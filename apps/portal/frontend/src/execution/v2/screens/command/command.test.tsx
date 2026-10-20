@@ -41,8 +41,8 @@ import {
 import { clearCommandIntents } from "./useCommandFlow";
 
 /** The story reads its catalogue through the strict V2 reader (`catalogueLane.ts`); the V1 read below exists only for the `ExecutionApi` mock, whose port type is V1. */
-const CATALOGUE = catalogueOf(loadCanonical("execution-command-catalog"))!;
-const API_CATALOGUE: CommandCatalogue = readCommandCatalogue(loadCanonical("execution-command-catalog"))!;
+const CATALOGUE = catalogueOf(loadCanonical("execution-command-catalog.served"))!;
+const API_CATALOGUE: CommandCatalogue = readCommandCatalogue(loadCanonical("execution-command-catalog.served"))!;
 const fetchSpy = vi.fn(async () => {
   throw new Error("the fixture lane must never reach a network");
 });
@@ -256,6 +256,44 @@ describe("DENIED (the relay said no)", () => {
   });
 });
 
+describe("BE-P13: the F0 apply answers are the real wire bodies", () => {
+  it("a first denial says the stored answer was not repeated; the denial comes from details, so nothing is read from the top level", async () => {
+    const { fake } = await planAndFill("f0-denied");
+    await send(fake, 1);
+    const panel = await screen.findByLabelText("Denied by the relay");
+    expect(within(panel).getByText("Stored answer repeated").nextSibling?.textContent).toBe("No: first answer for this key");
+    expect(within(panel).getByText("Request sent to the Trading System").nextSibling?.textContent).toBe("No");
+  });
+
+  it("a denial for a key the server already knew is the same denial with replayed true, and still a definite, non-retryable answer", async () => {
+    const { fake } = await planAndFill("f0-denied-replayed");
+    await send(fake, 1);
+    const panel = await screen.findByLabelText("Denied by the relay");
+    expect(within(panel).getByText("Stored answer repeated").nextSibling?.textContent).toBe("Yes: the server already knew this key");
+    expect(within(panel).getByText("Retry allowed").nextSibling?.textContent).toBe("No");
+    expect(within(panel).queryByRole("button", { name: /retry/i })).toBeNull();
+  });
+
+  it("no answer, then a retry under the same key: the stored denial comes back replayed", async () => {
+    const { fake } = await planAndFill("f0-timeout-then-denied");
+    await send(fake, 1);
+    fireEvent.click(await screen.findByRole("button", { name: "Retry with the same key" }));
+    await waitFor(() => expect(submits(fake)).toHaveLength(2));
+    const panel = await screen.findByLabelText("Denied by the relay");
+    expect(within(panel).getByText("Stored answer repeated").nextSibling?.textContent).toBe("Yes: the server already knew this key");
+  });
+
+  it("a reused request key is a typed, definite refusal that created nothing: the request can be changed, and no other operation is named", async () => {
+    const { fake } = await planAndFill("f0-key-conflict");
+    await send(fake, 1);
+    const panel = await screen.findByLabelText("Rejected");
+    expect(within(panel).getByText("REQUEST_KEY_PAYLOAD_CONFLICT")).toBeTruthy();
+    expect(within(panel).getByText(/already used for a different command/)).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Change the request" })).toBeTruthy();
+    expect(panel.textContent).not.toMatch(/op_/);
+  });
+});
+
 describe("ACCEPTED (four independent answers)", () => {
   it("acknowledged is not applied: delivery is transport only, business is unknown, and no Applied flag exists", async () => {
     const { fake } = await planAndFill("accepted");
@@ -437,14 +475,38 @@ describe("UNKNOWN (it may already have been applied)", () => {
     expect(submits(fake).map((c) => c.key)).toEqual([submits(fake)[0]!.key, submits(fake)[0]!.key]);
   });
 
-  it("no answer, then it had landed: the retry is answered with the one command that exists, and says it came from a re-send", async () => {
+  it("no answer, then it had landed: the retry is answered with the one command that exists, and the server says it was a replay (the bit, not a guess)", async () => {
     const { fake } = await planAndFill("timeout-then-landed");
     await send(fake, 1);
     fireEvent.click(await screen.findByRole("button", { name: "Retry with the same key" }));
+    const replayed = await screen.findByLabelText("Already recorded");
+    expect(within(replayed).getByText(/was created by an earlier send under this key\. Nothing new was created/)).toBeTruthy();
+    expect(within(replayed).getAllByText(COMMAND_ID_LANDED).length).toBeGreaterThan(0);
+    expect(submits(fake).map((c) => c.attempt)).toEqual([1, 2]);
+  });
+
+  it("no answer, then the re-send is the first the server saw (replayed false): it is Accepted, with the note that it came from a re-send", async () => {
+    const fake = createFakeCommandPort({ scenario: "timeout-then-landed" });
+    // The first send never reached the server; the retry creates the command. The bit says so.
+    const port: CommandPort = {
+      ...fake,
+      kind: "fixture",
+      plan: (i) => fake.plan(i),
+      lookup: (i) => fake.lookup(i),
+      submit: async (i) => {
+        const answer = await fake.submit(i);
+        return answer.kind === "response" ? { ...answer, body: { ...(answer.body as object), replayed: false } } : answer;
+      },
+    };
+    mount("timeout-then-landed", {}, "CAPITAL", port);
+    await readPlan();
+    fill("TOP_UP");
+    fireEvent.click(submitBtn());
+    await waitFor(() => expect(fake.calls.filter((c) => c.method === "submit")).toHaveLength(1));
+    fireEvent.click(await screen.findByRole("button", { name: "Retry with the same key" }));
     const accepted = await screen.findByLabelText("Accepted");
     expect(within(accepted).getByText(/re-send under the same key\. One key creates one command/)).toBeTruthy();
-    expect(within(accepted).getAllByText(COMMAND_ID_LANDED).length).toBeGreaterThan(0);
-    expect(submits(fake).map((c) => c.attempt)).toEqual([1, 2]);
+    expect(screen.queryByLabelText("Already recorded")).toBeNull();
   });
 
   it.each([
@@ -635,13 +697,25 @@ describe("operations that are not sendable", () => {
 
   it("a command whose route is not published says no capability helps, and a read has no invented capability", () => {
     render(<MemoryRouter><DisabledOperations catalogue={CATALOGUE} /></MemoryRouter>);
-    const ambiguous = document.querySelector('[data-op="ops/emergency-close"]') as HTMLElement;
+    const ambiguousKey = CATALOGUE.entries.find((e) => e.blockedReason === "SOURCE_ROUTE_MAPPING_AMBIGUOUS")!.key;
+    const ambiguous = document.querySelector(`[data-op="${ambiguousKey}"]`) as HTMLElement;
     expect(within(ambiguous).getByText(BLOCKED_REASON_TEXT.SOURCE_ROUTE_MAPPING_AMBIGUOUS)).toBeTruthy();
     expect(within(ambiguous).getByText(/route itself is not available/)).toBeTruthy();
     expect(ambiguous.textContent).not.toMatch(/COMMAND_R\d/);
     const read = document.querySelector('[data-op="account/state"]') as HTMLElement;
     expect(read.textContent).toMatch(/Not published \(FE-015\)/);
     expect(read.textContent).not.toMatch(/COMMAND_R\d/);
+  });
+
+  it("BE-P13: the emergency close is the accepted N16B primitive: its row says it is described and not active, names its own reason word, and no capability enables it", () => {
+    render(<MemoryRouter><DisabledOperations catalogue={CATALOGUE} /></MemoryRouter>);
+    const row = document.querySelector('[data-op="ops/emergency-close"]') as HTMLElement;
+    expect(within(row).getByText("N16B_RUNTIME_ACTIVATION_PENDING")).toBeTruthy();
+    expect(within(row).getByText(/described, not active/)).toBeTruthy();
+    expect(within(row).getByText(/route itself is not available/)).toBeTruthy();
+    expect(row.textContent).not.toMatch(/COMMAND_R\d/);
+    expect(row.textContent).not.toMatch(/no reason was published/);
+    expect((within(row).getByRole("button", { name: /^Send / }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("capital operations carry the exact send reason; with no catalogue read, the catalogue rows are not invented", () => {

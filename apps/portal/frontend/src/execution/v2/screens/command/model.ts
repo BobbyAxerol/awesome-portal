@@ -18,22 +18,26 @@
  * APPLIED + CATCHING_UP are expected states, not contradictions; APPLIED is never inferred from an acknowledgement and a flat or
  * filled position is never inferred from APPLIED (ELP2-07 coverage-and-handoff section 3).
  */
-import { BLOCKED_REASON_TEXT, GROUP_LABEL, RISK_TIER_LABEL, groupEntries, type CatalogEntry, type CommandCatalogue } from "../../../adminCatalog";
+import { BLOCKED_REASON_TEXT, CATALOG_GROUPS, GROUP_LABEL, RISK_TIER_LABEL, type BlockedReason, type CatalogGroupCode, type CatalogRiskTier } from "../../../adminCatalog";
 import { notPublishedText } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
 import {
   COMMAND_REASON_CODES,
+  F0_APPLY_CONFLICT_CODE,
+  F0_APPLY_DENIED_CODE,
+  RELAY_DECISION_SCHEMA,
   readCommandPlanV1,
   readCommandPreviewV1,
   readCommandProblemV1,
-  readRelayDecisionV1,
+  readF0ApplyAnswerV1,
   type CommandPlanV1,
   type CommandPreviewV1,
   type CommandReasonCode,
-  type RelayDecisionV1,
+  type CostImpactV1,
+  type F0ApplyDenialV1,
   type SafeNextAction,
 } from "../../readers/commandOperation";
-import { readCommandStatusV1, type CommandStatusV1 } from "../../readers/commandCurrency";
+import { readCommandSubmitResultV1, type CommandStatusV1 } from "../../readers/commandCurrency";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { hostileCharacters, showable, visibleCount } from "../request/model";
 import { SEND_DISABLED_REASON, type Lane, type PortResponse } from "./port";
@@ -53,6 +57,13 @@ export interface PlanFact {
  * publishes a figure adds a member (with its own exact string and unit), and no code path can fill it from a local sum.
  */
 export type PlanImpact = { kind: "not_published"; request: "FE-020" };
+
+/** The impact of a plan, read from the plan's own `cost_impact` (a typed absence on the wire), never from a constant and never computed here. */
+export function planImpact(costImpact: CostImpactV1): PlanImpact {
+  switch (costImpact.state) {
+    case "NOT_PUBLISHED": return { kind: "not_published", request: "FE-020" };
+  }
+}
 
 export interface PlanView {
   lane: Lane;
@@ -109,7 +120,7 @@ export function planViewFromF0(plan: CommandPlanV1): PlanView {
     ],
     blockers: plan.blockers,
     warnings: plan.warnings,
-    impact: { kind: "not_published", request: "FE-020" },
+    impact: planImpact(plan.costImpact),
     digest: plan.planDigest,
     expiresAtMs: plan.expiresAt.ms,
     operationId: plan.operationId,
@@ -154,7 +165,7 @@ export function planViewFromCapital(intent: CapitalIntentView, preview: CommandP
     ],
     blockers: preview.allowed ? [] : [preview.reasonCode ?? "NO_REASON_PUBLISHED"],
     warnings: [],
-    impact: { kind: "not_published", request: "FE-020" },
+    impact: planImpact(preview.costImpact),
     digest: preview.previewDigest,
     expiresAtMs: preview.expiresAtMs,
     operationId: null,
@@ -333,7 +344,8 @@ export type Receipt =
     nextAction: SafeNextAction | null;
     status: CommandStatusV1 | null;
   }
-  | { kind: "DENIED"; decision: RelayDecisionV1 }
+  /** The F0 apply 409 (`details`, the eight keys). `decision.replayed` says the stored first answer was repeated for a key the server already knew. */
+  | { kind: "DENIED"; decision: F0ApplyDenialV1 }
   | { kind: "UNKNOWN"; why: UnknownWhy; httpStatus: number | null; status: CommandStatusV1 | null }
   /** 401, 403 or 404: the screen stops showing what it showed. */
   | { kind: "ACCESS_STOPPED"; httpStatus: number };
@@ -341,11 +353,12 @@ export type Receipt =
 export interface ClassifyContext {
   /** F0: the plan's operation id; a denial for another operation is not this command's answer. */
   operationId: string | null;
-  /** Command ids this screen has already shown. */
-  knownCommandIds: ReadonlySet<string>;
+  /** F0: the request key this send carried. When given, a denial or conflict that echoes another key is not this send's answer. */
+  requestKey?: string | null;
 }
 
-export function classifyStatus(status: CommandStatusV1, known: ReadonlySet<string>): Receipt {
+/** `replayed` is the server's bit (`CommandSubmitResult.replayed`): true when a known key answered with the existing command and this call did not send. */
+export function classifyStatus(status: CommandStatusV1, replayed: boolean): Receipt {
   if (status.business.state === "REJECTED") {
     return { kind: "REJECTED", code: null, known: false, sentence: "The source rejected this command.", nextAction: null, status };
   }
@@ -362,7 +375,19 @@ export function classifyStatus(status: CommandStatusV1, known: ReadonlySet<strin
   if (status.delivery === "PREPARED" || status.delivery === "SENDING" || status.delivery === "DELIVERY_UNKNOWN") {
     return { kind: "UNKNOWN", why: "delivery_unknown", httpStatus: null, status };
   }
-  return known.has(status.commandId) ? { kind: "REPLAYED", status } : { kind: "ACCEPTED", status };
+  return replayed ? { kind: "REPLAYED", status } : { kind: "ACCEPTED", status };
+}
+
+/**
+ * A body that says it is an F0 apply answer (a denial or key-conflict code, or the bare relay-decision schema) but did not read as one: a
+ * danger flag that is not `false`, a key the closed shape does not allow, the legacy top-level `source_request_sent`. It is never a clean refusal
+ * that "changed nothing": it is an answer that could not be read, so it is UNKNOWN.
+ */
+function claimsApplyAnswer(body: unknown): boolean {
+  if (typeof body !== "object" || body === null) return false;
+  const record = body as { error?: { code?: unknown }; schema_version?: unknown };
+  const code = typeof record.error === "object" && record.error !== null ? record.error.code : undefined;
+  return code === F0_APPLY_DENIED_CODE || code === F0_APPLY_CONFLICT_CODE || record.schema_version === RELAY_DECISION_SCHEMA;
 }
 
 export function classifySubmit(answer: PortResponse, context: ClassifyContext): Receipt {
@@ -371,15 +396,27 @@ export function classifySubmit(answer: PortResponse, context: ClassifyContext): 
   // Access stops first, and the body is not read: a revoked reader is shown nothing from the server.
   if (status === 401 || status === 403 || status === 404) return { kind: "ACCESS_STOPPED", httpStatus: status };
 
-  const decision = readRelayDecisionV1(body);
-  if (decision !== null && decision.kind === "relay_decision") {
-    const mine = context.operationId === null || decision.decision.operationId === context.operationId;
-    return status === 409 && mine ? { kind: "DENIED", decision: decision.decision } : { kind: "UNKNOWN", why: "unreadable", httpStatus: status, status: null };
+  // The F0 apply has two answers, both 409 with the shared `{ error, request_id, details }` envelope (it has no 2xx). `details`, not the top
+  // level, holds `source_request_sent`, `retry_allowed` and `replayed`; the body decides which answer it is, the status only has to agree.
+  const apply = readF0ApplyAnswerV1(body);
+  if (apply !== null) {
+    const keyOk = (key: string) => context.requestKey == null || key === context.requestKey;
+    if (apply.kind === "f0_apply_denied") {
+      const mine = (context.operationId === null || apply.denial.operationId === context.operationId) && keyOk(apply.denial.requestKey);
+      return status === 409 && mine ? { kind: "DENIED", decision: apply.denial } : { kind: "UNKNOWN", why: "unreadable", httpStatus: status, status: null };
+    }
+    // REQUEST_KEY_PAYLOAD_CONFLICT: the key was first used for another operation. Nothing was recorded and nothing was sent.
+    if (status === 409 && keyOk(apply.conflict.requestKey)) {
+      return { kind: "REJECTED", code: apply.conflict.code, known: true, sentence: REASON_COPY.COMMAND_IDEMPOTENCY_CONFLICT, nextAction: null, status: null };
+    }
+    return { kind: "UNKNOWN", why: "unreadable", httpStatus: status, status: null };
   }
+  if (claimsApplyAnswer(body)) return { kind: "UNKNOWN", why: "unreadable", httpStatus: status, status: null };
   if (status >= 200 && status < 300) {
-    const read = readCommandStatusV1(body);
-    return read !== null && read.kind === "command_status"
-      ? classifyStatus(read.status, context.knownCommandIds)
+    // The capital submit answers with a CommandSubmitResult: the status plus the server's `replayed` bit. A bare status is not that answer.
+    const read = readCommandSubmitResultV1(body);
+    return read !== null && read.kind === "command_submit_result"
+      ? classifyStatus(read.result.status, read.result.replayed)
       : { kind: "UNKNOWN", why: "unreadable", httpStatus: status, status: null };
   }
   const problem = readCommandProblemV1(body);
@@ -560,7 +597,7 @@ export type EnablingCapability =
 /** Provisional, FE-037: the Portal grant a person would need has no published name; none is invented. */
 export const GRANT_NAME_NOTE = "Portal grant name: not published, provisional (FE-037).";
 
-export function enablingCapability(entry: CatalogEntry): EnablingCapability {
+export function enablingCapability(entry: Pick<CatalogueEntryView, "blockedReason" | "riskTier">): EnablingCapability {
   if (entry.blockedReason !== "COMMAND_RELAY_DISABLED") {
     return { kind: "none_published", because: "No capability enables it: the route itself is not available (see the reason)." };
   }
@@ -584,11 +621,41 @@ export interface DisabledRow {
   code: string | null;
 }
 
-/** What the disabled-operations list needs of a catalogue: its entries. The V1 `CommandCatalogue` and the strict V2 read both satisfy it. */
-export type CatalogueView = Pick<CommandCatalogue, "entries">;
+/** The N16B reason word the served catalogue adds beside `ops/emergency-close`. The V1 vocabulary does not know it; the strict reader does. */
+export const N16B_BLOCKED_REASON = "N16B_RUNTIME_ACTIVATION_PENDING";
+
+/** What the disabled-operations list needs of one entry. The strict V2 read satisfies it, and so does the V1 `CatalogEntry` (which reads the N16B word as null). */
+export interface CatalogueEntryView {
+  key: string;
+  group: CatalogGroupCode | null;
+  riskTier: CatalogRiskTier | null;
+  blockedReason: BlockedReason | typeof N16B_BLOCKED_REASON | null;
+}
+/** What the disabled-operations list needs of a catalogue: its entries. */
+export interface CatalogueView {
+  entries: readonly CatalogueEntryView[];
+}
+
+/** Every blocked reason an entry can carry, in the operator's words: the V1 sentences, and one for the N16B primitive (accepted, described, not active). */
+const BLOCKED_TEXT: Readonly<Record<BlockedReason | typeof N16B_BLOCKED_REASON, string>> = {
+  ...BLOCKED_REASON_TEXT,
+  N16B_RUNTIME_ACTIVATION_PENDING: "The one accepted current protective primitive. It is described, not active in the Portal, so it cannot be sent.",
+};
+
+/** The contract's group order; an entry with no group still appears (a catalogue's point is completeness). Same shape as the V1 grouping. */
+function groupView(entries: readonly CatalogueEntryView[]): readonly { code: CatalogGroupCode | null; label: string; items: readonly CatalogueEntryView[] }[] {
+  const out: { code: CatalogGroupCode | null; label: string; items: CatalogueEntryView[] }[] = [];
+  for (const code of CATALOG_GROUPS) {
+    const items = entries.filter((e) => e.group === code);
+    if (items.length > 0) out.push({ code, label: GROUP_LABEL[code], items });
+  }
+  const ungrouped = entries.filter((e) => e.group === null);
+  if (ungrouped.length > 0) out.push({ code: null, label: "Group not stated", items: ungrouped });
+  return out;
+}
 
 export function catalogueRows(catalogue: CatalogueView): readonly { code: string | null; label: string; rows: readonly DisabledRow[] }[] {
-  return groupEntries(catalogue.entries).map((group) => ({
+  return groupView(catalogue.entries).map((group) => ({
     code: group.code,
     label: group.label,
     rows: group.items.map((entry): DisabledRow => ({
@@ -596,7 +663,7 @@ export function catalogueRows(catalogue: CatalogueView): readonly { code: string
       label: entry.key,
       group: group.label,
       tier: entry.riskTier === null ? null : RISK_TIER_LABEL[entry.riskTier],
-      reason: entry.blockedReason === null ? "This command is not available through the Portal, and no reason was published." : BLOCKED_REASON_TEXT[entry.blockedReason],
+      reason: entry.blockedReason === null ? "This command is not available through the Portal, and no reason was published." : BLOCKED_TEXT[entry.blockedReason],
       capability: enablingCapability(entry),
       code: entry.blockedReason,
     })),

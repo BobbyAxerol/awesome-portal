@@ -176,6 +176,7 @@ function Body({ receipt, flow, rootRef, keepKey, asking, setAsking, accessHref }
               { label: "Operation", value: receipt.decision.operationId, mono: true },
               { label: "Reason", value: receipt.decision.reason, mono: true },
               { label: "Retry allowed", value: receipt.decision.retryAllowed ? "Yes" : "No" },
+              { label: "Stored answer repeated", value: receipt.decision.replayed ? "Yes: the server already knew this key" : "No: first answer for this key" },
               { label: "Request sent to the Trading System", value: receipt.decision.sourceRequestSent ? "Possibly: verify first" : "No" },
             ]}
           />

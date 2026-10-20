@@ -41,6 +41,9 @@ import {
   CAPITAL_INTENT,
   COMMAND_ID_APPLIED,
   COMMAND_ID_LANDED,
+  F0_APPLY_CONFLICT_BODY,
+  F0_APPLY_DENIED_BODY,
+  F0_APPLY_REPLAYED_BODY,
   F0_DENIED_BODY,
   F0_PLAN_BODY,
   STORY_NOW_MS,
@@ -48,12 +51,15 @@ import {
   appliedLaggingStatus,
   capitalPreviewBody,
   deliveryUnknownStatus,
+  f0ApplyAnswer,
   problemBody,
   rejectedBusinessStatus,
+  submitResultBody,
 } from "./storyData";
 
 const respond = (status: number, body: unknown): PortResponse => ({ kind: "response", status, body });
-const none: ReadonlySet<string> = new Set();
+/** A capital submit's 200: the status plus the server's `replayed` bit. */
+const submitted = (status: Record<string, unknown>, replayed = false) => respond(200, submitResultBody(status, replayed));
 const f0Plan = (): PlanView => {
   const read = readCommandPlanV1(structuredClone(F0_PLAN_BODY));
   if (read === null || read.kind !== "command_plan") throw new Error("the published plan does not read");
@@ -200,20 +206,63 @@ describe("the Submit gate and the sentence beside it are one answer", () => {
 });
 
 describe("an answer becomes a receipt, doubt first", () => {
-  const ctx = { operationId: "op_01K3COMMANDPLAN000000000000", knownCommandIds: none };
-  const kind = (answer: PortResponse, known: ReadonlySet<string> = none, operationId: string | null = ctx.operationId): Receipt["kind"] =>
-    classifySubmit(answer, { operationId, knownCommandIds: known }).kind;
+  const ctx = { operationId: "op_01K3COMMANDPLAN000000000000" };
+  const kind = (answer: PortResponse, operationId: string | null = ctx.operationId): Receipt["kind"] => classifySubmit(answer, { operationId }).kind;
 
-  it("ACCEPTED: an acknowledged status; REPLAYED when the command id was already shown", () => {
-    expect(kind(respond(200, ackOnlyStatus()), none, null)).toBe("ACCEPTED");
-    expect(kind(respond(200, ackOnlyStatus()), new Set([COMMAND_ID_LANDED]), null)).toBe("REPLAYED");
-    expect(kind(respond(200, appliedLaggingStatus()), new Set([COMMAND_ID_LANDED]), null)).toBe("ACCEPTED");
+  it("ACCEPTED when the server says it created the command, REPLAYED when it says a known key answered: the bit decides, not what the screen has shown", () => {
+    expect(kind(submitted(ackOnlyStatus(), false), null)).toBe("ACCEPTED");
+    expect(kind(submitted(ackOnlyStatus(), true), null)).toBe("REPLAYED");
+    expect(kind(submitted(appliedLaggingStatus(), false), null)).toBe("ACCEPTED");
+    expect(kind(submitted(appliedLaggingStatus(), true), null)).toBe("REPLAYED");
+    // A command id the screen already showed is not a replay unless the server says so.
+    expect(COMMAND_ID_LANDED).toBe((ackOnlyStatus() as { command_id: string }).command_id);
+    expect(kind(submitted(ackOnlyStatus(), false), null)).toBe("ACCEPTED");
   });
 
-  it("DENIED: the published denial with 409 for THIS operation; a denial for another operation, or with another status, is not this command's answer", () => {
-    expect(kind(respond(409, structuredClone(F0_DENIED_BODY)))).toBe("DENIED");
-    expect(classifySubmit(respond(409, { ...F0_DENIED_BODY, operation_id: "op_other" }), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
-    expect(classifySubmit(respond(200, structuredClone(F0_DENIED_BODY)), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  it("a bare status is not a submit answer: without the bit the screen would have to guess 'first send', so it is unreadable and therefore UNKNOWN", () => {
+    expect(classifySubmit(respond(200, ackOnlyStatus()), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    expect(classifySubmit(respond(200, { ...submitResultBody(ackOnlyStatus(), false), replayed: "false" }), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  });
+
+  it("DENIED: the 409 wire envelope for THIS operation; a denial for another operation, another key or another status is not this command's answer", () => {
+    const denied = (extra?: (d: Record<string, unknown>) => void) => {
+      const body = structuredClone(F0_APPLY_DENIED_BODY) as unknown as { details: Record<string, unknown> };
+      extra?.(body.details);
+      return body;
+    };
+    expect(kind(respond(409, denied()))).toBe("DENIED");
+    expect(classifySubmit(respond(409, denied((d) => { d.operation_id = "op_other"; })), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    expect(classifySubmit(respond(200, denied()), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    // The request key the send carried is echoed; a denial recorded under another key is not this send's answer.
+    const keyed = { ...ctx, requestKey: "ui:apply:0001" };
+    expect(classifySubmit(respond(409, denied()), keyed).kind).toBe("DENIED");
+    expect(classifySubmit(respond(409, denied((d) => { d.request_key = "ui:apply:9999"; })), keyed)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  });
+
+  it("DENIED reads the wire envelope, not the bare RelayDenied: that body never was the 409 body, and a copy at the top level is not an answer", () => {
+    expect(classifySubmit(respond(409, structuredClone(F0_DENIED_BODY)), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    const denied = classifySubmit(respond(409, structuredClone(F0_APPLY_DENIED_BODY)), ctx);
+    expect(denied).toMatchObject({ kind: "DENIED", decision: { sourceRequestSent: false, retryAllowed: false, replayed: false, requestKey: "ui:apply:0001" } });
+    // `source_request_sent` is read from `details`: a body that moved it to the top level (the legacy reading) is refused whole.
+    const legacy = { ...structuredClone(F0_APPLY_DENIED_BODY), source_request_sent: false };
+    expect(classifySubmit(respond(409, legacy), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  });
+
+  it("DENIED keeps the server's replayed bit; a denial that says a request was sent is never read as 'nothing reached the Trading System'", () => {
+    expect(classifySubmit(respond(409, structuredClone(F0_APPLY_REPLAYED_BODY)), ctx)).toMatchObject({ kind: "DENIED", decision: { replayed: true } });
+    const sent = f0ApplyAnswer(F0_APPLY_DENIED_BODY, "ui:apply:0001") as { details: Record<string, unknown> };
+    sent.details.source_request_sent = true;
+    expect(classifySubmit(respond(409, sent), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+  });
+
+  it("REJECTED (typed): the F0 key conflict is a definite refusal that created nothing; the form stays editable and the other operation is not named", () => {
+    const conflict = classifySubmit(respond(409, structuredClone(F0_APPLY_CONFLICT_BODY)), ctx);
+    expect(conflict).toMatchObject({ kind: "REJECTED", code: "REQUEST_KEY_PAYLOAD_CONFLICT", known: true, sentence: REASON_COPY.COMMAND_IDEMPOTENCY_CONFLICT, status: null });
+    expect(isSettled(conflict)).toBe(false);
+    expect(isDismissible(conflict)).toBe(true);
+    expect(JSON.stringify(conflict)).not.toMatch(/op_/);
+    expect(classifySubmit(respond(200, structuredClone(F0_APPLY_CONFLICT_BODY)), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
+    expect(classifySubmit(respond(409, structuredClone(F0_APPLY_CONFLICT_BODY)), { ...ctx, requestKey: "ui:apply:9999" })).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
   });
 
   it("REJECTED (typed): a 4xx problem with a word in the dictionary, a word outside it, or no readable word", () => {
@@ -224,11 +273,11 @@ describe("an answer becomes a receipt, doubt first", () => {
   });
 
   it("REJECTED: a source rejection and a failed-before-send status are rejections that created a command; neither invites a new key", () => {
-    const rejected = classifySubmit(respond(200, rejectedBusinessStatus()), ctx);
+    const rejected = classifySubmit(submitted(rejectedBusinessStatus()), ctx);
     expect(rejected).toMatchObject({ kind: "REJECTED", code: null });
     expect(isSettled(rejected)).toBe(true);
     expect(isDismissible(rejected)).toBe(false);
-    const failed = classifySubmit(respond(200, { ...ackOnlyStatus(), delivery: "FAILED_BEFORE_SEND", next_action: "REVIEW_BLOCKER" }), ctx);
+    const failed = classifySubmit(submitted({ ...ackOnlyStatus(), delivery: "FAILED_BEFORE_SEND", next_action: "REVIEW_BLOCKER" }), ctx);
     expect(failed).toMatchObject({ kind: "REJECTED", code: "FAILED_BEFORE_SEND", nextAction: "REVIEW_BLOCKER" });
     expect((failed as { sentence: string }).sentence).toMatch(/not an invitation to use a new key/);
     // A typed refusal created nothing: it can be dismissed and the request changed.
@@ -247,17 +296,17 @@ describe("an answer becomes a receipt, doubt first", () => {
     expect(classifySubmit(respond(200, { receipt: "ok" }), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
     expect(classifySubmit(respond(200, null), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
     expect(classifySubmit(respond(302, {}), ctx)).toMatchObject({ kind: "UNKNOWN", why: "unreadable" });
-    const delivery = classifySubmit(respond(200, deliveryUnknownStatus()), ctx);
+    const delivery = classifySubmit(submitted(deliveryUnknownStatus()), ctx);
     expect(delivery).toMatchObject({ kind: "UNKNOWN", why: "delivery_unknown" });
     expect(receiptCommandId(delivery)).toBe("ecm_00000000000000000000000000000005");
     for (const state of ["PREPARED", "SENDING"]) {
-      expect(classifySubmit(respond(200, { ...ackOnlyStatus(), delivery: state }), ctx)).toMatchObject({ kind: "UNKNOWN", why: "delivery_unknown" });
+      expect(classifySubmit(submitted({ ...ackOnlyStatus(), delivery: state }), ctx)).toMatchObject({ kind: "UNKNOWN", why: "delivery_unknown" });
     }
   });
 
   it("ACCESS_STOPPED: 401, 403 and 404 end the screen's disclosure whatever the body says, before the body is read", () => {
     for (const status of [401, 403, 404]) {
-      expect(classifySubmit(respond(status, structuredClone(F0_DENIED_BODY)), ctx)).toEqual({ kind: "ACCESS_STOPPED", httpStatus: status });
+      expect(classifySubmit(respond(status, structuredClone(F0_APPLY_DENIED_BODY)), ctx)).toEqual({ kind: "ACCESS_STOPPED", httpStatus: status });
       expect(classifySubmit(respond(status, ackOnlyStatus()), ctx)).toEqual({ kind: "ACCESS_STOPPED", httpStatus: status });
     }
   });
@@ -294,7 +343,8 @@ describe("the four answers of a capital status are never merged", () => {
     expect(facets.find((f) => f.dimension === "Venue")).toMatchObject({ kind: "pending" });
     expect(venueNeedsFillDetail(status)).toBe(true);
     expect(status.commandId).toBe(COMMAND_ID_APPLIED);
-    expect(classifyStatus(status, none).kind).toBe("ACCEPTED");
+    expect(classifyStatus(status, false).kind).toBe("ACCEPTED");
+    expect(classifyStatus(status, true).kind).toBe("REPLAYED");
   });
 
   it("amounts keep their exact strings and the unit; absent amounts are absent, not zero", () => {
@@ -322,7 +372,7 @@ describe("the status lookup grammar", () => {
 });
 
 describe("every operation that is not sendable carries its exact reason, and a capability only when one is published", () => {
-  const catalogue = catalogueOf(loadCanonical("execution-command-catalog"))!;
+  const catalogue = catalogueOf(loadCanonical("execution-command-catalog.served"))!;
   const groups = catalogueRows(catalogue);
   const rows = groups.flatMap((g) => g.rows);
 
@@ -336,11 +386,20 @@ describe("every operation that is not sendable carries its exact reason, and a c
     expect(catalogue.entries.every((e) => e.portalReachable === false)).toBe(true);
   });
 
+  it("BE-P13: the N16B primitive row says it is described and not active, with its own reason word, and is one of the 64 (not a 65th)", () => {
+    const row = rows.find((r) => r.id === "ops/emergency-close")!;
+    expect(row.code).toBe("N16B_RUNTIME_ACTIVATION_PENDING");
+    expect(row.reason).toMatch(/not active/);
+    expect(row.reason).not.toMatch(/no reason was published/);
+    expect(rows.filter((r) => r.code === "N16B_RUNTIME_ACTIVATION_PENDING")).toHaveLength(1);
+    expect(groups.find((g) => g.rows.includes(row))?.code).toBe("OPERATIONS_INCIDENTS");
+  });
+
   it("the capability is the published staged-activation key of the tier, and only for a command blocked by the relay itself", () => {
     const entry = (key: string) => catalogue.entries.find((e) => e.key === key)!;
     expect(enablingCapability(entry("account/sync"))).toEqual({ kind: "staged_activation", key: "COMMAND_R2" });
     expect(enablingCapability(entry("ops/emergency-close-verify"))).toEqual({ kind: "staged_activation", key: "COMMAND_R3" });
-    // The emergency close itself has an ambiguous source route: no capability would unlock it.
+    // The emergency close is the accepted N16B primitive: described, not active, and no HTTP route. No capability would unlock it.
     expect(enablingCapability(entry("ops/emergency-close"))).toMatchObject({ kind: "none_published", because: expect.stringContaining("route itself") });
     // A read has no COMMAND_R0 capability: nothing is invented for it.
     const read = catalogue.entries.find((e) => e.riskTier === "R0_READ" && e.blockedReason === "COMMAND_RELAY_DISABLED")!;
