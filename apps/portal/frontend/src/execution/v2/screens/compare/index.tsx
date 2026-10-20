@@ -7,9 +7,11 @@
  * domain, counts and `allocatedByCurrency`, each portfolio in its own currency.
  *
  * What it refuses, and says so:
- * - the overlay: aligned and rebased series are not published, so
- *   `CompareOverlay` prints `Not published (FE-033)`, and still lists who
- *   would have been left out of one basis;
+ * - the overlay (FE-013/033, BE-P4 manager series): the comparable picks (two to four, one basis) are asked for as ONE series
+ *   read through the port. ALIGNED draws every series on `axis_ms` exactly as published (no fill, no rebase, no conversion);
+ *   INCOMPARABLE lists each subject apart with the mismatch reason (`CURRENCY_MIXED`: different currencies are never converted
+ *   or summed); UNAVAILABLE says why per subject (a source that is not published keeps `Not published (FE-013/033)`);
+ *   a failed read is "Not available". It still lists who was left out of the basis before the read;
  * - mixing: the basis is the currency and domain of the first portfolio
  *   picked. Another currency, a Simulated book beside a Real-funded one, or a
  *   portfolio whose single allocation figure spans both domains is listed
@@ -27,22 +29,25 @@
  * | Cardinality | hi-fi 6 candidates and 3 picks; real 10 to 100 candidates, 2 to 4 picks |
  * | Break point | 100 candidate chips; 4 columns under 660px |
  * | Degradation | candidate chips filtered by `q` and capped at 100; the table stacks as cards at or below 660px; a fifth pick is refused |
- * | Server contract | list read only; requested: `IN` filter and aligned rebased series with a common-partition check (FE-033), windowed metrics (FE-005, FE-006, FE-025) |
+ * | Server contract | the list read, plus one series read (`getManagerSeries`, 2 to 4 subjects, ALIGNED / INCOMPARABLE / UNAVAILABLE derived and re-checked by the reader); requested: `IN` filter (FE-033), windowed metrics (FE-005, FE-006, FE-025) |
  * | Invariant | no cross-currency or cross-domain figure, ever; basis caption always printed; unresolved ids named, not dropped |
- * | Perf budget | one read; at most 100 chips and 4 table columns |
+ * | Perf budget | two reads (the list, one series); at most 100 chips, 4 table columns and 4 x 2000 points |
  */
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
-import { PanelState } from "../../../components/states";
+import { PanelSkeleton, PanelState } from "../../../components/states";
 import { utcStamp } from "../../../time";
 import { SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { CompareOverlay, type NotComparable } from "../../charts";
+import { CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
 import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
+import type { ManagerSeriesMetric, ManagerSeriesQuery } from "../../readers/managerSeries";
+import { METRIC_WORD, MISMATCH_SENTENCE, UNAVAILABLE_SENTENCE, chartPointsOf, chartStateOf, chartUnit, commonCaption, isSigned, sourceNotPublished } from "../series/seriesModel";
+import { useManagerSeries } from "../series/useManagerSeries";
 import { useExecUrlState, withContext } from "../../urlState";
 import { PF_FE, npReason, npText } from "../portfolios/fe";
 import { Absent, MoneyList, Np, freshnessFlag } from "../portfolios/format";
@@ -111,6 +116,15 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   useContextFacts({ ccy: basis.currency });
   const kindWanted = params.get("kind");
 
+  // FE-013/033: the comparable picks (two to four, one basis) are asked for as one series read through the port.
+  const [measure, setMeasure] = useState<ManagerSeriesMetric>("NAV");
+  const comparableIds = useMemo(() => basis.comparable.map((row) => row.portfolioId), [basis]);
+  const seriesQuery = useMemo<ManagerSeriesQuery | null>(
+    () => (comparableIds.length < 2 ? null : { environment: url.value.env, metric: measure, window: url.value.window, subjects: comparableIds.map((subjectId) => ({ subjectType: "PORTFOLIO" as const, subjectId })) }),
+    [comparableIds, measure, url.value.env, url.value.window],
+  );
+  const seriesRead = useManagerSeries(api, permitted && seriesQuery !== null, seriesQuery);
+
   // The 360 hands over one id. It becomes the first pick once, as a replace.
   const seeded = useRef(false);
   useEffect(() => {
@@ -167,9 +181,48 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     apart.length > 0 ? `${apart.length} listed apart` : null,
     "Money is never converted or combined",
   ].filter((part): part is string => part !== null).join(" · ");
-  const basisText = basis.currency === null
-    ? "No comparable portfolio picked yet"
-    : `Return since window start (${windowLabel}), one currency (${basis.currency}), ${domainWord(basis.domain)} books; methodology as published per source (FE-006)`;
+  const series = seriesRead.phase === "ready" ? seriesRead.value : seriesRead.phase === "loading" || seriesRead.phase === "error" ? seriesRead.last : null;
+  const labelOf = (id: string): string => chosen.find((r) => r.portfolioId === id)?.label ?? id;
+  const comparison = series?.comparison ?? null;
+  // The overlay, by what the server said. Nothing is rebased, filled, converted or combined here.
+  const entryNotes: NotComparable[] = series === null ? [] : series.series.map((entry) => ({
+    id: entry.subject.subjectId,
+    label: labelOf(entry.subject.subjectId),
+    reason: entry.state === "UNAVAILABLE"
+      ? `${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`
+      : `${entry.currency ?? "ratio"} · basis ${entry.basis} · methodology ${entry.methodologyRef} · ${entry.partition.economicDomain.toLowerCase()} book, ${entry.partition.nativeProfileRef}${entry.state === "EMPTY" ? " · no points in this window" : ""}`,
+  }));
+  const noBasisText = basis.currency === null ? "No comparable portfolio picked yet" : "No aligned series: the common basis is not established";
+  const overlay: { series: CompareSeries[]; notComparable: NotComparable[]; state: Parameters<typeof CompareOverlay>[0]["state"]; basis: string; unit: Parameters<typeof CompareOverlay>[0]["unit"]; currency?: string } = (() => {
+    const none = (copy: string, reason: string, notComparable: NotComparable[] = apart) => ({ series: [], notComparable, state: { kind: "unavailable" as const, copy, reason }, basis: noBasisText, unit: "pct" as const });
+    if (seriesQuery === null) return none("Pick two comparable portfolios", "Aligned series need two to four portfolios on one basis. Nothing is rebased or worked out here.");
+    if (series === null || comparison === null) return none("Not available", `The series could not be read${seriesRead.phase === "error" ? ` (${seriesRead.reason})` : ""}. Nothing is rebased or worked out here.`);
+    if (comparison.state === "ALIGNED") {
+      const drawn = series.series.flatMap((entry) => (entry.state === "AVAILABLE" ? [{ entry, id: entry.subject.subjectId }] : []));
+      const states = drawn.map(({ entry }) => chartStateOf(entry));
+      const worst = states.find((st) => st.kind !== "ready") ?? { kind: "ready" as const };
+      return {
+        series: drawn.map(({ entry, id }) => ({ id, label: labelOf(id), points: chartPointsOf(entry) })),
+        notComparable: apart,
+        state: worst,
+        basis: commonCaption(series.metric, comparison),
+        unit: chartUnit(drawn[0]!.entry),
+        currency: comparison.common.currency ?? undefined,
+      };
+    }
+    if (comparison.state === "INCOMPARABLE") {
+      return none("Not comparable", `${MISMATCH_SENTENCE[comparison.reasonCode]} (${comparison.reasonCode}). Each series is listed apart; none is converted, rebased or combined.`, [...entryNotes, ...apart]);
+    }
+    const missing = series.series.find((entry) => entry.state === "UNAVAILABLE");
+    return none(
+      sourceNotPublished(series) ? "Not published (FE-013/033)" : "Not available",
+      missing !== undefined && missing.state === "UNAVAILABLE"
+        ? `At least one pick has no series: ${UNAVAILABLE_SENTENCE[missing.reasonCode]} (${missing.reasonCode}). Nothing is drawn from the rest.`
+        : "At least one pick has no points in this window, so the picks are not aligned. Nothing is drawn from the rest.",
+      [...entryNotes, ...apart],
+    );
+  })();
+  const basisText = overlay.basis;
 
   const tableColumns: CardsColumn<MetricRow>[] = [
     { key: "metric", label: "Metric", render: (m) => m.label },
@@ -185,7 +238,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
       <header className="exec-pf-head">
         <div>
           <h1 className="exec-pf-h1">Compare</h1>
-          <p className="exec-pf-sub">2 to 4 · one currency · one domain · identity and scalars only</p>
+          <p className="exec-pf-sub">2 to 4 · one currency · one domain · identity, scalars and aligned series</p>
         </div>
         <div className="exec-pf-ctrls">
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
@@ -267,13 +320,13 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
                   <span className="exec-cmpr-sum-more">Partitions</span>
                 </button>
                 <span className="exec-pf-seg" role="group" aria-label="Series measure">
-                  {([["Return", PF_FE.ret], ["Net PnL", PF_FE.netPnl]] as const).map(([label, fact]) => (
-                    <button key={label} type="button" className="exec-pf-segbtn" aria-pressed="false" disabled title={npReason(fact, "No aligned series is published to draw it from.")}>
-                      {label}
+                  {(["NAV", "NET_PNL", "RETURN"] as const).map((metric) => (
+                    <button key={metric} type="button" className="exec-pf-segbtn" aria-pressed={measure === metric} onClick={() => setMeasure(metric)}>
+                      {METRIC_WORD[metric]}
                     </button>
                   ))}
                 </span>
-                <Flag kind="neutral" label="Retained snapshots" size="sm" />
+                {comparison?.state === "ALIGNED" ? <Flag kind="neutral" label="Published series" size="sm" /> : null}
               </>
             }
           >
@@ -301,13 +354,20 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
                 </>
               )}
             </div>
-            <CompareOverlay
-              label="Comparison"
-              series={[]}
-              notComparable={apart}
-              basis={basisText}
-              state={{ kind: "unavailable", copy: npText(PF_FE.compareSeries), reason: "Aligned series are not published. Nothing is rebased or worked out here." }}
-            />
+            {seriesQuery !== null && seriesRead.phase === "loading" && series === null ? (
+              <PanelSkeleton label="Loading the series" />
+            ) : (
+              <CompareOverlay
+                label="Comparison"
+                series={overlay.series}
+                notComparable={overlay.notComparable}
+                basis={basisText}
+                unit={overlay.unit}
+                currency={overlay.currency}
+                signed={isSigned(measure)}
+                state={overlay.state}
+              />
+            )}
             <p className="exec-pf-note" data-testid="basis-caption">Basis: {basisText}</p>
           </SectionPanel>
 

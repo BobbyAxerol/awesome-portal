@@ -10,7 +10,7 @@
  * and that the overlay draws nothing. The chart components' own point budgets
  * are covered by their suites.
  */
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -94,13 +94,24 @@ describe("L2 · scale", () => {
     expect(chipsOf(group).filter((b) => b.getAttribute("aria-pressed") === "true")).toHaveLength(4);
   });
 
-  it("makes one read and no series read, at any size; the overlay draws nothing", async () => {
+  it("makes one list read and one series read (2 to 4 subjects), at any size; with no source the overlay draws nothing", async () => {
     const { api, calls } = makeApi(serve(many(500)));
     const { container } = mount(api, `?in=pf_scale_00001,pf_scale_00002`);
     await loaded();
-    expect(calls).toEqual(["GET /portfolios"]);
+    await waitFor(() => expect(container.textContent).toContain("Not published (FE-013/033)"));
+    expect(calls.filter((c) => c === "GET /portfolios")).toHaveLength(1);
+    expect(calls.filter((c) => c.startsWith("GET /manager/series"))).toHaveLength(1);
+    expect(calls).toHaveLength(2);
     expect(container.querySelectorAll(".exec-compare svg")).toHaveLength(0);
-    expect(container.textContent).toContain("Not published (FE-033)");
+  });
+
+  it("asks for at most four subjects even when the address names ten", async () => {
+    const ten = Array.from({ length: 10 }, (_, i) => `pf_scale_${pad(i)}`).join(",");
+    const harness = makeApi(serve(many(500)));
+    mount(harness.api, `?in=${ten}`);
+    await loaded();
+    await waitFor(() => expect(harness.queriesOf("/manager/series")).toHaveLength(1));
+    expect(JSON.parse(harness.queriesOf("/manager/series")[0]!.get("subjects")!)).toHaveLength(4);
   });
 });
 

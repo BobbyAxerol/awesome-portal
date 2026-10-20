@@ -13,6 +13,9 @@ import type { ExecutionApi } from "../../../api/ports";
 import { useContextFactsValue } from "../../shell/contextFacts";
 import { V2_CAPABILITY } from "../../shell/roleNav";
 import { makeApi, type Override } from "../portfolios/harness.fixtures";
+import { loadCanonical } from "../../testkit/loadCanonical";
+import { oracleComparison, type Draft } from "../../readers/managerSeries.testbase";
+import { seriesBodyFor, type SeriesVariant } from "../series/seriesDouble.testbase";
 import CompareScreen, { COMPARE_SCREEN_KEY } from "./index";
 
 afterEach(cleanup);
@@ -52,7 +55,7 @@ describe("page", () => {
     mount(makeApi().api);
     await loaded();
     expect(screen.getByRole("heading", { level: 1, name: "Compare" })).toBeTruthy();
-    expect(screen.getByText("2 to 4 · one currency · one domain · identity and scalars only")).toBeTruthy();
+    expect(screen.getByText("2 to 4 · one currency · one domain · identity, scalars and aligned series")).toBeTruthy();
     expect(screen.getByText("Fresh")).toBeTruthy();
   });
 
@@ -280,18 +283,39 @@ describe("basis and partitions", () => {
   });
 });
 
-describe("series", () => {
-  it("prints Not published (FE-033) for the aligned series and the basis caption, and draws nothing", async () => {
-    const { container } = mount(makeApi().api, pick(PF.satellite, PF.canary));
+describe("series (FE-013/033, BE-P4 manager series)", () => {
+  /** Four live USDT portfolios from the published list shape, so any two of them share one basis. */
+  const canonicalList = loadCanonical<Draft>("execution-portfolio-list.valid.json");
+  const live = (index: number): Draft => ({ ...structuredClone(canonicalList.items[0]), portfolio_id: `pf_cmp_${index}`, name: `Alpha Book ${index}`, owner: null, environments: ["live"] });
+  const portfolios = (): Draft => ({ ...structuredClone(canonicalList), items: [1, 2, 3, 4].map(live), total_portfolios: 4, truncated: false });
+  const A = "pf_cmp_1";
+  const B = "pf_cmp_2";
+  const C = "pf_cmp_3";
+  const serving = (variant: SeriesVariant, tweak?: (body: Draft) => void): Override => (_method, path, search) => {
+    if (path === "/portfolios") return { status: 200, body: portfolios() };
+    if (path !== "/manager/series") return undefined;
+    if (variant.startsWith("status:")) return { status: Number(variant.slice(7)), body: { error: { code: "REFUSED", message: "refused" } } };
+    const body = seriesBodyFor(search, variant);
+    tweak?.(body);
+    return { status: 200, body };
+  };
+  const overlay = (container: HTMLElement) => container.querySelector(".exec-compare") as HTMLElement;
+  const settled = async (container: HTMLElement) => {
     await loaded();
-    const overlay = container.querySelector(".exec-compare")!;
-    expect(overlay.textContent).toContain("Not published (FE-033)");
-    expect(overlay.textContent).not.toContain("Not available");
-    expect(overlay.textContent).toContain("Aligned series are not published. Nothing is rebased or worked out here.");
-    expect(overlay.querySelectorAll("svg")).toHaveLength(0);
-    expect(screen.getByTestId("basis-caption").textContent).toBe("Basis: Return since window start (90D), one currency (USDT), Real-funded books; methodology as published per source (FE-006)");
-    expect(within(overlay as HTMLElement).getByRole("list", { name: "Not in the comparison" })).toBeTruthy();
-    expect(within(overlay as HTMLElement).getByText("Not comparable")).toBeTruthy();
+    await waitFor(() => expect(container.querySelector("[role='status'][aria-label='Loading the series']")).toBeNull());
+  };
+
+  it("fewer than two comparable picks: no series is asked for and the overlay says what to do (no 'Not published')", async () => {
+    const { api, calls } = makeApi();
+    const { container } = mount(api, pick(PF.satellite, PF.canary));
+    await loaded();
+    expect(overlay(container).textContent).toContain("Pick two comparable portfolios");
+    expect(overlay(container).textContent).not.toContain("Not published");
+    expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
+    expect(screen.getByTestId("basis-caption").textContent).toBe("Basis: No aligned series: the common basis is not established");
+    expect(within(overlay(container)).getByRole("list", { name: "Not in the comparison" })).toBeTruthy();
+    expect(within(overlay(container)).getByText("Not comparable")).toBeTruthy();
+    expect(calls).toEqual(["GET /portfolios"]);
   });
 
   it("follows the shared window in the caption", async () => {
@@ -300,14 +324,131 @@ describe("series", () => {
     expect(screen.getByText("Window 30D")).toBeTruthy();
   });
 
-  it("makes no read for a series, because none is published", async () => {
-    const { api, calls } = makeApi();
-    mount(api, pick(PF.satellite, PF.canary));
-    await loaded();
-    expect(calls).toEqual(["GET /portfolios"]);
+  it("two comparable picks: ONE series read, the picks in order, NAV, the URL's environment and window", async () => {
+    const harness = makeApi(serving("populated"));
+    const { container } = mount(harness.api, `${pick(A, B)}&env=paper&window=30d`);
+    await settled(container);
+    const queries = harness.queriesOf("/manager/series");
+    expect(queries).toHaveLength(1);
+    expect(queries[0]!.get("environment")).toBe("paper");
+    expect(queries[0]!.get("metric")).toBe("NAV");
+    expect(JSON.parse(queries[0]!.get("window")!)).toBe("30D");
+    expect(JSON.parse(queries[0]!.get("subjects")!)).toEqual([{ subject_type: "PORTFOLIO", subject_id: A }, { subject_type: "PORTFOLIO", subject_id: B }]);
+    expect(harness.calls.filter((c) => c.startsWith("GET /portfolios"))).toHaveLength(1);
+  });
+
+  it("ALIGNED draws every series on the published axis with its basis, and fills nothing where a subject has no point", async () => {
+    const { container } = mount(makeApi(serving("populated")).api, pick(A, B));
+    await settled(container);
+    await waitFor(() => expect(overlay(container).querySelectorAll("[data-testid='compare-line']")).toHaveLength(2));
+    expect(overlay(container).textContent).toContain("Alpha Book 1");
+    expect(overlay(container).textContent).toContain("Alpha Book 2");
+    const basis = screen.getByTestId("basis-caption").textContent!;
+    expect(basis).toContain("NAV in USDT");
+    expect(basis).toContain("methodology TEST_ONLY:nav-twr.v1");
+    expect(basis).toContain("nothing rebased, filled or converted");
+    expect(screen.getByText("Published series")).toBeTruthy();
+    // Walk the cursor along the axis: where Alpha Book 2 has no point the readout says so; it never carries a neighbour forward.
+    const plot = overlay(container).querySelector("[role='group'][tabindex='0']") as HTMLElement;
+    const seen = new Set<string>();
+    fireEvent.keyDown(plot, { key: "Home" });
+    for (let step = 0; step < 6; step += 1) {
+      for (const node of overlay(container).querySelectorAll("[data-testid='compare-value']")) seen.add(node.textContent ?? "");
+      fireEvent.keyDown(plot, { key: "ArrowRight" });
+    }
+    expect([...seen]).toContain("No point at this time");
+  });
+
+  it("the measure switch asks for the same picks again with the other metric", async () => {
+    const harness = makeApi(serving("populated"));
+    const { container } = mount(harness.api, pick(A, B));
+    await settled(container);
+    expect(screen.getByRole("button", { name: "NAV" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Net PnL" }));
+    await waitFor(() => expect(harness.queriesOf("/manager/series")).toHaveLength(2));
+    expect(harness.queriesOf("/manager/series")[1]!.get("metric")).toBe("NET_PNL");
+    expect(screen.getByRole("button", { name: "Net PnL" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(screen.getByRole("button", { name: "Return" }));
+    await waitFor(() => expect(harness.queriesOf("/manager/series")).toHaveLength(3));
+    expect(harness.queriesOf("/manager/series")[2]!.get("metric")).toBe("RETURN");
+    await waitFor(() => expect(screen.getByTestId("basis-caption").textContent).toContain("Return, a ratio"));
+  });
+
+  it("INCOMPARABLE lists every subject apart with the mismatch reason and its own currency; nothing is drawn, converted or summed", async () => {
+    const { container } = mount(makeApi(serving("mixed")).api, pick(A, B));
+    await settled(container);
+    await waitFor(() => expect(overlay(container).textContent).toContain("CURRENCY_MIXED"));
+    expect(overlay(container).textContent).toContain("Not comparable");
+    expect(overlay(container).textContent).toContain("Different currencies are never converted or summed");
+    expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
+    const items = within(overlay(container)).getAllByTestId("not-comparable");
+    expect(items.map((i) => i.textContent)).toEqual([
+      expect.stringMatching(/Alpha Book 1.*USDT/),
+      expect.stringMatching(/Alpha Book 2.*VND/),
+    ]);
+    expect(screen.getByTestId("basis-caption").textContent).toBe("Basis: No aligned series: the common basis is not established");
+  });
+
+  it("UNAVAILABLE for a source that is not published keeps Not published (FE-013/033) and names the code per subject", async () => {
+    const { container } = mount(makeApi(serving("unavailable")).api, pick(A, B, C));
+    await settled(container);
+    await waitFor(() => expect(overlay(container).textContent).toContain("SERIES_SOURCE_NOT_PUBLISHED"));
+    expect(overlay(container).textContent).toContain("Not published (FE-013/033)");
+    expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
+    expect(within(overlay(container)).getAllByTestId("not-comparable")).toHaveLength(3);
+  });
+
+  it("UNAVAILABLE for ALL prints the window reason, not a source gap", async () => {
+    const { container } = mount(makeApi(serving("populated")).api, `${pick(A, B)}&window=all`);
+    await settled(container);
+    await waitFor(() => expect(overlay(container).textContent).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED"));
+    expect(overlay(container).textContent).toContain("Not available");
+    expect(overlay(container).textContent).not.toContain("Not published (FE-013/033)");
+  });
+
+  it("an EMPTY subject means the picks are not aligned: nothing is drawn from the other one", async () => {
+    const { container } = mount(makeApi(serving("populated", (body) => {
+      Object.assign(body.series[1], { state: "EMPTY", reason_code: "NO_POINTS_PUBLISHED_IN_WINDOW", points: [], gaps: [] });
+      body.comparison = oracleComparison(body.series);
+    })).api, pick(A, B));
+    await settled(container);
+    await waitFor(() => expect(overlay(container).textContent).toContain("no points in this window"));
+    expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
+    expect(overlay(container).textContent).toContain("Not available");
+  });
+
+  it("a stale series still draws and wears the word", async () => {
+    const { container } = mount(makeApi(serving("populated", (body) => { body.series[0].quality.freshness = "STALE"; })).api, pick(A, B));
+    await settled(container);
+    await waitFor(() => expect(overlay(container).querySelectorAll("[data-testid='compare-line']")).toHaveLength(2));
+    expect(overlay(container).textContent).toMatch(/Stale/);
+  });
+
+  it.each(["status:400", "status:404", "status:503"] as const)("a failed series read (%s) is typed 'Not available' and the list, chips and table stand", async (variant) => {
+    const { container } = mount(makeApi(serving(variant)).api, pick(A, B));
+    await settled(container);
+    await waitFor(() => expect(overlay(container).textContent).toContain("The series could not be read"));
+    expect(overlay(container).textContent).toContain("Not available");
+    expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
+    expect(screen.getByRole("table", { name: "Metrics" })).toBeTruthy();
+  });
+
+  it("a series that answers other picks is refused and never drawn as these", async () => {
+    const { container } = mount(makeApi(serving("populated", (body) => { body.series.reverse(); body.comparison = oracleComparison(body.series); })).api, pick(A, B));
+    await settled(container);
+    await waitFor(() => expect(overlay(container).textContent).toContain("The series could not be read"));
+    expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
+  });
+
+  it("removing a pick below two stops asking and says what to do", async () => {
+    const harness = makeApi(serving("populated"));
+    const { container } = mount(harness.api, pick(A, B));
+    await settled(container);
+    fireEvent.click(chip("Alpha Book 2"));
+    await waitFor(() => expect(overlay(container).textContent).toContain("Pick two comparable portfolios"));
+    expect(harness.queriesOf("/manager/series")).toHaveLength(1);
   });
 });
-
 describe("metric table", () => {
   it("puts identity and the published scalars side by side, each in its own currency", async () => {
     mount(makeApi().api, pick(PF.satellite, PF.yen, PF.core));
