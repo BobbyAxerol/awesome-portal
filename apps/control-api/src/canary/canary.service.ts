@@ -18,6 +18,7 @@ import {
 import { evaluateSandboxCertification } from "../sandbox/sandbox-certification.service";
 import { CanaryEnvelopeCreateRequest } from "./contracts";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "./canary.repository";
+import { profileStageFacts } from "../execution/stage-facts-profile";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import {
   GOVERNANCE_DENIAL_MESSAGE,
@@ -316,6 +317,9 @@ export class CanaryService {
         duration_days: envelope.duration_days,
         blocker_codes: envelope.blocker_codes,
       },
+      // FE-067: runtime / reconciliation / sessions as typed facts. Additive; the pinned-null
+      // `runtime_state` above stays, the real value (when the source publishes one) is here.
+      stage_facts: profileStageFacts(source, "LIVE_SOURCE_UNAVAILABLE"),
       kpis: [
         ...(sourceConnected ? [
           valueKpi("capital_consumed", "Capital consumed", "EXECUTION", capitalConsumed, ["margin_balances"]),

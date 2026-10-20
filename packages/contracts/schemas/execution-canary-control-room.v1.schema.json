@@ -223,6 +223,7 @@
             "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string" } }
           }
         },
+        "stage_facts": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageFacts" },
         "kpis": {
           "type": "array", "minItems": 5, "maxItems": 5,
           "items": {

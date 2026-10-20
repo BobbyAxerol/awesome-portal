@@ -28,6 +28,53 @@
     "declared_stage": "LIVE_FULL", "runtime_state": null, "activated_at": null,
     "blocker_codes": ["PRODUCTION_COMMAND_INACTIVE", "LIVE_FULL_ACTIVATION_NOT_APPROVED", "CANARY_EXIT_EVIDENCE_UNAVAILABLE", "LIVE_SOURCE_UNAVAILABLE", "SOURCE_CONTINUITY_UNAVAILABLE", "BROKER_STATE_UNAVAILABLE", "ROLLBACK_EVIDENCE_UNAVAILABLE", "EX_BE_08_PENDING"]
   },
+  "stage_facts": {
+    "schema_version": "execution.stage-facts.v1",
+    "runtime": {
+      "runtime_state": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      },
+      "since": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      }
+    },
+    "reconciliation": {
+      "basis": "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN",
+      "verdict": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      },
+      "open_finding_count": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      },
+      "unknown_order_count": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      },
+      "as_of": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      }
+    },
+    "sessions": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "LIVE_SOURCE_UNAVAILABLE",
+      "basis": "EXECUTION_SESSIONS_BOUNDED_WINDOW",
+      "rows": [],
+      "returned_count": 0,
+      "omitted_count": 0,
+      "source_complete": null
+    }
+  },
   "predecessor_canary_envelope": {
     "envelope_id": "cenv_01K3D8R64WYH5M8MQM5H96J7BF", "revision": 1, "status": "DRAFT", "currency": "USDT",
     "limits": { "capital_cap": "5000", "gross_notional_cap": "10000", "daily_loss_cap": "250", "max_open_orders": 20 },

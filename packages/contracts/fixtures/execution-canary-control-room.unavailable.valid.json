@@ -53,6 +53,53 @@
     "duration_days": 14,
     "blocker_codes": ["PRODUCTION_COMMAND_INACTIVE", "CANARY_OWNER_GATE_REQUIRED", "LIVE_SOURCE_UNAVAILABLE", "BASE_RISK_PROFILE_UNVERIFIED"]
   },
+  "stage_facts": {
+    "schema_version": "execution.stage-facts.v1",
+    "runtime": {
+      "runtime_state": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      },
+      "since": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      }
+    },
+    "reconciliation": {
+      "basis": "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN",
+      "verdict": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      },
+      "open_finding_count": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      },
+      "unknown_order_count": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      },
+      "as_of": {
+        "availability": "NOT_PUBLISHED",
+        "value": null,
+        "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+      }
+    },
+    "sessions": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "LIVE_SOURCE_UNAVAILABLE",
+      "basis": "EXECUTION_SESSIONS_BOUNDED_WINDOW",
+      "rows": [],
+      "returned_count": 0,
+      "omitted_count": 0,
+      "source_complete": null
+    }
+  },
   "kpis": [
     { "key": "capital_consumed", "label": "Capital consumed", "value": null, "unit": "USDT", "envelope": { "panel_id": "kpi-capital_consumed", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_KPI-CAPITAL_CONSUMED_UNAVAILABLE" }] } },
     { "key": "gross_notional", "label": "Gross notional", "value": null, "unit": "USDT", "envelope": { "panel_id": "kpi-gross_notional", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_KPI-GROSS_NOTIONAL_UNAVAILABLE" }] } },

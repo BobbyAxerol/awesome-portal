@@ -103,6 +103,7 @@
           "type": "object", "additionalProperties": false, "required": ["declared_stage", "runtime_state", "activated_at", "blocker_codes"],
           "properties": { "declared_stage": { "const": "LIVE_FULL" }, "runtime_state": { "type": "null" }, "activated_at": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "type": "string" } } }
         },
+        "stage_facts": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageFacts" },
         "predecessor_canary_envelope": {
           "type": "object", "additionalProperties": false,
           "required": ["envelope_id", "revision", "status", "currency", "limits", "evidence_set_hash", "active_for_live_full"],

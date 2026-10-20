@@ -3359,6 +3359,97 @@ export interface components {
                 code: string;
             }[];
         };
+        /** @description Reviewed machine code saying why a fact is not published. Never free text, never a source message. */
+        StageReasonCode: string;
+        /** @description Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed. */
+        StageFactRuntimeState: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "RUNNING" | "PAUSED" | "HALTED" | "STOPPED";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** Format: date-time */
+        StageTimestamp: string;
+        StageFactTimestamp: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageTimestamp"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageRuntimeFacts: {
+            runtime_state: components["schemas"]["StageFactRuntimeState"];
+            since: components["schemas"]["StageFactTimestamp"];
+        };
+        /** @description NO_OPEN_FINDINGS is a statement about the findings relation, not a reconciliation run: it is never published from a partial window or when any finding status is unreadable. */
+        StageFactVerdict: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "NO_OPEN_FINDINGS" | "OPEN_FINDINGS";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageFactInteger: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: number;
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageReconciliationFacts: {
+            /** @constant */
+            basis: "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN";
+            verdict: components["schemas"]["StageFactVerdict"];
+            open_finding_count: components["schemas"]["StageFactInteger"];
+            /** @description Open findings the reviewed finding-type table classes as UNKNOWN_ORDER. Exact 0 only when no finding is open; NOT_PUBLISHED (FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED) while any open finding is unclassified. */
+            unknown_order_count: components["schemas"]["StageFactInteger"];
+            as_of: components["schemas"]["StageFactTimestamp"];
+        };
+        StageSessionRow: {
+            id: string;
+            started: components["schemas"]["StageTimestamp"];
+            ended: components["schemas"]["StageTimestamp"] | null;
+            state: string | null;
+        };
+        /** @description Newest first. `ended` null while the session has no completion time. A row the reader cannot type is counted in omitted_count, never listed. `state` is the source's own word or null. */
+        StageSessionsFact: {
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            /** @constant */
+            basis: "EXECUTION_SESSIONS_BOUNDED_WINDOW";
+            rows: components["schemas"]["StageSessionRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+        } & unknown;
+        /** @description FE-067. Additive on the Paper workbench (`data.stage_facts`) and on the Sandbox, Canary and Live Full bodies (top level `stage_facts`). The pre-existing pinned-null `runtime_state` members are unchanged. */
+        StageFacts: {
+            /** @constant */
+            schema_version: "execution.stage-facts.v1";
+            runtime: components["schemas"]["StageRuntimeFacts"];
+            reconciliation: components["schemas"]["StageReconciliationFacts"];
+            sessions: components["schemas"]["StageSessionsFact"];
+        };
         SmokePlan: {
             plan_id: components["schemas"]["$defs-Identifier"];
             qty: string;
@@ -3449,6 +3540,7 @@ export interface components {
             steps: components["schemas"]["Step"][];
             source_panels: components["schemas"]["SourcePanel"][];
             timeboxed_run_policy: null;
+            stage_facts?: components["schemas"]["StageFacts"];
             smoke_plan: components["schemas"]["SmokePlan"] | null;
             findings: components["schemas"]["FindingCollection"];
             timeline: components["schemas"]["Timeline"];

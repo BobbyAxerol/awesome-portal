@@ -1,0 +1,415 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-stage-facts.v1.schema.json",
+  "title": "Execution stage facts v1 (BE-P2)",
+  "description": "Typed, honest facts the stage screens publish beside their existing bodies. Every value is AVAILABLE or NOT_PUBLISHED with a reason; the Portal never publishes a financial or runtime fact its source does not hold.",
+  "$defs": {
+    "StageReasonCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,127}$",
+      "description": "Reviewed machine code saying why a fact is not published. Never free text, never a source message."
+    },
+    "StageTimestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "StageFactRuntimeState": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "AVAILABLE"
+            },
+            "value": {
+              "enum": [
+                "RUNNING",
+                "PAUSED",
+                "HALTED",
+                "STOPPED"
+              ]
+            },
+            "reason_code": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "NOT_PUBLISHED"
+            },
+            "value": {
+              "type": "null"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/StageReasonCode"
+            }
+          }
+        }
+      ],
+      "description": "Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed."
+    },
+    "StageFactTimestamp": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "AVAILABLE"
+            },
+            "value": {
+              "$ref": "#/$defs/StageTimestamp"
+            },
+            "reason_code": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "NOT_PUBLISHED"
+            },
+            "value": {
+              "type": "null"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/StageReasonCode"
+            }
+          }
+        }
+      ]
+    },
+    "StageFactInteger": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "AVAILABLE"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reason_code": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "NOT_PUBLISHED"
+            },
+            "value": {
+              "type": "null"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/StageReasonCode"
+            }
+          }
+        }
+      ]
+    },
+    "StageFactVerdict": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "AVAILABLE"
+            },
+            "value": {
+              "enum": [
+                "NO_OPEN_FINDINGS",
+                "OPEN_FINDINGS"
+              ]
+            },
+            "reason_code": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "NOT_PUBLISHED"
+            },
+            "value": {
+              "type": "null"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/StageReasonCode"
+            }
+          }
+        }
+      ],
+      "description": "NO_OPEN_FINDINGS is a statement about the findings relation, not a reconciliation run: it is never published from a partial window or when any finding status is unreadable."
+    },
+    "StageRuntimeFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_state",
+        "since"
+      ],
+      "properties": {
+        "runtime_state": {
+          "$ref": "#/$defs/StageFactRuntimeState"
+        },
+        "since": {
+          "$ref": "#/$defs/StageFactTimestamp"
+        }
+      }
+    },
+    "StageReconciliationFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basis",
+        "verdict",
+        "open_finding_count",
+        "unknown_order_count",
+        "as_of"
+      ],
+      "properties": {
+        "basis": {
+          "const": "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN"
+        },
+        "verdict": {
+          "$ref": "#/$defs/StageFactVerdict"
+        },
+        "open_finding_count": {
+          "$ref": "#/$defs/StageFactInteger"
+        },
+        "unknown_order_count": {
+          "$ref": "#/$defs/StageFactInteger",
+          "description": "Open findings the reviewed finding-type table classes as UNKNOWN_ORDER. Exact 0 only when no finding is open; NOT_PUBLISHED (FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED) while any open finding is unclassified."
+        },
+        "as_of": {
+          "$ref": "#/$defs/StageFactTimestamp"
+        }
+      }
+    },
+    "StageSessionRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "started",
+        "ended",
+        "state"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$"
+        },
+        "started": {
+          "$ref": "#/$defs/StageTimestamp"
+        },
+        "ended": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StageTimestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "StageSessionsFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "availability",
+        "reason_code",
+        "basis",
+        "rows",
+        "returned_count",
+        "omitted_count",
+        "source_complete"
+      ],
+      "properties": {
+        "availability": {
+          "enum": [
+            "AVAILABLE",
+            "NOT_PUBLISHED"
+          ]
+        },
+        "reason_code": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StageReasonCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "basis": {
+          "const": "EXECUTION_SESSIONS_BOUNDED_WINDOW"
+        },
+        "rows": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/StageSessionRow"
+          }
+        },
+        "returned_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "omitted_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_complete": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "description": "Newest first. `ended` null while the session has no completion time. A row the reader cannot type is counted in omitted_count, never listed. `state` is the source's own word or null.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              }
+            },
+            "required": [
+              "availability"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reason_code": {
+                "$ref": "#/$defs/StageReasonCode"
+              },
+              "rows": {
+                "type": "array",
+                "maxItems": 0
+              },
+              "returned_count": {
+                "const": 0
+              },
+              "omitted_count": {
+                "const": 0
+              },
+              "source_complete": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "reason_code": {
+                "type": "null"
+              },
+              "source_complete": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "StageFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "runtime",
+        "reconciliation",
+        "sessions"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "execution.stage-facts.v1"
+        },
+        "runtime": {
+          "$ref": "#/$defs/StageRuntimeFacts"
+        },
+        "reconciliation": {
+          "$ref": "#/$defs/StageReconciliationFacts"
+        },
+        "sessions": {
+          "$ref": "#/$defs/StageSessionsFact"
+        }
+      },
+      "description": "FE-067. Additive on the Paper workbench (`data.stage_facts`) and on the Sandbox, Canary and Live Full bodies (top level `stage_facts`). The pre-existing pinned-null `runtime_state` members are unchanged."
+    }
+  }
+}

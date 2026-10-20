@@ -361,6 +361,7 @@
         "steps": { "type": "array", "minItems": 7, "maxItems": 7, "items": { "$ref": "#/$defs/Step" } },
         "source_panels": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/SourcePanel" } },
         "timeboxed_run_policy": { "type": "null" },
+        "stage_facts": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageFacts" },
         "smoke_plan": { "oneOf": [{ "$ref": "#/$defs/SmokePlan" }, { "type": "null" }] },
         "findings": { "$ref": "#/$defs/FindingCollection" },
         "timeline": { "$ref": "#/$defs/Timeline" },
