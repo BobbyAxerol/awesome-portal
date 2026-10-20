@@ -15,10 +15,26 @@ export function trustedCommandFixtures(c) {
     delivery:'ACKNOWLEDGED',business:{state:'UNKNOWN',receipt_ref:null,source_event_ref:null,revision:null,amounts:null},
     projection:'CATCHING_UP',venue:'UNKNOWN',next_action:'QUERY_SAME_INTENT',
     created_at_ms:1792100000000,updated_at_ms:1792100000000,authority:'TEST_ONLY'});
+  // BE-P13: a source-REJECTED outcome. The published source result carries a state and an amount
+  // partition but NO reason, so source_rejection is NOT_PUBLISHED, never a guess. The venue is
+  // NOT_APPLICABLE for a capital command that never reached one.
+  const rejected=c.commandStatus.parse({...stored,command_id:'ecm_00000000000000000000000000000002',delivery:'ACKNOWLEDGED',
+    business:{state:'REJECTED',receipt_ref:'TEST_ONLY:receipt-2',source_event_ref:'TEST_ONLY:event-2',revision:'2',
+      amounts:{requested:'100.000000000000000001',applied:'0',pending:'0',cancelled:'0',rejected:'100.000000000000000001'}},
+    projection:'CURRENT',venue:'NOT_APPLICABLE',next_action:'REVIEW_RECEIPT',updated_at_ms:1792100000500});
+  const currency=intent.business_payload.currency;
   return {lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',intent,
     preview_blocked:c.commandPreview.parse({schema_version:'portal.execution.command-preview.v1',allowed:false,
       reason_code:'COMMAND_RELAY_NOT_QUALIFIED',preview_digest:null,expires_at_ms:null,profile_ref:null,
-      approval_required:null,approval_gate:null,business_applied:false,reserved:false}),
-    ack_only:c.publicCommandStatus.parse({...stored,currency:intent.business_payload.currency}),
+      approval_required:null,approval_gate:null,cost_impact:{state:'NOT_PUBLISHED',reason:'NO_COST_OR_IMPACT_SOURCE'},
+      business_applied:false,reserved:false}),
+    preview_allowed:c.commandPreview.parse({schema_version:'portal.execution.command-preview.v1',allowed:true,
+      reason_code:null,preview_digest:'sha256:'+'a'.repeat(64),expires_at_ms:1792100060000,profile_ref:'TEST_ONLY:paper',
+      approval_required:false,approval_gate:null,cost_impact:{state:'NOT_PUBLISHED',reason:'NO_COST_OR_IMPACT_SOURCE'},
+      business_applied:false,reserved:false}),
+    ack_only:c.toPublicCommandStatus(stored,currency),
+    rejected:c.toPublicCommandStatus(rejected,currency),
+    submit_first:c.submitCommandStatus.parse({...c.toPublicCommandStatus(stored,currency),replayed:false}),
+    submit_replayed:c.submitCommandStatus.parse({...c.toPublicCommandStatus(stored,currency),replayed:true}),
     stored_ack_only:stored};
 }

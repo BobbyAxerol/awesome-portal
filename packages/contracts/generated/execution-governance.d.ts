@@ -3126,6 +3126,28 @@ export interface components {
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
             currency: string;
+            source_rejection: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON";
+            };
+            venue_fill: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+                quantities: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES";
+                quantities: null;
+            };
         };
         /** @description Finite immutable Portal labels plus current local triage, not TS execution. Runtime additionally enforces nonnegative finite dates, updated>=created and the existing triage/timestamp shape. SQL retains six fractional UTC digits for exact keyset boundaries. */
         OperationalQueueItemV2: {

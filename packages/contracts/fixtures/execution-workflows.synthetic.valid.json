@@ -397,7 +397,16 @@
           "created_at_ms": 1792100000000,
           "updated_at_ms": 1792100000000,
           "authority": "TEST_ONLY",
-          "currency": "USDT"
+          "currency": "USDT",
+          "source_rejection": {
+            "state": "NOT_APPLICABLE",
+            "reason": null
+          },
+          "venue_fill": {
+            "state": "NOT_PUBLISHED",
+            "reason": "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES",
+            "quantities": null
+          }
         },
         "effect_kind": "MANAGEMENT_BUDGET",
         "physical_transfer_performed": false,
@@ -457,7 +466,16 @@
           "created_at_ms": 1792100000000,
           "updated_at_ms": 1792100000000,
           "authority": "TEST_ONLY",
-          "currency": "USDT"
+          "currency": "USDT",
+          "source_rejection": {
+            "state": "NOT_APPLICABLE",
+            "reason": null
+          },
+          "venue_fill": {
+            "state": "NOT_APPLICABLE",
+            "reason": null,
+            "quantities": null
+          }
         },
         "effect_kind": "ECONOMIC_ASSIGNMENT",
         "physical_transfer_performed": false,
@@ -517,7 +535,16 @@
           "created_at_ms": 1792100000000,
           "updated_at_ms": 1792100000000,
           "authority": "TEST_ONLY",
-          "currency": "USDT"
+          "currency": "USDT",
+          "source_rejection": {
+            "state": "NOT_APPLICABLE",
+            "reason": null
+          },
+          "venue_fill": {
+            "state": "NOT_APPLICABLE",
+            "reason": null,
+            "quantities": null
+          }
         },
         "effect_kind": "MANAGEMENT_BUDGET",
         "physical_transfer_performed": false,
@@ -571,7 +598,16 @@
           "created_at_ms": 1792100000000,
           "updated_at_ms": 1792100000000,
           "authority": "TEST_ONLY",
-          "currency": "USDT"
+          "currency": "USDT",
+          "source_rejection": {
+            "state": "NOT_APPLICABLE",
+            "reason": null
+          },
+          "venue_fill": {
+            "state": "NOT_APPLICABLE",
+            "reason": null,
+            "quantities": null
+          }
         },
         "effect_kind": "NOMINAL_ROOT_CAP",
         "physical_transfer_performed": false,
@@ -625,7 +661,16 @@
           "created_at_ms": 1792100000000,
           "updated_at_ms": 1792100000000,
           "authority": "TEST_ONLY",
-          "currency": "USDT"
+          "currency": "USDT",
+          "source_rejection": {
+            "state": "NOT_PUBLISHED",
+            "reason": "SOURCE_RESULT_HAS_NO_REJECTION_REASON"
+          },
+          "venue_fill": {
+            "state": "NOT_APPLICABLE",
+            "reason": null,
+            "quantities": null
+          }
         },
         "effect_kind": "MANAGEMENT_BUDGET",
         "physical_transfer_performed": false,
@@ -685,7 +730,16 @@
           "created_at_ms": 1792100000000,
           "updated_at_ms": 1792100000000,
           "authority": "TEST_ONLY",
-          "currency": "USDT"
+          "currency": "USDT",
+          "source_rejection": {
+            "state": "NOT_PUBLISHED",
+            "reason": "SOURCE_RESULT_HAS_NO_REJECTION_REASON"
+          },
+          "venue_fill": {
+            "state": "NOT_APPLICABLE",
+            "reason": null,
+            "quantities": null
+          }
         },
         "effect_kind": "MANAGEMENT_BUDGET",
         "physical_transfer_performed": false,
@@ -745,7 +799,16 @@
           "created_at_ms": 1792100000000,
           "updated_at_ms": 1792100000000,
           "authority": "TEST_ONLY",
-          "currency": "USDT"
+          "currency": "USDT",
+          "source_rejection": {
+            "state": "NOT_APPLICABLE",
+            "reason": null
+          },
+          "venue_fill": {
+            "state": "NOT_APPLICABLE",
+            "reason": null,
+            "quantities": null
+          }
         },
         "effect_kind": "MANAGEMENT_BUDGET",
         "physical_transfer_performed": false,
@@ -805,7 +868,16 @@
           "created_at_ms": 1792100000000,
           "updated_at_ms": 1792100000000,
           "authority": "TEST_ONLY",
-          "currency": "USDT"
+          "currency": "USDT",
+          "source_rejection": {
+            "state": "NOT_APPLICABLE",
+            "reason": null
+          },
+          "venue_fill": {
+            "state": "NOT_APPLICABLE",
+            "reason": null,
+            "quantities": null
+          }
         },
         "effect_kind": "MANAGEMENT_BUDGET",
         "physical_transfer_performed": false,
@@ -865,7 +937,16 @@
           "created_at_ms": 1792100000000,
           "updated_at_ms": 1792100000000,
           "authority": "TEST_ONLY",
-          "currency": "USDT"
+          "currency": "USDT",
+          "source_rejection": {
+            "state": "NOT_APPLICABLE",
+            "reason": null
+          },
+          "venue_fill": {
+            "state": "NOT_APPLICABLE",
+            "reason": null,
+            "quantities": null
+          }
         },
         "effect_kind": "MANAGEMENT_BUDGET",
         "physical_transfer_performed": false,
@@ -915,6 +996,10 @@
           "profile_ref": null,
           "approval_required": null,
           "approval_gate": null,
+          "cost_impact": {
+            "state": "NOT_PUBLISHED",
+            "reason": "NO_COST_OR_IMPACT_SOURCE"
+          },
           "business_applied": false,
           "reserved": false
         },
@@ -977,6 +1062,10 @@
           "profile_ref": null,
           "approval_required": null,
           "approval_gate": null,
+          "cost_impact": {
+            "state": "NOT_PUBLISHED",
+            "reason": "NO_COST_OR_IMPACT_SOURCE"
+          },
           "business_applied": false,
           "reserved": false
         },

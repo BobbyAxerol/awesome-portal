@@ -9,7 +9,7 @@ import { AccessPolicyError } from "./access.contract";
 import { accessDigest,evaluateAccess,type AccessEvaluationContext } from "./access-policy";
 import { ExecutionAccessService } from "./access.service";
 import { assertAmountPartition } from "./foundation.contract";
-import { CommandError,commandIntent,commandPreview,commandStatus,publicCommandStatus,type CommandIntent,type CommandStatus,type PublicCommandStatus } from "./command.contract";
+import { CommandError,commandIntent,commandPreview,commandStatus,submitCommandStatus,toPublicCommandStatus,type CommandIntent,type CommandStatus,type PublicCommandStatus,type SubmitCommandStatus } from "./command.contract";
 import { CommandStore,type CommandRecord } from "./command.store";
 import { capitalWorkflow } from "./workflow";
 import { publicCommandRecord,workflowCommandRecord,workflowCommandTarget } from "./capital-workflow-record";
@@ -121,17 +121,20 @@ export class ExecutionCommandService {
     const i=commandIntent.parse(raw),c=await this.access.readContext(actor,i.workspace_id);this.permit(c,i);
     try{const a=await this.prepare(actor,i,c);return commandPreview.parse({schema_version:"portal.execution.command-preview.v1",allowed:true,
       reason_code:null,preview_digest:previewHash(a),expires_at_ms:a.expires_at_ms,profile_ref:a.profile_ref,
-      approval_required:a.approval_required,approval_gate:a.required_approval_gate,business_applied:false,reserved:false});}
+      approval_required:a.approval_required,approval_gate:a.required_approval_gate,
+      cost_impact:{state:"NOT_PUBLISHED",reason:"NO_COST_OR_IMPACT_SOURCE"},business_applied:false,reserved:false});}
     catch(e){if(!(e instanceof CommandError))throw e;return commandPreview.parse({schema_version:"portal.execution.command-preview.v1",allowed:false,
-      reason_code:e.code,preview_digest:null,expires_at_ms:null,profile_ref:null,approval_required:null,approval_gate:null,business_applied:false,reserved:false});}
+      reason_code:e.code,preview_digest:null,expires_at_ms:null,profile_ref:null,approval_required:null,approval_gate:null,
+      cost_impact:{state:"NOT_PUBLISHED",reason:"NO_COST_OR_IMPACT_SOURCE"},business_applied:false,reserved:false});}
   }
-  async submit(actor:AccessActor,raw:CommandIntent,digest:string):Promise<PublicCommandStatus> {
+  async submit(actor:AccessActor,raw:CommandIntent,digest:string):Promise<SubmitCommandStatus> {
     const i=commandIntent.parse(raw),hash=intentHash(actor,i),c=await this.access.readContext(actor,i.workspace_id);this.permit(c,i);
     // A known intent returns its durable status even after new-send activation
     // is withdrawn. Current exact mutation authority is still required here.
     const prior=await this.access.commandBoundary(actor,i.workspace_id,c,action[i.business_payload.operation],i.resource,i.environment,()=>{},
       db=>this.store.keyed(db,i.workspace_id,i.business_payload.idempotency_key));
-    if(prior){if(prior.actor!==actor.user_id||prior.hash!==hash)throw new CommandError("COMMAND_IDEMPOTENCY_CONFLICT");return this.mutationStatus(actor,i,c,prior.id);}
+    if(prior){if(prior.actor!==actor.user_id||prior.hash!==hash)throw new CommandError("COMMAND_IDEMPOTENCY_CONFLICT");
+      return this.replayed(await this.mutationStatus(actor,i,c,prior.id),true);}
     const a=await this.prepare(actor,i,c);
     if(digest!==previewHash(a))throw new CommandError("COMMAND_PREVIEW_CHANGED");
     const claimed=await this.access.commandBoundary(actor,i.workspace_id,c,action[i.business_payload.operation],i.resource,i.environment,
@@ -139,7 +142,8 @@ export class ExecutionCommandService {
         const record=await this.store.insert(db,actor.user_id,i,hash,a);
         return {record,attempt:await this.store.claim(db,record)};
       });
-    if(!claimed.attempt)return this.mutationStatus(actor,i,c,claimed.record.id);
+    // Another call owns the send for this key: this one is the stored answer, not a send.
+    if(!claimed.attempt)return this.replayed(await this.mutationStatus(actor,i,c,claimed.record.id),true);
     let sent:SourceCommandResult|null=null;
     try {
       // Last current Portal check before entering the separately authenticated
@@ -154,7 +158,11 @@ export class ExecutionCommandService {
       {...old.status,delivery:"DELIVERY_UNKNOWN",next_action:"QUERY_SAME_INTENT"});}
     catch {result=await this.store.update(i.workspace_id,claimed.record.id,claimed.attempt,old=>({...old.status,delivery:"DELIVERY_UNKNOWN",next_action:"QUERY_SAME_INTENT"}));}
     const current=await this.access.confirmReadContext(actor,i.workspace_id,c);this.permit(current,i);
-    return this.publishRecord(result,i);
+    return this.replayed(this.publishRecord(result,i),false);
+  }
+  /** BE-P13: `CommandStatus` cannot say "this call did not send". Only the submit response carries it. */
+  private replayed(status:PublicCommandStatus,replayed:boolean):SubmitCommandStatus {
+    return submitCommandStatus.parse({...status,replayed});
   }
   /** Current mutation authority is checked by the caller; immutable stored
    * provenance still must agree before its currency can be disclosed. */
@@ -187,7 +195,7 @@ export class ExecutionCommandService {
   }
   async status(actor:AccessActor,workspace:string,id:string) {
     return this.storedReport(actor,workspace,id,({intent,status})=>
-      publicCommandStatus.parse({...status,currency:intent.business_payload.currency}));
+      toPublicCommandStatus(status,intent.business_payload.currency));
   }
   /** Current-authorized local presentation only. No command/provider dispatch,
    * recovery, status update, event or audit write. The original author may differ

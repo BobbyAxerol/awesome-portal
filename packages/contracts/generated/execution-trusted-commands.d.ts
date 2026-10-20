@@ -437,6 +437,12 @@ export interface components {
             profile_ref: string | null;
             approval_required: boolean | null;
             approval_gate: ("R1" | "R2" | "CANARY" | "LIVE" | "CAPITAL") | null;
+            cost_impact: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "NO_COST_OR_IMPACT_SOURCE";
+            };
             /** @constant */
             business_applied: false;
             /** @constant */
@@ -484,6 +490,94 @@ export interface components {
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
             currency: string;
+            source_rejection: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON";
+            };
+            venue_fill: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+                quantities: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES";
+                quantities: null;
+            };
+        };
+        /** @description The submit response (200): a CommandStatus plus `replayed`. replayed is true when this call is the stored answer for an idempotency key that already produced a command (a repeat, or a concurrent identical submit that did not send), false when this call originated the command. It is present ONLY here; GET status, reconcile, the collection and the workflow never carry it. source_rejection and venue_fill are typed absences: the published source result contains no rejection reason and no fill quantities, so they say NOT_PUBLISHED, never a guess. */
+        CommandSubmitResult: {
+            /** @constant */
+            schema_version: "portal.execution.command-status.v1";
+            command_id: string;
+            /** @enum {string} */
+            operation: "FUND" | "INITIAL_GRANT" | "TOP_UP" | "IMMEDIATE_DECREASE" | "RECALL_PARTIAL" | "RECALL_FULL" | "ADJUST_TARGET_BUDGET" | "SET_ROOT_LIMIT";
+            resource: {
+                /** @enum {string} */
+                kind: "ROOT" | "PORTFOLIO" | "DEPLOYMENT";
+                id: string;
+            };
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            profile_ref: string;
+            /** @enum {string} */
+            delivery: "PREPARED" | "SENDING" | "ACKNOWLEDGED" | "DELIVERY_UNKNOWN" | "FAILED_BEFORE_SEND";
+            business: {
+                /** @enum {string} */
+                state: "UNKNOWN" | "APPLIED" | "PARTIALLY_APPLIED" | "WAITING_ENCUMBRANCE" | "CANCELLED" | "PARTIALLY_APPLIED_CANCELLED" | "REJECTED";
+                receipt_ref: string | null;
+                source_event_ref: string | null;
+                revision: string | null;
+                amounts: {
+                    requested: string;
+                    applied: string;
+                    pending: string;
+                    cancelled: string;
+                    rejected: string;
+                } | null;
+            };
+            /** @enum {string} */
+            projection: "UNKNOWN" | "CURRENT" | "CATCHING_UP" | "STALE" | "UNAVAILABLE";
+            /** @enum {string} */
+            venue: "NOT_APPLICABLE" | "UNKNOWN" | "PENDING" | "ACKNOWLEDGED" | "FILLED" | "REJECTED";
+            /** @enum {string} */
+            next_action: "REVIEW_PREVIEW" | "QUERY_SAME_INTENT" | "REVIEW_RECEIPT" | "REVIEW_BLOCKER";
+            created_at_ms: number;
+            updated_at_ms: number;
+            /** @enum {string} */
+            authority: "OWNER_VERIFIED" | "TEST_ONLY";
+            currency: string;
+            source_rejection: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON";
+            };
+            venue_fill: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+                quantities: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES";
+                quantities: null;
+            };
+            replayed: boolean;
         };
         CommandCollectionQuery: {
             workspace_id: string;
@@ -778,7 +872,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CommandStatus"];
+                    "application/json": components["schemas"]["CommandSubmitResult"];
                 };
             };
             /** @description Closed input / current authority / correlation / capacity failure. Never blindly retry; query same intent. */

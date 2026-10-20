@@ -13,6 +13,7 @@ import { newUlid } from "../id";
 import { ProductAuditRepository } from "../repos/outbox";
 import { EXECUTION_COMMAND_CATALOG } from "./catalog.generated";
 import { f0ApplyDecision } from "./f0-apply.contract";
+import { executionCommandPlanResponse } from "./f0-plan.contract";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   ExecutionCommandCatalogueQuery,
@@ -77,6 +78,8 @@ function response(plan: ExecutionCommandPlanRecord, replayed: boolean) {
     source_side_effect_requested: false,
     payload_storage_policy: "HASH_ONLY_NO_RAW",
     current_primitive: currentPrimitive,
+    // FE-020: no plan carries a cost, fee or impact estimate. A typed absence, never a computed value.
+    cost_impact: { state: "NOT_PUBLISHED" as const, reason: "NO_COST_OR_IMPACT_SOURCE" as const },
     replayed,
   };
 }
@@ -393,7 +396,8 @@ export class ExecutionOperationsService {
         409,
       );
     }
-    return response(created.record, !created.created);
+    // The wire is validated against the same parser the published schema mirrors.
+    return executionCommandPlanResponse.parse(response(created.record, !created.created));
   }
 
   /**

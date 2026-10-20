@@ -1,0 +1,36 @@
+{
+  "schema_version": "execution.command-plan.v1",
+  "operation_id": "op_01K3COMMANDPLAN000000000001",
+  "command_type": "EXECUTION_COMMAND",
+  "command_version": 1,
+  "command_key": "ops/emergency-close",
+  "risk_tier": "R3_LIVE_PROTECTIVE",
+  "payload_hash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "plan_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "status": "BLOCKED",
+  "blockers": [
+    "COMMAND_RELAY_DISABLED",
+    "N16B_RUNTIME_ACTIVATION_PENDING",
+    "OWNER_REVIEW_REQUIRED"
+  ],
+  "warnings": [],
+  "apply_token": null,
+  "expires_at": "2026-08-22T12:05:00Z",
+  "relay_capability": "DISABLED",
+  "source_side_effect_requested": false,
+  "payload_storage_policy": "HASH_ONLY_NO_RAW",
+  "current_primitive": {
+    "id": "live.emergency-close",
+    "source_environment": "LIVE_FULL",
+    "target_types": [
+      "ACCOUNT"
+    ],
+    "runtime_active": false,
+    "source_side_effect_requested": false
+  },
+  "cost_impact": {
+    "state": "NOT_PUBLISHED",
+    "reason": "NO_COST_OR_IMPACT_SOURCE"
+  },
+  "replayed": false
+}

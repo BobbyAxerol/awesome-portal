@@ -478,6 +478,12 @@ export interface components {
             profile_ref: string | null;
             approval_required: boolean | null;
             approval_gate: ("R1" | "R2" | "CANARY" | "LIVE" | "CAPITAL") | null;
+            cost_impact: {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "NO_COST_OR_IMPACT_SOURCE";
+            };
             /** @constant */
             business_applied: false;
             /** @constant */
@@ -525,6 +531,28 @@ export interface components {
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
             currency: string;
+            source_rejection: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON";
+            };
+            venue_fill: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+                quantities: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES";
+                quantities: null;
+            };
         };
         WorkflowContext: {
             workspace_id: string;

@@ -44,7 +44,16 @@
       "created_at_ms": 1792100000000,
       "updated_at_ms": 1792100000000,
       "authority": "TEST_ONLY",
-      "currency": "USDT"
+      "currency": "USDT",
+      "source_rejection": {
+        "state": "NOT_APPLICABLE",
+        "reason": null
+      },
+      "venue_fill": {
+        "state": "NOT_PUBLISHED",
+        "reason": "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES",
+        "quantities": null
+      }
     },
     "effect_kind": "MANAGEMENT_BUDGET",
     "physical_transfer_performed": false,

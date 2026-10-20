@@ -155,7 +155,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CommandStatus"
+                  "$ref": "#/components/schemas/CommandSubmitResult"
                 }
               }
             }
@@ -2392,6 +2392,22 @@
               }
             ]
           },
+          "cost_impact": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "state": {
+                "const": "NOT_PUBLISHED"
+              },
+              "reason": {
+                "const": "NO_COST_OR_IMPACT_SOURCE"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ]
+          },
           "business_applied": {
             "const": false
           },
@@ -2408,6 +2424,7 @@
           "profile_ref",
           "approval_required",
           "approval_gate",
+          "cost_impact",
           "business_applied",
           "reserved"
         ]
@@ -2641,6 +2658,86 @@
             "maxLength": 512,
             "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
             "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+          },
+          "source_rejection": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_APPLICABLE"
+                  },
+                  "reason": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason": {
+                    "const": "SOURCE_RESULT_HAS_NO_REJECTION_REASON"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason"
+                ]
+              }
+            ]
+          },
+          "venue_fill": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_APPLICABLE"
+                  },
+                  "reason": {
+                    "type": "null"
+                  },
+                  "quantities": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason",
+                  "quantities"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason": {
+                    "const": "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES"
+                  },
+                  "quantities": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason",
+                  "quantities"
+                ]
+              }
+            ]
           }
         },
         "required": [
@@ -2658,9 +2755,347 @@
           "created_at_ms",
           "updated_at_ms",
           "authority",
-          "currency"
+          "currency",
+          "source_rejection",
+          "venue_fill"
         ],
         "description": "Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema."
+      },
+      "CommandSubmitResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.command-status.v1"
+          },
+          "command_id": {
+            "type": "string",
+            "pattern": "^ecm_[a-f0-9]{32}$"
+          },
+          "operation": {
+            "type": "string",
+            "enum": [
+              "FUND",
+              "INITIAL_GRANT",
+              "TOP_UP",
+              "IMMEDIATE_DECREASE",
+              "RECALL_PARTIAL",
+              "RECALL_FULL",
+              "ADJUST_TARGET_BUDGET",
+              "SET_ROOT_LIMIT"
+            ]
+          },
+          "resource": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ROOT",
+                  "PORTFOLIO",
+                  "DEPLOYMENT"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "kind",
+              "id"
+            ]
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "profile_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "delivery": {
+            "type": "string",
+            "enum": [
+              "PREPARED",
+              "SENDING",
+              "ACKNOWLEDGED",
+              "DELIVERY_UNKNOWN",
+              "FAILED_BEFORE_SEND"
+            ]
+          },
+          "business": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "state": {
+                "type": "string",
+                "enum": [
+                  "UNKNOWN",
+                  "APPLIED",
+                  "PARTIALLY_APPLIED",
+                  "WAITING_ENCUMBRANCE",
+                  "CANCELLED",
+                  "PARTIALLY_APPLIED_CANCELLED",
+                  "REJECTED"
+                ]
+              },
+              "receipt_ref": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source_event_ref": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "revision": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^(?:0|[1-9][0-9]{0,17}|[1-8][0-9]{18}|9[0-1][0-9]{17}|92[0-1][0-9]{16}|922[0-2][0-9]{15}|9223[0-2][0-9]{14}|92233[0-6][0-9]{13}|922337[0-1][0-9]{12}|92233720[0-2][0-9]{10}|922337203[0-5][0-9]{9}|9223372036[0-7][0-9]{8}|92233720368[0-4][0-9]{7}|922337203685[0-3][0-9]{6}|9223372036854[0-6][0-9]{5}|92233720368547[0-6][0-9]{4}|922337203685477[0-4][0-9]{3}|9223372036854775[0-7][0-9]{2}|922337203685477580[0-6]|9223372036854775807)$",
+                    "description": "PM HTTP adapter decimal-counter string; maximum 9223372036854775807. Never a JS Number."
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "amounts": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "requested": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      "applied": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      "pending": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      "cancelled": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      },
+                      "rejected": {
+                        "type": "string",
+                        "maxLength": 128,
+                        "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      }
+                    },
+                    "required": [
+                      "requested",
+                      "applied",
+                      "pending",
+                      "cancelled",
+                      "rejected"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "state",
+              "receipt_ref",
+              "source_event_ref",
+              "revision",
+              "amounts"
+            ]
+          },
+          "projection": {
+            "type": "string",
+            "enum": [
+              "UNKNOWN",
+              "CURRENT",
+              "CATCHING_UP",
+              "STALE",
+              "UNAVAILABLE"
+            ]
+          },
+          "venue": {
+            "type": "string",
+            "enum": [
+              "NOT_APPLICABLE",
+              "UNKNOWN",
+              "PENDING",
+              "ACKNOWLEDGED",
+              "FILLED",
+              "REJECTED"
+            ]
+          },
+          "next_action": {
+            "type": "string",
+            "enum": [
+              "REVIEW_PREVIEW",
+              "QUERY_SAME_INTENT",
+              "REVIEW_RECEIPT",
+              "REVIEW_BLOCKER"
+            ]
+          },
+          "created_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "updated_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "authority": {
+            "type": "string",
+            "enum": [
+              "OWNER_VERIFIED",
+              "TEST_ONLY"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
+            "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+          },
+          "source_rejection": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_APPLICABLE"
+                  },
+                  "reason": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason": {
+                    "const": "SOURCE_RESULT_HAS_NO_REJECTION_REASON"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason"
+                ]
+              }
+            ]
+          },
+          "venue_fill": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_APPLICABLE"
+                  },
+                  "reason": {
+                    "type": "null"
+                  },
+                  "quantities": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason",
+                  "quantities"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason": {
+                    "const": "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES"
+                  },
+                  "quantities": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason",
+                  "quantities"
+                ]
+              }
+            ]
+          },
+          "replayed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "schema_version",
+          "command_id",
+          "operation",
+          "resource",
+          "environment",
+          "profile_ref",
+          "delivery",
+          "business",
+          "projection",
+          "venue",
+          "next_action",
+          "created_at_ms",
+          "updated_at_ms",
+          "authority",
+          "currency",
+          "source_rejection",
+          "venue_fill",
+          "replayed"
+        ],
+        "description": "The submit response (200): a CommandStatus plus `replayed`. replayed is true when this call is the stored answer for an idempotency key that already produced a command (a repeat, or a concurrent identical submit that did not send), false when this call originated the command. It is present ONLY here; GET status, reconcile, the collection and the workflow never carry it. source_rejection and venue_fill are typed absences: the published source result contains no rejection reason and no fill quantities, so they say NOT_PUBLISHED, never a guess."
       },
       "CommandCollectionQuery": {
         "type": "object",

@@ -3,6 +3,7 @@
  * Relations/acceptance/receipt rows are explicitly TEST_ONLY synthetic facts,
  * NOT native PM authority, economic execution, cryptographic qualification,
  * grant-issuance HTTP or a held cross-authority COMMIT fence. */
+import { toPublicCommandStatus } from "../src/execution-v2/command.contract";
 import { Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
@@ -175,7 +176,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       ? (await f.commands.workflow(actor, f.workspace, record.id)).status
       : (await f.commands.collection(actor, { workspace_id: f.workspace, resource_kind: f.resource.kind, resource_id: f.resource.id,
         environment: f.environment, limit: 25 })).items[0];
-    expect(await request()).toEqual({...record.status,currency:record.intent.business_payload.currency});
+    expect(await request()).toEqual(toPublicCommandStatus(record.status,record.intent.business_payload.currency));
     const original = f.access.confirmReadContext.bind(f.access); let captured = false;
     const delay = vi.spyOn(f.access, "confirmReadContext").mockImplementation(async (...args) => {
       const row = (await ctx.pool.query(`UPDATE auth_sessions SET idle_expires_at=clock_timestamp()+interval '1500 milliseconds'
@@ -192,7 +193,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
         .rejects.toMatchObject({ code: "CURRENT_ACTOR_AUTHORITY_REQUIRED", status: 403 });
       expect(captured).toBe(true);
     } finally { delay.mockRestore(); }
-    expect(await f.commands.status(viewer.actor, f.workspace, record.id)).toEqual({...record.status,currency:record.intent.business_payload.currency});
+    expect(await f.commands.status(viewer.actor, f.workspace, record.id)).toEqual(toPublicCommandStatus(record.status,record.intent.business_payload.currency));
     expect(f.commandTrust.prepare).not.toHaveBeenCalled(); expect(f.commandTrust.lookup).not.toHaveBeenCalled();
     expect(f.commandTrust.send).not.toHaveBeenCalled();
   }, 10_000);
@@ -216,9 +217,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       events:(await ctx.pool.query("SELECT count(*)::int AS n FROM execution_trusted_command_events WHERE command_id=$1",[record.id])).rows[0].n});
     const before=await snapshot();expect(before.row.status).not.toHaveProperty("currency");
     await mounted(f,async http=>{
-      expect(page(await http.get()).items[0]).toEqual({...record.status,currency:"USDT"});
+      expect(page(await http.get()).items[0]).toEqual(toPublicCommandStatus(record.status,"USDT"));
       const detail=await http.detail(record.id);expect(detail.statusCode).toBe(200);
-      expect(detail.json()).toEqual({...record.status,currency:"USDT"});
+      expect(detail.json()).toEqual(toPublicCommandStatus(record.status,"USDT"));
     });
     expect(await snapshot()).toEqual(before);
     expect(f.commandTrust.prepare).not.toHaveBeenCalled();expect(f.commandTrust.send).not.toHaveBeenCalled();expect(f.commandTrust.lookup).not.toHaveBeenCalled();
@@ -290,7 +291,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
     const f = await fixture(), record = await seed(f);
     await f.repo.saveGrant({ ...f.grant, revoked_at_ms: Date.now(), revision: next() });
     await delegated(f, "ALLOW");
-    await mounted(f, async http => { expect(page(await http.get()).items).toEqual([{...record.status,currency:record.intent.business_payload.currency}]);
+    await mounted(f, async http => { expect(page(await http.get()).items).toEqual([toPublicCommandStatus(record.status,record.intent.business_payload.currency)]);
       expect((await http.detail(record.id)).statusCode).toBe(200); });
   });
 
@@ -492,7 +493,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       const result = await f.commands.collection(actor, { workspace_id: f.workspace, resource_kind: f.resource.kind,
         resource_id: f.resource.id, environment: f.environment, limit: 25 });
       expect(delayed).toBe(true); expect(Date.now()).toBeGreaterThan(initialDeadline!);
-      expect(result.items).toEqual([{...record.status,currency:record.intent.business_payload.currency}]);
+      expect(result.items).toEqual([toPublicCommandStatus(record.status,record.intent.business_payload.currency)]);
     } finally { scan.mockRestore(); capture.mockRestore(); }
     expect(f.commandTrust.prepare).not.toHaveBeenCalled(); expect(f.commandTrust.send).not.toHaveBeenCalled();
     expect(f.commandTrust.lookup).not.toHaveBeenCalled();
@@ -565,7 +566,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
       FEATURE_EXECUTION_LOCAL_PROJECTION: "true", EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID: source };
     const detail = vi.spyOn(f.commands, "status"), preview = vi.spyOn(f.commands, "preview");
     try { await mounted(f, async http => {
-      expect(page(await http.get()).items).toEqual([{...record.status,currency:record.intent.business_payload.currency}]);
+      expect(page(await http.get()).items).toEqual([toPublicCommandStatus(record.status,record.intent.business_payload.currency)]);
       expect((await http.detail(record.id)).statusCode).toBe(404); expect(detail).not.toHaveBeenCalled();
       expect((await http.preview()).statusCode).toBe(403); expect(preview).not.toHaveBeenCalled();
     }, config); } finally { detail.mockRestore(); preview.mockRestore(); }

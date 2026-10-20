@@ -113,7 +113,9 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 real PostgreSQL transpo
   it("same-intent submit replay keeps mutation authority; independent status still needs report authority",async()=>{
     const f=await fixture(),first=await f.submit();
     await f.repo.saveGrant({...f.grants[1],revoked_at_ms:Date.now(),revision:next()});
-    expect(await f.submit()).toEqual(first);
+    // BE-P13: the repeat is the stored answer and says so; the originating call did not.
+    expect(first.replayed).toBe(false);
+    expect(await f.submit()).toEqual({...first,replayed:true});
     await expect(f.service.status(actor,f.workspace,first.command_id)).rejects.toMatchObject({status:404});
     expect(f.counts().sends).toBe(1);
   });
@@ -122,7 +124,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 real PostgreSQL transpo
     f.trust.send=async input=>{await original(input);throw new Error("TEST_ONLY lost response after source commit");};
     const first=await f.submit();expect(first).toMatchObject({delivery:"DELIVERY_UNKNOWN",business:{state:"UNKNOWN"}});
     const restarted=new ExecutionCommandService(ctx.pool,f.access,f.trust,true);
-    expect(await restarted.submit(actor,f.intent,(await f.preview()).preview_digest!)).toEqual(first);
+    expect(await restarted.submit(actor,f.intent,(await f.preview()).preview_digest!)).toEqual({...first,replayed:true});
     const fixed=await restarted.reconcile(actor,f.workspace,first.command_id);
     expect(fixed).toMatchObject({delivery:"ACKNOWLEDGED",business:{state:"APPLIED"},projection:"CATCHING_UP"});
     expect(f.counts()).toEqual({sends:1,lookups:1,effects:1});
