@@ -7,6 +7,7 @@
  * | the portfolio resource | `getPortfolio360Resource` | always |
  * | capital, per environment | `getPortfolioCapital` x3 | always (a separate book per environment, never folded) |
  * | equity series | `getFinancialChart` (portfolio, equity) | once the resource names its environment |
+ * | NAV series | `getManagerSeries` (one PORTFOLIO subject, metric NAV, the page window, the selected environment) | once the resource names its environment |
  * | capital ledger, per environment | `getCapitalLedger` | the Allocations tab has been opened; the selected environment's also from the start (the Overview's event ribbon sits on the equity) |
  * | correlation | `getCorrelation` | the Risk tab has been opened |
  * | operations on this portfolio | `listOperationalQueueV2` | the People tab has been opened |
@@ -22,6 +23,8 @@ import { useMemo } from "react";
 
 import { environmentsOf, readDeployments, type Environment } from "./model";
 import { useRead } from "../useRead";
+import type { ManagerSeriesQuery } from "../../../readers/managerSeries";
+import { useManagerSeries } from "../../series/useManagerSeries";
 
 const DAY_MS = 86_400_000;
 const WINDOW_DAYS: Readonly<Record<string, number | null>> = { "7D": 7, "30D": 30, "90D": 90, ALL: null };
@@ -66,6 +69,14 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     }),
   );
 
+  // FE-013: the portfolio's NAV series (BE-P4), for the selected environment and the page's window, through the port.
+  const navWindow = windowLabel === "7D" || windowLabel === "30D" || windowLabel === "90D" || windowLabel === "ALL" ? windowLabel : null;
+  const navQuery = useMemo<ManagerSeriesQuery | null>(
+    () => (navWindow === null ? null : { environment: selected, metric: "NAV", window: navWindow, subjects: [{ subjectType: "PORTFOLIO", subjectId: portfolioId }], ...(ready?.workspaceId ? { workspaceId: ready.workspaceId } : {}) }),
+    [selected, navWindow, portfolioId, ready?.workspaceId],
+  );
+  const nav = useManagerSeries(api, enabled && ready !== null, navQuery);
+
   const ledgers = {
     live: useRead(api, enabled && (visited.allocations || selected === "live") && present.includes("live"), `ledger|${portfolioId}|live`, (scoped) => scoped.getCapitalLedger(portfolioId, "live")),
     paper: useRead(api, enabled && (visited.allocations || selected === "paper") && present.includes("paper"), `ledger|${portfolioId}|paper`, (scoped) => scoped.getCapitalLedger(portfolioId, "paper")),
@@ -86,7 +97,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     (scoped) => scoped.listOperationalQueueV2({ targetType: "PORTFOLIO", targetId: portfolioId, limit: 10 }),
   );
 
-  return { resource, capital, chart, ledgers, correlation, operations, selected, range, present };
+  return { resource, capital, chart, nav, ledgers, correlation, operations, selected, range, present };
 }
 
 export type PortfolioReads = ReturnType<typeof usePortfolioReads>;
