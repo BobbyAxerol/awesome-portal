@@ -52,7 +52,7 @@ import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV
 import type { PendingRecallDiscoveryQuery, PendingRecallDiscoveryRead } from "../v2/readers/pendingRecallDiscovery";
 import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligibility";
 import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
-import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
+import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
 import type { TypedCondition } from "../components/conditions";
@@ -559,6 +559,13 @@ export interface ExecutionApi {
    * step-up state (`portal.self-eligibility-batch.v1`). Advisory; the single-resource `portal.self-eligibility.v1` is unchanged.
    */
   getSelfEligibilityBatch(request: EligibilityBatchRequest): Promise<Result<AccessEligibilityBatchRead>>;
+  /**
+   * `POST /api/admin/profile-access/v2/step-up` (FE-015/060, BE-P7): the caller re-enters their OWN password to open THIS session's
+   * step-up for one proof family (`portal.access-step-up.v1`). The body always names the family. CSRF and a fresh idempotency key
+   * travel as headers; the browser adds `Origin`. The password is an argument of this call only: the adapter puts it in the JSON
+   * body and keeps it nowhere else. A 200 is not an `ACTIVE` row and not a grant: re-read the eligibility batch.
+   */
+  postSessionStepUp(input: AccessStepUpInput): Promise<SessionStepUpOutcome>;
   /**
    * `GET /api/v1/execution/governance/approvals/request-lookup` (FE-069): what replaying a `request_key` would do, for the caller's
    * own requests (`governance.approval-request-lookup.v1`). A read: it writes nothing and creates nothing.

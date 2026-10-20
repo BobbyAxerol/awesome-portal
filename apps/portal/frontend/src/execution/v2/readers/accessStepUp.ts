@@ -54,6 +54,19 @@ export function accessStepUpAnswers(stepUp: AccessStepUp, family: StepUpFamily):
   return stepUp.family === family;
 }
 
+/**
+ * What the port answers for the POST. Typed, never thrown:
+ * - `ok`: a 200 whose body read AND is for the family asked (the adapter checks `accessStepUpAnswers`). It is not an `ACTIVE` row;
+ *   the caller re-reads the eligibility batch;
+ * - `refused`: the Portal answered with a problem. `code` is the closed-vocabulary code it sent (or `null`), `status` the HTTP status.
+ *   Nothing was stored for this session;
+ * - `unavailable`: nothing usable came back (not sent, network, unreadable body, another family). The outcome may be unknown.
+ */
+export type SessionStepUpOutcome =
+  | { kind: "ok"; stepUp: AccessStepUp }
+  | { kind: "refused"; status: number; code: string | null }
+  | { kind: "unavailable"; reason: string };
+
 export interface AccessStepUpInput {
   workspaceId: string;
   family: StepUpFamily;

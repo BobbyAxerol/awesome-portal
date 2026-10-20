@@ -33,6 +33,7 @@ import {
   type Principal,
 } from "./laneModel";
 import type { EvidenceState } from "./EvidenceFrame";
+import { StepUpBlock, type StepUpBlockProps } from "./StepUp";
 
 export interface RailTarget {
   kind: EvidenceKind | "waiver";
@@ -153,9 +154,14 @@ export interface RailProps {
   evidence: EvidenceState;
   principal: Principal;
   workspaceId?: string;
+  /**
+   * The step-up target of this rail's decision: the workspace, environment, resource and action whose batch row the block reads
+   * (FE-015/060). Absent (today: no cockpit decision names a capital action) the rail keeps its informational "Not published" block.
+   */
+  stepUp?: Omit<StepUpBlockProps, "api">;
 }
 
-export function Rail({ api, target, evidence, principal, workspaceId }: RailProps) {
+export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: RailProps) {
   const noteId = useId();
   const noteReasonId = useId();
   const summary = summarizeEvidence(evidence.status === "ready" ? evidence.data : null);
@@ -223,7 +229,9 @@ export function Rail({ api, target, evidence, principal, workspaceId }: RailProp
             </div>
           )}
 
-          {spec.stepUp ? (
+          {spec.stepUp && stepUp !== undefined ? (
+            <StepUpBlock api={api} {...stepUp} />
+          ) : spec.stepUp ? (
             <div className="exec-ck-stepup" role="group" aria-label="Step-up confirmation">
               <Flag kind="approval" label="Step-up" size="sm" />
               <p>Requirement: <Np text={NOT_PUBLISHED.stepUp} /></p>
