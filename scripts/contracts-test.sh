@@ -128,6 +128,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/read-publication.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-model.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-dataset-invariants.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-query-p1.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score-publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score-revision.contract.ts" \
