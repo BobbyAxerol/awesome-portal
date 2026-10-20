@@ -855,13 +855,11 @@ const DRAWERS: readonly DrawerCase[] = [
 ];
 
 /**
- * Drawers in which some control inside swallows Escape today (name -> why). The row asserts the swallowing is STILL there
- * so the day it is fixed this row turns red and is deleted. See the evidence README, finding F-1.
+ * Drawers in which some control inside swallows Escape (name -> why). Empty since F-1 was fixed (TargetLink and
+ * IncidentLinks stop only Enter and Space); a new swallowing control fails the drawer test, and a row added here must
+ * be a defect that still reproduces.
  */
-const KNOWN_ESC_SWALLOWED: Readonly<Record<string, string>> = {
-  operations: "TargetLink.tsx onKeyDown stops every key, Escape included, while a target link has focus (F-1)",
-  incident: "same TargetLink in the incident drawer (F-1)",
-};
+const KNOWN_ESC_SWALLOWED: Readonly<Record<string, string>> = {};
 
 // 1600 docks the panel beside the page (the modal overlay is for 1500 and below); 1440 / 1024 / 390 overlay it.
 const DRAWER_WIDTHS = [

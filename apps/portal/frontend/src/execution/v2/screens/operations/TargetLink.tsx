@@ -17,7 +17,11 @@ import type { TargetTypeV2 } from "../../readers/operationalQueue";
 import { withContext } from "../../urlState";
 import { TARGET_LABEL } from "./outcome";
 
-const stop = (event: MouseEvent | KeyboardEvent) => event.stopPropagation();
+const stop = (event: MouseEvent) => event.stopPropagation();
+/** Enter and Space would also open the row; Escape and Tab must reach the drawer (F-1), so only these two are stopped. */
+const stopActivation = (event: KeyboardEvent) => {
+  if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+};
 
 export interface TargetLinkProps {
   type: TargetTypeV2;
@@ -33,7 +37,7 @@ export function TargetLink({ type, id, environment, className }: TargetLinkProps
   const href = targetHrefFor(type, id, environment);
   if (href === null) return <span className={className}>{text}</span>;
   return (
-    <Link className={className} to={withContext(href, params)} onClick={stop} onKeyDown={stop}>
+    <Link className={className} to={withContext(href, params)} onClick={stop} onKeyDown={stopActivation}>
       {text}
     </Link>
   );
