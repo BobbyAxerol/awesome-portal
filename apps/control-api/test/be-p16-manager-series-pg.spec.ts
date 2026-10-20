@@ -339,7 +339,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 Manager series writer on
       expect(await consumerFor(source, series).tick()).toMatchObject({ state: "COMMITTED", committed: 1, acknowledged: 1 });
       expect(await count("execution_manager_model_revisions")).toBe(1);
       expect(await count("execution_manager_series_revisions")).toBe(0);
-      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_BOOM", last_error_revision: "TEST_ONLY:r0" });
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPLAY_REFUSED", last_error_revision: "TEST_ONLY:r0" });
       await pool.query(`DROP TRIGGER series_boom ON execution_manager_series_revisions`);
     });
     it("when the source has nothing new the idle tick backfills retained revisions a bounded number at a time", async () => {
