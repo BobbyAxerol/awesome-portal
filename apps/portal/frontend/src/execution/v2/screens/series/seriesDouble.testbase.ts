@@ -35,6 +35,7 @@ export function seriesBodyFor(params: URLSearchParams, variant: SeriesVariant): 
   const source = variant === "unavailable" ? FIXTURE_UNAVAILABLE : variant === "empty" ? FIXTURE_EMPTY : variant === "mixed" ? FIXTURE_MIXED : FIXTURE_POPULATED;
   const body: Draft = fixtureValue(source);
   body.environment = params.get("environment") ?? body.environment;
+  body.workspace_id = params.get("workspace_id") ?? body.workspace_id;
   body.metric = metric;
   body.selected_window = { ...body.selected_window, requested: window };
   const published = body.series as Draft[];

@@ -2,8 +2,10 @@
  * Overview: identity KPIs from published facts, the equity series, capital as
  * current facts, concentration and what needs attention.
  *
- * The money KPIs of the hi-fi (NAV, Net PnL, Return, Drawdown) are cells that
- * name the request that will publish them. The equity series is the retained
+ * NAV (FE-013) is the portfolio's published NAV series (`getManagerSeries`, BE-P4): AVAILABLE draws the line and the NAV
+ * cells are its latest point exactly as sent, with the methodology and window in the caption; EMPTY says "No points in this
+ * window"; UNAVAILABLE prints the typed reason (a source that is not published keeps `Not published (FE-013)`).
+ * Net PnL, Return and Drawdown are cells that name the request that will publish them. The equity series is the retained
  * snapshot series the EDS-07 chart route serves: it is account equity, not
  * NAV, and the caption says so; a drawdown pane is absent for the same reason
  * the KPI is.
@@ -16,6 +18,10 @@ import { Flag } from "../../../Flag";
 import { formatAsOf } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
 import { EXPORT_REASON, PF_FE, npReason, npText, type Unpublished } from "../fe";
+import { utcStamp } from "../../../../time";
+import { showDecimal } from "../../../charts";
+import { ManagerSeriesPanel } from "../../series/ManagerSeriesPanel";
+import { chartUnit, isDescribed, latestPoint, UNAVAILABLE_SENTENCE } from "../../series/seriesModel";
 import { Absent, MoneyList, Np, envWord } from "../format";
 import type { TabCtx } from "./ctx";
 import { FlowRibbonChips, FlowRibbonLanes, FlowRibbonNotes, useRibbonLanes } from "./FlowRibbon";
@@ -23,6 +29,36 @@ import { chartState, equitySeries, serverEnvelope } from "./model";
 import { InternalLink, PfKpi, PfKpiStrip, ReadGate } from "./parts";
 
 import "../../../css/portfolios.css";
+
+/**
+ * The NAV figure: the latest point of the portfolio's published NAV series, exactly as sent, with its methodology. EMPTY is `No points
+ * in this window`; a series whose source is not published (or a read that has not answered) keeps `Not published (FE-013)`; any other
+ * typed reason is printed with its code. Never a derived or defaulted number, never added across Real-funded and Simulated.
+ */
+function NavFigure({ ctx, withNote = true }: { ctx: TabCtx; withNote?: boolean }) {
+  const read = ctx.reads.nav;
+  const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+  const entry = series?.series[0];
+  if (series === null || entry === undefined || (entry.state === "UNAVAILABLE" && entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED")) return <Np fact={PF_FE.nav} />;
+  if (entry.state === "UNAVAILABLE") return <Absent reason={`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`} />;
+  if (!isDescribed(entry)) return null;
+  const last = latestPoint(entry);
+  if (last === null) return <span className="exec-pf-dim">No points in this window</span>;
+  return (
+    <span title={last.exact}>
+      {showDecimal(last.exact, { unit: chartUnit(entry), currency: entry.currency ?? undefined })}
+      {withNote ? <small className="exec-pf-dim"> · {utcStamp(last.tsMs)}</small> : null}
+    </span>
+  );
+}
+
+function NavCard({ ctx }: { ctx: TabCtx }) {
+  return (
+    <SectionPanel title="NAV" aside={ctx.window === "ALL" ? "All history" : `Last ${ctx.window}`}>
+      <ManagerSeriesPanel label="Portfolio NAV" read={ctx.reads.nav} gapCopy={npText(PF_FE.nav)} height={220} />
+    </SectionPanel>
+  );
+}
 
 const SEGMENTS = [
   { id: "equity", label: "Equity", fact: null },
@@ -127,13 +163,13 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
 }
 
 /** The statements the hi-fi lists, in its two groups. Every figure is `Not published` with the request that will publish it. */
-const CASH_ROWS: readonly { label: string; fact: Unpublished; total?: boolean }[] = [
+const CASH_ROWS: readonly { label: string; fact: Unpublished; total?: boolean; live?: boolean }[] = [
   { label: "Initial funds", fact: PF_FE.statements },
   { label: "Added funds", fact: PF_FE.statements },
   { label: "Returned", fact: PF_FE.statements },
   { label: "Net external flows", fact: PF_FE.statements, total: true },
   { label: "Net PnL, since start", fact: PF_FE.netPnl },
-  { label: "NAV", fact: PF_FE.nav, total: true },
+  { label: "NAV", fact: PF_FE.nav, total: true, live: true },
 ];
 const BUDGET_ROWS: readonly { label: string; fact: Unpublished }[] = [
   { label: "Approved budget", fact: PF_FE.statements },
@@ -146,7 +182,7 @@ const BUDGET_ROWS: readonly { label: string; fact: Unpublished }[] = [
  * the Allocations tab's, once: it does not fit a 360px panel and printing it
  * twice made the Overview and Allocations disagree about which one was whole.
  */
-function CapitalCard() {
+function CapitalCard({ ctx }: { ctx: TabCtx }) {
   return (
     <SectionPanel title="Capital">
       <div className="exec-pf-stack">
@@ -155,7 +191,7 @@ function CapitalCard() {
           <tbody>
             <tr className="exec-pf-grp"><th colSpan={2} scope="colgroup">Cash flows</th></tr>
             {CASH_ROWS.map((row) => (
-              <tr key={row.label} data-total={row.total ? "true" : undefined}><th scope="row">{row.label}</th><td><Np fact={row.fact} /></td></tr>
+              <tr key={row.label} data-total={row.total ? "true" : undefined}><th scope="row">{row.label}</th><td>{row.live ? <NavFigure ctx={ctx} /> : <Np fact={row.fact} />}</td></tr>
             ))}
             <tr className="exec-pf-grp"><th colSpan={2} scope="colgroup">Budget · not cash</th></tr>
             {BUDGET_ROWS.map((row) => (
@@ -221,14 +257,15 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
         </PfKpi>
       </PfKpiStrip>
       <PfKpiStrip label="Performance, not yet published">
-        <PfKpi label="NAV" note="Real-funded and Simulated are never added"><Np fact={PF_FE.nav} /></PfKpi>
+        <PfKpi label="NAV" note="Real-funded and Simulated are never added"><NavFigure ctx={ctx} /></PfKpi>
         <PfKpi label={`Net PnL · ${ctx.window}`} note="After fees and funding"><Np fact={PF_FE.netPnl} /></PfKpi>
         <PfKpi label={`Return · ${ctx.window}`} note="Methodology as published per source"><Np fact={PF_FE.ret} /></PfKpi>
         <PfKpi label="Drawdown" note="Needs a NAV series"><Np fact={PF_FE.drawdown} /></PfKpi>
       </PfKpiStrip>
+      <NavCard ctx={ctx} />
       <div className="exec-pf-grid2">
         <EquityCard ctx={ctx} />
-        <CapitalCard />
+        <CapitalCard ctx={ctx} />
       </div>
       <div className="exec-pf-grid2">
         <SectionPanel title="Concentration" aside={<Np fact={PF_FE.concentration} />}>

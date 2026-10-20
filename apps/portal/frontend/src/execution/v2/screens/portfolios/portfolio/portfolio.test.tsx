@@ -11,6 +11,7 @@ import { PF, answerPortfolios } from "../../../../../../e2e/bffDoublePortfolios"
 import type { ExecutionApi } from "../../../../api/ports";
 import { V2_CAPABILITY } from "../../../shell/roleNav";
 import { makeApi, type Override } from "../harness.fixtures";
+import { seriesBodyFor, type SeriesVariant } from "../../series/seriesDouble.testbase";
 import PortfolioScreen, { PORTFOLIO_SCREEN_KEY } from "./index";
 import { incidentRoute } from "./People";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES } from "../routes";
@@ -218,6 +219,96 @@ describe("Overview", () => {
     mount(makeApi().api);
     await screen.findByRole("img", { name: /Core equity/ });
     expect(document.body.textContent).not.toMatch(/—|–|N\/A/);
+  });
+});
+
+describe("NAV (FE-013, BE-P4 manager series)", () => {
+  const serving = (variant: SeriesVariant): Override => (_method, path, search) => (path === "/manager/series"
+    ? variant.startsWith("status:") ? { status: Number(variant.slice(7)), body: { error: { code: "REFUSED", message: "refused" } } } : { status: 200, body: seriesBodyFor(search, variant) }
+    : undefined);
+  const navPanel = () => screen.getByRole("region", { name: "NAV" });
+  const kpiNav = () => within(screen.getByRole("group", { name: "Performance, not yet published" })).getByText("NAV").closest("div")!;
+  const statementNav = () => within(screen.getByRole("table", { name: "Capital statements" })).getByRole("row", { name: /^NAV/ });
+
+  it("asks for ONE portfolio's NAV in the selected environment and the page window, through the port", async () => {
+    const harness = makeApi(serving("populated"));
+    mount(harness.api, "?env=paper&window=30d");
+    await waitFor(() => expect(harness.queriesOf("/manager/series")).toHaveLength(1));
+    const query = harness.queriesOf("/manager/series")[0]!;
+    expect(Object.fromEntries(query)).toMatchObject({ metric: "NAV", window: "\"30D\"" });
+    expect(JSON.parse(query.get("subjects")!)).toEqual([{ subject_type: "PORTFOLIO", subject_id: PF.core }]);
+    expect(["live", "paper", "sandbox"]).toContain(query.get("environment"));
+  });
+
+  it("AVAILABLE draws the line with its methodology and window, and the NAV cells are the latest point as sent", async () => {
+    mount(makeApi(serving("populated")).api);
+    await ready();
+    await waitFor(() => expect(navPanel().querySelector("[data-testid='series-caption']")).not.toBeNull());
+    const caption = navPanel().querySelector("[data-testid='series-caption']")!.textContent!;
+    expect(caption).toContain("NAV in USDT");
+    expect(caption).toContain("methodology TEST_ONLY:nav-twr.v1");
+    expect(navPanel().querySelector("svg")).not.toBeNull();
+    for (const node of [kpiNav(), statementNav()]) {
+      const figure = node.querySelector("span[title]");
+      expect(figure, node.textContent ?? "").not.toBeNull();
+      expect(figure!.getAttribute("title")).toMatch(/^-?\d+(\.\d+)?$/);
+      expect(node.textContent).not.toContain("Not published");
+    }
+    // Net PnL, Return and Drawdown are not this series: they keep their request ids.
+    const strip = screen.getByRole("group", { name: "Performance, not yet published" });
+    expect(within(strip).getByText("Drawdown").closest("div")!.textContent).toContain("Not published (FE-013, FE-025)");
+  });
+
+  it("EMPTY says 'No points in this window' in the card, the KPI and the statement: no zero, no line", async () => {
+    mount(makeApi(serving("empty")).api);
+    await ready();
+    await waitFor(() => expect(navPanel().querySelector("[data-testid='series-empty']")).not.toBeNull());
+    expect(navPanel().textContent).toContain("No points in this window");
+    expect(navPanel().querySelector("svg")).toBeNull();
+    expect(kpiNav().textContent).toContain("No points in this window");
+    expect(statementNav().textContent).toContain("No points in this window");
+    expect(kpiNav().textContent).not.toMatch(/\d/);
+  });
+
+  it("UNAVAILABLE for a source that is not published keeps Not published (FE-013) and names the code", async () => {
+    mount(makeApi(serving("unavailable")).api);
+    await ready();
+    await waitFor(() => expect(navPanel().textContent).toContain("SERIES_SOURCE_NOT_PUBLISHED"));
+    expect(navPanel().textContent).toContain("Not published (FE-013)");
+    expect(kpiNav().textContent).toContain("Not published (FE-013)");
+    expect(navPanel().querySelector("svg path[data-main]")).toBeNull();
+  });
+
+  it("UNAVAILABLE for ALL prints its own typed reason in the card and the KPI, not a source gap", async () => {
+    mount(makeApi(serving("populated")).api, "?window=all");
+    await ready();
+    await waitFor(() => expect(navPanel().textContent).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED"));
+    expect(navPanel().textContent).toContain("Not available");
+    expect(kpiNav().textContent).toContain("Not available · All history is not a published window (ALL_HISTORY_WINDOW_NOT_PUBLISHED)");
+    expect(kpiNav().textContent).not.toContain("Not published");
+  });
+
+  it.each(["status:400", "status:404", "status:503"] as const)("a failed series read (%s) is typed 'Not available' in the card and leaves the rest of the Overview standing", async (variant) => {
+    mount(makeApi(serving(variant)).api);
+    await ready();
+    await waitFor(() => expect(navPanel().textContent).toContain("The series could not be read"));
+    expect(navPanel().textContent).toContain("Not available");
+    expect(navPanel().querySelector("svg path[data-main]")).toBeNull();
+    expect(kpiNav().textContent).toContain("Not published (FE-013)");
+    expect(screen.getByRole("group", { name: "Portfolio identity" })).toBeTruthy();
+  });
+
+  it("a series that answers another portfolio is refused by the port and never drawn as this one", async () => {
+    const wrongSubject: Override = (_m, path, search) => {
+      if (path !== "/manager/series") return undefined;
+      const body = seriesBodyFor(search, "populated");
+      body.series[0].subject.subject_id = "pf_someone_else";
+      return { status: 200, body };
+    };
+    mount(makeApi(wrongSubject).api);
+    await ready();
+    await waitFor(() => expect(navPanel().textContent).toContain("could not be read"));
+    expect(navPanel().querySelector("svg")).toBeNull();
   });
 });
 

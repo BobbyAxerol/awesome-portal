@@ -12,6 +12,8 @@ import { financialChartPath, readFinancialChart } from "../../../api/financialCh
 import type { ExecutionApi, Result } from "../../../api/ports";
 import { readPortfolioList, readProfileEnvelope } from "../../../api/profileRead";
 import { readOperationalQueueV2 } from "../../readers/operationalQueue";
+import { encodeManagerSeriesQuery, readManagerSeries, seriesAnswersQuery } from "../../readers/managerSeries";
+import { seriesBodyFor } from "../series/seriesDouble.testbase";
 
 export type Override = (method: string, path: string, search: URLSearchParams) => BffAnswerPortfolios | null | undefined;
 
@@ -91,6 +93,17 @@ export function makeApi(override?: Override): Harness {
       const correlation = readCorrelation(answer.body);
       const envelope = readAnalyticsEnvelope(answer.body);
       return correlation && envelope ? { ok: true as const, value: { correlation, envelope } } : unreadable("The correlation");
+    },
+    /** FE-013: the series route is in the double. Unless a test overrides it the backend answers as it does today: no series source is published. */
+    async getManagerSeries(query: Parameters<ExecutionApi["getManagerSeries"]>[0]) {
+      const search = new URLSearchParams(encodeManagerSeriesQuery(query) ?? {});
+      const answer = override?.("GET", "/manager/series", search) ?? { status: 200, body: seriesBodyFor(search, "unavailable") };
+      calls.push(`GET /manager/series?${search.toString()}`);
+      queries.push({ path: "/manager/series", search });
+      const failed = transport<NonNullable<ReturnType<typeof readManagerSeries>>>(answer, "The Manager series");
+      if (failed) return failed;
+      const read = readManagerSeries(answer.body);
+      return read !== null && read.kind === "series" && seriesAnswersQuery(read.series, query) ? { ok: true as const, value: read.series } : unreadable("The Manager series");
     },
     async listOperationalQueueV2(query: Parameters<ExecutionApi["listOperationalQueueV2"]>[0]) {
       const search = new URLSearchParams();
