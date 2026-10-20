@@ -124,7 +124,7 @@ API -> UI receipt (`REAL_READ_QUALIFIED`, owner Codex/Bobby) shows a populated N
 | contracts host vitest `execution-manager-series` (+ metric-unit block, Zod and Ajv side by side), `execution-manager-models`, `execution-manager-lifecycle` | 3 files, 156 / 156 |
 | `generate-execution-manager-series.mjs` (+ `openapi-typescript` for the d.ts) / `generate-execution-manager-models.mjs --check` | ran; every negative case proven refused before writing; both `--check` clean |
 | `tsc -p apps/control-api/tsconfig.build.json --noEmit` | exit 0 |
-| `scripts/contracts-test.sh` (docker wrapper, `/tmp/portal-heavy.lock`, once) | see the final report line |
+| `scripts/contracts-test.sh` (docker wrapper, `/tmp/portal-heavy.lock`, once) | **exit 0**, 86 files / 1,392 tests; every `--check` generator and d.ts diff clean (series d.ts included) |
 
 NOT_RUN: PostgreSQL-backed specs, the ordinary R3 hook, the Docker control-api suite, FE tests against the regenerated fixtures (FE not edited; the reader change above is owed),
 `contracts-snapshot.json` and EDS-12/N29 regeneration (lead), adding the new fixtures to `snapshot.py`'s TRACKED list (lead, with the snapshot regeneration; the BE-P6 negative-zero fixture is not tracked either).
