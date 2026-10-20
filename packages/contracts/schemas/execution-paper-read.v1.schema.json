@@ -847,6 +847,27 @@
       "description": "FE-066: the Paper profile deployment block: the source row plus the Alpha-Portfolio identity keys.",
       "allOf": [{ "$ref": "#/$defs/NarrowRecord" }, { "type": "object", "properties": { "alpha_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] }, "alpha_name": { "$ref": "#/$defs/DeploymentDisplayName" }, "portfolio_name": { "$ref": "#/$defs/DeploymentDisplayName" }, "alpha_reason_code": { "$ref": "#/$defs/AlphaIdentityReason" }, "portfolio_name_reason_code": { "$ref": "#/$defs/PortfolioNameReason" } } }, { "$ref": "#/$defs/DeploymentIdentityRules" }]
     },
+    "PositionsBySideRow": { "type": "object", "additionalProperties": false, "required": ["instrument_id", "long_quantity", "short_quantity", "gross_quantity", "position_count"], "properties": { "instrument_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+/-]{0,190}$" }, "long_quantity": { "type": "string", "maxLength": 80, "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])" }, "short_quantity": { "type": "string", "maxLength": 80, "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])" }, "gross_quantity": { "type": "string", "maxLength": 80, "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])" }, "position_count": { "type": "integer", "minimum": 1 } } },
+    "PositionsBySide": {
+      "description": "S3-U4 / FE-051: Long, Short and Gross by side for the deployment's open positions: exact quantity per instrument (gross = long + short, magnitudes), no total across instruments. Notional by side is never derived: the position page publishes no currency or mark lineage (E5), so notional is a typed unavailable, not a number.",
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code", "basis", "rows", "excluded", "notional"],
+      "properties": {
+        "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
+        "reason_code": { "enum": ["POSITIONS_NOT_PUBLISHED", "SOURCE_POSITIONS_PARTIAL", "POSITION_ROWS_UNCLASSIFIED", null] },
+        "basis": { "const": "OPEN_POSITION_ROWS_QUANTITY_BY_SIDE_PER_INSTRUMENT" },
+        "rows": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/PositionsBySideRow" } },
+        "excluded": { "type": "object", "additionalProperties": false, "required": ["flat_rows", "closed_rows", "unclassified_rows", "no_instrument_rows"], "properties": { "flat_rows": { "type": "integer", "minimum": 0 }, "closed_rows": { "type": "integer", "minimum": 0 }, "unclassified_rows": { "type": "integer", "minimum": 0 }, "no_instrument_rows": { "type": "integer", "minimum": 0 } } },
+        "notional": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code"], "properties": { "state": { "const": "UNAVAILABLE" }, "reason_code": { "const": "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED" } } }
+      },
+      "allOf": [
+        { "if": { "properties": { "state": { "const": "UNAVAILABLE" } } }, "then": { "properties": { "rows": { "type": "array", "maxItems": 0 }, "reason_code": { "const": "POSITIONS_NOT_PUBLISHED" } } } },
+        { "if": { "properties": { "state": { "enum": ["AVAILABLE", "EMPTY"] } } }, "then": { "properties": { "reason_code": { "type": "null" } } } },
+        { "if": { "properties": { "state": { "const": "EMPTY" } } }, "then": { "properties": { "rows": { "type": "array", "maxItems": 0 } } } },
+        { "if": { "properties": { "state": { "const": "AVAILABLE" } } }, "then": { "properties": { "rows": { "type": "array", "minItems": 1 } } } },
+        { "if": { "properties": { "state": { "const": "PARTIAL" } } }, "then": { "properties": { "reason_code": { "type": "string" } } } }
+      ]
+    },
     "Records": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/NarrowRecord" } },
     "Page": {
       "type": "object", "additionalProperties": false,
@@ -1015,6 +1036,7 @@
         "reconciliation": { "$ref": "#/$defs/Records" },
         "command_journal": { "$ref": "#/$defs/Records" },
         "observation_gate": { "oneOf": [{ "$ref": "#/$defs/NarrowRecord" }, { "type": "null" }] },
+        "positions_by_side": { "$ref": "#/$defs/PositionsBySide" },
         "query_analytics": { "oneOf": [{ "$ref": "#/$defs/QueryAnalytics" }, { "type": "null" }] },
         "page": { "$ref": "#/$defs/Page" },
         "query": { "$ref": "#/$defs/Query" },

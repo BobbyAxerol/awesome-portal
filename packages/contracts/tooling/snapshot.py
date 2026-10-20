@@ -481,6 +481,10 @@ TRACKED = (
     "fixtures/execution-sandbox-certification.identity.valid.json",
     "fixtures/execution-canary-control-room.identity.valid.json",
     "fixtures/execution-live-full-operations.identity.valid.json",
+    # BE-P3, S3-U4 / FE-051 widened
+    "fixtures/execution-paper-workbench.positions-by-side.valid.json",
+    "fixtures/execution-paper-workbench.positions-by-side.partial.valid.json",
+    "fixtures/execution-paper-workbench.positions-by-side.unavailable.valid.json",
     "fixtures/execution-analytics.binding-exposure.valid.json",
     "schemas/execution-publication-catalogue.v1.schema.json",
     "schemas/execution-manager-dataset.v1.schema.json",

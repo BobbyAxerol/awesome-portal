@@ -110,6 +110,10 @@ cp -a \
 cp -a "${ROOT_DIR}/apps/control-api/src/execution/stage-drift.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution/deployment-identity.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution/"
+# S3-U4: pure leaf (no imports) shared by the Paper producer and its contract spec.
+mkdir -p "${WORKSPACE_DIR}/apps/control-api/src/paper-read"
+cp -a "${ROOT_DIR}/apps/control-api/src/paper-read/positions-by-side.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/paper-read/"
 # Copy only this pure validator and compatibility dictionary, not app config,
 # credentials, node_modules or any runtime mount. The test cell stays networkless.
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \

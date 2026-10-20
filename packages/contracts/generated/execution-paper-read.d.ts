@@ -298,6 +298,35 @@ export interface components {
             alpha_reason_code?: components["schemas"]["AlphaIdentityReason"];
             portfolio_name_reason_code?: components["schemas"]["PortfolioNameReason"];
         } & components["schemas"]["DeploymentIdentityRules"];
+        PositionsBySideRow: {
+            instrument_id: string;
+            long_quantity: string;
+            short_quantity: string;
+            gross_quantity: string;
+            position_count: number;
+        };
+        /** @description S3-U4 / FE-051: Long, Short and Gross by side for the deployment's open positions: exact quantity per instrument (gross = long + short, magnitudes), no total across instruments. Notional by side is never derived: the position page publishes no currency or mark lineage (E5), so notional is a typed unavailable, not a number. */
+        PositionsBySide: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
+            /** @enum {unknown} */
+            reason_code: "POSITIONS_NOT_PUBLISHED" | "SOURCE_POSITIONS_PARTIAL" | "POSITION_ROWS_UNCLASSIFIED" | null;
+            /** @constant */
+            basis: "OPEN_POSITION_ROWS_QUANTITY_BY_SIDE_PER_INSTRUMENT";
+            rows: components["schemas"]["PositionsBySideRow"][];
+            excluded: {
+                flat_rows: number;
+                closed_rows: number;
+                unclassified_rows: number;
+                no_instrument_rows: number;
+            };
+            notional: {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED";
+            };
+        } & (unknown & unknown & unknown & unknown & unknown);
         NarrowRecord: {
             [key: string]: string | number | boolean | null | (string | number | boolean | null)[];
         };
@@ -316,6 +345,7 @@ export interface components {
             reconciliation?: components["schemas"]["NarrowRecord"][];
             command_journal?: components["schemas"]["NarrowRecord"][];
             observation_gate?: components["schemas"]["NarrowRecord"] | null;
+            positions_by_side?: components["schemas"]["PositionsBySide"];
             query_analytics?: {
                 [key: string]: unknown;
             } | null;
