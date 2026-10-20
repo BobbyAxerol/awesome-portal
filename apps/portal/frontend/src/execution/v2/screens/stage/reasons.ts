@@ -49,10 +49,11 @@ export const NOT_COMMISSIONED_WHY = "Not offered in the portal yet";
  */
 export const STAGE_REASON_WHY: Readonly<Record<Exclude<StageReasonClass, "SUBMIT_CHECKS_REQUIRED">, string>> = {
   RETAINED_REVIEW_READ_ONLY: STAGE_WHY.readOnly,
-  ADMIN_ROLE_REQUIRED: STAGE_WHY.noGrant,
+  // Bobby approved 2026-10-20: one sentence per cause (a role is not a grant, and a scope mismatch is more specific than "needs the grant").
+  ADMIN_ROLE_REQUIRED: "Needs the Admin role",
   GOVERNANCE_CAPABILITY_REQUIRED: STAGE_WHY.noGrant,
-  GOVERNANCE_SCOPE_MISMATCH: STAGE_WHY.noGrant,
-  CAPTURE_PROJECTION_NOT_AUTHORIZED: STAGE_WHY.notEnabled,
+  GOVERNANCE_SCOPE_MISMATCH: "The grant does not cover this deployment",
+  CAPTURE_PROJECTION_NOT_AUTHORIZED: "The paper projection is not authorised for this capture",
   COMMAND_FAMILY_NOT_COMMISSIONED: NOT_COMMISSIONED_WHY,
 };
 

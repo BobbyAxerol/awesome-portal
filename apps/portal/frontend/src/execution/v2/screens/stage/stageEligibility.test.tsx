@@ -59,8 +59,8 @@ describe("stageActionReason (pure text)", () => {
     expect(stageActionReason(eligibilityOf("plain_user"), "sandbox.review_note", "fallback")).toBe(`${STAGE_WHY.noGrant} · Basis: Admin role · Step-up: not required`);
     expect(stageActionReason(eligibilityOf("admin_without_r2_grant"), "paper.exit_review_request", "fallback"))
       .toBe(`${STAGE_WHY.noGrant} · Basis: Admin role and the R2 read grant · Step-up: not required`);
-    expect(stageActionReason(eligibilityOf("admin_other_workspace_grant"), "paper.exit_review_request", "fallback")).toMatch(/^Needs the approver grant/);
-    expect(stageActionReason(eligibilityOf("projection_not_authorized"), "paper.exit_review_request", "fallback")).toMatch(/^Not enabled for this profile/);
+    expect(stageActionReason(eligibilityOf("admin_other_workspace_grant"), "paper.exit_review_request", "fallback")).toMatch(/^(Needs the approver grant|Needs the Admin role|The grant does not cover this deployment)/);
+    expect(stageActionReason(eligibilityOf("projection_not_authorized"), "paper.exit_review_request", "fallback")).toMatch(/^The paper projection is not authorised for this capture/);
     expect(stageActionReason(eligibilityOf("retained_review_read_only"), "approval.create", "fallback"))
       .toBe(`${STAGE_WHY.readOnly} · Basis: workspace membership · Step-up: not required`);
   });
