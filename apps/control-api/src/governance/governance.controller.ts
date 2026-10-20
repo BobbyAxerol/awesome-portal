@@ -508,8 +508,15 @@ export class GovernanceController {
         request.portalUser,
         workspaceId,
         operationId,
+        execution.data.request_key,
         this.requestId(request),
       );
+    }
+    if (body !== null && typeof body === "object" &&
+        (body as Record<string, unknown>).schema_version === "execution.command-apply-request.v1") {
+      // Typed 400 instead of the generic INVALID_APPLY_REQUEST: a missing/bad request_key is the
+      // one thing an older client of this route will get wrong (BE-P13 added it).
+      throw new GovernanceError("INVALID_EXECUTION_COMMAND_APPLY", "Invalid execution command apply request.", 400);
     }
     const parsed = PortalApplyOperationRequestSchema.safeParse(body);
     if (!parsed.success) {

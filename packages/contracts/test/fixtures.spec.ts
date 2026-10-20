@@ -140,6 +140,18 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
   "execution-command-catalog.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/CommandCatalogue",
+  "execution-command-apply-denied.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyDeniedProblem",
+  "execution-command-apply-denied.replayed.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyDeniedProblem",
+  "execution-command-apply-key-conflict.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyKeyConflictProblem",
+  "execution-command-apply-attempt.none.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyAttemptLookup",
+  "execution-command-apply-attempt.found.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyAttemptLookup",
+  "execution-command-apply-attempt.conflict.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/F0ApplyAttemptLookup",
   "execution-command-catalog.served.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ServedCommandCatalogue",
   "execution-command-tasks.valid.json":

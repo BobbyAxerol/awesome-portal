@@ -8,6 +8,7 @@ import { accessDigest, type AccessEvaluationContext } from "../execution-v2/acce
 import { KeysetCursorCodec, type CursorKeyring } from "../query/cursor";
 import { QueryContractError } from "../query/contracts";
 import { ExecutionOperationsRepository } from "./operations.repository";
+import { f0ApplyAttemptLookup, type F0ApplyAttemptLookup } from "./f0-apply.contract";
 import { f0ReadId, f0ReadRecord, f0ReadTarget, f0CollectionQuery, f0Collection,
   type F0BlockedOperation, type F0CollectionQuery, type F0Collection } from "./f0-read.contract";
 import type { F0ReadCandidate } from "./operations.repository";
@@ -116,6 +117,42 @@ export class ExecutionF0ReadService {
     // actual Core clock with a conservative host elapsed-time clamp (never a
     // replacement or extension of Core authority), not only a fingerprint. This is
     // a local sequential boundary, NOT a held cross-authority TS transaction.
+    const current = await this.access.confirmReadContext(actor, workspace, context);
+    requireCurrentTsAuditRead({ ...current, now_ms: Math.max(current.now_ms, Date.now()) },
+      target.resource, target.environment);
+    if (!body) throw new CommandError("COMMAND_STATUS_UNVERIFIED", 503);
+    return body;
+  }
+  /**
+   * BE-P13 task 2 · "what did F0 apply answer for this key?", for a client that lost the response.
+   * Read-only, no source call, no write. Keyed by the actor: the attempt predicate carries the
+   * session actor, so another user's key is indistinguishable from an unknown one.
+   *
+   * Authorize BEFORE data: the caller names the operation it believes the key belongs to; that
+   * operation's exact target needs current TS-accepted audit.read BEFORE the attempt row is read
+   * (so a revoked reader learns nothing, not even NONE) and again after the last await. A key
+   * bound to some OTHER operation is CONFLICT without naming it (its target was not authorized).
+   */
+  async lookupApplyAttempt(actor: AccessActor, workspace: string, operationId: string,
+    requestKey: string): Promise<F0ApplyAttemptLookup> {
+    const context = await this.access.readContext(actor, workspace);
+    const candidate = await this.repository.findF0ReadCandidate(workspace, actor.user_id, operationId);
+    if (!candidate) throw new CommandError("COMMAND_RESOURCE_NOT_FOUND", 404);
+    const target = f0ReadTarget(candidate, actor, workspace, operationId);
+    requireCurrentTsAuditRead(context, target.resource, target.environment);
+    let body: F0ApplyAttemptLookup | undefined;
+    try {
+      const attempt = await this.repository.findApplyAttempt(workspace, actor.user_id, requestKey);
+      const base = { schema_version: "portal.execution.f0-apply-attempt.v1" as const,
+        operation_id: operationId, request_key: requestKey };
+      body = f0ApplyAttemptLookup.parse(attempt === null
+        ? { ...base, state: "NONE", relay_decision: null, first_recorded_at: null }
+        : attempt.operationId !== operationId
+          ? { ...base, state: "CONFLICT", relay_decision: null, first_recorded_at: null }
+          : { ...base, state: "FOUND", first_recorded_at: attempt.createdAt.toISOString(),
+            relay_decision: { schema_version: "execution.command-relay-decision.v1", operation_id: operationId,
+              decision: "DENIED", reason: "COMMAND_RELAY_DISABLED", retry_allowed: false, source_request_sent: false } });
+    } catch { /* fixed refusal after the final fence, never driver or validation text */ }
     const current = await this.access.confirmReadContext(actor, workspace, context);
     requireCurrentTsAuditRead({ ...current, now_ms: Math.max(current.now_ms, Date.now()) },
       target.resource, target.environment);

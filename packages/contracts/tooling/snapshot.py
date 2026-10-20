@@ -551,6 +551,13 @@ TRACKED = (
     "fixtures/execution-manager-series-query.synthetic.valid.json",
     # BE-P13 (2026-10-20): served command catalogue (the extract fixture above stays byte-pinned by N16B).
     "fixtures/execution-command-catalog.served.valid.json",
+    # BE-P13: F0 apply is DENIED-only; key replay / conflict / lookup fixtures. No success fixture exists.
+    "fixtures/execution-command-apply-denied.valid.json",
+    "fixtures/execution-command-apply-denied.replayed.valid.json",
+    "fixtures/execution-command-apply-key-conflict.valid.json",
+    "fixtures/execution-command-apply-attempt.none.valid.json",
+    "fixtures/execution-command-apply-attempt.found.valid.json",
+    "fixtures/execution-command-apply-attempt.conflict.valid.json",
     "package.json",
 )
 

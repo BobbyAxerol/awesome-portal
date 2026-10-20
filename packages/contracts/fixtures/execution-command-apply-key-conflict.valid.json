@@ -1,0 +1,11 @@
+{
+  "error": {
+    "code": "REQUEST_KEY_PAYLOAD_CONFLICT",
+    "message": "Request key was already used for another intent."
+  },
+  "request_id": "req_apply_conflict_0003",
+  "details": {
+    "request_key": "ui:apply:0001",
+    "source_request_sent": false
+  }
+}

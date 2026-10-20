@@ -4,6 +4,7 @@ import type { PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { CommandHttpError, commandHttpCall } from "../execution-v2/command.error";
 import { f0ReadId, f0ReadQuery, f0CollectionQuery } from "./f0-read.contract";
+import { f0ApplyLookupPath, f0ApplyLookupQuery } from "./f0-apply.contract";
 import { CommandCollectionError } from "../execution-v2/command-collection.contract";
 import { ExecutionF0ReadService } from "./f0-read.service";
 
@@ -39,5 +40,18 @@ export class ExecutionF0ReadController {
     const actor = { user_id: request.portalUser.userId, session_id: request.portalSession.sessionId,
       session_generation: request.portalUser.sessionVersion };
     return commandHttpCall(() => this.service.read(actor, query.data.workspace_id, id.data));
+  }
+  /** BE-P13: ROUTE ADDED. Read-only recovery of an F0 apply answer by its request key. */
+  @Get("/:operation_id/apply-attempts/:request_key") @Header("Cache-Control", "private, no-store")
+  async applyAttempt(@Req() request: Request, @Param("operation_id") rawId: string,
+    @Param("request_key") rawKey: string, @Query() rawQuery: unknown) {
+    const path = f0ApplyLookupPath.safeParse({ operation_id: rawId, request_key: rawKey });
+    const query = f0ApplyLookupQuery.safeParse(rawQuery);
+    if (!path.success || !query.success)
+      throw new CommandHttpError("COMMAND_INPUT_INVALID", "Check the operation fields.", 400);
+    const actor = { user_id: request.portalUser.userId, session_id: request.portalSession.sessionId,
+      session_generation: request.portalUser.sessionVersion };
+    return commandHttpCall(() => this.service.lookupApplyAttempt(
+      actor, query.data.workspace_id, path.data.operation_id, path.data.request_key));
   }
 }

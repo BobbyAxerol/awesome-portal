@@ -16923,12 +16923,123 @@
     "ExecutionCommandApplyRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "workspace_id", "command_type"],
+      "description": "F0 apply is DENIED-only: no body of this request can reach ACCEPTED, SUCCEEDED or a source request, so no success schema exists. request_key (BE-P13) makes the denial replayable and recoverable (same key + same operation => the same typed answer with replayed true; same key + another operation => REQUEST_KEY_PAYLOAD_CONFLICT). It is not a dedupe key for an effect: there is none.",
+      "required": ["schema_version", "workspace_id", "request_key", "command_type"],
       "properties": {
         "schema_version": { "const": "execution.command-apply-request.v1" },
         "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
         "command_type": { "const": "EXECUTION_COMMAND" }
       }
+    },
+    "F0ApplyDecision": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "details of the 409 COMMAND_RELAY_DISABLED body: the six RelayDenied fields (unchanged) plus the key and whether this answer is the stored one repeated. retry_allowed and source_request_sent are constants false: the denial happens before any relay or source call.",
+      "required": [
+        "schema_version", "operation_id", "decision", "reason", "retry_allowed",
+        "source_request_sent", "request_key", "replayed"
+      ],
+      "properties": {
+        "schema_version": { "const": "execution.command-relay-decision.v1" },
+        "operation_id": { "$ref": "#/$defs/Identifier" },
+        "decision": { "const": "DENIED" },
+        "reason": { "const": "COMMAND_RELAY_DISABLED" },
+        "retry_allowed": { "const": false },
+        "source_request_sent": { "const": false },
+        "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+        "replayed": { "type": "boolean" }
+      }
+    },
+    "F0ApplyDeniedProblem": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "The only answer F0 apply gives once the plan is visible to its creator: 409 with this body. Exactly what the shared error filter sends (no public_copy_key/safe_next_action).",
+      "required": ["error", "request_id", "details"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "const": "COMMAND_RELAY_DISABLED" },
+            "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+          }
+        },
+        "request_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "details": { "$ref": "#/$defs/F0ApplyDecision" }
+      }
+    },
+    "F0ApplyKeyConflictProblem": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "409 when request_key was first used for a different operation of the same actor. Nothing is recorded and nothing is sent; the other operation is not named.",
+      "required": ["error", "request_id", "details"],
+      "properties": {
+        "error": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "const": "REQUEST_KEY_PAYLOAD_CONFLICT" },
+            "message": { "type": "string", "minLength": 1, "maxLength": 512 }
+          }
+        },
+        "request_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "details": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["request_key", "source_request_sent"],
+          "properties": {
+            "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+            "source_request_sent": { "const": false }
+          }
+        }
+      }
+    },
+    "F0ApplyAttemptLookup": {
+      "description": "Read-only recovery of an F0 apply answer by request_key, for a client that lost the response. Keyed by the session actor; the named operation's exact target needs current TS-accepted audit.read BEFORE the attempt is read and again after. NONE: this actor never recorded that key in this workspace. FOUND: the key was recorded for THIS operation; relay_decision is what a replay returns. CONFLICT: the key is bound to a different operation of the same actor, which is deliberately not named.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema_version", "operation_id", "request_key", "state", "relay_decision", "first_recorded_at"],
+          "properties": {
+            "schema_version": { "const": "portal.execution.f0-apply-attempt.v1" },
+            "operation_id": { "$ref": "#/$defs/Identifier" },
+            "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+            "state": { "const": "NONE" },
+            "relay_decision": { "type": "null" },
+            "first_recorded_at": { "type": "null" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema_version", "operation_id", "request_key", "state", "relay_decision", "first_recorded_at"],
+          "properties": {
+            "schema_version": { "const": "portal.execution.f0-apply-attempt.v1" },
+            "operation_id": { "$ref": "#/$defs/Identifier" },
+            "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+            "state": { "const": "FOUND" },
+            "relay_decision": { "$ref": "#/$defs/RelayDenied" },
+            "first_recorded_at": { "$ref": "#/$defs/DateTime" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["schema_version", "operation_id", "request_key", "state", "relay_decision", "first_recorded_at"],
+          "properties": {
+            "schema_version": { "const": "portal.execution.f0-apply-attempt.v1" },
+            "operation_id": { "$ref": "#/$defs/Identifier" },
+            "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
+            "state": { "const": "CONFLICT" },
+            "relay_decision": { "type": "null" },
+            "first_recorded_at": { "type": "null" }
+          }
+        }
+      ]
     },
     "ExecutionCommandOperation": {
       "type": "object",

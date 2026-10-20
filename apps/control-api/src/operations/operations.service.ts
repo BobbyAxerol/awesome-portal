@@ -12,6 +12,7 @@ import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProductAuditRepository } from "../repos/outbox";
 import { EXECUTION_COMMAND_CATALOG } from "./catalog.generated";
+import { f0ApplyDecision } from "./f0-apply.contract";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
   ExecutionCommandCatalogueQuery,
@@ -395,33 +396,88 @@ export class ExecutionOperationsService {
     return response(created.record, !created.created);
   }
 
+  /**
+   * F0 apply is DENIED-only (see f0-apply.contract.ts): there is no branch that returns. The key
+   * makes the denial replayable (same key + same operation => the same typed answer, `replayed`
+   * true) and conflict-detectable (same key + a different operation => 409
+   * REQUEST_KEY_PAYLOAD_CONFLICT, nothing recorded). The plan lookup is creator-scoped, so a key
+   * can only ever be bound to an operation its own actor planned.
+   */
   async apply(
     user: PortalUser,
     workspaceId: string,
     operationId: string,
+    requestKey: string,
     requestId: string,
   ): Promise<never> {
     const plan = await this.repository.find(workspaceId, user.userId, operationId);
     if (!plan) throw new GovernanceError("OPERATION_NOT_FOUND", "Operation not found.", 404);
-    await this.audit.record({
-      eventId: newUlid("audit"),
-      eventType: "execution.command.apply_rejected",
-      actorUserId: user.userId,
-      workspaceId,
-      requestId,
-      idempotencyKey: `apply:${operationId}`,
-      aggregateType: "execution_command",
-      aggregateId: operationId,
-      aggregateVersion: 1,
-      result: "DENIED",
-      reasonCode: "COMMAND_RELAY_DISABLED",
-      metadata: { source_request_sent: false, retry_allowed: false },
+    const intentHash = digest({
+      command_type: "EXECUTION_COMMAND",
+      operation_id: operationId,
+      workspace_id: workspaceId,
     });
+    const recorded = await this.repository.recordApplyAttempt({
+      workspaceId,
+      actorUserId: user.userId,
+      requestKey,
+      operationId,
+      intentHash,
+      requestId,
+      auditEventId: newUlid("audit"),
+    });
+    if (recorded.record.intentHash !== intentHash) {
+      await this.audit.record({
+        eventId: newUlid("audit"),
+        eventType: "execution.command.apply_rejected",
+        actorUserId: user.userId,
+        workspaceId,
+        requestId,
+        idempotencyKey: requestKey,
+        aggregateType: "execution_command",
+        aggregateId: operationId,
+        aggregateVersion: 1,
+        result: "CONFLICT",
+        reasonCode: "REQUEST_KEY_PAYLOAD_CONFLICT",
+        metadata: { source_request_sent: false },
+      });
+      throw new GovernanceError(
+        "REQUEST_KEY_PAYLOAD_CONFLICT",
+        "Request key was already used for another intent.",
+        409,
+        { request_key: requestKey, source_request_sent: false },
+      );
+    }
+    if (!recorded.created) {
+      await this.audit.record({
+        eventId: newUlid("audit"),
+        eventType: "execution.command.apply_rejected",
+        actorUserId: user.userId,
+        workspaceId,
+        requestId,
+        idempotencyKey: requestKey,
+        aggregateType: "execution_command",
+        aggregateId: operationId,
+        aggregateVersion: 1,
+        result: "DENIED",
+        reasonCode: "COMMAND_RELAY_DISABLED",
+        metadata: { source_request_sent: false, retry_allowed: false, replayed: true },
+      });
+    }
     throw new GovernanceError(
       "COMMAND_RELAY_DISABLED",
       "Execution command relay is disabled in EX-BE-05b/F0.",
       409,
-      { operation_id: operationId, source_request_sent: false, retry_allowed: false },
+      f0ApplyDecision.parse({
+        schema_version: "execution.command-relay-decision.v1",
+        operation_id: operationId,
+        decision: "DENIED",
+        reason: "COMMAND_RELAY_DISABLED",
+        retry_allowed: false,
+        source_request_sent: false,
+        request_key: requestKey,
+        replayed: !recorded.created,
+      }),
     );
   }
 

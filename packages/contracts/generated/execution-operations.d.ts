@@ -342,6 +342,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/operations/f0/{operation_id}/apply-attempts/{request_key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description BE-P13 (ROUTE ADDED). Read-only recovery of an F0 apply answer by request_key after a lost response: NONE / FOUND / CONFLICT. Keyed by the session actor. The named operation's exact ACCOUNT/PORTFOLIO/DEPLOYMENT target needs current TS-accepted audit.read BEFORE the attempt row is read and again after the last await, so a revoked reader learns nothing (not even NONE). No owner/ADMIN/read_all override, source call or write. CONFLICT never names the other operation. */
+        get: operations["executionF0ApplyAttemptGetV2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/execution/operations/{operation_id}/apply": {
         parameters: {
             query?: never;
@@ -351,7 +368,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description Always denied in F0 before any relay/source call. */
+        /** @description DENIED-ONLY (BE-P13). Applying an F0 plan can never succeed: every F0 plan is stored BLOCKED with the relay DISABLED, and the service has no branch that returns, so this operation has NO 2xx response by design and no success fixture exists. The only answers are the typed refusals below. request_key makes the denial replayable (the same key for the same operation returns the same 409 with details.replayed true) and conflict-detectable (the same key for another operation is REQUEST_KEY_PAYLOAD_CONFLICT). If the response is lost, read GET /api/v1/execution/operations/f0/{operation_id}/apply-attempts/{request_key}. Nothing is ever sent to a source: details.source_request_sent and retry_allowed are constants false. */
         post: operations["applyExecutionCommandF0"];
         delete?: never;
         options?: never;
@@ -363,6 +380,59 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description The only answer F0 apply gives once the plan is visible to its creator: 409 with this body. Exactly what the shared error filter sends (no public_copy_key/safe_next_action). */
+        F0ApplyDeniedProblem: {
+            error: {
+                /** @constant */
+                code: "COMMAND_RELAY_DISABLED";
+                message: string;
+            };
+            request_id: string;
+            details: components["schemas"]["F0ApplyDecision"];
+        };
+        /** @description 409 when request_key was first used for a different operation of the same actor. Nothing is recorded and nothing is sent; the other operation is not named. */
+        F0ApplyKeyConflictProblem: {
+            error: {
+                /** @constant */
+                code: "REQUEST_KEY_PAYLOAD_CONFLICT";
+                message: string;
+            };
+            request_id: string;
+            details: {
+                request_key: string;
+                /** @constant */
+                source_request_sent: false;
+            };
+        };
+        /** @description Read-only recovery of an F0 apply answer by request_key, for a client that lost the response. Keyed by the session actor; the named operation's exact target needs current TS-accepted audit.read BEFORE the attempt is read and again after. NONE: this actor never recorded that key in this workspace. FOUND: the key was recorded for THIS operation; relay_decision is what a replay returns. CONFLICT: the key is bound to a different operation of the same actor, which is deliberately not named. */
+        F0ApplyAttemptLookup: {
+            /** @constant */
+            schema_version: "portal.execution.f0-apply-attempt.v1";
+            operation_id: components["schemas"]["Identifier"];
+            request_key: string;
+            /** @constant */
+            state: "NONE";
+            relay_decision: null;
+            first_recorded_at: null;
+        } | {
+            /** @constant */
+            schema_version: "portal.execution.f0-apply-attempt.v1";
+            operation_id: components["schemas"]["Identifier"];
+            request_key: string;
+            /** @constant */
+            state: "FOUND";
+            relay_decision: components["schemas"]["RelayDenied"];
+            first_recorded_at: components["schemas"]["DateTime"];
+        } | {
+            /** @constant */
+            schema_version: "portal.execution.f0-apply-attempt.v1";
+            operation_id: components["schemas"]["Identifier"];
+            request_key: string;
+            /** @constant */
+            state: "CONFLICT";
+            relay_decision: null;
+            first_recorded_at: null;
+        };
         /**
          * Finite current-authorized F0 blocked intent
          * @description Same twelve-field execution.command-operation.v1 body, no source status or dispatch. Stored target is requested intent, not TS attestation. created_at and updated_at are Portal timestamps, not source freshness. Runtime additionally enforces nonnegative finite epochs and updated_at >= created_at.
@@ -1951,12 +2021,43 @@ export interface components {
             reason: string;
             clean_dry_run_evidence_hash: components["schemas"]["Hash"];
         };
+        RelayDenied: {
+            /** @constant */
+            schema_version: "execution.command-relay-decision.v1";
+            operation_id: components["schemas"]["Identifier"];
+            /** @constant */
+            decision: "DENIED";
+            /** @constant */
+            reason: "COMMAND_RELAY_DISABLED";
+            /** @constant */
+            retry_allowed: false;
+            /** @constant */
+            source_request_sent: false;
+        };
+        /** @description F0 apply is DENIED-only: no body of this request can reach ACCEPTED, SUCCEEDED or a source request, so no success schema exists. request_key (BE-P13) makes the denial replayable and recoverable (same key + same operation => the same typed answer with replayed true; same key + another operation => REQUEST_KEY_PAYLOAD_CONFLICT). It is not a dedupe key for an effect: there is none. */
         ExecutionCommandApplyRequest: {
             /** @constant */
             schema_version: "execution.command-apply-request.v1";
             workspace_id: string;
+            request_key: string;
             /** @constant */
             command_type: "EXECUTION_COMMAND";
+        };
+        /** @description details of the 409 COMMAND_RELAY_DISABLED body: the six RelayDenied fields (unchanged) plus the key and whether this answer is the stored one repeated. retry_allowed and source_request_sent are constants false: the denial happens before any relay or source call. */
+        F0ApplyDecision: {
+            /** @constant */
+            schema_version: "execution.command-relay-decision.v1";
+            operation_id: components["schemas"]["Identifier"];
+            /** @constant */
+            decision: "DENIED";
+            /** @constant */
+            reason: "COMMAND_RELAY_DISABLED";
+            /** @constant */
+            retry_allowed: false;
+            /** @constant */
+            source_request_sent: false;
+            request_key: string;
+            replayed: boolean;
         };
     };
     responses: never;
@@ -2831,6 +2932,92 @@ export interface operations {
             };
         };
     };
+    executionF0ApplyAttemptGetV2: {
+        parameters: {
+            query: {
+                workspace_id: string;
+            };
+            header?: never;
+            path: {
+                operation_id: string;
+                request_key: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description NONE, FOUND or CONFLICT for this actor, key and operation. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["F0ApplyAttemptLookup"];
+                };
+            };
+            /** @description COMMAND_INPUT_INVALID: strict path and query. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated current Portal session required. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Current actor/session authority refused; nothing disclosed. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RESOURCE_NOT_FOUND: unknown, other creator, other workspace and unauthorized target are one safe answer. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ACCESS_RETRY_REQUIRED: current authority changed during the read. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE; no raw stored or driver text. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+        };
+    };
     applyExecutionCommandF0: {
         parameters: {
             query?: never;
@@ -2846,12 +3033,50 @@ export interface operations {
             };
         };
         responses: {
-            /** @description COMMAND_RELAY_DISABLED */
+            /** @description INVALID_EXECUTION_COMMAND_APPLY: strict body (schema_version, workspace_id, request_key, command_type); no extra field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description Authenticated Portal session required. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description ORIGIN_DENIED or CSRF failure; nothing recorded. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description OPERATION_NOT_FOUND or WORKSPACE_NOT_FOUND: unknown, other creator and other workspace are one safe answer. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommandProblem"];
+                };
+            };
+            /** @description COMMAND_RELAY_DISABLED (the only answer for a visible plan) or REQUEST_KEY_PAYLOAD_CONFLICT (key first used for another operation). */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["F0ApplyDeniedProblem"] | components["schemas"]["F0ApplyKeyConflictProblem"];
+                };
             };
         };
     };
