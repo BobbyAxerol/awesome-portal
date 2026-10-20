@@ -3,6 +3,7 @@ import { managerSearchText, managerSearchMode, managerWindowQuery, managerSelect
   managerP1Options, managerWindowAbsenceReason, validateManagerP1Response } from "./manager-query-p1.contract";
 import { utcMilliseconds, executionEnvironment, financialStage, exactDecimal, opaqueRevision } from "./foundation.contract";
 import { publicationDigest } from "./publication.contract";
+import { validateManagerDatasetInvariants } from "./manager-dataset-invariants";
 import { managerScorePublication } from "./manager-score-publication.contract";
 export { managerScorePublication } from "./manager-score-publication.contract";
 import { managerCompositionPublication } from "./manager-composition-publication.contract";
@@ -18,6 +19,8 @@ export const MANAGER_SCALARS = {
   equity_30d_end_value: "DECIMAL", return_30d_pct: "DECIMAL", score: "DECIMAL",
 } as const;
 export const managerScalar = z.enum(Object.keys(MANAGER_SCALARS) as [keyof typeof MANAGER_SCALARS, ...Array<keyof typeof MANAGER_SCALARS>]);
+/** The fields a dataset can be grouped by (a group key names one of these, never any text). */
+export const managerGroupField = z.enum(["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"]);
 export const managerMoneyFields = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"] as const;
 export const managerTuple = z.object({ alpha_id: text, alpha_version_id: text, portfolio_id: text,
   deployment_id: text, account_id: text }).strict();
@@ -88,7 +91,7 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
   filters: z.array(filter).max(16).default([]),
   sort: z.array(z.object({ field: managerScalar, direction: z.enum(["asc", "desc"]) }).strict()).min(1).max(3)
     .default([{ field: "name", direction: "asc" }]),
-  group_by: z.array(z.enum(["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"])).max(2).default([]),
+  group_by: z.array(managerGroupField).max(2).default([]),
   economic_partition: managerPartition.optional(), limit: z.number().int().min(1).max(200).default(100),
   after: z.string().min(1).max(4096).optional(), before: z.string().min(1).max(4096).optional(),
 }).strict().superRefine((q, c) => {
@@ -147,7 +150,7 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   query_policy: z.object({ null_order: z.literal("LAST_BOTH_DIRECTIONS"), stage_order: z.literal("LEXICAL_SET_NOT_RISK_RANK"), maximum_response_bytes: z.literal(1048576) }).strict(),
   page: z.object({ limit: z.number().int().min(1).max(200), returned_count: z.number().int().min(0).max(200),
     authorized_filtered_count: z.number().int().min(0).max(10_000), next_cursor: z.string().max(4096).nullable(), previous_cursor: z.string().max(4096).nullable() }).strict(),
-  items: z.array(managerDatasetRow).max(200), groups: z.array(z.object({ key: z.array(z.object({ field: text, value: text.nullable() }).strict()).max(2),
+  items: z.array(managerDatasetRow).max(200), groups: z.array(z.object({ key: z.array(z.object({ field: managerGroupField, value: text.nullable() }).strict()).max(2),
     unique_row_count: z.number().int().min(0).max(10_000), totals_scope: z.literal("FULL_AUTHORIZED_FILTERED_QUERY"), economic_partitions: z.array(partitionMetrics).max(200) }).strict()).max(200),
   capital_statements: z.array(partitionMetrics).max(200),
   statement_scope: z.literal("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS"),
@@ -161,4 +164,4 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),
-}).strict().superRefine(validateManagerP1Response);
+}).strict().superRefine(validateManagerP1Response).superRefine(validateManagerDatasetInvariants);

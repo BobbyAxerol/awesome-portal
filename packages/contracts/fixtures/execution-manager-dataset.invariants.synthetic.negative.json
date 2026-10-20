@@ -1,0 +1,380 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "base": "execution-manager-dataset.partitions.synthetic.valid.json",
+  "note": "Each case mutates the base example. MD-5 (negative zero) is not a rule: it waits for an owner decision.",
+  "cases": [
+    {
+      "id": "MD-1/empty-page-with-a-count",
+      "gap": "MD-1",
+      "rule": "an empty page publishes returned_count 0",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_PAGE_RETURNED_COUNT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items"
+          ],
+          "value": []
+        },
+        {
+          "op": "set",
+          "path": [
+            "groups"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "id": "MD-1/rows-with-a-zero-count",
+      "gap": "MD-1",
+      "rule": "a page with rows publishes at least 1",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_PAGE_RETURNED_COUNT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "returned_count"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "MD-1/returned-count-below-the-rows",
+      "gap": "MD-1",
+      "rule": "returned_count equals items.length",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PAGE_RETURNED_COUNT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "returned_count"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "MD-1/returned-count-above-the-limit",
+      "gap": "MD-1",
+      "rule": "returned_count is at most limit",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PAGE_RETURNED_OVER_LIMIT",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "limit"
+          ],
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "MD-1/more-rows-than-the-filtered-query",
+      "gap": "MD-1",
+      "rule": "returned_count is at most authorized_filtered_count",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PAGE_RETURNED_OVER_FILTERED",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "authorized_filtered_count"
+          ],
+          "value": 1
+        },
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "next_cursor"
+          ],
+          "value": "TEST_ONLY:cursor"
+        }
+      ]
+    },
+    {
+      "id": "MD-1/no-cursor-but-fewer-rows-than-the-filtered-query",
+      "gap": "MD-1",
+      "rule": "a non-empty page with neither cursor is the whole result",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PAGE_CURSOR_MISSING",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "authorized_filtered_count"
+          ],
+          "value": 5
+        }
+      ]
+    },
+    {
+      "id": "MD-2/foreign-currency-inside-a-partition",
+      "gap": "MD-2",
+      "rule": "a metric that names a currency names its partition's",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PARTITION_CURRENCY_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "capital_statements",
+            0,
+            "metrics",
+            "balance_total",
+            "currency"
+          ],
+          "value": "EUR"
+        }
+      ]
+    },
+    {
+      "id": "MD-3/partition-object-repeated",
+      "gap": "MD-3",
+      "rule": "a partition appears once per list (exact repeat)",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_PARTITION_DUPLICATE",
+      "ops": [
+        {
+          "op": "append_copy",
+          "path": [
+            "capital_statements"
+          ],
+          "from": [
+            "capital_statements",
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MD-3/partition-identity-repeated-with-other-content",
+      "gap": "MD-3",
+      "rule": "identity is domain, currency, basis, native profile",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PARTITION_DUPLICATE",
+      "ops": [
+        {
+          "op": "append_copy",
+          "path": [
+            "capital_statements"
+          ],
+          "from": [
+            "capital_statements",
+            0
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "capital_statements",
+            2,
+            "partition",
+            "domain_proof_ref"
+          ],
+          "value": "TEST_ONLY:other-proof"
+        }
+      ]
+    },
+    {
+      "id": "MD-4/unpublished-preset-with-a-window",
+      "gap": "MD-4",
+      "rule": "a preset the source does not publish carries no window",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_WINDOW_OPTION_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "query_options",
+            "window",
+            "presets",
+            0,
+            "resolved"
+          ],
+          "value": {
+            "from_ms": 1,
+            "to_ms": 2
+          }
+        }
+      ]
+    },
+    {
+      "id": "MD-6/row-repeated",
+      "gap": "MD-6",
+      "rule": "a row appears once (exact repeat)",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_ROW_KEY_DUPLICATE",
+      "ops": [
+        {
+          "op": "append_copy",
+          "path": [
+            "items"
+          ],
+          "from": [
+            "items",
+            0
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "returned_count"
+          ],
+          "value": 3
+        },
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "authorized_filtered_count"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "MD-6/row-key-shared-by-two-rows",
+      "gap": "MD-6",
+      "rule": "row_key is unique within a body",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_ROW_KEY_DUPLICATE",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            1,
+            "row_key"
+          ],
+          "value": "[\"TEST_ONLY:alpha\",\"TEST_ONLY:av\",\"TEST_ONLY:portfolio\"]"
+        }
+      ]
+    },
+    {
+      "id": "MD-6/group-repeated",
+      "gap": "MD-6",
+      "rule": "a group appears once (exact repeat)",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_GROUP_DUPLICATE",
+      "ops": [
+        {
+          "op": "append_copy",
+          "path": [
+            "groups"
+          ],
+          "from": [
+            "groups",
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MD-7/group-over-a-non-groupable-field",
+      "gap": "MD-7",
+      "rule": "a group key names one of the eight groupable fields",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_enum_value",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "key",
+            0,
+            "field"
+          ],
+          "value": "name"
+        }
+      ]
+    },
+    {
+      "id": "MD-7/field-twice-in-one-group-key",
+      "gap": "MD-7",
+      "rule": "a field is named once in a group key",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_GROUP_KEY_FIELD_DUPLICATE",
+      "ops": [
+        {
+          "op": "append",
+          "path": [
+            "groups",
+            0,
+            "key"
+          ],
+          "value": {
+            "field": "portfolio_id",
+            "value": "TEST_ONLY:other"
+          }
+        }
+      ]
+    },
+    {
+      "id": "MD-7/more-unique-rows-than-the-filtered-query",
+      "gap": "MD-7",
+      "rule": "a group holds at most authorized_filtered_count rows",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_GROUP_COUNT_OVER_FILTERED",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "unique_row_count"
+          ],
+          "value": 10
+        }
+      ]
+    },
+    {
+      "id": "MD-8/usdt-headline-above-a-eur-partition",
+      "gap": "MD-8",
+      "rule": "a headline money figure is one partition's figure",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE",
+      "ops": [
+        {
+          "op": "set_copy",
+          "path": [
+            "items",
+            1,
+            "metrics",
+            "net_pnl"
+          ],
+          "from": [
+            "items",
+            0,
+            "metrics",
+            "net_pnl"
+          ]
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            1,
+            "metrics",
+            "net_pnl",
+            "value"
+          ],
+          "value": "1"
+        }
+      ]
+    }
+  ]
+}

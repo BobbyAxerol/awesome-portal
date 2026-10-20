@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { amendManagerP1Schemas, managerCurrentOnlyProblem } from './execution-manager-p1-semantics.mjs';
 import { managerP1NoFactsSyntheticOptions, attachManagerP1SyntheticOptions,
-  managerP1AllWindowSyntheticFixture } from './execution-manager-p1-fixtures.mjs';
+  managerP1AllWindowSyntheticFixture, managerP1PartitionsSyntheticFixture, managerP1InvariantNegativeFixture,
+  applyManagerP1Ops } from './execution-manager-p1-fixtures.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = resolve(root, '../../apps/control-api/src/execution-v2');
 const require = createRequire(import.meta.url), cache = new Map();
@@ -157,6 +158,18 @@ for(const [name,context] of [
     const all=managerP1AllWindowSyntheticFixture(sample);
     contract.managerDatasetResponse.parse(all.value);
     outputs['fixtures/execution-manager-dataset.all-window.synthetic.valid.json']=all;
+    // BE-P1: positive partition example + the negative cases. The generator proves every negative case is refused by the
+    // producer with the stated code (and that the positive example is accepted) before it writes either file.
+    const partitions=managerP1PartitionsSyntheticFixture(sample);
+    contract.managerDatasetResponse.parse(partitions.value);
+    outputs['fixtures/execution-manager-dataset.partitions.synthetic.valid.json']=partitions;
+    const negative=managerP1InvariantNegativeFixture();
+    for(const c of negative.cases){
+      const refused=contract.managerDatasetResponse.safeParse(applyManagerP1Ops(partitions.value,c.ops));
+      if(refused.success || !refused.error.issues.some(i=>i.message===c.code || i.code===c.code))
+        throw new Error('Negative Manager fixture case is not refused with its code: '+c.id);
+    }
+    outputs['fixtures/execution-manager-dataset.invariants.synthetic.negative.json']=negative;
   }
 }
 for (const [file, value] of Object.entries(outputs)) {

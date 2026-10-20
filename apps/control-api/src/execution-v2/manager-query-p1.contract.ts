@@ -53,11 +53,12 @@ export const managerP1Options = z.object({
       resolved: managerExactWindow.nullable(),
       // METRIC_SPECIFIC means at least one scoped fact has this exact window;
       // it never promises complete census, methodology or a numeric metric.
+      // NOT_PUBLISHED carries no window: a window nobody published is not offered as bounds.
       data_state: z.enum(["METRIC_SPECIFIC", "NOT_PUBLISHED"]),
       reason_code: z.enum(["EXACT_METRIC_WINDOW_NOT_PUBLISHED", "ALL_HISTORY_WINDOW_NOT_PUBLISHED"]).nullable(),
     }).strict().superRefine((v, c) => {
       if (v.data_state === "METRIC_SPECIFIC" && (v.resolved === null || v.reason_code !== null) ||
-        v.data_state === "NOT_PUBLISHED" && v.reason_code === null ||
+        v.data_state === "NOT_PUBLISHED" && (v.reason_code === null || v.resolved !== null) ||
         v.value === "ALL" && (v.resolved !== null || v.reason_code !== "ALL_HISTORY_WINDOW_NOT_PUBLISHED"))
         c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_WINDOW_OPTION_INVALID" });
     })).length(4),

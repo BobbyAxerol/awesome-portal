@@ -78,7 +78,7 @@ export function managerQueryOptions(input: {
       ? { from_ms: input.asOf - days * 86_400_000, to_ms: input.asOf } : null;
     const present = resolved !== null && input.facts.some(f => !STOCKS.has(f.kind) && equalWindow(f.metric.window, resolved) &&
       (!FIXED_30D.has(f.kind) || resolved.to_ms - resolved.from_ms === 30 * 86_400_000));
-    return { value, resolved, data_state: present ? "METRIC_SPECIFIC" as const : "NOT_PUBLISHED" as const,
+    return { value, resolved: present ? resolved : null, data_state: present ? "METRIC_SPECIFIC" as const : "NOT_PUBLISHED" as const,
       reason_code: present ? null : value === "ALL" ? "ALL_HISTORY_WINDOW_NOT_PUBLISHED" as const : "EXACT_METRIC_WINDOW_NOT_PUBLISHED" as const };
   });
   return managerP1Options.parse({ temporal_mode: "CURRENT_ONLY",
