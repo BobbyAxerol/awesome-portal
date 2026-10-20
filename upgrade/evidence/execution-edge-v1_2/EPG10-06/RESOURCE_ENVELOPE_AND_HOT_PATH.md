@@ -9,7 +9,8 @@ alongside peers within their bounds; they neither take/remove a measurement
 lease nor claim absolute performance. Real observer capacity work still takes
 the exclusive measurement lease. Original-inode/payload and bounded no-follow,
 nonblocking checks protect per-stage ownership and terminal cleanup.
-153focused PASS/0FAIL/SKIP (21new), all TEST_ONLY flow/metadata qualification;
+159focused PASS/0FAIL/SKIP (27new, including09oracle driver flow), all TEST_ONLY
+flow/metadata qualification;
 no load target, production budget or connected measurement was manufactured.
 Existing Cargo/PG caps remain enforced, with native03 Cargo pinned to1CPU and
 PG auto-removal explicit. Actual hook/resource reconciliation stays in the

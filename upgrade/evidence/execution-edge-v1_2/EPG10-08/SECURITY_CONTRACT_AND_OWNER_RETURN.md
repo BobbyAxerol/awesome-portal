@@ -601,10 +601,18 @@ notices after revoke at11:48:49UTC. This is not authority-commit→last protecte
 network write SLA, native TS proof, production capacity, HA or financial Live
 qualification. Structural all-mode tests do not activate traffic.
 
+The following counts describe the original pinned08 source/receipt, not today's
+runner. A current-source rerun first freezes all expected suite counts against
+that selected source/binary manifest and additionally supplies
+`EPG10_EXPECT_PM_CUSTODY_TESTS=<exact current custody suite count>`; do not omit
+custody or reuse old counts to relax the runner. Current safety suite is107,
+whereas the historical profile below ran85.
+
 Reproduce only in a new reviewed private `/tmp/epg10-08-*` source-only target,
 with copied public monorepo compile inputs from the immutable manifest and the
-four runner helpers. Check both-host measurement locks, own a bounded lock,
-reuse pinned PG image, Rust1.85.1 and OpenSSL; do not supply operational secrets,
+four runner helpers. Inspect both-host activity and use a bounded per-owner
+correctness activity under workspace rule34b, not an exclusive measurement
+lease. Reuse pinned PG image, Rust1.85.1 and OpenSSL; do not supply operational secrets,
 rows or PKI. Set `EPG10_TEST_PROFILE=08`, `EPG10_PORTAL_REVISION` to the source
 baseline, `EPG10_EXPECT_BOOTSTRAP_TESTS=22`, `EPG10_EXPECT_READ_TESTS=38`,
 `EPG10_EXPECT_RESOURCE_TESTS=8`, `EPG10_EXPECT_MANAGER_TESTS=11`,
@@ -612,8 +620,9 @@ baseline, `EPG10_EXPECT_BOOTSTRAP_TESTS=22`, `EPG10_EXPECT_READ_TESTS=38`,
 `python3 /tmp/epg10-08-<new-owned-target>/run.py` from that prepared target.
 The runner invokes its85safety cases, locked/offline compile/tests/fmt/strict
 Clippy and final input hash comparison. Clean the exact private target afterward;
-the completed08 target has already been removed. No HK heavy job is permitted
-while its foreign measurement lock remains active.
+the completed08 target has already been removed. Capped correctness may coexist
+with peer jobs under rule34b; absolute capacity claims still require the
+exclusive measurement window. Separate TLS operational exclusivity is unchanged.
 
 Final peer round11:52–11:53 supersedes the historical11:43 pin above: PM now
 `e2003bfe8a21124fb78dbdfdda1ad774cbecdfc2`, docs-only Edgev1.2 plan references;

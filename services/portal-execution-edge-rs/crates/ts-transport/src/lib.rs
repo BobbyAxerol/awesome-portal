@@ -1,5 +1,7 @@
 #![forbid(unsafe_code)]
 
+pub mod report_publication_wire;
+
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use chrono::Utc;

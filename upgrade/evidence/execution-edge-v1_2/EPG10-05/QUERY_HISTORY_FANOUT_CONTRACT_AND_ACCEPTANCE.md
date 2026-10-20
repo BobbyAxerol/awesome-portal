@@ -140,9 +140,13 @@ The bounded runner is [scripts/epg10-04/run.py](../../../../scripts/epg10-04/run
 reused with explicit profile05 rather than copied into another runner. Inputs
 remain code/contracts only in an owned0700 `/tmp/epg10-05-*` directory, preserving
 the monorepo layout under `source/`; the shared keyset fixture and every Rust
-input are hashed before/after. Match the runner/helper hashes in `pg-receipt.json`.
-Before any run, inspect the target host measurement lock. A foreign unexpired
-lock means no job; the runner acquires/releases its own lock. No operational
+input are hashed before/after. `pg-receipt.json` runner/helper hashes describe
+the historical pinned revision only; a current-source rerun seals its actual
+current helper/input hashes in a new bounded receipt, not as those old bytes.
+Before any run, inspect target host activity and apply workspace rule34b.
+This capped correctness runner records/removes only its own bounded activity;
+it does not acquire an exclusive measurement lease or block peer correctness
+work. Coexistence is recorded, not absolute capacity evidence. No operational
 environment, DB address or credentials are inherited. Qualification uses:
 
 ```text
@@ -156,7 +160,8 @@ python3 -B /tmp/epg10-05-<owned>/run.py
 The runner executes safety tests, rustfmt, locked/offline compile, four Rust unit
 packages, exact bootstrap/scoped-read PG suites, strict all-targets Clippy and
 input immutability; its finally removes only the owner-labelled disposable PG
-and its own lock. After retaining bounded receipts, remove the exact private
+and its own activity file after inode/ownership verification. After retaining
+bounded receipts, remove the exact private
 source/target/dependency-cache/log directory; never prune shared Docker resources.
 
 One connected acceptance return is needed, not new generic approvals:

@@ -21,7 +21,8 @@ Reuse the accepted04–08 runner and Rust modules, not a second framework:
 
 - `scripts/epg10-04/{run.py,test_run.py}`: explicit09 profile, same ten unit
   crates, Edge binary, strict TLS, bootstrap/read/resource/manager/command PG
-  suites. Exact counts/hash-bound inputs, isolated ownership/cleanup and locks.
+  suites. Exact counts/hash-bound inputs, isolated ownership/cleanup and bounded
+  per-owner correctness activity under workspace rule34b.
 - `projection-store-pg/tests/epg10_09/read_e2e.rs` (child of05): staged group
   invisible through scoped query/replay; atomic two-entity COMMIT; lost-ACK
   retry/reconnected store; history/replay no duplicate; resync/rebootstrap same
@@ -52,14 +53,20 @@ reconnects after durable COMMIT. This is real DB-backend termination/rollback,
 not termination of a TS publisher, Edge worker, Research/BFF or whole PG host.
 Those actual multi-service crash cases remain in the connected return below.
 
+Counts/revision below reproduce the historical09 receipt only. For a current
+source rerun, freeze all expected counts against its selected source/binary
+manifest and additionally set `EPG10_EXPECT_PM_CUSTODY_TESTS=<exact current
+custody suite count>`. No omitted suite or historical-count substitution.
+
 Reproduction uses existing `scripts/epg10-04/run.py` and `test_run.py`, exact
 `qualification.json.input_hashes` source layout and helpers from03/06; no new
 test stack/framework. Select `EPG10_TEST_PROFILE=09`, baseline revision
 `cfeeee7e6dc4680dd736ac4e4076ea997d9cbb87`, expected PG counts
 bootstrap22/read42/resource8/manager11/command27 and TLS12. Rust toolchain1.85.1,
 cached PG digest and finite resource envelope are in the receipt/main plan.
-After its PASS/lease release, run `python3 -B oracles.py` from the exact private
-target with a fresh lock. Oracle inputs are committed Research630eafc5, not
+After its job is terminal and scoped cleanup verified, run `python3 -B oracles.py`
+from the exact private target with its own bounded correctness activity, not an
+exclusive measurement lease. Oracle inputs are committed Research630eafc5, not
 staged commissioning WIP; no package installation or peer build is needed.
 
 ## Actual verification and cleanup

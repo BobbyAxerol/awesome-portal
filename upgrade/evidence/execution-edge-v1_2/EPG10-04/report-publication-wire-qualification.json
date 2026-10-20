@@ -1,0 +1,108 @@
+{
+  "schema": "portal.edge.selected-report-wire-qualification.v1",
+  "phase": "EPG10-04",
+  "provenance": "TEST_ONLY_ISOLATED_CORRECTNESS",
+  "status": "IMPLEMENTED_AND_ISOLATED_TESTED",
+  "physical_terminal_utc": "2026-10-20T11:42:29Z",
+  "supervisor_confirmed_utc": "2026-10-20T11:42:32Z",
+  "terminal_exit_code": 0,
+  "feature_branch": "feat/execution-edge-upgrade-v1_2",
+  "tested_base_commit": "2abbad200c12d6b59aae5cbf7f9d550e9dfeb8c4",
+  "producer": {
+    "branch": "feat/portfolio-account-v1_1-parallel",
+    "qualified_input_commit": "a7f4df3b8104bd41e431e0fb79a0bc079d41a32f",
+    "rechecked_unchanged_through_commit": "4c7d0c222d9d42a2c9c6173e9d60134ba6e0494c",
+    "endpoint_sha256": "96671ba358239ff0d26b75fc17d832b06733292308ab0531966e724a04765396",
+    "bootstrap_sha256": "68577ab8f667a7b8fde0789369cddf44021d6354d32d13d7dc19bb5521a68b5c",
+    "dataset": "pma.reports.current-original-publication",
+    "payload_schema": "pma.report-publication-history-item.v1",
+    "semantics": "SELECTED_IMMUTABLE_AS_PUBLISHED_REPORTS_NOT_CURRENT_FINANCIAL_STATE"
+  },
+  "source": {
+    "wire_module_sha256": "db7e22a00c76e2f5faacb8915463dc050f1e436cfaf570e88db25a1319f326b6",
+    "wire_tests_sha256": "b60bd4e89326b9ab44d2f10522d5133614a8da53a0e70d8f642074d258e33b9c",
+    "cargo_lock_sha256": "6c6874194b41d6daed4306550a1108133856e92b9f270e2ecd0dc9a8fb49b6a0",
+    "final_421_file_manifest_sha256": "e64b24624bf5a800312df4a5b00af9f58727cb24a3845f2ae76aa354033d878a",
+    "additive_public_vocabulary_sha256": "2bff34b773e24c9f477e825f70f7776c03cc1b9038364791b5167f064e487af1",
+    "unchanged_bootstrap_core_sha256": "3d951b11daaa829b23684c824ae226acbd91bc4a17d7427ea76456e5b8c97b25",
+    "unchanged_projection_store_sha256": "a40550cec78bb6b9fa6e114e5599d94e3bc1ab63985422a98897664f596d1859"
+  },
+  "qualification": {
+    "rust_version": "1.85.1",
+    "image": "sha256:9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e3737d0b100e7907a679acb36",
+    "full_package": "ts-transport",
+    "passed": 37,
+    "new_cases_included": 31,
+    "unchanged_baseline_cases_included": 6,
+    "failed": 0,
+    "skipped": 0,
+    "ignored": 0,
+    "doctests": 0,
+    "fmt_check": "PASS",
+    "strict_all_target_clippy": "PASS_ZERO_WARNINGS",
+    "workspace_commands": [
+      "/opt/rust/bin/rustfmt --check --edition 2021 --config skip_children=true crates/ts-transport/src/lib.rs crates/ts-transport/src/report_publication_wire.rs crates/ts-transport/src/report_publication_wire/tests.rs",
+      "/opt/rust/bin/cargo test --offline --locked -p ts-transport",
+      "/opt/rust/bin/cargo clippy --offline --locked -p ts-transport --all-targets -- -D warnings"
+    ],
+    "earlier_selected_31_overlap_full_37": true,
+    "qualification_log_sha256": "57be4b785e8b524c33517209f9cbd01cc99e2c1f9c3f005e6f152124ddb8a27d",
+    "physical_terminal_sha256": "fdf53406856d1415a80d70ccfa58e01a7f9d0fec3706b3e7b99d32ebd578beaf",
+    "full_tests_log_sha256": "1158cef611949b4654065133608d6d9340b3797c04107a9244ad1d51b4f53a2b",
+    "clippy_log_sha256": "3148d8ab976ed46d0a092df29d327d9935defe347dda689d5aaa8fbfe0f639e8"
+  },
+  "private_bounded_evidence": {
+    "directory": "/home/bobby/secure/epg10-04-report-wire-Os7E6WCK-evidence",
+    "total_bytes": 449912,
+    "summary_sha256": "759c1ff8c430a207737e3b338c5c8df5a92917d67610dca37adf60ff53022b9c",
+    "all_422_inputs_check_log_sha256": "03ee49236f370f5d85e4d76b9dcce8dd975f0fbaba54c22a74c815e5ca3e068c",
+    "cleanup_receipt_sha256": "20b712b4071cfce5711f52aa2f3ee7c7408adbd5b21a7e1e9483e57779e0d2cc"
+  },
+  "test_envelope_not_production_capacity": {
+    "cpus": 1,
+    "memory_and_swap_bytes": 1073741824,
+    "pids_limit": 256,
+    "outer_deadline_seconds": 900,
+    "maximum_private_cell_bytes": 3221225472,
+    "network_during_qualification": "NONE",
+    "source_and_toolchain": "READ_ONLY",
+    "private_target_and_cargo_cache_only_writable": true,
+    "measurement_lease_acquired": false,
+    "shared_host_absolute_performance_claim": false,
+    "downloaded_public_archives_bytes": 29766782,
+    "present_locked_archive_checksums_passed": 245
+  },
+  "failed_attempts_preserved": [
+    "UNSUITABLE_ALPINE_TOOLCHAIN_PROBE_NO_SOURCE_TRANSFER",
+    "HEADROOM_PREFLIGHT_REFUSED_NO_JOB",
+    "PRIVATE_OFFLINE_CACHE_INCOMPLETE_BEFORE_COMPILE",
+    "PUBLIC_VOCABULARY_FIXTURE_MISSING_BEFORE_TESTS",
+    "TEST_ONLY_STYLE_CLIPPY_FAILURE_AFTER_37_TESTS_PASS"
+  ],
+  "not_qualified": [
+    "INSTALLED_PM_HTTP_MTLS_ENDPOINT",
+    "CURRENT_HISTORY_EXPORT_MEMBERSHIP_AUTHORITY",
+    "AUTHENTICATED_SOURCE_PROOF_OR_NATIVE_PUBLISHER_FENCE_COVERAGE",
+    "PROJECTION_APPLY_OR_ACK",
+    "CURRENT_FINANCIAL_STATE_ORDERS_FILLS_OR_ALL_TABLE_CENSUS",
+    "CONNECTED_EPG10_08_OR_09",
+    "PRODUCTION_CAPACITY_OR_ACTIVATION"
+  ],
+  "cleanup": {
+    "source_inputs_checked_before_removal": 422,
+    "sgp_cell_removed_utc": "2026-10-20T11:45:41Z",
+    "source_cache_target_archive_logical_bytes_removed": 654165663,
+    "owned_containers_remaining": 0,
+    "existing_sgp_runtime_tuples_unchanged": 52,
+    "sgp_image_rows_before_and_after": 338,
+    "sgp_unique_images_before_and_after": 328,
+    "sgp_buildkit_records_before_and_after": 3858,
+    "available_before_bytes": 144532922368,
+    "available_after_bytes": 145233526784,
+    "shared_host_disk_delta_not_exclusive_reclaim": true,
+    "image_build_pull_prune": false,
+    "shared_cache_volume_network_or_operational_state_deletion": false,
+    "bounded_private_evidence_retained": true
+  },
+  "runtime_mutations": 0
+}

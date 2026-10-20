@@ -2980,6 +2980,7 @@ dependencies = [
 name = "ts-transport"
 version = "0.1.0"
 dependencies = [
+ "authoritative-event-core",
  "chrono",
  "execution-contracts",
  "futures-util",

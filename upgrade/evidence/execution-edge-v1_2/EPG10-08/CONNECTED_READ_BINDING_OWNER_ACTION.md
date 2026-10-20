@@ -14,9 +14,10 @@ acceptance; Core policy/composition follows genuine mapping and source inputs.
 
 **Latest source disposition20Oct:** Core009 revision3 now corrects the three
 session/dry-run source defects listed historically below. Use the revision3
-intake section, not the old CHANGES_REQUESTED patch instructions. Actual
-disposable-PG qualification is being executed separately; source preparation
-is still not normal R3, installation, genuine session or connected08 acceptance.
+intake section, not the old CHANGES_REQUESTED patch instructions. Focused
+disposable-PG qualification is terminal89PASS/build/restore PASS as recorded
+below; this is still not full ordinary R3, installation, genuine session or
+connected08 acceptance.
 
 Bobby resumed **Core009 → actual08 → scoped read09**. Published base is
 f8d3f20cc330947253de8a73d14291a236ab3edc (later custody publication is in the
@@ -98,10 +99,20 @@ Known reviewed source seals (bare SHA256):
 | profile | `5c33c4e0276dd849215d2662c157418a75e91a06fd405f6b369dcc172b722c03` |
 | field policy | `b9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3` |
 
+Actual reviewed static field reference is now located and handed back in the
+[revision3 qualification/input return](CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md#core009-revision3--edge-focused-qualification-and-known-input-return):
+`/home/bobby/secure/portal-manager-read-v2/runtime/serving-policy.json`.
+Its exact field seal above and prior profile-domains artifact/mount review bind
+the existing catalogue/key/profile projection semantics, not a researcher field
+matrix or a new current-runtime grant. Core uses the actual ref consistently in
+a new owner artifact, not the old hash-derived label. Static ref assembly no
+longer waits for a producer; fresh operational pins/window still do.
+
 Previously qualified preparation bounds: source/control pool1each,
 request/response32768bytes, in-flight1. These are reused finite-window bounds,
-not production capacity evidence. Exact current `field_policy_ref` still needs
-the actual reviewed owner artifact; do not invent a reference from the hash.
+not production capacity evidence. Exact current grants/field seal still need
+the new reviewed owner artifact; use the actual located reference above, never
+invent a reference from a hash.
 Old authority/trust/source acceptance/window pins are historical and retired.
 Do not recycle acceptance1/2, reopen28446 to wait, or reuse the FINISHED session.
 
@@ -211,6 +222,21 @@ Bounded retry sets explicit1536MiB V8 heap inside the same Node2GiB/2CPU cap;
 PG1GiB/1CPU,900s deadline, no ports/operational DSN or peer source edits.
 Actual results and both cleanup receipts belong in the
 [same approved-phase journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct).
+
+**Final focused qualification:** TERMINAL0 at10:56:44UTC,89/89PASS/0FAIL/SKIP
+(63session+23CLI fixtures and3actual-PG cases), tsc and existing dump/restore
+with four scoped-policy row digests PASS. Final copied runner SHA256
+`11343fbbf337a84d120aa951e46dfc262dd63e9948fa05a6f99a0be8f6be285d`;
+qualification log SHA256
+`d32cdc0f14946dc1dfd26ac2539617224e770c81d01978a5eaa7b67eaa522e8b`.
+The successful layout adds only the seven pinned PUBLIC templates read-only
+at `/deploy/research-preview/native-core-templates`; Core must reconcile this
+normal-runner omission for ordinary R3, not skip those fixture suites. Three
+PG cases overlap the prior failed-collection attempt, not92new tests. All
+three attempts' own containers/networks/snapshots gone,0new images/cache,
+Core008/image7b2c/restart0 unchanged. Bounded full hashes/inventory/disk and
+failed provenance are in the main journal and SGP private evidence directory
+`/home/bobby/secure/epg10-08-core009-pg-final-DzvszyhJ-evidence`.
 
 Keep root-only token operations sequential and use unique paths; fixture
 inode models are not actual root-filesystem I/O proof. Ordinary full R3 and

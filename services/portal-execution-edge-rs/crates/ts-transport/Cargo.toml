@@ -7,6 +7,7 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
+authoritative-event-core = { path = "../authoritative-event-core" }
 chrono.workspace = true
 execution-contracts = { path = "../execution-contracts" }
 futures-util.workspace = true

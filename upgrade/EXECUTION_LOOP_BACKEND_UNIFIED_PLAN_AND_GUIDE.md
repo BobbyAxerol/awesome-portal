@@ -25610,6 +25610,431 @@ publication; use capped1CPU Cargo, bounded private target/no network when the
 existing cache suffices, no shared cache deletion. Rollback source-only;
 preserve current pinned core/store, all runtime/stable/rollback/peer files.
 
+**04 toolchain preparation before probe:** HK host has no installed Cargo/
+rustfmt or cached registry. Do not install a toolchain or copy new source to
+SGP merely for this. Read-only inventory identifies preexisting local TS native
+builder image8aaa0dafa4e91e2e34229e371fd28beb9c0440e79b24ec00f074cfb9f8ee2b46.
+Root may probe only version/cache-directory existence in one disposable
+network-none/read-only/--rm/cap-drop/no-new-privileges container,0.25CPU/256MiB,
+no source/runtime/secret mount or image pull/build. If suitable, use a private
+source/target and capped isolated correctness container under the same already
+approved04 test scope; retain the shared image/cache read-only. Record actual
+toolchain/cache result before choosing the build path. No absolute performance
+measurement/lease, operational image mutation or external source transfer.
+
+First builder probe's wrapper selected1.83 and refused a rustup temp write on
+read-only rootfs; no download/write succeeded, no source test ran. Inspect only
+actual toolchain/cache paths without invoking wrappers, and the other already
+present qdl-rust-builder image551428d98db6b6523b3515fe040d7f9ed53abf625a78e0a1413f4e2056883817
+under the identical disposable read-only/no-network bounds. No image mutation,
+peer source mount or toolchain installation is authorized by this probe.
+
+**Source publication slice1 terminal:** commit
+2abbad200c12d6b59aae5cbf7f9d550e9dfeb8c4, Bobby identity, original feature
+branch;14owned files,+939/-57, no peer-untracked staging. Ordinary hook PASS:
+130contracts,72API suites/717cases (including57unchanged peer-untracked
+qualification cases), tsc, D4offline syntax/exact-route negatives and actual
+disposable-PG restore. This does not add717unique new tests or install a source.
+Own offline image `portal-source-proxy-d4-offline:test-7400` is retained only
+until this batch's terminal resource inventory/reference check, not as rollback.
+Next coherent Rust04 slice uses its own normal hook; one final feature push
+batch, hosted CI0 expected. Source-only no dev/main merge or runtime mutation.
+
+**Core009 final focused qualification terminal0,10:56:44UTC:** same frozen
+FE2325 source and exact seven public templates; private corrected runner SHA256
+11343fbbf337a84d120aa951e46dfc262dd63e9948fa05a6f99a0be8f6be285d.
+Build/tsc PASS;3files/89distinct tests PASS/0FAIL/0SKIP =63session fixtures+
+23CLI fixtures+3actual-PG revoke/coordinator/trigger/lock cases. Repeated3PG
+cases are overlap, not92distinct tests. Existing dump/restore and four scoped
+policy row digests PASS. Focused qualification NOT full ordinary R3, actual
+root-filesystem token I/O, installed009 or native READ/STREAM acceptance.
+
+Final SGP private evidence directory
+`/home/bobby/secure/epg10-08-core009-pg-final-DzvszyhJ-evidence` retains:
+
+| Artifact | SHA256 |
+| --- | --- |
+| qualification.log | d32cdc0f14946dc1dfd26ac2539617224e770c81d01978a5eaa7b67eaa522e8b |
+| terminal.txt | b52a706cf87a7c521ff44d7f5fedd0da33f5e3b4c48c9d12788ffa4a2ba3c038 |
+| template-files.sha256 | d41e895ac8c066d6cef752448e103247f594608ff212ea8fb0b009cced4e70d5 |
+| source-files.sha256 | 843a0f99edb98e7b86de449fea91540f1b3e6846744be1d6478dcbd8e8d5a85a |
+| after.txt | 509dc3b4ae5ffa0ac857700dc13d85ba28d9c28b3b81e13c1b7f3873720deb07 |
+| final-inventory.txt | bda5b2b48af20df06f8fa4dec145749bf894dbd5b96c23c2e7f3c62683cbd423 |
+
+All three attempts' exact own containers/networks/source snapshots absent,
+coordinator released; keep bounded failed/success evidence,0new images/cache.
+SGP338images,60containers/52active,3858BuildKit records unchanged. Final run
+available145492049920→145525350400B includes peer activity; no attributed
+global cleanup saving. Core0087818d563/container5f3252b7/image7b2c7f34/config
+497fc5a8/running/restart0 unchanged; FE peer advanced1c956848 without edits by
+Edge. Return the normal-runner omission precisely: checked-in
+`native-core-templates` resolves to `/deploy/research-preview/native-core-templates`
+in these fixtures and needs that exact read-only source mount in ordinary R3.
+No private config/secret mount or test relaxation substitutes for it.
+
+**Runnable/owner split after these results:** owned runner preparation is
+implemented/isolated-qualified, not waiting on a host lock. Core owns full
+ordinary release/config/schema/current-policy/session selection and installed
+009; source fixes/008/identity are no longer blockers. Edge continues new04
+report-wire preparation immediately, then binds each actual installed return
+under already approved08 finite trust/current-head/zero-custody rules and runs
+scoped09read after its matching08 cases. PM07 still needs authenticated
+submit/status runtime/current authority; TS03 still needs accepted publisher
+fence/coverage;01/06 actual matched target/numeric budget remain unqualified.
+
+**04 wire frozen / isolated qualification BEFORE packaging/job:**5owned files,
+new399line module SHA256b27ce5e9ed674fb1df463bd22af88335277679a3b5511b9cd5c686ea4282196b,
+31TEST_ONLY case source SHA256bbe42ec22b37f8ff6ec62ffa5c5e8c1d45804fd0e9ce72408f593f4e13c5629a;
+only4additional dependency/module-declaration lines. No compile/test claim yet.
+Review corrected canonical whole-delta response cap,4096total snapshot rows
+and independent page expiry (a shorter rollback lifetime does not expire a
+still-live snapshot page); shared protocol/pinned core/store unchanged.
+
+HK toolchain probes created no image/cache/source mutation and both cells are
+gone; builders1.83/1.82 are unsupported, never use them to claim MSRV1.85.
+SGP read-only probe confirms existing1.85.1 binaries and registry. Package only
+tracked Rust workspace source/public contracts from2abbad20 plus the exact5file
+pure-code overlay into a private manifest-hashed archive, no ENV/credential/
+private config/DB/log/cache/market data. A source-only copy to a fresh unique
+SGP /tmp test directory is within this already approved isolated04 workflow;
+record exact archive/source pins and destination before running. Use existing
+Node imagec610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32,
+RO supported toolchain/registry/source mounts and private writable target/Cargo
+home, network-none, cap-drop/no-new-privileges, --rm,1CPU/2GiB, bounded deadline.
+Check actual headroom and shared heavy coordinator without holding it to wait.
+No toolchain install/download, peer cache/target modification or operating DB.
+Run offline locked selected ts-transport tests, fmt and strict impacted clippy;
+compiler/linker/cache feasibility is not assumed from Node's earlier PG tests.
+If formatter/linter correction is needed, keep both pins and return only the
+exact mechanical/source patch for review, not a private artifact. Clean exact
+packet/source/target/cell after terminal and retain bounded evidence. This
+source preparation cannot qualify HTTP/mTLS/PM authority or connected04/08/09.
+
+**04 exact source-only qualification packet,11:10UTC before transfer:**
+`/tmp/epg10-04-report-wire-un2AtDqv/source.tgz`,992352bytes,
+SHA256c55435fe09f0efa37be443ad0f26f6e0c78b6a95cc0433330a61d589a9444d9c;
+421file manifest SHA25622161d9008115b5b9124e324e4628a1524b7e69240c7cee0730ecf1467f237c6.
+Final pre-format module0541822e443329562c442bd3e21b6650c584dac159ffd305e2b637295234d775 /
+testbd00d4987a4d4b92bc8b6400c6040719b6cdf067f3f9fc6718c4c3fd6dfcd51c
+passed independent static review, not execution. Transfer only this public
+source packet and manifest to one freshly created
+`bobby@178.128.51.255:/tmp/epg10-04-report-wire-*` directory; record its actual
+path before the capped job. No secret, ENV, operational config or data included.
+The private copied source may be writable for rustfmt of exactly the three
+owned Rust source files, then read-only for test/clippy. Return those mechanical
+formatting edits only, verify their diff, and reseal the resulting test pins.
+Existing supported1.85.1 toolchain/registry remain read-only; no toolchain or
+dependency download. Use original capped correctness cell and exact cleanup
+above. Root retains HK journal/review/commit authority; delegated test owner
+may manage only this unique temporary packet/cell and bounded private evidence.
+
+**Live producer recheck / handback before editing Core packet,11:13UTC:**
+FE advanced be089fa4195732f77eed4024128da66ff5bad5ca for unrelated BE-P13;
+installed Core still7818d563,009 return still PREPARED_SOURCE_ONLY. Update only
+the existing already-indexed Core009 priority handoff with the real revision3
+89-case/build/restore result and exact public-template layout correction, so
+Core does not repeat superseded source fixes or wait for a test already run.
+Do not alter peer source, normal release runner, index, commit or runtime.
+Use exact content/hash compare-and-append, preserving concurrent peer changes.
+Final feature publication pin follows after the Rust slice's ordinary hook.
+
+PM now58282313dd165357c12b40ce84acecd320058933; the three report inputs are
+byte-identical to the a7f4df3b freeze. Command descriptor83d251e8 remains
+unmounted/untrusted, qualified runtime/native targets empty. TS canonical
+668e1032/next0cd356da, publisher13f21d53/SQL590115a6bc unchanged; no new accepted
+publisher-generation fence. Capacity target2fd7e45a still TEST_ONLY, selected
+image/config/composition/hardware/source pins null,14budget groups unapproved.
+These are actual scoped source/descriptor observations, not a broad health
+claim or a reason to defer the independently runnable report adapter.
+
+SGP Rust qualification exact temporary directory created before its probe:
+`/tmp/epg10-04-report-wire-hDA4bIys`; bounded private evidence at
+`/home/bobby/secure/epg10-04-report-wire-hDA4bIys-evidence`.
+Observed11:12:39UTC:9357MiB available memory,145320513536B filesystem available,
+no coordinator/measurement held; installed Core tuple unchanged. The source
+packet has not yet been transferred at that observation; probe/test outcomes
+must be recorded separately, including any failure and exact cleanup.
+
+**04 probe failure and existing compatible base BEFORE next probe:** Node
+c610fcdf is Alpine3.24.1/no cc; mounted GNU1.85.1 cargo/rustc/rustfmt exit127.
+No archive/source left HK, no tests/download/cache write; probe cell is absent,
+empty temporary directory removed. Retain6116B bounded private evidence,
+probe log SHA256f3676882e3dad7529771f9236e06d6cff24f752c9aead9aacefc88b29e65c727.
+Use already-present `rust:1.85.1-slim-bookworm` immutable image
+sha256:9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e3737d0b100e7907a679acb36
+for the same exact offline correctness workflow. If its cc is absent, the
+already-present full bookworm image
+sha256:e51d0265072d2d9d5d320f6a44dde6b9ef13653b035098febd68cce8fa7c0bc4
+is the only predeclared fallback. Neither image is pulled/built/modified.
+Probe supported binaries/cc first under the original caps; create and record
+one fresh unique owned cell, keep it only until its terminal qualification/
+cleanup. Same exact source packet, no operational source/config/data access.
+
+**08 static known-input assembly no longer externally missing,by11:19UTC:**
+Independent current HK audit plus root hash recheck identifies the actual
+reviewed `field_policy_ref`:
+`/home/bobby/secure/portal-manager-read-v2/runtime/serving-policy.json`, exact
+file hashb9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3.
+Existing sibling catalogue file hash9040f0897d8f452a486e51ce35abb7f3165b2238d07221b6b0e684d9829b012e
+has embedded seal0c71b72c; existing commissioning/profile-domains.json
+hash8bd82a118c9f189b9fb9447f3933e0a4fe0c0157b8acd02692ceee5a46d98e9f
+explicitly references these files. Its canonical Paper descriptor matches
+profile seal5c33c4e0. Prior review/mount provenance is in this plan21:57UTC
+entry above, not a new approval inferred from a hash. It is catalogue/key/profile
+projection semantics, NOT a new researcher field matrix or arbitrary SQL grant.
+
+Root checked exact qualified Core2325dd94 access.contract/access-policy/
+core-owner-commissioning source: ref is bounded opaque reviewed text, compared
+exactly between field seal and grants, not a file loaded on SGP. Hand back the
+actual existing path with byte/provenance pins for the NEW artifact; never
+recycle the old hash-derived label or change a stored grant. No private file
+transfer or DB/window/session/policy mutation. Profile remains an explicit
+owner selection, not upstream profile attestation. Fresh trust/native acceptance/
+runtime observation still need the coordinated real window. This closes owned
+static reference assembly only, not08 current authority or connected acceptance.
+
+GNU probe then PASS on preexisting9f841bbe: Debian12 cc12.2.0 and mounted actual
+Rust/Cargo1.85.1/rustfmt1.8.0. New exact private test directory
+`/tmp/epg10-04-report-wire-Os7E6WCK`; evidence sibling in SGP secure. Transfer
+only predeclared c55435fe archive/22161d90 manifest, then bounded offline tests;
+no fallback image, download, production input or additional private dependency.
+
+**Core handback actually delivered,confirmed by11:19UTC:** existing FE ELP2-10 priority
+packet append4228B after original content hash f178947d, final
+7112ba6d24aff93f31a368518711fa258f3a4ba989237f330408a35219072931;
+existing Core `upgrade/UNIFIED_IMPLEMENTATION_PLAN.md` append993B after8110c55b,
+final9ad858c24d85c86b0bb9d291fd4ba033fb0917c3e0d9bfa13af58dc7beb6b055.
+Only bounded public Markdown qualification/static-reference text was sent,
+exact compare-and-append through no-follow owned files; no overwrite of peer
+WIP/index/source, commit/push or runtime action. SGP has no apply_patch helper,
+so exact hash-guarded append was used, then both final hashes verified by the
+operation. Existing index points to the same packet. Delivery is not Claude
+ACK or installed009. Prior missing-code/field-ref instructions are superseded
+by actual revision3 qualified source/static inputs, not actual connected proof.
+Those final hashes include correction of only the appended UTC minute label
+to the actual clock observation11:19UTC; equal-length guarded byte replacement,
+no peer content removed or changed.
+
+**04 mechanical format return verified/applied:** exact GNU private test copy
+matches421input files; rustfmt changes only the two new owned source files,
+not lib.rs/core/store or any peer file. Returned HK
+`/tmp/epg10-04-report-wire-formatted-vzlqPfWt/formatted.tgz`
+SHA25632a66d8f15d83664a7e4a12a8ff5002745430386dd30ee33a5e0086ebe2139a3;
+format.patch0661294666d8e4d8d5815c7ac84c176a542a03df91a3e9b1eaeb562dccefce8a;
+three-file manifest7c31b420cf66ebee50f40683afc9e79b12f2f2093b5fbe61fd615efcb12cd59e.
+Root checked exact archive membership/patch and applied this formatting patch
+only, `git diff --check` PASS. Current module hash
+db7e22a00c76e2f5faacb8915463dc050f1e436cfaf570e88db25a1319f326b6;
+tests1aa5036f898540d39cef15b5c84fa06136b3af934ed09411e5330e1419103556.
+No execution result yet. Supported-toolchain job runs31new cases, then the
+full impacted37-case package (6self-contained baseline tests,5loopback and1pure),
+strict all-target package Clippy and exact fmt check; never sum31+37 as68cases.
+
+**04 headroom adjustment before Cargo launch:** actual SGP available memory
+fell to2543516KiB; original2GiB cell+1GiB headroom preflight refused safely,
+terminal78/no Cargo or container started, no coordinator held. Reduce this
+single-job Rust correctness cell to hard1GiB memory/swap and1CPU (not more
+resources or less correctness), keep1GiB host headroom and recheck immediately
+before launch. No parallel Rust stage, dependency download or shared target.
+If the hard cap cannot compile/link, record the OOM/failure and wait for actual
+headroom; never raise the cap or consume the TS/DL reserve silently. This
+bounded placement change is not a capacity/latency claim or test relaxation.
+
+**HK terminal hook1 cleanup:** no running/stopped container references exact
+`portal-source-proxy-d4-offline:test-7400`, immutable image
+sha256:9558584d148a66e020c5147ae6b097bd29c4e829b0b72659f110c7ea6e140191.
+Read-only inventory:97images,70containers/40active,67volumes,339BuildKit
+records. After the active build/publication guard, remove only that own tag/
+image and verify it absent. Pre-cleanup available253924442112B; post below.
+No shared cache prune, container/volume/network or peer image removed. Active/
+rollback retention remains exact original set; final19-tuple reconciliation
+and the second normal-hook image cleanup follow the completed Rust slice.
+Post exact removal filesystem available253972226048B (+47783936B observed,
+shared-host delta not an exclusive reclaim attribution).
+
+**04 first offline attempt terminal101 / bounded dependency preparation:**
+Supported GNU cell ran fmt CHECK PASS, then Cargo refused missing cached
+`ahash0.7.8` before any compile/test/Clippy. Preserve terminal hash
+4d7d50ffff9ba59018baa53272001db59d580d47a705f728b5f7e966d867e15b and
+failure log71c0928a1f9e94bdc00ff55bc0a40241c33f93bbb1ed4be7b4dc336b338decab;
+cell absent,421source hashes unchanged. This is owned dependency setup, not a
+producer gate or code PASS. Exact Cargo.lock checksum for that public crate:
+891477e0c6a8957309ee5c45a6368af3ae14bb510732d2684ffa19af310920f9.
+
+Use the existing04 `EPG10_ALLOW_DEPENDENCY_FETCH=1` preparation principle now,
+not a new framework: initialize a UNIQUE private Cargo home with existing
+public registry metadata/cache where useful, never shared writable files,
+credentials/config or a hardlink to mutable peer state. If exact archives are
+absent, a bounded `cargo fetch --locked --target x86_64-unknown-linux-gnu` may
+read the public crates.io HTTPS registry into that private cache only. No
+toolchain/package-manager installation or external private input. Fetch stage
+<=300s,1CPU/1GiB, hard memory/swap and original headroom guard, pinned image,
+no source writes/operational mounts; checksum verification remains Cargo.lock.
+Private downloaded archives<=256MiB and total private cache/source/target<=3GiB;
+stop/retain failure if bounds cannot be met. Registry copying is bounded to
+512MiB of public metadata/cache; larger shared cache is not copied wholesale.
+Then disconnect network and run unchanged exact fmt/31new/full37/strictClippy
+under original caps, one job at a time. Record actual traffic/cache size,
+commands/source pins and cleanup. The earlier no-download plan was safely
+attempted and failed; this explicit normal dependency preparation supersedes
+it only, without weakening tests/source/runtime authority or resource bounds.
+
+**Current operator-document impact check BEFORE edits:** independent review
+found three remaining CURRENT reproduction paragraphs in05 query/history,
+08 security and09 E2E packets claiming an exclusive host lock/refusing peer
+correctness work. Align only those instructions with tested2abbad20 and workspace
+34b: bounded per-owner correctness activity, no exclusive measurement lease.
+Preserve dated failed/tainted receipts,08 TLS operational exclusivity and10
+absolute capacity measurement locking. Review exact documentation diffs and
+run the normal hook with the coherent Rust slice; no runtime/test relaxation.
+
+**04 public dependency preparation actual terminal0,11:30:16UTC:** private
+registry319920661B, downloaded archives29766782B, total private cell327821286B;
+all below their frozen limits.245 present locked archive checksums PASS,
+including exact ahash0.7.8;63 other-target/unused archives remain absent.
+Cargo.lock unchanged6c6874194b41d6daed4306550a1108133856e92b9f270e2ecd0dc9a8fb49b6a0.
+Fetch log a9a087df1f2a1dd7ff8868c35ed5577803b0d5572cbe6c10a7ffcb80241ce255;
+checksum receipt b52a1c707c0ac6764949b94254b4e50f031b1972df930db2de0290ba18778e8a.
+Fetch container absent; subsequent actual qualification is offline only.
+
+**04 offline build packaging defect,terminal101 at11:33:34UTC:** supported
+Rust1.85.1 cell passed fmt then compilation correctly refused the missing
+PUBLIC vocabulary fixture required by existing ts-contract-v1/build.rs:32.
+No test executed and no runtime/authority evidence follows. The exact tracked
+file is `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract/vocabularies.json`,
+86131B, SHA2562bff34b773e24c9f477e825f70f7776c03cc1b9038364791b5167f064e487af1.
+Transfer only this public file into the identical monorepo-relative private
+SGP test layout, verify exact bytes before/after, then reuse existing compiled
+target/private cache and frozen CPU/memory/network/time/disk caps. Preserve
+the failed receipt; do not bypass vocabulary validation or expand source/data
+transfer. This is owned test packaging, not a missing producer gate.
+
+**04 actual corrected-layout qualification,terminal101 at11:38:02UTC:**
+Rust1.85.1 fmt CHECK PASS;31selected new tests PASS/0FAIL/ignored and the full
+impacted ts-transport package37distinct PASS/0FAIL/ignored,0doctests.31 is a
+subset, not68cases. Strict all-target Clippy correctly refused three owned
+test-style defects: TEST_ONLY doc markup, needless Vec ownership in tail fixture
+helper, and a missing semicolon in one match assignment arm. No production
+source warning, OOM or disk-budget failure; test cell absent, maximum private
+disk653906715B. Preserve failed lint receipt; fix only these test issues without
+weakening assertions, then exact updated public test-file transfer and rerun
+fmt/full37/strictClippy offline in the retained bounded private cell. This is
+owned runnable closure, not external technical debt or final lint PASS.
+Focused log ddc05e3f6e001362931a6611f3f612422cc1280f3d7704354bdf1fe3f6ea7d56;
+full log302fced4e88acd562dc67effa23a1f2e8ee1ec6ccc6946d6e72930fabf0cf0b1;
+Clippy0064e6b77629dbb38e37696661d7235675efe203f0280f55e2d798e3d375be8b.
+
+**Bounded producer refresh while Rust ran:** Core FEc938e786 adds BE-P12
+identity/stage contracts, not a change to the three frozen Core009 files.
+Integration7818d563 and actual008container5f3252b7/image7b2c7f34/restart0 remain
+unchanged; public return stays PREPARED_SOURCE_ONLY. No newer installed009,
+current-policy/session/window return found. A proposed broad environment read
+was rejected and NOT retried/bypassed; no secret/config read or fresh native
+acceptance claim. PM now4c7d0c222d9d42a2c9c6173e9d60134ba6e0494c, report
+endpoint96671ba3/bootstrap68577ab8 and command descriptor83d251e8 unchanged;
+new Paper-financial/package source work is not a commissioned target. TS-next
+0cd356da/publisher13f21d53/SQL590115a6bc unchanged. Continue owned Rust closure;
+do not turn these source-only changes into a blanket wait or runtime authority.
+
+**Final read-only review corrections BEFORE document edits:** no new wire
+authority/correctness blocker. Correct04 wording: shared protocol permits
+byte-identical transport replay, rejects conflicting immutable identities;
+duplicate snapshot entities still fail. Label05 receipt helper hashes and08/09
+old counts as their historical pinned-source reproduction, not current bytes.
+Current profiles07–11 additionally require explicit EPG10_EXPECT_PM_CUSTODY_TESTS;
+freeze all current-suite counts against the selected source/binary manifest,
+never copy historical counts, weaken expected-count checks or skip custody.
+Current runner safety suite107, historical08 suite85. These are documentation
+defects in owned runnable handoff, not a reason for a new phase or test bypass.
+
+**04 exact style correction reviewed11:40UTC:** only new test file changed:
+SHA256b60bd4e89326b9ab44d2f10522d5133614a8da53a0e70d8f642074d258e33b9c,
+701lines/31tests. Diff against the returned rustfmt snapshot is limited to the
+three lint findings and necessary fixture-helper call borrow updates; all
+assertions unchanged. Production wire remains db7e22a0, pinned core/store
+unchanged; diff check PASS. Transfer exactly this updated public test file to
+its existing private SGP path, reseal its final manifest, then offline fmt/full37/
+strict all-target Clippy. If rustfmt only adjusts this file mechanically,
+return/review that exact patch and hash before freezing the result. No other
+source, dependency, credential or runtime input is authorized by this retake.
+
+Current Core priority packet entry also labels the initial0af33fdf snapshot
+as historical and directs readers to its newest qualified publication section;
+do not present that early snapshot as the current feature head. Connected READ
+driver bytes remain unchanged. This documentation correction does not require
+Core to wait for the unrelated report-wire source publication.
+
+**04 final supported-toolchain retake terminal0:** physical11:42:29UTC,
+supervisor confirmed11:42:32UTC. Exact updated test hashb60bd4e8 unchanged by
+rustfmt. Offline fmt CHECK PASS, full ts-transport37distinct PASS/0FAIL/ignored/
+skip,0doctests (31new+6baseline), strict all-target Clippy PASS/zero warnings.
+The earlier separate31selected cases are a subset, not additional coverage.
+No assertion weakening/allow/skip; source/core/store hashes unchanged. This is
+isolated TEST_ONLY pure-wire correctness, not actual HTTP/TLS/current authority,
+projection apply/ACK, native publisher coverage or production capacity.
+Final qualification log57be4b785e8b524c33517209f9cbd01cc99e2c1f9c3f005e6f152124ddb8a27d;
+physical terminalfdf53406856d1415a80d70ccfa58e01a7f9d0fec3706b3e7b99d32ebd578beaf;
+full tests1158cef611949b4654065133608d6d9340b3797c04107a9244ad1d51b4f53a2b;
+Clippy3148d8ab976ed46d0a092df29d327d9935defe347dda689d5aaa8fbfe0f639e8.
+
+Publish a bounded sanitized [wire qualification](evidence/execution-edge-v1_2/EPG10-04/report-publication-wire-qualification.json)
+beside the existing04 packet, linked there and in backend tracking. Preserve
+failed setup/build/lint receipts in private SGP evidence; no raw logs, report
+payloads, caches, credentials or generated market data enter Git. Record the
+actual terminal source422check/SGPcleanup next, then exact owned stage scope,
+ordinary hook and feature-only one-batch publication. Predeclared private
+closeout above captures the second own hook-image cleanup, HK temporary paths,
+19protected runtime tuples and exact post-publication ref. Source-only rollback;
+full08/09 remain NOT_MET and no runtime activation is implied.
+
+**04 actual terminal SGP cleanup11:45:41UTC:** all422source inputs (421Rust
+manifest+one public vocabulary) rechecked before removal; exact owned private
+`/tmp/epg10-04-report-wire-Os7E6WCK` removed,654165663logical bytes of public
+source/archive/private Cargo cache/target. Own test/fetch/probe containers
+absent. All52existing SGP runtime ID/name/image/restart tuples match their
+baseline byte-for-byte. No image build/pull/prune, shared cache/volume/network
+or operational state deletion. Filesystem available144532922368→145233526784B;
+observed+700604416B is shared-host movement, not an exclusive reclaim claim.
+Bounded secure evidence retained; final image/BuildKit inventory is read-only.
+Root alone cleans the two exact consumed HK packet/format-return directories
+with the second terminal hook image through the predeclared closeout helper;
+no duplicate peer cleanup or active/rollback/worktree removal.
+
+**Final command/inventory handback:** from the Rust workspace in the pinned
+offline cell, `/opt/rust/bin/rustfmt --check --edition 2021 --config skip_children=true
+crates/ts-transport/src/lib.rs crates/ts-transport/src/report_publication_wire.rs
+crates/ts-transport/src/report_publication_wire/tests.rs`;
+`/opt/rust/bin/cargo test --offline --locked -p ts-transport`;
+`/opt/rust/bin/cargo clippy --offline --locked -p ts-transport --all-targets -- -D warnings`.
+All final exits0. SGP338image rows/328unique IDs and3858BuildKit records match
+baseline, no owned image/cache created. Installed Core0085f325/7b2c/restart0
+unchanged. No new throughput/latency or native-source assertion follows.
+
+Delegated owner had already removed ONLY the consumed HK format-return path
+`/tmp/epg10-04-report-wire-formatted-vzlqPfWt` at11:46:31UTC before root's
+do-not-duplicate message arrived.59541logical bytes, three declared public
+artifact hashes verified first; available251915288576→251915325440B. Original
+HK source packet remains untouched. Before changing the private closeout helper,
+record this exact already-cleaned receipt and verify path absent; its remaining
+deletion set is ONLY original source packet plus its own terminal hook image.
+Never recreate the removed path or suppress checks on any existing resource.
+
+**Final SGP bounded return and commit preflight:** secure449912B evidence
+retained, summary `.../epg10-04-report-wire-Os7E6WCK-evidence/qualification-summary.json`
+SHA256759c1ff8c430a207737e3b338c5c8df5a92917d67610dca37adf60ff53022b9c;
+422check log03ee49236f370f5d85e4d76b9dcce8dd975f0fbaba54c22a74c815e5ca3e068c;
+cleanup20b712b4071cfce5711f52aa2f3ee7c7408adbd5b21a7e1e9483e57779e0d2cc.
+No owned SGP container/image/cache/volume/network resource remains. Final
+review clean:16owned staged paths, five additive Rust/manifest files plus
+linked docs/evidence; no unstaged tracked code, three peer-untracked files
+excluded and original hashes match. Core/store and producer wire pins match.
+diff check/JSON schema-shape checks PASS; Bobby identity verified. HK available
+memory17906588KiB, ordinary capped hook profile as the first successful slice,
+nonexclusive correctness and no absolute measurement claim. Run normal
+`.githooks/pre-commit` via commit, log `report-wire-normal-hook.log`, then exact
+private closeout and one feature-only push batch (all checked-in workflow
+triggers exclude this feature push, expected hosted CI0). No PR/merge/deploy.
+
 
 
 

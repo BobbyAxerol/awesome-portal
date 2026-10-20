@@ -9,11 +9,15 @@ Chúng không thay thế phase hoặc exit gate trong
 
 - **Original03–11 runnable-first correctness preparation,20Oct:**
   [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
-  records153focused PASS/0FAIL/SKIP,21new cases: per-owner correctness activity,
+  records159focused PASS/0FAIL/SKIP,27new cases: per-owner correctness activity,
   no foreign-job/global-lock ban, original-inode bounded cleanup, one-core
   Cargo03 and disposable PG auto-removal. Absolute measurements stay exclusive;
-  no capacity/runtime authority follows. Core009 revision3 corrected source is
-  under separate actual disposable-PG qualification; full08/09 remain NOT_MET.
+  no capacity/runtime authority follows. Core009 revision3 focused qualification
+  is terminal89PASS (3actualPG+86fixtures), build/restore PASS; ordinary fullR3,
+  installed009 and connected acceptance remain separate. Full08/09 NOT_MET.
+  Original04 PM selected-report wire is37/37PASS (31new), fmt/strictClippy PASS;
+  [bounded proof](../evidence/execution-edge-v1_2/EPG10-04/report-publication-wire-qualification.json).
+  Untrusted AS_PUBLISHED wire only, no HTTP/auth/source-proof/apply/runtime claim.
 
 - **Original01/06 offline host-lock alignment,20Oct:**
   [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--offline-preparation-and-current-host-lock-class-alignment-20oct)

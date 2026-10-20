@@ -929,13 +929,17 @@ full08NOT_MET,09connected NOT_STARTED. This does not recertify393or717tests.
 
 - **Original03–11 runnable-first correctness preparation,20Oct:**
   [same approved-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
-  pins153focused PASS (21new), nonexclusive own activity lifecycle, bounded
+  pins159focused PASS (27new), nonexclusive own activity lifecycle, bounded
   inode/payload verification/cleanup, one-core native-driver Cargo and `--rm`
   disposable PG. Peer correctness/measurement activity no longer blocks these
   correctness drivers. Absolute observer measurements remain exclusive and
-  correctness receipts cannot prove capacity. Core009 revision3 corrected
-  source intake/actual PG qualification are tracked separately from ordinary
-  R3, installation and genuine08 acceptance; no fixture-as-runtime promotion.
+  correctness receipts cannot prove capacity. Core009 revision3 focused
+  qualification is terminal89PASS (3actualPG+86fixtures), build/restore PASS,
+  separate from ordinary fullR3, installation and genuine08 acceptance.
+  Additive original04 PM selected-report wire now37/37PASS (31new), fmt/strict
+  all-target Clippy PASS; [bounded proof](evidence/execution-edge-v1_2/EPG10-04/report-publication-wire-qualification.json).
+  Pure UNTRUSTED AS_PUBLISHED report parsing/request bytes only; no new runtime,
+  auth, source proof, projection ACK or native connected acceptance.
 
 - **Execution Edge v1.2 / EPG10-00 (2026-10-15):**
   [EPG10-00…11 in the Execution Loop unified plan §23](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)

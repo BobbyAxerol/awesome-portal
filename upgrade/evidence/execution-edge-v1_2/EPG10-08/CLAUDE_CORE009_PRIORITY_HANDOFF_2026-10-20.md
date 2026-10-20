@@ -17,8 +17,10 @@ B1/B2 cũ; giữ nguyên business/security invariants và ranh giới file đang
   change. Không ghi code trực tiếp vào checkout Codex, không tự merge/rebase/push.
 - Edge HK: `/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`,
   `feat/execution-edge-upgrade-v1_2@0af33fdf97861edde07a5ca85e367dc9a315a092`
-  là publication hiện tại. Runner mới đang được Edge sửa/test; lấy pin cuối
-  sau publication, không chạy draft hoặc áp lại helper44ee/551a cũ.
+  là snapshot ban đầu, không phải head hiện tại. Dùng mục qualification mới
+  nhất bên dưới và publication trong main journal để lấy pin cuối; không chạy
+  draft hoặc áp lại helper44ee/551a cũ. READ driver đã publish, không cần chờ
+  additive report-wire publication không liên quan để chuẩn bị Core009.
 
 Đọc `/home/bobby/AGENTS.md`, nearest `AGENTS.md`, `CLAUDE.md`, Unified§14,
 `upgrade/execution_loop/AGENT_WORKING_RULES.md` trước khi làm. Root34b là rule
@@ -134,3 +136,68 @@ dependency có thật, không đợi command/N03/calibration không liên quan.
 **ACK requested:** Claude ghi ACCEPTED/CHANGES_REQUESTED, source pin, owned files,
 first runnable slice và exact return path trong packet/Unified của mình. Handoff
 được đặt trên SGP chưa có nghĩa Claude đã nhận/chạy hoặc009/08/09 đã PASS.
+
+### Core009 revision3 — Edge focused qualification and known-input return
+
+20Oct2026,observed by11:19UTC. Supersedes the old three CHANGES_REQUESTED as source
+blockers, not the release/runtime acceptance gates. Root reviewed the revision3
+bytes frozen at FE2325dd942333687dc6c953ff21247fd59835adea:
+session6a4ed7dc790318d60c4fd2593e48ac1845629afde444b38b11bbfba3661d1eb3 /
+CLI fa353d3398acd79fdff8525972c1130622c8978306d0c2227c2e092be4290257.
+
+Actual isolated SGP qualification is terminal0: build/tsc PASS,3files/89distinct
+PASS/0FAIL/0SKIP (63session fixtures+23CLI fixtures+3actual-PG cases), existing
+dump/restore and four scoped policy-row digests PASS. No session was issued on
+a real Portal target. Not full ordinary R3, root-filesystem token-I/O evidence,
+installed009, Cloudflare/password/human-presence, native READ or STREAM proof.
+Two earlier failed setup attempts remain recorded, not silently counted green.
+
+Private evidence already on SGP:
+`/home/bobby/secure/epg10-08-core009-pg-final-DzvszyhJ-evidence`:
+qualification.log SHA256d32cdc0f14946dc1dfd26ac2539617224e770c81d01978a5eaa7b67eaa522e8b;
+source-files.sha256 SHA256843a0f99edb98e7b86de449fea91540f1b3e6846744be1d6478dcbd8e8d5a85a.
+Own containers/network/source snapshot removed, coordinator released,0new
+images/cache. Installed0085f3252b7/image7b2c7f34/config497fc5a8/restart0 unchanged.
+
+**Ordinary R3 runner correction for Core:** those fixtures resolve their
+checked-in seven PUBLIC templates to
+`/deploy/research-preview/native-core-templates`. Mount that exact source
+directory read-only in the normal selected runner; do not skip the fixtures or
+mount a private configuration as a substitute. The successful private runner
+used explicit1536MiB Node heap within2CPU/2GiB; its SHA256 is
+11343fbbf337a84d120aa951e46dfc262dd63e9948fa05a6f99a0be8f6be285d.
+Edge did not edit the peer-owned normal runner/source or install an image.
+
+**Known static field reference is now PROVIDED, not an external missing input:**
+`field_policy_ref=/home/bobby/secure/portal-manager-read-v2/runtime/serving-policy.json`;
+exact file SHA256b9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3.
+Existing sibling `relation-catalogue.json` file SHA256
+9040f0897d8f452a486e51ce35abb7f3165b2238d07221b6b0e684d9829b012e,
+embedded catalogue seal0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44.
+Existing root-owned HK `portal-native-manager-read/v1/commissioning/profile-domains.json`
+SHA2568bd82a118c9f189b9fb9447f3933e0a4fe0c0157b8acd02692ceee5a46d98e9f
+explicitly references both actual files; canonical Paper descriptor matches
+5c33c4e0276dd849215d2662c157418a75e91a06fd405f6b369dcc172b722c03.
+
+This is the previously reviewed Manager catalogue/key/profile projection policy,
+not a new researcher field matrix, arbitrary-table grant or current-runtime
+authorization. The profile is an explicit owner selection, not an upstream
+attestation. Exact qualified Core2325 source compares the ref as opaque reviewed
+text between field seal/grant; it does not load the HK path on SGP. Use this
+existing reference consistently in a NEW reviewed owner artifact. Do not mutate
+old grant rows, recycle the old hash-derived label or copy any private file.
+
+**Core next in the SAME009 assignment:** reconcile the normal R3 runner/layout,
+finish full ordinary release/image/config/schema/current-policy/session private
+references, then return exact PREPARED vs INSTALLED pins and the proposed finite
+window. Edge supplies fresh source/trust/current-head/observer pins only for
+that ready window; no listener opened simply to wait. Genuine identity/008 and
+these three source defects are not blockers. No repeat blanket approval is
+needed for the already assigned Core009 composition/08 binding. Preserve original
+attempt/receipt/ACK and UNKNOWN/zero-custody shutdown; stable/dev/provider28445
+and command/Live mutation remain untouched. READ does not imply STREAM.
+
+Latest Edge scheduling slice2abbad20 is local/normal-hook-qualified, feature
+publication is batched with the Rust04 slice; do not assume an unpushed local
+SHA is already on origin. Existing published runner e766034c remains usable.
+Full08NOT_MET/scoped connected09NOT_STARTED. Delivery is not Claude ACK.

@@ -4,7 +4,7 @@ Governing journal: [main plan §23.13](../../../EXECUTION_LOOP_BACKEND_UNIFIED_P
 Authority: [EDGE §5.2–5.7 / phase04](../../../upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#52-snapshot-bootstrap),
 BE §6.3–6.6/8, SCORE §8.1/8.6/11.4 and REVIEW §4.3/9 linked from that plan.
 This document describes the implemented and isolated-tested source-dark protocol.
-Final result:99automated PASS,0FAIL/skip/ignored/filtered; fmt/strict clippy PASS.
+Original16Oct result:99automated PASS,0FAIL/skip/ignored/filtered; fmt/strict clippy PASS.
 Full phase remains IN_PROGRESS / EXIT_NOT_MET for existing03publication and
 01capacity/permissions, not an unfinished owned implementation. It is not a
 production grant or source-connected acceptance.
@@ -108,7 +108,9 @@ crash, independent failure-domain, HA or operational DR certification.
 Read `scripts/epg10-04/run.py` and its safety tests before execution. The runner
 requires a private0700 `/tmp/epg10-04-*` containing exact Rust `source/`, its two
 runner files, unchanged `execution_edge_observe.py` and03`run.py` renamed
-`epg03_run.py`. It atomically acquires the shared-host lock, uses the pinned
+`epg03_run.py`. Since20Oct/root34b, it records/verifies a nonexclusive per-owner
+correctness activity, not the host measurement lock. Peer work may coexist;
+the result is not absolute capacity evidence. It uses the pinned
 cached PG16.15 image only, random private credential via stdin, loopback dynamic
 port, tmpfs512MiB, .5CPU/768MiB/128pids/24connections. Cargo is one job, one CPU
 affinity and nice15. Tests use only `portal_projection_test_epg10_04` with explicit
@@ -121,7 +123,7 @@ Run with `EPG10_PORTAL_REVISION=<parent-full-SHA>` and
 full working-tree input hashes, so parent SHA is not misrepresented as tested
 dirty source. Input immutability, all required test counts, fmt/clippy, own-PG
 observations and cleanup must pass. On any failure, stop/join the observer,
-remove only the owner-checked immutable PG ID and release only the owned lock.
+remove only the owner-checked immutable PG ID and release only its owned activity.
 Root then removes exactly its validated private source/target/cache directory;
 no operational image/cache/volume/network/worktree prune is authorized.
 
@@ -161,3 +163,78 @@ Next: existing03TS/PM producer return and same-phase03/connected04rerun, with
 01production capacity/permissions. No repeat blanket04approval, new phase or
 extra source gate.05isolated contract/query work is independently preparable
 when named by Bobby; no05implementation/activation is included here.
+
+## 20Oct additive selected-report wire preparation — original04 scope
+
+The approved runnable-first continuation is tracked in the
+[same main journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct).
+This additive preparation does not replace the original99-case store proof or
+claim source-connected04 acceptance. Qualification is recorded after execution,
+not inferred from the31 prepared TEST_ONLY cases.
+
+Producer: PM branch `feat/portfolio-account-v1_1-parallel`; qualified input at
+`a7f4df3b8104bd41e431e0fb79a0bc079d41a32f`, rechecked unchanged through
+`4c7d0c222d9d42a2c9c6173e9d60134ba6e0494c`. Exact source hashes:
+
+| PM input | SHA256 |
+| --- | --- |
+| report_publication_endpoint.py | 96671ba358239ff0d26b75fc17d832b06733292308ab0531966e724a04765396 |
+| report_publication_bootstrap.py | 68577ab8f667a7b8fde0789369cddf44021d6354d32d13d7dc19bb5521a68b5c |
+| pma11-report-publication-endpoint-evidence.json | 79ab5e26fb2186578834c2d7468605d64a4c34e09fe99817d74bfaf662a7727a |
+
+PM source qualification is30unit+3isolated-PG cases; no installed TLS endpoint,
+producer-generation fence, Portal consumer or production capacity follows.
+
+The Rust module is
+[`ts-transport::report_publication_wire`](../../../../services/portal-execution-edge-rs/crates/ts-transport/src/report_publication_wire.rs),
+reusing the pinned bootstrap protocol without modifying its core/store. It
+prepares exact POST path/body bytes and decodes bounded **untrusted** envelopes:
+
+| Operation | Fixed private source path | Request |
+| --- | --- | --- |
+| Snapshot | `/internal/pma11-candidate/publication/snapshot` | `{}`; fixed server selection |
+| Page | `/internal/pma11-candidate/publication/page` | original manifest + integer index |
+| Delta | `/internal/pma11-candidate/publication/delta` | original manifest + opaque cursor |
+
+Only dataset `pma.reports.current-original-publication`, schema
+`pma.report-publication-history-item.v1`: immutable selected **AS_PUBLISHED**
+reports. Not current NAV/economics, an all-table census, orders/fills, new-version
+correction support or a generic browser route. Preserve decimal strings/nulls,
+scope/generation, ordered pages/hash chains and exact complete delta chunks.
+Reject recursive duplicate JSON keys, foreign binding/schema, invalid time/
+cursor, oversized responses, duplicate snapshot entities, missing/misordered
+pages and conflicting immutable event/source identities. Exact transport replay
+duplicates remain permitted by the shared protocol; they are not new facts.
+Snapshot pages expire at their own deadline; a shorter rollback lifetime is
+not a page expiry. A completed snapshot may tail after its snapshot expiry.
+
+Source bounds are at most1MiB per HTTP response,200rows/page and a retained
+complete original-report prefix with floor1/head<=4096. These are source safety
+ceilings, not approved production budgets or general retention guarantees.
+Whole canonical delta envelope obeys the configured group-byte cap. Sparse
+visible positions, empty tail and hidden-only group never prove scan coverage.
+
+No HTTP client/listener, signing/auth/issuer, DB/Redis access, `Verified<T>`,
+accepting `SourceProofVerifier`, projection apply/ACK or runtime flag is added.
+Actual binding still requires PM's installed endpoint/selected definitions,
+current HISTORY+EXPORT/report membership and workload/TLS, authenticated source
+proof/fence/coverage and matched01/06 capacity. Keep these producer/runtime
+inputs separate from this runnable wire implementation; no fake verifier or
+financial semantics are introduced to hide the missing inputs.
+
+For selected-package reproduction preserve the monorepo-relative PUBLIC
+`upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/trading_system_portal_contract_pack/extract/vocabularies.json`
+as well as the Rust workspace. Existing ts-contract-v1/build.rs deliberately
+requires its frozen vocabulary counts. Exact file86131B, SHA256
+2bff34b773e24c9f477e825f70f7776c03cc1b9038364791b5167f064e487af1.
+An archive missing it is a packaging failure, not a reason to disable the build
+script or vocabulary checks. Use locked dependencies and supported Rust1.85.1;
+private capped offline correctness cells never inherit operational config/data.
+
+Final retake20Oct11:42:29UTC: **37/37 PASS**,0FAIL/skip/ignored, including31new
+wire cases and6unchanged package cases;0doctests. Exact fmt CHECK and strict
+all-target Clippy PASS/zero warnings. [Bounded qualification](report-publication-wire-qualification.json)
+pins source, supported image/toolchain, limits and actual log hashes. A prior
+selected31PASS run overlaps the37, not68distinct cases. Missing-cache/fixture
+packaging and three test-style lint failures were fixed; failed receipts remain
+provenance, not relabelled PASS. No HTTP/native/authority/capacity acceptance.
