@@ -32,7 +32,7 @@ import { isOutcomeUnknownReason, type ReviewCapture } from "../../../api/reviewC
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { SectionPanel } from "../../blocks";
-import { stageWhy } from "../stage/reasons";
+import { captureReasonText, stageWhy } from "../stage/reasons";
 import { useStageReason } from "../stage/StageEligibility";
 import { NOTE_MIN, newNoteKey, noteBlock, noteFingerprint, noteLength, type NoteInputs } from "./model";
 import type { NoteCapability } from "./useSandboxReads";
@@ -149,7 +149,8 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
   } else if (capability.state === "unknown") {
     body = <Shut reason={`Not available. ${capability.reason}`} />;
   } else if (capability.state === "unavailable") {
-    body = <Shut reason={reasonFor("sandbox.review_note", stageWhy("notEnabled"))} code={capability.reasonCode} />;
+    // The eligibility sentence when the server published one; else the capabilities row's own code in words (BE-P7); else today's sentence.
+    body = <Shut reason={reasonFor("sandbox.review_note", captureReasonText(capability.reasonCode) ?? stageWhy("notEnabled"))} code={capability.reasonCode} />;
   } else if (outcome?.kind === "recorded") {
     const { capture, key } = outcome;
     body = (

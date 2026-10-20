@@ -56,6 +56,19 @@ export const STAGE_REASON_WHY: Readonly<Record<Exclude<StageReasonClass, "SUBMIT
   COMMAND_FAMILY_NOT_COMMISSIONED: NOT_COMMISSIONED_WHY,
 };
 
+/**
+ * FE-068 (BE-P7 `594c298f`): `review-capture-capabilities` and the stage-action eligibility now answer from ONE predicate, in the
+ * order the routes refuse, so a capture that is off carries the SAME reason classes as the eligibility row (`RETAINED_REVIEW_READ_ONLY`,
+ * `ADMIN_ROLE_REQUIRED`, `GOVERNANCE_CAPABILITY_REQUIRED`, `GOVERNANCE_SCOPE_MISMATCH`, `CAPTURE_PROJECTION_NOT_AUTHORIZED`). The
+ * capabilities row's `reason_code` is a free string in the schema; this reads the known ones through the SAME dictionary as the
+ * eligibility (one set of words, no second table) and says `null` for any other code, so a screen keeps the code as the server sent it
+ * and its own generic sentence. Text only: nothing it returns can enable a control.
+ */
+export function captureReasonText(code: string | null | undefined): string | null {
+  if (typeof code !== "string" || !Object.hasOwn(STAGE_REASON_WHY, code)) return null;
+  return STAGE_REASON_WHY[code as keyof typeof STAGE_REASON_WHY];
+}
+
 /** The rule the producing route enforces today, in words (the basis is published; it is not a capability name). */
 export const STAGE_BASIS_TEXT: Readonly<Record<StageBasis, string>> = {
   WORKSPACE_MEMBERSHIP: "workspace membership",

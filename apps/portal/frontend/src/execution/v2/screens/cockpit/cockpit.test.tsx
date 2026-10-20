@@ -179,7 +179,7 @@ function standardPort(over: Partial<Record<(typeof READS)[number], Handler>> = {
     getWaivers: () => ({ ok: true, value: waiverPage() }),
     getReviewCaptureCapabilities: () => ({
       ok: true,
-      value: { schema_version: "governance.review-capture-capabilities.v1", authority: "PORTAL", source_side_effect_requested: false, actions: [{ id: "R2_EXECUTION_GRANT", state: "UNAVAILABLE", reason_code: "GRANT_NOT_PUBLISHED" }] },
+      value: { schema_version: "governance.review-capture-capabilities.v1", authority: "PORTAL", source_side_effect_requested: false, actions: [{ id: "R2_EXECUTION_GRANT", state: "UNAVAILABLE", reason_code: "GRANT_NOT_PUBLISHED" }, { id: "R2_CREATE", state: "UNAVAILABLE", reason_code: "RETAINED_REVIEW_READ_ONLY" }] },
     }),
     ...over,
   });
@@ -775,6 +775,8 @@ describe("decision rail", () => {
     expect(p.called("getReviewCaptureCapabilities")).toEqual([["ws_x"]]);
     expect(within(rail()).getByText("R2 execution grant")).toBeTruthy();
     expect(within(rail()).getByText("Unavailable · GRANT_NOT_PUBLISHED")).toBeTruthy();
+    // A code the stage dictionary knows (BE-P7) reads in words first, then the code as the server sent it.
+    expect(within(rail()).getByText("Unavailable · Read-only on this build · RETAINED_REVIEW_READ_ONLY")).toBeTruthy();
     cleanup();
     const q = standardPort();
     await mount(q, "/execution/approvals?sel=apr_a");
