@@ -326,6 +326,20 @@ describe("targets are links (#5)", () => {
     );
     expect(screen.getByRole("link", { name: "Account acc/1 2" }).getAttribute("href")).toBe("/deployments/accounts/acc%2F1%202");
   });
+
+  it("stops Enter and Space (they would also open the row) but lets Escape and Tab reach the drawer (F-1)", () => {
+    const seen: string[] = [];
+    render(
+      <MemoryRouter>
+        <div onKeyDown={(event) => seen.push(event.key)}>
+          <TargetLink type="ACCOUNT" id="acc_y" environment="live" />
+        </div>
+      </MemoryRouter>,
+    );
+    const link = screen.getByRole("link", { name: "Account acc_y" });
+    for (const key of ["Enter", " ", "Escape", "Tab", "ArrowDown"]) fireEvent.keyDown(link, { key });
+    expect(seen).toEqual(["Escape", "Tab", "ArrowDown"]);
+  });
 });
 
 describe("denied reads link to My access (D9)", () => {

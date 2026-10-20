@@ -26,7 +26,11 @@ import { humanize, severityWord } from "./outcome";
 const NO_READABLE = "No readable incident links";
 const HIDDEN_NOTE = "Incidents you cannot read are neither listed nor counted.";
 
-const stop = (event: MouseEvent | KeyboardEvent) => event.stopPropagation();
+const stop = (event: MouseEvent) => event.stopPropagation();
+/** Enter and Space would also open the row; Escape and Tab must reach the drawer (F-1), so only these two are stopped. */
+const stopActivation = (event: KeyboardEvent) => {
+  if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+};
 
 function LinkItem({ link, operationId, to }: { link: IncidentLinkV2; operationId: string; to(incidentId: string): To }) {
   if (link.state === "NOT_ATTESTED") {
@@ -44,7 +48,7 @@ function LinkItem({ link, operationId, to }: { link: IncidentLinkV2; operationId
         to={to(link.incidentId)}
         aria-label={`Open incident ${link.incidentId}, linked to operation ${operationId}`}
         onClick={stop}
-        onKeyDown={stop}
+        onKeyDown={stopActivation}
       >
         {link.incidentId}
       </Link>
