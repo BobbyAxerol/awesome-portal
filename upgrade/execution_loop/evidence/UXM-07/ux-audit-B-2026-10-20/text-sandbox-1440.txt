@@ -1,0 +1,148 @@
+URL http://127.0.0.1:8095/deployments/sandbox/dep_sandbox_01
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Deployments
+/
+Sandbox
+/
+dep_sandbox_01 · certification
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+The deployment fixes the environment.
+The certification run fixes the window
+Window: Certification run
+Set by the page
+Alpha Fleet
+dep_sandbox_01
+pf_crypto
+Sandbox
+Refresh
+
+Sandbox
+
+Sandbox certification
+
+OKX · account okx_testnet_main · Alpha Not available
+
+DISPLAY FRESHNESS
+Not available · Source unavailable
+RECONCILIATION
+◐
+PARTIAL DATA:
+2 OPEN
+2 recorded
+NOT AVAILABLE
+Runtime
+R1
+R2
+PAPER
+✕
+SANDBOX
+CANARY
+LIVE
+◐
+PARTIAL
+Source panels did not report.
+RECONCILIATION
+STEPS
+(7)
+PROMOTION PLANS
+TIMELINE
+STEPS PASSED
+4 / 7
+1 failed · 2 unavailable
+OPEN FINDINGS
+2
+2 recorded
+CRITICAL OPEN
+0
+PROMOTION PLANS
+1
+Blocked
+GATE
+✕
+REJECTED OR FAILED:
+BLOCKED
+Workflow draft
+
+Not available: Internal, Broker and Difference figures
+
+Sources
+FINDINGS
+2 recorded
+FINDING	SEVERITY	OPENED	STATUS
+Fee total differs by 0.01 USDT fnd_TEST_ONLY_1	
+◐
+PARTIAL DATA:
+WARNING	17 Oct 12:02Z	
+◔
+PENDING:
+OPEN
+Fill 3 arrived 4 s late fnd_TEST_ONLY_2	
+•
+INFORMATIONAL:
+INFO	17 Oct 11:15Z	
+◔
+PENDING:
+OPEN
+EXIT REVIEW
+✕
+REJECTED OR FAILED:
+BLOCKED
+Step 4 failed.
+Steps 6 and 7 are unavailable: no evidence yet.
+4 of 7 steps have passed.
+Provenance
+Submit for review
+
+Blocked until every step passes
+
+My access
+Request Sandbox exit review
+
+Not enabled for this profile
+
+My access
+What exit needs
+RECORD REVIEW NOTE
+Portal evidence
+What you checked, and what you concluded
+Record review note
+Needs at least 8 characters (0 so far)

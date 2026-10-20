@@ -1,0 +1,422 @@
+URL http://127.0.0.1:8095/governance/approvals?sel=AP-352
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Governance
+/
+Approval Inbox
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Not applied here. This screen's read has no environment filter.
+Window applies when the server supports it.
+Not applied: Environment, Window
+Approvals
+30 pending · 11 overdue · 1 due soon
+?
+Keys
+New request
+
+Preview build. Decisions are shown here, not recorded.
+
+Queue
+By SLA
+All gates 30
+R1 11
+R2 8
+Exit 8
+Live 3
+Waiver
+Archive
+Reactivation
+Capital
+Open 30
+Needs you 10
+Yours 3
+Closed
+R2
+Carry v3.2 → PF-MAIN
+sandbox · OKX TESTNET
+◔
+PENDING:
+PENDING 0/2
+▲
+INCIDENT:
+BLOCKER
+past budget 2h · 0 of 2 approvers
+R1
+RSI v1.7 · RC-41
+research
+◔
+PENDING:
+PENDING 1/2
+◈
+AWAITING APPROVAL:
+NEEDS YOU
+22h left · 1 of 2 approvers
+EXIT
+Grid v2.1 · dep_94
+→ sandbox · DERIBIT
+◔
+PENDING:
+PENDING 0/1
+◈
+AWAITING APPROVAL:
+NEEDS YOU
+1d 20h left · 0 of 1 approvers
+R1
+MeanRev v0.3 · RC-52
+research
+◔
+PENDING:
+PENDING 0/2
+▲
+INCIDENT:
+BLOCKER
+18h left · 0 of 2 approvers
+LIVE
+Grid v2.1 → BINANCE
+live · dual approval
+◔
+PENDING:
+PENDING 1/2
+❚❚
+PAUSED:
+LIVE CLOSED
+○
+NOT APPLICABLE:
+YOURS
+2d left · 1 of 2 approvers
+R1
+Funding v0.4 · RC-40
+research
+◔
+PENDING:
+PENDING 2/2
+1h 20m left · 2 of 2 approvers
+R1
+Trend v0.8 · RC-41
+research
+◔
+PENDING:
+PENDING 1/2
+▲
+INCIDENT:
+BLOCKER
+1h 13m left · 1 of 2 approvers
+EXIT
+Pairs v1.8 · dep_62
+→ sandbox · BINANCE
+◔
+PENDING:
+PENDING 0/1
+◈
+AWAITING APPROVAL:
+NEEDS YOU
+past budget 11h 46m · 0 of 1 approvers
+R1
+Liquidity v0.3 · RC-43
+research
+◔
+PENDING:
+PENDING 2/2
+◈
+AWAITING APPROVAL:
+NEEDS YOU
+past budget 9h 34m · 2 of 2 approvers
+EXIT
+Vol-Target v0.3 · dep_64
+→ sandbox · BINANCE
+◔
+PENDING:
+PENDING 1/1
+1d 21h left · 1 of 1 approvers
+LIVE
+Trend v2.6 → BINANCE
+live · dual approval
+◔
+PENDING:
+PENDING 1/2
+❚❚
+PAUSED:
+LIVE CLOSED
+○
+NOT APPLICABLE:
+YOURS
+past budget 4h 49m · 1 of 2 approvers
+R2
+Grid v0.1 → PF-MAIN
+sandbox · OKX TESTNET
+◔
+PENDING:
+PENDING 1/2
+▲
+INCIDENT:
+BLOCKER
+20h 52m left · 1 of 2 approvers
+R1
+Grid v0.1 · RC-47
+research
+◔
+PENDING:
+PENDING 2/2
+◈
+AWAITING APPROVAL:
+NEEDS YOU
+past budget 4h 14m · 2 of 2 approvers
+LIVE
+Reversion v2.2 → BINANCE
+live · dual approval
+◔
+PENDING:
+PENDING 2/2
+❚❚
+PAUSED:
+LIVE CLOSED
+○
+NOT APPLICABLE:
+YOURS
+2d 16h left · 2 of 2 approvers
+R1
+Momentum v2.6 · RC-49
+research
+◔
+PENDING:
+PENDING 1/2
+past budget 1h 49m · 1 of 2 approvers
+R2
+Pairs v2.0 → PF-MAIN
+sandbox · BYBIT TESTNET
+◔
+PENDING:
+PENDING 0/2
+2h 17m left · 0 of 2 approvers
+R1
+StatArb v2.9 · RC-51
+research
+◔
+PENDING:
+PENDING 0/2
+◈
+AWAITING APPROVAL:
+NEEDS YOU
+2h 29m left · 0 of 2 approvers
+EXIT
+Vol-Target v1.7 · dep_72
+→ sandbox · OKX
+◔
+PENDING:
+PENDING 1/1
+▲
+INCIDENT:
+BLOCKER
+1d 17h 33m left · 1 of 1 approvers
+R2
+Trend v1.9 → PF-MAIN
+sandbox · OKX TESTNET
+◔
+PENDING:
+PENDING 1/2
+▲
+INCIDENT:
+BLOCKER
+13h 17m left · 1 of 2 approvers
+R2
+Grid v1.8 → PF-MAIN
+sandbox · BYBIT TESTNET
+◔
+PENDING:
+PENDING 0/2
+past budget 6h 19m · 0 of 2 approvers
+EXIT
+Carry v1.9 · dep_75
+→ sandbox · BINANCE
+◔
+PENDING:
+PENDING 1/1
+◈
+AWAITING APPROVAL:
+NEEDS YOU
+past budget 15h 2m · 1 of 1 approvers
+R1
+Basis v1.2 · RC-56
+research
+◔
+PENDING:
+PENDING 0/2
+past budget 2h 47m · 0 of 2 approvers
+EXIT
+Spread v2.7 · dep_77
+→ sandbox · DERIBIT
+◔
+PENDING:
+PENDING 1/1
+▲
+INCIDENT:
+BLOCKER
+1d 7h 16m left · 1 of 1 approvers
+R1
+Breakout v2.1 · RC-58
+research
+◔
+PENDING:
+PENDING 1/2
+11h left · 1 of 2 approvers
+R1
+Gamma v2.3 · RC-59
+research
+◔
+PENDING:
+PENDING 2/2
+◈
+AWAITING APPROVAL:
+NEEDS YOU
+past budget 4h 16m · 2 of 2 approvers
+R2
+Gamma v2.1 → PF-MAIN
+sandbox · OKX TESTNET
+◔
+PENDING:
+PENDING 1/2
+21h 16m left · 1 of 2 approvers
+R2
+Delta-Neutral v0.8 → PF-MAIN
+sandbox · OKX TESTNET
+◔
+PENDING:
+PENDING 1/2
+▲
+INCIDENT:
+BLOCKER
+past budget 5h 40m · 1 of 2 approvers
+EXIT
+StatArb v0.2 · dep_82
+→ sandbox · BINANCE
+◔
+PENDING:
+PENDING 1/1
+◈
+AWAITING APPROVAL:
+NEEDS YOU
+1d 8h 33m left · 1 of 1 approvers
+R2
+Delta-Neutral v1.4 → PF-MAIN
+sandbox · OKX TESTNET
+◔
+PENDING:
+PENDING 1/2
+1h 16m left · 1 of 2 approvers
+EXIT
+Liquidity v1.0 · dep_84
+→ sandbox · DERIBIT
+◔
+PENDING:
+PENDING 0/1
+1d 5h 56m left · 0 of 1 approvers
+30 shown · 30 loaded of 30
+J K move
+Esc clear
+A approve
+R deny
+N note
+?
+help
+R2
+Carry v3.2 → PF-MAIN
+AP-352
+sandbox · OKX TESTNET
+Ladder: Not published
+(FE-030)
+Open full review
+R1 approved
+Grant paper_activation_authorization
+Criteria
+R2 review
+Not published
+(FE-028)
+R1 lineage
+R1 STATE	APPROVED
+R1 REQUEST	AP-101
+DECIDED BY	Minh
+DECIDED AT	30 Jul 00:00Z
+EXPIRES	1 Nov 00:00Z
+Capital change preview
+Derived, not applied
+ITEM	BEFORE	AFTER APPROVAL
+allocated capital USDT	0.00	50,000.00
+max capital USDT	0.00	100,000.00
+portfolio weight %	0.0	12.0
+concentration top-3 %	44.0	46.0
+Account & risk plan
+ACCOUNT (NEW)	acct-sbx-carry-okx (rev account policy rev 7)
+MARGIN	MARGIN · CROSS · 2x · settle USDT (rev account policy rev 7)
+RISK PROFILE	max order 5,000 · DD 8% · daily loss 3% (rev rev 12)
+MATCHER CONFIG	taker 4.0bp · latency 120ms (rev rev 3)
+Decision
+Policy approval.v3
+Separation of duty OK · created by Stan, you are Fixture reviewer
+Quorum
+0 of 2 approvers
+◈
+AWAITING APPROVAL:
+STEP-UP
+
+Requirement: Not published
+(FE-015)
+
+Note
+
+Preview · not recorded
+
+Approve
+
+Preview · not recorded
+
+Other decisions
+
+Preview · not recorded
+
+Would offer: Approve with a condition, Request changes, Deny
+
+Receipt
+DECISION	None recorded
+REQUEST	AP-352
+
+Not available: Ladder, Call, Receipt ref, What changes
+(Not published FE-030, Not published FE-030, Not published FE-030, Not published FE-030)
+
+What the server offers

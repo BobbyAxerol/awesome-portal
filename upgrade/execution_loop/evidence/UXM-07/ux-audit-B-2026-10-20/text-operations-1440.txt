@@ -1,0 +1,125 @@
+URL http://127.0.0.1:8095/execution/operations
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Command
+/
+Operations Queue
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Operations has its own Environment filter below.
+Operations has its own Range control below. The server takes no window (FE-025).
+Own filter below · Own range below
+Operations
+Observed 22 Aug 13:00Z
+Source journal unavailable
+IN SCOPE
+120
+MATCHING
+61
+LOADED
+50
+of 61 matching
+READ
+Available
+Counts by status
+
+Not available: Triage, Verification, Source status, Severity counts
+(Not published FE-043, Not published FE-043, Not published FE-043, Not published FE-043)
+
+Source health · 3 of 3 partial
+COMMANDS
+EXCEPTIONS
+AUDIT
+Lens
+Needs attention
+Mine
+All
+Window
+24H
+7D
+30D
+90D
+All time
+Triage
+Any
+Unacknowledged
+Acknowledged
+Resolved
+Severity
+Any
+Info
+Warning
+Error
+Critical
+Verification
+Any
+Not started
+Pending
+Succeeded
+Failed
+Partial
+Uncertain
+Denied
+Expired
+Target type
+Any
+Account
+Portfolio
+Deployment
+Environment
+Any
+Real-funded
+Paper
+Sandbox
+Command key
+ Apply
+
+Mine: Not published
+(FE-030)
+. No assignee or creator is published, so it cannot be filtered to you.
+
+Not available: Intent, Display, Linked incidents
+(Not published FE-020, Not published FE-032, Not published FE-042)
+
+TIME	TARGET AND OPERATION	RECEIPT	NEXT
+All 50 loaded rows are older than 24H. Widen the window to see them.
+50 of 61 matching · 120 in scope
+Load more
+Refresh

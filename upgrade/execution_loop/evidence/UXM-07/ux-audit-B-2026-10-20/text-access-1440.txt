@@ -1,0 +1,140 @@
+URL http://127.0.0.1:8095/administration/profile-access
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Administration
+/
+Profile & Access
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+Profile & Access
+
+Fixture reviewer · Owner
+
+MY ACCESS
+MANAGE GRANTS
+Signed in as
+Fixture reviewer
+usr_5a38d5dfb08b44748f5776fbe04a1434
+Owner
+Owner
+Capabilities held
+14
+Access policy
+Not available
+From the access read
+WHAT YOU CAN SEE
+AREA	STATUS	BASIS
+Overview	
+✓
+OK:
+CAN SEE	No capability needed
+Portfolios	
+✓
+OK:
+CAN SEE	Held: execution.portfolios.read
+Alpha Fleet	
+✓
+OK:
+CAN SEE	No capability needed
+Accounts	
+✓
+OK:
+CAN SEE	Held: execution.accounts.read
+Operations	
+✓
+OK:
+CAN SEE	Held: execution.operations.read
+Approvals	
+✓
+OK:
+CAN SEE	Held: governance.r1.read, governance.r2.read, governance.canary.read, governance.live.read
+Blotter	
+✓
+OK:
+CAN SEE	Held: portal.execution.blotter.read
+Profile & Access	
+✓
+OK:
+CAN SEE	No capability needed
+R1 gate	
+✓
+OK:
+CAN SEE	Held: governance.r1.read
+R2 gate	
+✓
+OK:
+CAN SEE	Held: governance.r2.read
+Canary gate	
+✓
+OK:
+CAN SEE	Held: governance.canary.read
+Live gate	
+✓
+OK:
+CAN SEE	Held: governance.live.read
+WHAT YOU CAN DO
+ACTION	STATUS	WHY
+Decide at R1 gate	
+✓
+OK:
+ALLOWED	Held: governance.r1.decide
+Decide at R2 gate	
+✓
+OK:
+ALLOWED	Held: governance.r2.decide
+Decide at Canary gate	
+✓
+OK:
+ALLOWED	Held: governance.canary.decide
+Decide at Live gate	
+✓
+OK:
+ALLOWED	Held: governance.live.decide
+Manage grants	
+✓
+OK:
+ALLOWED	Held: administration.profile_access.manage
+Manage users	
+✓
+OK:
+ALLOWED	Held: administration.users.manage
+
+Not available: Role preset, Per-action eligibility, Who granted each item
+(Not published FE-015, Not published FE-015, Not published FE-015)
+
+Provisional capability names: Portfolios, Accounts, Operations, Blotter
+
+GRANTED TO YOU
+
+Not available. The session does not publish a workspace; add ?workspace_id=... to the address to read your grants. No grants were requested.
+
+Reasons this screen can show

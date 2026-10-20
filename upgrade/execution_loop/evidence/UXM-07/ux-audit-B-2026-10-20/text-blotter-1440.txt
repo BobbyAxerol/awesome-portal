@@ -1,0 +1,456 @@
+URL http://127.0.0.1:8095/deployments/blotter
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Deployments
+/
+Blotter
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Not published (FE-052). The orders read has no environment filter.
+Not published (FE-025). The orders read takes no window.
+Window: Current retained window
+Not applied: Environment
+Blotter
+As of 2026-10-17 12:00:00 UTC
+environment
+Paper
+window
+Current retained window
+
+Environment and window come from this read, not from the context bar: the orders read has no environment or window filter yet (Not published, FE-052, FE-025, FE-041). The environment highlighted in the context bar does not change these rows.
+
+Symbol
+Venue
+Venue: all
+BINANCE
+OKX
+Side
+Side: both
+Buy
+Sell
+All 300
+Open 60
+Partial 30
+Filled 150
+Rejected 30
+No chip: Canceled 30
+Columns
+Export
+Not published
+(FE-016)
+
+Showing 50 of 300 authorized · newest first
+
+TIME (UTC)	ORDER	SYMBOL	SIDE AND TYPE	PRICE	QUANTITY	STATUS
+17 Oct 12:00:00Z	
++
+ord_00300
+◇
+bracket
+	BTCUSDT	Buy Stop limit	60,890.00	0.0400	
+✓
+OK:
+FILLED
+17 Oct 11:52:59Z	
++
+ord_00299
+	ETHUSDT	Sell Market	At market	1.250	
+✓
+OK:
+FILLED
+17 Oct 11:45:58Z	
++
+ord_00298
+	DOGEUSDT	Buy Limit	0.18120	1,250	
+◔
+PENDING:
+ACCEPTED
+17 Oct 11:38:57Z	
++
+ord_00297
+	BTCUSDT	Sell Limit	60,890.03	0.0400	
+◐
+PARTIAL DATA:
+PARTIALLY FILLED
+17 Oct 11:31:56Z	
++
+ord_00296
+	ETHUSDT	Buy Limit	2,481.39	1.250	
+✓
+OK:
+FILLED
+17 Oct 11:25:00Z	
++
+ord_00295
+	DOGEUSDT	Sell Market	At market	1,250	
+✕
+REJECTED
+17 Oct 11:17:59Z	
++
+ord_00294
+	BTCUSDT	Buy Limit	60,890.06	0.0400	
+✓
+OK:
+FILLED
+17 Oct 11:10:58Z	
++
+ord_00293
+	ETHUSDT	Sell Limit	2,481.42	1.250	
+❚❚
+PAUSED:
+CANCELED
+17 Oct 11:03:57Z	
++
+ord_00292
+	DOGEUSDT	Buy Limit	0.24120	1,250	
+◔
+PENDING:
+SUBMITTED
+17 Oct 10:56:56Z	
++
+ord_00291
+	BTCUSDT	Sell Market	At market	0.0400	
+✓
+OK:
+FILLED
+17 Oct 10:50:00Z	
++
+ord_00290
+	ETHUSDT	Buy Limit	2,481.45	1.250	
+✓
+OK:
+FILLED
+17 Oct 10:42:59Z	
++
+ord_00289
+	DOGEUSDT	Sell Stop limit	0.27120	1,250	
+✓
+OK:
+FILLED
+17 Oct 10:35:58Z	
++
+ord_00288
+	BTCUSDT	Buy Limit	60,890.12	0.0400	
+◔
+PENDING:
+ACCEPTED
+17 Oct 10:28:57Z	
++
+ord_00287
+	ETHUSDT	Sell Market	At market	1.250	
+◐
+PARTIAL DATA:
+PARTIALLY FILLED
+17 Oct 10:21:56Z	
++
+ord_00286
+	DOGEUSDT	Buy Limit	0.30120	1,250	
+✓
+OK:
+FILLED
+17 Oct 10:15:00Z	
++
+ord_00285
+	BTCUSDT	Sell Limit	60,890.15	0.0400	
+✕
+REJECTED
+17 Oct 10:07:59Z	
++
+ord_00284
+	ETHUSDT	Buy Limit	2,481.51	1.250	
+✓
+OK:
+FILLED
+17 Oct 10:00:58Z	
++
+ord_00283
+	DOGEUSDT	Sell Market	At market	1,250	
+❚❚
+PAUSED:
+CANCELED
+17 Oct 09:53:57Z	
++
+ord_00282
+	BTCUSDT	Buy Limit	60,890.01	0.0400	
+◔
+PENDING:
+SUBMITTED
+17 Oct 09:46:56Z	
++
+ord_00281
+	ETHUSDT	Sell Limit	2,481.37	1.250	
+✓
+OK:
+FILLED
+17 Oct 09:40:00Z	
++
+ord_00280
+	DOGEUSDT	Buy Limit	0.19120	1,250	
+✓
+OK:
+FILLED
+17 Oct 09:32:59Z	
++
+ord_00279
+	BTCUSDT	Sell Market	At market	0.0400	
+✓
+OK:
+FILLED
+17 Oct 09:25:58Z	
++
+ord_00278
+	ETHUSDT	Buy Stop limit	2,481.40	1.250	
+◔
+PENDING:
+ACCEPTED
+17 Oct 09:18:57Z	
++
+ord_00277
+	DOGEUSDT	Sell Limit	0.22120	1,250	
+◐
+PARTIAL DATA:
+PARTIALLY FILLED
+17 Oct 09:11:56Z	
++
+ord_00276
+◇
+bracket
+	BTCUSDT	Buy Limit	60,890.07	0.0400	
+✓
+OK:
+FILLED
+17 Oct 09:05:00Z	
++
+ord_00275
+	ETHUSDT	Sell Market	At market	1.250	
+✕
+REJECTED
+17 Oct 08:57:59Z	
++
+ord_00274
+	DOGEUSDT	Buy Limit	0.25120	1,250	
+✓
+OK:
+FILLED
+17 Oct 08:50:58Z	
++
+ord_00273
+	BTCUSDT	Sell Limit	60,890.10	0.0400	
+❚❚
+PAUSED:
+CANCELED
+17 Oct 08:43:57Z	
++
+ord_00272
+	ETHUSDT	Buy Limit	2,481.46	1.250	
+◔
+PENDING:
+SUBMITTED
+17 Oct 08:36:56Z	
++
+ord_00271
+	DOGEUSDT	Sell Market	At market	1,250	
+✓
+OK:
+FILLED
+17 Oct 08:30:00Z	
++
+ord_00270
+	BTCUSDT	Buy Limit	60,890.13	0.0400	
+✓
+OK:
+FILLED
+17 Oct 08:22:59Z	
++
+ord_00269
+	ETHUSDT	Sell Limit	2,481.49	1.250	
+✓
+OK:
+FILLED
+17 Oct 08:15:58Z	
++
+ord_00268
+	DOGEUSDT	Buy Limit	0.31120	1,250	
+◔
+PENDING:
+ACCEPTED
+17 Oct 08:08:57Z	
++
+ord_00267
+	BTCUSDT	Sell Market	At market	0.0400	
+◐
+PARTIAL DATA:
+PARTIALLY FILLED
+17 Oct 08:01:56Z	
++
+ord_00266
+	ETHUSDT	Buy Limit	2,481.35	1.250	
+✓
+OK:
+FILLED
+17 Oct 07:55:00Z	
++
+ord_00265
+	DOGEUSDT	Sell Limit	0.17120	1,250	
+✕
+REJECTED
+17 Oct 07:47:59Z	
++
+ord_00264
+◇
+bracket
+	BTCUSDT	Buy Limit	60,890.02	0.0400	
+✓
+OK:
+FILLED
+17 Oct 07:40:58Z	
++
+ord_00263
+	ETHUSDT	Sell Market	At market	1.250	
+❚❚
+PAUSED:
+CANCELED
+17 Oct 07:33:57Z	
++
+ord_00262
+	DOGEUSDT	Buy Limit	0.20120	1,250	
+◔
+PENDING:
+SUBMITTED
+17 Oct 07:26:56Z	
++
+ord_00261
+	BTCUSDT	Sell Limit	60,890.05	0.0400	
+✓
+OK:
+FILLED
+17 Oct 07:20:00Z	
++
+ord_00260
+	ETHUSDT	Buy Limit	2,481.41	1.250	
+✓
+OK:
+FILLED
+17 Oct 07:12:59Z	
++
+ord_00259
+	DOGEUSDT	Sell Market	At market	1,250	
+✓
+OK:
+FILLED
+17 Oct 07:05:58Z	
++
+ord_00258
+	BTCUSDT	Buy Limit	60,890.08	0.0400	
+◔
+PENDING:
+ACCEPTED
+17 Oct 06:58:57Z	
++
+ord_00257
+	ETHUSDT	Sell Limit	2,481.44	1.250	
+◐
+PARTIAL DATA:
+PARTIALLY FILLED
+17 Oct 06:51:56Z	
++
+ord_00256
+	DOGEUSDT	Buy Stop limit	0.26120	1,250	
+✓
+OK:
+FILLED
+17 Oct 06:45:00Z	
++
+ord_00255
+	BTCUSDT	Sell Market	At market	0.0400	
+✕
+REJECTED
+17 Oct 06:37:59Z	
++
+ord_00254
+	ETHUSDT	Buy Limit	2,481.47	1.250	
+✓
+OK:
+FILLED
+17 Oct 06:30:58Z	
++
+ord_00253
+	DOGEUSDT	Sell Limit	0.29120	1,250	
+❚❚
+PAUSED:
+CANCELED
+17 Oct 06:23:57Z	
++
+ord_00252
+	BTCUSDT	Buy Limit	60,890.14	0.0400	
+◔
+PENDING:
+SUBMITTED
+17 Oct 06:16:56Z	
++
+ord_00251
+	ETHUSDT	Sell Market	At market	1.250	
+✓
+OK:
+FILLED
+Newer
+Older
+At the newest rows, older rows exist
+How to read
+ORDER FUNNEL
+
+Open an order to see its path
+
+CONDITIONAL GROUPS
+3 of 3 on this page
+GROUP	SYMBOL	TYPE	STATE	TARGET	FILLED	OPENED (UTC)
+
+Read
+grp_00300
+	BTCUSDT	Ouo	Active	0.0400	0.0400	17 Oct 12:00:00Z
+
+Read
+grp_00276
+	BTCUSDT	Ouo	Active	0.0400	0.0400	17 Oct 09:11:56Z
+
+Read
+grp_00264
+	BTCUSDT	Ouo	Active	0.0400	0.0400	17 Oct 07:47:59Z
+Provenance
