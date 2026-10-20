@@ -31,6 +31,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { BlockerList, Kpi, KpiStrip, StageHeader, UrlTabs, type StageCrumb, type StageTab } from "../../blocks";
+import { AlphaNameLine } from "../stage/AlphaNameLine";
+import { alphaCrumb, portfolioLabel } from "../stage/identity";
 import { unsupportedText, type LiveFullVersionRead } from "../../readers/dispatch";
 import { useExecUrlState, withContext } from "../../urlState";
 import { ChartSlot } from "./parts";
@@ -103,9 +105,12 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
   const paging = usePanelPaging(api, deploymentId, workspaceId, v2);
   const id = model.deploymentId ?? deploymentId;
 
+  // The Alpha is linked only when the body published `alpha_id` (FE-066); the portfolio shows its published name, else its id.
+  const alpha = alphaCrumb(model.identity);
   const crumb: StageCrumb[] = [
     { label: "Alpha Fleet", to: withContext(FLEET_PATH, params) },
-    ...(model.portfolioId ? [{ label: model.portfolioId, to: withContext(`/deployments/portfolios/${enc(model.portfolioId)}`, params) }] : []),
+    ...(alpha === null ? [] : [{ label: alpha.label, to: withContext(alpha.to, params) }]),
+    ...(model.portfolioId ? [{ label: portfolioLabel(model.identity, model.portfolioId), to: withContext(`/deployments/portfolios/${enc(model.portfolioId)}`, params) }] : []),
     ...(model.accountId ? [{ label: model.accountId, to: withContext(`/deployments/accounts/${enc(model.accountId)}`, params) }] : []),
     { label: "Live" },
   ];
@@ -128,7 +133,15 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
         stage="live"
         crumb={crumb}
         title="Live operations"
-        subtitle={subtitle}
+        subtitle={
+          model.version === "v1" ? (
+            <>
+              {subtitle} · <AlphaNameLine identity={model.identity} />
+            </>
+          ) : (
+            subtitle
+          )
+        }
         chips={model.chips}
         spine={{
           current: model.stage,

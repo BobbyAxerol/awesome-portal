@@ -68,7 +68,9 @@ function oracle(s: State) {
   return {
     mismatch,
     chart: mismatch ? "mismatch" : s.gap === true ? "gap" : "unavailable",
-    reconciliation: mismatch ? "Mismatch" : s.state === "IN_SYNC" && s.visible ? "Matched" : "Not checked",
+    // MISMATCH and a visible IN_SYNC verdict keep their broker words; with neither, the published `stage_facts` speak: the dark
+    // canonical states `Not published (FE-067)` with its reason (LIVE_SOURCE_UNAVAILABLE), no longer the FE's own "Not checked".
+    reconciliation: mismatch ? "Mismatch" : s.state === "IN_SYNC" && s.visible ? "Matched" : null,
     blocked: mismatch || s.gap === true,
     notice: !s.sourceBacked ? "unqualified" : s.freshness === "STALE" ? "stale" : !s.visible && !mismatch ? "partial" : null,
     brokerKpi: s.visible ? "metric" : mismatch ? "hidden" : "absent",
@@ -90,7 +92,8 @@ describe("L1 · the V1 state matrix", () => {
     expect(m.chart.kind).toBe(want.chart);
     expect(m.spineBlocked).toBe(want.blocked);
     expect(m.notice?.kind ?? null).toBe(want.notice);
-    expect(m.chips.reconciliation).toMatchObject({ state: "flag", label: want.reconciliation });
+    if (want.reconciliation === null) expect(m.chips.reconciliation).toEqual({ state: "not-published", id: "FE-067", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
+    else expect(m.chips.reconciliation).toMatchObject({ state: "flag", label: want.reconciliation });
     expect(m.kpis).toHaveLength(5);
     expect(m.kpis.find((k) => k.key === "broker_equity")?.kind).toBe(want.brokerKpi);
     // "Hidden while the figures disagree" is a claim of disagreement: only a MISMATCH verdict makes it.
@@ -101,7 +104,7 @@ describe("L1 · the V1 state matrix", () => {
     if (s.freshness === "UNKNOWN") expect(m.chips.freshness).toMatchObject({ state: "not-available" });
     else expect(m.chips.freshness).toMatchObject({ state: "dot", tone: s.freshness === "OK" ? "ok" : "warn" });
     // Never a running state the source did not state.
-    expect(m.chips.runtime).toEqual({ state: "not-published", id: "FE-067", detail: "Runtime state" });
+    expect(m.chips.runtime).toEqual({ state: "not-published", id: "FE-067", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
     // The ladder is three rungs in every state: nothing the body says adds or removes one.
     expect(m.ladder).toEqual(LADDER);
     expect(m.ladder.map((r) => r.title)).toEqual(["Halt", "Reduce", "Emergency close"]);
@@ -117,6 +120,7 @@ describe("L1 · the V1 state matrix", () => {
   });
 
   it("a gap says so, withholds the window as Not published (FE-072) and blocks risk-increasing actions only", () => {
+    // `populatedV1` rebuilds `projection_continuity` without `gap_ranges`: a body without the member is typed absence, no reason to show.
     const m = model(populatedV1({ gap: true }));
     expect(m.continuity.rows.find((r) => r.key === "window")!.value).toEqual({ t: "np", fe: "FE-072", what: "Gap window" });
     expect(m.guardRules.find((r) => r.key === "gap-r4")).toMatchObject({ effect: { t: "text", text: "Risk-increasing actions are blocked" }, now: { t: "flag", label: "Active" } });
@@ -138,6 +142,8 @@ describe("L1 · the V1 state matrix", () => {
   it("the Triad units come from the read's own money KPIs, never a hard-coded USDT", () => {
     const rows = (unit: string | null) => {
       const raw = populatedV1();
+      // The currency fallback is for a body WITHOUT `source_figures`; a body that carries them states its own unit per figure.
+      delete raw.source_figures;
       for (const kpi of raw.kpis) if (kpi.key !== "open_orders") kpi.unit = unit;
       return model(raw).triad!.rows;
     };
@@ -145,6 +151,7 @@ describe("L1 · the V1 state matrix", () => {
     expect(rows(null).every((r) => r.suffix === undefined)).toBe(true);
     // Two currencies: no unit is guessed.
     const raw = populatedV1();
+    delete raw.source_figures;
     raw.kpis[0].unit = "USD";
     raw.kpis[1].unit = "EUR";
     expect(model(raw).triad!.rows.every((r) => r.suffix === undefined)).toBe(true);
@@ -199,7 +206,11 @@ describe("L1 · the V1 state matrix", () => {
     expect(model(populatedV1()).spineTargets.canary).toBe("/deployments/live/dep_TEST_ONLY_live/canary");
   });
 
-  it("runtime: only a published word becomes a chip; ACTIVE is a neutral Active (activation is not liveness), RUNNING is Running, HALTED is Halted, a stranger stays Unknown-worded", () => {
+  it("runtime (a body WITHOUT stage_facts): only a published word becomes a chip; ACTIVE is a neutral Active (activation is not liveness), RUNNING is Running, HALTED is Halted, a stranger stays Unknown-worded", () => {
+    const model = (raw: Draft) => {
+      delete raw.stage_facts;
+      return liveModelV1(v1Of(raw));
+    };
     expect(model(populatedV1({ runtimeState: "ACTIVE" })).chips.runtime).toMatchObject({ state: "flag", kind: "neutral", label: "Active" });
     expect(model(populatedV1({ runtimeState: "RUNNING" })).chips.runtime).toMatchObject({ state: "flag", kind: "ok", label: "Running" });
     expect(model(populatedV1({ runtimeState: "HALTED" })).chips.runtime).toMatchObject({ state: "flag", kind: "attention", label: "Halted" });
@@ -214,11 +225,14 @@ describe("L1 · the V1 state matrix", () => {
       ["capital", "not-published"], ["gross_notional", "not-published"], ["daily_pnl", "not-published"], ["open_orders", "not-published"],
       ["broker_equity", "absent"],
     ]);
-    expect(m.chips.runtime).toMatchObject({ state: "not-published", id: "FE-067" });
+    expect(m.chips.runtime).toEqual({ state: "not-published", id: "FE-067", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
     expect(m.chips.freshness).toMatchObject({ state: "not-available" });
-    expect(m.chips.reconciliation).toMatchObject({ label: "Not checked" });
+    expect(m.chips.reconciliation).toEqual({ state: "not-published", id: "FE-067", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
     expect(m.chart.kind).toBe("unavailable");
-    expect(m.triad).toMatchObject({ suppressed: false, internal: null, broker: null, rowsPublished: false });
+    // The dark body carries `source_figures`, every side `Not published`: the rows are the server's, so `rowsPublished` is true.
+    expect(m.triad).toMatchObject({ suppressed: false, internal: null, broker: null, rowsPublished: true });
+    expect(m.triad!.rows.map((r) => r.key)).toEqual(["equity", "gross_notional", "positions", "open_orders", "fees"]);
+    expect(m.triad!.rows[0]!.internal).toEqual({ kind: "not-published", id: "FE-072", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
     expect(m.predecessor).toMatchObject({ present: true, activeFlag: { label: "Not active for Live" } });
   });
 
@@ -555,6 +569,7 @@ describe("L3 · negative", () => {
   it("an unknown verdict or continuity word never becomes a match or a clean update stream", () => {
     const raw = populatedV1({ state: "IN_SYNC" });
     raw.broker_consistency.state = "ALMOST_IN_SYNC";
+    delete raw.stage_facts;
     const m = model(raw);
     expect(m.chips.reconciliation).toMatchObject({ label: "Not checked" });
     expect(m.triad?.suppressed).toBe(false);
