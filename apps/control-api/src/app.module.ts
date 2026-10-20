@@ -62,6 +62,7 @@ import { LiveParentReads } from "./governance/live-parent.service";
 import { PaperExitRepository } from "./governance/paper-exit.repository";
 import { PaperExitService } from "./governance/paper-exit.service";
 import { GovernanceReviewCaptureService } from "./governance/review-capture.service";
+import { StageActionEligibilityService } from "./governance/stage-action-eligibility.service";
 import { ExecutionRealtimeController } from "./execution/realtime.controller";
 import { ExecutionRealtimeProxy } from "./execution/realtime.proxy";
 import { ExecutionAnalyticsController } from "./execution/analytics.controller";
@@ -551,6 +552,7 @@ export class AppModule implements OnApplicationShutdown {
         PaperExitRepository,
         PaperExitService,
         GovernanceReviewCaptureService,
+        StageActionEligibilityService,
         CommandCenterRepository,
         CommandCenterService,
         ExecutionOperationsRepository,

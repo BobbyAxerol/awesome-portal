@@ -311,6 +311,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/governance/stage-action-eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description FE-068. Advisory own eligibility for the ten stage actions; see StageActionEligibility. */
+        get: operations["executionStageActionEligibilityV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/approvals/request-lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description FE-069. Look up the caller's own approval request by request_key without replaying it; see ApprovalRequestLookup. */
+        get: operations["executionApprovalRequestLookupV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2021,6 +2055,102 @@ export interface components {
                 };
             };
         };
+        /** @description One stage action. `stage_action` is a display identifier for a button, NOT a capability name and never accepted as authority. verdict ELIGIBLE means the route's own knowable preconditions did not refuse the caller; the row-level checks (run completeness, parent approval, versions, projection freshness, idempotency) still run at submit and every route rechecks current authority. NOT_COMMISSIONED means no Portal route exists for the action, whatever grants the caller holds. basis names the rule the producing route enforces today. step_up_required is false for the three live routes (they demand none) and null (not determined, never false) where no route exists. */
+        StageActionEligibilityRow: {
+            /** @enum {unknown} */
+            stage_action: "approval.create" | "sandbox.review_note" | "paper.exit_review_request" | "canary.hold" | "canary.reduce" | "canary.rollback" | "canary.request_scale" | "live.halt" | "live.reduce" | "live.emergency_close";
+            /** @enum {unknown} */
+            verdict: "ELIGIBLE" | "NOT_ELIGIBLE" | "NOT_COMMISSIONED";
+            eligible: boolean;
+            /** @enum {unknown} */
+            reason_class: "SUBMIT_CHECKS_REQUIRED" | "RETAINED_REVIEW_READ_ONLY" | "ADMIN_ROLE_REQUIRED" | "GOVERNANCE_CAPABILITY_REQUIRED" | "GOVERNANCE_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "COMMAND_FAMILY_NOT_COMMISSIONED";
+            /** @enum {unknown} */
+            public_copy_key: "SUBMIT_CHECKS_REQUIRED" | "RETAINED_REVIEW_READ_ONLY" | "ADMIN_ROLE_REQUIRED" | "GOVERNANCE_CAPABILITY_REQUIRED" | "GOVERNANCE_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "COMMAND_FAMILY_NOT_COMMISSIONED";
+            /** @enum {unknown} */
+            basis: "WORKSPACE_MEMBERSHIP" | "ADMIN_ROLE" | "ADMIN_ROLE_AND_GOVERNANCE_R2_READ" | "NONE_PUBLISHED";
+            step_up_required: boolean | null;
+            /** @enum {unknown} */
+            step_up_state: "NOT_REQUIRED" | "NOT_DETERMINED";
+            alpha_scope: "WORKSPACE_ALL_COMPLETED_RUNS" | null;
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        /** @description FE-068. Own advisory per-action eligibility for exactly ten stage actions in a fixed order, before the click. Authorization: session + workspace membership + a fresh database recheck of session and role before and after the reads. Grants nothing and consults no related capability for the commands without a route. Valid_until semantics are deliberately absent: this is a snapshot, not a lease. */
+        StageActionEligibility: {
+            /** @constant */
+            schema_version: "portal.stage-action-eligibility.v1";
+            workspace_id: string;
+            /** @constant */
+            current_only: true;
+            /** @constant */
+            advisory_only: true;
+            /** @description Portal evaluation time (UTC epoch ms), not a source observation time and not a permission lease. Re-ask on mount, workspace switch and focus; do not cache across sessions. */
+            observed_at_ms: number;
+            /** @description This session's step-up fact (the one the access/capital mutations recheck), scoped to this session only. ACTIVE requires valid_until_ms greater than observed_at_ms; NOT_ACTIVE has null. It changes no verdict above. */
+            session_step_up: {
+                /** @enum {unknown} */
+                state: "ACTIVE" | "NOT_ACTIVE";
+                valid_until_ms: number | null;
+            } & unknown;
+            actions: [
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "approval.create";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "sandbox.review_note";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "paper.exit_review_request";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "canary.hold";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "canary.reduce";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "canary.rollback";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "canary.request_scale";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "live.halt";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "live.reduce";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "live.emergency_close";
+                }
+            ];
+        };
+        /** @description FE-069. Read-only answer to "what would replaying this request_key do?" for the CALLER'S OWN requests (keyed by requester: another actor's request under the same key is indistinguishable from NONE). NONE: a replay would create. FOUND: result is exactly the governance.approval-create.v1 body a replay returns (replayed=true). KEY_PAYLOAD_CONFLICT: only when all four payload fields were supplied and differ from the stored request; a replay would answer 409 REQUEST_KEY_PAYLOAD_CONFLICT and no approval body. Without payload fields the stored payload is NOT compared (payload_check NOT_COMPARED): FOUND then only says a request exists under this key. Same authority as the replay it mirrors (current session + workspace membership, no gate capability). Writes nothing. */
+        ApprovalRequestLookup: {
+            /** @constant */
+            schema_version: "governance.approval-request-lookup.v1";
+            workspace_id: string;
+            request_key: string;
+            /** @enum {unknown} */
+            state: "NONE" | "FOUND" | "KEY_PAYLOAD_CONFLICT";
+            /** @enum {unknown} */
+            payload_check: "NOT_COMPARED" | "MATCH" | "MISMATCH";
+            result: {
+                /** @constant */
+                schema_version: "governance.approval-create.v1";
+                /** @constant */
+                replayed: true;
+                approval: components["schemas"]["Approval"];
+            } | null;
+        } & (unknown & unknown & unknown);
         Capabilities: {
             /** @constant */
             schema_version: "governance.review-capture-capabilities.v1";
@@ -4116,6 +4246,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PromotionPlanResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionStageActionEligibilityV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private, no-store. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageActionEligibility"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionApprovalRequestLookupV1: {
+        parameters: {
+            query: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                request_key: string;
+                /** @description Optional replay payload; supply all four or none. */
+                alpha_id?: string;
+                /** @description Optional replay payload; supply all four or none. */
+                evidence_run_id?: string;
+                /** @description Optional replay payload; supply all four or none. */
+                methodology_claim_id?: string;
+                /** @description Optional replay payload; supply all four or none. */
+                summary?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private, no-store. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequestLookup"];
                 };
             };
             default: components["responses"]["Problem"];

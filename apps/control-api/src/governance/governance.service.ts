@@ -4,6 +4,7 @@ import { decisionContext } from "./review-context";
 import { computeEvidenceManifestHash } from "./evidence-manifest";
 export { computeEvidenceManifestHash } from "./evidence-manifest";
 import { GovernanceReviewCaptureService } from "./review-capture.service";
+import { approvalRequestLookupOutcome, type ApprovalRequestLookupQuery } from "./approval-request-lookup";
 import { createHash } from "crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { constantTimeEqual } from "../auth/argon";
@@ -570,6 +571,36 @@ export class GovernanceService {
       }
       throw error;
     }
+  }
+
+  /**
+   * FE-069. Read-only answer to "what would replaying this request_key do?" for the
+   * CALLER'S OWN requests (the lookup is keyed by requester, so another actor's
+   * request is indistinguishable from none). Same authority as createApproval's
+   * replay branch (current session + workspace membership; no gate capability, as
+   * for the replay it mirrors). Writes nothing, refreshes no run, calls no source.
+   */
+  async lookupApprovalRequest(user: PortalUser, session: AuthSession, query: ApprovalRequestLookupQuery & { workspace_id: string }) {
+    const fence = () => assertGovernanceReadSession(this.repository.pool, user, session, query.workspace_id);
+    await fence();
+    if (!(await this.repository.isWorkspaceMember(query.workspace_id, user.userId))) {
+      throw new GovernanceError("WORKSPACE_ACCESS_DENIED", "Access denied.", 403);
+    }
+    const stored = await this.repository.findCreatedApproval(query.workspace_id, user.userId, query.request_key);
+    const payloadHash = query.alpha_id === undefined ? null : digest({
+      gate: "R1",
+      alpha_id: query.alpha_id,
+      evidence_run_id: query.evidence_run_id,
+      methodology_claim_id: query.methodology_claim_id,
+      summary: query.summary,
+    });
+    const outcome = approvalRequestLookupOutcome({
+      workspace_id: query.workspace_id, request_key: query.request_key, payloadHash,
+      stored: stored ? { payloadHash: stored.payloadHash, approval: this.publicApproval(stored.approval) as Record<string, unknown> } : null,
+    });
+    // A revocation/demotion during the reads refuses instead of publishing a stale answer.
+    await fence();
+    return outcome;
   }
 
   async detail(user: PortalUser, workspaceId: string, approvalId: string, session?: AuthSession) {
