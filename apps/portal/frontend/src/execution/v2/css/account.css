@@ -432,11 +432,11 @@ a.exec-acct-open {
 }
 
 /* Account 360 keeps the body of a partial or stale panel under `.exec-blk-demoted` (opacity .85, blocks.css). At that
- * opacity the faint ink (--ink-faint #8d8d8d on the #1d1d1d panel) renders as #7b7b7b, 4.02:1 on #1c1c1c, 4.46:1 on #111111
- * and 3.71:1 on the selected-row tint: 57 nodes failed WCAG 1.4.3 (UXM-10 F-5). Inside the demoted body of THIS screen the
- * faint ink is --ink-soft (#c6c6c6, an existing token, ~7.6:1 once demoted). No token is edited and the shared
- * .exec-blk-demoted (Workbench, Replay, Event feed) is unchanged. Deviation: a demoted label is now lighter than the same
- * label on a healthy account; the Partial / Stale state line above the body is what carries "not finished". */
+ * opacity the faint ink drops to about 4.0:1 on the panel and 3.7:1 on the selected-row tint, so 57 nodes failed WCAG 1.4.3
+ * (UXM-10 F-5). Inside the demoted body of THIS screen the faint ink is --ink-soft (an existing token, about 7.6:1 once
+ * demoted). No token is edited and the shared .exec-blk-demoted (Workbench, Replay, Event feed) is unchanged. Deviation: a
+ * demoted label is lighter than the same label on a healthy account; the Partial / Stale state line above the body is what
+ * carries "not finished". */
 .exec-acct-v2 .exec-blk-demoted {
   --ink-faint: var(--ink-soft);
 }
