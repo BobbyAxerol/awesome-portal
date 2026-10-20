@@ -5,14 +5,13 @@
 import { Link, useSearchParams } from "react-router-dom";
 
 import { formatUtcEpochMs } from "../../../screenDataContract";
-import { notPublishedText } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { CommandStatusV1 } from "../../readers/commandCurrency";
 import type { CommandOperationV1 } from "../../readers/commandOperation";
 import { withContext } from "../../urlState";
 import { receiptOutcome } from "../operations/outcome";
 import type { LookupView } from "./lookup";
-import { NEXT_ACTION_COPY, NOT_PUBLISHED_REJECT_REASON, operationHref, showable, statusFacets, venueNeedsFillDetail } from "./model";
+import { NEXT_ACTION_COPY, operationHref, showable, statusFacets } from "./model";
 
 import "../../css/command.css";
 
@@ -38,6 +37,11 @@ export function FacetList({ status }: { status: CommandStatusV1 }) {
           <span className="exec-cf-facet-name">{facet.dimension}</span>
           <Flag kind={facet.kind} label={facet.label} size="sm" />
           <span className="exec-cf-meta">{facet.note}</span>
+          {facet.absence !== undefined ? (
+            <span className="exec-cf-meta exec-cf-facet-absence" data-absence={facet.absence.field} data-state={facet.absence.state.toLowerCase()} title={facet.absence.title}>
+              {facet.absence.text}
+            </span>
+          ) : null}
         </li>
       ))}
     </ul>
@@ -74,9 +78,6 @@ export function StatusBody({ status }: { status: CommandStatusV1 }) {
         <p className="exec-cf-meta" data-notice="test-only">Fixture status (authority TEST_ONLY). Not a product receipt: no source produced it.</p>
       ) : null}
       <FacetList status={status} />
-      {venueNeedsFillDetail(status) ? (
-        <p className="exec-cf-meta" data-absent="fill">Fill quantity and partial fills: {notPublishedText("FE-032")}. The venue answer above is all the receipt says.</p>
-      ) : null}
       <Amounts status={status} />
       <Facts
         label="Receipt references"
@@ -172,5 +173,3 @@ export function LookupResult({ view }: { view: LookupView }) {
       );
   }
 }
-
-export { NOT_PUBLISHED_REJECT_REASON };

@@ -114,6 +114,26 @@ describe("the plan", () => {
     expect(screen.queryByRole("form")).toBeNull();
   });
 
+  it("current_primitive is shown from the plan's field: None for account/sync, and for emergency close 'not active' with the ids behind a disclosure", async () => {
+    const { fake } = mount("f0-denied");
+    await readPlan();
+    const none = screen.getByLabelText(/^Plan: /);
+    expect(within(none).getByText("Primitive").nextElementSibling!.textContent).toBe("None");
+    expect(none.querySelector('[data-block="primitive"]')).toBeNull();
+    cleanup();
+
+    const dark: CommandPort = { ...fake, kind: "fixture", plan: async () => ({ kind: "response", status: 201, body: loadCanonical("execution-command-plan.emergency-close") }) };
+    mount("f0-denied", {}, "F0", dark);
+    await readPlan();
+    const plan = screen.getByLabelText(/^Plan: /);
+    expect(within(plan).getByText("Emergency close · not active")).toBeTruthy();
+    const details = plan.querySelector('[data-block="primitive"]') as HTMLDetailsElement;
+    expect(details.tagName).toBe("DETAILS");
+    expect(details.querySelector("summary")!.textContent).toBe("Primitive details");
+    expect(details.textContent).toContain("live.emergency-close");
+    expect(details.textContent).toContain("LIVE_FULL");
+  });
+
   it("F0: the published plan, its blocker in words, and cost and impact Not published (FE-020), never a number", async () => {
     const { fake } = mount("f0-denied");
     await readPlan();
@@ -325,7 +345,10 @@ describe("ACCEPTED (four independent answers)", () => {
     expect(within(rows[2]!).getByText(/Never resubmit because a view is stale/)).toBeTruthy();
     expect(within(rows[3]!).getByText("Pending")).toBeTruthy();
     expect(within(panel).getAllByText("100.000000000000000001 USDT").length).toBeGreaterThanOrEqual(2);
-    expect(within(panel).getByText(/Fill quantity and partial fills: Not published \(FE-032\)/)).toBeTruthy();
+    const fillLine = within(rows[3]!).getByText("Fill: not published");
+    expect(fillLine.getAttribute("data-state")).toBe("not_published");
+    expect(fillLine.getAttribute("title")).toMatch(/Not published \(FE-032\)/);
+    expect(within(rows[1]!).getByText("Reason: not applicable").getAttribute("data-state")).toBe("not_applicable");
     expect(within(panel).getByText("9007199254740994")).toBeTruthy();
     expect(within(panel).getAllByText(COMMAND_ID_APPLIED).length).toBeGreaterThan(0);
     expect(submits(fake)).toHaveLength(1);
@@ -364,11 +387,14 @@ describe("REJECTED (typed)", () => {
     expect(second!.key).not.toBe(first!.key);
   });
 
-  it("a rejection by the source created a command: its reason is Not published (FE-032) and the form does not reopen", async () => {
+  it("a rejection by the source created a command: its reason is not published (read from source_rejection, id in the title) and the form does not reopen", async () => {
     const { fake } = await planAndFill("rejected-by-source");
     await send(fake, 1);
     const panel = await screen.findByLabelText("Rejected");
-    expect(within(panel).getByText(/The source's own reason: Not published \(FE-032\)/)).toBeTruthy();
+    const reason = within(panel).getByText("Reason: not published");
+    expect(reason.getAttribute("data-absence")).toBe("rejection");
+    expect(reason.getAttribute("title")).toMatch(/Not published \(FE-032\)/);
+    expect(panel.textContent).not.toMatch(/FE-032/);
     expect(within(panel).getByText("None published")).toBeTruthy();
     expect(within(panel).queryByRole("button", { name: "Change the request" })).toBeNull();
     expect(within(panel).getByRole("button", { name: "New plan" })).toBeTruthy();

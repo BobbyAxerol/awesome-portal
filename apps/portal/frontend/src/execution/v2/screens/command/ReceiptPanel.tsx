@@ -14,7 +14,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
-import { NOT_PUBLISHED_REJECT_REASON, UNKNOWN_COPY, operationHref, showable, type Receipt } from "./model";
+import { UNKNOWN_COPY, operationHref, showable, type Receipt } from "./model";
 import { Facts, LookupResult, StatusBody } from "./parts";
 import type { CommandFlow } from "./useCommandFlow";
 
@@ -145,9 +145,6 @@ function Body({ receipt, flow, rootRef, keepKey, asking, setAsking, accessHref }
             ]}
           />
           {receipt.status !== null ? <StatusBody status={receipt.status} /> : null}
-          {receipt.status !== null ? (
-            <p className="exec-cf-meta" data-absent="reason">The source's own reason: {NOT_PUBLISHED_REJECT_REASON}.</p>
-          ) : null}
           {receipt.nextAction === "REVIEW_BLOCKER" ? <p className="exec-cf-next">Review the blocker. Do not create a new key to get around it.</p> : null}
           {receipt.nextAction === "QUERY_SAME_INTENT" ? <p className="exec-cf-next">Query the same intent. Do not create a new command or a new key.</p> : null}
           <QueryBlock flow={flow} />
