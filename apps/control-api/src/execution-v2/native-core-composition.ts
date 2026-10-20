@@ -13,6 +13,7 @@ import { CurrentHumanMutations, type CurrentHumanNativeReadRecoveryPort,
   type CurrentHumanRecoveryPort } from "./current-human-mutations";
 import { selectedNativeBusinessReadSelection } from "./native-business-read-selected-source";
 import { privateOwnerCommissioning, type PrivateOwnerCommissioningPin } from "./core-owner-commissioning";
+import { privateOwnerRevocation } from "./manager-domain-revoke";
 import type { AccessTrustProvider } from "./access-trust";
 import type { ExecutionAccessService } from "./access.service";
 import { NativeManagerReadConsumer, type NativeManagerRealtimeOptions } from "./native-manager-consumer";
@@ -158,6 +159,17 @@ export async function composeNativeCore(pool:Pool,baseTrust:AccessTrustProvider,
       const receipts=[];
       for(const intake of intakes)receipts.push(await intake.install(access));
       return Object.freeze(receipts);
+    },
+    /** Explicit offline maintenance only (the revoke CLI). Remove-only: revokes or
+     * narrows exact NATIVE manager-domain grants of ONE pinned workspace through the
+     * SAME coordinator, trust chain and immutable audit as the installer. The target
+     * identity comes from the hash-pinned manifest intake, never from the artifact. */
+    revokeOwnerManagerGrants:async(access:ExecutionAccessService,input:{workspace_id:string;artifact_path:string;
+      approved_sha256:string;not_before_ms:number;not_after_ms:number})=>{
+      const pin=pins.find(p=>p.target.workspace_id===input.workspace_id);
+      if(!pin)return invalid();
+      return privateOwnerRevocation(pool,{artifact_path:input.artifact_path,approved_sha256:input.approved_sha256,
+        target:structuredClone(pin.target),not_before_ms:input.not_before_ms,not_after_ms:input.not_after_ms}).revoke(access);
     },
     selectedCandidate:(inputSelector:NativeCorePersonProfileSelector)=>{
       const candidate=admissionRegistry.get(accessDigest(selector(inputSelector)));
