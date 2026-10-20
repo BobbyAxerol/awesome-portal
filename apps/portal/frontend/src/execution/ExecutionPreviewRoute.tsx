@@ -341,6 +341,15 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
   // data for a fixture on a product route; the fixture port lives on only in
   // unit tests and the fixture lab.
   const api = useMemo(() => createHttpApi({ policy }), [policy]);
+  /*
+   * UXM-10 F-8. `policy` is rebuilt by `screenDeliveryPolicy` on every render of the routes, so `api` above is a new object
+   * after every URL change, and a screen that lists `api` in its read effects reads everything again: once per tab click and once
+   * more when `?tab=Promotion+plans` is rewritten to its canonical slug (certification, capabilities and eligibility each read
+   * twice). The V2 Sandbox gets an api keyed on the policy's VALUE; the other screens keep `api` as they had it.
+   */
+  const policyKey = JSON.stringify(policy);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the value on purpose
+  const stableApi = useMemo(() => createHttpApi({ policy }), [policyKey]);
   // The cockpit's New request drawer writes through the New-request screen's own policy, not the inbox's.
   const requestApi = useMemo(() => createHttpApi({ policy: requestPolicy }), [requestPolicy]);
   /*
@@ -563,7 +572,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
       // entry screen of WF 1d; /:deploymentId opens that certification.
       content = deploymentId
         ? V2Sandbox && isV2Screen("sandbox")
-          ? <Suspense fallback={null}>{V2StageEligibility ? <V2StageEligibility api={api} workspaceId={routeWorkspaceId}><V2Sandbox api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></V2StageEligibility> : <V2Sandbox api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} />}</Suspense>
+          ? <Suspense fallback={null}>{V2StageEligibility ? <V2StageEligibility api={stableApi} workspaceId={routeWorkspaceId}><V2Sandbox api={stableApi} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></V2StageEligibility> : <V2Sandbox api={stableApi} deploymentId={deploymentId} workspaceId={routeWorkspaceId} />}</Suspense>
           : <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
         : stageListRedirect("sandbox") ?? <SandboxOverviewRichContainer api={api} />;
       break;
