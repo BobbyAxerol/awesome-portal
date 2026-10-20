@@ -40,7 +40,7 @@ import { PanelState } from "../../../components/states";
 import { utcStamp } from "../../../time";
 import { DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { withoutOrigin } from "../../backTo";
-import { notPublishedReason } from "../../blocks";
+import { NotAvailableLine, notPublishedReason } from "../../blocks";
 import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
 import { V2_CAPABILITY, holds } from "../../shell/roleNav";
@@ -184,6 +184,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
     setMoreOpen(false);
   };
   const [moreOpen, setMoreOpen] = useState(false);
+  const moreButton = useRef<HTMLButtonElement | null>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
   const stripRef = useRef<HTMLDivElement | null>(null);
   /* At phone width the strip is one row that scrolls inside its own box and carries every tab, More's included:
@@ -247,18 +248,22 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
             ) : null}
           </h1>
           {view !== null && view.present ? (
-            <p className="exec-alp2-meta">
-              {view.name === null ? (
-                <span>Name <Np id="FE-066" /><WhyMark name="Name, reason" reason={view.nameReason} /></span>
-              ) : null}
-              {view.version === null ? <span>Version <Np id="FE-066" /><WhyMark name="Version, reason" reason={view.versionReason} /></span> : null}
-              {view.owner.kind === "not-published"
-                ? <span>Owner <Np id={view.owner.id} /><WhyMark name="Owner, reason" reason={view.owner.reason} /></span>
-                : <span>Owner <b>{view.owner.kind === "value" ? view.owner.value : "Not available"}</b></span>}
-              <span>Run <Np id="FE-029" /></span>
-              <span>Evidence <Np id="FE-029" /></span>
-              {view.portfolioNames.length > 0 ? <span>{view.portfolioNames.join(", ")}</span> : null}
-            </p>
+            <>
+              <p className="exec-alp2-meta">
+                {view.owner.kind === "not-published" ? null : <span>Owner <b>{view.owner.kind === "value" ? view.owner.value : "Not available"}</b></span>}
+                {view.portfolioNames.length > 0 ? <span>{view.portfolioNames.join(", ")}</span> : null}
+              </p>
+              {/* The gaps of the header (name, version, owner, run, evidence) are ONE line, not a "Not published" per fact. */}
+              <NotAvailableLine
+                facts={[
+                  ...(view.name === null ? [{ label: "Name", id: "FE-066" as const, why: view.nameReason }] : []),
+                  ...(view.version === null ? [{ label: "Version", id: "FE-066" as const, why: view.versionReason }] : []),
+                  ...(view.owner.kind === "not-published" ? [{ label: "Owner", id: view.owner.id, why: view.owner.reason }] : []),
+                  { label: "Run", id: "FE-029" as const },
+                  { label: "Evidence", id: "FE-029" as const },
+                ]}
+              />
+            </>
           ) : null}
         </div>
         <div className="exec-alp2-fresh">
@@ -302,14 +307,9 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                     ? view.money.exposure.map((e) => <span key={e.currency} className="exec-alp2-fig"><Dec value={e.value} currency={e.currency} /></span>)
                     : <Na />}
               </Fig>
-              <Fig label="Return"><Np id="FE-006" /></Fig>
-              <Fig label="Max drawdown"><Np id="FE-025" /></Fig>
-              <Fig label="Regime fit" basis="Separate from score">
-                <Np id="FE-011" />{" "}
-                <Link className="exec-blk-link" to={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=regime`)}>Open</Link>
-              </Fig>
             </dl>
             )}
+            {tab === "replay" ? null : <NotAvailableLine facts={[{ label: "Return", id: "FE-006" }, { label: "Max drawdown", id: "FE-025" }, { label: "Regime fit", id: "FE-011" }]} />}
 
             <div className="exec-alp2-tabbar">
               <div ref={stripRef} className="exec-alp2-tabs" role="tablist" aria-label="Alpha detail">
@@ -332,8 +332,18 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                 ))}
               </div>
               {narrow ? null : (
-              <div className="exec-alp2-more-wrap">
-                <button type="button" className="exec-alp2-tab" aria-haspopup="menu" aria-expanded={moreOpen} data-active={inMore ? "true" : undefined} onClick={() => setMoreOpen((open) => !open)}>
+              <div
+                className="exec-alp2-more-wrap"
+                onKeyDown={(event) => {
+                  // Escape closes the menu and gives the focus back to its button; it stayed open before.
+                  if (event.key !== "Escape" || !moreOpen) return;
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setMoreOpen(false);
+                  moreButton.current?.focus();
+                }}
+              >
+                <button ref={moreButton} type="button" className="exec-alp2-tab" aria-haspopup="menu" aria-expanded={moreOpen} data-active={inMore ? "true" : undefined} onClick={() => setMoreOpen((open) => !open)}>
                   More
                 </button>
                 {moreOpen ? (

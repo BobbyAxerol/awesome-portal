@@ -191,7 +191,13 @@ function cell(id: ColumnId, row: PortfolioRow) {
       return (
         <span className="exec-pf-alloc">
           <MoneyList entries={row.allocated} empty={<Absent reason="no allocation published" />} />
-          {row.mixedBooks ? <Flag kind="partial" label="Real-funded and Simulated books together" size="sm" /> : null}
+          {row.mixedBooks ? (
+            // Seventeen of twenty-five rows carried the full sentence as a chip: the chip is two words, the sentence is its title and hidden text.
+            <span title="Real-funded and Simulated books together">
+              <Flag kind="partial" label="Mixed books" size="sm" />
+              <span className="exec-blk-sr"> (Real-funded and Simulated books together)</span>
+            </span>
+          ) : null}
         </span>
       );
     default:

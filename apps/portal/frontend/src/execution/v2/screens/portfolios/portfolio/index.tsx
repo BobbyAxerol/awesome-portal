@@ -42,7 +42,6 @@ import { Flag } from "../../../Flag";
 import { holds, V2_CAPABILITY } from "../../../shell/roleNav";
 import { applyTab, resolveTab } from "../../../tabAliases";
 import { useExecUrlState, withContext } from "../../../urlState";
-import { EXPORT_REASON } from "../fe";
 import { freshnessFlag, humanize } from "../format";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_PORTFOLIO_PREFIX, joinQuery, type PortfolioRoutes } from "../routes";
 import { IN_PARAM } from "../selection";
@@ -262,10 +261,6 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
           {identity ? <Flag kind={identity.stateKind} label={identity.stateLabel} size="sm" /> : null}
           {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {resource ? <span className="exec-pf-dim">{resource.asOf ? `As of ${utcStamp(resource.asOf)}` : "Source time not published"}</span> : null}
-          <span className="exec-pf-btnwhy">
-            <button type="button" className="exec-pf-btn" disabled title={EXPORT_REASON} aria-describedby={`${tabsId}-export`}>Report pack</button>
-            <span id={`${tabsId}-export`} className="exec-pf-why">{EXPORT_REASON}</span>
-          </span>
           {compareHref === null ? (
             <span className="exec-pf-btnwhy">
               <button type="button" className="exec-pf-btn" disabled title={COMPARE_OFF_REASON} aria-describedby={`${tabsId}-compare`}>Compare with</button>

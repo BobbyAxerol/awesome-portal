@@ -51,6 +51,11 @@ describe("EquityPanel · readout from the published string", () => {
     const up = render(<EquityPanel label="Equity" points={series(["1000.00", "1010.00", "1100.00"])} />);
     expect(up.container.querySelector('[data-testid="high-flag"]')).toBeNull();
     expect(up.container.querySelector('[data-testid="low-flag"]')).toBeNull();
+    cleanup();
+    // A low that IS the latest point is the endpoint callout's value: no Low flag on top of it (UX audit A).
+    const down = render(<EquityPanel label="Equity" points={series(["1000.00", "1100.00", "950.00"])} />);
+    expect(down.container.querySelector('[data-testid="high-flag"] text')!.textContent).toBe("High 1,100.00");
+    expect(down.container.querySelector('[data-testid="low-flag"]')).toBeNull();
   });
 });
 

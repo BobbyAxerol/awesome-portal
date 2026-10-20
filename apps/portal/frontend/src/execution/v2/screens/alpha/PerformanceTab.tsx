@@ -17,7 +17,7 @@ import type { FinancialChartPayload } from "../../../api/financialChart";
 import type { StageDrift } from "../../../hifiInsight";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { SectionPanel } from "../../blocks";
+import { NotAvailableLine, SectionPanel } from "../../blocks";
 import { ChartTools, DivBars, EquityPanel, Spark, type DivBarRow } from "../../charts";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
 import { Na } from "./cells";
@@ -56,7 +56,6 @@ function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "
         label={`Equity, ${ENV_LABEL[env]}`}
         points={[]}
         state={{ kind: "unavailable", copy: "Not available", reason }}
-        drawdown={{ kind: "absent", copy: "Not published (FE-025)" }}
       />
     );
   }
@@ -75,17 +74,11 @@ function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "
               currency={input.currency ?? undefined}
               state={input.state}
               segments={input.segments}
-              drawdown={{ kind: "absent", copy: "Not published (FE-025)" }}
               height={240}
             />
           </ChartTools>
-          <p className="exec-alp2-cap">
-            <span>{ENV_LABEL[env]} book</span>
-            <span>{input.basis}</span>
-            {input.gapCount > 0 ? <span>{input.gapCount} {input.gapCount === 1 ? "gap" : "gaps"} the source declared</span> : null}
-            <span>Windowed return: <Np id="FE-006" /></span>
-            <span>Window: <Np id="FE-025" /></span>
-          </p>
+          {/* The book is the segmented control above, the sampling is the chart's own envelope line, and the windowed figures are the one "Not available" line of the screen. */}
+          {input.gapCount > 0 ? <p className="exec-alp2-cap"><span>{input.gapCount} {input.gapCount === 1 ? "gap" : "gaps"} the source declared</span></p> : null}
         </div>
       ))}
     </div>
@@ -104,7 +97,6 @@ function SimulatedFacet({ paths, drift }: Pick<PerformanceTabProps, "paths" | "d
     },
     { key: "closes", label: "Closes", numeric: true, render: (p) => (p.deployed ? String(p.closes) : <Na why={p.reason ?? undefined} />) },
     { key: "gaps", label: "Gap days", numeric: true, render: (p) => (p.deployed ? String(p.gapDays) : null) },
-    { key: "return", label: "Return", numeric: true, render: () => <Np id="FE-006" /> },
     {
       key: "path",
       label: "Path",
@@ -125,15 +117,7 @@ function SimulatedFacet({ paths, drift }: Pick<PerformanceTabProps, "paths" | "d
 }
 
 function OosFacet() {
-  return (
-    <table className="exec-alp2-kv">
-      <tbody>
-        <tr><th scope="row">Bound run</th><td><Np id="FE-029" /></td></tr>
-        <tr><th scope="row">OOS return</th><td><Np id="FE-029" /></td></tr>
-        <tr><th scope="row">Artifact available</th><td><Np id="FE-029" /></td></tr>
-      </tbody>
-    </table>
-  );
+  return <NotAvailableLine facts={[{ label: "Bound run", id: "FE-029" }, { label: "OOS return", id: "FE-029" }, { label: "Artifact available", id: "FE-029" }]} />;
 }
 
 /** Current net PnL by deployment, one chart per currency: partitions are never merged. */
@@ -179,46 +163,26 @@ export function PerformanceTab(props: PerformanceTabProps) {
         {view === "act" ? <ActualFacet env={env} equity={props.equity} inputs={props.inputs} drift={props.drift} /> : null}
         {view === "sim" ? <SimulatedFacet paths={props.paths} drift={props.drift} /> : null}
         {view === "oos" ? <OosFacet /> : null}
-        {view === "act" && props.inputs.length > 0 ? null : (
-          <p className="exec-alp2-cap">
-            <span>Window: <Np id="FE-025" /></span>
-          </p>
-        )}
       </SectionPanel>
 
-      <div className="exec-alp2-grid2">
-        <SectionPanel title="Contribution" aside="Current">
-          <Contribution rows={rows} noTotals={props.noTotals ?? null} />
-        </SectionPanel>
-        <SectionPanel title="Cost drag">
-          <table className="exec-alp2-kv">
-            <tbody>
-              <tr><th scope="row">Fees and funding</th><td><Np id="FE-025">Per-alpha attribution</Np></td></tr>
-              <tr><th scope="row">Slippage</th><td><Na why="Fill benchmark not published" /></td></tr>
-            </tbody>
-          </table>
-        </SectionPanel>
-      </div>
-
-      <SectionPanel title="Forward observation" aside={<Flag kind="partial" label="Not an actual track record" size="sm" />}>
-        <div className="exec-alp2-duo" role="group" aria-label="Forward and actual days">
-          <span><span className="exec-alp2-duo-l">Forward</span><span className="exec-alp2-duo-v"><Np id="FE-029">Days observed forward</Np></span></span>
-          <span><span className="exec-alp2-duo-l">Actual</span><span className="exec-alp2-duo-v"><Np id="FE-029">Days actually traded</Np></span></span>
-        </div>
-        <table className="exec-alp2-kv">
-          <tbody>
-            <tr><th scope="row">Mixed return</th><td><Np id="FE-029">Continuity manifest</Np></td></tr>
-            <tr><th scope="row">Mixed score</th><td><Np id="FE-011" /></td></tr>
-          </tbody>
-        </table>
+      <SectionPanel title="Contribution" aside="Current">
+        <Contribution rows={rows} noTotals={props.noTotals ?? null} />
       </SectionPanel>
 
-      <p className="exec-alp2-cap">
-        <span>
-          4 charts are not available yet: rolling correlation, return histogram, risk utilization, paper versus live drift (
-          <Np id="FE-029" />)
-        </span>
-      </p>
+      {/* Cost drag, forward observation and four charts had no published value: one line instead of two panels, a caption and a dozen "Not published". */}
+      <NotAvailableLine
+        facts={[
+          { label: "Fees and funding", id: "FE-025" },
+          { label: "Slippage", why: "Fill benchmark not published" },
+          { label: "Forward and actual days", id: "FE-029" },
+          { label: "Mixed return", id: "FE-029" },
+          { label: "Mixed score", id: "FE-011" },
+          { label: "Rolling correlation", id: "FE-029" },
+          { label: "Return histogram", id: "FE-029" },
+          { label: "Risk utilization", id: "FE-029" },
+          { label: "Paper versus live drift", id: "FE-029" },
+        ]}
+      />
     </div>
   );
 }

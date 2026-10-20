@@ -688,7 +688,10 @@ describe("Triad", () => {
   it("says Not available for an absent metric and Not computed for a published non-computation", () => {
     render(<Triad rows={rows} />);
     expect(screen.getByText("Not available · VENUE_GAP")).toBeTruthy();
-    expect(screen.getByText("Not computed · SHARED_BINDING")).toBeTruthy();
+    // Visible words are "Not computed"; the code rides in the title and in hidden text, so the cell still carries it.
+    const computed = screen.getByText("Not computed");
+    expect(computed.getAttribute("title")).toBe("SHARED_BINDING");
+    expect(computed.textContent).toBe("Not computed · SHARED_BINDING");
   });
 
   it("an absent side prints Not available in every row, never a value or a zero difference", () => {

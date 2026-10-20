@@ -13,7 +13,6 @@ import { cloneRows } from "../../testkit/scale";
 import AlphaScreen, { ALPHA_SCREEN_KEY } from "./index";
 import { useContextFactsValue } from "../../shell/contextFacts";
 import { alphaHttpApi, serveAlphaDouble, sessionOf, type Override } from "./testApi";
-import { whyText } from "../../gapWhyTestUtil";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
@@ -74,14 +73,13 @@ describe("screen contract", () => {
     const h1 = await ready();
     expect(h1.textContent).toContain(ALPHA_DOUBLE_ID);
     expect(h1.textContent).not.toMatch(/Unnamed alpha|UNVERSIONED|\bv\d/);
-    const meta = document.querySelector(".exec-alp2-meta")!;
-    // The name and the version are Not published (FE-066) with the server's literal behind a disclosure.
-    expect(meta.textContent).toContain("Name");
-    const member = (word: string) => Array.from(meta.children).find((c) => (c.textContent ?? "").startsWith(word))!;
-    expect(member("Name").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
-    expect(whyText(member("Name"))).toBe("ALPHA_NAME_NOT_PUBLISHED");
-    expect(member("Version").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
-    expect(whyText(member("Version"))).toBe("UNVERSIONED");
+    // The header's gaps are ONE "Not available" line; the server's literals sit behind its one disclosure (UX audit A).
+    const line = h1.parentElement!.querySelector("[data-testid='not-available-line']")!;
+    expect(line.textContent).toContain("Not available: Name, Version, Run, Evidence");
+    fireEvent.click(within(line as HTMLElement).getByRole("button", { name: "Why not available: Name, Version, Run, Evidence" }));
+    const rows = Array.from(line.querySelectorAll(".exec-blk-why-row")).map((row) => row.textContent ?? "");
+    expect(rows.find((row) => row.startsWith("Name:"))).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    expect(rows.find((row) => row.startsWith("Version:"))).toContain("UNVERSIONED");
     expect(screen.getByText("asmith")).toBeTruthy();
   });
 
@@ -89,9 +87,9 @@ describe("screen contract", () => {
     mount();
     const h1 = await ready();
     expect(within(h1).getByRole("button", { name: /Not scored · policy not set/ })).toBeTruthy();
-    const meta = h1.parentElement!.querySelector(".exec-alp2-meta")!;
-    expect(meta.textContent).toContain("Run Not published (FE-029)");
-    expect(meta.textContent).toContain("Evidence Not published (FE-029)");
+    const line = h1.parentElement!.querySelector("[data-testid='not-available-line']")!;
+    expect(line.textContent).toContain("Run, Evidence");
+    expect(line.textContent).toContain("Not published FE-029");
   });
 
   it("prints no dash and no N/A anywhere on any tab", async () => {
@@ -109,6 +107,20 @@ describe("screen contract", () => {
     await waitFor(() => expect(search().get("tab")).toBe("replay"));
     await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
     expect(document.body.textContent ?? "", "Trade Replay").not.toMatch(NO_DASH);
+  });
+});
+
+describe("the More menu", () => {
+  it("Escape closes it and returns the focus to its button (UX audit A: it stayed open)", async () => {
+    mount();
+    await ready();
+    const more = screen.getByRole("button", { name: "More" });
+    fireEvent.click(more);
+    const menu = screen.getByRole("menu", { name: "More tabs" });
+    fireEvent.keyDown(within(menu).getAllByRole("menuitem")[0], { key: "Escape" });
+    expect(screen.queryByRole("menu", { name: "More tabs" })).toBeNull();
+    expect(more.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(more);
   });
 });
 
@@ -133,7 +145,8 @@ describe("the lifecycle spine", () => {
     fireEvent.click(within(screen.getByRole("list", { name: "Alpha lifecycle" })).getByRole("button", { name: /Paper/ }));
     const detail = document.querySelector('.exec-alp2-stage-detail[data-stage="paper"]')!;
     expect(detail.textContent).toContain("dep_paper_01");
-    expect(detail.textContent).toContain("Not published (FE-028)");
+    // The stage detail no longer repeats the spine's "days in stage, criteria, decider" gap (UX audit A); a gate still names its own.
+    expect(detail.textContent).not.toContain("Not published");
     fireEvent.click(within(screen.getByRole("list", { name: "Alpha lifecycle" })).getByRole("button", { name: /R1 gate/ }));
     expect(document.querySelector('.exec-alp2-stage-detail[data-stage="r1"]')!.textContent).toContain("Not published (FE-027/028)");
   });
@@ -161,9 +174,12 @@ describe("current facts", () => {
     const facts = screen.getByLabelText("Current facts");
     expect(within(facts).getByText("+1,120.80")).toBeTruthy();
     expect(facts.textContent).toContain("All stages, current facts");
-    expect(facts.textContent).toContain("Return");
-    expect(facts.textContent).toContain("Not published (FE-006)");
-    expect(facts.textContent).toContain("Not published (FE-025)");
+    // The windowed figures are ONE line under the strip, not a "Not published" tile each (UX audit A).
+    expect(facts.textContent).not.toContain("Return");
+    const lines = screen.getAllByTestId("not-available-line").map((line) => line.textContent ?? "");
+    expect(lines.some((text) => text.includes("Not available: Return, Max drawdown, Regime fit"))).toBe(true);
+    expect(lines.join(" ")).toContain("Not published FE-006");
+    expect(lines.join(" ")).toContain("Not published FE-025");
   });
 });
 
@@ -175,11 +191,13 @@ describe("Performance", () => {
     expect(panel).toBeTruthy();
     expect(view.container.textContent).not.toMatch(/gap the source declared|gaps the source declared/);
     expect(view.container.textContent).toContain("24 points");
-    expect(view.container.textContent).toContain("Windowed return:");
+    // No "Windowed return: Not published" caption and no empty drawdown panel under the chart (UX audit A).
+    expect(view.container.textContent).not.toContain("Windowed return:");
+    expect(view.container.querySelectorAll('[data-testid="drawdown"], .exec-c2-dd')).toHaveLength(0);
     expect(screen.getByTestId("readout-value").textContent).toBe("40,812.00 USDT");
   });
 
-  it("Forward simulated lists each stage's own path, with Return as Not published (FE-006)", async () => {
+  it("Forward simulated lists each stage's own path, with no column of Return gaps", async () => {
     mount();
     await ready();
     fireEvent.click(screen.getByRole("button", { name: "Forward simulated" }));
@@ -190,7 +208,7 @@ describe("Performance", () => {
     expect(rows[0].textContent).toContain("Paper");
     expect(rows[0].textContent).toContain("Simulated");
     expect(rows[2].textContent).toContain("Real-funded");
-    for (const row of rows) expect(row.textContent).toContain("Not published (FE-006)");
+    expect(within(table).queryByRole("columnheader", { name: "Return" })).toBeNull();
     expect(table.textContent).toContain("Gap days");
     expect(screen.getByText("Never stitched into actual")).toBeTruthy();
   });
@@ -198,7 +216,8 @@ describe("Performance", () => {
   it("Research OOS names the bound run as Not published (FE-029)", async () => {
     mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?view=oos`);
     await ready();
-    expect(screen.getAllByText(/Not published/).filter((n) => n.closest("table.exec-alp2-kv")).length).toBeGreaterThanOrEqual(3);
+    const lines = screen.getAllByTestId("not-available-line").map((line) => line.textContent ?? "");
+    expect(lines.some((text) => text.includes("Not available: Bound run, OOS return, Artifact available"))).toBe(true);
   });
 
   it("a book whose exact equity read fails falls back to its own daily closes, worded partial with the source's reason", async () => {
@@ -325,9 +344,10 @@ describe("Deployments", () => {
     const live = rows[3];
     expect(live.querySelector("td[data-l='Allocated, current']")!.textContent).toContain("40,000.00");
     expect(live.querySelector("td[data-l='Net PnL, current']")!.textContent).toContain("+1,120.80");
-    expect(live.querySelector("td[data-l='Dates']")!.textContent).toBe("Not published (FE-027)");
-    expect(live.querySelector("td[data-l='Deployed by']")!.textContent).toBe("Not published (FE-021)");
-    expect(live.querySelector("td[data-l='Receipts']")!.textContent).toBe("Not published (FE-032)");
+    // Dates, deployer and receipts have no source: no column of "Not published" cells, ONE line under the table (UX audit A).
+    for (const column of ["Dates", "Deployed by", "Receipts"]) expect(live.querySelector(`td[data-l='${column}']`)).toBeNull();
+    const missing = table.closest("section")!.querySelector("[data-testid='not-available-line']")!;
+    expect(missing.textContent).toContain("Not available: Dates, Deployed by, Receipts");
     expect(rows[2].querySelector("td[data-l='Allocated, current']")!.textContent).toContain("Not available");
     expect(screen.getByText("No allocation total: rows sit in different partitions")).toBeTruthy();
   });
@@ -348,7 +368,7 @@ describe("Deployments", () => {
   it("a researcher's slice: no account link, no deployer column, the banner says so", async () => {
     const table = await open(V2_ROLE_PRESETS.researcher);
     expect(within(table).queryByRole("link", { name: "acct_binance_02" })).toBeNull();
-    expect(within(table).queryByRole("columnheader", { name: "Deployed by" })).toBeNull();
+    expect(table.closest("section")!.querySelector("[data-testid='not-available-line']")!.textContent).not.toContain("Deployed by");
     expect(screen.getByText("Your slice only. Peers and fund totals are hidden.")).toBeTruthy();
     expect(screen.getByText("Only deployments in your slice")).toBeTruthy();
   });
@@ -370,18 +390,20 @@ describe("Evidence, Regime, Reconciliation", () => {
     mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?tab=evidence`);
     await ready();
     const panel = await screen.findByRole("region", { name: "Research Evidence" });
-    expect(panel.textContent).toContain("Not published (FE-066)");
+    // The run binding and its five siblings are ONE "Not available" line; the name and version gap is the header's.
+    expect(within(panel).getByTestId("not-available-line").textContent).toContain("Not available: Bound research run, Parameters, Parameter bundle, Evidence, Provenance, Artifact available");
+    expect(panel.textContent).toContain("FE-029");
     expect(panel.textContent).not.toMatch(/Unnamed alpha|UNVERSIONED/);
-    expect(within(panel).getAllByText(/Not published/).length).toBeGreaterThanOrEqual(6);
     expect(await within(panel).findByText("RESEARCH_RUN_NOT_BOUND")).toBeTruthy();
   });
 
-  it("Regime Fit has its structure and every cell Not published (FE-011)", async () => {
+  it("Regime Fit says once that it is not evaluated and names what is missing (FE-011)", async () => {
     mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?tab=regime`);
     await ready();
     const panel = await screen.findByRole("region", { name: "Regime fit" });
-    expect(within(panel).getAllByText("Not published").length).toBeGreaterThanOrEqual(8);
-    expect(panel.textContent).toContain("(FE-011)");
+    expect(within(panel).getByTestId("not-available-line").textContent).toContain("Not available: Volatility, Trend, Liquidity, Outcome by stage");
+    expect(within(panel).queryAllByText("Not published")).toHaveLength(0);
+    expect(panel.textContent).toContain("FE-011");
     expect(panel.textContent).toContain("Historical support, not a forecast");
   });
 
@@ -448,7 +470,7 @@ describe("Orders & Fills", () => {
 
   it("each order opens its place in Trade Replay by a deep link", async () => {
     const { table } = await open();
-    const link = within(table).getAllByRole("link", { name: "Open" })[0];
+    const link = within(table).getAllByRole("link", { name: /^Open / })[0];
     expect(link.getAttribute("href")).toContain("tab=replay&focus=order%3Aord_");
   });
 

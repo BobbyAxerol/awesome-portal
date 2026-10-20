@@ -546,12 +546,11 @@ describe("capability", () => {
     expect(names()).toHaveLength(6);
   });
 
-  it("disables Export with the one shared sentence", async () => {
+  it("offers no Export: a control that cannot act is not drawn (UX audit A)", async () => {
     mount(makeApi().api);
     await loaded();
-    const exportButton = screen.getByRole("button", { name: "Export" }) as HTMLButtonElement;
-    expect(exportButton.disabled).toBe(true);
-    expect(exportButton.title).toBe("Export is not available yet.");
+    expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
+    expect(document.body.textContent).not.toContain("Export is not available yet.");
   });
 });
 

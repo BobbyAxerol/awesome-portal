@@ -251,7 +251,7 @@ export function ageAtRead(asOf: UtcEpochMs | null, readAt: UtcEpochMs | null): s
 export const UPDATED_STALE_MINUTES = 30;
 
 /**
- * "14 min ago" / "3 h ago" for a row's `updated_at`, measured against the instant the list was
+ * "14 min ago" / "3 h ago" / "46 d ago" for a row's `updated_at`, measured against the instant the list was
  * READ (both published, no browser clock), as hi-fi accounts.html prints it. `null` when either
  * instant is missing or the row claims to be newer than the read: the caller then prints the
  * absolute time instead of inventing an age.
@@ -259,7 +259,9 @@ export const UPDATED_STALE_MINUTES = 30;
 export function updatedAgo(updatedAt: UtcEpochMs | null, readAt: UtcEpochMs | null): { text: string; stale: boolean } | null {
   if (updatedAt === null || readAt === null || readAt < updatedAt) return null;
   const minutes = Math.floor((readAt - updatedAt) / 60_000);
-  const text = minutes < 1 ? "under 1 min ago" : minutes < 60 ? `${minutes} min ago` : `${Math.floor(minutes / 60)} h ago`;
+  const hours = Math.floor(minutes / 60);
+  // Past two days an hour count is raw ("1098 h ago"): days read at a glance.
+  const text = minutes < 1 ? "under 1 min ago" : minutes < 60 ? `${minutes} min ago` : hours < 48 ? `${hours} h ago` : `${Math.floor(hours / 24)} d ago`;
   return { text, stale: minutes >= UPDATED_STALE_MINUTES };
 }
 

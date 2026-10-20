@@ -424,6 +424,10 @@ describe("tabs, views, links, copy", () => {
     // Hours floor, like ageAtRead: 119 minutes is "1 h", never rounded up to "2 h".
     expect(updatedAgo(at("2026-10-17T07:01:00Z"), read)).toEqual({ text: "1 h ago", stale: true });
     expect(updatedAgo(at("2026-10-17T07:00:00Z"), read)).toEqual({ text: "2 h ago", stale: true });
+    // Past two days the age is in days, never a raw hour count.
+    expect(updatedAgo(at("2026-10-15T10:00:00Z"), read)).toEqual({ text: "47 h ago", stale: true });
+    expect(updatedAgo(at("2026-10-15T09:00:00Z"), read)).toEqual({ text: "2 d ago", stale: true });
+    expect(updatedAgo(at("2026-09-01T09:00:00Z"), read)).toEqual({ text: "46 d ago", stale: true });
     // No age is invented: a missing instant or a row newer than the read prints the instant instead.
     expect(updatedAgo(null, read)).toBeNull();
     expect(updatedAgo(at("2026-10-17T09:05:00Z"), read)).toBeNull();

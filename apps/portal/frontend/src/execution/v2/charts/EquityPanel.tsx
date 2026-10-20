@@ -263,7 +263,8 @@ export function EquityPanel(props: EquityPanelProps) {
   const flags: ReturnType<typeof flagBox>[] = [];
   if (hiIdx && loIdx && compareDecimal(hiIdx.s, loIdx.s) !== 0) {
     if (hiIdx.index !== last) flags.push(flagBox(hiIdx.index, `High ${show(hiIdx.s)}`, true));
-    if (loIdx.index !== first) flags.push(flagBox(loIdx.index, `Low ${show(loIdx.s)}`, false));
+    // The last point already wears the latest-value callout; a Low flag on it would sit on top of that callout.
+    if (loIdx.index !== first && loIdx.index !== last) flags.push(flagBox(loIdx.index, `Low ${show(loIdx.s)}`, false));
   }
 
   const inDomain = (t: number) => t >= x0 && t <= x1;
@@ -304,6 +305,9 @@ export function EquityPanel(props: EquityPanelProps) {
     (model.gaps > 0 ? ` ${model.gaps} ${model.gaps === 1 ? "gap" : "gaps"} with no published value.` : "") +
     (envelope.reduced ? ` Drawn from ${envelope.shownCount} of ${envelope.sourceCount} points, minimum and maximum kept.` : "");
 
+  // The one swatch of a lone series repeats the title it sits under ("Core equity" under "Core equity · USDT"): drawn only when it says more or stands beside another entry.
+  const loneSeries = label.toLowerCase().includes(seriesName.toLowerCase()) && !ghost && !bandOk && spans.length === 0 && !segments.some((s) => s.kind === "simulated" || s.kind === "retained");
+
   return (
     <figure className="exec-chart exec-eq2" data-state={state.kind} data-reduced={envelope.reduced ? "true" : "false"}>
       <figcaption className="exec-c2-head">
@@ -311,14 +315,14 @@ export function EquityPanel(props: EquityPanelProps) {
         <ChartStateFlags state={state} />
       </figcaption>
 
-      <ul className="exec-c2-legend">
+      {loneSeries ? null : <ul className="exec-c2-legend">
         <li><i className="exec-c2-sw" data-s="series" />{seriesName}</li>
         {ghost ? <li><i className="exec-c2-sw" data-s="sim" data-dash="true" />{ghost.name}</li> : null}
         {segments.some((s) => s.kind === "simulated") ? <li><i className="exec-c2-sw" data-s="sim" data-hatch="true" />Simulated</li> : null}
         {segments.some((s) => s.kind === "retained") ? <li><i className="exec-c2-sw" data-s="retained" data-hatch="true" />Retained</li> : null}
         {bandOk ? <li><i className="exec-c2-sw" data-s="band" data-dash="true" />{band?.name ?? "Approved band"}</li> : null}
         {spans.length > 0 ? <li><i className="exec-c2-sw" data-s="gap" data-hatch="true" />No published value</li> : null}
-      </ul>
+      </ul>}
 
       <div className="exec-c2-readout" id={readoutId}>
         <span><span className="exec-c2-ru" data-testid="readout-time">{timeOf(o.t)}</span><b className="exec-c2-rv" data-testid="readout-value">{readoutValue}</b></span>

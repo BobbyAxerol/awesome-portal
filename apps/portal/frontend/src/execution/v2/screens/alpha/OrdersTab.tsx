@@ -111,7 +111,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
         );
       },
     },
-    { key: "replay", label: "Replay", render: (o) => <Link className="exec-blk-link" to={linkTo(replayHref(alphaId, `order:${o.orderId}`))}>Open</Link> },
+    { key: "replay", label: "Replay", render: (o) => <Link className="exec-blk-link" to={linkTo(replayHref(alphaId, `order:${o.orderId}`))} aria-label={`Open ${o.orderId} in Trade Replay`}>Open</Link> },
   ];
   const fillColumns: CardsColumn<ReplayFill>[] = [
     { key: "at", label: "Time (UTC)", render: (f) => <At iso={f.tradeTime} /> },

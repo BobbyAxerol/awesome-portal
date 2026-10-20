@@ -300,6 +300,15 @@ div.exec-pf-banner {
   gap: 2px;
   white-space: normal;
 }
+/* Allocated capital is a right-aligned numeric column: the amount lines up with its neighbours, chip or no chip. */
+.exec-pf-alloc {
+  align-items: flex-end;
+}
+/* A timestamp under a figure: one line, never broken inside the date. */
+.exec-pf-stamp {
+  display: block;
+  white-space: nowrap;
+}
 .exec-pf-envs,
 .exec-pf-dim,
 .exec-pf-na,

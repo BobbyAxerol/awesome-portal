@@ -26,10 +26,9 @@ import { withOrigin } from "../../backTo";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
 import { BindingDrawer } from "./BindingDrawer";
 import { StateFlag, CredentialFlag, Updated } from "./parts";
-import { QuietIds } from "../../blocks";
 import { useBindingPages } from "./reads";
 import {
-  ALL_ENVIRONMENTS, CREDENTIAL_FILTERS, ENV_TABS, FE, ROW_CAP, accountHref, freshnessFlag, humanize, inScope, matchesCredential, notPublished,
+  ALL_ENVIRONMENTS, CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, accountHref, freshnessFlag, humanize, inScope, matchesCredential, notPublished,
   readCredentialFilter, timeOf, toBindingRow, type BindingEnv, type BindingRow,
 } from "./model";
 
@@ -291,10 +290,6 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
               Issues only{issueCountText !== null ? <span className="exec-acct-tab-count">{issueCountText}</span> : null}
             </button>
             {filtered ? <button type="button" className="exec-acct-btn" onClick={clearFilters}>Clear all</button> : null}
-            <span className="exec-acct-export">
-              <button type="button" className="exec-acct-btn" disabled title={notPublished(FE.export)} aria-describedby={`${panelId}-export`}>Export</button>
-              <span id={`${panelId}-export`} className="exec-acct-note" title={`${notPublished(FE.export)}. Exporting this list is not offered yet.`}><QuietIds text={`${notPublished(FE.export)}. Not offered yet.`} /></span>
-            </span>
           </div>
 
           {chips.length > 0 ? (

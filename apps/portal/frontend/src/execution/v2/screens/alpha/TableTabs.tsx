@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { NaWhy, SectionPanel } from "../../blocks";
+import { NaWhy, NotAvailableLine, SectionPanel, type UnavailableFact } from "../../blocks";
 import { PanelState } from "../../../components/states";
 import { formatAsOf } from "../../boundary";
 import { Dec, At, Na } from "./cells";
@@ -86,13 +86,16 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = 
         : <Dec value={r.netPnl} currency={r.currency} signed />),
     },
     { key: "equity", label: "Equity", numeric: true, render: (r) => (r.financial !== undefined ? <FinancialCell f={r.financial} member="equity" fallbackCurrency={r.currency} /> : <NaWhy />) },
-    { key: "dates", label: "Dates", render: () => <Np id="FE-027" /> },
   ];
   // The equity column exists only when the body publishes a snapshot entry for some deployment.
   const withEquity = rows.some((r) => r.financial !== undefined);
   if (!withEquity) columns.splice(columns.findIndex((c) => c.key === "equity"), 1);
-  if (canSeeAccounts) columns.push({ key: "by", label: "Deployed by", render: () => <Np id="FE-021" /> });
-  columns.push({ key: "receipts", label: "Receipts", numeric: true, render: () => <Np id="FE-032" /> });
+  // Dates, deployer and receipts have no source: ONE line under the table, not a "Not published" cell per row and column (UX audit A).
+  const missing: UnavailableFact[] = [
+    { label: "Dates", id: "FE-027" },
+    ...(canSeeAccounts ? [{ label: "Deployed by", id: "FE-021" as const }] : []),
+    { label: "Receipts", id: "FE-032" },
+  ];
   return (
     <SectionPanel title="Deployments" aside={withheld ? undefined : `${rows.length} ${rows.length === 1 ? "deployment" : "deployments"}`} flush>
       {withheld ? <Withheld what="Deployments" reason={withheld} /> : (
@@ -105,6 +108,7 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = 
         empty={<PanelState status="empty" reason="The source published no deployment for this alpha." />}
       />
       <CapNote shown={shown.length} total={rows.length} noun="deployments" />
+      <NotAvailableLine facts={missing} className="exec-alp2-nal" />
       <p className="exec-alp2-cap">
         {canSeeAccounts ? null : <span>Only deployments in your slice</span>}
         <span>No allocation total: rows sit in different partitions</span>
@@ -123,17 +127,24 @@ export function EvidenceTab({ view, researchReason }: { view: AlphaView | null; 
   const here = view !== null && view.present ? view : null;
   return (
     <SectionPanel title="Research Evidence">
-      <table className="exec-alp2-kv">
-        <tbody>
-          <tr><th scope="row">Alpha version</th><td>{here ? (here.name === null && here.version === null ? <Np id="FE-066">Name and version</Np> : here.titleWithVersion) : <Na />}</td></tr>
-          <tr><th scope="row">Bound research run</th><td><Np id="FE-029" /></td></tr>
-          <tr><th scope="row">Parameters</th><td><Np id="FE-029">Match against the deployed set</Np></td></tr>
-          <tr><th scope="row">Parameter bundle</th><td><Np id="FE-029" /></td></tr>
-          <tr><th scope="row">Evidence</th><td><Np id="FE-029">Original and revised evidence</Np></td></tr>
-          <tr><th scope="row">Provenance</th><td><Np id="FE-029">In-sample, out-of-sample and holdout</Np></td></tr>
-          <tr><th scope="row">Artifact available</th><td><Np id="FE-029" /></td></tr>
-        </tbody>
-      </table>
+      {here !== null && here.name === null && here.version === null ? null : (
+        <table className="exec-alp2-kv">
+          <tbody>
+            <tr><th scope="row">Alpha version</th><td>{here ? here.titleWithVersion : <Na />}</td></tr>
+          </tbody>
+        </table>
+      )}
+      <NotAvailableLine
+        facts={[
+          { label: "Bound research run", id: "FE-029" },
+          { label: "Parameters", id: "FE-029" },
+          { label: "Parameter bundle", id: "FE-029" },
+          { label: "Evidence", id: "FE-029" },
+          { label: "Provenance", id: "FE-029" },
+          { label: "Artifact available", id: "FE-029" },
+        ]}
+        className="exec-alp2-nal"
+      />
       {researchReason !== null ? (
         <p className="exec-alp2-cap"><span>Research binding: <span className="exec-blk-id">{researchReason}</span></span></p>
       ) : null}
@@ -153,25 +164,12 @@ export function EvidenceTab({ view, researchReason }: { view: AlphaView | null; 
 /* ── regime ───────────────────────────────────────────────────────────────── */
 
 const REGIME_AXES = ["Volatility", "Trend", "Liquidity"] as const;
-const REGIME_STAGES = ["Research OOS", "Paper", "Sandbox", "Real-funded"] as const;
 
 export function RegimeTab() {
   return (
     <SectionPanel title="Regime fit" aside="Historical support, not a forecast">
-      <p className="exec-alp2-line"><Flag kind="pending" label="Not evaluated" size="sm" /> <Np id="FE-011">Regime profile and support</Np></p>
-      <div className="exec-alp2-pair">
-        <table className="exec-alp2-kv" aria-label="Regime axes">
-          <tbody>
-            {REGIME_AXES.map((axis) => <tr key={axis}><th scope="row">{axis}</th><td><Np id="FE-011" /></td></tr>)}
-          </tbody>
-        </table>
-        <table className="exec-alp2-kv" aria-label="Outcome by stage">
-          <thead><tr><th scope="col">Stage</th><th scope="col">Outcome</th></tr></thead>
-          <tbody>
-            {REGIME_STAGES.map((stage) => <tr key={stage}><th scope="row">{stage}</th><td><Np id="FE-011" /></td></tr>)}
-          </tbody>
-        </table>
-      </div>
+      <p className="exec-alp2-line"><Flag kind="pending" label="Not evaluated" size="sm" /></p>
+      <NotAvailableLine facts={[...REGIME_AXES, "Outcome by stage"].map((label) => ({ label, id: "FE-011" as const }))} className="exec-alp2-nal" />
     </SectionPanel>
   );
 }

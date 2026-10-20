@@ -46,7 +46,7 @@ function NavFigure({ ctx, withNote = true }: { ctx: TabCtx; withNote?: boolean }
   return (
     <span title={last.exact}>
       {seriesValueText(entry, last.exact)}
-      {withNote ? <small className="exec-pf-dim"> · {utcStamp(last.tsMs)}</small> : null}
+      {withNote ? <small className="exec-pf-dim exec-pf-stamp">{utcStamp(last.tsMs)}</small> : null}
     </span>
   );
 }

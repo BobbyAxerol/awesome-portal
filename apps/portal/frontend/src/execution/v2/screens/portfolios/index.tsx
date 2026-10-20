@@ -36,7 +36,6 @@ import { utcStamp } from "../../../time";
 import { Flag } from "../../Flag";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { useExecUrlState, withContext } from "../../urlState";
-import { EXPORT_REASON } from "./fe";
 import { freshnessFlag, humanize } from "./format";
 import {
   ROW_CAP, SORT_KEYS, branchReasonText, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
@@ -316,10 +315,6 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
               </div>
             </details>
             <button type="button" className="exec-pf-btn" aria-pressed={compact} onClick={() => setLocal("density", compact ? null : "compact")}>Compact</button>
-            <span className="exec-pf-btnwhy">
-              <button type="button" className="exec-pf-btn" disabled title={EXPORT_REASON} aria-describedby={reasonId}>Export</button>
-              <span className="exec-pf-why" aria-hidden="true">{EXPORT_REASON}</span>
-            </span>
             {filtered ? <button type="button" className="exec-pf-btn" onClick={clearFilters}>Clear filters</button> : null}
           </div>
 
@@ -338,7 +333,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             )}
           </div>
           <p id={reasonId} className="exec-pf-sr">
-            Compare: {compareWhy || "ready"}. Export: {EXPORT_REASON}
+            Compare: {compareWhy || "ready"}
           </p>
 
           <PortfolioTable
