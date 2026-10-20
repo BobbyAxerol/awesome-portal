@@ -80,7 +80,7 @@ describe("L0 · canonical, verbatim", () => {
     expect(snapshotViolations(c.response)).toEqual([]);
     const read = readAlphaFleetRealtimeSnapshot(structuredClone(c.response));
     expect(read.ok).toBe(true);
-    if (!read.ok) return;
+    if (!read.ok) throw new Error("the reader must accept this canonical case");
     const { snapshot } = read;
     expect(snapshot.environment).toBe(c.response.environment);
     expect(snapshot.baseline.ordinal).toBe(c.response.baseline.ordinal);
@@ -108,7 +108,7 @@ describe("L0 · canonical, verbatim", () => {
     expect(frameViolations(c.response)).toEqual([]);
     const read = readFleetSseBlock(c.wire);
     expect(read.ok).toBe(true);
-    if (!read.ok) return;
+    if (!read.ok) throw new Error("the reader must accept this canonical case");
     expect(read.frame.kind).toBe(c.response.event_type);
     expect(read.eventId).toBe(c.response.terminal ? null : c.response.resume_cursor);
     // The wire adds no figure: the frame is exactly what the frame reader makes of the data line.
@@ -207,7 +207,10 @@ describe("L1 · matrix S · the stream x environment x ordinal x Edge source, ag
     const schemaOk = snapshotViolations(state.value).length === 0;
     const read = readAlphaFleetRealtimeSnapshot(state.value);
     expect(read.ok).toBe(schemaOk);
-    if (!read.ok) return;
+    if (!read.ok) {
+      expect(schemaOk).toBe(false);
+      return;
+    }
     // AF-3 in every readable state: a cursor exists exactly when the stream is available.
     expect("cursor" in read.snapshot.stream).toBe(read.snapshot.stream.state === "available");
     expect(read.snapshot.edgeNoticeSource).toBe("NOT_COMMISSIONED");
