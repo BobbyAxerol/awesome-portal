@@ -213,6 +213,28 @@ describe("overlay mode", () => {
     expect(dialog.contains(inside)).toBe(true);
   });
 
+  it("a disclosure (summary) after the last button is a stop of the trap, not a way out (UXM-10)", () => {
+    render(
+      <MemoryRouter initialEntries={["/fleet"]}>
+        <Drawer open onClose={() => {}} title="Request" mode="overlay">
+          <button type="button">Submit</button>
+          <details>
+            <summary>What happens next</summary>
+            <p>Three lines.</p>
+          </details>
+        </Drawer>
+      </MemoryRouter>,
+    );
+    const close = screen.getByText("Close");
+    const summary = screen.getByText("What happens next");
+    // Tab from the summary wraps to the first stop; Shift+Tab from the first stop lands on the summary, the last stop.
+    summary.focus();
+    fireEvent.keyDown(summary, { key: "Tab" });
+    expect(document.activeElement).toBe(close);
+    fireEvent.keyDown(close, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(summary);
+  });
+
   it("docked mode has no scrim and no aria-modal", () => {
     const { container } = mount("/fleet?sel=dep_1");
     expect(container.querySelector(".exec-dock-scrim")).toBeNull();

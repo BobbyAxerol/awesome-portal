@@ -922,8 +922,10 @@ describe("the drawer: draft, close, focus", () => {
     // Shift+Tab from the dialog itself wraps to the last control; Tab from the last wraps to the first.
     dialog.focus();
     fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
-    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+    // The trap's stops are the Drawer's FOCUSABLE list, `summary` included (UXM-10: the "What happens next" disclosure is the last stop).
+    const focusable = Array.from(dialog.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'));
     expect(document.activeElement).toBe(focusable[focusable.length - 1]);
+    expect(focusable[focusable.length - 1]!.tagName).toBe("SUMMARY");
     fireEvent.keyDown(dialog, { key: "Tab" });
     expect(document.activeElement).toBe(focusable[0]);
     expect(focusable[0]).toBe(closeBtn);
