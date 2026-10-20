@@ -92,6 +92,6 @@ export function managerQueryOptions(input: {
         ["allocation", "balance_total", "unrealized_pnl"].includes(key)), presets },
     stage_environment: [{ environment: "paper", stages: ["PAPER"] },
       { environment: "sandbox", stages: ["SANDBOX"] }, { environment: "live", stages: ["CANARY", "LIVE"] }],
-    unavailable_fields: [{ field: "current_stage", reason_code: "CURRENT_STAGE_GRAIN_NOT_PUBLISHED" },
-      { field: "days_in_stage", reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }] });
+    unavailable_fields: [{ field: "days_in_stage", reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED" },
+      { field: "entered_at_ms", reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }] });
 }

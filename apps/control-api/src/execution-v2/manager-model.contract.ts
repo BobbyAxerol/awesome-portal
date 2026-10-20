@@ -10,17 +10,18 @@ import { managerCompositionPublication } from "./manager-composition-publication
 export { managerCompositionPublication } from "./manager-composition-publication.contract";
 import { managerRegimePublication } from "./manager-regime-publication.contract";
 export { managerRegimePublication } from "./manager-regime-publication.contract";
+import { managerStageLifecycleReasons, managerStageLifecyclePolicy, validateManagerLifecycle } from "./manager-lifecycle";
 
 const text = z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
 export const MANAGER_SCALARS = {
   alpha_id: "TEXT", alpha_version_id: "TEXT", name: "TEXT", owner_user_id: "TEXT", portfolio_id: "TEXT",
-  lifecycle: "TEXT", venue: "TEXT", health: "TEXT", source_state: "TEXT", stage_presence: "TEXT",
+  lifecycle: "TEXT", venue: "TEXT", health: "TEXT", source_state: "TEXT", stage_presence: "TEXT", current_stage: "TEXT",
   allocation: "DECIMAL", net_pnl: "DECIMAL", unrealized_pnl: "DECIMAL", balance_total: "DECIMAL",
   equity_30d_end_value: "DECIMAL", return_30d_pct: "DECIMAL", score: "DECIMAL",
 } as const;
 export const managerScalar = z.enum(Object.keys(MANAGER_SCALARS) as [keyof typeof MANAGER_SCALARS, ...Array<keyof typeof MANAGER_SCALARS>]);
 /** The fields a dataset can be grouped by (a group key names one of these, never any text). */
-export const managerGroupField = z.enum(["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"]);
+export const managerGroupField = z.enum(["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "current_stage", "venue", "health", "source_state", "lifecycle"]);
 export const managerMoneyFields = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"] as const;
 export const managerTuple = z.object({ alpha_id: text, alpha_version_id: text, portfolio_id: text,
   deployment_id: text, account_id: text }).strict();
@@ -124,6 +125,9 @@ const partitionMetrics = z.object({ partition: managerPartition, metrics: z.reco
 export const managerDatasetRow = z.object({ row_key: z.string().min(1).max(2048), alpha_id: text, alpha_version_id: text, portfolio_id: text,
   name: text.nullable(), owner_user_id: text.nullable(), lifecycle: text.nullable(), venue: text.nullable(), health: text.nullable(), source_state: text.nullable(),
   stage_presence: z.array(financialStage).max(4),
+  // FE-027/FE-012 scalars: sortable/groupable `current_stage`; the entry pair is a typed absence until a source states the transition.
+  current_stage: financialStage.nullable(), entered_at_ms: utcMilliseconds.nullable(),
+  days_in_stage: z.number().int().min(0).max(10_000_000).nullable(), stage_lifecycle_reasons: managerStageLifecycleReasons,
   children: z.array(managerTuple.extend({ stage: financialStage, binding_ref: text.nullable() }).strict()).max(10_000),
   metrics: metricMap, economic_partitions: z.array(partitionMetrics).max(200) }).strict();
 const scorePending = z.object({ value: exactDecimal.nullable(), status: z.enum(["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data", "window_not_published"]),
@@ -144,6 +148,7 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   // Additive fields; old requests retain their original financial semantics.
   selected_window: managerSelectedWindow.nullable(), query_options: managerP1Options,
   surface: z.enum(["FUND", "FLEET", "PORTFOLIO", "ALPHA", "ACCOUNT", "DEPLOYMENT"]), workspace_id: text,
+  stage_lifecycle: managerStageLifecyclePolicy,
   environment: executionEnvironment, record_authority: z.literal("PORTAL_PROJECTION"), source_authority: z.literal("TRADING_SYSTEM"),
   snapshot_id: publicationDigest, as_of_ms: utcMilliseconds, recorded_through_ms: utcMilliseconds, facts_through_ms: utcMilliseconds.nullable(),
   quality: managerQuality, coverage: z.literal("AUTHORIZED_ONLY"), economic_aggregation: z.literal("PARTITIONED_ONLY"),
@@ -164,4 +169,4 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),
-}).strict().superRefine(validateManagerP1Response).superRefine(validateManagerDatasetInvariants);
+}).strict().superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine(validateManagerDatasetInvariants);

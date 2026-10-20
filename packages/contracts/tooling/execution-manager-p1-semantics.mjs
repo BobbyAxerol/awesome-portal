@@ -2,7 +2,7 @@
 export const managerP1MetricKeys = ['allocation','net_pnl','unrealized_pnl','balance_total','equity_30d_end_value','return_30d_pct','score'];
 const moneyKeys = ['allocation','net_pnl','unrealized_pnl','balance_total','equity_30d_end_value'];
 const stockKeys = ['allocation','balance_total','unrealized_pnl'];
-const groupKeys = ['portfolio_id','owner_user_id','alpha_id','stage_presence','venue','health','source_state','lifecycle'];
+const groupKeys = ['portfolio_id','owner_user_id','alpha_id','stage_presence','current_stage','venue','health','source_state','lifecycle'];
 const windowReasons = ['EXACT_METRIC_WINDOW_NOT_PUBLISHED','ALL_HISTORY_WINDOW_NOT_PUBLISHED'];
 const summaryNames = ['raw','direct_nav','composition'];
 const obj = (properties, required=[]) => ({type:'object',properties,...(required.length?{required}:{})});

@@ -18,8 +18,8 @@ export function managerP1NoFactsSyntheticOptions({asOf,sortFields,groupFields,me
         return {value,resolved:days!==undefined&&asOf>=days*86_400_000?{from_ms:asOf-days*86_400_000,to_ms:asOf}:null,
           data_state:'NOT_PUBLISHED',reason_code:value==='ALL'?'ALL_HISTORY_WINDOW_NOT_PUBLISHED':'EXACT_METRIC_WINDOW_NOT_PUBLISHED'};})},
     stage_environment:[{environment:'paper',stages:['PAPER']},{environment:'sandbox',stages:['SANDBOX']},{environment:'live',stages:['CANARY','LIVE']}],
-    unavailable_fields:[{field:'current_stage',reason_code:'CURRENT_STAGE_GRAIN_NOT_PUBLISHED'},
-      {field:'days_in_stage',reason_code:'STAGE_ENTRY_TIME_NOT_PUBLISHED'}]};
+    unavailable_fields:[{field:'days_in_stage',reason_code:'STAGE_ENTRY_TIME_NOT_PUBLISHED'},
+      {field:'entered_at_ms',reason_code:'STAGE_ENTRY_TIME_NOT_PUBLISHED'}]};
 }
 
 /** Caller supplies options from the SAME explicit TEST_ONLY authorization

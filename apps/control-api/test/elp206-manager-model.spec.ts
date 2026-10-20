@@ -531,7 +531,10 @@ describe("C4 current-only exact-window queries (TEST_ONLY, not commissioning)", 
     live.doc.members.at(-1)!.stage="CANARY";
     const result=live.read({sort:[{field:"stage_presence",direction:"asc"}]});
     expect(result.items[0].stage_presence).toEqual(["CANARY","LIVE"]);
-    expect(result.query_options.unavailable_fields.map(f=>f.field)).toEqual(["current_stage","days_in_stage"]);
+    // FE-027: the stage SET is still never ranked into a winner; entry time stays a typed absence.
+    expect(result.items[0]).toMatchObject({current_stage:null,entered_at_ms:null,days_in_stage:null,
+      stage_lifecycle_reasons:{current_stage:"MULTIPLE_ACTIVE_STAGES",entered_at_ms:"STAGE_ENTRY_TIME_NOT_PUBLISHED",days_in_stage:"STAGE_ENTRY_TIME_NOT_PUBLISHED"}});
+    expect(result.query_options.unavailable_fields.map(f=>f.field)).toEqual(["days_in_stage","entered_at_ms"]);
     const bad=structuredClone(live.doc);bad.members[0].stage="PAPER";
     expect(managerModelDocument.safeParse(bad).success).toBe(false);
     expect(managerModelQuery.safeParse({environment:"paper",stage_filter:["LIVE"]}).success).toBe(false);
