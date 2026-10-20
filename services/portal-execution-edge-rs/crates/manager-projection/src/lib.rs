@@ -24,6 +24,13 @@ use serde_json::{json, Value};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
+mod materialization;
+
+pub use materialization::{
+    bounded_json_bytes, checked_json_byte_copies, checked_json_byte_sum,
+    ManagerMaterializationError, ManagerMaterializationLimits,
+};
+
 pub const MANAGER_PROJECTION_SCHEMA_VERSION: &str = "portal.execution.manager-projection.v2";
 pub const MANAGER_PROJECTION_ADAPTER_VERSION: &str =
     "portal.execution.manager-projection.manager-v2.runtime.v6";
@@ -210,7 +217,73 @@ pub struct ManagerProjectionFact {
     fields: Value,
 }
 
+fn logical_fact_json_bytes<T: Serialize + ?Sized>(
+    source_key_digest: &str,
+    relation_id: &str,
+    fields: &T,
+) -> Result<usize, ManagerMaterializationError> {
+    #[derive(Serialize)]
+    struct BorrowedFact<'a, T: Serialize + ?Sized> {
+        source_key_digest: &'a str,
+        relation_id: &'a str,
+        fields: &'a T,
+    }
+    bounded_json_bytes(
+        &BorrowedFact {
+            source_key_digest,
+            relation_id,
+            fields,
+        },
+        usize::MAX,
+    )
+}
+
 impl ManagerProjectionFact {
+    /// Predicts full source-fact JSON bytes without copying record fields.
+    /// A fixed 71-byte safe-ASCII digest placeholder has the same JSON length
+    /// as every actual `sha256:` digest. This is sizing only, not validation of
+    /// the record's catalogue binding or an observation/SQL/heap/RSS bound.
+    ///
+    /// # Errors
+    /// Rejects serialization failure or byte-count overflow.
+    pub fn record_logical_json_bytes(
+        record: &ManagerRecord,
+    ) -> Result<usize, ManagerMaterializationError> {
+        let relation_id = format!(
+            "{}.{}",
+            record.relation().schema(),
+            record.relation().relation()
+        );
+        logical_fact_json_bytes(
+            "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+            &relation_id,
+            record.fields(),
+        )
+    }
+
+    /// Counts source fields before the existing owned JSON conversion.
+    /// Identity/envelope overhead is included separately in `logical_json_bytes`.
+    ///
+    /// # Errors
+    /// Rejects oversized fields, byte overflow or the existing mapping errors.
+    pub fn from_record_with_limits(
+        record: &ManagerRecord,
+        relation: &CataloguedRelation,
+        limits: &ManagerMaterializationLimits,
+    ) -> Result<Self, ProjectionMapError> {
+        limits.check_record_json_bytes(record.fields())?;
+        Self::from_record(record, relation)
+    }
+
+    /// Counts the complete fact wrapper JSON through borrowed fields only.
+    /// This is not heap/RSS accounting; array/container metadata is excluded.
+    ///
+    /// # Errors
+    /// Rejects serialization failure or byte-count overflow.
+    pub fn logical_json_bytes(&self) -> Result<usize, ManagerMaterializationError> {
+        logical_fact_json_bytes(&self.source_key_digest, &self.relation_id, &self.fields)
+    }
+
     /// Converts one contract-validated Manager record using the exact key
     /// columns published by its catalogue relation. No opaque retrieval token
     /// is persisted or used as identity.
@@ -296,6 +369,17 @@ pub struct ManagerFeedSnapshot {
 }
 
 impl ManagerFeedSnapshot {
+    /// Sums full fact-wrapper JSON bytes without cloning the facts/payloads.
+    /// Feed metadata and vector/allocator overhead are deliberately excluded.
+    ///
+    /// # Errors
+    /// Rejects serialization failure or byte-count overflow.
+    pub fn fact_json_bytes(&self) -> Result<usize, ManagerMaterializationError> {
+        self.facts.iter().try_fold(0, |bytes, fact| {
+            checked_json_byte_sum(bytes, fact.logical_json_bytes()?)
+        })
+    }
+
     /// Builds metadata directly from an authenticated Manager response.
     ///
     /// # Errors
@@ -336,6 +420,19 @@ pub struct ManagerProjectionCycle {
     pub catalogue_digest: String,
     pub poll_interval_ms: i64,
     pub feeds: Vec<ManagerFeedSnapshot>,
+}
+
+impl ManagerProjectionCycle {
+    /// Sums all full fact-wrapper JSON bytes without cloning any payload.
+    /// Cycle/feed metadata and vector/allocator overhead are excluded.
+    ///
+    /// # Errors
+    /// Rejects serialization failure or byte-count overflow.
+    pub fn fact_json_bytes(&self) -> Result<usize, ManagerMaterializationError> {
+        self.feeds.iter().try_fold(0, |bytes, feed| {
+            checked_json_byte_sum(bytes, feed.fact_json_bytes()?)
+        })
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -683,6 +780,8 @@ pub enum ProjectionMapError {
     #[error("Manager projection serialization failed")]
     Serialization,
     #[error(transparent)]
+    Materialization(#[from] ManagerMaterializationError),
+    #[error(transparent)]
     Contract(#[from] execution_contracts::ContractError),
     #[error(transparent)]
     Projection(#[from] projection_core::ProjectionError),
@@ -818,6 +917,138 @@ mod tests {
         };
         let record = records.data().items()[0].clone();
         (catalogue, record)
+    }
+
+    #[test]
+    fn bounded_record_accepts_exact_fields_size_and_refuses_one_byte_less() {
+        let (catalogue, record) = catalogue_and_order_record("TEST_ONLY_TOKEN", "OPEN");
+        let relation = catalogue.relation("public", "orders").unwrap();
+        let bytes = serde_json::to_vec(record.fields()).unwrap().len();
+        let exact = ManagerMaterializationLimits::new(bytes, 4096, 8192).unwrap();
+        assert_eq!(
+            ManagerProjectionFact::from_record_with_limits(&record, relation, &exact).unwrap(),
+            ManagerProjectionFact::from_record(&record, relation).unwrap()
+        );
+        let too_small = ManagerMaterializationLimits::new(bytes - 1, 4096, 8192).unwrap();
+        assert!(matches!(
+            ManagerProjectionFact::from_record_with_limits(&record, relation, &too_small),
+            Err(ProjectionMapError::Materialization(
+                ManagerMaterializationError::RecordJsonLimitExceeded
+            ))
+        ));
+    }
+
+    #[test]
+    fn fact_preflight_matches_actual_envelope_including_unicode_and_identity() {
+        for status in ["OPEN", "FILLED", "TEST_ONLY_\"\\Việt 😀"] {
+            let (catalogue, record) = catalogue_and_order_record("TEST_ONLY_TOKEN", status);
+            let fact = ManagerProjectionFact::from_record(
+                &record,
+                catalogue.relation("public", "orders").unwrap(),
+            )
+            .unwrap();
+            let actual = fact.logical_json_bytes().unwrap();
+            let expected = serde_json::to_vec(&json!({
+                "source_key_digest": fact.source_key_digest,
+                "relation_id": fact.relation_id,
+                "fields": fact.fields,
+            }))
+            .unwrap()
+            .len();
+            assert_eq!(actual, expected);
+            assert_eq!(
+                ManagerProjectionFact::record_logical_json_bytes(&record),
+                Ok(actual)
+            );
+            assert_eq!(fact.source_key_digest.len(), 71);
+            let fields_only = serde_json::to_vec(record.fields()).unwrap().len();
+            assert!(actual > fields_only);
+            let limits =
+                ManagerMaterializationLimits::new(fields_only, actual - 1, actual).unwrap();
+            assert_eq!(
+                limits.check_record_json_bytes(record.fields()),
+                Ok(fields_only)
+            );
+            assert_eq!(
+                limits.check_retained_json_bytes(actual),
+                Err(ManagerMaterializationError::RetainedJsonLimitExceeded)
+            );
+        }
+    }
+
+    #[test]
+    fn fact_record_limit_refuses_large_field_without_changing_legacy_constructor() {
+        let (catalogue, record) =
+            catalogue_and_order_record("TEST_ONLY_TOKEN", &"TEST_ONLY_".repeat(100));
+        let relation = catalogue.relation("public", "orders").unwrap();
+        let limits = ManagerMaterializationLimits::new(128, 4096, 8192).unwrap();
+        assert!(matches!(
+            ManagerProjectionFact::from_record_with_limits(&record, relation, &limits),
+            Err(ProjectionMapError::Materialization(
+                ManagerMaterializationError::RecordJsonLimitExceeded
+            ))
+        ));
+        assert!(ManagerProjectionFact::from_record(&record, relation).is_ok());
+    }
+
+    #[test]
+    fn snapshot_and_cycle_count_full_facts_without_metadata_or_container_bytes() {
+        let mut source = cycle(ManagerProjectionProfile::Paper);
+        let expected = source
+            .feeds
+            .iter()
+            .map(|feed| {
+                let bytes = feed.facts[0].logical_json_bytes().unwrap();
+                assert_eq!(feed.fact_json_bytes(), Ok(bytes));
+                bytes
+            })
+            .sum::<usize>();
+        assert_eq!(source.fact_json_bytes(), Ok(expected));
+        source.feeds[0].facts.clear();
+        assert_eq!(source.feeds[0].fact_json_bytes(), Ok(0));
+        for feed in &mut source.feeds {
+            feed.facts.clear();
+        }
+        assert_eq!(source.fact_json_bytes(), Ok(0));
+    }
+
+    #[test]
+    fn bounded_record_mapping_preserves_legacy_cycle_and_business_digests() {
+        let (catalogue, record) = catalogue_and_order_record("TEST_ONLY_TOKEN", "OPEN");
+        let relation = catalogue.relation("public", "orders").unwrap();
+        let limits = ManagerMaterializationLimits::new(4096, 65_536, 262_144).unwrap();
+        let mut legacy = cycle(ManagerProjectionProfile::Paper);
+        let mut bounded = legacy.clone();
+        legacy.feeds[0].facts =
+            vec![ManagerProjectionFact::from_record(&record, relation).unwrap()];
+        bounded.feeds[0].facts =
+            vec![
+                ManagerProjectionFact::from_record_with_limits(&record, relation, &limits).unwrap(),
+            ];
+        assert_eq!(legacy.fact_json_bytes(), bounded.fact_json_bytes());
+        let legacy = legacy.build().unwrap();
+        let bounded = bounded.build().unwrap();
+        assert_eq!(legacy.cycle_id, bounded.cycle_id);
+        assert_eq!(legacy.state_input_digest, bounded.state_input_digest);
+        assert_eq!(legacy.snapshots.len(), bounded.snapshots.len());
+        for (legacy, bounded) in legacy.snapshots.iter().zip(&bounded.snapshots) {
+            assert_eq!(legacy.snapshot_id, bounded.snapshot_id);
+            assert_eq!(legacy.entity_kind, bounded.entity_kind);
+            assert_eq!(legacy.completeness, bounded.completeness);
+            assert_eq!(legacy.expected_count, bounded.expected_count);
+            assert_eq!(legacy.observations, bounded.observations);
+        }
+    }
+
+    #[test]
+    fn bounded_record_still_rejects_wrong_catalogue_relation() {
+        let (catalogue, record) = catalogue_and_order_record("TEST_ONLY_TOKEN", "OPEN");
+        let wrong_relation = catalogue.relation("public", "fills").unwrap();
+        let limits = ManagerMaterializationLimits::new(4096, 4096, 8192).unwrap();
+        assert!(matches!(
+            ManagerProjectionFact::from_record_with_limits(&record, wrong_relation, &limits),
+            Err(ProjectionMapError::RelationBindingMismatch)
+        ));
     }
 
     #[test]

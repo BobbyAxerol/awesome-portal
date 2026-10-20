@@ -1,5 +1,53 @@
 # EPG10-06 resource envelope and hot path
 
+## Current20Oct Manager source-fact materialization follow-through
+
+Status: **ISOLATED_QUALIFIED; not deployed or capacity accepted**. The
+[same06 journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original06--manager-worker-materialization-follow-through-20oct1440utc)
+records source-only work prompted by actual historical OOM/die137 observations
+on the old8814/d6aa7a51 Paper worker. Its allocation cause is not established;
+this candidate is not an asserted remedy for that operational incident.
+
+The complete-feed cache shares immutable `Arc<ManagerFeedSnapshot>` values.
+Refreshing a class shallow-copies only the map and replaces those feeds;
+siblings retain the same allocation. The complete-cycle API still returns
+owned facts, and cache installation stays after successful durable commit.
+No field, record, empty feed, exact decimal, source clock or digest is omitted.
+
+Three optional values form one all-or-none opt-in configuration; none has an
+implicit production default:
+
+| Configuration | Exact logical population |
+|---|---|
+| `EDGE_MANAGER_PROJECTION_MAX_RECORD_JSON_BYTES` | Serialized source-record fields, checked before their owned clone |
+| `EDGE_MANAGER_PROJECTION_MAX_RETAINED_JSON_BYTES` | Sum of full fact-wrapper JSON in one complete candidate cache |
+| `EDGE_MANAGER_PROJECTION_MAX_WORKING_JSON_BYTES` | Distinct old-cache + refreshed fact JSON, then that population plus the owned complete-cycle fact copy |
+
+All absent retains legacy compatibility. Partial, empty, non-Unicode,
+noninteger, zero, overflow or nonmonotonic values fail startup. Bounds satisfy
+`record <= retained <= working`. A fixed-state counting writer checks UTF-8
+and escaping without retaining serialized output. Fact-wrapper overhead is
+counted as well as fields. Sum overflow is refusal, never wrapping admission.
+An oversize record/candidate fails before accumulating its owned fact; the
+owned complete-cycle copy is preflighted before cloning. Refusal preserves
+the prior complete cache, and cannot reach epoch preparation or partial ACK.
+
+**Scope is deliberately exact:** these are logical source-fact JSON counts,
+not serialized feed/container metadata, parsed-page buffers, builder
+observation/digest scratch, SQL CURRENT maps, allocator overhead or total RSS.
+Shared siblings are counted once, not once per Arc handle. No arbitrary copy
+multiplier, production budget, pool governance, memory certificate or runtime
+activation is inferred from this opt-in contract. Existing record/page/source
+admission limits remain independent. Real01/06 sizing and capacity acceptance
+still require matched targets, numeric owner bounds and measured peaks.
+
+[Actual impact qualification](manager-materialization-qualification.json):
+113 distinct PASS (29 mapper,73 Edge,11 real-PG Manager), including26 new
+methods; fmt/affected all-target check/strict Clippy and451 immutable inputs
+PASS. One test compile failure was corrected without changing the production
+serialization contract; predecessor retained. Exact terminal cleanup and
+mandatory normal-hook/publication evidence stay in the same-phase journal.
+
 ## Current20Oct correctness preparation, not capacity evidence
 
 The [runnable-first journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)

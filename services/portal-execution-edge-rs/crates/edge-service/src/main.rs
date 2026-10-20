@@ -53,6 +53,7 @@ use manager_compat_authority::{
     ManagerCompatibilityAuthority, ManagerRequestContext, DELEGATED_RESOURCE,
 };
 use manager_extension_contract::{ManagerExtensionRead, ManagerExtensionRequest};
+use manager_projection::ManagerMaterializationLimits;
 use manager_v2_client::{
     ManagerV2Client, ManagerV2ClientConfig, ManagerV2ClientError, ManagerV2ClientLimits,
 };
@@ -216,6 +217,8 @@ struct EdgeConfig {
     /// P4-E class cadence ladder. Leaving all three values unset preserves
     /// the accepted single cadence exactly.
     manager_projection_class_intervals: ManagerProjectionClassIntervals,
+    /// Opt-in source-fact JSON bounds; not allocator/RSS or SQL working-set limits.
+    manager_projection_materialization_limits: Option<ManagerMaterializationLimits>,
     manager_event_ledger_enabled: RuntimeGate,
     manager_event_ledger_reanchor_authorized: RuntimeGate,
     manager_event_ledger_admission_file: Option<PathBuf>,
@@ -390,6 +393,8 @@ impl EdgeConfig {
                 60_000,
             )? as u64),
         };
+        let manager_projection_materialization_limits =
+            manager_materialization_limits_from_environment()?;
         let manager_event_ledger_enabled =
             RuntimeGate::from(strict_boolean("EDGE_MANAGER_EVENT_LEDGER_ENABLED", false)?);
         if manager_event_ledger_enabled.is_enabled() && !manager_v2_read_enabled.is_enabled() {
@@ -468,6 +473,7 @@ impl EdgeConfig {
             manager_projection_retained_epoch_id,
             manager_projection_owner_digest,
             manager_projection_class_intervals,
+            manager_projection_materialization_limits,
             manager_event_ledger_enabled,
             manager_event_ledger_reanchor_authorized,
             manager_event_ledger_admission_file,
@@ -4535,6 +4541,48 @@ fn optional_uuid(name: &'static str) -> Result<Option<Uuid>, ConfigError> {
         .transpose()
 }
 
+const MANAGER_MATERIALIZATION_LIMIT_NAMES: [&str; 3] = [
+    "EDGE_MANAGER_PROJECTION_MAX_RECORD_JSON_BYTES",
+    "EDGE_MANAGER_PROJECTION_MAX_RETAINED_JSON_BYTES",
+    "EDGE_MANAGER_PROJECTION_MAX_WORKING_JSON_BYTES",
+];
+
+fn manager_materialization_limits_from_environment(
+) -> Result<Option<ManagerMaterializationLimits>, ConfigError> {
+    let mut values = [None, None, None];
+    for (slot, name) in values.iter_mut().zip(MANAGER_MATERIALIZATION_LIMIT_NAMES) {
+        *slot = env::var_os(name)
+            .map(|value| value.into_string().map_err(|_| ConfigError::Invalid(name)))
+            .transpose()?;
+    }
+    manager_materialization_limits(values.each_ref().map(|value| value.as_deref()))
+}
+
+/// All absent preserves compatibility. Any explicit value (including empty or
+/// non-Unicode) requires a complete, valid set; never silently falls back.
+fn manager_materialization_limits(
+    values: [Option<&str>; 3],
+) -> Result<Option<ManagerMaterializationLimits>, ConfigError> {
+    if values.iter().all(Option::is_none) {
+        return Ok(None);
+    }
+    let mut parsed = [0; 3];
+    for ((slot, value), name) in parsed
+        .iter_mut()
+        .zip(values)
+        .zip(MANAGER_MATERIALIZATION_LIMIT_NAMES)
+    {
+        let value = value.ok_or(ConfigError::Missing(name))?;
+        if value.is_empty() || !value.bytes().all(|byte| byte.is_ascii_digit()) {
+            return Err(ConfigError::Invalid(name));
+        }
+        *slot = value.parse().map_err(|_| ConfigError::Invalid(name))?;
+    }
+    ManagerMaterializationLimits::new(parsed[0], parsed[1], parsed[2])
+        .map(Some)
+        .map_err(|_| ConfigError::Invalid("EDGE_MANAGER_PROJECTION_MATERIALIZATION_LIMITS"))
+}
+
 fn bounded_usize(
     name: &'static str,
     default: usize,
@@ -4649,6 +4697,58 @@ fn command_relay_runtime_gate(requested: bool) -> Result<(), ConfigError> {
         ));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod manager_materialization_config_tests {
+    use super::manager_materialization_limits;
+
+    #[test]
+    fn absent_limits_preserve_legacy_and_complete_explicit_limits_are_exact() {
+        assert!(manager_materialization_limits([None, None, None])
+            .unwrap()
+            .is_none());
+        let limits = manager_materialization_limits([Some("17"), Some("1024"), Some("4096")])
+            .unwrap()
+            .unwrap();
+        assert_eq!(limits.max_record_json_bytes(), 17);
+        assert_eq!(limits.max_retained_json_bytes(), 1024);
+        assert_eq!(limits.max_working_json_bytes(), 4096);
+    }
+
+    #[test]
+    fn every_partial_materialization_configuration_fails_closed() {
+        for mask in 1..7 {
+            let values = std::array::from_fn(|index| (mask & (1 << index) != 0).then_some("1024"));
+            assert!(manager_materialization_limits(values).is_err());
+        }
+    }
+
+    #[test]
+    fn malformed_zero_non_monotonic_and_overflow_limits_do_not_fallback() {
+        for value in [
+            "",
+            " ",
+            " 1",
+            "1 ",
+            "+1",
+            "-1",
+            "1.0",
+            "NaN",
+            "0",
+            "999999999999999999999999999999999999999999",
+        ] {
+            for index in 0..3 {
+                let mut values = [Some("1024"); 3];
+                values[index] = Some(value);
+                assert!(manager_materialization_limits(values).is_err());
+            }
+        }
+        assert!(
+            manager_materialization_limits([Some("1025"), Some("1024"), Some("2048")]).is_err()
+        );
+        assert!(manager_materialization_limits([Some("1"), Some("2049"), Some("2048")]).is_err());
+    }
 }
 
 #[cfg(test)]

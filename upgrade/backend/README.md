@@ -7,6 +7,16 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original06 Manager materialization,20Oct — ISOLATED_QUALIFIED, source-only:**
+  [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original06--manager-worker-materialization-follow-through-20oct1440utc)
+  adds immutable shared feed cache and explicit opt-in source-fact JSON bounds.
+  Legacy absent-config behavior, exact business/state digests and post-commit
+  cache installation remain invariant. Not builder/SQL/allocator/RSS accounting,
+  not deployed and not an asserted fix for the old worker's observed OOM.
+  Actual113PASS (26new), fmt/check/strict Clippy/451 immutable inputs PASS;
+  corrected test-compile predecessor retained. Normal-hook/cleanup/publication
+  receipts stay in the journal. Full01/06 capacity and08connected remain NOT_MET.
+
 - **Original01/06 shared governed composition,20Oct — ISOLATED_QUALIFIED:**
   [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--shared-governed-pgcachefanout-composition--20oct1305utc)
   closes independently runnable PG/cache/fanout test-target instrumentation;

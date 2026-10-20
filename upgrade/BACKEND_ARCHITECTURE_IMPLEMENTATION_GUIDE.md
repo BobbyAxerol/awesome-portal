@@ -650,6 +650,18 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original06 Manager materialization,20Oct — ISOLATED_QUALIFIED, source-only:**
+[same06 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original06--manager-worker-materialization-follow-through-20oct1440utc)
+tracks immutable shared feed cache and optional explicit record/retained/working
+source-fact JSON limits. No production default, runtime/config/DB change or OOM
+remedy is asserted. Preserve legacy compatibility, business/state parity and
+post-durable-commit cache installation. Actual impact113PASS (26new), fmt,
+affected all-target check, strict Clippy and451 immutable inputs PASS;
+failed test-compile predecessor retained, corrected without production derives.
+Normal-hook/publication/cleanup receipts are recorded in the same-phase journal.
+Builder/digest/SQL/page/allocator/RSS populations remain outside these specific
+logical counters. Full01/06 capacity and08connected remain NOT_MET.
+
 **Original08 installed intake/finite lifecycle,20Oct — IN_PROGRESS:**
 [current journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
 supersedes the historical source-only Core blocker:0087818d563 is installed,

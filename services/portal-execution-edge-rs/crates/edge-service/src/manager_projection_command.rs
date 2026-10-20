@@ -1,6 +1,7 @@
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
+    sync::Arc,
     time::Duration,
 };
 
@@ -10,7 +11,8 @@ use manager_compat_authority::{
     ManagerRequestContext, DELEGATED_RESOURCE,
 };
 use manager_projection::{
-    BuiltProjectionCycle, FeedClass, ManagerFeedSnapshot, ManagerProjectionCycle,
+    checked_json_byte_sum, BuiltProjectionCycle, FeedClass, ManagerFeedSnapshot,
+    ManagerMaterializationError, ManagerMaterializationLimits, ManagerProjectionCycle,
     ManagerProjectionFact, ManagerProjectionFeed, ManagerProjectionProfile,
     ManagerProjectionSource, ProjectionMapError, FEEDS, MANAGER_PROJECTION_ADAPTER_VERSION,
     MAXIMUM_CYCLE_RECORDS, MAXIMUM_FEED_PAGES, MAXIMUM_FEED_RECORDS,
@@ -80,12 +82,40 @@ struct ProjectionCycleAttempt {
 /// In-memory, complete-feed cache for the P4-E cadence ladder. It is never an
 /// authority on its own: cold start or catalogue revision drift forces one
 /// complete source read before any partial-class refresh can commit.
+/// Candidates share immutable feeds; the owned cycle output still copies them.
 #[derive(Debug, Clone, Default)]
 struct ManagerProjectionFeedCache {
-    feeds: BTreeMap<&'static str, ManagerFeedSnapshot>,
+    feeds: BTreeMap<&'static str, Arc<ManagerFeedSnapshot>>,
 }
 
 impl ManagerProjectionFeedCache {
+    fn fact_json_bytes(&self) -> Result<usize, ManagerMaterializationError> {
+        self.feeds.values().try_fold(0, |total, feed| {
+            checked_json_byte_sum(total, feed.fact_json_bytes()?)
+        })
+    }
+
+    fn materialization_budget(
+        &self,
+        profile: ManagerProjectionProfile,
+        catalogue_digest: &str,
+        refreshed_classes: &[FeedClass],
+        limits: ManagerMaterializationLimits,
+    ) -> Result<ManagerFactJsonBudget, ManagerMaterializationError> {
+        let retained = self.fact_json_bytes()?;
+        let shared_siblings = if self.matches_catalogue(profile, catalogue_digest) {
+            self.feeds
+                .values()
+                .filter(|snapshot| !refreshed_classes.contains(&snapshot.feed.class))
+                .try_fold(0, |total, snapshot| {
+                    checked_json_byte_sum(total, snapshot.fact_json_bytes()?)
+                })?
+        } else {
+            0
+        };
+        ManagerFactJsonBudget::new(limits, retained, shared_siblings)
+    }
+
     fn matches_catalogue(&self, profile: ManagerProjectionProfile, catalogue_digest: &str) -> bool {
         self.feeds.len() == FEEDS.len()
             && FEEDS.iter().all(|expected| {
@@ -111,7 +141,7 @@ impl ManagerProjectionFeedCache {
             {
                 return Err(ManagerProjectionCommandError::CycleMetadataDrift);
             }
-            next.feeds.insert(snapshot.feed.feed_id, snapshot);
+            next.feeds.insert(snapshot.feed.feed_id, Arc::new(snapshot));
         }
         Ok(next)
     }
@@ -130,7 +160,7 @@ impl ManagerProjectionFeedCache {
             .map(|feed| {
                 self.feeds
                     .get(feed.feed_id)
-                    .cloned()
+                    .map(|snapshot| snapshot.as_ref().clone())
                     .ok_or(ManagerProjectionCommandError::ProjectionCacheIncomplete)
             })
             .collect::<Result<Vec<_>, _>>()?;
@@ -141,6 +171,56 @@ impl ManagerProjectionFeedCache {
                 .map_err(|_| ManagerProjectionCommandError::InvalidPollInterval)?,
             feeds,
         })
+    }
+}
+
+/// Accounts distinct source-fact JSON while old and candidate caches coexist,
+/// then the owned complete-cycle fact copy. Shared Arc siblings are counted
+/// once. This is NOT the builder's observation/digest scratch, SQL CURRENT
+/// state, page buffers, allocator overhead or total RSS.
+#[derive(Debug)]
+struct ManagerFactJsonBudget {
+    limits: ManagerMaterializationLimits,
+    retained_baseline: usize,
+    shared_siblings: usize,
+    refreshed: usize,
+}
+
+impl ManagerFactJsonBudget {
+    fn new(
+        limits: ManagerMaterializationLimits,
+        retained_baseline: usize,
+        shared_siblings: usize,
+    ) -> Result<Self, ManagerMaterializationError> {
+        limits.check_retained_json_bytes(retained_baseline)?;
+        limits.check_working_json_bytes(retained_baseline)?;
+        Ok(Self {
+            limits,
+            retained_baseline,
+            shared_siblings,
+            refreshed: 0,
+        })
+    }
+
+    fn admit_fact(&mut self, fact_json_bytes: usize) -> Result<(), ManagerMaterializationError> {
+        let refreshed = checked_json_byte_sum(self.refreshed, fact_json_bytes)?;
+        self.limits
+            .check_retained_json_bytes(checked_json_byte_sum(self.shared_siblings, refreshed)?)?;
+        self.limits
+            .check_working_json_bytes(checked_json_byte_sum(self.retained_baseline, refreshed)?)?;
+        // A refusal leaves the ledger unchanged; the caller cannot accumulate
+        // a partial candidate and treat it as an accepted complete feed.
+        self.refreshed = refreshed;
+        Ok(())
+    }
+
+    fn check_owned_cycle_copy(&self, candidate: usize) -> Result<(), ManagerMaterializationError> {
+        self.limits.check_retained_json_bytes(candidate)?;
+        self.limits.check_working_json_bytes(checked_json_byte_sum(
+            checked_json_byte_sum(self.retained_baseline, self.refreshed)?,
+            candidate,
+        )?)?;
+        Ok(())
     }
 }
 
@@ -232,6 +312,17 @@ async fn run_once_mode(
         } else {
             requested_classes
         };
+    let mut materialization_budget = config
+        .manager_projection_materialization_limits
+        .map(|limits| {
+            feed_cache.materialization_budget(
+                profile,
+                &catalogue_digest,
+                &refreshed_classes,
+                limits,
+            )
+        })
+        .transpose()?;
     let refreshed_feeds = load_feeds(
         &store,
         config,
@@ -242,12 +333,16 @@ async fn run_once_mode(
         profile,
         &refreshed_classes,
         config.manager_projection_class_intervals,
+        materialization_budget.as_mut(),
     )
     .await?;
     // Only install the updated cache after the complete candidate has passed
     // projection persistence/lease validation. A failure leaves the last
     // complete state intact and cannot publish a partial class as truth.
     let candidate_cache = feed_cache.with_refreshed(profile, &catalogue_digest, refreshed_feeds)?;
+    if let Some(budget) = &materialization_budget {
+        budget.check_owned_cycle_copy(candidate_cache.fact_json_bytes()?)?;
+    }
     let cycle = candidate_cache
         .complete_cycle(
             profile,
@@ -651,6 +746,7 @@ async fn load_feeds(
     profile: ManagerProjectionProfile,
     classes: &[FeedClass],
     class_intervals: ManagerProjectionClassIntervals,
+    mut materialization_budget: Option<&mut ManagerFactJsonBudget>,
 ) -> Result<Vec<ManagerFeedSnapshot>, ManagerProjectionCommandError> {
     if classes.is_empty() {
         return Err(ManagerProjectionCommandError::NoFeedClassesRequested);
@@ -673,6 +769,7 @@ async fn load_feeds(
             i64::try_from(class_intervals.of(feed.class).as_millis())
                 .map_err(|_| ManagerProjectionCommandError::InvalidPollInterval)?,
             remaining,
+            materialization_budget.as_deref_mut(),
         )
         .await?;
         record_count = record_count
@@ -696,6 +793,7 @@ async fn load_feed(
     feed: ManagerProjectionFeed,
     poll_interval_ms: i64,
     remaining_cycle_records: usize,
+    mut materialization_budget: Option<&mut ManagerFactJsonBudget>,
 ) -> Result<ManagerFeedSnapshot, ManagerProjectionCommandError> {
     let mut cursor: Option<OpaqueCursor> = None;
     let mut seen_cursors = BTreeSet::new();
@@ -749,7 +847,17 @@ async fn load_feed(
             let relation = catalogue
                 .relation(record.relation().schema(), record.relation().relation())
                 .ok_or(ManagerProjectionCommandError::CatalogueDrift)?;
-            facts.push(ManagerProjectionFact::from_record(record, relation)?);
+            let fact = if let Some(budget) = materialization_budget.as_deref_mut() {
+                // Count borrowed fields/envelope before cloning any fact or
+                // growing the accumulated feed. Transport page limits remain
+                // separate and are not a whole-cycle memory guarantee.
+                budget.limits.check_record_json_bytes(record.fields())?;
+                budget.admit_fact(ManagerProjectionFact::record_logical_json_bytes(record)?)?;
+                ManagerProjectionFact::from_record_with_limits(record, relation, &budget.limits)?
+            } else {
+                ManagerProjectionFact::from_record(record, relation)?
+            };
+            facts.push(fact);
         }
         let Some(next) = next else {
             return ManagerFeedSnapshot::from_manager_meta(
@@ -956,6 +1064,8 @@ fn read_nonempty_bytes(path: &std::path::Path) -> Result<Vec<u8>, ManagerProject
 
 #[derive(Debug, Error)]
 pub enum ManagerProjectionCommandError {
+    #[error(transparent)]
+    Materialization(#[from] ManagerMaterializationError),
     #[error("N24 Manager projection worker is disabled")]
     ProjectionDisabled,
     #[error("N24 Manager projection profile is missing")]
@@ -1104,10 +1214,313 @@ mod tests {
                 .map(|feed| {
                     (
                         feed.feed_id,
-                        empty_feed_snapshot(*feed, profile, catalogue_digest, at(2), 2_000),
+                        Arc::new(empty_feed_snapshot(
+                            *feed,
+                            profile,
+                            catalogue_digest,
+                            at(2),
+                            2_000,
+                        )),
                     )
                 })
                 .collect(),
+        }
+    }
+
+    fn cache_with_facts(
+        profile: ManagerProjectionProfile,
+        catalogue_digest: &str,
+    ) -> ManagerProjectionFeedCache {
+        let feeds = FEEDS
+            .iter()
+            .map(|feed| {
+                let mut snapshot =
+                    empty_feed_snapshot(*feed, profile, catalogue_digest, at(2), 2_000);
+                let relation = match feed.source {
+                    ManagerProjectionSource::Relation(relation) => relation,
+                    ManagerProjectionSource::Named(_) => "public.test_only",
+                };
+                snapshot.facts.push(
+                    ManagerProjectionFact::new(
+                        relation,
+                        feed.feed_id.as_bytes(),
+                        serde_json::json!({"TEST_ONLY": "source_fact_json", "amount": "1.23000000"}),
+                    )
+                    .unwrap(),
+                );
+                snapshot
+            })
+            .collect();
+        ManagerProjectionFeedCache::default()
+            .with_refreshed(profile, catalogue_digest, feeds)
+            .unwrap()
+    }
+
+    fn transactional_refresh(cache: &ManagerProjectionFeedCache) -> Vec<ManagerFeedSnapshot> {
+        FEEDS
+            .iter()
+            .filter(|feed| feed.class == FeedClass::Transactional)
+            .map(|feed| {
+                let mut snapshot = cache.feeds[feed.feed_id].as_ref().clone();
+                snapshot.source_read_at = at(20);
+                snapshot
+            })
+            .collect()
+    }
+
+    #[test]
+    fn fact_json_budget_preflight_and_retained_bounds_are_inclusive() {
+        let limits = ManagerMaterializationLimits::new(1, 8, 8).unwrap();
+        let exact = ManagerFactJsonBudget::new(limits, 8, 3).unwrap();
+        assert_eq!(exact.retained_baseline, 8);
+        assert_eq!(exact.shared_siblings, 3);
+        assert_eq!(exact.refreshed, 0);
+        assert!(matches!(
+            ManagerFactJsonBudget::new(limits, 9, 0),
+            Err(ManagerMaterializationError::RetainedJsonLimitExceeded)
+        ));
+
+        let limits = ManagerMaterializationLimits::new(1, 8, 16).unwrap();
+        let mut budget = ManagerFactJsonBudget::new(limits, 0, 0).unwrap();
+        assert_eq!(budget.admit_fact(8), Ok(()));
+        assert_eq!(budget.refreshed, 8);
+        assert_eq!(
+            budget.admit_fact(1),
+            Err(ManagerMaterializationError::RetainedJsonLimitExceeded)
+        );
+        assert_eq!(budget.refreshed, 8);
+    }
+
+    #[test]
+    fn fact_json_budget_working_refusal_does_not_advance_ledger() {
+        let limits = ManagerMaterializationLimits::new(1, 8, 10).unwrap();
+        let mut budget = ManagerFactJsonBudget::new(limits, 6, 2).unwrap();
+        assert_eq!(budget.admit_fact(4), Ok(()));
+        assert_eq!(budget.refreshed, 4);
+        assert_eq!(
+            budget.admit_fact(1),
+            Err(ManagerMaterializationError::WorkingJsonLimitExceeded)
+        );
+        assert_eq!(budget.refreshed, 4);
+        assert_eq!(budget.retained_baseline, 6);
+        assert_eq!(budget.shared_siblings, 2);
+        assert_eq!(budget.admit_fact(0), Ok(()));
+    }
+
+    #[test]
+    fn fact_json_budget_rejects_each_checked_sum_overflow() {
+        let limits = ManagerMaterializationLimits::new(1, usize::MAX, usize::MAX).unwrap();
+        let mut refreshed = ManagerFactJsonBudget::new(limits, 0, 0).unwrap();
+        assert_eq!(refreshed.admit_fact(usize::MAX), Ok(()));
+        assert_eq!(
+            refreshed.admit_fact(1),
+            Err(ManagerMaterializationError::ByteCountOverflow)
+        );
+        assert_eq!(refreshed.refreshed, usize::MAX);
+
+        for shared_siblings in [0, usize::MAX] {
+            let mut baseline =
+                ManagerFactJsonBudget::new(limits, usize::MAX, shared_siblings).unwrap();
+            assert_eq!(
+                baseline.admit_fact(1),
+                Err(ManagerMaterializationError::ByteCountOverflow)
+            );
+            assert_eq!(baseline.refreshed, 0);
+            assert_eq!(
+                baseline.check_owned_cycle_copy(1),
+                Err(ManagerMaterializationError::ByteCountOverflow)
+            );
+        }
+    }
+
+    #[test]
+    fn cache_budget_counts_shared_arcs_once_and_owned_cycle_separately() {
+        let profile = ManagerProjectionProfile::Paper;
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let baseline = cache_with_facts(profile, &digest);
+        let baseline_bytes = baseline.fact_json_bytes().unwrap();
+        let refreshed = transactional_refresh(&baseline);
+        let refreshed_bytes: usize = refreshed
+            .iter()
+            .map(|snapshot| snapshot.fact_json_bytes().unwrap())
+            .sum();
+        let working = baseline_bytes * 2 + refreshed_bytes;
+        let limits =
+            ManagerMaterializationLimits::new(baseline_bytes, baseline_bytes, working).unwrap();
+        let mut budget = baseline
+            .materialization_budget(profile, &digest, &[FeedClass::Transactional], limits)
+            .unwrap();
+        assert_eq!(budget.retained_baseline, baseline_bytes);
+        assert_eq!(budget.shared_siblings, baseline_bytes - refreshed_bytes);
+        for snapshot in &refreshed {
+            for fact in &snapshot.facts {
+                budget
+                    .admit_fact(fact.logical_json_bytes().unwrap())
+                    .unwrap();
+            }
+        }
+        let candidate = baseline
+            .with_refreshed(profile, &digest, refreshed)
+            .unwrap();
+        let unique = baseline
+            .feeds
+            .values()
+            .chain(candidate.feeds.values())
+            .map(|snapshot| (Arc::as_ptr(snapshot), snapshot.fact_json_bytes().unwrap()))
+            .collect::<BTreeMap<_, _>>();
+        let refreshed_count = FEEDS
+            .iter()
+            .filter(|feed| feed.class == FeedClass::Transactional)
+            .count();
+        assert_eq!(unique.len(), FEEDS.len() + refreshed_count);
+        assert_eq!(
+            unique.values().sum::<usize>(),
+            baseline_bytes + refreshed_bytes
+        );
+        let candidate_bytes = candidate.fact_json_bytes().unwrap();
+        assert_eq!(candidate_bytes, baseline_bytes);
+        assert_eq!(budget.check_owned_cycle_copy(candidate_bytes), Ok(()));
+        for feed in FEEDS {
+            assert_eq!(
+                Arc::ptr_eq(
+                    &baseline.feeds[feed.feed_id],
+                    &candidate.feeds[feed.feed_id]
+                ),
+                feed.class != FeedClass::Transactional,
+            );
+        }
+    }
+
+    #[test]
+    fn owned_cycle_budget_refusal_preserves_shared_baseline() {
+        for profile in [
+            ManagerProjectionProfile::Paper,
+            ManagerProjectionProfile::Sandbox,
+            ManagerProjectionProfile::Live,
+        ] {
+            let digest = format!("sha256:{}", "a".repeat(64));
+            let baseline = cache_with_facts(profile, &digest);
+            let original = baseline.clone();
+            let baseline_bytes = baseline.fact_json_bytes().unwrap();
+            let refreshed = transactional_refresh(&baseline);
+            let refreshed_bytes: usize = refreshed
+                .iter()
+                .map(|snapshot| snapshot.fact_json_bytes().unwrap())
+                .sum();
+            let exact_working = baseline_bytes * 2 + refreshed_bytes;
+            let limits = ManagerMaterializationLimits::new(
+                baseline_bytes,
+                baseline_bytes,
+                exact_working - 1,
+            )
+            .unwrap();
+            let mut budget = baseline
+                .materialization_budget(profile, &digest, &[FeedClass::Transactional], limits)
+                .unwrap();
+            for snapshot in &refreshed {
+                for fact in &snapshot.facts {
+                    budget
+                        .admit_fact(fact.logical_json_bytes().unwrap())
+                        .unwrap();
+                }
+            }
+            let candidate = baseline
+                .with_refreshed(profile, &digest, refreshed)
+                .unwrap();
+            assert_eq!(
+                budget.check_owned_cycle_copy(candidate.fact_json_bytes().unwrap()),
+                Err(ManagerMaterializationError::WorkingJsonLimitExceeded)
+            );
+            // The caller has not requested the owned cycle after the refusal;
+            // candidate disposal cannot mutate/install the original baseline.
+            drop(candidate);
+            assert_eq!(baseline.fact_json_bytes().unwrap(), baseline_bytes);
+            for feed in FEEDS {
+                assert!(Arc::ptr_eq(
+                    &baseline.feeds[feed.feed_id],
+                    &original.feeds[feed.feed_id],
+                ));
+                assert_eq!(Arc::strong_count(&baseline.feeds[feed.feed_id]), 2);
+                assert_eq!(baseline.feeds[feed.feed_id].source_read_at, at(2));
+            }
+        }
+    }
+
+    #[test]
+    fn cache_budget_keeps_old_baseline_during_metadata_drift_and_full_refresh() {
+        for profile in [
+            ManagerProjectionProfile::Paper,
+            ManagerProjectionProfile::Sandbox,
+            ManagerProjectionProfile::Live,
+        ] {
+            let digest = format!("sha256:{}", "a".repeat(64));
+            let changed_digest = format!("sha256:{}", "b".repeat(64));
+            let baseline = cache_with_facts(profile, &digest);
+            let bytes = baseline.fact_json_bytes().unwrap();
+            let limits = ManagerMaterializationLimits::new(bytes, bytes, bytes * 3).unwrap();
+            let changed_profile = if profile == ManagerProjectionProfile::Paper {
+                ManagerProjectionProfile::Live
+            } else {
+                ManagerProjectionProfile::Paper
+            };
+            let partial = [FeedClass::Transactional];
+            for (requested_profile, requested_digest, classes) in [
+                (profile, changed_digest.as_str(), &partial[..]),
+                (changed_profile, digest.as_str(), &partial[..]),
+                (profile, digest.as_str(), &FeedClass::ALL[..]),
+            ] {
+                let budget = baseline
+                    .materialization_budget(requested_profile, requested_digest, classes, limits)
+                    .unwrap();
+                assert_eq!(budget.retained_baseline, bytes);
+                assert_eq!(budget.shared_siblings, 0);
+                assert_eq!(budget.refreshed, 0);
+            }
+            let too_small = ManagerMaterializationLimits::new(1, bytes - 1, bytes * 3).unwrap();
+            assert!(matches!(
+                baseline.materialization_budget(
+                    profile,
+                    &changed_digest,
+                    &FeedClass::ALL,
+                    too_small
+                ),
+                Err(ManagerMaterializationError::RetainedJsonLimitExceeded)
+            ));
+            assert!(baseline.matches_catalogue(profile, &digest));
+        }
+    }
+
+    #[test]
+    fn empty_profile_cache_budget_preserves_complete_empty_cycles() {
+        let limits = ManagerMaterializationLimits::new(1, 1, 1).unwrap();
+        for profile in [
+            ManagerProjectionProfile::Paper,
+            ManagerProjectionProfile::Sandbox,
+            ManagerProjectionProfile::Live,
+        ] {
+            let digest = format!("sha256:{}", "a".repeat(64));
+            let baseline = complete_cache(profile, &digest);
+            let budget = baseline
+                .materialization_budget(profile, &digest, &FeedClass::ALL, limits)
+                .unwrap();
+            assert_eq!(baseline.fact_json_bytes(), Ok(0));
+            assert_eq!(budget.retained_baseline, 0);
+            assert_eq!(budget.shared_siblings, 0);
+            assert_eq!(budget.refreshed, 0);
+            assert_eq!(budget.check_owned_cycle_copy(0), Ok(()));
+            let cycle = baseline
+                .complete_cycle(profile, &digest, Duration::from_millis(1_000))
+                .unwrap()
+                .build()
+                .unwrap();
+            assert_eq!(cycle.feed_count, FEEDS.len());
+            assert_eq!(cycle.record_count, 0);
+            assert_eq!(cycle.snapshots.len(), 8);
+            assert!(cycle.snapshots.iter().all(|snapshot| {
+                snapshot.completeness == projection_core::SnapshotCompleteness::Complete
+                    && snapshot.expected_count == 0
+                    && snapshot.observations.is_empty()
+            }));
         }
     }
 
@@ -1177,6 +1590,17 @@ mod tests {
         let next = baseline
             .with_refreshed(profile, &digest, vec![changed])
             .expect("valid partial refresh preserves complete cache");
+        assert!(!Arc::ptr_eq(
+            &baseline.feeds[FEEDS[0].feed_id],
+            &next.feeds[FEEDS[0].feed_id],
+        ));
+        assert_eq!(baseline.feeds[FEEDS[0].feed_id].source_read_at, at(2));
+        for feed in &FEEDS[1..] {
+            assert!(Arc::ptr_eq(
+                &baseline.feeds[feed.feed_id],
+                &next.feeds[feed.feed_id],
+            ));
+        }
         let cycle = next
             .complete_cycle(profile, &digest, Duration::from_millis(1_000))
             .expect("still a complete candidate cycle");
@@ -1186,5 +1610,144 @@ mod tests {
         assert_eq!(cycle.feeds[1].source_read_at, at(2));
         assert!(next.matches_catalogue(profile, &digest));
         assert!(!next.matches_catalogue(profile, &format!("sha256:{}", "b".repeat(64))));
+    }
+
+    #[test]
+    fn cache_clones_share_immutable_feed_snapshots() {
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let baseline = complete_cache(ManagerProjectionProfile::Paper, &digest);
+        let cloned = baseline.clone();
+
+        for feed in FEEDS {
+            let original = &baseline.feeds[feed.feed_id];
+            assert!(Arc::ptr_eq(original, &cloned.feeds[feed.feed_id]));
+            assert_eq!(Arc::strong_count(original), 2);
+        }
+        drop(cloned);
+        assert!(baseline
+            .feeds
+            .values()
+            .all(|snapshot| Arc::strong_count(snapshot) == 1));
+    }
+
+    #[test]
+    fn rejected_refresh_preserves_shared_baseline_snapshots() {
+        let profile = ManagerProjectionProfile::Paper;
+        let digest = format!("sha256:{}", "a".repeat(64));
+        let baseline = complete_cache(profile, &digest);
+        let original = baseline.clone();
+        let changed = empty_feed_snapshot(FEEDS[0], profile, &digest, at(20), 1_000);
+        let valid = empty_feed_snapshot(FEEDS[1], profile, &digest, at(20), 1_000);
+        let mut wrong_profile = valid.clone();
+        wrong_profile.profile = ManagerProjectionProfile::Live;
+        let mut wrong_catalogue = valid.clone();
+        wrong_catalogue.catalogue_digest = format!("sha256:{}", "b".repeat(64));
+        let mut unknown_feed = valid;
+        unknown_feed.feed.feed_id = "TEST_ONLY_unknown_feed";
+
+        for invalid in [wrong_profile, wrong_catalogue, unknown_feed] {
+            assert!(matches!(
+                baseline.with_refreshed(profile, &digest, vec![changed.clone(), invalid]),
+                Err(ManagerProjectionCommandError::CycleMetadataDrift)
+            ));
+            for feed in FEEDS {
+                assert!(Arc::ptr_eq(
+                    &baseline.feeds[feed.feed_id],
+                    &original.feeds[feed.feed_id],
+                ));
+                assert_eq!(baseline.feeds[feed.feed_id].source_read_at, at(2));
+                assert_eq!(Arc::strong_count(&baseline.feeds[feed.feed_id]), 2);
+            }
+        }
+        assert!(baseline.matches_catalogue(profile, &digest));
+    }
+
+    #[test]
+    fn shared_cache_cycle_preserves_legacy_owned_business_digest() {
+        for profile in [
+            ManagerProjectionProfile::Paper,
+            ManagerProjectionProfile::Sandbox,
+            ManagerProjectionProfile::Live,
+        ] {
+            let digest = format!("sha256:{}", "a".repeat(64));
+            let mut owned_feeds = FEEDS
+                .iter()
+                .map(|feed| empty_feed_snapshot(*feed, profile, &digest, at(2), 2_000))
+                .collect::<Vec<_>>();
+            let fact = |status: &str| {
+                ManagerProjectionFact::new(
+                    "public.orders",
+                    b"TEST_ONLY_cache_order",
+                    serde_json::json!({
+                        "quantity": {"kind": "DECIMAL", "value": "1.23000000"},
+                        "status": {"kind": "TEXT", "value": status},
+                    }),
+                )
+                .unwrap()
+            };
+            owned_feeds[0].facts = vec![fact("OPEN")];
+            let baseline = ManagerProjectionFeedCache::default()
+                .with_refreshed(profile, &digest, owned_feeds.clone())
+                .unwrap();
+            let old = baseline
+                .complete_cycle(profile, &digest, Duration::from_millis(1_000))
+                .unwrap()
+                .build()
+                .unwrap();
+            owned_feeds[0].facts = vec![fact("FILLED")];
+            owned_feeds[0].source_read_at = at(20);
+            owned_feeds[0].poll_interval_ms = 1_000;
+            let next = baseline
+                .with_refreshed(profile, &digest, vec![owned_feeds[0].clone()])
+                .unwrap();
+            let expected = ManagerProjectionCycle {
+                profile,
+                catalogue_digest: digest.clone(),
+                poll_interval_ms: 1_000,
+                feeds: owned_feeds,
+            }
+            .build()
+            .unwrap();
+            let actual = next
+                .complete_cycle(profile, &digest, Duration::from_millis(1_000))
+                .unwrap()
+                .build()
+                .unwrap();
+
+            assert_eq!(actual.state_input_digest, expected.state_input_digest);
+            assert_ne!(actual.state_input_digest, old.state_input_digest);
+            assert_eq!(actual.cycle_id, expected.cycle_id);
+            assert_eq!(actual.feed_count, FEEDS.len());
+            assert_eq!(actual.record_count, 1);
+            let observation = actual
+                .snapshots
+                .iter()
+                .flat_map(|snapshot| &snapshot.observations)
+                .next()
+                .unwrap();
+            assert_eq!(
+                observation.payload["fields"]["quantity"]["value"],
+                "1.23000000"
+            );
+            assert_eq!(observation.payload["fields"]["status"]["value"], "FILLED");
+            assert_eq!(actual.source_read_at, expected.source_read_at);
+            assert_eq!(
+                actual.snapshot_poll_intervals,
+                expected.snapshot_poll_intervals
+            );
+            assert_eq!(
+                actual.snapshot_source_read_ats,
+                expected.snapshot_source_read_ats
+            );
+            assert_eq!(actual.feed_source_read_ats, expected.feed_source_read_ats);
+            assert_eq!(actual.snapshots.len(), expected.snapshots.len());
+            for (actual, expected) in actual.snapshots.iter().zip(&expected.snapshots) {
+                assert_eq!(actual.snapshot_id, expected.snapshot_id);
+                assert_eq!(actual.entity_kind, expected.entity_kind);
+                assert_eq!(actual.completeness, expected.completeness);
+                assert_eq!(actual.expected_count, expected.expected_count);
+                assert_eq!(actual.observations, expected.observations);
+            }
+        }
     }
 }

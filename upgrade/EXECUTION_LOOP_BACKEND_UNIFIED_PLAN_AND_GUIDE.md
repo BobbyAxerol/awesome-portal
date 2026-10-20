@@ -26571,6 +26571,240 @@ TS rollbackr59@9150385e/r49@b4e7a6c0 and all operational/shared image artifacts
 are retained. No operational route/DBrole/schema/data/auth/listener/restart or
 runtime release change was made by this test-target slice.
 
+### Original06 — Manager worker materialization follow-through —20Oct14:40UTC
+
+**Status: ISOLATED_QUALIFIED_SOURCE_ONLY; full01/06 remains NOT_MET. This is
+owned06 work, not external debt or a new phase.** The preceding independent
+composition is published at85c6cfd8; actual
+normal hook130contracts/717ControlAPI/build/PGrestore passed. Exact hook image,
+containers/network/temp and both host source packets are cleaned; final HK
+closeout361ba35b and packet69ae0298 are retained in the already-declared secure
+directory. No operational source/config/DB/auth/route change was made.
+
+**New factual boundary:** fixed-window Docker events on the existing Paper
+Manager worker show two OOM events followed by die137. Installed OCI source is
+8814cd2a5f66aeac0828812dbb8340c4f0a4adbb/image d6aa7a51, not85c6cfd8.
+Its1CPU/1GiB memory cap is observed, not a newly approved budget. Current-cgroup
+zeros after a restart cannot refute historical OOM. The allocation/cardinality
+cause remains unproved; candidate v6 is not an OOM remedy by assertion. Exact
+private diagnostic hashes89cad93a/52988600/0f2cd4ff and final runtime/config
+tuples are in `/home/bobby/secure/epg10-06-composition-r45yVujP/`.
+The earlier2deb90b0 comparison-group label was a peer P184 market-data cell,
+**not operational TS-writer evidence**; final closeout explicitly corrects it.
+
+**Goal/approved scope:** follow the existing [06 guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-06-áp-resource-budgets-và-tối-ưu-hot-path)
+and [resource boundary](evidence/execution-edge-v1_2/EPG10-06/RESOURCE_ENVELOPE_AND_HOT_PATH.md).
+Review and bound Manager retained logical JSON/materialization, eliminate the
+demonstrable whole-cache deep clone, and reuse existing typed limits/admission
+where their actual semantics fit. Source-only additive opt-in explicit limits;
+no invented production default, service, framework or SQL/schema change. Plain
+`connect_with_resources` alone does not govern legacy Manager SQL. Root owns
+integration/config/journal; delegated lanes may own disjoint mapper/cache files.
+
+**Invariants:** absent limits preserve existing behavior; malformed/partial
+explicit limits fail closed. Preserve exact business/state digests, all-feed
+completeness, truthful empty feeds, profile/identity isolation and atomic cache
+installation only after successful durable commit. Reject oversize before
+accumulation/copy; never truncate facts, publish partial COMPLETE or invent ACK.
+Logical serialized-byte/copy accounting is not heap/RSS or a bound on all SQL
+CURRENT maps. Retain that distinction in every test/report.
+
+**Runnable-now/test gates:** freeze the smallest concrete interfaces before
+parallel edits, then exercise byte boundary/+1, overflow, combined retained and
+working copies, unchanged legacy/parity, shared-cache ownership and failure/drop
+behavior with existing TEST_ONLY fixtures. Run impact-based Rust/unit/PG gates,
+fmt/strict Clippy, exact input pins and normal hook before publication. Do not
+rerun already-green unaffected suites merely for a larger count. No real DB rows,
+secrets or operational logs are copied into test inputs. Every disposable target
+remains capped, has a finite deadline and exact cleanup evidence on both hosts.
+
+**Rollback/decision boundary:** source rollback only; do not change the1GiB
+runtime cap, restart/recreate worker or promote v6 as a shortcut. A real profile
+budget, representative peak evidence, reviewed image/config and epoch/rollback
+are required for operational activation. Full01/06 remains NOT_MET. Core009,
+TS03 and PM07 still block only their own connected cases; check fresh returns at
+the next coherent boundary and immediately bind any newly eligible input.
+
+**Integration scope14:53UTC — IMPLEMENTING:** cache lane returned immutable
+Arc feed sharing; mapper lane returned explicit `ManagerMaterializationLimits`,
+fixed-state bounded counting writer, checked sums/copies and borrowed fact
+preflight. Root binds three all-or-none opt-in environment values documented in
+the [resource boundary](evidence/execution-edge-v1_2/EPG10-06/RESOURCE_ENVELOPE_AND_HOT_PATH.md#current20oct-manager-source-fact-materialization-follow-through).
+Distinct old-cache/refreshed JSON is checked before field cloning/accumulation;
+old+refreshed+owned candidate facts before complete-cycle copying. Shared sibling
+Arc handles do not multiply retained facts. Bounds apply specifically to these
+source-fact JSON populations, **not** builder observation/digest scratch, source
+pages, SQL CURRENT maps, container metadata, allocator or total RSS. This keeps
+the runtime decision boundary honest rather than assigning an arbitrary memory
+multiplier or claiming the old OOM incident fixed. Independent peer freshness
+14:49UTC found no new commissioning return; existing008 is already installed,
+009prepared605f43cf and installed-return230c7c66 unchanged; PM214bf5b3 source
+HTTP evidence is not a commissioned command/policy provider. TS/DL source and
+matched-capacity inputs remain unchanged. No identity/listener is reissued.
+
+**Impact qualification preparation:** private HK evidence path
+`/home/bobby/secure/epg10-06-manager-MfOTWWOO` contains metadata/helpers only;
+new exact disposable SGP cell is prepared only after final source freeze. Reuse
+existing06 environment/parser/source-pin/PG observer and03 teardown functions,
+select changed mapper lib/Edge bin and actual PG Manager11 regressions plus
+fmt/check/strict affected-target Clippy. No new product test framework, repeated
+unaffected suite counts or production-capacity claim. Normal versioned hook is
+still mandatory for the coherent commit. Terminal results, exact source hashes,
+both-host cleanup and publication will be appended before qualified closeout.
+
+**Formatting/source freeze15:05UTC:** HK has no Rust formatter/toolchain;
+the failed lookup did not start a build or mutate source. Reuse the new exact
+SGP cell `/tmp/epg10-06-manager-tGxHxCRi`, private evidence
+`/home/bobby/secure/epg10-06-manager-tGxHxCRi-evidence`. Pinned1.85.1 rustfmt
+changed only3of4allowlisted Rust files, terminal0/0.281s; all451packet inputs
+verified and only those3mechanical formatting deltas returned to HK. Receipt
+878e4befe533e9055d213e20d6a3a16b2f164c6acf8dd2100b1ec888daa4b703;
+final packet451files/6,910,360B, archive3021a5c02eb13a41d981b8ce799c08f836f6a47c17344e6ecb2b028ef24fff93,
+manifestebc30352b43db77178b22c5ca61245b8f7997b6bfd93cb89def98816648d71f2.
+Final main/command/mapper/module hashes f9d7ed71/d447d8e9/a3d2aaf0/e0ecf16e.
+No Rust tests have yet passed in this slice. Qualification uses1CPU affinity,
+2GiB/swap0/Tasks256 plus separate0.5CPU/768MiB disposable PG; locked public
+fetch<=300s, then all-offline fixed-target qualification<=1500s. Supervisor
+enforces4GiB available start headroom,8GiBcell/100GiBdisk floor and bounded
+logs; it can terminate only its own finite scope. Preserve original HOME;
+private Cargo/target/TMPDIR isolate dependencies without relocating identity
+or shared correctness-activity visibility. These are test bounds, not runtime
+defaults or absolute performance gates.
+
+**HK before-capture:** private `hk_hook/preflight.json`074d5803 at14:58UTC:
+46running metadata rows (not all production),98image rows/362BuildKit records,
+242,448,171,008B free and3peer WIP hashes unchanged. Compared with the prior
+closeout, the existing Paper worker restart206→285 is observed on the same
+ID/image/config/service; no restart/fix is performed. Other critical six-Edge/
+three-Manager/two-DL-query/four-DL-stream identity sets remain protected; no
+operational TS-writer continuity is inferred from a peer P184 test image.
+
+**Qualification attempt1,15:12UTC — FAILED, owned correction:** fmt passed;
+affected `cargo check --all-targets` stopped at two E0277 test compile errors:
+the new parity test tried to serialize `ProjectionSnapshot`, whose production
+contract intentionally has no `Serialize`. No tests ran, no PG was created;
+the finite scope is inactive and cleanup reported no errors. Preserve receipt
+18867366a136259cac5362b8272f0f73948b23ac46e4dd745f33f009e5022425 in
+the declared HK private evidence directory. Correct only the test to compare
+all explicit snapshot metadata and observations; do not derive production
+serialization merely for testing or weaken digest/business parity. Reuse the
+exact source cell/cache for the impact retake with new source pins; keep the
+failed predecessor. This is runnable owned work, not external debt.
+
+**Impact retake15:17:56UTC / parallel owner intake:** frozen451-input
+manifest697effdec4816aad79bcb7e05f1fdedd1563034d67a75f522f5c8c8ab9516739,
+archivefa1e2c5515e8472df45806784ef827444f73c5aa43bdfbadced8966c0ed38373;
+only mapper test source changed to8ea182bda1b027e97b67addc5018505ad7e25a864966385df58c80c79e3e5485.
+The original failure/logs are preserved separately. One early prelaunch hash
+guard refused while SCP was not terminal; no source/job ran from that refusal.
+After transfer terminal0, all451 hashes were verified before the actual retake
+started. Same finite caps/private compile cache; public fetch not repeated.
+
+New Core review handoff41807cac /15fe25ec explicitly says review-ready/source
+only, installed/connected/accepted0. Full212-line runbook rev2bd9c908b and
+prepared return605f43cf remain unchanged. Edge closure/lifecycle/operator and
+official-session/READ/STREAM runner interfaces already match; no independent
+Edge mismatch was found. Core owns its selected source landing, normal R3,
+reviewed image/config and finite-window preparation. Edge must coordinate that
+ready window, then renew trust/source acceptance and provide fresh observer
+pins; it need not wait for installation merely to coordinate, but must not open
+a source role/listener just to wait for unready Core artifacts. The stale SRC-K
+static-seal NOT_PROVIDED statement is superseded by our existing revision3
+handoff: catalogue/profile/field seal and field_policy_ref were already supplied.
+TS03 publication remains source-dark; PM07 authority is not commissioned; PM's
+new bounds proposal is explicitly PROPOSED_NOT_APPROVED, not numeric acceptance.
+
+**Actual qualification terminal0,20Oct15:28UTC:** the bounded retake completed
+in614.607 outer-supervisor seconds (qualification receipt613.065s), both
+observational, not performance gates. Actual identities were frozen before
+execution:29 mapper,73 Edge,11 Manager PG; all113 distinct cases PASS with
+0failed/ignored/filtered, including26 new methods. Unit stage0.140s/Edge29.434s/
+actual PG12.398s; these are correctness timings, not performance gates. Fmt,
+affected two-package all-target check, strict Clippy (0owned/upstream warnings)
+and451 source/helper immutability checks PASS. Final receipt
+61ca7cf146a3ed370f0d636a8b69b84d5baf101edf6b449825cfccddb5d56d96;
+compiled identity/binary manifest
+a02231fa9215d2a9522a7944f7984adf86bd45eb0ea86e3b81bbc3499bff8df8.
+The exact scope is inactive, sampler/activity ended, disposable PG removed,
+cleanup errors0, images built/pulled0 and volumes created/removed0. Source/cache
+copies await exact terminal-receipt ACK and removal; no shared cleanup. Public
+[bounded qualification](evidence/execution-edge-v1_2/EPG10-06/manager-materialization-qualification.json)
+contains source pins and the retained failed predecessor, not raw source/data.
+
+**Publication gate:** normal `.githooks` remains mandatory, once, under a1500s
+whole-job deadline; no bypass or duplicate prehook. Preserve terminal output and
+resource witness at the declared `hk_hook` private path, then reconcile/remove
+only the exact newly created unshared hook image in a quiet C4 window. This
+commit is source-only; it neither changes operational caps nor certifies the old
+Paper OOM fixed. Feature handoff push is one coherent batch, no PR/merge/dispatch;
+six workflow trigger definitions select no hosted CI for this ordinary feature
+push, expected hosted minutes0 (billed usage not queried). Canonical54c6f5f3,
+all seven active worktrees, stable release directories and TS rollbackr59/r49
+remain retained; no operational source/config/DB/auth/route/listener change.
+
+**Fresh return/preparation review15:25UTC:** PM advanced toff2bb673 with
+proposal77a7b985/evidence57d37691. Full527/886-line inputs were read, not
+discarded merely because source-only. The pilot uses independent restores,
+20operations/arm at1op/s, two tracing OFF/ON arms and60s deadline. Existing01
+explicit-roster observer already supports10–120s windows and can observe each
+arm unchanged with identical instrumentation. No new Edge transport/wire or
+adapter is specified. Do not feed this pilot into the distinct B0/B1/B2 validator
+(6k/9k canonical TRADE events/s,600s/two repeats/12cells) or weaken that validator.
+PM's proposed real-filesystem PG2CPU/2GiB plus worker1CPU/512MiB is not the06
+tmpfs PG target; no inherited budget/durability/IOPS proof. The finite TEST_ONLY
+pilot can precede Core009/TS publication once its own storage/target approval,
+frozen closure, independent restores/probes and admission/headroom are ready.
+Core/TS are operational-campaign dependencies, not blockers for pilot
+preparation. This completed crosswalk found no missing independent Edge code;
+PM owns its exact target/recipe. Core009 and TS publication pins remain
+unchanged. Continue intake per coherent boundary rather than polling/building
+duplicate targets while awaiting the concrete owner inputs.
+
+**SGP exact closeout20Oct15:32UTC — terminal0:** root verified mirrored
+qualification/identity/stage-evidence hashes61ca7cf1/a02231fa/b6a57d13, then
+ACKed scoped removal. All451 inputs were rechecked before deletion; own scopes,
+PG, sampler/activity terminal/absent. Exact `/tmp/epg10-06-manager-tGxHxCRi`
+removed:25,803 regular files/4,532,699,474 logical bytes. Shared-host free disk
+138,625,589,248→143,018,156,032B; not exclusively attributable reclaimed space.
+Cleanup-window runtime tuples, images and BuildKit inventory unchanged; no
+shared cache/image/volume/operational/rollback removal. Receipt
+7c98a506ff32d957c1d9d3abecfd7b3d066136fc30392dafe5dc1191c143d8e6,
+bounded final summary6819edafa065e00b610969e6d23b67437e6de73f9aee7a7364833c5bf4245e57;
+both retained in declared secure evidence directories. HK post-terminal commit
+closeout retains manifests/receipts/helpers and removes only the8 pre-inventoried
+archive/formatted-source copies (3,984,786 logical bytes), then the exact new
+hook image if unshared/unreferenced and C4 quiet guard permits. Its observed
+disk/runtime results are authoritative only in the declared immutable receipts;
+do not infer all production continuity from a global container count.
+
+**Normal-hook attempt1 — terminal1, source gate preserved:** ordinary versioned
+hook stopped at EDS-12 CURRENT generated input `manager_projection` digest drift;
+no commit. Logda069da8b09eca89dd1593500d96591f8b9355a19ae667e4aaf149562406993c
+is retained as `hk_hook/normal-hook-attempt1.log`. This is the current source
+ledger, not an immutable executed qualification. Use the existing strict
+`scripts/refresh-release-integrity-ledgers.sh --write` (same approved maintenance
+boundary as the prior original08 ledger repair), permitting only the changed
+manager-projection input and enclosing MANIFEST hash. Prove every non-input
+property/runtime authority unchanged, run affected static/mutation gates and
+normal hook again; never weaken the guard, rewrite historical receipts, enable
+operations or re-count unaffected Rust tests. The two generated ledger files
+were packet inputs but are not compiled source/include dependencies of these
+three qualified binaries; preserve the qualification-time451 hashes and record
+the later exact metadata delta separately. No Rust/source fixture changed.
+
+**Current-ledger correction actual:** existing refresh PASS, N29 changedfalse;
+EDS-12 exactly one `manager_projection` SHA plus enclosing qualification hash
+changed (two generated metadata paths). Parsed comparisons against HEAD prove
+all other qualification properties and41other input rows unchanged; static
+check current,11Python fail-closed mutations PASS. The EDS-12 standalone Rust
+crate embeds this metadata but no qualified mapper/Edge/PG binary depends on
+that crate; no Rust code/fixture/dependency of the113cases changed. Its validator
+does not inspect the changed digest field. Historical executed451-input receipt
+remains immutable; the later metadata-only delta is explicit in the public
+summary. Operations_qualified/product_active stayfalse; runtime_effectNONE.
+Retry the mandatory normal hook with11exact owned staged paths, preserving the
+three peer WIP files; do not bypass the hook or rerun unaffected Rust suites.
+
 
 
 
