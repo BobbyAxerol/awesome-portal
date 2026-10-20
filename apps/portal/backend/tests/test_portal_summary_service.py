@@ -462,7 +462,7 @@ async def test_healthy_sources_produce_available_schema_valid_summary() -> None:
     assert all(
         section.availability.state == "available" for section in summary.sections
     )
-    assert summary.registry_counts.by_maturity["AVAILABLE"] == 3
+    assert summary.registry_counts.by_maturity["AVAILABLE"] == 4
     assert summary.registry_counts.by_maturity["PROTOTYPE"] == 5
     assert summary.registry_counts.by_maturity["COMMISSIONED"] == 15
     assert summary.registry_counts.blocking_concerns == 5
@@ -926,7 +926,7 @@ def test_registry_counts_exact_for_default_source() -> None:
     summary_counts = _service()._registry_counts()
 
     assert dict(summary_counts.by_maturity) == {
-        "AVAILABLE": 3,
+        "AVAILABLE": 4,
         "PROTOTYPE": 5,
         "COMMISSIONED": 15,
         "BLOCKED": 0,
@@ -967,7 +967,7 @@ def test_registry_counts_follow_hidden_and_deprecated_invariants(tmp_path: Path)
     service = _service(registry_service=_registry_service(_registry_root(tmp_path, mutate)))
     counts = service._registry_counts()
 
-    assert counts.by_maturity["AVAILABLE"] == 2
+    assert counts.by_maturity["AVAILABLE"] == 3
     assert counts.by_maturity["HIDDEN"] == 0
     assert counts.blocking_concerns == 5
     priorities = service._registry_blocking_concern_priorities()
