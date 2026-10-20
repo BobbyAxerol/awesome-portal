@@ -157,6 +157,9 @@ for (const [label, width, height] of WIDTHS) {
 
       await page.goto(OVERVIEW(WS.none));
       await expect(page.locator(".portal-body")).toBeVisible();
+      // The rail is empty of Portfolios before the read lands too, so "no Portfolios" proves nothing until this page has asked for ITS
+      // scope; going Back before the lazy self-navigation mount has asked (a busier Overview now draws its NAV series first) loses the ask.
+      await expect.poll(() => lane.asked.some((ask) => ask.workspace === WS.none && ask.status === 200)).toBe(true);
       let nav = await rail(page);
       await expect(entry(nav, "Overview")).toBeVisible();
       await expect(entry(nav, "Portfolios")).toHaveCount(0);
