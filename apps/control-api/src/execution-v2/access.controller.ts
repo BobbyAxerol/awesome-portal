@@ -7,7 +7,7 @@ import { PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
 import { AccessActor, AccessPolicyError, accessAuditQuery, accessPreview, accessProposal, accessRevoke, accessWorkspaceQuery, accessText } from "./access.contract";
 import { ExecutionAccessService } from "./access.service";
-import { eligibilityQuery, navigationInput } from "./self-eligibility";
+import { eligibilityBatchQuery, eligibilityQuery, navigationInput } from "./self-eligibility";
 
 type AccessRequest=FastifyRequest&{portalUser:PortalUser;portalSession:{sessionId:string;csrfSecretHash:string}};
 const stepUpBody=z.object({workspace_id:accessText,password:z.string().min(1).max(256)}).strict();
@@ -44,6 +44,13 @@ export class ExecutionAccessController {
   async eligibility(@Req()req:AccessRequest,@Query()query:unknown) {
     const input=this.parse(eligibilityQuery,query);
     return this.call(()=>this.service.eligibility(this.actor(req),input));
+  }
+  /** FE-068: bounded multi-resource eligibility with a typed step-up state; the single-resource route above is unchanged. */
+  @Get("/eligibility/batch")
+  @Header("Cache-Control","private, no-store")
+  async eligibilityBatch(@Req()req:AccessRequest,@Query()query:unknown) {
+    const input=this.parse(eligibilityBatchQuery,query);
+    return this.call(()=>this.service.eligibilityBatch(this.actor(req),input));
   }
   @Get("/self-navigation")
   @Header("Cache-Control","private, no-store")
