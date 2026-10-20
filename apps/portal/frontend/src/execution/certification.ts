@@ -317,6 +317,8 @@ export interface SandboxFinding {
 export interface SandboxCertification {
   certificationId: string;
   deploymentId: string | null;
+  /** ADDITIVE: the record's `portfolio_id` (V1 never printed it). */
+  portfolioId: string | null;
   venue: string | null;
   workflowState: string | null;
   workflowVersion: number | null;
@@ -365,6 +367,7 @@ export function readSandboxCertification(raw: unknown): SandboxCertification | n
   return {
     certificationId,
     deploymentId: str(cert.deployment_id),
+    portfolioId: str(cert.portfolio_id),
     venue: str(cert.venue),
     workflowState: str(cert.workflow_state),
     workflowVersion: int(cert.workflow_version),

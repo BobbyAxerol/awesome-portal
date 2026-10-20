@@ -119,8 +119,9 @@ function Reconciliation({ view }: { view: SandboxView }) {
       <Triad
         titleLevel={2}
         rows={view.figures === null ? RECON_ROWS : triadRowsOf(view.figures)}
-        internal={internal === null ? null : { asOf: internal.asOf }}
-        broker={broker === null ? null : { asOf: broker.asOf }}
+        // With the server's figures each cell is its own fact, so a source panel that reads unavailable does not blank the column.
+        internal={internal === null ? (view.figures === null ? null : {}) : { asOf: internal.asOf }}
+        broker={broker === null ? (view.figures === null ? null : {}) : { asOf: broker.asOf }}
         suppressed={figuresSuppressed(view)}
       />
       <div className="exec-sbx-panels">

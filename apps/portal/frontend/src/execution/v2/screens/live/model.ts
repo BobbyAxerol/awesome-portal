@@ -682,8 +682,10 @@ export function liveModelV1(live: LiveFullOperations): LiveModel {
     triad: {
       // The server's figures (FE-072) when the body carries them; the strip has already emptied Broker and Difference while the broker is not visible.
       rows: figures !== null ? triadRowsOf(figures) : buildTriadRows(null, brokerVisible, readCurrency(live.kpis)),
-      internal: sideOf(live.panels.internal),
-      broker: brokerVisible ? sideOf(brokerPanel) : null,
+      // With the server's figures each cell is its own fact, so an unavailable source panel does not blank its column; the broker
+      // column is still absent while broker values are not visible (the reader emptied it).
+      internal: sideOf(live.panels.internal) ?? (figures === null ? null : {}),
+      broker: brokerVisible ? (sideOf(brokerPanel) ?? (figures === null ? null : {})) : null,
       suppressed,
       rowsPublished: figures !== null,
     },
