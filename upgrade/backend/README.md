@@ -7,6 +7,15 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 acceptance runner,20Oct — ISOLATED_QUALIFIED:**
+  [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08--active-sse-observation-and-independent-stream-revoke-preparation-20oct)
+  and [owner packet](../evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md)
+  pin66unit PASS (40prior+26new) for bounded active-SSE observation and
+  independent official STREAM-revoke/READ-positive specimens. Client EOF,
+  timing or reconnect denial is not active revoke/cache/final-egress proof.
+  GET-only/no runtime mutation. Core009 fixes/actual install still required;
+  full08NOT_MET,09connectedNOT_STARTED. See main journal for final hook/cleanup.
+
 - **Original08 installed intake/finite lifecycle,20Oct — IN_PROGRESS:**
   [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
   confirms Core0087818d563 installed and new1df9adad transfer verified. Edge

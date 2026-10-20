@@ -6,6 +6,9 @@ session and owner receipts are private pinned references. This driver never
 issues identity, grants, JWTs, SQL, commands or revocation. Core/PM perform their
 official revoke separately. Baseline/post_revoke are distinct finite specimens;
 reconnect denial is NOT proof of active-stream revocation or a cache HIT.
+Opt-in observe_active_stream holds the existing stream past its first notice
+to collect bounded client-side facts while the owner revokes separately. Those
+facts never prove server final-egress or grant a mutation capability.
 
 Optional --checkpoint-fd writes ONLY an opaque baseline cursor/provenance to an
 already open private owner file (never stdout). Public stdout contains bounded
@@ -38,6 +41,7 @@ MAX_BYTES = 1024 * 1024
 HELPER_PIN = "e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424"
 CASES = ("deployments", "relation", "repeat_read", "snapshot", "cursor_resume",
          "stream_notice", "post_revoke_read", "post_revoke_cursor",
+         "post_revoke_stream", "post_revoke_stream_read_preserved",
          "cache_revocation", "active_stream_revocation", "unaffected_scope")
 
 
@@ -141,7 +145,13 @@ def prepare(config, now=None):
             re.fullmatch(r"[A-Z][A-Z0-9_]{2,95}", config.get("profile_id", "")), "SCOPE_INVALID")
     for key, bound in (("limit", 200), ("deadline_seconds", 60), ("max_bytes", MAX_BYTES)):
         require(type(config.get(key)) is int and 1 <= config[key] <= bound, "BOUNDS_INVALID")
-    require(type(config.get("probe_stream")) is bool, "BOUNDS_INVALID")
+    require(type(config.get("probe_stream")) is bool and
+            type(config.get("observe_active_stream", False)) is bool, "BOUNDS_INVALID")
+    require(not config.get("observe_active_stream", False) or
+            (config["stage"] == "baseline" and config["probe_stream"]), "OBSERVATION_MODE_INVALID")
+    action = config.get("revoke_action", "business.read_all")
+    require(action in ("business.read_all", "stream.subscribe") and
+            ("revoke_action" not in config or config["stage"] == "post_revoke"), "REVOKE_ACTION_INVALID")
     receipt = document(config["core_return"])
     require(type(receipt) is dict and receipt.get("schema_version") ==
             "portal.execution.connected-read-ready.v1" and receipt.get("status") == "INSTALLED" and
@@ -164,9 +174,15 @@ def prepare(config, now=None):
             type(receipt.get("read_authorized")) is bool and
             type(receipt.get("stream_authorized")) is bool and
             type(receipt.get("native_revoked")) is bool, "SOURCE_OR_AUTHORITY_NOT_CURRENT")
+    if "stream_grant_id" in receipt or "stream_grant_revision" in receipt:
+        require(all(type(receipt.get(k)) is str and 1 <= len(receipt[k]) <= 256 for k in
+                    ("stream_grant_id", "stream_grant_revision")) and
+                receipt["stream_grant_id"] != receipt["manager_grant_id"], "STREAM_GRANT_INVALID")
     if config["stage"] == "baseline":
         require(receipt["read_authorized"] and not receipt["native_revoked"],
                 "SOURCE_OR_AUTHORITY_NOT_CURRENT")
+    require(not config.get("observe_active_stream", False) or receipt["stream_authorized"],
+            "STREAM_NOT_AUTHORIZED")
     if config["probe_stream"] and receipt["stream_authorized"]:
         require(type(receipt.get("source_set_ref")) is str and bool(receipt["source_set_ref"]),
                 "STREAM_SOURCE_SET_UNDECLARED")
@@ -198,16 +214,69 @@ def prepare(config, now=None):
                 revoke.get("previous_policy_revision") == prior.get("policy_revision") and
                 revoke.get("previous_manager_grant_revision") == prior.get("manager_grant_revision") and
                 revoke.get("previous_native_revision") == prior.get("native_revision") and
-                ((revoke["authority"] == "CORE_MANAGER_DOMAIN" and not receipt["read_authorized"] and
+                ((action == "business.read_all" and revoke["authority"] == "CORE_MANAGER_DOMAIN" and
+                  not receipt["read_authorized"] and
                   (receipt["policy_revision"] != prior["policy_revision"] or
                    receipt["manager_grant_revision"] != prior["manager_grant_revision"]) and
                   receipt["native_revision"] == prior["native_revision"]) or
-                 (revoke["authority"] == "PM_NATIVE_READ" and receipt["native_revoked"] and
-                  receipt["native_revision"] > prior["native_revision"])),
+                 (action == "business.read_all" and revoke["authority"] == "PM_NATIVE_READ" and
+                  receipt["native_revoked"] and receipt["native_revision"] > prior["native_revision"]) or
+                 (action == "stream.subscribe" and revoke["authority"] == "CORE_MANAGER_DOMAIN" and
+                  revoke.get("action") == action and receipt["read_authorized"] and
+                  not receipt["stream_authorized"] and not receipt["native_revoked"] and
+                  prior.get("read_authorized") is True and prior.get("stream_authorized") is True and
+                  receipt["policy_revision"] == prior["policy_revision"] and
+                  receipt["manager_grant_revision"] == prior["manager_grant_revision"] and
+                  receipt["native_revision"] == prior["native_revision"] and
+                  type(receipt.get("stream_grant_id")) is str and
+                  receipt["stream_grant_id"] == prior.get("stream_grant_id") and
+                  type(prior.get("stream_grant_revision")) is str and
+                  1 <= len(prior["stream_grant_revision"]) <= 256 and
+                  receipt["stream_grant_revision"] != prior["stream_grant_revision"])),
                 "REVOKE_PROVENANCE_INVALID")
+        if action == "stream.subscribe":
+            validate_stream_revoke(receipt, prior, revoke, now)
     return {"config": config, "producer": receipt, "headers": headers, "ip": str(ip),
             "scope": scope, "prior": prior, "revoke": revoke,
-            "session_evidence_class": session_evidence_class}
+            "revoke_action": action, "session_evidence_class": session_evidence_class}
+
+
+def validate_stream_revoke(producer, prior, revoke, now):
+    """Bind the distinct STREAM grant to the real coordinator receipt, not a label.
+
+    READY/checkpoint data is assembled from actual install ACK/readback. The
+    official receipt remains a private pinned document; no new exporter/API.
+    """
+    ref = revoke.get("official_receipt")
+    require(type(ref) is dict and ref.get("sha256") == revoke["official_receipt_sha256"],
+            "STREAM_REVOKE_RECEIPT_INVALID")
+    envelope = document(ref)
+    require(type(envelope) is dict and envelope.get("schema_version") ==
+            "portal.native-research-manager-revoke.v1" and
+            type(envelope.get("results")) is list and len(envelope["results"]) == 1 and
+            all(type(item) is dict for item in envelope["results"]), "STREAM_REVOKE_RECEIPT_INVALID")
+    selected = [item for item in envelope["results"] if item.get("grant_id") == producer["stream_grant_id"]]
+    require(len(selected) == 1, "STREAM_REVOKE_RECEIPT_INVALID")
+    official = selected[0]
+    require(type(official) is dict and official.get("schema_version") ==
+            "portal.manager-domain-revoke-receipt.v1" and
+            official.get("grant_id") == producer["stream_grant_id"] and
+            official.get("action") == "stream.subscribe" and official.get("mode") == "REVOKE" and
+            official.get("outcome") == "REVOKED" and
+            official.get("grant_revision_before") == prior["stream_grant_revision"] and
+            official.get("grant_revision_after") == producer["stream_grant_revision"] and
+            official.get("policy_revision") == producer["policy_revision"] and
+            official.get("replayed") is False and
+            all(type(official.get(k)) is str and 1 <= len(official[k]) <= 256
+                for k in ("revocation_id", "receipt_id")) and
+            all(type(official.get(k)) is int and 0 <= official[k] <= 9007199254740991 for k in
+                ("valid_until_ms_before", "valid_until_ms_after", "revoked_at_ms", "decided_at_ms")) and
+            official["valid_until_ms_before"] == official["valid_until_ms_after"] and
+            official["valid_until_ms_before"] > official["decided_at_ms"] and
+            official["decided_at_ms"] == official["revoked_at_ms"] and
+            utc(prior["at_utc"]) * 1000 <= official["revoked_at_ms"] <=
+            utc(revoke["committed_at_utc"]) * 1000 <= now * 1000,
+            "STREAM_REVOKE_RECEIPT_INVALID")
 
 
 def cursor_valid(value):
@@ -286,9 +355,17 @@ class Transport:
             if stream and response.status == 200:
                 require(response.getheader("Content-Type", "").split(";")[0] == "text/event-stream",
                         "STREAM_CONTENT_TYPE_INVALID")
+                observe = self.p["config"].get("observe_active_stream", False)
+                if observe:
+                    # The global abort timer still owns the physical socket even
+                    # after HTTPConnection detaches it. Quiet streams may stay
+                    # open until that bounded deadline, not just the5s connect cap.
+                    tls_socket.settimeout(max(0.001, self.end - time.monotonic()))
                 result = read_sse(response, self.p["config"]["max_bytes"], self.end,
-                                  self.p["producer"]["projection_epoch"], self.p["producer"]["source_set_ref"])
-                require(not result["notices"] or (not expired.is_set() and time.monotonic() < self.end),
+                                  self.p["producer"]["projection_epoch"], self.p["producer"]["source_set_ref"],
+                                  observe=observe)
+                require(observe or not result["notices"] or
+                        (not expired.is_set() and time.monotonic() < self.end),
                         "DEADLINE_EXCEEDED")
                 return response.status, dict(response.getheaders()), result
             require(response.getheader("Content-Type", "").split(";")[0] == "application/json",
@@ -304,17 +381,32 @@ class Transport:
                 response.close()
 
 
-def read_sse(response, maximum, end, expected_epoch, source_set_ref):
+def read_sse(response, maximum, end, expected_epoch, source_set_ref, *, observe=False):
     count, notices, total, event, data, identifier = 0, 0, 0, None, [], None
     last = None
+    started = time.monotonic() if observe else None
+    observation = {"status": "OBSERVED_ONLY", "termination": None, "first_notice_after_ms": None,
+        "terminal_event": None, "frame_observations": [], "final_egress_proved": False}
+    if observe:
+        observation["started_at_utc"] = datetime.now(timezone.utc).isoformat()
     while count < 8 and time.monotonic() < end:
         try:
             line = response.readline(min(65537, maximum - total + 1))
         except TimeoutError:
+            observation["termination"] = "DEADLINE" if time.monotonic() >= end else "SOCKET_TIMEOUT"
             break  # A quiet real stream is NOT_RUN, never a manufactured source notice.
+        except OSError:
+            if not observe or time.monotonic() < end:
+                raise
+            observation["termination"] = "DEADLINE"
+            break  # Physical abort at the global deadline is not a server deny.
         total += len(line)
         require(total <= maximum and len(line) <= 65536, "STREAM_LIMIT")
+        if observe and time.monotonic() >= end:
+            observation["termination"] = "DEADLINE"
+            break  # Includes EOF caused by our own physical deadline abort.
         if not line:
+            observation["termination"] = "EOF"
             break
         text = line.decode("utf-8").rstrip("\r\n")
         if text == "":
@@ -340,21 +432,33 @@ def read_sse(response, maximum, end, expected_epoch, source_set_ref):
                          cursor_valid(identifier) and frame.get("resume_cursor") == identifier and
                          frame.get("projection_generation") == expected_epoch and frame.get("reason_code") is None),
                         "STREAM_FRAME_INCONSISTENT")
+                received = time.monotonic() if observe else None
+                if observe and received >= end:
+                    observation["termination"] = "DEADLINE"
+                    break  # Buffered bytes after the deadline are not fresh observations.
                 if event == "revalidate":
-                    require(time.monotonic() < end, "DEADLINE_EXCEEDED")
+                    require(observe or time.monotonic() < end, "DEADLINE_EXCEEDED")
                     require(frame.get("next_action") == "READ_NAMED_SNAPSHOT" and
                             quality_valid(frame.get("quality")) and
                             frame["quality"]["source_set_ref"] == source_set_ref, "STREAM_NOTICE_INVALID")
                     notices += 1
                     last = identifier
-                    break  # bounded one real source notice; heartbeat is never positive.
+                    if not observe:
+                        break  # Old finite specimen: one notice, no active-stream proof.
+                    if observation["first_notice_after_ms"] is None:
+                        observation["first_notice_after_ms"] = max(0, int((received - started) * 1000))
                 require(event != "heartbeat" or (frame.get("next_action") == "RESUME_PORTAL_CURSOR"
                         and frame.get("quality") is None), "STREAM_FRAME_INCONSISTENT")
                 if terminal:
                     require(frame["next_action"] == {"resync_required": "READ_NAMED_SNAPSHOT",
                         "access_revoked": "SIGN_IN_OR_REQUEST_ACCESS", "unavailable": "WAIT"}[event],
                         "STREAM_FRAME_INCONSISTENT")
+                if observe:
+                    observation["frame_observations"].append({"event_type": event,
+                        "frame_sha256": digest(frame),
+                        "received_after_ms": max(0, int((received - started) * 1000))})
                 if frame.get("terminal") is True:
+                    observation.update(termination="TERMINAL", terminal_event=event)
                     break
             event, data, identifier = None, [], None
         elif text.startswith("event:"):
@@ -365,7 +469,13 @@ def read_sse(response, maximum, end, expected_epoch, source_set_ref):
             identifier = text[3:].strip()
         else:
             require(text.startswith(":"), "STREAM_FIELD_INVALID")
-    return {"frames": count, "notices": notices, "bytes": total, "cursor": last}
+    if observation["termination"] is None:
+        observation["termination"] = "DEADLINE" if time.monotonic() >= end else "FRAME_LIMIT"
+    result = {"frames": count, "notices": notices, "bytes": total, "cursor": last}
+    if observe:
+        observation["elapsed_ms"] = max(0, int((time.monotonic() - started) * 1000))
+        result["observation"] = observation
+    return result
 
 
 def quality_valid(value):
@@ -446,6 +556,26 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
                 # attempt/receipt observer must correlate that separate drill.
                 receipt["reason"] = "PM_DENIAL_REQUIRES_CORRELATED_OWNER_RECEIPT"
                 return receipt
+            if p["revoke_action"] == "stream.subscribe":
+                # Positive READ uses the same subject/domain/native selection,
+                # not a fake unaffected principal or a cache-HIT assertion.
+                status, headers, raw = request("deployments")
+                read_page = finite("deployments", status, headers, raw, p)
+                status, headers, raw = request("snapshot")
+                read_snapshot = finite("snapshot", status, headers, raw, p)
+                receipt["cases"]["post_revoke_stream_read_preserved"] = {
+                    "status": "PASS", "page": read_page, "snapshot": read_snapshot}
+                for case, cursor in (("post_revoke_stream", None),
+                                     ("post_revoke_cursor", p["prior"]["cursor"])):
+                    status, _, raw = request("stream", cursor)
+                    body = shared().decode(raw)
+                    error = body.get("error", body) if type(body) is dict else None
+                    require(status == 403 and type(error) is dict and error.get("code") ==
+                            "ACCESS_DENIED", "REVOKED_STREAM_NOT_DENIED")
+                    receipt["cases"][case] = {"status": "PASS", "http_status": status,
+                        "body_sha256": sha256(raw).hexdigest()}
+                receipt["status"] = "SCOPED_OBSERVATIONS_ONLY"
+                return receipt
             for case, name, cursor in (("post_revoke_read", "deployments", None),
                                       ("post_revoke_cursor", "stream", p["prior"]["cursor"])):
                 status, _, raw = request(name, cursor)
@@ -473,18 +603,28 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
             receipt["cases"].update(finite_results)
             cursor = headers["x-portal-realtime-cursor"]
             if checkpoint_sink is not None:
-                checkpoint_sink({"schema_version": "portal.execution.connected-read-baseline.v1",
+                checkpoint = {"schema_version": "portal.execution.connected-read-baseline.v1",
                     "scope_sha256": p["scope"], "producer_sha256": config["core_return"]["sha256"],
                     "policy_revision": p["producer"]["policy_revision"],
                     "manager_grant_revision": p["producer"]["manager_grant_revision"],
                     "native_revision": p["producer"]["native_revision"],
-                    "at_utc": datetime.now(timezone.utc).isoformat(), "cursor": cursor})
+                    "read_authorized": p["producer"]["read_authorized"],
+                    "stream_authorized": p["producer"]["stream_authorized"],
+                    "at_utc": datetime.now(timezone.utc).isoformat(), "cursor": cursor}
+                if "stream_grant_id" in p["producer"]:
+                    checkpoint.update({k: p["producer"][k] for k in
+                                       ("stream_grant_id", "stream_grant_revision")})
+                checkpoint_sink(checkpoint)
             if config["probe_stream"] and p["producer"]["stream_authorized"]:
                 status, _, stream = request("stream", cursor, True)
                 require(status == 200 and type(stream) is dict, "STREAM_NOT_AVAILABLE")
                 receipt["cases"]["stream_notice"] = {"status": "PASS" if stream["notices"] else "NOT_RUN",
                     "frames": stream["frames"], "notices": stream["notices"], "bytes": stream["bytes"]}
-                if stream["notices"]:
+                if config.get("observe_active_stream", False):
+                    receipt["active_stream_observation"] = stream["observation"]
+                    # Leave active_stream_revocation NOT_RUN. Timing and EOF are
+                    # client facts, not correlated official final-egress proof.
+                elif stream["notices"]:
                     status, _, resumed = request("stream", stream["cursor"], True)
                     require(status == 200 and type(resumed) is dict, "RESUME_NOT_AVAILABLE")
                     receipt["cases"]["cursor_resume"] = {"status": "PASS" if resumed["notices"] else "NOT_RUN",

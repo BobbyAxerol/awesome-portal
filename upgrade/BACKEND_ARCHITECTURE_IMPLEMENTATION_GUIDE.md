@@ -911,6 +911,15 @@ tuples unchanged,0own containers/networks/lease. Actual provider/Core runtime
 commissioning and connected revoke/cache/cursor/SSE remain OWNED08work;
 full08NOT_MET,09connected NOT_STARTED. This does not recertify393or717tests.
 
+- **Original08 acceptance runner,20Oct — ISOLATED_QUALIFIED:**
+  [current same-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08--active-sse-observation-and-independent-stream-revoke-preparation-20oct)
+  and [owner packet](evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md).
+  Same bounded GET-only runner now holds active SSE for observation and binds
+  independent STREAM-only official revoke while preserving READ/native.
+  66unit PASS (40previous+26new), no mutation or final-egress claim.
+  Core009 producer corrections/real installation remain; full08NOT_MET,
+  09connectedNOT_STARTED. Exact hook/publication/cleanup lives in main journal.
+
 - **Execution Edge v1.2 / EPG10-00 (2026-10-15):**
   [EPG10-00…11 in the Execution Loop unified plan §23](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
   is `EPG10-00_COMPLETED_INVENTORY_ONLY`, on

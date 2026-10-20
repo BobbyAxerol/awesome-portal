@@ -25238,6 +25238,101 @@ now-complete format binding plus final hook/cleanup/publication. After genuine
 reviewed return, coordinate fresh source/trust/zero-custody swap and run08→09
 read cases. Full08NOT_MET/09NOT_STARTED; no new phase or approval request.
 
+### Original08 — active SSE observation and independent STREAM revoke preparation —20Oct
+
+**Status before edits:** IN_PROGRESS_OWNED_ACCEPTANCE_RUNNER; full08NOT_MET,
+09connectedNOT_STARTED. Same approved08 round2, latest instruction to prioritize
+the Core/Claude handoff on SGP and complete the Edge runner in parallel.
+Guide authority: [original08](#epg10-08-plan),
+[detailed08/T08-02/08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls)
+and the [existing connected owner packet](evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md).
+
+**Owned gap confirmed:** the current parser stops at its first genuine source
+notice and always closes the socket. It cannot observe a stream held through
+an external official revoke. Existing post-revoke preparation also requires
+READ=false, so it cannot exercise independent STREAM removal with READ kept.
+Implement a bounded opt-in observation mode in this same GET-only driver,
+reuse its TLS/IP/private references/cursor/60s/1MiB/eight-frame bounds and
+existing checkpoint, and add action-aware specimen validation/probes against
+the actual owner return. No mutation transport, new provider or framework.
+
+**Invariants/exit:** observations contain only bounded hashes/counts/timing/
+termination classes. A client EOF/timeout, terminal event or reconnect denial
+is not final-egress/revoke-latency proof. Active-stream/cache/unaffected-scope
+acceptance stays NOT_RUN without matched official receipts and real positive
+bindings. Preserve old baseline/READ-revoke behavior; test hold-after-notice,
+terminal/EOF/timeout/deadline/frame/byte limits, redaction and independent
+STREAM-denied/READ-positive provenance. Unit fixtures remain TEST_ONLY.
+Run focused checks under1CPU/256MiB, independent review, normal hook, one
+coherent source/journal commit and nonforce feature publication; expected
+0additional hosted CI minutes. Reconcile source/runtime and exact own cleanup.
+Rollback is source-only reversion of this harness slice; no DB/session/role/
+image/route/listener mutation is authorized or needed for preparation. Core
+owns producer corrections/real PG/R3/image/config; it is not a blanket blocker
+for this owned runner. Actual08→scoped09 still requires genuine fresh inputs.
+
+**Tested slice / final source:** implemented the opt-in same-response SSE
+observer plus independent `stream.subscribe` poststage in the existing driver.
+Observer records client UTC anchor/monotonic offsets and at most8validated
+frame hashes; holds through first notice and terminates boundedly. Its own
+deadline-induced socket EOF is classified DEADLINE, not peer EOF. Client
+observations never set active-stream/cache/unaffected acceptance PASS.
+Independent STREAM revoke binds its real separate grant/revision, exact pinned
+official CLI envelope and one fresh REVOKED receipt; mixed READ removal, NOOP,
+expiry, replay, changed policy/READ/native and wrong provenance fail closed.
+READ-positive native snapshot/page and fresh/old-cursor STREAM403 probes remain
+separate from full connected acceptance. Install ACK contains IDs but not grant
+revisions: artifact+actual readback supply those. Source decision timestamp is
+not a COMMIT timestamp/final-egress cutoff. Existing READ specimens preserved.
+
+Actual final command: `taskset -c0 nice -n15 python3 -I -B
+scripts/epg10-08/test_connected_read.py` with256MiB virtual-memory cap:
+66PASS/0FAIL/SKIP,40prior+26new (not66new),0.865s. TEST_ONLY fixtures only;
+no actual session/HTTP/DB/listener/role/schema/producer window. Final test-log
+SHA25657fcc60dd9518a025988c552047727ae115b1e34a295a7e80517efa243c9036c;
+driver SHA256cad1eeb6b8f3cd8244cdf7e3f3dd0001a7fefb32a105bdbfab60d7ecc519debf;
+tests SHA256a173beac18bb67c7a6e4290fccbb171425ed456ad74de2b83f763ff67afd8d2b.
+Independent source reviewer found two defects (mixed READ receipt and timer
+EOF classification), both fixed+regression tested; final pin review found no
+blocking defect. One test agent changed only the test file; reviewer used
+read-only Core/Edge inspection. Root owns implementation/journal/publication.
+
+**Owner return recheck:** FE792647d5 still has original three producer defects,
+no new correction ACK; Core0087818d563/image7b2c7f34/restart0 unchanged,
+009not installed. Existing priority packet on SGP FE and canonical Core request
+already contain exact corrections/Edge6e8f publication; do not invent a claim
+that Claude is executing a job. Public final runner delta will be returned to
+these same packets after publication, without editing peer source/runtime.
+
+**Source/release/runtime / closeout:** owned feature remains
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2`,
+`feat/execution-edge-upgrade-v1_2`; canonical source remains
+`/home/bobby/.worktrees/portal-execution-manager-v2` on
+`feat/manager-v2-paper-read@54c6f5f3`. HK Edge image d6aa7a51 and the same19
+protected service/config/restart tuples unchanged at08:59:06UTC before hook;
+97images/339shared BuildKit records, available253796225024bytes. Retain all
+active/explicit rollback images, all7active peer/feature worktrees, immutable
+original closure, HK stable a9b10385/SGP stable e4fd9365 releases, TS named
+rollback r59/r49. No release, new operational image or config selected here.
+Normal hook/commit then one nonforce feature push;0extra hosted CI expected,
+no PR/merge/dev/main. Exact final hook result, own disposable-hook image cleanup
+with before/after disk and protected comparison, commit/remote pins and actual
+SGP public handoff delivery are retained in predeclared private
+`/home/bobby/secure/portal-edge-pm-custody-20261020-fzQHVrEM/active-stream-publication-and-cleanup.json`.
+No Rust/public dependency cache or SGP test cell created by this slice; shared
+cache cleanup deliberately deferred (no owned record/new Docker layer beyond
+the hook's exact disposable image). Preserve all3peer untracked files.
+
+**Status/next allowed action:** owned runner implemented/isolated-qualified,
+not connected-certified. Core fixes its three named producer errors and returns
+real PG/normal R3/image/config/current policy/session; then coordinate fresh
+trust/native window, zero-custody swap and actual08READ/STREAM/revoke/cache/
+cursor/SSE. Cache-HIT and independent unaffected-scope need real correlation/
+bindings, not repeated reads or fake grants. Full08NOT_MET/09connectedNOT_STARTED.
+07awaits actual authenticated native submit/status+authority;03awaits accepted
+native publisher fence/coverage;01/06connected capacity needs matched target/
+source/bounds. None is reclassified as PASS by this runner work.
+
 
 
 

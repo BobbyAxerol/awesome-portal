@@ -424,6 +424,263 @@ class DriverTests(unittest.TestCase):
         self.assertEqual(result["status"], "FAIL")
         self.assertTrue(all(case["status"] != "PASS" for case in result["cases"].values()))
 
+    def test_active_observation_requires_strict_flag_baseline_probe_and_stream_grant(self):
+        for value in (1, 0, None, "true", {}):
+            with self.subTest(flag_type=type(value).__name__):
+                self.cfg["observe_active_stream"] = value
+                self.assertRefusedNoNetwork("BOUNDS_INVALID")
+        self.cfg["observe_active_stream"] = True
+        self.assertRefusedNoNetwork("OBSERVATION_MODE_INVALID")
+        self.cfg.update(probe_stream=True, stage="post_revoke")
+        self.assertRefusedNoNetwork("OBSERVATION_MODE_INVALID")
+        self.cfg["stage"] = "baseline"
+        self.assertRefusedNoNetwork("STREAM_NOT_AUTHORIZED")
+        self.docs["/TEST_ONLY/core"]["stream_authorized"] = True
+        self.assertRefusedNoNetwork("STREAM_SOURCE_SET_UNDECLARED")
+
+    def test_active_observation_transport_uses_remaining_deadline_and_owns_detached_socket(self):
+        self.cfg.update(observe_active_stream=True, probe_stream=True)
+        self.docs["/TEST_ONLY/core"].update(stream_authorized=True, source_set_ref="TEST_ONLY-source-set")
+        prepared = self.prepare()
+        connection, response, tls, timer_handle = MagicMock(), MagicMock(), MagicMock(), MagicMock()
+        connection.sock = tls
+        response.status = 200
+        response.getheader.side_effect = lambda key, default=None: {
+            "Content-Type": "text/event-stream"}.get(key, default)
+        response.getheaders.return_value = [("Content-Type", "text/event-stream")]
+        callbacks = []
+        def timer(_seconds, callback):
+            callbacks.append(callback)
+            return timer_handle
+        def detach():
+            connection.sock = None
+            return response
+        connection.getresponse.side_effect = detach
+        parsed = {"frames": 1, "notices": 1, "bytes": 128, "cursor": "TEST_ONLY-opaque",
+            "observation": {"status": "OBSERVED_ONLY", "termination": "DEADLINE",
+                "first_notice_after_ms": 0, "terminal_event": None,
+                "frame_observations": [], "final_egress_proved": False}}
+        def parser(*_args, **_kwargs):
+            self.assertIsNone(connection.sock)
+            tls.settimeout.assert_called_once_with(30.0)
+            callbacks[0]()  # TEST_ONLY model of the owning global timer during the held stream.
+            tls.shutdown.assert_called_once_with(driver.socket.SHUT_RDWR)
+            return parsed
+        with patch.object(driver.time, "monotonic", return_value=10.0), \
+                patch.object(driver.http.client, "HTTPSConnection", return_value=connection), \
+                patch.object(driver.threading, "Timer", side_effect=timer), \
+                patch.object(driver, "read_sse", side_effect=parser) as read_sse:
+            result = driver.Transport(prepared).request("stream", "TEST_ONLY-opaque", stream=True)
+        read_sse.assert_called_once_with(response, self.cfg["max_bytes"], 40.0,
+            "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+        self.assertEqual(result[2], parsed)
+        self.assertEqual(connection.request.call_args.args[0], "GET")
+        self.assertEqual(tls.shutdown.call_count, 2)
+        self.assertEqual(connection.close.call_count, 2)
+        response.close.assert_called_once()
+        timer_handle.cancel.assert_called_once()
+
+    def test_active_observation_run_publishes_only_side_facts_and_never_credits_revoke(self):
+        self.cfg.update(observe_active_stream=True, probe_stream=True)
+        self.docs["/TEST_ONLY/core"].update(stream_authorized=True, source_set_ref="TEST_ONLY-source-set",
+            stream_grant_id="stream-grant-TEST_ONLY", stream_grant_revision="stream-revision-1")
+        observation = {"status": "OBSERVED_ONLY", "termination": "SOCKET_TIMEOUT",
+            "first_notice_after_ms": 0, "terminal_event": None,
+            "frame_observations": [{"event_type": "revalidate", "frame_sha256": PIN,
+                "received_after_ms": 0}], "final_egress_proved": False}
+        transport = MagicMock()
+        finite_response = (200, {"x-portal-realtime-cursor": "TEST_ONLY-baseline-private-cursor"}, b"{}")
+        transport.request.side_effect = [finite_response, finite_response, finite_response,
+            (200, {}, {"frames": 1, "notices": 1, "bytes": 128,
+                "cursor": "TEST_ONLY-stream-private-cursor", "raw": "TEST_ONLY_PRIVATE_RAW",
+                "observation": observation})]
+        checkpoints = []
+        with patch.object(driver.time, "time", return_value=NOW), \
+                patch.object(driver, "finite", return_value={"status": "PASS"}):
+            result = driver.run(self.cfg, lambda _: transport, checkpoints.append)
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        self.assertEqual(result["requests"], 4)
+        self.assertEqual(transport.request.call_count, 4)
+        self.assertEqual(transport.request.call_args.args,
+            ("stream", "TEST_ONLY-baseline-private-cursor"))
+        self.assertEqual(transport.request.call_args.kwargs, {"stream": True})
+        self.assertEqual(result["active_stream_observation"], observation)
+        self.assertEqual(len(checkpoints), 1)
+        for key, value in (("read_authorized", True), ("stream_authorized", True),
+                ("stream_grant_id", "stream-grant-TEST_ONLY"),
+                ("stream_grant_revision", "stream-revision-1"),
+                ("cursor", "TEST_ONLY-baseline-private-cursor")):
+            self.assertEqual(checkpoints[0][key], value)
+        for case in ("active_stream_revocation", "cache_revocation", "unaffected_scope", "cursor_resume"):
+            self.assertEqual(result["cases"][case]["status"], "NOT_RUN")
+        self.assertEqual((result["full_08"], result["full_09"]), ("NOT_MET", "NOT_MET"))
+        for private in ("TEST_ONLY_PRIVATE_RAW", "TEST_ONLY-stream-private-cursor",
+                        "TEST_ONLY-baseline-private-cursor", "TEST_ONLY_PRIVATE_COOKIE",
+                        "stream-grant-TEST_ONLY", "stream-revision-1"):
+            self.assertNotIn(private, json.dumps(result))
+
+
+    def stream_revoke_inputs(self):
+        producer = self.docs["/TEST_ONLY/core"]
+        producer.update(stream_authorized=True, stream_grant_id="stream-grant-TEST_ONLY",
+                        stream_grant_revision="stream-revision-1")
+        producer, revoke = self.post_inputs("CORE_MANAGER_DOMAIN")
+        prior = self.docs["/TEST_ONLY/baseline"]
+        prior.update(read_authorized=True, stream_authorized=True,
+                     stream_grant_id=producer["stream_grant_id"],
+                     stream_grant_revision="stream-revision-1")
+        producer.update(stream_authorized=False, stream_grant_revision="stream-revision-2")
+        self.cfg["revoke_action"] = "stream.subscribe"
+        revoke.update(action="stream.subscribe", official_receipt={
+            "path": "/TEST_ONLY/official", "sha256": "f" * 64})
+        decided = int(datetime(2026, 10, 20, 5, 0, 30, tzinfo=timezone.utc).timestamp() * 1000)
+        official = {"schema_version": "portal.manager-domain-revoke-receipt.v1",
+            "revocation_id": "TEST_ONLY-revocation", "receipt_id": "TEST_ONLY-receipt",
+            "grant_id": producer["stream_grant_id"], "action": "stream.subscribe",
+            "mode": "REVOKE", "outcome": "REVOKED", "grant_revision_before": "stream-revision-1",
+            "grant_revision_after": "stream-revision-2", "policy_revision": "policy-1",
+            "valid_until_ms_before": decided + 3600000, "valid_until_ms_after": decided + 3600000,
+            "revoked_at_ms": decided, "decided_at_ms": decided, "replayed": False}
+        self.docs["/TEST_ONLY/official"] = {
+            "schema_version": "portal.native-research-manager-revoke.v1", "results": [official]}
+        return producer, prior, revoke, official
+
+    def test_stream_only_revoke_preserves_read_policy_and_native_revision(self):
+        producer, prior, _, _ = self.stream_revoke_inputs()
+        prepared = self.prepare()
+        self.assertEqual(prepared["revoke_action"], "stream.subscribe")
+        for key in ("policy_revision", "manager_grant_revision", "native_revision"):
+            self.assertEqual(producer[key], prior[key])
+        self.assertTrue(producer["read_authorized"])
+        self.assertFalse(producer["stream_authorized"])
+
+    def test_stream_revoke_requires_same_live_read_and_native_and_selected_stream(self):
+        changes = (("read_authorized", False), ("stream_authorized", True),
+            ("native_revoked", True), ("policy_revision", "policy-2"),
+            ("manager_grant_revision", "grant-revision-2"), ("native_revision", 4),
+            ("stream_grant_id", "stream-OTHER"), ("stream_grant_id", "grant-TEST_ONLY"),
+            ("stream_grant_revision", "stream-revision-1"), ("stream_grant_revision", None))
+        for key, value in changes:
+            with self.subTest(field=key, value=value):
+                self.cfg, self.docs = inputs()
+                producer, _, _, _ = self.stream_revoke_inputs()
+                producer[key] = value
+                self.assertRefusedNoNetwork()
+
+    def test_stream_revoke_cannot_borrow_an_unobserved_baseline_grant(self):
+        for key in ("read_authorized", "stream_authorized", "stream_grant_id", "stream_grant_revision"):
+            with self.subTest(field=key):
+                self.cfg, self.docs = inputs()
+                _, prior, _, _ = self.stream_revoke_inputs()
+                del prior[key]
+                self.assertRefusedNoNetwork("REVOKE_PROVENANCE_INVALID")
+
+    def test_stream_receipt_requires_official_pinned_envelope_and_unique_selected_grant(self):
+        for change in ("missing", "hash", "bare", "schema", "empty", "duplicate", "mixed_read", "nondict"):
+            with self.subTest(change=change):
+                self.cfg, self.docs = inputs()
+                _, _, revoke, official = self.stream_revoke_inputs()
+                envelope = self.docs["/TEST_ONLY/official"]
+                if change == "missing":
+                    del revoke["official_receipt"]
+                elif change == "hash":
+                    revoke["official_receipt"]["sha256"] = "0" * 64
+                elif change == "bare":
+                    self.docs["/TEST_ONLY/official"] = official
+                elif change == "schema":
+                    envelope["schema_version"] = "TEST_ONLY-unofficial"
+                elif change == "empty":
+                    envelope["results"] = []
+                elif change == "duplicate":
+                    envelope["results"].append(copy.deepcopy(official))
+                elif change == "mixed_read":
+                    envelope["results"].append(dict(official, action="business.read_all",
+                        grant_id="grant-TEST_ONLY"))
+                else:
+                    envelope["results"] = [None]
+                self.assertRefusedNoNetwork("STREAM_REVOKE_RECEIPT_INVALID")
+
+    def test_stream_receipt_is_a_fresh_actual_transition_not_expiry_noop_or_replay(self):
+        changes = (("action", "business.read_all"), ("outcome", "NARROWED"),
+            ("outcome", "NOOP_ALREADY_REVOKED"), ("outcome", "NOOP_EXPIRED"), ("mode", "NARROW"),
+            ("replayed", True), ("replayed", 0), ("grant_id", "grant-OTHER"),
+            ("grant_revision_before", "stream-revision-OTHER"),
+            ("grant_revision_after", "stream-revision-OTHER"), ("policy_revision", "policy-OTHER"),
+            ("receipt_id", ""), ("revocation_id", None), ("revoked_at_ms", True),
+            ("decided_at_ms", 0), ("valid_until_ms_after", 0), ("revoked_at_ms", int(NOW * 1000)))
+        for key, value in changes:
+            with self.subTest(field=key, value=value):
+                self.cfg, self.docs = inputs()
+                _, _, _, official = self.stream_revoke_inputs()
+                official[key] = value
+                self.assertRefusedNoNetwork("STREAM_REVOKE_RECEIPT_INVALID")
+
+    def test_stream_action_does_not_silently_select_read_or_pm_revoke(self):
+        for change in ("config", "owner_action", "pm_authority"):
+            with self.subTest(change=change):
+                self.cfg, self.docs = inputs()
+                _, _, revoke, _ = self.stream_revoke_inputs()
+                if change == "config":
+                    del self.cfg["revoke_action"]
+                elif change == "owner_action":
+                    del revoke["action"]
+                else:
+                    revoke["authority"] = "PM_NATIVE_READ"
+                self.assertRefusedNoNetwork("REVOKE_PROVENANCE_INVALID")
+
+    def test_stream_poststage_probes_preserved_read_then_fresh_and_old_cursor_denial(self):
+        self.stream_revoke_inputs()
+        p = self.prepare()
+        transport = MagicMock()
+        transport.request.side_effect = [(200, {}, b"TEST_ONLY-page"), (200, {}, b"TEST_ONLY-snapshot"),
+            (403, {}, b'{"error":{"code":"ACCESS_DENIED"}}'),
+            (403, {}, b'{"error":{"code":"ACCESS_DENIED"}}')]
+        with patch.object(driver, "prepare", return_value=p), \
+                patch.object(driver, "finite", return_value={"status": "PASS", "bytes": 1}):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual(result["requests"], 4)
+        self.assertEqual(result["status"], "SCOPED_OBSERVATIONS_ONLY")
+        self.assertEqual([x.args[:2] for x in transport.request.call_args_list], [
+            ("deployments", None), ("snapshot", None), ("stream", None), ("stream", "TEST_ONLY-opaque")])
+        for name in ("post_revoke_stream", "post_revoke_cursor", "post_revoke_stream_read_preserved"):
+            self.assertEqual(result["cases"][name]["status"], "PASS")
+        for name in ("post_revoke_read", "active_stream_revocation", "cache_revocation", "unaffected_scope"):
+            self.assertEqual(result["cases"][name]["status"], "NOT_RUN")
+        self.assertEqual((result["full_08"], result["full_09"]), ("NOT_MET", "NOT_MET"))
+        self.assertEqual(result["mutations"], 0)
+        public = json.dumps(result)
+        for private in ("TEST_ONLY-opaque", "stream-grant-TEST_ONLY", "TEST_ONLY-receipt",
+                        "TEST_ONLY_PRIVATE_COOKIE"):
+            self.assertNotIn(private, public)
+
+    def test_stream_probe_cannot_credit_invalid_cursor_or_pm_eof_as_current_policy_denial(self):
+        for status, raw in ((200, b'{}'), (409, b'{"code":"CURSOR_INVALID_OR_EXPIRED"}'),
+                (403, b'{"code":"NATIVE_MANAGER_READ_DENIED"}'), (403, b'{"code":"OTHER"}')):
+            with self.subTest(status=status, body=raw):
+                self.cfg, self.docs = inputs()
+                self.stream_revoke_inputs()
+                transport = MagicMock()
+                transport.request.side_effect = [(200, {}, b"TEST_ONLY-page"),
+                    (200, {}, b"TEST_ONLY-snapshot"), (status, {}, raw)]
+                with patch.object(driver, "prepare", return_value=self.prepare()), \
+                        patch.object(driver, "finite", return_value={"status": "PASS"}):
+                    result = driver.run(self.cfg, lambda _: transport)
+                self.assertEqual(result["reason"], "REVOKED_STREAM_NOT_DENIED")
+                self.assertEqual(result["cases"]["post_revoke_stream"]["status"], "NOT_RUN")
+
+    def test_legacy_read_revoke_still_runs_exact_two_denial_probes(self):
+        producer, _ = self.post_inputs("CORE_MANAGER_DOMAIN")
+        producer.update(read_authorized=False, policy_revision="policy-2")
+        transport = MagicMock()
+        transport.request.side_effect = [(403, {}, b'{"code":"ACCESS_DENIED"}'),
+            (409, {}, b'{"code":"CURSOR_INVALID_OR_EXPIRED"}')]
+        with patch.object(driver, "prepare", return_value=self.prepare()):
+            result = driver.run(self.cfg, lambda _: transport)
+        self.assertEqual(result["requests"], 2)
+        self.assertEqual(result["cases"]["post_revoke_read"]["status"], "PASS")
+        self.assertEqual(result["cases"]["post_revoke_cursor"]["status"], "PASS")
+        self.assertEqual(result["cases"]["post_revoke_stream"]["status"], "NOT_RUN")
+
 
 class SseTests(unittest.TestCase):
     def wire(self, event, **changes):
@@ -479,6 +736,206 @@ class SseTests(unittest.TestCase):
             with self.assertRaisesRegex(driver.Refused, "DEADLINE_EXCEEDED"):
                 driver.read_sse(io.BytesIO(self.wire("revalidate")), 8192, 1,
                     "TEST_ONLY-epoch", "TEST_ONLY-source-set")
+
+    def capture(self, raw, maximum=8192):
+        with patch.object(driver.time, "monotonic", return_value=10.0):
+            return driver.read_sse(io.BytesIO(raw), maximum, 12.0,
+                "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+
+    def assertObservation(self, result, termination, events):
+        observation = result["observation"]
+        self.assertEqual(set(observation), {"status", "termination", "first_notice_after_ms",
+            "terminal_event", "frame_observations", "final_egress_proved", "started_at_utc", "elapsed_ms"})
+        self.assertEqual(datetime.fromisoformat(observation["started_at_utc"]).utcoffset().total_seconds(), 0)
+        self.assertIs(type(observation["elapsed_ms"]), int)
+        self.assertGreaterEqual(observation["elapsed_ms"], 0)
+        self.assertEqual(observation["status"], "OBSERVED_ONLY")
+        self.assertEqual(observation["termination"], termination)
+        self.assertIs(observation["final_egress_proved"], False)
+        self.assertEqual([frame["event_type"] for frame in observation["frame_observations"]], events)
+        for frame in observation["frame_observations"]:
+            self.assertEqual(set(frame), {"event_type", "frame_sha256", "received_after_ms"})
+            self.assertRegex(frame["frame_sha256"], r"\A[a-f0-9]{64}\Z")
+            self.assertIs(type(frame["received_after_ms"]), int)
+            self.assertGreaterEqual(frame["received_after_ms"], 0)
+        public = json.dumps(observation)
+        for private in ("TEST_ONLY-opaque", "TEST_ONLY-epoch", "TEST_ONLY-source-set",
+                        "resume_cursor", "projection_generation", "payload", "quality"):
+            self.assertNotIn(private, public)
+        return observation
+
+    def test_observation_is_opt_in_and_default_still_stops_at_first_notice(self):
+        first = self.wire("revalidate")
+        raw = first + self.wire("heartbeat") + self.wire("revalidate")
+        for kwargs in ({}, {"observe": False}):
+            with self.subTest(explicit=bool(kwargs)), \
+                    patch.object(driver.time, "monotonic", return_value=10.0):
+                result = driver.read_sse(io.BytesIO(raw), 8192, 12.0,
+                    "TEST_ONLY-epoch", "TEST_ONLY-source-set", **kwargs)
+            self.assertEqual(result, {"frames": 1, "notices": 1,
+                "bytes": len(first), "cursor": "TEST_ONLY-opaque"})
+
+    def test_observation_keeps_reading_and_hashes_each_valid_frame_without_raw_data(self):
+        wires = [self.wire(event) for event in ("revalidate", "heartbeat", "revalidate")]
+        raw = b"".join(wires)
+        result = self.capture(raw)
+        observation = self.assertObservation(result, "EOF", ["revalidate", "heartbeat", "revalidate"])
+        self.assertEqual((result["frames"], result["notices"], result["bytes"]), (3, 2, len(raw)))
+        self.assertEqual(result["cursor"], "TEST_ONLY-opaque")
+        self.assertEqual(observation["first_notice_after_ms"], 0)
+        self.assertIsNone(observation["terminal_event"])
+        for wire, observed in zip(wires, observation["frame_observations"]):
+            frame = json.loads(next(line[6:] for line in wire.splitlines() if line.startswith(b"data: ")))
+            self.assertEqual(observed["frame_sha256"], driver.digest(frame))
+
+    def test_observation_stops_at_valid_terminal_not_the_preceding_notice(self):
+        terminal = self.wire("access_revoked", terminal=True, resume_cursor=None,
+            projection_generation=None, quality=None, reason_code="ACCESS_CHANGED",
+            next_action="SIGN_IN_OR_REQUEST_ACCESS")
+        prefix = self.wire("revalidate") + terminal
+        result = self.capture(prefix + b"TEST_ONLY_UNREAD_INVALID_TAIL\n\n")
+        observation = self.assertObservation(result, "TERMINAL", ["revalidate", "access_revoked"])
+        self.assertEqual((result["frames"], result["notices"], result["bytes"]), (2, 1, len(prefix)))
+        self.assertEqual(observation["terminal_event"], "access_revoked")
+
+    def test_each_valid_terminal_observation_is_not_final_egress_or_source_notice(self):
+        for event, reason, action in (("access_revoked", "ACCESS_CHANGED", "SIGN_IN_OR_REQUEST_ACCESS"),
+                ("resync_required", "SNAPSHOT_REQUIRED", "READ_NAMED_SNAPSHOT"),
+                ("unavailable", "SOURCE_UNAVAILABLE", "WAIT")):
+            with self.subTest(event=event):
+                raw = self.wire(event, terminal=True, reconnect_required=event == "resync_required",
+                    resume_cursor=None, projection_generation=None, quality=None,
+                    reason_code=reason, next_action=action)
+                result = self.capture(raw)
+                observation = self.assertObservation(result, "TERMINAL", [event])
+                self.assertEqual(observation["terminal_event"], event)
+                self.assertIsNone(observation["first_notice_after_ms"])
+                self.assertEqual(result["notices"], 0)
+                self.assertIsNone(result["cursor"])
+
+    def test_empty_comment_and_heartbeat_eof_do_not_manufacture_a_notice(self):
+        for raw, events in ((b"", []), (b": TEST_ONLY keepalive\n\n", []),
+                            (self.wire("heartbeat"), ["heartbeat"])):
+            with self.subTest(events=events, bytes=len(raw)):
+                result = self.capture(raw)
+                observation = self.assertObservation(result, "EOF", events)
+                self.assertEqual(result["notices"], 0)
+                self.assertIsNone(result["cursor"])
+                self.assertIsNone(observation["first_notice_after_ms"])
+                self.assertIsNone(observation["terminal_event"])
+
+    def test_observation_socket_timeout_is_not_a_revoke_or_final_egress(self):
+        class TimeoutAfterBytes(io.BytesIO):
+            def readline(self, maximum):
+                line = super().readline(maximum)
+                if not line:
+                    raise TimeoutError("TEST_ONLY_QUIET_STREAM")
+                return line
+        for raw, events, notices in ((b"", [], 0), (self.wire("revalidate"), ["revalidate"], 1)):
+            with self.subTest(events=events), patch.object(driver.time, "monotonic", return_value=10.0):
+                result = driver.read_sse(TimeoutAfterBytes(raw), 8192, 12.0,
+                    "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+            observation = self.assertObservation(result, "SOCKET_TIMEOUT", events)
+            self.assertEqual(result["notices"], notices)
+            self.assertIsNone(observation["terminal_event"])
+
+    def test_observation_frame_limit_is_exactly_eight_without_reading_the_ninth(self):
+        wire = self.wire("revalidate")
+        result = self.capture(wire * 9, maximum=16384)
+        self.assertObservation(result, "FRAME_LIMIT", ["revalidate"] * 8)
+        self.assertEqual((result["frames"], result["notices"], result["bytes"]), (8, 8, len(wire) * 8))
+
+    def test_observation_expired_deadline_performs_no_read_and_credits_no_notice(self):
+        response = MagicMock()
+        response.readline.side_effect = AssertionError("TEST_ONLY_MUST_NOT_READ")
+        with patch.object(driver.time, "monotonic", return_value=12.0):
+            result = driver.read_sse(response, 8192, 12.0,
+                "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+        observation = self.assertObservation(result, "DEADLINE", [])
+        self.assertEqual((result["frames"], result["notices"], result["bytes"]), (0, 0, 0))
+        self.assertIsNone(observation["first_notice_after_ms"])
+        response.readline.assert_not_called()
+
+    def test_observation_does_not_credit_a_frame_delivered_after_the_deadline(self):
+        clock = [10.0]
+        class LateDelimiter(io.BytesIO):
+            def readline(self, maximum):
+                line = super().readline(maximum)
+                if line == b"\n":
+                    clock[0] = 12.0
+                return line
+        with patch.object(driver.time, "monotonic", side_effect=lambda: clock[0]):
+            result = driver.read_sse(LateDelimiter(self.wire("revalidate")), 8192, 12.0,
+                "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+        observation = self.assertObservation(result, "DEADLINE", [])
+        self.assertEqual(result["notices"], 0)
+        self.assertIsNone(result["cursor"])
+        self.assertIsNone(observation["first_notice_after_ms"])
+
+    def test_observation_times_first_notice_and_frames_from_the_same_monotonic_origin(self):
+        clock = [10.0]
+        class TimedFrames(io.BytesIO):
+            def readline(self, maximum):
+                line = super().readline(maximum)
+                if line == b"\n":
+                    clock[0] += 0.125
+                return line
+        raw = self.wire("heartbeat") + self.wire("revalidate") + self.wire("revalidate")
+        with patch.object(driver.time, "monotonic", side_effect=lambda: clock[0]):
+            result = driver.read_sse(TimedFrames(raw), 8192, 12.0,
+                "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+        observation = self.assertObservation(result, "EOF", ["heartbeat", "revalidate", "revalidate"])
+        self.assertEqual(observation["first_notice_after_ms"], 250)
+        self.assertEqual([frame["received_after_ms"] for frame in observation["frame_observations"]],
+            [125, 250, 375])
+
+    def test_observation_keeps_byte_and_line_limits_fail_closed(self):
+        for raw, maximum in ((self.wire("revalidate"), 10),
+                             (b":" + b"x" * 65536 + b"\n", 1048576)):
+            with self.subTest(maximum=maximum), self.assertRaisesRegex(driver.Refused, "STREAM_LIMIT"):
+                self.capture(raw, maximum)
+
+    def test_observation_does_not_relax_frame_scope_terminal_or_payload_validation(self):
+        for raw in (self.wire("revalidate", projection_generation="TEST_ONLY_OTHER"),
+                self.wire("revalidate").replace(b"TEST_ONLY-source-set", b"TEST_ONLY-OTHER"),
+                self.wire("revalidate").replace(b"event: revalidate", b"event: heartbeat"),
+                self.wire("access_revoked", terminal=True),
+                self.wire("revalidate", payload={"TEST_ONLY_SECRET": "TEST_ONLY_VALUE"})):
+            with self.subTest(bytes=len(raw)), self.assertRaises(driver.Refused):
+                self.capture(raw)
+
+    def test_observation_only_classifies_physical_abort_as_deadline_after_deadline(self):
+        for after_deadline in (False, True):
+            clock = [10.0]
+            class AbortedStream:
+                def readline(self, _maximum):
+                    if after_deadline:
+                        clock[0] = 12.0
+                    raise OSError("TEST_ONLY_PHYSICAL_ABORT")
+            with self.subTest(after_deadline=after_deadline), \
+                    patch.object(driver.time, "monotonic", side_effect=lambda: clock[0]):
+                if after_deadline:
+                    result = driver.read_sse(AbortedStream(), 8192, 12.0,
+                        "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+                    self.assertObservation(result, "DEADLINE", [])
+                    self.assertEqual(result["notices"], 0)
+                else:
+                    with self.assertRaisesRegex(OSError, "TEST_ONLY_PHYSICAL_ABORT"):
+                        driver.read_sse(AbortedStream(), 8192, 12.0,
+                            "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+
+    def test_observation_deadline_aborted_eof_is_not_labeled_peer_eof(self):
+        clock = [10.0]
+        class DeadlineEof:
+            def readline(self, _maximum):
+                clock[0] = 12.0
+                return b""
+        with patch.object(driver.time, "monotonic", side_effect=lambda: clock[0]):
+            result = driver.read_sse(DeadlineEof(), 8192, 12.0,
+                "TEST_ONLY-epoch", "TEST_ONLY-source-set", observe=True)
+        observation = self.assertObservation(result, "DEADLINE", [])
+        self.assertEqual(observation["elapsed_ms"], 2000)
+        self.assertEqual(result["notices"], 0)
 
 
 if __name__ == "__main__":

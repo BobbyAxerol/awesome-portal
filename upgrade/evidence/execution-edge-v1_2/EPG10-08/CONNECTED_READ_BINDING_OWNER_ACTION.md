@@ -33,7 +33,8 @@ window, and do not reopen a source only to wait. READ is not STREAM; candidate
 trust ends08:00:59UTC and must be fresh at opening. Stable28445 is unchanged.
 
 Edge has implemented the small operational connected-case runner in the
-existing08 harness boundary, with40TEST_ONLY unit cases PASS (29previous+11official-session format cases). A configured process or HTTP200 alone is not
+existing08 harness boundary, with66TEST_ONLY unit cases PASS (40previous,
+26new active-observation/STREAM-action cases). A configured process or HTTP200 alone is not
 business/current-authority acceptance. Only actual route results with current
 source/Core policy evidence can qualify a scoped case. No raw business payload,
 cookie, private configuration or credential belongs in the public return.
@@ -48,10 +49,10 @@ Core READ and Core STREAM are distinct.
 ### Current runner and priority assignment
 
 - [Driver](../../../../scripts/epg10-08/connected_read.py), SHA256
-  `18cb1a352d8e3d9cd37ddaafcd3340d0e60e6657b6245db0a248e18313d67d92`.
+  `cad1eeb6b8f3cd8244cdf7e3f3dd0001a7fefb32a105bdbfab60d7ecc519debf`.
 - [Tests](../../../../scripts/epg10-08/test_connected_read.py), SHA256
-  `754914fc3db8702b63e984bdae211dadf4e873fe2a45242e1a0649cdd754ec8f`:
-  `python3 -I -B scripts/epg10-08/test_connected_read.py`,40PASS/0FAIL/0SKIP.
+  `a173beac18bb67c7a6e4290fccbb171425ed456ad74de2b83f763ff67afd8d2b`:
+  `python3 -I -B scripts/epg10-08/test_connected_read.py`,66PASS/0FAIL/0SKIP.
 - [Claude's priority packet](CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md)
   delivered byte-exact to `/home/bobby/portal-research-fe` on SGP and indexed in
   its Unified/sync docs. Claude answered with the prepared return below;
@@ -170,6 +171,42 @@ Known source seals/mapping above remain historical inputs; renewal/current
 source head and reviewed field-policy reference must come from real artifacts.
 Existing08 approval covers this correction/binding work; no new phase or blanket
 approval requested. Full08NOT_MET; scoped connected09NOT_STARTED.
+
+### Active-stream observation and independent STREAM removal —20Oct
+
+The current driver supports opt-in `observe_active_stream:true` on a baseline
+with `probe_stream:true` and actual commissioned STREAM permission. It holds
+the same physical response after its first validated notice until a valid
+terminal, EOF/timeout, eight frames, byte ceiling or the global deadline.
+Source cursor stays private. Public output has bounded canonical frame hashes,
+event classes, client UTC anchor and monotonic offsets/termination only.
+`active_stream_revocation` remains NOT_RUN and `final_egress_proved:false`:
+client timing/terminal/EOF is not server final-egress or measured revoke SLO.
+The existing private checkpoint is written before the subscription; its UTC
+time alone does not prove the stream is active. Correlate real source/Core
+receipts and actual subscribed-window facts before accepting that experiment.
+
+For STREAM-only poststage set `revoke_action:"stream.subscribe"`; retain the
+same native head, READ grant/revision/policy, scope/session and positive READ.
+Producer and private baseline include distinct actual `stream_grant_id` and
+`stream_grant_revision`. Get IDs from the installed grant ACK; get revisions
+from the pinned artifact AND real current readback (ACK has no revision field).
+The owner `revoke_return` declares `action:"stream.subscribe"` and adds a pinned
+`official_receipt:{path,sha256}` matching its `official_receipt_sha256`.
+Use the existing official CLI output envelope
+`portal.native-research-manager-revoke.v1` with exactly one selected STREAM
+`portal.manager-domain-revoke-receipt.v1`, fresh `REVOKED`/`REVOKE`, matching
+before/after revisions, unchanged validity/policy and `replayed:false`.
+No expiry/NOOP, mixed READ revoke, action label or synthetic grant substitutes.
+Its DB decision time is not a COMMIT timestamp or final-byte cutoff.
+
+That specimen validates native snapshot+deployment READ still succeeds and
+fresh/old-cursor STREAM requests return Core403/ACCESS_DENIED. These are scoped
+post-revoke observations, not active-stream/cache-HIT/unaffected-principal
+proofs. Old baseline and READ-revoke input remain compatible. No mutation is
+performed by the runner; official Core/PM operations stay externally owned.
+66unit PASS/0FAIL/SKIP under1CPU/256MiB, all fixtures TEST_ONLY; no real session,
+API/native authority, runtime or source window used by that qualification.
 
 Operational invocation, only after actual inputs are ready:
 `python3 -I -B scripts/epg10-08/connected_read.py --config PRIVATE_PATH --sha256 ACTUAL_PIN`.
