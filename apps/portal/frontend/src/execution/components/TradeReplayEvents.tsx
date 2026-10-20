@@ -290,6 +290,7 @@ export function TradeReplayEvents({ orders, fills, candles, asOf, accounts = [],
             focusId={focusTarget}
             groups={groups}
             levelsInAutoscale={!plain}
+            hostRole={plain ? "group" : "img"}
           />
         </div>
         <div className="exec-rp-legend">
