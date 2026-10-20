@@ -245,29 +245,40 @@ export function NotPublished({ id, reasonCode, titleReason, children, compact = 
       </span>
     );
   }
+  const code = reasonCode ? ` · ${reasonCode}` : "";
+  // The id and the reason code are for whoever asks, not for the reader scanning the page: they stay in the text for assistive
+  // tech and copy (visually hidden) and in the tooltip, and the visible part is the word and what is missing.
+  const hidden = (
+    <span className="exec-blk-sr">
+      {" ("}
+      <span className="exec-blk-np-id">{id}</span>
+      {")"}
+      {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
+    </span>
+  );
   if (!first) {
     return (
-      <span className="exec-blk-np" data-repeat="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}`}>
+      <span className="exec-blk-np" data-repeat="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}${code}`}>
         <span className="exec-blk-np-word">{NOT_PUBLISHED}</span>
         {children ? <> {children}</> : null}
-        {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
+        {reasonCode ? <span className="exec-blk-sr"><span className="exec-blk-np-reason">{reasonCode}</span></span> : null}
       </span>
     );
   }
   if (compact) {
     return (
-      <span className="exec-blk-np" data-compact="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}`}>
+      <span className="exec-blk-np" data-compact="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}${code}`}>
         <span className="exec-blk-sr">{notPublishedText(id)} </span>
         <span className="exec-blk-np-short">{children ?? NOT_PUBLISHED}</span>
-        {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
+        {reasonCode ? <span className="exec-blk-sr"><span className="exec-blk-np-reason">{reasonCode}</span></span> : null}
       </span>
     );
   }
   return (
-    <span className="exec-blk-np" title={`${feLabel(id)}${why}`}>
-      <span className="exec-blk-np-word">{NOT_PUBLISHED}</span> (<span className="exec-blk-np-id">{id}</span>)
+    <span className="exec-blk-np" title={`${id} · ${feLabel(id)}${why}${code}`}>
+      <span className="exec-blk-np-word">{NOT_PUBLISHED}</span>
+      {hidden}
       {children ? <> {children}</> : null}
-      {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
     </span>
   );
 }

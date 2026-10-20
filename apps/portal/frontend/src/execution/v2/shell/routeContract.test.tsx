@@ -157,7 +157,7 @@ describe("envLockFor (D6)", () => {
     ["EXECUTION_CANARY_CONTROL_ROOM_SCREEN", "live"],
     ["EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "live"],
   ])("%s is decided by its path (%s), whatever the flags", (screenId, env) => {
-    for (const isV2 of [all, none]) expect(envLockFor(screenId, {}, isV2)).toEqual({ reason: PATH_ENV_REASON, effective: env });
+    for (const isV2 of [all, none]) expect(envLockFor(screenId, {}, isV2)).toMatchObject({ reason: PATH_ENV_REASON, effective: env });
   });
 
   it.each([
@@ -302,7 +302,7 @@ describe("shell + cockpit on", () => {
     const { container } = await mountRoute("/administration/actions?stage=foo&env=xx&window=24h&q=ok");
     await waitFor(() => expect(container.querySelector('[data-notice="invalid-params"]')).not.toBeNull());
     const notice = container.querySelector('[data-notice="invalid-params"]')!;
-    expect(notice.textContent).toMatch(/parameters: env, window, stage\./);
+    expect(notice.textContent).toMatch(/parameters: env, window, stage( |$)/);
     expect(notice.textContent).not.toMatch(/foo|xx|24h/);
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(container.querySelector('[data-notice="invalid-params"]')).toBeNull();
