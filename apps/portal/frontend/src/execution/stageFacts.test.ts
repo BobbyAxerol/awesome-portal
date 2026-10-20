@@ -322,3 +322,68 @@ describe("Paper: positions_by_side (S3-U4) and venue_calendar (FE-070)", () => {
     expect(readVenueCalendar({ ...c, extra: 1 })).toBeNull();
   });
 });
+
+
+/* ── L3: every member is closed at every depth ─────────────────────────────── */
+
+type Path = (string | number)[];
+
+/** Every object node (path) and every leaf (path) of a JSON value. */
+function walk(value: unknown, path: Path = [], objects: Path[] = [], leaves: Path[] = []): { objects: Path[]; leaves: Path[] } {
+  if (Array.isArray(value)) value.forEach((item, index) => walk(item, [...path, index], objects, leaves));
+  else if (value !== null && typeof value === "object") {
+    objects.push(path);
+    for (const [key, child] of Object.entries(value)) walk(child, [...path, key], objects, leaves);
+  } else leaves.push(path);
+  return { objects, leaves };
+}
+function at(root: Any, path: Path): any {
+  return path.reduce<any>((node, key) => node[key], root);
+}
+function put(root: Any, path: Path, value: unknown): Any {
+  const copy = clone(root);
+  if (path.length === 0) return value as Any;
+  at(copy, path.slice(0, -1))[path[path.length - 1]!] = value;
+  return copy;
+}
+function dropKey(root: Any, path: Path): Any {
+  const copy = clone(root);
+  delete at(copy, path.slice(0, -1))[path[path.length - 1]!];
+  return copy;
+}
+
+describe("closed at every depth (L3 over the canonical populated bodies)", () => {
+  const subjects: [string, () => unknown, (raw: any) => unknown][] = [
+    ["stage_facts (source-backed)", facts, readStageFacts],
+    ["stage_facts (dark)", () => dark().stage_facts, readStageFacts],
+    ["compliance rows", () => envelopeFacts().rows, readComplianceRows],
+    ["envelope verdict", () => envelopeFacts().verdict, readEnvelopeVerdict],
+    ["rollback items", () => envelopeFacts().items, readRollbackItems],
+    ["trial", () => envelopeFacts().trial, readTrial],
+    ["typed positions", () => rows().typed_positions, readTypedPositions],
+    ["typed orders", () => rows().typed_orders, readTypedOrders],
+    ["source figures", () => rows().source_figures, readSourceFigures],
+    ["gap ranges", () => rows().gap_ranges, readGapRanges],
+    ["plan envelope", () => rows().plan_rows[0].envelope, readPlanEnvelope],
+    ["venue calendar", calendar, readVenueCalendar],
+    ["positions by side", () => loadCanonical<Any>("execution-paper-workbench.positions-by-side").data.positions_by_side, readPositionsBySide],
+  ];
+
+  it.each(subjects)("%s: the canonical body reads, and each planted key, deleted key and mistyped leaf refuses it", (_name, build, read) => {
+    const body = build();
+    expect(read(body), "the canonical body reads").not.toBeNull();
+    const { objects, leaves } = walk(body);
+    for (const path of objects) {
+      expect(read(put(body as Any, [...path, "zz_planted"], 1)), `planted key at ${path.join(".") || "root"}`).toBeNull();
+    }
+    for (const path of [...objects.flatMap((p) => Object.keys(at(body as Any, p)).map((k) => [...p, k] as Path)), ...leaves]) {
+      // an array item is not a required key: only object members are
+      const parent = at(body as Any, path.slice(0, -1));
+      if (path.length === 0 || Array.isArray(parent)) continue;
+      expect(read(dropKey(body as Any, path)), `deleted ${path.join(".")}`).toBeNull();
+    }
+    for (const path of leaves) {
+      expect(read(put(body as Any, path, {})), `object at leaf ${path.join(".")}`).toBeNull();
+    }
+  });
+});
