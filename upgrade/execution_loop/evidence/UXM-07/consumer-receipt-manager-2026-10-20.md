@@ -135,3 +135,63 @@ Named stricter-than-schema groups (all producer rules JSON Schema cannot state; 
 - Series: `ALPHA` / `DEPLOYMENT` subjects are not built by the producer; the Compare "Alphas" choice stays off (`Not published (FE-033)`).
 - Overview's `MeasureSeg` (Net PnL / Return / Equity) stays disabled: the fund NAV is the only fund series this round wires.
 - Testkit: no `dependentRequired` was needed; `testkit/schema.ts` was not edited.
+
+## 9. Addendum 2026-10-20: FE-013 ratio scale (BE-P8 consumed) — consumer side
+
+Writer: Claude (FE writer). Lane `FIXTURE_LAB` (reader, model) plus `BFF_DOUBLE` (Compare). Consumed: [BE-P8](../BE-CLAUDE-2026-10-20/BE-P8.md) section 1 "FE reader change"
+(contract commit `9e219e44`, FE base `1055cea6`). Both CHANGES_REQUESTED of section 7 / FE-013 are consumed: (1) the RATIO scale is now a stated `ratio_scale`;
+(2) the unit is tied to the metric in the response (the schema now says what MS-S6 enforced alone). This is the consumer's record, not Codex's ACCEPTED and not a source
+acceptance: every value is `TEST_ONLY`, `REAL_READ_QUALIFIED` stays NOT_RUN (no profile publishes a series). `FRONTEND_BACKEND_SYNC.md` and `UNIFIED_IMPLEMENTATION_PLAN.md` not edited.
+
+### 9.1 What the reader and the screens do now
+
+| BE-P8 item | FE change | Where |
+| --- | --- | --- |
+| 1 `ratio_scale` in the entry | `ENTRY_KEYS` + `ratio_scale`; closed set `MANAGER_SERIES_RATIO_SCALES = [FRACTION, PERCENT]`; `ManagerSeriesDescribed.ratioScale` | `readers/managerSeries.ts` |
+| 2 branches | UNAVAILABLE requires `ratio_scale === null`; AVAILABLE and EMPTY: RATIO requires a scale from the closed set, MONEY requires `null` (MS-S6 extended; EMPTY included) | same |
+| 3 `RATIO_SCALE_NOT_PUBLISHED` | added to `SERIES_UNAVAILABLE_REASONS`; accepted only when the response `metric === "RETURN"`; NOT in `SOURCE_NOT_PUBLISHED_REASONS` (it needs a published source, so under `series_source NOT_PUBLISHED` it is refused) | same |
+| 4 `RATIO_SCALE_MIXED` | inserted after `UNIT_MIXED`, before `METHODOLOGY_MIXED`, in `COMPARISON_MISMATCH_REASONS` and in the local re-derivation (`e.ratioScale !== first.ratioScale`); `comparison.common.ratio_scale` is read (nullable closed enum) and compared | same |
+| metric <-> unit | already refused by the reader (MS-S6); now the schema agrees, so `RATIO under NAV` left the stricter-than-schema list | `managerSeries.conformance.test.ts` |
+| 5 print | `FRACTION`: the published string is shifted two places **in the string** (`shiftDecimalTwo`: `0.0123` -> `1.23`, `-0.004` -> `-0.4`, 25-digit integers and 34-digit fractions keep every digit; no `Number`, no float) and printed with `%` by the shared formatter's `pct` class; `PERCENT`: printed as published with `%`. The shift is applied to chart points (so geometry, axis, tooltip and last-value readout agree) and to Overview NAV / Portfolio 360 NAV through one helper (`seriesValueText`; MONEY is unchanged). The published string stays in the read and in `title`. | `screens/series/seriesModel.ts` |
+| 5 caption | `Return, a ratio stated as a fraction (1.0 is 100%), shown in %` / `... stated as percent (100 is 100%)`; Compare's common caption and per-subject notes (`ratio, scale FRACTION`) state the scale | same, `screens/compare/index.tsx` |
+| 5 typed cell | `RATIO_SCALE_NOT_PUBLISHED`: copy `Not published (FE-013)` (`Not published (FE-013/033)` in Compare), reason `The source states no ratio scale, so no return is shown; a scale is never guessed from the values (RATIO_SCALE_NOT_PUBLISHED)`, nothing drawn | same |
+| 5 Compare | `RATIO_SCALE_MIXED` = INCOMPARABLE with the sentence `These returns are stated on different scales and are not drawn together`; no chart, each subject listed apart with its own scale | `screens/compare/index.tsx` |
+
+Not touched: `screens/fleet`, `cockpit`, `portfolios/index`, `api/ports`, `httpApi`, `fixtureApi`, `MeasureSeg`. Shared files edited with a one-line or import change only: `screens/overview/index.tsx`
+(NAV cell uses `seriesValueText`; unused `showDecimal` import dropped), `screens/portfolios/portfolio/Overview.tsx` (same), `screens/compare/index.tsx` (scale in the notes, RATIO_SCALE_NOT_PUBLISHED copy).
+
+### 9.2 Fixtures read and the conformance accounting
+
+Read verbatim (schema-valid AND read): `return` (FRACTION on both subjects, ALIGNED, `common.ratio_scale FRACTION`), `return-scale-mixed` (FRACTION vs PERCENT -> INCOMPARABLE
+`RATIO_SCALE_MIXED`), `return-scale-not-published` (published source, UNAVAILABLE `RATIO_SCALE_NOT_PUBLISHED`), the regenerated populated / empty / unavailable / currency-mixed
+(`ratio_scale: null`), and the stored `execution-manager-series-publication.return` (not a series body: `unsupported_shape`). The `metric-unit` negative fixture: all 9 response cases
+(`bases[case.base]` + `ops`) are refused by the reader; the 8 `SCHEMA_AND_PRODUCER` cases are also refused by the schema (oracle), the `PRODUCER_ONLY` one
+(`scales-mixed-called-aligned`) is schema-valid and refused by the reader's re-derivation; the 4 stored cases are never read as a series.
+
+| Pin | Before | After |
+| --- | --- | --- |
+| reader accepts what the schema refuses ("looser") | 0 | **0** (936-case generated corpus; schema refuses 883) |
+| stricter-than-schema, generated corpus, MS-S9 (comparison / common edited alone) | 4 | **5** (the extra: `comparison.common.ratio_scale: null` is schema-valid because the key is nullable for MONEY; the derived common of a RETURN states its scale) |
+| stricter groups MS-S1 / MS-S4 / MS-S4-5 / MS-S7 | 39 / 1 / 1 / 2 | 39 / 1 / 1 / 2 (unchanged) |
+| hand-pinned stricter cases / named groups | 21 / 9 | 23 / 9 (`MS-S6 RATIO under NAV` removed: the schema refuses it now; added: mixed scales called ALIGNED, a common stating another scale, `RATIO_SCALE_NOT_PUBLISHED` under an unpublished source) |
+| matrix M (metric x unit x currency x scale) | 12 states; reader != schema | 21 states; reader == schema on all 21 |
+| matrix R (RETURN, scale x partition x basis x methodology x second state) | none | 48 states; `RATIO_SCALE_MIXED` reachable and ordered after partition and basis, before methodology |
+
+### 9.3 Gates (all focused, unlocked, `--maxWorkers=2`)
+
+- `npx vitest run src/execution/v2/readers/managerSeries src/execution/v2/screens/series src/execution/v2/screens/compare src/execution/api/managerSeries`: 8 files, 1,383 tests passed.
+- plus `readers/managerDataset`, `screens/overview`, `screens/portfolios/portfolio`, `v2Hygiene`, `disabledReason`, `failClosed`: 20 files, 4,354 passed, 5 expected-fail (the existing `it.fails` pins).
+- A mutation control (the shift disabled) turns the Compare FRACTION test red, so that test does bite.
+
+NOT_RUN: Docker, the visual suite, Playwright, the full hook (tier R2 will run it), `scripts/refresh-release-integrity-ledgers.sh --write`, any real read. No pixel was reviewed; the `pct` class prints
+two to four decimals, so a long fraction is rounded **for display only** (the exact published string is in `title` / `full`).
+
+### 9.4 Verdict cells (consumer side; the producer's ACCEPTED is Codex's)
+
+| Id | Consumer verdict |
+| --- | --- |
+| FE-013 CHANGES_REQUESTED (1) `ratio_scale` | **CONSUMED / ACCEPTED** for the contract and the consumer: reader, model, Compare and the two NAV figures follow the stated scale; vocabulary is two values by design |
+| FE-013 CHANGES_REQUESTED (2) unit tied to the metric in the response | **CONSUMED / ACCEPTED**: schema and reader agree on all 21 matrix states and the 9 published negatives |
+| FE-033 `UNIT_MIXED` unreachable note | unchanged: still unreachable; `RATIO_SCALE_MIXED` is reachable and tested |
+
+Open: Overview `MeasureSeg` (Net PnL / Return) stays another writer's; when it wires a RETURN it must use `seriesValueText` / `chartUnit` from `screens/series/seriesModel.ts` so the scale is never lost.
