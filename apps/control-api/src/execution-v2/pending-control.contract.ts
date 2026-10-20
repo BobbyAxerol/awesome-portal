@@ -116,3 +116,103 @@ export function publishPendingControlStatus(intent: PendingControlIntent, status
   return publicPendingControlStatus.parse({ ...status, currency: body.currency,
     recipient_account_id: body.recipient_kind === "DEPLOYMENT_ACCOUNT" ? body.recipient_account_id : null });
 }
+
+/* FE-062 (R-1): discovery of still-open recalls the Portal itself controlled.
+ * Read-only projection of the Portal's own pending-control history for ONE exact
+ * authorized resource. It is NOT a census of source recalls: a recall nobody
+ * has controlled through the Portal has no Portal record, so it is not listed
+ * and the contract says so in a typed field instead of implying completeness. */
+export const pendingRecallDiscoveryQuery = z.object({ workspace_id: pendingText,
+  resource_kind: z.enum(["PORTFOLIO", "DEPLOYMENT"]), resource_id: pendingText, environment: executionEnvironment }).strict();
+export type PendingRecallDiscoveryQuery = z.infer<typeof pendingRecallDiscoveryQuery>;
+export const PENDING_DISCOVERY_MAX_ITEMS = 100;
+export const pendingRecallDiscoveryItem = z.object({
+  original_recall_id: pendingSourceText, currency: pendingSourceText,
+  /** Verified recipient account of the ORIGINAL intent (FE-063); null for a PORTFOLIO recipient. */
+  recipient_account_id: pendingSourceText.nullable(),
+  /** WAITING_ENCUMBRANCE: last known source receipt shows an open remainder.
+   * UNKNOWN: a control was sent but no receipt is known yet (query the same intent). */
+  state: z.enum(["WAITING_ENCUMBRANCE", "UNKNOWN"]),
+  /** Last KNOWN partition (cumulative applied may already be > 0); null while UNKNOWN. Never zero-filled. */
+  amounts: pendingAmounts.nullable(),
+  /** Five exact CAS counters of the last KNOWN receipt: the starting point for expected_versions, which the next
+   * preview rechecks against the source. Null while UNKNOWN. A later source change makes them stale. */
+  versions: pendingVersions.nullable(),
+  latest_receipt_id: pendingSourceText.nullable(),
+  /** Newest control command with a known receipt / newest still-unresolved control command; both are status ids. */
+  last_known_command_id: pendingControlId.nullable(),
+  unresolved_command_id: pendingControlId.nullable(),
+  last_operation: pendingOperation, updated_at_ms: utcMilliseconds,
+}).strict().superRefine((v, c) => {
+  const known = v.state === "WAITING_ENCUMBRANCE";
+  if (known ? v.amounts === null || v.versions === null || v.latest_receipt_id === null || v.last_known_command_id === null :
+    v.amounts !== null || v.versions !== null || v.latest_receipt_id !== null || v.last_known_command_id !== null ||
+      v.unresolved_command_id === null)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "PENDING_DISCOVERY_ITEM_INVALID" });
+});
+export const pendingRecallDiscovery = z.object({
+  schema_version: z.literal("portal.execution.pending-recall-discovery.v1"),
+  family: z.literal("PENDING_RECALL_CONTROL"),
+  /** The list is the Portal's own control history for this resource, never the source's recall census. */
+  coverage: z.literal("PORTAL_CONTROLLED_RECALLS_ONLY"),
+  untracked_recalls: z.object({ availability: z.literal("NOT_PUBLISHED"),
+    reason_code: z.literal("RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED") }).strict(),
+  resource: pendingControlResource, environment: executionEnvironment,
+  items: z.array(pendingRecallDiscoveryItem).max(PENDING_DISCOVERY_MAX_ITEMS),
+  /** True when more open recalls matched than the finite page holds; the list is then the newest. */
+  truncated: z.boolean(),
+  /** Portal evaluation time, not a source observation time. */
+  observed_at_ms: utcMilliseconds,
+}).strict().superRefine((v, c) => {
+  const ids = v.items.map(item => item.original_recall_id);
+  if (new Set(ids).size !== ids.length)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "PENDING_DISCOVERY_DUPLICATE_RECALL", path: ["items"] });
+});
+export type PendingRecallDiscovery = z.infer<typeof pendingRecallDiscovery>;
+
+type DiscoveryRecord = { id: string; intent: PendingControlIntent; status: PendingControlStatus };
+const newer = (a: DiscoveryRecord, b: DiscoveryRecord) =>
+  a.status.updated_at_ms !== b.status.updated_at_ms ? a.status.updated_at_ms - b.status.updated_at_ms :
+    a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+const recipientOf = (intent: PendingControlIntent) => intent.business_payload.recipient_kind === "DEPLOYMENT_ACCOUNT" ?
+  intent.business_payload.recipient_account_id : null;
+/** Pure projection of already identity-validated records (pendingRecord) of ONE exact target. */
+export function buildPendingRecallDiscovery(target: Pick<PendingControlIntent, "resource" | "environment">,
+  records: readonly DiscoveryRecord[], observedAtMs: number): PendingRecallDiscovery {
+  const groups = new Map<string, DiscoveryRecord[]>();
+  for (const record of records) {
+    const key = record.status.original_recall_id;
+    groups.set(key, [...(groups.get(key) ?? []), record]);
+  }
+  const open: z.infer<typeof pendingRecallDiscoveryItem>[] = [];
+  for (const [originalRecallId, group] of groups) {
+    const ordered = [...group].sort(newer), newest = ordered[ordered.length - 1]!;
+    const body = newest.intent.business_payload;
+    // One original recall has one currency and one recipient. Divergence is corruption: refuse, never choose.
+    for (const record of ordered)
+      if (record.intent.business_payload.currency !== body.currency || recipientOf(record.intent) !== recipientOf(newest.intent))
+        throw new PendingControlError("PENDING_CONTROL_RECEIPT_UNVERIFIED", 503);
+    const known = ordered.filter(record => record.status.business.state !== "UNKNOWN");
+    const lastKnown = known[known.length - 1];
+    const unresolved = ordered.filter(record => record.status.business.state === "UNKNOWN" &&
+      record.status.delivery !== "FAILED_BEFORE_SEND" && (lastKnown === undefined || newer(record, lastKnown) > 0));
+    const lastUnresolved = unresolved[unresolved.length - 1];
+    // A terminal known outcome closes the recall; only a known open remainder or a pure unresolved send is listed.
+    if (lastKnown !== undefined ? lastKnown.status.business.state !== "WAITING_ENCUMBRANCE" : lastUnresolved === undefined) continue;
+    const receipt = lastKnown?.status.business.receipt ?? null;
+    open.push({ original_recall_id: originalRecallId, currency: body.currency, recipient_account_id: recipientOf(newest.intent),
+      state: lastKnown ? "WAITING_ENCUMBRANCE" : "UNKNOWN",
+      amounts: lastKnown?.status.business.amounts ?? null, versions: receipt?.versions ?? null,
+      latest_receipt_id: receipt?.latest_receipt_id ?? null, last_known_command_id: lastKnown?.status.command_id ?? null,
+      unresolved_command_id: lastUnresolved?.status.command_id ?? null,
+      last_operation: newest.status.operation, updated_at_ms: newest.status.updated_at_ms });
+  }
+  open.sort((a, b) => b.updated_at_ms - a.updated_at_ms ||
+    (a.original_recall_id < b.original_recall_id ? -1 : a.original_recall_id > b.original_recall_id ? 1 : 0));
+  return pendingRecallDiscovery.parse({ schema_version: "portal.execution.pending-recall-discovery.v1",
+    family: "PENDING_RECALL_CONTROL", coverage: "PORTAL_CONTROLLED_RECALLS_ONLY",
+    untracked_recalls: { availability: "NOT_PUBLISHED", reason_code: "RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED" },
+    resource: target.resource, environment: target.environment,
+    items: open.slice(0, PENDING_DISCOVERY_MAX_ITEMS), truncated: open.length > PENDING_DISCOVERY_MAX_ITEMS,
+    observed_at_ms: observedAtMs });
+}

@@ -11,8 +11,9 @@ import { commandMembershipCurrent } from "./command-current-authority";
 import { currentAccessRelations } from "./access-current-relations";
 import { nativeNoticeValidUntil } from "./read-scope";
 import { PendingControlError, pendingControlIntent, pendingControlPreview, pendingControlStatus,
-  publishPendingControlStatus, type PendingControlIntent, type PendingControlStatus,
-  type PublicPendingControlStatus, type PendingPrediction } from "./pending-control.contract";
+  publishPendingControlStatus, buildPendingRecallDiscovery, pendingRecallDiscoveryQuery,
+  type PendingControlIntent, type PendingControlStatus, type PendingRecallDiscovery,
+  type PendingRecallDiscoveryQuery, type PublicPendingControlStatus, type PendingPrediction } from "./pending-control.contract";
 import { PendingControlStore, pendingRecord, pendingTarget, type PendingRecord } from "./pending-control.store";
 import { pendingControlAuthorization, assertPendingAuthorizationIdentity, assertPendingPreview,
   boundedPendingJson, mergePendingSource, pendingIntentHash, pendingPreviewHash,
@@ -265,6 +266,29 @@ export class PendingControlService {
   }
   async status(actor: AccessActor, workspace: string, id: string): Promise<PublicPendingControlStatus> {
     return this.storedStatus(actor, workspace, id);
+  }
+  /** FE-062: local, finite, read-only list of still-open recalls the Portal itself
+   * controlled on ONE exact resource. Same exact-target authority as status:
+   * the target is authorized BEFORE any private row SQL, rows are decoded only
+   * after a fresh decision, and every row's immutable identity must equal that
+   * target. No source I/O, recovery, write or authority change. */
+  async discovery(actor: AccessActor, raw: PendingRecallDiscoveryQuery): Promise<PendingRecallDiscovery> {
+    const q = pendingRecallDiscoveryQuery.parse(raw);
+    const target = { resource: { kind: q.resource_kind, id: q.resource_id }, environment: q.environment } as const;
+    const prepared = await this.reads.prepareExact<PendingRecallDiscovery>(actor, q.workspace_id, async () => {
+      const rows = await this.store.targetCandidates(q.workspace_id, target.resource, target.environment);
+      return { target, authorize: (current) => {
+        requirePendingCorrespondence(current, true);
+        return { proof: accessDigest({ domain: "portal.execution.pending-recall-audit.v1",
+          source: currentBoundaryProof(current, target.environment, [target.resource]) }),
+          valid_until_ms: current.actor_lease_until_ms! };
+      }, decode: (current) => {
+        if (rows.length > 1024) throw new PendingControlError("PENDING_CONTROL_CAPACITY_EXCEEDED", 503);
+        const records = rows.map(row => pendingRecord(row, q.workspace_id, row.id, target));
+        return buildPendingRecallDiscovery(target, records, Math.max(current.now_ms, Date.now()));
+      } };
+    }, fixed, target);
+    return this.reads.finish(prepared);
   }
   async reconcile(actor: AccessActor, workspace: string, id: string): Promise<PublicPendingControlStatus> {
     await this.status(actor, workspace, id);
