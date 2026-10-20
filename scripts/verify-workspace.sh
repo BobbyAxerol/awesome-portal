@@ -1828,6 +1828,7 @@ python3 "${ROOT_DIR}/scripts/execution-n18-census.py" --verify
 python3 "${ROOT_DIR}/scripts/test_execution_n18_census.py"
 python3 "${ROOT_DIR}/scripts/execution-eds12-qualification.py" verify-static
 python3 "${ROOT_DIR}/scripts/test_execution_eds12_qualification.py"
+python3 -B "${ROOT_DIR}/scripts/epg10-08/test_connected_read.py"
 "${ROOT_DIR}/scripts/test-execution-d4-storage.sh"
 "${ROOT_DIR}/scripts/execution-d4-source-proxy-test.sh"
 "${ROOT_DIR}/scripts/execution-d4-qualification-preflight-test.sh"

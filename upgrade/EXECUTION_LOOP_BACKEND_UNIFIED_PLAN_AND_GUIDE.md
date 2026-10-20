@@ -24574,6 +24574,150 @@ caps, no swap and auto-remove. This changes test setup scheduling only, not a
 production SLO, catalogue, authority or route. Bash/diff/normal full hook remains
 mandatory; no skipped tests, source traffic, database policy or operational restart.
 
+### Original08 resumed — Core009 binding, then scoped read09 —20Oct05:40UTC
+
+Bobby explicitly resumed the goal and approved this order: Core009 composition,
+actual08 read/security acceptance, then the dependency-qualified read subset of09.
+The previous owner-requested PAUSED disposition is historical, not a current
+instruction to stop. Full08 remains NOT_MET and connected09 NOT_STARTED until
+their actual receipts exist. No new phase or repeated general approval is needed.
+
+Authority: [detailed08/09 guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+[current binding packet](evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md)
+and the existing Core008/009 return in the Core checkout. Source starts at
+0af33fdf97861edde07a5ca85e367dc9a315a092 on the existing feature worktree/branch;
+three peer untracked paths remain preserved. Final normal hook from that commit
+was130contracts/717API/build/restore PASS; do not rerun unchanged tests or credit
+those regressions as new connected evidence.
+
+Fresh source inspection05:41UTC: CoreHEAD7818d563 and owner return230c7c66
+unchanged, Core009 preparation/selection not yet returned. The09 prerequisite is
+not another008 install or identity issue. Genuine identity COMMIT/Core ACK and
+retirement remain valid history. Native acceptance head2 is revoked,28446 absent;
+never replay head1, infer READ implies STREAM, or reopen a listener just to wait.
+Candidate trust ends08:00:59UTC; verify freshness at the actual matched opening.
+
+Runnable now: inspect exact Core009 runtime/owner-artifact schema and installed
+references, reconcile existing Edge runner/case bindings and genuine input pins,
+prepare only the missing owned binding slice using existing components. When
+Core preparation and matched source inputs are available, append a current-head
+finite acceptance, bind actual Core consumer and run positive/negative READ,
+revoke/cache/cursor/SSE/recovery cases. Then execute only read09 cases whose own
+source/authority dependencies are met, retaining all other NOT_RUN boundaries.
+
+Invariants/rollback: no identity reissue, SQL grants, fabricated actor/session/
+policy/receipt, stable28445 rekey/restart, financial command or stable/dev/main
+rollout. Core retains Core app/policy/session authority; Edge retains source
+lifecycle/operator and qualification. UNKNOWN preserves original obligations,
+objects and recovery. Close new admission and use same-key status/recovery before
+terminal drain, exact session logout and official native revoke. Correctness
+work is resource-capped/nonexclusive under workspace34b; no production capacity
+claim or exclusive lease while waiting. Inventory and clean only newly owned
+terminal resources, recording source/runtime pins and actual results here.
+
+**05:45UTC concrete owned slice before editing:** existing04 PG runner,
+09score oracle and native lifecycle tests do not constitute an operational
+Core009 API runner. Implement exactly `scripts/epg10-08/connected_read.py` and
+`test_connected_read.py` as a bounded acceptance harness, not a product service
+or authority provider. Reuse existing pinned private-file guards, fixed reviewed
+Core routes and actual-session transport. Refuse missing/uncommissioned/expired
+source or policy before network; bound response200rows/1MiB and finite time;
+never turn heartbeat, legacy fallback, unavailable data or fixture callbacks into
+genuine READ/SSE acceptance. Revoke remains an official owner action, not a shell
+hook. Tests cover parsing/private references, deny-before-I/O, route/scope/limits,
+bounded stream parsing, redaction and every claimed result's exact scope.
+
+Fresh [bounded preflight](evidence/execution-edge-v1_2/EPG10-08/core009-readonly-preflight.json)
+is NOT an authority artifact. Actual Core container5f3252b7/image7b2c7f34 is
+running/restart0 with no native config env pair. On physical Research
+portal_control/system7688673963308855330, exact workspace has0policy-state,
+0grants and0policy-events; Research Bobby ACTIVE and protected owner. Check used
+one connection, BEGIN READ ONLY,5s statement bound, ROLLBACK and pool.end; no
+application mutation/session or source listener. Core009 policy/composition is
+therefore a fresh confirmed producer input, not an inferred stale blocker.
+Root34c CI budget: one coherent local-tested publication only; current workflow
+push triggers target main/dev (security/images main), not this feature branch.
+No new PR/main/dev push or manually dispatched Actions is authorized by this
+slice; expected additional hosted CI minutes0 if those triggers stay unchanged.
+
+Verification registration: add the pure bounded runner unit suite to the existing
+`scripts/verify-workspace.sh` Python checks so the ordinary unmodified commit
+hook executes it. No new CI service/workflow or product route. Independent
+source review confirms native Manager finite-page JSON intentionally shares
+legacy shape, so a200/schema match alone cannot distinguish native authority;
+require exact installed source/selection provenance. Native snapshot positive
+must carry its actual baseline kind/cursor; an SSE heartbeat is not a data frame.
+Public root-grant revoke is NOT manager-domain revoke; never use that endpoint
+as a substitute for official native/current-domain authority.
+
+**Owner follow-up20Oct:** Bobby explicitly directs SSH delivery of a priority
+Core009 backend assignment to Claude while Edge finishes its runner. Prepare
+[the single scoped handoff](evidence/execution-edge-v1_2/EPG10-08/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md),
+deliver exact public bytes into the verified Claude checkout
+`/home/bobby/portal-research-fe`, `claude/fe-parity@e4383f22`, and append only
+request/index pointers with head/content CAS. Core integration remains7818d563
+with5peer Markdown edits; do not overwrite/commit those, touch accepted FE code,
+install policy or change runtime as part of delivery. Remote apply_patch is
+absent (checked `shutil.which`), so use exact-byte O_EXCL creation/CAS append
+fallback and immediately verify hashes/head/index. Delivery status must remain
+AWAITING_CLAUDE_ACK until a real ACCEPTED/CHANGES_REQUESTED return exists.
+
+**06:03UTC owned runner slice verified:**
+`python3 -I -B scripts/epg10-08/test_connected_read.py` physically ended0:
+29PASS,0FAIL/0SKIP,0.365s. Driver SHA256
+8bc8113312f7cc765d798279cb4df98f46be40f1144d12a3d9dd34b205f83d9a;
+tests d848123dea2bb4898ea48ce5640f995d637d81ed5e63057271f320010baf866f.
+Earlier26/28-case draft runs overlap these29; do not sum them. Independent final
+source review found no blocking issue in the changed deadline/grant semantics;
+it did not run tests or observe runtime. These are TEST_ONLY transport specimens,
+not29 genuine Core/PM/security acceptances. Registering the suite in the normal
+workspace hook adds no product endpoint/service or hosted workflow.
+
+The runner targets only actual Research HTTPS API443, never identity28444.
+Before network it checks pinned private source/config/session references, actual
+installed selection/expiry, actor and domain. TLS validates CA/hostname and any
+commissioned leaf pin before sending Cookie. Limits200rows/1MiB/60s, detached
+socket abort and post-read deadline checks cover finite and SSE reads. Legacy
+page shape cannot qualify native authority without its genuine scoped snapshot;
+heartbeat, generic EOF and quiet stream never become positive source notices.
+Manager grant ID/revision binds the original baseline/current official receipt;
+grant-only revoke need not invent a policy revision bump. PM post-hijack EOF
+needs correlated owning-attempt denial evidence and remains NOT_RUN here.
+Repeat-read is not a proven cache HIT; reconnect denial does not certify active
+SSE no-late-byte or unaffected-scope behavior. Those cases and full08/full09 stay
+NOT_MET/NOT_RUN until actual separate connected evidence exists. The new private
+ready/revoke documents are harness metadata materialized from owning installed
+readback/receipts, not a requested new Core endpoint, exporter or authority gate.
+
+**Priority assignment delivery completed:** exact9186B public packet
+ccdfb4d714deedb8cc66f2beee5189c8dc07c985de85f7cbded9cb738056bb7f
+is in Claude's verified FE checkout at the same relative evidence path. Appended
+only its Unified/sync indices and the pre-existing Edge-owned Core request.
+Both checkout HEADs/indices and four other Core peer Markdown hashes remained
+unchanged. Core request resulting SHA256
+fbb6c13d11b8d0c0f76b7ff668cc010fedd76c0f6827539a31e2c0815a680970.
+Delivery is AWAITING_CLAUDE_ACK, not a claimed assignment acceptance or install.
+No runtime restart, policy/schema mutation, actual session or source was created.
+
+Publication gate for this coherent slice: bash syntax/diff/staged-scope checks,
+normal full commit hook (no bypass), one feature-only non-force push and remote
+SHA readback. Record the terminal hook/publication/cleanup receipt in the
+existing Core owner request and protected finite operator return; never credit
+a running hook. Baseline91images/46running containers, available256151437312B
+of518933680128B;13 protected Portal tuples unchanged. Pure tests created no
+runtime resource; their temporary fixtures were automatically removed. Inspect
+only new owned hook artifacts after terminal; retain shared/peer/rollback images
+and cache, with no broad prune or unapproved resource retirement.
+
+Runnable-now runner implementation/review/unit evidence is complete. Next exact
+producer action is Claude/Core009 prepared owner artifact, current native domain
+policy/independent STREAM selection, genuine selected session and reviewed
+Research-only composition/rollback. Then Edge matches a fresh finite source
+head/window and actual observer pins for08; read09 follows only qualified scopes.
+No identity reissue, retired-head replay, fake grant or new blanket approval.
+Current recorded disposition: RUNNER_IMPLEMENTED_AND_UNIT_TESTED / CORE009_NOT_COMPOSED;
+full08 NOT_MET, connected09 NOT_STARTED. This is not a phase closeout.
+
 
 
 

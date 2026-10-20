@@ -1,0 +1,62 @@
+{
+  "schema_version": "portal.edge-core009-readonly-preflight.v1",
+  "observed_utc": "2026-10-20T05:45:21.616Z",
+  "status": "NOT_READY_CORE009_NOT_COMPOSED",
+  "purpose": "Current-state observation, not an authority or commissioning artifact",
+  "edge_source_commit": "0af33fdf97861edde07a5ca85e367dc9a315a092",
+  "core_source_commit": "7818d5631e0da37563bca5715fd46d40b66ef1de",
+  "core_owner_return_sha256": "230c7c66769f0293415fbb9c8d492391496402ddc0c56c34ec30d73712bb161f",
+  "core_runtime": {
+    "container_id": "5f3252b7d270a40079d2767cc78f513681c5720fc092b9b51da69b1098efb954",
+    "image": "sha256:7b2c7f34f134323201f447084440973b9aefd22318fdb09ff1e1bc35c4c4395d",
+    "running": true,
+    "restart_count": 0,
+    "native_core_runtime_reference_env_present": false
+  },
+  "read_only_database_check": {
+    "transaction": "BEGIN READ ONLY; bounded SELECTs; ROLLBACK",
+    "maximum_connections": 1,
+    "statement_timeout_ms": 5000,
+    "database_name": "portal_control",
+    "database_system_identifier": "7688673963308855330",
+    "role_name": "portal",
+    "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+    "counts_for_exact_workspace": {
+      "portal_access_policy_state": 0,
+      "portal_access_grants_v2": 0,
+      "portal_access_policy_events": 0
+    },
+    "subject_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+    "subject_status": "ACTIVE",
+    "subject_must_change_password": false,
+    "subject_archived": false,
+    "protected_portal_owner_is_subject": true,
+    "application_mutations": 0,
+    "connection_closed": true
+  },
+  "preserved_history": {
+    "genuine_identity_committed_and_core_acknowledged": true,
+    "native_acceptance_id": "b922c105-4e99-4830-8be2-bb2e1f41b5d9",
+    "native_acceptance_last_observed_head": "2",
+    "native_acceptance_last_observed_revoked": true,
+    "last_observation_reference": "../../../integration/execution-native-read-v1/research-identity-intake/finite-source-closeout.json",
+    "native_acceptance_rechecked_by_this_core_query": false,
+    "old_source_snapshot_is_current_authority": false
+  },
+  "qualification": {
+    "core009_business_read": "NOT_RUN",
+    "core009_stream": "NOT_RUN",
+    "revoke_cache_cursor_sse": "NOT_RUN",
+    "full08": "NOT_MET",
+    "connected09": "NOT_STARTED",
+    "cloudflare_authentication_accepted": false,
+    "production_capacity_accepted": false,
+    "new_session_grant_listener_or_service_created": false
+  },
+  "next_owner_input": {
+    "owner": "PORTAL_CORE_009",
+    "requires": "Reviewed private owner commissioning and current READ policy; independent STREAM decision; prepared standard native Core composition with exact private references and a genuine session/route handoff",
+    "edge_followthrough": "Match a fresh current-head finite source window and observer pins, bind the prepared Core selection, then execute actual08 and dependency-qualified read09 cases",
+    "forbidden_shortcuts": "No repeated identity issue, retired-head replay, SQL grant seed, synthetic session/receipt, legacy fallback or stable28445 replacement"
+  }
+}

@@ -10,13 +10,68 @@ finite source-owner ACK.009 source composition does not commission native READ
 or STREAM. Edge owns its immutable closure/provider lifecycle and actual native
 acceptance; Core policy/composition follows genuine mapping and source inputs.
 
-Status: PREPARATION_ONLY; full08 NOT_MET;09connected NOT_STARTED.
-Authority: existing owner-approved original08 round2, not a new phase or a new
-blanket approval gate. This packet was prepared in an isolated SGP source
-overlay; it is not evidence of landed HK source, installed authority or a
-connected test. Identity, native READ, Core READ and Core STREAM are distinct.
+## Current resumed intake —20Oct05:45UTC
 
-## Current Edge operator input — 2026-10-19
+Bobby resumed **Core009 → actual08 → scoped read09**. Published Edge is now
+0af33fdf97861edde07a5ca85e367dc9a315a092; the dated unpublished-overlay and old
+f464 observations below are history, not current execution instructions.
+[Actual Core read-only preflight](core009-readonly-preflight.json) confirms
+Core0087818d563/image7b2c7f34/restart0, but no native Core runtime reference is
+selected. On the physical Research DB7688673963308855330, this exact workspace
+has0policy/0grant/0policy-event rows; Bobby is ACTIVE and the protected Portal
+owner. The bounded read-only transaction rolled back and its pool closed.
+This is an observed missing Core009 composition, not another identity blocker.
+
+Genuine identity COMMIT/Core ACK/history remains valid. Native source28446 was
+retired and acceptance head2 revoked; a historical READY snapshot is not a live
+source. Core can prepare its reviewed owner artifact/current policy and same-
+Pool/app/coordinator composition from the genuine mapping/domain/trust now.
+Then coordinate fresh source current-head CAS/window/observer pins for final
+selection; do not require a completed installation before coordinating that
+window, and do not reopen a source only to wait. READ is not STREAM; candidate
+trust ends08:00:59UTC and must be fresh at opening. Stable28445 is unchanged.
+
+Edge has implemented the small operational connected-case runner in the
+existing08 harness boundary, with29TEST_ONLY unit cases PASS. A configured process or HTTP200 alone is not
+business/current-authority acceptance. Only actual route results with current
+source/Core policy evidence can qualify a scoped case. No raw business payload,
+cookie, private configuration or credential belongs in the public return.
+
+Status: OWNED_RUNNER_IMPLEMENTED_AND_UNIT_TESTED / CORE009_NOT_COMPOSED; full08 NOT_MET;
+09connected NOT_STARTED.
+Authority: existing owner-approved original08 round2, not a new phase or a new
+blanket approval gate. The current runner is in HK source; the historical overlay
+below is not installed authority or a connected test. Identity, native READ,
+Core READ and Core STREAM are distinct.
+
+### Current runner and priority assignment
+
+- [Driver](../../../../scripts/epg10-08/connected_read.py), SHA256
+  `8bc8113312f7cc765d798279cb4df98f46be40f1144d12a3d9dd34b205f83d9a`.
+- [Tests](../../../../scripts/epg10-08/test_connected_read.py), SHA256
+  `d848123dea2bb4898ea48ce5640f995d637d81ed5e63057271f320010baf866f`:
+  `python3 -I -B scripts/epg10-08/test_connected_read.py`,29PASS/0FAIL/0SKIP.
+- [Claude's priority packet](CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md)
+  delivered byte-exact to `/home/bobby/portal-research-fe` on SGP and indexed in
+  its Unified/sync docs. AWAITING_CLAUDE_ACK; delivery is not installation.
+
+Operational invocation, only after actual inputs are ready:
+`python3 -I -B scripts/epg10-08/connected_read.py --config PRIVATE_PATH --sha256 ACTUAL_PIN`.
+Config pins genuine `core_return` and `session` references; baseline/post_revoke
+are separate specimens. Schema fields are explicit in driver `prepare()`.
+Optional `--checkpoint-fd` writes an opaque baseline cursor only into an
+already-open empty same-UID0600 regular private file; no cursor/cookie or raw
+business payload is published. Do not use TEST_ONLY fixtures as operational inputs.
+
+Harness ready/revoke metadata comes from actual installed Core/source receipts;
+Edge may materialize it from the existing return. Core does not owe a new API or
+exporter. Native domain grant revision is independent of policy revision. Official
+revoke is external to this GET-only runner; root-grant revoke is not a substitute.
+No PM EOF, heartbeat, repeated read or reconnect is silently upgraded into native
+deny, data notice, cache-HIT or active-SSE revocation acceptance. Missing inputs
+make zero requests/NOT_READY. Full08/full09 remain NOT_MET even for scoped PASS.
+
+## Historical Edge operator input — 2026-10-19
 
 Status: IMPLEMENTED / ISOLATED_QUALIFIED_NOT_PUBLISHED. This is the remote
 public overlay, not a canonical commit, Core repair or connected acceptance.

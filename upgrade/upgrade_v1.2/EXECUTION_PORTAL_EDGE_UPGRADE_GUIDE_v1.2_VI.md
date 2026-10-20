@@ -1017,6 +1017,15 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**20Oct06:03UTC resumed08:** [main plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-resumed--core009-binding-then-scoped-read09--20oct0540utc)
+and [current binding packet](../evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md#current-runner-and-priority-assignment)
+record the small bounded Core API runner,29TEST_ONLY unit cases PASS and priority
+Core009 delivery to Claude. Actual read-only DB/config preflight still shows no
+Core009 policy/selection. Metadata is sourced from owning receipts, not new
+authority; no legacy200/heartbeat/EOF/cache shortcut qualifies. Genuine identity
+history remains; fresh matched source head/window and Core009 composition precede
+actual08 READ/STREAM/revoke and scoped read09. Full08NOT_MET,09NOT_STARTED.
+
 **20Oct04:31UTC finite closeout:** [actual receipt](../integration/execution-native-read-v1/research-identity-intake/finite-source-closeout.json)
 records graceful SDK/handler/socket/pool drain, physical exit0, official
 acceptance revision2 revokedtrue and independent observer denial. Candidate28446
