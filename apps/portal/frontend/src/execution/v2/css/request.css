@@ -28,21 +28,12 @@
   color: var(--ink);
   overflow-wrap: anywhere;
 }
-.exec-rq-sub {
-  margin: 0;
-  font: var(--exec-font-meta);
-  color: var(--ink-faint);
-}
-.exec-rq-cols {
+/* One column: the form is the page; the three-line explanation is a disclosure under it. */
+.exec-rq-col {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
-  gap: var(--space-5);
-  align-items: start;
-}
-@media (max-width: 1100px) {
-  .exec-rq-cols {
-    grid-template-columns: minmax(0, 1fr);
-  }
+  gap: var(--space-4);
+  max-width: 880px;
+  min-width: 0;
 }
 
 /* ---- step bar ------------------------------------------------------------ */

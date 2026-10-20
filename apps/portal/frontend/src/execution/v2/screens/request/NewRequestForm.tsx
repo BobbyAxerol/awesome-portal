@@ -83,7 +83,6 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
       : "The runs of this alpha are loading.";
   const summary = validation.summary;
   const summaryBad = summary.state === "long" || summary.state === "hostile";
-  const reasonId = `${base}-why`;
   const needId = `${base}-need`;
   const counterId = `${base}-count`;
   const summaryHelpId = `${base}-sumhelp`;
@@ -107,14 +106,15 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
   const policyReason = gate.open || gate.kind !== "policy" ? null : stageActionReason(state.eligibility, "approval.create", gate.reason);
   // Submit is on, yet the reader's own check says the server will refuse: say so beside it. Advisory; the click still asks the server.
   const advice = gate.open && create !== undefined && create.verdict === "NOT_ELIGIBLE"
-    ? `Your access check says this will be refused: ${stageActionReason(state.eligibility, "approval.create", "")}. Submit still asks the server.`
+    ? `Your access check says this will be refused: ${stageActionReason(state.eligibility, "approval.create", "")}.`
     : null;
+  // The Ready flag says an open gate; the sentence is only for a gate that is shut, and it is the shut button's reason.
   const sentence = gate.open
-    ? "Everything needed is filled."
+    ? null
     : gate.kind === "policy"
       ? policyReason!
       : gate.kind === "sending"
-        ? "Sending the request. It is shown as created only when the server says so."
+        ? "Sending…"
         : gate.kind === "uncertain" || gate.kind === "held"
           ? gate.reason
           : gate.kind === "settled"
@@ -143,25 +143,27 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
           <div className="exec-rq-fld">
             <label htmlFor={`${base}-alpha`} className="exec-rq-label">
               <span>Alpha</span>
-              <span className="exec-rq-label-meta">{scope ?? "From completed runs"}</span>
+              {scope === null ? null : <span className="exec-rq-label-meta">{scope}</span>}
             </label>
             <select
               id={`${base}-alpha`}
               className="exec-rq-control"
               value={alphaListed ? f.alphaId : ""}
               disabled={!listReady || state.alphas.length === 0}
-              aria-describedby={!listReady || state.alphas.length === 0 ? `${base}-alpha-help` : undefined}
+              aria-describedby={(!listReady || state.alphas.length === 0) && runs.status !== "loading" ? `${base}-alpha-help` : undefined}
               onChange={(e) => state.setAlpha(e.target.value)}
             >
               <option value="">{alphaListed || f.alphaId === "" ? alphaPlaceholder : `${f.alphaId} (typed by hand)`}</option>
               {state.alphas.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
             </select>
             {runs.status === "unavailable" ? (
-              <p id={`${base}-alpha-help`} className="exec-rq-note" role="status">Run Library not available: {runs.reason} Type the ids below; the server checks them.</p>
+              <p id={`${base}-alpha-help`} className="exec-rq-note" role="status" title={runs.reason ?? undefined}>Run Library not available. Type the ids below.</p>
             ) : !listReady || state.alphas.length === 0 ? (
-              <p id={`${base}-alpha-help`} className="exec-rq-note">{runs.status === "loading" ? "Reading the completed runs the Run Library lists." : (runs.catalog === null ? "The Run Library lists no completed run, so there is nothing to pick. Type the ids below; the server checks them." : "The Run Library lists no alpha, so there is nothing to pick. Type the ids below; the server checks them.")}</p>
+              runs.status === "loading" ? null : (
+                <p id={`${base}-alpha-help`} className="exec-rq-note">{runs.catalog === null ? "No completed run to pick. Type the ids below." : "No alpha to pick. Type the ids below."}</p>
+              )
             ) : derivedAlphas ? (
-              <p className="exec-rq-note">The Run Library did not publish its alpha list, so these are the alphas of the runs loaded so far. If yours is missing, type its id below.</p>
+              <p className="exec-rq-note" title="The Run Library did not publish its alpha list, so these are the alphas of the runs loaded so far.">Alphas of the loaded runs only. If yours is missing, type its id below.</p>
             ) : null}
           </div>
 
@@ -178,20 +180,19 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
               className="exec-rq-control"
               value={runListed ? f.runId : ""}
               disabled={!listReady || !alphaListed || runsPending}
-              aria-describedby={!listReady || !alphaListed || runsPending ? `${base}-run-help` : undefined}
               onChange={(e) => state.setRun(e.target.value)}
             >
               <option value="">{runListed || f.runId === "" ? runPlaceholder : `${f.runId} (typed by hand)`}</option>
               {state.runOptions.map((o) => <option key={o.runId} value={o.runId}>{runLabel(o)}</option>)}
             </select>
-            {!listReady || !alphaListed || runsPending ? <p id={`${base}-run-help`} className="exec-rq-note">{!listReady ? "Runs are listed once the Run Library has been read." : runsPending ? "Reading this alpha's completed runs." : "Pick an alpha to see its completed runs."}</p> : null}
+            {/* The select's own placeholder says why it is waiting (pick an alpha first, reading runs); only a result is worth a line. */}
             {listReady && alphaListed && !runsPending ? (
               <p className="exec-rq-note" data-testid="run-count">
                 {state.runOptions.length === 0
-                  ? "The Run Library lists no completed run for this alpha. Type the run id below if you have one; the server checks it."
+                  ? "No completed run for this alpha. Type the run id below."
                   : runs.filteredRows !== null && runs.filter !== null
-                    ? `Showing the newest ${state.runOptions.length.toLocaleString("en-US")} of ${runs.filteredRows.toLocaleString("en-US")} completed runs of this alpha. If yours is missing, type its id below.`
-                    : `Showing ${state.runOptions.length.toLocaleString("en-US")} completed runs, newest first. If yours is missing, type its id below.`}
+                    ? `Newest ${state.runOptions.length.toLocaleString("en-US")} of ${runs.filteredRows.toLocaleString("en-US")} completed runs. If yours is missing, type its id below.`
+                    : `${state.runOptions.length.toLocaleString("en-US")} completed runs, newest first. If yours is missing, type its id below.`}
               </p>
             ) : null}
             {listReady && alphaListed && runs.hasMore ? (
@@ -230,18 +231,18 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
             ) : state.claim.kind === "only" ? (
               <p className="exec-rq-claim">
                 <span className="exec-rq-mono">{state.claim.claim.id}</span>
-                <span className="exec-rq-meta"> the only claim the Run Library lists for this run{claimHint(state.claim.claim) ? ` · ${claimHint(state.claim.claim)}` : ""}</span>
+                <span className="exec-rq-meta"> the only claim for this run{claimHint(state.claim.claim) ? ` · ${claimHint(state.claim.claim)}` : ""}</span>
               </p>
             ) : state.claim.kind === "pick-run" ? (
               <p className="exec-rq-note">Pick a run first, or type the claim id below.</p>
             ) : state.claim.kind === "typed" ? (
-              <p className="exec-rq-note">This run is not in the list, so the claim is typed below. The server refuses a claim that is not eligible.</p>
+              <p className="exec-rq-note" title="This run is not in the list. The server refuses a claim that is not eligible.">Type the claim id below.</p>
             ) : state.claim.kind === "none-listed" ? (
-              <p className="exec-rq-note">The Run Library lists no eligible claim for this run. The server refuses a typed one that is not eligible.</p>
+              <p className="exec-rq-note" title="The server refuses a typed claim that is not eligible.">No eligible claim listed for this run. Type the id below.</p>
             ) : state.claim.kind === "cannot-list" ? (
-              <p className="exec-rq-note">The Run Library cannot list claims for this run ({state.claim.reason}). Type the claim id below.</p>
+              <p className="exec-rq-note" title={state.claim.reason}>Claims cannot be listed for this run. Type the claim id below.</p>
             ) : (
-              <p className="exec-rq-note">The Run Library does not publish claims for this run. Type the claim id below.</p>
+              <p className="exec-rq-note">Claims are not listed for this run. Type the claim id below.</p>
             )}
 
             <details className="exec-rq-hand" open={handOpen ? true : undefined}>
@@ -250,7 +251,6 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
                 <IdInput label="Alpha id" value={f.alphaId} onChange={state.setAlpha} disabled={locked} hint="alpha id" />
                 <IdInput label="Evidence run id" value={f.runId} onChange={state.setRun} disabled={locked} hint="run id" />
                 <IdInput label="Claim id" value={f.claimId} onChange={state.setClaim} disabled={locked} hint="claim id" />
-                <p className="exec-rq-meta">An id the server does not know is refused, never guessed.</p>
               </div>
             </details>
           </div>
@@ -258,25 +258,26 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
           <div className="exec-rq-fld">
             <label htmlFor={`${base}-summary`} className="exec-rq-label">
               <span>Summary</span>
-              <span id={counterId} className="exec-rq-label-meta exec-rq-mono" data-state={summary.state}>{summaryCounter(summary)}</span>
+              <span id={counterId} className="exec-rq-label-meta exec-rq-mono" data-state={summary.state} title={`${MIN_SUMMARY} to ${MAX_SUMMARY.toLocaleString("en-US")} characters. It is the reviewer's first sentence.`}>{summaryCounter(summary)}</span>
             </label>
             <textarea
               id={`${base}-summary`}
               className="exec-rq-control"
               rows={variant === "drawer" ? 4 : 5}
               value={f.summary}
-              placeholder="What this alpha does, and why the evidence supports opening the loop for it."
+              placeholder="What this alpha does, and why the evidence supports it."
               aria-invalid={summaryBad || undefined}
-              aria-describedby={`${counterId} ${summaryHelpId}`}
+              aria-describedby={summaryBad ? `${counterId} ${summaryHelpId}` : counterId}
               onChange={(e) => state.setSummary(e.target.value)}
             />
-            <p id={summaryHelpId} className={summaryBad ? "exec-rq-error" : "exec-rq-note"}>
-              {summary.state === "hostile"
-                ? `Remove hidden or direction-changing characters (${summary.hostile.join(", ")}). The reviewer reads this as plain text.`
-                : summary.state === "long"
-                  ? `Too long: ${MAX_SUMMARY.toLocaleString("en-US")} characters at most.`
-                  : `${MIN_SUMMARY} to ${MAX_SUMMARY.toLocaleString("en-US")} characters. It is the reviewer's first sentence.`}
-            </p>
+            {/* The counter already says the minimum; a line appears only when the text is refused. */}
+            {summaryBad ? (
+              <p id={summaryHelpId} className="exec-rq-error">
+                {summary.state === "hostile"
+                  ? `Remove hidden or direction-changing characters (${summary.hostile.join(", ")}).`
+                  : `Too long: ${MAX_SUMMARY.toLocaleString("en-US")} characters at most.`}
+              </p>
+            ) : null}
           </div>
         </fieldset>
       </div>
@@ -300,15 +301,16 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
         <div className="exec-rq-bar">
           <div className="exec-rq-bar-text">
             <div>{flag}</div>
-            <p id={needId} className="exec-rq-need">{sentence}</p>
+            {sentence === null ? null : <p id={needId} className="exec-rq-need" role={gate.open ? undefined : "status"}>{sentence}</p>}
           </div>
           <div className="exec-rq-bar-act">
-            {/* aria-disabled, not disabled: a disabled button drops keyboard focus to the page while a send is in flight. */}
+            {/* aria-disabled, not disabled: a disabled button drops keyboard focus to the page while a send is in flight.
+                The shut button's reason is the sentence beside the flag, said once; the button is described by it. */}
             <button
               type="button"
               className="exec-rq-submit"
               aria-disabled={!gate.open}
-              aria-describedby={gate.open ? undefined : reasonId}
+              aria-describedby={gate.open ? undefined : needId}
               title={gate.open ? undefined : policyReason ?? gate.reason}
               onClick={() => {
                 if (gate.open) state.submit();
@@ -316,7 +318,6 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
             >
               {SUBMIT_LABEL}
             </button>
-            <span id={reasonId} className="exec-rq-why" role={gate.open ? undefined : "status"}>{gate.open ? "Nothing is sent until you click Submit." : policyReason ?? gate.reason}</span>
             {advice !== null ? <span className="exec-rq-why" role="status">{advice}</span> : null}
           </div>
         </div>

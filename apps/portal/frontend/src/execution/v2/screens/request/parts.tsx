@@ -1,11 +1,9 @@
 /**
- * Small, static parts of New request: the three-step bar and the "What happens next" aside.
- * Copy follows the hi-fi (new-approval.html); the Digest line says what the server does, because the form
- * never carries a digest (N29 section 3).
+ * Small, static parts of New request: the three-step bar and the collapsed "What happens next" disclosure.
+ * The disclosure says what the server does; the Digest line is there because the form never carries a digest (N29 section 3).
+ * The three steps keep their longer sentence in the step's title, so the bar is three short words.
  */
 import { useSearchParams } from "react-router-dom";
-
-import { SectionPanel } from "../../blocks";
 
 import "../../css/request.css";
 
@@ -14,7 +12,7 @@ import "../../css/request.css";
  * page is showing another one (`?workspace_id=` on the URL) the reader is told so, once, in one line. Nothing is
  * changed or claimed beyond that: no selector, no promise about where a later version will file it.
  */
-export const OWN_WORKSPACE_NOTE = "This request is created in your own workspace, not in the one this page is showing.";
+export const OWN_WORKSPACE_NOTE = "Created in your own workspace, not the one this page shows.";
 
 export function WorkspaceNote() {
   const [params] = useSearchParams();
@@ -26,37 +24,15 @@ export function StepBar() {
   return (
     <nav className="exec-rq-steps" aria-label="Where this request sits in the loop">
       <ol>
-        <li data-state="current" aria-current="step">1 · Declare · you, now</li>
-        <li data-state="ahead">2 · R1 · a quant reviewer, not you</li>
-        <li data-state="ahead">3 · R2 · capital, only after R1</li>
+        <li data-state="current" aria-current="step" title="You, now">1 · Declare</li>
+        <li data-state="ahead" title="A quant reviewer decides, not you">2 · R1</li>
+        <li data-state="ahead" title="Capital, only after R1">3 · R2</li>
       </ol>
     </nav>
   );
 }
 
-const NEXT: readonly { id: string; head: string; text: string }[] = [
-  { id: "digest", head: "1 · Digest", text: "Pinned on the server from the run registry." },
-  { id: "reviewer", head: "2 · Reviewer", text: "A quant reviewer decides, never you. The SLA clock starts at submit." },
-  { id: "duplicates", head: "3 · Duplicates", text: "Open work for the same alpha and run is refused with its request." },
-];
-
-/** The aside of the route page. */
-export function WhatNextPanel() {
-  return (
-    <SectionPanel title="What happens next" level={2} flush>
-      <ol className="exec-rq-next-list">
-        {NEXT.map((n) => (
-          <li key={n.id}>
-            <b>{n.head}</b>
-            <span>{n.text}</span>
-          </li>
-        ))}
-      </ol>
-    </SectionPanel>
-  );
-}
-
-/** The drawer folds the same three lines into one disclosure, as the hi-fi drawer does. */
+/** The three lines, folded into one disclosure under the form. */
 export function WhatNextDisclosure() {
   return (
     <details className="exec-rq-disclosure">

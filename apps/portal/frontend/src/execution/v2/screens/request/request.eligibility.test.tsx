@@ -62,7 +62,7 @@ const mount = (api: ExecutionApi, writeBlockedReason?: string | null) =>
   render(<MemoryRouter initialEntries={["/governance/approvals/new"]}><NewRequestPage api={api} writeBlockedReason={writeBlockedReason} /></MemoryRouter>);
 
 const submit = () => screen.getByRole("button", { name: "Submit for R1 review" });
-const why = () => document.querySelector(".exec-rq-bar-act")!.textContent ?? "";
+const why = () => document.querySelector(".exec-rq-bar")!.textContent ?? "";
 
 async function fill() {
   await screen.findByRole("option", { name: "BTC Trend" });
@@ -119,7 +119,7 @@ describe("approval.create eligibility", () => {
     mount(api);
     await fill();
     await waitFor(() => expect(why()).toContain("Your access check says this will be refused"));
-    expect(why()).toContain("Submit still asks the server");
+    expect(why()).not.toContain("Submit still asks the server");
     expect(submit().getAttribute("aria-disabled")).not.toBe("true");
     expect(createApprovalRequest).not.toHaveBeenCalled();
     fireEvent.click(submit());
@@ -134,6 +134,6 @@ describe("approval.create eligibility", () => {
     await waitFor(() => expect(getStageActionEligibility).toHaveBeenCalled());
     await new Promise((resolve) => setTimeout(resolve, 5));
     expect(why()).not.toContain("access check");
-    expect(why()).toContain("Nothing is sent until you click Submit.");
+    expect(why()).not.toContain("Nothing is sent until you click Submit.");
   });
 });
