@@ -59,6 +59,7 @@
           }
         },
         "total_portfolios": { "type": "integer", "minimum": 0 },
+        "matching_portfolios": { "type": "integer", "minimum": 0, "maximum": 100, "description": "Present only for q: exact matches among authorized retained rows, not the uncapped source population. Preserve truncated/completeness disclosure. total_portfolios remains the unfiltered source census." },
         "truncated": { "type": "boolean" },
         "items": { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/PortfolioListItem" } }
       }

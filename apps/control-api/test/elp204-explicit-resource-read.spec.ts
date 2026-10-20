@@ -269,10 +269,23 @@ describe("ELP2-04 exact explicit Alpha/Portfolio reads", () => {
     const f = fixture("ALPHA"); versioned(f);
     const relation = f.snapshot.document.relations["manager.orders:orders"];
     relation.items.push({ fields: { ...OWN, deployment_id: PEER.deployment_id, order_id: "4", status: "SECRET-CROSS", side: "SELL", venue: "SECRET-CROSS" } });
-    const first = await f.orders(); expect(first.source.data.projected_total_items).toBe(2);
-    expect(first.source.data.window_aggregates.status).toEqual({ OPEN: 2 });
+    const first = await f.orders();
     expect(first.source.data.next_cursor).toBeTruthy();
-    expect(JSON.stringify(first)).not.toMatch(/SECRET-CROSS|PEER_ONLY_STATUS|HIDDEN_VENUE|NEVER_RETURN/);
+    const second = await f.orders({ cursor: first.source.data.next_cursor });
+    // Prove the actual authorized population by walking its bounded pages.
+    // A SCOPED_V2 view intentionally cannot borrow the global legacy mirror
+    // proof or publish exact totals/aggregates from its authorized subset.
+    expect([first, second].flatMap(page => page.source.data.items.map((row: any) => row.fields.order_id.value)))
+      .toEqual(["3", "1"]);
+    expect(second.source.data.next_cursor).toBeNull();
+    for (const page of [first, second]) {
+      expect(page).toMatchObject({ visibility: "SCOPED", coverage: "AUTHORIZED_ONLY" });
+      expect(page.projection).toBeUndefined();
+      expect(page.source).toMatchObject({ completeness: "PARTIAL", as_of: null });
+      for (const key of ["projected_total_items", "filtered_total_items", "window_aggregates"])
+        expect(page.source.data[key]).toBeUndefined();
+      expect(JSON.stringify(page)).not.toMatch(/SECRET-CROSS|PEER_ONLY_STATUS|HIDDEN_VENUE|NEVER_RETURN/);
+    }
     expect(await f.orders({ status: "PEER_ONLY_STATUS" })).toEqual(await f.orders({ status: "TEST_ONLY-never-existed" }));
     await expect(f.orders({ limit: 2, cursor: first.source.data.next_cursor })).rejects.toMatchObject({ status: 400, code: "N31_PROJECTION_CURSOR_INVALID" });
   });

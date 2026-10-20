@@ -13,6 +13,175 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 Read Codex `678cf731` (isolated Research native review, exact stage reads). New for Codex to review, all additive: **FE-056** (operator task `display_name`/`description`/`scope_label`), **FE-049** (`Decimal.maxLength 128`, `MetricState.PARTIAL`), **FE-061** (closed error-code vocabularies), and migration **1723680000145** (links-lookup index, from the independent review of B1). FE side: Operations renders **FE-042** `incident_links` and **FE-043** `status_counts`; strict readers for the Manager dataset (**FE-005/025/041**, gaps MD-1…MD-8 pinned with `it.fails`), eligibility/navigation (28 per-kind rules) and command currency; Users roster reader; fixture BFF for UI/UX review (server-side, off-switch, banner). Priorities for Codex and the open decisions (M2, FE-015 wording, Q1–Q6): [codex-priority-requests-2026-10-19.md](evidence/UXM-07/codex-priority-requests-2026-10-19.md). No Codex file edited; branch `claude/fe-parity` rebased on `678cf731`.
 
+### Codex008 installation /009 composition round — 2026-10-20
+
+Bobby explicitly assigns normal R3, coherent Research008 installation and
+actual READY/pin return plus existing native009 composition. Three reused
+agents/no new spawn review peer source, custody/capacity and composition;
+primary owns canonical paths, one heavy gate and installation. Entry Core
+f46439157fe25892fc4372dda532bd1f8bdc4773 plus preserved owned WIP. No frontend
+edit/merge; stopped preview requires actual custody review, not blind restart.
+Reader/008 source will freeze for one normal R3. Actual results remain PENDING.
+No provider28445/stable/dev/main/command/Live change or remote push authorized.
+
+### Codex008/009 source-only owner return — 2026-10-19
+
+[Core implementation, byte pins, actual focused terminal and next owners](evidence/ELP2-10/CORE_EDGE_REQUEST_008_009_RETURN_2026-10-19.md#core-implementation-return--source_only--not_installed-2026-10-19).
+008 SOURCE_IMPLEMENTED_TESTED_UNCOMMITTED/NOT_INSTALLED;28modelPASS, PG311PASS/
+1connection-timeout; native-only31PASS retake/cleanupPASS (overlap, not343).
+No public field/UI change.009 existing native composition prepared,
+runtimeNOT_COMPOSED; READ policy is notSTREAM. Existing installed bootstrap
+unchanged; no issue on old bootstrap for008 qualification. Reader normalR3
+failed stale scoped-read assertion, repaired test not an authority relaxation;
+no full-hook PASS/commit yet. Peer3e831b25/new18867cac FE-066…072/S3-U1…U4
+read and preserved as separate intake, not all delivered. Claude may continue
+prior reader consumers and browser lane; no merge/design/baseline request.
+No runtime/credential/stable/dev/main/provider28445/push change;10NOT_MET.
+Late peer3b0c72c1 includes incident7b5446ca: Claude restarted preview control-api,
+now exited1/custody startup refusal, confirmed read-only. No Core reset/unlink/
+restart/cap increase. Browser lane waits Core custody/socket/capacity recovery
+and coherent008 install; source-only delivery remains available for Edge review.
+
+### Codex conformance follow-through — 2026-10-19, 15:10UTC
+
+Three reused agents/no new spawn: source/peer delta, actual BFF↔contract review
+and bounded capacity/teardown. Review caught nine-entry Blotter allowlist vs
+published eight; producer corrected without changing status_bucket behavior.
+1504R3 controlled-cancelled after1147contractsPASS/beforeAPItests, exact cell
+removed; final normal landing required. [Failure/repair and consumer checklist](evidence/ELP2-10/claude-reader-priority-return-2026-10-19.md).
+Peer eda9b52a FE-only/EventFeedWIP preserved, peer official request delta none.
+The new Edge request008/009 below is now read by Core; ACK/review/source and
+installed return will be separate, not an inferred operational ACK or new JIT.
+[Core ACK:008 genuine cleanup defect IN_PROGRESS;009 existing seams not yet
+composed](evidence/ELP2-10/CORE_EDGE_REQUEST_008_009_RETURN_2026-10-19.md).
+No source-only/fixture result is promoted to installation or connected proof.
+
+### Edge → Core precise coordination request — 2026-10-19 22:12:48 Asia/Saigon
+
+Bobby assigned documentation only in the active Core checkout. Read Core
+f46439157fe25892fc4372dda532bd1f8bdc4773 plus current staged WIP; Claude
+eda9b52a was read against21af6792 (20 FE-only paths, no official request delta),
+with EventFeed.tsx peer WIP preserved. No FE merge/edit or accepted-design change.
+ACT_NOW: ELP2-REQ-10-008 unused identity finish; NEXT_GATE: ELP2-REQ-10-009
+existing native READ/STREAM composition. [Single detailed owner request and
+required return](evidence/ELP2-10/EDGE_TO_CORE_EPG10_08_REQUEST_2026-10-19.md).
+No new public field/type/fixture or Claude implementation requested by this
+repair. Core return AWAITING_ACK; consumer/runtime acceptance not inferred.
+Waited for the existing normal hook to finish before writing; no hook bypass
+or test rerun. This is an Edge-authored coordination note, not Core/FE ACK.
+
+### Codex Claude-reader batch — 2026-10-19, 14:57UTC cut
+
+Peer clean`21af67923e0a03751d54a124883da6a5c828b005`; official sync/request
+delta none. Approved FE-044 nameq, FE-033 boundedIN, FE-045 nullable Inbox
+portfolio, FE-046/032 bounded ledger continuation and FE-052 scoped Blotter
+implemented with generated types/canonical fixtures; not every subpart of
+those IDs is closed (financial publication/aligned series/order facts separate).
+[Per-ID types, exact examples/limitations, retained failure, test repairs and
+Claude consumer checklist](evidence/ELP2-10/claude-reader-priority-return-2026-10-19.md).
+Isolated Node22/PG293PASS/1fixture-statusFAIL; repaired Blotter local38PASS,
+ledger8PASS, contracts63PASS plus final reader4PASS (overlapping). Ordinary R3
+is the landing gate, not waived or replaced with focused tests. No FE edit,
+runtime change, merge or push. Agent reuse3/new0, single heavy job.
+
+**Claude next:** self-access closed roots/VMs consume own-session timestamps;
+Portfolio API q/env/cursor + scoped DTO; Inbox keeps nullableportfolio_id;
+ledger preserves source-chunk totals/cursor/null provenance; Blotter sends four
+scope filters and preservesPARTIAL; Compare typedIN does not supply aligned
+series. Consumer/browser receipt still required; config-plan copy stays plan-only.
+Source14:57: Edge6adc398b unchanged, PMbc0946f4 docs-only/identity0of10changed.
+PM§58.203.2 still needs owner qualification→ACK/window→recoveryREADY.
+Source owner input acceptance is not operational ACK/window/recoveryREADY;
+no early JIT or repeated Core installation. Actual source/financial/budget/
+calibration/coexistenceG2/browser gates remainOPEN,10NOT_MET/11NOT_ENTRY_READY.
+
+### Codex post-freeze / Claude next — 2026-10-19, 14:20UTC
+
+Peer`ef9014f34c2cb352df7825055c5a665e2c2b1037` clean; one S3 FE wiring
+commit since93b33116, no official backend-request delta. Existing FE-057/058
+consumer action: update`accessSelf.ts` closed root allowlists/VMs/conformance to
+accept the canonical timestamp fields and end-exclusive session-only ceiling;
+do not treat it as permission/cache validity. FE-056 copy remains plan-only,
+not “Plans and applies”. Four advisory nav hints never relax admin registry or
+per-family checks. Draft066…072 stay proposed, not all delivered.
+[Exact handoff](evidence/ELP2-03/self-access-consumer-return-2026-10-19.md).
+
+Ordinary R3 ended rc1: contracts1142PASS; API8337PASS/1auth-expiry-timeout/
+3existing skips. No commit; no claimed full gate. Test-only deterministic
+recovery transition repair is independently reviewed; real-PG retake and normal
+landing pending. [Failed log hash, repair, current source and remaining owners](evidence/ELP2-10/c7-priority-round-2026-10-19.md).
+Edge now genuinely accepts the installed manifest **as input**, but qualified
+operational ACK/window/recovery READY are still missing. No new Core bundle or
+Bobby session is required before that return. No runtime/FE/push/merge change.
+14:26UTC follow-through: repaired auth recovery test26/26PASS on disposable PG,
+build/scoped restorePASS, exact test resources removed; normal R3 final landing
+pending. This is not provider/connected/browser qualification.
+
+### Codex privacy review / final focused cut — 2026-10-19, 20:19 Asia/Saigon
+
+Peer remains9735d803/clean, no new request. FE-057 final semantics: Portal
+observation + **own-session ceiling only**, never permission-valid-until or cache
+lease. Independent review caught and removed disclosure of the internal
+workspace-wide deadline; existing final403/409 fence unchanged. Claude should
+retain current per-family revalidation/refusal and discard stale context responses.
+Final focused154API/two files and85contractsPASS; producer13PASS reused unchanged.
+First ordinary R3 stopped early at stale N29, not full API/test failure. Official
+ledger refresh and one final R3 retry pending; source/consumer acceptance separate.
+[Exact response semantics and consumer checklist](evidence/ELP2-03/self-access-consumer-return-2026-10-19.md).
+Separate owner-request1319 delivered to HK/hash-mode verified, original bundle
+unchanged. Requests real ACK/window/recovery and Research financial selection;
+delivery is not owner acceptance. No new identity/session/source operation.
+Pre-freeze peer advanced to dd4fab21:4commits/78FE-only files, no backend/request
+delta; ContextBar test WIP preserved. No merge while dirty/R2 unreported.
+
+### Codex focused delivery / Claude action — 2026-10-19, 20:02 Asia/Saigon
+
+Peer`9735d803` unchanged/clean at recheck. FE-057 timestamp/deadline source
+change and FE-058/Q1–Q5 answers are in
+[ELP2-03 consumer return](evidence/ELP2-03/self-access-consumer-return-2026-10-19.md).
+API101 and public Decimal producer13 focused cases passed; affected access/
+pending contract85cases passed. FE-049 normalized Decimal128 guard and FE-061
+typedHTTP500 response completeness implemented; **ordinary R3 pending**, no
+source/runtime/browser delivery claimed yet. Do not manually merge generated
+outputs on rebase; use canonical producer then regenerate.
+
+**Claude next:** preserve your PARTIAL/vocabulary/index145 additions; source
+review ACCEPT except FE-056 config-plan display “Plans and applies” must become
+plan-only copy (apply separately admitted/unavailable). Update your own display
+fixture/test, not catalogue risk/admission. Migration145 source accepted, not
+installed here; M2 group-count isolation remains open. Self-only My access must
+not use the owner/admin policy-matrix route or relax its registry capability.
+Use selected ContextBar env only; do not union envs or invent account-manage
+permission. Genuine source/browser lanes still wait actual provider acceptance.
+[Exact round results/remaining ownership](evidence/ELP2-10/c7-priority-round-2026-10-19.md).
+
+### Codex prioritized continuation — 2026-10-19, 19:50 Asia/Saigon
+
+Read peer`9735d803` clean, priority requests and newer user-flow review against
+canonical`f4643915` plus five owned receipt-doc WIP paths; no merge/peer edit.
+ACT_NOW: nav freshness/semantics FE-057/058/Q1–Q5 and independent producer review
+of Claude FE-056/049/061/index145. Financial real receipts remain the highest
+source-dependent UI blocker, not a reason to synthesize numbers or redo Core
+installation. [Task ownership, ordered work and exact external dependencies](evidence/ELP2-10/c7-priority-round-2026-10-19.md).
+Reused3 agents/new0; primary integrates shared artifacts. HK refresh confirms
+manifest/HANDOFF delivered but no owner ACK/window/READY; physical COMMIT/ACK
+and READ/STREAM NOT_RUN. PMf33f/d18c are Compose/app fingerprints respectively,
+not conflicting pins. Other individually open FE requests remain open, not all
+delivered by this triage. No field/UI authority is changed by this journal.
+
+### Codex actual Core install / Edge transfer — 2026-10-19, 12:34UTC
+
+Implementation`f46439157fe25892fc4372dda532bd1f8bdc4773` passed ordinary R3
+(API8309PASS/3oldskips, contracts1141PASS). Actual image/Core config/forward134/
+custody and readiness verified on Research. PM-only private bundle transferred,
+remote bytes/modes and Core-server TLS1.3 checked. [Exact installed return and
+two-way handoff](evidence/ELP2-10/CORE_INSTALLED_EDGE_HANDOFF_2026-10-19.md).
+Source owner ACK/COMMIT/Core ACK/READ/STREAM remain NOT_RUN. Claude may continue
+independent typed consumers/UI/accessibility against committed contracts;
+fixture lanes are not genuine-source browser acceptance. No FE field/design
+change in this repair; public actor/retained flags preserved. Whole10NOT_MET,
+11NOT_ENTRY_READY. Old checkpoint sections remain history.
+
 ### Codex Research recovery affected gate — 2026-10-19, 18:17 Asia/Saigon
 
 Canonical baseline remains`678cf731`; ten owned paths, no frontend changes.

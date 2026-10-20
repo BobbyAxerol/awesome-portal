@@ -1,6 +1,7 @@
 import { QueryResultRow } from "pg";
 import { z } from "zod";
 import { PostgresListResource, RawKeysetQuery } from "../query";
+import { managerSearchText } from "../execution-v2/manager-query-p1.contract";
 
 export const MANAGER_LIST_ENVIRONMENTS = ["paper", "sandbox", "live"] as const;
 export type ManagerListEnvironment = (typeof MANAGER_LIST_ENVIRONMENTS)[number];
@@ -43,6 +44,9 @@ export type BindingsQuery = z.infer<typeof BindingsQuerySchema>;
 export const PortfolioListQuerySchema = z.object({
   workspace_id: z.string().min(1).max(128).optional(),
   environment: z.enum(ALPHA_FLEET_ENVIRONMENTS).default("all"),
+  // Same finite name-search grammar as Manager P1: literal, case-insensitive
+  // substring; no trimming, wildcard expansion or Unicode normalization.
+  q: managerSearchText.optional(),
   after: z.string().min(1).max(4096).optional(),
   before: z.string().min(1).max(4096).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),

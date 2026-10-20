@@ -261,6 +261,8 @@ export interface components {
          *       },
          *       "current_only": true,
          *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
          *       "actions": [
          *         {
          *           "action": "portfolio.read",
@@ -287,6 +289,8 @@ export interface components {
          *       },
          *       "current_only": true,
          *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
          *       "actions": [
          *         {
          *           "action": "portfolio.read",
@@ -321,6 +325,10 @@ export interface components {
             current_only: true;
             /** @constant */
             advisory_only: true;
+            /** @description Portal evaluation time in UTC epoch milliseconds; not source observation time. */
+            observed_at_ms: number;
+            /** @description End-exclusive ceiling of this actor's current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline. */
+            valid_until_ms: number;
             actions: components["schemas"]["AccessEligibilityRow"][] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         AccessSelfNavigationItem: {
@@ -347,6 +355,8 @@ export interface components {
          *       "environment": "paper",
          *       "current_only": true,
          *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
          *       "current_read_mode": "NOT_ESTABLISHED",
          *       "self_entry": {
          *         "feature": "PROFILE_ACCESS",
@@ -400,6 +410,8 @@ export interface components {
          *       "environment": "paper",
          *       "current_only": true,
          *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
          *       "current_read_mode": "NOT_ESTABLISHED",
          *       "self_entry": {
          *         "feature": "PROFILE_ACCESS",
@@ -453,6 +465,8 @@ export interface components {
          *       "environment": "paper",
          *       "current_only": true,
          *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
          *       "current_read_mode": "LEGACY_COMPATIBILITY",
          *       "self_entry": {
          *         "feature": "PROFILE_ACCESS",
@@ -506,6 +520,8 @@ export interface components {
          *       "environment": "paper",
          *       "current_only": true,
          *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
          *       "current_read_mode": "SCOPED_V2",
          *       "self_entry": {
          *         "feature": "PROFILE_ACCESS",
@@ -565,6 +581,10 @@ export interface components {
             current_only: true;
             /** @constant */
             advisory_only: true;
+            /** @description Portal evaluation time in UTC epoch milliseconds; not source observation time. */
+            observed_at_ms: number;
+            /** @description End-exclusive ceiling of this actor's current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline. */
+            valid_until_ms: number;
             /**
              * @description Current Core-workspace reader routing metadata only; not a grant, source readiness or command permit.
              * @enum {unknown}
@@ -864,6 +884,16 @@ export interface operations {
                     "application/json": components["schemas"]["AccessProblem"];
                 };
             };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
@@ -951,6 +981,16 @@ export interface operations {
                     "application/json": components["schemas"]["AccessProblem"];
                 };
             };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
@@ -1027,6 +1067,16 @@ export interface operations {
             };
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
                 headers: {
                     "Cache-Control": "private, no-store";
                     [name: string]: unknown;
@@ -1123,6 +1173,16 @@ export interface operations {
                     "application/json": components["schemas"]["AccessProblem"];
                 };
             };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
@@ -1211,6 +1271,16 @@ export interface operations {
                     "application/json": components["schemas"]["AccessProblem"];
                 };
             };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
@@ -1287,6 +1357,16 @@ export interface operations {
             };
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
                 headers: {
                     "Cache-Control": "private, no-store";
                     [name: string]: unknown;
@@ -1385,6 +1465,16 @@ export interface operations {
                     "application/json": components["schemas"]["AccessProblem"];
                 };
             };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
@@ -1467,6 +1557,16 @@ export interface operations {
             };
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
                 headers: {
                     "Cache-Control": "private, no-store";
                     [name: string]: unknown;
@@ -1563,6 +1663,16 @@ export interface operations {
                     "application/json": components["schemas"]["AccessProblem"];
                 };
             };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
             /** @description Typed public refusal; current authority is required even for replay. */
             503: {
                 headers: {
@@ -1640,6 +1750,16 @@ export interface operations {
             };
             /** @description Typed public refusal; current authority is required even for replay. */
             409: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
                 headers: {
                     "Cache-Control": "private, no-store";
                     [name: string]: unknown;

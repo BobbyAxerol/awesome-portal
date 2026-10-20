@@ -175,7 +175,8 @@
                           "EQ",
                           "GTE",
                           "LTE",
-                          "IS_NULL"
+                          "IS_NULL",
+                          "IN"
                         ]
                       },
                       "value": {
@@ -183,11 +184,94 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "values": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "minItems": 1,
+                        "maxItems": 32,
+                        "uniqueItems": true
                       }
                     },
                     "required": [
                       "field",
                       "op"
+                    ],
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IN"
+                          },
+                          "values": {}
+                        },
+                        "required": [
+                          "values"
+                        ],
+                        "not": {
+                          "properties": {
+                            "value": {}
+                          },
+                          "required": [
+                            "value"
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IS_NULL"
+                          }
+                        },
+                        "not": {
+                          "anyOf": [
+                            {
+                              "properties": {
+                                "value": {}
+                              },
+                              "required": [
+                                "value"
+                              ]
+                            },
+                            {
+                              "properties": {
+                                "values": {}
+                              },
+                              "required": [
+                                "values"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "enum": [
+                              "EQ",
+                              "GTE",
+                              "LTE"
+                            ]
+                          },
+                          "value": {}
+                        },
+                        "required": [
+                          "value"
+                        ],
+                        "not": {
+                          "properties": {
+                            "values": {}
+                          },
+                          "required": [
+                            "values"
+                          ]
+                        }
+                      }
                     ],
                     "allOf": [
                       {
@@ -214,13 +298,35 @@
                           }
                         },
                         "else": {
-                          "type": "object",
-                          "properties": {
-                            "value": {}
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {}
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       },
                       {
@@ -250,17 +356,46 @@
                           ]
                         },
                         "then": {
-                          "type": "object",
-                          "properties": {
-                            "value": {
-                              "type": "string",
-                              "maxLength": 128,
-                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-                            }
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 128,
+                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                }
+                              }
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              }
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       }
                     ]
@@ -985,7 +1120,8 @@
                           "EQ",
                           "GTE",
                           "LTE",
-                          "IS_NULL"
+                          "IS_NULL",
+                          "IN"
                         ]
                       },
                       "value": {
@@ -993,11 +1129,94 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "values": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "minItems": 1,
+                        "maxItems": 32,
+                        "uniqueItems": true
                       }
                     },
                     "required": [
                       "field",
                       "op"
+                    ],
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IN"
+                          },
+                          "values": {}
+                        },
+                        "required": [
+                          "values"
+                        ],
+                        "not": {
+                          "properties": {
+                            "value": {}
+                          },
+                          "required": [
+                            "value"
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IS_NULL"
+                          }
+                        },
+                        "not": {
+                          "anyOf": [
+                            {
+                              "properties": {
+                                "value": {}
+                              },
+                              "required": [
+                                "value"
+                              ]
+                            },
+                            {
+                              "properties": {
+                                "values": {}
+                              },
+                              "required": [
+                                "values"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "enum": [
+                              "EQ",
+                              "GTE",
+                              "LTE"
+                            ]
+                          },
+                          "value": {}
+                        },
+                        "required": [
+                          "value"
+                        ],
+                        "not": {
+                          "properties": {
+                            "values": {}
+                          },
+                          "required": [
+                            "values"
+                          ]
+                        }
+                      }
                     ],
                     "allOf": [
                       {
@@ -1024,13 +1243,35 @@
                           }
                         },
                         "else": {
-                          "type": "object",
-                          "properties": {
-                            "value": {}
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {}
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       },
                       {
@@ -1060,17 +1301,46 @@
                           ]
                         },
                         "then": {
-                          "type": "object",
-                          "properties": {
-                            "value": {
-                              "type": "string",
-                              "maxLength": 128,
-                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-                            }
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 128,
+                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                }
+                              }
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              }
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       }
                     ]
@@ -1805,7 +2075,8 @@
                           "EQ",
                           "GTE",
                           "LTE",
-                          "IS_NULL"
+                          "IS_NULL",
+                          "IN"
                         ]
                       },
                       "value": {
@@ -1813,11 +2084,94 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "values": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "minItems": 1,
+                        "maxItems": 32,
+                        "uniqueItems": true
                       }
                     },
                     "required": [
                       "field",
                       "op"
+                    ],
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IN"
+                          },
+                          "values": {}
+                        },
+                        "required": [
+                          "values"
+                        ],
+                        "not": {
+                          "properties": {
+                            "value": {}
+                          },
+                          "required": [
+                            "value"
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IS_NULL"
+                          }
+                        },
+                        "not": {
+                          "anyOf": [
+                            {
+                              "properties": {
+                                "value": {}
+                              },
+                              "required": [
+                                "value"
+                              ]
+                            },
+                            {
+                              "properties": {
+                                "values": {}
+                              },
+                              "required": [
+                                "values"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "enum": [
+                              "EQ",
+                              "GTE",
+                              "LTE"
+                            ]
+                          },
+                          "value": {}
+                        },
+                        "required": [
+                          "value"
+                        ],
+                        "not": {
+                          "properties": {
+                            "values": {}
+                          },
+                          "required": [
+                            "values"
+                          ]
+                        }
+                      }
                     ],
                     "allOf": [
                       {
@@ -1844,13 +2198,35 @@
                           }
                         },
                         "else": {
-                          "type": "object",
-                          "properties": {
-                            "value": {}
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {}
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       },
                       {
@@ -1880,17 +2256,46 @@
                           ]
                         },
                         "then": {
-                          "type": "object",
-                          "properties": {
-                            "value": {
-                              "type": "string",
-                              "maxLength": 128,
-                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-                            }
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 128,
+                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                }
+                              }
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              }
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       }
                     ]
@@ -2625,7 +3030,8 @@
                           "EQ",
                           "GTE",
                           "LTE",
-                          "IS_NULL"
+                          "IS_NULL",
+                          "IN"
                         ]
                       },
                       "value": {
@@ -2633,11 +3039,94 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "values": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "minItems": 1,
+                        "maxItems": 32,
+                        "uniqueItems": true
                       }
                     },
                     "required": [
                       "field",
                       "op"
+                    ],
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IN"
+                          },
+                          "values": {}
+                        },
+                        "required": [
+                          "values"
+                        ],
+                        "not": {
+                          "properties": {
+                            "value": {}
+                          },
+                          "required": [
+                            "value"
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IS_NULL"
+                          }
+                        },
+                        "not": {
+                          "anyOf": [
+                            {
+                              "properties": {
+                                "value": {}
+                              },
+                              "required": [
+                                "value"
+                              ]
+                            },
+                            {
+                              "properties": {
+                                "values": {}
+                              },
+                              "required": [
+                                "values"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "enum": [
+                              "EQ",
+                              "GTE",
+                              "LTE"
+                            ]
+                          },
+                          "value": {}
+                        },
+                        "required": [
+                          "value"
+                        ],
+                        "not": {
+                          "properties": {
+                            "values": {}
+                          },
+                          "required": [
+                            "values"
+                          ]
+                        }
+                      }
                     ],
                     "allOf": [
                       {
@@ -2664,13 +3153,35 @@
                           }
                         },
                         "else": {
-                          "type": "object",
-                          "properties": {
-                            "value": {}
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {}
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       },
                       {
@@ -2700,17 +3211,46 @@
                           ]
                         },
                         "then": {
-                          "type": "object",
-                          "properties": {
-                            "value": {
-                              "type": "string",
-                              "maxLength": 128,
-                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-                            }
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 128,
+                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                }
+                              }
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              }
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       }
                     ]
@@ -3445,7 +3985,8 @@
                           "EQ",
                           "GTE",
                           "LTE",
-                          "IS_NULL"
+                          "IS_NULL",
+                          "IN"
                         ]
                       },
                       "value": {
@@ -3453,11 +3994,94 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "values": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "minItems": 1,
+                        "maxItems": 32,
+                        "uniqueItems": true
                       }
                     },
                     "required": [
                       "field",
                       "op"
+                    ],
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IN"
+                          },
+                          "values": {}
+                        },
+                        "required": [
+                          "values"
+                        ],
+                        "not": {
+                          "properties": {
+                            "value": {}
+                          },
+                          "required": [
+                            "value"
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IS_NULL"
+                          }
+                        },
+                        "not": {
+                          "anyOf": [
+                            {
+                              "properties": {
+                                "value": {}
+                              },
+                              "required": [
+                                "value"
+                              ]
+                            },
+                            {
+                              "properties": {
+                                "values": {}
+                              },
+                              "required": [
+                                "values"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "enum": [
+                              "EQ",
+                              "GTE",
+                              "LTE"
+                            ]
+                          },
+                          "value": {}
+                        },
+                        "required": [
+                          "value"
+                        ],
+                        "not": {
+                          "properties": {
+                            "values": {}
+                          },
+                          "required": [
+                            "values"
+                          ]
+                        }
+                      }
                     ],
                     "allOf": [
                       {
@@ -3484,13 +4108,35 @@
                           }
                         },
                         "else": {
-                          "type": "object",
-                          "properties": {
-                            "value": {}
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {}
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       },
                       {
@@ -3520,17 +4166,46 @@
                           ]
                         },
                         "then": {
-                          "type": "object",
-                          "properties": {
-                            "value": {
-                              "type": "string",
-                              "maxLength": 128,
-                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-                            }
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 128,
+                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                }
+                              }
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              }
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       }
                     ]
@@ -4265,7 +4940,8 @@
                           "EQ",
                           "GTE",
                           "LTE",
-                          "IS_NULL"
+                          "IS_NULL",
+                          "IN"
                         ]
                       },
                       "value": {
@@ -4273,11 +4949,94 @@
                         "minLength": 1,
                         "maxLength": 256,
                         "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                      },
+                      "values": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                        },
+                        "minItems": 1,
+                        "maxItems": 32,
+                        "uniqueItems": true
                       }
                     },
                     "required": [
                       "field",
                       "op"
+                    ],
+                    "oneOf": [
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IN"
+                          },
+                          "values": {}
+                        },
+                        "required": [
+                          "values"
+                        ],
+                        "not": {
+                          "properties": {
+                            "value": {}
+                          },
+                          "required": [
+                            "value"
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "const": "IS_NULL"
+                          }
+                        },
+                        "not": {
+                          "anyOf": [
+                            {
+                              "properties": {
+                                "value": {}
+                              },
+                              "required": [
+                                "value"
+                              ]
+                            },
+                            {
+                              "properties": {
+                                "values": {}
+                              },
+                              "required": [
+                                "values"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "properties": {
+                          "op": {
+                            "enum": [
+                              "EQ",
+                              "GTE",
+                              "LTE"
+                            ]
+                          },
+                          "value": {}
+                        },
+                        "required": [
+                          "value"
+                        ],
+                        "not": {
+                          "properties": {
+                            "values": {}
+                          },
+                          "required": [
+                            "values"
+                          ]
+                        }
+                      }
                     ],
                     "allOf": [
                       {
@@ -4304,13 +5063,35 @@
                           }
                         },
                         "else": {
-                          "type": "object",
-                          "properties": {
-                            "value": {}
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {}
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {}
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       },
                       {
@@ -4340,17 +5121,46 @@
                           ]
                         },
                         "then": {
-                          "type": "object",
-                          "properties": {
-                            "value": {
-                              "type": "string",
-                              "maxLength": 128,
-                              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-                            }
+                          "if": {
+                            "type": "object",
+                            "properties": {
+                              "op": {
+                                "const": "IN"
+                              }
+                            },
+                            "required": [
+                              "op"
+                            ]
                           },
-                          "required": [
-                            "value"
-                          ]
+                          "then": {
+                            "type": "object",
+                            "properties": {
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "maxLength": 128,
+                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                }
+                              }
+                            },
+                            "required": [
+                              "values"
+                            ]
+                          },
+                          "else": {
+                            "type": "object",
+                            "properties": {
+                              "value": {
+                                "type": "string",
+                                "maxLength": 128,
+                                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                              }
+                            },
+                            "required": [
+                              "value"
+                            ]
+                          }
                         }
                       }
                     ]
@@ -13214,7 +14024,8 @@
                     "EQ",
                     "GTE",
                     "LTE",
-                    "IS_NULL"
+                    "IS_NULL",
+                    "IN"
                   ]
                 },
                 "value": {
@@ -13222,11 +14033,94 @@
                   "minLength": 1,
                   "maxLength": 256,
                   "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  "minItems": 1,
+                  "maxItems": 32,
+                  "uniqueItems": true
                 }
               },
               "required": [
                 "field",
                 "op"
+              ],
+              "oneOf": [
+                {
+                  "properties": {
+                    "op": {
+                      "const": "IN"
+                    },
+                    "values": {}
+                  },
+                  "required": [
+                    "values"
+                  ],
+                  "not": {
+                    "properties": {
+                      "value": {}
+                    },
+                    "required": [
+                      "value"
+                    ]
+                  }
+                },
+                {
+                  "properties": {
+                    "op": {
+                      "const": "IS_NULL"
+                    }
+                  },
+                  "not": {
+                    "anyOf": [
+                      {
+                        "properties": {
+                          "value": {}
+                        },
+                        "required": [
+                          "value"
+                        ]
+                      },
+                      {
+                        "properties": {
+                          "values": {}
+                        },
+                        "required": [
+                          "values"
+                        ]
+                      }
+                    ]
+                  }
+                },
+                {
+                  "properties": {
+                    "op": {
+                      "enum": [
+                        "EQ",
+                        "GTE",
+                        "LTE"
+                      ]
+                    },
+                    "value": {}
+                  },
+                  "required": [
+                    "value"
+                  ],
+                  "not": {
+                    "properties": {
+                      "values": {}
+                    },
+                    "required": [
+                      "values"
+                    ]
+                  }
+                }
               ],
               "allOf": [
                 {
@@ -13253,13 +14147,35 @@
                     }
                   },
                   "else": {
-                    "type": "object",
-                    "properties": {
-                      "value": {}
+                    "if": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "const": "IN"
+                        }
+                      },
+                      "required": [
+                        "op"
+                      ]
                     },
-                    "required": [
-                      "value"
-                    ]
+                    "then": {
+                      "type": "object",
+                      "properties": {
+                        "values": {}
+                      },
+                      "required": [
+                        "values"
+                      ]
+                    },
+                    "else": {
+                      "type": "object",
+                      "properties": {
+                        "value": {}
+                      },
+                      "required": [
+                        "value"
+                      ]
+                    }
                   }
                 },
                 {
@@ -13289,17 +14205,46 @@
                     ]
                   },
                   "then": {
-                    "type": "object",
-                    "properties": {
-                      "value": {
-                        "type": "string",
-                        "maxLength": 128,
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
-                      }
+                    "if": {
+                      "type": "object",
+                      "properties": {
+                        "op": {
+                          "const": "IN"
+                        }
+                      },
+                      "required": [
+                        "op"
+                      ]
                     },
-                    "required": [
-                      "value"
-                    ]
+                    "then": {
+                      "type": "object",
+                      "properties": {
+                        "values": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "maxLength": 128,
+                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                          }
+                        }
+                      },
+                      "required": [
+                        "values"
+                      ]
+                    },
+                    "else": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": "string",
+                          "maxLength": 128,
+                          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                        }
+                      },
+                      "required": [
+                        "value"
+                      ]
+                    }
                   }
                 }
               ]

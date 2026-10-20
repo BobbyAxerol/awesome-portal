@@ -87,17 +87,21 @@
       "properties": {
         "filters": {
           "type": "object", "additionalProperties": false,
-          "required": ["status", "status_bucket", "venue", "symbol", "side"],
+          "required": ["status", "status_bucket", "venue", "symbol", "side", "stage", "deployment_id", "account_id", "alpha_id"],
           "properties": {
             "status": { "oneOf": [{ "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED"] }, { "type": "null" }] },
             "status_bucket": { "oneOf": [{ "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN"] }, { "type": "null" }] },
             "venue": { "type": ["string", "null"], "maxLength": 64 },
             "symbol": { "type": ["string", "null"], "maxLength": 128 },
-            "side": { "oneOf": [{ "enum": ["BUY", "SELL"] }, { "type": "null" }] }
+            "side": { "oneOf": [{ "enum": ["BUY", "SELL"] }, { "type": "null" }] },
+            "stage": { "enum": ["PAPER", null] },
+            "deployment_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+            "account_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+            "alpha_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] }
           }
         },
         "sort": { "enum": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] },
-        "filter_allowlist": { "const": ["status", "venue", "symbol", "side"] },
+        "filter_allowlist": { "const": ["status", "venue", "symbol", "side", "stage", "deployment_id", "account_id", "alpha_id"] },
         "sort_allowlist": { "const": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] },
         "count_scope": { "const": "COMMITTED_HOT_PROJECTION" }
       }

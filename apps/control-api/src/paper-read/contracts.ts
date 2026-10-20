@@ -2,6 +2,7 @@ import { z } from "zod";
 
 const WorkspaceId = z.string().trim().min(1).max(96);
 const DeploymentId = z.string().trim().min(1).max(191);
+const ScopeId = DeploymentId.regex(/^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$/);
 const Cursor = z.string().min(1).max(4096);
 const OrderStatus = z.enum([
   "INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE",
@@ -24,6 +25,10 @@ export const PaperBlotterQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
   status: OrderStatus.optional(),
   status_bucket: z.enum(["FILLED", "PARTIAL", "REJECTED", "OPEN"]).optional(),
+  stage: z.enum(["PAPER", "SANDBOX", "CANARY", "LIVE"]).optional(),
+  deployment_id: ScopeId.optional(),
+  account_id: ScopeId.optional(),
+  alpha_id: ScopeId.optional(),
   venue: z.string().trim().min(1).max(32).optional(),
   symbol: z.string().trim().min(1).max(64).optional(),
   side: z.enum(["BUY", "SELL"]).optional(),

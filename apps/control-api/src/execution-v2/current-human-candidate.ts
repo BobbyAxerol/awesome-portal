@@ -260,7 +260,7 @@ export class CurrentHumanCandidate {
     });
   }
 
-  async issue(actor: AccessActor, untrustedBinding: CurrentHumanBinding): Promise<{ token: string; lease_id: string; expires_at_ms: number }> {
+  async issue(actor: AccessActor, untrustedBinding: CurrentHumanBinding): Promise<{ token: string; lease_id: string; expires_at_ms: number; authority_revision: number }> {
     const binding = currentHumanBinding.parse(untrustedBinding);
     this.checkInstallation(binding, true);
     if (binding.workload_id !== this.reverseSource().workload_id) throw new CurrentHumanLeaseError("CURRENT_HUMAN_WORKLOAD_MISMATCH");
@@ -288,7 +288,7 @@ export class CurrentHumanCandidate {
     // A concurrent drain can retire this ISSUED lease before signing completes;
     // enter will refuse it. Signing is never performed under a Core lock.
     return { token: await new SignJWT(claims).setProtectedHeader({ alg: "EdDSA", kid: this.config.key_id, typ: "JWT" })
-      .sign(this.config.private_key), lease_id: claims.jti, expires_at_ms: claims.exp * 1000 };
+      .sign(this.config.private_key), lease_id: claims.jti, expires_at_ms: claims.exp * 1000, authority_revision: claims.authority_revision };
   }
 
 
@@ -695,6 +695,63 @@ export class CurrentHumanCandidate {
       if (authority.drain_id !== drainId || Number(authority.revision) !== expectedRevision)
         throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_CONFLICT");
       if ((await this.drainState(db, drainId, authority.revision)).status !== "DRAIN_READY") throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_UNRESOLVED");
+      await db.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton");
+    });
+  }
+
+  /** Private owner cleanup only: retire/drain must have COMMITTED before this
+   * call. The trusted caller retains the exact one-view bearer for AuthService
+   * logout AFTER this transaction. This is neither a source terminal receipt
+   * nor permission to reconstruct a session, enter TS, or acknowledge COMMIT.
+   * Callback witness MUST synchronously throw unless its complete local
+   * transport snapshot is known and every counter is zero; never take it from
+   * IPC input. No network/callback I/O may run while this Core lock is held. */
+  async finishUnusedIdentityDrain(drainId: string, expectedDrainRevision: number,
+    original: { lease_id: string; authority_revision: number; actor: AccessActor; binding: CurrentHumanBinding },
+    assertNoCallbacks: () => void): Promise<void> {
+    id.parse(drainId); integer.parse(expectedDrainRevision);
+    const leaseId = id.parse(original.lease_id), originalRevision = integer.parse(original.authority_revision),
+      actor = nativeActor(original.actor), binding = currentHumanBinding.parse(original.binding);
+    // Expired installations may finish exact retained custody; this creates no
+    // fresh identity/grant, and never treats expiry as evidence of rollback.
+    this.checkInstallation(binding, false);
+    if (binding.workload_id !== this.reverseSource().workload_id)
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_BINDING_MISMATCH");
+    if (typeof assertNoCallbacks !== "function" || types.isAsyncFunction(assertNoCallbacks))
+      throw new CurrentHumanLeaseError("CURRENT_HUMAN_UNUSED_IDENTITY_WITNESS_REQUIRED");
+    return this.transaction(async (db, authority) => {
+      if (authority.drain_id !== drainId || Number(authority.revision) !== expectedDrainRevision)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_CONFLICT");
+      if ((await this.drainState(db, drainId, authority.revision)).status !== "DRAIN_READY")
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_DRAIN_UNRESOLVED");
+      const row = (await db.query<Row>(
+        "SELECT * FROM elp210_candidate.leases WHERE lease_id=$1 AND authority_revision=$2 AND subject_id=$3 " +
+        "AND session_id=$4 AND session_revision=$5 AND workspace_id=$6 AND environment=$7 " +
+        "AND workload_id=$8 AND request_digest=$9 FOR UPDATE",
+        [leaseId, originalRevision, actor.user_id, actor.session_id, actor.session_generation,
+          binding.workspace_id, binding.environment, binding.workload_id, binding.request_digest])).rows[0];
+      if (!row) throw new CurrentHumanLeaseError("CURRENT_HUMAN_BINDING_MISMATCH");
+      if (row.phase !== "RETIRED" || row.attempt_id !== null || row.terminal_receipt_digest !== null)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_UNUSED_IDENTITY_NOT_ELIGIBLE");
+      const events = (await db.query<{ phase: string; attempt_id: string | null; terminal_receipt_digest: string | null }>(
+        "SELECT phase,attempt_id,terminal_receipt_digest FROM elp210_candidate.events " +
+        "WHERE lease_id=$1 ORDER BY event_id LIMIT 3", [leaseId])).rows;
+      if (events.length !== 2 || events.some((event, index) =>
+        event.phase !== (index === 0 ? "ISSUED" : "RETIRED") ||
+        event.attempt_id !== null || event.terminal_receipt_digest !== null))
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_UNUSED_IDENTITY_NOT_ELIGIBLE");
+      // A synchronous trusted witness is sampled under the SAME authority lock,
+      // after immutable history and global (all-family) drain checks. A Promise
+      // is not evidence: no async work may escape this decision fence.
+      const witness: unknown = assertNoCallbacks();
+      if (types.isPromise(witness)) {
+        // Observe rejection on an actual native Promise without awaiting it,
+        // invoking a thenable or allowing its fulfillment value to propagate.
+        void Promise.prototype.then.call(witness, () => undefined, () => undefined);
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_UNUSED_IDENTITY_WITNESS_REQUIRED");
+      }
+      if (witness !== undefined)
+        throw new CurrentHumanLeaseError("CURRENT_HUMAN_UNUSED_IDENTITY_WITNESS_REQUIRED");
       await db.query("UPDATE elp210_candidate.authority SET drain_id=NULL WHERE singleton");
     });
   }

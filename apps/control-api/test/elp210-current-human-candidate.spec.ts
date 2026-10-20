@@ -667,6 +667,225 @@ describe.skipIf(!database)("ELP2-10 unmounted authentic-human candidate, real Co
       } finally { vi.useRealTimers(); }
     });
 
+  // P1 unused identity finish: actual disposable Core PG and the SAME candidate
+  // authority barrier. These are not installed IPC/provider/PM ACK receipts.
+  const unusedOriginal = (lease: Awaited<ReturnType<CurrentHumanCandidate["issue"]>>) => ({
+    lease_id: lease.lease_id, authority_revision: lease.authority_revision,
+    actor: { ...actor }, binding: { ...binding },
+  });
+
+  it("finishes an unused identity after a lost issue response, without manufacturing any source terminal", async () => {
+    const lease = await candidate.issue(actor, binding), original = unusedOriginal(lease);
+    expect(lease.authority_revision).toBe(Number((await state()).revision));
+    const beforeSession = (await pool.query("SELECT row_to_json(s) AS session FROM auth_sessions s WHERE session_id=$1",
+      [actor.session_id])).rows[0].session;
+    // The response is intentionally not handed to a source. The private owner
+    // still has the original durable target and its exact session bearer.
+    const drainId = "test-only-unused-finish", drain = await candidate.beginDrain(drainId), witness = vi.fn(() => {});
+    expect(drain).toMatchObject({ status: "DRAIN_READY", pending: 0 });
+    await candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, original, witness);
+    expect(witness).toHaveBeenCalledTimes(1);
+    expect((await state()).drain_id).toBeNull();
+    expect((await pool.query("SELECT phase,attempt_id,terminal_receipt_digest FROM elp210_candidate.leases WHERE lease_id=$1",
+      [lease.lease_id])).rows[0]).toEqual({ phase: "RETIRED", attempt_id: null, terminal_receipt_digest: null });
+    expect((await pool.query("SELECT phase,attempt_id,terminal_receipt_digest FROM elp210_candidate.events WHERE lease_id=$1 ORDER BY event_id",
+      [lease.lease_id])).rows).toEqual([
+      { phase: "ISSUED", attempt_id: null, terminal_receipt_digest: null },
+      { phase: "RETIRED", attempt_id: null, terminal_receipt_digest: null },
+    ]);
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.mutations")).rows[0].n).toBe(0);
+    expect((await pool.query("SELECT row_to_json(s) AS session FROM auth_sessions s WHERE session_id=$1",
+      [actor.session_id])).rows[0].session).toEqual(beforeSession);
+    await expect(candidate.enter(lease.token, await proof(lease.lease_id)))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE" });
+  });
+
+  it("rechecks the same unused target after a lost finish ACK without appending history or issuing another identity", async () => {
+    const lease = await candidate.issue(actor, binding), original = unusedOriginal(lease), drainId = "test-only-unused-ack";
+    const first = await candidate.beginDrain(drainId);
+    await candidate.finishUnusedIdentityDrain(drainId, first.authority_revision, original, () => {});
+    // Treat the committed reply as lost; do not pretend a second clear is a
+    // terminal receipt. A fresh exact drain can establish the same safe target.
+    await expect(candidate.finishUnusedIdentityDrain(drainId, first.authority_revision, original, () => {}))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_DRAIN_CONFLICT" });
+    const retry = await candidate.beginDrain(drainId);
+    await candidate.finishUnusedIdentityDrain(drainId, retry.authority_revision, original, () => {});
+    expect((await state()).drain_id).toBeNull();
+    expect((await pool.query("SELECT count(*)::int AS n FROM elp210_candidate.leases")).rows[0].n).toBe(1);
+    expect((await pool.query("SELECT phase FROM elp210_candidate.events ORDER BY event_id")).rows.map(row => row.phase))
+      .toEqual(["ISSUED", "RETIRED"]);
+  });
+
+  it.each(["lease_id", "authority_revision", "user_id", "session_id", "session_generation",
+    "workspace_id", "environment", "workload_id", "request_digest"] as const)(
+    "refuses unused finish with a different original %s and preserves its committed drain", async field => {
+      const lease = await candidate.issue(actor, binding), original = unusedOriginal(lease),
+        drainId = "test-only-unused-binding", drain = await candidate.beginDrain(drainId);
+      switch (field) {
+        case "lease_id": original.lease_id = "test-only-different-lease"; break;
+        case "authority_revision": original.authority_revision++; break;
+        case "user_id": original.actor.user_id = "test-only-different-user"; break;
+        case "session_id": original.actor.session_id = "test-only-different-session"; break;
+        case "session_generation": original.actor.session_generation++; break;
+        case "workspace_id": original.binding.workspace_id = "test-only-different-workspace"; break;
+        case "environment": original.binding.environment = "sandbox"; break;
+        case "workload_id": original.binding.workload_id = "test-only-different-workload"; break;
+        case "request_digest": original.binding.request_digest = "sha256:" + "c".repeat(64); break;
+      }
+      const witness = vi.fn(() => {});
+      await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, original, witness))
+        .rejects.toMatchObject({ code: "CURRENT_HUMAN_BINDING_MISMATCH" });
+      expect(witness).not.toHaveBeenCalled(); expect((await state()).drain_id).toBe(drainId);
+    });
+
+  it.each(["drain_id", "revision"] as const)("requires the committed original drain and its current %s", async field => {
+    const lease = await candidate.issue(actor, binding), drainId = "test-only-unused-drain",
+      drain = await candidate.beginDrain(drainId);
+    await expect(candidate.finishUnusedIdentityDrain(field === "drain_id" ? "test-only-foreign-drain" : drainId,
+      drain.authority_revision + (field === "revision" ? 1 : 0), unusedOriginal(lease), () => {}))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_DRAIN_CONFLICT" });
+    expect((await state()).drain_id).toBe(drainId);
+  });
+
+  it.each(["in_flight", "accepted", "denied", "timed_out"] as const)(
+    "preserves drain when the trusted local callback witness observes %s", async field => {
+      const lease = await candidate.issue(actor, binding), drainId = "test-only-unused-callback",
+        drain = await candidate.beginDrain(drainId), counters = { in_flight: 0, accepted: 0, denied: 0, timed_out: 0 };
+      counters[field] = 1;
+      await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(lease), () => {
+        if (Object.values(counters).some(value => value !== 0))
+          throw new CurrentHumanLeaseError("TEST_ONLY_CALLBACK_WITNESS_REFUSED");
+      })).rejects.toMatchObject({ code: "TEST_ONLY_CALLBACK_WITNESS_REFUSED" });
+      expect((await state()).drain_id).toBe(drainId); expect(await phase(lease.lease_id)).toBe("RETIRED");
+    });
+
+  it("refuses an async rejecting callback witness before it runs or creates a rejection", async () => {
+    const lease = await candidate.issue(actor, binding), drainId = "test-only-unused-async",
+      drain = await candidate.beginDrain(drainId);
+    let invoked = false;
+    const witness = async () => { invoked = true; throw new Error("TEST_ONLY_ASYNC_MUST_NOT_RUN"); };
+    await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(lease), witness))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_UNUSED_IDENTITY_WITNESS_REQUIRED" });
+    expect(invoked).toBe(false);
+    expect((await state()).drain_id).toBe(drainId);
+  });
+
+  it("observes a sync witness's native rejected Promise without awaiting it or clearing custody", async () => {
+    const lease = await candidate.issue(actor, binding), drainId = "test-only-unused-rejected-promise",
+      drain = await candidate.beginDrain(drainId), fault = new Error("TEST_ONLY_PROMISE_MUST_BE_OBSERVED"),
+      unhandled: unknown[] = [], onUnhandled = (reason: unknown) => { unhandled.push(reason); };
+    process.on("unhandledRejection", onUnhandled);
+    try {
+      await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(lease),
+        () => Promise.reject(fault))).rejects.toMatchObject({ code: "CURRENT_HUMAN_UNUSED_IDENTITY_WITNESS_REQUIRED" });
+      await new Promise<void>(resolve => setImmediate(resolve));
+      expect(unhandled).toEqual([]);
+      expect((await state()).drain_id).toBe(drainId);
+      expect((await pool.query("SELECT phase FROM elp210_candidate.events WHERE lease_id=$1 ORDER BY event_id",
+        [lease.lease_id])).rows.map(row => row.phase)).toEqual(["ISSUED", "RETIRED"]);
+    } finally { process.off("unhandledRejection", onUnhandled); }
+  });
+
+  it("refuses a returned thenable without invoking its then method", async () => {
+    const lease = await candidate.issue(actor, binding), drainId = "test-only-unused-thenable",
+      drain = await candidate.beginDrain(drainId), then = vi.fn(() => { throw new Error("TEST_ONLY_THEN_MUST_NOT_RUN"); });
+    await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(lease),
+      () => ({ then }))).rejects.toMatchObject({ code: "CURRENT_HUMAN_UNUSED_IDENTITY_WITNESS_REQUIRED" });
+    expect(then).not.toHaveBeenCalled();
+    expect((await state()).drain_id).toBe(drainId);
+  });
+
+  it("refuses a missing immutable retirement event without clearing or repairing custody", async () => {
+    const lease = await candidate.issue(actor, binding);
+    // Disposable fixture fault: suppress only this event append, not any
+    // production guard/trigger or lease transition; never edit old event bytes.
+    await pool.query("CREATE FUNCTION elp210_candidate.test_only_skip_retired_event() RETURNS trigger LANGUAGE plpgsql AS $$ " +
+      "BEGIN IF NEW.phase='RETIRED' THEN RETURN NULL; END IF; RETURN NEW; END $$; " +
+      "CREATE TRIGGER test_only_skip_retired_event BEFORE INSERT ON elp210_candidate.events " +
+      "FOR EACH ROW EXECUTE FUNCTION elp210_candidate.test_only_skip_retired_event()");
+    const drainId = "test-only-unused-missing-event", drain = await candidate.beginDrain(drainId);
+    await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(lease), () => {}))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_UNUSED_IDENTITY_NOT_ELIGIBLE" });
+    expect((await state()).drain_id).toBe(drainId);
+    expect((await pool.query("SELECT phase FROM elp210_candidate.events WHERE lease_id=$1 ORDER BY event_id",
+      [lease.lease_id])).rows.map(row => row.phase)).toEqual(["ISSUED"]);
+  });
+
+  it.each(["ENTERED", "UNKNOWN", "COMMITTED", "ROLLED_BACK", "SOURCE_ROLLED_BACK_UNENTERED", "TEST_ONLY_UNEXPECTED"] as const)(
+    "refuses extra %s history even if the lease row alone still looks RETIRED", async event => {
+      const lease = await candidate.issue(actor, binding), drainId = "test-only-unused-extra-event",
+        drain = await candidate.beginDrain(drainId);
+      // Explicit inconsistent-history fixture, NOT a genuine source receipt.
+      await pool.query("INSERT INTO elp210_candidate.events(lease_id,phase,attempt_id,terminal_receipt_digest) VALUES($1,$2,NULL,NULL)",
+        [lease.lease_id, event]);
+      await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(lease), () => {}))
+        .rejects.toMatchObject({ code: "CURRENT_HUMAN_UNUSED_IDENTITY_NOT_ELIGIBLE" });
+      expect((await state()).drain_id).toBe(drainId);
+    });
+
+  it.each(["ENTERED", "UNKNOWN", "COMMITTED", "ROLLED_BACK"] as const)(
+    "never accepts a genuinely used %s lease through unused finish", async targetPhase => {
+      const lease = await enter(), drainId = "test-only-used-not-unused";
+      if (targetPhase !== "ENTERED") await candidate.resolve(await proof(lease.lease_id, targetPhase));
+      const drain = await candidate.beginDrain(drainId);
+      await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(lease), () => {}))
+        .rejects.toMatchObject({ code: targetPhase === "ENTERED" || targetPhase === "UNKNOWN"
+          ? "CURRENT_HUMAN_DRAIN_UNRESOLVED" : "CURRENT_HUMAN_UNUSED_IDENTITY_NOT_ELIGIBLE" });
+      expect((await state()).drain_id).toBe(drainId); expect(await phase(lease.lease_id)).toBe(targetPhase);
+    });
+
+  it("leaves a genuine unentered source rollback on its existing terminal path", async () => {
+    const lease = await candidate.issue(actor, binding);
+    await candidate.resolve(await proof(lease.lease_id, "ROLLED_BACK"));
+    const drainId = "test-only-source-rollback-not-unused", drain = await candidate.beginDrain(drainId);
+    await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(lease), () => {}))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_UNUSED_IDENTITY_NOT_ELIGIBLE" });
+    expect((await state()).drain_id).toBe(drainId);
+    expect((await pool.query("SELECT phase FROM elp210_candidate.events WHERE lease_id=$1 ORDER BY event_id",
+      [lease.lease_id])).rows.map(row => row.phase)).toEqual(["ISSUED", "RETIRED", "SOURCE_ROLLED_BACK_UNENTERED"]);
+  });
+
+  it("requires the global drain to be ready, not just the exact unused lease", async () => {
+    const unused = await candidate.issue(actor, binding), used = await enter(),
+      drainId = "test-only-unused-other-pending", drain = await candidate.beginDrain(drainId);
+    expect(drain).toMatchObject({ status: "DRAIN_PENDING", pending: 1 });
+    await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(unused), () => {}))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_DRAIN_UNRESOLVED" });
+    expect(await phase(unused.lease_id)).toBe("RETIRED"); expect(await phase(used.lease_id)).toBe("ENTERED");
+    expect((await state()).drain_id).toBe(drainId);
+  });
+
+  it("uses separate original and current drain revisions and does not require an expired session to regain authority", async () => {
+    const lease = await candidate.issue(actor, binding), original = unusedOriginal(lease),
+      drainId = "test-only-unused-expired-session";
+    await candidate.beginDrain(drainId);
+    await pool.query("UPDATE auth_sessions SET idle_expires_at=clock_timestamp()-interval '1 second' WHERE session_id=$1",
+      [actor.session_id]);
+    await pool.query("UPDATE portal_users SET status='DISABLED' WHERE user_id=$1", [actor.user_id]);
+    const drain = await candidate.drainStatus(drainId);
+    expect(drain.authority_revision).toBeGreaterThan(original.authority_revision);
+    await candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, original, () => {});
+    expect((await state()).drain_id).toBeNull(); expect(await phase(lease.lease_id)).toBe("RETIRED");
+    expect((await pool.query("SELECT status FROM portal_users WHERE user_id=$1", [actor.user_id])).rows[0].status).toBe("DISABLED");
+  });
+
+  it("keeps the committed drain fence when unused finish and late ENTER race behind a real authority row lock", async () => {
+    const lease = await candidate.issue(actor, binding), signed = await proof(lease.lease_id),
+      drainId = "test-only-unused-enter-race", drain = await candidate.beginDrain(drainId), blocker = await pool.connect();
+    try {
+      await blocker.query("BEGIN"); await blocker.query("SELECT singleton FROM elp210_candidate.authority WHERE singleton FOR UPDATE");
+      const entering = candidate.enter(lease.token, signed).then(() => null, error => error);
+      const finishing = candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, unusedOriginal(lease), () => {});
+      await blocker.query("COMMIT");
+      const [entryError] = await Promise.all([entering, finishing]);
+      expect(entryError).toBeInstanceOf(CurrentHumanLeaseError);
+      expect(["CURRENT_HUMAN_DRAINING", "CURRENT_HUMAN_ENTRY_NOT_AVAILABLE"]).toContain(entryError.code);
+      expect((await state()).drain_id).toBeNull(); expect(await phase(lease.lease_id)).toBe("RETIRED");
+      expect((await pool.query("SELECT phase FROM elp210_candidate.events WHERE lease_id=$1 ORDER BY event_id",
+        [lease.lease_id])).rows.map(row => row.phase)).toEqual(["ISSUED", "RETIRED"]);
+    } finally { await blocker.query("ROLLBACK"); blocker.release(); }
+  });
+
   it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
     "still rejects malformed installation valid_until_ms %s at construction",
     async validUntil => {

@@ -5,6 +5,7 @@ import { TypedCondition } from "../operations/contracts";
 import type { PortalUser } from "../domain";
 import { assertDecisionAuthority } from "./decision-authority";
 import { computeEvidenceManifestHash } from "./evidence-manifest";
+import type { ApprovalGate, ApprovalInboxItem } from "./contracts";
 
 export type GovernanceDecisionCommand = "GOVERNANCE_R1_DECISION" | "GOVERNANCE_R2_DECISION" | "GOVERNANCE_LIVE_DECISION";
 
@@ -706,6 +707,61 @@ export class GovernanceRepository {
     );
     const row = result.rows[0];
     return { pending: Number(row.pending), overdue: Number(row.overdue), dueSoon: Number(row.due_soon) };
+  }
+
+  /** Navigation metadata for an already-authorized page, not a new scope
+   * resolver. R2 owns its immutable analytics scope; Paper Exit owns its
+   * immutable captured review. R1 records no portfolio and MUST NOT acquire
+   * one by walking forward to an R2, deployment or a current projection.
+   * Unsupported/missing/ambiguous lineage remains null. */
+  async inboxPortfolioIds(
+    workspaceId: string,
+    page: readonly Pick<ApprovalInboxItem, "id" | "gate">[],
+    visibleGates: readonly ApprovalGate[],
+  ): Promise<ReadonlyMap<string, string | null>> {
+    // Match the existing public page bound; never truncate an oversized page.
+    if (page.length > 250) throw new RangeError("Approval inbox page exceeds its bound.");
+    const links = new Map<string, string | null>(page.map(item => [item.id, null]));
+    const candidates = page.filter(item => visibleGates.includes(item.gate)
+      && (item.gate === "R2" || item.gate === "PAPER_EXIT"));
+    if (candidates.length === 0) return links;
+    const expected = new Map(candidates.map(item => [item.id, item.gate]));
+    const result = await this.pool.query<{
+      approval_id: string; workspace_id: string; gate: ApprovalGate; portfolio_id: unknown;
+    }>(
+      `WITH visible_requests AS (
+         SELECT request.approval_id, request.workspace_id, request.gate
+           FROM governance_approval_requests request
+           JOIN unnest($2::text[], $3::text[]) requested(approval_id, gate)
+             ON requested.approval_id = request.approval_id AND requested.gate = request.gate
+          WHERE request.workspace_id = $1 AND request.gate = ANY($4::text[])
+       )
+       SELECT request.approval_id, request.workspace_id, request.gate, scope.portfolio_id
+         FROM visible_requests request
+         JOIN governance_approval_analytics_scopes scope
+           ON scope.approval_id = request.approval_id AND scope.workspace_id = request.workspace_id
+          AND scope.gate = request.gate
+        WHERE request.gate = 'R2'
+       UNION ALL
+       SELECT request.approval_id, request.workspace_id, request.gate, review.portfolio_id
+         FROM visible_requests request
+         JOIN governance_paper_exit_reviews review
+           ON review.review_id = request.approval_id AND review.workspace_id = request.workspace_id
+          AND review.gate = request.gate
+        WHERE request.gate = 'PAPER_EXIT'`,
+      [workspaceId, candidates.map(item => item.id), candidates.map(item => item.gate), visibleGates],
+    );
+    const seen = new Set<string>();
+    for (const row of result.rows) {
+      if (row.workspace_id !== workspaceId || expected.get(row.approval_id) !== row.gate) continue;
+      // The current tables are unique by approval. Fail closed rather than
+      // choosing a first/last portfolio if a future source produces ambiguity.
+      const duplicate = seen.has(row.approval_id);
+      seen.add(row.approval_id);
+      links.set(row.approval_id, !duplicate && typeof row.portfolio_id === "string"
+        && /^[A-Za-z0-9._:-]{1,191}$/.test(row.portfolio_id) ? row.portfolio_id : null);
+    }
+    return links;
   }
 
   /**

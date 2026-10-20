@@ -179,6 +179,8 @@ function filtered(row: ManagerDatasetRow, q: ManagerModelQuery) {
     const value = scalar(row, f.field);
     if (f.op === "IS_NULL") return value === null;
     if (value === null) return false;
+    if (f.op === "IN") return f.values!.some(candidate => MANAGER_SCALARS[f.field] === "DECIMAL"
+      ? compareManagerDecimals(value, candidate) === 0 : value === candidate);
     const compare = MANAGER_SCALARS[f.field] === "DECIMAL" ? compareManagerDecimals(value, f.value!) : lexical(value, f.value!);
     return f.op === "EQ" ? compare === 0 : f.op === "GTE" ? compare >= 0 : compare <= 0;
   });

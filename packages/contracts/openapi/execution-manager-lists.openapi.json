@@ -140,6 +140,17 @@
               "maximum": 100
             },
             "description": "Scoped V2 pagination only; supplying this on legacy authority is rejected, not ignored."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "description": "Literal case-insensitive substring of authorized published names only; no trimming/normalization/wildcards. Controls, blank-only and malformed Unicode are refused. Works on legacy retained rows and scoped V2. Exact q binds scoped cursors; reset paging when q changes. Legacy matching_portfolios counts retained matches only, not the uncapped source census."
           }
         ],
         "responses": {

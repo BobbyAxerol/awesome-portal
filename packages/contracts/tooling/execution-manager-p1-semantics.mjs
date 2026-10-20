@@ -98,12 +98,15 @@ export function amendManagerP1Schemas({response,query,metric,row:standaloneRow,o
   add(query,{if:requiredKey('q_mode'),then:requiredKey('q')},{not:obj({after:{},before:{}},['after','before'])});
   query.properties.group_by.uniqueItems=true;
   const filter=query.properties.filters.items;
-  add(filter,{if:isField('op','IS_NULL'),then:noKey('value'),else:requiredKey('value')});
+  add(filter,{if:isField('op','IS_NULL'),then:noKey('value'),else:{
+    if:isField('op','IN'),then:requiredKey('values'),else:requiredKey('value')
+  }});
   const decimalString=metric.properties.value.anyOf.find(s=>s.type==='string');
   const scalarFields=query.properties.sort.items.properties.field.enum;
   if(!decimalString || !Array.isArray(scalarFields) || !scalarFields.length) throw new Error('Manager scalar/decimal schema missing');
   add(filter,{if:obj({field:{enum:[...moneyKeys,'return_30d_pct','score']},op:{not:{const:'IS_NULL'}}},['field','op']),
-    then:obj({value:structuredClone(decimalString)},['value'])});
+    then:{if:isField('op','IN'),then:obj({values:{type:'array',items:structuredClone(decimalString)}},['values']),
+      else:obj({value:structuredClone(decimalString)},['value'])}});
   for (const key of query.properties.sort.items.properties.field.enum) add(query.properties.sort,
     {type:'array',contains:isField('field',key),minContains:0,maxContains:1});
   // Amend every embedded actual metric as well as the standalone component.

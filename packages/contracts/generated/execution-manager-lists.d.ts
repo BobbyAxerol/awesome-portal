@@ -340,6 +340,8 @@ export interface components {
                 live?: components["schemas"]["EnvironmentBranch"];
             };
             total_portfolios: number;
+            /** @description Present only for q: exact matches among authorized retained rows, not the uncapped source population. Preserve truncated/completeness disclosure. total_portfolios remains the unfiltered source census. */
+            matching_portfolios?: number;
             truncated: boolean;
             items: components["schemas"]["PortfolioListItem"][];
         };
@@ -527,6 +529,8 @@ export interface operations {
                 before?: string;
                 /** @description Scoped V2 pagination only; supplying this on legacy authority is rejected, not ignored. */
                 limit?: number;
+                /** @description Literal case-insensitive substring of authorized published names only; no trimming/normalization/wildcards. Controls, blank-only and malformed Unicode are refused. Works on legacy retained rows and scoped V2. Exact q binds scoped cursors; reset paging when q changes. Legacy matching_portfolios counts retained matches only, not the uncapped source census. */
+                q?: string;
             };
             header?: never;
             path?: never;

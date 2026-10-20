@@ -152,6 +152,10 @@ export interface ApprovalInboxItem {
   gate: ApprovalGate;
   subject: string;
   subject_id: string;
+  /** Captured by this gate, never inferred from subject text or a later gate.
+   * Null means no unambiguous, linkable portfolio lineage was recorded. This
+   * navigation pointer does not grant access to the portfolio itself. */
+  portfolio_id: string | null;
   release_candidate: string | null;
   target: string;
   environment: ApprovalEnvironment;
@@ -308,6 +312,8 @@ export function approvalInboxResource(
         gate: row.gate,
         subject: row.subject_label,
         subject_id: row.subject_id,
+        // Filled only by the authorized, bounded gate-lineage read in list().
+        portfolio_id: null,
         release_candidate: row.release_candidate,
         target: `${row.environment.toLowerCase()} · ${row.target_label}`,
         environment: row.environment,

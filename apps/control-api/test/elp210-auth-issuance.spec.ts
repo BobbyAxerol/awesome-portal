@@ -283,14 +283,27 @@ describe.skipIf(!database)("ELP2-10 verified pre-session issuance is one-view", 
     expect(saved.intents).toMatchObject([{ state: "REFUSED" }]); expect(saved.drain).toBeNull();
   });
   it.each(["expiry", "revoked"] as const)("activation %s during recovery never consumes it or binds identity", async field => {
-    const deadline = Date.now() + 1500; await makeInvited(new Date(field === "expiry" ? deadline : Date.now() + 60_000));
+    // Enter the intended race after verification, not after a short timer
+    // started before setup. Natural expiry at consumption has its own test.
+    await makeInvited();
     await enter();
+    let recovered = false;
     recover = async attempt => {
+      const pending = await snapshot();
+      expect(pending.intents).toMatchObject([{ state: "PENDING" }]);
+      expect(pending.drain).toBe(pending.intents[0].mutation_id);
+      expect(pending.activations[0]).toMatchObject({ used_at: null, revoked_at: null });
       await resolve(attempt);
-      if (field === "expiry") await sleepUntil(deadline);
-      else await pool.query("UPDATE activation_credentials SET revoked_at=clock_timestamp() WHERE user_id=$1", [userId]);
+      const assignment = field === "expiry" ? "expires_at=clock_timestamp()-interval '1 millisecond'" : "revoked_at=clock_timestamp()";
+      const changed = await pool.query(`UPDATE activation_credentials SET ${assignment}
+        WHERE activation_id=$1 AND user_id=$2 AND used_at IS NULL AND revoked_at IS NULL AND expires_at>clock_timestamp()
+        RETURNING used_at,revoked_at,expires_at<=clock_timestamp() AS expired`, [`TEST_ONLY-activation-${suffix}`, userId]);
+      expect(changed.rows).toMatchObject([{ used_at: null, expired: field === "expiry" }]);
+      expect(changed.rows[0].revoked_at === null).toBe(field === "expiry");
+      recovered = true;
     };
     await expect(auth.login(input(activation))).rejects.toMatchObject({ code: "INVALID_CREDENTIALS", status: 401 });
+    expect(recovered).toBe(true);
     const saved = await snapshot(); expect(saved.activations[0].used_at).toBeNull();
     expect(saved.sessions).toHaveLength(0); expect(saved.bindings).toHaveLength(0); expect(saved.audits).toHaveLength(0);
     expect(saved.intents).toMatchObject([{ state: "REFUSED" }]); expect(saved.drain).toBeNull();
