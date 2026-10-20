@@ -110,6 +110,8 @@ cp -a \
 # ELP2-01 validates its runtime parser against the identical published fixtures.
 cp -a "${ROOT_DIR}/apps/control-api/src/execution/stage-drift.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution/deployment-identity.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/stage-facts.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/scoped-stage-wire.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution/"
 # S3-U4: pure leaf (no imports) shared by the Paper producer and its contract spec.
 mkdir -p "${WORKSPACE_DIR}/apps/control-api/src/paper-read"
