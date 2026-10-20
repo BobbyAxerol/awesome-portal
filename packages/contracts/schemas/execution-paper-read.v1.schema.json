@@ -29,6 +29,767 @@
     }
   ],
   "$defs": {
+    "VenueCalendar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "market",
+        "basis",
+        "timezone",
+        "windows",
+        "breaks",
+        "holidays",
+        "is_open",
+        "as_of"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "execution.venue-calendar.v1"
+        },
+        "market": {
+          "const": "VN_EQUITY"
+        },
+        "basis": {
+          "const": "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE"
+        },
+        "timezone": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "$ref": "#/$defs/VenueTimezone"
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "windows": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 12,
+                  "items": {
+                    "$ref": "#/$defs/VenueWindow"
+                  }
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "breaks": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "type": "array",
+                  "maxItems": 12,
+                  "items": {
+                    "$ref": "#/$defs/VenueBreak"
+                  }
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "holidays": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "type": "array",
+                  "maxItems": 400,
+                  "items": {
+                    "$ref": "#/$defs/VenueHoliday"
+                  }
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "is_open": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "type": "boolean"
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "as_of": {
+          "$ref": "#/$defs/StageFactTimestamp"
+        }
+      },
+      "description": "FE-070. Present only on the VN market workbench variant. Every member is a Fact: the Portal holds no trading-calendar source of truth, so each is NOT_PUBLISHED (N28_VENUE_CALENDAR_NOT_ACTIVE) until the market-data-layer session calendar is wired. is_open is the SOURCE's own statement at as_of; a client never infers PAUSED or AGING from window arithmetic."
+    },
+    "VenueHoliday": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "date",
+        "name"
+      ],
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$"
+        },
+        "name": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "VenueBreak": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "from",
+        "to",
+        "basis"
+      ],
+      "properties": {
+        "name": {
+          "const": "BREAK"
+        },
+        "from": {
+          "$ref": "#/$defs/VenueClock"
+        },
+        "to": {
+          "$ref": "#/$defs/VenueClock"
+        },
+        "basis": {
+          "const": "GAP_BETWEEN_PUBLISHED_WINDOWS"
+        }
+      },
+      "description": "The interval between two consecutive published windows (the lunch break). Arithmetic on published windows only."
+    },
+    "VenueWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind",
+        "open",
+        "close"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "kind": {
+          "enum": [
+            "TRADING_SESSION",
+            "OPENING_AUCTION",
+            "CLOSING_AUCTION"
+          ]
+        },
+        "open": {
+          "$ref": "#/$defs/VenueClock"
+        },
+        "close": {
+          "$ref": "#/$defs/VenueClock"
+        }
+      },
+      "description": "A named window in the venue's local time. OPENING_AUCTION / CLOSING_AUCTION (ATO / ATC) only when the source names them; a generic session is TRADING_SESSION. Window kinds describe the market calendar, not which order types the Portal can route."
+    },
+    "VenueClock": {
+      "type": "string",
+      "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+    },
+    "VenueTimezone": {
+      "type": "string",
+      "pattern": "^[A-Za-z_]+(?:/[A-Za-z0-9_+-]+){1,2}$",
+      "description": "IANA time-zone name, e.g. Asia/Ho_Chi_Minh."
+    },
+    "StageFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "runtime",
+        "reconciliation",
+        "sessions"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "execution.stage-facts.v1"
+        },
+        "runtime": {
+          "$ref": "#/$defs/StageRuntimeFacts"
+        },
+        "reconciliation": {
+          "$ref": "#/$defs/StageReconciliationFacts"
+        },
+        "sessions": {
+          "$ref": "#/$defs/StageSessionsFact"
+        }
+      },
+      "description": "FE-067. Additive on the Paper workbench (`data.stage_facts`) and on the Sandbox, Canary and Live Full bodies (top level `stage_facts`). The pre-existing pinned-null `runtime_state` members are unchanged."
+    },
+    "StageSessionsFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "availability",
+        "reason_code",
+        "basis",
+        "rows",
+        "returned_count",
+        "omitted_count",
+        "source_complete"
+      ],
+      "properties": {
+        "availability": {
+          "enum": [
+            "AVAILABLE",
+            "NOT_PUBLISHED"
+          ]
+        },
+        "reason_code": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StageReasonCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "basis": {
+          "const": "EXECUTION_SESSIONS_BOUNDED_WINDOW"
+        },
+        "rows": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/StageSessionRow"
+          }
+        },
+        "returned_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 50
+        },
+        "omitted_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_complete": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        }
+      },
+      "description": "Newest first. `ended` null while the session has no completion time. A row the reader cannot type is counted in omitted_count, never listed. `state` is the source's own word or null.",
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "availability": {
+                "const": "NOT_PUBLISHED"
+              }
+            },
+            "required": [
+              "availability"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reason_code": {
+                "$ref": "#/$defs/StageReasonCode"
+              },
+              "rows": {
+                "type": "array",
+                "maxItems": 0
+              },
+              "returned_count": {
+                "const": 0
+              },
+              "omitted_count": {
+                "const": 0
+              },
+              "source_complete": {
+                "type": "null"
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "reason_code": {
+                "type": "null"
+              },
+              "source_complete": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "StageSessionRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "started",
+        "ended",
+        "state"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$"
+        },
+        "started": {
+          "$ref": "#/$defs/StageTimestamp"
+        },
+        "ended": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/StageTimestamp"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "state": {
+          "oneOf": [
+            {
+              "type": "string",
+              "pattern": "^[A-Za-z][A-Za-z0-9_.-]{0,63}$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "StageReconciliationFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basis",
+        "verdict",
+        "open_finding_count",
+        "unknown_order_count",
+        "as_of"
+      ],
+      "properties": {
+        "basis": {
+          "const": "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN"
+        },
+        "verdict": {
+          "$ref": "#/$defs/StageFactVerdict"
+        },
+        "open_finding_count": {
+          "$ref": "#/$defs/StageFactInteger"
+        },
+        "unknown_order_count": {
+          "$ref": "#/$defs/StageFactInteger",
+          "description": "Open findings the reviewed finding-type table classes as UNKNOWN_ORDER. Exact 0 only when no finding is open; NOT_PUBLISHED (FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED) while any open finding is unclassified."
+        },
+        "as_of": {
+          "$ref": "#/$defs/StageFactTimestamp"
+        }
+      }
+    },
+    "StageFactInteger": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "AVAILABLE"
+            },
+            "value": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reason_code": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "NOT_PUBLISHED"
+            },
+            "value": {
+              "type": "null"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/StageReasonCode"
+            }
+          }
+        }
+      ]
+    },
+    "StageFactVerdict": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "AVAILABLE"
+            },
+            "value": {
+              "enum": [
+                "NO_OPEN_FINDINGS",
+                "OPEN_FINDINGS"
+              ]
+            },
+            "reason_code": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "NOT_PUBLISHED"
+            },
+            "value": {
+              "type": "null"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/StageReasonCode"
+            }
+          }
+        }
+      ],
+      "description": "NO_OPEN_FINDINGS is a statement about the findings relation, not a reconciliation run: it is never published from a partial window or when any finding status is unreadable."
+    },
+    "StageRuntimeFacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runtime_state",
+        "since"
+      ],
+      "properties": {
+        "runtime_state": {
+          "$ref": "#/$defs/StageFactRuntimeState"
+        },
+        "since": {
+          "$ref": "#/$defs/StageFactTimestamp"
+        }
+      }
+    },
+    "StageFactTimestamp": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "AVAILABLE"
+            },
+            "value": {
+              "$ref": "#/$defs/StageTimestamp"
+            },
+            "reason_code": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "NOT_PUBLISHED"
+            },
+            "value": {
+              "type": "null"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/StageReasonCode"
+            }
+          }
+        }
+      ]
+    },
+    "StageTimestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "StageFactRuntimeState": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "AVAILABLE"
+            },
+            "value": {
+              "enum": [
+                "RUNNING",
+                "PAUSED",
+                "HALTED",
+                "STOPPED"
+              ]
+            },
+            "reason_code": {
+              "type": "null"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "availability",
+            "value",
+            "reason_code"
+          ],
+          "properties": {
+            "availability": {
+              "const": "NOT_PUBLISHED"
+            },
+            "value": {
+              "type": "null"
+            },
+            "reason_code": {
+              "$ref": "#/$defs/StageReasonCode"
+            }
+          }
+        }
+      ],
+      "description": "Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed."
+    },
+    "StageReasonCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,127}$",
+      "description": "Reviewed machine code saying why a fact is not published. Never free text, never a source message."
+    },
     "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+-]{0,190}$" },
     "DateTime": { "type": "string", "format": "date-time" },
     "Actor": {
@@ -70,6 +831,42 @@
       "type": "object", "minProperties": 1, "maxProperties": 40,
       "propertyNames": { "pattern": "^(?!record_key$)(?!raw_)(?!.*(?:secret|credential|password|token|dsn)).+$" },
       "additionalProperties": { "oneOf": [{ "$ref": "#/$defs/Scalar" }, { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/Scalar" } }] }
+    },
+    "DeploymentDisplayName": { "type": ["string", "null"], "minLength": 1, "maxLength": 256, "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])", "description": "FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace." },
+    "AlphaIdentityReason": { "enum": ["ALPHA_MEMBERSHIP_NOT_QUALIFIED", "ALPHA_MEMBERSHIP_NOT_PUBLISHED", "ALPHA_MEMBERSHIP_AMBIGUOUS", "ALPHA_IDENTITY_NOT_AUTHORIZED", "ALPHA_NAME_NOT_PUBLISHED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id." },
+    "PortfolioNameReason": { "enum": ["PORTFOLIO_NOT_ASSIGNED", "PORTFOLIO_NAME_NOT_PUBLISHED", "PORTFOLIO_NAME_AMBIGUOUS", "PORTFOLIO_NAME_NOT_AUTHORIZED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why portfolio_name is null." },
+    "DeploymentIdentityRules": {
+      "type": "object", "description": "FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id.",
+      "dependentRequired": { "alpha_id": ["alpha_name", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_name": ["alpha_id", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "portfolio_name": ["alpha_id", "alpha_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "portfolio_name_reason_code"], "portfolio_name_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "alpha_reason_code"] },
+      "allOf": [
+        { "if": { "required": ["alpha_name"], "properties": { "alpha_name": { "type": "string" } } }, "then": { "properties": { "alpha_id": { "type": "string" }, "alpha_reason_code": { "type": "null" } } }, "else": { "properties": { "alpha_reason_code": { "type": "string" } } } },
+        { "if": { "required": ["portfolio_name"], "properties": { "portfolio_name": { "type": "string" } } }, "then": { "properties": { "portfolio_name_reason_code": { "type": "null" } } }, "else": { "properties": { "portfolio_name_reason_code": { "type": "string" } } } }
+      ]
+    },
+    "DeploymentRecord": {
+      "description": "FE-066: the Paper profile deployment block: the source row plus the Alpha-Portfolio identity keys.",
+      "allOf": [{ "$ref": "#/$defs/NarrowRecord" }, { "type": "object", "properties": { "alpha_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] }, "alpha_name": { "$ref": "#/$defs/DeploymentDisplayName" }, "portfolio_name": { "$ref": "#/$defs/DeploymentDisplayName" }, "alpha_reason_code": { "$ref": "#/$defs/AlphaIdentityReason" }, "portfolio_name_reason_code": { "$ref": "#/$defs/PortfolioNameReason" } } }, { "$ref": "#/$defs/DeploymentIdentityRules" }]
+    },
+    "PositionsBySideRow": { "type": "object", "additionalProperties": false, "required": ["instrument_id", "long_quantity", "short_quantity", "gross_quantity", "position_count"], "properties": { "instrument_id": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+/-]{0,190}$" }, "long_quantity": { "type": "string", "maxLength": 80, "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])" }, "short_quantity": { "type": "string", "maxLength": 80, "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])" }, "gross_quantity": { "type": "string", "maxLength": 80, "pattern": "^(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])" }, "position_count": { "type": "integer", "minimum": 1 } } },
+    "PositionsBySide": {
+      "description": "S3-U4 / FE-051: Long, Short and Gross by side for the deployment's open positions: exact quantity per instrument (gross = long + short, magnitudes), no total across instruments. Notional by side is never derived: the position page publishes no currency or mark lineage (E5), so notional is a typed unavailable, not a number.",
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "reason_code", "basis", "rows", "excluded", "notional"],
+      "properties": {
+        "state": { "enum": ["AVAILABLE", "EMPTY", "PARTIAL", "UNAVAILABLE"] },
+        "reason_code": { "enum": ["POSITIONS_NOT_PUBLISHED", "SOURCE_POSITIONS_PARTIAL", "POSITION_ROWS_UNCLASSIFIED", null] },
+        "basis": { "const": "OPEN_POSITION_ROWS_QUANTITY_BY_SIDE_PER_INSTRUMENT" },
+        "rows": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/PositionsBySideRow" } },
+        "excluded": { "type": "object", "additionalProperties": false, "required": ["flat_rows", "closed_rows", "unclassified_rows", "no_instrument_rows"], "properties": { "flat_rows": { "type": "integer", "minimum": 0 }, "closed_rows": { "type": "integer", "minimum": 0 }, "unclassified_rows": { "type": "integer", "minimum": 0 }, "no_instrument_rows": { "type": "integer", "minimum": 0 } } },
+        "notional": { "type": "object", "additionalProperties": false, "required": ["state", "reason_code"], "properties": { "state": { "const": "UNAVAILABLE" }, "reason_code": { "const": "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED" } } }
+      },
+      "allOf": [
+        { "if": { "properties": { "state": { "const": "UNAVAILABLE" } } }, "then": { "properties": { "rows": { "type": "array", "maxItems": 0 }, "reason_code": { "const": "POSITIONS_NOT_PUBLISHED" } } } },
+        { "if": { "properties": { "state": { "enum": ["AVAILABLE", "EMPTY"] } } }, "then": { "properties": { "reason_code": { "type": "null" } } } },
+        { "if": { "properties": { "state": { "const": "EMPTY" } } }, "then": { "properties": { "rows": { "type": "array", "maxItems": 0 } } } },
+        { "if": { "properties": { "state": { "const": "AVAILABLE" } } }, "then": { "properties": { "rows": { "type": "array", "minItems": 1 } } } },
+        { "if": { "properties": { "state": { "const": "PARTIAL" } } }, "then": { "properties": { "reason_code": { "type": "string" } } } }
+      ]
     },
     "Records": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/NarrowRecord" } },
     "Page": {
@@ -225,7 +1022,7 @@
     "Data": {
       "type": "object", "additionalProperties": false, "minProperties": 1,
       "properties": {
-        "deployment": { "oneOf": [{ "$ref": "#/$defs/NarrowRecord" }, { "type": "null" }] },
+        "deployment": { "oneOf": [{ "$ref": "#/$defs/DeploymentRecord" }, { "type": "null" }] },
         "deployments": { "$ref": "#/$defs/Records" },
         "positions": { "$ref": "#/$defs/Records" },
         "sessions": { "$ref": "#/$defs/Records" },
@@ -239,6 +1036,7 @@
         "reconciliation": { "$ref": "#/$defs/Records" },
         "command_journal": { "$ref": "#/$defs/Records" },
         "observation_gate": { "oneOf": [{ "$ref": "#/$defs/NarrowRecord" }, { "type": "null" }] },
+        "positions_by_side": { "$ref": "#/$defs/PositionsBySide" },
         "query_analytics": { "oneOf": [{ "$ref": "#/$defs/QueryAnalytics" }, { "type": "null" }] },
         "page": { "$ref": "#/$defs/Page" },
         "query": { "$ref": "#/$defs/Query" },
@@ -246,7 +1044,9 @@
         "filtered_total": { "type": ["integer", "null"], "minimum": 0 },
         "aggregates": { "oneOf": [{ "$ref": "#/$defs/Aggregates" }, { "type": "null" }] },
         "exact_query": { "$ref": "#/$defs/BlotterExactQuery" },
-        "derived_insights": { "oneOf": [{ "$ref": "#/$defs/DerivedInsights" }, { "type": "null" }] }
+        "derived_insights": { "oneOf": [{ "$ref": "#/$defs/DerivedInsights" }, { "type": "null" }] },
+        "stage_facts": { "$ref": "#/$defs/StageFacts" },
+        "venue_calendar": { "$ref": "#/$defs/VenueCalendar" }
       }
     }
   }

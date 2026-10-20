@@ -6,12 +6,15 @@ import { ProfileReadService } from "../profile-read/profile-read.service";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
+import { deploymentIdentityOf, identityFields } from "../execution/deployment-identity";
 import {
   exactCurrencySum,
   latest,
   openOrders,
   ProfileScreenSource,
 } from "../execution/profile-screen-composer";
+import { profileStageFacts } from "../execution/stage-facts-profile";
+import { gapRanges, sourceFigures, typedOrders, typedPositions } from "../execution/stage-rows";
 import { GovernanceError } from "../governance/governance.service";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import {
@@ -227,6 +230,7 @@ export class LiveOperationsService {
       deployment: {
         deployment_id: typeof deployment?.deployment_id === "string" ? deployment.deployment_id : deploymentId,
         portfolio_id: typeof deployment?.portfolio_id === "string" ? deployment.portfolio_id : null,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         account_id: typeof deployment?.account_id === "string" ? deployment.account_id : null,
         external_account_ref: null,
         venue: typeof deployment?.venue === "string" ? deployment.venue : null,
@@ -241,6 +245,9 @@ export class LiveOperationsService {
         activated_at: null,
         blocker_codes: blockers,
       },
+      // FE-067: typed runtime / reconciliation / sessions; additive, see stage-facts.ts.
+      stage_facts: profileStageFacts(source, "LIVE_SOURCE_UNAVAILABLE"),
+      source_figures: sourceFigures(source, "LIVE_SOURCE_UNAVAILABLE"),
       predecessor_canary_envelope: null,
       kpis: [
         kpi("capital", "Capital", "EXECUTION", currency, capital, ["account_balances"], false, capitalReason),
@@ -275,9 +282,11 @@ export class LiveOperationsService {
         gap_detected: source.projection ? false : null,
         affected_authorities: source.projection ? [] : ["EXECUTION", "BROKER", "DERIVED"],
         blocker_codes: source.projection ? [] : ["SOURCE_CONTINUITY_UNAVAILABLE"],
+        // FE-072: the wall-clock window of a gap is not recorded by the projection journal.
+        gap_ranges: gapRanges(source.projection !== null),
       },
-      positions: source.collection("positions", "EXECUTION", "positions"),
-      orders: source.collection("orders", "EXECUTION", "orders"),
+      positions: { ...source.collection("positions", "EXECUTION", "positions"), typed: typedPositions(source, "LIVE_SOURCE_UNAVAILABLE") },
+      orders: { ...source.collection("orders", "EXECUTION", "orders"), typed: typedOrders(source, "LIVE_SOURCE_UNAVAILABLE") },
       open_order_footer: {
         envelope: source.panel("open-order-footer", "EXECUTION", ["orders"], { exact_open_order_count: open.length }),
         exact_open_order_count: source.connected ? open.length : null,
@@ -437,6 +446,7 @@ export class LiveOperationsService {
       deployment: {
         deployment_id: canary.deployment_id,
         portfolio_id: certification.portfolio_id,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         account_id: certification.account_id,
         external_account_ref: certification.external_account_ref,
         venue: certification.venue,
@@ -459,6 +469,9 @@ export class LiveOperationsService {
         activated_at: null,
         blocker_codes: blockers,
       },
+      // FE-067: typed runtime / reconciliation / sessions; additive, see stage-facts.ts.
+      stage_facts: profileStageFacts(source, "LIVE_SOURCE_UNAVAILABLE"),
+      source_figures: sourceFigures(source, "LIVE_SOURCE_UNAVAILABLE"),
       predecessor_canary_envelope: {
         envelope_id: canary.envelope_id,
         revision: canary.revision,
@@ -518,9 +531,10 @@ export class LiveOperationsService {
         gap_detected: source.projection ? false : null,
         affected_authorities: source.projection ? [] : ["EXECUTION", "BROKER", "DERIVED"],
         blocker_codes: source.projection ? [] : ["SOURCE_CONTINUITY_UNAVAILABLE", "EX_BE_08_PENDING"],
+        gap_ranges: gapRanges(source.projection !== null),
       },
-      positions: sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION"),
-      orders: sourceConnected ? sourceOrders : unavailableCollection("orders", "EXECUTION"),
+      positions: { ...(sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION")), typed: typedPositions(source, "LIVE_SOURCE_UNAVAILABLE") },
+      orders: { ...(sourceConnected ? sourceOrders : unavailableCollection("orders", "EXECUTION")), typed: typedOrders(source, "LIVE_SOURCE_UNAVAILABLE") },
       open_order_footer: {
         envelope: sourceConnected ? source.panel("open-order-footer", "EXECUTION", ["orders"], { exact_open_order_count: open.length }) : unavailablePanel("open-order-footer", "EXECUTION"),
         exact_open_order_count: sourceConnected ? open.length : null,

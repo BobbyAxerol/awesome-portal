@@ -28,7 +28,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** @description FE-062. Local-only, bounded (<=100 items) discovery of still-open recalls this Portal controlled on the exact resource: original_recall_id, currency, recipient, last known amounts and the five CAS counters. Requires independent current audit.read and exact current TS target membership, authorized BEFORE any private row read. No upstream lookup/write, no recovery. Untracked recalls (never controlled through the Portal) are not discoverable here; that needs a qualified source read and is stated in untracked_recalls. */
+        get: operations["executionPendingRecallDiscoveryV1"];
         put?: never;
         /** @description Default-dark named pending recall control. Requires exact capital.apply_pending or capital.cancel_remaining, current membership/grants/DENY, original recall and recipient, environment and qualified source profile. Origin/CSRF and matching idempotency header required. Preview rolls back; submit requires current preview digest and fresh step-up. Durable correlation commits before source APPLY. Retained preview cannot mutate. No new recall, amount, funding, physical transfer or automatic resend. */
         post: operations["executionPendingControlSubmitV1"];
@@ -157,7 +158,9 @@ export interface components {
             updated_at_ms: number;
             /** @description Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee. */
             currency: string & (string & unknown);
-        } & unknown;
+            /** @description FE-063 (R-2c). Owning recipient account bound by the verified ORIGINAL intent and equal to the verified authorization recipient; non-null exactly when resource.kind is DEPLOYMENT, null for a PORTFOLIO recipient. Not a live source lookup, not browser-supplied after submission, never inferred from a label. Absent on pre-upgrade bodies, which are incomplete under this schema. */
+            recipient_account_id: (string & (string & unknown)) | null;
+        } & (unknown & unknown);
         PendingControlBody: {
             /** @constant */
             schema_version: "pma.operator-control.v1";
@@ -237,6 +240,56 @@ export interface components {
             original_payload_sha256: string;
             versions: components["schemas"]["PendingControlVersions"];
         } & unknown;
+        /** @description Exact resource only (PORTFOLIO or DEPLOYMENT), no wildcard, no global discovery. */
+        PendingRecallDiscoveryQuery: {
+            /** @description At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip. */
+            workspace_id: string;
+            /** @enum {string} */
+            resource_kind: "PORTFOLIO" | "DEPLOYMENT";
+            /** @description At most 256 Unicode codepoints; runtime additionally rejects malformed UTF-16 by exact UTF-8 round-trip. */
+            resource_id: string;
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+        };
+        /** @description One still-open recall this Portal controlled. WAITING_ENCUMBRANCE: last KNOWN source receipt shows an open remainder (cumulative applied may already be > 0); amounts and the five exact CAS counters are that receipt's and become the starting expected_versions, which the next preview rechecks against the source and which a later source change makes stale. UNKNOWN: a control was sent but no receipt is known; amounts/versions are null, never zero-filled. A terminal known outcome closes the recall, so it is not listed. */
+        PendingRecallDiscoveryItem: {
+            /** @description Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee. */
+            original_recall_id: string & (string & unknown);
+            /** @description Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee. */
+            currency: string & (string & unknown);
+            recipient_account_id: (string & (string & unknown)) | null;
+            /** @enum {string} */
+            state: "WAITING_ENCUMBRANCE" | "UNKNOWN";
+            amounts: components["schemas"]["PendingControlAmounts"] | null;
+            versions: components["schemas"]["PendingControlVersions"] | null;
+            latest_receipt_id: (string & (string & unknown)) | null;
+            last_known_command_id: string | null;
+            unresolved_command_id: string | null;
+            /** @enum {string} */
+            last_operation: "APPLY_PENDING" | "CANCEL_REMAINING";
+            updated_at_ms: number;
+        } & unknown;
+        /** @description Local read-only discovery for ONE exact authorized resource, from the Portal's own pending-control history only (coverage PORTAL_CONTROLLED_RECALLS_ONLY). It is NOT a census of source recalls: a recall nobody controlled through the Portal is absent, and untracked_recalls states that as NOT_PUBLISHED / RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED. original_recall_id is unique within items (runtime-enforced; JSON Schema uniqueItems cannot express a key-only uniqueness). truncated=true means more open recalls matched than the finite page holds and items are the newest. observed_at_ms is Portal evaluation time. Authorization: exact current audit.read plus TS-accepted correspondence on the resource, before any private row; hidden/wrong-workspace/unknown normalize to 404. */
+        PendingRecallDiscovery: {
+            /** @constant */
+            schema_version: "portal.execution.pending-recall-discovery.v1";
+            /** @constant */
+            family: "PENDING_RECALL_CONTROL";
+            /** @constant */
+            coverage: "PORTAL_CONTROLLED_RECALLS_ONLY";
+            untracked_recalls: {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED";
+            };
+            resource: components["schemas"]["PendingControlResource"];
+            /** @enum {string} */
+            environment: "paper" | "sandbox" | "live";
+            items: components["schemas"]["PendingRecallDiscoveryItem"][];
+            truncated: boolean;
+            observed_at_ms: number;
+        };
         PendingControlProblem: {
             error: {
                 /**
@@ -351,6 +404,102 @@ export interface operations {
                 };
             };
             /** @description Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics. */
+            503: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
+        };
+    };
+    executionPendingRecallDiscoveryV1: {
+        parameters: {
+            query: {
+                workspace_id: string;
+                resource_kind: "PORTFOLIO" | "DEPLOYMENT";
+                resource_id: string;
+                environment: "paper" | "sandbox" | "live";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Open recalls of the Portal pending-control history for this exact resource. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingRecallDiscovery"];
+                };
+            };
+            /** @description Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics. */
+            400: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
+            /** @description Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics. */
+            401: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
+            /** @description Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics. */
+            403: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
+            /** @description PENDING_CONTROL_NOT_FOUND: unknown/hidden/wrong workspace are indistinguishable. */
+            404: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
+            /** @description Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics. */
+            409: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
+            /** @description Sanitized INTERNAL_ERROR. */
+            500: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingControlProblem"];
+                };
+            };
+            /** @description Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics. */
             503: {
                 headers: {
                     "Cache-Control"?: "private, no-store";

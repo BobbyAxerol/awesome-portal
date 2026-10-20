@@ -5,6 +5,17 @@
   "$ref": "#/$defs/LiveFullOperations",
   "$defs": {
     "Identifier": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" },
+    "DeploymentDisplayName": { "type": ["string", "null"], "minLength": 1, "maxLength": 256, "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])", "description": "FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace." },
+    "AlphaIdentityReason": { "enum": ["ALPHA_MEMBERSHIP_NOT_QUALIFIED", "ALPHA_MEMBERSHIP_NOT_PUBLISHED", "ALPHA_MEMBERSHIP_AMBIGUOUS", "ALPHA_IDENTITY_NOT_AUTHORIZED", "ALPHA_NAME_NOT_PUBLISHED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id." },
+    "PortfolioNameReason": { "enum": ["PORTFOLIO_NOT_ASSIGNED", "PORTFOLIO_NAME_NOT_PUBLISHED", "PORTFOLIO_NAME_AMBIGUOUS", "PORTFOLIO_NAME_NOT_AUTHORIZED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why portfolio_name is null." },
+    "DeploymentIdentityRules": {
+      "type": "object", "description": "FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id.",
+      "dependentRequired": { "alpha_id": ["alpha_name", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_name": ["alpha_id", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "portfolio_name": ["alpha_id", "alpha_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "portfolio_name_reason_code"], "portfolio_name_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "alpha_reason_code"] },
+      "allOf": [
+        { "if": { "required": ["alpha_name"], "properties": { "alpha_name": { "type": "string" } } }, "then": { "properties": { "alpha_id": { "type": "string" }, "alpha_reason_code": { "type": "null" } } }, "else": { "properties": { "alpha_reason_code": { "type": "string" } } } },
+        { "if": { "required": ["portfolio_name"], "properties": { "portfolio_name": { "type": "string" } } }, "then": { "properties": { "portfolio_name_reason_code": { "type": "null" } } }, "else": { "properties": { "portfolio_name_reason_code": { "type": "string" } } } }
+      ]
+    },
     "Hash": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "Timestamp": { "type": "string", "format": "date-time" },
     "NullableTimestamp": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
@@ -59,7 +70,8 @@
       "properties": {
         "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "exact_total": { "type": ["integer", "null"], "minimum": 0 },
         "returned_count": { "type": "integer", "minimum": 0, "maximum": 200 }, "next_cursor": { "type": ["string", "null"], "maxLength": 4096 },
-        "previous_cursor": { "type": ["string", "null"], "maxLength": 4096 }, "rows": { "type": "array", "maxItems": 200, "items": { "type": "object", "maxProperties": 80 } }
+        "previous_cursor": { "type": ["string", "null"], "maxLength": 4096 }, "rows": { "type": "array", "maxItems": 200, "items": { "type": "object", "maxProperties": 80 } },
+        "typed": { "oneOf": [ { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageTypedPositions" }, { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageTypedOrders" } ] }
       }
     },
     "ActionPolicy": {
@@ -90,7 +102,13 @@
         "deployment": {
           "type": "object", "additionalProperties": false,
           "required": ["deployment_id", "portfolio_id", "account_id", "external_account_ref", "venue", "declared_environment", "runtime_state", "activated_at"],
-          "properties": { "deployment_id": { "$ref": "#/$defs/Identifier" }, "portfolio_id": { "$ref": "#/$defs/Identifier" }, "account_id": { "$ref": "#/$defs/Identifier" }, "external_account_ref": { "$ref": "#/$defs/Identifier" }, "venue": { "$ref": "#/$defs/Identifier" }, "declared_environment": { "const": "LIVE_FULL" }, "runtime_state": { "type": "null" }, "activated_at": { "type": "null" } }
+          "properties": { "deployment_id": { "$ref": "#/$defs/Identifier" }, "portfolio_id": { "$ref": "#/$defs/Identifier" }, "account_id": { "$ref": "#/$defs/Identifier" }, "external_account_ref": { "$ref": "#/$defs/Identifier" }, "venue": { "$ref": "#/$defs/Identifier" }, "declared_environment": { "const": "LIVE_FULL" }, "runtime_state": { "type": "null" }, "activated_at": { "type": "null" },
+            "alpha_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] },
+            "alpha_name": { "$ref": "#/$defs/DeploymentDisplayName" },
+            "portfolio_name": { "$ref": "#/$defs/DeploymentDisplayName" },
+            "alpha_reason_code": { "$ref": "#/$defs/AlphaIdentityReason" },
+            "portfolio_name_reason_code": { "$ref": "#/$defs/PortfolioNameReason" } },
+          "allOf": [{ "$ref": "#/$defs/DeploymentIdentityRules" }]
         },
         "lineage": {
           "type": "array", "minItems": 7, "maxItems": 7,
@@ -103,6 +121,8 @@
           "type": "object", "additionalProperties": false, "required": ["declared_stage", "runtime_state", "activated_at", "blocker_codes"],
           "properties": { "declared_stage": { "const": "LIVE_FULL" }, "runtime_state": { "type": "null" }, "activated_at": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": { "type": "string" } } }
         },
+        "stage_facts": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageFacts" },
+        "source_figures": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageSourceFigures" },
         "predecessor_canary_envelope": {
           "type": "object", "additionalProperties": false,
           "required": ["envelope_id", "revision", "status", "currency", "limits", "evidence_set_hash", "active_for_live_full"],
@@ -127,11 +147,11 @@
         },
         "projection_continuity": {
           "type": "object", "additionalProperties": false, "required": ["state", "epoch", "cursor", "sequence", "gap_detected", "affected_authorities", "blocker_codes"],
-          "properties": { "state": { "enum": ["UNAVAILABLE", "CONTIGUOUS", "GAP"] }, "epoch": { "type": ["string", "null"], "maxLength": 191 }, "cursor": { "type": ["string", "null"], "maxLength": 4096 }, "sequence": { "type": ["integer", "null"], "minimum": 0 }, "gap_detected": { "type": ["boolean", "null"] }, "affected_authorities": { "type": "array", "maxItems": 3, "uniqueItems": true, "items": { "enum": ["EXECUTION", "BROKER", "DERIVED"] } }, "blocker_codes": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } }
+          "properties": { "state": { "enum": ["UNAVAILABLE", "CONTIGUOUS", "GAP"] }, "epoch": { "type": ["string", "null"], "maxLength": 191 }, "cursor": { "type": ["string", "null"], "maxLength": 4096 }, "sequence": { "type": ["integer", "null"], "minimum": 0 }, "gap_detected": { "type": ["boolean", "null"] }, "affected_authorities": { "type": "array", "maxItems": 3, "uniqueItems": true, "items": { "enum": ["EXECUTION", "BROKER", "DERIVED"] } }, "blocker_codes": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } }, "gap_ranges": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageFactGapRanges" } }
         },
         "positions": { "$ref": "#/$defs/UnavailableCollection" }, "orders": { "$ref": "#/$defs/UnavailableCollection" }, "incidents": { "$ref": "#/$defs/UnavailableCollection" },
         "open_order_footer": { "type": "object", "additionalProperties": false, "required": ["envelope", "exact_open_order_count"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "exact_open_order_count": { "type": ["integer", "null"], "minimum": 0 } } },
-        "series": { "type": "object", "additionalProperties": false, "required": ["envelope", "resolution", "points"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "resolution": { "type": "null" }, "points": { "type": "array", "maxItems": 0 } } },
+        "series": { "type": "object", "additionalProperties": false, "required": ["envelope", "resolution", "points"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "resolution": { "oneOf": [{ "type": "null" }, { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageSeriesResolution" } ] }, "points": { "type": "array", "maxItems": 2000, "items": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageSeriesPoint" } }, "methodology_ref": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+/-]{0,190}$" }] }, "unit": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" }] } } },
         "rollback_readiness": { "type": "object", "additionalProperties": false, "required": ["envelope", "ready", "evidence_hash", "blocker_codes"], "properties": { "envelope": { "$ref": "#/$defs/SourceEnvelope" }, "ready": { "const": false }, "evidence_hash": { "type": "null" }, "blocker_codes": { "type": "array", "minItems": 2, "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } } },
         "realtime": { "type": "object", "additionalProperties": false, "required": ["active", "stream_url", "subscription_id", "blocker_codes"], "properties": { "active": { "type": "boolean" }, "stream_url": { "type": ["string", "null"], "maxLength": 512 }, "subscription_id": { "type": ["string", "null"], "maxLength": 191 }, "blocker_codes": { "type": "array", "maxItems": 8, "uniqueItems": true, "items": { "type": "string" } } } },
         "command_policy": {

@@ -34,13 +34,16 @@
  *           MD-S6  a partition appears once; a metric's currency is its partition's
  *           MD-S7  page: returned == rows <= limit, <= filtered; no cursor either way means the whole result; cursor text
  *           MD-S8  at most 10,000 children in a body (a 1 MiB body cannot hold more)
- *           MD-S9  a preset the source does not publish carries no window
+ *           (MD-S9, a preset the source does not publish carries no window, is a SCHEMA rule since BE-P1 and left this list)
  *           MD-S10 a row appears once; a stage set has no repeats
  *           MD-S11 group key: a groupable field, once; group appears once; unique_row_count <= filtered count
  *           MD-S12 clocks stay inside the Date range (schema: up to 2^53-1)
  *       - one group is LOOSER on purpose: MD-L1, `score_details` / `composition_details` / `regime_details` are
  *         accepted as bounded arrays of objects naming their slot and COUNTED, never read (other families);
- *       - Codex-side gaps pinned with `it.fails`: MD-1 .. MD-8 (what the schema does not say and the reader holds).
+ *       - MD-1 .. MD-8 (BE-P1): the server now refuses to emit a body that breaks them; the schema says what JSON Schema
+ *         can (MD-3 exact repeat, MD-4, MD-7 field enum + a field once in a key, MD-6 exact repeat, MD-1 empty page) and
+ *         those are normal `it`; what it cannot say stays `it.fails` (MD-1, MD-2, MD-6 row_key, MD-7 count, MD-8) and
+ *         MD-5 (negative zero) waits for an owner decision.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -79,6 +82,8 @@ import {
   datasetViolations,
   FIXTURE_ALL,
   FIXTURE_EMPTY,
+  FIXTURE_INVARIANT_CASES,
+  FIXTURE_PARTITIONS,
   FIXTURE_METRIC,
   FIXTURE_ROWS,
   fixtureValue,
@@ -327,8 +332,10 @@ describe("L1 · matrix P · economic partitions: layout x metric currency x head
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
     const read = datasetOf(state.value);
     expect(read !== null).toBe(accept(state.picks));
-    // These rules are the reader's: the schema accepts every one of the 45 states (counted below, MD-2, MD-3, MD-8).
-    expect(datasetViolations(state.value)).toEqual([]);
+    // The schema refuses the one layout that repeats a partition object (uniqueItems, MD-3 closed by BE-P1); every other
+    // state is schema-valid, and the rules that still refuse some of them are the reader's (counted below: MD-2, MD-8).
+    if (state.picks.layout === "usdt twice") expect(datasetViolations(state.value)).not.toEqual([]);
+    else expect(datasetViolations(state.value)).toEqual([]);
     if (read === null) return;
     const row = read.items[1]!;
     // The partitions come back in published order and separate; there is nothing to total.
@@ -344,8 +351,11 @@ describe("L1 · matrix P · economic partitions: layout x metric currency x head
   it("counts: the reader refuses these schema-valid states on purpose (MD-S5 headline, MD-S6 partition rules)", () => {
     const refused = states.filter((s) => !accept(s.picks));
     const valid = states.filter((s) => datasetViolations(s.value).length === 0);
-    console.info(`manager P: ${states.length} states, schema accepts ${valid.length}, reader refuses ${refused.length}`);
-    expect(valid).toHaveLength(states.length);
+    const refusedBySchemaToo = refused.filter((s) => datasetViolations(s.value).length > 0);
+    console.info(`manager P: ${states.length} states, schema accepts ${valid.length}, reader refuses ${refused.length} (${refused.length - refusedBySchemaToo.length} of them schema-valid)`);
+    // Only the repeated partition object (9 states) is now a schema refusal; the reader refuses it as well.
+    expect(valid).toHaveLength(states.length - 9);
+    expect(refusedBySchemaToo.every((s) => s.picks.layout === "usdt twice")).toBe(true);
     expect(refused.every((s) => datasetOf(s.value) === null)).toBe(true);
     expect(refused.length).toBe(states.length - states.filter((s) => accept(s.picks)).length);
   });
@@ -924,8 +934,6 @@ describe("L3 · schema agreement (the published ManagerDataset schema, via testk
   const STRICTER_GROUPS: { name: string; test: (c: Case) => boolean; count?: number }[] = [
     { name: "MD-S1 display safety: whitespace-only, bidi override, in any text", test: (c) => TEXT_PATHS.test(c.name) && SAFE_TEXT_VALUE.test(c.name) },
     { name: "MD-S2 negative zero is not a decimal value", test: (c) => c.category === "negative-zero" },
-    { name: "MD-S11 a group is over a field the options can group by (the schema says any text)", test: (c) => /^unknown-enum: groups\.0\.key\.0\.field <-/.test(c.name) },
-    { name: "MD-S10 a row appears once", test: (c) => c.category === "duplicate-id" && /^duplicate-id: items <-/.test(c.name) },
     { name: "MD-S7 page: returned_count is the number of rows (a cut or doubled list changes the rows, not the count)", test: (c) => /^(truncated|duplicate-id): items <-/.test(c.name) },
     { name: "MD-S7 cursor text: an empty cursor (whitespace-only, bidi and NUL cursors are MD-S1)", test: (c) => /: page\.(next_cursor|previous_cursor) <-/.test(c.name) },
   ];
@@ -1014,8 +1022,6 @@ const PINNED_STRICTER: Record<string, number> = {
   "MD-S2 negative zero is not a decimal value": 24,
   "MD-S7 page: returned_count is the number of rows (a cut or doubled list changes the rows, not the count)": 1,
   "MD-S7 cursor text: an empty cursor (whitespace-only, bidi and NUL cursors are MD-S1)": 2,
-  "MD-S10 a row appears once": 1,
-  "MD-S11 a group is over a field the options can group by (the schema says any text)": 11,
 };
 
 /* ═════════════════════════ stricter, pinned by hand ═════════════════════════ */
@@ -1034,7 +1040,8 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
     ["MD-S4 partition metric key not a lower-case token", (b) => { b.capital_statements[0].metrics.Balance_Total = b.capital_statements[0].metrics.balance_total; }],
     [`MD-S4 ${MAX_PARTITION_METRICS + 1} metrics in one partition`, (b) => { b.capital_statements[0].metrics = Object.fromEntries(Array.from({ length: MAX_PARTITION_METRICS + 1 }, (_, i) => [`m_${i}`, moneyMetric()])); }],
     ["MD-S5 USDT headline above a EUR partition", (b) => { b.items[1].metrics.net_pnl = moneyMetric({ value: "1" }); }],
-    ["MD-S6 the same partition twice in capital_statements", (b) => { b.capital_statements.push(clone(b.capital_statements[0])); }],
+    // An exact repeat is a schema refusal now (uniqueItems, MD-3). The identity repeated with other content is not.
+    ["MD-S6 the same partition twice in capital_statements, other figure", (b) => { const twin = clone(b.capital_statements[0]); twin.metrics.balance_total.value = "1"; b.capital_statements.push(twin); }],
     ["MD-S6 a EUR figure inside a USDT partition", (b) => { b.capital_statements[0].metrics.balance_total.currency = "EUR"; }],
     ["MD-S7 returned_count 1 for 2 rows", (b) => { b.page.returned_count = 1; }],
     ["MD-S7 returned_count above the limit", (b) => { b.page.limit = 1; }],
@@ -1042,13 +1049,13 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
     ["MD-S7 no cursor either way but fewer rows than the filtered count", (b) => { b.page.next_cursor = null; b.page.previous_cursor = null; }],
     ["MD-S7 empty cursor", (b) => { b.page.next_cursor = ""; }],
     ["MD-S8 10,001 children in a body over two rows", (b) => { const kids = (n: number, tag: string) => cloneRows(b.items[0].children[0], n, (c, i) => { c.deployment_id = `d_${tag}_${i}`; }); b.items[0].children = kids(5001, "a"); b.items[1].children = kids(5000, "b"); }],
-    ["MD-S9 an unpublished preset that carries a window", (b) => { b.query_options.window.presets[0].resolved = { from_ms: 1, to_ms: 2 }; }],
     ["MD-S10 a row twice", (b) => { b.items[1].row_key = b.items[0].row_key; }],
     ["MD-S10 a stage twice in a set", (b) => { b.items[0].stage_presence = ["PAPER", "PAPER"]; }],
-    ["MD-S11 a group over a field the options cannot group by", (b) => { b.groups[0].key[0].field = "name"; }],
+    // The schema's enum refuses a non-groupable field (MD-7). A groupable field the options do not offer is the reader's rule.
+    ["MD-S11 a group over a field the options do not offer", (b) => { b.query_options.sort_fields = b.query_options.sort_fields.filter((k: string) => k !== "venue"); b.query_options.group_fields = b.query_options.group_fields.filter((k: string) => k !== "venue"); b.groups[0].key[0].field = "venue"; }],
     ["MD-S11 a group with more unique rows than the filtered query", (b) => { b.groups[0].unique_row_count = 10; }],
-    ["MD-S11 a group twice", (b) => { b.groups.push(clone(b.groups[0])); }],
-    ["MD-S11 a field twice in one group key", (b) => { b.groups[0].key.push({ field: "portfolio_id", value: "x" }); }],
+    // An exact repeat is a schema refusal (uniqueItems); the same key with another count is not.
+    ["MD-S11 a group twice with another count", (b) => { const twin = clone(b.groups[0]); twin.unique_row_count = 1; b.groups.push(twin); }],
     ["MD-S12 as_of_ms beyond the Date range", (b) => { b.as_of_ms = 9_000_000_000_000_000; }],
     ["MD-S12 a metric window beyond the Date range", (b) => { b.items[0].metrics.net_pnl.window = { from_ms: 9_000_000_000_000_000, to_ms: 9_000_000_000_000_001 }; }],
   ];
@@ -1062,39 +1069,116 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
   it("prints the number of pinned groups", () => {
     const groups = new Set(cases.map(([name]) => name.split(" ")[0]));
     console.info(`manager stricter-than-schema (on purpose): ${cases.length} pinned cases in ${groups.size} named groups: ${[...groups].sort().join(", ")}`);
-    expect(groups.size).toBe(12);
+    // MD-S9 left this list: the schema refuses an unpublished preset that carries a window (BE-P1, MD-4).
+    expect(groups.size).toBe(11);
   });
 });
 
-/* ═════════════════════════ Codex-side gaps (the schema is silent, the reader holds) ═════════════════════════ */
-describe("pinned Codex-side gaps: what ManagerDataset does not say", () => {
+/* ═════════════════════════ MD-1 .. MD-8: what the schema says and what only the producer and the reader hold ═════════════════════════ */
+describe("MD-1 .. MD-8 (BE-P1): the producer refuses to emit these bodies; the schema says what JSON Schema can", () => {
   /*
-   * Each gap is a rule the reader enforces and the published schema does not express. `it.fails` documents the
-   * schema's SILENCE: it passes while the schema accepts the bad body and turns red the day Codex adds the rule,
-   * which is the signal to move that rule from "the reader's" to "the contract's" (and to drop the MD-S pin).
+   * Each gap is a rule the reader enforces. BE-P1 made the control-api refuse to emit a body that breaks it
+   * (manager-dataset-invariants.ts, in managerDatasetResponse) and put into the published schema the part JSON Schema can
+   * state. A "closed" case is refused by the schema now (normal `it`: schema refuses AND reader refuses). An "open" case
+   * is one JSON Schema cannot state (equality of two fields, identity inside a list, a property of two items): it stays
+   * `it.fails`, which passes while the schema stays silent and turns red the day a rule becomes expressible. MD-5 is not a
+   * rule yet: it waits for an owner decision.
    */
-  const gaps: [string, string, (b: Draft) => void][] = [
+  const closed: [string, string, (b: Draft) => void][] = [
+    ["MD-1 empty page", "an empty items list has returned_count 0, a non-empty one at least 1 (the exact count is the producer's)", (b) => { b.page.returned_count = 0; }],
+    ["MD-1 empty page, rows missing", "returned_count 2 over no rows is refused", (b) => { b.items = []; b.groups = []; }],
+    ["MD-3", "a partition object repeated in a list (uniqueItems)", (b) => { b.capital_statements.push(clone(b.capital_statements[0])); }],
+    ["MD-3 row", "a partition object repeated in a row's economic_partitions", (b) => { b.items[1].economic_partitions.push(clone(b.items[1].economic_partitions[0])); }],
+    ["MD-4", "a preset the source does not publish carries no window (data_state NOT_PUBLISHED with resolved: object)", (b) => { b.query_options.window.presets[0].resolved = { from_ms: 1, to_ms: 2 }; }],
+    ["MD-6 row", "a row repeated in items (uniqueItems)", (b) => { b.items.push(clone(b.items[0])); b.page.returned_count = 3; b.page.authorized_filtered_count = 3; }],
+    ["MD-6 group", "a group repeated (uniqueItems)", (b) => { b.groups.push(clone(b.groups[0])); }],
+    ["MD-7 field", "a group key names one of the eight groupable fields, not any text", (b) => { b.groups[0].key[0].field = "name"; }],
+    ["MD-7 key", "a field twice in one group key", (b) => { b.groups[0].key.push({ field: "portfolio_id", value: "x" }); }],
+  ];
+  for (const [id, rule, change] of closed) {
+    it(`${id} (closed in the schema, reader holds it too): ${rule}`, () => {
+      const body = clone(NEG);
+      change(body);
+      expect(datasetViolations(body)).not.toEqual([]);
+      expect(datasetOf(body)).toBeNull();
+    });
+  }
+  it("MD-1 empty page: the empty case is exact in the schema (no rows, returned_count 0) and the fixtures stay valid", () => {
+    const empty = fixtureValue(FIXTURE_EMPTY);
+    expect(empty.items).toEqual([]);
+    expect(empty.page.returned_count).toBe(0);
+    expect(datasetViolations(empty)).toEqual([]);
+    expect(datasetViolations({ ...clone(empty), page: { ...empty.page, returned_count: 1 } })).not.toEqual([]);
+  });
+  it("MD-4: an unpublished preset with no window, and a published one with bounds, are both valid", () => {
+    const body = clone(NEG);
+    expect(body.query_options.window.presets.every((p: Draft) => p.data_state === "NOT_PUBLISHED" && p.resolved === null)).toBe(true);
+    expect(datasetViolations(body)).toEqual([]);
+    body.query_options.window.presets[1] = { ...body.query_options.window.presets[1], data_state: "METRIC_SPECIFIC", resolved: { from_ms: 1, to_ms: 2592000001 }, reason_code: null };
+    expect(datasetViolations(body)).toEqual([]);
+  });
+
+  const open: [string, string, (b: Draft) => void][] = [
     ["MD-1", "page.returned_count equals items.length, is at most limit and at most authorized_filtered_count", (b) => { b.page.returned_count = 1; }],
     ["MD-2", "a metric inside a partition names the partition's currency", (b) => { b.capital_statements[0].metrics.balance_total.currency = "EUR"; }],
-    ["MD-3", "a partition appears once per list (no uniqueItems, no identity)", (b) => { b.capital_statements.push(clone(b.capital_statements[0])); }],
-    ["MD-4", "a preset the source does not publish carries no window (data_state NOT_PUBLISHED with resolved: object)", (b) => { b.query_options.window.presets[0].resolved = { from_ms: 1, to_ms: 2 }; }],
-    ["MD-5", "a decimal value is not a negative zero (the Decimal pattern admits -0 and -0.00)", (b) => { b.items[0].metrics.net_pnl.value = "-0"; }],
-    ["MD-6", "row_key and group key are unique within a body", (b) => { b.items[1].row_key = b.items[0].row_key; }],
-    ["MD-7", "a group's key fields are in query_options.group_fields and unique_row_count is at most the filtered count", (b) => { b.groups[0].unique_row_count = 10; }],
-    ["MD-8", "a row-level money figure is in the currency of every partition under it (no cross-currency headline)", (b) => { b.items[1].metrics.net_pnl = moneyMetric({ value: "1" }); }],
+    ["MD-6", "row_key is unique within a body (two different rows, one key)", (b) => { b.items[1].row_key = b.items[0].row_key; }],
+    ["MD-7", "a group's unique_row_count is at most the filtered count", (b) => { b.groups[0].unique_row_count = 10; }],
+    ["MD-8", "a row-level money figure is one partition's figure (no cross-currency headline)", (b) => { b.items[1].metrics.net_pnl = moneyMetric({ value: "1" }); }],
   ];
-  for (const [id, rule, change] of gaps) {
-    it(`${id} (reader holds it): ${rule}`, () => {
+  for (const [id, rule, change] of open) {
+    it(`${id} (reader holds it, the producer refuses to emit it): ${rule}`, () => {
       const body = clone(NEG);
       change(body);
       expect(datasetOf(body)).toBeNull();
     });
-    it.fails(`${id} (schema is silent, expected to FAIL today): the schema should refuse it`, () => {
+    it.fails(`${id} (JSON Schema cannot state it, expected to FAIL): the schema should refuse it`, () => {
       const body = clone(NEG);
       change(body);
       expect(datasetViolations(body)).not.toEqual([]);
     });
   }
+  it("the published partition example is read as published, and each published negative case is judged by the schema as the file says", () => {
+    const example = datasetOf(fixtureValue(FIXTURE_PARTITIONS))!;
+    expect(example.items.map((row) => row.economicPartitions.map((p) => p.partition.currency))).toEqual([["USDT"], ["USDT", "EUR"]]);
+    // The mixed row has no headline figure: two currencies are never one number.
+    expect(example.items[1]!.metrics.net_pnl!.kind).toBe("absent");
+    expect(example.groups).toHaveLength(1);
+    expect(example.capitalStatements.map((entry) => entry.partition.currency)).toEqual(["USDT", "EUR"]);
+
+    const file = loadCanonical<{ base: string; cases: { id: string; refused_by: string; ops: Draft[] }[] }>(FIXTURE_INVARIANT_CASES);
+    expect(file.base).toBe(`${FIXTURE_PARTITIONS}.valid.json`);
+    const apply = (ops: Draft[]): Draft => {
+      const body = fixtureValue(FIXTURE_PARTITIONS);
+      const at = (path: (string | number)[]): Draft => path.reduce((node: Draft, key) => node[key], body);
+      for (const op of ops) {
+        const parent = at(op.path.slice(0, -1));
+        const key = op.path.at(-1);
+        if (op.op === "set") parent[key] = clone(op.value);
+        else if (op.op === "delete") delete parent[key];
+        else if (op.op === "append") parent[key].push(clone(op.value));
+        else if (op.op === "append_copy") parent[key].push(clone(at(op.from)));
+        else if (op.op === "set_copy") parent[key] = clone(at(op.from));
+        else throw new Error(`unknown operation ${op.op}`);
+      }
+      return body;
+    };
+    const accepted: string[] = [];
+    for (const c of file.cases) {
+      const body = apply(c.ops);
+      // The checker here and the published Ajv verdict (BE-P1 contract test) agree: PRODUCER_ONLY means the schema is silent.
+      expect(datasetViolations(body).length === 0, c.id).toBe(c.refused_by === "PRODUCER_ONLY");
+      if (datasetOf(body) !== null) accepted.push(c.id);
+    }
+    // The reader refuses every case but one: it identifies a partition by five fields (the proof reference too), the
+    // producer by four, so a repeat that differs only in its proof reference is the producer's refusal alone.
+    expect(accepted).toEqual(["MD-3/partition-identity-repeated-with-other-content"]);
+  });
+  it("MD-5 (negative zero) is not a rule yet: the schema and the producer admit -0 and the reader refuses it (owner decision pending)", () => {
+    const body = clone(NEG);
+    body.items[0].metrics.net_pnl.value = "-0";
+    expect(datasetViolations(body)).toEqual([]);
+    expect(datasetOf(body)).toBeNull();
+  });
 });
 
 /* ═════════════════════════ L1 closing: determinism and isolation ═════════════════════════ */

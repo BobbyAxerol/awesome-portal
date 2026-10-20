@@ -1,0 +1,1227 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-observed-timeline.v1.schema.json",
+  "title": "Observed timeline of one subject (portal.execution.observed-timeline-bff.v1)",
+  "description": "A bounded, non-causal merge of the subject's current-page orders, fills, sessions and command-journal rows by their OWN clocks, ordered by observed_at_ms, clock class, then source identifier. It is an observation of the current page, not an event replay: broker acknowledgement, correction tombstones and a global event sequence are published as unavailable_segments. An entry carries NO order status or outcome (a request, FE-054): an order appears once per clock it has (submitted, updated, created). Exact values are decimal strings; a malformed source value is null and named in rejected_exact_value_fields. `mark_context` is derived current marks, not OHLCV. In SCOPED_V2 the received/ingested/processed clocks and the projection received/refresh times are null. Cursor `page.next_cursor` is Portal-signed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "logical_operation_id",
+    "record_authority",
+    "source_authority",
+    "observation_authority",
+    "observation_semantics",
+    "environment",
+    "profile_id",
+    "workspace_id",
+    "resource",
+    "projection",
+    "observed_timeline",
+    "mark_context",
+    "page"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.observed-timeline-bff.v1"
+    },
+    "logical_operation_id": {
+      "const": "executionObservedTimelineV1"
+    },
+    "record_authority": {
+      "const": "PORTAL_CONTROL"
+    },
+    "source_authority": {
+      "const": "TRADING_SYSTEM_CURRENT_STATE"
+    },
+    "observation_authority": {
+      "const": "PORTAL_OBSERVATION"
+    },
+    "observation_semantics": {
+      "const": "BOUNDED_CURRENT_PAGE"
+    },
+    "environment": {
+      "enum": [
+        "paper",
+        "sandbox",
+        "live"
+      ]
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 512
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "DEPLOYMENT",
+            "ALPHA",
+            "PORTFOLIO",
+            "ACCOUNT"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        }
+      }
+    },
+    "projection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "epoch_id",
+        "sequence",
+        "payload_digest",
+        "source_contract_revision",
+        "source_catalogue_sha256",
+        "source_as_of_ms",
+        "received_at_ms",
+        "last_successful_refresh_at_ms",
+        "completeness"
+      ],
+      "properties": {
+        "epoch_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "payload_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$(?![\\s\\S])"
+        },
+        "source_contract_revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "source_catalogue_sha256": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_as_of_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -8640000000000000,
+              "maximum": 8640000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -8640000000000000,
+              "maximum": 8640000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "last_successful_refresh_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": -8640000000000000,
+              "maximum": 8640000000000000
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "completeness": {
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "UNKNOWN"
+          ]
+        }
+      }
+    },
+    "observed_timeline": {
+      "$ref": "#/$defs/TimelinePanel"
+    },
+    "mark_context": {
+      "$ref": "#/$defs/MarkPanel"
+    },
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "limit",
+        "next_cursor",
+        "has_more"
+      ],
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "pattern": "^kc1\\.",
+              "maxLength": 4096
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "has_more": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "UtcEpochMs": {
+      "type": "integer",
+      "minimum": -8640000000000000,
+      "maximum": 8640000000000000
+    },
+    "Identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    },
+    "Decimal": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+    },
+    "Row": {
+      "type": "object",
+      "maxProperties": 64,
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "oneOf": [
+              {
+                "type": "string",
+                "maxLength": 8192
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "maxLength": 8192
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "PanelClocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_time_ms",
+        "source_published_at_ms",
+        "received_at_ms",
+        "ingested_at_ms",
+        "processed_at_ms",
+        "as_of_ms",
+        "read_at_ms"
+      ],
+      "properties": {
+        "event_time_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_published_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ingested_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "processed_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "as_of_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "read_at_ms": {
+          "$ref": "#/$defs/UtcEpochMs"
+        }
+      }
+    },
+    "PanelCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from_ms",
+        "to_ms",
+        "source_total",
+        "filtered_total",
+        "returned_count",
+        "truncated",
+        "downsampled",
+        "has_more",
+        "next_cursor",
+        "gaps"
+      ],
+      "properties": {
+        "from_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_total": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "filtered_total": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "returned_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "downsampled": {
+          "type": "boolean"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 4096
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "gaps": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from_ms",
+              "to_ms",
+              "reason_code"
+            ],
+            "properties": {
+              "from_ms": {
+                "$ref": "#/$defs/UtcEpochMs"
+              },
+              "to_ms": {
+                "$ref": "#/$defs/UtcEpochMs"
+              },
+              "reason_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            }
+          }
+        }
+      }
+    },
+    "Entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observed_at_ms",
+        "source_clock",
+        "observation_type",
+        "source_record",
+        "resource",
+        "values",
+        "rejected_exact_value_fields"
+      ],
+      "properties": {
+        "observed_at_ms": {
+          "type": "integer",
+          "minimum": -8640000000000000,
+          "maximum": 8640000000000000
+        },
+        "source_clock": {
+          "enum": [
+            "ORDER_CREATED_AT",
+            "ORDER_SUBMITTED_AT",
+            "ORDER_UPDATED_AT",
+            "FILL_RECORDED_AT",
+            "FILL_TRADE_TIME",
+            "SESSION_STARTED_AT",
+            "SESSION_UPDATED_AT",
+            "SESSION_COMPLETED_AT",
+            "COMMAND_JOURNAL_CREATED_AT",
+            "COMMAND_JOURNAL_UPDATED_AT"
+          ]
+        },
+        "observation_type": {
+          "enum": [
+            "ORDER_OBSERVED",
+            "FILL_OBSERVED",
+            "SESSION_OBSERVED",
+            "COMMAND_JOURNAL_ROW_OBSERVED"
+          ]
+        },
+        "source_record": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "ORDER",
+                "FILL",
+                "SESSION",
+                "COMMAND_JOURNAL"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512
+            }
+          }
+        },
+        "resource": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "deployment_id",
+            "strategy_id",
+            "account_id",
+            "portfolio_id",
+            "execution_session_id",
+            "instrument_id"
+          ],
+          "properties": {
+            "deployment_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "strategy_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "account_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "portfolio_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "execution_session_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "instrument_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "values": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "price",
+            "quantity",
+            "realized_pnl"
+          ],
+          "properties": {
+            "price": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "quantity": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "realized_pnl": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 128,
+                  "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "rejected_exact_value_fields": {
+          "type": "array",
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "price",
+              "quantity",
+              "realized_pnl"
+            ]
+          }
+        }
+      }
+    },
+    "TimelineData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "observation_authority",
+        "observation_semantics",
+        "source_history_semantics",
+        "ordering_rule",
+        "source_current_page_row_count",
+        "observed_entry_count",
+        "entries",
+        "unavailable_segments"
+      ],
+      "properties": {
+        "label": {
+          "const": "OBSERVED_TIMELINE"
+        },
+        "observation_authority": {
+          "const": "PORTAL_OBSERVATION"
+        },
+        "observation_semantics": {
+          "const": "BOUNDED_CURRENT_PAGE"
+        },
+        "source_history_semantics": {
+          "const": "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY"
+        },
+        "ordering_rule": {
+          "const": "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1"
+        },
+        "source_current_page_row_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "observed_entry_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "entries": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/Entry"
+          }
+        },
+        "unavailable_segments": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "segment",
+              "state",
+              "reason_code"
+            ],
+            "properties": {
+              "segment": {
+                "enum": [
+                  "BROKER_ACKNOWLEDGEMENT",
+                  "AUTHORITATIVE_CORRECTION_TOMBSTONE",
+                  "GLOBAL_EVENT_SEQUENCE"
+                ]
+              },
+              "state": {
+                "const": "UNAVAILABLE"
+              },
+              "reason_code": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            }
+          }
+        }
+      }
+    },
+    "MarkData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "authority",
+        "source_history_semantics",
+        "marks",
+        "equity_context",
+        "unavailable_market_context"
+      ],
+      "properties": {
+        "label": {
+          "const": "DERIVED · mark-context"
+        },
+        "authority": {
+          "const": "DERIVED"
+        },
+        "source_history_semantics": {
+          "const": "CURRENT_MARKS_AND_RETAINED_EQUITY_NOT_OHLCV"
+        },
+        "marks": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "position_id",
+              "instrument_id",
+              "account_id",
+              "observed_at_ms",
+              "mark_price",
+              "currency"
+            ],
+            "properties": {
+              "position_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              },
+              "instrument_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "account_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "observed_at_ms": {
+                "type": "integer",
+                "minimum": -8640000000000000,
+                "maximum": 8640000000000000
+              },
+              "mark_price": {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?[0-9]+(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              "currency": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 512
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "equity_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "relation_count",
+            "label"
+          ],
+          "properties": {
+            "state": {
+              "enum": [
+                "AVAILABLE",
+                "EMPTY"
+              ]
+            },
+            "relation_count": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "label": {
+              "const": "CURRENT_OR_RETAINED_EQUITY_CONTEXT"
+            }
+          }
+        },
+        "unavailable_market_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "state",
+            "reason_code"
+          ],
+          "properties": {
+            "state": {
+              "const": "UNAVAILABLE"
+            },
+            "reason_code": {
+              "const": "EDS10_MARKET_OHLCV_SOURCE_GAP_CONFIRMED"
+            }
+          }
+        }
+      }
+    },
+    "TimelinePanel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "data",
+        "clocks",
+        "coverage",
+        "source_history_semantics",
+        "formula",
+        "reason_code",
+        "retryable"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "READY",
+            "EMPTY",
+            "PARTIAL",
+            "STALE",
+            "UNAVAILABLE"
+          ]
+        },
+        "data": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TimelineData"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clocks": {
+          "$ref": "#/$defs/PanelClocks"
+        },
+        "coverage": {
+          "$ref": "#/$defs/PanelCoverage"
+        },
+        "source_history_semantics": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "formula": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "formula_id",
+                "formula_version",
+                "input_revision",
+                "input_digest",
+                "composite_read_revision"
+              ],
+              "properties": {
+                "formula_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "formula_version": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "input_revision": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "input_digest": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "composite_read_revision": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "READY",
+                  "PARTIAL",
+                  "STALE"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "EMPTY",
+                  "UNAVAILABLE"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "MarkPanel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "data",
+        "clocks",
+        "coverage",
+        "source_history_semantics",
+        "formula",
+        "reason_code",
+        "retryable"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "READY",
+            "EMPTY",
+            "PARTIAL",
+            "STALE",
+            "UNAVAILABLE"
+          ]
+        },
+        "data": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MarkData"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clocks": {
+          "$ref": "#/$defs/PanelClocks"
+        },
+        "coverage": {
+          "$ref": "#/$defs/PanelCoverage"
+        },
+        "source_history_semantics": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "formula": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "formula_id",
+                "formula_version",
+                "input_revision",
+                "input_digest",
+                "composite_read_revision"
+              ],
+              "properties": {
+                "formula_id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "formula_version": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "input_revision": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "input_digest": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 128
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "composite_read_revision": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "maxLength": 256
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "READY",
+                  "PARTIAL",
+                  "STALE"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "EMPTY",
+                  "UNAVAILABLE"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -108,7 +108,12 @@ cp -a \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
 # ELP2-01 validates its runtime parser against the identical published fixtures.
 cp -a "${ROOT_DIR}/apps/control-api/src/execution/stage-drift.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution/deployment-identity.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/execution/"
+# S3-U4: pure leaf (no imports) shared by the Paper producer and its contract spec.
+mkdir -p "${WORKSPACE_DIR}/apps/control-api/src/paper-read"
+cp -a "${ROOT_DIR}/apps/control-api/src/paper-read/positions-by-side.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/paper-read/"
 # Copy only this pure validator and compatibility dictionary, not app config,
 # credentials, node_modules or any runtime mount. The test cell stays networkless.
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
@@ -128,12 +133,16 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/read-publication.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-model.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-dataset-invariants.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-query-p1.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score-publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score-revision.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-regime-history.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-composition-publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-regime-publication.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-series-publication.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-series.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-lifecycle.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-catalogue.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-source.generated.ts" \
@@ -170,7 +179,12 @@ cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" 
   "${ROOT_DIR}/apps/control-api/src/governance/parent-recorded-facts.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/following-parent.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/live-parent.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/stage-action-eligibility.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/approval-request-lookup.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/governance/"
+# FE-068 stage-action eligibility is a pure projection; it needs only the type-only gate adapter.
+cp -a "${ROOT_DIR}/apps/control-api/src/auth/governance-access.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/auth/"
 # Pure source/ownership regression: explicit non-secret inputs only. The SQL is
 # parsed, never executed; this does not mount an app, connect a DB or grant roles.
 mkdir -p "${WORKSPACE_DIR}/apps/control-api/migrations" \

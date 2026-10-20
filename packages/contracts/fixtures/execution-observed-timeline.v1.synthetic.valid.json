@@ -1,0 +1,556 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "producer_run": true,
+  "cases": [
+    {
+      "name": "one_page",
+      "value": {
+        "schema_version": "portal.execution.observed-timeline-bff.v1",
+        "logical_operation_id": "executionObservedTimelineV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM_CURRENT_STATE",
+        "observation_authority": "PORTAL_OBSERVATION",
+        "observation_semantics": "BOUNDED_CURRENT_PAGE",
+        "environment": "live",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "workspace_id": "workspace_execution_manager",
+        "resource": {
+          "kind": "ALPHA",
+          "id": "alpha_btc_trend"
+        },
+        "projection": {
+          "epoch_id": "alpha-live",
+          "sequence": 7,
+          "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source_contract_revision": "manager-v2.current.v1",
+          "source_catalogue_sha256": null,
+          "source_as_of_ms": 1792238640000,
+          "received_at_ms": 1792238640500,
+          "last_successful_refresh_at_ms": 1792238640500,
+          "completeness": "COMPLETE"
+        },
+        "observed_timeline": {
+          "state": "READY",
+          "data": {
+            "label": "OBSERVED_TIMELINE",
+            "observation_authority": "PORTAL_OBSERVATION",
+            "observation_semantics": "BOUNDED_CURRENT_PAGE",
+            "source_history_semantics": "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY",
+            "ordering_rule": "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1",
+            "source_current_page_row_count": 4,
+            "observed_entry_count": 6,
+            "entries": [
+              {
+                "observed_at_ms": 1792231340000,
+                "source_clock": "SESSION_STARTED_AT",
+                "observation_type": "SESSION_OBSERVED",
+                "source_record": {
+                  "kind": "SESSION",
+                  "id": "session_live_01"
+                },
+                "resource": {
+                  "deployment_id": "dep_live_01",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "portfolio_id": null,
+                  "execution_session_id": "session_live_01",
+                  "instrument_id": "BTCUSDT"
+                },
+                "values": {
+                  "price": null,
+                  "quantity": null,
+                  "realized_pnl": null
+                },
+                "rejected_exact_value_fields": []
+              },
+              {
+                "observed_at_ms": 1792231440000,
+                "source_clock": "ORDER_SUBMITTED_AT",
+                "observation_type": "ORDER_OBSERVED",
+                "source_record": {
+                  "kind": "ORDER",
+                  "id": "ord_001"
+                },
+                "resource": {
+                  "deployment_id": "dep_live_01",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "portfolio_id": null,
+                  "execution_session_id": null,
+                  "instrument_id": "BTCUSDT"
+                },
+                "values": {
+                  "price": "67200.50",
+                  "quantity": "0.40",
+                  "realized_pnl": null
+                },
+                "rejected_exact_value_fields": []
+              },
+              {
+                "observed_at_ms": 1792231450000,
+                "source_clock": "ORDER_UPDATED_AT",
+                "observation_type": "ORDER_OBSERVED",
+                "source_record": {
+                  "kind": "ORDER",
+                  "id": "ord_001"
+                },
+                "resource": {
+                  "deployment_id": "dep_live_01",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "portfolio_id": null,
+                  "execution_session_id": null,
+                  "instrument_id": "BTCUSDT"
+                },
+                "values": {
+                  "price": "67200.50",
+                  "quantity": "0.40",
+                  "realized_pnl": null
+                },
+                "rejected_exact_value_fields": []
+              },
+              {
+                "observed_at_ms": 1792231452000,
+                "source_clock": "FILL_TRADE_TIME",
+                "observation_type": "FILL_OBSERVED",
+                "source_record": {
+                  "kind": "FILL",
+                  "id": "fill_001"
+                },
+                "resource": {
+                  "deployment_id": "dep_live_01",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "portfolio_id": null,
+                  "execution_session_id": null,
+                  "instrument_id": "BTCUSDT"
+                },
+                "values": {
+                  "price": "67200.50",
+                  "quantity": "0.40",
+                  "realized_pnl": "0"
+                },
+                "rejected_exact_value_fields": []
+              },
+              {
+                "observed_at_ms": 1792235040000,
+                "source_clock": "ORDER_SUBMITTED_AT",
+                "observation_type": "ORDER_OBSERVED",
+                "source_record": {
+                  "kind": "ORDER",
+                  "id": "ord_002"
+                },
+                "resource": {
+                  "deployment_id": "dep_live_01",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "portfolio_id": null,
+                  "execution_session_id": null,
+                  "instrument_id": "BTCUSDT"
+                },
+                "values": {
+                  "price": null,
+                  "quantity": "0.52",
+                  "realized_pnl": null
+                },
+                "rejected_exact_value_fields": []
+              },
+              {
+                "observed_at_ms": 1792238540000,
+                "source_clock": "SESSION_UPDATED_AT",
+                "observation_type": "SESSION_OBSERVED",
+                "source_record": {
+                  "kind": "SESSION",
+                  "id": "session_live_01"
+                },
+                "resource": {
+                  "deployment_id": "dep_live_01",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "portfolio_id": null,
+                  "execution_session_id": "session_live_01",
+                  "instrument_id": "BTCUSDT"
+                },
+                "values": {
+                  "price": null,
+                  "quantity": null,
+                  "realized_pnl": null
+                },
+                "rejected_exact_value_fields": []
+              }
+            ],
+            "unavailable_segments": [
+              {
+                "segment": "BROKER_ACKNOWLEDGEMENT",
+                "state": "UNAVAILABLE",
+                "reason_code": "EDS10_BROKER_ACK_CLOCK_SOURCE_GAP_CONFIRMED"
+              },
+              {
+                "segment": "AUTHORITATIVE_CORRECTION_TOMBSTONE",
+                "state": "UNAVAILABLE",
+                "reason_code": "EDS10_CORRECTION_TOMBSTONE_SOURCE_GAP_CONFIRMED"
+              },
+              {
+                "segment": "GLOBAL_EVENT_SEQUENCE",
+                "state": "UNAVAILABLE",
+                "reason_code": "EDS10_GLOBAL_EVENT_SEQUENCE_SOURCE_GAP_CONFIRMED"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": 1792238640000,
+            "received_at_ms": 1792238640500,
+            "ingested_at_ms": 1792238640500,
+            "processed_at_ms": 1792238640500,
+            "as_of_ms": 1792238640000,
+            "read_at_ms": 1792238641000
+          },
+          "coverage": {
+            "from_ms": 1792231340000,
+            "to_ms": 1792238540000,
+            "source_total": "4",
+            "filtered_total": "6",
+            "returned_count": 6,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY",
+          "formula": {
+            "formula_id": "observed-timeline.v1",
+            "formula_version": "1",
+            "input_revision": "manager-v2.current.v1",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "alpha-live:7"
+          },
+          "reason_code": null,
+          "retryable": false
+        },
+        "mark_context": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": 1792238640000,
+            "received_at_ms": 1792238640500,
+            "ingested_at_ms": 1792238640500,
+            "processed_at_ms": 1792238640500,
+            "as_of_ms": 1792238640000,
+            "read_at_ms": 1792238641000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_MARKS_AND_RETAINED_EQUITY_NOT_OHLCV",
+          "formula": {
+            "formula_id": "derived-mark-context.v1",
+            "formula_version": "1",
+            "input_revision": "manager-v2.current.v1",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "alpha-live:7"
+          },
+          "reason_code": null,
+          "retryable": false
+        },
+        "page": {
+          "limit": 100,
+          "next_cursor": null,
+          "has_more": false
+        }
+      }
+    },
+    {
+      "name": "first_page_has_more",
+      "value": {
+        "schema_version": "portal.execution.observed-timeline-bff.v1",
+        "logical_operation_id": "executionObservedTimelineV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM_CURRENT_STATE",
+        "observation_authority": "PORTAL_OBSERVATION",
+        "observation_semantics": "BOUNDED_CURRENT_PAGE",
+        "environment": "live",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "workspace_id": "workspace_execution_manager",
+        "resource": {
+          "kind": "ALPHA",
+          "id": "alpha_btc_trend"
+        },
+        "projection": {
+          "epoch_id": "alpha-live",
+          "sequence": 7,
+          "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source_contract_revision": "manager-v2.current.v1",
+          "source_catalogue_sha256": null,
+          "source_as_of_ms": 1792238640000,
+          "received_at_ms": 1792238640500,
+          "last_successful_refresh_at_ms": 1792238640500,
+          "completeness": "COMPLETE"
+        },
+        "observed_timeline": {
+          "state": "READY",
+          "data": {
+            "label": "OBSERVED_TIMELINE",
+            "observation_authority": "PORTAL_OBSERVATION",
+            "observation_semantics": "BOUNDED_CURRENT_PAGE",
+            "source_history_semantics": "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY",
+            "ordering_rule": "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1",
+            "source_current_page_row_count": 4,
+            "observed_entry_count": 6,
+            "entries": [
+              {
+                "observed_at_ms": 1792231340000,
+                "source_clock": "SESSION_STARTED_AT",
+                "observation_type": "SESSION_OBSERVED",
+                "source_record": {
+                  "kind": "SESSION",
+                  "id": "session_live_01"
+                },
+                "resource": {
+                  "deployment_id": "dep_live_01",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "portfolio_id": null,
+                  "execution_session_id": "session_live_01",
+                  "instrument_id": "BTCUSDT"
+                },
+                "values": {
+                  "price": null,
+                  "quantity": null,
+                  "realized_pnl": null
+                },
+                "rejected_exact_value_fields": []
+              },
+              {
+                "observed_at_ms": 1792231440000,
+                "source_clock": "ORDER_SUBMITTED_AT",
+                "observation_type": "ORDER_OBSERVED",
+                "source_record": {
+                  "kind": "ORDER",
+                  "id": "ord_001"
+                },
+                "resource": {
+                  "deployment_id": "dep_live_01",
+                  "strategy_id": "alpha_btc_trend",
+                  "account_id": "acct_binance_02",
+                  "portfolio_id": null,
+                  "execution_session_id": null,
+                  "instrument_id": "BTCUSDT"
+                },
+                "values": {
+                  "price": "67200.50",
+                  "quantity": "0.40",
+                  "realized_pnl": null
+                },
+                "rejected_exact_value_fields": []
+              }
+            ],
+            "unavailable_segments": [
+              {
+                "segment": "BROKER_ACKNOWLEDGEMENT",
+                "state": "UNAVAILABLE",
+                "reason_code": "EDS10_BROKER_ACK_CLOCK_SOURCE_GAP_CONFIRMED"
+              },
+              {
+                "segment": "AUTHORITATIVE_CORRECTION_TOMBSTONE",
+                "state": "UNAVAILABLE",
+                "reason_code": "EDS10_CORRECTION_TOMBSTONE_SOURCE_GAP_CONFIRMED"
+              },
+              {
+                "segment": "GLOBAL_EVENT_SEQUENCE",
+                "state": "UNAVAILABLE",
+                "reason_code": "EDS10_GLOBAL_EVENT_SEQUENCE_SOURCE_GAP_CONFIRMED"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": 1792238640000,
+            "received_at_ms": 1792238640500,
+            "ingested_at_ms": 1792238640500,
+            "processed_at_ms": 1792238640500,
+            "as_of_ms": 1792238640000,
+            "read_at_ms": 1792238641000
+          },
+          "coverage": {
+            "from_ms": 1792231340000,
+            "to_ms": 1792231440000,
+            "source_total": "4",
+            "filtered_total": "6",
+            "returned_count": 2,
+            "truncated": true,
+            "downsampled": false,
+            "has_more": true,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY",
+          "formula": {
+            "formula_id": "observed-timeline.v1",
+            "formula_version": "1",
+            "input_revision": "manager-v2.current.v1",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "alpha-live:7"
+          },
+          "reason_code": null,
+          "retryable": false
+        },
+        "mark_context": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": 1792238640000,
+            "received_at_ms": 1792238640500,
+            "ingested_at_ms": 1792238640500,
+            "processed_at_ms": 1792238640500,
+            "as_of_ms": 1792238640000,
+            "read_at_ms": 1792238641000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_MARKS_AND_RETAINED_EQUITY_NOT_OHLCV",
+          "formula": {
+            "formula_id": "derived-mark-context.v1",
+            "formula_version": "1",
+            "input_revision": "manager-v2.current.v1",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "alpha-live:7"
+          },
+          "reason_code": null,
+          "retryable": false
+        },
+        "page": {
+          "limit": 2,
+          "next_cursor": "kc1.query-k1.eyJib3VuZGFyeSI6WyJzaGEyNTY6YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsMl0sImRpcmVjdGlvbiI6ImFmdGVyIiwiZXhwaXJlc19hdCI6MTc5MjIzOTU0MSwiaXNzdWVkX2F0IjoxNzkyMjM4NjQxLCJrZXlfaWQiOiJxdWVyeS1rMSIsInF1ZXJ5X2ZpbmdlcnByaW50IjoiNEMwU1JFMkdkejVydDZVUENDTXEyWWRYTEFSZTJXbE1CbEVCNXk1UkNKZyIsInJlc291cmNlX2lkIjoiZXhlY3V0aW9uOm9ic2VydmVkLXRpbWVsaW5lOmxpdmU6YWxwaGE6YWxwaGFfYnRjX3RyZW5kIiwidmVyc2lvbiI6MSwid29ya3NwYWNlX2lkIjoid29ya3NwYWNlX2V4ZWN1dGlvbl9tYW5hZ2VyIn0.fqb-0a9nsYMz2hS0yMIcKbNY8nk8CcXs_3pH4unwg-s",
+          "has_more": true
+        }
+      }
+    },
+    {
+      "name": "empty",
+      "value": {
+        "schema_version": "portal.execution.observed-timeline-bff.v1",
+        "logical_operation_id": "executionObservedTimelineV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM_CURRENT_STATE",
+        "observation_authority": "PORTAL_OBSERVATION",
+        "observation_semantics": "BOUNDED_CURRENT_PAGE",
+        "environment": "live",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "workspace_id": "workspace_execution_manager",
+        "resource": {
+          "kind": "ALPHA",
+          "id": "alpha_btc_trend"
+        },
+        "projection": {
+          "epoch_id": "alpha-live",
+          "sequence": 7,
+          "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source_contract_revision": "manager-v2.current.v1",
+          "source_catalogue_sha256": null,
+          "source_as_of_ms": 1792238640000,
+          "received_at_ms": 1792238640500,
+          "last_successful_refresh_at_ms": 1792238640500,
+          "completeness": "COMPLETE"
+        },
+        "observed_timeline": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": 1792238640000,
+            "received_at_ms": 1792238640500,
+            "ingested_at_ms": 1792238640500,
+            "processed_at_ms": 1792238640500,
+            "as_of_ms": 1792238640000,
+            "read_at_ms": 1792238641000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY",
+          "formula": {
+            "formula_id": "observed-timeline.v1",
+            "formula_version": "1",
+            "input_revision": "manager-v2.current.v1",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "alpha-live:7"
+          },
+          "reason_code": null,
+          "retryable": false
+        },
+        "mark_context": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": 1792238640000,
+            "received_at_ms": 1792238640500,
+            "ingested_at_ms": 1792238640500,
+            "processed_at_ms": 1792238640500,
+            "as_of_ms": 1792238640000,
+            "read_at_ms": 1792238641000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_MARKS_AND_RETAINED_EQUITY_NOT_OHLCV",
+          "formula": {
+            "formula_id": "derived-mark-context.v1",
+            "formula_version": "1",
+            "input_revision": "manager-v2.current.v1",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "alpha-live:7"
+          },
+          "reason_code": null,
+          "retryable": false
+        },
+        "page": {
+          "limit": 100,
+          "next_cursor": null,
+          "has_more": false
+        }
+      }
+    }
+  ]
+}

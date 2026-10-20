@@ -577,5 +577,201 @@
         "ts_authority": "NOT_REQUIRED"
       }
     }
+  ],
+  "batch_cases": [
+    {
+      "type": "AccessEligibilityBatch",
+      "case_name": "STEP_UP_REQUIRED_NOT_ACTIVE",
+      "value": {
+        "schema_version": "portal.self-eligibility-batch.v1",
+        "workspace_id": "ws_TEST_ONLY",
+        "environment": "paper",
+        "current_only": true,
+        "advisory_only": true,
+        "observed_at_ms": 1792094400000,
+        "valid_until_ms": 1792094405000,
+        "session_step_up": {
+          "state": "NOT_ACTIVE",
+          "valid_until_ms": null,
+          "challenge": {
+            "mechanism": "PASSWORD_REAUTH",
+            "route": "/api/admin/profile-access/v2/step-up",
+            "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+            "precondition_met": false
+          }
+        },
+        "results": [
+          {
+            "resource": {
+              "kind": "PORTFOLIO",
+              "id": "portfolio_TEST_ONLY"
+            },
+            "actions": [
+              {
+                "action": "portfolio.read",
+                "permission": "ALLOWED",
+                "reason_class": "FAMILY_CHECK_REQUIRED",
+                "public_copy_key": "FAMILY_CHECK_REQUIRED",
+                "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC",
+                "authority_mode": "VERSIONED_CURRENT",
+                "step_up_required": false,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "BUSINESS_READ_SCOPE",
+                "step_up_state": "NOT_REQUIRED"
+              },
+              {
+                "action": "capital.top_up",
+                "permission": "ALLOWED",
+                "reason_class": "FAMILY_CHECK_REQUIRED",
+                "public_copy_key": "FAMILY_CHECK_REQUIRED",
+                "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP",
+                "authority_mode": "VERSIONED_CURRENT",
+                "step_up_required": true,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "CAPITAL_PREVIEW",
+                "step_up_state": "REQUIRED"
+              }
+            ]
+          },
+          {
+            "resource": {
+              "kind": "DEPLOYMENT",
+              "id": "deployment_TEST_ONLY"
+            },
+            "actions": [
+              {
+                "action": "portfolio.read",
+                "permission": "UNAVAILABLE",
+                "reason_class": "ACTION_TARGET_UNSUPPORTED",
+                "public_copy_key": "ACTION_TARGET_UNSUPPORTED",
+                "grant_ref": null,
+                "authority_mode": "NOT_ESTABLISHED",
+                "step_up_required": false,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "BUSINESS_READ_SCOPE",
+                "step_up_state": "NOT_REQUIRED"
+              },
+              {
+                "action": "capital.top_up",
+                "permission": "ALLOWED",
+                "reason_class": "FAMILY_CHECK_REQUIRED",
+                "public_copy_key": "FAMILY_CHECK_REQUIRED",
+                "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP_DEPLOYMENT",
+                "authority_mode": "VERSIONED_CURRENT",
+                "step_up_required": true,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "CAPITAL_PREVIEW",
+                "step_up_state": "REQUIRED"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "AccessEligibilityBatch",
+      "case_name": "STEP_UP_ACTIVE",
+      "value": {
+        "schema_version": "portal.self-eligibility-batch.v1",
+        "workspace_id": "ws_TEST_ONLY",
+        "environment": "paper",
+        "current_only": true,
+        "advisory_only": true,
+        "observed_at_ms": 1792094400000,
+        "valid_until_ms": 1792094405000,
+        "session_step_up": {
+          "state": "ACTIVE",
+          "valid_until_ms": 1792094403000,
+          "challenge": {
+            "mechanism": "PASSWORD_REAUTH",
+            "route": "/api/admin/profile-access/v2/step-up",
+            "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+            "precondition_met": true
+          }
+        },
+        "results": [
+          {
+            "resource": {
+              "kind": "PORTFOLIO",
+              "id": "portfolio_TEST_ONLY"
+            },
+            "actions": [
+              {
+                "action": "portfolio.read",
+                "permission": "ALLOWED",
+                "reason_class": "FAMILY_CHECK_REQUIRED",
+                "public_copy_key": "FAMILY_CHECK_REQUIRED",
+                "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC",
+                "authority_mode": "VERSIONED_CURRENT",
+                "step_up_required": false,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "BUSINESS_READ_SCOPE",
+                "step_up_state": "NOT_REQUIRED"
+              },
+              {
+                "action": "capital.top_up",
+                "permission": "ALLOWED",
+                "reason_class": "FAMILY_CHECK_REQUIRED",
+                "public_copy_key": "FAMILY_CHECK_REQUIRED",
+                "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP",
+                "authority_mode": "VERSIONED_CURRENT",
+                "step_up_required": true,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "CAPITAL_PREVIEW",
+                "step_up_state": "ACTIVE"
+              }
+            ]
+          },
+          {
+            "resource": {
+              "kind": "DEPLOYMENT",
+              "id": "deployment_TEST_ONLY"
+            },
+            "actions": [
+              {
+                "action": "portfolio.read",
+                "permission": "UNAVAILABLE",
+                "reason_class": "ACTION_TARGET_UNSUPPORTED",
+                "public_copy_key": "ACTION_TARGET_UNSUPPORTED",
+                "grant_ref": null,
+                "authority_mode": "NOT_ESTABLISHED",
+                "step_up_required": false,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "BUSINESS_READ_SCOPE",
+                "step_up_state": "NOT_REQUIRED"
+              },
+              {
+                "action": "capital.top_up",
+                "permission": "ALLOWED",
+                "reason_class": "FAMILY_CHECK_REQUIRED",
+                "public_copy_key": "FAMILY_CHECK_REQUIRED",
+                "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP_DEPLOYMENT",
+                "authority_mode": "VERSIONED_CURRENT",
+                "step_up_required": true,
+                "step_up_freshness": "NOT_CHECKED",
+                "challenge_availability": "NOT_CHECKED",
+                "command_readiness": "NOT_CHECKED",
+                "family_check": "CAPITAL_PREVIEW",
+                "step_up_state": "ACTIVE"
+              }
+            ]
+          }
+        ]
+      }
+    }
   ]
 }

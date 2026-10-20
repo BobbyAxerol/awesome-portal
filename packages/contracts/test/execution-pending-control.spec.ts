@@ -6,7 +6,8 @@ import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 import type { ZodTypeAny } from "zod";
 import { pendingControlIntent, pendingControlSubmit, pendingControlQuery, pendingControlPreview,
-  publicPendingControlStatus as pendingControlStatus, pendingControlStatus as storedPendingControlStatus, pendingRecallReceipt, pendingAmounts }
+  publicPendingControlStatus as pendingControlStatus, pendingControlStatus as storedPendingControlStatus, pendingRecallReceipt, pendingAmounts,
+  pendingRecallDiscovery, pendingRecallDiscoveryItem, pendingRecallDiscoveryQuery }
   from "../../../apps/control-api/src/execution-v2/pending-control.contract";
 
 const root = resolve(__dirname, "..");
@@ -41,7 +42,7 @@ const validCases: readonly [string, string, ZodTypeAny][] = [
   ["PendingControlPreview", "preview_allowed", pendingControlPreview],
   ["PendingControlPreview", "preview_cancel", pendingControlPreview],
   ...["unknown", "failed_before_send", "waiting", "applied", "cancelled", "partially_applied_cancelled",
-    "rejected", "linked_operation_not_published"].map((key): [string, string, ZodTypeAny] =>
+    "rejected", "linked_operation_not_published", "deployment_cancelled"].map((key): [string, string, ZodTypeAny] =>
     ["PendingControlStatus", key, pendingControlStatus]),
 ];
 describe("ELP2-07 separate existing pending recall control public contract", () => {
@@ -53,9 +54,20 @@ describe("ELP2-07 separate existing pending recall control public contract", () 
       expect(storedPendingControlStatus.safeParse(storedFixture[key]).success).toBe(true);
       expect(storedPendingControlStatus.safeParse(fixture[key]).success).toBe(false);
       same("PendingControlStatus", pendingControlStatus, storedFixture[key], false);
-      expect(fixture[key]).toEqual({ ...storedFixture[key], currency: fixture.intent.business_payload.currency });
+      // FE-063: recipient_account_id comes from the verified original intent;
+      // null for a PORTFOLIO recipient, the owning account for a DEPLOYMENT one.
+      const deployment = storedFixture[key].resource.kind === "DEPLOYMENT";
+      expect(fixture[key]).toEqual({ ...storedFixture[key], currency: fixture.intent.business_payload.currency,
+        recipient_account_id: deployment ? fixture.intent_deployment.business_payload.recipient_account_id : null });
       expect(validate(fixture[key])).toBe(true);
     }
+    // recipient kind must follow the resource kind in BOTH schemas; missing key is incomplete.
+    const portfolioStatus = copy(fixture.unknown), deploymentStatus = copy(fixture.deployment_cancelled);
+    same("PendingControlStatus", pendingControlStatus, { ...portfolioStatus, recipient_account_id: "TEST_ONLY:account" }, false);
+    same("PendingControlStatus", pendingControlStatus, { ...deploymentStatus, recipient_account_id: null }, false);
+    const { recipient_account_id: _omitted, ...withoutRecipient } = portfolioStatus;
+    same("PendingControlStatus", pendingControlStatus, withoutRecipient, false);
+    same("PendingControlStatus", pendingControlStatus, { ...deploymentStatus, recipient_account_id: "TEST_ONLY:account\n" }, false);
     for (const currency of [null, "", " USDT", "USDT ", "USDT\n"]) {
       same("PendingControlStatus", pendingControlStatus, { ...fixture.unknown, currency }, false);
     }
@@ -65,8 +77,9 @@ describe("ELP2-07 separate existing pending recall control public contract", () 
     expect(api.components.securitySchemes.PortalSession).toEqual({ type: "apiKey", in: "cookie", name: "__Host-portal_session" });
     const operations = Object.values(api.paths).flatMap(path => Object.values(path as Record<string, any>));
     expect(operations.map((operation: any) => operation.operationId).sort()).toEqual([
-      "Preview", "Submit", "Status", "Reconcile",
-    ].map(suffix => "executionPendingControl" + suffix + "V1").sort());
+      ...["Preview", "Submit", "Status", "Reconcile"].map(suffix => "executionPendingControl" + suffix + "V1"),
+      "executionPendingRecallDiscoveryV1", // FE-062: exact-resource local discovery GET on the collection root
+    ].sort());
     for (const operation of operations as any[]) {
       expect(operation.security).toEqual([{ PortalSession: [] }]);
       expect(Object.keys(operation.responses).sort()).toEqual(["200", "400", "401", "403", "404", "409", "500", "503"]);
@@ -76,7 +89,55 @@ describe("ELP2-07 separate existing pending recall control public contract", () 
     }
     expect(api.paths[base + "/{id}"].get.requestBody).toBeUndefined();
     expect(api.paths[base + "/{id}"].post).toBeUndefined();
-    expect(api.paths[base].get).toBeUndefined();
+    // The root keeps exactly one POST (submit) and one GET (discovery); nothing else is added.
+    expect(Object.keys(api.paths[base]).sort()).toEqual(["get", "post"]);
+    expect(api.paths[base].get.requestBody).toBeUndefined();
+  });
+  it("FE-062 discovery: exact-resource, read-only, typed coverage and fixtures through runtime and JSON Schema", () => {
+    const get = api.paths[base].get;
+    expect(get.parameters.map((p: any) => p.name).sort()).toEqual(["environment", "resource_id", "resource_kind", "workspace_id"]);
+    expect(get.parameters.every((p: any) => p.in === "query" && p.required === true)).toBe(true);
+    expect(get.description).toMatch(/audit.read/); expect(get.description).toMatch(/BEFORE any private row/);
+    expect(get.description).toMatch(/Untracked recalls/);
+    for (const key of ["discovery_open", "discovery_deployment", "discovery_empty"]) {
+      same("PendingRecallDiscovery", pendingRecallDiscovery, currencyFixture[key], true);
+      same("PendingRecallDiscovery", pendingRecallDiscovery, { ...currencyFixture[key], actor_id: "forbidden" }, false);
+      expect(currencyFixture[key].coverage).toBe("PORTAL_CONTROLLED_RECALLS_ONLY");
+      expect(currencyFixture[key].untracked_recalls).toEqual({ availability: "NOT_PUBLISHED",
+        reason_code: "RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED" });
+    }
+    const open = currencyFixture.discovery_open;
+    // WAITING is listed with exact receipt counters; a pure unresolved send is UNKNOWN with null (never zero) economics;
+    // a terminal APPLIED recall is closed and absent.
+    expect(open.items.map((item: any) => [item.original_recall_id, item.state])).toEqual([
+      ["TEST_ONLY:original-recall", "WAITING_ENCUMBRANCE"], ["TEST_ONLY:second-recall", "UNKNOWN"]]);
+    const waiting = open.items.find((item: any) => item.state === "WAITING_ENCUMBRANCE");
+    expect(waiting.versions.budget).toBe("9007199254740993");
+    expect(waiting.recipient_account_id).toBeNull();
+    const unknown = open.items.find((item: any) => item.state === "UNKNOWN");
+    expect([unknown.amounts, unknown.versions, unknown.latest_receipt_id, unknown.last_known_command_id]).toEqual([null, null, null, null]);
+    expect(unknown.unresolved_command_id).toMatch(/^ecm_[a-f0-9]{32}$/);
+    expect(open.items.some((item: any) => item.original_recall_id === "TEST_ONLY:closed-recall")).toBe(false);
+    expect(currencyFixture.discovery_empty.items).toEqual([]);
+    expect(currencyFixture.discovery_deployment.items[0].recipient_account_id).toBe("TEST_ONLY:account");
+    // negative: state/null coupling, duplicate recall, coverage lie, extra page size
+    const item = copy(waiting);
+    same("PendingRecallDiscoveryItem", pendingRecallDiscoveryItem, { ...item, amounts: null }, false);
+    same("PendingRecallDiscoveryItem", pendingRecallDiscoveryItem, { ...item, versions: null }, false);
+    same("PendingRecallDiscoveryItem", pendingRecallDiscoveryItem, { ...item, state: "UNKNOWN" }, false);
+    same("PendingRecallDiscoveryItem", pendingRecallDiscoveryItem, { ...copy(unknown), unresolved_command_id: null }, false);
+    same("PendingRecallDiscoveryItem", pendingRecallDiscoveryItem, { ...copy(unknown), amounts: item.amounts }, false);
+    same("PendingRecallDiscovery", pendingRecallDiscovery, { ...copy(open), coverage: "SOURCE_CENSUS" }, false);
+    same("PendingRecallDiscovery", pendingRecallDiscovery, { ...copy(open), truncated: undefined }, false);
+    expect(pendingRecallDiscovery.safeParse({ ...copy(open), items: [item, item] }).success).toBe(false); // runtime-only uniqueness
+    expect(pendingRecallDiscovery.safeParse({ ...copy(open), items: Array.from({ length: 101 }, (_, i) => ({ ...item,
+      original_recall_id: "r" + i })) }).success).toBe(false);
+    for (const query of [{ workspace_id: "w", resource_kind: "ROOT", resource_id: "x", environment: "paper" },
+      { workspace_id: "w", resource_kind: "PORTFOLIO", resource_id: "x" }, { workspace_id: "w", resource_kind: "PORTFOLIO", resource_id: "x",
+        environment: "paper", extra: "1" }, { workspace_id: "w", resource_kind: "PORTFOLIO", resource_id: "", environment: "paper" }])
+      same("PendingRecallDiscoveryQuery", pendingRecallDiscoveryQuery, query, false);
+    same("PendingRecallDiscoveryQuery", pendingRecallDiscoveryQuery,
+      { workspace_id: "w", resource_kind: "DEPLOYMENT", resource_id: "d", environment: "live" }, true);
   });
   it("requires Origin, current-session double CSRF and idempotency on all POSTs, not the read-only GET", () => {
     for (const [path, method] of [[base + "/preview", "post"], [base, "post"], [base + "/{id}/reconcile", "post"]]) {

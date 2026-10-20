@@ -1,0 +1,142 @@
+{
+  "schema_version": "execution.paper-workbench.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "PAPER_BINANCE_USDM",
+  "workspace_id": "ws_fixture",
+  "read_at": "2026-08-30T12:00:01Z",
+  "as_of": "2026-08-30T12:00:00Z",
+  "state": "partial",
+  "freshness": "FRESH",
+  "completeness": "PARTIAL",
+  "actor": {
+    "user_id": "usr_bobby",
+    "username": "bobby",
+    "roles": [
+      "ADMIN"
+    ]
+  },
+  "resource": {
+    "kind": "DEPLOYMENT",
+    "id": "dep_1"
+  },
+  "capabilities": [
+    {
+      "capability_id": "market.candles",
+      "state": "UNAVAILABLE",
+      "relations": [
+        "market_candles"
+      ],
+      "reason_code": "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED",
+      "retryable": false
+    }
+  ],
+  "data": {
+    "deployment": {
+      "deployment_id": "dep_1",
+      "strategy_id": "strat_doge_mom_v2",
+      "account_id": "acct_paper_1",
+      "mode": "paper",
+      "venue": "BINANCE",
+      "portfolio_id": "pf_crypto",
+      "alpha_id": "alpha_doge_mom",
+      "alpha_name": null,
+      "portfolio_name": "Crypto Core",
+      "alpha_reason_code": "ALPHA_NAME_NOT_PUBLISHED",
+      "portfolio_name_reason_code": null
+    },
+    "deployments": [
+      {
+        "deployment_id": "dep_1",
+        "mode": "paper"
+      }
+    ],
+    "positions": [
+      {
+        "position_id": "p1",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": "BTCUSDT",
+        "side": "LONG",
+        "quantity": "0.91",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": null
+      },
+      {
+        "position_id": "p2",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": "BTCUSDT",
+        "side": "SIDEWAYS",
+        "quantity": "0.52",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": null
+      },
+      {
+        "position_id": "p3",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": "ETHUSDT",
+        "side": "SHORT",
+        "quantity": "-2",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": null
+      },
+      {
+        "position_id": "p4",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": null,
+        "side": "SHORT",
+        "quantity": "100",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": null
+      }
+    ],
+    "orders": [],
+    "fills": [],
+    "performance": [],
+    "account_equity": [],
+    "portfolio_equity": [],
+    "positions_by_side": {
+      "state": "PARTIAL",
+      "reason_code": "POSITION_ROWS_UNCLASSIFIED",
+      "basis": "OPEN_POSITION_ROWS_QUANTITY_BY_SIDE_PER_INSTRUMENT",
+      "rows": [
+        {
+          "instrument_id": "BTCUSDT",
+          "long_quantity": "0.91",
+          "short_quantity": "0",
+          "gross_quantity": "0.91",
+          "position_count": 1
+        }
+      ],
+      "excluded": {
+        "flat_rows": 0,
+        "closed_rows": 0,
+        "unclassified_rows": 2,
+        "no_instrument_rows": 1
+      },
+      "notional": {
+        "state": "UNAVAILABLE",
+        "reason_code": "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED"
+      }
+    }
+  }
+}

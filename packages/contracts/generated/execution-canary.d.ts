@@ -214,6 +214,20 @@ export interface components {
             };
             unavailable_branches: components["schemas"]["UnavailableBranch"][];
         } & (unknown & unknown & unknown);
+        /** @description FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id. */
+        DeploymentIdentityRules: unknown & unknown;
+        /** @description FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace. */
+        DeploymentDisplayName: string | null;
+        /**
+         * @description FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id.
+         * @enum {unknown}
+         */
+        AlphaIdentityReason: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
+        /**
+         * @description FE-066: why portfolio_name is null.
+         * @enum {unknown}
+         */
+        PortfolioNameReason: "PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
         PositiveDecimal: string;
         CanaryLimits: {
             capital_cap: components["schemas"]["PositiveDecimal"];
@@ -223,6 +237,135 @@ export interface components {
             duration_days: number;
         };
         Hash: string;
+        /** Format: date-time */
+        StageTimestamp: string;
+        /** @description Reviewed machine code saying why a fact is not published. Never free text, never a source message. */
+        StageReasonCode: string;
+        StageFactTimestamp: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageTimestamp"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description started_at is the activation instant the SOURCE states; exit_review_opens_at is started_at plus duration_days x 24h, published only together with a stated start. A DRAFT envelope is not a started trial. */
+        TrialSchedule: {
+            /** @constant */
+            basis: "STARTED_AT_PLUS_DURATION_DAYS";
+            duration_days: number;
+            started_at: components["schemas"]["StageFactTimestamp"];
+            exit_review_opens_at: components["schemas"]["StageFactTimestamp"];
+        };
+        /** @description Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed. */
+        StageFactRuntimeState: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "RUNNING" | "PAUSED" | "HALTED" | "STOPPED";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageRuntimeFacts: {
+            runtime_state: components["schemas"]["StageFactRuntimeState"];
+            since: components["schemas"]["StageFactTimestamp"];
+        };
+        /** @description NO_OPEN_FINDINGS is a statement about the findings relation, not a reconciliation run: it is never published from a partial window or when any finding status is unreadable. */
+        StageFactVerdict: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "NO_OPEN_FINDINGS" | "OPEN_FINDINGS";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageFactInteger: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: number;
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageReconciliationFacts: {
+            /** @constant */
+            basis: "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN";
+            verdict: components["schemas"]["StageFactVerdict"];
+            open_finding_count: components["schemas"]["StageFactInteger"];
+            /** @description Open findings the reviewed finding-type table classes as UNKNOWN_ORDER. Exact 0 only when no finding is open; NOT_PUBLISHED (FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED) while any open finding is unclassified. */
+            unknown_order_count: components["schemas"]["StageFactInteger"];
+            as_of: components["schemas"]["StageFactTimestamp"];
+        };
+        StageSessionRow: {
+            id: string;
+            started: components["schemas"]["StageTimestamp"];
+            ended: components["schemas"]["StageTimestamp"] | null;
+            state: string | null;
+        };
+        /** @description Newest first. `ended` null while the session has no completion time. A row the reader cannot type is counted in omitted_count, never listed. `state` is the source's own word or null. */
+        StageSessionsFact: {
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            /** @constant */
+            basis: "EXECUTION_SESSIONS_BOUNDED_WINDOW";
+            rows: components["schemas"]["StageSessionRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+        } & unknown;
+        /** @description FE-067. Additive on the Paper workbench (`data.stage_facts`) and on the Sandbox, Canary and Live Full bodies (top level `stage_facts`). The pre-existing pinned-null `runtime_state` members are unchanged. */
+        StageFacts: {
+            /** @constant */
+            schema_version: "execution.stage-facts.v1";
+            runtime: components["schemas"]["StageRuntimeFacts"];
+            reconciliation: components["schemas"]["StageReconciliationFacts"];
+            sessions: components["schemas"]["StageSessionsFact"];
+        };
+        /** @description Canonical signed exact decimal string: no exponent, no leading zero, no trailing fractional zero, no negative zero. */
+        StageSignedDecimal: string;
+        StageFactSignedDecimal: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageSignedDecimal"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageFigure: {
+            /** @enum {unknown} */
+            key: "equity" | "gross_notional" | "positions" | "open_orders" | "fees";
+            label: string;
+            unit: string | null;
+            internal: components["schemas"]["StageFactSignedDecimal"];
+            /** @description The broker side. No broker population, equity or fee total is held by the Portal today, so each is NOT_PUBLISHED with its own reason; it is never copied from the internal side. */
+            broker: components["schemas"]["StageFactSignedDecimal"];
+            /** @description internal minus broker, exact, computed by the server only when both sides are AVAILABLE; otherwise NOT_PUBLISHED (DIFFERENCE_REQUIRES_BOTH_SIDES). The browser never subtracts. */
+            difference: components["schemas"]["StageFactSignedDecimal"];
+        };
+        /** @description The Internal / Broker / Difference rows, fixed order equity, gross_notional, positions, open_orders, fees. */
+        StageSourceFigures: {
+            /** @constant */
+            basis: "SOURCE_RELATIONS_HELD_BY_THE_PORTAL";
+            figures: components["schemas"]["StageFigure"][];
+        };
         SourceEnvelope: {
             panel_id: string;
             /** @enum {unknown} */
@@ -248,6 +391,99 @@ export interface components {
                 code: string;
             }[];
         } & (unknown & unknown);
+        /** @description Canonical non-negative exact decimal string: no exponent, no leading zero, no trailing fractional zero. Never a JSON number. */
+        StageDecimal: string;
+        StageFactDecimal: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageDecimal"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description One row per cap, in the order capital, gross_notional, daily_loss, open_orders. */
+        EnvelopeComplianceRow: {
+            /** @enum {unknown} */
+            cap: "capital" | "gross_notional" | "daily_loss" | "open_orders";
+            unit: string;
+            /** @description The base risk profile's limit. The Portal holds only the profile revision id, so this is NOT_PUBLISHED (BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED) until a source publishes the profile limits. */
+            policy_limit: components["schemas"]["StageFactDecimal"];
+            /** @description The stored envelope's own approved limit for this cap, exact. */
+            approved: components["schemas"]["StageDecimal"];
+            /** @description Consumed against the cap, published only when the profile source proves it under one explicit currency (capital, gross_notional) or over a complete relation (open_orders, count). daily_loss is NOT_PUBLISHED: no relation publishes a daily window. */
+            consumed: components["schemas"]["StageFactDecimal"];
+            /** @description consumed / approved, computed by the server at 6 fractional digits with ROUND_HALF_UP, canonical. The browser never divides. May exceed 1. */
+            used_ratio: components["schemas"]["StageFactDecimal"];
+            as_of: components["schemas"]["StageFactTimestamp"];
+        };
+        /** @description Server verdict. BREACH as soon as any proven consumed figure is above its approved limit; WITHIN_ENVELOPE only when all four caps are proven and none is above; otherwise UNDETERMINED naming the caps it could not prove. */
+        EnvelopeVerdict: {
+            /** @enum {unknown} */
+            state: "WITHIN_ENVELOPE" | "BREACH" | "UNDETERMINED";
+            /** @constant */
+            basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP";
+            undetermined_caps: ("capital" | "gross_notional" | "daily_loss" | "open_orders")[];
+        } & (unknown & unknown);
+        StageIdentifier: string;
+        StageSymbol: string;
+        /** @description From positions_v2 only. side is the source word LONG/SHORT, else the sign of signed_qty; quantity is the source quantity, else |signed_qty|. leverage is always null: see not_published_columns. */
+        StagePositionRow: {
+            id: components["schemas"]["StageIdentifier"] | null;
+            symbol: components["schemas"]["StageSymbol"];
+            side: ("long" | "short") | null;
+            quantity: components["schemas"]["StageDecimal"] | null;
+            entry: components["schemas"]["StageDecimal"] | null;
+            mark: components["schemas"]["StageDecimal"] | null;
+            unrealised: components["schemas"]["StageSignedDecimal"] | null;
+            leverage: null;
+        };
+        /** @description A column the hi-fi shows and the source relation does not carry. It is named here instead of being filled with a null that reads like data. */
+        StageNotPublishedColumn: {
+            column: string;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description Typed view of the same relation the collection's free `rows` come from. A row the reader cannot type is counted in omitted_count, never listed. */
+        StageTypedPositions: {
+            /** @constant */
+            kind: "positions";
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            rows: components["schemas"]["StagePositionRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+            not_published_columns: components["schemas"]["StageNotPublishedColumn"][];
+        } & unknown;
+        StageWord: string;
+        /** @description From the orders relation only. since is submitted_at. ack_latency_ms is always null (gateway-event data, not an orders column): see not_published_columns. */
+        StageOrderRow: {
+            id: components["schemas"]["StageIdentifier"] | null;
+            symbol: components["schemas"]["StageSymbol"];
+            type: components["schemas"]["StageWord"] | null;
+            side: ("buy" | "sell") | null;
+            quantity: components["schemas"]["StageDecimal"] | null;
+            price: components["schemas"]["StageDecimal"] | null;
+            status: components["schemas"]["StageWord"] | null;
+            since: components["schemas"]["StageTimestamp"] | null;
+            ack_latency_ms: null;
+        };
+        /** @description Typed view of the same relation the collection's free `rows` come from. A row the reader cannot type is counted in omitted_count, never listed. */
+        StageTypedOrders: {
+            /** @constant */
+            kind: "orders";
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            rows: components["schemas"]["StageOrderRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+            not_published_columns: components["schemas"]["StageNotPublishedColumn"][];
+        } & unknown;
         UnavailableCollection: {
             envelope: components["schemas"]["SourceEnvelope"];
             exact_total: number | null;
@@ -255,6 +491,31 @@ export interface components {
             next_cursor?: string | null;
             previous_cursor?: string | null;
             rows: Record<string, never>[];
+            typed?: components["schemas"]["StageTypedPositions"] | components["schemas"]["StageTypedOrders"];
+        };
+        StageSeriesResolution: string;
+        /** @description A deployment-level point: an exact decimal string, never a JSON number. The series names its methodology_ref. */
+        StageSeriesPoint: {
+            t: components["schemas"]["StageTimestamp"];
+            value: components["schemas"]["StageSignedDecimal"];
+        };
+        StageFactBoolean: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: boolean;
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description One of four readiness checks and the date it was last checked. Only broker_data is visible to the Portal today; the rest are NOT_PUBLISHED with a reason. The legacy `ready` member (pinned false) is unchanged. */
+        RollbackItem: {
+            /** @enum {unknown} */
+            key: "flatten_plan" | "paper_twin" | "broker_data" | "rollback_drill";
+            ready: components["schemas"]["StageFactBoolean"];
+            checked_at: components["schemas"]["StageFactTimestamp"];
         };
         ActionPolicy: {
             /** @enum {unknown} */
@@ -300,7 +561,12 @@ export interface components {
                 /** @constant */
                 declared_environment: "LIVE_CANARY";
                 runtime_state: null;
-            };
+                alpha_id?: components["schemas"]["Identifier"] | null;
+                alpha_name?: components["schemas"]["DeploymentDisplayName"];
+                portfolio_name?: components["schemas"]["DeploymentDisplayName"];
+                alpha_reason_code?: components["schemas"]["AlphaIdentityReason"];
+                portfolio_name_reason_code?: components["schemas"]["PortfolioNameReason"];
+            } & components["schemas"]["DeploymentIdentityRules"];
             lineage: {
                 /** @enum {unknown} */
                 kind: "ARTIFACT" | "R1_APPROVAL" | "R2_APPROVAL" | "SANDBOX_EXIT" | "CANARY_PROMOTION_PLAN";
@@ -329,7 +595,10 @@ export interface components {
                 day_index: null;
                 duration_days: number;
                 blocker_codes: string[];
+                trial?: components["schemas"]["TrialSchedule"];
             };
+            stage_facts?: components["schemas"]["StageFacts"];
+            source_figures?: components["schemas"]["StageSourceFigures"];
             kpis: {
                 /** @enum {unknown} */
                 key: "capital_consumed" | "gross_notional" | "daily_pnl" | "open_orders" | "broker_equity";
@@ -350,14 +619,18 @@ export interface components {
                 headroom: Record<string, never> | null;
                 /** @constant */
                 base_risk_profile_verified: false;
+                rows?: components["schemas"]["EnvelopeComplianceRow"][];
+                verdict?: components["schemas"]["EnvelopeVerdict"];
             };
             source_panels: components["schemas"]["SourceEnvelope"][];
             positions: components["schemas"]["UnavailableCollection"];
             blotter: components["schemas"]["UnavailableCollection"];
             series: {
                 envelope: components["schemas"]["SourceEnvelope"];
-                resolution: null;
-                points: unknown[];
+                resolution: null | components["schemas"]["StageSeriesResolution"];
+                points: components["schemas"]["StageSeriesPoint"][];
+                methodology_ref?: null | string;
+                unit?: null | string;
             };
             rollback_readiness: {
                 envelope: components["schemas"]["SourceEnvelope"];
@@ -365,6 +638,7 @@ export interface components {
                 ready: false;
                 evidence_hash: null;
                 blocker_codes: string[];
+                items?: components["schemas"]["RollbackItem"][];
             };
             command_policy: {
                 /** @constant */

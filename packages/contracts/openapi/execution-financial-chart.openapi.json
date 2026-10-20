@@ -1,0 +1,179 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Execution financial chart (EDS-07)",
+    "version": "1.0.0",
+    "description": "Existing session/workspace-authorized read; this document only publishes its wire contract. No new route, flag or grant."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
+  "paths": {
+    "/api/v1/execution/views/equity-chart": {
+      "get": {
+        "operationId": "executionFinancialChartV1",
+        "description": "Strict query: an unknown key is refused (400 EDS07_CHART_QUERY_INVALID). Authority is checked per subject kind (deployment/alpha: alpha.read; account: account.read; portfolio: portfolio.read) before any row is read and again before delivery. private, no-store.",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            },
+            "description": "Only the projection workspace is accepted."
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "subject_kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "alpha",
+                "deployment",
+                "account",
+                "portfolio"
+              ]
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:@-]{1,191}$"
+            }
+          },
+          {
+            "name": "metric",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "equity",
+                "net_pnl",
+                "gross_pnl",
+                "realized_pnl",
+                "unrealized_pnl",
+                "fee_total",
+                "funding_pnl",
+                "cash_total",
+                "cash_free",
+                "cash_locked",
+                "margin_initial",
+                "margin_maintenance",
+                "drawdown",
+                "notional",
+                "exposure_long",
+                "exposure_short",
+                "allocated_capital"
+              ],
+              "default": "equity"
+            }
+          },
+          {
+            "name": "from_ms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "to_ms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "viewport_px",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 256,
+              "maximum": 2048,
+              "default": 960
+            }
+          },
+          {
+            "name": "include_benchmark",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "A benchmark is never available today: the panel says EDS07_BENCHMARK_AUTHORITY_UNPUBLISHED."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Viewport-sized series of ONE retained metric for ONE subject (alpha, deployment, account or portfolio), read from the Portal durable mirror. Points are [epoch_ms, exact decimal string]; one series per (account, currency) and never an FX aggregate. A downsample keeps each bucket min, max and last and says so in `sampling`. Gaps and markers are NOT published by the source (`gaps` is always empty, preserves_gaps is false): an absence of a point is not a flat line. Alpha and deployment subjects serve the performance-snapshot metrics; account and portfolio serve their own equity relations; a metric a subject does not retain is a typed UNAVAILABLE (EDS07_METRIC_NOT_RETAINED_FOR_SUBJECT), never a zero series. `read_scope` is present only in a SCOPED_V2 read, whose clocks other than read_at_ms are withheld. Synthetic fixtures do not certify production.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-financial-chart.v1.schema.json"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "413": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    }
+  }
+}

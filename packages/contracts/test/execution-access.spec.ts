@@ -5,8 +5,8 @@ import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 import { ACCESS_ACTIONS, accessAction, accessText, accessPreview, accessProposal, accessRevoke,
   grantChange, resourceSelector } from "../../../apps/control-api/src/execution-v2/access.contract";
-import { ROW_ACTIONS, RULES, eligibilityQuery, eligibilityResult, navigationInput, navigationResult,
-  scopedText } from "../../../apps/control-api/src/execution-v2/self-eligibility";
+import { ROW_ACTIONS, RULES, eligibilityBatchQuery, eligibilityBatchResult, eligibilityQuery, eligibilityResult,
+  navigationInput, navigationResult, scopedText } from "../../../apps/control-api/src/execution-v2/self-eligibility";
 
 const root = resolve(__dirname, "..");
 const load = (path: string) => JSON.parse(readFileSync(resolve(root, path), "utf8"));
@@ -39,6 +39,7 @@ const prefix = "/api/admin/profile-access/v2";
 const routes = [
   { path: `${prefix}/effective`, method: "get", operation: "portalScopedAccessEffectiveGetV1", output: "AccessEffective", status: "200" },
   { path: prefix + "/eligibility", method: "get", operation: "portalScopedAccessEligibilityGetV1", output: "AccessEligibility", status: "200" },
+  { path: prefix + "/eligibility/batch", method: "get", operation: "portalScopedAccessEligibilityBatchGetV1", output: "AccessEligibilityBatch", status: "200" },
   { path: prefix + "/self-navigation", method: "get", operation: "portalScopedAccessSelfNavigationGetV1", output: "AccessSelfNavigation", status: "200" },
   { path: `${prefix}/preview`, method: "post", operation: "portalScopedAccessPreviewPostV1", input: "AccessPreviewRequest", output: "AccessPreview", status: "200" },
   { path: `${prefix}/proposals`, method: "post", operation: "portalScopedAccessProposalPostV1", input: "AccessProposalRequest", output: "AccessResult", status: "201" },
@@ -313,13 +314,13 @@ describe("ELP2-03 browser intents have no policy, actor or TS authority input", 
   });
 });
 
-describe("ELP2-03 eight unchanged legacy operations plus two C3 self reads and generated mapping", () => {
-  it("publishes exactly ten paths and ten unique operationIds, with no public install/TS receipt route", () => {
+describe("ELP2-03 eight unchanged legacy operations plus two C3 self reads, the FE-068 batch read and generated mapping", () => {
+  it("publishes exactly eleven paths and eleven unique operationIds, with no public install/TS receipt route", () => {
     expect(spec.openapi).toBe("3.1.0");
     expect(Object.keys(spec.paths).sort()).toEqual(routes.map(route => route.path).sort());
     const operations = routes.map(route => spec.paths[route.path][route.method].operationId);
     expect(operations).toEqual(routes.map(route => route.operation));
-    expect(new Set(operations).size).toBe(10);
+    expect(new Set(operations).size).toBe(11);
     for (const route of routes) expect(Object.keys(spec.paths[route.path])).toEqual([route.method]);
     expect(Object.keys(spec.paths).join("\n")).not.toMatch(/install|bootstrap|acceptance|ts[-_/]?receipt|trust-profile/iu);
     for (const internal of ["ReviewedAccessPolicy", "TsMembershipAcceptance", "AccessPolicyInstallRequest", "AccessReceiptAcceptRequest"])
@@ -388,7 +389,7 @@ describe("ELP2-03 eight unchanged legacy operations plus two C3 self reads and g
     expect(verifier).toContain("generate_and_compare openapi/execution-access.openapi.json generated/execution-access.d.ts");
   });
 
-  it("generated declarations expose all ten operationIds, paths and canonical component names", () => {
+  it("generated declarations expose all eleven operationIds, paths and canonical component names", () => {
     const generated = readFileSync(resolve(root, "generated/execution-access.d.ts"), "utf8");
     for (const route of routes) {
       expect(generated).toContain(`"${route.path}"`);
@@ -684,5 +685,81 @@ describe("C3 current self projection — canonical TEST_ONLY schemas, never inst
       expect(operation).not.toHaveProperty("requestBody");
       expect(operation.parameters.every((item: { in: string }) => item.in === "query")).toBe(true);
     }
+  });
+});
+
+describe("FE-068 batch self-eligibility with a typed step-up state: canonical TEST_ONLY schema, exact Zod parity", () => {
+  const cases = fixtures.batch_cases as Array<{ type: string; case_name: string; value: any }>;
+  const parity = (value: unknown, expected: boolean) => {
+    expect(validates("AccessEligibilityBatch", value), "AJV").toBe(expected);
+    expect(eligibilityBatchResult.safeParse(value).success, "Zod").toBe(expected);
+  };
+  const base = () => structuredClone(cases[0].value);
+  it("both fixtures pass both validators, are the schema's examples, and keep the v1 fixture set untouched", () => {
+    expect(cases.map(entry => entry.case_name)).toEqual(["STEP_UP_REQUIRED_NOT_ACTIVE", "STEP_UP_ACTIVE"]);
+    expect(spec.components.schemas.AccessEligibilityBatch.examples).toEqual(cases.map(entry => entry.value));
+    for (const entry of cases) { expect(entry.type).toBe("AccessEligibilityBatch"); parity(entry.value, true); }
+    expect(fixtures.cases.some((entry: { type: string }) => entry.type === "AccessEligibilityBatch")).toBe(false);
+    expect(fixtures.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+  });
+  it("publishes one private GET: exact query names, CSV actions, no subject/role selector, v1 route unchanged", () => {
+    const operation = spec.paths[prefix + "/eligibility/batch"].get;
+    expect(operation.parameters.map((item: { name: string }) => item.name)).toEqual(["workspace_id", "environment", "resources", "actions"]);
+    for (const name of ["resources", "actions"]) expect(operation.parameters.find((item: { name: string }) => item.name === name))
+      .toMatchObject({ in: "query", required: true, style: "form", explode: false });
+    expect(operation.parameters.find((item: { name: string }) => item.name === "actions").schema).toEqual(spec.components.schemas.AccessEligibilityQuery.properties.actions);
+    expect(operation.parameters.find((item: { name: string }) => item.name === "resources").schema)
+      .toEqual(spec.components.schemas.AccessEligibilityBatchQuery.properties.resources);
+    expect(operation.description).toContain("Current-only");
+    for (const status of ["200", "400", "401", "403", "404", "409", "500", "503"])
+      expect(operation.responses[status].headers["Cache-Control"]).toEqual({ required: true, schema: { type: "string", const: "private, no-store" } });
+    expect(spec.paths[prefix + "/eligibility"].get.parameters.map((item: { name: string }) => item.name))
+      .toEqual(["workspace_id", "environment", "resource_kind", "resource_id", "actions"]);
+    expect(validates("AccessEligibility", fixture("AccessEligibility"))).toBe(true);
+  });
+  it("the typed step-up state is tied to the rule and to this session, identically in schema and runtime", () => {
+    const requiredRow = (v: any) => v.results[0].actions[1];
+    parity((() => { const v = base(); return v; })(), true);
+    parity((() => { const v = base(); requiredRow(v).step_up_state = "ACTIVE"; return v; })(), false); // ACTIVE row, session NOT_ACTIVE
+    parity((() => { const v = base(); requiredRow(v).step_up_state = "NOT_REQUIRED"; return v; })(), false);
+    parity((() => { const v = base(); v.results[0].actions[0].step_up_state = "REQUIRED"; return v; })(), false); // rule false
+    parity((() => { const v = base(); delete v.results[0].actions[0].step_up_state; return v; })(), false);
+    const active = structuredClone(cases[1].value);
+    parity((() => { const v = structuredClone(active); requiredRow(v).step_up_state = "REQUIRED"; return v; })(), false); // session ACTIVE
+    parity((() => { const v = structuredClone(active); v.session_step_up.valid_until_ms = null; return v; })(), false);
+    // Cross-field time order is a producer invariant (JSON Schema cannot compare siblings), enforced by the runtime and stated in the schema.
+    for (const until of [active.observed_at_ms, active.valid_until_ms + 1]) {
+      const v = structuredClone(active); v.session_step_up.valid_until_ms = until;
+      expect(eligibilityBatchResult.safeParse(v).success).toBe(false);
+    }
+    expect(spec.components.schemas.AccessEligibilityBatch.properties.session_step_up.properties.valid_until_ms.description).toContain("never later than valid_until_ms");
+    parity((() => { const v = base(); v.session_step_up.valid_until_ms = v.observed_at_ms + 1; return v; })(), false); // NOT_ACTIVE with a time
+    parity((() => { const v = base(); v.session_step_up.challenge.mechanism = "TOTP"; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenge.route = "/api/admin/other"; return v; })(), false);
+    parity((() => { const v = base(); delete v.session_step_up.challenge; return v; })(), false);
+  });
+  it("keeps every v1 row and target rule per resource, bounds the batch and keeps keys closed", () => {
+    parity((() => { const v = base(); v.results[1].actions[0].permission = "ALLOWED"; return v; })(), false); // unsupported target cannot be ALLOWED
+    parity((() => { const v = base(); v.results[0].actions[0].family_check = "CURRENT_AUDIT_READ"; return v; })(), false);
+    parity((() => { const v = base(); v.results[0].actions[1].step_up_required = false; return v; })(), false);
+    parity((() => { const v = base(); v.results[0].actions.push(structuredClone(v.results[0].actions[0])); return v; })(), false); // duplicate action
+    parity((() => { const v = base(); v.results = []; return v; })(), false);
+    parity((() => { const v = base(); v.results = Array.from({ length: 9 }, (_, i) => ({ ...structuredClone(v.results[0]), resource: { kind: "PORTFOLIO", id: "p" + i } })); return v; })(), false);
+    parity((() => { const v = base(); v.results[1].resource = structuredClone(v.results[0].resource); return v; })(), false); // duplicate resource
+    // Runtime-only producer invariants (JSON Schema cannot compare sibling arrays / keys): stated in the schema description.
+    const ragged = base(); ragged.results[1].actions.pop();
+    expect(eligibilityBatchResult.safeParse(ragged).success).toBe(false);
+    expect(spec.components.schemas.AccessEligibilityBatch.description).toContain("same actions in the same order (runtime-enforced");
+    for (const patch of [{ extra: 1 }, { installed_authority: true }, { current_only: false }, { schema_version: "portal.self-eligibility.v1" }])
+      parity({ ...base(), ...patch }, false);
+  });
+  it("the CSV resources grammar is published, bounded and canonical-only", () => {
+    const pattern = new RegExp(spec.components.schemas.AccessEligibilityBatchQuery.properties.resources.pattern, "u");
+    for (const good of ["PORTFOLIO:p1", "PORTFOLIO:p%2C1,DEPLOYMENT:d", "ACCOUNT:100%25"]) {
+      expect(pattern.test(good), good).toBe(true);
+      expect(eligibilityBatchQuery.safeParse({ workspace_id: "ws", environment: "paper", resources: good, actions: "alpha.read" }).success, good).toBe(true);
+    }
+    for (const bad of ["", "portfolio:p", "PORTFOLIO:", "PORTFOLIO:a,b", "PORTFOLIO:p,", Array.from({ length: 9 }, (_, i) => "PORTFOLIO:p" + i).join(",")])
+      expect(pattern.test(bad), bad).toBe(false);
   });
 });

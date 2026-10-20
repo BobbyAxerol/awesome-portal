@@ -311,6 +311,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/governance/stage-action-eligibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description FE-068. Advisory own eligibility for the ten stage actions; see StageActionEligibility. */
+        get: operations["executionStageActionEligibilityV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/execution/governance/approvals/request-lookup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description FE-069. Look up the caller's own approval request by request_key without replaying it; see ApprovalRequestLookup. */
+        get: operations["executionApprovalRequestLookupV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2021,6 +2055,102 @@ export interface components {
                 };
             };
         };
+        /** @description One stage action. `stage_action` is a display identifier for a button, NOT a capability name and never accepted as authority. verdict ELIGIBLE means the route's own knowable preconditions did not refuse the caller; the row-level checks (run completeness, parent approval, versions, projection freshness, idempotency) still run at submit and every route rechecks current authority. NOT_COMMISSIONED means no Portal route exists for the action, whatever grants the caller holds. basis names the rule the producing route enforces today. step_up_required is false for the three live routes (they demand none) and null (not determined, never false) where no route exists. */
+        StageActionEligibilityRow: {
+            /** @enum {unknown} */
+            stage_action: "approval.create" | "sandbox.review_note" | "paper.exit_review_request" | "canary.hold" | "canary.reduce" | "canary.rollback" | "canary.request_scale" | "live.halt" | "live.reduce" | "live.emergency_close";
+            /** @enum {unknown} */
+            verdict: "ELIGIBLE" | "NOT_ELIGIBLE" | "NOT_COMMISSIONED";
+            eligible: boolean;
+            /** @enum {unknown} */
+            reason_class: "SUBMIT_CHECKS_REQUIRED" | "RETAINED_REVIEW_READ_ONLY" | "ADMIN_ROLE_REQUIRED" | "GOVERNANCE_CAPABILITY_REQUIRED" | "GOVERNANCE_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "COMMAND_FAMILY_NOT_COMMISSIONED";
+            /** @enum {unknown} */
+            public_copy_key: "SUBMIT_CHECKS_REQUIRED" | "RETAINED_REVIEW_READ_ONLY" | "ADMIN_ROLE_REQUIRED" | "GOVERNANCE_CAPABILITY_REQUIRED" | "GOVERNANCE_SCOPE_MISMATCH" | "CAPTURE_PROJECTION_NOT_AUTHORIZED" | "COMMAND_FAMILY_NOT_COMMISSIONED";
+            /** @enum {unknown} */
+            basis: "WORKSPACE_MEMBERSHIP" | "ADMIN_ROLE" | "ADMIN_ROLE_AND_GOVERNANCE_R2_READ" | "NONE_PUBLISHED";
+            step_up_required: boolean | null;
+            /** @enum {unknown} */
+            step_up_state: "NOT_REQUIRED" | "NOT_DETERMINED";
+            alpha_scope: "WORKSPACE_ALL_COMPLETED_RUNS" | null;
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        /** @description FE-068. Own advisory per-action eligibility for exactly ten stage actions in a fixed order, before the click. Authorization: session + workspace membership + a fresh database recheck of session and role before and after the reads. Grants nothing and consults no related capability for the commands without a route. Valid_until semantics are deliberately absent: this is a snapshot, not a lease. */
+        StageActionEligibility: {
+            /** @constant */
+            schema_version: "portal.stage-action-eligibility.v1";
+            workspace_id: string;
+            /** @constant */
+            current_only: true;
+            /** @constant */
+            advisory_only: true;
+            /** @description Portal evaluation time (UTC epoch ms), not a source observation time and not a permission lease. Re-ask on mount, workspace switch and focus; do not cache across sessions. */
+            observed_at_ms: number;
+            /** @description This session's step-up fact (the one the access/capital mutations recheck), scoped to this session only. ACTIVE requires valid_until_ms greater than observed_at_ms; NOT_ACTIVE has null. It changes no verdict above. */
+            session_step_up: {
+                /** @enum {unknown} */
+                state: "ACTIVE" | "NOT_ACTIVE";
+                valid_until_ms: number | null;
+            } & unknown;
+            actions: [
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "approval.create";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "sandbox.review_note";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "paper.exit_review_request";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "canary.hold";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "canary.reduce";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "canary.rollback";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "canary.request_scale";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "live.halt";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "live.reduce";
+                },
+                components["schemas"]["StageActionEligibilityRow"] & {
+                    /** @constant */
+                    stage_action: "live.emergency_close";
+                }
+            ];
+        };
+        /** @description FE-069. Read-only answer to "what would replaying this request_key do?" for the CALLER'S OWN requests (keyed by requester: another actor's request under the same key is indistinguishable from NONE). NONE: a replay would create. FOUND: result is exactly the governance.approval-create.v1 body a replay returns (replayed=true). KEY_PAYLOAD_CONFLICT: only when all four payload fields were supplied and differ from the stored request; a replay would answer 409 REQUEST_KEY_PAYLOAD_CONFLICT and no approval body. Without payload fields the stored payload is NOT compared (payload_check NOT_COMPARED): FOUND then only says a request exists under this key. Same authority as the replay it mirrors (current session + workspace membership, no gate capability). Writes nothing. */
+        ApprovalRequestLookup: {
+            /** @constant */
+            schema_version: "governance.approval-request-lookup.v1";
+            workspace_id: string;
+            request_key: string;
+            /** @enum {unknown} */
+            state: "NONE" | "FOUND" | "KEY_PAYLOAD_CONFLICT";
+            /** @enum {unknown} */
+            payload_check: "NOT_COMPARED" | "MATCH" | "MISMATCH";
+            result: {
+                /** @constant */
+                schema_version: "governance.approval-create.v1";
+                /** @constant */
+                replayed: true;
+                approval: components["schemas"]["Approval"];
+            } | null;
+        } & (unknown & unknown & unknown);
         Capabilities: {
             /** @constant */
             schema_version: "governance.review-capture-capabilities.v1";
@@ -3130,12 +3260,31 @@ export interface components {
             };
             unavailable_branches: components["schemas"]["UnavailableBranch"][];
         } & (unknown & unknown & unknown);
+        /** @description FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id. */
+        DeploymentIdentityRules: unknown & unknown;
+        /** @description FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace. */
+        DeploymentDisplayName: string | null;
+        /**
+         * @description FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id.
+         * @enum {unknown}
+         */
+        AlphaIdentityReason: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
+        /**
+         * @description FE-066: why portfolio_name is null.
+         * @enum {unknown}
+         */
+        PortfolioNameReason: "PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
         NullableIdentifier: components["schemas"]["$defs-Identifier"] | null;
         NullableHash: components["schemas"]["Hash"] | null;
         CertificationRecord: {
             certification_id: components["schemas"]["$defs-Identifier"];
             deployment_id: components["schemas"]["$defs-Identifier"];
             portfolio_id: components["schemas"]["$defs-Identifier"];
+            alpha_id?: components["schemas"]["$defs-Identifier"] | null;
+            alpha_name?: components["schemas"]["DeploymentDisplayName"];
+            portfolio_name?: components["schemas"]["DeploymentDisplayName"];
+            alpha_reason_code?: components["schemas"]["AlphaIdentityReason"];
+            portfolio_name_reason_code?: components["schemas"]["PortfolioNameReason"];
             venue: components["schemas"]["$defs-Identifier"];
             /** @constant */
             environment: "SANDBOX";
@@ -3161,7 +3310,7 @@ export interface components {
             created_by_user_id: components["schemas"]["$defs-Identifier"];
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
-        };
+        } & components["schemas"]["DeploymentIdentityRules"];
         LineageItem: {
             /** @enum {unknown} */
             kind: "ARTIFACT" | "R1_APPROVAL" | "R2_APPROVAL" | "PAPER_EXIT" | "PROMOTION_GRANT";
@@ -3229,6 +3378,127 @@ export interface components {
                 code: string;
             }[];
         };
+        /** @description Reviewed machine code saying why a fact is not published. Never free text, never a source message. */
+        StageReasonCode: string;
+        /** @description Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed. */
+        StageFactRuntimeState: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "RUNNING" | "PAUSED" | "HALTED" | "STOPPED";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** Format: date-time */
+        StageTimestamp: string;
+        StageFactTimestamp: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageTimestamp"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageRuntimeFacts: {
+            runtime_state: components["schemas"]["StageFactRuntimeState"];
+            since: components["schemas"]["StageFactTimestamp"];
+        };
+        /** @description NO_OPEN_FINDINGS is a statement about the findings relation, not a reconciliation run: it is never published from a partial window or when any finding status is unreadable. */
+        StageFactVerdict: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "NO_OPEN_FINDINGS" | "OPEN_FINDINGS";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageFactInteger: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: number;
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageReconciliationFacts: {
+            /** @constant */
+            basis: "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN";
+            verdict: components["schemas"]["StageFactVerdict"];
+            open_finding_count: components["schemas"]["StageFactInteger"];
+            /** @description Open findings the reviewed finding-type table classes as UNKNOWN_ORDER. Exact 0 only when no finding is open; NOT_PUBLISHED (FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED) while any open finding is unclassified. */
+            unknown_order_count: components["schemas"]["StageFactInteger"];
+            as_of: components["schemas"]["StageFactTimestamp"];
+        };
+        StageSessionRow: {
+            id: string;
+            started: components["schemas"]["StageTimestamp"];
+            ended: components["schemas"]["StageTimestamp"] | null;
+            state: string | null;
+        };
+        /** @description Newest first. `ended` null while the session has no completion time. A row the reader cannot type is counted in omitted_count, never listed. `state` is the source's own word or null. */
+        StageSessionsFact: {
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            /** @constant */
+            basis: "EXECUTION_SESSIONS_BOUNDED_WINDOW";
+            rows: components["schemas"]["StageSessionRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+        } & unknown;
+        /** @description FE-067. Additive on the Paper workbench (`data.stage_facts`) and on the Sandbox, Canary and Live Full bodies (top level `stage_facts`). The pre-existing pinned-null `runtime_state` members are unchanged. */
+        StageFacts: {
+            /** @constant */
+            schema_version: "execution.stage-facts.v1";
+            runtime: components["schemas"]["StageRuntimeFacts"];
+            reconciliation: components["schemas"]["StageReconciliationFacts"];
+            sessions: components["schemas"]["StageSessionsFact"];
+        };
+        /** @description Canonical signed exact decimal string: no exponent, no leading zero, no trailing fractional zero, no negative zero. */
+        StageSignedDecimal: string;
+        StageFactSignedDecimal: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageSignedDecimal"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageFigure: {
+            /** @enum {unknown} */
+            key: "equity" | "gross_notional" | "positions" | "open_orders" | "fees";
+            label: string;
+            unit: string | null;
+            internal: components["schemas"]["StageFactSignedDecimal"];
+            /** @description The broker side. No broker population, equity or fee total is held by the Portal today, so each is NOT_PUBLISHED with its own reason; it is never copied from the internal side. */
+            broker: components["schemas"]["StageFactSignedDecimal"];
+            /** @description internal minus broker, exact, computed by the server only when both sides are AVAILABLE; otherwise NOT_PUBLISHED (DIFFERENCE_REQUIRES_BOTH_SIDES). The browser never subtracts. */
+            difference: components["schemas"]["StageFactSignedDecimal"];
+        };
+        /** @description The Internal / Broker / Difference rows, fixed order equity, gross_notional, positions, open_orders, fees. */
+        StageSourceFigures: {
+            /** @constant */
+            basis: "SOURCE_RELATIONS_HELD_BY_THE_PORTAL";
+            figures: components["schemas"]["StageFigure"][];
+        };
         SmokePlan: {
             plan_id: components["schemas"]["$defs-Identifier"];
             qty: string;
@@ -3266,6 +3536,7 @@ export interface components {
                 as_of: components["schemas"]["NullableTimestamp"];
                 resolved_at: components["schemas"]["NullableTimestamp"];
                 created_at: components["schemas"]["Timestamp"];
+                opened_at?: components["schemas"]["Timestamp"];
             }[];
         };
         Timeline: {
@@ -3282,6 +3553,28 @@ export interface components {
                 created_at: components["schemas"]["Timestamp"];
             }[];
         };
+        StageIdentifier: string;
+        StagePlanAuthor: {
+            user_id: components["schemas"]["StageIdentifier"];
+        };
+        StagePlanEnvelopeRef: {
+            envelope_id: components["schemas"]["StageIdentifier"];
+            revision: number;
+            /** @constant */
+            status: "DRAFT";
+        };
+        /** @description The latest Canary envelope drafted from this promotion plan. AVAILABLE with a null value = the lookup ran and none exists. */
+        StageFactPlanEnvelope: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StagePlanEnvelopeRef"] | null;
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
         PromotionPlanSummary: {
             plan_id: components["schemas"]["$defs-Identifier"];
             /** @constant */
@@ -3293,6 +3586,8 @@ export interface components {
             /** @constant */
             source_side_effect_requested: false;
             created_at: components["schemas"]["Timestamp"];
+            author?: components["schemas"]["StagePlanAuthor"];
+            envelope?: components["schemas"]["StageFactPlanEnvelope"];
         };
         CertificationResponse: {
             /** @constant */
@@ -3319,6 +3614,8 @@ export interface components {
             steps: components["schemas"]["Step"][];
             source_panels: components["schemas"]["SourcePanel"][];
             timeboxed_run_policy: null;
+            stage_facts?: components["schemas"]["StageFacts"];
+            source_figures?: components["schemas"]["StageSourceFigures"];
             smoke_plan: components["schemas"]["SmokePlan"] | null;
             findings: components["schemas"]["FindingCollection"];
             timeline: components["schemas"]["Timeline"];
@@ -4116,6 +4413,63 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PromotionPlanResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionStageActionEligibilityV1: {
+        parameters: {
+            query?: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private, no-store. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageActionEligibility"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionApprovalRequestLookupV1: {
+        parameters: {
+            query: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                request_key: string;
+                /** @description Optional replay payload; supply all four or none. */
+                alpha_id?: string;
+                /** @description Optional replay payload; supply all four or none. */
+                evidence_run_id?: string;
+                /** @description Optional replay payload; supply all four or none. */
+                methodology_claim_id?: string;
+                /** @description Optional replay payload; supply all four or none. */
+                summary?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private, no-store. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApprovalRequestLookup"];
                 };
             };
             default: components["responses"]["Problem"];

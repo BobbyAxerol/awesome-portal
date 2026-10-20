@@ -1,0 +1,774 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-financial-chart.v1.schema.json",
+  "title": "Execution financial chart (EDS-07), retained snapshot range",
+  "description": "Viewport-sized series of ONE retained metric for ONE subject (alpha, deployment, account or portfolio), read from the Portal durable mirror. Points are [epoch_ms, exact decimal string]; one series per (account, currency) and never an FX aggregate. A downsample keeps each bucket min, max and last and says so in `sampling`. Gaps and markers are NOT published by the source (`gaps` is always empty, preserves_gaps is false): an absence of a point is not a flat line. Alpha and deployment subjects serve the performance-snapshot metrics; account and portfolio serve their own equity relations; a metric a subject does not retain is a typed UNAVAILABLE (EDS07_METRIC_NOT_RETAINED_FOR_SUBJECT), never a zero series. `read_scope` is present only in a SCOPED_V2 read, whose clocks other than read_at_ms are withheld. Synthetic fixtures do not certify production.",
+  "$ref": "#/$defs/FinancialChartResponse",
+  "$defs": {
+    "Identifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    },
+    "UtcEpochMs": {
+      "type": "integer",
+      "minimum": -8640000000000000,
+      "maximum": 8640000000000000
+    },
+    "Decimal": {
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+    },
+    "Clocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_time_ms",
+        "source_published_at_ms",
+        "received_at_ms",
+        "ingested_at_ms",
+        "processed_at_ms",
+        "as_of_ms",
+        "read_at_ms"
+      ],
+      "properties": {
+        "event_time_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_published_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "received_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ingested_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "processed_at_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "as_of_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "read_at_ms": {
+          "$ref": "#/$defs/UtcEpochMs"
+        }
+      }
+    },
+    "Coverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from_ms",
+        "to_ms",
+        "source_total",
+        "filtered_total",
+        "returned_count",
+        "truncated",
+        "downsampled",
+        "has_more",
+        "next_cursor",
+        "gaps"
+      ],
+      "properties": {
+        "from_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_total": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "filtered_total": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 32,
+              "pattern": "^(?:0|[1-9][0-9]*)$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "returned_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "truncated": {
+          "const": false
+        },
+        "downsampled": {
+          "type": "boolean"
+        },
+        "has_more": {
+          "const": false
+        },
+        "next_cursor": {
+          "type": "null"
+        },
+        "gaps": {
+          "type": "array",
+          "maxItems": 0
+        }
+      }
+    },
+    "Formula": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "formula_id",
+        "formula_version",
+        "input_revision",
+        "input_digest",
+        "composite_read_revision"
+      ],
+      "properties": {
+        "formula_id": {
+          "const": "eds07.direct-retained-financial-series"
+        },
+        "formula_version": {
+          "const": "v1"
+        },
+        "input_revision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "input_digest": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "composite_read_revision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "Point": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/UtcEpochMs"
+        },
+        {
+          "$ref": "#/$defs/Decimal"
+        }
+      ],
+      "items": false
+    },
+    "Series": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "label",
+        "account_id",
+        "currency",
+        "points"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "account_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currency": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Point"
+          }
+        }
+      }
+    },
+    "Sampling": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "source_rows",
+        "numeric_rows",
+        "rejected_rows",
+        "returned_rows",
+        "target_points",
+        "bucket_seconds",
+        "preserves_extrema",
+        "preserves_first_last",
+        "preserves_observed_time_spacing",
+        "preserves_gaps",
+        "preserves_markers",
+        "gap_semantics",
+        "marker_semantics"
+      ],
+      "properties": {
+        "algorithm": {
+          "enum": [
+            "NONE",
+            "MIN_MAX_LAST_BUCKET_V1"
+          ]
+        },
+        "source_rows": {
+          "type": "string",
+          "maxLength": 32,
+          "pattern": "^(?:0|[1-9][0-9]*)$(?![\\s\\S])"
+        },
+        "numeric_rows": {
+          "type": "string",
+          "maxLength": 32,
+          "pattern": "^(?:0|[1-9][0-9]*)$(?![\\s\\S])"
+        },
+        "rejected_rows": {
+          "type": "string",
+          "maxLength": 32,
+          "pattern": "^(?:0|[1-9][0-9]*)$(?![\\s\\S])"
+        },
+        "returned_rows": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "target_points": {
+          "type": "integer",
+          "minimum": 512,
+          "maximum": 4096
+        },
+        "bucket_seconds": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "preserves_extrema": {
+          "const": true
+        },
+        "preserves_first_last": {
+          "const": true
+        },
+        "preserves_observed_time_spacing": {
+          "const": true
+        },
+        "preserves_gaps": {
+          "const": false
+        },
+        "preserves_markers": {
+          "const": false
+        },
+        "gap_semantics": {
+          "const": "SOURCE_GAP_INTERVALS_NOT_PUBLISHED"
+        },
+        "marker_semantics": {
+          "const": "SOURCE_MARKERS_NOT_PUBLISHED"
+        }
+      }
+    },
+    "Retention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "retention_floor_ms",
+        "retention_floor_state",
+        "oldest_available_ms",
+        "newest_available_ms",
+        "history_semantics"
+      ],
+      "properties": {
+        "retention_floor_ms": {
+          "type": "null"
+        },
+        "retention_floor_state": {
+          "const": "UNKNOWN"
+        },
+        "oldest_available_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "newest_available_ms": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "history_semantics": {
+          "const": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY"
+        }
+      }
+    },
+    "Benchmark": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requested",
+        "state",
+        "reason_code",
+        "series"
+      ],
+      "properties": {
+        "requested": {
+          "type": "boolean"
+        },
+        "state": {
+          "enum": [
+            "NOT_REQUESTED",
+            "UNAVAILABLE"
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "series": {
+          "type": "null"
+        }
+      }
+    },
+    "ChartData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "time_basis",
+        "comparison_mode",
+        "scale_mode",
+        "currency_policy",
+        "series",
+        "sampling",
+        "retention",
+        "benchmark"
+      ],
+      "properties": {
+        "time_basis": {
+          "const": "UTC_EPOCH_MS"
+        },
+        "comparison_mode": {
+          "enum": [
+            "ABSOLUTE_EQUITY",
+            "DIRECT_RETAINED_VALUE"
+          ]
+        },
+        "scale_mode": {
+          "enum": [
+            "LOG",
+            "LINEAR"
+          ]
+        },
+        "currency_policy": {
+          "const": "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE"
+        },
+        "series": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/Series"
+          }
+        },
+        "sampling": {
+          "$ref": "#/$defs/Sampling"
+        },
+        "retention": {
+          "$ref": "#/$defs/Retention"
+        },
+        "benchmark": {
+          "$ref": "#/$defs/Benchmark"
+        }
+      }
+    },
+    "Panel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "data",
+        "clocks",
+        "coverage",
+        "source_history_semantics",
+        "formula",
+        "reason_code",
+        "retryable"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "READY",
+            "EMPTY",
+            "PARTIAL",
+            "STALE",
+            "UNAVAILABLE"
+          ]
+        },
+        "data": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ChartData"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "clocks": {
+          "$ref": "#/$defs/Clocks"
+        },
+        "coverage": {
+          "$ref": "#/$defs/Coverage"
+        },
+        "source_history_semantics": {
+          "const": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY"
+        },
+        "formula": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Formula"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "READY",
+                  "PARTIAL",
+                  "STALE"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "EMPTY",
+                  "UNAVAILABLE"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "null"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "UNAVAILABLE"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "reason_code": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "ReadScope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "visibility",
+        "coverage",
+        "policy_revision"
+      ],
+      "properties": {
+        "visibility": {
+          "const": "SCOPED"
+        },
+        "coverage": {
+          "const": "AUTHORIZED_ONLY"
+        },
+        "policy_revision": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 256
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "FinancialChartResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "logical_operation_id",
+        "record_authority",
+        "source_authority",
+        "workspace_id",
+        "environment",
+        "profile_id",
+        "subject",
+        "metric",
+        "panel"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "portal.execution.financial-chart.v1"
+        },
+        "logical_operation_id": {
+          "const": "executionFinancialChartV1"
+        },
+        "record_authority": {
+          "const": "PORTAL_CONTROL"
+        },
+        "source_authority": {
+          "const": "TRADING_SYSTEM"
+        },
+        "workspace_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96
+        },
+        "environment": {
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "profile_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "subject": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "id"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "alpha",
+                "deployment",
+                "account",
+                "portfolio"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            }
+          }
+        },
+        "metric": {
+          "enum": [
+            "equity",
+            "net_pnl",
+            "gross_pnl",
+            "realized_pnl",
+            "unrealized_pnl",
+            "fee_total",
+            "funding_pnl",
+            "cash_total",
+            "cash_free",
+            "cash_locked",
+            "margin_initial",
+            "margin_maintenance",
+            "drawdown",
+            "notional",
+            "exposure_long",
+            "exposure_short",
+            "allocated_capital"
+          ]
+        },
+        "panel": {
+          "$ref": "#/$defs/Panel"
+        },
+        "read_scope": {
+          "$ref": "#/$defs/ReadScope"
+        }
+      }
+    }
+  }
+}

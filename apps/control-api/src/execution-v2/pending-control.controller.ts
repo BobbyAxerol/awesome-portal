@@ -10,7 +10,7 @@ import { CommandHttpError } from "./command.error";
 import { AccessPolicyError } from "./access.contract";
 import { commandKey } from "./command.contract";
 import { PendingControlError, pendingControlId, pendingControlIntent, pendingControlQuery,
-  pendingControlSubmit } from "./pending-control.contract";
+  pendingControlSubmit, pendingRecallDiscoveryQuery } from "./pending-control.contract";
 import { PendingControlService } from "./pending-control.service";
 
 type Request = FastifyRequest & { portalUser: PortalUser;
@@ -56,6 +56,12 @@ export class PendingControlController {
     const submitted = this.parse(pendingControlSubmit, body);
     this.security(request, submitted.intent.business_payload.idempotency_key); reply.code(200);
     return this.call(() => this.service.submit(this.actor(request), submitted.intent, submitted.preview_digest));
+  }
+  /** FE-062: exact-resource discovery of open recalls this Portal controlled; local read, never a source census. */
+  @Get("") @Header("Cache-Control", "private, no-store")
+  async discovery(@Req() request: Request, @Query() query: unknown) {
+    const q = this.parse(pendingRecallDiscoveryQuery, query);
+    return this.call(() => this.service.discovery(this.actor(request), q));
   }
   @Get("/:id") @Header("Cache-Control", "private, no-store")
   async status(@Req() request: Request, @Param("id") id: string, @Query() query: unknown) {

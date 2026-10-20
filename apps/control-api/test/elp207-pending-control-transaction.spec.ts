@@ -393,9 +393,13 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 pending recall real Cor
   it("publishes immutable intent currency on submit/read/reconcile but never rewrites historical status bytes", async () => {
     const f=await fixture(),submitted=await f.submit();
     expect(submitted.currency).toBe(f.intent.business_payload.currency);
+    // FE-063: the verified recipient account is published on every read, never persisted into historical bytes.
+    const recipient=f.intent.business_payload.recipient_kind==="DEPLOYMENT_ACCOUNT"?f.intent.business_payload.recipient_account_id:null;
+    expect(submitted.recipient_account_id).toBe(recipient);
     const snapshot=async()=>({row:(await ctx.pool.query("SELECT intent,status,authorization_fact,intent_hash FROM execution_pending_recall_commands WHERE command_id=$1",[submitted.command_id])).rows[0],
       events:(await ctx.pool.query("SELECT count(*)::int AS n FROM execution_pending_recall_events WHERE command_id=$1",[submitted.command_id])).rows[0].n});
-    const before=await snapshot();expect(before.row.status).not.toHaveProperty("currency");
+    const before=await snapshot();expect(before.row.status).not.toHaveProperty("currency");expect(before.row.status).not.toHaveProperty("recipient_account_id");
+    expect((await f.service.status(actor,f.workspace,submitted.command_id)).recipient_account_id).toBe(recipient);
     expect((await f.service.status(actor,f.workspace,submitted.command_id)).currency).toBe(f.intent.business_payload.currency);
     expect(await snapshot()).toEqual(before);
     expect((await f.service.reconcile(actor,f.workspace,submitted.command_id)).currency).toBe(f.intent.business_payload.currency);
@@ -422,7 +426,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 pending recall real Cor
       .rejects.toMatchObject({ code: "PENDING_CONTROL_UNAVAILABLE", status: 503 }); } finally { spy.mockRestore(); }
     const row = (await ctx.pool.query("SELECT command_id,status,attempt_id FROM execution_pending_recall_commands WHERE workspace_id=$1", [f.workspace])).rows[0];
     expect(row.status.delivery).toBe("DELIVERY_UNKNOWN"); expect(row.attempt_id).toBeNull();
-    expect(await f.service.submit(actor, f.intent, preview.preview_digest!)).toEqual({...row.status,currency:f.intent.business_payload.currency});
+    expect(await f.service.submit(actor, f.intent, preview.preview_digest!)).toEqual({...row.status,currency:f.intent.business_payload.currency,
+      recipient_account_id:f.intent.business_payload.recipient_kind==="DEPLOYMENT_ACCOUNT"?f.intent.business_payload.recipient_account_id:null});
     expect(f.counts().sends).toBe(0);
   });
   it("an authenticated owning lookup settles an in-flight sender, whose late response cannot overwrite it", async () => {

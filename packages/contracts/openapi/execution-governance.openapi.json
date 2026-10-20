@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Governance Review API",
-    "version": "1.5.0",
+    "version": "1.6.0",
     "description": "Same-origin, session-guarded Portal governance boundaries for R1/R2 review, immutable approval history, R1 request creation, conditions/waivers, Paper Exit and source-dark Sandbox Certification. No endpoint in this slice commands the Trading System."
   },
   "servers": [
@@ -1288,6 +1288,127 @@
           }
         }
       }
+    },
+    "/api/v1/execution/governance/stage-action-eligibility": {
+      "get": {
+        "operationId": "executionStageActionEligibilityV1",
+        "description": "FE-068. Advisory own eligibility for the ten stage actions; see StageActionEligibility.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private, no-store.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StageActionEligibility"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/governance/approvals/request-lookup": {
+      "get": {
+        "operationId": "executionApprovalRequestLookupV1",
+        "description": "FE-069. Look up the caller's own approval request by request_key without replaying it; see ApprovalRequestLookup.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "request_key",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+            }
+          },
+          {
+            "name": "alpha_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            "description": "Optional replay payload; supply all four or none."
+          },
+          {
+            "name": "evidence_run_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            "description": "Optional replay payload; supply all four or none."
+          },
+          {
+            "name": "methodology_claim_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191
+            },
+            "description": "Optional replay payload; supply all four or none."
+          },
+          {
+            "name": "summary",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 2000
+            },
+            "description": "Optional replay payload; supply all four or none."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private, no-store.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalRequestLookup"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1700,6 +1821,1045 @@
       },
       "OperationalLiveParentCompositionV2": {
         "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalLiveParentCompositionV2"
+      },
+      "StageActionEligibilityRow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stage_action",
+          "verdict",
+          "eligible",
+          "reason_class",
+          "public_copy_key",
+          "basis",
+          "step_up_required",
+          "step_up_state",
+          "alpha_scope"
+        ],
+        "properties": {
+          "stage_action": {
+            "enum": [
+              "approval.create",
+              "sandbox.review_note",
+              "paper.exit_review_request",
+              "canary.hold",
+              "canary.reduce",
+              "canary.rollback",
+              "canary.request_scale",
+              "live.halt",
+              "live.reduce",
+              "live.emergency_close"
+            ]
+          },
+          "verdict": {
+            "enum": [
+              "ELIGIBLE",
+              "NOT_ELIGIBLE",
+              "NOT_COMMISSIONED"
+            ]
+          },
+          "eligible": {
+            "type": "boolean"
+          },
+          "reason_class": {
+            "enum": [
+              "SUBMIT_CHECKS_REQUIRED",
+              "RETAINED_REVIEW_READ_ONLY",
+              "ADMIN_ROLE_REQUIRED",
+              "GOVERNANCE_CAPABILITY_REQUIRED",
+              "GOVERNANCE_SCOPE_MISMATCH",
+              "CAPTURE_PROJECTION_NOT_AUTHORIZED",
+              "COMMAND_FAMILY_NOT_COMMISSIONED"
+            ]
+          },
+          "public_copy_key": {
+            "enum": [
+              "SUBMIT_CHECKS_REQUIRED",
+              "RETAINED_REVIEW_READ_ONLY",
+              "ADMIN_ROLE_REQUIRED",
+              "GOVERNANCE_CAPABILITY_REQUIRED",
+              "GOVERNANCE_SCOPE_MISMATCH",
+              "CAPTURE_PROJECTION_NOT_AUTHORIZED",
+              "COMMAND_FAMILY_NOT_COMMISSIONED"
+            ]
+          },
+          "basis": {
+            "enum": [
+              "WORKSPACE_MEMBERSHIP",
+              "ADMIN_ROLE",
+              "ADMIN_ROLE_AND_GOVERNANCE_R2_READ",
+              "NONE_PUBLISHED"
+            ]
+          },
+          "step_up_required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "step_up_state": {
+            "enum": [
+              "NOT_REQUIRED",
+              "NOT_DETERMINED"
+            ]
+          },
+          "alpha_scope": {
+            "anyOf": [
+              {
+                "enum": [
+                  "WORKSPACE_ALL_COMPLETED_RUNS"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "approval.create"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "WORKSPACE_MEMBERSHIP"
+                },
+                "step_up_required": {
+                  "const": false
+                },
+                "step_up_state": {
+                  "const": "NOT_REQUIRED"
+                },
+                "alpha_scope": {
+                  "const": "WORKSPACE_ALL_COMPLETED_RUNS"
+                },
+                "verdict": {
+                  "enum": [
+                    "ELIGIBLE",
+                    "NOT_ELIGIBLE"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "sandbox.review_note"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "ADMIN_ROLE"
+                },
+                "step_up_required": {
+                  "const": false
+                },
+                "step_up_state": {
+                  "const": "NOT_REQUIRED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "enum": [
+                    "ELIGIBLE",
+                    "NOT_ELIGIBLE"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "paper.exit_review_request"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "ADMIN_ROLE_AND_GOVERNANCE_R2_READ"
+                },
+                "step_up_required": {
+                  "const": false
+                },
+                "step_up_state": {
+                  "const": "NOT_REQUIRED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "enum": [
+                    "ELIGIBLE",
+                    "NOT_ELIGIBLE"
+                  ]
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "canary.hold"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "canary.reduce"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "canary.rollback"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "canary.request_scale"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "live.halt"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "live.reduce"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "stage_action": {
+                  "const": "live.emergency_close"
+                }
+              },
+              "required": [
+                "stage_action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "const": null
+                },
+                "step_up_state": {
+                  "const": "NOT_DETERMINED"
+                },
+                "alpha_scope": {
+                  "type": "null"
+                },
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "SUBMIT_CHECKS_REQUIRED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "SUBMIT_CHECKS_REQUIRED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "RETAINED_REVIEW_READ_ONLY"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "RETAINED_REVIEW_READ_ONLY"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "ADMIN_ROLE_REQUIRED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "ADMIN_ROLE_REQUIRED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "GOVERNANCE_CAPABILITY_REQUIRED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "GOVERNANCE_CAPABILITY_REQUIRED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "GOVERNANCE_SCOPE_MISMATCH"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "GOVERNANCE_SCOPE_MISMATCH"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "CAPTURE_PROJECTION_NOT_AUTHORIZED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "CAPTURE_PROJECTION_NOT_AUTHORIZED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "reason_class": {
+                  "const": "COMMAND_FAMILY_NOT_COMMISSIONED"
+                }
+              },
+              "required": [
+                "reason_class"
+              ]
+            },
+            "then": {
+              "properties": {
+                "public_copy_key": {
+                  "const": "COMMAND_FAMILY_NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "verdict": {
+                  "const": "ELIGIBLE"
+                }
+              },
+              "required": [
+                "verdict"
+              ]
+            },
+            "then": {
+              "properties": {
+                "eligible": {
+                  "const": true
+                },
+                "reason_class": {
+                  "const": "SUBMIT_CHECKS_REQUIRED"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "eligible": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "verdict": {
+                  "const": "NOT_COMMISSIONED"
+                }
+              },
+              "required": [
+                "verdict"
+              ]
+            },
+            "then": {
+              "properties": {
+                "reason_class": {
+                  "const": "COMMAND_FAMILY_NOT_COMMISSIONED"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "verdict": {
+                  "const": "NOT_ELIGIBLE"
+                }
+              },
+              "required": [
+                "verdict"
+              ]
+            },
+            "then": {
+              "properties": {
+                "reason_class": {
+                  "enum": [
+                    "RETAINED_REVIEW_READ_ONLY",
+                    "ADMIN_ROLE_REQUIRED",
+                    "GOVERNANCE_CAPABILITY_REQUIRED",
+                    "GOVERNANCE_SCOPE_MISMATCH",
+                    "CAPTURE_PROJECTION_NOT_AUTHORIZED"
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "description": "One stage action. `stage_action` is a display identifier for a button, NOT a capability name and never accepted as authority. verdict ELIGIBLE means the route's own knowable preconditions did not refuse the caller; the row-level checks (run completeness, parent approval, versions, projection freshness, idempotency) still run at submit and every route rechecks current authority. NOT_COMMISSIONED means no Portal route exists for the action, whatever grants the caller holds. basis names the rule the producing route enforces today. step_up_required is false for the three live routes (they demand none) and null (not determined, never false) where no route exists."
+      },
+      "StageActionEligibility": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "current_only",
+          "advisory_only",
+          "observed_at_ms",
+          "session_step_up",
+          "actions"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.stage-action-eligibility.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 96
+          },
+          "current_only": {
+            "const": true
+          },
+          "advisory_only": {
+            "const": true
+          },
+          "observed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Portal evaluation time (UTC epoch ms), not a source observation time and not a permission lease. Re-ask on mount, workspace switch and focus; do not cache across sessions."
+          },
+          "session_step_up": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "state",
+              "valid_until_ms"
+            ],
+            "properties": {
+              "state": {
+                "enum": [
+                  "ACTIVE",
+                  "NOT_ACTIVE"
+                ]
+              },
+              "valid_until_ms": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "description": "This session's step-up fact (the one the access/capital mutations recheck), scoped to this session only. ACTIVE requires valid_until_ms greater than observed_at_ms; NOT_ACTIVE has null. It changes no verdict above.",
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "state": {
+                      "const": "ACTIVE"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "valid_until_ms": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "valid_until_ms": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "actions": {
+            "type": "array",
+            "minItems": 10,
+            "maxItems": 10,
+            "items": false,
+            "prefixItems": [
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "approval.create"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "sandbox.review_note"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "paper.exit_review_request"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "canary.hold"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "canary.reduce"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "canary.rollback"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "canary.request_scale"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "live.halt"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "live.reduce"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              },
+              {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/StageActionEligibilityRow"
+                  },
+                  {
+                    "properties": {
+                      "stage_action": {
+                        "const": "live.emergency_close"
+                      }
+                    },
+                    "required": [
+                      "stage_action"
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "description": "FE-068. Own advisory per-action eligibility for exactly ten stage actions in a fixed order, before the click. Authorization: session + workspace membership + a fresh database recheck of session and role before and after the reads. Grants nothing and consults no related capability for the commands without a route. Valid_until semantics are deliberately absent: this is a snapshot, not a lease."
+      },
+      "ApprovalRequestLookup": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "request_key",
+          "state",
+          "payload_check",
+          "result"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "governance.approval-request-lookup.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 96
+          },
+          "request_key": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$"
+          },
+          "state": {
+            "enum": [
+              "NONE",
+              "FOUND",
+              "KEY_PAYLOAD_CONFLICT"
+            ]
+          },
+          "payload_check": {
+            "enum": [
+              "NOT_COMPARED",
+              "MATCH",
+              "MISMATCH"
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "schema_version",
+                  "replayed",
+                  "approval"
+                ],
+                "properties": {
+                  "schema_version": {
+                    "const": "governance.approval-create.v1"
+                  },
+                  "replayed": {
+                    "const": true
+                  },
+                  "approval": {
+                    "$ref": "../schemas/execution-governance-approval-workflow.v1.schema.json#/$defs/Approval"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "FOUND"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "payload_check": {
+                  "enum": [
+                    "NOT_COMPARED",
+                    "MATCH"
+                  ]
+                },
+                "result": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "KEY_PAYLOAD_CONFLICT"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "payload_check": {
+                  "const": "MISMATCH"
+                },
+                "result": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "NONE"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "payload_check": {
+                  "const": "NOT_COMPARED"
+                },
+                "result": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ],
+        "description": "FE-069. Read-only answer to \"what would replaying this request_key do?\" for the CALLER'S OWN requests (keyed by requester: another actor's request under the same key is indistinguishable from NONE). NONE: a replay would create. FOUND: result is exactly the governance.approval-create.v1 body a replay returns (replayed=true). KEY_PAYLOAD_CONFLICT: only when all four payload fields were supplied and differ from the stored request; a replay would answer 409 REQUEST_KEY_PAYLOAD_CONFLICT and no approval body. Without payload fields the stored payload is NOT compared (payload_check NOT_COMPARED): FOUND then only says a request exists under this key. Same authority as the replay it mirrors (current session + workspace membership, no gate capability). Writes nothing."
       }
     }
   }

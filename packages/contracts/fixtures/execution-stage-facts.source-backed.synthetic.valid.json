@@ -1,0 +1,65 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "description": "Populated shape only. The values are invented for the test and imply no source, runtime or product receipt.",
+  "value": {
+    "schema_version": "execution.stage-facts.v1",
+    "runtime": {
+      "runtime_state": {
+        "availability": "AVAILABLE",
+        "value": "RUNNING",
+        "reason_code": null
+      },
+      "since": {
+        "availability": "AVAILABLE",
+        "value": "2026-10-12T08:00:00.000Z",
+        "reason_code": null
+      }
+    },
+    "reconciliation": {
+      "basis": "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN",
+      "verdict": {
+        "availability": "AVAILABLE",
+        "value": "OPEN_FINDINGS",
+        "reason_code": null
+      },
+      "open_finding_count": {
+        "availability": "AVAILABLE",
+        "value": 1,
+        "reason_code": null
+      },
+      "unknown_order_count": {
+        "availability": "AVAILABLE",
+        "value": 1,
+        "reason_code": null
+      },
+      "as_of": {
+        "availability": "AVAILABLE",
+        "value": "2026-10-12T08:00:00.000Z",
+        "reason_code": null
+      }
+    },
+    "sessions": {
+      "availability": "AVAILABLE",
+      "reason_code": null,
+      "basis": "EXECUTION_SESSIONS_BOUNDED_WINDOW",
+      "rows": [
+        {
+          "id": "session_TEST_ONLY_2",
+          "started": "2026-10-12T08:00:00.000Z",
+          "ended": null,
+          "state": "RUNNING"
+        },
+        {
+          "id": "session_TEST_ONLY_1",
+          "started": "2026-10-10T08:00:00.000Z",
+          "ended": "2026-10-11T16:00:00.000Z",
+          "state": "COMPLETED"
+        }
+      ],
+      "returned_count": 2,
+      "omitted_count": 0,
+      "source_complete": true
+    }
+  }
+}

@@ -73,6 +73,186 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description FE-070. Present only on the VN market workbench variant. Every member is a Fact: the Portal holds no trading-calendar source of truth, so each is NOT_PUBLISHED (N28_VENUE_CALENDAR_NOT_ACTIVE) until the market-data-layer session calendar is wired. is_open is the SOURCE's own statement at as_of; a client never infers PAUSED or AGING from window arithmetic. */
+        VenueCalendar: {
+            /** @constant */
+            schema_version: "execution.venue-calendar.v1";
+            /** @constant */
+            market: "VN_EQUITY";
+            /** @constant */
+            basis: "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE";
+            timezone: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: components["schemas"]["VenueTimezone"];
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            windows: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: components["schemas"]["VenueWindow"][];
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            breaks: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: components["schemas"]["VenueBreak"][];
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            holidays: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: components["schemas"]["VenueHoliday"][];
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            is_open: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: boolean;
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            as_of: components["schemas"]["StageFactTimestamp"];
+        };
+        VenueHoliday: {
+            date: string;
+            name: string | null;
+        };
+        /** @description The interval between two consecutive published windows (the lunch break). Arithmetic on published windows only. */
+        VenueBreak: {
+            /** @constant */
+            name: "BREAK";
+            from: components["schemas"]["VenueClock"];
+            to: components["schemas"]["VenueClock"];
+            /** @constant */
+            basis: "GAP_BETWEEN_PUBLISHED_WINDOWS";
+        };
+        /** @description A named window in the venue's local time. OPENING_AUCTION / CLOSING_AUCTION (ATO / ATC) only when the source names them; a generic session is TRADING_SESSION. Window kinds describe the market calendar, not which order types the Portal can route. */
+        VenueWindow: {
+            name: string;
+            /** @enum {unknown} */
+            kind: "TRADING_SESSION" | "OPENING_AUCTION" | "CLOSING_AUCTION";
+            open: components["schemas"]["VenueClock"];
+            close: components["schemas"]["VenueClock"];
+        };
+        VenueClock: string;
+        /** @description IANA time-zone name, e.g. Asia/Ho_Chi_Minh. */
+        VenueTimezone: string;
+        /** @description FE-067. Additive on the Paper workbench (`data.stage_facts`) and on the Sandbox, Canary and Live Full bodies (top level `stage_facts`). The pre-existing pinned-null `runtime_state` members are unchanged. */
+        StageFacts: {
+            /** @constant */
+            schema_version: "execution.stage-facts.v1";
+            runtime: components["schemas"]["StageRuntimeFacts"];
+            reconciliation: components["schemas"]["StageReconciliationFacts"];
+            sessions: components["schemas"]["StageSessionsFact"];
+        };
+        /** @description Newest first. `ended` null while the session has no completion time. A row the reader cannot type is counted in omitted_count, never listed. `state` is the source's own word or null. */
+        StageSessionsFact: {
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            /** @constant */
+            basis: "EXECUTION_SESSIONS_BOUNDED_WINDOW";
+            rows: components["schemas"]["StageSessionRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+        } & unknown;
+        StageSessionRow: {
+            id: string;
+            started: components["schemas"]["StageTimestamp"];
+            ended: components["schemas"]["StageTimestamp"] | null;
+            state: string | null;
+        };
+        StageReconciliationFacts: {
+            /** @constant */
+            basis: "FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN";
+            verdict: components["schemas"]["StageFactVerdict"];
+            open_finding_count: components["schemas"]["StageFactInteger"];
+            /** @description Open findings the reviewed finding-type table classes as UNKNOWN_ORDER. Exact 0 only when no finding is open; NOT_PUBLISHED (FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED) while any open finding is unclassified. */
+            unknown_order_count: components["schemas"]["StageFactInteger"];
+            as_of: components["schemas"]["StageFactTimestamp"];
+        };
+        StageFactInteger: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: number;
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description NO_OPEN_FINDINGS is a statement about the findings relation, not a reconciliation run: it is never published from a partial window or when any finding status is unreadable. */
+        StageFactVerdict: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "NO_OPEN_FINDINGS" | "OPEN_FINDINGS";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageRuntimeFacts: {
+            runtime_state: components["schemas"]["StageFactRuntimeState"];
+            since: components["schemas"]["StageFactTimestamp"];
+        };
+        StageFactTimestamp: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageTimestamp"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** Format: date-time */
+        StageTimestamp: string;
+        /** @description Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed. */
+        StageFactRuntimeState: {
+            /** @constant */
+            availability: "AVAILABLE";
+            /** @enum {unknown} */
+            value: "RUNNING" | "PAUSED" | "HALTED" | "STOPPED";
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description Reviewed machine code saying why a fact is not published. Never free text, never a source message. */
+        StageReasonCode: string;
         Identifier: string;
         Actor: {
             user_id: components["schemas"]["Identifier"];
@@ -96,11 +276,62 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** @description FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace. */
+        DeploymentDisplayName: string | null;
+        /**
+         * @description FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id.
+         * @enum {unknown}
+         */
+        AlphaIdentityReason: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
+        /**
+         * @description FE-066: why portfolio_name is null.
+         * @enum {unknown}
+         */
+        PortfolioNameReason: "PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
+        /** @description FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id. */
+        DeploymentIdentityRules: unknown & unknown;
+        /** @description FE-066: the Paper profile deployment block: the source row plus the Alpha-Portfolio identity keys. */
+        DeploymentRecord: components["schemas"]["NarrowRecord"] & {
+            alpha_id?: components["schemas"]["Identifier"] | null;
+            alpha_name?: components["schemas"]["DeploymentDisplayName"];
+            portfolio_name?: components["schemas"]["DeploymentDisplayName"];
+            alpha_reason_code?: components["schemas"]["AlphaIdentityReason"];
+            portfolio_name_reason_code?: components["schemas"]["PortfolioNameReason"];
+        } & components["schemas"]["DeploymentIdentityRules"];
+        PositionsBySideRow: {
+            instrument_id: string;
+            long_quantity: string;
+            short_quantity: string;
+            gross_quantity: string;
+            position_count: number;
+        };
+        /** @description S3-U4 / FE-051: Long, Short and Gross by side for the deployment's open positions: exact quantity per instrument (gross = long + short, magnitudes), no total across instruments. Notional by side is never derived: the position page publishes no currency or mark lineage (E5), so notional is a typed unavailable, not a number. */
+        PositionsBySide: {
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
+            /** @enum {unknown} */
+            reason_code: "POSITIONS_NOT_PUBLISHED" | "SOURCE_POSITIONS_PARTIAL" | "POSITION_ROWS_UNCLASSIFIED" | null;
+            /** @constant */
+            basis: "OPEN_POSITION_ROWS_QUANTITY_BY_SIDE_PER_INSTRUMENT";
+            rows: components["schemas"]["PositionsBySideRow"][];
+            excluded: {
+                flat_rows: number;
+                closed_rows: number;
+                unclassified_rows: number;
+                no_instrument_rows: number;
+            };
+            notional: {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_code: "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED";
+            };
+        } & (unknown & unknown & unknown & unknown & unknown);
         NarrowRecord: {
             [key: string]: string | number | boolean | null | (string | number | boolean | null)[];
         };
         PaperData: {
-            deployment?: components["schemas"]["NarrowRecord"] | null;
+            deployment?: components["schemas"]["DeploymentRecord"] | null;
             deployments?: components["schemas"]["NarrowRecord"][];
             positions?: components["schemas"]["NarrowRecord"][];
             sessions?: components["schemas"]["NarrowRecord"][];
@@ -114,6 +345,7 @@ export interface components {
             reconciliation?: components["schemas"]["NarrowRecord"][];
             command_journal?: components["schemas"]["NarrowRecord"][];
             observation_gate?: components["schemas"]["NarrowRecord"] | null;
+            positions_by_side?: components["schemas"]["PositionsBySide"];
             query_analytics?: {
                 [key: string]: unknown;
             } | null;
@@ -167,6 +399,8 @@ export interface components {
             } | null;
             exact_query?: components["schemas"]["BlotterExactQuery"];
             derived_insights?: components["schemas"]["DerivedInsights"] | null;
+            stage_facts?: components["schemas"]["StageFacts"];
+            venue_calendar?: components["schemas"]["VenueCalendar"];
         };
         BlotterMirrorRevision: {
             projection_epoch: string;
