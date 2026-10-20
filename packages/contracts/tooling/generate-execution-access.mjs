@@ -150,6 +150,23 @@ const stepUpChallenge={...obj({family:{enum:stepUpFamilies},mechanism:{const:'PA
   route:{const:'/api/admin/profile-access/v2/step-up'},precondition:{enum:Object.values(stepUpPreconditions)},precondition_met:{type:'boolean'}}),
   allOf:stepUpFamilies.map(family=>({if:{properties:{family:{const:family}},required:['family']},
     then:{properties:{precondition:{const:stepUpPreconditions[family]}}}}))};
+// FE-057/058/038 · the member's OWN navigation context. Facts the client must otherwise guess; never a permit.
+const selfAccessEntryRoute='/administration/my-access';
+const selfContextCandidate=obj({workspace_id:scopedText,access_basis:{enum:['OWN_CURRENT_GRANT_RECORD','MEMBER_ONLY']}});
+const selfContextDefaultWorkspace={oneOf:[
+  obj({state:{const:'RESOLVED'},workspace_id:scopedText,rule:{enum:['SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD','SOLE_MEMBERSHIP']}}),
+  obj({state:{const:'AMBIGUOUS'},candidates:{type:'array',minItems:2,maxItems:16,items:selfContextCandidate}}),
+  obj({state:{const:'NONE'},reason_class:{const:'NO_WORKSPACE_MEMBERSHIP'}}),
+  obj({state:{const:'UNAVAILABLE'},reason_class:{const:'TOO_MANY_MEMBERSHIPS'}})],
+  description:'The workspace the server resolves for this member, or a typed absence. Never a choice between several: more than one candidate is AMBIGUOUS (sorted by workspace_id, at most 16; more is UNAVAILABLE, never a first-N). A candidate is a workspace the caller is a CURRENT MEMBER of. OWN_CURRENT_GRANT_RECORD says a stored, unrevoked, in-interval ALLOW record of the caller exists under that workspace\'s current reviewed policy revision: a hint for choosing a workspace, NOT proof of an effective right (navigation/eligibility for the chosen workspace evaluate the full graph). No peer, role or other-member fact is ever published.'};
+const selfContextEntry={oneOf:[
+  obj({feature:{const:'PROFILE_ACCESS'},mode:{const:'SELF_ONLY'},permission:{const:'ALLOWED'},route:{const:selfAccessEntryRoute},
+    workspace_scope:{const:'QUERY_workspace_id'},reason_class:{type:'null'},consumer_state:{const:'AWAITING_CONSUMER_ROUTER'}}),
+  obj({feature:{const:'PROFILE_ACCESS'},mode:{const:'SELF_ONLY'},permission:{const:'UNAVAILABLE'},route:{type:'null'},
+    workspace_scope:{type:'null'},reason_class:{const:'NO_WORKSPACE_MEMBERSHIP'},consumer_state:{const:'AWAITING_CONSUMER_ROUTER'}})],
+  description:'A self-only presentation for the member\'s OWN access review, distinct from the owner/admin policy matrix (/administration/profile-access, whose guards are unchanged). It is backed by the existing own effective read only and needs no peer-user selector or administration fetch. AWAITING_CONSUMER_ROUTER: the client must implement this route before navigating to it.'};
+const selfContextAccountOperation=obj({operation:{const:'REVISE_BINDING'},scope:{const:'CREDENTIAL_ONLY'},target_kind:{const:'BINDING'},
+  availability:{const:'NOT_COMMISSIONED'},reason_class:{const:'COMMAND_FAMILY_NOT_COMMISSIONED'},basis:{const:'NONE_PUBLISHED'},step_up_required:{type:'null'}});
 const batchResourceTokenPattern='[A-Z_]{1,16}:(?:[A-Za-z0-9\\-_.!~*\'()]|%[0-9A-F]{2}){1,768}';
 const eligibilityBatchResources={type:'string',minLength:1,maxLength:8192,
   pattern:'^'+batchResourceTokenPattern+'(?:,'+batchResourceTokenPattern+'){0,7}$(?![\\s\\S])',
@@ -203,6 +220,14 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
       then:{properties:{results:{items:{properties:{actions:{items:{properties:{step_up_state:{enum:['NOT_REQUIRED','PLAN_DEPENDENT','ACTIVE']}}}}}}}}},
       else:{properties:{results:{items:{properties:{actions:{items:{properties:{step_up_state:{enum:['NOT_REQUIRED','PLAN_DEPENDENT','REQUIRED']}}}}}}}}}}],
     description:'FE-068. Up to eight resources x the same 1-16 actions in one current-only self read. Each resource carries exactly the rows of portal.self-eligibility.v1 (same evaluator, same reasons, same target rules) plus a typed step_up_state. Resources are unique (runtime-enforced) and every result carries the same actions in the same order (runtime-enforced: JSON Schema cannot compare sibling arrays). An action unsupported by one resource is a typed per-resource refusal, not a batch failure. Advisory only: no permit, no lease, no target existence, no source/field qualification; per-family checks and the real step-up recheck remain authoritative.'},
+  AccessSelfContext:{...obj({schema_version:{const:'portal.self-context.v1'},current_only:{const:true},advisory_only:{const:true},
+    ...projectionTimes,default_workspace:selfContextDefaultWorkspace,self_entry:selfContextEntry,
+    account_operations:{type:'array',minItems:1,maxItems:1,items:selfContextAccountOperation,
+      description:'The account-management mutation is NOT commissioned: the credential rotation behind the "Rotate credential" control is the PM REVISE_BINDING (credential-only) family, for which Portal has no route (binding.change.propose proposes only) and no qualified source. A typed refusal that holds for every member, never a permission; step_up_required is null (not determined, never false). The identifiers are display names, NOT capability names, and a navigation or menu fact never opens this mutation. A temporary client token such as execution.accounts.manage has no server authority and must not gate it.'}}),
+    allOf:[{if:{properties:{default_workspace:{properties:{state:{const:'NONE'}},required:['state']}},required:['default_workspace']},
+      then:{properties:{self_entry:{properties:{permission:{const:'UNAVAILABLE'}},required:['permission']}}},
+      else:{properties:{self_entry:{properties:{permission:{const:'ALLOWED'}},required:['permission']}}}}],
+    description:'FE-057/058/038. The member\'s own session context, current-only and advisory: the default workspace (or a typed absence), the self-only entry route and the typed no-operation branch for account management. Takes no query. Cross-field producer invariants (valid_until_ms > observed_at_ms, candidates unique and sorted, one access_basis per ambiguity, self-entry route never under the admin matrix route) are runtime-enforced and stated here. Not a permit, not source readiness; every read and command rechecks current authority.'},
   AccessSelfNavigationItem:selfNavigationItem,
   AccessSelfNavigation:{...obj({schema_version:{const:'portal.self-navigation.v1'},workspace_id:scopedText,environment,
     current_only:{const:true},advisory_only:{const:true},
@@ -265,6 +290,7 @@ const document={openapi:'3.1.0',info:{title:'Portal scoped access and delegation
     {name:'resources',in:'query',required:true,style:'form',explode:false,schema:eligibilityBatchResources},
     {name:'actions',in:'query',required:true,style:'form',explode:false,schema:eligibilityCsv}])},
   [prefix+'/self-navigation']:{get:privateRead('portalScopedAccessSelfNavigationGetV1','AccessSelfNavigation',[selfWorkspace,selfEnvironment])},
+  [prefix+'/self-context']:{get:privateRead('portalScopedAccessSelfContextGetV1','AccessSelfContext',[])},
   [`${prefix}/preview`]:{post:write('portalScopedAccessPreviewPostV1','AccessPreviewRequest','AccessPreview')},
   [`${prefix}/proposals`]:{post:write('portalScopedAccessProposalPostV1','AccessProposalRequest','AccessResult',[],true)},
   [`${prefix}/proposals/{id}`]:{get:read('portalScopedAccessProposalGetV1','AccessProposal',[workspace,id])},
@@ -321,6 +347,25 @@ const fixtures={lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',cases:[
     http_status:outcome==='DENIED'?409:200,reason_code:outcome==='DENIED'?'GRANT_REVISION_CONFLICT':null,policy_revision:'p1_TEST_ONLY',
     grant_revision:'r1_TEST_ONLY',decided_at_ms:1792094400000,ts_authority:({TS_PENDING:'PENDING',TS_APPLIED:'ACCEPTED',TS_REJECTED:'REJECTED',TS_UNKNOWN:'UNKNOWN'})[outcome]??'NOT_REQUIRED'}})),
 ],
+// FE-057/058/038: kept apart from `cases` for the same reason.
+self_context_cases:(()=>{
+  const base={schema_version:'portal.self-context.v1',current_only:true,advisory_only:true,observed_at_ms:1792094400000,valid_until_ms:1792094405000,
+    self_entry:{feature:'PROFILE_ACCESS',mode:'SELF_ONLY',permission:'ALLOWED',route:selfAccessEntryRoute,workspace_scope:'QUERY_workspace_id',
+      reason_class:null,consumer_state:'AWAITING_CONSUMER_ROUTER'},
+    account_operations:[{operation:'REVISE_BINDING',scope:'CREDENTIAL_ONLY',target_kind:'BINDING',availability:'NOT_COMMISSIONED',
+      reason_class:'COMMAND_FAMILY_NOT_COMMISSIONED',basis:'NONE_PUBLISHED',step_up_required:null}]};
+  const none={...base.self_entry,permission:'UNAVAILABLE',route:null,workspace_scope:null,reason_class:'NO_WORKSPACE_MEMBERSHIP'};
+  return [
+    ['RESOLVED_SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD',{...base,default_workspace:{state:'RESOLVED',workspace_id:'ws_TEST_ONLY_shared',rule:'SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD'}}],
+    ['RESOLVED_SOLE_MEMBERSHIP',{...base,default_workspace:{state:'RESOLVED',workspace_id:'ws_TEST_ONLY_personal',rule:'SOLE_MEMBERSHIP'}}],
+    ['AMBIGUOUS_SEVERAL_WITH_GRANT_RECORDS',{...base,default_workspace:{state:'AMBIGUOUS',candidates:[
+      {workspace_id:'ws_TEST_ONLY_a',access_basis:'OWN_CURRENT_GRANT_RECORD'},{workspace_id:'ws_TEST_ONLY_b',access_basis:'OWN_CURRENT_GRANT_RECORD'}]}}],
+    ['AMBIGUOUS_MEMBER_ONLY',{...base,default_workspace:{state:'AMBIGUOUS',candidates:[
+      {workspace_id:'ws_TEST_ONLY_a',access_basis:'MEMBER_ONLY'},{workspace_id:'ws_TEST_ONLY_b',access_basis:'MEMBER_ONLY'}]}}],
+    ['ABSENT_NO_MEMBERSHIP',{...base,default_workspace:{state:'NONE',reason_class:'NO_WORKSPACE_MEMBERSHIP'},self_entry:none}],
+    ['UNAVAILABLE_TOO_MANY_MEMBERSHIPS',{...base,default_workspace:{state:'UNAVAILABLE',reason_class:'TOO_MANY_MEMBERSHIPS'}}],
+  ].map(([case_name,value])=>({type:'AccessSelfContext',case_name,value}));
+})(),
 // FE-068: kept apart from `cases` so the pre-existing fixture contract (and its exact type-set assertions) is untouched.
 batch_cases:[false,true].map(active=>({type:'AccessEligibilityBatch',case_name:active?'STEP_UP_ACTIVE':'STEP_UP_REQUIRED_NOT_ACTIVE',value:{
   schema_version:'portal.self-eligibility-batch.v2',workspace_id:'ws_TEST_ONLY',environment:'paper',current_only:true,advisory_only:true,
@@ -343,6 +388,7 @@ batch_cases:[false,true].map(active=>({type:'AccessEligibilityBatch',case_name:a
 for(const name of ['AccessEligibility','AccessSelfNavigation'])
   schemas[name].examples=fixtures.cases.filter(entry=>entry.type===name).map(entry=>entry.value);
 schemas.AccessEligibilityBatch.examples=fixtures.batch_cases.map(entry=>entry.value);
+schemas.AccessSelfContext.examples=fixtures.self_context_cases.map(entry=>entry.value);
 for(const [file,value] of Object.entries({'openapi/execution-access.openapi.json':document,'fixtures/execution-access.synthetic.valid.json':fixtures})){
   const bytes=JSON.stringify(value,null,2)+'\n',target=resolve(root,file);
   if(process.argv.includes('--check')){if(readFileSync(target,'utf8')!==bytes)throw new Error(`Generated drift: ${file}`);}
