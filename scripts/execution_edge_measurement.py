@@ -318,12 +318,18 @@ def preflight(plan, lock, now, purpose='candidate'):
         raise ValueError('ALL_FOURTEEN_UNIQUE_BUDGET_IDS_REQUIRED')
     missing = [x['id'] for x in plan['external_inputs'] if x['ready'] is not True]
     blockers = missing.copy() if purpose == 'candidate' else []
-    if lock:
-        deadline = datetime.fromisoformat(lock['until_utc'].replace('Z', '+00:00'))
-        if deadline.tzinfo is None:
-            raise ValueError('UTC_LOCK_DEADLINE_REQUIRED')
-        if deadline > now:
-            blockers.append('ACTIVE_HOST_MEASUREMENT_LOCK:' + lock['owner'])
+    # Baseline mode only prepares an offline descriptor. Future absolute
+    # measurement readiness respects exclusive windows, not correctness work.
+    if purpose == 'candidate' and lock:
+        lock_class = lock.get('class', 'measurement')  # Legacy locks were exclusive.
+        if lock_class not in ('measurement', 'correctness'):
+            raise ValueError('UNKNOWN_HOST_LOCK_CLASS')
+        if lock_class == 'measurement':
+            deadline = datetime.fromisoformat(lock['until_utc'].replace('Z', '+00:00'))
+            if deadline.tzinfo is None:
+                raise ValueError('UTC_LOCK_DEADLINE_REQUIRED')
+            if deadline > now:
+                blockers.append('ACTIVE_HOST_MEASUREMENT_LOCK:' + lock['owner'])
     for b in plan['budgets']:
         if not b.get('metrics') or len({x['id'] for x in b['metrics']}) != len(b['metrics']):
             raise ValueError('NONEMPTY_UNIQUE_BUDGET_METRICS_REQUIRED')
@@ -364,10 +370,15 @@ def main():
     args = p.parse_args()
     try:
         plan = read_json(args.plan)
-        lock = read_json(args.lock) if args.lock.exists() else None
         if args.runs and args.purpose != 'candidate':
             raise ValueError('BASELINE_PREPARATION_CANNOT_ACCEPT_CANDIDATE_RUNS')
+        # No job is started here. Only future absolute-readiness reporting
+        # consults today's host lock; existing receipts carry their own taint.
+        lock = (read_json(args.lock) if args.purpose == 'candidate' and
+                not args.runs and args.lock.exists() else None)
         result = preflight(plan, lock, datetime.now(timezone.utc),args.purpose)
+        if args.runs:
+            result['host_lock_check'] = 'NOT_APPLICABLE_EXISTING_RECEIPTS'
         if args.target:
             result['target_preparation'] = prepare_target(read_json(args.target))
             if args.purpose == 'candidate':

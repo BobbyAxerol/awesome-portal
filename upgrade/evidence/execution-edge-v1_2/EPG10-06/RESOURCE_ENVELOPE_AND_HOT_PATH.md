@@ -228,14 +228,29 @@ python3 -B scripts/execution_edge_measurement.py \
   --purpose baseline
 ```
 
-This is read-only offline preparation; it starts no job. Without a host lock,
-baseline preparation exits0 despite missing source/production budgets; with a
-foreign lock it still produces the descriptor but reports execution BLOCKED.
+This is read-only offline preparation; it starts no job. Under root34b
+(20Oct), baseline preparation exits0 despite missing source/production budgets
+or an active host lock. Candidate future absolute-measurement readiness still
+waits for an active `measurement` lock (or a legacy lock without class), not
+nonexclusive `correctness` activity. Unknown classes fail closed. This helper
+does not acquire/release locks or authorize jobs. Historical `--runs` comparison
+uses its recorded taint/ownership/pins/correctness, not today's host lock;
+recorded acceptance remains strict. No new paired-under-load acceptance profile
+or production-capacity claim is introduced by this preparation correction.
 Candidate mode stays exit2 for missing inputs (55current reason entries, not55
 new gates). `--target --runs` additionally requires all12 original cells, exact
 stage artifacts/common pins, identical metric units across repeats/rates, full
 durations and existing correctness/untainted-window checks. Synthetic positive
 vectors are TEST_ONLY validator tests, not proof that actual load runs occurred.
+
+20Oct root34b correction qualification supersedes the old lock expectation:
+60helper cases PASS/0FAIL/SKIP (53prior+7new); unchanged17observer cases were not
+rerun or added to this total. Actual baseline CLI exits0 with12offline cells,
+20missing source/budget inputs and35target blockers still described, no jobs or
+runtime acceptance. Current helper/test pins and normal-hook/cleanup/publication
+are in the [same01/06 journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--offline-preparation-and-current-host-lock-class-alignment-20oct).
+Older dated70-case receipts below remain their original provenance, not a new
+measurement or an assertion that today's helper bytes match their old pins.
 
 Final validation: **70unittest PASS,0FAIL/error/skip** =29existing measurement
 helpers +24target/CLI regressions +17observer cases; plus two actual CLI checks

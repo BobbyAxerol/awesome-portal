@@ -920,6 +920,12 @@ full08NOT_MET,09connected NOT_STARTED. This does not recertify393or717tests.
   Core009 producer corrections/real installation remain; full08NOT_MET,
   09connectedNOT_STARTED. Exact hook/publication/cleanup lives in main journal.
 
+- **Original01/06 offline host-lock alignment,20Oct:**
+  [same-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--offline-preparation-and-current-host-lock-class-alignment-20oct)
+  applies root34b to preparation/current-lock classification only. Historical
+  recorded-run taint/ownership and all source/budget gates remain strict;
+  no benchmark, production-capacity proof or runtime mutation follows.
+
 - **Execution Edge v1.2 / EPG10-00 (2026-10-15):**
   [EPG10-00…11 in the Execution Loop unified plan §23](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)
   is `EPG10-00_COMPLETED_INVENTORY_ONLY`, on

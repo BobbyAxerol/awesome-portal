@@ -25333,6 +25333,69 @@ bindings, not repeated reads or fake grants. Full08NOT_MET/09connectedNOT_STARTE
 native publisher fence/coverage;01/06connected capacity needs matched target/
 source/bounds. None is reclassified as PASS by this runner work.
 
+### Original01/06 — offline preparation and current host-lock class alignment —20Oct
+
+**Status before edits:** IN_PROGRESS_OWNED_PREPARATION_CORRECTION. Root34b
+(20Oct) supersedes34a blanket-lock behavior. The existing read-only helper
+still blocks baseline sizing under any active lock, blocks candidate readiness
+on nonexclusive correctness activity, and applies today's lock to validation
+of historical receipts. Those are runnable owned preparation defects, not TS/
+Core debt. Same already approved01/06, no new phase/measurement authorization.
+Guides: [01](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-01-đo-tải-và-chốt-placement),
+[06](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-06-áp-resource-budgets-và-tối-ưu-hot-path),
+[existing resource packet](evidence/execution-edge-v1_2/EPG10-06/RESOURCE_ENVELOPE_AND_HOT_PATH.md).
+
+**Scope/invariants:** fix only offline preflight/CLI lock classification and
+regressions; baseline descriptor preparation starts no job and never takes a
+lock. Future absolute candidate measurement readiness still waits for active
+measurement/legacy lock, not correctness; unknown classes fail closed. Existing
+receipt comparisons use recorded taint/ownership/correctness/pins/durations,
+not today's host lock. Do not relax recorded-run acceptance, freeze budgets,
+run an actual benchmark, manufacture paired capacity proof or remove any lock.
+Test existing helper suite plus active measurement/correctness/legacy/expired/
+unknown class and historical comparison, under1CPU/256MiB. Update this plan and
+existing guide/index, normal hook/commit/publication and exact own cleanup.
+Rollback only helper source changes, not host activity/lock/runtime. Full01/06
+connected budgets/capacity remain unqualified without real matched targets.
+
+**Implemented and tested:** baseline preflight/CLI no longer reads or blocks on
+today's host lock; no job is started. Candidate readiness distinguishes active
+measurement/legacy versus nonexclusive correctness, fails unknown classes;
+expired locks are ignored, never deleted. Historical `--runs` skips current
+lock reading and labels NOT_APPLICABLE_EXISTING_RECEIPTS while retaining all
+existing source/budget/target checks. Recorded compare/12-cell validators are
+unchanged, including strict window taint/ownership, artifacts/units/pins,
+correctness and full duration. This does not introduce a paired-under-load
+evidence profile or authorize a measurement. Updated the two obsolete lock
+expectations and added7new cases;60unit PASS/0FAIL/SKIP =53prior+7new under
+1CPU/nice15/256MiB. Root final run0.059s, log SHA256
+2da008daf4d7a1722cc65d34b565a3496f6f890bd506144e55ad98814dccfe5d.
+Helper SHA2566b6291ac3e905c5f36d3dbf576af49f50660b235a7467fc9de524931afd3a29a;
+tests SHA25603a89073fe70bc5864f62d5abaa526b3a528294e706ca45ec5ce672971d2525a.
+Independent static reviewer found no blocker and confirmed recorded validators
+are unchanged. Agent edited only the two assigned helper/test files; root
+reviewed, reran and owns journal/docs/normal-hook/publication.
+
+Actual existing-plan baseline CLI exits0 with12offline descriptor cells,
+20missing source/budget inputs, no blockers and starts_any_job/runtime_acceptance
+false. Those20 are not all candidate blockers:35target preparation blockers
+remain in their descriptor; no evidence or numeric bound was manufactured.
+No container/image/cache/network/volume/row/session/lock was created by these
+focused helper checks. Retain old dated source-pin receipts as historical
+evidence, not current helper byte assertions; current pins are above.
+
+Normal hook/source commit is separate from the08runner commit, then one
+coherent feature publication batch. Exact final results, both own hook images,
+disk pre/post, unchanged19protected tuples and source/remote/SGP handoff pins
+are in the same predeclared private `active-stream-publication-and-cleanup.json`
+closeout path above. Expected extra hosted CI0; no PR/merge/dev/main/runtime.
+Canonical source,7active features, deployed images/configs, stable/rollback/
+original closure retention unchanged as recorded in the preceding08section.
+**Status:** owned preparation correction implemented/isolated-tested;
+01/06actual connected capacity/bounds NOT_MET. No new source/export or active
+target arrived in the bounded TS/PM/Core recheck. Next allowed work is bind each
+actual owner return; do not relabel absent target/authority as capacity PASS.
+
 
 
 

@@ -7,6 +7,11 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original01/06 offline host-lock alignment,20Oct:**
+  [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--offline-preparation-and-current-host-lock-class-alignment-20oct)
+  tracks root34b preparation fix; no job/lock/runtime mutation or weakening of
+  recorded-run taint/source/budget gates. Connected capacity remains NOT_MET.
+
 - **Original08 acceptance runner,20Oct — ISOLATED_QUALIFIED:**
   [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08--active-sse-observation-and-independent-stream-revoke-preparation-20oct)
   and [owner packet](../evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md)

@@ -44,10 +44,50 @@ class MeasurementTests(unittest.TestCase):
         self.assertFalse(r['starts_any_job']); self.assertFalse(r['runtime_acceptance'])
         self.assertEqual(m.preflight(plan,None,datetime.now(timezone.utc))['status'],'BLOCKED')
 
-    def test_baseline_still_respects_foreign_host_lock(self):
-        lock={'owner':'foreign','until_utc':'2099-01-01T00:00:00Z'}
-        r=m.preflight(self.plan(),lock,datetime.now(timezone.utc),'baseline')
-        self.assertEqual(r['blockers'],['ACTIVE_HOST_MEASUREMENT_LOCK:foreign'])
+    def test_baseline_preparation_does_not_wait_for_any_host_lock(self):
+        for extra in ({}, {'class': 'measurement'}, {'class': 'correctness'},
+                      {'class': 'TEST_ONLY_UNKNOWN'}, {'class': None}):
+            lock = dict(owner='foreign', until_utc='2099-01-01T00:00:00Z', **extra)
+            original = deepcopy(lock)
+            with self.subTest(lock_class=extra):
+                r = m.preflight(self.plan(), lock, datetime.now(timezone.utc), 'baseline')
+                self.assertEqual(r['blockers'], [])
+                self.assertEqual(r['status'], 'BASELINE_PREPARATION_ONLY_NOT_AUTHORIZATION')
+                self.assertFalse(r['starts_any_job']); self.assertFalse(r['runtime_acceptance'])
+                self.assertEqual(lock, original)
+
+    def test_candidate_absolute_readiness_blocks_active_measurement_and_legacy_locks(self):
+        for extra in ({}, {'class': 'measurement'}):
+            lock = dict(owner='foreign', until_utc='2099-01-01T00:00:00Z', **extra)
+            with self.subTest(lock_class=extra):
+                r = m.preflight(self.plan(), lock, datetime.now(timezone.utc))
+                self.assertEqual(r['status'], 'BLOCKED')
+                self.assertEqual(r['blockers'], ['ACTIVE_HOST_MEASUREMENT_LOCK:foreign'])
+                self.assertFalse(r['starts_any_job']); self.assertFalse(r['runtime_acceptance'])
+
+    def test_candidate_absolute_readiness_does_not_wait_for_correctness_activity(self):
+        lock = {'owner': 'foreign', 'class': 'correctness', 'until_utc': '2099-01-01T00:00:00Z'}
+        r = m.preflight(self.plan(), lock, datetime.now(timezone.utc))
+        self.assertEqual(r['status'], 'INPUTS_COMPLETE_NOT_AUTHORIZATION')
+        self.assertEqual(r['blockers'], [])
+        self.assertFalse(r['starts_any_job']); self.assertFalse(r['runtime_acceptance'])
+
+    def test_candidate_expired_measurement_or_legacy_lock_is_not_removed_or_blocking(self):
+        for extra in ({}, {'class': 'measurement'}):
+            lock = dict(owner='foreign', until_utc='2026-10-19T00:00:00Z', **extra)
+            original = deepcopy(lock)
+            with self.subTest(lock_class=extra):
+                r = m.preflight(self.plan(), lock, datetime(2026, 10, 20, tzinfo=timezone.utc))
+                self.assertEqual(r['status'], 'INPUTS_COMPLETE_NOT_AUTHORIZATION')
+                self.assertEqual(r['blockers'], [])
+                self.assertEqual(lock, original)
+
+    def test_candidate_unknown_lock_class_fails_closed(self):
+        for value in ('TEST_ONLY_UNKNOWN', None, True, 1, {}, []):
+            lock = {'owner': 'foreign', 'class': value, 'until_utc': '2099-01-01T00:00:00Z'}
+            with self.subTest(class_type=type(value).__name__), \
+                    self.assertRaisesRegex(ValueError, 'UNKNOWN_HOST_LOCK_CLASS'):
+                m.preflight(self.plan(), lock, datetime.now(timezone.utc))
 
     def test_unknown_measurement_purpose_rejected(self):
         with self.assertRaises(ValueError):
@@ -359,20 +399,24 @@ class TargetPreparationTests(unittest.TestCase):
             with self.subTest(update=update), self.assertRaises(ValueError):
                 m.compare_target_runs(t, runs, {'cpu': '0'})
 
-    def cli(self, purpose='baseline', lock=None, target=None, runs=None):
+    def cli(self, purpose='baseline', lock=None, target=None, runs=None, complete_plan=False):
         plan = MeasurementTests().plan()
-        for row in plan['external_inputs']: row['ready'] = False
-        for row in plan['budgets']:
-            row['approval_ref'] = None
-            row['metrics'][0].update(baseline=None, approved_bound=None)
+        plan['near_zero_by_metric'] = {'cpu': '0'}
+        if not complete_plan:
+            for row in plan['external_inputs']: row['ready'] = False
+            for row in plan['budgets']:
+                row['approval_ref'] = None
+                row['metrics'][0].update(baseline=None, approved_bound=None)
         files = {'PLAN': plan, 'TARGET': target or self.target(), 'LOCK': lock, 'RUNS': runs}
         argv = ['measurement', '--plan', 'PLAN', '--target', 'TARGET',
                 '--purpose', purpose, '--lock', 'LOCK']
         if runs is not None: argv += ['--runs', 'RUNS']
         output = io.StringIO()
-        with patch('sys.argv', argv), patch.object(m, 'read_json', side_effect=lambda p: files[str(p)]), \
+        with patch('sys.argv', argv), patch.object(m, 'read_json', side_effect=lambda p: files[str(p)]) as reader, \
                 patch.object(Path, 'exists', return_value=lock is not None), redirect_stdout(output):
             status = m.main()
+        if purpose == 'baseline' or runs is not None:
+            self.assertNotIn(Path('LOCK'), [call.args[0] for call in reader.call_args_list])
         return status, json.loads(output.getvalue())
 
     def test_cli_prepares_without_publication_or_production_budgets(self):
@@ -382,11 +426,51 @@ class TargetPreparationTests(unittest.TestCase):
         self.assertEqual(len(r['target_preparation']['cells']), 12)
         self.assertFalse(r['runtime_acceptance'])
 
-    def test_cli_foreign_lock_blocks_execution_not_offline_descriptor_preparation(self):
+    def test_cli_foreign_lock_does_not_block_offline_descriptor_preparation(self):
         status, r = self.cli(lock={'owner': 'foreign', 'until_utc': '2099-01-01T00:00:00Z'})
-        self.assertEqual(status, 2)
-        self.assertEqual(r['blockers'], ['ACTIVE_HOST_MEASUREMENT_LOCK:foreign'])
+        self.assertEqual(status, 0)
+        self.assertEqual(r['blockers'], [])
+        self.assertEqual(r['status'], 'BASELINE_PREPARATION_ONLY_NOT_AUTHORIZATION')
         self.assertEqual(r['target_preparation']['status'], 'OFFLINE_TARGET_PREPARED_NOT_EXECUTED')
+        self.assertFalse(r['runtime_acceptance']); self.assertFalse(r['starts_any_job'])
+
+    def test_cli_historical_receipts_compare_without_consulting_the_current_lock(self):
+        target = self.bound_target()
+        for lock_class in ('measurement', 'correctness', 'TEST_ONLY_UNKNOWN'):
+            lock = {'owner': 'foreign', 'class': lock_class, 'until_utc': '2099-01-01T00:00:00Z'}
+            with self.subTest(lock_class=lock_class):
+                status, r = self.cli(purpose='candidate', lock=lock, target=target,
+                    runs=self.runs(target), complete_plan=True)
+                self.assertEqual(status, 0)
+                self.assertEqual(r['host_lock_check'], 'NOT_APPLICABLE_EXISTING_RECEIPTS')
+                self.assertEqual(r['blockers'], [])
+                self.assertEqual(set(r['comparison']), {'6000:1', '6000:2', '9000:1', '9000:2'})
+                self.assertFalse(r['runtime_acceptance']); self.assertFalse(r['starts_any_job'])
+
+    def test_cli_historical_taint_or_missing_run_ownership_still_fails_with_a_current_lock(self):
+        target = self.bound_target()
+        lock = {'owner': 'foreign', 'class': 'measurement', 'until_utc': '2099-01-01T00:00:00Z'}
+        for update in ({'foreign_jobs_active': True}, {'measurement_lock_owned': False}):
+            runs = self.runs(target)
+            runs[-1].update(update)
+            with self.subTest(update=update):
+                status, r = self.cli(purpose='candidate', lock=lock, target=target,
+                    runs=runs, complete_plan=True)
+                self.assertEqual(status, 1)
+                self.assertEqual(r['status'], 'FAIL')
+                self.assertEqual(r['reason'], 'TAINTED_OR_UNOWNED_WINDOW')
+                self.assertNotIn('comparison', r)
+                self.assertFalse(r['runtime_acceptance'])
+
+    def test_cli_historical_receipts_do_not_bypass_source_or_budget_gates(self):
+        target = self.bound_target()
+        lock = {'owner': 'foreign', 'class': 'measurement', 'until_utc': '2099-01-01T00:00:00Z'}
+        status, r = self.cli(purpose='candidate', lock=lock, target=target, runs=self.runs(target))
+        self.assertEqual(status, 2)
+        self.assertEqual(r['host_lock_check'], 'NOT_APPLICABLE_EXISTING_RECEIPTS')
+        self.assertEqual(set(r['blockers']), m.INPUT_IDS | {'UNDECIDED:' + key for key in m.BUDGET_IDS})
+        self.assertNotIn('comparison', r)
+        self.assertFalse(r['runtime_acceptance']); self.assertFalse(r['starts_any_job'])
 
     def test_cli_candidate_stays_blocked_and_does_not_accept_runs(self):
         status, r = self.cli(purpose='candidate', runs=[])
