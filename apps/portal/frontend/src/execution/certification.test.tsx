@@ -361,6 +361,8 @@ describe("the published finding row is read (additive)", () => {
     expect(row).toEqual({
       findingId: "fnd_1", severity: "CRITICAL", status: null, identity: null, localValue: null, brokerValue: null,
       findingCode: "FEE_DIFF", summary: "Fee total differs", blocking: true, resolvedAt: null, resolution: "OPEN", createdAt: "2026-10-17T12:02:00.000Z",
+      // ADDITIVE (BE-P2 FE-072): this row has no `opened_at`, so the new member is null; the V1 screen never reads it.
+      openedAt: null,
     });
   });
 
