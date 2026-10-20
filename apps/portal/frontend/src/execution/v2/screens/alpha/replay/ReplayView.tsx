@@ -12,22 +12,22 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
-import type { MarketCandleInterval } from "../../../../api/marketCandles";
+import type { MarketCandleInterval, MarketVenue } from "../../../../api/marketCandles";
 import type { ExecutionApi } from "../../../../api/ports";
-import type { AlphaFleetItem } from "../../../../api/profileRead";
 import type { TradeReplayEventsProps } from "../../../../components/TradeReplayEvents";
 import { ReplayPanel, type ReplayChip } from "../../../blocks";
 import { ENV_LABEL, type ExecEnv } from "../../../urlState";
 import { focusTarget } from "../model";
 import { useReplayCandles, type SubjectBook } from "../useAlphaReads";
-import { MAX_LOADED_RECORDS, auditBook, auditSentences, candleVerdict, candleWindow, canLoadMore, countUntimed, preferredInterval, replayRange, replayState, symbolsOf, venueOf, type RelationAudit } from "./model";
+import { MAX_LOADED_RECORDS, auditBook, auditSentences, candleVerdict, candleWindow, canLoadMore, countUntimed, preferredInterval, replayRange, replayState, symbolsOf, type RelationAudit } from "./model";
 
 export interface ReplayViewProps {
   api: ExecutionApi;
   alphaId: string;
   alphaLabel: string;
   env: ExecEnv;
-  item: AlphaFleetItem | null;
+  /** The first venue this alpha runs on in a book whose klines the Portal can read; either body variant (see `AlphaView.venueOf`). */
+  venueOf: (env: ExecEnv) => MarketVenue | null;
   book: SubjectBook;
   /** `order:<id>` or `fill:<id>`. */
   focus: string | null;
@@ -38,7 +38,7 @@ export interface ReplayViewProps {
   back?: { label: string; to: string };
 }
 
-export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, canSeeAccounts, ordersHref, back }: ReplayViewProps) {
+export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus, canSeeAccounts, ordersHref, back }: ReplayViewProps) {
   const target = focusTarget(focus);
   const symbols = useMemo(() => symbolsOf(book.orders, book.fills), [book.orders, book.fills]);
   const focusSymbol = useMemo(() => {
@@ -53,7 +53,7 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
   const [chosen, setChosen] = useState<MarketCandleInterval | null>(null);
   const wanted = chosen ?? choice.interval;
   const range = useMemo(() => replayRange(book.orders, book.fills, symbol), [book.orders, book.fills, symbol]);
-  const venue = venueOf(item, env);
+  const venue = venueOf(env);
   const window = range === null ? null : candleWindow(range, wanted);
   const query = symbol !== null && venue !== null && window !== null
     ? { env, symbol, venue, interval: window.interval, fromMs: window.fromMs, toMs: window.toMs, limit: window.limit }
@@ -77,6 +77,7 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
   const chips: ReplayChip[] = [
     { label: "Book", value: ENV_LABEL[env] },
     { label: "Account", value: canSeeAccounts ? (book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? "Not available") : "Not available" },
+    ...(book.scoped ? [{ label: "Read", value: "Scoped: authorized rows only" }] : []),
   ];
 
   const venuePayload = candles.venue.phase === "ready" ? candles.venue.value : null;
@@ -95,7 +96,13 @@ export function ReplayView({ api, alphaId, alphaLabel, env, item, book, focus, c
     symbol,
     onSymbolChange: setPicked,
     focusId: focus,
-    source: { label: "Subject BFF retained window", detail: "orders and fills of this alpha in this book, not an event replay", page: null },
+    source: {
+      label: "Subject BFF retained window",
+      detail: book.scoped
+        ? "authorized orders and fills of this alpha in this book (a retained window, not total history), not an event replay"
+        : "orders and fills of this alpha in this book, not an event replay",
+      page: null,
+    },
     subjectLabel: alphaLabel,
     plain: true,
   };

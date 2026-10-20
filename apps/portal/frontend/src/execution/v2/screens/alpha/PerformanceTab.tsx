@@ -14,7 +14,6 @@
  */
 import { PanelState } from "../../../components/states";
 import type { FinancialChartPayload } from "../../../api/financialChart";
-import type { AlphaFleetItem } from "../../../api/profileRead";
 import type { StageDrift } from "../../../hifiInsight";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
@@ -22,7 +21,7 @@ import { SectionPanel } from "../../blocks";
 import { DivBars, EquityPanel, Spark, type DivBarRow } from "../../charts";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
 import { Na } from "./cells";
-import { ROW_CAP, deploymentRows, stageWord, type EquityPanelInput, type StagePath } from "./model";
+import { ROW_CAP, stageWord, type DeploymentRow, type EquityPanelInput, type StagePath } from "./model";
 import { Np } from "./np";
 import type { Read } from "./useAlphaReads";
 
@@ -34,7 +33,10 @@ export const PERFORMANCE_VIEWS: readonly { id: PerformanceView; label: string }[
 ];
 
 export interface PerformanceTabProps {
-  item: AlphaFleetItem | null;
+  /** The deployment rows of the read, either variant. */
+  rows: readonly DeploymentRow[];
+  /** Set on a SCOPED_V2 read: the body's reason for stating no money total (then no bar is drawn from a row). */
+  noTotals?: string | null;
   env: ExecEnv;
   equity: Read<FinancialChartPayload>;
   drift: Read<StageDrift>;
@@ -130,14 +132,22 @@ function OosFacet() {
 }
 
 /** Current net PnL by deployment, one chart per currency: partitions are never merged. */
-function Contribution({ item }: { item: AlphaFleetItem | null }) {
-  const rows = deploymentRows(item);
+function Contribution({ rows, noTotals }: { rows: readonly DeploymentRow[]; noTotals: string | null }) {
   if (rows.length === 0) return <Na why="No deployment is published." />;
-  const currencies = [...new Set(rows.map((r) => r.currency))].sort();
+  if (noTotals !== null) {
+    // SCOPED_V2: the body states no per-deployment money and a total would be implied. Say so once; draw nothing.
+    return (
+      <p className="exec-alp2-line" title={noTotals}>
+        <Np id="FE-005">Net PnL by deployment</Np>
+        <span className="exec-alp2-why">{noTotals}</span>
+      </p>
+    );
+  }
+  const currencies = [...new Set(rows.map((r) => r.currency ?? ""))].sort();
   return (
     <div className="exec-alp2-contrib">
       {currencies.map((currency) => {
-        const mine = rows.filter((r) => r.currency === currency);
+        const mine = rows.filter((r) => (r.currency ?? "") === currency);
         const bars: DivBarRow[] = mine.slice(0, ROW_CAP).map((r) => ({ id: r.id, label: `${r.stageLabel} · ${r.id}`, value: r.netPnl }));
         return <DivBars key={currency} label={`Current net PnL by deployment, ${currency}`} rows={bars} currency={currency} total={mine.length} />;
       })}
@@ -146,7 +156,7 @@ function Contribution({ item }: { item: AlphaFleetItem | null }) {
 }
 
 export function PerformanceTab(props: PerformanceTabProps) {
-  const { item, env, view, onView } = props;
+  const { rows, env, view, onView } = props;
   return (
     <div className="exec-alp2-stack">
       <SectionPanel
@@ -173,7 +183,7 @@ export function PerformanceTab(props: PerformanceTabProps) {
 
       <div className="exec-alp2-grid2">
         <SectionPanel title="Contribution" aside="Current">
-          <Contribution item={item} />
+          <Contribution rows={rows} noTotals={props.noTotals ?? null} />
         </SectionPanel>
         <SectionPanel title="Cost drag">
           <table className="exec-alp2-kv">

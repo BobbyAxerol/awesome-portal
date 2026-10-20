@@ -53,31 +53,26 @@ import { ActivityTab } from "./ActivityTab";
 import { LifecyclePanel } from "./Lifecycle";
 import { OrdersTab } from "./OrdersTab";
 import { PERFORMANCE_VIEWS, PerformanceTab, type PerformanceView } from "./PerformanceTab";
+import { ScopeBanner } from "./ScopeBanner";
 import { ScoreDrawer } from "./ScoreDrawer";
 import { DeploymentsTab, EvidenceTab, PositionsTab, ReconciliationTab, RegimeTab } from "./TableTabs";
 import {
   ALPHA_MORE_TABS,
   ALPHA_TABS,
-  UNVERSIONED,
-  alphaName,
-  alphaTitle,
-  alphaTitleWithVersion,
-  alphaVersion,
   chooseEnv,
-  currentStageOf,
-  deployedEnvs,
-  deploymentRows,
   equityInputs,
   focusTarget,
   freshnessFlag,
   isAlphaTab,
   humanize,
-  positionRows,
-  reconciliationRows,
   stagePaths,
   type AlphaTabKey,
+  type DeploymentRow,
+  type PositionRow,
+  type ReconRow,
 } from "./model";
 import { Np } from "./np";
+import { alphaViewOf } from "./view";
 import { ReplayView } from "./replay/ReplayView";
 import {
   useActivityRollup,
@@ -92,6 +87,13 @@ import type { SpineStageId } from "../../blocks";
 import "../../css/alpha.css";
 
 export const ALPHA_SCREEN_KEY = "alpha" as const;
+
+/** Stable empties, so a memo or an effect keyed on them does not run again on every render. */
+const NO_ENVS: readonly ExecEnv[] = [];
+const NO_ROWS: readonly DeploymentRow[] = [];
+const NO_POSITIONS: readonly PositionRow[] = [];
+const NO_RECON: readonly ReconRow[] = [];
+const NO_VENUE = (): null => null;
 
 /** D9: where a reader sees which grant a disabled action lacks. */
 const ACCESS_PATH = "/administration/profile-access";
@@ -145,21 +147,24 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   }, [resolution, params, navigate, location.pathname]);
 
   /* ── reads ───────────────────────────────────────────────────────────── */
-  const resource = useAlphaResource(api, alphaId);
-  const item = resource.phase === "ready" ? resource.value.item : null;
-  const envelope = resource.phase === "ready" ? resource.value.envelope : null;
-  const deployed = useMemo(() => deployedEnvs(item), [item]);
+  // The workspace the URL (or the caller) names, when it names one. Only that is sent on the resource and record reads; the
+  // body's own `workspace_id` is never fed back as a request parameter.
+  const explicitWs = url.value.workspace_id ?? workspaceId ?? null;
+  const resource = useAlphaResource(api, alphaId, explicitWs);
+  // One view over either body (legacy v1 or SCOPED_V2 v2): the sections below read it, never the raw body.
+  const view = useMemo(() => (resource.phase === "ready" ? alphaViewOf(resource.value, alphaId) : null), [resource, alphaId]);
+  const deployed = view?.envs ?? NO_ENVS;
   const env: ExecEnv = chooseEnv(url.value.env, deployed);
   const settled = resource.phase === "ready" || resource.phase === "error";
-  const wsId = url.value.workspace_id ?? workspaceId ?? envelope?.workspaceId ?? null;
+  const wsId = explicitWs ?? view?.workspaceId ?? null;
 
   const drift = useStageDrift(api, alphaId, true);
   const equity = useEquityChart(api, alphaId, env, wsId, settled && (tab === "performance" || tab === "activity"));
   const rollup = useActivityRollup(api, alphaId, env, settled && tab === "orders");
   const timeline = useObservedFeed(api, alphaId, env, settled && tab === "activity");
-  const book = useSubjectBook(api, alphaId, env, settled && (tab === "orders" || tab === "activity" || tab === "replay"));
+  const book = useSubjectBook(api, alphaId, env, settled && (tab === "orders" || tab === "activity" || tab === "replay"), explicitWs);
 
-  const current: SpineStageId | null = currentStageOf(item);
+  const current: SpineStageId | null = view?.current ?? null;
   const [stagePick, setStagePick] = useState<SpineStageId | null>(null);
   const paths = useMemo(() => stagePaths(drift.phase === "ready" ? drift.value : null), [drift]);
   const inputs = useMemo(() => {
@@ -167,8 +172,8 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
       : equity.phase === "ready" ? "The source published no exact equity series for this book." : null;
     return equityInputs(equity.phase === "ready" ? equity.value : null, drift.phase === "ready" ? drift.value : null, env, current, why);
   }, [equity, drift, current, env]);
-  const rows = useMemo(() => deploymentRows(item), [item]);
-  const label = alphaTitleWithVersion(item, alphaId);
+  const rows = view?.rows ?? NO_ROWS;
+  const label = view?.titleWithVersion ?? alphaId;
 
   /* ── url writers ─────────────────────────────────────────────────────── */
   const openTab = (key: AlphaTabKey) => {
@@ -199,7 +204,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
     tabRefs.current[key]?.focus();
     openTab(key);
   };
-  const view: PerformanceView = PERFORMANCE_VIEWS.find((v) => v.id === url.value.view)?.id ?? "act";
+  const perfView: PerformanceView = PERFORMANCE_VIEWS.find((v) => v.id === url.value.view)?.id ?? "act";
   const focus = params.get("focus");
   const focusOrder = (() => {
     const target = focusTarget(focus);
@@ -207,19 +212,21 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   })();
 
   /* ── states ──────────────────────────────────────────────────────────── */
-  const fresh = envelope ? freshnessFlag(envelope.freshness) : null;
-  const incomplete = envelope !== null && (envelope.completeness ?? "").toUpperCase() !== "COMPLETE" && envelope.completeness !== null;
-  const stale = envelope !== null && envelope.state.toLowerCase() === "stale";
+  const fresh = view ? freshnessFlag(view.freshness) : null;
+  // A scoped read is always partial and says so in its scope label; the generic banner is the legacy body's.
+  const incomplete = view !== null && view.variant === "legacy" && (view.completeness ?? "").toUpperCase() !== "COMPLETE" && view.completeness !== null;
+  const stale = view !== null && view.state.toLowerCase() === "stale";
   const body = (() => {
     if (resource.phase === "loading" || resource.phase === "idle") return <PanelState status="loading" />;
     if (resource.phase === "error") return <PanelState status={resource.status} reason={resource.reason} />;
-    if (item === null) {
-      return envelope?.state.toLowerCase() === "empty"
+    if (view === null || !view.present) {
+      return view?.state.toLowerCase() === "empty"
         ? <PanelState status="empty" reason={`Alpha ${alphaId} is not present in the current projected resource population.`} />
         : <PanelState status="unavailable" reason={`The alpha row for ${alphaId} could not be read.`} />;
     }
     return null;
   })();
+  const present = view !== null && view.present;
 
   const panelId = `${uid}-panel`;
   const tabId = (key: string) => `${uid}-tab-${key}`;
@@ -231,60 +238,69 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
         <div>
           <Link className="exec-alp2-back" to={back.to}>← {back.label}</Link>
           <h1 className="exec-alp2-title">
-            {alphaTitle(item, alphaId)}
-            {alphaVersion(item) !== null ? <span className="exec-alp2-version">v{alphaVersion(item)}</span> : null}
-            {item ? (
+            {view?.present ? view.title : alphaId}
+            {view?.present && view.version !== null ? <span className="exec-alp2-version">v{view.version}</span> : null}
+            {present ? (
               <button type="button" className="exec-alp2-scorechip" aria-haspopup="dialog" onClick={() => select("score")}>
                 <Flag kind="pending" label="Not scored · policy not set" size="sm" />
               </button>
             ) : null}
           </h1>
-          {item ? (
+          {view !== null && view.present ? (
             <p className="exec-alp2-meta">
-              {alphaName(item) === null ? (
-                <span title="ALPHA_NAME_NOT_PUBLISHED">Name <Np id="FE-066" /></span>
+              {view.name === null ? (
+                <span title={view.nameReason}>Name <Np id="FE-066" /></span>
               ) : null}
-              {alphaVersion(item) === null ? <span title={UNVERSIONED}>Version <Np id="FE-066" /></span> : null}
-              <span>Owner <b>{item.owner ?? "Not available"}</b></span>
+              {view.version === null ? <span title={view.versionReason}>Version <Np id="FE-066" /></span> : null}
+              {view.owner.kind === "not-published"
+                ? <span title={view.owner.reason}>Owner <Np id={view.owner.id} /></span>
+                : <span>Owner <b>{view.owner.kind === "value" ? view.owner.value : "Not available"}</b></span>}
               <span>Run <Np id="FE-029" /></span>
               <span>Evidence <Np id="FE-029" /></span>
-              {item.portfolios.length > 0 ? <span>{item.portfolios.map((p) => p.name).join(", ")}</span> : null}
+              {view.portfolioNames.length > 0 ? <span>{view.portfolioNames.join(", ")}</span> : null}
             </p>
           ) : null}
         </div>
         <div className="exec-alp2-fresh">
-          {item ? (
+          {present ? (
             <div className="exec-alp2-requests" role="group" aria-label="Requests">
               <DockAction label="Request archive" reason={notPublishedReason("FE-034", "Archive requests cannot be recorded yet.")} accessHref={ACCESS_PATH} />
               <DockAction label="Request gate review" reason={notPublishedReason("FE-020", "Gate-review requests cannot be recorded yet.")} accessHref={ACCESS_PATH} />
             </div>
           ) : null}
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
-          {envelope?.asOfMs ? <span>As of {utcStamp(new Date(envelope.asOfMs).toISOString())}</span> : envelope ? <span>Source time not published</span> : null}
+          {view?.asOfMs ? <span>As of {utcStamp(new Date(view.asOfMs).toISOString())}</span> : view ? <span>Source time not published</span> : null}
         </div>
       </header>
 
       {sliceOnly ? <div className="exec-blk-banner" role="note">Your slice only. Peers and fund totals are hidden.</div> : null}
+      {view?.scope ? <ScopeBanner scope={view.scope} withheld={view.withheld} /> : null}
       {resolution.notice ? <div className="exec-blk-banner" role="status">{resolution.notice}</div> : null}
       {stale ? <div className="exec-blk-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /> The source has not updated for this alpha within its freshness budget.</div> : null}
-      {incomplete ? <div className="exec-blk-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /> The read is {humanize(envelope?.completeness ?? "").toLowerCase()}: some rows may be missing.</div> : null}
+      {incomplete ? <div className="exec-blk-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /> The read is {humanize(view?.completeness ?? "").toLowerCase()}: some rows may be missing.</div> : null}
 
       {body !== null ? (
         <section className="exec-alp2-state" aria-label="Alpha state">{body}</section>
       ) : (
         <div className="exec-alp2-main" data-docked={selection === "score" && mode === "dock" ? "true" : undefined}>
           <div className="exec-alp2-body">
-            {tab === "replay" ? null : <LifecyclePanel item={item} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} />}
+            {tab === "replay" ? null : <LifecyclePanel rows={rows} current={current} selected={stagePick} onSelect={setStagePick} linkTo={linkTo} currentNote={view?.currentNote} withheld={view?.withheld} />}
 
             {tab === "replay" ? null : (
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
               <Fig label="Net PnL, current" basis="All stages, current facts">
-                {item && item.positionPnl.length > 0
-                  ? item.positionPnl.map((p) => <span key={p.currency} className="exec-alp2-fig"><Dec value={p.net} currency={p.currency} signed /></span>)
-                  : <Na />}
+                {view?.money.published === false
+                  ? <span title={view.money.reason}><Np id="FE-005" /></span>
+                  : view?.money.published && view.money.netPnl.length > 0
+                    ? view.money.netPnl.map((p) => <span key={p.currency} className="exec-alp2-fig"><Dec value={p.value} currency={p.currency} signed /></span>)
+                    : <Na />}
               </Fig>
               <Fig label="Exposure, current" basis="All stages, current facts">
-                {item && item.exposure.length > 0 ? item.exposure.map((e) => <span key={e.currency} className="exec-alp2-fig"><Dec value={e.value} currency={e.currency} /></span>) : <Na />}
+                {view?.money.published === false
+                  ? <span title={view.money.reason}><Np id="FE-005" /></span>
+                  : view?.money.published && view.money.exposure.length > 0
+                    ? view.money.exposure.map((e) => <span key={e.currency} className="exec-alp2-fig"><Dec value={e.value} currency={e.currency} /></span>)
+                    : <Na />}
               </Fig>
               <Fig label="Return"><Np id="FE-006" /></Fig>
               <Fig label="Max drawdown"><Np id="FE-025" /></Fig>
@@ -343,10 +359,19 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
 
             <div role="tabpanel" id={panelId} aria-labelledby={inMore ? undefined : tabId(tab)} aria-label={inMore ? ALPHA_MORE_TABS.find((t) => t.key === tab)?.label : undefined} className="exec-alp2-panel">
               {tab === "performance" ? (
-                <PerformanceTab item={item} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={view} onView={(next) => url.set({ view: next === "act" ? null : next })} />
+                <PerformanceTab rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
               ) : null}
-              {tab === "deployments" ? <DeploymentsTab rows={rows} canSeeAccounts={canSeeAccounts} linkTo={linkTo} /> : null}
-              {tab === "evidence" ? <EvidenceTab item={item} researchReason={drift.phase === "ready" ? drift.value.researchReason : null} /> : null}
+              {tab === "deployments" ? (
+                <DeploymentsTab
+                  rows={rows}
+                  canSeeAccounts={canSeeAccounts}
+                  linkTo={linkTo}
+                  scopedNoTotals={view?.money.published === false ? view.money.reason : null}
+                  unplaced={view?.unplaced.deployments ?? 0}
+                  withheld={view?.withheld ?? null}
+                />
+              ) : null}
+              {tab === "evidence" ? <EvidenceTab view={view} researchReason={drift.phase === "ready" ? drift.value.researchReason : null} /> : null}
               {tab === "regime" ? <RegimeTab /> : null}
               {tab === "orders" ? <OrdersTab alphaId={alphaId} book={book} activity={rollup} focusOrder={focusOrder} linkTo={linkTo} /> : null}
               {tab === "activity" ? <ActivityTab env={env} alphaId={alphaId} alphaLabel={label} inputs={inputs} paths={paths} timeline={timeline} book={book} /> : null}
@@ -356,7 +381,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                   alphaId={alphaId}
                   alphaLabel={label}
                   env={env}
-                  item={item}
+                  venueOf={view?.venueOf ?? NO_VENUE}
                   book={book}
                   focus={focus}
                   canSeeAccounts={canSeeAccounts}
@@ -364,12 +389,14 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                   back={replayBack(params, linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`))}
                 />
               ) : null}
-              {tab === "positions" ? <PositionsTab rows={positionRows(envelope?.data.positions)} canSeeAccounts={canSeeAccounts} linkTo={linkTo} /> : null}
-              {tab === "reconciliation" ? <ReconciliationTab rows={reconciliationRows(envelope?.data.reconciliation)} /> : null}
+              {tab === "positions" ? (
+                <PositionsTab rows={view?.positions ?? NO_POSITIONS} canSeeAccounts={canSeeAccounts} linkTo={linkTo} unplaced={view?.unplaced.positions ?? 0} withheld={view?.withheld ?? null} />
+              ) : null}
+              {tab === "reconciliation" ? <ReconciliationTab rows={view?.reconciliation ?? NO_RECON} scoped={view?.variant === "scoped"} withheld={view?.withheld ?? null} /> : null}
             </div>
           </div>
 
-          {selection === "score" ? <ScoreDrawer item={item} mode={mode} onClose={close} /> : null}
+          {selection === "score" ? <ScoreDrawer view={view} mode={mode} onClose={close} /> : null}
         </div>
       )}
     </div>

@@ -99,11 +99,25 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
     { key: "liq", label: "Liquidity", render: (f) => (f.liquidity ? humanize(f.liquidity) : null) },
   ];
 
+  // SCOPED_V2 (R-3): the record carries a closed member set. These columns have nothing to show from it, so they are not drawn
+  // (an empty cell would read as "this order has none"); the note under the strip says once what the contract leaves out.
+  const scoped = book.scoped;
+  const orderCols = scoped ? orderColumns.filter((c) => c.key !== "client" && c.key !== "kind") : orderColumns;
+  const fillCols = scoped ? fillColumns.filter((c) => c.key !== "client" && c.key !== "fee" && c.key !== "liq") : fillColumns;
   const orders = newestFirst(book.orders, (o) => o.submittedAt);
   const fills = newestFirst(book.fills, (f) => f.tradeTime);
+  // Records the page declared that did not become a row (no id, no price or no time), so "empty" is not read as "none".
+  const declared = (state: Read<readonly SubjectActivityPage[]>) => (state.phase === "ready" ? state.value.reduce((n, p) => n + (p.page.returnedCount ?? p.records.length), 0) : 0);
+  const orderGap = scoped ? Math.max(0, declared(book.ordersState) - orders.length) : 0;
+  const fillGap = scoped ? Math.max(0, declared(book.fillsState) - fills.length) : 0;
 
   return (
     <div className="exec-alp2-stack">
+      {scoped ? (
+        <p className="exec-alp2-cap" role="note">
+          <span>Scoped read: authorized rows of a retained window, not total history. The record carries no client order id, order type, fee or liquidity (portal.execution.subject-records.v2).</span>
+        </p>
+      ) : null}
       <KpiStrip label="Orders and fills" columns={4}>
         <Kpi label="Orders" metric={count(data?.orderPopulation ?? undefined)} absentReason={absent} basis="Retained window" />
         <Kpi label="Fills" metric={count(data?.fillPopulation ?? undefined)} absentReason={absent} basis="Retained window" />
@@ -128,7 +142,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
         {book.ordersState.phase === "ready" ? (
           <>
             <CardsTable
-              columns={orderColumns}
+              columns={orderCols}
               rows={orders.slice(0, ROW_CAP)}
               rowKey={(o) => o.orderId}
               selectedKey={focusOrder}
@@ -136,6 +150,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
               empty={<PanelState status="empty" reason="No order is present for this alpha in the retained projection window." />}
             />
             <MoreRow page={book.ordersMore} noun="orders" loaded={orders.length} shown={Math.min(orders.length, ROW_CAP)} />
+            {orderGap > 0 ? <p className="exec-alp2-cap" role="note"><span>{orderGap} {orderGap === 1 ? "record was" : "records were"} returned and not shown: no order id.</span></p> : null}
           </>
         ) : null}
       </SectionPanel>
@@ -146,13 +161,14 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
         {book.fillsState.phase === "ready" ? (
           <>
             <CardsTable
-              columns={fillColumns}
+              columns={fillCols}
               rows={fills.slice(0, ROW_CAP)}
               rowKey={(f) => f.fillId}
               label="Fills of this alpha"
               empty={<PanelState status="empty" reason="No fill is present for this alpha in the retained projection window." />}
             />
             <MoreRow page={book.fillsMore} noun="fills" loaded={fills.length} shown={Math.min(fills.length, ROW_CAP)} />
+            {fillGap > 0 ? <p className="exec-alp2-cap" role="note"><span>{fillGap} {fillGap === 1 ? "record was" : "records were"} returned and not shown: no fill id, price or trade time. The scoped record states a time only as <span className="exec-blk-id">occurred_at_ms</span> or <span className="exec-blk-id">timestamp_ms</span>; the Portal observation time is not used as one.</span></p> : null}
           </>
         ) : null}
       </SectionPanel>

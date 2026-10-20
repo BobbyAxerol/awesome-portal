@@ -25,8 +25,9 @@ import { V2_CAPABILITY, holds } from "../../../shell/roleNav";
 import { withoutOrigin } from "../../../backTo";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../../urlState";
 import { replayBack } from "../backLinks";
-import { alphaTitleWithVersion, chooseEnv, deploymentRows, deployedEnvs, freshnessFlag } from "../model";
+import { chooseEnv, freshnessFlag } from "../model";
 import { useAlphaResource, useSubjectBook } from "../useAlphaReads";
+import { alphaViewOf } from "../view";
 import { ReplayView } from "./ReplayView";
 
 import "../../../css/alpha.css";
@@ -35,6 +36,8 @@ import "../../../css/alpha.css";
 const ENV_STAGES: Readonly<Record<string, readonly string[]>> = { live: ["canary", "live"], paper: ["paper"], sandbox: ["sandbox"] };
 
 export const REPLAY_SCREEN_KEY = "replay" as const;
+
+const NO_VENUE = (): null => null;
 
 export interface AlphaReplayProps {
   api: ExecutionApi;
@@ -54,15 +57,18 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
   const ordersHref = linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`);
   const back = replayBack(params, ordersHref);
 
-  const resource = useAlphaResource(api, alphaId);
-  const item = resource.phase === "ready" ? resource.value.item : null;
-  const env = chooseEnv(url.value.env, deployedEnvs(item));
+  const explicitWs = url.value.workspace_id ?? null;
+  const resource = useAlphaResource(api, alphaId, explicitWs);
+  // The same view as Alpha 360: the replay reads the resource for its label, deployments and venue, whichever body arrived.
+  const view = resource.phase === "ready" ? alphaViewOf(resource.value, alphaId) : null;
+  const env = chooseEnv(url.value.env, view?.envs ?? []);
   const settled = resource.phase === "ready" || resource.phase === "error";
-  const book = useSubjectBook(api, alphaId, env, settled);
-  const label = alphaTitleWithVersion(item, alphaId);
-  const deployment = deploymentRows(item).find((row) => row.stage !== null && ENV_STAGES[env].includes(row.stage)) ?? deploymentRows(item)[0] ?? null;
+  const book = useSubjectBook(api, alphaId, env, settled, explicitWs);
+  const label = view?.titleWithVersion ?? alphaId;
+  const rows = view?.rows ?? [];
+  const deployment = rows.find((row) => (row.env !== undefined ? row.env === env : row.stage !== null && ENV_STAGES[env].includes(row.stage))) ?? rows[0] ?? null;
   const accountId = canSeeAccounts ? (book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? deployment?.accountId ?? null) : null;
-  const fresh = resource.phase === "ready" ? freshnessFlag(resource.value.envelope.freshness) : null;
+  const fresh = view ? freshnessFlag(view.freshness) : null;
 
   return (
     <div className="exec-alp2-v2" data-screen="trade-replay-v2">
@@ -88,7 +94,7 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
           alphaId={alphaId}
           alphaLabel={label}
           env={env}
-          item={item}
+          venueOf={view?.venueOf ?? NO_VENUE}
           book={book}
           focus={focus ?? params.get("focus")}
           canSeeAccounts={canSeeAccounts}
