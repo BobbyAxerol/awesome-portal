@@ -62,7 +62,7 @@ export type StageChipValue =
   /** The read is in flight. */
   | { state: "loading" }
   /** The backend has not published it: the sentence carries the request id. `detail` is what IS known ("Source flag: active"). */
-  | { state: "not-published"; id: NotPublishedId; detail?: string }
+  | { state: "not-published"; id: NotPublishedId; detail?: string; reasonCode?: string }
   /** The source is qualified but answered nothing for this fact. */
   | { state: "not-available"; reason?: string }
   /** A published state as a Flag ("Running", "Reconciling"). */
@@ -99,7 +99,8 @@ export interface StageHeaderProps {
   renderLink?: (to: string, children: ReactNode) => ReactNode;
 }
 
-function ChipBody({ value }: { value: StageChipValue }) {
+/** One chip value on its own (the Paper workbench's summary bar prints the same words as the header chips). */
+export function ChipBody({ value }: { value: StageChipValue }) {
   switch (value.state) {
     case "loading":
       return (
@@ -109,7 +110,11 @@ function ChipBody({ value }: { value: StageChipValue }) {
         </>
       );
     case "not-published":
-      return <NotPublished id={value.id}>{value.detail}</NotPublished>;
+      return (
+        <NotPublished id={value.id} titleReason={value.reasonCode}>
+          {value.detail}
+        </NotPublished>
+      );
     case "not-available":
       return <span className="exec-blk-na">{value.reason ? `${NO_VALUE_COPY} · ${value.reason}` : NO_VALUE_COPY}</span>;
     case "flag":

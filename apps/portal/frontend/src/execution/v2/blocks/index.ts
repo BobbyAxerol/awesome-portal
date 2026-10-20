@@ -41,8 +41,8 @@ export type {
   JourneySpineProps,
 } from "./JourneySpine";
 export { TRIAD_SUPPRESSED_COPY, Triad } from "./Triad";
-export type { TriadCell, TriadNotComputed, TriadProps, TriadRow, TriadSide } from "./Triad";
-export { REAL_CAPITAL_AT_RISK, STAGE_CHIP_LABELS, STAGE_GUARD, StageChipRow, StageHeader } from "./StageHeader";
+export type { TriadCell, TriadNotComputed, TriadNotPublished, TriadProps, TriadRow, TriadSide } from "./Triad";
+export { ChipBody, REAL_CAPITAL_AT_RISK, STAGE_CHIP_LABELS, STAGE_GUARD, StageChipRow, StageHeader } from "./StageHeader";
 export type {
   StageChipId,
   StageChipValue,
