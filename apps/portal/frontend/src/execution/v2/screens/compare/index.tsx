@@ -39,7 +39,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { utcStamp } from "../../../time";
-import { SectionPanel } from "../../blocks";
+import { NotAvailableLine, SectionPanel, type UnavailableFact } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
 import { Flag } from "../../Flag";
@@ -50,7 +50,7 @@ import { METRIC_WORD, MISMATCH_SENTENCE, UNAVAILABLE_SENTENCE, chartPointsOf, ch
 import { useManagerSeries } from "../series/useManagerSeries";
 import { useExecUrlState, withContext } from "../../urlState";
 import { PF_FE, npReason, npText } from "../portfolios/fe";
-import { Absent, MoneyList, Np, freshnessFlag } from "../portfolios/format";
+import { Absent, MoneyList, freshnessFlag } from "../portfolios/format";
 import { toRows, type PortfolioRow } from "../portfolios/listModel";
 import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
 import { COMPARE_MAX, selectionFrom, withSelection } from "../portfolios/selection";
@@ -83,12 +83,16 @@ const domainWord = (domain: PortfolioRow["domain"] | null): string =>
 interface MetricRow { id: string; label: string; cell(row: PortfolioRow): ReactNode }
 
 /** The hi-fi order: the measures first (each says which request publishes it), then what the list read does publish. */
+/** The scalars the read does not publish: not rows of "Not published" under every pick, but one line (ids in its title). */
+const UNPUBLISHED_METRICS: readonly UnavailableFact[] = [
+  { label: "NAV", id: "FE-013" },
+  { label: "Net PnL", id: "FE-005", why: "Windowed; needs FE-025" },
+  { label: "Return", id: "FE-006", why: "Windowed; methodology per source" },
+  { label: "Max drawdown", id: "FE-013", why: "Needs the NAV series; windowed (FE-025)" },
+  { label: "Score", id: "FE-011" },
+];
+
 const METRICS: readonly MetricRow[] = [
-  { id: "nav", label: "NAV", cell: () => <Np fact={PF_FE.nav} /> },
-  { id: "pnl", label: "Net PnL", cell: () => <Np fact={PF_FE.netPnl} /> },
-  { id: "ret", label: "Return", cell: () => <Np fact={PF_FE.ret} /> },
-  { id: "dd", label: "Max drawdown", cell: () => <Np fact={PF_FE.drawdown} /> },
-  { id: "score", label: "Score", cell: () => <Np fact={PF_FE.score} /> },
   { id: "currency", label: "Base currency", cell: (r) => r.baseCurrency },
   { id: "owner", label: "Owner", cell: (r) => r.owner ?? <Absent reason="owner not published" /> },
   { id: "state", label: "State", cell: (r) => <Flag kind={r.stateKind} label={r.stateLabel} size="sm" /> },
@@ -179,7 +183,6 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   const partsSummary = [
     basis.currency === null ? (chosen.length === 0 && unresolved.length === 0 ? "Nothing picked" : "No comparable basis") : `${basis.currency} · ${domainWord(basis.domain)} basis`,
     apart.length > 0 ? `${apart.length} listed apart` : null,
-    "Money is never converted or combined",
   ].filter((part): part is string => part !== null).join(" · ");
   const series = seriesRead.phase === "ready" ? seriesRead.value : seriesRead.phase === "loading" || seriesRead.phase === "error" ? seriesRead.last : null;
   const labelOf = (id: string): string => chosen.find((r) => r.portfolioId === id)?.label ?? id;
@@ -239,10 +242,9 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
       <header className="exec-pf-head">
         <div>
           <h1 className="exec-pf-h1">Compare</h1>
-          <p className="exec-pf-sub">2 to 4 · one currency · one domain · identity, scalars and aligned series</p>
         </div>
         <div className="exec-pf-ctrls">
-          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {envelope ? <span className="exec-pf-dim">{envelope.sourceAsOf ? `As of ${utcStamp(envelope.sourceAsOf)}` : "Source time not published"}</span> : null}
           <Link to={withContext(backHref, params)}>{backLabel}</Link>
         </div>
@@ -267,7 +269,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             </div>
             <p id={reasonId} className="exec-pf-sr">Alphas: {npText(PF_FE.compareSeries)}</p>
             {kindWanted !== null && kindWanted !== "portfolio" && kindWanted !== "pf" ? (
-              <p className="exec-pf-banner" role="status">Comparing alphas is {npText(PF_FE.compareSeries)}. Showing portfolios.</p>
+              <p className="exec-pf-banner" role="status" title={npText(PF_FE.compareSeries)}>Comparing alphas is not available. Showing portfolios.</p>
             ) : null}
             <div className="exec-cmpr-pick" role="group" aria-label="Portfolios to compare">
               {chips.map((row) => {
@@ -316,7 +318,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
                   data-excluded={apart.length > 0 ? "true" : undefined}
                   onClick={() => setPartsOpen((open) => !open)}
                 >
-                  {partsSummary}
+                  <span title="Money is never converted or combined">{partsSummary}</span>
                   {/* Constant name; aria-expanded carries the state and the glyph is CSS alt-text-empty, so it never enters the name. */}
                   <span className="exec-cmpr-sum-more">Partitions</span>
                 </button>
@@ -372,11 +374,14 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             <p className="exec-pf-note" data-testid="basis-caption">Basis: {basisText}</p>
           </SectionPanel>
 
-          <SectionPanel title="Metrics" aside="Identity and published scalars">
+          <SectionPanel title="Metrics">
             {chosen.length === 0 ? (
               <p className="exec-pf-note">Pick portfolios above to see their identity and allocation side by side.</p>
             ) : (
-              <CardsTable label="Metrics" columns={tableColumns} rows={METRICS} rowKey={(m) => m.id} />
+              <>
+                <CardsTable label="Metrics" columns={tableColumns} rows={METRICS} rowKey={(m) => m.id} />
+                <NotAvailableLine facts={UNPUBLISHED_METRICS} className="exec-pf-na-line" />
+              </>
             )}
           </SectionPanel>
         </>

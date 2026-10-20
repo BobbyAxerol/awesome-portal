@@ -229,7 +229,8 @@ describe("L3 · mixed currencies are never combined", () => {
     expect(screen.getAllByTestId("partition")).toHaveLength(3);
     const text = container.textContent ?? "";
     for (const sum of ["251,777", "251777", "251,000", "1,777", "250,777"]) expect(text).not.toContain(sum);
-    expect(text).toContain("Money is never converted or combined");
+    // The reminder is the summary's title; the visible line is only what is picked and left apart.
+    expect(container.querySelector('[title="Money is never converted or combined"]')).not.toBeNull();
   });
 
   it("one portfolio holding two currencies lists each on its own line; the base currency decides the basis, never the sum", async () => {
