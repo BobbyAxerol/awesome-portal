@@ -956,3 +956,7 @@ Claude can repair in post-freeze; original28446 recovery remains independent.
 R3-1130 active with one actual expiry-test failure; do not build/claim READY or
 run competing gates. Bobby separately approved Markdown-only R0 for Codex;
 normal code/final landing gates unchanged. No Git push or runtime operation.
+
+### Bobby priority assignment — Claude Core009 —20Oct2026
+
+Priority request from Bobby via Edge: [Claude Core009 handoff](evidence/ELP2-10/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md), SHA256 `ccdfb4d714deedb8cc66f2beee5189c8dc07c985de85f7cbded9cb738056bb7f`. Core009 actual policy/config/app composition is required before real08/read09; identity already done, stable/dev/provider28445 unchanged. This explicit backend assignment is limited to009, not a UI rewrite. Read and ACK ACCEPTED/CHANGES_REQUESTED with scope/return path. Delivery AWAITING_CLAUDE_ACK; no runtime acceptance claimed.

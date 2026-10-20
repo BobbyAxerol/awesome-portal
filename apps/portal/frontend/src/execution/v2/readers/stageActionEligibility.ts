@@ -136,11 +136,13 @@ function readRow(raw: unknown, expected: StageAction): StageActionRow | null {
   // The copy key is the reason, always.
   if (copyKey !== reasonClass) return null;
   // Verdict x eligible x reason.
-  if (verdict === "ELIGIBLE") {
-    if (r.eligible !== true || reasonClass !== "SUBMIT_CHECKS_REQUIRED") return null;
-  } else {
-    if (r.eligible !== false) return null;
-    if (verdict === "NOT_COMMISSIONED" ? reasonClass !== "COMMAND_FAMILY_NOT_COMMISSIONED" : !NOT_ELIGIBLE_REASONS.includes(reasonClass)) return null;
+  // `eligible` is true exactly for the ELIGIBLE verdict: anything else (absent, non-boolean) never reads as eligibility.
+  const shouldBeEligible = verdict === "ELIGIBLE";
+  if (r.eligible !== shouldBeEligible) return null;
+  if (shouldBeEligible) {
+    if (reasonClass !== "SUBMIT_CHECKS_REQUIRED") return null;
+  } else if (verdict === "NOT_COMMISSIONED" ? reasonClass !== "COMMAND_FAMILY_NOT_COMMISSIONED" : !NOT_ELIGIBLE_REASONS.includes(reasonClass)) {
+    return null;
   }
   return { action, verdict, eligible: r.eligible, reasonClass, basis, stepUpRequired: rule.stepUpRequired, stepUpState, alphaScope };
 }
