@@ -180,15 +180,15 @@
   "default GET /screens/paper/dep_94": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6d07d72b7b21ca9818b7368516a3d11a9c401d1191d96a2289ec3c22292ec6d1",
-   "bytes": 829,
+   "sha256": "9728f4217d7f2b9fcf85aa3a498ff3e1e404d24373ce203606b2bf596683a903",
+   "bytes": 1911,
    "gap": false
   },
   "default GET /screens/paper/dep_vnm/vn-market": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "778766ce3fae340ba4ba7e2811be87a32b33bb11c57540facfa30b3591b0f03c",
-   "bytes": 827,
+   "sha256": "e7447d2c2000afbf6d36c18ac750400fefd417c6615adc186f6f1959b69c87d6",
+   "bytes": 2664,
    "gap": false
   },
   "default GET /screens/accounts/acc_bnc_core": {
@@ -1223,22 +1223,22 @@
   "default GET /deployments/dep_1/certification": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "813f5112398f281bf2ac3ca6bbdac80b68158c2779193dc083ba26ac7941f538",
-   "bytes": 7267,
+   "sha256": "595568ea9c1ecfffabf27e188e7d163423ca20d74f8a42ef1e4eb6b9798ed361",
+   "bytes": 10309,
    "gap": false
   },
   "default GET /deployments/dep_1/canary": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "59ee4bc36b7776be63fdd2db408811d855b7f46743195455a90e78dd2779bc07",
-   "bytes": 9224,
+   "sha256": "329f55d2833f9a1faa6e980a603ddc29b0df61923e29ddbcb191027f4a52aa20",
+   "bytes": 15994,
    "gap": false
   },
   "default GET /deployments/dep_1/live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "3a8571a97754264a56914b49441f2fc6c09e8d8a6b1791bb89bbd7b03b23e633",
-   "bytes": 10637,
+   "sha256": "bd2d89573dd153fdbc69fb94d31b287948aa3c7c12e5a58f2f68f11ce174e10b",
+   "bytes": 14301,
    "gap": false
   },
   "default GET /orders/ord_00137/funnel": {
@@ -1678,15 +1678,15 @@
   "operationsV2 GET /screens/paper/dep_94": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6d07d72b7b21ca9818b7368516a3d11a9c401d1191d96a2289ec3c22292ec6d1",
-   "bytes": 829,
+   "sha256": "9728f4217d7f2b9fcf85aa3a498ff3e1e404d24373ce203606b2bf596683a903",
+   "bytes": 1911,
    "gap": false
   },
   "operationsV2 GET /screens/paper/dep_vnm/vn-market": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "778766ce3fae340ba4ba7e2811be87a32b33bb11c57540facfa30b3591b0f03c",
-   "bytes": 827,
+   "sha256": "e7447d2c2000afbf6d36c18ac750400fefd417c6615adc186f6f1959b69c87d6",
+   "bytes": 2664,
    "gap": false
   },
   "operationsV2 GET /screens/accounts/acc_bnc_core": {
@@ -2721,22 +2721,22 @@
   "operationsV2 GET /deployments/dep_1/certification": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "813f5112398f281bf2ac3ca6bbdac80b68158c2779193dc083ba26ac7941f538",
-   "bytes": 7267,
+   "sha256": "595568ea9c1ecfffabf27e188e7d163423ca20d74f8a42ef1e4eb6b9798ed361",
+   "bytes": 10309,
    "gap": false
   },
   "operationsV2 GET /deployments/dep_1/canary": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "59ee4bc36b7776be63fdd2db408811d855b7f46743195455a90e78dd2779bc07",
-   "bytes": 9224,
+   "sha256": "329f55d2833f9a1faa6e980a603ddc29b0df61923e29ddbcb191027f4a52aa20",
+   "bytes": 15994,
    "gap": false
   },
   "operationsV2 GET /deployments/dep_1/live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "3a8571a97754264a56914b49441f2fc6c09e8d8a6b1791bb89bbd7b03b23e633",
-   "bytes": 10637,
+   "sha256": "bd2d89573dd153fdbc69fb94d31b287948aa3c7c12e5a58f2f68f11ce174e10b",
+   "bytes": 14301,
    "gap": false
   },
   "operationsV2 GET /orders/ord_00137/funnel": {
@@ -3190,15 +3190,15 @@
   "screensV2 GET /screens/paper/dep_94": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6d07d72b7b21ca9818b7368516a3d11a9c401d1191d96a2289ec3c22292ec6d1",
-   "bytes": 829,
+   "sha256": "9728f4217d7f2b9fcf85aa3a498ff3e1e404d24373ce203606b2bf596683a903",
+   "bytes": 1911,
    "gap": false
   },
   "screensV2 GET /screens/paper/dep_vnm/vn-market": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "778766ce3fae340ba4ba7e2811be87a32b33bb11c57540facfa30b3591b0f03c",
-   "bytes": 827,
+   "sha256": "e7447d2c2000afbf6d36c18ac750400fefd417c6615adc186f6f1959b69c87d6",
+   "bytes": 2664,
    "gap": false
   },
   "screensV2 GET /screens/accounts/acc_bnc_core": {
@@ -4233,22 +4233,22 @@
   "screensV2 GET /deployments/dep_1/certification": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "813f5112398f281bf2ac3ca6bbdac80b68158c2779193dc083ba26ac7941f538",
-   "bytes": 7267,
+   "sha256": "595568ea9c1ecfffabf27e188e7d163423ca20d74f8a42ef1e4eb6b9798ed361",
+   "bytes": 10309,
    "gap": false
   },
   "screensV2 GET /deployments/dep_1/canary": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "59ee4bc36b7776be63fdd2db408811d855b7f46743195455a90e78dd2779bc07",
-   "bytes": 9224,
+   "sha256": "329f55d2833f9a1faa6e980a603ddc29b0df61923e29ddbcb191027f4a52aa20",
+   "bytes": 15994,
    "gap": false
   },
   "screensV2 GET /deployments/dep_1/live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "3a8571a97754264a56914b49441f2fc6c09e8d8a6b1791bb89bbd7b03b23e633",
-   "bytes": 10637,
+   "sha256": "bd2d89573dd153fdbc69fb94d31b287948aa3c7c12e5a58f2f68f11ce174e10b",
+   "bytes": 14301,
    "gap": false
   },
   "screensV2 GET /orders/ord_00137/funnel": {
@@ -4772,15 +4772,15 @@
   "operationsV2+screensV2 GET /screens/paper/dep_94": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6d07d72b7b21ca9818b7368516a3d11a9c401d1191d96a2289ec3c22292ec6d1",
-   "bytes": 829,
+   "sha256": "9728f4217d7f2b9fcf85aa3a498ff3e1e404d24373ce203606b2bf596683a903",
+   "bytes": 1911,
    "gap": false
   },
   "operationsV2+screensV2 GET /screens/paper/dep_vnm/vn-market": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "778766ce3fae340ba4ba7e2811be87a32b33bb11c57540facfa30b3591b0f03c",
-   "bytes": 827,
+   "sha256": "e7447d2c2000afbf6d36c18ac750400fefd417c6615adc186f6f1959b69c87d6",
+   "bytes": 2664,
    "gap": false
   },
   "operationsV2+screensV2 GET /screens/accounts/acc_bnc_core": {
@@ -5815,22 +5815,22 @@
   "operationsV2+screensV2 GET /deployments/dep_1/certification": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "813f5112398f281bf2ac3ca6bbdac80b68158c2779193dc083ba26ac7941f538",
-   "bytes": 7267,
+   "sha256": "595568ea9c1ecfffabf27e188e7d163423ca20d74f8a42ef1e4eb6b9798ed361",
+   "bytes": 10309,
    "gap": false
   },
   "operationsV2+screensV2 GET /deployments/dep_1/canary": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "59ee4bc36b7776be63fdd2db408811d855b7f46743195455a90e78dd2779bc07",
-   "bytes": 9224,
+   "sha256": "329f55d2833f9a1faa6e980a603ddc29b0df61923e29ddbcb191027f4a52aa20",
+   "bytes": 15994,
    "gap": false
   },
   "operationsV2+screensV2 GET /deployments/dep_1/live": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "3a8571a97754264a56914b49441f2fc6c09e8d8a6b1791bb89bbd7b03b23e633",
-   "bytes": 10637,
+   "sha256": "bd2d89573dd153fdbc69fb94d31b287948aa3c7c12e5a58f2f68f11ce174e10b",
+   "bytes": 14301,
    "gap": false
   },
   "operationsV2+screensV2 GET /orders/ord_00137/funnel": {
