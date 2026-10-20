@@ -25,6 +25,7 @@ import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent as 
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import "./css/dock.css";
+import { QuietIds } from "./blocks/QuietIds";
 import { withoutOrigin } from "./backTo";
 import { useExecUrlState, withContext } from "./urlState";
 
@@ -325,7 +326,7 @@ export function DockAction({ label, onAction, reason, accessHref, accessLabel = 
       </button>
       {blocked ? (
         <div className="exec-dock-why" data-l={label}>
-          <p id={reasonId} className="exec-dock-reason" title={text}>{text}</p>
+          <p id={reasonId} className="exec-dock-reason" title={text}><QuietIds text={text} /></p>
           {accessHref ? <Link className="exec-dock-access" to={withContext(accessHref, withoutOrigin(params))} aria-label={`${accessLabel}: ${label}`}>{accessLabel}</Link> : null}
         </div>
       ) : null}

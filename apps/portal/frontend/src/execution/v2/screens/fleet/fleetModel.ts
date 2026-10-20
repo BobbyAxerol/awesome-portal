@@ -229,16 +229,16 @@ export const queryKey = (filters: FleetFilters): string => JSON.stringify(fleetQ
 
 /* ── summary: counts only ──────────────────────────────────────────────── */
 
-export interface Kpi { id: string; label: string; value: number | null; note: string }
+export interface Kpi { id: string; label: string; value: number | null; note?: string }
 
 export function fleetKpis(summary: AlphaFleetSummary | null): readonly Kpi[] {
   const v = (n: number | undefined): number | null => (summary ? n ?? null : null);
   return [
-    { id: "alphas", label: "Alphas", value: v(summary?.alphaCount), note: "In your scope" },
-    { id: "deployments", label: "Deployments", value: v(summary?.deploymentCount), note: "Across all stages" },
-    { id: "portfolios", label: "Portfolios", value: v(summary?.portfolioCount), note: "Holding deployments" },
-    { id: "attention", label: "Need attention", value: v(summary?.needsAttentionCount), note: "Health flag" },
-    { id: "research", label: "Research only", value: v(summary?.researchOnlyCount), note: "No deployment" },
+    { id: "alphas", label: "Alphas", value: v(summary?.alphaCount) },
+    { id: "deployments", label: "Deployments", value: v(summary?.deploymentCount) },
+    { id: "portfolios", label: "Portfolios", value: v(summary?.portfolioCount) },
+    { id: "attention", label: "Need attention", value: v(summary?.needsAttentionCount) },
+    { id: "research", label: "Research only", value: v(summary?.researchOnlyCount) },
   ];
 }
 

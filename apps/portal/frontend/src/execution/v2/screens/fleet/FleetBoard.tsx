@@ -93,7 +93,7 @@ function Column({ column, headingId, selectedKey, hrefFor, onOpen }: {
         </header>
         <p className="exec-fleet-lane-strip">
           <span className="exec-fleet-sr">{gateWords}</span>
-          <span aria-hidden="true">Not published ({BOARD_READINESS.fe})</span>
+          <span aria-hidden="true">Not available</span>
         </p>
       </section>
     );
@@ -106,9 +106,10 @@ function Column({ column, headingId, selectedKey, hrefFor, onOpen }: {
       <header className="exec-fleet-lane-head">
         <h3 id={headingId} className="exec-fleet-lane-title">{column.label}</h3>
         <span className="exec-fleet-lane-count">{n} loaded</span>
-        <span className="exec-fleet-lane-pub">In your scope: {column.published}</span>
+        <span className="exec-fleet-lane-pub" title="Counted over your whole scope, not only the loaded alphas">In your scope: {column.published}</span>
+        {/* Readiness is named once on the toolbar line ("Not available: ... Readiness"); here it stays for assistive tech only. */}
         {sharedGap ? (
-          <span className="exec-fleet-np exec-fleet-lane-gap">Readiness: {notPublished(BOARD_READINESS)} for every alpha here</span>
+          <span className="exec-fleet-sr exec-fleet-lane-gap">Readiness: {notPublished(BOARD_READINESS)} for every alpha here</span>
         ) : null}
       </header>
       {n === 0 ? (
