@@ -141,6 +141,15 @@ const eligibilityBatchRow={...eligibilityRow,required:[...eligibilityRow.require
     {if:{properties:{step_up_required:{const:false}},required:['step_up_required']},then:{properties:{step_up_state:{const:'NOT_REQUIRED'}}}},
     {if:{properties:{step_up_required:{type:'null'}},required:['step_up_required']},then:{properties:{step_up_state:{const:'PLAN_DEPENDENT'}}}},
     {if:{properties:{step_up_required:{const:true}},required:['step_up_required']},then:{properties:{step_up_state:{enum:['REQUIRED','ACTIVE']}}}}]};
+// FE-015/060/068 · step-up proof families. A proof is "this actor re-entered their OWN password in THIS session";
+// it is never a capability. CAPITAL_COMMAND lets a delegated capital actor prove themselves WITHOUT access.grant/revoke.
+const stepUpFamilies=['ACCESS_ADMIN','CAPITAL_COMMAND'];
+const stepUpChallengeOrder=['CAPITAL_COMMAND','ACCESS_ADMIN'];
+const stepUpPreconditions={CAPITAL_COMMAND:'CURRENT_OWN_STEP_UP_ACTION_ALLOW',ACCESS_ADMIN:'CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW'};
+const stepUpChallenge={...obj({family:{enum:stepUpFamilies},mechanism:{const:'PASSWORD_REAUTH'},
+  route:{const:'/api/admin/profile-access/v2/step-up'},precondition:{enum:Object.values(stepUpPreconditions)},precondition_met:{type:'boolean'}}),
+  allOf:stepUpFamilies.map(family=>({if:{properties:{family:{const:family}},required:['family']},
+    then:{properties:{precondition:{const:stepUpPreconditions[family]}}}}))};
 const batchResourceTokenPattern='[A-Z_]{1,16}:(?:[A-Za-z0-9\\-_.!~*\'()]|%[0-9A-F]{2}){1,768}';
 const eligibilityBatchResources={type:'string',minLength:1,maxLength:8192,
   pattern:'^'+batchResourceTokenPattern+'(?:,'+batchResourceTokenPattern+'){0,7}$(?![\\s\\S])',
@@ -180,14 +189,15 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
     allOf:eligibilityTargetRules,
     description:'Current own application permission facts only; action/target-kind compatibility is checked, but target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Unsupported targets are UNAVAILABLE with ACTION_TARGET_UNSUPPORTED, or POLICY_PENDING when the current producer cannot establish policy. Not a permit or TS activation.'},
   AccessEligibilityBatchQuery:eligibilityBatchQuery,AccessEligibilityBatchRow:eligibilityBatchRow,
-  AccessEligibilityBatch:{...obj({schema_version:{const:'portal.self-eligibility-batch.v1'},workspace_id:scopedText,environment,
+  AccessEligibilityBatch:{...obj({schema_version:{const:'portal.self-eligibility-batch.v2'},workspace_id:scopedText,environment,
     current_only:{const:true},advisory_only:{const:true},...projectionTimes,
     session_step_up:{...obj({state:{enum:['ACTIVE','NOT_ACTIVE']},
       valid_until_ms:{...nullable(ms),description:'When THIS session\'s step-up ends, never later than valid_until_ms of this projection (the session ceiling) and greater than observed_at_ms; null when NOT_ACTIVE.'},
-      challenge:obj({mechanism:{const:'PASSWORD_REAUTH'},route:{const:'/api/admin/profile-access/v2/step-up'},
-        precondition:{const:'CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW'},precondition_met:{type:'boolean'}})}),
+      challenges:{type:'array',minItems:2,maxItems:2,items:false,prefixItems:stepUpChallengeOrder.map(family=>({allOf:[
+        stepUpChallenge,{properties:{family:{const:family}},required:['family']}]})),
+        description:'One entry per proof family, fixed order CAPITAL_COMMAND then ACCESS_ADMIN. Each says which precondition POST /step-up enforces for that family (request body field `family`) and whether it holds for the caller now. Either ACTIVE-able proof satisfies the same step-up-requiring rows. Not a promise the password will be accepted.'}}),
       allOf:[{if:{properties:{state:{const:'ACTIVE'}},required:['state']},then:{properties:{valid_until_ms:ms}},else:{properties:{valid_until_ms:{type:'null'}}}}],
-      description:'This session\'s own step-up fact, the one the access/capital mutations recheck, plus whether the build\'s step-up route precondition (a current own ALLOW access.grant or access.revoke) holds for the caller. Not a promise the password will be accepted; no new authentication mechanism.'},
+      description:'This session\'s own step-up fact, the one the capital mutations recheck (a capital-family or an access-admin-family proof, whichever is live), plus, per proof family, whether the step-up route precondition holds for the caller. A capital delegate needs no access.grant/revoke: the CAPITAL_COMMAND precondition is a current own ALLOW of a step-up-requiring action. Not a promise the password will be accepted; no new authentication mechanism and no capability.'},
     results:{type:'array',minItems:1,maxItems:8,items:eligibilityBatchItem}}),
     allOf:[{if:{properties:{session_step_up:{properties:{state:{const:'ACTIVE'}},required:['state']}},required:['session_step_up']},
       then:{properties:{results:{items:{properties:{actions:{items:{properties:{step_up_state:{enum:['NOT_REQUIRED','PLAN_DEPENDENT','ACTIVE']}}}}}}}}},
@@ -212,12 +222,14 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
     after:obj({grant_state:{const:'REVOKED_ON_COMMIT'},effective_access:{const:'CURRENT_POLICY_REEVALUATED'},ts_revocation:{enum:['NOT_CONFIRMED','NOT_REQUIRED']},
       descendants:{const:'CURRENT_CHAIN_RECHECKED'},committed_obligations:{const:'CONTINUE'}}),
     step_up_required:{const:true},advisory_only:{const:true}}),
-  AccessStepUpRequest:obj({workspace_id:text,password:{type:'string',minLength:1,maxLength:256,writeOnly:true}}),
+  AccessStepUpRequest:{...obj({workspace_id:text,password:{type:'string',minLength:1,maxLength:256,writeOnly:true},family:{enum:stepUpFamilies,
+    description:'Proof family; omitted means ACCESS_ADMIN (the historical request, unchanged). CAPITAL_COMMAND needs a current own ALLOW of a step-up-requiring capital / pending-control / registration action and never requires access.grant or access.revoke.'}}),
+    required:['workspace_id','password']},
   AccessReceipt:receipt,AccessResult:obj({schema_version:{const:'portal.access-result.v1'},receipt:ref('AccessReceipt'),replayed:{type:'boolean'}}),
   AccessEffective:effective,AccessPreview:preview,AccessProposal:obj({schema_version:{const:'portal.access-proposal.v1'},proposal_id:text,
     state:{enum:['APP_APPLIED','TS_PENDING','TS_APPLIED','TS_REJECTED','TS_UNKNOWN','REVOKED']},change:ref('AccessChange'),
     submission_receipt:ref('AccessReceipt'),updated_at_ms:ms}),
-  AccessStepUp:obj({schema_version:{const:'portal.access-step-up.v1'},state:{const:'ACTIVE'},expires_at_ms:ms}),
+  AccessStepUp:obj({schema_version:{const:'portal.access-step-up.v1'},state:{const:'ACTIVE'},family:{enum:stepUpFamilies},expires_at_ms:ms}),
   AccessAudit:obj({schema_version:{const:'portal.access-audit.v1'},workspace_id:text,subject_user_id:text,
     items:{type:'array',maxItems:100,items:obj({operation:text,receipt:ref('AccessReceipt'),occurred_at_ms:ms})},
     next_cursor:nullable({type:'string',maxLength:2048}),max_items:{const:100}}),
@@ -311,11 +323,12 @@ const fixtures={lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',cases:[
 ],
 // FE-068: kept apart from `cases` so the pre-existing fixture contract (and its exact type-set assertions) is untouched.
 batch_cases:[false,true].map(active=>({type:'AccessEligibilityBatch',case_name:active?'STEP_UP_ACTIVE':'STEP_UP_REQUIRED_NOT_ACTIVE',value:{
-  schema_version:'portal.self-eligibility-batch.v1',workspace_id:'ws_TEST_ONLY',environment:'paper',current_only:true,advisory_only:true,
+  schema_version:'portal.self-eligibility-batch.v2',workspace_id:'ws_TEST_ONLY',environment:'paper',current_only:true,advisory_only:true,
   observed_at_ms:1792094400000,valid_until_ms:1792094405000,
   session_step_up:{state:active?'ACTIVE':'NOT_ACTIVE',valid_until_ms:active?1792094403000:null,
-    challenge:{mechanism:'PASSWORD_REAUTH',route:'/api/admin/profile-access/v2/step-up',
-      precondition:'CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW',precondition_met:active}},
+    // Delegated-capital-only actor: the capital challenge is available, the access-admin one is not.
+    challenges:stepUpChallengeOrder.map(family=>({family,mechanism:'PASSWORD_REAUTH',route:'/api/admin/profile-access/v2/step-up',
+      precondition:stepUpPreconditions[family],precondition_met:family==='CAPITAL_COMMAND'}))},
   results:[
     {resource:{kind:'PORTFOLIO',id:'portfolio_TEST_ONLY'},actions:[{...sampleEligibilityRow,step_up_state:'NOT_REQUIRED'},
       {...sampleEligibilityRow,action:'capital.top_up',grant_ref:'acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP',step_up_required:true,

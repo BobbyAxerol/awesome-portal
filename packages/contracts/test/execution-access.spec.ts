@@ -308,9 +308,21 @@ describe("ELP2-03 browser intents have no policy, actor or TS authority input", 
       expect(validates("AccessRevokeRequest", revoke), key).toBe(false);
       expect(accessRevoke.safeParse(revoke).success, key).toBe(false);
     }
-    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", expires_at_ms: 1792094400000 })).toBe(true);
-    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", expires_at_ms: 1792094400000,
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", family: "ACCESS_ADMIN", expires_at_ms: 1792094400000 })).toBe(true);
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", family: "CAPITAL_COMMAND", expires_at_ms: 1792094400000 })).toBe(true);
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", expires_at_ms: 1792094400000 })).toBe(false); // family is named
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", family: "OWNER", expires_at_ms: 1792094400000 })).toBe(false);
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", family: "ACCESS_ADMIN", expires_at_ms: 1792094400000,
       password: stepUp.password })).toBe(false);
+  });
+
+  it("FE-015/060/068 the step-up request names an optional proof family; the historical body is unchanged and nothing else is accepted", () => {
+    const base = { workspace_id: "ws_TEST_ONLY", password: "TEST_ONLY_not_a_production_credential" };
+    expect(validates("AccessStepUpRequest", base)).toBe(true); // no family == ACCESS_ADMIN, byte-compatible
+    for (const family of ["ACCESS_ADMIN", "CAPITAL_COMMAND"]) expect(validates("AccessStepUpRequest", { ...base, family }), family).toBe(true);
+    for (const family of ["OWNER", "capital_command", "", null, 1]) expect(validates("AccessStepUpRequest", { ...base, family }), String(family)).toBe(false);
+    expect(spec.components.schemas.AccessStepUpRequest.required).toEqual(["workspace_id", "password"]);
+    expect(spec.components.schemas.AccessStepUpRequest.properties.family.description).toContain("never requires access.grant or access.revoke");
   });
 });
 
@@ -734,9 +746,29 @@ describe("FE-068 batch self-eligibility with a typed step-up state: canonical TE
     }
     expect(spec.components.schemas.AccessEligibilityBatch.properties.session_step_up.properties.valid_until_ms.description).toContain("never later than valid_until_ms");
     parity((() => { const v = base(); v.session_step_up.valid_until_ms = v.observed_at_ms + 1; return v; })(), false); // NOT_ACTIVE with a time
-    parity((() => { const v = base(); v.session_step_up.challenge.mechanism = "TOTP"; return v; })(), false);
-    parity((() => { const v = base(); v.session_step_up.challenge.route = "/api/admin/other"; return v; })(), false);
-    parity((() => { const v = base(); delete v.session_step_up.challenge; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].mechanism = "TOTP"; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].route = "/api/admin/other"; return v; })(), false);
+    parity((() => { const v = base(); delete v.session_step_up.challenges; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenge = v.session_step_up.challenges[0]; return v; })(), false); // v1 key is gone
+  });
+  it("FE-015/060/068 the step-up challenges are one per proof family, in a fixed order, each with its own precondition", () => {
+    const challenges = base().session_step_up.challenges;
+    expect(challenges.map((c: { family: string }) => c.family)).toEqual(["CAPITAL_COMMAND", "ACCESS_ADMIN"]);
+    expect(challenges.map((c: { precondition: string }) => c.precondition)).toEqual(["CURRENT_OWN_STEP_UP_ACTION_ALLOW", "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"]);
+    // A delegated-capital-only actor: capital challenge available, access-admin not. This is the case the old schema could not say.
+    expect(challenges.map((c: { precondition_met: boolean }) => c.precondition_met)).toEqual([true, false]);
+    parity((() => { const v = base(); v.session_step_up.challenges.reverse(); return v; })(), false); // order is part of the contract
+    parity((() => { const v = base(); v.session_step_up.challenges.pop(); return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges.push(structuredClone(v.session_step_up.challenges[0])); return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].precondition = "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"; return v; })(), false); // family <-> precondition
+    parity((() => { const v = base(); v.session_step_up.challenges[1].precondition = "CURRENT_OWN_STEP_UP_ACTION_ALLOW"; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].family = "OWNER"; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].precondition_met = "yes"; return v; })(), false);
+    // Producer invariant (runtime-only: a cross-array rule): an ALLOWED step-up row proves a current own witness, so the
+    // capital challenge cannot say "not met" next to it.
+    const disagree = base(); disagree.session_step_up.challenges[0].precondition_met = false;
+    expect(eligibilityBatchResult.safeParse(disagree).success).toBe(false);
+    expect(eligibilityBatchResult.safeParse(base()).success).toBe(true);
   });
   it("keeps every v1 row and target rule per resource, bounds the batch and keeps keys closed", () => {
     parity((() => { const v = base(); v.results[1].actions[0].permission = "ALLOWED"; return v; })(), false); // unsupported target cannot be ALLOWED

@@ -4,7 +4,7 @@ import { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
 import { retainedReview } from "../execution/retained-read-profile";
 import { OwnerAccessService } from "../auth/owner-access.service";
-import { AccountLifecycleRepository } from "../repos/account-lifecycle";
+import { AccountLifecycleRepository, COMMAND_STEP_UP_PROOFS } from "../repos/account-lifecycle";
 import { CONTROL_API_CONFIG, CONTROL_API_POOL } from "../tokens";
 import { assertGovernanceReadSession } from "./governance.service";
 import { projectStageActionEligibility, type StageActionEligibility } from "./stage-action-eligibility";
@@ -28,8 +28,9 @@ export class StageActionEligibilityService {
   async read(user: PortalUser, session: AuthSession, workspaceId: string): Promise<StageActionEligibility> {
     await assertGovernanceReadSession(this.pool, user, session, workspaceId);
     const access = await this.ownerAccess.effectiveAccess(user.userId);
-    // Same step-up fact the access/capital mutations recheck: THIS session only, never another browser's.
-    const stepUpUntil = await new AccountLifecycleRepository(this.pool).activeStepUpExpiry(session.sessionId);
+    // The step-up fact the command mutations recheck (a capital or an access-admin proof, whichever is live): THIS session only,
+    // never another browser's. No row of this read depends on it (every stage action here is step-up false or undetermined).
+    const stepUpUntil = await new AccountLifecycleRepository(this.pool).activeStepUpExpiry(session.sessionId, COMMAND_STEP_UP_PROOFS);
     const config = this.config;
     const result = projectStageActionEligibility({
       workspace_id: workspaceId, role: user.role, access,
