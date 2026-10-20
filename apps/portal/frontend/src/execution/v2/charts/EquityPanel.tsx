@@ -15,7 +15,7 @@ import { compareDecimal, readChartDecimal, showDecimal, subtractDecimal, toGeome
 import { envelopeCaption, reduceRun, bucketSizeFor, type Envelope } from "./downsample";
 import { EVENT_KIND_TABLE } from "./eventKinds";
 import { CHART_MARGIN, useChartId, useElementWidth } from "./hooks";
-import { buildSeries, domainOfSeries, nearestIndex, runsOf, splitByKind, stepCursor, type KindRun, type SeriesModel } from "./model";
+import { buildSeries, domainOfSeries, nearestIndex, resolveCursor, runsOf, splitByKind, stepCursor, type KindRun, type SeriesModel } from "./model";
 import { areaPath, gapRectsPath, gapSpans, linePath, XAxis, YAxis, type Frame } from "./plotParts";
 import { linear, niceTicks } from "./scale";
 import type { ChartDomain, ChartEvent, ChartSegment, ChartState, FlowPin, SeriesPoint, ServerEnvelope, UtcEpochMs } from "./types";
@@ -135,10 +135,12 @@ export function EquityPanel(props: EquityPanelProps) {
   const id = useChartId("exec-eq");
   const plotRef = useRef<HTMLDivElement | null>(null);
   const W = useElementWidth(plotRef);
-  const [cursor, setCursor] = useState<number | null>(null);
-  const [announce, setAnnounce] = useState("");
+  // The cursor is an INSTANT, not an ordinal (see `resolveCursor`). `say` is true only for a keyboard move; the
+  // live-region text is derived from what is on screen, so a replaced series can never leave a stale sentence.
+  const [cur, setCur] = useState<{ readonly t: number | null; readonly say: boolean }>({ t: null, say: false });
 
   const model = useMemo(() => buildSeries(points, unit, intervalMs), [points, unit, intervalMs]);
+  const times = useMemo(() => model.obs.map((ob) => ob.t), [model]);
   const ghostModel = useMemo(() => (ghost ? buildSeries(ghost.points, unit, intervalMs) : null), [ghost, unit, intervalMs]);
   const ddModel = useMemo(
     () => (drawdown?.kind === "series" ? buildSeries(drawdown.points, "pct", intervalMs) : null),
@@ -210,6 +212,7 @@ export function EquityPanel(props: EquityPanelProps) {
   const timeOf = (t: number) => formatAsOf(t as UtcEpochMs);
 
   // Cursor and readout.
+  const cursor = resolveCursor(times, cur.t);
   const idx = cursor ?? last;
   const o = model.obs[idx];
   const dd = ddModel && sameTime(ddModel, o.t) >= 0 ? ddModel.obs[sameTime(ddModel, o.t)] : null;
@@ -219,14 +222,10 @@ export function EquityPanel(props: EquityPanelProps) {
   const ddText = drawdown === undefined ? null : drawdown.kind === "absent" ? drawdown.copy : dd?.s ? showDecimal(dd.s, { unit: "pct" }) : "No published value at this time";
   const ghostText = ghost === undefined ? null : gh?.s ? show(gh.s) : "No point at this time";
 
-  const moveTo = (next: number | null, announceIt: boolean) => {
-    setCursor(next);
-    if (announceIt) {
-      const at = model.obs[next ?? last];
-      const v = at.s !== null ? show(at.s) : "no published value";
-      setAnnounce(`${timeOf(at.t)}, ${v}`);
-    }
-  };
+  const sayPoint = (at: SeriesModel["obs"][number]) => `${timeOf(at.t)}, ${at.s !== null ? show(at.s) : "no published value"}`;
+  const moveTo = (next: number | null, say: boolean) => setCur({ t: next === null ? null : model.obs[next].t, say });
+  // A keyboard move says the point on screen; Escape says the latest; a cursor released by new data says nothing.
+  const announce = !cur.say ? "" : cur.t === null ? sayPoint(model.obs[last]) : cursor === null ? "" : sayPoint(model.obs[cursor]);
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!["ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End", "Escape"].includes(e.key)) return;
     e.preventDefault();

@@ -16,7 +16,7 @@ import { ChartStateFlags, ChartUnavailable } from "./ChartStateView";
 import { showDecimal } from "./decimal";
 import { bucketSizeFor, envelopeCaption, reduceRun, type Envelope } from "./downsample";
 import { CHART_MARGIN, useChartId, useElementWidth } from "./hooks";
-import { buildSeries, nearestIndex, nearestTimeIndex, runsOf, stepCursor, type SeriesModel } from "./model";
+import { buildSeries, nearestIndex, nearestTimeIndex, resolveCursor, runsOf, stepCursor, type SeriesModel } from "./model";
 import { gapRectsPath, gapSpans, linePath, XAxis, YAxis, type Frame } from "./plotParts";
 import { linear, niceTicks } from "./scale";
 import type { ChartDomain, ChartState, SeriesPoint, UtcEpochMs } from "./types";
@@ -89,8 +89,8 @@ export function CompareOverlay({ label, series, notComparable = [], basis, unit 
   const id = useChartId("exec-cmp");
   const plotRef = useRef<HTMLDivElement | null>(null);
   const W = useElementWidth(plotRef);
-  const [cursor, setCursor] = useState<number | null>(null);
-  const [announce, setAnnounce] = useState("");
+  // The cursor is an INSTANT on the shared timeline, not an ordinal: adding or removing a subject re-indexes the timeline.
+  const [cur, setCur] = useState<{ readonly t: number | null; readonly say: boolean }>({ t: null, say: false });
 
   const built = useMemo(() => series.map((c) => ({ c, model: buildSeries(c.points, unit, intervalMs) })), [series, unit, intervalMs]);
 
@@ -163,19 +163,17 @@ export function CompareOverlay({ label, series, notComparable = [], basis, unit 
   const show = (s: string) => showDecimal(s, { unit, signed, currency });
   const timeOf = (t: number) => formatAsOf(t as UtcEpochMs);
   const latest = timeline.length - 1;
+  const cursor = resolveCursor(timeline, cur.t);
   const at = timeline[cursor ?? latest];
   const valueAt = (p: Plotted, t: number): string | null => {
     const i = nearestIndex(p.model.obs, t);
     return i >= 0 && p.model.obs[i].t === t ? p.model.obs[i].s : null;
   };
 
-  const moveTo = (next: number | null, say: boolean) => {
-    setCursor(next);
-    if (say) {
-      const t = timeline[next ?? latest];
-      setAnnounce(`${timeOf(t)}. ${plotted.map((p) => `${p.c.label} ${valueAt(p, t) ?? "no point"}`).join(". ")}`);
-    }
-  };
+  const sayAt = (t: number) => `${timeOf(t)}. ${plotted.map((p) => `${p.c.label} ${valueAt(p, t) ?? "no point"}`).join(". ")}`;
+  const moveTo = (next: number | null, say: boolean) => setCur({ t: next === null ? null : timeline[next], say });
+  // A keyboard move says the instant on screen; Escape says the latest; a cursor released by new data says nothing.
+  const announce = !cur.say ? "" : cur.t === null ? sayAt(timeline[latest]) : cursor === null ? "" : sayAt(timeline[cursor]);
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!["ArrowLeft", "ArrowRight", "PageUp", "PageDown", "Home", "End", "Escape"].includes(e.key)) return;
     e.preventDefault();
