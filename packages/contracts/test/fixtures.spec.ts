@@ -140,6 +140,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-command-center-snapshot.v1.schema.json",
   "execution-command-catalog.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/CommandCatalogue",
+  "execution-command-catalog.served.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ServedCommandCatalogue",
   "execution-command-tasks.valid.json":
     "https://schemas.primusspark.com/portal/execution-command-tasks.v1.schema.json",
   "execution-command-plan.valid.json":
