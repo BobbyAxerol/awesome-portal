@@ -16,7 +16,6 @@
  */
 import { Link } from "react-router-dom";
 
-import { DockAction } from "../../Drawer";
 import { JourneySpine, SectionPanel, gapTitle, StageChipRow, type StageChips, type StageChipValue } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
@@ -26,7 +25,7 @@ import { AlphaNameLine } from "../stage/AlphaNameLine";
 import { reconciliationChipFrom, runtimeChipFrom } from "../stage/factChips";
 import { portfolioLabel, type StageIdentity } from "../stage/identity";
 import { VenueCalendarLine } from "./Calendar";
-import { GATE_FLAG, exitReviewReason, type DeploymentFacts, type FreshnessFacts, type GateFacts } from "./model";
+import { GATE_FLAG, type DeploymentFacts, type FreshnessFacts, type GateFacts } from "./model";
 import type { VenueCalendar } from "../../../stageFacts";
 
 /** The three chips for a read that has settled. Runtime and Reconciliation are the server's `stage_facts` when the profile carries them. */
@@ -137,7 +136,7 @@ export interface LifecycleProps {
   accessHref: string;
 }
 
-export function LifecyclePanel({ gate, accessHref }: LifecycleProps) {
+export function LifecyclePanel({ gate }: LifecycleProps) {
   const verdict = GATE_FLAG[gate.verdict];
   return (
     <SectionPanel level={2}
@@ -151,9 +150,6 @@ export function LifecyclePanel({ gate, accessHref }: LifecycleProps) {
       <div className="exec-wb-life">
         <div className="exec-wb-spine" title={gapTitle("FE-027/028", "Stage history, gate criteria and decider")}>
           <JourneySpine variant="compact" current="paper" blocked={gate.verdict === "blocked"} label="Deployment lifecycle" />
-        </div>
-        <div className="exec-wb-gate" title={gate.verdict === "none" ? gapTitle("FE-028", "Gate criteria") : undefined}>
-          <DockAction label="Request exit review" reason={exitReviewReason(gate)} accessHref={accessHref} />
         </div>
       </div>
     </SectionPanel>
