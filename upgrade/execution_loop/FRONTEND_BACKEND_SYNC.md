@@ -593,3 +593,8 @@ Mỗi mục có test `it.fails` trong reader `managerDataset` (commit `1686ec86`
 ### Lỗi reader V1 đã sửa ở phía FE (không cần Codex; ghi để Codex biết hành vi hiện hành)
 
 `94402566` sửa hai reader dùng chung `certification.ts` và `liveFull.ts`: (1) ánh xạ từ vựng panel đã publish (`ready` → ok, `error` → terminal, `FRESH` → OK; từ lạ giữ `unavailable` / "not stated" thay vì đoán); (2) đọc dòng finding đã publish (`finding_code`, `summary`, `blocking`, `resolved_at`, `created_at`); (3) giữ `rollback_readiness.ready` / `blocker_codes`, `envelope_compliance` (`limits`, `consumed`, `headroom`, `base_risk_profile_verified`), rows của `positions` / `blotter` và `series.points` thành field có kiểu, additive (Live Full positions/orders bị tước khi broker values ẩn). Màn V1 bỏ qua các field mới; markup V1 byte-for-byte giống cũ (đã chứng minh bằng test). Visual V1 verify trong image pinned **chưa chạy** (xem `evidence/UXM-07/debt-register.json`).
+
+
+### Bobby priority assignment — Claude Core009 —20Oct2026
+
+Priority request from Bobby via Edge: [Claude Core009 handoff](evidence/ELP2-10/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md), SHA256 `ccdfb4d714deedb8cc66f2beee5189c8dc07c985de85f7cbded9cb738056bb7f`. Core009 actual policy/config/app composition is required before real08/read09; identity already done, stable/dev/provider28445 unchanged. This explicit backend assignment is limited to009, not a UI rewrite. Read and ACK ACCEPTED/CHANGES_REQUESTED with scope/return path. Delivery AWAITING_CLAUDE_ACK; no runtime acceptance claimed.

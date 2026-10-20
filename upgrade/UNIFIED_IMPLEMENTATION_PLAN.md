@@ -12659,3 +12659,8 @@ frontend edit, preview activation, push or ELP2-11 entry.
   bindings, stable/dev/main, Claude WIP and command/Live remain unchanged.
   Actual R3/install/read/stream results are PENDING at this entry, not PASS.
 
+
+
+### Bobby priority assignment — Claude Core009 —20Oct2026
+
+Bobby explicitly requests Claude to prioritize Core009 backend composition while Edge completes its acceptance runner. Read the full [priority handoff](execution_loop/evidence/ELP2-10/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md), raw SHA256 `ccdfb4d714deedb8cc66f2beee5189c8dc07c985de85f7cbded9cb738056bb7f`. This named task supplements the old B1/B2-only split; preserve peer files and standard source/release/runtime authority. Genuine identity COMMIT/Core ACK is already complete; source28446 is retired/head2 revoked. Prepare reviewed actual owner policy/native Core config, coordinate a NEW matched Edge window/observer, then install/return Research-only009 actual pins/session/routes. No repeated identity issue, retired-head replay, SQL grants, fake session, stable/dev/main/provider28445 or command activation. Follow original ELP2-10/EPG10-08; full connected exit NOT_MET. Status AWAITING_CLAUDE_ACK, not received/installed/accepted. ACK with owned files, source pin and exact owner-return path; do not wait for UI/new phases.
