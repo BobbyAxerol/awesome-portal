@@ -8,7 +8,10 @@
  * its request ids, in the place the figure will go, so the structure of the
  * page is already the final one:
  *
- * - NAV, windowed Net PnL, Return and Drawdown: Not published (FE-005/006/013/025);
+ * - NAV (FE-013): the fund's published NAV series through `getManagerSeries` (BE-P4). AVAILABLE draws the line and the KPI is
+ *   its latest point, exact, with the methodology and window; EMPTY says "No points in this window"; UNAVAILABLE prints the
+ *   typed reason (a source that is not published keeps `Not published (FE-005/006/013/025)`). Nothing is computed here;
+ * - windowed Net PnL, Return and Drawdown: Not published (FE-005/006/013/025);
  * - the capital block (Initial, Added, Returned, NAV, budget): Not published (FE-017);
  * - "Since your last visit": Not published (FE-024);
  * - Contributors: Not published (FE-025).
@@ -32,7 +35,7 @@
  *
  * No URL state beyond the shared context params. Links carry them (`withContext`).
  */
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { useSession } from "../../../../auth/session";
@@ -45,16 +48,20 @@ import type { SseFactory } from "../../../sse";
 import { utcStamp } from "../../../time";
 import { SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { DivBars, EquityPanel } from "../../charts";
+import { DivBars, showDecimal } from "../../charts";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
-import { isInternalPath, withContext } from "../../urlState";
+import { isInternalPath, useExecUrlState, withContext } from "../../urlState";
 import {
   FE_CAPITAL, FE_CONTRIBUTORS, FE_DIGEST, FE_MONEY, FE_RESEARCHER, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
   needsAttention, openIncidents, ownRows, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact, type OwnRow,
 } from "./overviewModel";
+import type { ManagerSeriesQuery } from "../../readers/managerSeries";
+import { ManagerSeriesPanel } from "../series/ManagerSeriesPanel";
+import { chartUnit, isDescribed, latestPoint, UNAVAILABLE_SENTENCE } from "../series/seriesModel";
+import { useManagerSeries, type SeriesReadState } from "../series/useManagerSeries";
 import { MeasureSeg } from "./MeasureSeg";
 import { useOverviewReads } from "./useOverviewReads";
 
@@ -80,6 +87,31 @@ function Gap({ ids, children }: { ids: string; children?: string }) {
     <span className="exec-blk-np">
       <span className="exec-blk-np-word">Not published</span> (<span className="exec-ov-nowrap">{ids}</span>){children ? <> {children}</> : null}
     </span>
+  );
+}
+
+/**
+ * The NAV cell: the latest point of the fund's published NAV series, exactly as sent, with when it is from and the
+ * methodology. No point is `No points in this window`; a series that is not published (or a read that has not answered) keeps
+ * the request ids; any other typed reason is printed with its code. Never a derived or defaulted number.
+ */
+function NavCell({ read, window }: { read: SeriesReadState; window: string }) {
+  const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+  const entry = series?.series[0];
+  if (series === null || entry === undefined || (entry.state === "UNAVAILABLE" && entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED")) {
+    return <Cell label="NAV" note="Needs a published series"><Gap ids={FE_MONEY} /></Cell>;
+  }
+  if (entry.state === "UNAVAILABLE") {
+    return <Cell label="NAV" note={`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`}><span className="exec-ov-na">Not available</span></Cell>;
+  }
+  if (!isDescribed(entry)) return null;
+  const last = latestPoint(entry);
+  if (last === null) return <Cell label="NAV" note={`Methodology ${entry.methodologyRef}, window ${window}`}><span className="exec-ov-na">No points in this window</span></Cell>;
+  const shown = showDecimal(last.exact, { unit: chartUnit(entry), currency: entry.currency ?? undefined });
+  return (
+    <Cell label="NAV" note={`Latest published point, ${utcStamp(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>
+      <span className="exec-ov-num" title={last.exact}>{shown}</span>
+    </Cell>
   );
 }
 
@@ -132,6 +164,16 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   // says "Not published" costs nothing. A READY session without any fund-wide read gets "Your alphas".
   const fundWide = caps === null || holds(caps, { anyOf: [V2_CAPABILITY.portfoliosRead, V2_CAPABILITY.accountsRead, V2_CAPABILITY.operationsRead] });
   const reads = useOverviewReads(api, workspaceId, sseFactory, fundWide);
+  // FE-013: the fund's NAV series for the URL's environment and window, through the port. One read on open and on Refresh
+  // (the series is a current-only snapshot; it does not ride the 15 s composition tick).
+  const url = useExecUrlState();
+  const [seriesNonce, setSeriesNonce] = useState(0);
+  const navQuery = useMemo<ManagerSeriesQuery>(
+    () => ({ environment: url.value.env, metric: "NAV", window: url.value.window, subjects: [{ subjectType: "FUND" }], ...(workspaceId ? { workspaceId } : {}) }),
+    [url.value.env, url.value.window, workspaceId],
+  );
+  const nav = useManagerSeries(api, fundWide, navQuery, seriesNonce);
+  const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
   // Same fact as the heading below: only a READY session without any fund-wide read is narrowed; unknown access states nothing.
   useContextFacts({ scope: fundWide ? undefined : "Scope: Your alphas" });
 
@@ -225,7 +267,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
           {fundWide ? <Flag kind={flag.kind} label={mode === "busy" ? `Busy, ${needs?.items.length ?? 0} ranked` : flag.label} size="sm" /> : null}
           {fundWide ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           <span className="exec-ov-meta">{composition?.readAt ? `Read ${utcStamp(composition.readAt)}` : "Read time not published"}</span>
-          <button type="button" className="exec-ov-btn" onClick={reads.reload}>Refresh</button>
+          <button type="button" className="exec-ov-btn" onClick={refresh}>Refresh</button>
         </div>
       </header>
 
@@ -250,7 +292,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
       {fundWide ? (
         <>
           <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 6 } as CSSProperties}>
-            <Cell label="NAV" note="Needs a published series"><Gap ids={FE_MONEY} /></Cell>
+            <NavCell read={nav} window={url.value.window} />
             <Cell label="Net PnL" note="Windowed"><Gap ids={FE_MONEY} /></Cell>
             <Cell label="Return" note="Windowed"><Gap ids={FE_MONEY} /></Cell>
             <Cell label="Drawdown" note="Needs a NAV series"><Gap ids={FE_MONEY} /></Cell>
@@ -267,12 +309,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
 
           <div className="exec-ov-grid2">
             <SectionPanel title="Performance" lead={<MeasureSeg />} aside={<>Window: <Gap ids="FE-025" /></>}>
-              <EquityPanel
-                label="Fund performance"
-                points={[]}
-                state={{ kind: "unavailable", copy: `Not published (${FE_MONEY})`, reason: "No fund-level series is published, and none is drawn from client arithmetic." }}
-                height={240}
-              />
+              <ManagerSeriesPanel label="Fund performance" read={nav} gapCopy={`Not published (${FE_MONEY})`} />
             </SectionPanel>
             <SectionPanel title="Capital" aside="Real-funded">
               <table className="exec-ov-cap" aria-label="Capital">

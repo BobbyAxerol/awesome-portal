@@ -471,6 +471,24 @@ export interface ManagerSeriesQuery {
   workspaceId?: string;
 }
 
+/**
+ * Whether a series body answers THE QUESTION ASKED: same environment and metric, the requested window, and one entry per
+ * requested subject in request order (a portfolio entry names the portfolio asked for; the fund's own id is the workspace's and
+ * is not known here). A body for another subject or window must never be drawn as this one: the caller fails closed.
+ */
+export function seriesAnswersQuery(series: ManagerSeries, query: ManagerSeriesQuery): boolean {
+  if (series.environment !== query.environment || series.metric !== query.metric || series.series.length !== query.subjects.length) return false;
+  const window = series.selectedWindow;
+  if (typeof query.window === "string") {
+    if (window.requested !== query.window) return false;
+  } else if (window.kind !== "window" || typeof window.requested === "string" || window.requested.fromMs !== query.window.fromMs || window.requested.toMs !== query.window.toMs) return false;
+  if (query.workspaceId !== undefined && series.workspaceId !== query.workspaceId) return false;
+  return query.subjects.every((asked, index) => {
+    const got = series.series[index]!.subject;
+    return asked.subjectType === got.subjectType && (asked.subjectType === "FUND" || asked.subjectId === got.subjectId);
+  });
+}
+
 /** The three JSON-encoded query values of the OpenAPI (`subjects`, `window`, `economic_partition`) and the plain ones. */
 export function encodeManagerSeriesQuery(query: ManagerSeriesQuery): Record<string, string> | null {
   const subjects = query.subjects;

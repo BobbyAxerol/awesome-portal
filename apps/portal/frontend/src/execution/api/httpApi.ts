@@ -65,7 +65,7 @@ import { readAlphaActivity, readDeploymentQuality, readPortfolioCapital, readSou
 import { marketCandlesPath, readMarketCandles, type MarketCandlesPayload, type MarketCandlesQuery } from "./marketCandles";
 import { marketContextCandlesPath, readMarketContextCandles, type MarketContextCandles, type MarketContextQuery } from "./marketContext";
 import { readRelationPage, relationPagePath, type RelationPage, type RelationPageQuery } from "./managerRelations";
-import { encodeManagerSeriesQuery, readManagerSeries, type ManagerSeries, type ManagerSeriesQuery } from "../v2/readers/managerSeries";
+import { encodeManagerSeriesQuery, readManagerSeries, seriesAnswersQuery, type ManagerSeries, type ManagerSeriesQuery } from "../v2/readers/managerSeries";
 import { observedTimelinePath, readObservedTimeline, type ObservedTimeline, type ObservedTimelineQuery } from "./observedTimeline";
 import { readSubjectActivity, subjectActivityPath, type SubjectActivityPage, type SubjectActivityQuery } from "./subjectActivity";
 import {
@@ -601,7 +601,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     if (wire === null) return Promise.resolve(unavailable("The series request was not valid (1 to 4 distinct subjects and a readable window), so it was not sent."));
     return readGet(
       `/manager/series?${new URLSearchParams(wire).toString()}`,
-      (raw) => { const read = readManagerSeries(raw); return read !== null && read.kind === "series" ? read.series : null; },
+      (raw) => { const read = readManagerSeries(raw); return read !== null && read.kind === "series" && seriesAnswersQuery(read.series, query) ? read.series : null; },
       "The Manager series",
     );
   };

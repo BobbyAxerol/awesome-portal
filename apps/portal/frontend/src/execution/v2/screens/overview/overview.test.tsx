@@ -14,13 +14,18 @@ import type { ExecutionApi } from "../../../api/ports";
 import type { SseLike } from "../../../sse";
 import { httpApi, serveDoubles, type Call } from "../../../../../e2e/screensV2Harness";
 import { useContextFactsValue } from "../../shell/contextFacts";
+import { newSeriesDouble, wrapFetch, type SeriesDoubleState } from "../series/seriesDouble.testbase";
 import OverviewScreen, { OVERVIEW_SCREEN_KEY } from "./index";
 
 let calls: Call[] = [];
+/** FE-013: the series route is the BFF double's too. By default the backend answers as it does today: no series source is published. */
+let series: SeriesDoubleState = newSeriesDouble("unavailable");
 beforeEach(() => {
   resetOverviewDouble();
   setOverviewDoubleVariants({ fleet: "multi-currency" });
   calls = serveDoubles();
+  series = newSeriesDouble("unavailable");
+  vi.stubGlobal("fetch", wrapFetch(globalThis.fetch, series));
 });
 afterEach(() => {
   cleanup();
@@ -552,5 +557,100 @@ describe("links (#7, M11, D9)", () => {
     mount({ accessHref: "/administration/profile-access" }, down);
     await screen.findByText(/PORTAL_READ_FAILED/);
     expect(screen.queryByRole("link", { name: "See what you can access" })).toBeNull();
+  });
+});
+
+describe("the fund NAV series (FE-013, BE-P4 manager series)", () => {
+  const performance = () => panel("Performance");
+  const navCell = () => kpi("NAV").querySelector(".exec-blk-kpi-value")!.textContent;
+  const mountWith = async (variant: Parameters<typeof newSeriesDouble>[0], entry = "/execution") => {
+    series.variant = variant!;
+    mount({}, httpApi(), entry);
+    await loaded();
+    await waitFor(() => expect(series.calls.length).toBeGreaterThan(0));
+  };
+
+  it("asks for the FUND's NAV over the URL's environment and window, once, through the port", async () => {
+    await mountWith("unavailable", "/execution?env=paper&window=30d");
+    expect(series.calls).toEqual([{ environment: "paper", metric: "NAV", subjects: [{ subject_type: "FUND" }], window: "30D", partition: null }]);
+  });
+
+  it("defaults to the shell's environment and window and passes the workspace the screen was given", async () => {
+    series.variant = "unavailable";
+    mount({ workspaceId: "ws_9" });
+    await loaded();
+    await waitFor(() => expect(series.calls).toHaveLength(1));
+    expect(series.calls[0]).toMatchObject({ environment: "live", window: "90D" });
+  });
+
+  it("AVAILABLE draws the line, prints the latest point exactly, and captions the methodology and the exact window", async () => {
+    await mountWith("populated", "/execution?env=paper&window=30d");
+    await waitFor(() => expect(performance().querySelector("[data-testid='series-caption']")).not.toBeNull());
+    const caption = performance().querySelector("[data-testid='series-caption']")!.textContent!;
+    expect(caption).toContain("methodology TEST_ONLY:nav-twr.v1");
+    expect(caption).toContain("NAV in USDT");
+    expect(caption).toMatch(/window .* to .* \(UTC\)/);
+    expect(performance().querySelector("svg")).not.toBeNull();
+    expect(performance().querySelector(".exec-ser")!.textContent).not.toContain("Not published");
+    // The KPI is the last published point, as the server sent it (the title carries the full string), never a derived NAV.
+    const populated = JSON.parse(JSON.stringify(series.calls));
+    expect(populated).toHaveLength(1);
+    const last = kpi("NAV").querySelector(".exec-ov-num");
+    expect(last).not.toBeNull();
+    expect(last!.getAttribute("title")).toMatch(/^-?\d+(\.\d+)?$/);
+    expect(kpi("NAV").textContent).toContain("Latest published point");
+    expect(kpi("NAV").textContent).toContain("methodology TEST_ONLY:nav-twr.v1");
+    // The other money cells stay what they were: windowed figures are not this series.
+    for (const label of ["Net PnL", "Return", "Drawdown"]) expect(kpi(label).querySelector(".exec-blk-kpi-value")?.textContent, label).toBe(MONEY_GAP);
+  });
+
+  it("EMPTY says 'No points in this window' (not a zero line, not a number) and still names the methodology", async () => {
+    await mountWith("empty");
+    await waitFor(() => expect(performance().querySelector("[data-testid='series-empty']")).not.toBeNull());
+    expect(performance().querySelector("[data-testid='series-empty']")!.textContent).toBe("No points in this window");
+    expect(performance().querySelector("svg")).toBeNull();
+    expect(navCell()).toBe("No points in this window");
+    expect(kpi("NAV").textContent).toContain("Methodology TEST_ONLY:nav-twr.v1");
+    expect(kpi("NAV").textContent).not.toMatch(/\b0(\.0+)?\b/);
+  });
+
+  it("UNAVAILABLE with no published source keeps the request ids and prints the typed reason", async () => {
+    await mountWith("unavailable");
+    await waitFor(() => expect(performance().textContent).toContain("SERIES_SOURCE_NOT_PUBLISHED"));
+    expect(performance().textContent).toContain(MONEY_GAP);
+    expect(navCell()).toBe(MONEY_GAP);
+    expect(performance().querySelector("svg path.exec-c2-line, svg path[data-main]")).toBeNull();
+  });
+
+  it("UNAVAILABLE for a window that is not a window: ALL prints its own typed reason, in the chart and in the KPI", async () => {
+    await mountWith("populated", "/execution?window=all");
+    await waitFor(() => expect(performance().textContent).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED"));
+    expect(performance().textContent).toContain("All history is not a published window");
+    expect(performance().textContent).toContain("Not available");
+    expect(kpi("NAV").textContent).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED");
+    expect(navCell()).toBe("Not available");
+  });
+
+  it.each(["status:400", "status:404", "status:503", "garbage"] as const)("a failed series read (%s) is a typed 'Not available', never a flat line, and the rest of the page stands", async (variant) => {
+    await mountWith(variant);
+    await waitFor(() => expect(performance().textContent).toContain("The series could not be read"));
+    expect(performance().textContent).toContain("Not available");
+    expect(performance().querySelector("svg path[data-main]")).toBeNull();
+    expect(navCell()).toBe(MONEY_GAP);
+    expect(screen.getByRole("region", { name: "Needs attention" })).toBeTruthy();
+  });
+
+  it("Refresh asks the series again", async () => {
+    await mountWith("unavailable");
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    await waitFor(() => expect(series.calls.length).toBe(2));
+  });
+
+  it("a caller with no fund-wide read asks for no fund series", async () => {
+    series.variant = "populated";
+    mount({ capabilities: new Set(["governance.r1.read"]) });
+    await screen.findByRole("heading", { name: /^Your alphas/ });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(series.calls).toEqual([]);
   });
 });
