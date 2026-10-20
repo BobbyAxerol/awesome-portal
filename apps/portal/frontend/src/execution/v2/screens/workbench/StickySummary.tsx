@@ -7,7 +7,7 @@
  */
 import { Link } from "react-router-dom";
 
-import { NotPublished } from "../../blocks";
+import { ChipBody, type StageChips } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import type { FreshnessFacts } from "./model";
@@ -15,22 +15,24 @@ import type { FreshnessFacts } from "./model";
 export interface StickySummaryProps {
   name: string;
   freshness: FreshnessFacts;
-  /** `Alpha` target; absent when the deployment names no alpha. */
+  /** The header's chips: the summary prints the same Runtime and Reconciliation words, never its own. */
+  chips: StageChips;
+  /** `Alpha` target; absent unless the profile published `alpha_id`. */
   alphaHref: string | null;
 }
 
-export function StickySummary({ name, freshness, alphaHref }: StickySummaryProps) {
+export function StickySummary({ name, freshness, chips, alphaHref }: StickySummaryProps) {
   const kind = freshness.kind === "fresh" ? "ok" : freshness.kind === "stale" || freshness.kind === "aging" ? "stale" : freshness.kind === "paused" ? "paused" : "unknown";
   return (
     <aside className="exec-wb-mini" aria-label="Deployment summary">
       <span className="exec-wb-mini-cap">Deployment state</span>
       <b className="exec-wb-mini-name">{name} · Paper monitor</b>
-      <span className="exec-wb-mini-item">Runtime <NotPublished id="FE-067" /></span>
+      <span className="exec-wb-mini-item">Runtime <ChipBody value={chips.runtime} /></span>
       <span className="exec-wb-mini-item">
         <Flag kind={kind} label={freshness.label} size="sm" />
         {freshness.asOfMs === null ? null : <span className="exec-wb-why">As of {formatAsOf(freshness.asOfMs)}</span>}
       </span>
-      <span className="exec-wb-mini-item">Reconciliation <NotPublished id="FE-067" /></span>
+      <span className="exec-wb-mini-item">Reconciliation <ChipBody value={chips.reconciliation} /></span>
       {alphaHref ? <Link className="exec-blk-link" to={alphaHref}>← Alpha</Link> : null}
     </aside>
   );

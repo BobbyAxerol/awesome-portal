@@ -20,6 +20,7 @@ import { Kpi, KpiStrip, NotPublished, PanelGate, SectionPanel } from "../../bloc
 import { formatAsOf } from "../../boundary";
 import { EquityPanel } from "../../charts";
 import { At, Fig, Na } from "./cells";
+import { VenueCalendarPanel } from "./Calendar";
 import { ExitGatePanel } from "./ExitGatePanel";
 import { PAGE_CAP, humanize, readQuality, type AccountingFacts, type Figure, type WorkbenchModel } from "./model";
 import type { ReadState } from "./useWorkbenchReads";
@@ -201,6 +202,7 @@ function ExecutionQuality({ quality, notQualified }: { quality: ReadState<Deploy
 export function OverviewTab({ model, quality, exitReviewsHref, notQualified = false }: OverviewTabProps) {
   return (
     <div className="exec-wb-stack">
+      {model.calendar === null ? null : <VenueCalendarPanel calendar={model.calendar} />}
       <div className="exec-wb-grid2">
         <EquityBlock model={model} />
         <div id="exec-wb-evidence">

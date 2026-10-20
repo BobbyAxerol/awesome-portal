@@ -17,7 +17,7 @@ import { V2_CAPABILITY, V2_ROLE_PRESETS } from "../../shell/roleNav";
 import { ABSENT, dimension, dimensionOf, pairwise, type Draft } from "../../testkit/matrix";
 import PaperWorkbenchScreen, { WORKBENCH_SCREEN_KEY, type PaperWorkbenchScreenProps } from "./index";
 import {
-  ACCOUNT, DEP, PORTFOLIO, STRATEGY, deferred, envelopeOf, fail, fakeApi, paperWire, qualityOf, qualityWire, sessionOf, type Fake, type FakeOptions, type Wire,
+  ACCOUNT, ALPHA_ID, DEP, PORTFOLIO, PORTFOLIO_NAME, STRATEGY, deferred, envelopeOf, fail, fakeApi, paperWire, qualityOf, qualityWire, sessionOf, type Fake, type FakeOptions, type Wire,
 } from "./workbench.harness.fixtures";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
@@ -83,8 +83,35 @@ describe("screen contract", () => {
     const h1 = await ready();
     expect(h1.textContent).toContain("Paper");
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(text()).toContain("Names: Not published (FE-066)");
+    // No identity keys in this profile: the alpha name is Not published (FE-066), no alpha id is shown, and the strategy id is NOT linked as an alpha.
+    expect(text()).toContain("Alpha name");
+    expect(text()).toContain("Not published (FE-066)");
+    expect(screen.queryByRole("link", { name: STRATEGY })).toBeNull();
+    expect(screen.queryByRole("link", { name: "← Alpha" })).toBeNull();
     expect(text()).toContain("Tracking approved evidence? Ready to leave Paper?");
+  });
+
+  it("identity published (FE-066, S3-U5): the Alpha is linked by alpha_id, never by the strategy id; the portfolio shows its name; the alpha name stays Not published with its reason", async () => {
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ identity: true })) } });
+    await ready();
+    expect(screen.getAllByRole("link", { name: "← Alpha" })[0]!.getAttribute("href")).toBe(`/deployments/alphas/${ALPHA_ID}`);
+    expect(screen.getByRole("link", { name: STRATEGY }).getAttribute("href")).toBe(`/deployments/alphas/${ALPHA_ID}`);
+    expect(document.querySelector(`a[href="/deployments/alphas/${STRATEGY}"]`)).toBeNull();
+    expect(screen.getByRole("link", { name: PORTFOLIO_NAME }).getAttribute("href")).toBe(`/deployments/portfolios/${PORTFOLIO}`);
+    expect(screen.queryByRole("link", { name: PORTFOLIO })).toBeNull();
+    expect(text()).toContain(`Alpha ${ALPHA_ID}`);
+    const gap = Array.from(document.querySelectorAll(".exec-wb-head .exec-blk-np")).find((n) => (n.textContent ?? "").includes("Alpha name"))!;
+    expect(gap.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+  });
+
+  it("identity keys that break the schema's rules (a name without its id; some of the five missing) are refused whole: no link, no name", async () => {
+    const wire = paperWire({ identity: true });
+    delete wire.data.deployment.portfolio_name_reason_code;
+    mount({ profile: { ok: true, value: envelopeOf(wire) } });
+    await ready();
+    expect(screen.queryByRole("link", { name: "← Alpha" })).toBeNull();
+    expect(screen.queryByRole("link", { name: PORTFOLIO_NAME })).toBeNull();
+    expect(screen.getByRole("link", { name: PORTFOLIO })).toBeTruthy();
   });
 
   it("opens on a read-scoped api so leaving the screen cancels the read", async () => {
@@ -529,8 +556,51 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(screen.queryByRole("table", { name: /Sessions/ })?.getAttribute("aria-label")).not.toBe("Sessions rows");
     const panel = screen.getByRole("heading", { name: "Sessions" }).closest("section")!;
     expect(panel.textContent).toContain("Not published (FE-067)");
+    // The reason the server gave rides in the title.
+    expect(panel.querySelector(".exec-blk-np")!.getAttribute("title")).toContain("PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN");
     await waitFor(() => expect(within(panel).getByRole("row", { name: /Sessions counted/ }).textContent).toContain("1"));
-    expect(within(panel).getAllByRole("row")).toHaveLength(2);
+    expect(within(panel).getAllByRole("row")).toHaveLength(1);
+  });
+
+  it("Sessions (stage_facts published): the rows newest first with the source's own state word, the open one without a completion time; the chips carry the runtime and the findings", async () => {
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ stageFacts: "published" })) } });
+    await ready();
+    expect(chip("runtime").textContent).toContain("Running");
+    expect(chip("runtime").textContent).toContain("since 12 Oct 08:00Z");
+    expect(chip("reconciliation").textContent).toContain("1 open finding");
+    expect(chip("reconciliation").textContent).toContain("1 unknown order");
+    await openTab("Sessions");
+    const table = screen.getByRole("table", { name: "Sessions" });
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+    expect(rows.map((r) => r.querySelector('td[data-l="Session"]')!.textContent)).toEqual(["session_TEST_ONLY_2", "session_TEST_ONLY_1"]);
+    expect(rows[0]!.textContent).toContain("No completion time");
+    expect(rows[0]!.querySelector('td[data-l="State"]')!.textContent).toBe("Running");
+    expect(rows[1]!.querySelector('td[data-l="State"]')!.textContent).toBe("Completed");
+    expect(screen.getByTestId("Sessions-cap").textContent).toBe("2 sessions, newest first");
+  });
+
+  it("Positions (positions_by_side published): Long, Short and Gross as the server wrote them; notional by side stays Not published; a partial block says what it left out", async () => {
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ sides: "available" })) } });
+    await ready();
+    await openTab("Positions");
+    const table = screen.getByRole("table", { name: "Long, Short and Gross by instrument" });
+    const first = Array.from(table.querySelectorAll("tbody tr"))[0]!;
+    expect(Array.from(first.querySelectorAll("td")).map((td) => td.textContent)).toEqual(["BTCUSDT", "0.91", "0.52", "1.43", "2"]);
+    expect(Array.from(table.querySelectorAll("tbody tr"))[1]!.querySelector('td[data-l="Short"]')!.textContent).toBe("0");
+    expect(text()).toContain("Not counted: 1 flat, 1 closed.");
+    expect(text()).toContain("Notional by side: Not published (FE-051)");
+    expect(text()).not.toContain("Long, Short and Gross columns: Not published (FE-051)");
+    cleanup();
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ sides: "partial" })) } });
+    await ready();
+    await openTab("Positions");
+    expect(text()).toContain("Not counted: 2 not classified, 1 without an instrument.");
+    cleanup();
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ sides: "unavailable" })) } });
+    await ready();
+    await openTab("Positions");
+    expect(text()).toContain("Long, Short and Gross columns: Not published (FE-051)");
+    expect(screen.queryByRole("table", { name: "Long, Short and Gross by instrument" })).toBeNull();
   });
 
   it("prints no dash and no N/A anywhere on any tab", async () => {
@@ -545,13 +615,13 @@ describe("Orders, Fills, Positions, Sessions", () => {
 });
 
 describe("roles: the capability set decides, never a role name", () => {
-  it("a manager sees the Account links and the portfolio and alpha links", async () => {
-    mount();
+  it("a manager sees the Account links and the portfolio and alpha links (the alpha link needs a published alpha_id)", async () => {
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ identity: true })) } });
     await ready();
     expect(screen.getAllByRole("link", { name: "Account" })).toHaveLength(1);
     expect(screen.getByRole("link", { name: ACCOUNT }).getAttribute("href")).toBe(`/deployments/accounts/${ACCOUNT}`);
-    expect(screen.getByRole("link", { name: PORTFOLIO }).getAttribute("href")).toBe(`/deployments/portfolios/${PORTFOLIO}`);
-    expect(screen.getAllByRole("link", { name: STRATEGY })[0].getAttribute("href")).toBe(`/deployments/alphas/${STRATEGY}`);
+    expect(screen.getByRole("link", { name: PORTFOLIO_NAME }).getAttribute("href")).toBe(`/deployments/portfolios/${PORTFOLIO}`);
+    expect(screen.getAllByRole("link", { name: STRATEGY })[0].getAttribute("href")).toBe(`/deployments/alphas/${ALPHA_ID}`);
     expect(text()).not.toContain("Account not available");
   });
 
@@ -583,8 +653,12 @@ describe("roles: the capability set decides, never a role name", () => {
 });
 
 describe("the On scroll summary bar", () => {
-  it("is a named region with the deployment, the same states as the header and a way back to the alpha", async () => {
+  it("is a named region with the deployment, the same states as the header and a way back to the alpha (only when alpha_id is published)", async () => {
     mount();
+    await ready();
+    expect(screen.queryByRole("link", { name: "← Alpha" })).toBeNull();
+    cleanup();
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ identity: true })) } });
     await ready();
     const bar = screen.getByRole("complementary", { name: "Deployment summary" });
     expect(bar.textContent).toContain("Deployment state");
@@ -593,7 +667,7 @@ describe("the On scroll summary bar", () => {
     expect(bar.textContent).toContain("Runtime Not published (FE-067)");
     expect(bar.textContent).toContain("Reconciliation Not published (FE-067)");
     expect(bar.textContent).toContain("As of 17 Oct 09:14Z");
-    expect(within(bar).getByRole("link", { name: "← Alpha" }).getAttribute("href")).toBe(`/deployments/alphas/${STRATEGY}`);
+    expect(within(bar).getByRole("link", { name: "← Alpha" }).getAttribute("href")).toBe(`/deployments/alphas/${ALPHA_ID}`);
   });
 
   it("is pinned on a wide screen and static at phone width, where it would cover the cards it repeats", () => {

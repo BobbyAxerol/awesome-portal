@@ -3,10 +3,11 @@
  * tag, the three state chips, and the lifecycle panel (hi-fi `deployment.html`).
  *
  * Honesty (S3 plan D13):
- *   - the title is the strategy id: the profile publishes ids, not names (FE-066);
- *   - Runtime and Reconciliation are `Not published (FE-067)`; the source's own
- *     `active` flag rides beside Runtime as "Source flag: active" and never
- *     draws a green "Running";
+ *   - the title is the strategy id; the Alpha is linked ONLY when the profile published `alpha_id`
+ *     (FE-066, never promoted from the strategy id), and a name is printed only when it was published;
+ *   - Runtime and Reconciliation come from `stage_facts` (FE-067): a closed runtime word, or `Not published (FE-067)`
+ *     with the server's reason in the title; the source's own `active` flag rides beside Runtime as
+ *     "Source flag: active" and never draws a green "Running";
  *   - Display freshness is the source's word and its as-of, never an age;
  *   - the spine marks only the current stage (Paper) and never draws R1 or R2
  *     "done": the lifecycle history is FE-027/028;
@@ -16,13 +17,20 @@
 import { Link } from "react-router-dom";
 
 import { DockAction } from "../../Drawer";
-import { JourneySpine, NotPublished, SectionPanel, StageChipRow, type StageChips } from "../../blocks";
+import { JourneySpine, NotPublished, SectionPanel, StageChipRow, type StageChips, type StageChipValue } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
+import { reconciliationFactOf, runtimeFactOf } from "../../readers/stageFactViews";
+import type { StageFacts } from "../../../stageFacts";
+import { AlphaNameLine } from "../stage/AlphaNameLine";
+import { reconciliationChipFrom, runtimeChipFrom } from "../stage/factChips";
+import { portfolioLabel, type StageIdentity } from "../stage/identity";
+import { VenueCalendarLine } from "./Calendar";
 import { GATE_FLAG, exitReviewReason, type DeploymentFacts, type FreshnessFacts, type GateFacts } from "./model";
+import type { VenueCalendar } from "../../../stageFacts";
 
-/** The three chips for a read that has settled. */
-export function chipsOf(deployment: DeploymentFacts | null, freshness: FreshnessFacts): StageChips {
+/** The three chips for a read that has settled. Runtime and Reconciliation are the server's `stage_facts` when the profile carries them. */
+export function chipsOf(deployment: DeploymentFacts | null, freshness: FreshnessFacts, facts: StageFacts | null = null): StageChips {
   const flag = deployment?.sourceActive;
   const freshnessChip: StageChips["freshness"] =
     freshness.kind === "not-published"
@@ -33,10 +41,14 @@ export function chipsOf(deployment: DeploymentFacts | null, freshness: Freshness
           text: freshness.label,
           note: freshness.asOfMs === null ? undefined : `As of ${formatAsOf(freshness.asOfMs)}`,
         };
+  const sourceFlag = flag === null || flag === undefined ? undefined : `Source flag: ${flag ? "active" : "inactive"}`;
+  const fact = runtimeFactOf(facts);
+  const runtimeChip: StageChipValue = fact === null ? { state: "not-published", id: "FE-067" } : runtimeChipFrom(fact);
   return {
-    runtime: { state: "not-published", id: "FE-067", detail: flag === null || flag === undefined ? undefined : `Source flag: ${flag ? "active" : "inactive"}` },
+    // The source's `active` flag only ever rides beside a Runtime that is not published; a published word needs no companion.
+    runtime: runtimeChip.state === "not-published" ? { ...runtimeChip, detail: sourceFlag } : runtimeChip,
     freshness: freshnessChip,
-    reconciliation: { state: "not-published", id: "FE-067" },
+    reconciliation: reconciliationChipFrom(reconciliationFactOf(facts)),
   };
 }
 
@@ -55,6 +67,10 @@ export interface HeaderProps {
   deployment: DeploymentFacts | null;
   variant: "paper" | "vnm";
   chips: StageChips;
+  /** FE-066: the five identity keys; `published: false` = typed absence. */
+  identity: StageIdentity;
+  /** FE-070: the VN market calendar (the VN variant); `null` = not in the profile. */
+  calendar: VenueCalendar | null;
   /** Whether the reader may open Account 360 (the capability set decides, never a role name). */
   accountsVisible: boolean;
   links: {
@@ -68,7 +84,7 @@ export interface HeaderProps {
   read: { atLabel: string | null; refreshing: boolean; failure: string | null; onRefresh(): void };
 }
 
-export function Header({ deploymentId, deployment, variant, chips, accountsVisible, links, read }: HeaderProps) {
+export function Header({ deploymentId, deployment, variant, chips, identity, calendar, accountsVisible, links, read }: HeaderProps) {
   const strategy = deployment?.strategyId ?? null;
   const title = strategy ?? deploymentId;
   return (
@@ -78,7 +94,7 @@ export function Header({ deploymentId, deployment, variant, chips, accountsVisib
           <ol>
             {links.alpha ? <li><Link className="exec-blk-link" to={links.alpha}>← Alpha</Link></li> : null}
             <li><Link className="exec-blk-link" to={links.fleet}>Alpha Fleet</Link></li>
-            {strategy !== null && links.alpha ? <li><Link className="exec-blk-link" to={links.alpha}>{strategy}</Link></li> : null}
+            {strategy !== null ? links.alpha ? <li><Link className="exec-blk-link" to={links.alpha}>{strategy}</Link></li> : <li>{strategy}</li> : null}
             <li aria-current="page">Paper monitor</li>
           </ol>
         </nav>
@@ -89,15 +105,19 @@ export function Header({ deploymentId, deployment, variant, chips, accountsVisib
         </h1>
         <p className="exec-wb-question">Tracking approved evidence? Ready to leave Paper?</p>
         <p className="exec-wb-sub">
-          {links.portfolio && deployment?.portfolioId ? <Link className="exec-blk-link" to={links.portfolio}>{deployment.portfolioId}</Link> : <span>Portfolio not published</span>}
+          {links.portfolio && deployment?.portfolioId ? (
+            <Link className="exec-blk-link" to={links.portfolio} title={identity.portfolioNameReasonCode ?? undefined}>{portfolioLabel(identity, deployment.portfolioId)}</Link>
+          ) : (
+            <span>Portfolio not published</span>
+          )}
           {accountsVisible ? (
             links.account && deployment?.accountId ? <Link className="exec-blk-link" to={links.account}>{deployment.accountId}</Link> : <span>Account not published</span>
           ) : (
             <span>Account not available</span>
           )}
           <span>Simulated</span>
-          <span>Names: <NotPublished id="FE-066" /></span>
-          {variant === "vnm" ? <span>VN market calendar: <NotPublished id="FE-070" /></span> : null}
+          <span><AlphaNameLine identity={identity} /></span>
+          {variant === "vnm" ? <span>VN market calendar: <VenueCalendarLine calendar={calendar} /></span> : null}
         </p>
       </div>
       <div className="exec-wb-ctrls">

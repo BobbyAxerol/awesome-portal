@@ -23,6 +23,9 @@ export const DEP = "dep_TEST_ONLY_paper";
 export const STRATEGY = "alpha_TEST_ONLY";
 export const PORTFOLIO = "pf_TEST_ONLY";
 export const ACCOUNT = "acct_TEST_ONLY";
+/** The qualified alpha id a profile publishes with `identity: true`. It is NOT the strategy id: the two never stand for each other. */
+export const ALPHA_ID = "alpha_TEST_ONLY_qualified";
+export const PORTFOLIO_NAME = "Crypto Core";
 
 const CANONICAL = "execution-paper-workbench.partial.valid.json";
 
@@ -34,13 +37,19 @@ export interface WireOptions {
   equity?: number;
   /** Adds `data.history_windows.account_equity` (not in the published `Data` schema, which the V1 reader still reads). */
   history?: boolean;
+  /** Publishes the five identity keys (FE-066): a qualified `alpha_id`, no alpha name (ALPHA_NAME_NOT_PUBLISHED) and a portfolio name. */
+  identity?: boolean;
+  /** Replaces `data.stage_facts` with the canonical source-backed body (RUNNING, OPEN_FINDINGS, two sessions). */
+  stageFacts?: "published";
+  /** Adds `data.positions_by_side` from the canonical fixture of that state. */
+  sides?: "available" | "partial" | "unavailable";
 }
 
 const ORDER_STATES = ["FILLED", "UNKNOWN", "REJECTED", "SUBMITTED"] as const;
 
 /** One canonical profile body with deterministic, readable rows. */
 export function paperWire(options: WireOptions = {}): Wire {
-  const { orders = 2, fills = 1, positions = 1, equity = 6, history = false } = options;
+  const { orders = 2, fills = 1, positions = 1, equity = 6, history = false, identity = false, stageFacts, sides } = options;
   const wire: Wire = loadCanonical(CANONICAL);
   wire.state = "ready";
   wire.freshness = "FRESH";
@@ -58,7 +67,21 @@ export function paperWire(options: WireOptions = {}): Wire {
     active: true,
     updated_at: "2026-10-17T09:14:00Z",
   };
+  if (identity) {
+    Object.assign(deployment, {
+      alpha_id: ALPHA_ID,
+      alpha_name: null,
+      portfolio_name: PORTFOLIO_NAME,
+      alpha_reason_code: "ALPHA_NAME_NOT_PUBLISHED",
+      portfolio_name_reason_code: null,
+    });
+  }
   const data = wire.data;
+  if (stageFacts === "published") data.stage_facts = loadCanonical<Wire>("execution-stage-facts.source-backed.synthetic").value;
+  if (sides !== undefined) {
+    const file = sides === "available" ? "execution-paper-workbench.positions-by-side" : `execution-paper-workbench.positions-by-side.${sides}`;
+    data.positions_by_side = loadCanonical<Wire>(file).data.positions_by_side;
+  }
   data.deployment = deployment;
   data.deployments = [deployment];
   data.observation_gate = {
