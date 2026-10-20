@@ -6,8 +6,9 @@
  * whose outcome is unknown has no counters, so no request is built for it (a zero is not a counter). The workspace, resource, unit,
  * recall id and recipient come from the same served recall; the only free text is the reason.
  *
- * The opaque `expected_policy_revision` is a required member of the request and no read the FE consumes serves the pending-control
- * policy revision. The builder therefore takes it as an input that is `null` today and refuses with the typed gap
+ * The opaque `expected_policy_revision` is a required member of the request. Its only source is `policy_revision` of the SAME discovery
+ * read (`PUBLISHED` value, copied verbatim; the server compares it with the current reviewed access policy). The builder takes it as an
+ * input that is `null` when the discovery served `NOT_PUBLISHED` / `POLICY_NOT_CURRENT` (or nothing) and then refuses with the typed gap
  * `POLICY_REVISION_NOT_PUBLISHED` instead of inventing one (the catalogue's revision is the catalogue's, not this control's).
  *
  * Nothing here sends. The preview is a rollback; a submit needs the digest of a current preview and a fresh step-up, and stays dark.

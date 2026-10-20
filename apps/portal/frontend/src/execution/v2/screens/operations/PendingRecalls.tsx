@@ -172,13 +172,18 @@ export interface PendingRecallsSectionProps {
    * flag turns it on (OperationDock); a test passes it explicitly.
    */
   previewEnabled?: boolean;
-  /** The opaque Portal policy revision the preview must name, only if a read served it. `null` = none does (the form is then shut with that gap). */
-  policyRevision?: string | null;
 }
 
-export function PendingRecallsSection({ api, workspaceId, targetType, targetId, environment, previewEnabled = false, policyRevision = null }: PendingRecallsSectionProps) {
+/** The opaque policy revision a preview must name: the string the SAME discovery read served, or `null` (typed gap) when it served none. */
+export function servedPolicyRevision(load: PendingRecallsLoad): string | null {
+  return load.phase === "ready" && load.discovery.policyRevision.availability === "PUBLISHED" ? load.discovery.policyRevision.value : null;
+}
+
+export function PendingRecallsSection({ api, workspaceId, targetType, targetId, environment, previewEnabled = false }: PendingRecallsSectionProps) {
   const load = usePendingRecalls(api, workspaceId, targetType, targetId, environment);
-  const preview: PreviewWiring | null = previewEnabled ? { api, workspaceId, resource: { kind: targetType, id: targetId }, environment, policyRevision } : null;
+  const preview: PreviewWiring | null = previewEnabled
+    ? { api, workspaceId, resource: { kind: targetType, id: targetId }, environment, policyRevision: servedPolicyRevision(load) }
+    : null;
   return (
     <section aria-label="Open recalls the Portal controlled" data-testid="pending-recalls">
       <h3 className="exec-ops-section">Open recalls the Portal controlled</h3>

@@ -263,9 +263,10 @@ describe("in the dock section: dark unless the build enables command previews", 
     const value = readPendingRecallDiscoveryV1(body);
     return value === null ? { ok: false, status: "unavailable", reason: "unreadable" } : { ok: true, value };
   };
-  const section = (props: Record<string, unknown>) => {
+  const UNPUBLISHED = { ...CURRENCY.discovery_open, policy_revision: { availability: "NOT_PUBLISHED", reason_code: "POLICY_NOT_CURRENT" } };
+  const section = (props: Record<string, unknown>, body: unknown = CURRENCY.discovery_open) => {
     const api = {
-      getPendingRecallDiscovery: vi.fn(async () => discovery(CURRENCY.discovery_open)),
+      getPendingRecallDiscovery: vi.fn(async () => discovery(body)),
       previewPendingControl: vi.fn(async () => preview(CONTROL.preview_allowed)),
     } as unknown as ExecutionApi;
     render(
@@ -283,8 +284,8 @@ describe("in the dock section: dark unless the build enables command previews", 
     expect(screen.queryByText(/Command previews/)).toBeNull();
   });
 
-  it("on without a served policy revision: the control is shut with the typed gap, on the recall with versions", async () => {
-    section({ previewEnabled: true });
+  it("on while the discovery serves no policy revision (NOT_PUBLISHED / POLICY_NOT_CURRENT): shut with the typed gap, on the recall with versions", async () => {
+    section({ previewEnabled: true }, UNPUBLISHED);
     await screen.findByLabelText("Open recalls");
     const buttons = screen.getAllByRole("button", { name: "Preview control" }) as HTMLButtonElement[];
     // One per recall: the WAITING one is shut for the policy, the UNKNOWN one for its outcome.
@@ -294,14 +295,16 @@ describe("in the dock section: dark unless the build enables command previews", 
     expect(screen.getByText(/Outcome unknown: the Portal holds no receipt/)).toBeTruthy();
   });
 
-  it("on with a served policy revision: the WAITING recall opens, the UNKNOWN one stays shut", async () => {
-    const api = section({ previewEnabled: true, policyRevision: POLICY });
+  it("on with the policy revision the discovery served: the WAITING recall opens and sends exactly that value, the UNKNOWN one stays shut", async () => {
+    const api = section({ previewEnabled: true });
     await screen.findByLabelText("Open recalls");
     const first = within(screen.getByLabelText("Open recalls")).getAllByRole("listitem").filter((li) => li.classList.contains("exec-ops-recall"))[0]!;
     const reason = within(first).getByLabelText("Reason");
     fireEvent.change(reason, { target: { value: "Release the remainder" } });
     await act(async () => { fireEvent.click(within(first).getByRole("button", { name: "Preview control" })); });
-    await waitFor(() => expect((api as unknown as { previewPendingControl: ReturnType<typeof vi.fn> }).previewPendingControl).toHaveBeenCalledTimes(1));
+    const sent = (api as unknown as { previewPendingControl: ReturnType<typeof vi.fn> }).previewPendingControl;
+    await waitFor(() => expect(sent).toHaveBeenCalledTimes(1));
+    expect(sent.mock.calls[0]![0]).toMatchObject({ expected_policy_revision: POLICY });
     const second = within(screen.getByLabelText("Open recalls")).getAllByRole("listitem").filter((li) => li.classList.contains("exec-ops-recall"))[1]!;
     expect((within(second).getByRole("button", { name: "Preview control" }) as HTMLButtonElement).disabled).toBe(true);
   });
