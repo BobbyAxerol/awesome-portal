@@ -27,7 +27,7 @@ import { useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { NewRequestForm } from "./NewRequestForm";
-import { StepBar, WhatNextPanel, WorkspaceNote } from "./parts";
+import { StepBar, WhatNextDisclosure, WorkspaceNote } from "./parts";
 import { readPrefill, type PrefillRead } from "./model";
 import { useNewRequest } from "./useNewRequest";
 
@@ -57,14 +57,13 @@ export default function NewRequestPage({ api, writeBlockedReason, accessHref = A
   return (
     <div className="exec-rq-page" data-screen="new-request-v2">
       <header className="exec-rq-mast">
-        <h1 className="exec-rq-title">New approval request</h1>
-        <p className="exec-rq-sub">Research → R1 gate · when it did not start in Research</p>
+        <h1 className="exec-rq-title" title="Research to R1 gate, for a request that did not start in Research">New approval request</h1>
         <WorkspaceNote />
       </header>
       <StepBar />
-      <div className="exec-rq-cols">
+      <div className="exec-rq-col">
         <NewRequestForm state={state} variant="page" accessHref={accessHref} />
-        <WhatNextPanel />
+        <WhatNextDisclosure />
       </div>
     </div>
   );

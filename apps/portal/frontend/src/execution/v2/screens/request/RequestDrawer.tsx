@@ -101,7 +101,6 @@ export function RequestDrawer({ api, open, onClose, writeBlockedReason, accessHr
       open={open}
       onClose={requestClose}
       title="New approval request"
-      subtitle="Declare · you, now. R1 is decided by a quant reviewer, not you."
       mode={mode}
       priority={
         confirming ? (

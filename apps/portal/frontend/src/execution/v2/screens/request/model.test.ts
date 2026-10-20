@@ -58,7 +58,7 @@ describe("validation matrix", () => {
     expect(v.ready).toBe(false);
     expect(v.payload).toBeNull();
     expect(v.needs.map((n) => n.field)).toEqual(["alpha", "run", "claim", "summary"]);
-    expect(stillNeeded(v.needs)).toBe("Still needed: an alpha, an evidence run, a methodology claim, a summary of 8+ characters (0 so far).");
+    expect(stillNeeded(v.needs)).toBe("Still needed: an alpha, an evidence run, a methodology claim, a summary of 8+ characters.");
   });
 
   it.each([
@@ -92,7 +92,7 @@ describe("validation matrix", () => {
   });
 
   it("summary boundary: 7 is short, 8 passes, 2000 passes, 2001 is long", () => {
-    expect(validateFields({ ...OK, summary: "1234567" }).needs[0]?.text).toBe("a summary of 8+ characters (7 so far)");
+    expect(validateFields({ ...OK, summary: "1234567" }).needs[0]?.text).toBe("a summary of 8+ characters");
     expect(validateFields({ ...OK, summary: "12345678" }).ready).toBe(true);
     expect(validateFields({ ...OK, summary: "x".repeat(2000) }).ready).toBe(true);
     const long = validateFields({ ...OK, summary: "x".repeat(2001) });

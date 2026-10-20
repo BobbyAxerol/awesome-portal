@@ -73,7 +73,7 @@ function approvalRows(outcome: ReplayedApproval): readonly (readonly [string, st
 function OriginalCheckResult({ check, here }: { check: OriginalCheck; here(href: string): string }) {
   if (check.phase === "idle") return null;
   if (check.phase === "checking") {
-    return <p className="exec-rq-check" role="status" aria-busy="true" data-state="checking">Asking the Portal whether a request exists under this key. This only reads; nothing is created.</p>;
+    return <p className="exec-rq-check" role="status" aria-busy="true" data-state="checking" title="This only reads; nothing is created.">Checking whether a request exists under this key…</p>;
   }
   if (check.phase === "failed") {
     return (
@@ -135,7 +135,6 @@ export function OutcomePanel({ outcome, requestKey, busy = false, onDismiss, onN
           <span>{replayed ? "was created by an earlier submit of this request" : "opened for R1 review"}</span>
         </p>
         <Facts rows={approvalRows(outcome)} />
-        <p className="exec-rq-meta">The requester can never approve: the queue dims the row for you.</p>
         <div className="exec-rq-acts">
           {id ? <Link className="exec-rq-btn" data-variant="primary" to={here(reviewRouteFor({ id, gate: "R1" }))}>Open request</Link> : <Link className="exec-rq-btn" data-variant="primary" to={here(QUEUE_HREF)}>Open the approvals queue</Link>}
           <button type="button" className="exec-rq-btn" onClick={onNew}>New request</button>
@@ -188,8 +187,8 @@ export function OutcomePanel({ outcome, requestKey, busy = false, onDismiss, onN
           <Flag kind="unknown" label="Uncertain" />
           <span>We could not confirm this. It may have been created. Check the original request before doing anything.</span>
         </p>
-        <p className="exec-rq-meta">
-          The fields are locked while this stands. Retrying sends the same request again under the same key, so if the first one landed the server answers with it instead of creating another.
+        <p className="exec-rq-meta" title="Retrying sends the same request again under the same key, so if the first one landed the server answers with it instead of creating another.">
+          The fields are locked while this stands.
         </p>
         {asking ? (
           <div className="exec-rq-confirm" role="alertdialog" aria-label="Discard this uncertain request?">
@@ -270,7 +269,7 @@ export function OutcomePanel({ outcome, requestKey, busy = false, onDismiss, onN
         <Flag kind="attention" label="Could not send" />
         <span>{refusal.message}</span>
       </p>
-      <p className="exec-rq-meta">The server did not create a request from this attempt. The fields are as you left them.</p>
+      <p className="exec-rq-meta">Nothing was created. The fields are as you left them.</p>
       <div className="exec-rq-acts">
         <button type="button" className="exec-rq-btn" data-variant="primary" onClick={onDismiss}>Back to the form</button>
       </div>

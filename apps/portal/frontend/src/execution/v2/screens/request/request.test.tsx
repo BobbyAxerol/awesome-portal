@@ -151,12 +151,14 @@ describe("the page: what it shows", () => {
     await loaded();
     expect(document.querySelector('[data-screen="new-request-v2"]')).toBeTruthy();
     expect(screen.getByRole("heading", { level: 1, name: "New approval request" })).toBeTruthy();
-    expect(screen.getByText("Research → R1 gate · when it did not start in Research")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1 }).getAttribute("title")).toBe("Research to R1 gate, for a request that did not start in Research");
+    expect(screen.queryByText("Research → R1 gate · when it did not start in Research")).toBeNull();
     const steps = screen.getByRole("navigation", { name: "Where this request sits in the loop" });
-    expect(within(steps).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["1 · Declare · you, now", "2 · R1 · a quant reviewer, not you", "3 · R2 · capital, only after R1"]);
-    expect(within(steps).getByText("1 · Declare · you, now").getAttribute("aria-current")).toBe("step");
+    expect(within(steps).getAllByRole("listitem").map((li) => li.textContent)).toEqual(["1 · Declare", "2 · R1", "3 · R2"]);
+    expect(within(steps).getAllByRole("listitem").map((li) => li.getAttribute("title"))).toEqual(["You, now", "A quant reviewer decides, not you", "Capital, only after R1"]);
+    expect(within(steps).getByText("1 · Declare").getAttribute("aria-current")).toBe("step");
     expect(screen.getByText("What happens next")).toBeTruthy();
-    expect(screen.getByText("Pinned on the server from the run registry.")).toBeTruthy();
+    expect(document.querySelector("details.exec-rq-disclosure")!.textContent).toContain("Digest pinned on the server");
     // D13f and D8d: no switch, no preview, no Fresh chip, no scope label without a source.
     expect(screen.queryByText(/Route page/)).toBeNull();
     expect(screen.queryByText(/Drawer from the queue/)).toBeNull();
@@ -190,7 +192,8 @@ describe("the page: what it shows", () => {
     runsAnswer = () => new Response("{}", { status: 500 });
     const { api, createApprovalRequest } = port(() => CREATED);
     mountPage(api);
-    expect(await screen.findByText(/Run Library not available: The Research run list could not be read/)).toBeTruthy();
+    const unavailable = await screen.findByText("Run Library not available. Type the ids below.");
+    expect(unavailable.getAttribute("title")).toMatch(/The Research run list could not be read/);
     expect(alphaSel().matches(":disabled")).toBe(true);
     const hand = document.querySelector("details.exec-rq-hand") as HTMLDetailsElement;
     expect(hand.open).toBe(true);
@@ -207,7 +210,7 @@ describe("the page: what it shows", () => {
   it("an empty Run Library says there is nothing to pick, and does not invent alphas", async () => {
     runsAnswer = () => new Response(JSON.stringify({ items: [] }), { status: 200 });
     mountPage(port(() => CREATED).api);
-    expect(await screen.findByText(/lists no completed run, so there is nothing to pick/)).toBeTruthy();
+    expect(await screen.findByText("No completed run to pick. Type the ids below.")).toBeTruthy();
     expect(within(alphaSel()).getAllByRole("option")).toHaveLength(1);
   });
 });
@@ -217,12 +220,14 @@ describe("the form: pickers and the 'Still needed' bar", () => {
     const { api, createApprovalRequest } = port(() => CREATED);
     mountPage(api);
     await loaded();
-    expect(needText()).toBe("Still needed: an alpha, an evidence run, a methodology claim, a summary of 8+ characters (0 so far).");
+    expect(needText()).toBe("Still needed: an alpha, an evidence run, a methodology claim, a summary of 8+ characters.");
     expect(screen.getByText("Incomplete")).toBeTruthy();
     const btn = submitBtn();
     expect(down(btn)).toBe(true);
     const reason = document.getElementById(btn.getAttribute("aria-describedby") ?? "");
-    expect(reason?.textContent).toBe("Fill the missing fields first.");
+    // The shut button is described by the one "Still needed" sentence; its title is the generic reason.
+    expect(reason?.textContent).toBe("Still needed: an alpha, an evidence run, a methodology claim, a summary of 8+ characters.");
+    expect(btn.getAttribute("title")).toBe("Fill the missing fields first.");
     fireEvent.click(btn);
     expect(createApprovalRequest).not.toHaveBeenCalled();
   });
@@ -233,16 +238,18 @@ describe("the form: pickers and the 'Still needed' bar", () => {
     await loaded();
     fireEvent.change(alphaSel(), { target: { value: "alpha_TEST_ONLY_a" } });
     expect(within(runSel()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Pick a completed run", "run_TEST_ONLY_a2 · 2026-10-18", "run_TEST_ONLY_a1 · 2026-10-12"]);
-    expect(needText()).toBe("Still needed: an evidence run, a methodology claim, a summary of 8+ characters (0 so far).");
+    expect(needText()).toBe("Still needed: an evidence run, a methodology claim, a summary of 8+ characters.");
     fireEvent.change(runSel(), { target: { value: "run_TEST_ONLY_a1" } });
     expect(screen.getByText("claim_TEST_ONLY_a1")).toBeTruthy();
-    expect(screen.getByText(/the only claim the Run Library lists for this run · A · ELIGIBLE/)).toBeTruthy();
-    expect(needText()).toBe("Still needed: a summary of 8+ characters (0 so far).");
+    expect(screen.getByText(/the only claim for this run · A · ELIGIBLE/)).toBeTruthy();
+    expect(needText()).toBe("Still needed: a summary of 8+ characters.");
     fireEvent.change(summaryBox(), { target: { value: "1234567" } });
-    expect(needText()).toBe("Still needed: a summary of 8+ characters (7 so far).");
+    expect(needText()).toBe("Still needed: a summary of 8+ characters.");
     expect(down(submitBtn())).toBe(true);
     fireEvent.change(summaryBox(), { target: { value: "12345678" } });
-    expect(needText()).toBe("Everything needed is filled.");
+    // Ready says it; the sentence is gone.
+    expect(needText()).toBe("");
+    expect(screen.getByText("Ready")).toBeTruthy();
     expect(screen.getByText("Ready")).toBeTruthy();
     expect(down(submitBtn())).toBe(false);
   });
@@ -273,11 +280,11 @@ describe("the form: pickers and the 'Still needed' bar", () => {
     expect(screen.getByText("Pick a run first, or type the claim id below.")).toBeTruthy();
     fireEvent.change(alphaSel(), { target: { value: "alpha_TEST_ONLY_b" } });
     fireEvent.change(runSel(), { target: { value: "run_TEST_ONLY_b1" } });
-    expect(screen.getByText(/lists no eligible claim for this run/)).toBeTruthy();
+    expect(screen.getByText("No eligible claim listed for this run. Type the id below.")).toBeTruthy();
     fireEvent.change(alphaSel(), { target: { value: "alpha_TEST_ONLY_c" } });
     expect(runSel()).toHaveProperty("value", "");
     fireEvent.change(runSel(), { target: { value: "run_TEST_ONLY_c1" } });
-    expect(screen.getByText(/cannot list claims for this run \(R1_CLAIMS_NOT_PUBLISHED\)/)).toBeTruthy();
+    expect(screen.getByText("Claims cannot be listed for this run. Type the claim id below.").getAttribute("title")).toContain("R1_CLAIMS_NOT_PUBLISHED");
   });
 
   it("changing the alpha drops a run and claim that belonged to the old one", async () => {
@@ -319,7 +326,8 @@ describe("submit: the one road to the port", () => {
     expect(screen.queryByText("apr_TEST_ONLY_203")).toBeNull();
     expect(screen.getByText("Sending")).toBeTruthy();
     expect(down(submitBtn())).toBe(true);
-    expect(document.getElementById(submitBtn().getAttribute("aria-describedby") ?? "")?.textContent).toMatch(/Sending\. A second click is ignored until the server answers/);
+    expect(document.getElementById(submitBtn().getAttribute("aria-describedby") ?? "")?.textContent).toBe("Sending…");
+    expect(submitBtn().getAttribute("title")).toMatch(/Sending\. A second click is ignored until the server answers/);
     await act(async () => gate.resolve(CREATED));
     expect(await screen.findByText("Created")).toBeTruthy();
   });
@@ -1003,7 +1011,8 @@ describe("accessibility (structure)", () => {
       expect(named, el.outerHTML.slice(0, 80)).toBe(true);
     }
     expect(alphaSel().id).not.toBe("");
-    expect(summaryBox().getAttribute("aria-describedby")).toMatch(/\S+ \S+/);
+    // The counter is the textarea's description; the error line joins it only when the text is refused.
+    expect(summaryBox().getAttribute("aria-describedby")).toMatch(/-count$/);
     for (const id of (summaryBox().getAttribute("aria-describedby") ?? "").split(" ")) expect(document.getElementById(id), id).toBeTruthy();
     const disabled = Array.from(document.querySelectorAll<HTMLButtonElement>("button:disabled, button[aria-disabled=\"true\"]"));
     expect(disabled.length).toBeGreaterThan(0);
@@ -1013,8 +1022,9 @@ describe("accessibility (structure)", () => {
       expect(document.getElementById(ref ?? "")?.textContent?.trim(), b.textContent ?? "").toBeTruthy();
     }
     // Disabled selects are explained too.
-    expect(runSel().getAttribute("aria-describedby")).toBeTruthy();
-    expect(document.getElementById(runSel().getAttribute("aria-describedby") ?? "")?.textContent).toContain("Pick an alpha");
+    expect(runSel().matches(":disabled")).toBe(true);
+    // A disabled select says why in its own placeholder option, not in a second line under it.
+    expect(within(runSel()).getAllByRole("option")[0]!.textContent).toBe("Pick an alpha first");
   });
 
   it("the fields sit in a fieldset with a legend, the page has one h1 and its aside is a labelled region", async () => {
@@ -1022,7 +1032,7 @@ describe("accessibility (structure)", () => {
     await loaded();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getByRole("group", { name: "Request fields" })).toBeTruthy();
-    expect(screen.getByRole("region", { name: "What happens next" })).toBeTruthy();
+    expect(document.querySelector("details.exec-rq-disclosure > summary")!.textContent).toBe("What happens next");
     expect(screen.getByRole("form", { name: "New approval request" })).toBeTruthy();
   });
 
@@ -1136,7 +1146,8 @@ describe("M2: an uncertain outcome keeps its key and its payload", () => {
     const { api } = port(() => OFFLINE);
     const panel = await uncertain(api);
     expect(panel.textContent).not.toMatch(/never creates two/i);
-    expect(panel.textContent).toContain("Retrying sends the same request again under the same key");
+    // What a retry does is the line's title, not a second paragraph.
+    expect(panel.querySelector("p.exec-rq-meta[title]")!.getAttribute("title")).toContain("Retrying sends the same request again under the same key");
     expect(document.body.textContent).not.toMatch(/never creates two|Submitting twice creates one/i);
   });
 
@@ -1164,7 +1175,7 @@ describe("M2: an uncertain outcome keeps its key and its payload", () => {
     fireEvent.click(submitBtn());
     const panel = await screen.findByRole("alert", { name: "Request not sent" });
     expect(panel.textContent).not.toMatch(/never creates two/i);
-    expect(panel.textContent).toContain("did not create a request from this attempt");
+    expect(panel.textContent).toContain("Nothing was created.");
     expect(summaryBox().matches(":disabled")).toBe(false);
     fireEvent.change(summaryBox(), { target: { value: "Momentum with a venue calendar, reworded." } });
     fireEvent.click(submitBtn());

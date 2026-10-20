@@ -203,7 +203,7 @@ describe("Check original request", () => {
     const gate = new Promise<Result<ApprovalRequestLookupRead>>((resolve) => { release = resolve; });
     const { panel, lookupApprovalRequest } = await toUncertain({ lookup: () => gate });
     fireEvent.click(checkBtn(panel));
-    await within(panel).findByText(/Asking the Portal whether a request exists/);
+    await within(panel).findByText(/Checking whether a request exists under this key/);
     fireEvent.click(checkBtn(panel));
     fireEvent.click(checkBtn(panel));
     expect(lookupApprovalRequest).toHaveBeenCalledTimes(1);
@@ -247,7 +247,7 @@ describe("the alpha scope label", () => {
     mount(without.api);
     await screen.findByRole("option", { name: "Near Alpha" });
     expect(screen.queryByText("All completed runs in this workspace")).toBeNull();
-    expect(screen.getByText("From completed runs")).toBeTruthy();
+    expect(screen.queryByText("From completed runs")).toBeNull();
   });
 });
 
@@ -265,7 +265,7 @@ describe("the run list: server filter and cursor", () => {
     fireEvent.change(alphaSel(), { target: { value: "alpha_far" } });
     await screen.findByRole("option", { name: /run_alpha_far_1/ });
     expect(urls.at(-1)).toBe("/api/v1/quantbt/runs?status=COMPLETED&alpha=alpha_far&limit=50");
-    expect(screen.getByTestId("run-count").textContent).toBe("Showing the newest 2 of 3 completed runs of this alpha. If yours is missing, type its id below.");
+    expect(screen.getByTestId("run-count").textContent).toBe("Newest 2 of 3 completed runs. If yours is missing, type its id below.");
     fireEvent.click(screen.getByRole("button", { name: "Load more runs" }));
     await screen.findByRole("option", { name: /run_alpha_far_3/ });
     expect(urls.at(-1)).toBe("/api/v1/quantbt/runs?status=COMPLETED&alpha=alpha_far&limit=50&cursor=far1");
@@ -305,7 +305,7 @@ describe("the run list: server filter and cursor", () => {
     runsAnswer = () => ({ items: [run(1, "alpha_near", "Near Alpha")] });
     mount(port().api);
     await screen.findByRole("option", { name: "Near Alpha" });
-    expect(screen.getByText(/did not publish its alpha list, so these are the alphas of the runs loaded so far/)).toBeTruthy();
+    expect(screen.getByText(/Alphas of the loaded runs only/).getAttribute("title")).toContain("did not publish its alpha list");
   });
 
   it("the write-safety rules of the form hold with the new reads: Enter in an id field never submits", async () => {

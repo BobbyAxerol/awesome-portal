@@ -184,7 +184,7 @@ export function validateFields(fields: RequestFields): Validation {
   switch (summary.state) {
     case "empty":
     case "short":
-      needs.push({ field: "summary", text: `a summary of ${MIN_SUMMARY}+ characters (${summary.count} so far)` });
+      needs.push({ field: "summary", text: `a summary of ${MIN_SUMMARY}+ characters` });
       break;
     case "long":
       needs.push({ field: "summary", text: `a summary of ${MAX_SUMMARY.toLocaleString("en-US")} characters or fewer (${summary.count.toLocaleString("en-US")} now)` });
