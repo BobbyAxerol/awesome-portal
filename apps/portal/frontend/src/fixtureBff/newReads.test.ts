@@ -106,7 +106,7 @@ describe("manager/series answers the question asked, from the seven canonical fi
     expect(explicit.ok).toBe(true);
     const all = await api.getManagerSeries({ environment: "paper", metric: "NAV", window: "ALL", subjects: PORTFOLIOS });
     expect(all.ok && all.value.series.every((entry) => entry.state === "UNAVAILABLE")).toBe(true);
-    expect(all.ok && all.value.selectedWindow.reasonCode).toBe("ALL_HISTORY_WINDOW_NOT_PUBLISHED");
+    expect(all.ok && all.value.selectedWindow).toMatchObject({ kind: "gap", requested: "ALL", reasonCode: "ALL_HISTORY_WINDOW_NOT_PUBLISHED" });
   });
 
   it("NET_PNL has no canonical fixture: every subject is the typed UNAVAILABLE entry, never a relabelled NAV", async () => {
