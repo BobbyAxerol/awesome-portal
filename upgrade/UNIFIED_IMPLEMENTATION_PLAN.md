@@ -12699,3 +12699,8 @@ Prioritize existing three CHANGES_REQUESTED, then actual PG/R3/image/config/curr
 No peer source/config/DB/identity/listener/role/deploy mutation. Full08NOT_MET/09not started.
 Exact handback section SHA256 2ca35f6b3a5125b33593ca22b701c2e176220ee6bfb64770b9caa7415eb5d1ed. Read existing ELP2-10 request/Claude priority packet.
 Preserve peer changes/index; owning lead commits its own coherent docs/source batch.
+
+
+### Core009 revision3 focused qualification and static input return --20Oct11:19UTC
+
+Edge verified corrected revision3 source at2325dd94. Actual focused SGP build/tsc,89distinct tests (3realPG+86fixtures), dump/restore PASS; not full ordinaryR3/install/native08/09. Existing seven public templates need exact read-only /deploy/research-preview/native-core-templates mount in Core R3 runner. Existing reviewed field_policy_ref is PROVIDED from actual HK serving-policy.json and profile-domains provenance, not a hash-derived invented label. Read the full appended revision3 return in execution_loop/evidence/ELP2-10/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md. Core owns full ordinary release/image/config/policy/session and ready-window return; Edge owns fresh finite source/trust and connected08 then scoped read09. Old three source defects are superseded; no operational mutation/peer source edit/commit/push by Edge. Full08NOT_MET/09NOT_STARTED; not a consumer ACK. Preserve other WIP.
