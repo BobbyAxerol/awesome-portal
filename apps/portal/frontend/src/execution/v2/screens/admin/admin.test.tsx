@@ -58,8 +58,8 @@ describe("tiers", () => {
     await loaded();
     const heads = screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent);
     expect(heads).toEqual(["Read", "Portfolio capital", "Deployment risk", "Account", "Sync and reconciliation", "Emergency"]);
-    expect(screen.getByText(/Look only\. Nothing changes\. · 0 of 7 ready/)).toBeTruthy();
-    expect(screen.getByText(/Needs a second approver and a security key\. · 0 of 3 ready/)).toBeTruthy();
+    expect(screen.getByText("0 of 7 ready").getAttribute("title")).toBe("Look only. Nothing changes.");
+    expect(screen.getByText("0 of 3 ready").getAttribute("title")).toBe("Needs a second approver and a security key.");
     expect(screen.getByText("0 of 24 can run now")).toBeTruthy();
   });
 
@@ -171,7 +171,7 @@ describe("links (D4, M12)", () => {
     mount("/administration/actions?workspace_id=ws_1&env=paper");
     await loaded();
     const hrefs = screen.getAllByRole("link", { name: "Open in Operations" }).map((a) => a.getAttribute("href"));
-    expect(hrefs.length).toBe(2);
+    expect(hrefs.length).toBe(1);
     for (const href of hrefs) {
       expect(href).toBe("/execution/operations?env=paper&workspace_id=ws_1");
       expect(href).not.toContain("source=");
@@ -413,7 +413,7 @@ describe("states", () => {
     const spy = override({ getActivationCapabilities: async () => ({ ok: false, status: "unavailable", reason: "ACTIVATION_DOWN" }) });
     mount("/administration/actions", {}, spy);
     await loaded();
-    expect(screen.getByText(/staged-activation read failed \(ACTIVATION_DOWN\)/)).toBeTruthy();
+    expect(screen.getByTitle(/staged-activation read failed \(ACTIVATION_DOWN\)/).textContent).toBe("Reasons limited to the task catalogue");
   });
 
   it("loading", async () => {

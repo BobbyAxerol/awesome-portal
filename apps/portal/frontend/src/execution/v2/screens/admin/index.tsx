@@ -266,7 +266,7 @@ export default function AdminScreen({
       render: (r) => (
         <span className="exec-adm-name">
           <span className="exec-adm-title-cell">{r.title}</span>
-          <span className="exec-adm-sub">{r.task.catalogKey ?? "No catalogue key"}</span>
+          {r.task.catalogKey !== null ? <span className="exec-adm-sub">{r.task.catalogKey}</span> : null}
         </span>
       ),
     },
@@ -289,8 +289,7 @@ export default function AdminScreen({
     <div className="exec-adm-v2" data-screen="admin-actions-v2">
       <header className="exec-adm-head">
         <div>
-          <h1 className="exec-adm-title">Admin Actions</h1>
-          <p className="exec-adm-sub-head">Plan, apply and verify. Administrators only. This page plans; it does not apply.</p>
+          <h1 className="exec-adm-title" title="Plan, apply and verify. Administrators only. This page plans; it does not apply.">Admin Actions</h1>
         </div>
         <div className="exec-adm-chips">
           <span className="exec-adm-fresh">
@@ -314,7 +313,7 @@ export default function AdminScreen({
       {reads.activation.phase === "error" ? (
         <div className="exec-adm-banner" role="status">
           <Flag kind="unknown" label="Activation not read" size="sm" />
-          <span>The staged-activation read failed ({reads.activation.reason}), so the first reason an action is not live is limited to what the task catalogue states.</span>
+          <span title={`The staged-activation read failed (${reads.activation.reason}), so the first reason an action is not live is limited to what the task catalogue states.`}>Reasons limited to the task catalogue</span>
         </div>
       ) : null}
       {staleReads.length > 0 ? (
@@ -371,7 +370,7 @@ export default function AdminScreen({
             <PanelState status="empty" reason="No action is in this state." actions={<button type="button" className="exec-adm-btn" onClick={() => setFilter("all")}>Show all</button>} />
           ) : (
             tiers.map((tier) => (
-              <SectionPanel key={tier.group} title={tier.label} aside={`${tier.note ? `${tier.note} · ` : ""}${tier.ready} of ${tier.total} ready`} flush>
+              <SectionPanel key={tier.group} title={tier.label} aside={<span title={tier.note || undefined}>{tier.ready} of {tier.total} ready</span>} flush>
                 <CardsTable columns={columns} rows={tier.rows} rowKey={(r) => r.id} label={`${tier.label} actions`} selectedKey={selection} onRowOpen={(r) => pickRow(r.id)} />
               </SectionPanel>
             ))
@@ -405,7 +404,6 @@ export default function AdminScreen({
         <p className="exec-adm-note">
           Capital actions are not started here. They begin in <Link className="exec-adm-link" to={withContext(portfoliosHref, params)}>Portfolios</Link> with a preview.
         </p>
-        <Link className="exec-adm-link" to={withContext(operationsHref, params)}>Open in Operations</Link>
       </div>
 
       <details className="exec-adm-prov">
