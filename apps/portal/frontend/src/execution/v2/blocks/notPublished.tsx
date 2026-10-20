@@ -9,7 +9,7 @@
  * value (D9, review2/04). The ids are the open requests in
  * FRONTEND_BACKEND_SYNC.md.
  */
-import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import "../css/blocks.css";
 
@@ -184,8 +184,8 @@ export interface NotPublishedProps {
 
 /**
  * The stage screens (Workbench, Sandbox, Canary, Live) print a gap as the plain words `Not available`: the request id, its
- * label and the server's reason code ride on the element's `title`. Everything below a `CompactGaps` provider reads this;
- * a screen outside one prints `Not published (FE-xxx)` exactly as before.
+ * label and the server's reason code sit in a disclosure (`GapWhy`) that opens by keyboard and touch, never only on a hover.
+ * Everything below a `CompactGaps` provider reads this; a screen outside one prints `Not published (FE-xxx)` exactly as before.
  */
 const CompactGapsContext = createContext(false);
 
@@ -193,34 +193,92 @@ export function CompactGaps({ children }: { children: ReactNode }) {
   return <CompactGapsContext.Provider value={true}>{children}</CompactGapsContext.Provider>;
 }
 
-/** What the tooltip of a compact gap says: `Not published (FE-067): Alpha name · Runtime state ... · REASON_CODE`. */
+/** What one gap says when asked: `Not published (FE-067): Alpha name · Runtime state ... · REASON_CODE`. */
 export function gapTitle(id: string, what?: string | null, reason?: string | null): string {
   const label = Object.hasOwn(FE_REQUEST_LABEL, id) ? FE_REQUEST_LABEL[id as NotPublishedId] : null;
   return `${NOT_PUBLISHED} (${id}): ${[what, label, reason].filter(Boolean).join(" · ")}`;
 }
 
+/** The one next-action line of every disclosure: a reader cannot make the source publish, so the line says what will happen. */
+export const GAP_NEXT = "It appears here once the source publishes it.";
+
+export interface GapWhyProps {
+  /** The control's accessible name. When `text` is the trigger it must start with that text (WCAG 2.5.3). */
+  name: string;
+  /** The visible trigger. Omitted = the small "?" mark after a line of text. */
+  text?: ReactNode;
+  /** What the disclosure says, one string per fact: the request id and label, the server's reason code. */
+  rows: readonly string[];
+  /** `data-gap` of the wrapper: the request id. */
+  gap?: string;
+  className?: string;
+}
+
+/**
+ * The reason, next action and provenance of a missing fact behind ONE disclosure: a real button (`aria-expanded`, and
+ * `aria-controls` while open) that opens on Enter, Space and touch and closes on the same or on Escape. Ids and reason codes
+ * live inside it, never in the headline. Closed, the body is not in the DOM, so a screen with many gaps adds no text.
+ */
+export function GapWhy({ name, text, rows, gap, className }: GapWhyProps) {
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
+  const button = useRef<HTMLButtonElement>(null);
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== "Escape" || !open) return;
+    // Escape closes this disclosure only: a drawer or dialog around it stays.
+    event.stopPropagation();
+    setOpen(false);
+    button.current?.focus();
+  };
+  return (
+    <span className={className ? `exec-blk-why ${className}` : "exec-blk-why"} data-gap={gap} data-open={open ? "true" : undefined} onKeyDown={onKeyDown}>
+      <button
+        ref={button}
+        type="button"
+        className="exec-blk-why-btn"
+        data-mark={text === undefined ? "true" : undefined}
+        aria-expanded={open}
+        aria-controls={open ? bodyId : undefined}
+        aria-label={name}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {text}
+      </button>
+      {open ? (
+        <span id={bodyId} className="exec-blk-why-body">
+          {rows.map((row, i) => (
+            <span key={i} className="exec-blk-why-row">{row}</span>
+          ))}
+          <span className="exec-blk-why-next">{GAP_NEXT}</span>
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export interface GapItem {
   /** The fact that is missing, in a word or two ("Limit"). */
   label: string;
-  /** The request that will publish it; its id and label go in the tooltip. */
+  /** The request that will publish it; its id and label go in the disclosure. */
   id?: string;
-  /** The server's reason, tooltip only. */
+  /** The server's reason, disclosure only. */
   reason?: string | null;
 }
 
 /**
  * One compact line for the facts of a panel that are not published: `Not available: Limit, Consumed, Used`. The per-fact
- * request ids and reasons are in the tooltip, so nothing is dropped and nothing is repeated on screen.
+ * request ids and reasons are in one disclosure after the line (a "?" that opens by keyboard and touch), so nothing is
+ * dropped and nothing is repeated on screen.
  */
 export function GapLine({ items, because }: { items: readonly GapItem[]; because?: string | null }) {
   if (items.length === 0) return null;
-  const title = items
-    .map((item) => `${item.label}: ${item.id ? gapTitle(item.id, null, item.reason) : `${NOT_PUBLISHED}${item.reason ? ` · ${item.reason}` : ""}`}`)
-    .join("\n");
+  const labels = items.map((item) => item.label).join(", ");
+  const rows = items.map((item) => `${item.label}: ${item.id ? gapTitle(item.id, null, item.reason) : `${NOT_PUBLISHED}${item.reason ? ` · ${item.reason}` : ""}`}`);
   return (
-    <p className="exec-blk-gaps" title={title}>
-      <span className="exec-blk-gaps-lead">Not available:</span> {items.map((item) => item.label).join(", ")}
+    <p className="exec-blk-gaps">
+      <span className="exec-blk-gaps-lead">Not available:</span> {labels}
       {because ? <span className="exec-blk-gaps-why"> · {because}</span> : null}
+      <GapWhy name={`Why not available: ${labels}`} rows={rows} />
     </p>
   );
 }
@@ -240,9 +298,13 @@ export function NotPublished({ id, reasonCode, titleReason, children, compact = 
   const why = titleReason ? ` · ${titleReason}` : "";
   if (compactGaps) {
     return (
-      <span className="exec-blk-na" data-gap={id} title={gapTitle(id, typeof children === "string" ? children : null, [titleReason, reasonCode].filter(Boolean).join(" · ") || null)}>
-        Not available
-      </span>
+      <GapWhy
+        className="exec-blk-na"
+        gap={id}
+        text="Not available"
+        name={typeof children === "string" && children ? `Not available: ${children}, reason` : "Not available, reason"}
+        rows={[gapTitle(id, typeof children === "string" ? children : null, [titleReason, reasonCode].filter(Boolean).join(" · ") || null)]}
+      />
     );
   }
   const code = reasonCode ? ` · ${reasonCode}` : "";

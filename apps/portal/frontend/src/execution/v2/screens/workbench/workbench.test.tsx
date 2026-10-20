@@ -19,6 +19,7 @@ import PaperWorkbenchScreen, { WORKBENCH_SCREEN_KEY, type PaperWorkbenchScreenPr
 import {
   ACCOUNT, ALPHA_ID, DEP, PORTFOLIO, PORTFOLIO_NAME, STRATEGY, deferred, envelopeOf, fail, fakeApi, paperWire, qualityOf, qualityWire, sessionOf, type Fake, type FakeOptions, type Wire,
 } from "./workbench.harness.fixtures";
+import { whyText } from "../../gapWhyTestUtil";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
@@ -85,8 +86,8 @@ describe("screen contract", () => {
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     // No identity keys in this profile: the alpha is `Alpha Not available` (FE-066 in the title), no alpha id is shown, and the strategy id is NOT linked as an alpha.
     expect(text()).toContain("Alpha Not available");
-    expect(document.querySelector('.exec-wb-sub [data-gap="FE-066"]')!.getAttribute("title")).toContain("Not published (FE-066)");
     expect(text()).not.toContain("(FE-066)");
+    expect(whyText(document.querySelector('.exec-wb-sub [data-gap="FE-066"]')!)).toContain("Not published (FE-066)");
     expect(screen.queryByRole("link", { name: STRATEGY })).toBeNull();
     expect(screen.queryByRole("link", { name: "← Alpha" })).toBeNull();
     expect(text()).not.toContain("Tracking approved evidence");
@@ -102,9 +103,11 @@ describe("screen contract", () => {
     expect(screen.queryByRole("link", { name: PORTFOLIO })).toBeNull();
     expect(text()).toContain(`Alpha ${ALPHA_ID}`);
     // The name is not announced a second time: the id stands alone and the request and the server's reason are its title.
-    const gap = Array.from(document.querySelectorAll(".exec-wb-head .exec-wb-sub span[title]")).find((n) => (n.textContent ?? "").includes(`Alpha ${ALPHA_ID}`))!;
-    expect(gap.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
-    expect(gap.getAttribute("title")).toContain("FE-066");
+    const gap = Array.from(document.querySelectorAll(".exec-wb-head .exec-wb-sub span")).find((n) => (n.textContent ?? "").includes(`Alpha ${ALPHA_ID}`) && n.querySelector("button[aria-expanded]") !== null)!;
+    expect(text()).not.toContain("ALPHA_NAME_NOT_PUBLISHED");
+    const why = whyText(gap);
+    expect(why).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    expect(why).toContain("FE-066");
   });
 
   it("identity keys that break the schema's rules (a name without its id; some of the five missing) are refused whole: no link, no name", async () => {
@@ -128,7 +131,7 @@ describe("screen contract", () => {
     await ready();
     expect(m.calls).toContain(`profile:${DEP}:vnm`);
     expect(text()).toContain("VN market calendar: Not available");
-    expect(document.querySelector('.exec-wb-sub [data-gap="FE-070"]')!.getAttribute("title")).toContain("Not published (FE-070)");
+    expect(whyText(document.querySelector('.exec-wb-sub [data-gap="FE-070"]')!)).toContain("Not published (FE-070)");
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("VN market");
   });
 });
@@ -140,11 +143,11 @@ describe("the three chips never invent a state (D13a)", () => {
     expect(chip("runtime")).toBeNull();
     expect(chip("reconciliation")).toBeNull();
     expect(chip("gaps").textContent).toBe("Not availableRuntime, Reconciliation");
-    expect(chip("gaps").getAttribute("title")).toContain("Runtime: Not published (FE-067)");
-    expect(chip("gaps").getAttribute("title")).toContain("Source flag: active");
-    expect(chip("gaps").getAttribute("title")).toContain("Reconciliation: Not published (FE-067)");
-    expect(text()).not.toMatch(/\bRunning\b|\bReconciling\b/);
     expect(text()).not.toContain("(FE-067)");
+    expect(whyText(chip("gaps"))).toContain("Runtime: Not published (FE-067)");
+    expect(whyText(chip("gaps"))).toContain("Source flag: active");
+    expect(whyText(chip("gaps"))).toContain("Reconciliation: Not published (FE-067)");
+    expect(text()).not.toMatch(/\bRunning\b|\bReconciling\b/);
   });
 
   it("an inactive flag is worded as the source's flag, not as Halted", async () => {
@@ -152,7 +155,7 @@ describe("the three chips never invent a state (D13a)", () => {
     wire.data.deployment.active = false;
     mount({ profile: { ok: true, value: envelopeOf(wire) } });
     await ready();
-    expect(chip("gaps").getAttribute("title")).toContain("Source flag: inactive");
+    expect(whyText(chip("gaps"))).toContain("Source flag: inactive");
     expect(text()).not.toMatch(/Halted|Stopped/);
   });
 
@@ -161,7 +164,7 @@ describe("the three chips never invent a state (D13a)", () => {
     wire.data.deployment.active = "yes";
     mount({ profile: { ok: true, value: envelopeOf(wire) } });
     await ready();
-    expect(chip("gaps").getAttribute("title")).not.toContain("Source flag");
+    expect(whyText(chip("gaps"))).not.toContain("Source flag");
   });
 
   it("freshness is the source's word and as-of; the browser prints no age", async () => {
@@ -327,7 +330,7 @@ describe("Overview", () => {
     // One line for the three unpublished facts; each request id is in its title.
     const gaps = screen.getByRole("heading", { name: "Equity vs approved band" }).closest("section")!.querySelector(".exec-blk-gaps")!;
     expect(gaps.textContent).toBe("Not available: Drawdown, Approved band, Window");
-    for (const id of ["FE-013", "FE-029", "FE-025"]) expect(gaps.getAttribute("title")).toContain(`Not published (${id})`);
+    for (const id of ["FE-013", "FE-029", "FE-025"]) expect(whyText(gaps)).toContain(`Not published (${id})`);
     expect(text()).not.toContain("snapshots published");
   });
 
@@ -353,9 +356,9 @@ describe("Overview", () => {
     // The three unpublished criteria are one line; the request ids are in its title.
     const gaps = panel.querySelector(".exec-blk-gaps")!;
     expect(gaps.textContent).toBe("Not available: Drift vs approved band, Fills reconcile, Cost drift");
-    expect(gaps.getAttribute("title")).toContain("Not published (FE-029)");
-    expect(gaps.getAttribute("title")).toContain("Not published (FE-028)");
     expect(panel.textContent).not.toContain("FE-0");
+    expect(whyText(gaps)).toContain("Not published (FE-029)");
+    expect(whyText(gaps)).toContain("Not published (FE-028)");
     expect(within(panel).getByRole("link", { name: "Open exit review" }).getAttribute("href")).toBe("/governance/exit-reviews");
     expect(panel.textContent).not.toMatch(/Insufficient data|Met\b/);
   });
@@ -412,8 +415,8 @@ describe("Overview", () => {
     // Latency is one `Not available: Latency` line; the source's own reason code is its title.
     const gap = panel.querySelector(".exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Latency");
-    expect(gap.getAttribute("title")).toContain("BROKER_TIMESTAMPS_NOT_PUBLISHED");
     expect(panel.textContent).not.toContain("BROKER_TIMESTAMPS_NOT_PUBLISHED");
+    expect(whyText(gap)).toContain("BROKER_TIMESTAMPS_NOT_PUBLISHED");
     expect(within(panel).getByText("Partial")).toBeTruthy();
   });
 
@@ -519,7 +522,7 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(within(table).getAllByRole("row")[1].textContent).toContain("+9.54");
     const gap = document.querySelector(".exec-wb-sides .exec-blk-gaps, .exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Long, Short, Gross by instrument");
-    expect(gap.getAttribute("title")).toContain("Not published (FE-051)");
+    expect(whyText(gap)).toContain("Not published (FE-051)");
   });
 
   it("Positions: a flat row prints its zero quantity but no entry price, and says why", async () => {
@@ -545,8 +548,8 @@ describe("Orders, Fills, Positions, Sessions", () => {
     const panel = screen.getByRole("heading", { name: "Sessions" }).closest("section")!;
     expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Session rows");
     // The request and the reason the server gave ride in the title.
-    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-067)");
-    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN");
+    expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-067)");
+    expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN");
     await waitFor(() => expect(within(panel).getByRole("row", { name: /Sessions counted/ }).textContent).toContain("1"));
     expect(within(panel).getAllByRole("row")).toHaveLength(1);
   });
@@ -579,7 +582,7 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(Array.from(table.querySelectorAll("tbody tr"))[1]!.querySelector('td[data-l="Short"]')!.textContent).toBe("0");
     expect(text()).toContain("Not counted: 1 flat, 1 closed.");
     const notional = Array.from(document.querySelectorAll(".exec-blk-gaps")).find((n) => n.textContent === "Not available: Notional by side")!;
-    expect(notional.getAttribute("title")).toContain("Not published (FE-051)");
+    expect(whyText(notional)).toContain("Not published (FE-051)");
     expect(text()).not.toContain("Long, Short, Gross by instrument");
     cleanup();
     mount({ profile: { ok: true, value: envelopeOf(paperWire({ sides: "partial" })) } });
@@ -734,7 +737,7 @@ describe("states of the profile read (L1 matrix: outcome x quality x role)", () 
       expect(screen.getByRole("complementary", { name: "Deployment summary" })).toBeTruthy();
       expect(screen.queryAllByText(/Some branches or rows may be missing/).length > 0).toBe(picks.profile === "partial");
       expect(screen.queryAllByText(/No update within the freshness budget/).length > 0).toBe(picks.profile === "stale");
-      expect(chip("gaps").getAttribute("title")).toContain("Runtime: Not published (FE-067)");
+      expect(whyText(chip("gaps"))).toContain("Runtime: Not published (FE-067)");
       expect(screen.queryAllByText("Source not qualified.").length > 0).toBe(picks.profile === "nq");
     }
     // Account facts follow the capability set in every state.

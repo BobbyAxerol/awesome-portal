@@ -16,6 +16,7 @@ import SandboxScreen from "./index";
 import { chipsOf } from "./model";
 import { readSandboxView, type SandboxView } from "./readSandbox";
 import { fakeApi, okRead, v1Rich, v2Body } from "./testApi";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -96,10 +97,10 @@ describe("chips and identity", () => {
     expect(crumb.getByRole("link", { name: "Crypto Core" }).getAttribute("href")).toBe("/deployments/portfolios/pf_crypto");
     const sub = document.querySelector(".exec-stage-sub")!;
     expect(sub.textContent).toContain("Alpha alpha_TEST_ONLY");
-    // The name is not announced a second time: the id stands alone and the request and reason are its title.
+    // The name is not announced a second time: the id stands alone and the request and reason are in its disclosure.
     expect(sub.textContent).not.toContain("Alpha name");
-    expect(sub.querySelector("span[title]")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
-    expect(sub.querySelector("span[title]")!.getAttribute("title")).toContain("FE-066");
+    expect(whyText(sub.querySelector(".exec-blk-why"))).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    expect(whyText(sub.querySelector(".exec-blk-why"))).toContain("FE-066");
     expect(chip("runtime").textContent).toContain("Running");
   });
 
@@ -124,7 +125,7 @@ describe("Reconciliation: the server's figures", () => {
     expect(row("difference", "Open orders").querySelector("dd")!.textContent).toBe("1");
     const gap = row("broker", "Equity").querySelector("[data-gap]")!;
     expect(gap.textContent).toBe("Not available");
-    expect(gap.getAttribute("title")).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
+    expect(whyText(gap)).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
     expect(screen.getByText(/The Difference is the server's and is never worked out here\./)).toBeTruthy();
   });
 });
@@ -160,12 +161,13 @@ describe("findings and plans", () => {
     const rowsOf = Array.from(screen.getByRole("table", { name: "Promotion plans" }).querySelectorAll("tbody tr"));
     // No plan has an envelope, so that column is not drawn: it is one `Not available` line with the server's reason in its title.
     expect(rowsOf[0]!.querySelector('td[data-l="Envelope"]')).toBeNull();
-    expect(screen.getByRole("tabpanel").querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("ENVELOPE_LOOKUP_NOT_AVAILABLE");
+    // Closed, the page names no request id; each disclosure holds its own.
+    expect(screen.getByRole("tabpanel").textContent).not.toContain("(FE-072)");
+    expect(whyText(screen.getByRole("tabpanel").querySelector(".exec-blk-gaps")!)).toContain("ENVELOPE_LOOKUP_NOT_AVAILABLE");
     expect(rowsOf[1]!.querySelector('td[data-l="Author"]')!.textContent).toBe("Not available");
-    expect(rowsOf[1]!.querySelector('td[data-l="Author"] [data-gap]')!.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(whyText(rowsOf[1]!.querySelector('td[data-l="Author"] [data-gap]')!)).toContain("Not published (FE-072)");
     // Columns that still have a value stay; no note explaining the gaps is printed.
     expect(screen.getByRole("tabpanel").textContent).not.toContain("Typed plan fields");
-    expect(screen.getByRole("tabpanel").textContent).not.toContain("(FE-072)");
   });
 });
 

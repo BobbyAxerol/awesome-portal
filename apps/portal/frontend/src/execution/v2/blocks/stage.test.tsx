@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { readMetric, type Metric } from "../boundary";
 import { ConnectedContextBar } from "../shell/ContextBar";
+import { whyText } from "../gapWhyTestUtil";
 import {
   BlockerList,
   CapGauge,
@@ -114,14 +115,15 @@ describe("StageHeader · the three chips", () => {
     expect(screen.getByRole("group", { name: "Deployment state" })).toBeTruthy();
   });
 
-  it("chips the backend has not published are ONE `Not available` chip; the FE ids, reason and source flag are in its title (no green Running)", () => {
+  it("chips the backend has not published are ONE `Not available` chip; the FE ids, reason and source flag are in its disclosure (no green Running)", () => {
     const { container } = render(header());
     const [gaps] = chipsOf(container);
     expect(chipsOf(container)).toHaveLength(1);
     expect(gaps.getAttribute("data-chip")).toBe("gaps");
     expect(gaps.textContent).toBe("Not availableRuntime, Display freshness, Reconciliation");
     expect(gaps.textContent).not.toContain("(FE-");
-    const title = gaps.getAttribute("title") ?? "";
+    expect(gaps.getAttribute("title")).toBeNull();
+    const title = whyText(gaps);
     expect(title).toContain("Runtime: Not published (FE-067)");
     expect(title).toContain("Source flag: active");
     expect(title).toContain("Display freshness: Not published (FE-027)");
@@ -185,7 +187,8 @@ describe("StageHeader · compact spine slot", () => {
   it("a blocked current stage is announced as blocked, and without onSelect the nodes are not buttons", () => {
     render(header({ spine: { current: "sandbox", blocked: true } }));
     expect(screen.getByRole("img", { name: "Sandbox, Blocked" })).toBeTruthy();
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    // The spine's nodes are not buttons (the one button on the header is the chips' "why" disclosure).
+    expect(within(screen.getByRole("list", { name: "Lifecycle" })).queryAllByRole("button")).toHaveLength(0);
   });
 
   it("brings the current stage into view on mount, horizontally only; no throw where scrollIntoView does not exist (jsdom)", () => {

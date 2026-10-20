@@ -24,7 +24,7 @@ import { Flag } from "../Flag";
 import type { FlagKind } from "../flagKinds";
 import { JourneySpine, type JourneySpineProps } from "./JourneySpine";
 import { NO_VALUE_COPY } from "./metric";
-import { gapTitle, type NotPublishedId } from "./notPublished";
+import { GapWhy, gapTitle, type NotPublishedId } from "./notPublished";
 import "../css/blocks.css";
 import "../css/stage.css";
 
@@ -124,12 +124,8 @@ export function ChipBody({ value }: { value: StageChipValue }) {
         </>
       );
     case "not-published":
-      // The request id, its label and the server's reason are the tooltip; the words are the plain `Not available`.
-      return (
-        <span className="exec-blk-na" data-gap={value.id} title={gapChipTitle(value)}>
-          {NO_VALUE_COPY}
-        </span>
-      );
+      // The request id, its label and the server's reason are in the disclosure; the words are the plain `Not available`.
+      return <GapWhy className="exec-blk-na" gap={value.id} text={NO_VALUE_COPY} name={`${NO_VALUE_COPY}, reason`} rows={[gapChipTitle(value) ?? NO_VALUE_COPY]} />;
     case "not-available":
       return <span className="exec-blk-na">{value.reason ? `${NO_VALUE_COPY} · ${value.reason}` : NO_VALUE_COPY}</span>;
     case "flag":
@@ -173,14 +169,15 @@ export function StageChipRow({ chips }: { chips: StageChips }) {
           </div>
         ))}
         {gaps.length > 0 ? (
-          <div
-            className="exec-stage-chip"
-            data-chip="gaps"
-            data-state="not-available"
-            title={gaps.map((id) => `${STAGE_CHIP_LABELS[id]}: ${gapChipTitle(chips[id]) ?? NO_VALUE_COPY}`).join("\n")}
-          >
+          <div className="exec-stage-chip" data-chip="gaps" data-state="not-available">
             <dt className="exec-blk-kpi-label">{NO_VALUE_COPY}</dt>
-            <dd>{gaps.map((id) => STAGE_CHIP_LABELS[id]).join(", ")}</dd>
+            <dd>
+              {gaps.map((id) => STAGE_CHIP_LABELS[id]).join(", ")}
+              <GapWhy
+                name={`Why not available: ${gaps.map((id) => STAGE_CHIP_LABELS[id]).join(", ")}`}
+                rows={gaps.map((id) => `${STAGE_CHIP_LABELS[id]}: ${gapChipTitle(chips[id]) ?? NO_VALUE_COPY}`)}
+              />
+            </dd>
           </div>
         ) : null}
       </dl>
