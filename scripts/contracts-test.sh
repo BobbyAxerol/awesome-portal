@@ -160,6 +160,10 @@ cp -a "${ROOT_DIR}/apps/control-api/src/auth/cookies.ts" \
 # dependencies are copied into the networkless contract verification cell.
 cp -a "${ROOT_DIR}/apps/control-api/src/manager-lists/scoped-manager.contract.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/manager-lists/"
+# RV-12: the scoped scenario generator proves every published cursor with the REAL signed codec (two pure files: node:crypto + type-only imports).
+mkdir -p "${WORKSPACE_DIR}/apps/control-api/src/query"
+cp -a "${ROOT_DIR}/apps/control-api/src/query/cursor.ts" "${ROOT_DIR}/apps/control-api/src/query/contracts.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/query/"
 cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/command.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/instance-registration.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/pending-control.contract.ts" \
