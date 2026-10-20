@@ -13,7 +13,13 @@
  * only reports the click, the caller owns the order. Tables that pass neither
  * are unchanged. Below 660px the header row is hidden, so a caller that sorts
  * keeps its own control for the card layout.
+ *
+ * Scrolling (WCAG 2.1.1, axe scrollable-region-focusable, UXM-10 F-5): the wrap scrolls sideways when the table is wider
+ * than its column. A scroll region with nothing focusable inside cannot be scrolled from the keyboard, so exactly then
+ * (it overflows AND holds no link, button or focusable row) the wrap becomes a named, focusable region. Otherwise it is a
+ * plain div and adds no Tab stop.
  */
+import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import "./css/cards.css";
@@ -54,6 +60,13 @@ export interface CardsTableProps<Row> {
   onSort?(key: string): void;
 }
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** True while the element scrolls sideways and nothing inside it can take focus. */
+function needsKeyboardScroll(wrap: HTMLElement): boolean {
+  return wrap.scrollWidth > wrap.clientWidth + 1 && wrap.querySelector(FOCUSABLE) === null;
+}
+
 /** A cell that rendered nothing says so; it is never a dash and never 0. */
 function present(content: ReactNode): boolean {
   return content !== null && content !== undefined && content !== false && content !== "";
@@ -67,8 +80,26 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
       onRowOpen?.(row);
     }
   };
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const [keyboardScroll, setKeyboardScroll] = useState(false);
+  useEffect(() => {
+    const wrap = wrapRef.current;
+    if (wrap === null) return;
+    const measure = () => setKeyboardScroll(needsKeyboardScroll(wrap));
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(wrap);
+    const table = wrap.firstElementChild;
+    if (table !== null) observer.observe(table);
+    return () => observer.disconnect();
+  }, [rows, columns]);
   return (
-    <div className="exec-cards-wrap">
+    <div
+      ref={wrapRef}
+      className="exec-cards-wrap"
+      {...(keyboardScroll ? { role: "region", tabIndex: 0, "aria-label": `${label}, scrolls sideways` } : {})}
+    >
       <table className="exec-cards" aria-label={label}>
         <thead>
           <tr>

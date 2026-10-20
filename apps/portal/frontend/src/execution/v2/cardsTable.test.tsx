@@ -139,3 +139,42 @@ describe("cards.css", () => {
     numericBlocks.forEach((block) => expect(block).not.toMatch(/text-overflow/));
   });
 });
+
+describe("CardsTable scroll region (UXM-10 F-5, scrollable-region-focusable)", () => {
+  /** jsdom has no layout: say how wide the content is against the box. */
+  function overflow(scroll: number, client: number) {
+    vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(scroll);
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(client);
+  }
+  afterEach(() => vi.restoreAllMocks());
+
+  it("is a plain div, with no Tab stop, while the table fits", () => {
+    overflow(500, 500);
+    const { container } = table();
+    const wrap = container.querySelector(".exec-cards-wrap")!;
+    expect(wrap.getAttribute("tabindex")).toBeNull();
+    expect(wrap.getAttribute("role")).toBeNull();
+  });
+
+  it("becomes a named, focusable region when it scrolls and nothing inside can take focus", () => {
+    overflow(900, 500);
+    table();
+    const region = screen.getByRole("region", { name: "Deployments, scrolls sideways" });
+    expect(region.getAttribute("tabindex")).toBe("0");
+    expect(region.className).toBe("exec-cards-wrap");
+  });
+
+  it("stays a plain div when it scrolls but a row is focusable (the rows already take focus)", () => {
+    overflow(900, 500);
+    const { container } = table({ onRowOpen: () => undefined });
+    expect(container.querySelector(".exec-cards-wrap")!.getAttribute("tabindex")).toBeNull();
+    expect(screen.queryByRole("region")).toBeNull();
+  });
+
+  it("stays a plain div when it scrolls but a header sorts (a button is focusable content)", () => {
+    overflow(900, 500);
+    const sortable: CardsColumn<Row>[] = COLUMNS.map((c) => (c.key === "name" ? { ...c, sortKey: "name" } : c));
+    render(<CardsTable columns={sortable} rows={ROWS} rowKey={(r) => r.id} label="Deployments" onSort={() => undefined} />);
+    expect(screen.queryByRole("region")).toBeNull();
+  });
+});
