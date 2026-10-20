@@ -88,7 +88,9 @@ describe("/execution/slice", () => {
 
   it("is mounted, and says it is a fixture, when the manifest names it", async () => {
     expect(await open("/execution/slice", { manifest: "scoped", umbrella: "true" })).toBe("SLICE");
-    expect(screen.getByRole("note").textContent).toContain("Fixture frames, not a real stream");
-    expect(screen.getByRole("note").textContent).toContain("Not connected to a real source");
+    // One short line; the long words are its title.
+    expect(screen.getByRole("note").textContent).toBe("Fixture: not connected");
+    expect(screen.getByRole("note").getAttribute("title")).toContain("Fixture frames, not a real stream");
+    expect(screen.getByRole("note").getAttribute("title")).toContain("Not connected to a real source");
   });
 });

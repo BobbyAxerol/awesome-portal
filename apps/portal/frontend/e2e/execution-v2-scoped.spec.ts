@@ -83,8 +83,8 @@ for (const [label, width] of WIDTHS) {
     await openSlice(page);
 
     // The page says what it is, in the place a reader looks first.
-    const note = page.getByRole("note").filter({ hasText: "Fixture frames, not a real stream" });
-    await expect(note).toContainText("Not connected to a real source");
+    const note = page.getByRole("note").filter({ hasText: "Fixture: not connected" });
+    await expect(note).toHaveAttribute("title", /Not connected to a real source/);
     await expect(fixtureGroup(page)).toBeVisible();
     // The chip is never the green "ok" kind: it says fixture.
     await expect(chip(page).locator('[data-k="ok"]')).toHaveCount(0);
