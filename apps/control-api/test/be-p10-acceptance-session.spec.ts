@@ -10,8 +10,9 @@ import { AuthService, RESEARCH_ACCEPTANCE_ACCESS_SUBJECT, type SessionResult } f
 import { sha256 as tokenHash } from "../src/auth/argon";
 import { withTransaction } from "../src/db/pool";
 import { evaluateManagerDomainRead } from "../src/execution-v2/current-human-snapshot";
-import { ACCEPTANCE_EVIDENCE_CLASS, ACCEPTANCE_ISSUE_SCHEMA, ACCEPTANCE_REVOKE_SCHEMA, AcceptanceSessionError, nodeAcceptanceTokenFiles,
-  privateAcceptanceSession, readPinnedAcceptanceIssue, type AcceptanceArtifactPin, type AcceptanceTokenFiles } from "../src/execution-v2/research-acceptance-session";
+import { ACCEPTANCE_EVIDENCE_CLASS, ACCEPTANCE_ISSUE_SCHEMA, ACCEPTANCE_REVOKE_SCHEMA, AcceptanceSessionError,
+  acceptanceTokenFileMatches, nodeAcceptanceTokenFiles, privateAcceptanceSession, readPinnedAcceptanceIssue,
+  type AcceptanceArtifactPin, type AcceptanceTokenBinding, type AcceptanceTokenFiles } from "../src/execution-v2/research-acceptance-session";
 import { NOW, OWNER_STREAM_TEMPLATE, prepared, sha256 } from "./fixtures/core009-templates";
 import { FakeCoreWorld } from "./fixtures/fake-core-world";
 
@@ -20,12 +21,54 @@ type File = { bytes: Buffer; uid: number; mode: number; ino: number; link?: bool
 const files = new Map<string, File>();
 const ART = "/root/TEST_ONLY-session-artifact.json", TOKEN = "/root/TEST_ONLY-session/token.json";
 let serial = 0;
+const enoent = () => Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+/** A one-path fake disk for the default token sink: inodes survive unlink while a handle is open, like a real filesystem. */
+type Inode = { bytes: Buffer; ino: number; uid: number; mode: number };
+type Plan = (call: number, remaining: number) => { stored: number; reported?: number } | Error;
+const disk: { node: Inode | null; enabled: boolean; unlinks: number; plan: Plan | null; syncError: boolean; corruptRead: boolean; syncs: number; truncates: number; writes: number;
+  afterSync: (() => void) | null; writeHook: (() => void) | null; first: Buffer | null } =
+  { node: null, enabled: false, unlinks: 0, plan: null, syncError: false, corruptRead: false, syncs: 0, truncates: 0, writes: 0, afterSync: null, writeHook: null, first: null };
+const resetDisk = (enabled = false) => Object.assign(disk, { node: null, enabled, unlinks: 0, plan: null, syncError: false, corruptRead: false, syncs: 0, truncates: 0, writes: 0, afterSync: null, writeHook: null, first: null });
+const newInode = (bytes: Buffer | string = Buffer.alloc(0), over: Partial<Inode> = {}): Inode => ({ bytes: Buffer.from(bytes), ino: ++serial + 1000, uid: 0, mode: 0o100600, ...over });
+const inodeStat = (n: Inode) => ({ uid: n.uid, mode: n.mode, ino: n.ino, dev: 1, size: n.bytes.length, isFile: () => true, isSymbolicLink: () => false });
+const dirOf = { isDirectory: () => true, isSymbolicLink: () => false, uid: 0, mode: 0o40755 };
+function diskHandle(node: Inode) {
+  return {
+    chmod: async () => undefined, stat: async () => inodeStat(node), close: vi.fn(async () => undefined),
+    truncate: async () => { disk.truncates++; node.bytes = Buffer.alloc(0); },
+    sync: async () => { disk.syncs++; if (disk.syncError) throw new Error("EIO"); disk.afterSync?.(); },
+    write: async (buffer: Buffer, offset: number, length: number, position: number) => {
+      disk.writes++; if (!disk.first) disk.first = Buffer.from(buffer); disk.writeHook?.();
+      const step = disk.plan ? disk.plan(disk.writes, length) : { stored: length };
+      if (step instanceof Error) throw step;
+      const stored = Math.min(step.stored, length);
+      const next = Buffer.alloc(Math.max(node.bytes.length, position + stored)); node.bytes.copy(next); buffer.copy(next, position, offset, offset + stored); node.bytes = next;
+      return { bytesWritten: step.reported ?? stored, buffer };
+    },
+    read: async (buffer: Buffer, start: number, length: number, position: number) => {
+      const count = Math.max(0, Math.min(length, node.bytes.length - position));
+      if (count > 0) node.bytes.copy(buffer, start, position, position + count);
+      if (count > 0 && disk.corruptRead) buffer[start] = buffer[start]! ^ 0xff;
+      return { bytesRead: count, buffer };
+    },
+  };
+}
 const stat = (f: File) => ({ uid: f.uid, mode: f.mode, ino: f.ino, dev: 1, size: f.size ?? f.bytes.length, isFile: () => !f.link, isSymbolicLink: () => Boolean(f.link) });
 beforeEach(() => {
-  files.clear(); vi.clearAllMocks(); vi.mocked(unlink).mockResolvedValue(undefined); vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(NOW);
-  vi.mocked(lstat).mockImplementation((async (path: unknown) => { const f = files.get(String(path)); if (!f) throw Error("ENOENT"); return stat(f); }) as any);
-  vi.mocked(open).mockImplementation((async (path: unknown) => {
-    const f = files.get(String(path)); if (!f) throw Error("ENOENT");
+  files.clear(); vi.clearAllMocks(); vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(NOW);
+  resetDisk();
+  vi.mocked(unlink).mockImplementation((async (path: unknown) => { if (disk.enabled && path === TOKEN) { disk.unlinks++; disk.node = null; } }) as any);
+  vi.mocked(lstat).mockImplementation((async (path: unknown) => {
+    if (disk.enabled && path === TOKEN) { if (!disk.node) throw enoent(); return inodeStat(disk.node); }
+    if (disk.enabled && path === "/root/TEST_ONLY-session") return dirOf;
+    const f = files.get(String(path)); if (!f) throw enoent(); return stat(f); }) as any);
+  vi.mocked(open).mockImplementation((async (path: unknown, flags?: number) => {
+    if (disk.enabled && path === TOKEN) {
+      if (flags !== undefined && (flags & constants.O_CREAT)) { if (disk.node) throw Object.assign(new Error("EEXIST"), { code: "EEXIST" }); disk.node = newInode(); }
+      if (!disk.node) throw enoent();
+      return diskHandle(disk.node);
+    }
+    const f = files.get(String(path)); if (!f) throw enoent();
     let offset = 0;
     return { stat: async () => stat(f), close: vi.fn(async () => undefined), read: async (buffer: Buffer, start: number, length: number) => {
       const count = Math.min(length, f.bytes.length - offset);
@@ -41,14 +84,21 @@ const [READ, STREAM] = reviewed.ownerValue.manager_domain_grants as any[];
 const CONFIG = { AUTH_MODE: "dev", PORTAL_ENV: "local", SESSION_IDLE_SECONDS: 1800, SESSION_ABSOLUTE_SECONDS: 86400 } as any;
 
 class MemoryTokenFiles implements AcceptanceTokenFiles {
-  readonly store = new Map<string, Buffer>(); failWrite = false; refuseCreate = false; removeThrows = false;
+  readonly store = new Map<string, Buffer>(); failWrite = false; refuseCreate = false; removeThrows = false; readonly removeBindings: AcceptanceTokenBinding[] = [];
   async create(path: string) {
     if (this.refuseCreate || this.store.has(path)) throw new AcceptanceSessionError("ACCEPTANCE_TOKEN_FILE_REFUSED", 503);
     this.store.set(path, Buffer.alloc(0));
     return { write: async (bytes: Buffer) => { if (this.failWrite) throw new Error("disk full"); this.store.set(path, Buffer.from(bytes)); },
       abandon: async () => { this.store.delete(path); } };
   }
-  async remove(path: string) { if (this.removeThrows) throw new Error("busy"); if (!this.store.has(path)) return "ABSENT" as const; this.store.delete(path); return "REMOVED" as const; }
+  async remove(path: string, binding: AcceptanceTokenBinding) {
+    if (this.removeThrows) throw new Error("busy");
+    this.removeBindings.push(binding);
+    const bytes = this.store.get(path);
+    if (!bytes) return "ABSENT" as const;
+    if (!acceptanceTokenFileMatches(bytes, binding)) return "RETAINED_NOT_BOUND_TO_SESSION" as const;
+    this.store.delete(path); return "REMOVED" as const;
+  }
 }
 function makeWorld(over: Partial<ConstructorParameters<typeof FakeCoreWorld>[0]> = {}) {
   return new FakeCoreWorld({ now: NOW, database: { db: T.database_name, system: T.database_system_identifier, login: T.role_name },
@@ -282,19 +332,116 @@ describe("the default token sink (root-owned 0600, exclusive, wiped on removal)"
       expect(unlink).toHaveBeenCalledWith(TOKEN);
     }
   });
-  it("remove wipes the bytes before unlinking and refuses a non-root or non-regular file", async () => {
-    const st = { isFile: () => true, isSymbolicLink: () => false, uid: 0, ino: 9, dev: 1, size: 4 };
-    const handle = { stat: vi.fn(async () => st), write: vi.fn(async () => ({ bytesWritten: 4 })), sync: vi.fn(async () => undefined), close: vi.fn(async () => undefined) };
-    vi.mocked(lstat).mockResolvedValue(st as any); vi.mocked(open).mockResolvedValue(handle as any);
-    expect(await nodeAcceptanceTokenFiles.remove(TOKEN)).toBe("REMOVED");
-    expect((handle.write.mock.calls[0] as any)[0].equals(Buffer.alloc(4))).toBe(true);
-    expect(unlink).toHaveBeenCalledWith(TOKEN);
-    vi.mocked(unlink).mockClear();
-    vi.mocked(lstat).mockResolvedValue({ ...st, uid: 1000 } as any);
-    await expect(nodeAcceptanceTokenFiles.remove(TOKEN)).rejects.toSatisfy(code("ACCEPTANCE_TOKEN_FILE_REFUSED"));
-    expect(unlink).not.toHaveBeenCalled();
-    vi.mocked(lstat).mockRejectedValue(new Error("ENOENT"));
-    expect(await nodeAcceptanceTokenFiles.remove(TOKEN)).toBe("ABSENT");
+  it("remove wipes the verified bytes before unlinking and refuses a non-root or non-regular file; a missing file is ABSENT", async () => {
+    resetDisk(true);
+    const base = rig(), r = { ...base, deps: { ...base.deps, files: nodeAcceptanceTokenFiles } }, issued = await issue(r);
+    const written = Buffer.from(disk.node!.bytes), size = written.length, node = disk.node!;
+    expect(acceptanceTokenFileMatches(written, bindingOf(r, issued.session_id))).toBe(true);
+    expect(await nodeAcceptanceTokenFiles.remove(TOKEN, bindingOf(r, issued.session_id))).toBe("REMOVED");
+    expect(node.bytes.equals(Buffer.alloc(size))).toBe(true); // the verified inode was zeroed through its descriptor
+    expect(disk.node).toBeNull(); expect(disk.unlinks).toBe(1);
+    expect(await nodeAcceptanceTokenFiles.remove(TOKEN, bindingOf(r, issued.session_id))).toBe("ABSENT");
+    disk.node = newInode("{}", { uid: 1000 });
+    await expect(nodeAcceptanceTokenFiles.remove(TOKEN, bindingOf(r, issued.session_id))).rejects.toSatisfy(code("ACCEPTANCE_TOKEN_FILE_REFUSED"));
+    expect(disk.unlinks).toBe(1); expect(disk.node.bytes.toString()).toBe("{}");
+    vi.mocked(lstat).mockRejectedValue(Object.assign(new Error("EACCES"), { code: "EACCES" }));
+    await expect(nodeAcceptanceTokenFiles.remove(TOKEN, bindingOf(r, issued.session_id))).rejects.toSatisfy(code("ACCEPTANCE_TOKEN_FILE_REFUSED"));
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Edge CHANGES_REQUESTED item 1: token cleanup is bound to the EXACT session/file.
+const bindingOf = (r: ReturnType<typeof rig>, sessionId: string): AcceptanceTokenBinding =>
+  ({ session_id: sessionId, user_id: OWNER, token_sha256: r.w.sessions.get(sessionId)!.session_token_hash });
+const nodeRig = () => { resetDisk(true); const base = rig(); return { ...base, deps: { ...base.deps, files: nodeAcceptanceTokenFiles } }; };
+
+describe("revoke cleanup is bound to the exact session and file (Edge item 1)", () => {
+  it("REPRODUCER on the default sink: issue S1 at P, revoke S1, issue S2 at the reused P, REPLAY the S1 revoke -> S2's live token and session are untouched", async () => {
+    const r = nodeRig();
+    const s1 = await issue(r), first = await revokeBy(r, revokeDoc(s1.session_id));
+    expect(first).toMatchObject({ outcome: "REVOKED", token_file: "REMOVED" });
+    expect(disk.node).toBeNull();
+    const s2 = await issue(r), s2Bytes = Buffer.from(disk.node!.bytes), s2Inode = disk.node!;
+    expect(s2.session_id).not.toBe(s1.session_id);
+    const unlinks = disk.unlinks, writes = disk.writes;
+    const replay = await revokeBy(r, revokeDoc(s1.session_id));
+    expect(replay).toEqual({ schema_version: "portal.research-acceptance-session-revoke-receipt.v1", session_id: s1.session_id, user_id: OWNER,
+      outcome: "ALREADY_REVOKED_BY_THIS_OPERATION", session_state_before: "REVOKED", token_file: "RETAINED_NOT_BOUND_TO_SESSION", other_sessions_touched: 0 });
+    expect(disk.node).toBe(s2Inode); expect(disk.node!.bytes.equals(s2Bytes)).toBe(true); // not wiped, not unlinked
+    expect(disk.unlinks).toBe(unlinks); expect(disk.writes).toBe(writes);
+    expect(r.w.sessions.get(s2.session_id)!.state).toBe("ACTIVE");
+    expect(tokenHash(JSON.parse(s2Bytes.toString()).token)).toBe(r.w.sessions.get(s2.session_id)!.session_token_hash);
+    // the live session is still exactly revocable afterwards and ITS cleanup does remove its own file
+    expect(await revokeBy(r, revokeDoc(s2.session_id))).toMatchObject({ outcome: "REVOKED", token_file: "REMOVED" });
+    expect(disk.node).toBeNull();
+  });
+  it("the same reproducer through the injectable sink contract: the replayed S1 revoke is a typed terminal no-op that never touches S2", async () => {
+    const r = rig(), s1 = await issue(r);
+    await revokeBy(r, revokeDoc(s1.session_id));
+    const s2 = await issue(r), s2Token = Buffer.from(r.sink.store.get(TOKEN)!);
+    const replay = await revokeBy(r, revokeDoc(s1.session_id));
+    expect(replay).toMatchObject({ outcome: "ALREADY_REVOKED_BY_THIS_OPERATION", token_file: "RETAINED_NOT_BOUND_TO_SESSION", other_sessions_touched: 0 });
+    expect(r.sink.store.get(TOKEN)!.equals(s2Token)).toBe(true);
+    expect(r.sink.removeBindings.at(-1)).toEqual(bindingOf(r, s1.session_id));
+    expect(r.w.sessions.get(s2.session_id)).toMatchObject({ state: "ACTIVE" });
+    // a replay with a different artifact on the terminal session is the same typed no-op
+    expect(await revokeBy(r, revokeDoc(s1.session_id, { approval_ref: "TEST_ONLY-other" }))).toMatchObject({ outcome: "ALREADY_REVOKED_BY_THIS_OPERATION", token_file: "RETAINED_NOT_BOUND_TO_SESSION" });
+    expect(r.sink.store.get(TOKEN)!.equals(s2Token)).toBe(true);
+  });
+  it("an absent file is ABSENT (nothing removed), also for the replay with no S2", async () => {
+    const r = rig(), s1 = await issue(r);
+    r.sink.store.delete(TOKEN);
+    expect(await revokeBy(r, revokeDoc(s1.session_id))).toMatchObject({ outcome: "REVOKED", token_file: "ABSENT" });
+    expect(await revokeBy(r, revokeDoc(s1.session_id))).toMatchObject({ outcome: "ALREADY_REVOKED_BY_THIS_OPERATION", token_file: "ABSENT" });
+  });
+  it.each([
+    ["another session's token file", () => Buffer.from(JSON.stringify({ schema_version: "portal.research-acceptance-session-token.v1",
+      session_id: "TEST_ONLY-another-session", user_id: OWNER, cookie_name: "__Host-portal_session", token: "TEST_ONLY-OTHER-TOKEN".repeat(3), absolute_expires_at: "2026-10-20T08:00:00.000Z" }))],
+    ["the right session id but a token that is not this session's", (r: ReturnType<typeof rig>) => Buffer.from(JSON.stringify({ ...JSON.parse(r.sink.store.get(TOKEN)!.toString()), token: "TEST_ONLY-NOT-THE-SESSION-TOKEN-0123456789" }))],
+    ["the right token but another user", (r: ReturnType<typeof rig>) => Buffer.from(JSON.stringify({ ...JSON.parse(r.sink.store.get(TOKEN)!.toString()), user_id: "usr_someone_else" }))],
+    ["a foreign schema", (r: ReturnType<typeof rig>) => Buffer.from(JSON.stringify({ ...JSON.parse(r.sink.store.get(TOKEN)!.toString()), schema_version: "x" }))],
+    ["a file replaced by non-JSON bytes", () => Buffer.from("not json at all")],
+    ["a file replaced by an empty file", () => Buffer.alloc(0)],
+    ["a file replaced by JSON null", () => Buffer.from("null")],
+  ])("a mismatched file (%s) is RETAINED untouched; the session is still revoked", async (_n, replacement) => {
+    const r = rig(), s1 = await issue(r), foreign = (replacement as (r: ReturnType<typeof rig>) => Buffer)(r);
+    r.sink.store.set(TOKEN, Buffer.from(foreign));
+    const receipt = await revokeBy(r, revokeDoc(s1.session_id));
+    expect(receipt).toMatchObject({ outcome: "REVOKED", token_file: "RETAINED_NOT_BOUND_TO_SESSION", other_sessions_touched: 0 });
+    expect(r.sink.store.get(TOKEN)!.equals(foreign)).toBe(true);
+    expect(r.w.sessions.get(s1.session_id)!.state).toBe("REVOKED");
+  });
+  it("default sink: a file replaced between issue and revoke (other session / oversize / empty / torn JSON) is retained byte-for-byte: no wipe, no unlink", async () => {
+    const makers = [() => newInode(JSON.stringify({ schema_version: "portal.research-acceptance-session-token.v1", session_id: "TEST_ONLY-S-other", user_id: OWNER, token: "X".repeat(40) })),
+      () => newInode("A".repeat(5000)), () => newInode(Buffer.alloc(0)), () => newInode("{ torn")];
+    for (const make of makers) {
+      const r = nodeRig(), s1 = await issue(r), replacement = make();
+      disk.node = replacement; const before = Buffer.from(replacement.bytes), writes = disk.writes;
+      expect(await revokeBy(r, revokeDoc(s1.session_id))).toMatchObject({ outcome: "REVOKED", token_file: "RETAINED_NOT_BOUND_TO_SESSION" });
+      expect(disk.node).toBe(replacement); expect(replacement.bytes.equals(before)).toBe(true); expect(disk.unlinks).toBe(0); expect(disk.writes).toBe(writes);
+    }
+  });
+  it("default sink: a path swapped to another file AFTER verification and wipe is never unlinked (inode re-check)", async () => {
+    const r = nodeRig(), s1 = await issue(r);
+    const swapped = newInode("TEST_ONLY-live-token-of-a-newer-session");
+    disk.afterSync = () => { disk.node = swapped; };
+    expect(await revokeBy(r, revokeDoc(s1.session_id))).toMatchObject({ outcome: "REVOKED", token_file: "RETAINED_NOT_BOUND_TO_SESSION" });
+    expect(disk.node).toBe(swapped); expect(swapped.bytes.toString()).toBe("TEST_ONLY-live-token-of-a-newer-session"); expect(disk.unlinks).toBe(0);
+  });
+  it("default sink: the dead token file of the SAME session is wiped and removed exactly once (including for an EXPIRED session)", async () => {
+    const r = nodeRig(), s1 = await issue(r);
+    r.w.sessions.get(s1.session_id)!.state = "EXPIRED";
+    expect(await revokeBy(r, revokeDoc(s1.session_id))).toMatchObject({ outcome: "ALREADY_TERMINAL", session_state_before: "EXPIRED", token_file: "REMOVED" });
+    expect(disk.node).toBeNull(); expect(disk.unlinks).toBe(1);
+  });
+  it("the binding check is pure: id, user and token hash must all match", () => {
+    const token = "TEST_ONLY-TOKEN-VALUE-0123456789abcdef", hash = tokenHash(token);
+    const file = (over: object = {}) => Buffer.from(JSON.stringify({ schema_version: "portal.research-acceptance-session-token.v1", session_id: "S", user_id: OWNER, cookie_name: "c", token, absolute_expires_at: "t", ...over }));
+    const b = { session_id: "S", user_id: OWNER, token_sha256: hash };
+    expect(acceptanceTokenFileMatches(file(), b)).toBe(true);
+    for (const [bytes, binding] of [[file({ session_id: "T" }), b], [file({ user_id: "u" }), b], [file({ token: "x" }), b], [file({ token: 5 }), b], [file(), { ...b, token_sha256: "0".repeat(64) }],
+      [file(), { ...b, token_sha256: "short" }], [Buffer.from("[]"), b], [Buffer.from("\u0000"), b]] as const)
+      expect(acceptanceTokenFileMatches(bytes, binding)).toBe(false);
   });
 });
 
