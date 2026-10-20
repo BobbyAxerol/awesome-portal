@@ -630,7 +630,6 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
       <div className="exec-ck-mast">
         <div>
           <h1 className="exec-ck-h">Approvals</h1>
-          <p className="exec-ck-sub">Every decision, sorted by SLA</p>
         </div>
         <div className="exec-ck-ctrls">
           <CountLine counts={inbox.counts} status={inbox.status} />

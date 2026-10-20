@@ -198,7 +198,9 @@ export function Queue(props: QueueProps) {
           </button>
         ))}
       </div>
-      <p id="exec-ck-lane-reason" className="exec-ck-note exec-ck-pad">Archive, Reactivation and Capital: {NOT_PUBLISHED.lane}</p>
+      <p id="exec-ck-lane-reason" className="exec-ck-note exec-ck-pad" title={NOT_PUBLISHED.lane}>
+        Not available: Archive, Reactivation, Capital<span className="exec-blk-sr"> ({NOT_PUBLISHED.lane})</span>
+      </p>
 
       {lane === "waiver" ? (
         <div className="exec-ck-lanes" role="group" aria-label="Waiver state">

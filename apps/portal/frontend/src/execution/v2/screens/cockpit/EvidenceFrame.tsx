@@ -19,6 +19,7 @@ import { readGateR2Detail } from "../../../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../../../api/rows";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { reviewRouteFor, type ApprovalGate } from "../../../screens/ApprovalInbox";
+import { QuietIds } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
@@ -122,12 +123,12 @@ export function useEvidenceRead(api: ExecutionApi, target: EvidenceTarget | null
 /* ── small pieces ─────────────────────────────────────────────────────────── */
 
 function NotPublished({ text }: { text: string }) {
-  return <span className="exec-ck-np">{text}</span>;
+  return <span className="exec-ck-np" title={text}><QuietIds text={text} /></span>;
 }
 
 /** A published word, or the absence named with the FE request that will publish it. */
 function Word({ value, fe }: { value: string | null | undefined; fe: string }) {
-  return value ? <>{value}</> : <span className="exec-ck-np">{notPublishedFor(fe)}</span>;
+  return value ? <>{value}</> : <NotPublished text={notPublishedFor(fe)} />;
 }
 
 type Mark = "pass" | "watch" | "fail" | "insufficient";
@@ -428,7 +429,7 @@ function LiveBody({ data }: { data: Extract<EvidenceData, { kind: "live" }> }) {
 
 /** A section the server published as absent: the state word and its own reason code, never invented copy. */
 function Absent({ section }: { section: AbsentSectionV2 }) {
-  return <span className="exec-ck-np">{`Not published · ${section.reasonCode}`}</span>;
+  return <NotPublished text={`Not published · ${section.reasonCode}`} />;
 }
 
 function Id({ value }: { value: string }) {
@@ -535,7 +536,7 @@ function DecisionInputsPanel({ context }: { context: SectionV2<DecisionContextV2
                     {hashes.value.map((hash) => <div key={hash}><Id value={hash} /></div>)}
                   </details>
                 )
-              : <span className="exec-ck-np">{`Not published · ${hashes.reasonCode}`}</span>,
+              : <NotPublished text={`Not published · ${hashes.reasonCode}`} />,
           },
           { label: "Plan route", value: <Id value={context.planPath} /> },
           { label: "Request schema", value: <Id value={context.requestSchemaVersion} /> },

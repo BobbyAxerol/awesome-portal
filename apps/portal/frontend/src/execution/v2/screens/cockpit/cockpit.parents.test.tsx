@@ -226,9 +226,10 @@ describe("R2, V2 body with the sections added by e19ad906", () => {
     expect(text).toContain("Created byuser_TEST_ONLY_creator (you)");
     expect(text).toContain("Latest planop_TEST_ONLY_R2_EXPIRED · stored expired · created");
     // What the body still does not carry stays named with its request.
-    for (const label of ["Ladder", "Call", "Receipt ref", "What changes"]) {
-      expect(receipt().textContent).toContain(`${label}Not published (FE-030)`);
-    }
+    // ... on one 'Not available' line, with FE-030 in its title (no row of "Not published" per fact).
+    const line = within(receipt()).getByTestId("not-available-line");
+    expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref, What changes");
+    expect(line.getAttribute("title")).toContain("Ladder: Not published (FE-030)");
   });
 
   it("r2_followthrough: the decision inputs are drawn from the body: version, evidence set, hashes, plan route, admission not evaluated", async () => {

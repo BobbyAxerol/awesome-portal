@@ -15,6 +15,7 @@ import type { ReviewCaptureCapabilities } from "../../../api/reviewCapture";
 import type { DecidedRow } from "../../../screens/ApprovalInbox";
 import { formatAsOf } from "../../boundary";
 import { DockAction } from "../../Drawer";
+import { NotAvailableLine, QuietIds } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { ActorsV2, LatestOperationV2, SectionV2 } from "../../readers/governanceParents";
 import type { InboxRowV2 } from "./inboxRowV2";
@@ -116,7 +117,7 @@ function ReceiptRows({ rows }: { rows: readonly { label: string; value: ReactNod
 }
 
 function Np({ text }: { text: string }) {
-  return <span className="exec-ck-np">{text}</span>;
+  return <span className="exec-ck-np" title={text}><QuietIds text={text} /></span>;
 }
 
 /** A stored actor id, or the absence as the server gave it (a section withheld for this viewer is still FE-030's datum). */
@@ -236,14 +237,13 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
             <div className="exec-ck-stepup" role="group" aria-label="Step-up confirmation">
               <Flag kind="approval" label="Step-up" size="sm" />
               <p>Requirement: <Np text={NOT_PUBLISHED.stepUp} /></p>
-              <p className="exec-ck-note">Informational only. Nothing is asked or sent in this preview.</p>
             </div>
           ) : null}
 
           <div>
             <label className="exec-ck-label" htmlFor={noteId}>Note</label>
             <textarea id={noteId} className="exec-ck-textarea" rows={2} disabled aria-describedby={noteReasonId} placeholder="Recorded with the decision" />
-            <p id={noteReasonId} className="exec-ck-note">{PREVIEW_REASON}</p>
+            <p id={noteReasonId} className="exec-blk-sr">{PREVIEW_REASON}</p>
           </div>
 
           {spec.note ? <p className="exec-ck-note">{spec.note}</p> : null}
@@ -264,7 +264,7 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
       <section className="exec-ck-panel" aria-label="Receipt" data-recorded={decided ? "true" : undefined}>
         <div className="exec-ck-ph">
           <h3 className="exec-ck-pt">{decided ? "Recorded" : "Receipt"}</h3>
-          <span className="exec-ck-pr">{decided ? "Read from the decision history" : PREVIEW_REASON}</span>
+          {decided ? <span className="exec-ck-pr">Read from the decision history</span> : null}
         </div>
         <ReceiptRows
           rows={[
@@ -278,11 +278,11 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
                   { label: "Latest plan", value: <LatestPlanCell latest={summary.latestOperation} /> },
                 ]
               : []),
-            { label: "Ladder", value: <Np text={NOT_PUBLISHED.decisionCall} /> },
-            { label: "Call", value: <Np text={NOT_PUBLISHED.decisionCall} /> },
-            { label: "Receipt ref", value: <Np text={NOT_PUBLISHED.decisionCall} /> },
-            { label: "What changes", value: <Np text={NOT_PUBLISHED.decisionCall} /> },
           ]}
+        />
+        <NotAvailableLine
+          className="exec-ck-note exec-ck-pad"
+          facts={["Ladder", "Call", "Receipt ref", "What changes"].map((label) => ({ label, id: "FE-030" as const }))}
         />
       </section>
 
