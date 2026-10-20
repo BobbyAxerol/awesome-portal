@@ -34,6 +34,7 @@ import {
   type CommandPreviewV1,
   type CommandReasonCode,
   type CostImpactV1,
+  type CurrentPrimitiveV1,
   type F0ApplyDenialV1,
   type SafeNextAction,
 } from "../../readers/commandOperation";
@@ -65,6 +66,31 @@ export function planImpact(costImpact: CostImpactV1): PlanImpact {
   }
 }
 
+/** What the plan says about the N16B primitive. `NONE` is the wire's null; `DARK` is the described-but-inactive object (both flags are constants false). */
+export type PlanPrimitive =
+  | { state: "NONE" }
+  | { state: "DARK"; label: string; rows: readonly PlanFact[] }
+  /** A capital preview has no such field (the contract publishes it on the F0 plan only): the screen shows nothing and guesses nothing. */
+  | { state: "NOT_CARRIED" };
+
+const PRIMITIVE_LABEL: Readonly<Record<CurrentPrimitiveV1["id"], string>> = { "live.emergency-close": "Emergency close" };
+
+/** `current_primitive` as typed. Nothing is inferred from the command key. */
+export function planPrimitive(primitive: CurrentPrimitiveV1 | null): PlanPrimitive {
+  if (primitive === null) return { state: "NONE" };
+  return {
+    state: "DARK",
+    label: PRIMITIVE_LABEL[primitive.id],
+    rows: [
+      { label: "Primitive", value: primitive.id, mono: true },
+      { label: "Source environment", value: primitive.sourceEnvironment, mono: true },
+      { label: "Targets", value: primitive.targetTypes.join(", "), mono: true },
+      { label: "Active", value: primitive.runtimeActive ? "Yes" : "No" },
+      { label: "Request to the source", value: primitive.sourceSideEffectRequested ? "Possibly: verify first" : "No" },
+    ],
+  };
+}
+
 export interface PlanView {
   lane: Lane;
   /** What the key table is keyed by: the plan identity. Two different plans never share a key. */
@@ -74,6 +100,7 @@ export interface PlanView {
   blockers: readonly string[];
   warnings: readonly string[];
   impact: PlanImpact;
+  primitive: PlanPrimitive;
   /** `sha256:` digest the submit is bound to; null while the preview publishes none. */
   digest: string | null;
   /** Epoch ms the plan stops being usable, or null when none is published. */
@@ -121,6 +148,7 @@ export function planViewFromF0(plan: CommandPlanV1): PlanView {
     blockers: plan.blockers,
     warnings: plan.warnings,
     impact: planImpact(plan.costImpact),
+    primitive: planPrimitive(plan.currentPrimitive),
     digest: plan.planDigest,
     expiresAtMs: plan.expiresAt.ms,
     operationId: plan.operationId,
@@ -166,6 +194,7 @@ export function planViewFromCapital(intent: CapitalIntentView, preview: CommandP
     blockers: preview.allowed ? [] : [preview.reasonCode ?? "NO_REASON_PUBLISHED"],
     warnings: [],
     impact: planImpact(preview.costImpact),
+    primitive: { state: "NOT_CARRIED" },
     digest: preview.previewDigest,
     expiresAtMs: preview.expiresAtMs,
     operationId: null,
@@ -497,6 +526,31 @@ export interface Facet {
   label: string;
   /** What the word means, and what it does not. */
   note: string;
+  /** The typed absence this dimension carries (`venue_fill`, `source_rejection`), read from its own field and never from the dimension's word. */
+  absence?: FacetAbsence;
+}
+
+/** One typed absence in one line: NOT_APPLICABLE ("nothing to publish here") and NOT_PUBLISHED ("the source has not published it") are different words. */
+export interface FacetAbsence {
+  field: "fill" | "rejection";
+  state: "NOT_APPLICABLE" | "NOT_PUBLISHED";
+  text: string;
+  /** Hover text: the request id and the wire reason, kept out of the line itself. */
+  title: string;
+}
+
+export function fillAbsence(fill: CommandStatusV1["venueFill"]): FacetAbsence {
+  switch (fill.state) {
+    case "NOT_APPLICABLE": return { field: "fill", state: fill.state, text: "Fill: not applicable", title: "This command has no fill." };
+    case "NOT_PUBLISHED": return { field: "fill", state: fill.state, text: "Fill: not published", title: `${notPublishedText("FE-032")} · ${fill.reason}` };
+  }
+}
+
+export function rejectionAbsence(rejection: CommandStatusV1["sourceRejection"]): FacetAbsence {
+  switch (rejection.state) {
+    case "NOT_APPLICABLE": return { field: "rejection", state: rejection.state, text: "Reason: not applicable", title: "Nothing was rejected." };
+    case "NOT_PUBLISHED": return { field: "rejection", state: rejection.state, text: "Reason: not published", title: `${notPublishedText("FE-032")} · ${rejection.reason}` };
+  }
 }
 
 export function statusFacets(status: CommandStatusV1): readonly Facet[] {
@@ -517,7 +571,7 @@ export function statusFacets(status: CommandStatusV1): readonly Facet[] {
       case "WAITING_ENCUMBRANCE": return { dimension: "Business", kind: "pending", label: "Waiting", note: "Waiting for capacity. Some of it may already be applied." };
       case "CANCELLED": return { dimension: "Business", kind: "neutral", label: "Cancelled", note: "Cancelled at the source." };
       case "PARTIALLY_APPLIED_CANCELLED": return { dimension: "Business", kind: "partial", label: "Partly applied, rest cancelled", note: "Part applied, the remainder cancelled." };
-      case "REJECTED": return { dimension: "Business", kind: "rejected", label: "Rejected", note: "The source rejected it. Its reason is not published." };
+      case "REJECTED": return { dimension: "Business", kind: "rejected", label: "Rejected", note: "The source rejected it." };
     }
   })();
   const projection: Facet = (() => {
@@ -539,12 +593,8 @@ export function statusFacets(status: CommandStatusV1): readonly Facet[] {
       case "REJECTED": return { dimension: "Venue", kind: "rejected", label: "Rejected", note: "The venue rejected it." };
     }
   })();
-  return [delivery, business, projection, venue];
-}
-
-/** The venue words that imply order flow: a fill quantity is not part of the vocabulary. */
-export function venueNeedsFillDetail(status: CommandStatusV1): boolean {
-  return status.venue === "PENDING" || status.venue === "ACKNOWLEDGED" || status.venue === "FILLED";
+  // The absences come from their own typed fields. The venue word and the business word decide nothing here.
+  return [delivery, { ...business, absence: rejectionAbsence(status.sourceRejection) }, projection, { ...venue, absence: fillAbsence(status.venueFill) }];
 }
 
 export const NEXT_ACTION_COPY: Readonly<Record<CommandStatusV1["nextAction"], string>> = {
@@ -554,7 +604,6 @@ export const NEXT_ACTION_COPY: Readonly<Record<CommandStatusV1["nextAction"], st
   REVIEW_BLOCKER: "Review the blocker. Do not create a new key to get around it.",
 };
 
-export const NOT_PUBLISHED_REJECT_REASON = notPublishedText("FE-032");
 
 /* ───────────────────────────── status lookup ───────────────────────────── */
 

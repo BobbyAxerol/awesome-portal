@@ -8,13 +8,22 @@ import { BLOCKED_REASON_TEXT, type BlockedReason } from "../../../adminCatalog";
 import { formatUtcEpochMs } from "../../../screenDataContract";
 import { notPublishedText } from "../../blocks";
 import { Flag } from "../../Flag";
-import { F0_NO_EFFECT, showable } from "./model";
+import { F0_NO_EFFECT, showable, type PlanFact, type PlanPrimitive } from "./model";
 import { Facts } from "./parts";
 import { READ_DISABLED_REASON } from "./port";
 import type { CommandFlow } from "./useCommandFlow";
 
 function blockerSentence(code: string): string | null {
   return Object.prototype.hasOwnProperty.call(BLOCKED_REASON_TEXT, code) ? BLOCKED_REASON_TEXT[code as BlockedReason] : null;
+}
+
+/** One fact row read from the plan's `current_primitive`; a capital preview has no such field and shows no row. */
+function primitiveRow(primitive: PlanPrimitive): readonly PlanFact[] {
+  switch (primitive.state) {
+    case "NONE": return [{ label: "Primitive", value: "None" }];
+    case "DARK": return [{ label: "Primitive", value: `${primitive.label} · not active` }];
+    case "NOT_CARRIED": return [];
+  }
 }
 
 export function PlanPanel({ flow }: { flow: CommandFlow }) {
@@ -85,7 +94,13 @@ export function PlanPanel({ flow }: { flow: CommandFlow }) {
       {view.replayed ? (
         <p className="exec-cf-meta" data-notice="replayed">The server already knew this request key and returned the existing plan. Nothing new was recorded.</p>
       ) : null}
-      <Facts rows={view.facts} label="What this plan is" />
+      <Facts rows={[...view.facts, ...primitiveRow(view.primitive)]} label="What this plan is" />
+      {view.primitive.state === "DARK" ? (
+        <details className="exec-cf-prov" data-block="primitive">
+          <summary>Primitive details</summary>
+          <Facts rows={view.primitive.rows} label="Primitive" />
+        </details>
+      ) : null}
 
       <div className="exec-cf-block">
         <h4 className="exec-cf-sub">Blocked by</h4>

@@ -32,7 +32,6 @@ import {
   statusFacets,
   submitGate,
   validateConfirm,
-  venueNeedsFillDetail,
   type PlanView,
   type Receipt,
 } from "./model";
@@ -81,6 +80,19 @@ describe("the plan view is the plan, and cost and impact are never computed", ()
     expect(view.blockers).toEqual(["COMMAND_RELAY_DISABLED"]);
     expect(view.facts.some((f) => /payload/i.test(f.label) && f.mono !== true && !/hash/i.test(f.label) && !/Payload$/.test(f.label))).toBe(false);
     expect(view.confirmable.ok).toBe(true);
+  });
+
+  it("current_primitive is read from the plan's own field: null is None, the N16B object is described as not active, a capital preview carries none", () => {
+    expect(f0Plan().primitive).toEqual({ state: "NONE" });
+    const read = readCommandPlanV1(loadCanonical("execution-command-plan.emergency-close"));
+    if (read === null || read.kind !== "command_plan") throw new Error("the emergency-close plan does not read");
+    const dark = planViewFromF0(read.plan).primitive;
+    expect(dark.state).toBe("DARK");
+    if (dark.state !== "DARK") return;
+    expect(dark.label).toBe("Emergency close");
+    expect(dark.rows.find((r) => r.label === "Active")?.value).toBe("No");
+    expect(dark.rows.find((r) => r.label === "Request to the source")?.value).toBe("No");
+    expect(capitalPlan().primitive).toEqual({ state: "NOT_CARRIED" });
   });
 
   it("capital: the amount, the int64 versions and the policy come back byte for byte, with the unit", () => {
@@ -341,10 +353,30 @@ describe("the four answers of a capital status are never merged", () => {
     expect(facets.find((f) => f.dimension === "Projection")).toMatchObject({ kind: "display" });
     expect(facets.find((f) => f.dimension === "Projection")!.note).toMatch(/Never resubmit/);
     expect(facets.find((f) => f.dimension === "Venue")).toMatchObject({ kind: "pending" });
-    expect(venueNeedsFillDetail(status)).toBe(true);
+    expect(facets.find((f) => f.dimension === "Venue")!.absence).toMatchObject({ field: "fill", state: "NOT_PUBLISHED", text: "Fill: not published" });
     expect(status.commandId).toBe(COMMAND_ID_APPLIED);
     expect(classifyStatus(status, false).kind).toBe("ACCEPTED");
     expect(classifyStatus(status, true).kind).toBe("REPLAYED");
+  });
+
+  it("fill and rejection absences come from venue_fill and source_rejection, not from the venue or business word", () => {
+    const abs = (body: Record<string, unknown>) => {
+      const facets = statusFacets(read(body));
+      return [facets[1]!.absence, facets[3]!.absence] as const;
+    };
+    // A venue word that implies order flow, with a field that says "not applicable": the field wins.
+    const pendingButNa = { ...appliedLaggingStatus(), venue_fill: { state: "NOT_APPLICABLE", reason: null, quantities: null } };
+    expect(abs(pendingButNa)[1]).toMatchObject({ field: "fill", state: "NOT_APPLICABLE", text: "Fill: not applicable" });
+    // The venue word "not applicable", with a field that says "not published": the field wins.
+    const naButNp = { ...rejectedBusinessStatus(), venue_fill: { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES", quantities: null } };
+    const [rejection, fill] = abs(naButNp);
+    expect(fill).toMatchObject({ field: "fill", state: "NOT_PUBLISHED", text: "Fill: not published" });
+    expect(fill!.title).toMatch(/FE-032/);
+    expect(rejection).toMatchObject({ field: "rejection", state: "NOT_PUBLISHED", text: "Reason: not published" });
+    // The not-applicable and not-published lines never share words.
+    expect(new Set([abs(pendingButNa)[1]!.text, fill!.text]).size).toBe(2);
+    // The ids stay out of the line.
+    expect(JSON.stringify([rejection!.text, fill!.text])).not.toMatch(/FE-|SOURCE_RESULT/);
   });
 
   it("amounts keep their exact strings and the unit; absent amounts are absent, not zero", () => {

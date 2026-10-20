@@ -491,10 +491,19 @@ textarea.exec-cf-control {
   font: var(--exec-font-term);
   color: var(--ink-faint);
 }
+.exec-cf-facet-absence {
+  grid-column: 3;
+}
+.exec-cf-facet-absence[data-state="not_published"] {
+  color: var(--ink-soft);
+}
 @media (max-width: 660px) {
   .exec-cf-facets li {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-1);
+  }
+  .exec-cf-facet-absence {
+    grid-column: 1;
   }
 }
 
