@@ -26,7 +26,7 @@
  */
 import { afterAll, describe, expect, it } from "vitest";
 
-import { canonicalDigest, loadCanonical } from "../testkit/loadCanonical";
+import { canonicalDigest, loadCanonical, schemaEnum } from "../testkit/loadCanonical";
 import { cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, setPath, type Draft } from "../testkit/matrix";
 import {
   arrayCases, decimalCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
@@ -142,6 +142,59 @@ describe("L0 · canonical, verbatim", () => {
 });
 
 /* ═════════════════════════ L1 ═════════════════════════ */
+describe("L0 · the opt-in members (BE-P12), verbatim", () => {
+  it("every object in the file is a covered body", () => {
+    const objects = Object.keys(canonical).filter((key) => typeof canonical[key] === "object");
+    expect(objects.sort()).toEqual(["populated", "unpublished", "with_members", "with_members_hidden"]);
+  });
+
+  it("with_members and with_members_hidden pass the published schema and read", () => {
+    for (const body of [WITH, WITH_HIDDEN]) {
+      expect(violations(body)).toEqual([]);
+      expect(liveOf(body)).not.toBeNull();
+    }
+    // The members are the only difference from the populated body.
+    const rest = (b: Draft) => { const c = clone(b); delete c.identity; delete c.stage_facts; return c; };
+    expect(rest(WITH)).toEqual(POPULATED);
+    expect(rest(WITH_HIDDEN)).toEqual(POPULATED);
+  });
+
+  it("the original bodies carry neither member and read them as null (the opt-in is off by default)", () => {
+    for (const body of [POPULATED, UNPUBLISHED]) {
+      expect(Object.keys(body)).not.toContain("identity");
+      expect(Object.keys(body)).not.toContain("stage_facts");
+      expect(liveOf(body)).toMatchObject({ identity: null, stageFacts: null });
+    }
+  });
+
+  it("published identity and an OPEN_FINDINGS verdict come back; nothing else is a value", () => {
+    const read = liveOf(WITH)!;
+    expect(read.identity).toEqual({
+      basis: "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY", alphaId: "alpha_TEST_ONLY_identity", alphaName: null, portfolioName: "TEST_ONLY portfolio name",
+      alphaReasonCode: "ALPHA_NAME_NOT_PUBLISHED", portfolioNameReasonCode: null,
+    });
+    const facts = read.stageFacts!;
+    expect(facts.reconciliation.verdict).toEqual({ availability: "AVAILABLE", value: "OPEN_FINDINGS" });
+    expect(facts.reconciliation.openFindingCount).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "AUTHORIZED_POPULATION_COUNT_NOT_EXACT" });
+    expect(facts.reconciliation.unknownOrderCount).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED" });
+    expect(facts.runtime.state).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY" });
+    expect(facts.runtime.since).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY" });
+    expect(facts.sessions).toMatchObject({ availability: "NOT_PUBLISHED", reasonCode: "SCOPED_SESSION_ROW_FIELDS_NOT_IN_READ_VOCABULARY", rows: [] });
+  });
+
+  it("hidden: every part is a typed absence with its reason, including the verdict (AUTHORIZED_POPULATION_ONLY)", () => {
+    const read = liveOf(WITH_HIDDEN)!;
+    expect(read.identity).toMatchObject({ alphaId: null, portfolioName: null, alphaReasonCode: "ALPHA_IDENTITY_NOT_AUTHORIZED", portfolioNameReasonCode: "PORTFOLIO_NAME_NOT_AUTHORIZED" });
+    expect(read.stageFacts!.reconciliation.verdict).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "AUTHORIZED_POPULATION_ONLY" });
+  });
+
+  it("the dispatcher reads the same body as v2, with the members", () => {
+    const routed = readLiveFullByVersion(WITH);
+    expect(routed.kind).toBe("v2");
+    if (routed.kind === "v2") expect(routed.value).toEqual(liveOf(WITH));
+  });
+});
+
 describe("L1 · matrix A · one panel: state x reason x records x has_more x cursors x returned_count", () => {
   const PANEL = ["data", "orders"] as const;
   const DIMS = [
@@ -407,6 +460,113 @@ describe("L1 · matrix F · the contract flags: only the published constants rea
   });
 });
 
+/* ── BE-P12: the two opt-in members ───────────────────────────────────────── */
+const WITH: Draft = canonical.with_members;
+const WITH_HIDDEN: Draft = canonical.with_members_hidden;
+const NP = (reason: string) => ({ availability: "NOT_PUBLISHED", value: null, reason_code: reason });
+const AV = (value: unknown) => ({ availability: "AVAILABLE", value, reason_code: null });
+const TS = "2026-10-12T08:00:00.000Z";
+
+describe("L1 · matrix G · stage_facts: what an authorized population can prove, and nothing else", () => {
+  const FACTS = ["stage_facts"] as const;
+  const DIMS = [
+    dimensionOf("runtime_state", [
+      { label: "not-published", apply: (d: Draft) => { d.stage_facts.runtime.runtime_state = NP("RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY"); } },
+      { label: "RUNNING", apply: (d: Draft) => { d.stage_facts.runtime.runtime_state = AV("RUNNING"); } },
+      { label: "unknown-word", apply: (d: Draft) => { d.stage_facts.runtime.runtime_state = AV("ACTIVE"); } },
+    ]),
+    dimensionOf("since", [
+      { label: "not-published", apply: (d: Draft) => { d.stage_facts.runtime.since = NP("RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY"); } },
+      { label: "available", apply: (d: Draft) => { d.stage_facts.runtime.since = AV(TS); } },
+    ]),
+    dimensionOf("verdict", [
+      { label: "not-published", apply: (d: Draft) => { d.stage_facts.reconciliation.verdict = NP("AUTHORIZED_POPULATION_ONLY"); } },
+      { label: "OPEN_FINDINGS", apply: (d: Draft) => { d.stage_facts.reconciliation.verdict = AV("OPEN_FINDINGS"); } },
+      { label: "NO_OPEN_FINDINGS", apply: (d: Draft) => { d.stage_facts.reconciliation.verdict = AV("NO_OPEN_FINDINGS"); } },
+      { label: "available-null", apply: (d: Draft) => { d.stage_facts.reconciliation.verdict = AV(null); } },
+    ]),
+    dimensionOf("open_finding_count", [
+      { label: "not-published", apply: (d: Draft) => { d.stage_facts.reconciliation.open_finding_count = NP("AUTHORIZED_POPULATION_COUNT_NOT_EXACT"); } },
+      { label: "1", apply: (d: Draft) => { d.stage_facts.reconciliation.open_finding_count = AV(1); } },
+      { label: "0", apply: (d: Draft) => { d.stage_facts.reconciliation.open_finding_count = AV(0); } },
+    ]),
+    dimensionOf("unknown_order_count", [
+      { label: "not-published", apply: (d: Draft) => { d.stage_facts.reconciliation.unknown_order_count = NP("FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED"); } },
+      { label: "0", apply: (d: Draft) => { d.stage_facts.reconciliation.unknown_order_count = AV(0); } },
+    ]),
+    dimensionOf("as_of", [
+      { label: "not-published", apply: (d: Draft) => { d.stage_facts.reconciliation.as_of = NP("SOURCE_CLOCK_NOT_SCOPED"); } },
+      { label: "available", apply: (d: Draft) => { d.stage_facts.reconciliation.as_of = AV(TS); } },
+    ]),
+    dimensionOf("sessions", [
+      { label: "not-published", apply: () => undefined },
+      { label: "available-empty", apply: (d: Draft) => { d.stage_facts.sessions = { availability: "AVAILABLE", reason_code: null, basis: "EXECUTION_SESSIONS_BOUNDED_WINDOW", rows: [], returned_count: 0, omitted_count: 0, source_complete: true }; } },
+    ]),
+  ];
+  const states = cartesian(WITH, DIMS);
+  /** The contract stated in prose: only OPEN_FINDINGS (or a reasoned absence) can be AVAILABLE; as_of is the one free clock. */
+  const accepts = (p: Record<string, string>) =>
+    p.runtime_state === "not-published" && p.since === "not-published" && (p.verdict === "not-published" || p.verdict === "OPEN_FINDINGS")
+    && p.open_finding_count === "not-published" && p.unknown_order_count === "not-published" && p.sessions === "not-published";
+
+  it("prints the matrix size; the reader is never looser than the schema, and never stricter", () => {
+    console.info(describeCoverage("liveSource G (stage_facts) cartesian", coverage(DIMS, states)));
+    const looser = states.filter((x) => liveOf(x.value) !== null && violations(x.value).length > 0).map((x) => x.name);
+    const stricter = states.filter((x) => liveOf(x.value) === null && violations(x.value).length === 0).map((x) => x.name);
+    expect({ looser }).toEqual({ looser: [] });
+    expect({ stricter }).toEqual({ stricter: [] });
+    expect(FACTS).toEqual(["stage_facts"]);
+    expect(states).toHaveLength(3 * 2 * 4 * 3 * 2 * 2 * 2);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = liveOf(state.value);
+    expect(read !== null).toBe(accepts(state.picks));
+    if (read === null) return;
+    // Whatever was read: no count, no NO_OPEN_FINDINGS, no runtime word, no session, anywhere in the result.
+    const facts = read.stageFacts!;
+    expect(facts.runtime.state.availability).toBe("NOT_PUBLISHED");
+    expect(facts.reconciliation.openFindingCount.availability).toBe("NOT_PUBLISHED");
+    expect(facts.reconciliation.unknownOrderCount.availability).toBe("NOT_PUBLISHED");
+    expect(facts.sessions).toMatchObject({ availability: "NOT_PUBLISHED", rows: [], returnedCount: 0 });
+    expect(JSON.stringify(facts)).not.toContain("NO_OPEN_FINDINGS");
+    if (facts.reconciliation.verdict.availability === "AVAILABLE") expect(facts.reconciliation.verdict.value).toBe("OPEN_FINDINGS");
+  });
+});
+
+describe("L1 · matrix H · identity on the Live body: the same object, read exactly as the schema reads it", () => {
+  const DIMS = [
+    dimension("alpha_id", ["identity", "alpha_id"], ["alpha_TEST_ONLY", null, "", "a b"], (v) => JSON.stringify(v)),
+    dimension("alpha_reason", ["identity", "alpha_reason_code"], [...schemaEnum(SCHEMA, "/$defs/LiveSourceOperationsReadV2/properties/identity/properties/alpha_reason_code"), "ALPHA_NAME_UNKNOWN"]),
+    dimension("portfolio_name", ["identity", "portfolio_name"], ["Portfolio Name", null, "", " lead", "x".repeat(257)], (v) => JSON.stringify(v).slice(0, 24)),
+    dimension("portfolio_reason", ["identity", "portfolio_name_reason_code"], [null, ...schemaEnum(SCHEMA, "/$defs/LiveSourceOperationsReadV2/properties/identity/properties/portfolio_name_reason_code/anyOf/0"), "PORTFOLIO_UNKNOWN"]),
+  ];
+  const states = cartesian(WITH, DIMS);
+
+  it("the reader accepts exactly what the schema accepts", () => {
+    console.info(describeCoverage("liveSource H (identity) cartesian", coverage(DIMS, states)));
+    const looser = states.filter((x) => liveOf(x.value) !== null && violations(x.value).length > 0).map((x) => x.name);
+    const stricter = states.filter((x) => liveOf(x.value) === null && violations(x.value).length === 0).map((x) => x.name);
+    expect({ looser }).toEqual({ looser: [] });
+    expect({ stricter }).toEqual({ stricter: [] });
+    expect(states.filter((x) => liveOf(x.value) !== null).length).toBeGreaterThan(0);
+  });
+
+  it("each member is independent: identity alone, stage_facts alone, both, neither", () => {
+    const variants: [string, boolean, boolean][] = [["neither", false, false], ["identity", true, false], ["stage_facts", false, true], ["both", true, true]];
+    for (const [name, identity, stageFacts] of variants) {
+      const body = clone(WITH);
+      if (!identity) delete body.identity;
+      if (!stageFacts) delete body.stage_facts;
+      expect(violations(body), name).toEqual([]);
+      const read = liveOf(body)!;
+      expect(read, name).not.toBeNull();
+      expect(read.identity !== null, name).toBe(identity);
+      expect(read.stageFacts !== null, name).toBe(stageFacts);
+    }
+  });
+});
+
 /* ═════════════════════════ L2 ═════════════════════════ */
 describe("L2 · scale", () => {
   const PANELS_WITH_ROWS = LIVE_SOURCE_PANELS.filter((n) => n !== "broker_sync");
@@ -563,7 +723,36 @@ const PATHS: (readonly (string | number)[])[] = [
 const REQUIRED: Case[] = requiredCases(POPULATED, PATHS);
 const SCHEMA_SWAP = schemaVersionCases(POPULATED, ["schema_version"], LIVE_SOURCE_V2_SCHEMA, ["portal.execution.live-full-operations.v1", "portal.execution.live-source-operations.v1", "execution.live-full.v1"]);
 const POLLUTION = pollutionCases(POPULATED, [[], ["data"], [...O], [...PROV], [...REC], [...VAL], ["runtime"], ["realtime"], ["commands"]]);
-const ALL_NEG: Case[] = [...ENUMS, ...INTEGERS, ...DECIMALS, ...STRINGS, ...ARRAYS, ...REQUIRED, ...SCHEMA_SWAP, ...POLLUTION];
+/* BE-P12: negatives of the two members, generated from the published body that carries them. */
+const MEMBER_PATHS: (readonly (string | number)[])[] = [
+  ["identity"], ["stage_facts"],
+  ...["basis", "alpha_id", "alpha_name", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"].map((k) => ["identity", k] as const),
+  ...["schema_version", "runtime", "reconciliation", "sessions"].map((k) => ["stage_facts", k] as const),
+  ["stage_facts", "runtime", "runtime_state"], ["stage_facts", "runtime", "since"],
+  ...["basis", "verdict", "open_finding_count", "unknown_order_count", "as_of"].map((k) => ["stage_facts", "reconciliation", k] as const),
+  ["stage_facts", "reconciliation", "verdict", "availability"], ["stage_facts", "reconciliation", "verdict", "value"], ["stage_facts", "reconciliation", "verdict", "reason_code"],
+  ...["availability", "reason_code", "basis", "rows", "returned_count", "omitted_count", "source_complete"].map((k) => ["stage_facts", "sessions", k] as const),
+];
+const memberEnums = (path: readonly (string | number)[], valid: readonly string[]): Case[] =>
+  enumCases(WITH, path, valid).filter((c) => !valid.includes(getPath(c.value, path) as string));
+const MEMBER_NEG: Case[] = [
+  ...requiredCases(WITH, MEMBER_PATHS),
+  ...memberEnums(["identity", "basis"], ["RETAINED_PROJECTION_ROW_AND_FIELD_POLICY"]),
+  ...memberEnums(["identity", "alpha_reason_code"], ["ALPHA_NAME_NOT_PUBLISHED"]),
+  ...memberEnums(["stage_facts", "schema_version"], ["execution.stage-facts.v1"]),
+  ...memberEnums(["stage_facts", "reconciliation", "basis"], ["FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN"]),
+  ...memberEnums(["stage_facts", "reconciliation", "verdict", "availability"], ["NOT_PUBLISHED", "AVAILABLE"]),
+  ...memberEnums(["stage_facts", "sessions", "availability"], ["NOT_PUBLISHED"]),
+  ...memberEnums(["stage_facts", "sessions", "basis"], ["EXECUTION_SESSIONS_BOUNDED_WINDOW"]),
+  ...stringCases(WITH, ["identity", "alpha_id"]),
+  ...stringCases(WITH, ["identity", "portfolio_name"]),
+  ...stringCases(WITH, ["stage_facts", "reconciliation", "verdict", "reason_code"]),
+  ...integerCases(WITH, ["stage_facts", "sessions", "returned_count"]),
+  ...integerCases(WITH, ["stage_facts", "sessions", "omitted_count"]),
+  ...arrayCases(WITH, ["stage_facts", "sessions", "rows"], { idKey: "id" }),
+  ...pollutionCases(WITH, [[], ["identity"], ["stage_facts"], ["stage_facts", "runtime"], ["stage_facts", "reconciliation"], ["stage_facts", "reconciliation", "verdict"], ["stage_facts", "sessions"]]),
+].map((c) => ({ ...c, name: `members · ${c.name}` }));
+const ALL_NEG: Case[] = [...ENUMS, ...INTEGERS, ...DECIMALS, ...STRINGS, ...ARRAYS, ...REQUIRED, ...SCHEMA_SWAP, ...POLLUTION, ...MEMBER_NEG];
 
 /**
  * Accepted although the published schema refuses it. Each has a DEFECT test;
