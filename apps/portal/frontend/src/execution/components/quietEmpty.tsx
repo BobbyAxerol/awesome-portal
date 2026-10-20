@@ -1,6 +1,6 @@
 /**
  * One calm "nothing here" card for governance screens: an icon, a display title, one sentence, optional actions and an optional fold for the longer
- * explanation. Replaces the per-screen stacks of mono lines, codes and ghost frames; the server's own code rides along as a tooltip, never as copy.
+ * explanation. The title is the Research display voice (22/300, owner 2026-10-11), so it carries `data-hifi-exact` and the §5.2 scale audit steps aside for it alone. Replaces the per-screen stacks of mono lines, codes and ghost frames; the server's own code rides along as a tooltip, never as copy.
  */
 import type { ReactNode } from "react";
 
@@ -34,7 +34,7 @@ export function QuietEmpty({
   return (
     <section className="exec-qe" aria-label={label} data-prominent-empty={prominent ? "true" : undefined}>
       <span className="exec-qe-icon" aria-hidden="true">{ICONS[icon]}</span>
-      <h2 className="exec-qe-title">{title}</h2>
+      <h2 className="exec-qe-title" data-hifi-exact="research-display-title">{title}</h2>
       {line ? <p className="exec-qe-line" title={lineTitle ?? undefined}>{line}</p> : null}
       {actions ? <div className="exec-qe-actions" data-next-step>{actions}</div> : null}
       {more ? <details className="exec-qe-more"><summary>Why?</summary>{more}</details> : null}

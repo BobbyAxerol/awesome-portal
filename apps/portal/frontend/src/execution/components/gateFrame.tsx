@@ -44,7 +44,7 @@ export function GateVerdict({ tone, headline, detail, facts, children }: { tone:
   return (
     <section className="exec-gf-verdict" data-tone={tone} role="status" aria-label="Verdict">
       <div className="exec-gf-verdict-head">
-        <strong className="exec-gf-verdict-line">{headline}</strong>
+        <strong className="exec-gf-verdict-line" data-hifi-exact="research-verdict-line">{headline}</strong>
         {detail ? <span className="exec-gf-verdict-detail">{detail}</span> : null}
       </div>
       {facts && facts.length > 0 ? (

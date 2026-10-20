@@ -7142,7 +7142,7 @@ tr[data-arrived="true"] > :first-child,
 .exec-gf-verdict[data-tone="warn"] { border-left-color: var(--warn); }
 .exec-gf-verdict[data-tone="bad"] { border-left-color: var(--bad); }
 .exec-gf-verdict-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px var(--space-3); }
-.exec-gf-verdict-line { font: 500 16px/22px var(--font-body); color: var(--ink); }
+.exec-gf-verdict-line { font: 500 16px/22px var(--font-body); color: var(--ink); } /* the verdict is the gate's one figure: Research-voiced 16px (owner 2026-10-11), declared data-hifi-exact in gateFrame.tsx so the §5.2 audit steps aside for it alone */
 .exec-gf-verdict-detail { font: var(--exec-font-body); color: var(--ink-soft); min-width: 0; overflow-wrap: anywhere; }
 .exec-gf-facts { display: flex; flex-wrap: wrap; gap: 2px var(--space-4); margin: 0; padding: 0; list-style: none; font: var(--exec-font-meta); color: var(--ink-soft); }
 .exec-gf-facts li { min-width: 0; overflow-wrap: anywhere; }
@@ -7394,7 +7394,7 @@ details.exec-gf-details[open] > summary.exec-gov-panelhead::before { content: "�
 .exec-ret-refresh:hover { border-color: var(--accent); color: var(--accent); }
 .exec-qe-more { margin-top: var(--space-2); font: var(--exec-font-meta); color: var(--ink-mute); max-width: 60ch; }
 .exec-qe-more > summary { cursor: pointer; }
-.exec-qe-more > :not(summary) { margin: var(--space-2) 0 0; text-align: left; }
+.exec-qe-more > :not(summary) { margin: var(--space-2) 0 0; text-align: left; overflow-wrap: anywhere; } /* the closed <details> is as wide as "Why?"; its prose is still laid out there, so it must wrap rather than overflow (surface audit: clipped without a way to reach it) */
 .exec-qe-would { font: var(--exec-font-meta); color: var(--ink-mute); }
 
 /* Choice menu — field variant: full width, two-line trigger and options, status mark */
