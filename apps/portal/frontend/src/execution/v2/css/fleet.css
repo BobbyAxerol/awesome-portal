@@ -52,6 +52,11 @@
 .exec-fleet-typed {
   width: 150px;
 }
+/* The banner's flag is a short word: it never wraps letter by letter in a narrow row (390px). */
+.exec-fleet-banner .exec-flag {
+  flex: none;
+  white-space: nowrap;
+}
 .exec-fleet-banner {
   display: flex;
   align-items: center;
