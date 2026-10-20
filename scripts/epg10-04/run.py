@@ -876,7 +876,7 @@ def main():
                    performance_acceptance=False, tainted_for_capacity=True,
                    limitation='CORRECTNESS_ONLY_SHARED_HOST_NOT_CAPACITY_OR_PRODUCTION_PROOF',
                    disk_before=helper.free_bytes(), stages={})
-    lock_context, lock_acquired, create_attempted = None, False, False
+    activity_context, activity_acquired, create_attempted = None, False, False
     sampler = None
     started = time.monotonic()
     stage = 'preflight'
@@ -911,18 +911,17 @@ def main():
             receipt['expected_pm_custody_tests'] = expected_pm_custody
         if profile in ('08', '09', '10', '11'):
             receipt['expected_tls_tests'] = expected_tls
-        # Existing observer helper reserves 90s itself; pass1410 for an exact
-        # 1500s lease, with a separate30s local cleanup reserve.
-        lock_context = helper.obs.measurement_lock(helper.obs.LOCK, helper.OWNER,
-            LOCK_SECONDS - 90, 'EPG10-' + profile + ' isolated SGP correctness only; no HK/source requests; not capacity')
-        lock = lock_context.__enter__()
-        lock_acquired = True
-        receipt['lock_window_seconds'] = LOCK_SECONDS
+        # Correctness is nonexclusive under workspace34b. Keep the existing
+        # 1500s bound/30s cleanup reserve, never claim the host measurement lock.
+        activity_path = helper.obs.ACTIVITY_DIR / (helper.OWNER + '.json')
+        activity_context = helper.obs.correctness_activity(activity_path, owner=helper.OWNER,
+            seconds=LOCK_SECONDS, purpose='EPG10-' + profile +
+            ' isolated SGP correctness only; no HK/source requests; not capacity', cpu_cap=1.5)
+        activity = activity_context.__enter__()
+        activity_acquired = True
+        receipt['correctness_activity'] = activity
+        receipt['correctness_activity_window_seconds'] = LOCK_SECONDS
         receipt['foreign_test_metadata_before'] = peer_test_metadata(helper)
-        if profile in ('10', '11'):
-            require_no_peer_tests(helper)
-        if profile == '11':
-            helper.no_foreign_cpu_job()
         if helper.free_bytes() < 100 * 1024**3:
             raise ValueError('DISK_HEADROOM_REQUIRED')
         require_absent(helper)
@@ -945,17 +944,13 @@ def main():
             private_log_limit_bytes_per_stage=MAX_LOG_BYTES)
         env = isolated_environment(base)
         def logged(name, args, timeout=120, check=True, run_env=None, directory=None):
-            helper.obs.verify_lock(helper.obs.LOCK, lock)
-            if profile in ('10', '11'):
-                require_no_peer_tests(helper)
+            helper.obs.verify_activity(activity_path, activity)
             receipt['stages'][name] = run_logged(prefix + args, base / (name + '.log'),
                 cwd=directory or source, env=run_env or env, timeout=timeout,
                 check=check if profile not in ('06', '07', '08', '09', '10', '11') else False,
                 measure_resources=profile in ('06', '07', '08', '09', '10', '11'))
             if profile in ('06', '07', '08', '09', '10', '11') and check and receipt['stages'][name]['returncode']:
                 raise subprocess.CalledProcessError(receipt['stages'][name]['returncode'], args)
-            if profile in ('10', '11'):
-                require_no_peer_tests(helper)
             return (base / (name + '.log')).read_text(errors='replace')
         stage = 'runner_safety_tests'
         receipt['runner_safety_tests'] = parse_safety_results(logged(stage,
@@ -972,7 +967,7 @@ def main():
         receipt['rustfmt'] = 'PASS'
         if profile in ('06', '07', '08', '09', '10', '11'):
             stage = 'refresh_private_source_mtimes'
-            helper.obs.verify_lock(helper.obs.LOCK, lock)
+            helper.obs.verify_activity(activity_path, activity)
             receipt['source_mtime_refresh'] = refresh_copied_input_mtimes(
                 base, source_root, receipt['input_hashes'], profile)
         stage = 'compile'
@@ -998,11 +993,11 @@ def main():
             stage = 'compile_edge_service'
             logged(stage, ['cargo', 'check', '--offline', '--locked', '-p', 'edge-service',
                 '--all-targets', *command_feature_arguments(profile)], timeout=600)
-        helper.obs.verify_lock(helper.obs.LOCK, lock)
+        helper.obs.verify_activity(activity_path, activity)
         stage = 'create_owned_pg'
         password = secrets.token_urlsafe(24)
         create_attempted = True
-        helper.docker('run', '--detach', '--pull=never', '--name', helper.PG,
+        helper.docker('run', '--detach', '--rm', '--pull=never', '--name', helper.PG,
             '--label', LABEL + '=' + helper.OWNER, '--publish', '127.0.0.1::5432',
             '--memory', '768m', '--memory-swap', '768m', '--cpus', '.5', '--pids-limit', '128',
             '--security-opt', 'no-new-privileges', '--tmpfs',
@@ -1079,8 +1074,7 @@ def main():
         receipt['test_database_counts'] = owned_db_counts(helper, sampler.roster[0]['container_id'])
         if profile == '11':
             stage = 'logical_restore_drill'
-            helper.obs.verify_lock(helper.obs.LOCK, lock)
-            require_no_peer_tests(helper)
+            helper.obs.verify_activity(activity_path, activity)
             receipt['logical_restore'] = logical_restore_drill(helper, sampler.roster[0]['container_id'])
             stage = 'restored_application_test'
             restore_env = env.copy()
@@ -1097,8 +1091,7 @@ def main():
             if fingerprint != receipt['logical_restore']['schema_rows_sha256']:
                 raise ValueError('RESTORED_APPLICATION_CHANGED_DATA_OR_MIGRATION_STATE')
             receipt['logical_restore']['application_reopened_migrations_idempotent'] = True
-            helper.obs.verify_lock(helper.obs.LOCK, lock)
-            require_no_peer_tests(helper)
+            helper.obs.verify_activity(activity_path, activity)
         receipt['database_test_stage_seconds_observational'] = {
             name: receipt['stages'][name]['elapsed_seconds'] for name in database_stages}
         stage = 'clippy'
@@ -1118,15 +1111,13 @@ def main():
             raise ValueError('SOURCE_INPUT_CHANGED_DURING_QUALIFICATION')
         receipt['source_input_unchanged'] = True
         receipt['foreign_test_metadata_after'] = peer_test_metadata(helper)
-        if profile in ('10', '11'):
-            require_no_peer_tests(helper)
-        helper.obs.verify_lock(helper.obs.LOCK, lock)
+        helper.obs.verify_activity(activity_path, activity)
         receipt['status'] = 'PASS_ISOLATED_CORRECTNESS_ONLY'
     except Exception as exc:
         receipt.update(status='FAIL', failed_stage=stage, error_type=type(exc).__name__)
     finally:
         finish_observation_and_cleanup(receipt, sampler, helper, create_attempted,
-                                       lock_context if lock_acquired else None, base)
+                                       activity_context if activity_acquired else None, base)
         signal.alarm(0)
         receipt['elapsed_seconds_observational'] = round(time.monotonic() - started, 3)
     (base / 'receipt.json').write_text(json.dumps(receipt, sort_keys=True, indent=2) + '\n')

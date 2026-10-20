@@ -23,6 +23,7 @@ PG = 'epg10-03-native-pg-20261016'
 IMAGE = 'sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685'
 LABEL = 'portal.measurement.owner'
 TOOLCHAIN = '/home/bobby/.rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin'
+SAFETY_TEST_COUNT = 16
 MIGRATIONS = ['48-v2-source-change-journal.sql', '58-v2-semantic-journal-coverage.sql',
               '59-v2-source-commit-order-replay.sql', '60-v2-source-journal-paper-reader.sql',
               '67-v2-p16-consumer-publication-controls.sql']
@@ -112,7 +113,8 @@ def main():
         raise ValueError('EXACT_SOURCE_REVISION_REQUIRED')
     receipt = dict(schema='epg10.capture-proof.v1', provenance='TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL',
                    source_revision=revision,
-                   pg_image=IMAGE, runtime_activation=False, disk_before=free_bytes())
+                   pg_image=IMAGE, runtime_activation=False, disk_before=free_bytes(),
+                   performance_acceptance=False, tainted_for_capacity=True)
     created = False
     create_attempted = False
     lock_context = None
@@ -120,11 +122,13 @@ def main():
     stage = 'preflight'
     started = time.monotonic()
     try:
-        lock_context = obs.measurement_lock(obs.LOCK, OWNER, 1500, 'EPG10-03 independent SGP native Rust/PG proof; no HK requests')
-        lock = lock_context.__enter__()
+        activity_path = obs.ACTIVITY_DIR / (OWNER + '.json')
+        lock_context = obs.correctness_activity(activity_path, owner=OWNER, seconds=1500,
+            purpose='EPG10-03 isolated native Rust/PG correctness; no HK requests; not capacity', cpu_cap=1.5)
+        activity = lock_context.__enter__()
         lock_acquired = True
-        if lock:
-            no_foreign_cpu_job()
+        receipt['correctness_activity'] = activity
+        if activity:
             assert free_bytes() > 100*1024**3, 'DISK_HEADROOM'
             absent = subprocess.run(['sudo','-n','docker','inspect',PG], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
             if absent.returncode == 0 or b'no such' not in absent.stderr.lower():
@@ -146,23 +150,27 @@ def main():
             env=os.environ.copy()
             env.update(PATH=TOOLCHAIN+':'+env['PATH'], CARGO_HOME=str(base/'cargo'),
                        CARGO_TARGET_DIR=str(base/'target'), CARGO_BUILD_JOBS='1')
+            core = min(os.sched_getaffinity(0))
+            cargo = ['nice', '-n', '15', 'taskset', '--cpu-list', str(core), 'cargo']
+            receipt['resources'] = dict(cargo_cpu_affinity=[core], cargo_jobs=1,
+                cargo_nice=15, pg_cpu_limit=0.5, pg_memory_limit_bytes=512*1024**2)
             stage='runner_safety_tests'
             with (base/'safety.log').open('wb') as log:
                 command([sys.executable,'-B','-m','unittest','-v','test_run'],cwd=base,
                         env=env,stdout=log,stderr=log)
             safety=(base/'safety.log').read_text()
-            assert 'Ran 12 tests' in safety and safety.rstrip().endswith('OK')
-            receipt['runner_safety_tests']=dict(passed=12,failed=0,skipped=0)
+            assert f'Ran {SAFETY_TEST_COUNT} tests' in safety and safety.rstrip().endswith('OK')
+            receipt['runner_safety_tests']=dict(passed=SAFETY_TEST_COUNT,failed=0,skipped=0)
             stage='rustfmt'
             command([TOOLCHAIN+'/rustfmt','--check','--edition','2021',str(extension)],
                     stdout=subprocess.PIPE,stderr=subprocess.PIPE)
             stage='compile'
             with (base/'compile.log').open('wb') as log:
-                build=command(['nice','-n','15','cargo','test','--locked','-p','trading-runtime',
+                build=command(cargo+['test','--locked','-p','trading-runtime',
                     '--test','epg10_03_capture','--no-run'],cwd=source/'rust',env=env,stdout=log,stderr=log,timeout=900)
             stage='clippy'
             with (base/'clippy.log').open('wb') as log:
-                command(['nice','-n','15','cargo','clippy','--offline','--locked','-p','trading-runtime',
+                command(cargo+['clippy','--offline','--locked','-p','trading-runtime',
                     '--test','epg10_03_capture','--message-format=json'],cwd=source/'rust',env=env,
                     stdout=log,stderr=log,timeout=240)
             upstream_warnings=0
@@ -179,10 +187,10 @@ def main():
             receipt.update(rustfmt='PASS',clippy=dict(owned_extension_warnings=0,
                 upstream_advisory_warnings=upstream_warnings,
                 status='OWNED_EXTENSION_PASS_NOT_UPSTREAM_LINT_CERTIFICATION'))
-            obs.verify_lock(obs.LOCK,lock)
+            obs.verify_activity(activity_path, activity)
             stage='create_owned_pg'
             create_attempted=True
-            docker('run','--detach','--pull=never','--name',PG,'--label',LABEL+'='+OWNER,
+            docker('run','--detach','--rm','--pull=never','--name',PG,'--label',LABEL+'='+OWNER,
                    '--publish','127.0.0.1::5432','--memory','512m','--memory-swap','512m',
                    '--cpus','.5','--pids-limit','128','--security-opt','no-new-privileges',
                    '--tmpfs','/var/lib/postgresql/data:rw,exec,mode=0700,size=512m',
@@ -213,7 +221,7 @@ def main():
                            '-v','ON_ERROR_STOP=1','-1',input=sql,stdout=log,stderr=log)
             stage='native_tests'
             with (base/'tests.log').open('wb') as log:
-                command(['nice','-n','15','cargo','test','--offline','--locked','-p','trading-runtime',
+                command(cargo+['test','--offline','--locked','-p','trading-runtime',
                          '--test','epg10_03_capture','--','--nocapture','--test-threads=1'],
                         cwd=source/'rust',env=env,stdout=log,stderr=log,timeout=240)
             logs=(base/'tests.log').read_text()
@@ -228,7 +236,7 @@ def main():
                            rust_tests=dict(passed=6,failed=0,ignored=0,filtered_out=0))
             receipt['pg_version']=docker('exec',PG,'psql','-X','-U','postgres','-d','epg10_capture','-Atqc','SHOW server_version',stdout=subprocess.PIPE).stdout.decode().strip()
             receipt['slots_after_tests']=int(docker('exec',PG,'psql','-X','-U','postgres','-d','epg10_capture','-Atqc','SELECT count(*) FROM pg_replication_slots',stdout=subprocess.PIPE).stdout)
-            obs.verify_lock(obs.LOCK,lock)
+            obs.verify_activity(activity_path, activity)
     except Exception as exc:
         receipt.update(status='FAIL',failed_stage=stage,error_type=type(exc).__name__)
         # Logs stay private; operator can inspect bounded exact failures.

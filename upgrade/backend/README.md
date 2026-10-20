@@ -7,6 +7,14 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original03–11 runnable-first correctness preparation,20Oct:**
+  [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
+  records153focused PASS/0FAIL/SKIP,21new cases: per-owner correctness activity,
+  no foreign-job/global-lock ban, original-inode bounded cleanup, one-core
+  Cargo03 and disposable PG auto-removal. Absolute measurements stay exclusive;
+  no capacity/runtime authority follows. Core009 revision3 corrected source is
+  under separate actual disposable-PG qualification; full08/09 remain NOT_MET.
+
 - **Original01/06 offline host-lock alignment,20Oct:**
   [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--offline-preparation-and-current-host-lock-class-alignment-20oct)
   tracks root34b preparation fix; no job/lock/runtime mutation or weakening of
@@ -18,7 +26,8 @@ Chúng không thay thế phase hoặc exit gate trong
   pin66unit PASS (40prior+26new) for bounded active-SSE observation and
   independent official STREAM-revoke/READ-positive specimens. Client EOF,
   timing or reconnect denial is not active revoke/cache/final-egress proof.
-  GET-only/no runtime mutation. Core009 fixes/actual install still required;
+  GET-only/no runtime mutation. Core009 revision3 source fixes are received;
+  actual PG qualification/release installation are tracked separately;
   full08NOT_MET,09connectedNOT_STARTED. See main journal for final hook/cleanup.
 
 - **Original08 installed intake/finite lifecycle,20Oct — IN_PROGRESS:**

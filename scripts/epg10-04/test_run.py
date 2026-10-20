@@ -1,4 +1,5 @@
 """Safety checks, mocks and one local pipe/signal; no Docker/network/Cargo/source queries."""
+from contextlib import ExitStack
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,112 @@ import run as qualification
 
 
 class RunnerSafety(unittest.TestCase):
+    def activity_preflight(self, profile, *, reach_stage=False, enter_error=None, verify_error=None):
+        """Exercise real main control flow; every external/write/job boundary is doubled."""
+        helper = MagicMock()
+        helper.OWNER, helper.PG = 'TEST_ONLY-owner', 'TEST_ONLY-pg'
+        helper.obs.ACTIVITY_DIR = Path('/TEST_ONLY/host-activity')
+        helper.free_bytes.return_value = 150 * 1024**3
+        helper.docker.return_value.stdout = qualification.IMAGE.encode() + b'\n'
+        payload = dict(owner=helper.OWNER, purpose='TEST_ONLY', **{'class': 'correctness'},
+            cpu_cap=1.5, until_utc='2099-01-01T00:00:00Z')
+        context = helper.obs.correctness_activity.return_value
+        context.__enter__.return_value = payload
+        context.__enter__.side_effect = enter_error
+        helper.obs.verify_activity.side_effect = verify_error
+        helper.obs.measurement_lock.side_effect = AssertionError('TEST_ONLY_NO_MEASUREMENT_LOCK')
+        helper.obs.verify_lock.side_effect = AssertionError('TEST_ONLY_NO_MEASUREMENT_LOCK')
+        helper.no_foreign_cpu_job.side_effect = AssertionError('TEST_ONLY_NO_PEER_BAN')
+        # Reuse the existing cleanup function with create_attempted=False: it
+        # observes disk and releases only the supplied doubled activity context.
+        helper.finish_cleanup.side_effect = self.helper.finish_cleanup
+        environment = {'EPG10_TEST_PROFILE': profile, 'EPG10_PORTAL_REVISION': 'a' * 40,
+            **{'EPG10_EXPECT_' + kind + '_TESTS': '1' for kind in
+               ('BOOTSTRAP', 'READ', 'RESOURCE', 'MANAGER', 'COMMAND', 'PM_CUSTODY', 'TLS')}}
+        with ExitStack() as stack:
+            stack.enter_context(patch.dict(qualification.os.environ, environment, clear=True))
+            stack.enter_context(patch.object(qualification, 'validate_base'))
+            stack.enter_context(patch.object(qualification, 'load_cleanup_helpers', return_value=helper))
+            absent = stack.enter_context(patch.object(qualification, 'require_absent',
+                side_effect=None if reach_stage else RuntimeError('TEST_ONLY_PREFLIGHT_STOP')))
+            stack.enter_context(patch.object(qualification, 'source_hashes', return_value={}))
+            stack.enter_context(patch.object(qualification, 'workspace_directory',
+                side_effect=lambda source, _profile: source))
+            stack.enter_context(patch.object(qualification, 'isolated_environment', return_value={}))
+            stack.enter_context(patch.object(qualification, 'peer_test_metadata',
+                return_value=['TEST_ONLY-id pma11-foreign-correctness']))
+            peer_ban = stack.enter_context(patch.object(qualification, 'require_no_peer_tests',
+                side_effect=AssertionError('TEST_ONLY_NO_PEER_BAN')))
+            logged = stack.enter_context(patch.object(qualification, 'run_logged',
+                side_effect=RuntimeError('TEST_ONLY_NO_CHILD_JOB')))
+            stack.enter_context(patch.object(qualification.signal, 'signal'))
+            stack.enter_context(patch.object(qualification.signal, 'alarm'))
+            stack.enter_context(patch.object(Path, 'read_bytes', return_value=b'TEST_ONLY'))
+            written = stack.enter_context(patch.object(Path, 'write_text'))
+            stack.enter_context(patch('builtins.print'))
+            status = qualification.main()
+        written.assert_called_once()
+        receipt = json.loads(written.call_args.args[0])
+        return status, receipt, helper, absent, logged, peer_ban
+
+    def test_all_correctness_profiles_register_only_owned_nonexclusive_activity(self):
+        for profile in ('04', '05', '06', '07', '08', '09', '10', '11'):
+            with self.subTest(profile=profile):
+                status, receipt, helper, absent, logged, peer_ban = self.activity_preflight(profile)
+                self.assertEqual(status, 1)  # Intentional TEST_ONLY stop before Docker/source/job work.
+                self.assertEqual(receipt['failed_stage'], 'preflight')
+                helper.obs.correctness_activity.assert_called_once_with(
+                    Path('/TEST_ONLY/host-activity/TEST_ONLY-owner.json'), owner=helper.OWNER,
+                    seconds=qualification.LOCK_SECONDS, purpose='EPG10-' + profile +
+                    ' isolated SGP correctness only; no HK/source requests; not capacity', cpu_cap=1.5)
+                self.assertEqual(receipt['correctness_activity']['class'], 'correctness')
+                self.assertEqual(receipt['correctness_activity_window_seconds'], qualification.LOCK_SECONDS)
+                self.assertNotIn('lock_window_seconds', receipt)
+                self.assertEqual(receipt['foreign_test_metadata_before'],
+                    ['TEST_ONLY-id pma11-foreign-correctness'])
+                absent.assert_called_once_with(helper)
+                logged.assert_not_called(); peer_ban.assert_not_called()
+                helper.no_foreign_cpu_job.assert_not_called()
+                helper.obs.measurement_lock.assert_not_called(); helper.obs.verify_lock.assert_not_called()
+                helper.obs.correctness_activity.return_value.__exit__.assert_called_once_with(None, None, None)
+                self.assertFalse(receipt['performance_acceptance'])
+                self.assertTrue(receipt['tainted_for_capacity'])
+
+    def test_correctness_stage_verifies_own_activity_before_starting_a_child(self):
+        status, receipt, helper, absent, logged, peer_ban = self.activity_preflight('11', reach_stage=True)
+        self.assertEqual(status, 1)
+        self.assertEqual(receipt['failed_stage'], 'runner_safety_tests')
+        helper.obs.verify_activity.assert_called_once_with(
+            Path('/TEST_ONLY/host-activity/TEST_ONLY-owner.json'), receipt['correctness_activity'])
+        logged.assert_called_once()
+        absent.assert_called_once_with(helper)
+        peer_ban.assert_not_called(); helper.no_foreign_cpu_job.assert_not_called()
+        helper.obs.verify_lock.assert_not_called()
+        helper.obs.correctness_activity.return_value.__exit__.assert_called_once_with(None, None, None)
+
+    def test_changed_or_expired_activity_stops_before_a_child_without_skipping_cleanup(self):
+        for label in ('ACTIVITY_REPLACED_DO_NOT_REMOVE', 'ACTIVITY_EXPIRED'):
+            with self.subTest(label=label):
+                status, receipt, helper, _absent, logged, _peer = self.activity_preflight(
+                    '10', reach_stage=True, verify_error=ValueError(label))
+                self.assertEqual(status, 1)
+                self.assertEqual(receipt['failed_stage'], 'runner_safety_tests')
+                self.assertEqual(receipt['error_type'], 'ValueError')
+                logged.assert_not_called()
+                helper.obs.correctness_activity.return_value.__exit__.assert_called_once_with(None, None, None)
+                self.assertFalse(receipt['cleanup']['owned_container_removed'])
+
+    def test_failed_activity_registration_does_not_release_unacquired_or_foreign_state(self):
+        status, receipt, helper, absent, logged, _peer = self.activity_preflight(
+            '11', enter_error=FileExistsError('TEST_ONLY_EXISTING_ACTIVITY'))
+        self.assertEqual(status, 1)
+        self.assertEqual(receipt['failed_stage'], 'preflight')
+        self.assertEqual(receipt['error_type'], 'FileExistsError')
+        self.assertNotIn('correctness_activity', receipt)
+        helper.obs.correctness_activity.return_value.__exit__.assert_not_called()
+        helper.obs.measurement_lock.assert_not_called()
+        absent.assert_not_called(); logged.assert_not_called()
+
     def test_foreign_research_cells_are_detected_and_own_pg_is_excluded(self):
         helper = SimpleNamespace(PG='epg10-10-pg-owned', docker=MagicMock())
         helper.docker.return_value = subprocess.CompletedProcess([], 0, stdout=(

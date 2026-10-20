@@ -1,6 +1,8 @@
 """In-memory/fake-lock observer tests; no Docker, load or real business data."""
 from copy import deepcopy
+from datetime import datetime, timedelta, timezone
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
@@ -88,7 +90,9 @@ class Tests(unittest.TestCase):
     def test_owned_lock_cleanup(self):
         with tempfile.TemporaryDirectory(prefix='epg10-observe-test-') as d:
             path=Path(d)/'lock'
-            with m.measurement_lock(path,'TEST_ONLY',10): self.assertTrue(path.exists())
+            with m.measurement_lock(path,'TEST_ONLY',10) as payload:
+                self.assertTrue(path.exists())
+                self.assertEqual(payload['class'], 'measurement')
             self.assertFalse(path.exists())
 
     def test_foreign_lock_never_overwritten(self):
@@ -125,6 +129,134 @@ class Tests(unittest.TestCase):
         self.assertEqual(r['network_delta']['tx_bytes'],15)
         self.assertEqual(r['io_delta']['rbytes'],100)
         self.assertEqual(r['memory_events_delta']['oom'],1)
+
+    def activity(self, path, owner='TEST_ONLY', **overrides):
+        args = dict(owner=owner, seconds=30, purpose='TEST_ONLY capped correctness', cpu_cap=1.5)
+        args.update(overrides)
+        return m.correctness_activity(path, **args)
+
+    def test_correctness_coexists_with_active_measurement_without_touching_it(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            root = Path(d); lock = root / 'measurement.lock'; activity = root / 'TEST_ONLY.json'
+            with m.measurement_lock(lock, 'foreign-measurement', 10):
+                original = lock.read_bytes(); inode = lock.stat().st_ino
+                with patch.object(m, 'LOCK', lock), self.activity(activity) as value:
+                    self.assertEqual(value['class'], 'correctness')
+                    self.assertEqual(value['cpu_cap'], 1.5)
+                    self.assertEqual(activity.stat().st_mode & 0o777, 0o600)
+                    m.verify_activity(activity, value)
+                    self.assertEqual(lock.read_bytes(), original)
+                self.assertEqual(lock.stat().st_ino, inode)
+                self.assertEqual(lock.read_bytes(), original)
+            self.assertFalse(activity.exists())
+
+    def test_independent_correctness_owners_run_together(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            a = Path(d) / 'TEST_ONLY.json'; b = Path(d) / 'OTHER.json'
+            with self.activity(a) as first, self.activity(b, owner='OTHER') as second:
+                m.verify_activity(a, first); m.verify_activity(b, second)
+            self.assertFalse(a.exists()); self.assertFalse(b.exists())
+
+    def test_existing_correctness_owner_never_overwritten(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'
+            with self.activity(path) as original:
+                with self.assertRaises(FileExistsError), self.activity(path):
+                    self.fail('same owner must not replace a running activity')
+                m.verify_activity(path, original)
+
+    def test_correctness_exception_releases_own_metadata(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'
+            with self.assertRaisesRegex(RuntimeError, 'TEST_ONLY_FAILURE'), self.activity(path):
+                raise RuntimeError('TEST_ONLY_FAILURE')
+            self.assertFalse(path.exists())
+
+    def test_failed_activity_write_cleans_only_created_inode(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'
+            with patch.object(m.os, 'fsync', side_effect=OSError('TEST_ONLY')):
+                with self.assertRaises(OSError), self.activity(path):
+                    self.fail('failed visibility write cannot enter the job')
+            self.assertFalse(path.exists())
+
+    def test_changed_activity_payload_is_retained(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'
+            with self.assertRaisesRegex(ValueError, 'ACTIVITY_REPLACED'), self.activity(path) as value:
+                path.write_text(json.dumps({**value, 'owner': 'OTHER'}))
+                with self.assertRaisesRegex(ValueError, 'ACTIVITY_REPLACED'):
+                    m.verify_activity(path, value)
+            self.assertTrue(path.exists())
+
+    def test_same_payload_replacement_inode_is_retained(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'; original = Path(d) / 'held.json'
+            with self.assertRaisesRegex(ValueError, 'ACTIVITY_REPLACED'), self.activity(path) as value:
+                path.rename(original)
+                path.write_text(json.dumps(value)); path.chmod(0o600)
+                with self.assertRaisesRegex(ValueError, 'ACTIVITY_REPLACED'):
+                    m.verify_activity(path, value)
+            self.assertTrue(path.exists()); self.assertTrue(original.exists())
+
+    def test_missing_activity_is_not_silently_recreated(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'
+            with self.assertRaisesRegex(ValueError, 'ACTIVITY_DISAPPEARED'), self.activity(path):
+                path.unlink()
+
+    def test_expired_activity_refuses_next_stage_but_cleans_on_exit(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'
+            with self.activity(path) as value:
+                future = datetime.now(timezone.utc) + timedelta(seconds=60)
+                with patch.object(m, 'datetime') as clock:
+                    clock.fromisoformat.side_effect = datetime.fromisoformat
+                    clock.now.return_value = future
+                    with self.assertRaisesRegex(ValueError, 'ACTIVITY_EXPIRED'):
+                        m.verify_activity(path, value)
+            self.assertFalse(path.exists())
+
+    def test_correctness_rejects_unbounded_or_foreign_names(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'
+            for changes in ({'owner': '../other'}, {'seconds': 0}, {'seconds': 10801},
+                            {'seconds': True}, {'cpu_cap': 0}, {'cpu_cap': float('nan')},
+                            {'cpu_cap': True}, {'purpose': ''}):
+                with self.subTest(changes=changes), self.assertRaises(ValueError), self.activity(path, **changes):
+                    self.fail('invalid activity')
+            self.assertFalse(path.exists())
+
+    def test_activity_symlink_and_writable_directory_are_refused(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            root = Path(d); target = root / 'untouched'; target.write_text('TEST_ONLY')
+            path = root / 'TEST_ONLY.json'; path.symlink_to(target)
+            with self.assertRaises(FileExistsError), self.activity(path):
+                self.fail('no-follow activity')
+            self.assertEqual(target.read_text(), 'TEST_ONLY')
+            path.unlink(); root.chmod(0o777)
+            try:
+                with self.assertRaisesRegex(ValueError, 'ACTIVITY_DIRECTORY_REFUSED'), self.activity(path):
+                    self.fail('unsafe activity directory')
+            finally:
+                root.chmod(0o700)
+
+    def test_activity_verifier_refuses_widened_permissions(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'
+            with self.activity(path) as value:
+                path.chmod(0o644)
+                with self.assertRaisesRegex(ValueError, 'ACTIVITY_FILE_REFUSED'):
+                    m.verify_activity(path, value)
+                path.chmod(0o600)
+
+    def test_fifo_replacement_is_refused_without_waiting_for_a_writer(self):
+        with tempfile.TemporaryDirectory(prefix='epg10-activity-test-') as d:
+            path = Path(d) / 'TEST_ONLY.json'; held = Path(d) / 'held.json'
+            with self.assertRaisesRegex(ValueError, 'ACTIVITY_REPLACED'), self.activity(path) as value:
+                path.rename(held); os.mkfifo(path, 0o600)
+                with self.assertRaisesRegex(ValueError, 'ACTIVITY_REPLACED'):
+                    m.verify_activity(path, value)
 
 
 if __name__=='__main__': unittest.main()

@@ -25396,6 +25396,220 @@ original closure retention unchanged as recorded in the preceding08section.
 target arrived in the bounded TS/PM/Core recheck. Next allowed work is bind each
 actual owner return; do not relabel absent target/authority as capacity PASS.
 
+### Original01/06/08 — runnable-first continuation and Core009 revision3 intake —20Oct
+
+**Status before edits:** IN_PROGRESS_RUNNABLE_FIRST, existing approved goal and
+original phases; Bobby explicitly requests lower priority for externally gated
+cases, independent work now and parallel subagents with producer rechecks.
+Full08/full09 remain NOT_MET. Guides: [01/06](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-06-áp-resource-budgets-và-tối-ưu-hot-path),
+[08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls)
+and the existing connected owner packet. No new phase, gate or production scope.
+
+**Runnable owned defect:** the existing04–11 isolated correctness runner still
+claims/verifies the exclusive host measurement lock throughout build and tests,
+despite root34b. Align its bounded correctness lifecycle with nonexclusive
+per-owner activity and preserve actual absolute-observer measurement exclusion.
+Do not delete/readmit a foreign lock, serialize correctness behind peer jobs,
+relax actual measurement receipt validators, create a benchmark or invent numeric
+budgets. Test coexistence, own activity cleanup/replacement/failure/expiry,
+runner cleanup and old measurement exclusivity with in-memory/temporary inputs
+under1CPU/256MiB. Existing product Rust is unchanged. Root owns this journal,
+review and normal-hook coherent commit/publication; one agent owns the assigned
+runner/observer/test files, another audits independent Rust07/04/05 readiness.
+
+**Producer intake:** Core FE now e1f3938e76a03ca79ae81a801463d45fc7017ff0:
+revision3 corrects the three session/dry-run defects previously returned.
+Session source SHA2566a4ed7dc790318d60c4fd2593e48ac1845629afde444b38b11bbfba3661d1eb3;
+CLI SHA256fa353d3398acd79fdff8525972c1130622c8978306d0c2227c2e092be4290257.
+Claimed1098focused fake cases/410PGskips are source-only, not realPG/R3 or009
+installation. Review the actual corrected bytes and seek actual disposable-PG
+qualification without peer source edits or a source listener opened to wait.
+Installed Core008/schema134/genuine identity are not blockers to this work.
+
+**Boundaries/rollback:** no stable/dev/main merge, peer code changes, operational
+DB/grant/session/role mutation, source/provider28445 change or deployment. Keep
+genuine original attempt/receipt/Core ACK and UNKNOWN custody immutable. Existing
+GET-only runner never creates authority; actual final-egress/cache/STREAM proof
+still requires correlated installed producer inputs. Source-only rollback of
+the correctness-preparation change; exact own ephemeral resources only cleaned
+after terminal jobs, preserve active/explicit rollback artifacts and all peer
+worktrees/three untracked files. Record actual commands/results and source/
+runtime/cleanup reconciliation after each tested slice. Recheck returns at
+coherent work boundaries, not a busy-polling or fixture-as-production loop.
+
+**Same-slice03 extension before edits:** the isolated native03 test driver has
+the identical exclusive-lock/foreign-job ban, so align it to the same correctness
+API now, not a later phase. Preserve actual source proof/fence semantics and
+owned cleanup; add one-core Cargo affinity and --rm on the exact disposable PG
+to match root34b, never touch running TS or a foreign job. Exercise real driver
+preflight/early-stage flow with TEST_ONLY doubles. Independent review also found
+FIFO metadata replacement could block an open: require nonblocking no-follow
+reads and original inode witnesses, test refusal and retain the replacement.
+
+**Core009 PG qualification BEFORE job:** source FE2325dd942333687dc6c953ff21247fd59835adea
+(latest delta docs-only) retains the revision3 corrected source pins above.
+Reuse its existing scripts/control-api-test.sh, source SHA256
+b5e4277bc02402ea7a0674891de2900ff2eda4e76435af589b47332484c3a0ef,
+on an exact private SGP /tmp source snapshot, no cross-host source transfer or
+peer checkout changes. Select exactly be-p10-manager-revoke-pg (3actualPG),
+be-p10-acceptance-session (63fixtures) and be-p10-native-session-cli (23fixtures).
+Use existing internal-network disposable-PG/build/dump/restore apparatus, zero
+PG skips; this is focused qualification, NOT full ordinary R3 or installation.
+Only copied runner caps mechanically decrease Node to2CPU/2GiB (both stages),
+retain PG1CPU/1GiB and add --rm; aggregate3CPU/3GiB,15min deadline, unique own
+names, no published ports/operational DSN/volumes/secrets. Respect peer heavy
+coordination and current headroom; preserve failed outputs. Assigned subagent
+may execute this exact source-only qualification and scoped terminal cleanup,
+record source/runner-delta hashes and return bounded safe metrics, build/test/
+restore counts, actual resource/runtime/cleanup reconciliation. Never stop a
+peer job or delete active/shared/rollback images/cache. Root-only filesystem
+token I/O and real session/COMMIT/native READ/STREAM remain untested by fixtures;
+perform token tools sequentially with unique paths in a future finite window.
+
+**Owned implementation/qualification, same slice:** correctness drivers03–11
+now use nonexclusive per-owner metadata under host-activity, never acquire or
+remove a global measurement lease and no longer refuse a run merely because
+a foreign correctness job exists. Actual latency/capacity observer still takes
+an exclusive `class:measurement` lease. Metadata is bounded, private, no-follow
+and nonblocking; per-stage verification/cleanup require the original device,
+inode and payload. Replaced/missing/expired/unsafe metadata fails closed;
+replacement files are retained, never removed as our own. FIFO replacement is
+refused without a blocking open. Correctness receipts explicitly cannot prove
+capacity. Cargo remains one job and is now pinned to one CPU in03; existing
+PG caps remain03:0.5CPU/512MiB,04–11:0.5CPU/768MiB, with `--rm`. No producer
+fence, source proof, migration, authority or product Rust contract changed.
+
+Exact focused commands: `taskset -c0 nice -n15 python3 -B
+scripts/test_execution_edge_observe.py` (30PASS); with `PYTHONPATH=scripts`,
+the same invocation of `scripts/epg10-03/test_run.py` (16PASS); same invocation
+of `scripts/epg10-04/test_run.py` (107PASS), all under256MiB process bound.
+Total153distinct PASS/0FAIL/0SKIP =132prior+21new. Runner-flow cases double
+all child jobs/external I/O; these checks started no Docker/Cargo/DB/source
+window and created only temporary fixture files/pipes, cleaned after terminal.
+Independent reviewer found no remaining blocker after FIFO/original-inode
+corrections. `git diff --check` PASS. Final source/test SHA256 pins:
+
+| File | SHA256 |
+| --- | --- |
+| scripts/execution_edge_observe.py | 8a92c0506378726ab1aea3cb1ae593c654721b2f5cf78b6d64f5ee2e9a04c214 |
+| scripts/test_execution_edge_observe.py | 021865fadbb2fc89fe9bdaf6adca7e86e3cd605362a2809282e8bb4cdbd6a108 |
+| scripts/epg10-03/run.py | 0fb3b417476c970a959611cc944ad89641b19acd0f6fb9bc09d863ff38bf32d1 |
+| scripts/epg10-03/test_run.py | 1405005c4f49f51eb6adb417c739b620c423e0e88de9d6dce3186c426258e5d5 |
+| scripts/epg10-04/run.py | c78a775c1ac43ca6c6521fcbe6be7dea47783e25f2b4099537c15ad84176461a |
+| scripts/epg10-04/test_run.py | 1f9578a9837af08ff52825d30d40a87ae2d29f5e2b283e06070c9d659044d8e1 |
+
+Actual hook/publication/cleanup is recorded privately alongside the existing
+custody evidence at `/home/bobby/secure/portal-edge-pm-custody-20261020-fzQHVrEM/`:
+`correctness-activity-before.json` already records19protected HK tuples
+unchanged,97image tag rows (96unique images),339BuildKit records and
+251478523904available bytes. Predeclared closeout is
+`correctness-activity-publication-and-cleanup.json`; normal hook output stays
+in `correctness-activity-normal-hook.log`. Run ordinary `.githooks/pre-commit`,
+stage only owned files and this tracking, remove only its exact terminal
+test-image/cell artifacts after reference checks, then capture post-inventory.
+No broad prune/shared cache deletion/peer worktree cleanup. Expected feature
+publication hosted CI0; one coherent push, no PR/merge/dev/main. Preserve the
+three peer-untracked files unchanged. Active/rollback/stable retention and
+canonical/runtime reconciliation remain the preceding recorded set.
+
+**PG first attempt terminal / bounded correction before retry:** isolated
+SGP job ended134 at10:41:49UTC during tsc with V8 default heap approximately
+1041MiB;0tests executed, restore NOT_RUN. This is retained failed preparation,
+not a test PASS or a peer/source blocker. Private evidence
+`/home/bobby/secure/epg10-08-core009-pg-gQQ1itgf-evidence` retains log SHA256
+166645a2-prefix and terminal e7b46a27-prefix; exact3containers/network/snapshot
+verified absent, Core008 image7b2c/restart0 unchanged,0new images. Shared disk
+available146421637120→145532751872B includes concurrent peer work; no attributed
+cleanup saving. Correct the disposable Node invocation with explicit
+`NODE_OPTIONS=--max-old-space-size=1536`, retaining the same2GiB container cap,
+2CPU, PG1CPU/1GiB,900s deadline and exact selected tests/pinned backend bytes.
+One bounded retry is authorized within this owned qualification scope; freeze
+the same source independently of peer HEAD advancing. Preserve both attempts,
+no extra operational mutation, fixture/session authority or full R3 claim.
+
+**Same-slice09 preparation correction before edits:** audit found the numerical
+oracle driver still takes a measurement lease despite explicitly TEST_ONLY /
+performance_acceptance:false. Convert only that driver to the existing
+correctness_activity/verify_activity API, preserving its600s activity bound,
+full-PG prerequisite/source pins, bounded process/log/cache cleanup. Add
+focused TEST_ONLY flow regressions with no Vitest/source/DB execution. This is
+independent preparation in already approved09, not connected09 acceptance or
+a relaxed08 prerequisite. Retained-cell latency/resource observation remains
+a real measurement. TLS repair keeps its separate approved operational
+exclusivity/fallback/containment; do not opportunistically convert operational
+restarts to nonexclusive jobs. Agent owns only oracle driver/new test file;
+root owns journal/review/ordinary hook/publication.
+
+**09 preparation tested:** root reviewed and reran `taskset -c0 nice -n15
+python3 -B scripts/epg10-09/test_oracles.py` under256MiB:6new TEST_ONLY driver-flow
+PASS/0FAIL/SKIP,0.172s. Same600s own correctness activity, verification before
+each execution boundary; numerical source pins, full-PG/source prerequisite,
+bounded logs/process/cache remain unchanged. Driver SHA256
+fe2cb0be7b37d597975a0e9e9641763f7daa43f4ea6f1e7ed9421f10b3df4da8;
+tests8e9aa1bb324649ed8a6805a17115e2bcd7516195e3b34ec5e235c8cebe0851d0.
+These6do not rerun/recertify the historical102math/reference cases. Combined
+owned focused correctness preparation is159distinct PASS (132prior+27new),
+no runtime resources and exact temporary fixtures removed. Historical03runbook
+now distinguishes its old6native+12safety receipt from current16safety and
+nonexclusive one-core/auto-remove driver. No contradictory current lock advice.
+
+**PG retry terminal / layout correction before continuation:** retryoKztiwlh
+completed build/tsc and all3actual-PG revoke/coordinator/trigger/lock cases PASS,
+zeroPG skips. Session/CLI suites failed collection with0tests because the
+existing copied runner does not include newly checked-in public templates under
+`deploy/research-preview/native-core-templates`; no session/CLI fixture PASS
+and restore NOT_RUN. Private log SHA256
+7bd3cbf9a78341aa90ddc98366357bfefdfd422d03f8910f091e8ebf44c22e11.
+All3own containers/network/snapshot verified gone; Core008/image7b2c/restart0
+unchanged. This is an owned isolated-layout defect, not producer runtime debt.
+Continue within the approved qualification: inspect exact referenced public
+template paths, pin their source/hash, copy only those source templates into
+the private test layout using the existing runner, retain explicit1536MiB heap
+and all CPU/RAM/deadline/source/runtime bounds. No private configuration copy,
+peer source edit, weakened assertion or new framework. Record exact diff and
+tell Core which normal-runner source-pack omission must be reconciled for its
+ordinary R3. Preserve earlier failed logs/counts; repeated3PG cases do not
+increase distinct coverage. Full08/09 still NOT_MET.
+
+**04 newly available PM input / preparation scope before code:** fresh PM
+a7f4df3b8104bd41e431e0fb79a0bc079d41a32f supplies actual source-only report
+publication snapshot/page/delta routes. Endpoint SHA256
+96671ba358239ff0d26b75fc17d832b06733292308ab0531966e724a04765396,
+bootstrap68577ab8f667a7b8fde0789369cddf44021d6354d32d13d7dc19bb5521a68b5c,
+evidence79ab5e26fb2186578834c2d7468605d64a4c34e09fe99817d74bfaf662a7727a.
+Its pinned Edge bootstrap core/store bytes match current source; Edge has no
+wire adapter yet. Execute the dependency-independent bounded Rust wire/request
+preparation now, within approved04 and its linked BE6.3–6.6/8/SCORE8.1/8.6/11.4/
+REVIEW4.3/9. Reuse existing Manifest/SnapshotPage/DeltaGroup/DeltaChunk serde
+and validation. Put a narrow additive report-publication wire module in existing
+ts-transport, not a new framework/crate or a modification of the pinned core.
+No V1/Manager auth/route broadening, issuer/JWT/DB/Redis/browser exposure or
+listener/client-runtime activation. The module prepares exact closed POST
+paths/bodies and decodes bounded untrusted responses; it MUST NOT construct
+Verified<T>, an accepting SourceProofVerifier, auth grants or a projection ACK.
+
+One fixed dataset/schema only: pma.reports.current-original-publication /
+pma.report-publication-history-item.v1, immutable selected AS_PUBLISHED reports,
+not current NAV/capital/orders/fills. Keep exact decimal strings/nulls/scope,
+generation, pages/chunk/digest/group completeness and opaque cursor binding;
+empty tail/hidden-only group are not independently authenticated coverage.
+Existing source ceiling1MiB,200rows/page, retained complete prefix floor1 and
+head<=4096 are boundaries, not approved throughput/budgets or full native fence.
+Missing new-version qualification/correction support stays unavailable; never
+fabricate order/fill coverage. Actual authority/current HISTORY+EXPORT/report
+membership/workload/TLS/selected definitions and03 publisher remain external
+binding inputs, not reasons to defer this wire preparation.
+
+Tests before closure: fixed routes and canonical request body, exact response
+binding, malformed/foreign/expired/oversized snapshots, page counts/order/hash,
+group/chunk/event limits/digests/cursors, empty/hidden-only tail; all TEST_ONLY
+using existing protocol, no producer/DB/native publication claim. Agent owns
+only additive ts-transport module/tests, its Cargo dependency/lib declaration
+and minimal lockfile dependency change. Root reviews/journals/ordinary hooks/
+publication; use capped1CPU Cargo, bounded private target/no network when the
+existing cache suffices, no shared cache deletion. Rollback source-only;
+preserve current pinned core/store, all runtime/stable/rollback/peer files.
+
 
 
 

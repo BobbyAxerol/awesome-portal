@@ -10,15 +10,18 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
 import resource
 import signal
+import stat
 import subprocess
 import time
 
 LOCK = Path('/home/bobby/.local/state/host-measurement-window.lock')
+ACTIVITY_DIR = LOCK.parent / 'host-activity'
 
 
 def docker_metadata_limits():
@@ -94,9 +97,77 @@ def verify_lock(path, payload):
         raise ValueError('LOCK_EXPIRED')
 
 
+def _activity_payload(path, identity=None):
+    """Read only one owned metadata file, never a measurement lock or secret."""
+    fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    with os.fdopen(fd, 'rb') as stream:
+        info = os.fstat(stream.fileno())
+        if identity is not None and (info.st_dev, info.st_ino) != identity:
+            raise ValueError('ACTIVITY_REPLACED_DO_NOT_REMOVE')
+        if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
+                or info.st_mode & 0o077):
+            raise ValueError('ACTIVITY_FILE_REFUSED')
+        raw = stream.read(16385)
+    if len(raw) > 16384:
+        raise ValueError('ACTIVITY_FILE_TOO_LARGE')
+    return json.loads(raw)
+
+
+def verify_activity(path, payload):
+    if _activity_payload(path, (payload['file_device'], payload['file_inode'])) != payload:
+        raise ValueError('ACTIVITY_REPLACED_DO_NOT_REMOVE')
+    if (payload.get('class') != 'correctness'
+            or datetime.fromisoformat(payload['until_utc']) <= datetime.now(timezone.utc)):
+        raise ValueError('ACTIVITY_EXPIRED_OR_INVALID')
+
+
+@contextmanager
+def correctness_activity(path, owner, seconds, purpose, cpu_cap):
+    """Nonexclusive visibility for capped tests; never claims a measurement lock.
+
+    The caller retains its existing CPU/memory enforcement. This metadata does
+    not reserve resources, authorize a job or certify latency/capacity. Only the
+    exact file/inode created here is removed on terminal exit, including failure.
+    """
+    path = Path(path)
+    if (not isinstance(owner, str) or not re.fullmatch(r'[A-Za-z0-9_.-]{1,128}', owner)
+            or path.name != owner + '.json' or not path.is_absolute()
+            or type(seconds) is not int or not 1 <= seconds <= 10800
+            or type(cpu_cap) not in (int, float) or not math.isfinite(cpu_cap) or cpu_cap <= 0
+            or not isinstance(purpose, str) or not 1 <= len(purpose) <= 512):
+        raise ValueError('BOUNDED_CORRECTNESS_ACTIVITY_REQUIRED')
+    path.parent.mkdir(mode=0o700, exist_ok=True)
+    parent = path.parent.lstat()
+    if (not stat.S_ISDIR(parent.st_mode) or parent.st_uid != os.geteuid()
+            or parent.st_mode & 0o022):
+        raise ValueError('ACTIVITY_DIRECTORY_REFUSED')
+    now = datetime.now(timezone.utc)
+    payload = dict(owner=owner, purpose=purpose, **{'class': 'correctness'},
+                   started_utc=now.isoformat(),
+                   until_utc=(now + timedelta(seconds=seconds)).isoformat(), cpu_cap=cpu_cap)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    identity = os.fstat(fd)
+    payload.update(file_device=identity.st_dev, file_inode=identity.st_ino)
+    written = False
+    try:
+        with os.fdopen(fd, 'w') as stream:
+            json.dump(payload, stream); stream.flush(); os.fsync(stream.fileno())
+        written = True
+        yield payload
+    finally:
+        try:
+            current = path.lstat()
+        except FileNotFoundError:
+            raise ValueError('ACTIVITY_DISAPPEARED') from None
+        if ((current.st_dev, current.st_ino) != (identity.st_dev, identity.st_ino)
+                or (written and _activity_payload(path, (identity.st_dev, identity.st_ino)) != payload)):
+            raise ValueError('ACTIVITY_REPLACED_DO_NOT_REMOVE')
+        path.unlink()
+
+
 @contextmanager
 def measurement_lock(path, owner, seconds, purpose='EPG10-01 passive observation; no generator/source requests'):
-    payload = dict(owner=owner, purpose=purpose,
+    payload = dict(owner=owner, purpose=purpose, **{'class': 'measurement'},
                    started_utc=datetime.now(timezone.utc).isoformat(),
                    until_utc=(datetime.now(timezone.utc) + timedelta(seconds=seconds+90)).isoformat())
     # Never unlink or overwrite a foreign lock, including an expired one here.

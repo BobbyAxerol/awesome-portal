@@ -82,9 +82,12 @@ Inherited native tests additionally cover exported snapshot/page digests,
 slot loss→explicit resnapshot, group fragments, mixed filters and canonical
 Unicode payload preservation. Tests cannot silently skip: runner sets the
 required native environment, binds its own actual PG target and requires six
-executed Rust cases with zero ignored/filtered. Twelve runner safety tests
-exercise exact-target cleanup, foreign ownership, foreign test-load denial,
-independent container/lock cleanup and receipt-preserving finalization errors.
+executed Rust cases with zero ignored/filtered. The historical qualification
+ran twelve runner safety tests covering exact-target cleanup, foreign ownership,
+then-current foreign-load denial and container/lease cleanup. Current20Oct
+driver safety is16PASS, including nonexclusive correctness-activity flow;
+the historical six native Rust cases are not rerun or recertified by this
+metadata correction. See the current reproduction note below.
 
 ## Retention and replayability
 
@@ -176,14 +179,20 @@ is offline. Set `EPG10_TS_REVISION` to the full
 archived SHA and run `python3 -B run.py`. Do not point inherited fixed-name tests
 at a shared database. Source, test and input hashes must agree with the receipt.
 
-Runner acquires SGP host lock, rejects known competing test load, uses Rust1.85.1
-with one compile job/nice15 and an existing immutable PG16.15 image. PG has
+Current20Oct driver uses nonexclusive per-owner correctness activity, not the
+host measurement lock, and does not ban foreign correctness jobs (root34b).
+It verifies the original activity inode/payload and retains replacements.
+See the [current journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
+for exact pins/tests/cleanup. Rust1.85.1 uses one compile job, one-core affinity,
+nice15 and an existing immutable PG16.15 image; PG has explicit `--rm`.
+PG has
 512MiB RAM/tmpfs-data,0.5CPU,128pids,24connections,8slots,64MB configured
 `max_slot_wal_keep_size`/`max_wal_size` (checkpoint-dependent controls, not a hard
 instantaneous WAL ceiling; data tmpfs provides the512MiB hard cap);
 one random **127.0.0.1-only** test port, no shared DB/network identity or volume.
 These are disposable harness caps, not approved production defaults. No HK
-source requests during its foreign measurement window. No image build/pull.
+source requests; correctness observations cannot qualify capacity, including
+when a foreign measurement window is active. No image build/pull.
 
 WAL and serial timing are diagnostic; no unmeasured concurrency/placement/SLO
 claim. The32-event backlog is deliberately bounded and drained to zero. Test

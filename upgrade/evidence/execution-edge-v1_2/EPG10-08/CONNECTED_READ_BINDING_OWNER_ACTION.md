@@ -12,6 +12,12 @@ acceptance; Core policy/composition follows genuine mapping and source inputs.
 
 ## Current resumed intake —20Oct05:45UTC
 
+**Latest source disposition20Oct:** Core009 revision3 now corrects the three
+session/dry-run source defects listed historically below. Use the revision3
+intake section, not the old CHANGES_REQUESTED patch instructions. Actual
+disposable-PG qualification is being executed separately; source preparation
+is still not normal R3, installation, genuine session or connected08 acceptance.
+
 Bobby resumed **Core009 → actual08 → scoped read09**. Published base is
 f8d3f20cc330947253de8a73d14291a236ab3edc (later custody publication is in the
 main journal; the connected runner bytes are unchanged); the old
@@ -171,6 +177,47 @@ Known source seals/mapping above remain historical inputs; renewal/current
 source head and reviewed field-policy reference must come from real artifacts.
 Existing08 approval covers this correction/binding work; no new phase or blanket
 approval requested. Full08NOT_MET; scoped connected09NOT_STARTED.
+
+### Core009 revision3 intake —20Oct
+
+SGP FE source frozen at2325dd942333687dc6c953ff21247fd59835adea,
+`/home/bobby/portal-research-fe`, branch `claude/fe-parity`; its final delta
+is documentation only, backend bytes retain the e1f3938e fixes. Authoritative
+return is `upgrade/execution_loop/evidence/BE-CLAUDE-2026-10-20/BE-P10.md`,
+revision3 section, SHA256
+`1daa55426cb76ebead96be803268732ef1464a37c225dd356935446d0a4beb8d`.
+
+- Session source SHA256
+  `6a4ed7dc790318d60c4fd2593e48ac1845629afde444b38b11bbfba3661d1eb3`:
+  exact session/user/stored-token-hash cleanup preserves a reused path's new
+  session token; bounded complete write, fsync, same-FD length/content check
+  and exact-session compensation on failure.
+- CLI source SHA256
+  `fa353d3398acd79fdff8525972c1130622c8978306d0c2227c2e092be4290257`:
+  offline dry-run branches before Pool/schema/composition/AuthService.
+- Session/CLI spec SHA256 respectively
+  `81aa116b3c9645fbabe4c33c8556c45c1661afc7d017db3663fc23477c7cc464`
+  and `07c114b3724ef3fe2a3614c6b657f7af7ca4eccd453a5f854b643c5a58477b06`.
+- Operator runbook SHA256
+  `bd9c908ba238f7cc9eabd2d2c13764ab1ab6ceee30ff1e0b22b6c129f7dcb35e`.
+
+Static intake accepts these source corrections, not the producer's fake-only
+test counts as runtime authority. Edge uses a private exact source snapshot
+and existing runner for3actual-PG revoke cases plus63session/23CLI fixtures;
+build/restore and zero PG skips are required for that focused qualification.
+First attempt ended134 during tsc default-heap exhaustion:0tests, restore
+NOT_RUN, exact own cell/network/snapshot cleaned, production unchanged.
+Bounded retry sets explicit1536MiB V8 heap inside the same Node2GiB/2CPU cap;
+PG1GiB/1CPU,900s deadline, no ports/operational DSN or peer source edits.
+Actual results and both cleanup receipts belong in the
+[same approved-phase journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct).
+
+Keep root-only token operations sequential and use unique paths; fixture
+inode models are not actual root-filesystem I/O proof. Ordinary full R3 and
+installed image/schema/config/current policy/session remain distinct owner
+release inputs. Installed008, genuine identity and source seal history are
+already known; do not recreate them or open a source window merely to wait.
+Full08 NOT_MET; scoped connected09 NOT_STARTED.
 
 ### Active-stream observation and independent STREAM removal —20Oct
 

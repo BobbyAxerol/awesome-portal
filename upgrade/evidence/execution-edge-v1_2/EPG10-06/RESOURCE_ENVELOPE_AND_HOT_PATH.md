@@ -1,5 +1,21 @@
 # EPG10-06 resource envelope and hot path
 
+## Current20Oct correctness preparation, not capacity evidence
+
+The [runnable-first journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
+supersedes historical blanket-lock behavior in isolated drivers03–11.
+They now register only private per-owner correctness activity and can run
+alongside peers within their bounds; they neither take/remove a measurement
+lease nor claim absolute performance. Real observer capacity work still takes
+the exclusive measurement lease. Original-inode/payload and bounded no-follow,
+nonblocking checks protect per-stage ownership and terminal cleanup.
+153focused PASS/0FAIL/SKIP (21new), all TEST_ONLY flow/metadata qualification;
+no load target, production budget or connected measurement was manufactured.
+Existing Cargo/PG caps remain enforced, with native03 Cargo pinned to1CPU and
+PG auto-removal explicit. Actual hook/resource reconciliation stays in the
+same main journal. Full01/06 connected capacity remains NOT_MET pending the
+actual matched producer target, owner bounds and measurement window.
+
 Governing plan: [phase06 and §23.15](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-06-plan).
 This is the source-dark Rust implementation contract, not a production capacity
 certificate, new service, source grant, UI, command activation or deployment.

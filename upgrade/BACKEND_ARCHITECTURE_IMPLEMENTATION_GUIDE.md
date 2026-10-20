@@ -917,7 +917,8 @@ full08NOT_MET,09connected NOT_STARTED. This does not recertify393or717tests.
   Same bounded GET-only runner now holds active SSE for observation and binds
   independent STREAM-only official revoke while preserving READ/native.
   66unit PASS (40previous+26new), no mutation or final-egress claim.
-  Core009 producer corrections/real installation remain; full08NOT_MET,
+  Core009 revision3 producer corrections are received; actual PG qualification
+  and real installation remain separate gates; full08NOT_MET,
   09connectedNOT_STARTED. Exact hook/publication/cleanup lives in main journal.
 
 - **Original01/06 offline host-lock alignment,20Oct:**
@@ -925,6 +926,16 @@ full08NOT_MET,09connected NOT_STARTED. This does not recertify393or717tests.
   applies root34b to preparation/current-lock classification only. Historical
   recorded-run taint/ownership and all source/budget gates remain strict;
   no benchmark, production-capacity proof or runtime mutation follows.
+
+- **Original03–11 runnable-first correctness preparation,20Oct:**
+  [same approved-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
+  pins153focused PASS (21new), nonexclusive own activity lifecycle, bounded
+  inode/payload verification/cleanup, one-core native-driver Cargo and `--rm`
+  disposable PG. Peer correctness/measurement activity no longer blocks these
+  correctness drivers. Absolute observer measurements remain exclusive and
+  correctness receipts cannot prove capacity. Core009 revision3 corrected
+  source intake/actual PG qualification are tracked separately from ordinary
+  R3, installation and genuine08 acceptance; no fixture-as-runtime promotion.
 
 - **Execution Edge v1.2 / EPG10-00 (2026-10-15):**
   [EPG10-00…11 in the Execution Loop unified plan §23](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-upgrade-v12)

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Run exact existing Research tests and guide reference, never a new calculator.
 
-Execute only from the phase's private SGP target after the PG runner releases
-its lock. Reads committed, hash-pinned source; no peer checkout/cache mutation.
+Execute only from the phase's private SGP target after its PG qualification.
+Correctness activity is nonexclusive; no host measurement lease is claimed.
+Reads committed, hash-pinned source; no peer checkout/cache mutation.
 The node_modules symlink is an existing dependency reference, not vendored code.
 All policy/financial examples remain TEST_ONLY; no production calibration proof.
 """
@@ -64,8 +65,13 @@ def main():
         at_utc=datetime.now(timezone.utc).isoformat(), provenance='TEST_ONLY',
         performance_acceptance=False, production_calibration=False,
         runtime_mutations=0, source_revision=REVISION, input_sha256=PINS)
-    with observer.measurement_lock(observer.LOCK, 'codex-epg10-09-shared-oracles', 510,
-            'EPG10-09 exact shared Research/reference correctness; no capacity claim') as lock:
+    owner = 'codex-epg10-09-shared-oracles'
+    activity_path = observer.ACTIVITY_DIR / (owner + '.json')
+    with observer.correctness_activity(activity_path, owner=owner, seconds=600,
+            purpose='EPG10-09 exact shared Research/reference correctness; no capacity claim',
+            cpu_cap=1) as activity:
+        receipt['correctness_activity'] = activity
+        receipt['correctness_activity_window_seconds'] = 600
         try:
             original = json.loads((base / 'receipt.json').read_text())
             if original['status'] != 'PASS_ISOLATED_CORRECTNESS_ONLY':
@@ -75,6 +81,7 @@ def main():
             # Recheck safety and bind this oracle run to the final full PG
             # qualification. Repeated helper tests are not additional unique
             # application coverage; no changed Rust bytes may reuse the receipt.
+            observer.verify_activity(activity_path, activity)
             checked = subprocess.run([sys.executable, '-B', '-m', 'unittest', '-v', 'test_run'],
                 cwd=base, env=runner.isolated_environment(base), stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT, timeout=30, check=False)
@@ -86,6 +93,7 @@ def main():
                 for name in ('run.py', 'test_run.py', 'epg03_run.py', 'execution_edge_observe.py')}
             guide = None
             for name, expected in PINS.items():
+                observer.verify_activity(activity_path, activity)
                 data = subprocess.check_output(['git', '-C', str(RESEARCH), 'show', REVISION + ':' + name], timeout=15)
                 if len(data) > 256 * 1024 or hashlib.sha256(data).hexdigest() != expected:
                     raise ValueError('SHARED_SOURCE_PIN_CHANGED')
@@ -97,6 +105,7 @@ def main():
                     destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                     destination.write_bytes(data)
             block = reference_block(guide)
+            observer.verify_activity(activity_path, activity)
             namespace = {'__name__': 'epg10_exact_reference'}
             # Dataclasses need a registered module for postponed type lookups.
             module = importlib.util.module_from_spec(importlib.util.spec_from_loader(namespace['__name__'], loader=None))
@@ -129,7 +138,7 @@ def main():
                 '--root', str(target), '--config', str(config), '--maxWorkers=1', '--no-file-parallelism',
                 '--reporter=json',
                 'test/elp206-manager-score.spec.ts']
-            observer.verify_lock(observer.LOCK, lock)
+            observer.verify_activity(activity_path, activity)
             # JSON goes through the same bounded pipe as diagnostics: no
             # independently unbounded --outputFile. The existing runner kills
             # the complete process group on timeout or its 8 MiB log ceiling.
@@ -163,7 +172,7 @@ def main():
                         raise ValueError('SHARED_INPUT_CHANGED_DURING_TEST')
             receipt['source_input_unchanged'] = True
             receipt['runner_sha256'] = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
-            observer.verify_lock(observer.LOCK, lock)
+            observer.verify_activity(activity_path, activity)
             receipt['status'] = 'PASS_SHARED_TEST_ONLY_ORACLES'
         except Exception as exc:
             receipt['error_type'] = type(exc).__name__
