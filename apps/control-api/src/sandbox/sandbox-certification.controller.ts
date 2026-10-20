@@ -50,10 +50,12 @@ export class SandboxCertificationController {
     @Req() request: SandboxRequest,
     @Param("deployment_id") deploymentId: string,
     @Query("workspace_id") rawWorkspaceId?: unknown,
+    // BE-P12: SCOPED_V2 only (`identity`); the legacy body already carries it.
+    @Query("include") rawInclude?: unknown,
   ) {
     const workspaceId = await this.workspace(request, rawWorkspaceId);
     return this.certifications.detail(request.portalUser, request.portalSession, workspaceId, deploymentId,
-      request.portalViewerWorkspaceId ?? request.portalWorkspaceId);
+      request.portalViewerWorkspaceId ?? request.portalWorkspaceId, rawInclude);
   }
 
   @Post("/governance/sandbox-certifications")

@@ -11,6 +11,7 @@ import { ProfileScreenSource } from "../execution/profile-screen-composer";
 import { profileStageFacts } from "../execution/stage-facts-profile";
 import { sourceFigures } from "../execution/stage-rows";
 import { deploymentIdentityOf, identityFields } from "../execution/deployment-identity";
+import { attachFollowingIdentity, parseFollowingInclude } from "../governance/following-parent.identity";
 import {
   SANDBOX_CERTIFICATION_STEPS,
   SandboxCertificationCreateRequest,
@@ -174,10 +175,16 @@ export class SandboxCertificationService {
     @Optional() @Inject(FollowingParentReads) private readonly followingParents?: FollowingParentReads,
   ) {}
 
-  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string,
+    include?: unknown) {
     const principal = { user, session, workspaceId, viewerWorkspaceId };
-    if(this.followingParents&&await this.followingParents.mode(principal)==="SCOPED_V2")
-      return this.followingParents.detail(principal,"SANDBOX",deploymentId);
+    if(this.followingParents&&await this.followingParents.mode(principal)==="SCOPED_V2"){
+      // BE-P12: opt-in only; the legacy body below already carries the identity.
+      const wanted=parseFollowingInclude(include);
+      const parent=await this.followingParents.detail(principal,"SANDBOX",deploymentId);
+      return wanted.has("identity")?attachFollowingIdentity(parent,
+        await this.profileReads.deploymentIdentity(principal,"sandbox",deploymentId)):parent;
+    }
     if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
       throw new GovernanceError("SANDBOX_SCOPED_PARENT_NOT_COMMISSIONED", "Sandbox certification parent field authority is not commissioned.", 503);
     const result = await this.detailLegacy(user, session, workspaceId, deploymentId, viewerWorkspaceId);

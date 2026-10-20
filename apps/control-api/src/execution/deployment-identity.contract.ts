@@ -51,12 +51,22 @@ export const IDENTITY_NOT_READ: DeploymentIdentity = Object.freeze({
   alpha_reason_code: "DEPLOYMENT_IDENTITY_NOT_READ", portfolio_name_reason_code: "DEPLOYMENT_IDENTITY_NOT_READ",
 });
 
+/** The viewer's authority does not reach the identity source for this deployment (hidden and missing are one answer). */
+export const IDENTITY_NOT_AUTHORIZED: DeploymentIdentity = Object.freeze({
+  alpha_id: null, alpha_name: null, portfolio_name: null,
+  alpha_reason_code: "ALPHA_IDENTITY_NOT_AUTHORIZED", portfolio_name_reason_code: "PORTFOLIO_NAME_NOT_AUTHORIZED",
+});
+
 // The intersection of the Identifier patterns the four published schemas use.
 const ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$/;
 const MAX_NAME = 256;
 // Same hostile-text rule the other published display strings use: no control
 // or bidirectional-format characters.
 const UNSAFE_TEXT = /[\u0000-\u001f\u007f-\u009f؜‎‏‪-‮⁦-⁩]/u;
+/** Shared with the SCOPED_V2 wire contracts so a pattern can never drift between the producer and the sealed v2 bodies. */
+export const IDENTITY_ID_PATTERN = ID;
+export const IDENTITY_MAX_NAME = MAX_NAME;
+export const IDENTITY_UNSAFE_TEXT = UNSAFE_TEXT;
 const safeName = (value: unknown): string | null =>
   typeof value === "string" && value.length >= 1 && [...value].length <= MAX_NAME && !UNSAFE_TEXT.test(value) &&
   value.trim() === value ? value : null;

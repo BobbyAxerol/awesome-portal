@@ -29,6 +29,8 @@ export class LiveOperationsController {
     @Query("workspace_id") rawWorkspaceId?: unknown,
     @Query("panel") rawPanel?:unknown,
     @Query("cursor") rawCursor?:unknown,
+    // BE-P12: SCOPED_V2 only. The legacy body already carries identity and stage facts, so it ignores this.
+    @Query("include") rawInclude?:unknown,
   ) {
     const workspaceId = rawWorkspaceId === undefined || rawWorkspaceId === null || rawWorkspaceId === ""
       ? request.portalWorkspaceId
@@ -37,6 +39,6 @@ export class LiveOperationsController {
       throw new GovernanceError("WORKSPACE_NOT_FOUND", "Workspace not found.", 404);
     }
     return this.live.detail(request.portalUser, request.portalSession, workspaceId, deploymentId,
-      request.portalViewerWorkspaceId ?? request.portalWorkspaceId,{panel:rawPanel,cursor:rawCursor});
+      request.portalViewerWorkspaceId ?? request.portalWorkspaceId,{panel:rawPanel,cursor:rawCursor,include:rawInclude});
   }
 }
