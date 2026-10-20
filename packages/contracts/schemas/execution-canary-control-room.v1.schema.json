@@ -220,7 +220,8 @@
             "runtime_state": { "type": "null" },
             "day_index": { "type": "null" },
             "duration_days": { "type": "integer", "minimum": 1, "maximum": 90 },
-            "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string" } }
+            "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string" } },
+            "trial": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/TrialSchedule" }
           }
         },
         "stage_facts": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageFacts" },
@@ -255,7 +256,9 @@
             },
             "consumed": { "type": ["object", "null"], "maxProperties": 8 },
             "headroom": { "type": ["object", "null"], "maxProperties": 8 },
-            "base_risk_profile_verified": { "const": false }
+            "base_risk_profile_verified": { "const": false },
+            "rows": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/EnvelopeComplianceRow" } },
+            "verdict": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/EnvelopeVerdict" }
           }
         },
         "source_panels": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "$ref": "#/$defs/SourceEnvelope" } },
@@ -277,7 +280,8 @@
             "envelope": { "$ref": "#/$defs/SourceEnvelope" },
             "ready": { "const": false },
             "evidence_hash": { "type": "null" },
-            "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string" } }
+            "blocker_codes": { "type": "array", "minItems": 1, "maxItems": 16, "items": { "type": "string" } },
+            "items": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/RollbackItem" } }
           }
         },
         "command_policy": {

@@ -223,14 +223,14 @@ export interface components {
             duration_days: number;
         };
         Hash: string;
+        /** Format: date-time */
+        StageTimestamp: string;
         /** @description Reviewed machine code saying why a fact is not published. Never free text, never a source message. */
         StageReasonCode: string;
-        /** @description Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed. */
-        StageFactRuntimeState: {
+        StageFactTimestamp: {
             /** @constant */
             availability: "AVAILABLE";
-            /** @enum {unknown} */
-            value: "RUNNING" | "PAUSED" | "HALTED" | "STOPPED";
+            value: components["schemas"]["StageTimestamp"];
             reason_code: null;
         } | {
             /** @constant */
@@ -238,12 +238,20 @@ export interface components {
             value: null;
             reason_code: components["schemas"]["StageReasonCode"];
         };
-        /** Format: date-time */
-        StageTimestamp: string;
-        StageFactTimestamp: {
+        /** @description started_at is the activation instant the SOURCE states; exit_review_opens_at is started_at plus duration_days x 24h, published only together with a stated start. A DRAFT envelope is not a started trial. */
+        TrialSchedule: {
+            /** @constant */
+            basis: "STARTED_AT_PLUS_DURATION_DAYS";
+            duration_days: number;
+            started_at: components["schemas"]["StageFactTimestamp"];
+            exit_review_opens_at: components["schemas"]["StageFactTimestamp"];
+        };
+        /** @description Closed vocabulary. Published only when the SOURCE deployment row carries the word; never derived from `active`, a session, readiness or freshness. A source word outside the vocabulary is refused (reason RUNTIME_STATE_WORD_NOT_IN_CLOSED_VOCABULARY), not echoed. */
+        StageFactRuntimeState: {
             /** @constant */
             availability: "AVAILABLE";
-            value: components["schemas"]["StageTimestamp"];
+            /** @enum {unknown} */
+            value: "RUNNING" | "PAUSED" | "HALTED" | "STOPPED";
             reason_code: null;
         } | {
             /** @constant */
@@ -339,6 +347,42 @@ export interface components {
                 code: string;
             }[];
         } & (unknown & unknown);
+        /** @description Canonical non-negative exact decimal string: no exponent, no leading zero, no trailing fractional zero. Never a JSON number. */
+        StageDecimal: string;
+        StageFactDecimal: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageDecimal"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description One row per cap, in the order capital, gross_notional, daily_loss, open_orders. */
+        EnvelopeComplianceRow: {
+            /** @enum {unknown} */
+            cap: "capital" | "gross_notional" | "daily_loss" | "open_orders";
+            unit: string;
+            /** @description The base risk profile's limit. The Portal holds only the profile revision id, so this is NOT_PUBLISHED (BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED) until a source publishes the profile limits. */
+            policy_limit: components["schemas"]["StageFactDecimal"];
+            /** @description The stored envelope's own approved limit for this cap, exact. */
+            approved: components["schemas"]["StageDecimal"];
+            /** @description Consumed against the cap, published only when the profile source proves it under one explicit currency (capital, gross_notional) or over a complete relation (open_orders, count). daily_loss is NOT_PUBLISHED: no relation publishes a daily window. */
+            consumed: components["schemas"]["StageFactDecimal"];
+            /** @description consumed / approved, computed by the server at 6 fractional digits with ROUND_HALF_UP, canonical. The browser never divides. May exceed 1. */
+            used_ratio: components["schemas"]["StageFactDecimal"];
+            as_of: components["schemas"]["StageFactTimestamp"];
+        };
+        /** @description Server verdict. BREACH as soon as any proven consumed figure is above its approved limit; WITHIN_ENVELOPE only when all four caps are proven and none is above; otherwise UNDETERMINED naming the caps it could not prove. */
+        EnvelopeVerdict: {
+            /** @enum {unknown} */
+            state: "WITHIN_ENVELOPE" | "BREACH" | "UNDETERMINED";
+            /** @constant */
+            basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP";
+            undetermined_caps: ("capital" | "gross_notional" | "daily_loss" | "open_orders")[];
+        } & (unknown & unknown);
         UnavailableCollection: {
             envelope: components["schemas"]["SourceEnvelope"];
             exact_total: number | null;
@@ -346,6 +390,24 @@ export interface components {
             next_cursor?: string | null;
             previous_cursor?: string | null;
             rows: Record<string, never>[];
+        };
+        StageFactBoolean: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: boolean;
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description One of four readiness checks and the date it was last checked. Only broker_data is visible to the Portal today; the rest are NOT_PUBLISHED with a reason. The legacy `ready` member (pinned false) is unchanged. */
+        RollbackItem: {
+            /** @enum {unknown} */
+            key: "flatten_plan" | "paper_twin" | "broker_data" | "rollback_drill";
+            ready: components["schemas"]["StageFactBoolean"];
+            checked_at: components["schemas"]["StageFactTimestamp"];
         };
         ActionPolicy: {
             /** @enum {unknown} */
@@ -420,6 +482,7 @@ export interface components {
                 day_index: null;
                 duration_days: number;
                 blocker_codes: string[];
+                trial?: components["schemas"]["TrialSchedule"];
             };
             stage_facts?: components["schemas"]["StageFacts"];
             kpis: {
@@ -442,6 +505,8 @@ export interface components {
                 headroom: Record<string, never> | null;
                 /** @constant */
                 base_risk_profile_verified: false;
+                rows?: components["schemas"]["EnvelopeComplianceRow"][];
+                verdict?: components["schemas"]["EnvelopeVerdict"];
             };
             source_panels: components["schemas"]["SourceEnvelope"][];
             positions: components["schemas"]["UnavailableCollection"];
@@ -457,6 +522,7 @@ export interface components {
                 ready: false;
                 evidence_hash: null;
                 blocker_codes: string[];
+                items?: components["schemas"]["RollbackItem"][];
             };
             command_policy: {
                 /** @constant */

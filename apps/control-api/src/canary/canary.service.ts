@@ -19,6 +19,7 @@ import { evaluateSandboxCertification } from "../sandbox/sandbox-certification.s
 import { CanaryEnvelopeCreateRequest } from "./contracts";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "./canary.repository";
 import { profileStageFacts } from "../execution/stage-facts-profile";
+import { complianceRows, rollbackItems, trialSchedule } from "../execution/canary-envelope-facts";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import {
   GOVERNANCE_DENIAL_MESSAGE,
@@ -249,6 +250,14 @@ export class CanaryService {
     const internalData = { positions, orders, fills, sessions, account_balances: balances, margin_balances: margins, account_sync: accountSync };
     const brokerData = { broker_sync: brokerSync };
     const differenceData = { reconciliation };
+    const compliance = complianceRows({
+      currency: envelope.currency,
+      capital_cap: envelope.capital_cap,
+      gross_notional_cap: envelope.gross_notional_cap,
+      daily_loss_cap: envelope.daily_loss_cap,
+      max_open_orders: envelope.max_open_orders,
+      duration_days: envelope.duration_days,
+    }, source);
     const consumed = sourceConnected ? {
       capital: capitalConsumed,
       gross_notional: grossNotional,
@@ -316,6 +325,8 @@ export class CanaryService {
         day_index: null,
         duration_days: envelope.duration_days,
         blocker_codes: envelope.blocker_codes,
+        // FE-071: trial start and exit-review date, only from a source-stated activation; additive.
+        trial: trialSchedule(source.rows("deployments")[0]?.activated_at, envelope.duration_days),
       },
       // FE-067: runtime / reconciliation / sessions as typed facts. Additive; the pinned-null
       // `runtime_state` above stays, the real value (when the source publishes one) is here.
@@ -348,6 +359,9 @@ export class CanaryService {
         consumed,
         headroom,
         base_risk_profile_verified: false,
+        // FE-071: one row per cap with the server's own ratio and a server verdict; additive.
+        rows: compliance.rows,
+        verdict: compliance.verdict,
       },
       source_panels: [
         ...(sourceConnected ? [
@@ -372,6 +386,8 @@ export class CanaryService {
         ready: false,
         evidence_hash: null,
         blocker_codes: ["ROLLBACK_EVIDENCE_UNAVAILABLE"],
+        // FE-071: the four readiness checks with the date each was last checked; additive.
+        items: rollbackItems(source),
       },
       command_policy: {
         production_command_active: false,
