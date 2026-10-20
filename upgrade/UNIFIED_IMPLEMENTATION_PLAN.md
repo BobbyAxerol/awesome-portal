@@ -13815,3 +13815,38 @@ R0 for Codex is approved in campaign§10.10c; code/final candidate gates remain.
 ### Bobby priority assignment — Claude Core009 —20Oct2026
 
 Bobby explicitly requests Claude to prioritize Core009 backend composition while Edge completes its acceptance runner. Read the full [priority handoff](execution_loop/evidence/ELP2-10/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md), raw SHA256 `ccdfb4d714deedb8cc66f2beee5189c8dc07c985de85f7cbded9cb738056bb7f`. This named task supplements the old B1/B2-only split; preserve peer files and standard source/release/runtime authority. Genuine identity COMMIT/Core ACK is already complete; source28446 is retired/head2 revoked. Prepare reviewed actual owner policy/native Core config, coordinate a NEW matched Edge window/observer, then install/return Research-only009 actual pins/session/routes. No repeated identity issue, retired-head replay, SQL grants, fake session, stable/dev/main/provider28445 or command activation. Follow original ELP2-10/EPG10-08; full connected exit NOT_MET. Status AWAITING_CLAUDE_ACK, not received/installed/accepted. ACK with owned files, source pin and exact owner-return path; do not wait for UI/new phases.
+
+
+### Core009 revision2 — CHANGES_REQUESTED before commissioning —20Oct
+
+Existing Bobby-approved original08/Core009 priority assignment; public Markdown-only review handback.
+Source FE0deeee70, Research only. Revoke/session code exists, but fix exact-session token cleanup,
+short-write acknowledgment and dry-run-before-DB; then real PG/normal R3/image gates.
+No peer source/config/DB/session/role/provider/listener/service mutation or test/build/deploy.
+Preserve peer changes/index. Reuse current request/priority packet; no new phase/framework.
+Exact public review section SHA256 044207a63ed08acd4d4aa16401e6a4479e86569ad435f5d993d20ce6b0bae8ab.
+Core request: execution_loop/evidence/ELP2-10/EDGE_TO_CORE_EPG10_08_REQUEST_2026-10-19.md;
+FE priority: execution_loop/evidence/ELP2-10/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md.
+Rollback only these append sections, never shared reset. Full08NOT_MET/09NOT_STARTED.
+Not committed/pushed by Edge; owning lead lands its normal coherent batch.
+
+
+#### Edge official-session binding published —20Oct08:40UTC
+
+Edge source now6e8f7f2df585688dc4a75614ff15ddb77c977f32, origin/feat/execution-edge-upgrade-v1_2 in BobbyAxerol/awesome-portal, normal nonforce push and remote SHA verified.
+Existing GET-only runner consumes the official6-field AuthService token file directly, exact producer/session-id/subject/hash/UTC expiry binding, no credential copy or reissue.
+Driver18cb1a352d8e3d9cd37ddaafcd3340d0e60e6657b6245db0a248e18313d67d92; tests754914fc3db8702b63e984bdae211dadf4e873fe2a45242e1a0649cdd754ec8f. Actual40unitPASS (11new), normal130contracts/717API PASS, PG restore/build PASS.
+Exact own offline hook image removed;19protected HK tuples unchanged; no SGP test resources, genuine session/source calls or runtime changes.
+The three Core corrections immediately above remain CHANGES_REQUESTED on source pins rechecked08:37UTC. Core corrects/tests them; then review final PG/R3/image/config, coordinate fresh source/trust, zero-custody swap and actual08 READ/STREAM/revoke. No blanket approval or new phase.
+This receipt is source/isolated proof, never Cloudflare/password/human-presence or connected08/09 acceptance. Preserve peer index/source/runtime; no commit/push on Core or FE by Edge.
+
+
+### Published Edge runner and offline preparation batch —20Oct e766034c
+
+Bobby-approved same08/Core009 priority handoff; public docs only.
+Published Edge e766034c (08 runner3bbc4417 +01/06 offline preparation),66+60focused unit PASS;
+both normal hooks130contracts/717API/build/restore PASS; own test artifacts cleaned.
+Prioritize existing three CHANGES_REQUESTED, then actual PG/R3/image/config/current policy/session.
+No peer source/config/DB/identity/listener/role/deploy mutation. Full08NOT_MET/09not started.
+Exact handback section SHA256 2ca35f6b3a5125b33593ca22b701c2e176220ee6bfb64770b9caa7415eb5d1ed. Read existing ELP2-10 request/Claude priority packet.
+Preserve peer changes/index; owning lead commits its own coherent docs/source batch.
