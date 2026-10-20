@@ -1,0 +1,768 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "base": "execution-manager-scoped.scenarios.synthetic.valid.json#fleet-researcher-paper page 1",
+  "note": "RV-12 refusals. `mutations` are refused by the published JSON Schema and/or the producer validator (generator-proved). `requests` are refused by the real reader with the stated HTTP status and code (spec-proved, cursor cases also codec-proved).",
+  "mutations": [
+    {
+      "id": "version-mismatch",
+      "rule": "a different schema version is a different contract",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_literal",
+      "issue_path": [
+        "schema_version"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "schema_version"
+          ],
+          "value": "portal.execution.manager-scoped.v2"
+        }
+      ]
+    },
+    {
+      "id": "sensitive-field-on-facts",
+      "rule": "no physical account balance, custody or private field can ride on a fact set",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "unrecognized_keys",
+      "issue_path": [
+        "items",
+        "0",
+        "identity"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "identity",
+            "physical_balance"
+          ],
+          "value": "1"
+        }
+      ]
+    },
+    {
+      "id": "sensitive-field-on-envelope",
+      "rule": "no global count or total can ride on the envelope",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "unrecognized_keys",
+      "issue_path": [],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "global_count"
+          ],
+          "value": 9
+        }
+      ]
+    },
+    {
+      "id": "sensitive-field-on-page",
+      "rule": "no source cursor can ride on the page",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "unrecognized_keys",
+      "issue_path": [
+        "page"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "source_cursor"
+          ],
+          "value": "raw-source-offset"
+        }
+      ]
+    },
+    {
+      "id": "revision-metadata",
+      "rule": "the scoped read publishes no source revision or sequence",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "unrecognized_keys",
+      "issue_path": [],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "source_revision"
+          ],
+          "value": "sha256:aaaa"
+        }
+      ]
+    },
+    {
+      "id": "claims-all-coverage",
+      "rule": "coverage is authorized rows only",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_literal",
+      "issue_path": [
+        "read_scope",
+        "coverage"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "read_scope",
+            "coverage"
+          ],
+          "value": "ALL"
+        }
+      ]
+    },
+    {
+      "id": "claims-global-totals",
+      "rule": "totals are visible rows only, never global",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_literal",
+      "issue_path": [
+        "read_scope",
+        "totals_scope"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "read_scope",
+            "totals_scope"
+          ],
+          "value": "GLOBAL"
+        }
+      ]
+    },
+    {
+      "id": "claims-complete",
+      "rule": "a retained current page is never total history",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_literal",
+      "issue_path": [
+        "completeness"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "completeness"
+          ],
+          "value": "COMPLETE"
+        }
+      ]
+    },
+    {
+      "id": "disconnected-is-not-a-state",
+      "rule": "the contract has no DISCONNECTED disposition: a profile is PARTIAL, DENIED or UNAVAILABLE",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_enum_value",
+      "issue_path": [
+        "profile_dispositions",
+        "0",
+        "state"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "profile_dispositions",
+            0,
+            "state"
+          ],
+          "value": "DISCONNECTED"
+        }
+      ]
+    },
+    {
+      "id": "no-dispositions",
+      "rule": "at least one environment disposition is stated",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "too_small",
+      "issue_path": [
+        "profile_dispositions"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "profile_dispositions"
+          ],
+          "value": []
+        }
+      ]
+    },
+    {
+      "id": "item-environment-all",
+      "rule": "an item belongs to one environment",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_enum_value",
+      "issue_path": [
+        "items",
+        "0",
+        "environment"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "environment"
+          ],
+          "value": "all"
+        }
+      ]
+    },
+    {
+      "id": "money-as-number",
+      "rule": "money is an exact decimal string",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_type",
+      "issue_path": [
+        "items",
+        "0",
+        "financial_facts",
+        "0",
+        "facts",
+        "allocation"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "financial_facts",
+            0,
+            "facts",
+            "allocation"
+          ],
+          "value": 100
+        }
+      ]
+    },
+    {
+      "id": "money-exponent",
+      "rule": "no exponent notation",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_string",
+      "issue_path": [
+        "items",
+        "0",
+        "financial_facts",
+        "0",
+        "facts",
+        "allocation"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "financial_facts",
+            0,
+            "facts",
+            "allocation"
+          ],
+          "value": "1e3"
+        }
+      ]
+    },
+    {
+      "id": "has-more-without-cursor",
+      "rule": "has_more and next_cursor agree",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PAGE_INCONSISTENT",
+      "issue_path": [
+        "page"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "has_more"
+          ],
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "returned-count-above-items",
+      "rule": "returned_count is the number of items",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_PAGE_INCONSISTENT",
+      "issue_path": [
+        "page"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "returned_count"
+          ],
+          "value": 3
+        }
+      ]
+    },
+    {
+      "id": "limit-above-bound",
+      "rule": "a page holds at most 100 items",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "too_big",
+      "issue_path": [
+        "page",
+        "limit"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "limit"
+          ],
+          "value": 101
+        }
+      ]
+    },
+    {
+      "id": "unknown-fact-kind",
+      "rule": "financial fact kinds are closed",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_enum_value",
+      "issue_path": [
+        "items",
+        "0",
+        "financial_facts",
+        "0",
+        "kind"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "financial_facts",
+            0,
+            "kind"
+          ],
+          "value": "FEE"
+        }
+      ]
+    },
+    {
+      "id": "unknown-availability-reason",
+      "rule": "availability reasons are closed",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_enum_value",
+      "issue_path": [
+        "items",
+        "0",
+        "financial_availability",
+        "reason_code"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "financial_availability",
+            "reason_code"
+          ],
+          "value": "PROBABLY_FINE"
+        }
+      ]
+    },
+    {
+      "id": "control-character-in-name",
+      "rule": "display text has no control characters",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "custom",
+      "issue_path": [
+        "items",
+        "0",
+        "identity",
+        "name"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "identity",
+            "name"
+          ],
+          "value": "bad\nname"
+        }
+      ]
+    },
+    {
+      "id": "cursor-with-space",
+      "rule": "a cursor is an opaque token of a closed alphabet",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "invalid_string",
+      "issue_path": [
+        "page",
+        "next_cursor"
+      ],
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "has_more"
+          ],
+          "value": true
+        },
+        {
+          "op": "set",
+          "path": [
+            "page",
+            "next_cursor"
+          ],
+          "value": "a b"
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "id": "cursor/changed-query",
+      "level": "L3",
+      "rule": "a cursor binds the exact query: page 2 of one query cannot be reused with another search",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "ALL_BUSINESS_READER",
+        "query": {
+          "environment": "paper",
+          "limit": 1,
+          "search": "Aurora"
+        },
+        "cursor_from": "fleet-owner-paper-chain page 1 next_cursor",
+        "setup": {
+          "cursor": "next-of-page-1"
+        }
+      },
+      "status": 400,
+      "code": "CURSOR_CONTEXT_MISMATCH",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)",
+        "generate-execution-manager-scoped.mjs (real KeysetCursorCodec)"
+      ]
+    },
+    {
+      "id": "cursor/wrong-direction",
+      "level": "L3",
+      "rule": "an after cursor is not a before cursor",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "ALL_BUSINESS_READER",
+        "query": {
+          "environment": "paper",
+          "limit": 1
+        },
+        "cursor_from": "fleet-owner-paper-chain page 1 next_cursor",
+        "setup": {
+          "cursor": "next-of-page-1",
+          "as": "before"
+        }
+      },
+      "status": 400,
+      "code": "CURSOR_CONTEXT_MISMATCH",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)",
+        "generate-execution-manager-scoped.mjs (real KeysetCursorCodec)"
+      ]
+    },
+    {
+      "id": "cursor/other-workspace",
+      "level": "L3",
+      "rule": "a cursor minted for one workspace is refused in another",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "ALL_BUSINESS_READER",
+        "query": {
+          "environment": "paper",
+          "limit": 1
+        },
+        "cursor_from": "fleet-owner-paper-chain page 1 next_cursor",
+        "setup": {
+          "cursor": "next-of-page-1",
+          "workspace_id": "workspace_TEST_ONLY_OTHER"
+        }
+      },
+      "status": 400,
+      "code": "CURSOR_CONTEXT_MISMATCH",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)",
+        "generate-execution-manager-scoped.mjs (real KeysetCursorCodec)"
+      ]
+    },
+    {
+      "id": "cursor/tampered",
+      "level": "L3",
+      "rule": "a cursor with an altered signature is invalid",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "ALL_BUSINESS_READER",
+        "query": {
+          "environment": "paper",
+          "limit": 1
+        },
+        "cursor_from": "fleet-owner-paper-chain page 1 next_cursor",
+        "setup": {
+          "cursor": "next-of-page-1",
+          "tamper": true
+        }
+      },
+      "status": 400,
+      "code": "INVALID_CURSOR",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)",
+        "generate-execution-manager-scoped.mjs (real KeysetCursorCodec)"
+      ]
+    },
+    {
+      "id": "cursor/expired",
+      "level": "L3",
+      "rule": "a cursor is valid for 900 seconds",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "ALL_BUSINESS_READER",
+        "query": {
+          "environment": "paper",
+          "limit": 1
+        },
+        "cursor_from": "fleet-owner-paper-chain page 1 next_cursor",
+        "setup": {
+          "cursor": "next-of-page-1",
+          "advance_seconds": 901
+        }
+      },
+      "status": 400,
+      "code": "CURSOR_EXPIRED",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)",
+        "generate-execution-manager-scoped.mjs (real KeysetCursorCodec)"
+      ]
+    },
+    {
+      "id": "cursor/source-moved",
+      "level": "L3",
+      "rule": "a new source revision is a new query: the old cursor is not carried over",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "ALL_BUSINESS_READER",
+        "query": {
+          "environment": "paper",
+          "limit": 1
+        },
+        "cursor_from": "fleet-owner-paper-chain page 1 next_cursor",
+        "setup": {
+          "cursor": "next-of-page-1",
+          "options": {
+            "sourceRevision": "z"
+          }
+        }
+      },
+      "status": 400,
+      "code": "CURSOR_CONTEXT_MISMATCH",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    },
+    {
+      "id": "read/revoked-mid-request",
+      "level": "L3",
+      "rule": "authority that changes between the read and the delivery fence refuses the whole response",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "RESEARCHER_AUTHORIZED_SUBSET",
+        "query": {
+          "environment": "paper"
+        },
+        "source_conditions": {
+          "revokeAfterPublicationReads": 1
+        }
+      },
+      "status": 409,
+      "code": "EXECUTION_READ_ACCESS_CHANGED",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    },
+    {
+      "id": "read/single-environment-not-recorded",
+      "level": "L1",
+      "rule": "one named environment with no recorded snapshot is unavailable, not empty",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "ALL_BUSINESS_READER",
+        "query": {
+          "environment": "live"
+        },
+        "source_conditions": {
+          "unrecorded": [
+            "live"
+          ]
+        }
+      },
+      "status": 503,
+      "code": "EXECUTION_READ_AUTHORITY_UNAVAILABLE",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    },
+    {
+      "id": "read/single-environment-not-granted",
+      "level": "L1",
+      "rule": "one named environment without a current grant does not exist for the reader",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "RESEARCHER_AUTHORIZED_SUBSET",
+        "query": {
+          "environment": "live"
+        },
+        "source_conditions": {
+          "granted": [
+            "paper"
+          ]
+        }
+      },
+      "status": 404,
+      "code": "EXECUTION_READ_NOT_AVAILABLE",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    },
+    {
+      "id": "read/single-environment-policy-pending",
+      "level": "L1",
+      "rule": "a reviewed policy that is still pending admits no scoped read",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "RESEARCHER_AUTHORIZED_SUBSET",
+        "query": {
+          "environment": "paper"
+        },
+        "source_conditions": {
+          "policyPending": [
+            "paper"
+          ]
+        }
+      },
+      "status": 403,
+      "code": "EXECUTION_READ_POLICY_PENDING",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    },
+    {
+      "id": "read/all-environments-denied",
+      "level": "L1",
+      "rule": "when every environment is denied the request is refused, not an empty page",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "RESEARCHER_AUTHORIZED_SUBSET",
+        "query": {
+          "environment": "all"
+        },
+        "source_conditions": {
+          "granted": []
+        }
+      },
+      "status": 404,
+      "code": "EXECUTION_READ_NOT_AVAILABLE",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    },
+    {
+      "id": "read/field-policy-pending",
+      "level": "L1",
+      "rule": "a researcher field policy that does not qualify the resource id publishes nothing",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "RESEARCHER_AUTHORIZED_SUBSET",
+        "query": {
+          "environment": "paper"
+        },
+        "source_conditions": {
+          "researcherFieldsWithout": [
+            "alpha_id"
+          ]
+        }
+      },
+      "status": 503,
+      "code": "EXECUTION_READ_FIELD_POLICY_PENDING",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    },
+    {
+      "id": "read/query-field-not-authorized",
+      "level": "L1",
+      "rule": "a hidden field is not a search, sort or filter oracle",
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "RESEARCHER_AUTHORIZED_SUBSET",
+        "query": {
+          "environment": "paper",
+          "search": "Aurora"
+        },
+        "source_conditions": {
+          "researcherFieldsWithout": [
+            "name"
+          ]
+        }
+      },
+      "status": 400,
+      "code": "EXECUTION_READ_NOT_AVAILABLE",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    },
+    {
+      "id": "read/over-bound-is-refused-not-truncated",
+      "level": "L3",
+      "rule": "an item that would need 201 currency totals (bound 200) is refused whole; the producer never drops a currency to fit",
+      "request": {
+        "surface": "PORTFOLIOS",
+        "read_for": "ALL_BUSINESS_READER",
+        "query": {
+          "environment": "paper"
+        }
+      },
+      "status": 503,
+      "code": "EXECUTION_READ_AUTHORITY_UNAVAILABLE",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    },
+    {
+      "id": "read/binding-detail-unknown",
+      "level": "L1",
+      "rule": "a binding the reader cannot see is not found",
+      "request": {
+        "surface": "BINDING_DETAIL",
+        "read_for": "ALL_BUSINESS_READER",
+        "query": {
+          "environment": "live"
+        },
+        "binding_id": "binding_TEST_ONLY_UNKNOWN"
+      },
+      "status": 404,
+      "code": "EXECUTION_READ_NOT_AVAILABLE",
+      "proven_by": [
+        "apps/control-api/test/elp2-manager-scoped-fixtures.spec.ts (real ScopedManagerReader)"
+      ]
+    }
+  ]
+}

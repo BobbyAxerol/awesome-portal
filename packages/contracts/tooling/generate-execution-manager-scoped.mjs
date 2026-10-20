@@ -1,6 +1,7 @@
 import {readFileSync,writeFileSync} from 'node:fs';
 import {dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {buildScopedScenarioFixtures} from './execution-manager-scoped-publish.mjs';
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const obj=(properties,required=Object.keys(properties))=>({type:'object',additionalProperties:false,properties,required});
 const nullable=s=>({anyOf:[s,{type:'null'}]});
@@ -57,7 +58,9 @@ const value={schema_version:'portal.execution.manager-scoped.v1',surface:'ALPHA_
     financial_facts:[{kind:'ALLOCATION',facts:{currency:'USD',allocation:'100.1234567890123456789'}}],financial_totals:[{currency:'USD',allocation:'100.1234567890123456789'}],
     is_full_resource:false,financial_availability:{state:'PARTIAL',reason_code:'SCOPED_FINANCIAL_GRAIN_OR_FIELDS_UNAVAILABLE'}}]};
 const fixtures={lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',cases:[value,{...value,surface:'BINDINGS',page:{...value.page,visible_count:0,returned_count:0},items:[]}]};
-for(const [file,data] of Object.entries({'schemas/execution-manager-scoped.v1.schema.json':schema,'openapi/execution-manager-lists.openapi.json':spec,'fixtures/execution-manager-scoped.synthetic.valid.json':fixtures})){
+for(const [file,data] of Object.entries({'schemas/execution-manager-scoped.v1.schema.json':schema,'openapi/execution-manager-lists.openapi.json':spec,'fixtures/execution-manager-scoped.synthetic.valid.json':fixtures,
+  // RV-12 / BE-P14: canonical scenarios = the real reader's answers, re-proved here (Zod, JSON Schema, signed cursor codec) before they are written.
+  ...buildScopedScenarioFixtures({root,schema})})){
   const path=resolve(root,file),bytes=JSON.stringify(data,null,2)+'\n';
   if(process.argv.includes('--check')){if(readFileSync(path,'utf8')!==bytes)throw new Error(`Generated drift: ${file}`);}
   else writeFileSync(path,bytes);

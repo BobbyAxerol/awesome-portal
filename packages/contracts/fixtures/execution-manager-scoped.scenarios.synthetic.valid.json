@@ -1,0 +1,1917 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "schema": "execution-manager-scoped.v1.schema.json#/$defs/ManagerScopedResponse",
+  "source_authority": "ScopedManagerReader answers over TEST_ONLY worlds; no real source, account or credential",
+  "read_at_ms": 1790812800000,
+  "note": "RV-12 canonical scoped scenarios. One scenario per dimension plus the combined worst case, not a Cartesian product. Every page is the answer of the real reader; visible_count counts authorized rows only; totals are per currency over visible rows only and are never summed across items.",
+  "cursor": {
+    "key_id": "testonly-k1",
+    "note": "Non-secret TEST_ONLY key. A cursor is opaque to the browser; it binds resource, workspace, direction, boundary item and the query fingerprint."
+  },
+  "dispositions_covered": {
+    "PARTIAL": [
+      "AUTHORIZED_RETAINED_FACTS"
+    ],
+    "DENIED": [
+      "EXECUTION_READ_NOT_AVAILABLE",
+      "EXECUTION_READ_POLICY_PENDING"
+    ],
+    "UNAVAILABLE": [
+      "EXECUTION_READ_AUTHORITY_UNAVAILABLE",
+      "SCOPED_PROFILE_SNAPSHOT_NOT_RECORDED"
+    ]
+  },
+  "not_expressible": [
+    "DISCONNECTED and REVOKED are not dispositions: nothing connected to read is UNAVAILABLE / SCOPED_PROFILE_SNAPSHOT_NOT_RECORDED, a revoked or never granted environment is DENIED / EXECUTION_READ_NOT_AVAILABLE",
+    "a revoke between the read and the delivery fence refuses the whole response (409 EXECUTION_READ_ACCESS_CHANGED), see the refusals fixture"
+  ],
+  "scenarios": [
+    {
+      "id": "portfolios-owner-all",
+      "level": "L2",
+      "covers": [
+        "PORTFOLIOS dataset non-empty",
+        "multi-environment (paper, sandbox, live)",
+        "multi-currency (one portfolio holds USD and EUR; totals are per currency)",
+        "null, \"0\" and an unstated currency are three different things",
+        "a shared physical account is not attributed to either child portfolio (no double count)"
+      ],
+      "request": {
+        "surface": "PORTFOLIOS",
+        "read_for": "ALL_BUSINESS_READER"
+      },
+      "world": "TOPOLOGY",
+      "pages": [
+        {
+          "request": {
+            "query": {
+              "environment": "all"
+            }
+          },
+          "response": {
+            "schema_version": "portal.execution.manager-scoped.v1",
+            "surface": "PORTFOLIOS",
+            "workspace_id": "workspace_TEST_ONLY",
+            "environment": "all",
+            "record_authority": "PORTAL_PROJECTION",
+            "source_authority": "TRADING_SYSTEM",
+            "read_at_ms": 1790812800000,
+            "read_scope": {
+              "visibility": "SCOPED",
+              "coverage": "AUTHORIZED_ONLY",
+              "totals_scope": "VISIBLE_ROWS_ONLY",
+              "policy_revisions": [
+                "TEST_ONLY-policy"
+              ]
+            },
+            "completeness": "PARTIAL",
+            "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+            "profile_dispositions": [
+              {
+                "environment": "paper",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              },
+              {
+                "environment": "sandbox",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              },
+              {
+                "environment": "live",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              }
+            ],
+            "page": {
+              "visible_count": 9,
+              "returned_count": 9,
+              "limit": 100,
+              "maximum_response_bytes": 1048576,
+              "has_more": false,
+              "next_cursor": null,
+              "previous_cursor": null
+            },
+            "items": [
+              {
+                "environment": "live",
+                "identity": {
+                  "portfolio_id": "portfolio_TEST_ONLY_P1",
+                  "name": "TEST_ONLY Portfolio Aurora",
+                  "state": "ACTIVE",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812680000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A1",
+                    "alpha_version_id": "version_TEST_ONLY_A1",
+                    "portfolio_id": "portfolio_TEST_ONLY_P1",
+                    "deployment_id": "deployment_TEST_ONLY_D1",
+                    "account_id": "account_TEST_ONLY_X1"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "USD",
+                      "allocation": "2000"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "EUR",
+                      "allocation": "10.000000000000000001"
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "currency": "USD",
+                      "balance_total": "90000.75",
+                      "balance_free": "80000.75",
+                      "balance_locked": "10000"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "realized_pnl": "12.5",
+                      "unrealized_pnl": "-3.25",
+                      "exposure": "800"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": "10.000000000000000001"
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "2000",
+                    "balance_total": "90000.75",
+                    "balance_free": "80000.75",
+                    "balance_locked": "10000"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "paper",
+                "identity": {
+                  "portfolio_id": "portfolio_TEST_ONLY_P1",
+                  "name": "TEST_ONLY Portfolio Aurora",
+                  "state": "ACTIVE",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812680000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A1",
+                    "alpha_version_id": "version_TEST_ONLY_A1",
+                    "portfolio_id": "portfolio_TEST_ONLY_P1",
+                    "deployment_id": "deployment_TEST_ONLY_D1",
+                    "account_id": "account_TEST_ONLY_X1"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "USD",
+                      "allocation": "1000.50"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "EUR",
+                      "allocation": "250.125"
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "currency": "USD",
+                      "balance_total": "5000.00",
+                      "balance_free": "4500.00",
+                      "balance_locked": "500.00"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "realized_pnl": "12.5",
+                      "unrealized_pnl": "-3.25",
+                      "exposure": "800"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": "250.125"
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "1000.50",
+                    "balance_total": "5000.00",
+                    "balance_free": "4500.00",
+                    "balance_locked": "500.00"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "sandbox",
+                "identity": {
+                  "portfolio_id": "portfolio_TEST_ONLY_P1",
+                  "name": "TEST_ONLY Portfolio Aurora",
+                  "state": "ACTIVE",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812680000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A1",
+                    "alpha_version_id": "version_TEST_ONLY_A1",
+                    "portfolio_id": "portfolio_TEST_ONLY_P1",
+                    "deployment_id": "deployment_TEST_ONLY_D1",
+                    "account_id": "account_TEST_ONLY_X1"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "USD",
+                      "allocation": "500.5"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "EUR",
+                      "allocation": "75"
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "currency": "USD",
+                      "balance_total": "1200",
+                      "balance_free": "1100",
+                      "balance_locked": "100"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "realized_pnl": "12.5",
+                      "unrealized_pnl": "-3.25",
+                      "exposure": "800"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": "75"
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "500.5",
+                    "balance_total": "1200",
+                    "balance_free": "1100",
+                    "balance_locked": "100"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "live",
+                "identity": {
+                  "portfolio_id": "portfolio_TEST_ONLY_P2",
+                  "name": "TEST_ONLY Portfolio Borealis",
+                  "state": "ACTIVE",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812560000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A2",
+                    "alpha_version_id": "version_TEST_ONLY_A2",
+                    "portfolio_id": "portfolio_TEST_ONLY_P2",
+                    "deployment_id": "deployment_TEST_ONLY_D2",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A2",
+                      "portfolio_id": "portfolio_TEST_ONLY_P2",
+                      "currency": "USD",
+                      "allocation": "0"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "0",
+                      "unrealized_pnl": "7.000000000000000001",
+                      "exposure": "1500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "USD",
+                    "allocation": "0"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "paper",
+                "identity": {
+                  "portfolio_id": "portfolio_TEST_ONLY_P2",
+                  "name": "TEST_ONLY Portfolio Borealis",
+                  "state": "ACTIVE",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812560000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A2",
+                    "alpha_version_id": "version_TEST_ONLY_A2",
+                    "portfolio_id": "portfolio_TEST_ONLY_P2",
+                    "deployment_id": "deployment_TEST_ONLY_D2",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A2",
+                      "portfolio_id": "portfolio_TEST_ONLY_P2",
+                      "currency": "USD",
+                      "allocation": "0"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "0",
+                      "unrealized_pnl": "7.000000000000000001",
+                      "exposure": "1500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "USD",
+                    "allocation": "0"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "sandbox",
+                "identity": {
+                  "portfolio_id": "portfolio_TEST_ONLY_P2",
+                  "name": "TEST_ONLY Portfolio Borealis",
+                  "state": "ACTIVE",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812560000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A2",
+                    "alpha_version_id": "version_TEST_ONLY_A2",
+                    "portfolio_id": "portfolio_TEST_ONLY_P2",
+                    "deployment_id": "deployment_TEST_ONLY_D2",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A2",
+                      "portfolio_id": "portfolio_TEST_ONLY_P2",
+                      "currency": "USD",
+                      "allocation": "0"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "0",
+                      "unrealized_pnl": "7.000000000000000001",
+                      "exposure": "1500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "USD",
+                    "allocation": "0"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "live",
+                "identity": {
+                  "portfolio_id": "portfolio_TEST_ONLY_P3",
+                  "name": "TEST_ONLY Portfolio Cirrus",
+                  "state": "ACTIVE",
+                  "base_currency": "EUR",
+                  "updated_at_ms": 1790812440000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A3",
+                    "alpha_version_id": "version_TEST_ONLY_A3",
+                    "portfolio_id": "portfolio_TEST_ONLY_P3",
+                    "deployment_id": "deployment_TEST_ONLY_D3",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A3",
+                      "portfolio_id": "portfolio_TEST_ONLY_P3",
+                      "currency": "EUR",
+                      "allocation": null
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "-1",
+                      "unrealized_pnl": "0",
+                      "exposure": "2500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": null
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "paper",
+                "identity": {
+                  "portfolio_id": "portfolio_TEST_ONLY_P3",
+                  "name": "TEST_ONLY Portfolio Cirrus",
+                  "state": "ACTIVE",
+                  "base_currency": "EUR",
+                  "updated_at_ms": 1790812440000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A3",
+                    "alpha_version_id": "version_TEST_ONLY_A3",
+                    "portfolio_id": "portfolio_TEST_ONLY_P3",
+                    "deployment_id": "deployment_TEST_ONLY_D3",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A3",
+                      "portfolio_id": "portfolio_TEST_ONLY_P3",
+                      "currency": "EUR",
+                      "allocation": null
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "-1",
+                      "unrealized_pnl": "0",
+                      "exposure": "2500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": null
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "sandbox",
+                "identity": {
+                  "portfolio_id": "portfolio_TEST_ONLY_P3",
+                  "name": "TEST_ONLY Portfolio Cirrus",
+                  "state": "ACTIVE",
+                  "base_currency": "EUR",
+                  "updated_at_ms": 1790812440000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A3",
+                    "alpha_version_id": "version_TEST_ONLY_A3",
+                    "portfolio_id": "portfolio_TEST_ONLY_P3",
+                    "deployment_id": "deployment_TEST_ONLY_D3",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A3",
+                      "portfolio_id": "portfolio_TEST_ONLY_P3",
+                      "currency": "EUR",
+                      "allocation": null
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "-1",
+                      "unrealized_pnl": "0",
+                      "exposure": "2500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": null
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "bindings-owner-live",
+      "level": "L1",
+      "covers": [
+        "BINDINGS dataset non-empty",
+        "the shared account balance is stated exactly once, on the binding that owns the account",
+        "an explicit null allocation keeps its currency total null"
+      ],
+      "request": {
+        "surface": "BINDINGS",
+        "read_for": "ALL_BUSINESS_READER"
+      },
+      "world": "TOPOLOGY",
+      "pages": [
+        {
+          "request": {
+            "query": {
+              "environment": "live"
+            }
+          },
+          "response": {
+            "schema_version": "portal.execution.manager-scoped.v1",
+            "surface": "BINDINGS",
+            "workspace_id": "workspace_TEST_ONLY",
+            "environment": "live",
+            "record_authority": "PORTAL_PROJECTION",
+            "source_authority": "TRADING_SYSTEM",
+            "read_at_ms": 1790812800000,
+            "read_scope": {
+              "visibility": "SCOPED",
+              "coverage": "AUTHORIZED_ONLY",
+              "totals_scope": "VISIBLE_ROWS_ONLY",
+              "policy_revisions": [
+                "TEST_ONLY-policy"
+              ]
+            },
+            "completeness": "PARTIAL",
+            "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+            "profile_dispositions": [
+              {
+                "environment": "live",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              }
+            ],
+            "page": {
+              "visible_count": 2,
+              "returned_count": 2,
+              "limit": 50,
+              "maximum_response_bytes": 1048576,
+              "has_more": false,
+              "next_cursor": null,
+              "previous_cursor": null
+            },
+            "items": [
+              {
+                "environment": "live",
+                "identity": {
+                  "binding_id": "binding_TEST_ONLY_B1",
+                  "name": "TEST_ONLY Binding Aurora",
+                  "state": "ACTIVE",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812620000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A1",
+                    "alpha_version_id": "version_TEST_ONLY_A1",
+                    "portfolio_id": "portfolio_TEST_ONLY_P1",
+                    "deployment_id": "deployment_TEST_ONLY_D1",
+                    "account_id": "account_TEST_ONLY_X1"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "USD",
+                      "allocation": "2000"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "EUR",
+                      "allocation": "10.000000000000000001"
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "currency": "USD",
+                      "balance_total": "90000.75",
+                      "balance_free": "80000.75",
+                      "balance_locked": "10000"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "realized_pnl": "12.5",
+                      "unrealized_pnl": "-3.25",
+                      "exposure": "800"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": "10.000000000000000001"
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "2000",
+                    "balance_total": "90000.75",
+                    "balance_free": "80000.75",
+                    "balance_locked": "10000"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "live",
+                "identity": {
+                  "binding_id": "binding_TEST_ONLY_B2",
+                  "name": "TEST_ONLY Binding Borealis",
+                  "state": "ACTIVE",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812440000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A2",
+                    "alpha_version_id": "version_TEST_ONLY_A2",
+                    "portfolio_id": "portfolio_TEST_ONLY_P2",
+                    "deployment_id": "deployment_TEST_ONLY_D2",
+                    "account_id": "account_TEST_ONLY_XS"
+                  },
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A3",
+                    "alpha_version_id": "version_TEST_ONLY_A3",
+                    "portfolio_id": "portfolio_TEST_ONLY_P3",
+                    "deployment_id": "deployment_TEST_ONLY_D3",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A2",
+                      "portfolio_id": "portfolio_TEST_ONLY_P2",
+                      "currency": "USD",
+                      "allocation": "0"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A3",
+                      "portfolio_id": "portfolio_TEST_ONLY_P3",
+                      "currency": "EUR",
+                      "allocation": null
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "currency": "USD",
+                      "balance_total": "20000.000000000000000001",
+                      "balance_free": "19000",
+                      "balance_locked": "1000.000000000000000001"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "0",
+                      "unrealized_pnl": "7.000000000000000001",
+                      "exposure": "1500"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "-1",
+                      "unrealized_pnl": "0",
+                      "exposure": "2500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": null
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "0",
+                    "balance_total": "20000.000000000000000001",
+                    "balance_free": "19000",
+                    "balance_locked": "1000.000000000000000001"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "binding-detail-owner-live",
+      "level": "L1",
+      "covers": [
+        "BINDING_DETAIL: one binding, its two instances on one shared account"
+      ],
+      "request": {
+        "surface": "BINDING_DETAIL",
+        "read_for": "ALL_BUSINESS_READER",
+        "binding_id": "binding_TEST_ONLY_B2"
+      },
+      "world": "TOPOLOGY",
+      "pages": [
+        {
+          "request": {
+            "query": {
+              "environment": "live"
+            }
+          },
+          "response": {
+            "schema_version": "portal.execution.manager-scoped.v1",
+            "surface": "BINDING_DETAIL",
+            "workspace_id": "workspace_TEST_ONLY",
+            "environment": "live",
+            "record_authority": "PORTAL_PROJECTION",
+            "source_authority": "TRADING_SYSTEM",
+            "read_at_ms": 1790812800000,
+            "read_scope": {
+              "visibility": "SCOPED",
+              "coverage": "AUTHORIZED_ONLY",
+              "totals_scope": "VISIBLE_ROWS_ONLY",
+              "policy_revisions": [
+                "TEST_ONLY-policy"
+              ]
+            },
+            "completeness": "PARTIAL",
+            "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+            "profile_dispositions": [
+              {
+                "environment": "live",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              }
+            ],
+            "page": {
+              "visible_count": 1,
+              "returned_count": 1,
+              "limit": 50,
+              "maximum_response_bytes": 1048576,
+              "has_more": false,
+              "next_cursor": null,
+              "previous_cursor": null
+            },
+            "items": [
+              {
+                "environment": "live",
+                "identity": {
+                  "binding_id": "binding_TEST_ONLY_B2",
+                  "name": "TEST_ONLY Binding Borealis",
+                  "state": "ACTIVE",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812440000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A2",
+                    "alpha_version_id": "version_TEST_ONLY_A2",
+                    "portfolio_id": "portfolio_TEST_ONLY_P2",
+                    "deployment_id": "deployment_TEST_ONLY_D2",
+                    "account_id": "account_TEST_ONLY_XS"
+                  },
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A3",
+                    "alpha_version_id": "version_TEST_ONLY_A3",
+                    "portfolio_id": "portfolio_TEST_ONLY_P3",
+                    "deployment_id": "deployment_TEST_ONLY_D3",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A2",
+                      "portfolio_id": "portfolio_TEST_ONLY_P2",
+                      "currency": "USD",
+                      "allocation": "0"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A3",
+                      "portfolio_id": "portfolio_TEST_ONLY_P3",
+                      "currency": "EUR",
+                      "allocation": null
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "currency": "USD",
+                      "balance_total": "20000.000000000000000001",
+                      "balance_free": "19000",
+                      "balance_locked": "1000.000000000000000001"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "0",
+                      "unrealized_pnl": "7.000000000000000001",
+                      "exposure": "1500"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "-1",
+                      "unrealized_pnl": "0",
+                      "exposure": "2500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": null
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "0",
+                    "balance_total": "20000.000000000000000001",
+                    "balance_free": "19000",
+                    "balance_locked": "1000.000000000000000001"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fleet-researcher-paper",
+      "level": "L2",
+      "covers": [
+        "researcher-scoped authorized subset: role and scope are applied BEFORE aggregation (peer alpha A3 and portfolio P3 appear nowhere)",
+        "a physical account shared with an invisible peer is not published as the researcher's balance"
+      ],
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "RESEARCHER_AUTHORIZED_SUBSET"
+      },
+      "world": "TOPOLOGY",
+      "pages": [
+        {
+          "request": {
+            "query": {
+              "environment": "paper"
+            }
+          },
+          "response": {
+            "schema_version": "portal.execution.manager-scoped.v1",
+            "surface": "ALPHA_FLEET",
+            "workspace_id": "workspace_TEST_ONLY",
+            "environment": "paper",
+            "record_authority": "PORTAL_PROJECTION",
+            "source_authority": "TRADING_SYSTEM",
+            "read_at_ms": 1790812800000,
+            "read_scope": {
+              "visibility": "SCOPED",
+              "coverage": "AUTHORIZED_ONLY",
+              "totals_scope": "VISIBLE_ROWS_ONLY",
+              "policy_revisions": [
+                "TEST_ONLY-policy"
+              ]
+            },
+            "completeness": "PARTIAL",
+            "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+            "profile_dispositions": [
+              {
+                "environment": "paper",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              }
+            ],
+            "page": {
+              "visible_count": 2,
+              "returned_count": 2,
+              "limit": 50,
+              "maximum_response_bytes": 1048576,
+              "has_more": false,
+              "next_cursor": null,
+              "previous_cursor": null
+            },
+            "items": [
+              {
+                "environment": "paper",
+                "identity": {
+                  "alpha_id": "alpha_TEST_ONLY_A1",
+                  "alpha_version_id": "version_TEST_ONLY_A1",
+                  "portfolio_id": "portfolio_TEST_ONLY_P1",
+                  "name": "TEST_ONLY Alpha Aurora",
+                  "state": "ACTIVE",
+                  "stage": "PAPER",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812740000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A1",
+                    "alpha_version_id": "version_TEST_ONLY_A1",
+                    "portfolio_id": "portfolio_TEST_ONLY_P1",
+                    "deployment_id": "deployment_TEST_ONLY_D1",
+                    "account_id": "account_TEST_ONLY_X1"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "USD",
+                      "allocation": "1000.50"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "EUR",
+                      "allocation": "250.125"
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "currency": "USD",
+                      "balance_total": "5000.00",
+                      "balance_free": "4500.00",
+                      "balance_locked": "500.00"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "realized_pnl": "12.5",
+                      "unrealized_pnl": "-3.25",
+                      "exposure": "800"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": "250.125"
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "1000.50",
+                    "balance_total": "5000.00",
+                    "balance_free": "4500.00",
+                    "balance_locked": "500.00"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "paper",
+                "identity": {
+                  "alpha_id": "alpha_TEST_ONLY_A2",
+                  "alpha_version_id": "version_TEST_ONLY_A2",
+                  "portfolio_id": "portfolio_TEST_ONLY_P2",
+                  "name": "TEST_ONLY Alpha Borealis",
+                  "state": "ACTIVE",
+                  "stage": "PAPER",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812680000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A2",
+                    "alpha_version_id": "version_TEST_ONLY_A2",
+                    "portfolio_id": "portfolio_TEST_ONLY_P2",
+                    "deployment_id": "deployment_TEST_ONLY_D2",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A2",
+                      "portfolio_id": "portfolio_TEST_ONLY_P2",
+                      "currency": "USD",
+                      "allocation": "0"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "0",
+                      "unrealized_pnl": "7.000000000000000001",
+                      "exposure": "1500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "USD",
+                    "allocation": "0"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fleet-owner-paper-chain",
+      "level": "L2",
+      "covers": [
+        "has_more true across a 3 page chain",
+        "stable signed cursors: after on pages 2 and 3, previous_cursor walks back",
+        "visible_count is the authorized total, never a global count"
+      ],
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "ALL_BUSINESS_READER"
+      },
+      "world": "TOPOLOGY",
+      "pages": [
+        {
+          "request": {
+            "query": {
+              "environment": "paper",
+              "limit": 1
+            }
+          },
+          "response": {
+            "schema_version": "portal.execution.manager-scoped.v1",
+            "surface": "ALPHA_FLEET",
+            "workspace_id": "workspace_TEST_ONLY",
+            "environment": "paper",
+            "record_authority": "PORTAL_PROJECTION",
+            "source_authority": "TRADING_SYSTEM",
+            "read_at_ms": 1790812800000,
+            "read_scope": {
+              "visibility": "SCOPED",
+              "coverage": "AUTHORIZED_ONLY",
+              "totals_scope": "VISIBLE_ROWS_ONLY",
+              "policy_revisions": [
+                "TEST_ONLY-policy"
+              ]
+            },
+            "completeness": "PARTIAL",
+            "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+            "profile_dispositions": [
+              {
+                "environment": "paper",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              }
+            ],
+            "page": {
+              "visible_count": 3,
+              "returned_count": 1,
+              "limit": 1,
+              "maximum_response_bytes": 1048576,
+              "has_more": true,
+              "next_cursor": "kc1.testonly-k1.eyJib3VuZGFyeSI6WyJbXCJwYXBlclwiLFwiYWxwaGFfVEVTVF9PTkxZX0ExXCIsXCJ2ZXJzaW9uX1RFU1RfT05MWV9BMVwiLFwicG9ydGZvbGlvX1RFU1RfT05MWV9QMVwiLG51bGxdIl0sImRpcmVjdGlvbiI6ImFmdGVyIiwiZXhwaXJlc19hdCI6MTc5MDgxMzcwMCwiaXNzdWVkX2F0IjoxNzkwODEyODAwLCJrZXlfaWQiOiJ0ZXN0b25seS1rMSIsInF1ZXJ5X2ZpbmdlcnByaW50Ijoic2hhMjU2OmM5YzZhZDU0NjI3NDU2NGJmMTUxZDRiMTk0MTA2NTgzYzBlNzM3ZDQ4NmUyOWVhZjY5NmI3YWRiYTMxZjU3ODMiLCJyZXNvdXJjZV9pZCI6Im1hbmFnZXItc2NvcGVkOkFMUEhBX0ZMRUVUIiwidmVyc2lvbiI6MSwid29ya3NwYWNlX2lkIjoid29ya3NwYWNlX1RFU1RfT05MWSJ9.GL_Ikvr8TNINP4_pWKL-RJdzNZFy1nBVqzupCaK0dbw",
+              "previous_cursor": null
+            },
+            "items": [
+              {
+                "environment": "paper",
+                "identity": {
+                  "alpha_id": "alpha_TEST_ONLY_A1",
+                  "alpha_version_id": "version_TEST_ONLY_A1",
+                  "portfolio_id": "portfolio_TEST_ONLY_P1",
+                  "name": "TEST_ONLY Alpha Aurora",
+                  "state": "ACTIVE",
+                  "stage": "PAPER",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812740000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A1",
+                    "alpha_version_id": "version_TEST_ONLY_A1",
+                    "portfolio_id": "portfolio_TEST_ONLY_P1",
+                    "deployment_id": "deployment_TEST_ONLY_D1",
+                    "account_id": "account_TEST_ONLY_X1"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "USD",
+                      "allocation": "1000.50"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "EUR",
+                      "allocation": "250.125"
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "currency": "USD",
+                      "balance_total": "5000.00",
+                      "balance_free": "4500.00",
+                      "balance_locked": "500.00"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "realized_pnl": "12.5",
+                      "unrealized_pnl": "-3.25",
+                      "exposure": "800"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": "250.125"
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "1000.50",
+                    "balance_total": "5000.00",
+                    "balance_free": "4500.00",
+                    "balance_locked": "500.00"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "query": {
+              "environment": "paper",
+              "limit": 1,
+              "after": "kc1.testonly-k1.eyJib3VuZGFyeSI6WyJbXCJwYXBlclwiLFwiYWxwaGFfVEVTVF9PTkxZX0ExXCIsXCJ2ZXJzaW9uX1RFU1RfT05MWV9BMVwiLFwicG9ydGZvbGlvX1RFU1RfT05MWV9QMVwiLG51bGxdIl0sImRpcmVjdGlvbiI6ImFmdGVyIiwiZXhwaXJlc19hdCI6MTc5MDgxMzcwMCwiaXNzdWVkX2F0IjoxNzkwODEyODAwLCJrZXlfaWQiOiJ0ZXN0b25seS1rMSIsInF1ZXJ5X2ZpbmdlcnByaW50Ijoic2hhMjU2OmM5YzZhZDU0NjI3NDU2NGJmMTUxZDRiMTk0MTA2NTgzYzBlNzM3ZDQ4NmUyOWVhZjY5NmI3YWRiYTMxZjU3ODMiLCJyZXNvdXJjZV9pZCI6Im1hbmFnZXItc2NvcGVkOkFMUEhBX0ZMRUVUIiwidmVyc2lvbiI6MSwid29ya3NwYWNlX2lkIjoid29ya3NwYWNlX1RFU1RfT05MWSJ9.GL_Ikvr8TNINP4_pWKL-RJdzNZFy1nBVqzupCaK0dbw"
+            }
+          },
+          "response": {
+            "schema_version": "portal.execution.manager-scoped.v1",
+            "surface": "ALPHA_FLEET",
+            "workspace_id": "workspace_TEST_ONLY",
+            "environment": "paper",
+            "record_authority": "PORTAL_PROJECTION",
+            "source_authority": "TRADING_SYSTEM",
+            "read_at_ms": 1790812800000,
+            "read_scope": {
+              "visibility": "SCOPED",
+              "coverage": "AUTHORIZED_ONLY",
+              "totals_scope": "VISIBLE_ROWS_ONLY",
+              "policy_revisions": [
+                "TEST_ONLY-policy"
+              ]
+            },
+            "completeness": "PARTIAL",
+            "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+            "profile_dispositions": [
+              {
+                "environment": "paper",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              }
+            ],
+            "page": {
+              "visible_count": 3,
+              "returned_count": 1,
+              "limit": 1,
+              "maximum_response_bytes": 1048576,
+              "has_more": true,
+              "next_cursor": "kc1.testonly-k1.eyJib3VuZGFyeSI6WyJbXCJwYXBlclwiLFwiYWxwaGFfVEVTVF9PTkxZX0EyXCIsXCJ2ZXJzaW9uX1RFU1RfT05MWV9BMlwiLFwicG9ydGZvbGlvX1RFU1RfT05MWV9QMlwiLG51bGxdIl0sImRpcmVjdGlvbiI6ImFmdGVyIiwiZXhwaXJlc19hdCI6MTc5MDgxMzcwMCwiaXNzdWVkX2F0IjoxNzkwODEyODAwLCJrZXlfaWQiOiJ0ZXN0b25seS1rMSIsInF1ZXJ5X2ZpbmdlcnByaW50Ijoic2hhMjU2OmM5YzZhZDU0NjI3NDU2NGJmMTUxZDRiMTk0MTA2NTgzYzBlNzM3ZDQ4NmUyOWVhZjY5NmI3YWRiYTMxZjU3ODMiLCJyZXNvdXJjZV9pZCI6Im1hbmFnZXItc2NvcGVkOkFMUEhBX0ZMRUVUIiwidmVyc2lvbiI6MSwid29ya3NwYWNlX2lkIjoid29ya3NwYWNlX1RFU1RfT05MWSJ9.x_J1BIvvyNc_SepXBuv3C4EyjG07Xw4JysfInbIfIOY",
+              "previous_cursor": "kc1.testonly-k1.eyJib3VuZGFyeSI6WyJbXCJwYXBlclwiLFwiYWxwaGFfVEVTVF9PTkxZX0EyXCIsXCJ2ZXJzaW9uX1RFU1RfT05MWV9BMlwiLFwicG9ydGZvbGlvX1RFU1RfT05MWV9QMlwiLG51bGxdIl0sImRpcmVjdGlvbiI6ImJlZm9yZSIsImV4cGlyZXNfYXQiOjE3OTA4MTM3MDAsImlzc3VlZF9hdCI6MTc5MDgxMjgwMCwia2V5X2lkIjoidGVzdG9ubHktazEiLCJxdWVyeV9maW5nZXJwcmludCI6InNoYTI1NjpjOWM2YWQ1NDYyNzQ1NjRiZjE1MWQ0YjE5NDEwNjU4M2MwZTczN2Q0ODZlMjllYWY2OTZiN2FkYmEzMWY1NzgzIiwicmVzb3VyY2VfaWQiOiJtYW5hZ2VyLXNjb3BlZDpBTFBIQV9GTEVFVCIsInZlcnNpb24iOjEsIndvcmtzcGFjZV9pZCI6IndvcmtzcGFjZV9URVNUX09OTFkifQ.WQR01C7R2MkArApouhFM42EJoWAIFbPN1X6-Ar7Sv8A"
+            },
+            "items": [
+              {
+                "environment": "paper",
+                "identity": {
+                  "alpha_id": "alpha_TEST_ONLY_A2",
+                  "alpha_version_id": "version_TEST_ONLY_A2",
+                  "portfolio_id": "portfolio_TEST_ONLY_P2",
+                  "name": "TEST_ONLY Alpha Borealis",
+                  "state": "ACTIVE",
+                  "stage": "PAPER",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812680000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A2",
+                    "alpha_version_id": "version_TEST_ONLY_A2",
+                    "portfolio_id": "portfolio_TEST_ONLY_P2",
+                    "deployment_id": "deployment_TEST_ONLY_D2",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A2",
+                      "portfolio_id": "portfolio_TEST_ONLY_P2",
+                      "currency": "USD",
+                      "allocation": "0"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "0",
+                      "unrealized_pnl": "7.000000000000000001",
+                      "exposure": "1500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "USD",
+                    "allocation": "0"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "request": {
+            "query": {
+              "environment": "paper",
+              "limit": 1,
+              "after": "kc1.testonly-k1.eyJib3VuZGFyeSI6WyJbXCJwYXBlclwiLFwiYWxwaGFfVEVTVF9PTkxZX0EyXCIsXCJ2ZXJzaW9uX1RFU1RfT05MWV9BMlwiLFwicG9ydGZvbGlvX1RFU1RfT05MWV9QMlwiLG51bGxdIl0sImRpcmVjdGlvbiI6ImFmdGVyIiwiZXhwaXJlc19hdCI6MTc5MDgxMzcwMCwiaXNzdWVkX2F0IjoxNzkwODEyODAwLCJrZXlfaWQiOiJ0ZXN0b25seS1rMSIsInF1ZXJ5X2ZpbmdlcnByaW50Ijoic2hhMjU2OmM5YzZhZDU0NjI3NDU2NGJmMTUxZDRiMTk0MTA2NTgzYzBlNzM3ZDQ4NmUyOWVhZjY5NmI3YWRiYTMxZjU3ODMiLCJyZXNvdXJjZV9pZCI6Im1hbmFnZXItc2NvcGVkOkFMUEhBX0ZMRUVUIiwidmVyc2lvbiI6MSwid29ya3NwYWNlX2lkIjoid29ya3NwYWNlX1RFU1RfT05MWSJ9.x_J1BIvvyNc_SepXBuv3C4EyjG07Xw4JysfInbIfIOY"
+            }
+          },
+          "response": {
+            "schema_version": "portal.execution.manager-scoped.v1",
+            "surface": "ALPHA_FLEET",
+            "workspace_id": "workspace_TEST_ONLY",
+            "environment": "paper",
+            "record_authority": "PORTAL_PROJECTION",
+            "source_authority": "TRADING_SYSTEM",
+            "read_at_ms": 1790812800000,
+            "read_scope": {
+              "visibility": "SCOPED",
+              "coverage": "AUTHORIZED_ONLY",
+              "totals_scope": "VISIBLE_ROWS_ONLY",
+              "policy_revisions": [
+                "TEST_ONLY-policy"
+              ]
+            },
+            "completeness": "PARTIAL",
+            "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+            "profile_dispositions": [
+              {
+                "environment": "paper",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              }
+            ],
+            "page": {
+              "visible_count": 3,
+              "returned_count": 1,
+              "limit": 1,
+              "maximum_response_bytes": 1048576,
+              "has_more": false,
+              "next_cursor": null,
+              "previous_cursor": "kc1.testonly-k1.eyJib3VuZGFyeSI6WyJbXCJwYXBlclwiLFwiYWxwaGFfVEVTVF9PTkxZX0EzXCIsXCJ2ZXJzaW9uX1RFU1RfT05MWV9BM1wiLFwicG9ydGZvbGlvX1RFU1RfT05MWV9QM1wiLG51bGxdIl0sImRpcmVjdGlvbiI6ImJlZm9yZSIsImV4cGlyZXNfYXQiOjE3OTA4MTM3MDAsImlzc3VlZF9hdCI6MTc5MDgxMjgwMCwia2V5X2lkIjoidGVzdG9ubHktazEiLCJxdWVyeV9maW5nZXJwcmludCI6InNoYTI1NjpjOWM2YWQ1NDYyNzQ1NjRiZjE1MWQ0YjE5NDEwNjU4M2MwZTczN2Q0ODZlMjllYWY2OTZiN2FkYmEzMWY1NzgzIiwicmVzb3VyY2VfaWQiOiJtYW5hZ2VyLXNjb3BlZDpBTFBIQV9GTEVFVCIsInZlcnNpb24iOjEsIndvcmtzcGFjZV9pZCI6IndvcmtzcGFjZV9URVNUX09OTFkifQ.Jrk0fAGyLB7mqgbwIN2wG52WpBmWFYP8HDqnnJplbOQ"
+            },
+            "items": [
+              {
+                "environment": "paper",
+                "identity": {
+                  "alpha_id": "alpha_TEST_ONLY_A3",
+                  "alpha_version_id": "version_TEST_ONLY_A3",
+                  "portfolio_id": "portfolio_TEST_ONLY_P3",
+                  "name": "TEST_ONLY Alpha Cirrus",
+                  "state": "ACTIVE",
+                  "stage": "PAPER",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812620000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A3",
+                    "alpha_version_id": "version_TEST_ONLY_A3",
+                    "portfolio_id": "portfolio_TEST_ONLY_P3",
+                    "deployment_id": "deployment_TEST_ONLY_D3",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A3",
+                      "portfolio_id": "portfolio_TEST_ONLY_P3",
+                      "currency": "EUR",
+                      "allocation": null
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "-1",
+                      "unrealized_pnl": "0",
+                      "exposure": "2500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": null
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fleet-researcher-all-pending-unrecorded",
+      "level": "L2",
+      "covers": [
+        "combined worst case: researcher + all environments + has_more true",
+        "sandbox DENIED, policy pending",
+        "live UNAVAILABLE, no snapshot recorded (nothing connected to read)"
+      ],
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "RESEARCHER_AUTHORIZED_SUBSET"
+      },
+      "world": "TOPOLOGY",
+      "source_conditions": {
+        "policyPending": [
+          "sandbox"
+        ],
+        "unrecorded": [
+          "live"
+        ]
+      },
+      "pages": [
+        {
+          "request": {
+            "query": {
+              "environment": "all",
+              "limit": 1
+            }
+          },
+          "response": {
+            "schema_version": "portal.execution.manager-scoped.v1",
+            "surface": "ALPHA_FLEET",
+            "workspace_id": "workspace_TEST_ONLY",
+            "environment": "all",
+            "record_authority": "PORTAL_PROJECTION",
+            "source_authority": "TRADING_SYSTEM",
+            "read_at_ms": 1790812800000,
+            "read_scope": {
+              "visibility": "SCOPED",
+              "coverage": "AUTHORIZED_ONLY",
+              "totals_scope": "VISIBLE_ROWS_ONLY",
+              "policy_revisions": [
+                "TEST_ONLY-policy"
+              ]
+            },
+            "completeness": "PARTIAL",
+            "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+            "profile_dispositions": [
+              {
+                "environment": "paper",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              },
+              {
+                "environment": "sandbox",
+                "state": "DENIED",
+                "reason_code": "EXECUTION_READ_POLICY_PENDING"
+              },
+              {
+                "environment": "live",
+                "state": "UNAVAILABLE",
+                "reason_code": "SCOPED_PROFILE_SNAPSHOT_NOT_RECORDED"
+              }
+            ],
+            "page": {
+              "visible_count": 2,
+              "returned_count": 1,
+              "limit": 1,
+              "maximum_response_bytes": 1048576,
+              "has_more": true,
+              "next_cursor": "kc1.testonly-k1.eyJib3VuZGFyeSI6WyJbXCJwYXBlclwiLFwiYWxwaGFfVEVTVF9PTkxZX0ExXCIsXCJ2ZXJzaW9uX1RFU1RfT05MWV9BMVwiLFwicG9ydGZvbGlvX1RFU1RfT05MWV9QMVwiLG51bGxdIl0sImRpcmVjdGlvbiI6ImFmdGVyIiwiZXhwaXJlc19hdCI6MTc5MDgxMzcwMCwiaXNzdWVkX2F0IjoxNzkwODEyODAwLCJrZXlfaWQiOiJ0ZXN0b25seS1rMSIsInF1ZXJ5X2ZpbmdlcnByaW50Ijoic2hhMjU2OjExNDUyMzEwZGEyNzZmYzYxNzZkZTJhYmRjNThkNDBjNjAwNzFhODc5MWNkOTZhOTI1ODQ3MzVjMzZiODEyMGYiLCJyZXNvdXJjZV9pZCI6Im1hbmFnZXItc2NvcGVkOkFMUEhBX0ZMRUVUIiwidmVyc2lvbiI6MSwid29ya3NwYWNlX2lkIjoid29ya3NwYWNlX1RFU1RfT05MWSJ9.8Y4U9QOFP9uV_OeBJz5BxnpeZ2UfVbHJrqNiXeKCoGo",
+              "previous_cursor": null
+            },
+            "items": [
+              {
+                "environment": "paper",
+                "identity": {
+                  "alpha_id": "alpha_TEST_ONLY_A1",
+                  "alpha_version_id": "version_TEST_ONLY_A1",
+                  "portfolio_id": "portfolio_TEST_ONLY_P1",
+                  "name": "TEST_ONLY Alpha Aurora",
+                  "state": "ACTIVE",
+                  "stage": "PAPER",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812740000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A1",
+                    "alpha_version_id": "version_TEST_ONLY_A1",
+                    "portfolio_id": "portfolio_TEST_ONLY_P1",
+                    "deployment_id": "deployment_TEST_ONLY_D1",
+                    "account_id": "account_TEST_ONLY_X1"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "USD",
+                      "allocation": "1000.50"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "EUR",
+                      "allocation": "250.125"
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "currency": "USD",
+                      "balance_total": "5000.00",
+                      "balance_free": "4500.00",
+                      "balance_locked": "500.00"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "realized_pnl": "12.5",
+                      "unrealized_pnl": "-3.25",
+                      "exposure": "800"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": "250.125"
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "1000.50",
+                    "balance_total": "5000.00",
+                    "balance_free": "4500.00",
+                    "balance_locked": "500.00"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "fleet-researcher-all-denied-unavailable",
+      "level": "L1",
+      "covers": [
+        "live DENIED, no current grant (never granted or revoked: the contract does not distinguish)",
+        "sandbox UNAVAILABLE, authority layer failed"
+      ],
+      "request": {
+        "surface": "ALPHA_FLEET",
+        "read_for": "RESEARCHER_AUTHORIZED_SUBSET"
+      },
+      "world": "TOPOLOGY",
+      "source_conditions": {
+        "granted": [
+          "paper",
+          "sandbox"
+        ],
+        "accessFails": [
+          "sandbox"
+        ]
+      },
+      "pages": [
+        {
+          "request": {
+            "query": {
+              "environment": "all"
+            }
+          },
+          "response": {
+            "schema_version": "portal.execution.manager-scoped.v1",
+            "surface": "ALPHA_FLEET",
+            "workspace_id": "workspace_TEST_ONLY",
+            "environment": "all",
+            "record_authority": "PORTAL_PROJECTION",
+            "source_authority": "TRADING_SYSTEM",
+            "read_at_ms": 1790812800000,
+            "read_scope": {
+              "visibility": "SCOPED",
+              "coverage": "AUTHORIZED_ONLY",
+              "totals_scope": "VISIBLE_ROWS_ONLY",
+              "policy_revisions": [
+                "TEST_ONLY-policy"
+              ]
+            },
+            "completeness": "PARTIAL",
+            "reason_code": "RETAINED_CURRENT_PAGE_NOT_TOTAL_HISTORY",
+            "profile_dispositions": [
+              {
+                "environment": "paper",
+                "state": "PARTIAL",
+                "reason_code": "AUTHORIZED_RETAINED_FACTS"
+              },
+              {
+                "environment": "sandbox",
+                "state": "UNAVAILABLE",
+                "reason_code": "EXECUTION_READ_AUTHORITY_UNAVAILABLE"
+              },
+              {
+                "environment": "live",
+                "state": "DENIED",
+                "reason_code": "EXECUTION_READ_NOT_AVAILABLE"
+              }
+            ],
+            "page": {
+              "visible_count": 2,
+              "returned_count": 2,
+              "limit": 50,
+              "maximum_response_bytes": 1048576,
+              "has_more": false,
+              "next_cursor": null,
+              "previous_cursor": null
+            },
+            "items": [
+              {
+                "environment": "paper",
+                "identity": {
+                  "alpha_id": "alpha_TEST_ONLY_A1",
+                  "alpha_version_id": "version_TEST_ONLY_A1",
+                  "portfolio_id": "portfolio_TEST_ONLY_P1",
+                  "name": "TEST_ONLY Alpha Aurora",
+                  "state": "ACTIVE",
+                  "stage": "PAPER",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812740000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A1",
+                    "alpha_version_id": "version_TEST_ONLY_A1",
+                    "portfolio_id": "portfolio_TEST_ONLY_P1",
+                    "deployment_id": "deployment_TEST_ONLY_D1",
+                    "account_id": "account_TEST_ONLY_X1"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "USD",
+                      "allocation": "1000.50"
+                    }
+                  },
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A1",
+                      "portfolio_id": "portfolio_TEST_ONLY_P1",
+                      "currency": "EUR",
+                      "allocation": "250.125"
+                    }
+                  },
+                  {
+                    "kind": "INTERNAL_ACCOUNT_BALANCE",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "currency": "USD",
+                      "balance_total": "5000.00",
+                      "balance_free": "4500.00",
+                      "balance_locked": "500.00"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_X1",
+                      "realized_pnl": "12.5",
+                      "unrealized_pnl": "-3.25",
+                      "exposure": "800"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "EUR",
+                    "allocation": "250.125"
+                  },
+                  {
+                    "currency": "USD",
+                    "allocation": "1000.50",
+                    "balance_total": "5000.00",
+                    "balance_free": "4500.00",
+                    "balance_locked": "500.00"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              },
+              {
+                "environment": "paper",
+                "identity": {
+                  "alpha_id": "alpha_TEST_ONLY_A2",
+                  "alpha_version_id": "version_TEST_ONLY_A2",
+                  "portfolio_id": "portfolio_TEST_ONLY_P2",
+                  "name": "TEST_ONLY Alpha Borealis",
+                  "state": "ACTIVE",
+                  "stage": "PAPER",
+                  "venue": "VENUE_TEST_ONLY",
+                  "base_currency": "USD",
+                  "updated_at_ms": 1790812680000
+                },
+                "instances": [
+                  {
+                    "alpha_id": "alpha_TEST_ONLY_A2",
+                    "alpha_version_id": "version_TEST_ONLY_A2",
+                    "portfolio_id": "portfolio_TEST_ONLY_P2",
+                    "deployment_id": "deployment_TEST_ONLY_D2",
+                    "account_id": "account_TEST_ONLY_XS"
+                  }
+                ],
+                "financial_facts": [
+                  {
+                    "kind": "ALLOCATION",
+                    "facts": {
+                      "alpha_id": "alpha_TEST_ONLY_A2",
+                      "portfolio_id": "portfolio_TEST_ONLY_P2",
+                      "currency": "USD",
+                      "allocation": "0"
+                    }
+                  },
+                  {
+                    "kind": "POSITION_PNL",
+                    "facts": {
+                      "account_id": "account_TEST_ONLY_XS",
+                      "realized_pnl": "0",
+                      "unrealized_pnl": "7.000000000000000001",
+                      "exposure": "1500"
+                    }
+                  }
+                ],
+                "financial_totals": [
+                  {
+                    "currency": "USD",
+                    "allocation": "0"
+                  }
+                ],
+                "is_full_resource": true,
+                "financial_availability": {
+                  "state": "PARTIAL",
+                  "reason_code": "AUTHORIZED_RETAINED_FACTS"
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
