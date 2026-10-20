@@ -295,14 +295,13 @@ describe("the advisory self reads", () => {
     expect(get(`${BASE}/eligibility`, "?workspace_id=ws_TEST_ONLY&environment=paper&resource_kind=PORTFOLIO&resource_id=other&actions=portfolio.read")?.status).toBe(404);
   });
 
-  it("the batch answers the fixture's question only, as portal.self-eligibility-batch.v2; the FE reader still reads v1 (KNOWN gap)", () => {
+  it("the batch answers the fixture's question only, as portal.self-eligibility-batch.v2, and the FE reader reads it", () => {
     const q = "?workspace_id=ws_TEST_ONLY&environment=paper&resources=PORTFOLIO:portfolio_TEST_ONLY,DEPLOYMENT:deployment_TEST_ONLY&actions=portfolio.read,capital.top_up";
     const body = get(`${BASE}/eligibility/batch`, q);
     expect(body?.status).toBe(200);
     expect((body?.body as { schema_version: string }).schema_version).toBe("portal.self-eligibility-batch.v2");
-    // KNOWN: accessSelfBatch.ts is pinned to ...-batch.v1 and to a single `challenge`; the published contract is v2 with `challenges[]`.
-    // This row turns red when the reader moves to v2: delete it then and assert kind "eligibility_batch".
-    expect(readAccessEligibilityBatch(body?.body)).toMatchObject({ kind: "unsupported_shape" });
+    // F-15 closed: the reader moved to v2 with `challenges[]` (BE-P7 section 6), so the canonical body is read, not refused.
+    expect(readAccessEligibilityBatch(body?.body)).toMatchObject({ kind: "eligibility_batch" });
     const active = get(`${BASE}/eligibility/batch`, q.replace("ws_TEST_ONLY", "ws_TEST_STEP_UP_ACTIVE"));
     expect((active?.body as { session_step_up: { state: string } }).session_step_up.state).toBe("ACTIVE");
     // Another question than the fixture states is a typed 404, never an invented row.
