@@ -130,6 +130,10 @@
   gap: var(--space-3);
   margin: 0 0 var(--space-3);
 }
+.exec-cny-cmpl-label {
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
 .exec-cny-cmpl-note {
   font: var(--exec-font-data);
   color: var(--ink-soft);
