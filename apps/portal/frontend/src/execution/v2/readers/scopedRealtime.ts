@@ -191,7 +191,7 @@ function cursorOf(value: unknown): string | null {
   return typeof value === "string" && value.length >= 1 && value.length <= MAX_SCOPED_CURSOR && CURSOR.test(value) ? value : null;
 }
 
-function readQuality(raw: unknown): ScopedNoticeQuality | null {
+export function readQuality(raw: unknown): ScopedNoticeQuality | null {
   const q = record(raw);
   if (q === null || !hasOnly(q, QUALITY_KEYS) || !hasAll(q, QUALITY_KEYS)) return null;
   const completeness = oneOf(q.completeness, SCOPED_COMPLETENESS);
@@ -212,6 +212,9 @@ function readQuality(raw: unknown): ScopedNoticeQuality | null {
   }
   return { completeness, freshness, coverage, sourceAsOfMs: asOf, portalObservedAtMs: observed, sourceSetRef, confidence, reasons };
 }
+
+/** The cursor rule of the schema (1..4096 of the opaque alphabet), shared with the alpha-fleet snapshot reader. */
+export const readScopedCursor = cursorOf;
 
 /* ───────────────────────── the frame ───────────────────────── */
 

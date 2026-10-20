@@ -3,6 +3,8 @@
  *
  *   GET /api/v1/execution/manager/series   portal.execution.manager-series.v1
  *   GET /api/v1/execution/manager/fleet    portal.execution.manager-dataset.v1 (surface FLEET)
+ *   GET /api/v1/execution/manager/fleet/realtime-snapshot   portal.execution.alpha-fleet-realtime-snapshot.v1 (ELP2-09, BE-P16)
+ *   GET /api/v1/execution/manager/fleet/stream              text/event-stream of ScopedRealtimeFrame (a FINITE body, then the response ends)
  *
  * Every body is built from the PUBLISHED canonical fixtures in `packages/contracts/fixtures`, never from a hand-written object.
  * What is rewritten is only what the REQUEST decides (the ids, the metric, the environment, the workspace, the window, the page
@@ -392,7 +394,93 @@ export function answerManagerFleet(method: string, path: string, search: URLSear
   return { status: 200, body };
 }
 
-/** Both manager reads, in the order the answerer asks. `path` has the execution prefix stripped. */
+/* ═══════════════════════════════ fleet realtime (ELP2-09 alpha_fleet_overview, BE-P16) ═══════════════════════════════ */
+
+export const MANAGER_FLEET_REALTIME_SNAPSHOT_ROUTE = "/manager/fleet/realtime-snapshot";
+export const MANAGER_FLEET_REALTIME_STREAM_ROUTE = "/manager/fleet/stream";
+
+/**
+ * Which published case answers, chosen by the `workspace_id` of the read (the convention the series double uses):
+ *
+ *   snapshot  (none, anything else)              AFR-SNAPSHOT-AVAILABLE          a baseline cursor and the stream bounds
+ *             ws_TEST_FLEET_RT_PARTIAL           AFR-SNAPSHOT-PARTIAL-VIEWER     stream UNAVAILABLE / WHOLE_FLEET_AUTHORITY_REQUIRED
+ *             ws_TEST_FLEET_RT_NOT_GRANTED       AFR-SNAPSHOT-STREAM-NOT-GRANTED stream UNAVAILABLE / STREAM_AUTHORITY_NOT_GRANTED
+ *             ws_TEST_FLEET_RT_CAPACITY          AFR-SNAPSHOT-CAPACITY           stream UNAVAILABLE / STREAM_CAPACITY_REACHED
+ *             ws_TEST_FLEET_RT_WIDE_ORDINAL      AFR-SNAPSHOT-ORDINAL-WIDER-...  an ordinal beyond a safe integer, exact
+ *   stream    ?cursor= absent                    AFR-WIRE-RESYNC-SNAPSHOT-REQUIRED (never starts at head)
+ *             ?cursor= not the published token   AFR-WIRE-RESYNC-CURSOR-INVALID
+ *             (none, anything else)              AFR-WIRE-HEARTBEAT
+ *             ws_TEST_FLEET_RT_REVALIDATE        AFR-WIRE-REVALIDATE then AFR-WIRE-HEARTBEAT
+ *             ws_TEST_FLEET_RT_REVOKED           AFR-WIRE-REVOKED               (access_revoked, terminal)
+ *             ws_TEST_FLEET_RT_RESYNC            AFR-WIRE-RESYNC-GENERATION-CHANGED
+ *             ws_TEST_FLEET_RT_SLOW              AFR-WIRE-RESYNC-SLOW-CLIENT
+ *             ws_TEST_FLEET_RT_LIMIT             AFR-WIRE-UNAVAILABLE-RECONNECT-LIMIT
+ *
+ * The snapshot names the SAME publication revision as the fleet answer this double serves for that environment (its
+ * `lineage.revision`), so a screen that reads both pairs them. The stream is a finite body: a fixture lane keeps no connection and no
+ * state between requests, so it cannot hold one open; a consumer sees one answer, then the response ends. The double reads the cursor
+ * from `?cursor=` only (the contract's `Last-Event-ID` header never reaches a double).
+ */
+export const FLEET_REALTIME_DOUBLE_WORKSPACES = {
+  partial: "ws_TEST_FLEET_RT_PARTIAL", notGranted: "ws_TEST_FLEET_RT_NOT_GRANTED", capacity: "ws_TEST_FLEET_RT_CAPACITY", wideOrdinal: "ws_TEST_FLEET_RT_WIDE_ORDINAL",
+  revalidate: "ws_TEST_FLEET_RT_REVALIDATE", revoked: "ws_TEST_FLEET_RT_REVOKED", resync: "ws_TEST_FLEET_RT_RESYNC", slow: "ws_TEST_FLEET_RT_SLOW", limit: "ws_TEST_FLEET_RT_LIMIT",
+} as const;
+export const FLEET_REALTIME_FIXTURE_TOKEN = "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME";
+
+const FLEET_REALTIME_FILE = "execution-alpha-fleet-realtime.synthetic.valid.json";
+const realtimeCases = (): { id: string; response: Draft; wire?: string }[] =>
+  (JSON.parse(readFileSync(join(CONTRACTS, FLEET_REALTIME_FILE), "utf8")) as { cases: { id: string; response: Draft; wire?: string }[] }).cases;
+const realtimeCase = (id: string) => {
+  const found = realtimeCases().find((entry) => entry.id === id);
+  if (found === undefined) throw new Error(`no published case ${id}`);
+  return found;
+};
+const SSE = (body: string): BffAnswerManager => ({ status: 200, body, contentType: "text/event-stream" });
+
+/** The two ELP2-09 routes, or `null` when the request is neither. `path` has the execution prefix stripped. */
+export function answerManagerFleetRealtime(method: string, path: string, search: URLSearchParams): BffAnswerManager | null {
+  const isSnapshot = path === MANAGER_FLEET_REALTIME_SNAPSHOT_ROUTE, isStream = path === MANAGER_FLEET_REALTIME_STREAM_ROUTE;
+  if ((!isSnapshot && !isStream) || method !== "GET") return null;
+  const invalid = (message: string) => problem(400, "EXECUTION_READ_QUERY_INVALID", message);
+  const allowed = isStream ? ["environment", "workspace_id", "cursor"] : ["environment", "workspace_id"];
+  const keys = [...search.keys()];
+  if (new Set(keys).size !== keys.length || keys.some((key) => !allowed.includes(key))) return invalid("A parameter is unknown or repeated.");
+  const environment = search.get("environment");
+  if (environment === null || !(ENVIRONMENTS as readonly string[]).includes(environment)) return invalid("environment is paper, sandbox or live.");
+  const workspaceId = search.get("workspace_id");
+  if (workspaceId !== null && !WORKSPACE.test(workspaceId)) return invalid("workspace_id is 1 to 256 printable characters.");
+  const W = FLEET_REALTIME_DOUBLE_WORKSPACES;
+
+  if (isStream) {
+    const cursor = search.get("cursor");
+    const wire = (id: string) => realtimeCase(id).wire as string;
+    // An invalid or missing cursor is a terminal frame, never an HTTP error: an EventSource cannot read an error body.
+    if (cursor === null) return SSE(wire("AFR-WIRE-RESYNC-SNAPSHOT-REQUIRED"));
+    if (cursor !== FLEET_REALTIME_FIXTURE_TOKEN) return SSE(wire("AFR-WIRE-RESYNC-CURSOR-INVALID"));
+    if (workspaceId === W.revoked) return SSE(wire("AFR-WIRE-REVOKED"));
+    if (workspaceId === W.resync) return SSE(wire("AFR-WIRE-RESYNC-GENERATION-CHANGED"));
+    if (workspaceId === W.slow) return SSE(wire("AFR-WIRE-RESYNC-SLOW-CLIENT"));
+    if (workspaceId === W.limit) return SSE(wire("AFR-WIRE-UNAVAILABLE-RECONNECT-LIMIT"));
+    if (workspaceId === W.revalidate) return SSE(wire("AFR-WIRE-REVALIDATE") + wire("AFR-WIRE-HEARTBEAT"));
+    return SSE(wire("AFR-WIRE-HEARTBEAT"));
+  }
+
+  const id = workspaceId === W.partial ? "AFR-SNAPSHOT-PARTIAL-VIEWER" : workspaceId === W.notGranted ? "AFR-SNAPSHOT-STREAM-NOT-GRANTED" :
+    workspaceId === W.capacity ? "AFR-SNAPSHOT-CAPACITY" : workspaceId === W.wideOrdinal ? "AFR-SNAPSHOT-ORDINAL-WIDER-THAN-SAFE-INTEGER" : "AFR-SNAPSHOT-AVAILABLE";
+  const body = clone(realtimeCase(id).response);
+  body.environment = environment;
+  if (workspaceId !== null) body.workspace_id = workspaceId;
+  // The barrier names the publication the fleet double serves for this environment, so the two reads pair.
+  const fleet = answerManagerFleet("GET", MANAGER_FLEET_ROUTE, new URLSearchParams({ environment }));
+  const revision = (fleet?.body as Draft | undefined)?.lineage?.revision;
+  if (typeof revision === "string") {
+    body.baseline.revision = revision;
+    body.named_snapshot.lineage_revision = revision;
+  }
+  return { status: 200, body };
+}
+
+/** Every manager read, in the order the answerer asks. `path` has the execution prefix stripped. */
 export function answerManager(method: string, path: string, search: URLSearchParams): BffAnswerManager | null {
-  return answerManagerSeries(method, path, search) ?? answerManagerFleet(method, path, search);
+  return answerManagerSeries(method, path, search) ?? answerManagerFleetRealtime(method, path, search) ?? answerManagerFleet(method, path, search);
 }
