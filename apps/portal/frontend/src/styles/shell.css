@@ -33,6 +33,19 @@
   flex-wrap: wrap;
 }
 
+/* UXM-10 F-11: the top bar is sticky, so a focus scroll (or an in-page anchor) that lands a control at the top edge of the viewport
+ * put it under the bar. Scroll alignment keeps the bar's own height clear. Paints nothing and moves nothing at rest: it only
+ * changes where the browser stops when it scrolls something into view. The variable is the bar's own `min-height`, so the two
+ * cannot drift; the small-screen bar is a fixed 56px (see the max-width: 720px block), so that is its padding there. */
+html {
+  scroll-padding-top: var(--topbar-h);
+}
+@media (max-width: 720px) {
+  html {
+    scroll-padding-top: 56px;
+  }
+}
+
 .portal-brand {
   font-family: var(--font-display);
   font-size: 16px;

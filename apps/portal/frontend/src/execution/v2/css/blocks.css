@@ -598,6 +598,13 @@ button.exec-blk-spine-btn:hover {
   gap: var(--space-3);
   min-width: 0;
 }
+/* UXM-10 F-12: the replay header's account, symbol and venue chips are <span>s, not controls (V1's shared chip rule gives every chip a
+ * pointer, which promises an action neither the keyboard nor a click has). Only inside this V2 frame and only for spans, so the
+ * chips that ARE controls (buttons, the symbol and interval selects) keep their pointer and V1 keeps its own rule untouched. An
+ * attribute selector, not the V1 class name: a V2 stylesheet must not spell a class that V1 owns (v2Hygiene). */
+.exec-blk-replay span[class~="exec-rp-chip"] {
+  cursor: default;
+}
 .exec-blk-banner {
   display: flex;
   flex-wrap: wrap;
