@@ -165,7 +165,7 @@ export const nodeAcceptanceTokenFiles: AcceptanceTokenFiles = {
     try {
       const parent = await lstat(dirname(path));
       if (!parentAcceptable(parent)) return fileRefused();
-      handle = await open(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
+      handle = await open(path, constants.O_RDWR | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
       created = true;
       await handle.chmod(0o600);
       const stat = await handle.stat();
@@ -179,9 +179,28 @@ export const nodeAcceptanceTokenFiles: AcceptanceTokenFiles = {
     let closed = false;
     const close = async () => { if (!closed) { closed = true; await open$.close().catch(() => undefined); } };
     return {
-      write: async bytes => { try { await open$.write(bytes, 0, bytes.length, 0); await open$.sync(); await close(); }
-        catch { await close(); return fileRefused(); } },
-      abandon: async () => { await close(); await unlink(path).catch(() => undefined); },
+      write: async bytes => {
+        let back: Buffer | undefined;
+        try {
+          if (bytes.length < 1 || bytes.length > ACCEPTANCE_TOKEN_FILE_MAX_BYTES) throw new Error("size");
+          await writeFully(open$, bytes, 0);
+          await open$.sync();
+          // The acknowledged bytes are exactly the intended bytes: length and content read back from the same descriptor.
+          const stat = await open$.stat();
+          if (!stat.isFile() || stat.size !== bytes.length) throw new Error("length");
+          back = await readFully(open$, bytes.length);
+          if (!timingSafeEqual(back, bytes)) throw new Error("content");
+          back.fill(0);
+          await close();
+        } catch {
+          back?.fill(0);
+          // Do not leave a partial secret behind: empty it before the caller unlinks the file.
+          await open$.truncate(0).catch(() => undefined);
+          await close();
+          return fileRefused();
+        }
+      },
+      abandon: async () => { await open$.truncate(0).catch(() => undefined); await close(); await unlink(path).catch(() => undefined); },
     };
   },
   async remove(path, binding) {
