@@ -19,8 +19,20 @@
  *
  * Strict and closed like `governanceParents.ts`: one malformed panel voids the
  * whole read, because a dropped panel would be read as "nothing there".
+ *
+ * Two OPTIONAL closed members (BE-P12, FE-066 / FE-067), present only when the request asked `?include=`:
+ *
+ * - `identity` (`scopedIdentity.ts`): alpha id, portfolio name and the reasons a part is withheld;
+ * - `stage_facts` (`execution.stage-facts.v1`): over the viewer's AUTHORIZED population only. The schema allows
+ *   what that population can prove and nothing else, and so does this reader: the only AVAILABLE statement is
+ *   `reconciliation.verdict = OPEN_FINDINGS` (an authorized open finding exists); `NO_OPEN_FINDINGS`, an open-finding
+ *   count, an unknown-order count, a runtime word, its `since` and a sessions list are NOT_PUBLISHED with a reason or
+ *   the whole read is refused. An absent member is `null` (the original body); a present member that breaks the
+ *   schema voids the read, as a malformed panel does.
  */
 import { readUtcEpochMs, type UtcEpochMs } from "../../screenDataContract";
+import { readStageFacts, type StageFacts } from "../../stageFacts";
+import { readScopedIdentityV2, type ScopedIdentityV2 } from "./scopedIdentity";
 
 export const LIVE_SOURCE_V2_SCHEMA = "portal.execution.live-source-operations.v2";
 export const LIVE_SOURCE_PANELS = [
@@ -102,6 +114,10 @@ export interface LiveSourceOperationsV2 {
   realtimeActive: false;
   commandsEnabled: false;
   panels: Readonly<Record<LiveSourcePanelName, LiveSourcePanelV2>>;
+  /** `null` = the body carries none (the original body, or `include=identity` was not asked). */
+  identity: ScopedIdentityV2 | null;
+  /** `null` = the body carries none. Never a count, never `NO_OPEN_FINDINGS`, never a runtime word or a session. */
+  stageFacts: StageFacts | null;
 }
 
 type Rec = Record<string, unknown>;
@@ -222,13 +238,44 @@ function readPanel(name: LiveSourcePanelName, value: unknown): LiveSourcePanelV2
   };
 }
 
+/**
+ * `stage_facts` of the schema (`execution-operations.v1` LiveSourceOperationsReadV2): the V1 fact vocabulary, closed, with
+ * what the authorized population cannot prove forced to NOT_PUBLISHED. `null` = refused.
+ */
+export function readLiveStageFactsV2(raw: unknown): StageFacts | null {
+  const facts = readStageFacts(raw);
+  if (facts === null) return null;
+  const { runtime, reconciliation, sessions } = facts;
+  if (
+    runtime.state.availability !== "NOT_PUBLISHED" || runtime.since.availability !== "NOT_PUBLISHED"
+    || (reconciliation.verdict.availability === "AVAILABLE" && reconciliation.verdict.value === "NO_OPEN_FINDINGS")
+    || reconciliation.openFindingCount.availability !== "NOT_PUBLISHED" || reconciliation.unknownOrderCount.availability !== "NOT_PUBLISHED"
+    || sessions.availability !== "NOT_PUBLISHED"
+  ) return null;
+  return facts;
+}
+
+const LIVE_KEYS = [
+  "schema_version", "workspace_id", "environment", "profile_id", "deployment_id", "record_authority", "source_verdict",
+  "visibility", "coverage", "observed_at_ms", "source_side_effect_requested", "runtime_activation_requested", "data",
+  "runtime", "realtime", "commands",
+] as const;
+
+/** The body's keys: the sixteen, plus whichever of the two opt-in members it carries. */
+function liveBody(raw: unknown): Rec | null {
+  const r = rec(raw);
+  if (r === null) return null;
+  const extra = (["identity", "stage_facts"] as const).filter((key) => Object.hasOwn(r, key));
+  return closed(r, [...LIVE_KEYS, ...extra]);
+}
+
 export function readLiveSourceOperationsV2(raw: unknown): LiveSourceOperationsV2 | null {
-  const r = closed(raw, [
-    "schema_version", "workspace_id", "environment", "profile_id", "deployment_id", "record_authority", "source_verdict",
-    "visibility", "coverage", "observed_at_ms", "source_side_effect_requested", "runtime_activation_requested", "data",
-    "runtime", "realtime", "commands",
-  ]);
+  const r = liveBody(raw);
   if (r === null || r.schema_version !== LIVE_SOURCE_V2_SCHEMA) return null;
+  const hasFacts = Object.hasOwn(r, "stage_facts");
+  const identity = readScopedIdentityV2(r.identity, Object.hasOwn(r, "identity"));
+  const stageFacts = hasFacts ? readLiveStageFactsV2(r.stage_facts) : null;
+  if (identity === undefined || (hasFacts && stageFacts === null)) return null;
   const workspaceId = text(r.workspace_id);
   const profileId = text(r.profile_id);
   const deploymentId = text(r.deployment_id);
@@ -254,6 +301,6 @@ export function readLiveSourceOperationsV2(raw: unknown): LiveSourceOperationsV2
   }
   return {
     workspaceId, profileId, deploymentId, observedAt, runtimeReasonCode: "SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED",
-    realtimeActive: false, commandsEnabled: false, panels,
+    realtimeActive: false, commandsEnabled: false, panels, identity, stageFacts,
   };
 }
