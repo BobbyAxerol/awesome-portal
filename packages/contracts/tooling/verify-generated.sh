@@ -39,6 +39,8 @@ node tooling/generate-execution-workflows.mjs --check
 generate_and_compare openapi/execution-workflows.openapi.json generated/execution-workflows.d.ts
 node tooling/generate-execution-scoped-realtime.mjs --check
 generate_and_compare openapi/execution-scoped-realtime.openapi.json generated/execution-scoped-realtime.d.ts
+node tooling/generate-execution-alpha-fleet-realtime.mjs --check
+generate_and_compare openapi/execution-alpha-fleet-realtime.openapi.json generated/execution-alpha-fleet-realtime.d.ts
 node tooling/generate-execution-history.mjs --check
 node tooling/generate-execution-manager-scoped.mjs --check
 node tooling/generate-execution-scoped-records.mjs --check

@@ -1,0 +1,953 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Execution alpha fleet realtime (alpha_fleet_overview)",
+    "version": "1.0.0",
+    "description": "ELP2-09 scoped realtime for the named dataset alpha_fleet_overview: a baseline barrier and a NOTIFICATION_ONLY stream. execution_profile_observation is served by the opt-in native headers/stream of execution-profile-realtime.openapi.json and is not repeated here."
+  },
+  "paths": {
+    "/api/v1/execution/manager/fleet/realtime-snapshot": {
+      "get": {
+        "operationId": "executionAlphaFleetRealtimeSnapshotGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "description": "Named dataset `alpha_fleet_overview`: the baseline barrier a stream starts from. It names the Manager publication revision, generation, epoch and checkpoint ordinal the paired GET /api/v1/execution/manager/fleet answers, the authorization fingerprint, and either a resume token or a typed reason there is no stream. Read the fleet and the barrier together and compare `baseline.revision` with `lineage.revision`; a mismatch means a newer publication exists and the barrier must be re-read. Carries no figure; never an event replay.",
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "description": "Only ever the caller's own workspace; any other value is a 404.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current authorized barrier; a stream that cannot be offered is `stream.state: UNAVAILABLE` with a reason, never an error.",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlphaFleetRealtimeSnapshot"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid closed query",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace or current grant unavailable",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Authority or publication changed during the read",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Publication not qualified or authority unavailable",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/execution/manager/fleet/stream": {
+      "get": {
+        "operationId": "executionAlphaFleetRealtimeStreamGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "description": "Server-sent notifications for `alpha_fleet_overview`. Each SSE event is one ScopedRealtimeFrame (NOTIFICATION_ONLY): `event:` equals its `event_type`, a live frame carries `id:` equal to its `resume_cursor`, a terminal frame carries no `id`. `revalidate` means a newer Manager publication revision committed in the same generation: read GET /manager/fleet once. It carries no figure and no delta. `heartbeat` is liveness only. Every terminal frame (`resync_required`, `access_revoked`, `unavailable`) is followed by the server closing the response. Failures after the stream opened are terminal frames, never an HTTP status (an EventSource cannot read an error body). The stream starts only from a snapshot cursor: with neither `Last-Event-ID` nor `cursor` the answer is one terminal `resync_required`/`SNAPSHOT_REQUIRED` frame. Current authority and the exact `stream.subscribe` grant are re-checked before every source read and every write.",
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "description": "Only ever the caller's own workspace; any other value is a 404.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "description": "The snapshot's `stream.resume_cursor`. `Last-Event-ID` takes precedence.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^[A-Za-z0-9._~-]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "description": "The `id` of the last delivered frame (EventSource reconnect).",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096,
+              "pattern": "^[A-Za-z0-9._~-]+$(?![\\s\\S])"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "text/event-stream",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              },
+              "X-Accel-Buffering": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "no"
+                }
+              }
+            },
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "x-sse-frame": {
+                  "$ref": "#/components/schemas/ScopedRealtimeFrame"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid closed query or Last-Event-ID",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Workspace unavailable",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Publication not qualified or authority unavailable",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "Quality": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "completeness": {
+            "type": "string",
+            "enum": [
+              "COMPLETE",
+              "PARTIAL",
+              "UNRESOLVED"
+            ]
+          },
+          "freshness": {
+            "type": "string",
+            "enum": [
+              "FRESH",
+              "STALE",
+              "UNKNOWN"
+            ]
+          },
+          "coverage": {
+            "type": "string",
+            "enum": [
+              "AUTHORIZED_ONLY",
+              "CURRENT_PAGE_ONLY",
+              "RETAINED_OBSERVATIONS"
+            ]
+          },
+          "source_as_of_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "portal_observed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "source_set_ref": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "VERIFIED",
+              "PROVISIONAL",
+              "UNKNOWN"
+            ]
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256
+            },
+            "maxItems": 32
+          }
+        },
+        "required": [
+          "completeness",
+          "freshness",
+          "coverage",
+          "source_as_of_ms",
+          "portal_observed_at_ms",
+          "source_set_ref",
+          "confidence",
+          "reasons"
+        ]
+      },
+      "ScopedRealtimeFrame": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.scoped-realtime.v1"
+          },
+          "semantics": {
+            "const": "NOTIFICATION_ONLY"
+          },
+          "event_type": {
+            "type": "string",
+            "enum": [
+              "revalidate",
+              "heartbeat",
+              "resync_required",
+              "access_revoked",
+              "unavailable"
+            ]
+          },
+          "terminal": {
+            "type": "boolean"
+          },
+          "reconnect_required": {
+            "type": "boolean"
+          },
+          "resume_cursor": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096,
+                "pattern": "^[A-Za-z0-9._~-]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "projection_generation": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Quality"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_action": {
+            "type": "string",
+            "enum": [
+              "READ_NAMED_SNAPSHOT",
+              "RESUME_PORTAL_CURSOR",
+              "SIGN_IN_OR_REQUEST_ACCESS",
+              "WAIT"
+            ]
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "SNAPSHOT_REQUIRED",
+                  "CURSOR_INVALID_OR_EXPIRED",
+                  "SCOPE_CHANGED",
+                  "GENERATION_CHANGED",
+                  "SOURCE_COVERAGE_UNPROVED",
+                  "SOURCE_UNAVAILABLE",
+                  "SLOW_CLIENT",
+                  "ACCESS_CHANGED",
+                  "RECONNECT_LIMIT",
+                  "STOPPED"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "schema_version",
+          "semantics",
+          "event_type",
+          "terminal",
+          "reconnect_required",
+          "resume_cursor",
+          "projection_generation",
+          "quality",
+          "next_action",
+          "reason_code"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "enum": [
+                    "resync_required",
+                    "access_revoked",
+                    "unavailable"
+                  ]
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "terminal": {
+                  "const": true
+                },
+                "resume_cursor": {
+                  "type": "null"
+                },
+                "projection_generation": {
+                  "type": "null"
+                },
+                "quality": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "type": "string"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "terminal": {
+                  "const": false
+                },
+                "resume_cursor": {
+                  "type": "string"
+                },
+                "projection_generation": {
+                  "type": "string"
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "revalidate"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "READ_NAMED_SNAPSHOT"
+                },
+                "reconnect_required": {
+                  "const": false
+                },
+                "quality": {
+                  "$ref": "#/components/schemas/Quality"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "heartbeat"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "RESUME_PORTAL_CURSOR"
+                },
+                "reconnect_required": {
+                  "const": false
+                },
+                "quality": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "resync_required"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "READ_NAMED_SNAPSHOT"
+                },
+                "reconnect_required": {
+                  "const": true
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "access_revoked"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "SIGN_IN_OR_REQUEST_ACCESS"
+                },
+                "reconnect_required": {
+                  "const": false
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "event_type": {
+                  "const": "unavailable"
+                }
+              },
+              "required": [
+                "event_type"
+              ]
+            },
+            "then": {
+              "properties": {
+                "next_action": {
+                  "const": "WAIT"
+                },
+                "reconnect_required": {
+                  "const": false
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AlphaFleetStreamAvailable": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "const": "AVAILABLE"
+          },
+          "resume_cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096,
+            "pattern": "^[A-Za-z0-9._~-]+$(?![\\s\\S])"
+          },
+          "stream_path": {
+            "const": "/api/v1/execution/manager/fleet/stream"
+          },
+          "heartbeat_interval_ms": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 60000
+          },
+          "replay_window_ms": {
+            "type": "integer",
+            "minimum": 1000,
+            "maximum": 300000
+          },
+          "max_frame_bytes": {
+            "type": "integer",
+            "minimum": 8192,
+            "maximum": 1048576
+          },
+          "max_streams_per_session": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 16
+          }
+        },
+        "required": [
+          "state",
+          "resume_cursor",
+          "stream_path",
+          "heartbeat_interval_ms",
+          "replay_window_ms",
+          "max_frame_bytes",
+          "max_streams_per_session"
+        ]
+      },
+      "AlphaFleetStreamUnavailable": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "const": "UNAVAILABLE"
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "WHOLE_FLEET_AUTHORITY_REQUIRED",
+              "STREAM_AUTHORITY_NOT_GRANTED",
+              "STREAM_CAPACITY_REACHED"
+            ]
+          },
+          "resume_cursor": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "state",
+          "reason_code",
+          "resume_cursor"
+        ]
+      },
+      "AlphaFleetRealtimeSnapshot": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.alpha-fleet-realtime-snapshot.v1"
+          },
+          "dataset": {
+            "const": "alpha_fleet_overview"
+          },
+          "semantics": {
+            "const": "NOTIFICATION_ONLY"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "scope_fingerprint": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+          },
+          "baseline": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "revision": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "projection_generation": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "source_epoch": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "ordinal": {
+                "type": "string",
+                "pattern": "^(?:0|[1-9][0-9]{0,18})$(?![\\s\\S])"
+              },
+              "catalogue_digest": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              }
+            },
+            "required": [
+              "revision",
+              "projection_generation",
+              "source_epoch",
+              "ordinal",
+              "catalogue_digest"
+            ]
+          },
+          "named_snapshot": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "operation_id": {
+                "const": "executionManagerFleetGetV1"
+              },
+              "path": {
+                "const": "/api/v1/execution/manager/fleet"
+              },
+              "lineage_revision": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              }
+            },
+            "required": [
+              "operation_id",
+              "path",
+              "lineage_revision"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "notice_origin": {
+                "const": "PORTAL_PUBLICATION_REVISION"
+              },
+              "edge_notice_source": {
+                "const": "NOT_COMMISSIONED"
+              },
+              "qualification": {
+                "const": "SOURCE_VERIFIED"
+              }
+            },
+            "required": [
+              "notice_origin",
+              "edge_notice_source",
+              "qualification"
+            ]
+          },
+          "stream": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlphaFleetStreamAvailable"
+              },
+              {
+                "$ref": "#/components/schemas/AlphaFleetStreamUnavailable"
+              }
+            ]
+          },
+          "quality": {
+            "$ref": "#/components/schemas/Quality"
+          }
+        },
+        "required": [
+          "schema_version",
+          "dataset",
+          "semantics",
+          "workspace_id",
+          "environment",
+          "scope_fingerprint",
+          "baseline",
+          "named_snapshot",
+          "source",
+          "stream",
+          "quality"
+        ],
+        "description": "Baseline barrier of the named fleet read, not a figure. `baseline.revision` MUST equal `named_snapshot.lineage_revision` and the `lineage.revision` of the paired GET /manager/fleet answer (a cross-field rule JSON Schema cannot state; the producer validator and the browser reader enforce it). `scope_fingerprint` changes whenever the authorization identity changes: a consumer holding a different fingerprint than before must re-baseline. `source` states where a notice would come from; no Edge scoped-notice source is commissioned for this dataset."
+      },
+      "Problem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EXECUTION_READ_NOT_AVAILABLE",
+                  "EXECUTION_READ_QUERY_INVALID",
+                  "EXECUTION_READ_CURSOR_INVALID",
+                  "EXECUTION_READ_ACCESS_CHANGED",
+                  "EXECUTION_READ_POLICY_PENDING",
+                  "EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",
+                  "EXECUTION_READ_FIELD_POLICY_PENDING",
+                  "EXECUTION_READ_SCOPE_LIMIT",
+                  "EXECUTION_READ_AUTHORITY_UNAVAILABLE"
+                ]
+              },
+              "message": {
+                "const": "The requested Execution read is not available."
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

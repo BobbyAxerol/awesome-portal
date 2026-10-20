@@ -526,6 +526,33 @@ export class ExecutionReadScopes {
     }catch(error){return rethrowReadScopeError(error);}
   }
 
+  /** ELP2-09 `alpha_fleet_overview`: whole-fleet business authority anchored at the ONE published authority root, so the
+   * `stream.subscribe` fence of `deliverRealtime` covers exactly the population the named read answers. A principal without
+   * a single unambiguous root and whole-population read gets 404, never a partial fleet stream (a notice for a population
+   * larger than the principal may see would disclose hidden activity). Same root re-resolution as the technical path. */
+  async authorizeFleetRoot(principal:ReadScopePrincipal,binding:ReadScopeBinding,
+    dataset:ReadDatasetBinding):Promise<{scope:AuthorizedExecutionReadScope;resource:AccessResource}> {
+    try {
+    const p={user:{...principal.user},session:{...principal.session},workspaceId:principal.workspaceId,
+      viewerWorkspaceId:principal.viewerWorkspaceId??principal.workspaceId};
+    const b=structuredClone(binding),d=structuredClone(dataset);
+    if(!readDatasetBinding.safeParse(d).success)fail("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED",503);
+    const rootsOf=(context:AccessEvaluationContext)=>
+      Object.keys(environmentRelations(context.relationsFor(p.user.userId),b.environment).roots);
+    const context=await this.access.readContext({user_id:p.user.userId,
+      session_id:p.session.sessionId,session_generation:p.session.sessionVersion},p.workspaceId);
+    const roots=rootsOf(context);
+    if(roots.length!==1)fail("EXECUTION_READ_NOT_AVAILABLE",404);
+    const resource:AccessResource={kind:"ROOT",id:roots[0]};
+    const scope=await this.authorize(p,b,{action:"business.read_all",resource,requireWholePopulation:true,dataset:d});
+    const currentContext=minted.get(scope)!.context;
+    const current=currentContext?rootsOf(currentContext):[];
+    if(scope.mode!=="SCOPED_V2"||!scope.wholePopulation||current.length!==1||current[0]!==resource.id)
+      fail("EXECUTION_READ_ACCESS_CHANGED",409);
+    return{scope,resource};
+    }catch(error){return rethrowReadScopeError(error);}
+  }
+
   /** Existing unscoped transports are compatibility-only. A policy activation
    * during a legacy stream terminates it; a V2 grant cannot commission a raw
    * profile/global event feed. No publication or upstream I/O is needed. */

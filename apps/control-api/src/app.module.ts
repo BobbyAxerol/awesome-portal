@@ -146,6 +146,8 @@ import { ManagerScoreRevisionController } from "./execution-v2/manager-score-rev
 import { ManagerScoreRevisionService } from "./execution-v2/manager-score-revision.service";
 import { ManagerSeriesController } from "./execution-v2/manager-series.controller";
 import { ManagerSeriesService } from "./execution-v2/manager-series.service";
+import { AlphaFleetRealtimeController } from "./execution-v2/alpha-fleet-realtime.controller";
+import { AlphaFleetRealtimeService } from "./execution-v2/alpha-fleet-realtime.service";
 import { ResourceReadController } from "./resource-read/resource-read.controller";
 import { ResourceReadService } from "./resource-read/resource-read.service";
 import { PortalDerivationsController } from "./execution/portal-derivations.controller";
@@ -350,6 +352,7 @@ export class AppModule implements OnApplicationShutdown {
         ManagerModelController,
         ManagerScoreRevisionController,
         ManagerSeriesController,
+        AlphaFleetRealtimeController,
         ExecutionDurableMirrorIntegrityController,
         ResourceReadController,
         PortalDerivationsController,
@@ -588,6 +591,7 @@ export class AppModule implements OnApplicationShutdown {
         ManagerModelService,
         ManagerScoreRevisionService,
         ManagerSeriesService,
+        AlphaFleetRealtimeService,
         ResourceReadService,
         PortalDerivationsService,
         OperationalCompositionService,
