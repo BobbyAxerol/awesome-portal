@@ -33,7 +33,7 @@ import { useRead, type ReadState } from "../portfolios/useRead";
 const scoped = (api: ExecutionApi, signal: AbortSignal): ExecutionApi => api.withReadSignal?.(signal) ?? api;
 
 /** A port that predates the dataset (a test double, an older shell) has no method: that is "not published", not a crash. */
-function ask(api: ExecutionApi, query: ManagerDatasetQuery): Promise<Result<ManagerDataset>> {
+export function ask(api: ExecutionApi, query: ManagerDatasetQuery): Promise<Result<ManagerDataset>> {
   if (typeof api.getManagerDataset !== "function") return Promise.resolve({ ok: false, status: "unavailable", reason: "The Manager dataset is not part of this port." });
   try {
     return api.getManagerDataset(query);

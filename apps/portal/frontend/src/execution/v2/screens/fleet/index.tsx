@@ -13,11 +13,16 @@
  * `view`, plus `tab=archived` for the Archived lens and the screen-local
  * `owner` and `health`. Defaults are omitted.
  *
- * Manager dataset (FE-012, FE-027): when the lens is ONE environment (Real-funded, Sandbox, Paper) and the Manager dataset is
- * published for the caller there, a `Source` control offers it. With `src=dataset` the table reads the dataset through
- * `getManagerDataset`: one row per alpha version and portfolio, the server's own filters (search, owner, health with `IN`,
- * the lens's stages), `Current stage` sort and group, keyset paging with honest "Showing N of M". Not published: no `Source`
- * control, no new control, the legacy read exactly as before. `src`, `group` and a comma list in `health` are screen-local.
+ * Manager dataset (FE-012, FE-027, RV-09): the source is chosen by the data, not by a toggle. When the lens is ONE environment
+ * (Real-funded, Sandbox, Paper), the view is the table and the Manager dataset is published for the caller there, the table reads
+ * the dataset through `getManagerDataset`: one row per alpha version and portfolio, the server's own filters (search, owner,
+ * health with `IN`, the lens's stages), `Current stage` sort and group, keyset paging with honest "Showing N of M". Everywhere
+ * else (the All lens, the board, an unpublished dataset) it reads the fleet read, one row per alpha. ONE chip names the source and
+ * its population. The two populations differ, so there is no silent switch: the only way across is the explicit "Use the fleet
+ * read" on a failed dataset read (`src=fleet`, screen-local, as are `group` and a comma list in `health`).
+ *
+ * Owner and Health choices: the whole authorized population when the dataset published it (a group list over the whole filtered
+ * query), otherwise the rows loaded so far, worded as such, with a typed value that the server filters on (`useFleetOptions`).
  */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -33,6 +38,7 @@ import { withOrigin } from "../../backTo";
 import { serializeUrlParams, useExecUrlState, withContext } from "../../urlState";
 import { MANAGER_STATEMENT_SCOPE } from "../../readers/managerDataset";
 import { ColumnsMenu, FilterChips, MultiPick, type FilterChip } from "./fleetControls";
+import { OptionFilter } from "./OptionFilter";
 import { FleetBoard } from "./FleetBoard";
 import { FleetDatasetTable } from "./FleetDatasetTable";
 import { FleetDrawer } from "./FleetDrawer";
@@ -42,9 +48,10 @@ import {
   groupLabel, healthWord, parseHealths, serializeHealths, type DatasetFilters,
 } from "./fleetDatasetModel";
 import { useDatasetPublication, useFleetDataset } from "./useFleetDataset";
+import { useDatasetOptions } from "./useFleetOptions";
 import {
   ARCHIVED_TAB, FE, FLEET_LENSES, alphaHref, HIDDEN_COLUMNS_PARAM, ROW_CAP, SORT_OPTIONS, fleetKpis, humanize, inStages, lensCounts,
-  lensForStages, lensLabel, healthView, NOT_PUBLISHED, notPublished, parseHiddenColumns, queryKey, fleetQuery, serializeHiddenColumns,
+  lensForStages, lensLabel, healthView, notPublished, parseHiddenColumns, queryKey, fleetQuery, serializeHiddenColumns,
   sortValueOf, stageLabel, stagesForLens, toFleetRow,
   type FleetColumnKey, type FleetFilters, type FleetLens,
 } from "./fleetModel";
@@ -107,14 +114,15 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
   const key = queryKey(filters);
 
   /* ── the Manager dataset as the source (only when it is published for this caller) ───────── */
-  const wantsDataset = params.get("src") === "dataset";
+  // `src=fleet` is the explicit way back from a failed dataset read; it is not offered anywhere else.
+  const forceFleet = params.get("src") === "fleet";
   const scope = useMemo(() => datasetScopeOf(stage, archived), [stage, archived]);
   const publication = useDatasetPublication(api, scope === null ? null : scope.environment);
   const published = publication.phase === "published" && scope !== null;
-  // The legacy read is NOT started while the answer to "is it published?" is pending for a URL that asks for the dataset: a
+  // The legacy read is NOT started while the answer to "is it published?" is pending for a lens the dataset could serve: a
   // request for the fleet read that the dataset then replaces would be a wasted read and a flash of the other table.
-  const waitingForDataset = wantsDataset && scope !== null && tableView && publication.phase === "checking";
-  const datasetMode = published && wantsDataset && tableView;
+  const waitingForDataset = !forceFleet && scope !== null && tableView && publication.phase === "checking";
+  const datasetMode = published && !forceFleet && tableView;
   const offered = publication.phase === "published" ? publication.dataset.queryOptions : null;
   const sortOptions = useMemo(() => datasetSortOptions(offered === null ? null : offered.sortFields), [offered]);
   const groupOptions = useMemo(() => datasetGroupOptions(offered === null ? null : offered.groupFields), [offered]);
@@ -164,12 +172,33 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
     setSeenDatasetOwners((c) => mergeSeen(c, dataset.rows.flatMap((r) => (r.ownerUserId ? [r.ownerUserId] : []))));
     setSeenDatasetHealths((c) => mergeSeen(c, dataset.rows.flatMap((r) => (r.health ? [r.health] : []))));
   }, [dataset.rows]);
+  // RV-09: the whole authorized population when the dataset published it (a group list over the whole filtered query); otherwise only
+  // the rows loaded so far, which is worded as such and never offered as complete.
+  const published_ = useDatasetOptions(api, datasetMode, scope, workspaceId, offered === null ? null : offered.groupFields);
+  const ownerPublished = datasetMode && published_.owners.basis === "published";
+  const healthPublished = datasetMode && published_.healths.basis === "published";
+  const ownerComplete = ownerPublished && published_.owners.complete;
+  const healthComplete = healthPublished && published_.healths.complete;
   const ownerOptions = useMemo(
-    () => (datasetMode ? mergeSeen(seenDatasetOwners, owner ? [owner] : []) : mergeSeen(seenOwners, owner ? [owner] : [])),
-    [datasetMode, seenDatasetOwners, seenOwners, owner],
+    () => (ownerPublished ? mergeSeen(published_.owners.values, owner ? [owner] : [])
+      : datasetMode ? mergeSeen(seenDatasetOwners, owner ? [owner] : []) : mergeSeen(seenOwners, owner ? [owner] : [])),
+    [ownerPublished, published_.owners.values, datasetMode, seenDatasetOwners, seenOwners, owner],
   );
   const healthOptions = useMemo(() => mergeSeen(seenHealths, health ? [health] : []), [seenHealths, health]);
-  const datasetHealthOptions = useMemo(() => mergeSeen(seenDatasetHealths, healths), [seenDatasetHealths, healths]);
+  const datasetHealthOptions = useMemo(
+    () => mergeSeen(healthPublished ? published_.healths.values : seenDatasetHealths, healths),
+    [healthPublished, published_.healths.values, seenDatasetHealths, healths],
+  );
+  // One honest sentence about the choices that are not the whole population (nothing when both are).
+  const limitNote = (() => {
+    if (archived) return null;
+    const loadedNames = [ownerPublished ? null : "Owner", healthPublished ? null : "Health"].filter((name): name is string => name !== null);
+    const cutNames = [ownerPublished && !ownerComplete ? "Owner" : null, healthPublished && !healthComplete ? "Health" : null].filter((name): name is string => name !== null);
+    const parts: string[] = [];
+    if (loadedNames.length > 0) parts.push(`${loadedNames.join(" and ")} choices are the rows loaded so far, not the whole fleet.`);
+    if (cutNames.length > 0) parts.push(`${cutNames.join(" and ")} choices may be cut short by the server.`);
+    return parts.length === 0 ? null : `${parts.join(" ")} Type a value to filter on the server.`;
+  })();
 
   /* ── url writers ─────────────────────────────────────────────────── */
   const setColumn = (column: FleetColumnKey, shown: boolean) => {
@@ -189,15 +218,14 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
     next.delete("sel");
     setParams(next, { replace: true });
   };
-  // Source: the dataset adds `src=dataset`; going back drops what only the dataset understands (a group, a health list).
-  const setSource = (next: "fleet" | "dataset") => {
+  // The explicit way across, after a failed dataset read (`src=fleet`) and back. Going to the fleet read drops what only the dataset
+  // understands (a group, a health list); going back to the automatic source drops only the override.
+  const setSource = (next: "fleet" | "auto") => {
     const params2 = new URLSearchParams(params);
     params2.delete("sel");
-    if (next === "dataset") {
-      params2.set("src", "dataset");
-      params2.delete("view");
-    } else {
-      params2.delete("src");
+    if (next === "auto") params2.delete("src");
+    else {
+      params2.set("src", "fleet");
       params2.delete("group");
       // The fleet read filters one health at a time: one word stays, a list (the dataset's IN) is dropped, not cut to its first word.
       const words = parseHealths(params.get("health"));
@@ -279,6 +307,24 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
     return `${head} ${filteredCount === 1 ? "alpha" : "alphas"}${scope}`;
   })();
 
+  /* ONE chip says where the table comes from and what a row is: the two sources count different things. */
+  const sourceChip = (() => {
+    if (archived || mapView || waitingForDataset) return null;
+    if (datasetMode) {
+      return (
+        <span className="exec-fleet-source" role="status" data-source="dataset" title={datasetNote ?? "One row per alpha version in a portfolio, filtered and grouped by the server"}>
+          Manager dataset · alpha versions
+        </span>
+      );
+    }
+    return (
+      <span className="exec-fleet-source" role="status" data-source="fleet" title={boardView ? "The board is built from the fleet read: one row per alpha." : "One row per alpha."}>
+        Fleet read · alphas
+        {published && forceFleet ? <button type="button" className="exec-fleet-link" onClick={() => setSource("auto")}>Use the dataset</button> : null}
+      </span>
+    );
+  })();
+
   const emptyBlock = (() => {
     if (datasetMode) {
       if (dataset.state.phase !== "ready") return undefined;
@@ -325,21 +371,7 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
             <button type="button" className="exec-fleet-segbtn" aria-pressed={boardView} onClick={() => url.set({ view: "board" })}>Board</button>
             <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} disabled title={notPublished(FE.map)} aria-describedby={reasonId}>Map</button>
           </span>
-          {published ? (
-            <span className="exec-fleet-seg" role="group" aria-label="Source">
-              <button type="button" className="exec-fleet-segbtn" aria-pressed={!datasetMode} onClick={() => setSource("fleet")}>Fleet read</button>
-              <button
-                type="button"
-                className="exec-fleet-segbtn"
-                aria-pressed={datasetMode}
-                disabled={!tableView && !datasetMode}
-                title={!tableView && !datasetMode ? "The board and the map are built from the fleet read" : "One row per alpha version and portfolio, filtered and grouped by the server"}
-                onClick={() => setSource("dataset")}
-              >
-                Manager dataset
-              </button>
-            </span>
-          ) : null}
+          {sourceChip}
           {datasetMode ? (
             <>
               {dataset.first && dataset.first.quality.freshness !== "FRESH" ? <Flag kind={dataset.first.quality.freshness === "STALE" ? "stale" : "unknown"} label={humanize(dataset.first.quality.freshness)} size="sm" /> : null}
@@ -358,18 +390,6 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
         </div>
       </header>
 
-      {wantsDataset && scope !== null && tableView && (publication.phase === "unpublished") ? (
-        <div className="exec-fleet-banner" role="status">
-          <Flag kind="unknown" label="Not published" size="sm" />
-          <span>The Manager dataset is not published for this view ({publication.reason}). The fleet read is shown instead.</span>
-        </div>
-      ) : null}
-      {wantsDataset && scope === null && !archived ? (
-        <div className="exec-fleet-banner" role="status">
-          <Flag kind="unknown" label="One environment" size="sm" />
-          <span>The Manager dataset serves one environment at a time. Pick Real-funded, Sandbox or Paper to read it; the fleet read is shown instead.</span>
-        </div>
-      ) : null}
       {datasetMode && dataset.first && (dataset.first.quality.completeness !== "COMPLETE" || dataset.first.quality.freshness !== "FRESH") ? (
         <div className="exec-fleet-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" />
@@ -445,30 +465,43 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
                 }}
               />
             </label>
-            <label className="exec-fleet-field">
-              <span className="exec-fleet-sr">Owner</span>
-              <select className="exec-fleet-select" value={owner ?? ""} disabled={archived} title={archived ? notPublished(FE.archived) : undefined} aria-describedby={archived ? reasonId : undefined} onChange={(event) => setLocal("owner", event.target.value)}>
-                <option value="">Owner: all</option>
-                {ownerOptions.map((name) => <option key={name} value={name}>{name}</option>)}
-              </select>
-            </label>
+            <div className="exec-fleet-field">
+              <OptionFilter
+                name="Owner"
+                value={owner}
+                options={ownerOptions.map((name) => ({ value: name, label: name }))}
+                complete={ownerComplete}
+                limit={ownerPublished ? "The server may have cut this list. Type an id to filter on the server." : "These are the owners of the rows loaded so far, not the whole fleet. Type an id to filter on the server."}
+                disabled={archived}
+                title={archived ? notPublished(FE.archived) : undefined}
+                describedBy={archived ? reasonId : undefined}
+                onChange={(next) => setLocal("owner", next ?? "")}
+              />
+            </div>
             {datasetMode ? (
               <div className="exec-fleet-field">
                 <MultiPick
                   name="Health"
+                  complete={healthComplete}
                   options={datasetHealthOptions.map((code) => ({ value: code, label: healthWord(code) }))}
                   selected={healths}
                   onChange={(next) => setLocal("health", serializeHealths(next) ?? "")}
                 />
               </div>
             ) : (
-              <label className="exec-fleet-field">
-                <span className="exec-fleet-sr">Health</span>
-                <select className="exec-fleet-select" value={health ?? ""} disabled={archived} title={archived ? notPublished(FE.archived) : undefined} aria-describedby={archived ? reasonId : undefined} onChange={(event) => setLocal("health", event.target.value)}>
-                  <option value="">Health: all</option>
-                  {healthOptions.map((code) => <option key={code} value={code}>{healthView(code).label}</option>)}
-                </select>
-              </label>
+              <div className="exec-fleet-field">
+                <OptionFilter
+                  name="Health"
+                  value={health}
+                  options={healthOptions.map((code) => ({ value: code, label: healthView(code).label }))}
+                  complete={false}
+                  limit="These are the health words of the rows loaded so far, not the whole fleet. Type a word to filter on the server."
+                  disabled={archived}
+                  title={archived ? notPublished(FE.archived) : undefined}
+                  describedBy={archived ? reasonId : undefined}
+                  onChange={(next) => setLocal("health", next ?? "")}
+                />
+              </div>
             )}
             <label className="exec-fleet-field">
               <span className="exec-fleet-sr">Sort</span>
@@ -522,15 +555,16 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
             Not available: {unpublishedList.map((fact) => fact.what).join(", ")}
             <span className="exec-fleet-sr"> ({unpublishedList.map((fact) => `${fact.what} (${fact.fe})`).join(", ")})</span>
           </p>
-          {datasetNote ? <p className="exec-fleet-note" data-testid="dataset-note">{datasetNote}</p> : null}
+          {datasetNote ? <p className="exec-fleet-sr" data-testid="dataset-note">{datasetNote}</p> : null}
+          {limitNote ? <p className="exec-fleet-note exec-fleet-limit" data-testid="options-limit">{limitNote}</p> : null}
 
           <div role="tabpanel" id={`${searchId}-panel`} aria-labelledby={`${searchId}-tab-${lens ?? "all"}`} className="exec-fleet-panel">
             {archived ? (
               <div className="exec-fleet-nppanel" role="status">
                 <strong>Archived alphas</strong>
-                <p title="This lens makes no request until the backend publishes the list.">
+                <p title="No archived-alpha read is published (FE-034), so this lens asks for nothing.">
                   <span className="exec-fleet-sr">{notPublished(FE.archived)}</span>
-                  <span aria-hidden="true">{NOT_PUBLISHED}</span>
+                  <span aria-hidden="true">Not available</span>
                 </p>
               </div>
             ) : mapView ? (

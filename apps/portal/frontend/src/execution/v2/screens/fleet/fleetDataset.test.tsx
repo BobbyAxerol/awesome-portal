@@ -74,7 +74,10 @@ const ids = () => dataRows().map((row) => cell(row, "Alpha"));
 const isLegacyTable = () => [...table().querySelectorAll("th")].some((th) => th.textContent === "Deployments");
 const isDatasetTable = () => [...table().querySelectorAll("th")].some((th) => th.textContent === "In stage");
 const datasetCalls = (state: DatasetDoubleState) => state.calls.filter((call) => call.query.get("limit") !== "1");
-const probeCalls = (state: DatasetDoubleState) => state.calls.filter((call) => call.query.get("limit") === "1");
+/** The publication probe: one row, no grouping. */
+const probeCalls = (state: DatasetDoubleState) => state.calls.filter((call) => call.query.get("limit") === "1" && !call.query.has("group_by"));
+/** The Owner / Health choices (RV-09): one row, grouped by the one field, over the lens only. */
+const optionCalls = (state: DatasetDoubleState) => state.calls.filter((call) => call.query.get("limit") === "1" && call.query.has("group_by"));
 
 /** A published fixture body paged as the query asks (the probe asks for one row): only the page envelope and the rows kept change. */
 function pagedLike(body: Draft, limit: number): Draft {
@@ -84,7 +87,7 @@ function pagedLike(body: Draft, limit: number): Draft {
   return body;
 }
 
-const LIVE_URL ="/execution/fleet?stage=canary,live&src=dataset";
+const LIVE_URL = "/execution/fleet?stage=canary,live";
 /** 2 single-LIVE, 2 single-CANARY, 2 with both: a fleet where `current_stage` splits three ways. */
 const MIXED: DoubleAlpha[] = alphasOf(6, [["LIVE"], ["CANARY", "LIVE"], ["CANARY"]], { healths: ["READY", "ATTENTION", "FINDING"], owners: ["Lan-002", "Bobby-001"] });
 
@@ -126,48 +129,68 @@ describe("not published: today's screen, exactly", () => {
     expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
   });
 
-  it("a URL that asks for the dataset where it is not published shows the fleet read and says so", async () => {
+  it("an unpublished dataset keeps the fleet read and its chip names the population", async () => {
     const { api } = harness({ live: MIXED }, "status:404");
     mount(api, LIVE_URL);
     await loaded();
-    expect(screen.getByText(/The Manager dataset is not published for this view/)).toBeTruthy();
     expect(isLegacyTable()).toBe(true);
+    expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
+    expect(screen.queryByText(/not published for this view/)).toBeNull();
   });
 
-  it("a stage set across environments is not a dataset question: no request, a sentence", async () => {
+  it("a stage set across environments is not a dataset question: no request, the fleet read", async () => {
     const { api, state } = harness({ live: MIXED, paper: MIXED });
-    mount(api, "/execution/fleet?stage=paper,live&src=dataset");
+    mount(api, "/execution/fleet?stage=paper,live");
     await loaded();
     expect(state.calls).toEqual([]);
-    expect(screen.getByText(/serves one environment at a time/)).toBeTruthy();
+    expect(isLegacyTable()).toBe(true);
+    expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
   });
 });
 
-describe("published: the dataset is offered, never imposed", () => {
-  it("offers Source once the dataset answers, with the fleet read still the default (one tiny probe, no rows read)", async () => {
+describe("published: the dataset is the source, chosen by the data (no toggle)", () => {
+  it("a single-environment lens reads the dataset once it is published, with ONE chip and no Source control", async () => {
     const { api, state, legacy } = harness({ live: MIXED });
-    mount(api, "/execution/fleet?stage=canary,live");
-    const source = await screen.findByRole("group", { name: "Source" });
-    expect(within(source).getByRole("button", { name: "Fleet read" }).getAttribute("aria-pressed")).toBe("true");
-    expect(within(source).getByRole("button", { name: "Manager dataset" }).getAttribute("aria-pressed")).toBe("false");
+    mount(api, LIVE_URL);
+    await loaded();
+    expect(isDatasetTable()).toBe(true);
+    expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Manager dataset" })).toBeNull();
+    const chip = document.querySelector("[data-source='dataset']");
+    expect(chip?.textContent).toBe("Manager dataset · alpha versions");
+    expect(document.querySelectorAll(".exec-fleet-source")).toHaveLength(1);
+    // the fleet read was never started: no wasted read and no flash of the other table
+    expect(legacy).toEqual([]);
     expect(probeCalls(state)).toHaveLength(1);
     expect(Object.fromEntries(probeCalls(state)[0]!.query)).toEqual({ environment: "live", limit: "1" });
-    expect(datasetCalls(state)).toEqual([]);
-    expect(legacy.length).toBeGreaterThan(0);
-    expect(isLegacyTable()).toBe(true);
+    expect(datasetCalls(state)).toHaveLength(1);
+    expect(Object.fromEntries(datasetCalls(state)[0]!.query)).toEqual({ environment: "live", limit: "50" });
   });
 
-  it("choosing the dataset writes src=dataset and reads the rows the server returns", async () => {
-    const { api, state } = harness({ live: MIXED });
-    mount(api, "/execution/fleet?stage=canary,live");
-    const source = await screen.findByRole("group", { name: "Source" });
-    fireEvent.click(within(source).getByRole("button", { name: "Manager dataset" }));
-    await waitFor(() => expect(search().get("src")).toBe("dataset"));
-    await waitFor(() => expect(datasetCalls(state)).toHaveLength(1));
-    await waitFor(() => expect(dataRows()).toHaveLength(6));
-    expect(isDatasetTable()).toBe(true);
-    const first = datasetCalls(state)[0]!.query;
-    expect(Object.fromEntries(first)).toEqual({ environment: "live", limit: "50" });
+  it("the All lens and the board stay on the fleet read, and the chip says which population they show", async () => {
+    const first = harness({ live: MIXED });
+    const view = mount(first.api, "/execution/fleet");
+    await loaded();
+    expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
+    expect(first.state.calls).toEqual([]);
+    view.unmount();
+    const second = harness({ live: MIXED });
+    mount(second.api, "/execution/fleet?stage=canary,live&view=board");
+    await waitFor(() => expect(second.legacy.length).toBeGreaterThan(0));
+    expect(await screen.findByText(/Loaded rows only/)).toBeTruthy();
+    expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
+    expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
+  });
+
+  it("the chip explains the population and the stage rule in its tooltip, not in a paragraph", async () => {
+    const { api } = harness({ live: MIXED });
+    mount(api, LIVE_URL);
+    await loaded();
+    const chip = document.querySelector("[data-source='dataset']") as HTMLElement;
+    expect(chip.title).toContain("One row is an alpha version in a portfolio");
+    expect(chip.title).toContain("Current stage is the single active stage");
+    // the long note is for assistive technology only
+    expect(screen.getByTestId("dataset-note").className).toContain("exec-fleet-sr");
   });
 });
 
@@ -245,7 +268,7 @@ describe("dataset mode: rows, current stage, days in stage", () => {
       return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
     });
     const http = createHttpApi({ policy: OPEN, readScope: {} });
-    const { container } = mount({ getAlphaFleet: legacyFleet().getAlphaFleet, getManagerDataset: http.getManagerDataset } as unknown as ExecutionApi, "/execution/fleet?stage=paper&src=dataset");
+    const { container } = mount({ getAlphaFleet: legacyFleet().getAlphaFleet, getManagerDataset: http.getManagerDataset } as unknown as ExecutionApi, "/execution/fleet?stage=paper");
     await loaded();
     expect(dataRows().map((row) => cell(row, "Current stage"))).toEqual(["Paper", "Paper"]);
     expect(container.textContent).not.toMatch(/USDT|EUR/);
@@ -293,16 +316,21 @@ describe("dataset mode: sort and group by current stage (FE-012)", () => {
     expect(document.querySelector(".exec-fleet-count-line")?.textContent).toBe("Showing 50 of 130 rows. Load more for the rest.");
   });
 
-  it("going back to the fleet read drops what only the dataset understands", async () => {
-    const { api } = harness({ live: MIXED });
+  it("'Use the fleet read' (after a failed dataset read) drops what only the dataset understands, and the chip offers the way back", async () => {
+    const { api, state } = harness({ live: MIXED });
+    state.variantFor = (call) => (call.query.get("limit") === "1" ? "ok" : "status:503");
     mount(api, `${LIVE_URL}&group=current_stage&health=ATTENTION,READY`);
-    await loaded();
-    const source = screen.getByRole("group", { name: "Source" });
-    fireEvent.click(within(source).getByRole("button", { name: "Fleet read" }));
-    await waitFor(() => expect(search().get("src")).toBeNull());
+    fireEvent.click(await screen.findByRole("button", { name: "Use the fleet read" }));
+    await waitFor(() => expect(search().get("src")).toBe("fleet"));
     expect(search().get("group")).toBeNull();
     expect(search().get("health")).toBeNull();
     await waitFor(() => expect(isLegacyTable()).toBe(true));
+    // the override is explicit and reversible, and it is the only way across
+    state.variantFor = undefined;
+    state.variant = "ok";
+    fireEvent.click(screen.getByRole("button", { name: "Use the dataset" }));
+    await waitFor(() => expect(search().get("src")).toBeNull());
+    await waitFor(() => expect(isDatasetTable()).toBe(true));
   });
 });
 
@@ -348,7 +376,7 @@ describe("dataset mode: filters are the server's (never a client-side narrowing 
 
   it("a lens that is one stage of the environment sends stage_filter; the whole environment sends none", async () => {
     const { api, state } = harness({ live: MIXED });
-    mount(api, "/execution/fleet?stage=canary&src=dataset");
+    mount(api, "/execution/fleet?stage=canary");
     await loaded();
     expect(datasetCalls(state)[0]!.query.get("stage_filter")).toBe("CANARY");
     // a canary-only view: a two-stage alpha shows its visible stage and has no single stage (the producer reads it before the filter)
@@ -455,15 +483,15 @@ describe("dataset mode: answers that must not become rows", () => {
     ["garbage", "MANAGER_DATASET_REFUSED"],
     ["other-schema", "UNSUPPORTED_SCHEMA"],
   ])("%s is a typed error panel, never a table, and 'Use the fleet read' goes back", async (variant, fragment) => {
-    // the probe (limit 1) must pass for the Source control to exist, so the break starts after it
+    // the probe (limit 1) must pass for the dataset to be the source, so the break starts after it
     const { api, state } = harness({ live: MIXED });
-    state.before = (call) => { state.variant = call.query.get("limit") === "1" ? "ok" : variant; };
+    state.variantFor = (call) => (call.query.get("limit") === "1" ? "ok" : variant);
     mount(api, LIVE_URL, variant === "wrong:workspace" ? "ws-1" : undefined);
     await waitFor(() => expect(document.body.textContent).toContain(fragment));
     expect(screen.getByText("Unavailable")).toBeTruthy();
     expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Use the fleet read" }));
-    await waitFor(() => expect(search().get("src")).toBeNull());
+    await waitFor(() => expect(search().get("src")).toBe("fleet"));
     await waitFor(() => expect(isLegacyTable()).toBe(true));
   });
 
@@ -488,11 +516,188 @@ describe("dataset mode: answers that must not become rows", () => {
     expect(ids()[0]).toContain("a-001");
   });
 
-  it("the legacy board view still uses the fleet read, and the dataset cannot be chosen there", async () => {
-    const { api, legacy } = harness({ live: MIXED });
+  it("the board is built from the fleet read, whatever the dataset publishes", async () => {
+    const { api, legacy, state } = harness({ live: MIXED });
     mount(api, "/execution/fleet?stage=canary,live&view=board");
-    const source = await screen.findByRole("group", { name: "Source" });
-    expect((within(source).getByRole("button", { name: "Manager dataset" }) as HTMLButtonElement).disabled).toBe(true);
     await waitFor(() => expect(legacy.length).toBeGreaterThan(0));
+    expect(datasetCalls(state)).toEqual([]);
+    expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
+  });
+});
+
+describe("Owner and Health choices are the authorized population, or they say they are not (RV-09)", () => {
+  /** 130 alphas, 50 per page. `Zed-129` and the health FINDING exist only on the last row (page 3). */
+  function wide(): DoubleAlpha[] {
+    const population = alphasOf(130, [["LIVE"]], { owners: ["Lan-002", "Bobby-001"], healths: ["READY"] });
+    population[129] = { ...population[129]!, owner: "Zed-129", health: "FINDING" };
+    return population;
+  }
+  const ownerControl = () => screen.getByRole("combobox", { name: "Owner" }) as HTMLSelectElement | HTMLInputElement;
+  const ownerValues = () => {
+    const control = ownerControl();
+    return control.tagName === "SELECT"
+      ? [...(control as HTMLSelectElement).options].map((option) => option.value).filter((value) => value !== "")
+      : [...(document.getElementById(control.getAttribute("list") ?? "") as HTMLDataListElement).options].map((option) => option.value);
+  };
+  /** The dataset states it cannot group by owner or health: both sort and group lists lose them (the reader checks they agree). */
+  const withoutOwnerHealthGroups = (state: DatasetDoubleState) => {
+    state.mutate = (body) => {
+      const drop = ["owner_user_id", "health"];
+      body.query_options.sort_fields = body.query_options.sort_fields.filter((field: string) => !drop.includes(field));
+      body.query_options.group_fields = body.query_options.group_fields.filter((field: string) => !drop.includes(field));
+    };
+  };
+
+  it("published: every owner and health of the lens is offered although only page 1 is loaded", async () => {
+    const { api, state } = harness({ live: wide() });
+    mount(api, LIVE_URL);
+    await loaded();
+    expect(dataRows()).toHaveLength(50);
+    await waitFor(() => expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]));
+    expect(ownerControl().tagName).toBe("SELECT");
+    // the whole population is on offer, so there is no "loaded so far" sentence
+    expect(screen.queryByTestId("options-limit")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Health" }));
+    expect(within(screen.getByRole("group", { name: "Health" })).getAllByRole("checkbox").map((box) => (box as HTMLInputElement).labels?.[0]?.textContent)).toEqual(["Finding open", "Ready"]);
+    expect(screen.queryByTestId("health-limit")).toBeNull();
+    // two reads, one per field, over the lens alone: no search, owner or health in them
+    expect(optionCalls(state).map((call) => call.query.get("group_by")).sort()).toEqual(["health", "owner_user_id"]);
+    for (const call of optionCalls(state)) {
+      expect(Object.fromEntries(call.query)).toEqual({ environment: "live", limit: "1", group_by: call.query.get("group_by") });
+      expect(call.filters).toBeNull();
+    }
+  });
+
+  it("choosing the owner that only page 3 holds filters on the server, and the choices do not shrink or reload", async () => {
+    const { api, state } = harness({ live: wide() });
+    mount(api, LIVE_URL);
+    await loaded();
+    await waitFor(() => expect(ownerValues()).toContain("Zed-129"));
+    fireEvent.change(ownerControl(), { target: { value: "Zed-129" } });
+    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "owner_user_id", op: "EQ", value: "Zed-129" }]));
+    await waitFor(() => expect(dataRows()).toHaveLength(1));
+    expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]);
+    expect(optionCalls(state)).toHaveLength(2);
+  });
+
+  it("a search, an owner and a health already chosen never narrow the choices", async () => {
+    const { api, state } = harness({ live: wide() });
+    mount(api, `${LIVE_URL}&q=a-00&owner=Lan-002&health=READY`);
+    await loaded();
+    await waitFor(() => expect(optionCalls(state)).toHaveLength(2));
+    for (const call of optionCalls(state)) {
+      expect(call.query.has("q")).toBe(false);
+      expect(call.filters).toBeNull();
+    }
+    await waitFor(() => expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]));
+  });
+
+  it("a dataset that cannot group by owner or health: the choices are the loaded rows, worded so, and a typed value reaches the server", async () => {
+    const { api, state } = harness({ live: wide() });
+    withoutOwnerHealthGroups(state);
+    mount(api, LIVE_URL);
+    await loaded();
+    expect(optionCalls(state)).toEqual([]);
+    expect(ownerControl().tagName).toBe("INPUT");
+    expect(screen.getByTestId("options-limit").textContent).toContain("Owner and Health choices are the rows loaded so far, not the whole fleet.");
+    expect(ownerValues()).toEqual(["Bobby-001", "Lan-002"]);
+    // paging brings the rest of the rows, and with them the missing owner; the sentence stays
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() => expect(dataRows()).toHaveLength(100));
+    fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await waitFor(() => expect(dataRows()).toHaveLength(130));
+    expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]);
+    expect(screen.getByTestId("options-limit")).toBeTruthy();
+    // and a value the person types is the server's to filter, even before its page is loaded
+    const owner = ownerControl();
+    fireEvent.change(owner, { target: { value: "Zed-129" } });
+    fireEvent.keyDown(owner, { key: "Enter" });
+    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "owner_user_id", op: "EQ", value: "Zed-129" }]));
+    await waitFor(() => expect(dataRows()).toHaveLength(1));
+  });
+
+  it("the Health menu of a dataset that does not publish the list takes a typed value too", async () => {
+    const { api, state } = harness({ live: wide() });
+    withoutOwnerHealthGroups(state);
+    mount(api, LIVE_URL);
+    await loaded();
+    fireEvent.click(screen.getByRole("button", { name: "Health" }));
+    expect(screen.getByTestId("health-limit").textContent).toContain("Loaded so far");
+    const add = screen.getByRole("textbox", { name: "Add a health value" });
+    fireEvent.change(add, { target: { value: "finding" } });
+    fireEvent.keyDown(add, { key: "Enter" });
+    // the typed word is kept as typed when no loaded row has it: the server decides
+    await waitFor(() => expect(search().get("health")).toBe("finding"));
+    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "health", op: "EQ", value: "finding" }]));
+  });
+
+  it("an answer about another environment is refused: the choices fall back to the loaded rows and say so", async () => {
+    const { api, state } = harness({ live: wide() });
+    state.mutate = (body, call) => { if (call.query.has("group_by")) body.environment = "paper"; };
+    mount(api, LIVE_URL);
+    await loaded();
+    await waitFor(() => expect(optionCalls(state).length).toBeGreaterThan(0));
+    expect(ownerControl().tagName).toBe("INPUT");
+    expect(screen.getByTestId("options-limit")).toBeTruthy();
+  });
+
+  it("a refused options read (503) is not an empty list: the loaded rows are offered, worded so", async () => {
+    const { api, state } = harness({ live: wide() });
+    state.variantFor = (call) => (call.query.has("group_by") ? "status:503" : "ok");
+    mount(api, LIVE_URL);
+    await loaded();
+    await waitFor(() => expect(optionCalls(state).length).toBe(2));
+    expect(ownerControl().tagName).toBe("INPUT");
+    expect(ownerValues()).toEqual(["Bobby-001", "Lan-002"]);
+    expect(screen.getByTestId("options-limit")).toBeTruthy();
+  });
+
+  it("a late options answer for a lens the screen has left is dropped", async () => {
+    const live = alphasOf(4, [["LIVE"]], { owners: ["Live-Owner"] });
+    const paper = alphasOf(4, [["PAPER"]], { owners: ["Paper-Owner"] });
+    const { api, state } = harness({ live, paper });
+    let release: (() => void) | null = null;
+    const held = new Promise<void>((resolve) => { release = resolve; });
+    state.before = async (call) => {
+      if (call.query.get("environment") === "live" && call.query.get("group_by") === "owner_user_id") await held;
+    };
+    mount(api, LIVE_URL);
+    await loaded();
+    fireEvent.click(screen.getByRole("tab", { name: /^Paper/ }));
+    await waitFor(() => expect(optionCalls(state).some((call) => call.query.get("environment") === "paper")).toBe(true));
+    await waitFor(() => expect(ownerValues()).toEqual(["Paper-Owner"]));
+    release!();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(ownerValues()).toEqual(["Paper-Owner"]);
+  });
+
+  it("exactly 200 groups may have been cut by the server: the list is offered, not called complete", async () => {
+    const owners = Array.from({ length: 200 }, (_, index) => `Owner-${String(index).padStart(3, "0")}`);
+    const { api } = harness({ live: alphasOf(200, [["LIVE"]], { owners }) });
+    mount(api, LIVE_URL);
+    await loaded();
+    await waitFor(() => expect(ownerControl().tagName).toBe("INPUT"));
+    expect(ownerValues()).toHaveLength(200);
+    expect(screen.getByTestId("options-limit").textContent).toContain("Owner choices may be cut short by the server.");
+    // Health has fewer groups than the bound, so it is not named
+    expect(screen.getByTestId("options-limit").textContent).not.toContain("Health choices");
+  });
+
+  it("more owners than the reader's group bound is refused whole, never truncated into a list that looks complete", async () => {
+    const owners = Array.from({ length: 201 }, (_, index) => `Owner-${String(index).padStart(3, "0")}`);
+    const { api } = harness({ live: alphasOf(201, [["LIVE"]], { owners }) });
+    mount(api, LIVE_URL);
+    await loaded();
+    await waitFor(() => expect(screen.getByTestId("options-limit")).toBeTruthy());
+    expect(ownerValues()).toEqual(owners.slice(0, 50));
+  });
+
+  it("the Archived lens asks for no choices, no rows and no dataset", async () => {
+    const { api, state, legacy } = harness({ live: wide() });
+    mount(api, "/execution/fleet?tab=archived");
+    expect(await screen.findByText("Archived alphas")).toBeTruthy();
+    expect(screen.getByText("Not available")).toBeTruthy();
+    expect(state.calls).toEqual([]);
+    expect(legacy).toEqual([]);
   });
 });

@@ -99,14 +99,20 @@ export interface MultiPickProps {
   options: readonly { value: string; label: string }[];
   selected: readonly string[];
   onChange(next: readonly string[]): void;
+  /**
+   * The options are the whole population (published by the dataset). `false`: they are only what the rows loaded so far show, so the
+   * menu says so and takes a typed value; the server does the filtering either way. Absent means complete.
+   */
+  complete?: boolean;
 }
 
 /**
  * A pick-several filter as a checkbox popover (the dataset's `IN` operator: one word is `EQ`, two or more are `IN`). It only
  * reports the new set; the server does the filtering. Same Esc / click-away / Tab-out contract as the Columns menu.
  */
-export function MultiPick({ name, options, selected, onChange }: MultiPickProps) {
+export function MultiPick({ name, options, selected, onChange, complete = true }: MultiPickProps) {
   const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
   const wrap = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const menuId = useId();
@@ -137,6 +143,17 @@ export function MultiPick({ name, options, selected, onChange }: MultiPickProps)
   const first = options.find((option) => option.value === selected[0])?.label ?? selected[0];
   const summary = selected.length === 0 ? `${name}: all` : selected.length === 1 ? `${name}: ${first}` : `${name}: ${first} +${selected.length - 1}`;
   const toggle = (value: string, on: boolean) => onChange(on ? [...new Set([...selected, value])] : selected.filter((entry) => entry !== value));
+  // A value the person typed (the menu is only the loaded rows): matched to an option by value or label, else kept as typed.
+  const addTyped = () => {
+    const word = typed.trim();
+    if (word === "") return;
+    const lower = word.toLowerCase();
+    const known = options.find((option) => option.value.toLowerCase() === lower || option.label.toLowerCase() === lower);
+    setTyped("");
+    onChange([...new Set([...selected, known?.value ?? word])]);
+  };
+  // A chosen value that is not among the options (typed, or from a link) stays visible and removable.
+  const extra = selected.filter((value) => !options.some((option) => option.value === value));
 
   return (
     <span className="exec-fleet-pop" ref={wrap} onBlur={leave}>
@@ -153,13 +170,38 @@ export function MultiPick({ name, options, selected, onChange }: MultiPickProps)
       </button>
       {open ? (
         <div id={menuId} className="exec-fleet-menu" role="group" aria-label={name}>
-          {options.length === 0 ? <span className="exec-fleet-note">None seen yet</span> : null}
+          {options.length === 0 && extra.length === 0 ? <span className="exec-fleet-note">None seen yet</span> : null}
           {options.map((option) => (
             <label key={option.value} className="exec-fleet-menuitem">
               <input type="checkbox" checked={selected.includes(option.value)} onChange={(event) => toggle(option.value, event.target.checked)} />
               {option.label}
             </label>
           ))}
+          {extra.map((value) => (
+            <label key={value} className="exec-fleet-menuitem">
+              <input type="checkbox" checked onChange={() => toggle(value, false)} />
+              {value}
+            </label>
+          ))}
+          {complete ? null : (
+            <>
+              <span className="exec-fleet-note" data-testid={`${name.toLowerCase()}-limit`}>Loaded so far, not the whole fleet.</span>
+              <input
+                className="exec-fleet-input"
+                type="text"
+                aria-label={`Add a ${name.toLowerCase()} value`}
+                placeholder="Type a value, then Enter"
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addTyped();
+                  }
+                }}
+              />
+            </>
+          )}
         </div>
       ) : null}
     </span>
