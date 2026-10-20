@@ -58,6 +58,11 @@ import { DeploymentsTab, EvidenceTab, PositionsTab, ReconciliationTab, RegimeTab
 import {
   ALPHA_MORE_TABS,
   ALPHA_TABS,
+  UNVERSIONED,
+  alphaName,
+  alphaTitle,
+  alphaTitleWithVersion,
+  alphaVersion,
   chooseEnv,
   currentStageOf,
   deployedEnvs,
@@ -163,7 +168,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
     return equityInputs(equity.phase === "ready" ? equity.value : null, drift.phase === "ready" ? drift.value : null, env, current, why);
   }, [equity, drift, current, env]);
   const rows = useMemo(() => deploymentRows(item), [item]);
-  const label = item ? `${item.alphaLabel} v${item.version}` : alphaId;
+  const label = alphaTitleWithVersion(item, alphaId);
 
   /* ── url writers ─────────────────────────────────────────────────────── */
   const openTab = (key: AlphaTabKey) => {
@@ -226,8 +231,8 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
         <div>
           <Link className="exec-alp2-back" to={back.to}>← {back.label}</Link>
           <h1 className="exec-alp2-title">
-            {item ? item.alphaLabel : alphaId}
-            {item ? <span className="exec-alp2-version">v{item.version}</span> : null}
+            {alphaTitle(item, alphaId)}
+            {alphaVersion(item) !== null ? <span className="exec-alp2-version">v{alphaVersion(item)}</span> : null}
             {item ? (
               <button type="button" className="exec-alp2-scorechip" aria-haspopup="dialog" onClick={() => select("score")}>
                 <Flag kind="pending" label="Not scored · policy not set" size="sm" />
@@ -236,6 +241,10 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
           </h1>
           {item ? (
             <p className="exec-alp2-meta">
+              {alphaName(item) === null ? (
+                <span title="ALPHA_NAME_NOT_PUBLISHED">Name <Np id="FE-066" /></span>
+              ) : null}
+              {alphaVersion(item) === null ? <span title={UNVERSIONED}>Version <Np id="FE-066" /></span> : null}
               <span>Owner <b>{item.owner ?? "Not available"}</b></span>
               <span>Run <Np id="FE-029" /></span>
               <span>Evidence <Np id="FE-029" /></span>

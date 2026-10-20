@@ -16,7 +16,7 @@ import { Flag } from "../../Flag";
 import { SectionPanel } from "../../blocks";
 import { PanelState } from "../../../components/states";
 import { Dec, At, Na } from "./cells";
-import { ROW_CAP, type DeploymentRow, type PositionRow, type ReconRow } from "./model";
+import { ROW_CAP, alphaName, alphaTitleWithVersion, alphaVersion, type DeploymentRow, type PositionRow, type ReconRow } from "./model";
 import { Np } from "./np";
 
 function CapNote({ shown, total, noun }: { shown: number; total: number; noun: string }) {
@@ -74,7 +74,7 @@ export function EvidenceTab({ item, researchReason }: { item: AlphaFleetItem | n
     <SectionPanel title="Research Evidence">
       <table className="exec-alp2-kv">
         <tbody>
-          <tr><th scope="row">Alpha version</th><td>{item ? `${item.alphaLabel} v${item.version}` : <Na />}</td></tr>
+          <tr><th scope="row">Alpha version</th><td>{item ? (alphaName(item) === null && alphaVersion(item) === null ? <Np id="FE-066">Name and version</Np> : alphaTitleWithVersion(item, item.alphaId)) : <Na />}</td></tr>
           <tr><th scope="row">Bound research run</th><td><Np id="FE-029" /></td></tr>
           <tr><th scope="row">Parameters</th><td><Np id="FE-029">Match against the deployed set</Np></td></tr>
           <tr><th scope="row">Parameter bundle</th><td><Np id="FE-029" /></td></tr>
@@ -91,7 +91,7 @@ export function EvidenceTab({ item, researchReason }: { item: AlphaFleetItem | n
         <table className="exec-alp2-kv">
           <tbody>
             <tr><th scope="row">Alpha</th><td className="exec-blk-id">{item?.alphaId ?? "Not available"}</td></tr>
-            <tr><th scope="row">Version</th><td className="exec-blk-id">{item?.version ?? "Not available"}</td></tr>
+            <tr><th scope="row">Version</th><td className="exec-blk-id">{alphaVersion(item ?? null) ?? (item ? "Not published" : "Not available")}</td></tr>
           </tbody>
         </table>
       </details>

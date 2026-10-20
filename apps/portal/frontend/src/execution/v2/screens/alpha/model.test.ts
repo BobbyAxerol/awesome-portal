@@ -33,6 +33,25 @@ async function loaded() {
   return { resource: resource.value, drift: drift.value, chart: chart.value, timeline: timeline.value, item };
 }
 
+type LoadedChart = Awaited<ReturnType<typeof loaded>>["chart"];
+
+/**
+ * The reader and `equityInputs` still honour a declared gap (a hole in time is never joined, never a zero). The published
+ * financial-chart v1 schema forbids one today (`coverage.gaps` is `maxItems 0`, `preserves_gaps` false: the server never publishes a
+ * gap), so the double publishes none; a reader-level gap is built here from the real-shaped chart, and is a test of the reader,
+ * not a body any producer sends.
+ */
+function withDeclaredGap(chart: LoadedChart): LoadedChart {
+  const points = chart.series[0]!.points;
+  const from = points[8]![0];
+  const to = points[10]![0];
+  return {
+    ...chart,
+    coverage: { ...chart.coverage, gaps: [{ fromMs: from, toMs: to, reason: "SOURCE_GAP" }] },
+    series: [{ ...chart.series[0]!, points: points.filter(([t]) => t < from || t > to) }, ...chart.series.slice(1)],
+  };
+}
+
 describe("tabs", () => {
   it("every tab key is one the alias table knows, and More holds Trade Replay and the two that fold away", () => {
     const keys = [...ALPHA_TABS, ...ALPHA_MORE_TABS].map((t) => t.key);
@@ -108,7 +127,8 @@ describe("numberToDecimal", () => {
 
 describe("equity inputs: a matrix of published state and book", () => {
   it("never turns a gap into a zero, and marks simulated books hatched", async () => {
-    const { chart, drift } = await loaded();
+    const { chart: published, drift } = await loaded();
+    const chart = withDeclaredGap(published);
     const base = { payloadState: "READY", env: "live" };
     const states = cartesian(base, [
       dimension("payload", ["payloadState"], ["READY", "PARTIAL", "STALE", "EMPTY"]),
@@ -128,9 +148,19 @@ describe("equity inputs: a matrix of published state and book", () => {
     }
   });
 
-  it("puts the declared gap between two published points, once, in order", async () => {
+  it("the published chart has no gap: the server never publishes one, so none is drawn or counted", async () => {
     const { chart } = await loaded();
+    expect(chart.coverage.gaps).toEqual([]);
+    expect(chart.sampling?.preservesGaps).toBe(false);
     const [input] = equityInputs(chart, null, "live");
+    expect(input.points.some((p) => p.v === null)).toBe(false);
+    expect(input.gapCount).toBe(0);
+    expect(chart.series[0]!.id).toBe(`account:acct_binance_02:currency:USDT`);
+  });
+
+  it("puts the declared gap between two published points, once, in order", async () => {
+    const { chart: published } = await loaded();
+    const [input] = equityInputs(withDeclaredGap(published), null, "live");
     const times = input.points.map((p) => p.t);
     expect(times).toEqual([...times].sort((a, b) => a - b));
     expect(new Set(times).size).toBe(times.length);

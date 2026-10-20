@@ -63,8 +63,8 @@ describe("the page", () => {
     mount();
     expect(screen.getByRole("heading", { level: 1, name: "Trade Replay" })).toBeTruthy();
     await settled();
-    expect(screen.getByText("Fills on candles · BTC-Trend v3")).toBeTruthy();
-    expect(screen.getByRole("link", { name: "BTC-Trend v3" }).getAttribute("href")).toBe(`/deployments/alphas/${ALPHA_DOUBLE_ID}`);
+    expect(screen.getByText(`Fills on candles · ${ALPHA_DOUBLE_ID}`)).toBeTruthy();
+    expect(screen.getByRole("link", { name: ALPHA_DOUBLE_ID }).getAttribute("href")).toBe(`/deployments/alphas/${ALPHA_DOUBLE_ID}`);
   });
 
   it("opens on the first symbol with the whole retained window of orders and fills, as the source's strings", async () => {
@@ -103,7 +103,7 @@ describe("candles are qualified by the venue source, per symbol", () => {
     await waitFor(() => expect(props().symbol).toBe("ETHUSDT"));
     const note = screen.getByRole("note");
     expect(note.textContent).toContain("No candles are drawn until the market-data source is qualified. Fills and the trade log stay.");
-    await waitFor(() => expect(note.textContent).toContain("ETHUSDT: venue candles unavailable (E5_MARKET_CANDLES_NOT_PUBLISHED)"));
+    await waitFor(() => expect(note.textContent).toContain("ETHUSDT: venue candles unavailable (MARKET_CANDLES_FEATURE_DISABLED)"));
     expect(props().market).toBeNull();
     expect(props().orders.length).toBeGreaterThan(0);
   });
