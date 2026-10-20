@@ -29,6 +29,8 @@ export const EXEC_V2_SCREEN_KEYS = [
   "admin",
   "users",
   "replay",
+  // UXM-08: the fixture-only scoped slice at /execution/slice (v2/screens/slice). OFF unless the manifest names it.
+  "scoped",
 ] as const;
 export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
 
