@@ -105,12 +105,16 @@ describe("Exposure & orders", () => {
     const positions = screen.getByRole("table", { name: "Positions" });
     const first = Array.from(positions.querySelectorAll("tbody tr"))[0]!;
     expect(Array.from(first.querySelectorAll("td")).slice(0, 6).map((td) => td.textContent)).toEqual(["BTCUSDT", expect.stringContaining("Long"), "0.5", "60,000.00", "60,500.50", "250.25"]);
-    expect(first.querySelector('td[data-l="Leverage"] .exec-blk-np')!.getAttribute("title")).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
+    // Leverage and Ack latency are no column (no row fills them): each is named once under its table, the reason in the title.
+    expect(first.querySelector('td[data-l="Leverage"]')).toBeNull();
+    expect(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Leverage");
+    expect(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
     expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("2 of 2");
     const orders = screen.getByRole("table", { name: "Orders" });
     const order = Array.from(orders.querySelectorAll("tbody tr"))[0]!;
     expect(order.querySelector('td[data-l="Status"]')!.textContent).toBe("ACCEPTED");
-    expect(order.querySelector('td[data-l="Ack latency"] .exec-blk-np')!.getAttribute("title")).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
+    expect(order.querySelector('td[data-l="Ack latency"]')).toBeNull();
+    expect(screen.getByRole("region", { name: "Orders" }).querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
   });
 
   it("the Triad rows are the server's figures; Difference is the server's, positions 2 / 2 / 0", async () => {
@@ -171,7 +175,7 @@ describe("series, gap window, identity", () => {
     const crumb = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
     expect(crumb.getByRole("link", { name: "alpha_TEST_ONLY" }).getAttribute("href")).toBe("/deployments/alphas/alpha_TEST_ONLY");
     expect(crumb.getByRole("link", { name: "Crypto Core" }).getAttribute("href")).toBe("/deployments/portfolios/pf_crypto");
-    expect(document.querySelector(".exec-stage-sub .exec-blk-np")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    expect(document.querySelector(".exec-stage-sub span[title]")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
     expect(chip("runtime")).toContain("Running");
     cleanup();
     const none = published();

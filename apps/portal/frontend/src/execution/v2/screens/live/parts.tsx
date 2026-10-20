@@ -6,7 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { MetricText, NO_VALUE_COPY, NotPublished, SectionPanel } from "../../blocks";
+import { GapLine, MetricText, NO_VALUE_COPY, NotPublished, SectionPanel } from "../../blocks";
 import { EquityPanel } from "../../charts";
 import type { SeriesPoint as ChartPoint } from "../../charts/types";
 import { readAsOf } from "../../boundary";
@@ -56,7 +56,7 @@ export function CellView({ cell }: { cell: Cell }) {
         </NotPublished>
       );
     case "na":
-      return <span className="exec-blk-na">{cell.reason ? `${NO_VALUE_COPY} · ${cell.reason}` : NO_VALUE_COPY}</span>;
+      return <span className="exec-blk-na" title={cell.reason ?? undefined}>{NO_VALUE_COPY}</span>;
   }
 }
 
@@ -95,7 +95,7 @@ export function ChartSlot({ slot }: { slot: ChartSlotModel }) {
           <Flag kind="partial" label="Gap" />
           <p className="exec-liv-slot-text">Updates are missing. Chart hidden until the gap is filled.</p>
           <p className="exec-liv-slot-meta">
-            The gap window is <CellView cell={slot.window} />.
+            Gap window <CellView cell={slot.window} />
           </p>
           <p className="exec-liv-slot-links">
             <ContextLink to={OPERATIONS_PATH}>Open operation</ContextLink>
@@ -109,17 +109,17 @@ export function ChartSlot({ slot }: { slot: ChartSlotModel }) {
         if (at !== null) points.push({ t: at, v: p.value });
       }
       return (
-        <SectionPanel level={2} title="Deployment series" aside={slot.methodologyRef ?? undefined}>
-          <EquityPanel label="Deployment series" points={points} unit="money" currency={slot.unit ?? undefined} signed height={200} />
+        <SectionPanel level={2} title="Deployment series">
+          <div title={slot.methodologyRef === null ? undefined : `Methodology ${slot.methodologyRef}`}>
+            <EquityPanel label="Deployment series" points={points} unit="money" currency={slot.unit ?? undefined} signed height={200} />
+          </div>
         </SectionPanel>
       );
     }
     case "unavailable":
       return (
         <SectionPanel level={2} title="Live net PnL" aside="Since activation">
-          <p className="exec-liv-line">
-            <NotPublished id="FE-013">Live net PnL series</NotPublished>
-          </p>
+          <GapLine items={[{ label: "Live net PnL series", id: "FE-013" }]} />
         </SectionPanel>
       );
   }
@@ -201,27 +201,34 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
   if (rows.kind === "typed-positions" || rows.kind === "typed-orders") {
     // The server's typed rows (FE-072): exact text, no sum; the two columns the source relation lacks say so with the server's reason.
     const shown = rows.rows.slice(0, ROW_CAP);
+    // A column no row fills (Leverage, Ack latency) is not drawn per row: its name is one `Not available` line under the table.
+    // (The source relation carries neither, so no row can fill them.)
+    const unfilled = true;
+    const dropKey = rows.kind === "typed-positions" ? "leverage" : "ack_latency_ms";
+    const dropLabel = rows.kind === "typed-positions" ? "Leverage" : "Ack latency";
+    const keep = (column: { key: string }) => !(unfilled && shown.length > 0 && column.key === dropKey);
     return (
       <SectionPanel level={2} title={title} aside={aside}>
         {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
         {rows.kind === "typed-positions" ? (
-          <CardsTable columns={POSITION_COLUMNS(rows.reasons)} rows={shown as TypedPositionRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+          <CardsTable columns={POSITION_COLUMNS(rows.reasons).filter(keep)} rows={shown as TypedPositionRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
         ) : (
-          <CardsTable columns={ORDER_COLUMNS(rows.reasons)} rows={shown as TypedOrderRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
+          <CardsTable columns={ORDER_COLUMNS(rows.reasons).filter(keep)} rows={shown as TypedOrderRow[]} rowKey={(row) => `${row.id ?? row.symbol}`} label={title} empty="The source reported none." />
         )}
         <div className="exec-liv-more">
           <span className="exec-liv-cap">{rows.caption}</span>
         </div>
+        {unfilled && shown.length > 0 ? <GapLine items={[{ label: dropLabel, id: "FE-072", reason: rows.reasons[dropKey] ?? null }]} /> : null}
       </SectionPanel>
     );
   }
   if (rows.kind !== "table") {
+    // Withheld on purpose ("Hidden while the figures disagree") is its own claim and keeps its words; a plain gap is `Not available` and the reason goes in the title.
+    const gapReason = rows.kind === "withheld" && rows.text.startsWith("Not available · ") ? rows.text.slice("Not available · ".length) : null;
     return (
       <SectionPanel level={2} title={title} aside={aside}>
-        {rows.kind === "withheld" ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.text}</span></p> : null}
-        <p className="exec-liv-line">
-          <NotPublished id="FE-072">{what}</NotPublished>
-        </p>
+        {rows.kind === "withheld" && gapReason === null ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.text}</span></p> : null}
+        <GapLine items={[{ label: what, id: "FE-072", reason: gapReason }]} />
       </SectionPanel>
     );
   }
@@ -240,14 +247,19 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
   return (
     <SectionPanel level={2} title={title} aside={aside}>
       {rows.line ? <p className="exec-liv-line"><span className="exec-blk-na">{rows.line}</span></p> : null}
-      <CardsTable columns={cols} rows={shown} rowKey={(row) => row.key} label={title} empty="The source reported none." />
+      <div title="Columns are the source's own field names.">
+        <CardsTable columns={cols} rows={shown} rowKey={(row) => row.key} label={title} empty="The source reported none." />
+      </div>
       <div className="exec-liv-more">
         <span className="exec-liv-cap">{rows.caption}</span>
       </div>
-      <p className="exec-liv-line">
-        Columns are the source's own field names.{table.hiddenColumns > 0 ? ` ${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}{lossNote(table) === null ? "" : ` ${lossNote(table)}`}{" "}
-        <NotPublished id="FE-072">{`Typed ${what.toLowerCase()}`}</NotPublished>
-      </p>
+      {table.hiddenColumns > 0 || lossNote(table) !== null ? (
+        <p className="exec-liv-line">
+          {table.hiddenColumns > 0 ? `${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}
+          {lossNote(table) === null ? "" : ` ${lossNote(table)}`}
+        </p>
+      ) : null}
+      <GapLine items={[{ label: `Typed ${what.toLowerCase()}`, id: "FE-072" }]} />
     </SectionPanel>
   );
 }
@@ -265,7 +277,7 @@ export interface PanelSectionProps {
 export function PanelSection({ panel, page, onMore }: PanelSectionProps) {
   const title = panelTitle(panel.name);
   const noun = panelNoun(panel.name);
-  const aside = panel.state === "PARTIAL" ? <Flag kind="partial" label="Partial" size="sm" /> : <Flag kind="na" label="Not published" size="sm" />;
+  const aside = panel.state === "PARTIAL" ? <Flag kind="partial" label="Partial" size="sm" /> : undefined;
   const columns = panelColumns(page.records);
   const shown = page.records.slice(0, ROW_CAP);
   // Past the cap Load more would only add rows nobody can see: say so and point at the Blotter.
@@ -279,9 +291,9 @@ export function PanelSection({ panel, page, onMore }: PanelSectionProps) {
 
   let body;
   if (panel.state === "NOT_PUBLISHED") {
-    body = <p className="exec-liv-line"><span className="exec-blk-na">Not published · {panelReason(panel.reasonCode)}</span></p>;
+    body = <p className="exec-liv-line"><span className="exec-blk-na" title={panelReason(panel.reasonCode)}>Not available</span></p>;
   } else if (page.records.length === 0) {
-    body = <PanelState status="empty" reason={`No retained ${noun} are published for this deployment on this page. ${panelReason(panel.reasonCode)}`} />;
+    body = <PanelState status="empty" reason={`No retained ${noun} on this page. ${panelReason(panel.reasonCode)}`} />;
   } else {
     body = (
       <>
