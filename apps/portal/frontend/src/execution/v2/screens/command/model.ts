@@ -36,9 +36,12 @@ import {
   type CostImpactV1,
   type CurrentPrimitiveV1,
   type F0ApplyDenialV1,
+  type RelayDecisionV1,
   type SafeNextAction,
 } from "../../readers/commandOperation";
 import { readCommandSubmitResultV1, type CommandStatusV1 } from "../../readers/commandCurrency";
+import type { InstantV2 } from "../../readers/operationalQueue";
+import type { AttemptLookupView } from "./lookup";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { hostileCharacters, showable, visibleCount } from "../request/model";
 import { SEND_DISABLED_REASON, type Lane, type PortResponse } from "./port";
@@ -372,7 +375,11 @@ export type Receipt =
     sentence: string;
     nextAction: SafeNextAction | null;
     status: CommandStatusV1 | null;
+    /** The refusal was found by checking the request key of an unknown send, not read from a send's own answer. */
+    via?: "key_check";
   }
+  /** An unknown F0 send whose request-key check found the answer the server stored for it. A definite answer: nothing reached the Trading System. */
+  | { kind: "RECOVERED"; decision: RelayDecisionV1; firstRecordedAt: InstantV2; requestKey: string }
   /** The F0 apply 409 (`details`, the eight keys). `decision.replayed` says the stored first answer was repeated for a key the server already knew. */
   | { kind: "DENIED"; decision: F0ApplyDenialV1 }
   | { kind: "UNKNOWN"; why: UnknownWhy; httpStatus: number | null; status: CommandStatusV1 | null }
@@ -485,6 +492,7 @@ export function isSettled(receipt: Receipt | null): boolean {
     case "ACCEPTED":
     case "REPLAYED":
     case "DENIED":
+    case "RECOVERED":
     case "ACCESS_STOPPED": return true;
     case "REJECTED": return receipt.status !== null;
     case "UNKNOWN": return false;
@@ -505,8 +513,61 @@ export function receiptCommandId(receipt: Receipt | null): string | null {
     case "UNKNOWN": return receipt.status?.commandId ?? null;
     case "REJECTED": return receipt.status?.commandId ?? null;
     // An F0 denial is addressed by its operation id.
-    case "DENIED": return receipt.decision.operationId;
+    case "DENIED":
+    case "RECOVERED": return receipt.decision.operationId;
     default: return null;
+  }
+}
+
+/* ───────────────────────────── check by request key ───────────────────────────── */
+
+/**
+ * What a request-key check can leave the screen holding while the send stays unknown: NONE (this actor recorded nothing under the key) or no
+ * usable answer. FOUND, CONFLICT and a stopped access are definite and become receipts instead.
+ */
+export type KeyCheck =
+  | { kind: "NONE" }
+  | { kind: "UNANSWERED"; why: "no_response" | "unverified" | "unreadable" | "refused" };
+
+export const KEY_CHECK_UNANSWERED_COPY: Readonly<Record<Extract<KeyCheck, { kind: "UNANSWERED" }>["why"], string>> = {
+  no_response: "The check got no answer.",
+  unverified: "The check could not be verified.",
+  unreadable: "The check's answer could not be read.",
+  refused: "The server refused the check.",
+};
+
+export type KeyCheckOutcome = { kind: "receipt"; receipt: Receipt } | { kind: "check"; check: KeyCheck };
+
+/**
+ * Reads the answer of `GET /operations/f0/{id}/apply-attempts/{request_key}` for the send this screen made. The answer must echo the operation and
+ * the key that were asked about; a different one is not this send's answer and is read as unreadable. Doubt stays doubt: only FOUND and CONFLICT
+ * end the unknown, and only because the server said so for exactly this key.
+ */
+export function classifyKeyCheck(view: AttemptLookupView, ask: { operationId: string; requestKey: string }): KeyCheckOutcome {
+  const unanswered = (why: Extract<KeyCheck, { kind: "UNANSWERED" }>["why"]): KeyCheckOutcome => ({ kind: "check", check: { kind: "UNANSWERED", why } });
+  switch (view.kind) {
+    case "no_response": return unanswered("no_response");
+    case "unverified": return unanswered("unverified");
+    case "unreadable": return unanswered("unreadable");
+    case "refused": return unanswered("refused");
+    // 401, 403 and 404 stop the screen disclosing, exactly as they do for a send.
+    case "access_stopped": return { kind: "receipt", receipt: { kind: "ACCESS_STOPPED", httpStatus: view.httpStatus } };
+    case "not_found": return { kind: "receipt", receipt: { kind: "ACCESS_STOPPED", httpStatus: 404 } };
+    case "attempt": {
+      const { attempt } = view;
+      if (attempt.operationId !== ask.operationId || attempt.requestKey !== ask.requestKey) return unanswered("unreadable");
+      switch (attempt.state) {
+        case "NONE": return { kind: "check", check: { kind: "NONE" } };
+        case "CONFLICT":
+          return {
+            kind: "receipt",
+            receipt: { kind: "REJECTED", code: F0_APPLY_CONFLICT_CODE, known: true, sentence: REASON_COPY.COMMAND_IDEMPOTENCY_CONFLICT, nextAction: null, status: null, via: "key_check" },
+          };
+        case "FOUND":
+          if (attempt.relayDecision.operationId !== ask.operationId) return unanswered("unreadable");
+          return { kind: "receipt", receipt: { kind: "RECOVERED", decision: attempt.relayDecision, firstRecordedAt: attempt.firstRecordedAt, requestKey: attempt.requestKey } };
+      }
+    }
   }
 }
 

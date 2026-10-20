@@ -24,7 +24,7 @@ import { SUBMIT_LABEL } from "./ConfirmPanel";
 import { createFakeCommandPort, type FakeCommandPort, type FakePortOptions } from "./fakePort";
 import CommandStoryPage, { COMMAND_SCREEN_KEY } from "./index";
 import { CERTIFICATION_FLOWS, CERTIFICATION_PHRASE } from "./model";
-import { DISABLED_PORT, READ_DISABLED_REASON, SEND_DISABLED_REASON, type CommandPort } from "./port";
+import { DISABLED_PORT, READ_DISABLED_REASON, SEND_DISABLED_REASON, type CommandPort, type LookupInput, type PortResponse, type SubmitInput } from "./port";
 import { DISCARD_WARNING, FAKE_PORT_NOTE } from "./ReceiptPanel";
 import { StatusLookup } from "./StatusLookup";
 import {
@@ -34,11 +34,13 @@ import {
   COMMAND_ID_LANDED,
   COMMAND_ID_REVOKED,
   COMMAND_ID_UNVERIFIED,
+  F0_ATTEMPT_NONE_BODY,
   F0_OPERATION_BODY,
   STORY_NOW_MS,
+  problemBody,
   type ScenarioId,
 } from "./storyData";
-import { clearCommandIntents } from "./useCommandFlow";
+import { PLAN_EXPIRED_HOLD, clearCommandIntents } from "./useCommandFlow";
 
 /** The story reads its catalogue through the strict V2 reader (`catalogueLane.ts`); the V1 read below exists only for the `ExecutionApi` mock, whose port type is V1. */
 const CATALOGUE = catalogueOf(loadCanonical("execution-command-catalog.served"))!;
@@ -415,8 +417,10 @@ describe("UNKNOWN (it may already have been applied)", () => {
     const panel = await screen.findByLabelText("Outcome unknown");
     expect(within(panel).getByText(/may already have been applied/)).toBeTruthy();
     expect(within(panel).getByText(/No answer came back/)).toBeTruthy();
-    expect(within(panel).getByText(/No command id came back, so there is nothing to query by/)).toBeTruthy();
+    // An F0 send has no command id, but it has a key the server can be asked about; the old "nothing can be queried" sentence is gone.
+    expect(panel.textContent).not.toMatch(/nothing to query/i);
     expect(within(panel).queryByRole("button", { name: "Query the same intent" })).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Check by request key" })).toBeTruthy();
     // The fields are locked while this stands.
     expect(reasonBox().closest("fieldset")!.disabled).toBe(true);
     expect(submitBtn().getAttribute("aria-disabled")).toBe("true");
@@ -551,6 +555,268 @@ describe("UNKNOWN (it may already have been applied)", () => {
     await waitFor(() => expect(submits(fake)).toHaveLength(2));
     expect(submits(fake)[1]!.key).toBe(submits(fake)[0]!.key);
     await screen.findByLabelText("Outcome unknown");
+  });
+});
+
+/* ═════════════════════════ UNKNOWN recovery: check by request key (BE-P13, RV-03) ═════════════════════════ */
+describe("UNKNOWN recovery: Check by request key", () => {
+  const CHECK = "Check by request key";
+  const RETRY = "Retry with the same key";
+
+  /** An F0 send whose outcome is unknown, over a spied port. `now` is the story clock; `lookupAnswer` replaces what the lookup route says. */
+  async function unknownSend(scenario: ScenarioId, options: FakePortOptions = {}, extra: { now?: () => number; lookupAnswer?: PortResponse } = {}) {
+    const fake = createFakeCommandPort({ scenario, ...options });
+    const lookup = vi.fn((input: LookupInput) => (extra.lookupAnswer !== undefined ? Promise.resolve(extra.lookupAnswer) : fake.lookup(input)));
+    const submit = vi.fn((input: SubmitInput) => fake.submit(input));
+    const port: CommandPort = { kind: "fixture", plan: (input) => fake.plan(input), submit, lookup };
+    render(
+      <MemoryRouter>
+        <CommandFlow port={port} lane="F0" capital={CAPITAL_INTENT} now={extra.now ?? (() => STORY_NOW_MS)} />
+      </MemoryRouter>,
+    );
+    await readPlan();
+    fill("account/sync");
+    fireEvent.click(submitBtn());
+    const panel = await screen.findByLabelText("Outcome unknown");
+    const key = submit.mock.calls[0]![0].idempotencyKey;
+    return { fake, lookup, submit, panel, key };
+  }
+  const checkBtn = () => screen.getByRole("button", { name: CHECK });
+  const onlyKeys = (spy: { mock: { calls: unknown[][] } }, field: "idempotencyKey" | "requestKey") =>
+    spy.mock.calls.map((c) => (c[0] as Record<string, string>)[field]);
+
+  it("an unknown F0 send offers the check first; it is a real button in the tab order, and the old 'nothing can be queried' sentence is gone", async () => {
+    const { panel } = await unknownSend("f0-unverified");
+    const check = within(panel).getByRole("button", { name: CHECK });
+    expect(check.tagName).toBe("BUTTON");
+    expect(check.getAttribute("type")).toBe("button");
+    expect(check.tabIndex).toBeGreaterThanOrEqual(0);
+    expect(check.getAttribute("data-variant")).toBe("primary");
+    check.focus();
+    expect(document.activeElement).toBe(check);
+    expect(panel.textContent).not.toMatch(/nothing to query|nothing can be queried/i);
+    // The key sits in the provenance disclosure, not in the paragraph; the disclosure is a native <details>, reachable from the keyboard.
+    expect(panel.querySelector("details.exec-cf-prov summary")).not.toBeNull();
+  });
+
+  it("NONE: asks by the SAME operation id and request key, says 'No attempt recorded for this key', takes focus, and a retry goes out under that same key", async () => {
+    const { lookup, submit, panel, key } = await unknownSend("f0-unverified");
+    fireEvent.click(checkBtn());
+    const result = await screen.findByLabelText("What the key check found");
+    expect(result.getAttribute("data-check")).toBe("none");
+    expect(within(result).getByText("No attempt recorded for this key.")).toBeTruthy();
+    expect(result.getAttribute("role")).toBe("status");
+    expect(document.activeElement).toBe(result);
+    expect(lookup).toHaveBeenCalledTimes(1);
+    expect(lookup.mock.calls[0]![0]).toEqual({ id: F0_OPERATION_BODY.operation_id, requestKey: key });
+    // Still unknown: nothing was concluded from the absence. The retry is now the primary move.
+    expect(screen.getByLabelText("Outcome unknown")).toBe(panel);
+    expect(within(panel).getByRole("button", { name: RETRY }).getAttribute("data-variant")).toBe("primary");
+    expect(within(panel).getByRole("button", { name: "Check again" }).getAttribute("data-variant")).toBeNull();
+    fireEvent.click(within(panel).getByRole("button", { name: RETRY }));
+    await waitFor(() => expect(submit).toHaveBeenCalledTimes(2));
+    expect(onlyKeys(submit, "idempotencyKey")).toEqual([key, key]);
+    // A new send is a new question: the earlier result is not left standing.
+    await waitFor(() => expect(screen.queryByLabelText("What the key check found")).toBeNull());
+  });
+
+  it("the key never changes: every submit and every check, across a check, a retry and a second check, carries the one request key", async () => {
+    const { lookup, submit, key } = await unknownSend("f0-unverified");
+    fireEvent.click(checkBtn());
+    await screen.findByLabelText("What the key check found");
+    fireEvent.click(screen.getByRole("button", { name: RETRY }));
+    await waitFor(() => expect(submit).toHaveBeenCalledTimes(2));
+    await screen.findByLabelText("Outcome unknown");
+    fireEvent.click(checkBtn());
+    await waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
+    await screen.findByLabelText("What the key check found");
+    expect(new Set([...onlyKeys(submit, "idempotencyKey"), ...onlyKeys(lookup, "requestKey")])).toEqual(new Set([key]));
+    expect(lookup.mock.calls.every((c) => c[0].id === F0_OPERATION_BODY.operation_id)).toBe(true);
+  });
+
+  it("FOUND: the stored answer replaces the unknown, is a definite denial (nothing reached the Trading System), takes focus, and ends in New plan", async () => {
+    const { lookup, submit, key } = await unknownSend("f0-timeout-then-denied");
+    fireEvent.click(checkBtn());
+    const found = await screen.findByLabelText("Found by request key");
+    expect(found.getAttribute("data-receipt")).toBe("RECOVERED");
+    expect(document.activeElement).toBe(found);
+    expect(within(found).getByText(/The relay denied it before anything reached the Trading System/)).toBeTruthy();
+    const facts = found.querySelector('dl[aria-label="Stored answer"]') as HTMLElement;
+    expect(within(facts).getByText("Retry allowed").nextElementSibling!.textContent).toBe("No");
+    expect(within(facts).getByText("Sent to the Trading System").nextElementSibling!.textContent).toBe("No");
+    expect(within(facts).getByText("First recorded")).toBeTruthy();
+    expect(within(facts).getByText("Stored answer").nextElementSibling!.textContent).toMatch(/^Yes: the first answer for this key/);
+    // The unknown is over: no retry, no discard, no Submit, and the fields stay closed.
+    expect(screen.queryByLabelText("Outcome unknown")).toBeNull();
+    expect(screen.queryByRole("button", { name: RETRY })).toBeNull();
+    expect(screen.queryByRole("button", { name: SUBMIT_LABEL })).toBeNull();
+    // The ids are behind the disclosure, with the key that was asked.
+    expect(found.querySelector("details.exec-cf-prov")!.textContent).toContain(key);
+    expect(onlyKeys(lookup, "requestKey")).toEqual([key]);
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(within(found).getByRole("link", { name: "Open in Operations" })).toBeTruthy();
+    fireEvent.click(within(found).getByRole("button", { name: "New plan" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Read the plan" }));
+  });
+
+  it("CONFLICT: the key belongs to another operation; nothing was recorded; the request can be changed and the next send is a new intent with a new key", async () => {
+    const { fake, submit, key } = await unknownSend("f0-unverified");
+    fake.setScenario("f0-key-conflict");
+    fireEvent.click(checkBtn());
+    const rejected = await screen.findByLabelText("Rejected");
+    expect(rejected.getAttribute("data-receipt")).toBe("REJECTED");
+    expect(document.activeElement).toBe(rejected);
+    expect(within(rejected).getByText(/already used for a different command\. Nothing was changed/)).toBeTruthy();
+    expect(within(rejected).getByText(/Found by checking the request key/)).toBeTruthy();
+    expect(rejected.textContent).not.toMatch(/op_/);
+    expect(screen.queryByLabelText("Outcome unknown")).toBeNull();
+    fireEvent.click(within(rejected).getByRole("button", { name: "Change the request" }));
+    expect(screen.queryByLabelText("Rejected")).toBeNull();
+    expect((reasonBox() as HTMLTextAreaElement).value).toBe("Month-end top-up agreed with treasury.");
+    fireEvent.click(submitBtn());
+    await waitFor(() => expect(submit).toHaveBeenCalledTimes(2));
+    expect(submit.mock.calls[1]![0].idempotencyKey).not.toBe(key);
+  });
+
+  it("double click on Check asks once; the button says it is busy and stays focusable", async () => {
+    const hold = deferred();
+    const { lookup, panel } = await unknownSend("f0-unverified", { latency: (call) => (call.method === "lookup" ? hold.promise : Promise.resolve()) });
+    const check = within(panel).getByRole("button", { name: CHECK });
+    fireEvent.click(check);
+    fireEvent.click(check);
+    await waitFor(() => expect(lookup).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(lookup).toHaveBeenCalledTimes(1);
+    const busy = within(panel).getByRole("button", { name: "Checking…" });
+    expect(busy.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(busy);
+    await act(async () => {});
+    expect(lookup).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      hold.resolve();
+    });
+    await screen.findByLabelText("What the key check found");
+    expect(lookup).toHaveBeenCalledTimes(1);
+  });
+
+  it("a late answer after a retry is dropped, and a new check is possible afterwards", async () => {
+    const hold = deferred();
+    const { lookup, submit, panel } = await unknownSend("f0-unverified", { latency: (call) => (call.method === "lookup" ? hold.promise : Promise.resolve()) });
+    fireEvent.click(within(panel).getByRole("button", { name: CHECK }));
+    await waitFor(() => expect(lookup).toHaveBeenCalledTimes(1));
+    fireEvent.click(within(panel).getByRole("button", { name: RETRY }));
+    await waitFor(() => expect(submit).toHaveBeenCalledTimes(2));
+    await act(async () => {
+      hold.resolve();
+    });
+    expect(screen.queryByLabelText("What the key check found")).toBeNull();
+    expect(screen.getByLabelText("Outcome unknown")).toBeTruthy();
+    // The dropped answer did not leave the check stuck in flight.
+    fireEvent.click(checkBtn());
+    await waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
+    await screen.findByLabelText("What the key check found");
+  });
+
+  it("a late FOUND after Discard changes nothing on screen: the form is open and no receipt appears", async () => {
+    const hold = deferred();
+    const { lookup, panel } = await unknownSend("f0-timeout-then-denied", { latency: (call) => (call.method === "lookup" ? hold.promise : Promise.resolve()) });
+    fireEvent.click(within(panel).getByRole("button", { name: CHECK }));
+    await waitFor(() => expect(lookup).toHaveBeenCalledTimes(1));
+    fireEvent.click(within(panel).getByRole("button", { name: "Discard" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Discard anyway" }));
+    await act(async () => {
+      hold.resolve();
+    });
+    expect(screen.queryByLabelText("Found by request key")).toBeNull();
+    expect(screen.queryByLabelText("Outcome unknown")).toBeNull();
+    expect(reasonBox().closest("fieldset")!.disabled).toBe(false);
+  });
+
+  it("a late answer after unmount is dropped without an error", async () => {
+    const hold = deferred();
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { lookup, panel } = await unknownSend("f0-timeout-then-denied", { latency: (call) => (call.method === "lookup" ? hold.promise : Promise.resolve()) });
+    fireEvent.click(within(panel).getByRole("button", { name: CHECK }));
+    await waitFor(() => expect(lookup).toHaveBeenCalledTimes(1));
+    cleanup();
+    await act(async () => {
+      hold.resolve();
+    });
+    expect(errors).not.toHaveBeenCalled();
+  });
+
+  it("NONE after the plan has expired: the same key is not sent again, the reason is on the button, and New plan is the way on", async () => {
+    let clock: number = STORY_NOW_MS;
+    const { submit, panel } = await unknownSend("f0-unverified", {}, { now: () => clock });
+    clock = STORY_NOW_MS + 10 * 60_000;
+    fireEvent.click(within(panel).getByRole("button", { name: CHECK }));
+    const result = await screen.findByLabelText("What the key check found");
+    expect(within(result).getByText(PLAN_EXPIRED_HOLD)).toBeTruthy();
+    const retry = within(panel).getByRole("button", { name: RETRY });
+    expect(retry.getAttribute("aria-disabled")).toBe("true");
+    expect(retry.getAttribute("title")).toBe(PLAN_EXPIRED_HOLD);
+    fireEvent.click(retry);
+    await act(async () => {});
+    expect(submit).toHaveBeenCalledTimes(1);
+    fireEvent.click(within(panel).getByRole("button", { name: "New plan" }));
+    expect(screen.queryByLabelText("Outcome unknown")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Read the plan" }));
+  });
+
+  it("NONE with a plan that is still valid allows the retry (no hold, no extra button)", async () => {
+    const { panel } = await unknownSend("f0-unverified");
+    fireEvent.click(within(panel).getByRole("button", { name: CHECK }));
+    await screen.findByLabelText("What the key check found");
+    expect(within(panel).getByRole("button", { name: RETRY }).getAttribute("aria-disabled")).toBe("false");
+    expect(within(panel).queryByRole("button", { name: "New plan" })).toBeNull();
+  });
+
+  it("no answer to the check leaves the send unknown, says so, and can be asked again", async () => {
+    const { panel, lookup } = await unknownSend("f0-unverified", {}, { lookupAnswer: { kind: "no_response", why: "timeout" } });
+    fireEvent.click(within(panel).getByRole("button", { name: CHECK }));
+    const result = await screen.findByLabelText("What the key check found");
+    expect(result.getAttribute("data-check")).toBe("unanswered");
+    expect(within(result).getByText("Still unknown")).toBeTruthy();
+    expect(within(result).getByText("The check got no answer.")).toBeTruthy();
+    expect(document.activeElement).toBe(result);
+    expect(screen.getByLabelText("Outcome unknown")).toBeTruthy();
+    fireEvent.click(within(panel).getByRole("button", { name: "Check again" }));
+    await waitFor(() => expect(lookup).toHaveBeenCalledTimes(2));
+  });
+
+  it("an answer for another key or another operation is not this send's answer: unreadable, still unknown", async () => {
+    const wrongKey = { ...structuredClone(F0_ATTEMPT_NONE_BODY), request_key: "command_apply:someone-elses" };
+    const { panel } = await unknownSend("f0-unverified", {}, { lookupAnswer: { kind: "response", status: 200, body: wrongKey } });
+    fireEvent.click(within(panel).getByRole("button", { name: CHECK }));
+    const result = await screen.findByLabelText("What the key check found");
+    expect(within(result).getByText("The check's answer could not be read.")).toBeTruthy();
+    expect(screen.getByLabelText("Outcome unknown")).toBeTruthy();
+  });
+
+  it("a 503 on the check is not proof of anything: still unknown", async () => {
+    const { panel } = await unknownSend("f0-unverified", {}, { lookupAnswer: { kind: "response", status: 503, body: problemBody("COMMAND_STATUS_UNVERIFIED", "Could not verify.") } });
+    fireEvent.click(within(panel).getByRole("button", { name: CHECK }));
+    const result = await screen.findByLabelText("What the key check found");
+    expect(within(result).getByText("The check could not be verified.")).toBeTruthy();
+  });
+
+  it("a 403 on the check stops the screen disclosing, exactly like a 403 on the send", async () => {
+    const { panel } = await unknownSend("f0-unverified", {}, { lookupAnswer: { kind: "response", status: 403, body: problemBody("ACCESS_DENIED", "No.") } });
+    fireEvent.click(within(panel).getByRole("button", { name: CHECK }));
+    const stopped = await screen.findByLabelText("Access changed");
+    expect(stopped.getAttribute("data-receipt")).toBe("ACCESS_STOPPED");
+    expect(screen.queryByLabelText(/^Plan: /)).toBeNull();
+    expect(screen.queryByLabelText("Outcome unknown")).toBeNull();
+  });
+
+  it("a capital send has no key lookup: no Check button, and the receipt says only that no command id came back", async () => {
+    const { fake } = await planAndFill("timeout-then-landed");
+    await send(fake, 1);
+    const panel = await screen.findByLabelText("Outcome unknown");
+    expect(within(panel).queryByRole("button", { name: CHECK })).toBeNull();
+    expect(within(panel).getByText("No command id came back.")).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: RETRY }).getAttribute("data-variant")).toBe("primary");
+    expect(fake.calls.filter((c) => c.method === "lookup")).toEqual([]);
   });
 });
 

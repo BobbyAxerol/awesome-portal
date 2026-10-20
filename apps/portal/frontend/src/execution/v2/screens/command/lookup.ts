@@ -56,7 +56,8 @@ export function classifyLookup(answer: PortResponse): LookupView {
 /**
  * Recovery of an F0 apply answer by request key (BE-P13): `GET /operations/f0/{id}/apply-attempts/{request_key}` answers NONE, FOUND or
  * CONFLICT. A read: it never sends and never changes the receipt the screen holds. NONE means this actor never recorded the key; FOUND carries
- * the denial a replay returns; CONFLICT never names the other operation. No control asks for it yet, so it is not a `LookupView` member.
+ * the denial a replay returns; CONFLICT never names the other operation. The receipt's "Check by request key" asks it; it is not a `LookupView` member
+ * because it answers a different question (what was recorded for a key) and `model.ts#classifyKeyCheck` decides what each answer does to the screen.
  */
 export type AttemptLookupView = { kind: "attempt"; attempt: F0ApplyAttemptV1 } | Unread;
 

@@ -10,6 +10,10 @@
  * Double submit: `inFlight` is a ref, not state. React batches a double click's handlers before state lands, so the second click must be
  * refused synchronously. `submitting` (state) only drives the screen.
  *
+ * Check by request key (F0, while a send is unknown): a read of what the server recorded under the stored operation id and the stored key. It
+ * never mints a key. NONE leaves the send unknown (and holds a re-send once the plan has expired); FOUND and CONFLICT are definite, release the
+ * key and become the receipt, so the unknown always ends in a next step. One check at a time; a send, a discard or a reset drops a late answer.
+ *
  * Every send carries an attempt number. An answer that arrives after Discard or unmount updates the key table but never the screen.
  *
  * Nothing here runs on mount: no effect calls the port. Reading a plan, sending and looking up each need a click. A disabled port is
@@ -19,6 +23,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   EMPTY_CONFIRM,
+  classifyKeyCheck,
   classifyPlan,
   classifySubmit,
   isDismissible,
@@ -31,6 +36,7 @@ import {
   validateConfirm,
   type ConfirmFields,
   type ConfirmValidation,
+  type KeyCheck,
   type PlanLoad,
   type PlanView,
   type Receipt,
@@ -39,7 +45,7 @@ import {
   type CapitalIntentView,
 } from "./model";
 import { READ_DISABLED_REASON, sendBlockedReason, type CommandPort, type Lane } from "./port";
-import { classifyLookup, type LookupView } from "./lookup";
+import { classifyAttemptLookup, classifyLookup, type LookupView } from "./lookup";
 
 export interface UseCommandFlowOptions {
   port: CommandPort;
@@ -76,6 +82,18 @@ export interface CommandFlow {
   settled: boolean;
   /** Re-sends the stored payload of an UNKNOWN send, verbatim, under the SAME key. No-op in any other state. */
   retry(): void;
+  /**
+   * F0 only, while a send is unknown: asks the server what it recorded under the request key of THAT send (`GET .../apply-attempts/{key}`). A read.
+   * It uses the stored operation id and the stored key and nothing else: no code path mints a key to probe with.
+   */
+  checkKey(): void;
+  /** A key check can be asked right now: an unknown F0 send whose key is stored, on a port that answers. */
+  checkable: boolean;
+  checking: boolean;
+  /** The last check that left the send unknown (NONE, or no usable answer). FOUND and CONFLICT end the unknown and become the receipt. `seq` moves focus on every new result. */
+  checked: (KeyCheck & { seq: number }) | null;
+  /** After a check found nothing: why the same-key retry is held (the plan can no longer be used). Null when a retry is allowed. */
+  retryHeld: string | null;
   /** Forgets an UNKNOWN send (its key included). The caller shows the warning first. */
   discardUncertain(): void;
   /** Hides a typed refusal that created nothing and returns to the form with the fields as they were. */
@@ -101,6 +119,9 @@ export interface CommandFlow {
   /** What answered: `fixture` is the scripted fake (a receipt from it is not a receipt from any source). */
   portKind: CommandPort["kind"];
 }
+
+/** Why Retry is held after a check found nothing recorded: the plan the key belongs to can no longer be used. */
+export const PLAN_EXPIRED_HOLD = "The plan has expired, so this key can't be sent again.";
 
 function mintKey(): string {
   const id = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -129,6 +150,8 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
   const [attempts, setAttempts] = useState(0);
   const [querying, setQuerying] = useState(false);
   const [queried, setQueried] = useState<LookupView | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checked, setChecked] = useState<(KeyCheck & { seq: number }) | null>(null);
   const [focus, setFocus] = useState<{ tick: number; target: "reason" | "plan" }>({ tick: 0, target: "plan" });
   const moveFocus = useCallback((target: "reason" | "plan") => setFocus((f) => ({ tick: f.tick + 1, target })), []);
 
@@ -138,6 +161,8 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
   const inFlight = useRef(false);
   const planFlight = useRef(false);
   const queryFlight = useRef(false);
+  const checkFlight = useRef(false);
+  const checkSeq = useRef(0);
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -154,6 +179,10 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
 
   const view = plan.status === "ready" ? plan.view : null;
   const expired = view !== null && planExpired(view, now());
+  const checkedRef = useRef(checked);
+  checkedRef.current = checked;
+  const retryHeld = checked?.kind === "NONE" && expired ? PLAN_EXPIRED_HOLD : null;
+  const checkable = uncertain && lane === "F0" && requestKey !== null && blockedReason === null;
   const validation = useMemo(() => (view === null ? { needs: [], reason: { state: "empty" as const, count: 0, hostile: [] }, wordMatches: false, payload: null } : validateConfirm(fields, view)), [fields, view]);
   const gate = submitGate({
     validation, plan: view, expired, submitting, settled, uncertain, blockedReason, held: holdReason,
@@ -194,11 +223,27 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
     });
   }, [lane, capital]);
 
+  /** Access ended: the screen stops disclosing the plan, the typed reason and anything a lookup found. */
+  const stopAccess = useCallback(() => {
+    setPlan({ status: "failed", load: { kind: "failed", tone: "denied", sentence: "Your access to this command changed. Nothing is shown from the earlier plan or receipt." } });
+    setFields(EMPTY_CONFIRM);
+    setQueried(null);
+    setChecked(null);
+  }, []);
+
+  /** A send, a discard or a reset ends the question a key check was asking: its answer, if it ever comes, belongs to nobody on screen. */
+  const dropCheck = useCallback(() => {
+    checkFlight.current = false;
+    setChecking(false);
+    setChecked(null);
+  }, []);
+
   /** The one road to the port for a send, shared by a first send and a same-key retry. Never reached without an explicit click. */
   const send = useCallback(
     (identity: string, key: string, payload: SubmitPayload) => {
       inFlight.current = true;
       const mine = ++attempt.current;
+      dropCheck();
       INTENTS.set(identity, { key, payload });
       lastSent.current = { identity, key, payload };
       setRequestKey(key);
@@ -220,17 +265,12 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
         // After Discard, Reset or unmount, the answer belongs to nobody on screen.
         if (attempt.current !== mine || !mounted.current) return;
         inFlight.current = false;
-        if (outcome.kind === "ACCESS_STOPPED") {
-          // Access ended: the screen stops disclosing the plan, the typed reason and anything a lookup found.
-          setPlan({ status: "failed", load: { kind: "failed", tone: "denied", sentence: "Your access to this command changed. Nothing is shown from the earlier plan or receipt." } });
-          setFields(EMPTY_CONFIRM);
-          setQueried(null);
-        }
+        if (outcome.kind === "ACCESS_STOPPED") stopAccess();
         setReceipt(outcome);
         setSubmitting(false);
       });
     },
-    [],
+    [dropCheck, stopAccess],
   );
 
   const submit = useCallback(() => {
@@ -248,9 +288,45 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
   const retry = useCallback(() => {
     const sent = lastSent.current;
     if (inFlight.current || !uncertainRef.current || sent === null || portRef.current.kind === "disabled") return;
+    // A check that found nothing said the first send never landed. If the plan can no longer be used, sending it again is not offered.
+    const current = viewRef.current;
+    if (checkedRef.current?.kind === "NONE" && current !== null && planExpired(current, nowRef.current())) return;
     // The stored payload, verbatim, under the stored key: never what the form says now.
     send(sent.identity, sent.key, sent.payload);
   }, [send]);
+
+  const checkKey = useCallback(() => {
+    const sent = lastSent.current;
+    const operationId = sent?.payload.lane === "F0" ? sent.payload.operationId : null;
+    if (sent === null || operationId === null || checkFlight.current || inFlight.current || !uncertainRef.current || portRef.current.kind === "disabled") return;
+    checkFlight.current = true;
+    const mine = attempt.current;
+    // The operation and the key of the send that is unknown: both were stored when it went out. Nothing is minted here.
+    const ask = { operationId, requestKey: sent.key };
+    setChecking(true);
+    let pending: Promise<unknown>;
+    try {
+      pending = Promise.resolve(portRef.current.lookup({ id: ask.operationId, requestKey: ask.requestKey }));
+    } catch {
+      pending = Promise.resolve({ kind: "no_response", why: "network" });
+    }
+    void pending.catch(() => ({ kind: "no_response", why: "network" })).then((raw) => {
+      // A send, a discard, a reset or an unmount in the meantime: this answer is dropped, and the flight flag is theirs, not ours.
+      if (!mounted.current || attempt.current !== mine) return;
+      checkFlight.current = false;
+      setChecking(false);
+      const outcome = classifyKeyCheck(classifyAttemptLookup(raw as Parameters<typeof classifyAttemptLookup>[0]), ask);
+      if (outcome.kind === "check") {
+        setChecked({ ...outcome.check, seq: ++checkSeq.current });
+        return;
+      }
+      // FOUND, CONFLICT or a stopped access: the server said something definite about this key, so the key is released and the unknown ends.
+      if (INTENTS.get(sent.identity)?.key === sent.key) INTENTS.delete(sent.identity);
+      if (outcome.receipt.kind === "ACCESS_STOPPED") stopAccess();
+      setChecked(null);
+      setReceipt(outcome.receipt);
+    });
+  }, [stopAccess]);
 
   const dismissRefusal = useCallback(() => {
     // A definite refusal created nothing: hide it and keep the fields as they were.
@@ -263,11 +339,13 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
     const sent = lastSent.current;
     if (sent !== null) INTENTS.delete(sent.identity);
     lastSent.current = null;
+    attempt.current += 1;
+    dropCheck();
     setRequestKey(null);
     setAttempts(0);
     setReceipt(null);
     moveFocus("reason");
-  }, [moveFocus]);
+  }, [dropCheck, moveFocus]);
 
   const reset = useCallback(() => {
     const sent = lastSent.current;
@@ -278,6 +356,7 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
     planFlight.current = false;
     queryFlight.current = false;
     planKey.current = null;
+    dropCheck();
     setSubmitting(false);
     setQuerying(false);
     setQueried(null);
@@ -287,7 +366,7 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
     setFields(EMPTY_CONFIRM);
     setPlan({ status: "idle" });
     moveFocus("plan");
-  }, [moveFocus]);
+  }, [dropCheck, moveFocus]);
 
   // The payload of an UNKNOWN send is not editable: its key belongs to exactly that payload.
   const setReason = useCallback((reason: string) => { if (!uncertainRef.current) setFields((f) => ({ ...f, reason })); }, []);
@@ -322,7 +401,7 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
 
   return {
     plan, readPlan, fields, setReason, setConfirmWord, setImpactAck, validation, gate, expired,
-    submitting, receipt, requestKey, attempts, uncertain, settled, retry, discardUncertain, dismissRefusal, submit, reset,
+    submitting, receipt, requestKey, attempts, uncertain, settled, retry, checkKey, checkable, checking, checked, retryHeld, discardUncertain, dismissRefusal, submit, reset,
     commandId, queryIntent, querying, queried, focus, dirty, blockedReason, portKind: port.kind,
   };
 }
