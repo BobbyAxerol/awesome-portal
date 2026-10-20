@@ -37,6 +37,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/profile-access/v2/eligibility/batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Current-only self projection; reject unknown query keys, repeated/ambiguous values, subjects, roles, as_of_ms and browser profile/hash tuples. Advisory, never an execution permit. */
+        get: operations["portalScopedAccessEligibilityBatchGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/profile-access/v2/self-navigation": {
         parameters: {
             query?: never;
@@ -331,6 +348,273 @@ export interface components {
             valid_until_ms: number;
             actions: components["schemas"]["AccessEligibilityRow"][] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        AccessEligibilityBatchQuery: {
+            /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+            workspace_id: string;
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            /** @description One exact comma-separated value of 1-8 KIND:<id> tokens. <id> is encodeURIComponent(id) applied once more on top of query encoding, so a comma inside an id can never split a token; only the canonical encoding is accepted (uppercase hex, nothing needlessly escaped). Duplicates are refused. */
+            resources: string;
+            /** @description One exact CSV string,1–16 unique finite actions. No whitespace normalization, repeated query keys, JSON, wildcards or actor/as-of selectors. */
+            actions: string & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        };
+        AccessEligibilityBatchRow: {
+            action: components["schemas"]["AccessEligibilityAction"];
+            /** @enum {unknown} */
+            permission: "ALLOWED" | "UNAVAILABLE";
+            /** @enum {unknown} */
+            reason_class: "FAMILY_CHECK_REQUIRED" | "NO_CURRENT_PERMISSION" | "POLICY_PENDING" | "FIELD_POLICY_PENDING" | "ACTION_TARGET_UNSUPPORTED";
+            /** @enum {unknown} */
+            public_copy_key: "FAMILY_CHECK_REQUIRED" | "NO_CURRENT_PERMISSION" | "POLICY_PENDING" | "FIELD_POLICY_PENDING" | "ACTION_TARGET_UNSUPPORTED";
+            /** @description Opaque existing own matched grant ID: canonical accessText, at most 256 Unicode codepoints, not the new caller-selector UTF8 byte limit. Returned unchanged without normalization. */
+            grant_ref: string | null;
+            /** @enum {unknown} */
+            authority_mode: "VERSIONED_CURRENT" | "LEGACY_COMPATIBILITY" | "APP_ONLY" | "NOT_ESTABLISHED";
+            step_up_required: boolean | null;
+            /** @constant */
+            step_up_freshness: "NOT_CHECKED";
+            /** @constant */
+            challenge_availability: "NOT_CHECKED";
+            /** @constant */
+            command_readiness: "NOT_CHECKED";
+            /** @enum {unknown} */
+            family_check: "BUSINESS_READ_SCOPE" | "CURRENT_AUDIT_READ" | "GOVERNANCE_READER" | "GOVERNANCE_PLAN" | "TECHNICAL_READ_SCOPE" | "CAPITAL_PREVIEW" | "PENDING_CONTROL_PREVIEW" | "INSTANCE_REGISTRATION_PREVIEW";
+            /**
+             * @description Rule + this session: NOT_REQUIRED (rule false), PLAN_DEPENDENT (rule null: the plan decides), REQUIRED (rule true, no active session step-up) or ACTIVE (rule true, this session holds an unexpired step-up). A statement about the rule and the session, never a permission and not a refusal; every family recheck still applies.
+             * @enum {unknown}
+             */
+            step_up_state: "NOT_REQUIRED" | "PLAN_DEPENDENT" | "REQUIRED" | "ACTIVE";
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        /**
+         * @description FE-068. Up to eight resources x the same 1-16 actions in one current-only self read. Each resource carries exactly the rows of portal.self-eligibility.v1 (same evaluator, same reasons, same target rules) plus a typed step_up_state. Resources are unique (runtime-enforced) and every result carries the same actions in the same order (runtime-enforced: JSON Schema cannot compare sibling arrays). An action unsupported by one resource is a typed per-resource refusal, not a batch failure. Advisory only: no permit, no lease, no target existence, no source/field qualification; per-family checks and the real step-up recheck remain authoritative.
+         * @example {
+         *       "schema_version": "portal.self-eligibility-batch.v1",
+         *       "workspace_id": "ws_TEST_ONLY",
+         *       "environment": "paper",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
+         *       "session_step_up": {
+         *         "state": "NOT_ACTIVE",
+         *         "valid_until_ms": null,
+         *         "challenge": {
+         *           "mechanism": "PASSWORD_REAUTH",
+         *           "route": "/api/admin/profile-access/v2/step-up",
+         *           "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+         *           "precondition_met": false
+         *         }
+         *       },
+         *       "results": [
+         *         {
+         *           "resource": {
+         *             "kind": "PORTFOLIO",
+         *             "id": "portfolio_TEST_ONLY"
+         *           },
+         *           "actions": [
+         *             {
+         *               "action": "portfolio.read",
+         *               "permission": "ALLOWED",
+         *               "reason_class": "FAMILY_CHECK_REQUIRED",
+         *               "public_copy_key": "FAMILY_CHECK_REQUIRED",
+         *               "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC",
+         *               "authority_mode": "VERSIONED_CURRENT",
+         *               "step_up_required": false,
+         *               "step_up_freshness": "NOT_CHECKED",
+         *               "challenge_availability": "NOT_CHECKED",
+         *               "command_readiness": "NOT_CHECKED",
+         *               "family_check": "BUSINESS_READ_SCOPE",
+         *               "step_up_state": "NOT_REQUIRED"
+         *             },
+         *             {
+         *               "action": "capital.top_up",
+         *               "permission": "ALLOWED",
+         *               "reason_class": "FAMILY_CHECK_REQUIRED",
+         *               "public_copy_key": "FAMILY_CHECK_REQUIRED",
+         *               "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP",
+         *               "authority_mode": "VERSIONED_CURRENT",
+         *               "step_up_required": true,
+         *               "step_up_freshness": "NOT_CHECKED",
+         *               "challenge_availability": "NOT_CHECKED",
+         *               "command_readiness": "NOT_CHECKED",
+         *               "family_check": "CAPITAL_PREVIEW",
+         *               "step_up_state": "REQUIRED"
+         *             }
+         *           ]
+         *         },
+         *         {
+         *           "resource": {
+         *             "kind": "DEPLOYMENT",
+         *             "id": "deployment_TEST_ONLY"
+         *           },
+         *           "actions": [
+         *             {
+         *               "action": "portfolio.read",
+         *               "permission": "UNAVAILABLE",
+         *               "reason_class": "ACTION_TARGET_UNSUPPORTED",
+         *               "public_copy_key": "ACTION_TARGET_UNSUPPORTED",
+         *               "grant_ref": null,
+         *               "authority_mode": "NOT_ESTABLISHED",
+         *               "step_up_required": false,
+         *               "step_up_freshness": "NOT_CHECKED",
+         *               "challenge_availability": "NOT_CHECKED",
+         *               "command_readiness": "NOT_CHECKED",
+         *               "family_check": "BUSINESS_READ_SCOPE",
+         *               "step_up_state": "NOT_REQUIRED"
+         *             },
+         *             {
+         *               "action": "capital.top_up",
+         *               "permission": "ALLOWED",
+         *               "reason_class": "FAMILY_CHECK_REQUIRED",
+         *               "public_copy_key": "FAMILY_CHECK_REQUIRED",
+         *               "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP_DEPLOYMENT",
+         *               "authority_mode": "VERSIONED_CURRENT",
+         *               "step_up_required": true,
+         *               "step_up_freshness": "NOT_CHECKED",
+         *               "challenge_availability": "NOT_CHECKED",
+         *               "command_readiness": "NOT_CHECKED",
+         *               "family_check": "CAPITAL_PREVIEW",
+         *               "step_up_state": "REQUIRED"
+         *             }
+         *           ]
+         *         }
+         *       ]
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-eligibility-batch.v1",
+         *       "workspace_id": "ws_TEST_ONLY",
+         *       "environment": "paper",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
+         *       "session_step_up": {
+         *         "state": "ACTIVE",
+         *         "valid_until_ms": 1792094403000,
+         *         "challenge": {
+         *           "mechanism": "PASSWORD_REAUTH",
+         *           "route": "/api/admin/profile-access/v2/step-up",
+         *           "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+         *           "precondition_met": true
+         *         }
+         *       },
+         *       "results": [
+         *         {
+         *           "resource": {
+         *             "kind": "PORTFOLIO",
+         *             "id": "portfolio_TEST_ONLY"
+         *           },
+         *           "actions": [
+         *             {
+         *               "action": "portfolio.read",
+         *               "permission": "ALLOWED",
+         *               "reason_class": "FAMILY_CHECK_REQUIRED",
+         *               "public_copy_key": "FAMILY_CHECK_REQUIRED",
+         *               "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC",
+         *               "authority_mode": "VERSIONED_CURRENT",
+         *               "step_up_required": false,
+         *               "step_up_freshness": "NOT_CHECKED",
+         *               "challenge_availability": "NOT_CHECKED",
+         *               "command_readiness": "NOT_CHECKED",
+         *               "family_check": "BUSINESS_READ_SCOPE",
+         *               "step_up_state": "NOT_REQUIRED"
+         *             },
+         *             {
+         *               "action": "capital.top_up",
+         *               "permission": "ALLOWED",
+         *               "reason_class": "FAMILY_CHECK_REQUIRED",
+         *               "public_copy_key": "FAMILY_CHECK_REQUIRED",
+         *               "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP",
+         *               "authority_mode": "VERSIONED_CURRENT",
+         *               "step_up_required": true,
+         *               "step_up_freshness": "NOT_CHECKED",
+         *               "challenge_availability": "NOT_CHECKED",
+         *               "command_readiness": "NOT_CHECKED",
+         *               "family_check": "CAPITAL_PREVIEW",
+         *               "step_up_state": "ACTIVE"
+         *             }
+         *           ]
+         *         },
+         *         {
+         *           "resource": {
+         *             "kind": "DEPLOYMENT",
+         *             "id": "deployment_TEST_ONLY"
+         *           },
+         *           "actions": [
+         *             {
+         *               "action": "portfolio.read",
+         *               "permission": "UNAVAILABLE",
+         *               "reason_class": "ACTION_TARGET_UNSUPPORTED",
+         *               "public_copy_key": "ACTION_TARGET_UNSUPPORTED",
+         *               "grant_ref": null,
+         *               "authority_mode": "NOT_ESTABLISHED",
+         *               "step_up_required": false,
+         *               "step_up_freshness": "NOT_CHECKED",
+         *               "challenge_availability": "NOT_CHECKED",
+         *               "command_readiness": "NOT_CHECKED",
+         *               "family_check": "BUSINESS_READ_SCOPE",
+         *               "step_up_state": "NOT_REQUIRED"
+         *             },
+         *             {
+         *               "action": "capital.top_up",
+         *               "permission": "ALLOWED",
+         *               "reason_class": "FAMILY_CHECK_REQUIRED",
+         *               "public_copy_key": "FAMILY_CHECK_REQUIRED",
+         *               "grant_ref": "acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP_DEPLOYMENT",
+         *               "authority_mode": "VERSIONED_CURRENT",
+         *               "step_up_required": true,
+         *               "step_up_freshness": "NOT_CHECKED",
+         *               "challenge_availability": "NOT_CHECKED",
+         *               "command_readiness": "NOT_CHECKED",
+         *               "family_check": "CAPITAL_PREVIEW",
+         *               "step_up_state": "ACTIVE"
+         *             }
+         *           ]
+         *         }
+         *       ]
+         *     }
+         */
+        AccessEligibilityBatch: {
+            /** @constant */
+            schema_version: "portal.self-eligibility-batch.v1";
+            /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+            workspace_id: string;
+            /** @enum {unknown} */
+            environment: "paper" | "sandbox" | "live";
+            /** @constant */
+            current_only: true;
+            /** @constant */
+            advisory_only: true;
+            /** @description Portal evaluation time in UTC epoch milliseconds; not source observation time. */
+            observed_at_ms: number;
+            /** @description End-exclusive ceiling of this actor's current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline. */
+            valid_until_ms: number;
+            /** @description This session's own step-up fact, the one the access/capital mutations recheck, plus whether the build's step-up route precondition (a current own ALLOW access.grant or access.revoke) holds for the caller. Not a promise the password will be accepted; no new authentication mechanism. */
+            session_step_up: {
+                /** @enum {unknown} */
+                state: "ACTIVE" | "NOT_ACTIVE";
+                /** @description When THIS session's step-up ends, never later than valid_until_ms of this projection (the session ceiling) and greater than observed_at_ms; null when NOT_ACTIVE. */
+                valid_until_ms: number | null;
+                challenge: {
+                    /** @constant */
+                    mechanism: "PASSWORD_REAUTH";
+                    /** @constant */
+                    route: "/api/admin/profile-access/v2/step-up";
+                    /** @constant */
+                    precondition: "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW";
+                    precondition_met: boolean;
+                };
+            } & unknown;
+            results: ({
+                resource: {
+                    /** @enum {unknown} */
+                    kind: "ROOT" | "PORTFOLIO" | "ALPHA" | "ALPHA_VERSION" | "DEPLOYMENT" | "ACCOUNT" | "BINDING" | "USER";
+                    /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+                    id: string;
+                };
+                actions: components["schemas"]["AccessEligibilityBatchRow"][] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+            } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown))[];
+        } & unknown;
         AccessSelfNavigationItem: {
             /** @enum {unknown} */
             feature: "EXECUTION_PORTFOLIOS" | "EXECUTION_ACCOUNTS_BINDINGS" | "EXECUTION_OPERATIONS" | "EXECUTION_BLOTTER";
@@ -929,6 +1213,102 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccessEligibility"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            400: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            401: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            403: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            404: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            409: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            503: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+        };
+    };
+    portalScopedAccessEligibilityBatchGetV1: {
+        parameters: {
+            query: {
+                workspace_id: string;
+                environment: "paper" | "sandbox" | "live";
+                resources: string;
+                actions: string & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private,no-store; Portal application authority, not TS business activation. */
+            200: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessEligibilityBatch"];
                 };
             };
             /** @description Typed public refusal; current authority is required even for replay. */
