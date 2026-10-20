@@ -488,6 +488,18 @@ TRACKED = (
     "generated/execution-financial-chart.d.ts",
     "fixtures/execution-financial-chart.synthetic.valid.json",
     "fixtures/execution-query-analytics.deployment.valid.json",
+    # BE-P3, S3-U2 serving reads (alpha resource, subject records, observed timeline, venue candles)
+    "tooling/generate-execution-serving-reads.mjs",
+    "schemas/execution-alpha-resource.v1.schema.json",
+    "schemas/execution-subject-records.v1.schema.json",
+    "schemas/execution-observed-timeline.v1.schema.json",
+    "schemas/execution-market-candles.v1.schema.json",
+    "openapi/execution-serving-reads.openapi.json",
+    "generated/execution-serving-reads.d.ts",
+    "fixtures/execution-alpha-resource.v1.synthetic.valid.json",
+    "fixtures/execution-subject-records.v1.synthetic.valid.json",
+    "fixtures/execution-observed-timeline.v1.synthetic.valid.json",
+    "fixtures/execution-market-candles.v1.synthetic.valid.json",
     # BE-P3, S3-U4 / FE-051 widened
     "fixtures/execution-paper-workbench.positions-by-side.valid.json",
     "fixtures/execution-paper-workbench.positions-by-side.partial.valid.json",

@@ -51,6 +51,8 @@ node tooling/generate-execution-stage-facts.mjs --check
 generate_and_compare openapi/execution-stage-drift.openapi.json generated/execution-stage-drift.d.ts
 node tooling/generate-execution-financial-chart.mjs --check
 generate_and_compare openapi/execution-financial-chart.openapi.json generated/execution-financial-chart.d.ts
+node tooling/generate-execution-serving-reads.mjs --check
+generate_and_compare openapi/execution-serving-reads.openapi.json generated/execution-serving-reads.d.ts
 generate_and_compare openapi/execution-resource-scoped.openapi.json generated/execution-resource-scoped.d.ts
 generate_and_compare openapi/execution-scoped-records.openapi.json generated/execution-scoped-records.d.ts
 generate_and_compare openapi/execution-history.openapi.json generated/execution-history.d.ts
