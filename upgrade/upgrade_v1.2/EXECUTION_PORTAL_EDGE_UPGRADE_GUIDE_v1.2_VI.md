@@ -998,6 +998,14 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-07 Thực hiện command relay có durable receipt
 
+**20Oct06:35UTC original07 follow-through:** PM has now frozen its exact two-POST
+wire. Edge implements/tests the bounded Rust HTTP CommandPort immediately;
+missing listener commissioning blocks activation, not client source work.
+[Current plan/scope](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original07-resumed--bounded-pm-http-commandport--20oct0635utc)
+and [single owner return](../evidence/execution-edge-v1_2/EPG10-07/COMMAND_RELAY_AND_OWNER_RETURN.md).
+Actual native authority/target/retention and private service-only recovery remain
+uncommissioned; no flag, route or financial effect is enabled by this work.
+
 **Mục tiêu:** hoàn thiện relay mới tại source hiện đang từ chối activation, đưa approved command tới TS đúng authority. **Dependencies:** 00/02, TS command handlers/identity/capital scopes đã được PM certify, 04 cho receipt projection; explicit mutation approval.
 
 **Deliverables:** reviewed relay implementation, operation catalogue, actor/transport contract, status lookup, durable ambiguity handling và feature activation matrix.

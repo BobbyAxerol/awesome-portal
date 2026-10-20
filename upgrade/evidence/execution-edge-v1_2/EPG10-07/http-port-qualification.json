@@ -1,0 +1,93 @@
+{
+  "schema": "epg10.pm-command-http-port-qualification.v1",
+  "observed_utc": "2026-10-20T06:58:55Z",
+  "status": "IMPLEMENTED_AND_ISOLATED_QUALIFIED_SOURCE_ONLY",
+  "phase": "Original EPG10-07 round2; no new phase",
+  "branch": "feat/execution-edge-upgrade-v1_2",
+  "worktree": "/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2",
+  "source_base": "e90f79d5907f4633b48a333b8ffa8d5216725f96",
+  "provenance": "TEST_ONLY_AUTHORITY_AND_OUTCOME; REAL_EPHEMERAL_MTLS; NOT_NATIVE_ECONOMIC_AUTHORITY",
+  "source_pins": {
+    "pm_command_port.rs": "0c03ac474c4216920f656d90a9b0b6078e905f2a4efd16a1ea9829adb37cf0c8",
+    "pm_command_port/tests.rs": "c62af429609d906d30b56e1ee55e38cbe74166da2c9d0e7059ba0aa97692049f",
+    "Cargo.lock": "fd9ed5a2a8fb8b35a55fce9a970c31c51fef354e4fcea80ffa681a65d4bcc5fd",
+    "pm_revision": "73473c9122dab888d5de23bff4e1f93391028df4",
+    "pm_transport_descriptor": "83d251e847169571bdfd13839d9a2bcace7db3dda1e5be5b340650a56a6437ba",
+    "pm_transport_source": "3885c72d3f73d22bf61b2563ce12cdedaa7c6bd3c77c92708b9e655cabdd72c2"
+  },
+  "implemented": [
+    "Real implementation of existing CommandPort in edge-service, not another codec",
+    "Exactly POST /internal/elp210/pm-command/submit and POST /internal/elp210/pm-command/status",
+    "Serialize closed four-field wrapper once, obtain fresh current-requester assertion for exact path/body digest, deliver same bytes",
+    "TLS1.3, configured CA/hostname/client identity and server leaf verified during handshake BEFORE HTTP credentials",
+    "Six allowlisted headers only; no arbitrary URL/header, proxy, redirect, compression or application retry; HTTP1/close/no idle pool excludes H2 retry paths",
+    "Whole request header <=8192B, wrapper/response <=32768B, explicit deadline <=10s and fail-fast concurrency1..16",
+    "Owning original reference/source binding required; decoded full correlation retained through explicit custody ACK before returning receipt",
+    "Lost response/503/timeout/invalid correlation/custody failure stays UNKNOWN; lookup only calls status for original intent"
+  ],
+  "verification": {
+    "toolchain_image": "rust@sha256:9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e3737d0b100e7907a679acb36",
+    "rust_version": "1.85.1",
+    "focused_command": "cargo test --locked --offline -p edge-service --bin edge-service pm_command_port::tests -- --test-threads=2",
+    "focused_pass": 18,
+    "affected_command": "cargo test --locked --offline -p edge-service -p command-relay --all-targets",
+    "affected_pass": 135,
+    "affected_breakdown": {"command_relay": 75, "edge_service": 60, "new_in_edge_service": 18},
+    "failed": 0,
+    "ignored": 0,
+    "counting": "18 focused cases are included in135. Repeated regression runs are not added together.",
+    "clippy": "PASS; cargo clippy --locked --offline -p edge-service -p command-relay --all-targets -- -D warnings",
+    "fmt": "PASS; cargo fmt --all -- --check",
+    "normal_workspace_hook": "PENDING_ENFORCED_COMMIT_GATE",
+    "independent_review": "Read-only review of source/tests; no substantive finding; no additional test count",
+    "final_log_sha256": "386e20ce78410153a16433eae66466d10213d6cb03e56534bd6f65779e953366",
+    "private_log_directory": "/home/bobby/secure/portal-edge-command-http-20261020-dzxuVxFo",
+    "attempts": [
+      "Preparation first used wrong host UID1000; permission failure, zero test cases; corrected to verified1001",
+      "Dependency warming read manifest before new sha2 dependency, unresolved import, zero test cases; final locked graph corrected",
+      "First full regression135PASS; strict Clippy found4 owned doc/borrow issues; corrected without lint waivers",
+      "Final bytes135PASS/0FAIL/0ignored plus strict Clippy/fmt PASS"
+    ],
+    "resource_scope": {"cpu_cap": 2, "memory_mib": 4096, "compiler_jobs": 1, "network": "none; ephemeral loopback TLS only", "production_capacity_claim": false}
+  },
+  "runtime": {
+    "deployed": false,
+    "new_listener_or_route": false,
+    "relay_flag_changed": false,
+    "actual_source_requests": 0,
+    "production_mutations": 0,
+    "schema_or_role_changes": 0,
+    "financial_effects": 0,
+    "peer_worktrees_edited": false,
+    "canonical_source": "/home/bobby/.worktrees/portal-execution-manager-v2 feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4",
+    "active_edge_image": "sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e",
+    "active_core_image": "sha256:7b2c7f34f134323201f447084440973b9aefd22318fdb09ff1e1bc35c4c4395d",
+    "core009": "NOT_COMPOSED; priority handoff delivered unchanged, no new owner return observed06:54UTC"
+  },
+  "cleanup": {
+    "status": "RUST_CELL_CLEANED; NORMAL_HOOK_ARTIFACT_CHECK_PENDING",
+    "temporary_directory": "/tmp/epg10-07-http-port-duaFX5Zb",
+    "temporary_directory_absent": true,
+    "logical_bytes_removed": 2000231452,
+    "own_toolchain_image_removed": "sha256:9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e3737d0b100e7907a679acb36",
+    "no_container_reference_or_active_build_publish_before_image_removal": true,
+    "available_before_bytes": 253137575936,
+    "available_after_directory_bytes": 255203315712,
+    "available_after_image_bytes": 256318959616,
+    "disk_provenance": "Shared-host observations; no exclusive reclaimed-byte estimate",
+    "protected_portal_tuples_unchanged": 19,
+    "images_before_after": [97, 96],
+    "retained": "All other operational/peer images, named rollback and existing immutable closure; no shared cache/volume/network prune",
+    "sgp_test_resources_created": 0,
+    "shared_prune": false
+  },
+  "remaining": {
+    "owned_binding": "Compose actual owning original/assertion/durable-outcome custody adapters only against reviewed commissioned PM target and authority; not implemented by the TEST_ONLY context",
+    "pm_runtime": "Qualified native target/operation/profile/current authority/trust/retention arrays remain uncommissioned",
+    "service_recovery": "Published status route requires fresh human JWT. Genuine service-only recovery after human logout is NOT supplied or claimed.",
+    "full07": "NOT_MET",
+    "full08": "NOT_MET",
+    "connected09": "NOT_STARTED",
+    "next": "Core009 prepared config/policy/independent STREAM/session owner return -> fresh scoped08 connected binding -> qualified read09. Command07 commissions independently; no fake grants or repeated general approval."
+  }
+}

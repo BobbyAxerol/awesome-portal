@@ -6,7 +6,41 @@ Status: **IN_PROGRESS / OWNED_ISOLATED_PACKAGE_QUALIFIED / SOURCE_DARK**;
 and [EDGE07 guide](../../../upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-07-thực-hiện-command-relay-có-durable-receipt)
 remain authoritative. This is a backend implementation, not a UI or activation.
 
-## Current original-round2 follow-through —17/10/2026,09:48 Asia/Saigon
+## Current original-round2 follow-through —20/10/2026,06:35UTC
+
+The PM wire is now published in source: `pma11-14-edge-command-transport.json`
+at PM73473c91, descriptor SHA256
+83d251e847169571bdfd13839d9a2bcace7db3dda1e5be5b340650a56a6437ba;
+`services/portfolio_management/edge_command_transport.py` SHA256
+3885c72d3f73d22bf61b2563ce12cdedaa7c6bd3c77c92708b9e655cabdd72c2.
+It freezes exactly `POST /internal/elp210/pm-command/submit` and
+`POST /internal/elp210/pm-command/status`, a closed four-field JSON wrapper,
+TLS1.3/mTLS and exact delivered-byte human assertions. Therefore an unmounted
+listener is NOT a reason to defer the Edge HTTP client. Edge has implemented
+that bounded CommandPort under the original07 approval; see
+[execution journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original07-resumed--bounded-pm-http-commandport--20oct0635utc).
+This is source-only, not an enabled route or native target qualification.
+
+[HTTP client qualification](http-port-qualification.json):135affected Rust cases
+PASS/0FAIL/0ignored, including18new client cases; strict Clippy/workspace fmt PASS.
+The18focused cases overlap that135, not an extra count. Real ephemeral mTLS
+proves TLS/byte-binding/client mechanics; authority/outcomes/custody fixtures are
+TEST_ONLY. Lost ACK,503, invalid correlation or lost custody ACK remains UNKNOWN;
+status uses the same original intent and a fresh path-bound assertion, not submit.
+No runtime, DB, role, flag or peer checkout change. Normal hook/publication and
+exact artifact cleanup are recorded in the linked execution journal.
+
+Owning composition must retain the original source binding/reference, obtain a
+fresh byte-bound assertion for the actual current requester and durably retain
+the entire decoded outcome correlation. No default signer, inferred target or
+response-derived normalized digest is acceptable. Both published PM routes
+require human JWT: private service-only status recovery after human logout is a
+separate genuine producer dependency, not implemented by reusing that human.
+Qualified native/runtime cells remain empty. Activation and connected07 proof
+still require actual PM authority/target/retention publication; client mechanics
+can and must be tested independently now.
+
+## Historical codec qualification —17/10/2026,09:48 Asia/Saigon
 
 PM HTTP byte binding is now1009PASS, not the historical1007PASS/2FAIL attempt.
 PM0faf6ef0/461990f2/3fd02c18 supply durable original intent, full owning outcome
@@ -25,14 +59,13 @@ strict Clippy/fmt PASS;2actual PM HTTP-vector checks separately. Includes all
 operations. Private416,098,563B source/cache target removed; own lease absent,
 all23protected runtime tuples unchanged; no Docker artifact or shared prune.
 
-**Next gap, not a new phase:**08-READ-TRUST/current provider commissioning is
-the first read lane; command07 separately needs PM/TS to publish the mounted
-authenticated transport for `EdgeCommandHandler.submit/status`, actual byte
-delivery envelope/current human-workload-field providers and original resolved
-binding. PM's source packet explicitly has no new HTTP wire/routes or installed
-network transport. Never invent that wire by calling the reduced candidate API.
-After that return, Edge implements the actual CommandPort against this codec and
-runs07/08-COMMAND-COMMIT/09 loss/revoke/status/recovery cases on the exact target.
+**Historical next-gap statement, superseded by20Oct above:**08-READ-TRUST/current
+provider commissioning remains the first read lane. PM has since supplied the
+two-route HTTP wire; Edge implements/tests that client now, without waiting for
+listener commissioning. Actual command07 still needs authenticated runtime
+composition/current human-workload-field providers and original resolved binding.
+Never substitute the reduced candidate API. Once that actual target is returned,
+Edge binds it and runs07/08-COMMAND-COMMIT/09 loss/revoke/status/recovery cases.
 Retained original intent/proof must not be reconstructed from current profile;
 UNKNOWN never permits automatic resend. Actual operation/profile qualification
 and retention still required, but whole PM/TS upgrade is not a prerequisite.
@@ -86,6 +119,11 @@ Code entrypoints (all in this Portal repository):
 - [Bounded async relay and durable store](../../../../services/portal-execution-edge-rs/crates/projection-store-pg/src/command.rs),
   [additive Portal migration0021](../../../../services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0021_command_relay.sql).
 - [Real-PG TEST_ONLY fault/restart tests](../../../../services/portal-execution-edge-rs/crates/projection-store-pg/tests/epg10_07_command.rs).
+- [Bounded fixed-route HTTP CommandPort](../../../../services/portal-execution-edge-rs/crates/edge-service/src/pm_command_port.rs)
+  and [real ephemeral TLS client tests](../../../../services/portal-execution-edge-rs/crates/edge-service/src/pm_command_port/tests.rs).
+  Mandatory trusted context retains original source binding, supplies current
+  requester's exact-byte assertion and ACKs full outcome custody before Receipt.
+  There is no default production implementation of those owning callbacks.
 
 There is **no newly mounted command HTTP route** in this slice. Constructing
 internal facts is not authentication, and setting a flag does not install the

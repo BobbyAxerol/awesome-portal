@@ -10075,7 +10075,14 @@ not reclassified as somebody else's technical debt.07 was not started at that
 **Owned package:** QUALIFIED_SOURCE_DARK — **Full phase exit:** NOT_MET —
 **Runtime activation:** NOT_AUTHORIZED / NOT_PERFORMED.
 
-**Latest original-round2 slice (2026-10-17):** PM source formats consumed;
+**Latest original-round2 slice (2026-10-20):** real bounded PM HTTP CommandPort
+implemented and135affected Rust tests PASS (18new), strict Clippy/fmt PASS;
+source-only, actual target/current authority/custody commissioning pending.
+See [current execution](#original07-resumed--bounded-pm-http-commandport--20oct0635utc)
+and [qualification](evidence/execution-edge-v1_2/EPG10-07/http-port-qualification.json).
+No command route/flag/runtime activation. Full phase stillNOT_MET.
+
+**Historical format slice (2026-10-17):** PM source formats consumed;
 pure Rust HTTP byte-binding/full owning-outcome adapter75PASS/strict Clippy/fmt,
 cleaned. This is format qualification, not a mounted CommandPort or actual
 authority. See [§23.20.2](#23202-original-round2--pm-source-codec-follow-through-2026-10-17)
@@ -24749,6 +24756,131 @@ Current code source is published; Claude/Core009 ACK and installed policy/config
 session selection remain the exact external producer input. Final verification
 journal publication uses the same normal hook (no bypass, no evidence summing).
 Full08 remainsNOT_MET and connected09NOT_STARTED; no source was reopened to wait.
+
+### Original07 resumed — bounded PM HTTP CommandPort —20Oct06:35UTC
+
+**Status before code:** IN_PROGRESS / ORIGINAL_APPROVAL_CONTINUES; source-only
+implementation, no runtime activation. Guide: [EPG10-07](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-07-thực-hiện-command-relay-có-durable-receipt),
+[original phase](#epg10-07-plan), [single owner return](evidence/execution-edge-v1_2/EPG10-07/COMMAND_RELAY_AND_OWNER_RETURN.md).
+Fresh source review found a runnable Edge-owned gap: Rust has the byte-binding/
+full-outcome codec and durable relay, but its only production CommandPort is
+UnavailableCommandPort. PM has since frozen the exact two-POST HTTP transport;
+the older return saying there is no HTTP wire is superseded, not an external
+reason to leave the client unwritten. PM73473c9122dab888d5de23bff4e1f93391028df4,
+descriptor SHA25683d251e847169571bdfd13839d9a2bcace7db3dda1e5be5b340650a56a6437ba,
+transport source3885c72d3f73d22bf61b2563ce12cdedaa7c6bd3c77c92708b9e655cabdd72c2.
+No PM source changes are authorized or included.
+
+**Goal/scope:** implement the real CommandPort at the existing Rust edge-service
+composition boundary, reuse reqwest/rustls and the pure PM codec. Fixed submit/
+status paths only; serialize the closed four-field wrapper once and bind the
+fresh human assertion to those exact bytes/path. TLS1.3, configured CA/client
+identity and actual server leaf pin before delivering credentials; no arbitrary
+URL/header/SQL/CLI, proxy, redirect, mutation retry, user-agent or content encoding.
+Bound whole wrapper/response to32768B, whole header to8192B, concurrency1–16 and
+deadline<=10s. Unavailable trust/context, timeout, lost ACK,503 or invalid outcome
+means UNKNOWN, never not-applied or a second submit. Lookup calls status only.
+
+**Authority/custody invariant:** trusted owning composition must supply the
+retained original reference/source binding and a fresh byte-bound assertion for
+the actual current requester; never derive source digest/target from today's
+profile, response, browser or the immutable actor. Preserve the full decoded
+PmOutcome correlation through an explicit owning custody interface before
+returning its receipt. No default signer, invented grant, schema install, service
+listener or relay flag is added. PM's published wire requires a human JWT on
+both routes: it does NOT implement private service-only recovery after logout.
+That distinct provider remains genuinely uncommissioned, not disguised as a
+human token or inferred from READ. Existing durable dispatch CAS remains owner
+of the single-send fence.
+
+**Tests/exit for this slice:** exact body/digest/routes/header allowlist;
+TLS hostname/CA/client identity/leaf and negative substitutions; limits,
+one-shot/lost-response/status-only behavior; original correlation mismatch and
+full receipt validation; provider refusal means zero requests. TEST_ONLY fixtures
+prove client mechanics, not actual TS economic commits or production capacity.
+Run scoped Rust tests, fmt/strict Clippy and the unchanged normal workspace hook;
+record exact terminal counts. Rollback: source revert only, because runtime and
+DB are not changed. Before test jobs inspect headroom/measurement rules; cap CPU/
+RAM and clean only owned test resources, never peer state or shared BuildKit.
+
+**Cross-owner refresh:** Core008 remains image7b2c7f34f134323201f447084440973b9aefd22318fdb09ff1e1bc35c4c4395d,
+restart0/config497fc5a847743faa41057ed2b0435dacbcde5e87277b5841790dd6880951d05c;
+actual Research native-config reference/hash are still absent. Priority Core009
+handoff remains delivered/awaiting ACK, not installed. TS next0cd356dab20dc385d9effbda408a0ea53280aa4b
+still has SOURCE_DARK manifest/publisher fence gap; PM matched measurement's17
+inputs remain unapproved. Therefore08/03/01/06 connected acceptance is not
+claimed; this independent07 implementation proceeds now, not in a new phase.
+
+**06:52UTC coherent implementation slice:** real PmHttpCommandPort now implements
+the existing CommandPort at edge-service, with mandatory original-context/
+assertion/full-outcome custody interfaces and no runtime factory call. Reuses
+reqwest/rustls, existing PM byte hash/full decoder and existing sha2 version;
+Cargo.lock changes only the edge-service dependency list. README's old blanket
+"no command method" statement is corrected while preserving active V1 GET-only
+behavior. Detailed guide/single return point to this same scope, not a new phase.
+
+Actual focused command: `cargo test --locked --offline -p edge-service --bin
+edge-service pm_command_port::tests -- --test-threads=2`:18PASS/0FAIL/0ignored,
+42unselected existing cases,0.09s TEST_ONLY correctness, not capacity. Tests use
+real ephemeral TLS sockets: six allowed headers, exact serialized bytes/digest,
+full owning outcome custody; actual CA/hostname/client/leaf and TLS1.2 negatives;
+503/redirect/missing-body ACK stays UNKNOWN with one request; same-intent status
+uses a fresh path digest and never submit; refusal/wrong original context sends
+zero requests; cancellation deadline/concurrency; inclusive8192B request headers
+and whole-wrapper/response bounds; chunked oversize/MIME/encoding rejection.
+Provider/store fixtures are explicitly TEST_ONLY, not commissioned human/native
+economic authority. Existing75codec/authority cases and42Edge cases are being
+rerun alongside the18new cases; do not sum overlapping focused/regression runs.
+
+Pinned Rust1.85.1 image is the repository's existing CI base digest9f841bbe…;
+private preparation at `/tmp/epg10-07-http-port-duaFX5Zb`, no shared cache. Prep
+uses1CPU/1536MiB, offline tests2CPU/4096MiB/one compiler job, no product network,
+DB, container service or measurement lock. First prep used wrong host UID1000
+and failed permissions; verified UID1001 fixed it. Initial dependency warming
+read Cargo metadata before sha2 was added and ended101/unresolved import with
+zero test cases, not a hidden failing test or a waiver. Final focused run above
+uses the correct locked dependency graph. Workspace fmt check PASS. Strict
+Clippy/affected regression and normal hook remain pending at this checkpoint.
+
+**06:58UTC final Rust gate:** affected `cargo test --locked --offline -p
+edge-service -p command-relay --all-targets`135PASS/0FAIL/0ignored =75command
+relay +60Edge, including18new. This overlaps the focused18, not153unique cases.
+Strict Clippy and workspace fmt both exit0 on the final source bytes. Initial
+Clippy found4doc/needless-value issues; all fixed without waivers, then the
+entire135case scope rerun. Independent source/test review found no substantive
+remaining issue. [Bounded qualification](evidence/execution-edge-v1_2/EPG10-07/http-port-qualification.json)
+contains exact source/PM/log pins and honest remaining commissioning boundaries.
+Full original07 NOT_MET: the context callbacks are mandatory owning seams, not
+a commissioned signer/store; PM human status is not private service recovery.
+Core/Claude fresh public-source check06:54: installed008 pin7818d563 unchanged;
+FE advanced to bdea63935ab795694f7f18f2ba0eb4f597014695, but priority packet
+ccdfb4d7… remains unchanged with no new009owner-return. No activation inferred.
+
+**07:01UTC pre-publication cleanup/reconciliation:** final bounded logs copied
+to0700private directory `/home/bobby/secure/portal-edge-command-http-20261020-dzxuVxFo`
+(files0600), final log SHA256386e20ce78410153a16433eae66466d10213d6cb03e56534bd6f65779e953366.
+All owned Rust jobs/containers terminal; no container references the new toolchain
+image, no active build/publish process. Removed exactly
+`/tmp/epg10-07-http-port-duaFX5Zb` (2000231452logical bytes) and newly pulled
+Rust image9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e3737d0b100e7907a679acb36.
+Directory absent; no volumes/networks/shared BuildKit created or pruned.
+Available disk253137575936→255203315712B after private directory removal,
+then256318959616B after image removal; shared-host values, not exclusive byte
+attribution. Image census97→96; all19protected Portal ID/image/config/service/
+restart tuples unchanged. Current running40 versus41included our test container,
+not a production stop. SGP only read-only public metadata checks this slice;
+no remote test resources to remove. Retain all96other peer/operational images,
+existing named rollback/closure and7active documented feature worktrees. Canonical
+checkout54c6f5f3/current feature e90f79d5 remain source, not deployment identity;
+active HK Edge d6aa7a51 and SGP Core7b2c7f34 unchanged. Stable releases remain
+HK `/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`
+and SGP `/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`.
+
+Normal enforced hook/commit gate follows on the exact scoped source, with final
+hook artifacts inspected/cleaned separately. Feature-only non-force publication
+is batched after local gates; no PR/merge/main/dev/workflow dispatch, expected
+additional hosted CI minutes0. The3peer untracked paths retain original hashes
+and must not enter staging. Full07/08 remainNOT_MET; connected09NOT_STARTED.
 
 
 
