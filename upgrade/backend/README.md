@@ -7,6 +7,14 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original01/06 shared governed composition,20Oct — ISOLATED_QUALIFIED:**
+  [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--shared-governed-pgcachefanout-composition--20oct1305utc)
+  closes independently runnable PG/cache/fanout test-target instrumentation;
+  existing governor APIs/runner only. Runner119PASS (12new), selectedRust316PASS
+  (3new), fmt/strictClippy/449immutable inputs PASS through documented staged
+  actual-PG qualification; failed predecessors retained. Exact cleanup and
+  mandatory commit-hook receipts in journal. No production bounds/capacity claim.
+
 - **Original04 bounded report HTTPS preparation,20Oct — ISOLATED_QUALIFIED:**
   [same-phase scope/journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original04--bounded-selected-report-https-exchange--20oct1215utc)
   closes the independent delivery-client preparation without widening existing

@@ -26208,6 +26208,369 @@ operational return existed at12:30. Continue the matching connected cases on
 each genuine producer return, without waiting for unrelated sources or asking
 again for the approved phases.
 
+### Original01/06 — shared governed PG/cache/fanout composition —20Oct13:05UTC
+
+**Status: ISOLATED_QUALIFIED for the independent shared-resource test target;
+full01/06 remains NOT_MET. Approved original01/06, not a new phase.** Read-only
+producer intake at12:57–13:01UTC found Core009 still PREPARED_SOURCE_ONLY,
+TS publication SOURCE_DARK and PM command commissioning absent. PM has already
+consumed Edge126e045f into its own TEST_ONLY authenticated report HTTP exercise;
+the later committed returns are received below, not commissioned endpoints or
+Edge runtime acceptance.
+Do not duplicate it or wait for it to finish independent resource preparation.
+
+**Goal/scope:** close the independently runnable composition/observation gap
+recorded in §23.15: exercise the existing governed PostgreSQL store, scoped
+cache and realtime hub with the **same Arc<ResourceEnvelope>**, then include
+one bounded identity-free observation in the existing isolated runner receipt.
+Reuse existing APIs, PG fixture/suites and PG/RSS/WAL sampler; no new service,
+framework, production metrics API or production configuration. Root owns the
+runner/parser/journal; delegated Rust lane owns only the PG test composition;
+independent review/qualification lanes do not edit peer sources.
+
+**Guides/invariants:** [guide06](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-06-áp-resource-budgets-và-tối-ưu-hot-path),
+[governed resource boundary](evidence/execution-edge-v1_2/EPG10-06/RESOURCE_ENVELOPE_AND_HOT_PATH.md),
+root34b and project resource hygiene. Keep existing TEST_ONLY isolated bounds,
+foreground reserve, exact projection digest and authorization behavior. Assert
+registration sharing, admission/backpressure and terminal lease release across
+components; do not synthesize real filesystem/trust samples. Logical envelope
+accounting is not RSS, physical pool wait or production capacity. Preserve
+unknown/unavailable metrics explicitly rather than emitting invented zeros.
+
+**Test/exit gates:** finite actual disposable-PostgreSQL composition test(s),
+affected resource/cache/fanout regressions, strict fmt/Clippy, exact test-count
+gates and runner safety regressions rejecting absent/duplicate/unbounded/
+unexpected/nonfinite/inconsistent observations. Ordinary commit hook remains
+mandatory. Source/public inputs pinned before/after; capped correctness only,
+no exclusive measurement lease or absolute performance claim. Existing full06
+isolated profile is the reusable qualification target, not a production target.
+Record actual commands/counts/failures and bounded proof here after execution.
+
+**Rollback/cleanup:** source-only test/tooling additions; no operational route,
+role, database, listener, deployment or policy changes. Stop/remove only own
+terminal disposable cells; exact paths and image retention set, before/after
+disk and operational restart tuples must be recorded on both hosts. Retain
+only bounded audit receipts, no copied DB/credential/cache/build state.
+
+**Decision boundary:** independent composition can close when those gates pass;
+full01/06 remains NOT_MET until the genuine matched TS–DL–Research target,
+numeric owner bounds and eligible coexistence measurement exist. No phase08/09
+connected acceptance, publisher fence or command authority is inferred. Recheck
+producer returns at coherent boundaries and immediately run matching approved
+binding when a genuine commissioned input becomes available.
+
+**Initial runner slice actually tested:** reuse `parse_manager_cost`'s
+duplicate-key/finite-integer protections for exactly three resource-composition
+observations, fixed case/phase/nested-field allowlists and16KiB/line. Reject
+logical ceiling/reserve violations, counter regression, false pressure/recovery
+and unreleased terminal gauges. Existing profile06 attaches this observation
+from its read-suite output; no extra stage/service or descendant receipt change.
+`env PYTHONDONTWRITEBYTECODE=1 timeout 60s taskset -c 0 python3 -B -m unittest -v
+test_run` exited0: **117PASS/0FAIL/SKIP**,5.309s,
+including10new parser methods and107existing safety cases. Fixture-only parser
+proof, not the pending Rust/PostgreSQL composition qualification. No container,
+network, cache or operationalDB was created by this one-core helper check.
+
+**Qualification preflight:** existing SGP Rust1.85.1/tooling and exact cached PG
+image are present. Existing run.py supplies four PG suites, six lib packages,
+edge-service bins and strict Clippy/fmt; ordinary commit hook does not run those
+tests, so execute both gates explicitly. Three added read cases imply expected
+READ32 (previous29), BOOTSTRAP22/RESOURCE8/MANAGER11 unchanged. Run host-Cargo
+inside its own user memory cgroup2GiB/swap0/tasks256 plus one-core affinity,
+one Cargo job/nice15; user CPU controller is absent, so claim affinity rather
+than an imaginary CFS quota. Disposable PG remains separately capped0.5CPU/
+768MiB including512MiBtmpfs; combined declared ceiling1.5CPU/2.75GiB, no source
+requests. Reuse bounded locked public dependency fetch only if missing, verify
+checksums then run offline. Actual results/teardown still pending below.
+
+**Runner follow-through:** component-presence review added an11th parser test:
+only genuinely observable handles export cache/hub gauges; a retained private
+subscription has null component gauges but still measured resource charges.
+The same capped command now exits0: **118PASS/0FAIL/SKIP**,5.060s. This supersedes
+the117-count intermediate source for final qualification; no owned CPU-heavy
+job is waiting for a peer return.
+
+**Producer recheck13:12UTC:** PM has now committed326411478e005a0dbe52368ab1f2f4922c4ee505,
+selected request-bound TLS/actual-disposable-PG interoperability against the
+unchanged Edge126e045f client (reported7distinct PASS). Receive and inspect its
+bounded published evidence without rerunning identical peer work or widening
+it to a commissioned report/source/apply ACK. Core public source still7818d563,
+Core009 prepared-return hash605f43cf unchanged, no installed009/session/window
+return. TS canonical source668e1032 unchanged. Continue this independent06 slice.
+
+**Exact qualification namespaces:** delegated lane owns HK
+`/tmp/epg10-06-composition-prep-ZmOsdfwt` and SGP
+`/tmp/epg10-06-2WT11lXN`; no secret/runtime inputs. Bounded SGP evidence is
+predeclared at `/home/bobby/secure/epg10-06-2WT11lXN-evidence/` (preflight,
+format/fetch/qualification logs, receipt and cleanup). Initial copy may be
+formatted with the existing supported toolchain, but no test qualification
+starts before source-review/final-manifest freeze. Root must explicitly ACK
+publication before HK packet cleanup; all compiled cache/target/source on SGP
+is disposable after terminal evidence, not a retained implicit archive.
+
+**Independent code review / fresh handback intake:** root and a separate reader
+found no concrete blocker in the three Rust cases or strict parser. Explicit
+cache invalidation/refetch is included; no automatic invalidation claim. PM's
+accepted published HTTP receipt is pinned1d61d15d262f16e6272622eeeda697d14edc85ca824e895238df8cfd6d17c5cb;
+its7TEST_ONLY identities are interoperability, not an installed producer.
+At13:14–13:18UTC the Core canonical directory also gained the public
+`CLAUDE_FULLSTACK_REVIEW_2026-10-20.md` (a405ed7f…): receive its phase matrix,
+but it explicitly still assigns ordinaryR3/image/config/policy/session/ready
+return to Claude and is not an installed009/window/ACK. Existing source bugs
+and008identity are not reopened. TS/PE1 publisher/coverage source pins remain
+source-dark, not a newly eligible03 target. No Edge binding has been deferred
+despite an available commissioned input.
+
+**Root hook closeout preflight:** exact private receipts are predeclared at
+`/home/bobby/secure/epg10-06-composition-r45yVujP/` with normal-hook.log and final
+closeout.json. Metadata-only initial capture at13:15:05UTC hashes
+199edab688e41baba91fd5c8ed93bf99de45f8d82e3bcfc5782ef69a8e5861e2:
+49currently-running metadata tuples,98image tag rows,362BuildKit records and
+250,495,754,240B available. This is not49protected production services; preserve
+foreign test/CI changes honestly. All three original peer-WIP hashes match.
+No ENV/secret/mount contents collected. Only exact newly created unreferenced
+hook image and known terminal cells can be removed; shared/rollback remains.
+
+**Final qualified-input freeze (tests not yet complete):** supported Rust1.85.1
+formatting exited0 and only mechanical wrapping was applied to the owned Rust
+test via apply_patch. Final read-test SHA
+a556d533bd2dd6cd9222bacfb4f34eb90a9db26274a21d11043564fb60d6f6af;
+runner5f082e0c6f019bd06fa1818f374b2c745d72ec674698928ec5a02e6ff7401b8a,
+safety tests285e59441d998cf3af9ba99d05cdc8024d80382e3bda058ca094392e1ed888e4.
+Final449inputs (445source+4runner),6,850,980B; archive
+e65db02c5dbd0081606fe5fb9d8240a3165298ac6bb17c0d3c4cbea450304942,
+manifest845f968a0215c9cdd859fb6bf4e26b75bb9a089e094980e7e8a3d453a5e491f9.
+Actual full profile06 is next on those bytes; bound privatecell8GiB and preserve
+the runner's100GiB free-disk floor. A source/manifest or qualification failure
+is unfinished owned work and must be fixed here, not relabelled external debt.
+
+**Actual qualification started13:20:28UTC:** systemd user scope
+`epg10-06-qualification-2WT11lXN.scope`, PID3603542, physical exec session48769.
+Private locked fetch exited0 in5.051s;48verified seeded archives plus missing
+public lockfile dependencies, no shared credential/config/cache writes. All
+449frozen hashes matched before launch. Existing `run.py` is invoked with
+`EPG10_TEST_PROFILE=06 EPG10_PORTAL_REVISION=126e045f8db1278291c80f6ba20ca99b36957e62
+EPG10_EXPECT_BOOTSTRAP_TESTS=22 EPG10_EXPECT_READ_TESTS=32
+EPG10_EXPECT_RESOURCE_TESTS=8 EPG10_EXPECT_MANAGER_TESTS=11 python3 -B run.py`
+inside the declared memory/taskset scope. Subsequent Cargo is offline; private
+cell initially273MB with8GiB/100GiB-free watchdog. This is a live correctness
+job, not yet a test PASS; disposable PG is created only at the runner's own
+post-compile stage. No source or operational service request is sent.
+
+**Owned supervisor fault, not a source test verdict:** private disk watchdog
+rglob raced a Cargo temporary-directory deletion (`rustc9F4hwn`) and its wrapper
+session48769 exited1. Preserve that traceback. The separately capped original
+systemd job may still run: inspect its physical unit/PID and runner receipt,
+repair only private traversal's normal ENOENT handling and reattach to the same
+run/deadline. Do not duplicate qualification, guess PASS, relax memory limits,
+change source or call this external debt. Actual terminal status follows below.
+
+**Supervisor recovery physically verified13:30:07UTC:** original PythonPID3603542
+and the same systemd scope remain active; reattached session16849 without test
+restart. Repair uses private os.walk with ordinary ENOENT tolerance. Memory
+hardcap2GiB/swap0/tasks256/taskset0 stayed installed, observed current1.618GB;
+original13:45:28UTC wall deadline unchanged. Monitoring-gap duration cannot be
+retrospectively measured, so do not invent continuous disk observations. Cargo
+had progressed to current-source-compat; no source assertion/result or source
+hash changed. Original watcher failure remains failed supervisor provenance.
+
+**Actual attempt1 terminal13:39:36UTC — FAIL, retained:** full all-target compile
+exited0 (599.028s), edge-service all-target check exited0 (290.812s), runner118
+and fmt passed. The unit stage hit its existing240s wall timeout while running
+the unchanged182,000-order/2,881-series PostgreSQL scale corpus; three completed
+lib summaries31+16+26 passed and18PG cases completed, but this is not a complete
+unit PASS. READ32/resource/manager/Clippy were NOT_RUN. Own disposablePG,
+sampler/activity and scope are terminal/removed; bounded failed receipt hash
+2a0aa1d0a3908fe63e2b7a5b2522d90d45ea7ea8d54dc8f602a27b20dc99c26d
+is retained privately. Source/cache5.595GB remains solely for the finite retake.
+
+**Owned correction authorized in the same slice:** align only profile06's
+correctness unit-stage wall budget with profiles07–11's existing600s, within
+the unchanged1500s total bound. Preserve04/05, exact corpus/cardinalities,
+assertions, single-threading, CPU/memory caps and every result/count gate.
+This is not a relaxed performance threshold: no capacity PASS is claimed.
+Add an explicit regression for the changed06 bound; update prior-profile
+expectations transparently. First execute strict all-target Clippy; fix any
+actual owned lint narrowly, then freeze the final manifest and execute the
+bounded existing06 profile using only the same private dependency cache.
+Unchanged compile inputs may inherit their actual passed evidence by exact
+hash/impact mapping; do not rerun identical expensive work just to recollect
+its count. Preserve failed predecessor and any retake failure. All resources
+are disposed after terminal evidence; no peer/runtime change is authorized.
+
+**Tighter timeout diagnosis and root helper retake13:43UTC:** the unit log's
+first160s were feature-graph compilation inside the240s stage budget. Therefore
+the final scale case had only the remaining interval; no evidence says its
+query itself exceeded240s or hung. The600s correctness bound accounts for
+setup/build plus unchanged tests, not relaxed domain assertions. Root's
+`timeout 60s taskset -c 0 env PYTHONDONTWRITEBYTECODE=1 python3 -B -m unittest
+-q test_run` exited0: **119PASS**,5.337s,0failure/error/skip. This includes the
+new explicit06-bound regression (12new methods versus107previous), superseding
+118 for final input. Strict Clippy and the actual-PG retake remain pending.
+Private watcher fixes have4injected ENOENT/PermissionError checks; they are
+supervisor checks only and are not added to product/runner counts.
+
+**Producer intake13:42UTC:** PM now also committed
+aec6434f588ae9de254cce53a10b7a150d3eed05. Its public
+`contracts/baseline/portfolio-account-v1_1/pma11-edge-report-receiver-interop-evidence.json`
+hash943f71098000dd1b8299b21630874505e595d8d7e34962498d105069d755c1e2
+records4selected PASS (3new receiver identities+1previous HTTP regression):
+original Edge PG staged-invisible/noACK, actual COMMIT-before-output process
+exit/fresh-process recovery, rollback/dedup/checkpoint and bad-proof/tamper/
+stale-receiver generation. Root read the bounded receipt and original fixture
+probe; exact fixture proof is explicitly not a commissioned source verifier.
+Peer report's foreign runtime replacements remain recorded, not rewritten as
+all-runtime-unchanged. Receive these tests by pinned provenance; do not rerun
+or add them to Edge authored counts. No new report listener/native publication
+or command COMMIT authority is advertised. Core prepared605f43cf and public
+reviewa405ed7f unchanged; no installed009/session/window owner-return. TS N03
+f3a49603/P16342b3bce unchanged. Continue owned06 work without waiting.
+
+**First strict Clippy actual result — FAIL, narrowly fixed:** one actual
+`clippy::needless_pass_by_value` in the new observation emitter at line204,
+exit101/75.878s; private log hash
+e6c642f63de90092c6b853d6df8e6d5a000e6528c61056980433db80c946914d.
+Change only `Vec<Value>` to `&[Value]` and borrow the three call sites. No lint
+allowance, semantic/assertion change or speculative unrelated formatting fix.
+Rust source is now
+d783519d4eaa5f4746badc27b47c865169bd2e377f6f9ac5221e966c1a601072;
+root runner/test hashes5e298a16/991ff1c4 include the documented600s/119case
+correction. Independent read-only review found no concrete correctness blocker
+in these three files. Repin actual final inputs before finite actual-PG retake;
+the first Clippy failure and unit timeout remain visible predecessor results.
+
+**Retake physically started13:48:39UTC:** same existing profile06 runner,
+scope `epg10-06-retake-2WT11lXN.scope`, PID3752968/session61050, new1500s wall
+bound and unchanged per-process/container caps. All449input hashes matched;
+only the three owned source/test/runner inputs changed from attempt1. Final
+retake manifest6189db1507a5d13b105da9a7c294f82bfb158bc0fd89f2ee20cbc8a280e4e9fa.
+Initial free138.08GB/MemAvailable11,437,372KiB; this is capped correctness
+coexistence, not a measured production headroom/latency acceptance. Source
+mtime refresh remains unmodified, no gate skipped or monkeypatched. Terminal
+results and resource disposal must follow before this slice can close.
+
+**Retake2 terminal — actual green suites, failed stale input count:** runner
+retake exited1 after308.655s. Six lib suites **159PASS** (31+16+26+20+36+30),
+Edge binary **60PASS**, actual bootstrap **33PASS/0FAIL/SKIP** in26.28s.
+The explicit old `EPG10_EXPECT_BOOTSTRAP_TESTS=22` input is wrong for this
+current descendant-inclusive source; the exact-count gate correctly rejected
+33 instead of silently accepting it. READ/resource/manager/Clippy downstream
+remain NOT_RUN. This is owned qualification-input reconciliation, not external
+debt or an assertion failure. Preserve terminal receipt as FAIL. Disposable PG
+was removed by existing runner cleanup; no operational schema/data changed.
+
+**Corrective decision:** list the four existing compiled integration binaries'
+full distinct case identities without executing DB tests, pin the actual counts
+and identities before any continuation. Do not edit/filter test source to fit
+old22/32 counts. Reuse passed final-source159/60/33 evidence by exact source/
+feature/config pins, then execute remaining READ/resource/manager with their
+real fixed counts, strict all-target Clippy, final immutability and exact scoped
+cleanup under the same caps/finite wall. Reuse run.py parser/logging/observer/
+cleanup helpers, not a new committed framework or a monkeypatched gate. Final
+aggregate proof must name both failed runner predecessors and distinguish
+this impact continuation from an uninterrupted full-run PASS. No identical
+completed suite is rerun merely to recover a green aggregate process status.
+
+**Actual compiled identity freeze, not a filtered corpus:** full distinct
+binary `--list` output pins BOOTSTRAP33, READ45, RESOURCE8, MANAGER11 (97PG
+cases); listing identity manifest
+fa469aae6ddf4c691b27823c46e3c3d4466d5e9ce4842e7238f0ba77a2048207.
+READ includes all three new governed composition cases and42existing cases;
+the old29 baseline omitted subsequently added descendant tests. Retake2's
+actual failed-count receipt is
+1430719c955b16ad69f491e02a94fe7ad278b9e1972300634ba18fe7240156cb.
+Continue only READ45/resource8/manager11 + strict all-target Clippy/final
+immutability on exactly d783519d/5e298a16/991ff1c4 source. Inherit already
+passed159lib/60Edge/33bootstrap and compilation/fmt/119runner evidence by
+exact pins; no production/capacity/source acceptance is inferred.
+
+**Targeted continuation physically running14:01:18UTC:** same disposable cell,
+scope `epg10-06-continuation-2WT11lXN.scope`, PID3822622/session20686. A prior
+prelaunch check declined before any scope/PG/test creation when instantaneous
+MemAvailable was below the4GiB safety floor; do not call that a source/test
+failure or stop the foreign workload. Recheck passed at4,710,648KiB and
+137,670,905,856B free. Retain same2GiB/swap0/Tasks256/taskset0 and separate
+0.5CPU/768MiBPG; no exclusive measurement lock. Only remaining45+8+11 PG cases
+and strict Clippy execute; existing119/159/60/33 evidence is not recollected.
+The bounded public [qualification receipt](evidence/execution-edge-v1_2/EPG10-06/resource-composition-qualification.json)
+is staged as pending until actual terminal results/immutability/cleanup arrive.
+No source/operational request or mutation was made during preparation.
+
+**Actual continuation terminal0,14:07:18UTC — independent gates PASS:**
+360.620s, no watchdog stop; READ45/104.76s, RESOURCE8/12.21s and
+MANAGER11/43.86s each0failure/ignored/filtered. Existing parser accepted all
+three actual bounded composition observations. Strict all-target Clippy
+exited0/zero warnings; final449source hashes unchanged. Continuation outer log
+5f47418121b9619972d27691f1d8a296731667769d392cfe1b74009b00ecf53d.
+With the exact final-source inherited suites this is **316selected Rust PASS**
+(159lib+60Edge+33bootstrap+45read+8resource+11manager), **119runner PASS**,
+3newRust+12newrunner methods. It is explicitly a staged impact qualification,
+not a rewritten uninterrupted full-run PASS; predecessors above stay failed.
+PM's peer tests and private watcher's4checks are separate, not added to totals.
+
+**Publication gate:** ordinary versioned hook is mandatory through
+`git -c core.hooksPath=.githooks commit`; no bypass, no second identical prehook
+run just for a count. Its actual terminal log and post-commit exact-image/
+runtime closeout are predeclared in
+`/home/bobby/secure/epg10-06-composition-r45yVujP/normal-hook.log` and
+`closeout.json`, referenced by the bounded public receipt. Successful commit
+is conditional on the real hook PASS; source qualification is not authority to
+deploy. Hook's full-worktree checks include the unchanged57peer-untracked
+native-read-egress cases; those three peer files remain hash-identical and
+excluded from the eight-path commit. One batch feature push after green local
+checks, no PR/merge/main/dev/release. Current six workflow triggers imply
+**0expected hosted CI minutes** for this ordinary feature push; no workflow
+dispatch/full-suite/PR or billed CI used by this local qualification.
+
+**Next permitted dependency actions:** Core commissions009 image/config/schema/
+policy/session/window and returns installed pins; Edge immediately runs the
+already-approved08 READ/STREAM/revoke/cache/cursor/SSE then matching09read group.
+TS returns actual native fence+writer/export coverage/publication for03;
+PM returns authenticated submit/status plus human/workload authority through
+COMMIT for07.01/06 production closure needs matched TS–DL–Research target,
+numeric budgets and genuine coexistence measurement. These affected connected
+gates remain NOT_MET, not failures of this independent target and not reason to
+defer any newly runnable binding. No new phase or generic approval requested.
+
+**SGP physical cleanup verified14:09UTC:** all four own scopes inactive/dead,
+PG/activity absent; exact `/tmp/epg10-06-2WT11lXN` removed **6,595,021,163logicalB**.
+Free disk136,048,787,456→142,527,565,824B; shared-host delta is not exclusive
+reclaim attribution. No build/pull/image addition/removal; shared BuildKit3858
+records unchanged and not pruned. Cleanup runtime tuples unchanged; across the
+whole run58/60original tuples unchanged. Two observed feed restart deltas are
+crypto1m2→3 and VN30F1M15→18, same IDs/images/config; no command touched those
+services and no causation is asserted. Bounded22,855B final summary
+a39d7b2c0df2d1b798cf776b60a8a5e51dc60143c85fbe1dc1e6540bafdd148d
+has been copied to the declared HK secure evidence directory before disposing
+the source packet. Raw logs/samples/manifests remain only in SGP secure evidence.
+
+**HK hook/publication lifecycle:** source packet remains only until root ACKs
+verified remote publication, then delegated owner removes that exact packet
+and records `hk-packet-cleanup.json` in the declared secure directory. Hook
+observer pins only this Git process's descendant control-test script, exact
+two test container IDs, internal network and disposable `/cell` path; no ENV.
+After successful terminal commit, closeout checks their absence and removes
+only the exact new unshared hook image ID if no active build/push/bake exists.
+If a foreign build is active, retain the image and retry in a quiet boundary;
+never stop another agent or prune shared cache/volumes. Final disk/image/cache/
+critical runtime/peer-WIP checks are retained in `closeout.json`; these normal
+post-hook artifacts are not a deployment or new product technical debt.
+
+**Source/runtime reconciliation:** canonical checkout
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4`
+retains its owner's untracked upgrade guides. This active feature worktree is
+`feat/execution-edge-upgrade-v1_2` on parent126e045f; seven documented Portal
+worktrees retained, no merge/branch/worktree cleanup in scope. HK active six
+Edge/worker images d6aa7a51, three Manager28ea3958, TS writer2deb90b0 and
+DL query753604f8/stream27c79b53 remain the protected restart/config comparison
+set, not newly deployed revisions. Stable release locations
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`
+and SGP `/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`,
+TS rollbackr59@9150385e/r49@b4e7a6c0 and all operational/shared image artifacts
+are retained. No operational route/DBrole/schema/data/auth/listener/restart or
+runtime release change was made by this test-target slice.
+
 
 
 

@@ -285,3 +285,48 @@ numeric bounds/reduction acceptance from those populations. Existing03 publisher
 fence/coverage/identity return blocks only dependent source cases. Preparation
 above is no longer deferred behind it. B16 amendment1 is4/5clean (core-pause
 overflow FAIL), not a source/capacity acceptance; respect TS B17 work and lock.
+
+### 20Oct independent shared-composition follow-through
+
+The original06 isolated target now adds three cases in the existing
+`epg10_05_scoped_read` PostgreSQL suite, not a new service or resource API.
+Use `EPG10_EXPECT_READ_TESTS=45` and `EPG10_EXPECT_BOOTSTRAP_TESTS=33` for the
+current descendant-inclusive source; resource8 and manager11 are unchanged.
+The initially reused22/32 values were stale; compiled binary identity listing
+freezes33/45/8/11 (97actual PG cases, including3new composition cases).
+Historical receipts above retain their original counts. Qualification is
+**ISOLATED_QUALIFIED**, through the explicitly documented staged impact retake,
+not an uninterrupted full-run or production-capacity PASS.
+The first run passed all-target compilation/check but hit the old240s unit
+build-plus-test wall bound; retain its FAIL. Only06 is corrected to the existing
+successors'600s correctness budget, preserving corpus/assertions/caps and1500s
+total bound. Runner119PASS includes12new regression methods; actual selected
+Rust316PASS (159lib+60Edge+33bootstrap+45read+8resource+11manager), fmt/strict
+all-target Clippy and449input immutability PASS. Exact cleanup/ordinary-hook
+publication evidence is recorded in the same-phase journal and bounded receipt.
+
+The same governed store/cache/realtime hub share one `Arc<ResourceEnvelope>`
+from the first store connection. Exercise16-client shared polling with exact
+decimal update and explicit cache invalidation, foreground reserve despite two
+background admissions, TEST_ONLY high/hard pressure without premature ACK and
+exact duplicate-COMMIT recovery, then cancellation/join/clone/subscription
+retention and final release. No wall-clock performance threshold is asserted.
+
+Existing runner profile06 parses exactly three bounded
+`EPG10_06_COMPOSITION_OBSERVATION=` lines, schema
+`epg10.resource-composition-observation.v1`, with fixed case/phase/stat fields
+and at most16KiB each. It records actual logical `resources.stats()`, observable
+`cache.usage()` and `hub.metrics()`; absent handles are null, not invented zeros.
+Duplicate/unexpected fields, counter regressions, false pressure/recovery,
+test-ceiling violations and unreleased terminal gauges fail closed. This receipt
+addition is profile06-only; existing descendant receipt formats are unchanged.
+The three tests still belong to the shared read suite, so other profiles using
+these new source bytes also supply the correct explicit READ45/BOOTSTRAP33 counts.
+
+This complements the existing owned-PG cgroup/RSS/WAL observer. Physical pool
+acquire wait, allocator bytes and all-process RSS remain explicitly unavailable;
+logical charges cannot fill those fields. Pressure injection is not a real
+filesystem sample. No TS/DL source authority, production budgets, real workload
+or capacity acceptance is created. Current results, immutable pins, actual
+commands, producer returns and exact cleanup are in the
+[same-phase journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0106--shared-governed-pgcachefanout-composition--20oct1305utc).

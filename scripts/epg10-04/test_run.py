@@ -779,10 +779,17 @@ class RunnerSafety(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
             qualification.parse_rust_results('\n'.join([row]*6), 8)
 
-    def test_profile07_unit_timeout_is_bounded_without_changing_prior_profiles_or_own_lock(self):
+    def test_profile06_scale_unit_timeout_is_bounded_without_changing_legacy_profiles(self):
+        self.assertEqual(qualification.UNIT_TEST_TIMEOUT_SECONDS['06'], 600)
+        self.assertEqual({profile: qualification.UNIT_TEST_TIMEOUT_SECONDS[profile]
+                          for profile in ('04', '05')}, {'04': 240, '05': 240})
+        self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['06'],
+                        qualification.LOCK_SECONDS - 30)
+
+    def test_profile07_unit_timeout_preserves_the_documented06_correction_and_own_lock(self):
         self.assertEqual({profile: qualification.UNIT_TEST_TIMEOUT_SECONDS[profile]
                           for profile in ('04', '05', '06', '07')},
-                         {'04': 240, '05': 240, '06': 240, '07': 600})
+                         {'04': 240, '05': 240, '06': 600, '07': 600})
         self.assertEqual(qualification.LOCK_SECONDS, 1500)
         self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['07'], qualification.LOCK_SECONDS - 30)
 
@@ -1111,7 +1118,7 @@ class RunnerSafety(unittest.TestCase):
 
     def test_profile08_unit_timeout_stays_bounded_and_preserves_all_prior_profiles(self):
         self.assertEqual(qualification.UNIT_TEST_TIMEOUT_SECONDS,
-                         {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600, '09': 600, '10': 600, '11': 600})
+                         {'04': 240, '05': 240, '06': 600, '07': 600, '08': 600, '09': 600, '10': 600, '11': 600})
         self.assertEqual(qualification.LOCK_SECONDS, 1500)
         self.assertLess(qualification.UNIT_TEST_TIMEOUT_SECONDS['08'], qualification.LOCK_SECONDS - 30)
 
@@ -1260,6 +1267,150 @@ class RunnerSafety(unittest.TestCase):
             qualification.child_resource_delta(self.child_usage(), self.child_usage(rss=99))
         with self.assertRaises(ValueError):
             qualification.metric_number(10**1000, integer=True)
+
+    @staticmethod
+    def resource_composition_fixture():
+        cases = []
+        for case, phases in qualification.COMPOSITION_PHASES.items():
+            snapshots = []
+            for index, phase in enumerate(phases):
+                stats = dict.fromkeys(qualification.COMPOSITION_COUNTERS + qualification.COMPOSITION_GAUGES, 0)
+                stats.update(accepted=index + 1, registrations=2, peak_active=3,
+                    peak_entries=300, peak_bytes=8 * 1024**2, storage_pressure='NORMAL')
+                cache, fanout = dict(entries=1, bytes=512, flights=0), dict(clients=1, charged_bytes=512)
+                if phase == 'RELEASED' or (case == 'LIFETIME_RELEASE' and phase == 'RETAINED'):
+                    cache, fanout = None, None
+                if phase != 'RELEASED':
+                    stats.update(entries=257, background_entries=257,
+                                 bytes=5 * 1024**2, background_bytes=5 * 1024**2)
+                if phase in ('HIGH', 'HARD'):
+                    stats['storage_pressure'] = phase
+                snapshots.append(dict(phase=phase, stats=stats, cache=cache, fanout=fanout))
+            cases.append(dict(schema='epg10.resource-composition-observation.v1', case=case,
+                provenance='TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL', tainted_for_capacity=True,
+                performance_acceptance=False, snapshots=snapshots))
+        return cases
+
+    @staticmethod
+    def resource_composition_log(cases):
+        return '\n'.join('EPG10_06_COMPOSITION_OBSERVATION=' + json.dumps(case) for case in cases)
+
+    def test_resource_composition_exact_three_cases_are_correctness_only(self):
+        cases = self.resource_composition_fixture()
+        result = qualification.parse_resource_composition(self.resource_composition_log(cases))
+        self.assertEqual(set(result['cases']), set(qualification.COMPOSITION_PHASES))
+        self.assertFalse(result['performance_acceptance'])
+        self.assertTrue(result['tainted_for_capacity'])
+        self.assertIn('physical_pool_acquire_wait', result['unavailable_metrics'])
+        self.assertEqual(result['cases']['SHARED_ENVELOPE'], cases[0])
+
+    def test_resource_composition_case_order_can_differ_but_not_phase_order(self):
+        cases = self.resource_composition_fixture()[::-1]
+        qualification.parse_resource_composition(self.resource_composition_log(cases))
+        cases[0]['snapshots'].reverse()
+        with self.assertRaisesRegex(ValueError, 'SNAPSHOT_REQUIRED'):
+            qualification.parse_resource_composition(self.resource_composition_log(cases))
+
+    def test_resource_composition_rejects_missing_duplicate_or_unbounded_lines(self):
+        cases = self.resource_composition_fixture()
+        text = self.resource_composition_log(cases)
+        for invalid in ('', self.resource_composition_log(cases[:2]), text + '\n' + text,
+                        text.replace('EPG10_06_COMPOSITION_OBSERVATION=',
+                            'test ... EPG10_06_COMPOSITION_OBSERVATION=', 1),
+                        'x' * (qualification.MAX_LOG_BYTES + 1),
+                        text.replace('"schema":', '"padding":"' + 'x' * 16384 + '","schema":', 1)):
+            with self.subTest(prefix=invalid[:80]), self.assertRaises(ValueError):
+                qualification.parse_resource_composition(invalid)
+        cases[2] = cases[1]
+        with self.assertRaisesRegex(ValueError, 'DUPLICATE_RESOURCE'):
+            qualification.parse_resource_composition(self.resource_composition_log(cases))
+
+    def test_resource_composition_rejects_provenance_extra_keys_and_non_objects(self):
+        for field, invalid in (('provenance', 'PRODUCTION'), ('schema', 'unknown'),
+                ('performance_acceptance', True), ('tainted_for_capacity', False),
+                ('case', ['SHARED_ENVELOPE']), ('payload', 'DO_NOT_EXPORT')):
+            cases = self.resource_composition_fixture()
+            cases[0][field] = invalid
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                qualification.parse_resource_composition(self.resource_composition_log(cases))
+        for path in ('case', 'snapshot', 'stats', 'cache', 'fanout'):
+            cases = self.resource_composition_fixture()
+            if path == 'case':
+                cases[0] = []
+            elif path == 'snapshot':
+                cases[0]['snapshots'][0] = []
+            else:
+                cases[0]['snapshots'][0][path] = []
+            with self.subTest(path=path), self.assertRaises(ValueError):
+                qualification.parse_resource_composition(self.resource_composition_log(cases))
+
+    def test_resource_composition_rejects_duplicate_nested_keys(self):
+        text = self.resource_composition_log(self.resource_composition_fixture())
+        for original, duplicate in (('"active": 0', '"active": 0, "active": 0'),
+                ('"flights": 0', '"flights": 0, "flights": 0')):
+            with self.subTest(key=original), self.assertRaisesRegex(ValueError, 'DUPLICATE_METRIC_KEY'):
+                qualification.parse_resource_composition(text.replace(original, duplicate, 1))
+
+    def test_resource_composition_rejects_nonfinite_negative_boolean_or_unknown_metrics(self):
+        for field, invalid in (('accepted', True), ('bytes', -1), ('active', 0.5),
+                ('denied_storage', float('nan')), ('peak_bytes', float('inf')),
+                ('accepted', 1 << 54), ('storage_pressure', 'UNKNOWN'), ('secret', 'DO_NOT_EXPORT')):
+            cases = self.resource_composition_fixture()
+            cases[0]['snapshots'][0]['stats'][field] = invalid
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                qualification.parse_resource_composition(self.resource_composition_log(cases))
+
+    def test_resource_composition_rejects_accounting_overflow_and_reserved_space_violation(self):
+        for changes in (dict(active=4, peak_active=4), dict(background_active=1),
+                dict(entries=8193, peak_entries=8193), dict(background_entries=6145, entries=6145, peak_entries=6145),
+                dict(bytes=128 * 1024**2 + 1, peak_bytes=128 * 1024**2 + 1),
+                dict(background_bytes=88 * 1024**2 + 1, bytes=88 * 1024**2 + 1, peak_bytes=88 * 1024**2 + 1),
+                dict(entries=301)):
+            cases = self.resource_composition_fixture()
+            cases[0]['snapshots'][0]['stats'].update(changes)
+            with self.subTest(changes=changes), self.assertRaisesRegex(ValueError, 'ACCOUNTING_INCONSISTENT'):
+                qualification.parse_resource_composition(self.resource_composition_log(cases))
+
+    def test_resource_composition_rejects_counter_or_peak_regression(self):
+        for key in qualification.COMPOSITION_COUNTERS + ('peak_active', 'peak_entries', 'peak_bytes'):
+            cases = self.resource_composition_fixture()
+            cases[0]['snapshots'][0]['stats'][key] += 3
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                qualification.parse_resource_composition(self.resource_composition_log(cases))
+
+    def test_resource_composition_rejects_component_bounds_keys_and_invalid_numbers(self):
+        for component, key, invalid in (('cache', 'entries', 129), ('cache', 'bytes', 4 * 1024**2 + 1),
+                ('cache', 'flights', 2), ('fanout', 'clients', 17), ('fanout', 'charged_bytes', 1024**2 + 1),
+                ('cache', 'flights', True), ('fanout', 'clients', -1), ('fanout', 'identity', 'DO_NOT_EXPORT')):
+            cases = self.resource_composition_fixture()
+            cases[0]['snapshots'][0][component][key] = invalid
+            with self.subTest(component=component, key=key), self.assertRaises(ValueError):
+                qualification.parse_resource_composition(self.resource_composition_log(cases))
+
+    def test_resource_composition_requires_actual_component_observations_only_while_observable(self):
+        for component in ('cache', 'fanout'):
+            cases = self.resource_composition_fixture()
+            cases[0]['snapshots'][0][component] = None
+            with self.subTest(component=component), self.assertRaisesRegex(ValueError, 'COMPONENT_PRESENCE_REQUIRED'):
+                qualification.parse_resource_composition(self.resource_composition_log(cases))
+        cases = self.resource_composition_fixture()
+        cases[2]['snapshots'][-2]['cache'] = dict(entries=0, bytes=0, flights=0)
+        with self.assertRaisesRegex(ValueError, 'COMPONENT_PRESENCE_REQUIRED'):
+            qualification.parse_resource_composition(self.resource_composition_log(cases))
+
+    def test_resource_composition_rejects_false_pressure_recovery_and_terminal_release(self):
+        for phase, field, invalid in (('HIGH', 'storage_pressure', 'NORMAL'),
+                ('HARD', 'storage_pressure', 'HIGH'), ('RECOVERED', 'storage_pressure', 'HARD'),
+                ('RELEASED', 'active', 1), ('RELEASED', 'bytes', 1)):
+            cases = self.resource_composition_fixture()
+            snapshot = next(item for item in cases[1]['snapshots'] if item['phase'] == phase)
+            snapshot['stats'][field] = invalid
+            with self.subTest(phase=phase, field=field), self.assertRaises(ValueError):
+                qualification.parse_resource_composition(self.resource_composition_log(cases))
+        cases = self.resource_composition_fixture()
+        cases[0]['snapshots'][-1]['cache'] = dict(entries=0, bytes=0, flights=0)
+        with self.assertRaisesRegex(ValueError, 'COMPONENT_PRESENCE_REQUIRED'):
+            qualification.parse_resource_composition(self.resource_composition_log(cases))
 
     @staticmethod
     def manager_cost_fixture():

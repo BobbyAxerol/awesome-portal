@@ -47,7 +47,9 @@ LABEL = 'portal.measurement.owner'
 TOOLCHAIN = '/home/bobby/.rustup/toolchains/1.85.1-x86_64-unknown-linux-gnu/bin'
 MAX_LOG_BYTES = 8 * 1024 * 1024
 LOCK_SECONDS = 1500
-UNIT_TEST_TIMEOUT_SECONDS = {'04': 240, '05': 240, '06': 240, '07': 600, '08': 600, '09': 600, '10': 600, '11': 600}
+# Profile06 runs the same real-PG scale corpus as its successors. This is a
+# correctness wall bound, not a latency/capacity acceptance threshold.
+UNIT_TEST_TIMEOUT_SECONDS = {'04': 240, '05': 240, '06': 600, '07': 600, '08': 600, '09': 600, '10': 600, '11': 600}
 RUST_WORKSPACE = 'services/portal-execution-edge-rs'
 SHARED_FIXTURE = 'packages/contracts/fixtures/keyset-page.valid.json'
 RESOURCE_SHARED_FIXTURES = tuple('packages/contracts/fixtures/' + name for name in (
@@ -93,6 +95,16 @@ TLS_TEST_ARGUMENTS = ('cargo', 'test', '--offline', '--locked', '-p', 'manager-v
                       '--test', 'epg10_08_tls', '--', '--nocapture', '--test-threads=1')
 MAX_COST_LINE_BYTES = 4096
 MAX_SAFE_METRIC = (1 << 53) - 1
+COMPOSITION_PHASES = {
+    'SHARED_ENVELOPE': ('REGISTERED', 'CACHE_WARM', 'QUEUED', 'DELIVERED', 'RELEASED'),
+    'PRESSURE_RECOVERY': ('BACKGROUND_SATURATED', 'HIGH', 'HARD', 'RECOVERED', 'RELEASED'),
+    'LIFETIME_RELEASE': ('CLONED', 'ORIGINALS_DROPPED', 'RETAINED', 'RELEASED'),
+}
+COMPOSITION_COUNTERS = ('accepted', 'registrations', 'denied_busy', 'denied_entries',
+                        'denied_bytes', 'denied_storage')
+COMPOSITION_GAUGES = ('active', 'entries', 'bytes', 'background_active',
+                      'background_entries', 'background_bytes',
+                      'peak_active', 'peak_entries', 'peak_bytes')
 OWNED_RUST = (
     'crates/authoritative-event-core/src/bootstrap.rs',
     'crates/authoritative-event-core/src/bootstrap/tests.rs',
@@ -536,6 +548,90 @@ def parse_manager_cost(text):
         raise ValueError('MANAGER_COST_FIXTURE_COUNTS_INCONSISTENT')
     return dict(values=value, basis='SCOPED_TEST_QUERY_STRUCTURE_AND_FULL_SNAPSHOT_REFERENCE_NOT_TOTAL_SQL_OR_LEGACY_SPEEDUP',
         tainted_for_capacity=True, performance_acceptance=False)
+
+
+def parse_resource_composition(text):
+    """Allowlist bounded observations from the fixed, actual-PG TEST_ONLY cases.
+
+    These are logical admission/queue gauges, NOT physical pool waits, allocator
+    memory, source authority or an absolute capacity acceptance. Test assertions
+    remain the correctness oracle; this parser protects the exported receipt.
+    """
+    marker = 'EPG10_06_COMPOSITION_OBSERVATION='
+    if not isinstance(text, str) or len(text.encode()) > MAX_LOG_BYTES:
+        raise ValueError('BOUNDED_RESOURCE_COMPOSITION_LOG_REQUIRED')
+    rows = [line for line in text.splitlines() if marker in line]
+    if len(rows) != len(COMPOSITION_PHASES):
+        raise ValueError('EXACT_RESOURCE_COMPOSITION_CASES_REQUIRED')
+    cases = {}
+    for line in rows:
+        if not line.startswith(marker) or len(line.encode()) > 16 * 1024:
+            raise ValueError('BOUNDED_RESOURCE_COMPOSITION_LINE_REQUIRED')
+        value = json.loads(line[len(marker):], object_pairs_hook=unique_json_object)
+        if (not isinstance(value, dict) or set(value) != {
+                'schema', 'case', 'provenance', 'tainted_for_capacity',
+                'performance_acceptance', 'snapshots'}
+                or value['schema'] != 'epg10.resource-composition-observation.v1'
+                or value['provenance'] != 'TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL'
+                or value['tainted_for_capacity'] is not True
+                or value['performance_acceptance'] is not False
+                or type(value['case']) is not str or value['case'] not in COMPOSITION_PHASES):
+            raise ValueError('EXACT_TEST_ONLY_RESOURCE_COMPOSITION_SCHEMA_REQUIRED')
+        case = value['case']
+        if case in cases:
+            raise ValueError('DUPLICATE_RESOURCE_COMPOSITION_CASE')
+        snapshots = value['snapshots']
+        phases = COMPOSITION_PHASES[case]
+        if not isinstance(snapshots, list) or len(snapshots) != len(phases):
+            raise ValueError('EXACT_RESOURCE_COMPOSITION_PHASES_REQUIRED')
+        previous = None
+        for snapshot, phase in zip(snapshots, phases):
+            if (not isinstance(snapshot, dict) or set(snapshot) != {'phase', 'stats', 'cache', 'fanout'}
+                    or snapshot['phase'] != phase):
+                raise ValueError('EXACT_RESOURCE_COMPOSITION_SNAPSHOT_REQUIRED')
+            stats = snapshot['stats']
+            if (not isinstance(stats, dict) or set(stats) != set(
+                    COMPOSITION_COUNTERS + COMPOSITION_GAUGES + ('storage_pressure',))
+                    or stats['storage_pressure'] not in (None, 'NORMAL', 'SOFT', 'HIGH', 'HARD')):
+                raise ValueError('EXACT_RESOURCE_COMPOSITION_STATS_REQUIRED')
+            for name in COMPOSITION_COUNTERS + COMPOSITION_GAUGES:
+                metric_number(stats[name], integer=True)
+            # Frozen isolated descriptor, never a production default/budget.
+            for name, ceiling, reserve in (('active', 3, 1), ('entries', 8192, 2048),
+                                            ('bytes', 128 * 1024**2, 40 * 1024**2)):
+                if not (stats['background_' + name] <= stats[name] <= stats['peak_' + name] <= ceiling
+                        and stats['background_' + name] <= ceiling - reserve):
+                    raise ValueError('RESOURCE_COMPOSITION_ACCOUNTING_INCONSISTENT')
+            cumulative = COMPOSITION_COUNTERS + ('peak_active', 'peak_entries', 'peak_bytes')
+            if previous is not None and any(stats[key] < previous[key] for key in cumulative):
+                raise ValueError('RESOURCE_COMPOSITION_COUNTER_REGRESSION')
+            previous = stats
+            observable = phase != 'RELEASED' and not (case == 'LIFETIME_RELEASE' and phase == 'RETAINED')
+            for component, bounds in (
+                    ('cache', {'entries': 128, 'bytes': 4 * 1024**2, 'flights': 1}),
+                    ('fanout', {'clients': 16, 'charged_bytes': 1024**2})):
+                usage = snapshot[component]
+                if (usage is not None) != observable:
+                    raise ValueError('RESOURCE_COMPOSITION_COMPONENT_PRESENCE_REQUIRED')
+                if usage is not None:
+                    if not isinstance(usage, dict) or set(usage) != set(bounds):
+                        raise ValueError('EXACT_RESOURCE_COMPOSITION_COMPONENT_REQUIRED')
+                    for key, ceiling in bounds.items():
+                        if metric_number(usage[key], integer=True) > ceiling:
+                            raise ValueError('RESOURCE_COMPOSITION_COMPONENT_EXHAUSTED')
+            if phase in ('HIGH', 'HARD') and stats['storage_pressure'] != phase:
+                raise ValueError('RESOURCE_COMPOSITION_PRESSURE_MISMATCH')
+            if phase == 'RECOVERED' and stats['storage_pressure'] != 'NORMAL':
+                raise ValueError('RESOURCE_COMPOSITION_RECOVERY_REQUIRED')
+            if phase == 'RELEASED' and (snapshot['cache'] is not None or snapshot['fanout'] is not None
+                    or any(stats[name] for name in COMPOSITION_GAUGES[:6])):
+                raise ValueError('RESOURCE_COMPOSITION_TERMINAL_RELEASE_REQUIRED')
+        cases[case] = value
+    if set(cases) != set(COMPOSITION_PHASES):
+        raise ValueError('EXACT_RESOURCE_COMPOSITION_CASES_REQUIRED')
+    return dict(cases=cases, performance_acceptance=False, tainted_for_capacity=True,
+        basis='TEST_ONLY_SHARED_LOGICAL_ENVELOPE_AND_ACTUAL_DISPOSABLE_POSTGRESQL',
+        unavailable_metrics=['physical_pool_acquire_wait', 'allocator_bytes', 'all_process_rss'])
 
 
 def clippy_findings(text, profile=None):
@@ -1052,10 +1148,12 @@ def main():
         database_stages = ['unit_tests', 'bootstrap_tests']
         if profile != '04':
             stage = 'read_tests'
-            receipt['read_tests'] = parse_rust_results(logged(stage,
+            read_output = logged(stage,
                 ['cargo', 'test', '--offline', '--locked', '-p', 'projection-store-pg',
-                 '--test', 'epg10_05_scoped_read', '--', '--nocapture', '--test-threads=1'], timeout=240),
-                 1, expected_read, count_kind='READ')
+                 '--test', 'epg10_05_scoped_read', '--', '--nocapture', '--test-threads=1'], timeout=240)
+            receipt['read_tests'] = parse_rust_results(read_output, 1, expected_read, count_kind='READ')
+            if profile == '06':
+                receipt['resource_composition_observation'] = parse_resource_composition(read_output)
             database_stages.append(stage)
         if profile in ('06', '07', '08', '09', '10', '11'):
             for stage, target, count, kind in integration_test_suites(

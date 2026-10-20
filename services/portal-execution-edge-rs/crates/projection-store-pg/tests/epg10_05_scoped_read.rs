@@ -77,6 +77,434 @@ async fn governed_pg_cache_has_one_permit_and_reserves_control_before_pool_wait(
     assert_eq!(resources.stats().unwrap().bytes, 0);
 }
 
+fn composition_resources() -> Arc<ResourceEnvelope> {
+    let resources = Arc::new(
+        ResourceEnvelope::new(EnvelopeLimits {
+            max_active: 3,
+            foreground_reserved: 1,
+            max_entries: 8192,
+            foreground_reserved_entries: 2048,
+            max_bytes: 128 * 1024 * 1024,
+            foreground_reserved_bytes: 40 * 1024 * 1024,
+            storage_max_age: Duration::from_secs(60),
+        })
+        .unwrap(),
+    );
+    composition_storage(&resources, 0);
+    resources
+}
+
+fn composition_storage(resources: &ResourceEnvelope, used_bytes: u64) {
+    // Deliberate TEST_ONLY pressure injection, never a filesystem observation.
+    resources
+        .observe_storage(
+            StorageObservation {
+                observed_at: chrono::Utc::now(),
+                used_bytes,
+                free_bytes: 1000,
+                backlog_bytes: 0,
+            },
+            StorageLimits {
+                soft_used_bytes: 100,
+                high_used_bytes: 200,
+                hard_used_bytes: 300,
+                min_free_bytes: 100,
+                max_backlog_bytes: 1000,
+            },
+        )
+        .unwrap();
+}
+
+fn composition_cache(resources: &Arc<ResourceEnvelope>) -> ScopedCache {
+    ScopedCache::new_with_resources(
+        CacheLimits {
+            max_entries: 128,
+            max_bytes: 4 * 1024 * 1024,
+            max_flights: 1,
+            ttl_ms: 1000,
+            load_timeout_ms: 5000,
+        },
+        resources,
+    )
+    .unwrap()
+}
+
+fn composition_hub(f: &Fixture, resources: &Arc<ResourceEnvelope>) -> ScopedRealtimeHub {
+    let scope = f.scope(None);
+    f.read(&scope, Operation::Replay);
+    ScopedRealtimeHub::new_with_resources(
+        scope,
+        f.h.manifest().generation.to_string(),
+        None,
+        ScopedRealtimeConfig {
+            maximum_clients: 16,
+            client_queue_entries: 8,
+            client_queue_bytes: 65536,
+            total_queue_bytes: 1024 * 1024,
+            notices_per_poll: 20,
+            maximum_notice_bytes: 2048,
+            poll_interval_ms: 10,
+            poll_timeout_ms: 5000,
+        },
+        f.policy.as_ref(),
+        NOW,
+        resources,
+    )
+    .unwrap()
+}
+
+fn composition_snapshot(
+    phase: &str,
+    resources: &ResourceEnvelope,
+    cache: Option<&ScopedCache>,
+    hub: Option<&ScopedRealtimeHub>,
+) -> Value {
+    let stats = resources.stats().unwrap();
+    let pressure = stats.storage_pressure.map(|pressure| match pressure {
+        StoragePressure::Normal => "NORMAL",
+        StoragePressure::Soft => "SOFT",
+        StoragePressure::High => "HIGH",
+        StoragePressure::Hard => "HARD",
+    });
+    let cache = cache.map(|cache| {
+        let (entries, bytes, flights) = cache.usage().unwrap();
+        json!({"entries":entries,"bytes":bytes,"flights":flights})
+    });
+    let fanout = hub.map(|hub| {
+        let metrics = hub.metrics().unwrap();
+        json!({"clients":metrics.clients,"charged_bytes":metrics.charged_bytes})
+    });
+    json!({
+        "phase":phase,
+        "stats":{
+            "active":stats.active,"entries":stats.entries,"bytes":stats.bytes,
+            "background_active":stats.background_active,
+            "background_entries":stats.background_entries,"background_bytes":stats.background_bytes,
+            "peak_active":stats.peak_active,"peak_entries":stats.peak_entries,"peak_bytes":stats.peak_bytes,
+            "accepted":stats.accepted,"registrations":stats.registrations,
+            "denied_busy":stats.denied_busy,"denied_entries":stats.denied_entries,
+            "denied_bytes":stats.denied_bytes,"denied_storage":stats.denied_storage,
+            "storage_pressure":pressure
+        },
+        "cache":cache,"fanout":fanout
+    })
+}
+
+fn composition_released(resources: &ResourceEnvelope) -> Value {
+    let stats = resources.stats().unwrap();
+    assert_eq!(stats.active, 0);
+    assert_eq!(stats.entries, 0);
+    assert_eq!(stats.bytes, 0);
+    assert_eq!(stats.background_active, 0);
+    assert_eq!(stats.background_entries, 0);
+    assert_eq!(stats.background_bytes, 0);
+    composition_snapshot("RELEASED", resources, None, None)
+}
+
+fn emit_composition(case: &str, snapshots: &[Value]) {
+    assert!((1..=8).contains(&snapshots.len()));
+    let observation = json!({
+        "schema":"epg10.resource-composition-observation.v1",
+        "case":case,"provenance":"TEST_ONLY_SYNTHETIC_REAL_POSTGRESQL",
+        "tainted_for_capacity":true,"performance_acceptance":false,"snapshots":snapshots
+    });
+    let encoded = serde_json::to_string(&observation).unwrap();
+    assert!(encoded.len() <= 16 * 1024);
+    println!("\nEPG10_06_COMPOSITION_OBSERVATION={encoded}");
+}
+
+#[tokio::test]
+async fn governed_composition_shares_store_cache_and_sixteen_client_fanout() {
+    let resources = composition_resources();
+    let mut f = Fixture::governed(2, resources.clone()).await;
+    let cache = composition_cache(&resources);
+    let hub = composition_hub(&f, &resources);
+    let registered = resources.stats().unwrap();
+    assert_eq!(registered.registrations, 2);
+    assert_eq!(registered.entries, 257);
+    assert_eq!(registered.bytes, 5 * 1024 * 1024);
+    let mut snapshots = vec![composition_snapshot(
+        "REGISTERED",
+        &resources,
+        Some(&cache),
+        Some(&hub),
+    )];
+    let read = f.read(&f.scope(None), Operation::Current);
+    let query = Fixture::query(Operation::Current, 2);
+    let first = f
+        .service()
+        .cached_first_page(&cache, &read, &query)
+        .await
+        .unwrap();
+    let second = f
+        .service()
+        .cached_first_page(&cache, &read, &query)
+        .await
+        .unwrap();
+    assert!(Arc::ptr_eq(&first, &second));
+    let payload: Value = serde_json::from_slice(first.as_ref()).unwrap();
+    assert_eq!(
+        payload["rows"][0]["payload"]["amount"],
+        "9007199254740993.000000000001"
+    );
+    assert_eq!(cache.usage().unwrap().0, 1);
+    snapshots.push(composition_snapshot(
+        "CACHE_WARM",
+        &resources,
+        Some(&cache),
+        Some(&hub),
+    ));
+    let source = source(&f);
+    let mut clients: Vec<_> = (0..16)
+        .map(|_| hub.subscribe(f.policy.as_ref(), NOW).unwrap())
+        .collect();
+    hub.poll(&source, f.policy.as_ref(), NOW).await.unwrap();
+    assert_eq!(source.calls.load(Ordering::SeqCst), 1);
+    f.append(vec![f.event(1, "order_0000", 2)]).await;
+    f.clock.0.store(NOW + 20, Ordering::SeqCst);
+    hub.poll(&source, f.policy.as_ref(), NOW + 20)
+        .await
+        .unwrap();
+    assert_eq!(source.calls.load(Ordering::SeqCst), 2);
+    assert_eq!(hub.metrics().unwrap().clients, 16);
+    assert!(hub.metrics().unwrap().charged_bytes > 0);
+    snapshots.push(composition_snapshot(
+        "QUEUED",
+        &resources,
+        Some(&cache),
+        Some(&hub),
+    ));
+    for client in &mut clients {
+        assert!(matches!(
+            client.next(f.policy.as_ref(), NOW + 20).unwrap(),
+            ScopedDelivery::Notice(_)
+        ));
+    }
+    assert_eq!(hub.metrics().unwrap().charged_bytes, 0);
+    // The finite coordinator explicitly invalidates after applying the delta.
+    cache.invalidate().unwrap();
+    let current = f
+        .service()
+        .cached_first_page(&cache, &read, &query)
+        .await
+        .unwrap();
+    assert!(!Arc::ptr_eq(&first, &current));
+    let current_payload: Value = serde_json::from_slice(current.as_ref()).unwrap();
+    assert_eq!(
+        current_payload["rows"][0]["payload"]["amount"],
+        "1.000000000000000001"
+    );
+    snapshots.push(composition_snapshot(
+        "DELIVERED",
+        &resources,
+        Some(&cache),
+        Some(&hub),
+    ));
+    drop(clients);
+    drop(source);
+    drop(first);
+    drop(second);
+    drop(current);
+    drop(cache);
+    drop(hub);
+    snapshots.push(composition_released(&resources));
+    emit_composition("SHARED_ENVELOPE", &snapshots);
+}
+
+fn composition_delta(f: &Fixture, n: u64) -> (DeltaChunk, DeltaGroup) {
+    let events = vec![f.event(n, "order_0000", n + 1)];
+    let group_id = format!("TEST_ONLY.composition.{}", Uuid::now_v7().simple());
+    let chunk = DeltaChunk {
+        generation: f.h.manifest().generation,
+        group_id: group_id.clone(),
+        index: 0,
+        events: events.clone(),
+    };
+    let group = DeltaGroup {
+        generation: f.h.manifest().generation,
+        group_id,
+        from_cursor: f.tail.clone(),
+        to_cursor: format!("TEST_ONLY.composition.{}", Uuid::now_v7().simple()),
+        chunk_digests: vec![chunk.digest().unwrap()],
+        events_digest: events_digest(&events).unwrap(),
+        reached_catchup: false,
+    };
+    (chunk, group)
+}
+
+async fn composition_commit_exactly_once(f: &Fixture, chunk: &DeltaChunk, group: &DeltaGroup) {
+    let binding = &f.h.manifest().binding;
+    f.store
+        .bootstrap_stage_delta(&f.h, &verified(chunk, binding, "CHUNK"), NOW)
+        .await
+        .unwrap();
+    for _ in 0..2 {
+        let ack = f
+            .store
+            .bootstrap_commit_group(&f.h, &verified(group, binding, "GROUP"), NOW)
+            .await
+            .unwrap();
+        assert_eq!(ack.cursor(), group.to_cursor);
+    }
+    let count: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM portal_projection.bootstrap_facts WHERE generation=$1 AND event_id=$2",
+    )
+    .bind(f.h.manifest().generation)
+    .bind(chunk.events[0].event.event_id.as_str())
+    .fetch_one(&f.pool)
+    .await
+    .unwrap();
+    assert_eq!(count, 1);
+}
+
+#[tokio::test]
+async fn governed_composition_reserves_foreground_then_recovers_exactly_from_pressure() {
+    let resources = composition_resources();
+    let mut f = Fixture::governed(1, resources.clone()).await;
+    let cache = composition_cache(&resources);
+    let hub = composition_hub(&f, &resources);
+    let background: Vec<_> = (0..2)
+        .map(|_| {
+            resources
+                .try_acquire(WorkClass::BackgroundRead, 1, 1, chrono::Utc::now())
+                .unwrap()
+        })
+        .collect();
+    let read = f.read(&f.scope(None), Operation::Current);
+    let query = Fixture::query(Operation::Current, 1);
+    assert!(matches!(
+        f.service().cached_first_page(&cache, &read, &query).await,
+        Err(ReadError::Resource(ResourceError::Busy))
+    ));
+    let replay = f.read(&f.scope(None), Operation::Replay);
+    f.service().notices(&replay, None, 10).await.unwrap();
+    f.append(vec![f.event(1, "order_0000", 2)]).await;
+    assert_eq!(resources.stats().unwrap().peak_active, 3);
+    let mut snapshots = vec![composition_snapshot(
+        "BACKGROUND_SATURATED",
+        &resources,
+        Some(&cache),
+        Some(&hub),
+    )];
+    drop(background);
+    composition_storage(&resources, 200);
+    let (chunk, group) = composition_delta(&f, 2);
+    let binding = &f.h.manifest().binding;
+    assert!(matches!(
+        f.store
+            .bootstrap_backfill_history(&f.h, &verified(&chunk, binding, "HISTORY"), NOW)
+            .await,
+        Err(projection_store_pg::bootstrap::BootstrapError::Resource(
+            ResourceError::StorageHigh
+        ))
+    ));
+    f.store
+        .bootstrap_stage_delta(&f.h, &verified(&chunk, binding, "CHUNK"), NOW)
+        .await
+        .unwrap();
+    snapshots.push(composition_snapshot(
+        "HIGH",
+        &resources,
+        Some(&cache),
+        Some(&hub),
+    ));
+    composition_storage(&resources, 300);
+    assert!(matches!(
+        f.store
+            .bootstrap_commit_group(&f.h, &verified(&group, binding, "GROUP"), NOW)
+            .await,
+        Err(projection_store_pg::bootstrap::BootstrapError::Resource(
+            ResourceError::StorageHard
+        ))
+    ));
+    let checkpoint = f
+        .store
+        .bootstrap_checkpoint(&f.h, &verified(binding, binding, "CONTROL"), NOW)
+        .await
+        .unwrap();
+    assert_eq!(checkpoint.cursor(), f.tail);
+    snapshots.push(composition_snapshot(
+        "HARD",
+        &resources,
+        Some(&cache),
+        Some(&hub),
+    ));
+    composition_storage(&resources, 0);
+    composition_commit_exactly_once(&f, &chunk, &group).await;
+    let page = f
+        .service()
+        .cached_first_page(&cache, &read, &query)
+        .await
+        .unwrap();
+    let payload: Value = serde_json::from_slice(page.as_ref()).unwrap();
+    assert_eq!(
+        payload["rows"][0]["payload"]["amount"],
+        "2.000000000000000001"
+    );
+    snapshots.push(composition_snapshot(
+        "RECOVERED",
+        &resources,
+        Some(&cache),
+        Some(&hub),
+    ));
+    drop(cache);
+    drop(hub);
+    snapshots.push(composition_released(&resources));
+    emit_composition("PRESSURE_RECOVERY", &snapshots);
+}
+
+#[tokio::test]
+async fn governed_composition_retains_registration_until_clones_clients_and_task_end() {
+    let resources = composition_resources();
+    let f = Fixture::governed(1, resources.clone()).await;
+    let cache = composition_cache(&resources);
+    let hub = composition_hub(&f, &resources);
+    let cache_clone = cache.clone();
+    let hub_clone = hub.clone();
+    let client = hub.subscribe(f.policy.as_ref(), NOW).unwrap();
+    let started = Arc::new(tokio::sync::Notify::new());
+    let child_started = started.clone();
+    let child_resources = resources.clone();
+    let task = tokio::spawn(async move {
+        let _lease = child_resources
+            .try_acquire(WorkClass::BackgroundRead, 1, 1, chrono::Utc::now())
+            .unwrap();
+        child_started.notify_one();
+        std::future::pending::<()>().await;
+    });
+    tokio::time::timeout(Duration::from_secs(2), started.notified())
+        .await
+        .unwrap();
+    let mut snapshots = vec![composition_snapshot(
+        "CLONED",
+        &resources,
+        Some(&cache),
+        Some(&hub),
+    )];
+    assert_eq!(resources.stats().unwrap().registrations, 2);
+    assert_eq!(resources.stats().unwrap().active, 1);
+    drop(cache);
+    drop(hub);
+    assert_eq!(resources.stats().unwrap().entries, 258);
+    snapshots.push(composition_snapshot(
+        "ORIGINALS_DROPPED",
+        &resources,
+        Some(&cache_clone),
+        Some(&hub_clone),
+    ));
+    task.abort();
+    assert!(task.await.unwrap_err().is_cancelled());
+    drop(cache_clone);
+    drop(hub_clone);
+    assert_eq!(resources.stats().unwrap().active, 0);
+    assert_eq!(resources.stats().unwrap().entries, 128);
+    assert_eq!(resources.stats().unwrap().bytes, 1024 * 1024);
+    snapshots.push(composition_snapshot("RETAINED", &resources, None, None));
+    drop(client);
+    snapshots.push(composition_released(&resources));
+    emit_composition("LIFETIME_RELEASE", &snapshots);
+}
+
 #[path = "epg10_09/read_e2e.rs"]
 mod e2e;
 
@@ -100,7 +528,13 @@ use execution_contracts::{
     catalogue_v1::{Completeness, Freshness},
     CanonicalId,
 };
-use projection_core::{canonical_digest, canonical_value_digest};
+use projection_core::{
+    canonical_digest, canonical_value_digest,
+    resources::{
+        EnvelopeLimits, ResourceEnvelope, ResourceError, StorageLimits, StorageObservation,
+        StoragePressure, WorkClass,
+    },
+};
 use projection_store_pg::{
     bootstrap::BootstrapHandle,
     scoped_read::{
@@ -206,8 +640,14 @@ struct Fixture {
     tail: String,
 }
 impl Fixture {
-    #[allow(clippy::too_many_lines)] // One explicit test-only authenticated bootstrap fixture.
     async fn new(rows: usize) -> Self {
+        Self::configured(rows, None).await
+    }
+    async fn governed(rows: usize, resources: Arc<ResourceEnvelope>) -> Self {
+        Self::configured(rows, Some(resources)).await
+    }
+    #[allow(clippy::too_many_lines)] // One explicit test-only authenticated bootstrap fixture.
+    async fn configured(rows: usize, resources: Option<Arc<ResourceEnvelope>>) -> Self {
         assert_eq!(std::env::var("EPG10_TEST_ONLY").as_deref(), Ok("1"));
         let url = std::env::var("TEST_PROJECTION_DATABASE_URL")
             .expect("disposable PG required; never skip");
@@ -216,7 +656,12 @@ impl Fixture {
                 && url.contains("@127.0.0.1:")
                 && url.ends_with("/portal_projection_test_epg10_04")
         );
-        let store = Arc::new(PgProjectionStore::connect(&url).await.unwrap());
+        let store = Arc::new(match resources {
+            Some(resources) => PgProjectionStore::connect_with_resources(&url, resources, 3)
+                .await
+                .unwrap(),
+            None => PgProjectionStore::connect(&url).await.unwrap(),
+        });
         store.migrate().await.unwrap();
         store.migrate().await.unwrap();
         let pool = PgPoolOptions::new()
