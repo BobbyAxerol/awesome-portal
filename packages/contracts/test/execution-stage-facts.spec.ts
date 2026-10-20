@@ -208,3 +208,135 @@ describe("BE-P2 / FE-071 Canary envelope rows, rollback items and trial schedule
     for (const member of ["EnvelopeComplianceRow", "EnvelopeVerdict", "RollbackItem", "TrialSchedule"]) expect(types).toContain(member);
   });
 });
+
+describe("BE-P2 / FE-072 typed rows, figures, series, gap window, finding and plan columns", () => {
+  const defs = (name: string) => `${FAMILY}#/$defs/${name}`;
+  const CANARY = "https://schemas.primusspark.com/portal/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom";
+  const LIVE = "https://schemas.primusspark.com/portal/execution-live-full-operations.v1.schema.json#/$defs/LiveFullOperations";
+  const SANDBOX = "https://schemas.primusspark.com/portal/execution-sandbox-certification.v1.schema.json#/$defs/CertificationResponse";
+  const PLAN = "https://schemas.primusspark.com/portal/execution-sandbox-certification.v1.schema.json#/$defs/PromotionPlanSummary";
+  const synthetic = () => load("fixtures/execution-stage-rows.synthetic.valid.json");
+
+  it("validates the synthetic populated shapes and marks them as invented", () => {
+    const fixture = synthetic();
+    expect(fixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(fixture.runtime_qualified).toBe(false);
+    ok(defs("StageTypedPositions"), fixture.value.typed_positions);
+    ok(defs("StageTypedOrders"), fixture.value.typed_orders);
+    ok(defs("StageSourceFigures"), fixture.value.source_figures);
+    ok(defs("StageFactGapRanges"), fixture.value.gap_ranges);
+    for (const plan of fixture.value.plan_rows) ok(PLAN, plan);
+  });
+
+  it("grafts onto the dark bodies: series points, gap window, typed tables and finding / plan columns", () => {
+    const value = synthetic().value;
+    const canary = load("fixtures/execution-canary-control-room.unavailable.valid.json");
+    canary.series = { ...canary.series, ...value.series };
+    canary.positions.typed = value.typed_positions;
+    canary.blotter.typed = value.typed_orders;
+    canary.source_figures = value.source_figures;
+    ok(CANARY, canary);
+    const live = load("fixtures/execution-live-full-operations.unavailable.valid.json");
+    live.series = { ...live.series, ...value.series };
+    live.projection_continuity.gap_ranges = value.gap_ranges;
+    live.orders.typed = value.typed_orders;
+    ok(LIVE, live);
+    const sandbox = load("fixtures/execution-sandbox-certification.unavailable.valid.json");
+    sandbox.findings = { total_count: 1, returned_count: 1, truncated: false, rows: [value.finding_row] };
+    sandbox.promotion_plans = value.plan_rows;
+    ok(SANDBOX, sandbox);
+  });
+
+  it("shows the dark bodies' typed absences, never a bare null table", () => {
+    const canary = load("fixtures/execution-canary-control-room.unavailable.valid.json");
+    for (const typed of [canary.positions.typed, canary.blotter.typed]) {
+      expect(typed).toMatchObject({ availability: "NOT_PUBLISHED", rows: [], returned_count: 0, source_complete: null });
+      expect(typed.reason_code).toBe("LIVE_SOURCE_UNAVAILABLE");
+      expect(typed.not_published_columns).toHaveLength(1);
+    }
+    expect(canary.positions.typed.not_published_columns[0].column).toBe("leverage");
+    expect(canary.blotter.typed.not_published_columns[0].column).toBe("ack_latency_ms");
+    const live = load("fixtures/execution-live-full-operations.unavailable.valid.json");
+    expect(live.projection_continuity.gap_ranges).toMatchObject({ availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_CONTINUITY_UNAVAILABLE" });
+    for (const body of [canary, live, load("fixtures/execution-sandbox-certification.unavailable.valid.json")]) {
+      expect(body.source_figures.figures.map((figure: any) => figure.key)).toEqual(["equity", "gross_notional", "positions", "open_orders", "fees"]);
+      for (const figure of body.source_figures.figures) {
+        expect(figure.internal.availability).toBe("NOT_PUBLISHED");
+        expect(figure.broker.availability).toBe("NOT_PUBLISHED");
+        expect(figure.difference).toMatchObject({ availability: "NOT_PUBLISHED", reason_code: "DIFFERENCE_REQUIRES_BOTH_SIDES" });
+      }
+    }
+  });
+
+  it("keeps the new members optional so a producer that predates them still validates", () => {
+    const canary = load("fixtures/execution-canary-control-room.unavailable.valid.json");
+    delete canary.source_figures; delete canary.positions.typed; delete canary.blotter.typed;
+    ok(CANARY, canary);
+  });
+
+  it("refuses typed rows that invent a column or a number", () => {
+    const row = synthetic().value.typed_positions.rows[0];
+    const bad = (patch: object) => refuses(defs("StagePositionRow"), { ...row, ...patch });
+    bad({ leverage: "3" });
+    bad({ leverage: 3 });
+    bad({ side: "BUY" });
+    bad({ quantity: 0.5 });
+    bad({ entry: "-1" });
+    bad({ mark: "1e3" });
+    bad({ unrealised: "-0" });
+    bad({ symbol: "BTC USDT" });
+    bad({ extra: true });
+    ok(defs("StagePositionRow"), { ...row, unrealised: "-3.25", side: null, entry: null });
+    const order = synthetic().value.typed_orders.rows[0];
+    refuses(defs("StageOrderRow"), { ...order, ack_latency_ms: 12 });
+    refuses(defs("StageOrderRow"), { ...order, side: "BUY" });
+    refuses(defs("StageOrderRow"), { ...order, since: "yesterday" });
+    ok(defs("StageOrderRow"), { ...order, price: null, type: null, since: null });
+  });
+
+  it("refuses a typed table whose absence still lists rows or whose rows have no completeness", () => {
+    const typed = synthetic().value.typed_positions;
+    refuses(defs("StageTypedPositions"), { ...typed, availability: "NOT_PUBLISHED" });
+    refuses(defs("StageTypedPositions"), { ...typed, source_complete: null });
+    refuses(defs("StageTypedPositions"), { ...typed, kind: "orders" });
+    refuses(defs("StageTypedPositions"), { ...typed, rows: Array(201).fill(typed.rows[0]), returned_count: 200 });
+  });
+
+  it("refuses figures that publish a difference without both sides, or a fixed order other than the five keys", () => {
+    const figures = synthetic().value.source_figures;
+    const mutate = (change: (copy: any) => void) => { const copy = structuredClone(figures); change(copy); return copy; };
+    refuses(defs("StageSourceFigures"), mutate((c) => { c.figures.pop(); }));
+    refuses(defs("StageSourceFigures"), mutate((c) => { c.figures[0].key = "pnl"; }));
+    refuses(defs("StageSourceFigures"), mutate((c) => { c.figures[2].difference.value = 0; }));
+    refuses(defs("StageSourceFigures"), mutate((c) => { c.figures[2].internal = { availability: "AVAILABLE", value: null, reason_code: null }; }));
+    ok(defs("StageSourceFigures"), mutate((c) => { c.figures[2].difference.value = "-1.5"; }));
+  });
+
+  it("refuses series points that are numbers, and a resolution outside the compact form", () => {
+    const value = synthetic().value;
+    const canary = load("fixtures/execution-canary-control-room.unavailable.valid.json");
+    const graft = (series: object) => ({ ...canary, series: { ...canary.series, ...series } });
+    refuses(CANARY, graft({ ...value.series, points: [{ t: "2026-10-12T08:00:00Z", value: 1.5 }] }));
+    refuses(CANARY, graft({ ...value.series, points: [{ t: "2026-10-12T08:00:00Z", value: "1.50" }] }));
+    refuses(CANARY, graft({ ...value.series, resolution: "hourly" }));
+    ok(CANARY, graft({ ...value.series, resolution: null, points: [] }));
+  });
+
+  it("refuses a plan envelope that is not a Facts, and an author without a user id", () => {
+    const plan = synthetic().value.plan_rows[0];
+    refuses(PLAN, { ...plan, envelope: { envelope_id: "cenv_1", revision: 1, status: "DRAFT" } });
+    refuses(PLAN, { ...plan, envelope: { availability: "AVAILABLE", value: { envelope_id: "cenv_1", revision: 0, status: "DRAFT" }, reason_code: null } });
+    refuses(PLAN, { ...plan, author: {} });
+    ok(PLAN, { ...plan, envelope: { availability: "NOT_PUBLISHED", value: null, reason_code: "PLAN_ENVELOPE_LOOKUP_NOT_PERFORMED" } });
+  });
+
+  it("is mirrored in the generated Canary, Live and Governance types", () => {
+    for (const file of ["execution-canary", "execution-live-full", "execution-governance"]) {
+      const types = readFileSync(join(ROOT, `generated/${file}.d.ts`), "utf8");
+      const members = file === "execution-governance" ? ["StageSourceFigures"] : ["StageSourceFigures", "StageTypedPositions"];
+      for (const member of members) expect(types, `${file} ${member}`).toContain(member);
+    }
+    expect(readFileSync(join(ROOT, "generated/execution-governance.d.ts"), "utf8")).toContain("StageFactPlanEnvelope");
+    expect(readFileSync(join(ROOT, "generated/execution-live-full.d.ts"), "utf8")).toContain("StageFactGapRanges");
+  });
+});

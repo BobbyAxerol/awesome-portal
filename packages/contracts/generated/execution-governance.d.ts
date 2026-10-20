@@ -3450,6 +3450,36 @@ export interface components {
             reconciliation: components["schemas"]["StageReconciliationFacts"];
             sessions: components["schemas"]["StageSessionsFact"];
         };
+        /** @description Canonical signed exact decimal string: no exponent, no leading zero, no trailing fractional zero, no negative zero. */
+        StageSignedDecimal: string;
+        StageFactSignedDecimal: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageSignedDecimal"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageFigure: {
+            /** @enum {unknown} */
+            key: "equity" | "gross_notional" | "positions" | "open_orders" | "fees";
+            label: string;
+            unit: string | null;
+            internal: components["schemas"]["StageFactSignedDecimal"];
+            /** @description The broker side. No broker population, equity or fee total is held by the Portal today, so each is NOT_PUBLISHED with its own reason; it is never copied from the internal side. */
+            broker: components["schemas"]["StageFactSignedDecimal"];
+            /** @description internal minus broker, exact, computed by the server only when both sides are AVAILABLE; otherwise NOT_PUBLISHED (DIFFERENCE_REQUIRES_BOTH_SIDES). The browser never subtracts. */
+            difference: components["schemas"]["StageFactSignedDecimal"];
+        };
+        /** @description The Internal / Broker / Difference rows, fixed order equity, gross_notional, positions, open_orders, fees. */
+        StageSourceFigures: {
+            /** @constant */
+            basis: "SOURCE_RELATIONS_HELD_BY_THE_PORTAL";
+            figures: components["schemas"]["StageFigure"][];
+        };
         SmokePlan: {
             plan_id: components["schemas"]["$defs-Identifier"];
             qty: string;
@@ -3487,6 +3517,7 @@ export interface components {
                 as_of: components["schemas"]["NullableTimestamp"];
                 resolved_at: components["schemas"]["NullableTimestamp"];
                 created_at: components["schemas"]["Timestamp"];
+                opened_at?: components["schemas"]["Timestamp"];
             }[];
         };
         Timeline: {
@@ -3503,6 +3534,28 @@ export interface components {
                 created_at: components["schemas"]["Timestamp"];
             }[];
         };
+        StageIdentifier: string;
+        StagePlanAuthor: {
+            user_id: components["schemas"]["StageIdentifier"];
+        };
+        StagePlanEnvelopeRef: {
+            envelope_id: components["schemas"]["StageIdentifier"];
+            revision: number;
+            /** @constant */
+            status: "DRAFT";
+        };
+        /** @description The latest Canary envelope drafted from this promotion plan. AVAILABLE with a null value = the lookup ran and none exists. */
+        StageFactPlanEnvelope: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StagePlanEnvelopeRef"] | null;
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
         PromotionPlanSummary: {
             plan_id: components["schemas"]["$defs-Identifier"];
             /** @constant */
@@ -3514,6 +3567,8 @@ export interface components {
             /** @constant */
             source_side_effect_requested: false;
             created_at: components["schemas"]["Timestamp"];
+            author?: components["schemas"]["StagePlanAuthor"];
+            envelope?: components["schemas"]["StageFactPlanEnvelope"];
         };
         CertificationResponse: {
             /** @constant */
@@ -3541,6 +3596,7 @@ export interface components {
             source_panels: components["schemas"]["SourcePanel"][];
             timeboxed_run_policy: null;
             stage_facts?: components["schemas"]["StageFacts"];
+            source_figures?: components["schemas"]["StageSourceFigures"];
             smoke_plan: components["schemas"]["SmokePlan"] | null;
             findings: components["schemas"]["FindingCollection"];
             timeline: components["schemas"]["Timeline"];

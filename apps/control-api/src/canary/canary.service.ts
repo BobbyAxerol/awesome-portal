@@ -19,6 +19,7 @@ import { evaluateSandboxCertification } from "../sandbox/sandbox-certification.s
 import { CanaryEnvelopeCreateRequest } from "./contracts";
 import { CanaryEnvelopeRow, CanaryLineage, CanaryRepository } from "./canary.repository";
 import { profileStageFacts } from "../execution/stage-facts-profile";
+import { gapRanges, sourceFigures, typedOrders, typedPositions } from "../execution/stage-rows";
 import { complianceRows, rollbackItems, trialSchedule } from "../execution/canary-envelope-facts";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import {
@@ -331,6 +332,8 @@ export class CanaryService {
       // FE-067: runtime / reconciliation / sessions as typed facts. Additive; the pinned-null
       // `runtime_state` above stays, the real value (when the source publishes one) is here.
       stage_facts: profileStageFacts(source, "LIVE_SOURCE_UNAVAILABLE"),
+      // FE-072: Internal / Broker / Difference figures; every cell typed, broker side unpublished.
+      source_figures: sourceFigures(source, "LIVE_SOURCE_UNAVAILABLE"),
       kpis: [
         ...(sourceConnected ? [
           valueKpi("capital_consumed", "Capital consumed", "EXECUTION", capitalConsumed, ["margin_balances"]),
@@ -374,8 +377,9 @@ export class CanaryService {
           unavailablePanel("difference", "DERIVED"),
         ]),
       ],
-      positions: sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION"),
-      blotter: sourceConnected ? sourceBlotter : unavailableCollection("blotter", "EXECUTION"),
+      // FE-072: `typed` is the same relation as the free rows, typed; leverage / ack latency named as unpublished columns.
+      positions: { ...(sourceConnected ? sourcePositions : unavailableCollection("positions", "EXECUTION")), typed: typedPositions(source, "LIVE_SOURCE_UNAVAILABLE") },
+      blotter: { ...(sourceConnected ? sourceBlotter : unavailableCollection("blotter", "EXECUTION")), typed: typedOrders(source, "LIVE_SOURCE_UNAVAILABLE") },
       series: {
         envelope: unavailablePanel("series", "DERIVED"),
         resolution: null,

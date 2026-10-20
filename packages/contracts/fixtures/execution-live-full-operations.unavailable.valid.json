@@ -75,6 +75,111 @@
       "source_complete": null
     }
   },
+  "source_figures": {
+    "basis": "SOURCE_RELATIONS_HELD_BY_THE_PORTAL",
+    "figures": [
+      {
+        "key": "equity",
+        "label": "Equity",
+        "unit": null,
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_EQUITY_FIELD_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "gross_notional",
+        "label": "Gross notional",
+        "unit": null,
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_GROSS_NOTIONAL_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "positions",
+        "label": "Positions",
+        "unit": "COUNT",
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_POSITION_POPULATION_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "open_orders",
+        "label": "Open orders",
+        "unit": "COUNT",
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_OPEN_ORDER_POPULATION_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "fees",
+        "label": "Fees",
+        "unit": null,
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_FEE_TOTAL_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      }
+    ]
+  },
   "predecessor_canary_envelope": {
     "envelope_id": "cenv_01K3D8R64WYH5M8MQM5H96J7BF", "revision": 1, "status": "DRAFT", "currency": "USDT",
     "limits": { "capital_cap": "5000", "gross_notional_cap": "10000", "daily_loss_cap": "250", "max_open_orders": 20 },
@@ -94,9 +199,115 @@
     "difference": { "panel_id": "difference", "source_authority": "DERIVED", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T12:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "LIVE_FULL_DIFFERENCE_UNAVAILABLE" }] }
   },
   "broker_consistency": { "state": "UNAVAILABLE", "mismatch_behavior": "SUPPRESS_ALL_BROKER_VALUES", "broker_values_visible": false, "finding_href": null, "dry_run_reconcile_href": null, "blocker_codes": ["BROKER_STATE_UNAVAILABLE", "LIVE_SOURCE_UNAVAILABLE"] },
-  "projection_continuity": { "state": "UNAVAILABLE", "epoch": null, "cursor": null, "sequence": null, "gap_detected": null, "affected_authorities": ["EXECUTION", "BROKER", "DERIVED"], "blocker_codes": ["SOURCE_CONTINUITY_UNAVAILABLE", "EX_BE_08_PENDING"] },
-  "positions": { "envelope": { "panel_id": "positions", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T12:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "LIVE_FULL_POSITIONS_UNAVAILABLE" }] }, "exact_total": null, "returned_count": 0, "next_cursor": null, "previous_cursor": null, "rows": [] },
-  "orders": { "envelope": { "panel_id": "orders", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T12:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "LIVE_FULL_ORDERS_UNAVAILABLE" }] }, "exact_total": null, "returned_count": 0, "next_cursor": null, "previous_cursor": null, "rows": [] },
+  "projection_continuity": {
+    "state": "UNAVAILABLE",
+    "epoch": null,
+    "cursor": null,
+    "sequence": null,
+    "gap_detected": null,
+    "affected_authorities": [
+      "EXECUTION",
+      "BROKER",
+      "DERIVED"
+    ],
+    "blocker_codes": [
+      "SOURCE_CONTINUITY_UNAVAILABLE",
+      "EX_BE_08_PENDING"
+    ],
+    "gap_ranges": {
+      "availability": "NOT_PUBLISHED",
+      "value": null,
+      "reason_code": "SOURCE_CONTINUITY_UNAVAILABLE"
+    }
+  },
+  "positions": {
+    "envelope": {
+      "panel_id": "positions",
+      "source_authority": "EXECUTION",
+      "panel_state": "unavailable",
+      "freshness_state": "UNKNOWN",
+      "delivery_profile": "fixture",
+      "source_verification_state": "UNAVAILABLE",
+      "as_of": null,
+      "read_at": "2026-08-23T12:00:00.000Z",
+      "age_seconds": null,
+      "lag_ms": null,
+      "source_cursor": null,
+      "projection_epoch": null,
+      "projection_sequence": null,
+      "capability_snapshot_id": null,
+      "data": null,
+      "warnings": [
+        {
+          "code": "LIVE_FULL_POSITIONS_UNAVAILABLE"
+        }
+      ]
+    },
+    "exact_total": null,
+    "returned_count": 0,
+    "next_cursor": null,
+    "previous_cursor": null,
+    "rows": [],
+    "typed": {
+      "kind": "positions",
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "LIVE_SOURCE_UNAVAILABLE",
+      "rows": [],
+      "returned_count": 0,
+      "omitted_count": 0,
+      "source_complete": null,
+      "not_published_columns": [
+        {
+          "column": "leverage",
+          "reason_code": "POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION"
+        }
+      ]
+    }
+  },
+  "orders": {
+    "envelope": {
+      "panel_id": "orders",
+      "source_authority": "EXECUTION",
+      "panel_state": "unavailable",
+      "freshness_state": "UNKNOWN",
+      "delivery_profile": "fixture",
+      "source_verification_state": "UNAVAILABLE",
+      "as_of": null,
+      "read_at": "2026-08-23T12:00:00.000Z",
+      "age_seconds": null,
+      "lag_ms": null,
+      "source_cursor": null,
+      "projection_epoch": null,
+      "projection_sequence": null,
+      "capability_snapshot_id": null,
+      "data": null,
+      "warnings": [
+        {
+          "code": "LIVE_FULL_ORDERS_UNAVAILABLE"
+        }
+      ]
+    },
+    "exact_total": null,
+    "returned_count": 0,
+    "next_cursor": null,
+    "previous_cursor": null,
+    "rows": [],
+    "typed": {
+      "kind": "orders",
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "LIVE_SOURCE_UNAVAILABLE",
+      "rows": [],
+      "returned_count": 0,
+      "omitted_count": 0,
+      "source_complete": null,
+      "not_published_columns": [
+        {
+          "column": "ack_latency_ms",
+          "reason_code": "ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION"
+        }
+      ]
+    }
+  },
   "open_order_footer": { "envelope": { "panel_id": "open-order-footer", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T12:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "LIVE_FULL_OPEN_ORDER_FOOTER_UNAVAILABLE" }] }, "exact_open_order_count": null },
   "incidents": { "envelope": { "panel_id": "incidents", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T12:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "LIVE_FULL_INCIDENTS_UNAVAILABLE" }] }, "exact_total": null, "returned_count": 0, "next_cursor": null, "previous_cursor": null, "rows": [] },
   "series": { "envelope": { "panel_id": "series", "source_authority": "DERIVED", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T12:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "LIVE_FULL_SERIES_UNAVAILABLE" }] }, "resolution": null, "points": [] },
