@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
 import { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
+import { paperProjectionAuthorized } from "./capture-authority";
 import { retainedReview } from "../execution/retained-read-profile";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import { AccountLifecycleRepository, COMMAND_STEP_UP_PROOFS } from "../repos/account-lifecycle";
@@ -35,10 +36,8 @@ export class StageActionEligibilityService {
     const result = projectStageActionEligibility({
       workspace_id: workspaceId, role: user.role, access,
       retained_review: retainedReview(config),
-      // Exactly the predicate GovernanceReviewCaptureService.paperSnapshot() enforces for this workspace.
-      paper_projection_authorized: config.FEATURE_EXECUTION_LOCAL_PROJECTION === "true" &&
-        config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER === "true" &&
-        config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID === workspaceId && Boolean(config.EXECUTION_EDGE_PAPER_PROFILE_ID),
+      // The one predicate GovernanceReviewCaptureService enforces (context() and paperSnapshot()) for this workspace.
+      paper_projection_authorized: paperProjectionAuthorized(config, workspaceId),
       step_up_until_ms: stepUpUntil ? stepUpUntil.getTime() : null,
       observed_at_ms: Date.now(),
     });

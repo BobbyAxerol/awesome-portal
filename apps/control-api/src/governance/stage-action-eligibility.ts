@@ -17,8 +17,8 @@
  *   - no cache/lease semantics: re-ask on mount, workspace switch and focus.
  */
 import { z } from "zod";
-import { governanceDenial, type GovernanceDenial } from "../auth/governance-access";
 import type { EffectiveAccess } from "../auth/owner-access.service";
+import { captureRefusal, type CaptureAction } from "./capture-authority";
 
 export const STAGE_ACTIONS = ["approval.create", "sandbox.review_note", "paper.exit_review_request",
   "canary.hold", "canary.reduce", "canary.rollback", "canary.request_scale",
@@ -30,14 +30,14 @@ export const STAGE_REASONS = ["SUBMIT_CHECKS_REQUIRED", "RETAINED_REVIEW_READ_ON
   "COMMAND_FAMILY_NOT_COMMISSIONED"] as const;
 export type StageReason = typeof STAGE_REASONS[number];
 export const STAGE_BASES = ["WORKSPACE_MEMBERSHIP", "ADMIN_ROLE", "ADMIN_ROLE_AND_GOVERNANCE_R2_READ", "NONE_PUBLISHED"] as const;
-/** None of the ten actions can require a fresh step-up today (three live routes ask for none, seven have no route),
+/** None of the ten actions can require a fresh step-up today (the three Portal routes ask for none, seven have no route),
  * so REQUIRED/ACTIVE are deliberately NOT part of this vocabulary; the capital rows of the batch eligibility carry them. */
 export const STAGE_STEP_UP_STATES = ["NOT_REQUIRED", "NOT_DETERMINED"] as const;
 export const ALPHA_SCOPES = ["WORKSPACE_ALL_COMPLETED_RUNS"] as const;
 
 type Rule = { basis: typeof STAGE_BASES[number]; stepUp: boolean | null };
 /** What each route enforces today. `stepUp` is whether the producing route demands a fresh step-up (none of the
- * three live routes does); null = no route exists, so the requirement is not determined, never "false". */
+ * three existing routes does); null = no route exists, so the requirement is not determined, never "false". */
 export const STAGE_RULES: Readonly<Record<StageAction, Rule>> = {
   "approval.create": { basis: "WORKSPACE_MEMBERSHIP", stepUp: false },
   "sandbox.review_note": { basis: "ADMIN_ROLE", stepUp: false },
@@ -109,21 +109,20 @@ export interface StageEligibilityFacts {
   observed_at_ms: number;
 }
 
-function denial(facts: StageEligibilityFacts): GovernanceDenial | null {
-  return governanceDenial({ access: facts.access, gate: "r2", mode: "read", workspaceId: facts.workspace_id });
-}
+/** The stage actions that are Portal review captures: they share ONE predicate (capture-authority.ts) with the
+ * review-capture-capabilities read, so the two can never disagree about the same control. */
+const CAPTURE_OF: Readonly<Partial<Record<StageAction, CaptureAction>>> = {
+  "sandbox.review_note": "SANDBOX_NOTE", "paper.exit_review_request": "PAPER_EXIT_CREATE",
+};
 function verdictFor(action: StageAction, facts: StageEligibilityFacts): StageReason {
   const rule = STAGE_RULES[action];
   if (rule.basis === "NONE_PUBLISHED") return "COMMAND_FAMILY_NOT_COMMISSIONED";
-  // SessionGuard refuses every non-GET execution request in a retained-review build before any route runs.
+  const capture = CAPTURE_OF[action];
+  if (capture) return captureRefusal(capture, facts) ?? "SUBMIT_CHECKS_REQUIRED";
+  // approval.create: SessionGuard refuses every non-GET execution request in a retained-review build before any
+  // route runs; otherwise the route checks workspace membership only (no role, no gate capability).
   if (facts.retained_review) return "RETAINED_REVIEW_READ_ONLY";
-  if (rule.basis === "WORKSPACE_MEMBERSHIP") return "SUBMIT_CHECKS_REQUIRED";
-  // Same order as GovernanceReviewCaptureService.capture(): ADMIN role first, then the gate authority.
-  if (facts.role !== "ADMIN") return "ADMIN_ROLE_REQUIRED";
-  if (rule.basis === "ADMIN_ROLE") return "SUBMIT_CHECKS_REQUIRED";
-  const refused = denial(facts);
-  if (refused) return refused;
-  return facts.paper_projection_authorized ? "SUBMIT_CHECKS_REQUIRED" : "CAPTURE_PROJECTION_NOT_AUTHORIZED";
+  return "SUBMIT_CHECKS_REQUIRED";
 }
 
 /** Pure projection of server-gathered facts. */
