@@ -27,7 +27,7 @@
  *       - reader never accepts what the schema refuses (counted; one named exception, MD-L1, is not generated);
  *       - where the reader is stricter than the schema it is on purpose, the group is named and counted:
  *           MD-S1  display safety of every text (whitespace-only, bidi, zero-width, C1)
- *           MD-S2  negative zero ("-0", "-0.00") is not a decimal value
+ *           MD-S2  (retired) negative zero is now refused by the schema itself (MD-5 option C), so it is no longer stricter-than-schema
  *           MD-S3  a window is not backwards (from_ms > to_ms)
  *           MD-S4  partition metric key is a lower-case token; at most 64 metrics per partition
  *           MD-S5  a row-level money figure that names a currency IS one partition's figure (identity, BE-P1 MD-8; replaced "same currency as every partition", which refused a pinned-partition body)
@@ -44,7 +44,7 @@
  *       - MD-1 .. MD-8 (BE-P1): the server now refuses to emit a body that breaks them; the schema says what JSON Schema
  *         can (MD-3 exact repeat, MD-4, MD-7 field enum + a field once in a key, MD-6 exact repeat, MD-1 empty page) and
  *         those are normal `it`; what it cannot say stays `it.fails` (MD-1, MD-2, MD-6 row_key, MD-7 count, MD-8) and
- *         MD-5 (negative zero) waits for an owner decision.
+ *         MD-5 (negative zero): owner decision C (2026-10-20): canonical zero on emit; the response schema refuses -0.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
@@ -1023,7 +1023,6 @@ describe("L3 · schema agreement (the published ManagerDataset schema, via testk
   const TEXT_PATHS = /^huge-string: (workspace_id|items\.0\.(row_key|alpha_id|name|children\.0\.(deployment_id|binding_ref))|capital_statements\.0\.partition\.(currency|native_profile_ref)|items\.0\.metrics\.net_pnl\.(unit|basis|currency|methodology_ref|calculation_revision|policy_revision|provenance_refs\.0|quality\.reasons\.0)|quality\.reasons\.0|groups\.0\.key\.0\.value|page\.(next_cursor|previous_cursor)) <-/;
   const STRICTER_GROUPS: { name: string; test: (c: Case) => boolean; count?: number }[] = [
     { name: "MD-S1 display safety: whitespace-only, bidi override, in any text", test: (c) => TEXT_PATHS.test(c.name) && SAFE_TEXT_VALUE.test(c.name) },
-    { name: "MD-S2 negative zero is not a decimal value", test: (c) => c.category === "negative-zero" },
     // The base keeps the headline and its partition's figure as one fact (MD-8); a corpus case that edits the headline alone breaks it.
     { name: "MD-S5 a row money figure that names a currency is one partition's figure (edited headline alone)", test: (c) => /^[a-z-]+: items\.0\.metrics\.net_pnl\./.test(c.name) },
     { name: "MD-S7 page: returned_count is the number of rows (a cut or doubled list changes the rows, not the count)", test: (c) => /^(truncated|duplicate-id): items <-/.test(c.name) },
@@ -1111,7 +1110,6 @@ describe("L3 · schema agreement (the published ManagerDataset schema, via testk
  */
 const PINNED_STRICTER: Record<string, number> = {
   "MD-S1 display safety: whitespace-only, bidi override, in any text": 41,
-  "MD-S2 negative zero is not a decimal value": 24,
   "MD-S5 a row money figure that names a currency is one partition's figure (edited headline alone)": 4,
   "MD-S7 page: returned_count is the number of rows (a cut or doubled list changes the rows, not the count)": 1,
   "MD-S7 cursor text: an empty cursor (whitespace-only, bidi and NUL cursors are MD-S1)": 2,
@@ -1126,8 +1124,6 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
     ["MD-S1 bidi override in a metric basis", (b) => { b.items[0].metrics.net_pnl.basis = `net${rlo}x`; }],
     ["MD-S1 zero-width in a partition currency", (b) => { b.capital_statements[0].partition.currency = `US${zwsp}DT`; b.capital_statements[0].metrics.balance_total.currency = `US${zwsp}DT`; }],
     ["MD-S1 C1 control in a row_key (the schema leaves row_key unpatterned)", (b) => { b.items[0].row_key = "k\u0085x"; }],
-    ["MD-S2 negative zero value", (b) => { b.items[0].metrics.net_pnl.value = "-0"; }],
-    ["MD-S2 negative zero with decimals", (b) => { b.items[0].metrics.net_pnl.value = "-0.000"; }],
     ["MD-S3 metric window from_ms after to_ms", (b) => { b.items[0].metrics.net_pnl.window = { from_ms: 2000, to_ms: 1000 }; }],
     ["MD-S3 selected_window resolved backwards", (b) => { b.selected_window.resolved = { from_ms: 2000, to_ms: 1000 }; }],
     ["MD-S4 partition metric key not a lower-case token", (b) => { b.capital_statements[0].metrics.Balance_Total = b.capital_statements[0].metrics.balance_total; }],
@@ -1168,8 +1164,8 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
   it("prints the number of pinned groups", () => {
     const groups = new Set(cases.map(([name]) => name.split(" ")[0]));
     console.info(`manager stricter-than-schema (on purpose): ${cases.length} pinned cases in ${groups.size} named groups: ${[...groups].sort().join(", ")}`);
-    // MD-S9 left this list: the schema refuses an unpublished preset that carries a window (BE-P1, MD-4).
-    expect(groups.size).toBe(12);
+    // MD-S9 left this list (BE-P1, MD-4: the schema refuses an unpublished preset that carries a window); MD-S2 left it too (MD-5 option C: the schema refuses -0).
+    expect(groups.size).toBe(11);
   });
 });
 
@@ -1272,10 +1268,10 @@ describe("MD-1 .. MD-8 (BE-P1): the producer refuses to emit these bodies; the s
     // repeat that differs only in its proof reference (evidence, not identity) is refused here too.
     expect(accepted).toEqual([]);
   });
-  it("MD-5 (negative zero) is not a rule yet: the schema and the producer admit -0 and the reader refuses it (owner decision pending)", () => {
+  it("MD-5 (negative zero), owner decision C: the producer emits canonical zero, so the schema and the producer refuse -0 and the reader refuses it too", () => {
     const body = clone(NEG);
     body.items[0].metrics.net_pnl.value = "-0";
-    expect(datasetViolations(body)).toEqual([]);
+    expect(datasetViolations(body)).not.toEqual([]);
     expect(datasetOf(body)).toBeNull();
   });
 });
