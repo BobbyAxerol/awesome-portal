@@ -33,7 +33,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
-import { KpiStrip, Kpi, NotPublished, SectionPanel, StageHeader, UrlTabs, type StageChips, type StageCrumb } from "../../blocks";
+import { CompactGaps, GapLine, KpiStrip, Kpi, SectionPanel, StageHeader, UrlTabs, type StageChips, type StageCrumb } from "../../blocks";
 import { EquityPanel } from "../../charts";
 import type { SeriesPoint as ChartPoint } from "../../charts/types";
 import { readAsOf } from "../../boundary";
@@ -77,10 +77,11 @@ export interface CanaryScreenProps {
   workspaceId?: string;
 }
 
+/** The read did not answer: the chips say nothing (one `Not available` chip); the state panel below says why. */
 const UNAVAILABLE_CHIPS: StageChips = {
-  runtime: { state: "not-available", reason: "Not read" },
-  freshness: { state: "not-available", reason: "Not read" },
-  reconciliation: { state: "not-available", reason: "Not read" },
+  runtime: { state: "not-available" },
+  freshness: { state: "not-available" },
+  reconciliation: { state: "not-available" },
 };
 
 /**
@@ -95,23 +96,18 @@ function PublishedSeries({ series }: { series: NonNullable<CanaryView["seriesPoi
     if (at !== null) points.push({ t: at, v: p.value });
   }
   return (
-    <>
+    <div title={series.methodologyRef === null ? undefined : `Methodology ${series.methodologyRef}`}>
       <EquityPanel label="Deployment series" points={points} unit="money" currency={series.unit ?? undefined} signed height={200} />
-      <p className="exec-cny-series">
-        {series.methodologyRef === null ? null : <span className="exec-blk-num">Methodology {series.methodologyRef}. </span>}
-        <NotPublished id={FE.series}>Paper and Backtest series</NotPublished>
-      </p>
-    </>
+      <GapLine items={[{ label: "Paper and Backtest series", id: FE.series }]} />
+    </div>
   );
 }
 
 function SeriesPanel({ view }: { view: CanaryView }) {
   return (
-    <SectionPanel level={2} title="Live vs Paper vs Backtest" aside="Return since canary start">
+    <SectionPanel level={2} title="Live vs Paper vs Backtest" aside="Since canary start">
       {view.seriesPoints === null ? (
-        <p className="exec-cny-series">
-          <NotPublished id={FE.series}>Live, Paper and Backtest series</NotPublished> <span className="exec-blk-na">{panelLine(view.series)}.</span>
-        </p>
+        <GapLine items={[{ label: "Live, Paper and Backtest series", id: FE.series }]} because={panelLine(view.series)} />
       ) : (
         <PublishedSeries series={view.seriesPoints} />
       )}
@@ -119,7 +115,15 @@ function SeriesPanel({ view }: { view: CanaryView }) {
   );
 }
 
-export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryScreenProps) {
+export default function CanaryScreen(props: CanaryScreenProps) {
+  return (
+    <CompactGaps>
+      <CanaryBody {...props} />
+    </CompactGaps>
+  );
+}
+
+function CanaryBody({ api, deploymentId, workspaceId }: CanaryScreenProps) {
   const url = useExecUrlState();
   const [params] = useSearchParams();
   const navigate = useNavigate();
@@ -157,7 +161,6 @@ export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryS
       <div className="exec-cny-v2" data-screen="canary-v2" data-state="denied">
         <header>
           <h1 className="exec-cny-plain-title">{CANARY_TITLE}</h1>
-          <p className="exec-cny-plain-sub">The server refused this read.</p>
         </header>
         <section className="exec-cny-state" aria-label="Access">
           <p>You can't open this page.</p>
@@ -195,6 +198,13 @@ export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryS
             {subtitleIds(current).length > 0 ? " · " : ""}
             <AlphaNameLine identity={identity} />
           </>
+        )
+      }
+      actions={
+        current === null ? undefined : (
+          <button type="button" className="exec-cny-refresh" onClick={() => setRefresh((n) => n + 1)}>
+            Refresh
+          </button>
         )
       }
       chips={chips}
@@ -240,6 +250,7 @@ export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryS
   /* ── the control room ─────────────────────────────────────────────────── */
   const banners = bannersOf(result.view);
   const cells = kpiCells(result.view);
+  const metrics = cells.flatMap((cell) => (cell.kind === "metric" ? [cell] : []));
   return (
     <div className="exec-cny-v2" data-screen="canary-v2" data-state="ready" data-body={result.view.body}>
       {header(chipsOf(result.view), result.view)}
@@ -250,19 +261,19 @@ export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryS
         </div>
       ))}
 
-      <div className="exec-cny-toolbar">
-        <button type="button" className="exec-cny-refresh" onClick={() => setRefresh((n) => n + 1)}>
-          Refresh
-        </button>
-      </div>
-
-      <KpiStrip label="Canary figures" columns={5}>
-        {cells.map((cell) => {
-          if (cell.kind === "not-published") return <Kpi key={cell.key} label={cell.label} notPublished={cell.fe} />;
-          if (cell.kind === "absent") return <Kpi key={cell.key} label={cell.label} absentReason={cell.reason} basis={cell.basis} />;
-          return <Kpi key={cell.key} label={cell.label} metric={cell.metric} suffix={cell.suffix} signed={cell.signed} basis={cell.basis} />;
-        })}
-      </KpiStrip>
+      {/* A figure the source did not publish is not a tile holding the words: the missing ones are ONE line (reasons and request ids in its title). */}
+      {metrics.length > 0 ? (
+        <KpiStrip label="Canary figures" columns={metrics.length}>
+          {metrics.map((cell) => (
+            <Kpi key={cell.key} label={cell.label} metric={cell.metric} suffix={cell.suffix} signed={cell.signed} basis={cell.basis} />
+          ))}
+        </KpiStrip>
+      ) : null}
+      <GapLine
+        items={cells.flatMap((cell) =>
+          cell.kind === "metric" ? [] : [{ label: cell.label, id: cell.kind === "not-published" ? cell.fe : undefined, reason: cell.kind === "absent" ? cell.reason : undefined }],
+        )}
+      />
 
       <div className="exec-cny-grid">
         <div className="exec-cny-col">

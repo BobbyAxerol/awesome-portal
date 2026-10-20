@@ -336,7 +336,7 @@ describe("banners", () => {
   it("a stale broker with the published asymmetry says what stays open", () => {
     const keys = bannersOf(viewOf(populatedV1({ brokerFreshness: "STALE" })));
     expect(keys.map((b) => b.key)).toEqual(["guarded"]);
-    expect(keys[0].text).toBe("Broker data is stale. Scale-up is blocked. Protective actions stay open.");
+    expect(keys[0].text).toBe("Broker data is stale. Scale-up is blocked; protective actions stay open.");
   });
 
   it("a V2 body says it states the proposal only; a partial panel is worded; a clean lit body has none", () => {
@@ -359,8 +359,8 @@ describe("small words", () => {
   it("panel lines and subtitle ids", () => {
     expect(panelLine(null)).toBe("Not in this response");
     expect(panelLine(viewOf(v1Body()).series)).toBe("Source unavailable");
-    expect(subtitleIds(viewOf(v1Body()))).toEqual(["BINANCE", "Portfolio pf_crypto", "Account acct_canary_grid"]);
-    expect(subtitleIds(viewOf(parentBody()))).toEqual(["Portfolio pf_TEST_ONLY_parent"]);
+    expect(subtitleIds(viewOf(v1Body()))).toEqual(["BINANCE"]);
+    expect(subtitleIds(viewOf(parentBody()))).toEqual([]);
   });
 
   it("'N of total': the cap is stated, an unknown total is stated, the cut is stated", () => {

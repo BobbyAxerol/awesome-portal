@@ -9,13 +9,13 @@
  */
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { NotPublished, SectionPanel } from "../../blocks";
+import { GapLine, NotPublished, SectionPanel } from "../../blocks";
 import { formatAsOf, readAsOf } from "../../boundary";
 import type { PublishedRow, PublishedRows } from "../../readers/publishedRows";
 import { cellText, lossNote, lossText } from "../../readers/publishedRows";
 import type { CanaryView, OrderRow, PositionRow, RowsFact } from "./readCanary";
 import { FE, ROW_CAP, panelLine } from "./model";
-import { ExactCell, RowsNotPublished, countLine } from "./parts";
+import { ExactCell, countLine } from "./parts";
 
 const POSITION_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly CardsColumn<PositionRow>[] => [
   { key: "symbol", label: "Symbol", render: (r) => r.symbol },
@@ -66,11 +66,16 @@ function publishedColumns(table: PublishedRows): readonly CardsColumn<PublishedR
 function PublishedRowsTable({ table, label, rowsLabel, reasonCode }: { table: PublishedRows; label: string; rowsLabel: string; reasonCode?: string | null }) {
   return (
     <>
-      <CardsTable columns={publishedColumns(table)} rows={table.rows} rowKey={(row) => row.key} label={label} empty="The source reported none." />
-      <p className="exec-cny-rowsnote">
-        Columns are the source's own field names.{table.hiddenColumns > 0 ? ` ${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}{lossNote(table) === null ? "" : ` ${lossNote(table)}`}{" "}
-        <RowsNotPublished what={`Typed ${rowsLabel.toLowerCase()}`} reasonCode={reasonCode} />
-      </p>
+      <div title="Columns are the source's own field names.">
+        <CardsTable columns={publishedColumns(table)} rows={table.rows} rowKey={(row) => row.key} label={label} empty="The source reported none." />
+      </div>
+      {table.hiddenColumns > 0 || lossNote(table) !== null ? (
+        <p className="exec-cny-rowsnote">
+          {table.hiddenColumns > 0 ? `${table.hiddenColumns} more field${table.hiddenColumns === 1 ? " is" : "s are"} not drawn.` : ""}
+          {lossNote(table) === null ? "" : ` ${lossNote(table)}`}
+        </p>
+      ) : null}
+      <GapLine items={[{ label: `Typed ${rowsLabel.toLowerCase()}`, id: FE.rows, reason: reasonCode }]} />
     </>
   );
 }
@@ -82,6 +87,7 @@ function RowsPanel<R>({
   columns,
   rowKey,
   rowsLabel,
+  absent,
 }: {
   title: string;
   label: string;
@@ -89,12 +95,18 @@ function RowsPanel<R>({
   columns: (reasons: Readonly<Record<string, string>>) => readonly CardsColumn<R>[];
   rowKey(row: R, index: number): string;
   rowsLabel: string;
+  /** Per column key: is this row's cell unpublished? A column every row leaves out is not drawn. */
+  absent?: Readonly<Record<string, { reason: string; is(row: R): boolean }>>;
 }) {
   const rows = fact.rows;
   const visible = rows === null ? [] : rows.slice(0, ROW_CAP);
   const position = new Map(visible.map((row, index) => [row, index] as const));
   const published = rows === null ? fact.published : null;
   const reasons = Object.fromEntries((fact.notPublishedColumns ?? []).map((c) => [c.column, c.reasonCode]));
+  // A column no row can fill (Leverage, Ack latency) is not drawn per row: its name is one `Not available` line under the table.
+  const allColumns = columns(reasons);
+  const dropped = rows === null || rows.length === 0 ? [] : allColumns.filter((column) => absent?.[column.key] !== undefined && rows.every((row) => absent[column.key]!.is(row)));
+  const shownColumns = allColumns.filter((column) => !dropped.includes(column));
   return (
     <SectionPanel
       level={2}
@@ -102,23 +114,19 @@ function RowsPanel<R>({
       aside={rows !== null ? countLine(rows.length, fact.total, ROW_CAP) : published !== null ? countLine(published.rows.length, published.total, ROW_CAP) : undefined}
     >
       {published !== null ? (
-        <>
-          <p className="exec-cny-rowsnote"><span className="exec-blk-na">{panelLine(fact.panel)}.</span></p>
-          <PublishedRowsTable table={published} label={label} rowsLabel={rowsLabel} reasonCode={fact.typedReasonCode} />
-        </>
+        <PublishedRowsTable table={published} label={label} rowsLabel={rowsLabel} reasonCode={fact.typedReasonCode} />
       ) : rows === null ? (
-        <p className="exec-cny-rowsnote">
-          <span className="exec-blk-na">{panelLine(fact.panel)}.</span> <RowsNotPublished what={rowsLabel} reasonCode={fact.typedReasonCode} />
-        </p>
+        <GapLine items={[{ label: rowsLabel, id: FE.rows, reason: fact.typedReasonCode }]} because={panelLine(fact.panel)} />
       ) : (
         <CardsTable
-          columns={columns(reasons)}
+          columns={shownColumns}
           rows={visible}
           rowKey={(row) => rowKey(row, position.get(row) ?? 0)}
           label={label}
           empty="The source reported none."
         />
       )}
+      {dropped.length > 0 ? <GapLine items={dropped.map((column) => ({ label: column.label, id: FE.rows, reason: reasons[absent?.[column.key]?.reason ?? column.key] ?? null }))} /> : null}
     </SectionPanel>
   );
 }
@@ -133,6 +141,7 @@ export function PositionsOrdersTab({ view }: { view: CanaryView }) {
         columns={POSITION_COLUMNS}
         rowKey={(row, index) => `${row.symbol}-${index}`}
         rowsLabel="Position rows"
+        absent={{ leverage: { reason: "leverage", is: (row) => row.leverage === null } }}
       />
       <RowsPanel
         title="Open orders"
@@ -141,6 +150,7 @@ export function PositionsOrdersTab({ view }: { view: CanaryView }) {
         columns={ORDER_COLUMNS}
         rowKey={(row, index) => `${row.symbol}-${index}`}
         rowsLabel="Order rows"
+        absent={{ ack: { reason: "ack_latency_ms", is: (row) => row.ackLatencyMs === null } }}
       />
     </div>
   );

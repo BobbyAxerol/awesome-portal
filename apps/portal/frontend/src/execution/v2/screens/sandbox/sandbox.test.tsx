@@ -237,10 +237,11 @@ describe("the V1 certification body", () => {
     expect(chip("gaps").getAttribute("title")).toContain("SANDBOX_SOURCE_UNAVAILABLE");
     expect(screen.getByText(/not a clean result/)).toBeTruthy();
     expect(screen.getByText(/Source panels did not report/)).toBeTruthy();
-    const triad = screen.getByRole("group", { name: "Reconciliation" });
-    // The dark body now carries `source_figures`: every side is the server's `Not published (FE-072)`, with its reason in the title.
-    expect(triad.querySelectorAll("[data-gap]").length).toBe(15);
-    expect(triad.textContent).not.toMatch(/\b0\.00\b/);
+    // The dark body carries `source_figures`, every cell the server's `Not published (FE-072)`: ONE line instead of fifteen cells, the reason in its title.
+    expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
+    const figures = Array.from(document.querySelectorAll(".exec-blk-gaps")).find((n) => n.textContent === "Not available: Internal, Broker and Difference figures")!;
+    expect(figures.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(document.body.textContent).not.toMatch(/\b0\.00\b/);
     expect(screen.getByRole("list", { name: "Source panels" }).textContent).toContain("Execution · Unavailable");
   });
 

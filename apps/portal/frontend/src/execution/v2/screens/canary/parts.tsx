@@ -2,11 +2,10 @@
  * Small cells the Canary tabs share: an exact decimal fact, and the honest
  * "N of total" line for a capped table.
  */
-import { NO_VALUE_COPY, NotPublished, UNREADABLE_COPY } from "../../blocks";
+import { NO_VALUE_COPY, UNREADABLE_COPY } from "../../blocks";
 import { readDecimal, type SignTone } from "../../boundary";
 import type { ExactUnit } from "../../../formatExact";
 import type { DecimalFact } from "./readCanary";
-import { FE } from "./model";
 
 /** A published exact decimal; an unreadable one says so; an absent one says `Not available`. */
 export function DecimalCell({ fact }: { fact: DecimalFact | null }) {
@@ -30,15 +29,6 @@ export function ExactCell({ value, unit, suffix, signed = false }: { value: stri
       {decimal.display}
       {suffix ?? ""}
     </span>
-  );
-}
-
-/** `Not published (FE-072)` for a column or a panel whose rows the contract does not type; the server's reason code, when it gave one, is in the title. */
-export function RowsNotPublished({ what, reasonCode }: { what: string; reasonCode?: string | null }) {
-  return (
-    <NotPublished id={FE.rows} titleReason={reasonCode}>
-      {what}
-    </NotPublished>
   );
 }
 
