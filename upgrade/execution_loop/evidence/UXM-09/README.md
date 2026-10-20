@@ -3,6 +3,8 @@
 Chủ: Claude (writer) · 2026-10-20 · base `claude/uxm-f9` @ `4ac2e3a7` · commits `24419ea0` (readers), `3326d23f` (UI) · Tier: **R1** (vitest focused + `tsc`); R2 chưa chạy.
 Lane: **FIXTURE_LAB** (jsdom). Không Docker, không visual, không hook đầy đủ, không trình duyệt thật. **Không có gì ở đây chứng minh một lệnh đã từng được nguồn nhận.** Cổng gửi thật vẫn tắt: `Command sends are not connected to a source: UXM-09 fixture`.
 
+**Cập nhật 2026-10-20 (vòng 2, nhánh `claude/fe-parity` @ `7df531d3` + `0febd295` mount, `384453fc` browser receipt):** story đã được **mount** sau cờ `command` tại `/execution/command` (§2, §8), có nhãn "Fixture story: not connected to a source; fake port", mỗi receipt tự nói "fake port"; browser receipt `FIXTURE_LAB` ở §11 (8 test, 1280 và 660). **Trạng thái đề xuất: ACCEPTED_FIXTURE_ONLY (không đổi); CHANGES_REQUESTED cho real-source lane còn nguyên (§6).** Vẫn **không** có gì chứng minh một lệnh đã được nguồn nhận: cổng gửi thật tắt, port là fake có kịch bản, không request nào tới route lệnh (§11 đếm bằng trình duyệt). `NOT_RUN`: R2 (vitest rộng, hook đầy đủ, baseline ảnh) → người tích hợp.
+
 ## 1. Entry gate
 - Giao việc: lead (writer lane UXM-09 FIXTURE-ONLY), dựa trên ELP2-07 `coverage-and-handoff.md` §5 ("Handoff to Claude — NOT yet an assignment") và UXM-09 trong guide v1.1. Đây **không phải** duyệt của Bobby cho kết nối thật; không có mount route, không bật cờ nào.
 - Pins: Portal `4ac2e3a7`; contract đọc từ `packages/contracts` cùng SHA; TS/PM/Edge: không dùng (source-dark). Source Truth Board: **không hàng nào đổi** (không hàng nào lên `EXISTS_MOUNTED`).
@@ -17,9 +19,10 @@ Lane: **FIXTURE_LAB** (jsdom). Không Docker, không visual, không hook đầy 
 | UI: Plan, Confirm, Receipt, Status lookup, Disabled operations, Certification, story page | `PlanPanel.tsx`, `ConfirmPanel.tsx`, `ReceiptPanel.tsx`, `StatusLookup.tsx`, `DisabledOperations.tsx`, `Certification.tsx`, `CommandFlow.tsx`, `index.tsx`, `parts.tsx`, `StepBar.tsx` |
 | Fake port có kịch bản (không `fetch`, không URL, không socket) + dữ liệu story | `fakePort.ts`, `storyData.ts` |
 | CSS (`.exec-cf-*`, token carbon, qua `v2Hygiene`) | `v2/css/command.css` |
-| Cờ | key `command` trong `v2/flags.ts` (**pending** ⇒ `isV2Screen("command")` luôn false), `flags.test.ts` |
+| Cờ | key `command` trong `v2/flags.ts`; **2026-10-20: không còn pending** (`EXEC_V2_PENDING_KEYS = []`, bỏ trong cùng commit `0febd295` làm `PortalRoutes` đọc `isV2Screen("command")`), `flags.test.ts` |
+| Mount (2026-10-20) | `app/PortalRoutes.tsx`: `V2Command = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import(".../screens/command/storyRoute")) : null`, route `EXECUTION_COMMAND_ROUTE = "/execution/command"` có điều kiện `isV2Screen("command")` (cùng cách nối với `scoped`). Không phải feature trong registry, không có trong điều hướng. `storyRoute.tsx` = story page + catalogue công bố; `catalogueLane.ts` là module **duy nhất** của lane này nạp JSON `packages/contracts/fixtures/execution-command-catalog.valid.json` (qua reader V1 `adminCatalog`, như trước) |
 
-Mount contract (integrator làm, lane này không làm): default export của `v2/screens/command`, trong Router, sau cờ `command`; khi mount, bỏ `command` khỏi `EXEC_V2_PENDING_KEYS` cùng commit.
+Mount contract (đã thực hiện): default export của `v2/screens/command/storyRoute`, trong Router, sau cờ `command`; `command` đã bỏ khỏi `EXEC_V2_PENDING_KEYS` cùng commit mount. Reader catalogue V2 chặt vẫn **chưa làm** (cần lead đồng ý, §6 (c)): route dùng reader V1 `readCommandCatalogue`.
 
 ## 3. Bảng UX-F14…18 → component / state / test
 Ghi chú: guide v1.1 định nghĩa UX-F14…16 là archive/reactivation, F17 là APPLIED+projection lag+venue, F18 là click lặp/timeout/back/cancel/reconnect.
@@ -43,7 +46,7 @@ Task 2 receipt states: ACCEPTED, REJECTED (có lý do typed: từ vựng 11 từ
 6. **F0 apply không có idempotency key trong body** (route theo `operation_id`); "cùng key" ở F0 là key phía Portal (`command_apply:<uuid>`) mà fake port mô phỏng (cùng key khác payload ⇒ 409 `COMMAND_IDEMPOTENCY_CONFLICT`). Thật phải do Codex xác nhận.
 7. Revoke chỉ mô phỏng bằng 403 ở fake; "revoke giữa chừng" thật, step-up, CSRF, giới hạn 60 giây của new-send authorization: không phủ (cần nguồn).
 8. Họ **instance-registration** và **pending-control** (APPLY_PENDING/CANCEL_REMAINING): chỉ là hàng disabled (họ chưa admit); không UI preview/receipt riêng, chưa dùng `execution-instance-registration.d.ts`.
-9. Trình duyệt thật, 390px, thứ tự Tab thật, đọc màn hình: `NOT_RUN` (chỉ jsdom). Visual baseline: `NOT_RUN` (cờ pending, chưa mount).
+9. ~~Trình duyệt thật~~ **Đã có (2026-10-20, §11)** ở 1280 và 660, `FIXTURE_LAB`. Vẫn `NOT_RUN`: 390px, thứ tự Tab đầy đủ trên cả trang, đọc màn hình, axe riêng cho story. Visual baseline: `NOT_RUN` (chủ: người tích hợp/R2; story đã mount nhưng chưa có ảnh so sánh).
 
 ## 5. Source Truth Board và consumer receipt (ELP2-07 fixtures)
 Source Truth Board: **không đổi hàng nào**. Đề xuất cột FE cho hàng command (khi lead cập nhật): reader `v2/readers/commandOperation.ts` · L0/L1/L2/L3 · màn = story fixture, chưa mount · FE-020/032/015/037/034 mở.
@@ -67,13 +70,46 @@ Dùng id đã có khi khớp: **FE-020** (thêm: plan/preview phải publish cos
 - `tsc --noEmit` (toàn project): **exit 0**.
 - vitest focused, `--maxWorkers=2`: 14 file, **15 620 test PASS** = readers `commandOperation` (conformance 15 250 + 18), `screens/command` 109 (model 39, command.test 55, storyData 15), `flags.test.ts`, và các cổng v2Hygiene, productBoundary, absentValues, castLeak, failClosed, disabledReason, testHygiene, linkTargets.
 - Build tắt cờ (`VITE_EXECUTION_V2_SCREENS` không đặt): 448 asset, **0** chuỗi của lane này trong `dist` (không chunk mới; chưa module nào import `screens/command`).
-- `NOT_RUN`: vitest rộng, Playwright V2, visual, hook R2. Chạy ở mốc R2 trước hạ cánh.
+- `NOT_RUN`: vitest rộng, visual, hook R2. Chạy ở mốc R2 trước hạ cánh. (Playwright V2 cho story: đã chạy ở vòng 2, §11.)
+- **Vòng 2 (2026-10-20):**
+  - `tsc --noEmit` (toàn project): **exit 0**.
+  - vitest `src/execution/v2/readers realtime screens/slice screens/command flags.test.ts src/app scopedEviction.test.tsx --maxWorkers=2`: 44 file PASS, **47.122 test PASS**; 187 FAIL trong 4 file **không do lát này** (`readers/commandCurrency{,.conformance}.test.ts`, `readers/managerDataset{,.conformance}.test.ts`: reader của FE-A/FE-B, không file nào bị chạm; worktree sạch ở `7df531d3` cho 27 FAIL / 97 PASS trên hai file `*.test.ts`). Riêng `screens/command` + `flags.test.ts`: 144 PASS (gồm `command.mount.test.tsx` mới: cờ tắt ⇒ route không mount; mount chỉ khi manifest có `command` và có umbrella; nhãn story; catalogue đi theo route; một module duy nhất nạp JSON; chỉ lối vào lazy), `command.test.tsx` thêm 7 ca "a receipt from the scripted port says so".
+  - Gate hygiene/chung (`v2Hygiene`, `productBoundary`, `absentValues`, `castLeak`, `failClosed`, `disabledReason`, `testHygiene`, `linkTargets`, `flagOff`, `flagOn`, `budgets` + 4 thư mục màn đích): 37 file, 2.180 PASS.
+  - Build cờ tắt: 448 asset, **0** file `storyRoute-*`/`slice-*`, 0 chuỗi "Fixture story: not connected to a source", "Answered by the fake port", "UXM-09 fixture", "exec-cf-" trong `dist` (bản cờ bật: 545 asset, thêm `storyRoute-*.js/.css`).
+  - Playwright `execution-v2-command.spec.ts`: 8/8 PASS, 19,3 s.
 
 ## 8. File dùng chung đã chạm (merge)
 `v2/flags.ts` (một dòng `"command"` trong `EXEC_V2_SCREEN_KEYS` sau `"cockpit"`, `EXEC_V2_PENDING_KEYS = ["command"]`, một câu trong comment), `v2/flags.test.ts` (danh sách "knows every screen" và test reserved keys), `v2/css/command.css` (file mới trong thư mục chung). Không chạm `ExecutionPreviewRoute.tsx`, `PortalRoutes.tsx`, registry, token.
+
+**Vòng 2 (2026-10-20), file dùng chung đã chạm (tối thiểu):** `v2/flags.ts` (`EXEC_V2_PENDING_KEYS = []`, bỏ comment "pending", +1 câu về `command`), `v2/flags.test.ts` (bỏ kỳ vọng pending, +1 test `command` mount), `app/PortalRoutes.tsx` (+1 lazy import raw-env, +`EXECUTION_COMMAND_ROUTE`, +1 `<Route>` có điều kiện; không chạm cái gì của `scoped`), `playwright.config.ts` (manifest 4176 thêm `scoped,command`), `v2/css/command.css` (+quy tắc `.exec-cf-page .exec-dock-*`: xem UXM09-DEV-2). **Không chạm** `ExecutionPreviewRoute.tsx` (story không phải màn registry, nên không đi qua nó; cùng cách `scoped`), registry, token, `testkit/schema.ts`, `FRONTEND_BACKEND_SYNC.md`, `UNIFIED_IMPLEMENTATION_PLAN.md`. Hook đích của UXM-08 (`portfolios/useRead.ts`, `fleet/useFleetRead.ts`, `alpha/useAlphaReads.ts`) thuộc lát UXM-08, không thuộc lane này.
 
 ## 9. Reuse report
 Dùng lại: `Drawer.DockAction`, `Flag`, `SectionPanel`, `notPublishedText`, `receiptOutcome`, `commandCurrency` reader, `adminCatalog` (đọc + từ ngữ), tiện ích văn bản độc hại của `request/model`. Mới (lý do): `FacetList` bốn chiều (có nghĩa nghiệp vụ, dùng được cho Operations/Account), phân loại receipt, fake port. Lệch HiFi: không có HiFi cho receipt lệnh; CSS lấy số đo từ New request.
 
 ## 10. Rollback
-Xóa `v2/screens/command`, `v2/css/command.css`, `v2/readers/commandOperation*`, bỏ key `command`. Không đổi route/runtime/DB; không có lệnh nào từng được gửi.
+Tắt: không đặt `command` trong `VITE_EXECUTION_V2_SCREENS` (mặc định) — route không mount, build không có chunk. Gỡ hẳn: xóa `v2/screens/command`, `v2/css/command.css`, `v2/readers/commandOperation*`, `e2e/execution-v2-command.spec.ts`, bỏ key `command` (và `scoped,command` thêm vào manifest 4176 trong `playwright.config.ts` nếu `scoped` cũng gỡ), bỏ `V2Command`/`EXECUTION_COMMAND_ROUTE`/`<Route>` trong `PortalRoutes.tsx`. Không đổi runtime/DB; không có lệnh nào từng được gửi.
+
+## 11. Browser receipt — `FIXTURE_LAB` (2026-10-20, `384453fc`)
+
+`e2e/execution-v2-command.spec.ts`, project `chromium-v2`, build cổng 4176 (manifest có `command`). **Làn: `FIXTURE_LAB`, không có `BFF_DOUBLE` nào được hỏi**: story không tạo request nào; trình duyệt chỉ gọi các đọc của shell (auth context, registry, summary, access/self). Mọi receipt trên trang là câu trả lời có kịch bản của **fake port**, và tự nói vậy ("Answered by the fake port: a scripted fixture answer, not a receipt from any source."). **Không** có gì ở đây chứng minh một lệnh được nhận, áp dụng hay hiểu bởi bất kỳ hệ thống thật nào.
+
+| Test (8) | Khẳng định | Kết quả |
+| --- | --- | --- |
+| nhãn + overflow + console + zero writes @1280 và @660 (2) | `role=note` chứa "Fixture story: not connected to a source; fake port"; `scrollWidth - clientWidth ≤ 0` lúc tải, khi mở plan + form, và khi receipt Denied hiện; đường gửi thật là nút disabled với đúng câu "Command sends are not connected to a source: UXM-09 fixture" và click ép lên nó không làm gì; receipt Denied chứa "fake port"; console sạch, 0 request ra ngoài origin; **0 request ghi** (mọi method ≠ GET/HEAD) và **0 request tới bất kỳ route nào khớp `commands|plans|apply|operations|approvals|ecm_`** | PASS |
+| mọi trạng thái receipt @1280 | `f0-denied` (Denied by the relay), `accepted` (Accepted), `rejected-preview-changed` (Rejected), `timeout-then-landed` (Outcome unknown), `revoked` (Access changed): mỗi receipt có đúng câu fake port, không overflow; vẫn 0 ghi, 0 route lệnh | PASS |
+| UNKNOWN khoá payload, retry cùng key @1280 | "This command may already have been applied."; lý do và ô gõ xác nhận `:disabled` (fieldset), checkbox disabled; key trong Provenance (`request key …`) giữ nguyên sau "Retry with the same key"; số lần gửi 1 → 2; câu trả lời là Accepted/Already recorded và vẫn nói fake port; không có nút nào gửi bằng key thứ hai | PASS |
+| double click gửi một lần, Enter không submit @1280 | Enter trong ô xác nhận và trong ô lý do: không receipt, Submit còn đó; `dblclick` trên Submit: Provenance `sends 1` | PASS |
+| Submit đóng + Space @1280 | Submit `aria-disabled=true` và còn focus được; câu "Still needed" nêu cái thiếu; click ép lên nút đóng không gửi; đủ điều kiện thì Space gửi một lần và receipt nhận focus | PASS |
+| 84 điều khiển disabled mang lý do @1280 | 1 đường gửi thật + 78 thao tác (64 catalogue, 8 capital, 6 họ) + 5 luồng cần certification: đủ **84** nút `disabled`, mỗi nút có `aria-describedby` trỏ tới đoạn chữ không rỗng (≥12 ký tự), **0** nút bật trong vùng "Operations that are not sendable"; mở một nhóm thì lý do hiển thị cho người đọc; "Requires separate certification" hiện | PASS |
+| luồng đầy đủ @660 | plan → UNKNOWN, rồi mở **mọi** nhóm thao tác: không overflow; 0 ghi, 0 route lệnh, console sạch | PASS |
+
+**Thời gian:** 19,3 s (8 test, 2 worker, build có sẵn). **Phát hiện và sửa:** ở 660 px story tràn ngang 98 px (rồi 7 px) vì dòng "blocked action" của dock (vẽ cho footer drawer rộng: tên hành động + lý do một dòng + link không co được) — sửa trong `command.css` (UXM09-DEV-2). **Chưa chứng minh / không claim:** bất kỳ đường gửi thật; 390 px; thứ tự Tab đầy đủ; đọc màn hình; baseline ảnh; "double click" là hai click liên tiếp của Playwright, không phải mọi cách người dùng bấm lặp; số lần gửi đo ở Provenance của chính trang (không có request nào để đếm, vì port là fake).
+
+## 12. Trạng thái và các lệch UX cần xác nhận (vòng 2)
+
+**Trạng thái đề xuất cho các fixture ELP2-07 (§5): không đổi**; thêm: *mount + browser receipt*: ACCEPTED_FIXTURE_ONLY cho story, **CHANGES_REQUESTED** giữ nguyên cho real-source lane (§6: FE-020/032/015/037/034 và (a) body ACCEPTED của F0 apply, (b) idempotency key của F0 apply, (c) reader V2 cho catalogue). `NOT_RUN` (chủ: người tích hợp ở R2): vitest rộng, baseline ảnh pinned-image của `/execution/command`, hook đầy đủ, config Playwright nguyên bản 3 webServer (spec chạy bằng config cục bộ chỉ có webServer 4176, cùng env/build, không commit).
+
+Ba lệch cần lead/Bobby xác nhận (không tự chốt; mỗi cái nhỏ, đảo ngược được):
+- **UXM09-DEV-1** Receipt có thêm một dòng cố định "Answered by the fake port: a scripted fixture answer, not a receipt from any source." (`data-notice="fake-port"`, chỉ khi port là `fixture`), do yêu cầu "receipt phải nói fake port". Component `ReceiptPanel` không đổi cấu trúc; dòng nằm trong receipt, trước Provenance. Bỏ: xoá `FakePortNote` (hai chỗ gọi).
+- **UXM09-DEV-2** Trên trang story, dòng "blocked action" của `DockAction` wrap thay vì một dòng cắt bớt; **lý do được in đủ** (không còn `text-overflow: ellipsis` ở trang này). Lý do: tràn ngang 98 px ở 660 px; màn cảm ứng không có hover để xem lý do bị cắt. Chỉ trong `.exec-cf-page`, không đổi `dock.css` hay cách dock dùng ở nơi khác.
+- **UXM09-DEV-3** Banner đầu trang có thêm nhãn in đậm "Fixture story: not connected to a source; fake port." trước câu cũ; chữ "Fixture only" và câu cũ giữ nguyên.
