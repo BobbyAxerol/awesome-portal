@@ -53,16 +53,16 @@ describe("the canonical files are what this suite thinks they are", () => {
     }
   });
 
-  it("carries the 25 parent bodies and 3 compositions this suite covers (22 before Codex e19ad906: six new parents)", () => {
+  it("carries the 29 parent bodies and 3 compositions this suite covers (25 before BE-P12 c159bb40: four more, the optional identity of each following parent, published and hidden)", () => {
     const keys = Object.keys(parent()).filter((key) => typeof parent()[key] === "object");
     expect(keys.sort()).toEqual([
-      "canary", "canary_absent", "canary_revision", "live", "live_composition", "paper_exit", "paper_exit_absent",
+      "canary", "canary_absent", "canary_identity", "canary_identity_hidden", "canary_revision", "live", "live_composition", "paper_exit", "paper_exit_absent",
       "paper_exit_composition", "paper_exit_criteria", "paper_exit_extended", "paper_exit_followthrough", "paper_exit_operation",
       "paper_exit_operation_applied", "paper_exit_operation_expired", "paper_exit_recorded", "r2", "r2_absent", "r2_composition",
       "r2_followthrough", "r2_followthrough_hashes_absent", "r2_operation", "r2_operation_applied", "r2_operation_expired",
-      "r2_operation_uncaptured", "r2_recorded", "sandbox", "sandbox_absent", "sandbox_draft",
+      "r2_operation_uncaptured", "r2_recorded", "sandbox", "sandbox_absent", "sandbox_draft", "sandbox_identity", "sandbox_identity_hidden",
     ]);
-    expect(keys).toHaveLength(28);
+    expect(keys).toHaveLength(32);
   });
 });
 
@@ -367,6 +367,8 @@ describe("readGovernanceParentV2 routes every delivered body to its family", () 
     // added by Codex e19ad906
     paper_exit_criteria: "PAPER_EXIT", r2_followthrough: "R2", r2_followthrough_hashes_absent: "R2", paper_exit_followthrough: "PAPER_EXIT",
     r2_recorded: "R2", paper_exit_recorded: "PAPER_EXIT",
+    // added by BE-P12 c159bb40 (the optional identity member)
+    sandbox_identity: "SANDBOX", sandbox_identity_hidden: "SANDBOX", canary_identity: "CANARY", canary_identity_hidden: "CANARY",
   };
   it.each(Object.entries(expected))("%s -> %s", (key, family) => {
     expect(readGovernanceParentV2(parent()[key])?.family).toBe(family);
