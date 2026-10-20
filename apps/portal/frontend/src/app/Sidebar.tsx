@@ -16,11 +16,12 @@ import {
 } from "../execution/previewRegistry";
 import type { PortalFeatureDefinition, PortalRegistryDocument } from "../portal/contracts";
 import { sidebarGroups, type NavOptions } from "../portal/navigation";
-import { EXECUTION_V2_SHELL } from "../execution/v2/flags";
+import { EXECUTION_V2_SHELL, isV2Screen } from "../execution/v2/flags";
 import { applyV2Nav } from "../execution/v2/shell/roleNav";
 import { RAIL_CONTEXT_KEYS, withContext } from "../execution/v2/urlState";
 import { iconFor } from "./icons";
 import { usePresentationChrome } from "./presentation";
+import { SELF_ENTRY_PATH } from "./selfNavView";
 
 interface RailItem {
   feature: PortalFeatureDefinition;
@@ -33,6 +34,48 @@ interface RailGroup {
   id: string;
   label: string;
   items: RailItem[];
+}
+
+/** The words of the self-only rail entry: the ones the self-view's own tab and its many links already use. */
+export const SELF_ENTRY_LABEL = "My access";
+
+/**
+ * The self-only "My access" entry (BE-P7 `self_entry`) for a member who has no Profile & Access entry of their own.
+ *
+ * It exists in the rail only while the caller passes an offer, which the shell derives from a LIVE self-navigation projection (its
+ * `self_entry.permission` is `ALLOWED`, and the context's too when the workspace came from it). No offer, an offer whose workspace the
+ * address cannot carry, a registry without PROFILE_ACCESS, or an admin whose rail already lists Profile & Access (the self-view is
+ * the first tab there) all leave the groups exactly as they were: fail closed, never a duplicate. The registry is not edited: the
+ * group and the icon come from the PROFILE_ACCESS feature, the route is `SELF_ENTRY_PATH`. Listing only, never an authority.
+ */
+export function withSelfEntry(
+  groups: RailGroup[],
+  registry: PortalRegistryDocument,
+  offer: { workspaceId: string } | null,
+  search: string,
+): RailGroup[] {
+  if (offer === null) return groups;
+  const profile = registry.features.find((feature) => feature.id === "PROFILE_ACCESS");
+  if (profile === undefined) return groups;
+  if (groups.some((group) => group.items.some((item) => item.feature.id === profile.id))) return groups;
+  const id = offer.workspaceId;
+  // The address carries the workspace (`workspace_id` is at most 128 characters, no control characters): one it cannot carry is not offered.
+  if (id.length === 0 || id.length > 128 || /[\u0000-\u001f]/.test(id)) return groups;
+  const item: RailItem = {
+    feature: { ...profile, canonical_route: SELF_ENTRY_PATH },
+    label: SELF_ENTRY_LABEL,
+    to: withContext(`${SELF_ENTRY_PATH}?workspace_id=${encodeURIComponent(id)}`, search, RAIL_CONTEXT_KEYS),
+    end: true,
+  };
+  const at = groups.findIndex((group) => group.id === profile.group);
+  if (at >= 0) return groups.map((group, index) => (index === at ? { ...group, items: [...group.items, item] } : group));
+  const def = registry.feature_groups.find((group) => group.id === profile.group);
+  const created: RailGroup = { id: profile.group, label: def?.label ?? profile.group, items: [item] };
+  if (def === undefined) return [...groups, created];
+  // Where the registry orders the group: before the first group it orders later (the synthetic Execution group has no registry order).
+  const orderOf = (groupId: string) => registry.feature_groups.find((group) => group.id === groupId)?.order;
+  const next = groups.findIndex((group) => (orderOf(group.id) ?? Number.NEGATIVE_INFINITY) > def.order);
+  return next < 0 ? [...groups, created] : [...groups.slice(0, next), created, ...groups.slice(next)];
 }
 
 /**
@@ -75,6 +118,8 @@ export function Sidebar({
   onNavigate,
   v2Shell = EXECUTION_V2_SHELL,
   notice,
+  selfEntry = null,
+  selfEntryMounted = isV2Screen("profile"),
 }: {
   registry: PortalRegistryDocument;
   options: NavOptions;
@@ -89,9 +134,16 @@ export function Sidebar({
    * which entries are listed is still decided by `options.capabilities` alone.
    */
   notice?: (rail: { collapsed: boolean }) => ReactNode;
+  /**
+   * BE-P7: the self-only "My access" entry on offer (workspace it opens for), from a LIVE self-navigation projection. Ignored flag
+   * off, and unless the `profile` flag mounts the page it opens (`selfEntryMounted`; a prop only so a test can drive both states).
+   */
+  selfEntry?: { workspaceId: string } | null;
+  selfEntryMounted?: boolean;
 }) {
   const { search } = useLocation();
-  const groups = railGroups(registry, options, v2Shell, search);
+  const base = railGroups(registry, options, v2Shell, search);
+  const groups = v2Shell && selfEntryMounted ? withSelfEntry(base, registry, selfEntry, search) : base;
   const badge = usePresentationChrome()?.chrome.navBadge ?? null;
 
   return (
