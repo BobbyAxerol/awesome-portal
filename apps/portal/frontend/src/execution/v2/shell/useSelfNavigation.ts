@@ -29,7 +29,9 @@ import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
 
 import type { AccessEnvironment } from "../readers/accessEffective";
 import { navigationAnswers, selfProjectionExpiry, type AccessSelfNavigation } from "../readers/accessSelf";
+import type { SelfContextCandidate } from "../readers/accessSelfContext";
 import { selfNavigationGate, type SelfNavGate } from "./selfNavGate";
+import { useSelfContext } from "./useSelfContext";
 import { httpSelfNavigationPort, type SelfNavigationOutcome, type SelfNavigationPort, type SelfNavigationProblem } from "./selfNavigationPort";
 
 /** `setTimeout` holds a signed 32-bit delay; a longer one fires at once. A longer ceiling is waited out in slices of this size. */
@@ -40,7 +42,7 @@ export interface UseSelfNavigationOptions {
   enabled: boolean;
   /** The signed-in session's id. Not sent; part of the scope key so another session starts clean. */
   sessionKey: string | null;
-  /** The workspace in the address. `null`: nothing is asked (the session publishes none today). */
+  /** The workspace in the address. `null`: the self-context is asked which workspace is the member's (BE-P7); never a default of ours. */
   workspaceId: string | null;
   environment: AccessEnvironment;
   /** Test seam. Defaults to the same-origin HTTP port. */
@@ -49,14 +51,32 @@ export interface UseSelfNavigationOptions {
   now?: () => number;
 }
 
-export type SelfNavigationPhase = "idle" | "loading" | "live" | "expired" | "failed";
+/**
+ * `choosing`: the address names no workspace and the Portal says the member belongs to several (the chooser is offered, nothing is
+ * read until the member picks). `absent`: the Portal says there is no workspace to read (`NONE`, or too many to list).
+ */
+export type SelfNavigationPhase = "idle" | "loading" | "live" | "expired" | "failed" | "choosing" | "absent";
+
+/** The words the context path adds to the rail. NEW copy (not yet approved): recorded in the BE-P7 consumer receipt. */
+export const SELF_CONTEXT_COPY = {
+  none: "No workspace membership.",
+  tooMany: "Too many workspace memberships to choose from.",
+} as const;
 
 export interface SelfNavigationView {
   phase: SelfNavigationPhase;
   /** The rail's input. `live` only inside the ceiling; `none`/`expired` carry no token. */
   gate: SelfNavGate;
-  /** Why the rail is shut, for a read that is expired or failed (and, while it re-reads after expiry, `busy`). Else `null`. */
+  /** Why the rail is shut, for a read that is expired, failed or absent (and, while it re-reads after expiry, `busy`). Else `null`. */
   unavailable: { reason: string; busy: boolean } | null;
+  /** The candidate workspaces to choose from, in the order the Portal published them. Only while `choosing`; else `null`. */
+  chooser: { candidates: readonly SelfContextCandidate[] } | null;
+  /**
+   * The self-only "My access" entry is on offer: the navigation projection is LIVE (its own `self_entry.permission` is `ALLOWED`) and,
+   * when the workspace came from the self-context, that context's entry is `ALLOWED` too. Carries the workspace the page opens for.
+   * `null` fails closed (loading, expired, failed, denied, absent).
+   */
+  selfEntry: { workspaceId: string } | null;
   /** Ask again for the current scope. Joins a read already in flight; restores the one automatic expiry re-read. */
   retry(): void;
 }
@@ -91,12 +111,20 @@ function failureReason(outcome: Exclude<SelfNavigationOutcome, { kind: "ok" }>):
 }
 
 export function useSelfNavigation(options: UseSelfNavigationOptions): SelfNavigationView {
-  const { enabled, sessionKey, workspaceId, environment } = options;
+  const { enabled, sessionKey, environment } = options;
   const defaultPort = useMemo(() => httpSelfNavigationPort(), []);
   const portRef = useRef<SelfNavigationPort>(options.port ?? defaultPort);
   portRef.current = options.port ?? defaultPort;
   const nowRef = useRef<() => number>(options.now ?? Date.now);
   nowRef.current = options.now ?? Date.now;
+
+  // The workspace: the address names it, or (only when it names none) the self-context resolves it. The context is never asked while
+  // the address has a workspace, and a context that is not `RESOLVED` names none: a member with several workspaces CHOOSES, the
+  // rail is never scoped by a guess.
+  const addressWorkspace = options.workspaceId;
+  const context = useSelfContext({ enabled: enabled && addressWorkspace === null, sessionKey, port: options.port, now: options.now });
+  const resolved = context.context?.defaultWorkspace.state === "RESOLVED" ? context.context.defaultWorkspace.workspaceId : null;
+  const workspaceId = addressWorkspace ?? resolved;
 
   const scopeKey = enabled && sessionKey !== null && workspaceId !== null ? scopeKeyOf(sessionKey, workspaceId, environment) : null;
   const scopeRef = useRef<{ key: string; sessionKey: string; workspaceId: string; environment: AccessEnvironment } | null>(null);
@@ -212,26 +240,68 @@ export function useSelfNavigation(options: UseSelfNavigationOptions): SelfNaviga
   const nowMs = nowRef.current();
   const expired = slot !== null && slot.phase === "ready" && selfProjectionExpiry(slot.navigation, nowMs).state === "expired";
 
-  return useMemo<SelfNavigationView>(() => {
-    if (scopeKey === null) return { phase: "idle", gate: NO_GATE, unavailable: null, retry };
-    if (slot === null) return { phase: "loading", gate: NO_GATE, unavailable: null, retry };
+  const navigationView = useMemo<Omit<SelfNavigationView, "chooser" | "selfEntry" | "retry">>(() => {
+    if (scopeKey === null) return { phase: "idle", gate: NO_GATE, unavailable: null };
+    if (slot === null) return { phase: "loading", gate: NO_GATE, unavailable: null };
     switch (slot.phase) {
       case "loading":
         return {
           phase: "loading",
           gate: NO_GATE,
           unavailable: slot.after === null ? null : { reason: slot.after.reason, busy: true },
-          retry,
         };
       case "failed":
-        return { phase: "failed", gate: NO_GATE, unavailable: { reason: slot.reason, busy: false }, retry };
+        return { phase: "failed", gate: NO_GATE, unavailable: { reason: slot.reason, busy: false } };
       case "ready": {
         const gate = selfNavigationGate(slot.navigation, nowMs);
-        if (gate.kind === "expired") return { phase: "expired", gate, unavailable: { reason: gate.message, busy: false }, retry };
-        return { phase: "live", gate, unavailable: null, retry };
+        if (gate.kind === "expired") return { phase: "expired", gate, unavailable: { reason: gate.message, busy: false } };
+        return { phase: "live", gate, unavailable: null };
       }
     }
     // `expired` and `slot` are the only inputs that change the answer; the clock is read into `nowMs` once per render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopeKey, slot, expired, retry]);
+  }, [scopeKey, slot, expired]);
+
+  const retryBoth = useCallback(() => {
+    context.retry();
+    retry();
+  }, [context.retry, retry]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const contextPhase = context.phase;
+  const contextValue = context.context;
+  const contextFailure = context.failure;
+  return useMemo<SelfNavigationView>(() => {
+    const base = { chooser: null, selfEntry: null, retry: retryBoth } as const;
+    // The address names a workspace (or nothing is asked): the navigation read alone, as before.
+    if (addressWorkspace !== null || contextPhase === "idle") {
+      const live = navigationView.phase === "live" && workspaceId !== null;
+      return { ...navigationView, ...base, selfEntry: live ? { workspaceId } : null };
+    }
+    // The address names none: the self-context decides, and only a RESOLVED context scopes the navigation read.
+    switch (contextPhase) {
+      case "loading":
+        return { phase: "loading", gate: NO_GATE, unavailable: contextFailure, ...base };
+      case "failed":
+      case "expired":
+        return { phase: contextPhase, gate: NO_GATE, unavailable: contextFailure, ...base };
+      case "ready": {
+        const chosen = contextValue!.defaultWorkspace;
+        switch (chosen.state) {
+          case "RESOLVED": {
+            const live = navigationView.phase === "live" && contextValue!.selfEntry.permission === "ALLOWED";
+            return { ...navigationView, ...base, selfEntry: live ? { workspaceId: chosen.workspaceId } : null };
+          }
+          case "AMBIGUOUS":
+            // Never auto-picked: the candidates are offered in the order published and the member chooses.
+            return { phase: "choosing", gate: NO_GATE, unavailable: null, ...base, chooser: { candidates: chosen.candidates } };
+          case "NONE":
+            return { phase: "absent", gate: NO_GATE, unavailable: { reason: SELF_CONTEXT_COPY.none, busy: false }, ...base };
+          case "UNAVAILABLE":
+            return { phase: "absent", gate: NO_GATE, unavailable: { reason: SELF_CONTEXT_COPY.tooMany, busy: false }, ...base };
+        }
+      }
+    }
+    // The context object is read through the three values above; `navigationView` and the workspace are the other inputs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addressWorkspace, workspaceId, contextPhase, contextValue, contextFailure, navigationView, retryBoth]);
 }

@@ -52,7 +52,8 @@ import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV
 import type { PendingRecallDiscoveryQuery, PendingRecallDiscoveryRead } from "../v2/readers/pendingRecallDiscovery";
 import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligibility";
 import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
-import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
+import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";
+import type { AccessSelfContextRead } from "../v2/readers/accessSelfContext";import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
 import type { TypedCondition } from "../components/conditions";
@@ -566,6 +567,12 @@ export interface ExecutionApi {
    * body and keeps it nowhere else. A 200 is not an `ACTIVE` row and not a grant: re-read the eligibility batch.
    */
   postSessionStepUp(input: AccessStepUpInput): Promise<SessionStepUpOutcome>;
+  /**
+   * `GET /api/admin/profile-access/v2/self-context` (FE-057/058/038, BE-P7): the member's own default workspace (or a typed absence),
+   * the self-only entry route and the typed no-operation branch for account management (`portal.self-context.v1`). Takes no query.
+   * Advisory and current-only: never a permit. An unreadable body or another schema is a typed `unavailable`, never a guessed workspace.
+   */
+  getSelfContext(): Promise<Result<AccessSelfContextRead>>;
   /**
    * `GET /api/v1/execution/governance/approvals/request-lookup` (FE-069): what replaying a `request_key` would do, for the caller's
    * own requests (`governance.approval-request-lookup.v1`). A read: it writes nothing and creates nothing.

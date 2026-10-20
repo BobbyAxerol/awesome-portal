@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { MemoryRouter, useNavigate } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PortalRegistryDocument } from "../portal/contracts";
@@ -26,7 +26,8 @@ vi.mock("../auth/session", () => ({
 }));
 
 type Draft = any;
-const FIXTURE = loadCanonical<{ cases: { type: string; case_name: string; value: Draft }[] }>("execution-access.synthetic");
+const FIXTURE = loadCanonical<{ cases: { type: string; case_name: string; value: Draft }[]; self_context_cases: { case_name: string; value: Draft }[] }>("execution-access.synthetic");
+const contextBody = (name: string): Draft => ({ ...FIXTURE.self_context_cases.find((entry) => entry.case_name === name)!.value, observed_at_ms: Date.now(), valid_until_ms: Date.now() + 60_000 });
 const bodyOf = (name: string): Draft => FIXTURE.cases.find((entry) => entry.type === "AccessSelfNavigation" && entry.case_name === name)!.value;
 
 const FIXTURES = join(process.cwd(), "../registry/fixtures");
@@ -36,12 +37,17 @@ const links = JSON.parse(readFileSync(join(FIXTURES, "links.public.json"), "utf8
 const originalFetch = globalThis.fetch;
 
 const NAV_PATH = "/api/admin/profile-access/v2/self-navigation";
+const CONTEXT_PATH = "/api/admin/profile-access/v2/self-context";
 type Answer = Response | Promise<Response>;
 interface Harness {
   /** Every self-navigation request URL, in order. */
   asked: string[];
   /** Decides each answer; default: the APP_ONLY body for the asked scope with a ceiling a minute away. */
   answer: (url: URL, index: number) => Answer;
+  /** Every self-context request, in order (the read takes no query). */
+  contextAsked: string[];
+  /** Decides each self-context answer; default: the typed absence `NONE` (a member with no workspace). */
+  contextAnswer: (index: number) => Answer;
 }
 
 const navBody = (url: URL, ceilingMs = 60_000, name = "APP_ONLY_NOT_SOURCE_AUTHORITY") => ({
@@ -52,6 +58,11 @@ const navBody = (url: URL, ceilingMs = 60_000, name = "APP_ONLY_NOT_SOURCE_AUTHO
   valid_until_ms: Date.now() + ceilingMs,
 });
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200, headers: { "Content-Type": "application/json" } });
+
+function Where() {
+  const location = useLocation();
+  return <output data-testid="where">{`${location.pathname}${location.search}`}</output>;
+}
 
 function Jump({ to, label }: { to: string; label: string }) {
   const navigate = useNavigate();
@@ -67,12 +78,16 @@ async function mount(route: string, env: { manifest?: string }, harness: Partial
   const { PreferencesProvider } = await import("./preferences");
   const { __resetPortalClientCaches } = await import("../portal/client");
   __resetPortalClientCaches();
-  const state: Harness = { asked: [], answer: (url) => ok(navBody(url)), ...harness };
+  const state: Harness = { asked: [], answer: (url) => ok(navBody(url)), contextAsked: [], contextAnswer: () => ok(contextBody("ABSENT_NO_MEMBERSHIP")), ...harness };
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     const url = new URL(String(input), "http://localhost");
     if (url.pathname === NAV_PATH) {
       state.asked.push(`${url.search}`);
       return state.answer(url, state.asked.length - 1);
+    }
+    if (url.pathname === CONTEXT_PATH) {
+      state.contextAsked.push(`${url.search}`);
+      return state.contextAnswer(state.contextAsked.length - 1);
     }
     if (url.pathname.includes("/portal/registry")) {
       return new Response(JSON.stringify(registry), { status: 200, headers: { ETag: `"${registry.content_digest}"` } });
@@ -90,6 +105,7 @@ async function mount(route: string, env: { manifest?: string }, harness: Partial
           <Jump to="/execution?workspace_id=ws_other&env=paper" label="other-workspace" />
           <Jump to="/execution?workspace_id=ws_TEST_ONLY&env=live" label="live" />
           <Jump to="/research/quantbt" label="research" />
+          <Where />
         </PreferencesProvider>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -140,9 +156,10 @@ describe("shell flag on: the rail lists what the server listed, and only that", 
     await waitFor(() => expect(railLabels()).toContain("Approvals"));
   });
 
-  it("no workspace in the address: nothing is asked and the rail is today's", async () => {
-    const { state } = await mount("/execution", ON);
+  it("no workspace in the address: the navigation is not asked until the self-context names one; the rail is today's meanwhile", async () => {
+    const { state } = await mount("/execution", ON, { contextAnswer: () => new Promise<Response>(() => {}) });
     await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(state.contextAsked).toEqual([""]); // the read takes no query at all
     expect(state.asked).toEqual([]);
     expect(railLabels()).not.toContain("Portfolios");
     expect(within(rail()).queryByText(/Navigation unavailable/)).toBeNull();
@@ -154,6 +171,7 @@ describe("shell flag on: the rail lists what the server listed, and only that", 
       const { state } = await mount(SCOPED, ON);
       await new Promise((resolve) => setTimeout(resolve, 30));
       expect(state.asked).toEqual([]);
+      expect(state.contextAsked).toEqual([]);
     } finally {
       session.principal = true;
     }
@@ -265,6 +283,69 @@ describe("shell with the manifest set but the shell key absent", () => {
   it("nor does a build with no manifest at all", async () => {
     const { state } = await mount(SCOPED, { manifest: "" });
     await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(state.asked).toEqual([]);
+  });
+});
+
+describe("shell flag on: the address names no workspace (BE-P7 self-context)", () => {
+  const ctx = (name: string) => ({ contextAnswer: () => ok(contextBody(name)) });
+
+  it("RESOLVED: the navigation is asked for THAT workspace (and the selected environment), then the rail lists it", async () => {
+    const { state } = await mount("/execution?env=sandbox", ON, ctx("RESOLVED_SOLE_MEMBERSHIP"));
+    await waitFor(() => expect(railLabels()).toContain("Portfolios"));
+    expect(state.contextAsked).toEqual([""]);
+    expect(state.asked).toEqual(["?workspace_id=ws_TEST_ONLY_personal&environment=sandbox"]);
+    // The address is not rewritten for the member: only a CHOICE goes into it.
+    expect(screen.getByTestId("where").textContent).toBe("/execution?env=sandbox");
+  });
+
+  it("AMBIGUOUS: the candidates are offered in the order published, nothing is read until the member chooses, and the choice goes in the address", async () => {
+    const { state } = await mount("/execution?env=paper", ON, ctx("AMBIGUOUS_SEVERAL_WITH_GRANT_RECORDS"));
+    const group = await within(rail()).findByRole("group", { name: "Workspaces" });
+    expect(within(group).getAllByRole("button").map((button) => button.textContent)).toEqual(["ws_TEST_ONLY_a", "ws_TEST_ONLY_b"]);
+    expect(rail().firstElementChild?.getAttribute("data-selfnav")).toBe("choose");
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(state.asked).toEqual([]); // nothing guessed
+    expect(railLabels()).not.toContain("Portfolios");
+
+    fireEvent.click(within(group).getByRole("button", { name: "ws_TEST_ONLY_b" }));
+    expect(screen.getByTestId("where").textContent).toBe("/execution?env=paper&workspace_id=ws_TEST_ONLY_b");
+    await waitFor(() => expect(state.asked).toEqual(["?workspace_id=ws_TEST_ONLY_b&environment=paper"]));
+    await waitFor(() => expect(railLabels()).toContain("Portfolios"));
+    expect(within(rail()).queryByRole("group", { name: "Workspaces" })).toBeNull();
+    expect(state.contextAsked).toHaveLength(1); // the address has a workspace now
+  });
+
+  it("NONE: 'No workspace membership.' in the rail's own notice, nothing else asked", async () => {
+    const { state } = await mount("/execution", ON, ctx("ABSENT_NO_MEMBERSHIP"));
+    const line = await within(rail()).findByText(/Navigation unavailable:/);
+    expect(line.closest("[role=status]")?.textContent).toBe("Navigation unavailable: No workspace membership.");
+    expect(state.asked).toEqual([]);
+  });
+
+  it("UNAVAILABLE (too many memberships) is its own sentence, never a first-N list", async () => {
+    await mount("/execution", ON, ctx("UNAVAILABLE_TOO_MANY_MEMBERSHIPS"));
+    const line = await within(rail()).findByText(/Navigation unavailable:/);
+    expect(line.closest("[role=status]")?.textContent).toBe("Navigation unavailable: Too many workspace memberships to choose from.");
+    expect(within(rail()).queryByRole("group", { name: "Workspaces" })).toBeNull();
+  });
+
+  it("a failed context read prints its reason with a Retry; Retry asks the context again and a RESOLVED answer then scopes the rail", async () => {
+    const { state } = await mount("/execution", ON, {
+      contextAnswer: (index) => (index === 0 ? new Response("{}", { status: 503 }) : ok(contextBody("RESOLVED_SOLE_MEMBERSHIP"))),
+    });
+    const line = await within(rail()).findByText(/Navigation unavailable:/);
+    expect(line.closest("[role=status]")?.textContent).toBe("Navigation unavailable: The Portal answered 503.");
+    expect(state.asked).toEqual([]);
+    fireEvent.click(within(rail()).getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(railLabels()).toContain("Portfolios"));
+    expect(state.contextAsked).toHaveLength(2);
+  });
+
+  it("the shell flag off asks neither read", async () => {
+    const { state } = await mount("/execution", { manifest: "fleet" }, ctx("RESOLVED_SOLE_MEMBERSHIP"));
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    expect(state.contextAsked).toEqual([]);
     expect(state.asked).toEqual([]);
   });
 });
