@@ -84,7 +84,8 @@ describe("identity strip", () => {
     expect(within(strip).getByText("usr_me")).toBeTruthy();
     expect(within(strip).getByText("Owner").nextElementSibling?.textContent).toBe("Not an owner");
     expect(within(strip).getByText("Capabilities held").nextElementSibling?.textContent).toBe("1");
-    expect(within(strip).getByText("Role preset").nextElementSibling?.textContent).toBe("Not published (FE-015)");
+    // Role preset is not a KPI cell: it is on the one "Not available" line.
+    expect(within(strip).queryByText("Role preset")).toBeNull();
     // "Researcher field policy" is a published policy field, not a preset name.
     const text = (document.body.textContent ?? "").replace("Researcher field policy", "");
     for (const preset of ["Manager", "Researcher", "Operator", "Reviewer", "Viewer"]) {
@@ -126,7 +127,9 @@ describe("POLICY_PENDING", () => {
     await granted();
     expect(screen.queryByRole("columnheader", { name: /granted by/i })).toBeNull();
     expect(document.body.textContent).not.toMatch(/Granted by\b(?! each)/);
-    expect(screen.getByText(/Who granted each item is not published \(FE-015\)/)).toBeTruthy();
+    const gaps = screen.getByTestId("not-available-line");
+    expect(gaps.textContent).toContain("Who granted each item");
+    expect(gaps.getAttribute("title")).toContain("Who granted each item: Not published (FE-015)");
   });
 });
 
@@ -371,8 +374,12 @@ describe("what you can see and do come from capabilities alone", () => {
   it("says once that the execution capability names are provisional, and what is not published", async () => {
     mount();
     await granted();
-    expect(screen.getAllByText(/are provisional \(FE-037\)/)).toHaveLength(1);
-    expect(screen.getByText(/Per-action eligibility and the reason a control is off are not published/).closest("p")?.textContent).toContain("(FE-015)");
+    // One short line (the full sentence and FE-037 are its title), and one "Not available" line with FE-015.
+    expect(screen.getAllByText(/Provisional capability names/)).toHaveLength(1);
+    expect(screen.getByText(/Provisional capability names/).getAttribute("title")).toContain("are provisional (FE-037)");
+    const gaps = screen.getByTestId("not-available-line");
+    expect(gaps.textContent).toContain("Per-action eligibility");
+    expect(gaps.getAttribute("title")).toContain("Per-action eligibility: Not published (FE-015)");
   });
 
   it("lists a session capability no row names instead of dropping it", async () => {
@@ -556,7 +563,7 @@ describe("L2 · grants over the DOM cap", () => {
     const rows = rowsOf(await granted());
     expect(rows).toHaveLength(200);
     expect(screen.getByTestId("exec-acc-grants-cap-label").textContent).toBe("Showing 200 of 201 grants");
-    expect(capLabel()!.textContent).toContain("the other 1 are not drawn here");
+    expect(capLabel()!.textContent).toContain("The other 1 are not drawn here");
     // The first 200 in the order the server sent them; the 201st is not drawn.
     expect(cell(rows[0], "Revision").textContent).toBe("r3_TEST_ONLY");
     expect(screen.queryByText("acg_scale_0200")).toBeNull();
@@ -569,7 +576,7 @@ describe("L2 · grants over the DOM cap", () => {
     const text = screen.getByTestId("exec-acc-grants-cap-label").textContent!;
     expect(text).toBe("Showing 200 of 500 grants");
     expect(capLabel()!.textContent).not.toMatch(/\u2026|\.\.\./);
-    expect(capLabel()!.textContent).toContain("the other 300 are not drawn here");
+    expect(capLabel()!.textContent).toContain("The other 300 are not drawn here");
   });
 
   it("501 grants stays refused by the reader: unavailable, no table, no label", async () => {
