@@ -25108,6 +25108,63 @@ do not race that boundary or reactivate retired acceptance/window. Core owns
 revoke/session/release; Edge's next connected step needs a genuinely fresh
 finite source/trust publication. Full07/08NOT_MET;09NOT_STARTED; no new phase.
 
+**Implementation landed locally:** f1872092e778abe09f712bc0a537a098af97d68d,
+BobbyAxerol <vugioan11022002@gmail.com>,17files/+2205/-58 versus f8d3f20c.
+Normal hook terminalPASS:130contracts,72API suites/717cases,0FAIL/SKIP,
+TypeScript build and actual isolated PostgreSQL restore; log SHA256
+2847f0c805b4826af9a6f4e6db05f12a56890c741054c25c0e4d1f706e269108.
+717includes57unchanged peer-untracked native-egress cases, not717new or
+committed-only cases. Source24newRust+3newPython cases are included in their
+186/103totals; repetitions/diagnostic attempts are not added. All41local handoff
+links and13declared local source hashes verified. Code/tests frozen thereafter.
+
+First normal-hook image `portal-source-proxy-d4-offline:test-3479220`,
+sha256b9124ef18b213902029c8aa03b7682d2df9b023c37d02901fe0c0853f1e36625,
+removed only after terminal gate and exact no-container-reference/build/publish
+check. Available251282399232→251281137664bytes; shared-host concurrent I/O,
+not exclusive reclaimed accounting. Final inventory97images/50running/
+339shared BuildKit entries, all19protected tuples unchanged. Peer activity is
+not called idle or cleaned. No own compiled Docker layer to prune; all shared
+cache/operational/rollback/peer images retained. Small exact test folder and final
+documentation hook artifacts must be removed before the one batch push; bounded
+final outcome lives at the predeclared private path
+`/home/bobby/secure/portal-edge-pm-custody-20261020-fzQHVrEM/publication-and-cleanup-return.json`.
+This journal/qualification correction uses the same normal hook; no bypass,
+Rust/harness rerun or additional hosted CI. Source behavior is unchanged.
+
+**Source/release/runtime reconciliation:** canonical checkout
+`/home/bobby/.worktrees/portal-execution-manager-v2`, feat/manager-v2-paper-read
+54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4. Active feature checkout is this
+feat/execution-edge-upgrade-v1_2, now f1872092; no branch/worktree retired.
+Other6documented active branches retained: feat/manager-v2-paper-read,
+feat/eds-current-bff, docs/eds09-ts-owner-return-handoff,
+feat/portal-elp210-edge-provider-candidate, feat/execution-data-activation,
+deploy/r4r5-activation. Active HK Edge image d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e;
+SGP Core7818d563/image7b2c7f34/config497fc5a8/restart0, not this new code.
+Protected service set remains6Edge/workers+3SourceProxy+3PG+nativeManager+
+Paper/Sandbox/Live Manager/issuer,19tuple bytes retained in private inventory.
+Stable release locations stay HK
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`
+and SGP `/srv/portal/releases/e4fd93658de1ff0614126a85d70e59a23c25a01f/compose`;
+retain TS named rollbackr59@9150385e/r49@b4e7a6c0 and immutable operator closure.
+No deployment, schema/role/session change, actual native request or financial
+effect. Normal hooks use only disposable fixtures/DBs.
+
+**Runnable/blocked partition and next:** owned07 persistence/progress adapter,
+test coverage, harness integration and08 prepared-return handback are complete
+in isolated source scope; only final normal documentation gate/cleanup/batched
+feature publication are runnable now. Core009 genuinely still needs reviewed
+manager-domain revoke/current-human/session and release/config/schema, then
+Edge coordinates fresh finite source/trust and runs08→scoped read09 under the
+existing approval. No waiting on Core for unfinished storage work. Fresh PM
+01214c4e supplies funded native admission;5eb397d9 supplies bounded original
+query/correlation correctness preparation, not commissioned authority/retention
+or measured matched targets (`execution_ready:false`). Two PM HTTP route hashes
+remain unchanged. TS03 source stays dark/unaccepted;01/06 actual matched target/
+frozen numeric input/approval remains its own genuine dependency. No fixture or
+expired trust is promoted to native/production acceptance. Full07/08NOT_MET;
+09connectedNOT_STARTED. No new phase or repeat general approval requested.
+
 
 
 
