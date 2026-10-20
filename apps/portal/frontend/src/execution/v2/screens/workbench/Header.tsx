@@ -16,7 +16,7 @@
  */
 import { Link } from "react-router-dom";
 
-import { JourneySpine, SectionPanel, gapTitle, StageChipRow, type StageChips, type StageChipValue } from "../../blocks";
+import { GapWhy, JourneySpine, SectionPanel, gapTitle, StageChipRow, type StageChips, type StageChipValue } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import { reconciliationFactOf, runtimeFactOf } from "../../readers/stageFactViews";
@@ -103,7 +103,10 @@ export function Header({ deploymentId, deployment, variant, chips, identity, cal
         </h1>
         <p className="exec-wb-sub">
           {links.portfolio && deployment?.portfolioId ? (
-            <Link className="exec-blk-link" to={links.portfolio} title={identity.portfolioNameReasonCode ?? undefined}>{portfolioLabel(identity, deployment.portfolioId)}</Link>
+            <span>
+              <Link className="exec-blk-link" to={links.portfolio}>{portfolioLabel(identity, deployment.portfolioId)}</Link>
+              {identity.portfolioNameReasonCode ? <GapWhy name="Portfolio name, reason" rows={[identity.portfolioNameReasonCode]} /> : null}
+            </span>
           ) : (
             <span>Portfolio not published</span>
           )}
@@ -148,8 +151,9 @@ export function LifecyclePanel({ gate }: LifecycleProps) {
       }
     >
       <div className="exec-wb-life">
-        <div className="exec-wb-spine" title={gapTitle("FE-027/028", "Stage history, gate criteria and decider")}>
+        <div className="exec-wb-spine">
           <JourneySpine variant="compact" current="paper" blocked={gate.verdict === "blocked"} label="Deployment lifecycle" />
+          <GapWhy name="Stage history, gate criteria and decider, reason" gap="FE-027/028" rows={[gapTitle("FE-027/028", "Stage history, gate criteria and decider")]} />
         </div>
       </div>
     </SectionPanel>

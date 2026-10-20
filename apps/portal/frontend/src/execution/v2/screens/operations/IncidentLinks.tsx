@@ -19,6 +19,8 @@
 import type { KeyboardEvent, MouseEvent } from "react";
 import { Link, type To } from "react-router-dom";
 
+import { GapWhy } from "../../blocks";
+
 import type { IncidentLinksV2, IncidentLinkV2 } from "../../readers/operationalQueue";
 import { FE_B1 } from "./notPublished";
 import "../../css/blocks.css";
@@ -36,9 +38,8 @@ const stopActivation = (event: KeyboardEvent) => {
 function LinkItem({ link, operationId, to }: { link: IncidentLinkV2; operationId: string; to(incidentId: string): To }) {
   if (link.state === "NOT_ATTESTED") {
     return (
-      <li className="exec-ops-link" title={link.reasonCode}>
-        <span className="exec-ops-link-id">Incident not attested</span>
-        <span className="exec-blk-sr">{link.reasonCode}</span>
+      <li className="exec-ops-link" onClick={stop} onKeyDown={stopActivation}>
+        <GapWhy className="exec-ops-link-id" text="Incident not attested" name="Incident not attested, reason" rows={[link.reasonCode]} next={null} />
       </li>
     );
   }

@@ -24,6 +24,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { isOutcomeUnknownReason } from "../../../api/reviewCapture";
 import { reviewRouteFor } from "../../../screens/ApprovalInbox";
+import { GapWhy } from "../../blocks";
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
@@ -217,8 +218,9 @@ export function ExitReviewRequest({ api, deploymentId, workspaceId, bind }: Exit
   }
   if (shut !== undefined && shut !== null) {
     return (
-      <div className="exec-wb-xr" data-state="shut" title={shut.code === null ? undefined : `Server reason: ${shut.code}`}>
+      <div className="exec-wb-xr" data-state="shut">
         <DockAction label={LABEL} reason={shut.reason} accessHref={ACCESS} variant="primary" />
+        {shut.code === null ? null : <GapWhy name="Server reason" rows={[`Server reason: ${shut.code}`]} />}
       </div>
     );
   }

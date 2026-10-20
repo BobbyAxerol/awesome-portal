@@ -10,7 +10,7 @@
  * Time is the published UTC instant; expiry is the server's `expires_at`, never computed.
  */
 import { Flag } from "../../Flag";
-import { GapLine, SectionPanel } from "../../blocks";
+import { GapLine, NaWhy, SectionPanel } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { STEP_FLAG, sourceWord } from "./model";
 import type { StepView, StepsView } from "./readSandbox";
@@ -29,7 +29,7 @@ export function StepsGrid({ steps, hasSentences }: { steps: StepsView; hasSenten
   if (steps.availability === "absent") {
     return (
       <SectionPanel level={2} title="Steps">
-        <p className="exec-blk-na" title={steps.code ?? undefined}>{steps.text}</p>
+        <p className="exec-blk-na"><NaWhy reason={steps.code} text={steps.text} className="exec-blk-na" /></p>
         <GapLine items={[{ label: "Gate criteria", id: "FE-028" }]} />
       </SectionPanel>
     );

@@ -188,7 +188,9 @@ describe("Overview", () => {
     const paper = screen.getByRole("region", { name: "Capital in Paper" });
     expect(within(paper).getByText("80,000.00")).toBeTruthy();
     expect(within(paper).getByText("Partial")).toBeTruthy();
-    expect(within(paper).getByText(/MARGIN_BALANCES_NOT_PUBLISHED/)).toBeTruthy();
+    // The published code is behind the state's disclosure, not in the line.
+    expect(paper.textContent).not.toContain("MARGIN_BALANCES_NOT_PUBLISHED");
+    expect(whyText(paper.querySelector(".exec-blk-boundary .exec-blk-why"))).toBe("MARGIN_BALANCES_NOT_PUBLISHED");
     expect(within(paper).getByText(/Inputs the source did not publish: margin_balances/)).toBeTruthy();
     expect(screen.queryByRole("region", { name: "Capital in Sandbox" })).toBeNull();
   });

@@ -393,8 +393,8 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                 onClose={close}
                 actions={
                   <>
-                    <DockAction label="Disable" reason={CHANGES_ELSEWHERE} accessHref={legacyHref} accessLabel="Current Users screen" />
-                    <DockAction label="Archive" reason={CHANGES_ELSEWHERE} />
+                    <DockAction label="Disable" reason={CHANGES_ELSEWHERE} reasonLabel="" accessHref={legacyHref} accessLabel="Current Users screen" />
+                    <DockAction label="Archive" reason={CHANGES_ELSEWHERE} quietReason />
                   </>
                 }
               >

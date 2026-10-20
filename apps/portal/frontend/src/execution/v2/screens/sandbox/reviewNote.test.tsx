@@ -14,6 +14,7 @@ import type { Result } from "../../../api/ports";
 import type { ReviewCapture, SandboxNoteInput } from "../../../api/reviewCapture";
 import SandboxScreen from "./index";
 import { capabilitiesBody, captureBody, fakeApi, okRead, v1Body, v2Body, type FakeApi, type FakeOptions } from "./testApi";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(() => {
   cleanup();
@@ -69,7 +70,8 @@ describe("open only when the server says so (D10)", () => {
     expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toBe("Not enabled for this profile");
     // The server's own code is the actions' title, not a second printed line.
     expect(within(panel()).queryByText("Server reason: ADMIN_REQUIRED")).toBeNull();
-    expect(panel().querySelector(".exec-sbx-actions")!.getAttribute("title")).toBe("Server reason: ADMIN_REQUIRED");
+    expect(panel().querySelector(".exec-sbx-actions")!.getAttribute("title")).toBeNull();
+    expect(whyText(panel().querySelector(".exec-sbx-actions .exec-blk-why"))).toBe("Server reason: ADMIN_REQUIRED");
     expect(within(panel()).getByRole("link", { name: /My access/ })).toBeTruthy();
   });
 
@@ -86,7 +88,8 @@ describe("open only when the server says so (D10)", () => {
     expect(button.disabled).toBe(true);
     expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toBe(words);
     expect(within(panel()).queryByText(`Server reason: ${code}`)).toBeNull();
-    expect(panel().querySelector(".exec-sbx-actions")!.getAttribute("title")).toBe(`Server reason: ${code}`);
+    expect(panel().querySelector(".exec-sbx-actions")!.getAttribute("title")).toBeNull();
+    expect(whyText(panel().querySelector(".exec-sbx-actions .exec-blk-why"))).toBe(`Server reason: ${code}`);
   });
 
   it("the role never decides: a manager and a reviewer see exactly what the server's answer says", async () => {

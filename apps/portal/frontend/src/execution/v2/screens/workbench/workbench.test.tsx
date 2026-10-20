@@ -208,7 +208,8 @@ describe("the lifecycle spine will not infer (D13b)", () => {
     expect(within(spine).getByLabelText("R1 gate, Unknown")).toBeTruthy();
     expect(within(spine).getByLabelText("R2 gate, Unknown")).toBeTruthy();
     expect(within(spine).getByLabelText("Sandbox, Later")).toBeTruthy();
-    expect(spine.closest(".exec-wb-spine")!.getAttribute("title")).toContain("Not published (FE-027/028): Stage history, gate criteria and decider");
+    expect(spine.closest(".exec-wb-spine")!.getAttribute("title")).toBeNull();
+    expect(whyText(spine.closest(".exec-wb-spine"))).toContain("Not published (FE-027/028): Stage history, gate criteria and decider");
     expect(text()).not.toContain("Stage history, gate criteria and decider");
   });
 

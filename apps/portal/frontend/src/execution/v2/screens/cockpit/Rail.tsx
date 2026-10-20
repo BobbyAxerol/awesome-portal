@@ -249,14 +249,14 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
           {spec.note ? <p className="exec-ck-note">{spec.note}</p> : null}
 
           <div className="exec-ck-actions">
-            <DockAction label={spec.primary} variant="primary" reason={PREVIEW_REASON} />
+            <DockAction label={spec.primary} variant="primary" reason={PREVIEW_REASON} reasonLabel="" />
             {spec.others.length > 0 ? (
               <>
-                <DockAction label="Other decisions" reason={PREVIEW_REASON} />
+                <DockAction label="Other decisions" reason={PREVIEW_REASON} quietReason />
                 <p className="exec-ck-note">Would offer: {spec.others.join(", ")}</p>
               </>
             ) : null}
-            {own && !waiver ? <DockAction label="Withdraw" reason={PREVIEW_REASON} /> : null}
+            {own && !waiver ? <DockAction label="Withdraw" reason={PREVIEW_REASON} quietReason /> : null}
           </div>
         </div>
       </section>

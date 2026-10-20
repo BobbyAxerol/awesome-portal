@@ -142,21 +142,20 @@ describe("V1 body, matched", () => {
     expect(document.querySelector("svg[role='img']")).toBeNull();
   });
 
-  it("exposure & orders (a body WITHOUT source_figures): ONE `Not available` line for the Triad and for each of positions and orders, FE-072 in their titles", async () => {
+  it("exposure & orders (a body WITHOUT source_figures): ONE `Not available` line for the Triad, positions and orders together, FE-072 in its disclosure", async () => {
     const raw = populatedV1();
     delete raw.source_figures;
     mount(() => ok(v1Read(raw)));
     await loaded();
     expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
-    const recon = screen.getByRole("region", { name: "Reconciliation" });
-    expect(recon.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Internal, Broker and Difference figures");
-    expect(whyText(recon.querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-072)");
-    expect(recon.textContent).not.toMatch(/\b0\.00\b/);
-    for (const name of ["Positions", "Orders"]) {
-      const panel = screen.getByRole("region", { name });
-      expect(whyText(panel.querySelector(".exec-blk-gaps")!), name).toContain("Not published (FE-072)");
-      expect(panel.textContent, name).not.toContain("(FE-072)");
-    }
+    expect(screen.queryByRole("region", { name: "Reconciliation" })).toBeNull();
+    for (const name of ["Positions", "Orders"]) expect(screen.queryByRole("region", { name })).toBeNull();
+    const tab = screen.getByRole("link", { name: "Open the full blotter for this deployment" }).closest(".exec-liv-stack")!;
+    const lines = tab.querySelectorAll(".exec-blk-gaps");
+    expect(lines).toHaveLength(1);
+    expect(lines[0]!.textContent).toBe("Not available: Internal, Broker and Difference figures, Position rows, Open order rows");
+    expect(whyText(lines[0]!)).toContain("Not published (FE-072)");
+    expect(tab.textContent).not.toMatch(/\b0\.00\b/);
     expect(screen.getByRole("link", { name: "Open the full blotter for this deployment" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEPLOYMENT_ID}`);
   });
 
@@ -165,13 +164,13 @@ describe("V1 body, matched", () => {
     await loaded();
     // Every cell of the published figures is the server's NOT_PUBLISHED: ONE line instead of fifteen cells, every reason in its title.
     expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
-    const recon = screen.getByRole("region", { name: "Reconciliation" });
-    const gap = recon.querySelector(".exec-blk-gaps")!;
-    expect(gap.textContent).toBe("Not available: Internal, Broker and Difference figures");
+    const stack = screen.getByRole("link", { name: "Open the full blotter for this deployment" }).closest(".exec-liv-stack")!;
+    const gap = stack.querySelector(".exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Internal, Broker and Difference figures, Position rows, Open order rows");
     expect(whyText(gap)).toContain("Not published (FE-072)");
     expect(whyText(gap)).toContain("DIFFERENCE_REQUIRES_BOTH_SIDES");
     expect(whyText(gap)).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
-    expect(recon.textContent).not.toMatch(/\b0\.00\b/);
+    expect(stack.textContent).not.toMatch(/\b0\.00\b/);
     expect(screen.queryByText(/The Difference is the server's and is never worked out here\./)).toBeNull();
   });
 

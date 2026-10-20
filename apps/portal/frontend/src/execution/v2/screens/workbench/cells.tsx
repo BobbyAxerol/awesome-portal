@@ -28,6 +28,16 @@ export function Na({ why, visible = false }: { why?: string | null; visible?: bo
   );
 }
 
+/** Decimal places of the printed figure (0 for an integer, an absence or an unreadable value). String work only. */
+export function scaleOf(value: Figure): number {
+  return value.kind === "value" ? (value.decimal.display.split(".")[1]?.length ?? 0) : 0;
+}
+
+/** The widest printed scale of a column: what `Fig`'s `align` pads the shorter ones to. */
+export function widestScale(values: readonly Figure[]): number {
+  return values.reduce((max, value) => Math.max(max, scaleOf(value)), 0);
+}
+
 export interface FigProps {
   value: Figure;
   currency?: string | null;
@@ -35,17 +45,24 @@ export interface FigProps {
   signed?: boolean;
   /** Reason behind the `Not available` disclosure when the source published nothing. */
   why?: string;
+  /**
+   * The widest scale in this column (`widestScale`). A shorter figure keeps its own digits, exact and unpadded; the room for the
+   * missing places is drawn as invisible space after it, so the decimal points of the column line up.
+   */
+  align?: number;
 }
 
 /** A published figure, or the reason there is none. */
-export function Fig({ value, currency, signed = false, why }: FigProps): ReactNode {
+export function Fig({ value, currency, signed = false, why, align }: FigProps): ReactNode {
   if (value.kind === "absent") return <Na why={why} />;
   if (value.kind === "unreadable") return <Na why="Unreadable value" visible />;
   const { decimal } = value;
   const tone = signed && decimal.tone !== "neutral" ? decimal.tone : undefined;
+  const own = scaleOf(value);
+  const room = align !== undefined && align > own ? `${own === 0 ? "." : ""}${"0".repeat(align - own)}` : undefined;
   return (
     <span className="exec-blk-metric">
-      <span className="exec-blk-num" data-tone={tone} data-full={decimal.full} title={decimal.full}>
+      <span className="exec-blk-num" data-tone={tone} data-full={decimal.full} data-room={room} title={decimal.full}>
         {signed && decimal.tone === "positive" ? "+" : ""}
         {decimal.display}
       </span>

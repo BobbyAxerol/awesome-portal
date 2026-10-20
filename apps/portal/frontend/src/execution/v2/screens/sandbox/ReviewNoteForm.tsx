@@ -31,7 +31,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { isOutcomeUnknownReason, type ReviewCapture } from "../../../api/reviewCapture";
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
-import { SectionPanel } from "../../blocks";
+import { GapWhy, SectionPanel } from "../../blocks";
 import { captureReasonText, stageWhy } from "../stage/reasons";
 import { useStageReason } from "../stage/StageEligibility";
 import { newNoteKey, noteBlock, noteFingerprint, noteLength, type NoteInputs } from "./model";
@@ -63,8 +63,9 @@ export interface ReviewNoteFormProps {
 function Shut({ reason, code }: { reason: string; code?: string }) {
   return (
     <>
-      <div className="exec-sbx-actions" title={code === undefined ? undefined : `Server reason: ${code}`}>
+      <div className="exec-sbx-actions">
         <DockAction label="Record review note" reason={reason} accessHref={ACCESS} />
+        {code === undefined ? null : <GapWhy name="Server reason" rows={[`Server reason: ${code}`]} next={null} />}
       </div>
     </>
   );

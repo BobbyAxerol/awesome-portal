@@ -200,8 +200,8 @@ describe("the V2 following-parent body", () => {
     await ready();
     expect(screen.queryByRole("list", { name: "Certification steps" })).toBeNull();
     expect(screen.getByText("The steps are not published for this response.")).toBeTruthy();
-    // The reason code is the sentence's title, not a second printed line.
-    expect(screen.getByText("The steps are not published for this response.").getAttribute("title")).toBe("PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    // The reason code is behind the sentence's disclosure, not a second printed line.
+    expect(whyText(screen.getByText("The steps are not published for this response."))).toBe("PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
     expect(tabs().getByRole("tab", { name: /Steps/ }).textContent).not.toMatch(/\(\d+\)/);
     expect(document.querySelector(".exec-sbx-body > .exec-blk-gaps")).toBeTruthy();
   });
@@ -338,7 +338,8 @@ describe("the V1 certification body", () => {
     const table = screen.getByRole("table", { name: "Reconciliation findings" });
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(2);
-    expect(rows[0]!.textContent).toContain("fnd_TEST_ONLY_1");
+    expect(rows[0]!.textContent).not.toContain("fnd_TEST_ONLY_1");
+    expect(whyText(rows[0]!)).toContain("fnd_TEST_ONLY_1");
     expect(rows[0]!.textContent).toContain("Fee total differs between the two sources");
     expect(rows[0]!.textContent).toContain("Warning");
     expect(rows[1]!.textContent).toContain("Info");

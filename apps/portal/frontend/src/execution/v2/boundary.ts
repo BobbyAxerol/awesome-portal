@@ -61,7 +61,7 @@ export interface MetricAbsent {
 
 export type Metric = MetricValue | MetricAbsent;
 
-const ABSENT_WORD: Readonly<Record<AbsentState, string>> = {
+export const ABSENT_WORD: Readonly<Record<AbsentState, string>> = {
   UNAVAILABLE: "Not available",
   DENIED: "Not permitted",
   NOT_APPLICABLE: "Not applicable",

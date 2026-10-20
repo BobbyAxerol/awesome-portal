@@ -18,10 +18,10 @@
 import { createElement, type ReactNode } from "react";
 
 import type { Metric } from "../boundary";
-import { formatAsOf } from "../boundary";
+import { utcStamp } from "../../time";
 import type { UtcEpochMs } from "../../screenDataContract";
 import { MetricText, NO_VALUE_COPY } from "./metric";
-import { NotPublished, type NotPublishedId } from "./notPublished";
+import { GapWhy, NotPublished, type NotPublishedId } from "./notPublished";
 import "../css/blocks.css";
 
 /** The source says the figure is deliberately not computed, and why. */
@@ -108,7 +108,13 @@ function isNotPublished(cell: TriadCell): cell is TriadNotPublished {
 function CellView({ cell, suffix, signed, sideMissing }: { cell: TriadCell; suffix?: string; signed: boolean; sideMissing: boolean }) {
   if (sideMissing) return <span className="exec-blk-na">{NO_VALUE_COPY}</span>;
   // The reason is said once under the block ("Shared binding: the balance difference is not computed"); per cell it is the tooltip and hidden text, not a repeated code.
-  if (isNotComputed(cell)) return <span className="exec-blk-na" data-state="not-computed" title={cell.reason}>Not computed<span className="exec-blk-sr"> · {cell.reason}</span></span>;
+  if (isNotComputed(cell)) {
+    return (
+      <span className="exec-blk-na" data-state="not-computed">
+        <GapWhy className="exec-blk-na" text="Not computed" name="Not computed, reason" rows={[cell.reason]} next={null} />
+      </span>
+    );
+  }
   if (isNotPublished(cell)) return <NotPublished id={cell.id} titleReason={cell.reasonCode} compact />;
   return <MetricText metric={cell} suffix={suffix} signed={signed} />;
 }
@@ -117,7 +123,7 @@ function sub(column: Column, side: TriadSide | null | undefined, differenceNote:
   if (column === "difference") return differenceNote;
   const lead = column === "internal" ? "Virtual ledger" : "Venue report";
   if (withheld) return lead;
-  const when = side === null || side === undefined || side.asOf === null || side.asOf === undefined ? NO_VALUE_COPY : formatAsOf(side.asOf);
+  const when = side === null || side === undefined || side.asOf === null || side.asOf === undefined ? NO_VALUE_COPY : utcStamp(side.asOf);
   return `${lead} · ${when}`;
 }
 

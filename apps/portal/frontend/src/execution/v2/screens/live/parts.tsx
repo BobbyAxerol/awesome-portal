@@ -6,7 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { GapLine, MetricText, NO_VALUE_COPY, NaWhy, NotPublished, SectionPanel } from "../../blocks";
+import { GapLine, MetricText, NO_VALUE_COPY, NaWhy, NotPublished, SectionPanel, type GapItem } from "../../blocks";
 import { ChartTools, EquityPanel } from "../../charts";
 import type { SeriesPoint as ChartPoint } from "../../charts/types";
 import { readAsOf } from "../../boundary";
@@ -198,6 +198,17 @@ const ORDER_COLUMNS = (reasons: Readonly<Record<string, string>>): readonly Card
   },
   unpublishedColumn("ack_latency_ms", "Ack latency", reasons),
 ];
+
+/**
+ * The gap a V1 rows panel reduces to, or `null` when the panel has rows (or a withheld claim of its own) to draw. A body that
+ * publishes no rows for several panels says it ONCE (`GapLine`) instead of one panel of the same words per panel.
+ */
+export function v1RowsGap(rows: V1RowsPanel, what: string): GapItem | null {
+  if (rows.kind === "typed-positions" || rows.kind === "typed-orders" || rows.kind === "table") return null;
+  const gapReason = rows.kind === "withheld" && rows.text.startsWith("Not available · ") ? rows.text.slice("Not available · ".length) : null;
+  if (rows.kind === "withheld" && gapReason === null) return null;
+  return { label: what, id: "FE-072", reason: gapReason };
+}
 
 export function V1RowsSection({ title, aside, rows, what }: { title: string; aside?: string; rows: V1RowsPanel; what: string }) {
   if (rows.kind === "typed-positions" || rows.kind === "typed-orders") {

@@ -154,6 +154,11 @@
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
+/* A column of exact decimals shows one scale: the missing places are invisible room, not digits (the value and data-full are untouched). */
+.exec-blk-num[data-room]::after {
+  content: attr(data-room);
+  visibility: hidden;
+}
 .exec-blk-num[data-tone="positive"] {
   color: var(--good);
 }

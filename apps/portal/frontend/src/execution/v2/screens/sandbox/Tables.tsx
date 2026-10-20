@@ -14,7 +14,7 @@
  */
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { GapLine, NotPublished, SectionPanel, type GapItem } from "../../blocks";
+import { GapLine, GapWhy, NotPublished, SectionPanel, type GapItem } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { PanelState } from "../../../components/states";
 import { actionWord, humanize, severityFlag } from "./model";
@@ -52,7 +52,12 @@ const FINDING_COLUMNS: readonly CardsColumn<FindingView & { k: string }>[] = [
       <>
         {r.summary === null ? null : <span>{r.summary}</span>}
         {r.summary === null ? null : " "}
-        <span className="exec-sbx-id" title={r.code ?? undefined}>{r.id}</span>
+        {/* With a summary the id is a support reference, not something to read: it and the finding code sit behind one "?" (RV-06). A finding with no summary has the id as its only name. */}
+        {r.summary === null ? (
+          <span className="exec-sbx-id" title={r.code ?? undefined}>{r.id}</span>
+        ) : (
+          <GapWhy name="Finding reference" rows={[r.id, ...(r.code === null ? [] : [r.code])]} next={null} />
+        )}
         {/* A finding whose blocking bit cannot be read is not waved through: it says so (failClosed.test.ts). */}
         {r.blocking === null ? <>{" "}<Flag kind="unknown" label="Blocking not stated" size="sm" /></> : r.blocking ? <>{" "}<Flag kind="attention" label="Blocking" size="sm" /></> : null}
       </>

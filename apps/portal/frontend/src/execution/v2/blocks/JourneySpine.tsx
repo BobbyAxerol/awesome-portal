@@ -148,13 +148,9 @@ function Meter({ met, total }: SpineCriteria) {
 function Facts({ id, state, facts }: { id: SpineStageId; state: SpineNodeState; facts: SpineStageFacts | undefined }): ReactNode {
   const spec = SPINE_STAGES[id];
   if (state === "ahead") return <span className="exec-blk-spine-line">Not reached</span>;
-  if (state === "unknown") {
-    return (
-      <span className="exec-blk-spine-line">
-        <NotPublished id="FE-027/028" compact>Stage history</NotPublished>
-      </span>
-    );
-  }
+  // An unknown stage is one quiet state: no chip, no per-card sentence. The spine's one note under the list says why, and there is
+  // no stage-history target to link to, so nothing is drawn that looks like one.
+  if (state === "unknown") return null;
   const days = isCount(facts?.daysInStage) ? facts.daysInStage : null;
   const criteria = facts?.criteria && isCount(facts.criteria.met) && isCount(facts.criteria.total) ? facts.criteria : null;
   const who = facts?.decider ?? null;
@@ -266,7 +262,7 @@ export function JourneySpine({
               <>
                 <span className="exec-blk-spine-head">
                   <span className="exec-blk-spine-name">{spec.label}</span>
-                  <Flag kind={flag.kind} label={flag.label} size="sm" />
+                  {state === "unknown" ? <span className="exec-blk-sr">{flag.label}</span> : <Flag kind={flag.kind} label={flag.label} size="sm" />}
                 </span>
                 <span className="exec-blk-spine-domain">{DOMAIN_WORD[spec.domain]}</span>
                 <Facts id={id} state={state} facts={stages?.[id]} />

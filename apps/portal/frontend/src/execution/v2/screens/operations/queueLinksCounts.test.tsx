@@ -143,7 +143,8 @@ describe("FE-042 incident links in the queue row", () => {
     expect(within(group).getAllByRole("link").map((a) => a.textContent)).toEqual(["inc_TEST_ONLY_links_1"]);
     const items = within(group).getAllByRole("listitem");
     expect(items).toHaveLength(2);
-    expect(items[1]!.textContent).toBe("Incident not attestedINCIDENT_LINK_IDENTITY_NOT_REPRESENTABLE");
+    expect(items[1]!.textContent).toBe("Incident not attested");
+    expect(whyText(items[1]!)).toBe("INCIDENT_LINK_IDENTITY_NOT_REPRESENTABLE");
     expect(items[1]!.querySelector("a")).toBeNull();
     // Two authorized links, two listed: nothing is "not shown".
     expect(group.textContent).not.toMatch(/more not shown/);
@@ -225,6 +226,7 @@ describe("FE-042 incident links in the queue row", () => {
         // Row b is ACKNOWLEDGED with an UNCERTAIN outcome: its action is the check-original button.
         "Account acc_TEST_ONLY_operational",
         "Open incident inc_TEST_ONLY_links_1, linked to operation op_TEST_ONLY_links_b",
+        "Incident not attested, reason",
         "Check original request",
       ]);
       expect(row.getAttribute("tabindex")).toBe("0");

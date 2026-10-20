@@ -260,7 +260,10 @@ describe("drawer", () => {
       expect((button as HTMLButtonElement).disabled).toBe(true);
       expect(button.getAttribute("aria-describedby")).toBeTruthy();
     }
-    expect(within(dock).getAllByText(/Account changes are made on the current Users screen/).length).toBeGreaterThan(0);
+    // One reason for both actions: printed once, and still each button's description.
+    expect(within(dock).getAllByText(/Account changes are made on the current Users screen/)).toHaveLength(2);
+    expect(dock.querySelectorAll(".exec-dock-reason")).toHaveLength(1);
+    expect(dock.querySelectorAll(".exec-dock-sr")).toHaveLength(1);
     // Each blocked action carries its own link; the action is part of the name (WCAG 2.4.4).
     const legacy = within(dock).getAllByRole("link", { name: /^Current Users screen: / });
     expect(legacy.length).toBeGreaterThan(0);
