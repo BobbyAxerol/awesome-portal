@@ -11,6 +11,7 @@ export { managerCompositionPublication } from "./manager-composition-publication
 import { managerRegimePublication } from "./manager-regime-publication.contract";
 export { managerRegimePublication } from "./manager-regime-publication.contract";
 import { managerStageLifecycleReasons, managerStageLifecyclePolicy, validateManagerLifecycle } from "./manager-lifecycle";
+import { managerSeriesPublication, validateManagerSeriesPublications } from "./manager-series-publication.contract";
 
 const text = z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
 export const MANAGER_SCALARS = {
@@ -75,6 +76,8 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
   precomputed_scores: z.array(managerScorePublication).max(128).optional(),
   precomputed_compositions: z.array(managerCompositionPublication).max(128).optional(),
   precomputed_regimes: z.array(managerRegimePublication).max(128).optional(),
+  // FE-013: NAV / Net PnL / Return series from the financial normalized source. Absent today (source MISSING); never computed here.
+  precomputed_series: z.array(managerSeriesPublication).max(256).optional(),
 }).strict().superRefine((d, c) => {
   if (d.facts_through_ms !== null && d.facts_through_ms > d.as_of_ms || d.as_of_ms > d.observed_at_ms ||
     d.recorded_through_ms > d.observed_at_ms || d.members.some(m => m.valid_to_ms !== null && m.valid_to_ms <= m.valid_from_ms) ||
@@ -83,8 +86,9 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
   const allowedStages = d.environment === "paper" ? ["PAPER"] : d.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
   if (d.members.some(member => !allowedStages.includes(member.stage)))
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ENVIRONMENT_STAGE_MISMATCH" });
+  validateManagerSeriesPublications(d, c);
 });
-const filter = z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL", "IN"]),
+const filter =z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL", "IN"]),
   value: text.optional(), values: z.array(text).min(1).max(32).optional() }).strict();
 export const managerModelQuery = z.object({ workspace_id: text.optional(), environment: executionEnvironment,
   q: managerSearchText.optional(), q_mode: managerSearchMode.optional(), window: managerWindowQuery.optional(),
