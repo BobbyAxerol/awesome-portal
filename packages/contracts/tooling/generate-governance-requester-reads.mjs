@@ -178,6 +178,24 @@ const fixture = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_quali
       found_blocked_expired: outcome(blocked('APPROVAL_EXPIRED')),
     };
   })(),
+  // The six capture actions as GET /governance/review-capture-capabilities lists them (the shape ReviewCaptureService.capabilities
+  // builds), for a workspace where the Paper exit request is open and one where it is not. The positive parent above is the pin the open
+  // row's request is bound to. Fixture-lab doubles serve these rows; nothing here opens a flag or a Live/command route.
+  review_capture_capabilities: (() => {
+    const capabilities = paperExit => ({ schema_version: 'governance.review-capture-capabilities.v1', authority: 'PORTAL', source_side_effect_requested: false,
+      actions: [
+        { id: 'R2_CREATE', state: 'UNAVAILABLE', reason_code: 'R2_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE' },
+        paperExit,
+        { id: 'SANDBOX_NOTE', state: 'AVAILABLE', inputs: 'EXISTING_DRAFT_CERTIFICATION', path: '/api/v1/execution/governance/sandbox/capture-note' },
+        { id: 'R2_EXECUTION_GRANT', state: 'UNAVAILABLE', reason_code: 'SOURCE_OWNED_NOT_PORTAL_AUTHORED' },
+        { id: 'PAPER_EXIT_PROMOTE', state: 'UNAVAILABLE', reason_code: 'SOURCE_OWNED_NOT_PORTAL_AUTHORED' },
+        { id: 'SANDBOX_CERTIFY_SOURCE', state: 'UNAVAILABLE', reason_code: 'SOURCE_OWNED_NOT_PORTAL_AUTHORED' },
+      ] });
+    return {
+      paper_exit_open: capabilities({ id: 'PAPER_EXIT_CREATE', state: 'AVAILABLE', inputs: 'PINNED_R2_AND_PAPER_DEPLOYMENT', path: '/api/v1/execution/governance/paper-exit/create' }),
+      paper_exit_off: capabilities({ id: 'PAPER_EXIT_CREATE', state: 'UNAVAILABLE', reason_code: 'PAPER_EXIT_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE' }),
+    };
+  })(),
 };
 const outputs = { [path]: api, 'fixtures/governance-requester-reads.synthetic.valid.json': fixture };
 for (const [name, value] of Object.entries(outputs)) {

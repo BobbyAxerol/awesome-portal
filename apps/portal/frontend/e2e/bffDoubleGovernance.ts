@@ -17,6 +17,24 @@
  *
  * Opt-in: `answerExecutionBff` asks this module only with `screensV2`, so the V1 stubs keep their 501.
  *
+ * The Paper exit request (RV-10), reachable and demonstrable WITHOUT the dark `command` flag and without any Live or command route:
+ *
+ *   GET  /governance/review-capture-capabilities?workspace_id=   PAPER_EXIT_CREATE AVAILABLE in `ws_TEST_ONLY_shared`; UNAVAILABLE in
+ *                                                                `ws_TEST_EXIT_OFF` (the canonical `review_capture_capabilities` rows);
+ *                                                                every other workspace keeps the double's V1 answer (UNAVAILABLE)
+ *   GET  /governance/paper-exit/parent                           the canonical positive parent (above), the pins the request is bound to
+ *   POST /governance/paper-exit/create                           typed success or denial, by the TEXT of the summary:
+ *          (anything else)  201, the review `pexit_fx_<deployment>_<hash of the key>` (the canonical capture response, echoed)
+ *          "REPLAY ..."     201 with `replayed: true`
+ *          "DENIED ..."     403 ADMIN_ROLE_REQUIRED
+ *          "REFUSE ..."     409 APPROVAL_VERSION_CONFLICT (the R2 moved to another version)
+ *          "STALE ..."      409 CAPTURE_PROJECTION_VERSION_CONFLICT (the Paper projection moved)
+ *        The pins in the body must be the ones the parent serves for that workspace and deployment; otherwise 404/409 as the server would.
+ *   GET  /governance/exit-reviews/pexit_fx_...                   the canonical Paper exit review, read back for the deployment the id names
+ *
+ * Nothing is stored: the same request answers the same way every time. In the preview this write is served only with
+ * the writes switch set to `doubles`; with the default `refuse` it is 405 and the screen says the server did not record it.
+ *
  * stage-action-eligibility: the case is chosen by the `workspace_id` of the read (the convention `bffDoubleAccess.ts` uses), and the
  * body echoes the workspace asked:
  *   (none, anything else)        admin_with_r2_read
@@ -188,6 +206,11 @@ export function answerPaperExitParent(method: string, path: string, search: URLS
   if (search.has("workspace_id") && !text(workspaceId, 96)) return invalid("workspace_id is 1 to 96 printable characters.");
   if (workspaceId === STAGE_ACTION_DOUBLE_WORKSPACES.denied) return problem(403, "ACCESS_DENIED", "Not permitted.");
   if (workspaceId === STAGE_ACTION_DOUBLE_WORKSPACES.unavailable) return problem(503, "ACCESS_UNAVAILABLE", "Unavailable.");
+  return { status: 200, body: paperExitParentFor(deploymentId, workspaceId) };
+}
+
+/** The parent the double serves for a deployment (and workspace): the canonical row, echoing both. */
+function paperExitParentFor(deploymentId: string, workspaceId: string | null): Draft {
   const body: Draft = structuredClone(canonical(REQUESTER_READS).paper_exit_parent[PAPER_EXIT_CASE[deploymentId] ?? "found_available"]);
   body.deployment_id = deploymentId;
   if (workspaceId !== null) body.workspace_id = workspaceId;
@@ -195,11 +218,99 @@ export function answerPaperExitParent(method: string, path: string, search: URLS
     body.capture_context.workspace_id = body.workspace_id;
     for (const candidate of body.capture_context.candidates) candidate.deployment_id = deploymentId;
   }
+  return body;
+}
+
+/* ── Paper exit request (RV-10): capabilities, create, read-back ──────────── */
+
+export const REVIEW_CAPTURE_CAPABILITIES_ROUTE = "/governance/review-capture-capabilities";
+export const PAPER_EXIT_CREATE_ROUTE = "/governance/paper-exit/create";
+/** The fixture lab's shared workspace (`?workspace_id=ws_TEST_ONLY_shared`): the Paper exit request is open here. */
+export const PAPER_EXIT_OPEN_WORKSPACE = "ws_TEST_ONLY_shared";
+/** A workspace where the server does not open it: the capabilities row is UNAVAILABLE with its reason. */
+export const PAPER_EXIT_OFF_WORKSPACE = "ws_TEST_EXIT_OFF";
+
+const REVIEW_PREFIX = "pexit_fx_";
+const REVIEW_ID = /^pexit_fx_([A-Za-z0-9._:-]+)_([0-9a-f]{8})$/;
+const DIGEST = /^sha256:[0-9a-f]{64}$/;
+
+/** The capabilities of the two Paper exit workspaces, from the canonical rows. `null` = not mine (the double's other answers stand). */
+export function answerCaptureCapabilities(method: string, path: string, search: URLSearchParams): BffAnswerGovernance | null {
+  if (path !== REVIEW_CAPTURE_CAPABILITIES_ROUTE || method !== "GET") return null;
+  const workspaceId = search.get("workspace_id");
+  const rows = canonical(REQUESTER_READS).review_capture_capabilities;
+  if (workspaceId === PAPER_EXIT_OPEN_WORKSPACE) return { status: 200, body: structuredClone(rows.paper_exit_open) };
+  if (workspaceId === PAPER_EXIT_OFF_WORKSPACE) return { status: 200, body: structuredClone(rows.paper_exit_off) };
+  return null;
+}
+
+/** A short stable digest of a key (FNV-1a): the same request key names the same review. */
+function hex8(value: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < value.length; i += 1) {
+    h ^= value.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(16).padStart(8, "0");
+}
+
+const isRecord = (value: unknown): value is Record<string, Draft> => typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * `POST /governance/paper-exit/create`. `null` when the request carries no body to read (the golden's POSTs carry none): the caller keeps
+ * its own answer. The pins are checked against the parent this same double serves, so a form that builds them from anything else fails.
+ */
+export function answerPaperExitCreate(method: string, path: string, body: unknown): BffAnswerGovernance | null {
+  if (path !== PAPER_EXIT_CREATE_ROUTE || method !== "POST") return null;
+  if (!isRecord(body)) return null;
+  const { workspace_id: workspaceId, request_key: key, r2_approval_id: approvalId, expected_r2_version: version, deployment_id: deploymentId,
+    expected_projection_digest: digest } = body;
+  const summary = typeof body.summary === "string" ? body.summary.trim() : "";
+  if (typeof workspaceId !== "string" || typeof key !== "string" || !REQUEST_KEY.test(key) || typeof approvalId !== "string"
+    || typeof version !== "number" || !Number.isSafeInteger(version) || typeof deploymentId !== "string" || !DEPLOYMENT_ID.test(deploymentId)
+    || typeof digest !== "string" || !DIGEST.test(digest) || summary.length < 8 || summary.length > 1000) {
+    return problem(422, "INVALID_REVIEW_CAPTURE_REQUEST", "workspace_id, request_key, r2_approval_id, expected_r2_version, deployment_id, expected_projection_digest and a summary of 8 to 1000 characters are required.");
+  }
+  if (workspaceId === STAGE_ACTION_DOUBLE_WORKSPACES.denied) return problem(403, "ACCESS_DENIED", "Not permitted.");
+  if (workspaceId !== PAPER_EXIT_OPEN_WORKSPACE) return problem(403, "PAPER_EXIT_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE", "The Paper exit review is not open for this workspace.");
+  if (summary.startsWith("DENIED")) return problem(403, "ADMIN_ROLE_REQUIRED", "Requesting a Paper exit review needs the admin role in this workspace.");
+
+  const parent = paperExitParentFor(deploymentId, workspaceId);
+  const context = parent.capture_context;
+  if (parent.state !== "FOUND" || context === null) return problem(422, "R2_APPROVAL_REQUIRED", "This deployment has no R2 review to request an exit from.");
+  if (context.availability.state !== "AVAILABLE") return problem(422, context.availability.reason_code, "The R2 review does not allow an exit request now.");
+  if (approvalId !== context.parent_approval_id) return problem(404, "APPROVAL_NOT_FOUND", "No such R2 approval in this workspace.");
+  if (summary.startsWith("REFUSE") || version !== context.expected_parent_version) {
+    return problem(409, "APPROVAL_VERSION_CONFLICT", "The R2 approval moved to another version; read it again before requesting an exit review.");
+  }
+  if (summary.startsWith("STALE") || digest !== context.expected_projection_digest) {
+    return problem(409, "CAPTURE_PROJECTION_VERSION_CONFLICT", "The Paper projection moved since the request was prepared; read it again.");
+  }
+
+  const reviewId = `${REVIEW_PREFIX}${deploymentId}_${hex8(key)}`;
+  const response: Draft = canonical("execution-governance.review-capture.paper-exit.valid.json");
+  Object.assign(response, {
+    workspace_id: workspaceId, replayed: summary.startsWith("REPLAY"), aggregate_id: reviewId, review_id: reviewId,
+    read_path: `/api/v1/execution/governance/exit-reviews/${reviewId}`, captured_projection_digest: digest,
+  });
+  return { status: 201, body: response };
+}
+
+/** The Paper exit review a create of this double made, read back: the canonical review, for the deployment its id names. */
+export function answerFixtureExitReview(method: string, path: string): BffAnswerGovernance | null {
+  if (method !== "GET") return null;
+  const match = /^\/governance\/exit-reviews\/([^/]+)$/.exec(path);
+  const parts = match === null ? null : REVIEW_ID.exec(match[1]!);
+  if (match === null || parts === null) return null;
+  const deploymentId = parts[1]!;
+  const body: Draft = JSON.parse(JSON.stringify(canonical("execution-governance.paper-exit-review.valid.json")).split("dep_94").join(deploymentId));
+  body.data.review.review_id = match[1];
   return { status: 200, body };
 }
 
-/** The reads, in the order the answerer asks. `path` has the execution prefix stripped. */
-export function answerGovernance(method: string, path: string, search: URLSearchParams): BffAnswerGovernance | null {
+/** The reads and the one write, in the order the answerer asks. `path` has the execution prefix stripped. */
+export function answerGovernance(method: string, path: string, search: URLSearchParams, requestBody?: unknown): BffAnswerGovernance | null {
   return answerStageActionEligibility(method, path, search) ?? answerApprovalRequestLookup(method, path, search) ?? answerPaperExitParent(method, path, search)
-    ?? answerPendingRecallDiscovery(method, path, search);
+    ?? answerPendingRecallDiscovery(method, path, search) ?? answerCaptureCapabilities(method, path, search) ?? answerPaperExitCreate(method, path, requestBody)
+    ?? answerFixtureExitReview(method, path);
 }

@@ -48,11 +48,28 @@ answers synthetic data only; turn the overlay off to get the real, authenticated
 
    Two more keys exist and are off by default (they are not among the 20): `command` (the fixture-only command story at
    `/execution/command`, and the "Preview control" form in the Operations dock) and `scoped` (the fixture-only slice at
-   `/execution/slice`). Two controls are not reachable on this overlay whatever the build says:
-   the Workbench "Request review" (Paper exit) mounts once the URL names a workspace (`?workspace_id=ws_TEST_ONLY_shared`) and stays
-   shut because the fixture BFF answers `PAPER_EXIT_CREATE` as `UNAVAILABLE` for every workspace; the dock's "Preview control" form
-   needs `command` and a PORTFOLIO or DEPLOYMENT target with an open recall, and the fixture BFF returns `items: []` for all of them.
-   Both need a fixture-BFF change (Codex), not a front-end one.
+   `/execution/slice`). Keep both out of the list: nothing below needs them.
+
+   **Workbench Paper exit request ("Request review") is reachable with the 20 keys alone.** It rides `workbench`, not `command`,
+   and needs no Live or command enablement. Open
+   `/deployments/paper/<deployment id>?workspace_id=ws_TEST_ONLY_shared` (for example `/deployments/paper/dep_paper_01?workspace_id=ws_TEST_ONLY_shared`;
+   any deployment the Alpha 360 Deployments tab lists works) and find "Request review" in the Exit gate:
+
+   - the control opens because the fixture BFF serves `PAPER_EXIT_CREATE` AVAILABLE for `ws_TEST_ONLY_shared` (the canonical
+     `review_capture_capabilities.paper_exit_open` row) **and** the canonical positive R2 parent from
+     `GET /governance/paper-exit/parent` (approval `apr_TEST_ONLY_r2`, version 3, a projection digest, this deployment as the accepted choice).
+     The request body is built from those served pins only (`r2_approval_id`, `expected_r2_version`, `expected_projection_digest`);
+   - a workspace not named above keeps the old answer (UNAVAILABLE, the control shut with the server's reason). `ws_TEST_EXIT_OFF` is the explicit shut case;
+     `dep_exit_none`, `dep_exit_not_approved`, `dep_exit_not_admin` and `dep_exit_expired` as the deployment id show the NONE and BLOCKED parents;
+   - the typed answers depend on the text of the summary (the double stores nothing, so the same request always answers the same way): anything
+     else is recorded (`pexit_fx_<deployment>_<hash>`, status read back from the canonical Paper exit review), `REPLAY ...` is "matched an earlier request",
+     `DENIED ...` is 403 `ADMIN_ROLE_REQUIRED`, `REFUSE ...` is 409 `APPROVAL_VERSION_CONFLICT`, `STALE ...` is 409 `CAPTURE_PROJECTION_VERSION_CONFLICT`;
+   - the write is a POST, so it needs `FIXTURE_WRITES=doubles` (see "Writes" below). With the default `refuse` the form still opens and sending is a
+     `405` that the screen words as "the server did not record this request": honest, but no success state.
+
+   The `command`-key "Preview control" form (the dock's pending-control preview) **stays dark and is a different surface**: it needs `command` in the
+   build, a PORTFOLIO or DEPLOYMENT target with an open recall, and the fixture BFF still returns `items: []` for every recall question, so it has nothing to
+   build `expected_versions` from. Enabling the Paper exit request did not change that and does not enable it.
 
    The umbrella flag `VITE_EXECUTION_PREVIEW_ENABLED` is already true in the preview overlay. Optional:
    `FIXTURE_SCALE=small|medium|large` (default `medium`), `FIXTURE_WRITES=refuse|doubles`,

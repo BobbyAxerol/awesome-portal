@@ -154,6 +154,25 @@ describe("RV-10 Paper exit parent contract", () => {
   });
 });
 
+describe("RV-10 review-capture capabilities rows (fixture lab)", () => {
+  const rows = fixture.review_capture_capabilities as Record<string, any>;
+  const captureSchema = load("schemas/execution-governance-review-capture.v1.schema.json");
+  const validate = ajv.compile({ $id: "https://contracts.test/review-capture-capabilities.json", $ref: "#/$defs/Capabilities", $defs: captureSchema.$defs });
+  it.each(Object.entries(rows))("%s passes the published Capabilities schema", (_name, value) => {
+    expect(validate(value), JSON.stringify(validate.errors)).toBe(true);
+    expect(value.actions.map((action: any) => action.id)).toEqual(["R2_CREATE", "PAPER_EXIT_CREATE", "SANDBOX_NOTE", "R2_EXECUTION_GRANT", "PAPER_EXIT_PROMOTE", "SANDBOX_CERTIFY_SOURCE"]);
+  });
+  it("the open row offers only the Paper exit request that the positive parent is bound to; every source-owned action stays unavailable", () => {
+    const byId = (value: any, id: string) => value.actions.find((action: any) => action.id === id);
+    expect(byId(rows.paper_exit_open, "PAPER_EXIT_CREATE")).toEqual({ id: "PAPER_EXIT_CREATE", state: "AVAILABLE", inputs: "PINNED_R2_AND_PAPER_DEPLOYMENT", path: "/api/v1/execution/governance/paper-exit/create" });
+    expect(byId(rows.paper_exit_off, "PAPER_EXIT_CREATE")).toMatchObject({ state: "UNAVAILABLE", reason_code: "PAPER_EXIT_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE" });
+    for (const value of Object.values(rows)) {
+      for (const id of ["R2_EXECUTION_GRANT", "PAPER_EXIT_PROMOTE", "SANDBOX_CERTIFY_SOURCE"]) expect(byId(value, id).state).toBe("UNAVAILABLE");
+    }
+    expect(fixture.paper_exit_parent.found_available.capture_context.availability.state).toBe("AVAILABLE");
+  });
+});
+
 describe("governance requester-reads generator", () => {
   it("is idempotent and leaves every pre-existing governance path intact", () => {
     const original = Object.keys(api.paths).filter(path => !/stage-action-eligibility|request-lookup|paper-exit\/parent/.test(path));
