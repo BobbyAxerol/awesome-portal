@@ -685,7 +685,7 @@ describe("states", () => {
     }));
     mount(api);
     await loaded();
-    expect(screen.getByText(/The read is partial/)).toBeTruthy();
+    expect(screen.getByText("Some rows or counts may be missing").getAttribute("title")).toBe("The read is partial");
   });
 
   it("stale freshness is a Stale flag with the as-of time", async () => {

@@ -44,7 +44,7 @@ import {
 import { useDatasetPublication, useFleetDataset } from "./useFleetDataset";
 import {
   ARCHIVED_TAB, FE, FLEET_LENSES, alphaHref, HIDDEN_COLUMNS_PARAM, ROW_CAP, SORT_OPTIONS, fleetKpis, humanize, inStages, lensCounts,
-  lensForStages, lensLabel, healthView, notPublished, parseHiddenColumns, queryKey, fleetQuery, serializeHiddenColumns,
+  lensForStages, lensLabel, healthView, NOT_PUBLISHED, notPublished, parseHiddenColumns, queryKey, fleetQuery, serializeHiddenColumns,
   sortValueOf, stageLabel, stagesForLens, toFleetRow,
   type FleetColumnKey, type FleetFilters, type FleetLens,
 } from "./fleetModel";
@@ -305,6 +305,7 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
     );
   })();
 
+  const unpublishedList = datasetMode ? [FE.map, FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST;
   const unpublishedView = (fact: { fe: string; what: string }) => (
     <div className="exec-fleet-nppanel" role="status">
       <strong>{fact.what}</strong>
@@ -317,7 +318,6 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
       <header className="exec-fleet-head">
         <div>
           <h1 className="exec-fleet-title">Alpha Fleet</h1>
-          <p className="exec-fleet-sub">Identity only. Allocation, PnL and equity are not shown on this screen.</p>
         </div>
         <div className="exec-fleet-fresh">
           <span className="exec-fleet-seg" role="group" aria-label="View">
@@ -342,12 +342,12 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
           ) : null}
           {datasetMode ? (
             <>
-              {dataset.first ? <Flag kind={dataset.first.quality.freshness === "FRESH" ? "ok" : dataset.first.quality.freshness === "STALE" ? "stale" : "unknown"} label={dataset.first.quality.freshness === "FRESH" ? "Fresh" : humanize(dataset.first.quality.freshness)} size="sm" /> : null}
+              {dataset.first && dataset.first.quality.freshness !== "FRESH" ? <Flag kind={dataset.first.quality.freshness === "STALE" ? "stale" : "unknown"} label={humanize(dataset.first.quality.freshness)} size="sm" /> : null}
               {dataset.first ? <span>As of {utcStamp(dataset.first.asOfMs)}</span> : null}
             </>
           ) : (
             <>
-              {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+              {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
               {envelope ? (
                 <span>
                   {envelope.sourceAsOf ? `As of ${utcStamp(envelope.sourceAsOf)}` : "Source time not published"}
@@ -383,7 +383,7 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
       {!datasetMode && incomplete && envelope ? (
         <div className="exec-fleet-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" />
-          <span>The read is {humanize(envelope.completeness).toLowerCase()}: some rows or counts may be missing.</span>
+          <span title={`The read is ${humanize(envelope.completeness).toLowerCase()}`}>Some rows or counts may be missing</span>
         </div>
       ) : null}
 
@@ -517,8 +517,10 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
             <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />
           </div>
           <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={() => searchInput.current?.focus()} />
-          <p id={reasonId} className="exec-fleet-unpub">
-            Not published yet: {(datasetMode ? [FE.map, FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST).map((fact) => `${fact.what} (${fact.fe})`).join(", ")}.
+          {/* Tied to every disabled control by aria-describedby: the visible words are the names, the ids are in the title and the hidden text. */}
+          <p id={reasonId} className="exec-fleet-unpub" title={unpublishedList.map((fact) => `${fact.what}: ${notPublished(fact)}`).join("\n")}>
+            Not available: {unpublishedList.map((fact) => fact.what).join(", ")}
+            <span className="exec-fleet-sr"> ({unpublishedList.map((fact) => `${fact.what} (${fact.fe})`).join(", ")})</span>
           </p>
           {datasetNote ? <p className="exec-fleet-note" data-testid="dataset-note">{datasetNote}</p> : null}
 
@@ -526,7 +528,10 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
             {archived ? (
               <div className="exec-fleet-nppanel" role="status">
                 <strong>Archived alphas</strong>
-                <p>{notPublished(FE.archived)}. This lens makes no request until the backend publishes the list.</p>
+                <p title="This lens makes no request until the backend publishes the list.">
+                  <span className="exec-fleet-sr">{notPublished(FE.archived)}</span>
+                  <span aria-hidden="true">{NOT_PUBLISHED}</span>
+                </p>
               </div>
             ) : mapView ? (
               <>
@@ -590,9 +595,8 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
               <>
                 {boardView ? (
                   <>
-                    <p className="exec-fleet-note exec-fleet-board-note">
-                      Loaded rows only: {visible.length} {visible.length === 1 ? "alpha" : "alphas"} placed by highest published stage.
-                      Stage counts are for your whole scope. Readiness and days in stage are not published ({FE.readiness.fe}).
+                    <p className="exec-fleet-note exec-fleet-board-note" title="Stage counts are for your whole scope. Readiness and days in stage are not published.">
+                      Loaded rows only: {visible.length} {visible.length === 1 ? "alpha" : "alphas"} placed by highest published stage
                     </p>
                     {visible.length === 0 ? emptyBlock : (
                       <FleetBoard

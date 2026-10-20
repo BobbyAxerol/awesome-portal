@@ -201,14 +201,17 @@ describe("L1 · matrix A · envelope states", () => {
       const { api } = makeApi(() => input);
       const { container } = mount(api);
       const started = performance.now();
-      await waitFor(() => expect(container.querySelector(".exec-fleet-fresh .exec-flag")).not.toBeNull(), { timeout: 10_000 });
+      await waitFor(() => expect(container.querySelector(".exec-fleet-fresh")?.textContent).toBeTruthy(), { timeout: 10_000 });
       expect(performance.now() - started).toBeLessThan(BUDGET_RENDER_STATE_MS);
 
-      // Freshness: only the exact published FRESH is success; AGING is not.
-      const flag = container.querySelector(".exec-fleet-fresh .exec-flag")!;
-      const wantKind = d.freshness === "FRESH" ? "ok" : d.freshness === "STALE" ? "stale" : "unknown";
-      expect(flag.getAttribute("data-k")).toBe(wantKind);
-      expect(flag.textContent).toContain(d.freshness === "FRESH" ? "Fresh" : d.freshness === "STALE" ? "Stale" : "Aging");
+      // Freshness: a FRESH read prints no chip (the as-of line says it); AGING and STALE are never success and keep their chip.
+      const flag = container.querySelector(".exec-fleet-fresh .exec-flag");
+      if (d.freshness === "FRESH") {
+        expect(flag).toBeNull();
+      } else {
+        expect(flag!.getAttribute("data-k")).toBe(d.freshness === "STALE" ? "stale" : "unknown");
+        expect(flag!.textContent).toContain(d.freshness === "STALE" ? "Stale" : "Aging");
+      }
 
       // Completeness: anything but COMPLETE says partial and never carries a success flag.
       const banner = container.querySelector(".exec-fleet-banner");
@@ -218,7 +221,8 @@ describe("L1 · matrix A · envelope states", () => {
         expect(banner).not.toBeNull();
         expect(banner!.querySelector('[data-k="partial"]')).not.toBeNull();
         expect(banner!.querySelector('[data-k="ok"]')).toBeNull();
-        expect(banner!.textContent!.toLowerCase()).toContain(d.completeness.toLowerCase());
+        // The tier word is the banner's title; the visible line is one short clause.
+        expect(`${banner!.textContent} ${[...banner!.querySelectorAll("[title]")].map((t) => t.getAttribute("title")).join(" ")}`.toLowerCase()).toContain(d.completeness.toLowerCase());
       }
 
       // An unpublished source time is said so; it is never a date, a zero or a dash.
