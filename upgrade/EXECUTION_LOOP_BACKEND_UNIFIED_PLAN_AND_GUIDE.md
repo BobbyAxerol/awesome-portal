@@ -24718,6 +24718,38 @@ No identity reissue, retired-head replay, fake grant or new blanket approval.
 Current recorded disposition: RUNNER_IMPLEMENTED_AND_UNIT_TESTED / CORE009_NOT_COMPOSED;
 full08 NOT_MET, connected09 NOT_STARTED. This is not a phase closeout.
 
+**06:13–06:15UTC terminal publication/cleanup:** normal hook36991 ended0,
+130contract cases PASS;72API suites/717cases PASS,0FAIL/0SKIP; TypeScript build,
+actual isolated PostgreSQL dump/restore signatures and whole-workspace gates PASS.
+These are overlapping regressions, including57peer native-egress tests; they are
+not717 new cases or committed-only provenance. Code commit
+e2f337a45ab9bf166fc811ab3b735e5ed47c5f43 (Bobby's configured identity),8files,
++1262/-6lines, was pushed non-force to the feature and remote SHA matched. No
+main/dev/merge/PR/workflow dispatch; expected extra hosted Actions minutes0.
+Bounded91871B hook log SHA256
+68ed6c88acc4ec0b7a08ff66126433aec764baf0affcb048efeb6758ae58fef6 is
+retained as private qualification evidence, never a raw public business payload.
+Actual CLI missing-config probe ended2/NOT_READY with0requests/all11casesNOT_RUN.
+
+Own test cell2977752 is terminal: Node/PostgreSQL containers and exact internal
+network absent. D4 gate created only test image
+a157db4de9607c3ab01313c556f4693d02177b1a8d8cc6027c2a07335654b187;
+log proves ownership. All-container reference and active-build/publish checks
+were empty before normal non-force image removal. Image census92→91, no new
+images versus entry91; shared BuildKit323records unchanged/no owned new cache.
+Disk available before/after that exact cleanup253782724608→253746139136B; host
+is shared, so this is not a claimed reclaimed-byte estimate (entry256151437312B).
+All13protected Portal ID/image/config/restart/service tuples unchanged. Running
+host containers46→49 reflect peer activity, not leaked owned cells. Retain all
+entry operational/rollback images, native28445 trust/config and existing source
+closure; no volume/network/shared-cache prune, service restart or DB mutation.
+SGP received only public handoff/index pointers, not test resources to tear down.
+
+Current code source is published; Claude/Core009 ACK and installed policy/config/
+session selection remain the exact external producer input. Final verification
+journal publication uses the same normal hook (no bypass, no evidence summing).
+Full08 remainsNOT_MET and connected09NOT_STARTED; no source was reopened to wait.
+
 
 
 
