@@ -1124,7 +1124,7 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
 
   if (options.screensV2) {
     // The Manager series and Fleet dataset, and the three advisory governance reads: opt-in for the V2 lane, so the V1 stubs keep their 501.
-    const published = answerManager(method, path, search) ?? answerGovernance(method, path, search);
+    const published = answerManager(method, path, search) ?? answerGovernance(method, path, search, requestBody);
     if (published !== null) return published as Answer;
   }
 
@@ -1344,14 +1344,14 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
 }
 
 /**
- * The parsed JSON of the two writes whose answer depends on what was sent (the New request create and the Sandbox note).
+ * The parsed JSON of the three writes whose answer depends on what was sent (the New request create, the Sandbox note and the Paper exit request).
  * Every other request is answered without a body, exactly as the stub always has: `/commands/plans` would otherwise start
  * echoing its `command_key`, which the V1 journeys do not expect.
  */
 function bodyOf(request: { method(): string; url(): string; postDataJSON?: () => unknown }): unknown {
   if (request.method() !== "POST" || typeof request.postDataJSON !== "function") return undefined;
   const path = new URL(request.url()).pathname.replace(/^\/api\/v1\/execution/, "");
-  if (path !== "/governance/approvals" && path !== "/governance/sandbox/capture-note") return undefined;
+  if (path !== "/governance/approvals" && path !== "/governance/sandbox/capture-note" && path !== "/governance/paper-exit/create") return undefined;
   try {
     return request.postDataJSON();
   } catch {

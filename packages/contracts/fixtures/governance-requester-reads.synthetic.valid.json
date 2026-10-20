@@ -1082,5 +1082,84 @@
       },
       "source_side_effect_requested": false
     }
+  },
+  "review_capture_capabilities": {
+    "paper_exit_open": {
+      "schema_version": "governance.review-capture-capabilities.v1",
+      "authority": "PORTAL",
+      "source_side_effect_requested": false,
+      "actions": [
+        {
+          "id": "R2_CREATE",
+          "state": "UNAVAILABLE",
+          "reason_code": "R2_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE"
+        },
+        {
+          "id": "PAPER_EXIT_CREATE",
+          "state": "AVAILABLE",
+          "inputs": "PINNED_R2_AND_PAPER_DEPLOYMENT",
+          "path": "/api/v1/execution/governance/paper-exit/create"
+        },
+        {
+          "id": "SANDBOX_NOTE",
+          "state": "AVAILABLE",
+          "inputs": "EXISTING_DRAFT_CERTIFICATION",
+          "path": "/api/v1/execution/governance/sandbox/capture-note"
+        },
+        {
+          "id": "R2_EXECUTION_GRANT",
+          "state": "UNAVAILABLE",
+          "reason_code": "SOURCE_OWNED_NOT_PORTAL_AUTHORED"
+        },
+        {
+          "id": "PAPER_EXIT_PROMOTE",
+          "state": "UNAVAILABLE",
+          "reason_code": "SOURCE_OWNED_NOT_PORTAL_AUTHORED"
+        },
+        {
+          "id": "SANDBOX_CERTIFY_SOURCE",
+          "state": "UNAVAILABLE",
+          "reason_code": "SOURCE_OWNED_NOT_PORTAL_AUTHORED"
+        }
+      ]
+    },
+    "paper_exit_off": {
+      "schema_version": "governance.review-capture-capabilities.v1",
+      "authority": "PORTAL",
+      "source_side_effect_requested": false,
+      "actions": [
+        {
+          "id": "R2_CREATE",
+          "state": "UNAVAILABLE",
+          "reason_code": "R2_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE"
+        },
+        {
+          "id": "PAPER_EXIT_CREATE",
+          "state": "UNAVAILABLE",
+          "reason_code": "PAPER_EXIT_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE"
+        },
+        {
+          "id": "SANDBOX_NOTE",
+          "state": "AVAILABLE",
+          "inputs": "EXISTING_DRAFT_CERTIFICATION",
+          "path": "/api/v1/execution/governance/sandbox/capture-note"
+        },
+        {
+          "id": "R2_EXECUTION_GRANT",
+          "state": "UNAVAILABLE",
+          "reason_code": "SOURCE_OWNED_NOT_PORTAL_AUTHORED"
+        },
+        {
+          "id": "PAPER_EXIT_PROMOTE",
+          "state": "UNAVAILABLE",
+          "reason_code": "SOURCE_OWNED_NOT_PORTAL_AUTHORED"
+        },
+        {
+          "id": "SANDBOX_CERTIFY_SOURCE",
+          "state": "UNAVAILABLE",
+          "reason_code": "SOURCE_OWNED_NOT_PORTAL_AUTHORED"
+        }
+      ]
+    }
   }
 }
