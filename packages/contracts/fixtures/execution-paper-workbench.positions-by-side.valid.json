@@ -1,0 +1,177 @@
+{
+  "schema_version": "execution.paper-workbench.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "PAPER_BINANCE_USDM",
+  "workspace_id": "ws_fixture",
+  "read_at": "2026-08-30T12:00:01Z",
+  "as_of": "2026-08-30T12:00:00Z",
+  "state": "ready",
+  "freshness": "FRESH",
+  "completeness": "COMPLETE",
+  "actor": {
+    "user_id": "usr_bobby",
+    "username": "bobby",
+    "roles": [
+      "ADMIN"
+    ]
+  },
+  "resource": {
+    "kind": "DEPLOYMENT",
+    "id": "dep_1"
+  },
+  "capabilities": [
+    {
+      "capability_id": "market.candles",
+      "state": "UNAVAILABLE",
+      "relations": [
+        "market_candles"
+      ],
+      "reason_code": "N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED",
+      "retryable": false
+    }
+  ],
+  "data": {
+    "deployment": {
+      "deployment_id": "dep_1",
+      "strategy_id": "strat_doge_mom_v2",
+      "account_id": "acct_paper_1",
+      "mode": "paper",
+      "venue": "BINANCE",
+      "portfolio_id": "pf_crypto",
+      "alpha_id": "alpha_doge_mom",
+      "alpha_name": null,
+      "portfolio_name": "Crypto Core",
+      "alpha_reason_code": "ALPHA_NAME_NOT_PUBLISHED",
+      "portfolio_name_reason_code": null
+    },
+    "deployments": [
+      {
+        "deployment_id": "dep_1",
+        "mode": "paper"
+      }
+    ],
+    "positions": [
+      {
+        "position_id": "p1",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": "BTCUSDT",
+        "side": "LONG",
+        "quantity": "0.91",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": null
+      },
+      {
+        "position_id": "p2",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": "BTCUSDT",
+        "side": "SHORT",
+        "quantity": "0.52",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": null
+      },
+      {
+        "position_id": "p3",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": "ETHUSDT",
+        "side": "LONG",
+        "quantity": "3.000",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": null
+      },
+      {
+        "position_id": "p4",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": "ETHUSDT",
+        "side": "LONG",
+        "quantity": "1.25",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": null
+      },
+      {
+        "position_id": "p5",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": "SOLUSDT",
+        "side": "FLAT",
+        "quantity": "0",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": null
+      },
+      {
+        "position_id": "p6",
+        "strategy_id": "strat_doge_mom_v2",
+        "account_id": "acct_paper_1",
+        "mode": "paper",
+        "venue": "BINANCE",
+        "instrument_id": "XRPUSDT",
+        "side": "LONG",
+        "quantity": "10",
+        "avg_px_open": "67364.21",
+        "mark_price": "67410.00",
+        "unrealized_pnl": "41.67",
+        "closed_at": "2026-10-17T09:00:00Z"
+      }
+    ],
+    "orders": [],
+    "fills": [],
+    "performance": [],
+    "account_equity": [],
+    "portfolio_equity": [],
+    "positions_by_side": {
+      "state": "AVAILABLE",
+      "reason_code": null,
+      "basis": "OPEN_POSITION_ROWS_QUANTITY_BY_SIDE_PER_INSTRUMENT",
+      "rows": [
+        {
+          "instrument_id": "BTCUSDT",
+          "long_quantity": "0.91",
+          "short_quantity": "0.52",
+          "gross_quantity": "1.43",
+          "position_count": 2
+        },
+        {
+          "instrument_id": "ETHUSDT",
+          "long_quantity": "4.25",
+          "short_quantity": "0",
+          "gross_quantity": "4.25",
+          "position_count": 2
+        }
+      ],
+      "excluded": {
+        "flat_rows": 1,
+        "closed_rows": 1,
+        "unclassified_rows": 0,
+        "no_instrument_rows": 0
+      },
+      "notional": {
+        "state": "UNAVAILABLE",
+        "reason_code": "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED"
+      }
+    }
+  }
+}

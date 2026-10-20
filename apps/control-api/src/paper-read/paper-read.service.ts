@@ -20,6 +20,7 @@ import { PaperBlotterQuery } from "./contracts";
 import { ManagerPage, managerPage } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
 import { IDENTITY_NOT_READ, identityFields } from "../execution/deployment-identity";
+import { positionsBySide } from "./positions-by-side";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
 import { absentRelation, buildStageFacts, RelationInput } from "../execution/stage-facts";
 import { unpublishedVenueCalendar } from "../execution/venue-calendar";
@@ -170,6 +171,12 @@ const WORKBENCH_SPECS: readonly RelationSpec[] = [
   spec("account_equity", "manager.performance", "account_equity_snapshots", ACCOUNT_EQUITY_FIELDS, 200),
   spec("portfolio_equity", "manager.performance", "portfolio_equity_snapshots", PORTFOLIO_EQUITY_FIELDS, 200),
 ];
+
+/** The rows and state of one fetched relation, for the derived blocks that read it. */
+function relationRows(relations: readonly RelationResult[], key: string) {
+  const found = relations.find((item) => item.spec.key === key);
+  return { rows: found?.page?.items ?? null, relationState: found?.state ?? "UNAVAILABLE" } as const;
+}
 
 /**
  * The analytics envelope with every `source_facts` group emptied.
@@ -411,6 +418,9 @@ export class PaperReadService {
             ? resolution.identity : IDENTITY_NOT_READ) }
           : null,
         observation_gate: observationGate,
+        // S3-U4: Long/Short/Gross by side, exact quantity per instrument from the same
+        // rows; notional by side stays typed unavailable (E5), never a guess.
+        positions_by_side: positionsBySide(relationRows(relations, "positions")),
         query_analytics: queryAnalytics,
         // FE-067. Typed runtime / reconciliation / sessions. The workbench screen is not bound to the
         // sessions or reconciliation relations, so today those two are typed NOT_PUBLISHED with a reason;
