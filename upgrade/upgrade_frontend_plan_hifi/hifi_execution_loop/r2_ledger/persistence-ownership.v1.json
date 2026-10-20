@@ -372,6 +372,60 @@
       "reached_via": "governance.controller.ts,f0-read.controller.ts"
     },
     {
+      "table": "execution_manager_series_checkpoints",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 4,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "RETAIN_BACKFILL_RESUME_POINTER",
+      "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "BE-P16 migration147: append-only keyset checkpoint for the bounded NAV / NET_PNL series backfill; written inside the Manager runtime lease transaction, never by a route.",
+      "reached_via": "manager-series.store.ts"
+    },
+    {
+      "table": "execution_manager_series_observations",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 1
+      },
+      "readers": 1,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "RETAIN_SOURCE_VERIFIED_OBSERVATIONS",
+      "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "BE-P16 migration147: append-only value-or-typed-reason observations per series revision; exact decimal strings, no FX, no rebase, no interpolation.",
+      "reached_via": "manager-series.store.ts"
+    },
+    {
+      "table": "execution_manager_series_revisions",
+      "writer_owner": "PORTAL_PROJECTION",
+      "ingress": "WORKER",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 4
+      },
+      "readers": 4,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "RETAIN_SERIES_REVISION_HISTORY",
+      "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "BE-P16 migration147: append-only series revision header (methodology ref, window, digest); head never moves backwards.",
+      "reached_via": "manager-series.store.ts"
+    },
+    {
       "table": "execution_durable_mirror_batches",
       "writer_owner": "TRADING_SYSTEM_READ",
       "ingress": "WORKER",
