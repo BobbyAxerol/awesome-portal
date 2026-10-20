@@ -34,7 +34,7 @@ export function PlanPanel({ flow }: { flow: CommandFlow }) {
     const blocked = flow.blockedReason !== null;
     return (
       <div className="exec-cf-panel" data-step="plan" data-state={plan.status}>
-        <p className="exec-cf-meta">No plan has been read. Reading a plan changes nothing and sends nothing.</p>
+        <p className="exec-cf-meta" title="Reading a plan changes nothing and sends nothing.">No plan has been read</p>
         <div className="exec-cf-acts">
           <button
             ref={readRef}

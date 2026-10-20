@@ -90,7 +90,7 @@ describe("/execution/command", () => {
 
   it("is mounted, labelled as a fixture story over a fake port, when the manifest names it", async () => {
     expect(await open("/execution/command", { manifest: "command", umbrella: "true" })).toBe("STORY");
-    expect(STORY_LABEL).toBe("Fixture story: not connected to a source; fake port");
+    expect(STORY_LABEL).toBe("Fixture: not connected");
     expect(screen.getByRole("note").textContent).toContain(STORY_LABEL);
     // The published catalogue came with the route: the disabled operations are listed, not "not read".
     expect(screen.queryByText(/The command catalogue has not been read/)).toBeNull();

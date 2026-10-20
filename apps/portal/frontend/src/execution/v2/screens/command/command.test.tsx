@@ -573,13 +573,13 @@ describe("the disabled port", () => {
     expect(button.getAttribute("title")).toBe(READ_DISABLED_REASON);
     fireEvent.click(button);
     await act(async () => {});
-    expect(screen.getAllByText("Command reads are not connected to a source: UXM-09 fixture").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Command reads are not connected to a source: fixture").length).toBeGreaterThan(0);
     for (const spy of spies) expect(spy).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: SUBMIT_LABEL })).toBeNull();
   });
 
   it("the send reason is the exact sentence", () => {
-    expect(SEND_DISABLED_REASON).toBe("Command sends are not connected to a source: UXM-09 fixture");
+    expect(SEND_DISABLED_REASON).toBe("Command sends are not connected to a source: fixture");
   });
 });
 
@@ -691,7 +691,10 @@ describe("operations that are not sendable", () => {
     const row = document.querySelector('[data-op="account/sync"]') as HTMLElement;
     expect(within(row).getByText(BLOCKED_REASON_TEXT.COMMAND_RELAY_DISABLED)).toBeTruthy();
     expect(within(row).getByText("COMMAND_R2")).toBeTruthy();
-    expect(within(row).getByText(/Portal grant name: not published, provisional \(FE-037\)/)).toBeTruthy();
+    // The row says "Needs COMMAND_R2"; the staged-activation sentence and the provisional grant name (FE-037) are its title.
+    const need = row.querySelector("[data-capability]")!;
+    expect(need.textContent).toBe("Needs COMMAND_R2");
+    expect(need.getAttribute("title")).toMatch(/Portal grant name: not published, provisional \(FE-037\)/);
     expect(within(row).getByText("R2 · sandbox")).toBeTruthy();
   });
 
@@ -757,8 +760,9 @@ describe("the story page", () => {
 
   it("says it is a fixture, keeps the real send path disabled with the exact reason, and reaches no network", async () => {
     story();
-    expect(screen.getByRole("note").textContent).toMatch(/Fixture only.*Nothing here reaches a network or a source/);
-    expect(screen.getByRole("note").textContent).toContain("Fixture story: not connected to a source; fake port");
+    // One short line; the rest of the story (nothing reaches a network, answers are scripted) is its title.
+    expect(screen.getByRole("note").textContent).toMatch(/Fixture only.*Fixture: not connected/);
+    expect(screen.getByRole("note").getAttribute("title")).toMatch(/Nothing here reaches a network or a source/);
     const real = screen.getByRole("button", { name: "Send to the Trading System" }) as HTMLButtonElement;
     expect(real.disabled).toBe(true);
     expect(document.getElementById(real.getAttribute("aria-describedby")!)!.textContent).toBe(SEND_DISABLED_REASON);

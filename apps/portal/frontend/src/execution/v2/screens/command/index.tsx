@@ -57,7 +57,7 @@ import "../../css/command.css";
 export const COMMAND_SCREEN_KEY = "command" as const;
 
 /** The words the page wears at the top. Held by a test and by the browser receipt (e2e/execution-v2-command.spec.ts). */
-export const STORY_LABEL = "Fixture story: not connected to a source; fake port";
+export const STORY_LABEL = "Fixture: not connected";
 
 export interface CommandStoryProps {
   /** Reads the command catalogue once, on mount. Ignored when `catalogue` is given. */
@@ -111,12 +111,9 @@ export default function CommandStoryPage({ api, catalogue, port, initialScenario
     <div className="exec-cf-page" data-screen="command-fixture-v2">
       <header className="exec-cf-mast">
         <h1 className="exec-cf-title">Command confirmation</h1>
-        <p className="exec-cf-sub">UXM-09 fixture · plan, typed confirmation, receipt and status</p>
-        <p className="exec-cf-banner" role="note">
+        <p className="exec-cf-banner" role="note" title="Fixture story over a fake port. Nothing here reaches a network or a source: the answers are scripted and no command is ever sent.">
           <Flag kind="display" label="Fixture only" />
-          <span>
-            <strong>{STORY_LABEL}.</strong> Nothing here reaches a network or a source. The answers are scripted, and no command is ever sent.
-          </span>
+          <span>{STORY_LABEL}</span>
         </p>
       </header>
 
@@ -133,19 +130,18 @@ export default function CommandStoryPage({ api, catalogue, port, initialScenario
                   onChange={() => setScenarioId(SCENARIOS.find((s) => s.lane === entry.lane)!.id)}
                 />
                 <span>{entry.label}</span>
-                <span className="exec-cf-meta">{entry.note}</span>
+                <span className="exec-blk-sr">{entry.note}</span>
               </label>
             ))}
           </fieldset>
           <div className="exec-cf-fld">
             <label htmlFor="exec-cf-scenario" className="exec-cf-label"><span>Scripted answer</span></label>
-            <select id="exec-cf-scenario" className="exec-cf-control" value={scenarioId} aria-describedby="exec-cf-scenario-sum" onChange={(e) => setScenarioId(e.target.value as ScenarioId)}>
+            <select id="exec-cf-scenario" className="exec-cf-control" title={`${scenario.summary} Choosing another scripted answer starts the flow over.`} value={scenarioId} aria-describedby="exec-cf-scenario-sum" onChange={(e) => setScenarioId(e.target.value as ScenarioId)}>
               {SCENARIOS.filter((s) => s.lane === lane).map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}
             </select>
-            <p id="exec-cf-scenario-sum" className="exec-cf-meta">{scenario.summary}</p>
+            <p id="exec-cf-scenario-sum" className="exec-blk-sr">{scenario.summary}</p>
           </div>
-          <p className="exec-cf-meta" data-notice="restart">Choosing another scripted answer starts the flow over.</p>
-          <p className="exec-cf-meta" data-notice="clock">Fixture clock: {formatUtcEpochMs(STORY_NOW_MS)}. A plan's expiry is judged against it, not against real time.</p>
+          <p className="exec-cf-meta" data-notice="clock" title="A plan's expiry is judged against the fixture clock, not against real time.">Fixture clock: {formatUtcEpochMs(STORY_NOW_MS)}</p>
         </div>
       </SectionPanel>
 
@@ -168,7 +164,7 @@ export default function CommandStoryPage({ api, catalogue, port, initialScenario
             <summary>Fixture ids to try</summary>
             <ul className="exec-cf-list">
               {LOOKUP_IDS.map(([id, text]) => <li key={id}><span className="exec-cf-id">{id}</span> <span className="exec-cf-meta">{text}</span></li>)}
-              <li><span className="exec-cf-meta">Any other id is answered 404: an unknown receipt and one you may not read look the same.</span></li>
+              <li><span className="exec-cf-meta">Any other id: 404</span></li>
             </ul>
           </details>
         </div>

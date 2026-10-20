@@ -98,7 +98,7 @@ describe("catalogueLane · the page renders identically to the V1 read", () => {
     expect(buttons).toHaveLength(64 + 8 + 6);
     expect(buttons.every((b) => b.disabled)).toBe(true);
     expect(container.querySelector('[data-summary="disabled"]')?.textContent).toBe(
-      "64 catalogue commands, 8 capital operations and 6 families. None is sendable: each control is disabled and says why.",
+      "64 catalogue commands, 8 capital operations and 6 families. None is sendable.",
     );
   });
 });

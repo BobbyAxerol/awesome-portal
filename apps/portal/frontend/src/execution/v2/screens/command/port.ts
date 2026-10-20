@@ -55,9 +55,9 @@ export interface CommandPort {
 }
 
 /** The exact words a disabled send carries. */
-export const SEND_DISABLED_REASON = "Command sends are not connected to a source: UXM-09 fixture";
+export const SEND_DISABLED_REASON = "Command sends are not connected to a source: fixture";
 /** The same, for the reads that precede a send. */
-export const READ_DISABLED_REASON = "Command reads are not connected to a source: UXM-09 fixture";
+export const READ_DISABLED_REASON = "Command reads are not connected to a source: fixture";
 
 const NOT_CONNECTED: PortResponse = { kind: "no_response", why: "not_connected" };
 
