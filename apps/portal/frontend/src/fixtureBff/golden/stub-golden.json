@@ -152,29 +152,29 @@
   "default GET /screens/blotter": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "default GET /screens/blotter?limit=25&status_bucket=FILLED": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "default GET /screens/blotter?limit=10&symbol=BTCUSDT&venue=BINANCE&side=BUY": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "default GET /screens/blotter?after=not-a-cursor": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "default GET /screens/paper/dep_94": {
@@ -1335,8 +1335,8 @@
   "default CHAIN /screens/blotter?limit=20 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "default CHAIN /operations?limit=4 #0": {
@@ -1650,29 +1650,29 @@
   "operationsV2 GET /screens/blotter": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "operationsV2 GET /screens/blotter?limit=25&status_bucket=FILLED": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "operationsV2 GET /screens/blotter?limit=10&symbol=BTCUSDT&venue=BINANCE&side=BUY": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "operationsV2 GET /screens/blotter?after=not-a-cursor": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "operationsV2 GET /screens/paper/dep_94": {
@@ -2833,8 +2833,8 @@
   "operationsV2 CHAIN /screens/blotter?limit=20 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "83d986b5e6f38e420a4e37000fd6e7c695e93f5aee0ad2f13b81d0b75a364869",
-   "bytes": 1930,
+   "sha256": "decb5af614aea4e0dcc6f2bc7caf553b52867e3faab841fc36342d341d0b8365",
+   "bytes": 2046,
    "gap": false
   },
   "operationsV2 CHAIN /operations?limit=4 #0": {
@@ -3162,22 +3162,22 @@
   "screensV2 GET /screens/blotter": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "7ddd46bffa688221aa361d8268aca75ff20b4b35d91631ef3782ed01f78151f3",
-   "bytes": 64475,
+   "sha256": "097698db96fc2000ffb2548d44f5f49b0a094c0d76711db5370ae294f726738e",
+   "bytes": 64523,
    "gap": false
   },
   "screensV2 GET /screens/blotter?limit=25&status_bucket=FILLED": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "9657cd7aeff371c190ebd47f8e31bd211a978bdc62013fc721fc2fa07e6ec42c",
-   "bytes": 46891,
+   "sha256": "03dff27ca34254fe458e8ce5709e437becdce47375714790e65101d73bcfc548",
+   "bytes": 46939,
    "gap": false
   },
   "screensV2 GET /screens/blotter?limit=10&symbol=BTCUSDT&venue=BINANCE&side=BUY": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "2032061923241d83c969d6a6773d953132b25a61e26955c36449cf28b183af95",
-   "bytes": 17633,
+   "sha256": "a1136110ba583d09b0a9b637d15daec78e7dc441207abbb5c132ebbdf3c0df51",
+   "bytes": 17681,
    "gap": false
   },
   "screensV2 GET /screens/blotter?after=not-a-cursor": {
@@ -4345,29 +4345,29 @@
   "screensV2 CHAIN /screens/blotter?limit=20 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6e5e6b51d4aba2510c79015af36f55f43995902361132a91b8eda6346126661a",
-   "bytes": 26282,
+   "sha256": "f2e8d62dade7bcc478ac854c7849d6d0dcf762b84060b7a8941c242b784788a4",
+   "bytes": 26330,
    "gap": false
   },
   "screensV2 CHAIN /screens/blotter?limit=20 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0aa2e38bc56c9cee7c595093c174008e15a95b9728e18119c005fec8bc027123",
-   "bytes": 27969,
+   "sha256": "644b463fbbc14a08b5787297baa5f95b1fa5c871ffef8c7707c9dad11732ab3a",
+   "bytes": 28017,
    "gap": false
   },
   "screensV2 CHAIN /screens/blotter?limit=20 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "3be8d0e87eee9fa049f3e3220a4833296beb624c717021b322a8f149bf39a281",
-   "bytes": 25822,
+   "sha256": "e1c36c1e65f0a459b3d168abd72ad387a451185069783b03a753b38c1aa646c7",
+   "bytes": 25870,
    "gap": false
   },
   "screensV2 CHAIN /screens/blotter?limit=20 #3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "e3a9d0eec388c6ed3f1f05a542185d1d7c91bf1606927900449fb10af8c1e429",
-   "bytes": 26289,
+   "sha256": "f6a2a8c63539406f2520b2d235ce3916d3a94e9855bb7fe85d867b5028b93122",
+   "bytes": 26337,
    "gap": false
   },
   "screensV2 CHAIN /operations?limit=4 #0": {
@@ -4744,22 +4744,22 @@
   "operationsV2+screensV2 GET /screens/blotter": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "7ddd46bffa688221aa361d8268aca75ff20b4b35d91631ef3782ed01f78151f3",
-   "bytes": 64475,
+   "sha256": "097698db96fc2000ffb2548d44f5f49b0a094c0d76711db5370ae294f726738e",
+   "bytes": 64523,
    "gap": false
   },
   "operationsV2+screensV2 GET /screens/blotter?limit=25&status_bucket=FILLED": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "9657cd7aeff371c190ebd47f8e31bd211a978bdc62013fc721fc2fa07e6ec42c",
-   "bytes": 46891,
+   "sha256": "03dff27ca34254fe458e8ce5709e437becdce47375714790e65101d73bcfc548",
+   "bytes": 46939,
    "gap": false
   },
   "operationsV2+screensV2 GET /screens/blotter?limit=10&symbol=BTCUSDT&venue=BINANCE&side=BUY": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "2032061923241d83c969d6a6773d953132b25a61e26955c36449cf28b183af95",
-   "bytes": 17633,
+   "sha256": "a1136110ba583d09b0a9b637d15daec78e7dc441207abbb5c132ebbdf3c0df51",
+   "bytes": 17681,
    "gap": false
   },
   "operationsV2+screensV2 GET /screens/blotter?after=not-a-cursor": {
@@ -5927,29 +5927,29 @@
   "operationsV2+screensV2 CHAIN /screens/blotter?limit=20 #0": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "6e5e6b51d4aba2510c79015af36f55f43995902361132a91b8eda6346126661a",
-   "bytes": 26282,
+   "sha256": "f2e8d62dade7bcc478ac854c7849d6d0dcf762b84060b7a8941c242b784788a4",
+   "bytes": 26330,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /screens/blotter?limit=20 #1": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "0aa2e38bc56c9cee7c595093c174008e15a95b9728e18119c005fec8bc027123",
-   "bytes": 27969,
+   "sha256": "644b463fbbc14a08b5787297baa5f95b1fa5c871ffef8c7707c9dad11732ab3a",
+   "bytes": 28017,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /screens/blotter?limit=20 #2": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "3be8d0e87eee9fa049f3e3220a4833296beb624c717021b322a8f149bf39a281",
-   "bytes": 25822,
+   "sha256": "e1c36c1e65f0a459b3d168abd72ad387a451185069783b03a753b38c1aa646c7",
+   "bytes": 25870,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /screens/blotter?limit=20 #3": {
    "status": 200,
    "contentType": "application/json",
-   "sha256": "e3a9d0eec388c6ed3f1f05a542185d1d7c91bf1606927900449fb10af8c1e429",
-   "bytes": 26289,
+   "sha256": "f6a2a8c63539406f2520b2d235ce3916d3a94e9855bb7fe85d867b5028b93122",
+   "bytes": 26337,
    "gap": false
   },
   "operationsV2+screensV2 CHAIN /operations?limit=4 #0": {
