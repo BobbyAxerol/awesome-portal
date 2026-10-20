@@ -5,6 +5,7 @@
  * routes, icons and maturity all come from `portal.registry.v1`, so a new
  * commissioned module appears by adding a registry entry (U03 exit gate).
  */
+import type { ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 
 import { MaturityBadge } from "../components/semantic";
@@ -73,6 +74,7 @@ export function Sidebar({
   collapsed,
   onNavigate,
   v2Shell = EXECUTION_V2_SHELL,
+  notice,
 }: {
   registry: PortalRegistryDocument;
   options: NavOptions;
@@ -81,6 +83,12 @@ export function Sidebar({
   onNavigate?: () => void;
   /** The V2 shell flag; a prop only so tests can drive both states without reloading the module graph. */
   v2Shell?: boolean;
+  /**
+   * W3 (FE-057/058): the V2 "Navigation unavailable" line, drawn first inside the rail's own `<nav>` landmark when the
+   * self-navigation read expired or failed. Absent flag off, so the flag-off DOM is untouched. It only EXPLAINS a shut rail;
+   * which entries are listed is still decided by `options.capabilities` alone.
+   */
+  notice?: (rail: { collapsed: boolean }) => ReactNode;
 }) {
   const { search } = useLocation();
   const groups = railGroups(registry, options, v2Shell, search);
@@ -88,6 +96,7 @@ export function Sidebar({
 
   return (
     <nav className="portal-sidebar" aria-label="Primary navigation" data-collapsed={collapsed}>
+      {v2Shell && notice ? notice({ collapsed }) : null}
       {groups.map((group) => (
         <div key={group.id} className="portal-navgroup">
           {collapsed ? (
