@@ -15,7 +15,7 @@ import { EquityPanel, domainOfSeries } from "../../charts";
 import { Flag } from "../../Flag";
 import type { ManagerSeries } from "../../readers/managerSeries";
 import type { SeriesReadState } from "./useManagerSeries";
-import { METRIC_WORD, chartPointsOf, chartStateOf, chartUnit, emptyCaption, isSigned, seriesCaption, unavailableChart } from "./seriesModel";
+import { METRIC_WORD, chartPointsOf, chartStateOf, chartUnit, emptyCaption, isSigned, seriesCaption, seriesCaptionShort, unavailableChart } from "./seriesModel";
 
 import "../../css/series.css";
 
@@ -44,7 +44,7 @@ export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-0
   }
   const entry = series.series[0]!;
   const stale = read.phase === "error" ? read.reason : null;
-  const banner = stale ? <p className="exec-ser-note" role="status" data-testid="series-stale"><Flag kind="stale" label="Stale" size="sm" /> The last refresh failed ({stale}); this is the last good read.</p> : null;
+  const banner = stale ? <p className="exec-ser-note" role="status" data-testid="series-stale"><Flag kind="stale" label="Stale" size="sm" /> <span title={`The last refresh failed (${stale}).`}>Last good read</span></p> : null;
 
   if (entry.state === "UNAVAILABLE") {
     const { copy, reason } = unavailableChart(entry);
@@ -60,7 +60,7 @@ export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-0
       <div className="exec-ser" data-state="EMPTY">
         {banner}
         <p className="exec-ser-empty" data-testid="series-empty">No points in this window</p>
-        <p className="exec-ser-note" data-testid="series-caption">{emptyCaption(series.metric, entry)}</p>
+        <p className="exec-ser-note" data-testid="series-caption" title={emptyCaption(series.metric, entry)}>{seriesCaptionShort(series.metric, entry)}</p>
       </div>
     );
   }
@@ -79,7 +79,7 @@ export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-0
         domain={domainOfSeries(points) ?? undefined}
         height={height}
       />
-      <p className="exec-ser-note" data-testid="series-caption">{seriesCaption(series.metric, entry)}</p>
+      <p className="exec-ser-note" data-testid="series-caption" title={seriesCaption(series.metric, entry)}>{seriesCaptionShort(series.metric, entry)}</p>
     </div>
   );
 }
