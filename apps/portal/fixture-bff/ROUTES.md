@@ -6,11 +6,14 @@ Lane: `FIXTURE_LAB`. The answers come from the Playwright doubles under
 
 ## What an nginx must send here
 
-The server listens on **port 4100** (`PORT`). Everything below, and nothing else, goes to it;
-every other `/api/**` path keeps going to the real services.
+The server listens on **port 4100** (`PORT`). nginx gives it the matches below; every other `/api/**` path goes wherever `PORTAL_WEB_UPSTREAM` points: on the Research preview overlay that is this
+server (so it is refused, 404), unless `FIXTURE_WEB_UPSTREAM` names a real Control API.
 
 | nginx match | Why |
 |---|---|
+| `location = /api/auth/context` | the sign-in state: a synthetic, labelled "Fixture reviewer" (shell bootstrap) |
+| `location = /api/auth/csrf`, `= /api/auth/login`, `= /api/auth/change-password`, `= /api/auth/logout` | **refused** here (404, or 405 with `FIXTURE_WRITES=refuse`): routed so that no sign-in, sign-out or CSRF read can reach a real Control API while the lane is on. Exact matches, because `portal.conf` owns `location ^~ /api/auth/` |
+| `location ^~ /api/v1/portal/` | `registry`, `links` and `summary` (shell bootstrap); `capabilities` and anything else under it is refused (404) |
 | `location ^~ /api/v1/execution/` | every Execution BFF read the V2 screens make |
 | `location = /api/admin/access/self` | the session capabilities, so the screens are not fail-closed |
 | `location = /api/admin/profile-access/v2/effective` | the Access screen's read (exact match: `/api/admin/profile-access` and `/activity` stay real) |
@@ -19,28 +22,35 @@ every other `/api/**` path keeps going to the real services.
 | `location = /api/v1/quantbt/runs` | the Run Library list the New request pickers read (exact match: the rest of `/api/v1/quantbt/` stays real) |
 | `location ^~ /__fixture/` | the lane marker and the health check (`/__fixture/healthz`) |
 
+(The Research preview fragment, `deploy/research-preview/nginx/fixture-bff/fixture-bff.conf`, has a dedicated
+location for every row above except the Run Library list. That one, and any other route this server answers, reaches it
+through `portal.conf`'s catch-all, because the overlay points `PORTAL_WEB_UPSTREAM` here; see `README-fixture.md`.)
+
 Keep `proxy_http_version 1.1`, `proxy_buffering off` and the `Host` / `X-Forwarded-*` headers the
 `/api/` block in `deploy/nginx/portal.conf` sets. The two `/stream` routes send one terminal
-heartbeat and end. The server never reads a request header, so the preview's session cookie and CSRF
-token pass through untouched and unused.
+heartbeat and end. The server never reads a request header, so a session cookie, bearer token or CSRF
+token a browser sends is ignored, and it never sets a cookie.
 
-## Not served here (stay on the real services)
+## Not served here (refused, 404)
 
-These are called by the shell or by other screens. The fixture BFF answers them
-`404 {"error":"FIXTURE_ROUTE_NOT_SERVED"}` rather than invent a body, so route them elsewhere:
+These are called by other screens, or are not the browser's concern on the V2 lane. The fixture BFF
+answers them `404 {"error":"FIXTURE_ROUTE_NOT_SERVED"}` rather than invent a body (a deployment that wants them real routes them elsewhere):
 
-- `/api/auth/*` (session and CSRF), `/api/health`, `/api/ready`, `/api/control/healthz`
-- `/api/v1/portal/*` (registry, links, summary, capabilities), `/api/v1/alphas*`
+- `/api/health`, `/api/ready`, `/api/control/healthz` (the sign-in plate's probes; `/api/health` and
+  `/api/ready` are exact locations of `portal.conf`, so the overlay cannot take them, and the plate is
+  never shown while the fixture user is signed in)
+- `/api/v1/portal/capabilities`, `/api/v1/alphas*`
 - `/api/v1/research/*`, `/api/v1/quantbt/*` (except the exact `GET /api/v1/quantbt/runs` above), `/api/runs*`, `/api/strategies`, `/api/config/*`
 - `/api/admin/profile-access` (the legacy policy matrix), `/api/admin/profile-access/activity`,
   `/api/admin/profile-access/v2/eligibility`, `/api/admin/profile-access/v2/self-navigation`
 - any other `/api/admin/*`
 
-`e2e/fixtures.ts` stubs several of these inline for the visual baseline; they were not extracted
-into the doubles, so this server does not carry them. A preview that needs a signed-in shell uses
-the real `portal-api` for them. Because `/api/auth/context` then names the REAL principal, set
-`FIXTURE_USER_ID` to that principal id, or the Access screen (which refuses a body for another
-user) will refuse the fixture's.
+The shell bootstrap (`bffDoubleShell.ts`) takes the registry, links and summary bodies from the same
+canonical files `e2e/fixtures.ts` (`stubPortalApi`) reads, and `src/fixtureBff/shell.test.ts` runs
+`stubPortalApi` against a fake page and compares them. The one deliberate difference is the identity:
+`/api/auth/context` names "Fixture reviewer" and carries `fixture: true`, where the stub names a
+person. The id in it is `FIXTURE_USER_ID` (default `principal-visual-baseline`), the same id
+`/api/admin/access/self` and the Access screen use, so the Access screen no longer refuses the fixture's body.
 
 ## How an answer is chosen
 
@@ -136,6 +146,10 @@ rows keep their dates).
 |---|---|---|---|---|---|---|
 | GET | `/__fixture/lane` | 200 | server | fixture lane | none | lane, not_acceptance, source, scale |
 | GET | `/__fixture/healthz` | 200 | server | fixture lane | none |  |
+| GET | `/api/auth/context` | 200 | bffDoubleShell | control-api | none | AUTHENTICATED as the synthetic "Fixture reviewer"; body says fixture:true; no cookie, token or session is minted |
+| GET | `/api/v1/portal/registry` | 200 | bffDoubleShell (registry.public.json) | control-api | none | the canonical registry fixture stubPortalApi serves |
+| GET | `/api/v1/portal/links` | 200 | bffDoubleShell (links.public.json) | control-api | none | the canonical links fixture stubPortalApi serves |
+| GET | `/api/v1/portal/summary` | 200 | bffDoubleShell (summary.healthy.json) | control-api | none | the healthy summary fixture stubPortalApi serves |
 | GET | `/api/admin/access/self` | 200 | bffAnswerer (the manager session the V2 spec inlines) | control-api | none | portal.owner-access.v1; no published schema |
 | GET | `/api/admin/profile-access/v2/effective` | 200 | bffDoubleAccess | none yet | `execution-access.openapi.json#/components/schemas/AccessEffective` | no controller in apps/control-api/src at this commit; state chosen by workspace_id |
 | GET | `/api/admin/accounts` | 200 | bffDoubleUsers | control-api | none | 123 accounts, one unpaged list; portal-account-lifecycle.openapi.json |

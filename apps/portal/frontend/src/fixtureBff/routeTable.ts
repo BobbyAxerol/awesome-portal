@@ -53,6 +53,12 @@ export const ROUTES: RouteEntry[] = [
   { method: "GET", pattern: "/__fixture/lane", url: "/__fixture/lane", status: 200, source: "server", real: "fixture lane", note: "lane, not_acceptance, source, scale" },
   { method: "GET", pattern: "/__fixture/healthz", url: "/__fixture/healthz", status: 200, source: "server", real: "fixture lane" },
 
+  /* shell bootstrap: what the browser asks before any screen (bffDoubleShell.ts); no session exists */
+  { method: "GET", pattern: "/api/auth/context", url: "/api/auth/context", status: 200, source: "bffDoubleShell", real: "control-api", note: "AUTHENTICATED as the synthetic \"Fixture reviewer\"; body says fixture:true; no cookie, token or session is minted" },
+  { method: "GET", pattern: "/api/v1/portal/registry", url: "/api/v1/portal/registry", status: 200, source: "bffDoubleShell (registry.public.json)", real: "control-api", note: "the canonical registry fixture stubPortalApi serves" },
+  { method: "GET", pattern: "/api/v1/portal/links", url: "/api/v1/portal/links", status: 200, source: "bffDoubleShell (links.public.json)", real: "control-api", note: "the canonical links fixture stubPortalApi serves" },
+  { method: "GET", pattern: "/api/v1/portal/summary", url: "/api/v1/portal/summary", status: 200, source: "bffDoubleShell (summary.healthy.json)", real: "control-api", note: "the healthy summary fixture stubPortalApi serves" },
+
   /* session and admin reads (outside /api/v1/execution) */
   { method: "GET", pattern: `${ADM}/access/self`, url: `${ADM}/access/self`, status: 200, source: "bffAnswerer (the manager session the V2 spec inlines)", real: "control-api", note: "portal.owner-access.v1; no published schema" },
   { method: "GET", pattern: `${ADM}/profile-access/v2/effective`, url: `${ADM}/profile-access/v2/effective?workspace_id=ws_TEST_GRANTS`, status: 200, source: "bffDoubleAccess", real: "none yet", note: "no controller in apps/control-api/src at this commit; state chosen by workspace_id" },

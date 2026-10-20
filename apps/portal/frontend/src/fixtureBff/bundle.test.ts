@@ -85,6 +85,11 @@ describe("the bundled server", () => {
         "/api/v1/execution/resources/portfolios/pf_TEST_ONLY_core",
         "/api/admin/accounts",
         "/api/admin/access/self",
+        // The shell bootstrap: the registry, links and summary fixtures are inlined into the bundle at build time.
+        "/api/auth/context",
+        "/api/v1/portal/registry",
+        "/api/v1/portal/links",
+        "/api/v1/portal/summary",
       ]) {
         const [path, search = ""] = url.split("?");
         const direct = answerFixtureRequest({ method: "GET", path: path!, search, headers: {}, body: null }, V2_OPTIONS)!;

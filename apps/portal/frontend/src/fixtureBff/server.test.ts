@@ -152,7 +152,7 @@ describe("the lane", () => {
 
 describe("what is not served", () => {
   it("an unknown path is 404 FIXTURE_ROUTE_NOT_SERVED, never a fabricated body", async () => {
-    for (const url of ["/nope", "/api/v1/execution/this/is/not/a/route", "/api/v1/execution/derivations/alphas/a/anything-else?environment=paper", "/api/v1/execution/manager/current/not-in-the-catalogue?environment=paper", "/__fixture/other", "/api/admin/profile-access", "/api/auth/context", "/api/v1/portal/registry"]) {
+    for (const url of ["/nope", "/api/v1/execution/this/is/not/a/route", "/api/v1/execution/derivations/alphas/a/anything-else?environment=paper", "/api/v1/execution/manager/current/not-in-the-catalogue?environment=paper", "/__fixture/other", "/api/admin/profile-access", "/api/auth/login", "/api/auth/csrf", "/api/v1/portal/capabilities", "/api/health"]) {
       const answered = await call(base, { method: "GET", url });
       expect(answered.status, url).toBe(404);
       expect(JSON.parse(answered.text), url).toEqual({ error: "FIXTURE_ROUTE_NOT_SERVED" });

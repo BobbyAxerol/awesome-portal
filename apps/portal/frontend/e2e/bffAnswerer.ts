@@ -22,12 +22,15 @@
  *    not fail-closed;
  *  - the admin reads (`/api/admin/profile-access/v2/effective`, `/api/admin/accounts`,
  *    `/api/admin/step-up`) from their own doubles;
- *  - the Run Library list (`GET /api/v1/quantbt/runs`) the New request pickers read.
+ *  - the Run Library list (`GET /api/v1/quantbt/runs`) the New request pickers read;
+ *  - the four shell bootstrap reads (`bffDoubleShell.ts`: the fixture identity, the registry, the links and the summary), so a
+ *    deployed preview needs no Control API to sign in.
  */
 import { answerAccessEffective, ACCESS_DOUBLE_DEFAULT_USER } from "./bffDoubleAccess";
 import { answerUsers } from "./bffDoubleUsers";
 import { answerExecutionBff, type BffDoubleOptions } from "./bffDouble";
 import { answerQuantbtRuns, QUANTBT_RUNS_PATH } from "./bffDoubleStage";
+import { answerShell, SHELL_PATHS } from "./bffDoubleShell";
 
 export interface BffRequest {
   method: string;
@@ -110,6 +113,12 @@ export function answerFixtureRequest(request: BffRequest, options: FixtureAnswer
   // The Run Library list the New request pickers read. It is outside /api/v1/execution, so the doubles above never see it.
   if (path === QUANTBT_RUNS_PATH) {
     const answer = answerQuantbtRuns(method, params);
+    return answer === null ? null : respond(answer);
+  }
+
+  // The shell bootstrap: who is signed in (a synthetic fixture reviewer), the registry, the links, the summary.
+  if (SHELL_PATHS.includes(path)) {
+    const answer = answerShell(method, path, { userId: options.userId ?? ACCESS_DOUBLE_DEFAULT_USER });
     return answer === null ? null : respond(answer);
   }
 
