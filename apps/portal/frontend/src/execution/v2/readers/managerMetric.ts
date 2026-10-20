@@ -326,8 +326,12 @@ export interface ManagerPartitionedMetrics {
   metrics: ReadonlyMap<string, ManagerMetricRead>;
 }
 
+/**
+ * The identity of a partition is FOUR fields; `domain_proof_ref` is evidence, not identity (BE-P1: the producer's
+ * `partitionIdentity`, same as `managerPartitionKey`). A repeat that differs only in its proof reference is still a repeat.
+ */
 const partitionIdentity = (partition: ManagerPartition): string => JSON.stringify([
-  partition.economicDomain, partition.currency, partition.basis, partition.nativeProfileRef, partition.domainProofRef,
+  partition.economicDomain, partition.currency, partition.basis, partition.nativeProfileRef,
 ]);
 
 /**
@@ -336,7 +340,8 @@ const partitionIdentity = (partition: ManagerPartition): string => JSON.stringif
  * The schema gives the shape; four rules are the reader's (all STRICTER THAN THE SCHEMA, named in the conformance suite):
  * - MD-S4: a metric key is a lower-case token (the schema says any string; a key like `__proto__` cannot reach a map)
  *   and a partition holds at most `MAX_PARTITION_METRICS` metrics;
- * - MD-S6: a partition appears once: two entries with the same identity would be summed twice by anyone who sums;
+ * - MD-S6: a partition appears once (identity = domain, currency, basis, native_profile_ref; the proof reference is evidence):
+ *   two entries with the same identity would be summed twice by anyone who sums;
  * - MD-S6: a metric that names a currency names the partition's: a USDT partition holding a EUR figure is a cross-currency mix.
  * There is no total anywhere in the output; partitions are published in order and stay separate.
  */

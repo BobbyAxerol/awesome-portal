@@ -21,10 +21,12 @@ export const FIXTURE_ROWS = "execution-manager-dataset.rows.synthetic";
 export const FIXTURE_ALL = "execution-manager-dataset.all-window.synthetic";
 /** BE-P1: two rows, two currencies in separate partitions, one group, per-currency capital statements. */
 export const FIXTURE_PARTITIONS = "execution-manager-dataset.partitions.synthetic";
+/** BE-P4: a live-environment dataset with one single-stage row (current_stage LIVE) and one Canary+Live row (current_stage null, MULTIPLE_ACTIVE_STAGES). */
+export const FIXTURE_LIFECYCLE_LIVE = "execution-manager-dataset.lifecycle.live.synthetic";
 /** BE-P1: the negative cases MD-1..MD-8 as operations on FIXTURE_PARTITIONS (not a `.valid.json`, so not a dataset body). */
 export const FIXTURE_INVARIANT_CASES = "execution-manager-dataset.invariants.synthetic.negative.json";
 export const FIXTURE_METRIC = "execution-manager-metric.derived-reasons.synthetic";
-export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL, FIXTURE_PARTITIONS] as const;
+export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL, FIXTURE_PARTITIONS, FIXTURE_LIFECYCLE_LIVE] as const;
 
 export const clone = <T,>(value: T): T => structuredClone(value);
 

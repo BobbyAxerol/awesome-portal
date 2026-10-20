@@ -30,14 +30,15 @@
  *           MD-S2  negative zero ("-0", "-0.00") is not a decimal value
  *           MD-S3  a window is not backwards (from_ms > to_ms)
  *           MD-S4  partition metric key is a lower-case token; at most 64 metrics per partition
- *           MD-S5  a row-level money figure cannot sit above partitions in another currency
- *           MD-S6  a partition appears once; a metric's currency is its partition's
- *           MD-S7  page: returned == rows <= limit, <= filtered; no cursor either way means the whole result; cursor text
+ *           MD-S5  a row-level money figure that names a currency IS one partition's figure (identity, BE-P1 MD-8; replaced "same currency as every partition", which refused a pinned-partition body)
+ *           MD-S6  a partition appears once (identity = domain, currency, basis, native profile; proof ref is evidence); a metric's currency is its partition's
+ *           MD-S7  page: returned == rows <= limit, <= filtered; a NON-EMPTY page with no cursor either way is the whole result (empty past-the-end page exempt); cursor text
  *           MD-S8  at most 10,000 children in a body (a 1 MiB body cannot hold more)
  *           (MD-S9, a preset the source does not publish carries no window, is a SCHEMA rule since BE-P1 and left this list)
  *           MD-S10 a row appears once; a stage set has no repeats
  *           MD-S11 group key: a groupable field, once; group appears once; unique_row_count <= filtered count
  *           MD-S12 clocks stay inside the Date range (schema: up to 2^53-1)
+ *           MD-S13 lifecycle arithmetic (BE-P4): days_in_stage == floor((as_of - entered_at_ms)/day), entered_at_ms <= as_of_ms when days exist, an entry time needs a published current_stage
  *       - one group is LOOSER on purpose: MD-L1, `score_details` / `composition_details` / `regime_details` are
  *         accepted as bounded arrays of objects naming their slot and COUNTED, never read (other families);
  *       - MD-1 .. MD-8 (BE-P1): the server now refuses to emit a body that breaks them; the schema says what JSON Schema
@@ -83,6 +84,7 @@ import {
   FIXTURE_ALL,
   FIXTURE_EMPTY,
   FIXTURE_INVARIANT_CASES,
+  FIXTURE_LIFECYCLE_LIVE,
   FIXTURE_PARTITIONS,
   FIXTURE_METRIC,
   FIXTURE_ROWS,
@@ -175,9 +177,10 @@ describe("L0 · canonical, verbatim", () => {
       }
     };
     for (const file of others) walk(loadCanonical(file), file);
-    // Not covered by this reader: score revision view, score history, scoped records, realtime snapshot.
+    // Not covered by this reader: score revision view, score history, scoped records, realtime snapshot, series (managerSeries.ts).
     expect([...versions.keys()].sort()).toEqual([
       "execution.manager-realtime-snapshot.v2", "portal.execution.manager-scoped.v1", "portal.execution.manager-score-history.v1", "portal.execution.manager-score-revision.v1",
+      "portal.execution.manager-series.v1",
     ]);
   });
 
@@ -299,7 +302,9 @@ describe("L1 · matrix P · economic partitions: layout x metric currency x head
     "usdt twice": [["USDT", "a"], ["USDT", "a"]],
   };
   const INSIDE = ["own currency", "foreign currency", "no currency"] as const;
-  const HEADLINE = ["absent", "USDT", "EUR"] as const;
+  // MD-8 (BE-P1): a headline that names a currency IS one partition's figure. "copy" is that figure; "own figure" is a number
+  // above the partitions that no partition publishes (a total, a pin that never happened): refused.
+  const HEADLINE = ["absent", "copy of first partition", "copy of last partition", "own figure USDT 42.5"] as const;
   const DIMS = [
     dimensionOf("layout", Object.entries(LAYOUTS).map(([label, parts]) => ({ label, apply: (d: Draft) => { d.layout = parts; } }))),
     dimensionOf("inside", INSIDE.map((label) => ({ label, apply: (d: Draft) => { d.inside = label; } }))),
@@ -312,7 +317,12 @@ describe("L1 · matrix P · economic partitions: layout x metric currency x head
       const metric = spec.inside === "own currency" ? moneyMetric({ currency }) : spec.inside === "foreign currency" ? moneyMetric({ currency: "GBP" }) : absentMetric();
       return { partition: partition("PAPER", currency, tag), metrics: { net_pnl: metric } };
     });
-    row.metrics.net_pnl = spec.headline === "absent" ? absentMetric() : moneyMetric({ currency: spec.headline, value: "42.5" });
+    const parts = row.economic_partitions as Draft[];
+    const own = moneyMetric({ currency: "USDT", value: "42.5" });
+    row.metrics.net_pnl = spec.headline === "absent" ? absentMetric()
+      : spec.headline === "copy of first partition" ? clone(parts[0]?.metrics.net_pnl ?? own)
+      : spec.headline === "copy of last partition" ? clone(parts[parts.length - 1]?.metrics.net_pnl ?? own)
+      : own;
     return body;
   };
   const states = cartesian({} as Draft, DIMS).map((s) => ({ ...s, value: build(s.value) }));
@@ -320,13 +330,14 @@ describe("L1 · matrix P · economic partitions: layout x metric currency x head
     if (p.layout === "usdt twice") return false; // the same partition twice
     const parts = LAYOUTS[p.layout]!;
     if (p.inside === "foreign currency" && parts.length > 0) return false; // a GBP figure in a USDT/EUR partition
-    if (p.headline !== "absent" && parts.some(([currency]) => currency !== p.headline)) return false; // a headline above another currency
-    return true;
+    if (p.headline === "absent") return true;
+    if (p.headline === "own figure USDT 42.5") return false; // a money figure no partition publishes
+    return parts.length > 0; // a copy needs a partition to copy; with none, the stand-in is an own figure
   };
 
   it("prints the matrix size", () => {
     console.info(describeCoverage("manager P (partitions) cartesian", coverage(DIMS, states)));
-    expect(states).toHaveLength(5 * 3 * 3);
+    expect(states).toHaveLength(5 * 3 * 4);
   });
 
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
@@ -340,24 +351,36 @@ describe("L1 · matrix P · economic partitions: layout x metric currency x head
     const row = read.items[1]!;
     // The partitions come back in published order and separate; there is nothing to total.
     expect(row.economicPartitions.map((p) => p.partition.currency)).toEqual(LAYOUTS[state.picks.layout]!.map(([currency]) => currency));
-    // A row with two currencies never shows one headline: either absent, or in the one currency every partition shares.
+    // A headline that names a currency is exactly one partition's figure (a pinned partition above another currency is fine).
     const headline = row.metrics.net_pnl!;
-    if (headline.kind === "value") {
-      expect(new Set(row.economicPartitions.map((p) => p.partition.currency)).size).toBeLessThanOrEqual(1);
-      expect(headline.currency).toBe(state.picks.headline);
-    }
+    if (headline.currency !== null) expect(row.economicPartitions.some((p) => JSON.stringify(p.metrics.get("net_pnl")) === JSON.stringify(headline))).toBe(true);
   });
 
-  it("counts: the reader refuses these schema-valid states on purpose (MD-S5 headline, MD-S6 partition rules)", () => {
+  it("counts: the reader refuses these schema-valid states on purpose (MD-S5 headline identity, MD-S6 partition rules)", () => {
     const refused = states.filter((s) => !accept(s.picks));
     const valid = states.filter((s) => datasetViolations(s.value).length === 0);
     const refusedBySchemaToo = refused.filter((s) => datasetViolations(s.value).length > 0);
+    const repeated = states.filter((s) => s.picks.layout === "usdt twice");
     console.info(`manager P: ${states.length} states, schema accepts ${valid.length}, reader refuses ${refused.length} (${refused.length - refusedBySchemaToo.length} of them schema-valid)`);
-    // Only the repeated partition object (9 states) is now a schema refusal; the reader refuses it as well.
-    expect(valid).toHaveLength(states.length - 9);
+    // Only the repeated partition object is a schema refusal; the reader refuses it as well.
+    expect(valid).toHaveLength(states.length - repeated.length);
     expect(refusedBySchemaToo.every((s) => s.picks.layout === "usdt twice")).toBe(true);
     expect(refused.every((s) => datasetOf(s.value) === null)).toBe(true);
     expect(refused.length).toBe(states.length - states.filter((s) => accept(s.picks)).length);
+  });
+
+  it("a pinned partition: the headline is the USDT figure while the row still lists its EUR partition (the case the old MD-S5 refused)", () => {
+    const body = clone(RICH);
+    const row = body.items[1];
+    row.metrics.net_pnl = clone(row.economic_partitions[0].metrics.net_pnl);
+    expect(datasetViolations(body)).toEqual([]);
+    const read = datasetOf(body)!;
+    expect(read.items[1]!.economicPartitions.map((p) => p.partition.currency)).toEqual(["USDT", "EUR"]);
+    expect(read.items[1]!.metrics.net_pnl).toMatchObject({ kind: "value", currency: "USDT", exact: "100.25" });
+    // One digit off the partition's figure is a figure no partition publishes: refused, not rounded into place.
+    row.metrics.net_pnl.value = "100.26";
+    expect(datasetViolations(body)).toEqual([]);
+    expect(datasetOf(body)).toBeNull();
   });
 
   it("pairwise subset of the same axes meets every pair in fewer states", () => {
@@ -485,6 +508,69 @@ describe("L1 · matrix Q · query_options: one metric key at a time", () => {
   });
 });
 
+describe("L1 · matrix L · row lifecycle (BE-P4): current_stage x stage_presence x reason x entry pair", () => {
+  const DAY = 86_400_000;
+  const PRESENCE: Record<string, string[]> = { none: [], LIVE: ["LIVE"], CANARY: ["CANARY"], "CANARY+LIVE": ["CANARY", "LIVE"] };
+  const STAGE = [null, "CANARY", "LIVE"] as const;
+  const REASON = [null, "MULTIPLE_ACTIVE_STAGES", "STAGE_FIELD_NOT_PUBLISHED"] as const;
+  const ENTRY = ["unpublished", "published, days agree", "published, days wrong"] as const;
+  const DIMS = [
+    dimensionOf("presence", Object.entries(PRESENCE).map(([label, v]) => ({ label, apply: (d: Draft) => { d.items[0].stage_presence = [...v]; } }))),
+    dimensionOf("current_stage", STAGE.map((v) => ({ label: String(v), apply: (d: Draft) => { d.items[0].current_stage = v; } }))),
+    dimensionOf("reason", REASON.map((v) => ({ label: String(v), apply: (d: Draft) => { d.items[0].stage_lifecycle_reasons.current_stage = v; } }))),
+    dimensionOf("entry", ENTRY.map((label) => ({
+      label,
+      apply: (d: Draft) => {
+        const row = d.items[0];
+        if (label === "unpublished") Object.assign(row, { entered_at_ms: null, days_in_stage: null });
+        else Object.assign(row, { entered_at_ms: 10 * DAY - 3 * DAY, days_in_stage: label === "published, days agree" ? 3 : 4 });
+        row.stage_lifecycle_reasons.entered_at_ms = label === "unpublished" ? "STAGE_ENTRY_TIME_NOT_PUBLISHED" : null;
+        row.stage_lifecycle_reasons.days_in_stage = label === "unpublished" ? "STAGE_ENTRY_TIME_NOT_PUBLISHED" : null;
+      },
+    }))),
+  ];
+  const base = (() => {
+    const body = fixtureValue(FIXTURE_LIFECYCLE_LIVE);
+    body.as_of_ms = 10 * DAY;
+    body.items = [body.items[0]];
+    body.page = { limit: 100, returned_count: 1, authorized_filtered_count: 1, next_cursor: null, previous_cursor: null };
+    body.groups = [];
+    return body;
+  })();
+  const states = cartesian(base, DIMS);
+  /** The reader's own rules on top of the schema: arithmetic and "an entry time needs a published stage" (MD-S13). */
+  const readerOnly = (p: Record<string, string>) => p.entry === "published, days wrong" || (p.entry !== "unpublished" && p.current_stage === "null");
+
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("manager L (lifecycle) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(4 * 3 * 3 * 3);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const schemaOk = datasetViolations(state.value).length === 0;
+    const read = datasetOf(state.value);
+    // The reader never accepts what the schema refuses, and refuses on its own only for the named MD-S13 rules.
+    if (!schemaOk) expect(read).toBeNull();
+    else expect(read !== null).toBe(!readerOnly(state.picks));
+    if (read !== null) {
+      const row = read.items[0]!;
+      expect(row.currentStage).toBe(state.value.items[0].current_stage);
+      expect(row.enteredAtMs).toBe(state.value.items[0].entered_at_ms);
+      expect(row.daysInStage).toBe(state.value.items[0].days_in_stage);
+    }
+  });
+
+  it("counts: schema-valid states, reader-accepted states, and the reader-only refusals (MD-S13)", () => {
+    const schemaOk = states.filter((s) => datasetViolations(s.value).length === 0);
+    const accepted = states.filter((s) => datasetOf(s.value) !== null);
+    const strict = schemaOk.filter((s) => datasetOf(s.value) === null);
+    console.info(`manager L: ${states.length} states, schema accepts ${schemaOk.length}, reader accepts ${accepted.length}, reader-only refusals ${strict.length}`);
+    expect(accepted.every((s) => datasetViolations(s.value).length === 0)).toBe(true);
+    expect(strict.every((s) => readerOnly(s.picks))).toBe(true);
+    expect(accepted.length).toBeGreaterThan(0);
+    expect(strict.length).toBeGreaterThan(0);
+  });
+});
 describe("L1 · matrix S · search fields x modes x sortable name", () => {
   const SORT = ["name sortable", "name not sortable"] as const;
   const FIELDS: Record<string, string[]> = { none: [], name: ["name"] };
@@ -624,7 +710,9 @@ describe("L2 · scale", () => {
     const fat = (factor: number): Draft => {
       const rows = rowsOf(Math.min(factor, MAX_ITEMS));
       for (const row of rows) {
-        for (const metric of Object.values(row.metrics) as Draft[]) {
+        // MD-8: a headline is one partition's figure, so the partition's copy is edited the same way.
+        const partitionMetrics = row.economic_partitions.flatMap((entry: Draft) => Object.values(entry.metrics) as Draft[]);
+        for (const metric of [...Object.values(row.metrics), ...partitionMetrics] as Draft[]) {
           metric.provenance_refs = Array.from({ length: MAX_PROVENANCE_REFS }, (_, i) => `TEST_ONLY:source-receipt-${pad(i, 3)}-${"x".repeat(40)}`);
           metric.quality.reasons = Array.from({ length: MAX_METRIC_REASONS }, (_, i) => `TEST_ONLY:reason-${pad(i, 3)}-${"y".repeat(40)}`);
         }
@@ -758,6 +846,8 @@ const NEG: Draft = (() => {
   body.scores.composition = { value: "60", status: "provisional" };
   body.items[0].metrics.net_pnl.window = { from_ms: 1000, to_ms: 2000 };
   body.items[0].metrics.net_pnl.denominator = "10.5";
+  // MD-8: the headline is the partition's figure; the base keeps them one fact (the corpus then breaks the headline alone).
+  body.items[0].economic_partitions[0].metrics.net_pnl = clone(body.items[0].metrics.net_pnl);
   return body;
 })();
 
@@ -934,6 +1024,8 @@ describe("L3 · schema agreement (the published ManagerDataset schema, via testk
   const STRICTER_GROUPS: { name: string; test: (c: Case) => boolean; count?: number }[] = [
     { name: "MD-S1 display safety: whitespace-only, bidi override, in any text", test: (c) => TEXT_PATHS.test(c.name) && SAFE_TEXT_VALUE.test(c.name) },
     { name: "MD-S2 negative zero is not a decimal value", test: (c) => c.category === "negative-zero" },
+    // The base keeps the headline and its partition's figure as one fact (MD-8); a corpus case that edits the headline alone breaks it.
+    { name: "MD-S5 a row money figure that names a currency is one partition's figure (edited headline alone)", test: (c) => /^[a-z-]+: items\.0\.metrics\.net_pnl\./.test(c.name) },
     { name: "MD-S7 page: returned_count is the number of rows (a cut or doubled list changes the rows, not the count)", test: (c) => /^(truncated|duplicate-id): items <-/.test(c.name) },
     { name: "MD-S7 cursor text: an empty cursor (whitespace-only, bidi and NUL cursors are MD-S1)", test: (c) => /: page\.(next_cursor|previous_cursor) <-/.test(c.name) },
   ];
@@ -1020,6 +1112,7 @@ describe("L3 · schema agreement (the published ManagerDataset schema, via testk
 const PINNED_STRICTER: Record<string, number> = {
   "MD-S1 display safety: whitespace-only, bidi override, in any text": 41,
   "MD-S2 negative zero is not a decimal value": 24,
+  "MD-S5 a row money figure that names a currency is one partition's figure (edited headline alone)": 4,
   "MD-S7 page: returned_count is the number of rows (a cut or doubled list changes the rows, not the count)": 1,
   "MD-S7 cursor text: an empty cursor (whitespace-only, bidi and NUL cursors are MD-S1)": 2,
 };
@@ -1050,7 +1143,7 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
     ["MD-S7 empty cursor", (b) => { b.page.next_cursor = ""; }],
     ["MD-S8 10,001 children in a body over two rows", (b) => { const kids = (n: number, tag: string) => cloneRows(b.items[0].children[0], n, (c, i) => { c.deployment_id = `d_${tag}_${i}`; }); b.items[0].children = kids(5001, "a"); b.items[1].children = kids(5000, "b"); }],
     ["MD-S10 a row twice", (b) => { b.items[1].row_key = b.items[0].row_key; }],
-    ["MD-S10 a stage twice in a set", (b) => { b.items[0].stage_presence = ["PAPER", "PAPER"]; }],
+    ["MD-S10 a stage twice in a set", (b) => { Object.assign(b.items[0], { stage_presence: ["PAPER", "PAPER"], current_stage: null, stage_lifecycle_reasons: { ...b.items[0].stage_lifecycle_reasons, current_stage: "MULTIPLE_ACTIVE_STAGES" } }); }],
     // The schema's enum refuses a non-groupable field (MD-7). A groupable field the options do not offer is the reader's rule.
     ["MD-S11 a group over a field the options do not offer", (b) => { b.query_options.sort_fields = b.query_options.sort_fields.filter((k: string) => k !== "venue"); b.query_options.group_fields = b.query_options.group_fields.filter((k: string) => k !== "venue"); b.groups[0].key[0].field = "venue"; }],
     ["MD-S11 a group with more unique rows than the filtered query", (b) => { b.groups[0].unique_row_count = 10; }],
@@ -1058,6 +1151,12 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
     ["MD-S11 a group twice with another count", (b) => { const twin = clone(b.groups[0]); twin.unique_row_count = 1; b.groups.push(twin); }],
     ["MD-S12 as_of_ms beyond the Date range", (b) => { b.as_of_ms = 9_000_000_000_000_000; }],
     ["MD-S12 a metric window beyond the Date range", (b) => { b.items[0].metrics.net_pnl.window = { from_ms: 9_000_000_000_000_000, to_ms: 9_000_000_000_000_001 }; }],
+    ["MD-S5 headline one digit off the pinned partition's figure", (b) => { b.items[1].metrics.net_pnl = moneyMetric({ value: "100.26" }); }],
+    ["MD-S6 the same partition identity twice, differing only in domain_proof_ref (evidence, not identity)", (b) => { const twin = clone(b.capital_statements[0]); twin.partition.domain_proof_ref = "TEST_ONLY:other-proof"; b.capital_statements.push(twin); }],
+    // MD-S13: the producer's Zod arithmetic for the lifecycle scalars (JSON Schema cannot state it).
+    ["MD-S13 days_in_stage disagrees with the clocks", (b) => { b.as_of_ms = 10 * 86_400_000; Object.assign(b.items[0], { entered_at_ms: b.as_of_ms - 3 * 86_400_000, days_in_stage: 4, stage_lifecycle_reasons: { current_stage: null, entered_at_ms: null, days_in_stage: null } }); }],
+    ["MD-S13 entered_at_ms after the cutoff (with a day count)", (b) => { b.as_of_ms = 10 * 86_400_000; Object.assign(b.items[0], { entered_at_ms: b.as_of_ms + 1, days_in_stage: 0, stage_lifecycle_reasons: { current_stage: null, entered_at_ms: null, days_in_stage: null } }); }],
+    ["MD-S13 an entry time on a row with no published stage", (b) => { Object.assign(b.items[0], { current_stage: null, entered_at_ms: 1, days_in_stage: null, stage_lifecycle_reasons: { current_stage: "MULTIPLE_ACTIVE_STAGES", entered_at_ms: null, days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" } }); }],
   ];
   it.each(cases.map(([name, change]) => [name, change] as const))("%s", (name, change) => {
     const body = clone(NEG);
@@ -1070,7 +1169,7 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
     const groups = new Set(cases.map(([name]) => name.split(" ")[0]));
     console.info(`manager stricter-than-schema (on purpose): ${cases.length} pinned cases in ${groups.size} named groups: ${[...groups].sort().join(", ")}`);
     // MD-S9 left this list: the schema refuses an unpublished preset that carries a window (BE-P1, MD-4).
-    expect(groups.size).toBe(11);
+    expect(groups.size).toBe(12);
   });
 });
 
@@ -1169,9 +1268,9 @@ describe("MD-1 .. MD-8 (BE-P1): the producer refuses to emit these bodies; the s
       expect(datasetViolations(body).length === 0, c.id).toBe(c.refused_by === "PRODUCER_ONLY");
       if (datasetOf(body) !== null) accepted.push(c.id);
     }
-    // The reader refuses every case but one: it identifies a partition by five fields (the proof reference too), the
-    // producer by four, so a repeat that differs only in its proof reference is the producer's refusal alone.
-    expect(accepted).toEqual(["MD-3/partition-identity-repeated-with-other-content"]);
+    // The reader refuses EVERY case (BE-P1 reader follow-up 2): it now identifies a partition by the producer's four fields, so a
+    // repeat that differs only in its proof reference (evidence, not identity) is refused here too.
+    expect(accepted).toEqual([]);
   });
   it("MD-5 (negative zero) is not a rule yet: the schema and the producer admit -0 and the reader refuses it (owner decision pending)", () => {
     const body = clone(NEG);

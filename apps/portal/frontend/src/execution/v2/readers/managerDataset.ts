@@ -25,7 +25,10 @@
  * - `ALL` is never a window: `selected_window.requested === "ALL"` has `resolved: null` and reason
  *   `ALL_HISTORY_WINDOW_NOT_PUBLISHED`, and reads as `{kind: "gap"}`, a state with no `fromMs`/`toMs` to draw;
  * - there is no cross-currency total: partitions stay separate and in published order, a figure inside a partition
- *   cannot name another currency, and a row-level money figure cannot sit above partitions in another currency;
+ *   cannot name another currency, and a row-level money figure that names a currency IS one partition's figure (MD-S5,
+ *   identity, the producer's MD-8), never a sum; a partition's identity is its domain, currency, basis and native profile;
+ * - `current_stage` is the producer's scalar (BE-P4): the reader never derives a stage, an entry time or a day count, it
+ *   only refuses a published combination the clocks and the stage set contradict (MD-S13);
  * - an absent metric, score or window is a typed absence with its reason, never `0`; an unknown word is a refusal,
  *   never a success state;
  * - the contract is closed: a key the schema does not name voids the read; sizes are bounded.
@@ -71,11 +74,11 @@ export const MANAGER_PARTITIONED_METRIC_KEYS = ["allocation", "net_pnl", "unreal
 export type ManagerPartitionedMetricKey = (typeof MANAGER_PARTITIONED_METRIC_KEYS)[number];
 /** `window.independent_metrics`. */
 export const MANAGER_INDEPENDENT_WINDOW_KEYS = ["allocation", "balance_total", "unrealized_pnl"] as const;
-export const MANAGER_GROUP_FIELDS = ["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"] as const;
+export const MANAGER_GROUP_FIELDS = ["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "current_stage", "venue", "health", "source_state", "lifecycle"] as const;
 export type ManagerGroupField = (typeof MANAGER_GROUP_FIELDS)[number];
 export const MANAGER_SORT_FIELDS = [
   "alpha_id", "alpha_version_id", "name", "owner_user_id", "portfolio_id", "lifecycle", "venue", "health", "source_state", "allocation", "net_pnl",
-  "unrealized_pnl", "balance_total", "equity_30d_end_value", "return_30d_pct", "score", "stage_presence",
+  "unrealized_pnl", "balance_total", "equity_30d_end_value", "return_30d_pct", "score", "stage_presence", "current_stage",
 ] as const;
 export type ManagerSortField = (typeof MANAGER_SORT_FIELDS)[number];
 export const MANAGER_WINDOW_PRESETS = ["7D", "30D", "90D"] as const;
@@ -84,6 +87,22 @@ export const ALL_HISTORY_WINDOW_NOT_PUBLISHED = "ALL_HISTORY_WINDOW_NOT_PUBLISHE
 export const EXACT_METRIC_WINDOW_NOT_PUBLISHED = "EXACT_METRIC_WINDOW_NOT_PUBLISHED";
 const WINDOW_REASONS = [EXACT_METRIC_WINDOW_NOT_PUBLISHED, ALL_HISTORY_WINDOW_NOT_PUBLISHED] as const;
 export const MANAGER_STATEMENT_SCOPE = "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS";
+
+/** Row `stage_lifecycle_reasons.current_stage`: why the row has no single stage (closed). */
+export const CURRENT_STAGE_REASONS = ["MULTIPLE_ACTIVE_STAGES", "STAGE_FIELD_NOT_PUBLISHED"] as const;
+export type CurrentStageReason = (typeof CURRENT_STAGE_REASONS)[number];
+/** The one reason `entered_at_ms` / `days_in_stage` carry today, and `stage_lifecycle.entry_time`. */
+export const STAGE_ENTRY_TIME_NOT_PUBLISHED = "STAGE_ENTRY_TIME_NOT_PUBLISHED";
+/** Milliseconds per day: `days_in_stage == floor((as_of_ms - entered_at_ms) / MS_PER_DAY)` (BE-P4, producer rule). */
+export const MS_PER_DAY = 86_400_000;
+/** Schema `days_in_stage` maximum. */
+export const MAX_DAYS_IN_STAGE = 10_000_000;
+/** Response root constant `stage_lifecycle` (BE-P4): what `current_stage` means, printable as a caption. */
+export const MANAGER_STAGE_LIFECYCLE = {
+  currentStageRule: "SINGLE_ACTIVE_MEMBER_STAGE_IN_SELECTED_ENVIRONMENT",
+  covers: "DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY",
+  entryTime: STAGE_ENTRY_TIME_NOT_PUBLISHED,
+} as const;
 
 /** Schema `items` maxItems / `page.limit` maximum / `groups` maxItems. */
 export const MAX_ITEMS = 200;
@@ -137,8 +156,8 @@ export interface ManagerQueryOptions {
     independentMetrics: readonly (typeof MANAGER_INDEPENDENT_WINDOW_KEYS)[number][];
     presets: readonly ManagerWindowPreset[];
   };
-  /** Fields the contract states it cannot publish, with the published reason. */
-  unavailableFields: readonly { field: "current_stage" | "days_in_stage"; reasonCode: string }[];
+  /** Fields the contract states it cannot publish, with the published reason (BE-P4: the two stage-entry fields). */
+  unavailableFields: readonly { field: "days_in_stage" | "entered_at_ms"; reasonCode: typeof STAGE_ENTRY_TIME_NOT_PUBLISHED }[];
 }
 
 export interface ManagerPage {
@@ -175,6 +194,21 @@ export interface ManagerRow {
   sourceState: string | null;
   /** A set, in published (lexical) order: not a risk rank (`query_policy.stage_order`). */
   stagePresence: readonly ManagerStage[];
+  /**
+   * The ONE deployed stage of this row in the selected environment, or `null` (see `stageLifecycleReasons.currentStage`
+   * for why). Read before any stage filter; not a rank. Never derived here from `stagePresence`.
+   */
+  currentStage: ManagerStage | null;
+  /** `null` is "not published" (BE-P4: always, until a stage-transition source lands), never 0 or "now". */
+  enteredAtMs: UtcEpochMs | null;
+  /** Whole days, `null` is "not published" (never 0). Never derived from `valid_from_ms` or a decision date. */
+  daysInStage: number | null;
+  /** A reason exactly when its value is `null`. */
+  stageLifecycleReasons: {
+    currentStage: CurrentStageReason | null;
+    enteredAtMs: typeof STAGE_ENTRY_TIME_NOT_PUBLISHED | null;
+    daysInStage: typeof STAGE_ENTRY_TIME_NOT_PUBLISHED | null;
+  };
   children: readonly ManagerRowChild[];
   /** Exactly the keys of `queryOptions.metricKeys`. */
   metrics: ManagerRowMetrics;
@@ -211,6 +245,8 @@ export interface ManagerScores {
 export interface ManagerDataset {
   surface: ManagerSurface;
   workspaceId: string;
+  /** What `currentStage` means (constants of the response, BE-P4); print them, do not re-derive them. */
+  stageLifecycle: typeof MANAGER_STAGE_LIFECYCLE;
   environment: ManagerEnvironment;
   snapshotId: string;
   asOfMs: UtcEpochMs;
@@ -247,7 +283,7 @@ export type ManagerDatasetRead = { kind: "dataset"; dataset: ManagerDataset } | 
 /* ───────────────────────── readers ───────────────────────── */
 
 const ROOT_REQUIRED = [
-  "schema_version", "selected_window", "query_options", "surface", "workspace_id", "environment", "record_authority", "source_authority",
+  "schema_version", "selected_window", "query_options", "surface", "workspace_id", "stage_lifecycle", "environment", "record_authority", "source_authority",
   "snapshot_id", "as_of_ms", "recorded_through_ms", "facts_through_ms", "quality", "coverage", "economic_aggregation", "query_policy", "page",
   "items", "groups", "capital_statements", "statement_scope", "scores", "funding_bucket_pnl", "lineage",
 ] as const;
@@ -370,9 +406,10 @@ function readQueryOptions(raw: unknown): ManagerQueryOptions | null {
   ];
   if (!isConst(options.stage_environment, stageEnvironment)) return null;
 
+  // BE-P4: `current_stage` is published; the two entry-time fields are the ones the contract cannot publish, in this order.
   if (!Array.isArray(options.unavailable_fields) || options.unavailable_fields.length !== 2) return null;
-  const unavailableFields: { field: "current_stage" | "days_in_stage"; reasonCode: string }[] = [];
-  const expected = [["current_stage", "CURRENT_STAGE_GRAIN_NOT_PUBLISHED"], ["days_in_stage", "STAGE_ENTRY_TIME_NOT_PUBLISHED"]] as const;
+  const unavailableFields: { field: "days_in_stage" | "entered_at_ms"; reasonCode: typeof STAGE_ENTRY_TIME_NOT_PUBLISHED }[] = [];
+  const expected = [["days_in_stage", STAGE_ENTRY_TIME_NOT_PUBLISHED], ["entered_at_ms", STAGE_ENTRY_TIME_NOT_PUBLISHED]] as const;
   for (const [index, entry] of options.unavailable_fields.entries()) {
     const field = record(entry);
     if (field === null || !hasOnly(field, ["field", "reason_code"]) || field.field !== expected[index]![0] || field.reason_code !== expected[index]![1]) return null;
@@ -405,10 +442,12 @@ function readPage(raw: unknown): ManagerPage | null {
   const nextCursor = readCursor(page.next_cursor);
   const previousCursor = readCursor(page.previous_cursor);
   if (limit === null || limit < 1 || returnedCount === null || authorizedFilteredCount === null || nextCursor === undefined || previousCursor === undefined) return null;
-  // Not in the schema (MD-S7): a page holds at most `limit` rows and no more rows than the filtered query has, and a page
-  // with no cursor either way IS the whole result, so its count is the total. Otherwise "N of M" would be a lie.
+  // Not in the schema (MD-S7, the producer's MD-1): a page holds at most `limit` rows and no more rows than the filtered
+  // query has, and a NON-EMPTY page with no cursor either way IS the whole result, so its count is the total. Otherwise
+  // "N of M" would be a lie. An EMPTY page is exempt (a valid `after` cursor on the last row answers 0 of M with no
+  // cursor): the schema states the empty case exactly (no rows <=> returned_count 0).
   if (returnedCount > limit || returnedCount > authorizedFilteredCount) return null;
-  if (nextCursor === null && previousCursor === null && returnedCount !== authorizedFilteredCount) return null;
+  if (returnedCount > 0 && nextCursor === null && previousCursor === null && returnedCount !== authorizedFilteredCount) return null;
   return { limit, returnedCount, authorizedFilteredCount, nextCursor, previousCursor };
 }
 
@@ -430,7 +469,7 @@ function readChild(raw: unknown, allowedStages: readonly ManagerStage[]): Manage
 
 const ROW_KEYS = [
   "row_key", "alpha_id", "alpha_version_id", "portfolio_id", "name", "owner_user_id", "lifecycle", "venue", "health", "source_state",
-  "stage_presence", "children", "metrics", "economic_partitions",
+  "stage_presence", "current_stage", "entered_at_ms", "days_in_stage", "stage_lifecycle_reasons", "children", "metrics", "economic_partitions",
 ] as const;
 
 function readRowMetrics(raw: unknown, metricKeys: readonly ManagerMetricKey[]): ManagerRowMetrics | null {
@@ -448,22 +487,83 @@ function readRowMetrics(raw: unknown, metricKeys: readonly ManagerMetricKey[]): 
   return out;
 }
 
+/** Structural equality of two reads (plain data: strings, numbers, booleans, null, arrays, objects). Key order does not matter. */
+function sameRead(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (typeof a !== "object" || typeof b !== "object" || a === null || b === null || Array.isArray(a) !== Array.isArray(b)) return false;
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length && keys.every((key) => Object.prototype.hasOwnProperty.call(right, key) && sameRead(left[key], right[key]));
+}
+
 /**
- * A row-level money figure with a currency sits above its partitions. If a partition that publishes the same key is in
- * another currency, the row figure would be a cross-currency total: the read is refused (MD-S5).
+ * MD-S5 (rewritten after BE-P1/MD-8). A row-level money figure that names a currency is the figure of exactly ONE partition
+ * listed on that row: it is deep-equal to the same-key metric of some partition, never a total.
+ *
+ * The old rule ("the headline's currency is the currency of EVERY partition that publishes the key") refused a legitimate
+ * body: when a query pins one `economic_partition`, a row that also has facts in another currency still lists both
+ * partitions and its headline is the pinned partition's figure. Identity says what the old rule was after (no
+ * cross-currency total: a sum of USDT and EUR equals neither partition's metric) and it is the producer's real invariant
+ * (`MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE`). Only the five partitioned (money) keys are judged, as the producer does; a
+ * headline that names no currency (an absence, a ratio) is not a money figure and needs no partition.
  */
-function noCrossCurrencyHeadline(metrics: ManagerRowMetrics, partitions: readonly ManagerPartitionedMetrics[]): boolean {
-  for (const key of MANAGER_METRIC_KEYS) {
+function headlineIsAPartitionFigure(metrics: ManagerRowMetrics, partitions: readonly ManagerPartitionedMetrics[]): boolean {
+  for (const key of MANAGER_PARTITIONED_METRIC_KEYS) {
     const headline = metrics[key];
-    if (headline === undefined || headline.kind !== "value" || headline.currency === null) continue;
-    for (const entry of partitions) {
-      if (entry.metrics.has(key) && entry.partition.currency !== headline.currency) return false;
-    }
+    if (headline === undefined || headline.currency === null) continue;
+    if (!partitions.some((entry) => sameRead(entry.metrics.get(key), headline))) return false;
   }
   return true;
 }
 
-function readRow(raw: unknown, environment: ManagerEnvironment, metricKeys: readonly ManagerMetricKey[]): ManagerRow | null {
+/**
+ * The lifecycle scalars of a row (BE-P4). Schema `allOf`: a value is `null` exactly when its reason is set; a published
+ * `current_stage` is the row's only `stage_presence`; no presence means `STAGE_FIELD_NOT_PUBLISHED`, otherwise a missing
+ * `current_stage` means `MULTIPLE_ACTIVE_STAGES`; `days_in_stage` needs `entered_at_ms`. NOT the reader's rule: a presence of
+ * one stage with `current_stage: null` is legal (a stage filter hides the other stage), so it is accepted and never "fixed".
+ * The reader's own rules (MD-S13, the producer's Zod arithmetic) are in `stageEntryArithmetic`.
+ */
+function readStageLifecycle(
+  row: Record<string, unknown>, stagePresence: readonly ManagerStage[], allowedStages: readonly ManagerStage[],
+): Pick<ManagerRow, "currentStage" | "enteredAtMs" | "daysInStage" | "stageLifecycleReasons"> | null {
+  const currentStage = row.current_stage === null ? null : oneOf(row.current_stage, allowedStages);
+  const enteredAtMs = row.entered_at_ms === null ? null : clockMs(row.entered_at_ms);
+  const daysInStage = row.days_in_stage === null ? null : boundedCount(row.days_in_stage, MAX_DAYS_IN_STAGE);
+  if ((row.current_stage !== null && currentStage === null) || (row.entered_at_ms !== null && enteredAtMs === null) || (row.days_in_stage !== null && daysInStage === null)) return null;
+
+  const reasons = record(row.stage_lifecycle_reasons);
+  const reasonKeys = ["current_stage", "entered_at_ms", "days_in_stage"] as const;
+  if (reasons === null || !hasOnly(reasons, reasonKeys) || !hasAll(reasons, reasonKeys)) return null;
+  const stageReason = reasons.current_stage === null ? null : oneOf(reasons.current_stage, CURRENT_STAGE_REASONS);
+  const enteredReason = reasons.entered_at_ms === null ? null : oneOf(reasons.entered_at_ms, [STAGE_ENTRY_TIME_NOT_PUBLISHED] as const);
+  const daysReason = reasons.days_in_stage === null ? null : oneOf(reasons.days_in_stage, [STAGE_ENTRY_TIME_NOT_PUBLISHED] as const);
+  if ((reasons.current_stage !== null && stageReason === null) || (reasons.entered_at_ms !== null && enteredReason === null) || (reasons.days_in_stage !== null && daysReason === null)) return null;
+
+  // A value is null exactly when its reason is set.
+  if ((currentStage === null) !== (stageReason !== null) || (enteredAtMs === null) !== (enteredReason !== null) || (daysInStage === null) !== (daysReason !== null)) return null;
+  // Days exist only with an entry time.
+  if (daysInStage !== null && enteredAtMs === null) return null;
+  // A published stage is the row's only stage; a missing one is explained by the presence (none: not published, else several).
+  if (currentStage !== null && (stagePresence.length !== 1 || stagePresence[0] !== currentStage)) return null;
+  if (currentStage === null && stageReason !== (stagePresence.length === 0 ? "STAGE_FIELD_NOT_PUBLISHED" : "MULTIPLE_ACTIVE_STAGES")) return null;
+  return { currentStage, enteredAtMs, daysInStage, stageLifecycleReasons: { currentStage: stageReason, enteredAtMs: enteredReason, daysInStage: daysReason } };
+}
+
+/**
+ * MD-S13 (stricter than the schema, the producer's Zod rules, named and counted in the conformance suite): the entry time
+ * and the day count exist only for a row with a published stage; the entry time is not after the cutoff; and
+ * `days_in_stage == floor((as_of_ms - entered_at_ms) / 86 400 000)`. JSON Schema cannot state arithmetic. Nothing here
+ * ever computes a day count: it only refuses a published one that disagrees with the clocks.
+ */
+function stageEntryArithmetic(lifecycle: Pick<ManagerRow, "currentStage" | "enteredAtMs" | "daysInStage">, asOfMs: number): boolean {
+  const { currentStage, enteredAtMs, daysInStage } = lifecycle;
+  if (enteredAtMs !== null && currentStage === null) return false;
+  if (daysInStage === null) return true;
+  return currentStage !== null && enteredAtMs !== null && enteredAtMs <= asOfMs && daysInStage === Math.floor((asOfMs - enteredAtMs) / MS_PER_DAY);
+}
+
+function readRow(raw: unknown, environment: ManagerEnvironment, metricKeys: readonly ManagerMetricKey[], asOfMs: number): ManagerRow | null {
   const row = record(raw);
   if (row === null || !hasOnly(row, ROW_KEYS) || !hasAll(row, ROW_KEYS)) return null;
   const rowKey = managerText(row.row_key, 2048);
@@ -485,6 +585,8 @@ function readRow(raw: unknown, environment: ManagerEnvironment, metricKeys: read
   // A set: no stage repeats (MD-S10). The environment pins which stages a row may be in (schema allOf, one per environment).
   const stagePresence = uniqueEnumList(row.stage_presence, allowedStages, MANAGER_STAGES.length);
   if (stagePresence === null) return null;
+  const stage = readStageLifecycle(row, stagePresence, allowedStages);
+  if (stage === null || !stageEntryArithmetic(stage, asOfMs)) return null;
   if (!Array.isArray(row.children) || row.children.length > MAX_CHILDREN_PER_ROW) return null;
   const children: ManagerRowChild[] = [];
   for (const entry of row.children) {
@@ -494,8 +596,8 @@ function readRow(raw: unknown, environment: ManagerEnvironment, metricKeys: read
   }
   const metrics = readRowMetrics(row.metrics, metricKeys);
   const economicPartitions = readPartitionedMetricsList(row.economic_partitions);
-  if (metrics === null || economicPartitions === null || !noCrossCurrencyHeadline(metrics, economicPartitions)) return null;
-  return { rowKey, alphaId, alphaVersionId, portfolioId, name, ownerUserId, lifecycle, venue, health, sourceState, stagePresence, children, metrics, economicPartitions };
+  if (metrics === null || economicPartitions === null || !headlineIsAPartitionFigure(metrics, economicPartitions)) return null;
+  return { rowKey, alphaId, alphaVersionId, portfolioId, name, ownerUserId, lifecycle, venue, health, sourceState, stagePresence, ...stage, children, metrics, economicPartitions };
 }
 
 function readGroup(raw: unknown, groupFields: readonly ManagerGroupField[], filteredCount: number): ManagerGroup | null {
@@ -621,6 +723,13 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
     root.record_authority !== "PORTAL_PROJECTION" || root.source_authority !== "TRADING_SYSTEM" || root.coverage !== "AUTHORIZED_ONLY"
     || root.economic_aggregation !== "PARTITIONED_ONLY" || root.statement_scope !== MANAGER_STATEMENT_SCOPE
   ) return null;
+  // BE-P4 constant: what `current_stage` means. Exact, so a changed rule is a new contract, not a re-labelled column.
+  const stageLifecycle = record(root.stage_lifecycle);
+  if (
+    stageLifecycle === null || !hasOnly(stageLifecycle, ["current_stage_rule", "covers", "entry_time"]) || !hasAll(stageLifecycle, ["current_stage_rule", "covers", "entry_time"])
+    || stageLifecycle.current_stage_rule !== MANAGER_STAGE_LIFECYCLE.currentStageRule || stageLifecycle.covers !== MANAGER_STAGE_LIFECYCLE.covers
+    || stageLifecycle.entry_time !== MANAGER_STAGE_LIFECYCLE.entryTime
+  ) return null;
   const queryPolicy = record(root.query_policy);
   if (
     queryPolicy === null || !hasOnly(queryPolicy, ["null_order", "stage_order", "maximum_response_bytes"]) || queryPolicy.null_order !== "LAST_BOTH_DIRECTIONS"
@@ -649,7 +758,7 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   const rowKeys = new Set<string>();
   let children = 0;
   for (const entry of root.items) {
-    const row = readRow(entry, environment, queryOptions.metricKeys);
+    const row = readRow(entry, environment, queryOptions.metricKeys, asOfMs);
     // A row appears once (MD-S10): the schema states no uniqueness, and a repeated row would be counted twice.
     if (row === null || rowKeys.has(row.rowKey)) return null;
     rowKeys.add(row.rowKey);
@@ -683,7 +792,7 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   ) return null;
 
   return {
-    surface, workspaceId, environment, snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
+    surface, workspaceId, stageLifecycle: MANAGER_STAGE_LIFECYCLE, environment, snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
     capitalStatements, statementScope: MANAGER_STATEMENT_SCOPE, scores, fundingBucketPnl, lineage,
     unreadDetails: { scoreDetails, compositionDetails, regimeDetails }, hasMore: page.nextCursor !== null,
   };

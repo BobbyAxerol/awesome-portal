@@ -22,6 +22,7 @@ import {
   clone,
   FIXTURE_ALL,
   FIXTURE_EMPTY,
+  FIXTURE_LIFECYCLE_LIVE,
   FIXTURE_METRIC,
   FIXTURE_ROWS,
   fixtureValue,
@@ -62,7 +63,8 @@ describe("fixtures", () => {
     expect(dataset.scores.regime).toEqual({ kind: "absent", status: "unavailable", reasonCode: null });
     expect(dataset.fundingBucketPnl).toEqual({ kind: "absent", reasonCode: "LOT_ATTRIBUTION_METHOD_NOT_APPROVED" });
     expect(dataset.queryOptions.metricKeys).toEqual([]);
-    expect(dataset.queryOptions.unavailableFields.map((f) => f.field)).toEqual(["current_stage", "days_in_stage"]);
+    expect(dataset.queryOptions.unavailableFields.map((f) => f.field)).toEqual(["days_in_stage", "entered_at_ms"]);
+    expect(dataset.stageLifecycle).toEqual({ currentStageRule: "SINGLE_ACTIVE_MEMBER_STAGE_IN_SELECTED_ENVIRONMENT", covers: "DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY", entryTime: "STAGE_ENTRY_TIME_NOT_PUBLISHED" });
     expect(dataset.unreadDetails).toEqual({ scoreDetails: 0, compositionDetails: 0, regimeDetails: 0 });
   });
 
@@ -297,15 +299,26 @@ describe("partitions: no cross-currency total", () => {
     expect(dataset.items[1]!.metrics.net_pnl).toMatchObject({ kind: "absent", reasonCode: "MULTI_CURRENCY_NO_SINGLE_TOTAL" });
   });
 
-  it("refuses a headline in one currency above a partition in another", () => {
+  it("a headline that names a currency is one partition's figure (identity, MD-8), never a figure above the partitions", () => {
     const body = richDataset();
+    // A USDT figure above a USDT + EUR row that no partition publishes: a total in disguise.
     body.items[1].metrics.net_pnl = moneyMetric({ value: "87.75" });
     expect(readManagerDataset(body)).toBeNull();
-    // Same currency in every partition that publishes the key: one headline is honest.
-    body.items[1].economic_partitions[1].partition.currency = "USDT";
-    body.items[1].economic_partitions[1].metrics.net_pnl.currency = "USDT";
-    body.items[1].economic_partitions[1].partition.native_profile_ref = "TEST_ONLY:other";
-    expect(readManagerDataset(body)).not.toBeNull();
+    // The pinned partition's own figure is honest even though the row also lists a EUR partition.
+    body.items[1].metrics.net_pnl = clone(body.items[1].economic_partitions[0].metrics.net_pnl);
+    expect(datasetOf(body).items[1]!.metrics.net_pnl).toMatchObject({ kind: "value", currency: "USDT", exact: "100.25" });
+    body.items[1].metrics.net_pnl = clone(body.items[1].economic_partitions[1].metrics.net_pnl);
+    expect(datasetOf(body).items[1]!.metrics.net_pnl).toMatchObject({ kind: "value", currency: "EUR", exact: "-12.5" });
+    // The right currency and a different figure is still not a partition's figure.
+    body.items[1].metrics.net_pnl = moneyMetric({ currency: "EUR", value: "-12.6" });
+    expect(readManagerDataset(body)).toBeNull();
+    // A money headline with no partition at all is refused too (the producer refuses it); an absence needs none.
+    const bare = richDataset();
+    bare.items[1].economic_partitions = [];
+    bare.items[1].metrics.net_pnl = moneyMetric({ value: "1" });
+    expect(readManagerDataset(bare)).toBeNull();
+    bare.items[1].metrics.net_pnl = absentMetric({ reason_code: "NO_PARTITION" });
+    expect(readManagerDataset(bare)).not.toBeNull();
   });
 
   it("refuses a metric whose currency is not its partition's", () => {
@@ -321,6 +334,24 @@ describe("partitions: no cross-currency total", () => {
     const rowBody = richDataset();
     rowBody.items[1].economic_partitions.push(clone(rowBody.items[1].economic_partitions[0]));
     expect(readManagerDataset(rowBody)).toBeNull();
+  });
+
+  it("a partition's identity is four fields: a repeat differing only in domain_proof_ref is still a repeat", () => {
+    const body = richDataset();
+    const twin = clone(body.capital_statements[0]);
+    twin.partition.domain_proof_ref = "TEST_ONLY:another-proof";
+    twin.metrics.balance_total.value = "1";
+    body.capital_statements.push(twin);
+    expect(readManagerDataset(body)).toBeNull();
+    // Another native profile or basis is another partition, not a repeat.
+    for (const field of ["native_profile_ref", "basis", "currency", "economic_domain"] as const) {
+      const other = richDataset();
+      const copy = clone(other.capital_statements[0]);
+      copy.partition[field] = field === "economic_domain" ? "SANDBOX" : `${copy.partition[field]}-b`;
+      copy.metrics = {};
+      other.capital_statements.push(copy);
+      expect(readManagerDataset(other), field).not.toBeNull();
+    }
   });
 
   it("a metric key that is not a lower-case token cannot reach the map", () => {
@@ -412,6 +443,16 @@ describe("page and cursor envelope", () => {
     expect(datasetOf(middle).hasMore).toBe(false);
   });
 
+  it("an EMPTY page past the end is legal with no cursor (0 of M); a non-empty cursor-less page is still the whole result", () => {
+    const pastEnd = edit((b) => { b.items = []; b.groups = []; b.page = { limit: 100, returned_count: 0, authorized_filtered_count: 7, next_cursor: null, previous_cursor: null }; });
+    expect(datasetOf(pastEnd).page).toMatchObject({ returnedCount: 0, authorizedFilteredCount: 7, nextCursor: null });
+    expect(datasetOf(pastEnd).hasMore).toBe(false);
+    // The count still has to match the rows: no rows, no claim of one; rows, no claim of none.
+    expect(refuse((b) => { b.items = []; b.groups = []; b.page = { limit: 100, returned_count: 1, authorized_filtered_count: 7, next_cursor: null, previous_cursor: null }; })).toBe(true);
+    expect(refuse((b) => { b.page = { limit: 100, returned_count: 0, authorized_filtered_count: 7, next_cursor: null, previous_cursor: null }; })).toBe(true);
+    expect(refuse((b) => { b.page.authorized_filtered_count = 3; })).toBe(true);
+  });
+
   it("cursors are bounded opaque text: not empty, not 4097 characters, not a number", () => {
     for (const cursor of ["", "   ", "a".repeat(4097), 5, {}, "a\nb"]) {
       expect(refuse((b) => { b.page.authorized_filtered_count = 9; b.page.next_cursor = cursor; }), JSON.stringify(cursor).slice(0, 30)).toBe(true);
@@ -428,9 +469,102 @@ describe("rows, children and groups", () => {
   it("the environment pins the stages", () => {
     expect(refuse((b) => { b.items[0].stage_presence = ["LIVE"]; })).toBe(true);
     expect(refuse((b) => { b.items[0].children[0].stage = "CANARY"; })).toBe(true);
+    // A stage twice: refused whether or not the lifecycle fields are made to agree.
     expect(refuse((b) => { b.items[0].stage_presence = ["PAPER", "PAPER"]; })).toBe(true);
-    const live = edit((b) => { b.environment = "live"; b.items[0].stage_presence = ["CANARY", "LIVE"]; b.items[0].children[0].stage = "CANARY"; b.items[1].stage_presence = ["LIVE"]; b.items[1].children[0].stage = "LIVE"; });
+    expect(refuse((b) => { Object.assign(b.items[0], { stage_presence: ["PAPER", "PAPER"], current_stage: null }); b.items[0].stage_lifecycle_reasons.current_stage = "MULTIPLE_ACTIVE_STAGES"; })).toBe(true);
+    const live = edit((b) => {
+      b.environment = "live";
+      b.items[0].stage_presence = ["CANARY", "LIVE"]; b.items[0].current_stage = null; b.items[0].stage_lifecycle_reasons.current_stage = "MULTIPLE_ACTIVE_STAGES";
+      b.items[0].children[0].stage = "CANARY";
+      b.items[1].stage_presence = ["LIVE"]; b.items[1].current_stage = "LIVE"; b.items[1].children[0].stage = "LIVE";
+    });
     expect(datasetOf(live).items[0]!.stagePresence).toEqual(["CANARY", "LIVE"]);
+    expect(datasetOf(live).items.map((row) => row.currentStage)).toEqual([null, "LIVE"]);
+  });
+
+  it("current_stage: the producer's scalar, read as published; a missing one names why; the reader never fills it from stage_presence", () => {
+    const live = datasetOf(fixtureValue(FIXTURE_LIFECYCLE_LIVE));
+    expect(live.environment).toBe("live");
+    expect(live.items.map((row) => [row.stagePresence, row.currentStage, row.enteredAtMs, row.daysInStage, row.stageLifecycleReasons])).toEqual([
+      [["LIVE"], "LIVE", null, null, { currentStage: null, enteredAtMs: "STAGE_ENTRY_TIME_NOT_PUBLISHED", daysInStage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }],
+      [["CANARY", "LIVE"], null, null, null, { currentStage: "MULTIPLE_ACTIVE_STAGES", enteredAtMs: "STAGE_ENTRY_TIME_NOT_PUBLISHED", daysInStage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }],
+    ]);
+    expect(live.queryOptions.sortFields).toContain("current_stage");
+    // A stage filter can leave one visible stage on a row that has two: current_stage stays withheld (legal, never "fixed").
+    const filtered = edit((b) => { b.items[0].stage_presence = ["PAPER"]; b.items[0].current_stage = null; b.items[0].stage_lifecycle_reasons.current_stage = "MULTIPLE_ACTIVE_STAGES"; });
+    expect(datasetOf(filtered).items[0]).toMatchObject({ stagePresence: ["PAPER"], currentStage: null });
+    // No stage published at all: STAGE_FIELD_NOT_PUBLISHED, and only then.
+    const none = edit((b) => { b.items[0].stage_presence = []; b.items[0].current_stage = null; b.items[0].stage_lifecycle_reasons.current_stage = "STAGE_FIELD_NOT_PUBLISHED"; });
+    expect(datasetOf(none).items[0]!.stageLifecycleReasons.currentStage).toBe("STAGE_FIELD_NOT_PUBLISHED");
+  });
+
+  it("current_stage refusals: a value and its reason are one fact, a published stage is the only presence, the vocabulary is closed", () => {
+    const withStage = (change: (row: Draft) => void) => refuse((b) => change(b.items[0]));
+    expect(withStage((r) => { r.current_stage = null; })).toBe(true); // null without a reason
+    expect(withStage((r) => { r.stage_lifecycle_reasons.current_stage = "MULTIPLE_ACTIVE_STAGES"; })).toBe(true); // reason with a value
+    expect(withStage((r) => { r.current_stage = "SANDBOX"; })).toBe(true); // not the presence (and not this environment's stage)
+    expect(withStage((r) => { r.current_stage = "WARMUP"; })).toBe(true);
+    expect(withStage((r) => { r.current_stage = ""; })).toBe(true);
+    expect(withStage((r) => { r.current_stage = undefined; })).toBe(true); // required, an absent key is not null
+    expect(withStage((r) => { r.stage_presence = []; })).toBe(true); // a value with no presence
+    expect(withStage((r) => { Object.assign(r, { current_stage: null }); r.stage_lifecycle_reasons.current_stage = "STAGE_FIELD_NOT_PUBLISHED"; })).toBe(true); // presence exists
+    expect(withStage((r) => { Object.assign(r, { current_stage: null, stage_presence: [] }); r.stage_lifecycle_reasons.current_stage = "MULTIPLE_ACTIVE_STAGES"; })).toBe(true); // nothing is multiple
+    expect(withStage((r) => { Object.assign(r, { current_stage: null }); r.stage_lifecycle_reasons.current_stage = "WHO_KNOWS"; })).toBe(true);
+    expect(withStage((r) => { r.stage_lifecycle_reasons.extra = null; })).toBe(true);
+    expect(withStage((r) => { delete r.stage_lifecycle_reasons.days_in_stage; })).toBe(true);
+    expect(withStage((r) => { delete r.stage_lifecycle_reasons; })).toBe(true);
+    expect(withStage((r) => { r.surprise = 1; })).toBe(true);
+  });
+
+  it("entered_at_ms / days_in_stage: not published today (null with a reason); a published pair must agree with the clocks; never 0, never derived", () => {
+    expect(refuse((b) => { b.items[0].entered_at_ms = 0; })).toBe(true); // a value with a reason
+    expect(refuse((b) => { b.items[0].days_in_stage = 0; })).toBe(true);
+    expect(refuse((b) => { b.items[0].stage_lifecycle_reasons.entered_at_ms = "OTHER"; })).toBe(true);
+    expect(refuse((b) => { b.items[0].stage_lifecycle_reasons.days_in_stage = null; })).toBe(true); // null with no reason
+    expect(refuse((b) => { b.items[0].entered_at_ms = "1700000000000"; })).toBe(true);
+    expect(refuse((b) => { b.items[0].days_in_stage = 1.5; })).toBe(true);
+    expect(refuse((b) => { b.items[0].days_in_stage = -1; })).toBe(true);
+    expect(refuse((b) => { b.items[0].days_in_stage = 10_000_001; })).toBe(true);
+    const day = 86_400_000;
+    const published = (entered: number, days: number | null, asOf = 10 * day) => edit((b) => {
+      b.as_of_ms = asOf;
+      Object.assign(b.items[0], { entered_at_ms: entered, days_in_stage: days });
+      b.items[0].stage_lifecycle_reasons.entered_at_ms = null;
+      b.items[0].stage_lifecycle_reasons.days_in_stage = days === null ? "STAGE_ENTRY_TIME_NOT_PUBLISHED" : null;
+    });
+    // floor((as_of - entered) / day): 3 days and 23 hours is 3, not 4.
+    const read = datasetOf(published(10 * day - 3 * day - 82_800_000, 3)).items[0]!;
+    expect([read.currentStage, read.enteredAtMs, read.daysInStage]).toEqual(["PAPER", 10 * day - 3 * day - 82_800_000, 3]);
+    expect(datasetOf(published(10 * day, 0)).items[0]!.daysInStage).toBe(0);
+    expect(readManagerDataset(published(10 * day - 3 * day, 4))).toBeNull();
+    expect(readManagerDataset(published(10 * day - 3 * day, 2))).toBeNull();
+    expect(readManagerDataset(published(10 * day + 1, 0))).toBeNull(); // entry after the cutoff
+    // An entry time with no day count is a legal pair (the producer allows it), and the count never appears from nowhere.
+    expect(datasetOf(published(day, null)).items[0]).toMatchObject({ enteredAtMs: day, daysInStage: null });
+  });
+
+  it("the stage_lifecycle constant is exact and required: another rule is another contract", () => {
+    expect(refuse((b) => { delete b.stage_lifecycle; })).toBe(true);
+    expect(refuse((b) => { b.stage_lifecycle.current_stage_rule = "LATEST_DECISION"; })).toBe(true);
+    expect(refuse((b) => { b.stage_lifecycle.covers = "ALL_STAGES"; })).toBe(true);
+    expect(refuse((b) => { b.stage_lifecycle.entry_time = "FROM_VALID_FROM_MS"; })).toBe(true);
+    expect(refuse((b) => { b.stage_lifecycle.extra = 1; })).toBe(true);
+    expect(refuse((b) => { b.stage_lifecycle = null; })).toBe(true);
+  });
+
+  it("current_stage is a sort and a group field; the options keep sort, group and unavailable lists consistent", () => {
+    const body = richDataset();
+    expect(body.query_options.sort_fields).toContain("current_stage");
+    expect(body.query_options.group_fields).toContain("current_stage");
+    expect(datasetOf(body).queryOptions.groupFields).toContain("current_stage");
+    // A group by current_stage is read; one over a field the options do not offer is not.
+    expect(datasetOf(edit((b) => { b.groups[0].key = [{ field: "current_stage", value: "PAPER" }]; })).groups[0]!.key).toEqual([{ field: "current_stage", value: "PAPER" }]);
+    expect(datasetOf(edit((b) => { b.groups[0].key = [{ field: "current_stage", value: null }]; })).groups[0]!.key[0]!.value).toBeNull();
+    expect(refuse((b) => { b.query_options.sort_fields = b.query_options.sort_fields.filter((f: string) => f !== "current_stage"); })).toBe(true);
+    expect(refuse((b) => { b.query_options.group_fields = b.query_options.group_fields.filter((f: string) => f !== "current_stage").concat(["name"]); })).toBe(true);
+    // unavailable_fields is exactly [days_in_stage, entered_at_ms]; the old [current_stage, days_in_stage] is refused.
+    expect(refuse((b) => { b.query_options.unavailable_fields = [{ field: "current_stage", reason_code: "CURRENT_STAGE_GRAIN_NOT_PUBLISHED" }, { field: "days_in_stage", reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }]; })).toBe(true);
+    expect(refuse((b) => { b.query_options.unavailable_fields.pop(); })).toBe(true);
   });
 
   it("groups group by a field the options can group by, once, and cannot outnumber the query", () => {
