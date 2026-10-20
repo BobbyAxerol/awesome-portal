@@ -2,13 +2,15 @@
  * BE-P1 (UXM-07 conformance matrix MD-1..MD-8): producer invariants of the Manager dataset body that the published
  * JSON Schema cannot state. The runtime (Zod) refuses to emit a violating body; the schema carries the finite part.
  * Pure component tests over the canonical TEST_ONLY fixtures: no database, no source, no runtime authority.
- * MD-5 (negative zero) is intentionally NOT a rule here: it waits for an owner decision (BE-CLAUDE-2026-10-20/BE-P1.md).
+ * MD-5 (negative zero) is the owner's option C (2026-10-20): canonical zero on emit, limited to the Manager dataset and series
+ * responses; the producer refuses a body that still carries a signed zero (BE-CLAUDE-2026-10-20/BE-P1.md).
  */
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { managerDatasetResponse, managerMoneyFields } from "../src/execution-v2/manager-model.contract";
-import { MANAGER_DATASET_MONEY_KEYS } from "../src/execution-v2/manager-dataset-invariants";
+import { MANAGER_DATASET_MONEY_KEYS, MANAGER_NEGATIVE_ZERO_CODE, canonicalManagerZero, canonicalizeManagerDatasetZero,
+  canonicalizeManagerSeriesZero } from "../src/execution-v2/manager-dataset-invariants";
 import { managerP1Options } from "../src/execution-v2/manager-query-p1.contract";
 import { managerQueryOptions } from "../src/execution-v2/manager-query-p1";
 
@@ -177,5 +179,75 @@ describe("BE-P1 Manager dataset producer invariants (MD-1..MD-8)", () => {
       expect(body.items[1].metrics.net_pnl.currency).toBeNull();
       expect(messages(body)).toEqual([]);
     });
+  });
+});
+
+describe("MD-5 canonical zero on emit (owner decision C, 2026-10-20)", () => {
+  /** A body that carries a signed zero in every position the producer builds. */
+  function signed(zero: string): Json {
+    const body = rich();
+    for (const metric of [body.items[0].metrics.net_pnl, body.items[0].economic_partitions[0].metrics.net_pnl,
+      body.groups[0].economic_partitions[0].metrics.net_pnl, body.capital_statements[0].metrics.balance_total]) { metric.value = zero; metric.denominator = zero; }
+    body.scores.raw = { value: zero, status: "available" }; body.scores.composition = { value: zero, status: "provisional" };
+    body.scores.direct_nav = { value: zero, status: "available" };
+    return body;
+  }
+  it.each([["-0", "0"], ["-0.0", "0.0"], ["-0.00", "0.00"], ["-0.000000000000000000", "0.000000000000000000"]])("rewrites %s as %s everywhere, keeping the scale", (zero, emitted) => {
+    const body = signed(zero), out = canonicalizeManagerDatasetZero(body);
+    const metrics = [out.items[0].metrics.net_pnl, out.items[0].economic_partitions[0].metrics.net_pnl,
+      out.groups[0].economic_partitions[0].metrics.net_pnl, out.capital_statements[0].metrics.balance_total];
+    for (const metric of metrics) expect([metric.value, metric.denominator]).toEqual([emitted, emitted]);
+    expect([out.scores.raw.value, out.scores.composition.value, out.scores.direct_nav.value]).toEqual([emitted, emitted, emitted]);
+    expect(JSON.stringify(out)).not.toMatch(/"-0(?:\.0+)?"/);
+    expect(messages(out)).toEqual([]);
+    // The input is not edited (a metric object may be a stored source fact), and a second pass changes nothing.
+    expect(body.items[0].metrics.net_pnl.value).toBe(zero);
+    expect(canonicalizeManagerDatasetZero(out)).toEqual(out);
+  });
+  it("touches nothing else: not a non-zero, not a positive zero, not a null, not any other field", () => {
+    const body = rich(); body.items[0].metrics.net_pnl.denominator = "-0.10"; body.items[0].metrics.net_pnl.value = "-10.00";
+    body.items[1].economic_partitions[1].metrics.net_pnl.value = "-0.000001";
+    const out = canonicalizeManagerDatasetZero(body);
+    expect(out).toEqual(body);
+    expect(out.items[0].metrics.net_pnl.value).toBe("-10.00");
+    for (const value of ["0", "0.00", "-0.5", "-1", "100", "-100.00", "-0.0001", "-10"]) expect(canonicalManagerZero(value), value).toBe(value);
+    expect(canonicalManagerZero(null)).toBeNull();
+    // An unchanged metric is the same object (no copy), so a body with no signed zero costs nothing.
+    expect(out.items[0].metrics.net_pnl).toBe(body.items[0].metrics.net_pnl);
+  });
+  const places: Array<[string, (b: Json, zero: string) => void]> = [
+    // The headline is one partition's figure (MD-8), so the two always move together.
+    ["row headline and partition value", (b, z) => { b.items[0].metrics.net_pnl.value = z; b.items[0].economic_partitions[0].metrics.net_pnl.value = z; }],
+    ["row headline and partition denominator", (b, z) => { b.items[0].metrics.net_pnl.denominator = z; b.items[0].economic_partitions[0].metrics.net_pnl.denominator = z; }],
+    ["group partition value", (b, z) => { b.groups[0].economic_partitions[0].metrics.net_pnl.value = z; }],
+    ["capital statement value", (b, z) => { b.capital_statements[0].metrics.balance_total.value = z; }],
+    ["raw score summary", (b, z) => { b.scores.raw = { value: z, status: "available" }; }],
+    ["composition score summary", (b, z) => { b.scores.composition = { value: z, status: "provisional" }; }],
+    ["direct NAV score summary", (b, z) => { b.scores.direct_nav = { value: z, status: "available" }; }],
+  ];
+  it.each(["-0", "-0.0", "-0.00", "-0.000000000000000000"])("the response parse refuses a body that still carries %s, in every position, with its stated code", zero => {
+    expect(MANAGER_NEGATIVE_ZERO_CODE).toBe("MANAGER_DECIMAL_NEGATIVE_ZERO");
+    expect(messages(signed(zero))).toContain(MANAGER_NEGATIVE_ZERO_CODE);
+    for (const [name, set] of places) {
+      const one = rich(); set(one, zero);
+      expect(messages(one), name).toContain(MANAGER_NEGATIVE_ZERO_CODE);
+    }
+  });
+  it("accepts a positive zero, a scaled positive zero and a signed non-zero in every position", () => {
+    for (const value of ["0", "0.00", "-0.01", "-12.5", "-100"]) {
+      for (const [name, set] of places) { const one = rich(); set(one, value); expect(messages(one), `${name} ${value}`).toEqual([]); }
+    }
+  });
+  it("applies to a series point and nothing else of the series", () => {
+    const entry = (...values: string[]) => ({ subject: { subject_type: "FUND", subject_id: "w" }, state: "AVAILABLE",
+      points: values.map((value, i) => ({ ts_ms: i, value })), other: { value: "-0" } });
+    const body = { series: [entry("-0", "-0.00", "0", "-0.5"), entry("-1")], note: "-0" };
+    const out = canonicalizeManagerSeriesZero(body);
+    expect(out.series[0].points.map(p => p.value)).toEqual(["0", "0.00", "0", "-0.5"]);
+    expect(out.series[0].points.map(p => p.ts_ms)).toEqual([0, 1, 2, 3]);
+    expect(out.series[1].points).toEqual(body.series[1].points);
+    expect(out.series[0].other).toEqual({ value: "-0" }); expect(out.note).toBe("-0");
+    expect(body.series[0].points[0].value).toBe("-0");
+    expect(canonicalizeManagerSeriesZero(out)).toEqual(out);
   });
 });

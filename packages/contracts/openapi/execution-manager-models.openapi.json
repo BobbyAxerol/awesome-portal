@@ -8534,7 +8534,8 @@
                           {
                             "type": "string",
                             "maxLength": 128,
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                            "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                           },
                           {
                             "type": "null"
@@ -8598,7 +8599,8 @@
                           {
                             "type": "string",
                             "maxLength": 128,
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                            "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                           },
                           {
                             "type": "null"
@@ -8850,7 +8852,8 @@
                                 {
                                   "type": "string",
                                   "maxLength": 128,
-                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                  "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                                  "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                                 },
                                 {
                                   "type": "null"
@@ -8914,7 +8917,8 @@
                                 {
                                   "type": "string",
                                   "maxLength": 128,
-                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                  "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                                  "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                                 },
                                 {
                                   "type": "null"
@@ -9775,7 +9779,8 @@
                                 {
                                   "type": "string",
                                   "maxLength": 128,
-                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                  "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                                  "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                                 },
                                 {
                                   "type": "null"
@@ -9839,7 +9844,8 @@
                                 {
                                   "type": "string",
                                   "maxLength": 128,
-                                  "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                                  "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                                  "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                                 },
                                 {
                                   "type": "null"
@@ -10112,7 +10118,8 @@
                           {
                             "type": "string",
                             "maxLength": 128,
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                            "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                           },
                           {
                             "type": "null"
@@ -10176,7 +10183,8 @@
                           {
                             "type": "string",
                             "maxLength": 128,
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                            "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                           },
                           {
                             "type": "null"
@@ -10388,7 +10396,8 @@
                       {
                         "type": "string",
                         "maxLength": 128,
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                        "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                        "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                       },
                       {
                         "type": "null"
@@ -10506,7 +10515,8 @@
                       {
                         "type": "string",
                         "maxLength": 128,
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                        "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                        "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                       },
                       {
                         "type": "null"
@@ -10622,7 +10632,8 @@
                       {
                         "type": "string",
                         "maxLength": 128,
-                        "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                        "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                        "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                       },
                       {
                         "type": "null"
@@ -15649,7 +15660,8 @@
               {
                 "type": "string",
                 "maxLength": 128,
-                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
               },
               {
                 "type": "null"
@@ -15713,7 +15725,8 @@
               {
                 "type": "string",
                 "maxLength": 128,
-                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
               },
               {
                 "type": "null"
@@ -16195,7 +16208,8 @@
                     {
                       "type": "string",
                       "maxLength": 128,
-                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                      "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                     },
                     {
                       "type": "null"
@@ -16259,7 +16273,8 @@
                     {
                       "type": "string",
                       "maxLength": 128,
-                      "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                      "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                      "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                     },
                     {
                       "type": "null"
@@ -16510,7 +16525,8 @@
                           {
                             "type": "string",
                             "maxLength": 128,
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                            "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                           },
                           {
                             "type": "null"
@@ -16574,7 +16590,8 @@
                           {
                             "type": "string",
                             "maxLength": 128,
-                            "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$"
+                            "pattern": "^(?:(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?|-(?:[1-9][0-9]*(?:\\.[0-9]+)?|0\\.[0-9]*[1-9][0-9]*))$",
+                            "description": "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO)."
                           },
                           {
                             "type": "null"

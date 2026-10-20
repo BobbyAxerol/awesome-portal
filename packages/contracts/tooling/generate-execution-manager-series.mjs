@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { buildManagerSeriesFixtures } from './execution-manager-series-fixtures.mjs';
+import { describeCanonicalDecimals } from './execution-manager-p1-semantics.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sourceRoot = resolve(root, '../../apps/control-api/src/execution-v2');
 const require = createRequire(import.meta.url), cache = new Map();
@@ -21,6 +22,7 @@ function load(path) {
 }
 const series = load(resolve(sourceRoot, 'manager-series.contract.ts'));
 const publication = load(resolve(sourceRoot, 'manager-series-publication.contract.ts'));
+const invariants = load(resolve(sourceRoot, 'manager-dataset-invariants.ts'));
 const contract = { ...series, managerSeriesPublication: publication.managerSeriesPublication };
 function json(schema) {
   const d = schema._def, type = d.typeName;
@@ -106,6 +108,9 @@ responseSemantics(response); querySemantics(query);
 const entry = json(contract.managerSeriesEntry); entrySemantics(entry);
 const comparison = json(contract.managerSeriesComparison); comparisonSemantics(comparison);
 const stored = json(contract.managerSeriesPublication);
+// MD-5 (owner decision C): a series point is emitted in canonical zero; the stored publication (a SOURCE document) still admits "-0".
+const canonicalDecimal = { pattern: invariants.MANAGER_CANONICAL_DECIMAL_PATTERN.source, note: invariants.MANAGER_CANONICAL_ZERO_NOTE };
+for (const schema of [response, entry]) describeCanonicalDecimals(schema, canonicalDecimal);
 const problem = { type: 'object', additionalProperties: false, required: ['error', 'request_id'], properties: {
   error: { type: 'object', additionalProperties: false, required: ['code', 'message'], properties: {
     code: { type: 'string', enum: ['EXECUTION_READ_NOT_AVAILABLE', 'EXECUTION_READ_QUERY_INVALID', 'EXECUTION_READ_CURRENT_ONLY'] },
@@ -131,7 +136,7 @@ const operation = { get: { operationId: 'executionManagerSeriesGetV1', security:
     .map(([code, text]) => [code, errorResponse(text)])) } } };
 const schemaHeader = { $schema: 'https://json-schema.org/draft/2020-12/schema', $id: 'https://schemas.primusspark.com/portal/execution-manager-series.v1.schema.json' };
 
-const fixtures = buildManagerSeriesFixtures(contract);
+const fixtures = buildManagerSeriesFixtures({ ...contract, canonicalManagerZero: invariants.canonicalManagerZero });
 const outputs = {
   'schemas/execution-manager-series.v1.schema.json': { ...schemaHeader, ...response },
   'openapi/execution-manager-series.openapi.json': { openapi: '3.1.0', info: { title: 'Manager NAV / Net PnL / Return series', version: '1.0.0' },

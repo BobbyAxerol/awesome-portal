@@ -6,6 +6,7 @@ import { resolve } from "node:path";
 import { rejectManagerAsOf, resolveManagerWindow, managerFactsForWindow,
   managerPublicationsForWindow, managerQueryOptions } from "../src/execution-v2/manager-query-p1";
 import { managerDatasetResponse } from "../src/execution-v2/manager-model.contract";
+import { canonicalizeManagerDatasetZero } from "../src/execution-v2/manager-dataset-invariants";
 import { accessDigest } from "../src/execution-v2/access-policy";
 import { BUSINESS_READ_FIELDS } from "../src/execution-v2/read-fields";
 import { scopeReadPopulation } from "../src/execution-v2/read-scope";
@@ -578,6 +579,31 @@ describe("BE-P1 producer invariants on the actual read path (MD-1, MD-2, MD-4, M
     expect(() => f.read({ economic_partition: partition() })).toThrow(/MANAGER_PARTITION_CURRENCY_MISMATCH/);
     // The source admission refuses the same fact before it is ever stored; the response check is the second line.
     expect(() => f.prepare()).toThrow();
+  });
+  it("emits canonical zero for a source \"-0\" (MD-5, owner decision C): same scale, no sign, nothing else touched", async () => {
+    const f = await fixture({ full: true });
+    // The source admits the signed zero (admission is unchanged) and keeps it in the stored fact; only the response is canonical.
+    f.doc.facts = [fact(OWN, "zero-pnl", "-0.00", { metric: money("-0.00", { denominator: "-0.00" }) }),
+      ...[OWN, PEER, PRIVATE].map((tuple, i) => fact(tuple, `zero-flow-${i}`, "-0", { kind: "added_funds", metric: money("-0", { denominator: "-0.000" }) })),
+      fact(PEER, "peer-pnl", "-0.0", { metric: money("-0.0", { denominator: "-0.00" }) }),
+      fact(PRIVATE, "private-pnl", "-1.50", { metric: money("-1.50", { denominator: "-0.10" }) })];
+    expect(managerModelDocument.safeParse(f.doc).success).toBe(true);
+    const result = f.read({ group_by: ["portfolio_id"] }), text = JSON.stringify(result);
+    expect(text).not.toMatch(/"-0(?:\.0+)?"/);
+    const own = ownRow(result), other = result.items.find(value => value.portfolio_id === PRIVATE.portfolio_id)!;
+    expect(own.metrics.net_pnl).toMatchObject({ value: "0", denominator: "0.00" });
+    expect(own.economic_partitions[0].metrics.net_pnl).toMatchObject({ value: "0", denominator: "0.00" });
+    expect(result.groups.find(group => group.key[0].value === OWN.portfolio_id)!.economic_partitions[0].metrics.net_pnl).toMatchObject({ value: "0", denominator: "0.00" });
+    const statement = f.read({}, "FUND");
+    expect(statement.capital_statements[0].metrics.added_funds).toMatchObject({ value: "0", denominator: "0.000" });
+    expect(JSON.stringify(statement)).not.toMatch(/"-0(?:\.0+)?"/);
+    // A non-zero negative keeps its sign and its scale (the sum prints its own canonical value; the denominator is passed through).
+    expect(other.metrics.net_pnl).toMatchObject({ value: "-1.5", denominator: "-0.10" });
+    // The source document and its facts are untouched by the emit step.
+    expect(f.doc.facts[0].metric).toMatchObject({ value: "-0.00", denominator: "-0.00" });
+    // Idempotent: a second pass over the emitted body changes nothing, and the response parse accepts it as it is.
+    expect(canonicalizeManagerDatasetZero(result)).toEqual(result);
+    expect(managerDatasetResponse.parse(result)).toEqual(result);
   });
   it("counts the page it returns (MD-1) and keeps keyset pages inside the invariants", async () => {
     const f = await fixture({ full: true }), first = f.read({ limit: 1 });

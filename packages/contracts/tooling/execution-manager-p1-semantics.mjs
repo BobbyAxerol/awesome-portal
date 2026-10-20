@@ -128,8 +128,17 @@ function datasetInvariantSemantics(response,row) {
   partitionListSemantics(group.items.properties.economic_partitions);
   partitionListSemantics(response.properties.capital_statements);
 }
-/** Call once on freshly derived Zod schemas before publishing components/files. */
-export function amendManagerP1Schemas({response,query,metric,row:standaloneRow,options,selectedWindow}) {
+/** MD-5 canonical zero (owner decision C): the response decimal carries the lookahead-free canonical pattern; this puts the
+ * rule text next to it, wherever it occurs (metric value/denominator, score summaries, series points). Idempotent. */
+export function describeCanonicalDecimals(schema,{pattern,note}) {
+  let count=0;
+  walk(schema,node=>{if(node.type==='string' && node.pattern===pattern){node.description=note;count++;}});
+  if(!count) throw new Error('No canonical-zero decimal found to describe');
+  return count;
+}
+/** Call once on freshly derived Zod schemas before publishing components/files.
+ * `queryDecimal` is the SOURCE exact decimal (a filter value may still be "-0"): never the canonical response decimal. */
+export function amendManagerP1Schemas({response,query,metric,row:standaloneRow,options,selectedWindow,queryDecimal}) {
   if(!response?.properties?.query_options || !query?.properties?.window)
     throw new Error('Manager P1 runtime schema must be integrated before semantic generation');
   add(query,{if:requiredKey('q_mode'),then:requiredKey('q')},{not:obj({after:{},before:{}},['after','before'])});
@@ -138,7 +147,7 @@ export function amendManagerP1Schemas({response,query,metric,row:standaloneRow,o
   add(filter,{if:isField('op','IS_NULL'),then:noKey('value'),else:{
     if:isField('op','IN'),then:requiredKey('values'),else:requiredKey('value')
   }});
-  const decimalString=metric.properties.value.anyOf.find(s=>s.type==='string');
+  const decimalString=queryDecimal;
   const scalarFields=query.properties.sort.items.properties.field.enum;
   if(!decimalString || !Array.isArray(scalarFields) || !scalarFields.length) throw new Error('Manager scalar/decimal schema missing');
   add(filter,{if:obj({field:{enum:[...moneyKeys,'return_30d_pct','score']},op:{not:{const:'IS_NULL'}}},['field','op']),

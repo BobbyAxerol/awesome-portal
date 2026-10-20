@@ -24,7 +24,7 @@ const served = (subject, currency, points, { gaps = [], domain = 'PAPER', method
 const portfolio = id => ({ subject_type: 'PORTFOLIO', subject_id: id });
 
 export function buildManagerSeriesFixtures(contract) {
-  const { deriveSeriesComparison, managerSeriesResponse } = contract;
+  const { deriveSeriesComparison, managerSeriesResponse, canonicalManagerZero } = contract;
   const response = (entries, extra = {}) => {
     const value = { schema_version: 'portal.execution.manager-series.v1', workspace_id: 'TEST_ONLY:workspace', environment: 'paper',
       record_authority: 'PORTAL_PROJECTION', source_authority: 'TRADING_SYSTEM', metric: 'NAV',
@@ -60,7 +60,28 @@ export function buildManagerSeriesFixtures(contract) {
       source_revision: 'TEST_ONLY:model-r1', source_set_digest: digest('3'), source_qualification: 'SOURCE_VERIFIED', input_digest: digest('4'),
       calculation_revision: 'TEST_ONLY:calc', policy_revision: 'TEST_ONLY:policy', source_as_of_ms: AS_OF } };
   contract.managerSeriesPublication.parse(publication);
+  // MD-5 (owner decision C, 2026-10-20): canonical zero on emit. A response that carries a signed zero point is refused with its
+  // stated code (the generator proves each case before writing); the examples state what the emit step does with a SOURCE value.
+  const ZERO_CODE = 'MANAGER_DECIMAL_NEGATIVE_ZERO';
+  const negativeZero = {
+    lane: SERIES_FIXTURE_LANE, base: 'execution-manager-series.populated.synthetic.valid.json',
+    note: 'Each case mutates the base example. MD-5: canonical zero on emit, limited to the Manager series response; a stored publication (source) is not changed.',
+    emit_rule: 'A source point value that is zero with a minus sign is emitted with the same scale and no sign. Nothing else changes. Idempotent.',
+    cases: [['negative-zero-point', '-0'], ['negative-zero-point-with-a-scale', '-0.000']].map(([id, value]) => ({
+      id: `MD-5/${id}`, gap: 'MD-5', rule: 'a zero is never signed', refused_by: 'SCHEMA_AND_PRODUCER', code: ZERO_CODE,
+      ops: [{ op: 'set', path: ['series', 0, 'points', 1, 'value'], value }] })),
+    emit_examples: [['-0', '0'], ['-0.000', '0.000'], ['0', '0'], ['0.00', '0.00'], ['-0.5', '-0.5'], ['-100', '-100']].map(([source, emitted]) => ({ source, emitted })),
+  };
+  for (const c of negativeZero.cases) {
+    const body = structuredClone(populated);
+    for (const op of c.ops) op.path.slice(0, -1).reduce((node, key) => node[key], body)[op.path.at(-1)] = op.value;
+    const refused = managerSeriesResponse.safeParse(body);
+    if (refused.success || !refused.error.issues.some(i => i.message === c.code)) throw new Error('Negative series case is not refused with its code: ' + c.id);
+  }
+  for (const { source, emitted } of negativeZero.emit_examples)
+    if (canonicalManagerZero(source) !== emitted || canonicalManagerZero(emitted) !== emitted) throw new Error('Canonical zero emit example is wrong: ' + source);
   return {
+    'fixtures/execution-manager-series.negative-zero.synthetic.negative.json': negativeZero,
     'fixtures/execution-manager-series.populated.synthetic.valid.json': wrap(populated),
     'fixtures/execution-manager-series.empty.synthetic.valid.json': wrap(empty),
     'fixtures/execution-manager-series.unavailable.synthetic.valid.json': wrap(unavailableAll),

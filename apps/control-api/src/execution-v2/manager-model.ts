@@ -6,6 +6,7 @@ import { assertExecutionReadScope, ExecutionReadScopeError, scopeAllowsField, sc
 import { projectionRowVisible } from "./read-projection";
 import { KeysetCursorCodec } from "../query/cursor";
 import { sumExactDecimals } from "../research/exact-decimal";
+import { canonicalizeManagerDatasetZero } from "./manager-dataset-invariants";
 import { selectManagerScorePublications, type ManagerScoreReadFence } from "./manager-score-publication";
 import { selectManagerCompositionPublications,type ManagerCompositionReadFence } from "./manager-composition-publication";
 import { selectManagerRegimePublications, type ManagerRegimeReadFence } from "./manager-regime-publication";
@@ -386,5 +387,6 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
       revision: accessDigest({ scope: scope.fingerprint, source: doc.revision }), supersedes_revision: doc.supersedes_revision ? accessDigest({ scope: scope.fingerprint, source: doc.supersedes_revision }) : null },
   };
   if (Buffer.byteLength(JSON.stringify(response)) > 1048576) fail("EXECUTION_READ_SCOPE_LIMIT");
-  return managerDatasetResponse.parse(response);
+  // MD-5: canonical zero on emit, exactly once, before the response parse (which then refuses any signed zero left).
+  return managerDatasetResponse.parse(canonicalizeManagerDatasetZero(response));
 }

@@ -120,6 +120,32 @@ describe("BE-P4 FE-013: nothing is invented when the source is missing", () => {
   });
 });
 
+describe("MD-5 canonical zero on emit: the series read (owner decision C, 2026-10-20)", () => {
+  it("a stored publication may carry a signed zero (source admission is unchanged); the response never does", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, { points: [[0, "-0"], [1, "-0.000"], [2, "0.50"], [3, "-0.5"], [4, "0"]] })];
+    expect(managerModelDocument.safeParse(t.doc).success).toBe(true);
+    const s = t.read([A]).series[0];
+    expect(s.points.map(p => p.value)).toEqual(["0", "0.000", "0.50", "-0.5", "0"]);
+    expect(s.points.map(p => p.ts_ms)).toEqual([0, 1, 2, 3, 4].map(day => WINDOW.from_ms + day * DAY));
+    expect(JSON.stringify(t.read([A]))).not.toMatch(/"-0(?:\.0+)?"/);
+    // The stored publication is not edited: the emit step builds a new body.
+    expect(t.doc.precomputed_series![0].series.points[0].value).toBe("-0");
+    // Idempotent and accepted as it is by the response contract.
+    const response = t.read([A]);
+    expect(managerSeriesResponse.parse(response)).toEqual(response);
+  });
+  it("a response that still carries a signed zero point is refused with its stated code", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED)];
+    const response = structuredClone(t.read([A]));
+    for (const zero of ["-0", "-0.00"]) {
+      response.series[0].points[0].value = zero;
+      const parsed = managerSeriesResponse.safeParse(response);
+      expect(parsed.success).toBe(false);
+      expect(!parsed.success && parsed.error.issues.map(i => i.message)).toContain("MANAGER_DECIMAL_NEGATIVE_ZERO");
+    }
+  });
+});
+
 describe("BE-P4 FE-013: a published series is served exactly, with its methodology and window", () => {
   it("serves exact decimal strings with partition, unit, currency, basis, methodology and window", async () => {
     const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, { points: [[0, "100.000000000000000001"], [2, "-0.5"]] })];

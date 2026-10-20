@@ -91,6 +91,7 @@ export interface components {
                 } | null;
                 points: {
                     ts_ms: number;
+                    /** @description Canonical zero: a zero is never signed. "0" and "0.00" are valid, "-0" and "-0.00" are not; a source value of "-0.00" is published as "0.00" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO). */
                     value: string;
                 }[];
                 gaps: {
@@ -192,6 +193,7 @@ export interface components {
             } | null;
             points: {
                 ts_ms: number;
+                /** @description Canonical zero: a zero is never signed. "0" and "0.00" are valid, "-0" and "-0.00" are not; a source value of "-0.00" is published as "0.00" (same scale, no sign). The producer refuses to emit the signed form (MANAGER_DECIMAL_NEGATIVE_ZERO). */
                 value: string;
             }[];
             gaps: {

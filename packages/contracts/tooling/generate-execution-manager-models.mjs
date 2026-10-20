@@ -5,7 +5,7 @@ import { resolve, dirname } from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
-import { amendManagerP1Schemas, managerCurrentOnlyProblem } from './execution-manager-p1-semantics.mjs';
+import { amendManagerP1Schemas, describeCanonicalDecimals, managerCurrentOnlyProblem } from './execution-manager-p1-semantics.mjs';
 import { amendManagerLifecycleSchemas, attachManagerLifecycleSynthetic,
   managerLifecycleLiveSyntheticFixture } from './execution-manager-lifecycle-semantics.mjs';
 import { managerP1NoFactsSyntheticOptions, attachManagerP1SyntheticOptions,
@@ -27,6 +27,7 @@ const contract = load(resolve(sourceRoot, 'manager-model.contract.ts'));
 const revisions = load(resolve(sourceRoot, 'manager-score-revision.contract.ts'));
 const regimes = load(resolve(sourceRoot, 'manager-regime-history.contract.ts'));
 const p1 = load(resolve(sourceRoot, 'manager-query-p1.contract.ts'));
+const invariants = load(resolve(sourceRoot, 'manager-dataset-invariants.ts'));
 function json(schema) {
   const d = schema._def, type = d.typeName;
   if (['ZodEffects','ZodDefault','ZodOptional'].includes(type)) return json(d.schema ?? d.innerType);
@@ -75,13 +76,18 @@ scalarFilter.oneOf=[
   ]}},
   {properties:{op:{enum:['EQ','GTE','LTE']},value:{}},required:['value'],not:{properties:{values:{}},required:['values']}},
 ];
-const schemas = { ManagerDataset: response, ManagerDatasetQuery: query, ManagerMetric: json(contract.managerMetric), ManagerDatasetRow: json(contract.managerDatasetRow), ManagerScorePublication: json(contract.managerScorePublication), ManagerCompositionPublication: json(contract.managerCompositionPublication), ManagerRegimePublication: json(contract.managerRegimePublication) };
+const schemas = { ManagerDataset: response, ManagerDatasetQuery: query, ManagerMetric: json(contract.managerResponseMetric), ManagerDatasetRow: json(contract.managerDatasetRow), ManagerScorePublication: json(contract.managerScorePublication), ManagerCompositionPublication: json(contract.managerCompositionPublication), ManagerRegimePublication: json(contract.managerRegimePublication) };
 schemas.ManagerQueryOptions=json(p1.managerP1Options);
 schemas.ManagerSelectedWindow=json(p1.managerSelectedWindow);
 schemas.ManagerCurrentOnlyProblem=structuredClone(managerCurrentOnlyProblem);
+// A filter value is a SOURCE-form decimal (it may still be "-0"): it keeps the plain exact decimal, not the canonical response one.
+const queryDecimal=json(contract.managerMetric).properties.value.anyOf.find(s=>s.type==='string');
 amendManagerP1Schemas({response:schemas.ManagerDataset,query:schemas.ManagerDatasetQuery,
   metric:schemas.ManagerMetric,row:schemas.ManagerDatasetRow,
-  options:schemas.ManagerQueryOptions,selectedWindow:schemas.ManagerSelectedWindow});
+  options:schemas.ManagerQueryOptions,selectedWindow:schemas.ManagerSelectedWindow,queryDecimal});
+// MD-5 (owner decision C): the response decimals are canonical-zero; the rule text sits next to the pattern.
+const canonicalDecimal={pattern:invariants.MANAGER_CANONICAL_DECIMAL_PATTERN.source,note:invariants.MANAGER_CANONICAL_ZERO_NOTE};
+for(const schema of [schemas.ManagerDataset,schemas.ManagerMetric,schemas.ManagerDatasetRow])describeCanonicalDecimals(schema,canonicalDecimal);
 amendManagerLifecycleSchemas({response:schemas.ManagerDataset,row:schemas.ManagerDatasetRow});
 Object.assign(schemas,{ManagerScoreRevisionQuery:json(revisions.managerScoreRevisionQuery),ManagerScoreRevisionHistoryQuery:json(revisions.managerScoreRevisionHistoryQuery),
   ManagerScoreRevisionView:json(revisions.managerScoreRevisionView),ManagerScoreRevisionHistory:json(revisions.managerScoreRevisionHistory),
@@ -171,6 +177,12 @@ for(const [name,context] of [
       const refused=contract.managerDatasetResponse.safeParse(applyManagerP1Ops(partitions.value,c.ops));
       if(refused.success || !refused.error.issues.some(i=>i.message===c.code || i.code===c.code))
         throw new Error('Negative Manager fixture case is not refused with its code: '+c.id);
+    }
+    // MD-5: the emit step turns every source example into its stated form, and its output is a valid response decimal.
+    for(const {source,emitted} of negative.emit_examples){
+      if(invariants.canonicalManagerZero(source)!==emitted || invariants.canonicalManagerZero(emitted)!==emitted)
+        throw new Error('Canonical zero emit example is wrong: '+source);
+      if(!invariants.managerResponseDecimal.safeParse(emitted).success) throw new Error('Canonical zero example is not a response decimal: '+emitted);
     }
     outputs['fixtures/execution-manager-dataset.invariants.synthetic.negative.json']=negative;
     const lifecycle=managerLifecycleLiveSyntheticFixture(sample);

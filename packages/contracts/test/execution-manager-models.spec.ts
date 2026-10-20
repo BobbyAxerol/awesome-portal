@@ -2,9 +2,10 @@ import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
-import { managerDatasetResponse, managerMetric, managerModelQuery, managerQuality, managerScorePublication,managerCompositionPublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
+import { managerDatasetResponse, managerMetric, managerResponseMetric, managerModelQuery, managerQuality, managerScorePublication,managerCompositionPublication } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
 import { managerRegimePublication } from "../../../apps/control-api/src/execution-v2/manager-regime-publication.contract";
 import { managerScoreRevisionView, managerScoreRevisionHistory } from "../../../apps/control-api/src/execution-v2/manager-score-revision.contract";
+import { canonicalManagerZero, managerResponseDecimal, MANAGER_CANONICAL_DECIMAL_PATTERN } from "../../../apps/control-api/src/execution-v2/manager-dataset-invariants";
 import { managerP1Options } from "../../../apps/control-api/src/execution-v2/manager-query-p1.contract";
 import { managerDatasetRow } from "../../../apps/control-api/src/execution-v2/manager-model.contract";
 import { managerP1NoFactsSyntheticOptions } from "../tooling/execution-manager-p1-fixtures.mjs";
@@ -391,7 +392,7 @@ describe("BE-P1 Manager dataset producer invariants: schema part and runtime par
       }
       return body;
     };
-    expect(negative.cases.map((c:any) => c.gap).filter((gap:string,i:number,all:string[]) => all.indexOf(gap) === i).sort()).toEqual(["MD-1","MD-2","MD-3","MD-4","MD-6","MD-7","MD-8"]);
+    expect(negative.cases.map((c:any) => c.gap).filter((gap:string,i:number,all:string[]) => all.indexOf(gap) === i).sort()).toEqual(["MD-1","MD-2","MD-3","MD-4","MD-5","MD-6","MD-7","MD-8"]);
     for (const c of negative.cases) {
       const body = apply(c.ops), runtime = managerDatasetResponse.safeParse(body);
       expect(runtime.success,c.id).toBe(false);
@@ -414,9 +415,51 @@ describe("BE-P1 Manager dataset producer invariants: schema part and runtime par
     const bounded = clone(options); bounded.window.presets[0].resolved = {from_ms:1,to_ms:2};
     expect(check(bounded)).toBe(false); expect(managerP1Options.safeParse(bounded).success).toBe(false);
   });
-  it("leaves negative zero to an owner decision: both validators still admit -0 (MD-5 is NOT a rule)", () => {
-    const body = rich(); body.items[0].metrics.net_pnl.value = "-0"; body.items[0].economic_partitions[0].metrics.net_pnl.value = "-0";
-    expect(both(body)).toEqual({schema:true,runtime:true});
+  // MD-5 (owner decision C, 2026-10-20): canonical zero on emit. A body that carries a signed zero is refused by BOTH validators;
+  // a non-zero negative, a positive zero and a scaled positive zero are not touched.
+  it.each(["-0","-0.0","-0.00","-0.000000000000000000"])("MD-5 refuses %s on every manager decimal of the response in both validators", zero => {
+    const paths: Array<[string,(b:any)=>any]> = [
+      ["row headline value",b=>b.items[0].metrics.net_pnl],["row partition value",b=>b.items[0].economic_partitions[0].metrics.net_pnl],
+      ["group partition value",b=>b.groups[0].economic_partitions[0].metrics.net_pnl],["capital statement value",b=>b.capital_statements[0].metrics.balance_total]];
+    for (const [name,metric] of paths) for (const key of ["value","denominator"]) {
+      const body = rich(), target = metric(body); target[key] = zero;
+      const issues = managerDatasetResponse.safeParse(body); 
+      expect(issues.success,name+" "+key).toBe(false);
+      expect(!issues.success && issues.error.issues.some(i => i.message === "MANAGER_DECIMAL_NEGATIVE_ZERO"),name+" "+key).toBe(true);
+      expect(validate(body),name+" "+key).toBe(false);
+    }
+    const summary = rich(); summary.scores.raw = {value:zero,status:"available"};
+    expect(both(summary)).toEqual({schema:false,runtime:false});
+  });
+  it("MD-5 leaves every other decimal alone: positive zero at any scale, a non-zero negative, a non-zero with trailing zeros", () => {
+    for (const value of ["0","0.0","0.00","-0.01","-0.10","-1","-10","-10.00","-0.000000000000000001","100.0000000000000001"]) {
+      const body = rich(); body.items[0].metrics.net_pnl.value = value; body.items[0].economic_partitions[0].metrics.net_pnl.value = value;
+      expect(both(body),value).toEqual({schema:true,runtime:true});
+    }
+  });
+  it("MD-5 does not widen what a SOURCE document may say: the metric admitted from a source still accepts -0", () => {
+    const metric = {...rich().items[0].metrics.net_pnl, value:"-0.00"};
+    expect(managerMetric.safeParse(metric).success).toBe(true);
+    expect(managerResponseMetric.safeParse(metric).success).toBe(false);
+    // The published ManagerMetric is the response form; a query filter value is still the plain exact decimal.
+    expect(ajv.compile(api.components.schemas.ManagerMetric)(metric)).toBe(false);
+    const query = ajv.compile(api.components.schemas.ManagerDatasetQuery);
+    const filter = {environment:"paper",filters:[{field:"net_pnl",op:"EQ",value:"-0"}],
+      economic_partition:{economic_domain:"PAPER",currency:"USDT",basis:"TEST_ONLY:net-ledger",native_profile_ref:"TEST_ONLY:paper",domain_proof_ref:"TEST_ONLY:proof"}};
+    expect(query(filter),JSON.stringify(query.errors)).toBe(true); expect(managerModelQuery.safeParse(filter).success).toBe(true);
+  });
+  it("MD-5 publishes the rule on every canonical decimal and the emit examples agree with the function", () => {
+    const negative = load("fixtures/execution-manager-dataset.invariants.synthetic.negative.json");
+    for (const {source,emitted} of negative.emit_examples) {
+      expect(canonicalManagerZero(source),source).toBe(emitted); expect(canonicalManagerZero(emitted),emitted).toBe(emitted);
+      expect(managerResponseDecimal.safeParse(emitted).success,emitted).toBe(true);
+      expect(new RegExp(MANAGER_CANONICAL_DECIMAL_PATTERN.source).test(emitted)).toBe(true);
+    }
+    const value = api.components.schemas.ManagerMetric.properties.value.anyOf[0];
+    expect(value.pattern).toBe(MANAGER_CANONICAL_DECIMAL_PATTERN.source); expect(value.description).toMatch(/Canonical zero/);
+    expect(api.components.schemas.ManagerDataset.properties.scores.properties.raw.properties.value.anyOf[0].pattern).toBe(value.pattern);
+    // The sealed publications are passed through verbatim and keep the plain decimal.
+    expect(JSON.stringify(api.components.schemas.ManagerScorePublication)).not.toContain(value.pattern);
   });
   it("publishes the rule text where the schema cannot check it", () => {
     const response = api.components.schemas.ManagerDataset.properties;

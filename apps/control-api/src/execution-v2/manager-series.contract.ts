@@ -18,6 +18,7 @@ import { publicationDigest } from "./publication.contract";
 import { managerSelectedWindow, managerWindowQuery } from "./manager-query-p1.contract";
 import { managerQuality } from "./manager-model.contract";
 import { accessDigest } from "./access-digest";
+import { managerResponseDecimal } from "./manager-dataset-invariants";
 import { MAX_SERIES_GAPS, MAX_SERIES_POINTS, seriesBodyIssues, seriesConfidence, seriesGap, seriesMetric, seriesPartition, seriesPoint,
   seriesQuality, seriesUnit, seriesWindow } from "./manager-series-publication.contract";
 
@@ -47,13 +48,15 @@ export const SERIES_UNAVAILABLE_REASONS = ["SERIES_SOURCE_NOT_PUBLISHED", "EXACT
   "ECONOMIC_PARTITION_REQUIRED", "SERIES_SCOPE_NOT_AUTHORIZED", "SOURCE_NOT_QUALIFIED", "AMBIGUOUS_SERIES_PUBLICATION",
   "SUBJECT_HAS_NO_ACTIVE_MEMBERS"] as const;
 export const SERIES_EMPTY_REASON = "NO_POINTS_PUBLISHED_IN_WINDOW" as const;
+/** A point as EMITTED: canonical zero (MD-5). The stored publication's `seriesPoint` still admits a signed zero. */
+export const managerSeriesResponsePoint = z.object({ ts_ms: utcMilliseconds, value: managerResponseDecimal }).strict();
 export const managerSeriesEntry = z.object({
   subject: z.object({ subject_type: z.enum(["FUND", "PORTFOLIO"]), subject_id: text }).strict(),
   state: z.enum(["AVAILABLE", "EMPTY", "UNAVAILABLE"]),
   reason_code: z.enum([...SERIES_UNAVAILABLE_REASONS, SERIES_EMPTY_REASON]).nullable(),
   partition: seriesPartition.nullable(), unit: seriesUnit.nullable(), currency: text.nullable(), basis: text.nullable(),
   methodology_ref: text.nullable(), window: seriesWindow.nullable(),
-  points: z.array(seriesPoint).max(MAX_SERIES_POINTS), gaps: z.array(seriesGap).max(MAX_SERIES_GAPS),
+  points: z.array(managerSeriesResponsePoint).max(MAX_SERIES_POINTS), gaps: z.array(seriesGap).max(MAX_SERIES_GAPS),
   quality: seriesQuality, source_confidence: seriesConfidence,
   provenance_refs: z.array(text).min(1).max(32), calculation_revision: text, policy_revision: text,
 }).strict().superRefine((e, c) => {

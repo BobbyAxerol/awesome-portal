@@ -3,7 +3,7 @@ import { managerSearchText, managerSearchMode, managerWindowQuery, managerSelect
   managerP1Options, managerWindowAbsenceReason, validateManagerP1Response } from "./manager-query-p1.contract";
 import { utcMilliseconds, executionEnvironment, financialStage, exactDecimal, opaqueRevision } from "./foundation.contract";
 import { publicationDigest } from "./publication.contract";
-import { validateManagerDatasetInvariants } from "./manager-dataset-invariants";
+import { validateManagerDatasetInvariants, managerResponseDecimal } from "./manager-dataset-invariants";
 import { managerScorePublication } from "./manager-score-publication.contract";
 export { managerScorePublication } from "./manager-score-publication.contract";
 import { managerCompositionPublication } from "./manager-composition-publication.contract";
@@ -34,18 +34,23 @@ export const managerQuality = z.object({ completeness: z.enum(["COMPLETE", "PART
 // reasons. Match Score publication's existing 64-reason envelope without
 // widening the source/document admission envelope or silently truncating it.
 const managerMetricQuality = managerQuality.extend({ reasons: z.array(text).max(64) }).strict();
-export const managerMetric = z.object({ value: exactDecimal.nullable(), unit: text, currency: text.nullable(),
+const managerMetricShape = (decimal: z.ZodString) => ({ value: decimal.nullable(), unit: text, currency: text.nullable(),
   basis: text, window: z.object({ from_ms: utcMilliseconds, to_ms: utcMilliseconds }).strict().nullable(),
-  denominator: exactDecimal.nullable(), methodology_ref: text.nullable(),
+  denominator: decimal.nullable(), methodology_ref: text.nullable(),
   availability: z.enum(["AVAILABLE", "PARTIAL", "UNAVAILABLE", "NOT_APPLICABLE"]), reason_code: text.nullable(),
   quality: managerMetricQuality, source_confidence: z.enum(["VERIFIED", "PROVISIONAL", "UNKNOWN"]),
-  provenance_refs: z.array(text).min(1).max(32), calculation_revision: text, policy_revision: text }).strict()
-  .superRefine((v, c) => {
-    if ((v.availability === "AVAILABLE") !== (v.value !== null) || v.value === null && v.reason_code === null ||
-      v.window !== null && v.window.from_ms >= v.window.to_ms ||
-      v.unit === "MONEY" && v.currency === null)
-      c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_METRIC_INCONSISTENT" });
-  });
+  provenance_refs: z.array(text).min(1).max(32), calculation_revision: text, policy_revision: text });
+const managerMetricConsistent = (v: { availability: string; value: string | null; reason_code: string | null;
+  window: { from_ms: number; to_ms: number } | null; unit: string; currency: string | null }, c: z.RefinementCtx) => {
+  if ((v.availability === "AVAILABLE") !== (v.value !== null) || v.value === null && v.reason_code === null ||
+    v.window !== null && v.window.from_ms >= v.window.to_ms ||
+    v.unit === "MONEY" && v.currency === null)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_METRIC_INCONSISTENT" });
+};
+/** A metric as ADMITTED from a source document (a fact). A source value may be "-0": admission is unchanged (MD-5). */
+export const managerMetric = z.object(managerMetricShape(exactDecimal)).strict().superRefine(managerMetricConsistent);
+/** A metric as EMITTED in the dataset response: canonical zero (MD-5), a signed zero is refused. */
+export const managerResponseMetric = z.object(managerMetricShape(managerResponseDecimal)).strict().superRefine(managerMetricConsistent);
 export const managerStatementFields = ["opening_economic_capital", "initial_funds", "added_funds", "returned_capital",
   "net_economic_assignments", "current_nav", "realized_pnl", "unrealized_pnl", "actual_fees", "pending_fees",
   "funding", "interest", "initial_budget", "current_budget", "topups_applied", "decreases_applied", "recall_applied",
@@ -124,8 +129,8 @@ export type ManagerMetric = z.infer<typeof managerMetric>;
 export type ManagerModelQuery = z.infer<typeof managerModelQuery>;
 export type ManagerMember = z.infer<typeof managerMember>;
 
-const metricMap = z.record(z.enum([...managerMoneyFields, "return_30d_pct", "score"]), managerMetric);
-const partitionMetrics = z.object({ partition: managerPartition, metrics: z.record(z.string(), managerMetric) }).strict();
+const metricMap = z.record(z.enum([...managerMoneyFields, "return_30d_pct", "score"]), managerResponseMetric);
+const partitionMetrics = z.object({ partition: managerPartition, metrics: z.record(z.string(), managerResponseMetric) }).strict();
 export const managerDatasetRow = z.object({ row_key: z.string().min(1).max(2048), alpha_id: text, alpha_version_id: text, portfolio_id: text,
   name: text.nullable(), owner_user_id: text.nullable(), lifecycle: text.nullable(), venue: text.nullable(), health: text.nullable(), source_state: text.nullable(),
   stage_presence: z.array(financialStage).max(4),
@@ -134,13 +139,13 @@ export const managerDatasetRow = z.object({ row_key: z.string().min(1).max(2048)
   days_in_stage: z.number().int().min(0).max(10_000_000).nullable(), stage_lifecycle_reasons: managerStageLifecycleReasons,
   children: z.array(managerTuple.extend({ stage: financialStage, binding_ref: text.nullable() }).strict()).max(10_000),
   metrics: metricMap, economic_partitions: z.array(partitionMetrics).max(200) }).strict();
-const scorePending = z.object({ value: exactDecimal.nullable(), status: z.enum(["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data", "window_not_published"]),
+const scorePending = z.object({ value: managerResponseDecimal.nullable(), status: z.enum(["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data", "window_not_published"]),
   reason_code: managerWindowAbsenceReason.optional() }).strict()
   .superRefine((v,c) => { if (["available","provisional"].includes(v.status) !== (v.value !== null))
       c.addIssue({code:z.ZodIssueCode.custom,message:"MANAGER_SCORE_SUMMARY_INVALID"});
     if ((v.status === "window_not_published") !== (v.reason_code !== undefined))
       c.addIssue({code:z.ZodIssueCode.custom,message:"MANAGER_SCORE_WINDOW_REASON_REQUIRED"}); });
-const compositionSummary = z.object({value:exactDecimal.nullable(),status:z.enum(["policy_pending","available","provisional",
+const compositionSummary = z.object({value:managerResponseDecimal.nullable(),status:z.enum(["policy_pending","available","provisional",
   "partial_coverage","incomparable_basis","no_allocation","invalid_data","window_not_published"]),
   reason_code:managerWindowAbsenceReason.optional()}).strict().superRefine((v,c)=>{
   if(["available","provisional"].includes(v.status)!==(v.value!==null))
