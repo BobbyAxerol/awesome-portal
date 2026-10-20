@@ -57,6 +57,7 @@ import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } fr
 import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
 import { readStageActionEligibilityV1, stageActionEligibilityUrl } from "../v2/readers/stageActionEligibility";
 import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
+import { ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext } from "../v2/readers/accessSelfContext";
 import { ACCESS_STEP_UP_PATH, accessStepUpAnswers, accessStepUpBody, readAccessStepUp } from "../v2/readers/accessStepUp";
 import { approvalRequestLookupAnswers, approvalRequestLookupUrl, readApprovalRequestLookupV1 } from "../v2/readers/approvalRequestLookup";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
@@ -1078,6 +1079,17 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       const result = await readGetAt(url, readAccessEligibilityBatch, "The eligibility batch");
       if (result.ok && result.value.kind === "eligibility_batch" && !eligibilityBatchAnswers(result.value.batch, request)) {
         return unavailable("The eligibility batch answered another question than the one asked, so it is not shown.");
+      }
+      return result;
+    },
+
+    async getSelfContext() {
+      const result = await readGetAt(ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext, "The self context");
+      // Another schema is not a context: it is a typed unavailable, so a caller never has a "default workspace" it did not read.
+      if (result.ok && result.value.kind === "unsupported_shape") {
+        return unavailable(result.value.schemaVersion === null
+          ? "The self context carries no schema version this build reads."
+          : `The self context is ${result.value.schemaVersion}, which this build does not read.`);
       }
       return result;
     },

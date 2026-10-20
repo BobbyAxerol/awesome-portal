@@ -838,6 +838,9 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getSelfEligibilityBatch() {
       return unavailable("The eligibility batch is not served by the fixture port.");
     },
+    async getSelfContext() {
+      return unavailable("The self context is not served by the fixture port.");
+    },
     // A password never goes to a fixture: the lab port answers without reading the input.
     async postSessionStepUp() {
       return { kind: "unavailable" as const, reason: "The session step-up is not served by the fixture port." };

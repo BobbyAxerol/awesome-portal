@@ -22,6 +22,7 @@
  * can see which session the question belongs to.
  */
 import { readAccessSelfNavigation, accessSelfNavigationUrl, type AccessSelfNavigation } from "../readers/accessSelf";
+import { ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext, type AccessSelfContext } from "../readers/accessSelfContext";
 import type { AccessEnvironment } from "../readers/accessEffective";
 
 export interface SelfNavigationQuestion {
@@ -46,7 +47,24 @@ export type SelfNavigationOutcome =
 export interface SelfNavigationPort {
   /** Resolves; never rejects. An aborted read resolves as `unavailable` and the hook discards it by token. */
   read(request: SelfNavigationQuestion, signal: AbortSignal): Promise<SelfNavigationOutcome>;
+  /**
+   * `GET /api/admin/profile-access/v2/self-context` (BE-P7): asked ONLY when the address names no workspace. The read takes no
+   * query (the workspace is its output). Optional so a port that predates it still works: without it a workspace-less address stays
+   * idle, as before. Same contract as `read`: resolves, never rejects, nothing is cached, the session key is not sent.
+   */
+  readContext?(request: SelfContextQuestion, signal: AbortSignal): Promise<SelfContextOutcome>;
 }
+
+export interface SelfContextQuestion {
+  /** The session the question is asked for. Never sent; the cookie carries the session. */
+  sessionKey: string;
+}
+
+/** `conflict` does not exist here: the context is a membership read with no private egress fence; a 409 is just `unavailable`. */
+export type SelfContextOutcome =
+  | { kind: "ok"; context: AccessSelfContext }
+  | ({ kind: "denied"; status: 401 | 403 } & SelfNavigationProblem)
+  | ({ kind: "unavailable"; reason: string; status: number | null } & SelfNavigationProblem);
 
 const CODE = /^[A-Z][A-Z0-9_]{2,63}$/;
 const REQUEST_ID = /^[A-Za-z0-9._:-]{1,128}$/;
@@ -104,6 +122,39 @@ export function httpSelfNavigationPort(fetchImpl?: typeof fetch): SelfNavigation
         return { kind: "ok", navigation: read.navigation };
       } catch {
         return unavailable("The Portal could not be reached.");
+      }
+    },
+
+    async readContext(_request, signal): Promise<SelfContextOutcome> {
+      const down = (reason: string, status: number | null = null, problem: SelfNavigationProblem = { code: null, requestId: null }): SelfContextOutcome => ({
+        kind: "unavailable", reason, status, ...problem,
+      });
+      try {
+        const response = await (fetchImpl ?? fetch)(ACCESS_SELF_CONTEXT_PATH, { credentials: "same-origin", cache: "no-store", headers: { Accept: "application/json" }, signal });
+        if (!response.ok) {
+          const problem = await problemOf(response);
+          if (response.status === 401 || response.status === 403) return { kind: "denied", status: response.status, ...problem };
+          return down(`The Portal answered ${response.status}.`, response.status, problem);
+        }
+        let body: unknown;
+        try {
+          body = await response.json();
+        } catch {
+          return down("The answer was not readable.", response.status);
+        }
+        const read = readAccessSelfContext(body);
+        if (read === null) return down("The answer did not match the published self-context contract.", response.status);
+        if (read.kind === "unsupported_shape") {
+          return down(
+            read.schemaVersion === null
+              ? "The answer carries no schema version this build reads."
+              : `The answer is ${read.schemaVersion}, which this build does not read.`,
+            response.status,
+          );
+        }
+        return { kind: "ok", context: read.context };
+      } catch {
+        return down("The Portal could not be reached.");
       }
     },
   };
