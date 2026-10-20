@@ -17,6 +17,7 @@ import CanaryScreen from "./index";
 import { chipsOf, limitRows, rollbackItems, trialCalendar, verdictLine } from "./model";
 import { readCanaryView, type CanaryView } from "./readCanary";
 import { DEP, answering, canaryPort, legacyV1Body, lit, v1Body } from "./canary.testbase";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -169,7 +170,7 @@ describe("the Envelope tab: the server's rows, ratio, verdict", () => {
     expect(gauges[1]).toBe("Gross notional cap (USDT): 0.00% used");
     expect(gauges[2]).toBeNull();
     expect(gauges[3]).toBe("Open orders (max): 50.00% used");
-    expect(used("Used")[2]!.querySelector("[data-gap]")!.getAttribute("title")).toContain("DAILY_LOSS_WINDOW_NOT_PUBLISHED");
+    expect(whyText(used("Used")[2]!.querySelector("[data-gap]")!)).toContain("DAILY_LOSS_WINDOW_NOT_PUBLISHED");
     expect(used("Used")[2]!.textContent).toBe("Not available");
     expect(used("Consumed")[0]!.textContent).toContain("250.00");
     const panel = table.closest("section")!;
@@ -208,7 +209,7 @@ describe("rollback checks and the trial calendar", () => {
     const trial = screen.getByRole("group", { name: "Trial schedule" });
     // The day is not stated: it is one `Not available` line (FE-071 in its title), not a sentence.
     expect(trial.textContent).toContain("Not available: Trial day");
-    expect(trial.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Trial day: Not published (FE-071)");
+    expect(whyText(trial.querySelector(".exec-blk-gaps")!)).toContain("Trial day: Not published (FE-071)");
     expect(trial.textContent).toContain("Started 12 Oct 08:00Z");
     expect(trial.textContent).toContain("Exit review opens 26 Oct 08:00Z");
     expect(trial.textContent).not.toMatch(/days left|day 0|in \d+ days/);
@@ -225,8 +226,8 @@ describe("rollback checks and the trial calendar", () => {
     expect(items[0]!.textContent).toContain("Ready");
     const gap = panel.querySelector(".exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Flatten plan prepared, Paper twin running, Last rollback drill");
-    expect(gap.getAttribute("title")).toContain("FLATTEN_PLAN_NOT_RECORDED");
-    expect(gap.getAttribute("title")).toContain("ROLLBACK_DRILL_NOT_RECORDED");
+    expect(whyText(gap)).toContain("FLATTEN_PLAN_NOT_RECORDED");
+    expect(whyText(gap)).toContain("ROLLBACK_DRILL_NOT_RECORDED");
   });
 });
 
@@ -245,13 +246,13 @@ describe("Positions & orders: typed rows when AVAILABLE", () => {
     expect(first.querySelector('td[data-l="Leverage"]')).toBeNull();
     const positionsGap = positions.closest("section")!.querySelector(".exec-blk-gaps")!;
     expect(positionsGap.textContent).toBe("Not available: Leverage");
-    expect(positionsGap.getAttribute("title")).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
+    expect(whyText(positionsGap)).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
     const orders = screen.getByRole("table", { name: "Canary open orders" });
     const order = Array.from(orders.querySelectorAll("tbody tr"))[0]!;
     expect(order.querySelector('td[data-l="Type"]')!.textContent).toBe("LIMIT");
     expect(order.querySelector('td[data-l="Side"]')!.textContent).toBe("Buy");
     expect(order.querySelector('td[data-l="Ack latency"]')).toBeNull();
-    expect(orders.closest("section")!.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
+    expect(whyText(orders.closest("section")!.querySelector(".exec-blk-gaps")!)).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
     expect(screen.getByRole("tabpanel").textContent).toContain("2 of 2");
   });
 
@@ -283,7 +284,7 @@ describe("Reconciliation: the server's figures", () => {
     const openOrders = (col: Element) => Array.from(col.querySelectorAll(".exec-blk-triad-row")).find((r) => r.querySelector("dt")!.textContent === "Open orders")!;
     expect(openOrders(difference).querySelector("dd")!.textContent).toBe("1");
     const equity = Array.from(triad.querySelector('[data-col="broker"]')!.querySelectorAll(".exec-blk-triad-row")).find((r) => r.querySelector("dt")!.textContent === "Equity")!;
-    expect(equity.querySelector("[data-gap]")!.getAttribute("title")).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
+    expect(whyText(equity.querySelector("[data-gap]")!)).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
     expect(screen.getByRole("tabpanel").textContent).toContain("1 open finding");
     // "The findings relation, not a reconciliation run" is the line's title, not a second sentence.
     expect(screen.getByRole("tabpanel").textContent).not.toContain("not a reconciliation run");
@@ -301,7 +302,7 @@ describe("series and identity", () => {
     expect(panel.querySelector("div[title]")!.getAttribute("title")).toBe("Methodology portal.net-pnl.TEST_ONLY.v1");
     expect(panel.textContent).not.toContain("Methodology");
     expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Paper and Backtest series");
-    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-029)");
+    expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-029)");
   });
 
   it("the Alpha is linked only because alpha_id is published, the portfolio shows its name, the alpha name is Not published (FE-066) with its reason", async () => {
@@ -312,7 +313,7 @@ describe("series and identity", () => {
     expect(crumb.getByRole("link", { name: "Crypto Core" }).getAttribute("href")).toBe("/deployments/portfolios/pf_crypto");
     const sub = document.querySelector(".exec-stage-sub")!;
     expect(sub.textContent).toContain("Alpha alpha_TEST_ONLY");
-    expect(sub.querySelector("span[title]")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    expect(whyText(sub.querySelector(".exec-blk-why"))).toContain("ALPHA_NAME_NOT_PUBLISHED");
   });
 
   it("no alpha_id, no Alpha link: a body that cannot name the alpha links nothing and the portfolio keeps its id", async () => {

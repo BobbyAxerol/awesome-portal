@@ -22,6 +22,7 @@ import { PositionsOrdersTab } from "./PositionsOrdersTab";
 import { ReconciliationTab } from "./ReconGuardTabs";
 import { readCanaryView, type CanaryView, type OrderRow, type PositionRow } from "./readCanary";
 import { DEP, answering, canaryPort, legacyV1Body, parentBody, populatedV1, populatedWithFacts, refusing, v1Body } from "./canary.testbase";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -119,14 +120,14 @@ describe("dark V1 body: honest absence everywhere", () => {
     const chips = document.querySelector<HTMLElement>(".exec-stage-chips")!;
     // Runtime and Reconciliation are the server's stage facts: not published, so ONE `Not available` chip; FE-067 and the reason are in its title.
     expect(chips.querySelector('[data-chip="gaps"]')!.textContent).toBe("Not availableRuntime, Reconciliation");
-    expect(chips.querySelector('[data-chip="gaps"]')!.getAttribute("title")).toContain("Runtime: Not published (FE-067)");
-    expect(chips.querySelector('[data-chip="gaps"]')!.getAttribute("title")).toContain("LIVE_SOURCE_UNAVAILABLE");
+    expect(whyText(chips.querySelector('[data-chip="gaps"]')!)).toContain("Runtime: Not published (FE-067)");
+    expect(whyText(chips.querySelector('[data-chip="gaps"]')!)).toContain("LIVE_SOURCE_UNAVAILABLE");
     expect(chips.textContent).not.toMatch(/Running|Clean|Reconciled|\(FE-/);
     // The five figures are not tiles holding the words: one line names them, the reasons in its title.
     expect(screen.queryByRole("group", { name: "Canary figures" })).toBeNull();
     const gap = document.querySelector(".exec-cny-v2 > .exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Capital consumed, Gross notional, Daily PnL, Open orders, Broker equity");
-    expect(gap.getAttribute("title")).toContain("Capital consumed: Not published · source unavailable");
+    expect(whyText(gap)).toContain("Capital consumed: Not published · source unavailable");
     expect(gap.textContent).not.toMatch(/\b0\b/);
     for (const label of ["Envelope", "Positions & orders", "Reconciliation", "Guard rule"]) {
       await openTab(label);
@@ -141,7 +142,7 @@ describe("dark V1 body: honest absence everywhere", () => {
     expect(trial.textContent).toContain("Not available: Trial day, Started, Exit review opens");
     expect(trial.textContent).toContain("Duration 14 days");
     expect(trial.textContent).not.toMatch(/day 0|days left|in \d+ days|\(FE-/);
-    expect(trial.querySelector(".exec-blk-gaps")!.getAttribute("title")?.match(/Not published \(FE-071\)/g)).toHaveLength(3);
+    expect(whyText(trial.querySelector(".exec-blk-gaps")!).match(/Not published \(FE-071\)/g)).toHaveLength(3);
   });
 
   it("the series panel is `Not available` (FE-029 in its title, the source's state beside it): no chart, no invented line", async () => {
@@ -149,7 +150,7 @@ describe("dark V1 body: honest absence everywhere", () => {
     await ready();
     const panel = screen.getByRole("heading", { name: "Live vs Paper vs Backtest" }).closest("section")!;
     expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Live, Paper and Backtest series · Source unavailable");
-    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-029)");
+    expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-029)");
     expect(panel.querySelector("svg")).toBeNull();
   });
 
@@ -162,9 +163,9 @@ describe("dark V1 body: honest absence everywhere", () => {
     expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Cap", "Proposed"]);
     const gap = table.closest("section")!.querySelector(".exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Limit, Consumed, Used");
-    expect(gap.getAttribute("title")).toContain("Limit: Not published (FE-071)");
-    expect(gap.getAttribute("title")).toContain("BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED");
-    expect(gap.getAttribute("title")).toContain("LIVE_SOURCE_UNAVAILABLE");
+    expect(whyText(gap)).toContain("Limit: Not published (FE-071)");
+    expect(whyText(gap)).toContain("BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED");
+    expect(whyText(gap)).toContain("LIVE_SOURCE_UNAVAILABLE");
     expect(table.querySelector('[role="img"]')).toBeNull();
     expect(table.textContent).not.toMatch(/\d+(\.\d+)?%/);
   });
@@ -193,7 +194,7 @@ describe("dark V1 body: honest absence everywhere", () => {
     const panel = table.closest("section")!;
     // No verdict in this body: it is named in the gap line (FE-071 in the title), not a sentence.
     expect(panel.querySelector(".exec-blk-gaps")!.textContent).toContain("Verdict");
-    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Verdict: Not published (FE-071)");
+    expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("Verdict: Not published (FE-071)");
     expect(panel.textContent).not.toContain("Within envelope");
     expect(panel.textContent).toContain("Draft: values are proposed, not effective.");
   });
@@ -205,7 +206,7 @@ describe("dark V1 body: honest absence everywhere", () => {
     expect(where()).toContain("tab=positions-orders");
     const body = screen.getByRole("tabpanel");
     expect(body.textContent).toContain("Not available: Position rows");
-    expect(body.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(whyText(body.querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-072)");
     expect(body.textContent).not.toContain("(FE-072)");
     expect(body.querySelector("table")).toBeNull();
   });
@@ -217,7 +218,7 @@ describe("dark V1 body: honest absence everywhere", () => {
     // The dark body carries no figures: one `Not available` line instead of three columns of the same words.
     const panel = screen.getByRole("tabpanel");
     expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Internal, Broker and Difference figures");
-    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-072)");
     expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
   });
 
@@ -335,7 +336,7 @@ describe("what is blocking and rollback readiness", () => {
     expect(within(panel).queryAllByRole("listitem")).toHaveLength(0);
     const gap = panel.querySelector(".exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Flatten plan prepared, Paper twin running, Broker data fresh, Last rollback drill");
-    expect(gap.getAttribute("title")).toContain("Flatten plan prepared: Not published (FE-071)");
+    expect(whyText(gap)).toContain("Flatten plan prepared: Not published (FE-071)");
     expect(panel.textContent).not.toMatch(/Ready|Passed|\(FE-/);
   });
 });
@@ -377,7 +378,7 @@ describe("lit body (FIXTURE_LAB): figures, a fresh broker, trial day 6 of 14", (
     expect(trial.querySelectorAll('i[data-state="now"]')).toHaveLength(1);
     expect(trial.querySelectorAll('i[data-state="on"]')).toHaveLength(5);
     expect(trial.textContent).toContain("Not available: Started, Exit review opens");
-    expect(trial.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Exit review opens: Not published (FE-071)");
+    expect(whyText(trial.querySelector(".exec-blk-gaps")!)).toContain("Exit review opens: Not published (FE-071)");
   });
 
   it("a fresh broker: the freshness chip carries its time and the rollback check its last update; no stale banner", async () => {
@@ -415,7 +416,7 @@ describe("V2 following-parent body: the proposal only", () => {
     expect(screen.queryByRole("group", { name: "Canary figures" })).toBeNull();
     const gap = document.querySelector(".exec-cny-v2 > .exec-blk-gaps")!;
     expect(gap.textContent).toBe("Not available: Capital consumed, Gross notional, Daily PnL, Open orders, Broker equity");
-    expect(gap.getAttribute("title")?.match(/Not published \(FE-072\)/g)).toHaveLength(5);
+    expect(whyText(gap)?.match(/Not published \(FE-072\)/g)).toHaveLength(5);
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
     expect(within(table).getByRole("columnheader", { name: "Proposed" })).toBeTruthy();
     expect(table.querySelector('[data-full="9007199254740993.123456789123456789"]')).not.toBeNull();
@@ -557,7 +558,7 @@ describe("tabs and navigation", () => {
     expect(within(crumb).getByRole("link", { name: "Alpha Fleet" }).getAttribute("href")).toBe("/deployments/alphas");
     expect(crumb.textContent).toContain(DEP);
     expect(document.querySelector(".exec-stage-sub")!.textContent).toBe("BINANCE · Alpha Not available");
-    expect(document.querySelector('.exec-stage-sub [data-gap="FE-066"]')!.getAttribute("title")).toContain("Not published (FE-066)");
+    expect(whyText(document.querySelector('.exec-stage-sub [data-gap="FE-066"]')!)).toContain("Not published (FE-066)");
   });
 
   it("the crumb links the portfolio and the account the read published; there is no Alpha link (the alpha id is not in the read)", async () => {
@@ -664,7 +665,7 @@ describe("a lit V1 body: rows under the source's own names, compliance figures, 
     expect(table.closest("div[title]")!.getAttribute("title")).toBe("Columns are the source's own field names.");
     expect(table.closest("section")!.textContent).not.toContain("Columns are the source's own field names");
     expect(table.closest("section")!.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Typed position rows");
-    expect(table.closest("section")!.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(whyText(table.closest("section")!.querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-072)");
     expect(table.textContent).not.toMatch(NO_DASH);
     expect(Array.from(table.querySelectorAll("tbody td")).every((td) => td.getAttribute("data-l"))).toBe(true);
   });

@@ -14,6 +14,7 @@ import { validateAgainst } from "../../testkit/schema";
 import LiveScreen from "./index";
 import { liveModelV1, liveModelV2, type LiveModel } from "./model";
 import { DEPLOYMENT_ID, SOURCE_AS_OF, fakeApi, ok, populatedV1, v1Of, v1Read, v2Of, v2Populated } from "./live.testbase";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -108,13 +109,13 @@ describe("Exposure & orders", () => {
     // Leverage and Ack latency are no column (no row fills them): each is named once under its table, the reason in the title.
     expect(first.querySelector('td[data-l="Leverage"]')).toBeNull();
     expect(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Leverage");
-    expect(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
+    expect(whyText(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!)).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
     expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("2 of 2");
     const orders = screen.getByRole("table", { name: "Orders" });
     const order = Array.from(orders.querySelectorAll("tbody tr"))[0]!;
     expect(order.querySelector('td[data-l="Status"]')!.textContent).toBe("ACCEPTED");
     expect(order.querySelector('td[data-l="Ack latency"]')).toBeNull();
-    expect(screen.getByRole("region", { name: "Orders" }).querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
+    expect(whyText(screen.getByRole("region", { name: "Orders" }).querySelector(".exec-blk-gaps")!)).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
   });
 
   it("the Triad rows are the server's figures; Difference is the server's, positions 2 / 2 / 0", async () => {
@@ -175,7 +176,7 @@ describe("series, gap window, identity", () => {
     const crumb = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
     expect(crumb.getByRole("link", { name: "alpha_TEST_ONLY" }).getAttribute("href")).toBe("/deployments/alphas/alpha_TEST_ONLY");
     expect(crumb.getByRole("link", { name: "Crypto Core" }).getAttribute("href")).toBe("/deployments/portfolios/pf_crypto");
-    expect(document.querySelector(".exec-stage-sub span[title]")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    expect(whyText(document.querySelector(".exec-stage-sub .exec-blk-why"))).toContain("ALPHA_NAME_NOT_PUBLISHED");
     expect(chip("runtime")).toContain("Running");
     cleanup();
     const none = published();

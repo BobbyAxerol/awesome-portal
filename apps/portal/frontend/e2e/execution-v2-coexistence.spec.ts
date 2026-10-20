@@ -775,6 +775,63 @@ const KNOWN_AXE: Readonly<Record<string, Readonly<Record<string, number>>>> = {}
  */
 const KNOWN_ACCESS: Readonly<Record<string, string>> = {};
 
+/**
+ * RV-06 · the reason behind a `Not available` line is a button, not a hover. Real key presses and a real tap on the Workbench
+ * (its Overview prints "Not available: ..." lines): Tab reaches it with a visible ring, Enter and Space open and close it,
+ * Escape closes it and keeps focus, and a tap opens it. Closed, the page prints no request id.
+ */
+test.describe("not-available disclosure", () => {
+  const ROUTE = "/deployments/paper/dep_paper_01";
+  const ROOT = '[data-screen="workbench-v2"]';
+  const BUTTON = ".exec-blk-gaps .exec-blk-why-btn";
+
+  async function open(page: Page) {
+    await openLane(page);
+    await page.goto(ROUTE);
+    await ready(page, ROOT);
+    await page.waitForLoadState("networkidle");
+    const button = page.locator(BUTTON).first();
+    await expect(button).toBeVisible();
+    return button;
+  }
+
+  test("Tab reaches it with a visible ring; Enter and Space open and close it; Escape closes it and keeps focus", async ({ page }) => {
+    const button = await open(page);
+    expect(await page.locator(ROOT).first().innerText()).not.toMatch(/FE-\d/);
+    let reached = false;
+    for (let i = 0; i < 200 && !reached; i += 1) {
+      await page.keyboard.press("Tab");
+      reached = await button.evaluate((el) => el === document.activeElement);
+    }
+    expect(reached, "Tab never reached the disclosure").toBe(true);
+    expect(await button.evaluate((el) => getComputedStyle(el).outlineStyle)).not.toBe("none");
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await page.keyboard.press("Enter");
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    const body = page.locator(`#${await button.getAttribute("aria-controls")}`);
+    await expect(body).toContainText(/Not published/);
+    await page.keyboard.press("Enter");
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await page.keyboard.press("Space");
+    await expect(button).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Escape");
+    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(button).toBeFocused();
+  });
+
+  test.describe("touch", () => {
+    test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
+    test("a tap opens it and a second tap closes it", async ({ page }) => {
+      const button = await open(page);
+      await button.tap();
+      await expect(button).toHaveAttribute("aria-expanded", "true");
+      await expect(page.locator(`#${await button.getAttribute("aria-controls")}`)).toContainText(/Not published/);
+      await button.tap();
+      await expect(button).toHaveAttribute("aria-expanded", "false");
+    });
+  });
+});
+
 for (const [name, route, root] of SCREENS) {
   test(`access · ${name} · no sideways scroll, a clean Tab walk, a visible focus ring, axe, at 1440 / 1024 / 390`, async ({ page, baseURL }) => {
     test.setTimeout(120_000);

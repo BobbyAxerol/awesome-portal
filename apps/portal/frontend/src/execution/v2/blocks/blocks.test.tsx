@@ -9,6 +9,7 @@ import { readUtcEpochMs, type UtcEpochMs } from "../../screenDataContract";
 import { readMetric, type Metric } from "../boundary";
 import { FE as FLEET_FE } from "../screens/fleet/fleetModel";
 import { FE as OPS_FE } from "../screens/operations/notPublished";
+import { whyText } from "../gapWhyTestUtil";
 import {
   CompactGaps,
   EventFeed,
@@ -16,6 +17,7 @@ import {
   FE_FLEET,
   FE_OPERATIONS,
   FE_REQUEST_LABEL,
+  GAP_NEXT,
   JourneySpine,
   Kpi,
   KpiStrip,
@@ -81,7 +83,7 @@ describe("NotPublished and the one FE table", () => {
 });
 
 describe("CompactGaps and GapLine (stage screens)", () => {
-  it("outside CompactGaps a gap prints its request id; inside it prints `Not available` and the id rides in the title", () => {
+  it("outside CompactGaps a gap prints its request id; inside it prints `Not available` and the id sits in its disclosure", () => {
     const outside = render(<NotPublished id="FE-071">Used ratio</NotPublished>);
     expect(outside.container.textContent).toContain("Not published (FE-071)");
     cleanup();
@@ -92,19 +94,112 @@ describe("CompactGaps and GapLine (stage screens)", () => {
     );
     expect(inside.container.textContent).toBe("Not available");
     const gap = inside.container.querySelector("[data-gap]")!;
-    expect(gap.getAttribute("title")).toBe(`Not published (FE-071): Used ratio · ${FE_REQUEST_LABEL["FE-071"]} · SOME_CODE`);
+    expect(gap.getAttribute("title")).toBeNull();
+    expect(whyText(gap)).toBe(`Not published (FE-071): Used ratio · ${FE_REQUEST_LABEL["FE-071"]} · SOME_CODE`);
   });
 
-  it("GapLine is one line of the missing facts with every id and reason in its title, and nothing for an empty list", () => {
+  it("GapLine is one line of the missing facts with every id and reason in its disclosure, and nothing for an empty list", () => {
     const { container } = render(
       <GapLine items={[{ label: "Limit", id: "FE-071" }, { label: "Latency", reason: "CODE_X" }]} because="Source unavailable" />,
     );
-    expect(container.textContent).toBe("Not available: Limit, Latency · Source unavailable");
-    const title = container.querySelector(".exec-blk-gaps")!.getAttribute("title")!;
+    const line = container.querySelector(".exec-blk-gaps")!;
+    expect(line.textContent).toBe("Not available: Limit, Latency · Source unavailable");
+    expect(line.getAttribute("title")).toBeNull();
+    const title = whyText(line);
     expect(title).toContain("Limit: Not published (FE-071)");
     expect(title).toContain("Latency: Not published · CODE_X");
     cleanup();
     expect(render(<GapLine items={[]} />).container.textContent).toBe("");
+  });
+});
+
+describe("GapWhy · the reason is reachable by keyboard and touch, not only by hover (RV-06)", () => {
+  const line = () => render(<GapLine items={[{ label: "Limit", id: "FE-071", reason: "CODE_X" }]} />);
+
+  it("is one real button with a name, closed by default: aria-expanded=false, no aria-controls, no reason in the page", () => {
+    line();
+    const button = screen.getByRole("button", { name: "Why not available: Limit" });
+    expect(button.tagName).toBe("BUTTON");
+    expect(button.getAttribute("type")).toBe("button");
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(button.hasAttribute("aria-controls")).toBe(false);
+    expect(document.body.textContent).not.toContain("FE-071");
+    expect(document.body.textContent).not.toContain("CODE_X");
+    expect(document.querySelectorAll("[title]")).toHaveLength(0);
+  });
+
+  it("a tap or click opens it: aria-expanded=true, aria-controls names the body, which holds the id, the label, the reason and the next action", () => {
+    line();
+    const button = screen.getByRole("button", { name: "Why not available: Limit" });
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    const body = document.getElementById(button.getAttribute("aria-controls")!)!;
+    expect(body.textContent).toContain(`Limit: Not published (FE-071): ${FE_REQUEST_LABEL["FE-071"]} · CODE_X`);
+    expect(body.textContent).toContain(GAP_NEXT);
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(document.getElementById(body.id)).toBeNull();
+  });
+
+  it("is a Tab stop and a native button, so Enter and Space activate it (the real key presses are in the coexistence spec)", () => {
+    line();
+    const button = screen.getByRole("button", { name: "Why not available: Limit" });
+    expect(button.tabIndex).toBe(0);
+    expect(button.hasAttribute("disabled")).toBe(false);
+    button.focus();
+    expect(document.activeElement).toBe(button);
+    // A native button turns Enter and Space into this same click; the handler is the click, not a key table.
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("Escape closes it and puts focus back on the button, and does not reach a dialog around it", () => {
+    const outer = vi.fn();
+    render(
+      <div onKeyDown={(e) => outer(e.key)}>
+        <GapLine items={[{ label: "Limit", id: "FE-071" }]} />
+      </div>,
+    );
+    const button = screen.getByRole("button", { name: "Why not available: Limit" });
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    fireEvent.keyDown(document.getElementById(button.getAttribute("aria-controls")!)!, { key: "Escape" });
+    expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).toBe(button);
+    expect(outer).not.toHaveBeenCalled();
+    // With nothing open Escape is not swallowed: the dialog around it still hears it.
+    fireEvent.keyDown(button, { key: "Escape" });
+    expect(outer).toHaveBeenCalledWith("Escape");
+  });
+
+  it("a compact cell is the words `Not available` as the button: its name starts with the visible text, the reason stays inside", () => {
+    render(
+      <CompactGaps>
+        <NotPublished id="FE-071" titleReason="SOME_CODE">Used ratio</NotPublished>
+      </CompactGaps>,
+    );
+    const button = screen.getByRole("button", { name: "Not available: Used ratio, reason" });
+    expect(button.textContent).toBe("Not available");
+    expect(document.body.textContent).not.toContain("SOME_CODE");
+    fireEvent.click(button);
+    expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById(button.getAttribute("aria-controls")!)!.textContent).toContain("SOME_CODE");
+  });
+
+  it("two lines are two independent disclosures with distinct bodies", () => {
+    render(
+      <>
+        <GapLine items={[{ label: "Limit", id: "FE-071" }]} />
+        <GapLine items={[{ label: "Latency", reason: "CODE_X" }]} />
+      </>,
+    );
+    const [a, b] = screen.getAllByRole("button");
+    fireEvent.click(a!);
+    expect(a!.getAttribute("aria-expanded")).toBe("true");
+    expect(b!.getAttribute("aria-expanded")).toBe("false");
+    expect(document.body.textContent).not.toContain("CODE_X");
+    fireEvent.click(b!);
+    expect(a!.getAttribute("aria-controls")).not.toBe(b!.getAttribute("aria-controls"));
   });
 });
 

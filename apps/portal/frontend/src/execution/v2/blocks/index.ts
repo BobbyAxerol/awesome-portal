@@ -21,7 +21,9 @@ export {
   FE_REQUEST_LABEL,
   NOT_PUBLISHED,
   CompactGaps,
+  GAP_NEXT,
   GapLine,
+  GapWhy,
   NotPublished,
   feLabel,
   gapTitle,
@@ -29,7 +31,7 @@ export {
   notPublishedReason,
   notPublishedText,
 } from "./notPublished";
-export type { FeId, GapItem, NotPublishedId, NotPublishedProps, UnpublishedFact } from "./notPublished";
+export type { FeId, GapItem, GapWhyProps, NotPublishedId, NotPublishedProps, UnpublishedFact } from "./notPublished";
 export { NotAvailableLine, unavailableTitle } from "./NotAvailableLine";
 export type { NotAvailableLineProps, UnavailableFact } from "./NotAvailableLine";
 export { QuietIds } from "./QuietIds";

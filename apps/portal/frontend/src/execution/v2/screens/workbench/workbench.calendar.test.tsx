@@ -12,6 +12,7 @@ import { loadCanonical } from "../../testkit/loadCanonical";
 import PaperWorkbenchScreen from "./index";
 import { buildWorkbench } from "./model";
 import { DEP, STRATEGY, envelopeOf, fakeApi, paperWire, sessionOf, type Wire } from "./workbench.harness.fixtures";
+import { whyText } from "../../gapWhyTestUtil";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
@@ -71,19 +72,19 @@ describe("VN market calendar", () => {
     const head = document.querySelector(".exec-wb-sub")!;
     const gap = head.querySelector('[data-gap="FE-070"]')!;
     expect(gap.textContent).toBe("Not available");
-    expect(gap.getAttribute("title")).toContain("Not published (FE-070)");
-    expect(gap.getAttribute("title")).toContain("N28_VENUE_CALENDAR_NOT_ACTIVE");
+    expect(whyText(gap)).toContain("Not published (FE-070)");
+    expect(whyText(gap)).toContain("N28_VENUE_CALENDAR_NOT_ACTIVE");
     const panel = screen.getByRole("heading", { name: "VN market sessions" }).closest("section")!;
     const line = panel.querySelector(".exec-blk-gaps")!;
     expect(line.textContent).toBe("Not available: Open now, Time zone, Windows, Breaks, Holidays");
-    expect(line.getAttribute("title")).toContain("N28_VENUE_CALENDAR_NOT_ACTIVE");
+    expect(whyText(line)).toContain("N28_VENUE_CALENDAR_NOT_ACTIVE");
     expect(panel.querySelector("table")).toBeNull();
   });
 
   it("a profile without the calendar says Not available (FE-070 in the title) without a reason and draws no sessions panel", async () => {
     await mount(vnm(undefined));
     expect(document.querySelector(".exec-wb-sub")!.textContent).toContain("VN market calendar: Not available");
-    expect(document.querySelector('.exec-wb-sub [data-gap="FE-070"]')!.getAttribute("title")).toBe("Not published (FE-070): VN market session calendar");
+    expect(whyText(document.querySelector('.exec-wb-sub [data-gap="FE-070"]')!)).toBe("Not published (FE-070): VN market session calendar");
     expect(screen.queryByRole("heading", { name: "VN market sessions" })).toBeNull();
   });
 
