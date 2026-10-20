@@ -21,7 +21,7 @@ import { BeforeScaleUp } from "./Rail";
 import { PositionsOrdersTab } from "./PositionsOrdersTab";
 import { ReconciliationTab } from "./ReconGuardTabs";
 import { readCanaryView, type CanaryView, type OrderRow, type PositionRow } from "./readCanary";
-import { DEP, answering, canaryPort, parentBody, populatedV1, populatedWithFacts, refusing, v1Body } from "./canary.testbase";
+import { DEP, answering, canaryPort, legacyV1Body, parentBody, populatedV1, populatedWithFacts, refusing, v1Body } from "./canary.testbase";
 
 afterEach(cleanup);
 
@@ -118,8 +118,12 @@ describe("dark V1 body: honest absence everywhere", () => {
     await ready();
     const chips = document.querySelector<HTMLElement>(".exec-stage-chips")!;
     expect(chips.textContent).toContain("Runtime");
-    expect(chips.textContent).toContain("Not published (FE-067)");
-    expect(chips.textContent).toContain("Not published (FE-072)");
+    // Runtime and Reconciliation are the server's stage facts: Not published (FE-067), the reason in the title.
+    expect(chips.textContent?.match(/Not published \(FE-067\)/g)).toHaveLength(2);
+    expect(Array.from(chips.querySelectorAll(".exec-blk-np")).map((n) => n.getAttribute("title"))).toEqual([
+      expect.stringContaining("LIVE_SOURCE_UNAVAILABLE"),
+      expect.stringContaining("LIVE_SOURCE_UNAVAILABLE"),
+    ]);
     expect(chips.textContent).not.toMatch(/Running|Clean|Reconciled/);
     const kpis = within(screen.getByRole("group", { name: "Canary figures" }));
     for (const label of ["Capital consumed", "Gross notional", "Daily PnL", "Open orders", "Broker equity"]) {
@@ -151,8 +155,23 @@ describe("dark V1 body: honest absence everywhere", () => {
     expect(panel.querySelector("svg")).toBeNull();
   });
 
-  it("Envelope: a draft is Proposed with the exact caps; Limit is the compliance panel's own caps, Consumed and Used are Not published (FE-071); no gauge is drawn", async () => {
+  it("Envelope: a draft is Proposed with the exact caps; Limit, Consumed and Used are the compliance rows' facts, Not published (FE-071) with the reason in the title; no gauge is drawn", async () => {
     mount(canaryPort(answering(v1Body())));
+    await ready();
+    const table = screen.getByRole("table", { name: "Canary envelope caps" });
+    expect(table.textContent).toContain("5,000.00");
+    const bodyRows = Array.from(table.querySelectorAll("tbody tr"));
+    const cells = (label: string) => bodyRows.map((row) => row.querySelector(`td[data-l="${label}"] .exec-blk-np`));
+    // Duration has no compliance row: its Limit stays plain `Not published`; the four caps carry the server's reason.
+    expect(cells("Limit").slice(0, 4).map((n) => n?.getAttribute("title"))).toEqual(Array(4).fill(expect.stringContaining("BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED")));
+    expect(cells("Consumed").slice(0, 4).map((n) => n?.getAttribute("title"))).toEqual(Array(4).fill(expect.stringContaining("LIVE_SOURCE_UNAVAILABLE")));
+    expect(cells("Used").slice(0, 4).every((n) => n !== null && n !== undefined)).toBe(true);
+    expect(table.querySelector('[role="img"]')).toBeNull();
+    expect(table.textContent).not.toMatch(/\d+(\.\d+)?%/);
+  });
+
+  it("Envelope (a body from before BE-P2): a draft is Proposed with the exact caps; Limit is the compliance panel's own caps, Consumed and Used are Not published (FE-071); no gauge is drawn", async () => {
+    mount(canaryPort(answering(legacyV1Body())));
     await ready();
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
     expect(within(table).getByRole("columnheader", { name: "Proposed" })).toBeTruthy();

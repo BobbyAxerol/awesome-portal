@@ -32,7 +32,7 @@ import {
 } from "./model";
 import { countLine } from "./parts";
 import { readCanaryView, type CanaryView } from "./readCanary";
-import { parentBody, populatedV1, populatedWithFacts, v1Body } from "./canary.testbase";
+import { legacyV1Body, parentBody, populatedV1, populatedWithFacts, v1Body } from "./canary.testbase";
 
 function viewOf(raw: unknown): CanaryView {
   const result = readCanaryView(readCanaryByVersion(raw));
@@ -41,11 +41,17 @@ function viewOf(raw: unknown): CanaryView {
 }
 
 describe("header chips (D13): a source that does not publish is a request id, never a green word", () => {
-  it("dark V1: Runtime FE-067, Reconciliation FE-072, freshness not available", () => {
+  it("dark V1: Runtime and Reconciliation are the stage facts' Not published (FE-067) with the server's reason, freshness not available", () => {
     const chips = chipsOf(viewOf(v1Body()));
-    expect(chips.runtime).toEqual({ state: "not-published", id: "FE-067" });
-    expect(chips.reconciliation).toEqual({ state: "not-published", id: "FE-072" });
+    expect(chips.runtime).toEqual({ state: "not-published", id: "FE-067", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
+    expect(chips.reconciliation).toEqual({ state: "not-published", id: "FE-067", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
     expect(chips.freshness).toEqual({ state: "not-available", reason: "Broker source unavailable" });
+  });
+
+  it("a body from before BE-P2 (no stage_facts): both chips are Not published (FE-067) without a reason", () => {
+    const chips = chipsOf(viewOf(legacyV1Body()));
+    expect(chips.runtime).toEqual({ state: "not-published", id: "FE-067" });
+    expect(chips.reconciliation).toEqual({ state: "not-published", id: "FE-067" });
   });
 
   it("a lit broker: Fresh with its own time; stale is a warn dot, not a green one", () => {
@@ -236,9 +242,20 @@ describe("rollback readiness", () => {
     for (const item of items.filter((i) => i.key !== "broker")) expect(item.checked).toBeNull();
   });
 
-  it("stale broker is a stale flag; dark broker is not available with no date", () => {
+  it("stale broker is a stale flag; dark broker is not available with no date (a body without the server's items)", () => {
     expect(rollbackItems(viewOf(populatedV1({ brokerFreshness: "STALE" })))[2].status).toEqual({ kind: "flag", flag: "stale", label: "Stale" });
-    expect(rollbackItems(viewOf(v1Body()))[2]).toMatchObject({ status: { kind: "flag", flag: "na", label: "Not available" }, checked: null });
+    expect(rollbackItems(viewOf(legacyV1Body()))[2]).toMatchObject({ status: { kind: "flag", flag: "na", label: "Not available" }, checked: null });
+  });
+
+  it("the dark body's four items are the server's Not published (FE-071) facts, each with its own reason", () => {
+    const items = rollbackItems(viewOf(v1Body()));
+    expect(items.map((i) => [i.key, i.status])).toEqual([
+      ["flatten", { kind: "not-published", reasonCode: "FLATTEN_PLAN_NOT_RECORDED" }],
+      ["twin", { kind: "not-published", reasonCode: "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED" }],
+      ["broker", { kind: "not-published", reasonCode: "LIVE_SOURCE_UNAVAILABLE" }],
+      ["drill", { kind: "not-published", reasonCode: "ROLLBACK_DRILL_NOT_RECORDED" }],
+    ]);
+    expect(items.every((i) => i.checked === null)).toBe(true);
   });
 
   it("the head says Ready only for the server's boolean true on a ready panel with nothing against it", () => {
@@ -279,8 +296,8 @@ describe("rollback readiness", () => {
     }
   });
 
-  it("limit rows carry the compliance panel's own limit and consumed figure; the headroom and unmatched keys are listed, not divided", () => {
-    const dark = limitRows(viewOf(v1Body()));
+  it("limit rows carry the compliance panel's own limit and consumed figure; the headroom and unmatched keys are listed, not divided (a body without the typed rows)", () => {
+    const dark = limitRows(viewOf(legacyV1Body()));
     expect(dark.map((r) => r.limit?.kind)).toEqual(["value", "value", "value", "value", undefined]);
     expect(dark.every((r) => r.consumed === null)).toBe(true);
     const lit = limitRows(viewOf(populatedWithFacts()));

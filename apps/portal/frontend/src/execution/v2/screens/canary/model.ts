@@ -18,13 +18,17 @@
 import type { StageChipValue, StageChips } from "../../blocks";
 import type { BlockerItem } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
-import { formatAsOf, readAsOf, type Metric } from "../../boundary";
+import { type Metric } from "../../boundary";
 import type { SpineStageId } from "../../blocks";
 import { stageWhy, type StageWhyKey } from "../stage/reasons";
+import { reconciliationChipFrom, runtimeChipFrom, timeText } from "../stage/factChips";
+import type { CapKey } from "../../../stageFacts";
+import type { FactCell } from "../../readers/stageFactViews";
 import {
   KPI_KEYS,
   KPI_VALUE_STATES,
   type CanaryView,
+  type CapRowFact,
   type DecimalFact,
   type KpiFact,
   type KpiKey,
@@ -46,21 +50,22 @@ export const ACCESS_PATH = "/administration/profile-access";
 /** The most rows a table prints; the rest is a count, never a longer list (CLAUDE.md s8, perf budget). */
 export const ROW_CAP = 200;
 
-const FE_RUNTIME = "FE-067" as const;
 const FE_ENVELOPE = "FE-071" as const;
 const FE_ROWS = "FE-072" as const;
 
 /* ── header ───────────────────────────────────────────────────────────────── */
 
-function timeOf(ms: number | null): string | null {
-  const instant = ms === null ? null : readAsOf(ms);
-  return instant === null ? null : formatAsOf(instant);
-}
+const timeOf = timeText;
 
+/**
+ * Runtime from `stage_facts.runtime` (FE-067): RUNNING | PAUSED | HALTED | STOPPED when the server published a word, else
+ * `Not published (FE-067)` with the server's reason code in the title. The pinned-null legacy `runtime_state` is only a
+ * fallback for a body without `stage_facts`, printed neutral and never as a state.
+ */
 function runtimeChip(view: CanaryView): StageChipValue {
-  const word = view.runtimeState;
-  if (word === null) return { state: "not-published", id: FE_RUNTIME };
-  switch (word.toUpperCase()) {
+  if (view.runtime !== null || view.runtimeState === null) return runtimeChipFrom(view.runtime);
+  // A body from before `stage_facts` that still carries a runtime word on the pinned-null member: the earlier mapping stands.
+  switch (view.runtimeState.toUpperCase()) {
     case "RUNNING":
       return { state: "flag", kind: "ok", label: "Running" };
     case "HALTED":
@@ -71,7 +76,7 @@ function runtimeChip(view: CanaryView): StageChipValue {
       return { state: "flag", kind: "paused", label: "Paused" };
     default:
       // A word this build has no mapping for is printed as the source wrote it, in a neutral dot: never a green tick.
-      return { state: "dot", tone: "mute", text: word };
+      return { state: "dot", tone: "mute", text: view.runtimeState };
   }
 }
 
@@ -100,8 +105,8 @@ export function chipsOf(view: CanaryView): StageChips {
   return {
     runtime: runtimeChip(view),
     freshness: freshnessChip(view),
-    // The three source panels exist, but no reconciliation verdict is published (FE-072): no "Clean".
-    reconciliation: { state: "not-published", id: FE_ROWS },
+    // The server's statement about the findings relation (FE-067), never a "Clean" of our own.
+    reconciliation: reconciliationChipFrom(view.reconciliation),
   };
 }
 
@@ -133,6 +138,30 @@ export function trialOf(view: CanaryView): TrialFact {
     return { kind: "day", day: dayIndex, total: durationDays, ticks, tick };
   }
   return { kind: "unstated", durationDays, proposed: view.proposalOnly };
+}
+
+/** One date of the trial strip: the published instant, or `Not published (FE-071)` with the server's reason. */
+export type Stamp = { kind: "time"; text: string } | { kind: "not-published"; reasonCode: string | null };
+
+function stampOf(c: FactCell<number> | null): Stamp {
+  if (c === null) return { kind: "not-published", reasonCode: null };
+  if (c.kind === "not-published") return { kind: "not-published", reasonCode: c.reasonCode };
+  const text = timeOf(c.value);
+  return text === null ? { kind: "not-published", reasonCode: null } : { kind: "time", text };
+}
+
+export interface TrialCalendar {
+  started: Stamp;
+  exitReviewOpens: Stamp;
+}
+
+/**
+ * The strip's two dates, exactly as the server states them (`lifecycle.trial`). The exit-review date is the SERVER's
+ * (`started_at + duration_days x 24h`, published only with a stated start); nothing here is added, counted down or compared
+ * with the clock. A body without the member prints both as not published.
+ */
+export function trialCalendar(view: CanaryView): TrialCalendar {
+  return { started: stampOf(view.trial?.startedAtMs ?? null), exitReviewOpens: stampOf(view.trial?.exitReviewOpensAtMs ?? null) };
 }
 
 /* ── KPI ──────────────────────────────────────────────────────────────────── */
@@ -250,25 +279,90 @@ export interface LimitRow {
   key: LimitKey;
   label: string;
   value: DecimalFact | null;
-  /** The cap `envelope_compliance.limits` states, when it states one; `null` = not in this response (FE-071). */
+  /**
+   * The cap's LIMIT: the base risk profile's limit from the compliance row when the body has one; otherwise the cap the
+   * legacy compliance panel states. `null` = not published (`limitReason` is the server's reason when it gave one).
+   */
   limit: DecimalFact | null;
-  /** The consumed figure keyed by this cap's published name, when the compliance panel states one; `null` = not published (FE-071). */
+  limitReason: string | null;
+  /** The consumed figure the server published; `null` = not published (`consumedReason`). A published exact zero is a value. */
   consumed: DecimalFact | null;
-  /** The server's used ratio, when one is published; `undefined` otherwise (the gauge then says so). */
+  consumedReason: string | null;
+  /** The SERVER's used ratio ("0.25"); `undefined` otherwise (the gauge then says so). Never divided here. */
   usedRatio: string | undefined;
+  usedReason: string | null;
+  /** The instant the consumed figure was read; `null` = not published. */
+  asOf: string | null;
+}
+
+function valueOf(c: FactCell<DecimalFact>): DecimalFact | null {
+  return c.kind === "value" ? c.value : null;
+}
+function reasonOf(c: FactCell<unknown>): string | null {
+  return c.kind === "not-published" ? c.reasonCode : null;
+}
+
+function rowFigures(row: CapRowFact) {
+  return {
+    limit: valueOf(row.policyLimit),
+    limitReason: reasonOf(row.policyLimit),
+    consumed: valueOf(row.consumed),
+    consumedReason: reasonOf(row.consumed),
+    usedReason: reasonOf(row.usedRatio),
+    asOf: row.asOfMs.kind === "value" ? timeOf(row.asOfMs.value) : null,
+  };
 }
 
 export function limitRows(view: CanaryView): readonly LimitRow[] {
   const currency = view.envelope?.currency ?? null;
   const compliance = view.complianceFacts;
-  return (view.envelope?.limits ?? []).map((l: LimitFact) => ({
-    key: l.key,
-    label: LIMIT_MONEY[l.key] && currency !== null ? `${LIMIT_LABEL[l.key]} (${currency})` : LIMIT_LABEL[l.key],
-    value: l.value,
-    limit: compliance?.limits[l.key] ?? null,
-    consumed: compliance?.consumed?.byLimit[l.key] ?? null,
-    usedRatio: l.usedRatio,
-  }));
+  return (view.envelope?.limits ?? []).map((l: LimitFact): LimitRow => {
+    const label = LIMIT_MONEY[l.key] && currency !== null ? `${LIMIT_LABEL[l.key]} (${currency})` : LIMIT_LABEL[l.key];
+    const base = { key: l.key, label, value: l.value, usedRatio: l.usedRatio };
+    if (l.row !== null) return { ...base, ...rowFigures(l.row) };
+    return {
+      ...base,
+      limit: compliance?.limits[l.key] ?? null,
+      limitReason: null,
+      consumed: compliance?.consumed?.byLimit[l.key] ?? null,
+      consumedReason: null,
+      usedReason: null,
+      asOf: null,
+    };
+  });
+}
+
+export const CAP_LABEL: Readonly<Record<CapKey, string>> = {
+  capital: "Capital cap",
+  gross_notional: "Gross notional cap",
+  daily_loss: "Daily loss cap",
+  open_orders: "Open orders (max)",
+};
+
+export interface VerdictLine {
+  flag: FlagKind;
+  label: string;
+  /** What the server could not prove, in words; empty when it proved all four caps. */
+  sentence: string;
+}
+
+/**
+ * The SERVER's envelope verdict (FE-071), worded as it states it: WITHIN_ENVELOPE only when all four caps are proven and
+ * none is above; BREACH as soon as one proven figure is above its approved limit; otherwise UNDETERMINED naming the caps it
+ * could not prove. `null` = the body carries no verdict. Nothing is compared here.
+ */
+export function verdictLine(view: CanaryView): VerdictLine | null {
+  const verdict = view.verdict;
+  if (verdict === null) return null;
+  const named = verdict.undeterminedCaps.map((cap) => CAP_LABEL[cap].toLowerCase());
+  switch (verdict.state) {
+    case "WITHIN_ENVELOPE":
+      return { flag: "ok", label: "Within envelope", sentence: "All four caps are proven and none is above its approved limit." };
+    case "BREACH":
+      return { flag: "attention", label: "Breach", sentence: named.length === 0 ? "A proven figure is above its approved limit." : `A proven figure is above its approved limit. Not proven: ${named.join(", ")}.` };
+    case "UNDETERMINED":
+      return { flag: "partial", label: "Undetermined", sentence: `Not proven: ${named.join(", ")}.` };
+  }
 }
 
 export interface ComplianceNotes {
@@ -339,7 +433,7 @@ export const decisionReason = (spec: DecisionSpec): string => stageWhy(spec.why)
 /* ── rollback readiness ───────────────────────────────────────────────────── */
 
 export type RollbackStatus =
-  | { kind: "not-published" }
+  | { kind: "not-published"; reasonCode?: string }
   | { kind: "flag"; flag: FlagKind; label: string };
 
 export interface RollbackItem {
@@ -349,11 +443,42 @@ export interface RollbackItem {
   status: RollbackStatus;
   /** The check date line: the published instant, or `null` = `Not published (FE-071)`. */
   checked: string | null;
+  /** The server's reason for an unpublished check date or status (the tooltip), when it gave one. */
+  checkedReason: string | null;
   /** What `checked` is called ("Checked", "Last update"). */
   checkedWord: string;
 }
 
+const ROLLBACK_LABEL = {
+  flatten_plan: { key: "flatten", label: "Flatten plan prepared", note: "", word: "Checked" },
+  paper_twin: { key: "twin", label: "Paper twin running", note: "Same alpha, simulated", word: "Checked" },
+  broker_data: { key: "broker", label: "Broker data fresh", note: "", word: "Last update" },
+  rollback_drill: { key: "drill", label: "Last rollback drill", note: "", word: "Last drill" },
+} as const;
+
 export function rollbackItems(view: CanaryView): readonly RollbackItem[] {
+  // The server's four checks (FE-071) when the body carries them: each is ITS statement, with its own date and reason.
+  if (view.rollbackChecks !== null) {
+    const brokerStale = view.broker !== null && (view.broker.state === "stale" || view.broker.freshness === "STALE");
+    return view.rollbackChecks.map((check): RollbackItem => {
+      const spec = ROLLBACK_LABEL[check.key];
+      let status: RollbackStatus;
+      if (check.ready.kind === "not-published") status = { kind: "not-published", reasonCode: check.ready.reasonCode };
+      else if (check.ready.value === false) status = { kind: "flag", flag: "attention", label: "Not ready" };
+      // A stale broker snapshot contradicts a "broker data ready" statement made from it: not confirmed, never a green tick.
+      else if (check.key === "broker_data" && brokerStale) status = { kind: "flag", flag: "partial", label: "Not confirmed" };
+      else status = { kind: "flag", flag: "ok", label: "Ready" };
+      return {
+        key: spec.key,
+        label: spec.label,
+        note: spec.note,
+        status,
+        checked: check.checkedAtMs.kind === "value" ? timeOf(check.checkedAtMs.value) : null,
+        checkedReason: check.checkedAtMs.kind === "not-published" ? check.checkedAtMs.reasonCode : null,
+        checkedWord: spec.word,
+      };
+    });
+  }
   const broker = freshnessChip(view);
   const brokerStatus: RollbackStatus =
     broker.state === "dot"
@@ -361,10 +486,10 @@ export function rollbackItems(view: CanaryView): readonly RollbackItem[] {
       : { kind: "flag", flag: "na", label: "Not available" };
   const brokerAt = view.broker !== null && view.broker.state !== "unavailable" ? timeOf(view.broker.asOfMs) : null;
   return [
-    { key: "flatten", label: "Flatten plan prepared", note: "", status: { kind: "not-published" }, checked: null, checkedWord: "Checked" },
-    { key: "twin", label: "Paper twin running", note: "Same alpha, simulated", status: { kind: "not-published" }, checked: null, checkedWord: "Checked" },
-    { key: "broker", label: "Broker data fresh", note: "", status: brokerStatus, checked: brokerAt, checkedWord: "Last update" },
-    { key: "drill", label: "Last rollback drill", note: "", status: { kind: "not-published" }, checked: null, checkedWord: "Last drill" },
+    { key: "flatten", label: "Flatten plan prepared", note: "", status: { kind: "not-published" }, checked: null, checkedReason: null, checkedWord: "Checked" },
+    { key: "twin", label: "Paper twin running", note: "Same alpha, simulated", status: { kind: "not-published" }, checked: null, checkedReason: null, checkedWord: "Checked" },
+    { key: "broker", label: "Broker data fresh", note: "", status: brokerStatus, checked: brokerAt, checkedReason: null, checkedWord: "Last update" },
+    { key: "drill", label: "Last rollback drill", note: "", status: { kind: "not-published" }, checked: null, checkedReason: null, checkedWord: "Last drill" },
   ];
 }
 
@@ -514,7 +639,7 @@ export function panelLine(panel: PanelFact | null): string {
   }
 }
 
-export const FE = { runtime: FE_RUNTIME, envelope: FE_ENVELOPE, rows: FE_ROWS, series: "FE-029", names: "FE-066" } as const;
+export const FE = { runtime: "FE-067" as const, envelope: FE_ENVELOPE, rows: FE_ROWS, series: "FE-029", names: "FE-066" } as const;
 
 export function subtitleIds(view: CanaryView): readonly string[] {
   return [
