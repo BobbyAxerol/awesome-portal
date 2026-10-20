@@ -99,6 +99,7 @@ class MemoryTokenFiles implements AcceptanceTokenFiles {
     if (!acceptanceTokenFileMatches(bytes, binding)) return "RETAINED_NOT_BOUND_TO_SESSION" as const;
     this.store.delete(path); return "REMOVED" as const;
   }
+  async preflight(path: string, operation: "issue" | "revoke") { if (operation === "issue" && this.store.has(path)) throw new AcceptanceSessionError("ACCEPTANCE_TOKEN_FILE_REFUSED", 503); }
 }
 function makeWorld(over: Partial<ConstructorParameters<typeof FakeCoreWorld>[0]> = {}) {
   return new FakeCoreWorld({ now: NOW, database: { db: T.database_name, system: T.database_system_identifier, login: T.role_name },
