@@ -27,7 +27,8 @@
  * BE-P2 / BE-P3 additive members (V1 body only; read closed by `execution/stageFacts.ts`): `stage_facts` (FE-067) become
  * `runtime` / `reconciliation`, the `certification` identity keys (FE-066) become `identity`, `source_figures` (FE-072)
  * become `figures`, a finding's `opened_at` is the Opened column (else `created_at`), and a plan's `author` / `envelope`
- * (FE-072) are its Author / Envelope. A V2 following-parent body carries none of them: every one reads as typed absence.
+ * (FE-072) are its Author / Envelope. A V2 following-parent body carries none of them but the opt-in `identity`
+ * (BE-P12, `include=identity`, FE-066): every other one reads as typed absence.
  *
  * What it will not do: compute. No gate, no headroom, no freshness: every figure here is the
  * server's or absent (certification.ts, rules 1 and 2). A finding is `open` only when its row
@@ -404,10 +405,11 @@ function fromV2(body: SandboxParentV2, schemaVersion: string): SandboxView {
     runtimeState: null,
     // The V2 reader refuses a body whose source flags are not exactly false.
     sourceActed: false,
-    // The following-parent v2 body is sealed: it carries no stage facts, identity or figures (typed absence; see the receipt's request).
+    // The following-parent v2 body is sealed: it carries no stage facts or figures (typed absence; BE-P12 delivers none for Sandbox).
+    // Its identity is the one opt-in member (`include=identity`): the closed object the parent reader read, else `null` (not asked).
     runtime: null,
     reconciliation: null,
-    identity: null,
+    identity: body.identity,
     figures: null,
     steps,
     progress: null,

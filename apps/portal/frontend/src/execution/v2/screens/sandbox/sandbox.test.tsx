@@ -90,12 +90,13 @@ describe("screen contract", () => {
     const api = fakeApi();
     mount(api, `${ENTRY}?workspace_id=ws_TEST_ONLY_url`);
     await ready();
-    expect(api.read).toHaveBeenCalledWith("dep_TEST_ONLY_sbx", { workspaceId: "ws_TEST_ONLY_url" });
+    expect(api.read).toHaveBeenCalledWith("dep_TEST_ONLY_sbx", { workspaceId: "ws_TEST_ONLY_url", include: ["identity"] });
     cleanup();
     const bare = fakeApi();
     mount(bare);
     await ready();
-    expect(bare.read).toHaveBeenCalledWith("dep_TEST_ONLY_sbx", undefined);
+    // BE-P12: the screen always asks for the identity (opt-in); nothing else is added to the request.
+    expect(bare.read).toHaveBeenCalledWith("dep_TEST_ONLY_sbx", { include: ["identity"] });
   });
 
   it("has one h1, one tablist, named regions and no repeated id", async () => {
