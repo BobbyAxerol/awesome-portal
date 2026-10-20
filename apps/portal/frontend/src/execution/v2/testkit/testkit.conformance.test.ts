@@ -150,13 +150,69 @@ describe("schema checker", () => {
     });
   });
 
+  describe("dependentRequired", () => {
+    // JSON Schema 2020-12 section 10.2.2.4, exercised on a scratch schema so the semantics are pinned independently of any published document.
+    const run = (schema: Record<string, unknown>, value: unknown): string[] => {
+      const dir = mkdtempSync(join(tmpdir(), "testkit-dependent-required-"));
+      try {
+        const file = join(dir, "dep.schema.json");
+        writeFileSync(file, JSON.stringify(schema));
+        return validateAgainst(file, "", value);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+    const schema = { type: "object", dependentRequired: { credit_card: ["billing_address"], billing_address: [] } };
+
+    it("requires the listed members only when the trigger member is present", () => {
+      expect(run(schema, {})).toEqual([]);
+      expect(run(schema, { billing_address: "x" })).toEqual([]);
+      expect(run(schema, { credit_card: 1, billing_address: "x" })).toEqual([]);
+      expect(run(schema, { credit_card: 1 }).join()).toMatch(/\$\.billing_address: required when credit_card is present/);
+    });
+
+    it("counts a present member whose value is null (or falsy) as present, and does not inspect the value", () => {
+      expect(run(schema, { credit_card: null, billing_address: null })).toEqual([]);
+      expect(run(schema, { credit_card: 0, billing_address: "" })).toEqual([]);
+      expect(run(schema, { credit_card: null }).join()).toMatch(/billing_address: required/);
+    });
+
+    it("is silent for an inherited name, an array and a scalar (only an own member of an object triggers it)", () => {
+      expect(run({ dependentRequired: { toString: ["x"] } }, {})).toEqual([]);
+      expect(run({ dependentRequired: { a: ["b"] } }, ["a"])).toEqual([]);
+      expect(run({ dependentRequired: { a: ["b"] } }, "a")).toEqual([]);
+    });
+
+    it("refuses a map whose list is not an array rather than passing everything", () => {
+      expect(() => run({ type: "object", dependentRequired: { a: "b" } }, { a: 1 })).toThrow(/dependentRequired\.a must be an array/);
+    });
+
+    it("is applied to the published identity rules: the five keys travel together", () => {
+      const PAPER = "execution-paper-read.v1";
+      const RULES = "/$defs/DeploymentIdentityRules";
+      const together = { alpha_id: null, alpha_name: null, portfolio_name: null, alpha_reason_code: "ALPHA_MEMBERSHIP_NOT_QUALIFIED", portfolio_name_reason_code: "PORTFOLIO_NOT_ASSIGNED" };
+      expect(validateAgainst(PAPER, RULES, {})).toEqual([]);
+      const { alpha_id: _drop, ...partial } = together;
+      expect(validateAgainst(PAPER, RULES, partial).join()).toMatch(/\$\.alpha_id: required when alpha_name is present/);
+    });
+  });
+
+  describe("minProperties", () => {
+    it("requires at least that many own members (null members count)", () => {
+      const ENVELOPE = "execution-paper-read.v1";
+      const QUERY = "/$defs/QueryAnalytics";
+      expect(validateAgainst(ENVELOPE, QUERY, {})).toEqual(expect.arrayContaining([expect.stringMatching(/fewer than 1 properties/)]));
+      expect(validateAgainst(ENVELOPE, QUERY, { a: null })).toEqual([]);
+    });
+  });
+
   it("still refuses a keyword it does not know, so a schema that grows one cannot pass everything", () => {
-    // `dependentRequired` is a real JSON Schema keyword the published documents do not use today.
+    // `unevaluatedProperties` is a real JSON Schema keyword the checker deliberately does not interpret (it needs annotation collection).
     const dir = mkdtempSync(join(tmpdir(), "testkit-unknown-keyword-"));
     try {
       const file = join(dir, "unknown.schema.json");
-      writeFileSync(file, JSON.stringify({ type: "object", dependentRequired: { a: ["b"] } }));
-      expect(() => validateAgainst(file, "", {})).toThrow(/schema keyword not supported by the testkit checker: dependentRequired/);
+      writeFileSync(file, JSON.stringify({ type: "object", unevaluatedProperties: false }));
+      expect(() => validateAgainst(file, "", {})).toThrow(/schema keyword not supported by the testkit checker: unevaluatedProperties/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
