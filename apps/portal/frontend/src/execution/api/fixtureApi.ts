@@ -838,6 +838,10 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getPendingRecallDiscovery() {
       return unavailable("The pending recall discovery is not served by the fixture port.");
     },
+    // A command route: the lab port never answers one (a fixture is not a connected source).
+    async previewPendingControl() {
+      return unavailable("PENDING_CONTROL_NOT_CONNECTED: the fixture port answers no command route.");
+    },
     async getStageActionEligibility() {
       return unavailable("The stage action eligibility is not served by the fixture port.");
     },

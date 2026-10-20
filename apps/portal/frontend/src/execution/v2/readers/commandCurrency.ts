@@ -286,7 +286,7 @@ export function counter(value: unknown): string | null {
   return typeof value === "string" && COUNTER.test(value) && BigInt(value) <= INT64_MAX ? value : null;
 }
 
-function money(value: unknown, currency: string): MoneyAmount | null {
+export function money(value: unknown, currency: string): MoneyAmount | null {
   if (typeof value !== "string" || value.length === 0 || value.length > 128 || !UNSIGNED_DECIMAL.test(value)) return null;
   const decimal = readDecimal(value, { unit: "money" });
   return decimal === null ? null : { currency, decimal, text: `${decimal.display} ${currency}`, fullText: `${decimal.full} ${currency}` };

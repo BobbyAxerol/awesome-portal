@@ -58,6 +58,9 @@ import {
 import { refusalReason } from "./schemaGuard";
 import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
 import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
+import {
+  PENDING_CONTROL_PREVIEW_PATH, pendingControlWords, previewAnswers, readPendingControlPreviewV1, readPendingControlProblemV1,
+} from "../v2/readers/pendingControlPreview";
 import { readStageActionEligibilityV1, stageActionEligibilityUrl } from "../v2/readers/stageActionEligibility";
 import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
 import { ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext } from "../v2/readers/accessSelfContext";
@@ -170,7 +173,7 @@ export function csrfToken(cookieSource: string = typeof document === "undefined"
   return null;
 }
 
-async function post(path: string, body: unknown, signal?: AbortSignal): Promise<Response> {
+async function post(path: string, body: unknown, signal?: AbortSignal, extraHeaders: Record<string, string> = {}): Promise<Response> {
   const token = csrfToken();
   return fetch(`${BASE}${path}`, {
     method: "POST",
@@ -179,6 +182,7 @@ async function post(path: string, body: unknown, signal?: AbortSignal): Promise<
     headers: {
       accept: "application/json",
       "content-type": "application/json",
+      ...extraHeaders,
       // Omitted rather than sent empty when there is no cookie: an empty header
       // is a token that fails comparison, and the 403 that follows would read
       // as "your token is wrong" instead of "you have no session".
@@ -1080,6 +1084,37 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         return unavailable("The pending recall discovery answered another resource than the one asked, so it is not shown.");
       }
       return result;
+    },
+
+    async previewPendingControl(intent) {
+      const payload = intent.business_payload;
+      // No session token, no request: the route would answer 403 and the 403 would read as "your token is wrong".
+      if (csrfToken() === null) return unavailable("SESSION_REQUIRED: the session token is missing, so nothing was sent. Sign in again.");
+      let response: Response;
+      try {
+        response = await post(PENDING_CONTROL_PREVIEW_PATH, intent, signal, { "x-portal-idempotency-key": payload.idempotency_key });
+      } catch {
+        return unavailable("The preview request never reached the Portal.");
+      }
+      let body: unknown = null;
+      try { body = await response.json(); } catch { /* the status alone still types the answer */ }
+      if (!response.ok) {
+        // A relay denial (409) carries two facts a retry depends on, so it is read before the generic refusal.
+        if (response.status === 409) {
+          const denial = readRelayDenial(body);
+          if (denial) return { ok: false, status: denial.sourceRequestSent ? "terminal" : "denied", reason: denial.text };
+        }
+        const refusal = readPendingControlProblemV1(body);
+        if (refusal === null) return { ok: false, status: panelStatusForHttp(response.status), reason: `The Portal answered HTTP ${response.status} with a refusal this build cannot read.` };
+        return { ok: false, status: panelStatusForHttp(response.status), reason: `${refusal.code}: ${pendingControlWords(refusal.code)}` };
+      }
+      const read = readPendingControlPreviewV1(body, payload.currency);
+      if (read === null) return unavailable("The preview could not be read, so it is not shown.");
+      if (read.kind === "unsupported_shape") return unavailable("The preview is a shape this build does not read, so it is not shown.");
+      if (!previewAnswers(read.preview, { operation: payload.operation, originalRecallId: payload.command_id })) {
+        return unavailable("The preview answered another operation or recall than the one asked, so it is not shown.");
+      }
+      return { ok: true, value: read };
     },
 
     async getStageActionEligibility(workspaceId) {

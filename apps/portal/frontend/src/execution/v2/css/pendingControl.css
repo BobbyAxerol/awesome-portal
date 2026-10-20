@@ -1,0 +1,99 @@
+/* "Preview control" under a discovered recall (RV-10). Tokens only; own file so the operations stylesheet stays untouched. */
+.exec-pc {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+.exec-pc-label {
+  font: var(--exec-font-label);
+  color: var(--ink-faint);
+}
+.exec-pc-note {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-pc-select,
+.exec-pc-textarea {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  max-width: 28rem;
+  padding: 8px 10px;
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-pc-textarea {
+  min-height: 56px;
+}
+.exec-pc-select:focus-visible,
+.exec-pc-textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-pc-versions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+.exec-pc-versions div {
+  min-width: 0;
+}
+.exec-pc-versions dt {
+  font: var(--exec-font-label);
+  color: var(--ink-faint);
+}
+.exec-pc-versions dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.exec-pc-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.exec-pc-hint {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-pc-refusal {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-data);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--bad);
+  border-left-width: 3px;
+  overflow-wrap: anywhere;
+}
+.exec-pc-result {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+  border-left-width: 3px;
+  min-width: 0;
+}
+.exec-pc-result p {
+  margin: 0;
+}
+.exec-pc-result[data-outcome="not-allowed"] {
+  border-color: var(--bad);
+}
+.exec-pc-blockers {
+  margin: 0;
+  padding-left: var(--space-4);
+}
+.exec-pc-after summary {
+  cursor: pointer;
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+}
