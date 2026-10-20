@@ -92,3 +92,38 @@ Cross-cutting: a field reaches a SCOPED_V2 response only if it is in `BUSINESS_R
 | Commits | `453c572a` (control-api harness + spec + capture), `645687c8` (generator, fixtures, contracts spec, contracts-test.sh copy list), this ledger |
 
 Owed to the lead: add the new fixtures/tooling to `tooling/snapshot.py` `TRACKED` and regenerate `contracts-snapshot.json`; re-pin EDS-12/N29 if the hook asks; the Codex-side questions above (PM meaning of `submitted_at`, source of alpha name/version).
+
+## 5. BE-P15 - RV-11 producers implemented (Claude, 2026-10-20; supersedes the §3 "Implemented: nothing")
+Same private worktree, tier **R3 focused** (generators `--check`, impacted control-api and FE reader specs, `tsc`); the PG spec is written and **NOT_RUN** (no Docker). Claude owns the remaining backend (rules §10.13), so nothing below is parked as "waiting for Codex". Source Edge/PM/TS was **not** read (no SSH); every producer works on rows already in the retained projection or the durable mirror.
+
+**Design (one decision to review).** The audit said "add the names to `BUSINESS_READ_FIELDS`". That would widen every reader the moment a name is listed: the whole-domain readers in `read-scope.ts`, the `commission` money guards (`product-read-source.ts` `DECIMAL_FIELD`, `resource-read.service.ts` `unsafeMoney`), the `full-business-fields` policy revision that Core009 binds, and every scope fingerprint. Instead the 11 names live in a **separate closed list `RECORD_DETAIL_READ_FIELDS`** (`execution-v2/read-fields.ts`), admitted by `scopeAllowsDetailField` (full-business read: all; researcher: exactly what the reviewed artifact lists; any non-business purpose: none). `scopeAllowsField`, `retainedFieldAllowed`, scope fingerprints and the field-policy revision are **unchanged** (a researcher scope's fingerprint changes only when its artifact lists a detail name). Readers opt in explicitly: subject records, Resource360 v2 rows, the scoped adapter. A malformed cell is omitted (never coerced, never a 503); an explicit source `null` stays `null`.
+
+| Audit row | Field | Now | Producer / locator |
+| --- | --- | --- | --- |
+| R-5a | unit of every integer instant | **published** | `time_unit: UTC_EPOCH_MS` const on `subject-records.v2` and `profile-read-adapter.v2`; the Resource360 `<clock>_ms` members, declared since v2 and **never filled**, are now filled from the stated text clock (`resource-read.service.ts` `withClockMs`) |
+| R-5b | order submission time | **published** | `submitted_at_ms` (`subject-activity.service.ts`; same path in the adapter) |
+| R-5c | fill trade time when not admitted | **published** | per-record `time_reason_code`: `SUBMITTED_AT_NOT_IN_POLICY`, `OCCURRED_AT_NOT_IN_POLICY`, `SOURCE_TIME_NOT_PUBLISHED`, `SOURCE_TIME_UNPARSEABLE`; an unreadable instant is omitted instead of failing the page |
+| R-5d | clock order basis | **published** | `observed_at_basis: ORDER_UPDATED_AT \| FILL_TRADE_TIME`, tied to the operation by the producer validator (the wire schema does not couple them) |
+| R-8 | `finding_id`, `finding_type`, `resolved_at(_ms)` | **published** | `ReconciliationScopedRow` + `ScopedRecordFields`; `finding_type` is raw text, no classification (no vocabulary exists) |
+| R-9 | `client_order_id`, `order_type` | **published** | orders: subject records, Resource360, adapter |
+| R-9 | fee: `commission`, `commission_currency` | **published, fills only** | exact decimal; also unblocks the Resource360 fills panel, which was always `FIELD_POLICY_PENDING` for a full-business reader because `commission` was an unapproved protected value |
+| R-9 | `liquidity_side` | **published** | enum MAKER/TAKER/UNKNOWN; an unknown token is omitted |
+| R-9 | conditional-leg identity | **published (paper)** | adapter `group_id`, `leg_id`, `leg_role`, `leg_sequence`; match legs by **exact** `client_order_id`, never a suffix |
+| R-6 | alpha name / version / owner / stage | **typed absence** | `identity_absences[]`: `ALPHA_NAME_NOT_IN_SOURCE`, `ALPHA_NAME_NOT_IN_POLICY`, `ALPHA_VERSION_NOT_IN_SOURCE`, `ALPHA_VERSION_NOT_IN_POLICY`, `ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER`, `ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE`; a stated `name` / `version` is published (`version` is a new nullable summary member) |
+| R-7 | per-deployment net PnL / equity | **published for paper, typed absence otherwise** | `deployment_financials[]` (`scoped-summary-facts.ts`): the latest visible `account_equity_snapshots` row per `deployment_id`, basis stated; `PARTIAL` when the window was cut, `..._AMBIGUOUS` when two different rows share the latest instant, `..._RELATION_NOT_BOUND_FOR_PROFILE` for sandbox/live; **never a sum** |
+
+**Still absent, needs an external source** (typed absence kept):
+
+| Field | Owner | What is missing |
+| --- | --- | --- |
+| alpha display name, version | PM (Edge for the relation) | no name/version column in TS `strategies`/`alphas` (`db-schema.json`); a PM/Research publication with a qualified Execution-id join |
+| alpha owner | PM | mapping `strategies.trader_id` (a TS trader) to a Portal user |
+| alpha current stage; `entered_at_ms`, `gate_state` | PM / Edge | stage timeline (PM §58.154); no stage column in `strategies` / `strategy_deployments` |
+| `runtime_state` (+ since), deployment `state` | TS / Edge | `strategy_deployments` has `active` only (`db-schema.json`), so the catalogue's `state` can never be filled |
+| per-deployment exposure; sandbox/live net PnL and equity | Edge / PM | `exposure_*` rows are per instrument (a total would be a sum); the catalogue binds no equity/performance relation for sandbox/live |
+| order-level fee | TS | `orders` has no fee column (fills only) |
+| bracket leg type / entry link | Edge | `BRACKET_LEG` catalogue drops `client_order_id` / `leg_type`; needs a re-qualified catalogue pin |
+| `finding_type` vocabulary / classification | TS | none in `extract/vocabularies.md`; stage fact `unknown_order_count` stays `FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED` |
+| Paper `sessions` / `reconciliation` stage bindings (SRC-D2) | Edge + EDS pins | `N22_PAPER_SCREEN_BINDINGS` is an upstream allowlist pinned in the EDS-12 ledger; widening it needs the Edge capability set re-qualified |
+
+**Gates.** Generators `--check` clean (`generate-execution-scoped-records`, `generate-execution-resource-scoped`); `python3 packages/contracts/tooling/snapshot.py` and `scripts/refresh-release-integrity-ledgers.sh --write` run; contracts specs `execution-scoped-records` + `execution-resource-scoped` 59 pass; control-api `be-p15-record-detail.spec.ts` 62 pass and 53 impacted specs 1,254 pass (4 files need PostgreSQL and fail on ECONNREFUSED); FE `v2/readers` 32 files 63,742 pass, `v2/screens/alpha` + `alphaVersionedPort` + `fixtureBff` 676 pass. **NOT_RUN: `test/be-p15-record-detail.pg.spec.ts` (PG gate), Docker, full hook, browser.** control-api `tsc --noEmit`: 0 errors under `src/` and in the new/changed specs; the 326 remaining errors are in untouched older specs and are identical before and after this change (a type error this round introduced in `trimLargestRelation` was caught by `tsc` and fixed). FE strict readers were extended minimally so their own conformance stays green (`subjectRecordsScoped.ts`, `alphaResourceScoped.ts`); no screen consumes the new members yet (a consumer story is FE work).

@@ -127,6 +127,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description Closed per-record vocabulary. Time members are UTC epoch milliseconds. submitted_at_ms is the order submission instant and occurred_at_ms the fill trade instant (source columns submitted_at / trade_time); resolved_at_ms is a reconciliation finding resolution instant. client_order_id, order_type, finding_id, finding_type, leg_role are raw source text (the Portal does not classify; no finding_type vocabulary is published). commission is an exact decimal on fills only; orders carry no fee column. liquidity_side is MAKER|TAKER|UNKNOWN. group_id, leg_id, leg_role and leg_sequence identify a conditional-order leg: match legs to orders by exact client_order_id equality, never by suffix. Admission is per scope (field policy); an omitted member is not a zero. */
         ScopedRecordFields: {
             alpha_id?: string | null;
             alpha_version_id?: string | null;
@@ -162,6 +163,19 @@ export interface components {
             occurred_at_ms?: number | null;
             created_at?: number | null;
             updated_at?: number | null;
+            submitted_at_ms?: number | null;
+            resolved_at_ms?: number | null;
+            leg_sequence?: number | null;
+            client_order_id?: string | null;
+            order_type?: string | null;
+            commission_currency?: string | null;
+            finding_id?: string | null;
+            finding_type?: string | null;
+            group_id?: string | null;
+            leg_id?: string | null;
+            leg_role?: string | null;
+            commission?: string | null;
+            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
         };
         ScopedAdapterGroup: {
             /** @enum {unknown} */
@@ -180,6 +194,8 @@ export interface components {
         ScopedAdapterResponse: {
             /** @constant */
             schema_version: "portal.execution.profile-read-adapter.v2";
+            /** @constant */
+            time_unit: "UTC_EPOCH_MS";
             /** @enum {unknown} */
             capability_id: "admin.inspect" | "admin.performance" | "admin.broker-read" | "event.order-lifecycle";
             /** @constant */
@@ -221,9 +237,14 @@ export interface components {
                 conditional_order_group_legs?: components["schemas"]["ScopedAdapterGroup"];
             };
         };
+        /** @description Retained current window of authorized rows, not total history. time_unit: every integer instant is UTC epoch milliseconds (Date.parse of the source timestamptz; sub-millisecond digits are truncated). observed_at_basis: observed_at_ms and the keyset order are the order row updated_at (an order can move later) or the fill trade_time; this is a Portal retained-window ordering and is NOT a venue event sequence across relations. time_reason_code appears on a record only when its order/trade instant (submitted_at_ms / occurred_at_ms) is absent from values. */
         ScopedSubjectRecordsResponse: {
             /** @constant */
             schema_version: "portal.execution.subject-records.v2";
+            /** @constant */
+            time_unit: "UTC_EPOCH_MS";
+            /** @enum {unknown} */
+            observed_at_basis: "ORDER_UPDATED_AT" | "FILL_TRADE_TIME";
             /** @enum {unknown} */
             logical_operation_id: "executionAlphaOrdersV1" | "executionAlphaFillsV1" | "executionAccountOrdersV1" | "executionAccountFillsV1";
             /** @constant */
@@ -268,6 +289,8 @@ export interface components {
                 record_id: string;
                 observed_at_ms: number;
                 values: components["schemas"]["ScopedRecordFields"];
+                /** @enum {unknown} */
+                time_reason_code?: "SUBMITTED_AT_NOT_IN_POLICY" | "OCCURRED_AT_NOT_IN_POLICY" | "SOURCE_TIME_NOT_PUBLISHED" | "SOURCE_TIME_UNPARSEABLE";
             }[];
         };
         TechnicalHealth: {

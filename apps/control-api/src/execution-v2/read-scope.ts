@@ -2,7 +2,7 @@ import { accessDigest, AccessEvaluationContext, businessReadDenied, evaluateAcce
   environmentRelations, currentBoundaryProof, currentExplicitReadAllows } from "./access-policy";
 import { AccessAction, AccessPolicyError, AccessResource, accessResource } from "./access.contract";
 import { ExecutionReadPublication, ExecutionReadPublicationRequest, ReadDatasetBinding, readDatasetBinding, readPublication } from "./read-publication";
-import { AUDIT_READ_FIELDS, BUSINESS_READ_FIELDS, TECHNICAL_READ_FIELDS, isBusinessReadField } from "./read-fields";
+import { AUDIT_READ_FIELDS, BUSINESS_READ_FIELDS, TECHNICAL_READ_FIELDS, isBusinessReadField, isRecordDetailReadField } from "./read-fields";
 import type { ExecutionAccessService } from "./access.service";
 import type { ControlApiConfig } from "../config";
 import type { AuthSession, PortalUser } from "../domain";
@@ -72,6 +72,8 @@ type ManagerNativeState={source:SelectedNativeBusinessReadSource;
 type ScopeState={kind:"ENTITY"|"MANAGER";manager?:ManagerNativeState;issuer:ExecutionReadScopes;principal:ReadScopePrincipal;binding:ReadScopeBinding;
   requirement:ReadScopeRequirement;tuples:ExecutionReadPublication["tuples"];resources:AccessResource[];
   population:ExecutionReadPublication["tuples"];fields:readonly string[];context:AccessEvaluationContext|null;
+  /** null = the whole record-detail vocabulary (full-business read); an array = the reviewed researcher subset. */
+  detail?:readonly string[]|null;
   strategyPairs:readonly {strategy_id:string;alpha_id:string}[];
   bindingPairs:readonly {binding_id:string;account_id:string}[];};
 const minted=new WeakMap<object,ScopeState>();
@@ -144,6 +146,15 @@ export function scopeTuples(scope:AuthorizedExecutionReadScope) {
 export function scopeAllowsField(scope:AuthorizedExecutionReadScope,field:string):boolean {
   assertExecutionReadScope(scope);
   return minted.get(scope)!.fields.includes(field);
+}
+/** Record-detail names (BE-P15) are a second closed vocabulary that is NOT part of `scope.fields`: the scope
+ * fingerprint, the full-business field-policy revision and every `scopeAllowsField` guard stay as they were.
+ * Allowed only for a business read, and for a researcher only when the reviewed artifact lists the name. */
+export function scopeAllowsDetailField(scope:AuthorizedExecutionReadScope,field:string):boolean {
+  assertExecutionReadScope(scope);
+  const state=minted.get(scope)!;
+  if(!isRecordDetailReadField(field)||!businessReads.has(state.requirement.action))return false;
+  return state.detail==null||state.detail.includes(field);
 }
 /** Hidden values must not become a filter, sort, group or ranking oracle. */
 export const scopeAllowsQueryField = scopeAllowsField;
@@ -814,6 +825,7 @@ export class ExecutionReadScopes {
     let context:AccessEvaluationContext|null=null,publication:ExecutionReadPublication|null=null;
     let bindingPairs:{binding_id:string;account_id:string}[]=[];
     let resources:AccessResource[]=[],tuples:ExecutionReadPublication["tuples"]=[],fields:readonly string[]=[...BUSINESS_READ_FIELDS],whole=true;
+    let detail:readonly string[]|null=null;
     let mode:AuthorizedExecutionReadScope["mode"]="LEGACY_COMPATIBILITY",policyRevision:string|null=null,fieldPolicyRef:string|null=null;
     if(identity.policy!==null||identity.policy_seen){
       mode="SCOPED_V2";
@@ -994,7 +1006,7 @@ export class ExecutionReadScopes {
             (allowed("portfolio.read_restricted",{kind:"PORTFOLIO",id:t.portfolio_id})||allowed("portfolio.read",{kind:"PORTFOLIO",id:t.portfolio_id})));
           if(!fullTuples.length||[...linkedTuples,...bindingTuples,...accountTuples,...explicitTuples].some(t=>!fullTuples.includes(t))){
             if(policy.state!=="QUALIFIED"||!policy.policy_ref)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
-            fields=policy.fields.filter(isBusinessReadField);fieldPolicyRef=policy.policy_ref;
+            fields=policy.fields.filter(isBusinessReadField);detail=policy.fields.filter(isRecordDetailReadField);fieldPolicyRef=policy.policy_ref;
             if(!fields.length)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
           }
           tuples=[...new Set([...fullTuples,...linkedTuples,...bindingTuples,...accountTuples,...explicitTuples])];
@@ -1034,7 +1046,7 @@ export class ExecutionReadScopes {
         if(businessReads.has(r.action)&&!allowed("business.read_all",r.resource)){
           const policy=context.policy!.researcher_fields;
           if(policy.state!=="QUALIFIED"||!policy.policy_ref)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
-          fields=policy.fields.filter(isBusinessReadField);fieldPolicyRef=policy.policy_ref;
+          fields=policy.fields.filter(isBusinessReadField);detail=policy.fields.filter(isRecordDetailReadField);fieldPolicyRef=policy.policy_ref;
           if(!fields.length)fail("EXECUTION_READ_FIELD_POLICY_PENDING",503);
         }
       }
@@ -1054,11 +1066,11 @@ export class ExecutionReadScopes {
       publication:publication&&{revision:publication.publication_revision,binding:publication.binding,resources:publication.resources,
         tuples:publication.tuples,current_linkage:publication.current_linkage,binding_lineage:publication.binding_lineage??null,
         strategy_lineage:publication.strategy_lineage??null},
-      fields,resources,tuples});
+      fields,resources,tuples,...(detail?{detail}:{})});
     const scope=Object.freeze({mode,fingerprint,workspaceId:p.workspaceId,viewerWorkspaceId:p.viewerWorkspaceId!,
       environment:b.environment,profileId:b.profileId,policyRevision,fieldPolicyRef,wholePopulation:whole}) as AuthorizedExecutionReadScope;
     minted.set(scope,{kind:"ENTITY",issuer:this,principal:p,binding:b,requirement:r,resources,tuples,
-      population:publication?.tuples??[],fields,context,bindingPairs,
+      population:publication?.tuples??[],fields,detail,context,bindingPairs,
       strategyPairs:publication?.strategy_lineage&&(publication.strategy_lineage.qualification==="SOURCE_VERIFIED"||
         context?.allow_test_only&&publication.strategy_lineage.qualification==="TEST_ONLY")?publication.strategy_lineage.pairs:[]});
     if(optional){

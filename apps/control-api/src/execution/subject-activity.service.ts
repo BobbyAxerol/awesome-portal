@@ -13,7 +13,9 @@ import {
 import { ExecutionDurableMirrorRepository } from "./durable-mirror.repository";
 import { durableMirrorReadEnabled } from "./durable-mirror-mode";
 import { profileProjectionCatalog } from "./profile-projection.catalog";
-import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, scopeReadPopulation, type ReadScopePrincipal } from "../execution-v2/read-scope";
+import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, scopeAllowsDetailField, scopeReadPopulation, type AuthorizedExecutionReadScope, type ReadScopePrincipal } from "../execution-v2/read-scope";
+import { isRecordDetailReadField } from "../execution-v2/read-fields";
+import { addRecordDetail, epochMsFrom } from "../execution-v2/record-detail";
 import { scopedRetainedRows, fenceRetainedSnapshot } from "./retained-operation-page";
 import { accessDigest } from "../execution-v2/access-policy";
 import {scopedSubjectActivitySchema} from "../execution-v2/subject-activity.contract";
@@ -31,6 +33,24 @@ const SUBJECT_ID = /^[A-Za-z0-9._:@-]{1,191}$/;
 const MAXIMUM_PAGE_ROWS = 500;
 const DEFAULT_PAGE_ROWS = 200;
 const TIMEFRAMES = new Set(["1m", "5m", "15m", "30m", "1h", "4h", "1d"]);
+
+/**
+ * RV-11 R-5c: why a record has no order/trade instant. The instant is submitted_at_ms (orders) or occurred_at_ms (fills);
+ * when it is not in `values` the page says which of three honest reasons applies instead of staying silent.
+ * Returns undefined when the instant is present.
+ */
+function recordTimeReason(scope: AuthorizedExecutionReadScope, relation: SubjectActivityRelation,
+  fields: Readonly<Record<string, unknown>>, values: Readonly<Record<string, unknown>>):
+  "SUBMITTED_AT_NOT_IN_POLICY" | "OCCURRED_AT_NOT_IN_POLICY" | "SOURCE_TIME_NOT_PUBLISHED" | "SOURCE_TIME_UNPARSEABLE" | undefined {
+  const orders = relation === "orders";
+  const member = orders ? "submitted_at_ms" : "occurred_at_ms", column = orders ? "submitted_at" : "trade_time";
+  if (typeof values[member] === "number") return undefined;
+  if (!(orders ? scopeAllowsDetailField(scope, member) : scopeAllowsField(scope, member)))
+    return orders ? "SUBMITTED_AT_NOT_IN_POLICY" : "OCCURRED_AT_NOT_IN_POLICY";
+  const raw = fields[column];
+  if (raw === undefined || raw === null) return "SOURCE_TIME_NOT_PUBLISHED";
+  return epochMsFrom(raw) === undefined ? "SOURCE_TIME_UNPARSEABLE" : undefined;
+}
 
 export type SubjectActivityKind = "alpha" | "account";
 export type SubjectActivityRelation = "orders" | "fills";
@@ -131,21 +151,30 @@ export class ExecutionSubjectActivityService {
         {entity:request.subjectKind==="account"?{field:"account_id",value:request.subjectId}:null,after,limit,authorizedScope:scope});
       const last=page.rows.at(-1),next=page.hasMore&&last?this.cursors.encode({resource_id:resourceId,workspace_id:principal.workspaceId,
         direction:"after",query_fingerprint:fingerprint,boundary:[last.ts,last.rowId]}):null;
-      const result={schema_version:"portal.execution.subject-records.v2",logical_operation_id:operationId(request.subjectKind,request.relation),
+      const result={schema_version:"portal.execution.subject-records.v2",time_unit:"UTC_EPOCH_MS",
+        observed_at_basis:request.relation==="orders"?"ORDER_UPDATED_AT":"FILL_TRADE_TIME",logical_operation_id:operationId(request.subjectKind,request.relation),
         authority:"PORTAL_SGP_RETAINED_CURRENT_WINDOW",source_authority:"TRADING_SYSTEM_CURRENT_SOURCE",
         history_semantics:"RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",environment:request.environment,profile_id:profileId,
         resource:{kind:request.subjectKind,id:request.subjectId},read_scope:{visibility:"SCOPED",coverage:"AUTHORIZED_ONLY",policy_revision:scope.policyRevision},
         state:coverage.rowCount===0?"EMPTY":"PARTIAL",reason_code:"SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY",
         coverage:{retained_row_count:coverage.rowCount,oldest_observed_at_ms:epochMs(coverage.oldestTs),newest_observed_at_ms:epochMs(coverage.newestTs)},
         page:{limit,maximum_page_rows:MAXIMUM_PAGE_ROWS,returned_count:page.rows.length,has_more:page.hasMore,next_cursor:next},
-        records:scopedRetainedRows(scope,page.rows).map(row=>{
+        records:scopedRetainedRows(scope,page.rows,{detail:true}).map(row=>{
           const source:Record<string,unknown>={...row.fields};
           for(const [from,to] of Object.entries({signed_qty:"quantity",position_qty:"quantity",symbol:"instrument_id",trade_time:"occurred_at_ms",ts:"timestamp_ms"}))
             if(source[from]!==undefined&&scopeAllowsField(scope,to))source[to]=source[from];
           for(const key of ["created_at","updated_at","timestamp_ms","occurred_at_ms"])
-            if(typeof source[key]==="string")source[key]=Date.parse(source[key]);
-          const values=Object.fromEntries(Object.entries(source).filter(([key])=>Object.hasOwn(scopedAdapterFieldsSchema.shape,key)));
-          return {record_id:row.rowId,observed_at_ms:Date.parse(row.ts),values};
+            if(typeof source[key]==="string"){
+              const parsed=Date.parse(source[key]);
+              // An unreadable source instant is omitted and named (time_reason_code); it never fails the page nor becomes a guess.
+              if(Number.isSafeInteger(parsed)&&parsed>=0)source[key]=parsed;else delete source[key];
+            }
+          // Record detail is sanitised member by member below; the generic filter must not let a raw column of the same name through.
+          const values:Record<string,unknown>=Object.fromEntries(Object.entries(source).filter(([key])=>
+            Object.hasOwn(scopedAdapterFieldsSchema.shape,key)&&!isRecordDetailReadField(key)));
+          addRecordDetail(scope,row.fields,values,{submitted_at_ms:"submitted_at"});
+          const time=recordTimeReason(scope,request.relation,row.fields,values);
+          return {record_id:row.rowId,observed_at_ms:Date.parse(row.ts),values,...(time?{time_reason_code:time}:{})};
         })};
       if(result.records.length!==page.rows.length||Buffer.byteLength(JSON.stringify(result))>1024*1024)
         throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_LIMIT",503);

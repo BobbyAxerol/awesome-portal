@@ -679,6 +679,37 @@
             }
           ],
           "portfolios": [],
+          "deployment_financials": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "state": "UNAVAILABLE",
+              "reason_code": "DEPLOYMENT_FINANCIAL_SNAPSHOT_NOT_PUBLISHED",
+              "basis": "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW",
+              "snapshot_at_ms": null,
+              "currency": null,
+              "net_pnl": null,
+              "equity": null
+            }
+          ],
+          "identity_absences": [
+            {
+              "member": "name",
+              "reason_code": "ALPHA_NAME_NOT_IN_SOURCE"
+            },
+            {
+              "member": "version",
+              "reason_code": "ALPHA_VERSION_NOT_IN_SOURCE"
+            },
+            {
+              "member": "owner",
+              "reason_code": "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER"
+            },
+            {
+              "member": "stage",
+              "reason_code": "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE"
+            }
+          ],
           "metrics_availability": {
             "account_balance": {
               "state": "PARTIAL",
@@ -1392,6 +1423,19 @@
             }
           ],
           "portfolios": [],
+          "deployment_financials": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "state": "UNAVAILABLE",
+              "reason_code": "DEPLOYMENT_FINANCIAL_SNAPSHOT_NOT_PUBLISHED",
+              "basis": "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW",
+              "snapshot_at_ms": null,
+              "currency": null,
+              "net_pnl": null,
+              "equity": null
+            }
+          ],
           "metrics_availability": {
             "account_balance": {
               "state": "PARTIAL",
@@ -2073,6 +2117,19 @@
             }
           ],
           "portfolios": [],
+          "deployment_financials": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "state": "UNAVAILABLE",
+              "reason_code": "DEPLOYMENT_FINANCIAL_SNAPSHOT_NOT_PUBLISHED",
+              "basis": "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW",
+              "snapshot_at_ms": null,
+              "currency": null,
+              "net_pnl": null,
+              "equity": null
+            }
+          ],
           "metrics_availability": {
             "account_balance": {
               "state": "PARTIAL",
@@ -2754,6 +2811,19 @@
             }
           ],
           "portfolios": [],
+          "deployment_financials": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "state": "UNAVAILABLE",
+              "reason_code": "DEPLOYMENT_FINANCIAL_SNAPSHOT_NOT_PUBLISHED",
+              "basis": "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW",
+              "snapshot_at_ms": null,
+              "currency": null,
+              "net_pnl": null,
+              "equity": null
+            }
+          ],
           "metrics_availability": {
             "account_balance": {
               "state": "PARTIAL",
@@ -3975,6 +4045,836 @@
           "id": "alpha_TEST_ONLY",
           "state": "PARTIAL",
           "reason_code": "EDS04_RESOURCE_RESPONSE_BYTE_BOUND"
+        },
+        "profile_coverage": {
+          "paper": {
+            "profile_id": "profile_TEST_ONLY",
+            "state": "FOUND",
+            "reason_code": null,
+            "projection_epoch": null,
+            "projection_sequence": null,
+            "source_as_of": null
+          }
+        }
+      },
+      "unavailable_branches": [],
+      "actor": {
+        "user_id": "user_TEST_ONLY",
+        "username": "TEST_ONLY",
+        "roles": [
+          "USER"
+        ]
+      }
+    },
+    {
+      "schema_version": "execution.alpha-resource.v2",
+      "visibility": "SCOPED",
+      "coverage": "AUTHORIZED_ONLY",
+      "totals_scope": "VISIBLE_ROWS_ONLY",
+      "is_full_portfolio": false,
+      "read_scope": [
+        {
+          "environment": "paper",
+          "policy_revision": "TEST_ONLY-policy"
+        }
+      ],
+      "record_authority": "PORTAL_CONTROL",
+      "source_authority": "TRADING_SYSTEM",
+      "delivery_profile": "profile_TEST_ONLY",
+      "workspace_id": "workspace_TEST_ONLY",
+      "requested_environment": "paper",
+      "selected_environment": "paper",
+      "resource": {
+        "kind": "ALPHA",
+        "id": "alpha_RICH_TEST_ONLY",
+        "label": "TEST_ONLY rich Alpha"
+      },
+      "read_at_ms": 1790812800000,
+      "as_of_ms": null,
+      "read_at": "2026-10-01T00:00:00.000Z",
+      "as_of": null,
+      "state": "partial",
+      "freshness": "STALE",
+      "completeness": "PARTIAL",
+      "projection": [
+        {
+          "environment": "paper",
+          "epoch": null,
+          "sequence": null,
+          "payload_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "last_successful_refresh_at": null
+        }
+      ],
+      "capabilities": [
+        {
+          "capability_id": "resource.alpha.identity",
+          "state": "AVAILABLE",
+          "relations": [],
+          "reason_code": null,
+          "retryable": false
+        }
+      ],
+      "panels": {
+        "deployments": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "deployment_id": "deployment_TEST_ONLY",
+                "strategy_id": "strategy_TEST_ONLY",
+                "account_id": "account_TEST_ONLY",
+                "mode": "paper"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "account_id": "account_TEST_ONLY",
+                "currency": "USD",
+                "total": "1234567890123456789.1234567890123456789",
+                "free": "0",
+                "locked": null
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "margin_balances": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_sync": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "broker_sync": {
+          "state": "UNAVAILABLE",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "EXECUTION_CUSTODY_READ_NOT_COMMISSIONED",
+          "retryable": true
+        },
+        "venue_accounts": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolios": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "portfolio_allocations": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "positions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "sessions": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "orders": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "order_id": "order_TEST_ONLY",
+                "account_id": "account_TEST_ONLY",
+                "mode": "paper",
+                "client_order_id": "client_TEST_ONLY_entry",
+                "order_type": "LIMIT",
+                "side": "BUY",
+                "quantity": "10.5",
+                "price": "100.1234567890123456789",
+                "status": "FILLED",
+                "submitted_at": "2026-10-01T00:00:00.123Z",
+                "submitted_at_ms": 1790812800123,
+                "deployment_id": "deployment_TEST_ONLY"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "fills": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "fill_id": "fill_TEST_ONLY",
+                "account_id": "account_TEST_ONLY",
+                "mode": "paper",
+                "client_order_id": "client_TEST_ONLY_entry",
+                "commission": "0.0000000000000000001",
+                "commission_currency": "USDT",
+                "liquidity_side": "MAKER",
+                "price": "100.1234567890123456789",
+                "quantity": "10.5",
+                "trade_time": "2026-10-01T00:00:01.456Z",
+                "trade_time_ms": 1790812801456,
+                "deployment_id": "deployment_TEST_ONLY"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "performance": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "account_equity": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_RANGE_OR_CURRENT_WINDOW",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "reconciliation": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": [
+              {
+                "profile_environment": "paper",
+                "account_id": "account_TEST_ONLY",
+                "mode": "paper",
+                "status": "RESOLVED",
+                "finding_id": "finding_TEST_ONLY",
+                "finding_type": "TEST_ONLY_TYPE",
+                "created_at": "2026-10-01T00:00:00Z",
+                "created_at_ms": 1790812800000,
+                "resolved_at": "2026-10-01T00:05:00Z",
+                "resolved_at_ms": 1790813100000,
+                "deployment_id": "deployment_TEST_ONLY"
+              }
+            ]
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "1",
+            "filtered_total": "1",
+            "returned_count": 1,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "strategies": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        },
+        "journal": {
+          "state": "PARTIAL",
+          "data": {
+            "rows": []
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790812800000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": "0",
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "CURRENT_STATE_ONLY",
+          "formula": null,
+          "reason_code": "SOURCE_PARTIAL",
+          "retryable": false
+        }
+      },
+      "data": {
+        "deployments": [
+          {
+            "profile_environment": "paper",
+            "deployment_id": "deployment_TEST_ONLY",
+            "strategy_id": "strategy_TEST_ONLY",
+            "account_id": "account_TEST_ONLY",
+            "mode": "paper"
+          }
+        ],
+        "accounts": [],
+        "account_balances": [
+          {
+            "profile_environment": "paper",
+            "account_id": "account_TEST_ONLY",
+            "currency": "USD",
+            "total": "1234567890123456789.1234567890123456789",
+            "free": "0",
+            "locked": null
+          }
+        ],
+        "margin_balances": [],
+        "account_sync": [],
+        "broker_sync": [],
+        "venue_accounts": [],
+        "portfolios": [],
+        "portfolio_allocations": [],
+        "positions": [],
+        "sessions": [],
+        "orders": [
+          {
+            "profile_environment": "paper",
+            "order_id": "order_TEST_ONLY",
+            "account_id": "account_TEST_ONLY",
+            "mode": "paper",
+            "client_order_id": "client_TEST_ONLY_entry",
+            "order_type": "LIMIT",
+            "side": "BUY",
+            "quantity": "10.5",
+            "price": "100.1234567890123456789",
+            "status": "FILLED",
+            "submitted_at": "2026-10-01T00:00:00.123Z",
+            "submitted_at_ms": 1790812800123,
+            "deployment_id": "deployment_TEST_ONLY"
+          }
+        ],
+        "fills": [
+          {
+            "profile_environment": "paper",
+            "fill_id": "fill_TEST_ONLY",
+            "account_id": "account_TEST_ONLY",
+            "mode": "paper",
+            "client_order_id": "client_TEST_ONLY_entry",
+            "commission": "0.0000000000000000001",
+            "commission_currency": "USDT",
+            "liquidity_side": "MAKER",
+            "price": "100.1234567890123456789",
+            "quantity": "10.5",
+            "trade_time": "2026-10-01T00:00:01.456Z",
+            "trade_time_ms": 1790812801456,
+            "deployment_id": "deployment_TEST_ONLY"
+          }
+        ],
+        "performance": [],
+        "account_equity": [],
+        "reconciliation": [
+          {
+            "profile_environment": "paper",
+            "account_id": "account_TEST_ONLY",
+            "mode": "paper",
+            "status": "RESOLVED",
+            "finding_id": "finding_TEST_ONLY",
+            "finding_type": "TEST_ONLY_TYPE",
+            "created_at": "2026-10-01T00:00:00Z",
+            "created_at_ms": 1790812800000,
+            "resolved_at": "2026-10-01T00:05:00Z",
+            "resolved_at_ms": 1790813100000,
+            "deployment_id": "deployment_TEST_ONLY"
+          }
+        ],
+        "strategies": [],
+        "journal": [],
+        "alpha": {
+          "kind": "ALPHA",
+          "id": "alpha_TEST_ONLY",
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "financial_summary": {
+            "state": "UNAVAILABLE",
+            "reason_code": "SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS"
+          },
+          "deployments": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "strategy_id": "strategy_TEST_ONLY",
+              "account_id": "account_TEST_ONLY",
+              "mode": "paper"
+            }
+          ],
+          "portfolios": [],
+          "deployment_financials": [
+            {
+              "profile_environment": "paper",
+              "deployment_id": "deployment_TEST_ONLY",
+              "state": "AVAILABLE",
+              "reason_code": null,
+              "basis": "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW",
+              "snapshot_at_ms": 1790812800000,
+              "currency": "USDT",
+              "net_pnl": "-1234567890.1234567890123456789",
+              "equity": "9007199254740993.0000000001"
+            }
+          ],
+          "identity_absences": [
+            {
+              "member": "owner",
+              "reason_code": "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER"
+            },
+            {
+              "member": "stage",
+              "reason_code": "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE"
+            }
+          ],
+          "metrics_availability": {
+            "account_balance": {
+              "state": "PARTIAL",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "current_position_pnl": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            },
+            "equity_series": {
+              "state": "UNAVAILABLE",
+              "reason_code": "SOURCE_PARTIAL"
+            }
+          },
+          "name": "TEST_ONLY Alpha",
+          "version": "TEST_ONLY-v1"
         },
         "profile_coverage": {
           "paper": {

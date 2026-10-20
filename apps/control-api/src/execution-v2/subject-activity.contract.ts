@@ -5,6 +5,11 @@ const count=z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
 const cursor=z.string().min(1).max(4096).regex(/^[A-Za-z0-9._-]+$(?![\s\S])/).nullable();
 export const scopedSubjectActivitySchema=z.object({
   schema_version:z.literal("portal.execution.subject-records.v2"),
+  /** R-5a: every integer instant in this page (`*_ms`, `created_at`, `updated_at`, `observed_at_ms`) is UTC epoch milliseconds. */
+  time_unit:z.literal("UTC_EPOCH_MS"),
+  /** R-5d: what `observed_at_ms` and the keyset order mean. Orders move (`updated_at`); fills do not (`trade_time`).
+   * It is a Portal retained-window ordering, never a venue event sequence across relations. */
+  observed_at_basis:z.enum(["ORDER_UPDATED_AT","FILL_TRADE_TIME"]),
   logical_operation_id:z.enum(["executionAlphaOrdersV1","executionAlphaFillsV1","executionAccountOrdersV1","executionAccountFillsV1"]),
   authority:z.literal("PORTAL_SGP_RETAINED_CURRENT_WINDOW"),source_authority:z.literal("TRADING_SYSTEM_CURRENT_SOURCE"),
   history_semantics:z.literal("RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY"),environment:z.enum(["paper","sandbox","live"]),profile_id:text,
@@ -13,10 +18,13 @@ export const scopedSubjectActivitySchema=z.object({
   state:z.enum(["EMPTY","PARTIAL"]),reason_code:z.literal("SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY"),
   coverage:z.object({retained_row_count:count,oldest_observed_at_ms:count.nullable(),newest_observed_at_ms:count.nullable()}).strict(),
   page:z.object({limit:count.min(1).max(500),maximum_page_rows:z.literal(500),returned_count:count.max(500),has_more:z.boolean(),next_cursor:cursor}).strict(),
-  records:z.array(z.object({record_id:text,observed_at_ms:count,values:scopedAdapterFieldsSchema}).strict()).max(500),
+  records:z.array(z.object({record_id:text,observed_at_ms:count,values:scopedAdapterFieldsSchema,
+    /** R-5c: present only when the order/trade instant (`submitted_at_ms` / `occurred_at_ms`) is absent from `values`. */
+    time_reason_code:z.enum(["SUBMITTED_AT_NOT_IN_POLICY","OCCURRED_AT_NOT_IN_POLICY","SOURCE_TIME_NOT_PUBLISHED","SOURCE_TIME_UNPARSEABLE"]).optional()}).strict()).max(500),
 }).strict().superRefine((value,ctx)=>{
   if(value.records.length!==value.page.returned_count||value.page.returned_count>value.page.limit||
     value.page.returned_count>value.coverage.retained_row_count||value.page.has_more!==(value.page.next_cursor!==null)||
-    (value.state==="EMPTY")!==(value.coverage.retained_row_count===0))
+    (value.state==="EMPTY")!==(value.coverage.retained_row_count===0)||
+    value.observed_at_basis!==(value.logical_operation_id.endsWith("OrdersV1")?"ORDER_UPDATED_AT":"FILL_TRADE_TIME"))
     ctx.addIssue({code:"custom",message:"Inconsistent scoped page."});
 });

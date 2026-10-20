@@ -20,7 +20,9 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { ExecutionReadScopes, ExecutionReadScopeError, AuthorizedExecutionReadScope, scopeReadPopulation,
   scopeResources, scopeAllowsField } from "../execution-v2/read-scope";
 import { projectionRowVisible } from "../execution-v2/read-projection";
-import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, fenceRetainedSnapshot } from "../execution/retained-operation-page";
+import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, retainedDetailFieldAllowed, fenceRetainedSnapshot } from "../execution/retained-operation-page";
+import { epochMsFrom, recordDetailValue } from "../execution-v2/record-detail";
+import { deploymentFinancials, identityAbsences } from "./scoped-summary-facts";
 import { scopedResourceResponseSchemas } from "./scoped-resource.contract";
 
 export const RESOURCE_KINDS = ["ALPHA", "PORTFOLIO", "ACCOUNT", "BINDING"] as const;
@@ -444,6 +446,32 @@ interface ResourceResponseInput {
   readonly wireMemo?: WeakMap<object, unknown>;
 }
 
+/** Raw columns of the record-detail vocabulary that Resource360 v2 rows declare (orders, fills, reconciliation). */
+const SCOPED_DETAIL_COLUMNS = ["client_order_id", "order_type", "commission", "commission_currency", "liquidity_side", "finding_id", "finding_type"] as const;
+function sanitizeRecordDetail<T extends { fields: Record<string, ProjectionScalar> }>(row: T): T {
+  const fields = { ...row.fields };
+  for (const column of SCOPED_DETAIL_COLUMNS) {
+    if (!Object.hasOwn(fields, column)) continue;
+    const value = recordDetailValue(column, fields[column]);
+    if (value === undefined) delete fields[column]; else fields[column] = value;
+  }
+  return { ...row, fields };
+}
+const SCOPED_CLOCK_COLUMNS = ["ts", "created_at", "updated_at", "submitted_at", "trade_time", "mark_price_at", "resolved_at"] as const;
+/** R-5a: the schema has always declared `<clock>_ms` beside each text clock but nothing filled it. A stated instant that parses
+ * becomes UTC epoch milliseconds; one that does not stays text-only. The text member is never replaced. */
+function withClockMs(fact: Fact): Fact {
+  const out: Fact = { ...fact };
+  for (const column of SCOPED_CLOCK_COLUMNS) {
+    const key = `${column}_ms`;
+    if (typeof out[column] === "string" && out[key] === undefined) {
+      const ms = epochMsFrom(out[column]);
+      if (ms !== undefined) out[key] = ms;
+    }
+  }
+  return out;
+}
+
 const SCOPED_FINANCIAL_FIELDS = new Set(["total", "free", "locked", "initial", "maintenance", "buying_power", "allocated_capital",
   "max_capital", "quantity", "signed_qty", "notional", "price", "mark_price", "trigger_price", "commission", "fee_total",
   "funding_pnl", "gross_pnl", "net_pnl", "realized_pnl", "unrealized_pnl", "equity", "drawdown", "return"]);
@@ -476,7 +504,9 @@ function scopedResourceProfile(profile: LoadedProfile, scope: AuthorizedExecutio
       const strategy = typeof row.fields.strategy_id === "string" ? strategies.get(row.fields.strategy_id) : undefined;
       return strategy && row.fields.alpha_id === undefined ? { ...row, fields: { ...row.fields, alpha_id: strategy } } : row;
     });
-    let rows = scopedRetainedRows(scope, normalized);
+    // Record detail (client order id, order type, fee, liquidity, finding identity) is a separate closed vocabulary with closed
+    // row members; a cell with the wrong spelling is dropped here so one odd value cannot fail the whole resource.
+    let rows = scopedRetainedRows(scope, normalized, { detail: true }).map(sanitizeRecordDetail);
     // Eligible Portfolio discovery is a field-limited identity shell, even
     // when the financial Portfolio row spans a hidden peer Alpha.
     if (alias === "portfolios") {
@@ -490,7 +520,7 @@ function scopedResourceProfile(profile: LoadedProfile, scope: AuthorizedExecutio
     }
     if (alias === "venue_accounts") rows = rows.filter(row => typeof row.fields.binding_id === "string");
     const unsafeMoney = normalized.some(row => projectionRowVisible(scope, row.fields) &&
-      Object.keys(row.fields).some(field => SCOPED_FINANCIAL_FIELDS.has(field) && !retainedFieldAllowed(scope, field)));
+      Object.keys(row.fields).some(field => SCOPED_FINANCIAL_FIELDS.has(field) && !retainedFieldAllowed(scope, field) && !retainedDetailFieldAllowed(scope, field)));
     relations[key] = { ...source, as_of: null, completeness: "PARTIAL", reason_code: unsafeMoney ? "EXECUTION_READ_FIELD_POLICY_PENDING" :
       source.availability === "UNAVAILABLE" ? "EXECUTION_READ_NOT_AVAILABLE" : "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY",
       availability: unsafeMoney ? "UNAVAILABLE" : source.availability, items: unsafeMoney ? [] : rows };
@@ -881,7 +911,10 @@ function scopedRelation(
   // Scope ALL rows first so identity/ambiguity/counts stay exact. Only copy
   // the bounded public prefix: previously thousands of discarded rows were
   // allowlisted/cloned per viewer before slicing them down to200.
-  const items = scoped.rows.slice(0, RESOURCE_RELATION_ROW_LIMIT).map((row) => copyFact(alias, row, environment));
+  const items = scoped.rows.slice(0, RESOURCE_RELATION_ROW_LIMIT).map((row) => {
+    const fact = copyFact(alias, row, environment);
+    return readScope?.mode === "SCOPED_V2" ? withClockMs(fact) : fact;
+  });
   const boundReason = truncated ? "EDS04_RESOURCE_RELATION_ROW_BOUND" : null;
   const state: CapabilityState = scoped.reasonCode || relationPartial || truncated
     ? "PARTIAL" : scoped.rows.length === 0 ? "EMPTY" : "AVAILABLE";
@@ -1036,6 +1069,8 @@ interface MergedRelation {
   readonly reasonCode: string | null;
   readonly page: ManagerPage | null;
   readonly truncated: boolean;
+  /** Profiles whose own selection of this relation was UNAVAILABLE (merged `state` folds that into PARTIAL). */
+  readonly unavailableEnvironments: ReadonlySet<ResourceEnvironment>;
 }
 
 function mergeRelations(selections: readonly RelationSelection[]): ReadonlyMap<RelationAlias, MergedRelation> {
@@ -1070,7 +1105,8 @@ function mergeRelations(selections: readonly RelationSelection[]): ReadonlyMap<R
       scope: { state: state === "PARTIAL" ? "PARTIAL" as const : "EXACT" as const, reasonCode },
       projection: pages[0].projection,
     } satisfies ManagerPage;
-    result.set(alias, { rows, state, reasonCode, page, truncated });
+    result.set(alias, { rows, state, reasonCode, page, truncated,
+      unavailableEnvironments: new Set(members.filter((member) => member.state === "UNAVAILABLE").map((member) => member.environment)) });
   }
   return result;
 }
@@ -1104,7 +1140,7 @@ function trimLargestRelation(relations: ReadonlyMap<RelationAlias, MergedRelatio
     scope: { state: "PARTIAL" as const, reasonCode },
   } satisfies ManagerPage : null;
   const next = new Map(relations);
-  next.set(alias, { rows, state: "PARTIAL", reasonCode, page, truncated: true });
+  next.set(alias, { ...relation, rows, state: "PARTIAL", reasonCode, page, truncated: true });
   return next;
 }
 
@@ -1255,7 +1291,7 @@ function scopedResourceSummary(kind: ResourceKind, resourceId: string, found: re
   const data = (alias: RelationAlias) => relations.get(alias)?.rows ?? [];
   const result: Record<string, unknown> = { kind, id: resourceId, visibility: "SCOPED", coverage: "AUTHORIZED_ONLY",
     financial_summary: { state: "UNAVAILABLE", reason_code: "SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS" } };
-  for (const field of ["alpha_id", "portfolio_id", "account_id", "binding_id", "name", "display_name", "state", "base_currency"])
+  for (const field of ["alpha_id", "portfolio_id", "account_id", "binding_id", "name", "display_name", "version", "state", "base_currency"])
     if (allows(field) && field in parent) result[field] = parent[field];
   // Every child has already passed the tuple predicate and field policy. Keep
   // facts as facts; do not generate missing owner/version/lifecycle values.
@@ -1267,6 +1303,13 @@ function scopedResourceSummary(kind: ResourceKind, resourceId: string, found: re
     current_position_pnl: metricState(data("positions"), relations.get("positions")),
     equity_series: metricState(data("account_equity"), relations.get("account_equity")),
   };
+  // BE-P15 (RV-11 R-7): a published per-deployment snapshot row, or a typed absence. Never a sum of visible rows.
+  const equity = relations.get("account_equity");
+  result.deployment_financials = deploymentFinancials(result.deployments as readonly Fact[],
+    equity ? { rows: equity.rows, truncated: equity.truncated, unavailableEnvironments: equity.unavailableEnvironments } : undefined);
+  // BE-P15 (RV-11 R-6): which Alpha identity members are not stated, and why. Empty for the other kinds, then omitted.
+  const absences = identityAbsences(kind, result, allows);
+  if (absences.length) result.identity_absences = absences;
   return result;
 }
 

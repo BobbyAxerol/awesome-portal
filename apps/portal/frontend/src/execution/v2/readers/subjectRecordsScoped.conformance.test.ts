@@ -36,7 +36,7 @@ const violations = (value: unknown) => validateAgainst(OPENAPI, POINTER, value);
 const clone = <T,>(value: T): T => structuredClone(value);
 const pageOf = (raw: unknown): SubjectRecordsScoped | null => readSubjectRecordsScoped(raw);
 
-const SAMPLE: Record<string, unknown> = { T: "text_value", D: "123.456789012345678901234567890123", I: 1_790_812_800_000 };
+const SAMPLE: Record<string, unknown> = { T: "text_value", D: "123.456789012345678901234567890123", I: 1_790_812_800_000, L: "MAKER" };
 function rich(): Draft {
   const body = clone(BASE);
   const values: Draft = {};
@@ -78,7 +78,7 @@ describe("L0 · canonical, verbatim", () => {
   it("the rich page: every record member round-trips exactly", () => {
     const record = pageOf(RICH)!.records[0]!;
     for (const [key, kind] of Object.entries(SCOPED_RECORD_FIELDS)) {
-      expect(record.values[key], key).toEqual(kind === "T" ? { kind: "text", text: SAMPLE.T } : kind === "D" ? { kind: "decimal", exact: SAMPLE.D } : { kind: "integer", value: SAMPLE.I });
+      expect(record.values[key], key).toEqual(kind === "T" ? { kind: "text", text: SAMPLE.T } : kind === "D" ? { kind: "decimal", exact: SAMPLE.D } : kind === "L" ? { kind: "text", text: SAMPLE.L } : { kind: "integer", value: SAMPLE.I });
     }
   });
 
@@ -88,6 +88,7 @@ describe("L0 · canonical, verbatim", () => {
     const kindOf = (prop: Draft): string => {
       const base = (prop.anyOf as Draft[]).find((a) => a.type !== "null")!;
       if (base.type === "integer") return "I";
+      if (Array.isArray(base.enum)) return base.enum.join("|") === "MAKER|TAKER|UNKNOWN" ? "L" : `?${JSON.stringify(base)}`;
       if (base.pattern?.startsWith("^[^\\u0000") && base.maxLength === 256) return "T";
       if (base.type === "string" && base.maxLength === 128) return "D";
       return `?${JSON.stringify(base)}`;
@@ -133,9 +134,10 @@ describe("L1 · state matrices (schema as oracle)", () => {
   });
 
   const MEMBERS = Object.entries(SCOPED_RECORD_FIELDS);
-  const LEGAL: Record<string, unknown[]> = { T: ["x", "a".repeat(256), "ünïcode ✓"], D: ["0", "-1.5", "123456789012345678901234567890.123456789"], I: [0, 1_790_812_800_000] };
+  const LEGAL: Record<string, unknown[]> = { T: ["x", "a".repeat(256), "ünïcode ✓"], D: ["0", "-1.5", "123456789012345678901234567890.123456789"], I: [0, 1_790_812_800_000], L: ["MAKER", "TAKER", "UNKNOWN"] };
   const ILLEGAL: Record<string, unknown[]> = {
     T: ["", "a".repeat(257), "tab\there", 7, true, {}, []], D: [7, 1.5, "1e5", "01", "1.", ".5", "NaN", "a".repeat(129), {}], I: [-1, 1.5, "5", "", true, {}],
+    L: ["maker", "OTHER", "", 7, true, {}, []],
   };
   it(`B · ${MEMBERS.length} record members x legal values (null is absent): schema-valid and read exactly`, () => {
     for (const [key, kind] of MEMBERS) {
@@ -162,8 +164,8 @@ describe("L1 · state matrices (schema as oracle)", () => {
     }
     expect(checked).toBeGreaterThan(200);
   });
-  it("B · a member outside ScopedRecordFields is refused (a client order id, an order type, a fee, a liquidity word, a symbol)", () => {
-    for (const key of ["client_order_id", "order_type", "commission", "liquidity_side", "symbol", "submitted_at", "trade_time", "execution_session_id", "venue_order_id"]) {
+  it("B · a member outside ScopedRecordFields is refused (a symbol, a raw clock column, a session id, a venue order id, a trade id, an error text)", () => {
+    for (const key of ["symbol", "submitted_at", "trade_time", "resolved_at", "execution_session_id", "venue_order_id", "trade_id", "error_message", "role", "sequence"]) {
       const body = clone(RICH);
       body.records[0].values[key] = "x";
       expect(violations(body).length, key).toBeGreaterThan(0);
@@ -171,12 +173,59 @@ describe("L1 · state matrices (schema as oracle)", () => {
     }
   });
 
+  it("BE-P15 · the page states its clock and basis; a record without an order/trade instant says why, and nothing else may ride on a record", () => {
+    const read = pageOf(RICH)!;
+    expect(read).toMatchObject({ timeUnit: "UTC_EPOCH_MS", observedAtBasis: "FILL_TRADE_TIME" });
+    expect(read.records[0]!.timeReason).toBeNull();
+    // The wire does not tie the basis to the operation (the server does); a reader must not invent that coupling.
+    for (const [operation, basis] of [["executionAlphaOrdersV1", "ORDER_UPDATED_AT"], ["executionAccountFillsV1", "FILL_TRADE_TIME"]] as const) {
+      const body = clone(RICH);
+      body.logical_operation_id = operation;
+      body.observed_at_basis = basis;
+      expect(violations(body)).toEqual([]);
+      expect(pageOf(body)).toMatchObject({ operationId: operation, observedAtBasis: basis });
+    }
+    for (const reason of ["SUBMITTED_AT_NOT_IN_POLICY", "OCCURRED_AT_NOT_IN_POLICY", "SOURCE_TIME_NOT_PUBLISHED", "SOURCE_TIME_UNPARSEABLE"]) {
+      const body = clone(RICH);
+      body.records[0].time_reason_code = reason;
+      expect(violations(body)).toEqual([]);
+      expect(pageOf(body)!.records[0]!.timeReason).toBe(reason);
+    }
+    for (const bad of ["TIME_IS_ZERO", "", null, 5]) {
+      const body = clone(RICH);
+      body.records[0].time_reason_code = bad;
+      expect(violations(body).length, String(bad)).toBeGreaterThan(0);
+      expect(pageOf(body), String(bad)).toBeNull();
+    }
+    const stray = clone(RICH);
+    stray.records[0].time_reason = "SOURCE_TIME_NOT_PUBLISHED";
+    expect(violations(stray).length).toBeGreaterThan(0);
+    expect(pageOf(stray)).toBeNull();
+  });
+
+  it("BE-P15 · the published detail fixtures (orders with a client id and submission instant, fills with an exact fee) are schema-valid and read exactly", () => {
+    const pages = canonical.cases.filter((c) => c.type === "ScopedSubjectRecordsResponse").map((c) => c.value);
+    expect(pages.length).toBeGreaterThanOrEqual(3);
+    for (const page of pages) {
+      expect(violations(page)).toEqual([]);
+      expect(pageOf(page), page.logical_operation_id).not.toBeNull();
+    }
+    const fills = pageOf(pages.find((p) => p.logical_operation_id === "executionAccountFillsV1")!)!;
+    expect(fills.records[0]!.values.commission).toEqual({ kind: "decimal", exact: "0.0000000000000000001" });
+    expect(fills.records[0]!.values.liquidity_side).toEqual({ kind: "text", text: "MAKER" });
+    expect(fills.records[1]!.timeReason).toBe("OCCURRED_AT_NOT_IN_POLICY");
+    const orders = pageOf(pages.find((p) => p.logical_operation_id === "executionAlphaOrdersV1")!)!;
+    expect(orders.observedAtBasis).toBe("ORDER_UPDATED_AT");
+    expect(orders.records.map((r) => r.timeReason)).toEqual([null, "SUBMITTED_AT_NOT_IN_POLICY", "SOURCE_TIME_NOT_PUBLISHED"]);
+    expect(orders.records[2]!.values.submitted_at_ms).toEqual({ kind: "absent" });
+  });
+
   it("C · the constants: each flipped member refuses the page, and the schema agrees", () => {
     const flips: [string[], unknown][] = [
       [["authority"], "PORTAL_PROJECTION"], [["source_authority"], "TRADING_SYSTEM"], [["history_semantics"], "AUTHORITATIVE_REPLAY"], [["reason_code"], "COMPLETE"],
       [["read_scope", "visibility"], "FULL"], [["read_scope", "coverage"], "ALL"], [["page", "maximum_page_rows"], 200], [["page", "limit"], 501], [["page", "limit"], 0],
       [["state"], "AVAILABLE"], [["state"], "AUTHORITATIVE_EMPTY"], [["logical_operation_id"], "executionPortfolioOrdersV1"], [["resource", "kind"], "portfolio"],
-      [["environment"], "backtest"], [["page", "next_cursor"], "has space"], [["page", "next_cursor"], ""], [["page", "next_cursor"], "x".repeat(4097)],
+      [["environment"], "backtest"], [["time_unit"], "SECONDS"], [["time_unit"], "UTC_EPOCH_S"], [["observed_at_basis"], "VENUE_EVENT_SEQUENCE"], [["page", "next_cursor"], "has space"], [["page", "next_cursor"], ""], [["page", "next_cursor"], "x".repeat(4097)],
     ];
     for (const [path, value] of flips) {
       const body = clone(RICH);
@@ -227,7 +276,7 @@ const DECIMALS: Case[] = [...decimalCases(RICH, [...V, "price"]), ...decimalCase
 const STRINGS: Case[] = [...stringCases(RICH, ["profile_id"]), ...stringCases(RICH, ["resource", "id"]), ...stringCases(RICH, ["records", 0, "record_id"]), ...stringCases(RICH, [...V, "fill_id"]), ...stringCases(RICH, ["page", "next_cursor"])];
 const ARRAYS: Case[] = [...arrayCases(RICH, ["records"], { idKey: "record_id" })];
 const REQUIRED_PATHS = [
-  ...["schema_version", "logical_operation_id", "authority", "source_authority", "history_semantics", "environment", "profile_id", "resource", "read_scope", "state", "reason_code", "coverage", "page", "records"].map((k) => [k] as const),
+  ...["schema_version", "time_unit", "observed_at_basis", "logical_operation_id", "authority", "source_authority", "history_semantics", "environment", "profile_id", "resource", "read_scope", "state", "reason_code", "coverage", "page", "records"].map((k) => [k] as const),
   ...["limit", "maximum_page_rows", "returned_count", "has_more", "next_cursor"].map((k) => ["page", k] as const),
   ...["retained_row_count", "oldest_observed_at_ms", "newest_observed_at_ms"].map((k) => ["coverage", k] as const),
   ...["visibility", "coverage", "policy_revision"].map((k) => ["read_scope", k] as const),

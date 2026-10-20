@@ -5,6 +5,7 @@
       "type": "ScopedAdapterResponse",
       "value": {
         "schema_version": "portal.execution.profile-read-adapter.v2",
+        "time_unit": "UTC_EPOCH_MS",
         "capability_id": "admin.inspect",
         "authority": "PORTAL_SGP_PROJECTION",
         "workspace_id": "workspace_TEST_ONLY",
@@ -40,6 +41,8 @@
       "type": "ScopedSubjectRecordsResponse",
       "value": {
         "schema_version": "portal.execution.subject-records.v2",
+        "time_unit": "UTC_EPOCH_MS",
+        "observed_at_basis": "FILL_TRADE_TIME",
         "logical_operation_id": "executionAlphaFillsV1",
         "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
         "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
@@ -252,6 +255,217 @@
           "next_cursor": null
         },
         "records": []
+      }
+    },
+    {
+      "type": "ScopedSubjectRecordsResponse",
+      "value": {
+        "schema_version": "portal.execution.subject-records.v2",
+        "time_unit": "UTC_EPOCH_MS",
+        "observed_at_basis": "ORDER_UPDATED_AT",
+        "logical_operation_id": "executionAlphaOrdersV1",
+        "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+        "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
+        "history_semantics": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "resource": {
+          "kind": "alpha",
+          "id": "alpha_TEST_ONLY"
+        },
+        "read_scope": {
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "policy_revision": "TEST_ONLY-policy"
+        },
+        "state": "PARTIAL",
+        "reason_code": "SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY",
+        "coverage": {
+          "retained_row_count": 3,
+          "oldest_observed_at_ms": 1790812800123,
+          "newest_observed_at_ms": 1790812800123
+        },
+        "page": {
+          "limit": 200,
+          "maximum_page_rows": 500,
+          "returned_count": 3,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "records": [
+          {
+            "record_id": "order_TEST_ONLY_entry",
+            "observed_at_ms": 1790812800123,
+            "values": {
+              "order_id": "order_TEST_ONLY_entry",
+              "client_order_id": "client_TEST_ONLY_entry",
+              "order_type": "LIMIT",
+              "side": "BUY",
+              "price": "100.1234567890123456789",
+              "quantity": "10.5",
+              "submitted_at_ms": 1790812799123,
+              "updated_at": 1790812800123
+            }
+          },
+          {
+            "record_id": "order_TEST_ONLY_hidden_time",
+            "observed_at_ms": 1790812800123,
+            "values": {
+              "order_id": "order_TEST_ONLY_hidden_time",
+              "side": "SELL",
+              "quantity": "1"
+            },
+            "time_reason_code": "SUBMITTED_AT_NOT_IN_POLICY"
+          },
+          {
+            "record_id": "order_TEST_ONLY_unstated_time",
+            "observed_at_ms": 1790812800123,
+            "values": {
+              "order_id": "order_TEST_ONLY_unstated_time",
+              "client_order_id": null,
+              "order_type": null,
+              "submitted_at_ms": null
+            },
+            "time_reason_code": "SOURCE_TIME_NOT_PUBLISHED"
+          }
+        ]
+      }
+    },
+    {
+      "type": "ScopedSubjectRecordsResponse",
+      "value": {
+        "schema_version": "portal.execution.subject-records.v2",
+        "time_unit": "UTC_EPOCH_MS",
+        "observed_at_basis": "FILL_TRADE_TIME",
+        "logical_operation_id": "executionAccountFillsV1",
+        "authority": "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
+        "source_authority": "TRADING_SYSTEM_CURRENT_SOURCE",
+        "history_semantics": "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "resource": {
+          "kind": "account",
+          "id": "account_TEST_ONLY"
+        },
+        "read_scope": {
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "policy_revision": "TEST_ONLY-policy"
+        },
+        "state": "PARTIAL",
+        "reason_code": "SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY",
+        "coverage": {
+          "retained_row_count": 2,
+          "oldest_observed_at_ms": 1790812800123,
+          "newest_observed_at_ms": 1790812800123
+        },
+        "page": {
+          "limit": 200,
+          "maximum_page_rows": 500,
+          "returned_count": 2,
+          "has_more": false,
+          "next_cursor": null
+        },
+        "records": [
+          {
+            "record_id": "fill_TEST_ONLY_maker",
+            "observed_at_ms": 1790812800123,
+            "values": {
+              "fill_id": "fill_TEST_ONLY_maker",
+              "client_order_id": "client_TEST_ONLY_entry",
+              "price": "100.1234567890123456789",
+              "quantity": "10.5",
+              "commission": "0.0000000000000000001",
+              "commission_currency": "USDT",
+              "liquidity_side": "MAKER",
+              "occurred_at_ms": 1790812800123,
+              "realized_pnl": "0"
+            }
+          },
+          {
+            "record_id": "fill_TEST_ONLY_hidden_time",
+            "observed_at_ms": 1790812800123,
+            "values": {
+              "fill_id": "fill_TEST_ONLY_hidden_time",
+              "commission": null,
+              "liquidity_side": "UNKNOWN"
+            },
+            "time_reason_code": "OCCURRED_AT_NOT_IN_POLICY"
+          }
+        ]
+      }
+    },
+    {
+      "type": "ScopedAdapterResponse",
+      "value": {
+        "schema_version": "portal.execution.profile-read-adapter.v2",
+        "time_unit": "UTC_EPOCH_MS",
+        "capability_id": "event.order-lifecycle",
+        "authority": "PORTAL_SGP_PROJECTION",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "paper",
+        "profile_id": "profile_TEST_ONLY",
+        "visibility": "SCOPED",
+        "coverage": "AUTHORIZED_ONLY",
+        "policy_revision": "TEST_ONLY-policy",
+        "bounds": {
+          "maximum_rows_per_relation": 200,
+          "maximum_response_bytes": 1048576
+        },
+        "relations": {
+          "conditional_order_group_legs": {
+            "state": "PARTIAL",
+            "completeness": "PARTIAL",
+            "freshness": "UNKNOWN",
+            "as_of_ms": null,
+            "returned_count": 2,
+            "truncated": false,
+            "reason_code": "AUTHORIZED_RETAINED_FACTS",
+            "items": [
+              {
+                "group_id": "group_TEST_ONLY",
+                "leg_id": "leg_TEST_ONLY_entry",
+                "leg_role": "ENTRY",
+                "leg_sequence": 0,
+                "client_order_id": "client_TEST_ONLY_entry",
+                "order_type": "LIMIT",
+                "side": "BUY",
+                "quantity": "10.5",
+                "price": "100.1234567890123456789"
+              },
+              {
+                "group_id": "group_TEST_ONLY",
+                "leg_id": "leg_TEST_ONLY_stop",
+                "leg_role": "STOP",
+                "leg_sequence": 1,
+                "client_order_id": "client_TEST_ONLY_stop",
+                "order_type": "STOP_MARKET",
+                "side": "SELL",
+                "quantity": "10.5",
+                "price": null
+              }
+            ]
+          },
+          "reconciliation": {
+            "state": "PARTIAL",
+            "completeness": "PARTIAL",
+            "freshness": "UNKNOWN",
+            "as_of_ms": null,
+            "returned_count": 1,
+            "truncated": false,
+            "reason_code": "AUTHORIZED_RETAINED_FACTS",
+            "items": [
+              {
+                "account_id": "account_TEST_ONLY",
+                "status": "RESOLVED",
+                "finding_id": "finding_TEST_ONLY",
+                "finding_type": "TEST_ONLY_TYPE",
+                "created_at": 1790812500123,
+                "resolved_at_ms": 1790812800123
+              }
+            ]
+          }
+        }
       }
     }
   ]

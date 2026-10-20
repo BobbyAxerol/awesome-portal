@@ -20,11 +20,22 @@ export const scopedAdapterFieldsSchema = z.object({
   net_pnl: adapterDecimal.nullable().optional(), equity: adapterDecimal.nullable().optional(),
   timestamp_ms: adapterTime.nullable().optional(), occurred_at_ms: adapterTime.nullable().optional(),
   created_at: adapterTime.nullable().optional(), updated_at: adapterTime.nullable().optional(),
+  // BE-P15 record detail (RV-11 R-5..R-9). Every member optional + nullable: an omitted member means the scope did not admit it
+  // or the source did not state it; `null` is the source's own "no value". Admission lives in read-fields.ts / read-scope.ts.
+  submitted_at_ms: adapterTime.nullable().optional(), resolved_at_ms: adapterTime.nullable().optional(),
+  client_order_id: adapterText.nullable().optional(), order_type: adapterText.nullable().optional(),
+  commission: adapterDecimal.nullable().optional(), commission_currency: adapterText.nullable().optional(),
+  liquidity_side: z.enum(["MAKER", "TAKER", "UNKNOWN"]).nullable().optional(),
+  finding_id: adapterText.nullable().optional(), finding_type: adapterText.nullable().optional(),
+  group_id: adapterText.nullable().optional(), leg_id: adapterText.nullable().optional(),
+  leg_role: adapterText.nullable().optional(), leg_sequence: adapterTime.nullable().optional(),
 }).strict();
 export const scopedAdapterGroupSchema = z.object({ state: z.enum(["PARTIAL", "EMPTY", "UNAVAILABLE"]), completeness: z.literal("PARTIAL"),
   freshness: z.literal("UNKNOWN"), as_of_ms: z.null(), returned_count: z.number().int().min(0).max(200), truncated: z.boolean(),
   reason_code: z.enum(["AUTHORIZED_RETAINED_FACTS", "RETAINED_FACTS_NOT_PUBLISHED"]), items: z.array(scopedAdapterFieldsSchema).max(200) }).strict();
 export const scopedAdapterResponseSchema = z.object({ schema_version: z.literal("portal.execution.profile-read-adapter.v2"),
+  /** BE-P15 R-5a: every `*_ms` / `created_at` / `updated_at` integer in this response is UTC epoch milliseconds. */
+  time_unit: z.literal("UTC_EPOCH_MS"),
   capability_id: z.enum(["admin.inspect", "admin.performance", "admin.broker-read", "event.order-lifecycle"]),
   authority: z.literal("PORTAL_SGP_PROJECTION"), workspace_id: adapterText, environment: z.enum(["paper", "sandbox", "live"]),
   profile_id: adapterText, visibility: z.literal("SCOPED"), coverage: z.literal("AUTHORIZED_ONLY"), policy_revision: adapterText,
