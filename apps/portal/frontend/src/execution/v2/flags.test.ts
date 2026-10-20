@@ -26,7 +26,7 @@ describe("parseV2Manifest", () => {
 
   it("knows every screen of review2/07 s5 plus the shell", () => {
     expect([...parseV2Manifest(EXEC_V2_SCREEN_KEYS.join(","))].sort()).toEqual(
-      ["account", "admin", "alpha", "archived", "blotter", "canary", "cockpit", "compare", "fleet", "live", "ops", "overview", "portfolios", "profile", "replay", "request", "sandbox", "scoped", "shell", "users", "workbench"],
+      ["account", "admin", "alpha", "archived", "blotter", "canary", "cockpit", "command", "compare", "fleet", "live", "ops", "overview", "portfolios", "profile", "replay", "request", "sandbox", "scoped", "shell", "users", "workbench"],
     );
   });
 
@@ -52,10 +52,10 @@ describe("reserved keys", () => {
   const reserved: readonly string[] = EXEC_V2_RESERVED_KEYS;
   const mounting = EXEC_V2_SCREEN_KEYS.filter((key) => !reserved.includes(key));
 
-  it("names the two permanent keys and no pending key (the five S3 keys are wired)", () => {
+  it("names the two permanent keys and one pending key, `command` (UXM-09 fixture story, not mounted); the five S3 keys are wired", () => {
     expect([...EXEC_V2_PERMANENT_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
-    expect([...EXEC_V2_PENDING_KEYS]).toEqual([]);
-    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "replay"]);
+    expect([...EXEC_V2_PENDING_KEYS]).toEqual(["command"]);
+    expect([...EXEC_V2_RESERVED_KEYS].sort()).toEqual(["archived", "command", "replay"]);
   });
 
   it("D2: every S3 stage screen has its own key (no shared `stages` key), the Paper key stays `workbench`, and each one mounts", () => {

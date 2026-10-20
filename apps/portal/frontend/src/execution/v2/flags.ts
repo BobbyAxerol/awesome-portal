@@ -23,6 +23,7 @@ export const EXEC_V2_SCREEN_KEYS = [
   "profile",
   "overview",
   "cockpit",
+  "command", // UXM-09 fixture story; pending (EXEC_V2_PENDING_KEYS) until a route reads it
   "shell",
   "compare",
   "blotter",
@@ -41,7 +42,7 @@ export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
  * - `archived`: the Archived lens is part of the Fleet (`tab=archived`, key `fleet`); there is no separate screen.
  * - `replay`: Trade Replay rides the Alpha 360 Replay tab (key `alpha`); nothing reads `replay` itself.
  *
- * Pending: none. The S3 stage screens (2026-10-19, D2: one key per screen) left
+ * Pending: `command` (UXM-09 fixture story, not mounted). Earlier: the S3 stage screens (2026-10-19, D2: one key per screen) left
  * this list in the commit that made `ExecutionPreviewRoute` read
  * `isV2Screen("<key>")` for each: `workbench` (Paper, deployment routes),
  * `sandbox`, `canary`, `live` (deployment routes) and `request` (the New request
@@ -54,7 +55,7 @@ export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
  * read by `isV2Screen("<key>")` in source, and the reserved ones are read nowhere.
  */
 export const EXEC_V2_PERMANENT_RESERVED_KEYS = ["archived", "replay"] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
-export const EXEC_V2_PENDING_KEYS = [] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
+export const EXEC_V2_PENDING_KEYS = ["command"] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
 export const EXEC_V2_RESERVED_KEYS = [...EXEC_V2_PERMANENT_RESERVED_KEYS, ...EXEC_V2_PENDING_KEYS] as const satisfies readonly (typeof EXEC_V2_SCREEN_KEYS)[number][];
 const RESERVED: ReadonlySet<string> = new Set(EXEC_V2_RESERVED_KEYS);
 
