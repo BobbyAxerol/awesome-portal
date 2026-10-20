@@ -2,7 +2,7 @@ import {readFileSync} from "node:fs";
 import {resolve} from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import {describe,expect,it} from "vitest";
-import {commandIntent,commandPreview,publicCommandStatus as commandStatus,commandStatus as storedCommandStatus} from "../../../apps/control-api/src/execution-v2/command.contract";
+import {commandIntent,commandPreview,publicCommandStatus as commandStatus,commandStatus as storedCommandStatus,publicStatusFacets} from "../../../apps/control-api/src/execution-v2/command.contract";
 import {commandCollection,commandCollectionQuery} from "../../../apps/control-api/src/execution-v2/command-collection.contract";
 const root=resolve(__dirname,".."),load=(p:string)=>JSON.parse(readFileSync(resolve(root,p),"utf8"));
 const currencyFixture=load("fixtures/execution-command-currency.synthetic.valid.json");
@@ -26,7 +26,8 @@ describe("ELP2-07 generated command contract",()=>{
     const validate=compile("CommandStatus");
     expect(validate(currencyFixture.stored_status)).toBe(false);
     expect(validate(currencyFixture.public_status)).toBe(true);
-    expect(currencyFixture.public_status).toEqual({...currencyFixture.stored_status,currency:fixture.intent.business_payload.currency});
+    expect(currencyFixture.public_status).toEqual({...currencyFixture.stored_status,currency:fixture.intent.business_payload.currency,
+      ...publicStatusFacets(currencyFixture.stored_status)});
     for(const currency of [null,""," USDT","USDT ","USDT\n"]){
       expect(commandStatus.safeParse({...fixture.ack_only,currency}).success).toBe(false);
       expect(validate({...fixture.ack_only,currency})).toBe(false);
@@ -144,5 +145,34 @@ describe("ELP2-07 generated command contract",()=>{
       expect(validateWorkflow({...workflow,status})).toBe(false);
       expect(validateOtherWorkflow({...workflow,status})).toBe(false);
     }
+  });
+});
+
+describe("BE-P13 typed absences, replay marker and cost/impact in the published contract",()=>{
+  it("validates the new canonical examples against the served schemas and the runtime parsers",()=>{
+    for(const [key,name] of [["ack_only","CommandStatus"],["rejected","CommandStatus"],["submit_first","CommandSubmitResult"],
+      ["submit_replayed","CommandSubmitResult"],["preview_blocked","CommandPreview"],["preview_allowed","CommandPreview"]] as const){
+      const validate=compile(name);
+      expect(validate(fixture[key]),key+JSON.stringify(validate.errors)).toBe(true);
+    }
+    expect(commandStatus.safeParse(fixture.rejected).success).toBe(true);
+    expect(commandPreview.safeParse(fixture.preview_allowed).success).toBe(true);
+    expect(fixture.submit_first.replayed).toBe(false);
+    expect(fixture.submit_replayed.replayed).toBe(true);
+    // The replay marker belongs to the submit response alone.
+    expect(compile("CommandStatus")(fixture.submit_replayed)).toBe(false);
+    expect(compile("CommandSubmitResult")(fixture.ack_only)).toBe(false);
+    expect(api.paths["/api/v1/execution/capital-commands"].post.responses["200"].content["application/json"].schema.$ref).toMatch(/CommandSubmitResult$/);
+  });
+  it("source rejection reason and venue fill quantities are absences, never invented facts",()=>{
+    expect(fixture.rejected.source_rejection).toEqual({state:"NOT_PUBLISHED",reason:"SOURCE_RESULT_HAS_NO_REJECTION_REASON"});
+    expect(fixture.ack_only.source_rejection).toEqual({state:"NOT_APPLICABLE",reason:null});
+    expect(fixture.ack_only.venue_fill).toEqual({state:"NOT_PUBLISHED",reason:"SOURCE_RESULT_HAS_NO_FILL_QUANTITIES",quantities:null});
+    expect(fixture.rejected.venue_fill).toEqual({state:"NOT_APPLICABLE",reason:null,quantities:null});
+    const validate=compile("CommandStatus");
+    for(const bad of [{source_rejection:{state:"NOT_PUBLISHED",reason:"INSUFFICIENT_BALANCE"}},
+      {venue_fill:{state:"PARTIALLY_FILLED",reason:null,quantities:null}},
+      {venue_fill:{state:"NOT_PUBLISHED",reason:"SOURCE_RESULT_HAS_NO_FILL_QUANTITIES",quantities:{filled:"1"}}}])
+      expect(validate({...fixture.ack_only,...bad}),JSON.stringify(bad)).toBe(false);
   });
 });

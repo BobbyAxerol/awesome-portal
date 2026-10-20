@@ -3,6 +3,7 @@
  * relations, acceptance and historical receipt facts are synthetic TEST_ONLY.
  * Never import another spec: its hooks would execute a second fixture suite.
  */
+import { toPublicCommandStatus } from "../src/execution-v2/command.contract";
 import { Module } from "@nestjs/common";
 import { NestFactory } from "@nestjs/core";
 import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fastify";
@@ -226,7 +227,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
     "preserves real stored %s partition/copy without ACK, projection or venue promotion", async state => {
       const f = await fixture(), initial = await seed(f), record = await business(f, initial, state);
       await mounted(f, async http => {
-        const body = read(await http.get(record.id)); expect(body.status).toEqual({...record.status,currency:record.intent.business_payload.currency});
+        const body = read(await http.get(record.id)); expect(body.status).toEqual(toPublicCommandStatus(record.status,record.intent.business_payload.currency));
         expect(body.public_copy_key).toBe(state === "UNKNOWN" ? "QUERY_SAME_INTENT" : state === "REJECTED" ? "SOURCE_REJECTED"
           : state === "PARTIALLY_APPLIED_CANCELLED" ? "APPLIED_PART_RETAINED" : ["PARTIALLY_APPLIED", "WAITING_ENCUMBRANCE"].includes(state) ? "PARTIAL_REMAINDER_PENDING" : "REVIEW_RECEIPT");
         if (state === "UNKNOWN") expect(body.status.business).toMatchObject({ receipt_ref: null, source_event_ref: null, revision: null, amounts: null });
@@ -251,7 +252,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
     await mounted(f, async http => {
       const response = reader === "workflow" ? await http.get(record.id) : await http.detail(record.id);
       expect(response.statusCode).toBe(200);
-      expect(reader === "workflow" ? read(response).status : publicCommandStatus.parse(response.json())).toEqual({...record.status,currency:record.intent.business_payload.currency});
+      expect(reader === "workflow" ? read(response).status : publicCommandStatus.parse(response.json())).toEqual(toPublicCommandStatus(record.status,record.intent.business_payload.currency));
     });
   });
   it("a different currently authorized audit reviewer reads history using the original actor's immutable hash", async () => {
@@ -512,7 +513,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07/08 capital workflow GET
       submit = vi.spyOn(f.commands, "submit"), preview = vi.spyOn(f.commands, "preview"), update = vi.spyOn(CommandStore.prototype, "update"),
       insert = vi.spyOn(CommandStore.prototype, "insert"), claim = vi.spyOn(CommandStore.prototype, "claim");
     try { await mounted(f, async http => { read(await http.get(record.id));
-      expect(publicCommandStatus.parse((await http.detail(record.id)).json())).toEqual({...record.status,currency:record.intent.business_payload.currency});
+      expect(publicCommandStatus.parse((await http.detail(record.id)).json())).toEqual(toPublicCommandStatus(record.status,record.intent.business_payload.currency));
       read(await http.get(record.id)); });
       expect(await ledger()).toEqual(before);
       for (const call of [recover, reconcile, submit, preview, update, insert, claim,

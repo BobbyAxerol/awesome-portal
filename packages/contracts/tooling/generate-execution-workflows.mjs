@@ -22,6 +22,7 @@ function json(s) {
   if (t === 'ZodUnion') return { anyOf: d.options.map(json) };
   if (t === 'ZodNullable') return { anyOf: [json(d.innerType), { type: 'null' }] };
   if (t === 'ZodLiteral') return { const: d.value };
+  if (t === 'ZodNull') return { type: 'null' };
   if (t === 'ZodBoolean') return { type: 'boolean' };
   if (t === 'ZodEnum') return { type: 'string', enum: d.values };
   if (t === 'ZodRecord') return { type: 'object', additionalProperties: json(d.valueType) };

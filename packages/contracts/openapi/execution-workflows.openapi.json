@@ -2990,6 +2990,22 @@
               }
             ]
           },
+          "cost_impact": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "state": {
+                "const": "NOT_PUBLISHED"
+              },
+              "reason": {
+                "const": "NO_COST_OR_IMPACT_SOURCE"
+              }
+            },
+            "required": [
+              "state",
+              "reason"
+            ]
+          },
           "business_applied": {
             "const": false
           },
@@ -3006,6 +3022,7 @@
           "profile_ref",
           "approval_required",
           "approval_gate",
+          "cost_impact",
           "business_applied",
           "reserved"
         ]
@@ -3239,6 +3256,86 @@
             "maxLength": 512,
             "pattern": "^(?![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S]*[\\u0000-\\u001f\\u007f])[\\s\\S]*(?<![\\u0009-\\u000d\\u001c-\\u0020\\u0085\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])$",
             "$comment": "PM text additionally requires <=512 UTF-8 bytes, enforced by runtime pmText validator; JSON Schema maxLength counts Unicode codepoints, not bytes."
+          },
+          "source_rejection": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_APPLICABLE"
+                  },
+                  "reason": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason": {
+                    "const": "SOURCE_RESULT_HAS_NO_REJECTION_REASON"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason"
+                ]
+              }
+            ]
+          },
+          "venue_fill": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_APPLICABLE"
+                  },
+                  "reason": {
+                    "type": "null"
+                  },
+                  "quantities": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason",
+                  "quantities"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "state": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason": {
+                    "const": "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES"
+                  },
+                  "quantities": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "state",
+                  "reason",
+                  "quantities"
+                ]
+              }
+            ]
           }
         },
         "required": [
@@ -3256,7 +3353,9 @@
           "created_at_ms",
           "updated_at_ms",
           "authority",
-          "currency"
+          "currency",
+          "source_rejection",
+          "venue_fill"
         ],
         "description": "Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema."
       },

@@ -16898,7 +16898,7 @@
         "schema_version", "operation_id", "command_type", "command_version",
         "command_key", "risk_tier", "payload_hash", "plan_digest", "status",
         "blockers", "warnings", "apply_token", "expires_at", "payload_storage_policy",
-        "relay_capability", "source_side_effect_requested", "replayed"
+        "relay_capability", "source_side_effect_requested", "current_primitive", "cost_impact", "replayed"
       ],
       "properties": {
         "schema_version": { "const": "execution.command-plan.v1" },
@@ -16917,7 +16917,36 @@
         "payload_storage_policy": { "const": "HASH_ONLY_NO_RAW" },
         "relay_capability": { "const": "DISABLED" },
         "source_side_effect_requested": { "const": false },
+        "current_primitive": {
+          "description": "null for every command except ops/emergency-close (N16B), whose accepted-but-DARK current primitive is described here. runtime_active and source_side_effect_requested are constants false. The served plan always carried this key; it was missing from the schema (BE-P13).",
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "source_environment", "target_types", "runtime_active", "source_side_effect_requested"],
+              "properties": {
+                "id": { "const": "live.emergency-close" },
+                "source_environment": { "const": "LIVE_FULL" },
+                "target_types": { "type": "array", "items": { "const": "ACCOUNT" }, "minItems": 1, "maxItems": 1 },
+                "runtime_active": { "const": false },
+                "source_side_effect_requested": { "const": false }
+              }
+            }
+          ]
+        },
+        "cost_impact": { "$ref": "#/$defs/CostImpactAbsence" },
         "replayed": { "type": "boolean" }
+      }
+    },
+    "CostImpactAbsence": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "FE-020. No plan or preview carries a cost, fee or impact estimate, so the only value is this typed absence. The client never computes one. A real estimate would need a source that publishes it and arrive as a new, versioned branch.",
+      "required": ["state", "reason"],
+      "properties": {
+        "state": { "const": "NOT_PUBLISHED" },
+        "reason": { "const": "NO_COST_OR_IMPACT_SOURCE" }
       }
     },
     "ExecutionCommandApplyRequest": {

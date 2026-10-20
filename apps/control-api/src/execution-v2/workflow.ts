@@ -2,7 +2,7 @@
  * No route accepts these facts; none of these functions grants or dispatches an action. */
 import { z } from "zod";
 import { deriveCreateWorkflowState, workflowCapital, workflowContext, workflowCreate, workflowLifecycle, workflowNavigation, workflowReadState } from "./workflow.contract";
-import { commandStatus } from "./command.contract";
+import { commandStatus, toPublicCommandStatus } from "./command.contract";
 export { criteriaFromAuthorizedParent, recordedWorkflowFromAuthorizedParent } from "./workflow-criteria";
 
 const zero = (v: string) => /^0(?:\.0+)?$/.test(v);
@@ -19,7 +19,7 @@ export function capitalWorkflow(context: Context, currency: string, status: z.in
     : b.state === "PARTIALLY_APPLIED_CANCELLED" ? "APPLIED_PART_RETAINED"
     : ["PARTIALLY_APPLIED", "WAITING_ENCUMBRANCE"].includes(b.state) ? "PARTIAL_REMAINDER_PENDING" : "REVIEW_RECEIPT";
   return workflowCapital.parse({ schema_version: "portal.execution.capital-workflow.v1", context, currency,
-    status: { ...status, currency },
+    status: toPublicCommandStatus(status, currency),
     effect_kind: status.operation === "FUND" ? "ECONOMIC_ASSIGNMENT" : status.operation === "SET_ROOT_LIMIT" ? "NOMINAL_ROOT_CAP" : "MANAGEMENT_BUDGET",
     physical_transfer_performed: false, form_cancel: "DISCARD_LOCAL_DRAFT_ONLY", after_submit_cancel: "SEPARATE_CANCEL_REMAINING_AUTHORITY_REQUIRED",
     refresh: "GET_ORIGINAL_COMMAND_NO_RESUBMIT", public_copy_key, automatic_resend: false });

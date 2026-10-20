@@ -22,6 +22,8 @@ function json(s){const d=s._def,t=d.typeName;
     return v;}
   if(t==='ZodNullable')return {anyOf:[json(d.innerType),{type:'null'}]};
   if(t==='ZodLiteral')return {const:d.value};
+  if(t==='ZodNull')return {type:'null'};
+  if(t==='ZodUnion')return {oneOf:d.options.map(json)};
   if(t==='ZodBoolean')return {type:'boolean'};
   if(t==='ZodEnum')return {type:'string',enum:d.values};
   if(t==='ZodRecord')return {type:'object',additionalProperties:json(d.valueType)};
@@ -35,7 +37,7 @@ function json(s){const d=s._def,t=d.typeName;
 // to an untyped object in generated browser types.
 const foundation=JSON.parse(readFileSync(resolve(root,'openapi/execution-v2-foundation.openapi.json'),'utf8'));
 const schemas={...foundation.components.schemas,CommandIntent:json(c.commandIntent),CommandSubmit:json(c.commandSubmit),
-  CommandPreview:json(c.commandPreview),CommandStatus:json(c.publicCommandStatus),
+  CommandPreview:json(c.commandPreview),CommandStatus:json(c.publicCommandStatus),CommandSubmitResult:json(c.submitCommandStatus),
   CommandCollectionQuery:json(cc.commandCollectionQuery),CommandCollection:json(cc.commandCollection),
   ...capitalWorkflowSchemas(wc,json)};
 schemas.CommandCollection.properties.items.items={$ref:'#/components/schemas/CommandStatus'};
@@ -48,6 +50,11 @@ schemas.CommandStatus.properties.currency=structuredClone(
 // This deliberately does not change foundation/runtime terminal-LF semantics.
 schemas.CommandStatus.properties.business.properties.revision={anyOf:[
   structuredClone(foundation.components.schemas.PmCounter),{type:'null'}]};
+for(const name of ['CommandStatus','CommandSubmitResult']){
+  schemas[name].properties.currency=structuredClone(foundation.components.schemas.PmaCandidateCapitalCommand.oneOf[0].properties.currency);
+  schemas[name].properties.business.properties.revision={anyOf:[structuredClone(foundation.components.schemas.PmCounter),{type:'null'}]};
+}
+schemas.CommandSubmitResult.description='The submit response (200): a CommandStatus plus `replayed`. replayed is true when this call is the stored answer for an idempotency key that already produced a command (a repeat, or a concurrent identical submit that did not send), false when this call originated the command. It is present ONLY here; GET status, reconcile, the collection and the workflow never carry it. source_rejection and venue_fill are typed absences: the published source result contains no rejection reason and no fill quantities, so they say NOT_PUBLISHED, never a guess.';
 schemas.CommandStatus.description='Served status only. Required currency is copied exactly from the original immutable intent after current exact-resource authority and stored actor/intent/authorization/hash validation. A legacy stored status may lack this field and is projected without rewriting any stored row or event. Missing/corrupt original provenance is a sanitized refusal, never inferred USD, source-receipt currency or zero. Existing pre-upgrade HTTP bodies without currency are not complete according to this served schema.';
 schemas.CommandCollection.description='Finite exact-resource/environment trusted-capital statuses only. Not the mixed operation queue. Current TS-accepted audit authorization precedes collection. Runtime also verifies cross-row target and page-count invariants.';
 schemas.CommandProblem={type:'object',additionalProperties:false,required:['error','request_id'],properties:{error:{type:'object',additionalProperties:false,
@@ -58,7 +65,7 @@ schemas.CommandIntent.properties.business_payload.description='Unchanged PM wire
 schemas.CommandSubmit.properties.intent={$ref:'#/components/schemas/CommandIntent'};
 const paths={};
 for(const [route,method,operation,input,output] of [
-  ['/preview','post','Preview','CommandIntent','CommandPreview'],['','post','Submit','CommandSubmit','CommandStatus'],
+  ['/preview','post','Preview','CommandIntent','CommandPreview'],['','post','Submit','CommandSubmit','CommandSubmitResult'],
   ['/{id}','get','Status',null,'CommandStatus'],['/{id}/reconcile','post','Reconcile',null,'CommandStatus'],
   ['','get','Collection','CommandCollectionQuery','CommandCollection'],
   ['/{id}/workflow','get','WorkflowGet',null,'WorkflowCapital']]){
@@ -101,7 +108,7 @@ for(const [route,method,operation,input,output] of [
           :'Closed input / current authority / correlation / capacity failure. Never blindly retry; query same intent.',
         ...(finiteRead?{headers}:{}),content:{'application/json':{schema:{$ref:'#/components/schemas/CommandProblem'}}}}]))}};
 }
-const needed=new Set(['CommandIntent','CommandSubmit','CommandPreview','CommandStatus','CommandProblem','CommandCollectionQuery','CommandCollection','WorkflowContext','WorkflowCapital']);
+const needed=new Set(['CommandIntent','CommandSubmit','CommandPreview','CommandStatus','CommandSubmitResult','CommandProblem','CommandCollectionQuery','CommandCollection','WorkflowContext','WorkflowCapital']);
 function refs(v){if(!v||typeof v!=='object')return;for(const [key,value] of Object.entries(v)){
   if(key==='$ref'&&typeof value==='string'&&value.startsWith('#/components/schemas/')){const name=value.split('/').at(-1);if(!needed.has(name)){needed.add(name);refs(schemas[name]);}}
   else refs(value);}}

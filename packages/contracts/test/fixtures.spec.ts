@@ -158,6 +158,8 @@ const schemaIds: Record<string, string> = {
     "https://schemas.primusspark.com/portal/execution-command-tasks.v1.schema.json",
   "execution-command-plan.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlan",
+  "execution-command-plan.emergency-close.valid.json":
+    "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandPlan",
   "execution-command-operation.valid.json":
     "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json#/$defs/ExecutionCommandOperation",
   "execution-command-relay-denied.valid.json":

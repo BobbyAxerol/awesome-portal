@@ -1270,6 +1270,13 @@ export interface components {
             params: components["schemas"]["OperatorParams"];
             conditions: Record<string, never>[];
         };
+        /** @description FE-020. No plan or preview carries a cost, fee or impact estimate, so the only value is this typed absence. The client never computes one. A real estimate would need a source that publishes it and arrive as a new, versioned branch. */
+        CostImpactAbsence: {
+            /** @constant */
+            state: "NOT_PUBLISHED";
+            /** @constant */
+            reason: "NO_COST_OR_IMPACT_SOURCE";
+        };
         ExecutionCommandPlan: {
             /** @constant */
             schema_version: "execution.command-plan.v1";
@@ -1294,6 +1301,19 @@ export interface components {
             relay_capability: "DISABLED";
             /** @constant */
             source_side_effect_requested: false;
+            /** @description null for every command except ops/emergency-close (N16B), whose accepted-but-DARK current primitive is described here. runtime_active and source_side_effect_requested are constants false. The served plan always carried this key; it was missing from the schema (BE-P13). */
+            current_primitive: null | {
+                /** @constant */
+                id: "live.emergency-close";
+                /** @constant */
+                source_environment: "LIVE_FULL";
+                target_types: "ACCOUNT"[];
+                /** @constant */
+                runtime_active: false;
+                /** @constant */
+                source_side_effect_requested: false;
+            };
+            cost_impact: components["schemas"]["CostImpactAbsence"];
             replayed: boolean;
         };
         /** Format: date */
@@ -1588,6 +1608,28 @@ export interface components {
             /** @enum {string} */
             authority: "OWNER_VERIFIED" | "TEST_ONLY";
             currency: string;
+            source_rejection: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON";
+            };
+            venue_fill: {
+                /** @constant */
+                state: "NOT_APPLICABLE";
+                reason: null;
+                quantities: null;
+            } | {
+                /** @constant */
+                state: "NOT_PUBLISHED";
+                /** @constant */
+                reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES";
+                quantities: null;
+            };
         };
         /** @description Exact selected Portal plan with current-authorized ROOT metadata. APPLIED is stored Portal state, NOT TS acceptance/settlement/verification. Original expiry is historical metadata, not current read TTL; no status rewrite. Runtime additionally checks expires_at_ms>=created_at_ms and nonnull applied_at_ms>=created_at_ms, plus ROOT timestamp relations. Public millisecond equality is valid for a strictly positive sub-ms stored interval. No private intent, actor, token, response, receipt, prose or optional parent section. R2 captured parent pins are all-null or all-present; they are NOT today's R1 version or current permission. */
         R2ParentOperationReadV2: {
