@@ -101,7 +101,19 @@ export class ExecutionOperationsService {
       : EXECUTION_COMMAND_CATALOG.entries.filter((entry) => entry.risk_tier === scope.risk_tier);
     const entries = selectedEntries.map((entry) => {
       const accepted = n16bCatalogueEntry(entry);
-      return { ...accepted, classification: catalogueEntryClassification(accepted) };
+      const classification = catalogueEntryClassification(accepted);
+      // catalogue_revision 2 publishes `capability_state: "DISABLED"` and
+      // `portal_reachable: false` as constants. A CONNECTED entry would be a
+      // sendable claim the served schema cannot express, so refuse it here
+      // instead of computing a PARTIAL scope the contract does not describe.
+      if (classification.state === "CONNECTED") {
+        throw new GovernanceError(
+          "COMMAND_CATALOGUE_SENDABLE_CLAIM",
+          "The command catalogue cannot be served.",
+          503,
+        );
+      }
+      return { ...accepted, classification };
     });
     return {
       ...EXECUTION_COMMAND_CATALOG,
@@ -114,9 +126,7 @@ export class ExecutionOperationsService {
           ? null
           : { type: scope.target_type, id: scope.target_id! },
         requested_risk_tier: scope.risk_tier ?? null,
-        capability_state: entries.some((entry) => entry.classification.state === "CONNECTED")
-          ? ("PARTIAL" as const)
-          : ("DISABLED" as const),
+        capability_state: "DISABLED" as const,
         freshness_state: "UNAVAILABLE" as const,
         policy_revision: "execution.command-catalogue.f0.v2" as const,
       },

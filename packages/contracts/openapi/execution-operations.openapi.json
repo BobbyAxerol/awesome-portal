@@ -376,7 +376,7 @@
         "responses": {
           "200": {
             "description": "Canonical 64-action catalogue; F0 entries are all unreachable",
-            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/CommandCatalogue" } } }
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ServedCommandCatalogue" } } }
           },
           "403": { "description": "ADMIN_ROLE_REQUIRED" },
           "404": { "description": "WORKSPACE_NOT_FOUND" }
