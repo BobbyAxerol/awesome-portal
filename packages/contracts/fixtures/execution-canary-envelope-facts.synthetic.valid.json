@@ -1,0 +1,184 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "description": "FE-071 populated shape only: the members that Canary adds to envelope_compliance (rows, verdict), rollback_readiness (items) and lifecycle (trial). Invented figures; no source, runtime or product receipt implied.",
+  "value": {
+    "rows": [
+      {
+        "cap": "capital",
+        "unit": "USDT",
+        "policy_limit": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED"
+        },
+        "approved": "1000",
+        "consumed": {
+          "availability": "AVAILABLE",
+          "value": "250",
+          "reason_code": null
+        },
+        "used_ratio": {
+          "availability": "AVAILABLE",
+          "value": "0.25",
+          "reason_code": null
+        },
+        "as_of": {
+          "availability": "AVAILABLE",
+          "value": "2026-10-12T08:00:00.000Z",
+          "reason_code": null
+        }
+      },
+      {
+        "cap": "gross_notional",
+        "unit": "USDT",
+        "policy_limit": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED"
+        },
+        "approved": "5000.5",
+        "consumed": {
+          "availability": "AVAILABLE",
+          "value": "0",
+          "reason_code": null
+        },
+        "used_ratio": {
+          "availability": "AVAILABLE",
+          "value": "0",
+          "reason_code": null
+        },
+        "as_of": {
+          "availability": "AVAILABLE",
+          "value": "2026-10-12T08:00:00.000Z",
+          "reason_code": null
+        }
+      },
+      {
+        "cap": "daily_loss",
+        "unit": "USDT",
+        "policy_limit": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED"
+        },
+        "approved": "200",
+        "consumed": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DAILY_LOSS_WINDOW_NOT_PUBLISHED"
+        },
+        "used_ratio": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DAILY_LOSS_WINDOW_NOT_PUBLISHED"
+        },
+        "as_of": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DAILY_LOSS_WINDOW_NOT_PUBLISHED"
+        }
+      },
+      {
+        "cap": "open_orders",
+        "unit": "COUNT",
+        "policy_limit": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED"
+        },
+        "approved": "4",
+        "consumed": {
+          "availability": "AVAILABLE",
+          "value": "2",
+          "reason_code": null
+        },
+        "used_ratio": {
+          "availability": "AVAILABLE",
+          "value": "0.5",
+          "reason_code": null
+        },
+        "as_of": {
+          "availability": "AVAILABLE",
+          "value": "2026-10-12T08:00:00.000Z",
+          "reason_code": null
+        }
+      }
+    ],
+    "verdict": {
+      "state": "UNDETERMINED",
+      "basis": "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP",
+      "undetermined_caps": [
+        "daily_loss"
+      ]
+    },
+    "items": [
+      {
+        "key": "flatten_plan",
+        "ready": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "FLATTEN_PLAN_NOT_RECORDED"
+        },
+        "checked_at": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "FLATTEN_PLAN_NOT_RECORDED"
+        }
+      },
+      {
+        "key": "paper_twin",
+        "ready": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED"
+        },
+        "checked_at": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED"
+        }
+      },
+      {
+        "key": "broker_data",
+        "ready": {
+          "availability": "AVAILABLE",
+          "value": true,
+          "reason_code": null
+        },
+        "checked_at": {
+          "availability": "AVAILABLE",
+          "value": "2026-10-12T07:59:00.000Z",
+          "reason_code": null
+        }
+      },
+      {
+        "key": "rollback_drill",
+        "ready": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "ROLLBACK_DRILL_NOT_RECORDED"
+        },
+        "checked_at": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "ROLLBACK_DRILL_NOT_RECORDED"
+        }
+      }
+    ],
+    "trial": {
+      "basis": "STARTED_AT_PLUS_DURATION_DAYS",
+      "duration_days": 14,
+      "started_at": {
+        "availability": "AVAILABLE",
+        "value": "2026-10-12T08:00:00.000Z",
+        "reason_code": null
+      },
+      "exit_review_opens_at": {
+        "availability": "AVAILABLE",
+        "value": "2026-10-26T08:00:00.000Z",
+        "reason_code": null
+      }
+    }
+  }
+}

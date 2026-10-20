@@ -87,7 +87,16 @@ describe("BE-P2 / FE-067 typed stage facts", () => {
     const standalone = load("schemas/execution-paper-read.v1.schema.json");
     const api = load("openapi/execution-paper-read.openapi.json").components.schemas;
     const rewrite = (value: unknown) => JSON.parse(JSON.stringify(value).replaceAll("#/$defs/", "#/components/schemas/"));
-    for (const name of Object.keys(family).filter((key) => key.startsWith("Stage"))) {
+    // Paper embeds exactly the closure of StageFacts, no more (Canary-only definitions stay in the family file).
+    const reachable = new Set<string>();
+    const visit = (name: string) => {
+      if (reachable.has(name)) return;
+      reachable.add(name);
+      for (const match of JSON.stringify(family[name]).matchAll(/#\/\$defs\/([A-Za-z]+)/g)) visit(match[1]);
+    };
+    visit("StageFacts");
+    expect([...reachable].sort()).toEqual(Object.keys(standalone.$defs).filter((key) => key.startsWith("Stage")).sort());
+    for (const name of reachable) {
       expect(standalone.$defs[name], name).toEqual(family[name]);
       expect(api[name], name).toEqual(rewrite(family[name]));
     }
@@ -112,5 +121,90 @@ describe("BE-P2 / FE-067 typed stage facts", () => {
       expect(standalone(bad)).toBe(false);
       expect(component(bad.data)).toBe(false);
     }
+  });
+});
+
+describe("BE-P2 / FE-071 Canary envelope rows, rollback items and trial schedule", () => {
+  const defs = (name: string) => `${FAMILY}#/$defs/${name}`;
+  const canary = "https://schemas.primusspark.com/portal/execution-canary-control-room.v1.schema.json#/$defs/CanaryControlRoom";
+  const populated = () => load("fixtures/execution-canary-envelope-facts.synthetic.valid.json");
+
+  it("validates the synthetic populated shape member by member, and marks it as invented", () => {
+    const fixture = populated();
+    expect(fixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(fixture.runtime_qualified).toBe(false);
+    for (const row of fixture.value.rows) ok(defs("EnvelopeComplianceRow"), row);
+    ok(defs("EnvelopeVerdict"), fixture.value.verdict);
+    for (const item of fixture.value.items) ok(defs("RollbackItem"), item);
+    ok(defs("TrialSchedule"), fixture.value.trial);
+    expect(fixture.value.rows.map((row: any) => row.cap)).toEqual(["capital", "gross_notional", "daily_loss", "open_orders"]);
+    expect(fixture.value.items.map((item: any) => item.key)).toEqual(["flatten_plan", "paper_twin", "broker_data", "rollback_drill"]);
+  });
+
+  it("carries the dark Canary fixture with approved limits and nothing consumed", () => {
+    const body = load("fixtures/execution-canary-control-room.unavailable.valid.json");
+    ok(canary, body);
+    const rows = body.envelope_compliance.rows;
+    expect(rows.map((row: any) => row.approved)).toEqual([
+      body.envelope.limits.capital_cap, body.envelope.limits.gross_notional_cap, body.envelope.limits.daily_loss_cap, String(body.envelope.limits.max_open_orders),
+    ]);
+    for (const row of rows) {
+      expect(row.consumed).toMatchObject({ availability: "NOT_PUBLISHED", value: null });
+      expect(row.used_ratio).toMatchObject({ availability: "NOT_PUBLISHED", value: null });
+      expect(row.policy_limit.reason_code).toBe("BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED");
+    }
+    expect(body.envelope_compliance.verdict.state).toBe("UNDETERMINED");
+    expect(body.rollback_readiness.ready).toBe(false);
+    expect(body.rollback_readiness.items).toHaveLength(4);
+    expect(body.lifecycle.trial.started_at.reason_code).toBe("CANARY_ACTIVATION_NOT_RECORDED");
+    expect(body.lifecycle.day_index).toBeNull();
+    // Still valid for a producer that predates the members.
+    const old = structuredClone(body);
+    delete old.envelope_compliance.rows; delete old.envelope_compliance.verdict; delete old.rollback_readiness.items; delete old.lifecycle.trial;
+    ok(canary, old);
+  });
+
+  it("refuses ratios and figures that are not exact canonical decimals", () => {
+    const row = populated().value.rows[0];
+    const set = (patch: object) => ({ ...row, ...patch });
+    refuses(defs("EnvelopeComplianceRow"), set({ approved: 1000 }));
+    refuses(defs("EnvelopeComplianceRow"), set({ approved: "1000.50" }));
+    refuses(defs("EnvelopeComplianceRow"), set({ approved: "01000" }));
+    refuses(defs("EnvelopeComplianceRow"), set({ approved: "1e3" }));
+    refuses(defs("EnvelopeComplianceRow"), set({ approved: "-5" }));
+    refuses(defs("EnvelopeComplianceRow"), set({ used_ratio: { availability: "AVAILABLE", value: 0.25, reason_code: null } }));
+    refuses(defs("EnvelopeComplianceRow"), set({ used_ratio: { availability: "AVAILABLE", value: "0.250", reason_code: null } }));
+    refuses(defs("EnvelopeComplianceRow"), set({ cap: "leverage" }));
+    refuses(defs("EnvelopeComplianceRow"), set({ policy_limit: undefined }));
+    ok(defs("EnvelopeComplianceRow"), set({ used_ratio: { availability: "AVAILABLE", value: "1.25", reason_code: null } }));
+  });
+
+  it("refuses a verdict that contradicts its undetermined list", () => {
+    const verdict = populated().value.verdict;
+    refuses(defs("EnvelopeVerdict"), { ...verdict, undetermined_caps: [] });
+    refuses(defs("EnvelopeVerdict"), { ...verdict, state: "WITHIN_ENVELOPE" });
+    ok(defs("EnvelopeVerdict"), { ...verdict, state: "WITHIN_ENVELOPE", undetermined_caps: [] });
+    ok(defs("EnvelopeVerdict"), { ...verdict, state: "BREACH" });
+    refuses(defs("EnvelopeVerdict"), { ...verdict, state: "OK" });
+  });
+
+  it("refuses rollback items that claim readiness without a date, key or vocabulary", () => {
+    const item = populated().value.items[2];
+    refuses(defs("RollbackItem"), { ...item, key: "cleanup" });
+    refuses(defs("RollbackItem"), { ...item, ready: { availability: "AVAILABLE", value: "yes", reason_code: null } });
+    refuses(defs("RollbackItem"), { ...item, checked_at: { availability: "AVAILABLE", value: "yesterday", reason_code: null } });
+    refuses(defs("RollbackItem"), { key: item.key, ready: item.ready });
+  });
+
+  it("refuses a trial schedule with a duration outside the envelope range or an unexplained absence", () => {
+    const trial = populated().value.trial;
+    refuses(defs("TrialSchedule"), { ...trial, duration_days: 0 });
+    refuses(defs("TrialSchedule"), { ...trial, duration_days: 91 });
+    refuses(defs("TrialSchedule"), { ...trial, started_at: { availability: "NOT_PUBLISHED", value: null, reason_code: null } });
+  });
+
+  it("is mirrored in the generated Canary types", () => {
+    const types = readFileSync(join(ROOT, "generated/execution-canary.d.ts"), "utf8");
+    for (const member of ["EnvelopeComplianceRow", "EnvelopeVerdict", "RollbackItem", "TrialSchedule"]) expect(types).toContain(member);
   });
 });

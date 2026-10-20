@@ -31,6 +31,9 @@ const fact = value => ({oneOf: [
 ]});
 
 export const SESSION_ROW_CAP = 50;
+export const COMPLIANCE_CAPS = ["capital", "gross_notional", "daily_loss", "open_orders"];
+export const ROLLBACK_KEYS = ["flatten_plan", "paper_twin", "broker_data", "rollback_drill"];
+export const USED_RATIO_SCALE = 6;
 export const RUNTIME_STATES = ["RUNNING", "PAUSED", "HALTED", "STOPPED"];
 export const RECONCILIATION_VERDICTS = ["NO_OPEN_FINDINGS", "OPEN_FINDINGS"];
 
@@ -75,6 +78,38 @@ export function stageFactsDefs() {
           then: {properties: {reason_code: ref("StageReasonCode"), rows: {type: "array", maxItems: 0}, returned_count: {const: 0}, omitted_count: {const: 0}, source_complete: {type: "null"}}},
           else: {properties: {reason_code: {type: "null"}, source_complete: {type: "boolean"}}}},
       ]},
+    // ── FE-071: Canary envelope compliance, rollback readiness, trial schedule ──
+    StageDecimal: {type: "string", maxLength: 82, pattern: "^(?:0|[1-9][0-9]{0,39})(?:\\.[0-9]{0,39}[1-9])?$",
+      description: "Canonical non-negative exact decimal string: no exponent, no leading zero, no trailing fractional zero. Never a JSON number."},
+    StageFactDecimal: fact(ref("StageDecimal")),
+    StageFactBoolean: fact({type: "boolean"}),
+    EnvelopeComplianceRow: {...object({
+      cap: {enum: COMPLIANCE_CAPS},
+      unit: {type: "string", pattern: "^[A-Z0-9]{2,12}$"},
+      policy_limit: {...ref("StageFactDecimal"), description: "The base risk profile's limit. The Portal holds only the profile revision id, so this is NOT_PUBLISHED (BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED) until a source publishes the profile limits."},
+      approved: {...ref("StageDecimal"), description: "The stored envelope's own approved limit for this cap, exact."},
+      consumed: {...ref("StageFactDecimal"), description: "Consumed against the cap, published only when the profile source proves it under one explicit currency (capital, gross_notional) or over a complete relation (open_orders, count). daily_loss is NOT_PUBLISHED: no relation publishes a daily window."},
+      used_ratio: {...ref("StageFactDecimal"), description: `consumed / approved, computed by the server at ${USED_RATIO_SCALE} fractional digits with ROUND_HALF_UP, canonical. The browser never divides. May exceed 1.`},
+      as_of: ref("StageFactTimestamp"),
+    }), description: "One row per cap, in the order capital, gross_notional, daily_loss, open_orders."},
+    EnvelopeVerdict: object({
+      state: {enum: ["WITHIN_ENVELOPE", "BREACH", "UNDETERMINED"]},
+      basis: {const: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP"},
+      undetermined_caps: {type: "array", maxItems: 4, uniqueItems: true, items: {enum: COMPLIANCE_CAPS}},
+    }, {description: "Server verdict. BREACH as soon as any proven consumed figure is above its approved limit; WITHIN_ENVELOPE only when all four caps are proven and none is above; otherwise UNDETERMINED naming the caps it could not prove.",
+      allOf: [{if: {properties: {state: {const: "UNDETERMINED"}}, required: ["state"]}, then: {properties: {undetermined_caps: {type: "array", minItems: 1}}}},
+        {if: {properties: {state: {const: "WITHIN_ENVELOPE"}}, required: ["state"]}, then: {properties: {undetermined_caps: {type: "array", maxItems: 0}}}}]}),
+    RollbackItem: object({
+      key: {enum: ROLLBACK_KEYS},
+      ready: ref("StageFactBoolean"),
+      checked_at: ref("StageFactTimestamp"),
+    }, {description: "One of four readiness checks and the date it was last checked. Only broker_data is visible to the Portal today; the rest are NOT_PUBLISHED with a reason. The legacy `ready` member (pinned false) is unchanged."}),
+    TrialSchedule: object({
+      basis: {const: "STARTED_AT_PLUS_DURATION_DAYS"},
+      duration_days: {type: "integer", minimum: 1, maximum: 90},
+      started_at: ref("StageFactTimestamp"),
+      exit_review_opens_at: ref("StageFactTimestamp"),
+    }, {description: "started_at is the activation instant the SOURCE states; exit_review_opens_at is started_at plus duration_days x 24h, published only together with a stated start. A DRAFT envelope is not a started trial."}),
     StageFacts: {...object({
       schema_version: {const: STAGE_FACTS_VERSION},
       runtime: ref("StageRuntimeFacts"),
@@ -155,6 +190,44 @@ function updateStageFixtures(check) {
     if (check) { if (after !== before) throw new Error("Stage fixture drift: " + file); }
     else writeFileSync(path, after);
   }
+}
+
+/** Dark Canary facts for one stored envelope: the approved limits are the Portal's own; everything else is unpublished. */
+export function darkCanaryFacts(envelope, reason = "LIVE_SOURCE_UNAVAILABLE") {
+  const limit = {capital: envelope.limits.capital_cap, gross_notional: envelope.limits.gross_notional_cap,
+    daily_loss: envelope.limits.daily_loss_cap, open_orders: String(envelope.limits.max_open_orders)};
+  return {
+    rows: COMPLIANCE_CAPS.map(cap => ({
+      cap, unit: cap === "open_orders" ? "COUNT" : envelope.currency,
+      policy_limit: missing("BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED"), approved: limit[cap],
+      consumed: missing(reason), used_ratio: missing(reason), as_of: missing(reason),
+    })),
+    verdict: {state: "UNDETERMINED", basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP", undetermined_caps: [...COMPLIANCE_CAPS]},
+    items: [
+      {key: "flatten_plan", ready: missing("FLATTEN_PLAN_NOT_RECORDED"), checked_at: missing("FLATTEN_PLAN_NOT_RECORDED")},
+      {key: "paper_twin", ready: missing("E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED"), checked_at: missing("E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED")},
+      {key: "broker_data", ready: missing(reason), checked_at: missing(reason)},
+      {key: "rollback_drill", ready: missing("ROLLBACK_DRILL_NOT_RECORDED"), checked_at: missing("ROLLBACK_DRILL_NOT_RECORDED")},
+    ],
+    trial: {basis: "STARTED_AT_PLUS_DURATION_DAYS", duration_days: envelope.limits.duration_days,
+      started_at: missing("CANARY_ACTIVATION_NOT_RECORDED"), exit_review_opens_at: missing("CANARY_ACTIVATION_NOT_RECORDED")},
+  };
+}
+
+/** Replace a whole top-level object member with its current value plus a patch (idempotent). */
+function patchTop(text, key, patch) {
+  const current = JSON.parse(text)[key];
+  return member(text, key, {...current, ...patch}, null, 2);
+}
+
+function updateCanaryFixture(check) {
+  const path = resolve(root, "fixtures/execution-canary-control-room.unavailable.valid.json");
+  const before = readFileSync(path, "utf8"), body = JSON.parse(before), facts = darkCanaryFacts(body.envelope);
+  let after = patchTop(before, "envelope_compliance", {rows: facts.rows, verdict: facts.verdict});
+  after = patchTop(after, "rollback_readiness", {items: facts.items});
+  after = patchTop(after, "lifecycle", {trial: facts.trial});
+  if (check) { if (after !== before) throw new Error("Canary fixture drift"); }
+  else writeFileSync(path, after);
 }
 
 /** What the Paper workbench emits today: a runtime field the source does not publish, and two relations its screen is not bound to. */
@@ -249,8 +322,41 @@ export function syntheticStageFacts() {
   };
 }
 
+/** Populated Canary shape for tests only: invented figures, no source or runtime implied. */
+export function syntheticCanaryFacts() {
+  const row = (cap, unit, approved, consumed, ratio, reason = "DAILY_LOSS_WINDOW_NOT_PUBLISHED") => ({
+    cap, unit, policy_limit: missing("BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED"), approved,
+    consumed: consumed === null ? missing(reason) : available(consumed),
+    used_ratio: ratio === null ? missing(reason) : available(ratio),
+    as_of: consumed === null ? missing(reason) : available("2026-10-12T08:00:00.000Z"),
+  });
+  return {
+    rows: [
+      row("capital", "USDT", "1000", "250", "0.25"),
+      row("gross_notional", "USDT", "5000.5", "0", "0"),
+      row("daily_loss", "USDT", "200", null, null),
+      row("open_orders", "COUNT", "4", "2", "0.5"),
+    ],
+    verdict: {state: "UNDETERMINED", basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP", undetermined_caps: ["daily_loss"]},
+    items: [
+      {key: "flatten_plan", ready: missing("FLATTEN_PLAN_NOT_RECORDED"), checked_at: missing("FLATTEN_PLAN_NOT_RECORDED")},
+      {key: "paper_twin", ready: missing("E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED"), checked_at: missing("E5_CANARY_TWIN_COMPARISON_NOT_QUALIFIED")},
+      {key: "broker_data", ready: available(true), checked_at: available("2026-10-12T07:59:00.000Z")},
+      {key: "rollback_drill", ready: missing("ROLLBACK_DRILL_NOT_RECORDED"), checked_at: missing("ROLLBACK_DRILL_NOT_RECORDED")},
+    ],
+    trial: {basis: "STARTED_AT_PLUS_DURATION_DAYS", duration_days: 14,
+      started_at: available("2026-10-12T08:00:00.000Z"), exit_review_opens_at: available("2026-10-26T08:00:00.000Z")},
+  };
+}
+
 export function fixtures() {
   return {
+    "execution-canary-envelope-facts.synthetic.valid.json": {
+      lane: "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+      runtime_qualified: false,
+      description: "FE-071 populated shape only: the members that Canary adds to envelope_compliance (rows, verdict), rollback_readiness (items) and lifecycle (trial). Invented figures; no source, runtime or product receipt implied.",
+      value: syntheticCanaryFacts(),
+    },
     "execution-stage-facts.unavailable.valid.json": {
       lane: "CONTRACT_EXAMPLE_NOT_PRODUCT_RECEIPT",
       description: "What every stage body publishes while its source is dark: every fact typed NOT_PUBLISHED with its reason.",
@@ -278,6 +384,7 @@ export function synchronize(check = false) {
   }
   updatePaperDocuments(check);
   updateStageFixtures(check);
+  updateCanaryFixture(check);
   updatePaperFixtures(check);
 }
 
