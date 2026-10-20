@@ -249,9 +249,9 @@ describe("refusals and failures are distinct states", () => {
 
   it("without a workspace in the address nothing is requested and the card says exactly what is missing (D2)", async () => {
     const { fetchImpl } = mount({}, ACCESS_PATH);
-    const note = await screen.findByText(/The session does not publish a workspace; add/);
+    const note = await screen.findByText(/No workspace is named for this read/);
     expect(note.closest("p")?.textContent).toContain("Not available.");
-    expect(note.closest("p")?.textContent).toContain("The session does not publish a workspace; add ?workspace_id=... to the address to read your grants. No grants were requested.");
+    expect(note.closest("p")?.textContent).toContain("No workspace is named for this read.");
     expect(document.body.textContent).not.toContain("No workspace is named in the address");
     expect(fetchImpl).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: /Refresh/ })).toBeNull();
@@ -274,7 +274,7 @@ describe("refusals and failures are distinct states", () => {
 
   it("an empty session workspace is no workspace: nothing is requested", async () => {
     const { fetchImpl } = mount({ sessionWorkspaceId: "" }, ACCESS_PATH);
-    await screen.findByText(/The session does not publish a workspace; add/);
+    await screen.findByText(/No workspace is named for this read/);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
@@ -369,7 +369,7 @@ describe("what you can see and do come from capabilities alone", () => {
     const again = await screen.findByRole("table", { name: "What you can do" });
     const allowedRow = rowsOf(again).find((r) => cell(r, "Action").textContent === "Decide at R1 gate") as HTMLElement;
     expect(within(allowedRow).queryByRole("link")).toBeNull();
-    expect(cell(allowedRow, "Why").textContent).toBe("Held: governance.r1.decide");
+    expect(cell(allowedRow, "Why").textContent).toBe("governance.r1.decide");
   });
 
   it("says once that the execution capability names are provisional, and what is not published", async () => {

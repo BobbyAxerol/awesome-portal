@@ -213,6 +213,10 @@
   .exec-blk-kpis {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  /* An odd count leaves one cell of the two-column grid empty, and the 1px-gap background showed through it as a grey block. */
+  .exec-blk-kpis > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 @media (max-width: 660px) {
   .exec-blk-kpis {
@@ -520,6 +524,15 @@ button.exec-blk-spine-btn:hover {
 }
 .exec-blk-spine[data-variant="compact"] .exec-blk-spine-list {
   min-width: 400px;
+}
+/* At phone width the six stages share the row (about 50px each) instead of scrolling the last three out of sight. */
+@media (max-width: 660px) {
+  .exec-blk-spine[data-variant="compact"] .exec-blk-spine-list {
+    min-width: 0;
+  }
+  .exec-blk-spine[data-variant="compact"] .exec-blk-spine-short {
+    letter-spacing: 0;
+  }
 }
 /* The -1px overlap closes the seam between bordered nodes; the compact nodes have no border, and the last one's -1px pushed the
  * row 1px past its box, so it scrolled when it fitted (axe scrollable-region-focusable at 1440 and 1024, UXM-10 F-5). */

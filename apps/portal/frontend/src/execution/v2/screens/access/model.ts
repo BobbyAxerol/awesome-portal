@@ -90,7 +90,7 @@ function row(id: string, label: string, capabilities: ReadonlySet<string>, need:
   const reason = need === undefined
     ? openWord
     : allowed
-      ? `Held: ${held.join(", ")}`
+      ? held.join(", ")
       : `Needs ${text}`;
   return { id, label, allowed, need, held, reason };
 }

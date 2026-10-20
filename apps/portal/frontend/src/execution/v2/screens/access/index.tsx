@@ -309,7 +309,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
         <PanelHead level={2} id={`${headingId}-granted`} title="Granted to you" />
         {grants.phase === "idle" ? (
           <p className="exec-acc-state" role="status">
-            <strong>Not available.</strong> The session does not publish a workspace; add <span className="exec-acc-code">?workspace_id=...</span> to the address to read your grants. No grants were requested.
+            <strong>Not available.</strong> No workspace is named for this read.
           </p>
         ) : null}
         {grants.phase === "loading" ? <p className="exec-acc-state" role="status">Loading your grants.</p> : null}
@@ -397,7 +397,6 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           <div className="exec-acc-head">
             <div>
               <h1 className="exec-acc-title">Profile &amp; Access</h1>
-              <p className="exec-acc-subtitle">{principal?.username && ownerWord ? `${principal.username} · ${ownerWord}` : "Your own access, as the Portal publishes it"}</p>
             </div>
             <div className="exec-acc-chips">
               {grants.phase === "ready" && grants.readAt !== null ? (

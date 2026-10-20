@@ -155,7 +155,6 @@ export function PendingControlPreview({ api, target }: PendingControlPreviewProp
           </div>
         ))}
       </dl>
-      <p className="exec-pc-note">These are the versions the Portal served for this recall. They are sent as they are and cannot be edited here.</p>
 
       <label className="exec-pc-label" htmlFor={ids.reason}>Reason</label>
       <textarea
@@ -180,7 +179,7 @@ export function PendingControlPreview({ api, target }: PendingControlPreviewProp
         >
           {busy ? "Previewing" : LABEL}
         </button>
-        <span id={ids.hint} className="exec-pc-hint">{block !== null ? block : "Ready to preview"}</span>
+        <span id={ids.hint} className="exec-pc-hint">{block}</span>
       </div>
 
       {outcome?.kind === "refused" ? (

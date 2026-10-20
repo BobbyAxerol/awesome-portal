@@ -320,7 +320,7 @@ function R2Body({ detail, heading = "R2 review" }: { detail: GateR2Detail; headi
       </Panel>
       {detail.readiness.map((group) => (
         <Panel key={group.title} title={group.title}>
-          <Kv rows={group.entries.map((entry) => ({ label: entry.label, value: entry.revision ? `${entry.value} (rev ${entry.revision})` : entry.value }))} />
+          <Kv rows={group.entries.map((entry) => ({ label: entry.label, value: entry.revision ? `${entry.value} (${/rev/i.test(entry.revision) ? entry.revision : `rev ${entry.revision}`})` : entry.value }))} />
         </Panel>
       ))}
       {detail.locks.length > 0 ? (

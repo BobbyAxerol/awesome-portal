@@ -10,12 +10,15 @@
  * plot, whose own Esc would only release the readout) and focus returns to the Expand button. The table scrolls inside a
  * focusable, named region, so a phone reaches every column without scrolling the page.
  */
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
+import { createContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 
 import "../css/charts.css";
 import { formatAsOf } from "../boundary";
 import { chartTableModel, type ChartTableColumn } from "./chartTable";
 import type { UtcEpochMs } from "./types";
+
+/** True inside an expanded ChartTools dialog: a chart that can grow reads it, so Expand gives height as well as width. */
+export const ChartExpandedContext = createContext(false);
 
 export interface ChartToolsProps {
   /** Names the dialog when expanded and the table region. */
@@ -162,7 +165,7 @@ export function ChartTools({ label, columns = [], children, pageRows = 50, maxRo
             </button>
           </span>
         </div>
-        {children}
+        <ChartExpandedContext.Provider value={expanded}>{children}</ChartExpandedContext.Provider>
         {tableOn && hasTable ? <ChartTable label={label} columns={columns} pageRows={pageRows} maxRows={maxRows} /> : null}
       </div>
     </>

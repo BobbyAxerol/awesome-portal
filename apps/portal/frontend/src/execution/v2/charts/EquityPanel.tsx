@@ -5,12 +5,13 @@
  * not in the published string, or draw a plot when there is nothing to plot.
  * See the barrel (`index.ts`) for the prop contract.
  */
-import { useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent } from "react";
+import { useContext, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode, type TouchEvent } from "react";
 
 import "../css/charts.css";
 import type { ExactUnit } from "../../formatExact";
 import { formatAsOf } from "../boundary";
 import { ChartStateFlags, ChartUnavailable } from "./ChartStateView";
+import { ChartExpandedContext } from "./ChartTools";
 import { compareDecimal, readChartDecimal, showDecimal, subtractDecimal, toGeometry } from "./decimal";
 import { envelopeCaption, reduceRun, bucketSizeFor, type Envelope } from "./downsample";
 import { EVENT_KIND_TABLE } from "./eventKinds";
@@ -129,8 +130,11 @@ function sameTime(model: SeriesModel | null, t: number): number {
 export function EquityPanel(props: EquityPanelProps) {
   const {
     label, points, unit = "money", currency, signed = false, state = { kind: "ready" }, intervalMs, ghost, band,
-    segments = [], drawdown, flows = [], events = [], serverEnvelope, height = 280, ribbon,
+    segments = [], drawdown, flows = [], events = [], serverEnvelope, height: heightProp = 280, ribbon,
   } = props;
+  // Expanded: the plot takes half the window height (at most 620 px), not only the width.
+  const expanded = useContext(ChartExpandedContext);
+  const height = expanded ? Math.max(heightProp, Math.min(620, Math.round(window.innerHeight * 0.5))) : heightProp;
   const seriesName = props.seriesName ?? label;
   const id = useChartId("exec-eq");
   const plotRef = useRef<HTMLDivElement | null>(null);

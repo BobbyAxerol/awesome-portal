@@ -56,7 +56,7 @@ describe("the four presets", () => {
     const rows = byId(doRows(caps));
     expect(rows["manage:grants"].allowed).toBe(false);
     expect(rows["manage:grants"].reason).toBe("Needs administration.profile_access.manage");
-    expect(rows["decide:r1"].reason).toBe("Held: governance.r1.decide");
+    expect(rows["decide:r1"].reason).toBe("governance.r1.decide");
   });
 
   it("researcher sees only R1 and the open entries, and decides nothing", () => {
@@ -68,7 +68,7 @@ describe("the four presets", () => {
     expect(see["nav:EXECUTION_ACCOUNTS_BINDINGS"].allowed).toBe(false);
     expect(see["nav:EXECUTION_OPERATIONS"].allowed).toBe(false);
     expect(see["nav:EXECUTION_APPROVALS"].allowed).toBe(true);
-    expect(see["nav:EXECUTION_APPROVALS"].reason).toBe("Held: governance.r1.read");
+    expect(see["nav:EXECUTION_APPROVALS"].reason).toBe("governance.r1.read");
     expect(allowed(doRows(caps))).toEqual([]);
   });
 
