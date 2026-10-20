@@ -8,12 +8,17 @@
  * request that will publish it, never a green "Met" or an invented
  * "Insufficient data".
  */
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 
+import type { CaptureContext, ContextRead } from "../../../api/governanceContext";
+import type { ExecutionApi } from "../../../api/ports";
 import { formatExact } from "../../../formatExact";
 import { Flag } from "../../Flag";
 import { GapLine, SectionPanel } from "../../blocks";
 import { Na } from "./cells";
+import { ExitReviewRequest } from "./ExitReviewRequest";
+import { bindExitReview } from "./exitReviewRequest";
 import { GATE_FLAG, type GateFacts } from "./model";
 
 const n = (value: number): string => formatExact(String(value), "count").display;
@@ -28,13 +33,32 @@ function progress(current: number | null, minimum: number | null, unit: string) 
   );
 }
 
+/**
+ * What the Paper exit review request needs. Absent: the panel is the read-only gate it was (no control).
+ * `captureContext` is the parent R2 review's published `capture_context`; no read of this deployment carries it today, so the
+ * screen passes none and the control is shut with the typed gap (see `exitReviewRequest.ts`).
+ */
+export interface ExitRequestProps {
+  api: ExecutionApi;
+  deploymentId: string;
+  /** The workspace the route names, or `null` when none is. */
+  workspaceId: string | null;
+  captureContext?: ContextRead<CaptureContext> | null;
+}
+
 export interface ExitGatePanelProps {
   gate: GateFacts;
   exitReviewsHref: string;
+  request?: ExitRequestProps;
 }
 
-export function ExitGatePanel({ gate, exitReviewsHref }: ExitGatePanelProps) {
+export function ExitGatePanel({ gate, exitReviewsHref, request }: ExitGatePanelProps) {
   const verdict = GATE_FLAG[gate.verdict];
+  const context = request?.captureContext ?? null;
+  const bind = useMemo(
+    () => (request === undefined ? null : bindExitReview({ context, workspaceId: request.workspaceId, deploymentId: request.deploymentId })),
+    [request?.workspaceId, request?.deploymentId, context], // eslint-disable-line react-hooks/exhaustive-deps
+  );
   return (
     <SectionPanel level={2} title="Exit gate" aside="Paper → Sandbox">
       <table className="exec-wb-kv">
@@ -71,6 +95,7 @@ export function ExitGatePanel({ gate, exitReviewsHref }: ExitGatePanelProps) {
         ]}
       />
       {gate.policy ? <p className="exec-wb-cap">Policy {gate.policy}</p> : null}
+      {request !== undefined && bind !== null ? <ExitReviewRequest api={request.api} deploymentId={request.deploymentId} workspaceId={request.workspaceId} bind={bind} /> : null}
       <p className="exec-wb-link">
         <Link className="exec-blk-link" to={exitReviewsHref}>Open exit review</Link>
       </p>

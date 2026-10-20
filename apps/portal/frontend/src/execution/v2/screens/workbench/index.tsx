@@ -149,7 +149,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
               case "sessions":
                 return <SessionsTab counted={model.sessionsCounted} sessions={model.facts?.sessions ?? null} />;
               default:
-                return <OverviewTab model={model} quality={reads.quality} exitReviewsHref={ctx(r.exitReviews)} notQualified={model.page.nq !== null} />;
+                return <OverviewTab model={model} quality={reads.quality} exitReviewsHref={ctx(r.exitReviews)} exitRequest={{ api, deploymentId: dep, workspaceId: params.get("workspace_id") }} notQualified={model.page.nq !== null} />;
             }
           }}
         </UrlTabs>

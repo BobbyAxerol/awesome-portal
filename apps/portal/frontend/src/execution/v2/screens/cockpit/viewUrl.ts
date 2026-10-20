@@ -9,7 +9,7 @@
  * An unknown value reads as the default; the canonical form is written back
  * without it. The three are screen-local: they do not travel to other screens.
  */
-import { LENSES, type Lane, type Lens } from "./laneModel";
+import { FAMILY_LANES, LENSES, type FamilyLane, type Lane, type Lens } from "./laneModel";
 import { WAIVER_STATES, type WaiverFilter } from "./Queue";
 
 export const LANE_VIEW: Readonly<Record<Exclude<Lane, "all">, string>> = {
@@ -25,6 +25,12 @@ export function laneFromView(raw: string | null): Lane {
   const key = raw.trim().toLowerCase();
   const hit = (Object.entries(LANE_VIEW) as [Exclude<Lane, "all">, string][]).find(([, view]) => view === key);
   return hit ? hit[0] : "all";
+}
+
+/** `view=archive | reactivation | capital`: a family panel, not a gate lane (the gate lane then reads as All). */
+export function familyFromView(raw: string | null): FamilyLane | null {
+  const key = (raw ?? "").trim().toLowerCase();
+  return FAMILY_LANES.find((family) => family.id === key)?.id ?? null;
 }
 
 export const viewOfLane = (lane: Lane): string | null => (lane === "all" ? null : LANE_VIEW[lane]);
@@ -47,6 +53,8 @@ export interface CockpitView {
   lane?: Lane;
   lens?: Lens;
   waiver?: WaiverFilter;
+  /** A family panel; wins over `lane` for the `view` key. `null` leaves the key to `lane`. */
+  family?: FamilyLane | null;
 }
 
 /** `base` with the given parts written (a default removes its key); every other param is kept. Never touches `sel`. */
@@ -57,6 +65,7 @@ export function writeView(base: URLSearchParams | string, patch: CockpitView): U
     else next.set(key, value);
   };
   if (patch.lane !== undefined) put("view", viewOfLane(patch.lane));
+  if (patch.family != null) put("view", patch.family);
   if (patch.lens !== undefined) put("lens", urlOfLens(patch.lens));
   if (patch.waiver !== undefined) put("waiver", urlOfWaiver(patch.waiver));
   return next;
