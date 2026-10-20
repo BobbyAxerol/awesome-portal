@@ -1064,6 +1064,36 @@ export interface components {
             reconciliation: components["schemas"]["StageReconciliationFacts"];
             sessions: components["schemas"]["StageSessionsFact"];
         };
+        /** @description Canonical signed exact decimal string: no exponent, no leading zero, no trailing fractional zero, no negative zero. */
+        StageSignedDecimal: string;
+        StageFactSignedDecimal: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageSignedDecimal"];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageFigure: {
+            /** @enum {unknown} */
+            key: "equity" | "gross_notional" | "positions" | "open_orders" | "fees";
+            label: string;
+            unit: string | null;
+            internal: components["schemas"]["StageFactSignedDecimal"];
+            /** @description The broker side. No broker population, equity or fee total is held by the Portal today, so each is NOT_PUBLISHED with its own reason; it is never copied from the internal side. */
+            broker: components["schemas"]["StageFactSignedDecimal"];
+            /** @description internal minus broker, exact, computed by the server only when both sides are AVAILABLE; otherwise NOT_PUBLISHED (DIFFERENCE_REQUIRES_BOTH_SIDES). The browser never subtracts. */
+            difference: components["schemas"]["StageFactSignedDecimal"];
+        };
+        /** @description The Internal / Broker / Difference rows, fixed order equity, gross_notional, positions, open_orders, fees. */
+        StageSourceFigures: {
+            /** @constant */
+            basis: "SOURCE_RELATIONS_HELD_BY_THE_PORTAL";
+            figures: components["schemas"]["StageFigure"][];
+        };
         PositiveDecimal: string;
         Hash: string;
         Warning: {
@@ -1092,6 +1122,80 @@ export interface components {
             data: Record<string, never> | null;
             warnings: components["schemas"]["Warning"][];
         } & (unknown & unknown);
+        StageGapRange: {
+            from: components["schemas"]["StageTimestamp"];
+            to: components["schemas"]["StageTimestamp"];
+        };
+        StageFactGapRanges: {
+            /** @constant */
+            availability: "AVAILABLE";
+            value: components["schemas"]["StageGapRange"][];
+            reason_code: null;
+        } | {
+            /** @constant */
+            availability: "NOT_PUBLISHED";
+            value: null;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        StageIdentifier: string;
+        StageSymbol: string;
+        /** @description Canonical non-negative exact decimal string: no exponent, no leading zero, no trailing fractional zero. Never a JSON number. */
+        StageDecimal: string;
+        /** @description From positions_v2 only. side is the source word LONG/SHORT, else the sign of signed_qty; quantity is the source quantity, else |signed_qty|. leverage is always null: see not_published_columns. */
+        StagePositionRow: {
+            id: components["schemas"]["StageIdentifier"] | null;
+            symbol: components["schemas"]["StageSymbol"];
+            side: ("long" | "short") | null;
+            quantity: components["schemas"]["StageDecimal"] | null;
+            entry: components["schemas"]["StageDecimal"] | null;
+            mark: components["schemas"]["StageDecimal"] | null;
+            unrealised: components["schemas"]["StageSignedDecimal"] | null;
+            leverage: null;
+        };
+        /** @description A column the hi-fi shows and the source relation does not carry. It is named here instead of being filled with a null that reads like data. */
+        StageNotPublishedColumn: {
+            column: string;
+            reason_code: components["schemas"]["StageReasonCode"];
+        };
+        /** @description Typed view of the same relation the collection's free `rows` come from. A row the reader cannot type is counted in omitted_count, never listed. */
+        StageTypedPositions: {
+            /** @constant */
+            kind: "positions";
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            rows: components["schemas"]["StagePositionRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+            not_published_columns: components["schemas"]["StageNotPublishedColumn"][];
+        } & unknown;
+        StageWord: string;
+        /** @description From the orders relation only. since is submitted_at. ack_latency_ms is always null (gateway-event data, not an orders column): see not_published_columns. */
+        StageOrderRow: {
+            id: components["schemas"]["StageIdentifier"] | null;
+            symbol: components["schemas"]["StageSymbol"];
+            type: components["schemas"]["StageWord"] | null;
+            side: ("buy" | "sell") | null;
+            quantity: components["schemas"]["StageDecimal"] | null;
+            price: components["schemas"]["StageDecimal"] | null;
+            status: components["schemas"]["StageWord"] | null;
+            since: components["schemas"]["StageTimestamp"] | null;
+            ack_latency_ms: null;
+        };
+        /** @description Typed view of the same relation the collection's free `rows` come from. A row the reader cannot type is counted in omitted_count, never listed. */
+        StageTypedOrders: {
+            /** @constant */
+            kind: "orders";
+            /** @enum {unknown} */
+            availability: "AVAILABLE" | "NOT_PUBLISHED";
+            reason_code: components["schemas"]["StageReasonCode"] | null;
+            rows: components["schemas"]["StageOrderRow"][];
+            returned_count: number;
+            omitted_count: number;
+            source_complete: boolean | null;
+            not_published_columns: components["schemas"]["StageNotPublishedColumn"][];
+        } & unknown;
         UnavailableCollection: {
             envelope: components["schemas"]["SourceEnvelope"];
             exact_total: number | null;
@@ -1099,6 +1203,13 @@ export interface components {
             next_cursor: string | null;
             previous_cursor: string | null;
             rows: Record<string, never>[];
+            typed?: components["schemas"]["StageTypedPositions"] | components["schemas"]["StageTypedOrders"];
+        };
+        StageSeriesResolution: string;
+        /** @description A deployment-level point: an exact decimal string, never a JSON number. The series names its methodology_ref. */
+        StageSeriesPoint: {
+            t: components["schemas"]["StageTimestamp"];
+            value: components["schemas"]["StageSignedDecimal"];
         };
         ActionPolicy: {
             /** @enum {unknown} */
@@ -1162,6 +1273,7 @@ export interface components {
                 blocker_codes: string[];
             };
             stage_facts?: components["schemas"]["StageFacts"];
+            source_figures?: components["schemas"]["StageSourceFigures"];
             predecessor_canary_envelope: {
                 envelope_id: components["schemas"]["Identifier"];
                 revision: number;
@@ -1210,6 +1322,7 @@ export interface components {
                 gap_detected: boolean | null;
                 affected_authorities: ("EXECUTION" | "BROKER" | "DERIVED")[];
                 blocker_codes: string[];
+                gap_ranges?: components["schemas"]["StageFactGapRanges"];
             };
             positions: components["schemas"]["UnavailableCollection"];
             orders: components["schemas"]["UnavailableCollection"];
@@ -1220,8 +1333,10 @@ export interface components {
             };
             series: {
                 envelope: components["schemas"]["SourceEnvelope"];
-                resolution: null;
-                points: unknown[];
+                resolution: null | components["schemas"]["StageSeriesResolution"];
+                points: components["schemas"]["StageSeriesPoint"][];
+                methodology_ref?: null | string;
+                unit?: null | string;
             };
             rollback_readiness: {
                 envelope: components["schemas"]["SourceEnvelope"];

@@ -118,7 +118,8 @@
         "returned_count": { "type": "integer", "minimum": 0, "maximum": 200 },
         "next_cursor": { "type": ["string", "null"], "maxLength": 4096 },
         "previous_cursor": { "type": ["string", "null"], "maxLength": 4096 },
-        "rows": { "type": "array", "maxItems": 200, "items": { "type": "object", "maxProperties": 80 } }
+        "rows": { "type": "array", "maxItems": 200, "items": { "type": "object", "maxProperties": 80 } },
+        "typed": { "oneOf": [ { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageTypedPositions" }, { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageTypedOrders" } ] }
       }
     },
     "ActionPolicy": {
@@ -225,6 +226,7 @@
           }
         },
         "stage_facts": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageFacts" },
+        "source_figures": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageSourceFigures" },
         "kpis": {
           "type": "array", "minItems": 5, "maxItems": 5,
           "items": {
@@ -269,8 +271,10 @@
           "required": ["envelope", "resolution", "points"],
           "properties": {
             "envelope": { "$ref": "#/$defs/SourceEnvelope" },
-            "resolution": { "type": "null" },
-            "points": { "type": "array", "maxItems": 0 }
+            "resolution": { "oneOf": [{ "type": "null" }, { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageSeriesResolution" } ] },
+            "points": { "type": "array", "maxItems": 2000, "items": { "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageSeriesPoint" } },
+            "methodology_ref": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:@+/-]{0,190}$" }] },
+            "unit": { "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^[A-Z0-9]{2,12}$" }] }
           }
         },
         "rollback_readiness": {

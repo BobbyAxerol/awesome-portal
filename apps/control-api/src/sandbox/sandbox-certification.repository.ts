@@ -112,6 +112,13 @@ export interface SandboxSmokePlanRow extends Record<string, unknown> {
   updated_at: Date;
 }
 
+/** A Canary envelope drafted from a promotion plan (the plan list's Envelope column). */
+export interface SandboxCanaryEnvelopeRef {
+  envelope_id: string;
+  promotion_plan_id: string;
+  revision: number;
+}
+
 export interface SandboxCertificationDetail {
   certification: SandboxCertificationRow;
   evidence: SandboxStepEvidenceRow[];
@@ -121,6 +128,8 @@ export interface SandboxCertificationDetail {
   eventsTotal: number;
   promotionPlans: SandboxPromotionPlanRow[];
   smokePlan: SandboxSmokePlanRow | null;
+  /** Optional so a detail built elsewhere stays valid; absent = the lookup was not performed. */
+  canaryEnvelopes?: SandboxCanaryEnvelopeRef[];
 }
 
 interface BaseWrite {
@@ -525,6 +534,13 @@ export class SandboxCertificationRepository {
        WHERE workspace_id = $1 AND certification_id = $2`,
       [workspaceId, certificationId],
     );
+    const canaryEnvelopes = await queryable.query<SandboxCanaryEnvelopeRef>(
+      `SELECT envelope_id, promotion_plan_id, revision
+       FROM governance_canary_envelopes
+       WHERE workspace_id = $1 AND certification_id = $2
+       ORDER BY revision DESC, envelope_id DESC LIMIT 100`,
+      [workspaceId, certificationId],
+    );
     return {
       certification: certification.rows[0],
       evidence: evidence.rows,
@@ -534,6 +550,7 @@ export class SandboxCertificationRepository {
       eventsTotal: Number(eventCount.rows[0].count),
       promotionPlans: plans.rows,
       smokePlan: smokePlan.rows[0] ?? null,
+      canaryEnvelopes: canaryEnvelopes.rows,
     };
   }
 

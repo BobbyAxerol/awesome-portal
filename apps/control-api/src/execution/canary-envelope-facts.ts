@@ -115,7 +115,8 @@ const POSITION_VALUE_REASON = "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED
 
 type Consumed = Fact<string>;
 
-function relationBlocks(source: ProfileScreenSource, key: string): string | null {
+/** Why a relation cannot support a figure (unavailable or a partial window), or `null` when it can. Shared with the stage rows. */
+export function relationBlocks(source: ProfileScreenSource, key: string): string | null {
   const { state, reasonCode } = source.relationState(key);
   if (state === "UNAVAILABLE") return reasonCode ?? `${key.toUpperCase()}_RELATION_UNAVAILABLE`;
   if (state === "PARTIAL") return `${key.toUpperCase()}_WINDOW_PARTIAL`;

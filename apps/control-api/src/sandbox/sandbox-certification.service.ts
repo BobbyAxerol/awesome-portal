@@ -9,6 +9,7 @@ import { ProfileReadService } from "../profile-read/profile-read.service";
 import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
 import { ProfileScreenSource } from "../execution/profile-screen-composer";
 import { profileStageFacts } from "../execution/stage-facts-profile";
+import { sourceFigures } from "../execution/stage-rows";
 import {
   SANDBOX_CERTIFICATION_STEPS,
   SandboxCertificationCreateRequest,
@@ -18,6 +19,7 @@ import {
   SandboxPromotionPlanRequest,
 } from "./contracts";
 import {
+  SandboxCanaryEnvelopeRef,
   SandboxCertificationDetail,
   SandboxCertificationRepository,
   SandboxStepEvidenceRow,
@@ -58,6 +60,26 @@ function digest(value: unknown): string {
 
 function iso(value: Date | null): string | null {
   return value?.toISOString() ?? null;
+}
+
+/** The latest Canary envelope drafted from a plan; a lookup that was not performed is a typed absence, never "none". */
+export function planEnvelope(
+  envelopes: SandboxCanaryEnvelopeRef[] | undefined,
+  planId: string,
+):
+  | { availability: "AVAILABLE"; value: { envelope_id: string; revision: number; status: "DRAFT" } | null; reason_code: null }
+  | { availability: "NOT_PUBLISHED"; value: null; reason_code: string } {
+  if (envelopes === undefined) {
+    return { availability: "NOT_PUBLISHED", value: null, reason_code: "PLAN_ENVELOPE_LOOKUP_NOT_PERFORMED" };
+  }
+  const latestForPlan = envelopes
+    .filter((item) => item.promotion_plan_id === planId)
+    .sort((a, b) => b.revision - a.revision || b.envelope_id.localeCompare(a.envelope_id))[0];
+  return {
+    availability: "AVAILABLE",
+    value: latestForPlan ? { envelope_id: latestForPlan.envelope_id, revision: latestForPlan.revision, status: "DRAFT" } : null,
+    reason_code: null,
+  };
 }
 
 export interface EffectiveSandboxStep {
@@ -444,6 +466,7 @@ export class SandboxCertificationService {
       })),
       // FE-067: typed runtime / reconciliation / sessions from the profile source; additive.
       stage_facts: profileStageFacts(stageSource, "SANDBOX_SOURCE_UNAVAILABLE"),
+      source_figures: sourceFigures(stageSource, "SANDBOX_SOURCE_UNAVAILABLE"),
       source_panels: [
         sourcePanel("internal", "EXECUTION", ["TIMEBOXED_RUN"]),
         sourcePanel("broker", "BROKER", ["CONNECT", "SYNC", "ORDER_TYPES"]),
@@ -483,6 +506,8 @@ export class SandboxCertificationService {
           as_of: iso(item.as_of),
           resolved_at: iso(item.resolved_at),
           created_at: item.created_at.toISOString(),
+          // FE-072: the Opened column; the instant the Portal recorded the finding.
+          opened_at: item.created_at.toISOString(),
         })),
       },
       timeline: {
@@ -506,6 +531,9 @@ export class SandboxCertificationService {
         blocker_codes: item.blocker_codes,
         source_side_effect_requested: false,
         created_at: item.created_at.toISOString(),
+        // FE-072: who recorded the plan, and the latest Canary envelope drafted from it.
+        author: { user_id: item.actor_user_id },
+        envelope: planEnvelope(detail.canaryEnvelopes, item.plan_id),
       })),
     };
   }
@@ -587,6 +615,7 @@ export class SandboxCertificationService {
       })),
       // FE-067: typed runtime / reconciliation / sessions from the profile source; additive.
       stage_facts: profileStageFacts(new ProfileScreenSource(currentSource, readAt), "SANDBOX_SOURCE_UNAVAILABLE"),
+      source_figures: sourceFigures(new ProfileScreenSource(currentSource, readAt), "SANDBOX_SOURCE_UNAVAILABLE"),
       source_panels: ["internal", "broker", "difference"].map((panelId) => ({
         panel_id: panelId,
         source_authority: panelId === "internal" ? "EXECUTION" : panelId === "broker" ? "BROKER" : "DERIVED",

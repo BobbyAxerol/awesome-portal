@@ -119,6 +119,111 @@
       "source_complete": null
     }
   },
+  "source_figures": {
+    "basis": "SOURCE_RELATIONS_HELD_BY_THE_PORTAL",
+    "figures": [
+      {
+        "key": "equity",
+        "label": "Equity",
+        "unit": null,
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_EQUITY_FIELD_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "gross_notional",
+        "label": "Gross notional",
+        "unit": null,
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_GROSS_NOTIONAL_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "positions",
+        "label": "Positions",
+        "unit": "COUNT",
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_POSITION_POPULATION_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "open_orders",
+        "label": "Open orders",
+        "unit": "COUNT",
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_OPEN_ORDER_POPULATION_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      },
+      {
+        "key": "fees",
+        "label": "Fees",
+        "unit": null,
+        "internal": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+        },
+        "broker": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "BROKER_FEE_TOTAL_NOT_PUBLISHED"
+        },
+        "difference": {
+          "availability": "NOT_PUBLISHED",
+          "value": null,
+          "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+        }
+      }
+    ]
+  },
   "kpis": [
     { "key": "capital_consumed", "label": "Capital consumed", "value": null, "unit": "USDT", "envelope": { "panel_id": "kpi-capital_consumed", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_KPI-CAPITAL_CONSUMED_UNAVAILABLE" }] } },
     { "key": "gross_notional", "label": "Gross notional", "value": null, "unit": "USDT", "envelope": { "panel_id": "kpi-gross_notional", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_KPI-GROSS_NOTIONAL_UNAVAILABLE" }] } },
@@ -276,8 +381,90 @@
     { "panel_id": "broker", "source_authority": "BROKER", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_BROKER_UNAVAILABLE" }] },
     { "panel_id": "difference", "source_authority": "DERIVED", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_DIFFERENCE_UNAVAILABLE" }] }
   ],
-  "positions": { "envelope": { "panel_id": "positions", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_POSITIONS_UNAVAILABLE" }] }, "exact_total": null, "returned_count": 0, "rows": [] },
-  "blotter": { "envelope": { "panel_id": "blotter", "source_authority": "EXECUTION", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_BLOTTER_UNAVAILABLE" }] }, "exact_total": null, "returned_count": 0, "rows": [] },
+  "positions": {
+    "envelope": {
+      "panel_id": "positions",
+      "source_authority": "EXECUTION",
+      "panel_state": "unavailable",
+      "freshness_state": "UNKNOWN",
+      "delivery_profile": "fixture",
+      "source_verification_state": "UNAVAILABLE",
+      "as_of": null,
+      "read_at": "2026-08-23T11:00:00.000Z",
+      "age_seconds": null,
+      "lag_ms": null,
+      "source_cursor": null,
+      "projection_epoch": null,
+      "projection_sequence": null,
+      "capability_snapshot_id": null,
+      "data": null,
+      "warnings": [
+        {
+          "code": "CANARY_POSITIONS_UNAVAILABLE"
+        }
+      ]
+    },
+    "exact_total": null,
+    "returned_count": 0,
+    "rows": [],
+    "typed": {
+      "kind": "positions",
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "LIVE_SOURCE_UNAVAILABLE",
+      "rows": [],
+      "returned_count": 0,
+      "omitted_count": 0,
+      "source_complete": null,
+      "not_published_columns": [
+        {
+          "column": "leverage",
+          "reason_code": "POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION"
+        }
+      ]
+    }
+  },
+  "blotter": {
+    "envelope": {
+      "panel_id": "blotter",
+      "source_authority": "EXECUTION",
+      "panel_state": "unavailable",
+      "freshness_state": "UNKNOWN",
+      "delivery_profile": "fixture",
+      "source_verification_state": "UNAVAILABLE",
+      "as_of": null,
+      "read_at": "2026-08-23T11:00:00.000Z",
+      "age_seconds": null,
+      "lag_ms": null,
+      "source_cursor": null,
+      "projection_epoch": null,
+      "projection_sequence": null,
+      "capability_snapshot_id": null,
+      "data": null,
+      "warnings": [
+        {
+          "code": "CANARY_BLOTTER_UNAVAILABLE"
+        }
+      ]
+    },
+    "exact_total": null,
+    "returned_count": 0,
+    "rows": [],
+    "typed": {
+      "kind": "orders",
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "LIVE_SOURCE_UNAVAILABLE",
+      "rows": [],
+      "returned_count": 0,
+      "omitted_count": 0,
+      "source_complete": null,
+      "not_published_columns": [
+        {
+          "column": "ack_latency_ms",
+          "reason_code": "ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION"
+        }
+      ]
+    }
+  },
   "series": { "envelope": { "panel_id": "series", "source_authority": "DERIVED", "panel_state": "unavailable", "freshness_state": "UNKNOWN", "delivery_profile": "fixture", "source_verification_state": "UNAVAILABLE", "as_of": null, "read_at": "2026-08-23T11:00:00.000Z", "age_seconds": null, "lag_ms": null, "source_cursor": null, "projection_epoch": null, "projection_sequence": null, "capability_snapshot_id": null, "data": null, "warnings": [{ "code": "CANARY_SERIES_UNAVAILABLE" }] }, "resolution": null, "points": [] },
   "rollback_readiness": {
     "envelope": {

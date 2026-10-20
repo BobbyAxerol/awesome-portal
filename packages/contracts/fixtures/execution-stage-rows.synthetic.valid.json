@@ -1,0 +1,261 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "description": "FE-072 populated shapes only: typed position / order rows, Internal / Broker / Difference figures with both sides present, deployment-level series points, a continuity gap window, a finding opened_at and promotion-plan author / envelope. Invented values; no source, runtime or product receipt implied.",
+  "value": {
+    "typed_positions": {
+      "kind": "positions",
+      "availability": "AVAILABLE",
+      "reason_code": null,
+      "rows": [
+        {
+          "id": "pos_TEST_ONLY_1",
+          "symbol": "BTCUSDT",
+          "side": "long",
+          "quantity": "0.5",
+          "entry": "60000",
+          "mark": "60500.5",
+          "unrealised": "250.25",
+          "leverage": null
+        },
+        {
+          "id": "pos_TEST_ONLY_2",
+          "symbol": "ETHUSDT",
+          "side": "short",
+          "quantity": "2",
+          "entry": "3000",
+          "mark": "2990",
+          "unrealised": "20",
+          "leverage": null
+        }
+      ],
+      "returned_count": 2,
+      "omitted_count": 0,
+      "source_complete": true,
+      "not_published_columns": [
+        {
+          "column": "leverage",
+          "reason_code": "POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION"
+        }
+      ]
+    },
+    "typed_orders": {
+      "kind": "orders",
+      "availability": "AVAILABLE",
+      "reason_code": null,
+      "rows": [
+        {
+          "id": "ord_TEST_ONLY_1",
+          "symbol": "BTCUSDT",
+          "type": "LIMIT",
+          "side": "buy",
+          "quantity": "0.1",
+          "price": "59000",
+          "status": "ACCEPTED",
+          "since": "2026-10-12T08:00:00.000Z",
+          "ack_latency_ms": null
+        }
+      ],
+      "returned_count": 1,
+      "omitted_count": 0,
+      "source_complete": true,
+      "not_published_columns": [
+        {
+          "column": "ack_latency_ms",
+          "reason_code": "ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION"
+        }
+      ]
+    },
+    "source_figures": {
+      "basis": "SOURCE_RELATIONS_HELD_BY_THE_PORTAL",
+      "figures": [
+        {
+          "key": "equity",
+          "label": "Equity",
+          "unit": null,
+          "internal": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+          },
+          "broker": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "BROKER_EQUITY_FIELD_NOT_PUBLISHED"
+          },
+          "difference": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+          }
+        },
+        {
+          "key": "gross_notional",
+          "label": "Gross notional",
+          "unit": null,
+          "internal": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+          },
+          "broker": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "BROKER_GROSS_NOTIONAL_NOT_PUBLISHED"
+          },
+          "difference": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+          }
+        },
+        {
+          "key": "positions",
+          "label": "Positions",
+          "unit": "COUNT",
+          "internal": {
+            "availability": "AVAILABLE",
+            "value": "2",
+            "reason_code": null
+          },
+          "broker": {
+            "availability": "AVAILABLE",
+            "value": "2",
+            "reason_code": null
+          },
+          "difference": {
+            "availability": "AVAILABLE",
+            "value": "0",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "open_orders",
+          "label": "Open orders",
+          "unit": "COUNT",
+          "internal": {
+            "availability": "AVAILABLE",
+            "value": "1",
+            "reason_code": null
+          },
+          "broker": {
+            "availability": "AVAILABLE",
+            "value": "0",
+            "reason_code": null
+          },
+          "difference": {
+            "availability": "AVAILABLE",
+            "value": "1",
+            "reason_code": null
+          }
+        },
+        {
+          "key": "fees",
+          "label": "Fees",
+          "unit": null,
+          "internal": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "LIVE_SOURCE_UNAVAILABLE"
+          },
+          "broker": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "BROKER_FEE_TOTAL_NOT_PUBLISHED"
+          },
+          "difference": {
+            "availability": "NOT_PUBLISHED",
+            "value": null,
+            "reason_code": "DIFFERENCE_REQUIRES_BOTH_SIDES"
+          }
+        }
+      ]
+    },
+    "series": {
+      "resolution": "1h",
+      "methodology_ref": "portal.net-pnl.TEST_ONLY.v1",
+      "unit": "USDT",
+      "points": [
+        {
+          "t": "2026-10-12T08:00:00.000Z",
+          "value": "0"
+        },
+        {
+          "t": "2026-10-12T09:00:00.000Z",
+          "value": "12.5"
+        },
+        {
+          "t": "2026-10-12T10:00:00.000Z",
+          "value": "-3.25"
+        }
+      ]
+    },
+    "gap_ranges": {
+      "availability": "AVAILABLE",
+      "value": [
+        {
+          "from": "2026-10-12T11:52:00.000Z",
+          "to": "2026-10-12T12:04:00.000Z"
+        }
+      ],
+      "reason_code": null
+    },
+    "finding_row": {
+      "finding_id": "finding_TEST_ONLY_1",
+      "severity": "WARNING",
+      "source_authority": "DERIVED",
+      "finding_code": "TEST_ONLY_FINDING",
+      "summary": "Synthetic finding row for the opened_at column.",
+      "blocking": false,
+      "evidence_hash": null,
+      "as_of": null,
+      "resolved_at": null,
+      "created_at": "2026-10-12T08:00:00.000Z",
+      "opened_at": "2026-10-12T08:00:00.000Z"
+    },
+    "plan_rows": [
+      {
+        "plan_id": "plan_TEST_ONLY_2",
+        "target_stage": "CANARY",
+        "evidence_set_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "status": "BLOCKED",
+        "blocker_codes": [
+          "TEST_ONLY_BLOCKER"
+        ],
+        "source_side_effect_requested": false,
+        "created_at": "2026-10-12T08:00:00.000Z",
+        "author": {
+          "user_id": "usr_TEST_ONLY_author"
+        },
+        "envelope": {
+          "availability": "AVAILABLE",
+          "value": {
+            "envelope_id": "cenv_TEST_ONLY_1",
+            "revision": 1,
+            "status": "DRAFT"
+          },
+          "reason_code": null
+        }
+      },
+      {
+        "plan_id": "plan_TEST_ONLY_1",
+        "target_stage": "CANARY",
+        "evidence_set_hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "status": "BLOCKED",
+        "blocker_codes": [
+          "TEST_ONLY_BLOCKER"
+        ],
+        "source_side_effect_requested": false,
+        "created_at": "2026-10-11T08:00:00.000Z",
+        "author": {
+          "user_id": "usr_TEST_ONLY_author"
+        },
+        "envelope": {
+          "availability": "AVAILABLE",
+          "value": null,
+          "reason_code": null
+        }
+      }
+    ]
+  }
+}
