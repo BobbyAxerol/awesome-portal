@@ -94,9 +94,10 @@ export interface FixtureLane {
 
 /**
  * The lane's snapshot port. A context the published example does not cover is DENIED, like a real BFF that does not
- * authorize it: the fixture never answers one scope's rows for another.
+ * authorize it: the fixture never answers one scope's rows for another. `source` is the read the lane answers (default: the
+ * published ALPHA_FLEET example); a test passes a page of the RV-12 scenarios through the same strict reader.
  */
-export function createFixtureLane(context: LaneContext, revocations?: RevocationMemory): FixtureLane {
+export function createFixtureLane(context: LaneContext, revocations?: RevocationMemory, source: () => ScopedRead | null = fixtureScopedRead): FixtureLane {
   let next: NextRead = "ok";
   let reads = 0;
   const failure = (reason: SnapshotFailure): SnapshotOutcome<ScopedRead> => ({ ok: false, failure: reason });
@@ -109,7 +110,7 @@ export function createFixtureLane(context: LaneContext, revocations?: Revocation
     port: {
       readSnapshot: async () => {
         reads += 1;
-        const scoped = fixtureScopedRead();
+        const scoped = source();
         if (scoped === null) return failure("MALFORMED");
         const covers =
           (context.workspaceId === null || context.workspaceId === scoped.workspaceId) &&

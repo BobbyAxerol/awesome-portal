@@ -39,7 +39,24 @@ import {
   type NextRead,
   type RevocationMemory,
 } from "./canonicalLane";
-import { connectionKey, environmentWord, fleetRows, portfolioRows, scopeLines, type FleetRow, type PortfolioRow, type SliceContext } from "./model";
+import {
+  bindingRows,
+  connectionKey,
+  dispositionChips,
+  environmentWord,
+  fleetRows,
+  portfolioDatasetRows,
+  portfolioRows,
+  scopeLines,
+  showingLabel,
+  withheldEnvironments,
+  type BalanceCell,
+  type BindingRow,
+  type FleetRow,
+  type PortfolioDatasetRow,
+  type PortfolioRow,
+  type SliceContext,
+} from "./model";
 import type { ScopedRead } from "./scopedRead";
 
 import "../../css/blocks.css";
@@ -80,12 +97,14 @@ const AVAILABILITY_FLAG: Readonly<Record<string, { kind: FlagKind; label: string
 function ScopePanel({ read }: { read: ScopedRead }) {
   const lines = scopeLines(read);
   const readAt = readAsOf(read.readAtMs);
+  const showing = showingLabel(read);
   return (
     <SectionPanel title="Your scope" level={2}>
       <ul className="exec-slice-lines">
         <li title={`${lines.totals}. ${lines.policy}.`}>{lines.scope}</li>
         <li>{lines.completeness}</li>
         <li>{lines.page}{lines.morePages ? ". More pages exist." : "."}</li>
+        {showing === null ? null : <li data-testid="page-showing" title="Rows visible to you">{showing}</li>}
       </ul>
       <dl className="exec-slice-facts">
         <div>
@@ -103,10 +122,10 @@ function ScopePanel({ read }: { read: ScopedRead }) {
       </dl>
       {read.dispositions.length === 0 ? null : (
         <ul className="exec-slice-lines" aria-label="Environment dispositions">
-          {read.dispositions.map((d) => (
-            <li key={d.environment}>
-              {ENV_LABEL[d.environment]} <Flag kind={DISPOSITION_FLAG[d.state] ?? "unknown"} label={d.state === "PARTIAL" ? "Partial" : d.state === "DENIED" ? "Denied" : "Unavailable"} size="sm" />
-              {d.reasonCode === null ? <span className="exec-slice-muted"> No reason published</span> : <span className="exec-slice-muted"> {d.reasonCode}</span>}
+          {dispositionChips(read).map((d) => (
+            <li key={d.environment} data-state={d.state}>
+              {ENV_LABEL[d.environment]} <Flag kind={DISPOSITION_FLAG[d.state] ?? "unknown"} label={d.stateWord} size="sm" />
+              {d.reasonWord === null ? <span className="exec-slice-muted"> No reason published</span> : <span className="exec-slice-muted" title={d.reasonCode ?? undefined}> {d.reasonWord}</span>}
             </li>
           ))}
         </ul>
@@ -144,7 +163,84 @@ function PortfoliosPanel({ rows, search }: { rows: readonly PortfolioRow[]; sear
   );
 }
 
-function FleetPanel({ rows, search }: { rows: readonly FleetRow[]; search: URLSearchParams }) {
+type CellMetric = Parameters<typeof MetricText>[0]["metric"];
+
+/** A figure with its currency; an absence keeps its currency too (a null EUR is not a missing EUR). */
+function CurrencyFigure({ currency, metric }: { currency: string; metric: CellMetric }) {
+  if (metric !== null && metric !== undefined && metric.kind === "value") return <MetricText metric={metric} suffix={currency} />;
+  return (
+    <span>
+      <small className="exec-blk-unit">{currency}</small> <MetricText metric={metric} />
+    </span>
+  );
+}
+
+function MoneyStack({ cells }: { cells: readonly { currency: string; metric: CellMetric }[] }) {
+  return (
+    <span className="exec-slice-money">
+      {cells.map((cell) => (
+        <CurrencyFigure key={cell.currency} currency={cell.currency} metric={cell.metric} />
+      ))}
+    </span>
+  );
+}
+
+function PortfolioDatasetPanel({ rows }: { rows: readonly PortfolioDatasetRow[] }) {
+  const columns: CardsColumn<PortfolioDatasetRow>[] = [
+    { key: "id", label: "Portfolio", render: (row) => (row.portfolioId === null ? <span className="exec-slice-muted">Not named in this row</span> : <span className="exec-slice-id">{row.portfolioId}</span>) },
+    { key: "name", label: "Name", render: (row) => (row.portfolioName === null ? <NotPublished id="FE-066">Portfolio name</NotPublished> : row.portfolioName) },
+    { key: "env", label: "Environment", render: (row) => environmentWord(row.environment) },
+    { key: "base", label: "Base currency", render: (row) => (row.baseCurrency === null ? <span className="exec-slice-muted">Not published</span> : row.baseCurrency) },
+    {
+      key: "allocation",
+      label: "Allocation",
+      numeric: true,
+      render: (row) => (row.allocation.length === 0 ? <MetricText metric={row.allocationAbsent} /> : <MoneyStack cells={row.allocation} />),
+    },
+  ];
+  return (
+    <SectionPanel title="Portfolios" level={2}>
+      <CardsTable columns={columns} rows={rows} rowKey={(row) => row.key} label="Portfolios" empty={<span className="exec-slice-muted">No row from the environments that were read.</span>} />
+    </SectionPanel>
+  );
+}
+
+function BalanceStack({ cells, pick }: { cells: readonly BalanceCell[]; pick: "total" | "free" | "locked" }) {
+  if (cells.length === 0) return <span className="exec-slice-muted">Not stated</span>;
+  return (
+    <span className="exec-slice-money">
+      {cells.map((cell) => (
+        <CurrencyFigure key={cell.currency} currency={cell.currency} metric={cell[pick]} />
+      ))}
+    </span>
+  );
+}
+
+/** The one place an account balance is shown: on the binding that owns the account. */
+function BindingsPanel({ rows }: { rows: readonly BindingRow[] }) {
+  const columns: CardsColumn<BindingRow>[] = [
+    { key: "id", label: "Binding", render: (row) => (row.bindingId === null ? <span className="exec-slice-muted">Not named in this row</span> : <span className="exec-slice-id">{row.bindingId}</span>) },
+    { key: "name", label: "Name", render: (row) => (row.bindingName === null ? <NotPublished id="FE-066">Binding name</NotPublished> : row.bindingName) },
+    { key: "env", label: "Environment", render: (row) => environmentWord(row.environment) },
+    { key: "accounts", label: "Accounts", numeric: true, render: (row) => row.accounts },
+    {
+      key: "allocation",
+      label: "Allocation",
+      numeric: true,
+      render: (row) => (row.allocation.length === 0 ? <MetricText metric={row.allocationAbsent} /> : <MoneyStack cells={row.allocation} />),
+    },
+    { key: "balance", label: "Balance", numeric: true, render: (row) => <BalanceStack cells={row.balances} pick="total" /> },
+    { key: "free", label: "Free", numeric: true, render: (row) => <BalanceStack cells={row.balances} pick="free" /> },
+    { key: "locked", label: "Locked", numeric: true, render: (row) => <BalanceStack cells={row.balances} pick="locked" /> },
+  ];
+  return (
+    <SectionPanel title="Bindings" level={2}>
+      <CardsTable columns={columns} rows={rows} rowKey={(row) => row.key} label="Bindings" empty={<span className="exec-slice-muted">No row from the environments that were read.</span>} />
+    </SectionPanel>
+  );
+}
+
+function FleetPanel({ rows, search, withheld }: { rows: readonly FleetRow[]; search: URLSearchParams; withheld: boolean }) {
   const columns: CardsColumn<FleetRow>[] = [
     {
       key: "alpha",
@@ -170,11 +266,7 @@ function FleetPanel({ rows, search }: { rows: readonly FleetRow[]; search: URLSe
         row.allocation.length === 0 ? (
           <MetricText metric={row.allocationAbsent} />
         ) : (
-          <span className="exec-slice-money">
-            {row.allocation.map((cell) => (
-              <MetricText key={cell.currency} metric={cell.metric} suffix={cell.currency} />
-            ))}
-          </span>
+          <MoneyStack cells={row.allocation} />
         ),
     },
     {
@@ -211,9 +303,28 @@ function FleetPanel({ rows, search }: { rows: readonly FleetRow[]; search: URLSe
         rows={rows}
         rowKey={(row) => row.key}
         label="Fleet on this page"
-        empty={<span className="exec-slice-muted">No row is visible to you in this read.</span>}
+        empty={<span className="exec-slice-muted">{withheld ? "No row from the environments that were read." : "No row is visible to you in this read."}</span>}
       />
     </SectionPanel>
+  );
+}
+
+/** The panels of one read: the dataset the read is of, under the scope panel. */
+function ReadPanels({ read, search }: { read: ScopedRead; search: URLSearchParams }) {
+  return (
+    <>
+      <ScopePanel read={read} />
+      {read.surface === "PORTFOLIOS" ? (
+        <PortfolioDatasetPanel rows={portfolioDatasetRows(read)} />
+      ) : read.surface === "BINDINGS" || read.surface === "BINDING_DETAIL" ? (
+        <BindingsPanel rows={bindingRows(read)} />
+      ) : (
+        <>
+          <PortfoliosPanel rows={portfolioRows(read)} search={search} />
+          <FleetPanel rows={fleetRows(read)} search={search} withheld={withheldEnvironments(read).length > 0} />
+        </>
+      )}
+    </>
   );
 }
 
@@ -380,16 +491,10 @@ export function SliceScreen({ context, clock, config, lane: injected, revocation
           <StateBoundary status="unavailable" reason={boundary.reason ?? "The stream is not available."} actions={actions} />
         ) : read === null ? null : boundary.status === "stale" ? (
           <StateBoundary status="stale" reason={boundary.reason} actions={actions}>
-            <ScopePanel read={read} />
-            <PortfoliosPanel rows={portfolioRows(read)} search={search} />
-            <FleetPanel rows={fleetRows(read)} search={search} />
+            <ReadPanels read={read} search={search} />
           </StateBoundary>
         ) : (
-          <>
-            <ScopePanel read={read} />
-            <PortfoliosPanel rows={portfolioRows(read)} search={search} />
-            <FleetPanel rows={fleetRows(read)} search={search} />
-          </>
+          <ReadPanels read={read} search={search} />
         )}
       </div>
     </ExecutionSurface>
