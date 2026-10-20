@@ -17,6 +17,7 @@ import { useId, useMemo, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import { useSession } from "../../../../auth/session";
+import { SELF_ENTRY_PATH } from "../../../../app/selfNavView";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
 import { PanelHead } from "../../blocks";
@@ -142,7 +143,8 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
     requestAnimationFrame(() => document.getElementById(`exec-acc-tab-${next.id}`)?.focus());
   };
 
-  const myAccessHref = withContext(ACCESS_PATH, location.search);
+  // On the self-only page the "My access" link of a disabled control stays on that page (BE-P7); everywhere else it is the bare access path.
+  const myAccessHref = withContext(location.pathname === SELF_ENTRY_PATH ? SELF_ENTRY_PATH : ACCESS_PATH, location.search);
 
   const ownerWord = access.kind !== "ready"
     ? null

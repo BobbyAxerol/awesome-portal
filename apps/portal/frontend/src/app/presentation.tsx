@@ -74,7 +74,7 @@ export function presentationModeFor(
   // The V2 New request page stamps a Carbon surface (ExecutionPreviewRoute `onV2Request`), so the whole workspace must
   // be Carbon with it: a Carbon page inside a light shell was a mixed theme. Flag off, the page is the V1 light form.
   if (isV2Screen("request") && /^\/governance\/approvals\/new\/?$/.test(pathname)) return "execution-carbon";
-  if (isV2Screen("profile") && /^\/administration\/profile-access\/?$/.test(pathname)) return "execution-carbon";
+  if (isV2Screen("profile") && /^\/administration\/(?:profile-access|my-access)\/?$/.test(pathname)) return "execution-carbon";
   if (isV2Screen("users") && /^\/administration\/users\/?$/.test(pathname)) return "execution-carbon";
   if (pathname === "/governance" || pathname.startsWith("/governance/")) return "governance-light";
   if (pathname === "/execution" || pathname.startsWith("/execution/")) return "execution-carbon";

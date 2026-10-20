@@ -27,6 +27,7 @@ import {
 import { screenDeliveryProfile, screenDeliveryPolicy } from "../execution/profile";
 import { isV2Screen } from "../execution/v2/flags";
 import { withContext } from "../execution/v2/urlState";
+import { SELF_ENTRY_PATH } from "./selfNavView";
 
 /**
  * Heavy modules are loaded when their route is entered, not before.
@@ -278,6 +279,12 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
             screen itself renders `denied` for a non-ADMIN, so a guessed URL does
             not leak the table. */}
         <Route path={ADMIN_USERS_ROUTE} element={<UsersEntry />} />
+
+        {/* BE-P7 self-only "My access" (`self_entry.route`): the SAME self-view the access screen draws, with NO `manage` prop, so
+            the admin policy matrix cannot be reached from here whatever the session says. The matrix stays at
+            ADMIN_PROFILE_ACCESS_ROUTE behind its owner + capability guard. Mounted only with the `profile` flag; flag off the path
+            is not a route (the catch-all answers). Not a registry feature (rev 7 proposal in the BE-P7 consumer receipt). */}
+        {V2Access !== null && isV2Screen("profile") ? <Route path={SELF_ENTRY_PATH} element={<V2Access />} /> : null}
 
         {/* Execution Loop Phase 0 fixtures: components, not a screen. */}
         <Route path={EXECUTION_FIXTURES_ROUTE} element={<ExecutionFixtures />} />

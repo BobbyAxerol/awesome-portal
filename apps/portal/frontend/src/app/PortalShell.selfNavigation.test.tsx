@@ -349,3 +349,68 @@ describe("shell flag on: the address names no workspace (BE-P7 self-context)", (
     expect(state.asked).toEqual([]);
   });
 });
+
+describe("shell flag on: the self-only 'My access' entry (BE-P7 self_entry)", () => {
+  const PROFILE_ON = { manifest: "shell,profile" };
+  const myAccess = () => [...rail().querySelectorAll<HTMLAnchorElement>("a.portal-navitem")].filter((a) => a.querySelector(".portal-navitem-label")?.textContent === "My access");
+
+  it("an ordinary member with a live projection and the profile page mounted gets the entry, carrying the workspace and the context", async () => {
+    await mount(SCOPED, PROFILE_ON);
+    await waitFor(() => expect(myAccess()).toHaveLength(1));
+    expect(myAccess()[0]!.getAttribute("href")).toBe("/administration/my-access?workspace_id=ws_TEST_ONLY&env=paper");
+    expect(railLabels()).not.toContain("Profile & Access"); // no admin entry for this member
+  });
+
+  it("and it opens the self-only page: the path changes and the matrix is not mounted", async () => {
+    await mount(SCOPED, PROFILE_ON);
+    await waitFor(() => expect(myAccess()).toHaveLength(1));
+    fireEvent.click(myAccess()[0]!);
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/administration/my-access?workspace_id=ws_TEST_ONLY&env=paper"));
+    await waitFor(() => expect(screen.getByRole("link", { name: /My access/ })).toBeTruthy());
+  });
+
+  it("the context-resolved workspace is the one the entry opens for", async () => {
+    await mount("/execution?env=sandbox", PROFILE_ON, { contextAnswer: () => ok(contextBody("RESOLVED_SOLE_MEMBERSHIP")) });
+    await waitFor(() => expect(myAccess()).toHaveLength(1));
+    expect(myAccess()[0]!.getAttribute("href")).toBe("/administration/my-access?workspace_id=ws_TEST_ONLY_personal&env=sandbox");
+  });
+
+  it("without the profile flag there is no entry (the page it opens is not mounted)", async () => {
+    await mount(SCOPED, ON);
+    await waitFor(() => expect(railLabels()).toContain("Portfolios"));
+    expect(myAccess()).toHaveLength(0);
+  });
+
+  it.each([
+    ["a read still loading", { answer: () => new Promise<Response>(() => {}) }],
+    ["a failed read", { answer: () => new Response("{}", { status: 500 }) }],
+    ["a denied read", { answer: () => new Response("{}", { status: 403 }) }],
+  ])("%s offers no entry (fail closed)", async (_name, harness) => {
+    await mount(SCOPED, PROFILE_ON, harness);
+    await new Promise((resolve) => setTimeout(resolve, 60));
+    expect(myAccess()).toHaveLength(0);
+  });
+
+  it("no entry while the member still has to choose a workspace, and none for a member with no workspace", async () => {
+    await mount("/execution", PROFILE_ON, { contextAnswer: () => ok(contextBody("AMBIGUOUS_MEMBER_ONLY")) });
+    await within(rail()).findByRole("group", { name: "Workspaces" });
+    expect(myAccess()).toHaveLength(0);
+    cleanup();
+    await mount("/execution", PROFILE_ON, { contextAnswer: () => ok(contextBody("ABSENT_NO_MEMBERSHIP")) });
+    await within(rail()).findByText(/No workspace membership/);
+    expect(myAccess()).toHaveLength(0);
+  });
+
+  it("the entry goes with the rail when the session ceiling passes", async () => {
+    await mount(SCOPED, PROFILE_ON, { answer: (url, index) => (index === 0 ? ok(navBody(url, 250)) : new Response("{}", { status: 500 })) });
+    await waitFor(() => expect(myAccess()).toHaveLength(1));
+    await waitFor(() => expect(myAccess()).toHaveLength(0), { timeout: 2000 });
+  });
+
+  it("an owner who holds the admin capability keeps Profile & Access and gets no second entry", async () => {
+    await mount(SCOPED, PROFILE_ON, {}, ["administration.profile_access.manage"]);
+    await waitFor(() => expect(railLabels()).toContain("Profile & Access"));
+    await waitFor(() => expect(railLabels()).toContain("Portfolios"));
+    expect(myAccess()).toHaveLength(0);
+  });
+});

@@ -170,6 +170,7 @@ export function PortalShell() {
               options={navOptions}
               collapsed={preferences.sidebarCollapsed}
               notice={selfNav.notice ?? undefined}
+              selfEntry={selfNav.selfEntry}
             />
           </div>
 
@@ -188,6 +189,7 @@ export function PortalShell() {
                   collapsed={false}
                   onNavigate={() => setMobileNavOpen(false)}
                   notice={selfNav.notice ?? undefined}
+                  selfEntry={selfNav.selfEntry}
                 />
               </div>
             </div>

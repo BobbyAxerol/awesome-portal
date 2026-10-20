@@ -7,7 +7,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { SelfNavShellView } from "../../../app/selfNavView";
-import type { SelfContextOutcome, SelfNavigationPort } from "./selfNavigationPort";
+import type { SelfContextOutcome, SelfNavigationOutcome, SelfNavigationPort } from "./selfNavigationPort";
 import SelfNavigation, { SelfNavigationChooser, WORKSPACE_CHOOSER, canAddress } from "./SelfNavigation";
 
 const session = vi.hoisted(() => ({ principal: { sessionId: "sess_1" } as { sessionId: string } | null }));
@@ -67,7 +67,7 @@ describe("the controller", () => {
     return <output data-testid="where">{`${location.pathname}${location.search}`}</output>;
   }
   const contextPort = (outcome: SelfContextOutcome): SelfNavigationPort => ({
-    read: vi.fn(async () => ({ kind: "unavailable", reason: "x", status: null, code: null, requestId: null })),
+    read: vi.fn(async (): Promise<SelfNavigationOutcome> => ({ kind: "unavailable", reason: "x", status: null, code: null, requestId: null })),
     readContext: vi.fn(async () => outcome),
   });
   const ambiguous = async (): Promise<SelfContextOutcome> => {
@@ -102,7 +102,7 @@ describe("the controller", () => {
     const { loadCanonical } = await import("../testkit/loadCanonical");
     const file = loadCanonical<{ self_context_cases: { case_name: string; value: any }[] }>("execution-access.synthetic");
     const read = readAccessSelfContext({ ...file.self_context_cases.find((c) => c.case_name === "RESOLVED_SOLE_MEMBERSHIP")!.value, observed_at_ms: Date.now(), valid_until_ms: Date.now() + 60_000 });
-    const port = contextPort({ kind: "ok", context: (read as { context: never }).context });
+    const port = contextPort({ kind: "ok", context: (read as unknown as { context: import("../readers/accessSelfContext").AccessSelfContext }).context });
     render(
       <MemoryRouter initialEntries={["/execution?env=paper"]}>
         <SelfNavigation onView={(view) => { views.push(view); }} port={port} enabled />
