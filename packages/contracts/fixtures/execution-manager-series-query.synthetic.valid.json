@@ -1,0 +1,62 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "environment": "paper",
+      "metric": "NAV",
+      "window": "30D",
+      "subjects": [
+        {
+          "subject_type": "FUND"
+        }
+      ]
+    },
+    {
+      "environment": "paper",
+      "metric": "NAV",
+      "window": "30D",
+      "subjects": [
+        {
+          "subject_type": "PORTFOLIO",
+          "subject_id": "TEST_ONLY:portfolio-a"
+        },
+        {
+          "subject_type": "PORTFOLIO",
+          "subject_id": "TEST_ONLY:portfolio-b"
+        }
+      ],
+      "economic_partition": {
+        "economic_domain": "PAPER",
+        "currency": "USDT",
+        "basis": "TEST_ONLY:nav-ledger",
+        "native_profile_ref": "TEST_ONLY:paper-ledger",
+        "domain_proof_ref": "TEST_ONLY:domain-proof"
+      }
+    },
+    {
+      "environment": "live",
+      "metric": "RETURN",
+      "window": {
+        "from_ms": 1797408000000,
+        "to_ms": 1800000000000
+      },
+      "subjects": [
+        {
+          "subject_type": "PORTFOLIO",
+          "subject_id": "TEST_ONLY:portfolio-a"
+        },
+        {
+          "subject_type": "PORTFOLIO",
+          "subject_id": "TEST_ONLY:portfolio-b"
+        },
+        {
+          "subject_type": "PORTFOLIO",
+          "subject_id": "TEST_ONLY:portfolio-c"
+        },
+        {
+          "subject_type": "FUND"
+        }
+      ]
+    }
+  ]
+}

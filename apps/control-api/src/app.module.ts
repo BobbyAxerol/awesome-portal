@@ -62,6 +62,7 @@ import { LiveParentReads } from "./governance/live-parent.service";
 import { PaperExitRepository } from "./governance/paper-exit.repository";
 import { PaperExitService } from "./governance/paper-exit.service";
 import { GovernanceReviewCaptureService } from "./governance/review-capture.service";
+import { StageActionEligibilityService } from "./governance/stage-action-eligibility.service";
 import { ExecutionRealtimeController } from "./execution/realtime.controller";
 import { ExecutionRealtimeProxy } from "./execution/realtime.proxy";
 import { ExecutionAnalyticsController } from "./execution/analytics.controller";
@@ -143,6 +144,8 @@ import { ManagerModelController } from "./execution-v2/manager-model.controller"
 import { ManagerModelService } from "./execution-v2/manager-model.service";
 import { ManagerScoreRevisionController } from "./execution-v2/manager-score-revision.controller";
 import { ManagerScoreRevisionService } from "./execution-v2/manager-score-revision.service";
+import { ManagerSeriesController } from "./execution-v2/manager-series.controller";
+import { ManagerSeriesService } from "./execution-v2/manager-series.service";
 import { ResourceReadController } from "./resource-read/resource-read.controller";
 import { ResourceReadService } from "./resource-read/resource-read.service";
 import { PortalDerivationsController } from "./execution/portal-derivations.controller";
@@ -346,6 +349,7 @@ export class AppModule implements OnApplicationShutdown {
         ManagerListsController,
         ManagerModelController,
         ManagerScoreRevisionController,
+        ManagerSeriesController,
         ExecutionDurableMirrorIntegrityController,
         ResourceReadController,
         PortalDerivationsController,
@@ -551,6 +555,7 @@ export class AppModule implements OnApplicationShutdown {
         PaperExitRepository,
         PaperExitService,
         GovernanceReviewCaptureService,
+        StageActionEligibilityService,
         CommandCenterRepository,
         CommandCenterService,
         ExecutionOperationsRepository,
@@ -582,6 +587,7 @@ export class AppModule implements OnApplicationShutdown {
         ManagerListsService,
         ManagerModelService,
         ManagerScoreRevisionService,
+        ManagerSeriesService,
         ResourceReadService,
         PortalDerivationsService,
         OperationalCompositionService,

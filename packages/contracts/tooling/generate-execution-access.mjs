@@ -131,6 +131,25 @@ const eligibilityRow={...obj({action:ref('AccessEligibilityAction'),permission:{
       else:{properties:{reason_class:{enum:eligibilityReasons.filter(reason=>reason!=='FAMILY_CHECK_REQUIRED')},
         grant_ref:{type:'null'},authority_mode:{const:'NOT_ESTABLISHED'}}}}
   ]};
+// FE-068 · bounded multi-resource eligibility with a typed step-up state. Additive sibling: every v1 row/target rule
+// above is reused unchanged; the single-resource schema and route are not modified.
+const stepUpStates=['NOT_REQUIRED','PLAN_DEPENDENT','REQUIRED','ACTIVE'];
+const eligibilityBatchRow={...eligibilityRow,required:[...eligibilityRow.required,'step_up_state'],
+  properties:{...eligibilityRow.properties,step_up_state:{enum:stepUpStates,
+    description:'Rule + this session: NOT_REQUIRED (rule false), PLAN_DEPENDENT (rule null: the plan decides), REQUIRED (rule true, no active session step-up) or ACTIVE (rule true, this session holds an unexpired step-up). A statement about the rule and the session, never a permission and not a refusal; every family recheck still applies.'}},
+  allOf:[...eligibilityRow.allOf,
+    {if:{properties:{step_up_required:{const:false}},required:['step_up_required']},then:{properties:{step_up_state:{const:'NOT_REQUIRED'}}}},
+    {if:{properties:{step_up_required:{type:'null'}},required:['step_up_required']},then:{properties:{step_up_state:{const:'PLAN_DEPENDENT'}}}},
+    {if:{properties:{step_up_required:{const:true}},required:['step_up_required']},then:{properties:{step_up_state:{enum:['REQUIRED','ACTIVE']}}}}]};
+const batchResourceTokenPattern='[A-Z_]{1,16}:(?:[A-Za-z0-9\\-_.!~*\'()]|%[0-9A-F]{2}){1,768}';
+const eligibilityBatchResources={type:'string',minLength:1,maxLength:8192,
+  pattern:'^'+batchResourceTokenPattern+'(?:,'+batchResourceTokenPattern+'){0,7}$(?![\\s\\S])',
+  description:'One exact comma-separated value of 1-8 KIND:<id> tokens. <id> is encodeURIComponent(id) applied once more on top of query encoding, so a comma inside an id can never split a token; only the canonical encoding is accepted (uppercase hex, nothing needlessly escaped). Duplicates are refused.'};
+const eligibilityBatchQuery=obj({workspace_id:scopedText,environment,resources:eligibilityBatchResources,actions:eligibilityCsv});
+const eligibilityBatchItem={...obj({resource:obj({kind:resourceKind,id:scopedText}),
+  actions:{type:'array',minItems:1,maxItems:16,items:ref('AccessEligibilityBatchRow'),
+    allOf:eligibilityActions.map(action=>({contains:{type:'object',properties:{action:{const:action}},required:['action']},minContains:0,maxContains:1}))}}),
+  allOf:eligibilityTargetRules};
 const selfNavigationItem={...obj({feature:{enum:featureIds},state:{enum:['ENTERABLE','HIDDEN']},
   authority_mode:{enum:['SCOPED_CURRENT','APP_ONLY','NOT_ESTABLISHED']},
   family_check:{const:'NOT_CHECKED'},source_readiness:{const:'NOT_CHECKED'},field_readiness:{const:'NOT_CHECKED'},command_readiness:{const:'NOT_CHECKED'}}),
@@ -160,6 +179,20 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
         minContains:0,maxContains:1}))}}),
     allOf:eligibilityTargetRules,
     description:'Current own application permission facts only; action/target-kind compatibility is checked, but target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Unsupported targets are UNAVAILABLE with ACTION_TARGET_UNSUPPORTED, or POLICY_PENDING when the current producer cannot establish policy. Not a permit or TS activation.'},
+  AccessEligibilityBatchQuery:eligibilityBatchQuery,AccessEligibilityBatchRow:eligibilityBatchRow,
+  AccessEligibilityBatch:{...obj({schema_version:{const:'portal.self-eligibility-batch.v1'},workspace_id:scopedText,environment,
+    current_only:{const:true},advisory_only:{const:true},...projectionTimes,
+    session_step_up:{...obj({state:{enum:['ACTIVE','NOT_ACTIVE']},
+      valid_until_ms:{...nullable(ms),description:'When THIS session\'s step-up ends, never later than valid_until_ms of this projection (the session ceiling) and greater than observed_at_ms; null when NOT_ACTIVE.'},
+      challenge:obj({mechanism:{const:'PASSWORD_REAUTH'},route:{const:'/api/admin/profile-access/v2/step-up'},
+        precondition:{const:'CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW'},precondition_met:{type:'boolean'}})}),
+      allOf:[{if:{properties:{state:{const:'ACTIVE'}},required:['state']},then:{properties:{valid_until_ms:ms}},else:{properties:{valid_until_ms:{type:'null'}}}}],
+      description:'This session\'s own step-up fact, the one the access/capital mutations recheck, plus whether the build\'s step-up route precondition (a current own ALLOW access.grant or access.revoke) holds for the caller. Not a promise the password will be accepted; no new authentication mechanism.'},
+    results:{type:'array',minItems:1,maxItems:8,items:eligibilityBatchItem}}),
+    allOf:[{if:{properties:{session_step_up:{properties:{state:{const:'ACTIVE'}},required:['state']}},required:['session_step_up']},
+      then:{properties:{results:{items:{properties:{actions:{items:{properties:{step_up_state:{enum:['NOT_REQUIRED','PLAN_DEPENDENT','ACTIVE']}}}}}}}}},
+      else:{properties:{results:{items:{properties:{actions:{items:{properties:{step_up_state:{enum:['NOT_REQUIRED','PLAN_DEPENDENT','REQUIRED']}}}}}}}}}}],
+    description:'FE-068. Up to eight resources x the same 1-16 actions in one current-only self read. Each resource carries exactly the rows of portal.self-eligibility.v1 (same evaluator, same reasons, same target rules) plus a typed step_up_state. Resources are unique (runtime-enforced) and every result carries the same actions in the same order (runtime-enforced: JSON Schema cannot compare sibling arrays). An action unsupported by one resource is a typed per-resource refusal, not a batch failure. Advisory only: no permit, no lease, no target existence, no source/field qualification; per-family checks and the real step-up recheck remain authoritative.'},
   AccessSelfNavigationItem:selfNavigationItem,
   AccessSelfNavigation:{...obj({schema_version:{const:'portal.self-navigation.v1'},workspace_id:scopedText,environment,
     current_only:{const:true},advisory_only:{const:true},
@@ -215,6 +248,9 @@ const document={openapi:'3.1.0',info:{title:'Portal scoped access and delegation
   [prefix+'/eligibility']:{get:privateRead('portalScopedAccessEligibilityGetV1','AccessEligibility',[selfWorkspace,selfEnvironment,
     {name:'resource_kind',in:'query',required:true,schema:resourceKind},
     {name:'resource_id',in:'query',required:true,schema:scopedText},
+    {name:'actions',in:'query',required:true,style:'form',explode:false,schema:eligibilityCsv}])},
+  [prefix+'/eligibility/batch']:{get:privateRead('portalScopedAccessEligibilityBatchGetV1','AccessEligibilityBatch',[selfWorkspace,selfEnvironment,
+    {name:'resources',in:'query',required:true,style:'form',explode:false,schema:eligibilityBatchResources},
     {name:'actions',in:'query',required:true,style:'form',explode:false,schema:eligibilityCsv}])},
   [prefix+'/self-navigation']:{get:privateRead('portalScopedAccessSelfNavigationGetV1','AccessSelfNavigation',[selfWorkspace,selfEnvironment])},
   [`${prefix}/preview`]:{post:write('portalScopedAccessPreviewPostV1','AccessPreviewRequest','AccessPreview')},
@@ -272,10 +308,28 @@ const fixtures={lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',cases:[
     schema_version:'portal.access-operation.v1',operation_id:`ace_TEST_ONLY_${outcome}`,proposal_id:'acp_TEST_ONLY',grant_id:'acg_TEST_ONLY',outcome,
     http_status:outcome==='DENIED'?409:200,reason_code:outcome==='DENIED'?'GRANT_REVISION_CONFLICT':null,policy_revision:'p1_TEST_ONLY',
     grant_revision:'r1_TEST_ONLY',decided_at_ms:1792094400000,ts_authority:({TS_PENDING:'PENDING',TS_APPLIED:'ACCEPTED',TS_REJECTED:'REJECTED',TS_UNKNOWN:'UNKNOWN'})[outcome]??'NOT_REQUIRED'}})),
-]};
+],
+// FE-068: kept apart from `cases` so the pre-existing fixture contract (and its exact type-set assertions) is untouched.
+batch_cases:[false,true].map(active=>({type:'AccessEligibilityBatch',case_name:active?'STEP_UP_ACTIVE':'STEP_UP_REQUIRED_NOT_ACTIVE',value:{
+  schema_version:'portal.self-eligibility-batch.v1',workspace_id:'ws_TEST_ONLY',environment:'paper',current_only:true,advisory_only:true,
+  observed_at_ms:1792094400000,valid_until_ms:1792094405000,
+  session_step_up:{state:active?'ACTIVE':'NOT_ACTIVE',valid_until_ms:active?1792094403000:null,
+    challenge:{mechanism:'PASSWORD_REAUTH',route:'/api/admin/profile-access/v2/step-up',
+      precondition:'CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW',precondition_met:active}},
+  results:[
+    {resource:{kind:'PORTFOLIO',id:'portfolio_TEST_ONLY'},actions:[{...sampleEligibilityRow,step_up_state:'NOT_REQUIRED'},
+      {...sampleEligibilityRow,action:'capital.top_up',grant_ref:'acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP',step_up_required:true,
+        family_check:'CAPITAL_PREVIEW',step_up_state:active?'ACTIVE':'REQUIRED'}]},
+    {resource:{kind:'DEPLOYMENT',id:'deployment_TEST_ONLY'},actions:[{...sampleEligibilityRow,permission:'UNAVAILABLE',
+      reason_class:'ACTION_TARGET_UNSUPPORTED',public_copy_key:'ACTION_TARGET_UNSUPPORTED',grant_ref:null,authority_mode:'NOT_ESTABLISHED',
+      step_up_state:'NOT_REQUIRED'},
+      {...sampleEligibilityRow,action:'capital.top_up',grant_ref:'acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP_DEPLOYMENT',step_up_required:true,
+        family_check:'CAPITAL_PREVIEW',step_up_state:active?'ACTIVE':'REQUIRED'}]}]}})),
+};
 // Only the new C3 shapes receive examples; all existing schema/fixture semantics remain unchanged.
 for(const name of ['AccessEligibility','AccessSelfNavigation'])
   schemas[name].examples=fixtures.cases.filter(entry=>entry.type===name).map(entry=>entry.value);
+schemas.AccessEligibilityBatch.examples=fixtures.batch_cases.map(entry=>entry.value);
 for(const [file,value] of Object.entries({'openapi/execution-access.openapi.json':document,'fixtures/execution-access.synthetic.valid.json':fixtures})){
   const bytes=JSON.stringify(value,null,2)+'\n',target=resolve(root,file);
   if(process.argv.includes('--check')){if(readFileSync(target,'utf8')!==bytes)throw new Error(`Generated drift: ${file}`);}

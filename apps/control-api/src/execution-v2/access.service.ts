@@ -23,7 +23,7 @@ import { CurrentHumanLeaseError } from "./current-human-candidate";
 import { CurrentHumanMutations, type CurrentHumanMutationBinding, type CurrentHumanMutationHooks } from "./current-human-mutations";
 import { currentAcceptanceMatches, currentAccessRelations } from "./access-current-relations";
 import { reviewedParentAuditRoot } from "./parent-read-fields";
-import { eligibilityInput, navigationInput, projectEligibility, projectNavigation,
+import { eligibilityBatchInput, projectEligibilityBatch, eligibilityInput, navigationInput, projectEligibility, projectNavigation,
   selfProjectionPrincipalIds, NAVIGATION_ACTIONS, type RowAction, type SelfEligibilityContext } from "./self-eligibility";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
@@ -155,6 +155,15 @@ export class ExecutionAccessService {
   async eligibility(actor:AccessActor,input:ReturnType<typeof eligibilityInput.parse>) {
     const context=await this.selfProjectionContext(actor,input.workspace_id,input.environment,input.actions);
     return projectEligibility(context,input);
+  }
+
+  /** FE-068: several resources and a typed step-up state in one bounded request. Same context capture,
+   * evaluator and fences as eligibility(); the only extra read is THIS session's own step-up expiry, taken
+   * after the exact actor/member fence and before the pure projection's final lease fence. */
+  async eligibilityBatch(actor:AccessActor,input:ReturnType<typeof eligibilityBatchInput.parse>) {
+    const context=await this.selfProjectionContext(actor,input.workspace_id,input.environment,input.actions);
+    const expiry=await new AccountLifecycleRepository(this.pool).activeStepUpExpiry(actor.session_id);
+    return projectEligibilityBatch(context,input,{active_until_ms:expiry?expiry.getTime():null});
   }
 
   async selfNavigation(actor:AccessActor,input:ReturnType<typeof navigationInput.parse>) {

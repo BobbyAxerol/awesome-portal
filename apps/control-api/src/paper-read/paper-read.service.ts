@@ -19,7 +19,11 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { PaperBlotterQuery } from "./contracts";
 import { ManagerPage, managerPage } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
+import { IDENTITY_NOT_READ, identityFields } from "../execution/deployment-identity";
+import { positionsBySide } from "./positions-by-side";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
+import { absentRelation, buildStageFacts, RelationInput } from "../execution/stage-facts";
+import { unpublishedVenueCalendar } from "../execution/venue-calendar";
 import {
   oldestStageAsOfMs,
   stagePanels,
@@ -167,6 +171,12 @@ const WORKBENCH_SPECS: readonly RelationSpec[] = [
   spec("account_equity", "manager.performance", "account_equity_snapshots", ACCOUNT_EQUITY_FIELDS, 200),
   spec("portfolio_equity", "manager.performance", "portfolio_equity_snapshots", PORTFOLIO_EQUITY_FIELDS, 200),
 ];
+
+/** The rows and state of one fetched relation, for the derived blocks that read it. */
+function relationRows(relations: readonly RelationResult[], key: string) {
+  const found = relations.find((item) => item.spec.key === key);
+  return { rows: found?.page?.items ?? null, relationState: found?.state ?? "UNAVAILABLE" } as const;
+}
 
 /**
  * The analytics envelope with every `source_facts` group emptied.
@@ -400,9 +410,30 @@ export class PaperReadService {
       principal,
       relations,
       {
-        deployment: deployment ?? null,
+        // FE-066: the block that names the deployment also names its Alpha and
+        // Portfolio, each nullable with a typed reason. A resolution that did
+        // not establish an exact scope read no identity: said, not guessed.
+        deployment: deployment
+          ? { ...deployment, ...identityFields(resolution.state === "FOUND" && resolution.identity
+            ? resolution.identity : IDENTITY_NOT_READ) }
+          : null,
         observation_gate: observationGate,
+        // S3-U4: Long/Short/Gross by side, exact quantity per instrument from the same
+        // rows; notional by side stays typed unavailable (E5), never a guess.
+        positions_by_side: positionsBySide(relationRows(relations, "positions")),
         query_analytics: queryAnalytics,
+        // FE-067. Typed runtime / reconciliation / sessions. The workbench screen is not bound to the
+        // sessions or reconciliation relations, so today those two are typed NOT_PUBLISHED with a reason;
+        // they publish the moment a read carries the relation (no change here).
+        stage_facts: buildStageFacts({
+          deployment: deployment ?? null,
+          sessions: paperRelationInput(relations, "sessions"),
+          reconciliation: paperRelationInput(relations, "reconciliation"),
+          reconciliationAsOf: relations.find((item) => item.spec.key === "reconciliation")?.page?.asOf ?? null,
+        }),
+        // FE-070: the VN market variant carries the session calendar as typed facts. No calendar
+        // source of truth is wired (capability venue.calendar stays UNAVAILABLE), so each is NOT_PUBLISHED.
+        ...(vnm ? { venue_calendar: unpublishedVenueCalendar() } : {}),
         ...scoped,
         ...depth.rows,
         ...(Object.keys(depth.windows).length > 0 ? { history_windows: depth.windows } : {}),
@@ -761,6 +792,19 @@ function unresolvedRelations(
     state,
     reasonCode: resolution.reasonCode,
   }));
+}
+
+/** A workbench relation as the pure stage facts read it; a relation this read never asked for is absent, not empty. */
+function paperRelationInput(relations: readonly RelationResult[], key: string): RelationInput {
+  const item = relations.find((candidate) => candidate.spec.key === key);
+  if (!item) return absentRelation("PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN");
+  return {
+    present: true,
+    state: item.state,
+    reasonCode: item.reasonCode,
+    rows: item.page?.items ?? [],
+    absentReason: "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN",
+  };
 }
 
 function asStageRelations(relations: readonly RelationResult[]): StageRelation[] {

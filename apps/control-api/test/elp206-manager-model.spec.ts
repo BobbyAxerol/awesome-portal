@@ -531,7 +531,10 @@ describe("C4 current-only exact-window queries (TEST_ONLY, not commissioning)", 
     live.doc.members.at(-1)!.stage="CANARY";
     const result=live.read({sort:[{field:"stage_presence",direction:"asc"}]});
     expect(result.items[0].stage_presence).toEqual(["CANARY","LIVE"]);
-    expect(result.query_options.unavailable_fields.map(f=>f.field)).toEqual(["current_stage","days_in_stage"]);
+    // FE-027: the stage SET is still never ranked into a winner; entry time stays a typed absence.
+    expect(result.items[0]).toMatchObject({current_stage:null,entered_at_ms:null,days_in_stage:null,
+      stage_lifecycle_reasons:{current_stage:"MULTIPLE_ACTIVE_STAGES",entered_at_ms:"STAGE_ENTRY_TIME_NOT_PUBLISHED",days_in_stage:"STAGE_ENTRY_TIME_NOT_PUBLISHED"}});
+    expect(result.query_options.unavailable_fields.map(f=>f.field)).toEqual(["days_in_stage","entered_at_ms"]);
     const bad=structuredClone(live.doc);bad.members[0].stage="PAPER";
     expect(managerModelDocument.safeParse(bad).success).toBe(false);
     expect(managerModelQuery.safeParse({environment:"paper",stage_filter:["LIVE"]}).success).toBe(false);
@@ -540,5 +543,48 @@ describe("C4 current-only exact-window queries (TEST_ONLY, not commissioning)", 
   it.each([undefined,null,"",0,[],{},NOW])("rejects any supplied as_of_ms (%j) as CURRENT_ONLY",value=>{
     expect(()=>rejectManagerAsOf({as_of_ms:value})).toThrowError(expect.objectContaining({code:"EXECUTION_READ_CURRENT_ONLY",status:400}));
     expect(()=>rejectManagerAsOf({})).not.toThrow();
+  });
+});
+
+describe("BE-P1 producer invariants on the actual read path (MD-1, MD-2, MD-4, MD-8; TEST_ONLY)", () => {
+  const eur = () => ({ ...partition(), currency: "EUR", native_profile_ref: "TEST_ONLY:paper-ledger-eur" });
+  const ownRow = (result: ReturnType<typeof queryManagerModel>) =>
+    result.items.find(value => value.portfolio_id === OWN.portfolio_id && value.alpha_id === OWN.alpha_id)!;
+  it("never advertises bounds for a preset nobody published, with a realistic as_of (MD-4)", async () => {
+    const f = await fixture({ full: true });
+    const presets = f.read().query_options.window.presets;
+    expect(presets.map(p => [p.value, p.data_state, p.resolved])).toEqual([
+      ["7D", "NOT_PUBLISHED", null], ["30D", "NOT_PUBLISHED", null], ["90D", "NOT_PUBLISHED", null], ["ALL", "NOT_PUBLISHED", null]]);
+    const w30 = { from_ms: f.doc.as_of_ms - 30 * 86_400_000, to_ms: f.doc.as_of_ms };
+    f.doc.facts.forEach(value => { value.metric.window = { ...w30 }; });
+    expect(f.read().query_options.window.presets.find(p => p.value === "30D")).toMatchObject({ data_state: "METRIC_SPECIFIC", resolved: w30, reason_code: null });
+  });
+  it("emits a pinned partition's headline above the row's other-currency partitions as one partition's figure (MD-8)", async () => {
+    const f = await fixture({ full: true });
+    f.doc.facts = [fact(OWN, "usdt", "5"), fact(OWN, "eur", "7", { partition: eur(), metric: money("7", { currency: "EUR" }) })];
+    const unpinned = ownRow(f.read());
+    expect(unpinned.economic_partitions.map(p => p.partition.currency).sort()).toEqual(["EUR", "USDT"]);
+    expect(unpinned.metrics.net_pnl).toMatchObject({ value: null, currency: null, reason_code: "MIXED_ECONOMIC_DOMAINS" });
+    for (const [pinned, value, currency] of [[partition(), "5", "USDT"], [eur(), "7", "EUR"]] as const) {
+      const row = ownRow(f.read({ economic_partition: pinned }));
+      expect(row.metrics.net_pnl).toMatchObject({ value, currency });
+      expect(row.economic_partitions).toHaveLength(2);
+      expect(row.economic_partitions.find(p => p.partition.currency === currency)!.metrics.net_pnl).toEqual(row.metrics.net_pnl);
+    }
+  });
+  it("fails closed rather than emit a figure whose currency is not its partition's (MD-2)", async () => {
+    const f = await fixture({ full: true });
+    f.doc.facts = [fact(OWN, "mismatch", "5", { metric: money("5", { currency: "EUR" }) })];
+    expect(() => f.read({ economic_partition: partition() })).toThrow(/MANAGER_PARTITION_CURRENCY_MISMATCH/);
+    // The source admission refuses the same fact before it is ever stored; the response check is the second line.
+    expect(() => f.prepare()).toThrow();
+  });
+  it("counts the page it returns (MD-1) and keeps keyset pages inside the invariants", async () => {
+    const f = await fixture({ full: true }), first = f.read({ limit: 1 });
+    expect(first.page).toMatchObject({ returned_count: 1, authorized_filtered_count: 3 });
+    expect(first.page.next_cursor).not.toBeNull();
+    const second = f.read({ limit: 1, after: first.page.next_cursor! });
+    expect(second.page.returned_count).toBe(second.items.length);
+    expect(f.read().page).toMatchObject({ returned_count: 3, next_cursor: null, previous_cursor: null });
   });
 });

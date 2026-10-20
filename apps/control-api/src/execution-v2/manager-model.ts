@@ -9,6 +9,7 @@ import { sumExactDecimals } from "../research/exact-decimal";
 import { selectManagerScorePublications, type ManagerScoreReadFence } from "./manager-score-publication";
 import { selectManagerCompositionPublications,type ManagerCompositionReadFence } from "./manager-composition-publication";
 import { selectManagerRegimePublications, type ManagerRegimeReadFence } from "./manager-regime-publication";
+import { deriveManagerRowLifecycle, MANAGER_STAGE_LIFECYCLE_POLICY } from "./manager-lifecycle";
 import { managerModelDocument, managerModelQuery, managerDatasetResponse, MANAGER_SCALARS, managerMoneyFields, managerStatementFields,
   type ManagerMember, type ManagerFact, type ManagerMetric, type ManagerModelDocument, type ManagerModelQuery } from "./manager-model.contract";
 
@@ -27,7 +28,7 @@ export function compareManagerDecimals(a: string, b: string): number {
   const x = convert(a, scale), y = convert(b, scale); return x < y ? -1 : x > y ? 1 : 0;
 }
 const lexical = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
-const fieldPolicy = (field: string) => ({ stage_presence: "stage", source_state: "freshness",
+const fieldPolicy = (field: string) => ({ stage_presence: "stage", current_stage: "stage", source_state: "freshness",
   equity_30d_end_value: "equity", return_30d_pct: "return" } as Record<string, string>)[field] ?? field;
 function absent(reason: string, template?: ManagerMetric): ManagerMetric {
   return { value: null, unit: template?.unit ?? "NOT_PUBLISHED", currency: template?.currency ?? null,
@@ -40,6 +41,8 @@ export interface ManagerDatasetRow {
   row_key: string; alpha_id: string; alpha_version_id: string; portfolio_id: string;
   name: string | null; owner_user_id: string | null; lifecycle: string | null; venue: string | null;
   health: string | null; source_state: string | null; stage_presence: ManagerMember["stage"][];
+  current_stage: ManagerMember["stage"] | null; entered_at_ms: number | null; days_in_stage: number | null;
+  stage_lifecycle_reasons: ReturnType<typeof deriveManagerRowLifecycle>["stage_lifecycle_reasons"];
   children: Array<ManagerMember["tuple"] & { stage: ManagerMember["stage"]; binding_ref: string | null }>;
   metrics: Record<string, ManagerMetric>;
   economic_partitions: Array<{ partition: ManagerFact["partition"]; metrics: Record<string, ManagerMetric> }>;
@@ -143,7 +146,8 @@ function partitions(facts: ManagerFact[], keys: readonly string[], expectedTuple
 }
 const DEFAULT_METRICS = [...managerMoneyFields, "return_30d_pct", "score"];
 const nullableConsensus = (values: Array<string | null>) => new Set(values).size === 1 ? values[0] : null;
-function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerModelQuery, scope: AuthorizedExecutionReadScope) {
+function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerModelQuery, scope: AuthorizedExecutionReadScope,
+  lifecycleStages: ReadonlyMap<string, ManagerMember["stage"][]>) {
   const groups = new Map<string, ManagerMember[]>();
   const byTuple = new Map<string, ManagerFact[]>();
   for (const fact of facts) { const key = tupleKey(fact.tuple), rows = byTuple.get(key) ?? []; rows.push(fact); byTuple.set(key, rows); }
@@ -157,14 +161,15 @@ function rowsFor(members: ManagerMember[], facts: ManagerFact[], query: ManagerM
     const metricValues = Object.fromEntries(DEFAULT_METRICS.filter(f => scopeAllowsField(scope, fieldPolicy(f))).map(key => [key,
       key === "score" ? absent("RUNTIME_SCORE_POLICY_NOT_APPROVED") : selected?.metrics[key] ?? absent(economic_partitions.length > 1 ? "MIXED_ECONOMIC_DOMAINS" : "SOURCE_FACTS_NOT_PUBLISHED")]));
     const identity = group[0].tuple;
-    return { row_key, alpha_id: identity.alpha_id, alpha_version_id: identity.alpha_version_id, portfolio_id: identity.portfolio_id,
+    const stagePresence = scopeAllowsField(scope, "stage") ? [...new Set(group.map(m => m.stage))].sort() : [];
+    return { row_key, ...deriveManagerRowLifecycle(scopeAllowsField(scope, "stage") ? lifecycleStages.get(row_key) ?? stagePresence : []), alpha_id: identity.alpha_id, alpha_version_id: identity.alpha_version_id, portfolio_id: identity.portfolio_id,
       name: scopeAllowsField(scope, "name") ? nullableConsensus(group.map(m => m.name)) : null,
       owner_user_id: scopeAllowsField(scope, "owner_user_id") ? nullableConsensus(group.map(m => m.owner_user_id)) : null,
       lifecycle: scopeAllowsField(scope, "lifecycle") ? nullableConsensus(group.map(m => m.lifecycle)) : null,
       venue: scopeAllowsField(scope, "venue") ? nullableConsensus(group.map(m => m.venue)) : null,
       health: scopeAllowsField(scope, "health") ? nullableConsensus(group.map(m => m.health)) : null,
       source_state: scopeAllowsField(scope, "freshness") ? nullableConsensus(group.map(m => m.source_state)) : null,
-      stage_presence: scopeAllowsField(scope, "stage") ? [...new Set(group.map(m => m.stage))].sort() : [],
+      stage_presence: stagePresence,
       children: group.map(m => ({ ...m.tuple, stage: m.stage, binding_ref: scopeAllowsField(scope, "binding_id") ? m.binding_ref : null })),
       metrics: metricValues, economic_partitions };
   });
@@ -227,15 +232,20 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   validateQuery(scope, query);
   const selected = (m: ManagerMember) => surface === "FUND" || surface === "FLEET" ||
     m.tuple[surface === "PORTFOLIO" ? "portfolio_id" : surface === "ALPHA" ? "alpha_id" : surface === "ACCOUNT" ? "account_id" : "deployment_id"] === resourceId;
-  const members = doc.members.filter(m => m.valid_from_ms <= doc.as_of_ms && (m.valid_to_ms === null || m.valid_to_ms > doc.as_of_ms) &&
-    (!query.stage_filter.length || query.stage_filter.includes(m.stage)) && projectionRowVisible(scope, m.tuple) && selected(m));
+  const active = doc.members.filter(m => m.valid_from_ms <= doc.as_of_ms && (m.valid_to_ms === null || m.valid_to_ms > doc.as_of_ms) &&
+    projectionRowVisible(scope, m.tuple) && selected(m));
+  const members = active.filter(m => !query.stage_filter.length || query.stage_filter.includes(m.stage));
+  // FE-027: a stage filter narrows the table, never the row's lifecycle. current_stage is read off the
+  // authorized active members BEFORE that filter, or "filter to Canary" would crown Canary the only stage.
+  const lifecycleStages = new Map<string, ManagerMember["stage"][]>();
+  for (const m of active) { const key = managerRowKey(m), set = lifecycleStages.get(key) ?? []; if (!set.includes(m.stage)) set.push(m.stage); lifecycleStages.set(key, set); }
   const memberKeys = new Set(members.map(m => tupleKey(m.tuple)));
   const facts = dedupeManagerFacts(doc.facts.filter(f => memberKeys.has(tupleKey(f.tuple)) && projectionRowVisible(scope, f.tuple) &&
     scopeAllowsField(scope, fieldPolicy(f.kind))));
   if (facts.length && ["currency", "profile_id", "provenance_ref"].some(field => !scopeAllowsField(scope, field)))
     fail("EXECUTION_READ_FIELD_POLICY_PENDING");
   const selectedFacts = managerFactsForWindow(facts, selectedWindow);
-  const allRows = rowsFor(members, selectedFacts, query, scope);
+  const allRows = rowsFor(members, selectedFacts, query, scope, lifecycleStages);
   // No score computation on this read path. Exact authorized population and
   // economic partition must match a separately precomputed, current-policy result.
   if (scopeAllowsField(scope, "score")) for (const row of allRows) {
@@ -338,10 +348,11 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
   const statementFacts = rootFlows(facts, surface);
   const statement = partitions(statementFacts, managerStatementFields.filter(f => scopeAllowsField(scope, f)), memberKeys);
   const response = { schema_version: "portal.execution.manager-dataset.v1" as const, surface, workspace_id: scope.workspaceId,
+    stage_lifecycle: MANAGER_STAGE_LIFECYCLE_POLICY,
     selected_window: selectedWindow,
     query_options: managerQueryOptions({ asOf: doc.as_of_ms, canSearchName: scopeAllowsField(scope, "name"),
       sortFields: (Object.keys(MANAGER_SCALARS) as Array<keyof typeof MANAGER_SCALARS>).filter(key => scopeAllowsField(scope, fieldPolicy(key))),
-      groupFields: (["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"] as const)
+      groupFields: (["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "current_stage", "venue", "health", "source_state", "lifecycle"] as const)
         .filter(key => scopeAllowsField(scope, fieldPolicy(key))),
       metricKeys: ([...managerMoneyFields, "return_30d_pct", "score"] as const).filter(key => scopeAllowsField(scope, fieldPolicy(key))), facts }),
     environment: scope.environment, record_authority: "PORTAL_PROJECTION" as const, source_authority: "TRADING_SYSTEM" as const,

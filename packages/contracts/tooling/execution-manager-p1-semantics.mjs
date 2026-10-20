@@ -2,7 +2,7 @@
 export const managerP1MetricKeys = ['allocation','net_pnl','unrealized_pnl','balance_total','equity_30d_end_value','return_30d_pct','score'];
 const moneyKeys = ['allocation','net_pnl','unrealized_pnl','balance_total','equity_30d_end_value'];
 const stockKeys = ['allocation','balance_total','unrealized_pnl'];
-const groupKeys = ['portfolio_id','owner_user_id','alpha_id','stage_presence','venue','health','source_state','lifecycle'];
+const groupKeys = ['portfolio_id','owner_user_id','alpha_id','stage_presence','current_stage','venue','health','source_state','lifecycle'];
 const windowReasons = ['EXACT_METRIC_WINDOW_NOT_PUBLISHED','ALL_HISTORY_WINDOW_NOT_PUBLISHED'];
 const summaryNames = ['raw','direct_nav','composition'];
 const obj = (properties, required=[]) => ({type:'object',properties,...(required.length?{required}:{})});
@@ -60,7 +60,7 @@ function amendOptions(options) {
   const preset=presets.allOf[0].items;
   add(preset,
     {if:isField('data_state','METRIC_SPECIFIC'),then:obj({resolved:{type:'object'},reason_code:{type:'null'}}),
-      else:obj({reason_code:{type:'string',enum:windowReasons}})},
+      else:obj({resolved:{type:'null'},reason_code:{type:'string',enum:windowReasons}})},
     {if:isField('value','ALL'),then:obj({resolved:{type:'null'},reason_code:{const:'ALL_HISTORY_WINDOW_NOT_PUBLISHED'}})});
   p.stage_environment.prefixItems=[
     {const:{environment:'paper',stages:['PAPER']}},{const:{environment:'sandbox',stages:['SANDBOX']}},
@@ -91,6 +91,43 @@ function scoreWindowSemantics(response) {
     add(response,{if:{allOf:[selectionCondition,allMissing]},then:obj({scores:obj({reason_code:{const:reason}})})});
   }
 }
+const PARTITION_LIST_NOTE='A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; '+
+  'domain_proof_ref is evidence, not identity). A metric that names a currency names its partition\'s currency. '+
+  'uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer '+
+  '(MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items.';
+function partitionListSemantics(list) {
+  list.uniqueItems=true;
+  list.description=PARTITION_LIST_NOTE;
+}
+/** Finite JSON part of the producer invariants MD-1..MD-8 (see manager-dataset-invariants.ts for the rest). */
+function datasetInvariantSemantics(response,row) {
+  const page=response.properties.page;
+  page.description='returned_count is items.length, at most limit and at most authorized_filtered_count; a non-empty page '+
+    'with neither cursor is the whole filtered result (returned_count equals authorized_filtered_count). JSON Schema cannot '+
+    'compare a count with an array length: the producer refuses to emit a body that breaks this (MANAGER_PAGE_*), and the '+
+    'reader refuses it too. The schema states the empty case exactly.';
+  add(response,{if:obj({items:{type:'array',maxItems:0}},['items']),
+    then:obj({page:obj({returned_count:{const:0}})}),else:obj({page:obj({returned_count:{type:'integer',minimum:1}})})});
+  response.properties.items.uniqueItems=true;
+  response.properties.items.description='A row appears once: row_key is unique within a body (MANAGER_ROW_KEY_DUPLICATE). '+
+    'uniqueItems catches an exact repeat; a repeated row_key with different content is refused by the producer.';
+  row.properties.row_key.description='Unique within a body (MANAGER_ROW_KEY_DUPLICATE).';
+  row.properties.metrics.description='A money metric that names a currency is the figure of exactly one partition listed in '+
+    'economic_partitions (the same metric), never a total across partitions. When a query pins one economic_partition the '+
+    'row still lists its other partitions and the headline is the pinned partition\'s figure (MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE).';
+  partitionListSemantics(row.properties.economic_partitions);
+  const group=response.properties.groups;
+  group.uniqueItems=true;
+  group.description='A group appears once (identity: key) and holds no more unique rows than page.authorized_filtered_count '+
+    '(MANAGER_GROUP_DUPLICATE, MANAGER_GROUP_COUNT_OVER_FILTERED). Its key names a field of query_options.group_fields once '+
+    '(MANAGER_GROUP_FIELD_NOT_OFFERED).';
+  const key=group.items.properties.key;
+  // A field twice in one key: finite over the eight groupable fields, no $data comparison.
+  key.allOf=key.items.properties.field.enum.map(field=>({not:{type:'array',
+    contains:obj({field:{const:field}},['field']),minContains:2}}));
+  partitionListSemantics(group.items.properties.economic_partitions);
+  partitionListSemantics(response.properties.capital_statements);
+}
 /** Call once on freshly derived Zod schemas before publishing components/files. */
 export function amendManagerP1Schemas({response,query,metric,row:standaloneRow,options,selectedWindow}) {
   if(!response?.properties?.query_options || !query?.properties?.window)
@@ -114,9 +151,11 @@ export function amendManagerP1Schemas({response,query,metric,row:standaloneRow,o
   metricSemantics(metric);
   if(standaloneRow){
     standaloneRow.properties.metrics.propertyNames={type:'string',enum:managerP1MetricKeys};
+    partitionListSemantics(standaloneRow.properties.economic_partitions);
     walk(standaloneRow,node=>{if(node.properties?.availability && node.properties?.provenance_refs && node.properties?.calculation_revision)metricSemantics(node);});
   }
   const row=response.properties.items.items;
+  datasetInvariantSemantics(response,row);
   row.properties.metrics.propertyNames={type:'string',enum:managerP1MetricKeys};
   for(const key of managerP1MetricKeys) add(response,{
     if:obj({query_options:obj({metric_keys:contains(key)},['metric_keys'])},['query_options']),

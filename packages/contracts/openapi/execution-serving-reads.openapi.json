@@ -1,0 +1,510 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Execution serving reads, legacy-compatibility variants (Alpha 360 / Trade Replay)",
+    "version": "1.0.0",
+    "description": "Existing session/workspace-authorized reads; this document only publishes the wire contracts the Alpha 360 and Trade Replay screens consume. A SCOPED_V2 workspace is answered with the v2 successor of the same route: dispatch on schema_version. No new route, flag or grant."
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "security": [
+    {
+      "portalSession": []
+    }
+  ],
+  "paths": {
+    "/api/v1/execution/resources/alphas/{resource_id}": {
+      "get": {
+        "operationId": "executionAlphaResourceLegacyV1",
+        "parameters": [
+          {
+            "name": "resource_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:@-]{1,160}$"
+            }
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The body GET /resources/alphas/{id} returns while the workspace is NOT in SCOPED_V2. In SCOPED_V2 the same route answers execution.alpha-resource.v2 (execution-resource-scoped.v2.schema.json): raw authorized facts only, no alpha_label/version/health summary. The server, not the browser, selects the variant; a reader must dispatch on schema_version. Names: alpha_label is \"Unnamed alpha\" and deployments[].portfolio_name is null because no execution source publishes an alpha or allocation-level portfolio name (portfolios[].name is the portfolio relation's own name, join it on portfolio_id). Money is an exact decimal string. Synthetic fixtures are produced by the real service and do not certify production.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-alpha-resource.v1.schema.json"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/resources/alphas/{alphaId}/{relation}": {
+      "get": {
+        "operationId": "executionAlphaSubjectRecordsLegacyV1",
+        "parameters": [
+          {
+            "name": "alphaId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:@-]{1,191}$"
+            }
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "orders",
+                "fills"
+              ]
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "description": "Portal-signed continuation from page.next_cursor."
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One keyset page of an alpha's or account's orders or fills from the Portal retained current window (not authoritative replay, not total history). `state` AUTHORITATIVE_EMPTY means the retained window holds no row for this subject; UNAVAILABLE means the relation was not published. `values` carries the relation's own published fields as strings/numbers/null; a missing key is absent, never zero. `timeframe.derived` provenance DERIVED_STRATEGY_ID_SUFFIX is a parse of the strategy id, not a source fact. In SCOPED_V2 the same route answers portal.execution.subject-records.v2 (execution-scoped-records.openapi.json), whose `values` are restricted to the reviewed scoped field set. The cursor is Portal-signed, bound to user, snapshot and limit; a stale one is 409.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-subject-records.v1.schema.json"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/resources/accounts/{accountId}/{relation}": {
+      "get": {
+        "operationId": "executionAccountSubjectRecordsLegacyV1",
+        "parameters": [
+          {
+            "name": "accountId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:@-]{1,191}$"
+            }
+          },
+          {
+            "name": "relation",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "enum": [
+                "orders",
+                "fills"
+              ]
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 200
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "description": "Portal-signed continuation from page.next_cursor."
+          },
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 96
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One keyset page of an alpha's or account's orders or fills from the Portal retained current window (not authoritative replay, not total history). `state` AUTHORITATIVE_EMPTY means the retained window holds no row for this subject; UNAVAILABLE means the relation was not published. `values` carries the relation's own published fields as strings/numbers/null; a missing key is absent, never zero. `timeframe.derived` provenance DERIVED_STRATEGY_ID_SUFFIX is a parse of the strategy id, not a source fact. In SCOPED_V2 the same route answers portal.execution.subject-records.v2 (execution-scoped-records.openapi.json), whose `values` are restricted to the reviewed scoped field set. The cursor is Portal-signed, bound to user, snapshot and limit; a stale one is 409.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-subject-records.v1.schema.json"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/views/observed-timeline": {
+      "get": {
+        "operationId": "executionObservedTimelineV1",
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "subject_kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "deployment",
+                "alpha",
+                "portfolio",
+                "account"
+              ]
+            }
+          },
+          {
+            "name": "subject_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A bounded, non-causal merge of the subject's current-page orders, fills, sessions and command-journal rows by their OWN clocks, ordered by observed_at_ms, clock class, then source identifier. It is an observation of the current page, not an event replay: broker acknowledgement, correction tombstones and a global event sequence are published as unavailable_segments. An entry carries NO order status or outcome (a request, FE-054): an order appears once per clock it has (submitted, updated, created). Exact values are decimal strings; a malformed source value is null and named in rejected_exact_value_fields. `mark_context` is derived current marks, not OHLCV. In SCOPED_V2 the received/ingested/processed clocks and the projection received/refresh times are null. Cursor `page.next_cursor` is Portal-signed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-observed-timeline.v1.schema.json"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "403": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "409": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "503": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/market/venue-candles": {
+      "get": {
+        "operationId": "executionMarketCandlesV1",
+        "parameters": [
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ],
+              "default": "paper"
+            }
+          },
+          {
+            "name": "venue",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "BINANCE",
+                "OKX"
+              ],
+              "default": "BINANCE"
+            }
+          },
+          {
+            "name": "market",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "USDM",
+                "SWAP"
+              ]
+            },
+            "description": "Must match the venue (BINANCE=USDM, OKX=SWAP)."
+          },
+          {
+            "name": "symbol",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Z0-9]{5,20}$|^[A-Z0-9]{2,12}-[A-Z0-9]{2,8}-SWAP$"
+            }
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "4h",
+                "1d"
+              ],
+              "default": "1h"
+            }
+          },
+          {
+            "name": "from_ms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "to_ms",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6000,
+              "default": 500
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bars for one symbol and interval, every price the source's decimal string. `source_authority` VENUE_PUBLIC_MARKET_DATA is the venue's public kline feed (market context, never the Trading System's own history); TRADING_SYSTEM_DATA_LAYER is the Trading System market gateway, reached through GET /market/candles (execution-market-context) behind the same envelope when EXECUTION_MARKET_CANDLES_SOURCE=data_layer. `state` EMPTY is a real answer (no bar in the window, or the venue does not know the symbol: reason_code says which); UNAVAILABLE is an outage or a disabled/not-wired source and carries retryable. A truncated read filled its limit with room left in the window. No bar is ever fabricated or resampled.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "../schemas/execution-market-candles.v1.schema.json"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "401": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          },
+          "404": {
+            "$ref": "./execution-query-analytics.openapi.json#/components/responses/Problem"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "portalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    }
+  }
+}

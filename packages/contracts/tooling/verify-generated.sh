@@ -26,10 +26,13 @@ node tooling/generate-portal-profile.mjs --check
 generate_and_compare openapi/portal-profile.openapi.json generated/portal-profile.d.ts
 node tooling/generate-execution-access.mjs --check
 generate_and_compare openapi/execution-access.openapi.json generated/execution-access.d.ts
+node tooling/generate-governance-requester-reads.mjs --check
 node tooling/generate-execution-publication.mjs --check
 generate_and_compare openapi/execution-publication-catalogue.openapi.json generated/execution-publication-catalogue.d.ts
 node tooling/generate-execution-manager-models.mjs --check
 generate_and_compare openapi/execution-manager-models.openapi.json generated/execution-manager-models.d.ts
+node tooling/generate-execution-manager-series.mjs --check
+generate_and_compare openapi/execution-manager-series.openapi.json generated/execution-manager-series.d.ts
 node tooling/generate-execution-trusted-commands.mjs --check
 generate_and_compare openapi/execution-trusted-commands.openapi.json generated/execution-trusted-commands.d.ts
 node tooling/generate-execution-workflows.mjs --check
@@ -44,7 +47,12 @@ node tooling/generate-execution-resource-scoped.mjs --check
 node tooling/generate-execution-retained-scoped.mjs --check
 node tooling/generate-execution-analytics-scoped.mjs --check
 node tooling/generate-execution-stage-drift.mjs --check
+node tooling/generate-execution-stage-facts.mjs --check
 generate_and_compare openapi/execution-stage-drift.openapi.json generated/execution-stage-drift.d.ts
+node tooling/generate-execution-financial-chart.mjs --check
+generate_and_compare openapi/execution-financial-chart.openapi.json generated/execution-financial-chart.d.ts
+node tooling/generate-execution-serving-reads.mjs --check
+generate_and_compare openapi/execution-serving-reads.openapi.json generated/execution-serving-reads.d.ts
 generate_and_compare openapi/execution-resource-scoped.openapi.json generated/execution-resource-scoped.d.ts
 generate_and_compare openapi/execution-scoped-records.openapi.json generated/execution-scoped-records.d.ts
 generate_and_compare openapi/execution-history.openapi.json generated/execution-history.d.ts

@@ -19,8 +19,12 @@ export const METRIC_POINTER = "/components/schemas/ManagerMetric";
 export const FIXTURE_EMPTY = "execution-manager-dataset.synthetic";
 export const FIXTURE_ROWS = "execution-manager-dataset.rows.synthetic";
 export const FIXTURE_ALL = "execution-manager-dataset.all-window.synthetic";
+/** BE-P1: two rows, two currencies in separate partitions, one group, per-currency capital statements. */
+export const FIXTURE_PARTITIONS = "execution-manager-dataset.partitions.synthetic";
+/** BE-P1: the negative cases MD-1..MD-8 as operations on FIXTURE_PARTITIONS (not a `.valid.json`, so not a dataset body). */
+export const FIXTURE_INVARIANT_CASES = "execution-manager-dataset.invariants.synthetic.negative.json";
 export const FIXTURE_METRIC = "execution-manager-metric.derived-reasons.synthetic";
-export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL] as const;
+export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL, FIXTURE_PARTITIONS] as const;
 
 export const clone = <T,>(value: T): T => structuredClone(value);
 
@@ -30,14 +34,21 @@ export function fixtureValue(name: string): Draft {
 }
 
 export function fixturesDigest(): string {
-  return [...DATASET_FIXTURES, FIXTURE_METRIC].map((name) => canonicalDigest(name)).join(":");
+  return [...DATASET_FIXTURES, FIXTURE_METRIC, FIXTURE_INVARIANT_CASES].map((name) => canonicalDigest(name)).join(":");
 }
 
 /* ───────────── schema judgement ───────────── */
 
 /** Violations of the published `ManagerDataset` schema; empty when the body conforms. */
 export function datasetViolations(value: unknown): string[] {
-  return validateAgainst(OPENAPI, DATASET_POINTER, value);
+  try {
+    return validateAgainst(OPENAPI, DATASET_POINTER, value);
+  } catch (error) {
+    // `uniqueItems` compares items by their JSON text (testkit checker); a BigInt cannot be written as JSON, so a body
+    // holding one inside a list that must be unique is not a JSON body at all: a violation, not a crash.
+    if (error instanceof TypeError && /BigInt/.test(error.message)) return ["not JSON: a BigInt value"];
+    throw error;
+  }
 }
 
 /** Violations of the published `ManagerMetric` schema. */

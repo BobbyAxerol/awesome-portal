@@ -109,6 +109,16 @@ export class PendingControlStore {
       return row ? candidate(row) : null;
     });
   }
+  /** FE-062: raw private candidates for ONE exact target, newest first. Caller
+   * authorizes the exact target BEFORE this SQL and decodes (pendingRecord) only
+   * after a fresh decision. Migration144 caps a workspace at 1024 commands, so
+   * the sentinel row (1025th) makes an inconsistent oversize explicit. */
+  async targetCandidates(workspace: string, resource: PendingTarget["resource"],
+    environment: PendingTarget["environment"]): Promise<PendingCandidate[]> {
+    return this.transaction(true, async db => (await query(db, `SELECT ${commandColumns} FROM execution_pending_recall_commands
+      WHERE workspace_id=$1 AND intent->'resource'->>'kind'=$2 AND intent->'resource'->>'id'=$3 AND intent->>'environment'=$4
+      ORDER BY updated_at_ms DESC, command_id LIMIT 1025`, [workspace, resource.kind, resource.id, environment])).rows.map(candidate));
+  }
   async keyed(db: PoolClient, workspace: string, key: string): Promise<PendingCandidate | null> {
     await this.bounds(db);
     const row = (await query(db, `SELECT ${commandColumns} FROM execution_pending_recall_commands

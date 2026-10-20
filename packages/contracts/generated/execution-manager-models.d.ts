@@ -171,8 +171,8 @@ export interface components {
                     /** @constant */
                     normalization: "JS_TO_LOWER_CASE_NO_UNICODE_NORMALIZATION";
                 };
-                sort_fields: ("alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score" | "stage_presence")[];
-                group_fields: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+                sort_fields: ("alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score" | "stage_presence" | "current_stage")[];
+                group_fields: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
                 metric_keys: ("allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score")[];
                 economic_partition_required_for: ("allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value")[];
                 window: {
@@ -238,21 +238,29 @@ export interface components {
                 unavailable_fields: [
                     {
                         /** @constant */
-                        field: "current_stage";
+                        field: "days_in_stage";
                         /** @constant */
-                        reason_code: "CURRENT_STAGE_GRAIN_NOT_PUBLISHED";
+                        reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
                     },
                     {
                         /** @constant */
-                        field: "days_in_stage";
+                        field: "entered_at_ms";
                         /** @constant */
                         reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
                     }
                 ];
-            } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+            } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
             /** @enum {string} */
             surface: "FUND" | "FLEET" | "PORTFOLIO" | "ALPHA" | "ACCOUNT" | "DEPLOYMENT";
             workspace_id: string;
+            stage_lifecycle: {
+                /** @constant */
+                current_stage_rule: "SINGLE_ACTIVE_MEMBER_STAGE_IN_SELECTED_ENVIRONMENT";
+                /** @constant */
+                covers: "DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY";
+                /** @constant */
+                entry_time: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
+            };
             /** @enum {string} */
             environment: "paper" | "sandbox" | "live";
             /** @constant */
@@ -282,6 +290,7 @@ export interface components {
                 /** @constant */
                 maximum_response_bytes: 1048576;
             };
+            /** @description returned_count is items.length, at most limit and at most authorized_filtered_count; a non-empty page with neither cursor is the whole filtered result (returned_count equals authorized_filtered_count). JSON Schema cannot compare a count with an array length: the producer refuses to emit a body that breaks this (MANAGER_PAGE_*), and the reader refuses it too. The schema states the empty case exactly. */
             page: {
                 limit: number;
                 returned_count: number;
@@ -289,7 +298,9 @@ export interface components {
                 next_cursor: string | null;
                 previous_cursor: string | null;
             };
-            items: {
+            /** @description A row appears once: row_key is unique within a body (MANAGER_ROW_KEY_DUPLICATE). uniqueItems catches an exact repeat; a repeated row_key with different content is refused by the producer. */
+            items: ({
+                /** @description Unique within a body (MANAGER_ROW_KEY_DUPLICATE). */
                 row_key: string;
                 alpha_id: string;
                 alpha_version_id: string;
@@ -301,6 +312,14 @@ export interface components {
                 health: string | null;
                 source_state: string | null;
                 stage_presence: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+                current_stage: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE") | null;
+                entered_at_ms: number | null;
+                days_in_stage: number | null;
+                stage_lifecycle_reasons: {
+                    current_stage: ("MULTIPLE_ACTIVE_STAGES" | "STAGE_FIELD_NOT_PUBLISHED") | null;
+                    entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED" | null;
+                    days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" | null;
+                };
                 children: {
                     alpha_id: string;
                     alpha_version_id: string;
@@ -311,6 +330,7 @@ export interface components {
                     stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
                     binding_ref: string | null;
                 }[];
+                /** @description A money metric that names a currency is the figure of exactly one partition listed in economic_partitions (the same metric), never a total across partitions. When a query pins one economic_partition the row still lists its other partitions and the headline is the pinned partition's figure (MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE). */
                 metrics: {
                     [key: string]: {
                         value: string | null;
@@ -340,6 +360,7 @@ export interface components {
                         policy_revision: string;
                     } & (unknown & unknown);
                 };
+                /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
                 economic_partitions: {
                     partition: {
                         /** @enum {string} */
@@ -379,15 +400,18 @@ export interface components {
                         } & (unknown & unknown);
                     };
                 }[];
-            }[];
+            } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown))[];
+            /** @description A group appears once (identity: key) and holds no more unique rows than page.authorized_filtered_count (MANAGER_GROUP_DUPLICATE, MANAGER_GROUP_COUNT_OVER_FILTERED). Its key names a field of query_options.group_fields once (MANAGER_GROUP_FIELD_NOT_OFFERED). */
             groups: {
                 key: {
-                    field: string;
+                    /** @enum {string} */
+                    field: "portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle";
                     value: string | null;
-                }[];
+                }[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
                 unique_row_count: number;
                 /** @constant */
                 totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY";
+                /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
                 economic_partitions: {
                     partition: {
                         /** @enum {string} */
@@ -428,6 +452,7 @@ export interface components {
                     };
                 }[];
             }[];
+            /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
             capital_statements: {
                 partition: {
                     /** @enum {string} */
@@ -828,7 +853,7 @@ export interface components {
                 revision: string;
                 supersedes_revision: string | null;
             };
-        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerDatasetQuery: {
             workspace_id?: string;
             /** @enum {string} */
@@ -844,7 +869,7 @@ export interface components {
             lifecycle_filter?: string;
             filters?: (({
                 /** @enum {string} */
-                field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "stage_presence" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";
+                field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "stage_presence" | "current_stage" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";
                 /** @enum {string} */
                 op: "EQ" | "GTE" | "LTE" | "IS_NULL" | "IN";
                 value?: string;
@@ -863,11 +888,11 @@ export interface components {
             }))[];
             sort?: {
                 /** @enum {string} */
-                field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "stage_presence" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";
+                field: "alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "stage_presence" | "current_stage" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score";
                 /** @enum {string} */
                 direction: "asc" | "desc";
-            }[] & (unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[]);
-            group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+            }[] & (unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[]);
+            group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
             economic_partition?: {
                 /** @enum {string} */
                 economic_domain: "ACTUAL" | "PAPER" | "SANDBOX";
@@ -919,6 +944,14 @@ export interface components {
             health: string | null;
             source_state: string | null;
             stage_presence: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
+            current_stage: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE") | null;
+            entered_at_ms: number | null;
+            days_in_stage: number | null;
+            stage_lifecycle_reasons: {
+                current_stage: ("MULTIPLE_ACTIVE_STAGES" | "STAGE_FIELD_NOT_PUBLISHED") | null;
+                entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED" | null;
+                days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" | null;
+            };
             children: {
                 alpha_id: string;
                 alpha_version_id: string;
@@ -958,6 +991,7 @@ export interface components {
                     policy_revision: string;
                 } & (unknown & unknown);
             };
+            /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
             economic_partitions: {
                 partition: {
                     /** @enum {string} */
@@ -997,7 +1031,7 @@ export interface components {
                     } & (unknown & unknown);
                 };
             }[];
-        };
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerScorePublication: {
             /** @enum {string} */
             slot: "RAW" | "DIRECT_NAV";
@@ -1323,8 +1357,8 @@ export interface components {
                 /** @constant */
                 normalization: "JS_TO_LOWER_CASE_NO_UNICODE_NORMALIZATION";
             };
-            sort_fields: ("alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score" | "stage_presence")[];
-            group_fields: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+            sort_fields: ("alpha_id" | "alpha_version_id" | "name" | "owner_user_id" | "portfolio_id" | "lifecycle" | "venue" | "health" | "source_state" | "allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score" | "stage_presence" | "current_stage")[];
+            group_fields: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
             metric_keys: ("allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value" | "return_30d_pct" | "score")[];
             economic_partition_required_for: ("allocation" | "net_pnl" | "unrealized_pnl" | "balance_total" | "equity_30d_end_value")[];
             window: {
@@ -1390,18 +1424,18 @@ export interface components {
             unavailable_fields: [
                 {
                     /** @constant */
-                    field: "current_stage";
+                    field: "days_in_stage";
                     /** @constant */
-                    reason_code: "CURRENT_STAGE_GRAIN_NOT_PUBLISHED";
+                    reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
                 },
                 {
                     /** @constant */
-                    field: "days_in_stage";
+                    field: "entered_at_ms";
                     /** @constant */
                     reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
                 }
             ];
-        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerSelectedWindow: {
             requested: ("7D" | "30D" | "90D" | "ALL") | {
                 from_ms: number;
@@ -2899,7 +2933,7 @@ export interface operations {
                 lifecycle_filter?: string;
                 filters?: string;
                 sort?: string;
-                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -2977,7 +3011,7 @@ export interface operations {
                 lifecycle_filter?: string;
                 filters?: string;
                 sort?: string;
-                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -3055,7 +3089,7 @@ export interface operations {
                 lifecycle_filter?: string;
                 filters?: string;
                 sort?: string;
-                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -3135,7 +3169,7 @@ export interface operations {
                 lifecycle_filter?: string;
                 filters?: string;
                 sort?: string;
-                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -3215,7 +3249,7 @@ export interface operations {
                 lifecycle_filter?: string;
                 filters?: string;
                 sort?: string;
-                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
@@ -3295,7 +3329,7 @@ export interface operations {
                 lifecycle_filter?: string;
                 filters?: string;
                 sort?: string;
-                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
                 economic_partition?: string;
                 limit?: number;
                 after?: string;

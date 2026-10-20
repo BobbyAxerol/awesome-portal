@@ -3,21 +3,26 @@ import { managerSearchText, managerSearchMode, managerWindowQuery, managerSelect
   managerP1Options, managerWindowAbsenceReason, validateManagerP1Response } from "./manager-query-p1.contract";
 import { utcMilliseconds, executionEnvironment, financialStage, exactDecimal, opaqueRevision } from "./foundation.contract";
 import { publicationDigest } from "./publication.contract";
+import { validateManagerDatasetInvariants } from "./manager-dataset-invariants";
 import { managerScorePublication } from "./manager-score-publication.contract";
 export { managerScorePublication } from "./manager-score-publication.contract";
 import { managerCompositionPublication } from "./manager-composition-publication.contract";
 export { managerCompositionPublication } from "./manager-composition-publication.contract";
 import { managerRegimePublication } from "./manager-regime-publication.contract";
 export { managerRegimePublication } from "./manager-regime-publication.contract";
+import { managerStageLifecycleReasons, managerStageLifecyclePolicy, validateManagerLifecycle } from "./manager-lifecycle";
+import { managerSeriesPublication, validateManagerSeriesPublications } from "./manager-series-publication.contract";
 
 const text = z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
 export const MANAGER_SCALARS = {
   alpha_id: "TEXT", alpha_version_id: "TEXT", name: "TEXT", owner_user_id: "TEXT", portfolio_id: "TEXT",
-  lifecycle: "TEXT", venue: "TEXT", health: "TEXT", source_state: "TEXT", stage_presence: "TEXT",
+  lifecycle: "TEXT", venue: "TEXT", health: "TEXT", source_state: "TEXT", stage_presence: "TEXT", current_stage: "TEXT",
   allocation: "DECIMAL", net_pnl: "DECIMAL", unrealized_pnl: "DECIMAL", balance_total: "DECIMAL",
   equity_30d_end_value: "DECIMAL", return_30d_pct: "DECIMAL", score: "DECIMAL",
 } as const;
 export const managerScalar = z.enum(Object.keys(MANAGER_SCALARS) as [keyof typeof MANAGER_SCALARS, ...Array<keyof typeof MANAGER_SCALARS>]);
+/** The fields a dataset can be grouped by (a group key names one of these, never any text). */
+export const managerGroupField = z.enum(["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "current_stage", "venue", "health", "source_state", "lifecycle"]);
 export const managerMoneyFields = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"] as const;
 export const managerTuple = z.object({ alpha_id: text, alpha_version_id: text, portfolio_id: text,
   deployment_id: text, account_id: text }).strict();
@@ -71,6 +76,8 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
   precomputed_scores: z.array(managerScorePublication).max(128).optional(),
   precomputed_compositions: z.array(managerCompositionPublication).max(128).optional(),
   precomputed_regimes: z.array(managerRegimePublication).max(128).optional(),
+  // FE-013: NAV / Net PnL / Return series from the financial normalized source. Absent today (source MISSING); never computed here.
+  precomputed_series: z.array(managerSeriesPublication).max(256).optional(),
 }).strict().superRefine((d, c) => {
   if (d.facts_through_ms !== null && d.facts_through_ms > d.as_of_ms || d.as_of_ms > d.observed_at_ms ||
     d.recorded_through_ms > d.observed_at_ms || d.members.some(m => m.valid_to_ms !== null && m.valid_to_ms <= m.valid_from_ms) ||
@@ -79,8 +86,9 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
   const allowedStages = d.environment === "paper" ? ["PAPER"] : d.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
   if (d.members.some(member => !allowedStages.includes(member.stage)))
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ENVIRONMENT_STAGE_MISMATCH" });
+  validateManagerSeriesPublications(d, c);
 });
-const filter = z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL", "IN"]),
+const filter =z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL", "IN"]),
   value: text.optional(), values: z.array(text).min(1).max(32).optional() }).strict();
 export const managerModelQuery = z.object({ workspace_id: text.optional(), environment: executionEnvironment,
   q: managerSearchText.optional(), q_mode: managerSearchMode.optional(), window: managerWindowQuery.optional(),
@@ -88,7 +96,7 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
   filters: z.array(filter).max(16).default([]),
   sort: z.array(z.object({ field: managerScalar, direction: z.enum(["asc", "desc"]) }).strict()).min(1).max(3)
     .default([{ field: "name", direction: "asc" }]),
-  group_by: z.array(z.enum(["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"])).max(2).default([]),
+  group_by: z.array(managerGroupField).max(2).default([]),
   economic_partition: managerPartition.optional(), limit: z.number().int().min(1).max(200).default(100),
   after: z.string().min(1).max(4096).optional(), before: z.string().min(1).max(4096).optional(),
 }).strict().superRefine((q, c) => {
@@ -121,6 +129,9 @@ const partitionMetrics = z.object({ partition: managerPartition, metrics: z.reco
 export const managerDatasetRow = z.object({ row_key: z.string().min(1).max(2048), alpha_id: text, alpha_version_id: text, portfolio_id: text,
   name: text.nullable(), owner_user_id: text.nullable(), lifecycle: text.nullable(), venue: text.nullable(), health: text.nullable(), source_state: text.nullable(),
   stage_presence: z.array(financialStage).max(4),
+  // FE-027/FE-012 scalars: sortable/groupable `current_stage`; the entry pair is a typed absence until a source states the transition.
+  current_stage: financialStage.nullable(), entered_at_ms: utcMilliseconds.nullable(),
+  days_in_stage: z.number().int().min(0).max(10_000_000).nullable(), stage_lifecycle_reasons: managerStageLifecycleReasons,
   children: z.array(managerTuple.extend({ stage: financialStage, binding_ref: text.nullable() }).strict()).max(10_000),
   metrics: metricMap, economic_partitions: z.array(partitionMetrics).max(200) }).strict();
 const scorePending = z.object({ value: exactDecimal.nullable(), status: z.enum(["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data", "window_not_published"]),
@@ -141,13 +152,14 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   // Additive fields; old requests retain their original financial semantics.
   selected_window: managerSelectedWindow.nullable(), query_options: managerP1Options,
   surface: z.enum(["FUND", "FLEET", "PORTFOLIO", "ALPHA", "ACCOUNT", "DEPLOYMENT"]), workspace_id: text,
+  stage_lifecycle: managerStageLifecyclePolicy,
   environment: executionEnvironment, record_authority: z.literal("PORTAL_PROJECTION"), source_authority: z.literal("TRADING_SYSTEM"),
   snapshot_id: publicationDigest, as_of_ms: utcMilliseconds, recorded_through_ms: utcMilliseconds, facts_through_ms: utcMilliseconds.nullable(),
   quality: managerQuality, coverage: z.literal("AUTHORIZED_ONLY"), economic_aggregation: z.literal("PARTITIONED_ONLY"),
   query_policy: z.object({ null_order: z.literal("LAST_BOTH_DIRECTIONS"), stage_order: z.literal("LEXICAL_SET_NOT_RISK_RANK"), maximum_response_bytes: z.literal(1048576) }).strict(),
   page: z.object({ limit: z.number().int().min(1).max(200), returned_count: z.number().int().min(0).max(200),
     authorized_filtered_count: z.number().int().min(0).max(10_000), next_cursor: z.string().max(4096).nullable(), previous_cursor: z.string().max(4096).nullable() }).strict(),
-  items: z.array(managerDatasetRow).max(200), groups: z.array(z.object({ key: z.array(z.object({ field: text, value: text.nullable() }).strict()).max(2),
+  items: z.array(managerDatasetRow).max(200), groups: z.array(z.object({ key: z.array(z.object({ field: managerGroupField, value: text.nullable() }).strict()).max(2),
     unique_row_count: z.number().int().min(0).max(10_000), totals_scope: z.literal("FULL_AUTHORIZED_FILTERED_QUERY"), economic_partitions: z.array(partitionMetrics).max(200) }).strict()).max(200),
   capital_statements: z.array(partitionMetrics).max(200),
   statement_scope: z.literal("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS"),
@@ -161,4 +173,4 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),
-}).strict().superRefine(validateManagerP1Response);
+}).strict().superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine(validateManagerDatasetInvariants);

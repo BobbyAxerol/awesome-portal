@@ -1,0 +1,661 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "note": "Deployment subject cases. PERFORMANCE_METRICS (the metrics alpha and deployment retain): equity, net_pnl, gross_pnl, realized_pnl, unrealized_pnl, fee_total, funding_pnl, cash_total, cash_free, cash_locked, notional, exposure_long, exposure_short",
+  "cases": [
+    {
+      "name": "deployment_equity_ready",
+      "query": {
+        "environment": "paper",
+        "subject_kind": "deployment",
+        "subject_id": "dep_paper_01",
+        "metric": "equity"
+      },
+      "value": {
+        "schema_version": "portal.execution.financial-chart.v1",
+        "logical_operation_id": "executionFinancialChartV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "paper",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "subject": {
+          "kind": "deployment",
+          "id": "dep_paper_01"
+        },
+        "metric": "equity",
+        "panel": {
+          "state": "READY",
+          "data": {
+            "time_basis": "UTC_EPOCH_MS",
+            "comparison_mode": "ABSOLUTE_EQUITY",
+            "scale_mode": "LOG",
+            "currency_policy": "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
+            "series": [
+              {
+                "id": "account:acct_paper_1:currency:USDT",
+                "label": "Account acct_paper_1 · USDT",
+                "account_id": "acct_paper_1",
+                "currency": "USDT",
+                "points": [
+                  [
+                    1790812800000,
+                    "100000.00"
+                  ],
+                  [
+                    1790816400000,
+                    "100120.50"
+                  ],
+                  [
+                    1790820000000,
+                    "99980.25"
+                  ],
+                  [
+                    1790823600000,
+                    "100340.75"
+                  ],
+                  [
+                    1790827200000,
+                    "100290.00"
+                  ],
+                  [
+                    1790830800000,
+                    "100455.10"
+                  ]
+                ]
+              }
+            ],
+            "sampling": {
+              "algorithm": "NONE",
+              "source_rows": "6",
+              "numeric_rows": "6",
+              "rejected_rows": "0",
+              "returned_rows": 6,
+              "target_points": 1920,
+              "bucket_seconds": null,
+              "preserves_extrema": true,
+              "preserves_first_last": true,
+              "preserves_observed_time_spacing": true,
+              "preserves_gaps": false,
+              "preserves_markers": false,
+              "gap_semantics": "SOURCE_GAP_INTERVALS_NOT_PUBLISHED",
+              "marker_semantics": "SOURCE_MARKERS_NOT_PUBLISHED"
+            },
+            "retention": {
+              "retention_floor_ms": null,
+              "retention_floor_state": "UNKNOWN",
+              "oldest_available_ms": 1790812800000,
+              "newest_available_ms": 1790830800000,
+              "history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY"
+            },
+            "benchmark": {
+              "requested": false,
+              "state": "NOT_REQUESTED",
+              "reason_code": null,
+              "series": null
+            }
+          },
+          "clocks": {
+            "event_time_ms": 1790830800000,
+            "source_published_at_ms": 1790830800000,
+            "received_at_ms": 1790830801000,
+            "ingested_at_ms": 1790830801000,
+            "processed_at_ms": 1790830801000,
+            "as_of_ms": 1790830800000,
+            "read_at_ms": 1790834400000
+          },
+          "coverage": {
+            "from_ms": 1790812800000,
+            "to_ms": 1790830800000,
+            "source_total": null,
+            "filtered_total": "6",
+            "returned_count": 6,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY",
+          "formula": {
+            "formula_id": "eds07.direct-retained-financial-series",
+            "formula_version": "v1",
+            "input_revision": "mirror-rev-41",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "mirror-rev-41"
+          },
+          "reason_code": null,
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "deployment_equity_downsampled",
+      "query": {
+        "environment": "paper",
+        "subject_kind": "deployment",
+        "subject_id": "dep_paper_01",
+        "metric": "equity",
+        "viewport_px": 960
+      },
+      "value": {
+        "schema_version": "portal.execution.financial-chart.v1",
+        "logical_operation_id": "executionFinancialChartV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "paper",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "subject": {
+          "kind": "deployment",
+          "id": "dep_paper_01"
+        },
+        "metric": "equity",
+        "panel": {
+          "state": "READY",
+          "data": {
+            "time_basis": "UTC_EPOCH_MS",
+            "comparison_mode": "ABSOLUTE_EQUITY",
+            "scale_mode": "LOG",
+            "currency_policy": "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
+            "series": [
+              {
+                "id": "account:acct_paper_1:currency:USDT",
+                "label": "Account acct_paper_1 · USDT",
+                "account_id": "acct_paper_1",
+                "currency": "USDT",
+                "points": [
+                  [
+                    1790812800000,
+                    "100000.00"
+                  ],
+                  [
+                    1790816400000,
+                    "100120.50"
+                  ],
+                  [
+                    1790820000000,
+                    "99980.25"
+                  ],
+                  [
+                    1790823600000,
+                    "100340.75"
+                  ],
+                  [
+                    1790827200000,
+                    "100290.00"
+                  ],
+                  [
+                    1790830800000,
+                    "100455.10"
+                  ]
+                ]
+              }
+            ],
+            "sampling": {
+              "algorithm": "MIN_MAX_LAST_BUCKET_V1",
+              "source_rows": "120000",
+              "numeric_rows": "120000",
+              "rejected_rows": "0",
+              "returned_rows": 6,
+              "target_points": 1920,
+              "bucket_seconds": 900,
+              "preserves_extrema": true,
+              "preserves_first_last": true,
+              "preserves_observed_time_spacing": true,
+              "preserves_gaps": false,
+              "preserves_markers": false,
+              "gap_semantics": "SOURCE_GAP_INTERVALS_NOT_PUBLISHED",
+              "marker_semantics": "SOURCE_MARKERS_NOT_PUBLISHED"
+            },
+            "retention": {
+              "retention_floor_ms": null,
+              "retention_floor_state": "UNKNOWN",
+              "oldest_available_ms": 1790812800000,
+              "newest_available_ms": 1790830800000,
+              "history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY"
+            },
+            "benchmark": {
+              "requested": false,
+              "state": "NOT_REQUESTED",
+              "reason_code": null,
+              "series": null
+            }
+          },
+          "clocks": {
+            "event_time_ms": 1790830800000,
+            "source_published_at_ms": 1790830800000,
+            "received_at_ms": 1790830801000,
+            "ingested_at_ms": 1790830801000,
+            "processed_at_ms": 1790830801000,
+            "as_of_ms": 1790830800000,
+            "read_at_ms": 1790834400000
+          },
+          "coverage": {
+            "from_ms": 1790812800000,
+            "to_ms": 1790830800000,
+            "source_total": null,
+            "filtered_total": "120000",
+            "returned_count": 6,
+            "truncated": false,
+            "downsampled": true,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY",
+          "formula": {
+            "formula_id": "eds07.direct-retained-financial-series",
+            "formula_version": "v1",
+            "input_revision": "mirror-rev-41",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "mirror-rev-41"
+          },
+          "reason_code": null,
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "deployment_exposure_long_ready",
+      "query": {
+        "environment": "paper",
+        "subject_kind": "deployment",
+        "subject_id": "dep_paper_01",
+        "metric": "exposure_long"
+      },
+      "value": {
+        "schema_version": "portal.execution.financial-chart.v1",
+        "logical_operation_id": "executionFinancialChartV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "paper",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "subject": {
+          "kind": "deployment",
+          "id": "dep_paper_01"
+        },
+        "metric": "exposure_long",
+        "panel": {
+          "state": "READY",
+          "data": {
+            "time_basis": "UTC_EPOCH_MS",
+            "comparison_mode": "DIRECT_RETAINED_VALUE",
+            "scale_mode": "LOG",
+            "currency_policy": "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
+            "series": [
+              {
+                "id": "account:acct_paper_1:currency:USDT",
+                "label": "Account acct_paper_1 · USDT",
+                "account_id": "acct_paper_1",
+                "currency": "USDT",
+                "points": [
+                  [
+                    1790812800000,
+                    "61343.10"
+                  ],
+                  [
+                    1790820000000,
+                    "59880.00"
+                  ],
+                  [
+                    1790827200000,
+                    "62010.55"
+                  ]
+                ]
+              }
+            ],
+            "sampling": {
+              "algorithm": "NONE",
+              "source_rows": "3",
+              "numeric_rows": "3",
+              "rejected_rows": "0",
+              "returned_rows": 3,
+              "target_points": 1920,
+              "bucket_seconds": null,
+              "preserves_extrema": true,
+              "preserves_first_last": true,
+              "preserves_observed_time_spacing": true,
+              "preserves_gaps": false,
+              "preserves_markers": false,
+              "gap_semantics": "SOURCE_GAP_INTERVALS_NOT_PUBLISHED",
+              "marker_semantics": "SOURCE_MARKERS_NOT_PUBLISHED"
+            },
+            "retention": {
+              "retention_floor_ms": null,
+              "retention_floor_state": "UNKNOWN",
+              "oldest_available_ms": 1790812800000,
+              "newest_available_ms": 1790827200000,
+              "history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY"
+            },
+            "benchmark": {
+              "requested": false,
+              "state": "NOT_REQUESTED",
+              "reason_code": null,
+              "series": null
+            }
+          },
+          "clocks": {
+            "event_time_ms": 1790830800000,
+            "source_published_at_ms": 1790830800000,
+            "received_at_ms": 1790830801000,
+            "ingested_at_ms": 1790830801000,
+            "processed_at_ms": 1790830801000,
+            "as_of_ms": 1790830800000,
+            "read_at_ms": 1790834400000
+          },
+          "coverage": {
+            "from_ms": 1790812800000,
+            "to_ms": 1790827200000,
+            "source_total": null,
+            "filtered_total": "3",
+            "returned_count": 3,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY",
+          "formula": {
+            "formula_id": "eds07.direct-retained-financial-series",
+            "formula_version": "v1",
+            "input_revision": "mirror-rev-41",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "mirror-rev-41"
+          },
+          "reason_code": null,
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "deployment_empty",
+      "query": {
+        "environment": "paper",
+        "subject_kind": "deployment",
+        "subject_id": "dep_new_01",
+        "metric": "equity"
+      },
+      "value": {
+        "schema_version": "portal.execution.financial-chart.v1",
+        "logical_operation_id": "executionFinancialChartV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "paper",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "subject": {
+          "kind": "deployment",
+          "id": "dep_new_01"
+        },
+        "metric": "equity",
+        "panel": {
+          "state": "EMPTY",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": 1790830801000,
+            "ingested_at_ms": 1790830801000,
+            "processed_at_ms": 1790830801000,
+            "as_of_ms": null,
+            "read_at_ms": 1790834400000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": "0",
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY",
+          "formula": {
+            "formula_id": "eds07.direct-retained-financial-series",
+            "formula_version": "v1",
+            "input_revision": "mirror-rev-41",
+            "input_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "composite_read_revision": "mirror-rev-41"
+          },
+          "reason_code": null,
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "deployment_metric_not_retained",
+      "query": {
+        "environment": "paper",
+        "subject_kind": "deployment",
+        "subject_id": "dep_paper_01",
+        "metric": "drawdown"
+      },
+      "value": {
+        "schema_version": "portal.execution.financial-chart.v1",
+        "logical_operation_id": "executionFinancialChartV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "paper",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "subject": {
+          "kind": "deployment",
+          "id": "dep_paper_01"
+        },
+        "metric": "drawdown",
+        "panel": {
+          "state": "UNAVAILABLE",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790834400000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY",
+          "formula": null,
+          "reason_code": "EDS07_METRIC_NOT_RETAINED_FOR_SUBJECT",
+          "retryable": false
+        }
+      }
+    },
+    {
+      "name": "deployment_mirror_reads_disabled",
+      "query": {
+        "environment": "live",
+        "subject_kind": "deployment",
+        "subject_id": "dep_live_01",
+        "metric": "equity"
+      },
+      "value": {
+        "schema_version": "portal.execution.financial-chart.v1",
+        "logical_operation_id": "executionFinancialChartV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "live",
+        "profile_id": "LIVE_BINANCE_USDM",
+        "subject": {
+          "kind": "deployment",
+          "id": "dep_live_01"
+        },
+        "metric": "equity",
+        "panel": {
+          "state": "UNAVAILABLE",
+          "data": null,
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790834400000
+          },
+          "coverage": {
+            "from_ms": null,
+            "to_ms": null,
+            "source_total": null,
+            "filtered_total": null,
+            "returned_count": 0,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY",
+          "formula": null,
+          "reason_code": "EDS07_DURABLE_MIRROR_READS_DISABLED",
+          "retryable": true
+        }
+      }
+    },
+    {
+      "name": "deployment_scoped_v2",
+      "query": {
+        "environment": "paper",
+        "subject_kind": "deployment",
+        "subject_id": "dep_paper_01",
+        "metric": "equity"
+      },
+      "scoped": true,
+      "value": {
+        "schema_version": "portal.execution.financial-chart.v1",
+        "logical_operation_id": "executionFinancialChartV1",
+        "record_authority": "PORTAL_CONTROL",
+        "source_authority": "TRADING_SYSTEM",
+        "workspace_id": "workspace_TEST_ONLY",
+        "environment": "paper",
+        "profile_id": "PAPER_BINANCE_USDM",
+        "subject": {
+          "kind": "deployment",
+          "id": "dep_paper_01"
+        },
+        "metric": "equity",
+        "panel": {
+          "state": "READY",
+          "data": {
+            "time_basis": "UTC_EPOCH_MS",
+            "comparison_mode": "ABSOLUTE_EQUITY",
+            "scale_mode": "LOG",
+            "currency_policy": "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
+            "series": [
+              {
+                "id": "account:acct_paper_1:currency:USDT",
+                "label": "Account acct_paper_1 · USDT",
+                "account_id": "acct_paper_1",
+                "currency": "USDT",
+                "points": [
+                  [
+                    1790812800000,
+                    "100000.00"
+                  ],
+                  [
+                    1790816400000,
+                    "100120.50"
+                  ],
+                  [
+                    1790820000000,
+                    "99980.25"
+                  ],
+                  [
+                    1790823600000,
+                    "100340.75"
+                  ],
+                  [
+                    1790827200000,
+                    "100290.00"
+                  ],
+                  [
+                    1790830800000,
+                    "100455.10"
+                  ]
+                ]
+              }
+            ],
+            "sampling": {
+              "algorithm": "NONE",
+              "source_rows": "6",
+              "numeric_rows": "6",
+              "rejected_rows": "0",
+              "returned_rows": 6,
+              "target_points": 1920,
+              "bucket_seconds": null,
+              "preserves_extrema": true,
+              "preserves_first_last": true,
+              "preserves_observed_time_spacing": true,
+              "preserves_gaps": false,
+              "preserves_markers": false,
+              "gap_semantics": "SOURCE_GAP_INTERVALS_NOT_PUBLISHED",
+              "marker_semantics": "SOURCE_MARKERS_NOT_PUBLISHED"
+            },
+            "retention": {
+              "retention_floor_ms": null,
+              "retention_floor_state": "UNKNOWN",
+              "oldest_available_ms": 1790812800000,
+              "newest_available_ms": 1790830800000,
+              "history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY"
+            },
+            "benchmark": {
+              "requested": false,
+              "state": "NOT_REQUESTED",
+              "reason_code": null,
+              "series": null
+            }
+          },
+          "clocks": {
+            "event_time_ms": null,
+            "source_published_at_ms": null,
+            "received_at_ms": null,
+            "ingested_at_ms": null,
+            "processed_at_ms": null,
+            "as_of_ms": null,
+            "read_at_ms": 1790834400000
+          },
+          "coverage": {
+            "from_ms": 1790812800000,
+            "to_ms": 1790830800000,
+            "source_total": null,
+            "filtered_total": "6",
+            "returned_count": 6,
+            "truncated": false,
+            "downsampled": false,
+            "has_more": false,
+            "next_cursor": null,
+            "gaps": []
+          },
+          "source_history_semantics": "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY",
+          "formula": null,
+          "reason_code": "AUTHORIZED_RETAINED_FINANCIAL_RANGE",
+          "retryable": false
+        },
+        "read_scope": {
+          "visibility": "SCOPED",
+          "coverage": "AUTHORIZED_ONLY",
+          "policy_revision": "policy-r7"
+        }
+      }
+    }
+  ]
+}

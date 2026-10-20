@@ -200,10 +200,11 @@
               "equity_30d_end_value",
               "return_30d_pct",
               "score",
-              "stage_presence"
+              "stage_presence",
+              "current_stage"
             ]
           },
-          "maxItems": 17,
+          "maxItems": 18,
           "uniqueItems": true
         },
         "group_fields": {
@@ -215,13 +216,14 @@
               "owner_user_id",
               "alpha_id",
               "stage_presence",
+              "current_stage",
               "venue",
               "health",
               "source_state",
               "lifecycle"
             ]
           },
-          "maxItems": 8,
+          "maxItems": 9,
           "uniqueItems": true
         },
         "metric_keys": {
@@ -428,6 +430,9 @@
                         "else": {
                           "type": "object",
                           "properties": {
+                            "resolved": {
+                              "type": "null"
+                            },
                             "reason_code": {
                               "type": "string",
                               "enum": [
@@ -553,10 +558,10 @@
               "additionalProperties": false,
               "properties": {
                 "field": {
-                  "const": "current_stage"
+                  "const": "days_in_stage"
                 },
                 "reason_code": {
-                  "const": "CURRENT_STAGE_GRAIN_NOT_PUBLISHED"
+                  "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
                 }
               },
               "required": [
@@ -569,7 +574,7 @@
               "additionalProperties": false,
               "properties": {
                 "field": {
-                  "const": "days_in_stage"
+                  "const": "entered_at_ms"
                 },
                 "reason_code": {
                   "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
@@ -1165,6 +1170,48 @@
               "sort_fields": {
                 "type": "array",
                 "contains": {
+                  "const": "current_stage"
+                },
+                "minContains": 1
+              }
+            },
+            "required": [
+              "sort_fields"
+            ]
+          },
+          "then": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "contains": {
+                  "const": "current_stage"
+                },
+                "minContains": 1
+              }
+            }
+          },
+          "else": {
+            "type": "object",
+            "properties": {
+              "group_fields": {
+                "type": "array",
+                "not": {
+                  "contains": {
+                    "const": "current_stage"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "sort_fields": {
+                "type": "array",
+                "contains": {
                   "const": "venue"
                 },
                 "minContains": 1
@@ -1711,6 +1758,26 @@
       "maxLength": 256,
       "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
     },
+    "stage_lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "current_stage_rule": {
+          "const": "SINGLE_ACTIVE_MEMBER_STAGE_IN_SELECTED_ENVIRONMENT"
+        },
+        "covers": {
+          "const": "DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY"
+        },
+        "entry_time": {
+          "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+        }
+      },
+      "required": [
+        "current_stage_rule",
+        "covers",
+        "entry_time"
+      ]
+    },
     "environment": {
       "type": "string",
       "enum": [
@@ -1862,7 +1929,8 @@
         "authorized_filtered_count",
         "next_cursor",
         "previous_cursor"
-      ]
+      ],
+      "description": "returned_count is items.length, at most limit and at most authorized_filtered_count; a non-empty page with neither cursor is the whole filtered result (returned_count equals authorized_filtered_count). JSON Schema cannot compare a count with an array length: the producer refuses to emit a body that breaks this (MANAGER_PAGE_*), and the reader refuses it too. The schema states the empty case exactly."
     },
     "items": {
       "type": "array",
@@ -1873,7 +1941,8 @@
           "row_key": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 2048
+            "maxLength": 2048,
+            "description": "Unique within a body (MANAGER_ROW_KEY_DUPLICATE)."
           },
           "alpha_id": {
             "type": "string",
@@ -1983,6 +2052,91 @@
               ]
             },
             "maxItems": 4
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "PAPER",
+                  "SANDBOX",
+                  "CANARY",
+                  "LIVE"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "entered_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "days_in_stage": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000000
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "stage_lifecycle_reasons": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "current_stage": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "MULTIPLE_ACTIVE_STAGES",
+                      "STAGE_FIELD_NOT_PUBLISHED"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "entered_at_ms": {
+                "anyOf": [
+                  {
+                    "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "days_in_stage": {
+                "anyOf": [
+                  {
+                    "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "current_stage",
+              "entered_at_ms",
+              "days_in_stage"
+            ]
           },
           "children": {
             "type": "array",
@@ -2326,7 +2480,8 @@
                   }
                 }
               ]
-            }
+            },
+            "description": "A money metric that names a currency is the figure of exactly one partition listed in economic_partitions (the same metric), never a total across partitions. When a query pins one economic_partition the row still lists its other partitions and the headline is the pinned partition's figure (MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE)."
           },
           "economic_partitions": {
             "type": "array",
@@ -2649,7 +2804,9 @@
                 "metrics"
               ]
             },
-            "maxItems": 200
+            "maxItems": 200,
+            "uniqueItems": true,
+            "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items."
           }
         },
         "required": [
@@ -2664,12 +2821,382 @@
           "health",
           "source_state",
           "stage_presence",
+          "current_stage",
+          "entered_at_ms",
+          "days_in_stage",
+          "stage_lifecycle_reasons",
           "children",
           "metrics",
           "economic_partitions"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "current_stage": {
+                  "type": "null"
+                }
+              },
+              "required": [
+                "current_stage"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "stage_lifecycle_reasons": {
+                  "type": "object",
+                  "properties": {
+                    "current_stage": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "current_stage"
+                  ]
+                }
+              },
+              "required": [
+                "stage_lifecycle_reasons"
+              ]
+            },
+            "else": {
+              "type": "object",
+              "properties": {
+                "stage_lifecycle_reasons": {
+                  "type": "object",
+                  "properties": {
+                    "current_stage": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "current_stage"
+                  ]
+                }
+              },
+              "required": [
+                "stage_lifecycle_reasons"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "entered_at_ms": {
+                  "type": "null"
+                }
+              },
+              "required": [
+                "entered_at_ms"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "stage_lifecycle_reasons": {
+                  "type": "object",
+                  "properties": {
+                    "entered_at_ms": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "entered_at_ms"
+                  ]
+                }
+              },
+              "required": [
+                "stage_lifecycle_reasons"
+              ]
+            },
+            "else": {
+              "type": "object",
+              "properties": {
+                "stage_lifecycle_reasons": {
+                  "type": "object",
+                  "properties": {
+                    "entered_at_ms": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "entered_at_ms"
+                  ]
+                }
+              },
+              "required": [
+                "stage_lifecycle_reasons"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "days_in_stage": {
+                  "type": "null"
+                }
+              },
+              "required": [
+                "days_in_stage"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "stage_lifecycle_reasons": {
+                  "type": "object",
+                  "properties": {
+                    "days_in_stage": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "days_in_stage"
+                  ]
+                }
+              },
+              "required": [
+                "stage_lifecycle_reasons"
+              ]
+            },
+            "else": {
+              "type": "object",
+              "properties": {
+                "stage_lifecycle_reasons": {
+                  "type": "object",
+                  "properties": {
+                    "days_in_stage": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "days_in_stage"
+                  ]
+                }
+              },
+              "required": [
+                "stage_lifecycle_reasons"
+              ]
+            }
+          },
+          {
+            "if": {
+              "not": {
+                "type": "object",
+                "properties": {
+                  "days_in_stage": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "days_in_stage"
+                ]
+              }
+            },
+            "then": {
+              "not": {
+                "type": "object",
+                "properties": {
+                  "entered_at_ms": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "entered_at_ms"
+                ]
+              }
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "current_stage": {
+                  "const": "PAPER"
+                }
+              },
+              "required": [
+                "current_stage"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "stage_presence": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "const": "PAPER"
+                  }
+                }
+              },
+              "required": [
+                "stage_presence"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "current_stage": {
+                  "const": "SANDBOX"
+                }
+              },
+              "required": [
+                "current_stage"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "stage_presence": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "const": "SANDBOX"
+                  }
+                }
+              },
+              "required": [
+                "stage_presence"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "current_stage": {
+                  "const": "CANARY"
+                }
+              },
+              "required": [
+                "current_stage"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "stage_presence": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "const": "CANARY"
+                  }
+                }
+              },
+              "required": [
+                "stage_presence"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "current_stage": {
+                  "const": "LIVE"
+                }
+              },
+              "required": [
+                "current_stage"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "stage_presence": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 1,
+                  "items": {
+                    "const": "LIVE"
+                  }
+                }
+              },
+              "required": [
+                "stage_presence"
+              ]
+            }
+          },
+          {
+            "if": {
+              "type": "object",
+              "properties": {
+                "stage_presence": {
+                  "type": "array",
+                  "maxItems": 0
+                }
+              },
+              "required": [
+                "stage_presence"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "properties": {
+                "stage_lifecycle_reasons": {
+                  "type": "object",
+                  "properties": {
+                    "current_stage": {
+                      "const": "STAGE_FIELD_NOT_PUBLISHED"
+                    }
+                  },
+                  "required": [
+                    "current_stage"
+                  ]
+                }
+              },
+              "required": [
+                "stage_lifecycle_reasons"
+              ]
+            },
+            "else": {
+              "if": {
+                "type": "object",
+                "properties": {
+                  "current_stage": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "current_stage"
+                ]
+              },
+              "then": {
+                "type": "object",
+                "properties": {
+                  "stage_lifecycle_reasons": {
+                    "type": "object",
+                    "properties": {
+                      "current_stage": {
+                        "const": "MULTIPLE_ACTIVE_STAGES"
+                      }
+                    },
+                    "required": [
+                      "current_stage"
+                    ]
+                  }
+                },
+                "required": [
+                  "stage_lifecycle_reasons"
+                ]
+              }
+            }
+          }
         ]
       },
-      "maxItems": 200
+      "maxItems": 200,
+      "uniqueItems": true,
+      "description": "A row appears once: row_key is unique within a body (MANAGER_ROW_KEY_DUPLICATE). uniqueItems catches an exact repeat; a repeated row_key with different content is refused by the producer."
     },
     "groups": {
       "type": "array",
@@ -2685,9 +3212,17 @@
               "properties": {
                 "field": {
                   "type": "string",
-                  "minLength": 1,
-                  "maxLength": 256,
-                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  "enum": [
+                    "portfolio_id",
+                    "owner_user_id",
+                    "alpha_id",
+                    "stage_presence",
+                    "current_stage",
+                    "venue",
+                    "health",
+                    "source_state",
+                    "lifecycle"
+                  ]
                 },
                 "value": {
                   "anyOf": [
@@ -2708,7 +3243,162 @@
                 "value"
               ]
             },
-            "maxItems": 2
+            "maxItems": 2,
+            "allOf": [
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "portfolio_id"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              },
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "owner_user_id"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              },
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "alpha_id"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              },
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "stage_presence"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              },
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "current_stage"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              },
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "venue"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              },
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "health"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              },
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "source_state"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              },
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "lifecycle"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              }
+            ]
           },
           "unique_row_count": {
             "type": "integer",
@@ -3039,7 +3729,9 @@
                 "metrics"
               ]
             },
-            "maxItems": 200
+            "maxItems": 200,
+            "uniqueItems": true,
+            "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items."
           }
         },
         "required": [
@@ -3049,7 +3741,9 @@
           "economic_partitions"
         ]
       },
-      "maxItems": 200
+      "maxItems": 200,
+      "uniqueItems": true,
+      "description": "A group appears once (identity: key) and holds no more unique rows than page.authorized_filtered_count (MANAGER_GROUP_DUPLICATE, MANAGER_GROUP_COUNT_OVER_FILTERED). Its key names a field of query_options.group_fields once (MANAGER_GROUP_FIELD_NOT_OFFERED)."
     },
     "capital_statements": {
       "type": "array",
@@ -3372,7 +4066,9 @@
           "metrics"
         ]
       },
-      "maxItems": 200
+      "maxItems": 200,
+      "uniqueItems": true,
+      "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items."
     },
     "statement_scope": {
       "const": "AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS"
@@ -6100,6 +6796,7 @@
     "query_options",
     "surface",
     "workspace_id",
+    "stage_lifecycle",
     "environment",
     "record_authority",
     "source_authority",
@@ -6121,6 +6818,47 @@
     "lineage"
   ],
   "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "maxItems": 0
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "object",
+            "properties": {
+              "returned_count": {
+                "const": 0
+              }
+            }
+          }
+        }
+      },
+      "else": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "object",
+            "properties": {
+              "returned_count": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          }
+        }
+      }
+    },
     {
       "if": {
         "type": "object",

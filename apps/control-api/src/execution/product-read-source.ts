@@ -9,6 +9,7 @@ import { ExecutionReadScopes, ExecutionReadScopeError, scopeReadPopulation,
 import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, retainedRelationAction, fenceRetainedSnapshot } from "./retained-operation-page";
 import { projectionRowVisible } from "../execution-v2/read-projection";
 import {scopedLiveSource} from "../profile-read/scoped-live-source";
+import { deploymentIdentityFromRetained, type DeploymentIdentity } from "./deployment-identity";
 import type {LiveSourceOperationsRead,LiveSourceReadQuery} from "../live/live-source.contract";
 import { CONTROL_API_CONFIG } from "../tokens";
 import {
@@ -77,6 +78,8 @@ export type DeploymentScopeResolution =
     readonly reasonCode: null;
     readonly scope: DeploymentResourceScope;
     readonly deployment: Record<string, ProjectionScalar>;
+    /** FE-066: Alpha-Portfolio identity, composed inside the same authority fence. */
+    readonly identity?: DeploymentIdentity;
   }
   | {
     readonly state: "EMPTY" | "PARTIAL" | "UNAVAILABLE";
@@ -350,6 +353,10 @@ export class ExecutionProductReadSource {
           tupleUnique: tupleMatches.length === 1,
         },
         deployment,
+        identity: deploymentIdentityFromRetained({
+          scope: readScope, deploymentId, deploymentFields: deployment,
+          portfolios: snapshot.document.relations["manager.portfolios:portfolios"],
+        }),
       };
       if (readScope?.mode === "SCOPED_V2") await fenceRetainedSnapshot(this.repository, principal.workspaceId, environment, profileId, snapshot);
       return result;

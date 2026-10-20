@@ -6,7 +6,7 @@ import { z } from "zod";
 import { AccessPolicyError, accessText, resourceKind, tsBusinessAction,
   type AccessAction, type AccessResource, type ScopedAccessGrant,
   type ManagerDomainGrant } from "./access.contract";
-import { businessReadDenied, currentGrantAllows, evaluateAccess, evaluateBusinessRead, policyReady,
+import { businessReadDenied, currentGrantAllows, evaluateAccess, evaluateBusinessRead, grantCurrent, policyReady,
   resolvedResources, selectManagerDomainGrant,
   type AccessEvaluationContext } from "./access-policy";
 import { currentAccessRelations, currentGrantProof,
@@ -449,6 +449,121 @@ export function projectNavigation(context: SelfEligibilityContext, raw: unknown,
       }),
       self_entry: { feature: "PROFILE_ACCESS", mode: "SELF_ONLY", permission: "ALLOWED", route: null,
         consumer_state: "AWAITING_CONSUMER_ROUTER" },
+    });
+  });
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * FE-068 · bounded multi-resource eligibility with a typed step-up state.
+ * Additive sibling of the single-resource projection above, which is untouched
+ * (same rows, same evaluator, same fences). It only reports what the server
+ * already knows: the rule's `step_up_required` and whether THIS session holds an
+ * unexpired step-up grant (the same fact the mutations recheck). It adds no
+ * authentication mechanism, no permit and no lease: `ACTIVE` never makes an
+ * action eligible and `REQUIRED` is a statement about the rule, not a refusal.
+ * ───────────────────────────────────────────────────────────────────────────── */
+export const MAX_BATCH_RESOURCES = 8;
+const unique = <T>(values: readonly T[], key: (value: T) => string) => new Set(values.map(key)).size === values.length;
+export const eligibilityBatchInput = z.object({ workspace_id: scopedText, environment,
+  resources: z.array(scopedResource).min(1).max(MAX_BATCH_RESOURCES)
+    .refine(values => unique(values, value => JSON.stringify([value.kind, value.id])), "DUPLICATE_RESOURCE"),
+  actions: z.array(z.enum(ROW_ACTIONS)).min(1).max(16).refine(values => unique(values, value => value), "DUPLICATE_ACTION"),
+}).strict();
+// GET form/explode=false. `resources` = one comma-separated value of KIND:<encodeURIComponent(id)> tokens; the id is
+// percent-encoded a second time so a comma inside an id can never split a token, and only the canonical encoding
+// is accepted (no alternative spelling of the same id).
+const resourceToken = /^([A-Z_]{1,16}):((?:[A-Za-z0-9\-_.!~*'()]|%[0-9A-F]{2}){1,768})$/;
+export const eligibilityBatchQuery = z.object({ workspace_id: scopedText, environment,
+  resources: z.string().min(1).max(8192), actions: z.string().min(1).max(1024),
+}).strict().transform((value, ctx) => {
+  const resources: Array<{ kind: string; id: string }> = [];
+  for (const token of value.resources.split(",")) {
+    const match = resourceToken.exec(token);
+    let id: string | null = null;
+    try { id = match ? decodeURIComponent(match[2]) : null; } catch { id = null; }
+    if (!match || id === null || encodeURIComponent(id) !== match[2]) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "INVALID_RESOURCE_TOKEN" }); return z.NEVER;
+    }
+    resources.push({ kind: match[1], id });
+  }
+  return { workspace_id: value.workspace_id, environment: value.environment, resources, actions: value.actions.split(",") };
+}).pipe(eligibilityBatchInput);
+
+/** Rule says `step_up_required`; this says what that means for THIS session right now. */
+export const STEP_UP_STATES = ["NOT_REQUIRED", "PLAN_DEPENDENT", "REQUIRED", "ACTIVE"] as const;
+const stepUpStateOf = (required: boolean | null, active: boolean): typeof STEP_UP_STATES[number] =>
+  required === false ? "NOT_REQUIRED" : required === null ? "PLAN_DEPENDENT" : active ? "ACTIVE" : "REQUIRED";
+const batchRow = rowSchema.innerType().extend({ step_up_state: z.enum(STEP_UP_STATES) }).superRefine((value, ctx) => {
+  const { step_up_state: state, ...stored } = value;
+  const base = rowSchema.safeParse(stored);
+  if (!base.success) for (const issue of base.error.issues) ctx.addIssue(issue);
+  if (state !== stepUpStateOf(value.step_up_required, state === "ACTIVE") || state === "REQUIRED" && value.step_up_required !== true)
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["step_up_state"], message: "STEP_UP_STATE_INCONSISTENT" });
+});
+const sessionStepUp = z.object({
+  state: z.enum(["ACTIVE", "NOT_ACTIVE"]),
+  valid_until_ms: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).nullable()
+    .describe("When THIS session's step-up ends, never later than this projection's session ceiling; null when not active."),
+  /** The mechanism the build exposes to obtain a step-up, and whether its route precondition holds for the caller.
+   * Not a promise that the password will be accepted and not a permission for any action. */
+  challenge: z.object({ mechanism: z.literal("PASSWORD_REAUTH"), route: z.literal("/api/admin/profile-access/v2/step-up"),
+    precondition: z.literal("CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"), precondition_met: z.boolean() }).strict(),
+}).strict();
+export const eligibilityBatchResult = z.object({ schema_version: z.literal("portal.self-eligibility-batch.v1"),
+  workspace_id: scopedText, environment, current_only: z.literal(true), advisory_only: z.literal(true),
+  ...projectionTimes, session_step_up: sessionStepUp,
+  results: z.array(z.object({ resource: scopedResource, actions: z.array(batchRow).min(1).max(16) }).strict())
+    .min(1).max(MAX_BATCH_RESOURCES),
+}).strict().superRefine((value, ctx) => {
+  const bad = (message: string, path: (string | number)[]) => ctx.addIssue({ code: z.ZodIssueCode.custom, message, path });
+  if (value.valid_until_ms <= value.observed_at_ms) bad("PROJECTION_INTERVAL_INVALID", ["valid_until_ms"]);
+  const step = value.session_step_up, active = step.state === "ACTIVE";
+  if (active !== (step.valid_until_ms !== null) || step.valid_until_ms !== null &&
+    (step.valid_until_ms <= value.observed_at_ms || step.valid_until_ms > value.valid_until_ms))
+    bad("SESSION_STEP_UP_INVALID", ["session_step_up"]);
+  if (!unique(value.results, item => JSON.stringify([item.resource.kind, item.resource.id]))) bad("DUPLICATE_RESOURCE", ["results"]);
+  value.results.forEach((item, index) => {
+    // Reuse the single-resource target/reason rules for every resource of the batch.
+    const single = eligibilityResult.safeParse({ schema_version: "portal.self-eligibility.v1", workspace_id: value.workspace_id,
+      environment: value.environment, resource: item.resource, current_only: true, advisory_only: true,
+      observed_at_ms: value.observed_at_ms, valid_until_ms: value.valid_until_ms,
+      actions: item.actions.map(({ step_up_state: _state, ...rest }) => rest) });
+    if (!single.success) bad("ELIGIBILITY_BATCH_RESOURCE_INCONSISTENT", ["results", index]);
+    item.actions.forEach((row, rowIndex) => {
+      if (row.step_up_state === "ACTIVE" && !active || row.step_up_state === "REQUIRED" && active)
+        bad("STEP_UP_STATE_INCONSISTENT", ["results", index, "actions", rowIndex, "step_up_state"]);
+    });
+  });
+  const first = value.results[0]?.actions.map(row => row.action).join(",");
+  if (value.results.some(item => item.actions.map(row => row.action).join(",") !== first)) bad("ELIGIBILITY_BATCH_ACTIONS_DIFFER", ["results"]);
+});
+
+/** Server fact: does THIS session hold an unexpired step-up? Gathered by the service after the actor fence. */
+export interface SessionStepUpFact { active_until_ms: number | null }
+/** Exactly the precondition of POST /step-up (ExecutionAccessService.stepUp): policy ready and a CURRENT own
+ * ALLOW access.grant/access.revoke grant. It is reported, never enforced or widened here. */
+function stepUpRouteAvailable(context: AccessEvaluationContext): boolean {
+  return policyReady(context) && context.grants.some(grant => grant.subject_user_id === context.principal_id &&
+    grant.effect === "ALLOW" && (grant.action === "access.grant" || grant.action === "access.revoke") && grantCurrent(grant, context));
+}
+export function projectEligibilityBatch(context: SelfEligibilityContext, raw: unknown, stepUp: SessionStepUpFact) {
+  const input = eligibilityBatchInput.parse(raw);
+  const current = currentContext(context, input.workspace_id);
+  return projected(current, input.environment, until => {
+    const observed = current.now_ms;
+    const stepUpUntil = stepUp.active_until_ms !== null && Number.isSafeInteger(stepUp.active_until_ms) ?
+      Math.min(stepUp.active_until_ms, until) : null;
+    const active = stepUpUntil !== null && stepUpUntil > observed;
+    return eligibilityBatchResult.parse({ schema_version: "portal.self-eligibility-batch.v1", workspace_id: input.workspace_id,
+      environment: input.environment, current_only: true, advisory_only: true, observed_at_ms: observed, valid_until_ms: until,
+      session_step_up: { state: active ? "ACTIVE" : "NOT_ACTIVE", valid_until_ms: active ? stepUpUntil : null,
+        challenge: { mechanism: "PASSWORD_REAUTH", route: "/api/admin/profile-access/v2/step-up",
+          precondition: "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW", precondition_met: stepUpRouteAvailable(current) } },
+      results: input.resources.map(resource => ({ resource,
+        actions: input.actions.map(action => {
+          const row = projectRow(current, action, resource, input.environment);
+          return { ...row, step_up_state: stepUpStateOf(row.step_up_required, active) };
+        }) })),
     });
   });
 }

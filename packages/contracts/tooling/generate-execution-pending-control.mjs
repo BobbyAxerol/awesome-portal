@@ -103,6 +103,8 @@ const schemas = Object.fromEntries([
   ['PendingControlVersions', 'pendingVersions'], ['PendingControlResource', 'pendingControlResource'],
   ['PendingControlAmounts', 'pendingAmounts'], ['PendingControlPrediction', 'pendingPrediction'],
   ['PendingRecallReceipt', 'pendingRecallReceipt'],
+  ['PendingRecallDiscoveryQuery', 'pendingRecallDiscoveryQuery'], ['PendingRecallDiscoveryItem', 'pendingRecallDiscoveryItem'],
+  ['PendingRecallDiscovery', 'pendingRecallDiscovery'],
 ].map(([name, key]) => [name, json(contract[key])]));
 for (const branch of schemas.PendingControlBody.oneOf) branch.properties.expected_versions = ref('PendingControlVersions');
 const intent = schemas.PendingControlIntent;
@@ -159,7 +161,26 @@ status.allOf = [{
   ] },
 }];
 status.description = 'Separate PENDING_RECALL_CONTROL family, not a new economic action. ACKNOWLEDGED iff source business is known. WAITING may have cumulative applied > 0 and continues QUERY_SAME_INTENT; terminal known states REVIEW_RECEIPT. UNKNOWN has no receipt/economics/blockers and queries except FAILED_BEFORE_SEND reviews its blocker. Physical transfer and economic cash change are false; no venue/projection confirmation is inferred. Runtime additionally checks chronology, exact source correlation, amount partitions and monotonicity. TEST_ONLY fixtures are not source qualification.';
+status.allOf.push({ if: { properties: { resource: { properties: { kind: { const: 'DEPLOYMENT' } } } } },
+  then: { properties: { recipient_account_id: json(contract.pendingSourceText) } },
+  else: { properties: { recipient_account_id: { type: 'null' } } } });
+status.properties.recipient_account_id.description = 'FE-063 (R-2c). Owning recipient account bound by the verified ORIGINAL intent and equal to the verified authorization recipient; non-null exactly when resource.kind is DEPLOYMENT, null for a PORTFOLIO recipient. Not a live source lookup, not browser-supplied after submission, never inferred from a label. Absent on pre-upgrade bodies, which are incomplete under this schema.';
 status.description += ' Required currency is the exact immutable original intent unit, published only after current authority and original identity/hash validation. Historical stored status bytes remain unchanged and may omit currency; they are not served directly. Corrupt/unverifiable original intent refuses rather than guessing a unit. Pre-upgrade HTTP bodies without currency are incomplete under this public schema.';
+// FE-062 (R-1): discovery of still-open recalls the Portal itself controlled (exact resource, local read).
+const discoveryItem = schemas.PendingRecallDiscoveryItem;
+discoveryItem.properties.amounts = nullableRef('PendingControlAmounts');
+discoveryItem.properties.versions = nullableRef('PendingControlVersions');
+discoveryItem.allOf = [{ if: { properties: { state: { const: 'WAITING_ENCUMBRANCE' } } },
+  then: { properties: { amounts: ref('PendingControlAmounts'), versions: ref('PendingControlVersions'),
+    latest_receipt_id: json(contract.pendingSourceText), last_known_command_id: json(contract.pendingControlId) } },
+  else: { properties: { amounts: { type: 'null' }, versions: { type: 'null' }, latest_receipt_id: { type: 'null' },
+    last_known_command_id: { type: 'null' }, unresolved_command_id: json(contract.pendingControlId) } } }];
+discoveryItem.description = 'One still-open recall this Portal controlled. WAITING_ENCUMBRANCE: last KNOWN source receipt shows an open remainder (cumulative applied may already be > 0); amounts and the five exact CAS counters are that receipt\'s and become the starting expected_versions, which the next preview rechecks against the source and which a later source change makes stale. UNKNOWN: a control was sent but no receipt is known; amounts/versions are null, never zero-filled. A terminal known outcome closes the recall, so it is not listed.';
+const discovery = schemas.PendingRecallDiscovery;
+discovery.properties.resource = ref('PendingControlResource');
+discovery.properties.items.items = ref('PendingRecallDiscoveryItem');
+discovery.description = 'Local read-only discovery for ONE exact authorized resource, from the Portal\'s own pending-control history only (coverage PORTAL_CONTROLLED_RECALLS_ONLY). It is NOT a census of source recalls: a recall nobody controlled through the Portal is absent, and untracked_recalls states that as NOT_PUBLISHED / RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED. original_recall_id is unique within items (runtime-enforced; JSON Schema uniqueItems cannot express a key-only uniqueness). truncated=true means more open recalls matched than the finite page holds and items are the newest. observed_at_ms is Portal evaluation time. Authorization: exact current audit.read plus TS-accepted correspondence on the resource, before any private row; hidden/wrong-workspace/unknown normalize to 404.';
+schemas.PendingRecallDiscoveryQuery.description = 'Exact resource only (PORTFOLIO or DEPLOYMENT), no wildcard, no global discovery.';
 schemas.PendingControlProblem = { type: 'object', additionalProperties: false,
   required: ['error', 'request_id'], properties: {
     error: { type: 'object', additionalProperties: false, required: ['code', 'message'],
@@ -206,6 +227,20 @@ for (const [suffix, method, operation, input, output] of [
     } ])),
   } };
 }
+paths[base].get = {
+  operationId: 'executionPendingRecallDiscoveryV1', security: [{ PortalSession: [] }],
+  parameters: ['workspace_id', 'resource_kind', 'resource_id', 'environment'].map(name => ({ name, in: 'query', required: true,
+    schema: schemas.PendingRecallDiscoveryQuery.properties[name] })),
+  description: 'FE-062. Local-only, bounded (<=100 items) discovery of still-open recalls this Portal controlled on the exact resource: original_recall_id, currency, recipient, last known amounts and the five CAS counters. Requires independent current audit.read and exact current TS target membership, authorized BEFORE any private row read. No upstream lookup/write, no recovery. Untracked recalls (never controlled through the Portal) are not discoverable here; that needs a qualified source read and is stated in untracked_recalls.',
+  responses: Object.fromEntries([200, 400, 401, 403, 404, 409, 500, 503].map(code => [code, {
+    description: code === 200 ? 'Open recalls of the Portal pending-control history for this exact resource.'
+      : code === 404 ? 'PENDING_CONTROL_NOT_FOUND: unknown/hidden/wrong workspace are indistinguishable.'
+      : code === 500 ? 'Sanitized INTERNAL_ERROR.'
+      : 'Fixed public input/current-authority/capacity/verification refusal; never raw PM diagnostics.',
+    headers: { 'Cache-Control': { schema: { type: 'string', const: 'private, no-store' } } },
+    content: { 'application/json': { schema: ref(code === 200 ? 'PendingRecallDiscovery' : 'PendingControlProblem') } },
+  }])),
+};
 const now = 1792300000000;
 const versions = { budget: '9007199254740993', source: '11', parent: '12', book: '13', command: '14' };
 const baseIntent = contract.pendingControlIntent.parse({ schema_version: 'portal.execution.pending-recall-intent.v1',
@@ -266,13 +301,37 @@ const fixture = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_quali
       latest_operation: null, latest_operation_availability: 'NOT_PUBLISHED',
       latest_operation_reason: 'SOURCE_OPERATION_NOT_PUBLISHED', source_event_id: 'TEST_ONLY:pm:event:2',
       versions: { ...versions, command: '15' } } } }),
+  // FE-063: DEPLOYMENT resource, so the served projection carries recipient_account_id.
+  deployment_cancelled: contract.pendingControlStatus.parse({ ...cancelled, resource: deploymentIntent.resource }),
 };
+// FE-062 discovery fixtures: built through the SAME pure projection the service uses.
+const observed = now + 60000;
+const secondIntent = contract.pendingControlIntent.parse({ ...baseIntent, business_payload: { ...baseIntent.business_payload,
+  command_id: 'TEST_ONLY:second-recall', idempotency_key: 'TEST_ONLY:pending-control-0003' } });
+const thirdIntent = contract.pendingControlIntent.parse({ ...baseIntent, business_payload: { ...baseIntent.business_payload,
+  command_id: 'TEST_ONLY:closed-recall', idempotency_key: 'TEST_ONLY:pending-control-0004' } });
+const recordOf = (intent, status, id) => ({ id, intent, status: contract.pendingControlStatus.parse({ ...status, command_id: id,
+  original_recall_id: intent.business_payload.command_id, resource: intent.resource }) });
+const deploymentApplyIntent = contract.pendingControlIntent.parse({ ...deploymentIntent, business_payload: {
+  ...deploymentIntent.business_payload, operation: 'APPLY_PENDING', idempotency_key: 'TEST_ONLY:pending-control-0005' } });
+const discoveryRecords = [
+  recordOf(baseIntent, waiting, 'ecm_00000000000000000000000000000031'),
+  recordOf(secondIntent, unknown, 'ecm_00000000000000000000000000000032'),
+  recordOf(thirdIntent, applied, 'ecm_00000000000000000000000000000033'),
+];
+const discovery_open = contract.buildPendingRecallDiscovery(baseIntent, discoveryRecords, observed);
+const discovery_deployment = contract.buildPendingRecallDiscovery(deploymentApplyIntent,
+  [recordOf(deploymentApplyIntent, waiting, 'ecm_00000000000000000000000000000034')], observed);
+const discovery_empty = contract.buildPendingRecallDiscovery(baseIntent,
+  [discoveryRecords[2]], observed);
 const outputs = {
   'fixtures/execution-pending-control-currency.synthetic.valid.json': {
     lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_qualified: false,
+    discovery_open, discovery_deployment, discovery_empty,
     statuses: Object.fromEntries(Object.entries(fixture)
       .filter(([, value]) => value && typeof value === 'object' && value.schema_version === 'portal.execution.pending-recall-status.v1')
-      .map(([key, value]) => [key, contract.publishPendingControlStatus(baseIntent, value)])),
+      .map(([key, value]) => [key, contract.publishPendingControlStatus(
+        value.resource.kind === 'DEPLOYMENT' ? deploymentIntent : baseIntent, value)])),
   },
   'openapi/execution-pending-control.openapi.json': { openapi: '3.1.0',
     info: { title: 'Exact existing pending recall preview, submit and same-key status', version: '1.0.0' },

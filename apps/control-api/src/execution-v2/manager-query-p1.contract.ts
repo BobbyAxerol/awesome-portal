@@ -41,8 +41,8 @@ export const managerP1Options = z.object({
     normalization: z.literal("JS_TO_LOWER_CASE_NO_UNICODE_NORMALIZATION") }).strict(),
   sort_fields: z.array(z.enum(["alpha_id", "alpha_version_id", "name", "owner_user_id", "portfolio_id",
     "lifecycle", "venue", "health", "source_state", "allocation", "net_pnl", "unrealized_pnl",
-    "balance_total", "equity_30d_end_value", "return_30d_pct", "score", "stage_presence"])).max(17),
-  group_fields: z.array(z.enum(["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"])).max(8),
+    "balance_total", "equity_30d_end_value", "return_30d_pct", "score", "stage_presence", "current_stage"])).max(18),
+  group_fields: z.array(z.enum(["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "current_stage", "venue", "health", "source_state", "lifecycle"])).max(9),
   // Finite projection-owned metric vocabulary; not all BUSINESS_READ_FIELDS.
   metric_keys: z.array(z.enum(["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value", "return_30d_pct", "score"])).max(7),
   economic_partition_required_for: z.array(z.enum(["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"])).max(5),
@@ -53,11 +53,12 @@ export const managerP1Options = z.object({
       resolved: managerExactWindow.nullable(),
       // METRIC_SPECIFIC means at least one scoped fact has this exact window;
       // it never promises complete census, methodology or a numeric metric.
+      // NOT_PUBLISHED carries no window: a window nobody published is not offered as bounds.
       data_state: z.enum(["METRIC_SPECIFIC", "NOT_PUBLISHED"]),
       reason_code: z.enum(["EXACT_METRIC_WINDOW_NOT_PUBLISHED", "ALL_HISTORY_WINDOW_NOT_PUBLISHED"]).nullable(),
     }).strict().superRefine((v, c) => {
       if (v.data_state === "METRIC_SPECIFIC" && (v.resolved === null || v.reason_code !== null) ||
-        v.data_state === "NOT_PUBLISHED" && v.reason_code === null ||
+        v.data_state === "NOT_PUBLISHED" && (v.reason_code === null || v.resolved !== null) ||
         v.value === "ALL" && (v.resolved !== null || v.reason_code !== "ALL_HISTORY_WINDOW_NOT_PUBLISHED"))
         c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_WINDOW_OPTION_INVALID" });
     })).length(4),
@@ -65,8 +66,8 @@ export const managerP1Options = z.object({
   stage_environment: z.array(z.object({ environment: z.enum(["paper", "sandbox", "live"]),
     stages: z.array(financialStage).min(1).max(2) }).strict()).length(3),
   unavailable_fields: z.tuple([
-    z.object({ field: z.literal("current_stage"), reason_code: z.literal("CURRENT_STAGE_GRAIN_NOT_PUBLISHED") }).strict(),
     z.object({ field: z.literal("days_in_stage"), reason_code: z.literal("STAGE_ENTRY_TIME_NOT_PUBLISHED") }).strict(),
+    z.object({ field: z.literal("entered_at_ms"), reason_code: z.literal("STAGE_ENTRY_TIME_NOT_PUBLISHED") }).strict(),
   ]),
 }).strict().superRefine((v, c) => {
   const unique = (items: readonly string[]) => new Set(items).size === items.length;
@@ -78,7 +79,7 @@ export const managerP1Options = z.object({
   const money = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"];
   const stocks = ["allocation", "balance_total", "unrealized_pnl"];
   const metricKeys = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value", "return_30d_pct", "score"];
-  const groupKeys = ["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "venue", "health", "source_state", "lifecycle"];
+  const groupKeys = ["portfolio_id", "owner_user_id", "alpha_id", "stage_presence", "current_stage", "venue", "health", "source_state", "lifecycle"];
   if (!equal(v.economic_partition_required_for, v.metric_keys.filter(key => money.includes(key))) ||
     !equal(v.window.independent_metrics, v.metric_keys.filter(key => stocks.includes(key))) ||
     !equal(v.metric_keys, v.sort_fields.filter(key => metricKeys.includes(key))) ||
