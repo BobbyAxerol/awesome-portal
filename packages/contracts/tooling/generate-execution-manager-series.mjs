@@ -70,13 +70,14 @@ function entrySemantics(entry) {
   add(entry,
     { if: isField('state', 'UNAVAILABLE'),
       then: obj({ reason_code: { type: 'string', not: { const: 'NO_POINTS_PUBLISHED_IN_WINDOW' } }, currency: nul, points: emptyArray, gaps: emptyArray,
-        quality: obj({ completeness: { const: 'UNRESOLVED' } }), ...Object.fromEntries(descriptors.map(k => [k, nul])) }) },
+        quality: obj({ completeness: { const: 'UNRESOLVED' } }), ratio_scale: nul, ...Object.fromEntries(descriptors.map(k => [k, nul])) }) },
     { if: isField('state', 'AVAILABLE'),
       then: obj({ reason_code: nul, points: someItem, ...Object.fromEntries(descriptors.map(k => [k, nonNull])) }) },
     { if: isField('state', 'EMPTY'),
       then: obj({ reason_code: { const: 'NO_POINTS_PUBLISHED_IN_WINDOW' }, points: emptyArray, ...Object.fromEntries(descriptors.map(k => [k, nonNull])) }) },
-    { if: isField('unit', 'MONEY'), then: obj({ currency: { type: 'string' } }) },
-    { if: isField('unit', 'RATIO'), then: obj({ currency: nul }) });
+    { if: isField('unit', 'MONEY'), then: obj({ currency: { type: 'string' }, ratio_scale: nul }) },
+    // FE-013: a ratio has no currency and always states its scale (FRACTION: 1 = 100%; PERCENT: 100 = 100%).
+    { if: isField('unit', 'RATIO'), then: obj({ currency: nul, ratio_scale: nonNull }) });
 }
 function comparisonSemantics(c) {
   add(c,
@@ -91,11 +92,24 @@ function responseSemantics(response) {
   p.series.uniqueItems = false; // identity is the (subject_type, subject_id) pair; checked by the server validator
   entrySemantics(p.series.items);
   comparisonSemantics(p.comparison);
+  // FE-013: the metric fixes the unit. NAV / NET_PNL: MONEY; RETURN: RATIO. An UNAVAILABLE entry has no unit (null) and passes.
+  add(response,
+    { if: isField('metric', 'RETURN'), then: obj({ series: { type: 'array', items: obj({ unit: { enum: ['RATIO', null] } }) } }),
+      else: obj({ series: { type: 'array', items: obj({ unit: { enum: ['MONEY', null] }, reason_code: { not: { const: 'RATIO_SCALE_NOT_PUBLISHED' } } }) } }) });
   add(response,
     { if: obj({ series_source: isField('state', 'NOT_PUBLISHED') }, ['series_source']),
       then: obj({ series_source: obj({ reason_code: { const: 'FINANCIAL_NORMALIZED_SERIES_SOURCE_NOT_PUBLISHED' } }, ['reason_code']),
         series: { type: 'array', items: isField('state', 'UNAVAILABLE') } }),
       else: obj({ series_source: obj({ reason_code: nul }, ['reason_code']) }) });
+}
+// FE-013 on the stored form: the same metric/unit/scale tie, plus "an unscaled ratio carries no points".
+function publicationSemantics(stored) {
+  add(stored,
+    { if: obj({ binding: isField('metric', 'RETURN') }, ['binding']),
+      then: obj({ series: obj({ unit: { const: 'RATIO' }, currency: nul }, ['unit', 'currency']) }, ['series']),
+      else: obj({ series: obj({ unit: { const: 'MONEY' }, currency: { type: 'string' }, ratio_scale: nul }, ['unit', 'currency', 'ratio_scale']) }, ['series']) },
+    { if: obj({ series: obj({ unit: { const: 'RATIO' }, ratio_scale: nul }, ['unit', 'ratio_scale']) }, ['series']),
+      then: obj({ series: obj({ points: emptyArray }, ['points']) }, ['series']) });
 }
 function querySemantics(query) {
   const subject = query.properties.subjects.items;
@@ -107,7 +121,7 @@ const response = json(contract.managerSeriesResponse), query = json(contract.man
 responseSemantics(response); querySemantics(query);
 const entry = json(contract.managerSeriesEntry); entrySemantics(entry);
 const comparison = json(contract.managerSeriesComparison); comparisonSemantics(comparison);
-const stored = json(contract.managerSeriesPublication);
+const stored = json(contract.managerSeriesPublication); publicationSemantics(stored);
 // MD-5 (owner decision C): a series point is emitted in canonical zero; the stored publication (a SOURCE document) still admits "-0".
 const canonicalDecimal = { pattern: invariants.MANAGER_CANONICAL_DECIMAL_PATTERN.source, note: invariants.MANAGER_CANONICAL_ZERO_NOTE };
 for (const schema of [response, entry]) describeCanonicalDecimals(schema, canonicalDecimal);

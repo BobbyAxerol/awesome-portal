@@ -19,8 +19,8 @@ import { managerSelectedWindow, managerWindowQuery } from "./manager-query-p1.co
 import { managerQuality } from "./manager-model.contract";
 import { accessDigest } from "./access-digest";
 import { managerResponseDecimal } from "./manager-dataset-invariants";
-import { MAX_SERIES_GAPS, MAX_SERIES_POINTS, seriesBodyIssues, seriesConfidence, seriesGap, seriesMetric, seriesPartition, seriesPoint,
-  seriesQuality, seriesUnit, seriesWindow } from "./manager-series-publication.contract";
+import { MAX_SERIES_GAPS, MAX_SERIES_POINTS, SERIES_METRIC_UNIT, seriesBodyIssues, seriesConfidence, seriesGap, seriesMetric, seriesPartition, seriesPoint,
+  seriesQuality, seriesRatioScale, seriesUnit, seriesWindow } from "./manager-series-publication.contract";
 
 const text = z.string().min(1).max(256);
 export const MAX_SERIES_SUBJECTS = 4;
@@ -46,7 +46,7 @@ export type ManagerSeriesQuery = z.infer<typeof managerSeriesQuery>;
 /** Closed reason vocabulary of one subject's series. */
 export const SERIES_UNAVAILABLE_REASONS = ["SERIES_SOURCE_NOT_PUBLISHED", "EXACT_METRIC_WINDOW_NOT_PUBLISHED", "ALL_HISTORY_WINDOW_NOT_PUBLISHED",
   "ECONOMIC_PARTITION_REQUIRED", "SERIES_SCOPE_NOT_AUTHORIZED", "SOURCE_NOT_QUALIFIED", "AMBIGUOUS_SERIES_PUBLICATION",
-  "SUBJECT_HAS_NO_ACTIVE_MEMBERS"] as const;
+  "SUBJECT_HAS_NO_ACTIVE_MEMBERS", "RATIO_SCALE_NOT_PUBLISHED"] as const;
 export const SERIES_EMPTY_REASON = "NO_POINTS_PUBLISHED_IN_WINDOW" as const;
 /** A point as EMITTED: canonical zero (MD-5). The stored publication's `seriesPoint` still admits a signed zero. */
 export const managerSeriesResponsePoint = z.object({ ts_ms: utcMilliseconds, value: managerResponseDecimal }).strict();
@@ -54,36 +54,40 @@ export const managerSeriesEntry = z.object({
   subject: z.object({ subject_type: z.enum(["FUND", "PORTFOLIO"]), subject_id: text }).strict(),
   state: z.enum(["AVAILABLE", "EMPTY", "UNAVAILABLE"]),
   reason_code: z.enum([...SERIES_UNAVAILABLE_REASONS, SERIES_EMPTY_REASON]).nullable(),
-  partition: seriesPartition.nullable(), unit: seriesUnit.nullable(), currency: text.nullable(), basis: text.nullable(),
+  partition: seriesPartition.nullable(), unit: seriesUnit.nullable(), currency: text.nullable(),
+  // FE-013: what 1 means for a RATIO (FRACTION: 1 = 100%; PERCENT: 100 = 100%). Stated by the source, never inferred; null for MONEY and for UNAVAILABLE.
+  ratio_scale: seriesRatioScale.nullable(), basis: text.nullable(),
   methodology_ref: text.nullable(), window: seriesWindow.nullable(),
   points: z.array(managerSeriesResponsePoint).max(MAX_SERIES_POINTS), gaps: z.array(seriesGap).max(MAX_SERIES_GAPS),
   quality: seriesQuality, source_confidence: seriesConfidence,
   provenance_refs: z.array(text).min(1).max(32), calculation_revision: text, policy_revision: text,
 }).strict().superRefine((e, c) => {
   const bad = (message: string) => c.addIssue({ code: z.ZodIssueCode.custom, message });
-  const described = [e.partition, e.unit, e.basis, e.methodology_ref, e.window];
+  const described = [e.partition, e.unit, e.basis, e.methodology_ref, e.window, e.ratio_scale];
   if (e.state === "UNAVAILABLE") {
     if (e.reason_code === null || e.reason_code === SERIES_EMPTY_REASON || described.some(v => v !== null) || e.currency !== null ||
       e.points.length || e.gaps.length || e.quality.completeness !== "UNRESOLVED") bad("MANAGER_SERIES_UNAVAILABLE_INVALID");
     return;
   }
-  if (described.some(v => v === null) || (e.state === "AVAILABLE") !== (e.points.length > 0) ||
+  if ([e.partition, e.unit, e.basis, e.methodology_ref, e.window].some(v => v === null) || (e.state === "AVAILABLE") !== (e.points.length > 0) ||
     (e.state === "AVAILABLE" ? e.reason_code !== null : e.reason_code !== SERIES_EMPTY_REASON)) { bad("MANAGER_SERIES_STATE_INVALID"); return; }
-  for (const message of seriesBodyIssues({ unit: e.unit!, currency: e.currency, basis: e.basis!, methodology_ref: e.methodology_ref!,
-    window: e.window!, points: e.points, gaps: e.gaps, partition: e.partition!, metric: "NAV" }, null).filter(m => m !== "MANAGER_SERIES_UNIT_CURRENCY_INVALID")) bad(message);
-  // `seriesBodyIssues` is metric-aware; the entry is not told the metric, so the unit/currency pairing is checked here.
+  for (const message of seriesBodyIssues({ unit: e.unit!, currency: e.currency, ratio_scale: e.ratio_scale, basis: e.basis!, methodology_ref: e.methodology_ref!,
+    window: e.window!, points: e.points, gaps: e.gaps, partition: e.partition!, metric: "NAV" }, null).filter(m => !["MANAGER_SERIES_UNIT_CURRENCY_INVALID", "MANAGER_SERIES_METRIC_UNIT_MISMATCH", "MANAGER_SERIES_RATIO_SCALE_INVALID"].includes(m))) bad(message);
+  // `seriesBodyIssues` is metric-aware; the entry is not told the metric, so the unit/currency/scale pairing is checked here
+  // (the response ties the unit to its metric).
+  if (e.unit === "MONEY" ? e.ratio_scale !== null : e.ratio_scale === null) bad("MANAGER_SERIES_RATIO_SCALE_INVALID");
   if (e.unit === "MONEY" ? e.currency === null || e.currency !== e.partition!.currency : e.currency !== null) bad("MANAGER_SERIES_UNIT_CURRENCY_INVALID");
 });
 export type ManagerSeriesEntry = z.infer<typeof managerSeriesEntry>;
 
-export const COMPARISON_MISMATCH_REASONS = ["CURRENCY_MIXED", "ECONOMIC_PARTITION_MIXED", "BASIS_MIXED", "UNIT_MIXED",
+export const COMPARISON_MISMATCH_REASONS = ["CURRENCY_MIXED", "ECONOMIC_PARTITION_MIXED", "BASIS_MIXED", "UNIT_MIXED", "RATIO_SCALE_MIXED",
   "METHODOLOGY_MIXED", "WINDOW_MISMATCH"] as const;
 export const managerSeriesComparison = z.object({
   state: z.enum(["SINGLE_SUBJECT", "ALIGNED", "INCOMPARABLE", "UNAVAILABLE"]),
   reason_code: z.enum([...COMPARISON_MISMATCH_REASONS, "SUBJECT_SERIES_UNAVAILABLE"]).nullable(),
   transform: z.literal("NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM"),
   common: z.object({ economic_domain: z.enum(["ACTUAL", "PAPER", "SANDBOX"]), native_profile_ref: text, currency: text.nullable(),
-    basis: text, unit: seriesUnit, methodology_ref: text, window: seriesWindow }).strict().nullable(),
+    basis: text, unit: seriesUnit, ratio_scale: seriesRatioScale.nullable(), methodology_ref: text, window: seriesWindow }).strict().nullable(),
   // Union of every subject's timestamps, ascending. A subject without a point at a timestamp has none there: no fill.
   axis_ms: z.array(utcMilliseconds).max(MAX_AXIS_POINTS).nullable(),
 }).strict().superRefine((v, c) => {
@@ -97,7 +101,7 @@ export const managerSeriesComparison = z.object({
 });
 export type ManagerSeriesComparison = z.infer<typeof managerSeriesComparison>;
 
-type Comparable = Pick<ManagerSeriesEntry, "state" | "partition" | "unit" | "currency" | "basis" | "methodology_ref" | "window" | "points">;
+type Comparable = Pick<ManagerSeriesEntry, "state" | "partition" | "unit" | "currency" | "ratio_scale" | "basis" | "methodology_ref" | "window" | "points">;
 /**
  * The single place that decides whether subjects share an axis. First mismatch wins in a fixed order
  * (currency before everything: it is the one that makes numbers incomparable on sight).
@@ -107,13 +111,15 @@ export function deriveSeriesComparison(entries: readonly Comparable[]): ManagerS
   const described = entries.filter(e => e.state !== "UNAVAILABLE");
   if (!entries.length) return { state: "UNAVAILABLE", reason_code: "SUBJECT_SERIES_UNAVAILABLE", ...none, common: null };
   const commonOf = (e: Comparable) => ({ economic_domain: e.partition!.economic_domain, native_profile_ref: e.partition!.native_profile_ref,
-    currency: e.currency, basis: e.basis!, unit: e.unit!, methodology_ref: e.methodology_ref!, window: e.window! });
+    currency: e.currency, basis: e.basis!, unit: e.unit!, ratio_scale: e.ratio_scale, methodology_ref: e.methodology_ref!, window: e.window! });
   if (entries.length === 1) return { state: "SINGLE_SUBJECT", reason_code: null, ...none, common: described.length ? commonOf(described[0]) : null };
   const first = described[0];
   const tests: Array<[typeof COMPARISON_MISMATCH_REASONS[number], (e: Comparable) => boolean]> = first ? [
     ["CURRENCY_MIXED", e => e.currency !== first.currency],
     ["ECONOMIC_PARTITION_MIXED", e => e.partition!.economic_domain !== first.partition!.economic_domain || e.partition!.native_profile_ref !== first.partition!.native_profile_ref],
     ["BASIS_MIXED", e => e.basis !== first.basis], ["UNIT_MIXED", e => e.unit !== first.unit],
+    // Two RETURN series on different scales (1 = 100% vs 100 = 100%) share no axis: the numbers would lie by a factor of 100.
+    ["RATIO_SCALE_MIXED", e => e.ratio_scale !== first.ratio_scale],
     ["METHODOLOGY_MIXED", e => e.methodology_ref !== first.methodology_ref],
     ["WINDOW_MISMATCH", e => e.window!.from_ms !== first.window!.from_ms || e.window!.to_ms !== first.window!.to_ms],
   ] : [];
@@ -143,6 +149,9 @@ export const managerSeriesResponse = z.object({
       "ALL_HISTORY_WINDOW_NOT_PUBLISHED"].includes(e.reason_code ?? ""))) bad("MANAGER_SERIES_SOURCE_NOT_PUBLISHED_CONTRADICTED", ["series"]);
   const resolved = r.selected_window.resolved;
   r.series.forEach((e, i) => {
+    // FE-013: the metric fixes the unit (NAV, NET_PNL: MONEY in the partition currency; RETURN: RATIO with a stated scale).
+    if (e.state !== "UNAVAILABLE" && e.unit !== SERIES_METRIC_UNIT[r.metric]) bad("MANAGER_SERIES_METRIC_UNIT_MISMATCH", ["series", i]);
+    if (e.state === "UNAVAILABLE" && e.reason_code === "RATIO_SCALE_NOT_PUBLISHED" && r.metric !== "RETURN") bad("MANAGER_SERIES_REASON_METRIC_INVALID", ["series", i]);
     if (e.state === "UNAVAILABLE") {
       // ALL has no resolvable window, so a reason that says "this window is missing" or "pick a partition" can not be true of it;
       // and ALL_HISTORY_WINDOW_NOT_PUBLISHED can not be said of a window that was resolved.

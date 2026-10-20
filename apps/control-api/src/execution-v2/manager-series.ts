@@ -28,7 +28,7 @@ type Subject = ManagerSeriesQuery["subjects"][number];
 export interface SeriesSubjectScope { subject: Subject; scope: AuthorizedExecutionReadScope; }
 
 const unavailable = (subject: ManagerSeriesEntry["subject"], reason: ManagerSeriesEntry["reason_code"]): ManagerSeriesEntry => ({
-  subject, state: "UNAVAILABLE", reason_code: reason, partition: null, unit: null, currency: null, basis: null, methodology_ref: null,
+  subject, state: "UNAVAILABLE", reason_code: reason, partition: null, unit: null, currency: null, ratio_scale: null, basis: null, methodology_ref: null,
   window: null, points: [], gaps: [], quality: { completeness: "UNRESOLVED", freshness: "UNKNOWN", reasons: [reason!] },
   source_confidence: "UNKNOWN", provenance_refs: ["SOURCE_NOT_PUBLISHED"], calculation_revision: "manager-series.v1", policy_revision: "NOT_PUBLISHED" });
 
@@ -70,13 +70,15 @@ function entryFor(input: SeriesSubjectScope, doc: ManagerModelDocument, query: M
   const exact = inPartition.filter(p => p.binding.window_start_ms === window.from_ms && p.binding.window_end_ms === window.to_ms);
   if (!exact.length) return unavailable(id, "EXACT_METRIC_WINDOW_NOT_PUBLISHED");
   if (exact.length > 1) return unavailable(id, "AMBIGUOUS_SERIES_PUBLICATION");
+  // FE-013: a ratio whose scale the source does not state is a typed absence, never a number the reader must guess the meaning of.
+  if (exact[0].series.unit === "RATIO" && exact[0].series.ratio_scale === null) return unavailable(id, "RATIO_SCALE_NOT_PUBLISHED");
   return servedEntry(id, exact[0]);
 }
 
 function servedEntry(id: ManagerSeriesEntry["subject"], p: ManagerSeriesPublication): ManagerSeriesEntry {
   const b = p.binding;
   return { subject: id, state: p.series.points.length ? "AVAILABLE" : "EMPTY", reason_code: p.series.points.length ? null : SERIES_EMPTY_REASON,
-    partition: b.partition, unit: p.series.unit, currency: p.series.currency, basis: p.series.basis, methodology_ref: p.series.methodology_ref,
+    partition: b.partition, unit: p.series.unit, currency: p.series.currency, ratio_scale: p.series.ratio_scale, basis: p.series.basis, methodology_ref: p.series.methodology_ref,
     window: { from_ms: b.window_start_ms, to_ms: b.window_end_ms }, points: p.series.points.map(x => ({ ...x })), gaps: p.series.gaps.map(x => ({ ...x })),
     quality: { ...p.quality, reasons: [...p.quality.reasons] }, source_confidence: p.source_confidence,
     provenance_refs: [p.provenance.input_digest], calculation_revision: p.provenance.calculation_revision, policy_revision: p.provenance.policy_revision };

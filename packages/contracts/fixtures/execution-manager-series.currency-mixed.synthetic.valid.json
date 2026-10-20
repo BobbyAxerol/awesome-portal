@@ -44,6 +44,7 @@
         },
         "unit": "MONEY",
         "currency": "USDT",
+        "ratio_scale": null,
         "basis": "TEST_ONLY:nav-ledger",
         "methodology_ref": "TEST_ONLY:nav-twr.v1",
         "window": {
@@ -89,6 +90,7 @@
         },
         "unit": "MONEY",
         "currency": "VND",
+        "ratio_scale": null,
         "basis": "TEST_ONLY:nav-ledger",
         "methodology_ref": "TEST_ONLY:nav-twr.v1",
         "window": {

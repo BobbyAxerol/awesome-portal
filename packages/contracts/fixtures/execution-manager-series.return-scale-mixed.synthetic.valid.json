@@ -1,0 +1,137 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.manager-series.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "environment": "paper",
+    "record_authority": "PORTAL_PROJECTION",
+    "source_authority": "TRADING_SYSTEM",
+    "metric": "RETURN",
+    "selected_window": {
+      "requested": "30D",
+      "resolved": {
+        "from_ms": 1797408000000,
+        "to_ms": 1800000000000
+      },
+      "selection_basis": "EXACT_PUBLISHED_METRIC_WINDOW_ONLY",
+      "reason_code": null
+    },
+    "series_source": {
+      "state": "PUBLISHED",
+      "reason_code": null
+    },
+    "as_of_ms": 1800000000000,
+    "recorded_through_ms": 1800000000050,
+    "quality": {
+      "completeness": "COMPLETE",
+      "freshness": "FRESH",
+      "reasons": []
+    },
+    "series": [
+      {
+        "subject": {
+          "subject_type": "PORTFOLIO",
+          "subject_id": "TEST_ONLY:portfolio-a"
+        },
+        "state": "AVAILABLE",
+        "reason_code": null,
+        "partition": {
+          "economic_domain": "PAPER",
+          "currency": "USDT",
+          "basis": "TEST_ONLY:nav-ledger",
+          "native_profile_ref": "TEST_ONLY:paper-ledger",
+          "domain_proof_ref": "TEST_ONLY:domain-proof"
+        },
+        "unit": "RATIO",
+        "currency": null,
+        "ratio_scale": "FRACTION",
+        "basis": "TEST_ONLY:nav-ledger",
+        "methodology_ref": "TEST_ONLY:return-twr.v1",
+        "window": {
+          "from_ms": 1797408000000,
+          "to_ms": 1800000000000
+        },
+        "points": [
+          {
+            "ts_ms": 1797408000000,
+            "value": "0"
+          },
+          {
+            "ts_ms": 1797494400000,
+            "value": "0.0123"
+          }
+        ],
+        "gaps": [],
+        "quality": {
+          "completeness": "COMPLETE",
+          "freshness": "FRESH",
+          "reasons": []
+        },
+        "source_confidence": "VERIFIED",
+        "provenance_refs": [
+          "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ],
+        "calculation_revision": "TEST_ONLY:calc",
+        "policy_revision": "TEST_ONLY:policy"
+      },
+      {
+        "subject": {
+          "subject_type": "PORTFOLIO",
+          "subject_id": "TEST_ONLY:portfolio-b"
+        },
+        "state": "AVAILABLE",
+        "reason_code": null,
+        "partition": {
+          "economic_domain": "PAPER",
+          "currency": "USDT",
+          "basis": "TEST_ONLY:nav-ledger",
+          "native_profile_ref": "TEST_ONLY:paper-ledger",
+          "domain_proof_ref": "TEST_ONLY:domain-proof"
+        },
+        "unit": "RATIO",
+        "currency": null,
+        "ratio_scale": "PERCENT",
+        "basis": "TEST_ONLY:nav-ledger",
+        "methodology_ref": "TEST_ONLY:return-twr.v1",
+        "window": {
+          "from_ms": 1797408000000,
+          "to_ms": 1800000000000
+        },
+        "points": [
+          {
+            "ts_ms": 1797408000000,
+            "value": "0"
+          },
+          {
+            "ts_ms": 1797494400000,
+            "value": "1.23"
+          }
+        ],
+        "gaps": [],
+        "quality": {
+          "completeness": "COMPLETE",
+          "freshness": "FRESH",
+          "reasons": []
+        },
+        "source_confidence": "VERIFIED",
+        "provenance_refs": [
+          "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+        ],
+        "calculation_revision": "TEST_ONLY:calc",
+        "policy_revision": "TEST_ONLY:policy"
+      }
+    ],
+    "comparison": {
+      "state": "INCOMPARABLE",
+      "reason_code": "RATIO_SCALE_MIXED",
+      "transform": "NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM",
+      "common": null,
+      "axis_ms": null
+    },
+    "lineage": {
+      "reducer_revision": "manager-series.v1",
+      "source_set_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "revision": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  }
+}

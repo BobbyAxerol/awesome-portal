@@ -44,13 +44,14 @@ async function fixture(options: { full?: boolean; qualification?: "SOURCE_VERIFI
   const populationOf = (portfolioId?: string) => managerScorePopulationDigest(doc.members.filter(m => portfolioId === undefined || m.tuple.portfolio_id === portfolioId));
   /** A hand-built TEST_ONLY publication for a subject; patch edits the binding/series/provenance. */
   const publication = (portfolioId: string | undefined, patch: { currency?: string; points?: Array<[number, string]>; methodology?: string; basis?: string;
-    window?: { from_ms: number; to_ms: number }; metric?: "NAV" | "NET_PNL" | "RETURN"; population?: string; native?: string } = {}): ManagerSeriesPublication => {
+    window?: { from_ms: number; to_ms: number }; metric?: "NAV" | "NET_PNL" | "RETURN"; population?: string; native?: string; scale?: "FRACTION" | "PERCENT" | null } = {}): ManagerSeriesPublication => {
     const w = patch.window ?? WINDOW, currency = patch.currency ?? "USDT", p = { ...partition(currency, "PAPER", patch.native), basis: patch.basis ?? "TEST_ONLY:nav-ledger" };
     const metric = patch.metric ?? "NAV";
     return { binding: { subject_type: portfolioId === undefined ? "manager_book" : "portfolio", subject_id: portfolioId ?? doc.workspace_id,
       tuple_population_digest: patch.population ?? populationOf(portfolioId), stage_filter: ["PAPER"], metric, partition: p,
       window_start_ms: w.from_ms, window_end_ms: w.to_ms },
-    series: { unit: metric === "RETURN" ? "RATIO" : "MONEY", currency: metric === "RETURN" ? null : currency, basis: p.basis,
+    series: { unit: metric === "RETURN" ? "RATIO" : "MONEY", currency: metric === "RETURN" ? null : currency,
+      ratio_scale: metric === "RETURN" ? (patch.scale === undefined ? "FRACTION" : patch.scale) : null, basis: p.basis,
       methodology_ref: patch.methodology ?? "TEST_ONLY:nav-twr.v1",
       points: (patch.points ?? [[0, "100"], [1, "101.5"]]).map(([day, value]) => ({ ts_ms: w.from_ms + day * DAY, value })), gaps: [] },
     quality: { completeness: "COMPLETE", freshness: "FRESH", reasons: [] }, source_confidence: "VERIFIED",
@@ -159,9 +160,11 @@ describe("BE-P4 FE-013: a published series is served exactly, with its methodolo
     const s = t.read([A]).series[0];
     expect(s).toMatchObject({ state: "EMPTY", reason_code: "NO_POINTS_PUBLISHED_IN_WINDOW", points: [], methodology_ref: "TEST_ONLY:nav-twr.v1" });
   });
-  it("RETURN is a unitless ratio with no currency", async () => {
+  it("RETURN is a ratio with no currency and the scale its source stated", async () => {
     const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, { metric: "RETURN", points: [[0, "0"], [1, "0.0123"]] })];
-    expect(t.read([A], { metric: "RETURN" }).series[0]).toMatchObject({ state: "AVAILABLE", unit: "RATIO", currency: null });
+    expect(t.read([A], { metric: "RETURN" }).series[0]).toMatchObject({ state: "AVAILABLE", unit: "RATIO", currency: null, ratio_scale: "FRACTION" });
+    t.doc.precomputed_series = [t.publication(SHARED, { metric: "RETURN", points: [[0, "0"], [1, "1.23"]], scale: "PERCENT" })];
+    expect(t.read([A], { metric: "RETURN" }).series[0]).toMatchObject({ state: "AVAILABLE", unit: "RATIO", ratio_scale: "PERCENT" });
   });
   it("the fund subject is read over the whole authorized population", async () => {
     const t = await fixture(); t.doc.precomputed_series = [t.publication(undefined)];
@@ -223,8 +226,87 @@ describe("BE-P4 FE-033: aligned series for 2-4 subjects, typed refusal when they
   });
 });
 
+describe("FE-013: the metric fixes the unit, and a ratio states its scale", () => {
+  const RET = { metric: "RETURN" as const };
+  it("a RETURN whose source has no authoritative scale is a typed absence, never a number to guess", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, { ...RET, scale: null, points: [] })];
+    expect(managerModelDocument.safeParse(t.doc).success).toBe(true); // the producer's typed way to say "no scale": admitted, never served
+    const r = t.read([A], { metric: "RETURN" });
+    expect(r.series[0]).toMatchObject({ state: "UNAVAILABLE", reason_code: "RATIO_SCALE_NOT_PUBLISHED", unit: null, ratio_scale: null, points: [] });
+    expect(r.comparison).toMatchObject({ state: "SINGLE_SUBJECT", common: null, axis_ms: null });
+    expect(managerSeriesResponse.safeParse(r).success).toBe(true);
+  });
+  it("a RETURN with values and no scale can not enter a document (no way to publish points without a scale)", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, { ...RET, scale: null })];
+    expect(managerModelDocument.safeParse(t.doc).success).toBe(false);
+  });
+  it("two RETURN subjects on different scales are INCOMPARABLE: no shared axis", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, RET), t.publication(SOLO, { ...RET, scale: "PERCENT", points: [[0, "0"], [1, "1.23"]] })];
+    const r = t.read([A, B], { metric: "RETURN" });
+    expect(r.comparison).toMatchObject({ state: "INCOMPARABLE", reason_code: "RATIO_SCALE_MIXED", common: null, axis_ms: null });
+    expect(r.series.map(e => e.ratio_scale)).toEqual(["FRACTION", "PERCENT"]);
+  });
+  it("two RETURN subjects on one scale align and the common basis states it", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, RET), t.publication(SOLO, RET)];
+    expect(t.read([A, B], { metric: "RETURN" }).comparison).toMatchObject({ state: "ALIGNED", common: { unit: "RATIO", ratio_scale: "FRACTION", currency: null } });
+  });
+  it("NAV and NET_PNL stay MONEY with no scale", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED), t.publication(SHARED, { metric: "NET_PNL" })];
+    for (const metric of ["NAV", "NET_PNL"] as const)
+      expect(t.read([A], { metric }).series[0]).toMatchObject({ unit: "MONEY", currency: "USDT", ratio_scale: null });
+  });
+  const base = async (metric: "NAV" | "NET_PNL" | "RETURN" = "NAV") => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, { metric })];
+    return structuredClone(t.read([A], { metric })) as Record<string, any>;
+  };
+  const refused = async (metric: "NAV" | "NET_PNL" | "RETURN", mutate: (v: any) => void, message: string) => {
+    const v = await base(metric); mutate(v);
+    const parsed = managerSeriesResponse.safeParse(v);
+    expect(parsed.success).toBe(false);
+    expect(!parsed.success && parsed.error.issues.map(i => i.message)).toContain(message);
+  };
+  const MISMATCH = "MANAGER_SERIES_METRIC_UNIT_MISMATCH", SCALE = "MANAGER_SERIES_RATIO_SCALE_INVALID";
+  it("NAV as a RATIO is refused", () => refused("NAV", v => { Object.assign(v.series[0], { unit: "RATIO", currency: null, ratio_scale: "FRACTION" }); }, MISMATCH));
+  it("NET_PNL as a RATIO is refused", () => refused("NET_PNL", v => { Object.assign(v.series[0], { unit: "RATIO", currency: null, ratio_scale: "PERCENT" }); }, MISMATCH));
+  it("RETURN as MONEY is refused", () => refused("RETURN", v => { Object.assign(v.series[0], { unit: "MONEY", currency: "USDT", ratio_scale: null }); }, MISMATCH));
+  it("RETURN with values and no scale is refused", () => refused("RETURN", v => { v.series[0].ratio_scale = null; }, SCALE));
+  it("an EMPTY RETURN with no scale is refused too (an absence is UNAVAILABLE, not EMPTY)", async () => {
+    const v = await base("RETURN"); Object.assign(v.series[0], { state: "EMPTY", reason_code: "NO_POINTS_PUBLISHED_IN_WINDOW", points: [], ratio_scale: null });
+    v.comparison = deriveSeriesComparison(v.series);
+    expect(managerSeriesResponse.safeParse(v).success).toBe(false);
+  });
+  it("MONEY with a scale is refused", () => refused("NAV", v => { v.series[0].ratio_scale = "FRACTION"; }, SCALE));
+  it("a scale outside the closed vocabulary is refused", async () => {
+    const v = await base("RETURN"); v.series[0].ratio_scale = "BASIS_POINTS";
+    expect(managerSeriesResponse.safeParse(v).success).toBe(false);
+  });
+  it("RATIO_SCALE_NOT_PUBLISHED is only a RETURN reason", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, { ...RET, scale: null, points: [] })];
+    const v = structuredClone(t.read([A], { metric: "RETURN" })) as Record<string, any>; v.metric = "NAV";
+    const parsed = managerSeriesResponse.safeParse(v);
+    expect(parsed.success).toBe(false);
+    expect(!parsed.success && parsed.error.issues.map(i => i.message)).toContain("MANAGER_SERIES_REASON_METRIC_INVALID");
+  });
+  it("an unavailable entry carries no scale", async () => {
+    const t = await fixture(); t.doc.precomputed_series = [t.publication(SHARED, { ...RET, scale: null, points: [] })];
+    const v = structuredClone(t.read([A], { metric: "RETURN" })) as Record<string, any>; v.series[0].ratio_scale = "FRACTION";
+    expect(managerSeriesResponse.safeParse(v).success).toBe(false);
+  });
+  it("the stored publication ties its own metric to its unit and scale (document admission)", async () => {
+    const admitted = async (mutate: (p: any) => void, metric: "NAV" | "RETURN" = "NAV") => {
+      const t = await fixture(); const pub = structuredClone(t.publication(SHARED, { metric })) as any; mutate(pub);
+      t.doc.precomputed_series = [pub]; return managerModelDocument.safeParse(t.doc).success;
+    };
+    expect(await admitted(() => undefined)).toBe(true); expect(await admitted(() => undefined, "RETURN")).toBe(true);
+    expect(await admitted(p => { p.series.unit = "RATIO"; p.series.currency = null; p.series.ratio_scale = "FRACTION"; })).toBe(false);
+    expect(await admitted(p => { p.series.unit = "MONEY"; p.series.currency = "USDT"; p.series.ratio_scale = null; }, "RETURN")).toBe(false);
+    expect(await admitted(p => { p.series.ratio_scale = "FRACTION"; })).toBe(false);
+    expect(await admitted(p => { delete p.series.ratio_scale; })).toBe(false); // the scale is stated explicitly, null included
+  });
+});
+
 describe("deriveSeriesComparison is the only authority on alignment", () => {
-  const entry = (patch: Record<string, unknown> = {}) => ({ state: "AVAILABLE" as const, partition: partition(), unit: "MONEY" as const, currency: "USDT", basis: "b",
+  const entry = (patch: Record<string, unknown> = {}) => ({ state: "AVAILABLE" as const, partition: partition(), unit: "MONEY" as const, currency: "USDT", ratio_scale: null, basis: "b",
     methodology_ref: "m", window: WINDOW, points: [{ ts_ms: 1, value: "1" }], ...patch }) as Parameters<typeof deriveSeriesComparison>[0][number];
   it("reports the first mismatch in a fixed order, currency first", () => {
     const other = (patch: Record<string, unknown>) => deriveSeriesComparison([entry(), entry(patch)]);
@@ -233,9 +315,12 @@ describe("deriveSeriesComparison is the only authority on alignment", () => {
     expect(other({ partition: { ...partition(), native_profile_ref: "other" } }).reason_code).toBe("ECONOMIC_PARTITION_MIXED");
     expect(other({ basis: "y" }).reason_code).toBe("BASIS_MIXED");
     expect(other({ unit: "RATIO", currency: "USDT" }).reason_code).toBe("UNIT_MIXED");
+    const ratio = (scale: "FRACTION" | "PERCENT") => entry({ unit: "RATIO", currency: null, ratio_scale: scale });
+    expect(deriveSeriesComparison([ratio("FRACTION"), ratio("PERCENT")]).reason_code).toBe("RATIO_SCALE_MIXED");
+    expect(deriveSeriesComparison([ratio("FRACTION"), ratio("FRACTION")])).toMatchObject({ state: "ALIGNED", common: { unit: "RATIO", ratio_scale: "FRACTION", currency: null } });
     expect(other({ methodology_ref: "x" }).reason_code).toBe("METHODOLOGY_MIXED");
     expect(other({ window: { from_ms: WINDOW.from_ms + 1, to_ms: WINDOW.to_ms } }).reason_code).toBe("WINDOW_MISMATCH");
-    expect(COMPARISON_MISMATCH_REASONS).toHaveLength(6);
+    expect(COMPARISON_MISMATCH_REASONS).toHaveLength(7);
   });
   it("is INCOMPARABLE even when a third subject is unavailable, and EMPTY is not alignable", () => {
     expect(deriveSeriesComparison([entry(), entry({ currency: "VND" }), entry({ state: "UNAVAILABLE", partition: null, unit: null, currency: null, basis: null, methodology_ref: null, window: null, points: [] })])

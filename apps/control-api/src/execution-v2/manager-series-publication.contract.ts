@@ -35,6 +35,15 @@ export const SERIES_METRIC_FIELD: Record<SeriesMetric, string> = { NAV: "current
 export const seriesPartition = z.object({ economic_domain: z.enum(["ACTUAL", "PAPER", "SANDBOX"]), currency: text, basis: text,
   native_profile_ref: text, domain_proof_ref: text }).strict();
 export const seriesUnit = z.enum(["MONEY", "RATIO"]);
+/**
+ * FE-013: what `1` means for a RATIO series. It is a fact the SOURCE states, never one the Portal infers from magnitudes:
+ * FRACTION = 1.0 is 100% (0.0123 is 1.23%); PERCENT = 100 is 100% (1.23 is 1.23%). Absent (`null`) means the producer has no
+ * authoritative scale, and then no RATIO point may be published or served (typed absence `RATIO_SCALE_NOT_PUBLISHED`).
+ */
+export const seriesRatioScale = z.enum(["FRACTION", "PERCENT"]);
+export type SeriesRatioScale = z.infer<typeof seriesRatioScale>;
+/** The only metric/unit pairing there is: NAV and NET_PNL are money in one currency, RETURN is a ratio with a scale. */
+export const SERIES_METRIC_UNIT: Record<SeriesMetric, z.infer<typeof seriesUnit>> = { NAV: "MONEY", NET_PNL: "MONEY", RETURN: "RATIO" };
 export const seriesPoint = z.object({ ts_ms: utcMilliseconds, value: exactDecimal }).strict();
 export const seriesGap = z.object({ from_ms: utcMilliseconds, to_ms: utcMilliseconds,
   reason: z.enum(["SOURCE_GAP", "RETENTION", "SESSION_CLOSED", "PROJECTION_DISCONTINUITY"]) }).strict();
@@ -43,7 +52,7 @@ export const seriesQuality = z.object({ completeness: z.enum(["COMPLETE", "PARTI
   freshness: z.enum(["FRESH", "STALE", "UNKNOWN"]), reasons: z.array(text).max(32) }).strict();
 export const seriesConfidence = z.enum(["VERIFIED", "PROVISIONAL", "UNKNOWN"]);
 
-export interface SeriesBody { unit: z.infer<typeof seriesUnit>; currency: string | null; basis: string; methodology_ref: string;
+export interface SeriesBody { unit: z.infer<typeof seriesUnit>; currency: string | null; ratio_scale: SeriesRatioScale | null; basis: string; methodology_ref: string;
   window: { from_ms: number; to_ms: number }; points: Array<{ ts_ms: number; value: string }>;
   gaps: Array<{ from_ms: number; to_ms: number; reason: string }>; partition: z.infer<typeof seriesPartition>; metric: SeriesMetric }
 
@@ -54,6 +63,9 @@ export function seriesBodyIssues(b: SeriesBody, cutoffMs: number | null): string
   if (b.metric === "RETURN" ? b.unit !== "RATIO" || b.currency !== null :
     b.unit !== "MONEY" || b.currency === null || b.currency !== b.partition.currency)
     issues.push("MANAGER_SERIES_UNIT_CURRENCY_INVALID");
+  if (b.unit !== SERIES_METRIC_UNIT[b.metric]) issues.push("MANAGER_SERIES_METRIC_UNIT_MISMATCH");
+  // A scale belongs to a ratio and only to a ratio; a ratio with values and no stated scale is not publishable (an EMPTY one may stay null).
+  if (b.unit === "MONEY" ? b.ratio_scale !== null : b.ratio_scale === null && b.points.length) issues.push("MANAGER_SERIES_RATIO_SCALE_INVALID");
   if (b.basis !== b.partition.basis) issues.push("MANAGER_SERIES_BASIS_MISMATCH");
   let previous = -1;
   for (const point of b.points) {
@@ -80,7 +92,7 @@ export const managerSeriesBinding = z.object({
 /** A result produced off request by the financial normalized pipeline; never a request body. */
 export const managerSeriesPublication = z.object({
   binding: managerSeriesBinding,
-  series: z.object({ unit: seriesUnit, currency: text.nullable(), basis: text, methodology_ref: text,
+  series: z.object({ unit: seriesUnit, currency: text.nullable(), ratio_scale: seriesRatioScale.nullable(), basis: text, methodology_ref: text,
     points: z.array(seriesPoint).max(MAX_SERIES_POINTS), gaps: z.array(seriesGap).max(MAX_SERIES_GAPS) }).strict(),
   quality: seriesQuality, source_confidence: seriesConfidence,
   provenance: z.object({ scope: z.object({ workspace_id: text, environment: executionEnvironment, profile_id: text,
