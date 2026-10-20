@@ -1,0 +1,81 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "runtime_qualified": false,
+  "description": "FE-070 populated shape only: invented windows, break and holidays. Not the exchange calendar; the Portal holds no calendar source of truth and publishes NOT_PUBLISHED until the market-data-layer session calendar is wired.",
+  "value": {
+    "schema_version": "execution.venue-calendar.v1",
+    "market": "VN_EQUITY",
+    "basis": "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE",
+    "timezone": {
+      "availability": "AVAILABLE",
+      "value": "Asia/Ho_Chi_Minh",
+      "reason_code": null
+    },
+    "windows": {
+      "availability": "AVAILABLE",
+      "value": [
+        {
+          "name": "ATO",
+          "kind": "OPENING_AUCTION",
+          "open": "09:00",
+          "close": "09:15"
+        },
+        {
+          "name": "morning",
+          "kind": "TRADING_SESSION",
+          "open": "09:15",
+          "close": "11:30"
+        },
+        {
+          "name": "afternoon",
+          "kind": "TRADING_SESSION",
+          "open": "13:00",
+          "close": "14:30"
+        },
+        {
+          "name": "ATC",
+          "kind": "CLOSING_AUCTION",
+          "open": "14:30",
+          "close": "14:45"
+        }
+      ],
+      "reason_code": null
+    },
+    "breaks": {
+      "availability": "AVAILABLE",
+      "value": [
+        {
+          "name": "BREAK",
+          "from": "11:30",
+          "to": "13:00",
+          "basis": "GAP_BETWEEN_PUBLISHED_WINDOWS"
+        }
+      ],
+      "reason_code": null
+    },
+    "holidays": {
+      "availability": "AVAILABLE",
+      "value": [
+        {
+          "date": "2099-01-01",
+          "name": "TEST_ONLY holiday"
+        },
+        {
+          "date": "2099-01-02",
+          "name": null
+        }
+      ],
+      "reason_code": null
+    },
+    "is_open": {
+      "availability": "AVAILABLE",
+      "value": false,
+      "reason_code": null
+    },
+    "as_of": {
+      "availability": "AVAILABLE",
+      "value": "2026-10-12T08:00:00.000Z",
+      "reason_code": null
+    }
+  }
+}

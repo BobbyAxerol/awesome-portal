@@ -340,3 +340,52 @@ describe("BE-P2 / FE-072 typed rows, figures, series, gap window, finding and pl
     expect(readFileSync(join(ROOT, "generated/execution-live-full.d.ts"), "utf8")).toContain("StageFactGapRanges");
   });
 });
+
+describe("BE-P2 / FE-070 VN market session calendar", () => {
+  const defs = (name: string) => `${FAMILY}#/$defs/${name}`;
+  it("validates the synthetic populated calendar and marks it as invented", () => {
+    const fixture = load("fixtures/execution-venue-calendar.synthetic.valid.json");
+    expect(fixture.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    expect(fixture.runtime_qualified).toBe(false);
+    ok(defs("VenueCalendar"), fixture.value);
+    expect(fixture.value.windows.value.map((window: any) => window.kind)).toEqual(["OPENING_AUCTION", "TRADING_SESSION", "TRADING_SESSION", "CLOSING_AUCTION"]);
+  });
+
+  it("publishes the VN variant fixture with every member NOT_PUBLISHED, and not the plain workbench", () => {
+    const vnm = load("fixtures/execution-paper-workbench-vnm.partial.valid.json");
+    const calendar = vnm.data.venue_calendar;
+    for (const member of ["timezone", "windows", "breaks", "holidays", "is_open", "as_of"]) {
+      expect(calendar[member]).toMatchObject({ availability: "NOT_PUBLISHED", value: null, reason_code: "N28_VENUE_CALENDAR_NOT_ACTIVE" });
+    }
+    expect(load("fixtures/execution-paper-workbench.partial.valid.json").data.venue_calendar).toBeUndefined();
+    const spec = load("openapi/execution-paper-read.openapi.json");
+    const alone = new Ajv2020({ strict: false });
+    addFormats(alone);
+    const standalone = alone.compile(load("schemas/execution-paper-read.v1.schema.json"));
+    const component = alone.compile({ ...spec, $ref: "#/components/schemas/PaperData" });
+    expect(standalone(vnm), JSON.stringify(standalone.errors)).toBe(true);
+    expect(component(vnm.data), JSON.stringify(component.errors)).toBe(true);
+    const bad = structuredClone(vnm);
+    bad.data.venue_calendar.is_open = { availability: "AVAILABLE", value: "open", reason_code: null };
+    expect(standalone(bad)).toBe(false);
+    expect(component(bad.data)).toBe(false);
+  });
+
+  it("refuses a calendar that guesses: malformed clocks, zones, kinds or an unnamed market", () => {
+    const calendar = load("fixtures/execution-venue-calendar.synthetic.valid.json").value;
+    const withWindows = (windows: unknown[]) => ({ ...calendar, windows: { availability: "AVAILABLE", value: windows, reason_code: null } });
+    const window = calendar.windows.value[1];
+    refuses(defs("VenueCalendar"), withWindows([{ ...window, open: "9:15" }]));
+    refuses(defs("VenueCalendar"), withWindows([{ ...window, close: "24:00" }]));
+    refuses(defs("VenueCalendar"), withWindows([{ ...window, kind: "LUNCH" }]));
+    refuses(defs("VenueCalendar"), withWindows([]));
+    refuses(defs("VenueCalendar"), { ...calendar, timezone: { availability: "AVAILABLE", value: "Vietnam", reason_code: null } });
+    refuses(defs("VenueCalendar"), { ...calendar, holidays: { availability: "AVAILABLE", value: [{ date: "2099-13-01", name: null }], reason_code: null } });
+    refuses(defs("VenueCalendar"), { ...calendar, market: "CRYPTO" });
+    refuses(defs("VenueCalendar"), { ...calendar, extra: true });
+  });
+
+  it("is mirrored in the generated Paper types", () => {
+    expect(readFileSync(join(ROOT, "generated/execution-paper-read.d.ts"), "utf8")).toContain("VenueCalendar");
+  });
+});

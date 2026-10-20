@@ -36,6 +36,7 @@ export const ROLLBACK_KEYS = ["flatten_plan", "paper_twin", "broker_data", "roll
 export const USED_RATIO_SCALE = 6;
 export const FIGURE_KEYS = ["equity", "gross_notional", "positions", "open_orders", "fees"];
 export const TYPED_ROW_CAP = 200;
+export const VENUE_CALENDAR_VERSION = "execution.venue-calendar.v1";
 
 /** A typed table beside a collection's free rows: AVAILABLE with rows, or NOT_PUBLISHED with a reason and no rows. */
 function typedCollection(kind, rowDef) {
@@ -182,6 +183,33 @@ export function stageFactsDefs() {
     StagePlanEnvelopeRef: object({envelope_id: ref("StageIdentifier"), revision: {type: "integer", minimum: 1}, status: {const: "DRAFT"}}),
     StageFactPlanEnvelope: {...fact(nullable(ref("StagePlanEnvelopeRef"))),
       description: "The latest Canary envelope drafted from this promotion plan. AVAILABLE with a null value = the lookup ran and none exists."},
+    // ── FE-070: VN market session calendar ──
+    VenueClock: {type: "string", pattern: "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"},
+    VenueTimezone: {type: "string", pattern: "^[A-Za-z_]+(?:/[A-Za-z0-9_+-]+){1,2}$", description: "IANA time-zone name, e.g. Asia/Ho_Chi_Minh."},
+    VenueWindow: object({
+      name: {type: "string", minLength: 1, maxLength: 64},
+      kind: {enum: ["TRADING_SESSION", "OPENING_AUCTION", "CLOSING_AUCTION"]},
+      open: ref("VenueClock"),
+      close: ref("VenueClock"),
+    }, {description: "A named window in the venue's local time. OPENING_AUCTION / CLOSING_AUCTION (ATO / ATC) only when the source names them; a generic session is TRADING_SESSION. Window kinds describe the market calendar, not which order types the Portal can route."}),
+    VenueBreak: object({
+      name: {const: "BREAK"},
+      from: ref("VenueClock"),
+      to: ref("VenueClock"),
+      basis: {const: "GAP_BETWEEN_PUBLISHED_WINDOWS"},
+    }, {description: "The interval between two consecutive published windows (the lunch break). Arithmetic on published windows only."}),
+    VenueHoliday: object({date: {type: "string", pattern: "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$"}, name: nullable({type: "string", minLength: 1, maxLength: 128})}),
+    VenueCalendar: {...object({
+      schema_version: {const: VENUE_CALENDAR_VERSION},
+      market: {const: "VN_EQUITY"},
+      basis: {const: "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE"},
+      timezone: fact(ref("VenueTimezone")),
+      windows: fact({type: "array", minItems: 1, maxItems: 12, items: ref("VenueWindow")}),
+      breaks: fact({type: "array", maxItems: 12, items: ref("VenueBreak")}),
+      holidays: fact({type: "array", maxItems: 400, items: ref("VenueHoliday")}),
+      is_open: fact({type: "boolean"}),
+      as_of: ref("StageFactTimestamp"),
+    }), description: "FE-070. Present only on the VN market workbench variant. Every member is a Fact: the Portal holds no trading-calendar source of truth, so each is NOT_PUBLISHED (N28_VENUE_CALENDAR_NOT_ACTIVE) until the market-data-layer session calendar is wired. is_open is the SOURCE's own statement at as_of; a client never infers PAUSED or AGING from window arithmetic."},
     StageFacts: {...object({
       schema_version: {const: STAGE_FACTS_VERSION},
       runtime: ref("StageRuntimeFacts"),
@@ -339,6 +367,33 @@ function updateLiveFixture(check) {
   else writeFileSync(path, after);
 }
 
+/** What the VN market workbench emits today: no calendar source is wired, so every member is typed absent. */
+export function unpublishedVenueCalendar(reason = "N28_VENUE_CALENDAR_NOT_ACTIVE") {
+  return {
+    schema_version: VENUE_CALENDAR_VERSION, market: "VN_EQUITY", basis: "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE",
+    timezone: missing(reason), windows: missing(reason), breaks: missing(reason), holidays: missing(reason),
+    is_open: missing(reason), as_of: missing(reason),
+  };
+}
+
+/** Populated shape for tests only: invented times and dates, not the real exchange calendar. */
+export function syntheticVenueCalendar() {
+  return {
+    schema_version: VENUE_CALENDAR_VERSION, market: "VN_EQUITY", basis: "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE",
+    timezone: available("Asia/Ho_Chi_Minh"),
+    windows: available([
+      {name: "ATO", kind: "OPENING_AUCTION", open: "09:00", close: "09:15"},
+      {name: "morning", kind: "TRADING_SESSION", open: "09:15", close: "11:30"},
+      {name: "afternoon", kind: "TRADING_SESSION", open: "13:00", close: "14:30"},
+      {name: "ATC", kind: "CLOSING_AUCTION", open: "14:30", close: "14:45"},
+    ]),
+    breaks: available([{name: "BREAK", from: "11:30", to: "13:00", basis: "GAP_BETWEEN_PUBLISHED_WINDOWS"}]),
+    holidays: available([{date: "2099-01-01", name: "TEST_ONLY holiday"}, {date: "2099-01-02", name: null}]),
+    is_open: available(false),
+    as_of: available("2026-10-12T08:00:00.000Z"),
+  };
+}
+
 /** What the Paper workbench emits today: a runtime field the source does not publish, and two relations its screen is not bound to. */
 export function paperWorkbenchStageFacts() {
   const unbound = "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN";
@@ -348,21 +403,28 @@ export function paperWorkbenchStageFacts() {
 }
 
 const PAPER_FIXTURES = ["fixtures/execution-paper-workbench.partial.valid.json", "fixtures/execution-paper-workbench-vnm.partial.valid.json"];
+const VNM_FIXTURE = "fixtures/execution-paper-workbench-vnm.partial.valid.json";
 
 function updatePaperFixtures(check) {
   for (const file of PAPER_FIXTURES) {
     const path = resolve(root, file), before = readFileSync(path, "utf8");
-    const after = before.includes('"stage_facts":')
+    let after = before.includes('"stage_facts":')
       ? member(before, "stage_facts", paperWorkbenchStageFacts(), null, 2)
       : before.replace('"portfolio_equity": [] }', '"portfolio_equity": [],\n  "stage_facts": ' + JSON.stringify(paperWorkbenchStageFacts(), null, 2).replaceAll("\n", "\n  ") + "\n}");
     if (!after.includes('"stage_facts":')) throw new Error("Paper fixture anchor missing: " + file);
+    if (file === VNM_FIXTURE) {
+      const calendar = unpublishedVenueCalendar();
+      after = after.includes('"venue_calendar":')
+        ? member(after, "venue_calendar", calendar, null, 2)
+        : after.replace('"stage_facts": ', '"venue_calendar": ' + JSON.stringify(calendar, null, 2).replaceAll("\n", "\n  ") + ',\n  "stage_facts": ');
+    }
     if (check) { if (after !== before) throw new Error("Paper fixture drift: " + file); }
     else writeFileSync(path, after);
   }
 }
 
 /** The roots Paper embeds. Other requests append their own roots here. */
-export const PAPER_ROOTS = ["StageFacts"];
+export const PAPER_ROOTS = ["StageFacts", "VenueCalendar"];
 
 function familySchema() {
   return {
@@ -515,6 +577,12 @@ export function syntheticStageRows() {
 
 export function fixtures() {
   return {
+    "execution-venue-calendar.synthetic.valid.json": {
+      lane: "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+      runtime_qualified: false,
+      description: "FE-070 populated shape only: invented windows, break and holidays. Not the exchange calendar; the Portal holds no calendar source of truth and publishes NOT_PUBLISHED until the market-data-layer session calendar is wired.",
+      value: syntheticVenueCalendar(),
+    },
     "execution-stage-rows.synthetic.valid.json": {
       lane: "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
       runtime_qualified: false,

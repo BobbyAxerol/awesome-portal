@@ -4,7 +4,42 @@
   "actor": { "user_id": "usr_bobby", "username": "bobby", "roles": ["ADMIN"] },
   "resource": { "kind": "DEPLOYMENT", "id": "dep_1" },
   "capabilities": [{ "capability_id": "venue.calendar", "state": "UNAVAILABLE", "relations": ["session_shading"], "reason_code": "N28_VENUE_CALENDAR_NOT_ACTIVE", "retryable": false }],
-  "data": { "deployment": { "deployment_id": "dep_1", "mode": "paper" }, "deployments": [{ "deployment_id": "dep_1", "mode": "paper" }], "positions": [], "orders": [], "fills": [], "performance": [], "account_equity": [], "portfolio_equity": [], "stage_facts": {
+  "data": { "deployment": { "deployment_id": "dep_1", "mode": "paper" }, "deployments": [{ "deployment_id": "dep_1", "mode": "paper" }], "positions": [], "orders": [], "fills": [], "performance": [], "account_equity": [], "portfolio_equity": [], "venue_calendar": {
+    "schema_version": "execution.venue-calendar.v1",
+    "market": "VN_EQUITY",
+    "basis": "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE",
+    "timezone": {
+      "availability": "NOT_PUBLISHED",
+      "value": null,
+      "reason_code": "N28_VENUE_CALENDAR_NOT_ACTIVE"
+    },
+    "windows": {
+      "availability": "NOT_PUBLISHED",
+      "value": null,
+      "reason_code": "N28_VENUE_CALENDAR_NOT_ACTIVE"
+    },
+    "breaks": {
+      "availability": "NOT_PUBLISHED",
+      "value": null,
+      "reason_code": "N28_VENUE_CALENDAR_NOT_ACTIVE"
+    },
+    "holidays": {
+      "availability": "NOT_PUBLISHED",
+      "value": null,
+      "reason_code": "N28_VENUE_CALENDAR_NOT_ACTIVE"
+    },
+    "is_open": {
+      "availability": "NOT_PUBLISHED",
+      "value": null,
+      "reason_code": "N28_VENUE_CALENDAR_NOT_ACTIVE"
+    },
+    "as_of": {
+      "availability": "NOT_PUBLISHED",
+      "value": null,
+      "reason_code": "N28_VENUE_CALENDAR_NOT_ACTIVE"
+    }
+  },
+  "stage_facts": {
     "schema_version": "execution.stage-facts.v1",
     "runtime": {
       "runtime_state": {
