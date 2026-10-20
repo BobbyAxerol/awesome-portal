@@ -777,6 +777,30 @@ describe("states", () => {
     expect(document.querySelectorAll(".exec-c2-svg").length).toBe(1);
   });
 
+  it("swapping to a shorter series while the readout is pinned deep in the long one does not crash and keeps the readout valid (RV-04)", async () => {
+    const two: Override = (_m, path, query) => {
+      if (path !== "/views/equity-chart") return undefined;
+      const base = answerPortfolios("GET", path, query)!.body as { panel: { data: { series: { id: string; label: string; currency: string; points: unknown[] }[] } } };
+      const short = { ...base.panel.data.series[0], id: "portfolio:x:equity:JPY", label: "Core equity JPY", currency: "JPY", points: base.panel.data.series[0].points.slice(0, 5) };
+      return { status: 200, body: { ...base, panel: { ...base.panel, data: { ...base.panel.data, series: [base.panel.data.series[0], short] } } } };
+    };
+    mount(makeApi(two).api);
+    const select = await screen.findByRole("combobox", { name: "Equity series" });
+    const chart = select.closest(".exec-pf-chart") as HTMLElement;
+    const plot = within(chart).getByRole("group", { name: /arrow keys/ });
+    fireEvent.keyDown(plot, { key: "ArrowLeft", shiftKey: true });
+    fireEvent.keyDown(plot, { key: "ArrowLeft", shiftKey: true });
+    const deep = within(chart).getByTestId("readout-time").textContent;
+    expect(within(chart).getByRole("status").textContent).toContain(deep as string);
+    expect(() => fireEvent.change(select, { target: { value: "portfolio:x:equity:JPY" } })).not.toThrow();
+    expect(within(chart).getByTestId("readout-value").textContent).toContain("JPY");
+    expect(within(chart).getByTestId("readout-time").textContent).not.toBe(deep);
+    expect(within(chart).getByRole("status").textContent).toBe("");
+    expect(chart.querySelector('[data-testid="cursor"]')).toBeNull();
+    fireEvent.keyDown(within(chart).getByRole("group", { name: /arrow keys/ }), { key: "ArrowLeft" });
+    expect(within(chart).getByRole("status").textContent).toContain("JPY");
+  });
+
   it("is a stated state, not a guess, when no portfolio was named", () => {
     mount(makeApi().api, "", null);
     expect(screen.getByText("No portfolio was named in the address.")).toBeTruthy();

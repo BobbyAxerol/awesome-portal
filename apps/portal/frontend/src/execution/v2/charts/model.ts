@@ -178,6 +178,20 @@ export function nearestIndex(obs: readonly { t: number }[], t: number): number {
   return lo;
 }
 
+/**
+ * Where a remembered cursor instant sits in a (possibly new) ascending list of times. The cursor is kept by TIMESTAMP,
+ * never by ordinal, so a window, metric, data or subject change cannot point it at another instant or past the end:
+ * the same instant keeps its place; an instant the list skips but spans snaps to the nearest point (the earlier on a
+ * tie); an instant outside the list's extent (or no instant, or an empty list) resolves to `null`, which every caller
+ * reads as "released to the latest point". The result is always a valid index or `null`.
+ */
+export function resolveCursor(times: readonly number[], t: number | null): number | null {
+  if (t === null || !Number.isFinite(t) || times.length === 0) return null;
+  if (t < times[0] || t > times[times.length - 1]) return null;
+  const i = nearestTimeIndex(times, t);
+  return i >= 0 && i < times.length ? i : null;
+}
+
 /** Keyboard model shared by every chart: arrows move one, Shift+arrows ten, Home/End jump, Escape releases. */
 export function stepCursor(current: number | null, key: string, shift: boolean, count: number, latest: number): number | null {
   if (count <= 0) return null;
