@@ -30,8 +30,9 @@ import { usePresentation } from "../app/presentation";
 import { PanelState } from "./components/states";
 import { ensureRetainedReview, retainedSessionKey, useRetainedReview } from "./retainedReview";
 import { useSession } from "../auth/session";
-
 import { createHttpApi } from "./api/httpApi";
+import { useValueStableApi } from "./useValueStableApi";
+
 import { contractFor, useExecutionRuntime } from "./useExecutionRuntime";
 import { isAvailable, unavailableSentence } from "./screenContracts";
 import { governanceWriteBlocked, type DeliveryPolicy } from "./profile";
@@ -341,18 +342,19 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
   // No query parameter and no registry profile flag may swap real financial
   // data for a fixture on a product route; the fixture port lives on only in
   // unit tests and the fixture lab.
-  const api = useMemo(() => createHttpApi({ policy }), [policy]);
   /*
-   * UXM-10 F-8. `policy` is rebuilt by `screenDeliveryPolicy` on every render of the routes, so `api` above is a new object
-   * after every URL change, and a screen that lists `api` in its read effects reads everything again: once per tab click and once
-   * more when `?tab=Promotion+plans` is rewritten to its canonical slug (certification, capabilities and eligibility each read
-   * twice). The V2 Sandbox gets an api keyed on the policy's VALUE; the other screens keep `api` as they had it.
+   * UXM-10 F-8 / RV-07. `policy` is rebuilt by `screenDeliveryPolicy` on every render of the routes, so a port keyed on the policy
+   * OBJECT was a new `api` after every URL change, and every screen that lists `api` in a read effect read everything again: once
+   * per tab click and once more when `?tab=Promotion+plans` was rewritten to its slug. The port is now keyed on the VALUE of the
+   * policy and the session (useValueStableApi), for every screen: a tab, a selection or a slug keeps it and reads nothing; a new
+   * policy value or session is a new port, the old one is aborted and the runtime catalogue forgotten. A workspace or query
+   * change is not in the port: it is a prop (`workspaceId`, `binding`) that each screen's read effect lists, cancels and fences.
+   * The cockpit's New request drawer writes through the New-request screen's own policy, not the inbox's.
    */
-  const policyKey = JSON.stringify(policy);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the value on purpose
-  const stableApi = useMemo(() => createHttpApi({ policy }), [policyKey]);
-  // The cockpit's New request drawer writes through the New-request screen's own policy, not the inbox's.
-  const requestApi = useMemo(() => createHttpApi({ policy: requestPolicy }), [requestPolicy]);
+  const scopeKey = retainedSessionKey(useSession().principal);
+  // The product transport is the same-origin BFF, unconditionally (N29-FE-01): `createHttpApi` is the only factory the route names.
+  const api = useValueStableApi(policy, scopeKey, { make: createHttpApi });
+  const requestApi = useValueStableApi(requestPolicy, scopeKey, { make: createHttpApi, forgetRuntime: false });
   /*
    * PHASE 6 (round 2) · the workspace the URL names, sent to the reads that
    * accept one.
@@ -573,7 +575,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
       // entry screen of WF 1d; /:deploymentId opens that certification.
       content = deploymentId
         ? V2Sandbox && isV2Screen("sandbox")
-          ? <Suspense fallback={null}>{V2StageEligibility ? <V2StageEligibility api={stableApi} workspaceId={routeWorkspaceId}><V2Sandbox api={stableApi} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></V2StageEligibility> : <V2Sandbox api={stableApi} deploymentId={deploymentId} workspaceId={routeWorkspaceId} />}</Suspense>
+          ? <Suspense fallback={null}>{V2StageEligibility ? <V2StageEligibility api={api} workspaceId={routeWorkspaceId}><V2Sandbox api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></V2StageEligibility> : <V2Sandbox api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} />}</Suspense>
           : <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
         : stageListRedirect("sandbox") ?? <SandboxOverviewRichContainer api={api} />;
       break;

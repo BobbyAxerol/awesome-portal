@@ -147,121 +147,121 @@ interface Budget {
 // BUDGET_BEGIN (generated from UXM10_MEASURE_OUT; do not hand-edit a measured value)
 const BUDGET: Readonly<Record<string, Budget>> = {
   access: {
-    first: { api: [6, 8], apiBytes: [92853, 116067], assets: [42, 53], assetBytes: [1083525, 1354407] },
+    first: { api: [6, 8], apiBytes: [92853, 116067], assets: [41, 52], assetBytes: [1100505, 1375632] },
     tab: { api: [2, 3], apiBytes: [986, 1233] },
   },
   "account-360": {
-    first: { api: [11, 14], apiBytes: [110738, 138423], assets: [86, 108], assetBytes: [3083870, 3854838] },
-    tab: { api: [3, 4], apiBytes: [7537, 9422] },
+    first: { api: [14, 18], apiBytes: [113455, 141819], assets: [86, 108], assetBytes: [3126399, 3907999] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   accounts: {
-    first: { api: [8, 10], apiBytes: [102324, 127905], assets: [86, 108], assetBytes: [3083870, 3854838] },
-    tab: { api: [1, 2], apiBytes: [756, 945] },
+    first: { api: [10, 13], apiBytes: [104308, 130385], assets: [86, 108], assetBytes: [3126399, 3907999] },
+    tab: { api: [2, 3], apiBytes: [2008, 2510] },
   },
   admin: {
-    first: { api: [11, 14], apiBytes: [202856, 253570], assets: [82, 103], assetBytes: [2957595, 3696994] },
+    first: { api: [13, 17], apiBytes: [204840, 256050], assets: [81, 102], assetBytes: [2999650, 3749563] },
   },
   "alpha-360": {
-    first: { api: [10, 13], apiBytes: [128770, 160963], assets: [88, 110], assetBytes: [3084931, 3856164] },
-    tab: { api: [2, 3], apiBytes: [24676, 30845] },
+    first: { api: [12, 15], apiBytes: [130754, 163443], assets: [87, 109], assetBytes: [3141483, 3926854] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "alpha-replay": {
-    first: { api: [13, 17], apiBytes: [137510, 171888], assets: [88, 110], assetBytes: [3254835, 4068544] },
-    tab: { api: [3, 4], apiBytes: [27527, 34409] },
+    first: { api: [15, 19], apiBytes: [139494, 174368], assets: [87, 109], assetBytes: [3311387, 4139234] },
+    tab: { api: [1, 2], apiBytes: [2851, 3564] },
   },
   blotter: {
-    first: { api: [10, 13], apiBytes: [166279, 207849], assets: [79, 99], assetBytes: [2928068, 3660085] },
+    first: { api: [12, 15], apiBytes: [168263, 210329], assets: [80, 100], assetBytes: [3004018, 3755023] },
   },
   canary: {
-    first: { api: [9, 12], apiBytes: [120277, 150347], assets: [89, 112], assetBytes: [3044958, 3806198] },
-    tab: { api: [2, 3], apiBytes: [19034, 23793] },
+    first: { api: [11, 14], apiBytes: [122261, 152827], assets: [90, 113], assetBytes: [3088585, 3860732] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "canary-guard": {
-    first: { api: [9, 12], apiBytes: [120277, 150347], assets: [89, 112], assetBytes: [3044958, 3806198] },
-    tab: { api: [2, 3], apiBytes: [19034, 23793] },
+    first: { api: [11, 14], apiBytes: [122261, 152827], assets: [90, 113], assetBytes: [3088585, 3860732] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "canary-v2body": {
-    first: { api: [12, 15], apiBytes: [111880, 139850], assets: [89, 112], assetBytes: [3044958, 3806198] },
-    tab: { api: [2, 3], apiBytes: [4694, 5868] },
+    first: { api: [10, 13], apiBytes: [107186, 133983], assets: [90, 113], assetBytes: [3088585, 3860732] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   cockpit: {
-    first: { api: [11, 14], apiBytes: [106650, 133313], assets: [87, 109], assetBytes: [3080234, 3850293] },
+    first: { api: [13, 17], apiBytes: [108634, 135793], assets: [87, 109], assetBytes: [3125845, 3907307] },
   },
   "cockpit-r1": {
-    first: { api: [11, 14], apiBytes: [106447, 133059], assets: [87, 109], assetBytes: [3080234, 3850293] },
+    first: { api: [13, 17], apiBytes: [108431, 135539], assets: [87, 109], assetBytes: [3125845, 3907307] },
   },
   compare: {
-    first: { api: [8, 10], apiBytes: [103504, 129380], assets: [90, 113], assetBytes: [3046285, 3807857] },
+    first: { api: [10, 13], apiBytes: [105488, 131860], assets: [89, 112], assetBytes: [3088645, 3860807] },
   },
   fleet: {
-    first: { api: [8, 10], apiBytes: [109472, 136840], assets: [85, 107], assetBytes: [2982994, 3728743] },
+    first: { api: [10, 13], apiBytes: [111456, 139320], assets: [84, 105], assetBytes: [3025288, 3781610] },
     tab: { api: [1, 2], apiBytes: [7301, 9127] },
   },
   incident: {
-    first: { api: [10, 13], apiBytes: [109718, 137148], assets: [84, 105], assetBytes: [2995680, 3744600] },
+    first: { api: [12, 15], apiBytes: [111702, 139628], assets: [83, 104], assetBytes: [3037310, 3796638] },
   },
   live: {
-    first: { api: [9, 12], apiBytes: [118582, 148228], assets: [89, 112], assetBytes: [3068180, 3835225] },
-    tab: { api: [2, 3], apiBytes: [17339, 21674] },
+    first: { api: [11, 14], apiBytes: [120566, 150708], assets: [90, 113], assetBytes: [3087891, 3859864] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "live-continuity": {
-    first: { api: [9, 12], apiBytes: [118582, 148228], assets: [89, 112], assetBytes: [3068180, 3835225] },
-    tab: { api: [2, 3], apiBytes: [17339, 21674] },
+    first: { api: [11, 14], apiBytes: [120566, 150708], assets: [90, 113], assetBytes: [3087891, 3859864] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "live-v2body": {
-    first: { api: [10, 13], apiBytes: [132712, 165890], assets: [89, 112], assetBytes: [3068180, 3835225] },
-    tab: { api: [2, 3], apiBytes: [30220, 37775] },
+    first: { api: [10, 13], apiBytes: [132712, 165890], assets: [90, 113], assetBytes: [3087891, 3859864] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "new-request": {
-    first: { api: [9, 12], apiBytes: [105968, 132460], assets: [85, 107], assetBytes: [2976871, 3721089] },
+    first: { api: [11, 14], apiBytes: [107952, 134940], assets: [83, 104], assetBytes: [2974503, 3718129] },
   },
   "new-request-drawer": {
-    first: { api: [14, 18], apiBytes: [114408, 143010], assets: [87, 109], assetBytes: [3080234, 3850293] },
+    first: { api: [15, 19], apiBytes: [113359, 141699], assets: [87, 109], assetBytes: [3125845, 3907307] },
   },
   operations: {
-    first: { api: [9, 12], apiBytes: [108965, 136207], assets: [84, 105], assetBytes: [2995680, 3744600] },
+    first: { api: [11, 14], apiBytes: [110949, 138687], assets: [83, 104], assetBytes: [3037310, 3796638] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   overview: {
-    first: { api: [11, 14], apiBytes: [121575, 151969], assets: [88, 110], assetBytes: [3043768, 3804710] },
+    first: { api: [13, 17], apiBytes: [123559, 154449], assets: [87, 109], assetBytes: [3084739, 3855924] },
   },
   "portfolio-360": {
-    first: { api: [14, 18], apiBytes: [121723, 152154], assets: [93, 117], assetBytes: [3095302, 3869128] },
-    tab: { api: [12, 15], apiBytes: [21216, 26520] },
+    first: { api: [16, 20], apiBytes: [123707, 154634], assets: [92, 115], assetBytes: [3134674, 3918343] },
+    tab: { api: [1, 2], apiBytes: [736, 920] },
   },
   portfolios: {
-    first: { api: [8, 10], apiBytes: [103504, 129380], assets: [82, 103], assetBytes: [2905958, 3632448] },
+    first: { api: [10, 13], apiBytes: [105488, 131860], assets: [84, 105], assetBytes: [2992915, 3741144] },
   },
   sandbox: {
-    first: { api: [10, 13], apiBytes: [116282, 145353], assets: [86, 108], assetBytes: [3000526, 3750658] },
+    first: { api: [12, 15], apiBytes: [118266, 147833], assets: [85, 107], assetBytes: [3018684, 3773355] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "sandbox-plans": {
-    first: { api: [10, 13], apiBytes: [116282, 145353], assets: [85, 107], assetBytes: [2976274, 3720343] },
+    first: { api: [12, 15], apiBytes: [118266, 147833], assets: [85, 107], assetBytes: [3018684, 3773355] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "sandbox-steps": {
-    first: { api: [10, 13], apiBytes: [116282, 145353], assets: [85, 107], assetBytes: [2976274, 3720343] },
+    first: { api: [12, 15], apiBytes: [118266, 147833], assets: [85, 107], assetBytes: [3018684, 3773355] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "sandbox-v2body": {
-    first: { api: [11, 14], apiBytes: [109345, 136682], assets: [85, 107], assetBytes: [2976274, 3720343] },
+    first: { api: [11, 14], apiBytes: [109345, 136682], assets: [85, 107], assetBytes: [3018684, 3773355] },
     tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   users: {
-    first: { api: [6, 8], apiBytes: [111730, 139663], assets: [48, 60], assetBytes: [1119649, 1399562] },
+    first: { api: [8, 10], apiBytes: [113714, 142143], assets: [47, 59], assetBytes: [1136772, 1420965] },
   },
   workbench: {
-    first: { api: [9, 12], apiBytes: [179819, 224774], assets: [87, 109], assetBytes: [3064300, 3830375] },
-    tab: { api: [2, 3], apiBytes: [78576, 98220] },
+    first: { api: [11, 14], apiBytes: [181803, 227254], assets: [86, 108], assetBytes: [3104896, 3881120] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "workbench-fills": {
-    first: { api: [9, 12], apiBytes: [179819, 224774], assets: [86, 108], assetBytes: [3040048, 3800060] },
-    tab: { api: [2, 3], apiBytes: [78576, 98220] },
+    first: { api: [11, 14], apiBytes: [181803, 227254], assets: [85, 107], assetBytes: [3080644, 3850805] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
   "workbench-vnm": {
-    first: { api: [9, 12], apiBytes: [180569, 225712], assets: [87, 109], assetBytes: [3064300, 3830375] },
-    tab: { api: [2, 3], apiBytes: [79326, 99158] },
+    first: { api: [11, 14], apiBytes: [182553, 228192], assets: [86, 108], assetBytes: [3104896, 3881120] },
+    tab: { api: [0, 0], apiBytes: [0, 0] },
   },
 };
 // BUDGET_END
