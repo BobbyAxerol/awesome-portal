@@ -17,7 +17,7 @@
 import { Link } from "react-router-dom";
 
 import { DockAction } from "../../Drawer";
-import { JourneySpine, NotPublished, SectionPanel, StageChipRow, type StageChips, type StageChipValue } from "../../blocks";
+import { JourneySpine, SectionPanel, gapTitle, StageChipRow, type StageChips, type StageChipValue } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import { reconciliationFactOf, runtimeFactOf } from "../../readers/stageFactViews";
@@ -92,7 +92,6 @@ export function Header({ deploymentId, deployment, variant, chips, identity, cal
       <div className="exec-wb-headmain">
         <nav className="exec-wb-path" aria-label="Breadcrumb">
           <ol>
-            {links.alpha ? <li><Link className="exec-blk-link" to={links.alpha}>← Alpha</Link></li> : null}
             <li><Link className="exec-blk-link" to={links.fleet}>Alpha Fleet</Link></li>
             {strategy !== null ? links.alpha ? <li><Link className="exec-blk-link" to={links.alpha}>{strategy}</Link></li> : <li>{strategy}</li> : null}
             <li aria-current="page">Paper monitor</li>
@@ -103,7 +102,6 @@ export function Header({ deploymentId, deployment, variant, chips, identity, cal
           <span className="exec-wb-stage" data-stage="paper"><i aria-hidden="true" />Paper</span>
           {variant === "vnm" ? <span className="exec-wb-stage" data-stage="vnm">VN market</span> : null}
         </h1>
-        <p className="exec-wb-question">Tracking approved evidence? Ready to leave Paper?</p>
         <p className="exec-wb-sub">
           {links.portfolio && deployment?.portfolioId ? (
             <Link className="exec-blk-link" to={links.portfolio} title={identity.portfolioNameReasonCode ?? undefined}>{portfolioLabel(identity, deployment.portfolioId)}</Link>
@@ -115,13 +113,11 @@ export function Header({ deploymentId, deployment, variant, chips, identity, cal
           ) : (
             <span>Account not available</span>
           )}
-          <span>Simulated</span>
           <span><AlphaNameLine identity={identity} /></span>
           {variant === "vnm" ? <span>VN market calendar: <VenueCalendarLine calendar={calendar} /></span> : null}
         </p>
       </div>
       <div className="exec-wb-ctrls">
-        {links.alpha ? <Link className="exec-blk-link" to={links.alpha}>Alpha</Link> : null}
         {accountsVisible && links.account ? <Link className="exec-blk-link" to={links.account}>Account</Link> : null}
         <Link className="exec-blk-link" to={links.operations}>Operations</Link>
         <button type="button" className="exec-wb-btn" onClick={read.onRefresh} aria-busy={read.refreshing ? true : undefined}>
@@ -148,16 +144,15 @@ export function LifecyclePanel({ gate, accessHref }: LifecycleProps) {
       title="Lifecycle"
       aside={
         <span className="exec-wb-aside">
-          Paper · observation gate <Flag kind={verdict.kind} label={verdict.label} size="sm" />
+          Observation gate <Flag kind={verdict.kind} label={verdict.label} size="sm" />
         </span>
       }
     >
       <div className="exec-wb-life">
-        <div className="exec-wb-spine">
+        <div className="exec-wb-spine" title={gapTitle("FE-027/028", "Stage history, gate criteria and decider")}>
           <JourneySpine variant="compact" current="paper" blocked={gate.verdict === "blocked"} label="Deployment lifecycle" />
-          <p className="exec-wb-cap">Stage history, gate criteria and decider: <NotPublished id="FE-027/028" /></p>
         </div>
-        <div className="exec-wb-gate">
+        <div className="exec-wb-gate" title={gate.verdict === "none" ? gapTitle("FE-028", "Gate criteria") : undefined}>
           <DockAction label="Request exit review" reason={exitReviewReason(gate)} accessHref={accessHref} />
         </div>
       </div>

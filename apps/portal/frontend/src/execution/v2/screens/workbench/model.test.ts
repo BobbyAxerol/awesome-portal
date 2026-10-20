@@ -251,9 +251,9 @@ describe("the observation gate: the verdict is the server's", () => {
     expect(exitReviewReason(gate("partial"))).toBe("Blocked: the observation gate is partial.");
     expect(exitReviewReason(gate("blocked"))).toBe("Blocked: the observation gate is blocked.");
     expect(exitReviewReason(gate("not-met"))).toBe("Blocked: the observation gate is not met.");
-    expect(exitReviewReason(gate("met"))).toMatch(/^Not published \(FE-028\)\./);
-    expect(exitReviewReason(gate("available"))).toMatch(/^Not published \(FE-028\)\./);
-    expect(exitReviewReason(gate("none"))).toMatch(/^Not published \(FE-028\)\./);
+    expect(exitReviewReason(gate("met"))).toBe("Not offered from this screen yet.");
+    expect(exitReviewReason(gate("available"))).toBe("Not offered from this screen yet.");
+    expect(exitReviewReason(gate("none"))).toBe("Not offered from this screen yet.");
     for (const v of ["partial", "met", "none", "unknown"]) expect(exitReviewReason(gate(v)).includes("\n")).toBe(false);
   });
 });
@@ -315,7 +315,7 @@ describe("equity and accounting", () => {
     expect((equity.state as { reason: string }).reason).toContain("2 snapshots have an equity value that could not be read");
   });
 
-  it.each([[0, /No equity snapshot is published/], [1, /Only 1 drawable equity snapshot is published/]])("%i snapshots draw nothing and say why", (n, reason) => {
+  it.each([[0, /No equity snapshot published/], [1, /1 drawable equity snapshot; a line needs 2/]])("%i snapshots draw nothing and say why", (n, reason) => {
     const equity = model(paperWire({ equity: n })).equity;
     expect(equity.state).toMatchObject({ kind: "unavailable", copy: "Not available" });
     expect((equity.state as { reason: string }).reason).toMatch(reason);

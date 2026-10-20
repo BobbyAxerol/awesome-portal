@@ -56,6 +56,23 @@
   white-space: nowrap;
 }
 
+/* One line for every unpublished fact of a panel; the request ids and reasons ride on its title. */
+.exec-blk-gaps {
+  margin: 0;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-blk-gaps-lead {
+  color: var(--ink-faint);
+}
+.exec-blk-gaps-why {
+  color: var(--ink-faint);
+}
+.exec-blk-na[data-gap] {
+  cursor: help;
+}
+
 /* ---- metric ------------------------------------------------------------- */
 
 .exec-blk-metric {

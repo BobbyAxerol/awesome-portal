@@ -37,7 +37,7 @@ export function TablePanel<R extends { key: string }>({ label, noun, table, colu
         rows={table.rows}
         rowKey={(row) => row.key}
         label={label}
-        empty={<span className="exec-wb-empty">{`No ${noun} are published for this deployment.`}</span>}
+        empty={<span className="exec-wb-empty">{`No ${noun}`}</span>}
       />
       <p className="exec-wb-cap" data-testid={`${label}-cap`}>{table.label}</p>
     </div>

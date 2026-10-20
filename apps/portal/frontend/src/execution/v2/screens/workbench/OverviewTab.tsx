@@ -14,9 +14,8 @@
 import type { ReactNode } from "react";
 
 import type { DeploymentQuality } from "../../../api/derivations";
-import { formatExact } from "../../../formatExact";
 import { Flag } from "../../Flag";
-import { Kpi, KpiStrip, NotPublished, PanelGate, SectionPanel } from "../../blocks";
+import { GapLine, Kpi, KpiStrip, PanelGate, SectionPanel } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { EquityPanel } from "../../charts";
 import { At, Fig, Na } from "./cells";
@@ -52,15 +51,16 @@ function EquityBlock({ model }: { model: WorkbenchModel }) {
         currency={equity.currency ?? undefined}
         state={equity.state}
         segments={equity.segments}
-        drawdown={{ kind: "absent", copy: "Not published (FE-013)", reason: "The snapshot drawdown carries no published scale" }}
         serverEnvelope={envelope}
         height={240}
       />
-      <p className="exec-wb-cap">
-        <span>Approved band: <NotPublished id="FE-029" /></span>
-        <span>Window: <NotPublished id="FE-025" /></span>
-        <span>{equity.rows === 1 ? "1 snapshot" : `${formatExact(String(equity.rows), "count").display} snapshots`} published</span>
-      </p>
+      <GapLine
+        items={[
+          { label: "Drawdown", id: "FE-013", reason: "The snapshot drawdown carries no published scale" },
+          { label: "Approved band", id: "FE-029" },
+          { label: "Window", id: "FE-025" },
+        ]}
+      />
     </SectionPanel>
   );
 }
@@ -142,10 +142,9 @@ function Accounting({ model }: { model: WorkbenchModel }) {
               <td><Fig value={a.fees} /></td>
             </tr>
             <tr>
-              <th scope="row">Funding</th>
+              <th scope="row" title="Counted separately">Funding</th>
               <td>
-                <Fig value={a.funding} signed />
-                <span className="exec-wb-why">Counted separately</span>
+                <Fig value={a.funding} signed why="Counted separately" />
               </td>
             </tr>
             <tr>
@@ -175,22 +174,24 @@ function qualityBody(quality: ReadState<DeploymentQuality>): { body: ReactNode; 
   return {
     partial: facts.partial,
     body: (
-      <KpiStrip label="Execution quality" columns={5}>
-        <Kpi label="Sessions" {...kpiOf(facts.sessions)} />
-        <Kpi label="Orders" {...kpiOf(facts.orders)} />
-        <Kpi label="Fills" {...kpiOf(facts.fills)} />
-        <Kpi label="Rejected" {...kpiOf(facts.rejected)}>
-          {facts.submitted.kind === "value" ? <>Of {facts.submitted.decimal.display} submitted</> : "Submitted count not published"}
-        </Kpi>
-        <Kpi label="Latency" absentReason={facts.latencyReason ?? "No latency figure is published"} />
-      </KpiStrip>
+      <>
+        <KpiStrip label="Execution quality" columns={4}>
+          <Kpi label="Sessions" {...kpiOf(facts.sessions)} />
+          <Kpi label="Orders" {...kpiOf(facts.orders)} />
+          <Kpi label="Fills" {...kpiOf(facts.fills)} />
+          <Kpi label="Rejected" {...kpiOf(facts.rejected)}>
+            {facts.submitted.kind === "value" ? <>Of {facts.submitted.decimal.display} submitted</> : null}
+          </Kpi>
+        </KpiStrip>
+        <GapLine items={[{ label: "Latency", reason: facts.latencyReason ?? "No latency figure is published" }]} />
+      </>
     ),
   };
 }
 
 function ExecutionQuality({ quality, notQualified }: { quality: ReadState<DeploymentQuality>; notQualified: boolean }) {
   const { body, partial } = notQualified
-    ? { body: <PanelGate status="unavailable" reason="The source is not qualified, so execution quality is not available." />, partial: false }
+    ? { body: <PanelGate status="unavailable" reason="Source not qualified." />, partial: false }
     : qualityBody(quality);
   return (
     <SectionPanel level={2} title="Execution quality" aside={partial ? <Flag kind="partial" label="Partial" size="sm" /> : undefined}>

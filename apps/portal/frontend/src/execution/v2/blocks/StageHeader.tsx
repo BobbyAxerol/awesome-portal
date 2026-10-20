@@ -24,7 +24,7 @@ import { Flag } from "../Flag";
 import type { FlagKind } from "../flagKinds";
 import { JourneySpine, type JourneySpineProps } from "./JourneySpine";
 import { NO_VALUE_COPY } from "./metric";
-import { NotPublished, type NotPublishedId } from "./notPublished";
+import { gapTitle, type NotPublishedId } from "./notPublished";
 import "../css/blocks.css";
 import "../css/stage.css";
 
@@ -99,6 +99,18 @@ export interface StageHeaderProps {
   renderLink?: (to: string, children: ReactNode) => ReactNode;
 }
 
+/** A chip that says nothing: the request is not published, or the source answered nothing and gave no reason. */
+function isGap(value: StageChipValue): boolean {
+  return value.state === "not-published" || (value.state === "not-available" && !value.reason);
+}
+
+/** The tooltip of an unpublished chip: the request id and label, the server's reason, and what IS known. */
+function gapChipTitle(value: StageChipValue): string | undefined {
+  if (value.state !== "not-published") return undefined;
+  const reason = [value.reasonCode, value.detail].filter((part): part is string => Boolean(part)).join(" · ");
+  return gapTitle(value.id, null, reason || null);
+}
+
 /** One chip value on its own (the Paper workbench's summary bar prints the same words as the header chips). */
 export function ChipBody({ value }: { value: StageChipValue }) {
   switch (value.state) {
@@ -110,10 +122,11 @@ export function ChipBody({ value }: { value: StageChipValue }) {
         </>
       );
     case "not-published":
+      // The request id, its label and the server's reason are the tooltip; the words are the plain `Not available`.
       return (
-        <NotPublished id={value.id} titleReason={value.reasonCode}>
-          {value.detail}
-        </NotPublished>
+        <span className="exec-blk-na" data-gap={value.id} title={gapChipTitle(value)}>
+          {NO_VALUE_COPY}
+        </span>
       );
     case "not-available":
       return <span className="exec-blk-na">{value.reason ? `${NO_VALUE_COPY} · ${value.reason}` : NO_VALUE_COPY}</span>;
@@ -138,12 +151,18 @@ export function ChipBody({ value }: { value: StageChipValue }) {
   }
 }
 
-/** The three state chips on their own (the Paper workbench reuses them in its KPI tiles). */
+/**
+ * The three state chips on their own (the Paper workbench reuses them). A chip that says nothing is not drawn three
+ * times: the chips that are not published are ONE chip, `Not available  Runtime, Reconciliation`, with each request
+ * id and reason in its tooltip. A chip that carries a state (or its own reason) keeps its place.
+ */
 export function StageChipRow({ chips }: { chips: StageChips }) {
+  const gaps = CHIP_ORDER.filter((id) => isGap(chips[id]));
+  const shown = CHIP_ORDER.filter((id) => !isGap(chips[id]));
   return (
     <div role="group" aria-label="Deployment state">
       <dl className="exec-stage-chips">
-        {CHIP_ORDER.map((id) => (
+        {shown.map((id) => (
           <div key={id} className="exec-stage-chip" data-chip={id} data-state={chips[id].state}>
             <dt className="exec-blk-kpi-label">{STAGE_CHIP_LABELS[id]}</dt>
             <dd aria-busy={chips[id].state === "loading" ? true : undefined}>
@@ -151,6 +170,17 @@ export function StageChipRow({ chips }: { chips: StageChips }) {
             </dd>
           </div>
         ))}
+        {gaps.length > 0 ? (
+          <div
+            className="exec-stage-chip"
+            data-chip="gaps"
+            data-state="not-available"
+            title={gaps.map((id) => `${STAGE_CHIP_LABELS[id]}: ${gapChipTitle(chips[id]) ?? NO_VALUE_COPY}`).join("\n")}
+          >
+            <dt className="exec-blk-kpi-label">{NO_VALUE_COPY}</dt>
+            <dd>{gaps.map((id) => STAGE_CHIP_LABELS[id]).join(", ")}</dd>
+          </div>
+        ) : null}
       </dl>
     </div>
   );

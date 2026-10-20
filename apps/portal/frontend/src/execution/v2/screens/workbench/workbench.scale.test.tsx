@@ -101,8 +101,8 @@ describe("a long equity series", () => {
     const figure = document.querySelector("figure.exec-eq2")!;
     expect(figure.querySelectorAll("svg *").length).toBeLessThan(150);
     expect(figure.textContent).toMatch(/5,000|of 1,438|reduced|kept/);
-    // The published downsample says 1,438 source rows; it is 5,000 here, so it is repeated only when it is consistent.
-    expect(screen.getByText("5,000 snapshots published", { exact: false })).toBeTruthy();
+    // The chart's own caption carries the count; the panel no longer prints a second "N snapshots published".
+    expect(document.body.textContent).not.toContain("snapshots published");
   });
 });
 

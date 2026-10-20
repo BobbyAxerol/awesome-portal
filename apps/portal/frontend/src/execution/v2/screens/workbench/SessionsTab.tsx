@@ -6,7 +6,7 @@
  * recorded in this window" (the server counted them), and `source_complete: false` or omitted rows are worded.
  */
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { NotPublished, SectionPanel } from "../../blocks";
+import { GapLine, SectionPanel } from "../../blocks";
 import { formatAsOf, readAsOf } from "../../boundary";
 import type { StageSessionRow, StageSessions } from "../../../stageFacts";
 import { Fig, Na } from "./cells";
@@ -20,7 +20,7 @@ const when = (iso: string | null): string | null => {
 const COLUMNS: readonly CardsColumn<StageSessionRow>[] = [
   { key: "id", label: "Session", render: (r) => <span className="exec-blk-id">{r.id}</span> },
   { key: "started", label: "Started", render: (r) => when(r.started) },
-  { key: "ended", label: "Ended", render: (r) => (r.ended === null ? <span className="exec-wb-why">No completion time</span> : when(r.ended)) },
+  { key: "ended", label: "Ended", render: (r) => (r.ended === null ? <Na why="No completion time" /> : when(r.ended)) },
   { key: "state", label: "State", render: (r) => (r.state === null ? <Na /> : humanize(r.state)) },
 ];
 
@@ -28,21 +28,14 @@ export function SessionsTab({ counted, sessions }: { counted: Figure; sessions: 
   return (
     <SectionPanel level={2} title="Sessions">
       {sessions === null ? (
-        <p className="exec-wb-cap">
-          Session rows: <NotPublished id="FE-067">Started, ended and state</NotPublished>
-        </p>
+        <GapLine items={[{ label: "Session rows", id: "FE-067" }]} />
       ) : sessions.availability === "NOT_PUBLISHED" ? (
-        <p className="exec-wb-cap">
-          Session rows:{" "}
-          <NotPublished id="FE-067" titleReason={sessions.reasonCode}>
-            Started, ended and state
-          </NotPublished>
-        </p>
+        <GapLine items={[{ label: "Session rows", id: "FE-067", reason: sessions.reasonCode }]} />
       ) : (
         <div className="exec-wb-tablewrap" data-table="Sessions">
-          <CardsTable columns={COLUMNS} rows={sessions.rows} rowKey={(r) => r.id} label="Sessions" empty={<span className="exec-wb-empty">No sessions are recorded in this window.</span>} />
+          <CardsTable columns={COLUMNS} rows={sessions.rows} rowKey={(r) => r.id} label="Sessions" empty={<span className="exec-wb-empty">No sessions</span>} />
           <p className="exec-wb-cap" data-testid="Sessions-cap">
-            {sessions.returnedCount === 1 ? "1 session" : `${sessions.returnedCount.toLocaleString("en-US")} sessions`}, newest first
+            {sessions.returnedCount === 1 ? "1 session" : `${sessions.returnedCount.toLocaleString("en-US")} sessions`}
             {sessions.omittedCount > 0 ? ` · ${sessions.omittedCount.toLocaleString("en-US")} could not be read and ${sessions.omittedCount === 1 ? "is" : "are"} not listed` : ""}
             {sessions.sourceComplete === false ? " · the window may be incomplete" : ""}
           </p>

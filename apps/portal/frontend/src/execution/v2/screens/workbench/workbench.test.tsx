@@ -83,12 +83,13 @@ describe("screen contract", () => {
     const h1 = await ready();
     expect(h1.textContent).toContain("Paper");
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    // No identity keys in this profile: the alpha name is Not published (FE-066), no alpha id is shown, and the strategy id is NOT linked as an alpha.
-    expect(text()).toContain("Alpha name");
-    expect(text()).toContain("Not published (FE-066)");
+    // No identity keys in this profile: the alpha is `Alpha Not available` (FE-066 in the title), no alpha id is shown, and the strategy id is NOT linked as an alpha.
+    expect(text()).toContain("Alpha Not available");
+    expect(document.querySelector('.exec-wb-sub [data-gap="FE-066"]')!.getAttribute("title")).toContain("Not published (FE-066)");
+    expect(text()).not.toContain("(FE-066)");
     expect(screen.queryByRole("link", { name: STRATEGY })).toBeNull();
     expect(screen.queryByRole("link", { name: "← Alpha" })).toBeNull();
-    expect(text()).toContain("Tracking approved evidence? Ready to leave Paper?");
+    expect(text()).not.toContain("Tracking approved evidence");
   });
 
   it("identity published (FE-066, S3-U5): the Alpha is linked by alpha_id, never by the strategy id; the portfolio shows its name; the alpha name stays Not published with its reason", async () => {
@@ -100,8 +101,10 @@ describe("screen contract", () => {
     expect(screen.getByRole("link", { name: PORTFOLIO_NAME }).getAttribute("href")).toBe(`/deployments/portfolios/${PORTFOLIO}`);
     expect(screen.queryByRole("link", { name: PORTFOLIO })).toBeNull();
     expect(text()).toContain(`Alpha ${ALPHA_ID}`);
-    const gap = Array.from(document.querySelectorAll(".exec-wb-head .exec-blk-np")).find((n) => (n.textContent ?? "").includes("Alpha name"))!;
+    // The name is not announced a second time: the id stands alone and the request and the server's reason are its title.
+    const gap = Array.from(document.querySelectorAll(".exec-wb-head .exec-wb-sub span[title]")).find((n) => (n.textContent ?? "").includes(`Alpha ${ALPHA_ID}`))!;
     expect(gap.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    expect(gap.getAttribute("title")).toContain("FE-066");
   });
 
   it("identity keys that break the schema's rules (a name without its id; some of the five missing) are refused whole: no link, no name", async () => {
@@ -124,19 +127,24 @@ describe("screen contract", () => {
     const m = mount({ entry: `/deployments/paper/${DEP}/vn-market`, props: { variant: "vnm" } });
     await ready();
     expect(m.calls).toContain(`profile:${DEP}:vnm`);
-    expect(text()).toContain("VN market calendar: Not published (FE-070)");
+    expect(text()).toContain("VN market calendar: Not available");
+    expect(document.querySelector('.exec-wb-sub [data-gap="FE-070"]')!.getAttribute("title")).toContain("Not published (FE-070)");
     expect(screen.getByRole("heading", { level: 1 }).textContent).toContain("VN market");
   });
 });
 
 describe("the three chips never invent a state (D13a)", () => {
-  it("Runtime and Reconciliation are Not published (FE-067); the source flag rides beside Runtime, no green Running", async () => {
+  it("Runtime and Reconciliation are one `Not available` chip (FE-067 in its title); the source flag rides in that title, no green Running", async () => {
     mount();
     await ready();
-    expect(chip("runtime").textContent).toContain("Not published (FE-067)");
-    expect(chip("runtime").textContent).toContain("Source flag: active");
-    expect(chip("reconciliation").textContent).toContain("Not published (FE-067)");
+    expect(chip("runtime")).toBeNull();
+    expect(chip("reconciliation")).toBeNull();
+    expect(chip("gaps").textContent).toBe("Not availableRuntime, Reconciliation");
+    expect(chip("gaps").getAttribute("title")).toContain("Runtime: Not published (FE-067)");
+    expect(chip("gaps").getAttribute("title")).toContain("Source flag: active");
+    expect(chip("gaps").getAttribute("title")).toContain("Reconciliation: Not published (FE-067)");
     expect(text()).not.toMatch(/\bRunning\b|\bReconciling\b/);
+    expect(text()).not.toContain("(FE-067)");
   });
 
   it("an inactive flag is worded as the source's flag, not as Halted", async () => {
@@ -144,7 +152,7 @@ describe("the three chips never invent a state (D13a)", () => {
     wire.data.deployment.active = false;
     mount({ profile: { ok: true, value: envelopeOf(wire) } });
     await ready();
-    expect(chip("runtime").textContent).toContain("Source flag: inactive");
+    expect(chip("gaps").getAttribute("title")).toContain("Source flag: inactive");
     expect(text()).not.toMatch(/Halted|Stopped/);
   });
 
@@ -153,7 +161,7 @@ describe("the three chips never invent a state (D13a)", () => {
     wire.data.deployment.active = "yes";
     mount({ profile: { ok: true, value: envelopeOf(wire) } });
     await ready();
-    expect(chip("runtime").textContent).not.toContain("Source flag");
+    expect(chip("gaps").getAttribute("title")).not.toContain("Source flag");
   });
 
   it("freshness is the source's word and as-of; the browser prints no age", async () => {
@@ -185,7 +193,7 @@ describe("the three chips never invent a state (D13a)", () => {
 });
 
 describe("the lifecycle spine will not infer (D13b)", () => {
-  it("marks only Paper as now; R1 and R2 are not Done; history is Not published (FE-027/028)", async () => {
+  it("marks only Paper as now; R1 and R2 are not Done; history is Not published (FE-027/028) in the spine's title", async () => {
     mount();
     await ready();
     const spine = screen.getByRole("list", { name: "Deployment lifecycle" });
@@ -197,7 +205,8 @@ describe("the lifecycle spine will not infer (D13b)", () => {
     expect(within(spine).getByLabelText("R1 gate, Unknown")).toBeTruthy();
     expect(within(spine).getByLabelText("R2 gate, Unknown")).toBeTruthy();
     expect(within(spine).getByLabelText("Sandbox, Later")).toBeTruthy();
-    expect(text()).toContain("Stage history, gate criteria and decider: Not published (FE-027/028)");
+    expect(spine.closest(".exec-wb-spine")!.getAttribute("title")).toContain("Not published (FE-027/028): Stage history, gate criteria and decider");
+    expect(text()).not.toContain("Stage history, gate criteria and decider");
   });
 
   it("names the server's gate verdict in the panel head and blocks the spine only when the server says BLOCKED", async () => {
@@ -237,13 +246,14 @@ describe("Request exit review is disabled with a one-line reason (no command rou
     expect(m.calls).toHaveLength(before);
   });
 
-  it("with no gate published the reason is the request id", async () => {
+  it("with no gate published the reason is one short sentence and the request id is the control's title", async () => {
     const wire = paperWire();
     delete wire.data.observation_gate;
     mount({ profile: { ok: true, value: envelopeOf(wire) } });
     await ready();
     const button = screen.getByRole("button", { name: "Request exit review" });
-    expect(document.getElementById(button.getAttribute("aria-describedby")!)!.textContent).toMatch(/^Not published \(FE-028\)\./);
+    expect(document.getElementById(button.getAttribute("aria-describedby")!)!.textContent).toBe("Not offered from this screen yet.");
+    expect(button.closest(".exec-wb-gate")!.getAttribute("title")).toContain("Not published (FE-028)");
   });
 
   it("even a MET gate does not enable it: there is no route to call", async () => {
@@ -351,16 +361,17 @@ describe("Overview", () => {
     await ready();
     expect(screen.getByRole("heading", { name: "Equity vs approved band" })).toBeTruthy();
     expect(screen.getByTestId("readout-value").textContent).toContain("101,800.00");
-    expect(text()).toContain("Approved band: Not published (FE-029)");
-    expect(text()).toContain("Window: Not published (FE-025)");
-    expect(text()).toContain("Not published (FE-013)");
-    expect(text()).toContain("6 snapshots published");
+    // One line for the three unpublished facts; each request id is in its title.
+    const gaps = screen.getByRole("heading", { name: "Equity vs approved band" }).closest("section")!.querySelector(".exec-blk-gaps")!;
+    expect(gaps.textContent).toBe("Not available: Drawdown, Approved band, Window");
+    for (const id of ["FE-013", "FE-029", "FE-025"]) expect(gaps.getAttribute("title")).toContain(`Not published (${id})`);
+    expect(text()).not.toContain("snapshots published");
   });
 
   it("when there is nothing to draw the chart is a worded box, not an empty plot", async () => {
     mount({ profile: { ok: true, value: envelopeOf(paperWire({ equity: 0 })) } });
     await ready();
-    expect(text()).toContain("No equity snapshot is published for this deployment.");
+    expect(text()).toContain("No equity snapshot published.");
     expect(screen.queryByTestId("readout-value")).toBeNull();
   });
 
@@ -369,14 +380,19 @@ describe("Overview", () => {
     await ready();
     const panel = screen.getByRole("heading", { name: "Exit gate" }).closest("section")!;
     expect(panel.textContent).toContain("Partial");
-    expect(panel.textContent).toContain("Set by the server");
+    expect(within(panel).getByText("Partial").closest("td")!.getAttribute("title")).toBe("Set by the server");
+    expect(panel.textContent).not.toContain("Set by the server");
     expect(panel.textContent).toContain("3 of 14 days");
     expect(panel.textContent).toContain("2 of 20 trades");
     expect(panel.textContent).toContain("Bounded by the source");
-    expect(panel.textContent).toContain("SOURCE_RETENTION_SHORT");
-    expect(within(panel).getAllByText(/Not published/)).toHaveLength(3);
-    expect(panel.textContent).toContain("FE-029");
-    expect(panel.textContent).toContain("FE-028");
+    expect(within(panel).getByText("Bounded by the source").closest("td")!.getAttribute("title")).toBe("SOURCE_RETENTION_SHORT");
+    expect(panel.textContent).not.toContain("SOURCE_RETENTION_SHORT");
+    // The three unpublished criteria are one line; the request ids are in its title.
+    const gaps = panel.querySelector(".exec-blk-gaps")!;
+    expect(gaps.textContent).toBe("Not available: Drift vs approved band, Fills reconcile, Cost drift");
+    expect(gaps.getAttribute("title")).toContain("Not published (FE-029)");
+    expect(gaps.getAttribute("title")).toContain("Not published (FE-028)");
+    expect(panel.textContent).not.toContain("FE-0");
     expect(within(panel).getByRole("link", { name: "Open exit review" }).getAttribute("href")).toBe("/governance/exit-reviews");
     expect(panel.textContent).not.toMatch(/Insufficient data|Met\b/);
   });
@@ -404,19 +420,20 @@ describe("Overview", () => {
     expect(row(/Net PnL/)).toContain("+1,800.00");
     expect(row(/Fees/)).toContain("12.40");
     expect(row(/Funding/)).toContain("Not available");
-    expect(row(/Funding/)).toContain("Counted separately");
+    expect(within(panel).getByRole("row", { name: /Funding/ }).querySelector(".exec-blk-na")!.getAttribute("title")).toBe("Counted separately");
+    expect(row(/Funding/)).not.toContain("Counted separately");
     expect(row(/Cash free/)).toContain("91,200.00 · 10,600.00");
     expect(panel.querySelector('[data-tone="positive"]')).toBeTruthy();
   });
 
-  it("Accounting: a published funding figure prints, still labelled Counted separately", async () => {
+  it("Accounting: a published funding figure prints, its row still titled Counted separately", async () => {
     const wire = paperWire();
     wire.data.account_equity[5].funding_pnl = "-3.10";
     mount({ profile: { ok: true, value: envelopeOf(wire) } });
     await ready();
-    const row = within(screen.getByRole("heading", { name: "Accounting" }).closest("section")!).getByRole("row", { name: /Funding/ }).textContent ?? "";
-    expect(row).toContain("-3.10");
-    expect(row).toContain("Counted separately");
+    const funding = within(screen.getByRole("heading", { name: "Accounting" }).closest("section")!).getByRole("row", { name: /Funding/ });
+    expect(funding.textContent).toContain("-3.10");
+    expect(funding.querySelector("th")!.getAttribute("title")).toBe("Counted separately");
   });
 
   it("Execution quality: five counts as published, Partial flag, latency Not available with the source's own reason", async () => {
@@ -429,7 +446,11 @@ describe("Overview", () => {
       expect(kpis.getByText(label).closest("div")!.textContent, label).toContain(value);
     }
     expect(panel.textContent).toContain("Of 2 submitted");
-    expect(panel.textContent).toContain("Not available · BROKER_TIMESTAMPS_NOT_PUBLISHED");
+    // Latency is one `Not available: Latency` line; the source's own reason code is its title.
+    const gap = panel.querySelector(".exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Latency");
+    expect(gap.getAttribute("title")).toContain("BROKER_TIMESTAMPS_NOT_PUBLISHED");
+    expect(panel.textContent).not.toContain("BROKER_TIMESTAMPS_NOT_PUBLISHED");
     expect(within(panel).getByText("Partial")).toBeTruthy();
   });
 
@@ -499,15 +520,17 @@ describe("Orders, Fills, Positions, Sessions", () => {
     mount({ profile: { ok: true, value: envelopeOf(paperWire({ orders: 0 })) } });
     await ready();
     await openTab("Orders");
-    expect(text()).toContain("No orders are published for this deployment.");
+    expect(document.querySelector('[data-table="Orders"] .exec-wb-empty')!.textContent).toBe("No orders");
     cleanup();
     const wire = paperWire();
     delete wire.data.orders;
     mount({ profile: { ok: true, value: envelopeOf(wire) } });
     await ready();
     await openTab("Orders");
-    expect(text()).toContain("The profile carries no orders branch for this deployment.");
-    expect(text()).not.toContain("No orders are published");
+    // A missing branch is `Not available` (the sentence is its title); a published empty one is `No orders`.
+    const wrap = document.querySelector('[data-table="Orders"]')!;
+    expect(wrap.textContent).toBe("Not available");
+    expect(wrap.querySelector(".exec-blk-na")!.getAttribute("title")).toBe("The profile carries no orders branch for this deployment.");
   });
 
   it("Fills: when (UTC), order, quantity, price, fee with its currency", async () => {
@@ -531,7 +554,9 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Symbol", "Side", "Quantity", "Entry", "Mark", "Unrealised PnL"]);
     expect(within(table).getAllByRole("row")[1].textContent).toContain("BTCUSDT");
     expect(within(table).getAllByRole("row")[1].textContent).toContain("+9.54");
-    expect(text()).toContain("Long, Short and Gross columns: Not published (FE-051)");
+    const gap = document.querySelector(".exec-wb-sides .exec-blk-gaps, .exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Long, Short, Gross by instrument");
+    expect(gap.getAttribute("title")).toContain("Not published (FE-051)");
   });
 
   it("Positions: a flat row prints its zero quantity but no entry price, and says why", async () => {
@@ -543,8 +568,8 @@ describe("Orders, Fills, Positions, Sessions", () => {
     const flatRow = within(screen.getByRole("table", { name: "Positions" })).getAllByRole("row").find((r) => r.textContent?.includes("SOLUSDT"))!;
     const cells = within(flatRow).getAllByRole("cell").map((c) => c.textContent);
     expect(cells[2]).toBe("0");
-    expect(cells[3]).toContain("Not available");
-    expect(cells[3]).toContain("Flat: no entry price");
+    expect(cells[3]).toBe("Not available");
+    expect(within(flatRow).getAllByRole("cell")[3]!.querySelector(".exec-blk-na")!.getAttribute("title")).toBe("Flat: no entry price");
     expect(cells[3]).not.toContain("0.00");
     expect(cells[4]).toContain("152.30");
   });
@@ -555,9 +580,10 @@ describe("Orders, Fills, Positions, Sessions", () => {
     await openTab("Sessions");
     expect(screen.queryByRole("table", { name: /Sessions/ })?.getAttribute("aria-label")).not.toBe("Sessions rows");
     const panel = screen.getByRole("heading", { name: "Sessions" }).closest("section")!;
-    expect(panel.textContent).toContain("Not published (FE-067)");
-    // The reason the server gave rides in the title.
-    expect(panel.querySelector(".exec-blk-np")!.getAttribute("title")).toContain("PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN");
+    expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Session rows");
+    // The request and the reason the server gave ride in the title.
+    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-067)");
+    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN");
     await waitFor(() => expect(within(panel).getByRole("row", { name: /Sessions counted/ }).textContent).toContain("1"));
     expect(within(panel).getAllByRole("row")).toHaveLength(1);
   });
@@ -573,10 +599,11 @@ describe("Orders, Fills, Positions, Sessions", () => {
     const table = screen.getByRole("table", { name: "Sessions" });
     const rows = Array.from(table.querySelectorAll("tbody tr"));
     expect(rows.map((r) => r.querySelector('td[data-l="Session"]')!.textContent)).toEqual(["session_TEST_ONLY_2", "session_TEST_ONLY_1"]);
-    expect(rows[0]!.textContent).toContain("No completion time");
+    expect(rows[0]!.querySelector('td[data-l="Ended"]')!.textContent).toBe("Not available");
+    expect(rows[0]!.querySelector('td[data-l="Ended"] .exec-blk-na')!.getAttribute("title")).toBe("No completion time");
     expect(rows[0]!.querySelector('td[data-l="State"]')!.textContent).toBe("Running");
     expect(rows[1]!.querySelector('td[data-l="State"]')!.textContent).toBe("Completed");
-    expect(screen.getByTestId("Sessions-cap").textContent).toBe("2 sessions, newest first");
+    expect(screen.getByTestId("Sessions-cap").textContent).toBe("2 sessions");
   });
 
   it("Positions (positions_by_side published): Long, Short and Gross as the server wrote them; notional by side stays Not published; a partial block says what it left out", async () => {
@@ -588,8 +615,9 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(Array.from(first.querySelectorAll("td")).map((td) => td.textContent)).toEqual(["BTCUSDT", "0.91", "0.52", "1.43", "2"]);
     expect(Array.from(table.querySelectorAll("tbody tr"))[1]!.querySelector('td[data-l="Short"]')!.textContent).toBe("0");
     expect(text()).toContain("Not counted: 1 flat, 1 closed.");
-    expect(text()).toContain("Notional by side: Not published (FE-051)");
-    expect(text()).not.toContain("Long, Short and Gross columns: Not published (FE-051)");
+    const notional = Array.from(document.querySelectorAll(".exec-blk-gaps")).find((n) => n.textContent === "Not available: Notional by side")!;
+    expect(notional.getAttribute("title")).toContain("Not published (FE-051)");
+    expect(text()).not.toContain("Long, Short, Gross by instrument");
     cleanup();
     mount({ profile: { ok: true, value: envelopeOf(paperWire({ sides: "partial" })) } });
     await ready();
@@ -599,7 +627,7 @@ describe("Orders, Fills, Positions, Sessions", () => {
     mount({ profile: { ok: true, value: envelopeOf(paperWire({ sides: "unavailable" })) } });
     await ready();
     await openTab("Positions");
-    expect(text()).toContain("Long, Short and Gross columns: Not published (FE-051)");
+    expect(text()).toContain("Not available: Long, Short, Gross by instrument");
     expect(screen.queryByRole("table", { name: "Long, Short and Gross by instrument" })).toBeNull();
   });
 
@@ -661,11 +689,12 @@ describe("the On scroll summary bar", () => {
     mount({ profile: { ok: true, value: envelopeOf(paperWire({ identity: true })) } });
     await ready();
     const bar = screen.getByRole("complementary", { name: "Deployment summary" });
-    expect(bar.textContent).toContain("Deployment state");
     expect(bar.textContent).not.toContain("On scroll");
     expect(bar.textContent).toContain(`${STRATEGY} · Paper monitor`);
-    expect(bar.textContent).toContain("Runtime Not published (FE-067)");
-    expect(bar.textContent).toContain("Reconciliation Not published (FE-067)");
+    // What the header already says is not said twice: an unpublished Runtime and Reconciliation stay in the header's one chip.
+    expect(bar.textContent).not.toContain("Runtime");
+    expect(bar.textContent).not.toContain("Reconciliation");
+    expect(bar.textContent).not.toContain("Deployment state");
     expect(bar.textContent).toContain("As of 17 Oct 09:14Z");
     expect(within(bar).getByRole("link", { name: "← Alpha" }).getAttribute("href")).toBe(`/deployments/alphas/${ALPHA_ID}`);
   });
@@ -736,14 +765,14 @@ describe("states of the profile read (L1 matrix: outcome x quality x role)", () 
       expect(screen.getByRole("button", { name: "Try again" })).toBeTruthy();
       expect(Boolean(screen.queryByRole("link", { name: "My access" }))).toBe(picks.profile === "denied");
       expect(chip("runtime").textContent).toContain("Not available · The profile was not read");
-      expect(text()).not.toMatch(/Not published \(FE-067\)/);
+      expect(text()).not.toMatch(/FE-067/);
     } else {
       await screen.findByRole("tablist", { name: "Paper deployment sections" });
       expect(screen.getByRole("complementary", { name: "Deployment summary" })).toBeTruthy();
-      expect(screen.queryAllByText(/The profile is partial/).length > 0).toBe(picks.profile === "partial");
-      expect(screen.queryAllByText(/has not updated this deployment/).length > 0).toBe(picks.profile === "stale");
-      expect(chip("runtime").textContent).toContain("Not published (FE-067)");
-      expect(screen.queryAllByText("Source not qualified. Figures below are not available.").length > 0).toBe(picks.profile === "nq");
+      expect(screen.queryAllByText(/Some branches or rows may be missing/).length > 0).toBe(picks.profile === "partial");
+      expect(screen.queryAllByText(/No update within the freshness budget/).length > 0).toBe(picks.profile === "stale");
+      expect(chip("gaps").getAttribute("title")).toContain("Runtime: Not published (FE-067)");
+      expect(screen.queryAllByText("Source not qualified.").length > 0).toBe(picks.profile === "nq");
     }
     // Account facts follow the capability set in every state.
     expect(Boolean(screen.queryByText("Account not available"))).toBe(picks.role === "researcher" && !replaced ? true : picks.role === "researcher");
@@ -862,25 +891,27 @@ describe("nq: the source is not qualified (hi-fi state)", () => {
   it("keeps the frame, says so once with the published code, and draws no figure", async () => {
     mount({ profile: { ok: true, value: envelopeOf(nqWire()) } });
     await ready();
-    expect(screen.getByText("Source not qualified. Figures below are not available.")).toBeTruthy();
-    expect(text()).toContain("SOURCE_NOT_QUALIFIED");
+    const banner = screen.getByText("Source not qualified.", { selector: ".exec-blk-banner span" });
+    // The published reason codes are the banner's title, not a second printed line.
+    expect(banner.closest(".exec-blk-banner")!.getAttribute("title")).toContain("SOURCE_NOT_QUALIFIED");
+    expect(text()).not.toContain("SOURCE_NOT_QUALIFIED");
     expect(screen.getByRole("tablist")).toBeTruthy();
     expect(screen.queryByTestId("readout-value")).toBeNull();
-    expect(text()).toContain("The source is not qualified, so no equity series is available.");
+    expect(text()).toContain("Source not qualified.");
     const quality = (await screen.findByRole("heading", { name: "Execution quality" })).closest("section")!;
-    expect(quality.textContent).toContain("The source is not qualified, so execution quality is not available.");
+    expect(quality.textContent).toContain("Source not qualified.");
     const accounting = screen.getByRole("heading", { name: "Accounting" }).closest("section")!;
     expect(within(accounting).getAllByText("Not available").length).toBeGreaterThanOrEqual(4);
     expect(accounting.textContent).not.toMatch(/101,800|1,800|12\.40/);
     await openTab("Orders");
-    expect(text()).toContain("The profile carries no orders branch for this deployment.");
+    expect(document.querySelector('[data-table="Orders"] .exec-blk-na')!.getAttribute("title")).toBe("The profile carries no orders branch for this deployment.");
     expect(text()).not.toMatch(NO_DASH);
   });
 
   it("a transport failure is not nq: it is an Unavailable state with Try again", async () => {
     mount({ profile: fail("unavailable", "The Portal did not answer.") as never });
     expect(await screen.findByText("Unavailable")).toBeTruthy();
-    expect(screen.queryByText("Source not qualified. Figures below are not available.")).toBeNull();
+    expect(screen.queryByText("Source not qualified.")).toBeNull();
   });
 });
 
@@ -924,8 +955,8 @@ describe("states have the right words and actions", () => {
     mount({ profile: { ok: true, value: envelopeOf(wire) } });
     await ready();
     const banners = screen.getAllByRole("status").map((b) => b.textContent ?? "");
-    expect(banners.some((b) => b.includes("Partial") && b.includes("The profile is partial"))).toBe(true);
-    expect(banners.some((b) => b.includes("Stale") && b.includes("has not updated this deployment"))).toBe(true);
+    expect(banners.some((b) => b.includes("Partial") && b.includes("Some branches or rows may be missing"))).toBe(true);
+    expect(banners.some((b) => b.includes("Stale") && b.includes("No update within the freshness budget"))).toBe(true);
     expect(screen.getByRole("tablist")).toBeTruthy();
   });
 });
