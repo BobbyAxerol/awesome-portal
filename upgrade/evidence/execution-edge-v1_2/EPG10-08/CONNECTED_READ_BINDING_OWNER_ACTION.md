@@ -33,7 +33,7 @@ window, and do not reopen a source only to wait. READ is not STREAM; candidate
 trust ends08:00:59UTC and must be fresh at opening. Stable28445 is unchanged.
 
 Edge has implemented the small operational connected-case runner in the
-existing08 harness boundary, with29TEST_ONLY unit cases PASS. A configured process or HTTP200 alone is not
+existing08 harness boundary, with40TEST_ONLY unit cases PASS (29previous+11official-session format cases). A configured process or HTTP200 alone is not
 business/current-authority acceptance. Only actual route results with current
 source/Core policy evidence can qualify a scoped case. No raw business payload,
 cookie, private configuration or credential belongs in the public return.
@@ -48,10 +48,10 @@ Core READ and Core STREAM are distinct.
 ### Current runner and priority assignment
 
 - [Driver](../../../../scripts/epg10-08/connected_read.py), SHA256
-  `8bc8113312f7cc765d798279cb4df98f46be40f1144d12a3d9dd34b205f83d9a`.
+  `18cb1a352d8e3d9cd37ddaafcd3340d0e60e6657b6245db0a248e18313d67d92`.
 - [Tests](../../../../scripts/epg10-08/test_connected_read.py), SHA256
-  `d848123dea2bb4898ea48ce5640f995d637d81ed5e63057271f320010baf866f`:
-  `python3 -I -B scripts/epg10-08/test_connected_read.py`,29PASS/0FAIL/0SKIP.
+  `754914fc3db8702b63e984bdae211dadf4e873fe2a45242e1a0649cdd754ec8f`:
+  `python3 -I -B scripts/epg10-08/test_connected_read.py`,40PASS/0FAIL/0SKIP.
 - [Claude's priority packet](CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md)
   delivered byte-exact to `/home/bobby/portal-research-fe` on SGP and indexed in
   its Unified/sync docs. Claude answered with the prepared return below;
@@ -120,6 +120,56 @@ Edge owns fresh finite native publication, known-input assembly and the existing
 connected runner. It continues bounded07 custody correctness in parallel. This
 handback supplies known inputs; it does not claim private artifacts installed,
 renew trust, commission a listener, issue a session, or qualify08/09.
+
+### Core009 revision2 — CHANGES_REQUESTED before commissioning —20Oct
+
+Reviewed FE0deeee706849a02660da0ef94e7405ecb4765cc9; later792647d5
+frontend-only changes do not replace the pinned backend bytes below. Revision2
+supersedes the earlier missing-code observations: Plan B installer, official
+manager-domain revoke and actual AuthService session issuer/revoker exist.
+No fake grant/session or public autologin is needed. Core still reports actual
+PG/R3/image/install NOT_RUN. Edge publication e37a5e39009abd57c1b2d0356ea120053058eb9b
+contains the completed original07 custody slice, normal-hook PASS and cleanup;
+original08 connected runner is being bound to the official token-file shape.
+
+**Priority corrections for Core/Claude, in the same009 assignment:**
+
+1. `apps/control-api/src/execution-v2/research-acceptance-session.ts`
+   SHA256`2bd35bb2a13a77373e9b6b2777c87c9effd31d031393e4cbbdb4d0074ff80f48`:
+   revoke cleanup must be bound to the exact session/file. Reproducer without
+   any operational call: issue S1 at P → revoke S1 → issue S2 at reused P →
+   replay S1 revoke currently removes S2's live token while S2 remains ACTIVE.
+   Refuse/retain a mismatched token; preserve exact terminal/recovery semantics.
+   Add replay/reused-path/absent/mismatched-session tests, not a runtime demo.
+2. Same module's token sink ignores `FileHandle.write().bytesWritten`.
+   A short/zero write is fsynced and falsely acknowledged after session COMMIT.
+   Require complete bounded writing/verification, compensating exact-session
+   revoke on failure, and injected partial/zero-write tests. No weakened fsync.
+3. `apps/control-api/src/cli/execution-native-session.ts`
+   SHA256`df0f327756000183d776cdcb65f1dd80e7f456edbc1fbd87bc4cfa399a93a773`:
+   `--dry-run` branches only after schema DB read/composition. Honor its stated
+   offline/no-DB contract before those calls; test that dry-run cannot build
+   a pool, connect, mutate or issue a session.
+
+Return corrected source/test pins and run the actual disposable-PG/normal R3
+gates on the final composition. Refresh the lead-owned persistence ingress
+ledger for revoke/session tools. No expiry-only substitution for a revoke.
+Use existing publication/runner and Core templates, no new framework. Ordinary
+source review is not installer acceptance; do not open a source window merely
+to wait for these fixes/tests. Core operator runbook rev2 SHA256
+`3417afbdf9d0bc0c3b5f06e44ec654899f55916fd4864881927ce79eef5c0bb1`.
+
+Edge will directly read the actual six-field
+`portal.research-acceptance-session-token.v1` file in its current08 runner,
+with producer/session-id/subject/expiry/hash binding. The file remains private;
+no token transfer in public Markdown, stdout, chat or Git. Exact execution UID
+must own its0600 input; using the root-owned Core file requires an operator
+running the runner under that same UID, not chmod/chown widening. Evidence is
+`RESEARCH_APPLICATION_SESSION_NOT_CLOUDFLARE_NOT_PASSWORD_NOT_HUMAN_PRESENCE`.
+Known source seals/mapping above remain historical inputs; renewal/current
+source head and reviewed field-policy reference must come from real artifacts.
+Existing08 approval covers this correction/binding work; no new phase or blanket
+approval requested. Full08NOT_MET; scoped connected09NOT_STARTED.
 
 Operational invocation, only after actual inputs are ready:
 `python3 -I -B scripts/epg10-08/connected_read.py --config PRIVATE_PATH --sha256 ACTUAL_PIN`.

@@ -91,6 +91,44 @@ def pin(value):
     return type(value) is str and re.fullmatch("[a-f0-9]{64}", value) is not None
 
 
+def session_headers(session, producer, now, deadline_seconds):
+    """Read either existing owner input or the actual Core-issued token file.
+
+    This formats an existing credential in memory only. It never issues a
+    session or infers Cloudflare/password/human-presence authentication.
+    """
+    require(type(session) is dict, "SESSION_INVALID")
+    if "schema_version" in session:
+        require(set(session) == {"schema_version", "session_id", "user_id", "cookie_name",
+                                 "token", "absolute_expires_at"} and
+                session["schema_version"] == "portal.research-acceptance-session-token.v1" and
+                type(session["session_id"]) is str and
+                re.fullmatch(r"ses_[A-Za-z0-9_-]{1,128}", session["session_id"]) and
+                session["session_id"] == producer.get("session_id") and
+                session["user_id"] == producer["subject"] and
+                session["cookie_name"] == "__Host-portal_session" and
+                type(session["token"]) is str and
+                re.fullmatch(r"[A-Za-z0-9_.~%-]{16,4096}", session["token"]), "SESSION_INVALID")
+        try:
+            require(utc(session["absolute_expires_at"]) > now + deadline_seconds,
+                    "SESSION_INVALID")
+        except (ValueError, TypeError, OverflowError):
+            raise Refused("SESSION_INVALID") from None
+        return {"Cookie": "__Host-portal_session=" + session["token"], "Accept": "application/json"}, (
+            "RESEARCH_APPLICATION_SESSION_NOT_CLOUDFLARE_NOT_PASSWORD_NOT_HUMAN_PRESENCE")
+    require(set(session) <= {"cookie", "cf_access_assertion", "subject"} and
+            session.get("subject") == producer["subject"] and
+            re.fullmatch(r"__Host-portal_session=[A-Za-z0-9_.~%-]{16,4096}",
+                         session.get("cookie", "")), "SESSION_INVALID")
+    headers = {"Cookie": session["cookie"], "Accept": "application/json"}
+    if session.get("cf_access_assertion") is not None:
+        assertion = session["cf_access_assertion"]
+        require(type(assertion) is str and re.fullmatch(r"[A-Za-z0-9_.-]{20,16384}", assertion),
+                "SESSION_INVALID")
+        headers["Cf-Access-Jwt-Assertion"] = assertion
+    return headers, None
+
+
 def prepare(config, now=None):
     """The receipt is an owner attestation, not authority created by this tool."""
     now = time.time() if now is None else now
@@ -135,17 +173,9 @@ def prepare(config, now=None):
     require(min(utc(receipt[k]) for k in ("expires_at", "trust_expires_at", "native_expires_at"))
             > now + config["deadline_seconds"], "INPUT_EXPIRED")
     session = document(config["session"])
-    require(receipt.get("session_sha256") == config["session"]["sha256"] and
-            type(session) is dict and set(session) <= {"cookie", "cf_access_assertion", "subject"} and
-            session.get("subject") == receipt["subject"] and
-            re.fullmatch(r"__Host-portal_session=[A-Za-z0-9_.~%-]{16,4096}",
-                         session.get("cookie", "")), "SESSION_INVALID")
-    headers = {"Cookie": session["cookie"], "Accept": "application/json"}
-    if session.get("cf_access_assertion") is not None:
-        assertion = session["cf_access_assertion"]
-        require(type(assertion) is str and re.fullmatch(r"[A-Za-z0-9_.-]{20,16384}", assertion),
-                "SESSION_INVALID")
-        headers["Cf-Access-Jwt-Assertion"] = assertion
+    require(receipt.get("session_sha256") == config["session"]["sha256"], "SESSION_INVALID")
+    headers, session_evidence_class = session_headers(
+        session, receipt, now, config["deadline_seconds"])
     ip = ipaddress.ip_address(receipt.get("api_ip", ""))
     require(ip.is_global, "API_IP_INVALID")  # No DNS/unbounded resolver or generic upstream.
     scope = digest({k: receipt[k] for k in ("origin", "subject", "workspace_id", "environment",
@@ -176,7 +206,8 @@ def prepare(config, now=None):
                   receipt["native_revision"] > prior["native_revision"])),
                 "REVOKE_PROVENANCE_INVALID")
     return {"config": config, "producer": receipt, "headers": headers, "ip": str(ip),
-            "scope": scope, "prior": prior, "revoke": revoke}
+            "scope": scope, "prior": prior, "revoke": revoke,
+            "session_evidence_class": session_evidence_class}
 
 
 def cursor_valid(value):
@@ -402,6 +433,8 @@ def run(config, transport_factory=Transport, checkpoint_sink=None):
     try:
         p = prepare(config)
         receipt.update(producer_sha256=config["core_return"]["sha256"], scope_sha256=p["scope"])
+        if p["session_evidence_class"] is not None:
+            receipt["session_evidence_class"] = p["session_evidence_class"]
         transport = transport_factory(p)
         def request(name, cursor=None, stream=False):
             receipt["requests"] += 1

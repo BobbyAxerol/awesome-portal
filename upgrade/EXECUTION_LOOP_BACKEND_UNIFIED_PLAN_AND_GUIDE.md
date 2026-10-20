@@ -25165,6 +25165,79 @@ frozen numeric input/approval remains its own genuine dependency. No fixture or
 expired trust is promoted to native/production acceptance. Full07/08NOT_MET;
 09connectedNOT_STARTED. No new phase or repeat general approval requested.
 
+### Original08 — Core009 revision2 review and official session-file binding —20Oct
+
+**Status:** IN_PROGRESS_OWNED_RUNNER_BINDING; full08NOT_MET/09connectedNOT_STARTED.
+Authority: already approved [original08](#epg10-08-plan), latest user instruction
+to send Claude a priority handoff on SGP and finish the Edge runner in parallel.
+Guides: [EDGE08](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+[backend contract](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md),
+Core's `ELP2-10/CORE009_OPERATOR_RUNBOOK_2026-10-20.md` revision2 and BE-P10 ledger.
+
+Core FE supplied Plan B installer, independent manager-domain revoke and an
+actual AuthService acceptance-session issuer/revoker at0deeee706849a02660da0ef94e7405ecb4765cc9.
+Those two code gaps are superseded; actual PG/R3/image/install remain NOT_RUN.
+Independent read-only review found three owned Core corrections before use:
+old-session revoke can wipe a newer session token at the reused path; token-file
+write ignores short writes; session CLI dry-run composes/reads DB before its
+no-DB branch. Return exact findings to the existing Core request/Unified rather
+than patching peer files or minting a session to demonstrate them.
+
+**Runnable Edge scope before edits:** consume the official strict token-file
+document directly in the existing08 driver, without copying/reissuing its secret.
+Bind its actual session_id/user_id/cookie-name/expiry to the installed producer,
+SHA-pinned private reference and deadline; keep the older owner session format
+backward-compatible. Report Research application-session evidence explicitly,
+never Cloudflare/password/human-presence evidence. No new provider/framework,
+route, grant, source listener, operational role/schema or runtime mutation.
+
+**Tests/exit:** existing29cases plus positive official-format, exact-session/
+subject/expiry/schema/header negatives, zero requests on invalid inputs and no
+token in public output. Normal hook and exact cleanup/publication required.
+Isolated tests do not close08. Rollback: revert only this source adapter before
+deployment; no financial/history/session reset. Decision boundary: Core fixes
+its producer defects and runs actual PG/normal release gate; only a reviewed
+image/config and fresh source/trust permit connected08, then scoped read09.
+
+**Tested coherent slice:** direct official token-file binding implemented in
+the existing GET-only driver; legacy owner cookie/optional Access assertion
+unchanged. Exact producer session-id, subject, schema/keys, cookie name, token
+bounds/header safety and UTC expiry beyond the full request deadline are
+checked before transport creation. Public result labels the Research
+application-session class explicitly; no token/path/session id appears there.
+No credential was issued, copied, chmod/chowned or transferred. Actual command:
+`python3 -I -B scripts/epg10-08/test_connected_read.py` under1CPU/nice15/
+256MiB virtual-memory limit:40PASS/0FAIL/SKIP,11new (prior29included, not added
+again); log SHA256cbc09957d23b3d6f3538a22ed2bd2ee6d4eb7088b4c0919124cd7c7e879c7a67.
+Driver SHA25618cb1a352d8e3d9cd37ddaafcd3340d0e60e6657b6245db0a248e18313d67d92;
+test SHA256754914fc3db8702b63e984bdae211dadf4e873fe2a45242e1a0649cdd754ec8f.
+
+**Actual priority delivery:** corrections appended byte-exact on SGP to the
+existing canonical Core request and Claude FE priority packet, indexed in both
+existing Unified plans. Review section SHA256
+044207a63ed08acd4d4aa16401e6a4479e86569ad435f5d993d20ce6b0bae8ab;
+Core request after SHA256017dd6b6846317b83fc87c3726af87a78ecf2f36084239f5d424eb16a6ba91f8,
+FE priority after SHA256b1366013c1d102fa379d212440cd315e780e78ec8b0a1108f3e8c754f7567258.
+Old-hash CAS/prefix/section checks preserved peer changes/index; remote
+apply_patch absent, root32 fallback used. No Core source/test/runtime edits.
+
+**Closeout transaction:** one normal-hook source commit for exactly this driver,
+tests, owner packet and main plan, then one nonforce feature publication;
+0additional hosted CI minutes, no PR/merge/dev/main. Source scope implemented/
+isolated-tested, not connected-certified. Final normal-hook outcome, exact own
+offline-test image removal,19protected tuple comparison, disk pre/post and
+commit/remote verification are retained at predeclared private
+`/home/bobby/secure/portal-edge-pm-custody-20261020-fzQHVrEM/session-binding-publication-and-cleanup.json`.
+No new Rust/toolchain/cache/test cell or SGP test resources were created for
+this Python slice; no shared image/cache/volume/network/source cleanup.
+Canonical checkout/active feature worktrees, stable release locations, deployed
+Edge/Core image/config and rollback retention remain as the immediately
+preceding source/release/runtime reconciliation; no deploy occurred here.
+Core owns its three corrections and actual PG/R3/image; Edge owns only the
+now-complete format binding plus final hook/cleanup/publication. After genuine
+reviewed return, coordinate fresh source/trust/zero-custody swap and run08→09
+read cases. Full08NOT_MET/09NOT_STARTED; no new phase or approval request.
+
 
 
 

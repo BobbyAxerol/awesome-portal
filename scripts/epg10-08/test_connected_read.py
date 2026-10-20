@@ -14,6 +14,15 @@ driver = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(driver)
 PIN = "a" * 64
 NOW = datetime(2026, 10, 20, 6, tzinfo=timezone.utc).timestamp()
+SESSION_EVIDENCE = (
+    "RESEARCH_APPLICATION_SESSION_NOT_CLOUDFLARE_NOT_PASSWORD_NOT_HUMAN_PRESENCE")
+
+
+def official_session():
+    return {"schema_version": "portal.research-acceptance-session-token.v1",
+        "session_id": "ses_TEST_ONLY", "user_id": "usr_TEST_ONLY",
+        "cookie_name": "__Host-portal_session", "token": "TEST_ONLY_PRIVATE_TOKEN",
+        "absolute_expires_at": "2026-10-20T08:00:00Z"}
 
 
 def inputs():
@@ -61,6 +70,125 @@ class DriverTests(unittest.TestCase):
 
     def test_valid_current_installed_scope(self):
         self.assertEqual(self.prepare()["headers"]["Cookie"], self.docs["/TEST_ONLY/session"]["cookie"])
+
+    def use_official_session(self):
+        self.docs["/TEST_ONLY/session"] = official_session()
+        self.docs["/TEST_ONLY/core"]["session_id"] = "ses_TEST_ONLY"
+        return self.docs["/TEST_ONLY/session"]
+
+    def test_official_session_matches_exact_installed_subject_and_session(self):
+        session = self.use_official_session()
+        prepared = self.prepare()
+        self.assertEqual(prepared["headers"], {
+            "Cookie": "__Host-portal_session=" + session["token"], "Accept": "application/json"})
+        self.assertEqual(prepared["session_evidence_class"], SESSION_EVIDENCE)
+
+    def test_legacy_owner_session_preserves_optional_access_assertion(self):
+        self.docs["/TEST_ONLY/session"]["cf_access_assertion"] = "TEST_ONLY_ACCESS_ASSERTION"
+        prepared = self.prepare()
+        self.assertEqual(prepared["headers"]["Cookie"], self.docs["/TEST_ONLY/session"]["cookie"])
+        self.assertEqual(prepared["headers"]["Cf-Access-Jwt-Assertion"], "TEST_ONLY_ACCESS_ASSERTION")
+        self.assertIsNone(prepared["session_evidence_class"])
+
+    def test_official_session_requires_matching_producer_session_id_before_network(self):
+        self.use_official_session()
+        producer = self.docs["/TEST_ONLY/core"]
+        for label, value in (("missing", None), ("other", "ses_OTHER"), ("boolean", True)):
+            with self.subTest(case=label):
+                if value is None:
+                    producer.pop("session_id", None)
+                else:
+                    producer["session_id"] = value
+                self.assertRefusedNoNetwork("SESSION_INVALID")
+
+    def test_official_session_shape_scope_and_schema_refused_before_network(self):
+        changes = (("subject", "user_id", "usr_OTHER"),
+            ("schema", "schema_version", "portal.research-acceptance-session-token.v2"),
+            ("cookie", "cookie_name", "portal_session"),
+            ("extra", "cf_access_assertion", "TEST_ONLY_ACCESS_ASSERTION"),
+            ("mixed_legacy", "cookie", "__Host-portal_session=TEST_ONLY_PRIVATE_COOKIE"))
+        for label, key, value in changes:
+            with self.subTest(case=label):
+                self.use_official_session()[key] = value
+                self.assertRefusedNoNetwork("SESSION_INVALID")
+
+    def test_official_session_requires_all_six_fields_before_network(self):
+        for key in official_session():
+            with self.subTest(field=key):
+                session = self.use_official_session()
+                del session[key]
+                self.assertRefusedNoNetwork("SESSION_INVALID")
+
+    def test_official_session_id_shape_not_only_string_equality(self):
+        for session_id in ("TEST_ONLY", "ses_TEST_ONLY\r\n", "ses_", "ses_" + "x" * 129):
+            with self.subTest(length=len(session_id)):
+                self.use_official_session()["session_id"] = session_id
+                self.docs["/TEST_ONLY/core"]["session_id"] = session_id
+                self.assertRefusedNoNetwork("SESSION_INVALID")
+
+    def test_official_session_must_outlive_the_complete_request_deadline(self):
+        for label, expiry in (("expired", "2026-10-20T05:59:59Z"),
+                ("within_deadline", "2026-10-20T06:00:29Z"),
+                ("at_deadline", "2026-10-20T06:00:30Z")):
+            with self.subTest(case=label):
+                self.use_official_session()["absolute_expires_at"] = expiry
+                self.assertRefusedNoNetwork("SESSION_INVALID")
+        self.use_official_session()["absolute_expires_at"] = "2026-10-20T06:00:31Z"
+        self.assertEqual(self.prepare()["session_evidence_class"], SESSION_EVIDENCE)
+
+    def test_official_session_expiry_requires_a_valid_utc_timestamp(self):
+        for label, expiry in (("naive", "2026-10-20T08:00:00"),
+                ("non_utc", "2026-10-20T08:00:00+01:00"),
+                ("malformed", "TEST_ONLY_NOT_A_TIMESTAMP"), ("boolean", True)):
+            with self.subTest(case=label):
+                self.use_official_session()["absolute_expires_at"] = expiry
+                self.assertRefusedNoNetwork("SESSION_INVALID")
+
+    def test_official_session_token_bounds_are_inclusive(self):
+        for length in (16, 4096):
+            with self.subTest(length=length):
+                token = "x" * length
+                self.use_official_session()["token"] = token
+                self.assertEqual(self.prepare()["headers"]["Cookie"], "__Host-portal_session=" + token)
+
+    def test_official_session_unsafe_or_unbounded_tokens_never_reach_transport(self):
+        for label, token in (("short", "x" * 15), ("oversize", "x" * 4097),
+                ("header_injection", "TEST_ONLY_PRIVATE_TOKEN\r\nX-Injected: yes"),
+                ("cookie_injection", "TEST_ONLY_PRIVATE_TOKEN;other=value"),
+                ("space", "TEST_ONLY PRIVATE_TOKEN"),
+                ("control", "TEST_ONLY_PRIVATE_TOKEN\x00"), ("non_string", True)):
+            with self.subTest(case=label):
+                self.use_official_session()["token"] = token
+                self.assertRefusedNoNetwork("SESSION_INVALID")
+
+    def test_official_session_failure_output_reports_evidence_without_private_input(self):
+        self.use_official_session()
+        for failure in ("factory", "request"):
+            with self.subTest(failure=failure):
+                transport = MagicMock()
+                private_error = "TEST_ONLY_PRIVATE_TOKEN /TEST_ONLY/session ses_TEST_ONLY"
+                transport.request.side_effect = ValueError(private_error)
+                prepared = []
+                def factory(value):
+                    prepared.append(value)
+                    if failure == "factory":
+                        raise ValueError(private_error)
+                    return transport
+                with patch.object(driver.time, "time", return_value=NOW):
+                    result = driver.run(self.cfg, factory)
+                self.assertEqual(len(prepared), 1)
+                self.assertEqual(prepared[0]["headers"]["Cookie"],
+                    "__Host-portal_session=TEST_ONLY_PRIVATE_TOKEN")
+                self.assertEqual(result["requests"], 0 if failure == "factory" else 1)
+                self.assertEqual(result["status"], "NOT_READY" if failure == "factory" else "FAIL")
+                self.assertEqual(result["reason"], "INPUT_OR_TRANSPORT_REFUSED")
+                self.assertEqual(result["session_evidence_class"], SESSION_EVIDENCE)
+                self.assertEqual((result["full_08"], result["full_09"]), ("NOT_MET", "NOT_MET"))
+                public = json.dumps(result)
+                for private in ("TEST_ONLY_PRIVATE_TOKEN", "/TEST_ONLY/session", "ses_TEST_ONLY",
+                                "__Host-portal_session"):
+                    self.assertNotIn(private, public)
+                self.assertTrue(all(v["status"] == "NOT_RUN" for v in result["cases"].values()))
 
     def test_only_public_api_not_reverse_identity(self):
         self.cfg["origin"] = "https://core.elp210.candidate.invalid:28444"
@@ -119,13 +247,16 @@ class DriverTests(unittest.TestCase):
         with self.assertRaisesRegex(driver.Refused, "SESSION_INVALID"):
             self.prepare()
 
-    def assertRefusedNoNetwork(self):
+    def assertRefusedNoNetwork(self, reason=None):
         factory = unittest.mock.Mock(side_effect=AssertionError("NETWORK_MUST_NOT_START"))
-        result = driver.run(self.cfg, factory)
+        with patch.object(driver.time, "time", return_value=NOW):
+            result = driver.run(self.cfg, factory)
         self.assertEqual(result["status"], "NOT_READY")
         self.assertEqual(result["requests"], 0)
         self.assertFalse(factory.called)
         self.assertTrue(all(v["status"] == "NOT_RUN" for v in result["cases"].values()))
+        if reason is not None:
+            self.assertEqual(result["reason"], reason)
 
     def test_unknown_unavailable_and_legacy_200_not_accepted(self):
         p = self.prepare()
