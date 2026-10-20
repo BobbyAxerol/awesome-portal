@@ -141,6 +141,17 @@ export interface components {
                 /** @constant */
                 reason_code: "PARENT_FIELD_PURPOSE_NOT_QUALIFIED";
             };
+            /** @description BE-P12, present only when the request asks for include=identity. Names of the deployment's own alpha and portfolio from the retained projection under THIS viewer's alpha.read row and field policy (alpha_id from the qualified deployment-to-alpha tuple publication only, never from a strategy id; portfolio_name from the deployment's own portfolio row, hidden when that portfolio is shared with an alpha the viewer cannot read). A hidden or unpublished member is null with its reason, never a guess. alpha_name is the constant null: no source publishes an alpha display name. It is not a field of the Portal record it travels beside and belongs to no parent-field purpose. */
+            identity?: {
+                /** @constant */
+                basis: "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY";
+                alpha_id: string | null;
+                alpha_name: null;
+                portfolio_name: string | null;
+                /** @enum {string} */
+                alpha_reason_code: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ";
+                portfolio_name_reason_code: ("PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ") | null;
+            } & (unknown & unknown);
         };
         /** Format: date-time */
         Timestamp: string;
@@ -688,6 +699,8 @@ export interface operations {
         parameters: {
             query?: {
                 workspace_id?: string;
+                /** @description SCOPED_V2 only; the legacy body ignores it. include=identity attaches the closed `identity` block from a separate fenced retained-projection read under the viewer's own alpha.read row and field policy. Any other value is refused (400 EXECUTION_READ_QUERY_INVALID). Omitted: the body is byte-identical to before. It is not a parent record field and not a parent-field purpose. */
+                include?: "identity";
             };
             header?: never;
             path: {

@@ -2,6 +2,7 @@
 import {readFileSync} from "node:fs";
 import {resolve} from "node:path";
 import Ajv2020 from "ajv/dist/2020";
+import addFormats from "ajv-formats";
 import {describe,expect,it} from "vitest";
 import {liveSourceOperationsRead,liveSourceValues} from "../../../apps/control-api/src/live/live-source.contract";
 import {liveSourceCurrentSchemas,liveSourceFixture,liveSourceFixtureName,liveSourceReadRoute,
@@ -10,9 +11,12 @@ import type {components as LiveTypes,operations as LiveOperations} from "../gene
 const root=resolve(__dirname,".."),load=(file:string)=>JSON.parse(readFileSync(resolve(root,file),"utf8"));
 const fixture=load("fixtures/"+liveSourceFixtureName),definitions=liveSourceCurrentSchemas();
 const stored=load("schemas/execution-operations.v1.schema.json"),api=load("openapi/execution-live-full.openapi.json");
-const ajv=new Ajv2020({strict:true,allErrors:true});
-ajv.addSchema({$id:"TEST_ONLY:live-source",$defs:definitions});
-const validate=ajv.compile({$ref:"TEST_ONLY:live-source#/$defs/LiveSourceOperationsReadV2"});
+const ajv=new Ajv2020({strict:true,allErrors:true});addFormats(ajv);
+// BE-P12: the opt-in `stage_facts` member references the published stage-facts family by its sibling
+// file name, so the standalone definitions live under the same base URI as the published schemas.
+ajv.addSchema(load("schemas/execution-stage-facts.v1.schema.json"));
+ajv.addSchema({$id:"https://schemas.primusspark.com/portal/TEST_ONLY-live-source.schema.json",$defs:definitions});
+const validate=ajv.compile({$ref:"https://schemas.primusspark.com/portal/TEST_ONLY-live-source.schema.json#/$defs/LiveSourceOperationsReadV2"});
 const clone=<T>(value:T):T=>structuredClone(value);
 const check=(body:unknown,expected:boolean)=>{
   expect(validate(body),"finite AJV").toBe(expected);

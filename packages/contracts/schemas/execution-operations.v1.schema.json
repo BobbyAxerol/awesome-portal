@@ -9732,6 +9732,210 @@
               "const": "READ_NOT_COMMAND_AUTHORITY"
             }
           }
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "basis",
+            "alpha_id",
+            "alpha_name",
+            "portfolio_name",
+            "alpha_reason_code",
+            "portfolio_name_reason_code"
+          ],
+          "properties": {
+            "basis": {
+              "const": "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY"
+            },
+            "alpha_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "alpha_name": {
+              "type": "null"
+            },
+            "portfolio_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "alpha_reason_code": {
+              "type": "string",
+              "enum": [
+                "ALPHA_MEMBERSHIP_NOT_QUALIFIED",
+                "ALPHA_MEMBERSHIP_NOT_PUBLISHED",
+                "ALPHA_MEMBERSHIP_AMBIGUOUS",
+                "ALPHA_IDENTITY_NOT_AUTHORIZED",
+                "ALPHA_NAME_NOT_PUBLISHED",
+                "DEPLOYMENT_IDENTITY_NOT_READ"
+              ]
+            },
+            "portfolio_name_reason_code": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "PORTFOLIO_NOT_ASSIGNED",
+                    "PORTFOLIO_NAME_NOT_PUBLISHED",
+                    "PORTFOLIO_NAME_AMBIGUOUS",
+                    "PORTFOLIO_NAME_NOT_AUTHORIZED",
+                    "DEPLOYMENT_IDENTITY_NOT_READ"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "required": [
+                  "alpha_id"
+                ],
+                "properties": {
+                  "alpha_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "alpha_reason_code": {
+                    "const": "ALPHA_NAME_NOT_PUBLISHED"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "alpha_reason_code": {
+                    "not": {
+                      "const": "ALPHA_NAME_NOT_PUBLISHED"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "required": [
+                  "portfolio_name"
+                ],
+                "properties": {
+                  "portfolio_name": {
+                    "type": "string"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "portfolio_name_reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "portfolio_name_reason_code": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ],
+          "description": "BE-P12, present only when the request asks for include=identity. Names of the deployment's own alpha and portfolio from the retained projection under THIS viewer's alpha.read row and field policy (alpha_id from the qualified deployment-to-alpha tuple publication only, never from a strategy id; portfolio_name from the deployment's own portfolio row, hidden when that portfolio is shared with an alpha the viewer cannot read). A hidden or unpublished member is null with its reason, never a guess. alpha_name is the constant null: no source publishes an alpha display name. It is not a field of the Portal record it travels beside and belongs to no parent-field purpose."
+        },
+        "stage_facts": {
+          "allOf": [
+            {
+              "$ref": "execution-stage-facts.v1.schema.json#/$defs/StageFacts"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "runtime": {
+                  "type": "object",
+                  "properties": {
+                    "runtime_state": {
+                      "type": "object",
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        }
+                      }
+                    },
+                    "since": {
+                      "type": "object",
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        }
+                      }
+                    }
+                  }
+                },
+                "reconciliation": {
+                  "type": "object",
+                  "properties": {
+                    "verdict": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "not": {
+                            "const": "NO_OPEN_FINDINGS"
+                          }
+                        }
+                      }
+                    },
+                    "open_finding_count": {
+                      "type": "object",
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        }
+                      }
+                    },
+                    "unknown_order_count": {
+                      "type": "object",
+                      "properties": {
+                        "availability": {
+                          "const": "NOT_PUBLISHED"
+                        }
+                      }
+                    }
+                  }
+                },
+                "sessions": {
+                  "type": "object",
+                  "properties": {
+                    "availability": {
+                      "const": "NOT_PUBLISHED"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "description": "BE-P12, present only when the request asks for include=stage_facts. The V1 fact vocabulary over the AUTHORIZED population only: OPEN_FINDINGS is stated when an authorized open finding exists; NO_OPEN_FINDINGS and exact counts are never stated (a resource-bound scope cannot prove it holds the whole population: AUTHORIZED_POPULATION_ONLY / AUTHORIZED_POPULATION_COUNT_NOT_EXACT). runtime and sessions are NOT_PUBLISHED because runtime_state and a session's id/started/completed instants are not in the reviewed read-field vocabulary."
         }
       },
       "description": "Source-only finite Live deployment read; NEVER approval/root/captured lineage, current broker verdict, source completeness, runtime activation, stream or command permission. Legacy LiveFullOperations remains a separate version. Alpha and Account original purposes and reviewed field permissions are independently enforced by the runtime before rows/counts/fields; THIS SCHEMA DOES NOT AUTHORIZE. Portal observed time is not source freshness. Runtime also applies a1MiB encoded body bound and combined current-authority/fresh-source/LAST-Core fence. These are proposed implementation bounds, not measured performance qualification."
@@ -10507,6 +10711,137 @@
               }
             }
           ]
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "basis",
+            "alpha_id",
+            "alpha_name",
+            "portfolio_name",
+            "alpha_reason_code",
+            "portfolio_name_reason_code"
+          ],
+          "properties": {
+            "basis": {
+              "const": "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY"
+            },
+            "alpha_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "alpha_name": {
+              "type": "null"
+            },
+            "portfolio_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "alpha_reason_code": {
+              "type": "string",
+              "enum": [
+                "ALPHA_MEMBERSHIP_NOT_QUALIFIED",
+                "ALPHA_MEMBERSHIP_NOT_PUBLISHED",
+                "ALPHA_MEMBERSHIP_AMBIGUOUS",
+                "ALPHA_IDENTITY_NOT_AUTHORIZED",
+                "ALPHA_NAME_NOT_PUBLISHED",
+                "DEPLOYMENT_IDENTITY_NOT_READ"
+              ]
+            },
+            "portfolio_name_reason_code": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "PORTFOLIO_NOT_ASSIGNED",
+                    "PORTFOLIO_NAME_NOT_PUBLISHED",
+                    "PORTFOLIO_NAME_AMBIGUOUS",
+                    "PORTFOLIO_NAME_NOT_AUTHORIZED",
+                    "DEPLOYMENT_IDENTITY_NOT_READ"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "required": [
+                  "alpha_id"
+                ],
+                "properties": {
+                  "alpha_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "alpha_reason_code": {
+                    "const": "ALPHA_NAME_NOT_PUBLISHED"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "alpha_reason_code": {
+                    "not": {
+                      "const": "ALPHA_NAME_NOT_PUBLISHED"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "required": [
+                  "portfolio_name"
+                ],
+                "properties": {
+                  "portfolio_name": {
+                    "type": "string"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "portfolio_name_reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "portfolio_name_reason_code": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ],
+          "description": "BE-P12, present only when the request asks for include=identity. Names of the deployment's own alpha and portfolio from the retained projection under THIS viewer's alpha.read row and field policy (alpha_id from the qualified deployment-to-alpha tuple publication only, never from a strategy id; portfolio_name from the deployment's own portfolio row, hidden when that portfolio is shared with an alpha the viewer cannot read). A hidden or unpublished member is null with its reason, never a guess. alpha_name is the constant null: no source publishes an alpha display name. It is not a field of the Portal record it travels beside and belongs to no parent-field purpose."
         }
       },
       "description": "Finite immutable Portal Canary DRAFT under exact current LIVE deployment+portfolio audit, independent governance.canary.read and CANARY_ROOT fields. LIVE is requested current association, NOT an attested historical native environment or active Canary. Proposal amounts are positive exact decimal strings, at most20 integer/18 fractional digits, never JS Number, economic backing/budget or effective exposure. Optional proposal/lineage each require their own reviewed purpose. Source verdict NOT_ASSERTED; production_command_active and every side-effect flag remain false. Captured certification version is historical metadata, not current eligibility."
@@ -11201,6 +11536,137 @@
               }
             }
           ]
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "basis",
+            "alpha_id",
+            "alpha_name",
+            "portfolio_name",
+            "alpha_reason_code",
+            "portfolio_name_reason_code"
+          ],
+          "properties": {
+            "basis": {
+              "const": "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY"
+            },
+            "alpha_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 191,
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "alpha_name": {
+              "type": "null"
+            },
+            "portfolio_name": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "alpha_reason_code": {
+              "type": "string",
+              "enum": [
+                "ALPHA_MEMBERSHIP_NOT_QUALIFIED",
+                "ALPHA_MEMBERSHIP_NOT_PUBLISHED",
+                "ALPHA_MEMBERSHIP_AMBIGUOUS",
+                "ALPHA_IDENTITY_NOT_AUTHORIZED",
+                "ALPHA_NAME_NOT_PUBLISHED",
+                "DEPLOYMENT_IDENTITY_NOT_READ"
+              ]
+            },
+            "portfolio_name_reason_code": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": [
+                    "PORTFOLIO_NOT_ASSIGNED",
+                    "PORTFOLIO_NAME_NOT_PUBLISHED",
+                    "PORTFOLIO_NAME_AMBIGUOUS",
+                    "PORTFOLIO_NAME_NOT_AUTHORIZED",
+                    "DEPLOYMENT_IDENTITY_NOT_READ"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "required": [
+                  "alpha_id"
+                ],
+                "properties": {
+                  "alpha_id": {
+                    "type": "string"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "alpha_reason_code": {
+                    "const": "ALPHA_NAME_NOT_PUBLISHED"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "alpha_reason_code": {
+                    "not": {
+                      "const": "ALPHA_NAME_NOT_PUBLISHED"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "required": [
+                  "portfolio_name"
+                ],
+                "properties": {
+                  "portfolio_name": {
+                    "type": "string"
+                  }
+                }
+              },
+              "then": {
+                "properties": {
+                  "portfolio_name_reason_code": {
+                    "type": "null"
+                  }
+                }
+              },
+              "else": {
+                "properties": {
+                  "portfolio_name_reason_code": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ],
+          "description": "BE-P12, present only when the request asks for include=identity. Names of the deployment's own alpha and portfolio from the retained projection under THIS viewer's alpha.read row and field policy (alpha_id from the qualified deployment-to-alpha tuple publication only, never from a strategy id; portfolio_name from the deployment's own portfolio row, hidden when that portfolio is shared with an alpha the viewer cannot read). A hidden or unpublished member is null with its reason, never a guess. alpha_name is the constant null: no source publishes an alpha display name. It is not a field of the Portal record it travels beside and belongs to no parent-field purpose."
         }
       },
       "description": "Finite Portal Sandbox root under current exact SANDBOX deployment+portfolio audit, reviewed SANDBOX_ROOT fields and active workspace membership. CURRENT_NATIVE_TARGET_CORRESPONDENCE is a current association only, NOT an attested historical native deployment/portfolio edge. Optional steps/lineage each require their own exact reviewed purpose. Source/runtime/promotion effects are false. No private account, operator, prose, URLs, smoke amounts, raw evidence or commands."

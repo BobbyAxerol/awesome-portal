@@ -27,6 +27,42 @@ export const followingReadRoutes={
 };
 export const liveParentReadRoute="/api/v1/execution/governance/approvals/{approval_id}/live";
 
+/** BE-P12. The SCOPED_V2 identity block (Alpha-Portfolio names of one deployment), optional and opt-in on
+ * the Live source read and on the Sandbox/Canary parents. Same vocabulary as the V1 five identity keys
+ * (execution-live-full-operations `DeploymentIdentityRules`), restated closed: `alpha_name` is the constant
+ * null (no source publishes an alpha display name), so `alpha_reason_code` is always present and is
+ * ALPHA_NAME_NOT_PUBLISHED exactly when `alpha_id` is known. The reason words are pinned to the producer's
+ * leaf module by execution-scoped-stage.spec.ts. */
+export const scopedIdentityAlphaReasons=["ALPHA_MEMBERSHIP_NOT_QUALIFIED","ALPHA_MEMBERSHIP_NOT_PUBLISHED",
+  "ALPHA_MEMBERSHIP_AMBIGUOUS","ALPHA_IDENTITY_NOT_AUTHORIZED","ALPHA_NAME_NOT_PUBLISHED","DEPLOYMENT_IDENTITY_NOT_READ"];
+export const scopedIdentityPortfolioReasons=["PORTFOLIO_NOT_ASSIGNED","PORTFOLIO_NAME_NOT_PUBLISHED",
+  "PORTFOLIO_NAME_AMBIGUOUS","PORTFOLIO_NAME_NOT_AUTHORIZED","DEPLOYMENT_IDENTITY_NOT_READ"];
+/** TEST_ONLY synthetic examples: a viewer who may read both names, and one the policy hides everything from. */
+export function scopedIdentityExamples(){
+  const basis="RETAINED_PROJECTION_ROW_AND_FIELD_POLICY";
+  return {
+    named:{basis,alpha_id:"alpha_TEST_ONLY_identity",alpha_name:null,portfolio_name:"TEST_ONLY portfolio name",
+      alpha_reason_code:"ALPHA_NAME_NOT_PUBLISHED",portfolio_name_reason_code:null},
+    hidden:{basis,alpha_id:null,alpha_name:null,portfolio_name:null,
+      alpha_reason_code:"ALPHA_IDENTITY_NOT_AUTHORIZED",portfolio_name_reason_code:"PORTFOLIO_NAME_NOT_AUTHORIZED"},
+  };
+}
+export function scopedIdentitySchema(){
+  const displayName={type:"string",minLength:1,maxLength:256,pattern:"^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])"};
+  return {...object({basis:{const:"RETAINED_PROJECTION_ROW_AND_FIELD_POLICY"},
+    alpha_id:nullable({type:"string",minLength:1,maxLength:191,pattern:"^[A-Za-z0-9][A-Za-z0-9._:-]{0,190}$(?![\\s\\S])"}),
+    alpha_name:{type:"null"},portfolio_name:nullable(displayName),
+    alpha_reason_code:enumeration(scopedIdentityAlphaReasons),
+    portfolio_name_reason_code:nullable(enumeration(scopedIdentityPortfolioReasons))}),
+    allOf:[{if:{required:["alpha_id"],properties:{alpha_id:{type:"string"}}},
+      then:{properties:{alpha_reason_code:{const:"ALPHA_NAME_NOT_PUBLISHED"}}},
+      else:{properties:{alpha_reason_code:{not:{const:"ALPHA_NAME_NOT_PUBLISHED"}}}}},
+      {if:{required:["portfolio_name"],properties:{portfolio_name:{type:"string"}}},
+        then:{properties:{portfolio_name_reason_code:{type:"null"}}},
+        else:{properties:{portfolio_name_reason_code:{type:"string"}}}}],
+    description:"BE-P12, present only when the request asks for include=identity. Names of the deployment's own alpha and portfolio from the retained projection under THIS viewer's alpha.read row and field policy (alpha_id from the qualified deployment-to-alpha tuple publication only, never from a strategy id; portfolio_name from the deployment's own portfolio row, hidden when that portfolio is shared with an alpha the viewer cannot read). A hidden or unpublished member is null with its reason, never a guess. alpha_name is the constant null: no source publishes an alpha display name. It is not a field of the Portal record it travels beside and belongs to no parent-field purpose."};
+}
+
 /** Exact finite public shape. Cross-field identity/time/projected-key checks
  * remain in canonical Zod; descriptions and tests name them explicitly rather
  * than claiming standard JSON Schema can compare arbitrary sibling values.
@@ -292,6 +328,9 @@ function followingCurrentSchemas(){
     lineage:{oneOf:[object({availability:{const:"AVAILABLE"},basis:{const:"STORED_PORTAL_REFERENCE"},
       certification_id:id,promotion_plan_id:id,paper_exit_review_id:id,r1_approval_id:id,r2_approval_id:id}),absence()]}}),
     description:"Finite immutable Portal Canary DRAFT under exact current LIVE deployment+portfolio audit, independent governance.canary.read and CANARY_ROOT fields. LIVE is requested current association, NOT an attested historical native environment or active Canary. Proposal amounts are positive exact decimal strings, at most20 integer/18 fractional digits, never JS Number, economic backing/budget or effective exposure. Optional proposal/lineage each require their own reviewed purpose. Source verdict NOT_ASSERTED; production_command_active and every side-effect flag remain false. Captured certification version is historical metadata, not current eligibility."};
+  // BE-P12: optional and opt-in (`include=identity`). Not in `required`, so every existing body stays valid.
+  SandboxParentReadV2.properties.identity=scopedIdentitySchema();
+  CanaryParentReadV2.properties.identity=scopedIdentitySchema();
   return {SandboxParentReadV2,CanaryParentReadV2};
 }
 
@@ -346,6 +385,10 @@ export function updateFollowingParentPaths(api,document){
     const get=api.paths?.[path]?.get;
     if(!get||!get.responses?.["200"])throw new Error("Missing existing following-parent GET: "+path);
     get.description="Sticky current Core mode preserves legacy v1 separately. SCOPED_V2 publishes only a finite current-authorized Portal parent after BOTH current TS-qualified deployment/portfolio audit anchors and the exact reviewed root field purpose. Sandbox uses SANDBOX current correspondence and active membership; Canary uses LIVE current correspondence plus independent governance.canary.read. Current association is NOT captured historical native membership. Optional fields require separate purposes. Stored Portal evaluation/DRAFT never asserts a source verdict, current eligibility, activated runtime or effective capital; source screens remain explicitly unpublished. No mutation/upstream call, owner/ADMIN shortcut or fallback after current-authority refusal. One shared flight fences body and contextual errors after local/source checks and LAST Core.";
+    // BE-P12: opt-in identity. The legacy body already carries the five identity keys and ignores this.
+    get.parameters=[...(get.parameters??[]).filter(p=>!(p.in==="query"&&p.name==="include")),
+      {name:"include",in:"query",required:false,schema:{type:"string",enum:["identity"]},
+        description:"SCOPED_V2 only; the legacy body ignores it. include=identity attaches the closed `identity` block from a separate fenced retained-projection read under the viewer's own alpha.read row and field policy. Any other value is refused (400 EXECUTION_READ_QUERY_INVALID). Omitted: the body is byte-identical to before. It is not a parent record field and not a parent-field purpose."}];
     const previous=get.responses["200"];
     get.responses["200"]={...previous,
       description:"Legacy parent OR finite current-authorized v2 Portal root; not an effective source, certification, capital or execution verdict.",
@@ -567,7 +610,12 @@ export function parentCurrentFixture(){
     paper_exit_operation:operation("PAPER_EXIT","PLANNED"),paper_exit_operation_applied:operation("PAPER_EXIT","APPLIED"),
     paper_exit_operation_expired:operation("PAPER_EXIT","EXPIRED"),
     sandbox,sandbox_absent:sandboxAbsent,sandbox_draft:sandboxDraft,
-    canary,canary_absent:canaryAbsent,canary_revision:canaryRevision,live,
+    canary,canary_absent:canaryAbsent,canary_revision:canaryRevision,
+    // BE-P12: the same sealed parents with the opt-in `identity` block attached.
+    sandbox_identity:{...sandbox,identity:scopedIdentityExamples().named},
+    sandbox_identity_hidden:{...sandboxAbsent,identity:scopedIdentityExamples().hidden},
+    canary_identity:{...canary,identity:scopedIdentityExamples().named},
+    canary_identity_hidden:{...canaryAbsent,identity:scopedIdentityExamples().hidden},live,
     live_composition:parentCompositionFixture("live_review",{governance:live,
       accepted_manager_facts:live.accepted_manager_facts},base.workspace_id,observed),
     r2_followthrough:r2Followthrough,r2_followthrough_hashes_absent:r2FollowthroughHashesAbsent,
@@ -643,6 +691,19 @@ export function liveSourceCurrentSchemas(){
     realtime:object({active:{const:false},reason_code:{const:"FINITE_SCOPED_READ_NOT_STREAM_AUTHORITY"}}),
     commands:object({enabled:{const:false},reason_code:{const:"READ_NOT_COMMAND_AUTHORITY"}})}),
     description:"Source-only finite Live deployment read; NEVER approval/root/captured lineage, current broker verdict, source completeness, runtime activation, stream or command permission. Legacy LiveFullOperations remains a separate version. Alpha and Account original purposes and reviewed field permissions are independently enforced by the runtime before rows/counts/fields; THIS SCHEMA DOES NOT AUTHORIZE. Portal observed time is not source freshness. Runtime also applies a1MiB encoded body bound and combined current-authority/fresh-source/LAST-Core fence. These are proposed implementation bounds, not measured performance qualification."};
+  // BE-P12: optional and opt-in (`include=identity,stage_facts`). Not in `required`, so every existing body stays valid.
+  // Both are derived only from rows this reader already authorized, under the same scopes and final fence.
+  LiveSourceOperationsReadV2.properties.identity=scopedIdentitySchema();
+  const shape=properties=>({type:"object",properties});
+  const notPublished=shape({availability:{const:"NOT_PUBLISHED"}});
+  LiveSourceOperationsReadV2.properties.stage_facts={allOf:[{$ref:"execution-stage-facts.v1.schema.json#/$defs/StageFacts"},
+    // The honesty rule as contract: nothing a resource-bound scope cannot prove may be AVAILABLE here.
+    shape({
+      runtime:shape({runtime_state:notPublished,since:notPublished}),
+      reconciliation:shape({verdict:shape({value:{not:{const:"NO_OPEN_FINDINGS"}}}),
+        open_finding_count:notPublished,unknown_order_count:notPublished}),
+      sessions:notPublished})],
+    description:"BE-P12, present only when the request asks for include=stage_facts. The V1 fact vocabulary over the AUTHORIZED population only: OPEN_FINDINGS is stated when an authorized open finding exists; NO_OPEN_FINDINGS and exact counts are never stated (a resource-bound scope cannot prove it holds the whole population: AUTHORIZED_POPULATION_ONLY / AUTHORIZED_POPULATION_COUNT_NOT_EXACT). runtime and sessions are NOT_PUBLISHED because runtime_state and a session's id/started/completed instants are not in the reviewed read-field vocabulary."};
   return {LiveSourceOperationsReadV2};
 }
 
@@ -711,8 +772,23 @@ export function liveSourceFixture(){
     runtime:{state:null,reason_code:"SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED"},
     realtime:{active:false,reason_code:"FINITE_SCOPED_READ_NOT_STREAM_AUTHORITY"},
     commands:{enabled:false,reason_code:"READ_NOT_COMMAND_AUTHORITY"}};
+  // BE-P12: the opt-in members. Facts are the authorized-population statements only (never NO_OPEN_FINDINGS, never an exact count).
+  const gone=reason=>({availability:"NOT_PUBLISHED",value:null,reason_code:reason});
+  const runtimeReason="RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY";
+  const stageFacts=verdict=>({schema_version:"execution.stage-facts.v1",
+    runtime:{runtime_state:gone(runtimeReason),since:gone(runtimeReason)},
+    reconciliation:{basis:"FINDINGS_RELATION_NOT_A_RECONCILIATION_RUN",verdict,
+      open_finding_count:gone(verdict.availability==="AVAILABLE"?"AUTHORIZED_POPULATION_COUNT_NOT_EXACT":"AUTHORIZED_POPULATION_ONLY"),
+      unknown_order_count:gone(verdict.availability==="AVAILABLE"?"FINDING_TYPE_VOCABULARY_NOT_CLASSIFIED":"AUTHORIZED_POPULATION_ONLY"),
+      as_of:gone("SOURCE_CLOCK_NOT_SCOPED")},
+    sessions:{availability:"NOT_PUBLISHED",reason_code:"SCOPED_SESSION_ROW_FIELDS_NOT_IN_READ_VOCABULARY",
+      basis:"EXECUTION_SESSIONS_BOUNDED_WINDOW",rows:[],returned_count:0,omitted_count:0,source_complete:null}});
   return {lane:"TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",runtime_qualified:false,production_config:false,
-    authority_installed:false,source_publication_installed:false,populated:body,unpublished:{...body,data:unpublished}};
+    authority_installed:false,source_publication_installed:false,populated:body,unpublished:{...body,data:unpublished},
+    with_members:{...body,identity:scopedIdentityExamples().named,
+      stage_facts:stageFacts({availability:"AVAILABLE",value:"OPEN_FINDINGS",reason_code:null})},
+    with_members_hidden:{...body,identity:scopedIdentityExamples().hidden,
+      stage_facts:stageFacts(gone("AUTHORIZED_POPULATION_ONLY"))}};
 }
 
 /** Existing GET only, preserving its operationId/parameters/other verbs and
@@ -722,12 +798,14 @@ export function updateLiveSourcePath(api){
   const get=api.paths?.[liveSourceReadRoute]?.get;
   if(!get||!get.responses?.["200"]||get.operationId!=="getLiveFullOperations")
     throw new Error("Missing existing Live source GET");
-  const unrelated=(get.parameters??[]).filter(p=>!(p.in==="query"&&["panel","cursor"].includes(p.name)));
+  const unrelated=(get.parameters??[]).filter(p=>!(p.in==="query"&&["panel","cursor","include"].includes(p.name)));
   get.parameters=[...unrelated,
     {name:"panel",in:"query",required:false,schema:{type:"string",enum:liveSourcePanels},
       description:"Fixed Live panel only. Advances that panel; all other panels return their first page. Same independent Live/Alpha/Account current-authority flight. Account panels remain ACCOUNT grain, not deployment economics."},
     {name:"cursor",in:"query",required:false,schema:{type:"string",maxLength:128,minLength:1},
-      description:"Opaque Portal lps2 continuation from this exact panel under the SAME deployment/workspace/profile/session/current scope and immutable retained snapshot. Requires panel. Never a source cursor; no source or authority selection. Expired/changed-view cursor is refused; restart this panel from its first page."}];
+      description:"Opaque Portal lps2 continuation from this exact panel under the SAME deployment/workspace/profile/session/current scope and immutable retained snapshot. Requires panel. Never a source cursor; no source or authority selection. Expired/changed-view cursor is refused; restart this panel from its first page."},
+    {name:"include",in:"query",required:false,schema:{type:"string",enum:["identity","stage_facts","identity,stage_facts","stage_facts,identity"]},
+      description:"SCOPED_V2 only; the legacy body already carries identity and stage facts and ignores it. A comma list of distinct fixed tokens: identity (the closed `identity` block) and/or stage_facts (the V1 fact vocabulary over the authorized population). Any other value, a duplicate or an empty token is refused (400 EXECUTION_READ_QUERY_INVALID), never ignored. Omitted: the body is byte-identical to before. Both members are derived from rows this reader already authorized, under the same scopes and final fence; no legacy composer or extra source read."}];
   get.description="Sticky current Core preserves legacy separately. SCOPED_V2 is the exact DEPLOYMENT/LIVE source-only reader under independent governance.live.read, original Alpha/Account purposes and exact reviewed fields. Before retained reads, after every purpose, after snapshot equality and at LAST Core, the SAME combined flight retains all current obligations for body and held errors. No Canary/root lookup or fallback, source/broker acceptance, stream, activation, command, mutation, synthetic total or global population claim. Panel/source clock absence remains typed; Portal observed time is not source freshness.";
   const prior=get.responses["200"];
   get.responses["200"]={...prior,description:"Legacy Live operations OR finite current-authorized source-only retained observations, never a joint ROOT+source acceptance.",
