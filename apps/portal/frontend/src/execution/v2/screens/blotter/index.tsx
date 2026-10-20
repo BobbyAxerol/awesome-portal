@@ -387,7 +387,6 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
       <section className="exec-blt2-panel" aria-label="Filters">
         <div className="exec-blt2-scope">
           <span className="exec-blt2-chip" data-lock="read" title="Set by this read, not by the context bar"><span className="exec-blt2-chip-k">environment</span>Paper</span>
-          <span className="exec-blt2-chip" data-lock="read" title="Set by this read, not by the context bar"><span className="exec-blt2-chip-k">window</span>Current retained window</span>
           {!accountsVisible ? <span className="exec-blt2-chip"><span className="exec-blt2-chip-k">scope</span>Your slice only</span> : null}
           {(["deployment", "account", "alpha"] as const).map((key) =>
             scope[key] !== null && !(key === "account" && !accountsVisible) ? (

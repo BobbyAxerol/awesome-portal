@@ -46,6 +46,14 @@ answers synthetic data only; turn the overlay off to get the real, authenticated
    On this overlay the stage screens read the fixture doubles, so most of their cells say `Not available` or
    `Not published (FE-xxx)` by design.
 
+   Two more keys exist and are off by default (they are not among the 20): `command` (the fixture-only command story at
+   `/execution/command`, and the "Preview control" form in the Operations dock) and `scoped` (the fixture-only slice at
+   `/execution/slice`). Two controls are not reachable on this overlay whatever the build says:
+   the Workbench "Request review" (Paper exit) mounts once the URL names a workspace (`?workspace_id=ws_TEST_ONLY_shared`) and stays
+   shut because the fixture BFF answers `PAPER_EXIT_CREATE` as `UNAVAILABLE` for every workspace; the dock's "Preview control" form
+   needs `command` and a PORTFOLIO or DEPLOYMENT target with an open recall, and the fixture BFF returns `items: []` for all of them.
+   Both need a fixture-BFF change (Codex), not a front-end one.
+
    The umbrella flag `VITE_EXECUTION_PREVIEW_ENABLED` is already true in the preview overlay. Optional:
    `FIXTURE_SCALE=small|medium|large` (default `medium`), `FIXTURE_WRITES=refuse|doubles`,
    `FIXTURE_NOW_ISO`, `FIXTURE_VARIANTS` (see `apps/portal/fixture-bff/README.md`).
