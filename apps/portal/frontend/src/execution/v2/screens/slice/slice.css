@@ -1,0 +1,140 @@
+/* Scoped slice (UXM-08, fixture only). Tokens and type roles only; no uppercase, no raw colour, no font-size.
+ * Every class is .exec-slice-* so no V1 or other V2 class is shared. The only text/fill pair is ink on surface-2,
+ * the one overview.css and fleet.css already prove. The stylesheet lives beside the screen, so
+ * slice.hygiene.test.ts holds the same rules v2Hygiene.test.ts holds for v2/css. */
+.exec-slice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+  color: var(--ink);
+}
+.exec-slice-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-slice-title {
+  margin: 0;
+  font: var(--exec-font-title);
+  color: var(--ink);
+}
+.exec-slice-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-slice-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.exec-slice-chips .exec-flag {
+  flex: none;
+  white-space: nowrap;
+}
+.exec-slice-lane {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+}
+.exec-slice-line {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-slice-next {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-slice-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-slice-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.exec-slice-facts dt {
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+}
+.exec-slice-facts dd {
+  margin: 0;
+  font: var(--exec-font-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-slice-id {
+  font: var(--exec-font-id);
+  overflow-wrap: anywhere;
+}
+.exec-slice-muted {
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-slice-alpha,
+.exec-slice-money,
+.exec-slice-avail {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.exec-slice-link {
+  font: var(--exec-font-control);
+  color: var(--accent);
+}
+.exec-slice-btn {
+  padding: 5px var(--space-3);
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-slice-btn:focus-visible,
+.exec-slice-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-slice-details {
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-slice-fixture {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px dashed var(--line-strong);
+}
+.exec-slice-fixture legend {
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+}
+.exec-slice-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.exec-slice-dial {
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
