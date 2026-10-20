@@ -78,7 +78,7 @@ describe("the snapshot", () => {
   });
   it("answers the same bytes for the same question and refuses an unknown or missing parameter (400, never a guess)", () => {
     expect(JSON.stringify(ask("/manager/fleet/realtime-snapshot", { environment: "paper" })!.body)).toBe(JSON.stringify(ask("/manager/fleet/realtime-snapshot", { environment: "paper" })!.body));
-    for (const query of [{}, { environment: "all" }, { environment: "paper", cursor: "x" }, { environment: "paper", ordinal: "1" }, { environment: "paper", workspace_id: "" }]) {
+    for (const query of [{}, { environment: "all" }, { environment: "paper", cursor: "x" }, { environment: "paper", ordinal: "1" }, { environment: "paper", workspace_id: "" }] as Array<Record<string, string>>) {
       expect(ask("/manager/fleet/realtime-snapshot", query)?.status, JSON.stringify(query)).toBe(400);
     }
   });
