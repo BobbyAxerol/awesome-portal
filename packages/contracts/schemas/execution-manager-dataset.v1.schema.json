@@ -3217,6 +3217,7 @@
                     "owner_user_id",
                     "alpha_id",
                     "stage_presence",
+                    "current_stage",
                     "venue",
                     "health",
                     "source_state",
@@ -3303,6 +3304,23 @@
                     "properties": {
                       "field": {
                         "const": "stage_presence"
+                      }
+                    },
+                    "required": [
+                      "field"
+                    ]
+                  },
+                  "minContains": 2
+                }
+              },
+              {
+                "not": {
+                  "type": "array",
+                  "contains": {
+                    "type": "object",
+                    "properties": {
+                      "field": {
+                        "const": "current_stage"
                       }
                     },
                     "required": [
