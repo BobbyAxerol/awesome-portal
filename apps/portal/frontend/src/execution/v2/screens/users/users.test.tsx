@@ -95,9 +95,11 @@ describe("roster", () => {
     expect(note.textContent).toContain("Not published (FE-053) Last sign-in");
     expect(note.querySelectorAll("li").length).toBe(3);
     expect(note.textContent).not.toMatch(/no request/i);
+    // The drawer does not repeat the two gaps: they are on the toolbar line, ids in their titles.
     const dock = await screen.findByRole("complementary");
-    expect(dock.textContent).toContain("Not published (FE-015, FE-026, FE-037, FE-038)");
-    expect(dock.textContent).toContain("Not published (FE-053)");
+    expect(dock.textContent).not.toContain("Not published");
+    expect(note.querySelector('[title="FE-053"]')).not.toBeNull();
+    expect(note.querySelector('[title="FE-015, FE-026, FE-037, FE-038"]')).not.toBeNull();
   });
 
   it("renders inside an execution surface, so the type roles apply (USR-B1)", async () => {

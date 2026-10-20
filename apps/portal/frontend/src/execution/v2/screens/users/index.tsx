@@ -82,13 +82,16 @@ const SEARCH_DEBOUNCE_MS = 300;
 
 const LAST_SIGN_IN_REQUEST = "FE-053";
 
-const CHANGES_ELSEWHERE = "Account changes are made on the current Users screen. This view reads accounts only.";
+const CHANGES_ELSEWHERE = "Account changes are made on the current Users screen.";
 
 /** `Not published (FE-015, FE-026, FE-037, FE-038)`: the word, then the request ids. */
+/** `Not published` on screen; the request ids stay in the title and in hidden text. */
 function Unpublished({ ids, what }: { ids: string; what?: string }) {
   return (
-    <span className="exec-blk-np">
-      <span className="exec-blk-np-word">Not published</span> ({ids}){what ? <> {what}</> : null}
+    <span className="exec-blk-np" title={ids}>
+      <span className="exec-blk-np-word">Not published</span>
+      <span className="exec-blk-sr"> ({ids})</span>
+      {what ? <> {what}</> : null}
     </span>
   );
 }
@@ -261,8 +264,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
     <div className="exec-usr-v2" data-screen="users-v2">
       <header className="exec-usr-head">
         <div>
-          <h1 className="exec-usr-title">Users</h1>
-          <p className="exec-usr-sub">Accounts and their lifecycle. Administrators only.</p>
+          <h1 className="exec-usr-title" title="Accounts and their lifecycle. Administrators only. This view reads accounts only.">Users</h1>
         </div>
         <div className="exec-usr-chips">
           {stepRead === "loading" ? (
@@ -300,10 +302,9 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
               ["Archived", counts.byState.ARCHIVED, "Kept with history"],
               ["Locked", counts.locked, "Server-locked"],
             ] as const).map(([label, value, note]) => (
-              <div className="exec-usr-kpi" key={label}>
+              <div className="exec-usr-kpi" key={label} title={note}>
                 <span className="exec-usr-kpi-label">{label}</span>
                 <span className="exec-usr-kpi-value">{value}</span>
-                <span className="exec-usr-kpi-note">{note}</span>
               </div>
             ))}
           </section>
@@ -411,10 +412,6 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                     <dd>{flagsOf(selected)}</dd>
                     <dt>Revision</dt>
                     <dd className="exec-usr-num">{selected.accountRevision}</dd>
-                    <dt>Role preset</dt>
-                    <dd><Unpublished ids={PRESET_REQUESTS} /></dd>
-                    <dt>Last sign-in</dt>
-                    <dd><Unpublished ids={LAST_SIGN_IN_REQUEST} /></dd>
                   </dl>
                 ) : (
                   <p className="exec-usr-note">This account is not in the roster that was read. It may have been removed or the link is wrong.</p>
