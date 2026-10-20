@@ -7,6 +7,7 @@ import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProfileReadService } from "../profile-read/profile-read.service";
 import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
+import { deploymentIdentityOf, identityFields } from "../execution/deployment-identity";
 import {
   decimalAbsoluteSum,
   decimalSubtract,
@@ -287,6 +288,7 @@ export class CanaryService {
       deployment: {
         deployment_id: envelope.deployment_id,
         portfolio_id: certification.portfolio_id,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         account_id: certification.account_id,
         external_account_ref: certification.external_account_ref,
         venue: certification.venue,

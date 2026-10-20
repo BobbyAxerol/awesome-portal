@@ -476,6 +476,11 @@ TRACKED = (
     "fixtures/execution-analytics.correlation.valid.json",
     "fixtures/execution-analytics.capital-ledger.valid.json",
     "fixtures/execution-capital-ledger-page.synthetic.valid.json",
+    # BE-P3 (ELP2-06 serving data), FE-066 / S3-U5
+    "fixtures/execution-paper-workbench.identity.valid.json",
+    "fixtures/execution-sandbox-certification.identity.valid.json",
+    "fixtures/execution-canary-control-room.identity.valid.json",
+    "fixtures/execution-live-full-operations.identity.valid.json",
     "fixtures/execution-analytics.binding-exposure.valid.json",
     "schemas/execution-publication-catalogue.v1.schema.json",
     "schemas/execution-manager-dataset.v1.schema.json",

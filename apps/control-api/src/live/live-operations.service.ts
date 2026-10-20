@@ -6,6 +6,7 @@ import { ProfileReadService } from "../profile-read/profile-read.service";
 import { ControlApiConfig } from "../config";
 import { CONTROL_API_CONFIG } from "../tokens";
 import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
+import { deploymentIdentityOf, identityFields } from "../execution/deployment-identity";
 import {
   exactCurrencySum,
   latest,
@@ -229,6 +230,7 @@ export class LiveOperationsService {
       deployment: {
         deployment_id: typeof deployment?.deployment_id === "string" ? deployment.deployment_id : deploymentId,
         portfolio_id: typeof deployment?.portfolio_id === "string" ? deployment.portfolio_id : null,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         account_id: typeof deployment?.account_id === "string" ? deployment.account_id : null,
         external_account_ref: null,
         venue: typeof deployment?.venue === "string" ? deployment.venue : null,
@@ -444,6 +446,7 @@ export class LiveOperationsService {
       deployment: {
         deployment_id: canary.deployment_id,
         portfolio_id: certification.portfolio_id,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         account_id: certification.account_id,
         external_account_ref: certification.external_account_ref,
         venue: certification.venue,

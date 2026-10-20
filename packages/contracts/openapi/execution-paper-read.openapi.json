@@ -839,11 +839,23 @@
           "lineage_rejects": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } }
         }
       },
+      "DeploymentDisplayName": { "type": ["string", "null"], "minLength": 1, "maxLength": 256, "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])", "description": "FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace." },
+      "AlphaIdentityReason": { "enum": ["ALPHA_MEMBERSHIP_NOT_QUALIFIED", "ALPHA_MEMBERSHIP_NOT_PUBLISHED", "ALPHA_MEMBERSHIP_AMBIGUOUS", "ALPHA_IDENTITY_NOT_AUTHORIZED", "ALPHA_NAME_NOT_PUBLISHED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id." },
+      "PortfolioNameReason": { "enum": ["PORTFOLIO_NOT_ASSIGNED", "PORTFOLIO_NAME_NOT_PUBLISHED", "PORTFOLIO_NAME_AMBIGUOUS", "PORTFOLIO_NAME_NOT_AUTHORIZED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why portfolio_name is null." },
+      "DeploymentIdentityRules": {
+        "type": "object", "description": "FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id.",
+        "dependentRequired": { "alpha_id": ["alpha_name", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_name": ["alpha_id", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "portfolio_name": ["alpha_id", "alpha_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "portfolio_name_reason_code"], "portfolio_name_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "alpha_reason_code"] },
+        "allOf": [
+          { "if": { "required": ["alpha_name"], "properties": { "alpha_name": { "type": "string" } } }, "then": { "properties": { "alpha_id": { "type": "string" }, "alpha_reason_code": { "type": "null" } } }, "else": { "properties": { "alpha_reason_code": { "type": "string" } } } },
+          { "if": { "required": ["portfolio_name"], "properties": { "portfolio_name": { "type": "string" } } }, "then": { "properties": { "portfolio_name_reason_code": { "type": "null" } } }, "else": { "properties": { "portfolio_name_reason_code": { "type": "string" } } } }
+        ]
+      },
+      "DeploymentRecord": { "description": "FE-066: the Paper profile deployment block: the source row plus the Alpha-Portfolio identity keys.", "allOf": [{ "$ref": "#/components/schemas/NarrowRecord" }, { "type": "object", "properties": { "alpha_id": { "oneOf": [{ "$ref": "#/components/schemas/Identifier" }, { "type": "null" }] }, "alpha_name": { "$ref": "#/components/schemas/DeploymentDisplayName" }, "portfolio_name": { "$ref": "#/components/schemas/DeploymentDisplayName" }, "alpha_reason_code": { "$ref": "#/components/schemas/AlphaIdentityReason" }, "portfolio_name_reason_code": { "$ref": "#/components/schemas/PortfolioNameReason" } } }, { "$ref": "#/components/schemas/DeploymentIdentityRules" }] },
       "NarrowRecord": { "type": "object", "maxProperties": 40, "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }, { "type": "array", "items": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] } }] } },
       "PaperData": {
         "type": "object", "additionalProperties": false,
         "properties": {
-          "deployment": { "oneOf": [{ "$ref": "#/components/schemas/NarrowRecord" }, { "type": "null" }] },
+          "deployment": { "oneOf": [{ "$ref": "#/components/schemas/DeploymentRecord" }, { "type": "null" }] },
           "deployments": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "positions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "sessions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },

@@ -276,11 +276,33 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** @description FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace. */
+        DeploymentDisplayName: string | null;
+        /**
+         * @description FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id.
+         * @enum {unknown}
+         */
+        AlphaIdentityReason: "ALPHA_MEMBERSHIP_NOT_QUALIFIED" | "ALPHA_MEMBERSHIP_NOT_PUBLISHED" | "ALPHA_MEMBERSHIP_AMBIGUOUS" | "ALPHA_IDENTITY_NOT_AUTHORIZED" | "ALPHA_NAME_NOT_PUBLISHED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
+        /**
+         * @description FE-066: why portfolio_name is null.
+         * @enum {unknown}
+         */
+        PortfolioNameReason: "PORTFOLIO_NOT_ASSIGNED" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_AMBIGUOUS" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "DEPLOYMENT_IDENTITY_NOT_READ" | null;
+        /** @description FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id. */
+        DeploymentIdentityRules: unknown & unknown;
+        /** @description FE-066: the Paper profile deployment block: the source row plus the Alpha-Portfolio identity keys. */
+        DeploymentRecord: components["schemas"]["NarrowRecord"] & {
+            alpha_id?: components["schemas"]["Identifier"] | null;
+            alpha_name?: components["schemas"]["DeploymentDisplayName"];
+            portfolio_name?: components["schemas"]["DeploymentDisplayName"];
+            alpha_reason_code?: components["schemas"]["AlphaIdentityReason"];
+            portfolio_name_reason_code?: components["schemas"]["PortfolioNameReason"];
+        } & components["schemas"]["DeploymentIdentityRules"];
         NarrowRecord: {
             [key: string]: string | number | boolean | null | (string | number | boolean | null)[];
         };
         PaperData: {
-            deployment?: components["schemas"]["NarrowRecord"] | null;
+            deployment?: components["schemas"]["DeploymentRecord"] | null;
             deployments?: components["schemas"]["NarrowRecord"][];
             positions?: components["schemas"]["NarrowRecord"][];
             sessions?: components["schemas"]["NarrowRecord"][];

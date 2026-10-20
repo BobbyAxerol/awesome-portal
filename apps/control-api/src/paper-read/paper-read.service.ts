@@ -19,6 +19,7 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { PaperBlotterQuery } from "./contracts";
 import { ManagerPage, managerPage } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
+import { IDENTITY_NOT_READ, identityFields } from "../execution/deployment-identity";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
 import { absentRelation, buildStageFacts, RelationInput } from "../execution/stage-facts";
 import { unpublishedVenueCalendar } from "../execution/venue-calendar";
@@ -402,7 +403,13 @@ export class PaperReadService {
       principal,
       relations,
       {
-        deployment: deployment ?? null,
+        // FE-066: the block that names the deployment also names its Alpha and
+        // Portfolio, each nullable with a typed reason. A resolution that did
+        // not establish an exact scope read no identity: said, not guessed.
+        deployment: deployment
+          ? { ...deployment, ...identityFields(resolution.state === "FOUND" && resolution.identity
+            ? resolution.identity : IDENTITY_NOT_READ) }
+          : null,
         observation_gate: observationGate,
         query_analytics: queryAnalytics,
         // FE-067. Typed runtime / reconciliation / sessions. The workbench screen is not bound to the

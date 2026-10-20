@@ -10,6 +10,7 @@ import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
 import { ProfileScreenSource } from "../execution/profile-screen-composer";
 import { profileStageFacts } from "../execution/stage-facts-profile";
 import { sourceFigures } from "../execution/stage-rows";
+import { deploymentIdentityOf, identityFields } from "../execution/deployment-identity";
 import {
   SANDBOX_CERTIFICATION_STEPS,
   SandboxCertificationCreateRequest,
@@ -408,6 +409,7 @@ export class SandboxCertificationService {
         certification_id: record.certification_id,
         deployment_id: record.deployment_id,
         portfolio_id: record.portfolio_id,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         venue: record.venue,
         environment: "SANDBOX",
         workflow_state: record.workflow_state,
@@ -567,6 +569,7 @@ export class SandboxCertificationService {
         certification_id: `uncommissioned:${deploymentId}`,
         deployment_id: deploymentId,
         portfolio_id: deployment?.portfolio_id ?? null,
+        ...identityFields(deploymentIdentityOf(currentSource)),
         venue: deployment?.venue ?? null,
         environment: "SANDBOX",
         workflow_state: "NOT_COMMISSIONED",
