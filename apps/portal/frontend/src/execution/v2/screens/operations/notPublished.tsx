@@ -9,6 +9,7 @@
 import type { ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
+import "../../css/blocks.css";
 import { withContext } from "../../urlState";
 
 import "../../css/operations.css";
@@ -59,10 +60,11 @@ export interface NotPublishedProps {
 /** Inline: "Not published (FE-021)" plus what it means. */
 export function NotPublished({ id, reasonCode, children }: NotPublishedProps) {
   return (
-    <span className="exec-ops-np">
-      <span className="exec-ops-np-word">Not published</span> ({id})
+    <span className="exec-ops-np" title={reasonCode ? `${id} · ${reasonCode}` : id}>
+      <span className="exec-ops-np-word">Not published</span>
+      <span className="exec-blk-sr"> ({id})</span>
       {children ? <> {children}</> : null}
-      {reasonCode ? <span className="exec-ops-np-reason">{reasonCode}</span> : null}
+      {reasonCode ? <span className="exec-blk-sr"><span className="exec-ops-np-reason">{reasonCode}</span></span> : null}
     </span>
   );
 }

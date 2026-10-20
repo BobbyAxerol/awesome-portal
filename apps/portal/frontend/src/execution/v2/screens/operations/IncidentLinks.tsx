@@ -20,7 +20,8 @@ import type { KeyboardEvent, MouseEvent } from "react";
 import { Link, type To } from "react-router-dom";
 
 import type { IncidentLinksV2, IncidentLinkV2 } from "../../readers/operationalQueue";
-import { FE_B1, NotPublished } from "./notPublished";
+import { FE_B1 } from "./notPublished";
+import "../../css/blocks.css";
 import { humanize, severityWord } from "./outcome";
 
 const NO_READABLE = "No readable incident links";
@@ -35,9 +36,9 @@ const stopActivation = (event: KeyboardEvent) => {
 function LinkItem({ link, operationId, to }: { link: IncidentLinkV2; operationId: string; to(incidentId: string): To }) {
   if (link.state === "NOT_ATTESTED") {
     return (
-      <li className="exec-ops-link">
+      <li className="exec-ops-link" title={link.reasonCode}>
         <span className="exec-ops-link-id">Incident not attested</span>
-        <span className="exec-ops-meta">{link.reasonCode}</span>
+        <span className="exec-blk-sr">{link.reasonCode}</span>
       </li>
     );
   }
@@ -72,7 +73,8 @@ export function IncidentLinks({ operationId, links, to }: IncidentLinksProps) {
   if (links === undefined) {
     return (
       <div className="exec-ops-links" role="group" aria-label={label} data-state="absent">
-        <NotPublished id={FE_B1.links} />
+        {/* Said once on the queue's "Not available" line; per row it stays for assistive tech only. */}
+        <span className="exec-blk-sr">Not published ({FE_B1.links})</span>
       </div>
     );
   }

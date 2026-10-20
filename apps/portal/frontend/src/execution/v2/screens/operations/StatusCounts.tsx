@@ -14,7 +14,7 @@
  * voids the page.
  */
 import type { StatusCountDimensionV2, StatusCountsV2 } from "../../readers/operationalQueue";
-import { FE_B1, NotPublished } from "./notPublished";
+import { NotAvailableLine } from "../../blocks";
 import { humanize } from "./outcome";
 
 import "../../css/operations.css";
@@ -50,12 +50,15 @@ export interface StatusCountsProps {
 export function StatusCounts({ counts, appliedFilters, observed }: StatusCountsProps) {
   return (
     <section className="exec-ops-counts" aria-labelledby="exec-ops-counts-title">
-      <h2 id="exec-ops-counts-title" className="exec-ops-counts-title">Counts by status</h2>
-      <p className="exec-ops-counts-scope">
-        {COUNTS_SCOPE}
-        {counts ? <> {SUCCEEDED_NOTE} Same server snapshot as the table, observed {observed}.</> : null}
-      </p>
-      <div className="exec-ops-counts-grid">
+      <h2 id="exec-ops-counts-title" className="exec-ops-counts-title" title={`${COUNTS_SCOPE}${counts ? ` Same server snapshot as the table, observed ${observed}.` : ""}`}>Counts by status</h2>
+      {counts ? null : (
+        <NotAvailableLine
+          className="exec-ops-na-line"
+          facts={TILES.map((tile) => ({ label: tile.label, id: "FE-043" as const, why: "Server-side status counts over the whole filtered query" }))}
+          note="counts"
+        />
+      )}
+      {counts === undefined ? null : <div className="exec-ops-counts-grid">
         {TILES.map((tile) => {
           const dimension = counts ? tile.pick(counts) : undefined;
           const own = appliedFilters.find((filter) => filter.field === tile.field);
@@ -75,7 +78,7 @@ export function StatusCounts({ counts, appliedFilters, observed }: StatusCountsP
                       const selected = dimension.ownFilterApplied && own?.value === bucket;
                       return (
                         <li key={bucket} className="exec-ops-dim-row" data-selected={selected ? "true" : undefined}>
-                          <span>{humanize(bucket)}{selected ? <span className="exec-ops-dim-tag"> (filtered)</span> : null}</span>
+                          <span title={bucket === "SUCCEEDED" ? SUCCEEDED_NOTE : undefined}>{humanize(bucket)}{selected ? <span className="exec-ops-dim-tag"> (filtered)</span> : null}</span>
                           <span className="exec-ops-dim-num">{number(value)}</span>
                         </li>
                       );
@@ -83,12 +86,12 @@ export function StatusCounts({ counts, appliedFilters, observed }: StatusCountsP
                   </ul>
                 </>
               ) : (
-                <p className="exec-ops-np"><NotPublished id={FE_B1.counts} /></p>
+                <p className="exec-ops-np">Not available</p>
               )}
             </div>
           );
         })}
-      </div>
+      </div>}
     </section>
   );
 }

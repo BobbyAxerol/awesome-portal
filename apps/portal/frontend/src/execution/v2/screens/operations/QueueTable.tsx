@@ -1,6 +1,7 @@
 /**
  * The commands table, in the kit's column order: Time, Target and operation,
- * Intent, Receipt, Display, Next.
+ * Receipt, Next. Intent (FE-020) and Display (FE-032) have no source, so they are not columns of "Not published":
+ * the screen names them once ("Not available: Intent, Display").
  *
  * Time is `created_at`; Target + operation is the target and `command_key`;
  * Receipt is `source_status` with `verification_result`; Next is
@@ -18,7 +19,6 @@ import { formatAsOf } from "../../boundary";
 import type { OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { IncidentLinks } from "./IncidentLinks";
-import { FE, NotPublished } from "./notPublished";
 import { axesText, commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
@@ -45,11 +45,6 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       ),
     },
     {
-      key: "intent",
-      label: "Intent",
-      render: () => <NotPublished id={FE.intent} />,
-    },
-    {
       key: "receipt",
       label: "Receipt",
       render: (row) => {
@@ -61,11 +56,6 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
           </span>
         );
       },
-    },
-    {
-      key: "display",
-      label: "Display",
-      render: () => <NotPublished id={FE.receipts} />,
     },
     {
       key: "next",

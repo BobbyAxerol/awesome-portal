@@ -25,7 +25,7 @@ import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
 import { useDockMode, useDockSelection } from "../../Drawer";
-import { Kpi, KpiStrip } from "../../blocks";
+import { Kpi, KpiStrip, NotAvailableLine, QuietIds } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import {
@@ -53,7 +53,7 @@ export const ROW_CAP = 200;
 
 export const MINE_REASON = notPublishedReason(
   FE.assignee,
-  "The queue has no assignee or creator, so it cannot be filtered to you.",
+  "No assignee or creator is published, so it cannot be filtered to you.",
 );
 
 export type { OpsWindow } from "./opsUrl";
@@ -333,7 +333,6 @@ export default function OperationsV2({
       <div className="exec-ops-head">
         <div>
           <h1 className="exec-ops-title">Operations</h1>
-          <p className="exec-ops-subtitle">Commands, exceptions and audit</p>
         </div>
         {ready ? (
           <div className="exec-ops-chips">
@@ -345,15 +344,15 @@ export default function OperationsV2({
 
       {ready ? (
         <KpiStrip label="Queue counts" columns={4}>
-          <Kpi label="In scope" value={number(ready.queue.page.totalCount)} basis="Operations you may see, before filters" />
-          <Kpi label="Matching" value={number(ready.queue.page.filteredCount)} basis="After the filters below" />
+          <Kpi label="In scope" value={number(ready.queue.page.totalCount)} />
+          <Kpi label="Matching" value={number(ready.queue.page.filteredCount)} />
           <Kpi label="Loaded" value={number(ready.rows.length)} basis={`of ${number(ready.queue.page.filteredCount)} matching`} />
           <div className="exec-blk-kpi">
             <dt className="exec-blk-kpi-label">Read</dt>
             <dd className="exec-blk-kpi-body">
               {/* A state word, not a figure: body role, not the 24px KPI numeral (OP-9). */}
               <span className="exec-blk-kpi-value"><span className="exec-ops-kpi-word">{humanize(ready.queue.readTruth.state)}</span></span>
-              <span className="exec-blk-kpi-note">{ready.queue.readTruth.reasonCode ?? "For this request"}</span>
+              {ready.queue.readTruth.reasonCode ? <span className="exec-blk-kpi-note">{ready.queue.readTruth.reasonCode}</span> : null}
             </dd>
           </div>
         </KpiStrip>
@@ -399,7 +398,7 @@ export default function OperationsV2({
         ) : null}
         <p className="exec-ops-np">
           <NotPublished id={FE.audit}>
-            Source journal: integration is {ready ? humanize(ready.queue.sourceIntegrationState).toLowerCase() : "unavailable"}; no source journal is qualified, so nothing is assumed healthy.
+            Source journal: integration is {ready ? humanize(ready.queue.sourceIntegrationState).toLowerCase() : "unavailable"}; nothing is assumed healthy.
           </NotPublished>
         </p>
       </details>
@@ -430,7 +429,7 @@ export default function OperationsV2({
                 <h2 className="exec-ops-panel-title">Exceptions</h2>
                 <p className="exec-ops-np">
                   <NotPublished id={FE.events}>
-                    No exceptions feed is published, so none is drawn. Incidents open from their own link.
+                    No exceptions feed. Incidents open from their own link.
                   </NotPublished>
                 </p>
               </div>
@@ -441,7 +440,7 @@ export default function OperationsV2({
                 <h2 className="exec-ops-panel-title">Audit</h2>
                 <p className="exec-ops-np">
                   <NotPublished id={FE.audit}>
-                    The queue drops actors on purpose and the audit source is unavailable, so who did what is not shown.
+                    Who did what is not shown: the audit source is unavailable.
                   </NotPublished>
                 </p>
               </div>
@@ -536,7 +535,15 @@ export default function OperationsV2({
                     </span>
                   </form>
                 </div>
-                <p id={mineReasonId} className="exec-ops-reason">Mine: {MINE_REASON}</p>
+                <p id={mineReasonId} className="exec-ops-reason" title={MINE_REASON}>Mine: <QuietIds text={MINE_REASON} /></p>
+                <NotAvailableLine
+                  className="exec-ops-na-line"
+                  facts={[
+                    { label: "Intent", id: "FE-020", why: "Whether the command was only previewed" },
+                    { label: "Display", id: "FE-032", why: "Whether the figures shown have caught up" },
+                    ...(ready?.rows.some((row) => row.incidentLinks === undefined) ? [{ label: "Linked incidents", id: "FE-042" as const, why: "An older server body omits the field" }] : []),
+                  ]}
+                />
 
                 {urlNotices.map((text) => <p key={text} className="exec-ops-banner" role="status">{text}</p>)}
                 {notice ? <p className="exec-ops-banner" role="status">{notice}</p> : null}
