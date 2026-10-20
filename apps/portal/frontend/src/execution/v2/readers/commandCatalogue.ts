@@ -14,7 +14,15 @@
  *   `total_entries` 64). They are READ, not assumed: a body with any other value is not this contract, so it is refused whole rather than
  *   repaired into it. A later revision that widens a constant needs its own reader.
  * - A command that CLAIMS to be sendable is refused, never shown as enabled and never silently clamped to disabled: `portal_reachable`
- *   true, or a `classification` of CONNECTED (the server derives CONNECTED from `portal_reachable`; beside a `false` it is a contradiction).
+ *   true, a `classification` of CONNECTED (not a member of the served vocabulary: the service refuses to emit it, and this reader refuses it
+ *   under its own name), or `runtime_active` true on the N16B primitive.
+ * - It reads the SERVED body (`ServedCommandCatalogue`, BE-P13): `classification` is required on every entry. The pinned extract
+ *   (`execution-command-catalog.valid.json`, evidence of the N16B acceptance record) predates it, is schema-valid as `CommandCatalogue`, and is
+ *   refused here with `missing_key`: the story and any real response use the served form.
+ * - N16B: exactly one entry (`ops/emergency-close`) serves `source_route_state` CURRENT_PRIMITIVE_CONFIRMED, `blocked_reason`
+ *   N16B_RUNTIME_ACTIVATION_PENDING and five extra keys (`current_primitive_state`, `current_capability_id`, `accepted_environments`,
+ *   `accepted_target_types`, `runtime_active`). The extras exist exactly with that route state (the schema's if/then/else) and are constants:
+ *   it is a description of an accepted-but-DARK primitive, never an activation.
  * - The closed vocabulary is closed. No unknown key at any level (a planted `__proto__` is an own key and is refused), no unknown word, no
  *   null where the schema has none, no duplicate operation key. Nothing is defaulted: the V1 reader's "unreadable flag means required" and
  *   "unreadable group means group not stated" do not exist here, because a body that cannot be read is not a catalogue.
@@ -34,10 +42,12 @@
  *   scope-filter          when `scope.requested_risk_tier` is set, every entry is of that tier (the label is not allowed to lie).
  *   reason-state          each `blocked_reason` is only read beside the `source_route_state` it describes (COMMAND_RELAY_DISABLED beside
  *                         OBSERVED, and so on): the dictionary sentence for the reason would otherwise contradict the route facts.
- *   route-pair            `http_method` and `http_path` are both null or both set; OBSERVED has both; any other state has neither.
+ *   route-pair            `http_method` and `http_path` are both null or both set; OBSERVED has both; any other state has neither (so the N16B
+ *                         primitive, which has no HTTP route, has neither).
+ *   primitive-identity    CURRENT_PRIMITIVE_CONFIRMED (and so the N16B extras) only on `ops/emergency-close`; reported as `route_incoherent`.
  *   mutation-ceremony     a mutation tier (R1 to R4) requires owner review, plan and apply; an observed non-GET route requires owner review and
  *                         is never tier R0. Fewer steps than the Portal's own policy would understate what the command costs.
- *   sendable-claim        CONNECTED classification (see above).
+ *   sendable-claim        CONNECTED classification and `runtime_active` true (see above).
  *
  * Answer: `{ kind: "command_catalogue" }`, `{ kind: "unsupported_shape" }` (a readable body of another `schema_version`) or
  * `{ kind: "refused", reason, at }`. `at` is a path built from names this file knows (never from a key in the body), so a planted key
@@ -57,7 +67,7 @@ export const CATALOGUE_GROUPS = [
 ] as const;
 export type CatalogueGroup = (typeof CATALOGUE_GROUPS)[number];
 
-export const CATALOGUE_ROUTE_STATES = ["OBSERVED", "AMBIGUOUS", "UNPUBLISHED", "DIRECT_ACCESS_PROHIBITED"] as const;
+export const CATALOGUE_ROUTE_STATES = ["OBSERVED", "AMBIGUOUS", "UNPUBLISHED", "DIRECT_ACCESS_PROHIBITED", "CURRENT_PRIMITIVE_CONFIRMED"] as const;
 export type CatalogueRouteState = (typeof CATALOGUE_ROUTE_STATES)[number];
 
 export const CATALOGUE_HTTP_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
@@ -66,10 +76,12 @@ export type CatalogueHttpMethod = (typeof CATALOGUE_HTTP_METHODS)[number];
 export const CATALOGUE_BLOCKED_REASONS = [
   "COMMAND_RELAY_DISABLED", "SOURCE_ROUTE_MAPPING_AMBIGUOUS", "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED",
   "TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED", "GENERIC_REDIS_ACCESS_PROHIBITED", "DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED",
+  "N16B_RUNTIME_ACTIVATION_PENDING",
 ] as const;
 export type CatalogueBlockedReason = (typeof CATALOGUE_BLOCKED_REASONS)[number];
 
-export const CATALOGUE_CLASSIFICATION_STATES = ["CONNECTED", "SUPPORTED_BUT_INACTIVE", "SEMANTICALLY_INCOMPATIBLE"] as const;
+/** The served vocabulary. CONNECTED is not a member (BE-P13): the service refuses to publish a sendable claim, and so does this reader (`sendable_claim`). */
+export const CATALOGUE_CLASSIFICATION_STATES = ["SUPPORTED_BUT_INACTIVE", "SEMANTICALLY_INCOMPATIBLE"] as const;
 export type CatalogueClassificationState = (typeof CATALOGUE_CLASSIFICATION_STATES)[number];
 
 export const CATALOGUE_ENVIRONMENTS = ["PAPER", "SANDBOX", "LIVE"] as const;
@@ -86,7 +98,11 @@ export const REASON_ROUTE_STATES: Readonly<Record<CatalogueBlockedReason, readon
   TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED: ["DIRECT_ACCESS_PROHIBITED"],
   GENERIC_REDIS_ACCESS_PROHIBITED: ["DIRECT_ACCESS_PROHIBITED"],
   DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED: ["OBSERVED", "AMBIGUOUS"],
+  N16B_RUNTIME_ACTIVATION_PENDING: ["CURRENT_PRIMITIVE_CONFIRMED"],
 };
+
+/** The only command that serves the N16B primitive (group `primitive-identity`). */
+export const N16B_COMMAND_KEY = "ops/emergency-close";
 
 const MUTATION_TIERS: readonly RiskTierV2[] = ["R1_PAPER_MUTATION", "R2_SANDBOX", "R3_LIVE_PROTECTIVE", "R4_LIVE_RISK_INCREASING"];
 
@@ -113,8 +129,19 @@ export interface CommandCatalogueEntryV2 {
   httpPath: string | null;
   blockedReason: CatalogueBlockedReason;
   sourceReference: string;
-  /** Present on the server's live responses, absent on the canonical example. Never CONNECTED here. */
-  classification: { state: Exclude<CatalogueClassificationState, "CONNECTED">; reasonCode: string } | null;
+  /** Required on every served entry. Never CONNECTED. */
+  classification: { state: CatalogueClassificationState; reasonCode: string };
+  /** `null` for every entry but `ops/emergency-close`: the accepted-but-DARK N16B current primitive, a description and not an activation. */
+  currentPrimitive: CatalogueCurrentPrimitive | null;
+}
+
+export interface CatalogueCurrentPrimitive {
+  state: "ACCEPTED_CURRENT_PRIMITIVE";
+  capabilityId: "live.emergency-close";
+  acceptedEnvironments: readonly ["LIVE"];
+  acceptedTargetTypes: readonly ["ACCOUNT"];
+  /** Constant false: accepted for compatibility, not activated. */
+  runtimeActive: false;
 }
 
 export interface CommandCatalogueScopeV2 {
@@ -227,11 +254,19 @@ const REASON_CODE = /^[A-Z0-9_]{3,120}$/;
 
 const ENTRY_KEYS = [
   "key", "command", "action", "group", "risk_tier", "source_risk_tier", "owner_review_required", "plan_required", "apply_required",
-  "verify_required", "portal_reachable", "source_route_state", "http_method", "http_path", "blocked_reason", "source_reference",
+  "verify_required", "portal_reachable", "source_route_state", "http_method", "http_path", "blocked_reason", "source_reference", "classification",
 ] as const;
+/** Present exactly with `source_route_state` CURRENT_PRIMITIVE_CONFIRMED (the schema's if/then/else), absent otherwise. */
+const N16B_KEYS = ["current_primitive_state", "current_capability_id", "accepted_environments", "accepted_target_types", "runtime_active"] as const;
+
+/** A one-element array holding exactly `only`. */
+function singleton(value: unknown, only: string, at: string): void {
+  if (!Array.isArray(value) || value.length !== 1) return refuse("constant_mismatch", at);
+  if (value[0] !== only) return refuse("constant_mismatch", `${at}[0]`);
+}
 
 function readEntry(raw: unknown, at: string): CommandCatalogueEntryV2 {
-  const r = closed(raw, at, ENTRY_KEYS, ["classification"]);
+  const r = closed(raw, at, ENTRY_KEYS, N16B_KEYS);
   const key = matching(r.key, KEY, `${at}.key`);
   const command = matching(r.command, COMMAND, `${at}.command`);
   const action = matching(r.action, ACTION, `${at}.action`);
@@ -251,13 +286,28 @@ function readEntry(raw: unknown, at: string): CommandCatalogueEntryV2 {
   const blockedReason = word(r.blocked_reason, CATALOGUE_BLOCKED_REASONS, `${at}.blocked_reason`);
   const sourceReference = plain(r.source_reference, `${at}.source_reference`, 1, 256);
 
-  let classification: CommandCatalogueEntryV2["classification"] = null;
-  if (Object.prototype.hasOwnProperty.call(r, "classification")) {
-    const c = closed(r.classification, `${at}.classification`, ["state", "reason_code"]);
-    const state = word(c.state, CATALOGUE_CLASSIFICATION_STATES, `${at}.classification.state`);
-    const reasonCode = matching(c.reason_code, REASON_CODE, `${at}.classification.reason_code`);
-    if (state === "CONNECTED") return refuse("sendable_claim", `${at}.classification.state`);
-    classification = { state, reasonCode };
+  const c = closed(r.classification, `${at}.classification`, ["state", "reason_code"]);
+  // CONNECTED is a sendable claim under its own name, not an unknown word.
+  if (c.state === "CONNECTED") return refuse("sendable_claim", `${at}.classification.state`);
+  const state = word(c.state, CATALOGUE_CLASSIFICATION_STATES, `${at}.classification.state`);
+  const classification = { state, reasonCode: matching(c.reason_code, REASON_CODE, `${at}.classification.reason_code`) };
+
+  // N16B extras: all five exactly when the route state is CURRENT_PRIMITIVE_CONFIRMED, none otherwise.
+  let currentPrimitive: CatalogueCurrentPrimitive | null = null;
+  if (routeState === "CURRENT_PRIMITIVE_CONFIRMED") {
+    for (const field of N16B_KEYS) if (!Object.prototype.hasOwnProperty.call(r, field)) return refuse("missing_key", `${at}.${field}`);
+    constant(r.current_primitive_state, "ACCEPTED_CURRENT_PRIMITIVE", `${at}.current_primitive_state`);
+    constant(r.current_capability_id, "live.emergency-close", `${at}.current_capability_id`);
+    singleton(r.accepted_environments, "LIVE", `${at}.accepted_environments`);
+    singleton(r.accepted_target_types, "ACCOUNT", `${at}.accepted_target_types`);
+    // `true` is an activation claim: refused under the sendable-claim name, never read as "active".
+    if (r.runtime_active === true) return refuse("sendable_claim", `${at}.runtime_active`);
+    constant(r.runtime_active, false, `${at}.runtime_active`);
+    currentPrimitive = {
+      state: "ACCEPTED_CURRENT_PRIMITIVE", capabilityId: "live.emergency-close", acceptedEnvironments: ["LIVE"], acceptedTargetTypes: ["ACCOUNT"], runtimeActive: false,
+    };
+  } else if (N16B_KEYS.some((field) => Object.prototype.hasOwnProperty.call(r, field))) {
+    return refuse("unknown_key", at);
   }
 
   // key-identity
@@ -269,13 +319,15 @@ function readEntry(raw: unknown, at: string): CommandCatalogueEntryV2 {
   // route-pair
   if ((httpMethod === null) !== (httpPath === null)) return refuse("route_incoherent", `${at}.http_method`);
   if ((routeState === "OBSERVED") !== (httpMethod !== null)) return refuse("route_incoherent", `${at}.source_route_state`);
+  // primitive-identity: the N16B primitive is served for ops/emergency-close and for no other command.
+  if (routeState === "CURRENT_PRIMITIVE_CONFIRMED" && key !== N16B_COMMAND_KEY) return refuse("route_incoherent", `${at}.source_route_state`);
   // mutation-ceremony
   if (MUTATION_TIERS.includes(riskTier) && !(ownerReviewRequired && planRequired && applyRequired)) return refuse("ceremony_understated", `${at}.risk_tier`);
   if (httpMethod !== null && httpMethod !== "GET" && (!ownerReviewRequired || riskTier === "R0_READ")) return refuse("ceremony_understated", `${at}.http_method`);
 
   return {
     key, command, action, group, riskTier, sourceRiskTier, ownerReviewRequired, planRequired, applyRequired, verifyRequired,
-    portalReachable: false, routeState, httpMethod, httpPath, blockedReason, sourceReference, classification,
+    portalReachable: false, routeState, httpMethod, httpPath, blockedReason, sourceReference, classification, currentPrimitive,
   };
 }
 

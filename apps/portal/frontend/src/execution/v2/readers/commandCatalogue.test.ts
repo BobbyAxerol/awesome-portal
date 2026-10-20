@@ -9,7 +9,8 @@ import { loadCanonical } from "../testkit/loadCanonical";
 import { catalogueOf, readCommandCatalogueV2 } from "./commandCatalogue";
 
 type Draft = any; // eslint-disable-line @typescript-eslint/no-explicit-any
-const CATALOGUE: Draft = loadCanonical("execution-command-catalog");
+const CATALOGUE: Draft = loadCanonical("execution-command-catalog.served");
+const EXTRACT: Draft = loadCanonical("execution-command-catalog");
 const clone = <T,>(value: T): T => structuredClone(value);
 const reasonOf = (raw: unknown) => {
   const answer = readCommandCatalogueV2(raw);
@@ -21,7 +22,10 @@ describe("commandCatalogue · what a read is", () => {
     const c = catalogueOf(CATALOGUE)!;
     expect(c.entries).toHaveLength(64);
     const unpublished = c.entries.find((e) => e.key === "ops/streams")!;
-    expect(unpublished).toMatchObject({ httpMethod: null, httpPath: null, routeState: "UNPUBLISHED", blockedReason: "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED", classification: null });
+    expect(unpublished).toMatchObject({
+      httpMethod: null, httpPath: null, routeState: "UNPUBLISHED", blockedReason: "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED", currentPrimitive: null,
+      classification: { state: "SEMANTICALLY_INCOMPATIBLE", reasonCode: "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED" },
+    });
     const observed = c.entries.find((e) => e.key === "account/policy")!;
     expect(observed).toMatchObject({ httpMethod: "PUT", httpPath: "/v1/admin/accounts/{account_id}/policy", riskTier: "R1_PAPER_MUTATION", sourceRiskTier: "R0_READ" });
   });
@@ -42,11 +46,30 @@ describe("commandCatalogue · what a read is", () => {
     expect(c.totalEntries).toBe(64);
   });
 
-  it("agrees with the V1 reader on every entry fact the screens use, so the page cannot change", () => {
+  it("agrees with the V1 reader on every entry fact the screens use, for 63 entries; the N16B entry is the one place V1 reads two words as null", () => {
     const v1 = readCommandCatalogue(clone(CATALOGUE))!;
     const v2 = catalogueOf(CATALOGUE)!;
-    expect(v2.entries.map((e) => [e.key, e.command, e.action, e.group, e.riskTier, e.sourceRiskTier, e.ownerReviewRequired, e.planRequired, e.applyRequired, e.verifyRequired, e.portalReachable, e.routeState, e.httpMethod, e.httpPath, e.blockedReason, e.sourceReference]))
-      .toEqual(v1.entries.map((e) => [e.key, e.command, e.action, e.group, e.riskTier, e.sourceRiskTier, e.ownerReviewRequired, e.planRequired, e.applyRequired, e.verifyRequired, e.portalReachable, e.routeState, e.httpMethod, e.httpPath, e.blockedReason, e.sourceReference]));
+    const facts = (e: (typeof v2.entries)[number] | (typeof v1.entries)[number]) => [e.key, e.command, e.action, e.group, e.riskTier, e.sourceRiskTier, e.ownerReviewRequired, e.planRequired, e.applyRequired, e.verifyRequired, e.portalReachable, e.httpMethod, e.httpPath, e.sourceReference];
+    expect(v2.entries.map(facts)).toEqual(v1.entries.map(facts));
+    const same = (e: { key: string }) => e.key !== "ops/emergency-close";
+    expect(v2.entries.filter(same).map((e) => [e.routeState, e.blockedReason])).toEqual(v1.entries.filter(same).map((e) => [e.routeState, e.blockedReason]));
+    expect(v2.entries.find((e) => !same(e))).toMatchObject({ routeState: "CURRENT_PRIMITIVE_CONFIRMED", blockedReason: "N16B_RUNTIME_ACTIVATION_PENDING" });
+    expect(v1.entries.find((e) => !same(e))).toMatchObject({ routeState: null, blockedReason: null });
+  });
+
+  it("the N16B entry is a description of an accepted-but-dark primitive: it has no HTTP route, is not reachable and is not active", () => {
+    const entry = catalogueOf(CATALOGUE)!.entries.find((e) => e.key === "ops/emergency-close")!;
+    expect(entry).toMatchObject({
+      routeState: "CURRENT_PRIMITIVE_CONFIRMED", blockedReason: "N16B_RUNTIME_ACTIVATION_PENDING", httpMethod: null, httpPath: null, portalReachable: false,
+      riskTier: "R3_LIVE_PROTECTIVE", classification: { state: "SUPPORTED_BUT_INACTIVE", reasonCode: "N16B_COMPATIBLE_COMMAND_IDENTITY_NOT_ACTIVATED" },
+      currentPrimitive: { state: "ACCEPTED_CURRENT_PRIMITIVE", capabilityId: "live.emergency-close", acceptedEnvironments: ["LIVE"], acceptedTargetTypes: ["ACCOUNT"], runtimeActive: false },
+    });
+    expect(catalogueOf(CATALOGUE)!.entries.filter((e) => e.currentPrimitive !== null)).toHaveLength(1);
+  });
+
+  it("the pinned extract is not the served body: it carries no classification, so it is refused, not defaulted", () => {
+    expect(readCommandCatalogueV2(EXTRACT)).toEqual({ kind: "refused", reason: "missing_key", at: "$.entries[0].classification" });
+    expect(catalogueOf(EXTRACT)).toBeNull();
   });
 
   it("reads a frozen body and leaves it as it was", () => {
@@ -73,6 +96,26 @@ describe("commandCatalogue · refusals are typed, never repaired", () => {
     connected.entries[5].classification = { state: "CONNECTED", reason_code: "COMMAND_TRANSPORT_ACTIVE" };
     expect(readCommandCatalogueV2(connected)).toEqual({ kind: "refused", reason: "sendable_claim", at: "$.entries[5].classification.state" });
     expect(catalogueOf(reach)).toBeNull();
+  });
+
+  it("an N16B primitive that says it is active is an activation claim: refused as such, never read as 'active'", () => {
+    const body = clone(CATALOGUE);
+    const index = body.entries.findIndex((e: Draft) => e.key === "ops/emergency-close");
+    body.entries[index].runtime_active = true;
+    expect(readCommandCatalogueV2(body)).toEqual({ kind: "refused", reason: "sendable_claim", at: `$.entries[${index}].runtime_active` });
+    body.entries[index].runtime_active = "false";
+    expect(readCommandCatalogueV2(body)).toEqual({ kind: "refused", reason: "constant_mismatch", at: `$.entries[${index}].runtime_active` });
+  });
+
+  it("the N16B extras are exactly as present as the route state says: missing beside it, or stray beside any other state, voids the read", () => {
+    const body = clone(CATALOGUE);
+    const index = body.entries.findIndex((e: Draft) => e.key === "ops/emergency-close");
+    const missing = clone(body);
+    delete missing.entries[index].accepted_target_types;
+    expect(readCommandCatalogueV2(missing)).toEqual({ kind: "refused", reason: "missing_key", at: `$.entries[${index}].accepted_target_types` });
+    const stray = clone(body);
+    stray.entries[0].runtime_active = false;
+    expect(readCommandCatalogueV2(stray)).toEqual({ kind: "refused", reason: "unknown_key", at: "$.entries[0]" });
   });
 
   it("an enabled capability, a live profile or a fresh scope is not this contract", () => {
@@ -107,7 +150,7 @@ describe("commandCatalogue · refusals are typed, never repaired", () => {
     const c = catalogueOf(CATALOGUE)!;
     for (const e of c.entries) {
       expect(Object.keys(e).sort()).toEqual([
-        "action", "applyRequired", "blockedReason", "classification", "command", "group", "httpMethod", "httpPath", "key", "ownerReviewRequired", "planRequired",
+        "action", "applyRequired", "blockedReason", "classification", "command", "currentPrimitive", "group", "httpMethod", "httpPath", "key", "ownerReviewRequired", "planRequired",
         "portalReachable", "riskTier", "routeState", "sourceReference", "sourceRiskTier", "verifyRequired",
       ]);
     }

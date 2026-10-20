@@ -63,7 +63,14 @@ function same(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-function check(schema: Json, value: unknown, at: string, scope: Scope, out: string[]): void {
+function check(schema: Json | boolean, value: unknown, at: string, scope: Scope, out: string[]): void {
+  // A boolean schema (JSON Schema 2020-12): `true` accepts anything, `false` accepts nothing. The catalogue's N16B `else` branch forbids the
+  // five extra keys with `false` property schemas; without this they would be silently ignored and the oracle would be looser than the contract.
+  if (schema === true) return;
+  if (schema === false) {
+    out.push(`${at}: not allowed`);
+    return;
+  }
   for (const key of Object.keys(schema)) {
     if (!KNOWN.has(key) && !IGNORED.has(key)) throw new Error(`schema keyword not supported by the testkit checker: ${key}`);
   }
@@ -175,13 +182,13 @@ function check(schema: Json, value: unknown, at: string, scope: Scope, out: stri
         if (nameOut.length > 0) out.push(`${at}.${name}: property name refused (${nameOut.map((line) => line.replace(/^[^:]*: /, "")).join("; ")})`);
       }
     }
-    const props = (schema.properties ?? {}) as Record<string, Json>;
+    const props = (schema.properties ?? {}) as Record<string, Json | boolean>;
     for (const name of (schema.required ?? []) as string[]) {
       if (!Object.prototype.hasOwnProperty.call(record, name)) out.push(`${at}.${name}: required`);
     }
     for (const [name, child] of Object.entries(record)) {
       const propSchema = Object.prototype.hasOwnProperty.call(props, name) ? props[name] : undefined;
-      if (propSchema) check(propSchema, child, `${at}.${name}`, scope, out);
+      if (propSchema !== undefined) check(propSchema, child, `${at}.${name}`, scope, out);
       else if (schema.additionalProperties === false) out.push(`${at}.${name}: not allowed`);
       else if (schema.additionalProperties && typeof schema.additionalProperties === "object") {
         check(schema.additionalProperties as Json, child, `${at}.${name}`, scope, out);
