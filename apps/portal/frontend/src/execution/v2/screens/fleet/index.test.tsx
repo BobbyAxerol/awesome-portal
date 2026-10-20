@@ -883,43 +883,55 @@ describe("board view", () => {
     expect(where()).toBe("/execution/fleet");
   });
 
-  it("places the rows by their highest published stage, in spine order, with R1 and R2 empty and stated", async () => {
+  it("lanes are the four financial stages in HiFi order, an alpha is a card in EVERY stage it is in, and there is no R1 or R2 lane", async () => {
     const { api, getAlphaFleet } = makeApi();
     mount(api, "/execution/fleet?view=board");
     await board();
     expect(getAlphaFleet).toHaveBeenCalledTimes(1);
     const heads = [...document.querySelectorAll("section.exec-fleet-lane h3")].map((h) => h.textContent);
-    expect(heads).toEqual(["Research", "R1 gate", "R2 gate", "Paper", "Sandbox", "Canary", "Live"]);
+    // Research is not a stage of the guide (4.1, 6.2.1): its lane exists only because a loaded row has no stage lane to sit in.
+    expect(heads).toEqual(["Research", "Paper", "Sandbox", "Canary", "Live"]);
+    expect(heads.some((head) => /gate/i.test(head ?? ""))).toBe(false);
     expect(laneNames("Research")).toEqual(["Idea E"]);
-    expect(laneNames("Paper")).toEqual(["Carry A"]);
+    expect(laneNames("Paper")).toEqual(["Carry A", "Grid D"]);
     expect(laneNames("Sandbox")).toEqual(["Grid D"]);
-    expect(laneNames("Canary")).toEqual(["Momentum C"]);
+    expect(laneNames("Canary")).toEqual(["Basis B", "Momentum C"]);
     expect(laneNames("Live")).toEqual(["Basis B"]);
-    // A gate has no rows by construction and says why; it prints no count the server did not state.
-    expect(lane("R1 gate").textContent).toContain("does not publish a gate position (FE-027)");
-    expect(lane("R1 gate").textContent).toContain("In your scope: Not available");
-    expect(lane("R2 gate").textContent).toContain("In your scope: Not available");
-    // Stage counts are the summary's own: Canary and Live both hold Basis B.
+    // Stage counts are the summary's own (alphas per stage; the lanes' loaded counts are cards, so they are not added up).
     expect(lane("Live").textContent).toContain("1 loaded");
     expect(lane("Live").textContent).toContain("In your scope: 1");
+    expect(lane("Canary").textContent).toContain("2 loaded");
     expect(lane("Canary").textContent).toContain("In your scope: 2");
     expect(lane("Paper").textContent).toContain("In your scope: 2");
-    expect(screen.getByText(/Loaded rows only: 5 alphas placed by highest published stage/)).toBeTruthy();
+    expect(screen.getByText(/Loaded rows only: 5 alphas; an alpha in several stages is in each of its lanes/)).toBeTruthy();
   });
 
-  it("an empty gate lane is a slim labelled strip: the words are in the tooltip and for assistive tech, no count is invented", async () => {
+  it("a lens shows only its own lanes: Real-funded is Canary and Live, Paper is Paper", async () => {
+    const { api } = makeApi();
+    mount(api, "/execution/fleet?view=board&stage=canary,live");
+    await board();
+    expect([...document.querySelectorAll("section.exec-fleet-lane h3")].map((h) => h.textContent)).toEqual(["Canary", "Live"]);
+    cleanup();
+    mount(makeApi().api, "/execution/fleet?view=board&stage=paper");
+    await board();
+    expect([...document.querySelectorAll("section.exec-fleet-lane h3")].map((h) => h.textContent)).toEqual(["Paper"]);
+  });
+
+  it("an alpha in two stages says so on each card, relative to the lane it is in", async () => {
     const { api } = makeApi();
     mount(api, "/execution/fleet?view=board");
     await board();
-    for (const name of ["R1 gate", "R2 gate"]) {
-      const strip = lane(name);
-      expect(strip.getAttribute("data-collapsed")).toBe("true");
-      expect(strip.getAttribute("title")).toBe("No alpha is placed here: the fleet read does not publish a gate position (FE-027).");
-      expect(strip.querySelector(".exec-fleet-lane-cards")).toBeNull();
-      expect(screen.getByRole("region", { name })).toBe(strip);
-    }
-    // A stage lane is never collapsed, empty or not.
-    expect(lane("Paper").getAttribute("data-collapsed")).toBeNull();
+    const cardIn = (laneName: string, name: string) =>
+      [...lane(laneName).querySelectorAll<HTMLElement>(".exec-fleet-card")].find((c) => c.querySelector(".exec-fleet-name")?.textContent === name)!;
+    expect(cardIn("Live", "Basis B").textContent).toContain("also in Canary");
+    expect(cardIn("Canary", "Basis B").textContent).toContain("also in Live");
+    expect(cardIn("Sandbox", "Grid D").textContent).toContain("also in Paper");
+    // The mini spine marks the lane's stage, not the alpha's highest.
+    const nodes = (el: HTMLElement) => [...el.querySelectorAll(".exec-blk-spine-mini i")].map((i) => i.getAttribute("data-s"));
+    expect(nodes(cardIn("Canary", "Basis B"))[4]).toBe("cur");
+    expect(nodes(cardIn("Live", "Basis B"))[5]).toBe("cur");
+    // A card names the portfolios beside the owner (HiFi: owner and portfolio).
+    expect(cardIn("Canary", "Momentum C").textContent).toContain("Owner Minh-003 · Satellite");
   });
 
   it("a card is identity, published health, the mini spine and the readiness gap; nothing is derived", async () => {
@@ -937,12 +949,10 @@ describe("board view", () => {
     expect(paperGap).toHaveLength(1);
     expect(paperGap[0]!.textContent).toBe("Readiness: Not published (FE-027) for every alpha here");
     expect(lane("Paper").querySelectorAll(".exec-fleet-card-ready")).toHaveLength(0);
-    // A lane with no card carries no readiness line.
-    expect(lane("R1 gate").textContent).not.toContain("for every alpha here");
     const nodes = [...carry.querySelectorAll(".exec-blk-spine-mini i")].map((i) => i.getAttribute("data-s"));
     expect(nodes).toEqual(["unknown", "unknown", "cur", "ahead", "ahead", "ahead"]);
     expect(nodes).not.toContain("done");
-    expect(card("Basis B").textContent).toContain("also Canary");
+    expect(card("Basis B").textContent).toContain("also in");
     expect(card("Momentum C").textContent).toContain("Needs attention");
     expect(card("Momentum C").textContent).toContain("Deployment attention, Reconciliation open");
     // A missing owner is a statement, not a blank or a dash.
@@ -958,14 +968,14 @@ describe("board view", () => {
     mount(api, "/execution/fleet?view=board");
     const grp = await board();
     const links = within(grp).getAllByRole("link");
-    expect(links.map((a) => a.textContent)).toEqual(["Idea E 0.1", "Carry A 3.2", "Grid D 0.9", "Momentum C 2.0", "Basis B 1.4"]);
+    expect(links.map((a) => a.textContent)).toEqual(["Idea E 0.1", "Carry A 3.2", "Grid D 0.9", "Grid D 0.9", "Basis B 1.4", "Momentum C 2.0", "Basis B 1.4"]);
     expect(links[1]!.getAttribute("href")).toMatch(/^\/deployments\/alphas\/alpha_a/);
     // DOM order is Tab order: lane by lane in spine order, then card by card.
     expect([...document.querySelectorAll(".exec-fleet-card a")]).toEqual(links);
     expect(within(grp).getByRole("link", { name: "Carry A 3.2" })).toBeTruthy();
     // Each lane is a labelled region; a lane with cards is a labelled list.
     expect(screen.getByRole("region", { name: "Paper" })).toBeTruthy();
-    expect(screen.getByRole("list", { name: "Paper, 1 loaded" })).toBeTruthy();
+    expect(screen.getByRole("list", { name: "Paper, 2 loaded" })).toBeTruthy();
   });
 
   it("a plain click opens the same peek as a table row (sel), a modified click is left to the browser", async () => {
@@ -1026,7 +1036,7 @@ describe("board view", () => {
     expect(lane("Canary").textContent).toContain("No loaded alpha is in this stage.");
     expect(lane("Live").textContent).toContain("In your scope: Not available");
     expect(lane("Live").textContent).not.toContain("In your scope: 0");
-    expect(laneNames("Paper")).toEqual(["Carry A"]);
+    expect(laneNames("Paper")).toEqual(["Carry A", "Grid D"]);
   });
 
   it("201 alphas: 200 cards at most, the exact label, no Load more, the cap sentence", async () => {
@@ -1041,7 +1051,7 @@ describe("board view", () => {
     expect(screen.getByText("Top 200 of 201 alphas")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(screen.getByText("Showing the first 200 rows. Narrow the filters to see the rest.")).toBeTruthy();
-    expect(screen.getByText(/Loaded rows only: 200 alphas placed/)).toBeTruthy();
+    expect(screen.getByText(/Loaded rows only: 200 alphas;/)).toBeTruthy();
     expect(calls).toHaveLength(4);
   }, 30_000);
 
@@ -1063,8 +1073,8 @@ describe("board view", () => {
     const first = makeApi();
     mount(first.api, "/execution/fleet?view=board&stage=paper&owner=Bobby-001&sort=name%3Aasc");
     await board();
-    expect(laneNames("Paper")).toEqual(["Carry A"]);
-    expect(laneNames("Sandbox")).toEqual(["Grid D"]);
+    expect(laneNames("Paper")).toEqual(["Carry A", "Grid D"]);
+    expect([...document.querySelectorAll("section.exec-fleet-lane h3")].map((h) => h.textContent)).toEqual(["Paper"]);
     expect(screen.getByRole("tab", { name: /^Paper/ }).getAttribute("aria-selected")).toBe("true");
     expect(where()).toBe("/execution/fleet?view=board&stage=paper&owner=Bobby-001&sort=name%3Aasc");
     cleanup();

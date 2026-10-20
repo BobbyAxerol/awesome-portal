@@ -282,53 +282,54 @@ export function lensCounts(summary: AlphaFleetSummary | null): Readonly<Record<F
 /** The board's own gap: readiness and days in stage are not in the fleet read. */
 export const BOARD_READINESS: UnpublishedFact = { fe: "FE-027", what: "Readiness" };
 
-/** The spine order. R1 and R2 are review gates: a fleet row publishes a running stage, never a gate position. */
-const BOARD_SPINE = [
-  { code: "R1", label: "R1 gate", gate: true },
-  { code: "R2", label: "R2 gate", gate: true },
-  { code: "PAPER", label: "Paper", gate: false },
-  { code: "SANDBOX", label: "Sandbox", gate: false },
-  { code: "CANARY", label: "Canary", gate: false },
-  { code: "LIVE", label: "Live", gate: false },
+/**
+ * The lanes, in HiFi order (design/hifi/v2/fleet.html `drawBoard`): the four financial stages (backend guide 6.2.1: `financial_stage` is
+ * LIVE | CANARY | SANDBOX | PAPER). R1 and R2 are review gates of the lifecycle spine, not stages a deployed alpha runs in: a fleet row
+ * never sits in one (BE-P4: an R1/R2 alpha has no deployment and no Manager row), so they are never lanes.
+ */
+const BOARD_LANES = [
+  { code: "PAPER", label: "Paper" },
+  { code: "SANDBOX", label: "Sandbox" },
+  { code: "CANARY", label: "Canary" },
+  { code: "LIVE", label: "Live" },
 ] as const;
 
 export interface BoardColumn {
   /** The published stage word the column holds. */
   code: string;
   label: string;
-  /** R1 and R2: the fleet read has no gate position, so the column can only be empty. */
-  gate: boolean;
-  /** Loaded rows whose highest published stage is this one. */
+  /** Loaded rows that are in this stage (membership: an alpha in two stages is in two lanes). */
   rows: readonly FleetRow[];
   /** The stage count the summary states (alphas in this stage, whatever the filters), or `COUNT_NOT_AVAILABLE`. */
   published: string;
 }
 
 /**
- * Columns in spine order, one per stage, from rows already loaded. A row sits
- * in the column of its highest published stage (the table's Stage cell says the
- * rest). The six spine stages always have a column; a stage with no loaded row
- * is empty and prints the count the summary states, or "Not available" when it
- * states none (the same D4 rule as `lensCounts`). A Research row, or a stage
- * word the spine does not know, gets its own column ahead of / after the spine
- * only when a loaded row needs it, so no loaded row is dropped.
+ * One lane per stage of the lens (all four on the All lens; Canary and Live on Real-funded; one on Sandbox or Paper), from rows already
+ * loaded. A lane holds every loaded row that is IN that stage: the guide groups a stage as membership (section 8.2: "an alpha in several
+ * stages may appear in several stage groups; group subtotals are not added to a global total"), so the board does not crown the highest
+ * stage (backend guide 6.2.1: do not reduce the set to one badge). The lane count is therefore not an alpha count; the screen says
+ * so. A lane with no loaded row is empty and prints the count the summary states, or "Not available" when it states none (the same D4
+ * rule as `lensCounts`). A Research row, or a stage word the lanes do not know, gets its own lane ahead of / after the stage lanes
+ * only on the All lens and only when a loaded row needs it, so no loaded row is dropped.
  */
-export function boardColumns(rows: readonly FleetRow[], summary: AlphaFleetSummary | null): readonly BoardColumn[] {
+export function boardColumns(rows: readonly FleetRow[], summary: AlphaFleetSummary | null, stages: readonly ExecStage[] = []): readonly BoardColumn[] {
   const published = (code: string): string => {
     const n = summary?.stageCounts[code];
     return n === undefined ? COUNT_NOT_AVAILABLE : String(n);
   };
-  const spine = new Set<string>(BOARD_SPINE.map((s) => s.code));
-  const extra = [...new Set(rows.map((r) => r.stageCode).filter((c) => !spine.has(c)))].sort((a, b) => a.localeCompare(b));
+  const wanted = stages.length === 0 ? BOARD_LANES : BOARD_LANES.filter((lane) => stages.some((stage) => stage.toUpperCase() === lane.code));
+  const known = new Set<string>(BOARD_LANES.map((lane) => lane.code));
+  const extra = stages.length > 0 ? [] : [...new Set(rows.flatMap((r) => r.stageCodes).filter((c) => !known.has(c)))].sort((a, b) => a.localeCompare(b));
   const research = extra.filter((c) => c === "RESEARCH");
   const other = extra.filter((c) => c !== "RESEARCH");
-  const column = (code: string, label: string, gate: boolean): BoardColumn => ({
-    code, label, gate, rows: rows.filter((r) => r.stageCode === code), published: published(code),
+  const column = (code: string, label: string): BoardColumn => ({
+    code, label, rows: rows.filter((r) => r.stageCodes.includes(code)), published: published(code),
   });
   return [
-    ...research.map((c) => column(c, stageLabel(c), false)),
-    ...BOARD_SPINE.map((s) => column(s.code, s.label, s.gate)),
-    ...other.map((c) => column(c, stageLabel(c), false)),
+    ...research.map((c) => column(c, stageLabel(c))),
+    ...wanted.map((lane) => column(lane.code, lane.label)),
+    ...other.map((c) => column(c, stageLabel(c))),
   ];
 }
 

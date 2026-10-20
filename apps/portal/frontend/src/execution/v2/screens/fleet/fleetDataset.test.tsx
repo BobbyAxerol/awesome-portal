@@ -159,8 +159,8 @@ describe("published: the dataset is the source, chosen by the data (no toggle)",
     const chip = document.querySelector("[data-source='dataset']");
     expect(chip?.textContent).toBe("Manager dataset · alpha versions");
     expect(document.querySelectorAll(".exec-fleet-source")).toHaveLength(1);
-    // the fleet read was never started: no wasted read and no flash of the other table
-    expect(legacy).toEqual([]);
+    // the fleet read's TABLE was never started (no flash of the other table); its only request is the one-row, unfiltered counts read
+    expect(legacy).toEqual([{ limit: 1 }]);
     expect(probeCalls(state)).toHaveLength(1);
     expect(Object.fromEntries(probeCalls(state)[0]!.query)).toEqual({ environment: "live", limit: "1" });
     expect(datasetCalls(state)).toHaveLength(1);
@@ -199,8 +199,8 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     const { api, legacy } = harness({ live: MIXED });
     mount(api, LIVE_URL);
     await loaded();
-    // the legacy fleet read is not made while the dataset is the source
-    expect(legacy).toEqual([]);
+    // the legacy fleet read is not made for the table while the dataset is the source (only the counts read, asserted below)
+    expect(legacy).toEqual([{ limit: 1 }]);
     const rows = dataRows();
     expect(rows).toHaveLength(6);
     const byId = (id: string) => rows.find((row) => cell(row, "Alpha").includes(id))!;
@@ -305,7 +305,7 @@ describe("dataset mode: sort and group by current stage (FE-012)", () => {
     await loaded();
     const group = screen.getByRole("combobox", { name: "Group by" }) as HTMLSelectElement;
     expect(group.disabled).toBe(false);
-    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Current stage"]);
+    expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Portfolio", "Group: Current stage", "Group: Owner", "Group: Health"]);
     fireEvent.change(group, { target: { value: "current_stage" } });
     await waitFor(() => expect(search().get("group")).toBe("current_stage"));
     const groups = await screen.findByTestId("dataset-groups");

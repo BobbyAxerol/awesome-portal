@@ -21,6 +21,11 @@
  * its population. The two populations differ, so there is no silent switch: the only way across is the explicit "Use the fleet
  * read" on a failed dataset read (`src=fleet`, screen-local, as are `group` and a comma list in `health`).
  *
+ * Counts (Bobby, 2026-10-20): the KPI strip and the lens counts stay on every lens that is not Archived. They are ALWAYS the fleet read's
+ * summary (the whole authorized scope, whatever the lens or the table filters: the same "statement before table filters" the dataset
+ * states, ELP2-REQ-FE-010). On a dataset table a second, one-row fleet read (`limit` 1, no filter) supplies them, and ONE small line
+ * says which population each number is: counts = alphas (fleet read), table = alpha versions in a portfolio (Manager dataset).
+ *
  * Owner and Health choices: the whole authorized population when the dataset published it (a group list over the whole filtered
  * query), otherwise the rows loaded so far, worded as such, with a typed value that the server filters on (`useFleetOptions`).
  */
@@ -40,6 +45,7 @@ import { MANAGER_STATEMENT_SCOPE } from "../../readers/managerDataset";
 import { ColumnsMenu, FilterChips, MultiPick, type FilterChip } from "./fleetControls";
 import { OptionFilter } from "./OptionFilter";
 import { FleetBoard } from "./FleetBoard";
+import { FleetDatasetDrawer } from "./FleetDatasetDrawer";
 import { FleetDatasetTable } from "./FleetDatasetTable";
 import { FleetDrawer } from "./FleetDrawer";
 import { FleetTable } from "./FleetTable";
@@ -68,6 +74,8 @@ export interface FleetScreenProps {
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
+/** The URL codec's bound for `sel` (urlState `token(256)`). */
+const SEL_MAX = 256;
 
 function freshnessFlag(freshness: string): { kind: FlagKind; label: string } {
   switch (freshness) {
@@ -76,6 +84,8 @@ function freshnessFlag(freshness: string): { kind: FlagKind; label: string } {
     default: return { kind: "unknown", label: humanize(freshness) };
   }
 }
+
+const COUNTS_SOURCE_TITLE = "The figures above and the tab counts are the fleet read:one count per alpha over everything you may see, not narrowed by the lens or the filters. The table is the Manager dataset: one row per alpha version in a portfolio, in the lens's environment.";
 
 const NOT_PUBLISHED_LIST = [FE.group, FE.map, FE.window, FE.readiness, FE.compare, FE.archived];
 
@@ -147,15 +157,20 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
   );
 
   const read = useFleetRead(api, !archived && (tableView || boardView) && !datasetMode && !waitingForDataset, key, (after) => fleetQuery(filters, after));
+  // The counts' own read: one row, no filter, only while the dataset is the table's source (the fleet read above is then not made). Its
+  // summary is the whole authorized scope whatever the lens or the filters; a failed read leaves the strip with typed absences.
+  const countsRead = useFleetRead(api, datasetMode, "counts", () => ({ limit: 1 }));
 
   /* ── derived rows ─────────────────────────────────────────────────── */
   const loaded = useMemo(() => read.items.map(toFleetRow), [read.items]);
   const visible = useMemo(() => loaded.filter((row) => inStages(row, stage)).slice(0, ROW_CAP), [loaded, stage]);
   const datasetRows = useMemo(() => dataset.rows.slice(0, ROW_CAP), [dataset.rows]);
   const selected = selection === null ? null : loaded.find((row) => row.alphaId === selection) ?? null;
-  // The lens counts and the KPI strip are the fleet read's summary (the whole scope, whatever the filters): they are not the dataset's.
-  const counts = useMemo(() => lensCounts(datasetMode ? null : read.summary), [datasetMode, read.summary]);
-  const kpis = useMemo(() => fleetKpis(read.summary), [read.summary]);
+  const datasetSelected = selection === null ? null : dataset.rows.find((row) => row.rowKey === selection) ?? null;
+  // The lens counts and the KPI strip are the fleet read's summary (the whole scope, whatever the filters): never the dataset's.
+  const summary = datasetMode ? countsRead.summary : read.summary;
+  const counts = useMemo(() => lensCounts(summary), [summary]);
+  const kpis = useMemo(() => fleetKpis(summary), [summary]);
 
   // Owner and Health options come from rows the page has shown, and are kept
   // while filtering: choosing one health must not remove the others.
@@ -276,6 +291,14 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
   if (q !== null) chips.push({ id: "q", name: "search", value: q, clear: () => url.set({ q: null, sel: null }, { replace: true }) });
   const urlText = params.toString() === "" ? "No parameters" : `?${decodeURIComponent(params.toString().replace(/\+/g, " "))}`;
   const customStage = lens === null;
+  // The words that name the table's population in the counts line: the lens, or the stages when the URL names a set that is no lens.
+  const scopeWords = lens !== null && lens !== "all" ? lensLabel(lens) : stage.map((s) => stageLabel(s)).join(", ");
+  const countTitle = (approximate: boolean): string | undefined => {
+    const parts: string[] = [];
+    if (approximate) parts.push("Upper bound: an alpha in both Canary and Live is counted in each.");
+    if (datasetMode) parts.push("Alphas (fleet read). The table counts alpha versions in a portfolio (Manager dataset).");
+    return parts.length === 0 ? undefined : parts.join(" ");
+  };
   const envelope = read.envelope;
   const fresh = envelope ? freshnessFlag(envelope.freshness) : null;
   const incomplete = envelope !== null && envelope.completeness.toUpperCase() !== "COMPLETE";
@@ -407,7 +430,7 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
         </div>
       ) : null}
 
-      {!archived && !datasetMode ? (
+      {!archived ? (
         <KpiStrip label="Fleet counts">
           {kpis.map((kpi) => (
             <Kpi
@@ -419,8 +442,13 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
           ))}
         </KpiStrip>
       ) : null}
+      {!archived && datasetMode ? (
+        <p className="exec-fleet-counts-src" data-testid="counts-source" title={countsRead.envelope?.sourceAsOf ? `${COUNTS_SOURCE_TITLE} Counts as of ${utcStamp(countsRead.envelope.sourceAsOf)}.` : COUNTS_SOURCE_TITLE}>
+          Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in {scopeWords}.
+        </p>
+      ) : null}
 
-      <div className="exec-fleet-main" data-docked={selection !== null && !datasetMode && mode === "dock" ? "true" : undefined}>
+      <div className="exec-fleet-main" data-docked={selection !== null && mode === "dock" ? "true" : undefined}>
         <div className="exec-fleet-body">
           <div className="exec-fleet-tabs" role="tablist" aria-label="Fleet lens">
             {FLEET_LENSES.map((spec) => {
@@ -438,7 +466,7 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
                 >
                   {spec.label}
                   {count.text !== null ? (
-                    <span className="exec-fleet-tab-count" title={count.approximate ? "Upper bound: an alpha in both Canary and Live is counted in each." : undefined}>
+                    <span className="exec-fleet-tab-count" title={countTitle(count.approximate)}>
                       {count.approximate ? `~${count.text}` : count.text}
                     </span>
                   ) : null}
@@ -600,6 +628,9 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
                   <FleetDatasetTable
                     rows={datasetRows}
                     hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
+                    selectedKey={selection}
+                    // `sel` is a 256-character token and a row key may be longer: such a row has no peek (its name still opens the alpha).
+                    onOpen={(row) => { if (row.rowKey.length <= SEL_MAX) select(row.rowKey); }}
                     empty={emptyBlock}
                   />
                   <div className="exec-fleet-foot">
@@ -630,12 +661,13 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
                 {boardView ? (
                   <>
                     <p className="exec-fleet-note exec-fleet-board-note" title="Stage counts are for your whole scope. Readiness and days in stage are not published.">
-                      Loaded rows only: {visible.length} {visible.length === 1 ? "alpha" : "alphas"} placed by highest published stage
+                      Loaded rows only: {visible.length} {visible.length === 1 ? "alpha" : "alphas"}; an alpha in several stages is in each of its lanes
                     </p>
                     {visible.length === 0 ? emptyBlock : (
                       <FleetBoard
                         rows={visible}
                         summary={read.summary}
+                        stages={stage}
                         selectedKey={selection}
                         hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
                         onOpen={(row) => select(row.alphaId)}
@@ -675,6 +707,15 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
             alphaId={selection}
             row={selected}
             loading={read.state.phase === "loading"}
+            mode={mode}
+            onClose={close}
+          />
+        ) : null}
+        {selection !== null && datasetMode ? (
+          <FleetDatasetDrawer
+            rowKey={selection}
+            row={datasetSelected}
+            loading={dataset.state.phase === "loading" || dataset.state.phase === "idle"}
             mode={mode}
             onClose={close}
           />

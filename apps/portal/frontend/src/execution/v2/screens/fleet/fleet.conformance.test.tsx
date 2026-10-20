@@ -201,7 +201,8 @@ describe("L1 · matrix A · envelope states", () => {
       const { api } = makeApi(() => input);
       const { container } = mount(api);
       const started = performance.now();
-      await waitFor(() => expect(container.querySelector(".exec-fleet-fresh")?.textContent).toBeTruthy(), { timeout: 10_000 });
+      // The source chip is in the same strip from the first render, so "has text" is not "the read arrived": wait for the as-of line.
+      await waitFor(() => expect(container.querySelector(".exec-fleet-fresh")?.textContent).toMatch(/As of |Source time not published/), { timeout: 10_000 });
       expect(performance.now() - started).toBeLessThan(BUDGET_RENDER_STATE_MS);
 
       // Freshness: a FRESH read prints no chip (the as-of line says it); AGING and STALE are never success and keep their chip.

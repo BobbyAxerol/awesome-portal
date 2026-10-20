@@ -203,33 +203,44 @@ describe("boardColumns", () => {
     toFleetRow(variant({ alphaId: id, alphaLabel: id, stage: stages[0]!, stages, ...over }));
   const summaryOf = (stageCounts: Record<string, number>) => ({ ...envelope.summary!, stageCounts });
 
-  it("always has the six spine columns in order, and no Research or other column without a row that needs it", () => {
+  it("has the four stage lanes in HiFi order and no R1 or R2 lane; Research or another word only when a loaded row needs it", () => {
     const cols = boardColumns([], summaryOf({ PAPER: 2 }));
-    expect(cols.map((c) => c.label)).toEqual(["R1 gate", "R2 gate", "Paper", "Sandbox", "Canary", "Live"]);
-    expect(cols.map((c) => c.gate)).toEqual([true, true, false, false, false, false]);
+    expect(cols.map((c) => c.label)).toEqual(["Paper", "Sandbox", "Canary", "Live"]);
+    expect(cols.map((c) => c.code)).not.toContain("R1");
     expect(cols.every((c) => c.rows.length === 0)).toBe(true);
   });
 
-  it("places a row in its highest published stage, once", () => {
+  it("the lens chooses the lanes: Real-funded is Canary and Live, one stage is one lane, a selection keeps spine order", () => {
+    expect(boardColumns([], null, ["canary", "live"]).map((c) => c.label)).toEqual(["Canary", "Live"]);
+    expect(boardColumns([], null, ["paper"]).map((c) => c.label)).toEqual(["Paper"]);
+    expect(boardColumns([], null, ["live", "paper"]).map((c) => c.label)).toEqual(["Paper", "Live"]);
+    expect(boardColumns([], null, []).map((c) => c.label)).toEqual(["Paper", "Sandbox", "Canary", "Live"]);
+  });
+
+  it("a row is in EVERY stage it is in (membership, not a crowned highest stage); the cards are not the alphas", () => {
     const rows = [rowOf("a", ["LIVE", "CANARY"]), rowOf("b", ["PAPER"]), rowOf("c", ["SANDBOX", "PAPER"])];
     const cols = Object.fromEntries(boardColumns(rows, null).map((c) => [c.code, c.rows.map((r) => r.alphaId)]));
-    expect(cols).toMatchObject({ LIVE: ["a"], CANARY: [], PAPER: ["b"], SANDBOX: ["c"] });
-    expect(Object.values(cols).flat().sort()).toEqual(["a", "b", "c"]);
+    expect(cols).toEqual({ LIVE: ["a"], CANARY: ["a"], PAPER: ["b", "c"], SANDBOX: ["c"] });
+    // 3 alphas, 5 cards: the lane counts are memberships and must not be summed into an alpha count.
+    expect(Object.values(cols).flat()).toHaveLength(5);
+    expect(new Set(Object.values(cols).flat()).size).toBe(3);
   });
 
   it("prints the summary's count for a stage, and Not available (never 0) when it states none or there is no summary", () => {
     const withSummary = boardColumns([], summaryOf({ PAPER: 2, CANARY: 0 }));
-    expect(withSummary.map((c) => c.published)).toEqual(["Not available", "Not available", "2", "Not available", "0", "Not available"]);
+    expect(withSummary.map((c) => c.published)).toEqual(["2", "Not available", "0", "Not available"]);
     expect(boardColumns([], null).every((c) => c.published === COUNT_NOT_AVAILABLE)).toBe(true);
   });
 
-  it("keeps Research before the spine and an unknown stage word after it, only when a loaded row is there", () => {
+  it("keeps Research before the stage lanes and an unknown stage word after them, only on the All lens and only when a loaded row is there", () => {
     const rows = [rowOf("r", ["RESEARCH"]), rowOf("x", ["ARCHIVED_PREVIEW"]), rowOf("p", ["PAPER"])];
     const cols = boardColumns(rows, summaryOf({ RESEARCH: 1 }));
-    expect(cols.map((c) => c.code)).toEqual(["RESEARCH", "R1", "R2", "PAPER", "SANDBOX", "CANARY", "LIVE", "ARCHIVED_PREVIEW"]);
+    expect(cols.map((c) => c.code)).toEqual(["RESEARCH", "PAPER", "SANDBOX", "CANARY", "LIVE", "ARCHIVED_PREVIEW"]);
     expect(cols[0]).toMatchObject({ label: "Research", published: "1" });
     expect(cols.at(-1)).toMatchObject({ label: "Archived preview", published: COUNT_NOT_AVAILABLE });
     expect(cols.reduce((n, c) => n + c.rows.length, 0)).toBe(3);
+    // A lens that names stages has no such lane.
+    expect(boardColumns(rows, null, ["paper"]).map((c) => c.code)).toEqual(["PAPER"]);
   });
 
   it("states the readiness gap as FE-027", () => {

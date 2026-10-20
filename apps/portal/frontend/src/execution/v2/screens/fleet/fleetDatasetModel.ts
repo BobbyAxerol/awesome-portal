@@ -14,7 +14,8 @@
 import type { ManagerDatasetFilter, ManagerDatasetQuery, ManagerDatasetSort } from "../../../api/managerDatasetQuery";
 import type { ManagerDataset, ManagerEnvironment, ManagerGroup, ManagerGroupField, ManagerRow, ManagerSortField, ManagerStage } from "../../readers/managerDataset";
 import type { ExecStage } from "../../urlState";
-import { PAGE_LIMIT, healthView, stageLabel, type UnpublishedFact } from "./fleetModel";
+import type { FlagKind } from "../../flagKinds";
+import { PAGE_LIMIT, healthView, humanize, stageLabel, type UnpublishedFact } from "./fleetModel";
 
 /** The request that owns days in stage and entry time (the stage lifecycle). */
 export const FE_STAGE_ENTRY: UnpublishedFact = { fe: "FE-027", what: "Days in stage" };
@@ -66,10 +67,16 @@ export function datasetSortOptions(offered: readonly ManagerSortField[] | null):
 export const datasetSortOf = (sort: string | null, options: readonly DatasetSortOption[]): DatasetSortOption =>
   options.find((option) => option.value !== null && option.value === sort) ?? DATASET_SORT_OPTIONS[0]!;
 
-/** The groupings the control offers, each only when the dataset states it can group by the field (`query_options.group_fields`). */
+/**
+ * The groupings the control offers, each only when the dataset states it can group by the field (`query_options.group_fields`).
+ * Guide section 8.2 names portfolio, stage, owner and health; one level (the contract allows two, the control offers one).
+ */
 export const DATASET_GROUP_OPTIONS: readonly { id: string; label: string; field: ManagerGroupField | null }[] = [
   { id: "none", label: "Group: none", field: null },
+  { id: "portfolio_id", label: "Group: Portfolio", field: "portfolio_id" },
   { id: "current_stage", label: "Group: Current stage", field: "current_stage" },
+  { id: "owner_user_id", label: "Group: Owner", field: "owner_user_id" },
+  { id: "health", label: "Group: Health", field: "health" },
 ];
 
 export function datasetGroupOptions(offered: readonly ManagerGroupField[] | null): typeof DATASET_GROUP_OPTIONS {
@@ -157,11 +164,25 @@ export function inStageOf(row: ManagerRow, utcStamp: (ms: number) => string): In
   return { text: `Not published (${FE_STAGE_ENTRY.fe})`, detail: reason, published: false };
 }
 
+/**
+ * The lifecycle flag of a row (guide section 13 and decision register B6: an alpha asking to be archived, or draining, stays on the
+ * Fleet WITH a flag, because it still carries risk). `ACTIVE` prints nothing; `ARCHIVE_REQUESTED` and `ARCHIVED` are the two words
+ * the backend guide names (section 6.2.1); any other word is its own words with the neutral kind, never a guess. Archive is a lifecycle
+ * state, not a stage: it never replaces the stage.
+ */
+export function lifecycleFlagOf(lifecycle: string | null): { kind: FlagKind; label: string } | null {
+  if (lifecycle === null || lifecycle === "ACTIVE") return null;
+  if (lifecycle === "ARCHIVE_REQUESTED") return { kind: "approval", label: "Archive requested" };
+  if (lifecycle === "ARCHIVED") return { kind: "paused", label: "Archived" };
+  return { kind: "neutral", label: humanize(lifecycle) };
+}
+
 /** A group key as a label: a stage is its word, no value is the typed "no single stage"; other fields print their text. */
 export function groupLabel(group: ManagerGroup): string {
   return group.key.map((part) => {
     if (part.value === null) return part.field === "current_stage" ? "No single stage" : "Not available";
-    return part.field === "current_stage" ? stageLabel(part.value) : part.value;
+    if (part.field === "current_stage") return stageLabel(part.value);
+    return part.field === "health" ? healthView(part.value).label : part.value;
   }).join(", ");
 }
 

@@ -49,6 +49,12 @@
   border: 1px solid var(--line);
   white-space: nowrap;
 }
+/* One small line under the counts: which population the counts are, and which the table is (dataset source only). */
+.exec-fleet-counts-src {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
 .exec-fleet-typed {
   width: 150px;
 }
