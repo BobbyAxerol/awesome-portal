@@ -10,7 +10,8 @@
  * L2  100 rows, 2,000 instances in a row, 8,000 facts in a row, 200 totals, the 10,000-instance body bound, 70,000-character text.
  * L3  generated negatives over the envelope, a row and a fact set: every case refused or accepted only where the schema
  *     accepts; never throws; never leaks; never looser. Stricter on purpose, named: SS-1 totals are keyed by currency, SS-2 page
- *     consistency, SS-3 display safety, SS-4 a row once, SS-5 at most 10,000 instances, SS-6 a negative zero is not a value.
+ *     consistency, SS-3 display safety, SS-4 a row once by its dataset identity, SS-5 at most 10,000 instances, SS-6 a negative zero is not a value,
+ *     SS-7 at least one disposition. The RV-12 scenarios, bounded and refusals fixtures: scopedRead.scenarios.conformance.test.ts.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
