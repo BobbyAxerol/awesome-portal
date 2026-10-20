@@ -118,3 +118,53 @@ No capability-inventory row is needed: **no HTTP route was added.**
 6. **Token delivery to Edge.** The token lives in a root-owned 0600 file; the cookie name is `__Host-portal_session` (Secure, https only). Who reads the file and sets the cookie for Edge's harness, and over which approved channel does the path travel? Idle expiry shortens to 30 min after the first `markSeen`, so the harness must keep using the session.
 7. **Renewed trust does not exist yet.** The current candidate trust ends `2026-10-20T08:00:59Z`; Plan B artifacts can only be validated and installed once the renewed end is known (the caps bind to it).
 8. **Persistence-ownership / capability ledgers**: please confirm the row updates in section 8 (no route, so no capability row).
+
+## Revision 3 (Edge CHANGES_REQUESTED 20Oct)
+
+Edge reviewed the pinned bytes of `0deeee70` and returned CHANGES_REQUESTED on three exact items (handoff section "Core009 revision2 - CHANGES_REQUESTED before commissioning"); Bobby's approval of the Core009 work covers this correction. Written by Claude on a fresh worktree reset to the `claude/fe-parity` tip `be6d98d1`. Same limits as above: **fakes only, no runtime, no secret, no database, no Docker/SSH, no migration, no HTTP route, no contract artifact**, `git -c core.hooksPath=/dev/null`; `contracts-snapshot.json` and the EDS-12/N29 ledgers are not committed. Nothing was installed, issued, revoked or connected: still **PREPARED_SOURCE_ONLY**.
+
+| # | Edge item | Fix | Commit |
+| --- | --- | --- | --- |
+| 1 | Revoke cleanup removed whatever file sat at the token path: issue S1 at P, revoke S1, issue S2 at the reused P, replay the S1 revoke wiped S2's live token while S2 stayed ACTIVE | Cleanup takes the exact binding `{session_id, user_id, token_sha256 = stored session_token_hash}` (the revoke lock now also selects `session_token_hash`; it is never put in a receipt). The default sink opens no-follow, requires a root-owned regular file of 1..4096 bytes, and removes it only if the six-field `portal.research-acceptance-session-token.v1` document carries that session id, that user and a token hashing to that hash (constant-time compare). It wipes through the verified descriptor and unlinks only if the path still names that inode. A mismatched, replaced, oversized, empty, torn or reused-path file is **RETAINED untouched**: receipt `token_file: "RETAINED_NOT_BOUND_TO_SESSION"`; absent (ENOENT/ENOTDIR only) stays `ABSENT`; a non-root/non-regular file or an I/O error stays `REMOVE_FAILED`. Terminal/recovery semantics are unchanged: the replayed S1 revoke is the same typed `ALREADY_REVOKED_BY_THIS_OPERATION` no-op and never touches S2 | `6fa94980` |
+| 2 | The token sink ignored `FileHandle.write().bytesWritten`: a short or zero write was fsynced and acknowledged after the session COMMIT | The default sink loops until the whole buffer (<= 4 KiB) is written using `bytesWritten`, at most `ACCEPTANCE_TOKEN_WRITE_MAX_ATTEMPTS = 16`; zero, negative, NaN or larger-than-requested counts fail. After the (kept) fsync it checks the fstat length and reads the content back from the same descriptor (constant-time compare, buffers zeroed, never logged). Flags are now `O_RDWR\|O_CREAT\|O_EXCL\|O_NOFOLLOW`, 0600, root-owned parent as before. Any failure truncates the partial secret, then the existing compensating **exact-session** revoke runs (`..._SESSION_REVOKED`, or `..._REVOKE_UNCONFIRMED` if that cannot complete); no receipt, no ACK, no token in any output | `e04f1684` |
+| 3 | `execution-native-session --dry-run` branched only after `buildPool`, the registered-schema read, native composition and AuthService/Argon2 construction | The CLI reads the hash-pinned manifest target (no Core DB query) and branches on `--dry-run` **before** any Pool, schema read, `compose`, `AuthService` or `Argon2CredentialService`. New `verifyAcceptanceArtifactOffline` validates the artifact fully (root-owned 0600, SHA-256, compact JSON, shape, target vs manifest pin, owner, TTL, finite window) and the DB-free token-path rules through a new read-only `preflight` on the sink (issue: root-owned non-writable parent and nothing at the path; revoke: nothing or a root-owned regular non-symlink file). It creates, writes, wipes and unlinks nothing | `6111eb39` |
+| 4 | Persistence ingress ledger (lead-owned) | `persistence-ownership.v1.json`: `portal_access_grants_v2` and `portal_access_policy_events` gain the offline remove-only `execution-native-revoke` ingress; `auth_sessions` and `auth_audit_events` gain the offline `execution-native-session` ingress; `auth_sessions` one new locked read (`read` and `readers` 2 -> 3). The tools reuse existing repository statements, so no other verb count changes. The file has one row per table (the tests key by table), so the four existing rows were edited in place in their own layout (14 lines changed), not duplicated | `be83e7fb` |
+| - | Typing follow-up | the acceptance spec rig types `deps.files` as `AcceptanceTokenFiles` (scoped tsc finding; test-only) | `32c0d6eb` |
+
+Runbook rev 2 (same file name, same revision label, corrected in place) was refreshed in sections 2 (`--dry-run`), 7 (complete verified write, write-failure codes) and 8.2 (token cleanup, `RETAINED_NOT_BOUND_TO_SESSION`) and the "what changed" table. Its SHA-256 is now `bd9c908ba238f7cc9eabd2d2c13764ab1ab6ceee30ff1e0b22b6c129f7dcb35e` (the handoff's `3417afbd...` pin is superseded).
+
+### New pins (SHA-256 of the files at the last code commit `32c0d6eb`; `be83e7fb` for the ledger)
+
+| File | SHA-256 |
+| --- | --- |
+| `apps/control-api/src/execution-v2/research-acceptance-session.ts` (was `2bd35bb2...`) | `6a4ed7dc790318d60c4fd2593e48ac1845629afde444b38b11bbfba3661d1eb3` |
+| `apps/control-api/src/cli/execution-native-session.ts` (was `df0f3277...`) | `fa353d3398acd79fdff8525972c1130622c8978306d0c2227c2e092be4290257` |
+| `apps/control-api/test/be-p10-acceptance-session.spec.ts` | `81aa116b3c9645fbabe4c33c8556c45c1661afc7d017db3663fc23477c7cc464` |
+| `apps/control-api/test/be-p10-native-session-cli.spec.ts` (new) | `07c114b3724ef3fe2a3614c6b657f7af7ca4eccd453a5f854b643c5a58477b06` |
+| `upgrade/upgrade_frontend_plan_hifi/hifi_execution_loop/r2_ledger/persistence-ownership.v1.json` | `b0b35646ecf1c3c6c426b4a96bca5b77ff045909eaf8505e6f8aaea12c53f92b` |
+
+### Tests and gates (and what they are not)
+
+All fakes: the scripted in-memory Core world and fake coordinator (**not PostgreSQL**), the REAL `AuthService`, a fake inode-level disk behind a mocked `node:fs/promises` for the default sink (inodes survive unlink while a handle is open), and spies on the pool factory, schema check, composition, AuthService and credential service for the CLI.
+
+| Gate | Result |
+| --- | --- |
+| `be-p10-acceptance-session.spec.ts` | **63 passed** (was 38): +25 = revoke cleanup binding (S1/S2 reproducer on the default sink and on the injectable sink, absent, 7 mismatched-file variants, 4 replaced-file shapes, path swapped after verification, expired-session cleanup, pure binding check) and the bounded verified write (partial writes completed, zero progress after a short write, no progress, error after partial, fsync failure, lying short write, corrupted read-back, 3 nonsensical counts, attempt cap, unconfirmed compensation, token only in the file); each failing case asserts the exact-session revoke, the audit rows, the emptied partial file and the refused ACK |
+| `be-p10-native-session-cli.spec.ts` (new) | **23 passed**: issue and revoke dry-runs (zero pool / schema / compose / AuthService / Argon2 / write, read-only opens of the artifact only), 19 typed refusals each with zero such calls and the token file untouched, scope and usage errors, and a contrast case without `--dry-run` proving the spies are live. Against the previous CLI bytes **21 of the 23 fail** |
+| Focused run `be-p10`, `elp210-core009`, `elp210-native`, `-manager`, `-commissioning`, `-current-human`, `-root-receipt`, `-lifecycle-authority`, `native-`, `elp209-realtime`, `elp209-native-frame`, `--maxWorkers=2`, Node host, no PG | **38 files passed, 6 skipped (PG-gated); 1098 tests passed, 410 skipped (PG-gated)**, exit 0 |
+| `tsc -p tsconfig.build.json --noEmit` (control-api, at `32c0d6eb`) | **exit 0** |
+| Scoped `tsc` over the two specs and `test/fixtures/*.ts` (temporary config, not committed) | no diagnostic in any file written here; six pre-existing `src/auth/cookies.ts` diagnostics (the Fastify cookie augmentation is not in that file set), the same family as the scoped-config note in section 5 |
+| `cd apps/portal/frontend && npx vitest run src/execution/r2Ledger.test.ts` | **22 passed** |
+
+### NOT_RUN
+
+* **Real PostgreSQL**: `be-p10-manager-revoke-pg.spec.ts` and the other PG specs (needs a disposable `TEST_DATABASE_URL`); the four `a4-*`/`auth.spec.ts` files that need PG on 127.0.0.1:5432.
+* **Normal R3 / ordinary hook** on the final bytes (the handoff's "actual disposable-PG / normal R3 gates on the final composition"), R2, full-project `tsc`, `contracts-test.sh` (no contract artifact changed).
+* **Image build** from the corrected bytes (the installed `7b2c7f34` image predates all of BE-P10).
+* Everything on a runtime: install, session issue, revoke, source window, STREAM reachability, connected READ/STREAM/revoke/recovery. A real root-owned filesystem (uid 0, real `fsync`, real short-write behavior) was not exercised; the sink is proven against a fake descriptor model only.
+
+### Residual notes for the reviewer
+
+* The cleanup guards the unlink by an inode re-check, but POSIX offers no atomic unlink-by-inode; a swap between that re-check and `unlink` is not closable in user space. The wipe never touches the swapped file (it goes through the verified descriptor) and the swap window is two syscalls under a root-owned non-writable directory.
+* `RETAINED_NOT_BOUND_TO_SESSION` leaves a possibly stale token file for the operator to inspect; the runbook says to remove it by hand only after confirming whose it is.
+* The pre-existing `ACCEPTANCE_TOKEN_FILE_REFUSED` code now also covers verification failures of the write (length/content), by design: one opaque typed code.
