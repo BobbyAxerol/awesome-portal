@@ -134,3 +134,125 @@ dependency có thật, không đợi command/N03/calibration không liên quan.
 **ACK requested:** Claude ghi ACCEPTED/CHANGES_REQUESTED, source pin, owned files,
 first runnable slice và exact return path trong packet/Unified của mình. Handoff
 được đặt trên SGP chưa có nghĩa Claude đã nhận/chạy hoặc009/08/09 đã PASS.
+
+
+### Core009 revision2 — CHANGES_REQUESTED before commissioning —20Oct
+
+Reviewed FE0deeee706849a02660da0ef94e7405ecb4765cc9; later792647d5
+frontend-only changes do not replace the pinned backend bytes below. Revision2
+supersedes the earlier missing-code observations: Plan B installer, official
+manager-domain revoke and actual AuthService session issuer/revoker exist.
+No fake grant/session or public autologin is needed. Core still reports actual
+PG/R3/image/install NOT_RUN. Edge publication e37a5e39009abd57c1b2d0356ea120053058eb9b
+contains the completed original07 custody slice, normal-hook PASS and cleanup;
+original08 connected runner is being bound to the official token-file shape.
+
+**Priority corrections for Core/Claude, in the same009 assignment:**
+
+1. `apps/control-api/src/execution-v2/research-acceptance-session.ts`
+   SHA256`2bd35bb2a13a77373e9b6b2777c87c9effd31d031393e4cbbdb4d0074ff80f48`:
+   revoke cleanup must be bound to the exact session/file. Reproducer without
+   any operational call: issue S1 at P → revoke S1 → issue S2 at reused P →
+   replay S1 revoke currently removes S2's live token while S2 remains ACTIVE.
+   Refuse/retain a mismatched token; preserve exact terminal/recovery semantics.
+   Add replay/reused-path/absent/mismatched-session tests, not a runtime demo.
+2. Same module's token sink ignores `FileHandle.write().bytesWritten`.
+   A short/zero write is fsynced and falsely acknowledged after session COMMIT.
+   Require complete bounded writing/verification, compensating exact-session
+   revoke on failure, and injected partial/zero-write tests. No weakened fsync.
+3. `apps/control-api/src/cli/execution-native-session.ts`
+   SHA256`df0f327756000183d776cdcb65f1dd80e7f456edbc1fbd87bc4cfa399a93a773`:
+   `--dry-run` branches only after schema DB read/composition. Honor its stated
+   offline/no-DB contract before those calls; test that dry-run cannot build
+   a pool, connect, mutate or issue a session.
+
+Return corrected source/test pins and run the actual disposable-PG/normal R3
+gates on the final composition. Refresh the lead-owned persistence ingress
+ledger for revoke/session tools. No expiry-only substitution for a revoke.
+Use existing publication/runner and Core templates, no new framework. Ordinary
+source review is not installer acceptance; do not open a source window merely
+to wait for these fixes/tests. Core operator runbook rev2 SHA256
+`3417afbdf9d0bc0c3b5f06e44ec654899f55916fd4864881927ce79eef5c0bb1`.
+
+Edge will directly read the actual six-field
+`portal.research-acceptance-session-token.v1` file in its current08 runner,
+with producer/session-id/subject/expiry/hash binding. The file remains private;
+no token transfer in public Markdown, stdout, chat or Git. Exact execution UID
+must own its0600 input; using the root-owned Core file requires an operator
+running the runner under that same UID, not chmod/chown widening. Evidence is
+`RESEARCH_APPLICATION_SESSION_NOT_CLOUDFLARE_NOT_PASSWORD_NOT_HUMAN_PRESENCE`.
+Known source seals/mapping above remain historical inputs; renewal/current
+source head and reviewed field-policy reference must come from real artifacts.
+Existing08 approval covers this correction/binding work; no new phase or blanket
+approval requested. Full08NOT_MET; scoped connected09NOT_STARTED.
+
+
+
+#### Edge official-session binding published —20Oct08:40UTC
+
+Edge source now6e8f7f2df585688dc4a75614ff15ddb77c977f32, origin/feat/execution-edge-upgrade-v1_2 in BobbyAxerol/awesome-portal, normal nonforce push and remote SHA verified.
+Existing GET-only runner consumes the official6-field AuthService token file directly, exact producer/session-id/subject/hash/UTC expiry binding, no credential copy or reissue.
+Driver18cb1a352d8e3d9cd37ddaafcd3340d0e60e6657b6245db0a248e18313d67d92; tests754914fc3db8702b63e984bdae211dadf4e873fe2a45242e1a0649cdd754ec8f. Actual40unitPASS (11new), normal130contracts/717API PASS, PG restore/build PASS.
+Exact own offline hook image removed;19protected HK tuples unchanged; no SGP test resources, genuine session/source calls or runtime changes.
+The three Core corrections immediately above remain CHANGES_REQUESTED on source pins rechecked08:37UTC. Core corrects/tests them; then review final PG/R3/image/config, coordinate fresh source/trust, zero-custody swap and actual08 READ/STREAM/revoke. No blanket approval or new phase.
+This receipt is source/isolated proof, never Cloudflare/password/human-presence or connected08/09 acceptance. Preserve peer index/source/runtime; no commit/push on Core or FE by Edge.
+
+
+### Published Edge runner and offline preparation batch —20Oct e766034c
+
+Bobby-approved original08/Core009 priority handoff, not a new approval/phase.
+Fetch awesome-portal origin branch feat/execution-edge-upgrade-v1_2 at
+e766034c51b050182fc38b94c2286aec5f9e293d. This is source publication, not runtime.
+Commits: 3bbc44171593e04888f5b39ecfca0bc4d1b9ed15 (08 runner) and
+e766034c51b050182fc38b94c2286aec5f9e293d (01/06 offline lock correction).
+Both normal hooks terminal PASS:130contract/717API cases each, build/PG restore;
+717 includes57 unchanged peer-egress cases, not717new. Focused unit fixtures:
+66 runner cases (40prior+26new),60 helper cases (53prior+7new),0FAIL/SKIP.
+No real session/source/native connected acceptance was exercised by those tests.
+Own2hook images/cells/networks cleaned;19HK protected runtime tuples unchanged,
+339shared BuildKit records retained;0SGP test resources/runtime mutation.
+
+Current source pins:
+- scripts/epg10-08/connected_read.py:
+  cad1eeb6b8f3cd8244cdf7e3f3dd0001a7fefb32a105bdbfab60d7ecc519debf
+- scripts/epg10-08/test_connected_read.py:
+  a173beac18bb67c7a6e4290fccbb171425ed456ad74de2b83f763ff67afd8d2b
+
+Read the updated existing owner packet in that branch:
+upgrade/evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md,
+and current08/01/06 sections at the end of
+upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md.
+These supersede earlier40-case runner pins, not the genuine original identity
+attempt/physical receipt/Core ACK. Do not repeat identity issuance or patch
+old44ee/551a helper bytes over the published source.
+
+Runner remains GET-only, fixed Research origin/TLS/private references and bounds.
+Opt-in observe_active_stream holds the same response past its first source
+notice with8frame/1MiB/60s caps. Client UTC/monotonic/hash/termination facts are
+OBSERVED_ONLY/final_egress_proved:false, not final-egress or revoke-SLO proof.
+Independent STREAM removal uses revoke_action:"stream.subscribe", distinct
+installed STREAM grant ID and actual artifact/current-readback revisions;
+READ policy/grant/native stay unchanged and READ must still be positive.
+The actual official CLI envelope must contain exactly one fresh selected
+STREAM REVOKED receipt; no mixed READ removal/NOOP/expiry/replay substitute.
+READ-positive native snapshot/page and new/old-cursor STREAM403 are separate
+from active-stream/cache-HIT/independent-unaffected-scope acceptance.
+
+Core/Claude PLEASE PRIORITIZE the three already documented CHANGES_REQUESTED
+in the SAME009 task:
+1. Bind token-file revoke cleanup to the exact named session; old S1 replay
+   must not wipe the current S2 token at a reused path.
+2. Complete/verify bounded token writes; short/zero write cannot falsely ACK
+   after COMMIT; retain exact-session compensation/recovery semantics.
+3. Session --dry-run must run before Pool/schema/native composition, no DB.
+Revoke/session code already exists; do not repeat the stale "missing code" claim.
+Then return corrected source/test pins, actual PG and normal R3/image/config/
+installed current-policy/session private references. No secret/token in docs.
+
+Coordinate a fresh reviewed trust/source window only when the final target is
+ready, preserve UNKNOWN/attempt/receipt custody, prove zero reverse custody and
+use the installed bootstrap IPC shutdown seam before swapping it. Core008/
+schema134/genuine identity are not new blockers. Never generic restart/reset or
+expiry-only substitute for actual manager-domain revoke. Stable/provider28445
+remain protected. Full08NOT_MET/09connectedNOT_STARTED. Edge will bind genuine
+returns and run08 then scoped read09 under the existing approval.
