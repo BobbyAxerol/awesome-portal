@@ -83,11 +83,9 @@ function ScopePanel({ read }: { read: ScopedRead }) {
   return (
     <SectionPanel title="Your scope" level={2}>
       <ul className="exec-slice-lines">
-        <li>{lines.scope}</li>
-        <li>{lines.totals}</li>
+        <li title={`${lines.totals}. ${lines.policy}.`}>{lines.scope}</li>
         <li>{lines.completeness}</li>
         <li>{lines.page}{lines.morePages ? ". More pages exist." : "."}</li>
-        <li>{lines.policy}</li>
       </ul>
       <dl className="exec-slice-facts">
         <div>
@@ -282,14 +280,13 @@ export function SliceScreen({ context, clock, config, lane: injected, revocation
         <header className="exec-slice-head">
           <div>
             <h1 className="exec-slice-title">Scoped slice</h1>
-            <p className="exec-slice-sub">Portfolio, fleet and alpha, read-only</p>
           </div>
           <div className="exec-slice-chips" role="status" aria-live="polite" data-testid="stream-chip">
             <Flag kind={chip.kind} label={chip.label} />
           </div>
         </header>
-        <p className="exec-slice-lane" role="note">
-          <strong>{FIXTURE_LANE_LABEL}.</strong> {NOT_CONNECTED_LABEL}.
+        <p className="exec-slice-lane" role="note" title={`${FIXTURE_LANE_LABEL}. ${NOT_CONNECTED_LABEL}.`}>
+          <strong>Fixture: not connected</strong>
         </p>
 
         <SectionPanel title="Stream" level={2}>
@@ -305,13 +302,13 @@ export function SliceScreen({ context, clock, config, lane: injected, revocation
             </div>
             <div>
               <dt>Notices</dt>
-              <dd>
+              <dd title="Received, folded into an owed read, reads started">
                 {state.counters.revalidates} received, {state.counters.coalesced} folded into an owed read, {state.counters.readsStarted} reads started
               </dd>
             </div>
             <div>
               <dt>Heartbeats</dt>
-              <dd>{state.counters.heartbeats} (liveness only)</dd>
+              <dd title="Liveness only">{state.counters.heartbeats}</dd>
             </div>
             <div>
               <dt>Dropped</dt>
@@ -324,7 +321,7 @@ export function SliceScreen({ context, clock, config, lane: injected, revocation
           </dl>
           {state.notice === null ? null : (
             <details className="exec-slice-details">
-              <summary>Last notice: quality of the notice, not of the data</summary>
+              <summary title="The quality of the notice, not of the data">Last notice</summary>
               <ul className="exec-slice-lines">
                 <li>Completeness {state.notice.quality.completeness.toLowerCase()}</li>
                 <li>Freshness {state.notice.quality.freshness.toLowerCase()}</li>
@@ -339,7 +336,7 @@ export function SliceScreen({ context, clock, config, lane: injected, revocation
             </details>
           )}
           <fieldset className="exec-slice-fixture">
-            <legend>{FIXTURE_LANE_LABEL}</legend>
+            <legend className="exec-blk-sr">{FIXTURE_LANE_LABEL}</legend>
             <div className="exec-slice-buttons">
               {FIXTURE_FRAME_IDS.map((id) => (
                 <button key={id} type="button" className="exec-slice-btn" onClick={() => send(id)}>

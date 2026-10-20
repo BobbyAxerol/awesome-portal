@@ -48,8 +48,9 @@ describe("the lane label (this is not a real stream)", () => {
   it("says so in the first place a reader looks, and says it is not connected", async () => {
     await mount();
     const note = screen.getByRole("note");
-    expect(note.textContent).toContain(FIXTURE_LANE_LABEL);
-    expect(note.textContent).toContain(NOT_CONNECTED_LABEL);
+    expect(note.textContent).toBe("Fixture: not connected");
+    expect(note.getAttribute("title")).toContain(FIXTURE_LANE_LABEL);
+    expect(note.getAttribute("title")).toContain(NOT_CONNECTED_LABEL);
     expect(FIXTURE_LANE_LABEL).toBe("Fixture frames, not a real stream");
     expect(NOT_CONNECTED_LABEL).toBe("Not connected to a real source");
     expect(screen.getByRole("group", { name: FIXTURE_LANE_LABEL })).toBeTruthy();
@@ -62,7 +63,8 @@ describe("live: the banner and the three links", () => {
     expect(chip()).toContain("Live (fixture)");
     const scope = screen.getByRole("region", { name: "Your scope" });
     expect(scope.textContent).toContain("Scoped view: authorized rows only");
-    expect(scope.textContent).toContain("Totals cover the rows you can see");
+    // Totals and policy are the first line's title, not two more bullets.
+    expect(scope.querySelector("li")!.getAttribute("title")).toContain("Totals cover the rows you can see");
     expect(scope.textContent).toContain("Partial: current page of retained data, not total history");
     expect(scope.textContent).toContain("1 on this page, 1 visible to you, limit 50");
     expect(scope.textContent).toContain("workspace_TEST_ONLY");
@@ -137,7 +139,7 @@ describe("notifications", () => {
     expect(chip()).toContain("Live (fixture)");
     expect(fact("Notices")).toBe("1 received, 0 folded into an owed read, 2 reads started");
     // The notice quality is shown apart, labelled as the notice's.
-    expect(screen.getByText(/Last notice: quality of the notice, not of the data/)).toBeTruthy();
+    expect(screen.getByText("Last notice").getAttribute("title")).toBe("The quality of the notice, not of the data");
   });
 
   it("a heartbeat changes nothing a reader could take for freshness", async () => {
@@ -145,7 +147,7 @@ describe("notifications", () => {
     const before = fact("Data");
     await press("Heartbeat");
     expect(fact("Data")).toBe(before);
-    expect(fact("Heartbeats")).toBe("1 (liveness only)");
+    expect(fact("Heartbeats")).toBe("1");
     expect(fact("Notices")).toBe("0 received, 0 folded into an owed read, 1 reads started");
     expect(screen.queryByText(/Last notice/)).toBeNull();
     expect(chip()).toContain("Live (fixture)");
