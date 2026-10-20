@@ -93,6 +93,79 @@ export function ColumnsMenu({ hidden, onToggle }: ColumnsMenuProps) {
   );
 }
 
+export interface MultiPickProps {
+  /** Accessible name of the control and the word before the colon (`Health`). */
+  name: string;
+  options: readonly { value: string; label: string }[];
+  selected: readonly string[];
+  onChange(next: readonly string[]): void;
+}
+
+/**
+ * A pick-several filter as a checkbox popover (the dataset's `IN` operator: one word is `EQ`, two or more are `IN`). It only
+ * reports the new set; the server does the filtering. Same Esc / click-away / Tab-out contract as the Columns menu.
+ */
+export function MultiPick({ name, options, selected, onChange }: MultiPickProps) {
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLSpanElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (!open) return;
+    const away = (event: MouseEvent) => {
+      if (wrap.current && event.target instanceof Node && !wrap.current.contains(event.target)) setOpen(false);
+    };
+    const key = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setOpen(false);
+      button.current?.focus();
+    };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", key, true);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", key, true);
+    };
+  }, [open]);
+
+  const leave = (event: FocusEvent) => {
+    const to = event.relatedTarget;
+    if (to instanceof Node && wrap.current && !wrap.current.contains(to)) setOpen(false);
+  };
+  const first = options.find((option) => option.value === selected[0])?.label ?? selected[0];
+  const summary = selected.length === 0 ? `${name}: all` : selected.length === 1 ? `${name}: ${first}` : `${name}: ${first} +${selected.length - 1}`;
+  const toggle = (value: string, on: boolean) => onChange(on ? [...new Set([...selected, value])] : selected.filter((entry) => entry !== value));
+
+  return (
+    <span className="exec-fleet-pop" ref={wrap} onBlur={leave}>
+      <button
+        ref={button}
+        type="button"
+        className="exec-fleet-select"
+        aria-label={name}
+        aria-expanded={open}
+        aria-controls={open ? menuId : undefined}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {summary} ▾
+      </button>
+      {open ? (
+        <div id={menuId} className="exec-fleet-menu" role="group" aria-label={name}>
+          {options.length === 0 ? <span className="exec-fleet-note">None seen yet</span> : null}
+          {options.map((option) => (
+            <label key={option.value} className="exec-fleet-menuitem">
+              <input type="checkbox" checked={selected.includes(option.value)} onChange={(event) => toggle(option.value, event.target.checked)} />
+              {option.label}
+            </label>
+          ))}
+        </div>
+      ) : null}
+    </span>
+  );
+}
+
 export interface FilterChip {
   id: string;
   name: string;

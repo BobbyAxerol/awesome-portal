@@ -12,6 +12,12 @@
  * URL: `q`, `stage` (a lens is a named set of stage words), `sort`, `sel`,
  * `view`, plus `tab=archived` for the Archived lens and the screen-local
  * `owner` and `health`. Defaults are omitted.
+ *
+ * Manager dataset (FE-012, FE-027): when the lens is ONE environment (Real-funded, Sandbox, Paper) and the Manager dataset is
+ * published for the caller there, a `Source` control offers it. With `src=dataset` the table reads the dataset through
+ * `getManagerDataset`: one row per alpha version and portfolio, the server's own filters (search, owner, health with `IN`,
+ * the lens's stages), `Current stage` sort and group, keyset paging with honest "Showing N of M". Not published: no `Source`
+ * control, no new control, the legacy read exactly as before. `src`, `group` and a comma list in `health` are screen-local.
  */
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -25,10 +31,17 @@ import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { withOrigin } from "../../backTo";
 import { serializeUrlParams, useExecUrlState, withContext } from "../../urlState";
-import { ColumnsMenu, FilterChips, type FilterChip } from "./fleetControls";
+import { MANAGER_STATEMENT_SCOPE } from "../../readers/managerDataset";
+import { ColumnsMenu, FilterChips, MultiPick, type FilterChip } from "./fleetControls";
 import { FleetBoard } from "./FleetBoard";
+import { FleetDatasetTable } from "./FleetDatasetTable";
 import { FleetDrawer } from "./FleetDrawer";
 import { FleetTable } from "./FleetTable";
+import {
+  FE_STAGE_ENTRY, datasetCountLine, datasetGroupOptions, datasetKey, datasetQuery, datasetScopeOf, datasetSortOf, datasetSortOptions, groupFieldOf,
+  groupLabel, healthWord, parseHealths, serializeHealths, type DatasetFilters,
+} from "./fleetDatasetModel";
+import { useDatasetPublication, useFleetDataset } from "./useFleetDataset";
 import {
   ARCHIVED_TAB, FE, FLEET_LENSES, alphaHref, HIDDEN_COLUMNS_PARAM, ROW_CAP, SORT_OPTIONS, fleetKpis, humanize, inStages, lensCounts,
   lensForStages, lensLabel, healthView, notPublished, parseHiddenColumns, queryKey, fleetQuery, serializeHiddenColumns,
@@ -64,7 +77,10 @@ function mergeSeen(current: readonly string[], next: readonly string[]): readonl
   return merged.length === current.length ? current : merged;
 }
 
-export default function FleetScreen({ api }: FleetScreenProps) {
+/** Why a dataset-only note exists: the contract's own constants, in words (never re-derived). */
+const STAGE_RULE_SENTENCE = "Current stage is the single active stage of the alpha version in this environment; a row with several active stages has none, and the stage entry time is not published";
+
+export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
   const { selection, select, close } = useDockSelection();
@@ -89,13 +105,48 @@ export default function FleetScreen({ api }: FleetScreenProps) {
     [q, stage, owner, health, sort],
   );
   const key = queryKey(filters);
-  const read = useFleetRead(api, !archived && (tableView || boardView), key, (after) => fleetQuery(filters, after));
+
+  /* ── the Manager dataset as the source (only when it is published for this caller) ───────── */
+  const wantsDataset = params.get("src") === "dataset";
+  const scope = useMemo(() => datasetScopeOf(stage, archived), [stage, archived]);
+  const publication = useDatasetPublication(api, scope === null ? null : scope.environment);
+  const published = publication.phase === "published" && scope !== null;
+  // The legacy read is NOT started while the answer to "is it published?" is pending for a URL that asks for the dataset: a
+  // request for the fleet read that the dataset then replaces would be a wasted read and a flash of the other table.
+  const waitingForDataset = wantsDataset && scope !== null && tableView && publication.phase === "checking";
+  const datasetMode = published && wantsDataset && tableView;
+  const offered = publication.phase === "published" ? publication.dataset.queryOptions : null;
+  const sortOptions = useMemo(() => datasetSortOptions(offered === null ? null : offered.sortFields), [offered]);
+  const groupOptions = useMemo(() => datasetGroupOptions(offered === null ? null : offered.groupFields), [offered]);
+  const healths = useMemo(() => parseHealths(params.get("health")), [params]);
+  const datasetFilters = useMemo<DatasetFilters | null>(() => {
+    if (scope === null) return null;
+    const field = groupFieldOf(params.get("group"));
+    return {
+      scope, q, owner, healths, sort: sort,
+      group: field !== null && groupOptions.some((option) => option.field === field) ? field : null,
+      ...(workspaceId ? { workspaceId } : {}),
+    };
+  }, [scope, q, owner, healths, sort, params, groupOptions, workspaceId]);
+  const offeredSorts = offered === null ? null : offered.sortFields;
+  const [datasetNonce, setDatasetNonce] = useState(0);
+  const dataset = useFleetDataset(
+    api,
+    datasetMode && datasetFilters !== null,
+    `${datasetFilters === null ? "" : datasetKey(datasetFilters, offeredSorts)}|${datasetNonce}`,
+    // Only called while enabled, and enabled needs the filters.
+    (after) => datasetQuery(datasetFilters as DatasetFilters, offeredSorts, after),
+  );
+
+  const read = useFleetRead(api, !archived && (tableView || boardView) && !datasetMode && !waitingForDataset, key, (after) => fleetQuery(filters, after));
 
   /* ── derived rows ─────────────────────────────────────────────────── */
   const loaded = useMemo(() => read.items.map(toFleetRow), [read.items]);
   const visible = useMemo(() => loaded.filter((row) => inStages(row, stage)).slice(0, ROW_CAP), [loaded, stage]);
+  const datasetRows = useMemo(() => dataset.rows.slice(0, ROW_CAP), [dataset.rows]);
   const selected = selection === null ? null : loaded.find((row) => row.alphaId === selection) ?? null;
-  const counts = useMemo(() => lensCounts(read.summary), [read.summary]);
+  // The lens counts and the KPI strip are the fleet read's summary (the whole scope, whatever the filters): they are not the dataset's.
+  const counts = useMemo(() => lensCounts(datasetMode ? null : read.summary), [datasetMode, read.summary]);
   const kpis = useMemo(() => fleetKpis(read.summary), [read.summary]);
 
   // Owner and Health options come from rows the page has shown, and are kept
@@ -106,8 +157,19 @@ export default function FleetScreen({ api }: FleetScreenProps) {
     setSeenOwners((c) => mergeSeen(c, read.items.flatMap((i) => (i.owner ? [i.owner] : []))));
     setSeenHealths((c) => mergeSeen(c, read.items.map((i) => i.health)));
   }, [read.items]);
-  const ownerOptions = useMemo(() => mergeSeen(seenOwners, owner ? [owner] : []), [seenOwners, owner]);
+  // The dataset's own rows feed their own options (the two sources never share a list).
+  const [seenDatasetOwners, setSeenDatasetOwners] = useState<readonly string[]>([]);
+  const [seenDatasetHealths, setSeenDatasetHealths] = useState<readonly string[]>([]);
+  useEffect(() => {
+    setSeenDatasetOwners((c) => mergeSeen(c, dataset.rows.flatMap((r) => (r.ownerUserId ? [r.ownerUserId] : []))));
+    setSeenDatasetHealths((c) => mergeSeen(c, dataset.rows.flatMap((r) => (r.health ? [r.health] : []))));
+  }, [dataset.rows]);
+  const ownerOptions = useMemo(
+    () => (datasetMode ? mergeSeen(seenDatasetOwners, owner ? [owner] : []) : mergeSeen(seenOwners, owner ? [owner] : [])),
+    [datasetMode, seenDatasetOwners, seenOwners, owner],
+  );
   const healthOptions = useMemo(() => mergeSeen(seenHealths, health ? [health] : []), [seenHealths, health]);
+  const datasetHealthOptions = useMemo(() => mergeSeen(seenDatasetHealths, healths), [seenDatasetHealths, healths]);
 
   /* ── url writers ─────────────────────────────────────────────────── */
   const setColumn = (column: FleetColumnKey, shown: boolean) => {
@@ -120,12 +182,29 @@ export default function FleetScreen({ api }: FleetScreenProps) {
     else params2.set(HIDDEN_COLUMNS_PARAM, value);
     setParams(params2, { replace: true });
   };
-  const setLocal = (name: "owner" | "health", value: string) => {
+  const setLocal = (name: "owner" | "health" | "group", value: string) => {
     const next = new URLSearchParams(params);
     if (value === "") next.delete(name);
     else next.set(name, value);
     next.delete("sel");
     setParams(next, { replace: true });
+  };
+  // Source: the dataset adds `src=dataset`; going back drops what only the dataset understands (a group, a health list).
+  const setSource = (next: "fleet" | "dataset") => {
+    const params2 = new URLSearchParams(params);
+    params2.delete("sel");
+    if (next === "dataset") {
+      params2.set("src", "dataset");
+      params2.delete("view");
+    } else {
+      params2.delete("src");
+      params2.delete("group");
+      // The fleet read filters one health at a time: one word stays, a list (the dataset's IN) is dropped, not cut to its first word.
+      const words = parseHealths(params.get("health"));
+      if (words.length === 1) params2.set("health", words[0]!);
+      else params2.delete("health");
+    }
+    setParams(params2, { replace: true });
   };
   const pickLens = (next: FleetLens) =>
     url.set({ stage: stagesForLens(next), tab: next === "archived" ? ARCHIVED_TAB : null, sel: null });
@@ -165,7 +244,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
     });
   }
   if (owner !== null) chips.push({ id: "owner", name: "owner", value: owner, clear: () => setLocal("owner", "") });
-  if (health !== null) chips.push({ id: "health", name: "health", value: healthView(health).label, clear: () => setLocal("health", "") });
+  if (health !== null) chips.push({ id: "health", name: "health", value: datasetMode ? healths.map(healthWord).join(", ") : healthView(health).label, clear: () => setLocal("health", "") });
   if (q !== null) chips.push({ id: "q", name: "search", value: q, clear: () => url.set({ q: null, sel: null }, { replace: true }) });
   const urlText = params.toString() === "" ? "No parameters" : `?${decodeURIComponent(params.toString().replace(/\+/g, " "))}`;
   const customStage = lens === null;
@@ -176,7 +255,20 @@ export default function FleetScreen({ api }: FleetScreenProps) {
   const capped = read.items.length >= ROW_CAP;
 
   /* ── pieces ──────────────────────────────────────────────────────── */
+  const datasetCapped = datasetMode && dataset.rows.length >= ROW_CAP;
+  const datasetCount = datasetMode && dataset.state.phase === "ready"
+    ? datasetCountLine(datasetRows.length, dataset.rows.length, dataset.total, dataset.nextCursor !== null, datasetCapped)
+    : null;
+  const datasetNote = (() => {
+    const first = dataset.first;
+    if (!datasetMode || first === null) return null;
+    const scopeSentence = first.statementScope === MANAGER_STATEMENT_SCOPE
+      ? "Counts and groups cover the whole filtered result, not only the loaded rows; capital statements, which this screen does not show, are taken before the table filters."
+      : "";
+    return `Source: the Manager dataset, ${first.environment}. One row is an alpha version in a portfolio. ${STAGE_RULE_SENTENCE}. ${scopeSentence}`.trim();
+  })();
   const countLine = (() => {
+    if (datasetMode) return datasetCount;
     if (!envelope || read.state.phase !== "ready") return null;
     const { filteredCount, totalCount } = envelope.page;
     if (stageNarrowedHere) {
@@ -188,6 +280,17 @@ export default function FleetScreen({ api }: FleetScreenProps) {
   })();
 
   const emptyBlock = (() => {
+    if (datasetMode) {
+      if (dataset.state.phase !== "ready") return undefined;
+      // The lens alone is not a filter the reader chose: with only the lens, no row means the dataset published none for the view.
+      if (q === null && owner === null && health === null) return <PanelState status="empty" reason="The Manager dataset published no rows for this view." />;
+      return (
+        <div className="exec-fleet-empty">
+          <p>No rows match these filters.</p>
+          <button type="button" className="exec-fleet-btn" onClick={clearFilters}>Clear filters</button>
+        </div>
+      );
+    }
     if (read.state.phase !== "ready") return undefined;
     if (!filtered) return <PanelState status="empty" reason="The fleet read published no alphas." />;
     return (
@@ -222,23 +325,69 @@ export default function FleetScreen({ api }: FleetScreenProps) {
             <button type="button" className="exec-fleet-segbtn" aria-pressed={boardView} onClick={() => url.set({ view: "board" })}>Board</button>
             <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} disabled title={notPublished(FE.map)} aria-describedby={reasonId}>Map</button>
           </span>
-          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
-          {envelope ? (
-            <span>
-              {envelope.sourceAsOf ? `As of ${utcStamp(envelope.sourceAsOf)}` : "Source time not published"}
+          {published ? (
+            <span className="exec-fleet-seg" role="group" aria-label="Source">
+              <button type="button" className="exec-fleet-segbtn" aria-pressed={!datasetMode} onClick={() => setSource("fleet")}>Fleet read</button>
+              <button
+                type="button"
+                className="exec-fleet-segbtn"
+                aria-pressed={datasetMode}
+                disabled={!tableView && !datasetMode}
+                title={!tableView && !datasetMode ? "The board and the map are built from the fleet read" : "One row per alpha version and portfolio, filtered and grouped by the server"}
+                onClick={() => setSource("dataset")}
+              >
+                Manager dataset
+              </button>
             </span>
           ) : null}
+          {datasetMode ? (
+            <>
+              {dataset.first ? <Flag kind={dataset.first.quality.freshness === "FRESH" ? "ok" : dataset.first.quality.freshness === "STALE" ? "stale" : "unknown"} label={dataset.first.quality.freshness === "FRESH" ? "Fresh" : humanize(dataset.first.quality.freshness)} size="sm" /> : null}
+              {dataset.first ? <span>As of {utcStamp(dataset.first.asOfMs)}</span> : null}
+            </>
+          ) : (
+            <>
+              {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+              {envelope ? (
+                <span>
+                  {envelope.sourceAsOf ? `As of ${utcStamp(envelope.sourceAsOf)}` : "Source time not published"}
+                </span>
+              ) : null}
+            </>
+          )}
         </div>
       </header>
 
-      {incomplete && envelope ? (
+      {wantsDataset && scope !== null && tableView && (publication.phase === "unpublished") ? (
+        <div className="exec-fleet-banner" role="status">
+          <Flag kind="unknown" label="Not published" size="sm" />
+          <span>The Manager dataset is not published for this view ({publication.reason}). The fleet read is shown instead.</span>
+        </div>
+      ) : null}
+      {wantsDataset && scope === null && !archived ? (
+        <div className="exec-fleet-banner" role="status">
+          <Flag kind="unknown" label="One environment" size="sm" />
+          <span>The Manager dataset serves one environment at a time. Pick Real-funded, Sandbox or Paper to read it; the fleet read is shown instead.</span>
+        </div>
+      ) : null}
+      {datasetMode && dataset.first && (dataset.first.quality.completeness !== "COMPLETE" || dataset.first.quality.freshness !== "FRESH") ? (
+        <div className="exec-fleet-banner" role="status">
+          <Flag kind="partial" label="Partial" size="sm" />
+          <span>
+            The dataset is {humanize(dataset.first.quality.completeness).toLowerCase()} and {humanize(dataset.first.quality.freshness).toLowerCase()}: some rows or counts may be missing or old.
+            {dataset.first.quality.reasons.length > 0 ? ` (${dataset.first.quality.reasons.join(", ")})` : ""}
+          </span>
+        </div>
+      ) : null}
+
+      {!datasetMode && incomplete && envelope ? (
         <div className="exec-fleet-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" />
           <span>The read is {humanize(envelope.completeness).toLowerCase()}: some rows or counts may be missing.</span>
         </div>
       ) : null}
 
-      {!archived ? (
+      {!archived && !datasetMode ? (
         <KpiStrip label="Fleet counts">
           {kpis.map((kpi) => (
             <Kpi
@@ -251,7 +400,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
         </KpiStrip>
       ) : null}
 
-      <div className="exec-fleet-main" data-docked={selection !== null && mode === "dock" ? "true" : undefined}>
+      <div className="exec-fleet-main" data-docked={selection !== null && !datasetMode && mode === "dock" ? "true" : undefined}>
         <div className="exec-fleet-body">
           <div className="exec-fleet-tabs" role="tablist" aria-label="Fleet lens">
             {FLEET_LENSES.map((spec) => {
@@ -303,31 +452,64 @@ export default function FleetScreen({ api }: FleetScreenProps) {
                 {ownerOptions.map((name) => <option key={name} value={name}>{name}</option>)}
               </select>
             </label>
-            <label className="exec-fleet-field">
-              <span className="exec-fleet-sr">Health</span>
-              <select className="exec-fleet-select" value={health ?? ""} disabled={archived} title={archived ? notPublished(FE.archived) : undefined} aria-describedby={archived ? reasonId : undefined} onChange={(event) => setLocal("health", event.target.value)}>
-                <option value="">Health: all</option>
-                {healthOptions.map((code) => <option key={code} value={code}>{healthView(code).label}</option>)}
-              </select>
-            </label>
+            {datasetMode ? (
+              <div className="exec-fleet-field">
+                <MultiPick
+                  name="Health"
+                  options={datasetHealthOptions.map((code) => ({ value: code, label: healthWord(code) }))}
+                  selected={healths}
+                  onChange={(next) => setLocal("health", serializeHealths(next) ?? "")}
+                />
+              </div>
+            ) : (
+              <label className="exec-fleet-field">
+                <span className="exec-fleet-sr">Health</span>
+                <select className="exec-fleet-select" value={health ?? ""} disabled={archived} title={archived ? notPublished(FE.archived) : undefined} aria-describedby={archived ? reasonId : undefined} onChange={(event) => setLocal("health", event.target.value)}>
+                  <option value="">Health: all</option>
+                  {healthOptions.map((code) => <option key={code} value={code}>{healthView(code).label}</option>)}
+                </select>
+              </label>
+            )}
             <label className="exec-fleet-field">
               <span className="exec-fleet-sr">Sort</span>
-              <select
-                className="exec-fleet-select"
-                value={sortValueOf(sort) ?? ""}
-                disabled={archived}
-                title={archived ? notPublished(FE.archived) : undefined}
-                aria-describedby={archived ? reasonId : undefined}
-                onChange={(event) => url.set({ sort: event.target.value === "" ? null : event.target.value, sel: null })}
-              >
-                {SORT_OPTIONS.map((option) => <option key={option.id} value={option.value ?? ""}>Sort: {option.label}</option>)}
-              </select>
+              {datasetMode ? (
+                <select
+                  className="exec-fleet-select"
+                  value={datasetSortOf(sort, sortOptions).value ?? ""}
+                  title="Stages sort by name, not by risk. A row with no single stage comes last in both directions."
+                  onChange={(event) => url.set({ sort: event.target.value === "" ? null : event.target.value, sel: null })}
+                >
+                  {sortOptions.map((option) => <option key={option.id} value={option.value ?? ""}>Sort: {option.label}</option>)}
+                </select>
+              ) : (
+                <select
+                  className="exec-fleet-select"
+                  value={sortValueOf(sort) ?? ""}
+                  disabled={archived}
+                  title={archived ? notPublished(FE.archived) : undefined}
+                  aria-describedby={archived ? reasonId : undefined}
+                  onChange={(event) => url.set({ sort: event.target.value === "" ? null : event.target.value, sel: null })}
+                >
+                  {SORT_OPTIONS.map((option) => <option key={option.id} value={option.value ?? ""}>Sort: {option.label}</option>)}
+                </select>
+              )}
             </label>
             <label className="exec-fleet-field">
               <span className="exec-fleet-sr">Group by</span>
-              <select className="exec-fleet-select" disabled title={notPublished(FE.group)} aria-describedby={reasonId} value="">
-                <option value="">Group: none</option>
-              </select>
+              {datasetMode && groupOptions.some((option) => option.field !== null) ? (
+                <select
+                  className="exec-fleet-select"
+                  value={datasetFilters?.group ?? ""}
+                  title="Groups cover the whole filtered result"
+                  onChange={(event) => setLocal("group", event.target.value)}
+                >
+                  {groupOptions.map((option) => <option key={option.id} value={option.field ?? ""}>{option.label}</option>)}
+                </select>
+              ) : (
+                <select className="exec-fleet-select" disabled title={notPublished(FE.group)} aria-describedby={reasonId} value="">
+                  <option value="">Group: none</option>
+                </select>
+              )}
             </label>
             <button type="button" className="exec-fleet-btn" disabled title={notPublished(FE.window)} aria-describedby={reasonId}>Window</button>
             <button type="button" className="exec-fleet-btn" disabled title={notPublished(FE.compare)} aria-describedby={reasonId}>Compare</button>
@@ -336,8 +518,9 @@ export default function FleetScreen({ api }: FleetScreenProps) {
           </div>
           <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={() => searchInput.current?.focus()} />
           <p id={reasonId} className="exec-fleet-unpub">
-            Not published yet: {NOT_PUBLISHED_LIST.map((fact) => `${fact.what} (${fact.fe})`).join(", ")}.
+            Not published yet: {(datasetMode ? [FE.map, FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST).map((fact) => `${fact.what} (${fact.fe})`).join(", ")}.
           </p>
+          {datasetNote ? <p className="exec-fleet-note" data-testid="dataset-note">{datasetNote}</p> : null}
 
           <div role="tabpanel" id={`${searchId}-panel`} aria-labelledby={`${searchId}-tab-${lens ?? "all"}`} className="exec-fleet-panel">
             {archived ? (
@@ -350,6 +533,55 @@ export default function FleetScreen({ api }: FleetScreenProps) {
                 {unpublishedView(FE.map)}
                 <button type="button" className="exec-fleet-btn" onClick={() => url.set({ view: null })}>Back to Table</button>
               </>
+            ) : datasetMode ? (
+              dataset.state.phase === "loading" || dataset.state.phase === "idle" ? (
+                <PanelState status="loading" />
+              ) : dataset.state.phase === "error" ? (
+                <PanelState
+                  status={dataset.state.status}
+                  reason={dataset.state.reason}
+                  actions={
+                    <>
+                      <button type="button" className="exec-fleet-btn" onClick={() => setDatasetNonce((n) => n + 1)}>Try again</button>
+                      <button type="button" className="exec-fleet-btn" onClick={() => setSource("fleet")}>Use the fleet read</button>
+                    </>
+                  }
+                />
+              ) : (
+                <>
+                  {dataset.last && dataset.last.groups.length > 0 ? (
+                    <ul className="exec-fleet-chips" role="list" aria-label="Groups" data-testid="dataset-groups">
+                      {dataset.last.groups.map((group) => (
+                        <li key={JSON.stringify(group.key)} className="exec-fleet-chip">
+                          <span>{groupLabel(group)}: {group.uniqueRowCount}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  <FleetDatasetTable
+                    rows={datasetRows}
+                    hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
+                    empty={emptyBlock}
+                  />
+                  <div className="exec-fleet-foot">
+                    <span className="exec-fleet-count-line" role="status" aria-live="polite">{countLine}</span>
+                    {dataset.nextCursor && !datasetCapped ? (
+                      <button type="button" className="exec-fleet-btn" disabled={dataset.loadingMore} title={dataset.loadingMore ? "Loading the next page" : "Load the next page"} onClick={dataset.loadMore}>
+                        {dataset.loadingMore ? "Loading" : "Load more"}
+                      </button>
+                    ) : null}
+                    {dataset.nextCursor && datasetCapped ? (
+                      <span className="exec-fleet-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span>
+                    ) : null}
+                  </div>
+                  {dataset.moreError ? (
+                    <p className="exec-fleet-note" role="alert">
+                      The next page could not be read ({dataset.moreError}). The rows above are unchanged.{" "}
+                      <button type="button" className="exec-fleet-link" onClick={() => setDatasetNonce((n) => n + 1)}>Reload</button>
+                    </p>
+                  ) : null}
+                </>
+              )
             ) : read.state.phase === "loading" || read.state.phase === "idle" ? (
               <PanelState status="loading" />
             ) : read.state.phase === "error" ? (
@@ -400,7 +632,7 @@ export default function FleetScreen({ api }: FleetScreenProps) {
           </div>
         </div>
 
-        {selection !== null ? (
+        {selection !== null && !datasetMode ? (
           <FleetDrawer
             alphaId={selection}
             row={selected}
