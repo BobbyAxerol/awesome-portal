@@ -19,11 +19,14 @@ import {
   accessSelfNavigationUrl,
   eligibilityAnswers,
   eligibilityRow,
+  eligibilityRowNow,
   enterableSelfNavFeatures,
+  enterableSelfNavFeaturesNow,
   navigationAnswers,
   readAccessEligibility,
   readAccessSelfNavigation,
   selfNavItem,
+  selfProjectionExpiry,
   type AccessEligibility,
   type AccessSelfNavigation,
   type EligibilityRequest,
@@ -315,5 +318,52 @@ describe("requests", () => {
     const nav = navigation(NAV_APP_ONLY);
     expect(navigationAnswers(nav, { workspaceId: "ws_TEST_ONLY", environment: "paper" })).toBe(true);
     expect(navigationAnswers(nav, { workspaceId: "ws_TEST_ONLY", environment: "live" })).toBe(false);
+  });
+});
+
+describe("projection times (FE-057): the end of this actor's session, never a lease", () => {
+  it("both bodies read the pair exactly as published", () => {
+    expect(eligibility(POSITIVE)).toMatchObject({ observedAtMs: 1792094400000, validUntilMs: 1792094405000 });
+    for (const body of [NAV_APP_ONLY, NAV_HIDDEN, NAV_LEGACY, NAV_V2]) expect(navigation(body)).toMatchObject({ observedAtMs: 1792094400000, validUntilMs: 1792094405000 });
+  });
+
+  it("a missing, non-integer, negative, unsafe, string or null time voids the whole read", () => {
+    for (const key of ["observed_at_ms", "valid_until_ms"]) {
+      expect(readAccessSelfNavigation(edit(NAV_APP_ONLY, (b) => { delete b[key]; })), `${key} absent`).toBeNull();
+      expect(readAccessEligibility(edit(POSITIVE, (b) => { delete b[key]; })), `${key} absent`).toBeNull();
+      for (const bad of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1, "1792094400000", null, true, Number.NaN]) {
+        expect(readAccessSelfNavigation(edit(NAV_APP_ONLY, (b) => { b[key] = bad; })), `${key}=${String(bad)}`).toBeNull();
+        expect(readAccessEligibility(edit(POSITIVE, (b) => { b[key] = bad; })), `${key}=${String(bad)}`).toBeNull();
+      }
+    }
+  });
+
+  it("valid_until_ms must be after observed_at_ms (the producer invariant the schema cannot state)", () => {
+    for (const until of [1792094400000, 1792094399999, 0]) {
+      expect(readAccessSelfNavigation(edit(NAV_APP_ONLY, (b) => { b.valid_until_ms = until; })), String(until)).toBeNull();
+      expect(readAccessEligibility(edit(POSITIVE, (b) => { b.valid_until_ms = until; })), String(until)).toBeNull();
+    }
+  });
+
+  it("a ttl, revision or deadline key beside the pair is not this contract (closed object)", () => {
+    for (const key of ["ttl_ms", "revision", "expires_at_ms", "workspace_deadline_ms"]) {
+      expect(readAccessSelfNavigation(edit(NAV_APP_ONLY, (b) => { b[key] = 1792094405000; })), key).toBeNull();
+      expect(readAccessEligibility(edit(POSITIVE, (b) => { b[key] = 1792094405000; })), key).toBeNull();
+    }
+  });
+
+  it("selfProjectionExpiry: live before the ceiling, expired from it (end-exclusive, no grace), unreadable clock shut", () => {
+    const nav = navigation(NAV_APP_ONLY);
+    expect(selfProjectionExpiry(nav, 1792094404999)).toEqual({ state: "live" });
+    expect(selfProjectionExpiry(nav, 1792094405000)).toEqual({ state: "expired", reason: "SESSION_CEILING_PASSED", validUntilMs: 1792094405000 });
+    expect(selfProjectionExpiry(nav, Number.NaN)).toMatchObject({ state: "expired", reason: "CLOCK_UNREADABLE" });
+  });
+
+  it("an expired eligibility answers 'expired' for every action, never the stale ALLOWED; a live one answers the row", () => {
+    const body = eligibility(POSITIVE);
+    expect(eligibilityRowNow(body, "portfolio.read", 1792094400000)).toEqual({ kind: "row", row: body.actions[0] });
+    expect(eligibilityRowNow(body, "portfolio.read", 1792094405000)).toMatchObject({ kind: "expired", expiry: { reason: "SESSION_CEILING_PASSED" } });
+    expect(enterableSelfNavFeaturesNow(navigation(NAV_APP_ONLY), 1792094405000)).toEqual([]);
+    expect(enterableSelfNavFeaturesNow(navigation(NAV_APP_ONLY), 1792094404999)).toEqual(enterableSelfNavFeatures(navigation(NAV_APP_ONLY)));
   });
 });
