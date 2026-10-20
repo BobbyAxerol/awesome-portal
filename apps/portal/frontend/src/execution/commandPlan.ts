@@ -272,10 +272,13 @@ export interface RelayDenial {
 
 export function readRelayDenial(raw: unknown): RelayDenial | null {
   const o = obj(raw);
-  const envelope = obj(o?.envelope) ?? o;
+  // The served 409 wraps the decision: `{ error, request_id, details }` with the facts under `details` (RV-01). An older shape
+  // carries them in `envelope` or at the top level; the wrapped one wins when it names the relay decision.
+  const details = obj(o?.details);
+  const envelope = obj(o?.envelope) ?? (details !== null && details.schema_version === "execution.command-relay-decision.v1" ? details : o);
   if (!envelope) return null;
   const decision = str(envelope.decision);
-  const error = obj(envelope.error);
+  const error = obj(o?.error) ?? obj(envelope.error);
   // Accept the denial document, or a problem body carrying the same code.
   if (decision !== "DENIED" && str(error?.code) !== "COMMAND_RELAY_DISABLED") return null;
 

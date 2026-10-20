@@ -291,6 +291,13 @@ describe("#8 — a denied apply shows the two facts that make it safe to act on"
   });
 
   it("says nothing happened when nothing reached the source", () => {
+    const served = JSON.parse(readFileSync(join(__dirname, "../../../../../packages/contracts/fixtures/execution-command-apply-denied.valid.json"), "utf8"));
+    const wrapped = readRelayDenial(served)!;
+    expect(wrapped.sourceRequestSent).toBe(false);
+    expect(wrapped.operationId).toBe("op_01K3COMMANDPLAN000000000000");
+    expect(wrapped.text).toContain("nothing reached the Trading System");
+    // Fail closed: a wrapped body whose details cannot be read stays "request sent".
+    expect(readRelayDenial({ ...served, details: { ...served.details, source_request_sent: "no" } })!.sourceRequestSent).toBe(true);
     const denial = readRelayDenial(DENIED)!;
     expect(denial.sourceRequestSent).toBe(false);
     expect(denial.retryAllowed).toBe(false);
