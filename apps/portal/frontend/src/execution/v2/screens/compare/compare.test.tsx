@@ -50,13 +50,14 @@ const cell = (tr: HTMLElement, column: string) => tr.querySelector(`td[data-l='$
 const pick = (...ids: string[]) => `?in=${ids.join(",")}`;
 
 describe("page", () => {
-  it("is the compare flag's screen and keeps its promises in the subtitle", async () => {
+  it("is the compare flag's screen; the 2-to-4 promise is the pick hint, not a subtitle", async () => {
     expect(COMPARE_SCREEN_KEY).toBe("compare");
     mount(makeApi().api);
     await loaded();
     expect(screen.getByRole("heading", { level: 1, name: "Compare" })).toBeTruthy();
-    expect(screen.getByText("2 to 4 · one currency · one domain · identity, scalars and aligned series")).toBeTruthy();
-    expect(screen.getByText("Fresh")).toBeTruthy();
+    expect(screen.queryByText(/identity, scalars and aligned series/)).toBeNull();
+    // FRESH prints no chip; the as-of line says it.
+    expect(screen.queryByText("Fresh")).toBeNull();
   });
 
   it("offers Portfolios, and Alphas only as a choice that says why it is off", async () => {
@@ -72,7 +73,7 @@ describe("page", () => {
   it("says alphas are not comparable when the address asks for them, and shows portfolios", async () => {
     mount(makeApi().api, "?kind=alpha");
     await loaded();
-    expect(screen.getByText("Comparing alphas is Not published (FE-033). Showing portfolios.")).toBeTruthy();
+    expect(screen.getByText("Comparing alphas is not available. Showing portfolios.").getAttribute("title")).toBe("Not published (FE-033)");
   });
 
   it("points Back where the link came from", async () => {
@@ -239,7 +240,8 @@ describe("basis and partitions", () => {
     const summary = screen.getByRole("button", { name: /listed apart/ });
     expect(summary.textContent).toContain("USDT · Real-funded basis");
     expect(summary.textContent).toContain("1 listed apart");
-    expect(summary.textContent).toContain("Money is never converted or combined");
+    expect(summary.textContent).not.toContain("Money is never converted or combined");
+    expect(summary.querySelector("[title]")!.getAttribute("title")).toBe("Money is never converted or combined");
     expect(summary.getAttribute("aria-expanded")).toBe("false");
     const region = document.getElementById(summary.getAttribute("aria-controls")!)!;
     expect(region.hidden).toBe(true);
@@ -541,16 +543,14 @@ describe("metric table", () => {
     expect(cell(row("Allocated capital"), "Yen-Carry")).toContain("JPY");
   });
 
-  it("names the request behind NAV, Net PnL, Return, Max drawdown and Score in every column", async () => {
+  it("names NAV, Net PnL, Return, Max drawdown and Score once, not as a 'Not published' row under every pick", async () => {
     mount(makeApi().api, pick(PF.satellite, PF.canary));
     await loaded();
-    for (const column of ["Satellite", "Canary"]) {
-      expect(cell(row("NAV"), column)).toBe("Not published (FE-013)");
-      expect(cell(row("Net PnL"), column)).toBe("Not published (FE-005, FE-025)");
-      expect(cell(row("Return"), column)).toBe("Not published (FE-006, FE-025)");
-      expect(cell(row("Max drawdown"), column)).toBe("Not published (FE-013, FE-025)");
-      expect(cell(row("Score"), column)).toBe("Not published (FE-011)");
-    }
+    for (const label of ["NAV", "Net PnL", "Return", "Max drawdown", "Score"]) expect(screen.queryByRole("rowheader", { name: label }), label).toBeNull();
+    expect(document.querySelector("td[data-l='Metric']")!.textContent).not.toMatch(/NAV|Net PnL|Return|drawdown|Score/);
+    const line = screen.getByTestId("not-available-line");
+    expect(line.textContent).toContain("Not available: NAV, Net PnL, Return, Max drawdown, Score");
+    for (const id of ["FE-013", "FE-005", "FE-006", "FE-011"]) expect(line.getAttribute("title"), id).toContain(`Not published (${id})`);
   });
 
   it("marks no best in a row: a mark would need a value it does not have", async () => {
