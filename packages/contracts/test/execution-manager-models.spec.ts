@@ -310,3 +310,120 @@ describe("ELP2-06 generated named Manager BFF contract",()=>{
     }
   });
 });
+
+/** BE-P1 (UXM-07 conformance matrix MD-1..MD-8): what JSON Schema says and what only the producer's Zod refinement says. */
+describe("BE-P1 Manager dataset producer invariants: schema part and runtime part", () => {
+  const rows = load("fixtures/execution-manager-dataset.rows.synthetic.valid.json").value;
+  const clone = <T,>(value:T):T => structuredClone(value);
+  const part = (currency:string,tag:string) => ({economic_domain:"PAPER",currency,basis:"TEST_ONLY:net-ledger",
+    native_profile_ref:`TEST_ONLY:paper-ledger-${tag}`,domain_proof_ref:"TEST_ONLY:not-economic-authority"});
+  function rich() {
+    const body = clone(rows), rowA = body.items[0], rowB = clone(rowA);
+    rowB.row_key = '["TEST_ONLY:alpha-b","TEST_ONLY:av-b","TEST_ONLY:portfolio"]';
+    rowB.alpha_id = "TEST_ONLY:alpha-b"; rowB.alpha_version_id = "TEST_ONLY:av-b";
+    Object.assign(rowB.children[0],{alpha_id:"TEST_ONLY:alpha-b",alpha_version_id:"TEST_ONLY:av-b",deployment_id:"TEST_ONLY:deployment-b"});
+    const usdt = clone(rowA.metrics.net_pnl), eur = {...clone(rowA.metrics.net_pnl),currency:"EUR",value:"-12.5"};
+    const none = {...clone(rowA.metrics.allocation),reason_code:"MULTI_CURRENCY_NO_SINGLE_TOTAL"};
+    rowB.metrics.net_pnl = clone(none); rowB.metrics.unrealized_pnl = clone(none);
+    rowB.economic_partitions = [{partition:part("USDT","usdt"),metrics:{net_pnl:usdt}},{partition:part("EUR","eur"),metrics:{net_pnl:eur}}];
+    body.items = [rowA,rowB];
+    body.page = {limit:100,returned_count:2,authorized_filtered_count:2,next_cursor:null,previous_cursor:null};
+    body.groups = [{key:[{field:"portfolio_id",value:"TEST_ONLY:portfolio"}],unique_row_count:2,totals_scope:"FULL_AUTHORIZED_FILTERED_QUERY",
+      economic_partitions:[{partition:part("USDT","usdt"),metrics:{net_pnl:clone(usdt)}},{partition:part("EUR","eur"),metrics:{net_pnl:clone(eur)}}]}];
+    body.capital_statements = [{partition:part("USDT","usdt"),metrics:{balance_total:clone(usdt)}},
+      {partition:part("EUR","eur"),metrics:{balance_total:clone(eur)}}];
+    return body;
+  }
+  const both = (body:unknown) => ({schema:validate(body),runtime:managerDatasetResponse.safeParse(body).success});
+  it("accepts the rich two-currency page in both validators", () => {
+    const body = rich();
+    expect(validate(body),JSON.stringify(validate.errors)).toBe(true);
+    expect(managerDatasetResponse.safeParse(body).success).toBe(true);
+  });
+  // The schema AND the producer refuse these: the finite part of MD-1/3/4/6/7.
+  it.each([
+    ["MD-1 empty page with a count", (b:any) => { b.items = []; b.groups = []; }],
+    ["MD-1 rows with a zero count", (b:any) => { b.page.returned_count = 0; }],
+    ["MD-3 a partition object repeated in capital_statements", (b:any) => { b.capital_statements.push(clone(b.capital_statements[0])); }],
+    ["MD-3 a partition object repeated in a row", (b:any) => { b.items[1].economic_partitions.push(clone(b.items[1].economic_partitions[0])); }],
+    ["MD-3 a partition object repeated in a group", (b:any) => { b.groups[0].economic_partitions.push(clone(b.groups[0].economic_partitions[0])); }],
+    ["MD-4 an unpublished preset that carries a window", (b:any) => { b.query_options.window.presets[0].resolved = {from_ms:1,to_ms:2}; }],
+    ["MD-6 a row repeated", (b:any) => { b.items.push(clone(b.items[0])); b.page.returned_count = 3; b.page.authorized_filtered_count = 3; }],
+    ["MD-6 a group repeated", (b:any) => { b.groups.push(clone(b.groups[0])); }],
+    ["MD-7 a group over a non-groupable field", (b:any) => { b.groups[0].key[0].field = "name"; }],
+    ["MD-7 a field twice in one group key", (b:any) => { b.groups[0].key.push({field:"portfolio_id",value:"x"}); }],
+  ])("%s is refused by the schema and by the producer", (_name,change) => {
+    const body = rich(); change(body);
+    expect(both(body)).toEqual({schema:false,runtime:false});
+  });
+  // JSON Schema cannot state these (equality of two fields, identity inside a list): only the producer refuses them.
+  it.each([
+    ["MD-1 returned_count below the rows", (b:any) => { b.page.returned_count = 1; }],
+    ["MD-1 returned_count above the limit", (b:any) => { b.page.limit = 1; }],
+    ["MD-1 more rows than the filtered query", (b:any) => { b.page.authorized_filtered_count = 1; b.page.next_cursor = "n"; }],
+    ["MD-1 no cursor but fewer rows than the filtered query", (b:any) => { b.page.authorized_filtered_count = 5; }],
+    ["MD-2 a EUR figure inside a USDT partition", (b:any) => { b.capital_statements[0].metrics.balance_total.currency = "EUR"; }],
+    ["MD-3 the same partition identity with another proof and figure", (b:any) => { const twin = clone(b.capital_statements[0]); twin.partition.domain_proof_ref = "TEST_ONLY:other"; twin.metrics.balance_total.value = "1"; b.capital_statements.push(twin); }],
+    ["MD-6 a row_key shared by two different rows", (b:any) => { b.items[1].row_key = b.items[0].row_key; }],
+    ["MD-7 more unique rows in a group than the filtered query", (b:any) => { b.groups[0].unique_row_count = 10; }],
+    ["MD-7 a group over a field the options do not offer", (b:any) => { b.query_options.sort_fields = b.query_options.sort_fields.filter((k:string) => k !== "venue"); b.query_options.group_fields = b.query_options.group_fields.filter((k:string) => k !== "venue"); b.groups[0].key[0].field = "venue"; }],
+    ["MD-8 a USDT headline above a EUR partition", (b:any) => { b.items[1].metrics.net_pnl = {...clone(b.items[0].metrics.net_pnl),value:"1"}; }],
+  ])("%s is refused by the producer only (the schema is silent, the description says it)", (_name,change) => {
+    const body = rich(); change(body);
+    expect(both(body)).toEqual({schema:true,runtime:false});
+  });
+  it("publishes a canonical positive partition example and canonical negative cases that both validators judge as stated", () => {
+    const positive = load("fixtures/execution-manager-dataset.partitions.synthetic.valid.json"), negative = load("fixtures/execution-manager-dataset.invariants.synthetic.negative.json");
+    expect(positive.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT"); expect(negative.lane).toBe(positive.lane);
+    expect(negative.base).toBe("execution-manager-dataset.partitions.synthetic.valid.json");
+    expect(validate(positive.value),JSON.stringify(validate.errors)).toBe(true);
+    expect(managerDatasetResponse.parse(positive.value)).toEqual(positive.value);
+    // Two currencies stay in two partitions; the mixed row publishes no headline money figure.
+    expect(positive.value.items[1].economic_partitions.map((p:any) => p.partition.currency)).toEqual(["USDT","EUR"]);
+    expect(positive.value.items[1].metrics.net_pnl).toMatchObject({value:null,currency:null,reason_code:"MIXED_ECONOMIC_DOMAINS"});
+    const apply = (ops:any[]) => {
+      const body = clone(positive.value), at = (path:any[]) => path.reduce((node,key) => node[key],body);
+      for (const op of ops) {
+        const parent = at(op.path.slice(0,-1)), key = op.path.at(-1);
+        if (op.op === "set") parent[key] = clone(op.value); else if (op.op === "delete") delete parent[key];
+        else if (op.op === "append") parent[key].push(clone(op.value)); else if (op.op === "append_copy") parent[key].push(clone(at(op.from)));
+        else if (op.op === "set_copy") parent[key] = clone(at(op.from)); else throw new Error(op.op);
+      }
+      return body;
+    };
+    expect(negative.cases.map((c:any) => c.gap).filter((gap:string,i:number,all:string[]) => all.indexOf(gap) === i).sort()).toEqual(["MD-1","MD-2","MD-3","MD-4","MD-6","MD-7","MD-8"]);
+    for (const c of negative.cases) {
+      const body = apply(c.ops), runtime = managerDatasetResponse.safeParse(body);
+      expect(runtime.success,c.id).toBe(false);
+      expect(!runtime.success && runtime.error.issues.some(i => i.message === c.code || i.code === c.code),c.id).toBe(true);
+      expect(validate(body),c.id).toBe(c.refused_by === "PRODUCER_ONLY");
+    }
+  });
+  it("accepts the pinned-partition headline and a past-the-end empty page", () => {
+    const pinned = rich(); pinned.items[1].metrics.net_pnl = clone(pinned.items[1].economic_partitions[1].metrics.net_pnl);
+    expect(both(pinned)).toEqual({schema:true,runtime:true});
+    const empty = clone(fixture.value); empty.page = {limit:2,returned_count:0,authorized_filtered_count:4,next_cursor:null,previous_cursor:null};
+    expect(both(empty)).toEqual({schema:true,runtime:true});
+  });
+  it("accepts a published preset with a window and refuses the unpublished one with bounds in the options component too", () => {
+    const check = ajv.compile(api.components.schemas.ManagerQueryOptions), options = clone(rows.query_options);
+    expect(check(options),JSON.stringify(check.errors)).toBe(true);
+    const published = clone(options);
+    published.window.presets[1] = {...published.window.presets[1],data_state:"METRIC_SPECIFIC",resolved:{from_ms:1,to_ms:2592000001},reason_code:null};
+    expect(check(published)).toBe(true); expect(managerP1Options.safeParse(published).success).toBe(true);
+    const bounded = clone(options); bounded.window.presets[0].resolved = {from_ms:1,to_ms:2};
+    expect(check(bounded)).toBe(false); expect(managerP1Options.safeParse(bounded).success).toBe(false);
+  });
+  it("leaves negative zero to an owner decision: both validators still admit -0 (MD-5 is NOT a rule)", () => {
+    const body = rich(); body.items[0].metrics.net_pnl.value = "-0"; body.items[0].economic_partitions[0].metrics.net_pnl.value = "-0";
+    expect(both(body)).toEqual({schema:true,runtime:true});
+  });
+  it("publishes the rule text where the schema cannot check it", () => {
+    const response = api.components.schemas.ManagerDataset.properties;
+    for (const text of [response.page.description,response.items.description,response.groups.description,response.capital_statements.description])
+      expect(typeof text).toBe("string");
+    expect(response.page.description).toMatch(/returned_count is items\.length/);
+    expect(response.capital_statements.uniqueItems).toBe(true);
+    expect(response.items.items.properties.metrics.description).toMatch(/exactly one partition/);
+  });
+});

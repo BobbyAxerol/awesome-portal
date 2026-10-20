@@ -282,6 +282,7 @@ export interface components {
                 /** @constant */
                 maximum_response_bytes: 1048576;
             };
+            /** @description returned_count is items.length, at most limit and at most authorized_filtered_count; a non-empty page with neither cursor is the whole filtered result (returned_count equals authorized_filtered_count). JSON Schema cannot compare a count with an array length: the producer refuses to emit a body that breaks this (MANAGER_PAGE_*), and the reader refuses it too. The schema states the empty case exactly. */
             page: {
                 limit: number;
                 returned_count: number;
@@ -289,7 +290,9 @@ export interface components {
                 next_cursor: string | null;
                 previous_cursor: string | null;
             };
+            /** @description A row appears once: row_key is unique within a body (MANAGER_ROW_KEY_DUPLICATE). uniqueItems catches an exact repeat; a repeated row_key with different content is refused by the producer. */
             items: {
+                /** @description Unique within a body (MANAGER_ROW_KEY_DUPLICATE). */
                 row_key: string;
                 alpha_id: string;
                 alpha_version_id: string;
@@ -311,6 +314,7 @@ export interface components {
                     stage: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
                     binding_ref: string | null;
                 }[];
+                /** @description A money metric that names a currency is the figure of exactly one partition listed in economic_partitions (the same metric), never a total across partitions. When a query pins one economic_partition the row still lists its other partitions and the headline is the pinned partition's figure (MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE). */
                 metrics: {
                     [key: string]: {
                         value: string | null;
@@ -340,6 +344,7 @@ export interface components {
                         policy_revision: string;
                     } & (unknown & unknown);
                 };
+                /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
                 economic_partitions: {
                     partition: {
                         /** @enum {string} */
@@ -380,14 +385,17 @@ export interface components {
                     };
                 }[];
             }[];
+            /** @description A group appears once (identity: key) and holds no more unique rows than page.authorized_filtered_count (MANAGER_GROUP_DUPLICATE, MANAGER_GROUP_COUNT_OVER_FILTERED). Its key names a field of query_options.group_fields once (MANAGER_GROUP_FIELD_NOT_OFFERED). */
             groups: {
                 key: {
-                    field: string;
+                    /** @enum {string} */
+                    field: "portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "venue" | "health" | "source_state" | "lifecycle";
                     value: string | null;
-                }[];
+                }[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
                 unique_row_count: number;
                 /** @constant */
                 totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY";
+                /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
                 economic_partitions: {
                     partition: {
                         /** @enum {string} */
@@ -428,6 +436,7 @@ export interface components {
                     };
                 }[];
             }[];
+            /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
             capital_statements: {
                 partition: {
                     /** @enum {string} */
@@ -828,7 +837,7 @@ export interface components {
                 revision: string;
                 supersedes_revision: string | null;
             };
-        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerDatasetQuery: {
             workspace_id?: string;
             /** @enum {string} */
@@ -958,6 +967,7 @@ export interface components {
                     policy_revision: string;
                 } & (unknown & unknown);
             };
+            /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
             economic_partitions: {
                 partition: {
                     /** @enum {string} */
