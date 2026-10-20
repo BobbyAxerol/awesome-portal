@@ -25,6 +25,11 @@ import { accessDigest } from "../execution-v2/access-policy";
 import { CurrentHumanMutations, type CurrentHumanMutationBinding } from "../execution-v2/current-human-mutations";
 import { CurrentHumanLeaseError } from "../execution-v2/current-human-candidate";
 
+/** Dedicated access-subject marker of a Research acceptance session (never a Cloudflare subject). */
+export const RESEARCH_ACCEPTANCE_ACCESS_SUBJECT = "research-acceptance:v1";
+/** Hard cap on one acceptance session: the Plan B grant window (2 hours). */
+export const RESEARCH_ACCEPTANCE_MAX_TTL_SECONDS = 7200;
+
 export class AuthError extends Error {
   constructor(
     public readonly code: string,
@@ -660,6 +665,63 @@ export class AuthService {
     }
   }
 
+  /**
+   * RESEARCH acceptance only (Bobby, 2026-10-20): ONE temporary application session
+   * for an exact, already ACTIVE Portal user, issued through THIS service's one-view
+   * issuance path (the SAME coordinator, intent log, audit and session table as
+   * login/preview). It is Research application-session evidence: not a password,
+   * Cloudflare Access or human-presence proof, and never a copy of another session.
+   * Dev-mode/local scope only (as previewAutoSession). The session is marked by a
+   * dedicated access subject so (a) at most ONE can be active per user (a second issue
+   * is REFUSED, never replaces), and (b) it can never validate under Cloudflare mode.
+   * The TTL is capped at two hours; the token is returned ONCE to the in-process
+   * caller and never logged, audited or stored beyond its hash.
+   */
+  async issueResearchAcceptanceSession(input: {
+    userId: string; ttlSeconds: number; artifactSha256: string;
+    /** Extra DB-only check run inside the issuance transaction (exact owner/workspace/target pins). */
+    precondition?: (client: PoolClient) => Promise<void>;
+  }): Promise<SessionResult> {
+    if (this.config.AUTH_MODE !== "dev" || this.config.PORTAL_ENV !== "local" || !this.currentHumanMutations)
+      throw new AuthError("ACCEPTANCE_SESSION_SCOPE_REQUIRED", "The acceptance session is not available here.", 403);
+    if (!Number.isSafeInteger(input.ttlSeconds) || input.ttlSeconds < 60 || input.ttlSeconds > RESEARCH_ACCEPTANCE_MAX_TTL_SECONDS ||
+        !/^[0-9a-f]{64}$/.test(input.artifactSha256))
+      throw new AuthError("ACCEPTANCE_SESSION_TTL_INVALID", "The acceptance session request is not valid.", 400);
+    const user = await this.users.findById(input.userId);
+    const unavailable = () => new AuthError("ACCEPTANCE_SESSION_IDENTITY_UNAVAILABLE", "The acceptance session is not available here.", 409);
+    if (!user || user.status !== "ACTIVE" || user.archivedAt || user.mustChangePassword) throw unavailable();
+    const base = await this.verifyAccessIdentity(undefined, undefined);
+    const identity: VerifiedAccessIdentity = { ...base, sub: RESEARCH_ACCEPTANCE_ACCESS_SUBJECT };
+    const authorize = async (client: PoolClient) => {
+      const current = await new UsersRepository(client).lockById(user.userId);
+      if (!current || current.status !== "ACTIVE" || current.archivedAt || current.mustChangePassword ||
+          current.sessionVersion !== user.sessionVersion) throw unavailable();
+      const active = await client.query(`SELECT session_id FROM auth_sessions
+        WHERE user_id=$1 AND access_subject=$2 AND state='ACTIVE' AND absolute_expires_at>clock_timestamp() FOR UPDATE`,
+      [user.userId, RESEARCH_ACCEPTANCE_ACCESS_SUBJECT]);
+      if (active.rowCount) throw new AuthError("ACCEPTANCE_SESSION_ALREADY_ACTIVE", "An acceptance session is already active.", 409);
+      await input.precondition?.(client);
+      await this.requireCurrentAccessIdentity(client, identity);
+    };
+    const apply = async (client: PoolClient) => {
+      const current = (await new UsersRepository(client).lockById(user.userId))!;
+      const session = await this.createSession(current, identity, null, undefined, new SessionsRepository(client), input.ttlSeconds);
+      // Metadata is public facts only: ids, TTL, expiry, the approved artifact digest. Never the token.
+      await new AuditRepository(client).record({
+        eventType: "research_acceptance_session_issued", actorUserId: current.userId, targetUserId: current.userId,
+        accessSubject: RESEARCH_ACCEPTANCE_ACCESS_SUBJECT, result: "SUCCESS", reasonCode: "RESEARCH_ACCEPTANCE_SESSION",
+        metadata: { schema_version: "portal.research-acceptance-session-audit.v1", session_id: session.sessionId,
+          ttl_seconds: input.ttlSeconds, absolute_expires_at: session.absoluteExpiresAt.toISOString(),
+          artifact_sha256: input.artifactSha256 },
+      });
+      await this.requireCurrentAccessIdentity(client, identity);
+      return session;
+    };
+    try {
+      return await this.issueVerifiedSession(user, identity, "RESEARCH_ACCEPTANCE", null, authorize, apply);
+    } catch (error) { this.rethrowIssuanceError(error); }
+  }
+
   private async requireCurrentAccessIdentity(client: PoolClient, identity: VerifiedAccessIdentity): Promise<void> {
     const now = (await client.query<{ now: Date }>("SELECT clock_timestamp() AS now")).rows[0].now.getTime();
     if (!Number.isFinite(identity.tokenExpiresAt.getTime()) || identity.tokenExpiresAt.getTime() <= now)
@@ -671,7 +733,7 @@ export class AuthService {
    * metadata is hashed; no credential/assertion/token fingerprint is retained.
    * Lost COMMIT ACK fails closed. Private recovery cannot recreate cookies. */
   private async issueVerifiedSession(user: PortalUser, identity: VerifiedAccessIdentity,
-    operation: "LOGIN" | "PREVIEW", credentialId: string | null,
+    operation: "LOGIN" | "PREVIEW" | "RESEARCH_ACCEPTANCE", credentialId: string | null,
     authorize: (client: PoolClient) => Promise<void>, apply: (client: PoolClient) => Promise<SessionResult>): Promise<SessionResult> {
     const attemptId = randomId("iss");
     return this.currentHumanMutations!.executeVerified({
@@ -696,16 +758,20 @@ export class AuthService {
     activationId: string | null,
     requestId: string | undefined,
     sessions: SessionsRepository = this.sessions,
+    /** Finite cap (seconds) applied to BOTH the idle and the absolute lifetime. */
+    ttlSeconds?: number,
   ): Promise<SessionResult> {
     const token = randomToken(32);
     const csrfToken = randomToken(24);
     const now = new Date();
+    const idle = ttlSeconds === undefined ? this.config.SESSION_IDLE_SECONDS : Math.min(this.config.SESSION_IDLE_SECONDS, ttlSeconds);
+    const absolute = ttlSeconds === undefined ? this.config.SESSION_ABSOLUTE_SECONDS : Math.min(this.config.SESSION_ABSOLUTE_SECONDS, ttlSeconds);
     const session: SessionResult = {
       sessionId: randomId("ses"),
       token,
       csrfToken,
-      idleExpiresAt: new Date(now.getTime() + this.config.SESSION_IDLE_SECONDS * 1000),
-      absoluteExpiresAt: new Date(now.getTime() + this.config.SESSION_ABSOLUTE_SECONDS * 1000),
+      idleExpiresAt: new Date(now.getTime() + idle * 1000),
+      absoluteExpiresAt: new Date(now.getTime() + absolute * 1000),
     };
     await sessions.create({
       sessionId: session.sessionId,
