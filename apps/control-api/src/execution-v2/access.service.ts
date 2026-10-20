@@ -28,6 +28,9 @@ import { eligibilityBatchInput, projectEligibilityBatch, eligibilityInput, navig
 import { CAPITAL_STEP_UP_ACTIONS, stepUpProofsFor, type StepUpFamily } from "./step-up-family";
 import { projectSelfContext } from "./self-context";
 import { captureSelfContextFacts } from "./self-context.store";
+import { ManagerRevokeError, MANAGER_REVOKE_EVENT_SOURCE, MANAGER_REVOKE_RECEIPT_SCHEMA, managerRevokeIntentKey,
+  managerRevokeItemKey, managerRevokeRequestDigest, planManagerRevoke, verifiedManagerRevoke,
+  type ManagerRevokeDocument, type ManagerRevokeReceipt } from "./manager-domain-revoke";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
@@ -722,9 +725,118 @@ export class ExecutionAccessService {
     return receipt;
   }
 
+  /** PRIVATE remove-only revoke of NATIVE manager-domain grants (READ `business.read_all`
+   * and STREAM `stream.subscribe` are revocable separately, by exact grant identity).
+   * Same trust, coordinator, immutable audit table and advisory/authority locks as the
+   * installer; no route, session, SQL or legacy-grant path. The ONLY accepted input is a
+   * token minted by readPinnedManagerRevoke. Applies atomically: either every item is
+   * revoked/narrowed or no-op'd with its receipt, or nothing changes. Exact replay of the
+   * same revocation_id returns the original receipts without writing. */
+  async revokeReviewedManagerDomainGrants(input:unknown):Promise<readonly ManagerRevokeReceipt[]>{
+    const token=verifiedManagerRevoke(input);
+    if(!token||!this.authorityMutations)throw new ManagerRevokeError("MANAGER_REVOKE_ARTIFACT_REFUSED",503);
+    const doc=token.document,t=doc.target,requestDigest=managerRevokeRequestDigest(doc);
+    try{
+      const prior=await withTransaction(this.pool,async db=>{
+        await db.query("SET TRANSACTION READ ONLY");
+        await this.assertManagerRevokeTarget(db,t);
+        return this.priorManagerRevoke(new AccessRepository(db),doc,requestDigest);
+      });
+      if(prior)return prior; // immutable historical receipts, never a repair/re-apply
+      return await this.authorityMutations.executeVerified({family:"REVIEWED_POLICY",operation:"REVOKE_MANAGER_GRANT",
+        key_digest:managerRevokeIntentKey(t.workspace_id,doc.revocation_id),request_digest:requestDigest,target_id:t.workspace_id},{
+        retain_after_application_rollback:true,
+        authorize:async db=>{await this.revokeManagerDomainOn(db,doc,requestDigest,false);},
+        apply:db=>this.revokeManagerDomainOn(db,doc,requestDigest,true),
+        terminal:receipts=>({outcome:"APPLIED",receipt_ref:accessDigest(receipts.map(r=>r.receipt_id)),reason_code:null}),
+      });
+    }catch(error){throw this.managerRevokeFailure(error);}
+  }
+
+  private managerRevokeFailure(error:unknown):unknown{
+    if(error instanceof ManagerRevokeError)return error;
+    if(error instanceof AccessPolicyError)return new ManagerRevokeError(
+      error.code==="RECEIPT_BINDING_MISMATCH"?"MANAGER_REVOKE_TARGET_MISMATCH":"MANAGER_REVOKE_ARTIFACT_REFUSED",error.status);
+    if(error instanceof CurrentHumanLeaseError){
+      if(error.code==="CURRENT_HUMAN_MUTATION_KEY_CONFLICT"||error.code==="CURRENT_HUMAN_MUTATION_PREVIOUSLY_REFUSED")
+        return new ManagerRevokeError("MANAGER_REVOKE_KEY_CONFLICT",409);
+      // Open drain, unresolved/UNKNOWN native custody or an uncertain earlier outcome:
+      // the SAME artifact is retried after the custody settles. Nothing is forced.
+      return new ManagerRevokeError("MANAGER_REVOKE_DRAIN_PENDING",503);
+    }
+    const pgCode=(error as {code?:unknown}|null)?.code;
+    if(typeof pgCode==="string"&&["55P03","57014","40001","40P01"].includes(pgCode))
+      return new ManagerRevokeError("MANAGER_REVOKE_RETRY_REQUIRED",503);
+    return error;
+  }
+
+  private async assertManagerRevokeTarget(db:PoolClient,t:ManagerRevokeDocument["target"]):Promise<void>{
+    try{await this.assertManagerTarget(db,t);}
+    catch{throw new ManagerRevokeError("MANAGER_REVOKE_TARGET_MISMATCH",409);}
+  }
+
+  /** The audit rows already written for EXACTLY this artifact, or null if none. */
+  private async priorManagerRevoke(repo:AccessRepository,doc:ManagerRevokeDocument,requestDigest:string):Promise<ManagerRevokeReceipt[]|null>{
+    const found:AccessEvent[]=[];
+    for(const entry of doc.items){
+      const event=await repo.keyedEvent(doc.target.workspace_id,managerRevokeItemKey(doc.target.workspace_id,doc.revocation_id,entry.grant_id));
+      if(event)found.push(event);
+    }
+    if(found.length===0)return null;
+    if(found.length!==doc.items.length||found.some(event=>event.operation!=="REVOKE"||event.source!==MANAGER_REVOKE_EVENT_SOURCE||
+      event.request_digest!==requestDigest))throw new ManagerRevokeError("MANAGER_REVOKE_KEY_CONFLICT",409);
+    return found.map(event=>({...(event.after_fact as {receipt:ManagerRevokeReceipt}).receipt,replayed:true}));
+  }
+
+  private async revokeManagerDomainOn(db:PoolClient,doc:ManagerRevokeDocument,requestDigest:string,write:boolean):Promise<ManagerRevokeReceipt[]>{
+    const t=doc.target;
+    await db.query("SET LOCAL lock_timeout='1500ms'");
+    await db.query("SET LOCAL statement_timeout='5000ms'");
+    // SAME key the current-human readers try-lock: a concurrent read either
+    // finished before this revoke or fails closed (409 retry) while it holds.
+    await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`portal-access-v2:${t.workspace_id}`]);
+    await this.assertManagerRevokeTarget(db,t);
+    const repo=new AccessRepository(db),prior=await this.priorManagerRevoke(repo,doc,requestDigest);
+    if(prior)return prior;
+    const anchor=(await db.query("SELECT user_id FROM portal_owner_anchor WHERE anchor_id='PORTAL_OWNER' FOR SHARE NOWAIT")).rows[0]?.user_id;
+    if(anchor!==t.protected_owner_user_id)throw new ManagerRevokeError("MANAGER_REVOKE_TARGET_MISMATCH",409);
+    const policy=await repo.policy(t.workspace_id,true);
+    if(!policy||policy.state!=="REVIEWED"||policy.qualification!=="OWNER_VERIFIED"||policy.protected_owner_user_id!==anchor||
+      policy.workspace_id!==t.workspace_id)throw new ManagerRevokeError("MANAGER_REVOKE_NOT_COMMISSIONED",409);
+    const now=await this.now(db);
+    const plan=planManagerRevoke(await repo.storedGrants(t.workspace_id),doc,{workspace_id:t.workspace_id,
+      protected_owner_user_id:anchor,now_ms:now,newRevision:()=>randomId("acr")});
+    const receipts:ManagerRevokeReceipt[]=[];
+    for(const step of plan){
+      const effective=step.after??step.before,receiptId=randomId("ace");
+      const receipt:ManagerRevokeReceipt={schema_version:MANAGER_REVOKE_RECEIPT_SCHEMA,revocation_id:doc.revocation_id,receipt_id:receiptId,
+        grant_id:step.before.grant_id,action:step.before.action,mode:step.item.mode,outcome:step.outcome,
+        grant_revision_before:step.before.revision,grant_revision_after:effective.revision,
+        valid_until_ms_before:step.before.valid_until_ms,valid_until_ms_after:effective.valid_until_ms,
+        revoked_at_ms:effective.revoked_at_ms,policy_revision:policy.revision,decided_at_ms:now,replayed:false};
+      receipts.push(receipt);
+      if(!write)continue;
+      if(step.after)await repo.saveManagerDomainGrant(step.after,false);
+      const access:AccessReceipt={schema_version:"portal.access-operation.v1",operation_id:receiptId,proposal_id:null,
+        grant_id:step.before.grant_id,outcome:step.after?"REVOKED":"DENIED",http_status:200,reason_code:step.outcome,
+        policy_revision:policy.revision,grant_revision:effective.revision,decided_at_ms:now,ts_authority:"NOT_REQUIRED"};
+      // Immutable audit row (the table forbids UPDATE/DELETE). Reviewed public
+      // facts only: grant identity, domain hashes, windows; never a secret.
+      await repo.event({event_id:receiptId,workspace_id:t.workspace_id,actor_user_id:anchor,subject_user_id:step.before.subject_user_id,
+        operation:"REVOKE",key_digest:managerRevokeItemKey(t.workspace_id,doc.revocation_id,step.before.grant_id),
+        request_digest:requestDigest,policy_revision:policy.revision,grant_id:step.before.grant_id,proposal_id:null,
+        source:MANAGER_REVOKE_EVENT_SOURCE,source_receipt_id:`${doc.revocation_id}:${step.before.grant_id}`,
+        before_fact:step.before,after_fact:{grant:effective,outcome:step.outcome,mode:step.item.mode,reason:doc.reason,
+          approval_ref:doc.approval_ref,provenance_ref:doc.provenance_ref,receipt},receipt:access});
+    }
+    return receipts;
+  }
+
   /** A historical ACK must still originate from the exact reviewed database/login. */
   private async assertManagerCommissioningTarget(db:PoolClient,artifact:ReviewedPolicyArtifact):Promise<void>{
-    const t=artifact.manager_commissioning_target!;
+    return this.assertManagerTarget(db,artifact.manager_commissioning_target!);
+  }
+  private async assertManagerTarget(db:PoolClient,t:{database_name:string;database_system_identifier:string;role_name:string}):Promise<void>{
     const target=(await db.query(`SELECT current_database() AS db,session_user AS login,current_user AS role,
       (pg_control_system()).system_identifier::text AS system_identifier`)).rows[0];
     if(!target||target.db!==t.database_name||target.login!==t.role_name||target.role!==t.role_name||

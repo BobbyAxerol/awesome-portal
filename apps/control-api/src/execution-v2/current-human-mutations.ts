@@ -24,7 +24,12 @@ export type CurrentHumanMutationBinding = z.infer<typeof mutationBinding>;
 // private purposes have no fabricated user/session/generation. Their key and
 // full normalized request digest bind the immutable authority evidence.
 const verifiedBinding = z.discriminatedUnion("family", [
-  z.object({ family: z.literal("REVIEWED_POLICY"), operation: z.literal("INSTALL_POLICY"),
+  // REVIEWED_POLICY = a root-owned, hash-pinned owner artifact. The durable table
+  // stores only the family (no actor/session), so the two REMOVE-ONLY maintenance
+  // operations below need no schema change: each has its own key digest and the
+  // same drain/serialization as the install.
+  z.object({ family: z.literal("REVIEWED_POLICY"),
+    operation: z.enum(["INSTALL_POLICY", "REVOKE_MANAGER_GRANT", "REVOKE_ACCEPTANCE_SESSION"]),
     key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
   z.object({ family: z.literal("QUALIFIED_ROOT_RECEIPT"), operation: z.literal("ROOT_RECEIPT"),
     key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
@@ -32,7 +37,7 @@ const verifiedBinding = z.discriminatedUnion("family", [
     key_digest: hash, request_digest: hash, target_id: accessText }).strict(),
   // A newly verified login cannot present a prior Portal session. Only the
   // in-process auth service may use this purpose; never browser-supplied JSON.
-  z.object({ family: z.literal("VERIFIED_AUTH_ISSUANCE"), operation: z.enum(["LOGIN", "PREVIEW"]),
+  z.object({ family: z.literal("VERIFIED_AUTH_ISSUANCE"), operation: z.enum(["LOGIN", "PREVIEW", "RESEARCH_ACCEPTANCE"]),
     key_digest: hash, request_digest: hash, target_id: accessText,
     user_revision: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER) }).strict(),
 ]);
