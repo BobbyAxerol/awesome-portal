@@ -96,10 +96,9 @@ function Notes({ ledger, env }: { ledger: CapitalLedger; env: string }) {
   return (
     <div className="exec-pf-ribbon-notes">
       <p className="exec-pf-caption">
-        <span>Flow lane: allocation ledger entries in {envWord(env)}, per currency, never added together</span>
-        <span>Bounded: {boundedCaption(ledger)}</span>
-        <span>Stage, decision, incident and recall lanes: Not published (FE-031, FE-032)</span>
+        <span title={`Flow lane: allocation ledger entries in ${envWord(env)}, per currency, never added together`}>Bounded: {boundedCaption(ledger)}</span>
       </p>
+
       {flow.undated > 0 ? (
         <p className="exec-pf-note" role="status">
           {count(flow.undated)} {flow.undated === 1 ? "entry has" : "entries have"} no readable time and {flow.undated === 1 ? "is" : "are"} not on the ribbon.

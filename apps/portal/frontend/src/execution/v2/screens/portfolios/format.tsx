@@ -19,8 +19,9 @@ import "../../css/portfolios.css";
 
 export function Np({ fact, children }: { fact: Unpublished; children?: ReactNode }) {
   return (
-    <span className="exec-pf-np" title={fact.what}>
-      {NOT_PUBLISHED_WORD} <FeIds fe={fact.fe} />
+    <span className="exec-pf-np" title={`${fact.fe} · ${fact.what}`}>
+      {NOT_PUBLISHED_WORD}
+      <span className="exec-blk-sr"> <FeIds fe={fact.fe} /></span>
       {children ? <> {children}</> : null}
     </span>
   );
@@ -43,7 +44,13 @@ function FeIds({ fe }: { fe: string }) {
 
 /** A value the source did not send. It is a statement, never an empty cell. */
 export function Absent({ reason }: { reason?: string }) {
-  return <span className="exec-pf-na">{reason ? `Not available · ${reason}` : "Not available"}</span>;
+  // The reason stays in the title and in hidden text; the visible word is "Not available".
+  return (
+    <span className="exec-pf-na" title={reason}>
+      Not available
+      {reason ? <span className="exec-blk-sr"> · {reason}</span> : null}
+    </span>
+  );
 }
 
 export interface MoneyProps {

@@ -42,7 +42,7 @@ import { Flag } from "../../../Flag";
 import { holds, V2_CAPABILITY } from "../../../shell/roleNav";
 import { applyTab, resolveTab } from "../../../tabAliases";
 import { useExecUrlState, withContext } from "../../../urlState";
-import { EXPORT_REASON, PF_FE, npText } from "../fe";
+import { EXPORT_REASON } from "../fe";
 import { freshnessFlag, humanize } from "../format";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_PORTFOLIO_PREFIX, joinQuery, type PortfolioRoutes } from "../routes";
 import { IN_PARAM } from "../selection";
@@ -200,10 +200,10 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
     return (
       <>
         {resource.completeness !== null && resource.completeness.toUpperCase() !== "COMPLETE" ? (
-          <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /> The resource is {humanize(resource.completeness).toLowerCase()}: some relations may be missing.</p>
+          <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /> <span title={`The resource is ${humanize(resource.completeness).toLowerCase()}`}>Some relations may be missing</span></p>
         ) : null}
         {resource.unavailableBranches.length > 0 ? (
-          <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Branch not whole" size="sm" /> Not available from the source: {resource.unavailableBranches.map(humanize).join(", ")}.</p>
+          <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Branch not whole" size="sm" /> Not available: {resource.unavailableBranches.map(humanize).join(", ")}</p>
         ) : null}
         {accountsRefused ? <p className="exec-pf-banner" role="status">The Accounts tab needs execution.accounts.read, which your session does not hold. Showing Overview.</p> : null}
         {resolution.notice ? <p className="exec-pf-banner" role="status">{resolution.notice}</p> : null}
@@ -259,9 +259,8 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
           </p>
         </div>
         <div className="exec-pf-ctrls">
-          <span className="exec-pf-score" title={PF_FE.score.what}>Score: {npText(PF_FE.score)}</span>
           {identity ? <Flag kind={identity.stateKind} label={identity.stateLabel} size="sm" /> : null}
-          {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           {resource ? <span className="exec-pf-dim">{resource.asOf ? `As of ${utcStamp(resource.asOf)}` : "Source time not published"}</span> : null}
           <span className="exec-pf-btnwhy">
             <button type="button" className="exec-pf-btn" disabled title={EXPORT_REASON} aria-describedby={`${tabsId}-export`}>Report pack</button>

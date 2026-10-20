@@ -73,7 +73,9 @@ describe("ribbon under the equity", () => {
       expect(l.textContent).toContain(RIBBON_LANE_NP);
       expect(l.querySelector(".exec-ribbon-lane-axis")).toBeNull();
     }
-    expect(RIBBON_LANE_NP).toBe("Not published (FE-031, FE-032)");
+    expect(RIBBON_LANE_NP).toBe("Not published");
+    // The ids are on the one line under the chart, in its title.
+    expect(screen.getByTestId("not-available-line").getAttribute("title")).toContain("Not published (FE-031)");
     expect(lane(group, "flow").dataset.unpublished).toBeUndefined();
     expect(lane(group, "flow").querySelector(".exec-ribbon-lane-axis")).not.toBeNull();
     // No mark can sit on a lane with no source.
@@ -84,7 +86,7 @@ describe("ribbon under the equity", () => {
     mount(makeApi().api);
     await ribbon();
     expect(screen.getByText("Bounded: Latest 5 of 12 entries, no older page")).toBeTruthy();
-    expect(screen.getByText(/allocation ledger entries in Live, per currency, never added together/)).toBeTruthy();
+    expect(screen.getByTitle(/allocation ledger entries in Live, per currency, never added together/)).toBeTruthy();
   });
 
   it("counts entries outside the equity window instead of hiding them", async () => {
