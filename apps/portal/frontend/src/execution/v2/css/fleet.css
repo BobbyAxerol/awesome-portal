@@ -664,3 +664,13 @@ a.exec-fleet-open {
     padding: var(--space-2);
   }
 }
+
+/* Label-and-number tiles (no notes any more) sit two to a row at phone width instead of five tall rows. */
+@media (max-width: 660px) {
+  .exec-fleet-v2 .exec-blk-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .exec-fleet-v2 .exec-blk-kpi:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}

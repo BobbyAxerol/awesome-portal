@@ -601,3 +601,14 @@ textarea.exec-cf-control {
   background: var(--paper-sunken);
   border: 1px solid var(--line-strong);
 }
+
+/* A long panel title wraps inside its head instead of widening the page at 390px (it overflowed by 150px). */
+.exec-cf-page .exec-blk-ph {
+  flex-wrap: wrap;
+}
+.exec-cf-page .exec-blk-ph-title {
+  flex: 0 1 auto;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
