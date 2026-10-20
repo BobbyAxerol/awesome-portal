@@ -128,8 +128,12 @@ describe("TEST_ONLY operator readback SQL is read-only and names real relations"
     expect(statements[statements.length - 1]).toBe("ROLLBACK");
     expect(statements.every(s => /^(BEGIN READ ONLY|SET LOCAL (statement|lock)_timeout|SELECT\b|ROLLBACK)/.test(s))).toBe(true);
     const code = statements.join(";\n");
-    expect(code).not.toMatch(/\b(INSERT|UPDATE|DELETE|TRUNCATE|ALTER|CREATE|DROP|GRANT|REVOKE|COPY|CALL|DO|COMMIT|VACUUM|LOCK|set_config|nextval|pg_terminate|pg_cancel|lo_\w+|dblink|FOR UPDATE|FOR SHARE)\b/i);
-    expect(code).not.toMatch(/password_hash|secret|token|session_id|cookie|\bdsn\b|private_key/i);
+    expect(code).not.toMatch(/\b(INSERT|UPDATE|DELETE|TRUNCATE|ALTER|CREATE|DROP|GRANT|COPY|CALL|DO|COMMIT|VACUUM|LOCK|set_config|nextval|pg_terminate|pg_cancel|lo_\w+|dblink|FOR UPDATE|FOR SHARE)\b/i);
+    // REVOKE is banned as a statement (the first-token check above already makes one impossible); BE-P10 block E only
+    // filters audit rows by the literal operation name 'REVOKE'.
+    expect(statements.some(s => /^REVOKE\b/i.test(s))).toBe(false);
+    // Secrets and token hashes are never selected. A session's PUBLIC id (block F, BE-P10) is allowed; its token hash is not.
+    expect(code).not.toMatch(/password_hash|secret|token|cookie|\bdsn\b|private_key|csrf/i);
   });
   it("only references relations that exist in the shipped schema", () => {
     const candidate = readFileSync(join(__dirname, "../src/execution-v2/current-human-candidate.sql"), "utf8");
