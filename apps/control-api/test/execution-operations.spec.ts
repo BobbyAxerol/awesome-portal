@@ -841,21 +841,39 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
 
     const planned = await mutation(bobby, "/api/v1/execution/commands/plans", payload());
     const operationId = planned.json().operation_id;
-    const apply = await mutation(
-      bobby,
-      `/api/v1/execution/operations/${operationId}/apply`,
-      {
-        schema_version: "execution.command-apply-request.v1",
-        workspace_id: workspaceId,
-        command_type: "EXECUTION_COMMAND",
-      },
-    );
+    const applyBody = (request_key: string) => ({
+      schema_version: "execution.command-apply-request.v1",
+      workspace_id: workspaceId,
+      request_key,
+      command_type: "EXECUTION_COMMAND",
+    });
+    const applyPath = (id: string) => `/api/v1/execution/operations/${id}/apply`;
+    const apply = await mutation(bobby, applyPath(operationId), applyBody("apply:key:0001"));
     expect(apply.statusCode).toBe(409);
     expect(apply.json().error.code).toBe("COMMAND_RELAY_DISABLED");
     expect(apply.json().details).toMatchObject({
       source_request_sent: false,
       retry_allowed: false,
+      decision: "DENIED",
+      request_key: "apply:key:0001",
+      replayed: false,
     });
+    // BE-P13: the same key for the same operation is the same typed answer, replayed.
+    const replay = await mutation(bobby, applyPath(operationId), applyBody("apply:key:0001"));
+    expect(replay.statusCode).toBe(409);
+    expect(replay.json().details).toEqual({ ...apply.json().details, replayed: true });
+    expect((await ctx.pool.query("SELECT 1 FROM execution_f0_apply_attempts")).rowCount).toBe(1);
+    // ...and the same key for another operation is a typed conflict that records nothing.
+    const other = await mutation(bobby, "/api/v1/execution/commands/plans", payload({ request_key: "ops:account-sync:2" }));
+    const conflict = await mutation(bobby, applyPath(other.json().operation_id), applyBody("apply:key:0001"));
+    expect(conflict.statusCode).toBe(409);
+    expect(conflict.json().error.code).toBe("REQUEST_KEY_PAYLOAD_CONFLICT");
+    expect((await ctx.pool.query("SELECT 1 FROM execution_f0_apply_attempts")).rowCount).toBe(1);
+    // A body without the key is a typed 400, never an apply.
+    const { request_key: _omitted, ...keyless } = applyBody("x");
+    const invalid = await mutation(bobby, applyPath(operationId), keyless);
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.json().error.code).toBe("INVALID_EXECUTION_COMMAND_APPLY");
     expect((await ctx.pool.query("SELECT 1 FROM outbox_messages")).rowCount).toBe(0);
     expect((await ctx.pool.query(
       "SELECT 1 FROM product_audit_events WHERE reason_code = 'COMMAND_RELAY_DISABLED'",

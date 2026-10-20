@@ -1,0 +1,15 @@
+{
+  "schema_version": "portal.execution.f0-apply-attempt.v1",
+  "operation_id": "op_01K3COMMANDPLAN000000000000",
+  "request_key": "ui:apply:0001",
+  "state": "FOUND",
+  "relay_decision": {
+    "schema_version": "execution.command-relay-decision.v1",
+    "operation_id": "op_01K3COMMANDPLAN000000000000",
+    "decision": "DENIED",
+    "reason": "COMMAND_RELAY_DISABLED",
+    "retry_allowed": false,
+    "source_request_sent": false
+  },
+  "first_recorded_at": "2026-08-22T12:00:05Z"
+}

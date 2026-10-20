@@ -354,6 +354,24 @@
       "reached_via": "activation.controller.ts,admin.controller.ts"
     },
     {
+      "table": "execution_f0_apply_attempts",
+      "writer_owner": "PORTAL_WORKFLOW",
+      "ingress": "ROUTE",
+      "verbs": {
+        "insert": 1,
+        "update": 0,
+        "delete": 0,
+        "read": 2
+      },
+      "readers": 2,
+      "rows_dev": null,
+      "rows_stable": null,
+      "retention": "RETAIN_IDEMPOTENCY_HISTORY_NO_RECYCLE",
+      "disposal_decision": "NO_AUTOMATIC_DELETE",
+      "note": "BE-P13 migration146 append-only record of the FIRST use of an F0 apply request_key (workspace, actor, key) -> operation and the constant COMMAND_RELAY_DISABLED denial, so the denial is replayable, conflict-detectable and recoverable by key. Not a dispatch ledger: CHECKs make sent or retryable unrepresentable and no outbox row is written. Keys are never recycled (a recycled key would let a replay become a different answer). New table: null counts until deployment.",
+      "reached_via": "governance.controller.ts,f0-read.controller.ts"
+    },
+    {
       "table": "execution_durable_mirror_batches",
       "writer_owner": "TRADING_SYSTEM_READ",
       "ingress": "WORKER",

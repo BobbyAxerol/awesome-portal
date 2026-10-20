@@ -1165,16 +1165,53 @@
         "responses": { "201": { "description": "Resolved incident workflow", "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/IncidentWorkflowResponse" } } } } }
       }
     },
+    "/api/v1/execution/operations/f0/{operation_id}/apply-attempts/{request_key}": {
+      "get": {
+        "operationId": "executionF0ApplyAttemptGetV2",
+        "description": "BE-P13 (ROUTE ADDED). Read-only recovery of an F0 apply answer by request_key after a lost response: NONE / FOUND / CONFLICT. Keyed by the session actor. The named operation's exact ACCOUNT/PORTFOLIO/DEPLOYMENT target needs current TS-accepted audit.read BEFORE the attempt row is read and again after the last await, so a revoked reader learns nothing (not even NONE). No owner/ADMIN/read_all override, source call or write. CONFLICT never names the other operation.",
+        "x-strict-query-keys": ["workspace_id"],
+        "parameters": [
+          { "name": "operation_id", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^[A-Za-z0-9._:-]{1,191}$" } },
+          { "name": "request_key", "in": "path", "required": true, "schema": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" } },
+          { "name": "workspace_id", "in": "query", "required": true, "schema": { "type": "string", "minLength": 3, "maxLength": 96 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "NONE, FOUND or CONFLICT for this actor, key and operation.",
+            "headers": { "Cache-Control": { "schema": { "const": "private, no-store" } } },
+            "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0ApplyAttemptLookup" } } }
+          },
+          "400": { "description": "COMMAND_INPUT_INVALID: strict path and query.", "headers": { "Cache-Control": { "schema": { "const": "private, no-store" } } }, "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } },
+          "401": { "description": "Authenticated current Portal session required.", "headers": { "Cache-Control": { "schema": { "const": "private, no-store" } } }, "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } },
+          "403": { "description": "Current actor/session authority refused; nothing disclosed.", "headers": { "Cache-Control": { "schema": { "const": "private, no-store" } } }, "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } },
+          "404": { "description": "COMMAND_RESOURCE_NOT_FOUND: unknown, other creator, other workspace and unauthorized target are one safe answer.", "headers": { "Cache-Control": { "schema": { "const": "private, no-store" } } }, "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } },
+          "409": { "description": "ACCESS_RETRY_REQUIRED: current authority changed during the read.", "headers": { "Cache-Control": { "schema": { "const": "private, no-store" } } }, "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } },
+          "503": { "description": "COMMAND_STATUS_UNVERIFIED or COMMAND_UNAVAILABLE; no raw stored or driver text.", "headers": { "Cache-Control": { "schema": { "const": "private, no-store" } } }, "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } }
+        }
+      }
+    },
     "/api/v1/execution/operations/{operation_id}/apply": {
       "post": {
         "operationId": "applyExecutionCommandF0",
-        "description": "Always denied in F0 before any relay/source call.",
+        "description": "DENIED-ONLY (BE-P13). Applying an F0 plan can never succeed: every F0 plan is stored BLOCKED with the relay DISABLED, and the service has no branch that returns, so this operation has NO 2xx response by design and no success fixture exists. The only answers are the typed refusals below. request_key makes the denial replayable (the same key for the same operation returns the same 409 with details.replayed true) and conflict-detectable (the same key for another operation is REQUEST_KEY_PAYLOAD_CONFLICT). If the response is lost, read GET /api/v1/execution/operations/f0/{operation_id}/apply-attempts/{request_key}. Nothing is ever sent to a source: details.source_request_sent and retry_allowed are constants false.",
         "parameters": [{ "name": "operation_id", "in": "path", "required": true, "schema": { "type": "string" } }],
         "requestBody": {
           "required": true,
           "content": { "application/json": { "schema": { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/ExecutionCommandApplyRequest" } } }
         },
-        "responses": { "409": { "description": "COMMAND_RELAY_DISABLED" } }
+        "responses": {
+          "400": { "description": "INVALID_EXECUTION_COMMAND_APPLY: strict body (schema_version, workspace_id, request_key, command_type); no extra field.", "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } },
+          "401": { "description": "Authenticated Portal session required.", "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } },
+          "403": { "description": "ORIGIN_DENIED or CSRF failure; nothing recorded.", "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } },
+          "404": { "description": "OPERATION_NOT_FOUND or WORKSPACE_NOT_FOUND: unknown, other creator and other workspace are one safe answer.", "content": { "application/json": { "schema": { "$ref": "execution-trusted-commands.openapi.json#/components/schemas/CommandProblem" } } } },
+          "409": {
+            "description": "COMMAND_RELAY_DISABLED (the only answer for a visible plan) or REQUEST_KEY_PAYLOAD_CONFLICT (key first used for another operation).",
+            "content": { "application/json": { "schema": { "oneOf": [
+              { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0ApplyDeniedProblem" },
+              { "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0ApplyKeyConflictProblem" }
+            ] } } }
+          }
+        }
       }
     }
   },
@@ -1187,6 +1224,15 @@
       }
     },
     "schemas": {
+      "F0ApplyDeniedProblem": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0ApplyDeniedProblem"
+      },
+      "F0ApplyKeyConflictProblem": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0ApplyKeyConflictProblem"
+      },
+      "F0ApplyAttemptLookup": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0ApplyAttemptLookup"
+      },
       "F0BlockedOperationRead": {
         "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/F0BlockedOperationRead"
       },
