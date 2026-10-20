@@ -39,6 +39,8 @@ RUN rm -rf /usr/local/lib/node_modules/npm \
 WORKDIR /app
 COPY --chown=node:node --from=build /repo/apps/portal/fixture-bff/dist apps/portal/fixture-bff/dist
 COPY --chown=node:node packages/contracts/fixtures packages/contracts/fixtures
+# bffDoubleSelfAccess.ts validates its answers against this one published OpenAPI document at import time.
+COPY --chown=node:node packages/contracts/openapi/execution-access.openapi.json packages/contracts/openapi/execution-access.openapi.json
 
 # No secret and no credential: configuration is these variables only (see fixture-bff/README.md).
 # FIXTURE_HOST stays 0.0.0.0 on purpose: the container network is private and nginx is the only caller.
