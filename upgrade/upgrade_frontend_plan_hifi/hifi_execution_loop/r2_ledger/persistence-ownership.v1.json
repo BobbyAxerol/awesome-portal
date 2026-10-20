@@ -58,12 +58,12 @@
     },
     {
       "table": "portal_access_grants_v2",
-      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER_AND_EXPLICIT_OFFLINE_RESEARCH_OWNER_MAINTENANCE",
       "verbs": {"insert": 1, "update": 1, "delete": 0, "read": 1}, "readers": 1,
       "rows_dev": null, "rows_stable": null,
       "retention": "RETAIN_WITH_AUTHORITY_HISTORY", "disposal_decision": "NO_AUTOMATIC_DELETE",
-      "note": "ELP2-03 scoped Portal policy/CAS/revoke with independent TS acceptance; current grants never created by migration defaults.",
-      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService internal qualified ports"
+      "note": "ELP2-03 scoped Portal policy/CAS/revoke with independent TS acceptance; current grants never created by migration defaults. BE-P10 adds the offline remove-only manager-domain revoke/narrow (revoked_at_ms or a shorter valid_until_ms, never a widening, same-Core coordinator REVIEWED_POLICY/REVOKE_MANAGER_GRANT) through the existing grant UPDATE; no new statement, no route.",
+      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService internal qualified ports; cli/execution-native-revoke -> ExecutionAccessService.revokeReviewedManagerDomainGrants"
     },
     {
       "table": "portal_access_proposals",
@@ -76,12 +76,12 @@
     },
     {
       "table": "portal_access_policy_events",
-      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER",
+      "writer_owner": "PORTAL_WORKFLOW", "ingress": "ROUTE_AND_INTERNAL_QUALIFIED_ADAPTER_AND_EXPLICIT_OFFLINE_RESEARCH_OWNER_MAINTENANCE",
       "verbs": {"insert": 1, "update": 0, "delete": 0, "read": 4}, "readers": 4,
       "rows_dev": null, "rows_stable": null,
       "retention": "IMMUTABLE_AUTHORITY_AUDIT", "disposal_decision": "NO_AUTOMATIC_DELETE",
-      "note": "ELP2-03 append-only before/after decisions and original outcomes; scoped audit reads, no credentials.",
-      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService internal qualified ports"
+      "note": "ELP2-03 append-only before/after decisions and original outcomes; scoped audit reads, no credentials. BE-P10 adds one immutable row per revoked/narrowed/no-op grant from the offline manager-domain revoke (operation='REVOKE', source='portal.private-owner-manager-revoke.v1', source_receipt_id=<revocation_id>:<grant_id>) through the existing insert; no new statement.",
+      "reached_via": "execution-v2/access.controller.ts, ExecutionAccessService internal qualified ports; cli/execution-native-revoke -> ExecutionAccessService.revokeReviewedManagerDomainGrants"
     },
     {
       "table": "activation_credentials",
@@ -104,7 +104,7 @@
     {
       "table": "auth_audit_events",
       "writer_owner": "PORTAL_WORKFLOW",
-      "ingress": "ROUTE",
+      "ingress": "ROUTE_AND_EXPLICIT_OFFLINE_RESEARCH_OWNER_MAINTENANCE",
       "verbs": {
         "insert": 1,
         "update": 0,
@@ -116,26 +116,26 @@
       "rows_stable": 70,
       "retention": "UNDECLARED",
       "disposal_decision": "PENDING_OWNER",
-      "note": "written on a Portal request path",
-      "reached_via": "activation.controller.ts,admin.controller.ts"
+      "note": "written on a Portal request path. BE-P10 adds two secret-free event types from the offline Research acceptance-session tool (research_acceptance_session_issued / _revoked) through the existing AuditRepository insert; no new statement, no token.",
+      "reached_via": "activation.controller.ts,admin.controller.ts; cli/execution-native-session -> research-acceptance-session.ts"
     },
     {
       "table": "auth_sessions",
       "writer_owner": "PORTAL_WORKFLOW",
-      "ingress": "ROUTE",
+      "ingress": "ROUTE_AND_EXPLICIT_OFFLINE_RESEARCH_OWNER_MAINTENANCE",
       "verbs": {
         "insert": 1,
         "update": 4,
         "delete": 0,
-        "read": 2
+        "read": 3
       },
-      "readers": 2,
+      "readers": 3,
       "rows_dev": 499,
       "rows_stable": 25,
       "retention": "UNDECLARED",
       "disposal_decision": "PENDING_OWNER",
-      "note": "written on a Portal request path",
-      "reached_via": "activation.controller.ts,admin.controller.ts"
+      "note": "written on a Portal request path. BE-P10 adds the offline Research acceptance session (access_subject research-acceptance:v1, at most one ACTIVE, TTL <= 2 h, same-Core coordinator VERIFIED_AUTH_ISSUANCE/RESEARCH_ACCEPTANCE and REVIEWED_POLICY/REVOKE_ACCEPTANCE_SESSION) through the existing createSession/revokeSession statements, plus one new locked read (SELECT ... FOR UPDATE by session_id) that also binds the token-file cleanup to the exact session hash.",
+      "reached_via": "activation.controller.ts,admin.controller.ts; cli/execution-native-session -> AuthService.issueResearchAcceptanceSession, research-acceptance-session.ts"
     },
     {
       "table": "execution_activation_capabilities",
