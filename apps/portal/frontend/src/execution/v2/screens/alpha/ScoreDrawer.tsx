@@ -10,6 +10,7 @@
 import type { AlphaFleetItem } from "../../../api/profileRead";
 import { Drawer, type DockMode } from "../../Drawer";
 import { Dec } from "./cells";
+import { alphaTitleWithVersion } from "./model";
 import { Np } from "./np";
 
 const COMPONENTS = ["P (performance)", "R (risk)", "B (robustness)"] as const;
@@ -22,7 +23,7 @@ export interface ScoreDrawerProps {
 
 export function ScoreDrawer({ item, mode, onClose }: ScoreDrawerProps) {
   return (
-    <Drawer title="Score" subtitle={item ? `${item.alphaLabel} v${item.version}` : undefined} mode={mode} onClose={onClose}>
+    <Drawer title="Score" subtitle={item ? alphaTitleWithVersion(item, item.alphaId) : undefined} mode={mode} onClose={onClose}>
       <p className="exec-alp2-line"><Np id="FE-011">Score policy is not set</Np></p>
       <table className="exec-alp2-kv">
         <tbody>

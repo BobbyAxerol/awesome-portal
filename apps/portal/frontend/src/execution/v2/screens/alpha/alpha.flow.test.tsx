@@ -45,7 +45,12 @@ function mount(entry: string) {
   );
   return { ...served, view };
 }
-const ready = () => screen.findByRole("heading", { level: 1, name: /BTC-Trend/ });
+// The title is the alpha id (the producer publishes no name), so the h1 exists while the resource is still loading: the alpha is read when its meta line is drawn.
+const ready = async () => {
+  const h1 = await screen.findByRole("heading", { level: 1, name: new RegExp(ALPHA_DOUBLE_ID) });
+  await waitFor(() => expect(document.querySelector(".exec-alp2-meta")).not.toBeNull());
+  return h1;
+};
 const back = () => screen.getByRole("link", { name: /^←/ });
 /** Every href on the page: a hostile `from` must reach none of them. */
 const hrefs = () => [...document.querySelectorAll("a")].map((a) => a.getAttribute("href") ?? "");
@@ -253,7 +258,7 @@ describe("Trade Replay's Back (flow audit #10)", () => {
 
   it("the scope chips onward do not inherit the origin", async () => {
     mountReplay("/replay?from=blotter&back=status%3Dopen");
-    const chip = await screen.findByRole("link", { name: "BTC-Trend v3" });
+    const chip = await screen.findByRole("link", { name: ALPHA_DOUBLE_ID });
     expect(chip.getAttribute("href")).toBe(BASE);
   });
 

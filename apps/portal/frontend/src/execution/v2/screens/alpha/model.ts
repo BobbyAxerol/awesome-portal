@@ -148,8 +148,40 @@ export function deploymentHref(stage: SpineStageId | null, id: string): string {
   return `/deployments/live/${safe}`;
 }
 
+/**
+ * What the real producer says when no source publishes an alpha's name or version (BE-P3, S3-U2): the literals "Unnamed alpha"
+ * and "UNVERSIONED". They are absences worded as values, so the screen never prints either as a name or a version.
+ */
+export const UNNAMED_ALPHA = "Unnamed alpha";
+export const UNVERSIONED = "UNVERSIONED";
+
+/** The alpha's published name, or `null` while the producer publishes none (then the title is the alpha id). */
+export function alphaName(item: AlphaFleetItem | null): string | null {
+  return item === null || item.alphaLabel === UNNAMED_ALPHA ? null : item.alphaLabel;
+}
+
+/** The alpha's published version, or `null` while the producer publishes none. */
+export function alphaVersion(item: AlphaFleetItem | null): string | null {
+  return item === null || item.version === UNVERSIONED ? null : item.version;
+}
+
+/** The title: the published name, else the alpha id (never "Unnamed alpha"). */
+export function alphaTitle(item: AlphaFleetItem | null, alphaId: string): string {
+  return alphaName(item) ?? item?.alphaId ?? alphaId;
+}
+
+/** `Name v3` when both are published; the title alone otherwise. */
+export function alphaTitleWithVersion(item: AlphaFleetItem | null, alphaId: string): string {
+  const version = alphaVersion(item);
+  return version === null ? alphaTitle(item, alphaId) : `${alphaTitle(item, alphaId)} v${version}`;
+}
+
 export function deploymentRows(item: AlphaFleetItem | null): readonly DeploymentRow[] {
   if (item === null) return [];
+  // `portfolio_name` on a deployment is null by contract (no source names an allocation's portfolio): the name is the portfolio
+  // relation's own, joined on portfolio_id from the same body (`data.alpha.portfolios[]`).
+  const portfolioName = (d: { portfolioName: string | null; portfolioId: string | null }): string | null =>
+    d.portfolioName ?? (d.portfolioId === null ? null : (item.portfolios.find((p) => p.portfolioId === d.portfolioId)?.name ?? null));
   return item.deployments
     .map((d): DeploymentRow => {
       const stage = spineStageOf(d.stage);
@@ -158,7 +190,7 @@ export function deploymentRows(item: AlphaFleetItem | null): readonly Deployment
         stage,
         stageLabel: stage === null ? humanize(d.stage) : stageWord(stage),
         accountId: d.accountId,
-        portfolio: d.portfolioName,
+        portfolio: portfolioName(d),
         venue: d.venue,
         runtime: runtimeOf(d),
         currency: d.currency,

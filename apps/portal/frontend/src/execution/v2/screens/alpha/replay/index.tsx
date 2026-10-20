@@ -25,7 +25,7 @@ import { V2_CAPABILITY, holds } from "../../../shell/roleNav";
 import { withoutOrigin } from "../../../backTo";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../../urlState";
 import { replayBack } from "../backLinks";
-import { chooseEnv, deploymentRows, deployedEnvs, freshnessFlag } from "../model";
+import { alphaTitleWithVersion, chooseEnv, deploymentRows, deployedEnvs, freshnessFlag } from "../model";
 import { useAlphaResource, useSubjectBook } from "../useAlphaReads";
 import { ReplayView } from "./ReplayView";
 
@@ -59,7 +59,7 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
   const env = chooseEnv(url.value.env, deployedEnvs(item));
   const settled = resource.phase === "ready" || resource.phase === "error";
   const book = useSubjectBook(api, alphaId, env, settled);
-  const label = item ? `${item.alphaLabel} v${item.version}` : alphaId;
+  const label = alphaTitleWithVersion(item, alphaId);
   const deployment = deploymentRows(item).find((row) => row.stage !== null && ENV_STAGES[env].includes(row.stage)) ?? deploymentRows(item)[0] ?? null;
   const accountId = canSeeAccounts ? (book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? deployment?.accountId ?? null) : null;
   const fresh = resource.phase === "ready" ? freshnessFlag(resource.value.envelope.freshness) : null;

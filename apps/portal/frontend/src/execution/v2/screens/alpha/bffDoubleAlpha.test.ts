@@ -85,12 +85,14 @@ describe("through createHttpApi", () => {
     expect(types.filter((t) => t === "COMMAND_JOURNAL_ROW_OBSERVED")).toHaveLength(2);
   });
 
-  it("serves an equity series with a declared gap, and a 503 for sandbox", async () => {
+  it("serves an equity series with no gap (the server never publishes one) and the real series id, and a 503 for sandbox", async () => {
     serveAlphaDouble();
     const api = alphaHttpApi();
     const live = await api.getFinancialChart({ environment: "live", subjectKind: "alpha", subjectId: ALPHA_DOUBLE_ID, metric: "equity" });
     if (!live.ok) throw new Error(live.reason);
-    expect(live.value.coverage.gaps).toHaveLength(1);
+    expect(live.value.coverage.gaps).toEqual([]);
+    expect(live.value.sampling?.preservesGaps).toBe(false);
+    expect(live.value.series[0].id).toBe("account:acct_binance_02:currency:USDT");
     expect(live.value.series[0].currency).toBe("USDT");
     expect(live.value.series[0].points.every(([, v]) => typeof v === "string")).toBe(true);
     const sandbox = await api.getFinancialChart({ environment: "sandbox", subjectKind: "alpha", subjectId: ALPHA_DOUBLE_ID, metric: "equity" });

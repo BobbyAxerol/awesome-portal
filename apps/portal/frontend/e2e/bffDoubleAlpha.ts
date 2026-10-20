@@ -2,13 +2,33 @@
  * Alpha 360 + Trade Replay reads for the e2e BFF double (UXM-07 S2, package 2).
  *
  * Serves, as RAW wire bodies the real readers parse, a sparse-realistic
- * mid-journey alpha: BTC-Trend v3, owner asmith, with a Paper, a Sandbox, a
- * Canary and a Live deployment. Nothing here is a canonical contract fixture
- * (the alpha resource, stage-drift, observed-timeline and subject-activity
- * bodies have none); the shapes are the ones `profileRead.ts`,
- * `observedTimeline.ts`, `subjectActivity.ts`, `marketCandles.ts` and the
- * `getStageDrift` reader parse, and `bffDoubleAlpha.test.ts` proves each body
- * through those readers.
+ * mid-journey alpha with a Paper, a Sandbox, a Canary and a Live deployment.
+ *
+ * Shape authority (BE-P3 / S3-U2, S3-U3, 2026-10-20): every body is built FROM the
+ * canonical fixtures the producer published (`packages/contracts/fixtures/
+ * execution-{alpha-resource.v1,subject-records.v1,observed-timeline.v1,market-candles.v1,
+ * financial-chart}.synthetic.valid.json`, real service output on synthetic inputs) and
+ * overlaid only with the rows this double needs, so the envelope can never drift from the
+ * schema again: `src/fixtureBff/server.test.ts` judges the alpha resource, orders, fills,
+ * observed timeline and venue candles against the published schemas, and
+ * `canonicalServing.test.tsx` reads every canonical case through the product readers.
+ * What the real server says and the earlier hand-written double did not:
+ *
+ *   - the alpha is "Unnamed alpha", version "UNVERSIONED" (no source publishes either); a
+ *     deployment's portfolio_name is null, the name comes from data.alpha.portfolios[] joined
+ *     on portfolio_id; health is READY | ATTENTION | FINDING;
+ *   - subject records carry no projection.completeness (they carry received_at_ms) and a
+ *     keyset cursor is a Portal-signed `kc1.` token, never a counter;
+ *   - the observed timeline is a full panel envelope (clocks, coverage, formula,
+ *     source_current_page_row_count, three unavailable segments) plus workspace_id and the
+ *     projection digests;
+ *   - venue candles have no environment / profile_id and carry `trades`;
+ *   - the equity chart is `portal.execution.financial-chart.v1`: gaps are NEVER published
+ *     (coverage.gaps is always empty, sampling.preserves_gaps false) and the series id is
+ *     `account:<id>:currency:<ccy>`.
+ *
+ * The bodies the readers parse are proven through `bffDoubleAlpha.test.ts` (product HTTP
+ * client) and judged against the schemas in `fixtureBff/server.test.ts`.
  *
  * Wiring (the primary owns `answerExecutionBff`): call this first, for GET
  * requests, when the alpha stub is on, and fall through when it answers `null`.
@@ -20,11 +40,11 @@
  * Reads answered
  *
  *   GET /resources/alphas/{id}                alpha resource (execution.alpha-resource.v1)
- *   GET /resources/alphas/{id}/orders         subject records, TWO pages (cursor `orders-p2`)
+ *   GET /resources/alphas/{id}/orders         subject records, TWO pages (a `kc1.` cursor)
  *   GET /resources/alphas/{id}/fills          subject records, one page
  *   GET /alphas/{id}/stage-drift              paper / sandbox / live paths with a GAP in paper
- *   GET /views/observed-timeline              12 observations over TWO pages (cursor `tl-p2`)
- *   GET /views/equity-chart                   live and paper: one USDT series with a declared gap;
+ *   GET /views/observed-timeline              12 observations over TWO pages (a `kc1.` cursor)
+ *   GET /views/equity-chart                   live and paper: one USDT series, no gap (the server never publishes one);
  *                                             sandbox: 503 (the one error case)
  *   GET /derivations/alphas/{id}/activity     exact population and status counts
  *   GET /market/venue-candles                 BTCUSDT: READY bars; ETHUSDT: UNAVAILABLE
@@ -36,7 +56,7 @@
  * States, by alpha id
  *
  *   alpha_btc_trend    the full profile above (any other id also gets it)
- *   alpha_empty        resource state `empty`, no alpha row
+ *   alpha_empty        resource state `empty` (the canonical alpha_not_in_projection case)
  *   alpha_denied       403 ACCESS_DENIED on the resource
  *   alpha_down         503 on the resource
  *
@@ -45,6 +65,9 @@
  * a reason, cancelled and one whose status is UNKNOWN. One fill has no
  * commission. All prices and quantities are decimal strings.
  */
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 export interface BffAnswerAlpha {
   status: number;
@@ -66,6 +89,17 @@ const problem = (status: number, code: string, message: string): BffAnswerAlpha 
   body: { error: { code, message } },
 });
 
+const CONTRACTS = join(dirname(fileURLToPath(import.meta.url)), "../../../../packages/contracts/fixtures");
+type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+/** One named case of a published canonical fixture, a fresh deep copy. */
+function canonicalCase(file: string, name: string): Json {
+  const cases = (JSON.parse(readFileSync(join(CONTRACTS, file), "utf8")) as { cases: { name: string; value: Json }[] }).cases;
+  const found = cases.find((c) => c.name === name);
+  if (!found) throw new Error(`canonical case ${name} not found in ${file}`);
+  return structuredClone(found.value);
+}
+
 const ENV_PROFILE: Readonly<Record<string, string>> = {
   paper: "PAPER_BINANCE_USDM",
   sandbox: "SANDBOX_BINANCE_USDM",
@@ -85,24 +119,31 @@ function cents(value: number): string {
 
 /* ── the alpha resource ───────────────────────────────────────────────────── */
 
+/**
+ * A deployment of `data.alpha.deployments` as the producer writes it: `strategy_id` is the alpha's strategy,
+ * `portfolio_name` is null (no source publishes an allocation-level portfolio name; the name is joined from
+ * `portfolios[]`), health is READY | ATTENTION | FINDING.
+ */
 function deployment(
   id: string,
+  alphaId: string,
   stage: string,
   venue: string,
   account: string,
   allocation: string | null,
   state: string,
-  health: string,
+  health: "READY" | "ATTENTION" | "FINDING",
   net: string,
   exposure: string,
-): Record<string, unknown> {
+): Json {
   return {
     deployment_id: id,
+    strategy_id: alphaId,
     stage,
     venue,
     account_id: account,
     portfolio_id: "pf_core",
-    portfolio_name: "Core",
+    portfolio_name: null,
     currency: "USDT",
     allocation,
     balance_total: allocation,
@@ -117,23 +158,25 @@ function deployment(
     active: state === "ACTIVE",
     health,
     updated_at: iso(ALPHA_DOUBLE_AS_OF_MS - 120_000),
+    updated_at_ms: ALPHA_DOUBLE_AS_OF_MS - 120_000,
   };
 }
 
-function alphaRow(id: string): Record<string, unknown> {
+function alphaRow(id: string): Json {
   return {
     alpha_id: id,
-    alpha_label: "BTC-Trend",
-    version: "3",
+    // No execution source publishes an alpha display name or a version: the producer's literal words.
+    alpha_label: "Unnamed alpha",
+    version: "UNVERSIONED",
+    owner: "asmith",
     stage: "LIVE",
     stages: ["PAPER", "SANDBOX", "CANARY", "LIVE"],
-    owner: "asmith",
     portfolios: [{ portfolio_id: "pf_core", name: "Core", base_currency: "USDT" }],
     deployments: [
-      deployment("dep_live_01", "LIVE", "BINANCE", "acct_binance_02", "40000.00", "ACTIVE", "READY", "1120.80", "96400.00"),
-      deployment("dep_paper_01", "PAPER", "BINANCE", "acct_paper_sim_01", "20000.00", "ACTIVE", "READY", "-84.20", "30100.00"),
-      deployment("dep_canary_01", "CANARY", "BINANCE", "acct_binance_02", null, "ENDED", "READY", "0", "0"),
-      deployment("dep_sandbox_01", "SANDBOX", "BINANCE", "acct_testnet_01", "10000.00", "ENDED", "NOT_READY", "0", "0"),
+      deployment("dep_live_01", id, "LIVE", "BINANCE", "acct_binance_02", "40000.00", "ACTIVE", "READY", "1120.80", "96400.00"),
+      deployment("dep_paper_01", id, "PAPER", "BINANCE", "acct_paper_sim_01", "20000.00", "ACTIVE", "READY", "-84.20", "30100.00"),
+      deployment("dep_canary_01", id, "CANARY", "BINANCE", "acct_binance_02", null, "ENDED", "READY", "0", "0"),
+      deployment("dep_sandbox_01", id, "SANDBOX", "BINANCE", "acct_testnet_01", "10000.00", "ENDED", "ATTENTION", "0", "0"),
     ],
     allocations: [{ currency: "USDT", value: "70000.00" }],
     balances: [{ currency: "USDT", total: "41230.55", free: "38900.10", locked: "2330.45" }],
@@ -144,48 +187,50 @@ function alphaRow(id: string): Record<string, unknown> {
     metrics_availability: {
       account_balance: { state: "AVAILABLE", reason_code: null },
       current_position_pnl: { state: "AVAILABLE", reason_code: null },
-      equity_series_30d: { state: "UNAVAILABLE", reason_code: "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" },
-      max_drawdown_30d: { state: "UNAVAILABLE", reason_code: "SOURCE_LATEST_WINDOW_NOT_PUBLISHED" },
+      equity_series_30d: { state: "UNAVAILABLE", reason_code: "EDS04_ACCOUNT_EQUITY_RELATION_NOT_PROJECTED" },
+      max_drawdown_30d: { state: "UNAVAILABLE", reason_code: "EDS04_ACCOUNT_EQUITY_RELATION_NOT_PROJECTED" },
     },
     updated_at: iso(ALPHA_DOUBLE_AS_OF_MS - 120_000),
+    updated_at_ms: ALPHA_DOUBLE_AS_OF_MS - 120_000,
+    valuation_warning: "E5_POSITION_CURRENCY_AND_MARK_LINEAGE_UNQUALIFIED",
   };
 }
 
+/** The relation panels carry the rows the body's `data` carries (the producer writes both); counts follow the rows. */
+function withRows(body: Json, relation: string, rows: Json[]): void {
+  body.data[relation] = rows;
+  const panel = body.panels[relation] as Json;
+  panel.state = rows.length === 0 ? "EMPTY" : "READY";
+  panel.data = rows.length === 0 ? null : { rows };
+  panel.coverage = { ...panel.coverage, source_total: String(rows.length), filtered_total: String(rows.length), returned_count: rows.length };
+  panel.reason_code = null;
+}
+
 function resource(id: string, empty: boolean): BffAnswerAlpha {
-  const base = {
-    schema_version: "execution.alpha-resource.v1",
-    record_authority: "PORTAL_CONTROL",
-    source_authority: "TRADING_SYSTEM",
-    workspace_id: "workspace_execution_manager",
-    selected_environment: "live",
-    read_at: iso(ALPHA_DOUBLE_READ_AT_MS),
-    as_of: iso(ALPHA_DOUBLE_AS_OF_MS),
-    read_at_ms: ALPHA_DOUBLE_READ_AT_MS,
-    as_of_ms: ALPHA_DOUBLE_AS_OF_MS,
-    freshness: "FRESH",
-    capabilities: [],
-    panels: {},
-    unavailable_branches: [],
-  };
   if (empty) {
-    return ok({ ...base, state: "empty", completeness: "COMPLETE", data: { positions: [], reconciliation: [] } });
+    // The canonical alpha_not_in_projection case: state `empty`, the alpha is not in the projection.
+    const body = canonicalCase("execution-alpha-resource.v1.synthetic.valid.json", "alpha_not_in_projection");
+    body.resource = { ...body.resource, id };
+    return ok(body);
   }
-  return ok({
-    ...base,
-    state: "ready",
-    completeness: "COMPLETE",
-    data: {
-      alpha: alphaRow(id),
-      positions: [
-        { position_id: "pos_btc_long", deployment_id: "dep_live_01", account_id: "acct_binance_02", instrument_id: "BTCUSDT.BINANCE", symbol: "BTCUSDT", position_side: "LONG", quantity: "0.91", avg_px_open: "67364.21", mark_price: "67410.00", unrealized_pnl: "41.67", notional: "61343.10", currency: "USDT", updated_at: iso(ALPHA_DOUBLE_AS_OF_MS) },
-        { position_id: "pos_btc_short", deployment_id: "dep_live_01", account_id: "acct_binance_02", instrument_id: "BTCUSDT.BINANCE", symbol: "BTCUSDT", position_side: "SHORT", quantity: "0.52", avg_px_open: "67410.55", mark_price: null, unrealized_pnl: null, notional: "35053.05", currency: "USDT", updated_at: iso(ALPHA_DOUBLE_AS_OF_MS) },
-      ],
-      reconciliation: [
-        { finding_id: "rec_001", deployment_id: "dep_live_01", account_id: "acct_binance_02", venue: "BINANCE", finding_type: "POSITION", status: "RESOLVED", resolved_at: iso(Date.UTC(2026, 9, 17, 9, 12)) },
-        { finding_id: "rec_002", deployment_id: "dep_live_01", account_id: "acct_binance_02", venue: "BINANCE", finding_type: "BALANCE", status: "OPEN", resolved_at: null },
-      ],
-    },
-  });
+  const body = canonicalCase("execution-alpha-resource.v1.synthetic.valid.json", "ready");
+  body.resource = { kind: "ALPHA", id, label: "Unnamed alpha" };
+  body.data.alpha = alphaRow(id);
+  withRows(body, "strategies", [{ strategy_id: id, trader_id: "asmith", active: true, profile_environment: "live" }]);
+  withRows(body, "deployments", [
+    { deployment_id: "dep_live_01", strategy_id: id, account_id: "acct_binance_02", mode: "live", venue: "BINANCE", currency: "USDT", portfolio_id: "pf_core", state: "ACTIVE", active: true, updated_at: iso(ALPHA_DOUBLE_AS_OF_MS - 120_000), updated_at_ms: ALPHA_DOUBLE_AS_OF_MS - 120_000, profile_environment: "live" },
+    { deployment_id: "dep_paper_01", strategy_id: id, account_id: "acct_paper_sim_01", mode: "paper", venue: "BINANCE", currency: "USDT", portfolio_id: "pf_core", state: "ACTIVE", active: true, updated_at: iso(ALPHA_DOUBLE_AS_OF_MS - 120_000), updated_at_ms: ALPHA_DOUBLE_AS_OF_MS - 120_000, profile_environment: "paper" },
+  ]);
+  // The producer's positions rows: `instrument_id` and `side` (no `symbol`, no `position_side`), the exact notional, no mark on a short with none.
+  withRows(body, "positions", [
+    { position_id: "pos_btc_long", strategy_id: id, deployment_id: "dep_live_01", account_id: "acct_binance_02", mode: "live", venue: "BINANCE", instrument_id: "BTCUSDT", side: "LONG", quantity: "0.91", avg_px_open: "67364.21", mark_price: "67410.00", notional: "61343.10", realized_pnl: "0", unrealized_pnl: "41.67", updated_at: iso(ALPHA_DOUBLE_AS_OF_MS), updated_at_ms: ALPHA_DOUBLE_AS_OF_MS, profile_environment: "live" },
+    { position_id: "pos_btc_short", strategy_id: id, deployment_id: "dep_live_01", account_id: "acct_binance_02", mode: "live", venue: "BINANCE", instrument_id: "BTCUSDT", side: "SHORT", quantity: "0.52", avg_px_open: "67410.55", mark_price: null, notional: "35053.05", realized_pnl: "0", unrealized_pnl: null, updated_at: iso(ALPHA_DOUBLE_AS_OF_MS), updated_at_ms: ALPHA_DOUBLE_AS_OF_MS, profile_environment: "live" },
+  ]);
+  withRows(body, "reconciliation", [
+    { finding_id: "rec_001", deployment_id: "dep_live_01", account_id: "acct_binance_02", venue: "BINANCE", finding_type: "POSITION", status: "RESOLVED", resolved_at: iso(Date.UTC(2026, 9, 17, 9, 12)), profile_environment: "live" },
+    { finding_id: "rec_002", deployment_id: "dep_live_01", account_id: "acct_binance_02", venue: "BINANCE", finding_type: "BALANCE", status: "OPEN", resolved_at: null, profile_environment: "live" },
+  ]);
+  return ok(body);
 }
 
 /* ── subject activity: orders and fills ───────────────────────────────────── */
@@ -255,25 +300,25 @@ export const ALPHA_DOUBLE_FILLS: readonly Rec[] = [
   fill(3, 4, "BTCUSDT", "BUY", "67411.00", "0.05", T0 + 6 * HOUR + 90_000, null),
 ];
 
+/** Portal-signed keyset cursors are `kc1.` tokens; the double mints one fixed token per relation and never parses it. */
+const ORDERS_CURSOR = "kc1.double-k1.eyJkaXJlY3Rpb24iOiJhZnRlciIsInJlc291cmNlIjoib3JkZXJzIn0.RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF";
+
 function subjectPage(id: string, relation: "orders" | "fills", search: URLSearchParams): BffAnswerAlpha {
   const environment = validEnv(search.get("environment")) ? search.get("environment")! : "live";
   const after = search.get("after");
   let rows: readonly Rec[];
   let nextCursor: string | null = null;
   if (relation === "orders") {
-    if (after === "orders-p2") rows = ALPHA_DOUBLE_ORDERS_P2;
+    if (after === ORDERS_CURSOR) rows = ALPHA_DOUBLE_ORDERS_P2;
     else {
       rows = ALPHA_DOUBLE_ORDERS_P1;
-      nextCursor = "orders-p2";
+      nextCursor = ORDERS_CURSOR;
     }
   } else rows = ALPHA_DOUBLE_FILLS;
   const idKey = relation === "orders" ? "order_id" : "fill_id";
+  const base = canonicalCase("execution-subject-records.v1.synthetic.valid.json", relation === "orders" ? "orders_first_page_has_more" : "fills_one_page");
   return ok({
-    schema_version: "portal.execution.subject-records.v1",
-    logical_operation_id: relation === "orders" ? "executionAlphaOrdersV1" : "executionAlphaFillsV1",
-    authority: "PORTAL_SGP_RETAINED_CURRENT_WINDOW",
-    source_authority: "TRADING_SYSTEM_CURRENT_SOURCE",
-    history_semantics: "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY",
+    ...base,
     environment,
     profile_id: ENV_PROFILE[environment],
     resource: { kind: "alpha", id, resolution: "PUBLISHED_STRATEGY_ID" },
@@ -295,7 +340,8 @@ function subjectPage(id: string, relation: "orders" | "fills", search: URLSearch
       next_cursor: nextCursor,
     },
     records: rows.map((values) => ({ record_id: String(values[idKey]), values })),
-    projection: { epoch_id: `alpha-${environment}`, sequence: 7, source_as_of_ms: ALPHA_DOUBLE_AS_OF_MS, last_successful_refresh_at_ms: ALPHA_DOUBLE_READ_AT_MS, completeness: "COMPLETE" },
+    // No `completeness` here: the producer's subject records carry the receive clock instead.
+    projection: { epoch_id: `alpha-${environment}`, sequence: 7, source_as_of_ms: ALPHA_DOUBLE_AS_OF_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS - 500, last_successful_refresh_at_ms: ALPHA_DOUBLE_READ_AT_MS },
   });
 }
 
@@ -318,66 +364,63 @@ function stageDrift(id: string): BffAnswerAlpha {
 
 /* ── observed timeline ────────────────────────────────────────────────────── */
 
+const TIMELINE_CURSOR = "kc1.double-k1.eyJkaXJlY3Rpb24iOiJhZnRlciIsInJlc291cmNlIjoidGltZWxpbmUifQ.RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF";
+
 type Obs = { at: number; clock: string; type: string; kind: string; id: string; instrument: string; price: string | null; qty: string | null; pnl: string | null };
 const OBSERVATIONS: readonly Obs[] = [
-  { at: T0, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_001", instrument: "BTCUSDT.BINANCE", price: "67200.50", qty: "0.40", pnl: null },
-  { at: T0 + 12_000, clock: "FILL_TRADE_TIME", type: "FILL_OBSERVED", kind: "FILL", id: "fill_001", instrument: "BTCUSDT.BINANCE", price: "67200.50", qty: "0.40", pnl: "0" },
-  { at: T0 + 20_000, clock: "SESSION_UPDATED_AT", type: "SESSION_OBSERVED", kind: "SESSION", id: "session_live_01", instrument: "BTCUSDT.BINANCE", price: null, qty: null, pnl: null },
-  { at: T0 + 2 * HOUR, clock: "COMMAND_JOURNAL_AT", type: "COMMAND_JOURNAL_ROW_OBSERVED", kind: "COMMAND_JOURNAL", id: "cmd_901", instrument: "BTCUSDT.BINANCE", price: null, qty: null, pnl: null },
-  { at: T0 + 6 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_004", instrument: "BTCUSDT.BINANCE", price: "67410.55", qty: "0.52", pnl: null },
-  { at: T0 + 6 * HOUR + 30_000, clock: "FILL_TRADE_TIME", type: "FILL_OBSERVED", kind: "FILL", id: "fill_002", instrument: "BTCUSDT.BINANCE", price: "67410.55", qty: "0.31", pnl: "0" },
-  { at: T0 + 6 * HOUR + 90_000, clock: "FILL_TRADE_TIME", type: "FILL_OBSERVED", kind: "FILL", id: "fill_003", instrument: "BTCUSDT.BINANCE", price: "67411.00", qty: "0.05", pnl: "0" },
-  { at: T0 + 8 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_005", instrument: "ETHUSDT.BINANCE", price: null, qty: "3.00", pnl: null },
-  { at: T0 + 9 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_006", instrument: "ETHUSDT.BINANCE", price: "2650.00", qty: "2.50", pnl: null },
-  { at: T0 + 12 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_007", instrument: "BTCUSDT.BINANCE", price: null, qty: "0.10", pnl: null },
-  { at: T0 + 13 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_008", instrument: "ETHUSDT.BINANCE", price: "2488.00", qty: "1.00", pnl: null },
-  { at: T0 + 17 * HOUR, clock: "COMMAND_JOURNAL_AT", type: "COMMAND_JOURNAL_ROW_OBSERVED", kind: "COMMAND_JOURNAL", id: "cmd_944", instrument: "BTCUSDT.BINANCE", price: null, qty: null, pnl: null },
+  { at: T0, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_001", instrument: "BTCUSDT", price: "67200.50", qty: "0.40", pnl: null },
+  { at: T0 + 12_000, clock: "FILL_TRADE_TIME", type: "FILL_OBSERVED", kind: "FILL", id: "fill_001", instrument: "BTCUSDT", price: "67200.50", qty: "0.40", pnl: "0" },
+  { at: T0 + 20_000, clock: "SESSION_UPDATED_AT", type: "SESSION_OBSERVED", kind: "SESSION", id: "session_live_01", instrument: "BTCUSDT", price: null, qty: null, pnl: null },
+  { at: T0 + 2 * HOUR, clock: "COMMAND_JOURNAL_CREATED_AT", type: "COMMAND_JOURNAL_ROW_OBSERVED", kind: "COMMAND_JOURNAL", id: "cmd_901", instrument: "BTCUSDT", price: null, qty: null, pnl: null },
+  { at: T0 + 6 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_004", instrument: "BTCUSDT", price: "67410.55", qty: "0.52", pnl: null },
+  { at: T0 + 6 * HOUR + 30_000, clock: "FILL_TRADE_TIME", type: "FILL_OBSERVED", kind: "FILL", id: "fill_002", instrument: "BTCUSDT", price: "67410.55", qty: "0.31", pnl: "0" },
+  { at: T0 + 6 * HOUR + 90_000, clock: "FILL_TRADE_TIME", type: "FILL_OBSERVED", kind: "FILL", id: "fill_003", instrument: "BTCUSDT", price: "67411.00", qty: "0.05", pnl: "0" },
+  { at: T0 + 8 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_005", instrument: "ETHUSDT", price: null, qty: "3.00", pnl: null },
+  { at: T0 + 9 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_006", instrument: "ETHUSDT", price: "2650.00", qty: "2.50", pnl: null },
+  { at: T0 + 12 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_007", instrument: "BTCUSDT", price: null, qty: "0.10", pnl: null },
+  { at: T0 + 13 * HOUR, clock: "ORDER_UPDATED_AT", type: "ORDER_OBSERVED", kind: "ORDER", id: "ord_008", instrument: "ETHUSDT", price: "2488.00", qty: "1.00", pnl: null },
+  { at: T0 + 17 * HOUR, clock: "COMMAND_JOURNAL_UPDATED_AT", type: "COMMAND_JOURNAL_ROW_OBSERVED", kind: "COMMAND_JOURNAL", id: "cmd_944", instrument: "BTCUSDT", price: null, qty: null, pnl: null },
 ];
 
 function observedTimeline(id: string, search: URLSearchParams): BffAnswerAlpha {
   const environment = validEnv(search.get("environment")) ? search.get("environment")! : "live";
   const after = search.get("after");
-  const first = OBSERVATIONS.slice(0, 8);
-  const second = OBSERVATIONS.slice(8);
-  const entries = after === "tl-p2" ? second : first;
-  return ok({
-    schema_version: "portal.execution.observed-timeline-bff.v1",
-    logical_operation_id: "executionObservedTimelineV1",
-    record_authority: "PORTAL_CONTROL",
-    source_authority: "TRADING_SYSTEM_CURRENT_STATE",
-    observation_authority: "PORTAL_OBSERVATION",
-    observation_semantics: "BOUNDED_CURRENT_PAGE",
-    environment,
-    profile_id: ENV_PROFILE[environment],
-    resource: { kind: "ALPHA", id },
-    projection: { epoch_id: `alpha-${environment}`, sequence: 7, source_as_of_ms: ALPHA_DOUBLE_AS_OF_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS, last_successful_refresh_at_ms: ALPHA_DOUBLE_READ_AT_MS, completeness: "COMPLETE" },
-    observed_timeline: {
-      state: "READY",
-      reason_code: null,
-      retryable: false,
-      freshness: { as_of_ms: ALPHA_DOUBLE_AS_OF_MS, read_at_ms: ALPHA_DOUBLE_READ_AT_MS },
-      source_history_semantics: "BOUNDED_CURRENT_PAGE_OBSERVATION_NOT_AUTHORITATIVE_EVENT_REPLAY",
-      data: {
-        label: "OBSERVED_TIMELINE",
-        ordering_rule: "OBSERVED_AT_MS_THEN_CLOCK_CLASS_THEN_SOURCE_IDENTIFIER_V1",
-        entries: entries.map((o) => ({
-          observed_at_ms: o.at,
-          source_clock: o.clock,
-          observation_type: o.type,
-          source_record: { kind: o.kind, id: o.id },
-          resource: { strategy_id: id, account_id: "acct_binance_02", deployment_id: "dep_live_01", instrument_id: o.instrument },
-          values: { price: o.price, quantity: o.qty, realized_pnl: o.pnl },
-          rejected_exact_value_fields: [],
-        })),
-        unavailable_segments: [
-          { segment: "BROKER_ACKNOWLEDGEMENT", state: "UNAVAILABLE", reason_code: "EDS10_BROKER_ACK_CLOCK_SOURCE_GAP_CONFIRMED" },
-          { segment: "GLOBAL_EVENT_SEQUENCE", state: "UNAVAILABLE", reason_code: "EDS10_GLOBAL_EVENT_SEQUENCE_SOURCE_GAP_CONFIRMED" },
-        ],
-      },
-    },
-    mark_context: { state: "EMPTY", reason_code: "EDS10_MARK_CONTEXT_NOT_PUBLISHED", data: { label: "DERIVED · mark-context", marks: [] } },
-    page: { has_more: after !== "tl-p2", next_cursor: after === "tl-p2" ? null : "tl-p2" },
-  });
+  const secondPage = after === TIMELINE_CURSOR;
+  const entries = secondPage ? OBSERVATIONS.slice(8) : OBSERVATIONS.slice(0, 8);
+  const body = canonicalCase("execution-observed-timeline.v1.synthetic.valid.json", "first_page_has_more");
+  body.environment = environment;
+  body.profile_id = ENV_PROFILE[environment];
+  body.resource = { kind: "ALPHA", id };
+  body.projection = { ...body.projection, epoch_id: `alpha-${environment}`, source_as_of_ms: ALPHA_DOUBLE_AS_OF_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS - 500, last_successful_refresh_at_ms: ALPHA_DOUBLE_READ_AT_MS };
+  const panel = body.observed_timeline as Json;
+  panel.clocks = { ...panel.clocks, source_published_at_ms: ALPHA_DOUBLE_AS_OF_MS, as_of_ms: ALPHA_DOUBLE_AS_OF_MS, read_at_ms: ALPHA_DOUBLE_READ_AT_MS, received_at_ms: ALPHA_DOUBLE_READ_AT_MS - 500 };
+  panel.coverage = {
+    ...panel.coverage,
+    from_ms: entries[0]!.at,
+    to_ms: entries[entries.length - 1]!.at,
+    source_total: String(OBSERVATIONS.length),
+    filtered_total: String(OBSERVATIONS.length),
+    returned_count: entries.length,
+    truncated: !secondPage,
+    has_more: !secondPage,
+  };
+  panel.data = {
+    ...panel.data,
+    source_current_page_row_count: entries.length,
+    observed_entry_count: entries.length,
+    entries: entries.map((o) => ({
+      observed_at_ms: o.at,
+      source_clock: o.clock,
+      observation_type: o.type,
+      source_record: { kind: o.kind, id: o.id },
+      resource: { deployment_id: "dep_live_01", strategy_id: id, account_id: "acct_binance_02", portfolio_id: null, execution_session_id: o.kind === "SESSION" ? o.id : null, instrument_id: o.instrument },
+      values: { price: o.price, quantity: o.qty, realized_pnl: o.pnl },
+      rejected_exact_value_fields: [],
+    })),
+  };
+  body.mark_context = { ...body.mark_context, clocks: { ...body.mark_context.clocks, as_of_ms: ALPHA_DOUBLE_AS_OF_MS, read_at_ms: ALPHA_DOUBLE_READ_AT_MS } };
+  body.page = { limit: 8, has_more: !secondPage, next_cursor: secondPage ? null : TIMELINE_CURSOR };
+  return ok(body);
 }
 
 /* ── equity chart ─────────────────────────────────────────────────────────── */
@@ -390,38 +433,19 @@ function equityChart(id: string, search: URLSearchParams): BffAnswerAlpha {
   const start = end - 23 * HOUR;
   const steps = [0, 4200, 9100, 7600, 14300, 21050, 18800, 26100, 31400, 29700, 35200, 40100, 38800, 45200, 52100, 49900, 58300, 61000, 59400, 66200, 70100, 68800, 75400, 81200];
   const points: [number, string][] = steps.map((s, i) => [start + i * HOUR, cents(base + s)]);
-  // The source did not publish 08:04 to 10:04: a declared gap, not a flat line.
-  const gapFrom = start + 8 * HOUR;
-  const gapTo = start + 10 * HOUR;
-  const kept = points.filter(([t]) => t < gapFrom || t > gapTo);
-  return ok({
-    schema_version: "execution.financial-chart.v1",
-    logical_operation_id: "executionFinancialChartV1",
-    record_authority: "PORTAL_CONTROL",
-    source_authority: "DERIVED",
-    workspace_id: "workspace_execution_manager",
-    environment,
-    profile_id: ENV_PROFILE[environment],
-    subject: { kind: "alpha", id },
-    metric: "equity",
-    panel: {
-      state: "PARTIAL",
-      reason_code: "SOURCE_GAP_IN_WINDOW",
-      retryable: false,
-      clocks: { as_of_ms: end, read_at_ms: ALPHA_DOUBLE_READ_AT_MS, source_published_at_ms: end },
-      coverage: { from_ms: start, to_ms: end, source_total: "24", filtered_total: String(kept.length), returned_count: kept.length, truncated: false, downsampled: false, has_more: false, gaps: [{ from_ms: gapFrom, to_ms: gapTo, reason: "SOURCE_GAP" }] },
-      formula: { formula_id: "alpha.equity-chart.double", formula_version: "v1", input_digest: "sha256:alpha-double", input_revision: `alpha-${environment}:7` },
-      data: {
-        comparison_mode: "SINGLE_SUBJECT",
-        scale_mode: "LINEAR",
-        currency_policy: "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
-        series: [{ id: `alpha:${id}:equity`, label: "BTC-Trend", account_id: "acct_binance_02", currency: "USDT", points: kept }],
-        sampling: { algorithm: "IDENTITY_CURRENT_OBSERVATION_V1", source_rows: "24", numeric_rows: String(kept.length), rejected_rows: "0", returned_rows: kept.length, target_points: 256, bucket_seconds: 3600, preserves_extrema: true, preserves_first_last: true, preserves_gaps: true, gap_semantics: "DECLARED_IN_COVERAGE_GAPS", marker_semantics: "NONE" },
-        retention: { retention_floor_ms: null, retention_floor_state: "UNKNOWN", oldest_available_ms: start, newest_available_ms: end, history_semantics: "RETAINED_SNAPSHOT_RANGE_NOT_EVENT_REPLAY_OR_TOTAL_HISTORY" },
-        benchmark: { requested: false, state: "UNAVAILABLE", reason_code: "EDS11R4_MARKET_CONTEXT_NOT_ACTIVATED" },
-      },
-    },
-  });
+  const account = environment === "paper" ? "acct_paper_sim_01" : "acct_binance_02";
+  const body = canonicalCase("execution-financial-chart.synthetic.valid.json", "deployment_equity_ready");
+  body.environment = environment;
+  body.profile_id = ENV_PROFILE[environment];
+  // The producer serves an alpha's equity as its deployments' accounts, one series per account and currency; gaps are never published.
+  body.subject = { kind: "alpha", id };
+  const panel = body.panel as Json;
+  panel.clocks = { ...panel.clocks, event_time_ms: end, source_published_at_ms: end, as_of_ms: end, read_at_ms: ALPHA_DOUBLE_READ_AT_MS };
+  panel.coverage = { ...panel.coverage, from_ms: start, to_ms: end, source_total: String(points.length), filtered_total: String(points.length), returned_count: points.length };
+  panel.data.series = [{ id: `account:${account}:currency:USDT`, label: `Account ${account} \u00b7 USDT`, account_id: account, currency: "USDT", points }];
+  panel.data.sampling = { ...panel.data.sampling, source_rows: String(points.length), numeric_rows: String(points.length), rejected_rows: "0", returned_rows: points.length };
+  panel.data.retention = { ...panel.data.retention, oldest_available_ms: start, newest_available_ms: end };
+  return ok(body);
 }
 
 /* ── activity rollup ──────────────────────────────────────────────────────── */
@@ -467,41 +491,29 @@ function activity(id: string, search: URLSearchParams): BffAnswerAlpha {
 const INTERVAL_MS: Readonly<Record<string, number>> = { "1m": 60_000, "5m": 300_000, "15m": 900_000, "30m": 1_800_000, "1h": HOUR, "4h": 4 * HOUR, "1d": 24 * HOUR };
 
 function venueCandles(search: URLSearchParams): BffAnswerAlpha {
-  const environment = validEnv(search.get("environment")) ? search.get("environment")! : "live";
   const symbol = search.get("symbol") ?? "BTCUSDT";
   const interval = search.get("interval") ?? "1h";
   const step = INTERVAL_MS[interval] ?? HOUR;
   const from = Number(search.get("from_ms"));
   const to = Number(search.get("to_ms"));
   const limit = Math.min(300, Math.max(1, Number(search.get("limit") ?? 300)));
-  const envelope = {
-    schema_version: "portal.execution.market-candles.v1",
-    logical_operation_id: "executionMarketCandlesV1",
-    record_authority: "PORTAL_CONTROL",
-    source_authority: "VENUE_PUBLIC_MARKET_DATA",
-    environment,
-    profile_id: ENV_PROFILE[environment],
-    source: { kind: "venue_public", venue: "BINANCE", market: "USDM", endpoint: "fapi/v1/klines", instrument: symbol, note: null },
-    symbol,
-    interval,
-    interval_ms: step,
-    retryable: false,
-    read_at_ms: ALPHA_DOUBLE_READ_AT_MS,
-  };
+  const coverageOf = (fromMs: number | null, toMs: number | null, returned: number, pages: number) => ({ from_ms: fromMs, to_ms: toMs, requested_limit: limit, returned_count: returned, truncated: false, pages });
+  const fromMs = Number.isFinite(from) ? from : null;
+  const toMs = Number.isFinite(to) ? to : null;
   if (symbol !== "BTCUSDT") {
-    return ok({
-      ...envelope,
-      state: "UNAVAILABLE",
-      reason_code: "E5_MARKET_CANDLES_NOT_PUBLISHED",
-      fetched_at_ms: null,
-      coverage: { from_ms: Number.isFinite(from) ? from : null, to_ms: Number.isFinite(to) ? to : null, requested_limit: limit, returned_count: 0, truncated: false, pages: 0 },
-      last_candle_closed: null,
-      candles: [],
-    });
+    // A typed absence from the canonical feature_disabled case: no environment or profile_id on this body, the instrument named.
+    const absent = canonicalCase("execution-market-candles.v1.synthetic.valid.json", "feature_disabled");
+    absent.symbol = symbol;
+    absent.interval = interval;
+    absent.interval_ms = step;
+    absent.source = { ...absent.source, instrument: symbol };
+    absent.read_at_ms = ALPHA_DOUBLE_READ_AT_MS;
+    absent.coverage = coverageOf(fromMs, toMs, 0, 0);
+    return ok(absent);
   }
-  const startAt = Number.isFinite(from) ? Math.floor(from / step) * step : ALPHA_DOUBLE_AS_OF_MS - 72 * step;
-  const endAt = Number.isFinite(to) ? to : ALPHA_DOUBLE_AS_OF_MS;
-  const candles: Record<string, unknown>[] = [];
+  const startAt = fromMs !== null ? Math.floor(fromMs / step) * step : ALPHA_DOUBLE_AS_OF_MS - 72 * step;
+  const endAt = toMs ?? ALPHA_DOUBLE_AS_OF_MS;
+  const candles: Json[] = [];
   let close = 6_720_050;
   for (let t = startAt, i = 0; t <= endAt && candles.length < limit; t += step, i += 1) {
     const drift = ((i * 37) % 23) - 11;
@@ -509,14 +521,21 @@ function venueCandles(search: URLSearchParams): BffAnswerAlpha {
     close = open + drift * 90;
     const high = Math.max(open, close) + 120 + (i % 5) * 20;
     const low = Math.min(open, close) - 110 - (i % 4) * 25;
-    candles.push({ t, o: cents(open), h: cents(high), l: cents(low), c: cents(close), v: `${120 + (i % 9) * 7}.250`, close_t: t + step - 1 });
+    candles.push({ t, o: cents(open), h: cents(high), l: cents(low), c: cents(close), v: `${120 + (i % 9) * 7}.250`, close_t: t + step - 1, trades: 40 + (i % 17) });
   }
+  const ready = canonicalCase("execution-market-candles.v1.synthetic.valid.json", "venue_public_ready");
   return ok({
-    ...envelope,
+    ...ready,
+    symbol,
+    interval,
+    interval_ms: step,
+    source: { ...ready.source, instrument: symbol },
     state: "READY",
     reason_code: null,
+    retryable: false,
     fetched_at_ms: ALPHA_DOUBLE_READ_AT_MS,
-    coverage: { from_ms: startAt, to_ms: endAt, requested_limit: limit, returned_count: candles.length, truncated: false, pages: 1 },
+    read_at_ms: ALPHA_DOUBLE_READ_AT_MS,
+    coverage: coverageOf(startAt, endAt, candles.length, 1),
     last_candle_closed: true,
     candles,
   });

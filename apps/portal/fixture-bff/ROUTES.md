@@ -178,13 +178,18 @@ rows keep their dates).
 | GET | `/api/v1/execution/alphas/equity-sparklines` | 200 | bffDouble | control-api | none |  |
 | GET | `/api/v1/execution/alphas/{alpha_id}/stage-drift` | 200 | bffDoubleAlpha | control-api | DRIFT `execution-alpha-stage-drift.v2#/` |  |
 | GET | `/api/v1/execution/alphas/{alpha_id}/query-analytics` | 200 | bffDouble | control-api | `execution-query-analytics.v1#/` |  |
-| GET | `/api/v1/execution/resources/alphas/{alpha_id}` | 200 | bffDoubleAlpha | control-api | DRIFT `execution-resource-scoped.v2#/$defs/AlphaScopedResourceWireResponse` | any other id answers the same template; alpha_denied 403, alpha_down 503, alpha_empty empty |
-| GET | `/api/v1/execution/resources/alphas/{alpha_id}/orders` | 200 | bffDoubleAlpha | control-api | none |  |
-| GET | `/api/v1/execution/resources/alphas/{alpha_id}/fills` | 200 | bffDoubleAlpha | control-api | none |  |
+| GET | `/api/v1/execution/resources/alphas/{alpha_id}` | 200 | bffDoubleAlpha | control-api | `execution-alpha-resource.v1#/` | any other id answers the same template; alpha_denied 403, alpha_down 503, alpha_empty empty |
+| GET | `/api/v1/execution/resources/alphas/{alpha_id}/orders` | 200 | bffDoubleAlpha | control-api | `execution-subject-records.v1#/` |  |
+| GET | `/api/v1/execution/resources/alphas/{alpha_id}/fills` | 200 | bffDoubleAlpha | control-api | `execution-subject-records.v1#/` |  |
 | GET | `/api/v1/execution/derivations/alphas/{alpha_id}/activity` | 200 | bffDoubleAlpha | control-api | none |  |
-| GET | `/api/v1/execution/views/observed-timeline` | 200 | bffDoubleAlpha | control-api | none |  |
+| GET | `/api/v1/execution/views/observed-timeline` | 200 | bffDoubleAlpha | control-api | `execution-observed-timeline.v1#/` |  |
 | GET | `/api/v1/execution/views/equity-chart` | 200 | bffDoublePortfolios (portfolio), bffDoubleAlpha (alpha), bffDoubleAccount (account), bffDouble (other) | control-api | none | subject_kind alpha, portfolio, account |
-| GET | `/api/v1/execution/market/venue-candles` | 200 | bffDoubleAlpha | control-api | none | a typed absence, not a series |
+| GET | `/api/v1/execution/views/equity-chart [alpha]` | 200 | bffDoubleAlpha | control-api | `execution-financial-chart.v1#/` | one USDT series per account; the server never publishes a gap, so the double publishes none; sandbox answers 503 |
+| GET | `/api/v1/execution/market/venue-candles` | 200 | bffDoubleAlpha | control-api | `execution-market-candles.v1#/` | a typed absence, not a series |
+| GET | `/api/v1/execution/market/venue-candles [ready]` | 200 | bffDoubleAlpha | control-api | `execution-market-candles.v1#/` | BTCUSDT: READY bars with trades |
+| GET | `/api/v1/execution/resources/alphas/{alpha_id}/orders [page 2]` | 200 | bffDoubleAlpha | control-api | `execution-subject-records.v1#/` | the second keyset page; the cursor is a Portal-signed kc1. token |
+| GET | `/api/v1/execution/views/observed-timeline [page 2]` | 200 | bffDoubleAlpha | control-api | `execution-observed-timeline.v1#/` | the last page of 12 observations |
+| GET | `/api/v1/execution/resources/alphas/{alpha_id} [alpha_empty]` | 200 | bffDoubleAlpha | control-api | `execution-alpha-resource.v1#/` | the canonical alpha_not_in_projection case: state empty |
 | GET | `/api/v1/execution/market/candles` | 200 | bffDouble (canonical L0 body) | control-api | `execution-market-context.v1#/$defs/CandlesResponse` |  |
 | GET | `/api/v1/execution/manager/current/{relation}` | 200 | bffDouble | control-api | none | relation from the approved catalogue of 15; any other is not served |
 | GET | `/api/v1/execution/portfolios` | 200 | bffDoublePortfolios | control-api | `execution-portfolio-list.v1#/$defs/PortfolioListResponse` |  |

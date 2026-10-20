@@ -53,7 +53,12 @@ const facts = (): Record<string, unknown> => JSON.parse(screen.getByTestId("fact
 
 const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
-const ready = () => screen.findByRole("heading", { level: 1, name: /BTC-Trend/ });
+// The title is the alpha id (the producer publishes no name), so the h1 exists while the resource is still loading: the alpha is read when its meta line is drawn.
+const ready = async () => {
+  const h1 = await screen.findByRole("heading", { level: 1, name: new RegExp(ALPHA_DOUBLE_ID) });
+  await waitFor(() => expect(document.querySelector(".exec-alp2-meta")).not.toBeNull());
+  return h1;
+};
 const tabs = () => within(screen.getByRole("tablist", { name: "Alpha detail" }));
 const NO_DASH = /(^|\s)[-–—](\s|$)|N\/A/;
 
@@ -62,12 +67,17 @@ describe("screen contract", () => {
     expect(ALPHA_SCREEN_KEY).toBe("alpha");
   });
 
-  it("opens in a loading state, then names the alpha, its version and its owner", async () => {
+  it("opens in a loading state, then titles the alpha by its id (the producer publishes no name or version: 'Unnamed alpha' and 'UNVERSIONED' are never printed), with its owner", async () => {
     mount();
     expect(screen.getByLabelText("Loading")).toBeTruthy();
     const h1 = await ready();
-    expect(h1.textContent).toContain("BTC-Trend");
-    expect(h1.textContent).toContain("v3");
+    expect(h1.textContent).toContain(ALPHA_DOUBLE_ID);
+    expect(h1.textContent).not.toMatch(/Unnamed alpha|UNVERSIONED|\bv\d/);
+    const meta = document.querySelector(".exec-alp2-meta")!;
+    // The name and the version are Not published (FE-066) with the server's literal in the tooltip.
+    expect(meta.textContent).toContain("Name");
+    expect(meta.querySelector('[title="ALPHA_NAME_NOT_PUBLISHED"] .exec-blk-np')?.textContent).toContain("Not published (FE-066)");
+    expect(meta.querySelector('[title="UNVERSIONED"] .exec-blk-np')?.textContent).toContain("Not published (FE-066)");
     expect(screen.getByText("asmith")).toBeTruthy();
   });
 
@@ -154,12 +164,13 @@ describe("current facts", () => {
 });
 
 describe("Performance", () => {
-  it("draws the actual equity from the exact series, with the gap the source declared", async () => {
+  it("draws the actual equity from the exact series; the server publishes no gap, so none is counted or drawn", async () => {
     const { view } = mount();
     await ready();
     const panel = await screen.findByRole("group", { name: /Equity, Real-funded, USDT/ });
     expect(panel).toBeTruthy();
-    expect(view.container.textContent).toContain("1 gap the source declared");
+    expect(view.container.textContent).not.toMatch(/gap the source declared|gaps the source declared/);
+    expect(view.container.textContent).toContain("24 points");
     expect(view.container.textContent).toContain("Windowed return:");
     expect(screen.getByTestId("readout-value").textContent).toBe("40,812.00 USDT");
   });
@@ -355,7 +366,8 @@ describe("Evidence, Regime, Reconciliation", () => {
     mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?tab=evidence`);
     await ready();
     const panel = await screen.findByRole("region", { name: "Research Evidence" });
-    expect(panel.textContent).toContain("BTC-Trend v3");
+    expect(panel.textContent).toContain("Not published (FE-066)");
+    expect(panel.textContent).not.toMatch(/Unnamed alpha|UNVERSIONED/);
     expect(within(panel).getAllByText(/Not published/).length).toBeGreaterThanOrEqual(6);
     expect(await within(panel).findByText("RESEARCH_RUN_NOT_BOUND")).toBeTruthy();
   });
@@ -475,7 +487,7 @@ describe("Activity & Decisions", () => {
   async function open(extra = "") {
     const served = mount(`/deployments/alphas/${ALPHA_DOUBLE_ID}?tab=activity${extra}`);
     await ready();
-    const feed = await screen.findByRole("table", { name: /Events for BTC-Trend/ });
+    const feed = await screen.findByRole("table", { name: new RegExp(`Events for ${ALPHA_DOUBLE_ID}`) });
     return { ...served, feed };
   }
 
