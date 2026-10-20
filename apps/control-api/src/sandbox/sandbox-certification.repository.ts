@@ -113,7 +113,7 @@ export interface SandboxSmokePlanRow extends Record<string, unknown> {
 }
 
 /** A Canary envelope drafted from a promotion plan (the plan list's Envelope column). */
-export interface SandboxCanaryEnvelopeRef {
+export interface SandboxCanaryEnvelopeRef extends Record<string, unknown> {
   envelope_id: string;
   promotion_plan_id: string;
   revision: number;

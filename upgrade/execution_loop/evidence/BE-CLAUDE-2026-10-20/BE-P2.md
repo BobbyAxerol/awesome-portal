@@ -151,8 +151,9 @@ Producer-receipt request to Codex: see the last section.
   source-backed (full `CanaryControlRoom`), `SandboxCertificationService.publicDetail` plan row.
 * contracts focused (host): `execution-stage-facts` 27, plus `fixtures`, `execution-reader-refinements`,
   `execution-live-source`, `execution-operation-reader`, `execution-positive-parent` (305) green at the FE-067 state.
-* `tsc -p apps/control-api/tsconfig.build.json --noEmit` exit 0 (FE-067, FE-071 states, and the final tree: see report).
-* `scripts/contracts-test.sh` through the docker wrapper: see the report.
+* `tsc -p apps/control-api/tsconfig.build.json --noEmit` exit 0 on the final tree (an earlier run caught a missing index signature on `SandboxCanaryEnvelopeRef`, fixed in the last code commit).
+* `scripts/contracts-test.sh` via the docker wrapper under flock on the tree with FE-067/071/072/070: exit 0, 79 files / 1183 tests, all `--check` and d.ts diffs clean.
+* control-api focused re-run on the final tree: stage-rows, stage-facts, canary-envelope-facts, venue-calendar, paper-read: 86 passed.
 * **Not run**: PostgreSQL-backed `sandbox-certification.spec.ts`, `canary-control-room.spec.ts`,
   `elp2-product-reads.spec.ts` (no DB here). They assert with `toMatchObject`/`toHaveLength`, so additive keys
   should not break them, but that is unproven. The new SQL in the Sandbox detail load is a read-only SELECT
