@@ -94,7 +94,10 @@ export default defineConfig({
       name: "chromium",
       // The Research real-API receipt reads the isolated preview stack and its
       // local credentials; it runs only through playwright.research-preview.config.ts.
-      testIgnore: ["**/execution-v2-*.spec.ts", "**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts", "**/_preview-research-*.spec.ts"],
+      // `_preview-governance-c06` is the same kind of receipt (it needs GOV_WORKSPACE
+      // and ~/.config/portal-research-preview/claude-preview.password, no stubs) and
+      // is listed in that config's testMatch, so it is not part of this suite.
+      testIgnore: ["**/execution-v2-*.spec.ts", "**/execution-preview.spec.ts", "**/el-v2-evidence-shots.spec.ts", "**/execution-journeys.spec.ts", "**/_probe*.spec.ts", "**/_preview-research-*.spec.ts", "**/_preview-governance-c06.spec.ts"],
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4174" },
     },
     {

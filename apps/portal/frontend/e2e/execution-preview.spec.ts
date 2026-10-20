@@ -38,6 +38,10 @@ const FEATURE_ROOTS = [
 ] as const;
 
 test("every product route consumes the same-origin BFF and never leaves the origin", async ({ page, baseURL }) => {
+  // 27 routes walked in one test: ~25s on an idle host, which a full parallel run
+  // stretched past the 60s default (it timed out waiting for the marker on a route
+  // that renders fine alone).
+  test.setTimeout(180_000);
   await freezeClock(page);
   await usePreferences(page, "operations");
   await stubPortalApi(page, "healthy");
