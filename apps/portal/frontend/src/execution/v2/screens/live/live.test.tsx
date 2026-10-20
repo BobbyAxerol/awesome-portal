@@ -107,7 +107,7 @@ describe("page", () => {
   it("reads the deployment once, with the workspace from the URL", async () => {
     const m = mount(() => ok(v1Read(populatedV1())), "?workspace_id=ws_TEST_ONLY_a");
     await loaded();
-    expect(m.calls).toEqual([{ deploymentId: DEPLOYMENT_ID, options: { workspaceId: "ws_TEST_ONLY_a" } }]);
+    expect(m.calls).toEqual([{ deploymentId: DEPLOYMENT_ID, options: { workspaceId: "ws_TEST_ONLY_a", include: ["identity", "stage_facts"] } }]);
   });
 });
 

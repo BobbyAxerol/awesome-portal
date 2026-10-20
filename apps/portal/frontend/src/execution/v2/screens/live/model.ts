@@ -809,6 +809,25 @@ function coverageOf(v2: LiveSourceOperationsV2): CoverageRow[] {
   });
 }
 
+/** The Runtime chip of a V2 body that asked for `stage_facts`: the server's reason (never a word: the schema forbids one on this body), beside what the read states. */
+function runtimeChipV2(v2: LiveSourceOperationsV2): StageChipValue {
+  const stated: StageChipValue = { state: "not-published", id: "FE-067", detail: "Activation not asserted" };
+  if (v2.stageFacts === null) return stated;
+  const chip = runtimeChipFrom(runtimeFactOf(v2.stageFacts));
+  return chip.state === "not-published" ? { ...chip, detail: "Activation not asserted" } : stated;
+}
+
+/**
+ * The Reconciliation chip of a V2 body. Without `stage_facts` it is the stated `Not available`. With them it is the
+ * server's statement over the AUTHORIZED population: `Open findings` (no count: the reader refuses one) when an authorized
+ * open finding exists, else the reason in the title. `No open findings` cannot appear: the reader refuses that verdict.
+ */
+function reconciliationChipV2(v2: LiveSourceOperationsV2): StageChipValue {
+  const unstated: StageChipValue = { state: "not-available", reason: "Source verdict not asserted" };
+  if (v2.stageFacts === null) return unstated;
+  return reconciliationChipFrom(reconciliationFactOf(v2.stageFacts));
+}
+
 export function liveModelV2(v2: LiveSourceOperationsV2): LiveModel {
   const coverage = coverageOf(v2);
   const withRecords = coverage.filter((row) => row.returned > 0).length;
@@ -822,8 +841,8 @@ export function liveModelV2(v2: LiveSourceOperationsV2): LiveModel {
   ];
   return {
     version: "v2",
-    // The sealed live-source-operations v2 body carries no identity keys (typed absence; the receipt asks for a parent-field purpose).
-    identity: stageIdentity(null),
+    // Identity is the opt-in `include=identity` member (BE-P12); a body that did not carry it is the typed absence, as before.
+    identity: stageIdentity(v2.identity),
     deploymentId: v2.deploymentId,
     portfolioId: null,
     accountId: null,
@@ -833,9 +852,9 @@ export function liveModelV2(v2: LiveSourceOperationsV2): LiveModel {
     spineTargets: { canary: canaryHref(v2.deploymentId) },
     spineBlocked: false,
     chips: {
-      runtime: { state: "not-published", id: "FE-067", detail: "Activation not asserted" },
+      runtime: runtimeChipV2(v2),
       freshness: { state: "not-available", reason: "Source clock is not scoped" },
-      reconciliation: { state: "not-available", reason: "Source verdict not asserted" },
+      reconciliation: reconciliationChipV2(v2),
     },
     notice,
     kpis: KPI_SLOTS.map((slot) => ({ key: slot.key, label: slot.label, kind: "not-published" as const })),
