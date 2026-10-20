@@ -38,7 +38,11 @@
     "counting": "18 focused cases are included in135. Repeated regression runs are not added together.",
     "clippy": "PASS; cargo clippy --locked --offline -p edge-service -p command-relay --all-targets -- -D warnings",
     "fmt": "PASS; cargo fmt --all -- --check",
-    "normal_workspace_hook": "PENDING_ENFORCED_COMMIT_GATE",
+    "normal_workspace_hook": "PASS; unchanged mandatory .githooks/pre-commit / scripts/verify-workspace.sh",
+    "normal_hook_counts": {"contracts": 130, "api_suites": 72, "api_cases": 717, "failed": 0, "skipped": 0},
+    "normal_hook_provenance": "Includes57 unchanged peer untracked native-egress cases; not717 new or committed-only cases. TypeScript build and real isolated PostgreSQL dump/restore PASS.",
+    "normal_hook_log_sha256": "4f21e81a9950a5bce77eb73161669c9ce81f88713915d31a4f7f26c795acfdc3",
+    "source_commit": "6760c43d8fbf320e35b8e695cd449dc33ae0ba29",
     "independent_review": "Read-only review of source/tests; no substantive finding; no additional test count",
     "final_log_sha256": "386e20ce78410153a16433eae66466d10213d6cb03e56534bd6f65779e953366",
     "private_log_directory": "/home/bobby/secure/portal-edge-command-http-20261020-dzxuVxFo",
@@ -65,7 +69,7 @@
     "core009": "NOT_COMPOSED; priority handoff delivered unchanged, no new owner return observed06:54UTC"
   },
   "cleanup": {
-    "status": "RUST_CELL_CLEANED; NORMAL_HOOK_ARTIFACT_CHECK_PENDING",
+    "status": "RUST_CELL_AND_FIRST_HOOK_CLEANED; FOLLOWUP_HOOK_CHECK_RECORDED_IN_MAIN_PLAN",
     "temporary_directory": "/tmp/epg10-07-http-port-duaFX5Zb",
     "temporary_directory_absent": true,
     "logical_bytes_removed": 2000231452,
@@ -77,6 +81,11 @@
     "disk_provenance": "Shared-host observations; no exclusive reclaimed-byte estimate",
     "protected_portal_tuples_unchanged": 19,
     "images_before_after": [97, 96],
+    "first_hook_test_image_removed": "sha256:b304eca00c8af894826b38a2da3d84dc4dafbff110110a7d5a8dde853a9f0039",
+    "first_hook_image_available_before_after_bytes": [254536241152, 254536019968],
+    "first_hook_cell": "Terminal; Control API disposable containers absent. Shared host is not claimed idle.",
+    "shared_buildkit_records_observed": 334,
+    "own_new_buildkit_layers": "None; D4 single-FROM image CACHED; unrelated shared cache is retained, never globally pruned",
     "retained": "All other operational/peer images, named rollback and existing immutable closure; no shared cache/volume/network prune",
     "sgp_test_resources_created": 0,
     "shared_prune": false

@@ -24882,6 +24882,44 @@ is batched after local gates; no PR/merge/main/dev/workflow dispatch, expected
 additional hosted CI minutes0. The3peer untracked paths retain original hashes
 and must not enter staging. Full07/08 remainNOT_MET; connected09NOT_STARTED.
 
+**07:05UTC verification hygiene scope before edit:** normal mandatory hook
+reuses the legacy D4 nginx syntax test. Its --rm container lacks CPU/RAM flags,
+contrary to new workspace34b. Fix only that disposable test invocation with
+explicit1CPU/128MiB/no-swap bounds (TEST_ONLY, not production sizing). No D4
+contract/config/Compose/runtime changes. `bash -n`, diff inspection and the next
+unchanged normal hook must exercise the bounded invocation; do not waive the
+rule or pretend the first historical invocation was capped. This small owned
+verification fix belongs in the existing07 publication/cleanup transaction,
+not a new phase or external debt. Rust client bytes/tests remain unchanged.
+
+The same disposable test image tag is invocation-scoped by Bash PID to avoid
+parallel hooks overwriting a shared `:test` alias. Parent resolves each exact
+image from its own terminal hook log before non-force removal; no global image
+or shared BuildKit cleanup. This is test namespace isolation only, not a new
+long-lived image/service name. The normal second hook validates both changes.
+
+**07:10UTC terminal code commit:**6760c43d8fbf320e35b8e695cd449dc33ae0ba29,
+Bobby's configured identity;10scoped files,+1475/-16. Normal unchanged hook
+completed exit0:130contracts PASS;72API suites/717cases PASS,0FAIL/0SKIP;
+TypeScript build, actual isolated PostgreSQL restore drill and whole-workspace
+verification PASS. These include57unchanged peer-untracked native-egress tests,
+not717new or committed-only cases. Hook log SHA256
+4f21e81a9950a5bce77eb73161669c9ce81f88713915d31a4f7f26c795acfdc3,
+private0700directory/0600files above. Initial sandbox-only commit launch failed
+before Docker tests; escalated normal hook then passed, never bypassed.
+
+Hook-owned Control API cells terminal/absent. Resolved D4 test image from its
+own build log/inspect as b304eca00c8af894826b38a2da3d84dc4dafbff110110a7d5a8dde853a9f0039;
+all-container reference check empty before non-force removal. Available disk
+254536241152→254536019968B (shared-host observation, no reclaimed-byte claim).
+Global CLI activity was observed: host idle/no foreign work is NOT claimed.
+Shared BuildKit334records retained; single-FROM D4 layer was CACHED, no newly
+compiled layer/cache created by this hook. No global prune/volume/network or
+operational-container deletion. A second coherent commit records terminal
+evidence and the small capped/invocation-isolated syntax runner fix; the same
+normal hook must pass on it. Batch feature-only push happens after that terminal
+gate, no PR/merge/main/dev/dispatch and no new hosted CI minutes expected.
+
 
 
 
