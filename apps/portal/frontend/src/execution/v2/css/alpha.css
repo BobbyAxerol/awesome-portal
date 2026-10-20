@@ -131,6 +131,13 @@
 .exec-alp2-fig {
   display: block;
 }
+/* The "Open" link sits in a line of text ("Not published (FE-011) Open"). Its accent blue is 2.14:1 against the
+ * surrounding ink, below the 3:1 a colour-only cue needs (WCAG 1.4.1, axe link-in-text-block), so it is underlined.
+ * Scoped to this strip: the shared .exec-blk-link is unchanged for the other screens (UXM-10 F-5). */
+.exec-alp2-kpis .exec-blk-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 /* tabs */
 .exec-alp2-tabbar {
