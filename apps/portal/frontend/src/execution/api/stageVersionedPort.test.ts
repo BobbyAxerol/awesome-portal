@@ -291,8 +291,7 @@ describe.each(ROUTES)("$id · include (BE-P12, opt-in)", (route) => {
   it("a V2 body that carries the member reads as v2 with it; the reader of that body is the one the route uses", async () => {
     serve(IDENTITY_BODIES[route.id]);
     const result = await route.call(api(), DEPLOYMENT, { include: ["identity"] });
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
+    if (!result.ok) throw new Error(result.reason);
     expect(result.value.kind).toBe("v2");
     expect((result.value as { value: { identity: { alphaId: string | null } } }).value.identity.alphaId).toBe("alpha_TEST_ONLY_identity");
   });

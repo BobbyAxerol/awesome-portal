@@ -4,12 +4,12 @@
  *
  * What the screen may say, and no more:
  * - the identity crumb: the Alpha is linked ONLY when `alpha_id` is published, the portfolio shows its published NAME (the v2
- *   body carries no portfolio id, so it is printed, not linked); every reason code is a title, never a sentence;
+ *   body carries no portfolio id, so it is printed, not linked); every reason code is behind a disclosure, never a sentence;
  * - the Reconciliation chip: `Open findings` only for the OPEN_FINDINGS verdict, WITHOUT a count; nothing else is a statement
  *   (the reader refuses `NO_OPEN_FINDINGS` and every count); the Runtime chip stays Not available with the server's reason;
  * - a body without the members (the default request) draws exactly what it drew before.
  */
-import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -17,6 +17,7 @@ import LiveScreen from "./index";
 import { liveModelV2 } from "./model";
 import { DEPLOYMENT_ID, fakeApi, ok, v2Canonical, v2Of, v2Read } from "./live.testbase";
 import type { Draft } from "../../testkit/matrix";
+import { whyButton, whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -36,7 +37,7 @@ const loaded = async () => {
   await waitFor(() => expect(document.querySelector(".exec-stage-chips")).not.toBeNull());
 };
 const chip = (id: string) => document.querySelector<HTMLElement>(`[data-chip="${id}"]`);
-/** The chips that say nothing are ONE chip; each one's request id and reason is in its title. */
+/** The chips that say nothing are ONE chip; each one's request id and reason is in its disclosure (`GapWhy`). */
 const gaps = () => document.querySelector<HTMLElement>('[data-chip="gaps"]')!;
 const text = (el: Element) => (el.textContent ?? "").replace(/\s+/g, " ").trim();
 const crumb = () => within(screen.getByRole("navigation", { name: "Breadcrumb" }));
@@ -80,19 +81,35 @@ describe("the screen", () => {
     expect(text(chip("reconciliation")!)).toContain("Open findings");
     expect(text(chip("reconciliation")!)).not.toMatch(/\d/);
     expect(chip("runtime")).toBeNull();
-    expect(gaps().getAttribute("title")).toContain("RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY");
+    expect(text(gaps())).toBe("Not availableRuntime");
+    const why = whyButton(gaps());
+    expect(why.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(why);
+    expect(why.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById(why.getAttribute("aria-controls")!)!.textContent).toContain("RUNTIME_STATE_FIELD_NOT_IN_READ_VOCABULARY");
+    fireEvent.click(why);
+    expect(why.getAttribute("aria-expanded")).toBe("false");
     expect(text(gaps())).toBe("Not availableRuntime");
     // The wording that would claim more than the population proves never appears.
     expect(document.body.textContent).not.toMatch(/No open findings|Reconciled|Clean|Running/);
   });
 
-  it("hidden: no Alpha link, no portfolio crumb, Not available; the reason codes are titles and not text", async () => {
+  it("hidden: no Alpha link, no portfolio crumb, Not available; the reason codes are in the disclosure and not in the text", async () => {
     mount(canonical().with_members_hidden);
     await loaded();
     expect(document.querySelector('a[href^="/deployments/alphas/"]:not([href="/deployments/alphas"])')).toBeNull();
     expect(chip("reconciliation")).toBeNull();
-    expect(gaps().getAttribute("title")).toContain("Reconciliation: ");
-    expect(gaps().getAttribute("title")).toContain("AUTHORIZED_POPULATION_ONLY");
+    expect(text(gaps())).not.toMatch(/AUTHORIZED_POPULATION_ONLY|FE-\d/);
+    const why = whyButton(gaps());
+    expect(why.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(why);
+    expect(why.getAttribute("aria-expanded")).toBe("true");
+    const body = document.getElementById(why.getAttribute("aria-controls")!)!.textContent ?? "";
+    expect(body).toContain("Reconciliation: ");
+    expect(body).toContain("AUTHORIZED_POPULATION_ONLY");
+    fireEvent.click(why);
+    expect(why.getAttribute("aria-expanded")).toBe("false");
+    expect(whyText(gaps())).toContain("AUTHORIZED_POPULATION_ONLY");
     expect(screen.queryByText(/AUTHORIZED_POPULATION_ONLY|ALPHA_IDENTITY_NOT_AUTHORIZED|PORTFOLIO_NAME_NOT_AUTHORIZED/)).toBeNull();
   });
 
