@@ -25,7 +25,7 @@ const IGNORED = new Set(["$schema", "$id", "$defs", "$comment", "title", "descri
 const KNOWN = new Set([
   "type", "enum", "const", "required", "properties", "additionalProperties", "items", "minItems", "maxItems", "minimum",
   "maximum", "maxLength", "minLength", "pattern", "oneOf", "anyOf", "uniqueItems", "$ref", "prefixItems", "not", "allOf", "if", "then", "else", "contains", "minContains", "maxContains",
-  "maxProperties", "propertyNames",
+  "maxProperties", "propertyNames", "minProperties", "dependentRequired",
 ]);
 
 const documents = new Map<string, Json>();
@@ -149,6 +149,22 @@ function check(schema: Json, value: unknown, at: string, scope: Scope, out: stri
     // `maxProperties`: the object has at most that many own members (a count, whatever the members are).
     if (typeof schema.maxProperties === "number" && Object.keys(record).length > schema.maxProperties) {
       out.push(`${at}: more than ${schema.maxProperties} properties`);
+    }
+    // `minProperties`: the object has at least that many own members.
+    if (typeof schema.minProperties === "number" && Object.keys(record).length < schema.minProperties) {
+      out.push(`${at}: fewer than ${schema.minProperties} properties`);
+    }
+    // `dependentRequired` (JSON Schema 2020-12 section 10.2.2.4): for each property named in the map that is
+    // PRESENT in the instance, every property in its list must be present too. A property that is absent
+    // imposes nothing; a present one whose value is null still counts as present.
+    if (schema.dependentRequired && typeof schema.dependentRequired === "object" && !Array.isArray(schema.dependentRequired)) {
+      for (const [trigger, needed] of Object.entries(schema.dependentRequired as Record<string, unknown>)) {
+        if (!Array.isArray(needed)) throw new Error(`dependentRequired.${trigger} must be an array of property names`);
+        if (!Object.prototype.hasOwnProperty.call(record, trigger)) continue;
+        for (const name of needed as string[]) {
+          if (!Object.prototype.hasOwnProperty.call(record, name)) out.push(`${at}.${name}: required when ${trigger} is present`);
+        }
+      }
     }
     // `propertyNames`: every member NAME, as a string instance, must satisfy the subschema (whether or not
     // `properties` also names it). A name that fails is reported at `$.path.<name>`, like a member would be.
