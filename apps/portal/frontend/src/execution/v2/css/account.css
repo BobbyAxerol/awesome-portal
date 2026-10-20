@@ -431,6 +431,15 @@ a.exec-acct-open {
   gap: var(--space-2);
 }
 
+/* Account 360 keeps the body of a partial or stale panel under `.exec-blk-demoted` (opacity .85, blocks.css). At that
+ * opacity the faint ink (--ink-faint #8d8d8d on the #1d1d1d panel) renders as #7b7b7b, 4.02:1 on #1c1c1c, 4.46:1 on #111111
+ * and 3.71:1 on the selected-row tint: 57 nodes failed WCAG 1.4.3 (UXM-10 F-5). Inside the demoted body of THIS screen the
+ * faint ink is --ink-soft (#c6c6c6, an existing token, ~7.6:1 once demoted). No token is edited and the shared
+ * .exec-blk-demoted (Workbench, Replay, Event feed) is unchanged. Deviation: a demoted label is now lighter than the same
+ * label on a healthy account; the Partial / Stale state line above the body is what carries "not finished". */
+.exec-acct-v2 .exec-blk-demoted {
+  --ink-faint: var(--ink-soft);
+}
 /* The screen-reader-only text inside a table cell (the "(stale)" suffix) is absolutely positioned. Without a positioned
  * ancestor inside the scroller its containing block is the page, so it escaped the table's own horizontal scroll and
  * pushed the page sideways by the table's overhang between 661 and 1100 px (UXM-10 F-3). The wrap becomes its containing
