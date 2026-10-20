@@ -238,7 +238,7 @@ export function NotPublished({ id, reasonCode, titleReason, children, compact = 
     return () => scope.release(id, owner);
   }, [tracked, scope, id, owner]);
   const why = titleReason ? ` · ${titleReason}` : "";
-  if (compactGaps && !compact) {
+  if (compactGaps) {
     return (
       <span className="exec-blk-na" data-gap={id} title={gapTitle(id, typeof children === "string" ? children : null, [titleReason, reasonCode].filter(Boolean).join(" · ") || null)}>
         Not available

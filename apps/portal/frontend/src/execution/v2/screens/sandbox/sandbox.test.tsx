@@ -38,7 +38,7 @@ function mount(api: FakeApi, entry = ENTRY) {
 const ready = async () => {
   const h1 = await screen.findByRole("heading", { level: 1, name: "Sandbox certification" });
   await waitFor(() => expect(document.querySelector('[data-screen="sandbox-v2"]')?.getAttribute("data-state")).not.toBe("loading"));
-  await waitFor(() => expect(screen.queryByText(/Asking the server whether it offers this note/)).toBeNull());
+  await waitFor(() => expect(screen.queryByText(/Checking whether this note is offered/)).toBeNull());
   return h1;
 };
 const tabs = () => within(screen.getByRole("tablist", { name: "Sandbox certification sections" }));
@@ -120,10 +120,13 @@ describe("the V2 following-parent body", () => {
     expect(header.getAttribute("data-frame")).toBe("left");
     expect(header.textContent).not.toContain("Real capital at risk");
     // Runtime: nothing published (the sealed V2 body carries no stage facts), so no green "Running".
-    expect(chip("runtime").textContent).toContain("Not published (FE-067)");
-    expect(chip("runtime").textContent).not.toMatch(/Running|Halted/);
+    // Chips that say nothing are ONE `Not available` chip (FE-067 / FE-072 in its title); freshness keeps its own reason.
+    expect(chip("runtime")).toBeNull();
+    expect(chip("gaps").textContent).toBe("Not availableRuntime, Reconciliation");
+    expect(chip("gaps").getAttribute("title")).toContain("Runtime: Not published (FE-067)");
+    expect(chip("gaps").getAttribute("title")).toContain("Reconciliation: Not published (FE-072)");
+    expect(chip("gaps").textContent).not.toMatch(/Running|Halted/);
     expect(chip("freshness").textContent).toContain("Not available");
-    expect(chip("reconciliation").textContent).toContain("Not published (FE-072)");
     const spine = within(header as HTMLElement).getByRole("list", { name: "Lifecycle" });
     const current = within(spine).getAllByRole("listitem").filter((n) => n.getAttribute("aria-current") === "step");
     expect(current).toHaveLength(1);
@@ -132,10 +135,12 @@ describe("the V2 following-parent body", () => {
     expect(spine.textContent).not.toContain("Done");
   });
 
-  it("names the deployment and portfolio the body published, and links Alpha Fleet", async () => {
+  it("names the deployment and portfolio in the breadcrumb only, and links Alpha Fleet", async () => {
     mount(fakeApi());
     await ready();
-    expect(screen.getByText(/Deployment dep_TEST_ONLY_parent · portfolio pf_TEST_ONLY_parent/)).toBeTruthy();
+    // The subtitle does not say the deployment and the portfolio a second time.
+    expect(document.querySelector(".exec-stage-sub")!.textContent).not.toContain("dep_TEST_ONLY_parent");
+    expect(document.querySelector(".exec-stage-sub")!.textContent).not.toContain("portfolio");
     const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(within(crumb).getByRole("link", { name: "Alpha Fleet" }).getAttribute("href")).toBe("/deployments/alphas");
     expect(within(crumb).getByText("Sandbox").closest("li")?.getAttribute("aria-current")).toBe("page");
@@ -149,16 +154,19 @@ describe("the V2 following-parent body", () => {
     expect(within(crumb).getAllByRole("link").map((a) => a.textContent)).toEqual(["Alpha Fleet", "pf_TEST_ONLY_parent"]);
   });
 
-  it("every fact the body does not carry is Not published with its request id, and none is a number", async () => {
+  it("every fact the body does not carry is ONE `Not available` line (the request ids in its title), and none is a number", async () => {
     mount(fakeApi());
     await ready();
-    expect(kpi("Steps passed").textContent).toContain("Not published (FE-028)");
-    expect(kpi("Open findings").textContent).toContain("Not published (FE-072)");
-    expect(kpi("Critical open").textContent).toContain("Not published (FE-072)");
-    expect(kpi("Promotion plans").textContent).toContain("Not published (FE-072)");
-    expect(kpi("Gate").textContent).toContain("Not published (FE-028)");
-    expect(screen.getByRole("group", { name: "Certification facts" }).querySelector(".exec-blk-num")).toBeNull();
-    expect(screen.getByText(/carries the stored certification and its step evaluations only/)).toBeTruthy();
+    const gaps = document.querySelector(".exec-sbx-body > .exec-blk-gaps")!;
+    expect(gaps.textContent).toBe("Not available: Steps passed, Open findings, Critical open, Promotion plans, Gate");
+    expect(gaps.getAttribute("title")).toContain("Steps passed: Not published (FE-028)");
+    expect(gaps.getAttribute("title")).toContain("Open findings: Not published (FE-072)");
+    expect(gaps.getAttribute("title")).toContain("Gate: Not published (FE-028)");
+    // No strip of empty tiles and no number anywhere in the facts.
+    expect(screen.queryByRole("group", { name: "Certification facts" })).toBeNull();
+    expect(document.querySelector(".exec-sbx-body .exec-blk-num")).toBeNull();
+    const banner = screen.getByText(/Stored certification and step evaluations only/).closest(".exec-blk-banner")!;
+    expect(banner.getAttribute("title")).toContain("Not published (FE-072)");
   });
 
   it("the Steps tab shows the seven stored evaluations in order: Pass, Fail, Stale, Unavailable and three Not recorded", async () => {
@@ -173,8 +181,11 @@ describe("the V2 following-parent body", () => {
     expect(cells[4]!.textContent).toContain("No evidence recorded");
     // Stale is its own word, not a failure.
     expect(within(cells[2]!).getByText("Stale")).toBeTruthy();
-    // The explanation of a step is not in a V2 body: said once, with the request.
-    expect(screen.getByText(/Its explanation is/).textContent).toContain("Not published (FE-028)");
+    // The explanation of a step is not in a V2 body: one `Not available` line under the grid, the request in its title.
+    const gap = screen.getByText("Step explanations", { exact: false }).closest(".exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Step explanations");
+    expect(gap.getAttribute("title")).toContain("Not published (FE-028)");
+    expect(cells[0]!.querySelector(".exec-sbx-step-why")).toBeNull();
     // Lineage: the R1 and R2 approvals link to their reviews.
     const lineage = screen.getByRole("list", { name: "Lineage" });
     expect(within(lineage).getByText("R2 approval").parentElement!.querySelector("a")?.getAttribute("href")).toMatch(/\/governance\/approvals\/.+\/r2/);
@@ -186,20 +197,23 @@ describe("the V2 following-parent body", () => {
     await ready();
     expect(screen.queryByRole("list", { name: "Certification steps" })).toBeNull();
     expect(screen.getByText("The steps are not published for this response.")).toBeTruthy();
-    expect(screen.getByText("PARENT_FIELD_PURPOSE_NOT_QUALIFIED")).toBeTruthy();
+    // The reason code is the sentence's title, not a second printed line.
+    expect(screen.getByText("The steps are not published for this response.").getAttribute("title")).toBe("PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
     expect(tabs().getByRole("tab", { name: /Steps/ }).textContent).not.toMatch(/\(\d+\)/);
-    expect(screen.getByRole("group", { name: "Certification facts" })).toBeTruthy();
+    expect(document.querySelector(".exec-sbx-body > .exec-blk-gaps")).toBeTruthy();
   });
 
-  it("Findings, Promotion plans and Timeline are Not published (FE-072), never an empty table", async () => {
+  it("Findings, Promotion plans and Timeline are `Not available` (FE-072 in the title), never an empty table", async () => {
     mount(fakeApi());
     await ready();
-    expect(screen.getByRole("heading", { name: "Findings" }).closest("section")!.textContent).toContain("Not published (FE-072)");
+    const gapOf = (heading: string) => screen.getByRole("heading", { name: heading }).closest("section")!.querySelector(".exec-blk-gaps")!;
+    expect(gapOf("Findings").textContent).toBe("Not available: Reconciliation findings");
+    expect(gapOf("Findings").getAttribute("title")).toContain("Not published (FE-072)");
     expect(screen.queryByRole("table")).toBeNull();
     fireEvent.click(tabs().getByRole("tab", { name: "Promotion plans" }));
-    expect(screen.getByRole("heading", { name: "Promotion plans" }).closest("section")!.textContent).toContain("Not published (FE-072)");
+    expect(gapOf("Promotion plans").getAttribute("title")).toContain("Not published (FE-072)");
     fireEvent.click(tabs().getByRole("tab", { name: "Timeline" }));
-    expect(screen.getByRole("heading", { name: "Timeline" }).closest("section")!.textContent).toContain("Not published (FE-072)");
+    expect(gapOf("Timeline").getAttribute("title")).toContain("Not published (FE-072)");
     expect(screen.queryByRole("table")).toBeNull();
   });
 });
@@ -211,19 +225,21 @@ describe("the V1 certification body", () => {
     expect(kpi("Steps passed").textContent).toContain("0 / 7");
     expect(kpi("Gate").textContent).toContain("Blocked");
     // Zero findings against sources that reported nothing is an absence of evidence: the counts are Not available, not 0.
-    expect(kpi("Open findings").textContent).toContain("Not available");
-    expect(kpi("Open findings").textContent).toContain("Sources did not report");
-    expect(kpi("Critical open").textContent).toContain("Sources did not report");
-    expect(kpi("Open findings").querySelector(".exec-blk-num")).toBeNull();
+    // The two counts the sources did not report are one `Not available` line, the reason in its title; they are not tiles holding a 0.
+    expect(screen.queryByText("Open findings", { selector: "dt" })).toBeNull();
+    const gaps = document.querySelector(".exec-sbx-body > .exec-blk-gaps")!;
+    expect(gaps.textContent).toBe("Not available: Open findings, Critical open");
+    expect(gaps.getAttribute("title")).toContain("Open findings: Not published · Sources did not report");
+    expect(gaps.getAttribute("title")).toContain("Critical open: Not published · Sources did not report");
     expect(chip("freshness").textContent).toContain("Not available");
-    // Zero findings against sources that reported nothing is NOT a clean result: the server's own stage fact says Not published, with why.
-    expect(chip("reconciliation").textContent).toContain("Not published (FE-067)");
-    expect(chip("reconciliation").querySelector(".exec-blk-np")!.getAttribute("title")).toContain("SANDBOX_SOURCE_UNAVAILABLE");
-    expect(screen.getByText(/With the sources unavailable this is an absence of evidence, not a clean result/)).toBeTruthy();
-    expect(screen.getByText(/The source panels did not report/)).toBeTruthy();
+    // Zero findings against sources that reported nothing is NOT a clean result: the server's own stage fact says Not published, with why (in the title).
+    expect(chip("gaps").textContent).toContain("Reconciliation");
+    expect(chip("gaps").getAttribute("title")).toContain("SANDBOX_SOURCE_UNAVAILABLE");
+    expect(screen.getByText(/not a clean result/)).toBeTruthy();
+    expect(screen.getByText(/Source panels did not report/)).toBeTruthy();
     const triad = screen.getByRole("group", { name: "Reconciliation" });
     // The dark body now carries `source_figures`: every side is the server's `Not published (FE-072)`, with its reason in the title.
-    expect(triad.querySelectorAll(".exec-blk-np").length).toBe(15);
+    expect(triad.querySelectorAll("[data-gap]").length).toBe(15);
     expect(triad.textContent).not.toMatch(/\b0\.00\b/);
     expect(screen.getByRole("list", { name: "Source panels" }).textContent).toContain("Execution · Unavailable");
   });
@@ -282,7 +298,7 @@ describe("the V1 certification body", () => {
   it("subtitle, crumb and lineage use only what the body published", async () => {
     mount(fakeApi({ read: okRead(v1Rich()) }), `${ENTRY}?tab=steps`);
     await ready();
-    expect(screen.getByText(/Deployment dep_77 · OKX · account okx_testnet_main/)).toBeTruthy();
+    expect(screen.getByText(/OKX · account okx_testnet_main/).textContent).not.toContain("dep_77");
     const lineage = screen.getByRole("list", { name: "Lineage" });
     expect(within(lineage).getByRole("link", { name: "AP-101" }).getAttribute("href")).toBe("/governance/approvals/AP-101/r1");
     expect(within(lineage).getByText(/sha256:a{64}/)).toBeTruthy();
@@ -329,7 +345,7 @@ describe("the V1 certification body", () => {
     expect(rows[0]!.querySelector('td[data-l="Status"]')!.textContent).toContain("Open");
     expect(within(rows[0]!).queryByText("Not available")).toBeNull();
     expect(kpi("Open findings").textContent).toContain("2");
-    expect(kpi("Critical open").textContent).toContain("None open");
+    expect(kpi("Critical open").textContent).toBe("Critical open0");
     expect(screen.getByRole("heading", { name: "Findings" }).closest("section")!.textContent).toContain("2 recorded");
   });
 
@@ -354,7 +370,7 @@ describe("the V1 certification body", () => {
     mount(fakeApi({ read: okRead(body) }));
     await ready();
     expect(kpi("Open findings").textContent).toContain("2");
-    expect(kpi("Open findings").textContent).toContain("3 recorded, open or resolved");
+    expect(kpi("Open findings").textContent).toContain("3 recorded");
     expect(kpi("Critical open").textContent).toContain("1");
     const rows = within(screen.getByRole("table", { name: "Reconciliation findings" })).getAllByRole("row").slice(1);
     expect(rows[0]!.textContent).toContain("Blocking");
@@ -401,11 +417,11 @@ describe("the V1 certification body", () => {
     // An unreadable blocking bit is not waved through as "not blocking".
     expect(rows[0]!.textContent).toContain("Blocking not stated");
     expect(rows[1]!.textContent).not.toContain("Blocking");
-    expect(kpi("Open findings").textContent).toContain("Which are open was not published · 2 recorded");
-    expect(kpi("Open findings").querySelector(".exec-blk-num")).toBeNull();
+    expect(screen.queryByText("Open findings", { selector: "dt" })).toBeNull();
+    expect(document.querySelector(".exec-sbx-body > .exec-blk-gaps")!.getAttribute("title")).toContain("Open findings: Not published · Which are open was not published · 2 recorded");
   });
 
-  it("Promotion plans: id, target, time, status; Envelope and Author are Not published (FE-072) and said once", async () => {
+  it("Promotion plans: id, target, time, status; Envelope and Author, which no plan fills, are one `Not available` line (FE-072 in its title)", async () => {
     mount(fakeApi({ read: okRead(v1Rich()) }), `${ENTRY}?tab=promotion-plans`);
     await ready();
     const table = screen.getByRole("table", { name: "Promotion plans" });
@@ -415,7 +431,11 @@ describe("the V1 certification body", () => {
     expect(row.textContent).toContain("17 Oct 12:10Z");
     expect(within(row).getByText("Blocked")).toBeTruthy();
     expect(within(row).getByText("1 blocker")).toBeTruthy();
-    expect(screen.getByText(/Envelope and Author are/).textContent).toContain("Not published (FE-072)");
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Plan", "Target", "Created (UTC)", "Status", "Blockers"]);
+    const gap = screen.getByRole("heading", { name: "Promotion plans" }).closest("section")!.querySelector(".exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Envelope, Author");
+    expect(gap.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(screen.queryByText(/A plan records a refusal to promote/)).toBeNull();
     expect(kpi("Promotion plans").textContent).toContain("1");
   });
 
@@ -433,7 +453,7 @@ describe("the V1 certification body", () => {
   it("empty lists say what an absence is: nothing recorded, no plan, no event", async () => {
     mount(fakeApi({ read: okRead(v1Body()) }), `${ENTRY}?tab=promotion-plans`);
     await ready();
-    expect(screen.getByText("No promotion plan has been recorded for this certification.")).toBeTruthy();
+    expect(screen.getByText("No plans recorded.")).toBeTruthy();
   });
 
   it("a body that says a source action was requested is not trusted, loudly", async () => {
@@ -441,17 +461,17 @@ describe("the V1 certification body", () => {
     body.source_side_effect_requested = true;
     mount(fakeApi({ read: okRead(body) }));
     await ready();
-    expect(screen.getByRole("alert").textContent).toContain("a source action was requested");
+    expect(screen.getByRole("alert").textContent).toContain("A source action was requested; the figures below are not trusted.");
   });
 
-  it("a stale source panel says Showing data as of, from the server's time", async () => {
+  it("a stale source panel says Data as of, from the server's time", async () => {
     const body = v1Body();
     body.source_panels[1].panel_state = "stale";
     body.source_panels[1].freshness_state = "STALE";
     body.source_panels[1].as_of = "2026-10-17T11:40:00.000Z";
     mount(fakeApi({ read: okRead(body) }));
     await ready();
-    expect(screen.getByText(/Showing data as of 17 Oct 11:40Z/)).toBeTruthy();
+    expect(screen.getByText(/Data as of 17 Oct 11:40Z/)).toBeTruthy();
     expect(chip("freshness").textContent).toContain("Stale · 17 Oct 11:40Z");
   });
 

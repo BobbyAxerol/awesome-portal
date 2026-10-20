@@ -199,7 +199,7 @@ export function kpiCells(view: SandboxView): KpiCell[] {
     view.version === "v2"
       ? { key: "steps", label: "Steps passed", np: "FE-028" }
       : progress !== null && progress.passed !== null && progress.total !== null
-        ? { key: "steps", label: "Steps passed", value: `${progress.passed} / ${progress.total}`, basis: stepTally(view) ?? "Server count" }
+        ? { key: "steps", label: "Steps passed", value: `${progress.passed} / ${progress.total}`, basis: stepTally(view) ?? undefined }
         : { key: "steps", label: "Steps passed", absent: "The count was not published" };
 
   const f = view.findings;
@@ -218,7 +218,7 @@ export function kpiCells(view: SandboxView): KpiCell[] {
           ? { key: "findings", label: "Open findings", absent: f.truncated ? `The finding list is incomplete: showing ${f.returned ?? f.rows.length} of ${f.total}` : "The finding list is incomplete" }
           : counts!.open === null
             ? { key: "findings", label: "Open findings", absent: `Which are open was not published · ${f.total} recorded` }
-            : { key: "findings", label: "Open findings", value: count(counts!.open), basis: `${f.total} recorded, open or resolved` };
+            : { key: "findings", label: "Open findings", value: count(counts!.open), basis: `${f.total} recorded` };
 
   const crit: KpiCell =
     f === null
@@ -229,7 +229,7 @@ export function kpiCells(view: SandboxView): KpiCell[] {
         ? { key: "critical", label: "Critical open", absent: "The finding list is incomplete" }
         : counts.criticalOpen === null
           ? { key: "critical", label: "Critical open", absent: "Which are open was not published" }
-          : { key: "critical", label: "Critical open", value: count(counts.criticalOpen), basis: counts.criticalOpen === 0 ? "None open" : "Not resolved" };
+          : { key: "critical", label: "Critical open", value: count(counts.criticalOpen) };
 
   const plans: KpiCell =
     view.plans === null
@@ -240,7 +240,7 @@ export function kpiCells(view: SandboxView): KpiCell[] {
             key: "plans" as const,
             label: "Promotion plans",
             value: count(view.plans.length),
-            basis: view.plans.length === 0 ? "None recorded" : statuses.length === 1 ? humanize(statuses[0]!) : "Mixed statuses",
+            basis: view.plans.length === 0 ? undefined : statuses.length === 1 ? humanize(statuses[0]!) : "Mixed statuses",
           };
         })();
 
@@ -254,7 +254,7 @@ export function kpiCells(view: SandboxView): KpiCell[] {
           key: "gate",
           label: "Gate",
           flag: gate === "blocked" ? { kind: "rejected", label: "Blocked" } : { kind: "ok", label: "Eligible" },
-          basis: view.workflowState === null ? "Exit review" : `Exit review · workflow ${humanize(view.workflowState).toLowerCase()}`,
+          basis: view.workflowState === null ? undefined : `Workflow ${humanize(view.workflowState).toLowerCase()}`,
         };
   return [steps, findings, crit, plans, gateCell];
 }
@@ -309,7 +309,7 @@ export function blockers(view: SandboxView): Blockers {
 
 /** Why Submit for review is off. The action has no route, so it is never on; when the gate is shut the reason says that first. */
 export function submitReason(gate: GateState, notEnabled: string): string {
-  return gate === "blocked" ? "Blocked until every step passes and no critical finding is recorded" : notEnabled;
+  return gate === "blocked" ? "Blocked until every step passes" : notEnabled;
 }
 
 /* ── the header ───────────────────────────────────────────────────────────── */
@@ -374,12 +374,12 @@ export function chipsOf(view: SandboxView): StageChips {
 
 export const LOADING_CHIPS: StageChips = { runtime: { state: "loading" }, freshness: { state: "loading" }, reconciliation: { state: "loading" } };
 
-export function subtitleOf(view: SandboxView, routeDeploymentId: string): string {
-  const parts = [`Deployment ${view.deploymentId ?? routeDeploymentId}`];
+/** Venue and account; the deployment and the portfolio are in the breadcrumb, so the subtitle does not say them again. */
+export function subtitleOf(view: SandboxView): string | null {
+  const parts: string[] = [];
   if (view.venue !== null) parts.push(view.venue);
   if (view.accountRef !== null) parts.push(`account ${view.accountRef}`);
-  if (view.portfolioId !== null) parts.push(`portfolio ${view.portfolioId}`);
-  return parts.join(" · ");
+  return parts.length === 0 ? null : parts.join(" · ");
 }
 
 /** The spine's lines for the stages the lineage names. No stage is "done": lineage is a reference, not a history. */
@@ -423,7 +423,8 @@ export function panelLine(panel: PanelView): string {
   const who = sourceWord(panel.authority);
   if (who !== null) parts.push(who);
   parts.push(PANEL_STATE_WORD[panel.state]);
-  if (panel.freshness !== null) parts.push(FRESHNESS_WORD[panel.freshness] ?? humanize(panel.freshness));
+  // An unknown freshness is not a fact to print beside a state that already says unavailable.
+  if (panel.freshness !== null && panel.freshness !== "UNKNOWN") parts.push(FRESHNESS_WORD[panel.freshness] ?? humanize(panel.freshness));
   if (panel.asOf !== null) parts.push(formatAsOf(panel.asOf));
   return parts.join(" · ");
 }

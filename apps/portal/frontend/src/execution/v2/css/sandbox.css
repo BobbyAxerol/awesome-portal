@@ -194,18 +194,31 @@
   gap: var(--space-4);
   min-width: 0;
 }
+/* Each action is its button with its own reason directly under it, so the dock's repeated name before the reason is not wanted. */
 .exec-sbx-actions {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 .exec-sbx-actions .exec-dock-action {
-  display: contents;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  width: 100%;
 }
 .exec-sbx-actions .exec-dock-why {
-  flex: 0 0 100%;
+  flex: 0 0 auto;
+  width: 100%;
   order: 1;
+}
+.exec-sbx-actions .exec-dock-why[data-l]::before {
+  content: none;
+}
+.exec-sbx-actions .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
 }
 .exec-sbx-prov {
   margin: var(--space-2) 0 0;

@@ -59,8 +59,8 @@ function Provenance({ view, codes }: { view: SandboxView; codes: readonly string
 export function ExitReviewPanel({ view }: { view: SandboxView }) {
   const gate = gateOf(view);
   const { items, codes } = blockers(view);
-  const aside =
-    gate === "blocked" ? <Flag kind="rejected" label="Blocked" size="sm" /> : gate === "eligible" ? <Flag kind="ok" label="Eligible" size="sm" /> : <span className="exec-blk-na">Not available</span>;
+  // A gate the server did not state has no chip: the empty list below already says `Not available`.
+  const aside = gate === "blocked" ? <Flag kind="rejected" label="Blocked" size="sm" /> : gate === "eligible" ? <Flag kind="ok" label="Eligible" size="sm" /> : undefined;
   const empty =
     view.version === "v2" ? (
       <NotPublished id="FE-028">Gate criteria</NotPublished>

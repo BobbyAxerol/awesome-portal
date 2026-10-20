@@ -95,6 +95,8 @@ export interface StageHeaderProps {
   spine?: Omit<JourneySpineProps, "variant">;
   /** Below the spine, inside the frame (Canary: the trial-day strip). */
   extra?: ReactNode;
+  /** Right of the breadcrumb, inside the frame (the screen's Refresh). */
+  actions?: ReactNode;
   /** Render a crumb link with the router's `Link`; default is a plain anchor. */
   renderLink?: (to: string, children: ReactNode) => ReactNode;
 }
@@ -187,7 +189,7 @@ export function StageChipRow({ chips }: { chips: StageChips }) {
 }
 
 /** The guard frame. */
-export function StageHeader({ stage, crumb, title, subtitle, chips, spine, extra, renderLink }: StageHeaderProps) {
+export function StageHeader({ stage, crumb, title, subtitle, chips, spine, extra, actions, renderLink }: StageHeaderProps) {
   const guard = STAGE_GUARD[stage];
   // At phone width the compact spine scrolls inside its own box; bring the current stage into view on mount so a
   // stage past the right edge (Canary, Live) is not left clipped. Horizontal only (`block: "nearest"`), and a
@@ -201,6 +203,7 @@ export function StageHeader({ stage, crumb, title, subtitle, chips, spine, extra
   return (
     <header className="exec-stage-guard" data-stage={stage} data-frame={guard.frame}>
       <div>
+        <div className="exec-stage-top">
         <nav className="exec-stage-crumb" aria-label="Breadcrumb">
           <ol>
             {crumb.map((item, index) => {
@@ -214,6 +217,8 @@ export function StageHeader({ stage, crumb, title, subtitle, chips, spine, extra
             })}
           </ol>
         </nav>
+        {actions ? <div className="exec-stage-actions">{actions}</div> : null}
+        </div>
         <p className="exec-stage-tag" data-stage={stage} data-risk={guard.risk ? "true" : undefined}>
           <span>{guard.word}</span>
           {guard.risk ? <span className="exec-stage-tag-risk">{REAL_CAPITAL_AT_RISK}</span> : null}
