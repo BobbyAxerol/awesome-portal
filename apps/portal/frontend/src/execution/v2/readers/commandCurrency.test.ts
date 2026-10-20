@@ -153,6 +153,26 @@ describe("capital CommandStatus, the canonical bodies", () => {
   });
 });
 
+describe("pending-control status, FE-063 recipient_account_id", () => {
+  it("a DEPLOYMENT status carries its owning account, a PORTFOLIO status carries none (null, never an empty string)", () => {
+    expect(pending(PENDING.deployment_cancelled)).toMatchObject({ resource: { kind: "DEPLOYMENT", id: "TEST_ONLY:deployment" }, recipientAccountId: "TEST_ONLY:account" });
+    expect(pending(PENDING.waiting).recipientAccountId).toBeNull();
+  });
+
+  it.each<[string, string, (b: Draft) => void]>([
+    ["waiting", "a PORTFOLIO status with an account", (b) => { b.recipient_account_id = "TEST_ONLY:account"; }],
+    ["deployment_cancelled", "a DEPLOYMENT status with a null account", (b) => { b.recipient_account_id = null; }],
+    ["deployment_cancelled", "a DEPLOYMENT status with the key missing", (b) => { delete b.recipient_account_id; }],
+    ["deployment_cancelled", "an empty account", (b) => { b.recipient_account_id = ""; }],
+    ["deployment_cancelled", "an account that is a number", (b) => { b.recipient_account_id = 7; }],
+    ["deployment_cancelled", "an account with an edge space", (b) => { b.recipient_account_id = " TEST_ONLY:account"; }],
+    ["deployment_cancelled", "an account with a bidi override", (b) => { b.recipient_account_id = `TEST_ONLY:${String.fromCharCode(0x202e)}account`; }],
+    ["waiting", "a PORTFOLIO status with the key missing", (b) => { delete b.recipient_account_id; }],
+  ])("%s: %s voids the read", (name, _label, change) => {
+    expect(readPendingControlStatusV1(edit(PENDING[name], change))).toBeNull();
+  });
+});
+
 describe("pending-control status, the canonical bodies", () => {
   it("UNKNOWN: no amounts, no receipt, no applied flag; the currency is still known", () => {
     for (const key of ["unknown", "failed_before_send"]) {

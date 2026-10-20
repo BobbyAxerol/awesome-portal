@@ -135,6 +135,7 @@ describe("L0 · canonical, verbatim", () => {
     }
     expect(Object.keys(pendingFile.statuses)).toEqual([
       "unknown", "failed_before_send", "waiting", "applied", "cancelled", "partially_applied_cancelled", "rejected", "linked_operation_not_published",
+      "deployment_cancelled",
     ]);
   });
 
@@ -158,6 +159,42 @@ describe("L0 · canonical, verbatim", () => {
       expect(pendViolations(old), name).toEqual(["$.currency: required"]);
       expect(readPendingControlStatusV1(old), name).toBeNull();
     }
+    // FE-063: the same body without recipient_account_id is the pre-upgrade body too (the key is required, nullable).
+    for (const [name, value] of Object.entries(P)) {
+      const { recipient_account_id: _recipient, ...old } = value;
+      expect(pendViolations(old), name).toEqual(["$.recipient_account_id: required"]);
+      expect(readPendingControlStatusV1(old), name).toBeNull();
+    }
+  });
+
+  it("FE-063: the published schema refuses the same four cross-field bodies the reader refuses (the rule is in the schema, not invented here)", () => {
+    const portfolioWithAccount = clone(P.waiting);
+    portfolioWithAccount.recipient_account_id = "TEST_ONLY:account";
+    const deploymentWithout = clone(P.deployment_cancelled);
+    deploymentWithout.recipient_account_id = null;
+    for (const [name, body] of Object.entries({ portfolioWithAccount, deploymentWithout })) {
+      expect(pendViolations(body).length, name).toBeGreaterThan(0);
+      expect(readPendingControlStatusV1(body), name).toBeNull();
+    }
+    // Both valid pairings are accepted by the schema and the reader.
+    for (const body of [P.waiting, P.deployment_cancelled]) {
+      expect(pendViolations(body)).toEqual([]);
+      expect(pendOf(body)).not.toBeNull();
+    }
+  });
+
+  it("FE-063: recipient_account_id is read verbatim and is non-null exactly for the DEPLOYMENT status", () => {
+    const kinds = new Map<string, string | null>();
+    for (const [name, value] of Object.entries(P)) {
+      const status = pendOf(value)!;
+      expect(status.recipientAccountId, name).toBe(value.recipient_account_id);
+      expect(status.recipientAccountId !== null, name).toBe(status.resource.kind === "DEPLOYMENT");
+      kinds.set(status.resource.kind, status.recipientAccountId);
+    }
+    expect(kinds.get("DEPLOYMENT")).toBe("TEST_ONLY:account");
+    expect(kinds.get("PORTFOLIO")).toBeNull();
+    expect(P.deployment_cancelled.resource.kind).toBe("DEPLOYMENT");
+    expect(pendOf(P.deployment_cancelled)!.business.state).toBe("CANCELLED");
   });
 
   it("every capital status embedded in the other fixtures passes the CommandStatus schema, and reads", () => {
@@ -649,13 +686,32 @@ const PEND_ENUMS: Case[] = [
   ...enumsOf(WAITING, ["business", "receipt", "latest_operation"], [...PENDING_SOURCE_OPERATIONS, null]),
 ];
 const PEND_PATHS: (readonly (string | number)[])[] = [
-  ...["schema_version", "family", "command_id", "operation", "original_recall_id", "resource", "environment", "profile_ref", "delivery", "business", "economic_cash_changed", "physical_transfer_performed", "projection", "venue", "next_action", "authority", "created_at_ms", "updated_at_ms", "currency"].map((k) => [k] as const),
+  ...["schema_version", "family", "command_id", "operation", "original_recall_id", "resource", "environment", "profile_ref", "delivery", "business", "economic_cash_changed", "physical_transfer_performed", "projection", "venue", "next_action", "authority", "created_at_ms", "updated_at_ms", "currency", "recipient_account_id"].map((k) => [k] as const),
   ["resource", "kind"], ["resource", "id"],
   ...["state", "business_applied", "amounts", "receipt", "blockers"].map((k) => ["business", k] as const),
   ...amountPaths(["business", "amounts"]),
   ...["control_receipt_id", "latest_receipt_id", "latest_operation", "latest_operation_availability", "latest_operation_reason", "source_event_id", "original_payload_sha256", "versions"].map((k) => ["business", "receipt", k] as const),
   ...PENDING_VERSION_KEYS.map((k) => ["business", "receipt", "versions", k] as const),
 ];
+const DEPLOYED: Draft = P.deployment_cancelled;
+/** FE-063 cross-field rule, both directions, expressed as mutated bodies (the published schema is the oracle for each). */
+function recipientKindCases(): Case[] {
+  const portfolioWithAccount = clone(WAITING);
+  portfolioWithAccount.recipient_account_id = "TEST_ONLY:account";
+  const deploymentWithout = clone(DEPLOYED);
+  deploymentWithout.recipient_account_id = null;
+  const deploymentOnWaiting = clone(WAITING);
+  deploymentOnWaiting.resource.kind = "DEPLOYMENT";
+  const portfolioOnDeployed = clone(DEPLOYED);
+  portfolioOnDeployed.resource.kind = "PORTFOLIO";
+  return [
+    { name: "PORTFOLIO with a recipient account", category: "cross-field", value: portfolioWithAccount, probe: "TEST_ONLY:account" },
+    { name: "DEPLOYMENT with a null recipient account", category: "cross-field", value: deploymentWithout, probe: null },
+    { name: "kind flipped to DEPLOYMENT, recipient still null", category: "cross-field", value: deploymentOnWaiting, probe: null },
+    { name: "kind flipped to PORTFOLIO, recipient still set", category: "cross-field", value: portfolioOnDeployed, probe: "TEST_ONLY:account" },
+  ];
+}
+
 const PEND_NEG: Case[] = [
   ...PEND_ENUMS,
   ...requiredCases(WAITING, PEND_PATHS),
@@ -667,6 +723,9 @@ const PEND_NEG: Case[] = [
   ...stringCases(WAITING, ["original_recall_id"]),
   ...stringCases(WAITING, ["profile_ref"]),
   ...stringCases(WAITING, ["currency"]),
+  ...stringCases(DEPLOYED, ["recipient_account_id"]),
+  ...requiredCases(DEPLOYED, [["recipient_account_id"]]),
+  ...recipientKindCases(),
   ...stringCases(WAITING, ["business", "receipt", "control_receipt_id"]),
   ...stringCases(WAITING, ["business", "receipt", "original_payload_sha256"]),
   ...arrayCases(WAITING, ["business", "blockers"]),

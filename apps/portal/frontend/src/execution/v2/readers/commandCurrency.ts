@@ -172,6 +172,11 @@ export interface PendingControlStatusV1 {
   createdAt: UtcEpochMs;
   updatedAt: UtcEpochMs;
   currency: string;
+  /**
+   * FE-063: the owning recipient account bound by the verified ORIGINAL intent. Non-null exactly when `resource.kind` is DEPLOYMENT,
+   * `null` for a PORTFOLIO recipient. Never a live source lookup and never inferred from a label.
+   */
+  recipientAccountId: string | null;
 }
 
 /** What a reader hands back for a readable body that is not this schema. */
@@ -185,21 +190,21 @@ export type PendingControlStatusRead = { kind: "pending_control_status"; status:
 
 /* ───────────────────────── low-level checks ───────────────────────── */
 
-type Rec = Record<string, unknown>;
+export type Rec = Record<string, unknown>;
 
-function rec(value: unknown): Rec | null {
+export function rec(value: unknown): Rec | null {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Rec : null;
 }
 
 /** Exactly these own keys (a planted `__proto__` is an own key and so is refused). */
-function closed(value: unknown, keys: readonly string[]): Rec | null {
+export function closed(value: unknown, keys: readonly string[]): Rec | null {
   const r = rec(value);
   if (r === null) return null;
   const own = Object.keys(r);
   return own.length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(r, key)) ? r : null;
 }
 
-function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | null {
+export function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | null {
   return typeof value === "string" && (allowed as readonly string[]).includes(value) ? value as T : null;
 }
 
@@ -220,37 +225,37 @@ function codePoints(text: string): number {
 }
 
 /** Text with no control or invisible format character, well-formed, not whitespace-only, at most `max` codepoints. */
-function plain(value: unknown, max = 256): string | null {
+export function plain(value: unknown, max = 256): string | null {
   if (typeof value !== "string" || value.length === 0 || value.length > max * 2 || UNSAFE_TEXT.test(value) || LONE_SURROGATE.test(value) || value.trim().length === 0) return null;
   return codePoints(value) <= max ? value : null;
 }
 
 /** PM source text: `plain` plus no Python-whitespace edge and at most 512 UTF-8 bytes. */
-function pm(value: unknown): string | null {
+export function pm(value: unknown): string | null {
   const text = plain(value, 512);
   return text !== null && !PM_EDGE_SPACE.test(text) && encoder.encode(text).length <= 512 ? text : null;
 }
 
 /** The unit label is PM text; it is printed beside every amount, so it gets no softer rule than any other text. */
-const currencyText = pm;
+export const currencyText = pm;
 
-function nullable<T>(value: unknown, read: (v: unknown) => T | null): T | null | undefined {
+export function nullable<T>(value: unknown, read: (v: unknown) => T | null): T | null | undefined {
   return value === null ? null : read(value) ?? undefined;
 }
 
-function instant(value: unknown): UtcEpochMs | null {
+export function instant(value: unknown): UtcEpochMs | null {
   const at = readUtcEpochMs(value);
   return at !== null && at >= 0 ? at : null;
 }
 
-const COMMAND_ID = /^ecm_[a-f0-9]{32}$/;
+export const COMMAND_ID = /^ecm_[a-f0-9]{32}$/;
 const INT64_MAX = 9223372036854775807n;
 const COUNTER = /^(?:0|[1-9][0-9]{0,18})$/;
 const UNSIGNED_DECIMAL = /^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 
 /** A PM counter: decimal digits, at most int64. Kept as the exact string. */
-function counter(value: unknown): string | null {
+export function counter(value: unknown): string | null {
   return typeof value === "string" && COUNTER.test(value) && BigInt(value) <= INT64_MAX ? value : null;
 }
 
@@ -260,7 +265,7 @@ function money(value: unknown, currency: string): MoneyAmount | null {
   return decimal === null ? null : { currency, decimal, text: `${decimal.display} ${currency}`, fullText: `${decimal.full} ${currency}` };
 }
 
-function readAmounts(raw: unknown, currency: string): StatusAmounts | null {
+export function readAmounts(raw: unknown, currency: string): StatusAmounts | null {
   const r = closed(raw, AMOUNT_KEYS);
   if (r === null) return null;
   const out = {} as Record<AmountKey, MoneyAmount>;
@@ -285,13 +290,13 @@ function sameScale(values: readonly string[]): bigint[] {
 }
 
 /** requested = applied + pending + cancelled + rejected, exactly (the server proves it without floats). */
-function partitionHolds(amounts: StatusAmounts): boolean {
+export function partitionHolds(amounts: StatusAmounts): boolean {
   const [requested, applied, pending, cancelled, rejected] = sameScale(AMOUNT_KEYS.map((key) => amounts[key].decimal.full));
   return requested === applied! + pending! + cancelled! + rejected!;
 }
 
 /** The server's `assertStatePartition`: which outcomes a settled state may carry. */
-function statePartitionHolds(state: PendingBusinessState, amounts: StatusAmounts): boolean {
+export function statePartitionHolds(state: PendingBusinessState, amounts: StatusAmounts): boolean {
   const zero = (key: AmountKey) => scaled(amounts[key].decimal.full).coefficient === 0n;
   switch (state) {
     case "UNKNOWN": return true;
@@ -367,13 +372,18 @@ export function readCommandStatusV1(raw: unknown): CommandStatusRead | null {
 const PENDING_STATUS_KEYS = [
   "schema_version", "family", "command_id", "operation", "original_recall_id", "resource", "environment", "profile_ref", "delivery", "business",
   "economic_cash_changed", "physical_transfer_performed", "projection", "venue", "next_action", "authority", "created_at_ms", "updated_at_ms",
-  "currency",
+  "currency", "recipient_account_id",
 ] as const;
 const RECEIPT_KEYS = [
   "control_receipt_id", "latest_receipt_id", "latest_operation", "latest_operation_availability", "latest_operation_reason", "source_event_id",
   "original_payload_sha256", "versions",
 ] as const;
 const MAX_BLOCKERS = 128;
+
+/** FE-063: a DEPLOYMENT recall carries its owning account, a PORTFOLIO recall carries none. The reader never repairs either side. */
+export function recipientMatchesKind(kind: "PORTFOLIO" | "DEPLOYMENT", recipientAccountId: string | null): boolean {
+  return kind === "DEPLOYMENT" ? recipientAccountId !== null : recipientAccountId === null;
+}
 
 function readReceipt(raw: unknown): PendingControlReceipt | null {
   const r = closed(raw, RECEIPT_KEYS);
@@ -418,6 +428,7 @@ export function readPendingControlStatusV1(raw: unknown): PendingControlStatusRe
   if (r === null || resource === null || business === null) return null;
 
   const currency = currencyText(r.currency);
+  const recipientAccountId = nullable(r.recipient_account_id, pm);
   const commandId = typeof r.command_id === "string" && COMMAND_ID.test(r.command_id) ? r.command_id : null;
   const operation = oneOf(r.operation, PENDING_OPERATIONS);
   const originalRecallId = pm(r.original_recall_id);
@@ -438,6 +449,7 @@ export function readPendingControlStatusV1(raw: unknown): PendingControlStatusRe
     || environment === null || profileRef === null || delivery === null || nextAction === null || authority === null
     || createdAt === null || updatedAt === null || state === null
     || !Array.isArray(business.blockers) || business.blockers.length > MAX_BLOCKERS
+    || recipientAccountId === undefined || !recipientMatchesKind(kind, recipientAccountId)
   ) return null;
   // Runtime chronology (not in the schema).
   if (updatedAt < createdAt) return null;
@@ -461,7 +473,7 @@ export function readPendingControlStatusV1(raw: unknown): PendingControlStatusRe
         commandId, operation, originalRecallId, resource: { kind, id: resourceId }, environment, profileRef, delivery,
         business: { state, businessApplied: null, amounts: null, receipt: null, blockers },
         economicCashChanged: false, physicalTransferPerformed: false, projection: "UNKNOWN", venue: "NOT_APPLICABLE",
-        nextAction, authority, createdAt, updatedAt, currency,
+        nextAction, authority, createdAt, updatedAt, currency, recipientAccountId,
       },
     };
   }
@@ -480,7 +492,7 @@ export function readPendingControlStatusV1(raw: unknown): PendingControlStatusRe
       commandId, operation, originalRecallId, resource: { kind, id: resourceId }, environment, profileRef, delivery,
       business: { state, businessApplied: state === "APPLIED", amounts, receipt, blockers },
       economicCashChanged: false, physicalTransferPerformed: false, projection: "UNKNOWN", venue: "NOT_APPLICABLE",
-      nextAction, authority, createdAt, updatedAt, currency,
+      nextAction, authority, createdAt, updatedAt, currency, recipientAccountId,
     },
   };
 }
