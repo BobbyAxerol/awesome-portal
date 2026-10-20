@@ -9,6 +9,9 @@
 .exec-cards-wrap {
   min-width: 0;
   overflow-x: auto;
+  /* The absolutely positioned screen-reader text of a cell (`.exec-blk-sr`, "(FE-021)") needs this wrap as its containing
+   * block: otherwise it escapes the wrap's own horizontal scroll and widens the page by the table's overhang (UXM-10 F-3). */
+  position: relative;
 }
 .exec-cards-wrap:focus-visible {
   outline: 2px solid var(--accent);

@@ -177,7 +177,10 @@ test("Paper workbench: Orders names the UNKNOWN order, Fills and Positions list 
   // The VN variant is the same screen on the same rows; its calendar is named as not published, never invented.
   await page.goto(`/deployments/paper/${DEPLOYMENT_PAPER}/vn-market`);
   await expect(root).toHaveAttribute("data-variant", "vnm");
-  await expect(root).toContainText("FE-070");
+  // RV-06: the request id and the reason sit behind the GapWhy button, not in the headline; ask the way a reader does.
+  const calendarGap = root.locator('.exec-wb-sub [data-gap="FE-070"]');
+  await calendarGap.getByRole("button").click();
+  await expect(calendarGap).toContainText("Not published (FE-070)");
   expect(watch.foreign).toEqual([]);
   expect(watch.take()).toEqual([]);
 });
@@ -343,7 +346,9 @@ test("Sandbox: a workspace the server does not open the note for shuts the form 
   const root = page.locator('[data-screen="sandbox-v2"]');
   await expect(root).toBeVisible();
   const rail = root.getByRole("complementary", { name: "Exit review and review note" });
-  await expect(rail.getByText("SANDBOX_NOTE_NOT_OPEN_FOR_THIS_ACTOR")).toBeVisible();
+  // FE-068 (ac81f2c2): a code the stage dictionary has no words for reads as the generic sentence; the server's own code rides in the actions' title, not as printed text.
+  await expect(rail.getByRole("button", { name: "Record review note" })).toBeDisabled();
+  await expect(rail.locator('[title="Server reason: SANDBOX_NOTE_NOT_OPEN_FOR_THIS_ACTOR"]')).toHaveCount(1);
   await expect(rail.getByRole("textbox")).toHaveCount(0);
   expect(writes).toEqual([]);
 });
@@ -373,7 +378,8 @@ test("Live (V2 body): orders page in three keyset pages, then the button is gone
   await page.goto(`/deployments/live/${DEPLOYMENT_LIVE}?workspace_id=${V2_WORKSPACE}`);
   const root = page.locator('[data-screen="live-v2"]');
   await expect(root).toBeVisible();
-  const orders = root.getByRole("region", { name: "Orders" });
+  // exact: the table's own scroll region is named "Orders, scrolls sideways" and would otherwise match as a second region.
+  const orders = root.getByRole("region", { name: "Orders", exact: true });
   await expect(orders).toBeVisible();
   const more = orders.getByRole("button", { name: "Load more" });
   const rows = orders.locator("tbody tr, .exec-cards-card");
@@ -386,7 +392,8 @@ test("Live (V2 body): orders page in three keyset pages, then the button is gone
   await expect.poll(async () => rows.count()).toBeGreaterThan(second);
   await expect(more).toHaveCount(0);
   // Page 1 had no panel/cursor; the next two named the panel and carried the server's continuation.
-  expect(reads[0]).toBe(`?workspace_id=${V2_WORKSPACE}`);
+  // BE-P12 (useLiveReads LIVE_INCLUDE): the first read also opts into identity and stage_facts.
+  expect(reads[0]).toBe(`?workspace_id=${V2_WORKSPACE}&include=identity%2Cstage_facts`);
   expect(reads.slice(1).map((search) => new URLSearchParams(search).get("panel"))).toEqual(["orders", "orders"]);
   expect(reads.slice(1).every((search) => /^lps2\.orders\.0000000[12]\./.test(new URLSearchParams(search).get("cursor") ?? ""))).toBe(true);
   expect(watch.take()).toEqual([]);

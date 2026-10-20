@@ -166,11 +166,11 @@ test("FIXTURE_LAB · slice @1280: the fixture buttons and the select are reachab
   });
   expect(outline.style !== "none" && outline.width > 0 || outline.shadow !== "none", "a visible focus indicator").toBe(true);
 
-  // Enter and Space both press it; a heartbeat is liveness only.
+  // Enter and Space both press it; a heartbeat is liveness only (the "(liveness only)" suffix moved to the dd title in 3f5d3991, which kept one short fixture line).
   await page.keyboard.press("Enter");
-  expect(await factOf(page, "Heartbeats")).toBe("1 (liveness only)");
+  expect(await factOf(page, "Heartbeats")).toBe("1");
   await page.keyboard.press("Space");
-  expect(await factOf(page, "Heartbeats")).toBe("2 (liveness only)");
+  expect(await factOf(page, "Heartbeats")).toBe("2");
   expect(await factOf(page, "Notices")).toBe("0 received, 0 folded into an owed read, 1 reads started");
 
   // Shift+Tab walks back; the select is in the tab order and its options change with the keyboard.
