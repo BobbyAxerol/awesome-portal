@@ -1,0 +1,503 @@
+URL http://127.0.0.1:8095/administration/users
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+Users
+◈
+AWAITING APPROVAL:
+STEP-UP REQUIRED
+Open the current Users screen
+Accounts
+123
+Active
+87
+Invited
+12
+Disabled
+12
+Archived
+12
+Locked
+5
+Role
+Role: all
+Administrator (3)
+User (120)
+State
+State: all
+Active (87)
+Invited (12)
+Disabled (12)
+Archived (12)
+Role preset
+Role preset: not published
+Invite account
+Not published
+(FE-015, FE-026, FE-037, FE-038)
+ Role presets
+Not published
+(FE-053)
+ Last sign-in
+Account changes are made on the current Users screen.
+
+16 accounts are awaiting a first password.
+
+ACCOUNTS
+123 of 123
+ACCOUNT	STATE	ROLE	REVISION
+
+Bobby Vu
+bobby
+	
+✓
+OK:
+ACTIVE
+	Administrator	2
+
+Lan Tran
+lan
+	
+✓
+OK:
+ACTIVE
+	Administrator	3
+
+Account 3
+user003
+	
+✓
+OK:
+ACTIVE
+	Administrator	4
+
+Account 4
+user004
+	
+◔
+PENDING:
+INVITED
+◔
+PENDING:
+AWAITING FIRST PASSWORD
+	User	5
+
+Account 5
+user005
+	
+✓
+OK:
+ACTIVE
+	User	6
+
+Account 6
+user006
+	
+❚❚
+PAUSED:
+DISABLED
+◔
+PENDING:
+AWAITING FIRST PASSWORD
+	User	7
+
+Account 7
+user007
+	
+✓
+OK:
+ACTIVE
+	User	1
+
+Account 8
+user008
+	
+✓
+OK:
+ACTIVE
+	User	2
+
+Account 9
+user009
+	
+○
+NOT APPLICABLE:
+ARCHIVED
+	User	3
+
+Account 10
+user010
+	
+✓
+OK:
+ACTIVE
+	User	4
+
+Account 11
+user011
+	
+✓
+OK:
+ACTIVE
+	User	5
+
+Account 12
+user012
+	
+✓
+OK:
+ACTIVE
+	User	6
+
+Account 13
+user013
+	
+✓
+OK:
+ACTIVE
+	User	7
+
+Account 14
+user014
+	
+◔
+PENDING:
+INVITED
+◔
+PENDING:
+AWAITING FIRST PASSWORD
+	User	1
+
+Account 15
+user015
+	
+✓
+OK:
+ACTIVE
+	User	2
+
+Account 16
+user016
+	
+❚❚
+PAUSED:
+DISABLED
+	User	3
+
+Account 17
+user017
+	
+✓
+OK:
+ACTIVE
+⚠
+NEEDS ATTENTION:
+LOCKED
+	User	4
+
+Account 18
+user018
+	
+✓
+OK:
+ACTIVE
+	User	5
+
+Account 19
+user019
+	
+○
+NOT APPLICABLE:
+ARCHIVED
+	User	6
+
+Account 20
+user020
+	
+✓
+OK:
+ACTIVE
+	User	7
+
+Account 21
+user021
+	
+✓
+OK:
+ACTIVE
+	User	1
+
+Account 22
+user022
+	
+✓
+OK:
+ACTIVE
+	User	2
+
+Account 23
+user023
+	
+✓
+OK:
+ACTIVE
+	User	3
+
+Account 24
+user024
+	
+◔
+PENDING:
+INVITED
+◔
+PENDING:
+AWAITING FIRST PASSWORD
+	User	4
+
+Account 25
+user025
+	
+✓
+OK:
+ACTIVE
+	User	5
+
+Account 26
+user026
+	
+❚❚
+PAUSED:
+DISABLED
+	User	6
+
+Account 27
+user027
+	
+✓
+OK:
+ACTIVE
+	User	7
+
+Account 28
+user028
+	
+✓
+OK:
+ACTIVE
+	User	1
+
+Account 29
+user029
+	
+○
+NOT APPLICABLE:
+ARCHIVED
+	User	2
+
+Account 30
+user030
+	
+✓
+OK:
+ACTIVE
+	User	3
+
+Account 31
+user031
+	
+✓
+OK:
+ACTIVE
+	User	4
+
+Account 32
+user032
+	
+✓
+OK:
+ACTIVE
+	User	5
+
+Account 33
+user033
+	
+✓
+OK:
+ACTIVE
+	User	6
+
+Account 34
+user034
+	
+◔
+PENDING:
+INVITED
+◔
+PENDING:
+AWAITING FIRST PASSWORD
+	User	7
+
+Account 35
+user035
+	
+✓
+OK:
+ACTIVE
+	User	1
+
+Account 36
+user036
+	
+❚❚
+PAUSED:
+DISABLED
+◔
+PENDING:
+AWAITING FIRST PASSWORD
+	User	2
+
+Account 37
+user037
+	
+✓
+OK:
+ACTIVE
+	User	3
+
+Account 38
+user038
+	
+✓
+OK:
+ACTIVE
+	User	4
+
+Account 39
+user039
+	
+○
+NOT APPLICABLE:
+ARCHIVED
+	User	5
+
+Account 40
+user040
+	
+✓
+OK:
+ACTIVE
+	User	6
+
+Account 41
+user041
+	
+✓
+OK:
+ACTIVE
+	User	7
+
+Account 42
+user042
+	
+✓
+OK:
+ACTIVE
+	User	1
+
+Account 43
+user043
+	
+✓
+OK:
+ACTIVE
+	User	2
+
+Account 44
+user044
+	
+◔
+PENDING:
+INVITED
+◔
+PENDING:
+AWAITING FIRST PASSWORD
+	User	3
+
+Account 45
+user045
+	
+✓
+OK:
+ACTIVE
+	User	4
+
+Account 46
+user046
+	
+❚❚
+PAUSED:
+DISABLED
+	User	5
+
+Account 47
+user047
+	
+✓
+OK:
+ACTIVE
+	User	6
+
+Account 48
+user048
+	
+✓
+OK:
+ACTIVE
+	User	7
+
+Account 49
+user049
+	
+○
+NOT APPLICABLE:
+ARCHIVED
+	User	1
+
+Account 50
+user050
+	
+✓
+OK:
+ACTIVE
+	User	2
+Showing 50 of 123 accounts, 123 in the roster read
+Load more

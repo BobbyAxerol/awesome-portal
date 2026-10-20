@@ -1,0 +1,132 @@
+URL http://127.0.0.1:8095/deployments/live/dep_canary_01/canary
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Deployments
+/
+Live Operations
+/
+dep_canary_01 · canary
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+The deployment fixes the environment.
+The Canary trial fixes the window.
+Window: Trial window
+Set by the page
+USDT
+Alpha Fleet
+dep_canary_01
+pf_crypto
+acct_canary_grid
+Canary
+Refresh
+
+Live · Canary
+Real capital at risk
+
+Canary control room
+
+BINANCE · Alpha Not available
+
+DISPLAY FRESHNESS
+Not available · Broker source unavailable
+NOT AVAILABLE
+Runtime, Reconciliation
+R1
+R2
+PAPER
+SANDBOX
+●
+CANARY
+LIVE
+Duration 14 days
+
+Not available: Trial day, Started, Exit review opens
+
+Not available: Capital consumed, Gross notional, Daily PnL, Open orders, Broker equity
+
+LIVE VS PAPER VS BACKTEST
+Since canary start
+
+Not available: Live, Paper and Backtest series · Source unavailable
+
+ENVELOPE
+POSITIONS & ORDERS
+RECONCILIATION
+GUARD RULE
+ENVELOPE
+
+◐
+PARTIAL DATA:
+UNDETERMINED
+Not proven: capital cap, gross notional cap, daily loss cap, open orders (max).
+Source unavailable
+
+CAP	PROPOSED
+Capital cap (USDT)	5,000.00
+Gross notional cap (USDT)	10,000.00
+Daily loss cap (USDT)	250.00
+Open orders (max)	20
+Duration (days)	14
+
+Not available: Limit, Consumed, Used
+
+Base risk profile: not verified. Draft: values are proposed, not effective.
+
+PROMOTION DECISION
+Via exit review
+Hold
+Reduce
+Rollback
+Request scale
+
+Not offered in the portal yet · Basis: none published · Step-up: not determined
+
+My access
+BEFORE SCALE-UP
+Production commands are closed on this build.
+The Canary owner has not signed off yet.
+The live source is not available.
+The base risk profile is not verified yet.
+Protective actions are not available on this build.
+Broker data is not available.
+Provenance
+ROLLBACK READINESS
+
+Not available: Flatten plan prepared, Paper twin running, Broker data fresh, Last rollback drill

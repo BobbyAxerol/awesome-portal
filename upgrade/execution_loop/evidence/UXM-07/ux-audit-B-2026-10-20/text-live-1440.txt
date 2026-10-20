@@ -1,0 +1,139 @@
+URL http://127.0.0.1:8095/deployments/live/dep_live_01
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Deployments
+/
+Live Operations
+/
+dep_live_01 · live full
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+The deployment fixes the environment.
+Live operations reads from activation.
+Window: Since activation
+Set by the page
+Alpha Fleet
+pf_crypto
+acct_live_grid
+Live
+Refresh
+
+Live
+Real capital at risk
+
+Live operations
+
+dep_live_01 · BINANCE · Alpha Not available
+
+DISPLAY FRESHNESS
+Not available · Freshness not published
+NOT AVAILABLE
+Runtime, Reconciliation
+R1
+R2
+PAPER
+SANDBOX
+CANARY
+●
+LIVE
+
+Source not qualified.
+
+Not available: Capital, Gross notional, Daily P&L, Open orders, Broker equity
+
+LIVE NET PNL
+Since activation
+
+Not available: Live net PnL series
+
+EXPOSURE & ORDERS
+CONTINUITY
+PREDECESSOR ENVELOPE
+GUARD RULES
+RECONCILIATION
+
+Not available: Internal, Broker and Difference figures
+
+POSITIONS
+Internal figures
+
+Not available: Position rows
+
+ORDERS
+
+Not available: Open order rows
+
+Open the full blotter for this deployment
+
+PROTECTIVE LADDER
+Halt → Reduce → Close
+Halt
+Step 1 of 3
+
+Stops new orders.
+
+Halt
+Reduce
+Step 2 of 3
+
+Trims exposure.
+
+Reduce
+Emergency close
+Step 3 of 3
+
+Closes every position now.
+
+Emergency close
+
+Not offered in the portal yet · Basis: none published · Step-up: not determined
+
+My access
+WHAT IS BLOCKING
+Commands are closed on this build.
+Live activation is not approved.
+Canary exit evidence is not available.
+The live source is not available.
+Update continuity is not available.
+The broker state is not available.
+Rollback evidence is not available.
+A backend delivery is still pending.
+Realtime updates are off.
+Provenance

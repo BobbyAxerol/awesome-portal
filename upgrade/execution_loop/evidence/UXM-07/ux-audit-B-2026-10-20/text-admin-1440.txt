@@ -1,0 +1,274 @@
+URL http://127.0.0.1:8095/administration/actions
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Administration
+/
+Admin Actions
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Not applied here. This screen's read has no environment filter.
+Window applies when the server supports it.
+Not applied: Environment, Window
+Admin Actions
+○
+NOT APPLICABLE:
+UNAVAILABLE
+Read 2026-10-17 12:04:00 UTC
+Open in Operations
+Refresh
+❚❚
+PAUSED:
+RELAY OFF
+Command authority: Fail closed. First reason nothing is live: PROJECTION, kill switch engaged.
+All 24
+Ready 0
+Not enabled 12
+Start elsewhere 4
+Not offered 8
+0 of 24 can run now
+READ
+0 of 7 ready
+ACTION	SCOPE	STATE
+
+System health
+	system	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+
+
+Alpha / account inspect
+alpha/inspect
+	account · alpha	
+❚❚
+PAUSED:
+NOT OFFERED IN THE PORTAL
+
+
+Capital history
+capital/history
+	portfolio · account	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+
+
+Performance & NAV
+performance/portfolio
+	portfolio · account · alpha	
+❚❚
+PAUSED:
+NOT OFFERED IN THE PORTAL
+
+
+Sizing explanations
+sizing/history
+	alpha	
+❚❚
+PAUSED:
+NOT OFFERED IN THE PORTAL
+
+
+Broker bindings & exposure
+broker/bindings
+	account · venue	
+❚❚
+PAUSED:
+NOT OFFERED IN THE PORTAL
+
+
+Redis inspection
+redis/trading-state
+	venue	
+❚❚
+PAUSED:
+NOT OFFERED IN THE PORTAL
+PORTFOLIO CAPITAL
+0 of 4 ready
+ACTION	SCOPE	STATE
+
+Create portfolio
+portfolio/create
+	portfolio	
+◆
+OPERATION:
+START IN PORTFOLIOS
+Open
+
+
+Portfolio state
+portfolio/state
+	portfolio	
+◆
+OPERATION:
+START IN PORTFOLIOS
+Open
+
+
+Change allocation
+allocation/<root>
+	portfolio · account	
+◆
+OPERATION:
+START IN PORTFOLIOS
+Open
+
+
+Declarative config plan / apply
+config/plan
+	system	
+◆
+OPERATION:
+START IN PORTFOLIOS
+Open
+DEPLOYMENT RISK
+0 of 4 ready
+ACTION	SCOPE	STATE
+
+Deployment state
+deployment/state
+	deployment	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+
+
+Trading state per mode/venue
+risk/state
+	venue	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+
+
+Risk profile
+risk/profile
+	alpha · venue	
+❚❚
+PAUSED:
+NOT OFFERED IN THE PORTAL
+
+
+Register alpha
+alpha/register
+	alpha	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+ACCOUNT
+0 of 2 ready
+ACTION	SCOPE	STATE
+
+Account policy
+account/policy
+	account	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+
+
+Seed paper account
+account/seed-paper
+	account · alpha · venue	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+SYNC AND RECONCILIATION
+0 of 4 ready
+ACTION	SCOPE	STATE
+
+Broker account sync
+account/sync
+	account · venue	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+
+
+Reconcile positions
+account/reconcile-positions
+	account · venue	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+
+
+Reconcile open orders
+account/reconcile-open-orders
+	account · venue	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+
+
+Aggregate physical reconcile
+broker/reconcile-positions
+	account · venue	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+EMERGENCY
+0 of 3 ready
+ACTION	SCOPE	STATE
+
+Emergency close
+ops/emergency-close
+	account · alpha · venue	
+○
+NOT APPLICABLE:
+NOT ENABLED FOR THIS PROFILE
+
+
+Shared testnet hard reset
+	system	
+❚❚
+PAUSED:
+NOT OFFERED IN THE PORTAL
+
+
+Lab reset
+	system	
+❚❚
+PAUSED:
+NOT OFFERED IN THE PORTAL
+
+Capital actions are not started here. They begin in Portfolios with a preview.
+
+Provenance

@@ -1,0 +1,152 @@
+URL http://127.0.0.1:8095/deployments/alphas/TEST_ONLY%3Aalpha?tab=replay
+{"sw":1440,"cw":1440}
+FIXTURE DATA - sample data for UI/UX review, not real data, not acceptance evidence
+Skip to main content
+QUANT ECOSYSTEM PORTAL
+Default Workspace
+RESEARCH
+Deployments
+/
+Alpha Fleet
+/
+TEST_ONLY:alpha
+Theme
+Execution Carbon
+Density
+Comfortable
+Compact
+Operational
+COMMAND
+Command Center
+Portal Map
+EXECUTION
+Overview
+Portfolios
+Alpha Fleet
+Accounts
+Operations
+Approvals
+ADMINISTRATION
+Profile & Access
+RESEARCH
+QuantBT Backtest
+Alpha Pool
+Alpha Mining
+Strategy Composer
+DATA & OPERATIONS
+Data Catalog
+PLANNING
+Roadmap & Task Board
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+← Alpha Fleet
+TEST_ONLY:alpha
+◔
+PENDING:
+NOT SCORED · POLICY NOT SET
+
+Name Not published
+(FE-066)
+Version Not published
+(FE-066)
+Owner asmith
+Run Not published (FE-029)
+Evidence Not published (FE-029)
+Core
+
+Request archive
+
+Not published
+(FE-034)
+. Archive requests cannot be recorded yet.
+
+My access
+Request gate review
+
+Not published
+(FE-020)
+. Gate-review requests cannot be recorded yet.
+
+My access
+✓
+OK:
+FRESH
+As of 2026-10-17 12:04:00 UTC
+PERFORMANCE
+DEPLOYMENTS
+RESEARCH EVIDENCE
+REGIME FIT
+ORDERS & FILLS
+ACTIVITY & DECISIONS
+MORE
+Book
+Real-funded
+Paper
+Sandbox
+
+6 orders loaded; the Portal holds more. The log and chart show only what is loaded.
+
+Load more orders
+TRADE REPLAY
+TEST_ONLY:alpha
+Book Real-funded
+Account acct_binance_02
+TRADE REPLAY — TRADE LOGS ON CANDLES
+acct_binance_02
+BTCUSDT
+ETHUSDT
+BINANCE USDM
+1m
+5m
+15m
+30m
+1h
+4h
+1d
+Interval derived from the strategy id
+mark 67,193.30 ▲
++
+−
+◀
+▶
+Fit
+Expand
+25 bars · 1h · 3 fills · 2 legs · 0 round trips · 3 position boxes · crosshair · drag · wheel zoom · drag the price axis · ← → step fills
+	
+	
+
+	
+	
+▲ long entry · ▽ long exit (hollow; label = realized_pnl)
+▼ short entry · △ short exit
+▒ entry→TP · ▒ entry→SL position box, R:R at its edge (legs paired to the entry by time · DERIVED)
+─ ─ TP / SL leg at trigger_price · ◇ triggered · ⊣ cancelled · ┈ resting limit level
+× rejected (0)
+╌ round trip · ▮ venue candle up / down · hover a marker for its card · click ↔ log row · ← → step fills
+▲ / ▼ ┈ Off-scale levels are pinned to the edge with their value; the line position is not their price.
+How this is built
+TRADE LOG — EVENTS BEHIND THE MARKERS
+8 events · BTCUSDT · row ↔ marker share order_id / fill id
+TIME (UTC)	EVENT	ORDER	LEG	TYPE · SIDE	QTY	PRICE / TRIGGER	FEE	RESULT
+17 Oct 02:00:00Z	Submit	ord_007	Entry	Market · Sell GTC	0.1	At market	No fill yet	Status not known
+16 Oct 20:01:30Z	Fill	ord_004
+fill fill_003
+	Entry	Limit · Buy	0.05	67,411.00	Not published	Entry filled
+16 Oct 20:00:30Z	Fill	ord_004
+fill fill_002
+	Entry	Limit · Buy	0.31	67,410.55	4.18 · maker	Entry filled
+16 Oct 20:00:00Z	Submit	ord_004	Entry	Limit · Buy GTC	0.52	67,410.55	On the fill rows	Partly filled
+16 Oct 14:00:12Z	Fill	ord_001
+fill fill_001
+	Entry	Limit · Buy	0.4	67,200.50	5.38 · maker	Entry filled
+16 Oct 14:00:06Z	Armed	ord_003	Stop loss	Stop · Sell GTC · reduce only	0.4	66,100.00 (trigger)	No fill yet	Waiting for the price
+16 Oct 14:00:05Z	Armed	ord_002	Take profit	Take profit · Sell GTC · reduce only	0.4	68,500.00 (trigger)	No fill yet	Waiting for the price
+16 Oct 14:00:04Z	Submit	ord_001	Entry	Limit · Buy GTC	0.4	67,200.50	On the fill rows	Order filled
