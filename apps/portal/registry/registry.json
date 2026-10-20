@@ -1,7 +1,7 @@
 {
   "schema_version": "portal.registry.v1",
   "registry_id": "portal-default",
-  "revision": 7,
+  "revision": 8,
   "feature_groups": [
     {
       "id": "command",
@@ -703,6 +703,40 @@
         "icon_key": "user-round-cog",
         "show_in_sidebar": true,
         "show_in_command_palette": true
+      }
+    },
+    {
+      "id": "PROFILE_ACCESS_SELF",
+      "group": "administration",
+      "label": "My access",
+      "description": "What you can see and do, and the grants behind it. Only your own.",
+      "canonical_route": "/administration/my-access",
+      "legacy_routes": [],
+      "maturity": "AVAILABLE",
+      "data_mode": "NONE",
+      "permissions": [],
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "source_module": null,
+      "prototype_frame_id": null,
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "default_task_id": null,
+      "screen_ids": [],
+      "concern_ids": [],
+      "lifecycle_stage_ids": [],
+      "summary_source_ids": [],
+      "hidden_for_roles": [],
+      "activation_gate": null,
+      "navigation": {
+        "order": 15,
+        "icon_key": "user-round-cog",
+        "show_in_sidebar": false,
+        "show_in_command_palette": false
       }
     },
     {

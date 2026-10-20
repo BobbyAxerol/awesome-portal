@@ -255,7 +255,9 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
               />
             ))
           : null}
-        {registry.features.map((feature) => {
+        {registry.features.filter((feature) => feature.canonical_route !== SELF_ENTRY_PATH).map((feature) => {
+          // Registry rev 8 lists PROFILE_ACCESS_SELF (navigation/breadcrumbs/featureForPath), but its route is the
+          // explicit, flag-gated one below: a registry-derived route would render a preview in a flag-off build.
           const module = MODULES[feature.id];
           const previewScreen = previewByExactRoute.get(feature.canonical_route);
           const previewScreenId =
@@ -283,7 +285,7 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
         {/* BE-P7 self-only "My access" (`self_entry.route`): the SAME self-view the access screen draws, with NO `manage` prop, so
             the admin policy matrix cannot be reached from here whatever the session says. The matrix stays at
             ADMIN_PROFILE_ACCESS_ROUTE behind its owner + capability guard. Mounted only with the `profile` flag; flag off the path
-            is not a route (the catch-all answers). Not a registry feature (rev 7 proposal in the BE-P7 consumer receipt). */}
+            is not a route (the catch-all answers). A registry feature since rev 8 (PROFILE_ACCESS_SELF: listing only; this explicit route stays the mount). */}
         {V2Access !== null && isV2Screen("profile") ? <Route path={SELF_ENTRY_PATH} element={<V2Access />} /> : null}
 
         {/* Execution Loop Phase 0 fixtures: components, not a screen. */}

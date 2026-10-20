@@ -22,7 +22,7 @@ Writer: Claude (FE writer, consumer side). Consumer receipt per Rules §10.12.4 
 | step-up button (cockpit) | **ACCEPTED** model + component + port / **mount PARTIAL** | no cockpit control names a capital action today, so the rail mounts the block only when given a target (§2.2) |
 | `portal.access-step-up.v1` response `family` | **ACCEPTED** | required, closed, the answer for another family is refused |
 | `GET /self-context` | **ACCEPTED** (reader, port, hook, chooser) | consumed 8/8 top-level keys and every nested key |
-| `self_entry.route` | **ACCEPTED** (route + rail entry) / **registry rev 7 OPEN** (Codex) | proposal in §6 |
+| `self_entry.route` | **ACCEPTED** (route + rail entry) / **registry rev 8 added** (Codex review) | §6 |
 | `account_operations` | **ACCEPTED** | token `execution.accounts.manage` removed |
 | `review-capture-capabilities` `reason_code` | **ACCEPTED** | read through the stage dictionary; V1 `ReviewCapture.tsx` deliberately not edited |
 
@@ -102,6 +102,8 @@ See §8 for the run record. NOT_RUN: Docker, visual pinned-image suite, full hoo
 
 ## 6. Proposal for Codex: registry rev 7 feature entry (the registry is Codex-owned; nothing is edited here)
 
+**Update 2026-10-20 (RV-14, Claude implements, Codex reviews):** done as registry **revision 8**, not 7 (revision 7 already carries `scoped_v2_replacement`, e19ad906). Differences from the proposal below: `order` 15 (`administration` order 20 is `EXECUTION_ADMIN_ACTIONS`; visible positions must be unique), `show_in_sidebar` and `show_in_command_palette` both `false` (the entry stays an offer from a live self-navigation projection, never a static item), `prototype_frame_id` null, `roadmap_epic_id` `EXECUTION-LOOP`. The registry-derived route for `/administration/my-access` is skipped in `PortalRoutes` so the flag-gated explicit route stays the only mount.
+
 The FE lists the entry without it by borrowing the group and icon of `PROFILE_ACCESS`. A registry entry makes the nav, breadcrumbs, palette and `featureForPath` first-class:
 
 ```json
@@ -132,7 +134,7 @@ self-navigation projection is live (the entry must remain an offer, not a static
 `FE-068 | capture reason codes consumed 55dc70c4` ·
 `FE-057 | consumer ACCEPTED self-context 66bb1a31` ·
 `FE-058 | consumer ACCEPTED (self-only route + rail entry 9d059e30; token dropped 7f6aa460)` ·
-`FE-038 | rail entry for ordinary members DONE on the FE; registry rev 7 OPEN (Codex)` ·
+`FE-038 | rail entry for ordinary members DONE on the FE; registry rev 8 PROFILE_ACCESS_SELF added (Codex review)` ·
 `FE-037 | execution.accounts.manage removed 7f6aa460` ·
 `UXM-10 F-11 / F-12 / F-15 | closed`.
 

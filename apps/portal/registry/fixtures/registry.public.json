@@ -277,7 +277,7 @@
       "task_ids": []
     }
   ],
-  "content_digest": "sha256:0a688b5bbb6c980c3f5acd83c41412d0a1dec2afd6ee6c61605fc7da749b35cd",
+  "content_digest": "sha256:5ecadfdcd38a8cda1a11c8438e7074d187dd64959f1c77a4c6c14f53d1cfa8c0",
   "feature_groups": [
     {
       "id": "command",
@@ -887,6 +887,40 @@
       "summary_source_ids": []
     },
     {
+      "activation_gate": null,
+      "canonical_route": "/administration/my-access",
+      "concern_ids": [],
+      "data_mode": "NONE",
+      "default_task_id": null,
+      "description": "What you can see and do, and the grants behind it. Only your own.",
+      "environments": [
+        "local",
+        "research",
+        "paper",
+        "sandbox",
+        "live"
+      ],
+      "group": "administration",
+      "hidden_for_roles": [],
+      "id": "PROFILE_ACCESS_SELF",
+      "label": "My access",
+      "legacy_routes": [],
+      "lifecycle_stage_ids": [],
+      "maturity": "AVAILABLE",
+      "navigation": {
+        "icon_key": "user-round-cog",
+        "order": 15,
+        "show_in_command_palette": false,
+        "show_in_sidebar": false
+      },
+      "permissions": [],
+      "prototype_frame_id": null,
+      "roadmap_epic_id": "EXECUTION-LOOP",
+      "screen_ids": [],
+      "source_module": null,
+      "summary_source_ids": []
+    },
+    {
       "activation_gate": "Execution Loop Phase 9 backend authority and integration evidence pass.",
       "canonical_route": "/execution",
       "concern_ids": [
@@ -1423,7 +1457,7 @@
     }
   ],
   "registry_id": "portal-default",
-  "revision": 7,
+  "revision": 8,
   "schema_version": "portal.registry.v1",
   "screens": [
     {
