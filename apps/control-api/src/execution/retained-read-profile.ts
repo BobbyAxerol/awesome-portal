@@ -34,6 +34,8 @@ export function coreExecutionRead(path: string): boolean {
   // workspace. SessionGuard still rejects ALL retained-profile POSTs first.
   if (/^\/api\/v1\/execution\/instance-registrations\/ecm_[a-f0-9]{32}(?![\s\S])/u.test(path)) return true;
   if (/^\/api\/v1\/execution\/pending-recalls\/ecm_[a-f0-9]{32}(?![\s\S])/u.test(path)) return true;
+  // FE-062: the exact-resource discovery GET is the same Core-owned family; mutations stay refused by SessionGuard.
+  if (path === "/api/v1/execution/pending-recalls") return true;
   // Additive local workflow GET only. No neighboring detail/mutation exemption.
   if (/^\/api\/v1\/execution\/capital-commands\/ecm_[a-f0-9]{32}\/workflow$/.test(path)) return true;
   // Existing Core-owned gate envelopes keep the caller's workflow workspace;

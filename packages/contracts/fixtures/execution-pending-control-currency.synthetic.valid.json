@@ -1,6 +1,122 @@
 {
   "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
   "runtime_qualified": false,
+  "discovery_open": {
+    "schema_version": "portal.execution.pending-recall-discovery.v1",
+    "family": "PENDING_RECALL_CONTROL",
+    "coverage": "PORTAL_CONTROLLED_RECALLS_ONLY",
+    "untracked_recalls": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED"
+    },
+    "resource": {
+      "kind": "PORTFOLIO",
+      "id": "TEST_ONLY:portfolio"
+    },
+    "environment": "paper",
+    "items": [
+      {
+        "original_recall_id": "TEST_ONLY:original-recall",
+        "currency": "USDT",
+        "recipient_account_id": null,
+        "state": "WAITING_ENCUMBRANCE",
+        "amounts": {
+          "requested": "100",
+          "applied": "25",
+          "pending": "75",
+          "cancelled": "0",
+          "rejected": "0"
+        },
+        "versions": {
+          "budget": "9007199254740993",
+          "source": "11",
+          "parent": "12",
+          "book": "13",
+          "command": "14"
+        },
+        "latest_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+        "last_known_command_id": "ecm_00000000000000000000000000000031",
+        "unresolved_command_id": null,
+        "last_operation": "APPLY_PENDING",
+        "updated_at_ms": 1792300000000
+      },
+      {
+        "original_recall_id": "TEST_ONLY:second-recall",
+        "currency": "USDT",
+        "recipient_account_id": null,
+        "state": "UNKNOWN",
+        "amounts": null,
+        "versions": null,
+        "latest_receipt_id": null,
+        "last_known_command_id": null,
+        "unresolved_command_id": "ecm_00000000000000000000000000000032",
+        "last_operation": "APPLY_PENDING",
+        "updated_at_ms": 1792300000000
+      }
+    ],
+    "truncated": false,
+    "observed_at_ms": 1792300060000
+  },
+  "discovery_deployment": {
+    "schema_version": "portal.execution.pending-recall-discovery.v1",
+    "family": "PENDING_RECALL_CONTROL",
+    "coverage": "PORTAL_CONTROLLED_RECALLS_ONLY",
+    "untracked_recalls": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED"
+    },
+    "resource": {
+      "kind": "DEPLOYMENT",
+      "id": "TEST_ONLY:deployment"
+    },
+    "environment": "paper",
+    "items": [
+      {
+        "original_recall_id": "TEST_ONLY:original-recall",
+        "currency": "USDT",
+        "recipient_account_id": "TEST_ONLY:account",
+        "state": "WAITING_ENCUMBRANCE",
+        "amounts": {
+          "requested": "100",
+          "applied": "25",
+          "pending": "75",
+          "cancelled": "0",
+          "rejected": "0"
+        },
+        "versions": {
+          "budget": "9007199254740993",
+          "source": "11",
+          "parent": "12",
+          "book": "13",
+          "command": "14"
+        },
+        "latest_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+        "last_known_command_id": "ecm_00000000000000000000000000000034",
+        "unresolved_command_id": null,
+        "last_operation": "APPLY_PENDING",
+        "updated_at_ms": 1792300000000
+      }
+    ],
+    "truncated": false,
+    "observed_at_ms": 1792300060000
+  },
+  "discovery_empty": {
+    "schema_version": "portal.execution.pending-recall-discovery.v1",
+    "family": "PENDING_RECALL_CONTROL",
+    "coverage": "PORTAL_CONTROLLED_RECALLS_ONLY",
+    "untracked_recalls": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED"
+    },
+    "resource": {
+      "kind": "PORTFOLIO",
+      "id": "TEST_ONLY:portfolio"
+    },
+    "environment": "paper",
+    "items": [],
+    "truncated": false,
+    "observed_at_ms": 1792300060000
+  },
   "statuses": {
     "unknown": {
       "schema_version": "portal.execution.pending-recall-status.v1",
