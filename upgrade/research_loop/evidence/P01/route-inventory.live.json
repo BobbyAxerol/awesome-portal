@@ -2,7 +2,7 @@
   "schema": "research-loop.live-route-ledger.v1",
   "statement": "Live static route ledger. Regenerate with --write-live-routes in the same change that adds or removes a route.",
   "protected_kernel_sha256": "34dc1847d051ca40f9ae3d2fbbf2d7e8fdc6b8d1e853beb0cc480b69afe2054d",
-  "route_count": 309,
+  "route_count": 316,
   "routes": [
     {
       "method": "DELETE",
@@ -51,7 +51,17 @@
     },
     {
       "method": "GET",
+      "path": "/api/admin/profile-access/v2/eligibility/batch",
+      "owner": "apps/control-api/src/execution-v2/access.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/admin/profile-access/v2/proposals/:id",
+      "owner": "apps/control-api/src/execution-v2/access.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/admin/profile-access/v2/self-context",
       "owner": "apps/control-api/src/execution-v2/access.controller.ts"
     },
     {
@@ -491,12 +501,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/execution/governance/approvals/request-lookup",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/execution/governance/exit-reviews/:review_id",
       "owner": "apps/control-api/src/governance/governance.controller.ts"
     },
     {
       "method": "GET",
       "path": "/api/v1/execution/governance/review-capture-capabilities",
+      "owner": "apps/control-api/src/governance/governance.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/governance/stage-action-eligibility",
       "owner": "apps/control-api/src/governance/governance.controller.ts"
     },
     {
@@ -576,6 +596,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/execution/manager/series",
+      "owner": "apps/control-api/src/execution-v2/manager-series.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/execution/market/candles",
       "owner": "apps/control-api/src/execution/market-context.controller.ts"
     },
@@ -611,6 +636,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/execution/operations/f0/:operation_id/apply-attempts/:request_key",
+      "owner": "apps/control-api/src/operations/f0-read.controller.ts"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/execution/operations/incidents/:incident_id",
       "owner": "apps/control-api/src/operations/incident.controller.ts"
     },
@@ -618,6 +648,11 @@
       "method": "GET",
       "path": "/api/v1/execution/orders/:orderId/funnel",
       "owner": "apps/control-api/src/execution/analytics.controller.ts"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/execution/pending-recalls",
+      "owner": "apps/control-api/src/execution-v2/pending-control.controller.ts"
     },
     {
       "method": "GET",
