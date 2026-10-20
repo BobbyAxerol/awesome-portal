@@ -21,6 +21,7 @@ import { ManagerPage, managerPage } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
 import { absentRelation, buildStageFacts, RelationInput } from "../execution/stage-facts";
+import { unpublishedVenueCalendar } from "../execution/venue-calendar";
 import {
   oldestStageAsOfMs,
   stagePanels,
@@ -413,6 +414,9 @@ export class PaperReadService {
           reconciliation: paperRelationInput(relations, "reconciliation"),
           reconciliationAsOf: relations.find((item) => item.spec.key === "reconciliation")?.page?.asOf ?? null,
         }),
+        // FE-070: the VN market variant carries the session calendar as typed facts. No calendar
+        // source of truth is wired (capability venue.calendar stays UNAVAILABLE), so each is NOT_PUBLISHED.
+        ...(vnm ? { venue_calendar: unpublishedVenueCalendar() } : {}),
         ...scoped,
         ...depth.rows,
         ...(Object.keys(depth.windows).length > 0 ? { history_windows: depth.windows } : {}),

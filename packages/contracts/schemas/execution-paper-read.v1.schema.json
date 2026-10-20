@@ -29,6 +29,360 @@
     }
   ],
   "$defs": {
+    "VenueCalendar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "market",
+        "basis",
+        "timezone",
+        "windows",
+        "breaks",
+        "holidays",
+        "is_open",
+        "as_of"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": "execution.venue-calendar.v1"
+        },
+        "market": {
+          "const": "VN_EQUITY"
+        },
+        "basis": {
+          "const": "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE"
+        },
+        "timezone": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "$ref": "#/$defs/VenueTimezone"
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "windows": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 12,
+                  "items": {
+                    "$ref": "#/$defs/VenueWindow"
+                  }
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "breaks": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "type": "array",
+                  "maxItems": 12,
+                  "items": {
+                    "$ref": "#/$defs/VenueBreak"
+                  }
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "holidays": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "type": "array",
+                  "maxItems": 400,
+                  "items": {
+                    "$ref": "#/$defs/VenueHoliday"
+                  }
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "is_open": {
+          "oneOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "AVAILABLE"
+                },
+                "value": {
+                  "type": "boolean"
+                },
+                "reason_code": {
+                  "type": "null"
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "availability",
+                "value",
+                "reason_code"
+              ],
+              "properties": {
+                "availability": {
+                  "const": "NOT_PUBLISHED"
+                },
+                "value": {
+                  "type": "null"
+                },
+                "reason_code": {
+                  "$ref": "#/$defs/StageReasonCode"
+                }
+              }
+            }
+          ]
+        },
+        "as_of": {
+          "$ref": "#/$defs/StageFactTimestamp"
+        }
+      },
+      "description": "FE-070. Present only on the VN market workbench variant. Every member is a Fact: the Portal holds no trading-calendar source of truth, so each is NOT_PUBLISHED (N28_VENUE_CALENDAR_NOT_ACTIVE) until the market-data-layer session calendar is wired. is_open is the SOURCE's own statement at as_of; a client never infers PAUSED or AGING from window arithmetic."
+    },
+    "VenueHoliday": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "date",
+        "name"
+      ],
+      "properties": {
+        "date": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$"
+        },
+        "name": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "VenueBreak": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "from",
+        "to",
+        "basis"
+      ],
+      "properties": {
+        "name": {
+          "const": "BREAK"
+        },
+        "from": {
+          "$ref": "#/$defs/VenueClock"
+        },
+        "to": {
+          "$ref": "#/$defs/VenueClock"
+        },
+        "basis": {
+          "const": "GAP_BETWEEN_PUBLISHED_WINDOWS"
+        }
+      },
+      "description": "The interval between two consecutive published windows (the lunch break). Arithmetic on published windows only."
+    },
+    "VenueWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "kind",
+        "open",
+        "close"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "kind": {
+          "enum": [
+            "TRADING_SESSION",
+            "OPENING_AUCTION",
+            "CLOSING_AUCTION"
+          ]
+        },
+        "open": {
+          "$ref": "#/$defs/VenueClock"
+        },
+        "close": {
+          "$ref": "#/$defs/VenueClock"
+        }
+      },
+      "description": "A named window in the venue's local time. OPENING_AUCTION / CLOSING_AUCTION (ATO / ATC) only when the source names them; a generic session is TRADING_SESSION. Window kinds describe the market calendar, not which order types the Portal can route."
+    },
+    "VenueClock": {
+      "type": "string",
+      "pattern": "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+    },
+    "VenueTimezone": {
+      "type": "string",
+      "pattern": "^[A-Za-z_]+(?:/[A-Za-z0-9_+-]+){1,2}$",
+      "description": "IANA time-zone name, e.g. Asia/Ho_Chi_Minh."
+    },
     "StageFacts": {
       "type": "object",
       "additionalProperties": false,
@@ -654,7 +1008,8 @@
         "aggregates": { "oneOf": [{ "$ref": "#/$defs/Aggregates" }, { "type": "null" }] },
         "exact_query": { "$ref": "#/$defs/BlotterExactQuery" },
         "derived_insights": { "oneOf": [{ "$ref": "#/$defs/DerivedInsights" }, { "type": "null" }] },
-        "stage_facts": { "$ref": "#/$defs/StageFacts" }
+        "stage_facts": { "$ref": "#/$defs/StageFacts" },
+        "venue_calendar": { "$ref": "#/$defs/VenueCalendar" }
       }
     }
   }

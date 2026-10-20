@@ -73,6 +73,95 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description FE-070. Present only on the VN market workbench variant. Every member is a Fact: the Portal holds no trading-calendar source of truth, so each is NOT_PUBLISHED (N28_VENUE_CALENDAR_NOT_ACTIVE) until the market-data-layer session calendar is wired. is_open is the SOURCE's own statement at as_of; a client never infers PAUSED or AGING from window arithmetic. */
+        VenueCalendar: {
+            /** @constant */
+            schema_version: "execution.venue-calendar.v1";
+            /** @constant */
+            market: "VN_EQUITY";
+            /** @constant */
+            basis: "SOURCE_SESSION_CALENDAR_NOT_A_CLIENT_INFERENCE";
+            timezone: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: components["schemas"]["VenueTimezone"];
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            windows: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: components["schemas"]["VenueWindow"][];
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            breaks: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: components["schemas"]["VenueBreak"][];
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            holidays: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: components["schemas"]["VenueHoliday"][];
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            is_open: {
+                /** @constant */
+                availability: "AVAILABLE";
+                value: boolean;
+                reason_code: null;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                value: null;
+                reason_code: components["schemas"]["StageReasonCode"];
+            };
+            as_of: components["schemas"]["StageFactTimestamp"];
+        };
+        VenueHoliday: {
+            date: string;
+            name: string | null;
+        };
+        /** @description The interval between two consecutive published windows (the lunch break). Arithmetic on published windows only. */
+        VenueBreak: {
+            /** @constant */
+            name: "BREAK";
+            from: components["schemas"]["VenueClock"];
+            to: components["schemas"]["VenueClock"];
+            /** @constant */
+            basis: "GAP_BETWEEN_PUBLISHED_WINDOWS";
+        };
+        /** @description A named window in the venue's local time. OPENING_AUCTION / CLOSING_AUCTION (ATO / ATC) only when the source names them; a generic session is TRADING_SESSION. Window kinds describe the market calendar, not which order types the Portal can route. */
+        VenueWindow: {
+            name: string;
+            /** @enum {unknown} */
+            kind: "TRADING_SESSION" | "OPENING_AUCTION" | "CLOSING_AUCTION";
+            open: components["schemas"]["VenueClock"];
+            close: components["schemas"]["VenueClock"];
+        };
+        VenueClock: string;
+        /** @description IANA time-zone name, e.g. Asia/Ho_Chi_Minh. */
+        VenueTimezone: string;
         /** @description FE-067. Additive on the Paper workbench (`data.stage_facts`) and on the Sandbox, Canary and Live Full bodies (top level `stage_facts`). The pre-existing pinned-null `runtime_state` members are unchanged. */
         StageFacts: {
             /** @constant */
@@ -259,6 +348,7 @@ export interface components {
             exact_query?: components["schemas"]["BlotterExactQuery"];
             derived_insights?: components["schemas"]["DerivedInsights"] | null;
             stage_facts?: components["schemas"]["StageFacts"];
+            venue_calendar?: components["schemas"]["VenueCalendar"];
         };
         BlotterMirrorRevision: {
             projection_epoch: string;

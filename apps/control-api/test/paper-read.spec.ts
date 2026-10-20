@@ -882,4 +882,19 @@ describe("N22 full Paper read product BFF", () => {
     expect(result.schema_version).toBe("execution.paper-workbench-vnm.v1");
     expect(result.data.stage_facts.sessions.availability).toBe("NOT_PUBLISHED");
   });
+
+  it("FE-070 carries the VN market calendar only on the VN variant, every member typed NOT_PUBLISHED", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+    ]);
+    const vnm = await service(source).workbench(principal(), "dep_1", true) as Record<string, any>;
+    const calendar = vnm.data.venue_calendar;
+    expect(calendar).toMatchObject({ schema_version: "execution.venue-calendar.v1", market: "VN_EQUITY" });
+    for (const member of ["timezone", "windows", "breaks", "holidays", "is_open", "as_of"]) {
+      expect(calendar[member]).toEqual({ availability: "NOT_PUBLISHED", value: null, reason_code: "N28_VENUE_CALENDAR_NOT_ACTIVE" });
+    }
+    const plain = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    expect(plain.data.venue_calendar).toBeUndefined();
+  });
 });
