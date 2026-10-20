@@ -66,6 +66,8 @@ import { marketCandlesPath, readMarketCandles, type MarketCandlesPayload, type M
 import { marketContextCandlesPath, readMarketContextCandles, type MarketContextCandles, type MarketContextQuery } from "./marketContext";
 import { readRelationPage, relationPagePath, type RelationPage, type RelationPageQuery } from "./managerRelations";
 import { encodeManagerSeriesQuery, readManagerSeries, seriesAnswersQuery, type ManagerSeries, type ManagerSeriesQuery } from "../v2/readers/managerSeries";
+import { readManagerDataset, type ManagerDataset } from "../v2/readers/managerDataset";
+import { datasetQueryMismatch, encodeManagerDatasetQuery, managerDatasetPath, type ManagerDatasetQuery } from "./managerDatasetQuery";
 import { observedTimelinePath, readObservedTimeline, type ObservedTimeline, type ObservedTimelineQuery } from "./observedTimeline";
 import { readSubjectActivity, subjectActivityPath, type SubjectActivityPage, type SubjectActivityQuery } from "./subjectActivity";
 import {
@@ -605,6 +607,25 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       "The Manager series",
     );
   };
+  const getManagerDataset = async (query: ManagerDatasetQuery): Promise<Result<ManagerDataset>> => {
+    const request = encodeManagerDatasetQuery(query);
+    if (request === null) return unavailable("The Manager dataset request was not valid (MANAGER_DATASET_QUERY_INVALID), so it was not sent.");
+    // The reader's refusal keeps its own code: another schema, a malformed body and another question are three different facts.
+    let refusal = null as string | null;
+    const result = await readGet(
+      managerDatasetPath(request),
+      (raw) => {
+        const read = readManagerDataset(raw);
+        if (read === null) { refusal = "could not be read (MANAGER_DATASET_REFUSED)"; return null; }
+        if (read.kind !== "dataset") { refusal = `arrived in a shape this build does not accept (UNSUPPORTED_SCHEMA ${read.schemaVersion ?? "none"})`; return null; }
+        const mismatch = datasetQueryMismatch(read.dataset, query);
+        if (mismatch !== null) { refusal = `answers another question (MANAGER_DATASET_ANSWERS_ANOTHER_QUERY ${mismatch})`; return null; }
+        return read.dataset;
+      },
+      "The Manager dataset",
+    );
+    return !result.ok && refusal !== null ? unavailable(`The Manager dataset ${refusal}.`) : result;
+  };
   const getSubjectActivity = (query: SubjectActivityQuery): Promise<Result<SubjectActivityPage>> =>
     readGet(subjectActivityPath(query), readSubjectActivity, "The retained subject activity");
   const listParameters = (query: object) => {
@@ -771,6 +792,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     getObservedTimeline,
     getManagerRelationPage,
     getManagerSeries,
+    getManagerDataset,
     getOperationalComposition,
     getEquitySparklines,
     getStageDrift,

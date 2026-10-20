@@ -61,7 +61,9 @@ import type { AlphaActivity, DeploymentQuality, PortfolioCapital, SourceHealth }
 import type { MarketCandlesPayload, MarketCandlesQuery } from "./marketCandles";
 import type { MarketContextCandles, MarketContextQuery } from "./marketContext";
 import type { RelationPage, RelationPageQuery } from "./managerRelations";
+import type { ManagerDataset } from "../v2/readers/managerDataset";
 import type { ManagerSeries, ManagerSeriesQuery } from "../v2/readers/managerSeries";
+import type { ManagerDatasetQuery } from "./managerDatasetQuery";
 import type { ObservedTimeline, ObservedTimelineQuery } from "./observedTimeline";
 import type { SubjectActivityPage, SubjectActivityQuery } from "./subjectActivity";
 
@@ -404,6 +406,17 @@ export interface ExecutionApi {
    * request the server would refuse (no subject, five subjects, a duplicate) is refused here without a fetch.
    */
   getManagerSeries(query: ManagerSeriesQuery): Promise<Result<ManagerSeries>>;
+  /**
+   * BE-P1 / BE-P4 / FE-012 / FE-027 / FE-033 `GET /manager/{fund-overview|fleet|portfolios/:id/overview|alphas/:id/overview|
+   * accounts/:id/overview|deployments/:id/overview}`: the Manager DATASET of one surface in one environment (rows, groups, page,
+   * capital statements). The query is encoded exactly as the OpenAPI says (JSON for `window`, `filters`, `sort`,
+   * `economic_partition`; comma lists for `stage_filter`, `group_by`). Any non-2xx, any network failure, a body of another
+   * schema, a body the reader refuses and a well-formed body that ANSWERS ANOTHER QUESTION (another surface, environment, scope,
+   * window, page size, grouping, filter or stage) is a typed `unavailable` with its code: never an empty table, never partial
+   * rows. A request the server would refuse (unknown field or operator, a doubled operand, an `IN` over 32 values, a backwards
+   * window, `after` with `before`) is refused here without a fetch.
+   */
+  getManagerDataset(query: ManagerDatasetQuery): Promise<Result<ManagerDataset>>;
   /**
    * BR-EX-81 exact subject history through the Portal durable retained-current
    * mirror.  This is deliberately separate from the generic relation page:
