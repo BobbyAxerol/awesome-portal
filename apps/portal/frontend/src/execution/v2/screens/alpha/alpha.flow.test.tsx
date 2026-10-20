@@ -216,7 +216,7 @@ describe("links are routed, not full page loads (route audit M7)", () => {
   it("an order's Open link goes to its place in Trade Replay without a reload", async () => {
     mount(`${BASE}?tab=orders`);
     await ready();
-    const link = (await screen.findAllByRole("link", { name: "Open" })).find((a) => (a.getAttribute("href") ?? "").includes("focus=order"))!;
+    const link = (await screen.findAllByRole("link", { name: /^Open / })).find((a) => (a.getAttribute("href") ?? "").includes("focus=order"))!;
     expect(routed(link)).toBe(true);
     await waitFor(() => expect(where()).toContain("tab=replay&focus=order%3Aord_"));
   });

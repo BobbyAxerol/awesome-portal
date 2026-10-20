@@ -45,22 +45,13 @@ function StageDetail({
   return (
     <SectionPanel title={`${spec.label} · ${current === stage ? "Now" : "Selected"}`} level={4}>
     <div className="exec-alp2-stage-detail" data-stage={stage}>
+      {/* Days in stage, gate criteria and the decider are the spine's one "not published" line above; repeating them here said it twice more. */}
       {spec.gate ? (
         <p className="exec-alp2-line">
           Gate review: <Np id="FE-027/028">decision, decider and criteria</Np>
         </p>
-      ) : stage === "live" ? (
-        <p className="exec-alp2-line">No exit gate on Live. Capital actions start in Portfolio.</p>
-      ) : (
-        <p className="exec-alp2-line">
-          Exit gate: <Np id="FE-028">criteria met of required</Np>
-        </p>
-      )}
-      {!spec.gate ? (
-        <p className="exec-alp2-line">
-          Entered and days in stage: <Np id="FE-027">stage history</Np>
-        </p>
       ) : null}
+      {stage === "live" ? <p className="exec-alp2-line">No exit gate on Live. Capital actions start in Portfolio.</p> : null}
       {!spec.gate ? (
         withheld ? (
           <p className="exec-alp2-line">The deployments of this alpha are not in this response (<span className="exec-blk-id">{withheld}</span>).</p>

@@ -131,10 +131,10 @@ describe("identity table", () => {
       expect(row.querySelector("button")).toBeNull();
     }
     expect(document.body.textContent).toContain("Readiness (FE-027, FE-028)");
-    const compare = screen.getAllByRole("button", { name: "Compare" })[0] as HTMLButtonElement;
-    expect(compare.disabled).toBe(true);
-    expect(compare.title).toBe("Not published (FE-033)");
-    expect(document.getElementById(compare.getAttribute("aria-describedby")!)?.textContent).toContain("FE-033");
+    // One line names Compare and Window; the toolbar draws no dead button for them (UX audit A).
+    expect(screen.queryByRole("button", { name: "Compare" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Window" })).toBeNull();
+    expect(document.querySelector(".exec-fleet-unpub")?.textContent).toContain("Compare (FE-033)");
   });
 
   it("draws the stage hue and a mini spine from the published current stage alone", async () => {

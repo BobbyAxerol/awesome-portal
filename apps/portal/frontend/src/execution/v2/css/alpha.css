@@ -95,6 +95,15 @@
   align-items: flex-start;
   gap: var(--space-2);
 }
+/* The button already says what it is: the reason is not prefixed with the action's name, and it wraps instead of ending in an ellipsis (it was cut at phone width). */
+.exec-alp2-requests .exec-dock-why[data-l]::before {
+  content: none;
+}
+.exec-alp2-requests .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+}
 .exec-alp2-chip {
   padding: 2px var(--space-2);
   font: var(--exec-font-control);
@@ -126,7 +135,11 @@
 
 /* current facts */
 .exec-alp2-kpis {
-  --exec-kpi-n: 5;
+  --exec-kpi-n: 2;
+}
+/* A "Not available: ..." line inside a panel sits on the panel's gutter. */
+.exec-alp2-nal {
+  margin: var(--space-2) var(--space-3);
 }
 .exec-alp2-fig {
   display: block;

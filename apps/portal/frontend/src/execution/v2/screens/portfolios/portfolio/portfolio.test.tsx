@@ -70,9 +70,7 @@ describe("header", () => {
     expect(compare.searchParams.get("in")).toBe(PF.core);
     expect(compare.searchParams.get("from")).toBe(`portfolio:${PF.core}`);
     expect(compare.searchParams.get("env")).toBe("paper");
-    const pack = screen.getByRole("button", { name: "Report pack" }) as HTMLButtonElement;
-    expect(pack.disabled).toBe(true);
-    expect(pack.title).toBe("Export is not available yet.");
+    expect(screen.queryByRole("button", { name: "Report pack" })).toBeNull();
   });
 
   it("M2: with Compare off the header has no link to it, a disabled control with the reason instead", async () => {
@@ -147,7 +145,7 @@ describe("Overview", () => {
     expect(screen.queryByRole("group", { name: "Series" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Net PnL" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Return" })).toBeNull();
-    expect(screen.getAllByRole("button", { name: /Export|Report pack/ })).toHaveLength(1);
+    expect(screen.queryAllByRole("button", { name: /Export|Report pack/ })).toHaveLength(0);
   });
 
   it("asks the chart for a width from the window it is drawn in", async () => {
@@ -322,23 +320,15 @@ describe("Allocations", () => {
     expect(within(simulated).queryByRole("region", { name: "Capital in Live" })).toBeNull();
   });
 
-  it("draws the capital flow as structure only: hatched boxes, no band, no amount, and the request id", async () => {
+  it("says once that the capital flow and the receipts are not available, and draws no empty diagram (UX audit A)", async () => {
     mount(makeApi().api);
     await ready();
     await goto("Allocations");
-    const real = screen.getByRole("region", { name: "Real-funded" });
-    const flow = real.querySelector("figure.exec-flow")!;
-    expect(flow.querySelectorAll('[data-testid="flow-band"]')).toHaveLength(0);
-    expect(flow.querySelectorAll(".exec-flow-rect").length).toBeGreaterThanOrEqual(10);
-    expect(flow.querySelectorAll('.exec-flow-rect[data-hatch="true"]')).toHaveLength(flow.querySelectorAll(".exec-flow-rect").length);
-    expect(flow.textContent).toContain("Not published (FE-032) · Amounts and links are not published");
-    expect(flow.textContent).toContain("Structure only, no amounts");
-    expect(flow.textContent).not.toMatch(/\d{1,3},\d{3}/);
-    for (const name of ["Initial funds", "Added funds", "NAV", "Approved budget", "live-0192 · Binance-02"]) expect(flow.textContent).toContain(name);
-    const sim = screen.getByRole("region", { name: "Simulated" }).querySelector("figure.exec-flow")!;
-    expect(sim.textContent).toContain("Virtual funds");
-    expect(sim.textContent).toContain("pap-0301");
-    expect(sim.textContent).not.toContain("live-0192");
+    expect(document.querySelectorAll("figure.exec-flow")).toHaveLength(0);
+    const line = screen.getByTestId("not-available-line");
+    expect(line.textContent).toContain("Not available: Capital flow, Ledger receipts");
+    expect(line.textContent).toContain("FE-032");
+    expect(document.body.textContent).not.toContain("Hover or focus a node");
   });
 
   it("lists the ledger newest first with before and after as published, and says what is bounded", async () => {
@@ -356,7 +346,7 @@ describe("Allocations", () => {
     expect(cell(rows[4], "Event")).toBe("Initial allocation");
     expect(cell(rows[2], "Direction")).toBe("Unchanged");
     expect(rows.map((r) => cell(r, "Time · UTC"))).toEqual([...rows.map((r) => cell(r, "Time · UTC"))].sort().reverse());
-    for (const row of rows) expect(cell(row, "Receipt")).toBe("Not published (FE-032)");
+    expect(within(table).queryByRole("columnheader", { name: "Receipt" })).toBeNull();
     const block = screen.getByRole("region", { name: "Capital ledger in Live" });
     expect(block.textContent).toContain("Showing 5 of 12.");
     expect(block.textContent).toContain("publishes no older page");

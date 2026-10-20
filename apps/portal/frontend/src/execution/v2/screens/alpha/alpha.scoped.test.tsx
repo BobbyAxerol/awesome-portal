@@ -96,17 +96,18 @@ describe("the header and the authority label", () => {
     expect(document.body.textContent ?? "").not.toMatch(LEGACY_ONLY);
   });
 
-  it("a member the v2 body does not state reads Not published (FE-xxx), each with the body's own typed reason behind the mark", async () => {
+  it("a member the v2 body does not state is in the header's one Not available line, each with the body's own typed reason behind the disclosure", async () => {
     mount();
     await ready();
     const meta = document.querySelector(".exec-alp2-meta")!;
-    const member = (word: string) => Array.from(meta.children).find((c) => (c.textContent ?? "").startsWith(word))!;
-    expect(member("Name").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
-    expect(whyText(member("Name"))).toBe("The source has no alpha name");
-    expect(member("Version").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
-    expect(whyText(member("Version"))).toBe("The source has no alpha version");
-    expect(member("Owner").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-030)");
-    expect(whyText(member("Owner"))).toBe("The source owner is not mapped to a Portal user");
+    const line = meta.parentElement!.querySelector("[data-testid='not-available-line']")!;
+    expect(line.textContent).toContain("Not available: Name, Version, Owner, Run, Evidence");
+    expect(line.textContent).toContain("Not published FE-030");
+    fireEvent.click(within(line as HTMLElement).getByRole("button", { name: "Why not available: Name, Version, Owner, Run, Evidence" }));
+    const rows = Array.from(line.querySelectorAll(".exec-blk-why-row")).map((row) => row.textContent ?? "");
+    expect(rows.find((row) => row.startsWith("Name:"))).toContain("The source has no alpha name");
+    expect(rows.find((row) => row.startsWith("Version:"))).toContain("The source has no alpha version");
+    expect(rows.find((row) => row.startsWith("Owner:"))).toContain("The source owner is not mapped to a Portal user");
     // RV-06: no reason rides on a title of a non-focusable wrapper.
     for (const reason of ["has no alpha name", "has no alpha version", "not mapped to a Portal user"]) expect(meta.querySelector(`[title*="${reason}"]`)).toBeNull();
     // A reason code is never printed as text.
@@ -234,12 +235,11 @@ describe("the same sections, from the scoped facts", () => {
     expect(document.body.textContent).not.toContain("Not published (FE-072)");
   });
 
-  it("Research Evidence: the name and version are Not published (FE-066), the alpha id is the one the body names", async () => {
+  it("Research Evidence: no second name-and-version gap (the header says it once), the alpha id is the one the body names", async () => {
     mount(`${SCOPED_ENTRY}&tab=evidence`);
     await ready();
     const panel = await screen.findByRole("tabpanel");
-    expect(panel.textContent).toContain("Name and version");
-    expect(panel.textContent).toContain("Not published (FE-066)");
+    expect(panel.textContent).not.toContain("Name and version");
     expect(panel.textContent).toContain(ALPHA_DOUBLE_ID);
   });
 

@@ -475,7 +475,7 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
             })}
           </div>
 
-          <div className="exec-fleet-tool" role="search">
+          {archived ? null : <div className="exec-fleet-tool" role="search">
             <label className="exec-fleet-field">
               <span className="exec-fleet-sr">Search alpha</span>
               <input
@@ -572,14 +572,12 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
                 </select>
               )}
             </label>
-            <button type="button" className="exec-fleet-btn" disabled title={notPublished(FE.window)} aria-describedby={reasonId}>Window</button>
-            <button type="button" className="exec-fleet-btn" disabled title={notPublished(FE.compare)} aria-describedby={reasonId}>Compare</button>
             <span className="exec-fleet-grow" />
             <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />
-          </div>
-          <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={() => searchInput.current?.focus()} />
-          {/* Tied to every disabled control by aria-describedby: the visible words are the names, the ids are in the title and the hidden text. */}
-          <p id={reasonId} className="exec-fleet-unpub" title={unpublishedList.map((fact) => `${fact.what}: ${notPublished(fact)}`).join("\n")}>
+          </div>}
+          {archived ? null : <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={() => searchInput.current?.focus()} />}
+          {/* Tied to every disabled control by aria-describedby: the visible words are the names, the ids are in the title and the hidden text. The Archived lens has no list to filter, so its panel says the one thing and this line is for assistive tech only. */}
+          <p id={reasonId} className={archived ? "exec-fleet-sr" : "exec-fleet-unpub"} title={unpublishedList.map((fact) => `${fact.what}: ${notPublished(fact)}`).join("\n")}>
             Not available: {unpublishedList.map((fact) => fact.what).join(", ")}
             <span className="exec-fleet-sr"> ({unpublishedList.map((fact) => `${fact.what} (${fact.fe})`).join(", ")})</span>
           </p>

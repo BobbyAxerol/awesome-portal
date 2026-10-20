@@ -107,7 +107,8 @@ function isNotPublished(cell: TriadCell): cell is TriadNotPublished {
 
 function CellView({ cell, suffix, signed, sideMissing }: { cell: TriadCell; suffix?: string; signed: boolean; sideMissing: boolean }) {
   if (sideMissing) return <span className="exec-blk-na">{NO_VALUE_COPY}</span>;
-  if (isNotComputed(cell)) return <span className="exec-blk-na" data-state="not-computed">Not computed · {cell.reason}</span>;
+  // The reason is said once under the block ("Shared binding: the balance difference is not computed"); per cell it is the tooltip and hidden text, not a repeated code.
+  if (isNotComputed(cell)) return <span className="exec-blk-na" data-state="not-computed" title={cell.reason}>Not computed<span className="exec-blk-sr"> · {cell.reason}</span></span>;
   if (isNotPublished(cell)) return <NotPublished id={cell.id} titleReason={cell.reasonCode} compact />;
   return <MetricText metric={cell} suffix={suffix} signed={signed} />;
 }

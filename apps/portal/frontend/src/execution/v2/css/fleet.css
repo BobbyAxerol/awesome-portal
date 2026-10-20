@@ -699,3 +699,10 @@ a.exec-fleet-open {
     grid-column: 1 / -1;
   }
 }
+
+/* A long list of portfolios wraps inside its cell: it was one 400px nowrap line that pushed Stage, Health and Deployments off a 1024px screen. */
+.exec-fleet-v2 .exec-cards tbody td[data-l="Portfolios"] {
+  min-width: 12rem;
+  max-width: 22rem;
+  white-space: normal;
+}

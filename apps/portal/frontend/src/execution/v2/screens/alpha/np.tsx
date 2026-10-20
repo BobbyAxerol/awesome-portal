@@ -30,8 +30,10 @@ export const npText = (id: AlphaFeId): string => `${NOT_PUBLISHED} (${id})`;
 export function Np({ id, children }: { id: AlphaFeId; children?: ReactNode }) {
   if (!isLocal(id)) return <NotPublished id={id}>{children}</NotPublished>;
   return (
-    <span className="exec-blk-np" title={LOCAL_FE[id]}>
-      <span className="exec-blk-np-word">{NOT_PUBLISHED}</span> ({id})
+    // Same markup as the shared block: the id is for whoever asks (title, hidden text), not for the reader scanning the page.
+    <span className="exec-blk-np" title={`${id} · ${LOCAL_FE[id]}`}>
+      <span className="exec-blk-np-word">{NOT_PUBLISHED}</span>
+      <span className="exec-blk-sr">{` (${id})`}</span>
       {children ? <> {children}</> : null}
     </span>
   );
