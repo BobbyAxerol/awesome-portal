@@ -92,6 +92,27 @@ describe("getManagerSeries", () => {
     }
   });
 
+  it("a well-formed body that answers ANOTHER question is unavailable: another subject, order, environment, metric or window", async () => {
+    const pf = (id: string) => ({ subjectType: "PORTFOLIO", subjectId: id }) as const;
+    const answerFor = (query: Record<string, unknown>) => api().getManagerSeries({ ...QUERY, ...query } as never);
+    const cases: Record<string, Record<string, unknown>> = {
+      "another portfolio": { subjects: [pf("TEST_ONLY:portfolio-a"), pf("TEST_ONLY:portfolio-z")] },
+      "the same portfolios in another order": { subjects: [pf("TEST_ONLY:portfolio-b"), pf("TEST_ONLY:portfolio-a")] },
+      "the fund where a portfolio was asked": { subjects: [{ subjectType: "FUND" }, pf("TEST_ONLY:portfolio-b")] },
+      "another count": { subjects: [pf("TEST_ONLY:portfolio-a")] },
+      "another environment": { environment: "sandbox" },
+      "another metric": { metric: "NET_PNL" },
+      "another window": { window: "7D" },
+      "a custom window where a preset was answered": { window: { fromMs: 1797408000000, toMs: 1800000000000 } },
+    };
+    for (const [label, query] of Object.entries(cases)) {
+      serve(fixture("populated"));
+      expect((await answerFor(query)).ok, label).toBe(false);
+    }
+    serve(fixture("populated"));
+    expect((await answerFor({})).ok).toBe(true);
+  });
+
   it("a request the server would refuse is refused without a fetch", async () => {
     const calls = serve(fixture("populated"));
     const pf = (id: string) => ({ subjectType: "PORTFOLIO", subjectId: id }) as const;

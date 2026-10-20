@@ -1,0 +1,16 @@
+/* Manager series panel (FE-013): the caption and the empty line under the shared EquityPanel. Tokens only. */
+.exec-ser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.exec-ser-note {
+  margin: 0;
+  font: var(--exec-font-caption);
+  color: var(--ink-soft);
+}
+.exec-ser-empty {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink);
+}
