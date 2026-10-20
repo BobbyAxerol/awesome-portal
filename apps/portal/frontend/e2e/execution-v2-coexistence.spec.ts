@@ -757,7 +757,6 @@ async function axe(page: Page): Promise<AxeViolation[]> {
  */
 const KNOWN_AXE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
   access: { "scrollable-region-focusable": 1 },
-  "account-360": { "color-contrast": 57 },
   "alpha-360": { "link-in-text-block": 1 },
   "alpha-replay": { "nested-interactive": 1 },
   "live-v2body": { "scrollable-region-focusable": 5 },

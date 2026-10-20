@@ -18,3 +18,13 @@ describe("Accounts register table does not widen the page", () => {
     expect(css).toMatch(/\.exec-acct-sr\s*\{[^}]*position:\s*absolute/);
   });
 });
+
+describe("Account 360 demoted body keeps AA text contrast (UXM-10 F-5)", () => {
+  it("re-points the faint ink to the soft ink inside .exec-blk-demoted, on this screen only", () => {
+    expect(css).toMatch(/\.exec-acct-v2 \.exec-blk-demoted\s*\{[^}]*--ink-faint:\s*var\(--ink-soft\)/);
+    const blocks = readFileSync(resolve(__dirname, "../../css/blocks.css"), "utf8");
+    // The shared rule is untouched: Workbench, Replay and the Event feed share it.
+    expect(blocks).toMatch(/\.exec-blk-demoted\s*\{[^}]*opacity:\s*0\.85/);
+    expect(blocks).not.toMatch(/\.exec-blk-demoted[^{]*\{[^}]*--ink-faint/);
+  });
+});
