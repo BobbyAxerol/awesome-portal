@@ -1,5 +1,23 @@
 # Original08 — exact Research identity prerequisite
 
+## Genuine identity and finite native source —20Oct
+
+[Connected source return](connected-source-return.json) supersedes the identity
+prerequisite gap below: actual COMMITTED/Core ACK, independent exact TS receipt/
+mapping readback, identity role retired/passwordless/no grants/no sessions, and
+Core FINISHED/logout all passed. Native Research acceptance was appended through
+the official maintenance SDK, never a SQL seed. Real RR/native/control preflight
+started the finite28446 source; actual SGP→HK TLS1.3/route-denial/hostname/client
+certificate cases passed4/4 after correcting the first TLS-EOF oracle specimen.
+
+This is a time-bound READY **snapshot**, not a permanent service or Core app
+acceptance. Source acceptance/window expires04:35UTC20Oct; trust08:00:59UTC.
+Revalidate current runtime and exact policy head before any use, never reuse an
+expired acceptance or infer custody release from expiry. Preserve stable28445,
+six bindings and native caps/global admission. Core009 current policy/native
+app composition is still NOT_COMPOSED; actual READ/STREAM/revoke/cache/cursor/
+SSE and full08 remain NOT_MET. READ does not grant STREAM or commands.
+
 ## Current operator and connected binding — 19Oct/20Oct Asia/Saigon
 
 **20Oct installed intake and owned continuation:** [current journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
@@ -9,8 +27,9 @@ manifest1df9adad matches9/9 inputs. Closure preparation/import is qualified;
 the new [finite native lifecycle](native_read_lifecycle.py),
 [focused tests](test_native_read_lifecycle.py) and
 [actual frozen-source tests](test_native_source_closure.py) are
-ISOLATED_QUALIFIED:30+9 distinct final cases PASS, normal publication hook still
-pending. [Bounded receipt](native-lifecycle-qualification.json) preserves the
+ISOLATED_QUALIFIED:30+9 distinct final cases PASS, published1380ab9d with normal
+hook130contracts/717API/build/restore PASS and verified non-force remote pin.
+[Bounded receipt](native-lifecycle-qualification.json) preserves the
 first28PASS/2FAIL cleanup specimen and its corrected retake. This is not a
 runtime ACK;009 native READ/STREAM remains uncomposed.
 

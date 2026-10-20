@@ -654,7 +654,11 @@ deep-dive → ADR → slice → evidence discipline documented above.
 [current journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
 supersedes the historical source-only Core blocker:0087818d563 is installed,
 new1df9adad transfer verified. Edge closure/provider lifecycle now has30+9
-distinct isolated PASS; ordinary publication and actual source binding remain.
+distinct isolated PASS, published1380ab9d/normal hook PASS. Actual
+[source return](integration/execution-native-read-v1/research-identity-intake/connected-source-return.json)
+now proves identity COMMIT/Core ACK, independent receipt/mapping/role retirement
+and Core logout, finite native READ preflight/observer and4mTLS transport cases.
+Source window ends20Oct04:35UTC; Core009 READ/STREAM composition remains.
 See [qualification](integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json).
 Other phase dependencies
 do not block this owned work. Full08NOT_MET/09connectedNOT_STARTED; imported

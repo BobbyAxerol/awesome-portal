@@ -24154,6 +24154,205 @@ After publication, retain this single closure for the already-approved actual
 finite identity/native binding, not a production/rollback claim. Own lease is
 retained only while qualification/publication work is physically active.
 
+**Actual publication/cleanup,20Oct03:51UTC:** commit
+1380ab9d3d05baa16d54ef3cdb72f3e27ae7d77b (12owned files/+1683/-8,
+BobbyAxerol) completed unmodified normal hook, session50375 exit0:130contracts
++717API/build/PGrestore/tracking/snapshot/protected-kernel PASS. Log869b2225,
+90272B. Non-force push72652 exit0 and ls-remote match full SHA; no dev/main/
+merge. Three peer untracked files retain original hashes. Cleanup comparator
+first differed only on leading `/` names; normalized comparison proves all13
+exact protected tuples unchanged/running/restart0. `image ls --all` included
+24old intermediates absent from the default baseline; none were deleted.
+Compatible default inventory91→92 identifies exactly one owned unreferenced
+hook image700a31af, tagportal-source-proxy-d4-offline:test. Cleanup46862 exit0
+removed only that image without force; no container reference. Pre/post disk
+available255268302848/255268036608of518933680128bytes: shared-host delta is
+NOT reclaimed-space evidence. Keep323baseline BuildKit rows (hook steps cached),
+no arbitrary shared-cache prune. No source/volume/network/runtime/rollback
+removed; exact disposable containers/tmpfs are gone. One375261B immutable
+public closure is retained for actual original08 binding, not an archive.
+
+### Original08 genuine finite identity binding —20Oct03:52UTC
+
+BEFORE operational work: source1380ab9d published/ISOLATED_QUALIFIED;
+full08NOT_MET/09connectedNOT_STARTED. Already-approved original08 scope:
+READY→one genuine JIT assertion→original COMMIT/Core ACK→physical drain/role
+retirement→exact Core finish/logout. Bobby approved this finite identity
+role/receipt schema and one Research PREVIEW AuthService session, NOT stable
+Cloudflare/password proof. No repeated generic approval or new phase.
+
+Target/blast radius: TS live_data_executor/system7674585245102796834,
+127.0.0.1:7654, dormant ts_portal_research_identity max1 only; private schema
+owner bobby reference consumed without printing/copying credentials to Git.
+Reviewed SDK identity/receipt grants for≤300s initial window only; durable
+mapping/receipt history is retained. Original3native roles/caps2/2/1,
+provider28445/six bindings, protected owner/policy and commands/capital stay fixed.
+One capped nonroot operator≤2CPU/1536MiB/128pids, read-only source/private refs,
+host bind10.70.0.2:28446. Core exact installed7818/7b2c/bootstrapcc6ae429;
+no stable/dev/Core app redeploy, SGP listener or auth bypass.
+
+Prepare one protected private input directory and exact installation metadata
+copy, qualified32119f66 closure/new1df9adad transfer. Parent as authorized source
+operator independently reviews actual source/trust/DB/config and supplies the
+finite intake ACK; it is NOT a Core terminal ACK or business grant. Existing
+nonrecursive scope digest binds config/ACK. Password/DSNs/assertion stay in
+protected private stdin/files, never argv/stdout/logs/Git/remote source copies.
+Offline intake/crypto validation precedes DB/IPC issue. Fresh Core must be
+READY/unresolved0/zero callbacks/no lost cookie and valid trust/window; source
+READY_NO_OPEN precedes exactly one issue. No repeat issue on lost response.
+
+Validate official SDK physical fingerprint/catalogue before OPEN; original
+attempt/physical receipt/genuine signed Core ACK; zero physical handler/socket/
+task/pool/role sessions before NOLOGIN/PASSWORD NULL/no writer grants and original
+ACL restoration. Only real COMMITTED result releases TS UUID/mapping version.
+ROLLED_BACK/pre-OPEN refusal is not identity success. After known terminal,
+Core finish must prove exact session REVOKED; clean only created secret/local
+resources after physical terminal. Native READ acceptance and independent Core
+READ/STREAM composition and revoke/cache/cursor/SSE still follow afterward.
+
+Recovery: UNKNOWN retains original process/listener/pool/attempt/receipt/private
+custody for same-attempt recovery/readback. Never timeout/kill/remove/reissue,
+infer finished from EOF/expiry, auto-repeat ambiguous ACL DDL, reset custody or
+fake receipt/ACK. Before OPEN unused abort drains exact local resources; after
+terminal use official retire/finish. Preserve durable audit and unresolved
+recovery; no new framework, generic SQL endpoint or borrowed stable identity.
+
+**Actual finite identity binding,20Oct04:02UTC:** offline intake/crypto/TLS
+context checks PASS using32119f66 closure/new1df9adad transfer;28public files
+verified,0DB/session/role opens in that offline check. Protected input directory
+`/home/bobby/secure/portal-edge-identity-20261020-so1owuxq` holds only pinned
+installation metadata, finite config/ACK and bounded results; password/DSNs/JIT
+proof passed only through private process memory/stdin. Window ends04:05:39Z,
+configa58288fd/source-owner intake ACK49ac80a4. Host interface is portal0,
+not wg0;10.70.0.1:28444 TCP path and exact10.70.0.2:28446 bind verified;
+hostname verification remains enabled. Own quiet lease extended to04:39:42Z,
+within the original3h ceiling; no foreign guard present.
+
+Actual published operator ran1CPU/768MiB/128pids/nonroot/read-only with existing
+image28ea. READY_NO_OPEN preceded exactly one genuine Core AuthService assertion.
+Original attemptbc91a536-4f50-408e-8a31-e11dd5e588ee / lease
+75604271-623c-41fe-9e3f-512f43358dad finished **COMMITTED**, real Core ACKtrue,
+physical source receiptc257e2d3-d753-4398-a906-8e4867e54f3c / digest
+d499fb96835040c73391771805c2db8610818ea77dc7736491e59f9f51e13d86.
+Genuine Research mapping TSUUID608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd,
+mapping_version1 was released only after retirement. SDK reports role retired,
+0recovery handlers; actual operator process exit0. Core finish/status both
+FINISHED,unresolved0,cookie_lostfalse,callbacks(in_flight0/accepted2/denied0/
+timed_out0). This proves the actual identity prerequisite, not business READ,
+STREAM,Cloudflare authentication or full08 acceptance.
+
+The one-shot private stdin bridge incorrectly caught its own SystemExit(0)
+after the successful operator/Core finish, causing outer session18283 exit2.
+Preserve that failed controller specimen; corrected only its exit propagation.
+**Never rerun identity** to repair a reporting exit. Independently reread the
+exact DB receipt/mapping/dormant role, physical container/socket and Core state;
+then scoped cleanup and native READ acceptance/provider/Core composition.
+03/07/capacity fresh read-only source audit remains unchanged (PM7f4d3245,
+TSnext0cd356da); PM pacing/population/state preparation now exists, but not a
+new commissioned target or budget. Those separate inputs do not block owned08.
+
+**Independent identity readback/cleanup,20Oct04:05UTC:** first read-only specimen
+failed42703 because its diagnostic SELECT wrongly requested rolconfig from
+pg_authid; that column belongs to pg_roles. No transaction writes or second
+identity issue. Corrected bounded RR-independent readback exit0 proves exact
+physical database/fingerprint, original committed receipt IDs/digest/mapping1,
+native/receipt catalogue pins, dormant NOLOGIN/no-password/no-grant-dependencies
+role with0sessions, and old native caps2/2/1. Actual original operator37b9ee85
+was stopped/exit0/restart0 before exact removal; retained1561B redacted events
+hash9b7c5979 and2416B bounded warning stderr hash0f047a1d. Docker removal touched
+only that known-terminal owned qualification container, no image/volume/network.
+Shared disk available255976046592→255975927808B; no reclaimed-space claim.
+
+**Before native READ commissioning:** continue approved08, not a new phase.
+Use official BusinessRootReadMaintenance and the existing maintenance role
+only to append one finite nondelegable MANAGER_CATALOGUE_DOMAIN/business.read_all
+acceptance for the genuine Research mapping above. Preserve native protected
+owner a72b0e8c/stable subjectusr_3e5917c6/version1 and policy1; Research Bobby is
+the new READ subject, never replacement owner. Paper sealed catalogue0c71b72c,
+profile5c33c4e0 and field-policyb9fbe07d are exact existing reviewed compatibility
+inputs, not observed hashes promoted to their own approval. Same exact bytes
+and official status on UNKNOWN; no SQL row/grant seed, FRESH installer/DDL/new
+role, financial membership or command. Record actual head/receipt/observer,
+not RECORDED as held/current permission.
+
+Select finite correctness-only candidate until04:35UTC (within trust08:00:59Z),
+one binding/inflight, min0/max1source +min0/max1control under unchanged2/2role
+ceilings, and existing request32768B/response32768B/pool1s/observer1s/bridge2s/
+fence1s/lease30s/preflight8s/listener5s/request3s limits. Preserve global native
+admission8unresolved/4096retained/digest25d2b3ef and original maximum8attempt/
+handle controls. Observe actual role sessions before starting; refuse contention,
+do not change stable provider28445, its six bindings, TLS, pool maxima or policy.
+Reuse qualified NativeReadLifecycle/NativeBusinessReadRuntime directly; old
+private load/serve only accepts the original FRESH installation and is NOT the
+Research entrypoint. Bind sequential10.70.0.2:28446 only after identity listener
+and role are physically retired. Candidate TLS/current-human/terminal input
+keys are the new transfer; Core009 must select matching explicit trust/config.
+No capacity/production coexistence or app/STREAM acceptance is inferred.
+
+Exit: exact official acceptance + genuine RR/read-only observer + fresh native
+catalogue/function/fingerprint/control/admission preflight; only then report
+candidate native READY and send actual source/config/receipt pins to Core009.
+Retain original obligations on UNKNOWN; finite expiry stops admission, not
+authority teardown. Revoke candidate read acceptance by a new official revision
+only after corresponding terminal/drain, preserve history and unchanged stable
+rights. Root-owned credentials remain file refs or private stdin; no log/Git
+secret. Full08NOT_MET/09connectedNOT_STARTED until actual required cases.
+
+**Actual native READ source,20Oct04:06–04:12UTC:** official maintenance role
+appended acceptanceb922c105-4e99-4830-8be2-bb2e1f41b5d9/version1, command
+1e14f26d-adc0-42db-8ff0-3eac122f5ec7, manifestf9ed08e5; exact same-byte status
+agrees RECORDED/heldfalse/runtimefalse. No native owner/policy/role/DDL change.
+Qualified lifecycle source1ee3 plus actual21PM closure started the finite native
+candidate43026b4c/image28ea at04:09:20Z,10.70.0.2:28446,1CPU/768MiB/128pids,
+one source/control pool each; actual SDK catalogue/function/fingerprint/control/
+admission/acceptance preflight PASS. Genuine1685B RR/read-only observation
+semanticd9104e60, native receipt digestc517a257, owner/policy/mapping1 came from
+the database, not a fixture or recorded-install permission claim. Global8/4096
+and2/2/1role caps preserved; idle connections expire10s. Source expiry04:35UTC
+only stops admission; unresolved obligations retain original objects/recovery.
+
+Actual SGP→HK candidate mTLS retake04:12:32Z:4PASS (TLS1.3 exact PM leaf,
+authenticated unknown-route404 control, wrong-hostname deny, no-client-cert
+zero-byte TLS EOF deny),0business/source ISSUE/ENTER calls. First3-case oracle
+wrongly called TLS1.3 EOF unexpected acceptance instead of denial; keep its
+failed specimen and corrected HTTP positive control, no auth bypass or source
+code weakening. Candidate source process28318 is physically LIVE at readback;
+not an alleged wait on an owner file. No Core009 app composition/grants or
+business READ/STREAM/revoke/SSE acceptance is inferred.
+
+[Bounded source return](integration/execution-native-read-v1/research-identity-intake/connected-source-return.json)
+contains exact Core-selected pins, finite transport, identity/acceptance/proof
+provenance and honest gaps. **Coordination before write:** install only this
+bounded identifier/hash/provenance JSON (no DB business payload/secret/private
+configuration) into a new protected SGP return directory; append exact new facts
+to the existing Edge-owned
+`/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_EPG10_08_REQUEST_2026-10-19.md`
+using current-file hash comparison and append-only bytes. Preserve Core HEAD,
+index/Unified/sync/peer files; do not modify Core policy/config/source/runtime
+or claim its ACK. Core009 next input is now genuine, not an identity blocker.
+Normal publication/cleanup and finite candidate retirement are still owned08.
+
+**Actual Core return delivery/compatibility,20Oct04:15UTC:** delivered5611B
+sanitized source return SHA48ab20cd89d813346d6d5a7f106294f90e3ee7acb9e09feb1155f96246fa6ec9
+to SGP protected directory above; appended5406B only to the existing Edge-owned
+request, originalb58a137f→536fbc33. CoreHEAD7818d563 and empty staged-diff digest
+e3b0c442 preserved, no Core Unified/sync/source/policy/runtime write. No private
+key/DSN/session/business rows transferred. Existing pinned Core image7b2c ran
+the actual compiled captureNativeBusinessReadSelectedPins offline/networknone/
+read-only/nonroot/0.5CPU128MiB64pids: PASS, exact native1/mapping1; process exit0,
+0stderr, disposable container auto-removed,0newimages/cache. This is genuine
+consumer-code compatibility, not authenticated Core app READ or STREAM approval.
+
+Source/runtime/cleanup publication is the next coherent owned transaction:
+stage only8owned docs/qualification/return paths, preserve three peer untracked
+files, run unchanged normal hook, non-force publish only this feature. Candidate
+28318 is a genuinely live finite job; keep own reservation while active, then
+require strict SDK/socket/handler/task/pool drain and official acceptance revoke
+with new revision plus exact scoped teardown. No new framework or repeated
+identity/JIT issue. Current READ/STREAM connected action belongs to Core009
+selection/owner policy and existing app composition using the delivered actual
+pins; never label the now-complete identity/native-source input absent again.
+
 
 
 

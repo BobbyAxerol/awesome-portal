@@ -1017,6 +1017,15 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**20Oct actual identity/native source:** [bounded return](../integration/execution-native-read-v1/research-identity-intake/connected-source-return.json)
+records genuine COMMITTED/Core ACK, independent physical TS receipt/mapping and
+retired role, exact Core FINISHED/logout. Official Research READ acceptance and
+fresh native28446 SDK preflight/observer plus4actual SGP→HK mTLS transport cases
+are qualified within the finite window ending04:35UTC. These supersede the
+identity prerequisite gap, not Core009 READ/STREAM composition or actual
+revoke/cache/cursor/SSE/full08. Always revalidate expiry/runtime/head; no stable
+28445/binding/role-cap change or command/STREAM grant follows from identity.
+
 **20Oct installed intake:** [same-phase continuation](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
 records installed Core0087818d563/new1df9adad transfer and Edge-owned immutable
 closure/finite native lifecycle work. [Qualification](../integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json)

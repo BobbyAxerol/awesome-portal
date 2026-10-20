@@ -12,8 +12,11 @@ Chúng không thay thế phase hoặc exit gate trong
   confirms Core0087818d563 installed and new1df9adad transfer verified. Edge
   closure/finite provider lifecycle is isolated-qualified30+9distinct PASS,
   [receipt](../integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json);
-  ordinary publication and actual source binding remain owned work;
-  READ/STREAM binding follows genuine identity/source/Core authority. Full08
+  published1380ab9d/normal hook PASS. Actual
+  [source return](../integration/execution-native-read-v1/research-identity-intake/connected-source-return.json)
+  proves identity COMMIT/Core ACK, independent exact retirement/logout and
+  finite native source preflight/observer plus4mTLS cases; window ends04:35UTC.
+  Core009 READ/STREAM composition and genuine connected cases remain. Full08
   NOT_MET,09connectedNOT_STARTED; old source-only/paused-goal entries below are
   historical, not current blockers. No stable/provider28445 change implied.
 

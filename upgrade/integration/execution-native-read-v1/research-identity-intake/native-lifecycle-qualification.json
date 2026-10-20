@@ -1,6 +1,6 @@
 {
   "schema_version": "portal.execution-native-lifecycle-qualification.v1",
-  "status": "ISOLATED_QUALIFIED_NORMAL_HOOK_PENDING",
+  "status": "ISOLATED_QUALIFIED_PUBLISHED_NOT_CONNECTED",
   "phase": "EPG10-08",
   "date_utc": "2026-10-20",
   "source_pins": {
@@ -81,6 +81,23 @@
     "Not operational mTLS, current-human identity, authoritative COMMIT/Core ACK, native READ/STREAM/revoke/cache/cursor/SSE or capacity acceptance.",
     "No identity/session issued, database mutation, role opening, production listener or restart in qualification."
   ],
+  "publication": {
+    "commit": "1380ab9d3d05baa16d54ef3cdb72f3e27ae7d77b",
+    "branch": "feat/execution-edge-upgrade-v1_2",
+    "remote": "BobbyAxerol/awesome-portal",
+    "non_force_remote_pin_verified": true,
+    "normal_hook_exit": 0,
+    "contracts_pass": 130,
+    "api_pass": 717,
+    "build_and_restore": "PASS",
+    "log_sha256": "869b2225792ea0a55cce64ad45df9f42b6e7493605c377f09a4f0f86a202c9f1",
+    "removed_unreferenced_hook_image": "sha256:700a31afd722af169b61fd29aaf85693fd1659c0f360a94bbe5ea6c9d1f11f91",
+    "cleanup_available_bytes_before": 255268302848,
+    "cleanup_available_bytes_after": 255268036608,
+    "shared_disk_delta_is_not_reclaimed_space": true,
+    "protected_runtime_tuples_unchanged": 13,
+    "baseline_buildkit_metadata_rows_retained": 323
+  },
   "full_08_exit": "NOT_MET",
   "connected_09": "NOT_STARTED"
 }

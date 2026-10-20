@@ -6,9 +6,12 @@
 confirms Core0087818d563 installed and new1df9adad transfer verified. Do not
 repeat the old Core source-only blocker. Edge's finite provider lifecycle is
 [isolated-qualified](research-identity-intake/native-lifecycle-qualification.json)
-(30lifecycle+9actual-source cases); ordinary source publication is pending.
-Actual identity/READ/STREAM connected gates remain
-NOT_MET. Later dated blocks below preserve history, not a paused goal or an
+(30lifecycle+9actual-source cases), published1380ab9d with the normal hook PASS.
+Actual [identity/native-source return](research-identity-intake/connected-source-return.json)
+now proves genuine COMMIT/Core ACK, independent role/receipt/mapping readback,
+exact retirement/logout and finite native28446 preflight plus4mTLS transport
+cases. Source window ends20Oct04:35UTC; revalidate before use. Core009 READ/
+STREAM composition and full08 remain NOT_MET. Later blocks preserve history, not a paused goal or an
 instruction to activate old source/configuration.
 
 **Latest operator:** use the [current operator packet](research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
