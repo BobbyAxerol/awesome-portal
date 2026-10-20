@@ -18,16 +18,28 @@ import { Flag } from "../../Flag";
 import { safeInternalHref } from "../../safeHref";
 import { withContext } from "../../urlState";
 import type { CanaryView } from "./readCanary";
+import type { StageAction } from "../stage/reasons";
+import { useStageReason } from "../stage/StageEligibility";
 import { ACCESS_PATH, DECISIONS, FE, blockerItems, decisionReason, rollbackHead, rollbackItems } from "./model";
 
+/** The four promotion decisions as the eligibility read names them (display identifiers, not capability names). */
+const DECISION_ACTION: Readonly<Record<string, StageAction>> = {
+  Hold: "canary.hold",
+  Reduce: "canary.reduce",
+  Rollback: "canary.rollback",
+  "Request scale": "canary.request_scale",
+};
+
 export function DecisionPanel() {
+  // FE-068: the server's own reason for a decision that is off, when it published one; today's sentence otherwise. Text only.
+  const reasonFor = useStageReason();
   return (
     <SectionPanel level={2} title="Promotion decision" aside="Via exit review">
       {DECISIONS.map((decision) => (
         <div key={decision.label} className="exec-cny-dec">
           <p className="exec-cny-dec-hint">{decision.hint}</p>
           <div className="exec-cny-dec-act">
-            <DockAction label={decision.label} reason={decisionReason(decision)} accessHref={ACCESS_PATH} />
+            <DockAction label={decision.label} reason={reasonFor(DECISION_ACTION[decision.label]!, decisionReason(decision))} accessHref={ACCESS_PATH} />
           </div>
         </div>
       ))}

@@ -79,6 +79,9 @@ const V2Sandbox = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import(
 const V2Canary = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/canary")) : null;
 const V2Live = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/live")) : null;
 const V2Request = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/request")) : null;
+// FE-068: the caller's own advisory stage-action eligibility, offered as TEXT to the disabled controls of the screens below it.
+// It enables nothing; a flag-off build emits none of it.
+const V2StageEligibility = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/stage/StageEligibility")) : null;
 import {
   AdminCatalogueContainer,
   ApprovalInboxContainer,
@@ -560,7 +563,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
       // entry screen of WF 1d; /:deploymentId opens that certification.
       content = deploymentId
         ? V2Sandbox && isV2Screen("sandbox")
-          ? <Suspense fallback={null}><V2Sandbox api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></Suspense>
+          ? <Suspense fallback={null}>{V2StageEligibility ? <V2StageEligibility api={api} workspaceId={routeWorkspaceId}><V2Sandbox api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></V2StageEligibility> : <V2Sandbox api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} />}</Suspense>
           : <SandboxCertificationContainer api={api} deploymentId={deploymentId} />
         : stageListRedirect("sandbox") ?? <SandboxOverviewRichContainer api={api} />;
       break;
@@ -568,7 +571,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
       // The V2 Canary reads `workspace_id` from the URL itself.
       content = deploymentId
         ? V2Canary && isV2Screen("canary")
-          ? <Suspense fallback={null}><V2Canary api={api} deploymentId={deploymentId} /></Suspense>
+          ? <Suspense fallback={null}>{V2StageEligibility ? <V2StageEligibility api={api} workspaceId={routeWorkspaceId}><V2Canary api={api} deploymentId={deploymentId} /></V2StageEligibility> : <V2Canary api={api} deploymentId={deploymentId} />}</Suspense>
           : <CanaryControlRoomContainer api={api} deploymentId={deploymentId} />
         : <MissingRouteId what="deployment" />;
       break;
@@ -577,7 +580,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
       // screen of WF 1f/1e; /:deploymentId opens that deployment's workbench.
       content = deploymentId
         ? V2Live && isV2Screen("live")
-          ? <Suspense fallback={null}><V2Live api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></Suspense>
+          ? <Suspense fallback={null}>{V2StageEligibility ? <V2StageEligibility api={api} workspaceId={routeWorkspaceId}><V2Live api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} /></V2StageEligibility> : <V2Live api={api} deploymentId={deploymentId} workspaceId={routeWorkspaceId} />}</Suspense>
           : <LiveFullOperationsContainer api={api} deploymentId={deploymentId} />
         : stageListRedirect("live") ?? <LiveOverviewRichContainer api={api} />;
       break;

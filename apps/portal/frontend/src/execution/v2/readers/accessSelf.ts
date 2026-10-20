@@ -260,21 +260,21 @@ export type AccessSelfNavigationRead = { kind: "navigation"; navigation: AccessS
 
 /* ───────────────────────── low-level checks ───────────────────────── */
 
-type Rec = Record<string, unknown>;
+export type Rec = Record<string, unknown>;
 
-function rec(value: unknown): Rec | null {
+export function rec(value: unknown): Rec | null {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Rec : null;
 }
 
 /** Exactly these own keys: no more, no fewer (a planted `__proto__` is an own key and so is refused). */
-function closed(value: unknown, keys: readonly string[]): Rec | null {
+export function closed(value: unknown, keys: readonly string[]): Rec | null {
   const r = rec(value);
   if (r === null) return null;
   const own = Object.keys(r);
   return own.length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(r, key)) ? r : null;
 }
 
-function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | null {
+export function oneOf<T extends string>(value: unknown, allowed: readonly T[]): T | null {
   return typeof value === "string" && (allowed as readonly string[]).includes(value) ? value as T : null;
 }
 
@@ -299,7 +299,7 @@ function codePoints(text: string): number {
  * enforces all four on the way in and on the way out, so the reader does too.
  * Stricter than both: not whitespace-only and none of `UNSAFE_TEXT`.
  */
-function selectorText(value: unknown): string | null {
+export function selectorText(value: unknown): string | null {
   if (typeof value !== "string" || value.trim().length === 0 || value.length > 1024 || UNSAFE_TEXT.test(value) || LONE_SURROGATE.test(value)) return null;
   return codePoints(value) <= 256 && encoder.encode(value).length <= 256 ? value : null;
 }
@@ -323,7 +323,7 @@ function projectionMs(value: unknown): number | null {
  * PRODUCER invariant without being able to express it; the reader enforces it, because a ceiling that is not after the
  * evaluation clock is not a session ceiling and nothing may be inferred from it.
  */
-function projectionTimes(body: Rec): { observedAtMs: number; validUntilMs: number } | null {
+export function projectionTimes(body: Rec): { observedAtMs: number; validUntilMs: number } | null {
   const observedAtMs = projectionMs(body.observed_at_ms);
   const validUntilMs = projectionMs(body.valid_until_ms);
   return observedAtMs === null || validUntilMs === null || validUntilMs <= observedAtMs ? null : { observedAtMs, validUntilMs };
@@ -337,7 +337,7 @@ const ROW_KEYS = [
 ] as const;
 const ALL_REASONS = ["FAMILY_CHECK_REQUIRED", ...ELIGIBILITY_UNAVAILABLE_REASONS] as const;
 
-function readEligibilityRow(raw: unknown, resourceKind: AccessResourceKind): EligibilityRow | null {
+export function readEligibilityRow(raw: unknown, resourceKind: AccessResourceKind): EligibilityRow | null {
   const row = closed(raw, ROW_KEYS);
   if (row === null) return null;
   const action = oneOf(row.action, ELIGIBILITY_ACTIONS);

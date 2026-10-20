@@ -50,6 +50,8 @@ import type {
 } from "../v2/readers/dispatch";
 import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV2 } from "../v2/readers/operationalQueue";
 import type { PendingRecallDiscoveryQuery, PendingRecallDiscoveryRead } from "../v2/readers/pendingRecallDiscovery";
+import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligibility";
+import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
 import type { TypedCondition } from "../components/conditions";
@@ -524,6 +526,17 @@ export interface ExecutionApi {
    * answer the resource asked, or does not read, is a typed `unavailable`, never an empty list.
    */
   getPendingRecallDiscovery(query: PendingRecallDiscoveryQuery): Promise<Result<PendingRecallDiscoveryRead>>;
+  /**
+   * `GET /api/v1/execution/governance/stage-action-eligibility` (FE-068): the caller's own ADVISORY answer for the ten stage
+   * actions (`portal.stage-action-eligibility.v1`). It only explains a control that is off; it never enables one. A missing or
+   * failed read keeps the generic reason the control already had.
+   */
+  getStageActionEligibility(workspaceId?: string): Promise<Result<StageActionEligibilityRead>>;
+  /**
+   * `GET /api/admin/profile-access/v2/eligibility/batch` (FE-068): 1 to 8 resources x the same 1 to 16 actions, with a typed
+   * step-up state (`portal.self-eligibility-batch.v1`). Advisory; the single-resource `portal.self-eligibility.v1` is unchanged.
+   */
+  getSelfEligibilityBatch(request: EligibilityBatchRequest): Promise<Result<AccessEligibilityBatchRead>>;
   /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *

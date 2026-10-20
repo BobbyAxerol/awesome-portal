@@ -16,6 +16,8 @@ import { Link } from "react-router-dom";
 import { Flag } from "../../Flag";
 import { ID_PATTERN, ID_RULE, claimHint, runLabel, RUN_LIBRARY_HREF, stillNeeded, summaryCounter, MAX_SUMMARY, MIN_SUMMARY } from "./model";
 import { OutcomePanel } from "./OutcomePanel";
+import { stageActionRow } from "../../readers/stageActionEligibility";
+import { stageActionReason } from "../stage/reasons";
 import type { NewRequest } from "./useNewRequest";
 
 export type FormVariant = "page" | "drawer";
@@ -86,10 +88,18 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
     if (gate.kind === "held") return <Flag kind="na" label="On hold" />;
     return <Flag kind="na" label="Incomplete" />;
   })();
+  // FE-068: when Submit is closed by the delivery policy, the server's own reason for approval.create replaces the generic policy
+  // sentence if it published one. It is text only: it never opens Submit and the gate above never reads it.
+  const policyReason = gate.open || gate.kind !== "policy" ? null : stageActionReason(state.eligibility, "approval.create", gate.reason);
+  const create = stageActionRow(state.eligibility, "approval.create");
+  // Submit is on, yet the reader's own check says the server will refuse: say so beside it. Advisory; the click still asks the server.
+  const advice = gate.open && create !== undefined && create.verdict === "NOT_ELIGIBLE"
+    ? `Your access check says this will be refused: ${stageActionReason(state.eligibility, "approval.create", "")}. Submit still asks the server.`
+    : null;
   const sentence = gate.open
     ? "Everything needed is filled."
     : gate.kind === "policy"
-      ? gate.reason
+      ? policyReason!
       : gate.kind === "sending"
         ? "Sending the request. It is shown as created only when the server says so."
         : gate.kind === "uncertain" || gate.kind === "held"
@@ -255,14 +265,15 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
               className="exec-rq-submit"
               aria-disabled={!gate.open}
               aria-describedby={gate.open ? undefined : reasonId}
-              title={gate.open ? undefined : gate.reason}
+              title={gate.open ? undefined : policyReason ?? gate.reason}
               onClick={() => {
                 if (gate.open) state.submit();
               }}
             >
               {SUBMIT_LABEL}
             </button>
-            <span id={reasonId} className="exec-rq-why" role={gate.open ? undefined : "status"}>{gate.open ? "Nothing is sent until you click Submit." : gate.reason}</span>
+            <span id={reasonId} className="exec-rq-why" role={gate.open ? undefined : "status"}>{gate.open ? "Nothing is sent until you click Submit." : policyReason ?? gate.reason}</span>
+            {advice !== null ? <span className="exec-rq-why" role="status">{advice}</span> : null}
           </div>
         </div>
       )}

@@ -33,6 +33,7 @@ import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { SectionPanel } from "../../blocks";
 import { stageWhy } from "../stage/reasons";
+import { useStageReason } from "../stage/StageEligibility";
 import { NOTE_MIN, newNoteKey, noteBlock, noteFingerprint, noteLength, type NoteInputs } from "./model";
 import type { NoteCapability } from "./useSandboxReads";
 
@@ -71,6 +72,8 @@ function Shut({ reason, code }: { reason: string; code?: string }) {
 }
 
 export function ReviewNoteForm({ api, capability, identity, onRecorded }: ReviewNoteFormProps) {
+  // FE-068: the server's own reason when the note is shut, if it published one; today's sentence otherwise. Text only.
+  const reasonFor = useStageReason();
   const [summary, setSummary] = useState("");
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -146,7 +149,7 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
   } else if (capability.state === "unknown") {
     body = <Shut reason={`Not available. ${capability.reason}`} />;
   } else if (capability.state === "unavailable") {
-    body = <Shut reason={stageWhy("notEnabled")} code={capability.reasonCode} />;
+    body = <Shut reason={reasonFor("sandbox.review_note", stageWhy("notEnabled"))} code={capability.reasonCode} />;
   } else if (outcome?.kind === "recorded") {
     const { capture, key } = outcome;
     body = (

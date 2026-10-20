@@ -54,6 +54,8 @@ import {
 import { refusalReason } from "./schemaGuard";
 import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
 import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
+import { readStageActionEligibilityV1, stageActionEligibilityUrl } from "../v2/readers/stageActionEligibility";
+import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
 import type { WorkflowResult } from "../operations";
@@ -352,6 +354,24 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     return value !== null && value !== undefined
       ? { ok: true as const, value }
       : unavailable(`${what} response could not be read.`);
+  };
+
+  /**
+   * `readGet` for a route outside the execution base (the access family lives under `/api/admin/profile-access`). Same shape:
+   * same-origin fetch, typed problem on !ok, reader on the body, unavailable when it cannot be read. Never cached across calls.
+   */
+  const readGetAt = async <T>(absolutePath: string, reader: (raw: unknown) => T | null, what: string): Promise<Result<T>> => {
+    let response: Response;
+    try {
+      response = await fetch(absolutePath, { signal, credentials: "same-origin", headers: { accept: "application/json" } });
+    } catch {
+      return unavailable(`${what} never reached the Portal — network failure.`);
+    }
+    if (!response.ok) return problem(response);
+    let body: unknown = null;
+    try { body = await response.json(); } catch { /* reader fails closed below */ }
+    const value = reader(body);
+    return value !== null && value !== undefined ? { ok: true as const, value } : unavailable(`${what} response could not be read.`);
   };
 
   const getCommandCenterSnapshot = () =>
@@ -1006,6 +1026,22 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       // A body that reads is not yet an answer to the question asked: another resource or environment is refused, never shown.
       if (result.ok && result.value.kind === "pending_recall_discovery" && !pendingRecallDiscoveryAnswers(result.value.discovery, query)) {
         return unavailable("The pending recall discovery answered another resource than the one asked, so it is not shown.");
+      }
+      return result;
+    },
+
+    async getStageActionEligibility(workspaceId) {
+      const url = stageActionEligibilityUrl(workspaceId);
+      if (url === null) return unavailable("The stage action eligibility query is not one the Portal accepts.");
+      return readGet(url.slice(BASE.length), readStageActionEligibilityV1, "The stage action eligibility");
+    },
+
+    async getSelfEligibilityBatch(request) {
+      const url = accessEligibilityBatchUrl(request);
+      if (url === null) return unavailable("The eligibility batch query is not one the Portal accepts.");
+      const result = await readGetAt(url, readAccessEligibilityBatch, "The eligibility batch");
+      if (result.ok && result.value.kind === "eligibility_batch" && !eligibilityBatchAnswers(result.value.batch, request)) {
+        return unavailable("The eligibility batch answered another question than the one asked, so it is not shown.");
       }
       return result;
     },

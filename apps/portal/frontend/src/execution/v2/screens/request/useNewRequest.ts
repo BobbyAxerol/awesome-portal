@@ -23,6 +23,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ApprovalCreateOutcome, ExecutionApi } from "../../../api/ports";
 import { useRunSuggestions, type RunOption, type RunSuggestions } from "../../../runSuggestions";
+import type { StageActionEligibility } from "../../readers/stageActionEligibility";
+import { useStageActionEligibility } from "../stage/StageEligibility";
 import {
   alphaChoices,
   claimView,
@@ -70,6 +72,11 @@ export interface NewRequest {
   seed(prefill: Prefill, notices?: readonly string[]): void;
 
   runs: RunSuggestions;
+  /**
+   * FE-068: the caller's own ADVISORY answer for `approval.create`, or null (not read yet, failed, another workspace). It only
+   * EXPLAINS a Submit that is off or adds a note beside one that is on; the Submit gate (`gate`) never reads it.
+   */
+  eligibility: StageActionEligibility | null;
   alphas: readonly AlphaChoice[];
   runOptions: readonly RunOption[];
   claim: ClaimView;
@@ -144,6 +151,8 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   const [submitting, setSubmitting] = useState(false);
   const [requestKey, setRequestKey] = useState<string | null>(null);
   const runs = useRunSuggestions(runsEnabled);
+  // Read once the form is in use (a closed drawer asks nothing), again on focus; never cached. Advisory text only.
+  const eligibility = useStageActionEligibility(api, undefined, runsEnabled);
 
   /** The send the screen is showing: its identity, key and verbatim payload. */
   const lastSent = useRef<{ identity: string; key: string; payload: SubmitPayload } | null>(null);
@@ -332,7 +341,7 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
 
   return {
     fields: shown, setAlpha, setRun, setClaim, setSummary, seed,
-    runs, alphas, runOptions, claim, notices,
+    runs, eligibility, alphas, runOptions, claim, notices,
     validation, gate, submitting, outcome, requestKey, dismissOutcome, uncertain, retry, discardUncertain, settled, dirty, submit, reset,
   };
 }
