@@ -119,8 +119,8 @@ describe("the V2 following-parent body", () => {
     expect(header.getAttribute("data-stage")).toBe("sandbox");
     expect(header.getAttribute("data-frame")).toBe("left");
     expect(header.textContent).not.toContain("Real capital at risk");
-    // Runtime: nothing published, so no green "Running".
-    expect(chip("runtime").textContent).toContain("Not published (FE-027)");
+    // Runtime: nothing published (the sealed V2 body carries no stage facts), so no green "Running".
+    expect(chip("runtime").textContent).toContain("Not published (FE-067)");
     expect(chip("runtime").textContent).not.toMatch(/Running|Halted/);
     expect(chip("freshness").textContent).toContain("Not available");
     expect(chip("reconciliation").textContent).toContain("Not published (FE-072)");
@@ -216,12 +216,14 @@ describe("the V1 certification body", () => {
     expect(kpi("Critical open").textContent).toContain("Sources did not report");
     expect(kpi("Open findings").querySelector(".exec-blk-num")).toBeNull();
     expect(chip("freshness").textContent).toContain("Not available");
-    // Zero findings against sources that reported nothing is NOT a clean result.
-    expect(chip("reconciliation").textContent).toContain("Sources did not report");
+    // Zero findings against sources that reported nothing is NOT a clean result: the server's own stage fact says Not published, with why.
+    expect(chip("reconciliation").textContent).toContain("Not published (FE-067)");
+    expect(chip("reconciliation").querySelector(".exec-blk-np")!.getAttribute("title")).toContain("SANDBOX_SOURCE_UNAVAILABLE");
     expect(screen.getByText(/With the sources unavailable this is an absence of evidence, not a clean result/)).toBeTruthy();
     expect(screen.getByText(/The source panels did not report/)).toBeTruthy();
     const triad = screen.getByRole("group", { name: "Reconciliation" });
-    expect(within(triad).getAllByText("Not available").length).toBeGreaterThanOrEqual(12);
+    // The dark body now carries `source_figures`: every side is the server's `Not published (FE-072)`, with its reason in the title.
+    expect(triad.querySelectorAll(".exec-blk-np").length).toBe(15);
     expect(triad.textContent).not.toMatch(/\b0\.00\b/);
     expect(screen.getByRole("list", { name: "Source panels" }).textContent).toContain("Execution · Unavailable");
   });
