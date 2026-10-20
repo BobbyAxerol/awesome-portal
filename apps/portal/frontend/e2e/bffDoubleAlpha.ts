@@ -434,8 +434,8 @@ function resourceScoped(id: string, shape: "populated" | "empty" | "bounded"): B
     position("pos_btc_short", "SHORT", "0.52", "67410.55", null, "35053.05", null),
   ]);
   scopedRelation(body, "reconciliation", [
-    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "RESOLVED", created_at_ms: Date.UTC(2026, 9, 17, 9, 12), deployment_id: "dep_live_01" },
-    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "OPEN", created_at_ms: Date.UTC(2026, 9, 17, 11, 40), deployment_id: "dep_live_01" },
+    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "RESOLVED", created_at_ms: Date.UTC(2026, 9, 17, 9, 12), finding_id: "find_001", finding_type: "POSITION_MISMATCH", resolved_at_ms: Date.UTC(2026, 9, 17, 9, 48), deployment_id: "dep_live_01" },
+    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "OPEN", created_at_ms: Date.UTC(2026, 9, 17, 11, 40), finding_id: "find_002", finding_type: "BALANCE_MISMATCH", resolved_at: null, deployment_id: "dep_live_01" },
   ]);
   // Published and deliberately not consumed as the alpha's stage: it is per strategy and per book.
   scopedRelation(body, "strategies", [{ profile_environment: "live", strategy_id: id, alpha_id: id, state: "ACTIVE", stage: "LIVE", deployment_id: "dep_live_01" }]);
@@ -445,22 +445,43 @@ function resourceScoped(id: string, shape: "populated" | "empty" | "bounded"): B
     alpha_id: null,
     deployments: structuredClone(deployments),
     portfolios: [{ portfolio_id: "pf_core", name: "Core" }],
+    // BE-P15: one published snapshot row per visible deployment (never a sum); Paper states one, the other books say why they cannot.
+    deployment_financials: [
+      { profile_environment: "paper", deployment_id: "dep_paper_01", state: "AVAILABLE", reason_code: null, basis: "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW", snapshot_at_ms: SCOPED_AT, currency: "USDT", net_pnl: "184.2000", equity: "20184.2000" },
+      ...(["live", "sandbox"] as const).map((book) => ({
+        profile_environment: book, deployment_id: `dep_${book}_01`, state: "UNAVAILABLE", reason_code: "DEPLOYMENT_FINANCIALS_RELATION_NOT_BOUND_FOR_PROFILE",
+        basis: "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW", snapshot_at_ms: null, currency: null, net_pnl: null, equity: null,
+      })),
+    ],
   };
   return ok(body);
 }
+
+const LEG_OF_TYPE: Readonly<Record<string, { role: string; sequence: number }>> = {
+  TAKE_PROFIT_MARKET: { role: "TAKE_PROFIT", sequence: 1 },
+  STOP_MARKET: { role: "STOP_LOSS", sequence: 2 },
+};
 
 function scopedRecord(kind: "orders" | "fills", values: Rec): Json {
   const time = Date.parse(String(kind === "orders" ? values.submitted_at : values.trade_time));
   const shared = { strategy_id: values.strategy_id, account_id: values.account_id, instrument_id: values.instrument_id, side: values.side, quantity: values.quantity, price: values.price };
   if (kind === "orders") {
+    const leg = LEG_OF_TYPE[String(values.order_type)];
     return {
       record_id: String(values.order_id), observed_at_ms: time + 4_000,
-      values: { order_id: values.order_id, ...shared, status: values.status, occurred_at_ms: time },
+      // BE-P15: an order states its own submission instant (`submitted_at_ms`), client order id, type and, for a conditional leg, its role.
+      values: {
+        order_id: values.order_id, ...shared, status: values.status, submitted_at_ms: time, client_order_id: values.client_order_id, order_type: values.order_type,
+        ...(leg ? { leg_role: leg.role, leg_sequence: leg.sequence } : {}),
+      },
     };
   }
   return {
     record_id: String(values.fill_id), observed_at_ms: time + 4_000,
-    values: { fill_id: values.fill_id, ...shared, realized_pnl: values.realized_pnl, occurred_at_ms: time },
+    values: {
+      fill_id: values.fill_id, ...shared, realized_pnl: values.realized_pnl, occurred_at_ms: time, client_order_id: values.client_order_id,
+      commission: values.commission, commission_currency: values.commission_currency, liquidity_side: values.liquidity_side,
+    },
   };
 }
 
@@ -468,6 +489,7 @@ function scopedRecord(kind: "orders" | "fills", values: Rec): Json {
 const UNTIMED_FILL: Json = {
   record_id: "fill_004", observed_at_ms: ALPHA_DOUBLE_AS_OF_MS - 1_000,
   values: { fill_id: "fill_004", strategy_id: ALPHA_DOUBLE_ID, account_id: "acct_binance_02", instrument_id: "BTCUSDT.BINANCE", side: "BUY", price: "67411.50", quantity: "0.02", realized_pnl: "0" },
+  time_reason_code: "SOURCE_TIME_NOT_PUBLISHED",
 };
 
 function subjectPageScoped(id: string, relation: "orders" | "fills", search: URLSearchParams): BffAnswerAlpha {
@@ -489,6 +511,8 @@ function subjectPageScoped(id: string, relation: "orders" | "fills", search: URL
   return ok({
     ...base,
     logical_operation_id: relation === "orders" ? "executionAlphaOrdersV1" : "executionAlphaFillsV1",
+    // The server ties the basis to the operation: orders page by their update time, fills by their trade time.
+    observed_at_basis: relation === "orders" ? "ORDER_UPDATED_AT" : "FILL_TRADE_TIME",
     environment,
     profile_id: ENV_PROFILE[environment],
     resource: { kind: "alpha", id },

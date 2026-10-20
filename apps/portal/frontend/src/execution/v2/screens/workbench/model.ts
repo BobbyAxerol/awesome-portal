@@ -536,6 +536,8 @@ export interface OrderRow {
   quantity: Figure;
   price: Figure;
   state: OrderState;
+  /** The source's order type word, when the row states one. */
+  orderType: string | null;
   atMs: UtcEpochMs | null;
 }
 
@@ -553,6 +555,7 @@ export function readOrders(envelope: ProfileEnvelope, population: number | null)
       quantity: figure(row.quantity, "qty"),
       price: figure(row.price ?? row.trigger_price, "money"),
       state: orderState(row.status),
+      orderType: text(row.order_type),
       atMs: timeOf(row, "submitted_at_ms", "submitted_at", "updated_at_ms", "updated_at"),
     };
   });
@@ -569,6 +572,8 @@ export interface FillRow {
   price: Figure;
   fee: Figure;
   feeCurrency: string | null;
+  /** MAKER, TAKER or UNKNOWN, when the row states one. */
+  liquidity: string | null;
   atMs: UtcEpochMs | null;
 }
 
@@ -582,6 +587,7 @@ export function readFills(envelope: ProfileEnvelope, population: number | null):
     price: figure(row.price, "money"),
     fee: figure(row.commission, "money"),
     feeCurrency: currencyOf(row.commission_currency),
+    liquidity: text(row.liquidity_side),
     atMs: timeOf(row, "trade_time_ms", "trade_time"),
   }));
   return windowOf(rows, population, "fills", branchPublished(envelope, "fills"));

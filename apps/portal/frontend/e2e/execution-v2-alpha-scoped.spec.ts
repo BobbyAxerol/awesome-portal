@@ -136,7 +136,7 @@ test("BFF_DOUBLE · scoped alpha @1280: Deployments and Orders & Fills tell the 
   const live = deployments.getByRole("row").filter({ hasText: "dep_live_01" });
   await expect(live).toContainText("Live book");
   await expect(live).toContainText("Core");
-  await expect(live.locator("td[data-l='Net PnL, current']")).toContainText("Not published (FE-005)");
+  await expect(live.locator("td[data-l='Net PnL, current']")).toHaveText("Not available"); // BE-P15: the Live book states no snapshot relation, with its reason behind the mark
   await expect(live.locator("td[data-l='Allocated, current'] .exec-blk-num")).toHaveAttribute("data-full", "40000.00");
 
   await tab(page, "Orders & Fills").click();

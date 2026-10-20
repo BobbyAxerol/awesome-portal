@@ -96,19 +96,21 @@ describe("the header and the authority label", () => {
     expect(document.body.textContent ?? "").not.toMatch(LEGACY_ONLY);
   });
 
-  it("a member the v2 body does not publish reads Not published (FE-xxx), each with its reason in the title", async () => {
+  it("a member the v2 body does not state reads Not published (FE-xxx), each with the body's own typed reason behind the mark", async () => {
     mount();
     await ready();
     const meta = document.querySelector(".exec-alp2-meta")!;
     const member = (word: string) => Array.from(meta.children).find((c) => (c.textContent ?? "").startsWith(word))!;
     expect(member("Name").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
-    expect(whyText(member("Name"))).toBe("execution.alpha-resource.v2 states no alpha name");
+    expect(whyText(member("Name"))).toBe("The source has no alpha name");
     expect(member("Version").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
-    expect(whyText(member("Version"))).toBe("execution.alpha-resource.v2 states no alpha version");
+    expect(whyText(member("Version"))).toBe("The source has no alpha version");
     expect(member("Owner").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-030)");
-    expect(whyText(member("Owner"))).toBe("execution.alpha-resource.v2 states no owner");
+    expect(whyText(member("Owner"))).toBe("The source owner is not mapped to a Portal user");
     // RV-06: no reason rides on a title of a non-focusable wrapper.
-    for (const reason of ["states no alpha name", "states no alpha version", "states no owner"]) expect(meta.querySelector(`[title*="${reason}"]`)).toBeNull();
+    for (const reason of ["has no alpha name", "has no alpha version", "not mapped to a Portal user"]) expect(meta.querySelector(`[title*="${reason}"]`)).toBeNull();
+    // A reason code is never printed as text.
+    expect(meta.textContent).not.toMatch(/ALPHA_[A-Z_]+/);
     expect(meta.textContent).toContain("Core");
   });
 
@@ -161,7 +163,7 @@ describe("the same sections, from the scoped facts", () => {
     const spine = screen.getByRole("list", { name: "Alpha lifecycle" });
     expect(within(spine).getAllByRole("listitem").filter((n) => n.getAttribute("aria-current") === "step")).toHaveLength(0);
     expect(spine.closest("section")!.textContent).toContain("The source names no current stage");
-    expect(spine.closest("section")!.textContent).toContain("carries no alpha-level stage");
+    expect(spine.closest("section")!.textContent).toContain("The source publishes no stage");
     fireEvent.click(within(spine).getByRole("button", { name: /Paper/ }));
     expect(document.querySelector('.exec-alp2-stage-detail[data-stage="paper"]')!.textContent).toContain("dep_paper_01");
     fireEvent.click(within(spine).getByRole("button", { name: /Live/ }));
@@ -171,7 +173,7 @@ describe("the same sections, from the scoped facts", () => {
     expect(live.textContent).toContain("Allocated, current");
   });
 
-  it("Deployments: a row per deployment with its book as the stage; the money columns read Not published (FE-005); the allocation is the one stated row", async () => {
+  it("Deployments: a row per deployment with its book as the stage; the allocation is the one stated row; net PnL and equity are the one published snapshot row, or the body's reason", async () => {
     mount();
     await ready();
     await openTab("Deployments");
@@ -181,10 +183,21 @@ describe("the same sections, from the scoped facts", () => {
     expect(live.textContent).toContain("Live book");
     expect(live.textContent).toContain("Core");
     expect(live.querySelector("td[data-l='Allocated, current'] .exec-blk-num")!.getAttribute("data-full")).toBe("40000.00");
-    expect(live.querySelector("td[data-l='Net PnL, current']")!.textContent).toContain("Not published (FE-005)");
+    // A book with no bound snapshot relation says so; it is never a zero, a dash or a sum.
+    const liveNet = live.querySelector("td[data-l='Net PnL, current']")!;
+    expect(liveNet.textContent).toBe("Not available");
+    expect(whyText(liveNet as HTMLElement)).toBe("No snapshot is bound for this book");
+    expect(live.querySelector("td[data-l='Equity']")!.textContent).toBe("Not available");
     const paper = rows.find((r) => r.textContent?.includes("dep_paper_01"))!;
     expect(paper.textContent).toContain("Paper");
     expect(paper.querySelector("td[data-l='Allocated, current']")!.textContent).toContain("Not published (FE-005)");
+    // Paper states one snapshot row: exact digits, the currency, the row's own instant (UTC), and nothing is added across rows.
+    const paperNet = paper.querySelector("td[data-l='Net PnL, current'] .exec-blk-num")!;
+    expect(paperNet.getAttribute("data-full")).toBe("184.2000");
+    expect(paper.querySelector("td[data-l='Net PnL, current']")!.textContent).toContain("USDT");
+    expect(paper.querySelector("td[data-l='Net PnL, current'] small")).not.toBeNull();
+    expect(paper.querySelector("td[data-l='Equity'] .exec-blk-num")!.getAttribute("data-full")).toBe("20184.2000");
+    expect(document.body.textContent).toContain("One snapshot row per deployment, not summed");
     expect(rows.find((r) => r.textContent?.includes("dep_sandbox_01"))!.textContent).toContain("Sandbox");
   });
 
@@ -202,7 +215,7 @@ describe("the same sections, from the scoped facts", () => {
     expect(rows[1].textContent).toContain("Not marked");
   });
 
-  it("Reconciliation: the result as stated; the finding type and the resolution time, which the scoped relation lacks, are Not published (FE-072)", async () => {
+  it("Reconciliation: the result, the finding id and type and the resolution time as the body states them; an open finding is Not resolved", async () => {
     mount();
     await ready();
     fireEvent.click(screen.getByRole("button", { name: "More" }));
@@ -212,7 +225,13 @@ describe("the same sections, from the scoped facts", () => {
     expect(rows).toHaveLength(2);
     expect(rows.map((r) => r.textContent).join(" ")).toContain("Resolved");
     expect(rows.map((r) => r.textContent).join(" ")).toContain("Open");
-    for (const r of rows) expect(r.textContent).toContain("Not published (FE-072)");
+    const [resolved, open] = rows;
+    expect(resolved.textContent).toContain("POSITION_MISMATCH");
+    expect(resolved.textContent).toContain("find_001");
+    expect(resolved.querySelector("td[data-l='Resolved'] time")!.getAttribute("datetime")).toBe(new Date(Date.UTC(2026, 9, 17, 9, 48)).toISOString());
+    expect(open.textContent).toContain("BALANCE_MISMATCH");
+    expect(open.querySelector("td[data-l='Resolved']")!.textContent).toContain("Not resolved");
+    expect(document.body.textContent).not.toContain("Not published (FE-072)");
   });
 
   it("Research Evidence: the name and version are Not published (FE-066), the alpha id is the one the body names", async () => {
@@ -246,17 +265,26 @@ describe("the same sections, from the scoped facts", () => {
 });
 
 describe("Orders & Fills on subject-records.v2", () => {
-  it("states what the scoped record leaves out once, draws no empty column for it, and pages with the Portal's cursor unchanged", async () => {
+  it("draws a column only when the page states that member; a record that lacks it says so; the order time is its own submitted_at_ms; the cursor is the Portal's, unchanged", async () => {
     const { calls } = mount();
     await ready();
     await openTab("Orders & Fills");
     const orders = await screen.findByRole("table", { name: "Orders of this alpha" });
-    expect(document.body.textContent).toContain("Scoped read: authorized rows of a retained window, not total history");
+    expect(document.body.textContent).toContain("Scoped read: authorized rows of a retained window, not total history. Paged by order update time.");
+    expect(document.body.textContent).not.toContain("subject-records.v2");
     const heads = within(orders).getAllByRole("columnheader").map((h) => h.textContent);
-    expect(heads).toContain("Order");
-    expect(heads).not.toContain("Client order");
-    expect(heads).not.toContain("Type");
-    expect(within(orders).getAllByRole("row").slice(1)).toHaveLength(6);
+    expect(heads).toEqual(expect.arrayContaining(["Time (UTC)", "Order", "Client order", "Type", "Leg"]));
+    const rows = within(orders).getAllByRole("row").slice(1);
+    expect(rows).toHaveLength(6);
+    const first = rows.find((r) => r.textContent?.includes("ord_001"))!;
+    expect(first.querySelector("td[data-l='Client order']")!.textContent).toBe("bt3-001");
+    expect(first.querySelector("td[data-l='Time (UTC)'] time")!.getAttribute("datetime")).toBe(new Date(Date.UTC(2026, 9, 16, 14, 0)).toISOString());
+    expect(first.querySelector("td[data-l='Type']")!.textContent).toContain("Limit");
+    // A conditional leg states its role and sequence; an entry order states none, and says so without a guess.
+    const takeProfit = rows.find((r) => r.textContent?.includes("ord_002"))!;
+    expect(takeProfit.querySelector("td[data-l='Leg']")!.textContent).toBe("Take profit 1");
+    expect(first.querySelector("td[data-l='Leg']")!.textContent).toBe("Not available");
+    expect(whyText(first.querySelector("td[data-l='Leg']") as HTMLElement)).toBe("Not in this record");
     expect(calls.filter((c) => /\/orders\?/.test(c)).every((c) => c.includes(`workspace_id=${ALPHA_V2_WORKSPACE}`))).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     await waitFor(() => expect(within(screen.getByRole("table", { name: "Orders of this alpha" })).getAllByRole("row").slice(1)).toHaveLength(8));
@@ -264,14 +292,77 @@ describe("Orders & Fills on subject-records.v2", () => {
     expect(new URL(second, "http://portal.test").searchParams.get("after")).toBe("kc1.double-k1.eyJkaXJlY3Rpb24iOiJhZnRlciIsInJlc291cmNlIjoib3JkZXJzIn0.RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF");
   });
 
-  it("a fill the scoped record dates with no trade time is counted as returned and not shown, never dated by the observation clock", async () => {
+  it("Fills: client order, fee with its own currency and liquidity as stated; a fill the source gave no fee is Not available with a reason, not a zero", async () => {
+    mount();
+    await ready();
+    await openTab("Orders & Fills");
+    const fills = await screen.findByRole("table", { name: "Fills of this alpha" });
+    const heads = within(fills).getAllByRole("columnheader").map((h) => h.textContent);
+    expect(heads).toEqual(expect.arrayContaining(["Client order", "Fee", "Liquidity"]));
+    const rows = within(fills).getAllByRole("row").slice(1);
+    const one = rows.find((r) => r.textContent?.includes("fill_001"))!;
+    expect(one.querySelector("td[data-l='Fee'] .exec-blk-num")!.getAttribute("data-full")).toBe("5.38");
+    expect(one.querySelector("td[data-l='Fee']")!.textContent).toContain("USDT");
+    expect(one.querySelector("td[data-l='Liquidity']")!.textContent).toBe("Maker");
+    expect(one.querySelector("td[data-l='Client order']")!.textContent).toBe("bt3-001");
+    const noFee = rows.find((r) => r.textContent?.includes("fill_003"))!;
+    expect(noFee.querySelector("td[data-l='Fee']")!.textContent).toBe("Not available");
+    expect(whyText(noFee.querySelector("td[data-l='Fee']") as HTMLElement)).toBe("Not in this record");
+  });
+
+  it("an order the page gives no submission time for says why, in the page's own reason; both of the page's order-time reasons read, and no time is borrowed", async () => {
+    const override: Override = (path, query) => {
+      if (!path.endsWith("/orders") || query.get("after") !== null) return undefined;
+      const answer = answerAlpha("GET", path, query)!;
+      const body = structuredClone(answer.body) as { records: { values: Record<string, unknown>; time_reason_code?: string }[] };
+      delete body.records[0]!.values.submitted_at_ms;
+      body.records[0]!.time_reason_code = "SUBMITTED_AT_NOT_IN_POLICY";
+      delete body.records[1]!.values.submitted_at_ms;
+      body.records[1]!.time_reason_code = "SOURCE_TIME_UNPARSEABLE";
+      return { ...answer, body };
+    };
+    mount(SCOPED_ENTRY, override);
+    await ready();
+    await openTab("Orders & Fills");
+    const rows = within(await screen.findByRole("table", { name: "Orders of this alpha" })).getAllByRole("row").slice(1);
+    const cell = (id: string) => rows.find((r) => r.textContent?.includes(id))!.querySelector("td[data-l='Time (UTC)']") as HTMLElement;
+    expect(cell("ord_001").textContent).toBe("Not available");
+    expect(cell("ord_001").querySelector("time")).toBeNull();
+    expect(whyText(cell("ord_001"))).toBe("Submission time is outside this read's scope");
+    expect(whyText(cell("ord_002"))).toBe("The source time could not be read");
+    expect(cell("ord_003").querySelector("time")).not.toBeNull();
+    expect(document.body.textContent).not.toMatch(/SUBMITTED_AT_NOT_IN_POLICY|SOURCE_TIME_UNPARSEABLE/);
+  });
+
+  it("a page that states none of the detail members draws none of its columns (no empty column reads as 'none')", async () => {
+    const override: Override = (path, query) => {
+      if (!/\/(orders|fills)$/.test(path)) return undefined;
+      const answer = answerAlpha("GET", path, query)!;
+      const body = structuredClone(answer.body) as { records: { values: Record<string, unknown> }[] };
+      for (const record of body.records) for (const key of ["client_order_id", "order_type", "leg_role", "leg_sequence", "commission", "commission_currency", "liquidity_side"]) delete record.values[key];
+      return { ...answer, body };
+    };
+    mount(SCOPED_ENTRY, override);
+    await ready();
+    await openTab("Orders & Fills");
+    const orders = await screen.findByRole("table", { name: "Orders of this alpha" });
+    const fills = await screen.findByRole("table", { name: "Fills of this alpha" });
+    const heads = [...within(orders).getAllByRole("columnheader"), ...within(fills).getAllByRole("columnheader")].map((h) => h.textContent);
+    for (const gone of ["Client order", "Type", "Leg", "Fee", "Liquidity"]) expect(heads).not.toContain(gone);
+    expect(heads).toEqual(expect.arrayContaining(["Order", "Fill", "Quantity"]));
+  });
+
+  it("a fill with no trade time is counted as returned and not shown, never dated by the observation clock; the page's reason is behind the mark", async () => {
     mount();
     await ready();
     await openTab("Orders & Fills");
     const fills = await screen.findByRole("table", { name: "Fills of this alpha" });
     expect(within(fills).getAllByRole("row").slice(1)).toHaveLength(3);
-    expect(document.body.textContent).toContain("1 record was returned and not shown: no fill id, price or trade time");
-    expect(within(fills).getAllByRole("columnheader").map((h) => h.textContent)).not.toContain("Fee");
+    const note = screen.getByText(/1 record was returned and not shown: no fill id, price or trade time\./);
+    expect(note.textContent).not.toMatch(/occurred_at_ms|timestamp_ms/);
+    const mark = within(note.closest("p")!).getByRole("button", { name: "Why trade time is missing" });
+    fireEvent.click(mark);
+    expect(note.closest("p")!.textContent).toContain("The source published no time");
   });
 });
 

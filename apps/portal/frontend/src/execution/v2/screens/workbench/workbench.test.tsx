@@ -461,6 +461,26 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(screen.getByTestId("Orders-cap").textContent).toBe("4 orders");
   });
 
+  it("Orders: a submitted time and a type column appear only when the profile states them; a row without a type says Not available", async () => {
+    const wire = paperWire({ orders: 2 });
+    wire.data.orders[0].order_type = "STOP_MARKET";
+    mount({ profile: { ok: true, value: envelopeOf(wire) } });
+    await ready();
+    await openTab("Orders");
+    const table = screen.getByRole("table", { name: "Orders" });
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Submitted (UTC)", "Client order", "Type", "Side", "Quantity", "Price", "State", "Blotter"]);
+    const rows = within(table).getAllByRole("row").slice(1);
+    // Newest first: ord 1 states no type, ord 0 states one; the instant is the order's own, in UTC.
+    expect(rows[0].querySelector("td[data-l='Type']")!.textContent).toBe("Not available");
+    expect(rows[1].querySelector("td[data-l='Type']")!.textContent).toBe("Stop market");
+    expect(rows[1].querySelector("td[data-l='Submitted (UTC)'] time")!.getAttribute("datetime")).toBe("2026-10-16T14:00:00.000Z");
+    cleanup();
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ orders: 2 })) } });
+    await ready();
+    await openTab("Orders");
+    expect(within(screen.getByRole("table", { name: "Orders" })).getAllByRole("columnheader").map((h) => h.textContent)).not.toContain("Type");
+  });
+
   it("Orders: an UNKNOWN or unknown-word state reads Unknown, never a success", async () => {
     const wire = paperWire({ orders: 2 });
     wire.data.orders[0].status = "UNKNOWN";
@@ -512,6 +532,24 @@ describe("Orders, Fills, Positions, Sessions", () => {
     expect(rows[0].textContent).toContain("12.40");
     expect(rows[0].textContent).toContain("USDT");
     expect(screen.getByTestId("Fills-cap").textContent).toBe("2 fills");
+  });
+
+  it("Fills: a liquidity column appears only when the profile states a side; MAKER, TAKER or UNKNOWN as the source said it", async () => {
+    const wire = paperWire({ fills: 2 });
+    wire.data.fills[0].liquidity_side = "MAKER";
+    mount({ profile: { ok: true, value: envelopeOf(wire) } });
+    await ready();
+    await openTab("Fills");
+    const table = screen.getByRole("table", { name: "Fills" });
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["When (UTC)", "Client order", "Quantity", "Price", "Fee", "Liquidity"]);
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows[0].querySelector("td[data-l='Liquidity']")!.textContent).toBe("Not available");
+    expect(rows[1].querySelector("td[data-l='Liquidity']")!.textContent).toBe("Maker");
+    cleanup();
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ fills: 2 })) } });
+    await ready();
+    await openTab("Fills");
+    expect(within(screen.getByRole("table", { name: "Fills" })).getAllByRole("columnheader").map((h) => h.textContent)).not.toContain("Liquidity");
   });
 
   it("Positions: the published columns, and Long, Short and Gross named as Not published (FE-051)", async () => {

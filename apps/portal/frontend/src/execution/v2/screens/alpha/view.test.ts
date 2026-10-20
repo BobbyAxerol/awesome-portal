@@ -58,11 +58,34 @@ describe("the scoped view", () => {
   it("states no name, version, owner or current stage: each is absent with a reason, and the producer's literal is not a name", () => {
     const view = scopedView();
     expect(view).toMatchObject({ name: null, version: null, current: null, title: ALPHA_DOUBLE_ID, titleWithVersion: ALPHA_DOUBLE_ID });
-    expect(view.owner).toMatchObject({ kind: "not-published", id: "FE-030" });
-    expect(view.currentNote).toContain("no alpha-level stage");
+    expect(view.owner).toMatchObject({ kind: "not-published", id: "FE-030", reason: "The source owner is not mapped to a Portal user" });
+    expect(view.nameReason).toBe("The source has no alpha name");
+    expect(view.versionReason).toBe("The source has no alpha version");
+    expect(view.currentNote).toBe("The source publishes no stage");
     // The strategies relation states `stage: LIVE` per strategy and per book; it is not the alpha's stage and is not read as one.
     expect(JSON.stringify(scopedBody().data.strategies)).toContain('"stage":"LIVE"');
     expect(view.current).toBeNull();
+  });
+
+  it("a version the summary states is the version; with no typed absence the older sentence stands; a stated name needs no reason", () => {
+    const stated = scopedView((b) => { b.data.alpha.version = "3"; b.data.alpha.name = "Trend Name"; b.data.alpha.identity_absences = [{ member: "owner", reason_code: "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER" }, { member: "stage", reason_code: "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE" }]; });
+    expect(stated).toMatchObject({ name: "Trend Name", version: "3", title: "Trend Name", titleWithVersion: "Trend Name v3" });
+    const none = scopedView((b) => { delete b.data.alpha.identity_absences; });
+    expect(none.nameReason).toBe("execution.alpha-resource.v2 states no alpha name");
+    expect(none.currentNote).toContain("no alpha-level stage");
+  });
+
+  it("deployment financials: one snapshot row per deployment of its book, matched on book and id, with the body's reason in words; none for a deployment the body names no entry for", () => {
+    const view = scopedView();
+    const byId = (id: string) => view.rows.find((r) => r.id === id)!;
+    expect(byId("dep_paper_01").financial).toEqual({ state: "AVAILABLE", reason: null, netPnl: "184.2000", equity: "20184.2000", currency: "USDT", atMs: expect.any(Number) });
+    expect(byId("dep_live_01").financial).toMatchObject({ state: "UNAVAILABLE", reason: "No snapshot is bound for this book", netPnl: null, equity: null, atMs: null });
+    const cut = scopedView((b) => { b.data.alpha.deployment_financials[0] = { ...b.data.alpha.deployment_financials[0], state: "PARTIAL", reason_code: "DEPLOYMENT_FINANCIAL_WINDOW_TRUNCATED" }; });
+    expect(cut.rows.find((r) => r.id === "dep_paper_01")!.financial).toMatchObject({ state: "PARTIAL", reason: "The window was cut; a later row may exist", netPnl: "184.2000" });
+    // An entry for the same id in another book is not this deployment's.
+    const wrongBook = scopedView((b) => { b.data.alpha.deployment_financials[0].profile_environment = "sandbox"; });
+    expect(wrongBook.rows.find((r) => r.id === "dep_paper_01")!.financial).toBeUndefined();
+    expect(scopedView((b) => { delete b.data.alpha.deployment_financials; }).rows.every((r) => r.financial === undefined)).toBe(true);
   });
 
   it("a PUBLISHED name is the title: summary display_name, then name, then a resource label that is not the producer's literal", () => {
@@ -123,9 +146,13 @@ describe("the scoped view", () => {
     expect(scopedView().positions[1]).toMatchObject({ side: "Short", mark: null, unrealized: null, currency: null, notional: "35053.05" });
   });
 
-  it("reconciliation rows carry the result and the venue; the finding type and the resolution time are absent, not 'Unknown' and not now", () => {
+  it("reconciliation rows carry the result, venue, finding id and type, and the resolution instant when the body states them; a member it omits stays null, not 'Unknown' and not now", () => {
     const rows = scopedView().reconciliation;
-    expect(rows.map((r) => [r.status.label, r.venue, r.kind, r.resolvedAt])).toEqual([["Resolved", "BINANCE", null, null], ["Open", "BINANCE", null, null]]);
+    expect(rows.map((r) => [r.status.label, r.venue, r.kind, r.resolvedAt, r.findingId])).toEqual([
+      ["Resolved", "BINANCE", "POSITION_MISMATCH", Date.UTC(2026, 9, 17, 9, 48), "find_001"], ["Open", "BINANCE", "BALANCE_MISMATCH", null, "find_002"],
+    ]);
+    const bare = scopedView((b) => { for (const row of b.data.reconciliation) { delete row.finding_id; delete row.finding_type; delete row.resolved_at_ms; } }).reconciliation;
+    expect(bare.map((r) => [r.kind, r.resolvedAt, r.findingId])).toEqual([[null, null, null], [null, null, null]]);
     expect(scopedView((b) => { delete b.data.reconciliation[0].status; }).reconciliation[0]!.status).toEqual({ kind: "unknown", label: "Not published" });
   });
 

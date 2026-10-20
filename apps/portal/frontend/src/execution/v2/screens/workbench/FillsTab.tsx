@@ -3,8 +3,8 @@
  * Fees are the source's `commission` with its own currency; nothing is summed.
  */
 import type { CardsColumn } from "../../cardsTable";
-import { At, Fig } from "./cells";
-import type { FillRow, TableWindow } from "./model";
+import { At, Fig, Na } from "./cells";
+import { humanize, type FillRow, type TableWindow } from "./model";
 import { TablePanel } from "./TablePanel";
 
 export function FillsTab({ table }: { table: TableWindow<FillRow> }) {
@@ -14,6 +14,7 @@ export function FillsTab({ table }: { table: TableWindow<FillRow> }) {
     { key: "qty", label: "Quantity", numeric: true, render: (r) => <Fig value={r.quantity} /> },
     { key: "price", label: "Price", numeric: true, render: (r) => <Fig value={r.price} /> },
     { key: "fee", label: "Fee", numeric: true, render: (r) => <Fig value={r.fee} currency={r.feeCurrency} /> },
+    ...(table.rows.some((r) => r.liquidity !== null) ? [{ key: "liquidity", label: "Liquidity", render: (r: FillRow) => (r.liquidity === null ? <Na /> : humanize(r.liquidity)) }] : []),
   ];
   return <TablePanel label="Fills" noun="fills" table={table} columns={columns} />;
 }
