@@ -10,12 +10,16 @@
  * - A failed first page is `error` with the typed status and reason; a failed
  *   `loadMore` keeps the rows already shown and reports `moreError`.
  * - `enabled: false` makes no request at all (the Archived lens).
+ * - UXM-08: when the view that owns the scope's stream says access was revoked
+ *   (`scopedEviction`), rows, envelope AND the kept summary are dropped, both
+ *   requests are cancelled and the state is `denied` until the query changes.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { AlphaFleetQuery, ExecutionApi, Result } from "../../../api/ports";
 import type { AlphaFleetItem, AlphaFleetSummary, ManagerListEnvelope } from "../../../api/profileRead";
 import type { PanelStatus } from "../../../contracts";
+import { EVICTED_REASON, useScopedCacheEviction } from "../../scopedEviction";
 
 export type FleetReadState =
   | { phase: "idle" }
@@ -65,6 +69,20 @@ export function useFleetRead(
   cursorRef.current = nextCursor;
   const generation = useRef(0);
   const more = useRef<AbortController | null>(null);
+  const first = useRef<(() => void) | null>(null);
+
+  useScopedCacheEviction(() => {
+    generation.current += 1;
+    first.current?.();
+    first.current = null;
+    more.current?.abort();
+    setLoadingMore(false);
+    setMoreError(null);
+    setItems([]);
+    setEnvelope(null);
+    setSummary(null);
+    setState((now) => (now.phase === "idle" ? now : { phase: "error", status: "denied", reason: EVICTED_REASON }));
+  });
 
   useEffect(() => {
     generation.current += 1;
@@ -77,6 +95,10 @@ export function useFleetRead(
     }
     const controller = new AbortController();
     let cancelled = false;
+    first.current = () => {
+      cancelled = true;
+      controller.abort();
+    };
     setState({ phase: "loading" });
     setItems([]);
     setEnvelope(null);

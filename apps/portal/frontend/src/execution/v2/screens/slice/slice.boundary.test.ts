@@ -29,6 +29,7 @@ const OWNED = [
   ...walk(join(V2, "realtime")).filter(isProduct),
   ...walk(join(V2, "screens/slice")).filter(isProduct),
   join(V2, "readers/scopedRealtime.ts"),
+  join(V2, "scopedEviction.ts"),
 ];
 
 describe("the lane's product sources", () => {

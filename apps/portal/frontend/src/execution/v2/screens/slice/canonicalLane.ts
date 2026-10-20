@@ -63,10 +63,32 @@ export interface LaneContext {
   environment: string | null;
 }
 
+/**
+ * What the fixture "server" remembers about withdrawn access, for as long as the memory object lives. A real source
+ * answers DENIED to every later read of a revoked scope; a lane built per mount would forget and show the rows again on
+ * Back. The route keeps one memory for the page's life (`PAGE_REVOCATIONS`); a full reload forgets it, and tests build their own.
+ */
+export interface RevocationMemory {
+  has(scope: string): boolean;
+  add(scope: string): void;
+}
+
+export function createRevocationMemory(): RevocationMemory {
+  const scopes = new Set<string>();
+  return { has: (scope) => scopes.has(scope), add: (scope) => void scopes.add(scope) };
+}
+
+/** The route's memory (the page's life). Fixture behaviour only: it stands in for a server that does not forget. */
+export const PAGE_REVOCATIONS: RevocationMemory = createRevocationMemory();
+
+const scopeOf = (context: LaneContext): string => `${context.workspaceId ?? "-"}|${context.environment ?? "-"}`;
+
 export interface FixtureLane {
   port: SnapshotPort<ScopedRead>;
   /** What the next snapshot read answers; the lane's one dial. */
   setNext(next: NextRead): void;
+  /** The view learned that access to this lane's scope was withdrawn: every later read of it is DENIED (when a memory was given). */
+  revoke(): void;
   reads(): number;
 }
 
@@ -74,7 +96,7 @@ export interface FixtureLane {
  * The lane's snapshot port. A context the published example does not cover is DENIED, like a real BFF that does not
  * authorize it: the fixture never answers one scope's rows for another.
  */
-export function createFixtureLane(context: LaneContext): FixtureLane {
+export function createFixtureLane(context: LaneContext, revocations?: RevocationMemory): FixtureLane {
   let next: NextRead = "ok";
   let reads = 0;
   const failure = (reason: SnapshotFailure): SnapshotOutcome<ScopedRead> => ({ ok: false, failure: reason });
@@ -82,6 +104,7 @@ export function createFixtureLane(context: LaneContext): FixtureLane {
     setNext: (value) => {
       next = value;
     },
+    revoke: () => revocations?.add(scopeOf(context)),
     reads: () => reads,
     port: {
       readSnapshot: async () => {
@@ -91,7 +114,7 @@ export function createFixtureLane(context: LaneContext): FixtureLane {
         const covers =
           (context.workspaceId === null || context.workspaceId === scoped.workspaceId) &&
           (context.environment === null || scoped.environment === "all" || context.environment === scoped.environment);
-        if (!covers || next === "denied") return failure("DENIED");
+        if (!covers || next === "denied" || revocations?.has(scopeOf(context)) === true) return failure("DENIED");
         if (next === "unavailable") return failure("UNAVAILABLE");
         const baseline = next === "no_stream" ? baselineOf("N10-NATIVE-NO-STREAM-HEADERS") : baselineOf("N10-NATIVE-BASELINE-HEADERS");
         return { ok: true, data: scoped, readAtMs: scoped.readAtMs, baseline };
