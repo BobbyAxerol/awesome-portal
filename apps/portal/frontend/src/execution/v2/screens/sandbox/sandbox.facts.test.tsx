@@ -16,7 +16,7 @@ import SandboxScreen from "./index";
 import { chipsOf } from "./model";
 import { readSandboxView, type SandboxView } from "./readSandbox";
 import { fakeApi, okRead, v1Rich, v2Body } from "./testApi";
-import { whyText } from "../../gapWhyTestUtil";
+import { whyButton, whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -209,7 +209,9 @@ describe("BE-P12: the opt-in identity of the following-parent v2 body (include=i
     const crumb = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
     expect(crumb.getByRole("link", { name: "alpha_TEST_ONLY_identity" }).getAttribute("href")).toBe("/deployments/alphas/alpha_TEST_ONLY_identity");
     expect(crumb.getByRole("link", { name: "TEST_ONLY portfolio name" }).getAttribute("href")).toBe("/deployments/portfolios/pf_TEST_ONLY_parent");
-    expect(document.querySelector(".exec-stage-sub span[title]")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    const sub = document.querySelector(".exec-stage-sub")!;
+    expect(sub.textContent).not.toMatch(/ALPHA_NAME_NOT_PUBLISHED|FE-\d/);
+    expect(whyText(sub)).toContain("ALPHA_NAME_NOT_PUBLISHED");
     cleanup();
     mount(parentFile().sandbox);
     await ready();
@@ -218,13 +220,23 @@ describe("BE-P12: the opt-in identity of the following-parent v2 body (include=i
     expect(bare.getByRole("link", { name: "pf_TEST_ONLY_parent" })).toBeTruthy();
   });
 
-  it("hidden: no Alpha link and the portfolio id stands in; the reason codes are in titles, not in a sentence", async () => {
+  it("hidden: no Alpha link and the portfolio id stands in; the reason codes are in the disclosure, not in a sentence", async () => {
     mount(parentFile().sandbox_identity_hidden);
     await ready();
     const crumb = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
     expect(document.querySelector('a[href^="/deployments/alphas/"]:not([href="/deployments/alphas"])')).toBeNull();
     expect(crumb.getByRole("link", { name: "pf_TEST_ONLY_parent" })).toBeTruthy();
-    expect(document.querySelector(".exec-stage-sub")!.innerHTML).toContain("ALPHA_IDENTITY_NOT_AUTHORIZED");
+    // the visible subtitle names no code and no FE id; the reason is behind the disclosure, reachable by click and Enter
+    const sub = document.querySelector(".exec-stage-sub")!;
+    expect(sub.textContent).not.toMatch(/ALPHA_IDENTITY_NOT_AUTHORIZED|PORTFOLIO_NAME_NOT_AUTHORIZED|FE-\d/);
     expect(screen.queryByText(/ALPHA_IDENTITY_NOT_AUTHORIZED|PORTFOLIO_NAME_NOT_AUTHORIZED/)).toBeNull();
+    const why = whyButton(sub);
+    expect(why.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(why);
+    expect(why.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById(why.getAttribute("aria-controls")!)!.textContent).toContain("ALPHA_IDENTITY_NOT_AUTHORIZED");
+    fireEvent.click(why);
+    expect(why.getAttribute("aria-expanded")).toBe("false");
+    expect(whyText(sub)).toContain("ALPHA_IDENTITY_NOT_AUTHORIZED");
   });
 });

@@ -17,7 +17,7 @@ import CanaryScreen from "./index";
 import { chipsOf, limitRows, rollbackItems, trialCalendar, verdictLine } from "./model";
 import { readCanaryView, type CanaryView } from "./readCanary";
 import { DEP, answering, canaryPort, legacyV1Body, lit, v1Body } from "./canary.testbase";
-import { whyText } from "../../gapWhyTestUtil";
+import { whyButton, whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -397,12 +397,22 @@ describe("BE-P12: the opt-in identity of the following-parent v2 body (include=i
     expect(bare.getByRole("link", { name: "pf_TEST_ONLY_parent" })).toBeTruthy();
   });
 
-  it("hidden: no Alpha link, the portfolio id stands in, and the reason codes are titles only", async () => {
+  it("hidden: no Alpha link, the portfolio id stands in, and the reason codes are in the disclosure only", async () => {
     mount(parentFile().canary_identity_hidden);
     await ready();
     expect(document.querySelector('a[href^="/deployments/alphas/"]:not([href="/deployments/alphas"])')).toBeNull();
     expect(within(screen.getByRole("navigation", { name: "Breadcrumb" })).getByRole("link", { name: "pf_TEST_ONLY_parent" })).toBeTruthy();
-    expect(document.querySelector(".exec-stage-sub")!.innerHTML).toContain("ALPHA_IDENTITY_NOT_AUTHORIZED");
+    // the visible subtitle names no code and no FE id; the reason is behind the disclosure, reachable by click and Enter
+    const sub = document.querySelector(".exec-stage-sub")!;
+    expect(sub.textContent).not.toMatch(/ALPHA_IDENTITY_NOT_AUTHORIZED|PORTFOLIO_NAME_NOT_AUTHORIZED|FE-\d/);
     expect(screen.queryByText(/ALPHA_IDENTITY_NOT_AUTHORIZED|PORTFOLIO_NAME_NOT_AUTHORIZED/)).toBeNull();
+    const why = whyButton(sub);
+    expect(why.getAttribute("aria-expanded")).toBe("false");
+    fireEvent.click(why);
+    expect(why.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById(why.getAttribute("aria-controls")!)!.textContent).toContain("ALPHA_IDENTITY_NOT_AUTHORIZED");
+    fireEvent.click(why);
+    expect(why.getAttribute("aria-expanded")).toBe("false");
+    expect(whyText(sub)).toContain("ALPHA_IDENTITY_NOT_AUTHORIZED");
   });
 });
