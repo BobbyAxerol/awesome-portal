@@ -172,6 +172,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/command.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/pm-http-request-binding.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/command-collection.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/realtime.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/alpha-fleet-realtime.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow-criteria.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/workflow-criteria.ts" \

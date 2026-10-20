@@ -1,0 +1,403 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "production_config": false,
+  "cases": [
+    {
+      "id": "AFR-SNAPSHOT-AVAILABLE",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "TEST_ONLY:fleet-r7"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "AFR-SNAPSHOT-ORDINAL-WIDER-THAN-SAFE-INTEGER",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "9007199254740993",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "TEST_ONLY:fleet-r7"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "AVAILABLE",
+          "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+          "stream_path": "/api/v1/execution/manager/fleet/stream",
+          "heartbeat_interval_ms": 5000,
+          "replay_window_ms": 300000,
+          "max_frame_bytes": 16384,
+          "max_streams_per_session": 4
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "AFR-SNAPSHOT-PARTIAL-VIEWER",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "TEST_ONLY:fleet-r7"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "UNAVAILABLE",
+          "reason_code": "WHOLE_FLEET_AUTHORITY_REQUIRED",
+          "resume_cursor": null
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "AFR-SNAPSHOT-STREAM-NOT-GRANTED",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4b4",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "TEST_ONLY:fleet-r7"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "UNAVAILABLE",
+          "reason_code": "STREAM_AUTHORITY_NOT_GRANTED",
+          "resume_cursor": null
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "AFR-SNAPSHOT-CAPACITY",
+      "schema": "AlphaFleetRealtimeSnapshot",
+      "response": {
+        "schema_version": "portal.execution.alpha-fleet-realtime-snapshot.v1",
+        "dataset": "alpha_fleet_overview",
+        "semantics": "NOTIFICATION_ONLY",
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "scope_fingerprint": "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
+        "baseline": {
+          "revision": "TEST_ONLY:fleet-r7",
+          "projection_generation": "TEST_ONLY:g1",
+          "source_epoch": "TEST_ONLY:epoch-1",
+          "ordinal": "7",
+          "catalogue_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1"
+        },
+        "named_snapshot": {
+          "operation_id": "executionManagerFleetGetV1",
+          "path": "/api/v1/execution/manager/fleet",
+          "lineage_revision": "TEST_ONLY:fleet-r7"
+        },
+        "source": {
+          "notice_origin": "PORTAL_PUBLICATION_REVISION",
+          "edge_notice_source": "NOT_COMMISSIONED",
+          "qualification": "SOURCE_VERIFIED"
+        },
+        "stream": {
+          "state": "UNAVAILABLE",
+          "reason_code": "STREAM_CAPACITY_REACHED",
+          "resume_cursor": null
+        },
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000000000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "BASELINE_BARRIER_ONLY",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        }
+      }
+    },
+    {
+      "id": "AFR-WIRE-REVALIDATE",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "event_type": "revalidate",
+        "terminal": false,
+        "reconnect_required": false,
+        "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+        "projection_generation": "TEST_ONLY:g1",
+        "quality": {
+          "completeness": "PARTIAL",
+          "freshness": "UNKNOWN",
+          "coverage": "AUTHORIZED_ONLY",
+          "source_as_of_ms": null,
+          "portal_observed_at_ms": 1800000005000,
+          "source_set_ref": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+          "confidence": "PROVISIONAL",
+          "reasons": [
+            "PORTAL_PUBLICATION_REVISION_NOTICE",
+            "NO_EDGE_NOTICE_SOURCE",
+            "SOURCE_FRESHNESS_NOT_ATTESTED"
+          ]
+        },
+        "next_action": "READ_NAMED_SNAPSHOT",
+        "reason_code": null
+      },
+      "wire": "id: TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME\nevent: revalidate\ndata: {\"schema_version\":\"portal.execution.scoped-realtime.v1\",\"semantics\":\"NOTIFICATION_ONLY\",\"event_type\":\"revalidate\",\"terminal\":false,\"reconnect_required\":false,\"resume_cursor\":\"TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME\",\"projection_generation\":\"TEST_ONLY:g1\",\"quality\":{\"completeness\":\"PARTIAL\",\"freshness\":\"UNKNOWN\",\"coverage\":\"AUTHORIZED_ONLY\",\"source_as_of_ms\":null,\"portal_observed_at_ms\":1800000005000,\"source_set_ref\":\"sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3\",\"confidence\":\"PROVISIONAL\",\"reasons\":[\"PORTAL_PUBLICATION_REVISION_NOTICE\",\"NO_EDGE_NOTICE_SOURCE\",\"SOURCE_FRESHNESS_NOT_ATTESTED\"]},\"next_action\":\"READ_NAMED_SNAPSHOT\",\"reason_code\":null}\n\n"
+    },
+    {
+      "id": "AFR-WIRE-HEARTBEAT",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "event_type": "heartbeat",
+        "terminal": false,
+        "reconnect_required": false,
+        "resume_cursor": "TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME",
+        "projection_generation": "TEST_ONLY:g1",
+        "quality": null,
+        "next_action": "RESUME_PORTAL_CURSOR",
+        "reason_code": null
+      },
+      "wire": "id: TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME\nevent: heartbeat\ndata: {\"schema_version\":\"portal.execution.scoped-realtime.v1\",\"semantics\":\"NOTIFICATION_ONLY\",\"event_type\":\"heartbeat\",\"terminal\":false,\"reconnect_required\":false,\"resume_cursor\":\"TEST_ONLY_ENCRYPTED_TOKEN_NOT_FOR_RUNTIME\",\"projection_generation\":\"TEST_ONLY:g1\",\"quality\":null,\"next_action\":\"RESUME_PORTAL_CURSOR\",\"reason_code\":null}\n\n"
+    },
+    {
+      "id": "AFR-WIRE-RESYNC-SLOW-CLIENT",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "event_type": "resync_required",
+        "terminal": true,
+        "reconnect_required": true,
+        "resume_cursor": null,
+        "projection_generation": null,
+        "quality": null,
+        "next_action": "READ_NAMED_SNAPSHOT",
+        "reason_code": "SLOW_CLIENT"
+      },
+      "wire": "event: resync_required\ndata: {\"schema_version\":\"portal.execution.scoped-realtime.v1\",\"semantics\":\"NOTIFICATION_ONLY\",\"event_type\":\"resync_required\",\"terminal\":true,\"reconnect_required\":true,\"resume_cursor\":null,\"projection_generation\":null,\"quality\":null,\"next_action\":\"READ_NAMED_SNAPSHOT\",\"reason_code\":\"SLOW_CLIENT\"}\n\n"
+    },
+    {
+      "id": "AFR-WIRE-RESYNC-SNAPSHOT-REQUIRED",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "event_type": "resync_required",
+        "terminal": true,
+        "reconnect_required": true,
+        "resume_cursor": null,
+        "projection_generation": null,
+        "quality": null,
+        "next_action": "READ_NAMED_SNAPSHOT",
+        "reason_code": "SNAPSHOT_REQUIRED"
+      },
+      "wire": "event: resync_required\ndata: {\"schema_version\":\"portal.execution.scoped-realtime.v1\",\"semantics\":\"NOTIFICATION_ONLY\",\"event_type\":\"resync_required\",\"terminal\":true,\"reconnect_required\":true,\"resume_cursor\":null,\"projection_generation\":null,\"quality\":null,\"next_action\":\"READ_NAMED_SNAPSHOT\",\"reason_code\":\"SNAPSHOT_REQUIRED\"}\n\n"
+    },
+    {
+      "id": "AFR-WIRE-RESYNC-CURSOR-INVALID",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "event_type": "resync_required",
+        "terminal": true,
+        "reconnect_required": true,
+        "resume_cursor": null,
+        "projection_generation": null,
+        "quality": null,
+        "next_action": "READ_NAMED_SNAPSHOT",
+        "reason_code": "CURSOR_INVALID_OR_EXPIRED"
+      },
+      "wire": "event: resync_required\ndata: {\"schema_version\":\"portal.execution.scoped-realtime.v1\",\"semantics\":\"NOTIFICATION_ONLY\",\"event_type\":\"resync_required\",\"terminal\":true,\"reconnect_required\":true,\"resume_cursor\":null,\"projection_generation\":null,\"quality\":null,\"next_action\":\"READ_NAMED_SNAPSHOT\",\"reason_code\":\"CURSOR_INVALID_OR_EXPIRED\"}\n\n"
+    },
+    {
+      "id": "AFR-WIRE-RESYNC-GENERATION-CHANGED",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "event_type": "resync_required",
+        "terminal": true,
+        "reconnect_required": true,
+        "resume_cursor": null,
+        "projection_generation": null,
+        "quality": null,
+        "next_action": "READ_NAMED_SNAPSHOT",
+        "reason_code": "GENERATION_CHANGED"
+      },
+      "wire": "event: resync_required\ndata: {\"schema_version\":\"portal.execution.scoped-realtime.v1\",\"semantics\":\"NOTIFICATION_ONLY\",\"event_type\":\"resync_required\",\"terminal\":true,\"reconnect_required\":true,\"resume_cursor\":null,\"projection_generation\":null,\"quality\":null,\"next_action\":\"READ_NAMED_SNAPSHOT\",\"reason_code\":\"GENERATION_CHANGED\"}\n\n"
+    },
+    {
+      "id": "AFR-WIRE-REVOKED",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "event_type": "access_revoked",
+        "terminal": true,
+        "reconnect_required": false,
+        "resume_cursor": null,
+        "projection_generation": null,
+        "quality": null,
+        "next_action": "SIGN_IN_OR_REQUEST_ACCESS",
+        "reason_code": "ACCESS_CHANGED"
+      },
+      "wire": "event: access_revoked\ndata: {\"schema_version\":\"portal.execution.scoped-realtime.v1\",\"semantics\":\"NOTIFICATION_ONLY\",\"event_type\":\"access_revoked\",\"terminal\":true,\"reconnect_required\":false,\"resume_cursor\":null,\"projection_generation\":null,\"quality\":null,\"next_action\":\"SIGN_IN_OR_REQUEST_ACCESS\",\"reason_code\":\"ACCESS_CHANGED\"}\n\n"
+    },
+    {
+      "id": "AFR-WIRE-UNAVAILABLE-RECONNECT-LIMIT",
+      "schema": "ScopedRealtimeFrame",
+      "response": {
+        "schema_version": "portal.execution.scoped-realtime.v1",
+        "semantics": "NOTIFICATION_ONLY",
+        "event_type": "unavailable",
+        "terminal": true,
+        "reconnect_required": false,
+        "resume_cursor": null,
+        "projection_generation": null,
+        "quality": null,
+        "next_action": "WAIT",
+        "reason_code": "RECONNECT_LIMIT"
+      },
+      "wire": "event: unavailable\ndata: {\"schema_version\":\"portal.execution.scoped-realtime.v1\",\"semantics\":\"NOTIFICATION_ONLY\",\"event_type\":\"unavailable\",\"terminal\":true,\"reconnect_required\":false,\"resume_cursor\":null,\"projection_generation\":null,\"quality\":null,\"next_action\":\"WAIT\",\"reason_code\":\"RECONNECT_LIMIT\"}\n\n"
+    }
+  ]
+}

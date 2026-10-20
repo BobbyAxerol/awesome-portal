@@ -119,6 +119,24 @@ export class ManagerModelRepository {
     return (await this.pool.query<ManagerModelHead>(`SELECT revision,source_epoch,source_sequence::text,projection_generation,payload_digest,catalogue_digest
       FROM execution_manager_model_heads WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`, [workspace, environment, profile])).rows[0] ?? null;
   }
+  /** ELP2-09 `alpha_fleet_overview` notice source: revision METADATA (never the payload) after a checkpoint, inside exactly one
+   * (epoch, generation). Ascending, bounded by `limit` (<=200); the unique key makes the ordinals a dense, indexed range. */
+  async revisionMetadataAfter(workspace: string, environment: string, profile: string, epoch: string, generation: string,
+    after: string, limit: number): Promise<Array<{ revision: string; source_sequence: string; created_at_ms: number }>> {
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 200 || !/^(?:0|[1-9][0-9]{0,18})$/.test(after)) throw new Error("MANAGER_NOTICE_BOUND_INVALID");
+    const rows = (await this.pool.query<{ revision: string; source_sequence: string; created_at_ms: string }>(
+      `SELECT revision,source_sequence::text,(floor(extract(epoch FROM created_at)*1000))::bigint::text AS created_at_ms
+       FROM execution_manager_model_revisions
+       WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND source_epoch=$4 AND projection_generation=$5 AND source_sequence>$6::numeric
+       ORDER BY source_sequence ASC LIMIT $7`, [workspace, environment, profile, epoch, generation, after, limit])).rows;
+    return rows.map(row => ({ revision: row.revision, source_sequence: row.source_sequence, created_at_ms: Number(row.created_at_ms) }));
+  }
+  /** Scalar qualification of one stored revision (`SOURCE_VERIFIED` | `TEST_ONLY`) without loading its payload document. */
+  async revisionQualification(workspace: string, environment: string, profile: string, revision: string): Promise<string | null> {
+    return (await this.pool.query<{ qualification: string | null }>(`SELECT payload->>'qualification' AS qualification
+      FROM execution_manager_model_revisions WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND revision=$4`,
+      [workspace, environment, profile, revision])).rows[0]?.qualification ?? null;
+  }
   async document(workspace: string, environment: string, profile: string, revision: string) {
     // Bound followers as well as unique flights. Each detached 8MiB maximum
     // document still costs per-caller memory; coalescing is not free fanout.

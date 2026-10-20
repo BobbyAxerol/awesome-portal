@@ -16,6 +16,8 @@ import { accessDigest, type AccessRelations } from "../src/execution-v2/access-p
 import { AccessRepository } from "../src/execution-v2/access.repository";
 import { ExecutionAccessService } from "../src/execution-v2/access.service";
 import { ScopedReplayCursorCodec,ScopedReplayHub,scopedNoticeGuard } from "../src/execution-v2/realtime";
+import { ScopedReplayError } from "../src/execution-v2/scoped-replay-cursor";
+import { ScopesFleetAuthority } from "../src/execution-v2/alpha-fleet-realtime.authority";
 import type { ScopedRealtimeFrame } from "../src/execution-v2/realtime.contract";
 import type { AccessTrustProvider, ReviewedPolicyArtifact } from "../src/execution-v2/access-trust";
 import { readPublication, type ExecutionReadPublication, type ExecutionReadPublicationRequest } from "../src/execution-v2/read-publication";
@@ -1032,5 +1034,87 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 TEST_ONLY scoped reads with real Postgre
     expect(scopeTuples(scope)!.allowedTuples).toEqual([row(OWN_TUPLE)]);
     expect(scopeResources(scope)).toContainEqual(OWN);
     await refused(f.scopes.revalidate(scope));
+  });
+  /* ── BE-P16 / ELP2-09 alpha_fleet_overview: whole-fleet root authority and the stream fence (PG gate, not run by the author) ── */
+  const ROOT: AccessResource = { kind: "ROOT", id: "TEST_ONLY-root" };
+  const rootGrant = { kind: "ROOT_SCOPE", root_id: ROOT.id } as const;
+  const fleetDataset = () => ({ ...structuredClone(DATASET), projection_generation: "TEST_ONLY:g1", catalogue_revision: "TEST_ONLY:catalogue" });
+
+  it("BE-P16 authorizeFleetRoot: a whole-fleet principal gets the ONE root, and stream.subscribe is a separate, exact grant", async () => {
+    const f = await fixture({ full: true }), emit = vi.fn(() => true);
+    const { scope, resource } = await f.scopes.authorizeFleetRoot(f.p, BINDING, structuredClone(DATASET));
+    expect(resource).toEqual(ROOT);
+    expect(scope).toMatchObject({ mode: "SCOPED_V2", wholePopulation: true });
+    await expect(f.scopes.deliverRealtime(scope, resource, emit)).rejects.toMatchObject({ code: "ACCESS_DENIED" });
+    expect(emit).not.toHaveBeenCalled();
+    await f.addGrant("stream.subscribe", rootGrant);
+    const fresh = await f.scopes.authorizeFleetRoot(f.p, BINDING, structuredClone(DATASET));
+    expect(await f.scopes.deliverRealtime(fresh.scope, resource, emit)).toBe(true);
+    expect(emit).toHaveBeenCalledOnce();
+  });
+
+  it("BE-P16 authorizeFleetRoot: a partial viewer is a 404, never a partial-fleet stream scope", async () => {
+    const f = await fixture();
+    await expect(f.scopes.authorizeFleetRoot(f.p, BINDING, structuredClone(DATASET))).rejects.toMatchObject({ code: "EXECUTION_READ_NOT_AVAILABLE", status: 404 });
+  });
+
+  it("BE-P16 fleet authority: the snapshot types why there is no stream, and still serves the baseline", async () => {
+    const authority = (f: Fixture) => new ScopesFleetAuthority(f.scopes);
+    const read = vi.fn(async () => "TEST_ONLY-head");
+    const partial = await fixture();
+    expect(await authority(partial).snapshot(partial.p, "paper", BINDING.profileId, structuredClone(DATASET), read))
+      .toMatchObject({ stream: { eligible: false, reason: "WHOLE_FLEET_AUTHORITY_REQUIRED" }, policy_revision: null, value: "TEST_ONLY-head" });
+    const full = await fixture({ full: true });
+    expect(await authority(full).snapshot(full.p, "paper", BINDING.profileId, structuredClone(DATASET), read))
+      .toMatchObject({ stream: { eligible: false, reason: "STREAM_AUTHORITY_NOT_GRANTED" }, policy_revision: null });
+    await full.addGrant("stream.subscribe", rootGrant);
+    const granted = await authority(full).snapshot(full.p, "paper", BINDING.profileId, structuredClone(DATASET), read);
+    expect(granted).toMatchObject({ stream: { eligible: true }, policy_revision: full.policy.revision });
+    expect(granted.field_policy_revision).toMatch(/^portal\.execution\.full-business-fields\.v1:sha256:/);
+    const fresh = await full.scopes.authorizeFleetRoot(full.p, BINDING, structuredClone(DATASET));
+    expect(granted.identity).toBe(scopeRealtimeIdentity(fresh.scope));
+  });
+
+  it("BE-P16 fleet authority: the stream guard re-resolves current authority on every poll and every write; a revoke delivers nothing", async () => {
+    const f = await fixture({ full: true });
+    await f.addGrant("stream.subscribe", rootGrant);
+    const opened = await new ScopesFleetAuthority(f.scopes).openStream(f.p, "paper", BINDING.profileId, structuredClone(DATASET), async () => structuredClone(DATASET));
+    const emit = vi.fn(() => true);
+    expect(await opened.guard.currentIdentity()).toBe(opened.identity);
+    expect(await opened.guard.write(opened.identity, emit)).toBe(true);
+    // The grant that carries the read is revoked: the next poll's identity read and the next write both fail, with no bytes.
+    await revoke(f);
+    await expect(opened.guard.currentIdentity()).rejects.toBeInstanceOf(ExecutionReadScopeError);
+    await expect(opened.guard.write(opened.identity, emit)).rejects.toBeDefined();
+    expect(emit).toHaveBeenCalledOnce();
+  });
+
+  it("BE-P16 fleet authority: a lineage that moved is a resync (GENERATION_CHANGED) from the guard, not an authorization failure", async () => {
+    const f = await fixture({ full: true });
+    await f.addGrant("stream.subscribe", rootGrant);
+    let moved = false;
+    const opened = await new ScopesFleetAuthority(f.scopes).openStream(f.p, "paper", BINDING.profileId, structuredClone(DATASET), async () => {
+      if (moved) throw new ScopedReplayError("GENERATION_CHANGED");
+      return structuredClone(DATASET);
+    });
+    moved = true;
+    await expect(opened.guard.currentIdentity()).rejects.toMatchObject({ code: "GENERATION_CHANGED" });
+    const emit = vi.fn(() => true);
+    await expect(opened.guard.write(opened.identity, emit)).rejects.toMatchObject({ code: "GENERATION_CHANGED" });
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("BE-P16 fleet authority: a document revision does not change the replay identity, a changed authority does", async () => {
+    const f = await fixture({ full: true });
+    f.trust.publication.binding = fleetDataset();
+    const first = await f.scopes.authorizeFleetRoot(f.p, BINDING, fleetDataset());
+    const nextDataset = { ...fleetDataset(), source_revision: "TEST_ONLY-source-r2" };
+    f.trust.publication.binding = structuredClone(nextDataset);
+    f.trust.publication.publication_revision = "TEST_ONLY-publication-r2";
+    const second = await f.scopes.authorizeFleetRoot(f.p, BINDING, nextDataset);
+    expect(scopeRealtimeIdentity(second.scope)).toBe(scopeRealtimeIdentity(first.scope));
+    f.trust.relationRevision = "TEST_ONLY-current-authority-r2";
+    const third = await f.scopes.authorizeFleetRoot(f.p, BINDING, nextDataset);
+    expect(scopeRealtimeIdentity(third.scope)).not.toBe(scopeRealtimeIdentity(first.scope));
   });
 });
