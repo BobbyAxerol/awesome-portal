@@ -1,0 +1,130 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+← Alpha Fleet
+alpha_a
+◔
+PENDING:
+NOT SCORED · POLICY NOT SET
+Name Not published
+(FE-066)
+Version Not published
+(FE-066)
+Owner asmith
+Run Not published (FE-029)
+Evidence Not published (FE-029)
+Core
+Request archive
+Not published
+(FE-034)
+. Archive requests cannot be recorded yet.
+My access
+Request gate review
+Not published
+(FE-020)
+. Gate-review requests cannot be recorded yet.
+My access
+✓
+OK:
+FRESH
+As of 2026-10-17 12:04:00 UTC
+LIFECYCLE
+Now in Live
+R1 GATE
+?
+UNKNOWN
+Review gate
+Not published (FE-027/028)
+Stage history
+R2 GATE
+?
+UNKNOWN
+Review gate
+Not published (FE-027/028)
+Stage history
+PAPER
+?
+UNKNOWN
+Simulated
+Not published (FE-027/028)
+Stage history
+SANDBOX
+?
+UNKNOWN
+Simulated
+Not published (FE-027/028)
+Stage history
+CANARY
+?
+UNKNOWN
+Real-funded domain
+Not published (FE-027/028)
+Stage history
+LIVE
+◆
+OPERATION:
+NOW
+Real-funded domain
+Not published (FE-027/028)
+Days in stage
+No exit gate
+Not published (FE-027/028)
+Decider
+Not published
+(FE-027/028)
+ Days in stage, gate criteria and decider are not published
+LIVE · NOW
+No exit gate on Live. Capital actions start in Portfolio.
+Entered and days in stage: Not published
+(FE-027)
+ stage history
+dep_live_01
+✓
+OK:
+RUNNING
+BINANCE
+Allocated, current 
+40,000.00
+USDT
+NET PNL, CURRENT
++1,120.80
+USDT
+All stages, current facts
+EXPOSURE, CURRENT
+126,500.00
+USDT
+All stages, current facts
+RETURN
+Not published (FE-006)
+MAX DRAWDOWN
+Not published
+(FE-025)
+REGIME FIT
+Not published (FE-011) Open
+Separate from score
+PERFORMANCE
+DEPLOYMENTS
+RESEARCH EVIDENCE
+REGIME FIT
+ORDERS & FILLS
+ACTIVITY & DECISIONS
+MORE
+RESEARCH EVIDENCE
+ALPHA VERSION	Not published
+(FE-066)
+ Name and version
+BOUND RESEARCH RUN	Not published (FE-029)
+PARAMETERS	Not published (FE-029) Match against the deployed set
+PARAMETER BUNDLE	Not published (FE-029)
+EVIDENCE	Not published (FE-029) Original and revised evidence
+PROVENANCE	Not published (FE-029) In-sample, out-of-sample and holdout
+ARTIFACT AVAILABLE	Not published (FE-029)
+Research binding: RESEARCH_RUN_NOT_BOUND
+Provenance

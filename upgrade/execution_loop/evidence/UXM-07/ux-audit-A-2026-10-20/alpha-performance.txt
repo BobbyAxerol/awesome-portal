@@ -1,0 +1,194 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+← Alpha Fleet
+alpha_a
+◔
+PENDING:
+NOT SCORED · POLICY NOT SET
+Name Not published
+(FE-066)
+Version Not published
+(FE-066)
+Owner asmith
+Run Not published (FE-029)
+Evidence Not published (FE-029)
+Core
+Request archive
+Not published
+(FE-034)
+. Archive requests cannot be recorded yet.
+My access
+Request gate review
+Not published
+(FE-020)
+. Gate-review requests cannot be recorded yet.
+My access
+✓
+OK:
+FRESH
+As of 2026-10-17 12:04:00 UTC
+LIFECYCLE
+Now in Live
+R1 GATE
+?
+UNKNOWN
+Review gate
+Not published (FE-027/028)
+Stage history
+R2 GATE
+?
+UNKNOWN
+Review gate
+Not published (FE-027/028)
+Stage history
+PAPER
+?
+UNKNOWN
+Simulated
+Not published (FE-027/028)
+Stage history
+SANDBOX
+?
+UNKNOWN
+Simulated
+Not published (FE-027/028)
+Stage history
+CANARY
+?
+UNKNOWN
+Real-funded domain
+Not published (FE-027/028)
+Stage history
+LIVE
+◆
+OPERATION:
+NOW
+Real-funded domain
+Not published (FE-027/028)
+Days in stage
+No exit gate
+Not published (FE-027/028)
+Decider
+Not published
+(FE-027/028)
+ Days in stage, gate criteria and decider are not published
+LIVE · NOW
+No exit gate on Live. Capital actions start in Portfolio.
+Entered and days in stage: Not published
+(FE-027)
+ stage history
+dep_live_01
+✓
+OK:
+RUNNING
+BINANCE
+Allocated, current 
+40,000.00
+USDT
+NET PNL, CURRENT
++1,120.80
+USDT
+All stages, current facts
+EXPOSURE, CURRENT
+126,500.00
+USDT
+All stages, current facts
+RETURN
+Not published (FE-006)
+MAX DRAWDOWN
+Not published
+(FE-025)
+REGIME FIT
+Not published (FE-011) Open
+Separate from score
+PERFORMANCE
+DEPLOYMENTS
+RESEARCH EVIDENCE
+REGIME FIT
+ORDERS & FILLS
+ACTIVITY & DECISIONS
+MORE
+Book
+Real-funded
+Paper
+Sandbox
+EQUITY
+Actual
+Forward simulated
+Research OOS
+Table
+Expand
+Equity, Real-funded, USDT
+Account acct_binance_02 · USDT
+17 Oct 12:04Z40,812.00 USDT
+Change across the plotted points+812.00 USDT 16 Oct 13:04Z to 17 Oct 12:04Z
+DrawdownNot published (FE-025)
+39,800.00
+40,000.00
+40,200.00
+40,400.00
+40,600.00
+40,800.00
+41,000.00
+16 Oct 18:00Z
+17 Oct 00:00Z
+17 Oct 06:00Z
+17 Oct 12:00Z
+40,812.00 USDT
+Drawdown
+Not published (FE-025)
+24 points, none reduced
+Equity, Real-funded, USDT. 24 published points from 16 Oct 13:04Z to 17 Oct 12:04Z. Latest 40,812.00 USDT. High 40,812.00 USDT at 17 Oct 12:04Z. Low 40,000.00 USDT at 16 Oct 13:04Z.
+Key readings, Equity, Real-funded, USDT
+READING	TIME (UTC)	VALUE
+FIRST	16 Oct 13:04Z	40,000.00 USDT
+HIGH	17 Oct 12:04Z	40,812.00 USDT
+LOW	16 Oct 13:04Z	40,000.00 USDT
+LATEST	17 Oct 12:04Z	40,812.00 USDT
+Real-funded book
+None
+Windowed return: Not published (FE-006)
+Window: Not published
+(FE-025)
+CONTRIBUTION
+Current
+Current net PnL by deployment, USDT
+Paper · dep_paper_01
+-84.20 USDT
+Sandbox · dep_sandbox_01
+0.00 USDT
+Canary · dep_canary_01
+0.00 USDT
+Live · dep_live_01
++1,120.80 USDT
+Current net PnL by deployment, USDT
+NAME	VALUE
+PAPER · DEP_PAPER_01	-84.20 USDT
+SANDBOX · DEP_SANDBOX_01	0.00 USDT
+CANARY · DEP_CANARY_01	0.00 USDT
+LIVE · DEP_LIVE_01	+1,120.80 USDT
+COST DRAG
+FEES AND FUNDING	Not published
+(FE-025)
+ Per-alpha attribution
+SLIPPAGE	Not available
+Fill benchmark not published
+FORWARD OBSERVATION
+◐
+PARTIAL DATA:
+NOT AN ACTUAL TRACK RECORD
+Forward
+Not published (FE-029) Days observed forward
+Actual
+Not published (FE-029) Days actually traded
+MIXED RETURN	Not published (FE-029) Continuity manifest
+MIXED SCORE	Not published (FE-011)
+4 charts are not available yet: rolling correlation, return histogram, risk utilization, paper versus live drift (Not published (FE-029))

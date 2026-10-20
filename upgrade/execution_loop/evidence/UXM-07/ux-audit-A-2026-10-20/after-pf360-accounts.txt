@@ -1,0 +1,60 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+Portfolios
+Core
+pf_TEST_ONLY_core · M. Tran · USDT
+✓
+OK:
+ACTIVE
+As of 2026-10-17 12:04:00 UTC
+Compare with
+Actions
+OVERVIEW
+ALLOCATIONS
+ALPHAS
+ACCOUNTS
+RISK AND HEALTH
+PEOPLE AND ACTIVITY
+A venue balance belongs to the account, which can serve sleeves outside this portfolio. It is shown beside the account and is never this portfolio's capital or added to it.
+ACCOUNTS
+4 accounts
+ACCOUNT	PROFILE	SERVES HERE	VENUE BALANCE, TOTAL	STATUS	LAST SYNCED
+Binance-02
+BINANCE · live
+	USDT-M futures	2 deployments	
+412,880.00 USDT
+	
+◷
+STALE	2026-10-17 11:50:00 UTC
+Bybit-01
+BYBIT · live
+	USDT-M futures	1 deployment	
+96,520.00 USDT
+	
+✓
+OK:
+SYNCED	2026-10-17 12:03:40 UTC
+OKX-01
+OKX · live
+	USDT-M futures	1 deployment	
+188,300.00 USDT
+	
+✓
+OK:
+SYNCED	2026-10-17 12:03:40 UTC
+Paper-Binance
+BINANCE · paper
+	USDT-M futures	1 deployment	
+252,310.00 USDT
+	
+✓
+OK:
+SYNCED	2026-10-17 12:03:40 UTC
