@@ -4,6 +4,7 @@
  * with a reason (D9). Triage is a Portal record, so nothing here claims the
  * source was touched.
  */
+import type { ExecutionApi } from "../../../api/ports";
 import { Drawer, DockAction, type DockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { formatAsOf } from "../../boundary";
@@ -14,6 +15,7 @@ import { ACCESS_PATH, FE, NotPublished, notPublishedReason } from "./notPublishe
 import {
   CHECK_ORIGINAL_COPY, humanize, receiptOutcome, severityWord, triageOutcome,
 } from "./outcome";
+import { PendingRecallsSection, discoverable } from "./PendingRecalls";
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
@@ -40,11 +42,18 @@ export interface OperationDockProps {
   loading: boolean;
   mode: DockMode;
   onClose(): void;
+  /**
+   * FE-062: when given, a PORTFOLIO or DEPLOYMENT row also lists the open recalls the Portal controlled on that target. Optional and
+   * additive: a host that does not pass it renders the dock exactly as before.
+   */
+  api?: ExecutionApi;
+  /** The workspace the queue answered for (the discovery query requires it). */
+  workspaceId?: string;
 }
 
 export const SEND_AGAIN_REASON = "Blocked until the outcome is known.";
 
-export function OperationDock({ operationId, row, loading, mode, onClose }: OperationDockProps) {
+export function OperationDock({ operationId, row, loading, mode, onClose, api, workspaceId }: OperationDockProps) {
   const outcomeUnknown = row !== null && receiptOutcome(row.sourceStatus, row.verificationResult).checkOriginal;
   const actions = (
     <>
@@ -103,6 +112,9 @@ export function OperationDock({ operationId, row, loading, mode, onClose }: Oper
         <dt>Version</dt>
         <dd><span className="exec-ops-mono">{row.workflowVersion}</span></dd>
       </dl>
+      {api !== undefined && discoverable(row.targetType) ? (
+        <PendingRecallsSection api={api} workspaceId={workspaceId} targetType={row.targetType} targetId={row.targetId} environment={row.environment} />
+      ) : null}
       <h3 className="exec-ops-section">Not published</h3>
       <ul className="exec-ops-np-list">
         <li><NotPublished id={FE.intent}>Intent axis: whether the command was only previewed.</NotPublished></li>

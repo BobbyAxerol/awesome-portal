@@ -530,3 +530,30 @@ span.exec-ops-link-id {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ---- open recalls the Portal controlled (FE-062) ------------------------- */
+
+.exec-ops-recalls {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+.exec-ops-recall {
+  min-width: 0;
+  padding: var(--space-3);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-ops-recall[data-state="UNKNOWN"] {
+  border-style: dashed;
+}
+.exec-ops-recall .exec-ops-facts {
+  margin-bottom: var(--space-2);
+}
+.exec-ops-recall-note {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}

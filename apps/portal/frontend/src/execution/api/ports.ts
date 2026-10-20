@@ -49,6 +49,7 @@ import type {
   StageVersionedOptions,
 } from "../v2/readers/dispatch";
 import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV2 } from "../v2/readers/operationalQueue";
+import type { PendingRecallDiscoveryQuery, PendingRecallDiscoveryRead } from "../v2/readers/pendingRecallDiscovery";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
 import type { TypedCondition } from "../components/conditions";
@@ -516,6 +517,13 @@ export interface ExecutionApi {
    * as `listOperationalQueueV2`.
    */
   getIncidentRootV2(incidentId: string, workspaceId?: string): Promise<Result<IncidentRootReadV2>>;
+  /**
+   * `GET /api/v1/execution/pending-recalls` (FE-062): the still-open recalls THIS PORTAL controlled on one exact resource,
+   * read as `portal.execution.pending-recall-discovery.v1`. Additive and read-only. A recall the Portal never controlled is not
+   * discoverable (the body says so as `untracked_recalls`), so an empty list is never "no open recall exists". A body that does not
+   * answer the resource asked, or does not read, is a typed `unavailable`, never an empty list.
+   */
+  getPendingRecallDiscovery(query: PendingRecallDiscoveryQuery): Promise<Result<PendingRecallDiscoveryRead>>;
   /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *

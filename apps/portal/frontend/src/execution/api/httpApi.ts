@@ -53,6 +53,7 @@ import {
 } from "../v2/readers/dispatch";
 import { refusalReason } from "./schemaGuard";
 import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
+import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
 import type { WorkflowResult } from "../operations";
@@ -996,6 +997,17 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         readIncidentRootV2,
         "The incident root",
       );
+    },
+
+    async getPendingRecallDiscovery(query) {
+      const url = pendingRecallDiscoveryUrl(query);
+      if (url === null) return unavailable("The pending recall discovery query is not one the Portal accepts.");
+      const result = await readGet(url.slice(BASE.length), readPendingRecallDiscoveryV1, "The pending recall discovery");
+      // A body that reads is not yet an answer to the question asked: another resource or environment is refused, never shown.
+      if (result.ok && result.value.kind === "pending_recall_discovery" && !pendingRecallDiscoveryAnswers(result.value.discovery, query)) {
+        return unavailable("The pending recall discovery answered another resource than the one asked, so it is not shown.");
+      }
+      return result;
     },
 
     async planCommand(input) {
