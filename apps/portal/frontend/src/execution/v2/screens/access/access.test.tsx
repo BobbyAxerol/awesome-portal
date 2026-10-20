@@ -436,6 +436,43 @@ describe("owner and non-owner", () => {
     await granted();
     expect(screen.queryByRole("tablist")).toBeNull();
   });
+
+  // W3 / task 3: the admin matrix is gated on the admin CAPABILITY as well as the owner flag, and fails closed on either missing.
+  it("an owner flag WITHOUT the admin capability gets the self-view only, even with view=manage written by hand", async () => {
+    signIn({ owner: true, capabilities: [V2_CAPABILITY.governanceR1Read] });
+    mount({ manage: <Manage /> }, `${workspace("pending")}&view=manage`);
+    await granted();
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByTestId("v1-matrix")).toBeNull();
+  });
+
+  it("the admin capability WITHOUT the owner flag gets the self-view only", async () => {
+    signIn({ owner: false, capabilities: ownerCaps });
+    mount({ manage: <Manage /> }, `${workspace("pending")}&view=manage`);
+    await granted();
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByTestId("v1-matrix")).toBeNull();
+  });
+
+  it("a session that has not loaded, or could not be read, offers no matrix and no tab", async () => {
+    for (const access of [{ kind: "loading" }, { kind: "unavailable", requestId: null }]) {
+      session.current = { principal: null, access };
+      const view = mount({ manage: <Manage /> }, `${workspace("pending")}&view=manage`);
+      await screen.findByRole("heading", { level: 1 });
+      expect(screen.queryByRole("tablist")).toBeNull();
+      expect(screen.queryByTestId("v1-matrix")).toBeNull();
+      view.unmount();
+    }
+  });
+
+  it("an ordinary user's self-view reads only the self endpoint: no admin policy or users request is made", async () => {
+    const fetchImpl = doubleFetch() as unknown as typeof fetch;
+    mount({ manage: <Manage />, fetchImpl }, workspace("available"));
+    await granted();
+    const urls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls.map((call) => new URL(String(call[0]), "http://portal.test").pathname);
+    expect(urls.length).toBeGreaterThan(0);
+    expect(new Set(urls)).toEqual(new Set(["/api/admin/profile-access/v2/effective"]));
+  });
 });
 
 describe("structure and absences", () => {

@@ -25,8 +25,10 @@ import { ExecutionSurface } from "../../../ExecutionSurface";
 import { Flag } from "../../Flag";
 import type { AccessEffective, AccessGrant } from "../../readers/accessEffective";
 import { useExecUrlState, withContext } from "../../urlState";
+import { holds } from "../../shell/roleNav";
 import {
   ACCESS_FE,
+  ADMIN_CAPABILITY,
   REASON_DICTIONARY,
   TS_AUTHORITY_FLAG,
   doRows,
@@ -56,7 +58,7 @@ const TABS: readonly { id: Tab; label: string }[] = [
 ];
 
 export interface AccessSelfViewProps {
-  /** The V1 grant matrix. Offered on a second tab to owners only. */
+  /** The V1 grant matrix. Offered on a second tab to an owner who holds `administration.profile_access.manage`, and to no one else. */
   manage?: ReactNode;
   /**
    * The workspace the session publishes, when it publishes one (today's `/access/self` does not). The address wins;
@@ -107,9 +109,14 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
   const { load, reload, refreshing } = useAccessEffective(workspaceId, { now, fetchImpl });
 
   const session = access.kind === "ready" ? access.access : null;
-  const owner = session?.isOwner === true;
   const capabilities = useMemo(() => new Set(session?.capabilities ?? []), [session]);
-  const tab: Tab = owner && manage !== undefined && url.value.view === "manage" ? "manage" : "self";
+  // The admin policy matrix (V1 `ProfileAccess`) is reachable here only for the owner who also HOLDS the admin capability, read
+  // from the same session answer. Fail closed: a session that did not load, an owner flag without the capability, a capability
+  // without the owner flag, and `?view=manage` written by hand all leave the self-view alone. Every other link to this path (the
+  // many "My access" links) lands on the self-view; none of them can open the matrix. `manage` also stays a prop, so no admin
+  // surface exists unless the route's mount passes one.
+  const canManage = manage !== undefined && session?.isOwner === true && holds(capabilities, { allOf: [ADMIN_CAPABILITY.profileAccessManage] });
+  const tab: Tab = canManage && url.value.view === "manage" ? "manage" : "self";
 
   // The body must be for the user who is signed in; a body for anyone else is never shown as theirs.
   const grants: GrantsView = useMemo(() => {
@@ -410,7 +417,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
             </div>
           </div>
 
-          {owner && manage !== undefined ? (
+          {canManage ? (
             <div className="exec-acc-tabs" role="tablist" aria-label="Profile and access views" onKeyDown={tabKeys}>
               {TABS.map((t) => (
                 <button
@@ -431,7 +438,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           ) : null}
 
           {tab === "self" ? (
-            owner && manage !== undefined ? (
+            canManage ? (
               <div id="exec-acc-panel" role="tabpanel" aria-labelledby="exec-acc-tab-self" className="exec-acc">{body}</div>
             ) : body
           ) : null}
