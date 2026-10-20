@@ -578,12 +578,244 @@
       }
     }
   ],
+  "self_context_cases": [
+    {
+      "type": "AccessSelfContext",
+      "case_name": "RESOLVED_SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD",
+      "value": {
+        "schema_version": "portal.self-context.v1",
+        "current_only": true,
+        "advisory_only": true,
+        "observed_at_ms": 1792094400000,
+        "valid_until_ms": 1792094405000,
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "ALLOWED",
+          "route": "/administration/my-access",
+          "workspace_scope": "QUERY_workspace_id",
+          "reason_class": null,
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "account_operations": [
+          {
+            "operation": "REVISE_BINDING",
+            "scope": "CREDENTIAL_ONLY",
+            "target_kind": "BINDING",
+            "availability": "NOT_COMMISSIONED",
+            "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+            "basis": "NONE_PUBLISHED",
+            "step_up_required": null
+          }
+        ],
+        "default_workspace": {
+          "state": "RESOLVED",
+          "workspace_id": "ws_TEST_ONLY_shared",
+          "rule": "SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD"
+        }
+      }
+    },
+    {
+      "type": "AccessSelfContext",
+      "case_name": "RESOLVED_SOLE_MEMBERSHIP",
+      "value": {
+        "schema_version": "portal.self-context.v1",
+        "current_only": true,
+        "advisory_only": true,
+        "observed_at_ms": 1792094400000,
+        "valid_until_ms": 1792094405000,
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "ALLOWED",
+          "route": "/administration/my-access",
+          "workspace_scope": "QUERY_workspace_id",
+          "reason_class": null,
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "account_operations": [
+          {
+            "operation": "REVISE_BINDING",
+            "scope": "CREDENTIAL_ONLY",
+            "target_kind": "BINDING",
+            "availability": "NOT_COMMISSIONED",
+            "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+            "basis": "NONE_PUBLISHED",
+            "step_up_required": null
+          }
+        ],
+        "default_workspace": {
+          "state": "RESOLVED",
+          "workspace_id": "ws_TEST_ONLY_personal",
+          "rule": "SOLE_MEMBERSHIP"
+        }
+      }
+    },
+    {
+      "type": "AccessSelfContext",
+      "case_name": "AMBIGUOUS_SEVERAL_WITH_GRANT_RECORDS",
+      "value": {
+        "schema_version": "portal.self-context.v1",
+        "current_only": true,
+        "advisory_only": true,
+        "observed_at_ms": 1792094400000,
+        "valid_until_ms": 1792094405000,
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "ALLOWED",
+          "route": "/administration/my-access",
+          "workspace_scope": "QUERY_workspace_id",
+          "reason_class": null,
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "account_operations": [
+          {
+            "operation": "REVISE_BINDING",
+            "scope": "CREDENTIAL_ONLY",
+            "target_kind": "BINDING",
+            "availability": "NOT_COMMISSIONED",
+            "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+            "basis": "NONE_PUBLISHED",
+            "step_up_required": null
+          }
+        ],
+        "default_workspace": {
+          "state": "AMBIGUOUS",
+          "candidates": [
+            {
+              "workspace_id": "ws_TEST_ONLY_a",
+              "access_basis": "OWN_CURRENT_GRANT_RECORD"
+            },
+            {
+              "workspace_id": "ws_TEST_ONLY_b",
+              "access_basis": "OWN_CURRENT_GRANT_RECORD"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "AccessSelfContext",
+      "case_name": "AMBIGUOUS_MEMBER_ONLY",
+      "value": {
+        "schema_version": "portal.self-context.v1",
+        "current_only": true,
+        "advisory_only": true,
+        "observed_at_ms": 1792094400000,
+        "valid_until_ms": 1792094405000,
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "ALLOWED",
+          "route": "/administration/my-access",
+          "workspace_scope": "QUERY_workspace_id",
+          "reason_class": null,
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "account_operations": [
+          {
+            "operation": "REVISE_BINDING",
+            "scope": "CREDENTIAL_ONLY",
+            "target_kind": "BINDING",
+            "availability": "NOT_COMMISSIONED",
+            "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+            "basis": "NONE_PUBLISHED",
+            "step_up_required": null
+          }
+        ],
+        "default_workspace": {
+          "state": "AMBIGUOUS",
+          "candidates": [
+            {
+              "workspace_id": "ws_TEST_ONLY_a",
+              "access_basis": "MEMBER_ONLY"
+            },
+            {
+              "workspace_id": "ws_TEST_ONLY_b",
+              "access_basis": "MEMBER_ONLY"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "AccessSelfContext",
+      "case_name": "ABSENT_NO_MEMBERSHIP",
+      "value": {
+        "schema_version": "portal.self-context.v1",
+        "current_only": true,
+        "advisory_only": true,
+        "observed_at_ms": 1792094400000,
+        "valid_until_ms": 1792094405000,
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "UNAVAILABLE",
+          "route": null,
+          "workspace_scope": null,
+          "reason_class": "NO_WORKSPACE_MEMBERSHIP",
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "account_operations": [
+          {
+            "operation": "REVISE_BINDING",
+            "scope": "CREDENTIAL_ONLY",
+            "target_kind": "BINDING",
+            "availability": "NOT_COMMISSIONED",
+            "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+            "basis": "NONE_PUBLISHED",
+            "step_up_required": null
+          }
+        ],
+        "default_workspace": {
+          "state": "NONE",
+          "reason_class": "NO_WORKSPACE_MEMBERSHIP"
+        }
+      }
+    },
+    {
+      "type": "AccessSelfContext",
+      "case_name": "UNAVAILABLE_TOO_MANY_MEMBERSHIPS",
+      "value": {
+        "schema_version": "portal.self-context.v1",
+        "current_only": true,
+        "advisory_only": true,
+        "observed_at_ms": 1792094400000,
+        "valid_until_ms": 1792094405000,
+        "self_entry": {
+          "feature": "PROFILE_ACCESS",
+          "mode": "SELF_ONLY",
+          "permission": "ALLOWED",
+          "route": "/administration/my-access",
+          "workspace_scope": "QUERY_workspace_id",
+          "reason_class": null,
+          "consumer_state": "AWAITING_CONSUMER_ROUTER"
+        },
+        "account_operations": [
+          {
+            "operation": "REVISE_BINDING",
+            "scope": "CREDENTIAL_ONLY",
+            "target_kind": "BINDING",
+            "availability": "NOT_COMMISSIONED",
+            "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+            "basis": "NONE_PUBLISHED",
+            "step_up_required": null
+          }
+        ],
+        "default_workspace": {
+          "state": "UNAVAILABLE",
+          "reason_class": "TOO_MANY_MEMBERSHIPS"
+        }
+      }
+    }
+  ],
   "batch_cases": [
     {
       "type": "AccessEligibilityBatch",
       "case_name": "STEP_UP_REQUIRED_NOT_ACTIVE",
       "value": {
-        "schema_version": "portal.self-eligibility-batch.v1",
+        "schema_version": "portal.self-eligibility-batch.v2",
         "workspace_id": "ws_TEST_ONLY",
         "environment": "paper",
         "current_only": true,
@@ -593,12 +825,22 @@
         "session_step_up": {
           "state": "NOT_ACTIVE",
           "valid_until_ms": null,
-          "challenge": {
-            "mechanism": "PASSWORD_REAUTH",
-            "route": "/api/admin/profile-access/v2/step-up",
-            "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-            "precondition_met": false
-          }
+          "challenges": [
+            {
+              "family": "CAPITAL_COMMAND",
+              "mechanism": "PASSWORD_REAUTH",
+              "route": "/api/admin/profile-access/v2/step-up",
+              "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+              "precondition_met": true
+            },
+            {
+              "family": "ACCESS_ADMIN",
+              "mechanism": "PASSWORD_REAUTH",
+              "route": "/api/admin/profile-access/v2/step-up",
+              "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+              "precondition_met": false
+            }
+          ]
         },
         "results": [
           {
@@ -680,7 +922,7 @@
       "type": "AccessEligibilityBatch",
       "case_name": "STEP_UP_ACTIVE",
       "value": {
-        "schema_version": "portal.self-eligibility-batch.v1",
+        "schema_version": "portal.self-eligibility-batch.v2",
         "workspace_id": "ws_TEST_ONLY",
         "environment": "paper",
         "current_only": true,
@@ -690,12 +932,22 @@
         "session_step_up": {
           "state": "ACTIVE",
           "valid_until_ms": 1792094403000,
-          "challenge": {
-            "mechanism": "PASSWORD_REAUTH",
-            "route": "/api/admin/profile-access/v2/step-up",
-            "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-            "precondition_met": true
-          }
+          "challenges": [
+            {
+              "family": "CAPITAL_COMMAND",
+              "mechanism": "PASSWORD_REAUTH",
+              "route": "/api/admin/profile-access/v2/step-up",
+              "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+              "precondition_met": true
+            },
+            {
+              "family": "ACCESS_ADMIN",
+              "mechanism": "PASSWORD_REAUTH",
+              "route": "/api/admin/profile-access/v2/step-up",
+              "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+              "precondition_met": false
+            }
+          ]
         },
         "results": [
           {

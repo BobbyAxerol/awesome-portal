@@ -1,6 +1,7 @@
 import { Pool, PoolClient } from "pg";
 
 import { PortalUser, accountStateOf } from "../domain";
+import { ACCESS_STEP_UP_PROOFS, COMMAND_STEP_UP_PROOFS, STEP_UP_FAMILIES, type StepUpFamily } from "../execution-v2/step-up-family";
 
 /**
  * A4-2 · the owner account control plane's own state.
@@ -127,6 +128,19 @@ function toOperation(row: OperationRow): LifecycleOperationRecord {
   };
 }
 
+/** Which kind of actor a step-up proof was issued to: the pure vocabulary lives in execution-v2/step-up-family.ts
+ * (importable by the contract tooling without a database); callers of this repository get it re-exported. */
+export { ACCESS_STEP_UP_PROOFS, COMMAND_STEP_UP_PROOFS, STEP_UP_FAMILIES, type StepUpFamily };
+/** Capital proof ids start with this; every other id (the historical `stp_...` and test ids) is ACCESS_ADMIN. */
+export const CAPITAL_STEP_UP_ID_PREFIX = "stpcap_";
+export const stepUpFamilyOfId = (stepUpId: string): StepUpFamily =>
+  stepUpId.startsWith(CAPITAL_STEP_UP_ID_PREFIX) ? "CAPITAL_COMMAND" : "ACCESS_ADMIN";
+/** The same rule in SQL (left(), not LIKE, because `_` is a LIKE wildcard). Keep in lock-step with stepUpFamilyOfId. */
+const FAMILY_SQL = `(CASE WHEN left(step_up_id, ${CAPITAL_STEP_UP_ID_PREFIX.length}) = '${CAPITAL_STEP_UP_ID_PREFIX}'
+  THEN 'CAPITAL_COMMAND' ELSE 'ACCESS_ADMIN' END)`;
+const validFamilies = (families: readonly StepUpFamily[]): boolean =>
+  Array.isArray(families) && families.length > 0 && families.every(family => STEP_UP_FAMILIES.includes(family));
+
 export class AccountLifecycleRepository {
   /**
    * A pool for ordinary work, or the caller's client while a named owner
@@ -138,12 +152,24 @@ export class AccountLifecycleRepository {
 
   // ------------------------------------------------------------- step-up
 
+  /**
+   * Record that this actor re-entered their OWN password in THIS session.
+   *
+   * `family` says which kind of actor the proof was issued to (execution-v2/step-up-family.ts). It lives in the
+   * proof id itself (capital proofs carry the `stpcap_` prefix) so no schema change is needed, and the id is
+   * VALIDATED here: a caller can neither tag an access proof as capital nor the reverse. A proof is not a
+   * capability; every consumer re-checks its own authority at the moment of use.
+   */
   async grantStepUp(input: {
     stepUpId: string;
     sessionId: string;
     userId: string;
     ttlSeconds: number;
+    family?: StepUpFamily;
   }): Promise<Date> {
+    const family = input.family ?? "ACCESS_ADMIN";
+    if (!STEP_UP_FAMILIES.includes(family) || stepUpFamilyOfId(input.stepUpId) !== family)
+      throw new Error("STEP_UP_FAMILY_ID_MISMATCH");
     const result = await this.pool.query<{ expires_at: Date }>(
       `INSERT INTO owner_step_up_grants (step_up_id, session_id, user_id, expires_at)
             VALUES ($1, $2, $3, now() + make_interval(secs => $4))
@@ -154,32 +180,38 @@ export class AccountLifecycleRepository {
   }
 
   /**
-   * When this session's step-up stops being valid, or `null` if it has none.
+   * When this session's step-up stops being valid for the given proof families, or `null` if it has none.
    *
    * Scoped to the session, not the user: a step-up performed in one browser
    * must not silently authorize a destructive action in another. The row is
    * cascaded with the session, so revoking sessions revokes step-up with them.
+   * `families` is deliberately REQUIRED: every caller states which proofs it accepts, and an empty or unknown
+   * list answers `null` (fail closed).
    */
-  async activeStepUpExpiry(sessionId: string): Promise<Date | null> {
+  async activeStepUpExpiry(sessionId: string, families: readonly StepUpFamily[]): Promise<Date | null> {
+    if (!validFamilies(families)) return null;
     const result = await this.pool.query<{ expires_at: Date }>(
       `SELECT expires_at FROM owner_step_up_grants
         WHERE session_id = $1 AND revoked_at IS NULL AND expires_at > now()
+          AND ${FAMILY_SQL} = ANY($2::text[])
         ORDER BY expires_at DESC
         LIMIT 1`,
-      [sessionId],
+      [sessionId, [...families]],
     );
     return result.rows[0]?.expires_at ?? null;
   }
 
-  /** Mutation fence: the proof belongs to this actor AND this active session. */
-  async lockActiveStepUpExpiry(sessionId: string, userId: string): Promise<Date | null> {
+  /** Mutation fence: the proof belongs to this actor AND this active session AND an accepted family. */
+  async lockActiveStepUpExpiry(sessionId: string, userId: string, families: readonly StepUpFamily[]): Promise<Date | null> {
+    if (!validFamilies(families)) return null;
     const result = await this.pool.query<{ expires_at: Date }>(
       `SELECT expires_at FROM owner_step_up_grants
         WHERE session_id = $1 AND user_id = $2 AND revoked_at IS NULL
           AND expires_at > clock_timestamp()
+          AND ${FAMILY_SQL} = ANY($3::text[])
         ORDER BY expires_at DESC
         LIMIT 1 FOR UPDATE`,
-      [sessionId, userId],
+      [sessionId, userId, [...families]],
     );
     return result.rows[0]?.expires_at ?? null;
   }

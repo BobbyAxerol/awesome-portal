@@ -6,7 +6,8 @@
  *
  * Runtime MUST keep legacy route selection unchanged until a separately
  * qualified native selected consumer is mounted. Domain policy installation
- * alone does not commission stream.subscribe or legacy SCOPED_V2 consumers. */
+ * alone does not commission stream.subscribe or legacy SCOPED_V2 consumers:
+ * a STREAM grant exists only if the reviewed artifact lists it explicitly. */
 import { constants } from "node:fs";
 import { open, lstat } from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -27,6 +28,9 @@ const target=z.object({database_name:text,database_system_identifier:z.string().
 const document=z.object({schema_version:z.literal("portal.private-owner-manager-commissioning.v1"),
   target,policy:reviewedAccessPolicy,root_grants:z.array(z.never()).max(0),
   manager_domain_grants:z.array(managerDomainGrant).min(1).max(64),provenance_ref:text}).strict();
+/** Exported for the offline preparation validator and its tests only. The
+ * installer still reads the artifact exclusively through readPinnedOwnerArtifact. */
+export const privateOwnerCommissioningDocument=document;
 
 export interface PrivateOwnerCommissioningPin {
   /** Root-owned 0600 regular file, no symlink. Absolute private path only. */
@@ -85,8 +89,16 @@ export async function readPinnedOwnerArtifact(pin:PrivateOwnerCommissioningPin,n
 export function privateOwnerCommissioning(base:AccessTrustProvider,pool:Pool,pin:PrivateOwnerCommissioningPin,
   clock:()=>number=Date.now){
   const detached=structuredClone(pin),request=Object.freeze({});
+  // What the verified artifact actually carries, so the ACK cannot describe a
+  // READ-only install when the reviewed artifact also records a STREAM grant.
+  let streamAllowGrants=0;
   const trust:AccessTrustProvider={
-    verifyPolicy:async input=>input===request?readPinnedOwnerArtifact(detached,clock()):base.verifyPolicy(input),
+    verifyPolicy:async input=>{
+      if(input!==request)return base.verifyPolicy(input);
+      const artifact=await readPinnedOwnerArtifact(detached,clock());
+      streamAllowGrants=artifact.manager_domain_grants?.filter(g=>g.action==="stream.subscribe"&&g.effect==="ALLOW").length??0;
+      return artifact;
+    },
     verifyReceipt:base.verifyReceipt.bind(base),
     verifyRootReceipt:base.verifyRootReceipt?.bind(base),
     qualifyDelegatedReceipt:base.qualifyDelegatedReceipt?.bind(base),
@@ -97,9 +109,14 @@ export function privateOwnerCommissioning(base:AccessTrustProvider,pool:Pool,pin
     install:async(access:ExecutionAccessService)=>{
       if(!access.usesPool(pool))throw new AccessPolicyError("RECEIPT_NOT_QUALIFIED",503);
       await access.installReviewedManagerDomainPolicy(request);
-      return Object.freeze({state:"REVIEWED_MANAGER_POLICY_ACKNOWLEDGED",authority_scope:"DOMAIN_READ_ONLY",
+      // Default (READ-only artifact) output is unchanged. A STREAM grant is a
+      // separate explicit artifact entry; recording it is reported, never
+      // implied, and still says nothing about source publication or egress.
+      const stream=streamAllowGrants>0;
+      return Object.freeze({state:"REVIEWED_MANAGER_POLICY_ACKNOWLEDGED",
+        authority_scope:stream?"DOMAIN_READ_AND_STREAM_GRANT":"DOMAIN_READ_ONLY",
         artifact_sha256:detached.approved_sha256,workspace_id:detached.target.workspace_id,
-        stream_commissioned:false,command_commissioned:false});
+        stream_commissioned:stream,command_commissioned:false});
     }});
 }
 

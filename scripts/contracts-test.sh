@@ -120,6 +120,8 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access-digest.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/self-eligibility.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/step-up-family.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/self-context.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access-policy.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access-current-relations.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/current-audit-read.ts" \
@@ -180,6 +182,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" 
   "${ROOT_DIR}/apps/control-api/src/governance/following-parent.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/live-parent.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/stage-action-eligibility.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/capture-authority.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/approval-request-lookup.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/governance/"
 # FE-068 stage-action eligibility is a pure projection; it needs only the type-only gate adapter.

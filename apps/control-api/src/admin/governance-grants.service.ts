@@ -14,7 +14,7 @@ import {
 } from "../repos/governance-grants";
 import { OwnerAccessRepository, isPortalCapability, type PortalCapability } from "../repos/owner-access";
 import { WorkspacesRepository } from "../repos/workspaces";
-import { AccountLifecycleRepository } from "../repos/account-lifecycle";
+import { ACCESS_STEP_UP_PROOFS, AccountLifecycleRepository } from "../repos/account-lifecycle";
 import { UsersRepository } from "../repos/users";
 import { SessionsRepository } from "../repos/sessions";
 
@@ -169,7 +169,7 @@ export class GovernanceGrantsService {
 
       // A receipt is not a credential: recheck today's owner, session and proof
       // BEFORE exposing a prior outcome or writing a new authority change.
-      const steppedUp = (await tx.lifecycle.lockActiveStepUpExpiry(request.sessionId, actor.userId)) !== null;
+      const steppedUp = (await tx.lifecycle.lockActiveStepUpExpiry(request.sessionId, actor.userId, ACCESS_STEP_UP_PROOFS)) !== null;
       if (!steppedUp) {
         const denial = new GrantDeniedError(
           "STEP_UP_REQUIRED", "Re-enter your password to change who may decide a Governance gate.", 403,
@@ -489,7 +489,7 @@ export class GovernanceGrantsService {
         if (!await tx.sessions.lockActiveLease(request.sessionId,request.actor.userId,request.actor.sessionVersion)) {
           throw new GrantDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403);
         }
-        if (!await tx.lifecycle.lockActiveStepUpExpiry(request.sessionId,request.actor.userId)) {
+        if (!await tx.lifecycle.lockActiveStepUpExpiry(request.sessionId,request.actor.userId,ACCESS_STEP_UP_PROOFS)) {
           throw new GrantDeniedError("STEP_UP_REQUIRED", "Re-enter your password before changing access.", 403);
         }
       }
@@ -508,7 +508,7 @@ export class GovernanceGrantsService {
               || !await new SessionsRepository(client).lockActiveLease(request.sessionId, actor.userId, actor.sessionVersion)
               || await new GovernanceGrantsRepository(client).lockOwnerAnchorUserId() !== actor.userId)
               throw new GrantDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403);
-            if (!await new AccountLifecycleRepository(client).lockActiveStepUpExpiry(request.sessionId, actor.userId))
+            if (!await new AccountLifecycleRepository(client).lockActiveStepUpExpiry(request.sessionId, actor.userId, ACCESS_STEP_UP_PROOFS))
               throw new GrantDeniedError("STEP_UP_REQUIRED", "Re-enter your password before changing access.", 403);
           }, apply,
           terminal: result => "denial" in result
