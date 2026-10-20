@@ -2,6 +2,29 @@
 
 ## Current operator and connected binding — 19Oct/20Oct Asia/Saigon
 
+**20Oct installed intake and owned continuation:** [current journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+supersedes the historical Core installation blocker: Core0087818d563 is
+installed, image7b2c7f34/bootstrap cc6ae429, running/restart0 rechecked. New HK
+manifest1df9adad matches9/9 inputs. Closure preparation/import is qualified;
+the new [finite native lifecycle](native_read_lifecycle.py),
+[focused tests](test_native_read_lifecycle.py) and
+[actual frozen-source tests](test_native_source_closure.py) are
+ISOLATED_QUALIFIED:30+9 distinct final cases PASS, normal publication hook still
+pending. [Bounded receipt](native-lifecycle-qualification.json) preserves the
+first28PASS/2FAIL cleanup specimen and its corrected retake. This is not a
+runtime ACK;009 native READ/STREAM remains uncomposed.
+
+Reproduce source-only qualification with `python3 -I -B test_native_source_closure.py
+--closure-root <owned-public-closure> --lifecycle-source <pinned-adapter>` inside
+the declared isolated image/network-none/read-only-source budget. The explicit
+closure contains `pm/` and `edge/identity_operator.py`; it is not a DB/trust
+bundle. The driver verifies real21PM origins and rejects hash/mode/symlink/
+namespace/bytecode/extension faults before PM execution, always cleaning exact
+fault copies. For the30 lifecycle cases use isolated Python with this directory
+on its explicit sys.path and load only `test_native_read_lifecycle` (not the old
+operator TestCase). Neither command issues authority or constitutes connected
+acceptance.
+
 Use `identity_operator.py` and `test_identity_operator.py` from this same Git
 revision: SHA256 `e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424`
 and `a9ea6d20d3574cc63ef30666d91143a8ccc1d20f938d57a6a3f99c856e4d47b5`.
@@ -25,8 +48,8 @@ and [connected READ/STREAM owner action](../../../evidence/execution-edge-v1_2/E
 verified. [Actual publication and two-host cleanup](operator-publication.json):
 unmodified normal hook130contracts/717API PASS, build/restore PASS. Exact test
 source copies and the new unreferenced hook image were cleaned; operational
-resources/custody unchanged. Core008 remains source-only/not installed and009
-not composed; these source results do not authorize assertion issuance or
+resources/custody unchanged. Core008 is now installed at7818d563;009 is still
+not composed. These source results alone do not authorize assertion issuance or
 claim full08/connected09. Core should consume these pins, not old44ee/551a.
 
 Bind only matching installed Core source/image/bootstrap/config/custody and

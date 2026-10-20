@@ -4,9 +4,12 @@
 mirrored in this Edge checkout; actual normal-hook/commit/push results live in
 the [main journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct).
 The overlay/unpublished observations below are dated provenance, not current
-activation instructions. Core returned008 candidate a2bd8435/bootstrap cc6ae429
-SOURCE_ONLY; it must land/install and resolve actual custody before issuance.
-Do not treat the historical e997 bootstrap/READY observation as current health.
+activation instructions. Core008 a2bd8435/bootstrap cc6ae429 has now landed and
+is installed at7818d563/image7b2c7f34. [Current intake](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+records the new1df9adad transfer and Edge-owned closure/binding continuation.
+The old source-only/install blocker below is historical. Real finite recovery
+readiness, original physical COMMIT/Core ACK and exact finish remain unproven;
+installed repair is not connected cleanup acceptance or READ/STREAM permission.
 
 Status: REVIEWED CODE-PATH GAP; not an actual issued/orphan session.
 Owner: Portal Core. Edge source/test work continues independently.

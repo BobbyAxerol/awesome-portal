@@ -650,6 +650,17 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**Original08 installed intake/finite lifecycle,20Oct — IN_PROGRESS:**
+[current journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+supersedes the historical source-only Core blocker:0087818d563 is installed,
+new1df9adad transfer verified. Edge closure/provider lifecycle now has30+9
+distinct isolated PASS; ordinary publication and actual source binding remain.
+See [qualification](integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json).
+Other phase dependencies
+do not block this owned work. Full08NOT_MET/09connectedNOT_STARTED; imported
+public source is not actual identity/READ/STREAM or capacity acceptance. Older
+dated tracking below is provenance, not the current goal/installation status.
+
 **Original08 current operator publication/binding,19Oct/20Oct — ISOLATED_QUALIFIED:**
 [current packet](integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
 pins operator e108a0a7/tests a9ea6d20 and67PASS (65 overlap+2 new real loopback

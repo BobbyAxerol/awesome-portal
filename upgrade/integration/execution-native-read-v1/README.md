@@ -2,6 +2,15 @@
 
 ## Current entrypoint — 19Oct Asia/Saigon
 
+**20Oct continuation:** [current immutable closure/lifecycle journal](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+confirms Core0087818d563 installed and new1df9adad transfer verified. Do not
+repeat the old Core source-only blocker. Edge's finite provider lifecycle is
+[isolated-qualified](research-identity-intake/native-lifecycle-qualification.json)
+(30lifecycle+9actual-source cases); ordinary source publication is pending.
+Actual identity/READ/STREAM connected gates remain
+NOT_MET. Later dated blocks below preserve history, not a paused goal or an
+instruction to activate old source/configuration.
+
 **Latest operator:** use the [current operator packet](research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
 and [67-case receipt](research-identity-intake/operator-real-tls-qualification.json),
 not the unpublished58b6/e150 drafts or old44ee helper. Operator e108a0a7 and

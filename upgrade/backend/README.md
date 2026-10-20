@@ -7,6 +7,16 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original08 installed intake/finite lifecycle,20Oct — IN_PROGRESS:**
+  [current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+  confirms Core0087818d563 installed and new1df9adad transfer verified. Edge
+  closure/finite provider lifecycle is isolated-qualified30+9distinct PASS,
+  [receipt](../integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json);
+  ordinary publication and actual source binding remain owned work;
+  READ/STREAM binding follows genuine identity/source/Core authority. Full08
+  NOT_MET,09connectedNOT_STARTED; old source-only/paused-goal entries below are
+  historical, not current blockers. No stable/provider28445 change implied.
+
 - **Original08 operator publication/binding,19Oct/20Oct — ISOLATED_QUALIFIED:**
   [current packet](../integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
   and [main journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct)

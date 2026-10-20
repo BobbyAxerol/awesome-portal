@@ -23910,6 +23910,250 @@ identity/provider trust. No fresh generic approval requested; exact original08
 binding/drill remains approved. Owned publication work is complete, connected
 original08NOT_MET,09connectedNOT_STARTED; no new phase/release claimed.
 
+### Original08 source-delivery reconciliation and owned binding preparation —19Oct17:53UTC
+
+Status BEFORE work: IN_PROGRESS within the existing approved goal/original08.
+Previous goal turn is PROGRESS:81058source +cb9e50evidence both published with
+normal hooks, two-host disposable cleanup terminal and HK lease removed.
+This is not a verified wait: no live Core R3 process was found; the observed
+pre-commit process belongs to the separate frontend checkout. Full08NOT_MET.
+
+Fresh Core return still7b9e7c98/sourcef4643915/installed bootstrape997debd.
+Core owns008 ordinary landing/install/custody/READY and009 app policy/mount.
+Edge owns its config/source selection, finite window/recovery28446, native READ
+acceptance/provider binding and connected qualification. Do not label all009
+inputs external. PM advanced tob8babe75 (physical-account census/profile fence),
+not native publisher/command activation; TS0cd356da and original03/07/01+06
+handoff authority remain unchanged. Two reused agents audit disjoint inputs.
+
+**Runnable approved scope:** append the actual published Edge pins and durable
+locators to the existing Edge-owned Core request at
+`/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_EPG10_08_REQUEST_2026-10-19.md`
+on SGP, docs/research-loop-plan@f4643915. Its187-line snapshot still says
+NOT_PUBLISHED and points at the now-cleaned overlay. Preserve its history,
+Core staged index, owner-return, shared Unified and all peer source. Journal
+this coordination delta here; Core owns acknowledgement/integration of its
+existing Unified link. No new ledger/request ID or receiving-owner ACK.
+Also reconcile existing config/provider preparation with actual source/trust
+pins and explicit missing dynamic facts, using current runner/components.
+No new executable framework, placeholder operational ACK, guessed identity,
+per-user permanent service, SQL grant seed or silent28445 trust/capacity change.
+
+Bounds/validation: Markdown coordination + bounded public hash/provenance only;
+0containers/builds/DB/runtime/credentials/listeners for preparation. Verify all
+qualified closure pins after the new PM revision, exact request-before hash,
+single-path append-only patch, preserved Core index/HEAD/shared files, existing
+links and staged scope. Normal hook remains required for eventual HK publication
+under a fresh quiet lease; do not rerun unchanged67cases. Rollback an uncommitted
+owned append only if exact bytes still match; otherwise retain for peer review,
+never revert peer work. Provider/window selection is preparation, not an
+executable config or operational source ACK; actual activation requires observed
+installed008/READY, independent finite-window approval facts and genuine identity.
+After this owned slice, partition genuinely missing inputs by their actual owner
+and continue immediately if any becomes available. No new generic phase approval.
+
+### Original08 immutable closure and finite native lifecycle —20Oct03:15UTC
+
+Status BEFORE implementation: IN_PROGRESS_OWNED_IMPLEMENTATION; full08NOT_MET,
+09connectedNOT_STARTED. Bobby's active goal explicitly includes original08,
+01/06,03,04/05,07 and scoped09; retain their complete exits rather than closing
+the goal around an isolated adapter. Previous continuation yielded new evidence:
+Core008 is installed and the new DL lock was subsequently released. This is
+PROGRESS, not a claimed live-job wait or a repeated source-only Core blocker.
+
+Authority: [original08](#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+[detailed08 guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+[existing identity operator](integration/execution-native-read-v1/research-identity-intake/README.md)
+and [connected source/Core contract](evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md).
+Core authoritative return is SGP `/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/CORE_008_INSTALLED_READY_009_RETURN_2026-10-19.md`,
+SHA256 `230c7c66769f0293415fbb9c8d492391496402ddc0c56c34ec30d73712bb161f`.
+
+**Superseding actual intake,20Oct02:10–02:14UTC:** Core commit
+`7818d5631e0da37563bca5715fd46d40b66ef1de`, container
+`5f3252b7d270a40079d2767cc78f513681c5720fc092b9b51da69b1098efb954`,
+image `sha256:7b2c7f34f134323201f447084440973b9aefd22318fdb09ff1e1bc35c4c4395d`,
+running/restart0 directly rechecked. Actual bootstrap is cc6ae429, Compose
+497fc5a8/effective cb384377, descriptor783f8bc4. Installed receipt64f523cf
+supersedes old f464/e997/source-only/R3-pending observations; historical entries
+remain provenance. READY/unresolved0/callbacks0 belongs to the genuine18:49
+installation receipt, not a newly sampled IPC result. No session/IPC/DB action
+was performed in the read-only recheck.
+
+New HK private bundle is `/home/bobby/secure/portal-core-c7-return-20261019-7818d5631e0d`;
+manifest `1df9adad1538c85990eb527270e5696286a6349dedac1460e919790e456e524b`.
+Exact9/9 hashes and10-file membership match; all0600UID1001/singly-linked regular
+files, directory0700; embedded trust and raw hash agree. Eleven offline crypto
+checks PASS: CA/leaf/SPKI pins, server chain/hostname, client purpose and private/
+public key correspondence. These are not connected runtime acceptance. Trust
+still expires20Oct08:00:59UTC; recheck before activation. New ACK must bind this
+manifest, not old15d94c6f. Existing21 helper bytes all match, but all current
+source files are group-writable and frozen PM root is unreadable by UID1001;
+materialize a minimal immutable owned closure rather than chmod peer source or
+run the private operator as a different owner. Additional4native modules match.
+
+**Current admission:** both Bobby/root HK measurement guards were absent at
+03:13UTC; earlier claude-dl-v225-window is superseded only by that actual absent
+observation, not its future deadline. Recheck leases AND actual physical peer
+jobs before tests/builds or runtime work; acquire a finite own reservation for
+qualification. No prior tainted measurement is relabelled PASS.
+
+**Approved owned slice:** mechanically freeze the exact17PM+3Edge+1credential
+helper plus published operator in a runtime-owned, non-group-writable path,
+with hashes/provenance outside Git; preserve original source/secret custody.
+Add one small private finite lifecycle adapter and its focused tests, reusing
+NativeBusinessReadRuntime and published RecoveryHandlers/close_listener/
+server_transport_count. Verify all17+4 native modules before execution. No new
+wire/auth/SQL implementation, permanent per-user service, Python data plane,
+role/schema/financial grant or PM/TS source edit. Parent owns main/index/
+immutable operational inputs and eventual actual binding; disjoint reused
+agents own adapter source and tests/review, with no competing test jobs.
+
+Invariants: sequential28446 reuse only after genuine identity terminal+Core
+ACK, physical socket/task/pool drain, source-role retirement and exact logout.
+UNKNOWN retains original runtime, attempt, pools/listener and recovery custody;
+begin_draining rejects new ISSUE without disabling original status/resolve.
+Protect every partial setup after the first pool, retain start/close tasks on
+cancellation, close only owned resources after assert_drained plus physical
+readback, require strict integer pool size0. Never reset custody, force abort,
+invent terminal/receipt/ACK, borrow stable identity or change28445/six bindings,
+old role2/2/1 caps or global admission limits. READ is not STREAM/command.
+
+Tests/exit: source closure/hash/permissions and isolated-import checks; new
+focused adapter cases for each setup failure, cancellation/start-result loss,
+UNKNOWN recovery retention, actual TLS lingering handler/pre-handler transport,
+strict socket/server/pool readback and repeated exact cleanup. Reuse unchanged
+67operator/89helper receipts by pin, never add overlapping counts or present
+model callbacks as real Core/PM/DB. Run normal unmodified publication hook,
+diff/staged-secret/identity review, coherent commit and approved feature push;
+record actual results, exact disposable cleanup and active/rollback retention.
+After source qualification, use the existing genuine operator for finite
+READY→identity COMMIT/Core ACK→retirement/logout; then native acceptance and
+Core policy/composition with actual mapping/revisions before READ/STREAM tests.
+Full08 closes only on the detailed guide's connected evidence, not this slice.
+
+Rollback: before admission remove only exact owned incomplete public staging;
+source rollback is a reviewed forward revert. After uncertain admission retain
+original objects/resources and same-key recovery; no timeout-based teardown or
+replay restoring revoked authority. No production/stable/dev restart/rollout.
+
+Parallel scope remains dependency-specific: fresh PM97a0ed73/TS0cd356da audit
+found07targets/cells empty, mountsfalse and COMMIT authority unpublished;
+03publisher fence bytes unchanged; capacity17input/14approval references null.
+Refresh again during this goal. Execute any genuinely newly supplied binding
+immediately in its original phase; do not invent source authority/budgets or
+make unrelated03/07 block08 read. Independent04/05/09 code remains qualified;
+connected acceptance needs its corresponding real source/trust/target inputs.
+
+**Coherent immutable-source slice,20Oct03:26UTC:** both leases absent and a
+bounded physical-process category check found0foreign build/test jobs before
+our exclusive reservation03:21:29–04:06:29UTC. The13protected HK Edge/native
+runtime tuples are running/restart0, digest
+`b1ea3e752c5dc03816cdc1007e0859ddbedbd77a78d3ccc3015a2ce5793db768`.
+Shared available256554872832of518933680128bytes;91baseline image IDs,323
+BuildKit metadata rows retained. No capacity/latency PASS is inferred.
+
+Mechanically copied26pin-verified public Python files plus exact candidate SQL
+to owned `/home/bobby/.local/share/portal-execution-operator/.prepare-n7qf85ws`.
+All source0400UID1001, singly-linked/canonical, private product root0700;
+0secrets copied and no peer source permissions changed. Generated public
+manifest5953118f23d8666dcecdb351fac971fd51ae623a90123370f012b2873ee31e85
+records27files; staging is not a deployed release or source-owner ACK. Add the
+qualified adapter before final content-addressed freeze; retain this one staging
+copy until its exact published replacement is verified, then remove it.
+
+Actual isolated import command used existing native image
+`sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3`,
+nonrootUID1001, networknone/read-only source,1CPU/256MiB/64pids/allcaps dropped,
+CPython3.10.21 `-I -B`. Exit0: all27files/21PM modules verified and imported;
+0DBconnections,0listeners,0roleopens. Exact disposable container
+`portal-execution-operator-closure-check` auto-removed at physical command
+completion. No build/pull/newimage/cache. This is executable closure proof only,
+not genuine identity, native authority, Core ACK or full08 acceptance.
+
+Fresh parallel audit PM7f4d3245/TS0cd356da: no decisive03/07/capacity delta.
+PM new opt-in Paper-position rehearsal is explicitly TEST_ONLY/OLD43CE ABI,
+not native publisher/held-COMMIT or connected capacity. Existing command
+targets/cells empty, authority unpublished;17matched/14budget inputs unfilled.
+Continue owned08 now rather than waiting on those unrelated returns. Parent
+review found a start-cancellation admission gap in the new unqualified adapter;
+coder/tester are fixing it before focused qualification. No failed case or
+unfinished adapter is relabelled external technical debt.
+
+**Actual focused qualification attempt1,20Oct03:33UTC:** under the same own
+exclusive lease, existing image28ea/nonroot/networknone/read-only source and
+16MiB disposable tmpfs ran exactly30 new lifecycle tests. Physical command
+session88313 ended exit1:28PASS/2FAIL/0ERROR/0SKIP. Both failures are the reused
+loopback fixture's final `TEST_ONLY_LOOPBACK_CLEANUP_INCOMPLETE` assertion;
+neither is waived or relabelled authority/production evidence. Preserve bounded
+log `/tmp/epg10-08-native-lifecycle-rQxjamKL/focused.log`; tester owns the exact
+fixture cleanup correction, parent owns sequential retake and physical cleanup
+readback. Source adapter remains unqualified/uncommitted. No DB/Core IPC,
+identity/role/listener activation or production restart occurred. Docker test
+container is disposable `--rm`, with generated certificates only in its tmpfs.
+The preceding goal turn was a requested status-only report (NO_PROGRESS toward
+implementation); this turn resumed the available owned qualification instead
+of treating unrelated TS/PM gaps as a blanket blocker.
+
+**Focused repair and actual Core recheck,20Oct03:38UTC:** first specimen log
+SHA256e397f2ecdbacda3e741b67852a576f2e2a210abf6a089b51a55f6ff9e6f58b49
+is retained. The manually reused IsolatedAsyncioTestCase fixture had no nested
+runner, so inherited doCleanups did not execute its callbacks. Local ExitStack
+now executes the same LIFO callbacks; actual socket/task checks and generated
+certificate-directory absence remain mandatory. Retake session73745 ended
+exit0:30PASS/0FAIL/0ERROR/0SKIP in0.587s, including2actual loopback TLS cases.
+Log e29b8591c3016ab846fd04ca0b75bacf49e4084bbf3e104da90f29a389d981ed;
+adapter1ee3a15d/testc914cf48. Loader now rejects preexisting bytecode/cache or
+extension shadows BEFORE PM execution. A separate reproducible actual21-PM
+closure test is being prepared; no pin substitution/model PM execution.
+Only owned stage PM directories were hardened0700 (copy preserved source
+directory modes0775); no peer/frozen source chmod. Staging now28public files,
+manifestc18892e8, no credential/secret copy or runtime ACK.
+
+Actual SGP read-only recheck used pinned bootstrapcc6ae429 + installed exact
+Core container/image7818/7b2c. First non-sudo Docker inspect refused before IPC;
+the sudo read-only retake session17336 ended exit0: running/restart0, actual
+existing IPC `status` reports READY/unresolved0. This is a current IPC sample,
+not the historical install receipt; it creates no human session, identity,
+attempt or source role. Pending action is owned source qualification/publication
+then genuine finite binding, not a Core008 installation blocker. Full08NOT_MET,
+09connectedNOT_STARTED; source/command/capacity prerequisites unchanged.
+
+**Coherent qualified closure/lifecycle slice,20Oct03:40UTC:** actual source
+loader session24026 ended exit0:9PASS/0FAIL/0ERROR/0SKIP in1.448s, real21PM
+imports with zero socket/process allocation attempts. Eight fault families
+(hash, source/directory modes, symlink, initializer/ambient namespace,
+cached/loose bytecode, extension shadow) fail before PM execution. Loader test
+SHA314c7c47, logcdc89f9d. These9 plus30lifecycle cases are39distinct final
+methods, not added to unchanged67operator/89helper receipts. New unit/source
+tests are source-controlled/reproducible, not an ephemeral evidence-only driver.
+
+The28public files/375261bytes were promoted to the single retained active
+closure `/home/bobby/.local/share/portal-execution-operator/closures/sha256-32119f66b5cb54ee1242cf4cef6f8086f0618e1d8062294aa0af356ce4914a63`.
+Manifest32119f66, source0400/directory0500, UID1001, singly-linked and canonical;
+0secret files and no peer chmod. First cross-parent rename refused because the
+owned source directory had already been made0500; temporarily restoring only
+that directory0700 allowed its exact rename, final root returned0500. No broad
+deletion: old `.prepare-n7qf85ws` is absent, no duplicate staging archive kept.
+Final physical isolated import from the promoted read-only root ended exit0:
+28files/21PM verified,0DBconnections/listeners/roleopens. Loga5bc857e.
+All three exact disposable test/import container names are absent after actual
+command completion, fixture copies/certificates checked absent or tmpfs removed;
+no image build/pull/cache from these checks. Disk available255158550528bytes of
+518933680128 before publication (shared-host drift is not attributed to cleanup).
+
+[Bounded qualification](integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json)
+records actual39PASS, the preserved first failed specimen and scope limits.
+Guide, native packet and both backend indices agree: isolated-qualified owned
+slice; full08NOT_MET/09connectedNOT_STARTED. Parent stages only the12owned
+source/test/receipt/tracking paths, reviews secrets/links/diff/Bobby identity,
+then runs the normal unmodified hook and approved non-force feature publication.
+Normal hook/publication remains PENDING until the physical process ends; no
+staged peer egress or SCORE review, TS/PM/Core code, dev/main or runtime change.
+Two writing agents and one read-only review agent were reused; no new agent.
+After publication, retain this single closure for the already-approved actual
+finite identity/native binding, not a production/rollback claim. Own lease is
+retained only while qualification/publication work is physically active.
+
 
 
 

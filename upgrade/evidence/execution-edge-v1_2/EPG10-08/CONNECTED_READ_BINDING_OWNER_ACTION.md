@@ -3,9 +3,12 @@
 **Current publication entry:** use the [canonical operator packet](../../../integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
 and [main publication/binding journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct).
 Qualified bytes are mirrored in this checkout; dated overlay/unpublished
-observations below remain provenance. Core008 source-only repair is not its
-installed release/READY;009 source composition does not commission native READ
-or STREAM. No listener, role, assertion or business grant is opened here.
+observations below remain provenance. [Current intake](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+confirms Core0087818d563/image7b2c7f34/bootstrap cc6ae429 installed; old f464/
+15d94c6f locators below are historical. Use new HK transfer1df9adad and a fresh
+finite source-owner ACK.009 source composition does not commission native READ
+or STREAM. Edge owns its immutable closure/provider lifecycle and actual native
+acceptance; Core policy/composition follows genuine mapping and source inputs.
 
 Status: PREPARATION_ONLY; full08 NOT_MET;09connected NOT_STARTED.
 Authority: existing owner-approved original08 round2, not a new phase or a new

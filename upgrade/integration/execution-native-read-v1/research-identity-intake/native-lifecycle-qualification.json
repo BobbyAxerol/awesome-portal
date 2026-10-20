@@ -1,0 +1,86 @@
+{
+  "schema_version": "portal.execution-native-lifecycle-qualification.v1",
+  "status": "ISOLATED_QUALIFIED_NORMAL_HOOK_PENDING",
+  "phase": "EPG10-08",
+  "date_utc": "2026-10-20",
+  "source_pins": {
+    "native_read_lifecycle.py": "1ee3a15db548c2a472fe195a23af6905da36ca690eebcc7e3e5d774de2a8a632",
+    "test_native_read_lifecycle.py": "c914cf48198edc566f05dfcd033b01887c23ff58c94c5f4a97c988cf1d9b3af6",
+    "test_native_source_closure.py": "314c7c47f806549f3d927d069d8294d50662c6d151ec1309f57199dad33168e8",
+    "identity_operator.py": "e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424"
+  },
+  "environment": {
+    "image": "sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3",
+    "python": "3.10.21",
+    "uid": 1001,
+    "cpu_cap": 1,
+    "memory_mib": 384,
+    "pids_cap": 64,
+    "network": "none",
+    "root_and_source_read_only": true,
+    "tmpfs_mib": 16,
+    "isolated_no_bytecode": true
+  },
+  "failed_specimen": {
+    "tests": 30,
+    "pass": 28,
+    "fail": 2,
+    "error": 0,
+    "skip": 0,
+    "physical_exit": 1,
+    "log_sha256": "e397f2ecdbacda3e741b67852a576f2e2a210abf6a089b51a55f6ff9e6f58b49",
+    "cause": "Manually reused IsolatedAsyncioTestCase cleanup required its absent nested runner; replaced wrapper by local ExitStack with original LIFO callbacks and mandatory physical cleanup checks."
+  },
+  "final_lifecycle": {
+    "tests": 30,
+    "pass": 30,
+    "fail": 0,
+    "error": 0,
+    "skip": 0,
+    "duration_seconds": 0.587,
+    "physical_exit": 0,
+    "actual_loopback_tls_cases": 2,
+    "sdk_core_db_callbacks": "TEST_ONLY",
+    "log_sha256": "e29b8591c3016ab846fd04ca0b75bacf49e4084bbf3e104da90f29a389d981ed"
+  },
+  "actual_public_source_loader": {
+    "tests": 9,
+    "pass": 9,
+    "fail": 0,
+    "error": 0,
+    "skip": 0,
+    "duration_seconds": 1.448,
+    "physical_exit": 0,
+    "actual_pm_modules": 21,
+    "negative_scope": ["changed_hash", "source_mode", "directory_mode", "symlink", "namespace_initializer", "ambient_namespace", "cached_or_loose_bytecode", "extension_shadow"],
+    "negative_pm_execution": false,
+    "socket_or_process_resource_attempts": 0,
+    "log_sha256": "cdc89f9d230534ff4e4a9e77e9b2e47138520babd2c737675823b9cd3b511fb3"
+  },
+  "frozen_public_closure": {
+    "manifest_sha256": "32119f66b5cb54ee1242cf4cef6f8086f0618e1d8062294aa0af356ce4914a63",
+    "files": 28,
+    "bytes": 375261,
+    "file_mode": "0400",
+    "directory_mode": "0500",
+    "secret_files": 0,
+    "peer_source_permissions_changed": false,
+    "staging_promoted_by_exact_rename": true,
+    "runtime_or_owner_ack": false
+  },
+  "cleanup": {
+    "disposable_containers": ["portal-execution-operator-lifecycle-test", "portal-execution-operator-source-test"],
+    "physical_jobs_terminal": true,
+    "containers_removed": true,
+    "fixture_paths_checked_absent": true,
+    "new_images_or_cache_from_focused_tests": 0,
+    "retained": "One content-addressed public closure for the active original08 binding; bounded sanitized logs retained outside Git."
+  },
+  "limitations": [
+    "39 distinct final source/lifecycle test methods, not added to earlier overlapping 65/67 operator receipts or 89 helper receipts.",
+    "Not operational mTLS, current-human identity, authoritative COMMIT/Core ACK, native READ/STREAM/revoke/cache/cursor/SSE or capacity acceptance.",
+    "No identity/session issued, database mutation, role opening, production listener or restart in qualification."
+  ],
+  "full_08_exit": "NOT_MET",
+  "connected_09": "NOT_STARTED"
+}

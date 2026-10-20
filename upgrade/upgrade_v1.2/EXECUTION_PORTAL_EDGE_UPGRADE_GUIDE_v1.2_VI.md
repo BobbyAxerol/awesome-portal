@@ -1017,6 +1017,14 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**20Oct installed intake:** [same-phase continuation](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+records installed Core0087818d563/new1df9adad transfer and Edge-owned immutable
+closure/finite native lifecycle work. [Qualification](../integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json)
+records30lifecycle+9actual-source PASS, separately from normal publication and
+genuine connected acceptance. Old installation blockers are superseded,
+not the actual connected identity/READ/STREAM/revocation requirements below.
+Source import or adapter tests cannot close full08 or certify connected09.
+
 **Current operator publication/binding,19Oct/20Oct:** [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct)
 and [current operator packet](../integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
 pin operator e108a0a7/tests a9ea6d20 and67PASS:65 overlapping regressions plus2
