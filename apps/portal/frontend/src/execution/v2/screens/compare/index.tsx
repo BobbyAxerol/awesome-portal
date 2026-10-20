@@ -190,7 +190,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     label: labelOf(entry.subject.subjectId),
     reason: entry.state === "UNAVAILABLE"
       ? `${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`
-      : `${entry.currency ?? "ratio"} · basis ${entry.basis} · methodology ${entry.methodologyRef} · ${entry.partition.economicDomain.toLowerCase()} book, ${entry.partition.nativeProfileRef}${entry.state === "EMPTY" ? " · no points in this window" : ""}`,
+      : `${entry.currency ?? `ratio, scale ${entry.ratioScale ?? "not stated"}`} · basis ${entry.basis} · methodology ${entry.methodologyRef} · ${entry.partition.economicDomain.toLowerCase()} book, ${entry.partition.nativeProfileRef}${entry.state === "EMPTY" ? " · no points in this window" : ""}`,
   }));
   const noBasisText = basis.currency === null ? "No comparable portfolio picked yet" : "No aligned series: the common basis is not established";
   const overlay: { series: CompareSeries[]; notComparable: NotComparable[]; state: Parameters<typeof CompareOverlay>[0]["state"]; basis: string; unit: Parameters<typeof CompareOverlay>[0]["unit"]; currency?: string } = (() => {
@@ -215,7 +215,8 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     }
     const missing = series.series.find((entry) => entry.state === "UNAVAILABLE");
     return none(
-      sourceNotPublished(series) ? "Not published (FE-013/033)" : "Not available",
+      // FE-013: a return whose source states no scale is a request id too (the source has not published what a return needs).
+      sourceNotPublished(series) || (missing !== undefined && missing.state === "UNAVAILABLE" && missing.reasonCode === "RATIO_SCALE_NOT_PUBLISHED") ? "Not published (FE-013/033)" : "Not available",
       missing !== undefined && missing.state === "UNAVAILABLE"
         ? `At least one pick has no series: ${UNAVAILABLE_SENTENCE[missing.reasonCode]} (${missing.reasonCode}). Nothing is drawn from the rest.`
         : "At least one pick has no points in this window, so the picks are not aligned. Nothing is drawn from the rest.",

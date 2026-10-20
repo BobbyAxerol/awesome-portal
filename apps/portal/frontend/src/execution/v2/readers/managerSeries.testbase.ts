@@ -20,6 +20,15 @@ export const FIXTURE_MIXED = "execution-manager-series.currency-mixed.synthetic"
 export const FIXTURE_PUBLICATION = "execution-manager-series-publication.synthetic";
 export const FIXTURE_QUERY = "execution-manager-series-query.synthetic";
 export const SERIES_FIXTURES = [FIXTURE_POPULATED, FIXTURE_EMPTY, FIXTURE_UNAVAILABLE, FIXTURE_MIXED] as const;
+/** FE-013 (BE-P8): a RETURN stated as a FRACTION on both subjects; two subjects on different scales; a return whose source states no scale. */
+export const FIXTURE_RETURN = "execution-manager-series.return.synthetic";
+export const FIXTURE_RETURN_SCALE_MIXED = "execution-manager-series.return-scale-mixed.synthetic";
+export const FIXTURE_RETURN_UNSCALED = "execution-manager-series.return-scale-not-published.synthetic";
+export const RETURN_FIXTURES = [FIXTURE_RETURN, FIXTURE_RETURN_SCALE_MIXED, FIXTURE_RETURN_UNSCALED] as const;
+/** The stored form of a RETURN (a publication, not a response body). */
+export const FIXTURE_PUBLICATION_RETURN = "execution-manager-series-publication.return.synthetic";
+/** The metric <-> unit negatives: `cases[].ops` applied to `bases[case.base]`; `stored_cases` apply to a publication. */
+export const FIXTURE_METRIC_UNIT = "execution-manager-series.metric-unit.synthetic.negative.json";
 
 export const DAY = 86_400_000;
 export const clone = <T,>(value: T): T => structuredClone(value);
@@ -29,7 +38,7 @@ export function fixtureValue(name: string): Draft {
 }
 
 export function fixturesDigest(): string {
-  return [...SERIES_FIXTURES, FIXTURE_PUBLICATION, FIXTURE_QUERY].map((name) => canonicalDigest(name)).join(":");
+  return [...SERIES_FIXTURES, ...RETURN_FIXTURES, FIXTURE_PUBLICATION, FIXTURE_PUBLICATION_RETURN, FIXTURE_QUERY, FIXTURE_METRIC_UNIT].map((name) => canonicalDigest(name)).join(":");
 }
 
 /** Violations of the published `portal.execution.manager-series.v1` schema; empty when the body conforms. */
@@ -48,7 +57,7 @@ export function oracleComparison(series: Draft[]): Draft {
   const described = series.filter((e) => e.state !== "UNAVAILABLE");
   const commonOf = (e: Draft) => ({
     economic_domain: e.partition.economic_domain, native_profile_ref: e.partition.native_profile_ref, currency: e.currency, basis: e.basis, unit: e.unit,
-    methodology_ref: e.methodology_ref, window: e.window,
+    ratio_scale: e.ratio_scale, methodology_ref: e.methodology_ref, window: e.window,
   });
   if (series.length === 1) return { state: "SINGLE_SUBJECT", reason_code: null, ...none, common: described[0] ? commonOf(described[0]) : null };
   const first = described[0];
@@ -58,6 +67,7 @@ export function oracleComparison(series: Draft[]): Draft {
       ["ECONOMIC_PARTITION_MIXED", (e) => e.partition.economic_domain !== first.partition.economic_domain || e.partition.native_profile_ref !== first.partition.native_profile_ref],
       ["BASIS_MIXED", (e) => e.basis !== first.basis],
       ["UNIT_MIXED", (e) => e.unit !== first.unit],
+      ["RATIO_SCALE_MIXED", (e) => e.ratio_scale !== first.ratio_scale],
       ["METHODOLOGY_MIXED", (e) => e.methodology_ref !== first.methodology_ref],
       ["WINDOW_MISMATCH", (e) => e.window.from_ms !== first.window.from_ms || e.window.to_ms !== first.window.to_ms],
     ];
@@ -85,4 +95,29 @@ export function populated(change: (body: Draft) => void = () => {}): Draft {
   const body = fixtureValue(FIXTURE_POPULATED);
   change(body);
   return withComparison(body);
+}
+
+/** One case of the metric <-> unit negative fixture: its body (the case's base with its ops applied) and what the producer said. */
+export interface MetricUnitCase { id: string; rule: string; refused_by: string; code: string; body: Draft }
+
+type MetricUnitFile = { bases: Record<string, string>; cases: Draft[]; stored_cases: Draft[] };
+
+function applyOps(body: Draft, ops: Draft[]): Draft {
+  for (const op of ops) {
+    if (op.op !== "set") throw new Error(`unknown op ${String(op.op)}`);
+    const path = op.path as (string | number)[];
+    let node = body;
+    for (const key of path.slice(0, -1)) node = node[key];
+    node[path[path.length - 1]!] = structuredClone(op.value);
+  }
+  return body;
+}
+
+/** The response cases (`stored: false`) or the stored publication cases (`stored: true`), each already applied to a fresh base. */
+export function metricUnitCases(stored = false): MetricUnitCase[] {
+  const file = loadCanonical<MetricUnitFile>(FIXTURE_METRIC_UNIT);
+  return (stored ? file.stored_cases : file.cases).map((c) => ({
+    id: c.id, rule: c.rule, refused_by: c.refused_by, code: c.code,
+    body: applyOps(loadCanonical<{ value: Draft }>(file.bases[c.base]!).value, c.ops),
+  }));
 }

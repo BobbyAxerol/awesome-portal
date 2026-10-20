@@ -23,7 +23,11 @@ import {
   FIXTURE_MIXED,
   FIXTURE_POPULATED,
   FIXTURE_PUBLICATION,
+  FIXTURE_PUBLICATION_RETURN,
   FIXTURE_QUERY,
+  FIXTURE_RETURN,
+  FIXTURE_RETURN_SCALE_MIXED,
+  FIXTURE_RETURN_UNSCALED,
   FIXTURE_UNAVAILABLE,
   fixtureValue,
   oracleComparison,
@@ -92,6 +96,110 @@ describe("fixtures", () => {
   it("the published publication and query examples are not series bodies", () => {
     expect(readManagerSeries(loadCanonical(FIXTURE_PUBLICATION + ".valid.json"))).toEqual({ kind: "unsupported_shape", schemaVersion: null });
     expect(readManagerSeries(loadCanonical(FIXTURE_QUERY + ".valid.json"))).toEqual({ kind: "unsupported_shape", schemaVersion: null });
+    expect(readManagerSeries(loadCanonical(FIXTURE_PUBLICATION_RETURN + ".valid.json"))).toEqual({ kind: "unsupported_shape", schemaVersion: null });
+  });
+});
+
+describe("FE-013 fixtures (BE-P8): a RETURN states its scale, a source without one is a typed absence", () => {
+  it("reads the return fixture: RATIO, no currency, FRACTION on both subjects, ALIGNED with the scale in common; the digits stay the source's", () => {
+    const series = seriesOf(fixtureValue(FIXTURE_RETURN));
+    expect(series.metric).toBe("RETURN");
+    const [a, b] = series.series as [Extract<ManagerSeriesEntry, { state: "AVAILABLE" }>, Extract<ManagerSeriesEntry, { state: "AVAILABLE" }>];
+    expect([a.unit, a.currency, a.ratioScale, b.ratioScale]).toEqual(["RATIO", null, "FRACTION", "FRACTION"]);
+    expect(a.points.map((p) => p.exact)).toEqual(["0", "0.0123", "-0.004"]);
+    expect(a.points[0]).toMatchObject({ exact: "0", zero: true });
+    expect(series.comparison).toMatchObject({ state: "ALIGNED", reasonCode: null, common: { unit: "RATIO", currency: null, ratioScale: "FRACTION" } });
+  });
+
+  it("reads the scale-mixed fixture: INCOMPARABLE with RATIO_SCALE_MIXED, no axis, no common, each subject keeps its own scale and digits", () => {
+    const series = seriesOf(fixtureValue(FIXTURE_RETURN_SCALE_MIXED));
+    expect(series.comparison).toEqual({ state: "INCOMPARABLE", reasonCode: "RATIO_SCALE_MIXED", common: null, axisMs: null });
+    const [a, b] = series.series as Extract<ManagerSeriesEntry, { state: "AVAILABLE" }>[];
+    expect([a!.ratioScale, b!.ratioScale]).toEqual(["FRACTION", "PERCENT"]);
+    expect([a!.points.map((p) => p.exact), b!.points.map((p) => p.exact)]).toEqual([["0", "0.0123"], ["0", "1.23"]]);
+  });
+
+  it("reads the scale-not-published fixture: a published source, one UNAVAILABLE entry with the typed reason and no description of a series", () => {
+    const series = seriesOf(fixtureValue(FIXTURE_RETURN_UNSCALED));
+    expect(series.seriesSource).toEqual({ state: "PUBLISHED", reasonCode: null });
+    expect(series.series[0]).toMatchObject({ state: "UNAVAILABLE", reasonCode: "RATIO_SCALE_NOT_PUBLISHED", copy: "Not available · RATIO_SCALE_NOT_PUBLISHED" });
+    for (const key of ["points", "gaps", "unit", "currency", "ratioScale", "window", "partition", "basis", "methodologyRef"]) expect(series.series[0], key).not.toHaveProperty(key);
+    expect(series.comparison).toMatchObject({ state: "SINGLE_SUBJECT", common: null });
+  });
+});
+
+describe("FE-013 ratio_scale: a ratio states its scale, money has none, the scale is a closed word", () => {
+  const returnBody = (change: (b: Draft) => void = () => {}): Draft => { const body = fixtureValue(FIXTURE_RETURN); change(body); return withComparison(body); };
+  const refusesReturn = (change: (b: Draft) => void, rebuild = true): boolean => readManagerSeries(rebuild ? returnBody(change) : (() => { const b = fixtureValue(FIXTURE_RETURN); change(b); return b; })()) === null;
+
+  it("PERCENT reads (both subjects), a mix of the two is read as INCOMPARABLE rather than refused", () => {
+    expect(seriesOf(returnBody((b) => { for (const e of b.series) e.ratio_scale = "PERCENT"; })).comparison).toMatchObject({ state: "ALIGNED", common: { ratioScale: "PERCENT" } });
+    expect(seriesOf(returnBody((b) => { b.series[1].ratio_scale = "PERCENT"; })).comparison).toMatchObject({ state: "INCOMPARABLE", reasonCode: "RATIO_SCALE_MIXED" });
+  });
+
+  it("a RATIO without a scale is refused (EMPTY included); money with a scale is refused; an absence carries none", () => {
+    expect(refusesReturn((b) => { b.series[0].ratio_scale = null; })).toBe(true);
+    expect(refusesReturn((b) => { for (const e of b.series) { e.state = "EMPTY"; e.reason_code = "NO_POINTS_PUBLISHED_IN_WINDOW"; e.points = []; e.gaps = []; e.ratio_scale = null; } })).toBe(true);
+    expect(seriesOf(returnBody((b) => { for (const e of b.series) { e.state = "EMPTY"; e.reason_code = "NO_POINTS_PUBLISHED_IN_WINDOW"; e.points = []; e.gaps = []; } })).series.map((e) => e.state)).toEqual(["EMPTY", "EMPTY"]);
+    expect(refuses((b) => { b.series[0].ratio_scale = "FRACTION"; }, true)).toBe(true); // NAV is MONEY
+    const unscaled = fixtureValue(FIXTURE_RETURN_UNSCALED);
+    unscaled.series[0].ratio_scale = "FRACTION";
+    expect(readManagerSeries(unscaled)).toBeNull();
+  });
+
+  it("the scale is a closed set: any other word, case, type or an absent key is refused; the key is required", () => {
+    for (const bad of ["fraction", "Percent", "BASIS_POINTS", "BPS", "RATIO", "", 1, true, {}, []]) {
+      expect(refusesReturn((b) => { b.series[0].ratio_scale = bad; }), JSON.stringify(bad)).toBe(true);
+    }
+    expect(refusesReturn((b) => { delete b.series[0].ratio_scale; }, false)).toBe(true);
+    expect(refusesReturn((b) => { delete b.comparison.common.ratio_scale; }, false)).toBe(true);
+    expect(refusesReturn((b) => { b.comparison.common.ratio_scale = "BASIS_POINTS"; }, false)).toBe(true);
+  });
+
+  it("a RETURN with a currency, NAV or Net PnL as a ratio, and a RETURN as money are refused (the metric fixes the unit)", () => {
+    expect(refusesReturn((b) => { b.series[0].currency = "USDT"; })).toBe(true);
+    expect(refusesReturn((b) => { for (const e of b.series) { e.unit = "MONEY"; e.currency = "USDT"; e.ratio_scale = null; } })).toBe(true);
+    expect(refuses((b) => { b.metric = "NET_PNL"; for (const e of b.series) { e.unit = "RATIO"; e.currency = null; e.ratio_scale = "FRACTION"; } }, true)).toBe(true);
+    expect(seriesOf(populated((b) => { b.metric = "NET_PNL"; })).metric).toBe("NET_PNL");
+  });
+
+  it("RATIO_SCALE_NOT_PUBLISHED is said of a RETURN only, and only under a published source", () => {
+    expect(seriesOf(fixtureValue(FIXTURE_RETURN_UNSCALED)).series[0]).toMatchObject({ state: "UNAVAILABLE", reasonCode: "RATIO_SCALE_NOT_PUBLISHED" });
+    for (const metric of ["NAV", "NET_PNL"]) {
+      const body = fixtureValue(FIXTURE_RETURN_UNSCALED);
+      body.metric = metric;
+      expect(readManagerSeries(body), metric).toBeNull();
+    }
+    // The reason needs a published source: an unpublished profile cannot have a series whose scale is missing.
+    const unpublished = fixtureValue(FIXTURE_RETURN_UNSCALED);
+    unpublished.series_source = { state: "NOT_PUBLISHED", reason_code: "FINANCIAL_NORMALIZED_SERIES_SOURCE_NOT_PUBLISHED" };
+    expect(readManagerSeries(unpublished)).toBeNull();
+    // Beside a described subject, the pair is UNAVAILABLE, never ALIGNED on the one that has a scale.
+    const pair = returnBody((b) => { b.series[1] = { ...unavailableEntry(b.series[1].subject, "RATIO_SCALE_NOT_PUBLISHED") }; });
+    expect(seriesOf(pair).comparison).toMatchObject({ state: "UNAVAILABLE", reasonCode: "SUBJECT_SERIES_UNAVAILABLE" });
+  });
+
+  it("RATIO_SCALE_MIXED comes after UNIT_MIXED and before METHODOLOGY_MIXED; partition and basis mismatches are named first", () => {
+    const reasonOf = (change: (b: Draft) => void) => seriesOf(returnBody((b) => { b.series[1].ratio_scale = "PERCENT"; change(b); })).comparison.reasonCode;
+    expect(reasonOf(() => {})).toBe("RATIO_SCALE_MIXED");
+    expect(reasonOf((b) => { b.series[1].methodology_ref = "TEST_ONLY:m2"; })).toBe("RATIO_SCALE_MIXED");
+    expect(reasonOf((b) => { b.series[1].basis = "TEST_ONLY:b2"; b.series[1].partition.basis = "TEST_ONLY:b2"; })).toBe("BASIS_MIXED");
+    expect(reasonOf((b) => { b.series[1].partition.native_profile_ref = "TEST_ONLY:other-ledger"; })).toBe("ECONOMIC_PARTITION_MIXED");
+    // Three subjects: one unavailable, two on different scales: the mismatch among the described ones is named.
+    const three = returnBody((b) => { b.series[1].ratio_scale = "PERCENT"; b.series.push(unavailableEntry({ subject_type: "PORTFOLIO", subject_id: "TEST_ONLY:portfolio-c" }, "RATIO_SCALE_NOT_PUBLISHED")); });
+    expect(seriesOf(three).comparison).toMatchObject({ state: "INCOMPARABLE", reasonCode: "RATIO_SCALE_MIXED" });
+  });
+
+  it("a comparison that lies about the scale is refused: mixed called ALIGNED, a made-up RATIO_SCALE_MIXED, or a common with another scale", () => {
+    const mixedCalledAligned = fixtureValue(FIXTURE_RETURN);
+    mixedCalledAligned.series[1].ratio_scale = "PERCENT"; // comparison left as the aligned one (PRODUCER_ONLY in the published negative fixture)
+    expect(readManagerSeries(mixedCalledAligned)).toBeNull();
+    const invented = fixtureValue(FIXTURE_RETURN);
+    Object.assign(invented.comparison, { state: "INCOMPARABLE", reason_code: "RATIO_SCALE_MIXED", common: null, axis_ms: null });
+    expect(readManagerSeries(invented)).toBeNull();
+    const common = fixtureValue(FIXTURE_RETURN);
+    common.comparison.common.ratio_scale = "PERCENT";
+    expect(readManagerSeries(common)).toBeNull();
   });
 });
 
@@ -131,7 +239,7 @@ describe("envelope", () => {
       delete body[key];
       expect(readManagerSeries(body), key).toBeNull();
     }
-    for (const key of ["subject", "state", "reason_code", "partition", "unit", "currency", "basis", "methodology_ref", "window", "points", "gaps", "quality", "source_confidence", "provenance_refs", "calculation_revision", "policy_revision"]) {
+    for (const key of ["subject", "state", "reason_code", "partition", "unit", "currency", "ratio_scale", "basis", "methodology_ref", "window", "points", "gaps", "quality", "source_confidence", "provenance_refs", "calculation_revision", "policy_revision"]) {
       const body = fixtureValue(FIXTURE_POPULATED);
       delete body.series[0][key];
       expect(readManagerSeries(body), `series.${key}`).toBeNull();
@@ -166,7 +274,7 @@ describe("states: AVAILABLE, EMPTY and UNAVAILABLE are different facts", () => {
       body.series[0].reason_code = bad;
       expect(readManagerSeries(body), String(bad)).toBeNull();
     }
-    for (const [key, value] of Object.entries({ unit: "MONEY", currency: "USDT", basis: "b", methodology_ref: "m", window: { from_ms: 1, to_ms: 2 }, partition: fixtureValue(FIXTURE_POPULATED).series[0].partition, points: [{ ts_ms: 1, value: "1" }], gaps: [{ from_ms: 1, to_ms: 2, reason: "SOURCE_GAP" }] })) {
+    for (const [key, value] of Object.entries({ unit: "MONEY", currency: "USDT", ratio_scale: "FRACTION", basis: "b", methodology_ref: "m", window: { from_ms: 1, to_ms: 2 }, partition: fixtureValue(FIXTURE_POPULATED).series[0].partition, points: [{ ts_ms: 1, value: "1" }], gaps: [{ from_ms: 1, to_ms: 2, reason: "SOURCE_GAP" }] })) {
       const body = fixtureValue(FIXTURE_UNAVAILABLE);
       body.series[0][key] = value;
       expect(readManagerSeries(body), `UNAVAILABLE with ${key}`).toBeNull();
@@ -235,10 +343,12 @@ describe("exact decimals, units, windows and points", () => {
     expect(refuses((b) => { b.series[0].unit = "RATIO"; }, true)).toBe(true); // RATIO under NAV
     expect(refuses((b) => { b.series[0].unit = "RATIO"; b.series[0].currency = null; }, true)).toBe(true);
     expect(refuses((b) => { b.series[0].basis = "TEST_ONLY:other-basis"; }, true)).toBe(true);
-    const ret = populated((b) => { b.metric = "RETURN"; for (const e of b.series) { e.unit = "RATIO"; e.currency = null; } });
-    expect(seriesOf(ret).series.every((e) => e.state === "AVAILABLE" && e.unit === "RATIO" && e.currency === null)).toBe(true);
+    // A ratio states its scale (FE-013): the same body with FRACTION is a return.
+    const ret = populated((b) => { b.metric = "RETURN"; for (const e of b.series) { e.unit = "RATIO"; e.currency = null; e.ratio_scale = "FRACTION"; } });
+    expect(seriesOf(ret).series.every((e) => e.state === "AVAILABLE" && e.unit === "RATIO" && e.currency === null && e.ratioScale === "FRACTION")).toBe(true);
+    expect(refuses((b) => { b.metric = "RETURN"; for (const e of b.series) { e.unit = "RATIO"; e.currency = null; } }, true)).toBe(true); // RATIO with no scale
     expect(refuses((b) => { b.metric = "RETURN"; }, true)).toBe(true); // MONEY under RETURN
-    expect(refuses((b) => { b.metric = "RETURN"; for (const e of b.series) { e.unit = "RATIO"; } }, true)).toBe(true); // RATIO with a currency
+    expect(refuses((b) => { b.metric = "RETURN"; for (const e of b.series) { e.unit = "RATIO"; e.ratio_scale = "FRACTION"; } }, true)).toBe(true); // RATIO with a currency
   });
 
   it("the entry window is the selected resolved window, not backwards, not after the cutoff", () => {

@@ -48,7 +48,7 @@ import type { SseFactory } from "../../../sse";
 import { utcStamp } from "../../../time";
 import { SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { DivBars, showDecimal } from "../../charts";
+import { DivBars } from "../../charts";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { useContextFacts } from "../../shell/contextFacts";
@@ -60,7 +60,7 @@ import {
 } from "./overviewModel";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
 import { ManagerSeriesPanel } from "../series/ManagerSeriesPanel";
-import { chartUnit, isDescribed, latestPoint, UNAVAILABLE_SENTENCE } from "../series/seriesModel";
+import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../series/seriesModel";
 import { useManagerSeries, type SeriesReadState } from "../series/useManagerSeries";
 import { MeasureSeg } from "./MeasureSeg";
 import { useOverviewReads } from "./useOverviewReads";
@@ -107,7 +107,7 @@ function NavCell({ read, window }: { read: SeriesReadState; window: string }) {
   if (!isDescribed(entry)) return null;
   const last = latestPoint(entry);
   if (last === null) return <Cell label="NAV" note={`Methodology ${entry.methodologyRef}, window ${window}`}><span className="exec-ov-na">No points in this window</span></Cell>;
-  const shown = showDecimal(last.exact, { unit: chartUnit(entry), currency: entry.currency ?? undefined });
+  const shown = seriesValueText(entry, last.exact);
   return (
     <Cell label="NAV" note={`Latest published point, ${utcStamp(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>
       <span className="exec-ov-num" title={last.exact}>{shown}</span>

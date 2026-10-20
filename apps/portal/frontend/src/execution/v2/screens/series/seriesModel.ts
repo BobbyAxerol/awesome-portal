@@ -5,11 +5,16 @@
  * explicit `v: null` mark (the chart breaks the line there); a missing source is typed text, never a zero line. Every
  * figure stays the server's exact decimal string.
  *
+ * The one transform is a PRINT shift (FE-013): a RATIO the source states as `FRACTION` (1.0 = 100%) is shown in percent by moving the
+ * decimal point two places in the STRING (`0.0123` -> `1.23`); a `PERCENT` ratio is shown as is. No `Number`, no float, no rounding
+ * here (the shared formatter rounds for display only; the published string stays in `title`/`full`). The scale is whatever the
+ * source stated; it is never inferred from magnitudes.
+ *
  * Plain TypeScript, no React.
  */
 import type { ExactUnit } from "../../../formatExact";
 import { utcStamp } from "../../../time";
-import type { ChartState, SeriesPoint } from "../../charts";
+import { showDecimal, type ChartState, type SeriesPoint } from "../../charts";
 import type {
   ManagerSeries,
   ManagerSeriesAvailable,
@@ -18,6 +23,7 @@ import type {
   ManagerSeriesEmpty,
   ManagerSeriesEntry,
   ManagerSeriesMetric,
+  ManagerSeriesRatioScale,
   ManagerSeriesUnavailable,
   SeriesComparisonMismatch,
   SeriesUnavailableReason,
@@ -39,6 +45,7 @@ export const UNAVAILABLE_SENTENCE: Readonly<Record<SeriesUnavailableReason, stri
   SOURCE_NOT_QUALIFIED: "The source is not qualified (fresh, complete and verified), so no series is served",
   AMBIGUOUS_SERIES_PUBLICATION: "More than one published series matches; none is chosen for you",
   SUBJECT_HAS_NO_ACTIVE_MEMBERS: "The subject has no active members at the cutoff",
+  RATIO_SCALE_NOT_PUBLISHED: "The source states no ratio scale, so no return is shown; a scale is never guessed from the values",
 };
 
 export const MISMATCH_SENTENCE: Readonly<Record<SeriesComparisonMismatch, string>> = {
@@ -46,12 +53,53 @@ export const MISMATCH_SENTENCE: Readonly<Record<SeriesComparisonMismatch, string
   ECONOMIC_PARTITION_MIXED: "The series sit in different economic partitions (domain or native profile)",
   BASIS_MIXED: "The series are measured on different bases",
   UNIT_MIXED: "The series are in different units",
+  RATIO_SCALE_MIXED: "These returns are stated on different scales and are not drawn together",
   METHODOLOGY_MIXED: "The series use different methodologies",
   WINDOW_MISMATCH: "The series cover different windows",
 };
 
-/** The chart unit class: money for MONEY, `ratio` for RATIO (the scale of a published ratio is not stated, so no `%` is invented). */
-export const chartUnit = (entry: Pick<ManagerSeriesDescribed, "unit">): ExactUnit => (entry.unit === "MONEY" ? "money" : "ratio");
+/**
+ * The chart unit class: `money` for MONEY; `pct` for a RATIO, whose scale the source states (FE-013), so the `%` is the source's
+ * and not invented. A FRACTION is shifted to percent first (`seriesPlotValue`); a PERCENT is already in percent.
+ */
+export const chartUnit = (entry: Pick<ManagerSeriesDescribed, "unit">): ExactUnit => (entry.unit === "MONEY" ? "money" : "pct");
+
+/** The scale in the words of the contract, for a caption: what 1.0 and 100 mean. */
+export const RATIO_SCALE_WORD: Readonly<Record<ManagerSeriesRatioScale, string>> = {
+  FRACTION: "a fraction (1.0 is 100%)",
+  PERCENT: "percent (100 is 100%)",
+};
+
+/**
+ * An exact decimal string with its point moved two places right (x100), in the string: `0.0123` -> `1.23`, `-0.004` -> `-0.4`, `1` -> `100`,
+ * `0.5` -> `50`. The digits are the source's own; nothing is rounded, parsed or floated. A string outside the published decimal grammar
+ * (the reader refuses those, so none gets here) answers `null`, never a guess.
+ */
+export function shiftDecimalTwo(exact: string): string | null {
+  const match = /^(-?)(0|[1-9][0-9]*)(?:\.([0-9]+))?$/.exec(exact);
+  if (match === null) return null;
+  const sign = match[1] ?? "";
+  const whole = match[2] ?? "";
+  const fraction = (match[3] ?? "").padEnd(2, "0");
+  const integer = `${whole}${fraction.slice(0, 2)}`.replace(/^0+(?=[0-9])/, "");
+  const rest = fraction.slice(2);
+  const text = `${integer}${rest === "" ? "" : `.${rest}`}`;
+  // The reader refuses negative zero, so a shifted zero keeps no sign either.
+  return sign === "-" && /[1-9]/.test(text) ? `-${text}` : text;
+}
+
+/** The value a chart plots and a label prints for one published point: the source's string, shifted two places only for a FRACTION. */
+export function seriesPlotValue(entry: Pick<ManagerSeriesDescribed, "unit" | "ratioScale">, exact: string): string | null {
+  return entry.unit === "RATIO" && entry.ratioScale === "FRACTION" ? shiftDecimalTwo(exact) : exact;
+}
+
+/** One published value as text, with its unit: `1.23%` for a FRACTION `0.0123`, `1.23%` for a PERCENT `1.23`, money with its currency. */
+export function seriesValueText(entry: Pick<ManagerSeriesDescribed, "unit" | "ratioScale" | "currency">, exact: string, options: { signed?: boolean } = {}): string {
+  const value = seriesPlotValue(entry, exact);
+  // Unreachable after the reader; if it ever happens the label says so and shows the published string, never a shifted guess.
+  if (value === null) return `${exact} (not shown: not a decimal)`;
+  return showDecimal(value, { unit: chartUnit(entry), currency: entry.currency ?? undefined, signed: options.signed === true });
+}
 
 export const isSigned = (metric: ManagerSeriesMetric): boolean => metric !== "NAV";
 
@@ -60,7 +108,7 @@ export const isSigned = (metric: ManagerSeriesMetric): boolean => metric !== "NA
  * the line breaks instead of joining the two sides; nothing is interpolated or carried forward.
  */
 export function chartPointsOf(entry: ManagerSeriesDescribed): SeriesPoint[] {
-  const marks: SeriesPoint[] = entry.points.map((point) => ({ t: point.tsMs, v: point.exact }));
+  const marks: SeriesPoint[] = entry.points.map((point) => ({ t: point.tsMs, v: seriesPlotValue(entry, point.exact) }));
   const taken = new Set(marks.map((mark) => mark.t));
   for (const gap of entry.gaps) if (!taken.has(gap.fromMs)) { marks.push({ t: gap.fromMs, v: null }); taken.add(gap.fromMs); }
   return marks.sort((a, b) => a.t - b.t);
@@ -68,10 +116,13 @@ export function chartPointsOf(entry: ManagerSeriesDescribed): SeriesPoint[] {
 
 export const isDescribed = (entry: ManagerSeriesEntry): entry is ManagerSeriesAvailable | ManagerSeriesEmpty => entry.state !== "UNAVAILABLE";
 
-/** `Not published (FE-013)` for a source that is not published, otherwise `Not available`; the reason line always carries the code. */
+/**
+ * `Not published (FE-013)` for a source that is not published or a return whose scale the source does not state, otherwise
+ * `Not available`; the reason line always carries the code.
+ */
 export function unavailableChart(entry: ManagerSeriesUnavailable, fe: string = SERIES_FE): { copy: string; reason: string } {
   return {
-    copy: entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED" ? `Not published (${fe})` : "Not available",
+    copy: entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED" || entry.reasonCode === "RATIO_SCALE_NOT_PUBLISHED" ? `Not published (${fe})` : "Not available",
     reason: `${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode}). Nothing is drawn from client arithmetic.`,
   };
 }
@@ -89,10 +140,14 @@ export function chartStateOf(entry: ManagerSeriesDescribed): ChartState {
 
 const windowText = (entry: Pick<ManagerSeriesDescribed, "window">): string => `${utcStamp(entry.window.fromMs)} to ${utcStamp(entry.window.toMs)}`;
 
+/** What a ratio is stated in, for a caption: `, a ratio stated as a fraction (1.0 is 100%), shown in %`. */
+const ratioWord = (scale: ManagerSeriesRatioScale | null): string =>
+  scale === null ? ", a ratio" : `, a ratio stated as ${RATIO_SCALE_WORD[scale]}${scale === "FRACTION" ? ", shown in %" : ""}`;
+
 /** The caption under a drawn series: what it measures, in what, by which methodology, over which exact window. */
 export function seriesCaption(metric: ManagerSeriesMetric, entry: ManagerSeriesDescribed): string {
   return [
-    `${METRIC_WORD[metric]}${entry.currency ? ` in ${entry.currency}` : ", a ratio"}`,
+    `${METRIC_WORD[metric]}${entry.currency ? ` in ${entry.currency}` : ratioWord(entry.ratioScale)}`,
     `${entry.partition.economicDomain.toLowerCase()} book`,
     `basis ${entry.basis}`,
     `methodology ${entry.methodologyRef}`,
@@ -116,7 +171,7 @@ export function emptyCaption(metric: ManagerSeriesMetric, entry: ManagerSeriesEm
 export function commonCaption(metric: ManagerSeriesMetric, comparison: Extract<ManagerSeriesComparison, { state: "ALIGNED" }>): string {
   const c = comparison.common;
   return [
-    `${METRIC_WORD[metric]}${c.currency ? ` in ${c.currency}` : ", a ratio"}`,
+    `${METRIC_WORD[metric]}${c.currency ? ` in ${c.currency}` : ratioWord(c.ratioScale)}`,
     `${c.economicDomain.toLowerCase()} book`,
     `basis ${c.basis}`,
     `methodology ${c.methodologyRef}`,

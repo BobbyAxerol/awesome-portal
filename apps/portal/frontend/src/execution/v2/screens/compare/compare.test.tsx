@@ -440,6 +440,80 @@ describe("series (FE-013/033, BE-P4 manager series)", () => {
     expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
   });
 
+  describe("Return: a ratio states its scale (FE-013, BE-P8)", () => {
+    /** Applies `change` to RETURN bodies only (the first read is NAV and must stay a valid NAV). */
+    const returns = (change: (body: Draft) => void) => serving("populated", (body) => {
+      if (body.metric !== "RETURN") return;
+      change(body);
+      body.comparison = oracleComparison(body.series);
+    });
+    const openReturn = async (container: HTMLElement) => {
+      await settled(container);
+      fireEvent.click(screen.getByRole("button", { name: "Return" }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Return" }).getAttribute("aria-pressed")).toBe("true"));
+    };
+
+    it("RATIO_SCALE_MIXED is INCOMPARABLE with that reason: nothing is drawn, each subject is listed apart with its own scale", async () => {
+      const { container } = mount(makeApi(returns((body) => { body.series[1].ratio_scale = "PERCENT"; })).api, pick(A, B));
+      await openReturn(container);
+      await waitFor(() => expect(overlay(container).textContent).toContain("RATIO_SCALE_MIXED"));
+      expect(overlay(container).textContent).toContain("Not comparable");
+      expect(overlay(container).textContent).toContain("These returns are stated on different scales and are not drawn together");
+      expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
+      const items = within(overlay(container)).getAllByTestId("not-comparable");
+      expect(items.map((i) => i.textContent)).toEqual([
+        expect.stringMatching(/Alpha Book 1.*ratio, scale FRACTION/),
+        expect.stringMatching(/Alpha Book 2.*ratio, scale PERCENT/),
+      ]);
+      expect(screen.getByTestId("basis-caption").textContent).toBe("Basis: No aligned series: the common basis is not established");
+    });
+
+    it("an ALIGNED FRACTION return is drawn in percent and the basis caption states the scale", async () => {
+      const { container } = mount(makeApi(returns((body) => { for (const e of body.series) e.points.forEach((p: Draft, i: number) => { p.value = ["0", "0.0123", "-0.004"][i % 3]; }); })).api, pick(A, B));
+      await openReturn(container);
+      await waitFor(() => expect(overlay(container).querySelectorAll("[data-testid='compare-line']")).toHaveLength(2));
+      const basis = screen.getByTestId("basis-caption").textContent!;
+      expect(basis).toContain("Return, a ratio stated as a fraction (1.0 is 100%), shown in %");
+      const plot = overlay(container).querySelector("[role='group'][tabindex='0']") as HTMLElement;
+      const seen = new Set<string>();
+      fireEvent.keyDown(plot, { key: "Home" });
+      for (let step = 0; step < 6; step += 1) {
+        for (const node of overlay(container).querySelectorAll("[data-testid='compare-value']")) seen.add(node.textContent ?? "");
+        fireEvent.keyDown(plot, { key: "ArrowRight" });
+      }
+      // The published 0.0123 is printed as 1.23% by moving the point in the string; no value is read as a number.
+      expect([...seen].some((text) => text.includes("1.23%"))).toBe(true);
+      expect([...seen].some((text) => text.includes("0.0123"))).toBe(false);
+    });
+
+    it("a PERCENT return prints as published with a percent sign", async () => {
+      const { container } = mount(makeApi(returns((body) => { for (const e of body.series) { e.ratio_scale = "PERCENT"; e.points.forEach((p: Draft, i: number) => { p.value = ["0", "1.23", "-0.4"][i % 3]; }); } })).api, pick(A, B));
+      await openReturn(container);
+      await waitFor(() => expect(overlay(container).querySelectorAll("[data-testid='compare-line']")).toHaveLength(2));
+      expect(screen.getByTestId("basis-caption").textContent).toContain("Return, a ratio stated as percent (100 is 100%)");
+      const plot = overlay(container).querySelector("[role='group'][tabindex='0']") as HTMLElement;
+      const seen = new Set<string>();
+      fireEvent.keyDown(plot, { key: "Home" });
+      for (let step = 0; step < 6; step += 1) {
+        for (const node of overlay(container).querySelectorAll("[data-testid='compare-value']")) seen.add(node.textContent ?? "");
+        fireEvent.keyDown(plot, { key: "ArrowRight" });
+      }
+      expect([...seen].some((text) => text.includes("1.23%"))).toBe(true);
+    });
+
+    it("a pick whose source states no scale is 'Not published (FE-013/033)' with the typed reason; nothing is drawn from the other pick", async () => {
+      const { container } = mount(makeApi(returns((body) => {
+        const template = seriesBodyFor(new URLSearchParams({ environment: "paper", metric: "RETURN", subjects: JSON.stringify([{ subject_type: "PORTFOLIO", subject_id: B }]), window: JSON.stringify("30D") }), "unavailable").series[0];
+        body.series[1] = { ...template, subject: body.series[1].subject, reason_code: "RATIO_SCALE_NOT_PUBLISHED", quality: { ...template.quality, reasons: ["RATIO_SCALE_NOT_PUBLISHED"] } };
+      })).api, pick(A, B));
+      await openReturn(container);
+      await waitFor(() => expect(overlay(container).textContent).toContain("RATIO_SCALE_NOT_PUBLISHED"));
+      expect(overlay(container).textContent).toContain("Not published (FE-013/033)");
+      expect(overlay(container).textContent).toContain("states no ratio scale");
+      expect(overlay(container).querySelectorAll("svg")).toHaveLength(0);
+    });
+  });
+
   it("removing a pick below two stops asking and says what to do", async () => {
     const harness = makeApi(serving("populated"));
     const { container } = mount(harness.api, pick(A, B));
