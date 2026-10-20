@@ -6,6 +6,7 @@ import { z } from "zod";
 import { AccessPolicyError, accessText, resourceKind, tsBusinessAction,
   type AccessAction, type AccessResource, type ScopedAccessGrant,
   type ManagerDomainGrant } from "./access.contract";
+import { CAPITAL_STEP_UP_ACTIONS, STEP_UP_FAMILIES, type StepUpFamily } from "./step-up-family";
 import { businessReadDenied, currentGrantAllows, evaluateAccess, evaluateBusinessRead, grantCurrent, policyReady,
   resolvedResources, selectManagerDomainGrant,
   type AccessEvaluationContext } from "./access-policy";
@@ -500,16 +501,29 @@ const batchRow = rowSchema.innerType().extend({ step_up_state: z.enum(STEP_UP_ST
   if (state !== stepUpStateOf(value.step_up_required, state === "ACTIVE") || state === "REQUIRED" && value.step_up_required !== true)
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["step_up_state"], message: "STEP_UP_STATE_INCONSISTENT" });
 });
+/** What a build exposes to obtain a step-up proof, per proof family, and whether the route's precondition holds
+ * for the caller RIGHT NOW. Not a promise the password will be accepted and not a permission for any action. The
+ * request body names the family (`family`). Fixed order: CAPITAL_COMMAND first (the delegated-capital path),
+ * then ACCESS_ADMIN (the historical path, which still satisfies the same rows). */
+export const STEP_UP_CHALLENGE_PRECONDITIONS = {
+  CAPITAL_COMMAND: "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+  ACCESS_ADMIN: "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+} as const satisfies Record<StepUpFamily, string>;
+export const STEP_UP_CHALLENGE_ORDER = ["CAPITAL_COMMAND", "ACCESS_ADMIN"] as const satisfies readonly StepUpFamily[];
+const stepUpChallenge = z.object({ family: z.enum(STEP_UP_FAMILIES), mechanism: z.literal("PASSWORD_REAUTH"),
+  route: z.literal("/api/admin/profile-access/v2/step-up"),
+  precondition: z.enum(["CURRENT_OWN_STEP_UP_ACTION_ALLOW", "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"]),
+  precondition_met: z.boolean() }).strict().superRefine((value, ctx) => {
+  if (value.precondition !== STEP_UP_CHALLENGE_PRECONDITIONS[value.family])
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["precondition"], message: "STEP_UP_CHALLENGE_INCONSISTENT" });
+});
 const sessionStepUp = z.object({
   state: z.enum(["ACTIVE", "NOT_ACTIVE"]),
   valid_until_ms: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER).nullable()
     .describe("When THIS session's step-up ends, never later than this projection's session ceiling; null when not active."),
-  /** The mechanism the build exposes to obtain a step-up, and whether its route precondition holds for the caller.
-   * Not a promise that the password will be accepted and not a permission for any action. */
-  challenge: z.object({ mechanism: z.literal("PASSWORD_REAUTH"), route: z.literal("/api/admin/profile-access/v2/step-up"),
-    precondition: z.literal("CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"), precondition_met: z.boolean() }).strict(),
+  challenges: z.array(stepUpChallenge).length(STEP_UP_CHALLENGE_ORDER.length),
 }).strict();
-export const eligibilityBatchResult = z.object({ schema_version: z.literal("portal.self-eligibility-batch.v1"),
+export const eligibilityBatchResult = z.object({ schema_version: z.literal("portal.self-eligibility-batch.v2"),
   workspace_id: scopedText, environment, current_only: z.literal(true), advisory_only: z.literal(true),
   ...projectionTimes, session_step_up: sessionStepUp,
   results: z.array(z.object({ resource: scopedResource, actions: z.array(batchRow).min(1).max(16) }).strict())
@@ -521,6 +535,15 @@ export const eligibilityBatchResult = z.object({ schema_version: z.literal("port
   if (active !== (step.valid_until_ms !== null) || step.valid_until_ms !== null &&
     (step.valid_until_ms <= value.observed_at_ms || step.valid_until_ms > value.valid_until_ms))
     bad("SESSION_STEP_UP_INVALID", ["session_step_up"]);
+  if (step.challenges.some((challenge, index) => challenge.family !== STEP_UP_CHALLENGE_ORDER[index]))
+    bad("STEP_UP_CHALLENGE_ORDER_INVALID", ["session_step_up", "challenges"]);
+  // An ALLOWED row whose rule demands a step-up proves a current own witness for a step-up action, so the capital
+  // challenge precondition (the same witness search, any resource) cannot be unmet. A disagreement means one of the
+  // two readings is wrong: refuse the whole read instead of publishing a button that cannot work.
+  const capitalChallenge = step.challenges.find(challenge => challenge.family === "CAPITAL_COMMAND");
+  if (capitalChallenge && !capitalChallenge.precondition_met && value.results.some(item => item.actions.some(row =>
+    row.permission === "ALLOWED" && row.step_up_required === true && (CAPITAL_STEP_UP_ACTIONS as readonly string[]).includes(row.action))))
+    bad("STEP_UP_CHALLENGE_ROW_DISAGREE", ["session_step_up", "challenges"]);
   if (!unique(value.results, item => JSON.stringify([item.resource.kind, item.resource.id]))) bad("DUPLICATE_RESOURCE", ["results"]);
   value.results.forEach((item, index) => {
     // Reuse the single-resource target/reason rules for every resource of the batch.
@@ -540,11 +563,42 @@ export const eligibilityBatchResult = z.object({ schema_version: z.literal("port
 
 /** Server fact: does THIS session hold an unexpired step-up? Gathered by the service after the actor fence. */
 export interface SessionStepUpFact { active_until_ms: number | null }
-/** Exactly the precondition of POST /step-up (ExecutionAccessService.stepUp): policy ready and a CURRENT own
- * ALLOW access.grant/access.revoke grant. It is reported, never enforced or widened here. */
-function stepUpRouteAvailable(context: AccessEvaluationContext): boolean {
-  return policyReady(context) && context.grants.some(grant => grant.subject_user_id === context.principal_id &&
-    grant.effect === "ALLOW" && (grant.action === "access.grant" || grant.action === "access.revoke") && grantCurrent(grant, context));
+const MAX_STEP_UP_PRECONDITION_RESOURCES = 20000;
+/** The precondition of POST /step-up for one proof family, evaluated on the caller's CURRENT context. It is reported
+ * and enforced by the SAME function (ExecutionAccessService.stepUp and the batch read both call it), so the button
+ * and the route cannot drift. It never widens anything:
+ *   ACCESS_ADMIN     policy ready and a current own ALLOW access.grant / access.revoke (the historical rule).
+ *   CAPITAL_COMMAND  policy ready and a current own ALLOW of a step-up-requiring capital / pending-control /
+ *                    registration action that the full current graph (DENYs, parents, TS proof, intervals,
+ *                    session) allows for at least one resource this grant covers. Exactly the witness search
+ *                    projectRow uses for an ALLOWED row, so an ALLOWED capital row implies this is met.
+ * Throws ACCESS_SCOPE_LIMIT_EXCEEDED (503) rather than answer from a truncated search. */
+export function stepUpPreconditionMet(context: AccessEvaluationContext, family: StepUpFamily): boolean {
+  if (!policyReady(context)) return false;
+  if (family === "ACCESS_ADMIN")
+    return context.grants.some(grant => grant.subject_user_id === context.principal_id &&
+      grant.effect === "ALLOW" && (grant.action === "access.grant" || grant.action === "access.revoke") && grantCurrent(grant, context));
+  if (family !== "CAPITAL_COMMAND") return false;
+  const stepUpActions = new Set<string>(CAPITAL_STEP_UP_ACTIONS);
+  let attempts = 0;
+  for (const grant of context.grants) {
+    if (grant.subject_user_id !== context.principal_id || grant.workspace_id !== context.workspace_id ||
+      grant.effect !== "ALLOW" || !stepUpActions.has(grant.action)) continue;
+    const rule = RULES[grant.action as RowAction];
+    for (const env of grant.environments) {
+      let resources: AccessResource[];
+      try { resources = resolvedResources(grant.selector, context.relationsFor(context.principal_id), env); }
+      catch (error) {
+        if (error instanceof AccessPolicyError && error.code === "SOURCE_RELATION_NOT_QUALIFIED") continue;
+        throw error;
+      }
+      for (const resource of resources) {
+        if (++attempts > MAX_STEP_UP_PRECONDITION_RESOURCES) throw new AccessPolicyError("ACCESS_SCOPE_LIMIT_EXCEEDED", 503);
+        if (rule.kinds.includes(resource.kind) && currentGrantAllows(context, grant.action, resource, env, grant.grant_id)) return true;
+      }
+    }
+  }
+  return false;
 }
 export function projectEligibilityBatch(context: SelfEligibilityContext, raw: unknown, stepUp: SessionStepUpFact) {
   const input = eligibilityBatchInput.parse(raw);
@@ -554,11 +608,12 @@ export function projectEligibilityBatch(context: SelfEligibilityContext, raw: un
     const stepUpUntil = stepUp.active_until_ms !== null && Number.isSafeInteger(stepUp.active_until_ms) ?
       Math.min(stepUp.active_until_ms, until) : null;
     const active = stepUpUntil !== null && stepUpUntil > observed;
-    return eligibilityBatchResult.parse({ schema_version: "portal.self-eligibility-batch.v1", workspace_id: input.workspace_id,
+    return eligibilityBatchResult.parse({ schema_version: "portal.self-eligibility-batch.v2", workspace_id: input.workspace_id,
       environment: input.environment, current_only: true, advisory_only: true, observed_at_ms: observed, valid_until_ms: until,
       session_step_up: { state: active ? "ACTIVE" : "NOT_ACTIVE", valid_until_ms: active ? stepUpUntil : null,
-        challenge: { mechanism: "PASSWORD_REAUTH", route: "/api/admin/profile-access/v2/step-up",
-          precondition: "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW", precondition_met: stepUpRouteAvailable(current) } },
+        challenges: STEP_UP_CHALLENGE_ORDER.map(family => ({ family, mechanism: "PASSWORD_REAUTH",
+          route: "/api/admin/profile-access/v2/step-up", precondition: STEP_UP_CHALLENGE_PRECONDITIONS[family],
+          precondition_met: stepUpPreconditionMet(current, family) })) },
       results: input.resources.map(resource => ({ resource,
         actions: input.actions.map(action => {
           const row = projectRow(current, action, resource, input.environment);

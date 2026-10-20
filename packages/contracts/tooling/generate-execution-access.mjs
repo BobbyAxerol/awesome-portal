@@ -141,6 +141,32 @@ const eligibilityBatchRow={...eligibilityRow,required:[...eligibilityRow.require
     {if:{properties:{step_up_required:{const:false}},required:['step_up_required']},then:{properties:{step_up_state:{const:'NOT_REQUIRED'}}}},
     {if:{properties:{step_up_required:{type:'null'}},required:['step_up_required']},then:{properties:{step_up_state:{const:'PLAN_DEPENDENT'}}}},
     {if:{properties:{step_up_required:{const:true}},required:['step_up_required']},then:{properties:{step_up_state:{enum:['REQUIRED','ACTIVE']}}}}]};
+// FE-015/060/068 · step-up proof families. A proof is "this actor re-entered their OWN password in THIS session";
+// it is never a capability. CAPITAL_COMMAND lets a delegated capital actor prove themselves WITHOUT access.grant/revoke.
+const stepUpFamilies=['ACCESS_ADMIN','CAPITAL_COMMAND'];
+const stepUpChallengeOrder=['CAPITAL_COMMAND','ACCESS_ADMIN'];
+const stepUpPreconditions={CAPITAL_COMMAND:'CURRENT_OWN_STEP_UP_ACTION_ALLOW',ACCESS_ADMIN:'CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW'};
+const stepUpChallenge={...obj({family:{enum:stepUpFamilies},mechanism:{const:'PASSWORD_REAUTH'},
+  route:{const:'/api/admin/profile-access/v2/step-up'},precondition:{enum:Object.values(stepUpPreconditions)},precondition_met:{type:'boolean'}}),
+  allOf:stepUpFamilies.map(family=>({if:{properties:{family:{const:family}},required:['family']},
+    then:{properties:{precondition:{const:stepUpPreconditions[family]}}}}))};
+// FE-057/058/038 · the member's OWN navigation context. Facts the client must otherwise guess; never a permit.
+const selfAccessEntryRoute='/administration/my-access';
+const selfContextCandidate=obj({workspace_id:scopedText,access_basis:{enum:['OWN_CURRENT_GRANT_RECORD','MEMBER_ONLY']}});
+const selfContextDefaultWorkspace={oneOf:[
+  obj({state:{const:'RESOLVED'},workspace_id:scopedText,rule:{enum:['SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD','SOLE_MEMBERSHIP']}}),
+  obj({state:{const:'AMBIGUOUS'},candidates:{type:'array',minItems:2,maxItems:16,items:selfContextCandidate}}),
+  obj({state:{const:'NONE'},reason_class:{const:'NO_WORKSPACE_MEMBERSHIP'}}),
+  obj({state:{const:'UNAVAILABLE'},reason_class:{const:'TOO_MANY_MEMBERSHIPS'}})],
+  description:'The workspace the server resolves for this member, or a typed absence. Never a choice between several: more than one candidate is AMBIGUOUS (sorted by workspace_id, at most 16; more is UNAVAILABLE, never a first-N). A candidate is a workspace the caller is a CURRENT MEMBER of. OWN_CURRENT_GRANT_RECORD says a stored, unrevoked, in-interval ALLOW record of the caller exists under that workspace\'s current reviewed policy revision: a hint for choosing a workspace, NOT proof of an effective right (navigation/eligibility for the chosen workspace evaluate the full graph). No peer, role or other-member fact is ever published.'};
+const selfContextEntry={oneOf:[
+  obj({feature:{const:'PROFILE_ACCESS'},mode:{const:'SELF_ONLY'},permission:{const:'ALLOWED'},route:{const:selfAccessEntryRoute},
+    workspace_scope:{const:'QUERY_workspace_id'},reason_class:{type:'null'},consumer_state:{const:'AWAITING_CONSUMER_ROUTER'}}),
+  obj({feature:{const:'PROFILE_ACCESS'},mode:{const:'SELF_ONLY'},permission:{const:'UNAVAILABLE'},route:{type:'null'},
+    workspace_scope:{type:'null'},reason_class:{const:'NO_WORKSPACE_MEMBERSHIP'},consumer_state:{const:'AWAITING_CONSUMER_ROUTER'}})],
+  description:'A self-only presentation for the member\'s OWN access review, distinct from the owner/admin policy matrix (/administration/profile-access, whose guards are unchanged). It is backed by the existing own effective read only and needs no peer-user selector or administration fetch. AWAITING_CONSUMER_ROUTER: the client must implement this route before navigating to it.'};
+const selfContextAccountOperation=obj({operation:{const:'REVISE_BINDING'},scope:{const:'CREDENTIAL_ONLY'},target_kind:{const:'BINDING'},
+  availability:{const:'NOT_COMMISSIONED'},reason_class:{const:'COMMAND_FAMILY_NOT_COMMISSIONED'},basis:{const:'NONE_PUBLISHED'},step_up_required:{type:'null'}});
 const batchResourceTokenPattern='[A-Z_]{1,16}:(?:[A-Za-z0-9\\-_.!~*\'()]|%[0-9A-F]{2}){1,768}';
 const eligibilityBatchResources={type:'string',minLength:1,maxLength:8192,
   pattern:'^'+batchResourceTokenPattern+'(?:,'+batchResourceTokenPattern+'){0,7}$(?![\\s\\S])',
@@ -180,19 +206,28 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
     allOf:eligibilityTargetRules,
     description:'Current own application permission facts only; action/target-kind compatibility is checked, but target existence, full lineage, field/source qualification, step-up and family/command readiness remain separately checked. Unsupported targets are UNAVAILABLE with ACTION_TARGET_UNSUPPORTED, or POLICY_PENDING when the current producer cannot establish policy. Not a permit or TS activation.'},
   AccessEligibilityBatchQuery:eligibilityBatchQuery,AccessEligibilityBatchRow:eligibilityBatchRow,
-  AccessEligibilityBatch:{...obj({schema_version:{const:'portal.self-eligibility-batch.v1'},workspace_id:scopedText,environment,
+  AccessEligibilityBatch:{...obj({schema_version:{const:'portal.self-eligibility-batch.v2'},workspace_id:scopedText,environment,
     current_only:{const:true},advisory_only:{const:true},...projectionTimes,
     session_step_up:{...obj({state:{enum:['ACTIVE','NOT_ACTIVE']},
       valid_until_ms:{...nullable(ms),description:'When THIS session\'s step-up ends, never later than valid_until_ms of this projection (the session ceiling) and greater than observed_at_ms; null when NOT_ACTIVE.'},
-      challenge:obj({mechanism:{const:'PASSWORD_REAUTH'},route:{const:'/api/admin/profile-access/v2/step-up'},
-        precondition:{const:'CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW'},precondition_met:{type:'boolean'}})}),
+      challenges:{type:'array',minItems:2,maxItems:2,items:false,prefixItems:stepUpChallengeOrder.map(family=>({allOf:[
+        stepUpChallenge,{properties:{family:{const:family}},required:['family']}]})),
+        description:'One entry per proof family, fixed order CAPITAL_COMMAND then ACCESS_ADMIN. Each says which precondition POST /step-up enforces for that family (request body field `family`) and whether it holds for the caller now. Either ACTIVE-able proof satisfies the same step-up-requiring rows. Not a promise the password will be accepted.'}}),
       allOf:[{if:{properties:{state:{const:'ACTIVE'}},required:['state']},then:{properties:{valid_until_ms:ms}},else:{properties:{valid_until_ms:{type:'null'}}}}],
-      description:'This session\'s own step-up fact, the one the access/capital mutations recheck, plus whether the build\'s step-up route precondition (a current own ALLOW access.grant or access.revoke) holds for the caller. Not a promise the password will be accepted; no new authentication mechanism.'},
+      description:'This session\'s own step-up fact, the one the capital mutations recheck (a capital-family or an access-admin-family proof, whichever is live), plus, per proof family, whether the step-up route precondition holds for the caller. A capital delegate needs no access.grant/revoke: the CAPITAL_COMMAND precondition is a current own ALLOW of a step-up-requiring action. Not a promise the password will be accepted; no new authentication mechanism and no capability.'},
     results:{type:'array',minItems:1,maxItems:8,items:eligibilityBatchItem}}),
     allOf:[{if:{properties:{session_step_up:{properties:{state:{const:'ACTIVE'}},required:['state']}},required:['session_step_up']},
       then:{properties:{results:{items:{properties:{actions:{items:{properties:{step_up_state:{enum:['NOT_REQUIRED','PLAN_DEPENDENT','ACTIVE']}}}}}}}}},
       else:{properties:{results:{items:{properties:{actions:{items:{properties:{step_up_state:{enum:['NOT_REQUIRED','PLAN_DEPENDENT','REQUIRED']}}}}}}}}}}],
     description:'FE-068. Up to eight resources x the same 1-16 actions in one current-only self read. Each resource carries exactly the rows of portal.self-eligibility.v1 (same evaluator, same reasons, same target rules) plus a typed step_up_state. Resources are unique (runtime-enforced) and every result carries the same actions in the same order (runtime-enforced: JSON Schema cannot compare sibling arrays). An action unsupported by one resource is a typed per-resource refusal, not a batch failure. Advisory only: no permit, no lease, no target existence, no source/field qualification; per-family checks and the real step-up recheck remain authoritative.'},
+  AccessSelfContext:{...obj({schema_version:{const:'portal.self-context.v1'},current_only:{const:true},advisory_only:{const:true},
+    ...projectionTimes,default_workspace:selfContextDefaultWorkspace,self_entry:selfContextEntry,
+    account_operations:{type:'array',minItems:1,maxItems:1,items:selfContextAccountOperation,
+      description:'The account-management mutation is NOT commissioned: the credential rotation behind the "Rotate credential" control is the PM REVISE_BINDING (credential-only) family, for which Portal has no route (binding.change.propose proposes only) and no qualified source. A typed refusal that holds for every member, never a permission; step_up_required is null (not determined, never false). The identifiers are display names, NOT capability names, and a navigation or menu fact never opens this mutation. A temporary client token such as execution.accounts.manage has no server authority and must not gate it.'}}),
+    allOf:[{if:{properties:{default_workspace:{properties:{state:{const:'NONE'}},required:['state']}},required:['default_workspace']},
+      then:{properties:{self_entry:{properties:{permission:{const:'UNAVAILABLE'}},required:['permission']}}},
+      else:{properties:{self_entry:{properties:{permission:{const:'ALLOWED'}},required:['permission']}}}}],
+    description:'FE-057/058/038. The member\'s own session context, current-only and advisory: the default workspace (or a typed absence), the self-only entry route and the typed no-operation branch for account management. Takes no query. Cross-field producer invariants (valid_until_ms > observed_at_ms, candidates unique and sorted, one access_basis per ambiguity, self-entry route never under the admin matrix route) are runtime-enforced and stated here. Not a permit, not source readiness; every read and command rechecks current authority.'},
   AccessSelfNavigationItem:selfNavigationItem,
   AccessSelfNavigation:{...obj({schema_version:{const:'portal.self-navigation.v1'},workspace_id:scopedText,environment,
     current_only:{const:true},advisory_only:{const:true},
@@ -212,12 +247,14 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
     after:obj({grant_state:{const:'REVOKED_ON_COMMIT'},effective_access:{const:'CURRENT_POLICY_REEVALUATED'},ts_revocation:{enum:['NOT_CONFIRMED','NOT_REQUIRED']},
       descendants:{const:'CURRENT_CHAIN_RECHECKED'},committed_obligations:{const:'CONTINUE'}}),
     step_up_required:{const:true},advisory_only:{const:true}}),
-  AccessStepUpRequest:obj({workspace_id:text,password:{type:'string',minLength:1,maxLength:256,writeOnly:true}}),
+  AccessStepUpRequest:{...obj({workspace_id:text,password:{type:'string',minLength:1,maxLength:256,writeOnly:true},family:{enum:stepUpFamilies,
+    description:'Proof family; omitted means ACCESS_ADMIN (the historical request, unchanged). CAPITAL_COMMAND needs a current own ALLOW of a step-up-requiring capital / pending-control / registration action and never requires access.grant or access.revoke.'}}),
+    required:['workspace_id','password']},
   AccessReceipt:receipt,AccessResult:obj({schema_version:{const:'portal.access-result.v1'},receipt:ref('AccessReceipt'),replayed:{type:'boolean'}}),
   AccessEffective:effective,AccessPreview:preview,AccessProposal:obj({schema_version:{const:'portal.access-proposal.v1'},proposal_id:text,
     state:{enum:['APP_APPLIED','TS_PENDING','TS_APPLIED','TS_REJECTED','TS_UNKNOWN','REVOKED']},change:ref('AccessChange'),
     submission_receipt:ref('AccessReceipt'),updated_at_ms:ms}),
-  AccessStepUp:obj({schema_version:{const:'portal.access-step-up.v1'},state:{const:'ACTIVE'},expires_at_ms:ms}),
+  AccessStepUp:obj({schema_version:{const:'portal.access-step-up.v1'},state:{const:'ACTIVE'},family:{enum:stepUpFamilies},expires_at_ms:ms}),
   AccessAudit:obj({schema_version:{const:'portal.access-audit.v1'},workspace_id:text,subject_user_id:text,
     items:{type:'array',maxItems:100,items:obj({operation:text,receipt:ref('AccessReceipt'),occurred_at_ms:ms})},
     next_cursor:nullable({type:'string',maxLength:2048}),max_items:{const:100}}),
@@ -253,6 +290,7 @@ const document={openapi:'3.1.0',info:{title:'Portal scoped access and delegation
     {name:'resources',in:'query',required:true,style:'form',explode:false,schema:eligibilityBatchResources},
     {name:'actions',in:'query',required:true,style:'form',explode:false,schema:eligibilityCsv}])},
   [prefix+'/self-navigation']:{get:privateRead('portalScopedAccessSelfNavigationGetV1','AccessSelfNavigation',[selfWorkspace,selfEnvironment])},
+  [prefix+'/self-context']:{get:privateRead('portalScopedAccessSelfContextGetV1','AccessSelfContext',[])},
   [`${prefix}/preview`]:{post:write('portalScopedAccessPreviewPostV1','AccessPreviewRequest','AccessPreview')},
   [`${prefix}/proposals`]:{post:write('portalScopedAccessProposalPostV1','AccessProposalRequest','AccessResult',[],true)},
   [`${prefix}/proposals/{id}`]:{get:read('portalScopedAccessProposalGetV1','AccessProposal',[workspace,id])},
@@ -309,13 +347,33 @@ const fixtures={lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',cases:[
     http_status:outcome==='DENIED'?409:200,reason_code:outcome==='DENIED'?'GRANT_REVISION_CONFLICT':null,policy_revision:'p1_TEST_ONLY',
     grant_revision:'r1_TEST_ONLY',decided_at_ms:1792094400000,ts_authority:({TS_PENDING:'PENDING',TS_APPLIED:'ACCEPTED',TS_REJECTED:'REJECTED',TS_UNKNOWN:'UNKNOWN'})[outcome]??'NOT_REQUIRED'}})),
 ],
+// FE-057/058/038: kept apart from `cases` for the same reason.
+self_context_cases:(()=>{
+  const base={schema_version:'portal.self-context.v1',current_only:true,advisory_only:true,observed_at_ms:1792094400000,valid_until_ms:1792094405000,
+    self_entry:{feature:'PROFILE_ACCESS',mode:'SELF_ONLY',permission:'ALLOWED',route:selfAccessEntryRoute,workspace_scope:'QUERY_workspace_id',
+      reason_class:null,consumer_state:'AWAITING_CONSUMER_ROUTER'},
+    account_operations:[{operation:'REVISE_BINDING',scope:'CREDENTIAL_ONLY',target_kind:'BINDING',availability:'NOT_COMMISSIONED',
+      reason_class:'COMMAND_FAMILY_NOT_COMMISSIONED',basis:'NONE_PUBLISHED',step_up_required:null}]};
+  const none={...base.self_entry,permission:'UNAVAILABLE',route:null,workspace_scope:null,reason_class:'NO_WORKSPACE_MEMBERSHIP'};
+  return [
+    ['RESOLVED_SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD',{...base,default_workspace:{state:'RESOLVED',workspace_id:'ws_TEST_ONLY_shared',rule:'SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD'}}],
+    ['RESOLVED_SOLE_MEMBERSHIP',{...base,default_workspace:{state:'RESOLVED',workspace_id:'ws_TEST_ONLY_personal',rule:'SOLE_MEMBERSHIP'}}],
+    ['AMBIGUOUS_SEVERAL_WITH_GRANT_RECORDS',{...base,default_workspace:{state:'AMBIGUOUS',candidates:[
+      {workspace_id:'ws_TEST_ONLY_a',access_basis:'OWN_CURRENT_GRANT_RECORD'},{workspace_id:'ws_TEST_ONLY_b',access_basis:'OWN_CURRENT_GRANT_RECORD'}]}}],
+    ['AMBIGUOUS_MEMBER_ONLY',{...base,default_workspace:{state:'AMBIGUOUS',candidates:[
+      {workspace_id:'ws_TEST_ONLY_a',access_basis:'MEMBER_ONLY'},{workspace_id:'ws_TEST_ONLY_b',access_basis:'MEMBER_ONLY'}]}}],
+    ['ABSENT_NO_MEMBERSHIP',{...base,default_workspace:{state:'NONE',reason_class:'NO_WORKSPACE_MEMBERSHIP'},self_entry:none}],
+    ['UNAVAILABLE_TOO_MANY_MEMBERSHIPS',{...base,default_workspace:{state:'UNAVAILABLE',reason_class:'TOO_MANY_MEMBERSHIPS'}}],
+  ].map(([case_name,value])=>({type:'AccessSelfContext',case_name,value}));
+})(),
 // FE-068: kept apart from `cases` so the pre-existing fixture contract (and its exact type-set assertions) is untouched.
 batch_cases:[false,true].map(active=>({type:'AccessEligibilityBatch',case_name:active?'STEP_UP_ACTIVE':'STEP_UP_REQUIRED_NOT_ACTIVE',value:{
-  schema_version:'portal.self-eligibility-batch.v1',workspace_id:'ws_TEST_ONLY',environment:'paper',current_only:true,advisory_only:true,
+  schema_version:'portal.self-eligibility-batch.v2',workspace_id:'ws_TEST_ONLY',environment:'paper',current_only:true,advisory_only:true,
   observed_at_ms:1792094400000,valid_until_ms:1792094405000,
   session_step_up:{state:active?'ACTIVE':'NOT_ACTIVE',valid_until_ms:active?1792094403000:null,
-    challenge:{mechanism:'PASSWORD_REAUTH',route:'/api/admin/profile-access/v2/step-up',
-      precondition:'CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW',precondition_met:active}},
+    // Delegated-capital-only actor: the capital challenge is available, the access-admin one is not.
+    challenges:stepUpChallengeOrder.map(family=>({family,mechanism:'PASSWORD_REAUTH',route:'/api/admin/profile-access/v2/step-up',
+      precondition:stepUpPreconditions[family],precondition_met:family==='CAPITAL_COMMAND'}))},
   results:[
     {resource:{kind:'PORTFOLIO',id:'portfolio_TEST_ONLY'},actions:[{...sampleEligibilityRow,step_up_state:'NOT_REQUIRED'},
       {...sampleEligibilityRow,action:'capital.top_up',grant_ref:'acg_TEST_ONLY_OWN_SYNTHETIC_TOPUP',step_up_required:true,
@@ -330,6 +388,7 @@ batch_cases:[false,true].map(active=>({type:'AccessEligibilityBatch',case_name:a
 for(const name of ['AccessEligibility','AccessSelfNavigation'])
   schemas[name].examples=fixtures.cases.filter(entry=>entry.type===name).map(entry=>entry.value);
 schemas.AccessEligibilityBatch.examples=fixtures.batch_cases.map(entry=>entry.value);
+schemas.AccessSelfContext.examples=fixtures.self_context_cases.map(entry=>entry.value);
 for(const [file,value] of Object.entries({'openapi/execution-access.openapi.json':document,'fixtures/execution-access.synthetic.valid.json':fixtures})){
   const bytes=JSON.stringify(value,null,2)+'\n',target=resolve(root,file);
   if(process.argv.includes('--check')){if(readFileSync(target,'utf8')!==bytes)throw new Error(`Generated drift: ${file}`);}

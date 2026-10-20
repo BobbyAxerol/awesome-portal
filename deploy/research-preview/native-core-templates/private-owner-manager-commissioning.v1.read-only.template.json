@@ -1,0 +1,64 @@
+{
+  "schema_version": "portal.private-owner-manager-commissioning.v1",
+  "target": {
+    "database_name": "portal_control",
+    "database_system_identifier": "7688673963308855330",
+    "role_name": "portal",
+    "protected_owner_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+    "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+    "principal_workspace_pins": [
+      { "user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434", "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660" }
+    ]
+  },
+  "policy": {
+    "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+    "revision": "<<FILL:str:POLICY_REVISION|opaque, new, never a revision that already has an install event>>",
+    "artifact_digest": "<<FILL:sha256p:POLICY_ARTIFACT_DIGEST|sha256:<64 hex> assigned by the owner review>>",
+    "approval_ref": "<<FILL:str:OWNER_APPROVAL_REF|reference to Bobby's written approval; never invented>>",
+    "state": "REVIEWED",
+    "qualification": "OWNER_VERIFIED",
+    "protected_owner_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+    "researcher_fields": { "state": "PENDING", "policy_ref": null, "fields": [] },
+    "manager_read_domains": [
+      {
+        "environment": "paper",
+        "domain": {
+          "profile_id": "PAPER_BINANCE_USDM",
+          "catalogue_sha256": "<<FILL:hex64:DOMAIN_CATALOGUE_SHA256|identical to the runtime selector/pins>>",
+          "profile_sha256": "<<FILL:hex64:DOMAIN_PROFILE_SHA256>>",
+          "field_policy_sha256": "<<FILL:hex64:DOMAIN_FIELD_POLICY_SHA256>>"
+        },
+        "field_policy_ref": "<<FILL:str:FIELD_POLICY_REF|reviewed field-policy reference>>",
+        "valid_from_ms": "<<FILL:ms:SEAL_VALID_FROM_MS>>",
+        "valid_until_ms": "<<FILL:ms:SEAL_VALID_UNTIL_MS|contains every grant window below>>"
+      }
+    ]
+  },
+  "root_grants": [],
+  "manager_domain_grants": [
+    {
+      "schema_version": "portal.manager-domain-grant.v1",
+      "grant_id": "<<FILL:str:READ_GRANT_ID>>",
+      "workspace_id": "ws_06G19F61YB8CFR7TEWMS7HQ660",
+      "subject_user_id": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+      "issued_by": "usr_5a38d5dfb08b44748f5776fbe04a1434",
+      "parent_grant_id": null,
+      "revision": "<<FILL:str:READ_GRANT_REVISION>>",
+      "policy_revision": "<<FILL:str:POLICY_REVISION|equal to policy.revision>>",
+      "action": "business.read_all",
+      "effect": "ALLOW",
+      "environment": "paper",
+      "domain": {
+        "profile_id": "PAPER_BINANCE_USDM",
+        "catalogue_sha256": "<<FILL:hex64:DOMAIN_CATALOGUE_SHA256>>",
+        "profile_sha256": "<<FILL:hex64:DOMAIN_PROFILE_SHA256>>",
+        "field_policy_sha256": "<<FILL:hex64:DOMAIN_FIELD_POLICY_SHA256>>"
+      },
+      "field_policy_ref": "<<FILL:str:FIELD_POLICY_REF>>",
+      "valid_from_ms": "<<FILL:ms:READ_GRANT_VALID_FROM_MS>>",
+      "valid_until_ms": "<<FILL:ms:READ_GRANT_VALID_UNTIL_MS|finite; decide the window with Bobby, not a default>>",
+      "revoked_at_ms": null
+    }
+  ],
+  "provenance_ref": "<<FILL:str:PROVENANCE_REF|where the independent review of THIS file is recorded>>"
+}

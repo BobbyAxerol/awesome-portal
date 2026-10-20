@@ -18,6 +18,7 @@ import { retainedReview } from "../execution/retained-read-profile";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import { mayGovern } from "../auth/governance-access";
 import { assertDecisionAuthority, DecisionAuthorityError } from "./decision-authority";
+import { captureRefusal, paperProjectionAuthorized, type CaptureAction } from "./capture-authority";
 
 const POLICY = "portal.review-capture.v1";
 const EXIT_PANELS = ["OBSERVATION_COVERAGE", "DRIFT", "LIMITS_HEALTH", "PORTFOLIO_FIT"] as const;
@@ -40,7 +41,13 @@ export class GovernanceReviewCaptureService {
     @Inject(OwnerAccessService) private readonly ownerAccess: OwnerAccessService,
   ) {}
 
-  capabilities(user: PortalUser) {
+  /** Which capture buttons the member may start HERE. Each AVAILABLE action is judged by the one predicate the
+   * stage-action eligibility read also uses (capture-authority.ts), in the order the routes refuse; the unavailable
+   * ones are fixed facts of this build. Advisory: the routes recheck everything. */
+  async capabilities(user: PortalUser, workspaceId: string) {
+    const access = await this.ownerAccess.effectiveAccess(user.userId);
+    const facts = { workspace_id: workspaceId, role: user.role, access, retained_review: retainedReview(this.config),
+      paper_projection_authorized: paperProjectionAuthorized(this.config, workspaceId) };
     return { schema_version: "governance.review-capture-capabilities.v1", authority: "PORTAL",
       source_side_effect_requested: false,
       actions: [
@@ -50,8 +57,11 @@ export class GovernanceReviewCaptureService {
         { id: "R2_EXECUTION_GRANT", state: "UNAVAILABLE", reason_code: "R2_UPSTREAM_EXECUTION_NOT_QUALIFIED" },
         { id: "PAPER_EXIT_PROMOTE", state: "UNAVAILABLE", reason_code: GAP },
         { id: "SANDBOX_CERTIFY_SOURCE", state: "UNAVAILABLE", reason_code: "ACCEPTED_SANDBOX_STEP_EVIDENCE_UNAVAILABLE" },
-      ].map(action => action.state === "AVAILABLE" && user.role !== "ADMIN"
-        ? { ...action,state:"UNAVAILABLE",reason_code:"ADMIN_ROLE_REQUIRED" } : action) };
+      ].map(action => {
+        if (action.state !== "AVAILABLE") return action;
+        const refusal = captureRefusal(action.id as CaptureAction, facts);
+        return refusal === null ? action : { ...action, state: "UNAVAILABLE", reason_code: refusal };
+      }) };
   }
 
   /** Inputs come from an already-authorized, verified parent read, never a browser-supplied parent. */
@@ -71,13 +81,12 @@ export class GovernanceReviewCaptureService {
       if (!lineage.r1EvidenceComplete) return blocked("R1_EVIDENCE_INCOMPLETE");
     }
     if (retainedReview(this.config)) return blocked("CAPTURE_RETAINED_REVIEW_READ_ONLY");
-    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || this.config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER !== "true"
-      || this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID !== approval.workspaceId || !this.config.EXECUTION_EDGE_PAPER_PROFILE_ID) {
-      return blocked("CAPTURE_PROJECTION_NOT_AUTHORIZED");
-    }
+    const paperProfile = this.config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+    // paperProjectionAuthorized already requires a profile id; the second test only narrows the type.
+    if (!paperProjectionAuthorized(this.config, approval.workspaceId) || !paperProfile) return blocked("CAPTURE_PROJECTION_NOT_AUTHORIZED");
     let snapshot: Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>;
     try {
-      snapshot = await this.projections.snapshot(approval.workspaceId, "paper", this.config.EXECUTION_EDGE_PAPER_PROFILE_ID);
+      snapshot = await this.projections.snapshot(approval.workspaceId, "paper", paperProfile);
     } catch {
       // A domain-store outage must not break an otherwise readable Core R1.
       // No cached permission, source reactivation or guessed candidate on failure.
@@ -317,14 +326,14 @@ export class GovernanceReviewCaptureService {
 
   private async paperSnapshot(client: PoolClient,workspace: string,digest: string) {
     if (retainedReview(this.config)) fail("CAPTURE_RETAINED_REVIEW_READ_ONLY",422);
-    if (this.config.FEATURE_EXECUTION_LOCAL_PROJECTION !== "true" || this.config.FEATURE_EXECUTION_CURRENT_SOURCE_PAPER !== "true" ||
-      this.config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID !== workspace || !this.config.EXECUTION_EDGE_PAPER_PROFILE_ID) fail("CAPTURE_PROJECTION_NOT_AUTHORIZED",404);
+    const paperProfile = this.config.EXECUTION_EDGE_PAPER_PROFILE_ID;
+    if (!paperProjectionAuthorized(this.config, workspace) || !paperProfile) fail("CAPTURE_PROJECTION_NOT_AUTHORIZED",404);
     // UDB isolates Execution rows: a Core transaction must not query the domain table.
     // In the legacy single-store profile retain transaction-local snapshot semantics.
     const reader = this.projections.pool === this.pool ? client : this.projections.pool;
     let snapshot: Awaited<ReturnType<ExecutionProfileProjectionRepository["snapshot"]>>;
     try {
-      snapshot = await this.projections.snapshot(workspace,"paper",this.config.EXECUTION_EDGE_PAPER_PROFILE_ID,reader);
+      snapshot = await this.projections.snapshot(workspace,"paper",paperProfile,reader);
     } catch {
       fail("CAPTURE_PROJECTION_UNAVAILABLE",503);
     }

@@ -5,6 +5,7 @@ import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 import { ACCESS_ACTIONS, accessAction, accessText, accessPreview, accessProposal, accessRevoke,
   grantChange, resourceSelector } from "../../../apps/control-api/src/execution-v2/access.contract";
+import { ADMIN_ACCESS_ROUTE, SELF_ACCESS_ENTRY_ROUTE, selfContextResult } from "../../../apps/control-api/src/execution-v2/self-context";
 import { ROW_ACTIONS, RULES, eligibilityBatchQuery, eligibilityBatchResult, eligibilityQuery, eligibilityResult,
   navigationInput, navigationResult, scopedText } from "../../../apps/control-api/src/execution-v2/self-eligibility";
 
@@ -41,6 +42,7 @@ const routes = [
   { path: prefix + "/eligibility", method: "get", operation: "portalScopedAccessEligibilityGetV1", output: "AccessEligibility", status: "200" },
   { path: prefix + "/eligibility/batch", method: "get", operation: "portalScopedAccessEligibilityBatchGetV1", output: "AccessEligibilityBatch", status: "200" },
   { path: prefix + "/self-navigation", method: "get", operation: "portalScopedAccessSelfNavigationGetV1", output: "AccessSelfNavigation", status: "200" },
+  { path: prefix + "/self-context", method: "get", operation: "portalScopedAccessSelfContextGetV1", output: "AccessSelfContext", status: "200" },
   { path: `${prefix}/preview`, method: "post", operation: "portalScopedAccessPreviewPostV1", input: "AccessPreviewRequest", output: "AccessPreview", status: "200" },
   { path: `${prefix}/proposals`, method: "post", operation: "portalScopedAccessProposalPostV1", input: "AccessProposalRequest", output: "AccessResult", status: "201" },
   { path: `${prefix}/proposals/{id}`, method: "get", operation: "portalScopedAccessProposalGetV1", output: "AccessProposal", status: "200" },
@@ -308,19 +310,31 @@ describe("ELP2-03 browser intents have no policy, actor or TS authority input", 
       expect(validates("AccessRevokeRequest", revoke), key).toBe(false);
       expect(accessRevoke.safeParse(revoke).success, key).toBe(false);
     }
-    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", expires_at_ms: 1792094400000 })).toBe(true);
-    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", expires_at_ms: 1792094400000,
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", family: "ACCESS_ADMIN", expires_at_ms: 1792094400000 })).toBe(true);
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", family: "CAPITAL_COMMAND", expires_at_ms: 1792094400000 })).toBe(true);
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", expires_at_ms: 1792094400000 })).toBe(false); // family is named
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", family: "OWNER", expires_at_ms: 1792094400000 })).toBe(false);
+    expect(validates("AccessStepUp", { schema_version: "portal.access-step-up.v1", state: "ACTIVE", family: "ACCESS_ADMIN", expires_at_ms: 1792094400000,
       password: stepUp.password })).toBe(false);
+  });
+
+  it("FE-015/060/068 the step-up request names an optional proof family; the historical body is unchanged and nothing else is accepted", () => {
+    const base = { workspace_id: "ws_TEST_ONLY", password: "TEST_ONLY_not_a_production_credential" };
+    expect(validates("AccessStepUpRequest", base)).toBe(true); // no family == ACCESS_ADMIN, byte-compatible
+    for (const family of ["ACCESS_ADMIN", "CAPITAL_COMMAND"]) expect(validates("AccessStepUpRequest", { ...base, family }), family).toBe(true);
+    for (const family of ["OWNER", "capital_command", "", null, 1]) expect(validates("AccessStepUpRequest", { ...base, family }), String(family)).toBe(false);
+    expect(spec.components.schemas.AccessStepUpRequest.required).toEqual(["workspace_id", "password"]);
+    expect(spec.components.schemas.AccessStepUpRequest.properties.family.description).toContain("never requires access.grant or access.revoke");
   });
 });
 
 describe("ELP2-03 eight unchanged legacy operations plus two C3 self reads, the FE-068 batch read and generated mapping", () => {
-  it("publishes exactly eleven paths and eleven unique operationIds, with no public install/TS receipt route", () => {
+  it("publishes exactly twelve paths and twelve unique operationIds, with no public install/TS receipt route", () => {
     expect(spec.openapi).toBe("3.1.0");
     expect(Object.keys(spec.paths).sort()).toEqual(routes.map(route => route.path).sort());
     const operations = routes.map(route => spec.paths[route.path][route.method].operationId);
     expect(operations).toEqual(routes.map(route => route.operation));
-    expect(new Set(operations).size).toBe(11);
+    expect(new Set(operations).size).toBe(12);
     for (const route of routes) expect(Object.keys(spec.paths[route.path])).toEqual([route.method]);
     expect(Object.keys(spec.paths).join("\n")).not.toMatch(/install|bootstrap|acceptance|ts[-_/]?receipt|trust-profile/iu);
     for (const internal of ["ReviewedAccessPolicy", "TsMembershipAcceptance", "AccessPolicyInstallRequest", "AccessReceiptAcceptRequest"])
@@ -357,7 +371,8 @@ describe("ELP2-03 eight unchanged legacy operations plus two C3 self reads, the 
   });
 
   it("read queries preserve exact workspace/subject IDs and bounded opaque audit pagination", () => {
-    for (const route of routes.filter(route => route.method === "get")) {
+    // self-context takes no query at all: the workspace is an OUTPUT there (no selector to spoof).
+    for (const route of routes.filter(route => route.method === "get" && route.path !== `${prefix}/self-context`)) {
       const parameters = spec.paths[route.path].get.parameters;
       expect(parameters.find((parameter: { name: string }) => parameter.name === "workspace_id"))
         .toMatchObject({ in: "query", required: true, schema: { type: "string", minLength: 1, maxLength: 256 } });
@@ -734,9 +749,29 @@ describe("FE-068 batch self-eligibility with a typed step-up state: canonical TE
     }
     expect(spec.components.schemas.AccessEligibilityBatch.properties.session_step_up.properties.valid_until_ms.description).toContain("never later than valid_until_ms");
     parity((() => { const v = base(); v.session_step_up.valid_until_ms = v.observed_at_ms + 1; return v; })(), false); // NOT_ACTIVE with a time
-    parity((() => { const v = base(); v.session_step_up.challenge.mechanism = "TOTP"; return v; })(), false);
-    parity((() => { const v = base(); v.session_step_up.challenge.route = "/api/admin/other"; return v; })(), false);
-    parity((() => { const v = base(); delete v.session_step_up.challenge; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].mechanism = "TOTP"; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].route = "/api/admin/other"; return v; })(), false);
+    parity((() => { const v = base(); delete v.session_step_up.challenges; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenge = v.session_step_up.challenges[0]; return v; })(), false); // v1 key is gone
+  });
+  it("FE-015/060/068 the step-up challenges are one per proof family, in a fixed order, each with its own precondition", () => {
+    const challenges = base().session_step_up.challenges;
+    expect(challenges.map((c: { family: string }) => c.family)).toEqual(["CAPITAL_COMMAND", "ACCESS_ADMIN"]);
+    expect(challenges.map((c: { precondition: string }) => c.precondition)).toEqual(["CURRENT_OWN_STEP_UP_ACTION_ALLOW", "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"]);
+    // A delegated-capital-only actor: capital challenge available, access-admin not. This is the case the old schema could not say.
+    expect(challenges.map((c: { precondition_met: boolean }) => c.precondition_met)).toEqual([true, false]);
+    parity((() => { const v = base(); v.session_step_up.challenges.reverse(); return v; })(), false); // order is part of the contract
+    parity((() => { const v = base(); v.session_step_up.challenges.pop(); return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges.push(structuredClone(v.session_step_up.challenges[0])); return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].precondition = "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"; return v; })(), false); // family <-> precondition
+    parity((() => { const v = base(); v.session_step_up.challenges[1].precondition = "CURRENT_OWN_STEP_UP_ACTION_ALLOW"; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].family = "OWNER"; return v; })(), false);
+    parity((() => { const v = base(); v.session_step_up.challenges[0].precondition_met = "yes"; return v; })(), false);
+    // Producer invariant (runtime-only: a cross-array rule): an ALLOWED step-up row proves a current own witness, so the
+    // capital challenge cannot say "not met" next to it.
+    const disagree = base(); disagree.session_step_up.challenges[0].precondition_met = false;
+    expect(eligibilityBatchResult.safeParse(disagree).success).toBe(false);
+    expect(eligibilityBatchResult.safeParse(base()).success).toBe(true);
   });
   it("keeps every v1 row and target rule per resource, bounds the batch and keeps keys closed", () => {
     parity((() => { const v = base(); v.results[1].actions[0].permission = "ALLOWED"; return v; })(), false); // unsupported target cannot be ALLOWED
@@ -761,5 +796,80 @@ describe("FE-068 batch self-eligibility with a typed step-up state: canonical TE
     }
     for (const bad of ["", "portfolio:p", "PORTFOLIO:", "PORTFOLIO:a,b", "PORTFOLIO:p,", Array.from({ length: 9 }, (_, i) => "PORTFOLIO:p" + i).join(",")])
       expect(pattern.test(bad), bad).toBe(false);
+  });
+});
+
+describe("FE-057/058/038 self context: default workspace, self-only entry and the typed no-operation branch", () => {
+  const cases = fixtures.self_context_cases as Array<{ type: string; case_name: string; value: any }>;
+  const parity = (value: unknown, expected: boolean) => {
+    expect(validates("AccessSelfContext", value), "AJV").toBe(expected);
+    expect(selfContextResult.safeParse(value).success, "Zod").toBe(expected);
+  };
+  // Cross-field/ordering invariants JSON Schema cannot state: the runtime refuses, the schema description says so.
+  const runtimeOnly = (value: unknown) => expect(selfContextResult.safeParse(value).success, "Zod").toBe(false);
+  const named = (name: string) => structuredClone(cases.find(entry => entry.case_name === name)!.value);
+  it("every case passes both validators, is a schema example, and the v1 fixture set is untouched", () => {
+    expect(cases.map(entry => entry.case_name)).toEqual(["RESOLVED_SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD", "RESOLVED_SOLE_MEMBERSHIP",
+      "AMBIGUOUS_SEVERAL_WITH_GRANT_RECORDS", "AMBIGUOUS_MEMBER_ONLY", "ABSENT_NO_MEMBERSHIP", "UNAVAILABLE_TOO_MANY_MEMBERSHIPS"]);
+    expect(spec.components.schemas.AccessSelfContext.examples).toEqual(cases.map(entry => entry.value));
+    for (const entry of cases) { expect(entry.type).toBe("AccessSelfContext"); parity(entry.value, true); }
+    expect(fixtures.cases.some((entry: { type: string }) => entry.type === "AccessSelfContext")).toBe(false);
+  });
+  it("publishes one private GET with NO query parameter: the workspace is an output, there is nothing to spoof", () => {
+    const operation = spec.paths[prefix + "/self-context"].get;
+    expect(operation.operationId).toBe("portalScopedAccessSelfContextGetV1");
+    expect(operation.parameters).toEqual([]);
+    expect(operation).not.toHaveProperty("requestBody");
+    for (const status of ["200", "400", "401", "403", "404", "409", "500", "503"])
+      expect(operation.responses[status].headers["Cache-Control"]).toEqual({ required: true, schema: { type: "string", const: "private, no-store" } });
+  });
+  it("the default workspace is never guessed: one resolved answer, a bounded sorted ambiguity, or a typed absence", () => {
+    parity((() => { const v = named("AMBIGUOUS_MEMBER_ONLY"); v.default_workspace.candidates.pop(); return v; })(), false); // one candidate is RESOLVED, not AMBIGUOUS
+    parity((() => { const v = named("AMBIGUOUS_MEMBER_ONLY"); v.default_workspace.candidates = Array.from({ length: 17 }, (_, i) => ({ workspace_id: "ws" + String(i).padStart(2, "0"), access_basis: "MEMBER_ONLY" })); return v; })(), false); // never a first-N
+    runtimeOnly((() => { const v = named("AMBIGUOUS_MEMBER_ONLY"); v.default_workspace.candidates.reverse(); return v; })()); // order is part of the contract
+    runtimeOnly((() => { const v = named("AMBIGUOUS_SEVERAL_WITH_GRANT_RECORDS"); v.default_workspace.candidates[1].access_basis = "MEMBER_ONLY"; return v; })()); // one basis per ambiguity
+    runtimeOnly((() => { const v = named("AMBIGUOUS_MEMBER_ONLY"); v.default_workspace.candidates[1].workspace_id = v.default_workspace.candidates[0].workspace_id; return v; })());
+    parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.default_workspace.rule = "FIRST_ONE"; return v; })(), false);
+    parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.default_workspace.candidates = []; return v; })(), false);
+    parity((() => { const v = named("ABSENT_NO_MEMBERSHIP"); v.default_workspace.workspace_id = "ws_x"; return v; })(), false);
+    parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.default_workspace.workspace_id = "bad\nid"; return v; })(), false);
+    for (const key of ["workspace_name", "owner_user_id", "role", "members", "grant_id", "policy_revision"]) {
+      parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.default_workspace[key] = "TEST_ONLY_LEAK"; return v; })(), false);
+      parity((() => { const v = named("AMBIGUOUS_MEMBER_ONLY"); v.default_workspace.candidates[0][key] = "TEST_ONLY_LEAK"; return v; })(), false);
+      parity({ ...named("RESOLVED_SOLE_MEMBERSHIP"), [key]: "TEST_ONLY_LEAK" }, false);
+    }
+  });
+  it("the self-only entry is distinct from the admin policy matrix, ties to the workspace state, and has a typed absence", () => {
+    expect(SELF_ACCESS_ENTRY_ROUTE).not.toBe(ADMIN_ACCESS_ROUTE);
+    expect(SELF_ACCESS_ENTRY_ROUTE.startsWith(ADMIN_ACCESS_ROUTE)).toBe(false);
+    for (const entry of cases.filter(e => e.value.default_workspace.state !== "NONE")) expect(entry.value.self_entry.route).toBe(SELF_ACCESS_ENTRY_ROUTE);
+    expect(named("ABSENT_NO_MEMBERSHIP").self_entry).toMatchObject({ permission: "UNAVAILABLE", route: null, reason_class: "NO_WORKSPACE_MEMBERSHIP" });
+    for (const route of [ADMIN_ACCESS_ROUTE, ADMIN_ACCESS_ROUTE + "/x", ADMIN_ACCESS_ROUTE + "?view=self", "/administration/my-access?x=1", "/administration/my-access#a", null, ""])
+      parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.self_entry.route = route; return v; })(), false);
+    parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.self_entry.permission = "UNAVAILABLE"; return v; })(), false);
+    parity((() => { const v = named("ABSENT_NO_MEMBERSHIP"); v.self_entry = named("RESOLVED_SOLE_MEMBERSHIP").self_entry; return v; })(), false); // entry offered with no membership
+    parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.self_entry = named("ABSENT_NO_MEMBERSHIP").self_entry; return v; })(), false);
+    parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.self_entry.consumer_state = "READY"; return v; })(), false);
+    parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.self_entry.mode = "ADMIN"; return v; })(), false);
+    expect(spec.components.schemas.AccessSelfContext.properties.self_entry.description).toContain("distinct from the owner/admin policy matrix");
+  });
+  it("account management is a typed NOT_COMMISSIONED refusal for every member: never a permission, never an undetermined step-up of 'false'", () => {
+    for (const entry of cases) expect(entry.value.account_operations).toEqual([{ operation: "REVISE_BINDING", scope: "CREDENTIAL_ONLY", target_kind: "BINDING",
+      availability: "NOT_COMMISSIONED", reason_class: "COMMAND_FAMILY_NOT_COMMISSIONED", basis: "NONE_PUBLISHED", step_up_required: null }]);
+    const op = (change: (o: any) => void) => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); change(v.account_operations[0]); return v; };
+    for (const patch of [{ availability: "AVAILABLE" }, { availability: "ELIGIBLE" }, { reason_class: "SUBMIT_CHECKS_REQUIRED" }, { basis: "ADMIN_ROLE" },
+      { step_up_required: false }, { step_up_required: true }, { operation: "ROTATE_CREDENTIAL" }, { scope: "FULL" }, { target_kind: "ACCOUNT" },
+      { capability: "execution.accounts.manage" }])
+      parity(op(o => Object.assign(o, patch)), false);
+    parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.account_operations = []; return v; })(), false);
+    parity((() => { const v = named("RESOLVED_SOLE_MEMBERSHIP"); v.account_operations.push(structuredClone(v.account_operations[0])); return v; })(), false);
+    expect(spec.components.schemas.AccessSelfContext.properties.account_operations.description).toContain("execution.accounts.manage");
+    expect(JSON.stringify(cases)).not.toMatch(/accounts\.manage|binding\.change\.propose/);
+  });
+  it("is current-only, advisory, closed and time-ordered", () => {
+    for (const patch of [{ current_only: false }, { advisory_only: false }, { schema_version: "portal.self-context.v2" }, { extra: 1 }, { observed_at_ms: -1 }])
+      parity({ ...named("RESOLVED_SOLE_MEMBERSHIP"), ...patch }, false);
+    for (const until of [1792094400000, 1792094399999]) runtimeOnly({ ...named("RESOLVED_SOLE_MEMBERSHIP"), valid_until_ms: until }); // not after observed_at_ms
+    expect(JSON.stringify(named("RESOLVED_SOLE_MEMBERSHIP"))).not.toMatch(/grants|policy|owner|token|capabilit/);
   });
 });

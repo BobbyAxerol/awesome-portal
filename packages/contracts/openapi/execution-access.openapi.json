@@ -1101,6 +1101,172 @@
         "description": "Current-only self projection; reject unknown query keys, repeated/ambiguous values, subjects, roles, as_of_ms and browser profile/hash tuples. Advisory, never an execution permit."
       }
     },
+    "/api/admin/profile-access/v2/self-context": {
+      "get": {
+        "operationId": "portalScopedAccessSelfContextGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Private,no-store; Portal application authority, not TS business activation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessSelfContext"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed public refusal; current authority is required even for replay.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccessProblem"
+                }
+              }
+            },
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            }
+          }
+        },
+        "description": "Current-only self projection; reject unknown query keys, repeated/ambiguous values, subjects, roles, as_of_ms and browser profile/hash tuples. Advisory, never an execution permit."
+      }
+    },
     "/api/admin/profile-access/v2/preview": {
       "post": {
         "operationId": "portalScopedAccessPreviewPostV1",
@@ -7874,7 +8040,7 @@
         ],
         "properties": {
           "schema_version": {
-            "const": "portal.self-eligibility-batch.v1"
+            "const": "portal.self-eligibility-batch.v2"
           },
           "workspace_id": {
             "type": "string",
@@ -7914,7 +8080,7 @@
             "required": [
               "state",
               "valid_until_ms",
-              "challenge"
+              "challenges"
             ],
             "properties": {
               "state": {
@@ -7936,29 +8102,190 @@
                 ],
                 "description": "When THIS session's step-up ends, never later than valid_until_ms of this projection (the session ceiling) and greater than observed_at_ms; null when NOT_ACTIVE."
               },
-              "challenge": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "mechanism",
-                  "route",
-                  "precondition",
-                  "precondition_met"
-                ],
-                "properties": {
-                  "mechanism": {
-                    "const": "PASSWORD_REAUTH"
+              "challenges": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": false,
+                "prefixItems": [
+                  {
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "family",
+                          "mechanism",
+                          "route",
+                          "precondition",
+                          "precondition_met"
+                        ],
+                        "properties": {
+                          "family": {
+                            "enum": [
+                              "ACCESS_ADMIN",
+                              "CAPITAL_COMMAND"
+                            ]
+                          },
+                          "mechanism": {
+                            "const": "PASSWORD_REAUTH"
+                          },
+                          "route": {
+                            "const": "/api/admin/profile-access/v2/step-up"
+                          },
+                          "precondition": {
+                            "enum": [
+                              "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+                              "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
+                            ]
+                          },
+                          "precondition_met": {
+                            "type": "boolean"
+                          }
+                        },
+                        "allOf": [
+                          {
+                            "if": {
+                              "properties": {
+                                "family": {
+                                  "const": "ACCESS_ADMIN"
+                                }
+                              },
+                              "required": [
+                                "family"
+                              ]
+                            },
+                            "then": {
+                              "properties": {
+                                "precondition": {
+                                  "const": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "if": {
+                              "properties": {
+                                "family": {
+                                  "const": "CAPITAL_COMMAND"
+                                }
+                              },
+                              "required": [
+                                "family"
+                              ]
+                            },
+                            "then": {
+                              "properties": {
+                                "precondition": {
+                                  "const": "CURRENT_OWN_STEP_UP_ACTION_ALLOW"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "properties": {
+                          "family": {
+                            "const": "CAPITAL_COMMAND"
+                          }
+                        },
+                        "required": [
+                          "family"
+                        ]
+                      }
+                    ]
                   },
-                  "route": {
-                    "const": "/api/admin/profile-access/v2/step-up"
-                  },
-                  "precondition": {
-                    "const": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
-                  },
-                  "precondition_met": {
-                    "type": "boolean"
+                  {
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "family",
+                          "mechanism",
+                          "route",
+                          "precondition",
+                          "precondition_met"
+                        ],
+                        "properties": {
+                          "family": {
+                            "enum": [
+                              "ACCESS_ADMIN",
+                              "CAPITAL_COMMAND"
+                            ]
+                          },
+                          "mechanism": {
+                            "const": "PASSWORD_REAUTH"
+                          },
+                          "route": {
+                            "const": "/api/admin/profile-access/v2/step-up"
+                          },
+                          "precondition": {
+                            "enum": [
+                              "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+                              "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
+                            ]
+                          },
+                          "precondition_met": {
+                            "type": "boolean"
+                          }
+                        },
+                        "allOf": [
+                          {
+                            "if": {
+                              "properties": {
+                                "family": {
+                                  "const": "ACCESS_ADMIN"
+                                }
+                              },
+                              "required": [
+                                "family"
+                              ]
+                            },
+                            "then": {
+                              "properties": {
+                                "precondition": {
+                                  "const": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "if": {
+                              "properties": {
+                                "family": {
+                                  "const": "CAPITAL_COMMAND"
+                                }
+                              },
+                              "required": [
+                                "family"
+                              ]
+                            },
+                            "then": {
+                              "properties": {
+                                "precondition": {
+                                  "const": "CURRENT_OWN_STEP_UP_ACTION_ALLOW"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "properties": {
+                          "family": {
+                            "const": "ACCESS_ADMIN"
+                          }
+                        },
+                        "required": [
+                          "family"
+                        ]
+                      }
+                    ]
                   }
-                }
+                ],
+                "description": "One entry per proof family, fixed order CAPITAL_COMMAND then ACCESS_ADMIN. Each says which precondition POST /step-up enforces for that family (request body field `family`) and whether it holds for the caller now. Either ACTIVE-able proof satisfies the same step-up-requiring rows. Not a promise the password will be accepted."
               }
             },
             "allOf": [
@@ -7991,7 +8318,7 @@
                 }
               }
             ],
-            "description": "This session's own step-up fact, the one the access/capital mutations recheck, plus whether the build's step-up route precondition (a current own ALLOW access.grant or access.revoke) holds for the caller. Not a promise the password will be accepted; no new authentication mechanism."
+            "description": "This session's own step-up fact, the one the capital mutations recheck (a capital-family or an access-admin-family proof, whichever is live), plus, per proof family, whether the step-up route precondition holds for the caller. A capital delegate needs no access.grant/revoke: the CAPITAL_COMMAND precondition is a current own ALLOW of a step-up-requiring action. Not a promise the password will be accepted; no new authentication mechanism and no capability."
           },
           "results": {
             "type": "array",
@@ -10795,7 +11122,7 @@
         "description": "FE-068. Up to eight resources x the same 1-16 actions in one current-only self read. Each resource carries exactly the rows of portal.self-eligibility.v1 (same evaluator, same reasons, same target rules) plus a typed step_up_state. Resources are unique (runtime-enforced) and every result carries the same actions in the same order (runtime-enforced: JSON Schema cannot compare sibling arrays). An action unsupported by one resource is a typed per-resource refusal, not a batch failure. Advisory only: no permit, no lease, no target existence, no source/field qualification; per-family checks and the real step-up recheck remain authoritative.",
         "examples": [
           {
-            "schema_version": "portal.self-eligibility-batch.v1",
+            "schema_version": "portal.self-eligibility-batch.v2",
             "workspace_id": "ws_TEST_ONLY",
             "environment": "paper",
             "current_only": true,
@@ -10805,12 +11132,22 @@
             "session_step_up": {
               "state": "NOT_ACTIVE",
               "valid_until_ms": null,
-              "challenge": {
-                "mechanism": "PASSWORD_REAUTH",
-                "route": "/api/admin/profile-access/v2/step-up",
-                "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-                "precondition_met": false
-              }
+              "challenges": [
+                {
+                  "family": "CAPITAL_COMMAND",
+                  "mechanism": "PASSWORD_REAUTH",
+                  "route": "/api/admin/profile-access/v2/step-up",
+                  "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+                  "precondition_met": true
+                },
+                {
+                  "family": "ACCESS_ADMIN",
+                  "mechanism": "PASSWORD_REAUTH",
+                  "route": "/api/admin/profile-access/v2/step-up",
+                  "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+                  "precondition_met": false
+                }
+              ]
             },
             "results": [
               {
@@ -10888,7 +11225,7 @@
             ]
           },
           {
-            "schema_version": "portal.self-eligibility-batch.v1",
+            "schema_version": "portal.self-eligibility-batch.v2",
             "workspace_id": "ws_TEST_ONLY",
             "environment": "paper",
             "current_only": true,
@@ -10898,12 +11235,22 @@
             "session_step_up": {
               "state": "ACTIVE",
               "valid_until_ms": 1792094403000,
-              "challenge": {
-                "mechanism": "PASSWORD_REAUTH",
-                "route": "/api/admin/profile-access/v2/step-up",
-                "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-                "precondition_met": true
-              }
+              "challenges": [
+                {
+                  "family": "CAPITAL_COMMAND",
+                  "mechanism": "PASSWORD_REAUTH",
+                  "route": "/api/admin/profile-access/v2/step-up",
+                  "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+                  "precondition_met": true
+                },
+                {
+                  "family": "ACCESS_ADMIN",
+                  "mechanism": "PASSWORD_REAUTH",
+                  "route": "/api/admin/profile-access/v2/step-up",
+                  "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+                  "precondition_met": false
+                }
+              ]
             },
             "results": [
               {
@@ -10979,6 +11326,525 @@
                 ]
               }
             ]
+          }
+        ]
+      },
+      "AccessSelfContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "current_only",
+          "advisory_only",
+          "observed_at_ms",
+          "valid_until_ms",
+          "default_workspace",
+          "self_entry",
+          "account_operations"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.self-context.v1"
+          },
+          "current_only": {
+            "const": true
+          },
+          "advisory_only": {
+            "const": true
+          },
+          "observed_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "Portal evaluation time in UTC epoch milliseconds; not source observation time."
+          },
+          "valid_until_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "End-exclusive ceiling of this actor's current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline."
+          },
+          "default_workspace": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "workspace_id",
+                  "rule"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "RESOLVED"
+                  },
+                  "workspace_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+                    "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+                  },
+                  "rule": {
+                    "enum": [
+                      "SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD",
+                      "SOLE_MEMBERSHIP"
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "candidates"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "AMBIGUOUS"
+                  },
+                  "candidates": {
+                    "type": "array",
+                    "minItems": 2,
+                    "maxItems": 16,
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "workspace_id",
+                        "access_basis"
+                      ],
+                      "properties": {
+                        "workspace_id": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 256,
+                          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])",
+                          "description": "Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization."
+                        },
+                        "access_basis": {
+                          "enum": [
+                            "OWN_CURRENT_GRANT_RECORD",
+                            "MEMBER_ONLY"
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason_class"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "NONE"
+                  },
+                  "reason_class": {
+                    "const": "NO_WORKSPACE_MEMBERSHIP"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "state",
+                  "reason_class"
+                ],
+                "properties": {
+                  "state": {
+                    "const": "UNAVAILABLE"
+                  },
+                  "reason_class": {
+                    "const": "TOO_MANY_MEMBERSHIPS"
+                  }
+                }
+              }
+            ],
+            "description": "The workspace the server resolves for this member, or a typed absence. Never a choice between several: more than one candidate is AMBIGUOUS (sorted by workspace_id, at most 16; more is UNAVAILABLE, never a first-N). A candidate is a workspace the caller is a CURRENT MEMBER of. OWN_CURRENT_GRANT_RECORD says a stored, unrevoked, in-interval ALLOW record of the caller exists under that workspace's current reviewed policy revision: a hint for choosing a workspace, NOT proof of an effective right (navigation/eligibility for the chosen workspace evaluate the full graph). No peer, role or other-member fact is ever published."
+          },
+          "self_entry": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "feature",
+                  "mode",
+                  "permission",
+                  "route",
+                  "workspace_scope",
+                  "reason_class",
+                  "consumer_state"
+                ],
+                "properties": {
+                  "feature": {
+                    "const": "PROFILE_ACCESS"
+                  },
+                  "mode": {
+                    "const": "SELF_ONLY"
+                  },
+                  "permission": {
+                    "const": "ALLOWED"
+                  },
+                  "route": {
+                    "const": "/administration/my-access"
+                  },
+                  "workspace_scope": {
+                    "const": "QUERY_workspace_id"
+                  },
+                  "reason_class": {
+                    "type": "null"
+                  },
+                  "consumer_state": {
+                    "const": "AWAITING_CONSUMER_ROUTER"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "feature",
+                  "mode",
+                  "permission",
+                  "route",
+                  "workspace_scope",
+                  "reason_class",
+                  "consumer_state"
+                ],
+                "properties": {
+                  "feature": {
+                    "const": "PROFILE_ACCESS"
+                  },
+                  "mode": {
+                    "const": "SELF_ONLY"
+                  },
+                  "permission": {
+                    "const": "UNAVAILABLE"
+                  },
+                  "route": {
+                    "type": "null"
+                  },
+                  "workspace_scope": {
+                    "type": "null"
+                  },
+                  "reason_class": {
+                    "const": "NO_WORKSPACE_MEMBERSHIP"
+                  },
+                  "consumer_state": {
+                    "const": "AWAITING_CONSUMER_ROUTER"
+                  }
+                }
+              }
+            ],
+            "description": "A self-only presentation for the member's OWN access review, distinct from the owner/admin policy matrix (/administration/profile-access, whose guards are unchanged). It is backed by the existing own effective read only and needs no peer-user selector or administration fetch. AWAITING_CONSUMER_ROUTER: the client must implement this route before navigating to it."
+          },
+          "account_operations": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "operation",
+                "scope",
+                "target_kind",
+                "availability",
+                "reason_class",
+                "basis",
+                "step_up_required"
+              ],
+              "properties": {
+                "operation": {
+                  "const": "REVISE_BINDING"
+                },
+                "scope": {
+                  "const": "CREDENTIAL_ONLY"
+                },
+                "target_kind": {
+                  "const": "BINDING"
+                },
+                "availability": {
+                  "const": "NOT_COMMISSIONED"
+                },
+                "reason_class": {
+                  "const": "COMMAND_FAMILY_NOT_COMMISSIONED"
+                },
+                "basis": {
+                  "const": "NONE_PUBLISHED"
+                },
+                "step_up_required": {
+                  "type": "null"
+                }
+              }
+            },
+            "description": "The account-management mutation is NOT commissioned: the credential rotation behind the \"Rotate credential\" control is the PM REVISE_BINDING (credential-only) family, for which Portal has no route (binding.change.propose proposes only) and no qualified source. A typed refusal that holds for every member, never a permission; step_up_required is null (not determined, never false). The identifiers are display names, NOT capability names, and a navigation or menu fact never opens this mutation. A temporary client token such as execution.accounts.manage has no server authority and must not gate it."
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "default_workspace": {
+                  "properties": {
+                    "state": {
+                      "const": "NONE"
+                    }
+                  },
+                  "required": [
+                    "state"
+                  ]
+                }
+              },
+              "required": [
+                "default_workspace"
+              ]
+            },
+            "then": {
+              "properties": {
+                "self_entry": {
+                  "properties": {
+                    "permission": {
+                      "const": "UNAVAILABLE"
+                    }
+                  },
+                  "required": [
+                    "permission"
+                  ]
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "self_entry": {
+                  "properties": {
+                    "permission": {
+                      "const": "ALLOWED"
+                    }
+                  },
+                  "required": [
+                    "permission"
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "description": "FE-057/058/038. The member's own session context, current-only and advisory: the default workspace (or a typed absence), the self-only entry route and the typed no-operation branch for account management. Takes no query. Cross-field producer invariants (valid_until_ms > observed_at_ms, candidates unique and sorted, one access_basis per ambiguity, self-entry route never under the admin matrix route) are runtime-enforced and stated here. Not a permit, not source readiness; every read and command rechecks current authority.",
+        "examples": [
+          {
+            "schema_version": "portal.self-context.v1",
+            "current_only": true,
+            "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "ALLOWED",
+              "route": "/administration/my-access",
+              "workspace_scope": "QUERY_workspace_id",
+              "reason_class": null,
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "account_operations": [
+              {
+                "operation": "REVISE_BINDING",
+                "scope": "CREDENTIAL_ONLY",
+                "target_kind": "BINDING",
+                "availability": "NOT_COMMISSIONED",
+                "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+                "basis": "NONE_PUBLISHED",
+                "step_up_required": null
+              }
+            ],
+            "default_workspace": {
+              "state": "RESOLVED",
+              "workspace_id": "ws_TEST_ONLY_shared",
+              "rule": "SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD"
+            }
+          },
+          {
+            "schema_version": "portal.self-context.v1",
+            "current_only": true,
+            "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "ALLOWED",
+              "route": "/administration/my-access",
+              "workspace_scope": "QUERY_workspace_id",
+              "reason_class": null,
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "account_operations": [
+              {
+                "operation": "REVISE_BINDING",
+                "scope": "CREDENTIAL_ONLY",
+                "target_kind": "BINDING",
+                "availability": "NOT_COMMISSIONED",
+                "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+                "basis": "NONE_PUBLISHED",
+                "step_up_required": null
+              }
+            ],
+            "default_workspace": {
+              "state": "RESOLVED",
+              "workspace_id": "ws_TEST_ONLY_personal",
+              "rule": "SOLE_MEMBERSHIP"
+            }
+          },
+          {
+            "schema_version": "portal.self-context.v1",
+            "current_only": true,
+            "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "ALLOWED",
+              "route": "/administration/my-access",
+              "workspace_scope": "QUERY_workspace_id",
+              "reason_class": null,
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "account_operations": [
+              {
+                "operation": "REVISE_BINDING",
+                "scope": "CREDENTIAL_ONLY",
+                "target_kind": "BINDING",
+                "availability": "NOT_COMMISSIONED",
+                "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+                "basis": "NONE_PUBLISHED",
+                "step_up_required": null
+              }
+            ],
+            "default_workspace": {
+              "state": "AMBIGUOUS",
+              "candidates": [
+                {
+                  "workspace_id": "ws_TEST_ONLY_a",
+                  "access_basis": "OWN_CURRENT_GRANT_RECORD"
+                },
+                {
+                  "workspace_id": "ws_TEST_ONLY_b",
+                  "access_basis": "OWN_CURRENT_GRANT_RECORD"
+                }
+              ]
+            }
+          },
+          {
+            "schema_version": "portal.self-context.v1",
+            "current_only": true,
+            "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "ALLOWED",
+              "route": "/administration/my-access",
+              "workspace_scope": "QUERY_workspace_id",
+              "reason_class": null,
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "account_operations": [
+              {
+                "operation": "REVISE_BINDING",
+                "scope": "CREDENTIAL_ONLY",
+                "target_kind": "BINDING",
+                "availability": "NOT_COMMISSIONED",
+                "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+                "basis": "NONE_PUBLISHED",
+                "step_up_required": null
+              }
+            ],
+            "default_workspace": {
+              "state": "AMBIGUOUS",
+              "candidates": [
+                {
+                  "workspace_id": "ws_TEST_ONLY_a",
+                  "access_basis": "MEMBER_ONLY"
+                },
+                {
+                  "workspace_id": "ws_TEST_ONLY_b",
+                  "access_basis": "MEMBER_ONLY"
+                }
+              ]
+            }
+          },
+          {
+            "schema_version": "portal.self-context.v1",
+            "current_only": true,
+            "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "UNAVAILABLE",
+              "route": null,
+              "workspace_scope": null,
+              "reason_class": "NO_WORKSPACE_MEMBERSHIP",
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "account_operations": [
+              {
+                "operation": "REVISE_BINDING",
+                "scope": "CREDENTIAL_ONLY",
+                "target_kind": "BINDING",
+                "availability": "NOT_COMMISSIONED",
+                "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+                "basis": "NONE_PUBLISHED",
+                "step_up_required": null
+              }
+            ],
+            "default_workspace": {
+              "state": "NONE",
+              "reason_class": "NO_WORKSPACE_MEMBERSHIP"
+            }
+          },
+          {
+            "schema_version": "portal.self-context.v1",
+            "current_only": true,
+            "advisory_only": true,
+            "observed_at_ms": 1792094400000,
+            "valid_until_ms": 1792094405000,
+            "self_entry": {
+              "feature": "PROFILE_ACCESS",
+              "mode": "SELF_ONLY",
+              "permission": "ALLOWED",
+              "route": "/administration/my-access",
+              "workspace_scope": "QUERY_workspace_id",
+              "reason_class": null,
+              "consumer_state": "AWAITING_CONSUMER_ROUTER"
+            },
+            "account_operations": [
+              {
+                "operation": "REVISE_BINDING",
+                "scope": "CREDENTIAL_ONLY",
+                "target_kind": "BINDING",
+                "availability": "NOT_COMMISSIONED",
+                "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+                "basis": "NONE_PUBLISHED",
+                "step_up_required": null
+              }
+            ],
+            "default_workspace": {
+              "state": "UNAVAILABLE",
+              "reason_class": "TOO_MANY_MEMBERSHIPS"
+            }
           }
         ]
       },
@@ -11694,6 +12560,13 @@
             "minLength": 1,
             "maxLength": 256,
             "writeOnly": true
+          },
+          "family": {
+            "enum": [
+              "ACCESS_ADMIN",
+              "CAPITAL_COMMAND"
+            ],
+            "description": "Proof family; omitted means ACCESS_ADMIN (the historical request, unchanged). CAPITAL_COMMAND needs a current own ALLOW of a step-up-requiring capital / pending-control / registration action and never requires access.grant or access.revoke."
           }
         }
       },
@@ -12235,6 +13108,7 @@
         "required": [
           "schema_version",
           "state",
+          "family",
           "expires_at_ms"
         ],
         "properties": {
@@ -12243,6 +13117,12 @@
           },
           "state": {
             "const": "ACTIVE"
+          },
+          "family": {
+            "enum": [
+              "ACCESS_ADMIN",
+              "CAPITAL_COMMAND"
+            ]
           },
           "expires_at_ms": {
             "type": "integer",

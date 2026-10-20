@@ -86,8 +86,8 @@ export class GovernanceController {
 
   @Get("/governance/review-capture-capabilities")
   async captureCapabilities(@Req() request: GovernanceRequest, @Query("workspace_id") workspace?: string) {
-    await this.workspace(request, workspace);
-    return this.captures.capabilities(request.portalUser);
+    const workspaceId = await this.workspace(request, workspace);
+    return this.captures.capabilities(request.portalUser, workspaceId);
   }
 
   @Post("/governance/r2/capture")

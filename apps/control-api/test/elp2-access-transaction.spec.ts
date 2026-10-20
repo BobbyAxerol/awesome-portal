@@ -845,6 +845,57 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
     expect((await f.service.effective(actor(peer), f.workspace)).grants).toEqual([]);
   });
 
+  it("FE-015 a CAPITAL_COMMAND proof is invisible to the access fence; session, expiry and revoke bind it exactly like an access proof", async () => {
+    const account = await active("capital-proof"), f = await fixture(account), request = f.change();
+    const lifecycle = new AccountLifecycleRepository(ctx.pool), sessionId = account.session.sessionId, userId = account.user.userId;
+    // fixture() issued an ACCESS proof; leave only a capital one.
+    await ctx.pool.query("UPDATE owner_step_up_grants SET revoked_at=clock_timestamp() WHERE user_id=$1", [userId]);
+    const stepUpId = `stpcap_${next("capital-proof")}`;
+    await lifecycle.grantStepUp({ stepUpId, sessionId, userId, ttlSeconds: 600, family: "CAPITAL_COMMAND" });
+    // 1. an access mutation does not accept it, even though the actor really holds access.grant
+    await expect(f.submit(request)).rejects.toMatchObject({ code: "STEP_UP_REQUIRED" });
+    expect(await lifecycle.lockActiveStepUpExpiry(sessionId, userId, ["ACCESS_ADMIN"])).toBeNull();
+    expect(await lifecycle.lockActiveStepUpExpiry(sessionId, userId, ["ACCESS_ADMIN", "CAPITAL_COMMAND"])).toBeInstanceOf(Date);
+    // 2. another session of the same user cannot use it
+    const second = await auth.login({ assertion: account.assertion, username: account.user.username, credential: PASSWORD });
+    expect(await lifecycle.lockActiveStepUpExpiry(second.sessionId, userId, ["ACCESS_ADMIN", "CAPITAL_COMMAND"])).toBeNull();
+    // 3. another user in the same session id cannot use it
+    expect(await lifecycle.lockActiveStepUpExpiry(sessionId, peer.user.userId, ["ACCESS_ADMIN", "CAPITAL_COMMAND"])).toBeNull();
+    // 4. expiry and revoke end it
+    await ctx.pool.query("UPDATE owner_step_up_grants SET expires_at=clock_timestamp()-interval '1 second' WHERE step_up_id=$1", [stepUpId]);
+    expect(await lifecycle.activeStepUpExpiry(sessionId, ["CAPITAL_COMMAND"])).toBeNull();
+    const revokedId = `stpcap_${next("capital-proof-revoked")}`;
+    await lifecycle.grantStepUp({ stepUpId: revokedId, sessionId, userId, ttlSeconds: 600, family: "CAPITAL_COMMAND" });
+    expect(await lifecycle.activeStepUpExpiry(sessionId, ["CAPITAL_COMMAND"])).toBeInstanceOf(Date);
+    await lifecycle.revokeStepUpsForUser(userId);
+    expect(await lifecycle.activeStepUpExpiry(sessionId, ["CAPITAL_COMMAND"])).toBeNull();
+    // 5. an access proof is not a capital proof and does not appear for a capital-only reader
+    await lifecycle.grantStepUp({ stepUpId: next("access-proof"), sessionId, userId, ttlSeconds: 600 });
+    expect(await lifecycle.activeStepUpExpiry(sessionId, ["CAPITAL_COMMAND"])).toBeNull();
+    expect((await f.submit(request)).receipt.outcome).toBe("APP_APPLIED");
+  });
+
+  it("FE-015 the capital challenge needs the actor's own capital grant: an access administrator without one is refused, writes nothing, and the route stays CSRF-guarded", async () => {
+    const account = await active("capital-challenge-denied"), f = await fixture(account);
+    await ctx.pool.query("UPDATE owner_step_up_grants SET revoked_at=clock_timestamp() WHERE user_id=$1", [account.user.userId]);
+    const proofs = (await ctx.pool.query("SELECT * FROM owner_step_up_grants WHERE user_id=$1 ORDER BY step_up_id", [account.user.userId])).rows;
+    await expect(f.service.stepUp(actor(account), f.workspace, PASSWORD, "CAPITAL_COMMAND")).rejects.toMatchObject({ code: "ACCESS_DENIED", status: 403 });
+    await expect(f.service.stepUp(actor(peer), f.workspace, PASSWORD, "CAPITAL_COMMAND")).rejects.toMatchObject({ code: "ACCESS_DENIED" });
+    expect((await ctx.pool.query("SELECT * FROM owner_step_up_grants WHERE user_id=$1 ORDER BY step_up_id", [account.user.userId])).rows).toEqual(proofs);
+    await withHttp(f.service, async app => {
+      const inject = (payload: object, extra: Record<string, string> = {}) => app.getHttpAdapter().getInstance().inject({ method: "POST", url: `${BASE}/step-up`,
+        headers: { ...headers(account.session), ...extra }, payload });
+      const denied = await inject({ workspace_id: f.workspace, password: PASSWORD, family: "CAPITAL_COMMAND" });
+      expect(denied.statusCode).toBe(403);
+      expect(denied.json().error.code).toBe("ACCESS_DENIED");
+      expect((await inject({ workspace_id: f.workspace, password: PASSWORD, family: "OWNER" })).statusCode).toBe(400);
+      expect((await inject({ workspace_id: f.workspace, password: PASSWORD, family: "CAPITAL_COMMAND" }, { "x-portal-csrf": "wrong" })).statusCode).toBe(403);
+      const plain = await inject({ workspace_id: f.workspace, password: PASSWORD });
+      expect(plain.statusCode).toBe(200);
+      expect(plain.json()).toMatchObject({ schema_version: "portal.access-step-up.v1", state: "ACTIVE", family: "ACCESS_ADMIN" });
+    });
+  });
+
   it("T03-07 mounted wrong-password step-up refusal is redacted and changes no proof or capability", async () => {
     const account = await active("wrong-password-stepup"), f = await fixture(account);
     const wrongPassword = next("TEST_ONLY-private-wrong-password"), rawKey = next("TEST_ONLY-private-stepup-key");
