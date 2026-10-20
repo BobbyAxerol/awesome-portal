@@ -217,7 +217,7 @@ export function StageHeader({ stage, crumb, title, subtitle, chips, spine, extra
             })}
           </ol>
         </nav>
-        {actions ? <div className="exec-stage-actions">{actions}</div> : null}
+        {actions ? <div className="exec-stage-head-acts">{actions}</div> : null}
         </div>
         <p className="exec-stage-tag" data-stage={stage} data-risk={guard.risk ? "true" : undefined}>
           <span>{guard.word}</span>
