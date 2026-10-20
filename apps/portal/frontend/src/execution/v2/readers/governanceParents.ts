@@ -48,6 +48,7 @@
  */
 import { readUtcEpochMs, type UtcEpochMs } from "../../screenDataContract";
 import { readDecimal, type BoundaryDecimal } from "../boundary";
+import { readScopedIdentityV2, type ScopedIdentityV2 } from "./scopedIdentity";
 
 export const GOVERNANCE_PARENT_V2_SCHEMA = "portal.execution.governance-parent.v2";
 export const GOVERNANCE_PARENT_OPERATION_V2_SCHEMA = "portal.execution.governance-parent-operation.v2";
@@ -411,6 +412,8 @@ export interface SandboxParentV2 {
     r1ApprovalId: string;
     r2ApprovalId: string;
   }>;
+  /** BE-P12: the closed `identity` member, present only when the read asked `include=identity`; `null` = the body carries none. */
+  identity: ScopedIdentityV2 | null;
   notPublished: NotPublishedV2;
 }
 
@@ -460,6 +463,8 @@ export interface CanaryParentV2 {
     r1ApprovalId: string;
     r2ApprovalId: string;
   }>;
+  /** BE-P12: the closed `identity` member, present only when the read asked `include=identity`; `null` = the body carries none. */
+  identity: ScopedIdentityV2 | null;
   notPublished: NotPublishedV2;
 }
 
@@ -571,6 +576,13 @@ type Rec = Record<string, unknown>;
 
 function rec(value: unknown): Rec | null {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Rec : null;
+}
+
+/** The object when it has exactly `keys`, or `keys` plus the one optional member `extra` (BE-P12 `identity`). */
+function closedOptional(value: unknown, keys: readonly string[], extra: string): Rec | null {
+  const r = rec(value);
+  if (r === null) return null;
+  return closed(r, Object.hasOwn(r, extra) ? [...keys, extra] : keys);
 }
 
 /** The object, only when it has exactly `keys` (the schemas are closed). */
@@ -1276,8 +1288,10 @@ function readStep(value: unknown): CertificationStepV2 | null {
 
 /** `GET /deployments/{id}/certification` when the workspace is SCOPED_V2. */
 export function readSandboxParentV2(raw: unknown): SandboxParentV2 | null {
-  const r = closed(raw, SANDBOX_KEYS);
+  const r = closedOptional(raw, SANDBOX_KEYS, "identity");
   if (r === null || r.schema_version !== FOLLOWING_PARENT_V2_SCHEMA || r.family !== "SANDBOX") return null;
+  const identity = readScopedIdentityV2(r.identity, Object.hasOwn(r, "identity"));
+  if (identity === undefined) return null;
   const header = readHeader(r, FOLLOWING_FLAGS);
   const acceptedManagerFacts = readManagerFacts(r.accepted_manager_facts);
   const a = closed(r.anchors, ["deployment_id", "portfolio_id", "environment", "association_basis", "captured_environment_attested"]);
@@ -1344,6 +1358,7 @@ export function readSandboxParentV2(raw: unknown): SandboxParentV2 | null {
     },
     steps: steps as SandboxParentV2["steps"],
     lineage: lineage as SandboxParentV2["lineage"],
+    identity,
     notPublished: FOLLOWING_NOT_PUBLISHED,
   };
 }
@@ -1358,8 +1373,10 @@ function amount(value: unknown): ProposedAmountV2 | null {
 
 /** `GET /deployments/{id}/canary` when the workspace is SCOPED_V2. */
 export function readCanaryParentV2(raw: unknown): CanaryParentV2 | null {
-  const r = closed(raw, CANARY_KEYS);
+  const r = closedOptional(raw, CANARY_KEYS, "identity");
   if (r === null || r.schema_version !== FOLLOWING_PARENT_V2_SCHEMA || r.family !== "CANARY") return null;
+  const identity = readScopedIdentityV2(r.identity, Object.hasOwn(r, "identity"));
+  if (identity === undefined) return null;
   const header = readHeader(r, FOLLOWING_FLAGS);
   const acceptedManagerFacts = readManagerFacts(r.accepted_manager_facts);
   const a = closed(r.anchors, ["deployment_id", "portfolio_id", "environment", "association_basis", "captured_environment_attested"]);
@@ -1420,6 +1437,7 @@ export function readCanaryParentV2(raw: unknown): CanaryParentV2 | null {
     },
     proposal: proposal as CanaryParentV2["proposal"],
     lineage: lineage as CanaryParentV2["lineage"],
+    identity,
     notPublished: FOLLOWING_NOT_PUBLISHED,
   };
 }

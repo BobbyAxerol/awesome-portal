@@ -111,19 +111,22 @@ const BODIES: Body[] = [
   ...["paper_exit", "paper_exit_absent", "paper_exit_extended", "paper_exit_criteria", "paper_exit_followthrough", "paper_exit_recorded"].map((key) => ({ key, def: "PaperExitParentReadV2", read: readPaperExitParentV2 as Reader, family: "PAPER_EXIT" })),
   ...["r2_operation", "r2_operation_uncaptured", "r2_operation_applied", "r2_operation_expired"].map((key) => ({ key, def: "R2ParentOperationReadV2", read: readOperationParentV2 as Reader, family: "R2" })),
   ...["paper_exit_operation", "paper_exit_operation_applied", "paper_exit_operation_expired"].map((key) => ({ key, def: "PaperExitParentOperationReadV2", read: readOperationParentV2 as Reader, family: "PAPER_EXIT" })),
-  ...["sandbox", "sandbox_absent", "sandbox_draft"].map((key) => ({ key, def: "SandboxParentReadV2", read: readSandboxParentV2 as Reader, family: "SANDBOX" })),
-  ...["canary", "canary_absent", "canary_revision"].map((key) => ({ key, def: "CanaryParentReadV2", read: readCanaryParentV2 as Reader, family: "CANARY" })),
+  // BE-P12 (c159bb40): the two bodies per family that carry the optional closed `identity` (published, and hidden with typed reasons).
+  ...["sandbox", "sandbox_absent", "sandbox_draft", "sandbox_identity", "sandbox_identity_hidden"].map((key) => ({ key, def: "SandboxParentReadV2", read: readSandboxParentV2 as Reader, family: "SANDBOX" })),
+  ...["canary", "canary_absent", "canary_revision", "canary_identity", "canary_identity_hidden"].map((key) => ({ key, def: "CanaryParentReadV2", read: readCanaryParentV2 as Reader, family: "CANARY" })),
   { key: "live", def: "LiveParentReadV2", read: readLiveParentV2 as Reader, family: "LIVE_GATE" },
 ];
 const bodyOf = (key: string): Draft => canonical[key];
 
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
-  it("the file is the synthetic unqualified lane with the 25 parent bodies and 3 compositions this suite covers", () => {
+  it("the file is the synthetic unqualified lane with the 29 parent bodies and 3 compositions this suite covers", () => {
     expect(canonical.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
     expect(canonical.runtime_qualified).toBe(false);
     expect(canonical.authority_installed).toBe(false);
-    expect(BODIES).toHaveLength(25);
+    // 25 before BE-P12 c159bb40, which published four more bodies (sandbox_identity, sandbox_identity_hidden, canary_identity,
+    // canary_identity_hidden): the opt-in `identity` member, once published and once hidden, for each of the two following parents.
+    expect(BODIES).toHaveLength(29);
     // Every object in the file is a covered body or a composition: a body Codex adds later fails here, not silently.
     const objects = Object.keys(canonical).filter((key) => typeof canonical[key] === "object");
     expect(objects.filter((key) => !BODIES.some((b) => b.key === key)).sort()).toEqual(["live_composition", "paper_exit_composition", "r2_composition"]);
@@ -837,6 +840,85 @@ describe("L1 · matrix J · R2 decision inputs: workspace x approval x version x
 });
 
 /* ═════════════════════════ L2 ═════════════════════════ */
+/** The two words the identity member publishes, as the schema's enums state them (the same object in the Sandbox and Canary bodies). */
+const IDENTITY_ALPHA_REASONS = schemaEnum(SCHEMA, "/$defs/SandboxParentReadV2/properties/identity/properties/alpha_reason_code");
+const IDENTITY_PORTFOLIO_REASONS = schemaEnum(SCHEMA, "/$defs/SandboxParentReadV2/properties/identity/properties/portfolio_name_reason_code/anyOf/0");
+
+describe("L1 · matrix K · identity (BE-P12): the published object, read exactly as the schema reads it, in both following parents", () => {
+  const NAMES: unknown[] = ["Portfolio Name", null, "", " lead", "trail ", "a\nb", "a\u202eb", "\u200fx", "x".repeat(256), "x".repeat(257), "\u{1F600}".repeat(128), "\u{1F600}".repeat(129), 7];
+  const ALPHA_IDS: unknown[] = ["alpha_TEST_ONLY", null, "", "-lead", "a b", "a".repeat(191), "a".repeat(192), 7];
+  const dims = [
+    dimension("alpha_id", ["identity", "alpha_id"], ALPHA_IDS, (v) => JSON.stringify(v).slice(0, 20)),
+    dimension("alpha_name", ["identity", "alpha_name"], [null, "An Alpha"]),
+    dimension("alpha_reason", ["identity", "alpha_reason_code"], [...IDENTITY_ALPHA_REASONS, "ALPHA_NAME_UNKNOWN", null]),
+    dimension("portfolio_name", ["identity", "portfolio_name"], NAMES, (v) => JSON.stringify(v).slice(0, 24)),
+    dimension("portfolio_reason", ["identity", "portfolio_name_reason_code"], [null, ...IDENTITY_PORTFOLIO_REASONS, "PORTFOLIO_UNKNOWN"]),
+  ];
+  const cases = [
+    ["sandbox", "sandbox_identity", "SandboxParentReadV2", readSandboxParentV2],
+    ["canary", "canary_identity", "CanaryParentReadV2", readCanaryParentV2],
+  ] as const;
+
+  it("the four canonical bodies carry the identity member; the original six do not and read it as null", () => {
+    for (const key of ["sandbox_identity", "sandbox_identity_hidden", "canary_identity", "canary_identity_hidden"]) {
+      expect(Object.keys(bodyOf(key)), key).toContain("identity");
+      expect(Object.keys(bodyOf(key.split("_")[0]!)), key).not.toContain("identity");
+    }
+    for (const key of ["sandbox", "sandbox_absent", "sandbox_draft", "canary", "canary_absent", "canary_revision"]) {
+      expect((readGovernanceParentV2(bodyOf(key)) as Draft).identity, key).toBeNull();
+    }
+  });
+
+  it("published: ids and name come back as published; alpha_name stays null; hidden: null parts with their typed reasons", () => {
+    for (const family of ["sandbox", "canary"]) {
+      const shown = (readGovernanceParentV2(bodyOf(`${family}_identity`)) as Draft).identity;
+      expect(shown).toEqual({
+        basis: "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY", alphaId: "alpha_TEST_ONLY_identity", alphaName: null, portfolioName: "TEST_ONLY portfolio name",
+        alphaReasonCode: "ALPHA_NAME_NOT_PUBLISHED", portfolioNameReasonCode: null,
+      });
+      const hidden = (readGovernanceParentV2(bodyOf(`${family}_identity_hidden`)) as Draft).identity;
+      expect(hidden).toEqual({
+        basis: "RETAINED_PROJECTION_ROW_AND_FIELD_POLICY", alphaId: null, alphaName: null, portfolioName: null,
+        alphaReasonCode: "ALPHA_IDENTITY_NOT_AUTHORIZED", portfolioNameReasonCode: "PORTFOLIO_NAME_NOT_AUTHORIZED",
+      });
+    }
+  });
+
+  it("the body without its identity member reads as the same parent with identity null (the member is the only difference)", () => {
+    for (const [family, key] of cases) {
+      const body = clone(bodyOf(key));
+      delete body.identity;
+      const bare = readGovernanceParentV2(body) as Draft;
+      expect(bare.identity, family).toBeNull();
+      expect({ ...(readGovernanceParentV2(bodyOf(key)) as Draft), identity: null }, family).toEqual(bare);
+    }
+  });
+
+  it("a present key with no usable object is a refusal, not 'nothing to show'", () => {
+    for (const [family, key, , read] of cases) {
+      for (const bad of [null, [], "identity", 0, {}]) {
+        const body = clone(bodyOf(key));
+        body.identity = bad;
+        expect(read(body), `${family} ${JSON.stringify(bad)}`).toBeNull();
+      }
+    }
+  });
+
+  for (const [family, key, def, read] of cases) {
+    const states = cartesian(bodyOf(key), dims);
+    it(`${family}: ${states.length} identity states; the reader accepts exactly what the published schema accepts`, () => {
+      console.info(describeCoverage(`governanceParents K (${family} identity) cartesian`, coverage(dims, states)));
+      const looser = states.filter((x) => read(x.value) !== null && violations(def, x.value).length > 0).map((x) => x.name);
+      const stricter = states.filter((x) => read(x.value) === null && violations(def, x.value).length === 0).map((x) => x.name);
+      expect({ looser }).toEqual({ looser: [] });
+      expect({ stricter }).toEqual({ stricter: [] });
+      const accepted = states.filter((x) => read(x.value) !== null);
+      expect(accepted.length).toBeGreaterThan(0);
+      expect(accepted.length).toBeLessThan(states.length / 4);
+    });
+  }
+});
+
 describe("L2 · scale", () => {
   const base = bodyOf("paper_exit_extended");
   const withFindings = (n: number, idLength = 20): Draft => {
@@ -1012,6 +1094,11 @@ const OBJ_KEYS = (root: unknown, prefix: (string | number)[] = [], depth = 0): (
 interface Plan { enums: [(string | number)[], readonly string[]][]; ints: (string | number)[][]; strs: (string | number)[][]; decs?: (string | number)[][]; arrays?: [(string | number)[], string | undefined][]; containers: (string | number)[][] }
 const APPROVAL_INTS = [["approval", "approval_version"], ["approval", "quorum_required"], ["approval", "quorum_met"], ["approval", "created_at_ms"], ["approval", "updated_at_ms"], ["approval", "sla_due_at_ms"], ["approval", "expires_at_ms"], ["approval", "decided_at_ms"], ["observed_at_ms"]];
 const APPROVAL_STRS = [["workspace_id"], ["approval", "approval_id"], ["approval", "policy_version"], ["anchors", "deployment_id"]];
+const IDENTITY_ENUMS: Plan["enums"] = [
+  [["identity", "basis"], ["RETAINED_PROJECTION_ROW_AND_FIELD_POLICY"]],
+  [["identity", "alpha_reason_code"], ["ALPHA_NAME_NOT_PUBLISHED"]],
+  [["identity", "portfolio_name_reason_code"], []],
+];
 const PLANS: Record<string, Plan> = {
   r2: {
     enums: [[["approval", "status"], APPROVAL_STATUSES_V2], [["family"], ["R2"]], [["anchors", "environment"], ["PAPER"]], [["lineage", "availability"], ["AVAILABLE", "NOT_PUBLISHED"]]],
@@ -1126,6 +1213,17 @@ const PLANS: Record<string, Plan> = {
     decs: [["proposal", "capital_cap"], ["proposal", "gross_notional_cap"], ["proposal", "daily_loss_cap"]],
     containers: [[], ["envelope"], ["proposal"], ["lineage"], ["anchors"], ["source"]],
   },
+  // BE-P12: the same bodies WITH the opt-in `identity`: its container is closed and each of its words is the published vocabulary.
+  sandbox_identity: {
+    enums: [...IDENTITY_ENUMS, [["certification", "workflow_state"], ["DRAFT", "IN_REVIEW", "APPROVED", "DENIED"]]],
+    ints: [["certification", "workflow_version"], ["observed_at_ms"]], strs: [["workspace_id"], ["identity", "alpha_id"], ["identity", "portfolio_name"]],
+    containers: [[], ["identity"], ["certification"], ["anchors"], ["source"]],
+  },
+  canary_identity: {
+    enums: [...IDENTITY_ENUMS, [["envelope", "status"], ["DRAFT"]]],
+    ints: [["envelope", "revision"], ["observed_at_ms"]], strs: [["workspace_id"], ["identity", "alpha_id"], ["identity", "portfolio_name"]],
+    containers: [[], ["identity"], ["envelope"], ["anchors"], ["source"]],
+  },
   r2_operation: {
     enums: [[["status"], ["PLANNED", "APPLIED", "EXPIRED"]], [["decision"], ["APPROVE", "APPROVE_WITH_CONDITION", "DENY"]], [["family"], ["R2", "PAPER_EXIT"]], [["command_type"], ["GOVERNANCE_R2_DECISION"]], [["approval", "status"], APPROVAL_STATUSES_V2]],
     ints: [...APPROVAL_INTS, ["command_version"], ["expected_version"], ["parent_approval_version"], ["created_at_ms"], ["expires_at_ms"], ["applied_at_ms"]],
@@ -1149,6 +1247,8 @@ const PLAN_BODY: Record<string, { key: string; def: string; read: Reader; schema
   live: { key: "live", def: "LiveParentReadV2", read: readLiveParentV2 as Reader, schemaVersions: [LIVE_PARENT_V2_SCHEMA] },
   sandbox: { key: "sandbox", def: "SandboxParentReadV2", read: readSandboxParentV2 as Reader, schemaVersions: [FOLLOWING_PARENT_V2_SCHEMA] },
   canary: { key: "canary", def: "CanaryParentReadV2", read: readCanaryParentV2 as Reader, schemaVersions: [FOLLOWING_PARENT_V2_SCHEMA] },
+  sandbox_identity: { key: "sandbox_identity", def: "SandboxParentReadV2", read: readSandboxParentV2 as Reader, schemaVersions: [FOLLOWING_PARENT_V2_SCHEMA] },
+  canary_identity: { key: "canary_identity", def: "CanaryParentReadV2", read: readCanaryParentV2 as Reader, schemaVersions: [FOLLOWING_PARENT_V2_SCHEMA] },
   r2_operation: { key: "r2_operation", def: "R2ParentOperationReadV2", read: readOperationParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_OPERATION_V2_SCHEMA] },
   paper_exit_operation: { key: "paper_exit_operation", def: "PaperExitParentOperationReadV2", read: readOperationParentV2 as Reader, schemaVersions: [GOVERNANCE_PARENT_OPERATION_V2_SCHEMA] },
 };
@@ -1320,7 +1420,7 @@ describe("fixed defects (F5c)", () => {
    * route (`/deployments/{id}/...`).
    */
   it("FIXED GP-5: an anchor id outside the Identifier pattern is refused", () => {
-    for (const bad of ["a b", "a/b", "‮evil", "   ", "x".repeat(192)]) {
+    for (const bad of ["a b", "a/b", "\u202eevil", "   ", "x".repeat(192)]) {
       const body = clone(bodyOf("r2"));
       body.anchors.deployment_id = bad;
       expect(readR2ParentV2(body), JSON.stringify(bad)).toBeNull();
@@ -1328,7 +1428,7 @@ describe("fixed defects (F5c)", () => {
   });
 
   it("FIXED GP-5b: a canary currency outside ^[A-Z0-9]{2,12}$ is refused", () => {
-    for (const bad of ["usdt", "U", "USDT-PERP", "   ", "‮evil"]) {
+    for (const bad of ["usdt", "U", "USDT-PERP", "   ", "\u202eevil"]) {
       const body = clone(bodyOf("canary"));
       body.proposal.currency = bad;
       expect(readCanaryParentV2(body), JSON.stringify(bad)).toBeNull();
