@@ -108,7 +108,8 @@ function makeWorld(over: Partial<ConstructorParameters<typeof FakeCoreWorld>[0]>
 function rig(w = makeWorld(), config = CONFIG) {
   const auth = new AuthService(w.pool, config, {} as any, w.coordinator.asMutations());
   const sink = new MemoryTokenFiles();
-  const deps = { auth, pool: w.pool, mutations: w.coordinator.asMutations(), files: sink };
+  const deps: { auth: AuthService; pool: typeof w.pool; mutations: ReturnType<typeof w.coordinator.asMutations>; files: AcceptanceTokenFiles } =
+    { auth, pool: w.pool, mutations: w.coordinator.asMutations(), files: sink };
   return { w, auth, sink, deps };
 }
 const issueDoc = (over: object = {}) => ({ schema_version: ACCEPTANCE_ISSUE_SCHEMA, target: T, user_id: OWNER, ttl_seconds: 3600, token_path: TOKEN,
