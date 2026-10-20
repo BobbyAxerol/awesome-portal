@@ -9,6 +9,10 @@ Answers `CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md` §4–5. Analysis:
 No runtime, database, Docker, SSH, secret, session, grant or policy was touched while writing this.
 Values below marked `NOT_PROVIDED` are inputs Core cannot invent; each names its owner.
 
+> **Addendum 2026-10-20 (BE-P10).** Section 6 below is decided: **Plan B** (two grants, <= 2 h each, <= renewed trust end). The "no official revoke" and
+> "no session issuer" statements are superseded by source commits listed in [BE-P10](../BE-CLAUDE-2026-10-20/BE-P10.md) (still **PREPARED_SOURCE_ONLY**:
+> nothing installed, issued, revoked or connected; new image + R3 required). Steps: [runbook revision 2](CORE009_OPERATOR_RUNBOOK_2026-10-20.md).
+
 ## 1. State markers (one row per claim; do not merge them)
 
 | Item | PREPARED | INSTALLED | CONNECTED | Owner of the next step |

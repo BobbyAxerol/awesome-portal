@@ -195,6 +195,12 @@ end to end, schema registration against the actual Core DB, the readback SQL exe
 session issuance, connected READ/STREAM/revoke/recovery. Normal R2/R3 for the final bytes is also NOT_RUN
 (focused vitest + typecheck only, per rules §10.10a).
 
+> **Update 2026-10-20 (BE-P10).** Bobby answered Q1–Q4 and Q5/Q6 in part: **Plan B** (READ and STREAM together, each <= 2 h and <= the renewed
+> trust end), an **official Core-side revoke** (built: `execution-native-revoke`), the **acceptance session by the actual AuthService** (built:
+> `execution-native-session`), image = **rebuild** (the installed `7b2c7f34` image has none of it). Gaps 6.3 and Q4 below are therefore CLOSED IN SOURCE
+> (tests with fakes; real PG/runtime NOT_RUN). Steps: [runbook revision 2](CORE009_OPERATOR_RUNBOOK_2026-10-20.md); ledger:
+> [BE-P10](../BE-CLAUDE-2026-10-20/BE-P10.md). Q7 (exact artifact fields, reviewer) and the swap itself remain open.
+
 ## 9. Questions for Bobby before any runtime step
 
 1. Plan A (READ-only now) or Plan B (READ+STREAM recorded together)? (§5)
