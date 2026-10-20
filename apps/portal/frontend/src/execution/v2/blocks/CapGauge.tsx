@@ -29,6 +29,8 @@ export interface CapGaugeProps {
   label: string;
   /** The open request that will publish the ratio. Default FE-071. */
   fe?: NotPublishedId;
+  /** The server's reason code when it said the ratio is not published; carried in the tooltip. */
+  reasonCode?: string | null;
   /** Print the readout ("76.00% used") beside the bar. Default true. */
   showText?: boolean;
 }
@@ -52,11 +54,11 @@ export function toneOfUsed(percent: number): "ok" | "warn" | "bad" {
   return "ok";
 }
 
-export function CapGauge({ ratio, label, fe = "FE-071", showText = true }: CapGaugeProps) {
+export function CapGauge({ ratio, label, fe = "FE-071", reasonCode, showText = true }: CapGaugeProps) {
   if (ratio === undefined) {
     return (
       <span className="exec-gauge-wrap" data-state="not-published">
-        <NotPublished id={fe} collapsible>Used</NotPublished>
+        <NotPublished id={fe} titleReason={reasonCode} collapsible>Used</NotPublished>
       </span>
     );
   }

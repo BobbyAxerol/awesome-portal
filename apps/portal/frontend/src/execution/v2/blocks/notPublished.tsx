@@ -165,6 +165,11 @@ export interface NotPublishedProps {
   id: NotPublishedId;
   /** The published reason code, shown as given. */
   reasonCode?: string | null;
+  /**
+   * The server's reason code for a stage fact (BE-P2/P3 `Fact.reason_code`), carried in the tooltip only: the words stay
+   * `Not published (FE-xxx)` and the code is there for whoever asks why. Ignored when `reasonCode` already shows it.
+   */
+  titleReason?: string | null;
   /** What exactly is missing, in a few words ("Days in stage"). */
   children?: ReactNode;
   /**
@@ -178,7 +183,7 @@ export interface NotPublishedProps {
 }
 
 /** Inline: "Not published (FE-021)" plus what it means. */
-export function NotPublished({ id, reasonCode, children, compact = false, collapsible = false }: NotPublishedProps) {
+export function NotPublished({ id, reasonCode, titleReason, children, compact = false, collapsible = false }: NotPublishedProps) {
   const ctx = useContext(ScopeContext);
   const scope = ctx === null ? null : ctx.scope;
   const owner = useId();
@@ -188,9 +193,10 @@ export function NotPublished({ id, reasonCode, children, compact = false, collap
     if (!tracked) return;
     return () => scope.release(id, owner);
   }, [tracked, scope, id, owner]);
+  const why = titleReason ? ` · ${titleReason}` : "";
   if (!first) {
     return (
-      <span className="exec-blk-np" data-repeat="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}`}>
+      <span className="exec-blk-np" data-repeat="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}`}>
         <span className="exec-blk-np-word">{NOT_PUBLISHED}</span>
         {children ? <> {children}</> : null}
         {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
@@ -199,7 +205,7 @@ export function NotPublished({ id, reasonCode, children, compact = false, collap
   }
   if (compact) {
     return (
-      <span className="exec-blk-np" data-compact="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}`}>
+      <span className="exec-blk-np" data-compact="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}`}>
         <span className="exec-blk-sr">{notPublishedText(id)} </span>
         <span className="exec-blk-np-short">{children ?? NOT_PUBLISHED}</span>
         {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}
@@ -207,7 +213,7 @@ export function NotPublished({ id, reasonCode, children, compact = false, collap
     );
   }
   return (
-    <span className="exec-blk-np" title={feLabel(id)}>
+    <span className="exec-blk-np" title={`${feLabel(id)}${why}`}>
       <span className="exec-blk-np-word">{NOT_PUBLISHED}</span> (<span className="exec-blk-np-id">{id}</span>)
       {children ? <> {children}</> : null}
       {reasonCode ? <span className="exec-blk-np-reason">{reasonCode}</span> : null}

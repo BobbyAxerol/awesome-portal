@@ -21,6 +21,7 @@ import type { Metric } from "../boundary";
 import { formatAsOf } from "../boundary";
 import type { UtcEpochMs } from "../../screenDataContract";
 import { MetricText, NO_VALUE_COPY } from "./metric";
+import { NotPublished, type NotPublishedId } from "./notPublished";
 import "../css/blocks.css";
 
 /** The source says the figure is deliberately not computed, and why. */
@@ -30,11 +31,18 @@ export interface TriadNotComputed {
   reason: string;
 }
 
+/** The server said it does not publish this figure (`Fact.availability: NOT_PUBLISHED`); the reason code rides in the tooltip. */
+export interface TriadNotPublished {
+  kind: "not-published";
+  id: NotPublishedId;
+  reasonCode?: string | null;
+}
+
 /**
- * One cell: a boundary `Metric`, a `TriadNotComputed`, `null` for a malformed
+ * One cell: a boundary `Metric`, a `TriadNotComputed`, a `TriadNotPublished`, `null` for a malformed
  * payload, or `undefined` for nothing provided.
  */
-export type TriadCell = Metric | TriadNotComputed | null | undefined;
+export type TriadCell = Metric | TriadNotComputed | TriadNotPublished | null | undefined;
 
 export interface TriadRow {
   /** Stable key of the row (`cash`, `position`). Same row in all three columns. */
@@ -93,9 +101,14 @@ function isNotComputed(cell: TriadCell): cell is TriadNotComputed {
   return typeof cell === "object" && cell !== null && cell.kind === "not-computed";
 }
 
+function isNotPublished(cell: TriadCell): cell is TriadNotPublished {
+  return typeof cell === "object" && cell !== null && cell.kind === "not-published";
+}
+
 function CellView({ cell, suffix, signed, sideMissing }: { cell: TriadCell; suffix?: string; signed: boolean; sideMissing: boolean }) {
   if (sideMissing) return <span className="exec-blk-na">{NO_VALUE_COPY}</span>;
   if (isNotComputed(cell)) return <span className="exec-blk-na" data-state="not-computed">Not computed · {cell.reason}</span>;
+  if (isNotPublished(cell)) return <NotPublished id={cell.id} titleReason={cell.reasonCode} compact />;
   return <MetricText metric={cell} suffix={suffix} signed={signed} />;
 }
 
