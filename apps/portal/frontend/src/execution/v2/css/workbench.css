@@ -266,6 +266,23 @@
   margin: var(--space-3) 0 0;
   font: var(--exec-font-data);
 }
+/* VN market calendar windows and the by-side block (FE-070, S3-U4) */
+.exec-wb-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font: var(--exec-font-data);
+}
+.exec-wb-sides {
+  margin-top: var(--space-3);
+}
+.exec-wb-sides > h3 {
+  margin: 0 0 var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
 .exec-wb-prov {
   margin-top: var(--space-3);
 }
