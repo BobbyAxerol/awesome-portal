@@ -5,13 +5,13 @@
 import type { Pool } from "pg";
 import { CurrentOperationalReads } from "../operations/current-operational-read";
 import { AccessPolicyError, type AccessAction, type AccessActor } from "./access.contract";
-import { accessDigest, currentBoundaryProof, evaluateAccess, type AccessEvaluationContext } from "./access-policy";
+import { accessDigest, currentBoundaryProof, evaluateAccess, policyReady, type AccessEvaluationContext } from "./access-policy";
 import { ExecutionAccessService } from "./access.service";
 import { commandMembershipCurrent } from "./command-current-authority";
 import { currentAccessRelations } from "./access-current-relations";
 import { nativeNoticeValidUntil } from "./read-scope";
 import { PendingControlError, pendingControlIntent, pendingControlPreview, pendingControlStatus,
-  publishPendingControlStatus, buildPendingRecallDiscovery, pendingRecallDiscoveryQuery,
+  publishPendingControlStatus, buildPendingRecallDiscovery, pendingPolicyRevisionOf, pendingRecallDiscoveryQuery,
   type PendingControlIntent, type PendingControlStatus, type PendingRecallDiscovery,
   type PendingRecallDiscoveryQuery, type PublicPendingControlStatus, type PendingPrediction } from "./pending-control.contract";
 import { PendingControlStore, pendingRecord, pendingTarget, type PendingRecord } from "./pending-control.store";
@@ -285,7 +285,9 @@ export class PendingControlService {
       }, decode: (current) => {
         if (rows.length > 1024) throw new PendingControlError("PENDING_CONTROL_CAPACITY_EXCEEDED", 503);
         const records = rows.map(row => pendingRecord(row, q.workspace_id, row.id, target));
-        return buildPendingRecallDiscovery(target, records, Math.max(current.now_ms, Date.now()));
+        // The SAME current policy revision grantDecision compares expected_policy_revision with.
+        return buildPendingRecallDiscovery(target, records, Math.max(current.now_ms, Date.now()),
+          pendingPolicyRevisionOf(current.policy, policyReady(current)));
       } };
     }, fixed, target);
     return this.reads.finish(prepared);

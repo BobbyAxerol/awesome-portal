@@ -119,6 +119,18 @@ describe("ELP2-07 separate existing pending recall control public contract", () 
     expect(unknown.unresolved_command_id).toMatch(/^ecm_[a-f0-9]{32}$/);
     expect(open.items.some((item: any) => item.original_recall_id === "TEST_ONLY:closed-recall")).toBe(false);
     expect(currencyFixture.discovery_empty.items).toEqual([]);
+    // policy_revision: the exact value the preview validates expected_policy_revision against, or a typed absence
+    for (const key of ["discovery_open", "discovery_deployment"])
+      expect(currencyFixture[key].policy_revision).toEqual({ availability: "PUBLISHED", value: storedFixture.intent.expected_policy_revision });
+    expect(currencyFixture.discovery_empty.policy_revision).toEqual({ availability: "NOT_PUBLISHED", reason_code: "POLICY_NOT_CURRENT" });
+    const withPolicy = (policy_revision: unknown) => ({ ...copy(open), policy_revision });
+    same("PendingRecallDiscovery", pendingRecallDiscovery, withPolicy({ availability: "PUBLISHED", value: "rev-1" }), true);
+    for (const bad of [undefined, null, { availability: "PUBLISHED" }, { availability: "PUBLISHED", value: "" },
+      { availability: "PUBLISHED", value: "x".repeat(257) }, { availability: "PUBLISHED", value: "a\nb" },
+      { availability: "PUBLISHED", value: "rev", reason_code: "POLICY_NOT_CURRENT" },
+      { availability: "NOT_PUBLISHED", reason_code: "OTHER" }, { availability: "NOT_PUBLISHED", value: "rev", reason_code: "POLICY_NOT_CURRENT" },
+      { availability: "NOT_PUBLISHED" }])
+      same("PendingRecallDiscovery", pendingRecallDiscovery, withPolicy(bad), false);
     expect(currencyFixture.discovery_deployment.items[0].recipient_account_id).toBe("TEST_ONLY:account");
     // negative: state/null coupling, duplicate recall, coverage lie, extra page size
     const item = copy(waiting);

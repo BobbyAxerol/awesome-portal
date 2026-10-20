@@ -6,7 +6,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { PENDING_DISCOVERY_MAX_ITEMS, buildPendingRecallDiscovery, pendingControlIntent, pendingControlStatus,
-  pendingRecallDiscovery, pendingRecallDiscoveryQuery, publishPendingControlStatus,
+  pendingPolicyRevisionOf, pendingRecallDiscovery, pendingRecallDiscoveryQuery, publishPendingControlStatus,
   type PendingControlIntent, type PendingControlStatus } from "../src/execution-v2/pending-control.contract";
 
 const fixture = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/execution-pending-control.synthetic.valid.json"), "utf8"));
@@ -87,6 +87,22 @@ describe("FE-062 pending-recall discovery projection", () => {
     expect(publishPendingControlStatus(base, status("waiting")).recipient_account_id).toBeNull();
     // the served DTO refuses a recipient that contradicts the resource kind
     expect(() => publishPendingControlStatus(base, { ...status("waiting"), resource: deployment.resource })).toThrow();
+  });
+  it("serves the policy revision the preview validates against, exactly, or a typed absence; never invents one", () => {
+    const rows = [row("r", status("waiting"), 1, 10)];
+    const published = pendingPolicyRevisionOf({ revision: base.expected_policy_revision }, true);
+    expect(published).toEqual({ availability: "PUBLISHED", value: base.expected_policy_revision });
+    expect(buildPendingRecallDiscovery(target, rows, 1, published).policy_revision).toEqual(published);
+    // default (no policy supplied) is the typed absence, not a made-up value
+    expect(build(rows).policy_revision).toEqual({ availability: "NOT_PUBLISHED", reason_code: "POLICY_NOT_CURRENT" });
+    // not reviewed / no policy / unservable revision text -> absence, whatever the revision string says
+    for (const [policy, ready] of [[{ revision: "rev-1" }, false], [null, true], [undefined, true], [{ revision: "" }, true],
+      [{ revision: "x".repeat(257) }, true], [{ revision: "a\nb" }, true]] as const)
+      expect(pendingPolicyRevisionOf(policy, ready)).toEqual({ availability: "NOT_PUBLISHED", reason_code: "POLICY_NOT_CURRENT" });
+    // the discovery body parses, and an unpublished value cannot carry a revision
+    expect(pendingRecallDiscovery.safeParse(buildPendingRecallDiscovery(target, rows, 1, published)).success).toBe(true);
+    expect(pendingRecallDiscovery.safeParse({ ...build(rows), policy_revision: { availability: "NOT_PUBLISHED", reason_code: "POLICY_NOT_CURRENT", value: "rev" } }).success).toBe(false);
+    expect(pendingRecallDiscovery.safeParse({ ...build(rows), policy_revision: undefined }).success).toBe(false);
   });
   it("the query grammar is exact: PORTFOLIO or DEPLOYMENT only, no wildcard/extra keys", () => {
     const ok = { workspace_id: "w", resource_kind: "PORTFOLIO", resource_id: "p", environment: "paper" };
