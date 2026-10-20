@@ -139,7 +139,6 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
   const planFlight = useRef(false);
   const queryFlight = useRef(false);
   const mounted = useRef(true);
-  const known = useRef<Set<string>>(new Set());
   useEffect(() => {
     mounted.current = true;
     return () => {
@@ -215,11 +214,9 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
       }
       void pending.catch(() => ({ kind: "no_response", why: "network" })).then((raw) => {
         const answer = raw as Parameters<typeof classifySubmit>[0];
-        const outcome = classifySubmit(answer, { operationId: payload.operationId, knownCommandIds: known.current });
+        const outcome = classifySubmit(answer, { operationId: payload.operationId, requestKey: payload.lane === "F0" ? key : null });
         // A definite answer frees the key. UNKNOWN keeps it.
         if (!isUncertain(outcome) && INTENTS.get(identity)?.key === key) INTENTS.delete(identity);
-        const id = receiptCommandId(outcome);
-        if (id !== null) known.current.add(id);
         // After Discard, Reset or unmount, the answer belongs to nobody on screen.
         if (attempt.current !== mine || !mounted.current) return;
         inFlight.current = false;
@@ -280,7 +277,6 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
     inFlight.current = false;
     planFlight.current = false;
     queryFlight.current = false;
-    known.current = new Set();
     planKey.current = null;
     setSubmitting(false);
     setQuerying(false);
@@ -317,7 +313,6 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
       queryFlight.current = false;
       if (!mounted.current || attempt.current !== mine) return;
       const view = classifyLookup(raw as Parameters<typeof classifyLookup>[0]);
-      if (view.kind === "command") known.current.add(view.status.commandId);
       setQueried(view);
       setQuerying(false);
     });

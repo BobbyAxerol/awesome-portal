@@ -3,6 +3,10 @@
  *
  * The switch from the lenient V1 reader must change nothing the operator sees: the same 64 + 8 + 6 disabled controls, the same reasons, the
  * same counts, in the same order. The proof is a comparison of the two reads, row by row and in markup. Nothing here sends or fetches.
+ *
+ * BE-P13: the story reads the SERVED catalogue. It differs from what V1 shows in exactly one row, `ops/emergency-close`, the accepted N16B
+ * primitive: V1 reads its two new words as null and says "no reason was published"; the strict read says what the reason is. Every other row is
+ * compared as before.
  */
 import { cleanup, render } from "@testing-library/react";
 import { readFileSync } from "node:fs";
@@ -18,14 +22,16 @@ import { DisabledOperations } from "./DisabledOperations";
 import { catalogueRows } from "./model";
 
 type Draft = any; // eslint-disable-line @typescript-eslint/no-explicit-any
-const BODY: Draft = loadCanonical("execution-command-catalog");
+const BODY: Draft = loadCanonical("execution-command-catalog.served");
+const N16B_ID = "ops/emergency-close";
 const V1 = readCommandCatalogue(structuredClone(BODY))!;
 
 afterEach(cleanup);
 
 /** The markup with the generated ids replaced by their order of appearance (React's `useId` differs between two renders). */
-function markup(catalogue: Parameters<typeof catalogueRows>[0] | null): string {
+function markup(catalogue: Parameters<typeof catalogueRows>[0] | null, omit?: string): string {
   const { container } = render(<MemoryRouter><DisabledOperations catalogue={catalogue} /></MemoryRouter>);
+  if (omit !== undefined) container.querySelectorAll(`li[data-op="${omit}"]`).forEach((row) => row.remove());
   const ids = new Map<string, string>();
   const name = (id: string) => ids.get(id) ?? (ids.set(id, `id${ids.size}`), ids.get(id)!);
   const html = container.innerHTML
@@ -60,18 +66,30 @@ describe("catalogueLane · the strict reader feeds the story", () => {
 describe("catalogueLane · the page renders identically to the V1 read", () => {
   const strict = catalogueOf(BODY)!;
 
-  it("the disabled rows are equal row for row: same ids, labels, groups, tiers, reasons, capabilities and codes, in the same order", () => {
-    expect(catalogueRows(strict)).toEqual(catalogueRows(V1));
+  const withoutN16B = (groups: ReturnType<typeof catalogueRows>) => groups.map((g) => ({ ...g, rows: g.rows.filter((r) => r.id !== N16B_ID) }));
+
+  it("the disabled rows are equal row for row: same ids, labels, groups, tiers, reasons, capabilities and codes, in the same order (but for the N16B row)", () => {
+    expect(withoutN16B(catalogueRows(strict))).toEqual(withoutN16B(catalogueRows(V1)));
     const rows = catalogueRows(strict).flatMap((g) => g.rows);
     expect(rows).toHaveLength(64);
     expect(rows.every((r) => r.reason.length > 20)).toBe(true);
+    // Same position in the same group; only its words differ.
+    expect(catalogueRows(strict).map((g) => g.rows.map((r) => r.id))).toEqual(catalogueRows(V1).map((g) => g.rows.map((r) => r.id)));
   });
 
-  it("the markup of the whole disabled-operations section is the same string", () => {
-    const strictHtml = markup(strict);
-    const v1Html = markup(V1);
+  it("the N16B row says what it is: V1 reads its two new words as null and claims no reason was published, the strict read does not", () => {
+    const row = (view: Parameters<typeof catalogueRows>[0]) => catalogueRows(view).flatMap((g) => g.rows).find((r) => r.id === N16B_ID)!;
+    expect(row(V1)).toMatchObject({ code: null, reason: "This command is not available through the Portal, and no reason was published." });
+    expect(row(strict)).toMatchObject({ code: "N16B_RUNTIME_ACTIVATION_PENDING", capability: { kind: "none_published" } });
+    expect(row(strict).reason).toMatch(/not active/);
+  });
+
+  it("the markup of the whole disabled-operations section is the same string, but for the N16B row", () => {
+    const strictHtml = markup(strict, N16B_ID);
+    const v1Html = markup(V1, N16B_ID);
     expect(strictHtml).toBe(v1Html);
     expect(strictHtml.length).toBeGreaterThan(10_000);
+    expect(markup(strict)).not.toBe(markup(V1));
   });
 
   it("78 disabled controls and the same summary sentence", () => {

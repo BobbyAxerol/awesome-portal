@@ -39,6 +39,11 @@ export interface SubmitInput {
 export interface LookupInput {
   /** `ecm_` + 32 hex (a capital command) or an operation id (an F0 operation). */
   id: string;
+  /**
+   * F0 only: with an operation id, ask what that actor recorded under this request key (`GET /operations/f0/{id}/apply-attempts/{request_key}`):
+   * NONE, FOUND or CONFLICT. A read; it never sends. Not offered by any control yet (no screen copy asks for it).
+   */
+  requestKey?: string;
 }
 
 export interface CommandPort {

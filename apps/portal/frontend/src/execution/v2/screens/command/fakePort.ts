@@ -15,7 +15,12 @@ import {
   COMMAND_ID_REJECTED,
   COMMAND_ID_REVOKED,
   COMMAND_ID_UNVERIFIED,
-  F0_DENIED_BODY,
+  F0_APPLY_CONFLICT_BODY,
+  F0_APPLY_DENIED_BODY,
+  F0_APPLY_REPLAYED_BODY,
+  F0_ATTEMPT_CONFLICT_BODY,
+  F0_ATTEMPT_FOUND_BODY,
+  F0_ATTEMPT_NONE_BODY,
   F0_OPERATION_BODY,
   F0_PLAN_BODY,
   STORY_NOW_MS,
@@ -24,9 +29,11 @@ import {
   capitalPreviewBody,
   deliveryUnknownSettledStatus,
   deliveryUnknownStatus,
+  f0ApplyAnswer,
   problemBody,
   rejectedBusinessStatus,
   scenarioById,
+  submitResultBody,
   type ScenarioId,
 } from "./storyData";
 import type { CommandPort, LookupInput, PlanInput, PortResponse, SubmitInput } from "./port";
@@ -55,18 +62,24 @@ export interface FakePortOptions {
 }
 
 const respond = (status: number, body: unknown): PortResponse => ({ kind: "response", status, body });
+/** F0 scenarios in which the server records the denial for the key it was sent under. */
+const RECORDS_DENIAL: ReadonlySet<ScenarioId> = new Set<ScenarioId>(["f0-denied", "f0-denied-replayed", "f0-timeout-then-denied", "f0-plan-replayed", "f0-plan-expired"]);
 const silence: PortResponse = { kind: "no_response", why: "timeout" };
 const clone = <T,>(value: T): T => structuredClone(value);
 
-type Step = () => PortResponse;
+/** A step knows the request key of the send it answers: the F0 apply bodies echo it, as the server does. */
+type Step = (requestKey: string) => PortResponse;
 
 /** The script of a scenario: its sends, in order. The last step repeats. */
 function sends(id: ScenarioId): readonly Step[] {
   switch (id) {
-    case "f0-denied": return [() => respond(409, clone(F0_DENIED_BODY))];
-    case "f0-timeout-then-denied": return [() => silence, () => respond(409, clone(F0_DENIED_BODY))];
+    case "f0-denied": return [(key) => respond(409, f0ApplyAnswer(F0_APPLY_DENIED_BODY, key))];
+    case "f0-denied-replayed": return [(key) => respond(409, f0ApplyAnswer(F0_APPLY_REPLAYED_BODY, key))];
+    case "f0-key-conflict": return [(key) => respond(409, f0ApplyAnswer(F0_APPLY_CONFLICT_BODY, key))];
+    // The first send was recorded before its answer was lost, so the retry gets the stored answer back: replayed.
+    case "f0-timeout-then-denied": return [() => silence, (key) => respond(409, f0ApplyAnswer(F0_APPLY_REPLAYED_BODY, key))];
     case "f0-plan-replayed":
-    case "f0-plan-expired": return [() => respond(409, clone(F0_DENIED_BODY))];
+    case "f0-plan-expired": return [(key) => respond(409, f0ApplyAnswer(F0_APPLY_DENIED_BODY, key))];
     case "f0-unverified":
     case "unverified": return [() => respond(503, problemBody("COMMAND_STATUS_UNVERIFIED", "Could not verify the receipt."))];
     case "f0-unreadable":
@@ -90,6 +103,22 @@ export function createFakeCommandPort(options: FakePortOptions = {}): FakeComman
   const keys = new Map<string, { attempts: number; fingerprint: string }>();
   /** Ids this port has issued; a lookup of one of them finds a command. */
   const issued = new Set<string>([COMMAND_ID_LANDED, COMMAND_ID_APPLIED, COMMAND_ID_DELIVERY_UNKNOWN, COMMAND_ID_REJECTED]);
+
+  /**
+   * What recovery by key finds. The scenarios that record a denial (even one whose answer is lost) find it once the key has been sent; a key
+   * conflict finds CONFLICT and never names the other operation; every other scenario recorded nothing, so NONE.
+   */
+  const attemptLookup = (operationId: string, requestKey: string): Record<string, unknown> => {
+    const named = (body: typeof F0_ATTEMPT_NONE_BODY | typeof F0_ATTEMPT_FOUND_BODY | typeof F0_ATTEMPT_CONFLICT_BODY): Record<string, unknown> => {
+      const out: Record<string, unknown> = clone(body);
+      out.operation_id = operationId;
+      out.request_key = requestKey;
+      if (out.relay_decision !== null) out.relay_decision = { ...(out.relay_decision as Record<string, unknown>), operation_id: operationId };
+      return out;
+    };
+    if (current === "f0-key-conflict") return named(F0_ATTEMPT_CONFLICT_BODY);
+    return keys.has(requestKey) && RECORDS_DENIAL.has(current) ? named(F0_ATTEMPT_FOUND_BODY) : named(F0_ATTEMPT_NONE_BODY);
+  };
 
   const wait = async (call: PortCall) => {
     calls.push(call);
@@ -119,18 +148,29 @@ export function createFakeCommandPort(options: FakePortOptions = {}): FakeComman
       const seen = keys.get(input.idempotencyKey);
       if (seen !== undefined && seen.fingerprint !== fingerprint) {
         await wait({ method: "submit", key: input.idempotencyKey, attempt: seen.attempts + 1 });
-        return respond(409, problemBody("COMMAND_IDEMPOTENCY_CONFLICT", "Key reuse."));
+        // F0 apply gives its own typed conflict (REQUEST_KEY_PAYLOAD_CONFLICT, in the shared envelope); the capital routes give the CommandProblem.
+        return input.lane === "F0"
+          ? respond(409, f0ApplyAnswer(F0_APPLY_CONFLICT_BODY, input.idempotencyKey))
+          : respond(409, problemBody("COMMAND_IDEMPOTENCY_CONFLICT", "Key reuse."));
       }
       const attempts = (seen?.attempts ?? 0) + 1;
       keys.set(input.idempotencyKey, { attempts, fingerprint });
       await wait({ method: "submit", key: input.idempotencyKey, attempt: attempts });
       const script = sends(current);
-      return script[Math.min(attempts, script.length) - 1]!();
+      const answer = script[Math.min(attempts, script.length) - 1]!(input.idempotencyKey);
+      // The capital submit's 200 is a CommandSubmitResult: the status plus `replayed`. A known key (a retry) is answered with the existing
+      // command and does not send again, so it is the one case where the bit is true. A body that is not a status is passed through unread.
+      if (answer.kind === "response" && answer.status === 200 && typeof answer.body === "object" && answer.body !== null && "command_id" in answer.body) {
+        return respond(200, submitResultBody(answer.body as Record<string, unknown>, attempts > 1));
+      }
+      return answer;
     },
 
     async lookup(input: LookupInput): Promise<PortResponse> {
       await wait({ method: "lookup", key: input.id });
       const { id } = input;
+      // `GET /operations/f0/{id}/apply-attempts/{request_key}`: NONE until this port has seen the key, then what the scenario recorded.
+      if (input.requestKey !== undefined) return respond(200, attemptLookup(id, input.requestKey));
       if (id === F0_OPERATION_BODY.operation_id) return respond(200, clone(F0_OPERATION_BODY));
       if (id === COMMAND_ID_REVOKED) return respond(403, problemBody("ACCESS_DENIED", "Your access changed."));
       if (id === COMMAND_ID_UNVERIFIED) return respond(503, problemBody("COMMAND_STATUS_UNVERIFIED", "Could not verify the receipt."));

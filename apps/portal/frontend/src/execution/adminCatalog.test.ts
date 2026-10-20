@@ -71,7 +71,9 @@ describe("the vocabulary is the schema's", () => {
   });
 
   it("knows every blocked reason and has words for each", () => {
-    expect([...BLOCKED_REASONS].sort()).toEqual(
+    // BE-P13 added N16B_RUNTIME_ACTIVATION_PENDING (only beside ops/emergency-close). This lenient reader does not know it and reads it as
+    // null, on purpose: the command story reads the served catalogue through the strict V2 reader (readers/commandCatalogue.ts).
+    expect([...BLOCKED_REASONS, "N16B_RUNTIME_ACTIVATION_PENDING"].sort()).toEqual(
       [...SCHEMA.$defs.CommandCatalogueEntry.properties.blocked_reason.enum].sort(),
     );
     for (const reason of BLOCKED_REASONS) {

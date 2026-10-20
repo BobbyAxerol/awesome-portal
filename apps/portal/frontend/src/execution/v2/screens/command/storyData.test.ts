@@ -7,12 +7,14 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { readCommandStatusV1 } from "../../readers/commandCurrency";
+import { readCommandStatusV1, readCommandSubmitResultV1 } from "../../readers/commandCurrency";
 import {
   readCommandOperationV1,
   readCommandPlanV1,
   readCommandPreviewV1,
   readCommandProblemV1,
+  readF0ApplyAnswerV1,
+  readF0ApplyAttemptLookupV1,
   readRelayDecisionV1,
 } from "../../readers/commandOperation";
 import { loadCanonical } from "../../testkit/loadCanonical";
@@ -23,6 +25,12 @@ import {
   COMMAND_ID_DELIVERY_UNKNOWN,
   COMMAND_ID_LANDED,
   COMMAND_ID_REJECTED,
+  F0_APPLY_CONFLICT_BODY,
+  F0_APPLY_DENIED_BODY,
+  F0_APPLY_REPLAYED_BODY,
+  F0_ATTEMPT_CONFLICT_BODY,
+  F0_ATTEMPT_FOUND_BODY,
+  F0_ATTEMPT_NONE_BODY,
   F0_DENIED_BODY,
   F0_OPERATION_BODY,
   F0_PLAN_BODY,
@@ -34,8 +42,10 @@ import {
   capitalPreviewBody,
   deliveryUnknownSettledStatus,
   deliveryUnknownStatus,
+  f0ApplyAnswer,
   problemBody,
   rejectedBusinessStatus,
+  submitResultBody,
 } from "./storyData";
 
 const OPS = "execution-operations.v1";
@@ -59,6 +69,31 @@ describe("PUBLISHED: the copies equal the canonical files", () => {
 
   it("the acknowledged status equals the published ack_only fixture", () => {
     expect(ackOnlyStatus()).toEqual(loadCanonical<Record<string, unknown>>("execution-trusted-commands.synthetic").ack_only);
+  });
+
+  it("BE-P13: the three F0 apply 409 bodies and the three apply-attempt lookups equal the canonical files, pass their schemas and read", () => {
+    expect(F0_APPLY_DENIED_BODY).toEqual(loadCanonical("execution-command-apply-denied"));
+    expect(F0_APPLY_REPLAYED_BODY).toEqual(loadCanonical("execution-command-apply-denied.replayed"));
+    expect(F0_APPLY_CONFLICT_BODY).toEqual(loadCanonical("execution-command-apply-key-conflict"));
+    expect(F0_ATTEMPT_NONE_BODY).toEqual(loadCanonical("execution-command-apply-attempt.none"));
+    expect(F0_ATTEMPT_FOUND_BODY).toEqual(loadCanonical("execution-command-apply-attempt.found"));
+    expect(F0_ATTEMPT_CONFLICT_BODY).toEqual(loadCanonical("execution-command-apply-attempt.conflict"));
+    for (const body of [F0_APPLY_DENIED_BODY, F0_APPLY_REPLAYED_BODY]) expect(validateAgainst(OPS, "/$defs/F0ApplyDeniedProblem", body)).toEqual([]);
+    expect(validateAgainst(OPS, "/$defs/F0ApplyKeyConflictProblem", F0_APPLY_CONFLICT_BODY)).toEqual([]);
+    for (const body of [F0_ATTEMPT_NONE_BODY, F0_ATTEMPT_FOUND_BODY, F0_ATTEMPT_CONFLICT_BODY]) {
+      expect(validateAgainst(OPS, "/$defs/F0ApplyAttemptLookup", body)).toEqual([]);
+      expect(readF0ApplyAttemptLookupV1(body)?.kind).toBe("f0_apply_attempt");
+    }
+    expect(readF0ApplyAnswerV1(F0_APPLY_DENIED_BODY)).toMatchObject({ kind: "f0_apply_denied", denial: { replayed: false } });
+    expect(readF0ApplyAnswerV1(F0_APPLY_REPLAYED_BODY)).toMatchObject({ kind: "f0_apply_denied", denial: { replayed: true } });
+    expect(readF0ApplyAnswerV1(F0_APPLY_CONFLICT_BODY)).toMatchObject({ kind: "f0_apply_key_conflict" });
+  });
+
+  it("an apply answer for a send carries that send's request key and nothing else changes", () => {
+    const answer = f0ApplyAnswer(F0_APPLY_DENIED_BODY, "command_apply:abc-123");
+    expect(validateAgainst(OPS, "/$defs/F0ApplyDeniedProblem", answer)).toEqual([]);
+    expect(readF0ApplyAnswerV1(answer)).toMatchObject({ denial: { requestKey: "command_apply:abc-123", replayed: false } });
+    expect({ ...answer, details: { ...(answer.details as object), request_key: "ui:apply:0001" } }).toEqual(F0_APPLY_DENIED_BODY);
   });
 });
 
@@ -86,6 +121,24 @@ describe("SYNTHETIC (TEST_ONLY): schema-valid, readable, and never a product rec
     }
     expect(capitalPreviewBody({ now: STORY_NOW_MS, expired: true }).expires_at_ms).toBeLessThan(STORY_NOW_MS);
     expect(capitalPreviewBody({ now: STORY_NOW_MS }).expires_at_ms).toBeGreaterThan(STORY_NOW_MS);
+  });
+
+  it("BE-P13: every capital status carries the typed absences the server's projection derives, and a submit result adds only `replayed`", () => {
+    for (const [, body] of statuses) {
+      expect((body.source_rejection as { state: string }).state === "NOT_PUBLISHED").toBe((body.business as { state: string }).state === "REJECTED");
+      expect((body.venue_fill as { state: string }).state === "NOT_APPLICABLE").toBe(body.venue === "NOT_APPLICABLE");
+      expect((body.venue_fill as { quantities: unknown }).quantities).toBeNull();
+      for (const replayed of [false, true]) {
+        const result = submitResultBody(body, replayed);
+        expect(validateAgainst(TRUSTED, "/components/schemas/CommandSubmitResult", result)).toEqual([]);
+        expect(readCommandSubmitResultV1(result)).toMatchObject({ kind: "command_submit_result", result: { replayed } });
+        // The status reader refuses the bit: a GET can never claim "this call did not send".
+        expect(readCommandStatusV1(result)).toBeNull();
+      }
+    }
+    const fixtures = loadCanonical<Record<string, unknown>>("execution-trusted-commands.synthetic");
+    expect(submitResultBody(ackOnlyStatus(), false)).toEqual(fixtures.submit_first);
+    expect(submitResultBody(ackOnlyStatus(), true)).toEqual(fixtures.submit_replayed);
   });
 
   it("the problem envelope passes CommandProblem and reads", () => {
@@ -119,6 +172,47 @@ describe("the scenarios", () => {
       if (s.id === "f0-timeout-then-denied" || s.id === "timeout-then-landed") expect(send.kind, s.id).toBe("no_response");
       else expect(send.kind, s.id).toBe("response");
     }
+  });
+
+  it("BE-P13: the F0 scenarios answer with the wire bodies: denied, denied-replayed and key conflict, each echoing the key that was sent", async () => {
+    const send = (scenario: (typeof SCENARIO_IDS)[number]) =>
+      createFakeCommandPort({ scenario }).submit({ lane: "F0", idempotencyKey: "command_apply:k1", operationId: F0_PLAN_BODY.operation_id, digest: "sha256:x", reason: "a reason" });
+    const body = async (scenario: (typeof SCENARIO_IDS)[number]) => ((await send(scenario)) as { status: number; body: unknown });
+    expect(await body("f0-denied")).toMatchObject({ status: 409 });
+    expect(readF0ApplyAnswerV1((await body("f0-denied")).body)).toMatchObject({ kind: "f0_apply_denied", denial: { replayed: false, requestKey: "command_apply:k1" } });
+    expect(readF0ApplyAnswerV1((await body("f0-denied-replayed")).body)).toMatchObject({ kind: "f0_apply_denied", denial: { replayed: true, requestKey: "command_apply:k1" } });
+    expect(readF0ApplyAnswerV1((await body("f0-key-conflict")).body)).toMatchObject({ kind: "f0_apply_key_conflict", conflict: { requestKey: "command_apply:k1", sourceRequestSent: false } });
+  });
+
+  it("BE-P13: a retry after a lost answer finds the stored denial, replayed; the apply-attempt lookup agrees (NONE before, FOUND after; CONFLICT for a reused key)", async () => {
+    const port = createFakeCommandPort({ scenario: "f0-timeout-then-denied" });
+    const input = { lane: "F0" as const, idempotencyKey: "command_apply:k2", operationId: F0_PLAN_BODY.operation_id, digest: "sha256:x", reason: "a reason" };
+    const lookup = async () => readF0ApplyAttemptLookupV1(((await port.lookup({ id: F0_PLAN_BODY.operation_id, requestKey: "command_apply:k2" })) as { body: unknown }).body);
+    expect(await lookup()).toMatchObject({ attempt: { state: "NONE", requestKey: "command_apply:k2" } });
+    expect((await port.submit(input)).kind).toBe("no_response");
+    expect(await lookup()).toMatchObject({ attempt: { state: "FOUND", relayDecision: { operationId: F0_PLAN_BODY.operation_id, sourceRequestSent: false } } });
+    const retry = (await port.submit(input)) as { body: unknown };
+    expect(readF0ApplyAnswerV1(retry.body)).toMatchObject({ denial: { replayed: true } });
+    const conflict = createFakeCommandPort({ scenario: "f0-key-conflict" });
+    expect(readF0ApplyAttemptLookupV1(((await conflict.lookup({ id: F0_PLAN_BODY.operation_id, requestKey: "command_apply:k3" })) as { body: unknown }).body)).toMatchObject({ attempt: { state: "CONFLICT" } });
+  });
+
+  it("BE-P13: the capital submit answers a CommandSubmitResult, replayed false for the originating call and true for the same key again", async () => {
+    const port = createFakeCommandPort({ scenario: "delivery-unknown" });
+    const input = { lane: "CAPITAL" as const, idempotencyKey: "command_apply:k4", operationId: null, digest: "sha256:x", reason: "a reason" };
+    const first = readCommandSubmitResultV1(((await port.submit(input)) as { body: unknown }).body);
+    const again = readCommandSubmitResultV1(((await port.submit(input)) as { body: unknown }).body);
+    expect(first).toMatchObject({ kind: "command_submit_result", result: { replayed: false } });
+    expect(again).toMatchObject({ kind: "command_submit_result", result: { replayed: true } });
+  });
+
+  it("BE-P13: a same-key different-payload F0 send is the typed REQUEST_KEY_PAYLOAD_CONFLICT envelope, not the capital CommandProblem", async () => {
+    const port = createFakeCommandPort({ scenario: "f0-denied" });
+    const base = { lane: "F0" as const, idempotencyKey: "command_apply:k5", operationId: F0_PLAN_BODY.operation_id, digest: "sha256:x" };
+    await port.submit({ ...base, reason: "first reason" });
+    const conflict = (await port.submit({ ...base, reason: "another reason" })) as { status: number; body: unknown };
+    expect(conflict.status).toBe(409);
+    expect(readF0ApplyAnswerV1(conflict.body)).toMatchObject({ kind: "f0_apply_key_conflict" });
   });
 
   it("the fake port emulates an idempotency key: the same key with another payload is refused with the typed conflict", async () => {

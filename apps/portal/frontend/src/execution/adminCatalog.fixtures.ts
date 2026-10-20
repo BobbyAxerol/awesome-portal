@@ -1215,5 +1215,10 @@ export const COMMAND_PLAN_FIXTURE = {
   "relay_capability": "DISABLED",
   "source_side_effect_requested": false,
   "payload_storage_policy": "HASH_ONLY_NO_RAW",
+  "current_primitive": null,
+  "cost_impact": {
+    "state": "NOT_PUBLISHED",
+    "reason": "NO_COST_OR_IMPACT_SOURCE"
+  },
   "replayed": false
 } as const;

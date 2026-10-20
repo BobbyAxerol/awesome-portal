@@ -3,9 +3,10 @@
  *
  * Two kinds of body live here, and the file says which is which:
  *
- * - PUBLISHED: the F0 plan, the F0 operation and the relay denial are copies of the canonical files in `packages/contracts/fixtures`
- *   (`execution-command-plan`, `-operation`, `-relay-denied`). `storyData.test.ts` holds each equal to the file on disk, so a change
- *   to the published fixture fails a test here instead of drifting quietly.
+ * - PUBLISHED: the F0 plan, the F0 operation, the relay denial, the three F0 apply 409 bodies (denied, denied-replayed, key conflict) and the three
+ *   apply-attempt lookups are copies of the canonical files in `packages/contracts/fixtures` (`execution-command-plan`, `-operation`,
+ *   `-relay-denied`, `-apply-denied`, `-apply-denied.replayed`, `-apply-key-conflict`, `-apply-attempt.*`). `storyData.test.ts` holds each equal to
+ *   the file on disk, so a change to the published fixture fails a test here instead of drifting quietly.
  * - SYNTHETIC (TEST_ONLY): the capital preview, the capital statuses and the problem envelopes are built here from the published
  *   vocabulary (`portal.execution.command-preview.v1`, `portal.execution.command-status.v1`, `CommandProblem`). They are schema-valid
  *   (`storyData.test.ts` checks each against the published schema) and they are NOT product receipts: every capital status says
@@ -41,6 +42,8 @@ export const F0_PLAN_BODY = {
   relay_capability: "DISABLED",
   source_side_effect_requested: false,
   payload_storage_policy: "HASH_ONLY_NO_RAW",
+  current_primitive: null,
+  cost_impact: { state: "NOT_PUBLISHED", reason: "NO_COST_OR_IMPACT_SOURCE" },
   replayed: false,
 } as const;
 
@@ -67,6 +70,60 @@ export const F0_DENIED_BODY = {
   retry_allowed: false,
   source_request_sent: false,
 } as const;
+
+/** The wire body of the F0 apply 409 (BE-P13): the shared error envelope, never the bare `RelayDenied`. The first answer for a request key. */
+export const F0_APPLY_DENIED_BODY = {
+  error: { code: "COMMAND_RELAY_DISABLED", message: "Execution command relay is disabled in EX-BE-05b/F0." },
+  request_id: "req_apply_first_0001",
+  details: {
+    schema_version: "execution.command-relay-decision.v1",
+    operation_id: "op_01K3COMMANDPLAN000000000000",
+    decision: "DENIED",
+    reason: "COMMAND_RELAY_DISABLED",
+    retry_allowed: false,
+    source_request_sent: false,
+    request_key: "ui:apply:0001",
+    replayed: false,
+  },
+} as const;
+
+/** The same denial for a key the server already knew: the stored first answer repeated, `details.replayed` true. */
+export const F0_APPLY_REPLAYED_BODY = {
+  error: { code: "COMMAND_RELAY_DISABLED", message: "Execution command relay is disabled in EX-BE-05b/F0." },
+  request_id: "req_apply_replay_0002",
+  details: { ...F0_APPLY_DENIED_BODY.details, replayed: true },
+} as const;
+
+/** `REQUEST_KEY_PAYLOAD_CONFLICT`: the key was first used for another operation of this actor. The other operation is not named. */
+export const F0_APPLY_CONFLICT_BODY = {
+  error: { code: "REQUEST_KEY_PAYLOAD_CONFLICT", message: "Request key was already used for another intent." },
+  request_id: "req_apply_conflict_0003",
+  details: { request_key: "ui:apply:0001", source_request_sent: false },
+} as const;
+
+/** `GET .../apply-attempts/{request_key}`: recovery of the apply answer by key after a lost response. */
+export const F0_ATTEMPT_NONE_BODY = {
+  schema_version: "portal.execution.f0-apply-attempt.v1",
+  operation_id: "op_01K3COMMANDPLAN000000000000",
+  request_key: "ui:apply:0001",
+  state: "NONE",
+  relay_decision: null,
+  first_recorded_at: null,
+} as const;
+
+export const F0_ATTEMPT_FOUND_BODY = {
+  ...F0_ATTEMPT_NONE_BODY,
+  state: "FOUND",
+  relay_decision: F0_DENIED_BODY,
+  first_recorded_at: "2026-08-22T12:00:05Z",
+} as const;
+
+export const F0_ATTEMPT_CONFLICT_BODY = { ...F0_ATTEMPT_NONE_BODY, state: "CONFLICT" } as const;
+
+/** An apply answer as the server would give it for the request key this send carried (the published bodies carry a fixed demo key). */
+export function f0ApplyAnswer(body: typeof F0_APPLY_DENIED_BODY | typeof F0_APPLY_REPLAYED_BODY | typeof F0_APPLY_CONFLICT_BODY, requestKey: string): Record<string, unknown> {
+  return { ...structuredClone(body), details: { ...structuredClone(body.details), request_key: requestKey } };
+}
 
 /* ───────────────────────────── SYNTHETIC (TEST_ONLY) ───────────────────────────── */
 
@@ -102,6 +159,7 @@ export function capitalPreviewBody(options: { now: number; allowed?: boolean; ex
     profile_ref: allowed ? "TEST_ONLY:paper" : null,
     approval_required: allowed ? true : null,
     approval_gate: allowed ? "CAPITAL" : null,
+    cost_impact: { state: "NOT_PUBLISHED", reason: "NO_COST_OR_IMPACT_SOURCE" },
     business_applied: false,
     reserved: false,
   };
@@ -118,7 +176,24 @@ interface StatusOverrides {
   next_action?: string;
 }
 
+/**
+ * The server's projection of the two typed absences (BE-P13): `source_rejection` is NOT_PUBLISHED exactly when the business state is REJECTED
+ * (or `amounts.rejected` is non-zero) and `venue_fill` is NOT_APPLICABLE exactly when the venue is. Derived here so a scenario cannot contradict
+ * its own state; the readers do not invent this pairing, and no figure is ever put in `quantities`.
+ */
+function typedAbsences(business: Record<string, unknown>, venue: string): Record<string, unknown> {
+  const rejected = business.state === "REJECTED";
+  return {
+    source_rejection: rejected ? { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON" } : { state: "NOT_APPLICABLE", reason: null },
+    venue_fill: venue === "NOT_APPLICABLE"
+      ? { state: "NOT_APPLICABLE", reason: null, quantities: null }
+      : { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES", quantities: null },
+  };
+}
+
 export function capitalStatusBody(overrides: StatusOverrides = {}): Record<string, unknown> {
+  const business = overrides.business ?? { state: "UNKNOWN", receipt_ref: null, source_event_ref: null, revision: null, amounts: UNKNOWN_AMOUNTS };
+  const venue = overrides.venue ?? "UNKNOWN";
   return {
     schema_version: "portal.execution.command-status.v1",
     command_id: overrides.command_id ?? COMMAND_ID_LANDED,
@@ -127,16 +202,20 @@ export function capitalStatusBody(overrides: StatusOverrides = {}): Record<strin
     environment: "paper",
     profile_ref: "TEST_ONLY:paper",
     delivery: overrides.delivery ?? "ACKNOWLEDGED",
-    business: overrides.business ?? { state: "UNKNOWN", receipt_ref: null, source_event_ref: null, revision: null, amounts: UNKNOWN_AMOUNTS },
+    business,
     projection: overrides.projection ?? "CATCHING_UP",
-    venue: overrides.venue ?? "UNKNOWN",
+    venue,
     next_action: overrides.next_action ?? "QUERY_SAME_INTENT",
     created_at_ms: 1792100000000,
     updated_at_ms: 1792100000000,
     authority: "TEST_ONLY",
     currency: "USDT",
+    ...typedAbsences(business, venue),
   };
 }
+
+/** The capital submit's 200 (`CommandSubmitResult`): a status plus the server's `replayed` bit. A GET status never carries it. */
+export const submitResultBody = (status: Record<string, unknown>, replayed: boolean): Record<string, unknown> => ({ ...status, replayed });
 
 /** Acknowledged, business UNKNOWN: the published `ack_only` shape. */
 export const ackOnlyStatus = (): Record<string, unknown> => capitalStatusBody();
@@ -189,6 +268,8 @@ export function problemBody(code: string, message = "Refused."): Record<string, 
 
 export const SCENARIO_IDS = [
   "f0-denied",
+  "f0-denied-replayed",
+  "f0-key-conflict",
   "f0-timeout-then-denied",
   "f0-plan-replayed",
   "f0-plan-expired",
@@ -219,7 +300,9 @@ export interface Scenario {
 
 export const SCENARIOS: readonly Scenario[] = [
   { id: "f0-denied", lane: "F0", plan: "normal", label: "Relay denied", summary: "Apply is answered 409 with the published denial: nothing was sent and a retry is never invited." },
-  { id: "f0-timeout-then-denied", lane: "F0", plan: "normal", label: "No answer, then denied", summary: "The first send gets no answer (unknown). A retry under the same key is answered with the denial." },
+  { id: "f0-denied-replayed", lane: "F0", plan: "normal", label: "Relay denied (key already known)", summary: "Apply is answered 409 with the stored first denial repeated for a key the server already knew: replayed is true and nothing new was recorded." },
+  { id: "f0-key-conflict", lane: "F0", plan: "normal", label: "Request key reused", summary: "Apply is answered 409 REQUEST_KEY_PAYLOAD_CONFLICT: the key belongs to another operation. Nothing was recorded or sent." },
+  { id: "f0-timeout-then-denied", lane: "F0", plan: "normal", label: "No answer, then denied", summary: "The first send gets no answer (unknown). A retry under the same key is answered with the stored denial, replayed." },
   { id: "f0-plan-replayed", lane: "F0", plan: "replayed", label: "Plan already existed (replayed)", summary: "The plan comes back for a request key the server already knew. Nothing new was recorded." },
   { id: "f0-plan-expired", lane: "F0", plan: "expired", label: "Plan expired", summary: "The plan's published expiry has passed on the story clock: Confirm stays closed." },
   { id: "f0-unverified", lane: "F0", plan: "normal", label: "Receipt could not be verified", summary: "503 COMMAND_STATUS_UNVERIFIED: not proof that nothing happened." },
