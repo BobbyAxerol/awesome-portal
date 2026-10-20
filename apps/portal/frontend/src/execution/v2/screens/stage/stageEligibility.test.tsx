@@ -56,7 +56,7 @@ describe("stageActionReason (pure text)", () => {
   });
 
   it("maps the refusing classes to the stage dictionary, with the basis and step-up state", () => {
-    expect(stageActionReason(eligibilityOf("plain_user"), "sandbox.review_note", "fallback")).toBe(`${STAGE_WHY.noGrant} · Basis: Admin role · Step-up: not required`);
+    expect(stageActionReason(eligibilityOf("plain_user"), "sandbox.review_note", "fallback")).toBe(`Needs the Admin role · Basis: Admin role · Step-up: not required`);
     expect(stageActionReason(eligibilityOf("admin_without_r2_grant"), "paper.exit_review_request", "fallback"))
       .toBe(`${STAGE_WHY.noGrant} · Basis: Admin role and the R2 read grant · Step-up: not required`);
     expect(stageActionReason(eligibilityOf("admin_other_workspace_grant"), "paper.exit_review_request", "fallback")).toMatch(/^(Needs the approver grant|Needs the Admin role|The grant does not cover this deployment)/);
@@ -183,7 +183,7 @@ describe("sandbox review note", () => {
   it("a shut note under a provider reads the server's reason for sandbox.review_note", async () => {
     const { api } = fakeApi(() => readOf(CASES.plain_user));
     shut(api);
-    await waitFor(() => expect(reasonOf("Record review note")).toBe(`${STAGE_WHY.noGrant} · Basis: Admin role · Step-up: not required`));
+    await waitFor(() => expect(reasonOf("Record review note")).toBe(`Needs the Admin role · Basis: Admin role · Step-up: not required`));
     expect((screen.getByRole("button", { name: "Record review note" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
