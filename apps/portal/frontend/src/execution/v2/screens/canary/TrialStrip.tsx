@@ -2,15 +2,20 @@
  * The trial strip under the spine (hi-fi `.trial`): "Trial day 6 of 14", one tick
  * per day, and when the exit review opens.
  *
- * Day N of M only when both are published and consistent. Nothing is counted
- * down: the exit-review date and the start are `Not published (FE-071)`, and a
- * body that carries no day says "Trial day not stated", never "day 0".
+ * Day N of M only when both are published and consistent (`day_index` is pinned null today, so
+ * "Trial day not stated"). The start and the exit-review date are the SERVER's (`lifecycle.trial`,
+ * FE-071) and are printed as published, or `Not published (FE-071)` with the server's reason in the
+ * title. Nothing is counted down or compared with the clock.
  */
 import { NotPublished } from "../../blocks";
-import type { TrialFact } from "./model";
+import type { Stamp, TrialCalendar, TrialFact } from "./model";
 import { FE } from "./model";
 
-export function TrialStrip({ trial }: { trial: TrialFact }) {
+function StampText({ stamp }: { stamp: Stamp }) {
+  return stamp.kind === "time" ? <span className="exec-blk-num">{stamp.text}</span> : <NotPublished id={FE.envelope} titleReason={stamp.reasonCode} />;
+}
+
+export function TrialStrip({ trial, calendar }: { trial: TrialFact; calendar: TrialCalendar }) {
   return (
     <div className="exec-cny-trial" role="group" aria-label="Trial schedule">
       {trial.kind === "day" ? (
@@ -29,10 +34,10 @@ export function TrialStrip({ trial }: { trial: TrialFact }) {
         </span>
       )}
       <span className="exec-cny-trial-fact">
-        Started <NotPublished id={FE.envelope} />
+        Started <StampText stamp={calendar.started} />
       </span>
       <span className="exec-cny-trial-fact">
-        Exit review opens <NotPublished id={FE.envelope} />
+        Exit review opens <StampText stamp={calendar.exitReviewOpens} />
       </span>
     </div>
   );

@@ -22,6 +22,26 @@ export const SCHEMA_V2 = "execution-operations.v1";
 export const DEP = "dep_TEST_ONLY_canary";
 
 export const v1Body = (): Draft => loadCanonical<Draft>(V1_FILE);
+
+/**
+ * The V1 body as a producer from BEFORE BE-P2/P3 wrote it: the additive members (stage facts, identity keys, compliance rows
+ * and verdict, rollback items, trial, typed rows, source figures, series members) removed. The suites that pin the earlier
+ * behaviour (legacy rollback, legacy compliance figures, free rows) build on this; the BE-P2/P3 members have their own
+ * suites (`canary.facts.test.tsx`) and the L0 conformance reads the canonical body with all of them.
+ */
+export function legacyV1Body(): Draft {
+  const body = v1Body();
+  delete body.stage_facts;
+  delete body.source_figures;
+  for (const key of ["alpha_id", "alpha_name", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"]) delete body.deployment[key];
+  delete body.envelope_compliance.rows;
+  delete body.envelope_compliance.verdict;
+  delete body.rollback_readiness.items;
+  delete body.lifecycle.trial;
+  delete body.positions.typed;
+  delete body.blotter.typed;
+  return body;
+}
 export const parentBody = (key: "canary" | "canary_absent" | "canary_revision" = "canary"): Draft => loadCanonical<Draft>(PARENT_FILE)[key];
 
 const AS_OF = "2026-10-17T12:04:00.000Z";
@@ -37,7 +57,7 @@ export function lit(envelope: Draft, state: string, freshness: string, verificat
 
 /** The V1 body with figures, fresh panels and a trial day 6 of 14 (reader vocabulary). */
 export function populatedV1(overrides: { brokerFreshness?: string; brokerState?: string } = {}): Draft {
-  const body = v1Body();
+  const body = legacyV1Body();
   body.deployment.deployment_id = DEP;
   const values: Record<string, string> = {
     capital_consumed: "3820.00",

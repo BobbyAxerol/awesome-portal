@@ -33,9 +33,13 @@ export function ExactCell({ value, unit, suffix, signed = false }: { value: stri
   );
 }
 
-/** `Not published (FE-072)` for a column or a panel whose rows the contract does not type. */
-export function RowsNotPublished({ what }: { what: string }) {
-  return <NotPublished id={FE.rows}>{what}</NotPublished>;
+/** `Not published (FE-072)` for a column or a panel whose rows the contract does not type; the server's reason code, when it gave one, is in the title. */
+export function RowsNotPublished({ what, reasonCode }: { what: string; reasonCode?: string | null }) {
+  return (
+    <NotPublished id={FE.rows} titleReason={reasonCode}>
+      {what}
+    </NotPublished>
+  );
 }
 
 /**

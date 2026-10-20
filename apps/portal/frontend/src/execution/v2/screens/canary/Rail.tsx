@@ -100,10 +100,16 @@ export function RollbackPanel({ view }: { view: CanaryView }) {
               <span className="exec-cny-rb-name">{item.label}</span>
               <span className="exec-cny-rb-note">
                 {item.note !== "" ? `${item.note} · ` : ""}
-                {item.checkedWord} {item.checked === null ? <NotPublished id={FE.envelope} /> : item.checked}
+                {item.checkedWord} {item.checked === null ? <NotPublished id={FE.envelope} titleReason={item.checkedReason} /> : item.checked}
               </span>
             </div>
-            {item.status.kind === "flag" ? <Flag kind={item.status.flag} label={item.status.label} size="sm" /> : <NotPublished id={FE.envelope} compact>Status</NotPublished>}
+            {item.status.kind === "flag" ? (
+              <Flag kind={item.status.flag} label={item.status.label} size="sm" />
+            ) : (
+              <NotPublished id={FE.envelope} titleReason={item.status.reasonCode} compact>
+                Status
+              </NotPublished>
+            )}
           </li>
         ))}
       </ul>

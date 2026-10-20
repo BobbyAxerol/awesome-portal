@@ -34,6 +34,11 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { KpiStrip, Kpi, NotPublished, SectionPanel, StageHeader, UrlTabs, type StageChips, type StageCrumb } from "../../blocks";
+import { EquityPanel } from "../../charts";
+import type { SeriesPoint as ChartPoint } from "../../charts/types";
+import { readAsOf } from "../../boundary";
+import { AlphaNameLine } from "../stage/AlphaNameLine";
+import { alphaCrumb, portfolioLabel, stageIdentity } from "../stage/identity";
 import { useContextFacts } from "../../shell/contextFacts";
 import { safeInternalHref } from "../../safeHref";
 import { useExecUrlState, withContext } from "../../urlState";
@@ -55,6 +60,7 @@ import {
   kpiCells,
   panelLine,
   subtitleIds,
+  trialCalendar,
   trialOf,
 } from "./model";
 import { readCanaryView, type CanaryView } from "./readCanary";
@@ -77,12 +83,38 @@ const UNAVAILABLE_CHIPS: StageChips = {
   reconciliation: { state: "not-available", reason: "Not read" },
 };
 
+/**
+ * The series the server published (FE-072): ONE deployment-level series with its own methodology, drawn as published (exact
+ * decimal strings, no smoothing, no joining across a gap). The Paper and Backtest series of the hi-fi are a different request
+ * (FE-029) and stay `Not published`; nothing is drawn from them.
+ */
+function PublishedSeries({ series }: { series: NonNullable<CanaryView["seriesPoints"]> }) {
+  const points: ChartPoint[] = [];
+  for (const p of series.points) {
+    const at = readAsOf(Date.parse(p.t));
+    if (at !== null) points.push({ t: at, v: p.value });
+  }
+  return (
+    <>
+      <EquityPanel label="Deployment series" points={points} unit="money" currency={series.unit ?? undefined} signed height={200} />
+      <p className="exec-cny-series">
+        {series.methodologyRef === null ? null : <span className="exec-blk-num">Methodology {series.methodologyRef}. </span>}
+        <NotPublished id={FE.series}>Paper and Backtest series</NotPublished>
+      </p>
+    </>
+  );
+}
+
 function SeriesPanel({ view }: { view: CanaryView }) {
   return (
     <SectionPanel level={2} title="Live vs Paper vs Backtest" aside="Return since canary start">
-      <p className="exec-cny-series">
-        <NotPublished id={FE.series}>Live, Paper and Backtest series</NotPublished> <span className="exec-blk-na">{panelLine(view.series)}.</span>
-      </p>
+      {view.seriesPoints === null ? (
+        <p className="exec-cny-series">
+          <NotPublished id={FE.series}>Live, Paper and Backtest series</NotPublished> <span className="exec-blk-na">{panelLine(view.series)}.</span>
+        </p>
+      ) : (
+        <PublishedSeries series={view.seriesPoints} />
+      )}
     </SectionPanel>
   );
 }
@@ -101,12 +133,15 @@ export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryS
   useContextFacts({ ccy: view === null ? undefined : (view.envelope?.currency ?? null) });
 
   const linkTo = (href: string) => withContext(href, params);
-  // The portfolio and the account are linked only when the read published their ids; the alpha id is not in this
-  // read, so there is no Alpha link (never a link built from a guess).
+  // The portfolio and the account are linked only when the read published their ids. The Alpha is linked ONLY when the
+  // body published `alpha_id` (FE-066): never a link built from a strategy id or a guess.
+  const identity = stageIdentity(view?.identity ?? null);
+  const alpha = alphaCrumb(identity);
   const crumb: readonly StageCrumb[] = [
     { label: "Alpha Fleet", to: linkTo("/deployments/alphas") },
+    ...(alpha === null ? [] : [{ label: alpha.label, to: linkTo(alpha.to) }]),
     { label: deploymentId },
-    ...(view?.portfolioId ? [{ label: view.portfolioId, to: linkTo(`/deployments/portfolios/${encodeURIComponent(view.portfolioId)}`) }] : []),
+    ...(view?.portfolioId ? [{ label: portfolioLabel(identity, view.portfolioId), to: linkTo(`/deployments/portfolios/${encodeURIComponent(view.portfolioId)}`) }] : []),
     ...(view?.accountId ? [{ label: view.accountId, to: linkTo(`/deployments/accounts/${encodeURIComponent(view.accountId)}`) }] : []),
     { label: "Canary" },
   ];
@@ -158,13 +193,13 @@ export default function CanaryScreen({ api, deploymentId, workspaceId }: CanaryS
           <>
             {subtitleIds(current).join(" · ")}
             {subtitleIds(current).length > 0 ? " · " : ""}
-            <NotPublished id={FE.names}>Alpha name</NotPublished>
+            <AlphaNameLine identity={identity} />
           </>
         )
       }
       chips={chips}
       spine={{ current: "canary", onSelect: spineSelect }}
-      extra={current === null ? undefined : <TrialStrip trial={trialOf(current)} />}
+      extra={current === null ? undefined : <TrialStrip trial={trialOf(current)} calendar={trialCalendar(current)} />}
       renderLink={(to, children) => <Link to={to}>{children}</Link>}
     />
   );
