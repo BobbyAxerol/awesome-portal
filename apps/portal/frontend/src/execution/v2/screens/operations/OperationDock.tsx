@@ -9,6 +9,7 @@ import { Drawer, DockAction, type DockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { formatAsOf } from "../../boundary";
 import type { InstantV2, OperationV2 } from "../../readers/operationalQueue";
+import { isV2Screen } from "../../flags";
 import { ENV_LABEL } from "../../urlState";
 import { PanelState } from "../../../components/states";
 import { ACCESS_PATH, FE, notPublishedReason } from "./notPublished";
@@ -114,7 +115,7 @@ export function OperationDock({ operationId, row, loading, mode, onClose, api, w
         <dd><span className="exec-ops-mono">{row.workflowVersion}</span></dd>
       </dl>
       {api !== undefined && discoverable(row.targetType) ? (
-        <PendingRecallsSection api={api} workspaceId={workspaceId} targetType={row.targetType} targetId={row.targetId} environment={row.environment} />
+        <PendingRecallsSection api={api} workspaceId={workspaceId} targetType={row.targetType} targetId={row.targetId} environment={row.environment} previewEnabled={isV2Screen("command")} />
       ) : null}
       <NotAvailableLine
         className="exec-ops-na-line"

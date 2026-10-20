@@ -52,6 +52,8 @@ import type {
 } from "../v2/readers/dispatch";
 import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV2 } from "../v2/readers/operationalQueue";
 import type { PendingRecallDiscoveryQuery, PendingRecallDiscoveryRead } from "../v2/readers/pendingRecallDiscovery";
+import type { PendingControlPreviewRead } from "../v2/readers/pendingControlPreview";
+import type { PendingControlIntentWire } from "../v2/screens/operations/pendingControlIntent";
 import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligibility";
 import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
 import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";
@@ -559,6 +561,15 @@ export interface ExecutionApi {
    * answer the resource asked, or does not read, is a typed `unavailable`, never an empty list.
    */
   getPendingRecallDiscovery(query: PendingRecallDiscoveryQuery): Promise<Result<PendingRecallDiscoveryRead>>;
+  /**
+   * `POST /api/v1/execution/pending-recalls/preview` (RV-10): a ROLLBACK preview of one named continuation of a recall the Portal
+   * controlled (`portal.execution.pending-recall-preview.v1`). The five `expected_versions` in the intent are the served counters of
+   * that recall, built by `buildPendingControlIntent`; a screen never types them. The idempotency key travels as the
+   * `x-portal-idempotency-key` header and equals the intent's. A submit is a different route and is not in this port. A refusal is
+   * a typed `{ ok: false }` whose reason starts with the closed code; a body that does not read, or answers another operation or
+   * recall, is `unavailable`, never an allowed preview.
+   */
+  previewPendingControl(intent: PendingControlIntentWire): Promise<Result<PendingControlPreviewRead>>;
   /**
    * `GET /api/v1/execution/governance/stage-action-eligibility` (FE-068): the caller's own ADVISORY answer for the ten stage
    * actions (`portal.stage-action-eligibility.v1`). It only explains a control that is off; it never enables one. A missing or

@@ -9,7 +9,8 @@
  *   recall whose last receipt is known. They are a starting point, not an authority: the next preview rechecks them against the source;
  * - an UNKNOWN recall (a control was sent, no receipt is known) has no amounts and no counters. It says so; it never prints zero;
  * - a recall is never invented, closed or reordered here. A failed read says it failed and shows no list at all;
- * - this component sends nothing: it has no button that reaches the command route.
+ * - the list sends nothing. Where the build enables command previews (flag `command`) each recall with known versions also carries the
+ *   "Preview control" form (`PendingControlPreview`), which sends a rollback preview and never applies; otherwise no button is drawn.
  */
 import { useEffect, useState, type ReactNode } from "react";
 
@@ -19,6 +20,7 @@ import { PENDING_VERSION_KEYS, AMOUNT_KEYS } from "../../readers/commandCurrency
 import type { PendingRecallDiscovery, DiscoveredRecall } from "../../readers/pendingRecallDiscovery";
 import type { CommandEnvironment } from "../../readers/commandCurrency";
 import type { TargetTypeV2 } from "../../readers/operationalQueue";
+import { PendingControlPreview } from "./PendingControlPreview";
 
 import "../../css/operations.css";
 
@@ -78,7 +80,15 @@ export function usePendingRecalls(api: ExecutionApi, workspaceId: string | undef
   return state;
 }
 
-function Recall({ item }: { item: DiscoveredRecall }) {
+interface PreviewWiring {
+  api: ExecutionApi;
+  workspaceId: string | undefined;
+  resource: { kind: "PORTFOLIO" | "DEPLOYMENT"; id: string };
+  environment: CommandEnvironment;
+  policyRevision: string | null;
+}
+
+function Recall({ item, preview }: { item: DiscoveredRecall; preview: PreviewWiring | null }) {
   return (
     <li className="exec-ops-recall" data-state={item.state}>
       <dl className="exec-ops-facts">
@@ -132,6 +142,12 @@ function Recall({ item }: { item: DiscoveredRecall }) {
           Versions are the last known receipt&apos;s, shown as published. A change at the source makes them stale; a preview rechecks them before anything is sent.
         </p>
       ) : null}
+      {preview === null ? null : (
+        <PendingControlPreview
+          api={preview.api}
+          target={{ workspaceId: preview.workspaceId ?? null, resource: preview.resource, environment: preview.environment, recall: item, policyRevision: preview.policyRevision }}
+        />
+      )}
     </li>
   );
 }
@@ -151,10 +167,18 @@ export interface PendingRecallsSectionProps {
   targetType: "PORTFOLIO" | "DEPLOYMENT";
   targetId: string;
   environment: CommandEnvironment;
+  /**
+   * Draw the "Preview control" form under each recall. Off (the default) draws nothing: the command stays dark. The build's `command`
+   * flag turns it on (OperationDock); a test passes it explicitly.
+   */
+  previewEnabled?: boolean;
+  /** The opaque Portal policy revision the preview must name, only if a read served it. `null` = none does (the form is then shut with that gap). */
+  policyRevision?: string | null;
 }
 
-export function PendingRecallsSection({ api, workspaceId, targetType, targetId, environment }: PendingRecallsSectionProps) {
+export function PendingRecallsSection({ api, workspaceId, targetType, targetId, environment, previewEnabled = false, policyRevision = null }: PendingRecallsSectionProps) {
   const load = usePendingRecalls(api, workspaceId, targetType, targetId, environment);
+  const preview: PreviewWiring | null = previewEnabled ? { api, workspaceId, resource: { kind: targetType, id: targetId }, environment, policyRevision } : null;
   return (
     <section aria-label="Open recalls the Portal controlled" data-testid="pending-recalls">
       <h3 className="exec-ops-section">Open recalls the Portal controlled</h3>
@@ -176,7 +200,7 @@ export function PendingRecallsSection({ api, workspaceId, targetType, targetId, 
           </p>
           {load.discovery.items.length === 0 ? <p className="exec-ops-recall-note">{EMPTY_RECALLS_COPY}</p> : (
             <ul className="exec-ops-recalls" aria-label="Open recalls">
-              {load.discovery.items.map((item) => <Recall key={item.originalRecallId} item={item} />)}
+              {load.discovery.items.map((item) => <Recall key={item.originalRecallId} item={item} preview={preview} />)}
             </ul>
           )}
           {load.discovery.truncated ? (
