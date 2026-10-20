@@ -21,6 +21,8 @@ use rustls::{
 use sha2::{Digest, Sha256};
 use tokio::sync::Semaphore;
 
+pub mod stored;
+
 const SUBMIT: &str = "/internal/elp210/pm-command/submit";
 const STATUS: &str = "/internal/elp210/pm-command/status";
 const MAX_BODY: usize = 32_768;

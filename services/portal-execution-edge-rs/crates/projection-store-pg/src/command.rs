@@ -314,13 +314,15 @@ pub struct DispatchClaim {
 }
 
 impl PgProjectionStore {
-    async fn command_transaction(&self) -> Result<Transaction<'_, Postgres>, CommandStoreError> {
+    pub(super) async fn command_transaction(
+        &self,
+    ) -> Result<Transaction<'_, Postgres>, CommandStoreError> {
         let mut tx = self.pool.begin().await?;
         sqlx::query("SELECT set_config('statement_timeout','2000ms',true),set_config('lock_timeout','250ms',true)")
             .execute(&mut *tx).await?;
         Ok(tx)
     }
-    fn command_admit(
+    pub(super) fn command_admit(
         &self,
         write: bool,
     ) -> Result<Option<projection_core::resources::ResourceLease>, CommandStoreError> {
@@ -384,13 +386,23 @@ impl PgProjectionStore {
     ) -> Result<CommandRecord, CommandStoreError> {
         let _lease = self.command_admit(true)?;
         let mut tx = self.command_transaction().await?;
+        let record = Self::prepare_command_in_tx(&mut tx, ledger, intent).await?;
+        tx.commit().await?;
+        Ok(record)
+    }
+
+    pub(super) async fn prepare_command_in_tx(
+        tx: &mut Transaction<'_, Postgres>,
+        ledger: &str,
+        intent: &CommandIntent,
+    ) -> Result<CommandRecord, CommandStoreError> {
         // Serialize admission across replicas, NOT the downstream network call.
         let quota = sqlx::query(
             "SELECT max_commands,command_count FROM portal_projection.command_relay_limits
             WHERE ledger_id=$1 FOR UPDATE",
         )
         .bind(ledger)
-        .fetch_optional(&mut *tx)
+        .fetch_optional(&mut **tx)
         .await?
         .ok_or(CommandStoreError::Configuration)?;
         let scope = intent.scope();
@@ -406,14 +418,13 @@ impl PgProjectionStore {
         .bind(scope.authority_scope_id())
         .bind(intent.operation())
         .bind(intent.key())
-        .fetch_optional(&mut *tx)
+        .fetch_optional(&mut **tx)
         .await?;
         if let Some(row) = existing {
             let record = decode(&row)?;
             if record.intent.request_digest() != intent.request_digest() {
                 return Err(CommandStoreError::Conflict);
             }
-            tx.commit().await?;
             return Ok(record);
         }
         if quota.try_get::<i64, _>("command_count")? >= quota.try_get::<i64, _>("max_commands")? {
@@ -439,11 +450,10 @@ impl PgProjectionStore {
         .bind(intent.payload())
         .bind(intent.digest())
         .bind(intent.request_digest())
-        .execute(&mut *tx)
+        .execute(&mut **tx)
         .await?;
         sqlx::query("UPDATE portal_projection.command_relay_limits SET command_count=command_count+1 WHERE ledger_id=$1")
-            .bind(ledger).execute(&mut *tx).await?;
-        tx.commit().await?;
+            .bind(ledger).execute(&mut **tx).await?;
         Ok(CommandRecord {
             command_id: id,
             intent: intent.clone(),
@@ -599,14 +609,7 @@ impl PgProjectionStore {
         if previous.delivery == "PREPARED" {
             return Err(CommandStoreError::Fence);
         }
-        if let Some(old) = &previous.receipt {
-            receipt
-                .validate_progress(old)
-                .map_err(|_| CommandStoreError::Invalid)?;
-            if receipt.revision() == old.revision() && receipt.payload() != old.payload() {
-                return Err(CommandStoreError::Conflict);
-            }
-        }
+        validate_receipt_progress(previous.receipt.as_ref(), receipt)?;
         sqlx::query("UPDATE portal_projection.command_relay SET delivery='ACKNOWLEDGED',source_ref=$3,
             source_revision=$4,business_state=$5,receipt=$6,receipt_digest=$7,updated_at=clock_timestamp()
             WHERE ledger_id=$1 AND request_digest=$2")
@@ -622,7 +625,22 @@ impl PgProjectionStore {
     }
 }
 
-fn decode(row: &PgRow) -> Result<CommandRecord, CommandStoreError> {
+pub(super) fn validate_receipt_progress(
+    previous: Option<&AuthorityReceipt>,
+    receipt: &AuthorityReceipt,
+) -> Result<(), CommandStoreError> {
+    if let Some(old) = previous {
+        receipt
+            .validate_progress(old)
+            .map_err(|_| CommandStoreError::Invalid)?;
+        if receipt.revision() == old.revision() && receipt.payload() != old.payload() {
+            return Err(CommandStoreError::Conflict);
+        }
+    }
+    Ok(())
+}
+
+pub(super) fn decode(row: &PgRow) -> Result<CommandRecord, CommandStoreError> {
     let scope = CommandScope::new(
         &row.try_get::<String, _>("workspace_id")?,
         &row.try_get::<String, _>("environment")?,

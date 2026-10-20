@@ -24,6 +24,7 @@ mod authoritative_event_store;
 pub mod bootstrap;
 pub mod bootstrap_rollout;
 pub mod command;
+pub mod command_pm;
 mod d4_writer;
 mod manager_projection;
 mod manager_query_analytics;

@@ -10081,6 +10081,8 @@ source-only, actual target/current authority/custody commissioning pending.
 See [current execution](#original07-resumed--bounded-pm-http-commandport--20oct0635utc)
 and [qualification](evidence/execution-edge-v1_2/EPG10-07/http-port-qualification.json).
 No command route/flag/runtime activation. Full phase stillNOT_MET.
+The next owned source-only slice is
+[durable PM original/outcome custody](#original07--durable-pm-original-binding-and-outcome-custody--20oct).
 
 **Historical format slice (2026-10-17):** PM source formats consumed;
 pure Rust HTTP byte-binding/full owning-outcome adapter75PASS/strict Clippy/fmt,
@@ -24919,6 +24921,192 @@ operational-container deletion. A second coherent commit records terminal
 evidence and the small capped/invocation-isolated syntax runner fix; the same
 normal hook must pass on it. Batch feature-only push happens after that terminal
 gate, no PR/merge/main/dev/dispatch and no new hosted CI minutes expected.
+
+### Original07 — durable PM original binding and outcome custody —20Oct
+
+**Status/approval:** IN_PROGRESS, same Bobby-approved original07/08 round2;
+not a new phase or runtime approval. Base f8d3f20cc330947253de8a73d14291a236ab3edc.
+The previous slice is published (6760c43d + f8d3f20c):135affected Rust cases,
+strict Clippy/fmt PASS; both normal hooks130contracts/717API/build/PG restore
+PASS. Final cleanup/publication receipt is
+`/home/bobby/secure/portal-edge-command-http-20261020-dzxuVxFo/publication-and-cleanup-return.json`,
+SHA256e8029cd0e7a5cc0981f1330c584cc70f2976bf1e9738f0d049bd9aaeb69e6e95.
+All19protected HK tuples unchanged, no operational/DB mutation. Peer untracked
+native-egress/source-review files remain excluded from edits/staging.
+
+**Goal and evidence for runnable ownership:** the real HTTP port is implemented,
+but PmCommandContext is still an interface plus TEST_ONLY implementation. Existing
+0021 persists the command intent and AuthorityReceipt presentation, not the
+ORIGINAL PM reference/normalized source digest/resolved target or full PmOutcome.
+That storage implementation does not require an active PM listener or invented
+authority and must be completed now, not called external technical debt.
+
+**Guides:** [EDGE07](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-07-thực-hiện-command-relay-có-durable-receipt),
+[BE §§3,9.2–9.4,11–12/ELP2-07](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md),
+[single07 return](evidence/execution-edge-v1_2/EPG10-07/COMMAND_RELAY_AND_OWNER_RETURN.md).
+Reuse command.rs governed transaction/admission/quota/single-send CAS/progress,
+existing PM source codec and existing Rust/PG qualification harness; no new
+service, SDK, general framework, direct TS SQL or separate unlimited ledger.
+
+**Approved implementation scope:** additive Portal projection migration0023;
+atomically retain original binding with the existing prepared command; immutable
+scoped replay, one bounded custody row per command under the existing quota,
+full latest PM outcome with integrity/progress checks and no automatic TTL.
+Thin Edge stored-context adapter resolves these retained original facts and ACKs
+durable full-outcome custody; actual current-human assertion remains a mandatory
+separate trusted issuer, never an inferred historical actor or locally minted JWT.
+No production migration, role/schema install, route/flag/listener or new send.
+
+**Invariants/decision boundary:** bind by ledger + immutable request/command id;
+wrong workspace/key/digest/target/reference conflicts, never re-normalize from
+today's profile or response. No DB transaction over network. Custody retains the
+full envelope BEFORE returning ACK, but does not advance generic delivery or
+receipt state: if custody COMMIT loses its ACK, the port returns UNKNOWN and the
+existing dispatch claim must still retire to DELIVERY_UNKNOWN, not fail its CAS
+because custody prematurely wrote ACKNOWLEDGED. Normal relay receipt persistence
+remains unchanged after an acknowledged callback. No private service-only status
+or native authority is invented. Source retention and connected target proof
+remain genuine producer inputs, not prerequisites for this bounded storage code.
+
+**Tests/exit for this slice:** real disposable PG migration/reapply; atomic
+original+intent/quota/replay/conflict; scope/ledger isolation, concurrent replicas,
+post-claim immutable replay and refusal to backfill missing historical pins;
+full outcome replay/progress/integrity/body bounds, cancellation/COMMIT ACK loss
+and reopen/recovery using the original intent; demonstrate custody does not
+advance generic delivery and generic relay recovery still works. Thin-context
+tests prove actual PG custody plus TEST_ONLY delegated assertions, not real
+authority. Run affected Rust/PG tests, fmt/strict Clippy and normal workspace
+hook with bounded CPU/RAM. Evidence is TEST_ONLY, not native economic commits,
+Cloudflare authentication or production capacity. Clean exact test namespace,
+image/cache/target resources and record protected runtime/disk checks.
+
+**Rollback:** source revert only; additive migration is installed solely on a
+disposable PG. No operational DB has been changed. Never delete actual unresolved
+intent/receipt history or make a status-only command sendable again.
+
+**Fresh cross-owner intake:** Claude now answered the priority assignment with
+Core009 PREPARED_SOURCE_ONLY at FE892ea030b3e576e4394d9b00563da1eb0a841dce,
+code2062fcdc0cfeea7ae6aabec553fc838b257bd379. Returns on SGP FE ELP2-10:
+`CORE009_PREPARED_OWNER_RETURN_2026-10-20.md` SHA256ee256ddaba393990aede165d10c66496a10c63fb007301d8824949ea4fc1bd7b;
+`CORE009_PREPARATION_2026-10-20.md`22b043d39dcc6a5db224504a277bd019a62e35025f424d20ca088d84b72ce007;
+`CORE009_OPERATOR_RUNBOOK_2026-10-20.md`3283c294cf884f1bfea7071702851ae30d26cc0ac8580924791d972fd60ed226.
+These supersede AWAITING_CLAUDE_ACK, not installed008 or connected acceptance.
+144focused fake-only cases PASS reported by Core, normal R2/R3/PG not run;
+Core manager-domain revoke/session commissioning are still producer work.
+Edge will return known exact source seals/bounds as historical preparation,
+not recycle retired acceptance1/2 or open a listener while Core is unprepared.
+Full07/08NOT_MET; connected09NOT_STARTED. Continue07 custody and08 handback in
+parallel; do not wait on Core for owned persistence work.
+
+**In-scope correctness discovered before edits:** actual PM
+`capital_outcome_source.py` emits `pma:source-event:<owning-event-id>`; recall
+progress advances that event/receipt while preserving the original command key,
+normalized digest, target and command_id. The generic AuthorityReceipt progress
+validator incorrectly required source_ref to be constant across revisions. Fix
+only this versioned-evidence assumption: a strictly higher valid revision may
+advance source_ref, while same-revision full-payload equality, original intent/
+command/currency binding, version/amount monotonicity and terminal checks remain.
+Add positive real-shape recall progress and wrong-command/same-revision/regression
+negatives; no legacy/read-route/runtime change. Do not preserve a known owned
+validator defect and then report native PM progress as an external blocker.
+
+**Coherent preparation update:** all5storage paths are frozen; independent
+read-only review found no production correctness blocker in original binding,
+full custody, generic delivery isolation or mandatory assertion ownership.
+Review did find that the cancellation test's pre-call notification could abort
+before BEGIN; strengthen it with an observed TEST_ONLY transaction barrier before
+claiming mid-write rollback. The first capped Rust/PG qualification is running;
+no PASS is inferred from compilation or health. Initial toolchain preparation
+failed on private directory UID permissions, before any tests; corrected to the
+actual UID/read-only/cap-drop preparation and it passed. No permission broadening.
+
+Core009 handback was actually appended to the existing Edge-owned Core request
+and its existing Unified index on SGP, not merely written locally. Exact public
+section SHA256d939fcb3be170c7689133b1ec6dcd1b57849f3434f6efab4cda70a13b8899c27;
+request after append47528bytes/SHA256ce46aa05341b5d68729bfd635507cd9b39c747fddfe84014957298dbf82238f8.
+Target `/home/bobby/portal-research`, `docs/research-loop-plan`; preserve all
+peer changes/index. Remote apply_patch is absent, so exact old-hash CAS plus
+append/prefix/section verification was used per root32 fallback. Existing request
+is already linked from Claude's priority packet. No code/config/schema/auth/
+session/listener/test/restart/merge/push on SGP. Known input seals supplied;
+Core manager-domain revoke and current-human/release work explicitly requested.
+Core acknowledgment of this new handback is still pending; the earlier priority
+assignment itself is ACK_PREPARED, not AWAITING_CLAUDE_ACK.
+
+**Cross-owner repin:** PM advanced to0b85852e580919c46218cb31b2a63730634851b0
+during this slice; the command descriptor83d251e8 and transport3885c72d bytes
+remain unchanged. Its17tracked WIP paths are preserved. TS stays
+0cd356dab20dc385d9effbda408a0ea53280aa4b; original N03/EDS11R manifests still
+SOURCE_DARK_NOT_ACCEPTED, image null/owner_accepted false. These observations
+do not manufacture publication or alter03/capacity gates. Reuse source-shape
+knowledge only. The existing07→11 isolated runner is also being extended to
+require/hash the custody sources, enable the explicit TEST_ONLY PG feature and
+run the new bounded custody target; do not leave future qualification silently
+omitting the new storage tests.04/05/06 behavior remains unchanged.
+
+**First actual test attempt:** relay79PASS and existing command PG27PASS;
+new custody PG0/15PASS,15FAIL before any test body because its TEST_ONLY pool4
+violated the governed envelope max_active8 invariant (`Resource(Config)`).
+Corrected only the test pool to the existing8-connection fixture contract;
+no production check weakened. Disposable PG was gracefully stopped/auto-removed
+in finally. Edge tests/Clippy were NOT_RUN in this failed attempt. Preserve its
+private failure log. Also replaced the cancellation pre-call notification with
+an actual observed per-ledger advisory wait inside a TEST_ONLY custody INSERT
+trigger, after command/quota writes, before COMMIT. Exact trigger/function cleanup
+precedes assertions; production SQL timeouts unchanged. Rerun affected gates
+after these fixes, do not relabel failed test setup as external debt.
+
+**Correctness slice result:** rerun relay79, existing command PG27, new custody
+PG15 and feature-enabled Edge65 all PASS/0FAIL/ignored/filtered:186unique Rust
+cases,24new (4relay+15custody+5PG/mTLS); not additional counts for repeat attempts.
+The cancellation case observed the actual writer wait after transaction-local
+command/quota writes, then abort/uninstall/rollback and successful same-key retry.
+`python3 -B -m unittest -v test_run` from scripts/epg10-04:103PASS, including3new
+count/feature/target guards. A first incorrect `python3 -I -B .../test_run.py`
+invocation failed import before running tests; corrected invocation is above.
+Strict Clippy caught2similar-name diagnostics (`raw`/`row`); renamed only local
+serialized-envelope bindings, no suppression or behavior change. Static retake
+is running; strict/normal publication gates are still pending, not PASS.
+Both disposable PG attempts stopped/auto-removed in finally. Pre-cleanup read-only
+inventory:19protected tuples unchanged,98images/42running including own active
+test resources,339shared BuildKit records, available246797881344bytes. Do not
+clean shared cache/peer images while qualification/build work is active.
+
+**Final owned-source gate:** after local naming/doc/import/lifetime and duplicate
+test-setup fixes, all186Rust cases PASS again on final source, strict Clippy
+all-targets/feature-on and format PASS. No warning suppression or weakened gate.
+The103harness cases remain unchanged since their PASS. Public exact test/log/
+source pins are in [custody qualification](evidence/execution-edge-v1_2/EPG10-07/custody-qualification.json);
+[single07 return](evidence/execution-edge-v1_2/EPG10-07/COMMAND_RELAY_AND_OWNER_RETURN.md)
+documents stored context, recovery and reproduction. No operational schema,
+command route, current-human issuer or native send was installed. Four diagnostic
+Clippy attempts are preserved privately, not counted as test successes.
+
+**Actual Rust cleanup:** exact cargo/rustup/target directories under
+`/tmp/epg10-07-pm-custody-LnTe5gf1` removed,3358006182logical bytes. Before/after
+available247938764800→252439638016bytes (shared-host observations). Pulled
+Rust9f841bbe toolchain reference removed only after all containers/build/publish
+jobs were terminal and no container referenced it. All PG cells auto-removed.
+After inventory97images/41running/339shared BuildKit entries, all19protected
+tuples unchanged. No compiled Docker layers were created by this bind-mounted
+Rust run; shared BuildKit, active/rollback/peer images, PG base, volumes/networks
+and immutable operator custody retained. Logs/receipt in private0700
+`/home/bobby/secure/portal-edge-pm-custody-20261020-fzQHVrEM`, receipt SHA256
+db8209c29013a3317acf0e807bfa5e242f0d2755b57cf5b7d329ace640b54a56.
+Small scripts/inventory copies remain temporarily for post-hook reconciliation;
+remove exactly that remaining test directory after preserving the final receipt.
+
+**Publication boundary:** prepare one coherent implementation commit through
+unchanged normal .githooks/pre-commit/verify-workspace. Verify configured Bobby
+identity and exact staged paths; exclude all3peer untracked paths. Final normal
+hook/result and hook-only image cleanup follow in the same bounded journal
+closeout, then one nonforce feature push; no PR/merge/dev/main. Current workflow
+filters cause0additional hosted CI minutes for this feature push; no workflow
+dispatch. Fresh08:00:50UTC SGP check still Core7818d563/image7b2c7f34/config497fc5a8,
+restart0, FE892ea030:009 remains prepared/not installed. Old trust ends08:00:59UTC;
+do not race that boundary or reactivate retired acceptance/window. Core owns
+revoke/session/release; Edge's next connected step needs a genuinely fresh
+finite source/trust publication. Full07/08NOT_MET;09NOT_STARTED; no new phase.
 
 
 

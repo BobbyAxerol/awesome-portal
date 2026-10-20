@@ -6,6 +6,10 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[features]
+# TEST_ONLY real disposable PostgreSQL qualification. No production behavior.
+pm-custody-pg-test = []
+
 [dependencies]
 analytics = { path = "../analytics" }
 authoritative-event-core = { path = "../authoritative-event-core" }

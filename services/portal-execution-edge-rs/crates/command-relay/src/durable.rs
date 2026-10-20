@@ -327,12 +327,13 @@ impl AuthorityReceipt {
     }
 
     /// Preserves original requested/applied/cancelled amounts across replay.
+    /// A newer PM recall revision may cite a different owning source event;
+    /// that evidence reference is not the immutable command/intent identity.
     ///
     /// # Errors
-    /// Rejects another command/source, revision conflicts or decreasing progress.
+    /// Rejects another command/intent, revision conflicts or decreasing progress.
     pub fn validate_progress(&self, previous: &Self) -> Result<(), DurableError> {
         if self.intent_digest != previous.intent_digest
-            || self.source_ref != previous.source_ref
             || self.payload["command_id"] != previous.payload["command_id"]
             || self.payload["currency"] != previous.payload["currency"]
             || self.revision < previous.revision
@@ -831,6 +832,19 @@ mod tests {
         AuthorityReceipt::new(&intent(), "TEST_ONLY-source", revision, state, value)
     }
 
+    fn event_receipt(
+        command: &CommandIntent,
+        revision: i64,
+        state: BusinessState,
+        mut value: Value,
+        event: u64,
+    ) -> Result<AuthorityReceipt, DurableError> {
+        // TEST_ONLY UUID shape, not an operational event or economic effect.
+        let source_ref = format!("pma:source-event:00000000-0000-4000-8000-{event:012}");
+        value["source_ref"] = json!(source_ref);
+        AuthorityReceipt::new(command, &source_ref, revision, state, value)
+    }
+
     #[test]
     fn canonical_digest_and_original_json_are_preserved() {
         let value = payload("TOP_UP");
@@ -1275,6 +1289,123 @@ mod tests {
     }
 
     #[test]
+    fn higher_recall_revision_may_advance_owning_source_event() {
+        let command = intent();
+        let previous = event_receipt(
+            &command,
+            1,
+            BusinessState::PartiallyApplied,
+            presentation(BusinessState::PartiallyApplied, "3", "7", "0", "0"),
+            1,
+        )
+        .unwrap();
+        let mut value = presentation(BusinessState::PartiallyApplied, "6", "4", "0", "0");
+        value["current_versions"]["budget"] = json!(2);
+        let progress =
+            event_receipt(&command, 2, BusinessState::PartiallyApplied, value, 2).unwrap();
+        assert_ne!(progress.source_ref(), previous.source_ref());
+        assert_eq!(progress.intent_digest(), previous.intent_digest());
+        assert_eq!(
+            progress.payload()["command_id"],
+            previous.payload()["command_id"]
+        );
+        assert!(progress.validate_progress(&previous).is_ok());
+
+        let mut value = presentation(BusinessState::Applied, "10", "0", "0", "0");
+        value["current_versions"]["budget"] = json!(3);
+        let terminal = event_receipt(&command, 3, BusinessState::Applied, value, 3).unwrap();
+        assert_ne!(terminal.source_ref(), progress.source_ref());
+        assert!(terminal.validate_progress(&progress).is_ok());
+        assert!(terminal.is_terminal());
+    }
+
+    #[test]
+    fn same_revision_cannot_substitute_owning_source_event() {
+        let command = intent();
+        let value = presentation(BusinessState::PartiallyApplied, "3", "7", "0", "0");
+        let previous = event_receipt(
+            &command,
+            2,
+            BusinessState::PartiallyApplied,
+            value.clone(),
+            1,
+        )
+        .unwrap();
+        let substituted =
+            event_receipt(&command, 2, BusinessState::PartiallyApplied, value, 2).unwrap();
+        assert!(previous.validate_progress(&previous).is_ok());
+        assert_eq!(
+            substituted.validate_progress(&previous),
+            Err(DurableError::ProgressRegression)
+        );
+    }
+
+    #[test]
+    fn advancing_source_event_does_not_change_command_or_original_intent() {
+        let command = intent();
+        let value = presentation(BusinessState::PartiallyApplied, "3", "7", "0", "0");
+        let previous = event_receipt(
+            &command,
+            1,
+            BusinessState::PartiallyApplied,
+            value.clone(),
+            1,
+        )
+        .unwrap();
+        let mut changed = value.clone();
+        changed["command_id"] = json!("TEST_ONLY-other-command");
+        let changed =
+            event_receipt(&command, 2, BusinessState::PartiallyApplied, changed, 2).unwrap();
+        assert!(changed.validate_progress(&previous).is_err());
+
+        let mut changed = payload("RECALL_PARTIAL");
+        changed["reason"] = json!("TEST_ONLY-other-original-intent");
+        let other = intent_from(changed).unwrap();
+        let changed = event_receipt(&other, 2, BusinessState::PartiallyApplied, value, 2).unwrap();
+        assert_ne!(changed.intent_digest(), previous.intent_digest());
+        assert!(changed.validate_progress(&previous).is_err());
+    }
+
+    #[test]
+    fn advancing_source_event_still_rejects_backward_revision_and_invalid_amounts() {
+        let command = intent();
+        let previous = event_receipt(
+            &command,
+            2,
+            BusinessState::PartiallyApplied,
+            presentation(BusinessState::PartiallyApplied, "3", "7", "0", "0"),
+            1,
+        )
+        .unwrap();
+        let older = event_receipt(
+            &command,
+            1,
+            BusinessState::PartiallyApplied,
+            presentation(BusinessState::PartiallyApplied, "6", "4", "0", "0"),
+            2,
+        )
+        .unwrap();
+        assert!(older.validate_progress(&previous).is_err());
+        let regressed = event_receipt(
+            &command,
+            3,
+            BusinessState::PartiallyApplied,
+            presentation(BusinessState::PartiallyApplied, "2", "8", "0", "0"),
+            2,
+        )
+        .unwrap();
+        assert!(regressed.validate_progress(&previous).is_err());
+        assert!(event_receipt(
+            &command,
+            3,
+            BusinessState::PartiallyApplied,
+            presentation(BusinessState::PartiallyApplied, "4", "7", "0", "0"),
+            2,
+        )
+        .is_err());
+    }
+
+    #[test]
     fn inconsistent_disposition_pending_and_delivery_labels_are_rejected() {
         let partial = presentation(BusinessState::PartiallyApplied, "3", "7", "0", "0");
         let mut applied = partial.clone();
@@ -1324,31 +1455,16 @@ mod tests {
         let intent = intent_from(payload("SET_ROOT_LIMIT")).unwrap();
         let mut value = presentation(BusinessState::Applied, "0", "0", "0", "0");
         value["amounts"]["requested"] = json!("0.00");
-        let previous = AuthorityReceipt::new(
-            &intent,
-            "TEST_ONLY-source",
-            1,
-            BusinessState::Applied,
-            value.clone(),
-        )
-        .unwrap();
+        let previous = event_receipt(&intent, 1, BusinessState::Applied, value.clone(), 1).unwrap();
         for state in [BusinessState::Rejected, BusinessState::Cancelled] {
             let mut changed = value.clone();
             changed["state"] = json!(state.as_str());
             changed["cli_exit_code"] = json!(2);
-            let changed =
-                AuthorityReceipt::new(&intent, "TEST_ONLY-source", 2, state, changed).unwrap();
+            let changed = event_receipt(&intent, 2, state, changed, 2).unwrap();
             assert!(changed.validate_progress(&previous).is_err());
         }
         value["current_versions"]["budget"] = json!(2);
-        let refreshed = AuthorityReceipt::new(
-            &intent,
-            "TEST_ONLY-source",
-            2,
-            BusinessState::Applied,
-            value,
-        )
-        .unwrap();
+        let refreshed = event_receipt(&intent, 2, BusinessState::Applied, value, 2).unwrap();
         assert!(refreshed.validate_progress(&previous).is_ok());
     }
 

@@ -26,6 +26,9 @@ const ORIGINAL_DIGEST: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 const TARGET: &str = "TEST_ONLY-resolved-portfolio";
 const REFERENCE: &str = "TEST_ONLY-retained-alias";
 
+#[cfg(feature = "pm-custody-pg-test")]
+mod pg_custody;
+
 fn intent() -> CommandIntent {
     let payload = json!({
         "schema_version":"pma.capital-command.v1.1", "operation":"RECALL_PARTIAL",

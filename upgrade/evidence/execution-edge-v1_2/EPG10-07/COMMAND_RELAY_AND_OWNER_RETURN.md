@@ -6,7 +6,56 @@ Status: **IN_PROGRESS / OWNED_ISOLATED_PACKAGE_QUALIFIED / SOURCE_DARK**;
 and [EDGE07 guide](../../../upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-07-thực-hiện-command-relay-có-durable-receipt)
 remain authoritative. This is a backend implementation, not a UI or activation.
 
-## Current original-round2 follow-through —20/10/2026,06:35UTC
+## Current original-round2 custody follow-through —20/10/2026
+
+The existing Portal PG store now supplies actual original-binding/full-outcome
+custody, not just a callback interface. Additive
+[migration0023](../../../../services/portal-execution-edge-rs/crates/projection-store-pg/migrations/0023_pm_command_custody.sql)
+is TEST_ONLY-installed on disposable PG; no operational database was migrated.
+[Storage](../../../../services/portal-execution-edge-rs/crates/projection-store-pg/src/command_pm.rs)
+atomically prepares the original reference/resolved target/normalized digest with
+the existing quota-admitted intent. One bounded latest envelope per command,
+32768bytes, integrity and correlation checked; immutable replay, no historical
+backfill after claim, no TTL or second financial ledger. Accepted/UNKNOWN history
+does not become sendable again.
+
+[Stored context](../../../../services/portal-execution-edge-rs/crates/edge-service/src/pm_command_port/stored.rs)
+resolves those retained pins and durably commits full outcome custody before
+returning ACK. It deliberately does not set generic delivery ACK/receipt: losing
+the custody callback ACK still allows the existing claim to become UNKNOWN and
+recover through STATUS only. Current-human assertions remain a mandatory separate
+issuer, not a token cached from the original actor. The class is available in
+source, not wired into a runtime route/factory or enabled flag.
+
+Actual PM recall progress changes the owning source-event reference at a higher
+revision. The receipt validator now accepts that valid evidence advance while
+preserving same-revision equality, original command/intent/currency binding,
+monotonic versions/amount partition and terminal-state guards. This fixes an
+owned validator defect; it does not loosen source authentication or authorization.
+
+The existing isolated harness now requires the custody sources/migration, an
+explicit `EPG10_EXPECT_PM_CUSTODY_TESTS=15`, and enables the TEST_ONLY PG feature
+in profiles07–11. The current existing command target has27cases, not the old22;
+04–06/default feature behavior is unchanged. Focused replay commands:
+
+```sh
+# Existing bounded disposable-PG harness supplies EPG10_TEST_ONLY=1 and its
+# loopback TEST_PROJECTION_DATABASE_URL; never use an operational database.
+cargo test --offline --locked -p command-relay --lib
+cargo test --offline --locked -p projection-store-pg --test epg10_07_command --test epg10_07_pm_custody -- --test-threads=1
+cargo test --offline --locked -p edge-service --features pm-custody-pg-test --bin edge-service -- --test-threads=1
+```
+
+Run from `services/portal-execution-edge-rs`; use the existing capped correctness
+cell/toolchain, not an uncapped shared-host load. From scripts/epg10-04:
+`python3 -B -m unittest -v test_run`. Full original07 native acceptance remains
+NOT_MET until the genuine target/current authority/retention publication and
+connected drills qualify. Core009 commissioning is an08 dependency, not a
+reason to leave this owned07 storage unfinished. Exact tests/pins and remaining
+runtime boundaries are in [custody qualification](custody-qualification.json)
+and the [main custody journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original07--durable-pm-original-binding-and-outcome-custody-20oct).
+
+## Published HTTP port —20/10/2026,06:35UTC
 
 The PM wire is now published in source: `pma11-14-edge-command-transport.json`
 at PM73473c91, descriptor SHA256
@@ -30,7 +79,8 @@ status uses the same original intent and a fresh path-bound assertion, not submi
 No runtime, DB, role, flag or peer checkout change. Normal hook/publication and
 exact artifact cleanup are recorded in the linked execution journal.
 
-Owning composition must retain the original source binding/reference, obtain a
+Owning composition uses the stored context above to retain the original source
+binding/reference, and must obtain a
 fresh byte-bound assertion for the actual current requester and durably retain
 the entire decoded outcome correlation. No default signer, inferred target or
 response-derived normalized digest is acceptable. Both published PM routes
@@ -123,7 +173,8 @@ Code entrypoints (all in this Portal repository):
   and [real ephemeral TLS client tests](../../../../services/portal-execution-edge-rs/crates/edge-service/src/pm_command_port/tests.rs).
   Mandatory trusted context retains original source binding, supplies current
   requester's exact-byte assertion and ACKs full outcome custody before Receipt.
-  There is no default production implementation of those owning callbacks.
+  Original/full-outcome callbacks now have the bounded PG implementation above;
+  actual current-requester assertion issuance still requires its owning provider.
 
 There is **no newly mounted command HTTP route** in this slice. Constructing
 internal facts is not authentication, and setting a flag does not install the

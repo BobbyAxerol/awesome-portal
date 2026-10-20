@@ -13,9 +13,11 @@ it grants no new runtime authority and inherits all10 correctness gates.
 Root supplies
 EPG10_PORTAL_REVISION, EPG10_EXPECT_BOOTSTRAP_TESTS and, for05 through11,
 EPG10_EXPECT_READ_TESTS;06 through11 also require EPG10_EXPECT_RESOURCE_TESTS and
-EPG10_EXPECT_MANAGER_TESTS;07/08/09 require EPG10_EXPECT_COMMAND_TESTS and08/09
-requires EPG10_EXPECT_TLS_TESTS. TLS tests create only ephemeral TEST_ONLY keys
-below the private TMPDIR; no operational trust material is supplied.
+EPG10_EXPECT_MANAGER_TESTS;07 through11 also require EPG10_EXPECT_COMMAND_TESTS
+and EPG10_EXPECT_PM_CUSTODY_TESTS;08 through11 require EPG10_EXPECT_TLS_TESTS.
+The custody PG feature is enabled only for07 through11. TLS tests create only
+ephemeral TEST_ONLY keys below the private TMPDIR; no operational trust material
+is supplied.
 Resource/WAL/cost observations remain tainted for
 capacity, and cumulative child maxrss is not an individual stage peak. Only an
 explicit EPG10_ALLOW_DEPENDENCY_FETCH=1 permits the first locked compile to fetch;
@@ -125,8 +127,17 @@ RESOURCE_OWNED_RUST = (
 COMMAND_OWNED_RUST = (
     'crates/command-relay/src/authority.rs',
     'crates/command-relay/src/durable.rs',
+    'crates/command-relay/src/pm_source.rs',
+    'crates/edge-service/Cargo.toml',
+    'crates/edge-service/src/pm_command_port.rs',
+    'crates/edge-service/src/pm_command_port/stored.rs',
+    'crates/edge-service/src/pm_command_port/tests.rs',
+    'crates/edge-service/src/pm_command_port/tests/pg_custody.rs',
     'crates/projection-store-pg/src/command.rs',
+    'crates/projection-store-pg/src/command_pm.rs',
+    'crates/projection-store-pg/migrations/0023_pm_command_custody.sql',
     'crates/projection-store-pg/tests/epg10_07_command.rs',
+    'crates/projection-store-pg/tests/epg10_07_pm_custody.rs',
     'crates/projection-store-pg/tests/epg10_09/command_e2e.rs',
 )
 COMMAND_MIGRATION = 'crates/projection-store-pg/migrations/0021_command_relay.sql'
@@ -191,11 +202,40 @@ def package_arguments(profile=None):
 
 
 def expected_test_count(value, kind):
-    if kind not in ('BOOTSTRAP', 'READ', 'RESOURCE', 'MANAGER', 'COMMAND', 'TLS'):
+    if kind not in ('BOOTSTRAP', 'READ', 'RESOURCE', 'MANAGER', 'COMMAND', 'PM_CUSTODY', 'TLS'):
         raise ValueError('EXPLICIT_TEST_COUNT_KIND_REQUIRED')
     if not isinstance(value, str) or not re.fullmatch('[1-9][0-9]{0,2}', value) or int(value) > 128:
         raise ValueError('EXACT_BOUNDED_' + kind + '_TEST_COUNT_REQUIRED')
     return int(value)
+
+
+def expected_pm_custody_test_count(profile=None):
+    if test_profile(profile) not in ('07', '08', '09', '10', '11'):
+        return None
+    return expected_test_count(os.environ.get('EPG10_EXPECT_PM_CUSTODY_TESTS'), 'PM_CUSTODY')
+
+
+def command_feature_arguments(profile=None):
+    return (['--features', 'edge-service/pm-custody-pg-test']
+            if test_profile(profile) in ('07', '08', '09', '10', '11') else [])
+
+
+def edge_test_arguments(profile=None):
+    arguments = list(EDGE_TEST_ARGUMENTS)
+    separator = arguments.index('--')
+    return arguments[:separator] + command_feature_arguments(profile) + arguments[separator:]
+
+
+def integration_test_suites(profile, resource, manager, command=None, pm_custody=None):
+    profile = test_profile(profile)
+    if profile not in ('06', '07', '08', '09', '10', '11'):
+        return []
+    suites = [('resource_tests', 'epg10_06_resources', resource, 'RESOURCE'),
+              ('manager_tests', 'epg10_06_manager', manager, 'MANAGER')]
+    if profile in ('07', '08', '09', '10', '11'):
+        suites += [('command_tests', 'epg10_07_command', command, 'COMMAND'),
+                   ('pm_custody_tests', 'epg10_07_pm_custody', pm_custody, 'PM_CUSTODY')]
+    return suites
 
 
 def load_cleanup_helpers(base, profile=None):
@@ -854,6 +894,7 @@ def main():
                             if profile in ('06', '07', '08', '09', '10', '11') else None)
         expected_command = (expected_test_count(os.environ.get('EPG10_EXPECT_COMMAND_TESTS'), 'COMMAND')
                             if profile in ('07', '08', '09', '10', '11') else None)
+        expected_pm_custody = expected_pm_custody_test_count(profile)
         expected_tls = (expected_test_count(os.environ.get('EPG10_EXPECT_TLS_TESTS'), 'TLS')
                         if profile in ('08', '09', '10', '11') else None)
         if not re.fullmatch('[0-9a-f]{40}', revision):
@@ -867,6 +908,7 @@ def main():
             receipt['expected_manager_tests'] = expected_manager
         if profile in ('07', '08', '09', '10', '11'):
             receipt['expected_command_tests'] = expected_command
+            receipt['expected_pm_custody_tests'] = expected_pm_custody
         if profile in ('08', '09', '10', '11'):
             receipt['expected_tls_tests'] = expected_tls
         # Existing observer helper reserves 90s itself; pass1410 for an exact
@@ -941,7 +983,8 @@ def main():
         packages = package_arguments(profile)
         compile_packages = packages + (['-p', 'edge-service'] if profile in ('06', '07', '08', '09', '10', '11') else [])
         compile_targets = ['--all-targets'] if profile in ('06', '07', '08', '09', '10', '11') else ['--lib']
-        logged(stage, ['cargo', 'test', '--locked', *compile_packages, *compile_targets, '--no-run'],
+        logged(stage, ['cargo', 'test', '--locked', *compile_packages, *compile_targets,
+            *command_feature_arguments(profile), '--no-run'],
             timeout=900, run_env=compile_env)
         if profile == '05':
             stage = 'compile_integration_tests'
@@ -954,7 +997,7 @@ def main():
         if profile in ('06', '07', '08', '09', '10', '11'):
             stage = 'compile_edge_service'
             logged(stage, ['cargo', 'check', '--offline', '--locked', '-p', 'edge-service',
-                '--all-targets'], timeout=600)
+                '--all-targets', *command_feature_arguments(profile)], timeout=600)
         helper.obs.verify_lock(helper.obs.LOCK, lock)
         stage = 'create_owned_pg'
         password = secrets.token_urlsafe(24)
@@ -1001,7 +1044,7 @@ def main():
         if profile in ('06', '07', '08', '09', '10', '11'):
             stage = 'edge_tests'
             receipt['edge_tests'] = parse_rust_results(logged(stage,
-                list(EDGE_TEST_ARGUMENTS), timeout=240), 1)
+                edge_test_arguments(profile), timeout=240), 1)
         if profile in ('08', '09', '10', '11'):
             stage = 'tls_tests'
             receipt['tls_tests'] = parse_rust_results(logged(stage,
@@ -1020,12 +1063,8 @@ def main():
                  1, expected_read, count_kind='READ')
             database_stages.append(stage)
         if profile in ('06', '07', '08', '09', '10', '11'):
-            integration_suites = [
-                    ('resource_tests', 'epg10_06_resources', expected_resource, 'RESOURCE'),
-                    ('manager_tests', 'epg10_06_manager', expected_manager, 'MANAGER')]
-            if profile in ('07', '08', '09', '10', '11'):
-                integration_suites.append(('command_tests', 'epg10_07_command', expected_command, 'COMMAND'))
-            for stage, target, count, kind in integration_suites:
+            for stage, target, count, kind in integration_test_suites(
+                    profile, expected_resource, expected_manager, expected_command, expected_pm_custody):
                 output = logged(stage, ['cargo', 'test', '--offline', '--locked',
                     '-p', 'projection-store-pg', '--test', target, '--', '--nocapture',
                     '--test-threads=1'], timeout=240)
@@ -1066,7 +1105,8 @@ def main():
         clippy_packages = packages + (['-p', 'edge-service'] if profile in ('06', '07', '08', '09', '10', '11') else [])
         findings = clippy_findings(logged(stage,
             ['cargo', 'clippy', '--offline', '--locked', *clippy_packages, '--all-targets',
-             '--message-format=json', *(['--', '-D', 'warnings'] if profile != '04' else [])],
+             *command_feature_arguments(profile), '--message-format=json',
+             *(['--', '-D', 'warnings'] if profile != '04' else [])],
             timeout=600 if profile in ('06', '07', '08', '09', '10', '11') else 240, check=False), profile)
         receipt['clippy'] = findings
         if receipt['stages'][stage]['returncode'] or findings['owned_warnings']:

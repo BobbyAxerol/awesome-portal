@@ -694,9 +694,76 @@ class RunnerSafety(unittest.TestCase):
             with self.subTest(result=invalid), self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
                 qualification.parse_rust_results(invalid, 1, 12, count_kind='COMMAND')
 
+    def test_profile07_pm_custody_count_is_required_bounded_exact_and_unskippable(self):
+        with patch.dict(qualification.os.environ, {}, clear=True):
+            for profile in ('04', '05', '06'):
+                self.assertIsNone(qualification.expected_pm_custody_test_count(profile))
+            for profile in ('07', '08', '09', '10', '11'):
+                with self.subTest(profile=profile), self.assertRaisesRegex(
+                        ValueError, 'EXACT_BOUNDED_PM_CUSTODY_TEST_COUNT_REQUIRED'):
+                    qualification.expected_pm_custody_test_count(profile)
+            for value in ('1', '15', '128'):
+                qualification.os.environ['EPG10_EXPECT_PM_CUSTODY_TESTS'] = value
+                for profile in ('07', '08', '09', '10', '11'):
+                    self.assertEqual(qualification.expected_pm_custody_test_count(profile), int(value))
+        for invalid in (None, '', '0', '129', '-1', '1.0', '01', 1, True):
+            with self.subTest(value=invalid), self.assertRaisesRegex(ValueError, 'EXACT_BOUNDED_PM_CUSTODY'):
+                qualification.expected_test_count(invalid, 'PM_CUSTODY')
+        row = 'test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out'
+        self.assertEqual(qualification.parse_rust_results(row, 1, 15, count_kind='PM_CUSTODY')['passed'], 15)
+        with self.assertRaisesRegex(ValueError, 'EXACT_PM_CUSTODY_TEST_COUNT_REQUIRED'):
+            qualification.parse_rust_results(row, 1, 14, count_kind='PM_CUSTODY')
+        for invalid in ('', row.replace('0 ignored', '1 ignored'), row.replace('0 filtered out', '1 filtered out')):
+            with self.subTest(result=invalid), self.assertRaisesRegex(ValueError, 'ALL_REQUIRED'):
+                qualification.parse_rust_results(invalid, 1, 15, count_kind='PM_CUSTODY')
+
+    def test_profile07_pm_custody_feature_is_explicit_only_for_command_profiles(self):
+        for profile in ('04', '05', '06'):
+            self.assertEqual(qualification.command_feature_arguments(profile), [])
+            self.assertEqual(qualification.edge_test_arguments(profile), list(qualification.EDGE_TEST_ARGUMENTS))
+        for profile in ('07', '08', '09', '10', '11'):
+            feature = ['--features', 'edge-service/pm-custody-pg-test']
+            self.assertEqual(qualification.command_feature_arguments(profile), feature)
+            arguments = qualification.edge_test_arguments(profile)
+            self.assertEqual(arguments, [
+                'cargo', 'test', '--offline', '--locked', '-p', 'edge-service',
+                '--bins', *feature, '--', '--test-threads=1'])
+            self.assertLess(arguments.index('--features'), arguments.index('--'))
+            self.assertNotIn('--all-features', arguments)
+        self.assertEqual(qualification.EDGE_TEST_ARGUMENTS, (
+            'cargo', 'test', '--offline', '--locked', '-p', 'edge-service',
+            '--bins', '--', '--test-threads=1'))
+
+    def test_profile07_pm_custody_pg_target_is_mandatory_in_inherited_suites(self):
+        baseline = [('resource_tests', 'epg10_06_resources', 8, 'RESOURCE'),
+                    ('manager_tests', 'epg10_06_manager', 9, 'MANAGER')]
+        for profile in ('04', '05'):
+            self.assertEqual(qualification.integration_test_suites(profile, 8, 9), [])
+        self.assertEqual(qualification.integration_test_suites('06', 8, 9), baseline)
+        for profile in ('07', '08', '09', '10', '11'):
+            self.assertEqual(qualification.integration_test_suites(profile, 8, 9, 12, 15), [
+                *baseline, ('command_tests', 'epg10_07_command', 12, 'COMMAND'),
+                ('pm_custody_tests', 'epg10_07_pm_custody', 15, 'PM_CUSTODY')])
+
     def test_profile07_requires_and_hash_binds_every_command_source_and_migration(self):
         source = self.source_fixture('07')
         before = qualification.source_hashes(source, '07')
+        required_custody = {
+            'crates/command-relay/src/pm_source.rs',
+            'crates/edge-service/Cargo.toml',
+            'crates/edge-service/src/pm_command_port.rs',
+            'crates/edge-service/src/pm_command_port/stored.rs',
+            'crates/edge-service/src/pm_command_port/tests.rs',
+            'crates/edge-service/src/pm_command_port/tests/pg_custody.rs',
+            'crates/projection-store-pg/src/command_pm.rs',
+            'crates/projection-store-pg/migrations/0023_pm_command_custody.sql',
+            'crates/projection-store-pg/tests/epg10_07_pm_custody.rs',
+        }
+        self.assertTrue(required_custody <= set(qualification.COMMAND_OWNED_RUST))
+        for profile in ('07', '08', '09', '10', '11'):
+            self.assertTrue(required_custody <= set(qualification.owned_rust(profile)))
+        for profile in ('04', '05', '06'):
+            self.assertFalse(required_custody & set(qualification.owned_rust(profile)))
         for name in (*qualification.COMMAND_OWNED_RUST, qualification.COMMAND_MIGRATION):
             relative = qualification.RUST_WORKSPACE + '/' + name
             self.assertIn(relative, before)

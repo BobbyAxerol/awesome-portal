@@ -12,8 +12,9 @@ acceptance; Core policy/composition follows genuine mapping and source inputs.
 
 ## Current resumed intake —20Oct05:45UTC
 
-Bobby resumed **Core009 → actual08 → scoped read09**. Published Edge is now
-0af33fdf97861edde07a5ca85e367dc9a315a092; the dated unpublished-overlay and old
+Bobby resumed **Core009 → actual08 → scoped read09**. Published base is
+f8d3f20cc330947253de8a73d14291a236ab3edc (later custody publication is in the
+main journal; the connected runner bytes are unchanged); the old
 f464 observations below are history, not current execution instructions.
 [Actual Core read-only preflight](core009-readonly-preflight.json) confirms
 Core0087818d563/image7b2c7f34/restart0, but no native Core runtime reference is
@@ -37,7 +38,7 @@ business/current-authority acceptance. Only actual route results with current
 source/Core policy evidence can qualify a scoped case. No raw business payload,
 cookie, private configuration or credential belongs in the public return.
 
-Status: OWNED_RUNNER_IMPLEMENTED_AND_UNIT_TESTED / CORE009_NOT_COMPOSED; full08 NOT_MET;
+Status: OWNED_RUNNER_IMPLEMENTED_AND_UNIT_TESTED / CORE009_PREPARED_NOT_INSTALLED; full08 NOT_MET;
 09connected NOT_STARTED.
 Authority: existing owner-approved original08 round2, not a new phase or a new
 blanket approval gate. The current runner is in HK source; the historical overlay
@@ -53,7 +54,72 @@ Core READ and Core STREAM are distinct.
   `python3 -I -B scripts/epg10-08/test_connected_read.py`,29PASS/0FAIL/0SKIP.
 - [Claude's priority packet](CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md)
   delivered byte-exact to `/home/bobby/portal-research-fe` on SGP and indexed in
-  its Unified/sync docs. AWAITING_CLAUDE_ACK; delivery is not installation.
+  its Unified/sync docs. Claude answered with the prepared return below;
+  delivery/source preparation is not installation or connected acceptance.
+
+### Core009 preparation ACK and Edge handback —20Oct
+
+Read in full on SGP FE `claude/fe-parity` at
+892ea030b3e576e4394d9b00563da1eb0a841dce; source commit
+2062fcdc0cfeea7ae6aabec553fc838b257bd379. ELP2-10 return pins:
+
+- `CORE009_PREPARED_OWNER_RETURN_2026-10-20.md`, SHA256
+  ee256ddaba393990aede165d10c66496a10c63fb007301d8824949ea4fc1bd7b.
+- `CORE009_PREPARATION_2026-10-20.md`, SHA256
+  22b043d39dcc6a5db224504a277bd019a62e35025f424d20ca088d84b72ce007.
+- `CORE009_OPERATOR_RUNBOOK_2026-10-20.md`, SHA256
+  3283c294cf884f1bfea7071702851ae30d26cc0ac8580924791d972fd60ed226.
+
+Disposition: ACKNOWLEDGED_PREPARED_SOURCE_ONLY. Reported144focused fake-only
+tests PASS; native PG/normal R2/R3/image/config/session commissioning NOT_RUN.
+Installed008 remains separate. Its reverse bootstrap does not invoke native
+composition: setting environment references alone does not commission009.
+
+Known exact domain inputs are already in the
+[historical source return](../../../integration/execution-native-read-v1/research-identity-intake/connected-source-return.json):
+Portal subject/protected Research owner `usr_5a38d5dfb08b44748f5776fbe04a1434`,
+workspace `ws_06G19F61YB8CFR7TEWMS7HQ660`, issuer
+`portal-control-api.native-manager-read`, TS user
+`608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd`, mapping
+`ts-user:608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd:1`. Historical specimen:
+`paper` / `PAPER_BINANCE_USDM`, not a product profile ceiling.
+Known reviewed source seals (bare SHA256):
+
+| Seal | Value |
+| --- | --- |
+| catalogue | `0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44` |
+| profile | `5c33c4e0276dd849215d2662c157418a75e91a06fd405f6b369dcc172b722c03` |
+| field policy | `b9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3` |
+
+Previously qualified preparation bounds: source/control pool1each,
+request/response32768bytes, in-flight1. These are reused finite-window bounds,
+not production capacity evidence. Exact current `field_policy_ref` still needs
+the actual reviewed owner artifact; do not invent a reference from the hash.
+Old authority/trust/source acceptance/window pins are historical and retired.
+Do not recycle acceptance1/2, reopen28446 to wait, or reuse the FINISHED session.
+
+Core next, within the already assigned009 scope:
+
+1. Finish/review the manager-domain revoke/narrow operation through the owning
+   coordinator, with a correlated receipt. Expiry or legacy root revoke is not
+   actual manager-domain revocation evidence. No direct grant-table SQL.
+2. Prepare the genuine current-human session through the existing AuthService/
+   coordinator path or a reviewed one-shot private operator seam. No public
+   autologin, made-up cookie/JWT, password reset or repeat identity attempt.
+3. Prepare independent READ and STREAM grants in the fresh offline artifact
+   (the return's PlanB), because both are already required by the approved08
+   goal and no append-grant operation currently exists. READ never implies
+   STREAM; source permission/consumer acceptance must still be proven.
+4. Run the impacted real PG and normal release gates, return source/image/
+   schema/config/private-reference pins. Only then coordinate a fresh finite
+   source/trust window, reprove zero reverse custody and use the bootstrap's
+   IPC zero-custody shutdown before replacing the entrypoint. No generic
+   restart/stop that would discard unresolved custody.
+
+Edge owns fresh finite native publication, known-input assembly and the existing
+connected runner. It continues bounded07 custody correctness in parallel. This
+handback supplies known inputs; it does not claim private artifacts installed,
+renew trust, commission a listener, issue a session, or qualify08/09.
 
 Operational invocation, only after actual inputs are ready:
 `python3 -I -B scripts/epg10-08/connected_read.py --config PRIVATE_PATH --sha256 ACTUAL_PIN`.
