@@ -345,6 +345,168 @@ function subjectPage(id: string, relation: "orders" | "fills", search: URLSearch
   });
 }
 
+/* ── the SCOPED_V2 variant (UXM-07 R-3) ───────────────────────────────────── */
+
+/**
+ * Opt-in sentinel. ONLY a request that names this workspace explicitly (`?workspace_id=ws_TEST_SCOPED_V2`, the same sentinel the
+ * stage double uses for its V2 bodies) is answered with `execution.alpha-resource.v2` and `portal.execution.subject-records.v2`;
+ * every other request, with or without a `workspace_id`, gets the legacy v1 bodies byte for byte as before.
+ *
+ * Shape authority: the bodies are built from the canonical fixtures (`execution-resource-scoped.synthetic.valid.json`, the
+ * Alpha cases; `execution-scoped-records.synthetic.valid.json`, the ScopedSubjectRecordsResponse case) and overlaid with the
+ * rows this double needs, never hand-shaped: `fixtureBff/server.test.ts` judges them against the published schemas. They state
+ * what the contract states and no more: no alpha label (the literal "Unnamed alpha", as the producer writes it), no version, no
+ * owner, no stage, no health, no money total; a position or order record carries only the members of the closed field sets.
+ *
+ *   workspace_id=ws_TEST_SCOPED_V2   GET /resources/alphas/{id}            alpha-resource.v2 (alpha_empty: the empty case;
+ *                                                                          alpha_bounded: the byte-bound case; denied/down as v1)
+ *                                    GET /resources/alphas/{id}/orders     subject-records.v2, TWO pages (a `kc1.` cursor)
+ *                                    GET /resources/alphas/{id}/fills      subject-records.v2, one page (+ one record with no time)
+ */
+export const ALPHA_V2_WORKSPACE = "ws_TEST_SCOPED_V2";
+const scopedRequested = (search: URLSearchParams): boolean => search.get("workspace_id") === ALPHA_V2_WORKSPACE;
+
+function canonicalScopedAlpha(shape: "populated" | "empty" | "bounded"): Json {
+  const cases = (JSON.parse(readFileSync(join(CONTRACTS, "execution-resource-scoped.synthetic.valid.json"), "utf8")) as { cases: Json[] }).cases
+    .filter((c) => c.schema_version === "execution.alpha-resource.v2");
+  const found = shape === "empty" ? cases.find((c) => c.state === "empty")
+    : shape === "bounded" ? cases.find((c) => Object.keys(c.data).length === 2)
+    : cases.find((c) => c.state === "partial" && Object.keys(c.data).length > 2);
+  if (!found) throw new Error(`canonical scoped alpha case ${shape} not found`);
+  return structuredClone(found);
+}
+
+/** One relation's rows, in `data` and in its panel; the panel stays PARTIAL (a scoped read is never complete) with the counts as exact strings. */
+function scopedRelation(body: Json, relation: string, rows: Json[]): void {
+  body.data[relation] = rows;
+  const panel = body.panels[relation] as Json;
+  panel.data = rows.length === 0 ? null : { rows: structuredClone(rows) };
+  panel.coverage = { ...panel.coverage, source_total: String(rows.length), filtered_total: String(rows.length), returned_count: rows.length };
+}
+
+const SCOPED_BOOKS = ["paper", "sandbox", "live"] as const;
+const SCOPED_AT = ALPHA_DOUBLE_AS_OF_MS - 120_000;
+
+function scopedDeployment(id: string, alphaId: string, book: (typeof SCOPED_BOOKS)[number], account: string, state: string): Json {
+  return {
+    profile_environment: book, deployment_id: id, strategy_id: alphaId, account_id: account, mode: book, venue: "BINANCE", currency: "USDT",
+    portfolio_id: "pf_core", state, created_at_ms: SCOPED_AT - 86_400_000, updated_at_ms: SCOPED_AT,
+  };
+}
+
+function resourceScoped(id: string, shape: "populated" | "empty" | "bounded"): BffAnswerAlpha {
+  const body = canonicalScopedAlpha(shape);
+  // The producer's literal for a resource no source names; the screen never prints it as a name.
+  body.resource = shape === "empty" ? { kind: "ALPHA", id } : { kind: "ALPHA", id, label: "Unnamed alpha" };
+  if (shape === "empty") return ok(body);
+  body.workspace_id = ALPHA_V2_WORKSPACE;
+  body.requested_environment = "all";
+  body.selected_environment = null;
+  body.read_at_ms = ALPHA_DOUBLE_READ_AT_MS;
+  body.read_at = iso(ALPHA_DOUBLE_READ_AT_MS);
+  body.freshness = "AGING";
+  body.read_scope = SCOPED_BOOKS.map((environment) => ({ environment, policy_revision: `TEST_ONLY-policy-${environment}-4` }));
+  body.projection = SCOPED_BOOKS.map((environment, i) => ({ environment, epoch: null, sequence: null, payload_digest: `sha256:${String(i + 1).repeat(64)}`, last_successful_refresh_at: null }));
+  body.data.profile_coverage = Object.fromEntries(SCOPED_BOOKS.map((environment) => [environment, {
+    profile_id: ENV_PROFILE[environment], state: "FOUND", reason_code: null, projection_epoch: null, projection_sequence: null, source_as_of: null,
+  }]));
+  if (shape === "bounded") {
+    body.data.alpha = { id, state: "PARTIAL", reason_code: "EDS04_RESOURCE_RESPONSE_BYTE_BOUND" };
+    return ok(body);
+  }
+  const deployments = [
+    scopedDeployment("dep_live_01", id, "live", "acct_binance_02", "ACTIVE"),
+    scopedDeployment("dep_paper_01", id, "paper", "acct_paper_sim_01", "ACTIVE"),
+    scopedDeployment("dep_sandbox_01", id, "sandbox", "acct_testnet_01", "ENDED"),
+  ];
+  const position = (pid: string, side: string, qty: string, entry: string, mark: string | null, notional: string, unrealized: string | null): Json => ({
+    profile_environment: "live", position_id: pid, strategy_id: id, account_id: "acct_binance_02", mode: "live", venue: "BINANCE", instrument_id: "BTCUSDT", side,
+    quantity: qty, avg_px_open: entry, mark_price: mark, notional, realized_pnl: "0", unrealized_pnl: unrealized, updated_at_ms: ALPHA_DOUBLE_AS_OF_MS, deployment_id: "dep_live_01",
+  });
+  scopedRelation(body, "deployments", deployments);
+  scopedRelation(body, "portfolios", [{ profile_environment: "live", portfolio_id: "pf_core", name: "Core", base_currency: "USDT", state: "ACTIVE" }]);
+  scopedRelation(body, "portfolio_allocations", [{
+    profile_environment: "live", portfolio_id: "pf_core", strategy_id: id, deployment_id: "dep_live_01", account_id: "acct_binance_02", mode: "live", venue: "BINANCE", currency: "USDT",
+    allocated_capital: "40000.00", state: "ACTIVE", created_at_ms: SCOPED_AT - 86_400_000, updated_at_ms: SCOPED_AT,
+  }]);
+  scopedRelation(body, "positions", [
+    position("pos_btc_long", "LONG", "0.91", "67364.21", "67410.00", "61343.10", "41.67"),
+    position("pos_btc_short", "SHORT", "0.52", "67410.55", null, "35053.05", null),
+  ]);
+  scopedRelation(body, "reconciliation", [
+    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "RESOLVED", created_at_ms: Date.UTC(2026, 9, 17, 9, 12), deployment_id: "dep_live_01" },
+    { profile_environment: "live", account_id: "acct_binance_02", strategy_id: id, mode: "live", venue: "BINANCE", status: "OPEN", created_at_ms: Date.UTC(2026, 9, 17, 11, 40), deployment_id: "dep_live_01" },
+  ]);
+  // Published and deliberately not consumed as the alpha's stage: it is per strategy and per book.
+  scopedRelation(body, "strategies", [{ profile_environment: "live", strategy_id: id, alpha_id: id, state: "ACTIVE", stage: "LIVE", deployment_id: "dep_live_01" }]);
+  body.data.alpha = {
+    ...body.data.alpha,
+    id,
+    alpha_id: null,
+    deployments: structuredClone(deployments),
+    portfolios: [{ portfolio_id: "pf_core", name: "Core" }],
+  };
+  return ok(body);
+}
+
+function scopedRecord(kind: "orders" | "fills", values: Rec): Json {
+  const time = Date.parse(String(kind === "orders" ? values.submitted_at : values.trade_time));
+  const shared = { strategy_id: values.strategy_id, account_id: values.account_id, instrument_id: values.instrument_id, side: values.side, quantity: values.quantity, price: values.price };
+  if (kind === "orders") {
+    return {
+      record_id: String(values.order_id), observed_at_ms: time + 4_000,
+      values: { order_id: values.order_id, ...shared, status: values.status, occurred_at_ms: time },
+    };
+  }
+  return {
+    record_id: String(values.fill_id), observed_at_ms: time + 4_000,
+    values: { fill_id: values.fill_id, ...shared, realized_pnl: values.realized_pnl, occurred_at_ms: time },
+  };
+}
+
+/** A fill whose only time is the Portal's observation clock: the scoped record states no trade time for it, so no screen dates it. */
+const UNTIMED_FILL: Json = {
+  record_id: "fill_004", observed_at_ms: ALPHA_DOUBLE_AS_OF_MS - 1_000,
+  values: { fill_id: "fill_004", strategy_id: ALPHA_DOUBLE_ID, account_id: "acct_binance_02", instrument_id: "BTCUSDT.BINANCE", side: "BUY", price: "67411.50", quantity: "0.02", realized_pnl: "0" },
+};
+
+function subjectPageScoped(id: string, relation: "orders" | "fills", search: URLSearchParams): BffAnswerAlpha {
+  const environment = validEnv(search.get("environment")) ? search.get("environment")! : "live";
+  const after = search.get("after");
+  let source: readonly Rec[];
+  let nextCursor: string | null = null;
+  if (relation === "orders") {
+    if (after === ORDERS_CURSOR) source = ALPHA_DOUBLE_ORDERS_P2;
+    else {
+      source = ALPHA_DOUBLE_ORDERS_P1;
+      nextCursor = ORDERS_CURSOR;
+    }
+  } else source = ALPHA_DOUBLE_FILLS;
+  const records = source.map((values) => scopedRecord(relation, values));
+  if (relation === "fills") records.push(structuredClone(UNTIMED_FILL));
+  const base = canonicalScopedPage();
+  const total = relation === "orders" ? ALPHA_DOUBLE_ORDERS_P1.length + ALPHA_DOUBLE_ORDERS_P2.length : records.length;
+  return ok({
+    ...base,
+    logical_operation_id: relation === "orders" ? "executionAlphaOrdersV1" : "executionAlphaFillsV1",
+    environment,
+    profile_id: ENV_PROFILE[environment],
+    resource: { kind: "alpha", id },
+    read_scope: { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", policy_revision: `TEST_ONLY-policy-${environment}-4` },
+    state: records.length === 0 ? "EMPTY" : "PARTIAL",
+    coverage: { retained_row_count: total, oldest_observed_at_ms: T0, newest_observed_at_ms: ALPHA_DOUBLE_AS_OF_MS },
+    page: { limit: Math.min(500, Math.max(1, Number(search.get("limit") ?? 200))), maximum_page_rows: 500, returned_count: records.length, has_more: nextCursor !== null, next_cursor: nextCursor },
+    records,
+  });
+}
+
+function canonicalScopedPage(): Json {
+  const cases = (JSON.parse(readFileSync(join(CONTRACTS, "execution-scoped-records.synthetic.valid.json"), "utf8")) as { cases: { type: string; value: Json }[] }).cases;
+  const found = cases.find((c) => c.type === "ScopedSubjectRecordsResponse");
+  if (!found) throw new Error("canonical ScopedSubjectRecordsResponse not found");
+  return structuredClone(found.value);
+}
+
 /* ── stage drift ──────────────────────────────────────────────────────────── */
 
 function stageDrift(id: string): BffAnswerAlpha {
@@ -558,9 +720,11 @@ export function answerAlpha(method: string, pathname: string, search: URLSearchP
     const id = decodeURIComponent(seg[2]);
     if (id === "alpha_denied") return problem(403, "ACCESS_DENIED", "This alpha is outside your slice.");
     if (id === "alpha_down") return problem(503, "UPSTREAM_UNAVAILABLE", "The alpha resource could not be read.");
+    if (scopedRequested(search)) return resourceScoped(id, id === "alpha_empty" ? "empty" : id === "alpha_bounded" ? "bounded" : "populated");
     return resource(id, id === "alpha_empty");
   }
   if (seg[0] === "resources" && seg[1] === "alphas" && seg.length === 4 && (seg[3] === "orders" || seg[3] === "fills")) {
+    if (scopedRequested(search)) return subjectPageScoped(decodeURIComponent(seg[2]), seg[3], search);
     return subjectPage(decodeURIComponent(seg[2]), seg[3], search);
   }
   if (seg[0] === "alphas" && seg[2] === "stage-drift" && seg.length === 3) return stageDrift(decodeURIComponent(seg[1]));

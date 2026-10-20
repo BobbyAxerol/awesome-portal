@@ -121,6 +121,13 @@ export const ROUTES: RouteEntry[] = [
   { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id}/orders [page 2]`, url: `${EX}/resources/alphas/alpha_btc_trend/orders?environment=live&after=kc1.double-k1.eyJkaXJlY3Rpb24iOiJhZnRlciIsInJlc291cmNlIjoib3JkZXJzIn0.RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "the second keyset page; the cursor is a Portal-signed kc1. token" },
   { method: "GET", pattern: `${EX}/views/observed-timeline [page 2]`, url: `${EX}/views/observed-timeline?environment=live&subject_kind=alpha&subject_id=alpha_btc_trend&after=kc1.double-k1.eyJkaXJlY3Rpb24iOiJhZnRlciIsInJlc291cmNlIjoidGltZWxpbmUifQ.RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "the last page of 12 observations" },
   { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id} [alpha_empty]`, url: `${EX}/resources/alphas/alpha_empty`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "the canonical alpha_not_in_projection case: state empty" },
+  /* alphas, SCOPED_V2 workspace (UXM-07 R-3): the v2 bodies are served ONLY for an explicit workspace_id=ws_TEST_SCOPED_V2 */
+  { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id} [V2 workspace]`, url: `${EX}/resources/alphas/alpha_btc_trend?workspace_id=${V2_WS}`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "execution.alpha-resource.v2 (SCOPED_V2): raw authorized facts, no label, version, owner, stage, health or total; alpha_empty and alpha_bounded answer the empty and byte-bound cases; denied and down as v1" },
+  { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id} [V2 workspace, alpha_empty]`, url: `${EX}/resources/alphas/alpha_empty?workspace_id=${V2_WS}`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "the canonical empty v2 case: data {} and every panel EMPTY" },
+  { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id} [V2 workspace, alpha_bounded]`, url: `${EX}/resources/alphas/alpha_bounded?workspace_id=${V2_WS}`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "the canonical bounded v2 case: EDS04_RESOURCE_RESPONSE_BYTE_BOUND, no relation rows" },
+  { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id}/orders [V2 workspace]`, url: `${EX}/resources/alphas/alpha_btc_trend/orders?environment=live&workspace_id=${V2_WS}`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "portal.execution.subject-records.v2, page 1 of 2 (a kc1. cursor)" },
+  { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id}/orders [V2 workspace, page 2]`, url: `${EX}/resources/alphas/alpha_btc_trend/orders?environment=live&workspace_id=${V2_WS}&after=kc1.double-k1.eyJkaXJlY3Rpb24iOiJhZnRlciIsInJlc291cmNlIjoib3JkZXJzIn0.RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "the second keyset page" },
+  { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id}/fills [V2 workspace]`, url: `${EX}/resources/alphas/alpha_btc_trend/fills?environment=live&workspace_id=${V2_WS}`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "portal.execution.subject-records.v2; the last record states no time (the Portal observation clock is not a trade time)" },
   { method: "GET", pattern: `${EX}/market/candles`, url: `${EX}/market/candles?environment=paper&symbol=ETHUSDT&interval=1h`, status: 200, source: "bffDouble (canonical L0 body)", real: "control-api" },
   { method: "GET", pattern: `${EX}/manager/current/{relation}`, url: `${EX}/manager/current/orders?environment=paper&limit=200`, status: 200, source: "bffDouble", real: "control-api", note: "relation from the approved catalogue of 15; any other is not served" },
   { method: "GET", pattern: `${EX}/manager/series`, url: seriesUrl("NAV", TWO_PORTFOLIOS), status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE populated: the canonical NAV body with the ids, metric, environment and window of the question; presets resolve to the one published window, ALL is a typed gap" },
@@ -280,6 +287,15 @@ export const SCHEMAS: Record<string, SchemaVerdict> = {
   "GET /api/v1/execution/resources/alphas/{alpha_id}/orders [page 2]": { ref: { file: "execution-subject-records.v1", ptr: "" } },
   "GET /api/v1/execution/views/observed-timeline [page 2]": { ref: { file: "execution-observed-timeline.v1", ptr: "" } },
   "GET /api/v1/execution/resources/alphas/{alpha_id} [alpha_empty]": { ref: { file: "execution-alpha-resource.v1", ptr: "" } },
+  // SCOPED_V2 (R-3): judged against the published v2 contracts, not the legacy ones.
+  ...Object.fromEntries(["", ", alpha_empty", ", alpha_bounded"].map((variant) => [
+    `GET /api/v1/execution/resources/alphas/{alpha_id} [V2 workspace${variant}]`,
+    { ref: { file: RES, ptr: "/$defs/AlphaScopedResourceWireResponse" } },
+  ] as const)),
+  ...Object.fromEntries(["orders [V2 workspace]", "orders [V2 workspace, page 2]", "fills [V2 workspace]"].map((variant) => [
+    `GET /api/v1/execution/resources/alphas/{alpha_id}/${variant}`,
+    { ref: { file: "../openapi/execution-scoped-records.openapi.json", ptr: "/components/schemas/ScopedSubjectRecordsResponse" } },
+  ] as const)),
   "GET /api/v1/execution/resources/portfolios/{portfolio_id}": { ref: { file: RES, ptr: "/$defs/PortfolioScopedResourceWireResponse" }, drift: NOT_V2 },
   "GET /api/v1/execution/resources/accounts/{account_id}": { ref: { file: RES, ptr: "/$defs/AccountScopedResourceWireResponse" }, drift: NOT_V2 },
   "GET /api/v1/execution/resources/bindings/{binding_id}": { ref: { file: RES, ptr: "/$defs/BindingScopedResourceWireResponse" }, drift: NOT_V2 },
