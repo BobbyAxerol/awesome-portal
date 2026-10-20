@@ -171,7 +171,12 @@ cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" 
   "${ROOT_DIR}/apps/control-api/src/governance/parent-recorded-facts.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/following-parent.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/live-parent.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/stage-action-eligibility.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/approval-request-lookup.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/governance/"
+# FE-068 stage-action eligibility is a pure projection; it needs only the type-only gate adapter.
+cp -a "${ROOT_DIR}/apps/control-api/src/auth/governance-access.ts" \
+  "${WORKSPACE_DIR}/apps/control-api/src/auth/"
 # Pure source/ownership regression: explicit non-secret inputs only. The SQL is
 # parsed, never executed; this does not mount an app, connect a DB or grant roles.
 mkdir -p "${WORKSPACE_DIR}/apps/control-api/migrations" \
