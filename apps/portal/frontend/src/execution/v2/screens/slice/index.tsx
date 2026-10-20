@@ -12,7 +12,7 @@
  * Scale and degradation: one page of at most 100 rows (the contract's own cap), no client paging, sorting or totals; the
  * server's page is the page. Past one page the screen says "More pages exist" and offers nothing it cannot back.
  */
-import { useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { ExecutionSurface } from "../../../ExecutionSurface";
@@ -25,16 +25,19 @@ import type { Clock } from "../../realtime/scopedStreamController";
 import { useScopedStream } from "../../realtime/useScopedStream";
 import type { StreamConfig, StreamState } from "../../realtime/scopedStreamMachine";
 import { DROP_COPY, FIXTURE_LANE_LABEL, NOT_CONNECTED_LABEL, POSTURE_COPY, causeCopy, streamHeadline } from "../../realtime/streamView";
+import { evictScopedCaches } from "../../scopedEviction";
 import { ENV_LABEL, withContext } from "../../urlState";
 import { DEFAULT_ROUTES } from "../portfolios/routes";
 import {
   FIXTURE_FRAME_IDS,
   NEXT_READ_LABEL,
+  PAGE_REVOCATIONS,
   createFixtureLane,
   fixtureFrame,
   type FixtureFrameId,
   type FixtureLane,
   type NextRead,
+  type RevocationMemory,
 } from "./canonicalLane";
 import { connectionKey, environmentWord, fleetRows, portfolioRows, scopeLines, type FleetRow, type PortfolioRow, type SliceContext } from "./model";
 import type { ScopedRead } from "./scopedRead";
@@ -54,6 +57,8 @@ export interface SliceScreenProps {
   config?: StreamConfig;
   /** Injected by tests to hold a read open; the page builds the published-example lane itself. */
   lane?: FixtureLane;
+  /** The fixture server's memory of withdrawn access (the route passes the page's). Without it a lane forgets, per mount. */
+  revocations?: RevocationMemory;
 }
 
 const FRAME_BUTTON: Readonly<Record<FixtureFrameId, string>> = {
@@ -235,11 +240,21 @@ function boundaryFor<T>(state: StreamState<T>): {
   }
 }
 
-export function SliceScreen({ context, clock, config, lane: injected }: SliceScreenProps) {
+export function SliceScreen({ context, clock, config, lane: injected, revocations }: SliceScreenProps) {
   const [search] = useSearchParams();
   const connection = connectionKey(context);
-  const lane = useMemo(() => injected ?? createFixtureLane(context), [injected, context]);
+  const lane = useMemo(() => injected ?? createFixtureLane(context, revocations), [injected, context, revocations]);
   const { state, receive, retry } = useScopedStream<ScopedRead>({ snapshot: lane.port, connection, clock, config });
+  // UXM08-DEBT-1: a revoked frame or a DENIED snapshot read also empties what the linked screens (Portfolio 360, Alpha Fleet,
+  // Alpha 360) read under this scope, once per entry into the phase. Leaving the page is not a cause and evicts nothing.
+  const revoked = state.phase === "access_revoked";
+  const denied = revoked && state.cause?.origin === "local" && state.cause.code === "SNAPSHOT_DENIED";
+  useEffect(() => {
+    if (!revoked) return;
+    lane.revoke();
+    evictScopedCaches(denied ? "SNAPSHOT_DENIED" : "ACCESS_REVOKED");
+  }, [revoked, denied, lane]);
+
   const headline = streamHeadline(state);
   const chip = headline.chip;
   const boundary = boundaryFor(state);
@@ -390,5 +405,5 @@ export default function SliceRoute() {
   const workspaceId = search.get("workspace_id");
   const environment = search.get("env");
   const context = useMemo<SliceContext>(() => ({ workspaceId, environment }), [workspaceId, environment]);
-  return <SliceScreen context={context} />;
+  return <SliceScreen context={context} revocations={PAGE_REVOCATIONS} />;
 }

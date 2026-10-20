@@ -11,11 +11,17 @@
  * The request is cancelled when the key changes or the screen unmounts. A key
  * change drops `last`: a value read for another portfolio must not stand in
  * for this one.
+ *
+ * UXM-08: when the view that owns the scope's stream says access was revoked
+ * (`scopedEviction`), the value and `last` are dropped, the request in flight is
+ * cancelled, a late answer is refused and the read says `denied` until its key or
+ * port changes (another question).
  */
 import { useEffect, useRef, useState } from "react";
 
 import type { PanelStatus } from "../../../contracts";
 import type { ExecutionApi, Result } from "../../../api/ports";
+import { EVICTED_REASON, useScopedCacheEviction } from "../../scopedEviction";
 
 export type ReadError = { status: Exclude<PanelStatus, "ok" | "loading">; reason: string };
 
@@ -41,6 +47,14 @@ export function useRead<T>(
   const build = useRef(run);
   build.current = run;
   const lastGood = useRef<{ key: string; value: T } | null>(null);
+  const flight = useRef<(() => void) | null>(null);
+
+  useScopedCacheEviction(() => {
+    lastGood.current = null;
+    flight.current?.();
+    flight.current = null;
+    setState((now) => (now.phase === "idle" ? now : { phase: "error", last: null, status: "denied", reason: EVICTED_REASON }));
+  });
 
   useEffect(() => {
     if (!enabled) {
@@ -49,6 +63,10 @@ export function useRead<T>(
     }
     const controller = new AbortController();
     let cancelled = false;
+    flight.current = () => {
+      cancelled = true;
+      controller.abort();
+    };
     const keep = lastGood.current !== null && lastGood.current.key === key ? lastGood.current.value : null;
     setState({ phase: "loading", last: keep });
     build.current(scoped(api, controller.signal)).then((result) => {

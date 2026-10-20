@@ -11,6 +11,10 @@
  * The three states a read can be in are kept apart, never folded into "empty":
  * not started (`idle`), in flight (`loading`), answered (`ready`) or refused
  * (`error` with the typed status and reason).
+ *
+ * UXM-08: when the view that owns the scope's stream says access was revoked
+ * (`scopedEviction`), every answer is dropped, the request in flight is
+ * cancelled and the read says `denied` until its key or port changes.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -26,6 +30,7 @@ import type { SubjectActivityPage } from "../../../api/subjectActivity";
 import type { PanelStatus } from "../../../contracts";
 import { readReplayFills, readReplayOrders, type ReplayFill, type ReplayOrder } from "../../../components/tradeReplayModel";
 import type { StageDrift } from "../../../hifiInsight";
+import { EVICTED_REASON, useScopedCacheEviction } from "../../scopedEviction";
 import type { ExecEnv } from "../../urlState";
 
 export type ReadFailure = { status: Exclude<PanelStatus, "ok" | "loading">; reason: string };
@@ -49,6 +54,12 @@ export function useRead<T>(api: ExecutionApi, enabled: boolean, key: string, run
   const runRef = useRef(run);
   runRef.current = run;
   const controller = useRef<AbortController | null>(null);
+
+  useScopedCacheEviction(() => {
+    // `started` keeps the key, so the read does not restart by itself; only another question reads again.
+    controller.current?.abort();
+    setRead((now) => (now.value.phase === "idle" ? now : { ...now, value: { phase: "error", status: "denied", reason: EVICTED_REASON } }));
+  });
 
   // A new key or a new api is another question: forget the old answer.
   useEffect(() => {
@@ -108,15 +119,25 @@ export function usePagedRead<P>(
   const nextRef = useRef(next);
   nextRef.current = next;
   const busy = useRef(false);
+  const evictions = useRef(0);
+
+  // The first page is dropped by `useRead` above; the later pages and a later page in flight are dropped here.
+  useScopedCacheEviction(() => {
+    evictions.current += 1;
+    busy.current = false;
+    setMore({ key, pages: [], loading: false, error: null });
+  });
 
   const loadMore = useCallback(() => {
     const after = nextRef.current;
     if (after === null || busy.current) return;
     busy.current = true;
+    const mine = evictions.current;
     setMore((m) => ({ ...(m.key === key ? m : { key, pages: [], loading: false, error: null }), loading: true, error: null }));
     void loadRef
       .current(api, after)
       .then((result) => {
+        if (mine !== evictions.current) return;
         busy.current = false;
         setMore((m) => {
           const base = m.key === key ? m : { key, pages: [] as readonly P[], loading: false, error: null };
@@ -126,6 +147,7 @@ export function usePagedRead<P>(
         });
       })
       .catch(() => {
+        if (mine !== evictions.current) return;
         busy.current = false;
         setMore((m) => ({ ...(m.key === key ? m : { key, pages: [], loading: false, error: null }), loading: false, error: "The page could not be read." }));
       });
