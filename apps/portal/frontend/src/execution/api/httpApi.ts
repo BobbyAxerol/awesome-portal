@@ -49,6 +49,7 @@ import {
   readSandboxByVersion,
   readSubjectRecordsByVersion,
   stageVersionedSearch,
+  FOLLOWING_STAGE_INCLUDES,
   unsupportedText,
   type GovernanceParentKind,
   type GovernanceParentRead,
@@ -497,8 +498,9 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     options: Parameters<typeof stageVersionedSearch>[0],
     dispatch: (raw: unknown) => VersionRead<A, B>,
     what: string,
+    allowedIncludes?: Parameters<typeof stageVersionedSearch>[1],
   ): Promise<Result<VersionRead<A, B>>> => {
-    const query = stageVersionedSearch(options);
+    const query = stageVersionedSearch(options, allowedIncludes);
     if (!query.ok) return Promise.resolve(unavailable(query.reason));
     return readVersioned(`/deployments/${encodeURIComponent(deploymentId)}/${route}${query.search}`, dispatch, what);
   };
@@ -968,9 +970,9 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     },
 
     getSandboxCertificationVersioned: (deploymentId, options = {}) =>
-      stageVersioned("certification", deploymentId, { workspaceId: options.workspaceId }, readSandboxByVersion, "The sandbox certification"),
+      stageVersioned("certification", deploymentId, { workspaceId: options.workspaceId, include: options.include }, readSandboxByVersion, "The sandbox certification", FOLLOWING_STAGE_INCLUDES),
     getCanaryVersioned: (deploymentId, options = {}) =>
-      stageVersioned("canary", deploymentId, { workspaceId: options.workspaceId }, readCanaryByVersion, "The canary control room"),
+      stageVersioned("canary", deploymentId, { workspaceId: options.workspaceId, include: options.include }, readCanaryByVersion, "The canary control room", FOLLOWING_STAGE_INCLUDES),
     getLiveFullVersioned: (deploymentId, options = {}) =>
       stageVersioned("live", deploymentId, options, readLiveFullByVersion, "The live operations"),
 

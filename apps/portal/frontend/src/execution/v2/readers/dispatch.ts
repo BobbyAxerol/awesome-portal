@@ -312,9 +312,20 @@ export type SubjectRecordsVersionRead = VersionRead<SubjectActivityPage, Subject
 /** The panels `GET /deployments/{id}/live?panel=` can advance (published query enum): the eleven minus `broker_sync`, which is not commissioned and has nothing to page. */
 export const LIVE_FULL_PAGEABLE_PANELS: readonly LiveSourcePanelName[] = LIVE_SOURCE_PANELS.filter((p) => p !== "broker_sync");
 
+/**
+ * The opt-in members a SCOPED_V2 stage body can carry (BE-P12, `?include=`): `identity` on Sandbox, Canary and Live,
+ * `stage_facts` on Live only. A request that does not ask is byte-identical to the one before; the legacy body ignores it.
+ */
+export const STAGE_INCLUDES = ["identity", "stage_facts"] as const;
+export type StageInclude = (typeof STAGE_INCLUDES)[number];
+/** What the Sandbox and Canary routes publish in their `include` enum. */
+export const FOLLOWING_STAGE_INCLUDES: readonly StageInclude[] = ["identity"];
+
 export interface StageVersionedOptions {
   /** `?workspace_id=`; omitted means the caller's own workspace. */
   workspaceId?: string;
+  /** `?include=` (BE-P12): which opt-in members to ask for. Distinct tokens, sent comma-joined in the published order. Omitted or empty: no query member. */
+  include?: readonly StageInclude[];
 }
 
 export interface LiveFullVersionedOptions extends StageVersionedOptions {
@@ -330,8 +341,14 @@ export interface LiveFullVersionedOptions extends StageVersionedOptions {
  * a caller bug the server would answer with a 400; it is refused here without
  * a request, so a screen cannot ask the server to guess.
  */
-export function stageVersionedSearch(options: LiveFullVersionedOptions = {}): { ok: true; search: string } | { ok: false; reason: string } {
-  const { workspaceId, panel, cursor } = options;
+export function stageVersionedSearch(
+  options: LiveFullVersionedOptions = {},
+  allowedIncludes: readonly StageInclude[] = STAGE_INCLUDES,
+): { ok: true; search: string } | { ok: false; reason: string } {
+  const { workspaceId, panel, cursor, include } = options;
+  if (include !== undefined && (new Set(include).size !== include.length || include.some((token) => !allowedIncludes.includes(token)))) {
+    return { ok: false, reason: "That read cannot ask for those members: each must be one of the published include tokens, once." };
+  }
   if (panel !== undefined && !(LIVE_FULL_PAGEABLE_PANELS as readonly string[]).includes(panel)) {
     return { ok: false, reason: "That Live panel cannot be requested: it is not one of the published pageable panels." };
   }
@@ -342,6 +359,7 @@ export function stageVersionedSearch(options: LiveFullVersionedOptions = {}): { 
   if (workspaceId) params.set("workspace_id", workspaceId);
   if (panel !== undefined) params.set("panel", panel);
   if (cursor) params.set("cursor", cursor);
+  if (include !== undefined && include.length > 0) params.set("include", STAGE_INCLUDES.filter((token) => include.includes(token)).join(","));
   const search = params.toString();
   return { ok: true, search: search === "" ? "" : `?${search}` };
 }

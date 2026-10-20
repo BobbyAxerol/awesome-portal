@@ -254,6 +254,21 @@ describe("the stage port helpers", () => {
     expect(stageVersionedSearch({ workspaceId: "w", panel: "orders", cursor: "c&x=1" })).toEqual({ ok: true, search: "?workspace_id=w&panel=orders&cursor=c%26x%3D1" });
   });
 
+  it("stageVersionedSearch include (BE-P12): absent or empty adds nothing; tokens are sent comma-joined in the published order, last", () => {
+    expect(stageVersionedSearch({ include: [] })).toEqual({ ok: true, search: "" });
+    expect(stageVersionedSearch({ include: ["identity"] })).toEqual({ ok: true, search: "?include=identity" });
+    expect(stageVersionedSearch({ include: ["stage_facts", "identity"] })).toEqual({ ok: true, search: "?include=identity%2Cstage_facts" });
+    expect(stageVersionedSearch({ workspaceId: "w", panel: "orders", cursor: "c", include: ["identity"] })).toEqual({
+      ok: true, search: "?workspace_id=w&panel=orders&cursor=c&include=identity",
+    });
+  });
+
+  it("stageVersionedSearch include: a repeated token, an unknown one, or one the route does not publish is refused", () => {
+    for (const include of [["identity", "identity"], ["nope"], ["IDENTITY"], [""]]) expect(stageVersionedSearch({ include: include as never }).ok).toBe(false);
+    expect(stageVersionedSearch({ include: ["stage_facts"] }, ["identity"]).ok).toBe(false);
+    expect(stageVersionedSearch({ include: ["identity"] }, ["identity"]).ok).toBe(true);
+  });
+
   it("stageVersionedSearch: a panel outside the enum, or a cursor with no panel, is refused with a reason", () => {
     for (const panel of ["broker_sync", "", "nope", "ORDERS"]) expect(stageVersionedSearch({ panel }).ok).toBe(false);
     const refused = stageVersionedSearch({ cursor: "lps2.x" });
