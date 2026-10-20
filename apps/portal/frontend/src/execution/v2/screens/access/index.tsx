@@ -20,7 +20,7 @@ import { useSession } from "../../../../auth/session";
 import { SELF_ENTRY_PATH } from "../../../../app/selfNavView";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
-import { PanelHead } from "../../blocks";
+import { NotAvailableLine, PanelHead } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ExecutionSurface } from "../../../ExecutionSurface";
 import { Flag } from "../../Flag";
@@ -240,12 +240,10 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
         <div className="exec-acc-kpi">
           <dt>Owner</dt>
           <KpiValue text={ownerWord ?? (access.kind === "loading" ? "Loading" : "Not available")} absent={!ownerWord} />
-          <dd className="exec-acc-kpi-note">From your session</dd>
         </div>
         <div className="exec-acc-kpi">
           <dt>Capabilities held</dt>
           <KpiValue text={session ? String(session.capabilities.length) : access.kind === "loading" ? "Loading" : "Not available"} absent={!session} />
-          <dd className="exec-acc-kpi-note">From your session</dd>
         </div>
         <div className="exec-acc-kpi">
           <dt>Access policy</dt>
@@ -253,11 +251,6 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           <dd className="exec-acc-kpi-note">
             {effective ? (effective.policyRevision ? `Revision ${effective.policyRevision}` : "No revision published") : "From the access read"}
           </dd>
-        </div>
-        <div className="exec-acc-kpi">
-          <dt>Role preset</dt>
-          <dd className="exec-acc-kpi-value" data-form="absent"><NotPublished id={ACCESS_FE.reasons} /></dd>
-          <dd className="exec-acc-kpi-note">Access is shown by capability</dd>
         </div>
       </dl>
 
@@ -277,38 +270,43 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
 
       <div className="exec-acc-two">
         <section className="exec-acc-panel" aria-labelledby={`${headingId}-see`}>
-          <PanelHead level={2} id={`${headingId}-see`} title="What you can see" aside="Visibility only" />
+          <PanelHead level={2} id={`${headingId}-see`} title="What you can see" />
           {sessionState ?? (
             <CardsTable columns={seeColumns} rows={seeRows(capabilities)} rowKey={(r) => r.id} label="What you can see" />
           )}
         </section>
         <section className="exec-acc-panel" aria-labelledby={`${headingId}-do`}>
-          <PanelHead level={2} id={`${headingId}-do`} title="What you can do" aside="Seeing never grants this" />
+          <PanelHead level={2} id={`${headingId}-do`} title="What you can do" />
           {sessionState ?? (
             <>
               <CardsTable columns={doColumns} rows={doRows(capabilities)} rowKey={(r) => r.id} label="What you can do" />
-              <p className="exec-acc-foot">
-                {/*
-                  FE-015 WORDING: "Not published" is no longer exact for per-action eligibility. A published body
-                  (portal.self-eligibility.v1) and a strict reader (readers/accessSelf.ts) exist but are NOT wired here
-                  (DEBT-UXM07-011), and serving of the route is not verified. Recommended honest words until it is wired and
-                  served: "Not read yet by this screen"; "Not published" stays only for what no body states (who granted
-                  an item, a role preset). Left unchanged on purpose: nothing is wired in this slice.
-                */}
-                <NotPublished id={ACCESS_FE.reasons}>Per-action eligibility and the reason a control is off are not published for commands, archive and export.</NotPublished>
-              </p>
+              {/*
+                FE-015 WORDING: "Not published" is no longer exact for per-action eligibility. A published body
+                (portal.self-eligibility.v1) and a strict reader (readers/accessSelf.ts) exist but are NOT wired here
+                (DEBT-UXM07-011), and serving of the route is not verified. Recommended honest words until it is wired and
+                served: "Not read yet by this screen"; "Not published" stays only for what no body states (who granted
+                an item, a role preset). Left unchanged on purpose: nothing is wired in this slice.
+              */}
             </>
           )}
         </section>
       </div>
 
-      <p className="exec-acc-caption">
-        The capability names behind Portfolios, Accounts, Operations and Blotter are provisional ({ACCESS_FE.capabilityNames}) and may change.
-        {others.length > 0 ? <> Other capabilities in your session: <span className="exec-acc-code">{others.join(", ")}</span>.</> : null}
+      <NotAvailableLine
+        className="exec-acc-caption"
+        facts={[
+          { label: "Role preset", id: "FE-015", why: "Access is shown by capability" },
+          { label: "Per-action eligibility", id: "FE-015", why: "The reason a control is off is not published for commands, archive and export" },
+          { label: "Who granted each item", id: "FE-015" },
+        ]}
+      />
+      <p className="exec-acc-caption" title={`The capability names behind Portfolios, Accounts, Operations and Blotter are provisional (${ACCESS_FE.capabilityNames}) and may change.`}>
+        Provisional capability names: Portfolios, Accounts, Operations, Blotter
+        {others.length > 0 ? <> · Other capabilities in your session: <span className="exec-acc-code">{others.join(", ")}</span></> : null}
       </p>
 
       <section className="exec-acc-panel" aria-labelledby={`${headingId}-granted`} id="exec-acc-granted">
-        <PanelHead level={2} id={`${headingId}-granted`} title="Granted to you" aside="What, where and until when" />
+        <PanelHead level={2} id={`${headingId}-granted`} title="Granted to you" />
         {grants.phase === "idle" ? (
           <p className="exec-acc-state" role="status">
             <strong>Not available.</strong> The session does not publish a workspace; add <span className="exec-acc-code">?workspace_id=...</span> to the address to read your grants. No grants were requested.
@@ -342,24 +340,23 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
             />
             {grantView.label !== null ? (
               <p className="exec-acc-foot" role="status" data-testid="exec-acc-grants-cap">
-                <span data-testid="exec-acc-grants-cap-label">{grantView.label}</span>. These are the first {grantView.rows.length} in the order the Portal sent them; the other {grantView.total - grantView.rows.length} are not drawn here.
+                <span data-testid="exec-acc-grants-cap-label">{grantView.label}</span>
+                <span title={`These are the first ${grantView.rows.length} in the order the Portal sent them; the other ${grantView.total - grantView.rows.length} are not drawn here.`}>{`. The other ${grantView.total - grantView.rows.length} are not drawn here`}</span>
               </p>
             ) : null}
-            <p className="exec-acc-foot">
-              Who granted each item is not published ({ACCESS_FE.reasons}). State and trading-system columns are the Portal&apos;s own evaluation, not recomputed here.
-            </p>
+            <p className="exec-acc-foot">State and trading-system columns are the Portal&apos;s own evaluation.</p>
           </>
         ) : null}
       </section>
 
       {effective ? (
         <section className="exec-acc-panel" aria-labelledby={`${headingId}-policy`}>
-          <PanelHead level={2} id={`${headingId}-policy`} title="Policy" aside="As published" />
+          <PanelHead level={2} id={`${headingId}-policy`} title="Policy" />
           <dl className="exec-acc-facts">
             <dt>Researcher field policy</dt>
             <dd>
               {effective.researcherFieldPolicy.state === "PENDING" ? (
-                <NotPublished id={ACCESS_FE.researcher}>The field matrix for researchers is not decided.</NotPublished>
+                <NotPublished id={ACCESS_FE.researcher}>Not decided</NotPublished>
               ) : (
                 <>
                   <Flag kind="ok" size="sm" label="Qualified" />{" "}
@@ -370,8 +367,8 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
             <dt>Owner recovery</dt>
             <dd>
               <Flag kind="neutral" size="sm" label="Off" />{" "}
-              {reasonText(effective.ownerRecovery.reasonCode).text}{" "}
-              <span className="exec-acc-code">{effective.ownerRecovery.reasonCode}</span>
+              <span title={effective.ownerRecovery.reasonCode}>{reasonText(effective.ownerRecovery.reasonCode).text}</span>
+              <span className="exec-blk-sr"> {effective.ownerRecovery.reasonCode}</span>
             </dd>
           </dl>
         </section>
