@@ -557,3 +557,10 @@ span.exec-ops-link-id {
   font: var(--exec-font-body);
   color: var(--ink-soft);
 }
+
+/* Four label-and-number tiles: two to a row at phone width. */
+@media (max-width: 660px) {
+  .exec-ops .exec-blk-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
