@@ -7,6 +7,14 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Four-input Portal handoff,20Oct23:16ICT — documentation/coordination:**
+  [single owner packet](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md)
+  separates Core009→08/read09, PM07, TS03 and target/bounds01/06. Read the
+  [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0807030106--consolidated-portal-owner-handoff-20oct2316ict)
+  for delivery/validation. Existing source bc4b8fe1 is published, no operational
+  activation. Fresh actual return, not copied fixture or delivery ACK, unlocks
+  the corresponding Edge binding; full connected gates remain NOT_MET.
+
 - **Original06 Manager materialization,20Oct — ISOLATED_QUALIFIED, source-only:**
   [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original06--manager-worker-materialization-follow-through-20oct1440utc)
   adds immutable shared feed cache and explicit opt-in source-fact JSON bounds.

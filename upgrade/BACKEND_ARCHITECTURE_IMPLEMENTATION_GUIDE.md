@@ -650,6 +650,15 @@ deep-dive → ADR → slice → evidence discipline documented above.
 
 ### 14.1 Current backend state (tracking snapshot — 2026-08-17)
 
+**20Oct23:16ICT — four-input Portal handoff, documentation-only:**
+[current owner packet](evidence/execution-edge-v1_2/EPG10-08/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md)
+and [same-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original0807030106--consolidated-portal-owner-handoff-20oct2316ict)
+coordinate Core009→08/read09, PM07, TS03 and target/bounds01/06 separately.
+Edge source bc4b8fe1 is published/isolated-qualified, not newly deployed.
+Claude implements Portal backend per canonical Core§10.13; Core integrator
+owns reviewed landing/release. Delivery is not ACK or connected acceptance.
+No peer source/DB/runtime/identity/command authority change is authorized here.
+
 **Original06 Manager materialization,20Oct — ISOLATED_QUALIFIED, source-only:**
 [same06 journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original06--manager-worker-materialization-follow-through-20oct1440utc)
 tracks immutable shared feed cache and optional explicit record/retained/working

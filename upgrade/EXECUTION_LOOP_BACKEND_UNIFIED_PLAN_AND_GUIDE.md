@@ -26805,6 +26805,89 @@ summary. Operations_qualified/product_active stayfalse; runtime_effectNONE.
 Retry the mandatory normal hook with11exact owned staged paths, preserving the
 three peer WIP files; do not bypass the hook or rerun unaffected Rust suites.
 
+### Original08/07/03/01–06 — consolidated Portal owner handoff —20Oct23:16ICT
+
+**Status before documentation: PREPARING_DELIVERY; connected gates NOT_MET.**
+Bobby explicitly requests one handoff for all four outstanding input groups,
+delivered to the actual Portal agent checkouts on SGP, followed by Edge review
+and acceptance when genuine returns arrive. This is documentation/coordination,
+not permission to mutate peer source, install009, open native28446, issue a
+session, activate commands or take over TS/PM. Existing goal is blocked on those
+external inputs; writing/delivery does not imply connected acceptance or resume
+an operational window.
+
+**Goal/scope/guide:** consolidate current original08→read09,07,03 and01/06
+requests in one linked [owner handoff](evidence/execution-edge-v1_2/EPG10-08/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md).
+Use the original phase guides/owner packets linked there, not a new phase or
+parallel debt register. Claude implements Portal backend under the newer
+canonical Core campaign rules§10.13; Core Codex reviews/integrates/releases in
+its assigned window. Source TS/PM/Edge ownership is unchanged. At23:16ICT,
+Core7818d563 remains canonical integration and Claude advanced to105775f0;
+the latter changes test/runner layout, not installed native009 proof.
+
+**Owned/forbidden paths:** local handoff plus this main plan/backend§14.1/
+README only; SGP identical handoff copies under both existing ELP2-10 directories
+and append-only pointers in their Unified/sync and the existing Core request.
+Preserve all original bytes, dirty peer edits, branch HEAD and index via exact
+preimage/content checks; no peer commit/push/merge. Missing remote apply_patch
+was rechecked; workspace32 permits a bounded exact-match/CAS fallback with
+immediate diff/hash verification. Local Git publication uses the normal hook,
+never an R0 bypass borrowed from a different branch.
+
+**Test/exit/rollback:** validate Markdown links, four owners/done-when/return
+fields, source pins, secret exclusion, diff/staged scope and byte-identical
+remote copies; record actual delivery receipt separately from peer ACK. Normal
+local hook and scoped cleanup if it creates artifacts; no repeated Rust/load
+qualification for unchanged code. Remove only newly created disposable helper/
+test resources after terminal, retain bounded receipts. Remote rollback is only
+the exact new file or exact appended marker after confirming unchanged bytes;
+never revert a whole shared document. Ready return triggers Edge pin/authority/
+expiry review, fresh matched source window and08→qualified read09; PM/TS/load
+block only dependent cases. No full phase closure or new numeric budget claim.
+
+**Delivery executed20Oct23:26:47ICT (16:26:47UTC): DELIVERED /
+AWAITING_PORTAL_ACK.** The16274-byte public handoff, SHA256
+`e94b332f850699246624afd6cf8da9fc302eeaaf591edfcb3ec085ab0c0b493b`,
+is byte-identical at both SGP checkouts under
+`upgrade/execution_loop/evidence/ELP2-10/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md`.
+Canonical `/home/bobby/portal-research` and active Claude
+`/home/bobby/portal-research-fe` have append-only links in their existing
+Unified/sync; canonical original08 request also links it: seven Markdown paths
+total, no second ledger. All five original document prefixes, every other peer
+WIP file, branch HEAD and actual Git index hashes are preserved. No remote
+staging, commit/push/merge, code, DB, auth or runtime operation was performed.
+Receipt `/home/bobby/secure/edge-four-input-handoff-pOfgq8mC/delivery-receipt.json`,
+SHA256 `e8676f44cb9f88f3197fb060cc1112a4ce05f8e3a587b4aff06be607235f3746`,
+records all pre/post hashes and the two full source pins. Corrected reviewer
+findings before delivery: exact session_id/subject matching is required, and
+Core returns prepared templates/selection/window before fresh Edge inputs;
+final config/artifact hashes are reviewed after composition and before install.
+
+**Verification/retention:** bounded read-only validation PASS for two identical
+remote packets, five append-only pointers, HEAD/index/peer preservation, four
+owners and explicit return gates, five detailed-guide files, new Markdown
+targets and secret-marker exclusion. `git diff --check` PASS. Only four owned
+local Markdown paths enter this coherent commit; three original peer files
+stay excluded/byte-identical. The mandatory normal commit hook runs unchanged;
+its terminal log, metadata before/after, disk, exact hook-image retention/
+cleanup and runtime checks are retained under the same private evidence
+directory `hk_hook/`, not substituted by old test counts. No load or Rust suite
+is rerun for unchanged code. No remote disposable container/image/temp-copy was
+created by this docs delivery. Keep the delivered owner documents and bounded
+receipts; remove only terminal, unreferenced, positively owned local hook
+artifacts, never shared BuildKit cache or operational/rollback resources.
+
+**Next action / phase decision:** Claude ACKs and implements the Portal P0
+Core009 slice; Core integrator reviews actual source/image/config/schema/
+policy/session/window returns. Portal coordinates PM07, TS03 and target01/06
+with their owners, not permission to change their authority. Edge owns review
+and connected acceptance when each corresponding return is usable,08 then the
+read subset09; other approved independent cases do not wait. File delivery is
+not recipient ACK, installed009 or any connected PASS; full08/09 and original
+07/03/01–06 gates remain NOT_MET. No new phase/release or operational activation
+is claimed. This task incurs no hosted CI minutes and does not request a PR,
+main/dev merge, mirror push or workflow dispatch.
+
 
 
 
