@@ -71,7 +71,7 @@ describe("state matrix", () => {
     const c = sandbox();
     const critical = {
       ...c,
-      findings: { ...c.findings, rows: [...c.findings.rows, { findingId: "f_crit", severity: "CRITICAL", status: "OPEN", identity: "BTCUSDT position", localValue: "0", brokerValue: "0.0100", findingCode: null, summary: null, blocking: null, resolvedAt: null, resolution: null, createdAt: null }] },
+      findings: { ...c.findings, rows: [...c.findings.rows, { findingId: "f_crit", severity: "CRITICAL", status: "OPEN", identity: "BTCUSDT position", localValue: "0", brokerValue: "0.0100", findingCode: null, summary: null, blocking: null, resolvedAt: null, resolution: null, createdAt: null, openedAt: null }] },
     };
     render(<SandboxCertificationScreen certification={critical} />);
     expect(screen.getByRole("alert").textContent).toContain("fail-closed");

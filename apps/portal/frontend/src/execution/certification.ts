@@ -22,6 +22,33 @@
 import type { Authority, FreshnessState, PanelStatus } from "./contracts";
 import { v1Refusal } from "./api/schemaGuard";
 import { unsafeText } from "./unsafeText";
+import {
+  readComplianceRows,
+  readDeploymentIdentity,
+  readEnvelopeVerdict,
+  readPlanAuthor,
+  readPlanEnvelope,
+  readRollbackItems,
+  readSeriesMembers,
+  readSourceFigures,
+  readStageFacts,
+  readTrial,
+  readTypedOrders,
+  readTypedPositions,
+  type DeploymentIdentity,
+  type EnvelopeComplianceRow,
+  type EnvelopeVerdict,
+  type Fact,
+  type PlanEnvelopeRef,
+  type RollbackReadinessItem,
+  type SourceFigure,
+  type StageFacts,
+  type StageSeries,
+  type TrialSchedule,
+  type TypedOrderRow,
+  type TypedPositionRow,
+  type TypedRows,
+} from "./stageFacts";
 
 function obj(raw: unknown): Record<string, unknown> | null {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw)
@@ -245,6 +272,15 @@ export interface PromotionPlan {
   blockerCodes: readonly string[];
   sourceSideEffectRequested: boolean;
   createdAt: string | null;
+  /**
+   * ADDITIVE (FE-072, BE-P2). `author.user_id` as published; `null` = the key is absent or malformed. The V1 screen never reads it.
+   */
+  author: string | null;
+  /**
+   * ADDITIVE (FE-072). The latest Canary envelope drafted from this plan, as a Fact: AVAILABLE with a `null` value means the
+   * lookup ran and none exists; `null` (not a Fact) = the key is absent or malformed.
+   */
+  envelope: Fact<PlanEnvelopeRef | null> | null;
 }
 
 export interface SandboxFinding {
@@ -274,6 +310,8 @@ export interface SandboxFinding {
   resolution: "OPEN" | "RESOLVED" | null;
   /** ISO instant the finding was recorded (`created_at`). */
   createdAt: string | null;
+  /** ADDITIVE (FE-072): the published `opened_at` (equal to `created_at` on the producer); `null` = absent or malformed. */
+  openedAt: string | null;
 }
 
 export interface SandboxCertification {
@@ -301,6 +339,16 @@ export interface SandboxCertification {
   findings: Collection<SandboxFinding>;
   timeline: Collection<{ eventId: string; action: string | null; actor: string | null; createdAt: string | null }>;
   promotionPlans: readonly PromotionPlan[];
+  /*
+   * Additive fields (BE-P2/P3). The V1 Sandbox screen ignores every one of them; each is `null` when the key is absent or
+   * does not match the published schema exactly (`stageFacts.ts` reads them closed).
+   */
+  /** FE-066: the five identity keys of the `certification` record. */
+  identity: DeploymentIdentity | null;
+  /** FE-067: runtime, reconciliation and sessions. */
+  stageFacts: StageFacts | null;
+  /** FE-072: Internal / Broker / Difference figures. */
+  sourceFigures: readonly SourceFigure[] | null;
 }
 
 export function readSandboxCertification(raw: unknown): SandboxCertification | null {
@@ -395,6 +443,7 @@ export function readSandboxCertification(raw: unknown): SandboxCertification | n
               ? "RESOLVED"
               : null,
         createdAt: str(o!.created_at),
+        openedAt: str(o!.opened_at),
       };
     }),
     timeline: collection(root.timeline, (r) => {
@@ -420,9 +469,14 @@ export function readSandboxCertification(raw: unknown): SandboxCertification | n
           blockerCodes: codes(o!.blocker_codes),
           sourceSideEffectRequested: o!.source_side_effect_requested !== false,
           createdAt: str(o!.created_at),
+          author: Object.hasOwn(o!, "author") ? readPlanAuthor(o!.author) : null,
+          envelope: Object.hasOwn(o!, "envelope") ? readPlanEnvelope(o!.envelope) : null,
         },
       ];
     }),
+    identity: readDeploymentIdentity(cert),
+    stageFacts: Object.hasOwn(root, "stage_facts") ? readStageFacts(root.stage_facts) : null,
+    sourceFigures: Object.hasOwn(root, "source_figures") ? readSourceFigures(root.source_figures) : null,
   };
 }
 
@@ -727,6 +781,28 @@ export interface CanaryControlRoom {
   blotterRows: RowCollection | null;
   seriesDetail: CanarySeries | null;
   rollbackDetail: CanaryRollback | null;
+  /*
+   * Additive fields (BE-P2/P3). Each is `null` when the key is absent or does not match the published schema exactly
+   * (`stageFacts.ts` reads them closed); the V1 screen ignores all of them.
+   */
+  /** FE-066: the five identity keys of the `deployment` block. */
+  identity: DeploymentIdentity | null;
+  /** FE-067: runtime, reconciliation and sessions. */
+  stageFacts: StageFacts | null;
+  /** FE-072: Internal / Broker / Difference figures. */
+  sourceFigures: readonly SourceFigure[] | null;
+  /** FE-071: `envelope_compliance.rows` (one per cap) and the server's verdict. */
+  complianceRows: readonly EnvelopeComplianceRow[] | null;
+  complianceVerdict: EnvelopeVerdict | null;
+  /** FE-071: `rollback_readiness.items` (the four checks). */
+  rollbackItems: readonly RollbackReadinessItem[] | null;
+  /** FE-071: `lifecycle.trial`. */
+  trial: TrialSchedule | null;
+  /** FE-072: `positions.typed` and `blotter.typed`. */
+  typedPositions: TypedRows<TypedPositionRow> | null;
+  typedOrders: TypedRows<TypedOrderRow> | null;
+  /** FE-072: the series' resolution, methodology, unit and exact points. */
+  seriesMembers: StageSeries | null;
 }
 
 function actionPolicy(raw: unknown): CanaryActionPolicy | null {
@@ -873,6 +949,16 @@ export function readCanaryControlRoom(raw: unknown): CanaryControlRoom | null {
           evidenceHash: bounded(rollback.evidence_hash, 80),
         }
       : null,
+    identity: readDeploymentIdentity(dep),
+    stageFacts: Object.hasOwn(root, "stage_facts") ? readStageFacts(root.stage_facts) : null,
+    sourceFigures: Object.hasOwn(root, "source_figures") ? readSourceFigures(root.source_figures) : null,
+    complianceRows: compliance !== null && Object.hasOwn(compliance, "rows") ? readComplianceRows(compliance.rows) : null,
+    complianceVerdict: compliance !== null && Object.hasOwn(compliance, "verdict") ? readEnvelopeVerdict(compliance.verdict) : null,
+    rollbackItems: rollback !== null && Object.hasOwn(rollback, "items") ? readRollbackItems(rollback.items) : null,
+    trial: life !== null && Object.hasOwn(life, "trial") ? readTrial(life.trial) : null,
+    typedPositions: obj(root.positions) !== null && Object.hasOwn(obj(root.positions)!, "typed") ? readTypedPositions(obj(root.positions)!.typed) : null,
+    typedOrders: obj(root.blotter) !== null && Object.hasOwn(obj(root.blotter)!, "typed") ? readTypedOrders(obj(root.blotter)!.typed) : null,
+    seriesMembers: series !== null ? readSeriesMembers(series) : null,
   };
 }
 

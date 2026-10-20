@@ -29,6 +29,24 @@
 import type { Authority, PanelStatus } from "./contracts";
 import { v1Refusal } from "./api/schemaGuard";
 import { readPanelEnvelope, readRowCollection, type LineageItem, type PanelEnvelope, type RowCollection } from "./certification";
+import {
+  readDeploymentIdentity,
+  readGapRanges,
+  readSeriesMembers,
+  readSourceFigures,
+  readStageFacts,
+  readTypedOrders,
+  readTypedPositions,
+  type DeploymentIdentity,
+  type Fact,
+  type GapRange,
+  type SourceFigure,
+  type StageFacts,
+  type StageSeries,
+  type TypedOrderRow,
+  type TypedPositionRow,
+  type TypedRows,
+} from "./stageFacts";
 
 function obj(raw: unknown): Record<string, unknown> | null {
   return typeof raw === "object" && raw !== null && !Array.isArray(raw)
@@ -174,6 +192,27 @@ export interface LiveFullOperations {
   orderRows: RowCollection | null;
   /** Which row collections the strip emptied. V2 reads this; V1 does not, so its output is unchanged. */
   withheldRows: readonly ("positions" | "orders")[];
+  /*
+   * Additive fields (BE-P2/P3). Each is `null` when the key is absent or does not match the published schema exactly
+   * (`stageFacts.ts` reads them closed); the V1 screen ignores all of them.
+   */
+  /** FE-066: the five identity keys of the `deployment` block. */
+  identity: DeploymentIdentity | null;
+  /** FE-067: runtime, reconciliation and sessions. */
+  stageFacts: StageFacts | null;
+  /**
+   * FE-072: Internal / Broker / Difference. While broker values are not visible the Broker and Difference sides are stripped
+   * HERE (replaced by `null`, `withheldFigures` set), exactly like a suppressed KPI: the value never enters the tree.
+   */
+  sourceFigures: readonly LiveSourceFigure[] | null;
+  withheldFigures: boolean;
+  /** FE-072: `positions.typed` / `orders.typed`; `null` also when the strip emptied that collection. */
+  typedPositions: TypedRows<TypedPositionRow> | null;
+  typedOrders: TypedRows<TypedOrderRow> | null;
+  /** FE-072: `series` members (resolution, methodology, unit, exact points). */
+  seriesMembers: StageSeries | null;
+  /** FE-072: `projection_continuity.gap_ranges`. */
+  gapRanges: Fact<readonly GapRange[]> | null;
   /**
    * Broker figures the reader refused to carry.
    *
@@ -181,6 +220,12 @@ export interface LiveFullOperations {
    * gap the reader silently made. Counts only; the values themselves are gone.
    */
   suppressedBrokerFields: readonly string[];
+}
+
+/** A source figure after the broker strip: `broker` and `difference` are `null` while broker values are withheld. */
+export interface LiveSourceFigure extends Omit<SourceFigure, "broker" | "difference"> {
+  broker: SourceFigure["broker"] | null;
+  difference: SourceFigure["difference"] | null;
 }
 
 /** Authorities the server explicitly names as NOT broker-authored. Only these survive the strip. */
@@ -229,6 +274,7 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
   const brokerValuesVisible = consistency?.broker_values_visible === true;
   const suppressed: string[] = [];
   const withheldRows: ("positions" | "orders")[] = [];
+  const figures = Object.hasOwn(root, "source_figures") ? readSourceFigures(root.source_figures) : null;
 
   const panelsRaw = obj(root.source_panels) ?? {};
   const panels: Record<string, LivePanel> = {};
@@ -348,7 +394,20 @@ export function readLiveFullOperations(raw: unknown): LiveFullOperations | null 
     orderRows: rowCollection("orders"),
     suppressedBrokerFields: suppressed,
     withheldRows,
+    identity: readDeploymentIdentity(dep),
+    stageFacts: Object.hasOwn(root, "stage_facts") ? readStageFacts(root.stage_facts) : null,
+    sourceFigures: figures?.map((figure) => (brokerValuesVisible ? figure : { ...figure, broker: null, difference: null })) ?? null,
+    withheldFigures: figures !== null && !brokerValuesVisible,
+    typedPositions: withheldRows.includes("positions") ? null : typedOf(root.positions, readTypedPositions),
+    typedOrders: withheldRows.includes("orders") ? null : typedOf(root.orders, readTypedOrders),
+    seriesMembers: obj(root.series) !== null ? readSeriesMembers(obj(root.series)!) : null,
+    gapRanges: continuity !== null && Object.hasOwn(continuity, "gap_ranges") ? readGapRanges(continuity.gap_ranges) : null,
   };
+}
+
+function typedOf<R>(collection: unknown, read: (raw: unknown) => TypedRows<R> | null): TypedRows<R> | null {
+  const o = obj(collection);
+  return o !== null && Object.hasOwn(o, "typed") ? read(o.typed) : null;
 }
 
 /**
