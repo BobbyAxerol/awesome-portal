@@ -19,9 +19,10 @@ import { breadcrumbsFor, type NavOptions } from "../portal/navigation";
 import { useSession } from "../auth/session";
 import { PortalPresentationProvider } from "./presentation";
 import { CommandPalette, useCommandPaletteShortcut } from "./CommandPalette";
-import { opensV2CommandBar } from "./commandRouting";
+import { opensV2CommandBar, V2_SHELL_ON } from "./commandRouting";
 import { PortalContext } from "./context";
 import { PortalRoutes } from "./PortalRoutes";
+import { NO_SELF_NAV, type SelfNavShellView } from "./selfNavView";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { usePreferences } from "./preferences";
@@ -32,6 +33,12 @@ import { installPrintLightTheme } from "./printTheme";
 // a given route is `opensV2CommandBar` (shell flag + Execution route); otherwise V1's palette.
 const V2CommandBar = import.meta.env.VITE_EXECUTION_V2_SCREENS
   ? lazy(() => import("../execution/v2/shell/ExecCommandBar").then((m) => ({ default: m.ExecCommandBar })))
+  : null;
+
+// Self-navigation (W3, FE-057/058): the controller that reads the actor's own navigation projection and tells the rail what it
+// lists. Same raw-env guard as above; it renders nothing, and with the shell flag off it is never mounted.
+const V2SelfNavigation = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/shell/SelfNavigation"))
   : null;
 
 export function PortalShell() {
@@ -71,6 +78,8 @@ export function PortalShell() {
 
   const environment = summary.data?.environment ?? null;
   const { access } = useSession();
+  // What the V2 self-navigation controller says the rail lists / why it is shut. Flag off nobody sets it: `NO_SELF_NAV`.
+  const [selfNav, setSelfNav] = useState<SelfNavShellView>(NO_SELF_NAV);
 
   /*
    * A4-4 · navigation is owner-aware, from the server's answer.
@@ -82,7 +91,13 @@ export function PortalShell() {
    * because the screen behind it would refuse anyway and an entry that always
    * refuses is worse than no entry.
    */
-  const capabilities = access.kind === "ready" ? access.access.capabilities : [];
+  const sessionCapabilities = access.kind === "ready" ? access.access.capabilities : [];
+  // A live self-navigation projection can only ADD listing tokens to what the session holds (selfNavGate); nothing is removed,
+  // nothing is sent back. With no tokens (flag off, nothing read, expired, failed) this is the session list itself, as before.
+  const capabilities = useMemo(
+    () => (selfNav.tokens.size === 0 ? sessionCapabilities : [...new Set([...sessionCapabilities, ...selfNav.tokens])]),
+    [sessionCapabilities, selfNav.tokens],
+  );
   const navOptions = useMemo<NavOptions>(
     () => ({ environment, showCommissioned: preferences.showCommissioned, capabilities }),
     [environment, preferences.showCommissioned, capabilities],
@@ -154,6 +169,7 @@ export function PortalShell() {
               registry={registry.data}
               options={navOptions}
               collapsed={preferences.sidebarCollapsed}
+              notice={selfNav.notice ?? undefined}
             />
           </div>
 
@@ -171,6 +187,7 @@ export function PortalShell() {
                   options={navOptions}
                   collapsed={false}
                   onNavigate={() => setMobileNavOpen(false)}
+                  notice={selfNav.notice ?? undefined}
                 />
               </div>
             </div>
@@ -187,6 +204,11 @@ export function PortalShell() {
           open={paletteOpen}
           onClose={() => setPaletteOpen(false)}
         />
+        {V2SelfNavigation && V2_SHELL_ON ? (
+          <Suspense fallback={null}>
+            <V2SelfNavigation onView={setSelfNav} />
+          </Suspense>
+        ) : null}
         {V2CommandBar && v2Route ? (
           <Suspense fallback={null}>
             <V2CommandBar

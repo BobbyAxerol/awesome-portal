@@ -47,9 +47,9 @@ function utcText(ms: number): string | null {
 
 /** The sentence a shell prints when the rail is shut for an expired projection. Says "Portal clock" and "session", never "permission valid until". */
 export function expiredNavigationMessage(reason: "SESSION_CEILING_PASSED" | "CLOCK_UNREADABLE", validUntilMs: number): string {
-  if (reason === "CLOCK_UNREADABLE") return "This device's clock could not be read, so the navigation read for your session is not shown. Reload to check again.";
+  if (reason === "CLOCK_UNREADABLE") return "This device's clock could not be read, so the navigation read for your session is not shown. Retry to check again.";
   const at = utcText(validUntilMs);
-  return `The navigation read for your session ended${at === null ? "" : ` at ${at} (Portal clock)`} and is no longer shown. Reload to check again.`;
+  return `The navigation read for your session ended${at === null ? "" : ` at ${at} (Portal clock)`} and is no longer shown. Retry to check again.`;
 }
 
 /**

@@ -20,6 +20,9 @@ import { EXECUTION_V2_SHELL } from "../execution/v2/flags";
 import type { PortalRegistryDocument } from "../portal/contracts";
 import { presentationModeFor } from "./presentation";
 
+/** Whether the V2 shell flag is on in this build; the shell mounts the self-navigation controller (W3) only then. */
+export const V2_SHELL_ON: boolean = EXECUTION_V2_SHELL;
+
 export function opensV2CommandBar(
   registry: PortalRegistryDocument | null,
   pathname: string,

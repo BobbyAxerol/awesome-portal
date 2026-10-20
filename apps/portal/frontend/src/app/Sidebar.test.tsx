@@ -167,3 +167,39 @@ describe("flag on", () => {
     expect(names).toEqual(expect.arrayContaining(["Overview", "Alpha Fleet", "Approvals"]));
   });
 });
+
+describe("W3 · the Navigation unavailable line (notice prop)", () => {
+  const notice = ({ collapsed }: { collapsed: boolean }) => <div data-testid="notice" data-collapsed={String(collapsed)}>Navigation unavailable: test</div>;
+  const mountWith = (v2Shell: boolean, collapsed = false, withNotice = true) =>
+    render(
+      <MemoryRouter>
+        <Sidebar registry={registry} options={{ capabilities: [...V2_ROLE_PRESETS.manager] }} collapsed={collapsed} v2Shell={v2Shell} notice={withNotice ? notice : undefined} />
+      </MemoryRouter>,
+    );
+
+  it("flag on: drawn first inside the rail's own <nav>, which keeps its name and its entries", () => {
+    const view = mountWith(true);
+    const nav = view.getByRole("navigation", { name: "Primary navigation" });
+    expect(nav.firstElementChild?.getAttribute("data-testid")).toBe("notice");
+    expect(nav.querySelectorAll("a.portal-navitem").length).toBeGreaterThan(0);
+    expect(view.getAllByRole("navigation")).toHaveLength(1);
+  });
+
+  it("the collapsed state is handed to the notice", () => {
+    expect(mountWith(true, true).getByTestId("notice").getAttribute("data-collapsed")).toBe("true");
+  });
+
+  it("flag off: the prop is ignored, the DOM is exactly the one without it", () => {
+    const withNotice = mountWith(false);
+    const html = withNotice.container.innerHTML;
+    withNotice.unmount();
+    expect(mountWith(false, false, false).container.innerHTML).toBe(html);
+    expect(html).not.toContain("Navigation unavailable");
+  });
+
+  it("flag on without a notice: no extra element, the first child is the first group", () => {
+    const view = mountWith(true, false, false);
+    expect(view.container.querySelector("[data-testid=notice]")).toBeNull();
+    expect(view.container.querySelector("nav")?.firstElementChild?.className).toBe("portal-navgroup");
+  });
+});

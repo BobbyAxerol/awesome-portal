@@ -66,7 +66,7 @@ describe("selfNavigationGate", () => {
     expect(gate.tokens.size).toBe(0);
     if (gate.kind !== "expired") throw new Error("unreachable");
     expect(gate.reason).toBe("SESSION_CEILING_PASSED");
-    expect(gate.message).toBe("The navigation read for your session ended at 2026-10-15T20:00:05.000Z (Portal clock) and is no longer shown. Reload to check again.");
+    expect(gate.message).toBe("The navigation read for your session ended at 2026-10-15T20:00:05.000Z (Portal clock) and is no longer shown. Retry to check again.");
     expect(gate.message).not.toMatch(/valid until|permission|expires? in/i);
   });
 
@@ -89,7 +89,7 @@ describe("selfNavigationGate", () => {
   it("a ceiling beyond the Date range still reads honestly (no RangeError, no timestamp invented)", () => {
     const far = nav({ ...bodyOf("APP_ONLY_NOT_SOURCE_AUTHORITY"), observed_at_ms: 1, valid_until_ms: Number.MAX_SAFE_INTEGER });
     expect(selfNavigationGate(far, 10).kind).toBe("live");
-    expect(expiredNavigationMessage("SESSION_CEILING_PASSED", Number.MAX_SAFE_INTEGER)).toBe("The navigation read for your session ended and is no longer shown. Reload to check again.");
+    expect(expiredNavigationMessage("SESSION_CEILING_PASSED", Number.MAX_SAFE_INTEGER)).toBe("The navigation read for your session ended and is no longer shown. Retry to check again.");
   });
 
   it("is a pure function of its inputs: the clock is a parameter and the body is not mutated", () => {
