@@ -42,6 +42,7 @@ import { formatAsOf } from "../../boundary";
 import { V2_CAPABILITY, holds } from "../../shell/roleNav";
 import { resolveTab } from "../../tabAliases";
 import { withContext } from "../../urlState";
+import { stageIdentity } from "../stage/identity";
 import { FillsTab } from "./FillsTab";
 import { Header, LOADING_CHIPS, LifecyclePanel, UNREAD_CHIPS, chipsOf } from "./Header";
 import { OrdersTab } from "./OrdersTab";
@@ -98,7 +99,9 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
   const deployment = model?.deployment ?? null;
   const strategyId = deployment?.strategyId ?? null;
   const dep = deployment?.deploymentId ?? deploymentId;
-  const alphaHref = strategyId === null ? null : ctx(r.alpha(strategyId));
+  // The Alpha is linked ONLY when the profile published `alpha_id` (FE-066, S3-U5): a strategy id is never promoted to an alpha id.
+  const identity = model?.identity ?? stageIdentity(null);
+  const alphaHref = identity.alphaId === null ? null : ctx(r.alpha(identity.alphaId));
   const name = strategyId ?? deploymentId;
 
   const profileFailure = reads.profile.phase === "ready" ? reads.profile.refreshFailure : null;
@@ -143,9 +146,9 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
               case "fills":
                 return <FillsTab table={model.fills} />;
               case "positions":
-                return <PositionsTab positions={model.positions} />;
+                return <PositionsTab positions={model.positions} sides={model.sides} />;
               case "sessions":
-                return <SessionsTab counted={model.sessionsCounted} />;
+                return <SessionsTab counted={model.sessionsCounted} sessions={model.facts?.sessions ?? null} />;
               default:
                 return <OverviewTab model={model} quality={reads.quality} exitReviewsHref={ctx(r.exitReviews)} notQualified={model.page.nq !== null} />;
             }
@@ -155,13 +158,16 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
     );
   })();
 
+  const chips = showing && model !== null ? chipsOf(model.deployment, model.freshness, model.facts) : reads.profile.phase === "loading" ? LOADING_CHIPS : UNREAD_CHIPS;
   return (
     <div className="exec-wb-v2" data-screen="workbench-v2" data-variant={variant}>
       <Header
         deploymentId={deploymentId}
         deployment={deployment}
         variant={variant}
-        chips={showing && model !== null ? chipsOf(model.deployment, model.freshness) : reads.profile.phase === "loading" ? LOADING_CHIPS : UNREAD_CHIPS}
+        chips={chips}
+        identity={identity}
+        calendar={model?.calendar ?? null}
         accountsVisible={accountsVisible}
         links={{
           alpha: alphaHref,
@@ -173,7 +179,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
         read={{ atLabel: readAtMs === null ? null : formatAsOf(readAtMs), refreshing: reads.refreshing, failure: failure === null ? null : failure.reason, onRefresh: reads.refresh }}
       />
       {body}
-      {showing && model !== null ? <StickySummary name={name} freshness={model.freshness} alphaHref={alphaHref} /> : null}
+      {showing && model !== null ? <StickySummary name={name} freshness={model.freshness} chips={chips} alphaHref={alphaHref} /> : null}
     </div>
   );
 }

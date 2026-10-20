@@ -30,6 +30,16 @@ import { readDecimal, type BoundaryDecimal } from "../../boundary";
 import type { StageTab } from "../../blocks";
 import type { ChartSegment, ChartState, SeriesPoint, ServerEnvelope } from "../../charts";
 import type { FlagKind } from "../../flagKinds";
+import {
+  readDeploymentIdentity,
+  readPositionsBySide,
+  readStageFacts,
+  readVenueCalendar,
+  type PositionsBySide,
+  type StageFacts,
+  type VenueCalendar,
+} from "../../../stageFacts";
+import { stageIdentity, type StageIdentity } from "../stage/identity";
 
 /* ── constants ────────────────────────────────────────────────────────────── */
 
@@ -680,8 +690,20 @@ export interface WorkbenchModel {
   orders: TableWindow<OrderRow>;
   fills: TableWindow<FillRow>;
   positions: PositionsModel;
-  /** Sessions the quality read counts; their rows are not published (FE-067). */
+  /** Sessions the quality read counts. */
   sessionsCounted: Figure;
+  /*
+   * BE-P2 / BE-P3 additive members, read closed (`execution/stageFacts.ts`); each is `null` when the profile carries none
+   * or the member did not match the published schema exactly.
+   */
+  /** FE-066: the five identity keys of `data.deployment`. */
+  identity: StageIdentity;
+  /** FE-067: runtime, reconciliation and the session rows (`data.stage_facts`). */
+  facts: StageFacts | null;
+  /** S3-U4: Long, Short and Gross quantity by instrument (`data.positions_by_side`). */
+  sides: PositionsBySide | null;
+  /** FE-070: the VN market calendar (`data.venue_calendar`, the VN variant only). */
+  calendar: VenueCalendar | null;
 }
 
 /** The profile with every figure branch removed: what an unqualified source may still say is who the deployment is. */
@@ -706,6 +728,11 @@ export function buildWorkbench(envelope: ProfileEnvelope, quality: DeploymentQua
     fills: readFills(source, populationOf(d?.fillPopulation)),
     positions: readPositions(source),
     sessionsCounted: d === undefined ? { kind: "absent" } : figure(d.executionSessionPopulation, "count"),
+    identity: stageIdentity(readDeploymentIdentity(envelope.objects.deployment)),
+    // Facts about the deployment, not figures: they survive an unqualified source (they say why they are not published).
+    facts: Object.hasOwn(envelope.objects, "stage_facts") ? readStageFacts(envelope.objects.stage_facts) : null,
+    sides: page.nq === null && Object.hasOwn(source.objects, "positions_by_side") ? readPositionsBySide(source.objects.positions_by_side) : null,
+    calendar: Object.hasOwn(envelope.objects, "venue_calendar") ? readVenueCalendar(envelope.objects.venue_calendar) : null,
   };
 }
 

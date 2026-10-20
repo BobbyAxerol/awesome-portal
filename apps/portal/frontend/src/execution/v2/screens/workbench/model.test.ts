@@ -511,7 +511,7 @@ describe("the whole model", () => {
   });
 
   it("holds no field that could be an age, a band, a drawdown or a stage history", () => {
-    expect(Object.keys(model())).toEqual(["deployment", "page", "freshness", "gate", "equity", "orders", "fills", "positions", "sessionsCounted"]);
+    expect(Object.keys(model())).toEqual(["deployment", "page", "freshness", "gate", "equity", "orders", "fills", "positions", "sessionsCounted", "identity", "facts", "sides", "calendar"]);
     expect(Object.keys(model().freshness)).toEqual(["kind", "label", "asOfMs"]);
     expect(Object.keys(model().gate)).not.toContain("criteria");
     expect(Object.keys(model().deployment ?? {})).not.toContain("runtime");
