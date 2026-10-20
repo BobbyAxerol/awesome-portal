@@ -21,7 +21,7 @@ import { readCanaryControlRoom, readSandboxCertification } from "../certificatio
 import { CANARY_ROOM_FIXTURE, LIVE_FULL_FIXTURE, SANDBOX_CERTIFICATION_FIXTURE } from "../certification.fixtures";
 import { readLiveFullOperations } from "../liveFull";
 import type { DeliveryPolicy } from "../profile";
-import { readCanaryByVersion, readLiveFullByVersion, readSandboxByVersion, type VersionRead } from "../v2/readers/dispatch";
+import { readCanaryByVersion, readLiveFullByVersion, readSandboxByVersion, type StageInclude, type VersionRead } from "../v2/readers/dispatch";
 import { readCanaryParentV2, readSandboxParentV2 } from "../v2/readers/governanceParents";
 import { readLiveSourceOperationsV2 } from "../v2/readers/liveSourceOperations";
 import { loadCanonical } from "../v2/testkit/loadCanonical";
@@ -81,7 +81,7 @@ type AnyRead = VersionRead<unknown, unknown>;
 interface Route {
   id: string;
   path: string;
-  call: (port: ExecutionApi, id: string, options?: { workspaceId?: string; panel?: string; cursor?: string }) => Promise<Result<AnyRead>>;
+  call: (port: ExecutionApi, id: string, options?: { workspaceId?: string; panel?: string; cursor?: string; include?: readonly StageInclude[] }) => Promise<Result<AnyRead>>;
   dispatch: (raw: unknown) => AnyRead;
   v1Body: Draft;
   v1Direct: (raw: unknown) => unknown;
@@ -259,6 +259,70 @@ describe.each(ROUTES)("$id · http port", (route) => {
     expect(serializedBytes(body)).toBeGreaterThan(MIB);
     expect(value).toEqual({ ok: true, value: { kind: "unsupported", schemaVersion: "portal.execution.something-else.v9", reason: "UNKNOWN_SCHEMA_VERSION" } });
     expect(ms).toBeLessThan(2000);
+  });
+});
+
+/** The members each route publishes in its `include` enum (OpenAPI, BE-P12): identity everywhere, stage_facts on Live only. */
+const IDENTITY_BODIES: Record<string, Draft> = { sandbox: parent.sandbox_identity, canary: parent.canary_identity, live: liveSource.with_members };
+
+describe.each(ROUTES)("$id · include (BE-P12, opt-in)", (route) => {
+  it("is sent only when asked, after the workspace, as the published token", async () => {
+    const urls = serve(route.v1Body);
+    await route.call(api(), DEPLOYMENT, { include: ["identity"] });
+    await route.call(api(), DEPLOYMENT, { workspaceId: "ws 1", include: ["identity"] });
+    // An empty list asks for nothing: the request is the one it always was.
+    await route.call(api(), DEPLOYMENT, { include: [] });
+    expect(urls).toEqual([
+      `/api/v1/execution/deployments/${DEPLOYMENT}/${route.path}?include=identity`,
+      `/api/v1/execution/deployments/${DEPLOYMENT}/${route.path}?workspace_id=ws+1&include=identity`,
+      `/api/v1/execution/deployments/${DEPLOYMENT}/${route.path}`,
+    ]);
+  });
+
+  it("a repeated token or one outside the vocabulary is refused without a request", async () => {
+    const urls = serve(route.v1Body);
+    for (const include of [["identity", "identity"], ["nonsense"], ["identity", "nonsense"]]) {
+      const result = await route.call(api(), DEPLOYMENT, { include: include as never });
+      expect(result, include.join(",")).toMatchObject({ ok: false, status: "unavailable" });
+    }
+    expect(urls).toEqual([]);
+  });
+
+  it("a V2 body that carries the member reads as v2 with it; the reader of that body is the one the route uses", async () => {
+    serve(IDENTITY_BODIES[route.id]);
+    const result = await route.call(api(), DEPLOYMENT, { include: ["identity"] });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.kind).toBe("v2");
+    expect((result.value as { value: { identity: { alphaId: string | null } } }).value.identity.alphaId).toBe("alpha_TEST_ONLY_identity");
+  });
+});
+
+describe("include · stage_facts is a Live member only", () => {
+  it("Sandbox and Canary refuse stage_facts without a request", async () => {
+    const urls = serve(parent.sandbox);
+    for (const call of [api().getSandboxCertificationVersioned.bind(api()), api().getCanaryVersioned.bind(api())]) {
+      expect(await call(DEPLOYMENT, { include: ["stage_facts"] })).toMatchObject({ ok: false, status: "unavailable" });
+      expect(await call(DEPLOYMENT, { include: ["identity", "stage_facts"] })).toMatchObject({ ok: false, status: "unavailable" });
+    }
+    expect(urls).toEqual([]);
+  });
+
+  it("Live sends both tokens in the published order whatever order they were asked in", async () => {
+    const urls = serve(liveSource.with_members);
+    await api().getLiveFullVersioned(DEPLOYMENT, { include: ["stage_facts", "identity"] });
+    await api().getLiveFullVersioned(DEPLOYMENT, { include: ["stage_facts"] });
+    expect(urls.map((url) => new URL(url, "http://portal.test").searchParams.get("include"))).toEqual(["identity,stage_facts", "stage_facts"]);
+  });
+
+  it("a Live read with both members carries the OPEN_FINDINGS verdict and no count", async () => {
+    serve(liveSource.with_members);
+    const result = await api().getLiveFullVersioned(DEPLOYMENT, { include: ["identity", "stage_facts"] });
+    expect(result.ok && result.value.kind).toBe("v2");
+    if (!result.ok || result.value.kind !== "v2") return;
+    const facts = result.value.value.stageFacts!;
+    expect(facts.reconciliation.verdict).toEqual({ availability: "AVAILABLE", value: "OPEN_FINDINGS" });
+    expect(facts.reconciliation.openFindingCount.availability).toBe("NOT_PUBLISHED");
   });
 });
 
