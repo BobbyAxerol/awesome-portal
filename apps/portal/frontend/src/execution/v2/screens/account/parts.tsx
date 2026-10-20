@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf, type Metric } from "../../boundary";
-import { MetricText } from "../../blocks";
+import { MetricText, QuietIds } from "../../blocks";
 import { Flag } from "../../Flag";
 import { credentialView, notPublished, stateView, updatedAgo, type UnpublishedFact } from "./model";
 
@@ -17,9 +17,10 @@ export const NOT_AVAILABLE = "Not available";
 
 export function Na({ why }: { why?: string }) {
   return (
-    <span className="exec-acct-na">
+    <span className="exec-acct-na" title={why}>
       {NOT_AVAILABLE}
-      {why ? <span className="exec-acct-why">{why}</span> : null}
+      {/* The reason stays in the title and in hidden text; the visible word is enough to decide. */}
+      {why ? <span className="exec-acct-why exec-blk-sr">{why}</span> : null}
     </span>
   );
 }
@@ -27,8 +28,8 @@ export function Na({ why }: { why?: string }) {
 /** `Not published (FE-017)`: the gap and the request that closes it. */
 export function Np({ fact, children }: { fact: UnpublishedFact; children?: ReactNode }) {
   return (
-    <span className="exec-acct-np" title={fact.what}>
-      {notPublished(fact)}
+    <span className="exec-acct-np" title={`${fact.fe} · ${fact.what}`}>
+      <QuietIds text={notPublished(fact)} />
       {children ? <span className="exec-acct-why">{children}</span> : null}
     </span>
   );
@@ -37,9 +38,9 @@ export function Np({ fact, children }: { fact: UnpublishedFact; children?: React
 /** A figure the source deliberately does not split (R10): not a failure and not a zero. */
 export function NotComputed({ why }: { why: string }) {
   return (
-    <span className="exec-acct-na" data-state="not-computed">
+    <span className="exec-acct-na" data-state="not-computed" title={why}>
       Not computed
-      <span className="exec-acct-why">{why}</span>
+      <span className="exec-acct-why exec-blk-sr">{why}</span>
     </span>
   );
 }

@@ -48,7 +48,7 @@ export function PhysicalBinding({ view, detail, exposure, rotate }: PhysicalBind
         <dl className="exec-acct-facts">
           <Fact label="Binding">{identity.bindingId ?? <Na why="The account resource names no binding" />}</Fact>
           <Fact label="Venue">{identity.venue ?? item?.venue ?? <Na />}</Fact>
-          <Fact label="Native account"><span className="exec-acct-withheld">{WITHHELD}</span></Fact>
+          <Fact label="Native account"><span className="exec-acct-withheld" title={WITHHELD}>Withheld</span></Fact>
           <Fact label="Product"><Np fact={FE.product} /></Fact>
           <Fact label="Margin mode">{identity.marginMode ?? <Np fact={FE.product} />}</Fact>
           <Fact label="Environment">{environment ?? <Na />}</Fact>

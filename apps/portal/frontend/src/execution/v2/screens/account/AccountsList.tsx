@@ -25,7 +25,8 @@ import { Flag } from "../../Flag";
 import { withOrigin } from "../../backTo";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
 import { BindingDrawer } from "./BindingDrawer";
-import { Na, StateFlag, CredentialFlag, Updated } from "./parts";
+import { StateFlag, CredentialFlag, Updated } from "./parts";
+import { QuietIds } from "../../blocks";
 import { useBindingPages } from "./reads";
 import {
   ALL_ENVIRONMENTS, CREDENTIAL_FILTERS, ENV_TABS, FE, ROW_CAP, accountHref, freshnessFlag, humanize, inScope, matchesCredential, notPublished,
@@ -154,9 +155,6 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     },
     { key: "state", label: "State", render: (row) => <StateFlag word={row.stateWord} /> },
     { key: "credential", label: "Credential", render: (row) => <CredentialFlag word={row.credentialWord} /> },
-    { key: "equity", label: "Physical equity", numeric: true, render: () => <Na why="Venue report not published" /> },
-    { key: "virtual", label: "Σ Virtual · Headroom", numeric: true, render: () => <Na why="Read per binding" /> },
-    { key: "check", label: "Check", render: () => <Na why="Needs the binding's exposure" /> },
     {
       key: "updated",
       label: "Updated",
@@ -169,7 +167,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     if (!envelope || pages.state.phase !== "ready") return null;
     const { filteredCount, totalCount } = envelope.page;
     if (narrowedHere) {
-      return `${visible.length} ${issuesOnly ? "with issues" : "match"} in the ${pages.items.length} loaded rows, ${filteredCount} on the server. The server does not filter these, so they narrow only what is loaded.`;
+      return `${visible.length} ${issuesOnly ? "with issues" : "match"} in the ${pages.items.length} loaded rows, ${filteredCount} on the server`;
     }
     const scope = filteredCount !== totalCount ? `, ${totalCount} in your scope` : "";
     const head = capped && visible.length >= ROW_CAP ? `Top ${visible.length} of ${filteredCount}` : `${visible.length} of ${filteredCount}`;
@@ -203,7 +201,6 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
       <header className="exec-acct-head">
         <div>
           <h1 className="exec-acct-title">Accounts</h1>
-          <p className="exec-acct-subtitle">Venue bindings and the sleeves on them</p>
         </div>
         <div className="exec-acct-fresh">
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
@@ -211,7 +208,6 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
             <span>
               {sourceAsOf !== null ? `As of ${formatAsOf(sourceAsOf)}` : "Source time not published"}
               {readAtMs !== null ? ` · Read ${formatAsOf(readAtMs)}` : ""}
-              {` · ${humanize(envelope.environment)} environment`}
             </span>
           ) : null}
         </div>
@@ -220,7 +216,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
       {incomplete && envelope ? (
         <div className="exec-acct-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" />
-          <span>The read is {humanize(envelope.completeness).toLowerCase()}: some bindings may be missing.</span>
+          <span title={`The read is ${humanize(envelope.completeness).toLowerCase()}`}>Some bindings may be missing</span>
         </div>
       ) : null}
 
@@ -297,7 +293,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
             {filtered ? <button type="button" className="exec-acct-btn" onClick={clearFilters}>Clear all</button> : null}
             <span className="exec-acct-export">
               <button type="button" className="exec-acct-btn" disabled title={notPublished(FE.export)} aria-describedby={`${panelId}-export`}>Export</button>
-              <span id={`${panelId}-export`} className="exec-acct-note">{notPublished(FE.export)}. Exporting this list is not offered yet.</span>
+              <span id={`${panelId}-export`} className="exec-acct-note" title={`${notPublished(FE.export)}. Exporting this list is not offered yet.`}><QuietIds text={`${notPublished(FE.export)}. Not offered yet.`} /></span>
             </span>
           </div>
 
@@ -329,7 +325,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                   empty={empty}
                 />
                 <div className="exec-acct-foot">
-                  <span className="exec-acct-count" role="status" aria-live="polite">{countLine}</span>
+                  <span className="exec-acct-count" role="status" aria-live="polite" title={narrowedHere ? "The server does not filter these, so they narrow only what is loaded." : undefined}>{countLine}</span>
                   {pages.nextCursor && !capped ? (
                     <button type="button" className="exec-acct-btn" disabled={pages.loadingMore} title={pages.loadingMore ? "Loading the next page" : "Load the next page"} onClick={pages.loadMore}>
                       {pages.loadingMore ? "Loading" : "Load more"}
