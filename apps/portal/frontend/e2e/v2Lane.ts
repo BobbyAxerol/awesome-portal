@@ -6,6 +6,7 @@
 import type { Page } from "@playwright/test";
 
 import { answerAccessEffective } from "./bffDoubleAccess";
+import { answerSelfAccess } from "./bffDoubleSelfAccess";
 import { answerQuantbtRuns, STAGE_V2_WORKSPACE } from "./bffDoubleStage";
 import { answerUsers } from "./bffDoubleUsers";
 
@@ -89,7 +90,7 @@ export async function stubAccessSelf(page: Page): Promise<void> {
   );
 }
 
-/** The admin reads live outside /api/v1/execution: the session, Access effective and the Users roster. */
+/** The admin reads live outside /api/v1/execution: the session, Access effective, the self reads and the Users roster. */
 export async function stubAdminRoutes(page: Page): Promise<void> {
   await page.route("**/api/admin/**", (route) => {
     const request = route.request();
@@ -97,7 +98,12 @@ export async function stubAdminRoutes(page: Page): Promise<void> {
     if (url.pathname === "/api/admin/access/self") {
       return route.fulfill({ status: 200, contentType: "application/json", body: ACCESS_SELF_BODY });
     }
-    const answer = answerAccessEffective(request.method(), url.pathname, url.searchParams) ?? answerUsers(request.method(), url.pathname, url.searchParams);
+    // The four advisory self reads (self-navigation, eligibility, the batch, self-context) answer from the canonical fixture,
+    // stamped from the real clock with a ten-minute ceiling (specs that fix the page clock still see an answer that has not expired).
+    const answer =
+      answerSelfAccess(request.method(), url.pathname, url.searchParams, { nowMs: Date.now(), ceilingMs: 10 * 60_000 }) ??
+      answerAccessEffective(request.method(), url.pathname, url.searchParams) ??
+      answerUsers(request.method(), url.pathname, url.searchParams);
     if (answer === null) return route.fallback();
     return route.fulfill({ status: answer.status, contentType: answer.contentType ?? "application/json", body: typeof answer.body === "string" ? answer.body : JSON.stringify(answer.body) });
   });
