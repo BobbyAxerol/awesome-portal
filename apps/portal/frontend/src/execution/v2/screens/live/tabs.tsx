@@ -12,12 +12,20 @@ import { Flag } from "../../Flag";
 import { NotPublished, SectionPanel, Triad } from "../../blocks";
 import type { LiveSourceOperationsV2 } from "../../readers/liveSourceOperations";
 import { withContext } from "../../urlState";
-import { stageWhy } from "../stage/reasons";
+import { stageWhy, type StageAction } from "../stage/reasons";
+import { useStageReason } from "../stage/StageEligibility";
 import { ContextLink, KeyedTable, PanelSection, V1RowsSection } from "./parts";
 import { ACCESS_PATH, CONTINUITY_PANELS, EXPOSURE_PANELS, type LiveModel } from "./model";
 import type { PanelPaging } from "./useLiveReads";
 
 /* ── rail: the protective ladder ─────────────────────────────────────────── */
+
+/** The three rungs as the eligibility read names them (display identifiers, not capability names). */
+const RUNG_ACTION: Readonly<Record<string, StageAction>> = {
+  halt: "live.halt",
+  reduce: "live.reduce",
+  "emergency-close": "live.emergency_close",
+};
 
 /**
  * Halt, Reduce, Emergency close. There is no real command route on this build, so every rung is a
@@ -26,6 +34,8 @@ import type { PanelPaging } from "./useLiveReads";
  */
 export function ProtectiveLadder({ model }: { model: LiveModel }) {
   const reason = stageWhy("liveClosed");
+  // FE-068: the server's own reason for a rung that is off, when it published one; today's sentence otherwise. Text only.
+  const reasonFor = useStageReason();
   return (
     <SectionPanel level={2} title="Protective ladder" aside="Halt → Reduce → Close">
       <div className="exec-liv-ladder">
@@ -36,7 +46,7 @@ export function ProtectiveLadder({ model }: { model: LiveModel }) {
               <span className="exec-liv-step">Step {rung.step}</span>
             </div>
             <p className="exec-liv-rung-note">{rung.note}</p>
-            <DockAction label={rung.title} reason={reason} accessHref={ACCESS_PATH} />
+            <DockAction label={rung.title} reason={RUNG_ACTION[rung.key] ? reasonFor(RUNG_ACTION[rung.key]!, reason) : reason} accessHref={ACCESS_PATH} />
           </div>
         ))}
       </div>

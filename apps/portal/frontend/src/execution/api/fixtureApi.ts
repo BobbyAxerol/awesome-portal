@@ -826,9 +826,15 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getIncidentRootV2() {
       return unavailable("The V2 incident root is not served by the fixture port.");
     },
-    // The FE-062 read is served by the e2e BFF double through the HTTP client; the lab port has no fixture for it.
+    // The FE-062 / FE-068 / FE-069 reads are served by the e2e BFF double through the HTTP client; the lab port has no fixture for them.
     async getPendingRecallDiscovery() {
       return unavailable("The pending recall discovery is not served by the fixture port.");
+    },
+    async getStageActionEligibility() {
+      return unavailable("The stage action eligibility is not served by the fixture port.");
+    },
+    async getSelfEligibilityBatch() {
+      return unavailable("The eligibility batch is not served by the fixture port.");
     },
 
     async getIncident() {
