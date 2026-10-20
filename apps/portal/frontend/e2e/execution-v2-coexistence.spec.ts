@@ -772,14 +772,12 @@ const KNOWN_AXE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
  * Layout / keyboard findings that reproduce today, as `route@width:kind` -> what and where. Same contract as KNOWN_AXE:
  * the row asserts the defect is still there, so fixing it turns the row red and the row is deleted. Product findings F-2..,
  * not accepted debt (evidence/UXM-10/README.md).
+ *
+ * Empty since F-11 (shell.css `html { scroll-padding-top: var(--topbar-h) }`: a focused control is no longer parked under the sticky
+ * top bar, portfolio-360 and live at 1440) and F-12 (v2/css/blocks.css: the replay header's span chips get `cursor: default`) were
+ * fixed; their rows were deleted as this contract asks. A finding that reproduces again is a new row, with its F-number.
  */
-const KNOWN_ACCESS: Readonly<Record<string, string>> = {
-  "portfolio-360@wide:obscured": "focusing 'By funding source' scrolls it to y=0, under the sticky shell top bar (F-11)",
-  "live@wide:obscured": "focusing 'My access: Halt' scrolls it to y=44, under the sticky shell top bar: the same cause as portfolio-360 (F-11)",
-  "alpha-replay@wide:pointer-only": "the account and venue chips of the replay header are <span> with cursor:pointer (F-12)",
-  "alpha-replay@tablet:pointer-only": "same as alpha-replay@wide (F-12)",
-  "alpha-replay@narrow:pointer-only": "same as alpha-replay@wide (F-12)",
-};
+const KNOWN_ACCESS: Readonly<Record<string, string>> = {};
 
 for (const [name, route, root] of SCREENS) {
   test(`access · ${name} · no sideways scroll, a clean Tab walk, a visible focus ring, axe, at 1440 / 1024 / 390`, async ({ page, baseURL }) => {
