@@ -19,10 +19,10 @@
  * (it overflows AND holds no link, button or focusable row) the wrap becomes a named, focusable region. Otherwise it is a
  * plain div and adds no Tab stop.
  */
-import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
 
 import "./css/cards.css";
+import { useKeyboardScroll } from "./useKeyboardScroll";
 
 export interface CardsColumn<Row> {
   key: string;
@@ -60,13 +60,6 @@ export interface CardsTableProps<Row> {
   onSort?(key: string): void;
 }
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-
-/** True while the element scrolls sideways and nothing inside it can take focus. */
-function needsKeyboardScroll(wrap: HTMLElement): boolean {
-  return wrap.scrollWidth > wrap.clientWidth + 1 && wrap.querySelector(FOCUSABLE) === null;
-}
-
 /** A cell that rendered nothing says so; it is never a dash and never 0. */
 function present(content: ReactNode): boolean {
   return content !== null && content !== undefined && content !== false && content !== "";
@@ -80,26 +73,9 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
       onRowOpen?.(row);
     }
   };
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const [keyboardScroll, setKeyboardScroll] = useState(false);
-  useEffect(() => {
-    const wrap = wrapRef.current;
-    if (wrap === null) return;
-    const measure = () => setKeyboardScroll(needsKeyboardScroll(wrap));
-    measure();
-    if (typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
-    observer.observe(wrap);
-    const table = wrap.firstElementChild;
-    if (table !== null) observer.observe(table);
-    return () => observer.disconnect();
-  }, [rows, columns]);
+  const { ref: wrapRef, props: scrollProps } = useKeyboardScroll<HTMLDivElement>(label, [rows, columns]);
   return (
-    <div
-      ref={wrapRef}
-      className="exec-cards-wrap"
-      {...(keyboardScroll ? { role: "region", tabIndex: 0, "aria-label": `${label}, scrolls sideways` } : {})}
-    >
+    <div ref={wrapRef} className="exec-cards-wrap" {...scrollProps}>
       <table className="exec-cards" aria-label={label}>
         <thead>
           <tr>

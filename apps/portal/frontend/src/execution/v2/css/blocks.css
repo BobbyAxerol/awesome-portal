@@ -453,6 +453,11 @@ button.exec-blk-spine-btn:hover {
 .exec-blk-spine[data-variant="compact"] .exec-blk-spine-list {
   min-width: 400px;
 }
+/* The -1px overlap closes the seam between bordered nodes; the compact nodes have no border, and the last one's -1px pushed the
+ * row 1px past its box, so it scrolled when it fitted (axe scrollable-region-focusable at 1440 and 1024, UXM-10 F-5). */
+.exec-blk-spine[data-variant="compact"] .exec-blk-spine-node {
+  margin-right: 0;
+}
 .exec-blk-spine[data-variant="compact"] .exec-blk-spine-btn {
   align-items: center;
   min-height: 0;

@@ -757,16 +757,12 @@ async function axe(page: Page): Promise<AxeViolation[]> {
  * axe findings that exist today, per route, as `rule` -> highest node count seen over the three widths. The test fails
  * on any rule/route not listed here (a regression) and on a listed rule that no longer appears (delete the row).
  * They are product findings (evidence/UXM-10/README.md), not accepted debt.
+ *
+ * Empty since RV-05 (2026-10-20): the compact lifecycle spine is a named, focusable region while it overflows with nothing
+ * focusable inside (v2/useKeyboardScroll.ts, the CardsTable rule), and the Sandbox lineage ids are underlined (css/sandbox.css).
+ * Every route is asserted axe-clean at 1440 / 1024 / 390; a finding that reproduces again is a new row.
  */
-const KNOWN_AXE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  sandbox: { "scrollable-region-focusable": 1 },
-  "sandbox-plans": { "scrollable-region-focusable": 1 },
-  "sandbox-steps": { "link-in-text-block": 3, "scrollable-region-focusable": 1 },
-  "sandbox-v2body": { "scrollable-region-focusable": 1 },
-  workbench: { "scrollable-region-focusable": 1 },
-  "workbench-fills": { "scrollable-region-focusable": 1 },
-  "workbench-vnm": { "scrollable-region-focusable": 1 },
-};
+const KNOWN_AXE: Readonly<Record<string, Readonly<Record<string, number>>>> = {};
 
 /**
  * Layout / keyboard findings that reproduce today, as `route@width:kind` -> what and where. Same contract as KNOWN_AXE:
