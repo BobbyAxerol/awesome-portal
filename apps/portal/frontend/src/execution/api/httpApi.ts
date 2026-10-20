@@ -56,6 +56,7 @@ import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } fr
 import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
 import { readStageActionEligibilityV1, stageActionEligibilityUrl } from "../v2/readers/stageActionEligibility";
 import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
+import { approvalRequestLookupAnswers, approvalRequestLookupUrl, readApprovalRequestLookupV1 } from "../v2/readers/approvalRequestLookup";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
 import type { WorkflowResult } from "../operations";
@@ -1042,6 +1043,16 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       const result = await readGetAt(url, readAccessEligibilityBatch, "The eligibility batch");
       if (result.ok && result.value.kind === "eligibility_batch" && !eligibilityBatchAnswers(result.value.batch, request)) {
         return unavailable("The eligibility batch answered another question than the one asked, so it is not shown.");
+      }
+      return result;
+    },
+
+    async lookupApprovalRequest(query) {
+      const url = approvalRequestLookupUrl(query);
+      if (url === null) return unavailable("The request lookup query is not one the Portal accepts.");
+      const result = await readGet(url.slice(BASE.length), readApprovalRequestLookupV1, "The request lookup");
+      if (result.ok && result.value.kind === "approval_request_lookup" && !approvalRequestLookupAnswers(result.value.lookup, query)) {
+        return unavailable("The request lookup answered another question than the one asked, so it is not shown.");
       }
       return result;
     },

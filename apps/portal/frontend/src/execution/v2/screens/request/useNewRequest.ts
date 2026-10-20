@@ -21,12 +21,15 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { ApprovalCreateOutcome, ExecutionApi } from "../../../api/ports";
-import { useRunSuggestions, type RunOption, type RunSuggestions } from "../../../runSuggestions";
+import type { ApprovalCreateOutcome, ExecutionApi, Result } from "../../../api/ports";
+import type { RunOption } from "../../../runSuggestions";
+import type { ApprovalRequestLookup, ApprovalRequestLookupRead } from "../../readers/approvalRequestLookup";
 import type { StageActionEligibility } from "../../readers/stageActionEligibility";
 import { useStageActionEligibility } from "../stage/StageEligibility";
+import { useRunLibrary, type RunLibrary } from "./runLibrary";
 import {
   alphaChoices,
+  catalogAlphaChoices,
   claimView,
   EMPTY_FIELDS,
   failureKind,
@@ -43,6 +46,12 @@ import {
   type SubmitPayload,
   type Validation,
 } from "./model";
+
+export type OriginalCheck =
+  | { phase: "idle" }
+  | { phase: "checking" }
+  | { phase: "known"; lookup: ApprovalRequestLookup }
+  | { phase: "failed"; reason: string };
 
 export interface UseNewRequestOptions {
   api: ExecutionApi;
@@ -71,7 +80,8 @@ export interface NewRequest {
   /** Applies a prefill once, only if the reader has not touched the form. */
   seed(prefill: Prefill, notices?: readonly string[]): void;
 
-  runs: RunSuggestions;
+  /** The Run Library: the server-filtered list, its alpha catalog and its cursor (FE-069). */
+  runs: RunLibrary;
   /**
    * FE-068: the caller's own ADVISORY answer for `approval.create`, or null (not read yet, failed, another workspace). It only
    * EXPLAINS a Submit that is off or adds a note beside one that is on; the Submit gate (`gate`) never reads it.
@@ -94,6 +104,14 @@ export interface NewRequest {
   uncertain: boolean;
   /** Re-sends the stored payload of an uncertain send, verbatim, under the SAME key. No-op in any other state. */
   retry(): void;
+  /**
+   * FE-069: what the server knows about the uncertain send's request key (NONE, FOUND or KEY_PAYLOAD_CONFLICT), asked with the
+   * stored payload so the answer can say MATCH or MISMATCH. A READ: it writes nothing, never changes the stored key or payload, and
+   * never settles the form (only a retry that the server answers does).
+   */
+  originalCheck: OriginalCheck;
+  /** Asks once (single-flight). No-op unless the last answer is uncertain. */
+  checkOriginal(): void;
   /** Forgets an uncertain send (its key included) and unlocks the form with the fields as they were. The caller shows the warning first. */
   discardUncertain(): void;
   /** created or replayed: the request is recorded and the form is done. */
@@ -150,7 +168,10 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   const [outcome, setOutcome] = useState<ApprovalCreateOutcome | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [requestKey, setRequestKey] = useState<string | null>(null);
-  const runs = useRunSuggestions(runsEnabled);
+  const runs = useRunLibrary(runsEnabled);
+  const [originalCheck, setOriginalCheck] = useState<OriginalCheck>({ phase: "idle" });
+  const checkSeq = useRef(0);
+  const checking = useRef(false);
   // Read once the form is in use (a closed drawer asks nothing), again on focus; never cached. Advisory text only.
   const eligibility = useStageActionEligibility(api, undefined, runsEnabled);
 
@@ -232,7 +253,17 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   );
 
   const options = runs.options;
-  const alphas = useMemo(() => alphaChoices(options), [options]);
+  // FE-069: an alpha the server's catalog lists is filtered on the server, so its runs are reachable beyond the first 50. A
+  // half-typed id never starts a read (selectAlpha ignores an id the catalog does not list), and the catalog arriving re-runs this.
+  const selectRunAlpha = runs.selectAlpha;
+  const alphaIdNow = fields.alphaId;
+  useEffect(() => {
+    selectRunAlpha(alphaIdNow === "" ? null : alphaIdNow);
+  }, [alphaIdNow, runs.catalog, selectRunAlpha]);
+  // FE-069: the picker is the server's catalog (the whole workspace) when the body published one; otherwise the alphas of the runs
+  // loaded so far, and the form says so. Never the first 50 runs presented as the workspace's alphas.
+  const catalog = runs.catalog;
+  const alphas = useMemo(() => (catalog !== null ? catalogAlphaChoices(catalog) : alphaChoices(options)), [catalog, options]);
   const runOptions = useMemo(() => runChoices(options, fields.alphaId), [options, fields.alphaId]);
   const claim = useMemo(() => claimView(options, fields.runId), [options, fields.runId]);
 
@@ -267,6 +298,10 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
     (identity: string, key: string, payload: SubmitPayload) => {
       inFlight.current = true;
       const mine = ++attempt.current;
+      // The earlier check was about the earlier answer.
+      checkSeq.current += 1;
+      checking.current = false;
+      setOriginalCheck({ phase: "idle" });
       INTENTS.set(identity, { key, payload });
       lastSent.current = { identity, key, payload };
       setRequestKey(key);
@@ -306,6 +341,38 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
     send(sent.identity, sent.key, sent.payload);
   }, [send]);
 
+  /**
+   * FE-069: ask the server what a replay of this request key would do. Read-only. The stored key and payload are sent as they were
+   * stored (never what the form says now), the answer is shown beside the outcome, and nothing here settles, retries or discards.
+   */
+  const checkOriginal = useCallback(() => {
+    const sent = lastSent.current;
+    if (checking.current || inFlight.current || !uncertainRef.current || sent === null) return;
+    checking.current = true;
+    const mine = ++checkSeq.current;
+    setOriginalCheck({ phase: "checking" });
+    const { alphaId, evidenceRunId, methodologyClaimId, summary } = sent.payload;
+    let pending: Promise<Result<ApprovalRequestLookupRead> | null>;
+    try {
+      pending = Promise.resolve(api.lookupApprovalRequest({ requestKey: sent.key, payload: { alphaId, evidenceRunId, methodologyClaimId, summary } }));
+    } catch {
+      pending = Promise.resolve(null);
+    }
+    void pending.catch(() => null).then((result) => {
+      if (checkSeq.current !== mine) return;
+      checking.current = false;
+      if (!mounted.current) return;
+      if (result === null) return setOriginalCheck({ phase: "failed", reason: "The check never reached the Portal." });
+      if (!result.ok) return setOriginalCheck({ phase: "failed", reason: result.reason });
+      if (result.value.kind !== "approval_request_lookup") {
+        return setOriginalCheck({ phase: "failed", reason: "The server answered a shape this build does not read." });
+      }
+      // An answer for another key than the one sent is not an answer.
+      if (result.value.lookup.requestKey !== sent.key) return setOriginalCheck({ phase: "failed", reason: "The server answered for another request key." });
+      setOriginalCheck({ phase: "known", lookup: result.value.lookup });
+    });
+  }, [api]);
+
   const dismissOutcome = useCallback(() => {
     setOutcome((o) => (o !== null && (o.kind === "duplicate" || (o.kind === "failed" && !isUncertain(o))) ? null : o));
   }, []);
@@ -315,6 +382,9 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
     const sent = lastSent.current;
     if (sent !== null) INTENTS.delete(sent.identity);
     lastSent.current = null;
+    checkSeq.current += 1;
+    checking.current = false;
+    setOriginalCheck({ phase: "idle" });
     setRequestKey(null);
     setOutcome(null);
   }, []);
@@ -325,6 +395,9 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
     if (sent !== null && !inFlight.current) INTENTS.delete(sent.identity);
     lastSent.current = null;
     attempt.current += 1;
+    checkSeq.current += 1;
+    checking.current = false;
+    setOriginalCheck({ phase: "idle" });
     inFlight.current = false;
     setSubmitting(false);
     baseline.current = { alphaId: "", runId: "", claimId: "" };
@@ -342,6 +415,6 @@ export function useNewRequest({ api, writeBlockedReason, prefill, prefillNotices
   return {
     fields: shown, setAlpha, setRun, setClaim, setSummary, seed,
     runs, eligibility, alphas, runOptions, claim, notices,
-    validation, gate, submitting, outcome, requestKey, dismissOutcome, uncertain, retry, discardUncertain, settled, dirty, submit, reset,
+    validation, gate, submitting, outcome, requestKey, dismissOutcome, uncertain, retry, originalCheck, checkOriginal, discardUncertain, settled, dirty, submit, reset,
   };
 }

@@ -836,6 +836,9 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getSelfEligibilityBatch() {
       return unavailable("The eligibility batch is not served by the fixture port.");
     },
+    async lookupApprovalRequest() {
+      return unavailable("The request lookup is not served by the fixture port.");
+    },
 
     async getIncident() {
       const blocked = gate<never>("getIncident");
