@@ -23,6 +23,7 @@ import { profileStageFacts } from "../execution/stage-facts-profile";
 import { gapRanges, sourceFigures, typedOrders, typedPositions } from "../execution/stage-rows";
 import { complianceRows, rollbackItems, trialSchedule } from "../execution/canary-envelope-facts";
 import { OwnerAccessService } from "../auth/owner-access.service";
+import { attachFollowingIdentity, parseFollowingInclude } from "../governance/following-parent.identity";
 import {
   GOVERNANCE_DENIAL_MESSAGE,
   governanceDenial,
@@ -88,10 +89,16 @@ export class CanaryService {
     }
   }
 
-  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string) {
+  async detail(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string, viewerWorkspaceId?: string,
+    include?: unknown) {
     const principal = { user, session, workspaceId, viewerWorkspaceId };
-    if(this.followingParents&&await this.followingParents.mode(principal)==="SCOPED_V2")
-      return this.followingParents.detail(principal,"CANARY",deploymentId);
+    if(this.followingParents&&await this.followingParents.mode(principal)==="SCOPED_V2"){
+      // BE-P12: opt-in only; the legacy body below already carries the identity.
+      const wanted=parseFollowingInclude(include);
+      const parent=await this.followingParents.detail(principal,"CANARY",deploymentId);
+      return wanted.has("identity")?attachFollowingIdentity(parent,
+        await this.profileReads.deploymentIdentity(principal,"canary",deploymentId)):parent;
+    }
     await this.assertGovernance(user, "read", workspaceId);
     if (this.readScopes && await this.readScopes.coreSelectionMode(principal) === "SCOPED_V2")
       throw new GovernanceError("CANARY_SCOPED_PARENT_NOT_COMMISSIONED", "Canary parent evidence field authority is not commissioned.", 503);

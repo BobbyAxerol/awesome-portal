@@ -11,7 +11,8 @@ import {
 } from "../execution/product-read-source";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
-import { attachDeploymentIdentity } from "../execution/deployment-identity";
+import { attachDeploymentIdentity, IDENTITY_NOT_AUTHORIZED, IDENTITY_NOT_READ, type DeploymentIdentity } from "../execution/deployment-identity";
+import { ExecutionReadScopeError } from "../execution-v2/read-scope";
 import {
   oldestStageAsOfMs,
   stagePanels,
@@ -167,6 +168,33 @@ export class ProfileReadService {
     project?:(view:import("../live/live-source.contract").LiveSourceOperationsRead)=>T,
     query:import("../live/live-source.contract").LiveSourceReadQuery={}):Promise<T>{
     return this.source.scopedLiveOperations(principal,deploymentId,project,query);
+  }
+
+  /**
+   * BE-P12 - the Alpha-Portfolio identity of one deployment for a SCOPED_V2 Sandbox / Canary
+   * parent. It is the SAME resolution the legacy composer uses (the viewer's alpha.read scope
+   * on the retained deployment row, the qualified tuple publication, the viewer's field policy,
+   * the combined final authority fence) but returns only the identity; the legacy composer is
+   * never run. A 403/404 from the scope is one uniform answer (hidden = missing) and becomes a
+   * typed NOT_AUTHORIZED absence; a changed (409) or unavailable (503) authority is NOT turned
+   * into an absence, it ends the request.
+   */
+  async deploymentIdentity(
+    principal: ProfileReadPrincipal,
+    requestedEnvironment: "sandbox" | "canary",
+    deploymentId: string,
+  ): Promise<DeploymentIdentity> {
+    const screenId = requestedEnvironment === "sandbox"
+      ? "EXECUTION_SANDBOX_CERTIFICATION_SCREEN" : "EXECUTION_CANARY_CONTROL_ROOM_SCREEN";
+    try {
+      const resolution = await this.source.resolveDeploymentScope(
+        principal as CurrentSourcePrincipal, requestedEnvironment, screenId, deploymentId,
+      );
+      return resolution.state === "FOUND" && resolution.identity ? resolution.identity : IDENTITY_NOT_READ;
+    } catch (error) {
+      if (error instanceof ExecutionReadScopeError && (error.status === 403 || error.status === 404)) return IDENTITY_NOT_AUTHORIZED;
+      throw error;
+    }
   }
 
   async accountBroker(

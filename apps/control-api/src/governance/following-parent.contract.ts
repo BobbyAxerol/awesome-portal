@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { scopedIdentity } from "../execution/scoped-stage-wire.contract";
 const id=z.string().min(1).max(191).regex(/^[A-Za-z0-9._:-]+$/);
 const text=z.string().min(1).refine(v=>[...v].length<=191&&!/[\u0000-\u001f\u007f]/u.test(v));
 const ms=z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),version=ms.refine(v=>v>0);
@@ -11,7 +12,10 @@ const base={schema_version:z.literal("portal.execution.following-parent.v2"),
   workspace_id:z.string().refine(v=>[...v].length>=3&&[...v].length<=96),record_authority:z.literal("PORTAL"),
   provenance_basis:z.literal("CURRENT_CORE_BASELINE"),field_contract_revision:z.literal("portal.execution.parent-fields.v1"),
   observed_at_ms:ms,source,accepted_manager_facts:z.object({availability:z.literal("NOT_PUBLISHED"),
-    reason_code:z.literal("PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION")}).strict()};
+    reason_code:z.literal("PARENT_ROOT_NOT_SOURCE_SCREEN_COMPOSITION")}).strict(),
+  // BE-P12: optional, opt-in (`include=identity`), attached AFTER the sealed parent flight from a
+  // separate retained-projection read. Not a parent record field and in no parent-field purpose.
+  identity:scopedIdentity.optional()};
 const anchors=<T extends "SANDBOX"|"LIVE">(env:T)=>z.object({deployment_id:id,portfolio_id:id,environment:z.literal(env),
   association_basis:z.literal("CURRENT_NATIVE_TARGET_CORRESPONDENCE"),captured_environment_attested:z.literal(false)}).strict();
 const sandboxLineage=z.object({availability:z.literal("AVAILABLE"),basis:z.literal("STORED_PORTAL_REFERENCE"),

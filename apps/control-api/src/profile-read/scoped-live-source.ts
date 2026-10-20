@@ -8,8 +8,11 @@ import {projectionRowVisible} from "../execution-v2/read-projection";
 import {authorizeRetainedRelation,retainedFieldAllowed} from "../execution/retained-operation-page";
 import {namedRetainedBusinessResourceId,joinRetainedFindingSessionRows,namedRetainedFindingNeedsSession} from "../execution/retained-business-aliases";
 import {managerTimestamp} from "../execution/manager-timestamp";
-import {LIVE_SOURCE_PANELS,liveSourcePanelGrain,liveSourceOperationsRead,liveSourceValues,
+import {LIVE_SOURCE_PANELS,liveSourcePanelGrain,liveSourceOperationsRead,liveSourceValues,parseLiveSourceInclude,
   type LiveSourceReadQuery,type LiveSourceOperationsRead,type LiveSourcePanel} from "../live/live-source.contract";
+import {deploymentIdentityFromRetained,identityFields} from "../execution/deployment-identity";
+import {scopedLiveStageFacts,type ScopedReconciliationInput} from "../execution/scoped-stage-facts";
+import {SCOPED_IDENTITY_BASIS} from "../execution/scoped-stage-wire.contract";
 
 // Only the ProductRead owner passes its EXISTING lps2 functions. These pure
 // callbacks neither mint a scope nor fetch an upstream/source cursor.
@@ -113,8 +116,11 @@ export async function scopedLiveSource(config:ControlApiConfig,scopes:ExecutionR
   // Account even for an Alpha panel. Parsing failures stay in the SAME flight.
   if(query.panel!==undefined&&(typeof query.panel!=="string"||
     !LIVE_SOURCE_PANELS.includes(query.panel as typeof LIVE_SOURCE_PANELS[number]))||
-    query.cursor!==undefined&&(typeof query.cursor!=="string"||query.cursor.length<1||query.cursor.length>128||query.panel===undefined))
+    query.cursor!==undefined&&(typeof query.cursor!=="string"||query.cursor.length<1||query.cursor.length>128||query.panel===undefined)||
+    parseLiveSourceInclude(query.include)===undefined)
     throw new ExecutionReadScopeError("EXECUTION_READ_QUERY_INVALID",400);
+  const include=parseLiveSourceInclude(query.include)!;
+  let reconciliation:ScopedReconciliationInput={kind:"UNAVAILABLE",reason:"SOURCE_PANEL_NOT_CAPTURED"};
   const scopeProof=SCOPED_LIVE_SPECS.map(spec=>[spec.key,issued.get(spec.key)!.fingerprint]);
   const keys=querySigningKeys(config),key=keys[config.QUERY_CURSOR_ACTIVE_KEY_ID];
   if(!key)return fail();
@@ -158,12 +164,17 @@ export async function scopedLiveSource(config:ControlApiConfig,scopes:ExecutionR
     const accountGrain=["accounts","account_balances","margin_balances","account_sync_effective"].includes(spec.relation);
     if(!accountGrain&&spec.relation!=="strategy_deployments"&&!target.tupleUnique&&
       !visible.some(row=>row.fields.deployment_id===deploymentId)){
-      panels[spec.key]=absent("DEPLOYMENT_GRAIN_NOT_PROVEN",spec,scope);continue;
+      panels[spec.key]=absent("DEPLOYMENT_GRAIN_NOT_PROVEN",spec,scope);
+      if(spec.key==="reconciliation")reconciliation={kind:"UNAVAILABLE",reason:"DEPLOYMENT_GRAIN_NOT_PROVEN"};
+      continue;
     }
     const rows=visible.filter(({fields:f})=>accountGrain?f.account_id===target.accountId:
       spec.relation==="strategy_deployments"||Object.hasOwn(f,"deployment_id")?f.deployment_id===deploymentId:
         target.tupleUnique&&f.strategy_id===target.strategyId&&f.account_id===target.accountId&&f.mode===environment&&f.venue===target.venue);
     if(rows.length>10000)return fail();
+    if(spec.key==="reconciliation")reconciliation=!retainedFieldAllowed(scope,"status")?
+      {kind:"UNAVAILABLE",reason:"FINDING_STATUS_NOT_AUTHORIZED"}:
+      {kind:"ROWS",rows:rows.map(row=>({status:row.fields.status}))};
     if(start>rows.length)throw new ExecutionReadScopeError("EXECUTION_READ_CURSOR_INVALID",400);
     const records=rows.slice(start,start+200).map((row,index)=>{
       lineage(row);
@@ -203,11 +214,24 @@ export async function scopedLiveSource(config:ControlApiConfig,scopes:ExecutionR
       previous_cursor:start>0?cursor.encode(Math.max(0,start-200),binding):null,records};
   }
   panels.broker_sync=absent("BROKER_PURPOSE_NOT_COMMISSIONED");
+  // BE-P12, opt-in only. Both blocks are derived from rows ALREADY authorized above, under
+  // the same scopes and the same final fence; nothing is read or authorized here.
+  const optional:Record<string,unknown>={};
+  if(include.has("identity")){
+    const portfolios=snapshot.document.relations["manager.portfolios:portfolios"];
+    // The named portfolio row is served, so its lineage is checked like every served row.
+    if(portfolios?.availability==="AVAILABLE"&&typeof original.portfolio_id==="string")
+      for(const row of portfolios.items)if(row.fields.portfolio_id===original.portfolio_id&&projectionRowVisible(deploymentScope,rowFields(row)))lineage(row);
+    optional.identity={basis:SCOPED_IDENTITY_BASIS,...identityFields(deploymentIdentityFromRetained({
+      scope:deploymentScope,deploymentId,deploymentFields:original,portfolios}))};
+  }
+  if(include.has("stage_facts"))optional.stage_facts=scopedLiveStageFacts(reconciliation);
   return liveSourceOperationsRead.parse({schema_version:"portal.execution.live-source-operations.v2",
     workspace_id:principal.workspaceId,environment,profile_id:profile,deployment_id:deploymentId,
     record_authority:"PORTAL_RETAINED_OBSERVATION",source_verdict:"NOT_ASSERTED",visibility:"SCOPED",coverage:"AUTHORIZED_ONLY",
     observed_at_ms:Date.now(),source_side_effect_requested:false,runtime_activation_requested:false,data:panels,
     runtime:{state:null,reason_code:"SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED"},
+    ...optional,
     realtime:{active:false,reason_code:"FINITE_SCOPED_READ_NOT_STREAM_AUTHORITY"},
     commands:{enabled:false,reason_code:"READ_NOT_COMMAND_AUTHORITY"}});
 }

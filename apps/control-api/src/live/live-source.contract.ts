@@ -1,4 +1,5 @@
 import {z} from "zod";
+import {scopedIdentity,scopedStageFacts} from "../execution/scoped-stage-wire.contract";
 const text=z.string().min(1).max(4096).refine(v=>!/[\u0000-\u001f\u007f]/u.test(v));
 // `$` alone accepts a final newline in JS regexes. Exact public scalars
 // must end at the actual string boundary, not before a trailing line break.
@@ -8,7 +9,18 @@ const ms=z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 // Fixed screen vocabulary, not a relation/source/operation selector.
 export const LIVE_SOURCE_PANELS=["deployments","positions","sessions","orders","fills","accounts",
   "account_balances","margin_balances","account_sync","reconciliation"] as const;
-export type LiveSourceReadQuery={panel?:unknown;cursor?:unknown};
+/** BE-P12 opt-in members. Absent from the query means byte-identical to the original v2 body. */
+export const LIVE_SOURCE_INCLUDES=["identity","stage_facts"] as const;
+export type LiveSourceInclude=typeof LIVE_SOURCE_INCLUDES[number];
+export type LiveSourceReadQuery={panel?:unknown;cursor?:unknown;include?:unknown};
+/** Closed comma list of distinct fixed tokens; anything else is undefined (invalid), never ignored. */
+export function parseLiveSourceInclude(raw:unknown):ReadonlySet<LiveSourceInclude>|undefined{
+  if(raw===undefined)return new Set();
+  if(typeof raw!=="string"||raw.length<1||raw.length>64)return undefined;
+  const tokens=raw.split(",");
+  if(new Set(tokens).size!==tokens.length||!tokens.every(token=>(LIVE_SOURCE_INCLUDES as readonly string[]).includes(token)))return undefined;
+  return new Set(tokens as LiveSourceInclude[]);
+}
 const continuation=z.string().max(128).regex(/^lps2\.[A-Za-z0-9_-]{1,32}\.\d{1,8}\.\d{10}\.[A-Za-z0-9_-]{43}$(?![\s\S])/).nullable();
 export const liveSourcePanelGrain=(key:string):"ACCOUNT"|"DEPLOYMENT"|"NOT_COMMISSIONED"=>
   key==="broker_sync"?"NOT_COMMISSIONED":
@@ -58,6 +70,8 @@ export const liveSourceOperationsRead=z.object({
     orders:liveSourcePanel,fills:liveSourcePanel,accounts:liveSourcePanel,account_balances:liveSourcePanel,
     margin_balances:liveSourcePanel,account_sync:liveSourcePanel,reconciliation:liveSourcePanel,broker_sync:liveSourcePanel}).strict(),
   runtime:z.object({state:z.null(),reason_code:z.literal("SOURCE_RUNTIME_ACTIVATION_NOT_ASSERTED")}).strict(),
+  // BE-P12: optional and opt-in (`include=`). Present only when asked for; a hidden fact inside is a typed absence.
+  identity:scopedIdentity.optional(),stage_facts:scopedStageFacts.optional(),
   realtime:z.object({active:z.literal(false),reason_code:z.literal("FINITE_SCOPED_READ_NOT_STREAM_AUTHORITY")}).strict(),
   commands:z.object({enabled:z.literal(false),reason_code:z.literal("READ_NOT_COMMAND_AUTHORITY")}).strict(),
 }).strict().superRefine((view,c)=>{
