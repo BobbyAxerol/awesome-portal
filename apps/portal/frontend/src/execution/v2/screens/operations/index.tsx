@@ -619,6 +619,8 @@ export default function OperationsV2({
             loading={load.phase === "loading"}
             mode={mode}
             onClose={close}
+            api={api}
+            workspaceId={ready?.queue.workspaceId ?? workspaceId}
           />
         ) : null}
       </div>
