@@ -15,7 +15,7 @@ describe("ELP2-04 adapter closed public DTO boundaries", () => {
     expect(scopedAdapterFieldsSchema.safeParse({ timestamp_ms: "2026-01-01T00:00:00Z" }).success).toBe(false);
   });
   it("keeps public group selectors finite and forbids the global projection metadata envelope", () => {
-    const value = { schema_version: "portal.execution.profile-read-adapter.v2", capability_id: "admin.inspect", authority: "PORTAL_SGP_PROJECTION",
+    const value = { schema_version: "portal.execution.profile-read-adapter.v2", time_unit: "UTC_EPOCH_MS", capability_id: "admin.inspect", authority: "PORTAL_SGP_PROJECTION",
       workspace_id: "workspace", environment: "paper", profile_id: "paper", visibility: "SCOPED", coverage: "AUTHORIZED_ONLY",
       policy_revision: "revision", bounds: { maximum_rows_per_relation: 200, maximum_response_bytes: 1048576 }, relations: {} };
     expect(scopedAdapterResponseSchema.safeParse(value).success).toBe(true);

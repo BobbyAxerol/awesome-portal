@@ -6,8 +6,12 @@
  * (`state: EMPTY | PARTIAL`, `reason_code: SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY`, `history_semantics:
  * RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY`). What it does NOT carry, unlike the legacy v1 body, is every
  * `source_health`, `timeframe`, `projection` and `resource.resolution` member, and a record's `values` is limited to the
- * closed `ScopedRecordFields` set (no client order id, order type, session id, fee, liquidity or venue order id). Those stay
- * absent: nothing here is derived from a neighbouring member.
+ * closed `ScopedRecordFields` set. Since BE-P15 that set names the client order id, order type, fee, fee currency, liquidity, the order
+ * submission instant (`submitted_at_ms`) and conditional-leg identity, each admitted per scope: a member the scope does not admit or
+ * the source did not state is absent (never zero), and a record with no order/trade instant says why in `timeReason`. The page states
+ * its own clock: `time_unit` UTC epoch milliseconds, and `observed_at_basis` (what `observed_at_ms` and the page order mean; a Portal
+ * window order, never a venue event sequence). Session id, venue order id, trade id and error text stay absent: nothing here is
+ * derived from a neighbouring member.
  *
  * Closed: an unknown key, a `values` member outside `ScopedRecordFields`, a wrong type or word refuses the WHOLE page. A
  * cursor is an opaque Portal token: only its spelling (`^[A-Za-z0-9._-]+$`, at most 4096) is checked, it is never split.
@@ -22,13 +26,21 @@ export type ScopedOperation = (typeof SCOPED_OPERATIONS)[number];
 export const SCOPED_RECORDS_REASON = "SCOPED_RETAINED_WINDOW_NOT_TOTAL_HISTORY";
 export const SCOPED_RECORDS_HISTORY = "RETAINED_PORTAL_CURRENT_WINDOW_NOT_AUTHORITATIVE_REPLAY";
 
-type Kind = "T" | "D" | "I";
+type Kind = "T" | "D" | "I" | "L";
+const LIQUIDITY_SIDES = ["MAKER", "TAKER", "UNKNOWN"] as const;
+export const TIME_REASONS = ["SUBMITTED_AT_NOT_IN_POLICY", "OCCURRED_AT_NOT_IN_POLICY", "SOURCE_TIME_NOT_PUBLISHED", "SOURCE_TIME_UNPARSEABLE"] as const;
+export type TimeReason = (typeof TIME_REASONS)[number];
+export const OBSERVED_AT_BASES = ["ORDER_UPDATED_AT", "FILL_TRADE_TIME"] as const;
+export type ObservedAtBasis = (typeof OBSERVED_AT_BASES)[number];
 /** The closed `ScopedRecordFields` set (text up to 256, exact decimal, non-negative integer); every member optional and nullable. */
 export const SCOPED_RECORD_FIELDS: Readonly<Record<string, Kind>> = {
   alpha_id: "T", alpha_version_id: "T", strategy_id: "T", portfolio_id: "T", deployment_id: "T", account_id: "T", binding_id: "T", instrument_id: "T",
   position_id: "T", order_id: "T", fill_id: "T", name: "T", state: "T", status: "T", stage: "T", venue: "T", currency: "T", base_currency: "T", side: "T",
   quantity: "D", price: "D", notional: "D", allocation: "D", balance_total: "D", balance_free: "D", balance_locked: "D", realized_pnl: "D",
   unrealized_pnl: "D", net_pnl: "D", equity: "D", timestamp_ms: "I", occurred_at_ms: "I", created_at: "I", updated_at: "I",
+  // BE-P15 record detail.
+  submitted_at_ms: "I", resolved_at_ms: "I", leg_sequence: "I", client_order_id: "T", order_type: "T", commission_currency: "T", finding_id: "T",
+  finding_type: "T", group_id: "T", leg_id: "T", leg_role: "T", commission: "D", liquidity_side: "L",
 };
 
 export interface ScopedRecord {
@@ -37,10 +49,16 @@ export interface ScopedRecord {
   observedAtMs: UtcEpochMs;
   /** A member the source did not state is not here; one it stated as `null` is `{ kind: "absent" }`. */
   values: Readonly<Record<string, ScopedCell>>;
+  /** Why this record has no order/trade instant (`submitted_at_ms` / `occurred_at_ms`); `null` when it has one. */
+  timeReason: TimeReason | null;
 }
 
 export interface SubjectRecordsScoped {
   schemaVersion: typeof SUBJECT_RECORDS_V2_SCHEMA;
+  /** Every integer instant of the page is UTC epoch milliseconds. */
+  timeUnit: "UTC_EPOCH_MS";
+  /** What `observed_at_ms` and the page order mean. The wire does not tie it to `operationId`; the server does. */
+  observedAtBasis: ObservedAtBasis;
   operationId: ScopedOperation;
   environment: ScopedEnvironment;
   profileId: string;
@@ -81,12 +99,16 @@ function readValue(kind: Kind, value: unknown): ScopedCell | null {
   if (value === null) return { kind: "absent" };
   if (kind === "T") { const t = text(value); return t === null ? null : { kind: "text", text: t }; }
   if (kind === "D") { const d = decimal(value); return d === null ? null : { kind: "decimal", exact: d }; }
+  if (kind === "L") return typeof value === "string" && (LIQUIDITY_SIDES as readonly string[]).includes(value) ? { kind: "text", text: value } : null;
   const n = integer(value);
   return n === null ? null : { kind: "integer", value: n };
 }
 
 function readRecord(value: unknown): ScopedRecord | null {
-  const r = closed(value, ["record_id", "observed_at_ms", "values"]);
+  const wide = rec(value);
+  const r = has(wide ?? {}, "time_reason_code") ? closed(value, ["record_id", "observed_at_ms", "values", "time_reason_code"]) : closed(value, ["record_id", "observed_at_ms", "values"]);
+  const reason = r !== null && has(r, "time_reason_code") ? (TIME_REASONS as readonly string[]).includes(r.time_reason_code as string) ? r.time_reason_code as TimeReason : undefined : null;
+  if (reason === undefined) return null;
   const values = rec(r?.values);
   const recordId = text(r?.record_id);
   const observedAtMs = instant(r?.observed_at_ms);
@@ -98,17 +120,19 @@ function readRecord(value: unknown): ScopedRecord | null {
     if (cell === null) return null;
     out[key] = cell;
   }
-  return { recordId, observedAtMs, values: out };
+  return { recordId, observedAtMs, values: out, timeReason: reason };
 }
 
 export function readSubjectRecordsScoped(raw: unknown): SubjectRecordsScoped | null {
   const r = closed(raw, [
-    "schema_version", "logical_operation_id", "authority", "source_authority", "history_semantics", "environment", "profile_id", "resource", "read_scope",
-    "state", "reason_code", "coverage", "page", "records",
+    "schema_version", "time_unit", "observed_at_basis", "logical_operation_id", "authority", "source_authority", "history_semantics", "environment", "profile_id",
+    "resource", "read_scope", "state", "reason_code", "coverage", "page", "records",
   ]);
+  const basis = (OBSERVED_AT_BASES as readonly string[]).includes(r?.observed_at_basis as string) ? r!.observed_at_basis as ObservedAtBasis : null;
   if (
     r === null || r.schema_version !== SUBJECT_RECORDS_V2_SCHEMA || r.authority !== "PORTAL_SGP_RETAINED_CURRENT_WINDOW"
     || r.source_authority !== "TRADING_SYSTEM_CURRENT_SOURCE" || r.history_semantics !== SCOPED_RECORDS_HISTORY || r.reason_code !== SCOPED_RECORDS_REASON
+    || r.time_unit !== "UTC_EPOCH_MS" || basis === null
   ) return null;
   const operationId = typeof r.logical_operation_id === "string" && (SCOPED_OPERATIONS as readonly string[]).includes(r.logical_operation_id) ? r.logical_operation_id as ScopedOperation : null;
   const environment = r.environment === "paper" || r.environment === "sandbox" || r.environment === "live" ? r.environment : null;
@@ -141,7 +165,7 @@ export function readSubjectRecordsScoped(raw: unknown): SubjectRecordsScoped | n
     records.push(read);
   }
   return {
-    schemaVersion: SUBJECT_RECORDS_V2_SCHEMA, operationId, environment, profileId, resource: { kind, id: resourceId },
+    schemaVersion: SUBJECT_RECORDS_V2_SCHEMA, timeUnit: "UTC_EPOCH_MS", observedAtBasis: basis, operationId, environment, profileId, resource: { kind, id: resourceId },
     authority: { visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", policyRevision }, state, reasonCode: SCOPED_RECORDS_REASON,
     coverage: { retainedRowCount: retained, oldestObservedAtMs: oldest, newestObservedAtMs: newest },
     page: { limit, maximumPageRows: 500, returnedCount: returned, hasMore: page.has_more, nextCursor: cursor }, records,

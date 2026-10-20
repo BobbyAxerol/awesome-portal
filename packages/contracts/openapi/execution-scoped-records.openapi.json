@@ -989,9 +989,176 @@
                 "type": "null"
               }
             ]
+          },
+          "submitted_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolved_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "leg_sequence": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "client_order_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "order_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commission_currency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finding_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "finding_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "group_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "leg_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "leg_role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "commission": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "liquidity_side": {
+            "anyOf": [
+              {
+                "enum": [
+                  "MAKER",
+                  "TAKER",
+                  "UNKNOWN"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
-        "required": []
+        "required": [],
+        "description": "Closed per-record vocabulary. Time members are UTC epoch milliseconds. submitted_at_ms is the order submission instant and occurred_at_ms the fill trade instant (source columns submitted_at / trade_time); resolved_at_ms is a reconciliation finding resolution instant. client_order_id, order_type, finding_id, finding_type, leg_role are raw source text (the Portal does not classify; no finding_type vocabulary is published). commission is an exact decimal on fills only; orders carry no fee column. liquidity_side is MAKER|TAKER|UNKNOWN. group_id, leg_id, leg_role and leg_sequence identify a conditional-order leg: match legs to orders by exact client_order_id equality, never by suffix. Admission is per scope (field policy); an omitted member is not a zero."
       },
       "ScopedAdapterGroup": {
         "type": "object",
@@ -1052,6 +1219,9 @@
         "properties": {
           "schema_version": {
             "const": "portal.execution.profile-read-adapter.v2"
+          },
+          "time_unit": {
+            "const": "UTC_EPOCH_MS"
           },
           "capability_id": {
             "enum": [
@@ -1178,6 +1348,7 @@
         },
         "required": [
           "schema_version",
+          "time_unit",
           "capability_id",
           "authority",
           "workspace_id",
@@ -1196,6 +1367,15 @@
         "properties": {
           "schema_version": {
             "const": "portal.execution.subject-records.v2"
+          },
+          "time_unit": {
+            "const": "UTC_EPOCH_MS"
+          },
+          "observed_at_basis": {
+            "enum": [
+              "ORDER_UPDATED_AT",
+              "FILL_TRADE_TIME"
+            ]
           },
           "logical_operation_id": {
             "enum": [
@@ -1383,6 +1563,14 @@
                 },
                 "values": {
                   "$ref": "#/components/schemas/ScopedRecordFields"
+                },
+                "time_reason_code": {
+                  "enum": [
+                    "SUBMITTED_AT_NOT_IN_POLICY",
+                    "OCCURRED_AT_NOT_IN_POLICY",
+                    "SOURCE_TIME_NOT_PUBLISHED",
+                    "SOURCE_TIME_UNPARSEABLE"
+                  ]
                 }
               },
               "required": [
@@ -1395,6 +1583,8 @@
         },
         "required": [
           "schema_version",
+          "time_unit",
+          "observed_at_basis",
           "logical_operation_id",
           "authority",
           "source_authority",
@@ -1408,7 +1598,8 @@
           "coverage",
           "page",
           "records"
-        ]
+        ],
+        "description": "Retained current window of authorized rows, not total history. time_unit: every integer instant is UTC epoch milliseconds (Date.parse of the source timestamptz; sub-millisecond digits are truncated). observed_at_basis: observed_at_ms and the keyset order are the order row updated_at (an order can move later) or the fill trade_time; this is a Portal retained-window ordering and is NOT a venue event sequence across relations. time_reason_code appears on a record only when its order/trade instant (submitted_at_ms / occurred_at_ms) is absent from values."
       },
       "TechnicalHealth": {
         "type": "object",

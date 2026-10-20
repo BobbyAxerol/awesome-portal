@@ -49,7 +49,7 @@ const alphaOf = (raw: unknown): AlphaResourceScoped | null => readAlphaResourceS
 
 /* ── a rich, schema-valid body: every relation carries one row with every member the table names ── */
 
-const SAMPLE: Record<string, unknown> = { T: "text_value", D: "123.456789012345678901234567890123", M: "paper", S: "2026-10-17T12:00:00Z", I: 1_790_812_800_000, C: "9007199254740993" };
+const SAMPLE: Record<string, unknown> = { T: "text_value", D: "123.456789012345678901234567890123", M: "paper", S: "2026-10-17T12:00:00Z", I: 1_790_812_800_000, C: "9007199254740993", L: "TAKER" };
 const richRow = (relation: ScopedRelation, book: string = "paper"): Draft => {
   const row: Draft = { profile_environment: book };
   for (const [key, kind] of Object.entries(SCOPED_ROW_FIELDS[relation])) row[key] = SAMPLE[kind];
@@ -76,14 +76,56 @@ const RICH: Draft = rich();
 
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
-  it("the fixture is the synthetic lane and its three Alpha cases pass the published schema through the testkit checker", () => {
+  it("the fixture is the synthetic lane and its four Alpha cases pass the published schema through the testkit checker", () => {
     expect(canonical.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
-    expect(ALPHA_CASES).toHaveLength(3);
+    expect(ALPHA_CASES).toHaveLength(4);
     for (const c of ALPHA_CASES) expect(violations(c), c.resource.id).toEqual([]);
     expect(violations(RICH)).toEqual([]);
     const broken = clone(POPULATED);
     broken.totals_scope = "ALL_ROWS";
     expect(violations(broken).length).toBeGreaterThan(0);
+  });
+
+  it("BE-P15 · the detail Alpha case: record detail, a published deployment snapshot and typed identity absences are read exactly", () => {
+    const detail = ALPHA_CASES.find((c) => c.resource.id === "alpha_RICH_TEST_ONLY")!;
+    const read = alphaOf(detail)!;
+    expect(read).not.toBeNull();
+    const fill = read.rows!.fills[0]!;
+    expect(fill.cells.commission).toEqual({ kind: "decimal", exact: "0.0000000000000000001" });
+    expect(fill.cells.liquidity_side).toEqual({ kind: "text", text: "MAKER" });
+    expect(fill.cells.trade_time_ms).toEqual({ kind: "integer", value: 1790812801456 });
+    expect(read.rows!.orders[0]!.cells).toMatchObject({ client_order_id: { kind: "text", text: "client_TEST_ONLY_entry" }, order_type: { kind: "text", text: "LIMIT" } });
+    expect(read.rows!.reconciliation[0]!.cells).toMatchObject({ finding_id: { kind: "text", text: "finding_TEST_ONLY" }, resolved_at_ms: { kind: "integer", value: 1790813100000 } });
+    expect(read.summary).toMatchObject({ name: "TEST_ONLY Alpha", version: "TEST_ONLY-v1" });
+    expect(read.summary!.identityAbsences).toEqual([
+      { member: "owner", reasonCode: "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER" }, { member: "stage", reasonCode: "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE" },
+    ]);
+    expect(read.summary!.deploymentFinancials).toEqual([{
+      book: "paper", deploymentId: "deployment_TEST_ONLY", state: "AVAILABLE", reasonCode: null, snapshotAtMs: 1790812800000, currency: "USDT",
+      netPnl: "-1234567890.1234567890123456789", equity: "9007199254740993.0000000001",
+    }]);
+    // The same members, malformed, refuse the whole body (and the schema agrees).
+    const bad = (mutate: (body: Draft) => void) => { const body = clone(detail); mutate(body); return body; };
+    for (const body of [
+      bad((b) => { b.data.alpha.deployment_financials[0].basis = "SUM_OF_VISIBLE_ROWS"; }),
+      bad((b) => { b.data.alpha.deployment_financials[0].state = "ZERO"; }),
+      bad((b) => { b.data.alpha.deployment_financials[0].net_pnl = "1e3"; }),
+      bad((b) => { b.data.alpha.deployment_financials[0].extra = "x"; }),
+      bad((b) => { b.data.alpha.identity_absences[0].reason_code = "UNNAMED_ALPHA"; }),
+      bad((b) => { b.data.alpha.identity_absences[0].member = "owner_user_id"; }),
+      bad((b) => { b.data.fills[0].liquidity_side = "maker"; b.panels.fills.data.rows[0].liquidity_side = "maker"; }),
+    ]) {
+      expect(violations(body).length).toBeGreaterThan(0);
+      expect(alphaOf(body)).toBeNull();
+    }
+    // Without the optional members the body is exactly the previous body (additive): both read, with empty lists.
+    const trimmed = clone(detail);
+    delete trimmed.data.alpha.deployment_financials;
+    delete trimmed.data.alpha.identity_absences;
+    expect(violations(trimmed)).toEqual([]);
+    const plain = alphaOf(trimmed)!;
+    expect(plain.summary!.identityAbsences).toEqual([]);
+    expect(plain.summary!.deploymentFinancials).toEqual([]);
   });
 
   it("populated: the authority the body states is kept as typed constants, never inferred", () => {
@@ -141,6 +183,7 @@ describe("L0 · canonical, verbatim", () => {
         if (kind === "I") expect(cell, `${relation}.${key}`).toEqual({ kind: "integer", value: SAMPLE.I });
         if (kind === "M") expect(cell, `${relation}.${key}`).toEqual({ kind: "book", book: "paper" });
         if (kind === "S") expect(cell, `${relation}.${key}`).toEqual({ kind: "stamp-text", text: SAMPLE.S });
+        if (kind === "L") expect(cell, `${relation}.${key}`).toEqual({ kind: "text", text: SAMPLE.L });
       }
     }
     expect(cellDecimal(read.rows!.account_balances[0]!, "total")).toBe(SAMPLE.D);
@@ -163,7 +206,7 @@ describe("L0 · canonical, verbatim", () => {
       const nullable = alts.some((a) => a.type === "null");
       const base = alts.filter((a) => a.type !== "null");
       const one = base.length === 1 ? base[0] : { anyOf: base };
-      if (Array.isArray(one.enum)) return "M";
+      if (Array.isArray(one.enum)) return one.enum.join("|") === "MAKER|TAKER|UNKNOWN" ? "L" : "M";
       if (one.type === "string" && isText(one)) return "T";
       if (one.type === "string" && one.maxLength === 128) return "D";
       if (one.type === "integer") return nullable ? "N?" : "I";
@@ -268,10 +311,12 @@ describe("L1 · state matrices (schema as oracle)", () => {
   const LEGAL: Record<string, unknown[]> = {
     T: ["x", "a".repeat(512), "ünïcode ✓"], D: ["0", "-1.5", "123456789012345678901234567890.123456789", "0.000000000000000001"],
     M: ["paper", "sandbox", "live"], S: ["2026-10-17T12:00:00Z", 0, 1_790_812_800_000], I: [0, 1_790_812_800_000], C: ["0", "9007199254740993", 0, 7],
+    L: ["MAKER", "TAKER", "UNKNOWN"],
   };
   const ILLEGAL: Record<string, unknown[]> = {
     T: ["", "a".repeat(513), "tab\there", 7, true, {}, []], D: [7, 1.5, "1e5", "01", "1.", ".5", "NaN", "a".repeat(129), {}], M: ["Paper", "backtest", "", 7],
     S: [-1, 1.5, "", true, {}], I: [null, -1, 1.5, "5", true, {}], C: [-1, 1.5, "01", "-1", "1.5", {}],
+    L: ["maker", "OTHER", "", 7, true, {}, []],
   };
   it(`C · ${MEMBER_CASES.length} members x legal values: schema-valid and read exactly; null is absent (except epoch-ms members)`, () => {
     for (const { relation, key, kind } of MEMBER_CASES) {

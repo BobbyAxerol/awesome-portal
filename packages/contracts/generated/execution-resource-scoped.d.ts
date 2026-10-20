@@ -638,6 +638,8 @@ export interface components {
             updated_at?: (string | number) | null;
             updated_at_ms?: number;
             risk_grant_id?: string | null;
+            client_order_id?: string | null;
+            order_type?: string | null;
             deployment_id?: string | null;
         };
         OrdersScopedRowPanel: {
@@ -689,6 +691,10 @@ export interface components {
             price?: string | null;
             quantity?: string | null;
             realized_pnl?: string | null;
+            client_order_id?: string | null;
+            commission?: string | null;
+            commission_currency?: string | null;
+            liquidity_side?: ("MAKER" | "TAKER" | "UNKNOWN") | null;
             deployment_id?: string | null;
         };
         FillsScopedRowPanel: {
@@ -857,6 +863,10 @@ export interface components {
             status?: string | null;
             created_at?: (string | number) | null;
             created_at_ms?: number;
+            finding_id?: string | null;
+            finding_type?: string | null;
+            resolved_at?: (string | number) | null;
+            resolved_at_ms?: number;
             deployment_id?: string | null;
         };
         ReconciliationScopedRowPanel: {
@@ -1004,6 +1014,20 @@ export interface components {
             reason_code: string | null;
             retryable: boolean;
         };
+        DeploymentFinancialScopedRow: {
+            /** @enum {unknown} */
+            profile_environment: "paper" | "sandbox" | "live";
+            deployment_id: string;
+            /** @enum {unknown} */
+            state: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
+            reason_code: ("DEPLOYMENT_FINANCIALS_RELATION_NOT_BOUND_FOR_PROFILE" | "DEPLOYMENT_FINANCIALS_RELATION_UNAVAILABLE" | "DEPLOYMENT_FINANCIAL_SNAPSHOT_NOT_PUBLISHED" | "DEPLOYMENT_FINANCIAL_SNAPSHOT_AMBIGUOUS" | "DEPLOYMENT_FINANCIAL_WINDOW_TRUNCATED") | null;
+            /** @constant */
+            basis: "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW";
+            snapshot_at_ms: number | null;
+            currency: string | null;
+            net_pnl: string | null;
+            equity: string | null;
+        };
         ScopedResourceMetricAvailability: {
             /** @enum {unknown} */
             state: "AVAILABLE" | "EMPTY" | "PARTIAL" | "UNAVAILABLE";
@@ -1029,8 +1053,16 @@ export interface components {
             binding_id?: string | null;
             name?: string | null;
             display_name?: string | null;
+            version?: string | null;
             state?: string | null;
             base_currency?: string | null;
+            identity_absences?: {
+                /** @enum {unknown} */
+                member: "name" | "version" | "owner" | "stage";
+                /** @enum {unknown} */
+                reason_code: "ALPHA_NAME_NOT_IN_SOURCE" | "ALPHA_NAME_NOT_IN_POLICY" | "ALPHA_VERSION_NOT_IN_SOURCE" | "ALPHA_VERSION_NOT_IN_POLICY" | "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER" | "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE";
+            }[];
+            deployment_financials?: components["schemas"]["DeploymentFinancialScopedRow"][];
             deployments: components["schemas"]["DeploymentsScopedRow"][];
             portfolios: {
                 portfolio_id?: string | null;
@@ -1322,8 +1354,16 @@ export interface components {
             binding_id?: string | null;
             name?: string | null;
             display_name?: string | null;
+            version?: string | null;
             state?: string | null;
             base_currency?: string | null;
+            identity_absences?: {
+                /** @enum {unknown} */
+                member: "name" | "version" | "owner" | "stage";
+                /** @enum {unknown} */
+                reason_code: "ALPHA_NAME_NOT_IN_SOURCE" | "ALPHA_NAME_NOT_IN_POLICY" | "ALPHA_VERSION_NOT_IN_SOURCE" | "ALPHA_VERSION_NOT_IN_POLICY" | "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER" | "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE";
+            }[];
+            deployment_financials?: components["schemas"]["DeploymentFinancialScopedRow"][];
             deployments: components["schemas"]["DeploymentsScopedRow"][];
             portfolios: {
                 portfolio_id?: string | null;
@@ -1530,8 +1570,16 @@ export interface components {
             binding_id?: string | null;
             name?: string | null;
             display_name?: string | null;
+            version?: string | null;
             state?: string | null;
             base_currency?: string | null;
+            identity_absences?: {
+                /** @enum {unknown} */
+                member: "name" | "version" | "owner" | "stage";
+                /** @enum {unknown} */
+                reason_code: "ALPHA_NAME_NOT_IN_SOURCE" | "ALPHA_NAME_NOT_IN_POLICY" | "ALPHA_VERSION_NOT_IN_SOURCE" | "ALPHA_VERSION_NOT_IN_POLICY" | "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER" | "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE";
+            }[];
+            deployment_financials?: components["schemas"]["DeploymentFinancialScopedRow"][];
             deployments: components["schemas"]["DeploymentsScopedRow"][];
             portfolios: {
                 portfolio_id?: string | null;
@@ -1735,8 +1783,16 @@ export interface components {
             binding_id?: string | null;
             name?: string | null;
             display_name?: string | null;
+            version?: string | null;
             state?: string | null;
             base_currency?: string | null;
+            identity_absences?: {
+                /** @enum {unknown} */
+                member: "name" | "version" | "owner" | "stage";
+                /** @enum {unknown} */
+                reason_code: "ALPHA_NAME_NOT_IN_SOURCE" | "ALPHA_NAME_NOT_IN_POLICY" | "ALPHA_VERSION_NOT_IN_SOURCE" | "ALPHA_VERSION_NOT_IN_POLICY" | "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER" | "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE";
+            }[];
+            deployment_financials?: components["schemas"]["DeploymentFinancialScopedRow"][];
             deployments: components["schemas"]["DeploymentsScopedRow"][];
             portfolios: {
                 portfolio_id?: string | null;

@@ -36,9 +36,11 @@ export type ScopedRelation = (typeof ALPHA_SCOPED_RELATIONS)[number];
 
 /**
  * Member kinds of a row. `T` text, `D` exact decimal, `M` book word, `S` a stamp that is text OR an integer, `I` an
- * epoch-ms integer (never null), `C` a count (integer OR exact counter string). Every kind but `I` also admits `null`.
+ * epoch-ms integer (never null), `C` a count (integer OR exact counter string), `L` a liquidity word (MAKER, TAKER or UNKNOWN).
+ * Every kind but `I` also admits `null`.
  */
-type Kind = "T" | "D" | "M" | "S" | "I" | "C";
+type Kind = "T" | "D" | "M" | "S" | "I" | "C" | "L";
+const LIQUIDITY_SIDES = ["MAKER", "TAKER", "UNKNOWN"] as const;
 
 const stamps = (prefix: string, withMs = true): Record<string, Kind> => ({ [prefix]: "S", ...(withMs ? { [`${prefix}_ms`]: "I" } : {}) });
 
@@ -64,11 +66,11 @@ export const SCOPED_ROW_FIELDS: Readonly<Record<ScopedRelation, Readonly<Record<
   },
   orders: {
     order_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", instrument_id: "T", symbol: "T", side: "T", quantity: "D", price: "D", status: "T",
-    ...stamps("submitted_at"), ...stamps("updated_at"), risk_grant_id: "T", deployment_id: "T",
+    ...stamps("submitted_at"), ...stamps("updated_at"), risk_grant_id: "T", client_order_id: "T", order_type: "T", deployment_id: "T",
   },
   fills: {
     fill_id: "T", ...stamps("trade_time"), strategy_id: "T", account_id: "T", mode: "M", venue: "T", instrument_id: "T", side: "T", price: "D", quantity: "D",
-    realized_pnl: "D", deployment_id: "T",
+    realized_pnl: "D", client_order_id: "T", commission: "D", commission_currency: "T", liquidity_side: "L", deployment_id: "T",
   },
   performance: {
     ...stamps("ts"), deployment_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", instrument_id: "T", symbol: "T", currency: "T", position_qty: "D",
@@ -79,7 +81,9 @@ export const SCOPED_ROW_FIELDS: Readonly<Record<ScopedRelation, Readonly<Record<
     ...stamps("ts"), deployment_id: "T", strategy_id: "T", account_id: "T", mode: "M", venue: "T", currency: "T", margin_initial: "D", margin_maintenance: "D",
     realized_pnl: "D", unrealized_pnl: "D", fee_total: "D", funding_pnl: "D", gross_pnl: "D", net_pnl: "D", equity: "D", drawdown: "D", ...stamps("created_at"),
   },
-  reconciliation: { account_id: "T", strategy_id: "T", mode: "M", venue: "T", status: "T", ...stamps("created_at"), deployment_id: "T" },
+  reconciliation: {
+    account_id: "T", strategy_id: "T", mode: "M", venue: "T", status: "T", ...stamps("created_at"), finding_id: "T", finding_type: "T", ...stamps("resolved_at"), deployment_id: "T",
+  },
   journal: { mode: "M", venue: "T", alpha_id: "T", account_id: "T", state: "T", ...stamps("updated_at"), deployment_id: "T" },
 };
 
@@ -141,7 +145,12 @@ export interface ScopedAlphaSummary {
   alphaId: string | null;
   name: string | null;
   displayName: string | null;
+  version: string | null;
   state: string | null;
+  /** BE-P15: identity members the body does not state, each with a typed reason. Empty when the body carries none. */
+  identityAbsences: readonly { member: (typeof IDENTITY_ABSENCE_MEMBERS)[number]; reasonCode: (typeof IDENTITY_ABSENCE_REASONS)[number] }[];
+  /** BE-P15: one published snapshot row per visible deployment, or a typed absence. Empty when the body carries none. */
+  deploymentFinancials: readonly ScopedDeploymentFinancial[];
   deployments: readonly ScopedRow[];
   portfolios: readonly { portfolioId: string | null; name: string | null; displayName: string | null }[];
   metrics: Readonly<Record<"account_balance" | "current_position_pnl" | "equity_series", { state: (typeof AVAILABILITY)[number]; reasonCode: string | null }>>;
@@ -277,6 +286,7 @@ function readCell(kind: Kind, value: unknown): ScopedCell | null {
       const n = integer(value);
       return n === null ? null : { kind: "integer", value: n };
     }
+    case "L": return oneOf(value, LIQUIDITY_SIDES) === null ? null : { kind: "text", text: value as string };
     case "C": {
       if (typeof value === "string") return value.length <= 20 && COUNTER.test(value) ? { kind: "counter", exact: value } : null;
       const n = integer(value);
@@ -351,7 +361,50 @@ function readPanel(name: ScopedRelation, value: unknown): ScopedPanel | null {
 
 /* ── summary and the small members ────────────────────────────────────────── */
 
-const SUMMARY_OPTIONAL_TEXT = ["alpha_id", "portfolio_id", "account_id", "binding_id", "name", "display_name", "state", "base_currency"] as const;
+const SUMMARY_OPTIONAL_TEXT = ["alpha_id", "portfolio_id", "account_id", "binding_id", "name", "display_name", "version", "state", "base_currency"] as const;
+
+/** BE-P15: which identity members of an Alpha the body does not state, and why. Typed absence, never a placeholder name. */
+export const IDENTITY_ABSENCE_MEMBERS = ["name", "version", "owner", "stage"] as const;
+export const IDENTITY_ABSENCE_REASONS = [
+  "ALPHA_NAME_NOT_IN_SOURCE", "ALPHA_NAME_NOT_IN_POLICY", "ALPHA_VERSION_NOT_IN_SOURCE", "ALPHA_VERSION_NOT_IN_POLICY",
+  "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER", "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE",
+] as const;
+export const DEPLOYMENT_FINANCIAL_REASONS = [
+  "DEPLOYMENT_FINANCIALS_RELATION_NOT_BOUND_FOR_PROFILE", "DEPLOYMENT_FINANCIALS_RELATION_UNAVAILABLE", "DEPLOYMENT_FINANCIAL_SNAPSHOT_NOT_PUBLISHED",
+  "DEPLOYMENT_FINANCIAL_SNAPSHOT_AMBIGUOUS", "DEPLOYMENT_FINANCIAL_WINDOW_TRUNCATED",
+] as const;
+export const DEPLOYMENT_FINANCIAL_BASIS = "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW";
+
+export interface ScopedDeploymentFinancial {
+  book: ScopedEnvironment;
+  deploymentId: string;
+  /** PARTIAL: the Portal cut the window, a later row may exist. UNAVAILABLE: no figure, `reasonCode` says why (never zero). */
+  state: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
+  reasonCode: (typeof DEPLOYMENT_FINANCIAL_REASONS)[number] | null;
+  /** The published snapshot row's instant, UTC epoch ms. */
+  snapshotAtMs: number | null;
+  currency: string | null;
+  /** Exact decimals of ONE published row. The source does not say whether the row is the deployment's or its shared account's; nothing is summed. */
+  netPnl: string | null;
+  equity: string | null;
+}
+
+function readDeploymentFinancial(value: unknown): ScopedDeploymentFinancial | null {
+  const f = closed(value, ["profile_environment", "deployment_id", "state", "reason_code", "basis", "snapshot_at_ms", "currency", "net_pnl", "equity"]);
+  const rowBook = book(f?.profile_environment);
+  const deploymentId = text(f?.deployment_id);
+  const state = oneOf(f?.state, ["AVAILABLE", "PARTIAL", "UNAVAILABLE"] as const);
+  const reasonCode = f?.reason_code === null ? null : oneOf(f?.reason_code, DEPLOYMENT_FINANCIAL_REASONS);
+  const at = f?.snapshot_at_ms === null ? null : integer(f?.snapshot_at_ms);
+  const currency = nullableText(f?.currency);
+  const netPnl = f?.net_pnl === null ? null : decimal(f?.net_pnl);
+  const equity = f?.equity === null ? null : decimal(f?.equity);
+  if (
+    f === null || rowBook === null || deploymentId === null || state === null || (f.reason_code !== null && reasonCode === null) || f.basis !== DEPLOYMENT_FINANCIAL_BASIS
+    || (f.snapshot_at_ms !== null && at === null) || currency === undefined || (f.net_pnl !== null && netPnl === null) || (f.equity !== null && equity === null)
+  ) return null;
+  return { book: rowBook, deploymentId, state, reasonCode, snapshotAtMs: at, currency, netPnl, equity };
+}
 
 function readMetric(value: unknown): { state: (typeof AVAILABILITY)[number]; reasonCode: string | null } | null {
   const m = closed(value, ["state", "reason_code"]);
@@ -363,6 +416,7 @@ function readMetric(value: unknown): { state: (typeof AVAILABILITY)[number]; rea
 function readSummary(value: unknown): ScopedAlphaSummary | null {
   const s = subset(value, [
     "kind", "id", "visibility", "coverage", "financial_summary", "deployments", "portfolios", "metrics_availability", ...SUMMARY_OPTIONAL_TEXT,
+    "identity_absences", "deployment_financials",
   ], ["kind", "id", "visibility", "coverage", "financial_summary", "deployments", "portfolios", "metrics_availability"]);
   const id = text(s?.id);
   const financial = closed(s?.financial_summary, ["state", "reason_code"]);
@@ -393,12 +447,33 @@ function readSummary(value: unknown): ScopedAlphaSummary | null {
     }
     portfolios.push({ portfolioId: read.portfolio_id, name: read.name, displayName: read.display_name });
   }
+  const identityAbsences: ScopedAlphaSummary["identityAbsences"][number][] = [];
+  if (has(s, "identity_absences")) {
+    if (!Array.isArray(s.identity_absences) || s.identity_absences.length > 4) return null;
+    for (const entry of s.identity_absences) {
+      const a = closed(entry, ["member", "reason_code"]);
+      const member = oneOf(a?.member, IDENTITY_ABSENCE_MEMBERS);
+      const reason = oneOf(a?.reason_code, IDENTITY_ABSENCE_REASONS);
+      if (member === null || reason === null) return null;
+      identityAbsences.push({ member, reasonCode: reason });
+    }
+  }
+  const deploymentFinancials: ScopedDeploymentFinancial[] = [];
+  if (has(s, "deployment_financials")) {
+    if (!Array.isArray(s.deployment_financials) || s.deployment_financials.length > 200) return null;
+    for (const entry of s.deployment_financials) {
+      const read = readDeploymentFinancial(entry);
+      if (read === null) return null;
+      deploymentFinancials.push(read);
+    }
+  }
   const balance = readMetric(metrics.account_balance);
   const pnl = readMetric(metrics.current_position_pnl);
   const equity = readMetric(metrics.equity_series);
   if (balance === null || pnl === null || equity === null) return null;
   return {
-    id, alphaId: optional.alpha_id, name: optional.name, displayName: optional.display_name, state: optional.state, deployments, portfolios,
+    id, alphaId: optional.alpha_id, name: optional.name, displayName: optional.display_name, version: optional.version, state: optional.state,
+    identityAbsences, deploymentFinancials, deployments, portfolios,
     metrics: { account_balance: balance, current_position_pnl: pnl, equity_series: equity },
     financialSummary: { state: "UNAVAILABLE", reasonCode: NO_TOTALS_REASON },
   };

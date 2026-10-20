@@ -17,7 +17,7 @@ const reason = nullable(text);
 const states = { enum: ['AVAILABLE', 'EMPTY', 'PARTIAL', 'UNAVAILABLE'] };
 const money = new Set(('total free locked signed_qty quantity avg_px_open avg_px_close mark_price realized_pnl unrealized_pnl notional allocated_capital equity drawdown gross_pnl net_pnl fee_total funding_pnl margin_initial margin_maintenance exposure_long exposure_short price trigger_price commission').split(' '));
 const counts = new Set(['submitted_count', 'risk_rejected_count', 'broker_rejected_count', 'filled_count']);
-const clocks = new Set(['ts', 'created_at', 'updated_at', 'submitted_at', 'trade_time', 'mark_price_at']);
+const clocks = new Set(['ts', 'created_at', 'updated_at', 'submitted_at', 'trade_time', 'mark_price_at', 'resolved_at']);
 // Closed per-relation public vocabulary. This is not a grant: the runtime
 // intersects these raw names with reviewed BUSINESS_READ_FIELDS first.
 // Physical custody, external account IDs, errors and source cursors are absent.
@@ -34,12 +34,12 @@ const fields = {
   portfolio_allocations: 'portfolio_id strategy_id deployment_id account_id mode venue currency allocated_capital state created_at updated_at',
   positions: 'position_id strategy_id account_id mode venue instrument_id side signed_qty quantity avg_px_open avg_px_close realized_pnl unrealized_pnl mark_price notional updated_at',
   sessions: 'strategy_id account_id mode venue state submitted_count risk_rejected_count filled_count broker_rejected_count updated_at',
-  orders: 'order_id strategy_id account_id mode venue instrument_id symbol side quantity price status submitted_at updated_at risk_grant_id',
-  fills: 'fill_id trade_time strategy_id account_id mode venue instrument_id side price quantity realized_pnl',
+  orders: 'order_id strategy_id account_id mode venue instrument_id symbol side quantity price status submitted_at updated_at risk_grant_id client_order_id order_type',
+  fills: 'fill_id trade_time strategy_id account_id mode venue instrument_id side price quantity realized_pnl client_order_id commission commission_currency liquidity_side',
   performance: 'ts deployment_id strategy_id account_id mode venue instrument_id symbol currency position_qty signed_qty avg_px_open mark_price notional exposure_long exposure_short realized_pnl unrealized_pnl fee_total funding_pnl gross_pnl net_pnl equity created_at',
   account_equity: 'ts deployment_id strategy_id account_id mode venue currency margin_initial margin_maintenance realized_pnl unrealized_pnl fee_total funding_pnl gross_pnl net_pnl equity drawdown created_at',
   portfolio_equity: 'ts portfolio_id currency allocated_capital margin_initial margin_maintenance realized_pnl unrealized_pnl fee_total funding_pnl gross_pnl net_pnl equity drawdown created_at',
-  reconciliation: 'account_id strategy_id mode venue status created_at',
+  reconciliation: 'account_id strategy_id mode venue status created_at finding_id finding_type resolved_at',
   journal: 'mode venue alpha_id account_id state updated_at',
 };
 const common = 'deployments accounts account_balances margin_balances account_sync broker_sync venue_accounts portfolios portfolio_allocations positions sessions orders fills performance account_equity reconciliation strategies'.split(' ');
@@ -49,7 +49,7 @@ const defs = {};
 for (const [alias, keys] of Object.entries(fields)) {
   const properties = { profile_environment: environment };
   for (const key of keys.split(' ').filter(Boolean)) {
-    properties[key] = nullable(money.has(key) || ['position_qty'].includes(key) ? decimal : counts.has(key) ? { anyOf: [integer, { type: 'string', pattern: '^(?:0|[1-9][0-9]*)$(?![\\s\\S])' }] } : clocks.has(key) ? { anyOf: [text, integer] } : key === 'mode' ? environment : text);
+    properties[key] = nullable(key === 'liquidity_side' ? { enum: ['MAKER', 'TAKER', 'UNKNOWN'] } : money.has(key) || ['position_qty'].includes(key) ? decimal : counts.has(key) ? { anyOf: [integer, { type: 'string', pattern: '^(?:0|[1-9][0-9]*)$(?![\\s\\S])' }] } : clocks.has(key) ? { anyOf: [text, integer] } : key === 'mode' ? environment : text);
     if (clocks.has(key)) properties[`${key}_ms`] = integer;
   }
   // Resource linkage may add deployment_id only after qualified unique tuple
@@ -58,6 +58,16 @@ for (const [alias, keys] of Object.entries(fields)) {
   defs[rowName(alias)] = obj(properties, ['profile_environment']);
 }
 defs.ScopedResourceMetricAvailability = obj({ state: states, reason_code: reason });
+// BE-P15 R-7. The source row is an account_equity_snapshots row that carries deployment_id. The source does not state whether the
+// snapshot is the deployment's own or the shared account's, so `basis` says what was done (pick the latest visible row, nothing else)
+// and the Portal sums nothing. AVAILABLE = the whole retained window was visible; PARTIAL = the window was cut, a later row may exist;
+// UNAVAILABLE carries the reason (profile not bound, relation unavailable, no row, or two rows share the latest instant).
+defs.DeploymentFinancialScopedRow = obj({ profile_environment: environment, deployment_id: text,
+  state: { enum: ['AVAILABLE', 'PARTIAL', 'UNAVAILABLE'] },
+  reason_code: nullable({ enum: ['DEPLOYMENT_FINANCIALS_RELATION_NOT_BOUND_FOR_PROFILE', 'DEPLOYMENT_FINANCIALS_RELATION_UNAVAILABLE',
+    'DEPLOYMENT_FINANCIAL_SNAPSHOT_NOT_PUBLISHED', 'DEPLOYMENT_FINANCIAL_SNAPSHOT_AMBIGUOUS', 'DEPLOYMENT_FINANCIAL_WINDOW_TRUNCATED'] }),
+  basis: { const: 'LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW' },
+  snapshot_at_ms: nullable(integer), currency: nullable(text), net_pnl: nullable(decimal), equity: nullable(decimal) });
 defs.ScopedResourceProfileCoverage = obj(Object.fromEntries(environment.enum.map(env => [env, obj({
   profile_id: nullable(text), state: { enum: ['FOUND', 'EMPTY', 'PARTIAL', 'UNAVAILABLE'] }, reason_code: reason,
   projection_epoch: nil, projection_sequence: nil, source_as_of: nil,
@@ -87,7 +97,14 @@ for (const [kind, aliases] of Object.entries(relations)) {
   const lower = kind.toLowerCase();
   const summary = obj({ kind: { const: kind.toUpperCase() }, id: text, visibility: { const: 'SCOPED' }, coverage: { const: 'AUTHORIZED_ONLY' },
     financial_summary: obj({ state: { const: 'UNAVAILABLE' }, reason_code: { const: 'SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS' } }),
-    ...Object.fromEntries(['alpha_id', 'portfolio_id', 'account_id', 'binding_id', 'name', 'display_name', 'state', 'base_currency'].map(key => [key, nullable(text)])),
+    ...Object.fromEntries(['alpha_id', 'portfolio_id', 'account_id', 'binding_id', 'name', 'display_name', 'version', 'state', 'base_currency'].map(key => [key, nullable(text)])),
+    // BE-P15 (RV-11 R-6, R-7). Both optional: a body without them is exactly the previous body.
+    // identity_absences names, for an ALPHA, each identity member the body does not state and WHY (typed, never inferred from a display id).
+    identity_absences: array(obj({ member: { enum: ['name', 'version', 'owner', 'stage'] },
+      reason_code: { enum: ['ALPHA_NAME_NOT_IN_SOURCE', 'ALPHA_NAME_NOT_IN_POLICY', 'ALPHA_VERSION_NOT_IN_SOURCE', 'ALPHA_VERSION_NOT_IN_POLICY',
+        'ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER', 'ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE'] } }), 4),
+    // One entry per visible deployment: the selected published snapshot row, never a sum of visible rows (see DeploymentFinancialScopedRow).
+    deployment_financials: array(ref('DeploymentFinancialScopedRow')),
     deployments: array(ref('DeploymentsScopedRow')),
     portfolios: array(obj({ portfolio_id: nullable(text), name: nullable(text), display_name: nullable(text) }, [])),
     metrics_availability: obj({ account_balance: ref('ScopedResourceMetricAvailability'), current_position_pnl: ref('ScopedResourceMetricAvailability'), equity_series: ref('ScopedResourceMetricAvailability') }),
@@ -165,6 +182,11 @@ for (const [kind, aliases] of Object.entries(relations)) {
     capabilities: [{ capability_id: `resource.${lower}.identity`, state: 'AVAILABLE', relations: [], reason_code: null, retryable: false }],
     panels, data: { ...rows, [lower]: { kind: kind.toUpperCase(), id, visibility: 'SCOPED', coverage: 'AUTHORIZED_ONLY',
       financial_summary: { state: 'UNAVAILABLE', reason_code: 'SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS' }, deployments: rows.deployments, portfolios: [],
+      deployment_financials: [{ profile_environment: 'paper', deployment_id: 'deployment_TEST_ONLY', state: 'UNAVAILABLE',
+        reason_code: 'DEPLOYMENT_FINANCIAL_SNAPSHOT_NOT_PUBLISHED', basis: 'LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW',
+        snapshot_at_ms: null, currency: null, net_pnl: null, equity: null }],
+      ...(kind === 'Alpha' ? { identity_absences: [{ member: 'name', reason_code: 'ALPHA_NAME_NOT_IN_SOURCE' }, { member: 'version', reason_code: 'ALPHA_VERSION_NOT_IN_SOURCE' },
+        { member: 'owner', reason_code: 'ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER' }, { member: 'stage', reason_code: 'ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE' }] } : {}),
       metrics_availability: { account_balance: { state: 'PARTIAL', reason_code: 'SOURCE_PARTIAL' }, current_position_pnl: { state: 'UNAVAILABLE', reason_code: 'SOURCE_PARTIAL' }, equity_series: { state: 'UNAVAILABLE', reason_code: 'SOURCE_PARTIAL' } } },
       profile_coverage: { paper: { profile_id: 'profile_TEST_ONLY', state: 'FOUND', reason_code: null, projection_epoch: null, projection_sequence: null, source_as_of: null } } },
     unavailable_branches: [], actor: { user_id: 'user_TEST_ONLY', username: 'TEST_ONLY', roles: ['USER'] },
@@ -185,7 +207,26 @@ for (const panel of Object.values(bounded.panels)) {
   panel.state = 'PARTIAL'; panel.data = { rows: [] }; panel.reason_code = 'EDS04_RESOURCE_RESPONSE_BYTE_BOUND'; panel.retryable = false;
   panel.coverage = { ...panel.coverage, source_total: null, filtered_total: null, returned_count: 0, truncated: true, has_more: true };
 }
-fixtureCases.push(empty, bounded);
+// BE-P15: an ALPHA body that exercises the record detail and a published deployment snapshot (exact decimals, no sum).
+const rich = structuredClone(fixtureCases[0]);
+rich.resource = { kind: 'ALPHA', id: 'alpha_RICH_TEST_ONLY', label: 'TEST_ONLY rich Alpha' };
+const richRows = {
+  orders: [{ profile_environment: 'paper', order_id: 'order_TEST_ONLY', account_id: 'account_TEST_ONLY', mode: 'paper', client_order_id: 'client_TEST_ONLY_entry', order_type: 'LIMIT',
+    side: 'BUY', quantity: '10.5', price: '100.1234567890123456789', status: 'FILLED', submitted_at: '2026-10-01T00:00:00.123Z', submitted_at_ms: 1790812800123, deployment_id: 'deployment_TEST_ONLY' }],
+  fills: [{ profile_environment: 'paper', fill_id: 'fill_TEST_ONLY', account_id: 'account_TEST_ONLY', mode: 'paper', client_order_id: 'client_TEST_ONLY_entry', commission: '0.0000000000000000001',
+    commission_currency: 'USDT', liquidity_side: 'MAKER', price: '100.1234567890123456789', quantity: '10.5', trade_time: '2026-10-01T00:00:01.456Z', trade_time_ms: 1790812801456, deployment_id: 'deployment_TEST_ONLY' }],
+  reconciliation: [{ profile_environment: 'paper', account_id: 'account_TEST_ONLY', mode: 'paper', status: 'RESOLVED', finding_id: 'finding_TEST_ONLY', finding_type: 'TEST_ONLY_TYPE',
+    created_at: '2026-10-01T00:00:00Z', created_at_ms: 1790812800000, resolved_at: '2026-10-01T00:05:00Z', resolved_at_ms: 1790813100000, deployment_id: 'deployment_TEST_ONLY' }],
+};
+for (const [alias, list] of Object.entries(richRows)) {
+  rich.data[alias] = list; rich.panels[alias].data = { rows: list };
+  rich.panels[alias].coverage = { ...rich.panels[alias].coverage, source_total: String(list.length), filtered_total: String(list.length), returned_count: list.length };
+}
+rich.data.alpha.deployment_financials = [{ profile_environment: 'paper', deployment_id: 'deployment_TEST_ONLY', state: 'AVAILABLE', reason_code: null,
+  basis: 'LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW', snapshot_at_ms: 1790812800000, currency: 'USDT', net_pnl: '-1234567890.1234567890123456789', equity: '9007199254740993.0000000001' }];
+rich.data.alpha.name = 'TEST_ONLY Alpha'; rich.data.alpha.version = 'TEST_ONLY-v1';
+rich.data.alpha.identity_absences = [{ member: 'owner', reason_code: 'ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER' }, { member: 'stage', reason_code: 'ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE' }];
+fixtureCases.push(empty, bounded, rich);
 const fixtures = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', cases: fixtureCases };
 for (const [file, value] of Object.entries({ 'schemas/execution-resource-scoped.v2.schema.json': schema,
   'openapi/execution-resource-scoped.openapi.json': openapi, 'fixtures/execution-resource-scoped.synthetic.valid.json': fixtures })) {

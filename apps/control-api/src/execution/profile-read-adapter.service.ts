@@ -4,6 +4,7 @@ import { scopedAdapterFieldsSchema, scopedAdapterGroupSchema, scopedAdapterRespo
 export { scopedAdapterFieldsSchema, scopedAdapterResponseSchema } from "../execution-v2/profile-adapter.contract";
 import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, scopeReadPopulation, type ReadScopePrincipal } from "../execution-v2/read-scope";
 import { projectionRowVisible, redactProjectionFields } from "../execution-v2/read-projection";
+import { addRecordDetail } from "../execution-v2/record-detail";
 import { fenceRetainedSnapshot } from "./retained-operation-page";
 import { ControlApiConfig } from "../config";
 import { projectionExpired } from "./retained-read-profile";
@@ -60,6 +61,9 @@ const MAXIMUM_ROWS_PER_RELATION = 200;
 const ADAPTER_FIELD_MAPPING: Readonly<Record<string, string>> = { total: "balance_total", free: "balance_free", locked: "balance_locked",
   allocated_capital: "allocation", signed_qty: "quantity", position_qty: "quantity", avg_px_open: "price", mark_price: "price",
   symbol: "instrument_id", trade_time: "occurred_at_ms", ts: "timestamp_ms" };
+/** Detail member -> raw source column when the spellings differ (conditional-order legs name them `role` / `sequence`). */
+const ADAPTER_DETAIL_COLUMN: Readonly<Record<string, string>> = Object.freeze({
+  submitted_at_ms: "submitted_at", resolved_at_ms: "resolved_at", leg_role: "role", leg_sequence: "sequence" });
 const FILTER_FIELDS = Object.freeze({
   "admin.inspect": Object.freeze(["alpha_id", "account_id"]),
   "admin.performance": Object.freeze(["portfolio_id", "alpha_id", "account_id"]),
@@ -195,7 +199,9 @@ export class ExecutionProfileReadAdapterService {
           for (const field of ["timestamp_ms", "occurred_at_ms", "created_at", "updated_at"])
             if (typeof mapped[field] === "string") mapped[field] = Date.parse(mapped[field] as string);
           const visible = redactProjectionFields(scope, mapped);
-          const dto = Object.fromEntries(Object.entries(visible).filter(([key]) => Object.hasOwn(scopedAdapterFieldsSchema.shape, key)));
+          const dto: Record<string, unknown> = Object.fromEntries(Object.entries(visible).filter(([key]) => Object.hasOwn(scopedAdapterFieldsSchema.shape, key)));
+          // BE-P15 record detail: a separate closed vocabulary, admitted per scope; a malformed cell is omitted, never coerced.
+          addRecordDetail(scope, row, dto, ADAPTER_DETAIL_COLUMN);
           const parsed = scopedAdapterFieldsSchema.safeParse(dto);
           if (!parsed.success) throw new ExecutionReadScopeError("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
           return parsed.data;
@@ -204,7 +210,7 @@ export class ExecutionProfileReadAdapterService {
           completeness: "PARTIAL", freshness: "UNKNOWN", as_of_ms: null, returned_count: items.length, truncated: selected.length > items.length,
           reason_code: !relation || relation.availability === "UNAVAILABLE" ? "RETAINED_FACTS_NOT_PUBLISHED" : "AUTHORIZED_RETAINED_FACTS", items };
       }
-      const response = scopedAdapterResponseSchema.parse({ schema_version: "portal.execution.profile-read-adapter.v2", capability_id: capabilityId,
+      const response = scopedAdapterResponseSchema.parse({ schema_version: "portal.execution.profile-read-adapter.v2", time_unit: "UTC_EPOCH_MS", capability_id: capabilityId,
         authority: "PORTAL_SGP_PROJECTION", workspace_id: workspaceId, environment, profile_id: profileId,
         visibility: "SCOPED", coverage: "AUTHORIZED_ONLY", policy_revision: scope.policyRevision,
         bounds: { maximum_rows_per_relation: MAXIMUM_ROWS_PER_RELATION, maximum_response_bytes: 1048576 }, relations });

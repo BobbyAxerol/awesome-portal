@@ -2015,6 +2015,32 @@
             }
           ]
         },
+        "client_order_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "order_type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "deployment_id": {
           "anyOf": [
             {
@@ -2193,6 +2219,58 @@
               "type": "string",
               "maxLength": 128,
               "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "client_order_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "commission": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "commission_currency": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "liquidity_side": {
+          "anyOf": [
+            {
+              "enum": [
+                "MAKER",
+                "TAKER",
+                "UNKNOWN"
+              ]
             },
             {
               "type": "null"
@@ -3174,6 +3252,59 @@
           "minimum": 0,
           "maximum": 9007199254740991
         },
+        "finding_id": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "finding_type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolved_at": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "resolved_at_ms": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
         "deployment_id": {
           "anyOf": [
             {
@@ -3343,6 +3474,111 @@
       "required": [
         "state",
         "reason_code"
+      ]
+    },
+    "DeploymentFinancialScopedRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile_environment": {
+          "enum": [
+            "paper",
+            "sandbox",
+            "live"
+          ]
+        },
+        "deployment_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+        },
+        "state": {
+          "enum": [
+            "AVAILABLE",
+            "PARTIAL",
+            "UNAVAILABLE"
+          ]
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "enum": [
+                "DEPLOYMENT_FINANCIALS_RELATION_NOT_BOUND_FOR_PROFILE",
+                "DEPLOYMENT_FINANCIALS_RELATION_UNAVAILABLE",
+                "DEPLOYMENT_FINANCIAL_SNAPSHOT_NOT_PUBLISHED",
+                "DEPLOYMENT_FINANCIAL_SNAPSHOT_AMBIGUOUS",
+                "DEPLOYMENT_FINANCIAL_WINDOW_TRUNCATED"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "basis": {
+          "const": "LATEST_VISIBLE_ACCOUNT_EQUITY_SNAPSHOT_ROW"
+        },
+        "snapshot_at_ms": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "net_pnl": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "equity": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 128,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "profile_environment",
+        "deployment_id",
+        "state",
+        "reason_code",
+        "basis",
+        "snapshot_at_ms",
+        "currency",
+        "net_pnl",
+        "equity"
       ]
     },
     "ScopedResourceProfileCoverage": {
@@ -7170,6 +7406,19 @@
             }
           ]
         },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "state": {
           "anyOf": [
             {
@@ -7195,6 +7444,45 @@
               "type": "null"
             }
           ]
+        },
+        "identity_absences": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "member": {
+                "enum": [
+                  "name",
+                  "version",
+                  "owner",
+                  "stage"
+                ]
+              },
+              "reason_code": {
+                "enum": [
+                  "ALPHA_NAME_NOT_IN_SOURCE",
+                  "ALPHA_NAME_NOT_IN_POLICY",
+                  "ALPHA_VERSION_NOT_IN_SOURCE",
+                  "ALPHA_VERSION_NOT_IN_POLICY",
+                  "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER",
+                  "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE"
+                ]
+              }
+            },
+            "required": [
+              "member",
+              "reason_code"
+            ]
+          }
+        },
+        "deployment_financials": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/DeploymentFinancialScopedRow"
+          }
         },
         "deployments": {
           "type": "array",
@@ -8253,6 +8541,19 @@
             }
           ]
         },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "state": {
           "anyOf": [
             {
@@ -8278,6 +8579,45 @@
               "type": "null"
             }
           ]
+        },
+        "identity_absences": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "member": {
+                "enum": [
+                  "name",
+                  "version",
+                  "owner",
+                  "stage"
+                ]
+              },
+              "reason_code": {
+                "enum": [
+                  "ALPHA_NAME_NOT_IN_SOURCE",
+                  "ALPHA_NAME_NOT_IN_POLICY",
+                  "ALPHA_VERSION_NOT_IN_SOURCE",
+                  "ALPHA_VERSION_NOT_IN_POLICY",
+                  "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER",
+                  "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE"
+                ]
+              }
+            },
+            "required": [
+              "member",
+              "reason_code"
+            ]
+          }
+        },
+        "deployment_financials": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/DeploymentFinancialScopedRow"
+          }
         },
         "deployments": {
           "type": "array",
@@ -9336,6 +9676,19 @@
             }
           ]
         },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "state": {
           "anyOf": [
             {
@@ -9361,6 +9714,45 @@
               "type": "null"
             }
           ]
+        },
+        "identity_absences": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "member": {
+                "enum": [
+                  "name",
+                  "version",
+                  "owner",
+                  "stage"
+                ]
+              },
+              "reason_code": {
+                "enum": [
+                  "ALPHA_NAME_NOT_IN_SOURCE",
+                  "ALPHA_NAME_NOT_IN_POLICY",
+                  "ALPHA_VERSION_NOT_IN_SOURCE",
+                  "ALPHA_VERSION_NOT_IN_POLICY",
+                  "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER",
+                  "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE"
+                ]
+              }
+            },
+            "required": [
+              "member",
+              "reason_code"
+            ]
+          }
+        },
+        "deployment_financials": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/DeploymentFinancialScopedRow"
+          }
         },
         "deployments": {
           "type": "array",
@@ -10403,6 +10795,19 @@
             }
           ]
         },
+        "version": {
+          "anyOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 512,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "state": {
           "anyOf": [
             {
@@ -10428,6 +10833,45 @@
               "type": "null"
             }
           ]
+        },
+        "identity_absences": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "member": {
+                "enum": [
+                  "name",
+                  "version",
+                  "owner",
+                  "stage"
+                ]
+              },
+              "reason_code": {
+                "enum": [
+                  "ALPHA_NAME_NOT_IN_SOURCE",
+                  "ALPHA_NAME_NOT_IN_POLICY",
+                  "ALPHA_VERSION_NOT_IN_SOURCE",
+                  "ALPHA_VERSION_NOT_IN_POLICY",
+                  "ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER",
+                  "ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE"
+                ]
+              }
+            },
+            "required": [
+              "member",
+              "reason_code"
+            ]
+          }
+        },
+        "deployment_financials": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/DeploymentFinancialScopedRow"
+          }
         },
         "deployments": {
           "type": "array",

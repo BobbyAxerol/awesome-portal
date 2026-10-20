@@ -5,7 +5,7 @@ import { ManagerRelationOperation, ManagerRelationScalarKind, managerRelationPro
 import type { MaximumDataOperationPrincipal, MaximumDataRelationQuery } from "./maximum-data-operation.service";
 import { LocalRealtimeError } from "./profile-realtime.service";
 import { AuthorizedExecutionReadScope, ExecutionReadScopes, ExecutionReadScopeError,
-  scopeAllowsField, scopeReadPopulation, ReadScopePrincipal, ReadScopeRequirement } from "../execution-v2/read-scope";
+  scopeAllowsField, scopeAllowsDetailField, scopeReadPopulation, ReadScopePrincipal, ReadScopeRequirement } from "../execution-v2/read-scope";
 import { projectionRowVisible } from "../execution-v2/read-projection";
 import { managerTimestamp } from "./manager-timestamp";
 import { joinRetainedBracketLegRows, joinRetainedConditionalLegRows, joinRetainedFindingSessionRows, namedRetainedFindingNeedsSession, namedRetainedBusinessAnchored, namedRetainedBusinessFields, namedRetainedBusinessResourceId, namedRetainedBusinessSourceAllowed } from "./retained-business-aliases";
@@ -94,11 +94,19 @@ const RAW_PUBLIC_FIELD: Readonly<Record<string, string>> = Object.freeze({
 export function retainedFieldAllowed(scope: AuthorizedExecutionReadScope, name: string): boolean {
   return scope.mode === "LEGACY_COMPATIBILITY" || scopeAllowsField(scope, RAW_PUBLIC_FIELD[name] ?? name);
 }
+/** Raw source column -> record-detail policy name (BE-P15). Everything else in the detail vocabulary is spelled the same. */
+const RAW_DETAIL_FIELD: Readonly<Record<string, string>> = Object.freeze({ submitted_at: "submitted_at_ms", resolved_at: "resolved_at_ms" });
+/** Record-detail admission (client order id, order type, fee, liquidity, finding identity). Never consulted by the
+ * money-field guards: those keep using `retainedFieldAllowed`, which does not know these names. */
+export function retainedDetailFieldAllowed(scope: AuthorizedExecutionReadScope, name: string): boolean {
+  return scope.mode === "LEGACY_COMPATIBILITY" || scopeAllowsDetailField(scope, RAW_DETAIL_FIELD[name] ?? name);
+}
 export function scopedRetainedRows<T extends { fields: Record<string, ProjectionScalar> }>(
-  scope: AuthorizedExecutionReadScope | undefined, rows: readonly T[]): T[] {
+  scope: AuthorizedExecutionReadScope | undefined, rows: readonly T[], options?: { readonly detail?: boolean }): T[] {
   if (!scope || scope.mode === "LEGACY_COMPATIBILITY") return [...rows];
   return rows.filter(row => projectionRowVisible(scope, row.fields)).map(row => ({ ...row,
-    fields: Object.fromEntries(Object.entries(row.fields).filter(([key, value]) => retainedFieldAllowed(scope, key) &&
+    fields: Object.fromEntries(Object.entries(row.fields).filter(([key, value]) =>
+      (retainedFieldAllowed(scope, key) || options?.detail === true && retainedDetailFieldAllowed(scope, key)) &&
       (value === null || typeof value === "string" || typeof value === "boolean" || typeof value === "number" && Number.isFinite(value)))) }));
 }
 export async function fenceRetainedSnapshot(repository: ExecutionProfileProjectionRepository,
