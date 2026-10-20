@@ -366,8 +366,10 @@ describe("shell flag on: the self-only 'My access' entry (BE-P7 self_entry)", ()
     await waitFor(() => expect(myAccess()).toHaveLength(1));
     fireEvent.click(myAccess()[0]!);
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/administration/my-access?workspace_id=ws_TEST_ONLY&env=paper"));
-    await waitFor(() => expect(screen.getByRole("link", { name: /My access/ })).toBeTruthy());
-  });
+    // The self-view (the access screen without a matrix prop) mounts; no "Manage grants" tab exists on this path.
+    await waitFor(() => expect(screen.getByLabelText("Who you are signed in as")).toBeTruthy(), { timeout: 20_000 });
+    expect(screen.queryByRole("tab", { name: "Manage grants" })).toBeNull();
+  }, 40_000);
 
   it("the context-resolved workspace is the one the entry opens for", async () => {
     await mount("/execution?env=sandbox", PROFILE_ON, { contextAnswer: () => ok(contextBody("RESOLVED_SOLE_MEMBERSHIP")) });

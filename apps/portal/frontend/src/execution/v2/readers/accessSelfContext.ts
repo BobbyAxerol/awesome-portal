@@ -23,12 +23,13 @@
  * `schema_version` is `unsupported_shape`; never throws.
  */
 import type { UnsupportedAccessShape } from "./accessEffective";
+import { SELF_ENTRY_PATH } from "../../../app/selfNavView";
 import { closed, oneOf, projectionTimes, rec, selectorText } from "./accessSelf";
 
 export const ACCESS_SELF_CONTEXT_SCHEMA = "portal.self-context.v1";
 export const ACCESS_SELF_CONTEXT_PATH = "/api/admin/profile-access/v2/self-context";
 /** The self-only page. The admin matrix stays at `/administration/profile-access`. */
-export const SELF_ENTRY_ROUTE = "/administration/my-access";
+export const SELF_ENTRY_ROUTE = SELF_ENTRY_PATH;
 export const MAX_SELF_CONTEXT_CANDIDATES = 16;
 export const SELF_CONTEXT_RESOLVED_RULES = ["SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD", "SOLE_MEMBERSHIP"] as const;
 export type SelfContextResolvedRule = (typeof SELF_CONTEXT_RESOLVED_RULES)[number];
