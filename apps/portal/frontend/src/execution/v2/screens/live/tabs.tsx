@@ -16,7 +16,7 @@ import type { LiveSourceOperationsV2 } from "../../readers/liveSourceOperations"
 import { withContext } from "../../urlState";
 import { stageWhy, type StageAction } from "../stage/reasons";
 import { useStageReason } from "../stage/StageEligibility";
-import { ContextLink, KeyedTable, PanelSection, V1RowsSection } from "./parts";
+import { ContextLink, KeyedTable, PanelSection, V1RowsSection, v1RowsGap } from "./parts";
 import { ACCESS_PATH, CONTINUITY_PANELS, EXPOSURE_PANELS, panelReason, panelTitle, type LiveModel } from "./model";
 import type { PanelPaging } from "./useLiveReads";
 
@@ -95,15 +95,23 @@ export function ExposureTab({ model, v2, paging }: TabProps) {
   const triadReason =
     [...new Set(cells.flatMap((cell) => (typeof cell === "object" && cell !== null && cell.kind === "not-published" && cell.reasonCode ? [cell.reasonCode] : [])))].join(" · ") || null;
   const unpublishedPanels = v2 === null ? [] : EXPOSURE_PANELS.filter((name) => v2.panels[name].state === "NOT_PUBLISHED");
+  const triadItem: GapItem = { label: "Internal, Broker and Difference figures", id: "FE-072", reason: triadReason };
+  // A V1 body that publishes no rows says so ONCE: the reconciliation, position and order gaps are one line, not three panels of the same words.
+  const positionsGap = v2 === null ? v1RowsGap(model.v1Rows?.positions ?? { kind: "none" }, "Position rows") : null;
+  const ordersGap = v2 === null ? v1RowsGap(model.v1Rows?.orders ?? { kind: "none" }, "Open order rows") : null;
+  const v1Gaps = [...(triadGap ? [triadItem] : []), ...(positionsGap ? [positionsGap] : []), ...(ordersGap ? [ordersGap] : [])];
   return (
     <div className="exec-liv-stack">
-      {triadGap ? (
+      {v2 === null && v1Gaps.length > 1 ? (
+        <GapLine items={v1Gaps} />
+      ) : triadGap ? (
         <SectionPanel level={2} title="Reconciliation">
-          <GapLine items={[{ label: "Internal, Broker and Difference figures", id: "FE-072", reason: triadReason }]} />
+          <GapLine items={[triadItem]} />
         </SectionPanel>
-      ) : model.triad === null ? null : (
+      ) : null}
+      {!triadGap && model.triad !== null ? (
         <Triad rows={model.triad.rows} internal={model.triad.internal} broker={model.triad.broker} suppressed={model.triad.suppressed} />
-      )}
+      ) : null}
       {v2 !== null ? (
         <>
           {EXPOSURE_PANELS.filter((name) => !unpublishedPanels.includes(name)).map((name) => (
@@ -113,8 +121,8 @@ export function ExposureTab({ model, v2, paging }: TabProps) {
         </>
       ) : (
         <>
-          <V1RowsSection title="Positions" aside="Internal figures" rows={model.v1Rows?.positions ?? { kind: "none" }} what="Position rows" />
-          <V1RowsSection title="Orders" rows={model.v1Rows?.orders ?? { kind: "none" }} what="Open order rows" />
+          {v1Gaps.length > 1 && positionsGap ? null : <V1RowsSection title="Positions" aside="Internal figures" rows={model.v1Rows?.positions ?? { kind: "none" }} what="Position rows" />}
+          {v1Gaps.length > 1 && ordersGap ? null : <V1RowsSection title="Orders" rows={model.v1Rows?.orders ?? { kind: "none" }} what="Open order rows" />}
         </>
       )}
       {blotter === null ? null : (

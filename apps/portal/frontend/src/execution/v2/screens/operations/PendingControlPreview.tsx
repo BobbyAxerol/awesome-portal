@@ -21,6 +21,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { formatAsOf } from "../../boundary";
+import { GapWhy } from "../../blocks";
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { AMOUNT_KEYS, PENDING_OPERATIONS, PENDING_VERSION_KEYS, type PendingOperation } from "../../readers/commandCurrency";
@@ -87,8 +88,9 @@ export function PendingControlPreview({ api, target }: PendingControlPreviewProp
 
   if (!gate.open) {
     return (
-      <div className="exec-pc" data-state="shut" title={`Reason code: ${gate.code}`}>
+      <div className="exec-pc" data-state="shut">
         <DockAction label={LABEL} reason={gate.reason} />
+        <GapWhy name="Reason code" rows={[`Reason code: ${gate.code}`]} next={null} />
       </div>
     );
   }

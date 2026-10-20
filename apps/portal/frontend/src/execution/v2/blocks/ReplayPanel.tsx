@@ -18,7 +18,7 @@ import { PanelState } from "../../components/states";
 import type { TradeReplayEventsProps } from "../../components/TradeReplayEvents";
 import { formatExact } from "../../formatExact";
 import type { UtcEpochMs } from "../../screenDataContract";
-import { formatAsOf } from "../boundary";
+import { utcStamp } from "../../time";
 import { CardsTable, type CardsColumn } from "../cardsTable";
 import { Flag } from "../Flag";
 import { SectionPanel } from "./SectionPanel";
@@ -104,7 +104,7 @@ function logColumns(qtyDp: number | undefined, priceDp: number | undefined): Car
   const dec = (value: string | null | undefined, unit: "qty" | "money", dp?: number) =>
     value === null || value === undefined ? "Not available" : formatExact(value, unit, dp === undefined ? undefined : { dp }).display;
   return [
-    { key: "at", label: "Time (UTC)", render: (r) => formatAsOf(r.at) },
+    { key: "at", label: "Time (UTC)", render: (r) => utcStamp(r.at) },
     { key: "event", label: "Event", render: (r) => r.event },
     { key: "order", label: "Order", render: (r) => <span className="exec-blk-id">{r.order}</span> },
     { key: "kind", label: "Type", render: (r) => r.kind },

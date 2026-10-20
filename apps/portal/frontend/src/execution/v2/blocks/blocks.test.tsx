@@ -297,10 +297,14 @@ describe("Kpi", () => {
 
   it("prints the state word and the reason for an absence, and says so for unreadable and missing", () => {
     const { unmount } = render(<Kpi label="A" metric={absent("UNAVAILABLE", "SOURCE_GAP")} />);
-    expect(screen.getByText("Not available · SOURCE_GAP")).toBeTruthy();
+    // The state word is the headline; the published code is behind the disclosure, never in the line.
+    expect(screen.getByText("Not available")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("SOURCE_GAP");
+    expect(whyText(screen.getByText("Not available").closest("span"))).toBe("SOURCE_GAP");
     unmount();
     const denied = render(<Kpi label="B" metric={absent("DENIED", "NO_GRANT")} />);
-    expect(screen.getByText("Not permitted · NO_GRANT")).toBeTruthy();
+    expect(screen.getByText("Not permitted")).toBeTruthy();
+    expect(whyText(screen.getByText("Not permitted").closest("span"))).toBe("NO_GRANT");
     denied.unmount();
     const bad = render(<Kpi label="C" metric={null} />);
     expect(screen.getByText("Not available · unreadable value")).toBeTruthy();
@@ -336,6 +340,24 @@ describe("SectionPanel, PanelHead and StateBoundary", () => {
     const region = screen.getByRole("region", { name: "Positions" });
     expect(within(region).getByRole("heading", { level: 2, name: "Positions" })).toBeTruthy();
     expect(within(region).getByText("as of 17 Oct")).toBeTruthy();
+  });
+
+  it("a state reason that is only a published code reads in the approved words, with the code behind the disclosure", () => {
+    const { unmount } = render(<StateBoundary status="denied" reason="ADMIN_ROLE_REQUIRED" />);
+    expect(document.body.textContent).toContain("Needs the Admin role");
+    expect(document.body.textContent).not.toContain("ADMIN_ROLE_REQUIRED");
+    expect(whyText(document.querySelector(".exec-blk-why"))).toBe("ADMIN_ROLE_REQUIRED");
+    unmount();
+    // A code with no approved wording prints the state word alone; the code is only in the disclosure.
+    render(<StateBoundary status="partial" reason="MARGIN_BALANCES_NOT_PUBLISHED">body</StateBoundary>);
+    expect(document.body.textContent).not.toContain("MARGIN_BALANCES_NOT_PUBLISHED");
+    expect(whyText(document.querySelector(".exec-blk-why"))).toBe("MARGIN_BALANCES_NOT_PUBLISHED");
+  });
+
+  it("a reason that is already prose is printed as given, with no disclosure", () => {
+    render(<StateBoundary status="unavailable" reason="The source did not answer." />);
+    expect(document.body.textContent).toContain("The source did not answer.");
+    expect(document.querySelector(".exec-blk-why")).toBeNull();
   });
 
   it("PanelHead renders a heading without a panel", () => {
@@ -412,10 +434,10 @@ describe("EventFeed", () => {
     const table = screen.getByRole("table", { name: "Events for BTC-Trend v3" });
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(3);
-    expect(rows[0].textContent).toContain("17 Oct 09:14Z");
+    expect(rows[0].textContent).toContain("2026-10-17 09:14:00 UTC");
     expect(rows[0].textContent).toContain("Recall applied");
     expect(rows[0].textContent).toContain("Budget returned");
-    expect(rows[2].textContent).toContain("1 Oct 00:05Z");
+    expect(rows[2].textContent).toContain("2026-10-01 00:05:00 UTC");
     expect(within(table).getByRole("link", { name: "BTC-Trend v3" }).getAttribute("href")).toBe("/alphas/btc");
     expect(within(table).getAllByRole("columnheader").map((c) => c.textContent)).toEqual(["When (UTC)", "Kind", "Target", "Outcome"]);
     expect(screen.getByRole("region", { name: "Events" })).toBeTruthy();
@@ -513,9 +535,12 @@ describe("JourneySpine", () => {
     expect(items).toHaveLength(6);
     for (const item of items) {
       expect(item.getAttribute("data-s")).toBe("unknown");
+      // One quiet state: the word is there for assistive tech only, no chip and no sentence per card.
       expect(item.textContent).toContain("Unknown");
-      expect(item.textContent).toContain("Not published");
-      expect(item.textContent).toContain("(FE-027/028)");
+      expect(item.querySelector(".exec-flag")).toBeNull();
+      expect(item.querySelector(".exec-blk-spine-line")).toBeNull();
+      expect(item.textContent).not.toContain("Not published");
+      expect(item.textContent).not.toContain("Stage history");
     }
     expect(within(list).queryByText("Done")).toBeNull();
     expect(within(list).queryByText("Now")).toBeNull();
@@ -675,7 +700,7 @@ describe("Triad", () => {
     render(<Triad rows={rows} internal={{ asOf: at(Date.UTC(2026, 9, 17, 9, 14)) }} broker={{ asOf: null }} />);
     const group = screen.getByRole("group", { name: "Reconciliation" });
     const [internal, broker, diff] = within(group).getAllByRole("region");
-    expect(internal.textContent).toContain("Virtual ledger · 17 Oct 09:14Z");
+    expect(internal.textContent).toContain("Virtual ledger · 2026-10-17 09:14:00 UTC");
     expect(broker.textContent).toContain("Venue report · Not available");
     expect(diff.textContent).toContain("Derived · matching scopes only");
     const exact = internal.querySelector(".exec-blk-num") as HTMLElement;
@@ -687,11 +712,13 @@ describe("Triad", () => {
 
   it("says Not available for an absent metric and Not computed for a published non-computation", () => {
     render(<Triad rows={rows} />);
-    expect(screen.getByText("Not available · VENUE_GAP")).toBeTruthy();
-    // Visible words are "Not computed"; the code rides in the title and in hidden text, so the cell still carries it.
+    expect(document.body.textContent).not.toContain("VENUE_GAP");
+    expect(whyText(screen.getAllByText("Not available").find((n) => n.closest("[data-state]") !== null)!.closest("span"))).toBe("VENUE_GAP");
+    // Visible words are "Not computed"; the code is behind the disclosure, not in the line.
     const computed = screen.getByText("Not computed");
-    expect(computed.getAttribute("title")).toBe("SHARED_BINDING");
-    expect(computed.textContent).toBe("Not computed · SHARED_BINDING");
+    expect(computed.getAttribute("title")).toBeNull();
+    expect(document.body.textContent).not.toContain("SHARED_BINDING");
+    expect(whyText(computed)).toBe("SHARED_BINDING");
   });
 
   it("an absent side prints Not available in every row, never a value or a zero difference", () => {
@@ -789,7 +816,8 @@ describe("JourneySpine gap note (L-B2)", () => {
     const compact = list.querySelectorAll("[data-compact]");
     expect(compact.length).toBeGreaterThan(0);
     for (const item of within(list).getAllByRole("listitem")) {
-      if (item.getAttribute("data-s") === "ahead") continue;
+      // An unknown stage says nothing of its own (the note under the list does); the current one keeps the full text for assistive tech.
+      if (item.getAttribute("data-s") !== "cur") continue;
       expect(item.textContent).toContain("Not published (FE-027/028)");
       expect(item.querySelector(".exec-blk-sr")?.textContent).toContain("Not published (FE-027/028)");
     }

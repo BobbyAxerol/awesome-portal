@@ -13,6 +13,7 @@ import { answerOperationsV2 } from "../../../../../e2e/bffDoubleV2";
 import type { ExecutionApi, Result } from "../../../api/ports";
 import { operationalQueueSearch, readOperationalQueueV2, type OperationV2 } from "../../readers/operationalQueue";
 import { readPendingRecallDiscoveryV1, type PendingRecallDiscoveryQuery, type PendingRecallDiscoveryRead } from "../../readers/pendingRecallDiscovery";
+import { whyText } from "../../gapWhyTestUtil";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import { OperationDock } from "./OperationDock";
 import {
@@ -80,7 +81,8 @@ describe("the section", () => {
     expect(region.textContent).toContain(RECALL_COVERAGE_COPY);
     expect(region.textContent).toContain("Recalls not started through the Portal cannot be discovered here");
     expect(region.textContent).toContain(UNTRACKED_RECALLS_COPY);
-    expect(region.textContent).toContain("Not published: RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED");
+    expect(region.textContent).not.toContain("RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED");
+    expect(whyText(region.querySelector(".exec-blk-why"))).toBe("Not published: RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED");
   });
 
   it("an empty list is 'none the Portal controlled', and the coverage sentence is still printed", async () => {
@@ -154,7 +156,8 @@ describe("the section", () => {
   it("sends nothing: the section has no button", async () => {
     section(fake(() => read(FIXTURE.discovery_open)).api);
     await screen.findByLabelText("Open recalls");
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    // The only control is the reason disclosure; nothing in the section sends.
+    expect(screen.queryAllByRole("button").map((b) => b.getAttribute("aria-label"))).toEqual(["Why other recalls are not listed"]);
   });
 });
 

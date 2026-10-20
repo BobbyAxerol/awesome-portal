@@ -212,6 +212,8 @@ export interface GapWhyProps {
   /** `data-gap` of the wrapper: the request id. */
   gap?: string;
   className?: string;
+  /** The closing line. Default `GAP_NEXT`; `null` for a disclosure that is a reference (an id), not a gap. */
+  next?: string | null;
 }
 
 /**
@@ -219,7 +221,7 @@ export interface GapWhyProps {
  * `aria-controls` while open) that opens on Enter, Space and touch and closes on the same or on Escape. Ids and reason codes
  * live inside it, never in the headline. Closed, the body is not in the DOM, so a screen with many gaps adds no text.
  */
-export function GapWhy({ name, text, rows, gap, className }: GapWhyProps) {
+export function GapWhy({ name, text, rows, gap, className, next = GAP_NEXT }: GapWhyProps) {
   const [open, setOpen] = useState(false);
   const bodyId = useId();
   const button = useRef<HTMLButtonElement>(null);
@@ -249,7 +251,7 @@ export function GapWhy({ name, text, rows, gap, className }: GapWhyProps) {
           {rows.map((row, i) => (
             <span key={i} className="exec-blk-why-row">{row}</span>
           ))}
-          <span className="exec-blk-why-next">{GAP_NEXT}</span>
+          {next === null ? null : <span className="exec-blk-why-next">{next}</span>}
         </span>
       ) : null}
     </span>

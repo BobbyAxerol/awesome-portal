@@ -13,6 +13,7 @@ import { readPendingControlPreviewV1, type PendingControlPreviewRead } from "../
 import { readPendingRecallDiscoveryV1, type DiscoveredRecall, type PendingRecallDiscoveryRead } from "../../readers/pendingRecallDiscovery";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import type { PendingControlIntentWire } from "./pendingControlIntent";
+import { whyText } from "../../gapWhyTestUtil";
 import { PendingControlPreview, PREVIEW_ONLY_COPY } from "./PendingControlPreview";
 import { PendingRecallsSection } from "./PendingRecalls";
 
@@ -62,7 +63,10 @@ describe("shut: one reason, a visible one, and nothing is sent", () => {
     expect(button().disabled).toBe(true);
     expect(button().getAttribute("aria-describedby")).toBeTruthy();
     expect(screen.getByText(words)).toBeTruthy();
-    expect(document.querySelector("[data-state='shut']")?.getAttribute("title")).toBe(`Reason code: ${code}`);
+    const shut = document.querySelector("[data-state='shut']")!;
+    expect(shut.getAttribute("title")).toBeNull();
+    expect(shut.textContent).not.toContain(code);
+    expect(whyText(shut.querySelector(".exec-blk-why"))).toBe(`Reason code: ${code}`);
     expect(screen.queryByLabelText("Reason")).toBeNull();
     expect(previewPendingControl).not.toHaveBeenCalled();
   });

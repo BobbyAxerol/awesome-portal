@@ -11,7 +11,9 @@
  *   signed difference, and never while the value is partial.
  */
 import { Flag } from "../Flag";
-import type { Metric } from "../boundary";
+import { ABSENT_WORD, type Metric } from "../boundary";
+import { NaWhy } from "./notPublished";
+import { plainReason } from "./StateBoundary";
 
 /** What a reader sees when the payload could not be read at all. */
 export const UNREADABLE_COPY = "Not available · unreadable value";
@@ -38,7 +40,15 @@ export function MetricText({ metric, suffix, signed = false, absentReason }: Met
     return <span className="exec-blk-na">{absentReason ? `${NO_VALUE_COPY} · ${absentReason}` : NO_VALUE_COPY}</span>;
   }
   if (metric === null) return <span className="exec-blk-na">{UNREADABLE_COPY}</span>;
-  if (metric.kind === "absent") return <span className="exec-blk-na" data-state={metric.state}>{metric.copy}</span>;
+  if (metric.kind === "absent") {
+    // The state word is the headline; the published code (and its plain wording, when one is approved) sits behind the disclosure.
+    const why = plainReason(metric.reasonCode);
+    return (
+      <span className="exec-blk-na" data-state={metric.state}>
+        <NaWhy text={ABSENT_WORD[metric.state]} reason={why.text ? `${why.text} · ${metric.reasonCode}` : metric.reasonCode} />
+      </span>
+    );
+  }
   const { decimal } = metric;
   const tone = signed && metric.tone !== "neutral" ? metric.tone : undefined;
   return (

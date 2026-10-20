@@ -303,11 +303,18 @@ export interface DockActionProps {
   accessHref?: string;
   accessLabel?: string;
   variant?: "default" | "primary";
+  /**
+   * The reason is already printed by a sibling action of the same footer: keep it as the button's description for assistive tech,
+   * draw it once. The button stays disabled and described.
+   */
+  quietReason?: boolean;
+  /** The name printed before a reason that several actions share ("Disable, Archive"). Default: this action's label. */
+  reasonLabel?: string;
 }
 
 const NOT_OFFERED = "Not offered in the portal yet.";
 
-export function DockAction({ label, onAction, reason, accessHref, accessLabel = "My access", variant = "default" }: DockActionProps) {
+export function DockAction({ label, onAction, reason, accessHref, accessLabel = "My access", variant = "default", quietReason = false, reasonLabel }: DockActionProps) {
   const reasonId = useId();
   const [params] = useSearchParams();
   const text = reason?.trim() || (onAction ? "" : NOT_OFFERED);
@@ -324,8 +331,9 @@ export function DockAction({ label, onAction, reason, accessHref, accessLabel = 
       >
         {label}
       </button>
-      {blocked ? (
-        <div className="exec-dock-why" data-l={label}>
+      {blocked && quietReason ? <p id={reasonId} className="exec-dock-sr">{text}</p> : null}
+      {blocked && !quietReason ? (
+        <div className="exec-dock-why" data-l={reasonLabel ?? label}>
           <p id={reasonId} className="exec-dock-reason" title={text}><QuietIds text={text} /></p>
           {accessHref ? <Link className="exec-dock-access" to={withContext(accessHref, withoutOrigin(params))} aria-label={`${accessLabel}: ${label}`}>{accessLabel}</Link> : null}
         </div>

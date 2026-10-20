@@ -14,7 +14,11 @@
 import type { ReactNode } from "react";
 
 import type { PanelStatus } from "../../contracts";
+import { reasonWords } from "../../api/governanceContext";
 import { PanelState } from "../../components/states";
+import { isSourcePending } from "../../soon";
+import { captureReasonText } from "../screens/stage/reasons";
+import { GapWhy } from "./notPublished";
 import "../css/blocks.css";
 
 interface StateBoundaryBase {
@@ -41,6 +45,22 @@ export type StateBoundaryProps = StateBoundaryBase &
     | { status: "denied" | "unavailable" | "terminal"; reason: string; lastGood?: ReactNode }
   );
 
+const REASON_CODE = /^([A-Z][A-Z0-9_]{5,})(?::\s*\1)?$/;
+
+/**
+ * A reason that is only a published code, said in the approved plain words (`STAGE_REASON_WHY` through `captureReasonText`, then the
+ * governance dictionary) with the code kept for the disclosure. A reason that is already prose passes through as it came; a code with
+ * no approved wording has no `text`: the state word stands alone and the code is behind the disclosure.
+ */
+export function plainReason(reason: string | undefined): { text: string | undefined; code: string | null } {
+  const match = reason === undefined ? null : REASON_CODE.exec(reason.trim());
+  if (match === null) return { text: reason, code: null };
+  const code = match[1];
+  const words = captureReasonText(code) ?? reasonWords(code);
+  const text = words === null || words === code ? undefined : words.charAt(0).toUpperCase() + words.slice(1);
+  return { text, code };
+}
+
 /** The panel body or the state that replaced it. */
 export function StateBoundary(props: StateBoundaryProps) {
   if (props.status === "ok") return <>{props.children}</>;
@@ -51,9 +71,15 @@ export function StateBoundary(props: StateBoundaryProps) {
   const given = "reason" in props ? props.reason : undefined;
   const silent = quiet && keepsBody && given === undefined && actions === undefined && lastGood === undefined;
   const reason = given === undefined && keepsBody ? "The source gave no reason." : given;
+  // A published code is not for the reader: the state line says it in words and the code waits behind the "?" (RV-06).
+  const plain = plainReason(reason);
+  const soon = plain.code !== null && title === undefined && isSourcePending(plain.code) && (status === "unavailable" || status === "insufficient_data" || status === "empty");
   return (
     <div className="exec-blk-boundary" data-status={status}>
-      {silent ? null : <PanelState status={status} reason={reason} lastGood={lastGood} actions={actions} title={title} />}
+      {silent ? null : (
+        <PanelState status={status} reason={plain.text} lastGood={lastGood} actions={actions} title={title ?? (soon ? "Soon" : undefined)} />
+      )}
+      {!silent && plain.code !== null ? <GapWhy name="Why, reason" rows={[plain.code]} /> : null}
       {keepsBody && children ? (
         <div className="exec-blk-demoted" data-status={status}>
           {children}

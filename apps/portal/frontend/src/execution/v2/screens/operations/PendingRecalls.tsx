@@ -16,6 +16,7 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { formatAsOf } from "../../boundary";
+import { GapWhy } from "../../blocks";
 import { PENDING_VERSION_KEYS, AMOUNT_KEYS } from "../../readers/commandCurrency";
 import type { PendingRecallDiscovery, DiscoveredRecall } from "../../readers/pendingRecallDiscovery";
 import type { CommandEnvironment } from "../../readers/commandCurrency";
@@ -201,7 +202,7 @@ export function PendingRecallsSection({ api, workspaceId, targetType, targetId, 
           <p className="exec-ops-recall-note">
             {RECALL_COVERAGE_COPY} {UNTRACKED_RECALLS_COPY}
             {" "}
-            <span className="exec-ops-np-reason">Not published: {load.discovery.untrackedRecalls.reasonCode}</span>
+            <GapWhy name="Why other recalls are not listed" rows={[`Not published: ${load.discovery.untrackedRecalls.reasonCode}`]} />
           </p>
           {load.discovery.items.length === 0 ? <p className="exec-ops-recall-note">{EMPTY_RECALLS_COPY}</p> : (
             <ul className="exec-ops-recalls" aria-label="Open recalls">

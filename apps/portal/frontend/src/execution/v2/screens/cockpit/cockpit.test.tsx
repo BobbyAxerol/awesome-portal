@@ -816,6 +816,7 @@ describe("decision rail", () => {
     expect(whyText(line)).toContain("Receipt ref: Not published (FE-030)");
     expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("None recorded");
     // The decision controls say PREVIEW beside each disabled control; the receipt head does not repeat it.
+    expect(rail().querySelectorAll(".exec-dock-reason")).toHaveLength(1);
     expect(within(rail()).getAllByText(PREVIEW).length).toBeGreaterThan(0);
   });
 

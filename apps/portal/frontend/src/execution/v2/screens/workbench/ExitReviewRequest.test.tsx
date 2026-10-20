@@ -18,6 +18,7 @@ import { ExitGatePanel } from "./ExitGatePanel";
 import { ExitReviewRequest } from "./ExitReviewRequest";
 import { R2_PARENT_GAP, bindExitReview, checkCapture, exitFingerprint, exitStatusOf, summaryBlock, type ExitBind, type ExitReviewBinding } from "./exitReviewRequest";
 import type { GateFacts } from "./model";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -198,7 +199,7 @@ describe("shut: ONE control with ONE short reason", () => {
     expect(button().disabled).toBe(true);
     expect(reason()).toBe("The R2 review behind this deployment is not published.");
     expect(screen.queryByRole("textbox")).toBeNull();
-    expect(document.querySelector("[data-state='shut']")?.getAttribute("title")).toBe(`Server reason: ${R2_PARENT_GAP}`);
+    expect(whyText(document.querySelector("[data-state='shut'] .exec-blk-why"))).toBe(`Server reason: ${R2_PARENT_GAP}`);
     fireEvent.click(button());
     expect(s.create).not.toHaveBeenCalled();
   });
@@ -219,7 +220,7 @@ describe("shut: ONE control with ONE short reason", () => {
     await settle();
     expect(button().disabled).toBe(true);
     expect(reason()).toBe("Needs the approver grant");
-    expect(document.querySelector("[data-state='shut']")?.getAttribute("title")).toBe("Server reason: GOVERNANCE_CAPABILITY_REQUIRED");
+    expect(whyText(document.querySelector("[data-state='shut'] .exec-blk-why"))).toBe("Server reason: GOVERNANCE_CAPABILITY_REQUIRED");
     expect(screen.queryByRole("textbox")).toBeNull();
   });
 
@@ -571,7 +572,7 @@ describe("in the exit gate panel, bound to the R2 parent the Portal publishes fo
     expect(button().disabled).toBe(true);
     expect(reason()).toBe("This deployment has no R2 review.");
     expect(screen.queryByRole("textbox")).toBeNull();
-    expect(document.querySelector("[data-state='shut']")?.getAttribute("title")).toBe(`Server reason: ${R2_PARENT_GAP}`);
+    expect(whyText(document.querySelector("[data-state='shut'] .exec-blk-why"))).toBe(`Server reason: ${R2_PARENT_GAP}`);
   });
 
   it.each([
@@ -595,7 +596,7 @@ describe("in the exit gate panel, bound to the R2 parent the Portal publishes fo
     await settle();
     expect(button().disabled).toBe(true);
     expect(reason()).toBe("Your account may not read this review.");
-    expect(document.querySelector("[data-state='shut']")?.getAttribute("title")).toBe("Server reason: R2_PARENT_UNREADABLE");
+    expect(whyText(document.querySelector("[data-state='shut'] .exec-blk-why"))).toBe("Server reason: R2_PARENT_UNREADABLE");
   });
 
   it("a schema this build does not read is shut, never read as a context", async () => {

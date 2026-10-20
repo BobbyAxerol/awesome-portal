@@ -17,7 +17,7 @@ import type { PanelStatus } from "../../contracts";
 import { CardsTable, type CardsColumn } from "../cardsTable";
 import { Flag } from "../Flag";
 import type { FlagKind } from "../flagKinds";
-import { formatAsOf } from "../boundary";
+import { utcStamp } from "../../time";
 import { isInternalPath } from "../urlState";
 import type { UtcEpochMs } from "../../screenDataContract";
 import { NotPublished, type NotPublishedId } from "./notPublished";
@@ -102,7 +102,7 @@ function columns(withActor: boolean): CardsColumn<EventFeedRow>[] {
     {
       key: "at",
       label: "When (UTC)",
-      render: (r) => <time dateTime={isoOf(r.at)}>{formatAsOf(r.at)}</time>,
+      render: (r) => <time dateTime={isoOf(r.at)}>{utcStamp(r.at)}</time>,
     },
     { key: "kind", label: "Kind", render: (r) => <Flag kind={r.kind} label={r.kindLabel} size="sm" /> },
     {

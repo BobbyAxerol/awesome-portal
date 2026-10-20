@@ -857,7 +857,9 @@ describe("Account 360: tabs", () => {
     const panel = await openTab("Reconciliation");
     const triad = within(panel).getByRole("group", { name: "Reconciliation" });
     expect(within(triad).getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Internal", "Broker", "Difference"]);
-    expect(triad.textContent).toContain("Not computed · SHARED_BINDING");
+    expect(triad.textContent).toContain("Not computed");
+    expect(triad.textContent).not.toContain("SHARED_BINDING");
+    expect(whyText(within(triad).getAllByText("Not computed")[0]!)).toBe("SHARED_BINDING");
     const difference = triad.querySelector("[data-col='difference']")!;
     expect(difference.textContent).not.toMatch(/\b0(\.00)?\b/);
     expect(triad.querySelector("[data-col='internal']")!.textContent).toContain("80,000.00");
