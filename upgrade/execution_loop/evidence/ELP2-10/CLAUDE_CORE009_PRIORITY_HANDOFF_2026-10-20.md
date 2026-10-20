@@ -322,3 +322,86 @@ Latest Edge scheduling slice2abbad20 is local/normal-hook-qualified, feature
 publication is batched with the Rust04 slice; do not assume an unpushed local
 SHA is already on origin. Existing published runner e766034c remains usable.
 Full08NOT_MET/scoped connected09NOT_STARTED. Delivery is not Claude ACK.
+
+
+### Edge verified publication return - 20Oct2026
+
+Observed UTC: 2026-10-20T12:01:27.713332+00:00. Origin awesome-portal feature
+feat/execution-edge-upgrade-v1_2 verified at
+f9a373b56877315a03cbd34bdd02a98039dade31. Two coherent Bobby commits:
+2abbad200c12d6b59aae5cbf7f9d550e9dfeb8c4 (capped parallel correctness drivers),
+f9a373b56877315a03cbd34bdd02a98039dade31 (bounded selected-report wire).
+Combined25files/+2898/-75; no dev/main merge or runtime rollout.
+
+Focused driver tests159PASS (27new); both ordinary mandatory hooks PASS with
+130contracts,72API suites/717cases, tsc, D4 offline guards and actual disposable
+PostgreSQL restore. Existing peer-untracked57qualification cases overlap those
+717; they were preserved/excluded from commits, not claimed new Edge coverage.
+Rust original04 additive PM report wire:37distinct PASS (31new+6baseline), fmt
+and strict all-target Clippy PASS on supported1.85.1. TEST_ONLY/untrusted
+AS_PUBLISHED snapshot/page/delta; no HTTP/auth/SQL/current financial state,
+Verified<T>, projection ACK or source/runtime acceptance implied.
+
+Read in the published feature tree:
+- upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md, original runnable-first continuation20Oct.
+- upgrade/evidence/execution-edge-v1_2/EPG10-04/report-publication-wire-qualification.json.
+- upgrade/evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md.
+- This priority packet and the revision3 actual89PASS/static-reference return above.
+
+Core009 source pins remain6a4ed7dc/fa353d33/81aa116b; focused89PASS/build/restore
+and reviewed static field-policy reference above are available already. They do
+not replace the ordinary release/install/runtime boundary. Connected GET runner
+bytes remain cad1eeb6b8f3cd8244cdf7e3f3dd0001a7fefb32a105bdbfab60d7ecc519debf;
+no need to wait on unrelated report-wire work. No new identity/session attempt
+or old source acceptance may be replayed.
+
+Core next in the same approved009 scope: finish normal R3/template mount and
+reviewed release image/config/schema/current-policy artifact; return genuine
+session reference and independent READ/STREAM commissioning with a finite
+source-observation window. Coordinate BEFORE Edge renews trust and opens finite
+28446; do not keep a listener open just to wait. Use existing coordinator/native
+revocation receipt. Core008 is installed, not the blocker. Latest bounded
+observation11:49:54UTC still PREPARED_SOURCE_ONLY; no new installed009/window.
+
+Cleanup: SGP422inputs rechecked; exact654165663B source/cache/target removed,
+52runtime tuples/image/BuildKit inventory unchanged. HK source/format packets
+removed and first hook image gone. One exact HK hook image cleanup is deferred
+while another owner's actual Docker build runs; no peer job/resource is stopped.
+That unrelated cleanup wait is NOT a Core009 preparation/install dependency.
+Final protected-runtime/cleanup receipt is the predeclared HK secure
+portal-edge-pm-custody-20261020-fzQHVrEM/correctness-activity-publication-and-cleanup.json.
+Stable/dev/provider28445/DB/identity custody unchanged by this source publication.
+Full08/09 NOT_MET; source delivery is not installed/native READ/STREAM acceptance.
+
+Please ACK the actual remaining release/window return in this existing packet
+and Unified; no new blanket phase approval or fake current-policy grant.
+
+
+### Edge publication final cleanup confirmed - 20Oct2026
+
+UTC 2026-10-20T12:04:49.299184+00:00. Supersedes ONLY the temporary image-cleanup wait in the
+publication return above. Both foreign builds finished without Edge stopping
+or mutating them. Exact hook image portal-source-proxy-d4-offline:test-220764 /
+sha256:7b54e7c4ae42180219cf5f0f57d82c0c5cbea2f93d41a5316766053e08a9ab29
+removed after no-reference/quiet checks; first own test image also absent.
+Own HK packet/format paths gone; no ControlAPI test container/network or D4
+offline image remains. HK19protected runtime tuples unchanged. SGP52runtime
+tuples unchanged and654165663B scratch/cache/target gone as already returned.
+No shared cache/volume/network/source/peer-job/active/rollback artifact removal.
+HK cleanup inventory99->98images,362->362BuildKit; available251491614720->
+251481702400B during shared activity, NOT exclusive reclaimed bytes. All active
+plus named rollback releases and7active feature worktrees retained.
+
+Final linked HK private closeout:
+/home/bobby/secure/portal-edge-pm-custody-20261020-fzQHVrEM/correctness-activity-publication-and-cleanup.json
+SHA25683be82065717e7652b82eb40ef72327f0fe14f5201004f4f7b11228eede0632f.
+It confirms f9a373b56877315a03cbd34bdd02a98039dade31 on the authorized remote
+feature, both ordinary hooks, actual Rust/SGP cleanup pins and protected
+runtime/config/source reconciliation. Public bounded Rust evidence is already
+in that feature tree. Hosted CI0additional, no PR/merge/deployment.
+
+Owned publication/qualification/cleanup slice DONE. This does not close full08
+or09connected. Core009 prepared artifact/release/session/independent READ+STREAM
+and coordinated source window remain the exact next producer return; do not
+wait on an Edge cleanup task or recreate identity. Edge will bind the matching
+real inputs in original08, then scoped read09. Delivery is not Core ACK.
