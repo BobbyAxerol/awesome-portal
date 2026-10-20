@@ -56,7 +56,7 @@
       },
       "field_policy_ref": "<<FILL:str:FIELD_POLICY_REF>>",
       "valid_from_ms": "<<FILL:ms:READ_GRANT_VALID_FROM_MS>>",
-      "valid_until_ms": "<<FILL:ms:READ_GRANT_VALID_UNTIL_MS|finite; decide the window with Bobby, not a default>>",
+      "valid_until_ms": "<<FILL:ms:READ_GRANT_VALID_UNTIL_MS|Plan B: finite, at most 2 h after valid_from_ms and not later than the renewed source trust end>>",
       "revoked_at_ms": null
     },
     {
@@ -79,7 +79,7 @@
       },
       "field_policy_ref": "<<FILL:str:FIELD_POLICY_REF>>",
       "valid_from_ms": "<<FILL:ms:STREAM_GRANT_VALID_FROM_MS>>",
-      "valid_until_ms": "<<FILL:ms:STREAM_GRANT_VALID_UNTIL_MS|finite and not later than the READ grant>>",
+      "valid_until_ms": "<<FILL:ms:STREAM_GRANT_VALID_UNTIL_MS|Plan B: its OWN finite expiry, at most 2 h after its valid_from_ms and not later than the renewed source trust end; STREAM never outlives usefulness of READ>>",
       "revoked_at_ms": null
     }
   ],

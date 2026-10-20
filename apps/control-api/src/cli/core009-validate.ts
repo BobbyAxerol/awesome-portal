@@ -11,6 +11,10 @@
  *     [--max-window-hours N] [--max-grant-hours N] [--workspace-id <id>]
  *     [--no-research-review] [--policy-install-only] [--stat-refs [--runtime-uid N] [--runtime-path <abs>]]
  *
+ * Plan B (`--plan read-and-stream`, Bobby 2026-10-20): ONE artifact with exactly one READ and one
+ * STREAM ALLOW grant, each <= 2 h (`--max-grant-hours` can only lower this) and ending no later than
+ * `--trust-expires-at`, which is mandatory for this plan; the manifest owner intake must carry the
+ * `grant_window` pin the offline installer enforces.
  * Exit: 0 all checks passed, 1 at least one error, 2 usage. Output is a JSON
  * report of stable codes + JSON paths; a pass is not an approval or install. */
 import { closeSync, constants, fstatSync, lstatSync, openSync, readSync } from "node:fs";

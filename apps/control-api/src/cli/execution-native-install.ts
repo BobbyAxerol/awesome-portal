@@ -26,6 +26,11 @@ async function main(){
   const reference=nativeCoreRuntimeReference();
   if(!reference)throw new Error("NATIVE_RESEARCH_INSTALL_SCOPE_REQUIRED");
   const native=await prepareNativeCoreRuntime(reference),target=native.researchReviewTarget(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!);
+  // Plan B (Bobby, 2026-10-20): READ and STREAM are installed together, each
+  // finite (<= 2 h) and never beyond the renewed source trust. The caps ride in
+  // the hash-pinned manifest; without them nothing is installed.
+  try{native.researchGrantWindow(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!);}
+  catch{throw new Error("NATIVE_RESEARCH_INSTALL_GRANT_WINDOW_REQUIRED");}
   const pool=buildPool(config.DATABASE_URL,native.poolProfile);
   try{
     await assertRegisteredResearchCurrentHumanSchema(pool,target);
@@ -41,6 +46,6 @@ async function main(){
 }
 void main().catch(error=>{
   // Neither paths, private JSON, SQL details, URLs nor source exceptions.
-  const code=error instanceof Error&&/^CURRENT_HUMAN_SCHEMA_[A-Z_]+$/.test(error.message)?error.message:"NATIVE_RESEARCH_INSTALL_FAILED";
+  const code=error instanceof Error&&/^(CURRENT_HUMAN_SCHEMA_[A-Z_]+|NATIVE_RESEARCH_INSTALL_GRANT_WINDOW_REQUIRED)$/.test(error.message)?error.message:"NATIVE_RESEARCH_INSTALL_FAILED";
   process.stderr.write(JSON.stringify({code})+"\n");process.exitCode=1;
 });

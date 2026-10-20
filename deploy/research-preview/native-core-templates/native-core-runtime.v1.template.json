@@ -137,7 +137,12 @@
           ]
         },
         "intake_not_before_ms": "<<FILL:ms:INTAKE_NOT_BEFORE_MS>>",
-        "intake_not_after_ms": "<<FILL:ms:INTAKE_NOT_AFTER_MS|bounded installation-intake window only; not a product grant TTL>>"
+        "intake_not_after_ms": "<<FILL:ms:INTAKE_NOT_AFTER_MS|bounded installation-intake window only; not a product grant TTL>>",
+        "grant_window": {
+          "plan": "READ_AND_STREAM",
+          "maximum_grant_ms": "<<FILL:int:PLAN_B_MAXIMUM_GRANT_MS|Plan B cap on EACH grant (valid_until - valid_from); at most 7200000 = 2 h>>",
+          "trust_not_after_ms": "<<FILL:ms:TRUST_NOT_AFTER_MS|end of the RENEWED source trust; no grant may end later>>"
+        }
       }
     ],
     "mutation_limits": {

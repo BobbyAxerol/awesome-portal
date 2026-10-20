@@ -12,7 +12,7 @@
 import { createHash } from "node:crypto";
 import { accessDigest } from "./access-digest";
 import { nativeCoreRuntimeManifest, nativeCoreResearchReviewTarget } from "./native-core-runtime";
-import { privateOwnerCommissioningDocument } from "./core-owner-commissioning";
+import { privateOwnerCommissioningDocument, planBGrantFindings, PLAN_B_MAXIMUM_GRANT_MS } from "./core-owner-commissioning";
 import { nativeBusinessReadUtcMicroseconds } from "./native-business-read-codec";
 
 export type Core009Plan = "read-only" | "read-and-stream";
@@ -34,7 +34,8 @@ export interface Core009InspectionOptions {
   minRemainingMs?: number;
   /** Upper bound of the installation window (default 24 h, as the reverse bootstrap). */
   maxWindowMs?: number;
-  /** Upper bound of one domain grant (default 72 h; operator guard, not a product rule). */
+  /** Upper bound of one domain grant (default 72 h; operator guard, not a product rule).
+   * Plan B (`read-and-stream`) is hard-capped at 2 h: this option can only lower it. */
   maxGrantMs?: number;
   /** Independent pin of the runtime file, e.g. the CONTROL_API_NATIVE_CORE_CONFIG_SHA256 value. */
   expectedRuntimeSha256?: string;
@@ -98,7 +99,8 @@ export function inspectCore009Preparation(runtimeBytes: Uint8Array, ownerBytes: 
   const errors: Core009Finding[] = [], warnings: Core009Finding[] = [];
   const plan = options.plan ?? "read-only", now = options.nowMs, policyOnly = options.mode === "policy-install-only";
   const minRemaining = options.minRemainingMs ?? 15 * 60_000, maxWindow = options.maxWindowMs ?? DAY,
-    maxGrant = options.maxGrantMs ?? 72 * 3_600_000;
+    planB = plan === "read-and-stream",
+    maxGrant = planB ? Math.min(options.maxGrantMs ?? PLAN_B_MAXIMUM_GRANT_MS, PLAN_B_MAXIMUM_GRANT_MS) : options.maxGrantMs ?? 72 * 3_600_000;
   const summary: Core009Report["summary"] = {
     runtime_sha256: runtimeBytes.length ? sha256(runtimeBytes) : null,
     owner_artifact_sha256: ownerBytes.length ? sha256(ownerBytes) : null, plan, selections: 0, retained_recovery: 0,
@@ -199,6 +201,12 @@ export function inspectCore009Preparation(runtimeBytes: Uint8Array, ownerBytes: 
     // 3. Pin <-> artifact (installer's independent checks, performed here first).
     owner_intakes.forEach((pin, i) => {
       if (pin.approved_sha256 !== summary.owner_artifact_sha256) errors.push({ code: "OWNER_ARTIFACT_SHA256_PIN_MISMATCH", path: `/composition/owner_intakes/${i}/approved_sha256` });
+      // Plan B caps ride in the hash-pinned manifest and are what the installer enforces.
+      const at = `/composition/owner_intakes/${i}/grant_window`;
+      if (planB && !pin.grant_window) errors.push({ code: "GRANT_WINDOW_PIN_MISSING", path: at });
+      if (!planB && pin.grant_window) errors.push({ code: "GRANT_WINDOW_PIN_IN_READ_ONLY_PLAN", path: at });
+      if (planB && pin.grant_window && options.trustExpiresAtMs !== undefined && pin.grant_window.trust_not_after_ms > options.trustExpiresAtMs)
+        errors.push({ code: "GRANT_WINDOW_PIN_OUTLIVES_TRUST", path: `${at}/trust_not_after_ms` });
       if (artifact && accessDigest(artifact.target) !== accessDigest(pin.target)) errors.push({ code: "OWNER_TARGET_PIN_MISMATCH", path: `/composition/owner_intakes/${i}/target` });
     });
   }
@@ -231,8 +239,24 @@ export function inspectCore009Preparation(runtimeBytes: Uint8Array, ownerBytes: 
       shortestGrant = shortestGrant === null ? left : Math.min(shortestGrant, left);
       if (g.valid_from_ms > now) errors.push({ code: "GRANT_NOT_YET_VALID", path: `${at}/valid_from_ms` });
       if (left < minRemaining) errors.push({ code: "GRANT_EXPIRED_OR_TOO_SHORT", path: `${at}/valid_until_ms` });
-      if (g.valid_until_ms - g.valid_from_ms > maxGrant) errors.push({ code: "GRANT_NOT_FINITE", path: `${at}/valid_until_ms` });
+      if (!planB && g.valid_until_ms - g.valid_from_ms > maxGrant) errors.push({ code: "GRANT_NOT_FINITE", path: `${at}/valid_until_ms` });
     });
+    // Plan B: ONE artifact installs the READ and the STREAM grant together. Each is finite
+    // (<= 2 h), has its own id and expiry, and ends no later than the renewed source trust,
+    // judged against the STRICTER of the validator options and the installer's manifest pin.
+    if (planB) {
+      const pins = manifest?.composition.owner_intakes.filter(p => p.target.workspace_id === target.workspace_id) ?? [];
+      const trusts = [options.trustExpiresAtMs, ...pins.map(p => p.grant_window?.trust_not_after_ms)].filter((v): v is number => v !== undefined);
+      if (options.trustExpiresAtMs === undefined) errors.push({ code: "TRUST_END_REQUIRED_FOR_PLAN_B", path: "" });
+      if (trusts.length > 0) {
+        const window = { plan: "READ_AND_STREAM" as const,
+          maximum_grant_ms: Math.min(maxGrant, ...pins.map(p => p.grant_window?.maximum_grant_ms ?? PLAN_B_MAXIMUM_GRANT_MS)),
+          trust_not_after_ms: Math.min(...trusts) };
+        for (const f of planBGrantFindings(manager_domain_grants, window, now))
+          if (f.code !== "GRANT_ALREADY_EXPIRED")
+            errors.push({ code: f.code, path: f.index === null ? "/manager_domain_grants" : `/manager_domain_grants/${f.index}/valid_until_ms` });
+      }
+    }
     summary.window_remaining_ms.shortest_grant = shortestGrant;
     for (const s of seals) if (s.valid_until_ms <= now) errors.push({ code: "FIELD_SEAL_EXPIRED", path: "/policy/manager_read_domains" });
     // READ and STREAM are independent: the plan states which are intended, and
