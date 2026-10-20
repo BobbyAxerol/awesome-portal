@@ -801,6 +801,29 @@ describe("states", () => {
     expect(within(chart).getByRole("status").textContent).toContain("JPY");
   });
 
+  it("offers Table and Expand on the equity chart: the same published points as rows, newest first, Esc returns focus (RV-08)", async () => {
+    mount(makeApi().api);
+    await ready();
+    const chart = (await screen.findByRole("group", { name: /arrow keys/ })).closest(".exec-pf-chart") as HTMLElement;
+    const published = (answerPortfolios("GET", "/views/equity-chart", new URLSearchParams({ subject_kind: "portfolio", subject_id: PF.core }))!.body as { panel: { data: { series: { points: [number, string | null][] }[] } } }).panel.data.series[0].points;
+    fireEvent.click(within(chart).getByRole("button", { name: /^Table, / }));
+    const rows = [...chart.querySelectorAll(".exec-ct-tbl tbody tr")];
+    // Every published value, newest first, as its exact string; the stated gap is a row that says so (the chart hatches it).
+    const exact = rows.map((r) => r.querySelector("td")!.getAttribute("title"));
+    expect(exact.filter((v) => v !== null)).toEqual(published.filter(([, v]) => v !== null).map(([, v]) => v).reverse());
+    expect(rows.filter((r) => r.querySelector("td")!.textContent === "No published value").length).toBeGreaterThan(0);
+    // The first row is the chart's own latest readout.
+    expect(rows[0].querySelector("td")!.textContent).toBe(within(chart).getByTestId("readout-value").textContent);
+    expect(within(chart).getByTestId("table-count").textContent).toBe(`Showing ${rows.length} of ${rows.length} rows`);
+    const expand = within(chart).getByRole("button", { name: /^Expand / });
+    expand.focus();
+    fireEvent.click(expand);
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(within(chart).getByRole("button", { name: /^Expand / }));
+  });
+
   it("is a stated state, not a guess, when no portfolio was named", () => {
     mount(makeApi().api, "", null);
     expect(screen.getByText("No portfolio was named in the address.")).toBeTruthy();
