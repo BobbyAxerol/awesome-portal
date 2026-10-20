@@ -52,6 +52,7 @@ import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV
 import type { PendingRecallDiscoveryQuery, PendingRecallDiscoveryRead } from "../v2/readers/pendingRecallDiscovery";
 import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligibility";
 import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
+import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
 import type { CanaryControlRoom, SandboxCertification } from "../certification";
 import type { LiveFullOperations } from "../liveFull";
 import type { TypedCondition } from "../components/conditions";
@@ -537,6 +538,11 @@ export interface ExecutionApi {
    * step-up state (`portal.self-eligibility-batch.v1`). Advisory; the single-resource `portal.self-eligibility.v1` is unchanged.
    */
   getSelfEligibilityBatch(request: EligibilityBatchRequest): Promise<Result<AccessEligibilityBatchRead>>;
+  /**
+   * `GET /api/v1/execution/governance/approvals/request-lookup` (FE-069): what replaying a `request_key` would do, for the caller's
+   * own requests (`governance.approval-request-lookup.v1`). A read: it writes nothing and creates nothing.
+   */
+  lookupApprovalRequest(query: ApprovalRequestLookupQuery): Promise<Result<ApprovalRequestLookupRead>>;
   /**
    * `POST /api/v1/execution/commands/plans` with the EXECUTION_COMMAND body.
    *

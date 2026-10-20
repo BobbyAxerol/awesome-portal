@@ -12,8 +12,10 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { ApprovalCreateOutcome } from "../../../api/ports";
 import { reviewRouteFor } from "../../../screens/ApprovalInbox";
 import { Flag } from "../../Flag";
+import { lookupSentence, type ReplayedApproval } from "../../readers/approvalRequestLookup";
 import { withContext, withoutParams } from "../../urlState";
 import { dueText, failureKind, QUEUE_HREF, refusalOf, safeApprovalId, showable } from "./model";
+import type { OriginalCheck } from "./useNewRequest";
 
 export interface OutcomePanelProps {
   outcome: ApprovalCreateOutcome;
@@ -28,6 +30,10 @@ export interface OutcomePanelProps {
   onRetry?(): void;
   /** Forget the uncertain send and its key. Called only after the reader has seen the warning and confirmed. */
   onDiscardUncertain?(): void;
+  /** FE-069: what the read-only lookup of the request key found (idle until asked). */
+  originalCheck?: OriginalCheck;
+  /** FE-069: ask the server what a replay of this key would do. A read; sends nothing. */
+  onCheckOriginal?(): void;
   accessHref: string;
 }
 
@@ -47,7 +53,61 @@ function Facts({ rows }: { rows: readonly (readonly [string, string])[] }) {
   );
 }
 
-export function OutcomePanel({ outcome, requestKey, busy = false, onDismiss, onNew, onRetry, onDiscardUncertain, accessHref }: OutcomePanelProps) {
+/** The facts of a request, the same rows for a created or replayed answer and for a lookup that found one. */
+function approvalRows(outcome: ReplayedApproval): readonly (readonly [string, string])[] {
+  const due = dueText(outcome.slaDueAt);
+  return [
+    ["Gate", "R1 · a quant reviewer, not you"],
+    ["Status", outcome.status !== "" ? showable(outcome.status, 40) : "Not stated"],
+    ["Quorum required", outcome.quorumRequired !== null ? String(outcome.quorumRequired) : "Not stated"],
+    ["Review due", due ?? "Not stated"],
+    ["Policy", outcome.policyVersion !== null ? showable(outcome.policyVersion, 60) : "Not stated"],
+    ["Requested by", outcome.requester !== null ? showable(outcome.requester, 80) : "Not stated"],
+  ];
+}
+
+/**
+ * What the read-only lookup of the request key found, said plainly. It is shown beside the uncertain panel and changes nothing: the
+ * fields stay locked, the key stays, and only the reader's click on Retry, Discard or Open request moves on.
+ */
+function OriginalCheckResult({ check, here }: { check: OriginalCheck; here(href: string): string }) {
+  if (check.phase === "idle") return null;
+  if (check.phase === "checking") {
+    return <p className="exec-rq-check" role="status" aria-busy="true" data-state="checking">Asking the Portal whether a request exists under this key. This only reads; nothing is created.</p>;
+  }
+  if (check.phase === "failed") {
+    return (
+      <div className="exec-rq-check" role="status" data-state="failed">
+        <p>The check could not be completed, so it is still unknown whether the request exists: {showable(check.reason)}</p>
+        <p className="exec-rq-meta"><Link className="exec-rq-link" to={here(QUEUE_HREF)}>Check the queue</Link></p>
+      </div>
+    );
+  }
+  const { lookup } = check;
+  const sentence = lookupSentence(lookup);
+  const found = lookup.state === "FOUND" ? lookup.result : null;
+  const id = found ? safeApprovalId(found.approvalId) : null;
+  return (
+    <div className="exec-rq-check" role="status" data-state={lookup.state} data-payload-check={lookup.payloadCheck}>
+      <p className="exec-rq-check-head">
+        <Flag kind={lookup.state === "NONE" ? "na" : lookup.state === "FOUND" ? "applied" : "rejected"} label={lookup.state === "NONE" ? "No request" : lookup.state === "FOUND" ? "Request exists" : "Key in use"} size="sm" />
+        <span>{sentence.text}</span>
+      </p>
+      {found ? (
+        <>
+          <p className="exec-rq-meta">Approval <span className="exec-rq-id">{showable(found.approvalId, 80)}</span></p>
+          <Facts rows={approvalRows(found)} />
+          <p className="exec-rq-acts">
+            {id ? <Link className="exec-rq-btn" to={here(reviewRouteFor({ id, gate: "R1" }))}>Open request</Link> : <Link className="exec-rq-btn" to={here(QUEUE_HREF)}>Open the approvals queue</Link>}
+          </p>
+        </>
+      ) : null}
+      {lookup.state === "KEY_PAYLOAD_CONFLICT" ? <p className="exec-rq-meta"><Link className="exec-rq-link" to={here(QUEUE_HREF)}>Check the queue</Link></p> : null}
+    </div>
+  );
+}
+
+export function OutcomePanel({ outcome, requestKey, busy = false, onDismiss, onNew, onRetry, onDiscardUncertain, originalCheck = { phase: "idle" }, onCheckOriginal, accessHref }: OutcomePanelProps) {
   const [params] = useSearchParams();
   const root = useRef<HTMLDivElement>(null);
   const keepKey = useRef<HTMLButtonElement>(null);
@@ -67,7 +127,6 @@ export function OutcomePanel({ outcome, requestKey, busy = false, onDismiss, onN
   if (outcome.kind === "created" || outcome.kind === "replayed") {
     const id = safeApprovalId(outcome.approvalId);
     const replayed = outcome.kind === "replayed";
-    const due = dueText(outcome.slaDueAt);
     return (
       <div ref={root} className="exec-rq-res" data-tone={replayed ? "replayed" : "created"} role="status" tabIndex={-1} aria-label={replayed ? "Request already created" : "Request created"}>
         <p className="exec-rq-res-head">
@@ -75,16 +134,7 @@ export function OutcomePanel({ outcome, requestKey, busy = false, onDismiss, onN
           <span className="exec-rq-id">{showable(outcome.approvalId, 80)}</span>
           <span>{replayed ? "was created by an earlier submit of this request" : "opened for R1 review"}</span>
         </p>
-        <Facts
-          rows={[
-            ["Gate", "R1 · a quant reviewer, not you"],
-            ["Status", outcome.status !== "" ? showable(outcome.status, 40) : "Not stated"],
-            ["Quorum required", outcome.quorumRequired !== null ? String(outcome.quorumRequired) : "Not stated"],
-            ["Review due", due ?? "Not stated"],
-            ["Policy", outcome.policyVersion !== null ? showable(outcome.policyVersion, 60) : "Not stated"],
-            ["Requested by", outcome.requester !== null ? showable(outcome.requester, 80) : "Not stated"],
-          ]}
-        />
+        <Facts rows={approvalRows(outcome)} />
         <p className="exec-rq-meta">The requester can never approve: the queue dims the row for you.</p>
         <div className="exec-rq-acts">
           {id ? <Link className="exec-rq-btn" data-variant="primary" to={here(reviewRouteFor({ id, gate: "R1" }))}>Open request</Link> : <Link className="exec-rq-btn" data-variant="primary" to={here(QUEUE_HREF)}>Open the approvals queue</Link>}
@@ -153,13 +203,22 @@ export function OutcomePanel({ outcome, requestKey, busy = false, onDismiss, onN
           </div>
         ) : (
           <div className="exec-rq-acts">
-            <Link className="exec-rq-btn" to={here(QUEUE_HREF)}>Check original request</Link>
+            <button
+              type="button"
+              className="exec-rq-btn"
+              aria-disabled={busy || originalCheck.phase === "checking"}
+              title={busy ? "A send is in progress; wait for its answer." : originalCheck.phase === "checking" ? "The check is already running." : "Asks the Portal whether a request exists under this key. A read; nothing is created."}
+              onClick={() => { if (!busy && originalCheck.phase !== "checking") onCheckOriginal?.(); }}
+            >
+              Check original request
+            </button>
             <button type="button" className="exec-rq-btn" data-variant="primary" aria-disabled={busy} title={busy ? "A send is in progress; wait for its answer." : undefined} onClick={() => { if (!busy) onRetry?.(); }}>
               Retry with the same key
             </button>
             <button type="button" className="exec-rq-btn" aria-disabled={busy} title={busy ? "A send is in progress; wait for its answer." : undefined} onClick={() => { if (!busy) setAsking(true); }}>Discard</button>
           </div>
         )}
+        {asking ? null : <OriginalCheckResult check={originalCheck} here={here} />}
         <details className="exec-rq-prov">
           <summary>Provenance</summary>
           <p className="exec-rq-mono">{refusal.verbatim}{requestKey ? ` · request key ${showable(requestKey, 80)}` : ""}</p>

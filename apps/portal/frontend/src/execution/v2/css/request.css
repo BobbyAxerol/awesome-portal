@@ -440,3 +440,33 @@ textarea.exec-rq-control {
     margin-bottom: -1px;
   }
 }
+
+/* ---- FE-069: the read-only check of the request key, and Load more runs -------------------------- */
+
+.exec-rq-check {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  background: var(--paper);
+  border: 1px dashed var(--line-strong);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.exec-rq-check p {
+  margin: 0;
+}
+.exec-rq-check-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+.exec-rq-more {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  margin-top: var(--space-2);
+}

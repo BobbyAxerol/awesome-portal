@@ -466,7 +466,9 @@ describe("submit: the one road to the port", () => {
     const panel = await screen.findByRole("alert", { name: "Request outcome uncertain" });
     expect(within(panel).getByText("Uncertain")).toBeTruthy();
     expect(panel.textContent).toContain("It may have been created. Check the original request before doing anything.");
-    expect(within(panel).getByRole("link", { name: "Check original request" }).getAttribute("href")).toBe("/governance/approvals");
+    // FE-069: "Check original request" is a read-only lookup of the request key now, not a link to the queue (see request.lookup.test.tsx).
+    expect(within(panel).getByRole("button", { name: "Check original request" })).toBeTruthy();
+    expect(within(panel).queryByRole("link", { name: "Check original request" })).toBeNull();
     expect(screen.queryByText("Created")).toBeNull();
     first = false;
     // While uncertain, Submit is down and the only way on is the panel's same-key retry.
@@ -796,7 +798,7 @@ describe("the URL never writes", () => {
     expect(search().get("compose")).toBe("request");
     await loaded();
     expect(net.calls).toHaveLength(1);
-    expect(net.calls[0]).toMatchObject({ method: "GET", url: "/api/v1/quantbt/runs?limit=50" });
+    expect(net.calls[0]).toMatchObject({ method: "GET", url: "/api/v1/quantbt/runs?status=COMPLETED&limit=50" });
     expect(createApprovalRequest).not.toHaveBeenCalled();
   });
 });
@@ -1430,7 +1432,9 @@ describe("M3: result links open the caller's own workspace record", () => {
     await fillValid();
     fireEvent.click(submitBtn());
     const unc = await screen.findByRole("alert", { name: "Request outcome uncertain" });
-    expect(within(unc).getByRole("link", { name: "Check original request" }).getAttribute("href")).toBe("/governance/approvals");
+    // The queue link is in the discard question; it keeps the context but not the page's workspace_id.
+    fireEvent.click(within(unc).getByRole("button", { name: "Discard" }));
+    expect(within(await screen.findByRole("alertdialog", { name: "Discard this uncertain request?" })).getByRole("link", { name: "Check the queue" }).getAttribute("href")).toBe("/governance/approvals");
   });
 });
 

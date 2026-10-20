@@ -280,8 +280,26 @@ export function readPrefill(params: URLSearchParams): PrefillRead {
 export interface AlphaChoice {
   id: string;
   label: string;
-  runCount: number;
+  /** Completed runs of this alpha among the runs LOADED; `null` for an alpha taken from the server's catalog (the count is not published). */
+  runCount: number | null;
 }
+
+/**
+ * FE-069: the alpha picker from the Run Library's own `filter_catalog.alphas` (the whole workspace, not the runs loaded so far). Two
+ * alphas with the same name are told apart by id; the order is the label's. No count is shown: the catalog publishes none.
+ */
+export function catalogAlphaChoices(catalog: readonly { id: string; name: string }[]): AlphaChoice[] {
+  const nameCount = new Map<string, number>();
+  for (const { name } of catalog) nameCount.set(name, (nameCount.get(name) ?? 0) + 1);
+  return catalog
+    .map<AlphaChoice>(({ id, name }) => ({ id, label: (nameCount.get(name) ?? 0) > 1 ? `${name} (${id})` : name, runCount: null }))
+    .sort((a, b) => a.label.localeCompare(b.label, "en"));
+}
+
+/** What the server calls the scope of the create route's alpha, in words. Only a published value has a label; none is invented. */
+export const ALPHA_SCOPE_LABEL: Readonly<Record<string, string>> = {
+  WORKSPACE_ALL_COMPLETED_RUNS: "All completed runs in this workspace",
+};
 
 /** D8: alphas that have a COMPLETED run. Two alphas with the same name are told apart by id; nothing is guessed about permissions. */
 export function alphaChoices(options: readonly RunOption[]): AlphaChoice[] {

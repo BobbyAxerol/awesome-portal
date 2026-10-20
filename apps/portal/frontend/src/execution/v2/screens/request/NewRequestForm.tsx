@@ -14,7 +14,8 @@ import { useId } from "react";
 import { Link } from "react-router-dom";
 
 import { Flag } from "../../Flag";
-import { ID_PATTERN, ID_RULE, claimHint, runLabel, RUN_LIBRARY_HREF, stillNeeded, summaryCounter, MAX_SUMMARY, MIN_SUMMARY } from "./model";
+import { ALPHA_SCOPE_LABEL, ID_PATTERN, ID_RULE, claimHint, runLabel, RUN_LIBRARY_HREF, stillNeeded, summaryCounter, MAX_SUMMARY, MIN_SUMMARY } from "./model";
+import { MAX_RUN_PAGES, RUN_PAGE_LIMIT } from "./runLibrary";
 import { OutcomePanel } from "./OutcomePanel";
 import { stageActionRow } from "../../readers/stageActionEligibility";
 import { stageActionReason } from "../stage/reasons";
@@ -67,8 +68,19 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
   // An uncertain send locks the payload: its idempotency key belongs to exactly these fields.
   const locked = settled || state.submitting || state.uncertain;
   const listReady = runs.status === "ok";
+  const create = stageActionRow(state.eligibility, "approval.create");
   const alphaListed = state.alphas.some((a) => a.id === f.alphaId);
   const runListed = state.runOptions.some((o) => o.runId === f.runId);
+  // FE-069: the server's catalog is the whole workspace's alphas; without one the picker holds the loaded runs' alphas and says so.
+  const derivedAlphas = listReady && runs.catalog === null;
+  const runsPending = runs.refreshing;
+  const moreWhyId = `${base}-more-why`;
+  const moreBlocked = runs.loadingMore || runs.capped || runsPending;
+  const moreWhy = runs.capped
+    ? `${(MAX_RUN_PAGES * RUN_PAGE_LIMIT).toLocaleString("en-US")} runs are loaded. Type the run id below for older ones.`
+    : runs.loadingMore
+      ? "The next page is loading."
+      : "The runs of this alpha are loading.";
   const summary = validation.summary;
   const summaryBad = summary.state === "long" || summary.state === "hostile";
   const reasonId = `${base}-why`;
@@ -77,8 +89,10 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
   const summaryHelpId = `${base}-sumhelp`;
   const handOpen = runs.status === "unavailable" || (listReady && state.alphas.length === 0) || (f.runId !== "" && !runListed) || (f.alphaId !== "" && !alphaListed);
 
-  const alphaPlaceholder = runs.status === "loading" ? "Reading completed runs…" : runs.status === "unavailable" ? "Run Library not available" : state.alphas.length === 0 ? "No completed run to pick from" : "Pick an alpha";
-  const runPlaceholder = f.alphaId === "" ? "Pick an alpha first" : !alphaListed ? "This alpha has no listed run" : "Pick a completed run";
+  const alphaPlaceholder = runs.status === "loading" ? "Reading completed runs…" : runs.status === "unavailable" ? "Run Library not available" : state.alphas.length === 0 ? (runs.catalog === null ? "No completed run to pick from" : "No alpha to pick from") : "Pick an alpha";
+  const runPlaceholder = f.alphaId === "" ? "Pick an alpha first" : !alphaListed ? "This alpha is not in the list" : runsPending ? "Reading this alpha's completed runs…" : state.runOptions.length === 0 ? "This alpha has no completed run" : "Pick a completed run";
+  // The server's scope of the create route's alpha, in words. Printed only when the eligibility read published one.
+  const scope = create?.alphaScope != null ? ALPHA_SCOPE_LABEL[create.alphaScope] ?? null : null;
 
   const flag = (() => {
     if (gate.open) return <Flag kind="ok" label="Ready" />;
@@ -91,7 +105,6 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
   // FE-068: when Submit is closed by the delivery policy, the server's own reason for approval.create replaces the generic policy
   // sentence if it published one. It is text only: it never opens Submit and the gate above never reads it.
   const policyReason = gate.open || gate.kind !== "policy" ? null : stageActionReason(state.eligibility, "approval.create", gate.reason);
-  const create = stageActionRow(state.eligibility, "approval.create");
   // Submit is on, yet the reader's own check says the server will refuse: say so beside it. Advisory; the click still asks the server.
   const advice = gate.open && create !== undefined && create.verdict === "NOT_ELIGIBLE"
     ? `Your access check says this will be refused: ${stageActionReason(state.eligibility, "approval.create", "")}. Submit still asks the server.`
@@ -130,7 +143,7 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
           <div className="exec-rq-fld">
             <label htmlFor={`${base}-alpha`} className="exec-rq-label">
               <span>Alpha</span>
-              <span className="exec-rq-label-meta">From completed runs</span>
+              <span className="exec-rq-label-meta">{scope ?? "From completed runs"}</span>
             </label>
             <select
               id={`${base}-alpha`}
@@ -146,7 +159,9 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
             {runs.status === "unavailable" ? (
               <p id={`${base}-alpha-help`} className="exec-rq-note" role="status">Run Library not available: {runs.reason} Type the ids below; the server checks them.</p>
             ) : !listReady || state.alphas.length === 0 ? (
-              <p id={`${base}-alpha-help`} className="exec-rq-note">{runs.status === "loading" ? "Reading the completed runs the Run Library lists." : "The Run Library lists no completed run, so there is nothing to pick. Type the ids below; the server checks them."}</p>
+              <p id={`${base}-alpha-help`} className="exec-rq-note">{runs.status === "loading" ? "Reading the completed runs the Run Library lists." : (runs.catalog === null ? "The Run Library lists no completed run, so there is nothing to pick. Type the ids below; the server checks them." : "The Run Library lists no alpha, so there is nothing to pick. Type the ids below; the server checks them.")}</p>
+            ) : derivedAlphas ? (
+              <p className="exec-rq-note">The Run Library did not publish its alpha list, so these are the alphas of the runs loaded so far. If yours is missing, type its id below.</p>
             ) : null}
           </div>
 
@@ -162,15 +177,42 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
               id={`${base}-run`}
               className="exec-rq-control"
               value={runListed ? f.runId : ""}
-              disabled={!listReady || !alphaListed}
-              aria-describedby={!listReady || !alphaListed ? `${base}-run-help` : undefined}
+              disabled={!listReady || !alphaListed || runsPending}
+              aria-describedby={!listReady || !alphaListed || runsPending ? `${base}-run-help` : undefined}
               onChange={(e) => state.setRun(e.target.value)}
             >
               <option value="">{runListed || f.runId === "" ? runPlaceholder : `${f.runId} (typed by hand)`}</option>
               {state.runOptions.map((o) => <option key={o.runId} value={o.runId}>{runLabel(o)}</option>)}
             </select>
-            {!listReady || !alphaListed ? <p id={`${base}-run-help`} className="exec-rq-note">{listReady ? "Pick an alpha to see its completed runs." : "Runs are listed once the Run Library has been read."}</p> : null}
-            {listReady ? <p className="exec-rq-note">Lists the Run Library&apos;s latest 50 runs, completed ones only. If yours is missing, type its id below.</p> : null}
+            {!listReady || !alphaListed || runsPending ? <p id={`${base}-run-help`} className="exec-rq-note">{!listReady ? "Runs are listed once the Run Library has been read." : runsPending ? "Reading this alpha's completed runs." : "Pick an alpha to see its completed runs."}</p> : null}
+            {listReady && alphaListed && !runsPending ? (
+              <p className="exec-rq-note" data-testid="run-count">
+                {state.runOptions.length === 0
+                  ? "The Run Library lists no completed run for this alpha. Type the run id below if you have one; the server checks it."
+                  : runs.filteredRows !== null && runs.filter !== null
+                    ? `Showing the newest ${state.runOptions.length.toLocaleString("en-US")} of ${runs.filteredRows.toLocaleString("en-US")} completed runs of this alpha. If yours is missing, type its id below.`
+                    : `Showing ${state.runOptions.length.toLocaleString("en-US")} completed runs, newest first. If yours is missing, type its id below.`}
+              </p>
+            ) : null}
+            {listReady && alphaListed && runs.hasMore ? (
+              <div className="exec-rq-more">
+                <button
+                  type="button"
+                  className="exec-rq-btn"
+                  aria-disabled={moreBlocked}
+                  aria-busy={runs.loadingMore || undefined}
+                  aria-describedby={moreBlocked ? moreWhyId : undefined}
+                  title={moreBlocked ? moreWhy : undefined}
+                  onClick={() => {
+                    if (!moreBlocked) runs.loadMore();
+                  }}
+                >
+                  {runs.loadingMore ? "Loading runs…" : "Load more runs"}
+                </button>
+                {moreBlocked ? <span id={moreWhyId} className="exec-rq-note">{moreWhy}</span> : null}
+              </div>
+            ) : null}
+            {runs.moreError !== null ? <p className="exec-rq-error" role="alert">{runs.moreError}</p> : null}
           </div>
 
           <div className="exec-rq-fld">
@@ -248,6 +290,8 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
           onNew={state.reset}
           onRetry={state.retry}
           onDiscardUncertain={state.discardUncertain}
+          originalCheck={state.originalCheck}
+          onCheckOriginal={state.checkOriginal}
           accessHref={accessHref}
         />
       ) : null}
