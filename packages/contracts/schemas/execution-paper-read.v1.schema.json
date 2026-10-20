@@ -832,6 +832,21 @@
       "propertyNames": { "pattern": "^(?!record_key$)(?!raw_)(?!.*(?:secret|credential|password|token|dsn)).+$" },
       "additionalProperties": { "oneOf": [{ "$ref": "#/$defs/Scalar" }, { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/Scalar" } }] }
     },
+    "DeploymentDisplayName": { "type": ["string", "null"], "minLength": 1, "maxLength": 256, "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])", "description": "FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace." },
+    "AlphaIdentityReason": { "enum": ["ALPHA_MEMBERSHIP_NOT_QUALIFIED", "ALPHA_MEMBERSHIP_NOT_PUBLISHED", "ALPHA_MEMBERSHIP_AMBIGUOUS", "ALPHA_IDENTITY_NOT_AUTHORIZED", "ALPHA_NAME_NOT_PUBLISHED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id." },
+    "PortfolioNameReason": { "enum": ["PORTFOLIO_NOT_ASSIGNED", "PORTFOLIO_NAME_NOT_PUBLISHED", "PORTFOLIO_NAME_AMBIGUOUS", "PORTFOLIO_NAME_NOT_AUTHORIZED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why portfolio_name is null." },
+    "DeploymentIdentityRules": {
+      "type": "object", "description": "FE-066: the five identity keys travel together; a name is present iff its reason is null; alpha_name implies alpha_id.",
+      "dependentRequired": { "alpha_id": ["alpha_name", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_name": ["alpha_id", "portfolio_name", "alpha_reason_code", "portfolio_name_reason_code"], "portfolio_name": ["alpha_id", "alpha_name", "alpha_reason_code", "portfolio_name_reason_code"], "alpha_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "portfolio_name_reason_code"], "portfolio_name_reason_code": ["alpha_id", "alpha_name", "portfolio_name", "alpha_reason_code"] },
+      "allOf": [
+        { "if": { "required": ["alpha_name"], "properties": { "alpha_name": { "type": "string" } } }, "then": { "properties": { "alpha_id": { "type": "string" }, "alpha_reason_code": { "type": "null" } } }, "else": { "properties": { "alpha_reason_code": { "type": "string" } } } },
+        { "if": { "required": ["portfolio_name"], "properties": { "portfolio_name": { "type": "string" } } }, "then": { "properties": { "portfolio_name_reason_code": { "type": "null" } } }, "else": { "properties": { "portfolio_name_reason_code": { "type": "string" } } } }
+      ]
+    },
+    "DeploymentRecord": {
+      "description": "FE-066: the Paper profile deployment block: the source row plus the Alpha-Portfolio identity keys.",
+      "allOf": [{ "$ref": "#/$defs/NarrowRecord" }, { "type": "object", "properties": { "alpha_id": { "oneOf": [{ "$ref": "#/$defs/Identifier" }, { "type": "null" }] }, "alpha_name": { "$ref": "#/$defs/DeploymentDisplayName" }, "portfolio_name": { "$ref": "#/$defs/DeploymentDisplayName" }, "alpha_reason_code": { "$ref": "#/$defs/AlphaIdentityReason" }, "portfolio_name_reason_code": { "$ref": "#/$defs/PortfolioNameReason" } } }, { "$ref": "#/$defs/DeploymentIdentityRules" }]
+    },
     "Records": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/NarrowRecord" } },
     "Page": {
       "type": "object", "additionalProperties": false,
@@ -986,7 +1001,7 @@
     "Data": {
       "type": "object", "additionalProperties": false, "minProperties": 1,
       "properties": {
-        "deployment": { "oneOf": [{ "$ref": "#/$defs/NarrowRecord" }, { "type": "null" }] },
+        "deployment": { "oneOf": [{ "$ref": "#/$defs/DeploymentRecord" }, { "type": "null" }] },
         "deployments": { "$ref": "#/$defs/Records" },
         "positions": { "$ref": "#/$defs/Records" },
         "sessions": { "$ref": "#/$defs/Records" },

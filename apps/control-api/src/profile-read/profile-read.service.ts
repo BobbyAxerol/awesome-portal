@@ -11,6 +11,7 @@ import {
 } from "../execution/product-read-source";
 import { ManagerPage, ManagerReadContext, managerPage } from "../paper-read/manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
+import { attachDeploymentIdentity } from "../execution/deployment-identity";
 import {
   oldestStageAsOfMs,
   stagePanels,
@@ -279,7 +280,7 @@ export class ProfileReadService {
     // continuations, never a Manager cursor.
     const projection = rawProjection ? { ...rawProjection, sourceCursor: null } : null;
     const readAtMs = Date.now();
-    return {
+    const body = {
       schema_version: requestedEnvironment === "sandbox"
         ? deploymentId ? "execution.sandbox-current-source.v1" : "execution.sandbox-overview.v1"
         : requestedEnvironment === "canary"
@@ -322,6 +323,10 @@ export class ProfileReadService {
         ? [{ capability_id: "market.ticks", state: "UNAVAILABLE", reason_code: "N28_MARKET_TICKS_NOT_ACTIVATED", retryable: false }]
         : [],
     };
+    // FE-066: the deployment's Alpha-Portfolio identity rides beside the body
+    // (not inside it) for the Sandbox/Canary/Live composers.
+    return resolution?.state === "FOUND" && resolution.identity
+      ? attachDeploymentIdentity(body, resolution.identity) : body;
   }
 
   private async fetch(

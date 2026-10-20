@@ -13,6 +13,7 @@
     "certification_id": "scert_fixture_77",
     "deployment_id": "dep_77",
     "portfolio_id": "pf_crypto",
+    "alpha_id": null, "alpha_name": null, "portfolio_name": null, "alpha_reason_code": "DEPLOYMENT_IDENTITY_NOT_READ", "portfolio_name_reason_code": "DEPLOYMENT_IDENTITY_NOT_READ",
     "venue": "OKX",
     "environment": "SANDBOX",
     "workflow_state": "DRAFT",

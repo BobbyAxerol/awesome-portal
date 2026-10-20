@@ -11,7 +11,7 @@
   "read_at": "2026-08-23T12:00:00.000Z",
   "actor": { "user_id": "usr_fixture_admin", "username": "bobby", "roles": ["ADMIN"] },
   "deployment": {
-    "deployment_id": "dep_88", "portfolio_id": "pf_crypto", "account_id": "acct_live_grid",
+    "deployment_id": "dep_88", "portfolio_id": "pf_crypto", "alpha_id": null, "alpha_name": null, "portfolio_name": null, "alpha_reason_code": "DEPLOYMENT_IDENTITY_NOT_READ", "portfolio_name_reason_code": "DEPLOYMENT_IDENTITY_NOT_READ", "account_id": "acct_live_grid",
     "external_account_ref": "acct-live-grid-v21", "venue": "BINANCE",
     "declared_environment": "LIVE_FULL", "runtime_state": null, "activated_at": null
   },
