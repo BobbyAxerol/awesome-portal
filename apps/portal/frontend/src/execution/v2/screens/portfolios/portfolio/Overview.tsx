@@ -19,9 +19,8 @@ import { formatAsOf } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
 import { EXPORT_REASON, PF_FE, npReason, npText, type Unpublished } from "../fe";
 import { utcStamp } from "../../../../time";
-import { showDecimal } from "../../../charts";
 import { ManagerSeriesPanel } from "../../series/ManagerSeriesPanel";
-import { chartUnit, isDescribed, latestPoint, UNAVAILABLE_SENTENCE } from "../../series/seriesModel";
+import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../../series/seriesModel";
 import { Absent, MoneyList, Np, envWord } from "../format";
 import type { TabCtx } from "./ctx";
 import { FlowRibbonChips, FlowRibbonLanes, FlowRibbonNotes, useRibbonLanes } from "./FlowRibbon";
@@ -46,7 +45,7 @@ function NavFigure({ ctx, withNote = true }: { ctx: TabCtx; withNote?: boolean }
   if (last === null) return <span className="exec-pf-dim">No points in this window</span>;
   return (
     <span title={last.exact}>
-      {showDecimal(last.exact, { unit: chartUnit(entry), currency: entry.currency ?? undefined })}
+      {seriesValueText(entry, last.exact)}
       {withNote ? <small className="exec-pf-dim"> · {utcStamp(last.tsMs)}</small> : null}
     </span>
   );

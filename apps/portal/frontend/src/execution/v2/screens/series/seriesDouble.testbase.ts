@@ -49,7 +49,8 @@ export function seriesBodyFor(params: URLSearchParams, variant: SeriesVariant): 
     const entry = clone(published[index % published.length]!);
     entry.subject = id;
     // A pair of populated series shares the fixture's points; a third and fourth subject cycle through them.
-    if (metric === "RETURN") { entry.unit = "RATIO"; entry.currency = null; }
+    // A RETURN is a RATIO whose source states its scale (FE-013); the double states FRACTION, the published return fixture's.
+    if (metric === "RETURN") { entry.unit = "RATIO"; entry.currency = null; entry.ratio_scale = "FRACTION"; }
     return entry;
   });
   body.series_source = variant === "unavailable" ? body.series_source : { state: "PUBLISHED", reason_code: null };

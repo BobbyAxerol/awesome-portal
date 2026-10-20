@@ -2,15 +2,17 @@
  * Reader conformance for `managerSeries.ts` (Rules 9.8.3, tiers L0 to L3). Lane: FIXTURE_LAB (a fixture is never a source
  * acceptance). Contract: `packages/contracts/schemas/execution-manager-series.v1.schema.json` (also
  * `openapi/execution-manager-series.openapi.json`, `ManagerSeries`); fixtures `execution-manager-series.{populated,empty,
- * unavailable,currency-mixed}.synthetic`. Every payload is built from those fixtures (`managerSeries.testbase.ts`), the
+ * unavailable,currency-mixed}.synthetic` and, since BE-P8 (FE-013 ratio scale), `{return,return-scale-mixed,
+ * return-scale-not-published}.synthetic` plus the `metric-unit` negative fixture. Every payload is built from those fixtures (`managerSeries.testbase.ts`), the
  * published schema is the oracle (testkit `validateAgainst`).
  *
- * L0  the four fixtures verbatim: they validate against the published schema AND are read; digests unchanged at the end.
+ * L0  the seven fixtures verbatim: they validate against the published schema AND are read; digests unchanged at the end.
  * L1  state matrices:
  *       S  one entry: state x reason_code x points x described-or-bare (reader accepts iff the schema does)
  *       C  two subjects: currency x partition x basis x methodology x second subject's state (the comparison is re-derived;
  *          a body whose comparison lies is refused: schema-valid, reader-refused, counted)
- *       M  metric x unit x currency (the unit follows the metric)
+ *       M  metric x unit x currency x ratio_scale (the unit follows the metric; a ratio states its scale: the schema now says the same)
+ *       R  RETURN, two subjects: scale x partition x basis x methodology x second subject's state (RATIO_SCALE_MIXED is reachable)
  * L2  4 subjects x 2000 points (the union axis is 8000 timestamps), 256 gaps, the bounds (2001 points, 5 subjects)
  * L3  generated negatives over the populated fixture: never throws, never leaks a probe, the reader NEVER accepts what the
  *     schema refuses, and where it is stricter than the schema it is in a named, counted group:
@@ -18,10 +20,10 @@
  *       MS-S2 (retired) negative zero is now refused by the schema (MD-5 option C)
  *       MS-S3/MS-S4 a window is not empty or backwards; points are strictly ascending and inside the window; gaps are ordered
  *       MS-S5 an entry carries the selected, resolved window and does not end after the cutoff
- *       MS-S6 the unit follows the metric; MONEY is in the partition's currency; the basis is the partition's
- *       MS-S7 a subject appears once; an unpublished source allows only five reasons
+ *       MS-S6 MONEY is in the partition's currency; the basis is the partition's (the metric -> unit and ratio_scale ties are the schema's since BE-P8)
+ *       MS-S7 a subject appears once; an unpublished source allows only five reasons (RATIO_SCALE_NOT_PUBLISHED needs a published source)
  *       MS-S8 ALL is a gap: no points for it; window reasons agree with the request
- *       MS-S9 comparison equals the value re-derived from the entries
+ *       MS-S9 comparison equals the value re-derived from the entries (scale included)
  *       MS-S10 clocks stay inside the Date range
  */
 import { afterAll, describe, expect, it } from "vitest";
@@ -36,6 +38,7 @@ import {
   COMPARISON_MISMATCH_REASONS,
   COMPARISON_STATES,
   MANAGER_SERIES_METRICS,
+  MANAGER_SERIES_RATIO_SCALES,
   MANAGER_SERIES_SCHEMA,
   MAX_AXIS_POINTS,
   MAX_SERIES_GAPS,
@@ -55,9 +58,14 @@ import {
   FIXTURE_EMPTY,
   FIXTURE_MIXED,
   FIXTURE_POPULATED,
+  FIXTURE_RETURN,
+  FIXTURE_RETURN_SCALE_MIXED,
+  FIXTURE_RETURN_UNSCALED,
   FIXTURE_UNAVAILABLE,
   fixtureValue,
   fixturesDigest,
+  metricUnitCases,
+  RETURN_FIXTURES,
   SERIES_FIXTURES,
   seriesViolations,
   unavailableEntry,
@@ -81,8 +89,8 @@ const POPULATED: Draft = fixtureValue(FIXTURE_POPULATED);
 
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
-  it("the four series fixtures are the synthetic lane, validate against the published schema, and are read", () => {
-    for (const name of SERIES_FIXTURES) {
+  it("the seven series fixtures are the synthetic lane, validate against the published schema, and are read", () => {
+    for (const name of [...SERIES_FIXTURES, ...RETURN_FIXTURES]) {
       const file = loadCanonical<{ lane: string; value: Draft }>(name);
       expect(file.lane, name).toMatch(/TEST_ONLY/);
       expect(file.value.schema_version, name).toBe(MANAGER_SERIES_SCHEMA);
@@ -98,6 +106,16 @@ describe("L0 · canonical, verbatim", () => {
     expect(new Set(reads.map((r) => r.comparison.state))).toEqual(new Set(COMPARISON_STATES));
   });
 
+  it("the return fixtures cover the ratio scale: FRACTION aligned, mixed scales INCOMPARABLE, a source with no scale UNAVAILABLE", () => {
+    const reads = RETURN_FIXTURES.map((name) => seriesOf(fixtureValue(name))!);
+    expect(reads.map((r) => [r.metric, r.comparison.state, r.comparison.reasonCode])).toEqual([
+      ["RETURN", "ALIGNED", null], ["RETURN", "INCOMPARABLE", "RATIO_SCALE_MIXED"], ["RETURN", "SINGLE_SUBJECT", null],
+    ]);
+    expect(reads.flatMap((r) => r.series.map((e) => (e.state === "UNAVAILABLE" ? e.reasonCode : e.ratioScale)))).toEqual(["FRACTION", "FRACTION", "FRACTION", "PERCENT", "RATIO_SCALE_NOT_PUBLISHED"]);
+    expect(fixtureValue(FIXTURE_RETURN_UNSCALED).series_source.state).toBe("PUBLISHED");
+    expect(fixtureValue(FIXTURE_RETURN_SCALE_MIXED).comparison.common).toBeNull();
+  });
+
   it("the closed words the reader holds are the ones the schema publishes", () => {
     const schema = loadCanonical<Draft>("../schemas/execution-manager-series.v1.schema.json");
     const entry = schema.properties.series.items.properties;
@@ -105,6 +123,8 @@ describe("L0 · canonical, verbatim", () => {
     expect([...words(entry.state)]).toEqual([...SERIES_STATES]);
     expect(words(entry.reason_code)).toEqual([...SERIES_UNAVAILABLE_REASONS, SERIES_EMPTY_REASON]);
     expect(words(entry.gaps.items.properties.reason)).toEqual([...SERIES_GAP_REASONS]);
+    expect(words(entry.ratio_scale)).toEqual([...MANAGER_SERIES_RATIO_SCALES]);
+    expect(words(schema.properties.comparison.properties.common.anyOf[0].properties.ratio_scale)).toEqual([...MANAGER_SERIES_RATIO_SCALES]);
     expect(words(entry.source_confidence)).toEqual([...MANAGER_SOURCE_CONFIDENCE]);
     expect(words(schema.properties.metric)).toEqual([...MANAGER_SERIES_METRICS]);
     expect(words(schema.properties.comparison.properties.state)).toEqual([...COMPARISON_STATES]);
@@ -242,24 +262,134 @@ describe("L1 · matrix C · two subjects: currency x partition x basis x methodo
   });
 });
 
-describe("L1 · matrix M · metric x unit x currency (the unit follows the metric)", () => {
+describe("L1 · matrix M · metric x unit x currency x ratio_scale (the metric fixes the unit; a ratio states its scale)", () => {
+  const SHAPES: [string, string, string | null, string | null][] = [
+    ["MONEY/USDT/-", "MONEY", "USDT", null],
+    ["MONEY/null/-", "MONEY", null, null],
+    ["MONEY/USDT/FRACTION", "MONEY", "USDT", "FRACTION"],
+    ["RATIO/null/FRACTION", "RATIO", null, "FRACTION"],
+    ["RATIO/null/PERCENT", "RATIO", null, "PERCENT"],
+    ["RATIO/null/-", "RATIO", null, null],
+    ["RATIO/USDT/FRACTION", "RATIO", "USDT", "FRACTION"],
+  ];
   const DIMS = [
     dimension("metric", ["metric"], [...MANAGER_SERIES_METRICS]),
-    dimensionOf("unit", [["MONEY/USDT", "MONEY", "USDT"], ["MONEY/null", "MONEY", null], ["RATIO/null", "RATIO", null], ["RATIO/USDT", "RATIO", "USDT"]].map(([label, unit, currency]) => ({
-      label: label as string,
-      apply: (d: Draft) => { for (const e of d.series) { e.unit = unit; e.currency = currency; } },
+    dimensionOf("unit", SHAPES.map(([label, unit, currency, scale]) => ({
+      label,
+      apply: (d: Draft) => { for (const e of d.series) { e.unit = unit; e.currency = currency; e.ratio_scale = scale; } },
     }))),
   ];
   const states = cartesian(POPULATED, DIMS).map((s) => ({ ...s, value: withComparison(s.value) }));
-  const accept = (p: Record<string, string>) => (p.metric === "RETURN" ? p.unit === "RATIO/null" : p.unit === "MONEY/USDT");
+  const accept = (p: Record<string, string>) => (p.metric === "RETURN" ? p.unit === "RATIO/null/FRACTION" || p.unit === "RATIO/null/PERCENT" : p.unit === "MONEY/USDT/-");
   it("prints the matrix size", () => {
-    expect(states).toHaveLength(3 * 4);
+    expect(states).toHaveLength(3 * SHAPES.length);
+    expect(states.filter((s) => accept(s.picks))).toHaveLength(2 + 1 + 1);
   });
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
     expect(seriesOf(state.value) !== null).toBe(accept(state.picks));
-    // The schema pairs MONEY with a currency and RATIO with none, whatever the metric: the metric rule is the reader's (MS-S6).
-    const schemaAccepts = state.picks.unit === "MONEY/USDT" || state.picks.unit === "RATIO/null";
-    expect(seriesViolations(state.value).length === 0).toBe(schemaAccepts);
+    // Since BE-P8 the schema states the tie too (metric -> unit, unit -> currency, RATIO -> scale): reader and schema agree exactly.
+    expect(seriesViolations(state.value).length === 0).toBe(accept(state.picks));
+  });
+});
+
+describe("L1 · matrix R · RETURN, two subjects: scale x partition x basis x methodology x the second subject's state (RATIO_SCALE_MIXED is reachable)", () => {
+  const YN = ["same", "different"] as const;
+  const B_STATE = ["AVAILABLE", "EMPTY", "UNAVAILABLE"] as const;
+  const DIMS = [
+    dimensionOf("scale", YN.map((label) => ({ label, apply: (d: Draft) => { d.sc = label; } }))),
+    dimensionOf("partition", YN.map((label) => ({ label, apply: (d: Draft) => { d.p = label; } }))),
+    dimensionOf("basis", YN.map((label) => ({ label, apply: (d: Draft) => { d.b = label; } }))),
+    dimensionOf("methodology", YN.map((label) => ({ label, apply: (d: Draft) => { d.m = label; } }))),
+    dimensionOf("second", B_STATE.map((label) => ({ label, apply: (d: Draft) => { d.s = label; } }))),
+  ];
+  const build = (spec: Draft): Draft => {
+    const body = fixtureValue(FIXTURE_RETURN);
+    const b = body.series[1];
+    if (spec.sc === "different") b.ratio_scale = "PERCENT";
+    if (spec.p === "different") b.partition.native_profile_ref = "TEST_ONLY:other-ledger";
+    if (spec.b === "different") { b.basis = "TEST_ONLY:other-basis"; b.partition.basis = "TEST_ONLY:other-basis"; }
+    if (spec.m === "different") b.methodology_ref = "TEST_ONLY:other-method";
+    if (spec.s === "EMPTY") Object.assign(b, { state: "EMPTY", reason_code: SERIES_EMPTY_REASON, points: [], gaps: [] });
+    if (spec.s === "UNAVAILABLE") body.series[1] = unavailableEntry(b.subject, "RATIO_SCALE_NOT_PUBLISHED");
+    return withComparison(body);
+  };
+  const states = cartesian({} as Draft, DIMS).map((s) => ({ ...s, value: build(s.value) }));
+  /** The expected comparison, from the contract text: currency (none here), partition, basis, unit (none here), scale, methodology; then availability. */
+  const expectedState = (p: Record<string, string>): [string, string | null] => {
+    if (p.second !== "UNAVAILABLE") {
+      if (p.partition === "different") return ["INCOMPARABLE", "ECONOMIC_PARTITION_MIXED"];
+      if (p.basis === "different") return ["INCOMPARABLE", "BASIS_MIXED"];
+      if (p.scale === "different") return ["INCOMPARABLE", "RATIO_SCALE_MIXED"];
+      if (p.methodology === "different") return ["INCOMPARABLE", "METHODOLOGY_MIXED"];
+    }
+    return p.second === "AVAILABLE" ? ["ALIGNED", null] : ["UNAVAILABLE", "SUBJECT_SERIES_UNAVAILABLE"];
+  };
+
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("series R (RETURN comparison) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(2 * 2 * 2 * 2 * 3);
+  });
+
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, state) => {
+    const read = seriesOf(state.value);
+    expect(seriesViolations(state.value)).toEqual([]);
+    expect(read).not.toBeNull();
+    const [want, reason] = expectedState(state.picks);
+    expect([read!.comparison.state, read!.comparison.reasonCode]).toEqual([want, reason]);
+    if (read!.comparison.state === "ALIGNED") expect(read!.comparison.common).toMatchObject({ unit: "RATIO", currency: null, ratioScale: "FRACTION" });
+    else expect(read!.comparison.axisMs).toBeNull();
+    if (read!.comparison.state === "INCOMPARABLE") expect(read!.comparison.common).toBeNull();
+  });
+
+  it("a comparison that is not the derived one is refused, for every state (the scale included)", () => {
+    let lies = 0;
+    for (const state of states) {
+      for (const other of states) {
+        if (other === state || JSON.stringify(other.value.comparison) === JSON.stringify(state.value.comparison)) continue;
+        const body = clone(state.value);
+        body.comparison = clone(other.value.comparison);
+        lies += 1;
+        expect(seriesOf(body), `${state.name} <- comparison of ${other.name}`).toBeNull();
+      }
+    }
+    console.info(`series R: ${lies} lying comparisons, every one refused`);
+    expect(lies).toBeGreaterThan(200);
+  });
+
+  it("how many lying comparisons the schema alone would let through: mixed scales called ALIGNED (why the reader re-derives)", () => {
+    const sample = states.filter((s) => expectedState(s.picks)[1] === "RATIO_SCALE_MIXED");
+    expect(sample.length).toBeGreaterThan(0);
+    for (const s of sample) {
+      const body = clone(s.value);
+      const aligned = fixtureValue(FIXTURE_RETURN).comparison;
+      Object.assign(body.comparison, { state: "ALIGNED", reason_code: null, common: clone(aligned.common), axis_ms: clone(aligned.axis_ms) });
+      // The schema checks the SHAPE of an ALIGNED answer, not that the entries share a scale.
+      expect(seriesViolations(body), s.name).toEqual([]);
+      expect(seriesOf(body), s.name).toBeNull();
+    }
+  });
+});
+
+describe("L1 · FE-013 published negatives (execution-manager-series.metric-unit.synthetic.negative.json): schema and reader judge each case", () => {
+  const cases = metricUnitCases();
+  it("the fixture holds the nine response cases and the four stored ones", () => {
+    expect(cases.map((c) => c.id)).toEqual([
+      "FE-013/nav-as-ratio", "FE-013/net-pnl-as-ratio", "FE-013/return-as-money", "FE-013/return-without-a-scale", "FE-013/money-with-a-scale",
+      "FE-013/return-with-a-currency", "FE-013/unavailable-with-a-scale", "FE-013/scale-reason-on-a-money-metric", "FE-013/scales-mixed-called-aligned",
+    ]);
+    expect(metricUnitCases(true)).toHaveLength(4);
+  });
+  it.each(cases.map((c) => [c.id, c] as const))("%s is refused by the reader; the schema refuses it unless the producer alone can", (_id, c) => {
+    expect(seriesOf(c.body), c.rule).toBeNull();
+    if (c.refused_by === "SCHEMA_AND_PRODUCER") expect(seriesViolations(c.body).length, c.rule).toBeGreaterThan(0);
+    else {
+      // PRODUCER_ONLY: JSON Schema cannot state it (the comparison is re-derived); the reader is the second guard.
+      expect(c.refused_by).toBe("PRODUCER_ONLY");
+      expect(seriesViolations(c.body), c.rule).toEqual([]);
+    }
+  });
+  it("the stored (publication) cases are not series bodies: they are never read as one", () => {
+    for (const c of metricUnitCases(true)) expect(seriesOf(c.body), c.id).toBeNull();
   });
 });
 
@@ -377,6 +507,10 @@ const DECIMALS: Case[] = [
 /** enumCases lower-cases the first valid word; where that is already the word the case is the base, not a negative. */
 const enumsOf = (path: readonly (string | number)[], valid: readonly string[]): Case[] =>
   enumCases(NEG, path, valid).filter((c) => !valid.includes(getPath(c.value, path) as string));
+/** The RETURN base: the scale and the comparison's common scale only exist there (a NAV entry carries `null`). */
+const RNEG: Draft = fixtureValue(FIXTURE_RETURN);
+const enumsOfReturn = (path: readonly (string | number)[], valid: readonly string[]): Case[] =>
+  enumCases(RNEG, path, valid).filter((c) => !valid.includes(getPath(c.value, path) as string));
 const ENUMS: Case[] = [
   ...enumsOf(["environment"], ["paper", "sandbox", "live"]),
   ...enumsOf(["metric"], MANAGER_SERIES_METRICS),
@@ -393,6 +527,8 @@ const ENUMS: Case[] = [
   ...enumsOf(["comparison", "state"], COMPARISON_STATES),
   ...enumsOf(["comparison", "common", "economic_domain"], ["ACTUAL", "PAPER", "SANDBOX"]),
   ...enumsOf(["comparison", "common", "unit"], ["MONEY", "RATIO"]),
+  ...enumsOfReturn([...E0, "ratio_scale"], MANAGER_SERIES_RATIO_SCALES),
+  ...enumsOfReturn(["comparison", "common", "ratio_scale"], MANAGER_SERIES_RATIO_SCALES),
 ];
 const INTEGERS: Case[] = [
   ...integerCases(NEG, ["as_of_ms"]),
@@ -440,7 +576,8 @@ const REQUIRED: Case[] = requiredCases(NEG, [
   ...["subject", "state", "reason_code", "partition", "unit", "currency", "basis", "methodology_ref", "window", "points", "gaps", "quality", "source_confidence", "provenance_refs",
     "calculation_revision", "policy_revision"].map((k) => [...E0, k] as const),
   [...E0, "partition", "domain_proof_ref"], [...E0, "points", 0, "value"], [...E1, "gaps", 0, "reason"],
-]);
+  [...E0, "ratio_scale"],
+]).concat(requiredCases(RNEG, [[...E0, "ratio_scale"], ["comparison", "common", "ratio_scale"]]));
 const SCHEMA_SWAP = schemaVersionCases(NEG, ["schema_version"], MANAGER_SERIES_SCHEMA, [
   "portal.execution.manager-dataset.v1", "portal.execution.manager-score-history.v1", "portal.execution.manager-scoped.v1", "execution.analytics-series.v1",
   "portal.execution.manager-series.v2",
@@ -544,7 +681,8 @@ describe("L3 · schema agreement (the published schema, via testkit validateAgai
 
 /** The generated corpus' stricter-than-schema counts, pinned: a change means a rule moved. */
 const PINNED_STRICTER: Record<string, number> = {
-  "MS-S9 the comparison is the value derived from the entries (an axis or common edited alone)": 4,
+  // 5 since FE-013: `common.ratio_scale: null` is schema-valid (the key is nullable for MONEY) but the derived common of a RETURN states its scale.
+  "MS-S9 the comparison is the value derived from the entries (an axis or common edited alone)": 5,
   "MS-S1 display safety: whitespace-only, bidi override, in any text": 39,
   "MS-S7 a subject appears once": 2,
   "MS-S4 a cut or doubled points list changes the points (a repeated timestamp has two values)": 1,
@@ -569,11 +707,22 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
     ["MS-S5 a window after the cutoff", (b) => { b.as_of_ms = from; }],
     ["MS-S6 a EUR series in a USDT partition", (b) => { b.series[0].currency = "EUR"; }],
     ["MS-S6 basis other than the partition's", (b) => { b.series[0].basis = "TEST_ONLY:other-basis"; }],
-    ["MS-S6 RATIO under NAV", (b) => { for (const e of b.series) { e.unit = "RATIO"; e.currency = null; } b.comparison.common.unit = "RATIO"; b.comparison.common.currency = null; }],
     ["MS-S7 one subject twice", (b) => { b.series[1].subject = clone(b.series[0].subject); }],
     ["MS-S7 an unpublished source with a reason the producer never gives for it", (b) => { Object.assign(b, fixtureValue(FIXTURE_UNAVAILABLE)); b.series[0].reason_code = "AMBIGUOUS_SERIES_PUBLICATION"; b.series[0].quality.reasons = ["AMBIGUOUS_SERIES_PUBLICATION"]; }],
     ["MS-S8 ALL with points", (b) => { b.selected_window = { requested: "ALL", resolved: null, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: "ALL_HISTORY_WINDOW_NOT_PUBLISHED" }; }],
     ["MS-S9 mixed currencies called ALIGNED", (b) => { b.series[1].currency = "VND"; b.series[1].partition.currency = "VND"; }],
+    ["MS-S9 mixed ratio scales called ALIGNED (FE-013)", (b) => {
+      Object.assign(b, fixtureValue(FIXTURE_RETURN));
+      b.series[1].ratio_scale = "PERCENT";
+    }],
+    ["MS-S9 a common that states another scale (FE-013)", (b) => {
+      Object.assign(b, fixtureValue(FIXTURE_RETURN));
+      b.comparison.common.ratio_scale = "PERCENT";
+    }],
+    ["MS-S7 RATIO_SCALE_NOT_PUBLISHED under a source that is NOT_PUBLISHED (FE-013)", (b) => {
+      Object.assign(b, fixtureValue(FIXTURE_RETURN_UNSCALED));
+      b.series_source = { state: "NOT_PUBLISHED", reason_code: "FINANCIAL_NORMALIZED_SERIES_SOURCE_NOT_PUBLISHED" };
+    }],
     ["MS-S9 an axis missing a timestamp", (b) => { b.comparison.axis_ms = b.comparison.axis_ms.slice(1); }],
     ["MS-S9 an axis that is not ascending", (b) => { b.comparison.axis_ms.reverse(); }],
     ["MS-S10 a timestamp beyond the Date range", (b) => { b.series[0].points[2].ts_ms = 9_000_000_000_000_000; b.comparison.axis_ms[3] = 9_000_000_000_000_000; }],

@@ -17,8 +17,8 @@
  *   window (a line of nothing, never a zero line); `UNAVAILABLE` is a typed absence with its reason and carries no
  *   description of a series at all. An unknown state or reason word is a refusal, never a success;
  * - `comparison` is RE-DERIVED here from the entries with the producer's precedence (CURRENCY_MIXED, ECONOMIC_PARTITION_MIXED,
- *   BASIS_MIXED, UNIT_MIXED, METHODOLOGY_MIXED, WINDOW_MISMATCH, then UNAVAILABLE, then ALIGNED) and a body whose
- *   `comparison` disagrees is refused: `ALIGNED` is never trusted without one currency, partition, basis, unit,
+ *   BASIS_MIXED, UNIT_MIXED, RATIO_SCALE_MIXED, METHODOLOGY_MIXED, WINDOW_MISMATCH, then UNAVAILABLE, then ALIGNED) and a body whose
+ *   `comparison` disagrees is refused: `ALIGNED` is never trusted without one currency, partition, basis, unit, ratio scale,
  *   methodology and window actually shared. `axis_ms` is the union of the timestamps; a subject has no value where it has
  *   no point;
  * - the contract is closed: a key the schema does not name voids the read; sizes are bounded.
@@ -30,7 +30,8 @@
  *   MS-S3 a window is not backwards or empty (from_ms >= to_ms), a requested custom window is not backwards
  *   MS-S4 points strictly ascending and inside the entry window, gaps ordered, non-overlapping and inside it
  *   MS-S5 an entry that describes a series carries the selected, resolved window and does not end after `as_of_ms`
- *   MS-S6 unit follows the metric (NAV, NET_PNL: MONEY in the partition's currency; RETURN: RATIO, no currency); basis is the partition's
+ *   MS-S6 unit follows the metric (NAV, NET_PNL: MONEY in the partition's currency; RETURN: RATIO, no currency); basis is the partition's;
+ *         a ratio STATES its scale (`ratio_scale` FRACTION|PERCENT, never inferred from magnitudes) and money has none (FE-013)
  *   MS-S7 subjects are unique; `series_source NOT_PUBLISHED` allows only its five typed reasons
  *   MS-S8 `ALL` is a typed gap (`resolved: null`), so an entry cannot carry points for it; ALL/window reasons agree
  *   MS-S9 `comparison` equals the value re-derived from the entries; `axis_ms` ascending
@@ -63,6 +64,9 @@ export const MANAGER_SERIES_METRICS = ["NAV", "NET_PNL", "RETURN"] as const;
 export type ManagerSeriesMetric = (typeof MANAGER_SERIES_METRICS)[number];
 export const MANAGER_SERIES_UNITS = ["MONEY", "RATIO"] as const;
 export type ManagerSeriesUnit = (typeof MANAGER_SERIES_UNITS)[number];
+/** FE-013: the scale a SOURCE states for a RATIO. FRACTION: 1.0 is 100% (0.0123 is 1.23%). PERCENT: 100 is 100% (1.23 is 1.23%). */
+export const MANAGER_SERIES_RATIO_SCALES = ["FRACTION", "PERCENT"] as const;
+export type ManagerSeriesRatioScale = (typeof MANAGER_SERIES_RATIO_SCALES)[number];
 export const MANAGER_SERIES_SUBJECT_TYPES = ["FUND", "PORTFOLIO"] as const;
 export type ManagerSeriesSubjectType = (typeof MANAGER_SERIES_SUBJECT_TYPES)[number];
 export const SERIES_STATES = ["AVAILABLE", "EMPTY", "UNAVAILABLE"] as const;
@@ -70,18 +74,21 @@ export type ManagerSeriesState = (typeof SERIES_STATES)[number];
 /** Closed reason vocabulary of an UNAVAILABLE entry. */
 export const SERIES_UNAVAILABLE_REASONS = [
   "SERIES_SOURCE_NOT_PUBLISHED", "EXACT_METRIC_WINDOW_NOT_PUBLISHED", "ALL_HISTORY_WINDOW_NOT_PUBLISHED", "ECONOMIC_PARTITION_REQUIRED",
-  "SERIES_SCOPE_NOT_AUTHORIZED", "SOURCE_NOT_QUALIFIED", "AMBIGUOUS_SERIES_PUBLICATION", "SUBJECT_HAS_NO_ACTIVE_MEMBERS",
+  "SERIES_SCOPE_NOT_AUTHORIZED", "SOURCE_NOT_QUALIFIED", "AMBIGUOUS_SERIES_PUBLICATION", "SUBJECT_HAS_NO_ACTIVE_MEMBERS", "RATIO_SCALE_NOT_PUBLISHED",
 ] as const;
 export type SeriesUnavailableReason = (typeof SERIES_UNAVAILABLE_REASONS)[number];
 export const SERIES_EMPTY_REASON = "NO_POINTS_PUBLISHED_IN_WINDOW";
-/** The reasons a profile whose source is NOT_PUBLISHED may give for a subject (the producer's list). */
+/**
+ * The reasons a profile whose source is NOT_PUBLISHED may give for a subject (the producer's list). `RATIO_SCALE_NOT_PUBLISHED` is NOT
+ * one of them: it needs a published source (a return the source published without stating its scale), so it only appears under PUBLISHED.
+ */
 const SOURCE_NOT_PUBLISHED_REASONS: readonly SeriesUnavailableReason[] = [
   "SERIES_SOURCE_NOT_PUBLISHED", "SERIES_SCOPE_NOT_AUTHORIZED", "SUBJECT_HAS_NO_ACTIVE_MEMBERS", "SOURCE_NOT_QUALIFIED", "ALL_HISTORY_WINDOW_NOT_PUBLISHED",
 ];
 export const SERIES_GAP_REASONS = ["SOURCE_GAP", "RETENTION", "SESSION_CLOSED", "PROJECTION_DISCONTINUITY"] as const;
 export type SeriesGapReason = (typeof SERIES_GAP_REASONS)[number];
 export const COMPARISON_STATES = ["SINGLE_SUBJECT", "ALIGNED", "INCOMPARABLE", "UNAVAILABLE"] as const;
-export const COMPARISON_MISMATCH_REASONS = ["CURRENCY_MIXED", "ECONOMIC_PARTITION_MIXED", "BASIS_MIXED", "UNIT_MIXED", "METHODOLOGY_MIXED", "WINDOW_MISMATCH"] as const;
+export const COMPARISON_MISMATCH_REASONS = ["CURRENCY_MIXED", "ECONOMIC_PARTITION_MIXED", "BASIS_MIXED", "UNIT_MIXED", "RATIO_SCALE_MIXED", "METHODOLOGY_MIXED", "WINDOW_MISMATCH"] as const;
 export type SeriesComparisonMismatch = (typeof COMPARISON_MISMATCH_REASONS)[number];
 export const SERIES_COMPARISON_TRANSFORM = "NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM";
 export const SERIES_SOURCE_NOT_PUBLISHED_REASON = "FINANCIAL_NORMALIZED_SERIES_SOURCE_NOT_PUBLISHED";
@@ -122,6 +129,8 @@ export interface ManagerSeriesDescribed extends EntryBase {
   unit: ManagerSeriesUnit;
   /** `null` for a RATIO; the partition's currency for MONEY. Never converted. */
   currency: string | null;
+  /** FE-013: `null` for MONEY; for a RATIO the scale the source states (closed set). Never inferred, never converted. */
+  ratioScale: ManagerSeriesRatioScale | null;
   basis: string;
   methodologyRef: string;
   window: MsWindow;
@@ -148,6 +157,7 @@ export interface SeriesCommon {
   currency: string | null;
   basis: string;
   unit: ManagerSeriesUnit;
+  ratioScale: ManagerSeriesRatioScale | null;
   methodologyRef: string;
   window: MsWindow;
 }
@@ -183,7 +193,7 @@ export type ManagerSeriesRead = { kind: "series"; series: ManagerSeries } | Unsu
 
 const commonOf = (entry: ManagerSeriesDescribed): SeriesCommon => ({
   economicDomain: entry.partition.economicDomain, nativeProfileRef: entry.partition.nativeProfileRef, currency: entry.currency, basis: entry.basis,
-  unit: entry.unit, methodologyRef: entry.methodologyRef, window: { fromMs: entry.window.fromMs, toMs: entry.window.toMs },
+  unit: entry.unit, ratioScale: entry.ratioScale, methodologyRef: entry.methodologyRef, window: { fromMs: entry.window.fromMs, toMs: entry.window.toMs },
 });
 
 /**
@@ -202,6 +212,7 @@ export function deriveManagerSeriesComparison(entries: readonly ManagerSeriesEnt
       ["ECONOMIC_PARTITION_MIXED", (e) => e.partition.economicDomain !== first.partition.economicDomain || e.partition.nativeProfileRef !== first.partition.nativeProfileRef],
       ["BASIS_MIXED", (e) => e.basis !== first.basis],
       ["UNIT_MIXED", (e) => e.unit !== first.unit],
+      ["RATIO_SCALE_MIXED", (e) => e.ratioScale !== first.ratioScale],
       ["METHODOLOGY_MIXED", (e) => e.methodologyRef !== first.methodologyRef],
       ["WINDOW_MISMATCH", (e) => e.window.fromMs !== first.window.fromMs || e.window.toMs !== first.window.toMs],
     ];
@@ -217,7 +228,7 @@ export function deriveManagerSeriesComparison(entries: readonly ManagerSeriesEnt
 /* ───────────────────────── readers ───────────────────────── */
 
 const ENTRY_KEYS = [
-  "subject", "state", "reason_code", "partition", "unit", "currency", "basis", "methodology_ref", "window", "points", "gaps", "quality",
+  "subject", "state", "reason_code", "partition", "unit", "currency", "ratio_scale", "basis", "methodology_ref", "window", "points", "gaps", "quality",
   "source_confidence", "provenance_refs", "calculation_revision", "policy_revision",
 ] as const;
 
@@ -273,6 +284,11 @@ function readGaps(raw: unknown, window: MsWindow): readonly ManagerSeriesGap[] |
   return gaps;
 }
 
+/** The scale of a RATIO or `null`; `undefined` is a refusal (a word outside the closed set). */
+function readRatioScale(raw: unknown): ManagerSeriesRatioScale | null | undefined {
+  return raw === null ? null : oneOf(raw, MANAGER_SERIES_RATIO_SCALES) ?? undefined;
+}
+
 function readEntry(raw: unknown, ctx: { metric: ManagerSeriesMetric; selected: ManagerSelectedWindow; asOfMs: number }): ManagerSeriesEntry | null {
   const entry = record(raw);
   if (entry === null || !hasOnly(entry, ENTRY_KEYS) || !hasAll(entry, ENTRY_KEYS)) return null;
@@ -296,13 +312,15 @@ function readEntry(raw: unknown, ctx: { metric: ManagerSeriesMetric; selected: M
     // A typed absence describes no series at all: no partition, unit, currency, basis, methodology, window, point or gap.
     const reasonCode = oneOf(entry.reason_code, SERIES_UNAVAILABLE_REASONS);
     if (
-      reasonCode === null || entry.partition !== null || entry.unit !== null || entry.currency !== null || entry.basis !== null || entry.methodology_ref !== null
+      reasonCode === null || entry.partition !== null || entry.unit !== null || entry.currency !== null || entry.ratio_scale !== null || entry.basis !== null || entry.methodology_ref !== null
       || entry.window !== null || !Array.isArray(entry.points) || entry.points.length !== 0 || !Array.isArray(entry.gaps) || entry.gaps.length !== 0
       || quality.completeness !== "UNRESOLVED"
     ) return null;
     // MS-S8: `ALL` has no window to be missing, and a resolved window is not "all history not published".
     const all = ctx.selected.kind === "gap";
     if (all && ["EXACT_METRIC_WINDOW_NOT_PUBLISHED", "ECONOMIC_PARTITION_REQUIRED", "AMBIGUOUS_SERIES_PUBLICATION"].includes(reasonCode)) return null;
+    // FE-013: a source that publishes a return without a scale is a statement about RETURN only.
+    if (reasonCode === "RATIO_SCALE_NOT_PUBLISHED" && ctx.metric !== "RETURN") return null;
     if (!all && reasonCode === "ALL_HISTORY_WINDOW_NOT_PUBLISHED") return null;
     return { ...base, state, reasonCode, copy: `Not available · ${reasonCode}` };
   }
@@ -311,13 +329,16 @@ function readEntry(raw: unknown, ctx: { metric: ManagerSeriesMetric; selected: M
   const partition = readManagerPartition(entry.partition);
   const unit = oneOf(entry.unit, MANAGER_SERIES_UNITS);
   const currency = entry.currency === null ? null : managerText(entry.currency);
+  const ratioScale = readRatioScale(entry.ratio_scale);
   const basis = managerText(entry.basis);
   const methodologyRef = managerText(entry.methodology_ref);
   const window = readEntryWindow(entry.window);
-  if (partition === null || unit === null || (entry.currency !== null && currency === null) || basis === null || methodologyRef === null || window === null) return null;
+  if (partition === null || unit === null || ratioScale === undefined || (entry.currency !== null && currency === null) || basis === null || methodologyRef === null || window === null) return null;
   // MS-S6: the unit follows the metric; MONEY is in the partition's currency and RATIO names none; the basis is the partition's.
   if (ctx.metric === "RETURN" ? unit !== "RATIO" : unit !== "MONEY") return null;
   if (unit === "MONEY" ? currency === null || currency !== partition.currency : currency !== null) return null;
+  // FE-013: a ratio states its scale (EMPTY included); money has none. The scale is never guessed from the values.
+  if (unit === "RATIO" ? ratioScale === null : ratioScale !== null) return null;
   if (basis !== partition.basis) return null;
   // MS-S5: the entry is for the window that was selected and resolved, and never ends after the cutoff.
   if (ctx.selected.kind !== "window" || window.fromMs !== ctx.selected.resolved.fromMs || window.toMs !== ctx.selected.resolved.toMs || window.toMs > ctx.asOfMs) return null;
@@ -326,31 +347,32 @@ function readEntry(raw: unknown, ctx: { metric: ManagerSeriesMetric; selected: M
   if (points === null || gaps === null) return null;
   if (state === "AVAILABLE") {
     if (points.length === 0 || entry.reason_code !== null) return null;
-    return { ...base, state, reasonCode: null, partition, unit, currency, basis, methodologyRef, window, points, gaps };
+    return { ...base, state, reasonCode: null, partition, unit, currency, ratioScale, basis, methodologyRef, window, points, gaps };
   }
   if (points.length !== 0 || entry.reason_code !== SERIES_EMPTY_REASON) return null;
-  return { ...base, state, reasonCode: SERIES_EMPTY_REASON, partition, unit, currency, basis, methodologyRef, window, points, gaps };
+  return { ...base, state, reasonCode: SERIES_EMPTY_REASON, partition, unit, currency, ratioScale, basis, methodologyRef, window, points, gaps };
 }
 
 function readCommon(raw: unknown): SeriesCommon | null | undefined {
   if (raw === null) return null;
   const common = record(raw);
-  const keys = ["economic_domain", "native_profile_ref", "currency", "basis", "unit", "methodology_ref", "window"] as const;
+  const keys = ["economic_domain", "native_profile_ref", "currency", "basis", "unit", "ratio_scale", "methodology_ref", "window"] as const;
   if (common === null || !hasOnly(common, keys) || !hasAll(common, keys)) return undefined;
   const economicDomain = oneOf(common.economic_domain, ["ACTUAL", "PAPER", "SANDBOX"] as const);
   const nativeProfileRef = managerText(common.native_profile_ref);
   const currency = common.currency === null ? null : managerText(common.currency);
   const basis = managerText(common.basis);
   const unit = oneOf(common.unit, MANAGER_SERIES_UNITS);
+  const ratioScale = readRatioScale(common.ratio_scale);
   const methodologyRef = managerText(common.methodology_ref);
   const window = readEntryWindow(common.window);
-  if (economicDomain === null || nativeProfileRef === null || (common.currency !== null && currency === null) || basis === null || unit === null || methodologyRef === null || window === null) return undefined;
-  return { economicDomain, nativeProfileRef, currency, basis, unit, methodologyRef, window };
+  if (economicDomain === null || nativeProfileRef === null || (common.currency !== null && currency === null) || basis === null || unit === null || ratioScale === undefined || methodologyRef === null || window === null) return undefined;
+  return { economicDomain, nativeProfileRef, currency, basis, unit, ratioScale, methodologyRef, window };
 }
 
 const sameCommon = (a: SeriesCommon | null, b: SeriesCommon | null): boolean =>
   a === null || b === null ? a === b
-    : a.economicDomain === b.economicDomain && a.nativeProfileRef === b.nativeProfileRef && a.currency === b.currency && a.basis === b.basis && a.unit === b.unit
+    : a.economicDomain === b.economicDomain && a.nativeProfileRef === b.nativeProfileRef && a.currency === b.currency && a.basis === b.basis && a.unit === b.unit && a.ratioScale === b.ratioScale
       && a.methodologyRef === b.methodologyRef && a.window.fromMs === b.window.fromMs && a.window.toMs === b.window.toMs;
 
 /** Reads the published `comparison` and refuses a body whose comparison is not the one the entries imply (MS-S9). */
