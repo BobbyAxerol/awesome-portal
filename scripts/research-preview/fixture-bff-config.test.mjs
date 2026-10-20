@@ -162,38 +162,93 @@ test('overlay: the fixture service is private, read-only and capped', () => {
   assert.doesNotMatch(service, /(?:PASSWORD|SECRET|TOKEN|KEY)/i);
 });
 
-test('fragment: the banner text and the seven fixture locations are present', () => {
+// Every location the fragment sends to the fixture BFF, in file order, then the banner stylesheet (served by nginx itself).
+const AUTH_ROUTES = ['/api/auth/context', '/api/auth/csrf', '/api/auth/login', '/api/auth/change-password', '/api/auth/logout'];
+const PROXIED_LOCATIONS = [
+  ...AUTH_ROUTES.map((route) => `= ${route}`),
+  '^~ /api/v1/portal/',
+  '^~ /api/v1/execution/',
+  '= /api/admin/access/self',
+  '= /api/admin/profile-access/v2/effective',
+  '= /api/admin/accounts',
+  '^~ /api/admin/accounts/',
+  '= /api/admin/step-up',
+  '^~ /__fixture/',
+];
+const escapeRegExp = (text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+test('fragment: the banner text and the fixture locations are present, and only those', () => {
   assert(fragment.includes(BANNER));
   const locations = [...fragment.matchAll(/^location (\S+(?: \S+)?) \{$/gm)].map((match) => match[1]);
-  assert.deepEqual(locations, [
-    '^~ /api/v1/execution/',
-    '= /api/admin/access/self',
-    '= /api/admin/profile-access/v2/effective',
-    '= /api/admin/accounts',
-    '^~ /api/admin/accounts/',
-    '= /api/admin/step-up',
-    '^~ /__fixture/',
-    '= /__fixture-banner.css',
-  ]);
-  for (const proxied of locations.slice(0, 7)) {
-    const block = fragment.match(new RegExp(`^location ${proxied.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')} \\{\\n([\\s\\S]*?)^\\}`, 'm'))?.[1];
+  assert.deepEqual(locations, [...PROXIED_LOCATIONS, '= /__fixture-banner.css']);
+  for (const proxied of PROXIED_LOCATIONS) {
+    const block = fragment.match(new RegExp(`^location ${escapeRegExp(proxied)} \\{\\n([\\s\\S]*?)^\\}`, 'm'))?.[1];
     assert(block?.includes('include /etc/nginx/fixture/proxy.inc;'), `${proxied} must use the shared proxy settings`);
   }
 });
 
-test('fragment: nothing under /api/auth or /api/v1/portal (or any other real service) reaches the fixture server', () => {
+test('fragment: the bootstrap routes are the ones the shell makes and the AuthController declares', () => {
+  // Every route of the real AuthController is listed (so none can reach the Control API while the lane is on) ...
+  const controller = read('apps/control-api/src/auth/auth.controller.ts');
+  const declared = [...controller.matchAll(/@(?:Get|Post|Put|Patch|Delete)\("([^"]+)"\)/g)].map((match) => `/api/auth${match[1]}`).sort();
+  assert.deepEqual(declared, [...AUTH_ROUTES].sort(), 'AuthController routes drifted: update the fragment, the BFF README and this list');
+  // ... each as an EXACT match, because portal.conf owns `location ^~ /api/auth/` and a second one would stop nginx.
+  for (const route of AUTH_ROUTES) assert(fragment.includes(`location = ${route} {`), route);
+  assert(!/location \^~ \/api\/auth\//.test(fragment.replace(/^\s*#.*$/gm, '')));
+  // The browser's four bootstrap reads are paths the frontend really calls.
+  assert(read('apps/portal/frontend/src/auth/authApi.ts').includes('"/api/auth/context"'));
+  const client = read('apps/portal/frontend/src/portal/client.ts');
+  for (const path of ['/api/v1/portal/registry', '/api/v1/portal/links', '/api/v1/portal/summary']) assert(client.includes(path), path);
+});
+
+test('fragment: no location duplicates one portal.conf already owns (nginx refuses a duplicate)', () => {
+  const owned = [...portalConf.matchAll(/^\s*location (\S+(?: \S+)?) \{$/gm)].map((match) => match[1]);
+  const mine = [...fragment.matchAll(/^location (\S+(?: \S+)?) \{$/gm)].map((match) => match[1]);
+  assert.deepEqual(mine.filter((location) => owned.includes(location)), []);
+  assert.equal(new Set(mine).size, mine.length, 'a location is listed twice in the fragment');
+  // /api/health and /api/ready are exact locations of portal.conf: the fragment cannot take them, so the sign-in plate's
+  // service probes stay real (and are never shown while the fixture user is signed in).
+  assert(owned.includes('= /api/health') && owned.includes('= /api/ready'));
+});
+
+test('fragment: nothing else of the real services (research, QuantBT, runs, health, Planning) reaches the fixture server', () => {
   assert.match(proxyInc, /^proxy_pass http:\/\/portal-fixture-bff:4100;$/m);
   assert.match(proxyInc, /^add_header X-Fixture-Overlay on always;$/m);
   const withoutComments = fragment.replace(/^\s*#.*$/gm, '');
-  for (const real of ['/api/auth', '/api/v1/portal', '/api/v1/research', '/api/v1/quantbt', '/api/v1/alphas',
-    '/api/runs', '/api/health', '/api/ready', '/roadmap-task-board/api']) {
+  for (const real of ['/api/v1/research', '/api/v1/quantbt', '/api/v1/alphas', '/api/runs', '/api/strategies', '/api/health',
+    '/api/ready', '/api/control', '/api/config', '/roadmap-task-board']) {
     assert(!withoutComments.includes(real), `${real} must stay on the real services`);
   }
+  // /api/auth appears only as the five exact routes; /api/v1/portal only as the one prefix (fail closed on the rest).
+  const authLines = withoutComments.split('\n').filter((line) => line.includes('/api/auth'));
+  assert.deepEqual(authLines.map((line) => line.trim()), AUTH_ROUTES.map((route) => `location = ${route} {`));
+  assert.deepEqual(withoutComments.split('\n').filter((line) => line.includes('/api/v1/portal')).map((line) => line.trim()),
+    ['location ^~ /api/v1/portal/ {']);
   assert.doesNotMatch(withoutComments, /location (?:~\*? |\/ |\/api\/ )/, 'no regex, root or /api/ catch-all location');
   assert.doesNotMatch(withoutComments, /proxy_pass/, 'proxy_pass lives only in the shared include');
   // The profile-access matches are exact, so the legacy matrix and /activity are not caught.
   assert(!/location \^~ \/api\/admin\/profile-access/.test(fragment));
   assert(!/location \^~ \/api\/admin\/ \{/.test(fragment));
+});
+
+test('overlay: portal-web\'s upstream is the fixture BFF, so nginx never resolves a stopped control-api', () => {
+  const web = overlay.match(/^  portal-web:\n([\s\S]*)$/m)?.[1].replace(/^[ \t]*#.*\n/gm, '') ?? '';
+  assert.match(web, /^    environment:\n      PORTAL_WEB_UPSTREAM: \$\{FIXTURE_WEB_UPSTREAM:-portal-fixture-bff:4100\}$/m);
+  // The base compose is where the default (the real facade) lives; the overlay is the only place that changes it.
+  assert.match(read('compose.yaml'), /PORTAL_WEB_UPSTREAM: \$\{PORTAL_WEB_UPSTREAM:-control-api:4000\}/);
+  assert.doesNotMatch(overlay.replace(/^\s*#.*$/gm, ''), /control-api/, 'the overlay names no control-api dependency');
+  // The scoped rollout starts no dependency (so control-api is not started or recreated) ...
+  const preview = read('scripts/research-preview/preview.sh');
+  assert.match(preview, /compose up -d --no-build --no-deps "\$\{recreate\[@\]\}" "\$@"/);
+  // ... and, while the marker is set, the readiness probe is the lane's, not the Control API's.
+  assert.match(preview, /ready_path=\/api\/control\/readyz\n\s*\[\[ -f "\$FIXTURE_MARKER" \]\] && ready_path=\/__fixture\/healthz/);
+});
+
+test('fragment: the lane exists only while the fragment is mounted; the include is the single hook', () => {
+  // Cutting over needs no edit of portal.conf or of the frontend: without the mount the include is empty.
+  assert.match(overlay, /\.\/deploy\/research-preview\/nginx\/fixture-bff:\/etc\/nginx\/fixture:ro/);
+  assert.equal((portalConf.match(/include \/etc\/nginx\/fixture\/\*\.conf;/g) ?? []).length, 1);
+  assert(!existsSync(join(root, 'deploy/nginx/fixture')), 'no fixture file lives in the default nginx directory');
 });
 
 test('fragment: the banner is fixed, above everything, pushes the page down and cannot be dismissed', () => {
@@ -268,7 +323,7 @@ function renderCompose(marker) {
   }, { marker });
 }
 
-test('docker compose config: marker off vs on differs only by the fixture service and two portal-web keys', { skip: docker ? false : 'docker not reachable' }, (t) => {
+test('docker compose config: marker off vs on differs only by the fixture service and three portal-web keys', { skip: docker ? false : 'docker not reachable' }, (t) => {
   const off = renderCompose(false), on = renderCompose(true);
   if (off.skipped || on.skipped) return t.skip(off.skipped ?? on.skipped);
 
@@ -286,10 +341,15 @@ test('docker compose config: marker off vs on differs only by the fixture servic
   assert.deepEqual(on.json.volumes, off.json.volumes);
   assert.deepEqual(on.json.networks, off.json.networks);
 
-  // portal-web: same except a read-only mount of the fragment directory and a health-gated dependency.
-  const { volumes: onVolumes, depends_on: onDepends, ...onRest } = on.json.services['portal-web'];
-  const { volumes: offVolumes, depends_on: offDepends, ...offRest } = off.json.services['portal-web'];
+  // portal-web: same except a read-only mount of the fragment directory, a health-gated dependency and its upstream.
+  const { volumes: onVolumes, depends_on: onDepends, environment: onEnv, ...onRest } = on.json.services['portal-web'];
+  const { volumes: offVolumes, depends_on: offDepends, environment: offEnv, ...offRest } = off.json.services['portal-web'];
   assert.deepEqual(onRest, offRest);
+  const { PORTAL_WEB_UPSTREAM: onUpstream, ...onEnvRest } = onEnv;
+  const { PORTAL_WEB_UPSTREAM: offUpstream, ...offEnvRest } = offEnv;
+  assert.deepEqual(onEnvRest, offEnvRest);
+  assert.equal(offUpstream, 'control-api:4000');
+  assert.equal(onUpstream, 'portal-fixture-bff:4100');
   assert.deepEqual(offVolumes ?? [], []);
   assert.equal(onVolumes.length, 1);
   assert.equal(onVolumes[0].target, '/etc/nginx/fixture');
@@ -341,15 +401,14 @@ test('nginx -t/-T: the fixture variant is valid and carries the locations and ba
   assert.match(result.stderr, /syntax is ok/);
   assert.match(result.stderr, /test is successful/);
   const dump = result.stdout;
-  for (const location of ['^~ /api/v1/execution/', '= /api/admin/access/self', '= /api/admin/profile-access/v2/effective',
-    '= /api/admin/accounts', '^~ /api/admin/accounts/', '= /api/admin/step-up', '^~ /__fixture/', '= /__fixture-banner.css']) {
+  for (const location of [...PROXIED_LOCATIONS, '= /__fixture-banner.css']) {
     assert(dump.includes(`location ${location} {`), location);
   }
   assert(dump.includes(BANNER));
   assert(dump.includes('proxy_pass http://portal-fixture-bff:4100;'));
   assert(dump.includes('proxy_pass http://control-api:4000;'), 'the real upstream blocks are still rendered');
   const authBlock = dump.match(/location \^~ \/api\/auth\/ \{[\s\S]*?\n    \}/)?.[0] ?? '';
-  assert(authBlock.includes('control-api:4000') && !authBlock.includes('fixture'));
+  assert(authBlock.includes('control-api:4000') && !authBlock.includes('fixture'), 'the prefix block of portal.conf is untouched');
 });
 
 test('nginx -t/-T: without the mount the include is empty and the config has no trace of the overlay', { skip: nginxImageLocal ? false : 'docker or the pinned nginx image is not available locally (never pulled)' }, (t) => {
