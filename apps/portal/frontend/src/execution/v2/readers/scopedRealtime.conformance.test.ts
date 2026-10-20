@@ -111,7 +111,8 @@ describe("L0 · canonical, verbatim", () => {
   it("no other published family reads as a scoped frame (every .valid.json and every body embedded in one)", () => {
     let bodies = 0;
     for (const file of listCanonical()) {
-      if (file.startsWith("execution-scoped-realtime")) continue;
+      // The alpha-fleet family legitimately embeds ScopedRealtimeFrame bodies (its stream frame IS this frame): it is the same contract, not another family.
+      if (file.startsWith("execution-scoped-realtime") || file.startsWith("execution-alpha-fleet-realtime")) continue;
       const doc = loadCanonical<Draft>(file);
       const candidates: unknown[] = [doc];
       if (Array.isArray(doc.cases)) for (const c of doc.cases) candidates.push(c, c?.response, c?.body);

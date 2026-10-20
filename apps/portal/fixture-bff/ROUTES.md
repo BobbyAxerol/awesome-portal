@@ -28,7 +28,7 @@ location for every row above except the Run Library list. That one, and any othe
 through `portal.conf`'s catch-all, because the overlay points `PORTAL_WEB_UPSTREAM` here; see `README-fixture.md`.)
 
 Keep `proxy_http_version 1.1`, `proxy_buffering off` and the `Host` / `X-Forwarded-*` headers the
-`/api/` block in `deploy/nginx/portal.conf` sets. The two `/stream` routes send one terminal
+`/api/` block in `deploy/nginx/portal.conf` sets. The three `/stream` routes (the fleet one, `manager/fleet/stream`, is ELP2-09 `alpha_fleet_overview`: a cursor-checked finite body of `ScopedRealtimeFrame`s) send one terminal
 heartbeat and end. The server never reads a request header, so a session cookie, bearer token or CSRF
 token a browser sends is ignored, and it never sets a cookie.
 
@@ -43,7 +43,7 @@ answers them `404 {"error":"FIXTURE_ROUTE_NOT_SERVED"}` rather than invent a bod
 - `/api/v1/portal/capabilities`, `/api/v1/alphas*`
 - `/api/v1/research/*`, `/api/v1/quantbt/*` (except the exact `GET /api/v1/quantbt/runs` above), `/api/runs*`, `/api/strategies`, `/api/config/*`
 - `/api/admin/profile-access` (the legacy policy matrix), `/api/admin/profile-access/activity`
-- the other five `manager/*` dataset routes (`fund-overview` and the portfolio, alpha, account and deployment overviews): only `manager/series` and `manager/fleet` are modelled
+- the other five `manager/*` dataset routes (`fund-overview` and the portfolio, alpha, account and deployment overviews): only `manager/series`, `manager/fleet` and the two ELP2-09 routes under `manager/fleet/` (`realtime-snapshot`, `stream`) are modelled
 - any other `/api/admin/*`
 
 The shell bootstrap (`bffDoubleShell.ts`) takes the registry, links and summary bodies from the same
@@ -214,6 +214,12 @@ rows keep their dates).
 | GET | `/api/v1/execution/manager/fleet` | 200 | bffDoubleManager | control-api | `execution-manager-dataset.v1#/` | FIXTURE partitions (paper): 2 rows, 2 currencies. workspace_id, q, stage_filter, text filters, text sort, group_by, limit and after are applied; window, economic_partition, lifecycle_filter, before and numeric fields are 400 MANAGER_QUERY_NOT_SUPPORTED_BY_DOUBLE. The other five dataset routes are not served |
 | GET | `/api/v1/execution/manager/fleet [live]` | 200 | bffDoubleManager | control-api | `execution-manager-dataset.v1#/` | FIXTURE lifecycle.live: one LIVE row and one CANARY and LIVE row (current_stage null, MULTIPLE_ACTIVE_STAGES) |
 | GET | `/api/v1/execution/manager/fleet [sandbox]` | 200 | bffDoubleManager | control-api | `execution-manager-dataset.v1#/` | FIXTURE dataset (the base example): an empty page |
+| GET | `/api/v1/execution/manager/fleet/realtime-snapshot` | 200 | bffDoubleManager | control-api | `execution-alpha-fleet-realtime.v1#/$defs/AlphaFleetRealtimeSnapshot` | FIXTURE available: names the publication revision the fleet double serves for that environment (baseline.revision = lineage.revision), a resume cursor and the stream bounds. source.edge_notice_source is NOT_COMMISSIONED |
+| GET | `/api/v1/execution/manager/fleet/realtime-snapshot [partial viewer]` | 200 | bffDoubleManager | control-api | `execution-alpha-fleet-realtime.v1#/$defs/AlphaFleetRealtimeSnapshot` | FIXTURE (workspace_id=ws_TEST_FLEET_RT_PARTIAL): the baseline is served and the stream is UNAVAILABLE / WHOLE_FLEET_AUTHORITY_REQUIRED, with no cursor |
+| GET | `/api/v1/execution/manager/fleet/realtime-snapshot [stream not granted]` | 200 | bffDoubleManager | control-api | `execution-alpha-fleet-realtime.v1#/$defs/AlphaFleetRealtimeSnapshot` | FIXTURE (workspace_id=ws_TEST_FLEET_RT_NOT_GRANTED): UNAVAILABLE / STREAM_AUTHORITY_NOT_GRANTED |
+| GET | `/api/v1/execution/manager/fleet/realtime-snapshot [capacity]` | 200 | bffDoubleManager | control-api | `execution-alpha-fleet-realtime.v1#/$defs/AlphaFleetRealtimeSnapshot` | FIXTURE (workspace_id=ws_TEST_FLEET_RT_CAPACITY): UNAVAILABLE / STREAM_CAPACITY_REACHED |
+| GET | `/api/v1/execution/manager/fleet/realtime-snapshot [wide ordinal]` | 200 | bffDoubleManager | control-api | `execution-alpha-fleet-realtime.v1#/$defs/AlphaFleetRealtimeSnapshot` | FIXTURE (workspace_id=ws_TEST_FLEET_RT_WIDE_ORDINAL): an ordinal beyond a safe integer, kept as its decimal string |
+| GET | `/api/v1/execution/manager/fleet/stream` | 200 | bffDoubleManager | control-api | none | FIXTURE: ONE heartbeat frame and the response ends (a fixture lane holds no connection). workspace_id picks revalidate, revoked, resync, slow and limit; a missing cursor is a terminal SNAPSHOT_REQUIRED frame, a wrong one CURSOR_INVALID_OR_EXPIRED. Last-Event-ID is not read, only ?cursor= |
 | GET | `/api/v1/execution/portfolios` | 200 | bffDoublePortfolios | control-api | `execution-portfolio-list.v1#/$defs/PortfolioListResponse` |  |
 | GET | `/api/v1/execution/resources/portfolios/{portfolio_id}` | 200 | bffDoublePortfolios | control-api | DRIFT `execution-resource-scoped.v2#/$defs/PortfolioScopedResourceWireResponse` |  |
 | GET | `/api/v1/execution/derivations/portfolios/{portfolio_id}/capital` | 200 | bffDoublePortfolios | control-api | none |  |
