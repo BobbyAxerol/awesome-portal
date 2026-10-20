@@ -61,3 +61,17 @@ describe("F-12 · the replay header's span chips are not offered as controls", (
     expect(body(EXECUTION, ".exec-rp-chip:disabled")).toMatch(/cursor:\s*not-allowed;/);
   });
 });
+
+describe("RV-05 · the two axe findings left on Sandbox and Workbench (F-5)", () => {
+  const SANDBOX = strip(read("css/sandbox.css"));
+
+  it("the compact spine's nodes do not overlap by -1px, so a row that fits does not scroll by 1px", () => {
+    expect(body(BLOCKS, '.exec-blk-spine[data-variant="compact"] .exec-blk-spine-node')?.replace(/\s+/g, "")).toBe("margin-right:0;");
+    expect(body(BLOCKS, ".exec-blk-spine-node")).toMatch(/margin-right:\s*-1px;/);
+  });
+
+  it("the Sandbox lineage ids are underlined (a non-colour cue) in that list only; the shared link is unchanged", () => {
+    expect(body(SANDBOX, ".exec-sbx-lineage .exec-blk-link")).toMatch(/text-decoration:\s*underline;/);
+    expect(body(BLOCKS, ".exec-blk-link")?.replace(/\s+/g, "")).toBe("color:var(--accent);");
+  });
+});

@@ -534,6 +534,38 @@ describe("JourneySpine", () => {
     ]);
     expect(spineNodeState("r1", null, false, { outcome: "done" })).toBe("done");
   });
+
+  describe("compact scroll region (UXM-10 F-5 / RV-05, scrollable-region-focusable)", () => {
+    /** jsdom has no layout: say how wide the content is against the box. */
+    const overflow = (scroll: number, client: number) => {
+      vi.spyOn(HTMLElement.prototype, "scrollWidth", "get").mockReturnValue(scroll);
+      vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(client);
+    };
+    afterEach(() => vi.restoreAllMocks());
+
+    it("is a plain div with no Tab stop while the stepper fits", () => {
+      overflow(400, 400);
+      const { container } = render(<JourneySpine variant="compact" current="paper" />);
+      const box = container.querySelector(".exec-blk-spine")!;
+      expect(box.getAttribute("tabindex")).toBeNull();
+      expect(box.getAttribute("role")).toBeNull();
+    });
+
+    it("becomes a named, focusable region while it overflows and holds nothing focusable", () => {
+      overflow(700, 300);
+      render(<JourneySpine variant="compact" current="paper" />);
+      const region = screen.getByRole("region", { name: "Lifecycle, scrolls sideways" });
+      expect(region.getAttribute("tabindex")).toBe("0");
+      expect(region.className).toBe("exec-blk-spine");
+    });
+
+    it("adds no Tab stop when the stages are buttons (they already take focus) or in the full variant that fits", () => {
+      overflow(700, 300);
+      const { container } = render(<JourneySpine variant="compact" current="paper" onSelect={() => undefined} />);
+      expect(container.querySelector(".exec-blk-spine")!.getAttribute("tabindex")).toBeNull();
+      expect(screen.queryByRole("region")).toBeNull();
+    });
+  });
 });
 
 describe("Triad", () => {

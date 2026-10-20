@@ -18,6 +18,7 @@ import type { ReactNode } from "react";
 
 import { formatExact } from "../../formatExact";
 import { Flag } from "../Flag";
+import { useKeyboardScroll } from "../useKeyboardScroll";
 import type { FlagKind } from "../flagKinds";
 import { NotPublished } from "./notPublished";
 import "../css/blocks.css";
@@ -216,6 +217,8 @@ export function JourneySpine({
   label = "Lifecycle",
 }: JourneySpineProps) {
   const states = SPINE_STAGE_IDS.map((id) => spineNodeState(id, current, blocked, stages?.[id]));
+  // The compact stepper scrolls sideways in a narrow column; with no button in it (no `onSelect`) it needs to be reachable.
+  const { ref: boxRef, props: scrollProps } = useKeyboardScroll<HTMLDivElement>(label, [variant, current, blocked, stages, onSelect]);
 
   if (variant === "mini") {
     const summary = SPINE_STAGE_IDS.map((id, i) => accessibleName(id, states[i])).join(", ");
@@ -243,7 +246,7 @@ export function JourneySpine({
     ) : null;
 
   return (
-    <div className="exec-blk-spine" data-variant={variant}>
+    <div ref={boxRef} className="exec-blk-spine" data-variant={variant} {...scrollProps}>
       {note}
       <ol className="exec-blk-spine-list" aria-label={label}>
         {SPINE_STAGE_IDS.map((id, i) => {

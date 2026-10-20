@@ -186,6 +186,13 @@
 .exec-sbx-lineage-kind {
   color: var(--ink-faint);
 }
+/* The id sits in a line of text ("Exit review PX-29"). Its accent blue is under the 3:1 a colour-only cue needs against the
+ * line (WCAG 1.4.1, axe link-in-text-block), so it is underlined. Scoped to this list: the shared .exec-blk-link is unchanged
+ * for the other screens (UXM-10 F-5; same cue as .exec-alp2-kpis). */
+.exec-sbx-lineage .exec-blk-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 /* exit review */
 .exec-sbx-exit {
