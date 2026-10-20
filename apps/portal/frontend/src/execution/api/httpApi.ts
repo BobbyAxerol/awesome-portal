@@ -65,6 +65,7 @@ import { readAlphaActivity, readDeploymentQuality, readPortfolioCapital, readSou
 import { marketCandlesPath, readMarketCandles, type MarketCandlesPayload, type MarketCandlesQuery } from "./marketCandles";
 import { marketContextCandlesPath, readMarketContextCandles, type MarketContextCandles, type MarketContextQuery } from "./marketContext";
 import { readRelationPage, relationPagePath, type RelationPage, type RelationPageQuery } from "./managerRelations";
+import { encodeManagerSeriesQuery, readManagerSeries, type ManagerSeries, type ManagerSeriesQuery } from "../v2/readers/managerSeries";
 import { observedTimelinePath, readObservedTimeline, type ObservedTimeline, type ObservedTimelineQuery } from "./observedTimeline";
 import { readSubjectActivity, subjectActivityPath, type SubjectActivityPage, type SubjectActivityQuery } from "./subjectActivity";
 import {
@@ -595,6 +596,15 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
 
   const getManagerRelationPage = (query: RelationPageQuery): Promise<Result<RelationPage>> =>
     readGet(relationPagePath(query), readRelationPage, "The Manager relation page");
+  const getManagerSeries = (query: ManagerSeriesQuery): Promise<Result<ManagerSeries>> => {
+    const wire = encodeManagerSeriesQuery(query);
+    if (wire === null) return Promise.resolve(unavailable("The series request was not valid (1 to 4 distinct subjects and a readable window), so it was not sent."));
+    return readGet(
+      `/manager/series?${new URLSearchParams(wire).toString()}`,
+      (raw) => { const read = readManagerSeries(raw); return read !== null && read.kind === "series" ? read.series : null; },
+      "The Manager series",
+    );
+  };
   const getSubjectActivity = (query: SubjectActivityQuery): Promise<Result<SubjectActivityPage>> =>
     readGet(subjectActivityPath(query), readSubjectActivity, "The retained subject activity");
   const listParameters = (query: object) => {
@@ -760,6 +770,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     getMarketContextCandles,
     getObservedTimeline,
     getManagerRelationPage,
+    getManagerSeries,
     getOperationalComposition,
     getEquitySparklines,
     getStageDrift,

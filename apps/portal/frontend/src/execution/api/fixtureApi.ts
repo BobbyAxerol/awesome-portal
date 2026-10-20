@@ -526,6 +526,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getMarketContextCandles() { return unavailable("Trading System market candles are not part of the fixture set."); },
     async getObservedTimeline() { return unavailable("The observed timeline BFF is not part of the fixture set."); },
     async getManagerRelationPage() { return unavailable("The Manager relation BFF is not part of the fixture set."); },
+    async getManagerSeries() { return unavailable("The Manager series (FE-013/033) is not part of the fixture set."); },
     async getEquitySparklines() { return unavailable("The fleet equity sparklines are not part of the fixture set."); },
     async getStageDrift() { return unavailable("The alpha stage drift is not part of the fixture set."); },
     async getSubjectActivity() { return unavailable("The retained subject activity BFF is not part of the fixture set."); },

@@ -61,6 +61,7 @@ import type { AlphaActivity, DeploymentQuality, PortfolioCapital, SourceHealth }
 import type { MarketCandlesPayload, MarketCandlesQuery } from "./marketCandles";
 import type { MarketContextCandles, MarketContextQuery } from "./marketContext";
 import type { RelationPage, RelationPageQuery } from "./managerRelations";
+import type { ManagerSeries, ManagerSeriesQuery } from "../v2/readers/managerSeries";
 import type { ObservedTimeline, ObservedTimelineQuery } from "./observedTimeline";
 import type { SubjectActivityPage, SubjectActivityQuery } from "./subjectActivity";
 
@@ -396,6 +397,13 @@ export interface ExecutionApi {
   getObservedTimeline(query: ObservedTimelineQuery): Promise<Result<ObservedTimeline>>;
   /** EDS-11R1 named relation BFF (G9): one bounded page of a screen-bound Manager relation; the Portal continuation goes back unchanged. */
   getManagerRelationPage(query: RelationPageQuery): Promise<Result<RelationPage>>;
+  /**
+   * BE-P4 / FE-013 + FE-033 `GET /manager/series`: the NAV, Net PnL or Return series of 1 to 4 subjects over one exact window.
+   * `subjects`, `window` and `economic_partition` travel as JSON-encoded query values, as the OpenAPI says. Any non-2xx, any
+   * network failure and any body the reader refuses is a typed `unavailable` (never an empty series, never a zero line); a
+   * request the server would refuse (no subject, five subjects, a duplicate) is refused here without a fetch.
+   */
+  getManagerSeries(query: ManagerSeriesQuery): Promise<Result<ManagerSeries>>;
   /**
    * BR-EX-81 exact subject history through the Portal durable retained-current
    * mirror.  This is deliberately separate from the generic relation page:
