@@ -11,7 +11,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { withoutOrigin } from "../../backTo";
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
-import { GapLine, SectionPanel, Triad, type GapItem } from "../../blocks";
+import { GapLine, NaWhy, SectionPanel, Triad, type GapItem } from "../../blocks";
 import type { LiveSourceOperationsV2 } from "../../readers/liveSourceOperations";
 import { withContext } from "../../urlState";
 import { stageWhy, type StageAction } from "../stage/reasons";
@@ -196,7 +196,7 @@ export function PredecessorTab({ model }: { model: LiveModel }) {
         </>
       ) : (
         <p className="exec-liv-line">
-          <span className="exec-blk-na" title={p.reason}>Not available</span>
+          <NaWhy reason={p.reason} />
         </p>
       )}
       <p className="exec-liv-line">

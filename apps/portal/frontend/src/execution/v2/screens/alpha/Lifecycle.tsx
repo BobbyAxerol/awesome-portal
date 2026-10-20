@@ -19,7 +19,7 @@ import { Flag } from "../../Flag";
 import { JourneySpine, SectionPanel, SPINE_STAGES, type SpineStageId } from "../../blocks";
 import { Dec } from "./cells";
 import { stageWord, type DeploymentRow } from "./model";
-import { Np } from "./np";
+import { Np, WhyMark } from "./np";
 
 export interface LifecyclePanelProps {
   rows: readonly DeploymentRow[];
@@ -73,7 +73,7 @@ function StageDetail({
                 <Link className="exec-blk-link" to={linkTo(row.href)}>{row.id}</Link>
                 <Flag kind={row.runtime.kind} label={row.runtime.label} size="sm" />
                 <span className="exec-alp2-dim">{row.venue ?? "Venue not stated"}</span>
-                {liveBookRow(row) ? <span className="exec-alp2-dim" title="Canary or Live is not stated by the scoped body">Stage not published</span> : null}
+                {liveBookRow(row) ? <span className="exec-alp2-dim">Stage not published<WhyMark name="Stage, reason" reason="Canary or Live is not stated by the scoped body" /></span> : null}
                 {row.allocation !== null ? (
                   <span>
                     <span className="exec-alp2-dim">Allocated, current </span>

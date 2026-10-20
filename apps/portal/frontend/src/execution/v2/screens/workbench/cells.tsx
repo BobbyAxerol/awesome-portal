@@ -1,8 +1,8 @@
 /**
  * Cells for the Paper workbench: a published figure, a published instant, an
  * absence. Every digit comes from `formatExact` through the boundary reader.
- * A figure the source did not publish prints `Not available` (the reason is its
- * title); one it published in a shape the reader refuses prints `Not available`
+ * A figure the source did not publish prints `Not available` (the reason is behind a
+ * disclosure, never only a hover); one it published in a shape the reader refuses prints `Not available`
  * with "Unreadable" beside it, because that is a defect, not an absence;
  * neither is ever a zero or a dash.
  */
@@ -10,16 +10,21 @@ import type { ReactNode } from "react";
 
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
+import { NaWhy } from "../../blocks/notPublished";
 import type { Figure } from "./model";
 
 export const NOT_AVAILABLE = "Not available";
 
 export function Na({ why, visible = false }: { why?: string | null; visible?: boolean }) {
   return (
-    <span className="exec-blk-na" title={why ? why : undefined}>
-      {NOT_AVAILABLE}
-      {visible && why ? <span className="exec-wb-why">{why}</span> : null}
-    </span>
+    visible && why ? (
+      <span className="exec-blk-na">
+        {NOT_AVAILABLE}
+        <span className="exec-wb-why">{why}</span>
+      </span>
+    ) : (
+      <NaWhy reason={why} text={NOT_AVAILABLE} />
+    )
   );
 }
 
@@ -28,7 +33,7 @@ export interface FigProps {
   currency?: string | null;
   /** Prefix `+` on a positive value and tone it by its published sign (a PnL, not a balance). */
   signed?: boolean;
-  /** Reason carried in the title of `Not available` when the source published nothing. */
+  /** Reason behind the `Not available` disclosure when the source published nothing. */
   why?: string;
 }
 

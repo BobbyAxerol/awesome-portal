@@ -10,7 +10,7 @@
  * (`WITHIN_ENVELOPE`, `BREACH`, `UNDETERMINED`); a body without a verdict says so.
  */
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { CapGauge, GapLine, NotPublished, SectionPanel, type GapItem } from "../../blocks";
+import { CapGauge, GapLine, NaWhy, NotPublished, SectionPanel, type GapItem } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { CanaryView } from "./readCanary";
 import { FE, complianceNotes, envelopeColumn, limitRows, panelLine, verdictLine, type LimitRow } from "./model";
@@ -60,8 +60,8 @@ export function EnvelopeTab({ view }: { view: CanaryView }) {
   return (
     <SectionPanel level={2} title="Envelope">
       {view.envelope === null ? (
-        <p className="exec-blk-na" title={view.proposalOnly ? (view.proposalAbsentReason ?? undefined) : "The response carries no Canary envelope"}>
-          Not available
+        <p className="exec-blk-na">
+          <NaWhy reason={view.proposalOnly ? view.proposalAbsentReason : "The response carries no Canary envelope"} />
         </p>
       ) : (
         <>

@@ -431,8 +431,11 @@ describe("V2 following-parent body: the proposal only", () => {
     mount(canaryPort(answering(parentBody("canary_absent"))));
     await ready();
     expect(screen.queryByRole("table", { name: "Canary envelope caps" })).toBeNull();
-    // The server's reason code is the title of `Not available`, not a second printed token.
-    expect(screen.getByText("Not available", { selector: "p.exec-blk-na" }).getAttribute("title")).toBe("PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    // The server's reason code is behind a disclosure on `Not available` (a button, no title), not a second printed token.
+    const na = document.querySelector("p.exec-blk-na")!;
+    expect(na.textContent).toBe("Not available");
+    expect(na.querySelector("[title]")).toBeNull();
+    expect(whyText(na)).toBe("PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
     expect(document.body.textContent).not.toContain("PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
   });
 

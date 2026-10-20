@@ -15,6 +15,7 @@ import { evictScopedCaches } from "../../scopedEviction";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import AlphaScreen from "./index";
 import { alphaHttpApi, serveAlphaDouble, sessionOf, type Override } from "./testApi";
+import { whyText } from "../../gapWhyTestUtil";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
@@ -99,9 +100,15 @@ describe("the header and the authority label", () => {
     mount();
     await ready();
     const meta = document.querySelector(".exec-alp2-meta")!;
-    expect(meta.querySelector('[title="execution.alpha-resource.v2 states no alpha name"] .exec-blk-np')?.textContent).toContain("Not published (FE-066)");
-    expect(meta.querySelector('[title="execution.alpha-resource.v2 states no alpha version"] .exec-blk-np')?.textContent).toContain("Not published (FE-066)");
-    expect(meta.querySelector('[title="execution.alpha-resource.v2 states no owner"] .exec-blk-np')?.textContent).toContain("Not published (FE-030)");
+    const member = (word: string) => Array.from(meta.children).find((c) => (c.textContent ?? "").startsWith(word))!;
+    expect(member("Name").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
+    expect(whyText(member("Name"))).toBe("execution.alpha-resource.v2 states no alpha name");
+    expect(member("Version").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
+    expect(whyText(member("Version"))).toBe("execution.alpha-resource.v2 states no alpha version");
+    expect(member("Owner").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-030)");
+    expect(whyText(member("Owner"))).toBe("execution.alpha-resource.v2 states no owner");
+    // RV-06: no reason rides on a title of a non-focusable wrapper.
+    for (const reason of ["states no alpha name", "states no alpha version", "states no owner"]) expect(meta.querySelector(`[title*="${reason}"]`)).toBeNull();
     expect(meta.textContent).toContain("Core");
   });
 
@@ -138,9 +145,13 @@ describe("the same sections, from the scoped facts", () => {
     mount();
     await ready();
     const facts = screen.getByLabelText("Current facts");
-    const np = facts.querySelectorAll('[title="SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS"] .exec-blk-np');
-    expect(np.length).toBe(2);
-    for (const node of np) expect(node.textContent).toContain("Not published (FE-005)");
+    const whys = Array.from(facts.querySelectorAll(".exec-blk-why"));
+    expect(whys.length).toBe(2);
+    for (const node of whys) {
+      expect(node.previousElementSibling?.textContent).toContain("Not published (FE-005)");
+      expect(whyText(node)).toBe("SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS");
+    }
+    expect(facts.querySelector('[title="SCOPED_RAW_FACTS_ONLY_NO_IMPLIED_TOTALS"]')).toBeNull();
     expect(facts.textContent).not.toMatch(/\d{1,3}(,\d{3})+\.\d\d/);
   });
 

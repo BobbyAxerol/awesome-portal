@@ -19,7 +19,7 @@ import { PanelState } from "../../../components/states";
 import type { ObservedEntry, ObservedTimeline } from "../../../api/observedTimeline";
 import { readUtcEpochMs } from "../../../screenDataContract";
 import { readDecimal } from "../../boundary";
-import { EquityPanel, EventKindChips, EventRibbon, domainOfSeries, type ChartDomain, type EventKind } from "../../charts";
+import { ChartTools, EquityPanel, EventKindChips, EventRibbon, domainOfSeries, type ChartDomain, type EventKind } from "../../charts";
 import { EventFeed, SectionPanel, type EventFeedRow } from "../../blocks";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
 import { ROW_CAP, feedKind, orderFlag, ribbonEvents, stageBands, type EquityPanelInput, type StagePath } from "./model";
@@ -132,17 +132,22 @@ export function ActivityTab({ env, alphaLabel, inputs, paths, timeline, book }: 
             {ribbon}
           </>
         ) : (
-          <EquityPanel
+          <ChartTools
             label={`Equity path, ${ENV_LABEL[env]}${lead.currency ? `, ${lead.currency}` : ""}`}
-            seriesName={lead.label}
-            points={lead.points}
-            currency={lead.currency ?? undefined}
-            state={lead.state}
-            segments={lead.segments}
-            domain={domain ?? undefined}
-            ribbon={ribbon}
-            height={220}
-          />
+            columns={lead.state.kind === "unavailable" ? [] : [{ key: lead.key, label: lead.label, points: lead.points, currency: lead.currency ?? undefined }]}
+          >
+            <EquityPanel
+              label={`Equity path, ${ENV_LABEL[env]}${lead.currency ? `, ${lead.currency}` : ""}`}
+              seriesName={lead.label}
+              points={lead.points}
+              currency={lead.currency ?? undefined}
+              state={lead.state}
+              segments={lead.segments}
+              domain={domain ?? undefined}
+              ribbon={ribbon}
+              height={220}
+            />
+          </ChartTools>
         )}
         <p className="exec-alp2-cap">
           <span>Hatched is simulated, solid is actual</span>

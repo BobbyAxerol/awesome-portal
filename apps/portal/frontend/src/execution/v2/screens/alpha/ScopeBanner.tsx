@@ -6,6 +6,7 @@
  */
 import { Flag } from "../../Flag";
 import { humanize } from "./model";
+import { WhyMark } from "./np";
 import type { ScopeLabel } from "./view";
 
 export function ScopeBanner({ scope, withheld }: { scope: ScopeLabel; withheld: string | null }) {
@@ -40,7 +41,7 @@ export function ScopeBanner({ scope, withheld }: { scope: ScopeLabel; withheld: 
                 <th scope="row">{humanize(p.relation)}</th>
                 <td>{p.returned}</td>
                 <td>{p.sourceTotal ?? "Total not published"}</td>
-                <td title={p.reasonCode ?? undefined}>{humanize(p.state)}</td>
+                <td>{humanize(p.state)}<WhyMark name={`${humanize(p.relation)}, reason`} reason={p.reasonCode} /></td>
               </tr>
             ))}
           </tbody>

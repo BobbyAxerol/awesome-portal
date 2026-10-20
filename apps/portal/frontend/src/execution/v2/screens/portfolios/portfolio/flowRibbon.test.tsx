@@ -13,6 +13,7 @@ import { makeApi, type Override } from "../harness.fixtures";
 import PortfolioScreen from "./index";
 import { RIBBON_LANE_NP, ledgerFlow } from "./model";
 import { readCapitalLedger } from "../../../../analytics";
+import { whyText } from "../../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -75,7 +76,7 @@ describe("ribbon under the equity", () => {
     }
     expect(RIBBON_LANE_NP).toBe("Not published");
     // The ids are on the one line under the chart, in its title.
-    expect(screen.getByTestId("not-available-line").getAttribute("title")).toContain("Not published (FE-031)");
+    expect(whyText(screen.getByTestId("not-available-line"))).toContain("Not published (FE-031)");
     expect(lane(group, "flow").dataset.unpublished).toBeUndefined();
     expect(lane(group, "flow").querySelector(".exec-ribbon-lane-axis")).not.toBeNull();
     // No mark can sit on a lane with no source.

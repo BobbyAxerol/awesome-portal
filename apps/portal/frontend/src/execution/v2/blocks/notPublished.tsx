@@ -256,6 +256,26 @@ export function GapWhy({ name, text, rows, gap, className }: GapWhyProps) {
   );
 }
 
+export interface NaWhyProps {
+  /** The reason the source gave (or the approved sentence for this absence). Empty = nothing to disclose, the plain words only. */
+  reason?: string | null;
+  /** The visible words. Default `Not available`. */
+  text?: string;
+  /** `data-gap` / class passthrough for placement. */
+  className?: string;
+  gap?: string;
+}
+
+/**
+ * `Not available` with its reason behind a disclosure (RV-06). With no reason it is the plain word (nothing to open); with one
+ * it is a `GapWhy` button whose text is still `Not available`, so the cell reads the same and the reason is reachable by
+ * keyboard and touch instead of a `title` on a non-focusable span.
+ */
+export function NaWhy({ reason, text = "Not available", className = "exec-blk-na", gap }: NaWhyProps) {
+  if (!reason) return <span className={className} data-gap={gap}>{text}</span>;
+  return <GapWhy className={className} gap={gap} text={text} name={`${text}, reason`} rows={[reason]} />;
+}
+
 export interface GapItem {
   /** The fact that is missing, in a word or two ("Limit"). */
   label: string;

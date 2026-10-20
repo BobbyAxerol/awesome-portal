@@ -327,6 +327,8 @@ describe("Overview", () => {
     await ready();
     expect(screen.getByRole("heading", { name: "Equity vs approved band" })).toBeTruthy();
     expect(screen.getByTestId("readout-value").textContent).toContain("101,800.00");
+    expect(screen.getByRole("button", { name: "Expand Paper equity vs approved band" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Table, Paper equity vs approved band" })).toBeTruthy();
     // One line for the three unpublished facts; each request id is in its title.
     const gaps = screen.getByRole("heading", { name: "Equity vs approved band" }).closest("section")!.querySelector(".exec-blk-gaps")!;
     expect(gaps.textContent).toBe("Not available: Drawdown, Approved band, Window");
@@ -351,7 +353,7 @@ describe("Overview", () => {
     expect(panel.textContent).toContain("3 of 14 days");
     expect(panel.textContent).toContain("2 of 20 trades");
     expect(panel.textContent).toContain("Bounded by the source");
-    expect(within(panel).getByText("Bounded by the source").closest("td")!.getAttribute("title")).toBe("SOURCE_RETENTION_SHORT");
+    expect(whyText(within(panel).getByText("Bounded by the source").closest("td")!)).toBe("SOURCE_RETENTION_SHORT");
     expect(panel.textContent).not.toContain("SOURCE_RETENTION_SHORT");
     // The three unpublished criteria are one line; the request ids are in its title.
     const gaps = panel.querySelector(".exec-blk-gaps")!;
@@ -386,7 +388,7 @@ describe("Overview", () => {
     expect(row(/Net PnL/)).toContain("+1,800.00");
     expect(row(/Fees/)).toContain("12.40");
     expect(row(/Funding/)).toContain("Not available");
-    expect(within(panel).getByRole("row", { name: /Funding/ }).querySelector(".exec-blk-na")!.getAttribute("title")).toBe("Counted separately");
+    expect(whyText(within(panel).getByRole("row", { name: /Funding/ }).querySelector(".exec-blk-na")!)).toBe("Counted separately");
     expect(row(/Funding/)).not.toContain("Counted separately");
     expect(row(/Cash free/)).toContain("91,200.00 · 10,600.00");
     expect(panel.querySelector('[data-tone="positive"]')).toBeTruthy();
@@ -496,7 +498,7 @@ describe("Orders, Fills, Positions, Sessions", () => {
     // A missing branch is `Not available` (the sentence is its title); a published empty one is `No orders`.
     const wrap = document.querySelector('[data-table="Orders"]')!;
     expect(wrap.textContent).toBe("Not available");
-    expect(wrap.querySelector(".exec-blk-na")!.getAttribute("title")).toBe("The profile carries no orders branch for this deployment.");
+    expect(whyText(wrap.querySelector(".exec-blk-na")!)).toBe("The profile carries no orders branch for this deployment.");
   });
 
   it("Fills: when (UTC), order, quantity, price, fee with its currency", async () => {
@@ -535,7 +537,7 @@ describe("Orders, Fills, Positions, Sessions", () => {
     const cells = within(flatRow).getAllByRole("cell").map((c) => c.textContent);
     expect(cells[2]).toBe("0");
     expect(cells[3]).toBe("Not available");
-    expect(within(flatRow).getAllByRole("cell")[3]!.querySelector(".exec-blk-na")!.getAttribute("title")).toBe("Flat: no entry price");
+    expect(whyText(within(flatRow).getAllByRole("cell")[3]!.querySelector(".exec-blk-na")!)).toBe("Flat: no entry price");
     expect(cells[3]).not.toContain("0.00");
     expect(cells[4]).toContain("152.30");
   });
@@ -566,7 +568,7 @@ describe("Orders, Fills, Positions, Sessions", () => {
     const rows = Array.from(table.querySelectorAll("tbody tr"));
     expect(rows.map((r) => r.querySelector('td[data-l="Session"]')!.textContent)).toEqual(["session_TEST_ONLY_2", "session_TEST_ONLY_1"]);
     expect(rows[0]!.querySelector('td[data-l="Ended"]')!.textContent).toBe("Not available");
-    expect(rows[0]!.querySelector('td[data-l="Ended"] .exec-blk-na')!.getAttribute("title")).toBe("No completion time");
+    expect(whyText(rows[0]!.querySelector('td[data-l="Ended"] .exec-blk-na')!)).toBe("No completion time");
     expect(rows[0]!.querySelector('td[data-l="State"]')!.textContent).toBe("Running");
     expect(rows[1]!.querySelector('td[data-l="State"]')!.textContent).toBe("Completed");
     expect(screen.getByTestId("Sessions-cap").textContent).toBe("2 sessions");
@@ -858,8 +860,9 @@ describe("nq: the source is not qualified (hi-fi state)", () => {
     mount({ profile: { ok: true, value: envelopeOf(nqWire()) } });
     await ready();
     const banner = screen.getByText("Source not qualified.", { selector: ".exec-blk-banner span" });
-    // The published reason codes are the banner's title, not a second printed line.
-    expect(banner.closest(".exec-blk-banner")!.getAttribute("title")).toContain("SOURCE_NOT_QUALIFIED");
+    // The published reason codes are behind a disclosure on the banner (RV-06), not a title and not a second printed line.
+    expect(banner.closest(".exec-blk-banner")!.hasAttribute("title")).toBe(false);
+    expect(whyText(banner.closest(".exec-blk-banner")!)).toContain("SOURCE_NOT_QUALIFIED");
     expect(text()).not.toContain("SOURCE_NOT_QUALIFIED");
     expect(screen.getByRole("tablist")).toBeTruthy();
     expect(screen.queryByTestId("readout-value")).toBeNull();
@@ -870,7 +873,7 @@ describe("nq: the source is not qualified (hi-fi state)", () => {
     expect(within(accounting).getAllByText("Not available").length).toBeGreaterThanOrEqual(4);
     expect(accounting.textContent).not.toMatch(/101,800|1,800|12\.40/);
     await openTab("Orders");
-    expect(document.querySelector('[data-table="Orders"] .exec-blk-na')!.getAttribute("title")).toBe("The profile carries no orders branch for this deployment.");
+    expect(whyText(document.querySelector('[data-table="Orders"] .exec-blk-na'))).toBe("The profile carries no orders branch for this deployment.");
     expect(text()).not.toMatch(NO_DASH);
   });
 

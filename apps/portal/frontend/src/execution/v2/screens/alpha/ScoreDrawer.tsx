@@ -9,7 +9,7 @@
  */
 import { Drawer, type DockMode } from "../../Drawer";
 import { Dec } from "./cells";
-import { Np } from "./np";
+import { Np, WhyMark } from "./np";
 import type { AlphaView } from "./view";
 
 const COMPONENTS = ["P (performance)", "R (risk)", "B (robustness)"] as const;
@@ -46,7 +46,7 @@ export function ScoreDrawer({ view, mode, onClose }: ScoreDrawerProps) {
       <table className="exec-alp2-kv">
         <tbody>
           {here && !here.money.published ? (
-            <tr><th scope="row">Net PnL</th><td title={here.money.reason}><Np id="FE-005" /></td></tr>
+            <tr><th scope="row">Net PnL</th><td><Np id="FE-005" /><WhyMark name="Net PnL, reason" reason={here.money.reason} /></td></tr>
           ) : here && here.money.published && here.money.netPnl.length > 0 ? (
             here.money.netPnl.map((p) => (
               <tr key={p.currency}>

@@ -29,6 +29,7 @@ import { loadCanonical } from "../../testkit/loadCanonical";
 import { readGovernanceParentByKind, v1GovernanceParent, type GovernanceParentKind, type GovernanceParentRead } from "../../readers/dispatch";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import Cockpit from "./index";
+import { whyText } from "../../gapWhyTestUtil";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
@@ -226,10 +227,11 @@ describe("R2, V2 body with the sections added by e19ad906", () => {
     expect(text).toContain("Created byuser_TEST_ONLY_creator (you)");
     expect(text).toContain("Latest planop_TEST_ONLY_R2_EXPIRED · stored expired · created");
     // What the body still does not carry stays named with its request.
-    // ... on one 'Not available' line, with FE-030 in its title (no row of "Not published" per fact).
+    // ... on one 'Not available' line, with FE-030 behind its disclosure (no row of "Not published" per fact).
     const line = within(receipt()).getByTestId("not-available-line");
     expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref, What changes");
-    expect(line.getAttribute("title")).toContain("Ladder: Not published (FE-030)");
+    expect(line.hasAttribute("title")).toBe(false);
+    expect(whyText(line)).toContain("Ladder: Not published (FE-030)");
   });
 
   it("r2_followthrough: the decision inputs are drawn from the body: version, evidence set, hashes, plan route, admission not evaluated", async () => {

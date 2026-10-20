@@ -38,7 +38,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { useExecutionRuntime } from "../../../useExecutionRuntime";
 import { Flag } from "../../Flag";
-import { CompactGaps, GapLine, KpiStrip, SectionPanel, StageHeader, Triad, UrlTabs, gapTitle, type GapItem } from "../../blocks";
+import { CompactGaps, GapLine, GapWhy, KpiStrip, SectionPanel, StageHeader, Triad, UrlTabs, gapTitle, type GapItem } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { figuresUnpublished, triadRowsOf } from "../stage/triadRows";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
@@ -224,8 +224,9 @@ function Banners({ view }: { view: SandboxView }) {
         </div>
       ) : null}
       {view.version === "v2" ? (
-        <div className="exec-blk-banner" role="status" title={gapTitle("FE-072", "Findings, plans, timeline and reconciliation figures")}>
+        <div className="exec-blk-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" /> Stored certification and step evaluations only.
+          <GapWhy name="Why only stored certification and step evaluations" rows={[gapTitle("FE-072", "Findings, plans, timeline and reconciliation figures")]} />
         </div>
       ) : !reported ? (
         <div className="exec-blk-banner" role="status">

@@ -16,7 +16,7 @@ import { SectionPanel } from "../../blocks";
 import { PanelState } from "../../../components/states";
 import { Dec, At, Na } from "./cells";
 import { ROW_CAP, type DeploymentRow, type PositionRow, type ReconRow } from "./model";
-import { Np } from "./np";
+import { Np, WhyMark } from "./np";
 import type { AlphaView } from "./view";
 
 /** The words of a body whose relation rows were cut at its byte bound: never "none", never a table. */
@@ -47,7 +47,7 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = 
   const shown = rows.slice(0, ROW_CAP);
   const scoped = scopedNoTotals !== null;
   const columns: CardsColumn<DeploymentRow>[] = [
-    { key: "stage", label: "Stage", render: (r) => <span className="exec-alp2-stage" data-stage={r.stage ?? "unknown"} title={r.stage === null && scoped ? "Canary or Live is not stated by the scoped body" : undefined}><i aria-hidden="true" />{r.stageLabel}</span> },
+    { key: "stage", label: "Stage", render: (r) => <span className="exec-alp2-stage" data-stage={r.stage ?? "unknown"}><i aria-hidden="true" />{r.stageLabel}{r.stage === null && scoped ? <WhyMark name="Stage, reason" reason="Canary or Live is not stated by the scoped body" /> : null}</span> },
     { key: "deployment", label: "Deployment", render: (r) => <Link className="exec-blk-link" to={linkTo(r.href)}>{r.id}</Link> },
     {
       key: "account",
@@ -61,8 +61,8 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = 
     },
     { key: "runtime", label: "Runtime", render: (r) => <Flag kind={r.runtime.kind} label={r.runtime.label} size="sm" /> },
     { key: "venue", label: "Venue", render: (r) => r.venue ?? <Na /> },
-    { key: "allocation", label: "Allocated, current", numeric: true, render: (r) => (scoped && r.allocation === null ? <span title={scopedNoTotals ?? undefined}><Np id="FE-005" /></span> : <Dec value={r.allocation} currency={r.currency} />) },
-    { key: "net", label: "Net PnL, current", numeric: true, render: (r) => (scoped ? <span title={scopedNoTotals ?? undefined}><Np id="FE-005" /></span> : <Dec value={r.netPnl} currency={r.currency} signed />) },
+    { key: "allocation", label: "Allocated, current", numeric: true, render: (r) => (scoped && r.allocation === null ? <span><Np id="FE-005" /><WhyMark name="Totals, reason" reason={scopedNoTotals} /></span> : <Dec value={r.allocation} currency={r.currency} />) },
+    { key: "net", label: "Net PnL, current", numeric: true, render: (r) => (scoped ? <span><Np id="FE-005" /><WhyMark name="Totals, reason" reason={scopedNoTotals} /></span> : <Dec value={r.netPnl} currency={r.currency} signed />) },
     { key: "dates", label: "Dates", render: () => <Np id="FE-027" /> },
   ];
   if (canSeeAccounts) columns.push({ key: "by", label: "Deployed by", render: () => <Np id="FE-021" /> });
@@ -194,12 +194,12 @@ export function ReconciliationTab({ rows, scoped = false, withheld = null }: { r
   const shown = rows.slice(0, ROW_CAP);
   const columns: CardsColumn<ReconRow>[] = [
     { key: "venue", label: "Venue", render: (r) => r.venue },
-    { key: "kind", label: "Finding", render: (r) => (r.kind === null ? <span title="The scoped reconciliation relation has no finding type"><Np id="FE-072" /></span> : r.kind) },
+    { key: "kind", label: "Finding", render: (r) => (r.kind === null ? <span><Np id="FE-072" /><WhyMark name="Finding type, reason" reason="The scoped reconciliation relation has no finding type" /></span> : r.kind) },
     { key: "status", label: "Result", render: (r) => <Flag kind={r.status.kind} label={r.status.label} size="sm" /> },
     {
       key: "resolved",
       label: "Resolved",
-      render: (r) => (r.resolvedAt !== null ? <At iso={new Date(r.resolvedAt).toISOString()} /> : scoped ? <span title="The scoped reconciliation relation has no resolution time"><Np id="FE-072" /></span> : <Na why="Not resolved" />),
+      render: (r) => (r.resolvedAt !== null ? <At iso={new Date(r.resolvedAt).toISOString()} /> : scoped ? <span><Np id="FE-072" /><WhyMark name="Resolution time, reason" reason="The scoped reconciliation relation has no resolution time" /></span> : <Na why="Not resolved" />),
     },
   ];
   return (

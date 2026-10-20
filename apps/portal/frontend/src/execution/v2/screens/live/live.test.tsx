@@ -361,7 +361,7 @@ describe("V1 body, gap", () => {
     await loaded();
     const table = screen.getByRole("table", { name: "Display continuity" });
     // The reason is the cell's title; the cell says `Not available`.
-    expect(within(table).getByText("State").closest("tr")!.querySelector(".exec-blk-na")!.getAttribute("title")).toContain("could not tell");
+    expect(whyText(within(table).getByText("State").closest("tr")!.querySelector(".exec-blk-na")!)).toContain("could not tell");
     expect(within(table).getAllByText("Gap window")[0]!.closest("tr")!.textContent).not.toContain("None");
   });
 });
@@ -471,7 +471,7 @@ describe("tabs", () => {
     await loaded();
     const panel = screen.getByRole("region", { name: "Canary envelope" });
     expect(panel.querySelector(".exec-blk-na")!.textContent).toBe("Not available");
-    expect(panel.querySelector(".exec-blk-na")!.getAttribute("title")).toBe("No predecessor Canary envelope was published for this deployment.");
+    expect(whyText(panel.querySelector(".exec-blk-na")!)).toBe("No predecessor Canary envelope was published for this deployment.");
   });
 
   it("guard rules: three rows from structured flags, the risk-increasing action disabled with its reason, Provenance carries the policy token", async () => {
@@ -573,7 +573,7 @@ describe("V2 body (retained observations)", () => {
   it("continuity: the read does not assert continuity; a coverage table lists all eleven panels; broker_sync is Not published", async () => {
     mount(() => ok(v2Read(v2Populated())), "?tab=continuity");
     await loaded();
-    expect(within(screen.getByRole("table", { name: "Display continuity" })).getByText("State").closest("tr")!.querySelector(".exec-blk-na")!.getAttribute("title")).toContain("This read does not assert update continuity");
+    expect(whyText(within(screen.getByRole("table", { name: "Display continuity" })).getByText("State").closest("tr")!.querySelector(".exec-blk-na")!)).toContain("This read does not assert update continuity");
     const coverage = screen.getByRole("table", { name: "Panel coverage" });
     expect(coverage.querySelectorAll("tbody tr")).toHaveLength(11);
     expect(within(coverage).getByText("Broker sync").closest("tr")!.textContent).toContain("The broker purpose is not commissioned.");
@@ -583,7 +583,7 @@ describe("V2 body (retained observations)", () => {
   it("predecessor and guard rules say what this read does not carry", async () => {
     mount(() => ok(v2Read(v2Populated())), "?tab=predecessor-envelope");
     await loaded();
-    expect(screen.getByRole("region", { name: "Canary envelope" }).querySelector(".exec-blk-na")!.getAttribute("title")).toContain("This read does not carry the predecessor Canary envelope.");
+    expect(whyText(screen.getByRole("region", { name: "Canary envelope" }).querySelector(".exec-blk-na")!)).toContain("This read does not carry the predecessor Canary envelope.");
     fireEvent.click(screen.getByRole("tab", { name: "Guard rules" }));
     const rows = screen.getByRole("table", { name: "Guard rules" }).querySelectorAll("tbody tr");
     for (const row of Array.from(rows)) expect(row.textContent).toContain("Not available");

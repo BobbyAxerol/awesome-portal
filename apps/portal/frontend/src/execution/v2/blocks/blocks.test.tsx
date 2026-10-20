@@ -21,6 +21,8 @@ import {
   JourneySpine,
   Kpi,
   KpiStrip,
+  NaWhy,
+  NotAvailableLine,
   NotPublished,
   PanelHead,
   SPINE_STAGE_IDS,
@@ -706,6 +708,45 @@ describe("Triad", () => {
   it("never tones a partial difference", () => {
     render(<Triad rows={[{ key: "x", label: "X", difference: metric("-5.00", "PARTIAL") }]} />);
     expect(document.querySelector(".exec-blk-num")?.getAttribute("data-tone")).toBeNull();
+  });
+});
+
+describe("NaWhy and NotAvailableLine · the reason is in the DOM behind a button, never only in a title (RV-06)", () => {
+  it("NaWhy with a reason: the cell still says `Not available`, the button opens the reason, no title anywhere", () => {
+    render(<NaWhy reason="Flat: no entry price" />);
+    const button = screen.getByRole("button", { name: "Not available, reason" });
+    expect(button.textContent).toBe("Not available");
+    expect(document.querySelectorAll("[title]")).toHaveLength(0);
+    expect(document.body.textContent).not.toContain("Flat: no entry price");
+    expect(button.tabIndex).toBe(0);
+    expect(whyText(button)).toBe("Flat: no entry price");
+    fireEvent.click(button);
+    expect(document.getElementById(button.getAttribute("aria-controls")!)!.textContent).toContain(GAP_NEXT);
+  });
+
+  it("NaWhy without a reason is the plain words: nothing to open, no button", () => {
+    render(<NaWhy reason={null} />);
+    expect(screen.queryByRole("button")).toBeNull();
+    expect(document.body.textContent).toBe("Not available");
+  });
+
+  it("NotAvailableLine: the visible part is the labels; per-fact id and reason sit behind one disclosure; no title", () => {
+    render(
+      <NotAvailableLine
+        facts={[
+          { label: "Fees", id: "FE-025", why: "WINDOW_NOT_OFFERED" },
+          { label: "Funding", why: "Counted separately" },
+        ]}
+      />,
+    );
+    const line = screen.getByTestId("not-available-line");
+    expect(line.hasAttribute("title")).toBe(false);
+    expect(document.querySelectorAll("[title]")).toHaveLength(0);
+    expect(line.textContent).toContain("Not available: Fees, Funding");
+    expect(line.textContent).not.toContain("WINDOW_NOT_OFFERED");
+    const text = whyText(line);
+    expect(text).toContain(`Fees: Not published (FE-025) ${FE_REQUEST_LABEL["FE-025"]} · WINDOW_NOT_OFFERED`);
+    expect(text).toContain("Funding: Counted separately");
   });
 });
 

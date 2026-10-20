@@ -11,6 +11,7 @@ import type { ApprovalRow, DecidedRow } from "../../../screens/ApprovalInbox";
 import { v1GovernanceParent, type GovernanceParentKind } from "../../readers/dispatch";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import Cockpit, { type CockpitProps } from "./index";
+import { whyText } from "../../gapWhyTestUtil";
 
 /* ── the session, standing in for useSession ─────────────────────────────── */
 
@@ -741,7 +742,8 @@ describe("decision rail", () => {
   const PREVIEW = "Preview · not recorded";
 
   function expectEveryButtonDisabledWithPreviewReason(labels: string[]) {
-    const buttons = within(rail()).getAllByRole("button") as HTMLButtonElement[];
+    // The "?" reason disclosures (GapWhy) are buttons too; this is about the decision controls.
+    const buttons = (within(rail()).getAllByRole("button") as HTMLButtonElement[]).filter((b) => !b.hasAttribute("aria-expanded"));
     expect(buttons.map((b) => b.textContent)).toEqual(labels);
     for (const button of buttons) {
       expect(button.disabled).toBe(true);
@@ -804,13 +806,14 @@ describe("decision rail", () => {
     expect(rail().querySelectorAll('.exec-ck-cells i[data-filled="true"]')).toHaveLength(0);
   });
 
-  it("ladder, call and receipt ref are one 'Not available' line (FE-030 in its title); the receipt is a preview", async () => {
+  it("ladder, call and receipt ref are one 'Not available' line (FE-030 behind its disclosure); the receipt is a preview", async () => {
     await mount(standardPort(), "/execution/approvals?sel=apr_a");
     const receipt = within(rail()).getByRole("region", { name: "Receipt" });
     for (const label of ["Ladder", "Call", "Receipt ref", "What changes"]) expect(within(receipt).queryByRole("rowheader", { name: label }), label).toBeNull();
     const line = within(receipt).getByTestId("not-available-line");
     expect(line.textContent).toContain("Not available: Ladder, Call, Receipt ref, What changes");
-    expect(line.getAttribute("title")).toContain("Receipt ref: Not published (FE-030)");
+    expect(line.hasAttribute("title")).toBe(false);
+    expect(whyText(line)).toContain("Receipt ref: Not published (FE-030)");
     expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("None recorded");
     // The decision controls say PREVIEW beside each disabled control; the receipt head does not repeat it.
     expect(within(rail()).getAllByText(PREVIEW).length).toBeGreaterThan(0);
@@ -903,7 +906,8 @@ describe("waiver lane", () => {
     const evidence = screen.getByRole("region", { name: "Evidence" });
     expect(within(evidence).getByRole("region", { name: "Condition" }).textContent).toContain("Keep paper exposure below the certified envelope.");
     expect(within(evidence).getByTitle("Not published (FE-029)")).toBeTruthy();
-    const buttons = within(rail()).getAllByRole("button") as HTMLButtonElement[];
+    // The "?" reason disclosures (GapWhy) are buttons too; this is about the decision controls.
+    const buttons = (within(rail()).getAllByRole("button") as HTMLButtonElement[]).filter((b) => !b.hasAttribute("aria-expanded"));
     expect(buttons.map((b) => b.textContent)).toEqual(["Extend 14 days", "Other decisions"]);
     expect(buttons.every((b) => b.disabled)).toBe(true);
     expect(p.called("getGateR1")).toHaveLength(0);

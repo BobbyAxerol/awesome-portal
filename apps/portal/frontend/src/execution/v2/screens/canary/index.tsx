@@ -34,7 +34,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { CompactGaps, GapLine, KpiStrip, Kpi, SectionPanel, StageHeader, UrlTabs, type StageChips, type StageCrumb } from "../../blocks";
-import { EquityPanel } from "../../charts";
+import { ChartTools, EquityPanel } from "../../charts";
 import type { SeriesPoint as ChartPoint } from "../../charts/types";
 import { readAsOf } from "../../boundary";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
@@ -97,7 +97,9 @@ function PublishedSeries({ series }: { series: NonNullable<CanaryView["seriesPoi
   }
   return (
     <div title={series.methodologyRef === null ? undefined : `Methodology ${series.methodologyRef}`}>
-      <EquityPanel label="Deployment series" points={points} unit="money" currency={series.unit ?? undefined} signed height={200} />
+      <ChartTools label="Deployment series" columns={points.length === 0 ? [] : [{ key: "series", label: "Deployment series", points, unit: "money", currency: series.unit ?? undefined, signed: true }]}>
+        <EquityPanel label="Deployment series" points={points} unit="money" currency={series.unit ?? undefined} signed height={200} />
+      </ChartTools>
       <GapLine items={[{ label: "Paper and Backtest series", id: FE.series }]} />
     </div>
   );
