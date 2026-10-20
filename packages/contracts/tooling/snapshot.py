@@ -507,6 +507,20 @@ TRACKED = (
     "fixtures/execution-publication-source/registry.json",
     "fixtures/execution-publication-source/field-dictionary.json",
     "fixtures/execution-publication-source/metric-dependencies.json",
+    # BE-P4 (2026-10-20): Manager lifecycle scalars (FE-027/FE-012) and the Manager series read (FE-013/FE-033).
+    "tooling/execution-manager-lifecycle-semantics.mjs",
+    "fixtures/execution-manager-dataset.lifecycle.live.synthetic.valid.json",
+    "tooling/generate-execution-manager-series.mjs",
+    "tooling/execution-manager-series-fixtures.mjs",
+    "schemas/execution-manager-series.v1.schema.json",
+    "openapi/execution-manager-series.openapi.json",
+    "generated/execution-manager-series.d.ts",
+    "fixtures/execution-manager-series.populated.synthetic.valid.json",
+    "fixtures/execution-manager-series.empty.synthetic.valid.json",
+    "fixtures/execution-manager-series.unavailable.synthetic.valid.json",
+    "fixtures/execution-manager-series.currency-mixed.synthetic.valid.json",
+    "fixtures/execution-manager-series-publication.synthetic.valid.json",
+    "fixtures/execution-manager-series-query.synthetic.valid.json",
     "package.json",
 )
 
