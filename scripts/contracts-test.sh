@@ -181,6 +181,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/governance/positive-parent.contract.ts" 
   "${ROOT_DIR}/apps/control-api/src/governance/following-parent.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/live-parent.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/stage-action-eligibility.ts" \
+  "${ROOT_DIR}/apps/control-api/src/governance/capture-authority.ts" \
   "${ROOT_DIR}/apps/control-api/src/governance/approval-request-lookup.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/governance/"
 # FE-068 stage-action eligibility is a pure projection; it needs only the type-only gate adapter.
