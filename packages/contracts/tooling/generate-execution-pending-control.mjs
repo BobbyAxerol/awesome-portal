@@ -159,6 +159,10 @@ status.allOf = [{
   ] },
 }];
 status.description = 'Separate PENDING_RECALL_CONTROL family, not a new economic action. ACKNOWLEDGED iff source business is known. WAITING may have cumulative applied > 0 and continues QUERY_SAME_INTENT; terminal known states REVIEW_RECEIPT. UNKNOWN has no receipt/economics/blockers and queries except FAILED_BEFORE_SEND reviews its blocker. Physical transfer and economic cash change are false; no venue/projection confirmation is inferred. Runtime additionally checks chronology, exact source correlation, amount partitions and monotonicity. TEST_ONLY fixtures are not source qualification.';
+status.allOf.push({ if: { properties: { resource: { properties: { kind: { const: 'DEPLOYMENT' } } } } },
+  then: { properties: { recipient_account_id: json(contract.pendingSourceText) } },
+  else: { properties: { recipient_account_id: { type: 'null' } } } });
+status.properties.recipient_account_id.description = 'FE-063 (R-2c). Owning recipient account bound by the verified ORIGINAL intent and equal to the verified authorization recipient; non-null exactly when resource.kind is DEPLOYMENT, null for a PORTFOLIO recipient. Not a live source lookup, not browser-supplied after submission, never inferred from a label. Absent on pre-upgrade bodies, which are incomplete under this schema.';
 status.description += ' Required currency is the exact immutable original intent unit, published only after current authority and original identity/hash validation. Historical stored status bytes remain unchanged and may omit currency; they are not served directly. Corrupt/unverifiable original intent refuses rather than guessing a unit. Pre-upgrade HTTP bodies without currency are incomplete under this public schema.';
 schemas.PendingControlProblem = { type: 'object', additionalProperties: false,
   required: ['error', 'request_id'], properties: {
@@ -266,13 +270,16 @@ const fixture = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_quali
       latest_operation: null, latest_operation_availability: 'NOT_PUBLISHED',
       latest_operation_reason: 'SOURCE_OPERATION_NOT_PUBLISHED', source_event_id: 'TEST_ONLY:pm:event:2',
       versions: { ...versions, command: '15' } } } }),
+  // FE-063: DEPLOYMENT resource, so the served projection carries recipient_account_id.
+  deployment_cancelled: contract.pendingControlStatus.parse({ ...cancelled, resource: deploymentIntent.resource }),
 };
 const outputs = {
   'fixtures/execution-pending-control-currency.synthetic.valid.json': {
     lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_qualified: false,
     statuses: Object.fromEntries(Object.entries(fixture)
       .filter(([, value]) => value && typeof value === 'object' && value.schema_version === 'portal.execution.pending-recall-status.v1')
-      .map(([key, value]) => [key, contract.publishPendingControlStatus(baseIntent, value)])),
+      .map(([key, value]) => [key, contract.publishPendingControlStatus(
+        value.resource.kind === 'DEPLOYMENT' ? deploymentIntent : baseIntent, value)])),
   },
   'openapi/execution-pending-control.openapi.json': { openapi: '3.1.0',
     info: { title: 'Exact existing pending recall preview, submit and same-key status', version: '1.0.0' },

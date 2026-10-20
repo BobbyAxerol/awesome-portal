@@ -94,10 +94,17 @@ export const pendingControlStatus = z.object({ schema_version: z.literal("portal
 export type PendingControlStatus = z.infer<typeof pendingControlStatus>;
 
 /** Additive served projection; the durable/event grammar above is unchanged.
- * Never feed this DTO into persistence or source receipt comparison. */
-export const publicPendingControlStatus = pendingControlStatus.innerType().extend({ currency: pendingSourceText })
+ * Never feed this DTO into persistence or source receipt comparison.
+ * `recipient_account_id` is the owning recipient account bound by the verified
+ * ORIGINAL intent (equal to the verified authorization's recipient); null for a
+ * PORTFOLIO recipient. Never a live source lookup and never guessed from a label. */
+export const publicPendingControlStatus = pendingControlStatus.innerType().extend({ currency: pendingSourceText,
+  recipient_account_id: pendingSourceText.nullable() })
   .superRefine((value, context) => {
-    const { currency: _currency, ...stored } = value;
+    const { currency: _currency, recipient_account_id: account, ...stored } = value;
+    // PORTFOLIO resource <-> PORTFOLIO recipient (null); DEPLOYMENT <-> DEPLOYMENT_ACCOUNT (non-null).
+    if ((value.resource.kind === "DEPLOYMENT") !== (account !== null))
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "PENDING_RECIPIENT_INVALID", path: ["recipient_account_id"] });
     const result = pendingControlStatus.safeParse(stored);
     if (!result.success) for (const issue of result.error.issues) context.addIssue(issue);
   });
@@ -105,5 +112,7 @@ export type PublicPendingControlStatus = z.infer<typeof publicPendingControlStat
 /** Caller must already have validated original provenance via pendingRecord,
  * or the exact submitted intent + current mutation/COMMIT correlation. */
 export function publishPendingControlStatus(intent: PendingControlIntent, status: PendingControlStatus): PublicPendingControlStatus {
-  return publicPendingControlStatus.parse({ ...status, currency: intent.business_payload.currency });
+  const body = intent.business_payload;
+  return publicPendingControlStatus.parse({ ...status, currency: body.currency,
+    recipient_account_id: body.recipient_kind === "DEPLOYMENT_ACCOUNT" ? body.recipient_account_id : null });
 }

@@ -157,7 +157,9 @@ export interface components {
             updated_at_ms: number;
             /** @description Exact PM source text: runtime enforces at most 512 UTF-8 bytes, well-formed UTF-16 and Python-strip boundaries. JSON maxLength=512 is a necessary codepoint bound, NOT a UTF-8 byte guarantee. */
             currency: string & (string & unknown);
-        } & unknown;
+            /** @description FE-063 (R-2c). Owning recipient account bound by the verified ORIGINAL intent and equal to the verified authorization recipient; non-null exactly when resource.kind is DEPLOYMENT, null for a PORTFOLIO recipient. Not a live source lookup, not browser-supplied after submission, never inferred from a label. Absent on pre-upgrade bodies, which are incomplete under this schema. */
+            recipient_account_id: (string & (string & unknown)) | null;
+        } & (unknown & unknown);
         PendingControlBody: {
             /** @constant */
             schema_version: "pma.operator-control.v1";
