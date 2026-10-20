@@ -481,6 +481,13 @@ TRACKED = (
     "fixtures/execution-sandbox-certification.identity.valid.json",
     "fixtures/execution-canary-control-room.identity.valid.json",
     "fixtures/execution-live-full-operations.identity.valid.json",
+    # BE-P3, S3-U3 deployment chart / analytics
+    "tooling/generate-execution-financial-chart.mjs",
+    "schemas/execution-financial-chart.v1.schema.json",
+    "openapi/execution-financial-chart.openapi.json",
+    "generated/execution-financial-chart.d.ts",
+    "fixtures/execution-financial-chart.synthetic.valid.json",
+    "fixtures/execution-query-analytics.deployment.valid.json",
     # BE-P3, S3-U4 / FE-051 widened
     "fixtures/execution-paper-workbench.positions-by-side.valid.json",
     "fixtures/execution-paper-workbench.positions-by-side.partial.valid.json",
