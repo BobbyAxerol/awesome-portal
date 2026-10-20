@@ -6,6 +6,10 @@
  *   node dist/cli/execution-native-session.js issue|revoke --artifact <root-owned 0600 abs path>
  *     --sha256 <approved artifact sha256> --not-before-ms <N> --not-after-ms <N> [--dry-run]
  *
+ * `--dry-run` is OFFLINE: it runs right after the manifest target is read and BEFORE any Pool, schema read, AuthService or
+ * native composition. It validates the artifact fully (root-owned 0600, hash, shape, target pin, TTL, windows) and the
+ * token-path rules that need no database, then prints a secret-free verdict. It cannot connect, mutate or issue.
+ *
  * `issue` writes the session token ONLY to the root-owned 0600 file named in the
  * artifact (created exclusively before the session exists) and prints a secret-free
  * receipt: session id, expiry, a hash of the path. The token is never printed.
@@ -23,7 +27,7 @@ import { assertRegisteredResearchCurrentHumanSchema } from "../execution-v2/curr
 import { AuthService } from "../auth/auth.service";
 import { Argon2CredentialService } from "../auth/argon";
 import { parseOwnerArtifactArgs } from "../execution-v2/private-root-file";
-import { AcceptanceSessionError, nodeAcceptanceTokenFiles, privateAcceptanceSession } from "../execution-v2/research-acceptance-session";
+import { AcceptanceSessionError, nodeAcceptanceTokenFiles, privateAcceptanceSession, verifyAcceptanceArtifactOffline } from "../execution-v2/research-acceptance-session";
 
 async function main() {
   const [operation, ...rest] = process.argv.slice(2);
@@ -34,7 +38,16 @@ async function main() {
   const reference = nativeCoreRuntimeReference();
   if (!reference) throw new Error("NATIVE_RESEARCH_SESSION_SCOPE_REQUIRED");
   const workspace = config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!;
+  // Manifest only (hash-pinned file read, no Core DB query, no composition): the target pin the artifact must equal.
   const native = await prepareNativeCoreRuntime(reference), target = native.researchReviewTarget(workspace);
+  const pin = { artifact_path: args.artifact, approved_sha256: args.sha256, target: structuredClone(target),
+    not_before_ms: args.notBeforeMs, not_after_ms: args.notAfterMs };
+  if (args.dryRun) {
+    // OFFLINE, before any Pool, schema read, AuthService or native composition: nothing here can connect, mutate or issue.
+    await verifyAcceptanceArtifactOffline(operation, pin, nodeAcceptanceTokenFiles);
+    process.stdout.write(JSON.stringify({ schema_version: "portal.native-research-acceptance-session.v1", operation, dry_run: true, verified: true }) + "\n");
+    return;
+  }
   const pool = buildPool(config.DATABASE_URL, native.poolProfile);
   try {
     await assertRegisteredResearchCurrentHumanSchema(pool, target);
@@ -42,14 +55,7 @@ async function main() {
     if (!deps.currentHumanMutations) throw new Error("NATIVE_RESEARCH_SESSION_COMPOSITION_REQUIRED");
     const auth = new AuthService(pool, config, new Argon2CredentialService({ memoryKib: config.ARGON2_MEMORY_KIB,
       iterations: config.ARGON2_ITERATIONS, parallelism: config.ARGON2_PARALLELISM }), deps.currentHumanMutations);
-    const session = privateAcceptanceSession({ auth, pool, mutations: deps.currentHumanMutations, files: nodeAcceptanceTokenFiles },
-      { artifact_path: args.artifact, approved_sha256: args.sha256, target: structuredClone(target),
-        not_before_ms: args.notBeforeMs, not_after_ms: args.notAfterMs });
-    if (args.dryRun) {
-      await (operation === "issue" ? session.verifyIssue() : session.verifyRevoke());
-      process.stdout.write(JSON.stringify({ schema_version: "portal.native-research-acceptance-session.v1", operation, dry_run: true, verified: true }) + "\n");
-      return;
-    }
+    const session = privateAcceptanceSession({ auth, pool, mutations: deps.currentHumanMutations, files: nodeAcceptanceTokenFiles }, pin);
     const receipt = operation === "issue" ? await session.issue() : await session.revoke();
     process.stdout.write(JSON.stringify({ schema_version: "portal.native-research-acceptance-session.v1", operation, receipt }) + "\n");
   } finally { await pool.end(); }

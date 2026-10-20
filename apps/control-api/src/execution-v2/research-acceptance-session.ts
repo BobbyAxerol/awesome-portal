@@ -128,6 +128,9 @@ export interface AcceptanceTokenFiles {
    * is there; "RETAINED_NOT_BOUND_TO_SESSION" (file untouched) when the file is anything else (another session's token,
    * replaced, unreadable as a token file, too large). Throws ACCEPTANCE_TOKEN_FILE_REFUSED for a non-root / non-regular file. */
   remove(path: string, binding: AcceptanceTokenBinding): Promise<AcceptanceTokenRemoval>;
+  /** Offline, read-only, mutation-free check of the path rules (used by --dry-run): `issue` = root-owned non-writable
+   * parent and nothing at the path; `revoke` = nothing, or a root-owned regular non-symlink file. */
+  preflight(path: string, operation: "issue" | "revoke"): Promise<void>;
 }
 const fileRefused = (): never => { throw new AcceptanceSessionError("ACCEPTANCE_TOKEN_FILE_REFUSED", 503); };
 /** A token file is one small JSON document; anything bigger is not ours. */
@@ -229,6 +232,21 @@ export const nodeAcceptanceTokenFiles: AcceptanceTokenFiles = {
     } finally { await handle.close().catch(() => undefined); }
     await unlink(path);
     return "REMOVED";
+  },
+  async preflight(path, operation) {
+    try {
+      if (operation === "issue") {
+        if (!parentAcceptable(await lstat(dirname(path)))) return fileRefused();
+        try { await lstat(path); } catch (error) { if (missing(error)) return; throw error; }
+        return fileRefused();
+      }
+      let stat;
+      try { stat = await lstat(path); } catch (error) { if (missing(error)) return; throw error; }
+      if (!stat.isFile() || stat.isSymbolicLink() || stat.uid !== 0) return fileRefused();
+    } catch (error) {
+      if (error instanceof AcceptanceSessionError) throw error;
+      return fileRefused();
+    }
   },
 };
 
@@ -382,4 +400,16 @@ export function privateAcceptanceSession(deps: AcceptanceDependencies, pin: Acce
     issue: async () => issueAcceptanceSession(deps, await readPinnedAcceptanceIssue(detached, clock())),
     revoke: async () => revokeAcceptanceSession(deps, await readPinnedAcceptanceRevoke(detached, clock())),
   });
+}
+
+/** `--dry-run`: OFFLINE verification, no database, no pool, no AuthService, no coordinator, no write. Reads and fully
+ * validates the pinned artifact (root-owned 0600, hash, compact JSON, schema, target against the manifest pin, user, TTL,
+ * finite window) and applies the token-path rules that need no database (issue: root-owned non-writable parent and nothing
+ * at the path; revoke: nothing or a root-owned regular file). Returns nothing secret. */
+export async function verifyAcceptanceArtifactOffline(operation: "issue" | "revoke", pin: AcceptanceArtifactPin,
+  files: Pick<AcceptanceTokenFiles, "preflight">, clock: () => number = Date.now): Promise<void> {
+  const verified = operation === "issue" ? await readPinnedAcceptanceIssue(pin, clock()) : await readPinnedAcceptanceRevoke(pin, clock());
+  const document = operation === "issue" ? issues.get(verified)?.document : revokes.get(verified)?.document;
+  if (!document) throw new AcceptanceSessionError("ACCEPTANCE_ARTIFACT_REFUSED", 503);
+  await files.preflight(document.token_path, operation);
 }
