@@ -8,9 +8,7 @@
  * qualified native selected consumer is mounted. Domain policy installation
  * alone does not commission stream.subscribe or legacy SCOPED_V2 consumers:
  * a STREAM grant exists only if the reviewed artifact lists it explicitly. */
-import { constants } from "node:fs";
-import { open, lstat } from "node:fs/promises";
-import { createHash } from "node:crypto";
+import { readRootOwnedPinnedFile, parseCompactJson } from "./private-root-file";
 import { z } from "zod";
 import type { Pool } from "pg";
 import { accessDigest } from "./access-policy";
@@ -32,6 +30,39 @@ const document=z.object({schema_version:z.literal("portal.private-owner-manager-
  * installer still reads the artifact exclusively through readPinnedOwnerArtifact. */
 export const privateOwnerCommissioningDocument=document;
 
+/** Hard product ceiling for one domain grant under Plan B (Bobby, 2026-10-20). */
+export const PLAN_B_MAXIMUM_GRANT_MS=2*3_600_000;
+/** Plan B pin: READ and STREAM are installed TOGETHER, each finite, at most
+ * `maximum_grant_ms` (never more than two hours) and never beyond the renewed
+ * source trust end. Independent deployment pin (hash-pinned manifest), NOT read
+ * back from the artifact. Absent = the pre-Plan-B artifact checks only. */
+export const planBGrantWindow=z.object({plan:z.literal("READ_AND_STREAM"),
+  maximum_grant_ms:z.number().int().positive().max(PLAN_B_MAXIMUM_GRANT_MS),
+  trust_not_after_ms:z.number().int().positive().safe()}).strict();
+export type PlanBGrantWindow=z.infer<typeof planBGrantWindow>;
+export type PlanBGrantFinding="PLAN_B_GRANT_SET_INVALID"|"PLAN_B_GRANT_ID_NOT_DISTINCT"|"PLAN_B_GRANTS_NOT_SAME_SCOPE"|
+  "GRANT_EXCEEDS_PLAN_B_WINDOW"|"GRANT_OUTLIVES_TRUST"|"GRANT_ALREADY_EXPIRED";
+/** Pure. Exactly one ALLOW business.read_all and one ALLOW stream.subscribe for
+ * the SAME subject/environment/domain/field seal reference, different grant ids,
+ * each with its OWN finite interval. Returns stable codes; never throws. */
+export function planBGrantFindings(grants:readonly z.infer<typeof managerDomainGrant>[],
+  window:PlanBGrantWindow,nowMs:number):{code:PlanBGrantFinding;index:number|null}[]{
+  const out:{code:PlanBGrantFinding;index:number|null}[]=[];
+  const read=grants.filter(g=>g.action==="business.read_all"&&g.effect==="ALLOW"),
+    stream=grants.filter(g=>g.action==="stream.subscribe"&&g.effect==="ALLOW");
+  if(grants.length!==2||read.length!==1||stream.length!==1){out.push({code:"PLAN_B_GRANT_SET_INVALID",index:null});return out;}
+  const [r,s]=[read[0]!,stream[0]!];
+  if(r.grant_id===s.grant_id)out.push({code:"PLAN_B_GRANT_ID_NOT_DISTINCT",index:null});
+  if(r.subject_user_id!==s.subject_user_id||r.environment!==s.environment||accessDigest(r.domain)!==accessDigest(s.domain)||
+    r.field_policy_ref!==s.field_policy_ref||r.workspace_id!==s.workspace_id)out.push({code:"PLAN_B_GRANTS_NOT_SAME_SCOPE",index:null});
+  grants.forEach((g,index)=>{
+    if(g.valid_until_ms-g.valid_from_ms>window.maximum_grant_ms)out.push({code:"GRANT_EXCEEDS_PLAN_B_WINDOW",index});
+    if(g.valid_until_ms>window.trust_not_after_ms)out.push({code:"GRANT_OUTLIVES_TRUST",index});
+    if(g.valid_until_ms<=nowMs)out.push({code:"GRANT_ALREADY_EXPIRED",index});
+  });
+  return out;
+}
+
 export interface PrivateOwnerCommissioningPin {
   /** Root-owned 0600 regular file, no symlink. Absolute private path only. */
   artifact_path:string;
@@ -41,43 +72,31 @@ export interface PrivateOwnerCommissioningPin {
   /** Independent configured intake validity, NOT a short product-grant TTL. */
   intake_not_before_ms:number;
   intake_not_after_ms:number;
+  /** Plan B caps (see planBGrantWindow). When present the artifact MUST be the
+   * READ+STREAM pair inside them or the intake is refused. */
+  grant_window?:PlanBGrantWindow;
 }
 
 /** Exported only for focused private-file tests / maintenance composition. */
 export async function readPinnedOwnerArtifact(pin:PrivateOwnerCommissioningPin,nowMs:number):Promise<ReviewedPolicyArtifact>{
   try{
     hash.parse(pin.approved_sha256);target.parse(pin.target);
+    if(pin.grant_window!==undefined)planBGrantWindow.parse(pin.grant_window);
     if(!pin.artifact_path.startsWith("/")||!Number.isSafeInteger(nowMs)||
       !Number.isSafeInteger(pin.intake_not_before_ms)||!Number.isSafeInteger(pin.intake_not_after_ms)||
       pin.intake_not_before_ms>=pin.intake_not_after_ms||nowMs<pin.intake_not_before_ms||nowMs>=pin.intake_not_after_ms)
       throw new Error("invalid");
-    const before=await lstat(pin.artifact_path);
-    if(!before.isFile()||before.isSymbolicLink()||before.uid!==0||(before.mode&0o7777)!==0o600||
-      before.size<1||before.size>131072)throw new Error("invalid");
-    const file=await open(pin.artifact_path,constants.O_RDONLY|constants.O_NOFOLLOW);
-    let raw:Buffer;
-    try{
-      const actual=await file.stat();
-      if(!actual.isFile()||actual.uid!==0||(actual.mode&0o7777)!==0o600||
-        actual.dev!==before.dev||actual.ino!==before.ino||actual.size!==before.size)throw new Error("invalid");
-      const buffer=Buffer.alloc(131073);let length=0;
-      while(length<buffer.length){
-        const part=await file.read(buffer,length,buffer.length-length,null);
-        if(part.bytesRead===0)break;
-        length+=part.bytesRead;
-      }
-      raw=buffer.subarray(0,length);
-      if(raw.length!==actual.size||raw.length>131072)throw new Error("invalid");
-    }finally{await file.close();}
-    if(createHash("sha256").update(raw).digest("hex")!==pin.approved_sha256)throw new Error("invalid");
-    const parsed:unknown=JSON.parse(raw.toString("utf8"));
-    // One reviewed compact representation: duplicate keys, whitespace variants,
-    // invalid UTF-8 replacement and trailing bytes cannot normalize silently.
-    if(Buffer.from(JSON.stringify(parsed),"utf8").compare(raw)!==0)throw new Error("invalid");
+    const raw=await readRootOwnedPinnedFile(pin.artifact_path,pin.approved_sha256);
+    // One reviewed compact representation (shared private-file boundary).
+    const parsed=parseCompactJson(raw);
     const value=document.parse(parsed);
     if(accessDigest(value.target)!==accessDigest(pin.target)||value.policy.qualification!=="OWNER_VERIFIED"||
       value.policy.state!=="REVIEWED"||value.policy.workspace_id!==pin.target.workspace_id||
       value.policy.protected_owner_user_id!==pin.target.protected_owner_user_id)throw new Error("invalid");
+    // An already-expired grant is a validator finding, not an installer refusal:
+    // the exact immutable replay of a lost ACK must stay possible after expiry.
+    if(pin.grant_window&&planBGrantFindings(value.manager_domain_grants,pin.grant_window,nowMs)
+      .some(f=>f.code!=="GRANT_ALREADY_EXPIRED"))throw new Error("invalid");
     return {policy:value.policy,root_grants:[],manager_domain_grants:value.manager_domain_grants,
       manager_commissioning_target:value.target,provenance_ref:value.provenance_ref};
   }catch{throw new AccessPolicyError("RECEIPT_NOT_QUALIFIED",503);}
@@ -92,11 +111,14 @@ export function privateOwnerCommissioning(base:AccessTrustProvider,pool:Pool,pin
   // What the verified artifact actually carries, so the ACK cannot describe a
   // READ-only install when the reviewed artifact also records a STREAM grant.
   let streamAllowGrants=0;
+  let grantDetail:{grant_id:string;action:string;valid_from_ms:number;valid_until_ms:number}[]=[];
   const trust:AccessTrustProvider={
     verifyPolicy:async input=>{
       if(input!==request)return base.verifyPolicy(input);
       const artifact=await readPinnedOwnerArtifact(detached,clock());
       streamAllowGrants=artifact.manager_domain_grants?.filter(g=>g.action==="stream.subscribe"&&g.effect==="ALLOW").length??0;
+      grantDetail=(artifact.manager_domain_grants??[]).map(g=>({grant_id:g.grant_id,action:g.action,
+        valid_from_ms:g.valid_from_ms,valid_until_ms:g.valid_until_ms}));
       return artifact;
     },
     verifyReceipt:base.verifyReceipt.bind(base),
@@ -116,7 +138,11 @@ export function privateOwnerCommissioning(base:AccessTrustProvider,pool:Pool,pin
       return Object.freeze({state:"REVIEWED_MANAGER_POLICY_ACKNOWLEDGED",
         authority_scope:stream?"DOMAIN_READ_AND_STREAM_GRANT":"DOMAIN_READ_ONLY",
         artifact_sha256:detached.approved_sha256,workspace_id:detached.target.workspace_id,
-        stream_commissioned:stream,command_commissioned:false});
+        stream_commissioned:stream,command_commissioned:false,
+        // Plan B only: the two separately-expiring grants, ids and windows, so the
+        // ACK itself shows READ and STREAM as distinct finite facts. No hash, key
+        // or approval text. Pre-Plan-B ACK bytes are unchanged.
+        ...(detached.grant_window?{plan:detached.grant_window.plan,grants:grantDetail.map(g=>({...g}))}:{})});
     }});
 }
 

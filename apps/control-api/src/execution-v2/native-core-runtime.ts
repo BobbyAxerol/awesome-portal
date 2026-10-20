@@ -15,6 +15,7 @@ import { SelectedNativeBusinessReadSource } from "./native-business-read-selecte
 import { composeNativeCore, type NativeCoreSelection, type NativeCoreCompositionInput } from "./native-core-composition";
 import { unqualifiedAccessTrust } from "./access-trust";
 import { nativeCoreSchemaTarget, type NativeCoreSchemaTarget } from "./current-human-schema";
+import { planBGrantWindow, type PlanBGrantWindow } from "./core-owner-commissioning";
 
 export class NativeCoreRuntimeError extends Error {
   readonly code="CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID";
@@ -52,7 +53,11 @@ const target=z.object({database_name:text,database_system_identifier:z.string().
   role_name:text,protected_owner_user_id:text,workspace_id:text,
   principal_workspace_pins:z.array(z.object({user_id:text,workspace_id:text}).strict()).min(1).max(65)}).strict();
 const ownerIntake=z.object({artifact_path:path,approved_sha256:hash,target,
-  intake_not_before_ms:z.number().int().nonnegative().safe(),intake_not_after_ms:positive}).strict()
+  intake_not_before_ms:z.number().int().nonnegative().safe(),intake_not_after_ms:positive,
+  /** Plan B (READ+STREAM together, finite, <=2h, within trust). Optional so the
+   * serving path and pre-Plan-B manifests are unchanged; the Research offline
+   * installer REQUIRES it (researchGrantWindow). */
+  grant_window:planBGrantWindow.optional()}).strict()
   .refine(p=>p.intake_not_before_ms<p.intake_not_after_ms);
 const realtimeLimits=z.object({maximumClients:positive.max(4096),maximumEntriesPerClient:positive.max(4096),
   maximumFrameBytes:positive.max(1048576),maximumClientBytes:positive,
@@ -176,6 +181,9 @@ export interface PreparedNativeCoreRuntime {
   /** Closed approval ceiling for the Research-only operator path. No I/O or
    * grant creation; target identity is still checked on the actual Core pool. */
   researchReviewTarget(workspaceId:string):Readonly<z.infer<typeof target>>;
+  /** Plan B caps pinned for the workspace's single owner intake. Throws (fail
+   * closed) when the manifest does not carry them. Used by the offline installer. */
+  researchGrantWindow(workspaceId:string):Readonly<PlanBGrantWindow>;
   compose(pool:Pool):Promise<ControlApiDependencies>;
 }
 export async function prepareNativeCoreRuntime(input:NativeCoreRuntimeReference):Promise<PreparedNativeCoreRuntime>{
@@ -195,7 +203,12 @@ export async function prepareNativeCoreRuntime(input:NativeCoreRuntimeReference)
     const compositionInput:NativeCoreCompositionInput={...parsed.composition,selections,retained_recovery:retained};
     const profile=Object.freeze({...parsed.pool_profile});
     return Object.freeze({poolProfile:profile,researchReviewTarget:(workspaceId:string)=>
-      nativeCoreResearchReviewTarget(parsed,workspaceId),compose:async(pool:Pool)=>{
+      nativeCoreResearchReviewTarget(parsed,workspaceId),
+      researchGrantWindow:(workspaceId:string)=>{
+        nativeCoreResearchReviewTarget(parsed,workspaceId);
+        const window=parsed.composition.owner_intakes[0]!.grant_window;
+        return window?Object.freeze({...window}):fail();
+      },compose:async(pool:Pool)=>{
       try{
         const composed=await composeNativeCore(pool,unqualifiedAccessTrust,compositionInput);
         // Constructors above validate the SAME already-bounded pool. Target

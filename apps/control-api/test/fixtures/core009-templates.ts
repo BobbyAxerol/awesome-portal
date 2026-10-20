@@ -23,10 +23,10 @@ const ints: Record<string, number> = {
   SOURCE_DEADLINE_MS: 1000, SOURCE_REQUEST_BYTES: 32768, SOURCE_RESPONSE_BYTES: 32768, SOURCE_MAX_INFLIGHT: 1,
   LEASE_TTL_MS: 10000, LEASE_MAX_UNRESOLVED: 4, LEASE_MAX_RETAINED: 32, TERMINAL_TTL_SECONDS: 30,
   EGRESS_MAX_RESPONSE_BYTES: 1048576, EGRESS_MAX_INFLIGHT: 1, EGRESS_SEND_TIMEOUT_MS: 1000, EGRESS_QUIESCE_TIMEOUT_MS: 1000,
-  MUTATION_MAX_INTENTS: 128, MUTATION_MAX_RECOVERIES_PER_REQUEST: 8,
+  MUTATION_MAX_INTENTS: 128, MUTATION_MAX_RECOVERIES_PER_REQUEST: 8, PLAN_B_MAXIMUM_GRANT_MS: 2 * 3_600_000,
 };
 const ms: Record<string, number> = {
-  INSTALLATION_EXPIRES_AT_MS: NOW + 90 * MINUTE, INSTALLATION_SCOPE_VALID_UNTIL_MS: NOW + 90 * MINUTE,
+  TRUST_NOT_AFTER_MS: TRUST_EXPIRES, INSTALLATION_EXPIRES_AT_MS: NOW + 90 * MINUTE, INSTALLATION_SCOPE_VALID_UNTIL_MS: NOW + 90 * MINUTE,
   INTAKE_NOT_BEFORE_MS: NOW - MINUTE, INTAKE_NOT_AFTER_MS: NOW + 90 * MINUTE,
   SEAL_VALID_FROM_MS: NOW - HOUR, SEAL_VALID_UNTIL_MS: NOW + 6 * HOUR,
   READ_GRANT_VALID_FROM_MS: NOW - MINUTE, READ_GRANT_VALID_UNTIL_MS: NOW + 90 * MINUTE,
@@ -68,6 +68,9 @@ export function prepared(ownerTemplate = OWNER_READ_TEMPLATE, edit: (runtime: an
   runtimeOverrides: Overrides = {}): Prepared {
   const ownerValue = JSON.parse(fill(readTemplate(ownerTemplate)));
   const runtimeValue = JSON.parse(fill(readTemplate(RUNTIME_TEMPLATE), runtimeOverrides));
+  // The runtime template carries the Plan B grant_window pin. The retained READ-only
+  // (superseded Plan A) owner template is paired with a manifest without it.
+  if (ownerTemplate === OWNER_READ_TEMPLATE) for (const intake of runtimeValue.composition.owner_intakes) delete intake.grant_window;
   edit(runtimeValue, ownerValue);
   const owner = Buffer.from(JSON.stringify(ownerValue), "utf8");
   if (!("OWNER_ARTIFACT_SHA256" in runtimeOverrides)) runtimeValue.composition.owner_intakes[0].approved_sha256 = sha256(owner);
