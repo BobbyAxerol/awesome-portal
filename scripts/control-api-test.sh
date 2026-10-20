@@ -151,6 +151,8 @@ fi
   -v "${DEPS_DIR}:/cell" \
   -v "${ROOT_DIR}/packages/contracts:/contracts:ro" \
   -e PORTAL_CONTRACTS_DIR=/contracts \
+  -v "${ROOT_DIR}/deploy/research-preview/native-core-templates:/core009-templates:ro" \
+  -e PORTAL_CORE009_TEMPLATES_DIR=/core009-templates \
   -v "${MAXIMUM_DATA_PACK}:/services/portal-execution-edge-rs/contracts/maximum-data-return-v1:ro" \
   -v "${EDS08_SOURCE_CONTINUITY_PACK}:/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1:ro" \
   -v "${EDS11R_MANAGER_CENSUS_PACK}:/services/portal-execution-edge-rs/contracts/manager-surface-census-v1:ro" \

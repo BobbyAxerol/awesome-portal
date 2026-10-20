@@ -13,7 +13,7 @@ import { LocalQueryAnalyticsService } from "../src/execution/local-query-analyti
 import { testConfig } from "./harness";
 import { FIELDS, productReadFixture } from "./elp2-product-read.fixture";
 
-const contracts = resolve(__dirname, "../../../packages/contracts");
+const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const load = (path: string) => JSON.parse(readFileSync(resolve(contracts, path), "utf8"));
 const ajv = new Ajv2020({ strict: true, allErrors: true });
 addFormats(ajv);

@@ -7,6 +7,7 @@ import { FastifyAdapter, type NestFastifyApplication } from "@nestjs/platform-fa
 import cookiePlugin from "@fastify/cookie";
 import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { toPublicCommandStatus } from "../src/execution-v2/command.contract";
 import { AdminService } from "../src/admin/admin.service";
 import { AuthService } from "../src/auth/auth.service";
 import { SESSION_COOKIE } from "../src/auth/cookies";
@@ -183,7 +184,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 exact trusted-command p
       const body = publicCommandStatus.parse(response.json());
       // Currency is a served projection of the verified original intent. The
       // immutable historical status does not acquire a synthetic new field.
-      expect(body).toEqual({ ...f.record.status, currency: f.record.intent.business_payload.currency });
+      expect(body).toEqual(toPublicCommandStatus(f.record.status, f.record.intent.business_payload.currency));
       expect(f.record.status).not.toHaveProperty("currency");
       expect(body).toMatchObject({ schema_version: "portal.execution.command-status.v1", resource: f.resource,
         environment: "paper", authority: "TEST_ONLY", delivery: "PREPARED", business: { state: "UNKNOWN" } });

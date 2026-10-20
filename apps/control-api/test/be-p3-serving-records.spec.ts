@@ -17,7 +17,7 @@ import { ExecutionSubjectActivityService } from "../src/execution/subject-activi
 import { LocalQueryAnalyticsService } from "../src/execution/local-query-analytics.service";
 import { testConfig } from "./harness";
 
-const contracts = resolve(__dirname, "../../../packages/contracts");
+const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const WRITE = process.env.BE_P3_WRITE_FIXTURES === "1";
 const ajv = new Ajv2020({ strict: true, allErrors: true });
 addFormats(ajv);

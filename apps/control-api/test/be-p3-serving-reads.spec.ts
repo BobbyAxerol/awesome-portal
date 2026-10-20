@@ -21,7 +21,7 @@ import {
 } from "../src/execution/market-candles.service";
 import { testConfig } from "./harness";
 
-const contracts = resolve(__dirname, "../../../packages/contracts");
+const contracts = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const WRITE = process.env.BE_P3_WRITE_FIXTURES === "1";
 const ajv = new Ajv2020({ strict: true, allErrors: true });
 addFormats(ajv);
