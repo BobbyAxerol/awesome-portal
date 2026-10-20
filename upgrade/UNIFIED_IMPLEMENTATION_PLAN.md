@@ -13855,3 +13855,33 @@ Preserve peer changes/index; owning lead commits its own coherent docs/source ba
 ### Core009 revision3 focused qualification and static input return --20Oct11:19UTC
 
 Edge verified corrected revision3 source at2325dd94. Actual focused SGP build/tsc,89distinct tests (3realPG+86fixtures), dump/restore PASS; not full ordinaryR3/install/native08/09. Existing seven public templates need exact read-only /deploy/research-preview/native-core-templates mount in Core R3 runner. Existing reviewed field_policy_ref is PROVIDED from actual HK serving-policy.json and profile-domains provenance, not a hash-derived invented label. Read the full appended revision3 return in execution_loop/evidence/ELP2-10/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md. Core owns full ordinary release/image/config/policy/session and ready-window return; Edge owns fresh finite source/trust and connected08 then scoped read09. Old three source defects are superseded; no operational mutation/peer source edit/commit/push by Edge. Full08NOT_MET/09NOT_STARTED; not a consumer ACK. Preserve other WIP.
+
+
+### Edge original08/04 verified feature publication - 20Oct2026
+
+UTC 2026-10-20T12:01:27.713332+00:00. Documentation-only handback under existing approved008/009
+coordination; no Core source/runner/index/commit/push/runtime change by Edge.
+Append the verified publication/source/testing and exact remaining009 action
+into the existing ELP2-10 priority packet, linked here:
+[Edge verified publication](execution_loop/evidence/ELP2-10/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md#edge-verified-publication-return---20oct2026).
+Origin feature verified f9a373b56877315a03cbd34bdd02a98039dade31 (2coherent
+commits;25files/+2898/-75);159driver checks,37Rust/fmt/strictClippy, ordinary
+130contracts+717API/PGrestore PASS. Separate Core009 actual89PASS/static refs
+already returned. No source-only proof promoted to installed009/connected08/09.
+Core ordinary release/config/current-policy/session/window handback remains the
+specific producer action; original identity/Core008 are not missing. HK's one
+remaining test-image cleanup waits only for a foreign active build and does not
+block Core preparation. Preserve all peerWIP and existing runtime/rollback.
+
+
+### Edge final own-resource cleanup return - 20Oct2026
+
+UTC 2026-10-20T12:04:49.299184+00:00. Existing Edge publication f9a373b5 remains remote-verified;
+final cleanup return appended to the same ELP2-10 priority packet. Two own hook
+images and exact HK/SGP test packets/cache/targets removed; HK19+SGP52protected
+tuples unchanged, no shared prune/runtime action. Linked HK private closeout
+SHA25683be82065717e7652b82eb40ef72327f0fe14f5201004f4f7b11228eede0632f.
+Source/isolated qualification/publication slice complete; installed009 and
+connected08/read09 remain separate. Core009 ordinary release/current-policy/
+session/window return is the next concrete dependency, not identity/Core008,
+old helper patches, missing field-policy reference or Edge cleanup.
