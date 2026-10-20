@@ -71,7 +71,7 @@ import {
   type PositionRow,
   type ReconRow,
 } from "./model";
-import { Np } from "./np";
+import { Np, WhyMark } from "./np";
 import { alphaViewOf } from "./view";
 import { ReplayView } from "./replay/ReplayView";
 import {
@@ -249,11 +249,11 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
           {view !== null && view.present ? (
             <p className="exec-alp2-meta">
               {view.name === null ? (
-                <span title={view.nameReason}>Name <Np id="FE-066" /></span>
+                <span>Name <Np id="FE-066" /><WhyMark name="Name, reason" reason={view.nameReason} /></span>
               ) : null}
-              {view.version === null ? <span title={view.versionReason}>Version <Np id="FE-066" /></span> : null}
+              {view.version === null ? <span>Version <Np id="FE-066" /><WhyMark name="Version, reason" reason={view.versionReason} /></span> : null}
               {view.owner.kind === "not-published"
-                ? <span title={view.owner.reason}>Owner <Np id={view.owner.id} /></span>
+                ? <span>Owner <Np id={view.owner.id} /><WhyMark name="Owner, reason" reason={view.owner.reason} /></span>
                 : <span>Owner <b>{view.owner.kind === "value" ? view.owner.value : "Not available"}</b></span>}
               <span>Run <Np id="FE-029" /></span>
               <span>Evidence <Np id="FE-029" /></span>
@@ -290,14 +290,14 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
             <dl className="exec-blk-kpis exec-alp2-kpis" aria-label="Current facts">
               <Fig label="Net PnL, current" basis="All stages, current facts">
                 {view?.money.published === false
-                  ? <span title={view.money.reason}><Np id="FE-005" /></span>
+                  ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
                   : view?.money.published && view.money.netPnl.length > 0
                     ? view.money.netPnl.map((p) => <span key={p.currency} className="exec-alp2-fig"><Dec value={p.value} currency={p.currency} signed /></span>)
                     : <Na />}
               </Fig>
               <Fig label="Exposure, current" basis="All stages, current facts">
                 {view?.money.published === false
-                  ? <span title={view.money.reason}><Np id="FE-005" /></span>
+                  ? <span><Np id="FE-005" /><WhyMark name="Money, reason" reason={view.money.reason} /></span>
                   : view?.money.published && view.money.exposure.length > 0
                     ? view.money.exposure.map((e) => <span key={e.currency} className="exec-alp2-fig"><Dec value={e.value} currency={e.currency} /></span>)
                     : <Na />}

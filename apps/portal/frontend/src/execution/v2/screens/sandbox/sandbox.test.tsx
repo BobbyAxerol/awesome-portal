@@ -168,7 +168,8 @@ describe("the V2 following-parent body", () => {
     expect(screen.queryByRole("group", { name: "Certification facts" })).toBeNull();
     expect(document.querySelector(".exec-sbx-body .exec-blk-num")).toBeNull();
     const banner = screen.getByText(/Stored certification and step evaluations only/).closest(".exec-blk-banner")!;
-    expect(banner.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(banner.hasAttribute("title")).toBe(false);
+    expect(whyText(banner)).toContain("Not published (FE-072)");
   });
 
   it("the Steps tab shows the seven stored evaluations in order: Pass, Fail, Stale, Unavailable and three Not recorded", async () => {

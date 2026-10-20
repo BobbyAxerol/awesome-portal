@@ -37,7 +37,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
 import { Flag } from "../../Flag";
-import { CompactGaps, PanelGate, StateBoundary, UrlTabs } from "../../blocks";
+import { CompactGaps, GapWhy, PanelGate, StateBoundary, UrlTabs } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { V2_CAPABILITY, holds } from "../../shell/roleNav";
 import { resolveTab } from "../../tabAliases";
@@ -132,8 +132,9 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
         {model.page.partial ? <div className="exec-blk-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /> {model.page.partial}</div> : null}
         {model.page.stale ? <div className="exec-blk-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /> {model.page.stale}</div> : null}
         {model.page.nq ? (
-          <div className="exec-blk-banner" role="status" title={model.page.nq.reasons.length > 0 ? model.page.nq.reasons.join(" · ") : undefined}>
+          <div className="exec-blk-banner" role="status">
             <span>Source not qualified.</span>
+            {model.page.nq.reasons.length > 0 ? <GapWhy name="Why the source is not qualified" rows={[model.page.nq.reasons.join(" · ")]} /> : null}
           </div>
         ) : null}
         <LifecyclePanel gate={model.gate} accessHref={accessHref} />

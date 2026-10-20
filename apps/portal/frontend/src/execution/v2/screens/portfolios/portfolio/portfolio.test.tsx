@@ -15,6 +15,7 @@ import { seriesBodyFor, type SeriesVariant } from "../../series/seriesDouble.tes
 import PortfolioScreen, { PORTFOLIO_SCREEN_KEY } from "./index";
 import { incidentRoute } from "./People";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES } from "../routes";
+import { whyText } from "../../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -121,7 +122,7 @@ describe("Overview", () => {
     expect(screen.getAllByTestId("not-available-line")).toHaveLength(1);
     const line = screen.getByTestId("not-available-line");
     expect(line.textContent).toContain("Not available: Net PnL, Return, Drawdown, Concentration, Capital statements, Funding source, Stage, decision, incident and recall lanes, Score");
-    const title = line.getAttribute("title") ?? "";
+    const title = whyText(line);
     for (const id of ["FE-005", "FE-006", "FE-013", "FE-017", "FE-032", "FE-011"]) expect(title, id).toContain(`Not published (${id})`);
   });
 
@@ -179,8 +180,8 @@ describe("Overview", () => {
     expect(screen.queryByRole("table", { name: "Capital statements" })).toBeNull();
     const line = screen.getByTestId("not-available-line");
     expect(line.textContent).toContain("Capital statements");
-    expect(line.getAttribute("title")).toContain("Capital statements: Not published (FE-017)");
-    expect(line.getAttribute("title")).toContain("recalling");
+    expect(whyText(line)).toContain("Capital statements: Not published (FE-017)");
+    expect(whyText(line)).toContain("recalling");
     await goto("Allocations");
     const live = screen.getByRole("region", { name: "Capital in Live" });
     expect(within(live).getByText("460,000.00")).toBeTruthy();

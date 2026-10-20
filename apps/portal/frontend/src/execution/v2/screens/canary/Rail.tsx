@@ -12,7 +12,7 @@
  */
 import { Link, useSearchParams } from "react-router-dom";
 
-import { BlockerList, GapLine, NotPublished, SectionPanel, type GapItem } from "../../blocks";
+import { BlockerList, GapLine, NaWhy, NotPublished, SectionPanel, type GapItem } from "../../blocks";
 import { DecisionGroup } from "../stage/DecisionGroup";
 import { Flag } from "../../Flag";
 import { safeInternalHref } from "../../safeHref";
@@ -60,7 +60,7 @@ export function BeforeScaleUp({ view }: { view: CanaryView }) {
       level={2}
       title="Before scale-up"
       items={items}
-      emptyText={<span title="No reasons were published">Not available</span>}
+      emptyText={<NaWhy reason="No reasons were published" />}
       provenance={
         <div className="exec-cny-prov">
           <p>

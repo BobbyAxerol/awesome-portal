@@ -12,6 +12,7 @@ import { ACCESS_DOUBLE_WORKSPACES, answerAccessEffective } from "../../../../../
 import { V2_CAPABILITY, V2_ROLE_PRESETS } from "../../shell/roleNav";
 import AccessSelfView, { ACCESS_PATH, type AccessSelfViewProps } from "./index";
 import { ADMIN_CAPABILITY, ROW_CAP } from "./model";
+import { whyText } from "../../gapWhyTestUtil";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
@@ -129,7 +130,7 @@ describe("POLICY_PENDING", () => {
     expect(document.body.textContent).not.toMatch(/Granted by\b(?! each)/);
     const gaps = screen.getByTestId("not-available-line");
     expect(gaps.textContent).toContain("Who granted each item");
-    expect(gaps.getAttribute("title")).toContain("Who granted each item: Not published (FE-015)");
+    expect(whyText(gaps)).toContain("Who granted each item: Not published (FE-015)");
   });
 });
 
@@ -379,7 +380,7 @@ describe("what you can see and do come from capabilities alone", () => {
     expect(screen.getByText(/Provisional capability names/).getAttribute("title")).toContain("are provisional (FE-037)");
     const gaps = screen.getByTestId("not-available-line");
     expect(gaps.textContent).toContain("Per-action eligibility");
-    expect(gaps.getAttribute("title")).toContain("Per-action eligibility: Not published (FE-015)");
+    expect(whyText(gaps)).toContain("Per-action eligibility: Not published (FE-015)");
   });
 
   it("lists a session capability no row names instead of dropping it", async () => {

@@ -6,8 +6,8 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { GapLine, MetricText, NO_VALUE_COPY, NotPublished, SectionPanel } from "../../blocks";
-import { EquityPanel } from "../../charts";
+import { GapLine, MetricText, NO_VALUE_COPY, NaWhy, NotPublished, SectionPanel } from "../../blocks";
+import { ChartTools, EquityPanel } from "../../charts";
 import type { SeriesPoint as ChartPoint } from "../../charts/types";
 import { readAsOf } from "../../boundary";
 import { ExactCell } from "../canary/parts";
@@ -56,7 +56,7 @@ export function CellView({ cell }: { cell: Cell }) {
         </NotPublished>
       );
     case "na":
-      return <span className="exec-blk-na" title={cell.reason ?? undefined}>{NO_VALUE_COPY}</span>;
+      return <NaWhy reason={cell.reason} text={NO_VALUE_COPY} />;
   }
 }
 
@@ -111,7 +111,9 @@ export function ChartSlot({ slot }: { slot: ChartSlotModel }) {
       return (
         <SectionPanel level={2} title="Deployment series">
           <div title={slot.methodologyRef === null ? undefined : `Methodology ${slot.methodologyRef}`}>
-            <EquityPanel label="Deployment series" points={points} unit="money" currency={slot.unit ?? undefined} signed height={200} />
+            <ChartTools label="Deployment series" columns={points.length === 0 ? [] : [{ key: "series", label: "Deployment series", points, unit: "money", currency: slot.unit ?? undefined, signed: true }]}>
+              <EquityPanel label="Deployment series" points={points} unit="money" currency={slot.unit ?? undefined} signed height={200} />
+            </ChartTools>
           </div>
         </SectionPanel>
       );
@@ -291,7 +293,7 @@ export function PanelSection({ panel, page, onMore }: PanelSectionProps) {
 
   let body;
   if (panel.state === "NOT_PUBLISHED") {
-    body = <p className="exec-liv-line"><span className="exec-blk-na" title={panelReason(panel.reasonCode)}>Not available</span></p>;
+    body = <p className="exec-liv-line"><NaWhy reason={panelReason(panel.reasonCode)} /></p>;
   } else if (page.records.length === 0) {
     body = <PanelState status="empty" reason={`No retained ${noun} on this page. ${panelReason(panel.reasonCode)}`} />;
   } else {

@@ -15,6 +15,7 @@ import { V2_CAPABILITY } from "../../shell/roleNav";
 import { makeApi, type Override } from "./harness.fixtures";
 import PortfolioListScreen, { PORTFOLIOS_SCREEN_KEY } from "./index";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES } from "./routes";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -96,7 +97,7 @@ describe("register", () => {
     const line = screen.getByTestId("not-available-line");
     expect(screen.getAllByTestId("not-available-line")).toHaveLength(1);
     expect(line.textContent).toContain("Not available: NAV, Net PnL, Return, Drawdown, Concentration, Score");
-    const title = line.getAttribute("title") ?? "";
+    const title = whyText(line);
     for (const id of ["FE-013", "FE-005", "FE-006", "FE-011"]) expect(title, id).toContain(`Not published (${id})`);
     expect(document.body.textContent).not.toMatch(/Not published \(FE-005, FE-025\)/);
   });

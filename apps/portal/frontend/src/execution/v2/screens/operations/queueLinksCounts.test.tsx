@@ -20,6 +20,7 @@ import type { ExecutionApi, Result } from "../../../api/ports";
 import { readOperationalQueueV2, type OperationalQueueReadV2 } from "../../readers/operationalQueue";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import OperationsV2, { ROW_CAP } from "./index";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(() => {
   cleanup();
@@ -355,7 +356,7 @@ describe("FE-043 counts by status", () => {
     const region = screen.getByRole("region", { name: "Counts by status" });
     const line = within(region).getByTestId("not-available-line");
     expect(line.textContent).toContain("Not available: Triage, Verification, Source status, Severity counts");
-    expect(line.getAttribute("title")).toContain("Triage: Not published (FE-043)");
+    expect(whyText(line)).toContain("Triage: Not published (FE-043)");
     expect(region.querySelectorAll("li")).toHaveLength(0);
     // There is no snapshot claim without counts.
     expect(region.textContent).not.toContain("Same server snapshot");

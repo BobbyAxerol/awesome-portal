@@ -16,6 +16,7 @@ import { httpApi, serveDoubles, type Call } from "../../../../../e2e/screensV2Ha
 import { useContextFactsValue } from "../../shell/contextFacts";
 import { newSeriesDouble, wrapFetch, type SeriesDoubleState } from "../series/seriesDouble.testbase";
 import OverviewScreen, { OVERVIEW_SCREEN_KEY } from "./index";
+import { whyText } from "../../gapWhyTestUtil";
 
 let calls: Call[] = [];
 /** FE-013: the series route is the BFF double's too. By default the backend answers as it does today: no series source is published. */
@@ -79,7 +80,7 @@ describe("BUSY", () => {
     const line = screen.getByTestId("not-available-line");
     expect(screen.getAllByTestId("not-available-line")).toHaveLength(1);
     expect(line.textContent).toContain("Not available: Net PnL, Return, Drawdown, Capital, Since your last visit, Contributors");
-    const title = line.getAttribute("title") ?? "";
+    const title = whyText(line);
     for (const id of ["FE-005", "FE-006", "FE-013", "FE-017", "FE-024", "FE-025"]) expect(title, id).toContain(`Not published (${id})`);
   });
 
@@ -102,7 +103,7 @@ describe("BUSY", () => {
     expect(screen.queryByRole("table", { name: "Capital" })).toBeNull();
     // The gaps those panels carried are named, with their ids, on the one line.
     expect(screen.getByTestId("not-available-line").textContent).toContain("Capital, Since your last visit, Contributors");
-    expect(screen.getByTestId("not-available-line").getAttribute("title")).toContain("Capital: Not published (FE-017)");
+    expect(whyText(screen.getByTestId("not-available-line"))).toContain("Capital: Not published (FE-017)");
   });
 
   it("lists the ranked triage in the server's order with rank, kind, deadline and a canonical link", async () => {
@@ -446,7 +447,7 @@ describe("a caller without a fund-wide read", () => {
     await waitFor(() => expect(screen.queryByRole("status", { name: /^Loading/ })).toBeNull());
     expect(within(table).getAllByRole("row")).toHaveLength(4);
     expect(screen.getByTestId("not-available-line").textContent).toContain("Researcher field policy");
-    expect(screen.getByTestId("not-available-line").getAttribute("title")).toContain("Not published (FE-026)");
+    expect(whyText(screen.getByTestId("not-available-line"))).toContain("Not published (FE-026)");
     // Nothing fund-wide is even asked for.
     expect(calls.some((c) => c.path === "/compositions/command-center" || c.path === "/operations")).toBe(false);
     expect(calls.some((c) => c.path === "/alphas")).toBe(true);

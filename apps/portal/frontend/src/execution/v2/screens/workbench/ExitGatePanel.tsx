@@ -15,7 +15,7 @@ import type { CaptureContext, ContextRead } from "../../../api/governanceContext
 import type { ExecutionApi } from "../../../api/ports";
 import { formatExact } from "../../../formatExact";
 import { Flag } from "../../Flag";
-import { GapLine, SectionPanel } from "../../blocks";
+import { GapLine, GapWhy, SectionPanel } from "../../blocks";
 import { Na } from "./cells";
 import { ExitReviewRequest } from "./ExitReviewRequest";
 import { bindExitReview } from "./exitReviewRequest";
@@ -80,8 +80,9 @@ export function ExitGatePanel({ gate, exitReviewsHref, request }: ExitGatePanelP
           {gate.windowBounded === null ? null : (
             <tr>
               <th scope="row">Observation window</th>
-              <td title={gate.reasonCode ?? undefined}>
+              <td>
                 {gate.windowBounded ? <Flag kind="partial" label="Bounded by the source" size="sm" /> : <span>Not bounded</span>}
+                {gate.reasonCode ? <GapWhy name="Observation window, reason" rows={[gate.reasonCode]} /> : null}
               </td>
             </tr>
           )}

@@ -18,7 +18,7 @@ import type { StageDrift } from "../../../hifiInsight";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { SectionPanel } from "../../blocks";
-import { DivBars, EquityPanel, Spark, type DivBarRow } from "../../charts";
+import { ChartTools, DivBars, EquityPanel, Spark, type DivBarRow } from "../../charts";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
 import { Na } from "./cells";
 import { ROW_CAP, stageWord, type DeploymentRow, type EquityPanelInput, type StagePath } from "./model";
@@ -64,16 +64,21 @@ function ActualFacet({ env, equity, inputs, drift }: Pick<PerformanceTabProps, "
     <div className="exec-alp2-equity-stack">
       {inputs.map((input) => (
         <div key={input.key} className="exec-alp2-equity">
-          <EquityPanel
+          <ChartTools
             label={`Equity, ${ENV_LABEL[env]}${input.currency ? `, ${input.currency}` : ""}`}
-            seriesName={input.label}
-            points={input.points}
-            currency={input.currency ?? undefined}
-            state={input.state}
-            segments={input.segments}
-            drawdown={{ kind: "absent", copy: "Not published (FE-025)" }}
-            height={240}
-          />
+            columns={input.state.kind === "unavailable" ? [] : [{ key: input.key, label: input.label, points: input.points, currency: input.currency ?? undefined }]}
+          >
+            <EquityPanel
+              label={`Equity, ${ENV_LABEL[env]}${input.currency ? `, ${input.currency}` : ""}`}
+              seriesName={input.label}
+              points={input.points}
+              currency={input.currency ?? undefined}
+              state={input.state}
+              segments={input.segments}
+              drawdown={{ kind: "absent", copy: "Not published (FE-025)" }}
+              height={240}
+            />
+          </ChartTools>
           <p className="exec-alp2-cap">
             <span>{ENV_LABEL[env]} book</span>
             <span>{input.basis}</span>
@@ -137,7 +142,7 @@ function Contribution({ rows, noTotals }: { rows: readonly DeploymentRow[]; noTo
   if (noTotals !== null) {
     // SCOPED_V2: the body states no per-deployment money and a total would be implied. Say so once; draw nothing.
     return (
-      <p className="exec-alp2-line" title={noTotals}>
+      <p className="exec-alp2-line">
         <Np id="FE-005">Net PnL by deployment</Np>
         <span className="exec-alp2-why">{noTotals}</span>
       </p>

@@ -8,7 +8,7 @@ import { useState } from "react";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { EventFeed, NotPublished, SectionPanel } from "../../blocks";
-import { EquityPanel } from "../../charts";
+import { ChartTools, EquityPanel } from "../../charts";
 import { useAccountEquity, useSubjectPages } from "./reads";
 import { FE, activityRows, equityModel, type BindingEnv } from "./model";
 import { Np } from "./parts";
@@ -56,14 +56,16 @@ export function EquityBlock({ api, accountId, environment, workspaceId, currency
     : undefined;
   return (
     <SectionPanel title="Account equity" aside="Internal ledger · this sleeve">
-      <EquityPanel
-        label="Account equity"
-        points={model.points}
-        currency={model.currency ?? undefined}
-        state={model.state}
-        height={220}
-        serverEnvelope={serverEnvelope}
-      />
+      <ChartTools label="Account equity" columns={model.state.kind === "unavailable" ? [] : [{ key: "equity", label: "Equity", points: model.points, currency: model.currency ?? undefined }]}>
+        <EquityPanel
+          label="Account equity"
+          points={model.points}
+          currency={model.currency ?? undefined}
+          state={model.state}
+          height={220}
+          serverEnvelope={serverEnvelope}
+        />
+      </ChartTools>
     </SectionPanel>
   );
 }

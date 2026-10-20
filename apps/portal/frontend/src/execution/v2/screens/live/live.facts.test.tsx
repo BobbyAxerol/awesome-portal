@@ -154,6 +154,9 @@ describe("series, gap window, identity", () => {
     await loaded();
     const panel = screen.getByRole("heading", { name: "Deployment series" }).closest("section")!;
     expect(panel.querySelector("svg")).not.toBeNull();
+    // The shared Table and Expand affordance wraps the chart (RV-06 follow-up): same points, no new metric.
+    expect(within(panel).getByRole("button", { name: "Expand Deployment series" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Table, Deployment series" })).toBeTruthy();
     cleanup();
     const gap = model(published({ gap: true }));
     expect(gap.chart.kind).toBe("gap");

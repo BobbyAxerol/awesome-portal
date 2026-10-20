@@ -13,6 +13,7 @@ import { cloneRows } from "../../testkit/scale";
 import AlphaScreen, { ALPHA_SCREEN_KEY } from "./index";
 import { useContextFactsValue } from "../../shell/contextFacts";
 import { alphaHttpApi, serveAlphaDouble, sessionOf, type Override } from "./testApi";
+import { whyText } from "../../gapWhyTestUtil";
 
 const session = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
@@ -74,10 +75,13 @@ describe("screen contract", () => {
     expect(h1.textContent).toContain(ALPHA_DOUBLE_ID);
     expect(h1.textContent).not.toMatch(/Unnamed alpha|UNVERSIONED|\bv\d/);
     const meta = document.querySelector(".exec-alp2-meta")!;
-    // The name and the version are Not published (FE-066) with the server's literal in the tooltip.
+    // The name and the version are Not published (FE-066) with the server's literal behind a disclosure.
     expect(meta.textContent).toContain("Name");
-    expect(meta.querySelector('[title="ALPHA_NAME_NOT_PUBLISHED"] .exec-blk-np')?.textContent).toContain("Not published (FE-066)");
-    expect(meta.querySelector('[title="UNVERSIONED"] .exec-blk-np')?.textContent).toContain("Not published (FE-066)");
+    const member = (word: string) => Array.from(meta.children).find((c) => (c.textContent ?? "").startsWith(word))!;
+    expect(member("Name").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
+    expect(whyText(member("Name"))).toBe("ALPHA_NAME_NOT_PUBLISHED");
+    expect(member("Version").querySelector(".exec-blk-np")?.textContent).toContain("Not published (FE-066)");
+    expect(whyText(member("Version"))).toBe("UNVERSIONED");
     expect(screen.getByText("asmith")).toBeTruthy();
   });
 

@@ -24,6 +24,7 @@ export {
   GAP_NEXT,
   GapLine,
   GapWhy,
+  NaWhy,
   NotPublished,
   feLabel,
   gapTitle,
@@ -31,7 +32,7 @@ export {
   notPublishedReason,
   notPublishedText,
 } from "./notPublished";
-export type { FeId, GapItem, GapWhyProps, NotPublishedId, NotPublishedProps, UnpublishedFact } from "./notPublished";
+export type { FeId, GapItem, GapWhyProps, NaWhyProps, NotPublishedId, NotPublishedProps, UnpublishedFact } from "./notPublished";
 export { NotAvailableLine, unavailableTitle } from "./NotAvailableLine";
 export type { NotAvailableLineProps, UnavailableFact } from "./NotAvailableLine";
 export { QuietIds } from "./QuietIds";

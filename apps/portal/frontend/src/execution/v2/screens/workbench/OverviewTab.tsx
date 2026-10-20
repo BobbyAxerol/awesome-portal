@@ -17,7 +17,7 @@ import type { DeploymentQuality } from "../../../api/derivations";
 import { Flag } from "../../Flag";
 import { GapLine, Kpi, KpiStrip, PanelGate, SectionPanel } from "../../blocks";
 import { formatAsOf } from "../../boundary";
-import { EquityPanel } from "../../charts";
+import { ChartTools, EquityPanel } from "../../charts";
 import { At, Fig, Na } from "./cells";
 import { VenueCalendarPanel } from "./Calendar";
 import { ExitGatePanel, type ExitRequestProps } from "./ExitGatePanel";
@@ -46,16 +46,18 @@ function EquityBlock({ model }: { model: WorkbenchModel }) {
   const envelope = equity.serverEnvelope;
   return (
     <SectionPanel level={2} title="Equity vs approved band" aside={`Simulated${equity.currency ? ` · ${equity.currency}` : ""}`}>
-      <EquityPanel
-        label="Paper equity vs approved band"
-        seriesName="Equity"
-        points={equity.points}
-        currency={equity.currency ?? undefined}
-        state={equity.state}
-        segments={equity.segments}
-        serverEnvelope={envelope}
-        height={240}
-      />
+      <ChartTools label="Paper equity vs approved band" columns={equity.state.kind === "unavailable" ? [] : [{ key: "equity", label: "Equity", points: equity.points, currency: equity.currency ?? undefined }]}>
+        <EquityPanel
+          label="Paper equity vs approved band"
+          seriesName="Equity"
+          points={equity.points}
+          currency={equity.currency ?? undefined}
+          state={equity.state}
+          segments={equity.segments}
+          serverEnvelope={envelope}
+          height={240}
+        />
+      </ChartTools>
       <GapLine
         items={[
           { label: "Drawdown", id: "FE-013", reason: "The snapshot drawdown carries no published scale" },

@@ -298,6 +298,8 @@ describe("series and identity", () => {
     await ready();
     const panel = screen.getByRole("heading", { name: "Live vs Paper vs Backtest" }).closest("section")!;
     expect(panel.querySelector("svg")).not.toBeNull();
+    expect(within(panel).getByRole("button", { name: "Expand Deployment series" })).toBeTruthy();
+    expect(within(panel).getByRole("button", { name: "Table, Deployment series" })).toBeTruthy();
     // The methodology is the chart block's title, not a printed caption; Paper and Backtest are one `Not available` line.
     expect(panel.querySelector("div[title]")!.getAttribute("title")).toBe("Methodology portal.net-pnl.TEST_ONLY.v1");
     expect(panel.textContent).not.toContain("Methodology");

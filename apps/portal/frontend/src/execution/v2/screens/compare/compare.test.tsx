@@ -17,6 +17,7 @@ import { loadCanonical } from "../../testkit/loadCanonical";
 import { oracleComparison, type Draft } from "../../readers/managerSeries.testbase";
 import { seriesBodyFor, type SeriesVariant } from "../series/seriesDouble.testbase";
 import CompareScreen, { COMPARE_SCREEN_KEY } from "./index";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -550,7 +551,7 @@ describe("metric table", () => {
     expect(document.querySelector("td[data-l='Metric']")!.textContent).not.toMatch(/NAV|Net PnL|Return|drawdown|Score/);
     const line = screen.getByTestId("not-available-line");
     expect(line.textContent).toContain("Not available: NAV, Net PnL, Return, Max drawdown, Score");
-    for (const id of ["FE-013", "FE-005", "FE-006", "FE-011"]) expect(line.getAttribute("title"), id).toContain(`Not published (${id})`);
+    for (const id of ["FE-013", "FE-005", "FE-006", "FE-011"]) expect(whyText(line), id).toContain(`Not published (${id})`);
   });
 
   it("marks no best in a row: a mark would need a value it does not have", async () => {

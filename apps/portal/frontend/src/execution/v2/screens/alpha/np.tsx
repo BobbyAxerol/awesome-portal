@@ -9,7 +9,7 @@
  */
 import type { ReactNode } from "react";
 
-import { NOT_PUBLISHED, NotPublished, type NotPublishedId } from "../../blocks";
+import { GapWhy, NOT_PUBLISHED, NotPublished, type NotPublishedId } from "../../blocks";
 
 /** Ids this screen prints that `FE_REQUEST_LABEL` does not list. */
 export const LOCAL_FE = {
@@ -35,4 +35,13 @@ export function Np({ id, children }: { id: AlphaFeId; children?: ReactNode }) {
       {children ? <> {children}</> : null}
     </span>
   );
+}
+
+/**
+ * The reason a fact is missing (RV-06): a "?" disclosure after the gap, opened by keyboard and touch. Nothing when the source
+ * gave no reason. Replaces a `title` on a non-focusable wrapper.
+ */
+export function WhyMark({ name, reason }: { name: string; reason?: string | null }) {
+  if (!reason) return null;
+  return <GapWhy name={name} rows={[reason]} />;
 }

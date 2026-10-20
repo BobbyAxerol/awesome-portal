@@ -17,6 +17,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import AccountScreen, { ACCOUNT_SCREEN_KEY } from "./index";
+import { whyText } from "../../gapWhyTestUtil";
 
 /* ── the session, standing in for useSession ─────────────────────────────── */
 
@@ -564,6 +565,7 @@ describe("Account 360: the shared sleeve", () => {
     account("acc_bnc_core");
     await loaded360();
     await screen.findByRole("img", { name: /Account equity/ });
+    expect(screen.getByRole("button", { name: "Expand Account equity" })).toBeTruthy();
     expect(stub.paths("/api/v1/execution/views/equity-chart")[0]).toContain("subject_id=acc_bnc_core");
     fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "USDC" } });
     await waitFor(() => expect(search().get("ccy")).toBe("USDC"));
@@ -813,9 +815,11 @@ describe("Account 360: tabs", () => {
     expect(cell(rows[1]!, "Unrealized PnL")).toContain("120.50");
     const gap = within(panel).getByTestId("not-available-line");
     expect(gap.textContent).toContain("Not available: Long, short and gross notional");
-    expect(gap.getAttribute("title")).toContain("A360-1");
+    expect(whyText(gap)).toContain("A360-1");
     fireEvent.click(within(panel).getByRole("button", { name: "Whole account" }));
-    expect(within(panel).getByText("No source attributes native positions to sleeves")).toBeTruthy();
+    const sleeves = panel.querySelector(".exec-acct-pad .exec-acct-na")!;
+    expect(sleeves.textContent).toBe("Not available");
+    expect(whyText(sleeves)).toBe("No source attributes native positions to sleeves");
     expect(within(panel).queryByRole("table")).toBeNull();
   });
 
@@ -839,7 +843,7 @@ describe("Account 360: tabs", () => {
     const panel = await openTab("Fees & funding");
     const gap = within(panel).getByTestId("not-available-line");
     expect(gap.textContent).toContain("Not available: Fees, funding and borrow over a window");
-    expect(gap.getAttribute("title")).toContain("Not published (FE-025)");
+    expect(whyText(gap)).toContain("Not published (FE-025)");
     expect(panel.textContent).toContain("Fees, current");
     expect(panel.textContent).toContain("388.20");
     expect(panel.textContent).toContain("224.20");
@@ -880,7 +884,12 @@ describe("Account 360: tabs", () => {
     const rows = bodyRows(table);
     expect(rows).toHaveLength(7);
     expect(cell(rows[0]!, "When (UTC)")).toContain("17 Oct 09:00Z");
-    expect(rows.some((r) => cell(r, "When (UTC)").includes("Time not published"))).toBe(true);
+    // The reason is a disclosure on the cell, not a title and not hidden text: open it and read it.
+    const noTime = rows.map((r) => r.querySelector("td[data-l='When (UTC)'] .exec-acct-na")).find((n) => n !== null && n !== undefined);
+    expect(noTime).toBeTruthy();
+    expect(noTime!.textContent).toContain("Not available");
+    expect(whyText(noTime!)).toBe("Time not published");
+    expect(rows.some((r) => cell(r, "When (UTC)").includes("Time not published"))).toBe(false);
     const results = rows.map((r) => r.querySelector("td[data-l='Result'] .exec-flag")?.getAttribute("data-k"));
     expect(results).toContain("stale");
     expect(results).toContain("rejected");

@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf, type Metric } from "../../boundary";
-import { MetricText, QuietIds } from "../../blocks";
+import { GapWhy, MetricText, NaWhy, QuietIds } from "../../blocks";
 import { Flag } from "../../Flag";
 import { credentialView, notPublished, stateView, updatedAgo, type UnpublishedFact } from "./model";
 
@@ -16,13 +16,8 @@ import "../../css/account.css";
 export const NOT_AVAILABLE = "Not available";
 
 export function Na({ why }: { why?: string }) {
-  return (
-    <span className="exec-acct-na" title={why}>
-      {NOT_AVAILABLE}
-      {/* The reason stays in the title and in hidden text; the visible word is enough to decide. */}
-      {why ? <span className="exec-acct-why exec-blk-sr">{why}</span> : null}
-    </span>
-  );
+  // The reason sits behind a disclosure (RV-06), never only in a hover; the visible word is enough to decide.
+  return <NaWhy reason={why} text={NOT_AVAILABLE} className="exec-acct-na" />;
 }
 
 /** `Not published (FE-017)`: the gap and the request that closes it. */
@@ -38,9 +33,8 @@ export function Np({ fact, children }: { fact: UnpublishedFact; children?: React
 /** A figure the source deliberately does not split (R10): not a failure and not a zero. */
 export function NotComputed({ why }: { why: string }) {
   return (
-    <span className="exec-acct-na" data-state="not-computed" title={why}>
-      Not computed
-      <span className="exec-acct-why exec-blk-sr">{why}</span>
+    <span className="exec-acct-na" data-state="not-computed">
+      <GapWhy className="exec-acct-na-why" text="Not computed" name="Not computed, reason" rows={[why]} />
     </span>
   );
 }

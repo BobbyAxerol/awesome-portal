@@ -16,6 +16,7 @@ import { operationalQueueSearch, readOperationalQueueV2, type OperationalQueueQu
 import { sourceHealthSummary } from "./useSourceHealth";
 import OperationsV2, { MINE_REASON, PAGE_LIMIT, queryFor, ROW_CAP, type OperationsV2Props } from "./index";
 import { receiptOutcome, triageOutcome } from "./outcome";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(() => {
   cleanup();
@@ -121,8 +122,8 @@ describe("loaded queue", () => {
     expect(within(row).queryByText("(FE-020)", { exact: false })).toBeNull();
     const line = screen.getAllByTestId("not-available-line").find((node) => node.textContent?.includes("Intent"))!;
     expect(line.textContent).toContain("Not available: Intent, Display");
-    expect(line.getAttribute("title")).toContain("Intent: Not published (FE-020)");
-    expect(line.getAttribute("title")).toContain("Display: Not published (FE-032)");
+    expect(whyText(line)).toContain("Intent: Not published (FE-020)");
+    expect(whyText(line)).toContain("Display: Not published (FE-032)");
   });
 
   it("prints no dash, no N/A, and says Not published with the request ids", async () => {
@@ -132,7 +133,7 @@ describe("loaded queue", () => {
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/[—–]/);
     expect(text).not.toContain("N/A");
-    const titles = screen.getAllByTestId("not-available-line").map((node) => node.getAttribute("title")).join("\n");
+    const titles = screen.getAllByTestId("not-available-line").map((node) => whyText(node)).join("\n");
     expect(titles).toContain("Not published (FE-020)");
     expect(titles).toContain("Not published (FE-032)");
     fireEvent.click(screen.getByRole("tab", { name: "Audit" }));
@@ -256,9 +257,9 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
     }
     const gaps = within(dock).getByTestId("not-available-line");
     expect(gaps.textContent).toContain("Not available: Intent axis, Display axis, Amounts, Who acknowledged or resolved it");
-    expect(gaps.getAttribute("title")).toContain("Intent axis: Not published (FE-020)");
-    expect(gaps.getAttribute("title")?.match(/Not published \(FE-032\)/g)).toHaveLength(2);
-    expect(gaps.getAttribute("title")).toContain("Who acknowledged or resolved it: Not published (FE-021)");
+    expect(whyText(gaps)).toContain("Intent axis: Not published (FE-020)");
+    expect(whyText(gaps).match(/Not published \(FE-032\)/g)).toHaveLength(2);
+    expect(whyText(gaps)).toContain("Who acknowledged or resolved it: Not published (FE-021)");
     expect(dock.textContent).not.toMatch(/[—–]/);
     fireEvent.click(within(dock).getByText("Close"));
     expect(screen.queryByRole("complementary")).toBeNull();

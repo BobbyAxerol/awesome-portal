@@ -12,6 +12,7 @@ import { readIncidentRootV2, type IncidentRootReadV2 } from "../../readers/opera
 import { readOperationalQueueV2 } from "../../readers/operationalQueue";
 import { IncidentRootDrawer, INCIDENT_ACTION_REASONS, railFor } from "./IncidentRootDrawer";
 import OperationsV2 from "./index";
+import { whyText } from "../../gapWhyTestUtil";
 
 afterEach(() => {
   cleanup();
@@ -163,13 +164,14 @@ describe("root content", () => {
     const line = within(priority).getByTestId("not-available-line");
     expect(line.textContent).toContain("Not available: Evidence, Operations taken, Resolution gates, Timeline, Assignee");
     // Ids and the server's reason code are in the title, once per fact; no panel, heading or landmark per gap.
-    const title = line.getAttribute("title") ?? "";
+    const title = whyText(line);
     for (const name of ["Evidence", "Operations taken", "Resolution gates", "Timeline"]) expect(title, name).toContain(`${name}: Not published (FE-031)`);
     expect(title).toContain("Assignee: Not published (FE-030)");
     expect(within(priority).queryAllByRole("group")).toHaveLength(0);
     expect(priority.querySelectorAll("h4")).toHaveLength(0);
     expect(within(priority).queryAllByRole("region")).toHaveLength(0);
-    expect(priority.querySelectorAll("[aria-label]")).toHaveLength(0);
+    // The one "?" disclosure button is labelled; nothing else in the block is.
+    expect(priority.querySelectorAll("[aria-label]:not(button[aria-expanded])")).toHaveLength(0);
     expect(title.match(/ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED/g)).toHaveLength(4);
     // The block rides the Drawer's priority slot, so it sits above the long facts table.
     const facts = drawer.querySelector(".exec-ops-facts") as HTMLElement;
