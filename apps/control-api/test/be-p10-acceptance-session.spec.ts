@@ -10,7 +10,7 @@ import { AuthService, RESEARCH_ACCEPTANCE_ACCESS_SUBJECT, type SessionResult } f
 import { sha256 as tokenHash } from "../src/auth/argon";
 import { withTransaction } from "../src/db/pool";
 import { evaluateManagerDomainRead } from "../src/execution-v2/current-human-snapshot";
-import { ACCEPTANCE_EVIDENCE_CLASS, ACCEPTANCE_ISSUE_SCHEMA, ACCEPTANCE_REVOKE_SCHEMA, AcceptanceSessionError,
+import { ACCEPTANCE_EVIDENCE_CLASS, ACCEPTANCE_ISSUE_SCHEMA, ACCEPTANCE_REVOKE_SCHEMA, ACCEPTANCE_TOKEN_WRITE_MAX_ATTEMPTS, AcceptanceSessionError,
   acceptanceTokenFileMatches, nodeAcceptanceTokenFiles, privateAcceptanceSession, readPinnedAcceptanceIssue,
   type AcceptanceArtifactPin, type AcceptanceTokenBinding, type AcceptanceTokenFiles } from "../src/execution-v2/research-acceptance-session";
 import { NOW, OWNER_STREAM_TEMPLATE, prepared, sha256 } from "./fixtures/core009-templates";
@@ -306,11 +306,13 @@ describe("artifact boundary (same root-owned, hash-pinned, finite-window model a
 describe("the default token sink (root-owned 0600, exclusive, wiped on removal)", () => {
   const dirStat = (over: object = {}) => ({ isDirectory: () => true, isSymbolicLink: () => false, uid: 0, mode: 0o40755, ...over });
   it("creates exclusively with O_EXCL|O_NOFOLLOW at 0600, then fsyncs and closes after one write", async () => {
-    const handle = { chmod: vi.fn(async () => undefined), stat: vi.fn(async () => ({ isFile: () => true, uid: 0, mode: 0o100600, size: 0 })),
-      write: vi.fn(async () => ({ bytesWritten: 3 })), sync: vi.fn(async () => undefined), close: vi.fn(async () => undefined) };
+    let stored = 0;
+    const handle = { chmod: vi.fn(async () => undefined), stat: vi.fn(async () => ({ isFile: () => true, uid: 0, mode: 0o100600, size: stored })),
+      write: vi.fn(async () => { stored = 3; return { bytesWritten: 3 }; }), read: vi.fn(async (b: Buffer) => { b.write("abc"); return { bytesRead: 3 }; }),
+      sync: vi.fn(async () => undefined), close: vi.fn(async () => undefined) };
     vi.mocked(lstat).mockResolvedValue(dirStat() as any); vi.mocked(open).mockResolvedValue(handle as any);
     const sink = await nodeAcceptanceTokenFiles.create(TOKEN);
-    expect(vi.mocked(open).mock.calls[0]).toEqual([TOKEN, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600]);
+    expect(vi.mocked(open).mock.calls[0]).toEqual([TOKEN, constants.O_RDWR | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600]);
     expect(handle.chmod).toHaveBeenCalledWith(0o600);
     await sink.write(Buffer.from("abc"));
     expect(handle.sync).toHaveBeenCalledTimes(1); expect(handle.close).toHaveBeenCalledTimes(1);
@@ -442,6 +444,92 @@ describe("revoke cleanup is bound to the exact session and file (Edge item 1)", 
     for (const [bytes, binding] of [[file({ session_id: "T" }), b], [file({ user_id: "u" }), b], [file({ token: "x" }), b], [file({ token: 5 }), b], [file(), { ...b, token_sha256: "0".repeat(64) }],
       [file(), { ...b, token_sha256: "short" }], [Buffer.from("[]"), b], [Buffer.from("\u0000"), b]] as const)
       expect(acceptanceTokenFileMatches(bytes, binding)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Edge CHANGES_REQUESTED item 2: complete, verified, bounded token writes; failure => exact compensating revoke, no ACK.
+describe("the default token sink writes ALL the bytes or fails closed (Edge item 2)", () => {
+  function expectCompensated(r: ReturnType<typeof rig>, sessionId: string) {
+    expect(acceptanceRows(r.w)).toHaveLength(1);
+    expect(r.w.sessions.get(sessionId)).toMatchObject({ state: "REVOKED", revoke_reason: "research_acceptance_revoked" });
+    expect(r.w.coordinator.calls.at(-1)).toMatchObject({ family: "REVIEWED_POLICY", operation: "REVOKE_ACCEPTANCE_SESSION" });
+    expect(r.w.audit.map(a => a.event_type)).toEqual(["research_acceptance_session_issued", "research_acceptance_session_revoked"]);
+    expect(r.w.audit.at(-1)!.metadata).toMatchObject({ session_id: sessionId });
+    expect(disk.node).toBeNull(); // the (partial) file is emptied and unlinked
+  }
+  async function failing(r: ReturnType<typeof rig>, expected = "ACCEPTANCE_TOKEN_WRITE_FAILED_SESSION_REVOKED") {
+    const spies = (["log", "info", "warn", "error", "debug"] as const).map(m => vi.spyOn(console, m).mockImplementation(() => undefined));
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true), stderr = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+    let thrown: unknown;
+    const result = await issue(r).then(v => v, e => { thrown = e; return undefined; });
+    expect(result).toBeUndefined(); // refused ACK: no receipt
+    expect(thrown).toSatisfy(code(expected));
+    const sessionId = [...r.w.sessions.keys()].find(k => r.w.sessions.get(k)!.access_subject === RESEARCH_ACCEPTANCE_ACCESS_SUBJECT)!;
+    const out = JSON.stringify([String(thrown), (thrown as Error).message, thrown, spies.flatMap(s => s.mock.calls), stdout.mock.calls, stderr.mock.calls, r.w.audit, r.w.events]);
+    vi.restoreAllMocks();
+    return { sessionId, out };
+  }
+  it("PARTIAL writes (a few bytes per call) are completed in a loop; the ACK carries the true length and the file is whole", async () => {
+    let chunk = 0;
+    const r = nodeRig(); disk.plan = (_call, remaining) => ({ stored: Math.min(remaining, chunk ||= Math.ceil(remaining / 5)) });
+    const receipt = await issue(r), bytes = disk.node!.bytes;
+    expect(disk.writes).toBe(5); expect(disk.syncs).toBe(1);
+    expect(receipt.token_file.bytes).toBe(bytes.length);
+    const file = JSON.parse(bytes.toString("utf8"));
+    expect(file.session_id).toBe(receipt.session_id); expect(tokenHash(file.token)).toBe(r.w.sessions.get(receipt.session_id)!.session_token_hash);
+    expect(r.w.sessions.get(receipt.session_id)!.state).toBe("ACTIVE");
+  });
+  it("a ZERO-progress write after a short one fails (no spin), is compensated by the exact-session revoke and is never acknowledged", async () => {
+    const r = nodeRig(); disk.plan = call => call === 1 ? { stored: 5 } : { stored: 0 };
+    const { sessionId, out } = await failing(r);
+    expect(disk.writes).toBe(2); expectCompensated(r, sessionId);
+    expect(out).not.toContain(JSON.parse(disk.first!.toString()).token); // the token is in no failure surface
+  });
+  it("a write that makes no progress at all (first call returns 0) fails", async () => {
+    const r = nodeRig(); disk.plan = () => ({ stored: 0 });
+    const { sessionId } = await failing(r); expect(disk.writes).toBe(1); expectCompensated(r, sessionId);
+  });
+  it("a write ERROR after a partial write fails, empties the partial secret, and is compensated", async () => {
+    const r = nodeRig(); disk.plan = call => call === 1 ? { stored: 9 } : new Error("EIO");
+    const { sessionId } = await failing(r);
+    expectCompensated(r, sessionId);
+    expect(disk.truncates).toBeGreaterThanOrEqual(1); expect(disk.writes).toBe(2);
+  });
+  it("an fsync FAILURE is not acknowledged: compensated", async () => {
+    const r = nodeRig(); disk.syncError = true;
+    const { sessionId } = await failing(r); expect(disk.syncs).toBe(1); expectCompensated(r, sessionId);
+  });
+  it("a write that REPORTS the full count but stored fewer bytes (lying short write) is caught by the length verification", async () => {
+    const r = nodeRig(); disk.plan = (_c, remaining) => ({ stored: remaining - 1, reported: remaining });
+    const { sessionId } = await failing(r); expectCompensated(r, sessionId);
+  });
+  it("a write whose stored bytes differ (corrupt read-back) is caught by the content verification", async () => {
+    const r = nodeRig(); disk.corruptRead = true;
+    const { sessionId } = await failing(r); expectCompensated(r, sessionId);
+  });
+  it("a nonsensical bytesWritten (more than requested / negative / NaN) fails", async () => {
+    for (const reported of [10_000, -1, Number.NaN]) {
+      const r = nodeRig(); disk.plan = () => ({ stored: 3, reported });
+      const { sessionId } = await failing(r); expectCompensated(r, sessionId);
+    }
+  });
+  it("attempts are BOUNDED: a trickle of 1 byte per call is refused after the attempt cap", async () => {
+    const r = nodeRig(); disk.plan = () => ({ stored: 1 });
+    const { sessionId } = await failing(r);
+    expect(disk.writes).toBe(ACCEPTANCE_TOKEN_WRITE_MAX_ATTEMPTS); expectCompensated(r, sessionId);
+  });
+  it("if the compensating revoke itself cannot complete, the typed failure says REVOKE_UNCONFIRMED and still acknowledges nothing", async () => {
+    const r = nodeRig(); disk.plan = () => ({ stored: 0 }); disk.writeHook = () => { r.w.unresolvedObligations = 1; };
+    const { sessionId } = await failing(r, "ACCEPTANCE_TOKEN_WRITE_FAILED_REVOKE_UNCONFIRMED");
+    expect(r.w.sessions.get(sessionId)!.state).toBe("ACTIVE"); // the operator must revoke it by id; the file is already gone
+    expect(disk.node).toBeNull();
+  });
+  it("the default-sink success path still never puts the token anywhere but the file", async () => {
+    const stdout = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const r = nodeRig(), receipt = await issue(r), token = JSON.parse(disk.node!.bytes.toString()).token;
+    expect(JSON.stringify([receipt, r.w.audit, r.w.events, r.w.coordinator.calls, stdout.mock.calls])).not.toContain(token);
+    vi.restoreAllMocks();
   });
 });
 
