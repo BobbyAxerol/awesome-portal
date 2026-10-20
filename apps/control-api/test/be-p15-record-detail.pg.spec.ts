@@ -75,7 +75,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P15 subject records through 
     const page = await read("fills");
     expect(page.observed_at_basis).toBe("FILL_TRADE_TIME");
     expect(page.records).toHaveLength(1);
-    expect(page.records[0].values).toMatchObject({ fill_id: "f-own", client_order_id: "client-entry", commission: "0.0000000000000000001", commission_currency: "USDT",
+    expect(page.records[0].record_id).toContain("f-own");   // the fill id is the record identity, not a value member
+    expect(page.records[0].values).toMatchObject({ client_order_id: "client-entry", commission: "0.0000000000000000001", commission_currency: "USDT",
       liquidity_side: "MAKER", occurred_at_ms: 1790812801456 });
     expect(JSON.stringify(page)).not.toMatch(/999|NEVER_RETURN/);
     expect(scopedSubjectActivitySchema.safeParse(page).success).toBe(true);
