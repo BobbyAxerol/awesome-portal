@@ -18,10 +18,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ExecutionApi, Result } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
-import { unsupportedText, type LiveFullVersionRead } from "../../readers/dispatch";
+import { unsupportedText, type LiveFullVersionRead, type StageInclude } from "../../readers/dispatch";
 import type { LiveSourceOperationsV2, LiveSourcePanelName, LiveSourceRecordV2 } from "../../readers/liveSourceOperations";
 import { readCursorFailure } from "../../../cursorFailure";
 import { ROW_CAP, panelTitle } from "./model";
+
+/**
+ * BE-P12: the FIRST read asks for the deployment's identity and its stage facts; the legacy body already carries both and
+ * ignores the query. The keyset pages that follow do not ask again (they take one panel and leave the rest).
+ */
+const LIVE_INCLUDE: readonly StageInclude[] = ["identity", "stage_facts"];
 
 export type LiveReadState =
   | { phase: "loading" }
@@ -44,7 +50,7 @@ export function useLiveRead(api: ExecutionApi, deploymentId: string, workspaceId
     setHeld({ key, state: { phase: "loading" } });
     const scoped = api.withReadSignal?.(abort.signal) ?? api;
     void scoped
-      .getLiveFullVersioned(deploymentId, workspaceId ? { workspaceId } : undefined)
+      .getLiveFullVersioned(deploymentId, workspaceId ? { workspaceId, include: LIVE_INCLUDE } : { include: LIVE_INCLUDE })
       .then((result) => {
         if (abort.signal.aborted) return;
         setHeld({

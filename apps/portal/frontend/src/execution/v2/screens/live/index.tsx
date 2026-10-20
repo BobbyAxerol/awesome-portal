@@ -109,7 +109,10 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
   const crumb: StageCrumb[] = [
     { label: "Alpha Fleet", to: withContext(FLEET_PATH, params) },
     ...(alpha === null ? [] : [{ label: alpha.label, to: withContext(alpha.to, params) }]),
-    ...(model.portfolioId ? [{ label: portfolioLabel(model.identity, model.portfolioId), to: withContext(`/deployments/portfolios/${enc(model.portfolioId)}`, params) }] : []),
+    ...(model.portfolioId
+      ? [{ label: portfolioLabel(model.identity, model.portfolioId), to: withContext(`/deployments/portfolios/${enc(model.portfolioId)}`, params) }]
+      // A V2 body publishes the portfolio's NAME without its id (BE-P12): printed, not linked.
+      : model.identity.portfolioName === null ? [] : [{ label: model.identity.portfolioName }]),
     ...(model.accountId ? [{ label: model.accountId, to: withContext(`/deployments/accounts/${enc(model.accountId)}`, params) }] : []),
     { label: "Live" },
   ];
