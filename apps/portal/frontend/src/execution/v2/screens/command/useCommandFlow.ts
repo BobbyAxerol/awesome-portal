@@ -98,6 +98,8 @@ export interface CommandFlow {
   dirty: boolean;
   /** Why the send is blocked for this port, or null. */
   blockedReason: string | null;
+  /** What answered: `fixture` is the scripted fake (a receipt from it is not a receipt from any source). */
+  portKind: CommandPort["kind"];
 }
 
 function mintKey(): string {
@@ -326,6 +328,6 @@ export function useCommandFlow({ port, lane, capital, now = Date.now, holdReason
   return {
     plan, readPlan, fields, setReason, setConfirmWord, setImpactAck, validation, gate, expired,
     submitting, receipt, requestKey, attempts, uncertain, settled, retry, discardUncertain, dismissRefusal, submit, reset,
-    commandId, queryIntent, querying, queried, focus, dirty, blockedReason,
+    commandId, queryIntent, querying, queried, focus, dirty, blockedReason, portKind: port.kind,
   };
 }

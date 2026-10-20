@@ -22,16 +22,26 @@ import type { CommandFlow } from "./useCommandFlow";
 export const DISCARD_WARNING = "This command may already have been applied. Check it before creating another.";
 export const ACCESS_HREF = "/administration/profile-access";
 
+/** UXM-09 e2e/receipt rule: a receipt from the scripted port says so, in the receipt, where it is read. */
+export const FAKE_PORT_NOTE = "Answered by the fake port: a scripted fixture answer, not a receipt from any source.";
+
+function FakePortNote({ flow }: { flow: CommandFlow }) {
+  return flow.portKind === "fixture" ? <p className="exec-cf-meta" data-notice="fake-port">{FAKE_PORT_NOTE}</p> : null;
+}
+
 function Provenance({ flow, rows }: { flow: CommandFlow; rows?: readonly string[] }) {
   return (
-    <details className="exec-cf-prov">
-      <summary>Provenance</summary>
-      <p className="exec-cf-mono">
-        {[...(rows ?? []), flow.requestKey !== null ? `request key ${showable(flow.requestKey, 120)}` : null, flow.attempts > 0 ? `sends ${flow.attempts}` : null]
-          .filter((part): part is string => part !== null)
-          .join(" · ")}
-      </p>
-    </details>
+    <>
+      <FakePortNote flow={flow} />
+      <details className="exec-cf-prov">
+        <summary>Provenance</summary>
+        <p className="exec-cf-mono">
+          {[...(rows ?? []), flow.requestKey !== null ? `request key ${showable(flow.requestKey, 120)}` : null, flow.attempts > 0 ? `sends ${flow.attempts}` : null]
+            .filter((part): part is string => part !== null)
+            .join(" · ")}
+        </p>
+      </details>
+    </>
   );
 }
 
@@ -253,6 +263,7 @@ function Body({ receipt, flow, rootRef, keepKey, asking, setAsking, accessHref }
             <Link className="exec-cf-btn" data-variant="primary" to={accessHref}>My access</Link>
             {newPlan}
           </div>
+          <FakePortNote flow={flow} />
         </div>
       );
   }
