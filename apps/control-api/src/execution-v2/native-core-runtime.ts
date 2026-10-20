@@ -66,6 +66,10 @@ const manifest=z.object({schema_version:z.literal("portal.native-core-runtime.v1
   }).strict().refine(c=>c.selections.length+c.retained_recovery.length<=64),
 }).strict();
 
+/** Exported for the offline preparation validator and its tests only; the
+ * runtime itself still parses through prepareNativeCoreRuntime. */
+export const nativeCoreRuntimeManifest=manifest;
+
 /** The only new env pair. Empty, partial or malformed values fail closed.
  * Existing loadConfig remains unchanged and never receives secret values. */
 export function nativeCoreRuntimeReference(env:NodeJS.ProcessEnv=process.env):NativeCoreRuntimeReference|undefined {
@@ -150,6 +154,23 @@ async function hydrate(entry:z.infer<typeof selection>):Promise<NativeCoreSelect
       terminal:{...terminalRest,private_key:await signingKey(terminalRef)}}};
   }finally{ca.fill(0);cert?.fill(0);key?.fill(0);}
 }
+/** Pure Research-only ceiling over an ALREADY schema-parsed manifest. No I/O,
+ * key/TLS hydration or database access; shared by startup and the offline
+ * preparation validator so both enforce the identical single-Paper-actor rule. */
+export function nativeCoreResearchReviewTarget(parsed:Pick<z.infer<typeof manifest>,"realtime_limits"|"composition">,
+  workspaceId:string):Readonly<z.infer<typeof target>>{
+  const entries=parsed.composition.selections,intakes=parsed.composition.owner_intakes;
+  if(!parsed.realtime_limits||!workspaceId||entries.length!==1||intakes.length!==1||
+    [...entries,...parsed.composition.retained_recovery].some(entry=>entry.selector.environment!=="paper"||
+      entry.selector.workspace_id!==workspaceId||entry.selector.domain.profile_id!=="PAPER_BINANCE_USDM"||
+      entry.selector.portal_user_id!==entry.selector.subject||
+      entry.config.installation_scope.workspace_id!==workspaceId||entry.config.installation_scope.environment!=="paper")||
+    intakes[0]!.target.workspace_id!==workspaceId||
+    intakes[0]!.target.principal_workspace_pins.length!==1||
+    intakes[0]!.target.principal_workspace_pins[0]!.user_id!==entries[0]!.selector.portal_user_id||
+    intakes[0]!.target.principal_workspace_pins[0]!.workspace_id!==workspaceId)return fail();
+  return Object.freeze(structuredClone(intakes[0]!.target));
+}
 export interface PreparedNativeCoreRuntime {
   readonly poolProfile:CorePoolProfile;
   /** Closed approval ceiling for the Research-only operator path. No I/O or
@@ -173,19 +194,8 @@ export async function prepareNativeCoreRuntime(input:NativeCoreRuntimeReference)
     for(const entry of parsed.composition.retained_recovery)retained.push(await hydrate(entry));
     const compositionInput:NativeCoreCompositionInput={...parsed.composition,selections,retained_recovery:retained};
     const profile=Object.freeze({...parsed.pool_profile});
-    return Object.freeze({poolProfile:profile,researchReviewTarget:(workspaceId:string)=>{
-      const entries=parsed.composition.selections,intakes=parsed.composition.owner_intakes;
-      if(!parsed.realtime_limits||!workspaceId||entries.length!==1||intakes.length!==1||
-        [...entries,...parsed.composition.retained_recovery].some(entry=>entry.selector.environment!=="paper"||
-          entry.selector.workspace_id!==workspaceId||entry.selector.domain.profile_id!=="PAPER_BINANCE_USDM"||
-          entry.selector.portal_user_id!==entry.selector.subject||
-          entry.config.installation_scope.workspace_id!==workspaceId||entry.config.installation_scope.environment!=="paper")||
-        intakes[0]!.target.workspace_id!==workspaceId||
-        intakes[0]!.target.principal_workspace_pins.length!==1||
-        intakes[0]!.target.principal_workspace_pins[0]!.user_id!==entries[0]!.selector.portal_user_id||
-        intakes[0]!.target.principal_workspace_pins[0]!.workspace_id!==workspaceId)return fail();
-      return Object.freeze(structuredClone(intakes[0]!.target));
-    },compose:async(pool:Pool)=>{
+    return Object.freeze({poolProfile:profile,researchReviewTarget:(workspaceId:string)=>
+      nativeCoreResearchReviewTarget(parsed,workspaceId),compose:async(pool:Pool)=>{
       try{
         const composed=await composeNativeCore(pool,unqualifiedAccessTrust,compositionInput);
         // Constructors above validate the SAME already-bounded pool. Target
