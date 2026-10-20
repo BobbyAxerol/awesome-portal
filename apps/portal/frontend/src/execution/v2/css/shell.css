@@ -79,6 +79,16 @@
   border: 1px solid var(--warn);
 }
 
+/* Visually hidden: the full lock reason the disabled buttons point at (aria-describedby). */
+.exec-ctxbar-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .exec-ctxbar-reason {
   font: var(--exec-font-caption);
   color: var(--ink-faint);

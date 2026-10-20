@@ -84,9 +84,9 @@ describe("V2 shell flag on", () => {
     expect(why?.textContent).toContain("Not published (FE-052)");
   });
 
-  it("the V2 Blotter reads 'Window fixed: Current retained window' (its read takes no window), and only there", async () => {
+  it("the V2 Blotter reads 'Window: Current retained window' (its read takes no window), and only there", async () => {
     await frame("shell,blotter", "EXECUTION_FULL_BLOTTER_SCREEN");
-    expect(document.querySelector(".exec-ctxbar-lock")?.textContent).toBe("Window fixed: Current retained window");
+    expect(document.querySelector(".exec-ctxbar-lock")?.textContent).toBe("Window: Current retained window");
     const button = screen.getByRole("group", { name: "Window" }).querySelector("button") as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Not published (FE-025)");
@@ -216,11 +216,11 @@ describe("S3 stage screens flag on", () => {
   });
 
   it.each([
-    ["/deployments/sandbox/dep_1", "sandbox", "Window fixed: Certification run", "sandbox"],
-    ["/deployments/live/dep_1", "live", "Window fixed: Since activation", "live"],
-    ["/deployments/live/dep_1/canary", "canary", "Window fixed: Trial window", "live"],
-    ["/deployments/paper/dep_1", "workbench", "Window fixed: Published window", "paper"],
-    ["/deployments/paper/dep_1/vn-market", "workbench", "Window fixed: Published window", "paper"],
+    ["/deployments/sandbox/dep_1", "sandbox", "Window: Certification run", "sandbox"],
+    ["/deployments/live/dep_1", "live", "Window: Since activation", "live"],
+    ["/deployments/live/dep_1/canary", "canary", "Window: Trial window", "live"],
+    ["/deployments/paper/dep_1", "workbench", "Window: Published window", "paper"],
+    ["/deployments/paper/dep_1/vn-market", "workbench", "Window: Published window", "paper"],
   ])("%s: the context bar says what the V2 read covers and why the environment is fixed", async (path, key, windowText, env) => {
     const container = await mountApp(`shell,${key}`, path);
     await waitFor(() => expect(container.querySelector(".exec-ctxbar")).not.toBeNull());
@@ -242,11 +242,11 @@ describe("S3 stage screens flag on", () => {
       ["EXECUTION_LIVE_FULL_OPERATIONS_SCREEN", "live", "live", "Since activation"],
     ] as const;
     for (const [screenId, key, env, effective] of SCREENS) {
-      expect(envLockFor(screenId, { hasDeploymentId: true }, only(key))).toEqual({ reason: DEPLOYMENT_ENV_REASON, effective: env });
+      expect(envLockFor(screenId, { hasDeploymentId: true }, only(key))).toMatchObject({ reason: DEPLOYMENT_ENV_REASON, effective: env });
       expect(windowLockFor(screenId, { hasDeploymentId: true }, only(key))?.effective).toBe(effective);
       // list route, or the key is off: path reason, no window lock
-      expect(envLockFor(screenId, {}, only(key))).toEqual({ reason: PATH_ENV_REASON, effective: env });
-      expect(envLockFor(screenId, { hasDeploymentId: true }, only())).toEqual({ reason: PATH_ENV_REASON, effective: env });
+      expect(envLockFor(screenId, {}, only(key))).toMatchObject({ reason: PATH_ENV_REASON, effective: env });
+      expect(envLockFor(screenId, { hasDeploymentId: true }, only())).toMatchObject({ reason: PATH_ENV_REASON, effective: env });
       expect(windowLockFor(screenId, {}, only(key))).toBeUndefined();
       expect(windowLockFor(screenId, { hasDeploymentId: true }, only())).toBeUndefined();
     }
@@ -255,7 +255,7 @@ describe("S3 stage screens flag on", () => {
   it("with the stage flag off the same route keeps the path reason and no fixed-window chip", async () => {
     const container = await mountApp("shell", "/deployments/live/dep_1/canary");
     await waitFor(() => expect(container.querySelector(".exec-ctxbar")).not.toBeNull());
-    expect(locks(container).filter((text) => text.startsWith("Window fixed"))).toEqual([]);
+    expect(locks(container).filter((text) => text.startsWith("Window:"))).toEqual([]);
     const pressed = [...container.querySelectorAll<HTMLButtonElement>('[data-control="env"] button')].find((b) => b.getAttribute("aria-pressed") === "true");
     expect(document.getElementById(pressed?.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The path sets the environment.");
   });

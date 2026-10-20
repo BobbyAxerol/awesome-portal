@@ -196,23 +196,23 @@ export function cockpitClearSearch(search: URLSearchParams | string): string {
   return query === "" ? "" : `?${query}`;
 }
 // The V2 Blotter's orders read has no environment filter (Not published, FE-052): the bar says so instead of looking live.
-const BLOTTER_ENV_LOCK = { reason: "Not published (FE-052). The orders read has no environment filter." };
+const BLOTTER_ENV_LOCK = { reason: "Not published (FE-052). The orders read has no environment filter.", unapplied: true };
 // The V2 Blotter's orders read takes no window either (FE-025); the screen itself says what it covers
 // ("Current retained window"), so the bar prints that as the fixed window.
-const BLOTTER_WINDOW_LOCK = { reason: "Not published (FE-025). The orders read takes no window.", effective: "Current retained window" };
+const BLOTTER_WINDOW_LOCK = { reason: "Not published (FE-025). The orders read takes no window.", short: null, effective: "Current retained window" };
 // Operations carries its own Range control and the server takes no window (FE-025): the bar's window says so.
 // No `effective`: a fixed chip would lie once the local Range changes.
-const OPERATIONS_WINDOW_LOCK = { reason: "Operations has its own Range control below. The server takes no window (FE-025)." };
+const OPERATIONS_WINDOW_LOCK = { reason: "Operations has its own Range control below. The server takes no window (FE-025).", short: "Own range below" };
 // The S3 stage screens read one deployment, and none of those reads takes the bar's window: each says what it covers instead.
-const WORKBENCH_WINDOW_LOCK = { reason: "Not published (FE-025). The deployment read takes no window.", effective: "Published window" };
-const SANDBOX_WINDOW_LOCK = { reason: "The certification run fixes the window", effective: "Certification run" };
-const CANARY_WINDOW_LOCK = { reason: "The Canary trial fixes the window.", effective: "Trial window" };
-const LIVE_WINDOW_LOCK = { reason: "Live operations reads from activation.", effective: "Since activation" };
+const WORKBENCH_WINDOW_LOCK = { reason: "Not published (FE-025). The deployment read takes no window.", short: null, effective: "Published window" };
+const SANDBOX_WINDOW_LOCK = { reason: "The certification run fixes the window", short: null, effective: "Certification run" };
+const CANARY_WINDOW_LOCK = { reason: "The Canary trial fixes the window.", short: null, effective: "Trial window" };
+const LIVE_WINDOW_LOCK = { reason: "Live operations reads from activation.", short: null, effective: "Since activation" };
 /**
  * The window lock a V2 screen's own read implies; `undefined` keeps the bar's generic "server takes no window" lock.
  * The stage screens are V2 only on their deployment route (`context.hasDeploymentId`): a list route is the Fleet or the V1 list.
  */
-export function windowLockFor(screenId: string, context: EnvLockContext = {}, isV2: (key: Parameters<typeof isV2Screen>[0]) => boolean = isV2Screen): { reason: string; effective?: string } | undefined {
+export function windowLockFor(screenId: string, context: EnvLockContext = {}, isV2: (key: Parameters<typeof isV2Screen>[0]) => boolean = isV2Screen): WindowLock | undefined {
   if (screenId === "EXECUTION_OPERATIONS_QUEUE_SCREEN" && isV2("ops")) return OPERATIONS_WINDOW_LOCK;
   if (screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2("blotter")) return BLOTTER_WINDOW_LOCK;
   if (context.hasDeploymentId !== true) return undefined;
@@ -261,7 +261,8 @@ const PATH_ENV: Readonly<Record<string, ExecEnv>> = {
 };
 // The V2 screens whose reads take no environment (audit D6): the bar says so instead of offering a switch that does nothing.
 const NO_ENV_REASON = "Not applied here. This screen's read has no environment filter.";
-const OPERATIONS_ENV_LOCK: EnvLock = { reason: "Operations has its own Environment filter below." };
+const NO_ENV_LOCK: EnvLock = { reason: NO_ENV_REASON, unapplied: true };
+const OPERATIONS_ENV_LOCK: EnvLock = { reason: "Operations has its own Environment filter below.", short: "Own filter below" };
 /**
  * The environment lock for the context bar of one screen, or `undefined` when the bar's choice applies as it is.
  * Pure: `isV2` is injected so the per-screen flags are testable without reloading the module graph.
@@ -270,27 +271,27 @@ export function envLockFor(screenId: string, context: EnvLockContext = {}, isV2:
   const pathEnv = PATH_ENV[screenId];
   if (pathEnv !== undefined) {
     const key = STAGE_V2_KEY[screenId];
-    return { reason: context.hasDeploymentId === true && key !== undefined && isV2(key) ? DEPLOYMENT_ENV_REASON : PATH_ENV_REASON, effective: pathEnv };
+    return { reason: context.hasDeploymentId === true && key !== undefined && isV2(key) ? DEPLOYMENT_ENV_REASON : PATH_ENV_REASON, short: "Set by the page", effective: pathEnv };
   }
   switch (screenId) {
     case "EXECUTION_FULL_BLOTTER_SCREEN":
       return isV2("blotter") ? BLOTTER_ENV_LOCK : undefined;
     case "EXECUTION_COMMAND_CENTER_SCREEN":
-      return isV2("overview") ? { reason: NO_ENV_REASON } : undefined;
+      return isV2("overview") ? NO_ENV_LOCK : undefined;
     case "EXECUTION_ALPHA_FLEET_LIST_SCREEN":
-      return isV2("fleet") ? { reason: NO_ENV_REASON } : undefined;
+      return isV2("fleet") ? NO_ENV_LOCK : undefined;
     case "EXECUTION_ALPHA_360_SCREEN":
       // A 360 reads per environment; only the list route (no alpha id) is the Fleet.
-      return context.hasAlphaId !== true && isV2("fleet") ? { reason: NO_ENV_REASON } : undefined;
+      return context.hasAlphaId !== true && isV2("fleet") ? NO_ENV_LOCK : undefined;
     case "EXECUTION_PORTFOLIO_360_SCREEN":
-      return context.compare === true ? { reason: NO_ENV_REASON } : undefined;
+      return context.compare === true ? NO_ENV_LOCK : undefined;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
-      return isV2("admin") ? { reason: NO_ENV_REASON } : undefined;
+      return isV2("admin") ? NO_ENV_LOCK : undefined;
     case "EXECUTION_OPERATIONS_QUEUE_SCREEN":
     case "EXECUTION_INCIDENT_DETAIL_SCREEN":
       return isV2("ops") ? OPERATIONS_ENV_LOCK : undefined;
     default:
-      return COCKPIT_SCREENS.has(screenId) && isV2("cockpit") ? { reason: NO_ENV_REASON } : undefined;
+      return COCKPIT_SCREENS.has(screenId) && isV2("cockpit") ? NO_ENV_LOCK : undefined;
   }
 }
 

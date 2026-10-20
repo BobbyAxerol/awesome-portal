@@ -47,7 +47,7 @@ describe("context facts", () => {
 
   it("a screen that states a currency shows it without the URL carrying one", () => {
     mount("/deployments/portfolios?view=compare", { ccy: "USDT" });
-    expect(chips()).toEqual(["USDT · one basis"]);
+    expect(chips()).toEqual(["USDT"]);
   });
 
   it("a screen that states no currency hides one left in the URL by another screen", () => {
@@ -57,7 +57,7 @@ describe("context facts", () => {
 
   it("a screen that publishes nothing about currency leaves the URL's ccy alone", () => {
     mount("/deployments/portfolios?ccy=eur", { scope: undefined });
-    expect(chips()).toEqual(["EUR · one basis"]);
+    expect(chips()).toEqual(["EUR"]);
   });
 
   it("a scope prop on the bar wins over a published one", () => {

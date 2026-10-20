@@ -61,7 +61,9 @@ describe("ContextBar", () => {
       expect(reason?.textContent).toContain("Window applies when the server supports it.");
     }
     expect((screen.getByRole("button", { name: "Paper" }) as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.getByText("Window fixed: ALL")).toBeTruthy();
+    expect(screen.getByText("Window: ALL")).toBeTruthy();
+    // The full reason is in the title of the one compact line; only "My access" prints beside the bar.
+    expect(document.querySelector('[data-notice="lock"]')?.getAttribute("title")).toContain("Window applies when the server supports it.");
     const access = screen.getByRole("link", { name: "My access" });
     expect(access.getAttribute("href")).toBe("/administration/profile-access#do");
     // A router link: the click is handled in the page (cancelled), not left to the browser as a full reload.
@@ -88,11 +90,12 @@ describe("ContextBar", () => {
     expect(onChange).toHaveBeenCalledWith({ window: "30D" });
   });
 
-  it("envLock.effective shows the screen's own environment as pressed, with 'Environment fixed' beside it (S3 plan s1)", () => {
-    render(<ContextBar env="live" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "The deployment fixes the environment.", effective: "paper" }} />);
+  it("envLock.effective shows the screen's own environment as pressed; the short reason prints once, the full one stays tied to the buttons (S3 plan s1)", () => {
+    render(<ContextBar env="live" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "The deployment fixes the environment.", short: "Set by the deployment", effective: "paper" }} />);
     expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "Real-funded" }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByText("Environment fixed: Paper")).toBeTruthy();
+    expect(screen.getByText("Set by the deployment")).toBeTruthy();
+    expect(document.querySelector('[data-notice="lock"]')?.getAttribute("title")).toBe("The deployment fixes the environment.");
     for (const name of ["Real-funded", "Paper", "Sandbox"]) {
       const button = screen.getByRole("button", { name }) as HTMLButtonElement;
       expect(button.disabled, name).toBe(true);
@@ -101,13 +104,13 @@ describe("ContextBar", () => {
   });
 
   it.each([
-    ["sandbox", "Sandbox", "Environment fixed: Sandbox"],
-    ["live", "Real-funded", "Environment fixed: Real-funded"],
-  ] as const)("envLock.effective=%s presses %s", (effective, name, fixed) => {
+    ["sandbox", "Sandbox"],
+    ["live", "Real-funded"],
+  ] as const)("envLock.effective=%s presses %s", (effective, name) => {
     render(<ContextBar env="paper" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "r", effective }} />);
     expect(screen.getByRole("button", { name }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByText(fixed)).toBeTruthy();
+    expect(document.querySelector('[data-notice="lock"]')?.textContent).toBe("r");
   });
 
   it("envLock.effective does not click through, and a window change still reports", () => {
@@ -134,8 +137,9 @@ describe("ContextBar", () => {
 
   it("windowLock.effective and envLock.effective can sit together", () => {
     render(<ContextBar env="live" window="90D" onChange={noop} windowLock={{ reason: "w", effective: "Certification run" }} envLock={{ reason: "e", effective: "sandbox" }} />);
-    expect(screen.getByText("Window fixed: Certification run")).toBeTruthy();
-    expect(screen.getByText("Environment fixed: Sandbox")).toBeTruthy();
+    expect(screen.getByText("Window: Certification run")).toBeTruthy();
+    // The window's own reason is folded into its chip (short: null); the environment's prints once.
+    expect(screen.getByRole("button", { name: "Sandbox" }).getAttribute("aria-pressed")).toBe("true");
   });
 
   it("D6: an effective environment (the path decides) is the pressed one, whatever the URL value, with the notice attached", () => {
@@ -156,13 +160,15 @@ describe("ContextBar", () => {
     const onDismiss = vi.fn();
     render(<ContextBar env="live" window="90D" onChange={noop} invalid={["stage", "env", "window"]} onDismissInvalid={onDismiss} />);
     const notice = screen.getByRole("status");
-    expect(notice.textContent).toContain("Ignored invalid URL parameters: stage, env, window.");
+    expect(notice.textContent).toContain("Ignored invalid URL parameters: stage, env, window");
+    expect(notice.textContent).not.toContain("Defaults are shown");
+    expect(notice.querySelector("[title]")?.getAttribute("title")).toBe("Defaults are shown");
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
 
   it("D7: one name reads in the singular, a long list is capped, nothing is drawn when empty", () => {
-    expect(invalidNotice(["env"])).toBe("Ignored invalid URL parameter: env. Defaults are shown.");
+    expect(invalidNotice(["env"])).toBe("Ignored invalid URL parameter: env");
     expect(invalidNotice(["a", "b", "c", "d", "e", "f", "g", "h"])).toContain("a, b, c, d, e, f and 2 more");
     const { container } = render(<ContextBar env="live" window="90D" onChange={noop} invalid={[]} />);
     expect(container.querySelector('[data-notice="invalid-params"]')).toBeNull();
@@ -180,7 +186,7 @@ describe("ContextBar", () => {
 
   it("shows currency and scope only when given", () => {
     render(<ContextBar env="live" window="90D" ccy="USDT" scope="Scope: Your alphas" onChange={noop} />);
-    expect(screen.getByText("USDT · one basis")).toBeTruthy();
+    expect(screen.getByText("USDT")).toBeTruthy();
     expect(screen.getByText("Scope: Your alphas")).toBeTruthy();
   });
 });
@@ -226,7 +232,7 @@ describe("ConnectedContextBar", () => {
   it("D7: stage=foo, env=xx and window=24h are named once on the bar, the URL is rewritten, and Dismiss clears the notice", () => {
     mount("/deployments/alphas?stage=foo&env=xx&window=24h&q=carry", null);
     const notice = document.querySelector('[data-notice="invalid-params"]')!;
-    expect(notice.textContent).toContain("Ignored invalid URL parameters: env, window, stage.");
+    expect(notice.textContent).toContain("Ignored invalid URL parameters: env, window, stage");
     // Names only: the rejected values are not printed anywhere.
     expect(document.body.textContent).not.toMatch(/foo|xx|24h/);
     // The bar shows the defaults it fell back to, and the screen-local param survives the rewrite.

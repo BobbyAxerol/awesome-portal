@@ -348,8 +348,8 @@ describe("V1 body, gap", () => {
     await loaded();
     const table = screen.getByRole("table", { name: "Display continuity" });
     expect(table.textContent).toContain("Gap in updates");
-    expect(within(table).getByText("Gap window").closest("tr")!.textContent).toContain("Not available");
-    expect(within(table).getByText("Gap window").closest("tr")!.querySelector("[data-gap]")!.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(within(table).getAllByText("Gap window")[0]!.closest("tr")!.textContent).toContain("Not available");
+    expect(within(table).getAllByText("Gap window")[0]!.closest("tr")!.querySelector("[data-gap]")!.getAttribute("title")).toContain("Not published (FE-072)");
     expect(within(table).getByText("Broker")).toBeTruthy();
     expect(within(table).getByText("Derived")).toBeTruthy();
     expect(screen.getByRole("region", { name: "Display continuity" }).querySelector("details")!.textContent).toContain("Epoch 41 · sequence 88240");
@@ -361,7 +361,7 @@ describe("V1 body, gap", () => {
     const table = screen.getByRole("table", { name: "Display continuity" });
     // The reason is the cell's title; the cell says `Not available`.
     expect(within(table).getByText("State").closest("tr")!.querySelector(".exec-blk-na")!.getAttribute("title")).toContain("could not tell");
-    expect(within(table).getByText("Gap window").closest("tr")!.textContent).not.toContain("None");
+    expect(within(table).getAllByText("Gap window")[0]!.closest("tr")!.textContent).not.toContain("None");
   });
 });
 

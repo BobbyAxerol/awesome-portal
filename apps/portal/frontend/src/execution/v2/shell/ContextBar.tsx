@@ -33,20 +33,29 @@ import { useContextFactsValue } from "./contextFacts";
 import "../css/shell.css";
 
 export const WINDOW_NOT_SERVED_REASON = "Window applies when the server supports it.";
+const WINDOW_NOT_SERVED: WindowLock = { reason: WINDOW_NOT_SERVED_REASON, unapplied: true };
 
 export interface WindowLock {
+  /** The full reason: tied to the disabled buttons (aria-describedby) and the bar's title; what prints is `short`. */
   reason: string;
+  /** What prints beside the bar instead of `reason`; `null` prints nothing (the `effective` chip already says it). */
+  short?: string | null;
+  /** The read takes no window: the bar folds it into one "Not applied: ..." line instead of printing a sentence. */
+  unapplied?: boolean;
   /** The window the data actually covers, e.g. `ALL`; shown beside the control when known. */
   effective?: string;
 }
 
 export interface EnvLock {
-  /** Why the environment does not apply on this screen (one short sentence, ideally with its FE id). */
+  /** Why the environment does not apply on this screen: tied to the disabled buttons (aria-describedby) and the bar's title. */
   reason: string;
+  /** What prints beside the bar instead of `reason`; `null` prints nothing. */
+  short?: string | null;
+  /** The read takes no environment: folded into the bar's one "Not applied: ..." line. */
+  unapplied?: boolean;
   /**
    * The environment the screen itself is in, when it knows (a deployment screen: Paper workbench, Sandbox,
-   * Canary, Live). The pressed button shows this instead of the URL's `env`, and "Environment fixed: <label>"
-   * is printed beside the control, the same pattern as `WindowLock.effective`. Without it the bar keeps showing
+   * Canary, Live). The pressed button shows this instead of the URL's `env`; the lock reason says why. Without it the bar keeps showing
    * the URL's environment, which on `/deployments/paper/x` with no `env=paper` marks Real-funded by default.
    * A value that is not a known environment is ignored (the bar never prints a label it cannot name).
    */
@@ -83,7 +92,7 @@ export interface ContextBarProps {
 export function invalidNotice(invalid: readonly string[]): string {
   const names = invalid.slice(0, 6).join(", ");
   const more = invalid.length > 6 ? ` and ${invalid.length - 6} more` : "";
-  return `Ignored invalid URL ${invalid.length === 1 ? "parameter" : "parameters"}: ${names}${more}. Defaults are shown.`;
+  return `Ignored invalid URL ${invalid.length === 1 ? "parameter" : "parameters"}: ${names}${more}`;
 }
 
 export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowLock, envLock, scope, accessHref, invalid, onDismissInvalid }: ContextBarProps) {
@@ -93,6 +102,10 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
   const envLocked = envLock !== undefined && envLock !== null;
   const lockedEnv = envLocked && typeof envLock.effective === "string" && (EXEC_ENVS as readonly string[]).includes(envLock.effective) ? envLock.effective : null;
   const shownEnv: ExecEnv = lockedEnv ?? env;
+  // One compact line for every lock: locks that only say "this read takes no X" fold into "Not applied: X, Y".
+  const notApplied = [envLock?.unapplied ? "Environment" : null, windowLock?.unapplied ? "Window" : null].filter((word): word is string => word !== null);
+  const own = (lock: EnvLock | WindowLock | null | undefined): string | null => (lock === null || lock === undefined || lock.unapplied === true ? null : lock.short === undefined ? lock.reason : lock.short);
+  const lockLine = [notApplied.length > 0 ? `Not applied: ${notApplied.join(", ")}` : null, own(envLock), own(windowLock)].filter((part): part is string => part !== null && part !== "");
 
   return (
     <div className="exec-ctxbar" role="group" aria-label="Context">
@@ -131,13 +144,13 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
           </button>
         ))}
       </div>
-      {lockedEnv ? <span className="exec-ctxbar-lock">Environment fixed: {ENV_LABEL[lockedEnv]}</span> : null}
-      {envLock ? <span id={envReasonId} className="exec-ctxbar-reason">{envLock.reason}</span> : null}
-      {windowLock?.effective ? <span className="exec-ctxbar-lock">Window fixed: {windowLock.effective}</span> : null}
-      {windowLock ? (
-        <span id={reasonId} className="exec-ctxbar-reason">
-          {windowLock.reason}
-          {accessHref ? (
+      {envLocked ? <span id={envReasonId} className="exec-ctxbar-sr">{envLock.reason}</span> : null}
+      {locked ? <span id={reasonId} className="exec-ctxbar-sr">{windowLock.reason}</span> : null}
+      {windowLock?.effective ? <span className="exec-ctxbar-lock" title="Window fixed by this screen">Window: {windowLock.effective}</span> : null}
+      {lockLine.length > 0 || (locked && accessHref) ? (
+        <span className="exec-ctxbar-reason" title={[envLock?.reason, windowLock?.reason].filter(Boolean).join(" ")} data-notice="lock">
+          {lockLine.join(" · ")}
+          {locked && accessHref ? (
             <>
               {" "}
               <Link to={accessHref}>My access</Link>
@@ -145,11 +158,11 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
           ) : null}
         </span>
       ) : null}
-      {ccy ? <span className="exec-ctxbar-chip">{ccy} · one basis</span> : null}
+      {ccy ? <span className="exec-ctxbar-chip" title="One currency basis">{ccy}</span> : null}
       {scope ? <span className="exec-ctxbar-chip">{scope}</span> : null}
       {invalid && invalid.length > 0 ? (
         <span role="status" className="exec-ctxbar-reason" data-notice="invalid-params">
-          {invalidNotice(invalid)}
+          <span title="Defaults are shown">{invalidNotice(invalid)}</span>
           {onDismissInvalid ? (
             <>
               {" "}
@@ -174,7 +187,7 @@ export function ConnectedContextBar(props: Omit<ContextBarProps, "env" | "window
   const { value, set, invalid, clearInvalid } = useExecUrlState();
   const facts = useContextFactsValue();
   // No read accepts a window yet (FE-025), so the control starts locked; a caller that knows better passes `windowLock={null}`.
-  const windowLock = props.windowLock === undefined ? { reason: WINDOW_NOT_SERVED_REASON } : props.windowLock;
+  const windowLock = props.windowLock === undefined ? WINDOW_NOT_SERVED : props.windowLock;
   const ccy = facts.ccy !== undefined ? facts.ccy : value.ccy;
   const scope = props.scope ?? facts.scope ?? null;
   return <ContextBar {...props} scope={scope} windowLock={windowLock} env={value.env} window={value.window} ccy={ccy} onChange={(patch) => set(patch)} invalid={invalid} onDismissInvalid={clearInvalid} />;
