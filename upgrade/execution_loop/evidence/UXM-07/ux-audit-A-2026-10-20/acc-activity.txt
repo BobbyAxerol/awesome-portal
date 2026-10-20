@@ -1,0 +1,86 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+← Accounts
+Binance-02 sleeve
+pf_core · USDT · Real-funded
+Sleeve
+Physical binding
+Currency
+USDC
+USDT
+◷
+STALE:
+STALE 14 MIN
+As of 17 Oct 09:00Z
+✓
+APPLIED:
+BROKER SYNC: SYNCED
+✓
+OK:
+ACTIVE
+Refresh
+Shared by 3 sleeves
+LOGICAL SLEEVE
+Internal
+Name
+Binance-02 sleeve
+Portfolio
+pf_core
+Domain
+Real-funded · USDT
+Deployments
+dep_btc_live
+Provenance
+PHYSICAL BINDING
+Native
+Venue
+BINANCE
+Native account
+Withheld
+Product
+Not published
+(A360-4)
+Margin mode
+CROSS
+Environment
+Real-funded
+Credential
+✓
+OK:
+SYNCED
+Open physical binding view
+OVERVIEW
+POSITIONS
+ALLOCATIONS
+FEES & FUNDING
+RECONCILIATION
+ACTIVITY
+ACTIVITY
+acc_bnc_core
+WHEN (UTC)	KIND	TARGET	OUTCOME
+17 Oct 08:55Z	
+✓
+APPLIED:
+FILLED	BTCUSDT	BUY 0.2 at 68,100.50
+17 Oct 08:20Z	
+◔
+PENDING:
+OPEN	ETHUSDT	SELL 4 at 2,810.00
+17 Oct 05:40Z	
+✕
+REJECTED	BTCUSDT	BUY 1.5 at 67,000.00
+Orders
+Fills
+Retained current window, not an audit trail. Actor and receipt: Not published
+(FE-021)
+. Audit events: Not published
+(FE-031)
+.

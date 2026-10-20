@@ -1,0 +1,78 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+Portfolios
+Core
+pf_TEST_ONLY_core · M. Tran · USDT
+✓
+OK:
+ACTIVE
+As of 2026-10-17 12:04:00 UTC
+Compare with
+Actions
+OVERVIEW
+ALLOCATIONS
+ALPHAS
+ACCOUNTS
+RISK AND HEALTH
+PEOPLE AND ACTIVITY
+ACTIVITY
+Receipt and display are separate
+Not published
+(FE-031)
+ There is no feed of what happened to this portfolio yet.
+ATTRIBUTION
+PERSON	ROLE HERE	BASIS
+M. Tran	Portfolio owner	
+•
+INFORMATIONAL:
+PORTFOLIO RECORD
+asmith	Alpha owner · BTC-Trend	
+•
+INFORMATIONAL:
+ATTRIBUTION
+bjones	Alpha owner · ETH-Mean	
+•
+INFORMATIONAL:
+ATTRIBUTION
+bjones	Alpha owner · Funding-Carry	
+•
+INFORMATIONAL:
+ATTRIBUTION
+asmith	Alpha owner · SOL-Breakout	
+•
+INFORMATIONAL:
+ATTRIBUTION
+Who holds the portfolio-manager grant and who may act as a delegate is not published here. See your own access.
+APPROVALS
+All approvals
+Not available
+· the approvals read cannot be limited to one portfolio
+Open the approval queue to see requests that name Core.
+INCIDENTS
+Operations
+Not published
+(FE-042)
+ The queue publishes no incident links, so no incident can be attached to this portfolio.
+OPERATIONS ON THIS PORTFOLIO
+2 of 2
+WHEN · UTC	OPERATION	ENVIRONMENT	SEVERITY	QUEUE STATE	VERIFICATION
+22 Aug 10:30Z	Portfolio adjust-target-budget	Real-funded	
+▲
+INCIDENT:
+ERROR	Failed	Failed
+22 Aug 09:10Z	Portfolio return-capital	Real-funded	
+▲
+INCIDENT:
+ERROR	Expired	Expired
+CONFIGURATION LOG
+Not published
+(FE-021)
+ Who changed the allocation lock or the approved budget, and when, has no source yet.

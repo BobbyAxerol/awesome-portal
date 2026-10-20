@@ -1,0 +1,71 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+← Accounts
+Binance-02 sleeve
+pf_core · USDT · Real-funded
+Sleeve
+Physical binding
+Currency
+USDC
+USDT
+◷
+STALE:
+STALE 14 MIN
+As of 17 Oct 09:00Z
+✓
+APPLIED:
+BROKER SYNC: SYNCED
+✓
+OK:
+ACTIVE
+Refresh
+Shared by 3 sleeves
+LOGICAL SLEEVE
+Internal
+Name
+Binance-02 sleeve
+Portfolio
+pf_core
+Domain
+Real-funded · USDT
+Deployments
+dep_btc_live
+Provenance
+PHYSICAL BINDING
+Native
+Venue
+BINANCE
+Native account
+Withheld
+Product
+Not published
+(A360-4)
+Margin mode
+CROSS
+Environment
+Real-funded
+Credential
+✓
+OK:
+SYNCED
+Open physical binding view
+OVERVIEW
+POSITIONS
+ALLOCATIONS
+FEES & FUNDING
+RECONCILIATION
+ACTIVITY
+ALLOCATIONS
+ALPHA	DEPLOYMENT	STAGE	PORTFOLIO	ALLOCATION
+btc_trend	dep_btc_live	Real-funded	pf_core	
+80,000.00
+USDT
+No claim on the native balance

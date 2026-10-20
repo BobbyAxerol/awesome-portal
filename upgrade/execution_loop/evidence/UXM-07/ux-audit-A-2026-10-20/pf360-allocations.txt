@@ -1,0 +1,104 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+Portfolios
+Core
+pf_TEST_ONLY_core · M. Tran · USDT
+✓
+OK:
+ACTIVE
+As of 2026-10-17 12:04:00 UTC
+Report pack
+Export is not available yet.
+Compare with
+Actions
+OVERVIEW
+ALLOCATIONS
+ALPHAS
+ACCOUNTS
+RISK AND HEALTH
+PEOPLE AND ACTIVITY
+Simulated capital. It is never added to Real-funded figures.
+REAL-FUNDED
+Live and Canary
+Live
+CURRENCY	ALLOCATED (CURRENT)	MAX	BALANCE TOTAL	FREE	LOCKED
+USDT	460,000.00	700,000.00	697,700.00	544,910.00	152,790.00
+Capital flow · Real-funded
+Not published (FE-032) · Amounts and links are not published; the boxes are the published structure · Structure only, no amounts
+Real-funded · Real-funded
+Initial funds
+Not published (FE-032)
+Added funds
+Not published (FE-032)
+Net PnL since start
+Not published (FE-032)
+NAV
+Not published (FE-032)
+Approved budget
+Not published (FE-032)
+BTC-Trend
+Not published (FE-032)
+ETH-Mean
+Not published (FE-032)
+SOL-Breakout
+Not published (FE-032)
+live-0192 · Binance-02
+Not published (FE-032)
+live-0193 · OKX-01
+Not published (FE-032)
+live-0210 · Binance-02
+Not published (FE-032)
+live-0215 · Bybit-01
+Not published (FE-032)
+Hover or focus a node to trace its sources and uses.
+Basis: Amounts in each currency, Real-funded; not published
+Band height is the amount on its own basis · Hatched outline: no amount
+Capital flow · Real-funded. 12 nodes, 0 links in 1 block. Basis: Amounts in each currency, Real-funded; not published.
+Table view
+Capital ledger · Live
+TIME · UTC	EVENT	DIRECTION	ACCOUNT	AMOUNT	ALLOCATED BEFORE	ALLOCATED AFTER	RECEIPT
+2026-10-17 09:14:00 UTC	Withdraw	Decrease	Binance-02	20,000.00 USDT	140,000.00 USDT	120,000.00 USDT	Not published
+(FE-032)
+2026-10-17 08:40:00 UTC	Allocate	Increase	Binance-02	50,000.00 USDT	90,000.00 USDT	140,000.00 USDT	Not published
+(FE-032)
+2026-10-17 08:30:00 UTC	Rebalance	Unchanged	Binance-02	0.00 USDT	160,000.00 USDT	160,000.00 USDT	Not published
+(FE-032)
+2026-08-11 09:12:00 UTC	Allocate	Increase	OKX-01	100,000.00 USDT	60,000.00 USDT	160,000.00 USDT	Not published
+(FE-032)
+2026-07-02 08:00:00 UTC	Initial allocation	Increase	Bybit-01	60,000.00 USDT	0.00 USDT	60,000.00 USDT	Not published
+(FE-032)
+Append-only, newest first. Showing 5 of 12. The read is bounded to the latest entries and publishes no older page.
+USDT: gross increase 480,000.00 USDT · gross decrease 20,000.00 USDT · 12 entries
+SIMULATED
+Paper and Sandbox · never added to Real-funded
+Paper
+Partial
+MARGIN_BALANCES_NOT_PUBLISHED
+CURRENCY	ALLOCATED (CURRENT)	MAX	BALANCE TOTAL	FREE	LOCKED
+USDT	80,000.00	250,000.00	252,310.00	52,310.00	0.00
+Inputs the source did not publish: margin_balances.
+Capital flow · Simulated
+Not published (FE-032) · Amounts and links are not published; the boxes are the published structure · Structure only, no amounts
+Simulated · Simulated
+Virtual funds
+Not published (FE-032)
+Funding-Carry
+Not published (FE-032)
+pap-0301 · Paper-Binance
+Not published (FE-032)
+Hover or focus a node to trace its sources and uses.
+Basis: Amounts in each currency, Simulated; never added to Real-funded
+Band height is the amount on its own basis · Hatched outline: no amount
+Capital flow · Simulated. 3 nodes, 0 links in 1 block. Basis: Amounts in each currency, Simulated; never added to Real-funded.
+Table view
+Capital ledger · Paper
+The ledger published no entry in Paper. An empty ledger is a fact, not a zero balance.
+Append-only, newest first. Showing 0 of 0.

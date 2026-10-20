@@ -1,0 +1,150 @@
+CONTEXT
+Real-funded
+Paper
+Sandbox
+7D
+30D
+90D
+ALL
+Window applies when the server supports it.
+Not applied: Window
+Portfolios
+Core
+pf_TEST_ONLY_core · M. Tran · USDT
+✓
+OK:
+ACTIVE
+As of 2026-10-17 12:04:00 UTC
+Compare with
+Actions
+OVERVIEW
+ALLOCATIONS
+ALPHAS
+ACCOUNTS
+RISK AND HEALTH
+PEOPLE AND ACTIVITY
+Simulated capital. It is never added to Real-funded figures.
+Alphas
+4
+Deployments
+5
+5 holdings
+Accounts
+4
+Allocated (current)
+540,000.00 USDT
+NAV
+99.25 USDT
+2026-12-18 08:00:00 UTC
+Not available: Net PnL, Return, Drawdown, Concentration, Capital statements, Funding source, Stage, decision, incident and recall lanes, Score
+(Not published FE-005, Not published FE-006, Not published FE-013, Not published FE-005, Not published FE-017, Not published FE-032, Not published FE-031, Not published FE-011)
+NAV
+Last 90D
+Table
+Expand
+Portfolio NAV
+18 Dec 08:00Z99.25 USDT
+Change across the plotted points-0.75 USDT 16 Dec 08:00Z to 18 Dec 08:00Z
+99.00
+99.50
+100.00
+100.50
+101.00
+101.50
+102.00
+16 Dec 12:00Z
+17 Dec 00:00Z
+17 Dec 12:00Z
+18 Dec 00:00Z
+High 101.50 USDT
+99.25 USDT
+3 points, none reduced
+Portfolio NAV. 3 published points from 16 Dec 08:00Z to 18 Dec 08:00Z. Latest 99.25 USDT. High 101.50 USDT at 17 Dec 08:00Z. Low 99.25 USDT at 18 Dec 08:00Z.
+Key readings, Portfolio NAV
+READING	TIME (UTC)	VALUE
+FIRST	16 Dec 08:00Z	100.00 USDT
+HIGH	17 Dec 08:00Z	101.50 USDT
+LOW	18 Dec 08:00Z	99.25 USDT
+LATEST	18 Dec 08:00Z	99.25 USDT
+NAV in USDT · paper book
+EQUITY
+Last 90D
+→
+Stage
+Not published
+◈
+Decision
+Not published
+▲
+Incident
+Not published
+↩
+Recall
+Not published
++
+Flow
+2
+Table
+Expand
+Core equity · USDT
+◐
+PARTIAL DATA:
+PARTIAL · RETAINED SNAPSHOT GAP
+Core equity
+No published value
+17 Oct 12:04Z616,125.00 USDT
+Change across the plotted points+6,500.00 USDT 15 Oct 13:04Z to 17 Oct 12:04Z
+Stage
+Not published
+Decision
+Not published
+Incident
+Not published
+Recall
+Not published
+Flow
++
++
+2 events outside this window not drawn
+608,000.00
+610,000.00
+612,000.00
+614,000.00
+616,000.00
+618,000.00
+16 Oct 00:00Z
+16 Oct 12:00Z
+17 Oct 00:00Z
+17 Oct 12:00Z
+616,125.00 USDT
+40 points, none reduced · 1 gap drawn as a gap, not joined · Server: 40 of 4,592 points, MIN_MAX_LAST_BUCKET_V1
+Core equity · USDT. 40 published points from 15 Oct 13:04Z to 17 Oct 12:04Z. Latest 616,125.00 USDT. High 616,125.00 USDT at 17 Oct 12:04Z. Low 609,625.00 USDT at 15 Oct 13:04Z. 1 gap with no published value.
+Key readings, Core equity · USDT
+READING	TIME (UTC)	VALUE
+FIRST	15 Oct 13:04Z	609,625.00 USDT
+HIGH	17 Oct 12:04Z	616,125.00 USDT
+LOW	15 Oct 13:04Z	609,625.00 USDT
+LATEST	17 Oct 12:04Z	616,125.00 USDT
+Bounded: Latest 5 of 12 entries, no older page
+1 entry left the allocation unchanged and is not drawn as a flow. They are in the Allocations ledger.
+Flow events as a table (4)
+•
+INFORMATIONAL:
+RETAINED SNAPSHOTS
+Account equity, not NAV
+As of 17 Oct 12:04Z
+NEEDS ATTENTION
+Operations
+⚠
+NEEDS ATTENTION
+live-0193
+BTC-Trend · Live
+◐
+PARTIAL DATA:
+FINDING OPEN
+live-0210
+ETH-Mean · Live
+◷
+STALE
+Binance-02
+1 open finding
