@@ -12,7 +12,7 @@
  */
 import { useState } from "react";
 
-import { EquityPanel, domainOfSeries, type ChartDomain } from "../../../charts";
+import { ChartTools, EquityPanel, domainOfSeries, type ChartDomain } from "../../../charts";
 import { NotAvailableLine, SectionPanel, type UnavailableFact } from "../../../blocks";
 import { Flag } from "../../../Flag";
 import { formatAsOf } from "../../../boundary";
@@ -54,7 +54,7 @@ function NavFigure({ ctx, withNote = true }: { ctx: TabCtx; withNote?: boolean }
 function NavCard({ ctx }: { ctx: TabCtx }) {
   return (
     <SectionPanel title="NAV" aside={ctx.window === "ALL" ? "All history" : `Last ${ctx.window}`}>
-      <ManagerSeriesPanel label="Portfolio NAV" read={ctx.reads.nav} gapCopy={npText(PF_FE.nav)} height={220} />
+      <ManagerSeriesPanel label="Portfolio NAV" read={ctx.reads.nav} gapCopy={npText(PF_FE.nav)} height={220} tools />
     </SectionPanel>
   );
 }
@@ -100,16 +100,18 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
                   ribbon={ribbon}
                 />
               ) : (
-                <EquityPanel
-                  label={label}
-                  seriesName={shown.label}
-                  points={shown.points}
-                  currency={shown.currency ?? undefined}
-                  state={state}
-                  domain={axis ?? undefined}
-                  ribbon={ribbon}
-                  serverEnvelope={envelope ?? undefined}
-                />
+                <ChartTools label={label} columns={state.kind === "unavailable" ? [] : [{ key: shown.id, label: shown.label, points: shown.points, currency: shown.currency ?? undefined }]}>
+                  <EquityPanel
+                    label={label}
+                    seriesName={shown.label}
+                    points={shown.points}
+                    currency={shown.currency ?? undefined}
+                    state={state}
+                    domain={axis ?? undefined}
+                    ribbon={ribbon}
+                    serverEnvelope={envelope ?? undefined}
+                  />
+                </ChartTools>
               )}
               {shown && shown.unreadable > 0 ? <p className="exec-pf-note">{shown.unreadable} points could not be read and were not drawn.</p> : null}
               <FlowRibbonNotes ctx={ctx} />

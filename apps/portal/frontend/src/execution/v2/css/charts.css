@@ -608,3 +608,92 @@
 .exec-ribbon-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .exec-ribbon-chip-glyph { line-height: 1; }
 .exec-ribbon-chip-count { color: var(--ink-faint); }
+
+/* chart tools: Table and Expand (ChartTools). The chart stays mounted; expanded is a fixed dialog over a scrim. */
+.exec-ct { min-width: 0; }
+.exec-ct-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-2);
+}
+.exec-ct-tools { display: inline-flex; gap: var(--space-2); }
+.exec-ct-btn {
+  min-height: 28px;
+  padding: 3px 12px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ct-btn[aria-pressed="true"] { color: var(--accent); background: var(--accent-soft); border-color: var(--accent); }
+.exec-ct-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.exec-ct-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  background: var(--scrim);
+}
+.exec-ct[data-expanded="true"] {
+  position: fixed;
+  inset: var(--space-5);
+  z-index: 40;
+  box-sizing: border-box;
+  padding: var(--space-4) var(--space-5);
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-raised);
+}
+.exec-ct[data-expanded="true"]:focus { outline: none; }
+.exec-ct-table { margin-top: var(--space-3); }
+.exec-ct-tw {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--line-soft);
+}
+.exec-ct[data-expanded="true"] .exec-ct-tw { max-height: 45vh; }
+.exec-ct-tw:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.exec-ct-tbl {
+  width: 100%;
+  border-collapse: collapse;
+}
+.exec-ct-tbl th,
+.exec-ct-tbl td {
+  padding: 4px var(--space-3);
+  text-align: left;
+  white-space: nowrap;
+  font: var(--exec-font-data);
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-ct-tbl thead th {
+  position: sticky;
+  top: 0;
+  font: var(--exec-font-th);
+  color: var(--ink-faint);
+  background: var(--paper-sunken);
+}
+.exec-ct-tbl tbody th { color: var(--ink-soft); text-transform: none; letter-spacing: normal; }
+.exec-ct-tbl .exec-ct-num { text-align: right; }
+.exec-ct-tbl td.exec-ct-num { font: var(--exec-font-num); font-variant-numeric: tabular-nums; color: var(--ink); }
+.exec-ct-tbl td[data-absent="true"] { font: var(--exec-font-data); color: var(--ink-faint); }
+.exec-ct-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-ct-note {
+  margin: var(--space-2) 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+@media (max-width: 660px) {
+  .exec-ct[data-expanded="true"] { inset: 0; padding: var(--space-3); }
+  .exec-ct-btn { min-height: 36px; }
+}

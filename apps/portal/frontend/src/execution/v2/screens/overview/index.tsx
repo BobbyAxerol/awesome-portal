@@ -359,7 +359,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
 
           <div className="exec-ov-grid2 exec-ov-top">
             <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />}>
-              <ManagerSeriesPanel label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`} read={metric === "NAV" ? nav : measureRead} gapCopy={`Not published (${FE_MONEY})`} />
+              <ManagerSeriesPanel label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`} read={metric === "NAV" ? nav : measureRead} gapCopy={`Not published (${FE_MONEY})`} tools />
             </SectionPanel>
             {needsPanel}
           </div>

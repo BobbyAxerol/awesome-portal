@@ -45,12 +45,15 @@
  * | {@link CompareOverlay} | two to four series on one basis, plus a "Not comparable" partition |
  * | {@link CapitalFlow} | Sankey of nodes and edges, one block per basis, table view |
  * | {@link EventRibbon} / {@link EventKindChips} | events and stages on the same time axis as an EquityPanel |
+ * | {@link ChartTools} | Table (the published points as rows, a bounded page at a time) and Expand (modal) around any chart |
  *
  * Helpers: {@link rebaseToFirst} (exact `v - first`), {@link showDecimal}
  * (the one label path), {@link domainOfSeries} (the window to share between an
  * EquityPanel and its ribbon), {@link CHART_MARGIN} (the margins both use).
  */
 export { CapitalFlow, type CapitalFlowProps, type FlowBlock, type FlowEdge, type FlowNode } from "./CapitalFlow";
+export { ChartTools, type ChartToolsProps } from "./ChartTools";
+export { chartTableModel, type ChartTableCell, type ChartTableColumn, type ChartTableModel } from "./chartTable";
 export { ChartStateFlags, ChartUnavailable, type ChartUnavailableProps } from "./ChartStateView";
 export { CompareOverlay, type CompareOverlayProps, type CompareSeries, type NotComparable } from "./CompareOverlay";
 export { DivBars, type DivBarRow, type DivBarsProps } from "./DivBars";

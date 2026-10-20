@@ -11,7 +11,7 @@
  * Nothing is computed here and no figure is made up: the points are the server's exact strings.
  */
 import { PanelSkeleton } from "../../../components/states";
-import { EquityPanel, domainOfSeries } from "../../charts";
+import { ChartTools, EquityPanel, domainOfSeries } from "../../charts";
 import { Flag } from "../../Flag";
 import type { ManagerSeries } from "../../readers/managerSeries";
 import type { SeriesReadState } from "./useManagerSeries";
@@ -27,9 +27,11 @@ export interface ManagerSeriesPanelProps {
   /** Copy of the chart's unavailable state when the read failed or the source is not published (default `Not published (FE-013)`). */
   gapCopy?: string;
   height?: number;
+  /** Offer Table and Expand (`ChartTools`) around a drawn series, over the same points. Default off. */
+  tools?: boolean;
 }
 
-export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-013)", height = 240 }: ManagerSeriesPanelProps) {
+export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-013)", height = 240, tools = false }: ManagerSeriesPanelProps) {
   const series: ManagerSeries | null = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
   if (series === null) {
     if (read.phase === "loading") return <PanelSkeleton label={`Loading ${label.toLowerCase()}`} />;
@@ -65,20 +67,30 @@ export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-0
     );
   }
   const points = chartPointsOf(entry);
+  const chart = (
+    <EquityPanel
+      label={label}
+      seriesName={METRIC_WORD[series.metric]}
+      points={points}
+      unit={chartUnit(entry)}
+      currency={entry.currency ?? undefined}
+      signed={isSigned(series.metric)}
+      state={chartStateOf(entry)}
+      domain={domainOfSeries(points) ?? undefined}
+      height={height}
+    />
+  );
   return (
     <div className="exec-ser" data-state="AVAILABLE">
       {banner}
-      <EquityPanel
-        label={label}
-        seriesName={METRIC_WORD[series.metric]}
-        points={points}
-        unit={chartUnit(entry)}
-        currency={entry.currency ?? undefined}
-        signed={isSigned(series.metric)}
-        state={chartStateOf(entry)}
-        domain={domainOfSeries(points) ?? undefined}
-        height={height}
-      />
+      {tools ? (
+        <ChartTools
+          label={label}
+          columns={[{ key: "series", label: METRIC_WORD[series.metric], points, unit: chartUnit(entry), currency: entry.currency ?? undefined, signed: isSigned(series.metric) }]}
+        >
+          {chart}
+        </ChartTools>
+      ) : chart}
       <p className="exec-ser-note" data-testid="series-caption" title={seriesCaption(series.metric, entry)}>{seriesCaptionShort(series.metric, entry)}</p>
     </div>
   );

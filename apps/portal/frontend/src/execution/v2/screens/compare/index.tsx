@@ -41,7 +41,7 @@ import { PanelSkeleton, PanelState } from "../../../components/states";
 import { utcStamp } from "../../../time";
 import { NotAvailableLine, SectionPanel, type UnavailableFact } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
+import { ChartTools, CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
 import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
@@ -360,16 +360,21 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             {seriesQuery !== null && seriesRead.phase === "loading" && series === null ? (
               <PanelSkeleton label="Loading the series" />
             ) : (
-              <CompareOverlay
+              <ChartTools
                 label="Comparison"
-                series={overlay.series}
-                notComparable={overlay.notComparable}
-                basis={basisText}
-                unit={overlay.unit}
-                currency={overlay.currency}
-                signed={isSigned(measure)}
-                state={overlay.state}
-              />
+                columns={overlay.state?.kind === "unavailable" ? [] : overlay.series.slice(0, 4).map((s) => ({ key: s.id, label: s.label, points: s.points, unit: overlay.unit, currency: overlay.currency, signed: isSigned(measure) }))}
+              >
+                <CompareOverlay
+                  label="Comparison"
+                  series={overlay.series}
+                  notComparable={overlay.notComparable}
+                  basis={basisText}
+                  unit={overlay.unit}
+                  currency={overlay.currency}
+                  signed={isSigned(measure)}
+                  state={overlay.state}
+                />
+              </ChartTools>
             )}
             <p className="exec-pf-note" data-testid="basis-caption">Basis: {basisText}</p>
           </SectionPanel>
