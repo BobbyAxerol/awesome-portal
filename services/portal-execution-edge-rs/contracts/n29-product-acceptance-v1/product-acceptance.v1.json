@@ -80,7 +80,7 @@
     "recovery_runbook_sha256": "sha256:483773e344f032f6c4b044671c0d202d9c041d3390da275243556b4397cd00dc",
     "governance_product_migration_sha256": "sha256:e9193e9baaa1886dd882d1e6b806dd117b6f6a08d0862bc386ac20c81c679383",
     "governance_product_schema_sha256": "sha256:2c67126d01ae5a4f04f56646ac5b36b36d1a2fbc55711c2ac9040e49bc18e86a",
-    "governance_product_openapi_sha256": "sha256:c68b82c6ea2bea06abeb0658615c441fda17bcb3fa03bc54f4882fbfe6ccf671",
+    "governance_product_openapi_sha256": "sha256:c8f42d4fef4b08a7aaf71cd4597ce14b41ac34ec6d53f0eafeb92e962d3c2344",
     "governance_product_test_sha256": "sha256:e7980be17bbd19f27308f59fa51c7aed140c31eedf7109b6555d4d9b225d2be3",
     "br72_schema_sha256": "sha256:05fe339f3d25dfb68f5af531f083f0161c1b1dca960b63edb0038f4615317248",
     "br72_fleet_v2_schema_sha256": "sha256:e2ec94a14210c8c0f81102384d5da1cac7e04889e70de743d8b60f1ee25856e5",
