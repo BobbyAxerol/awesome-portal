@@ -30,7 +30,8 @@
       "authority": "TEST_ONLY",
       "created_at_ms": 1792300000000,
       "updated_at_ms": 1792300000000,
-      "currency": "USDT"
+      "currency": "USDT",
+      "recipient_account_id": null
     },
     "failed_before_send": {
       "schema_version": "portal.execution.pending-recall-status.v1",
@@ -60,7 +61,8 @@
       "authority": "TEST_ONLY",
       "created_at_ms": 1792300000000,
       "updated_at_ms": 1792300000000,
-      "currency": "USDT"
+      "currency": "USDT",
+      "recipient_account_id": null
     },
     "waiting": {
       "schema_version": "portal.execution.pending-recall-status.v1",
@@ -113,7 +115,8 @@
       "authority": "TEST_ONLY",
       "created_at_ms": 1792300000000,
       "updated_at_ms": 1792300000000,
-      "currency": "USDT"
+      "currency": "USDT",
+      "recipient_account_id": null
     },
     "applied": {
       "schema_version": "portal.execution.pending-recall-status.v1",
@@ -164,7 +167,8 @@
       "authority": "TEST_ONLY",
       "created_at_ms": 1792300000000,
       "updated_at_ms": 1792300000000,
-      "currency": "USDT"
+      "currency": "USDT",
+      "recipient_account_id": null
     },
     "cancelled": {
       "schema_version": "portal.execution.pending-recall-status.v1",
@@ -215,7 +219,8 @@
       "authority": "TEST_ONLY",
       "created_at_ms": 1792300000000,
       "updated_at_ms": 1792300000000,
-      "currency": "USDT"
+      "currency": "USDT",
+      "recipient_account_id": null
     },
     "partially_applied_cancelled": {
       "schema_version": "portal.execution.pending-recall-status.v1",
@@ -266,7 +271,8 @@
       "authority": "TEST_ONLY",
       "created_at_ms": 1792300000000,
       "updated_at_ms": 1792300000000,
-      "currency": "USDT"
+      "currency": "USDT",
+      "recipient_account_id": null
     },
     "rejected": {
       "schema_version": "portal.execution.pending-recall-status.v1",
@@ -317,7 +323,8 @@
       "authority": "TEST_ONLY",
       "created_at_ms": 1792300000000,
       "updated_at_ms": 1792300000000,
-      "currency": "USDT"
+      "currency": "USDT",
+      "recipient_account_id": null
     },
     "linked_operation_not_published": {
       "schema_version": "portal.execution.pending-recall-status.v1",
@@ -370,7 +377,60 @@
       "authority": "TEST_ONLY",
       "created_at_ms": 1792300000000,
       "updated_at_ms": 1792300000000,
-      "currency": "USDT"
+      "currency": "USDT",
+      "recipient_account_id": null
+    },
+    "deployment_cancelled": {
+      "schema_version": "portal.execution.pending-recall-status.v1",
+      "family": "PENDING_RECALL_CONTROL",
+      "command_id": "ecm_00000000000000000000000000000031",
+      "operation": "CANCEL_REMAINING",
+      "original_recall_id": "TEST_ONLY:original-recall",
+      "resource": {
+        "kind": "DEPLOYMENT",
+        "id": "TEST_ONLY:deployment"
+      },
+      "environment": "paper",
+      "profile_ref": "TEST_ONLY:pending-paper",
+      "delivery": "ACKNOWLEDGED",
+      "business": {
+        "state": "CANCELLED",
+        "business_applied": false,
+        "amounts": {
+          "requested": "100",
+          "applied": "0",
+          "pending": "0",
+          "cancelled": "100",
+          "rejected": "0"
+        },
+        "receipt": {
+          "control_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_receipt_id": "TEST_ONLY:pm:control-receipt:1",
+          "latest_operation": "CANCEL_REMAINING",
+          "latest_operation_availability": "AVAILABLE",
+          "latest_operation_reason": null,
+          "source_event_id": "TEST_ONLY:pm:event:1",
+          "original_payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "versions": {
+            "budget": "9007199254740993",
+            "source": "11",
+            "parent": "12",
+            "book": "13",
+            "command": "14"
+          }
+        },
+        "blockers": []
+      },
+      "economic_cash_changed": false,
+      "physical_transfer_performed": false,
+      "projection": "UNKNOWN",
+      "venue": "NOT_APPLICABLE",
+      "next_action": "REVIEW_RECEIPT",
+      "authority": "TEST_ONLY",
+      "created_at_ms": 1792300000000,
+      "updated_at_ms": 1792300000000,
+      "currency": "USDT",
+      "recipient_account_id": "TEST_ONLY:account"
     }
   }
 }

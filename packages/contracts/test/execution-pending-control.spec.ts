@@ -41,7 +41,7 @@ const validCases: readonly [string, string, ZodTypeAny][] = [
   ["PendingControlPreview", "preview_allowed", pendingControlPreview],
   ["PendingControlPreview", "preview_cancel", pendingControlPreview],
   ...["unknown", "failed_before_send", "waiting", "applied", "cancelled", "partially_applied_cancelled",
-    "rejected", "linked_operation_not_published"].map((key): [string, string, ZodTypeAny] =>
+    "rejected", "linked_operation_not_published", "deployment_cancelled"].map((key): [string, string, ZodTypeAny] =>
     ["PendingControlStatus", key, pendingControlStatus]),
 ];
 describe("ELP2-07 separate existing pending recall control public contract", () => {
@@ -53,9 +53,20 @@ describe("ELP2-07 separate existing pending recall control public contract", () 
       expect(storedPendingControlStatus.safeParse(storedFixture[key]).success).toBe(true);
       expect(storedPendingControlStatus.safeParse(fixture[key]).success).toBe(false);
       same("PendingControlStatus", pendingControlStatus, storedFixture[key], false);
-      expect(fixture[key]).toEqual({ ...storedFixture[key], currency: fixture.intent.business_payload.currency });
+      // FE-063: recipient_account_id comes from the verified original intent;
+      // null for a PORTFOLIO recipient, the owning account for a DEPLOYMENT one.
+      const deployment = storedFixture[key].resource.kind === "DEPLOYMENT";
+      expect(fixture[key]).toEqual({ ...storedFixture[key], currency: fixture.intent.business_payload.currency,
+        recipient_account_id: deployment ? fixture.intent_deployment.business_payload.recipient_account_id : null });
       expect(validate(fixture[key])).toBe(true);
     }
+    // recipient kind must follow the resource kind in BOTH schemas; missing key is incomplete.
+    const portfolioStatus = copy(fixture.unknown), deploymentStatus = copy(fixture.deployment_cancelled);
+    same("PendingControlStatus", pendingControlStatus, { ...portfolioStatus, recipient_account_id: "TEST_ONLY:account" }, false);
+    same("PendingControlStatus", pendingControlStatus, { ...deploymentStatus, recipient_account_id: null }, false);
+    const { recipient_account_id: _omitted, ...withoutRecipient } = portfolioStatus;
+    same("PendingControlStatus", pendingControlStatus, withoutRecipient, false);
+    same("PendingControlStatus", pendingControlStatus, { ...deploymentStatus, recipient_account_id: "TEST_ONLY:account\n" }, false);
     for (const currency of [null, "", " USDT", "USDT ", "USDT\n"]) {
       same("PendingControlStatus", pendingControlStatus, { ...fixture.unknown, currency }, false);
     }
