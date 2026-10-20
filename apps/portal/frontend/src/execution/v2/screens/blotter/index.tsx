@@ -38,6 +38,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import type { ConditionalGroupRead } from "../../../derivedReads";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { useProfileRealtime } from "../../../profileRealtime";
+import { utcStamp } from "../../../time";
 import { QuietIds } from "../../blocks";
 import { CardsTable } from "../../cardsTable";
 import { Flag } from "../../Flag";
@@ -364,7 +365,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
         </div>
         <div className="exec-blt2-fresh">
           {fresh === "FRESH" ? null : <Flag kind={fresh === "STALE" ? "stale" : "unknown"} label={fresh === "STALE" ? "Stale" : page.freshness ? humanize(page.freshness) : "Freshness not stated"} size="sm" />}
-          {page.asOf ? <span className="exec-blt2-meta">As of {shortUtc(page.asOf)}</span> : <span className="exec-blt2-meta">Source time not published</span>}
+          {page.asOf ? <span className="exec-blt2-meta">As of {utcStamp(page.asOf)}</span> : <span className="exec-blt2-meta">Source time not published</span>}
         </div>
       </header>
 
