@@ -16,12 +16,14 @@ import {
   EXCLUDED_FAMILY_ROWS,
   REASON_COPY,
   catalogueRows,
+  classifyKeyCheck,
   classifyPlan,
   classifyStatus,
   classifySubmit,
   enablingCapability,
   isDismissible,
   isSettled,
+  isUncertain,
   operationHref,
   payloadIdentity,
   planExpired,
@@ -35,11 +37,15 @@ import {
   type PlanView,
   type Receipt,
 } from "./model";
+import { classifyAttemptLookup } from "./lookup";
 import { SEND_DISABLED_REASON, type PortResponse } from "./port";
 import {
   CAPITAL_INTENT,
   COMMAND_ID_APPLIED,
   COMMAND_ID_LANDED,
+  F0_ATTEMPT_CONFLICT_BODY,
+  F0_ATTEMPT_FOUND_BODY,
+  F0_ATTEMPT_NONE_BODY,
   F0_APPLY_CONFLICT_BODY,
   F0_APPLY_DENIED_BODY,
   F0_APPLY_REPLAYED_BODY,
@@ -327,6 +333,49 @@ describe("an answer becomes a receipt, doubt first", () => {
     const unknown = classifySubmit({ kind: "no_response", why: "timeout" }, ctx);
     expect(unknown.kind).toBe("UNKNOWN");
     expect(isSettled(unknown)).toBe(false);
+  });
+});
+
+describe("a request-key check: only FOUND and CONFLICT end the unknown, and only for exactly this operation and key", () => {
+  const ask: { operationId: string; requestKey: string } = { operationId: F0_ATTEMPT_NONE_BODY.operation_id, requestKey: F0_ATTEMPT_NONE_BODY.request_key };
+  const check = (answer: PortResponse, over = ask) => classifyKeyCheck(classifyAttemptLookup(answer), over);
+
+  it("NONE stays unknown; FOUND is a definite stored denial (settled); CONFLICT is a dismissible typed refusal that created nothing", () => {
+    expect(check(respond(200, F0_ATTEMPT_NONE_BODY))).toEqual({ kind: "check", check: { kind: "NONE" } });
+    const found = check(respond(200, F0_ATTEMPT_FOUND_BODY));
+    expect(found.kind).toBe("receipt");
+    if (found.kind !== "receipt" || found.receipt.kind !== "RECOVERED") throw new Error("FOUND did not become RECOVERED");
+    expect(found.receipt.decision).toMatchObject({ decision: "DENIED", retryAllowed: false, sourceRequestSent: false });
+    expect(found.receipt.requestKey).toBe(ask.requestKey);
+    expect(isSettled(found.receipt)).toBe(true);
+    expect(isUncertain(found.receipt)).toBe(false);
+    expect(receiptCommandId(found.receipt)).toBe(ask.operationId);
+    const conflict = check(respond(200, F0_ATTEMPT_CONFLICT_BODY));
+    if (conflict.kind !== "receipt" || conflict.receipt.kind !== "REJECTED") throw new Error("CONFLICT did not become REJECTED");
+    expect(conflict.receipt).toMatchObject({ code: "REQUEST_KEY_PAYLOAD_CONFLICT", known: true, status: null, via: "key_check" });
+    expect(isDismissible(conflict.receipt)).toBe(true);
+  });
+
+  it("an answer that echoes another key or operation is not this send's answer; so is a FOUND whose decision names another operation", () => {
+    const other = { operationId: ask.operationId, requestKey: "command_apply:another" };
+    for (const body of [F0_ATTEMPT_NONE_BODY, F0_ATTEMPT_FOUND_BODY, F0_ATTEMPT_CONFLICT_BODY]) {
+      expect(check(respond(200, body), other), body.state).toEqual({ kind: "check", check: { kind: "UNANSWERED", why: "unreadable" } });
+      expect(check(respond(200, body), { ...ask, operationId: "op_someone_else" }), body.state).toEqual({ kind: "check", check: { kind: "UNANSWERED", why: "unreadable" } });
+    }
+    const foreign = { ...structuredClone(F0_ATTEMPT_FOUND_BODY), relay_decision: { ...structuredClone(F0_ATTEMPT_FOUND_BODY.relay_decision), operation_id: "op_someone_else" } };
+    expect(check(respond(200, foreign)).kind).toBe("check");
+  });
+
+  it("doubt stays doubt: no answer, 503, 5xx, a refusal and an unreadable body leave the send unknown; 401, 403 and 404 stop the screen", () => {
+    const unanswered = (why: string) => ({ kind: "check", check: { kind: "UNANSWERED", why } });
+    expect(check({ kind: "no_response", why: "timeout" })).toEqual(unanswered("no_response"));
+    expect(check(respond(503, problemBody("COMMAND_STATUS_UNVERIFIED")))).toEqual(unanswered("unverified"));
+    expect(check(respond(500, {}))).toEqual(unanswered("unverified"));
+    expect(check(respond(400, problemBody("COMMAND_VALIDATION_FAILED")))).toEqual(unanswered("refused"));
+    expect(check(respond(200, { state: "NONE" }))).toEqual(unanswered("unreadable"));
+    expect(check(respond(401, {}))).toEqual({ kind: "receipt", receipt: { kind: "ACCESS_STOPPED", httpStatus: 401 } });
+    expect(check(respond(403, {}))).toEqual({ kind: "receipt", receipt: { kind: "ACCESS_STOPPED", httpStatus: 403 } });
+    expect(check(respond(404, {}))).toEqual({ kind: "receipt", receipt: { kind: "ACCESS_STOPPED", httpStatus: 404 } });
   });
 });
 

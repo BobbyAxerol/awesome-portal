@@ -42,6 +42,8 @@ export interface PortCall {
   method: "plan" | "submit" | "lookup";
   /** Idempotency key (submit), plan key (plan) or id (lookup). */
   key: string;
+  /** Lookup by request key only: the key that was asked about. */
+  requestKey?: string;
   /** The nth time this key was sent (submit only). */
   attempt?: number;
 }
@@ -167,7 +169,7 @@ export function createFakeCommandPort(options: FakePortOptions = {}): FakeComman
     },
 
     async lookup(input: LookupInput): Promise<PortResponse> {
-      await wait({ method: "lookup", key: input.id });
+      await wait(input.requestKey === undefined ? { method: "lookup", key: input.id } : { method: "lookup", key: input.id, requestKey: input.requestKey });
       const { id } = input;
       // `GET /operations/f0/{id}/apply-attempts/{request_key}`: NONE until this port has seen the key, then what the scenario recorded.
       if (input.requestKey !== undefined) return respond(200, attemptLookup(id, input.requestKey));

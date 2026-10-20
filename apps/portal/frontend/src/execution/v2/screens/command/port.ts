@@ -41,7 +41,7 @@ export interface LookupInput {
   id: string;
   /**
    * F0 only: with an operation id, ask what that actor recorded under this request key (`GET /operations/f0/{id}/apply-attempts/{request_key}`):
-   * NONE, FOUND or CONFLICT. A read; it never sends. Not offered by any control yet (no screen copy asks for it).
+   * NONE, FOUND or CONFLICT. A read; it never sends. Asked only with the operation id and the key of the send that is unknown.
    */
   requestKey?: string;
 }

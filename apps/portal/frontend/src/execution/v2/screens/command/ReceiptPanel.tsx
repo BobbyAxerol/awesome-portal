@@ -6,15 +6,18 @@
  * (`REASON_COPY`), and the verbatim machine words sit in Provenance with the request key, so a refusal can be quoted to whoever has to
  * fix it.
  *
- * Unknown is the state that must not be hurried: the fields stay locked, the only way on is a retry under the SAME key or a discard
- * that has first shown what it costs. There is no button that sends the stored intent under a second key.
+ * Unknown is the state that must not be hurried: the fields stay locked. For an F0 send the first move is "Check by request key" (a read of
+ * what the server recorded under the SAME operation and key); FOUND and CONFLICT end the unknown, NONE leaves a same-key retry (held once the
+ * plan has expired). Otherwise the only way on is a retry under the SAME key or a discard that has first shown what it costs. There is no
+ * button that sends the stored intent under a second key, and none that probes with one.
  */
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
-import { UNKNOWN_COPY, operationHref, showable, type Receipt } from "./model";
+import { formatUtcEpochMs } from "../../../screenDataContract";
+import { KEY_CHECK_UNANSWERED_COPY, UNKNOWN_COPY, operationHref, showable, type Receipt } from "./model";
 import { Facts, LookupResult, StatusBody } from "./parts";
 import type { CommandFlow } from "./useCommandFlow";
 
@@ -50,6 +53,38 @@ function QueryBlock({ flow }: { flow: CommandFlow }) {
   return (
     <div className="exec-cf-query" role="status" aria-label="What the lookup found">
       <LookupResult view={flow.queried} />
+    </div>
+  );
+}
+
+/**
+ * What the request-key check found while the send is still unknown (NONE, or no usable answer). It is a status region that takes focus when a
+ * result lands, so a keyboard user who pressed the button hears it. FOUND and CONFLICT never show here: they replace the receipt.
+ */
+function KeyCheckResult({ flow }: { flow: CommandFlow }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const { checked } = flow;
+  const seq = checked?.seq ?? 0;
+  useEffect(() => {
+    if (seq > 0) ref.current?.focus({ preventScroll: false });
+  }, [seq]);
+  if (checked === null) return null;
+  return (
+    <div ref={ref} className="exec-cf-query" role="status" tabIndex={-1} aria-label="What the key check found" data-check={checked.kind.toLowerCase()}>
+      {checked.kind === "NONE" ? (
+        <>
+          <p className="exec-cf-res-head">
+            <Flag kind="na" label="None recorded" />
+            <span>No attempt recorded for this key.</span>
+          </p>
+          <p className="exec-cf-meta">{flow.retryHeld ?? "Retry sends the same request under the same key."}</p>
+        </>
+      ) : (
+        <p className="exec-cf-res-head">
+          <Flag kind="unknown" label="Still unknown" />
+          <span>{KEY_CHECK_UNANSWERED_COPY[checked.why]}</span>
+        </p>
+      )}
     </div>
   );
 }
@@ -144,6 +179,7 @@ function Body({ receipt, flow, rootRef, keepKey, asking, setAsking, accessHref }
               ...(receipt.code !== null && !receipt.known ? [{ label: "Dictionary", value: "This build has no words for this reason; the word is printed as received." }] : []),
             ]}
           />
+          {receipt.via === "key_check" ? <p className="exec-cf-meta" data-notice="via-key-check">Found by checking the request key. Nothing was recorded.</p> : null}
           {receipt.status !== null ? <StatusBody status={receipt.status} /> : null}
           {receipt.nextAction === "REVIEW_BLOCKER" ? <p className="exec-cf-next">Review the blocker. Do not create a new key to get around it.</p> : null}
           {receipt.nextAction === "QUERY_SAME_INTENT" ? <p className="exec-cf-next">Query the same intent. Do not create a new command or a new key.</p> : null}
@@ -199,15 +235,11 @@ function Body({ receipt, flow, rootRef, keepKey, asking, setAsking, accessHref }
             <Flag kind="unknown" label="Outcome unknown" />
             <span><b>This command may already have been applied.</b> {UNKNOWN_COPY[receipt.why]}</span>
           </p>
-          <p className="exec-cf-meta">
-            The fields are locked while this stands. Retrying sends the same request again under the same key
-            {flow.requestKey !== null ? <> (<span className="exec-cf-id">{showable(flow.requestKey, 120)}</span>)</> : null}, so if the first send landed the server answers with it instead of creating another.
-          </p>
+          <p className="exec-cf-meta">Fields are locked. A retry uses the same key, so it can't create a second command.</p>
           {receipt.status !== null ? <StatusBody status={receipt.status} /> : null}
-          {flow.commandId === null ? (
-            <p className="exec-cf-meta" data-absent="command-id">No command id came back, so there is nothing to query by. Retrying under the same key is the only safe way to find out.</p>
-          ) : null}
+          {flow.commandId === null && !flow.checkable ? <p className="exec-cf-meta" data-absent="command-id">No command id came back.</p> : null}
           <QueryBlock flow={flow} />
+          <KeyCheckResult flow={flow} />
           {asking ? (
             <div className="exec-cf-confirm" role="alertdialog" aria-label="Discard this unknown command?">
               <p className="exec-cf-confirm-title">{DISCARD_WARNING}</p>
@@ -222,16 +254,29 @@ function Body({ receipt, flow, rootRef, keepKey, asking, setAsking, accessHref }
               flow={flow}
               extra={(
                 <>
+                  {flow.checkable ? (
+                    <button
+                      type="button"
+                      className="exec-cf-btn"
+                      data-variant={flow.checked?.kind === "NONE" ? undefined : "primary"}
+                      aria-disabled={flow.checking || flow.submitting}
+                      title={flow.checking ? "A check is in progress." : flow.submitting ? "A send is in progress; wait for its answer." : "Asks what was recorded under this key. Changes nothing."}
+                      onClick={() => { if (!flow.checking && !flow.submitting) flow.checkKey(); }}
+                    >
+                      {flow.checking ? "Checking…" : flow.checked === null ? "Check by request key" : "Check again"}
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="exec-cf-btn"
-                    data-variant="primary"
-                    aria-disabled={flow.submitting}
-                    title={flow.submitting ? "A send is in progress; wait for its answer." : undefined}
-                    onClick={() => { if (!flow.submitting) flow.retry(); }}
+                    data-variant={!flow.checkable || (flow.checked?.kind === "NONE" && flow.retryHeld === null) ? "primary" : undefined}
+                    aria-disabled={flow.submitting || flow.retryHeld !== null}
+                    title={flow.retryHeld ?? (flow.submitting ? "A send is in progress; wait for its answer." : undefined)}
+                    onClick={() => { if (!flow.submitting && flow.retryHeld === null) flow.retry(); }}
                   >
                     {flow.submitting ? "Sending…" : "Retry with the same key"}
                   </button>
+                  {flow.retryHeld !== null ? <button type="button" className="exec-cf-btn" data-variant="primary" onClick={flow.reset}>New plan</button> : null}
                   <button
                     type="button"
                     className="exec-cf-btn"
@@ -248,6 +293,38 @@ function Body({ receipt, flow, rootRef, keepKey, asking, setAsking, accessHref }
           <Provenance flow={flow} rows={[`unknown: ${receipt.why}`, ...(receipt.httpStatus !== null ? [`http ${receipt.httpStatus}`] : [])]} />
         </div>
       );
+
+    case "RECOVERED": {
+      const href = operationHref(receipt.decision.operationId);
+      return (
+        <div ref={rootRef} className="exec-cf-res" data-tone="denied" data-receipt="RECOVERED" role="status" tabIndex={-1} aria-label="Found by request key">
+          <p className="exec-cf-res-head">
+            <Flag kind="rejected" label="Denied" />
+            <span>Found by checking the key. The relay denied it before anything reached the Trading System.</span>
+          </p>
+          <Facts
+            label="Stored answer"
+            rows={[
+              { label: "Retry allowed", value: receipt.decision.retryAllowed ? "Yes" : "No" },
+              { label: "Sent to the Trading System", value: receipt.decision.sourceRequestSent ? "Possibly: verify first" : "No" },
+              { label: "First recorded", value: formatUtcEpochMs(receipt.firstRecordedAt.ms) },
+              { label: "Stored answer", value: "Yes: the first answer for this key" },
+            ]}
+          />
+          <QueryBlock flow={flow} />
+          <Actions
+            flow={flow}
+            extra={(
+              <>
+                {href !== null ? <Link className="exec-cf-btn" data-variant="primary" to={withContext(href, params)}>Open in Operations</Link> : null}
+                {newPlan}
+              </>
+            )}
+          />
+          <Provenance flow={flow} rows={[`reason ${receipt.decision.reason}`, `operation ${receipt.decision.operationId}`, "found by request key"]} />
+        </div>
+      );
+    }
 
     case "ACCESS_STOPPED":
       return (
