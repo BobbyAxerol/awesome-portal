@@ -61,6 +61,10 @@ const V2Access = import.meta.env.VITE_EXECUTION_V2_SCREENS
 const V2Users = import.meta.env.VITE_EXECUTION_V2_SCREENS
   ? lazy(() => import("../execution/v2/screens/users"))
   : null;
+// UXM-08: the fixture-only scoped slice. Same raw-env gate, so a flag-off build emits no chunk for it.
+const V2Slice = import.meta.env.VITE_EXECUTION_V2_SCREENS
+  ? lazy(() => import("../execution/v2/screens/slice"))
+  : null;
 const ExecutionFixtures = lazy(() => import("../execution/Fixtures"));
 const ResearchFixtures = lazy(() => import("../research/ResearchFixtures"));
 const ExecutionPreviewRoute = lazy(() =>
@@ -152,6 +156,14 @@ export const ADMIN_PROFILE_ACCESS_ROUTE = "/administration/profile-access";
  * the registry is a hard rule and this route is not nav.
  */
 export const EXECUTION_FIXTURES_ROUTE = "/execution/_fixtures";
+
+/**
+ * UXM-08 scoped slice (`EXECUTION_SLICE_ROUTE`): portfolio -> fleet -> alpha under a scope banner, with the
+ * notification-stream life cycle. FIXTURE ONLY and mounted only when the V2 manifest names `scoped`: it is not a registry
+ * feature, appears in no navigation and reads no real source. Defined here and not in the slice sources, so the V2 link
+ * scan (linkTargets) does not take it for a path every build mounts.
+ */
+export const EXECUTION_SLICE_ROUTE = "/execution/slice";
 
 /**
  * Research Loop component fixtures (`RESEARCH_FIXTURES_ROUTE`).
@@ -258,6 +270,9 @@ export function PortalRoutes({ registry }: { registry: PortalRegistryDocument })
 
         {/* Execution Loop Phase 0 fixtures: components, not a screen. */}
         <Route path={EXECUTION_FIXTURES_ROUTE} element={<ExecutionFixtures />} />
+
+        {/* UXM-08 fixture-only scoped slice: flag-gated, off by default. */}
+        {V2Slice !== null && isV2Screen("scoped") ? <Route path={EXECUTION_SLICE_ROUTE} element={<V2Slice />} /> : null}
 
         {/* Research Loop composition fixtures: components, not a screen. */}
         <Route path={RESEARCH_FIXTURES_ROUTE} element={<ResearchFixtures />} />
