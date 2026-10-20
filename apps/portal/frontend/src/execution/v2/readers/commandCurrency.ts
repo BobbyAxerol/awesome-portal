@@ -5,6 +5,7 @@
  * - `portal.execution.command-status.v1` (`CommandStatus`, capital commands:
  *   `executionCapitalCommandStatusV1`, collection items, reconcile, and the
  *   `WorkflowCapital.status` copy in `execution-workflows`);
+ * - `CommandSubmitResult` (BE-P13): the same body plus `replayed`, the 200 of the capital submit ONLY (`readCommandSubmitResultV1`);
  * - `portal.execution.pending-recall-status.v1` (`PendingControlStatus`,
  *   `executionPendingControlStatusV1`, submit and reconcile).
  *
@@ -39,7 +40,13 @@
  *   id, blocker or currency can reverse or hide the text around it is refused
  *   whole, never sanitised (review L-1);
  * - a readable body of another `schema_version` is `unsupported_shape`; never
- *   throws.
+ *   throws;
+ * - BE-P13 typed absences: every `CommandStatus` carries `source_rejection` and `venue_fill`. The source publishes NO rejection reason and NO fill
+ *   quantity (request FE-032), so the only members are NOT_APPLICABLE and NOT_PUBLISHED, `quantities` is the constant null, and there is
+ *   deliberately NO published branch: a body that tries one is refused, never half-read. Which of the two members goes with which
+ *   business/venue state is the server's projection, not a schema rule, so the reader does not invent that cross-check;
+ * - `replayed` exists on the submit result only. `readCommandStatusV1` (status, reconcile, collection items, `workflow.status`) refuses a body that
+ *   carries it (a closed key list), so a read can never claim "this call did not send".
  */
 import { readDecimal, type BoundaryDecimal } from "../boundary";
 import { readUtcEpochMs, type UtcEpochMs } from "../../screenDataContract";
@@ -98,6 +105,16 @@ export interface MoneyAmount {
 
 export type StatusAmounts = Readonly<Record<AmountKey, MoneyAmount>>;
 
+/** Why a status has no source rejection reason. There is no member that carries one: the source publishes none (FE-032). */
+export type SourceRejectionV1 =
+  | { state: "NOT_APPLICABLE"; reason: null }
+  | { state: "NOT_PUBLISHED"; reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON" };
+
+/** Why a status has no venue fill quantity. `quantities` is a constant null: a figure would be a versioned schema change, never a new branch here. */
+export type VenueFillV1 =
+  | { state: "NOT_APPLICABLE"; reason: null; quantities: null }
+  | { state: "NOT_PUBLISHED"; reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES"; quantities: null };
+
 export interface CommandStatusV1 {
   /** `ecm_` + 32 hex, server-generated. */
   commandId: string;
@@ -124,6 +141,15 @@ export interface CommandStatusV1 {
   authority: StatusAuthority;
   /** The unit of every amount in this status. */
   currency: string;
+  sourceRejection: SourceRejectionV1;
+  venueFill: VenueFillV1;
+}
+
+/** `CommandSubmitResult`: a status plus the bit that says whether this call sent. */
+export interface CommandSubmitResultV1 {
+  status: CommandStatusV1;
+  /** `true`: a known idempotency key (or a concurrent identical submit) answered with the existing command and did NOT send. `false`: this call originated it. */
+  replayed: boolean;
 }
 
 export type PendingLatestOperation =
@@ -186,6 +212,7 @@ export interface UnsupportedStatusShape {
 }
 
 export type CommandStatusRead = { kind: "command_status"; status: CommandStatusV1 } | UnsupportedStatusShape;
+export type CommandSubmitResultRead = { kind: "command_submit_result"; result: CommandSubmitResultV1 } | UnsupportedStatusShape;
 export type PendingControlStatusRead = { kind: "pending_control_status"; status: PendingControlStatusV1 } | UnsupportedStatusShape;
 
 /* ───────────────────────── low-level checks ───────────────────────── */
@@ -312,8 +339,26 @@ export function statePartitionHolds(state: PendingBusinessState, amounts: Status
 
 const COMMAND_STATUS_KEYS = [
   "schema_version", "command_id", "operation", "resource", "environment", "profile_ref", "delivery", "business", "projection", "venue",
-  "next_action", "created_at_ms", "updated_at_ms", "authority", "currency",
+  "next_action", "created_at_ms", "updated_at_ms", "authority", "currency", "source_rejection", "venue_fill",
 ] as const;
+
+/** `source_rejection`: NOT_APPLICABLE (reason null) or NOT_PUBLISHED with its one reason. A PUBLISHED member does not exist and is refused. */
+function sourceRejection(value: unknown): SourceRejectionV1 | null {
+  const r = closed(value, ["state", "reason"]);
+  if (r === null) return null;
+  if (r.state === "NOT_APPLICABLE" && r.reason === null) return { state: "NOT_APPLICABLE", reason: null };
+  if (r.state === "NOT_PUBLISHED" && r.reason === "SOURCE_RESULT_HAS_NO_REJECTION_REASON") return { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON" };
+  return null;
+}
+
+/** `venue_fill`: NOT_APPLICABLE or NOT_PUBLISHED, `quantities` the constant null in both. A PUBLISHED member, or any quantity, is refused. */
+function venueFill(value: unknown): VenueFillV1 | null {
+  const r = closed(value, ["state", "reason", "quantities"]);
+  if (r === null || r.quantities !== null) return null;
+  if (r.state === "NOT_APPLICABLE" && r.reason === null) return { state: "NOT_APPLICABLE", reason: null, quantities: null };
+  if (r.state === "NOT_PUBLISHED" && r.reason === "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES") return { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES", quantities: null };
+  return null;
+}
 
 /**
  * `CommandStatus` body -> typed read. `null` is "malformed" (including a body
@@ -325,7 +370,29 @@ export function readCommandStatusV1(raw: unknown): CommandStatusRead | null {
   if (root === null) return null;
   const version = typeof root.schema_version === "string" ? root.schema_version : null;
   if (version !== COMMAND_STATUS_SCHEMA) return { kind: "unsupported_shape", schemaVersion: version };
-  const r = closed(root, COMMAND_STATUS_KEYS);
+  const status = statusFrom(root, COMMAND_STATUS_KEYS);
+  return status === null ? null : { kind: "command_status", status };
+}
+
+/**
+ * `CommandSubmitResult` body -> typed read: a status plus `replayed`. Only the capital submit answers with it; GET status, reconcile, the
+ * collection and the workflow never do, and `readCommandStatusV1` refuses it (closed key list). `replayed` is read as a boolean: any other value
+ * voids the whole body, so a missing marker is never guessed to be "first send".
+ */
+export function readCommandSubmitResultV1(raw: unknown): CommandSubmitResultRead | null {
+  const root = rec(raw);
+  if (root === null) return null;
+  const version = typeof root.schema_version === "string" ? root.schema_version : null;
+  if (version !== COMMAND_STATUS_SCHEMA) return { kind: "unsupported_shape", schemaVersion: version };
+  const status = statusFrom(root, SUBMIT_RESULT_KEYS);
+  if (status === null || typeof root.replayed !== "boolean") return null;
+  return { kind: "command_submit_result", result: { status, replayed: root.replayed } };
+}
+
+const SUBMIT_RESULT_KEYS = [...COMMAND_STATUS_KEYS, "replayed"] as const;
+
+function statusFrom(root: Rec, keys: readonly string[]): CommandStatusV1 | null {
+  const r = closed(root, keys);
   const resource = closed(r?.resource, ["kind", "id"]);
   const business = closed(r?.business, ["state", "receipt_ref", "source_event_ref", "revision", "amounts"]);
   if (r === null || resource === null || business === null) return null;
@@ -348,22 +415,22 @@ export function readCommandStatusV1(raw: unknown): CommandStatusRead | null {
   const receiptRef = nullable(business.receipt_ref, plain);
   const sourceEventRef = nullable(business.source_event_ref, plain);
   const revision = nullable(business.revision, counter);
+  const rejection = sourceRejection(r.source_rejection);
+  const fill = venueFill(r.venue_fill);
   if (
     currency === null || commandId === null || operation === null || kind === null || resourceId === null || environment === null
     || profileRef === null || delivery === null || projection === null || venue === null || nextAction === null || authority === null
     || createdAt === null || updatedAt === null || state === null
     || receiptRef === undefined || sourceEventRef === undefined || revision === undefined
+    || rejection === null || fill === null
   ) return null;
   const amounts = business.amounts === null ? null : readAmounts(business.amounts, currency);
   if (business.amounts !== null && amounts === null) return null;
 
   return {
-    kind: "command_status",
-    status: {
-      commandId, operation, resource: { kind, id: resourceId }, environment, profileRef, delivery,
-      business: { state, receiptRef, sourceEventRef, revision, amounts },
-      projection, venue, nextAction, createdAt, updatedAt, authority, currency,
-    },
+    commandId, operation, resource: { kind, id: resourceId }, environment, profileRef, delivery,
+    business: { state, receiptRef, sourceEventRef, revision, amounts },
+    projection, venue, nextAction, createdAt, updatedAt, authority, currency, sourceRejection: rejection, venueFill: fill,
   };
 }
 
