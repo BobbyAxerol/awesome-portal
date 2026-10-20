@@ -42,7 +42,7 @@ describe("ContextBar", () => {
     expect(screen.getByRole("group", { name: "Environment" })).toBeTruthy();
   });
 
-  it("disables the window control with its reason attached and leaves the environment live", () => {
+  it("draws no window buttons when the window is locked; the reason stays in the title, the fixed window is a chip, My access links", () => {
     render(
       <MemoryRouter>
         <ContextBar
@@ -54,15 +54,11 @@ describe("ContextBar", () => {
         />
       </MemoryRouter>,
     );
-    for (const name of ["7D", "30D", "90D", "ALL"]) {
-      const button = screen.getByRole("button", { name }) as HTMLButtonElement;
-      expect(button.disabled, name).toBe(true);
-      const reason = document.getElementById(button.getAttribute("aria-describedby") ?? "");
-      expect(reason?.textContent).toContain("Window applies when the server supports it.");
-    }
+    expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
+    for (const name of ["7D", "30D", "90D", "ALL"]) expect(screen.queryByRole("button", { name }), name).toBeNull();
+    // The environment is not locked: it stays a live choice.
     expect((screen.getByRole("button", { name: "Paper" }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByText("Window: ALL")).toBeTruthy();
-    // The full reason is in the title of the one compact line; only "My access" prints beside the bar.
     expect(document.querySelector('[data-notice="lock"]')?.getAttribute("title")).toContain("Window applies when the server supports it.");
     const access = screen.getByRole("link", { name: "My access" });
     expect(access.getAttribute("href")).toBe("/administration/profile-access#do");
@@ -70,90 +66,62 @@ describe("ContextBar", () => {
     expect(fireEvent.click(access)).toBe(false);
   });
 
-  it("does not click through a locked window", () => {
-    const onChange = vi.fn();
-    render(<ContextBar env="live" window="90D" onChange={onChange} windowLock={{ reason: WINDOW_NOT_SERVED_REASON }} />);
-    fireEvent.click(screen.getByRole("button", { name: "7D" }));
-    expect(onChange).not.toHaveBeenCalled();
+  it("a locked window folds into one 'Not applied' line, with no dead button", () => {
+    render(<ContextBar env="live" window="90D" onChange={noop} windowLock={{ reason: WINDOW_NOT_SERVED_REASON, unapplied: true }} />);
+    expect(screen.queryByRole("button", { name: "7D" })).toBeNull();
+    expect(document.querySelector('[data-notice="lock"]')?.textContent).toBe("Not applied: Window");
   });
 
-  it("envLock disables the environment buttons and ties the reason to them, leaving the window alone", () => {
+  it("envLock without effective draws no environment buttons and presses nothing (the Blotter pattern)", () => {
+    const { container } = render(<ContextBar env="live" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "Not published (FE-052). No environment filter.", unapplied: true }} />);
+    expect(screen.queryByRole("group", { name: "Environment" })).toBeNull();
+    for (const name of ["Real-funded", "Paper", "Sandbox"]) expect(screen.queryByRole("button", { name }), name).toBeNull();
+    expect(container.querySelector('[aria-pressed="true"]')?.closest('[data-control="env"]')).toBeNull();
+    expect(container.querySelector('[data-control="env"]')).toBeNull();
+    expect(document.querySelector('[data-notice="lock"]')?.textContent).toBe("Not applied: Environment");
+    expect(container.textContent).toContain("Not published (FE-052). No environment filter.");
+  });
+
+  it("the window control still works beside a locked environment", () => {
     const onChange = vi.fn();
-    render(<ContextBar env="paper" window="90D" onChange={onChange} windowLock={null} envLock={{ reason: "Not published (FE-052). No environment filter." }} />);
-    const sandbox = screen.getByRole("button", { name: "Sandbox" }) as HTMLButtonElement;
-    expect(sandbox.disabled).toBe(true);
-    expect(document.getElementById(sandbox.getAttribute("aria-describedby") ?? "")?.textContent).toBe("Not published (FE-052). No environment filter.");
-    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
-    fireEvent.click(sandbox);
-    expect(onChange).not.toHaveBeenCalled();
+    render(<ContextBar env="paper" window="90D" onChange={onChange} windowLock={null} envLock={{ reason: "r", unapplied: true }} />);
     fireEvent.click(screen.getByRole("button", { name: "30D" }));
     expect(onChange).toHaveBeenCalledWith({ window: "30D" });
   });
 
-  it("envLock.effective shows the screen's own environment as pressed; the short reason prints once, the full one stays tied to the buttons (S3 plan s1)", () => {
-    render(<ContextBar env="live" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "The deployment fixes the environment.", short: "Set by the deployment", effective: "paper" }} />);
-    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Real-funded" }).getAttribute("aria-pressed")).toBe("false");
+  it("envLock.effective draws the screen's own environment as a chip, not as buttons; the short reason prints once, the full one is the chip's description and the bar's title", () => {
+    const { container } = render(<ContextBar env="live" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "The deployment fixes the environment.", short: "Set by the deployment", effective: "paper" }} />);
+    expect(screen.queryByRole("button", { name: "Paper" })).toBeNull();
+    const chip = container.querySelector<HTMLElement>('[data-control="env"]')!;
+    expect(chip.textContent).toBe("Paper");
+    expect(chip.dataset.v).toBe("paper");
+    expect(chip.getAttribute("aria-label")).toBe("Environment: Paper");
+    expect(document.getElementById(chip.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The deployment fixes the environment.");
     expect(screen.getByText("Set by the deployment")).toBeTruthy();
     expect(document.querySelector('[data-notice="lock"]')?.getAttribute("title")).toBe("The deployment fixes the environment.");
-    for (const name of ["Real-funded", "Paper", "Sandbox"]) {
-      const button = screen.getByRole("button", { name }) as HTMLButtonElement;
-      expect(button.disabled, name).toBe(true);
-      expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The deployment fixes the environment.");
-    }
   });
 
   it.each([
     ["sandbox", "Sandbox"],
     ["live", "Real-funded"],
-  ] as const)("envLock.effective=%s presses %s", (effective, name) => {
-    render(<ContextBar env="paper" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "r", effective }} />);
-    expect(screen.getByRole("button", { name }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("false");
+  ] as const)("envLock.effective=%s shows %s", (effective, name) => {
+    const { container } = render(<ContextBar env="paper" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "r", effective }} />);
+    expect(container.querySelector('[data-control="env"]')?.textContent).toBe(name);
+    expect(container.querySelector('[data-control="env"] button')).toBeNull();
     expect(document.querySelector('[data-notice="lock"]')?.textContent).toBe("r");
-  });
-
-  it("envLock.effective does not click through, and a window change still reports", () => {
-    const onChange = vi.fn();
-    render(<ContextBar env="live" window="90D" onChange={onChange} windowLock={null} envLock={{ reason: "r", effective: "sandbox" }} />);
-    fireEvent.click(screen.getByRole("button", { name: "Paper" }));
-    expect(onChange).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "7D" }));
-    expect(onChange).toHaveBeenCalledWith({ window: "7D" });
-  });
-
-  it("an envLock without effective keeps the URL's environment pressed and prints no 'fixed' chip (the Blotter pattern)", () => {
-    const { container } = render(<ContextBar env="paper" window="90D" onChange={noop} windowLock={null} envLock={{ reason: "Not published (FE-052)." }} />);
-    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
-    expect(container.querySelector(".exec-ctxbar-lock")).toBeNull();
   });
 
   it("an effective value the bar cannot name is ignored, not printed", () => {
     const bad = { reason: "r", effective: "canary" } as unknown as Parameters<typeof ContextBar>[0]["envLock"];
     const { container } = render(<ContextBar env="paper" window="90D" onChange={noop} windowLock={null} envLock={bad} />);
-    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
+    expect(container.querySelector('[data-control="env"]')).toBeNull();
     expect(container.querySelector(".exec-ctxbar-lock")).toBeNull();
   });
 
   it("windowLock.effective and envLock.effective can sit together", () => {
     render(<ContextBar env="live" window="90D" onChange={noop} windowLock={{ reason: "w", effective: "Certification run" }} envLock={{ reason: "e", effective: "sandbox" }} />);
     expect(screen.getByText("Window: Certification run")).toBeTruthy();
-    // The window's own reason is folded into its chip (short: null); the environment's prints once.
-    expect(screen.getByRole("button", { name: "Sandbox" }).getAttribute("aria-pressed")).toBe("true");
-  });
-
-  it("D6: an effective environment (the path decides) is the pressed one, whatever the URL value, with the notice attached", () => {
-    const onChange = vi.fn();
-    render(<ContextBar env="live" window="90D" onChange={onChange} windowLock={null} envLock={{ reason: "The path sets the environment.", effective: "paper" }} />);
-    expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "Real-funded" }).getAttribute("aria-pressed")).toBe("false");
-    for (const name of ["Real-funded", "Paper", "Sandbox"]) {
-      const button = screen.getByRole("button", { name }) as HTMLButtonElement;
-      expect(button.disabled, name).toBe(true);
-      expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The path sets the environment.");
-    }
-    fireEvent.click(screen.getByRole("button", { name: "Real-funded" }));
-    expect(onChange).not.toHaveBeenCalled();
+    expect(document.querySelector('[data-control="env"]')?.textContent).toBe("Sandbox");
   });
 
   it("D7: names the rejected params, never their values, and dismisses on request", () => {
@@ -206,18 +174,17 @@ describe("ConnectedContextBar", () => {
   const where = () => screen.getByTestId("where").textContent;
 
   it("reads env and window from the URL, with 90D as the default", () => {
-    mount("/execution?env=paper");
+    mount("/execution?env=paper", null);
     expect(screen.getByRole("button", { name: "Paper" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("button", { name: "90D" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("starts with the window locked and says why, since no read accepts one yet", () => {
+  it("starts with the window locked and says so, since no read accepts one yet: no buttons, one line, the reason in the title", () => {
     mount("/execution");
-    const button = screen.getByRole("button", { name: "30D" }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    const described = button.getAttribute("aria-describedby");
-    expect(described && document.getElementById(described)?.textContent).toContain(WINDOW_NOT_SERVED_REASON);
-    fireEvent.click(button);
+    expect(screen.queryByRole("button", { name: "30D" })).toBeNull();
+    const line = document.querySelector('[data-notice="lock"]')!;
+    expect(line.textContent).toBe("Not applied: Window");
+    expect(line.getAttribute("title")).toContain(WINDOW_NOT_SERVED_REASON);
     expect(where()).toBe("/execution");
   });
 

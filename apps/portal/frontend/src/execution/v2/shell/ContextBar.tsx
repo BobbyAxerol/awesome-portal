@@ -7,8 +7,9 @@
  * or `workspace_id`. Nothing here stores state of its own.
  *
  * The window control is honest about the backend: until the read side accepts
- * a window (FE-025) the caller passes `windowLock` and the control is disabled
- * with the reason beside it, not left to look like it works. There is no
+ * a window (FE-025) the caller passes `windowLock` and the buttons are not
+ * drawn (no dead control, no pressed state the data does not follow); the
+ * reason stays in the bar's title and hidden text. There is no
  * "As of" and no placeholder for an absent currency or scope; what is not
  * known is not drawn. "As of" stays out on purpose: no read can be taken at a
  * past instant (decision B6; FE-036 was settled 2026-10-18 as current-only), so
@@ -36,7 +37,7 @@ export const WINDOW_NOT_SERVED_REASON = "Window applies when the server supports
 const WINDOW_NOT_SERVED: WindowLock = { reason: WINDOW_NOT_SERVED_REASON, unapplied: true };
 
 export interface WindowLock {
-  /** The full reason: tied to the disabled buttons (aria-describedby) and the bar's title; what prints is `short`. */
+  /** The full reason: the bar's title and hidden text; what prints is `short`. */
   reason: string;
   /** What prints beside the bar instead of `reason`; `null` prints nothing (the `effective` chip already says it). */
   short?: string | null;
@@ -47,7 +48,7 @@ export interface WindowLock {
 }
 
 export interface EnvLock {
-  /** Why the environment does not apply on this screen: tied to the disabled buttons (aria-describedby) and the bar's title. */
+  /** Why the environment does not apply on this screen: the bar's title and hidden text (and the environment chip's description). */
   reason: string;
   /** What prints beside the bar instead of `reason`; `null` prints nothing. */
   short?: string | null;
@@ -55,8 +56,7 @@ export interface EnvLock {
   unapplied?: boolean;
   /**
    * The environment the screen itself is in, when it knows (a deployment screen: Paper workbench, Sandbox,
-   * Canary, Live). The pressed button shows this instead of the URL's `env`; the lock reason says why. Without it the bar keeps showing
-   * the URL's environment, which on `/deployments/paper/x` with no `env=paper` marks Real-funded by default.
+   * Canary, Live). The bar draws this as a chip instead of the buttons; the lock reason says why. Without it nothing is drawn for the environment.
    * A value that is not a known environment is ignored (the bar never prints a label it cannot name).
    */
   effective?: ExecEnv;
@@ -73,9 +73,9 @@ export interface ContextBarProps {
   windowLock?: WindowLock | null;
   /**
    * For a screen whose read takes no environment (the Blotter's orders read):
-   * the environment buttons are disabled and the reason is printed beside them,
-   * the same pattern as `windowLock`. The pressed button keeps showing the URL's
-   * environment; it is not a claim about the rows.
+   * the environment buttons are not drawn and the bar says "Not applied", the
+   * same pattern as `windowLock`. Nothing is pressed: the URL's environment is
+   * not a claim about the rows.
    */
   envLock?: EnvLock | null;
   /** Server-derived scope text, e.g. "Scope: Your alphas"; the bar never decides it from a role. */
@@ -101,7 +101,6 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
   const locked = windowLock !== undefined && windowLock !== null;
   const envLocked = envLock !== undefined && envLock !== null;
   const lockedEnv = envLocked && typeof envLock.effective === "string" && (EXEC_ENVS as readonly string[]).includes(envLock.effective) ? envLock.effective : null;
-  const shownEnv: ExecEnv = lockedEnv ?? env;
   // One compact line for every lock: locks that only say "this read takes no X" fold into "Not applied: X, Y".
   const notApplied = [envLock?.unapplied ? "Environment" : null, windowLock?.unapplied ? "Window" : null].filter((word): word is string => word !== null);
   const own = (lock: EnvLock | WindowLock | null | undefined): string | null => (lock === null || lock === undefined || lock.unapplied === true ? null : lock.short === undefined ? lock.reason : lock.short);
@@ -110,40 +109,44 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
   return (
     <div className="exec-ctxbar" role="group" aria-label="Context">
       <span className="exec-ctxbar-label">Context</span>
-      <div className="exec-ctxbar-seg" role="group" aria-label="Environment" data-control="env">
-        {EXEC_ENVS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            data-v={value}
-            aria-pressed={value === shownEnv}
-            disabled={envLocked}
-            aria-describedby={envLocked ? envReasonId : undefined}
-            onClick={() => {
-              if (value !== env) onChange({ env: value });
-            }}
-          >
-            {ENV_LABEL[value]}
-          </button>
-        ))}
-      </div>
-      <div className="exec-ctxbar-seg" role="group" aria-label="Window" data-control="window">
-        {EXEC_WINDOWS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            data-v={value}
-            aria-pressed={value === selectedWindow}
-            disabled={locked}
-            aria-describedby={locked ? reasonId : undefined}
-            onClick={() => {
-              if (value !== selectedWindow) onChange({ window: value });
-            }}
-          >
-            {value}
-          </button>
-        ))}
-      </div>
+      {envLocked ? (
+        // A locked control is not drawn as buttons that do nothing: a screen that knows its environment states it (a chip, reason attached),
+        // one whose read takes none says so once in the "Not applied" line. A pressed button is only ever a choice the data follows.
+        lockedEnv ? <span className="exec-ctxbar-chip" data-control="env" data-v={lockedEnv} title={envLock.reason} aria-label={`Environment: ${ENV_LABEL[lockedEnv]}`} aria-describedby={envReasonId}>{ENV_LABEL[lockedEnv]}</span> : null
+      ) : (
+        <div className="exec-ctxbar-seg" role="group" aria-label="Environment" data-control="env">
+          {EXEC_ENVS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              data-v={value}
+              aria-pressed={value === env}
+              onClick={() => {
+                if (value !== env) onChange({ env: value });
+              }}
+            >
+              {ENV_LABEL[value]}
+            </button>
+          ))}
+        </div>
+      )}
+      {locked ? null : (
+        <div className="exec-ctxbar-seg" role="group" aria-label="Window" data-control="window">
+          {EXEC_WINDOWS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              data-v={value}
+              aria-pressed={value === selectedWindow}
+              onClick={() => {
+                if (value !== selectedWindow) onChange({ window: value });
+              }}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
+      )}
       {envLocked ? <span id={envReasonId} className="exec-ctxbar-sr">{envLock.reason}</span> : null}
       {locked ? <span id={reasonId} className="exec-ctxbar-sr">{windowLock.reason}</span> : null}
       {windowLock?.effective ? <span className="exec-ctxbar-lock" title="Window fixed by this screen">Window: {windowLock.effective}</span> : null}

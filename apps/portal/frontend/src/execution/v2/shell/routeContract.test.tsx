@@ -273,12 +273,8 @@ describe("shell + cockpit on", () => {
   it("the shell on shows the bar, and a deployment path wins over ?env= with the one-line notice", async () => {
     const { container } = await mountRoute("/deployments/paper/dep_1?env=live");
     await waitFor(() => expect(container.querySelector(".exec-ctxbar")).not.toBeNull());
-    const buttons = [...container.querySelectorAll<HTMLButtonElement>('[data-control="env"] button')];
-    expect(buttons.map((b) => [b.dataset.v, b.getAttribute("aria-pressed"), b.disabled])).toEqual([
-      ["live", "false", true],
-      ["paper", "true", true],
-      ["sandbox", "false", true],
-    ]);
+    expect(container.querySelectorAll('[data-control="env"] button')).toHaveLength(0);
+    expect(container.querySelector<HTMLElement>('[data-control="env"]')?.dataset.v).toBe("paper");
     expect(container.querySelector(".exec-ctxbar")?.textContent).toContain("The path sets the environment");
   });
 
@@ -288,13 +284,13 @@ describe("shell + cockpit on", () => {
   ])("%s shows %s as the environment", async (path, env) => {
     const { container } = await mountRoute(`${path}?env=paper`);
     await waitFor(() => expect(container.querySelector(".exec-ctxbar")).not.toBeNull());
-    expect(container.querySelector(`[data-control="env"] button[aria-pressed="true"]`)?.getAttribute("data-v")).toBe(env);
+    expect(container.querySelector(`[data-control="env"]`)?.getAttribute("data-v")).toBe(env);
   });
 
   it("a screen that ignores the environment says so on the bar (Admin)", async () => {
     const { container } = await mountRoute("/administration/actions");
     await waitFor(() => expect(container.querySelector(".exec-ctxbar")).not.toBeNull());
-    expect([...container.querySelectorAll<HTMLButtonElement>('[data-control="env"] button')].every((b) => b.disabled)).toBe(true);
+    expect(container.querySelector('[data-control="env"]')).toBeNull();
     expect(container.querySelector(".exec-ctxbar")?.textContent).toMatch(/no environment filter/);
   });
 

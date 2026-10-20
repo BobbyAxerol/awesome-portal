@@ -272,7 +272,7 @@ export function envLockFor(screenId: string, context: EnvLockContext = {}, isV2:
   const pathEnv = PATH_ENV[screenId];
   if (pathEnv !== undefined) {
     const key = STAGE_V2_KEY[screenId];
-    return { reason: context.hasDeploymentId === true && key !== undefined && isV2(key) ? DEPLOYMENT_ENV_REASON : PATH_ENV_REASON, short: "Set by the page", effective: pathEnv };
+    return { reason: context.hasDeploymentId === true && key !== undefined && isV2(key) ? DEPLOYMENT_ENV_REASON : PATH_ENV_REASON, short: null, effective: pathEnv };
   }
   switch (screenId) {
     case "EXECUTION_FULL_BLOTTER_SCREEN":

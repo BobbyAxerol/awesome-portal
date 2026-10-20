@@ -399,6 +399,32 @@
     display: block;
     overflow-x: auto;
   }
+  /* A phone card is a two-column grid (label above value), not seven stacked lines: a page of ten reads as one short scroll. The
+   * order cell holds the expander and the id, so it takes the card's full width (UXM-07 audit B #22). */
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px var(--space-3);
+    padding: 8px 12px;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td[data-l] {
+    display: block;
+    padding: 4px 0;
+    min-width: 0;
+    text-align: left;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td[data-l]::before {
+    display: block;
+    margin-right: 0;
+    padding-right: 0;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td[data-l="Order"] {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+  .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td[data-l="Order"]::before {
+    display: none;
+  }
   /* Cards: nothing sticks; every cell is a row of the card. */
   .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:last-child {
     position: static;
