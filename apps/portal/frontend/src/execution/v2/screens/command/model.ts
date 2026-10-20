@@ -584,7 +584,10 @@ export interface DisabledRow {
   code: string | null;
 }
 
-export function catalogueRows(catalogue: CommandCatalogue): readonly { code: string | null; label: string; rows: readonly DisabledRow[] }[] {
+/** What the disabled-operations list needs of a catalogue: its entries. The V1 `CommandCatalogue` and the strict V2 read both satisfy it. */
+export type CatalogueView = Pick<CommandCatalogue, "entries">;
+
+export function catalogueRows(catalogue: CatalogueView): readonly { code: string | null; label: string; rows: readonly DisabledRow[] }[] {
   return groupEntries(catalogue.entries).map((group) => ({
     code: group.code,
     label: group.label,
