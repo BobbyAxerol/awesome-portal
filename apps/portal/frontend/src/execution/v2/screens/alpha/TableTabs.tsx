@@ -12,10 +12,11 @@ import { Link } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { SectionPanel } from "../../blocks";
+import { NaWhy, SectionPanel } from "../../blocks";
 import { PanelState } from "../../../components/states";
+import { formatAsOf } from "../../boundary";
 import { Dec, At, Na } from "./cells";
-import { ROW_CAP, type DeploymentRow, type PositionRow, type ReconRow } from "./model";
+import { ROW_CAP, type DeploymentFinancial, type DeploymentRow, type PositionRow, type ReconRow } from "./model";
 import { Np, WhyMark } from "./np";
 import type { AlphaView } from "./view";
 
@@ -30,6 +31,20 @@ function CapNote({ shown, total, noun }: { shown: number; total: number; noun: s
 }
 
 /* ── deployments ──────────────────────────────────────────────────────────── */
+
+/** One figure of a deployment's published snapshot row: the exact decimal, or `Not available` with the server's reason. */
+function FinancialCell({ f, member, fallbackCurrency, signed = false }: { f: DeploymentFinancial; member: "netPnl" | "equity"; fallbackCurrency: string | null; signed?: boolean }) {
+  const value = f[member];
+  if (f.state === "UNAVAILABLE" || value === null) return <NaWhy reason={f.reason} />;
+  const at = member === "netPnl" && f.atMs !== null ? <small className="exec-alp2-dim"> {formatAsOf(f.atMs)}</small> : null;
+  return (
+    <>
+      <Dec value={value} currency={f.currency ?? fallbackCurrency} signed={signed} />
+      {at}
+      {f.state === "PARTIAL" && member === "netPnl" ? <WhyMark name="Snapshot, reason" reason={f.reason} /> : null}
+    </>
+  );
+}
 
 export interface DeploymentsTabProps {
   rows: readonly DeploymentRow[];
@@ -62,9 +77,20 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = 
     { key: "runtime", label: "Runtime", render: (r) => <Flag kind={r.runtime.kind} label={r.runtime.label} size="sm" /> },
     { key: "venue", label: "Venue", render: (r) => r.venue ?? <Na /> },
     { key: "allocation", label: "Allocated, current", numeric: true, render: (r) => (scoped && r.allocation === null ? <span><Np id="FE-005" /><WhyMark name="Totals, reason" reason={scopedNoTotals} /></span> : <Dec value={r.allocation} currency={r.currency} />) },
-    { key: "net", label: "Net PnL, current", numeric: true, render: (r) => (scoped ? <span><Np id="FE-005" /><WhyMark name="Totals, reason" reason={scopedNoTotals} /></span> : <Dec value={r.netPnl} currency={r.currency} signed />) },
+    {
+      key: "net",
+      label: "Net PnL, current",
+      numeric: true,
+      render: (r) => (scoped
+        ? r.financial !== undefined ? <FinancialCell f={r.financial} member="netPnl" fallbackCurrency={r.currency} signed /> : <span><Np id="FE-005" /><WhyMark name="Totals, reason" reason={scopedNoTotals} /></span>
+        : <Dec value={r.netPnl} currency={r.currency} signed />),
+    },
+    { key: "equity", label: "Equity", numeric: true, render: (r) => (r.financial !== undefined ? <FinancialCell f={r.financial} member="equity" fallbackCurrency={r.currency} /> : <NaWhy />) },
     { key: "dates", label: "Dates", render: () => <Np id="FE-027" /> },
   ];
+  // The equity column exists only when the body publishes a snapshot entry for some deployment.
+  const withEquity = rows.some((r) => r.financial !== undefined);
+  if (!withEquity) columns.splice(columns.findIndex((c) => c.key === "equity"), 1);
   if (canSeeAccounts) columns.push({ key: "by", label: "Deployed by", render: () => <Np id="FE-021" /> });
   columns.push({ key: "receipts", label: "Receipts", numeric: true, render: () => <Np id="FE-032" /> });
   return (
@@ -82,6 +108,7 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = 
       <p className="exec-alp2-cap">
         {canSeeAccounts ? null : <span>Only deployments in your slice</span>}
         <span>No allocation total: rows sit in different partitions</span>
+        {withEquity ? <span>One snapshot row per deployment, not summed</span> : null}
         {unplaced > 0 ? <span>{unplaced} {unplaced === 1 ? "row" : "rows"} without a deployment id not shown</span> : null}
       </p>
         </>
@@ -194,12 +221,21 @@ export function ReconciliationTab({ rows, scoped = false, withheld = null }: { r
   const shown = rows.slice(0, ROW_CAP);
   const columns: CardsColumn<ReconRow>[] = [
     { key: "venue", label: "Venue", render: (r) => r.venue },
-    { key: "kind", label: "Finding", render: (r) => (r.kind === null ? <span><Np id="FE-072" /><WhyMark name="Finding type, reason" reason="The scoped reconciliation relation has no finding type" /></span> : r.kind) },
+    {
+      key: "kind",
+      label: "Finding",
+      render: (r) => (
+        <>
+          {r.kind === null ? <span><Np id="FE-072" /><WhyMark name="Finding type, reason" reason="The scoped reconciliation relation has no finding type" /></span> : r.kind}
+          {r.findingId ? <> <span className="exec-blk-id">{r.findingId}</span></> : null}
+        </>
+      ),
+    },
     { key: "status", label: "Result", render: (r) => <Flag kind={r.status.kind} label={r.status.label} size="sm" /> },
     {
       key: "resolved",
       label: "Resolved",
-      render: (r) => (r.resolvedAt !== null ? <At iso={new Date(r.resolvedAt).toISOString()} /> : scoped ? <span><Np id="FE-072" /><WhyMark name="Resolution time, reason" reason="The scoped reconciliation relation has no resolution time" /></span> : <Na why="Not resolved" />),
+      render: (r) => (r.resolvedAt !== null ? <At iso={new Date(r.resolvedAt).toISOString()} /> : scoped && r.status.label !== "Open" ? <span><Np id="FE-072" /><WhyMark name="Resolution time, reason" reason="The scoped reconciliation relation has no resolution time" /></span> : <Na why="Not resolved" />),
     },
   ];
   return (

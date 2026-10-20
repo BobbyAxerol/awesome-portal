@@ -15,6 +15,7 @@
  * Pure: nothing fetches. The census of what each variant publishes and what this view consumes is in
  * `evidence/UXM-07/consumer-receipt-alpha-scoped-2026-10-20.md`.
  */
+import { readUtcEpochMs } from "../../../screenDataContract";
 import { marketVenueOf, type MarketVenue } from "../../../api/marketCandles";
 import { readAlphaFleetItem, type AlphaFleetItem, type ProfileEnvelope } from "../../../api/profileRead";
 import { SPINE_STAGE_IDS, type SpineStageId } from "../../blocks";
@@ -22,12 +23,14 @@ import {
   BOUNDED_REASON,
   NO_TOTALS_REASON,
   cellDecimal,
+  cellInstant,
   cellText,
   type AlphaResourceScoped,
   type ScopedEnvironment,
   type ScopedRow,
 } from "../../readers/alphaResourceScoped";
 import type { ExecEnv } from "../../urlState";
+import { financialReasonText, identityReasonText } from "./recordReasons";
 import {
   UNNAMED_ALPHA,
   alphaName,
@@ -45,6 +48,7 @@ import {
   reconciliationRows,
   runtimeOfState,
   spineStageOf,
+  type DeploymentFinancial,
   type DeploymentRow,
   type PositionRow,
   type ReconRow,
@@ -199,8 +203,20 @@ function allocationOf(scoped: AlphaResourceScoped, deploymentId: string): string
   return mine.length === 1 ? cellDecimal(mine[0], "allocated_capital") : null;
 }
 
+/** The snapshot row published for a deployment of a book, as the table reads it. */
+function financialsOf(scoped: AlphaResourceScoped): ReadonlyMap<string, DeploymentFinancial> {
+  const out = new Map<string, DeploymentFinancial>();
+  for (const f of scoped.summary?.deploymentFinancials ?? []) {
+    out.set(`${f.book}:${f.deploymentId}`, {
+      state: f.state, reason: financialReasonText(f.reasonCode), netPnl: f.netPnl, equity: f.equity, currency: f.currency, atMs: f.snapshotAtMs === null ? null : readUtcEpochMs(f.snapshotAtMs),
+    });
+  }
+  return out;
+}
+
 function scopedDeploymentRows(scoped: AlphaResourceScoped): { rows: DeploymentRow[]; unplaced: number } {
   const names = portfolioNames(scoped);
+  const financials = financialsOf(scoped);
   let unplaced = 0;
   const rows: DeploymentRow[] = [];
   const seen = new Set<string>();
@@ -226,6 +242,7 @@ function scopedDeploymentRows(scoped: AlphaResourceScoped): { rows: DeploymentRo
       href: deploymentHref(stage, id),
       rank: RANK[row.book],
       env: row.book,
+      ...(financials.has(`${row.book}:${id}`) ? { financial: financials.get(`${row.book}:${id}`)! } : {}),
     });
   }
   return { rows: rows.sort((a, b) => a.rank - b.rank || a.id.localeCompare(b.id)), unplaced };
@@ -255,19 +272,20 @@ function scopedPositionRows(scoped: AlphaResourceScoped): { rows: PositionRow[];
   return { rows, unplaced };
 }
 
-/** A reconciliation row has `status`, `venue`, `account_id`, a created stamp: no finding id, type or resolution time. */
+/** A reconciliation row: the finding type and resolution time when the body states them (BE-P15), else a typed absence on the screen. */
 function scopedReconciliationRows(scoped: AlphaResourceScoped): ReconRow[] {
   return (scoped.rows?.reconciliation ?? []).map((row, index): ReconRow => {
     const status = (cellText(row, "status") ?? "").toUpperCase();
     return {
-      key: `${row.book}:finding:${index}`,
+      key: cellText(row, "finding_id") ?? `${row.book}:finding:${index}`,
       venue: cellText(row, "venue"),
-      kind: null,
+      kind: cellText(row, "finding_type"),
       status: status === "RESOLVED" ? { kind: "applied", label: "Resolved" }
         : status === "OPEN" ? { kind: "attention", label: "Open" }
         : status === "" ? { kind: "unknown", label: "Not published" }
         : { kind: "unknown", label: humanize(status) },
-      resolvedAt: null,
+      resolvedAt: cellInstant(row, "resolved_at_ms"),
+      findingId: cellText(row, "finding_id"),
     };
   });
 }
@@ -298,20 +316,26 @@ function scopedView(scoped: AlphaResourceScoped, alphaId: string): AlphaView {
   const names = [...new Set([...portfolioNames(scoped).values()])];
   const bounded = scoped.shape === "bounded";
   const rows = placed.rows;
+  const version = scoped.summary?.version ?? null;
+  // The body's own typed reason for each identity member it does not state; the older fixed sentence only when it states none.
+  const absent = (member: "name" | "version" | "owner" | "stage", fallback: string): string => {
+    const hit = scoped.summary?.identityAbsences.find((entry) => entry.member === member);
+    return (hit === undefined ? null : identityReasonText(hit.reasonCode)) ?? fallback;
+  };
   return {
     variant: "scoped",
     alphaId: id,
     present: scoped.shape !== "empty" && scoped.state !== "empty",
     title: name ?? id ?? alphaId,
-    titleWithVersion: name ?? id ?? alphaId,
+    titleWithVersion: version === null ? name ?? id ?? alphaId : `${name ?? id ?? alphaId} v${version}`,
     name,
-    version: null,
-    nameReason: "execution.alpha-resource.v2 states no alpha name",
-    versionReason: "execution.alpha-resource.v2 states no alpha version",
-    owner: { kind: "not-published", id: "FE-030", reason: "execution.alpha-resource.v2 states no owner" },
+    version,
+    nameReason: absent("name", "execution.alpha-resource.v2 states no alpha name"),
+    versionReason: absent("version", "execution.alpha-resource.v2 states no alpha version"),
+    owner: { kind: "not-published", id: "FE-030", reason: absent("owner", "execution.alpha-resource.v2 states no owner") },
     portfolioNames: names,
     current: null,
-    currentNote: "The scoped body carries no alpha-level stage; it states each deployment's book only.",
+    currentNote: absent("stage", "The scoped body carries no alpha-level stage; it states each deployment's book only."),
     rows,
     envs: (["live", "paper", "sandbox"] as const).filter((env) => rows.some((r) => r.env === env)),
     money: { published: false, reason: scoped.summary?.financialSummary.reasonCode ?? NO_TOTALS_REASON },

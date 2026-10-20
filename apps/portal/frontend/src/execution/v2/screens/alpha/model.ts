@@ -129,6 +129,18 @@ export interface DeploymentRow {
   rank: number;
   /** The book the row was read from. Set on a SCOPED_V2 row (whose stage within the Live book is not published); a legacy row leaves it to its stage. */
   env?: ExecEnv;
+  /** SCOPED_V2 only: the one published snapshot row of this deployment, or its typed absence. Absent when the body carries no entry for it. */
+  financial?: DeploymentFinancial;
+}
+
+/** One published snapshot row of one deployment (BE-P15): never a sum, never zero. `reason` is the words for the server's code, when known. */
+export interface DeploymentFinancial {
+  state: "AVAILABLE" | "PARTIAL" | "UNAVAILABLE";
+  reason: string | null;
+  netPnl: string | null;
+  equity: string | null;
+  currency: string | null;
+  atMs: UtcEpochMs | null;
 }
 
 const STAGE_WORD: Readonly<Record<SpineStageId, string>> = { r1: "R1 gate", r2: "R2 gate", paper: "Paper", sandbox: "Sandbox", canary: "Canary", live: "Live" };
@@ -517,6 +529,8 @@ export interface ReconRow {
   kind: string | null;
   status: { kind: FlagKind; label: string };
   resolvedAt: UtcEpochMs | null;
+  /** The source's finding id, when the body states one (SCOPED_V2 since BE-P15; the legacy row's `key` is it already). */
+  findingId?: string | null;
 }
 
 export function reconciliationRows(rows: readonly Record<string, unknown>[] | undefined): readonly ReconRow[] {

@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { ALPHA_V2_WORKSPACE, answerAlpha } from "../../../../../e2e/bffDoubleAlpha";
 import { readReplayFills, readReplayOrders } from "../../../components/tradeReplayModel";
 import { readSubjectRecordsScoped } from "../../readers/subjectRecordsScoped";
-import { isScopedPage, scopedPageAsActivity } from "./scopedBook";
+import { detailIndex, isScopedPage, scopedPageAsActivity, serves } from "./scopedBook";
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 const page = (relation: "orders" | "fills", extra = ""): Json =>
@@ -20,6 +20,27 @@ const read = (relation: "orders" | "fills", mutate?: (b: Json) => void) => {
 };
 
 describe("scopedPageAsActivity", () => {
+  it("carries the page's clock statement and each record's time reason, and indexes the record detail the replay model drops", () => {
+    const orders = read("orders", (b) => { b.records[1].time_reason_code = "SOURCE_TIME_NOT_PUBLISHED"; delete b.records[1].values.submitted_at_ms; });
+    expect(orders.clock).toEqual({ timeUnit: "UTC_EPOCH_MS", observedAtBasis: "ORDER_UPDATED_AT" });
+    expect(read("fills").clock).toEqual({ timeUnit: "UTC_EPOCH_MS", observedAtBasis: "FILL_TRADE_TIME" });
+    expect(orders.records.map((r) => r.timeReason ?? null)).toEqual([null, "SOURCE_TIME_NOT_PUBLISHED", null, null, null, null]);
+    expect(orders.records[1]!.values.submitted_at).toBeUndefined();
+    const index = detailIndex([orders], "order_id");
+    expect(index.get("ord_002")).toMatchObject({ timeReason: "SOURCE_TIME_NOT_PUBLISHED" });
+    expect(index.get("ord_001")!.values.client_order_id).toBe("bt3-001");
+    // `serves` is true when some record states the member at all, even as null.
+    expect(serves(index, "order_type")).toBe(true);
+    expect(serves(index, "commission")).toBe(false);
+  });
+
+  it("an order with both submitted_at_ms and occurred_at_ms is placed by submitted_at_ms", () => {
+    const both = read("orders", (b) => { b.records[0].values.submitted_at_ms = 5_000; b.records[0].values.occurred_at_ms = 9_000; });
+    expect(both.records[0]!.values.submitted_at).toBe(new Date(5_000).toISOString());
+    const legacy = read("orders", (b) => { delete b.records[0].values.submitted_at_ms; b.records[0].values.occurred_at_ms = 9_000; });
+    expect(legacy.records[0]!.values.submitted_at).toBe(new Date(9_000).toISOString());
+  });
+
   it("keeps the retained-window statement and borrows nothing for the members the v2 page does not have", () => {
     const mapped = read("orders");
     expect(isScopedPage(mapped)).toBe(true);
@@ -35,13 +56,13 @@ describe("scopedPageAsActivity", () => {
     expect(mapped.records).toHaveLength(6);
   });
 
-  it("an order is placed in time by occurred_at_ms only; the replay's own reader then reads it, with the members the v2 record has", () => {
+  it("an order is placed in time by its own submitted_at_ms (else occurred_at_ms); the replay's own reader then reads it, with the members the v2 record states", () => {
     const orders = readReplayOrders(read("orders").records.map((r) => r.values));
     expect(orders).toHaveLength(6);
     expect(orders[0]).toMatchObject({ orderId: "ord_001", symbol: "BTCUSDT", side: "BUY", status: "FILLED", price: "67200.50", qty: "0.40", accountId: "acct_binance_02" });
     expect(orders[0]!.submittedAt).toBe(new Date(Date.UTC(2026, 9, 16, 14, 0)).toISOString());
-    // No client order id, order type, session or venue order id exists in the v2 record: they are null, not guessed.
-    expect(orders[0]).toMatchObject({ clientOrderId: null, type: null, sessionId: null, venueOrderId: null });
+    // The record states the client order id and the type; session and venue order id are not in the v2 record: null, not guessed.
+    expect(orders[0]).toMatchObject({ clientOrderId: "bt3-001", type: "LIMIT", sessionId: null, venueOrderId: null });
   });
 
   it("a fill with no occurred_at_ms or timestamp_ms has no trade time: the replay reader drops it (counted as lost), the observation clock is not borrowed", () => {

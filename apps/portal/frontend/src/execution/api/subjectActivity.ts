@@ -38,7 +38,9 @@ export interface SubjectActivityPage {
   coverage: { retainedRowCount: number | null; oldestObservedAtMs: number | null; newestObservedAtMs: number | null; sourceCompleteness: string | null; sourceWindow: string | null };
   state: string;
   page: { limit: number | null; maximumPageRows: number | null; returnedCount: number | null; hasMore: boolean; nextCursor: string | null };
-  records: readonly { recordId: string; values: Record<string, RelationScalar> }[];
+  records: readonly { recordId: string; values: Record<string, RelationScalar>; timeReason?: string | null }[];
+  /** SCOPED_V2 only: the page's own clock statement (`time_unit`, `observed_at_basis`). Absent on a v1 page. */
+  clock?: { timeUnit: string; observedAtBasis: string };
   projection: { epochId: string | null; sequence: number | null; sourceAsOfMs: number | null; lastRefreshMs: number | null; completeness: string | null };
 }
 

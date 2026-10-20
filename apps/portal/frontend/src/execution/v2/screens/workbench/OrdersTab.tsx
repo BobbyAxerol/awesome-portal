@@ -9,8 +9,8 @@ import { Link } from "react-router-dom";
 
 import type { CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { Fig, Na } from "./cells";
-import type { OrderRow, TableWindow } from "./model";
+import { At, Fig, Na } from "./cells";
+import { humanize, type OrderRow, type TableWindow } from "./model";
 import { TablePanel } from "./TablePanel";
 
 const SIDE = { buy: "Buy", sell: "Sell" } as const;
@@ -22,8 +22,13 @@ export interface OrdersTabProps {
 }
 
 export function OrdersTab({ table, blotterHref }: OrdersTabProps) {
+  // Quiet columns, drawn only when the profile states the member for some row; a row without it says `Not available`.
+  const withTime = table.rows.some((r) => r.atMs !== null);
+  const withType = table.rows.some((r) => r.orderType !== null);
   const columns: CardsColumn<OrderRow>[] = [
+    ...(withTime ? [{ key: "when", label: "Submitted (UTC)", render: (r: OrderRow) => <At ms={r.atMs} /> }] : []),
     { key: "client", label: "Client order", render: (r) => (r.clientOrderId ?? r.orderId) === null ? null : <span className="exec-blk-id">{r.clientOrderId ?? r.orderId}</span> },
+    ...(withType ? [{ key: "type", label: "Type", render: (r: OrderRow) => (r.orderType === null ? <Na /> : humanize(r.orderType)) }] : []),
     { key: "side", label: "Side", render: (r) => (r.side === null ? null : SIDE[r.side]) },
     { key: "qty", label: "Quantity", numeric: true, render: (r) => <Fig value={r.quantity} /> },
     { key: "price", label: "Price", numeric: true, render: (r) => <Fig value={r.price} /> },

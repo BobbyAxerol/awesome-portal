@@ -16,9 +16,11 @@ import type { ReplayFill, ReplayOrder } from "../../../components/tradeReplayMod
 import { readMetric } from "../../boundary";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { Kpi, KpiStrip, SectionPanel } from "../../blocks";
+import { GapWhy, Kpi, KpiStrip, NaWhy, SectionPanel } from "../../blocks";
 import { At, Dec, Na } from "./cells";
 import { ROW_CAP, humanize, orderFlag, replayHref } from "./model";
+import { BASIS_TEXT, NOT_IN_RECORD, timeReasonText } from "./recordReasons";
+import { detailIndex, serves, type RecordDetail } from "./scopedBook";
 import type { PagedRead, Read, SubjectBook } from "./useAlphaReads";
 import type { SubjectActivityPage } from "../../../api/subjectActivity";
 
@@ -50,6 +52,26 @@ function sideType(side: string | null, type: string | null): string {
   return parts.length === 0 ? "Not available" : parts.join(", ");
 }
 
+const pagesOf = (state: Read<readonly SubjectActivityPage[]>): readonly SubjectActivityPage[] => (state.phase === "ready" ? state.value : []);
+
+/** A scoped record's time: the instant when it states one, else the reason the page gives for having none. */
+function Moment({ iso, detail }: { iso: string | null; detail: RecordDetail | undefined }) {
+  if (iso !== null && detail?.timeReason == null) return <At iso={iso} />;
+  return <NaWhy reason={timeReasonText(detail?.timeReason)} />;
+}
+
+/** A member a scoped record may or may not state: the value, or `Not available` with the one neutral reason. */
+const stated = (value: string | null | undefined, detail: RecordDetail | undefined, scoped: boolean) =>
+  value ? <span className="exec-blk-id">{value}</span> : scoped && detail !== undefined ? <NaWhy reason={NOT_IN_RECORD} /> : null;
+
+/** `Take profit 2`: the leg a conditional order plays, from the record's own words; absent members are left out, never guessed. */
+function legText(detail: RecordDetail | undefined): string | null {
+  const role = detail?.values.leg_role;
+  const sequence = detail?.values.leg_sequence;
+  const parts = [typeof role === "string" && role !== "" ? humanize(role) : null, typeof sequence === "number" ? String(sequence) : null].filter((part): part is string => part !== null);
+  return parts.length === 0 ? null : parts.join(" ");
+}
+
 export interface OrdersTabProps {
   alphaId: string;
   book: SubjectBook;
@@ -63,12 +85,16 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
   const absent = activity.phase === "error" ? activity.reason : activity.phase === "ready" ? undefined : "Reading the rollup";
   const statusCounts = data ? Object.entries(data.orderStatusCounts) : [];
 
+  const scoped = book.scoped;
+  const orderDetail = detailIndex(pagesOf(book.ordersState), "order_id");
+  const fillDetail = detailIndex(pagesOf(book.fillsState), "fill_id");
   const orderColumns: CardsColumn<ReplayOrder>[] = [
-    { key: "at", label: "Time (UTC)", render: (o) => <At iso={o.submittedAt} /> },
+    { key: "at", label: "Time (UTC)", render: (o) => (scoped ? <Moment iso={o.submittedAt} detail={orderDetail.get(o.orderId)} /> : <At iso={o.submittedAt} />) },
     { key: "order", label: "Order", render: (o) => <span className="exec-blk-id">{o.orderId}</span> },
-    { key: "client", label: "Client order", render: (o) => (o.clientOrderId ? <span className="exec-blk-id">{o.clientOrderId}</span> : null) },
+    { key: "client", label: "Client order", render: (o) => stated(o.clientOrderId, orderDetail.get(o.orderId), scoped) },
     { key: "symbol", label: "Symbol", render: (o) => o.symbol },
     { key: "kind", label: "Type", render: (o) => sideType(o.side, o.type) },
+    { key: "leg", label: "Leg", render: (o) => legText(orderDetail.get(o.orderId)) ?? (orderDetail.has(o.orderId) ? <NaWhy reason={NOT_IN_RECORD} /> : null) },
     { key: "qty", label: "Quantity", numeric: true, render: (o) => <Dec value={o.qty} unit="qty" /> },
     { key: "price", label: "Price or trigger", numeric: true, render: (o) => (o.price !== null ? <Dec value={o.price} /> : o.trigger !== null ? <Dec value={o.trigger} /> : <Na why="Market order" />) },
     {
@@ -90,32 +116,40 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
   const fillColumns: CardsColumn<ReplayFill>[] = [
     { key: "at", label: "Time (UTC)", render: (f) => <At iso={f.tradeTime} /> },
     { key: "fill", label: "Fill", render: (f) => <span className="exec-blk-id">{f.fillId}</span> },
-    { key: "client", label: "Client order", render: (f) => (f.clientOrderId ? <span className="exec-blk-id">{f.clientOrderId}</span> : null) },
+    { key: "client", label: "Client order", render: (f) => stated(f.clientOrderId, fillDetail.get(f.fillId), scoped) },
     { key: "symbol", label: "Symbol", render: (f) => f.symbol },
     { key: "side", label: "Side", render: (f) => (f.side ? humanize(f.side) : null) },
     { key: "qty", label: "Quantity", numeric: true, render: (f) => <Dec value={f.qty} unit="qty" /> },
     { key: "price", label: "Price", numeric: true, render: (f) => <Dec value={f.price} /> },
-    { key: "fee", label: "Fee", numeric: true, render: (f) => <Dec value={f.commission} currency={f.commissionCurrency} why="Fee not published" /> },
-    { key: "liq", label: "Liquidity", render: (f) => (f.liquidity ? humanize(f.liquidity) : null) },
+    { key: "fee", label: "Fee", numeric: true, render: (f) => (scoped && f.commission === null ? <NaWhy reason={NOT_IN_RECORD} /> : <Dec value={f.commission} currency={f.commissionCurrency} why="Fee not published" />) },
+    { key: "liq", label: "Liquidity", render: (f) => (f.liquidity ? humanize(f.liquidity) : scoped ? <NaWhy reason={NOT_IN_RECORD} /> : null) },
   ];
 
-  // SCOPED_V2 (R-3): the record carries a closed member set. These columns have nothing to show from it, so they are not drawn
-  // (an empty cell would read as "this order has none"); the note under the strip says once what the contract leaves out.
-  const scoped = book.scoped;
-  const orderCols = scoped ? orderColumns.filter((c) => c.key !== "client" && c.key !== "kind") : orderColumns;
-  const fillCols = scoped ? fillColumns.filter((c) => c.key !== "client" && c.key !== "fee" && c.key !== "liq") : fillColumns;
+  // SCOPED_V2: a column is drawn only when the page states that member for at least one record (an unserved column would read as
+  // "this order has none"). A record that lacks it among the others says so with one neutral reason.
+  const orderCols = scoped
+    ? orderColumns.filter((c) => (c.key === "client" ? serves(orderDetail, "client_order_id") : c.key === "kind" ? serves(orderDetail, "order_type") : c.key === "leg" ? serves(orderDetail, "leg_role") : true))
+    : orderColumns.filter((c) => c.key !== "leg");
+  const fillCols = scoped
+    ? fillColumns.filter((c) => (c.key === "client" ? serves(fillDetail, "client_order_id") : c.key === "fee" ? serves(fillDetail, "commission") : c.key === "liq" ? serves(fillDetail, "liquidity_side") : true))
+    : fillColumns;
   const orders = newestFirst(book.orders, (o) => o.submittedAt);
   const fills = newestFirst(book.fills, (f) => f.tradeTime);
   // Records the page declared that did not become a row (no id, no price or no time), so "empty" is not read as "none".
   const declared = (state: Read<readonly SubjectActivityPage[]>) => (state.phase === "ready" ? state.value.reduce((n, p) => n + (p.page.returnedCount ?? p.records.length), 0) : 0);
   const orderGap = scoped ? Math.max(0, declared(book.ordersState) - orders.length) : 0;
   const fillGap = scoped ? Math.max(0, declared(book.fillsState) - fills.length) : 0;
+  // Why the fills that did not become a row have no time: the page's own reasons, once each.
+  const shownFills = new Set(fills.map((f) => f.fillId));
+  const fillWhy = [...new Set([...fillDetail].filter(([id]) => !shownFills.has(id)).flatMap(([, d]) => timeReasonText(d.timeReason) ?? []))];
+  const head = pagesOf(book.ordersState)[0] ?? pagesOf(book.fillsState)[0];
+  const basis = head?.clock === undefined ? null : BASIS_TEXT[head.clock.observedAtBasis] ?? null;
 
   return (
     <div className="exec-alp2-stack">
       {scoped ? (
         <p className="exec-alp2-cap" role="note">
-          <span>Scoped read: authorized rows of a retained window, not total history. The record carries no client order id, order type, fee or liquidity (portal.execution.subject-records.v2).</span>
+          <span>Scoped read: authorized rows of a retained window, not total history.{basis ? ` Paged by ${basis}.` : ""}</span>
         </p>
       ) : null}
       <KpiStrip label="Orders and fills" columns={4}>
@@ -168,7 +202,12 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
               empty={<PanelState status="empty" reason="No fill is present for this alpha in the retained projection window." />}
             />
             <MoreRow page={book.fillsMore} noun="fills" loaded={fills.length} shown={Math.min(fills.length, ROW_CAP)} />
-            {fillGap > 0 ? <p className="exec-alp2-cap" role="note"><span>{fillGap} {fillGap === 1 ? "record was" : "records were"} returned and not shown: no fill id, price or trade time. The scoped record states a time only as <span className="exec-blk-id">occurred_at_ms</span> or <span className="exec-blk-id">timestamp_ms</span>; the Portal observation time is not used as one.</span></p> : null}
+            {fillGap > 0 ? (
+              <p className="exec-alp2-cap" role="note">
+                <span>{fillGap} {fillGap === 1 ? "record was" : "records were"} returned and not shown: no fill id, price or trade time.</span>
+                {fillWhy.length > 0 ? <GapWhy name="Why trade time is missing" rows={fillWhy} /> : null}
+              </p>
+            ) : null}
           </>
         ) : null}
       </SectionPanel>
