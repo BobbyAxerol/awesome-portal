@@ -220,7 +220,7 @@ describe("L1 · the V1 state matrix", () => {
 
   it("the published dark body: nothing is a number, Runtime is Not published (FE-067), the source is not qualified", () => {
     const m = model(v1Raw());
-    expect(m.notice).toEqual({ kind: "unqualified", text: "Source not qualified. Figures stay unavailable until it is." });
+    expect(m.notice).toEqual({ kind: "unqualified", text: "Source not qualified." });
     expect(m.kpis.map((k) => [k.key, k.kind])).toEqual([
       ["capital", "not-published"], ["gross_notional", "not-published"], ["daily_pnl", "not-published"], ["open_orders", "not-published"],
       ["broker_equity", "absent"],
@@ -262,8 +262,8 @@ describe("L1 · the V1 state matrix", () => {
       const p = model(withV1Rows(populatedV1(), "EXECUTION", state)).v1Rows!.positions;
       return p.kind === "table" ? p.line : p.kind === "withheld" ? p.text : p.kind;
     };
-    expect(line("partial")).toBe("Partial: the source reported only part of it.");
-    expect(line("stale")).toBe("Stale: the source has not updated within its freshness budget.");
+    expect(line("partial")).toBe("Partial.");
+    expect(line("stale")).toBe("Stale.");
     expect(line("ready")).toBeNull();
     expect(line("empty")).toBeNull();
     expect(line("unavailable")).toBe("Not available · source unavailable");
@@ -419,7 +419,7 @@ describe("L1 · the V2 body", () => {
       none.data[name].next_cursor = null;
       none.data[name].previous_cursor = null;
     }
-    expect(liveModelV2(v2Of(none)).notice).toEqual({ kind: "empty", text: "No retained observation is published for this deployment yet." });
+    expect(liveModelV2(v2Of(none)).notice).toEqual({ kind: "empty", text: "No retained observation yet." });
   });
 
   it("the Canary link of a V2 body is the deployment's own", () => {

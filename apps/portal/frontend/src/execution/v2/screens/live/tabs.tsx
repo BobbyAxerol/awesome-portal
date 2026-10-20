@@ -5,18 +5,22 @@
  * (model.ts); a V2 body adds its retained-observation tables on the first two. Nothing here decides a
  * fact: a value the body did not publish prints `Not published (FE-xxx)` or `Not available`.
  */
+import { useId } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
+import { withoutOrigin } from "../../backTo";
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
-import { NotPublished, SectionPanel, Triad } from "../../blocks";
+import { GapLine, SectionPanel, Triad, type GapItem } from "../../blocks";
 import type { LiveSourceOperationsV2 } from "../../readers/liveSourceOperations";
 import { withContext } from "../../urlState";
 import { stageWhy, type StageAction } from "../stage/reasons";
 import { useStageReason } from "../stage/StageEligibility";
 import { ContextLink, KeyedTable, PanelSection, V1RowsSection } from "./parts";
-import { ACCESS_PATH, CONTINUITY_PANELS, EXPOSURE_PANELS, type LiveModel } from "./model";
+import { ACCESS_PATH, CONTINUITY_PANELS, EXPOSURE_PANELS, panelReason, panelTitle, type LiveModel } from "./model";
 import type { PanelPaging } from "./useLiveReads";
+
+import "../../css/decisions.css";
 
 /* ── rail: the protective ladder ─────────────────────────────────────────── */
 
@@ -36,6 +40,12 @@ export function ProtectiveLadder({ model }: { model: LiveModel }) {
   const reason = stageWhy("liveClosed");
   // FE-068: the server's own reason for a rung that is off, when it published one; today's sentence otherwise. Text only.
   const reasonFor = useStageReason();
+  const reasonId = useId();
+  const [params] = useSearchParams();
+  const reasons = model.ladder.map((rung) => (RUNG_ACTION[rung.key] ? reasonFor(RUNG_ACTION[rung.key]!, reason) : reason));
+  // Every rung is off for the same reason: the reason is printed once, under the ladder, with one My access link. A rung the server
+  // gave its own reason keeps its own `DockAction`, so no reason is ever merged with a different one.
+  const same = reasons.every((text) => text === reasons[0]);
   return (
     <SectionPanel level={2} title="Protective ladder" aside="Halt → Reduce → Close">
       <div className="exec-liv-ladder">
@@ -46,10 +56,20 @@ export function ProtectiveLadder({ model }: { model: LiveModel }) {
               <span className="exec-liv-step">Step {rung.step}</span>
             </div>
             <p className="exec-liv-rung-note">{rung.note}</p>
-            <DockAction label={rung.title} reason={RUNG_ACTION[rung.key] ? reasonFor(RUNG_ACTION[rung.key]!, reason) : reason} accessHref={ACCESS_PATH} />
+            {same ? (
+              <button type="button" className="exec-dock-btn" disabled aria-describedby={reasonId}>{rung.title}</button>
+            ) : (
+              <div className="exec-stage-dec"><DockAction label={rung.title} reason={reasons[index]} accessHref={ACCESS_PATH} /></div>
+            )}
           </div>
         ))}
       </div>
+      {same ? (
+        <div className="exec-stage-dec-why">
+          <p id={reasonId} className="exec-dock-reason" title={reasons[0]}>{reasons[0]}</p>
+          <Link className="exec-dock-access" to={withContext(ACCESS_PATH, withoutOrigin(params))} aria-label={`My access: ${model.ladder.map((rung) => rung.title).join(", ")}`}>My access</Link>
+        </div>
+      ) : null}
       {model.gapNote ? <p className="exec-liv-line">{model.gapNote}</p> : null}
     </SectionPanel>
   );
@@ -66,30 +86,31 @@ export interface TabProps {
 export function ExposureTab({ model, v2, paging }: TabProps) {
   const [params] = useSearchParams();
   const blotter = model.deploymentId === null ? null : withContext(`/deployments/blotter?deployment=${encodeURIComponent(model.deploymentId)}`, params);
+  // No figure in the triad (none published, or every cell the server's NOT_PUBLISHED): ONE line instead of three columns of the same words.
+  const cells = model.triad === null ? [] : model.triad.rows.flatMap((row) => [row.internal, row.broker, row.difference]);
+  const triadGap =
+    model.triad === null ||
+    (!model.triad.suppressed &&
+      cells.every((cell) => cell === undefined || (typeof cell === "object" && cell !== null && cell.kind === "not-published")));
+  const triadReason =
+    [...new Set(cells.flatMap((cell) => (typeof cell === "object" && cell !== null && cell.kind === "not-published" && cell.reasonCode ? [cell.reasonCode] : [])))].join(" · ") || null;
+  const unpublishedPanels = v2 === null ? [] : EXPOSURE_PANELS.filter((name) => v2.panels[name].state === "NOT_PUBLISHED");
   return (
     <div className="exec-liv-stack">
-      {model.triad !== null ? (
-        <>
-          <Triad rows={model.triad.rows} internal={model.triad.internal} broker={model.triad.broker} suppressed={model.triad.suppressed} />
-          {model.triad.rowsPublished ? (
-            <p className="exec-liv-line">The Difference is the server's and is never worked out here.</p>
-          ) : (
-            <p className="exec-liv-line">
-              Reconciliation figures: <NotPublished id="FE-072">Internal, Broker and Difference rows</NotPublished>
-            </p>
-          )}
-        </>
-      ) : (
+      {triadGap ? (
         <SectionPanel level={2} title="Reconciliation">
-          <p className="exec-liv-line">
-            <NotPublished id="FE-072">Internal, Broker and Difference figures</NotPublished>
-          </p>
+          <GapLine items={[{ label: "Internal, Broker and Difference figures", id: "FE-072", reason: triadReason }]} />
         </SectionPanel>
+      ) : model.triad === null ? null : (
+        <Triad rows={model.triad.rows} internal={model.triad.internal} broker={model.triad.broker} suppressed={model.triad.suppressed} />
       )}
       {v2 !== null ? (
-        EXPOSURE_PANELS.map((name) => (
-          <PanelSection key={name} panel={v2.panels[name]} page={paging.page(name)} onMore={() => paging.loadMore(name)} />
-        ))
+        <>
+          {EXPOSURE_PANELS.filter((name) => !unpublishedPanels.includes(name)).map((name) => (
+            <PanelSection key={name} panel={v2.panels[name]} page={paging.page(name)} onMore={() => paging.loadMore(name)} />
+          ))}
+          <GapLine items={unpublishedPanels.map((name): GapItem => ({ label: panelTitle(name), reason: panelReason(v2.panels[name].reasonCode) }))} />
+        </>
       ) : (
         <>
           <V1RowsSection title="Positions" aside="Internal figures" rows={model.v1Rows?.positions ?? { kind: "none" }} what="Position rows" />
@@ -130,7 +151,7 @@ export function ContinuityTab({ model, v2, paging }: TabProps) {
       </SectionPanel>
       {v2 !== null ? (
         <>
-          <SectionPanel level={2} title="What this read covers" aside="Retained observations">
+          <SectionPanel level={2} title="What this read covers">
             <KeyedTable
               label="Panel coverage"
               columns={[{ key: "panel", label: "Panel" }, { key: "state", label: "State" }, { key: "rows", label: "On this page", numeric: true }, { key: "why", label: "Why" }]}
@@ -145,7 +166,8 @@ export function ContinuityTab({ model, v2, paging }: TabProps) {
               }))}
             />
           </SectionPanel>
-          {CONTINUITY_PANELS.map((name) => (
+          {/* A panel the source did not publish is a row of the coverage table above (state and reason), not a second panel of the same words. */}
+          {CONTINUITY_PANELS.filter((name) => v2.panels[name].state !== "NOT_PUBLISHED").map((name) => (
             <PanelSection key={name} panel={v2.panels[name]} page={paging.page(name)} onMore={() => paging.loadMore(name)} />
           ))}
         </>
@@ -174,7 +196,7 @@ export function PredecessorTab({ model }: { model: LiveModel }) {
         </>
       ) : (
         <p className="exec-liv-line">
-          <span className="exec-blk-na">Not available · {p.reason}</span>
+          <span className="exec-blk-na" title={p.reason}>Not available</span>
         </p>
       )}
       <p className="exec-liv-line">
@@ -208,8 +230,9 @@ export function GuardRulesTab({ model }: { model: LiveModel }) {
         ) : null}
       </SectionPanel>
       <SectionPanel level={2} title="Risk-increasing actions">
-        <p className="exec-liv-line">A gap blocks these first; the ladder's protective actions are separate.</p>
-        <DockAction label="Risk-increasing action" reason={reason} accessHref={ACCESS_PATH} />
+        <div className="exec-stage-dec" title="A gap blocks these first; the ladder's protective actions are separate.">
+          <DockAction label="Risk-increasing action" reason={reason} accessHref={ACCESS_PATH} />
+        </div>
       </SectionPanel>
     </div>
   );

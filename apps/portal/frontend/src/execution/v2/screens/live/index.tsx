@@ -30,7 +30,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
-import { BlockerList, Kpi, KpiStrip, StageHeader, UrlTabs, type StageCrumb, type StageTab } from "../../blocks";
+import { BlockerList, CompactGaps, GapLine, Kpi, KpiStrip, StageHeader, UrlTabs, type StageCrumb, type StageTab } from "../../blocks";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
 import { alphaCrumb, portfolioLabel } from "../stage/identity";
 import { unsupportedText, type LiveFullVersionRead } from "../../readers/dispatch";
@@ -69,12 +69,11 @@ function Denied() {
     <Frame>
       <header className="exec-liv-plainhead">
         <h1 className="exec-liv-title">Live operations</h1>
-        <p className="exec-liv-sub">Operators, managers and reviewers</p>
       </header>
       <PanelState
         status="denied"
         title="You can't open this page"
-        reason="Live operations is outside what your access allows."
+        reason="Outside your access."
         actions={
           <span className="exec-liv-actions">
             <Link className="exec-blk-link" to={withContext(ACCESS_PATH, params)}>See what you can access</Link>
@@ -87,23 +86,23 @@ function Denied() {
 }
 
 function kpiView(cell: KpiCell) {
-  switch (cell.kind) {
-    case "metric":
-      return <Kpi key={cell.key} label={cell.label} metric={cell.metric} suffix={cell.suffix} basis={cell.basis} signed={cell.signed} />;
-    case "hidden":
-      return <Kpi key={cell.key} label={cell.label} value="Hidden" basis={cell.basis} />;
-    case "not-published":
-      return <Kpi key={cell.key} label={cell.label} notPublished="FE-072" />;
-    case "absent":
-      return <Kpi key={cell.key} label={cell.label} absentReason={cell.absentReason} />;
-  }
+  return cell.kind === "metric" ? (
+    <Kpi key={cell.key} label={cell.label} metric={cell.metric} suffix={cell.suffix} basis={cell.basis} signed={cell.signed} />
+  ) : (
+    <Kpi key={cell.key} label={cell.label} value="Hidden" basis={cell.basis} />
+  );
 }
+
+/** A figure the strip can print: a published value, or one withheld on purpose (`Hidden`). The rest are ONE `Not available` line. */
+const printable = (cell: KpiCell): boolean => cell.kind === "metric" || cell.kind === "hidden";
 
 function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model: LiveModel; api: ExecutionApi; deploymentId: string; workspaceId: string | undefined; v2: Parameters<typeof usePanelPaging>[3]; reload(): void }) {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const paging = usePanelPaging(api, deploymentId, workspaceId, v2);
   const id = model.deploymentId ?? deploymentId;
+  const shown = model.kpis.filter(printable);
+  const missing = model.kpis.filter((cell) => !printable(cell));
 
   // The Alpha is linked only when the body published `alpha_id` (FE-066); the portfolio shows its published name, else its id.
   const alpha = alphaCrumb(model.identity);
@@ -143,6 +142,10 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
           )
         }
         chips={model.chips}
+        actions={
+          // One read per press: the body is replaced by the loading frame until it answers, so there is no second in flight.
+          <button type="button" className="exec-blk-btn" onClick={reload}>Refresh</button>
+        }
         spine={{
           current: model.stage,
           blocked: model.spineBlocked,
@@ -164,13 +167,12 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
           {model.notice.text}
         </p>
       ) : null}
-      <div className="exec-liv-actions">
-        {/* One read per press: the body is replaced by the loading frame until it answers, so there is no second in flight. */}
-        <button type="button" className="exec-blk-btn" onClick={reload}>Refresh</button>
-      </div>
-      <KpiStrip label="Live figures" columns={5}>
-        {model.kpis.map(kpiView)}
-      </KpiStrip>
+      {shown.length > 0 ? (
+        <KpiStrip label="Live figures" columns={shown.length}>
+          {shown.map(kpiView)}
+        </KpiStrip>
+      ) : null}
+      <GapLine items={missing.map((cell) => ({ label: cell.label, id: cell.kind === "not-published" ? "FE-072" : undefined, reason: cell.kind === "absent" ? cell.absentReason : undefined }))} />
       <div className="exec-liv-grid">
         <div className="exec-liv-main">
           <ChartSlot slot={model.chart} />
@@ -198,7 +200,15 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
   );
 }
 
-export default function LiveScreen({ api, deploymentId, workspaceId }: LiveScreenProps) {
+export default function LiveScreen(props: LiveScreenProps) {
+  return (
+    <CompactGaps>
+      <LiveScreenBody {...props} />
+    </CompactGaps>
+  );
+}
+
+function LiveScreenBody({ api, deploymentId, workspaceId }: LiveScreenProps) {
   const url = useExecUrlState();
   const [params] = useSearchParams();
   const wsId = url.value.workspace_id ?? workspaceId;

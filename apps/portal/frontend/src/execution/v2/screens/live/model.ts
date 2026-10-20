@@ -596,7 +596,7 @@ function rowsPanelV1(live: LiveFullOperations, key: "positions" | "orders", coll
     const shownRows = Math.min(typed.rows.length, ROW_CAP);
     const reasons = Object.fromEntries(typed.notPublishedColumns.map((c) => [c.column, c.reasonCode]));
     const caption = rowsCaption(shownRows, typed.rows.length, collection.exactTotal);
-    const line = envelope.panelState === "partial" ? "Partial: the source reported only part of it." : envelope.panelState === "stale" ? "Stale: the source has not updated within its freshness budget." : null;
+    const line = envelope.panelState === "partial" ? "Partial." : envelope.panelState === "stale" ? "Stale." : null;
     return key === "positions"
       ? { kind: "typed-positions", rows: (typed as TypedRows<TypedPositionRow>).rows, reasons, caption, line }
       : { kind: "typed-orders", rows: (typed as TypedRows<TypedOrderRow>).rows, reasons, caption, line };
@@ -604,9 +604,9 @@ function rowsPanelV1(live: LiveFullOperations, key: "positions" | "orders", coll
   const table = publishedRowsOf(collection);
   if (table === null) return { kind: "withheld", text: envelope.panelState === "terminal" ? "Not available · the source read failed" : "Not available · source unavailable" };
   const line = envelope.panelState === "partial"
-    ? "Partial: the source reported only part of it."
+    ? "Partial."
     : envelope.panelState === "stale"
-      ? "Stale: the source has not updated within its freshness budget."
+      ? "Stale."
       : null;
   const shown = Math.min(table.rows.length, ROW_CAP);
   return { kind: "table", table, caption: rowsCaption(shown, table.rows.length, table.total), line };
@@ -614,16 +614,16 @@ function rowsPanelV1(live: LiveFullOperations, key: "positions" | "orders", coll
 
 function noticeV1(live: LiveFullOperations, mismatch: boolean): LiveNotice | null {
   if (live.sourceSideEffectRequested || live.runtimeActivationRequested || live.promotionExecutionRequested) {
-    return { kind: "untrusted", text: "Not trusted. This response says a source action was requested. This screen never requests one, so the figures below are not trusted." };
+    return { kind: "untrusted", text: "Not trusted. A source action was requested; the figures below are not trusted." };
   }
   if (live.sourceIntegrationState !== "SOURCE_BACKED") {
-    return { kind: "unqualified", text: "Source not qualified. Figures stay unavailable until it is." };
+    return { kind: "unqualified", text: "Source not qualified." };
   }
   const watched = [live.panels.internal, live.panels.broker].filter((p): p is LivePanel => p !== undefined);
   const stale = watched.find((p) => p.envelope.freshness === "STALE");
   if (stale !== undefined) {
     const at = whenText(stale.envelope.asOf);
-    return { kind: "stale", text: at === null ? "Showing data that has not updated recently." : `Showing data as of ${at}. The source has not updated recently.` };
+    return { kind: "stale", text: at === null ? "Stale." : `Stale. Data as of ${at}.` };
   }
   const panels = Object.values(live.panels);
   const reported = panels.filter((p) => p.envelope.panelState === "ok").length;
@@ -813,8 +813,8 @@ export function liveModelV2(v2: LiveSourceOperationsV2): LiveModel {
   const coverage = coverageOf(v2);
   const withRecords = coverage.filter((row) => row.returned > 0).length;
   const notice: LiveNotice = withRecords === 0
-    ? { kind: "empty", text: "No retained observation is published for this deployment yet." }
-    : { kind: "retained", text: "Retained observations only. The source has not asserted a verdict, a runtime state or completeness." };
+    ? { kind: "empty", text: "No retained observation yet." }
+    : { kind: "retained", text: "Retained observations only." };
   const items: BlockerItem[] = [
     { key: "commands", text: blockerSentence("READ_NOT_COMMAND_AUTHORITY"), code: "READ_NOT_COMMAND_AUTHORITY" },
     { key: "runtime", text: blockerSentence(v2.runtimeReasonCode), code: v2.runtimeReasonCode },

@@ -14,6 +14,8 @@ import { withoutOrigin } from "../../backTo";
 import { DockAction } from "../../Drawer";
 import { withContext } from "../../urlState";
 
+import "../../css/decisions.css";
+
 export interface DecisionItem {
   key: string;
   label: string;

@@ -35,7 +35,7 @@ const mount = (handler: Handler, search = "") => {
   );
   return { ...fake, ...view };
 };
-const loaded = () => screen.findByRole("group", { name: "Live figures" });
+const loaded = () => screen.findByRole("tablist", { name: "Live sections" });
 const chip = (id: string) => (document.querySelector(`[data-chip="${id}"]`)?.textContent ?? "").replace(/\s+/g, " ").trim();
 const text = () => document.body.textContent ?? "";
 const col = (name: string) => document.querySelector(`[data-col="${name}"]`) as HTMLElement;
@@ -116,52 +116,62 @@ describe("page", () => {
 describe("V1 body, matched", () => {
   it("prints the published figures exactly, the chips the body supports and Runtime as Not published (FE-067)", async () => {
     mount(() => ok(v1Read(populatedV1())));
-    const strip = await loaded();
+    await loaded();
+    const strip = screen.getByRole("group", { name: "Live figures" });
     expect(within(strip).getByText("60,000.00")).toBeTruthy();
     expect(within(strip).getByText("41,080.00")).toBeTruthy();
     expect(within(strip).getByText("2")).toBeTruthy();
     expect(within(strip).getByText("60,118.40")).toBeTruthy();
     expect(chip("reconciliation")).toContain("Matched");
     expect(chip("freshness")).toContain("Fresh · 17 Oct 12:04Z");
-    expect(chip("runtime")).toContain("Not published (FE-067)");
-    expect(chip("runtime")).not.toContain("Running");
+    // Runtime is not published: it is in the one `Not available` chip, FE-067 in its title.
+    expect(chip("runtime")).toBe("");
+    expect(chip("gaps")).toContain("Runtime");
+    expect(document.querySelector('[data-chip="gaps"]')!.getAttribute("title")).toContain("Runtime: Not published (FE-067)");
+    expect(chip("gaps")).not.toContain("Running");
   });
 
-  it("the chart slot says the series is not published, with its request id; no chart is drawn", async () => {
+  it("the chart slot says the series is `Not available` (FE-013 in its title); no chart is drawn", async () => {
     mount(() => ok(v1Read(populatedV1())));
     await loaded();
     const panel = screen.getByRole("region", { name: "Live net PnL" });
-    expect(panel.textContent).toContain("Not published (FE-013)");
+    expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Live net PnL series");
+    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-013)");
+    expect(panel.textContent).not.toContain("(FE-013)");
     expect(document.querySelector("svg[role='img']")).toBeNull();
   });
 
-  it("exposure & orders (a body WITHOUT source_figures): the Triad prints Not available for every cell and names FE-072; positions are Not published (FE-072)", async () => {
+  it("exposure & orders (a body WITHOUT source_figures): ONE `Not available` line for the Triad and for each of positions and orders, FE-072 in their titles", async () => {
     const raw = populatedV1();
     delete raw.source_figures;
     mount(() => ok(v1Read(raw)));
     await loaded();
-    const triad = screen.getByRole("group", { name: "Reconciliation" });
-    expect(within(triad).getAllByText("Not available").length).toBeGreaterThanOrEqual(12);
-    expect(within(triad).queryByText("0.00")).toBeNull();
-    expect(screen.getByText(/Reconciliation figures:/).textContent).toContain("Not published (FE-072)");
-    expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Not published (FE-072)");
-    expect(screen.getByRole("region", { name: "Orders" }).textContent).toContain("Not published (FE-072)");
+    expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
+    const recon = screen.getByRole("region", { name: "Reconciliation" });
+    expect(recon.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Internal, Broker and Difference figures");
+    expect(recon.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(recon.textContent).not.toMatch(/\b0\.00\b/);
+    for (const name of ["Positions", "Orders"]) {
+      const panel = screen.getByRole("region", { name });
+      expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title"), name).toContain("Not published (FE-072)");
+      expect(panel.textContent, name).not.toContain("(FE-072)");
+    }
     expect(screen.getByRole("link", { name: "Open the full blotter for this deployment" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEPLOYMENT_ID}`);
   });
 
   it("exposure & orders: the Triad rows are the server's source_figures (FE-072); every side the dark body leaves out is Not published (FE-072) with its reason in the title, and nothing is subtracted", async () => {
     mount(() => ok(v1Read(populatedV1())));
     await loaded();
-    const triad = screen.getByRole("group", { name: "Reconciliation" });
-    expect(within(triad).getAllByText("Equity").length).toBeGreaterThan(0);
-    for (const label of ["Equity", "Gross notional", "Positions", "Open orders", "Fees"]) expect(within(triad).getAllByText(label).length).toBe(3);
-    const gaps = Array.from(triad.querySelectorAll(".exec-blk-np"));
-    expect(gaps.length).toBe(15);
-    expect(gaps.every((g) => (g.getAttribute("title") ?? "").includes("Not published (FE-072)"))).toBe(true);
-    expect(gaps.map((g) => g.getAttribute("title") ?? "").some((t) => t.includes("DIFFERENCE_REQUIRES_BOTH_SIDES"))).toBe(true);
-    expect(gaps.map((g) => g.getAttribute("title") ?? "").some((t) => t.includes("BROKER_EQUITY_FIELD_NOT_PUBLISHED"))).toBe(true);
-    expect(within(triad).queryByText("0.00")).toBeNull();
-    expect(screen.getByText(/The Difference is the server's and is never worked out here\./)).toBeTruthy();
+    // Every cell of the published figures is the server's NOT_PUBLISHED: ONE line instead of fifteen cells, every reason in its title.
+    expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
+    const recon = screen.getByRole("region", { name: "Reconciliation" });
+    const gap = recon.querySelector(".exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Internal, Broker and Difference figures");
+    expect(gap.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(gap.getAttribute("title")).toContain("DIFFERENCE_REQUIRES_BOTH_SIDES");
+    expect(gap.getAttribute("title")).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
+    expect(recon.textContent).not.toMatch(/\b0\.00\b/);
+    expect(screen.queryByText(/The Difference is the server's and is never worked out here\./)).toBeNull();
   });
 
   it("a V1 body that carries rows draws positions and orders under the source's own names; the typed columns stay Not published (FE-072)", async () => {
@@ -172,8 +182,11 @@ describe("V1 body, matched", () => {
     const first = Array.from(table.querySelectorAll("tbody tr"))[0]!;
     expect(Array.from(first.querySelectorAll("td")).map((td) => td.textContent)).toEqual(["BTCUSDT", "LONG", "0.0120", "64000.10", "No"]);
     expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("2 of 2");
-    expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Columns are the source's own field names.");
-    expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Not published (FE-072)");
+    // "Columns are the source's own field names" is the table's title; the typed rows are one `Not available` line.
+    expect(table.closest("div[title]")!.getAttribute("title")).toBe("Columns are the source's own field names.");
+    expect(screen.getByRole("region", { name: "Positions" }).textContent).not.toContain("Columns are the source's own field names");
+    expect(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Typed position rows");
+    expect(screen.getByRole("region", { name: "Positions" }).querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-072)");
     const orders = screen.getByRole("table", { name: "Orders" });
     expect(orders.textContent).toContain("63990.00");
     expect(orders.textContent).not.toMatch(/(^|\s)[-–—](\s|$)|N\/A/);
@@ -193,12 +206,15 @@ describe("V1 body, matched", () => {
   it("the protective ladder is three disabled controls, each with the reason and a My access link; nothing enables one", async () => {
     mount(() => ok(v1Read(populatedV1())));
     await loaded();
+    // One reason and one My access link for the three rungs that are off for the same reason.
+    expect(screen.getAllByRole("link", { name: /My access/ })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "My access: Halt, Reduce, Emergency close" }).getAttribute("href")).toContain("/administration/profile-access");
+    expect(text().match(/Live decisions are closed on this build/g)).toHaveLength(1);
     for (const name of ["Halt", "Reduce", "Emergency close"]) {
       const button = screen.getByRole("button", { name }) as HTMLButtonElement;
       expect(button.disabled, name).toBe(true);
       const why = document.getElementById(button.getAttribute("aria-describedby") ?? "");
       expect(why?.textContent, name).toBe("Live decisions are closed on this build");
-      expect(screen.getByRole("link", { name: `My access: ${name}` }).getAttribute("href")).toContain("/administration/profile-access");
     }
     expect(screen.getByText("Step 1 of 3")).toBeTruthy();
     expect(screen.getByText("Step 3 of 3")).toBeTruthy();
@@ -261,7 +277,8 @@ describe("V1 body, mismatch (the broker figure never reaches the DOM)", () => {
 
   it("the broker equity KPI reads Hidden, 'While figures disagree'; the exact figure is nowhere in the page", async () => {
     mount(() => ok(v1Read(mismatch())));
-    const strip = await loaded();
+    await loaded();
+    const strip = screen.getByRole("group", { name: "Live figures" });
     // Fail-closed: the DERIVED daily PnL is hidden with it (derived from what? the server does not say it is not the broker).
     expect(within(strip).getAllByText("Hidden")).toHaveLength(2);
     expect(within(strip).getAllByText("While figures disagree")).toHaveLength(2);
@@ -289,17 +306,22 @@ describe("V1 body, mismatch (the broker figure never reaches the DOM)", () => {
 });
 
 describe("V1 body, broker not verified (UNAVAILABLE) is not a mismatch", () => {
-  it("the published dark body: Not published (FE-067), Source not qualified, Not published (FE-072) in every KPI but the withheld broker one, no number anywhere", async () => {
+  it("the published dark body: Runtime and Reconciliation one `Not available` chip (FE-067), Source not qualified, the five figures one `Not available` line, no number anywhere", async () => {
     mount(() => ok(v1Read(v1Raw())));
-    const strip = await loaded();
-    // The published stage facts speak for Runtime and Reconciliation: Not published (FE-067), the reason in the title.
-    expect(chip("reconciliation")).toContain("Not published (FE-067)");
-    expect(chip("runtime")).toContain("Not published (FE-067)");
-    expect(document.querySelector('[data-chip="runtime"] .exec-blk-np')!.getAttribute("title")).toContain("LIVE_SOURCE_UNAVAILABLE");
+    await loaded();
+    // The published stage facts speak for Runtime and Reconciliation: not published, the request and the reason in the chip's title.
+    expect(chip("gaps")).toContain("Runtime, Reconciliation");
+    expect(document.querySelector('[data-chip="gaps"]')!.getAttribute("title")).toContain("Runtime: Not published (FE-067)");
+    expect(document.querySelector('[data-chip="gaps"]')!.getAttribute("title")).toContain("LIVE_SOURCE_UNAVAILABLE");
     expect(chip("freshness")).toContain("Not available");
-    expect(screen.getByText("Source not qualified. Figures stay unavailable until it is.")).toBeTruthy();
-    expect(strip.querySelectorAll(".exec-blk-np")).toHaveLength(4);
-    expect(within(strip).getByText("Not available · Broker state not available")).toBeTruthy();
+    expect(screen.getByText("Source not qualified.")).toBeTruthy();
+    // No tile holds a "Not available": one line names the five, FE-072 and the broker's reason in its title.
+    expect(screen.queryByRole("group", { name: "Live figures" })).toBeNull();
+    const gap = document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Capital, Gross notional, Daily P&L, Open orders, Broker equity");
+    expect(gap.getAttribute("title")).toContain("Capital: Not published (FE-072)");
+    expect(gap.getAttribute("title")).toContain("Broker equity: Not published · Broker state not available");
+    const strip = document.body;
     expect(within(strip).queryByText("Hidden")).toBeNull();
     // Not a disagreement: the Triad does not claim one.
     expect(text()).not.toContain("Hidden while the figures disagree");
@@ -310,12 +332,13 @@ describe("V1 body, broker not verified (UNAVAILABLE) is not a mismatch", () => {
 });
 
 describe("V1 body, gap", () => {
-  it("replaces the chart with one sentence and Open operation; the window is Not published (FE-072)", async () => {
+  it("replaces the chart with one sentence and Open operation; the window is Not available (FE-072 in its title)", async () => {
     mount(() => ok(v1Read(populatedV1({ gap: true }))));
     await loaded();
     const slot = screen.getByRole("alert", { name: "Live net PnL" });
     expect(slot.textContent).toContain("Updates are missing. Chart hidden until the gap is filled.");
-    expect(slot.textContent).toContain("Not published (FE-072)");
+    expect(slot.textContent).toContain("Gap window Not available");
+    expect(slot.querySelector("[data-gap]")!.getAttribute("title")).toContain("Not published (FE-072)");
     expect(within(slot).getByRole("link", { name: "Open operation" }).getAttribute("href")).toBe("/execution/operations");
     expect(screen.getByText("A gap blocks risk-increasing actions. Protective actions stay open.")).toBeTruthy();
   });
@@ -325,7 +348,8 @@ describe("V1 body, gap", () => {
     await loaded();
     const table = screen.getByRole("table", { name: "Display continuity" });
     expect(table.textContent).toContain("Gap in updates");
-    expect(within(table).getByText("Gap window").closest("tr")!.textContent).toContain("Not published (FE-072)");
+    expect(within(table).getByText("Gap window").closest("tr")!.textContent).toContain("Not available");
+    expect(within(table).getByText("Gap window").closest("tr")!.querySelector("[data-gap]")!.getAttribute("title")).toContain("Not published (FE-072)");
     expect(within(table).getByText("Broker")).toBeTruthy();
     expect(within(table).getByText("Derived")).toBeTruthy();
     expect(screen.getByRole("region", { name: "Display continuity" }).querySelector("details")!.textContent).toContain("Epoch 41 · sequence 88240");
@@ -335,7 +359,8 @@ describe("V1 body, gap", () => {
     mount(() => ok(v1Read(populatedV1({ gap: null }))), "?tab=continuity");
     await loaded();
     const table = screen.getByRole("table", { name: "Display continuity" });
-    expect(within(table).getByText("State").closest("tr")!.textContent).toContain("could not tell");
+    // The reason is the cell's title; the cell says `Not available`.
+    expect(within(table).getByText("State").closest("tr")!.querySelector(".exec-blk-na")!.getAttribute("title")).toContain("could not tell");
     expect(within(table).getByText("Gap window").closest("tr")!.textContent).not.toContain("None");
   });
 });
@@ -344,7 +369,7 @@ describe("V1 body, freshness and coverage", () => {
   it("stale: one banner with the time, and the chip says Stale", async () => {
     mount(() => ok(v1Read(populatedV1({ freshness: "STALE" }))));
     await loaded();
-    expect(screen.getByText("Showing data as of 17 Oct 12:04Z. The source has not updated recently.")).toBeTruthy();
+    expect(screen.getByText("Stale. Data as of 17 Oct 12:04Z.")).toBeTruthy();
     expect(chip("freshness")).toContain("Stale · 17 Oct 12:04Z");
   });
 
@@ -443,7 +468,9 @@ describe("tabs", () => {
     raw.predecessor_canary_envelope = null;
     mount(() => ok(v1Read(raw)), "?tab=predecessor-envelope");
     await loaded();
-    expect(screen.getByRole("region", { name: "Canary envelope" }).textContent).toContain("Not available · No predecessor Canary envelope was published for this deployment.");
+    const panel = screen.getByRole("region", { name: "Canary envelope" });
+    expect(panel.querySelector(".exec-blk-na")!.textContent).toBe("Not available");
+    expect(panel.querySelector(".exec-blk-na")!.getAttribute("title")).toBe("No predecessor Canary envelope was published for this deployment.");
   });
 
   it("guard rules: three rows from structured flags, the risk-increasing action disabled with its reason, Provenance carries the policy token", async () => {
@@ -467,7 +494,7 @@ describe("states the read can end in", () => {
   it("denied: the researcher page, 'You can't open this page', with a way to see what access there is", async () => {
     mount(() => refused("denied", "403: not allowed"));
     expect(await screen.findByText("You can't open this page")).toBeTruthy();
-    expect(screen.getByText("Operators, managers and reviewers")).toBeTruthy();
+    expect(screen.queryByText("Operators, managers and reviewers")).toBeNull();
     expect(screen.getByRole("link", { name: "See what you can access" }).getAttribute("href")).toContain("/administration/profile-access");
     expect(screen.getByRole("link", { name: "Alpha Fleet" }).getAttribute("href")).toContain("/deployments/alphas");
     expect(screen.queryByRole("group", { name: "Live figures" })).toBeNull();
@@ -507,14 +534,17 @@ describe("states the read can end in", () => {
 /* ═════════════════════════ V2 ═════════════════════════ */
 
 describe("V2 body (retained observations)", () => {
-  it("says what it is: Not published (FE-067) runtime, no freshness, no verdict, one retained-observations line", async () => {
+  it("says what it is: Runtime `Not available` (FE-067 in its title), no freshness, no verdict, one retained-observations line", async () => {
     mount(() => ok(v2Read(v2Populated())));
-    const strip = await loaded();
-    expect(chip("runtime")).toContain("Not published (FE-067)");
+    await loaded();
+    expect(chip("gaps")).toBe("Not availableRuntime");
+    expect(document.querySelector('[data-chip="gaps"]')!.getAttribute("title")).toContain("Runtime: Not published (FE-067)");
     expect(chip("freshness")).toContain("Not available · Source clock is not scoped");
     expect(chip("reconciliation")).toContain("Not available · Source verdict not asserted");
-    expect(screen.getByText("Retained observations only. The source has not asserted a verdict, a runtime state or completeness.")).toBeTruthy();
-    expect(strip.querySelectorAll(".exec-blk-np")).toHaveLength(5);
+    expect(screen.getByText("Retained observations only.")).toBeTruthy();
+    // The five figures are one line (FE-072 in its title), not five tiles.
+    expect(screen.queryByRole("group", { name: "Live figures" })).toBeNull();
+    expect(document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!.getAttribute("title")?.match(/Not published \(FE-072\)/g)).toHaveLength(5);
     // No per-figure rows exist in this body, so no Triad is drawn at all (a Triad of twelve "Not available" would say nothing).
     expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
     expect(screen.getByRole("region", { name: "Reconciliation" })).toBeTruthy();
@@ -532,17 +562,17 @@ describe("V2 body (retained observations)", () => {
     expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Partial");
   });
 
-  it("orders, fills and balances are tables; the reconciliation figures are Not published (FE-072)", async () => {
+  it("orders, fills and balances are tables; the reconciliation figures are `Not available` (FE-072 in the title)", async () => {
     mount(() => ok(v2Read(v2Populated())));
     await loaded();
     for (const name of ["Orders", "Fills", "Account balances", "Margin balances"]) expect(screen.getByRole("table", { name }), name).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Reconciliation" }).textContent).toContain("Not published (FE-072)");
+    expect(screen.getByRole("region", { name: "Reconciliation" }).querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-072)");
   });
 
   it("continuity: the read does not assert continuity; a coverage table lists all eleven panels; broker_sync is Not published", async () => {
     mount(() => ok(v2Read(v2Populated())), "?tab=continuity");
     await loaded();
-    expect(within(screen.getByRole("table", { name: "Display continuity" })).getByText("State").closest("tr")!.textContent).toContain("This read does not assert update continuity");
+    expect(within(screen.getByRole("table", { name: "Display continuity" })).getByText("State").closest("tr")!.querySelector(".exec-blk-na")!.getAttribute("title")).toContain("This read does not assert update continuity");
     const coverage = screen.getByRole("table", { name: "Panel coverage" });
     expect(coverage.querySelectorAll("tbody tr")).toHaveLength(11);
     expect(within(coverage).getByText("Broker sync").closest("tr")!.textContent).toContain("The broker purpose is not commissioned.");
@@ -552,7 +582,7 @@ describe("V2 body (retained observations)", () => {
   it("predecessor and guard rules say what this read does not carry", async () => {
     mount(() => ok(v2Read(v2Populated())), "?tab=predecessor-envelope");
     await loaded();
-    expect(screen.getByRole("region", { name: "Canary envelope" }).textContent).toContain("This read does not carry the predecessor Canary envelope.");
+    expect(screen.getByRole("region", { name: "Canary envelope" }).querySelector(".exec-blk-na")!.getAttribute("title")).toContain("This read does not carry the predecessor Canary envelope.");
     fireEvent.click(screen.getByRole("tab", { name: "Guard rules" }));
     const rows = screen.getByRole("table", { name: "Guard rules" }).querySelectorAll("tbody tr");
     for (const row of Array.from(rows)) expect(row.textContent).toContain("Not available");
@@ -568,7 +598,7 @@ describe("V2 body (retained observations)", () => {
     for (const name of ["Halt", "Reduce", "Emergency close"]) expect((screen.getByRole("button", { name }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("an unpublished body: every panel says Not published and why; the screen is empty, said once", async () => {
+  it("an unpublished body: the exposure panels are one `Not available` line with the reasons in its title; the screen is empty, said once", async () => {
     const raw = v2Unpublished();
     for (const name of Object.keys(raw.data)) {
       raw.data[name].state = "NOT_PUBLISHED";
@@ -577,8 +607,11 @@ describe("V2 body (retained observations)", () => {
     }
     mount(() => ok(v2Read(raw)));
     await loaded();
-    expect(screen.getByText("No retained observation is published for this deployment yet.")).toBeTruthy();
-    expect(screen.getByRole("region", { name: "Positions" }).textContent).toContain("Not published · The source did not capture this panel.");
+    expect(screen.getByText("No retained observation yet.")).toBeTruthy();
+    const line = document.querySelector(".exec-liv-stack > .exec-blk-gaps")!;
+    expect(line.textContent).toContain("Not available: Positions, Orders");
+    expect(line.getAttribute("title")).toContain("Positions: Not published · The source did not capture this panel.");
+    expect(screen.queryByRole("region", { name: "Positions" })).toBeNull();
     expect(screen.queryByRole("table", { name: "Positions" })).toBeNull();
   });
 
@@ -589,7 +622,7 @@ describe("V2 body (retained observations)", () => {
     mount(() => ok(v2Read(raw)));
     await loaded();
     const panel = screen.getByRole("region", { name: "Fills" });
-    expect(panel.textContent).toContain("No retained fills are published for this deployment on this page.");
+    expect(panel.textContent).toContain("No retained fills on this page.");
     expect(within(panel).queryByRole("table")).toBeNull();
   });
 });
