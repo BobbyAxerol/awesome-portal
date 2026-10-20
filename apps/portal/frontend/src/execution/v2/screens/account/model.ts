@@ -26,7 +26,9 @@ import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import { readDecimal, readMetric, type Metric } from "../../boundary";
 import type { TriadCell, TriadRow } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
+import type { AccountOperation } from "../../readers/accessSelfContext";
 import { V2_CAPABILITY, type CapabilityNeed } from "../../shell/roleNav";
+import { NOT_COMMISSIONED_WHY } from "../stage/reasons";
 import type { SeriesPoint } from "../../charts";
 
 /* ── scale constants (the six-cell table in index.tsx explains them) ────── */
@@ -70,19 +72,44 @@ export const notPublishedReason = (fact: UnpublishedFact, because: string): stri
 /* ── capabilities ───────────────────────────────────────────────────────── */
 
 /**
- * `execution.accounts.read` is the roleNav name (FE-037). `manage` is a NEW
- * requested name for "may start a binding action"; nothing issues it yet, so
- * every binding action is off for everyone and says why.
+ * `execution.accounts.read` is the roleNav name (FE-037). There is no "manage" capability: `execution.accounts.manage` was a requested
+ * name that nothing ever issued and the server says does not exist (BE-P7 `1449455e`, FE-037/058). The only control it would have
+ * gated, "Rotate credential", is the PM `REVISE_BINDING` (credential-only) family, which has no Portal route; it is off for EVERY
+ * caller and `rotateCredential` below says why. A navigation or read capability never opens it.
  */
 export const ACCOUNT_CAPABILITY = {
   read: V2_CAPABILITY.accountsRead,
-  manage: "execution.accounts.manage",
 } as const;
 
-export const ACCOUNT_NEEDS: Readonly<Record<"read" | "manage", CapabilityNeed>> = {
+export const ACCOUNT_NEEDS: Readonly<Record<"read", CapabilityNeed>> = {
   read: { allOf: [ACCOUNT_CAPABILITY.read] },
-  manage: { allOf: [ACCOUNT_CAPABILITY.manage] },
 };
+
+/**
+ * "Rotate credential": always disabled, with the reason the Portal published when it has (FE-037/058, `GET /self-context`
+ * `account_operations`: `REVISE_BINDING`, `COMMAND_FAMILY_NOT_COMMISSIONED`, the same for every member), else the reason the
+ * control carried before the read existed. The published branch is a refusal, never a permission: nothing in `published` can turn
+ * the control on, and a published entry that is anything but exactly that refusal is ignored (fail closed to today's reason).
+ */
+export interface RotateCredential {
+  /** The sentence under the disabled control. */
+  reason: string;
+  /** The "My access" link that goes with it: only for the access-flavoured fallback, never for a typed not-commissioned refusal. */
+  accessHref: string | undefined;
+  /** True when `reason` came from the Portal's typed `account_operations`. */
+  published: boolean;
+}
+
+/** The reason the control carried before the typed absence existed. Unchanged for a caller whose read did not publish one. */
+export const ROTATE_FALLBACK_REASON = "Not allowed. Your access does not include managing accounts.";
+
+export function rotateCredential(published: readonly AccountOperation[] | null): RotateCredential {
+  const typed = published?.find((entry) => entry.operation === "REVISE_BINDING");
+  if (typed !== undefined && typed.availability === "NOT_COMMISSIONED" && typed.reasonClass === "COMMAND_FAMILY_NOT_COMMISSIONED") {
+    return { reason: NOT_COMMISSIONED_WHY, accessHref: undefined, published: true };
+  }
+  return { reason: ROTATE_FALLBACK_REASON, accessHref: ACCESS_PATH, published: false };
+}
 
 /* ── tiny readers over rows of unknown ──────────────────────────────────── */
 

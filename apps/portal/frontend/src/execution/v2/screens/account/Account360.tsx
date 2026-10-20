@@ -22,16 +22,16 @@ import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import { backLinkFor, withoutOrigin } from "../../backTo";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
-import { holds } from "../../shell/roleNav";
 import { PhysicalBinding } from "./PhysicalBinding";
 import { ActivityPanel, EquityBlock } from "./readPanels";
 import { AllocationsPanel, AuthorityKpis, FeesPanel, MarginPanel, PositionsPanel, ReconciliationPanel, SleevesPanel, type PanelContext } from "./panels";
 import { Fact, Na, Np, StateFlag, WITHHELD } from "./parts";
 import { useAccountResource, useBindingDetail, useBindingExposure } from "./reads";
 import {
-  ACCOUNT_NEEDS, FE, RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
-  populationOf, portfolioHref, readAccountView, readTab, readViewMode, resourceReason, resourceStatus, timeOf, type TabId,
+  FE, RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
+  populationOf, portfolioHref, readAccountView, readTab, readViewMode, resourceReason, resourceStatus, rotateCredential, timeOf, type TabId,
 } from "./model";
+import { useAccountOperations } from "./useAccountOperations";
 
 import "../../css/account.css";
 
@@ -57,7 +57,7 @@ function boundaryReason(status: string, asOf: UtcEpochMs | null): string | undef
 /** The lists that link into Account 360 and whose state Back restores. */
 const ACCOUNT_BACK_SOURCES = ["accounts", "portfolio", "cockpit", "blotter"] as const;
 
-export function Account360({ api, accountId, capabilities }: Account360Props) {
+export function Account360({ api, accountId }: Account360Props) {
   const [params] = useSearchParams();
   const resource = useAccountResource(api, accountId);
   // Back by source: the Accounts list as the reader left it, a Portfolio, or the Approvals cockpit (audit #8).
@@ -96,7 +96,6 @@ export function Account360({ api, accountId, capabilities }: Account360Props) {
       staleReason={state.stale}
       refreshing={resource.refreshing}
       reload={resource.reload}
-      capabilities={capabilities}
       back={back}
     />
   );
@@ -109,11 +108,10 @@ interface LoadedProps {
   staleReason: string | null;
   refreshing: boolean;
   reload(): void;
-  capabilities: ReadonlySet<string>;
   back: ReactNode;
 }
 
-function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capabilities, back }: LoadedProps) {
+function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back }: LoadedProps) {
   const url = useExecUrlState();
   const [params] = useSearchParams();
   const tabsId = useId();
@@ -128,7 +126,8 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
   const resolved = readTab(url.value.tab);
   const tab: TabId = resolved.tab;
   const [positionScope, setPositionScope] = useState<"sleeve" | "account">("sleeve");
-  const canManage = holds(capabilities, ACCOUNT_NEEDS.manage);
+  // "Rotate credential" is off for everyone (no capability opens it); the reason is the Portal's typed one when it published it.
+  const rotate = rotateCredential(useAccountOperations(api));
 
   // A tab the screen does not have is explained and the URL is made canonical. The URL then no longer holds the
   // unknown value, so the sentence is kept in state: it must outlive the rewrite, and it goes when the reader picks a tab.
@@ -228,7 +227,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, capa
         <div role="tabpanel" id={`${tabsId}-panel`} aria-labelledby={`${tabsId}-tab-${tab}`} className="exec-acct-stack">
           {tab === "ov" ? (
             <>
-              {sleeve ? null : <PhysicalBinding view={view} detail={detail.state} exposure={exposure.state} canManage={canManage} />}
+              {sleeve ? null : <PhysicalBinding view={view} detail={detail.state} exposure={exposure.state} rotate={rotate} />}
               <AuthorityKpis ctx={ctx} physicalOnly={!sleeve} />
               <div className="exec-acct-two">
                 <SleevesPanel ctx={ctx} />

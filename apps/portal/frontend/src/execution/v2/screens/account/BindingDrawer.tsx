@@ -25,10 +25,10 @@ import { withOrigin } from "../../backTo";
 import { ENV_LABEL, withContext } from "../../urlState";
 import { useBindingDetail, useBindingExposure } from "./reads";
 import {
-  ACCESS_PATH, ACCOUNT_NEEDS, ENV_TABS, FE, accountHref, capitalRows, humanize, notPublishedReason, stateView, timeOf, toBindingRow,
+  ENV_TABS, accountHref, capitalRows, humanize, rotateCredential, stateView, timeOf, toBindingRow,
   type BindingEnv, type BindingRow,
 } from "./model";
-import { holds } from "../../shell/roleNav";
+import { useAccountOperations } from "./useAccountOperations";
 import { CredentialFlag, Fact, Na, StateFlag, Value, When, WITHHELD } from "./parts";
 
 export interface BindingDrawerProps {
@@ -102,7 +102,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export function BindingDrawer({ api, bindingId, row, environment, mode, capabilities, onClose }: BindingDrawerProps) {
+export function BindingDrawer({ api, bindingId, row, environment, mode, onClose }: BindingDrawerProps) {
   const [params] = useSearchParams();
   const detail = useBindingDetail(api, bindingId, row !== null ? [environment] : [environment, ...ENV_TABS.filter((entry) => entry !== environment)]).state;
   const exposure = useBindingExposure(api, bindingId).state;
@@ -111,10 +111,8 @@ export function BindingDrawer({ api, bindingId, row, environment, mode, capabili
   const shown: BindingRow | null = row ?? (read ? toBindingRow(read.item) : null);
   const accountId = shown?.accountId ?? null;
 
-  const canManage = holds(capabilities, ACCOUNT_NEEDS.manage);
-  const rotateReason = canManage
-    ? notPublishedReason(FE.eligibility, "Rotating a credential is an admin action and none is offered from this page yet.")
-    : "Not allowed. Your access does not include managing accounts.";
+  // "Rotate credential" is off for everyone: no capability opens it. The reason is the Portal's typed one when it published it.
+  const rotate = rotateCredential(useAccountOperations(api));
 
   const actions = (
     <>
@@ -124,7 +122,7 @@ export function BindingDrawer({ api, bindingId, row, environment, mode, capabili
           <Link className="exec-dock-btn exec-acct-open" to={withContext(withOrigin(`${accountHref(accountId)}?view=physical`, { kind: "accounts" }, params), params)}>Physical binding</Link>
         </>
       ) : null}
-      <DockAction label="Rotate credential" reason={rotateReason} accessHref={canManage ? undefined : ACCESS_PATH} />
+      <DockAction label="Rotate credential" reason={rotate.reason} accessHref={rotate.accessHref} />
     </>
   );
 
