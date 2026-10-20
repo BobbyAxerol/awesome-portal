@@ -102,13 +102,13 @@ describe("screen contract", () => {
   it("reads once, with the deployment and no workspace unless the URL names one", async () => {
     const { port } = mount(canaryPort(answering(v1Body())));
     await ready();
-    expect(port.calls).toEqual([{ id: DEP, options: undefined }]);
+    expect(port.calls).toEqual([{ id: DEP, options: { include: ["identity"] } }]);
   });
 
   it("passes the URL's workspace_id to the read", async () => {
     const { port } = mount(canaryPort(answering(v1Body())), `/deployments/live/${DEP}/canary?workspace_id=ws_TEST_ONLY`);
     await ready();
-    expect(port.calls[0].options).toEqual({ workspaceId: "ws_TEST_ONLY" });
+    expect(port.calls[0].options).toEqual({ workspaceId: "ws_TEST_ONLY", include: ["identity"] });
   });
 });
 

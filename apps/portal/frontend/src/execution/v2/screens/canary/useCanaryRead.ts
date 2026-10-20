@@ -11,7 +11,10 @@ import { useEffect, useState } from "react";
 
 import type { ExecutionApi } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
-import type { CanaryVersionRead } from "../../readers/dispatch";
+import type { CanaryVersionRead, StageInclude } from "../../readers/dispatch";
+
+/** BE-P12: the V2 screen asks for the identity of the deployment; the legacy body ignores it and the default request is otherwise unchanged. */
+const CANARY_INCLUDE: readonly StageInclude[] = ["identity"];
 
 export type CanaryRead =
   | { phase: "loading" }
@@ -27,7 +30,7 @@ export function useCanaryRead(api: ExecutionApi, deploymentId: string, workspace
     setState({ key, api, value: { phase: "loading" } });
     const scoped = api.withReadSignal?.(abort.signal) ?? api;
     void scoped
-      .getCanaryVersioned(deploymentId, workspaceId === undefined ? undefined : { workspaceId })
+      .getCanaryVersioned(deploymentId, workspaceId === undefined ? { include: CANARY_INCLUDE } : { workspaceId, include: CANARY_INCLUDE })
       .then((result) => {
         if (abort.signal.aborted) return;
         setState({

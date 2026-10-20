@@ -18,7 +18,7 @@
  * string, and every list is bounded.
  *
  * BE-P2 / BE-P3 additive members (read closed by `execution/stageFacts.ts`, carried by the V1 reader; a V2 following-parent
- * body carries none of them and reads as typed absence, which is the SCOPED_V2 identity/stage-facts request in the receipt):
+ * body carries none of them except `identity` (BE-P12, `include=identity`, FE-066) and reads the rest as typed absence):
  * - `stage_facts.runtime` / `.reconciliation` (FE-067) become `view.runtime` / `view.reconciliation`;
  * - `envelope_compliance.rows` / `.verdict` (FE-071) become each cap's `row` (policy limit, approved, consumed, the SERVER's
  *   used ratio, as-of) and `view.verdict`; `rollback_readiness.items` become `view.rollbackChecks`; `lifecycle.trial`
@@ -780,7 +780,8 @@ function readV2(parent: CanaryParentV2, schemaVersion: string | null): CanaryVie
     complianceFacts: null,
     runtime: null,
     reconciliation: null,
-    identity: null,
+    // The one opt-in member BE-P12 delivers for Canary (`include=identity`); `null` when the read did not ask.
+    identity: parent.identity ?? null,
     verdict: null,
     rollbackChecks: null,
     trial: null,
