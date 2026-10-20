@@ -5,8 +5,12 @@
  *   `execution-operations.v1.schema.json#/$defs/{ExecutionCommandPlan,ExecutionCommandOperation,F0BlockedOperationRead,RelayDenied,F0CommandCollection}`
  *   `execution-trusted-commands.openapi.json#/components/schemas/{CommandPreview,CommandProblem}`
  *
+ * BE-P13 additions (consumer integration): `F0ApplyDeniedProblem`, `F0ApplyKeyConflictProblem`, `F0ApplyAttemptLookup`, plan `current_primitive` +
+ * `cost_impact`, preview `cost_impact`. The closed readers of those are held to the schema as oracle exactly like the others.
+ *
  * L0  the canonical files, verbatim and digest-checked:
- *       execution-command-plan / -operation / -relay-denied      (valid, read)
+ *       execution-command-plan / -plan.emergency-close / -operation / -relay-denied      (valid, read)
+ *       execution-command-apply-denied / -denied.replayed / -key-conflict, execution-command-apply-attempt.none|found|conflict
  *       execution-f0-command-collection.synthetic                (the `response` body)
  *       execution-command-catalog                                (its 64 keys are the reader's F0 key list)
  *     Closed words (risk tiers, F0 blocker words, F0 keys, reason codes, gates, next actions) are compared with the schemas' enums.
@@ -29,6 +33,10 @@ import { MIB, serializedBytes, timed } from "../testkit/scale";
 import { validateAgainst } from "../testkit/schema";
 import {
   APPROVAL_GATES,
+  F0_APPLY_ATTEMPT_SCHEMA,
+  F0_APPLY_ATTEMPT_STATES,
+  F0_APPLY_CONFLICT_CODE,
+  F0_APPLY_DENIED_CODE,
   COMMAND_OPERATION_SCHEMA,
   COMMAND_PLAN_SCHEMA,
   COMMAND_PREVIEW_SCHEMA,
@@ -44,6 +52,10 @@ import {
   readCommandPlanV1,
   readCommandPreviewV1,
   readCommandProblemV1,
+  readF0ApplyAnswerV1,
+  readF0ApplyAttemptLookupV1,
+  readF0ApplyDeniedV1,
+  readF0ApplyKeyConflictV1,
   readF0BlockedOperationV1,
   readF0CommandCollectionV1,
   readRelayDecisionV1,
@@ -54,8 +66,10 @@ const BUDGET_2000_READS_MS = 600;
 const BUDGET_WIDEST_MS = 150;
 
 const FILES = [
-  "execution-command-plan", "execution-command-operation", "execution-command-relay-denied", "execution-f0-command-collection.synthetic",
-  "execution-command-catalog",
+  "execution-command-plan", "execution-command-plan.emergency-close", "execution-command-operation", "execution-command-relay-denied",
+  "execution-f0-command-collection.synthetic", "execution-command-catalog", "execution-trusted-commands.synthetic",
+  "execution-command-apply-denied", "execution-command-apply-denied.replayed", "execution-command-apply-key-conflict",
+  "execution-command-apply-attempt.none", "execution-command-apply-attempt.found", "execution-command-apply-attempt.conflict",
 ];
 const digestsBefore = FILES.map(canonicalDigest);
 afterAll(() => {
@@ -69,17 +83,29 @@ const opViolations = (v: unknown) => validateAgainst(OPS, "/$defs/ExecutionComma
 const f0Violations = (v: unknown) => validateAgainst(OPS, "/$defs/F0BlockedOperationRead", v);
 const denyViolations = (v: unknown) => validateAgainst(OPS, "/$defs/RelayDenied", v);
 const collectionViolations = (v: unknown) => validateAgainst(OPS, "/$defs/F0CommandCollection", v);
+const deniedApplyViolations = (v: unknown) => validateAgainst(OPS, "/$defs/F0ApplyDeniedProblem", v);
+const conflictApplyViolations = (v: unknown) => validateAgainst(OPS, "/$defs/F0ApplyKeyConflictProblem", v);
+const lookupViolations = (v: unknown) => validateAgainst(OPS, "/$defs/F0ApplyAttemptLookup", v);
 const previewViolations = (v: unknown) => validateAgainst(TRUSTED, "/components/schemas/CommandPreview", v);
 const problemViolations = (v: unknown) => validateAgainst(TRUSTED, "/components/schemas/CommandProblem", v);
 const clone = <T,>(value: T): T => structuredClone(value);
 
 const PLAN: Draft = loadCanonical("execution-command-plan");
+const PLAN_EC: Draft = loadCanonical("execution-command-plan.emergency-close");
+const APPLY_DENIED: Draft = loadCanonical("execution-command-apply-denied");
+const APPLY_REPLAYED: Draft = loadCanonical("execution-command-apply-denied.replayed");
+const APPLY_CONFLICT: Draft = loadCanonical("execution-command-apply-key-conflict");
+const LOOKUP_NONE: Draft = loadCanonical("execution-command-apply-attempt.none");
+const LOOKUP_FOUND: Draft = loadCanonical("execution-command-apply-attempt.found");
+const LOOKUP_CONFLICT: Draft = loadCanonical("execution-command-apply-attempt.conflict");
+const COST_ABSENT = { state: "NOT_PUBLISHED", reason: "NO_COST_OR_IMPACT_SOURCE" } as const;
 const OPERATION: Draft = loadCanonical("execution-command-operation");
 const DENIED: Draft = loadCanonical("execution-command-relay-denied");
 const COLLECTION_FILE = loadCanonical<{ lane: string; runtime_qualified: boolean; response: Draft }>("execution-f0-command-collection.synthetic");
 const COLLECTION: Draft = COLLECTION_FILE.response;
 const CATALOG = loadCanonical<{ entries: { key: string }[] }>("execution-command-catalog");
 const PREVIEW_BLOCKED: Draft = loadCanonical<Draft>("execution-trusted-commands.synthetic").preview_blocked;
+const PREVIEW_FIXTURE_ALLOWED: Draft = loadCanonical<Draft>("execution-trusted-commands.synthetic").preview_allowed;
 const PROBLEM: Draft = {
   error: { code: "COMMAND_STATUS_UNVERIFIED", message: "The receipt could not be verified." },
   request_id: "req_01J2K3M4N5P6Q7R8S9T0A1B2C3",
@@ -89,7 +115,7 @@ const PROBLEM: Draft = {
 /** A schema-valid preview that allows the action: the shape a connected relay would publish (synthetic, TEST_ONLY). */
 const PREVIEW_ALLOWED: Draft = {
   schema_version: COMMAND_PREVIEW_SCHEMA, allowed: true, reason_code: null, preview_digest: `sha256:${"a".repeat(64)}`, expires_at_ms: 1792100060000,
-  profile_ref: "TEST_ONLY:paper", approval_required: true, approval_gate: "CAPITAL", business_applied: false, reserved: false,
+  profile_ref: "TEST_ONLY:paper", approval_required: true, approval_gate: "CAPITAL", cost_impact: { ...COST_ABSENT }, business_applied: false, reserved: false,
 };
 
 const planOf = (raw: unknown) => { const r = readCommandPlanV1(raw); return r !== null && r.kind === "command_plan" ? r.plan : null; };
@@ -97,6 +123,9 @@ const opOf = (raw: unknown) => { const r = readCommandOperationV1(raw); return r
 const f0Of = (raw: unknown) => { const r = readF0BlockedOperationV1(raw); return r !== null && r.kind === "command_operation" ? r.operation : null; };
 const denyOf = (raw: unknown) => { const r = readRelayDecisionV1(raw); return r !== null && r.kind === "relay_decision" ? r.decision : null; };
 const collOf = (raw: unknown) => { const r = readF0CommandCollectionV1(raw); return r !== null && r.kind === "f0_collection" ? r.collection : null; };
+const deniedOf = (raw: unknown) => readF0ApplyDeniedV1(raw);
+const conflictOf = (raw: unknown) => readF0ApplyKeyConflictV1(raw);
+const lookupOf = (raw: unknown) => { const r = readF0ApplyAttemptLookupV1(raw); return r !== null && r.kind === "f0_apply_attempt" ? r.attempt : null; };
 const previewOf = (raw: unknown) => { const r = readCommandPreviewV1(raw); return r !== null && r.kind === "command_preview" ? r.preview : null; };
 
 /* ═════════════════════════ L0 ═════════════════════════ */
@@ -166,6 +195,60 @@ describe("L0 · canonical, verbatim", () => {
     expect([...COMMAND_REASON_CODES]).toEqual([...preview("reason_code")]);
     expect([...APPROVAL_GATES]).toEqual([...preview("approval_gate")]);
     expect([...SAFE_NEXT_ACTIONS]).toEqual([...schemaEnum(TRUSTED, "/components/schemas/CommandProblem/properties/safe_next_action")]);
+  });
+
+  it("BE-P13: every apply, lookup and emergency-close plan fixture passes its published schema, and reads", () => {
+    expect(planViolations(PLAN_EC)).toEqual([]);
+    expect(deniedApplyViolations(APPLY_DENIED)).toEqual([]);
+    expect(deniedApplyViolations(APPLY_REPLAYED)).toEqual([]);
+    expect(conflictApplyViolations(APPLY_CONFLICT)).toEqual([]);
+    for (const body of [LOOKUP_NONE, LOOKUP_FOUND, LOOKUP_CONFLICT]) expect(lookupViolations(body)).toEqual([]);
+    expect(previewViolations(PREVIEW_FIXTURE_ALLOWED)).toEqual([]);
+    expect(planOf(PLAN_EC)).not.toBeNull();
+    expect(deniedOf(APPLY_DENIED)).not.toBeNull();
+    expect(deniedOf(APPLY_REPLAYED)).not.toBeNull();
+    expect(conflictOf(APPLY_CONFLICT)).not.toBeNull();
+    for (const body of [LOOKUP_NONE, LOOKUP_FOUND, LOOKUP_CONFLICT]) expect(lookupOf(body)).not.toBeNull();
+    expect(previewOf(PREVIEW_FIXTURE_ALLOWED)).not.toBeNull();
+  });
+
+  it("BE-P13: the plan carries current_primitive (null, or the N16B object) and a typed cost_impact absence, read verbatim", () => {
+    expect(planOf(PLAN)).toMatchObject({ currentPrimitive: null, costImpact: COST_ABSENT });
+    expect(planOf(PLAN_EC)).toMatchObject({
+      commandKey: "ops/emergency-close", costImpact: COST_ABSENT,
+      currentPrimitive: { id: "live.emergency-close", sourceEnvironment: "LIVE_FULL", targetTypes: ["ACCOUNT"], runtimeActive: false, sourceSideEffectRequested: false },
+    });
+    expect(previewOf(PREVIEW_BLOCKED)!.costImpact).toEqual(COST_ABSENT);
+    expect(previewOf(PREVIEW_FIXTURE_ALLOWED)!.costImpact).toEqual(COST_ABSENT);
+  });
+
+  it("BE-P13: the apply 409 is the wire envelope, not the RelayDenied body; the three bodies read to their own facts", () => {
+    expect(deniedOf(APPLY_DENIED)).toEqual({
+      code: "COMMAND_RELAY_DISABLED", requestId: "req_apply_first_0001", operationId: "op_01K3COMMANDPLAN000000000000", decision: "DENIED",
+      reason: "COMMAND_RELAY_DISABLED", retryAllowed: false, sourceRequestSent: false, requestKey: "ui:apply:0001", replayed: false,
+    });
+    expect(deniedOf(APPLY_REPLAYED)).toMatchObject({ requestId: "req_apply_replay_0002", replayed: true, requestKey: "ui:apply:0001" });
+    expect(conflictOf(APPLY_CONFLICT)).toEqual({ code: "REQUEST_KEY_PAYLOAD_CONFLICT", requestId: "req_apply_conflict_0003", requestKey: "ui:apply:0001", sourceRequestSent: false });
+    // The old stand-alone RelayDenied body was never the 409 body: neither apply reader reads it, and the stand-alone reader does not read the envelope.
+    expect(readF0ApplyAnswerV1(DENIED)).toBeNull();
+    expect(readRelayDecisionV1(APPLY_DENIED)).toEqual({ kind: "unsupported_shape", schemaVersion: null });
+    // Each reader reads only its own code; the combined reader tells them apart by `error.code`.
+    expect(deniedOf(APPLY_CONFLICT)).toBeNull();
+    expect(conflictOf(APPLY_DENIED)).toBeNull();
+    expect(readF0ApplyAnswerV1(APPLY_DENIED)).toMatchObject({ kind: "f0_apply_denied" });
+    expect(readF0ApplyAnswerV1(APPLY_CONFLICT)).toMatchObject({ kind: "f0_apply_key_conflict" });
+    expect(F0_APPLY_DENIED_CODE).toBe(APPLY_DENIED.error.code);
+    expect(F0_APPLY_CONFLICT_CODE).toBe(APPLY_CONFLICT.error.code);
+  });
+
+  it("BE-P13: the lookup reads NONE, FOUND (with the decision a replay returns) and CONFLICT, and a FOUND decision is the RelayDenied body", () => {
+    expect(lookupOf(LOOKUP_NONE)).toEqual({ state: "NONE", operationId: "op_01K3COMMANDPLAN000000000000", requestKey: "ui:apply:0001" });
+    expect(lookupOf(LOOKUP_CONFLICT)).toEqual({ state: "CONFLICT", operationId: "op_01K3COMMANDPLAN000000000000", requestKey: "ui:apply:0001" });
+    const found = lookupOf(LOOKUP_FOUND)!;
+    expect(found).toMatchObject({ state: "FOUND", firstRecordedAt: { iso: "2026-08-22T12:00:05Z" } });
+    expect(found.state === "FOUND" && found.relayDecision).toEqual(denyOf(DENIED));
+    expect([...F0_APPLY_ATTEMPT_STATES]).toEqual(["NONE", "FOUND", "CONFLICT"]);
+    expect(F0_APPLY_ATTEMPT_SCHEMA).toBe("portal.execution.f0-apply-attempt.v1");
   });
 
   it("the reader and the schemas agree on schema_version, and none reads another's body", () => {
@@ -376,6 +459,162 @@ describe("L1 · matrix F · problem: code forms x optional keys", () => {
   });
 });
 
+/* ═════════════ BE-P13 matrices (G to J): the schema is the oracle, the contract text is the rest ═════════════ */
+const KEY_OK = "ui:apply:0001";
+const detailPick = (id: string, field: string, entries: readonly (readonly [string, unknown])[]): Dimension => pick(id, ["details", field], entries);
+
+describe("L1 · matrix G · plan: current_primitive x command key x cost_impact", () => {
+  const PRIMITIVE = PLAN_EC.current_primitive as Draft;
+  const DIMS = [
+    dimensionOf("primitive", [
+      { label: "null", apply: (d: Draft) => { d.current_primitive = null; } },
+      { label: "n16b", apply: (d: Draft) => { d.current_primitive = clone(PRIMITIVE); } },
+      { label: "other id", apply: (d: Draft) => { d.current_primitive = { ...clone(PRIMITIVE), id: "live.other" }; } },
+      { label: "other env", apply: (d: Draft) => { d.current_primitive = { ...clone(PRIMITIVE), source_environment: "PAPER" }; } },
+      { label: "no targets", apply: (d: Draft) => { d.current_primitive = { ...clone(PRIMITIVE), target_types: [] }; } },
+      { label: "two targets", apply: (d: Draft) => { d.current_primitive = { ...clone(PRIMITIVE), target_types: ["ACCOUNT", "ACCOUNT"] }; } },
+      { label: "portfolio target", apply: (d: Draft) => { d.current_primitive = { ...clone(PRIMITIVE), target_types: ["PORTFOLIO"] }; } },
+      { label: "runtime active", apply: (d: Draft) => { d.current_primitive = { ...clone(PRIMITIVE), runtime_active: true }; } },
+      { label: "effect requested", apply: (d: Draft) => { d.current_primitive = { ...clone(PRIMITIVE), source_side_effect_requested: true }; } },
+      { label: "extra key", apply: (d: Draft) => { d.current_primitive = { ...clone(PRIMITIVE), extra: 1 }; } },
+      { label: "missing key", apply: (d: Draft) => { const p = clone(PRIMITIVE); delete p.runtime_active; d.current_primitive = p; } },
+      { label: "absent", apply: (d: Draft) => { delete d.current_primitive; } },
+    ]),
+    pick("key", ["command_key"], words("account/sync", "ops/emergency-close")),
+    dimensionOf("cost", [
+      { label: "absence", apply: (d: Draft) => { d.cost_impact = { ...COST_ABSENT }; } },
+      { label: "available", apply: (d: Draft) => { d.cost_impact = { state: "AVAILABLE", reason: "NO_COST_OR_IMPACT_SOURCE" }; } },
+      { label: "other reason", apply: (d: Draft) => { d.cost_impact = { state: "NOT_PUBLISHED", reason: "COMPUTED_LOCALLY" }; } },
+      { label: "a figure", apply: (d: Draft) => { d.cost_impact = { state: "NOT_PUBLISHED", reason: "NO_COST_OR_IMPACT_SOURCE", amount: "1.5" }; } },
+      { label: "null", apply: (d: Draft) => { d.cost_impact = null; } },
+      { label: "absent", apply: (d: Draft) => { delete d.cost_impact; } },
+    ]),
+  ];
+  const states = cartesian(PLAN, DIMS);
+  /** Schema: null or the exact object; cost the exact absence. Named group `primitive-identity`: the object only beside ops/emergency-close. */
+  const schemaOk = (p: Record<string, string>) => (p.primitive === "null" || p.primitive === "n16b") && p.cost === "absence";
+  const readerOk = (p: Record<string, string>) => schemaOk(p) && (p.primitive === "null" || p.key === "ops/emergency-close");
+
+  it("prints the matrix size and the stricter group's count", () => {
+    console.info(describeCoverage("commandOperation G (plan primitive/cost) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(12 * 2 * 6);
+    expect(states.filter((s) => schemaOk(s.picks))).toHaveLength(2 * 2);
+    // primitive-identity: the one schema-valid cell the reader refuses (the N16B object beside account/sync).
+    expect(states.filter((s) => schemaOk(s.picks) && !readerOk(s.picks))).toHaveLength(1);
+    expect(states.filter((s) => readerOk(s.picks))).toHaveLength(3);
+  });
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, s) => {
+    const read = planOf(s.value);
+    expect(read !== null).toBe(readerOk(s.picks));
+    if (read !== null) expect(planViolations(s.value)).toEqual([]);
+    expect(planViolations(s.value).length === 0).toBe(schemaOk(s.picks));
+  });
+});
+
+describe("L1 · matrix H · F0 apply denied: decision constants x key x replayed x top-level leftovers", () => {
+  const DIMS = [
+    detailPick("decision", "decision", words("DENIED", "ALLOWED")),
+    detailPick("retry", "retry_allowed", [["false", false], ["true", true], ["null", null]]),
+    detailPick("sent", "source_request_sent", [["false", false], ["true", true], ["null", null], ["absent", ABSENT]]),
+    detailPick("key", "request_key", [["ui", KEY_OK], ["empty", ""], ["leading dash", "-x"], ["193 chars", `a${"b".repeat(192)}`], ["absent", ABSENT]]),
+    detailPick("replayed", "replayed", [["false", false], ["true", true], ["string true", "true"], ["null", null], ["absent", ABSENT]]),
+    dimensionOf("top", [
+      { label: "envelope", apply: () => undefined },
+      { label: "legacy source_request_sent at the top", apply: (d: Draft) => { d.source_request_sent = false; } },
+      { label: "public_copy_key", apply: (d: Draft) => { d.public_copy_key = "x"; } },
+    ]),
+  ];
+  const states = cartesian(APPLY_DENIED, DIMS);
+  const accept = (p: Record<string, string>) =>
+    p.decision === "DENIED" && p.retry === "false" && p.sent === "false" && p.key === "ui"
+    && (p.replayed === "false" || p.replayed === "true") && p.top === "envelope";
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("commandOperation H (apply denied) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(2 * 3 * 4 * 5 * 5 * 3);
+    expect(states.filter((s) => accept(s.picks))).toHaveLength(2);
+  });
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, s) => {
+    const read = deniedOf(s.value);
+    expect(read !== null).toBe(accept(s.picks));
+    if (read !== null) expect(deniedApplyViolations(s.value)).toEqual([]);
+    // The combined reader agrees, and the key-conflict reader never reads a denial.
+    expect(readF0ApplyAnswerV1(s.value) !== null).toBe(accept(s.picks));
+    expect(conflictOf(s.value)).toBeNull();
+  });
+});
+
+describe("L1 · matrix I · F0 apply key conflict: code x flag x key x extra detail", () => {
+  const DIMS = [
+    pick("code", ["error", "code"], words("REQUEST_KEY_PAYLOAD_CONFLICT", "COMMAND_RELAY_DISABLED", "COMMAND_IDEMPOTENCY_CONFLICT")),
+    detailPick("sent", "source_request_sent", [["false", false], ["true", true], ["null", null], ["absent", ABSENT]]),
+    detailPick("key", "request_key", [["ui", KEY_OK], ["empty", ""], ["space", "a b"], ["absent", ABSENT]]),
+    dimensionOf("extra", [
+      { label: "none", apply: () => undefined },
+      { label: "the other operation's id", apply: (d: Draft) => { d.details.operation_id = "op_OTHER"; } },
+    ]),
+  ];
+  const states = cartesian(APPLY_CONFLICT, DIMS);
+  const accept = (p: Record<string, string>) => p.code === "REQUEST_KEY_PAYLOAD_CONFLICT" && p.sent === "false" && p.key === "ui" && p.extra === "none";
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("commandOperation I (apply key conflict) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(3 * 4 * 4 * 2);
+    expect(states.filter((s) => accept(s.picks))).toHaveLength(1);
+  });
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, s) => {
+    const read = conflictOf(s.value);
+    expect(read !== null).toBe(accept(s.picks));
+    if (read !== null) expect(conflictApplyViolations(s.value)).toEqual([]);
+    expect(readF0ApplyAnswerV1(s.value) !== null).toBe(accept(s.picks));
+    expect(deniedOf(s.value)).toBeNull();
+  });
+});
+
+describe("L1 · matrix J · apply-attempt lookup: state x relay_decision x first_recorded_at x operation", () => {
+  const OP = LOOKUP_FOUND.operation_id as string;
+  const DIMS = [
+    pick("state", ["state"], words("NONE", "FOUND", "CONFLICT", "SENT")),
+    dimensionOf("decision", [
+      { label: "null", apply: (d: Draft) => { d.relay_decision = null; } },
+      { label: "this operation", apply: (d: Draft) => { d.relay_decision = clone(LOOKUP_FOUND.relay_decision); } },
+      { label: "another operation", apply: (d: Draft) => { d.relay_decision = { ...clone(LOOKUP_FOUND.relay_decision), operation_id: "op_OTHER" }; } },
+      { label: "retry allowed", apply: (d: Draft) => { d.relay_decision = { ...clone(LOOKUP_FOUND.relay_decision), retry_allowed: true }; } },
+      { label: "request sent", apply: (d: Draft) => { d.relay_decision = { ...clone(LOOKUP_FOUND.relay_decision), source_request_sent: true }; } },
+      { label: "apply envelope", apply: (d: Draft) => { d.relay_decision = clone(APPLY_DENIED); } },
+    ]),
+    dimensionOf("at", [
+      { label: "null", apply: (d: Draft) => { d.first_recorded_at = null; } },
+      { label: "utc", apply: (d: Draft) => { d.first_recorded_at = "2026-08-22T12:00:05Z"; } },
+      { label: "offset", apply: (d: Draft) => { d.first_recorded_at = "2026-08-22T19:00:05+07:00"; } },
+      { label: "not a date", apply: (d: Draft) => { d.first_recorded_at = "yesterday"; } },
+      { label: "absent", apply: (d: Draft) => { delete d.first_recorded_at; } },
+    ]),
+    pick("key", ["request_key"], [["ui", KEY_OK], ["empty", ""], ["absent", ABSENT]]),
+  ];
+  const states = cartesian(LOOKUP_NONE, DIMS);
+  /** The schema's three variants. A date-time is any string to the testkit checker (no `format` support), so the schema cannot tell `offset` from `utc`. */
+  const schemaOk = (p: Record<string, string>) => {
+    if (p.key !== "ui") return false;
+    if (p.state === "FOUND") return p.decision === "this operation" || p.decision === "another operation" ? p.at === "utc" || p.at === "offset" || p.at === "not a date" : false;
+    if (p.state === "NONE" || p.state === "CONFLICT") return p.decision === "null" && p.at === "null";
+    return false;
+  };
+  /** Stricter, named: `lookup-identity` (the FOUND decision names the operation looked up) and `utc-instant` (an offset or a non-date is not an instant). */
+  const readerOk = (p: Record<string, string>) => schemaOk(p) && (p.state !== "FOUND" || (p.decision === "this operation" && p.at === "utc"));
+  it("prints the matrix size and the stricter groups' counts", () => {
+    console.info(describeCoverage("commandOperation J (lookup) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(4 * 6 * 5 * 3);
+    expect(states.filter((s) => schemaOk(s.picks))).toHaveLength(2 + 2 * 3);
+    expect(states.filter((s) => readerOk(s.picks))).toHaveLength(2 + 1);
+    expect(OP).toBe("op_01K3COMMANDPLAN000000000000");
+  });
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, s) => {
+    const read = lookupOf(s.value);
+    expect(read !== null).toBe(readerOk(s.picks));
+    if (read !== null) expect(lookupViolations(s.value)).toEqual([]);
+    expect(lookupViolations(s.value).length === 0, "schema oracle agrees with the hand-written one").toBe(schemaOk(s.picks));
+  });
+});
+
 /* ═════════════════════════ L2 ═════════════════════════ */
 describe("L2 · scale", () => {
   it("a collection of 100 items (the schema's maximum) reads inside the budget", () => {
@@ -414,6 +653,16 @@ describe("L2 · scale", () => {
     expect(t.ms).toBeLessThan(BUDGET_2000_READS_MS);
   });
 
+  it("BE-P13: 2,000 reads of each new body inside the budget", () => {
+    const t = timed(() => {
+      for (let n = 0; n < 2000; n += 1) {
+        readF0ApplyDeniedV1(APPLY_REPLAYED); readF0ApplyKeyConflictV1(APPLY_CONFLICT); readF0ApplyAttemptLookupV1(LOOKUP_FOUND); readCommandPlanV1(PLAN_EC);
+      }
+    });
+    console.info(`commandOperation 2,000 x 4 BE-P13 reads: ${t.ms.toFixed(0)} ms (budget ${BUDGET_2000_READS_MS} ms)`);
+    expect(t.ms).toBeLessThan(BUDGET_2000_READS_MS);
+  });
+
   it("a 70,000 character id, key, blocker, digest or cursor is refused fast, not scanned", () => {
     const text = "a".repeat(70_000);
     const edits: [() => unknown][] = [
@@ -421,6 +670,8 @@ describe("L2 · scale", () => {
       [() => planOf({ ...clone(PLAN), plan_digest: `sha256:${text}` })], [() => opOf({ ...clone(OPERATION), warnings: [text] })],
       [() => denyOf({ ...clone(DENIED), operation_id: text })], [() => collOf({ ...clone(COLLECTION), page: { ...clone(COLLECTION.page), has_more: true, next_cursor: text } })],
       [() => readCommandProblemV1({ ...clone(PROBLEM), request_id: text })],
+      [() => deniedOf({ ...clone(APPLY_DENIED), request_id: text })], [() => deniedOf({ ...clone(APPLY_DENIED), details: { ...clone(APPLY_DENIED.details), request_key: text } })],
+      [() => conflictOf({ ...clone(APPLY_CONFLICT), error: { code: "REQUEST_KEY_PAYLOAD_CONFLICT", message: text } })], [() => lookupOf({ ...clone(LOOKUP_NONE), request_key: text })],
     ];
     for (const [run] of edits) {
       const { value, ms } = timed(run);
@@ -485,11 +736,61 @@ const COLL_NEG: Case[] = [
   ...schemaVersionCases(COLLECTION, ["schema_version"], F0_COLLECTION_SCHEMA, [COMMAND_OPERATION_SCHEMA, "portal.execution.f0-command-collection.v2"]),
   ...pollutionCases(COLLECTION, [[], ["resource"], ["page"], ["items", 0]]),
 ];
+const COST_PATHS = [["cost_impact", "state"], ["cost_impact", "reason"]] as const;
+const PRIMITIVE_PATHS = ["id", "source_environment", "target_types", "runtime_active", "source_side_effect_requested"].map((k) => ["current_primitive", k] as const);
+const PLAN_EC_NEG: Case[] = [
+  ...enumsOf(PLAN_EC, ["current_primitive", "id"], ["live.emergency-close"]),
+  ...enumsOf(PLAN_EC, ["current_primitive", "source_environment"], ["LIVE_FULL"]),
+  ...enumsOf(PLAN_EC, ["current_primitive", "runtime_active"], [false]),
+  ...enumsOf(PLAN_EC, ["current_primitive", "source_side_effect_requested"], [false]),
+  ...enumsOf(PLAN_EC, ["cost_impact", "state"], ["NOT_PUBLISHED"]),
+  ...enumsOf(PLAN_EC, ["cost_impact", "reason"], ["NO_COST_OR_IMPACT_SOURCE"]),
+  ...requiredCases(PLAN_EC, [["cost_impact"], ["current_primitive"], ...COST_PATHS, ...PRIMITIVE_PATHS]),
+  ...arrayCases(PLAN_EC, ["current_primitive", "target_types"]),
+  ...pollutionCases(PLAN_EC, [[], ["current_primitive"], ["cost_impact"]]),
+];
+const APPLY_DETAIL_PATHS = ["schema_version", "operation_id", "decision", "reason", "retry_allowed", "source_request_sent", "request_key", "replayed"].map((k) => ["details", k] as const);
+const APPLY_DENIED_NEG: Case[] = [
+  ...enumsOf(APPLY_DENIED, ["error", "code"], ["COMMAND_RELAY_DISABLED"]),
+  ...enumsOf(APPLY_DENIED, ["details", "schema_version"], [RELAY_DECISION_SCHEMA]),
+  ...enumsOf(APPLY_DENIED, ["details", "decision"], ["DENIED"]),
+  ...enumsOf(APPLY_DENIED, ["details", "reason"], ["COMMAND_RELAY_DISABLED"]),
+  ...enumsOf(APPLY_DENIED, ["details", "retry_allowed"], [false]),
+  ...enumsOf(APPLY_DENIED, ["details", "source_request_sent"], [false]),
+  ...requiredCases(APPLY_DENIED, [["error"], ["request_id"], ["details"], ["error", "code"], ["error", "message"], ...APPLY_DETAIL_PATHS]),
+  ...stringCases(APPLY_DENIED, ["error", "message"]), ...stringCases(APPLY_DENIED, ["request_id"]),
+  ...stringCases(APPLY_DENIED, ["details", "operation_id"]), ...stringCases(APPLY_DENIED, ["details", "request_key"]),
+  ...pollutionCases(APPLY_DENIED, [[], ["error"], ["details"]]),
+];
+const APPLY_CONFLICT_NEG: Case[] = [
+  ...enumsOf(APPLY_CONFLICT, ["error", "code"], ["REQUEST_KEY_PAYLOAD_CONFLICT"]),
+  ...enumsOf(APPLY_CONFLICT, ["details", "source_request_sent"], [false]),
+  ...requiredCases(APPLY_CONFLICT, [["error"], ["request_id"], ["details"], ["error", "code"], ["error", "message"], ["details", "request_key"], ["details", "source_request_sent"]]),
+  ...stringCases(APPLY_CONFLICT, ["error", "message"]), ...stringCases(APPLY_CONFLICT, ["request_id"]), ...stringCases(APPLY_CONFLICT, ["details", "request_key"]),
+  ...pollutionCases(APPLY_CONFLICT, [[], ["error"], ["details"]]),
+];
+const LOOKUP_NEG: Case[] = [
+  ...enumsOf(LOOKUP_FOUND, ["state"], [...F0_APPLY_ATTEMPT_STATES]),
+  ...enumsOf(LOOKUP_FOUND, ["relay_decision", "decision"], ["DENIED"]),
+  ...enumsOf(LOOKUP_FOUND, ["relay_decision", "reason"], ["COMMAND_RELAY_DISABLED"]),
+  ...enumsOf(LOOKUP_FOUND, ["relay_decision", "retry_allowed"], [false]),
+  ...enumsOf(LOOKUP_FOUND, ["relay_decision", "source_request_sent"], [false]),
+  ...requiredCases(LOOKUP_FOUND, [...Object.keys(LOOKUP_FOUND).map((k) => [k] as const), ["relay_decision", "operation_id"], ["relay_decision", "retry_allowed"], ["relay_decision", "source_request_sent"]]),
+  ...requiredCases(LOOKUP_NONE, Object.keys(LOOKUP_NONE).map((k) => [k] as const)),
+  ...requiredCases(LOOKUP_CONFLICT, Object.keys(LOOKUP_CONFLICT).map((k) => [k] as const)),
+  ...stringCases(LOOKUP_FOUND, ["operation_id"]), ...stringCases(LOOKUP_FOUND, ["request_key"]), ...stringCases(LOOKUP_FOUND, ["first_recorded_at"]),
+  ...schemaVersionCases(LOOKUP_FOUND, ["schema_version"], F0_APPLY_ATTEMPT_SCHEMA, [COMMAND_PLAN_SCHEMA, RELAY_DECISION_SCHEMA, "portal.execution.f0-apply-attempt.v2"]),
+  ...pollutionCases(LOOKUP_FOUND, [[], ["relay_decision"]]), ...pollutionCases(LOOKUP_NONE, [[]]),
+];
 const PREVIEW_NEG: Case[] = [
   ...enumsOf(PREVIEW_ALLOWED, ["approval_gate"], [...APPROVAL_GATES, null]),
   ...enumsOf(PREVIEW_ALLOWED, ["reason_code"], [...COMMAND_REASON_CODES, null]),
   ...enumsOf(PREVIEW_ALLOWED, ["business_applied"], [false]),
   ...enumsOf(PREVIEW_ALLOWED, ["reserved"], [false]),
+  ...enumsOf(PREVIEW_ALLOWED, ["cost_impact", "state"], ["NOT_PUBLISHED"]),
+  ...enumsOf(PREVIEW_ALLOWED, ["cost_impact", "reason"], ["NO_COST_OR_IMPACT_SOURCE"]),
+  ...requiredCases(PREVIEW_ALLOWED, [["cost_impact", "state"], ["cost_impact", "reason"]]),
+  ...pollutionCases(PREVIEW_ALLOWED, [["cost_impact"]]),
   ...requiredCases(PREVIEW_ALLOWED, Object.keys(PREVIEW_ALLOWED).map((k) => [k] as const)),
   ...integerCases(PREVIEW_ALLOWED, ["expires_at_ms"]).filter((c) => getPath(c.value, ["expires_at_ms"]) !== null),
   ...stringCases(PREVIEW_ALLOWED, ["preview_digest"]).filter((c) => getPath(c.value, ["preview_digest"]) !== null),
@@ -556,6 +857,10 @@ runNegatives("operation (base)", COMMAND_OPERATION_SCHEMA, OP_NEG, readCommandOp
 runNegatives("operation (F0)", COMMAND_OPERATION_SCHEMA, OP_NEG, readF0BlockedOperationV1, f0Violations, 80);
 runNegatives("relay decision", RELAY_DECISION_SCHEMA, DENY_NEG, readRelayDecisionV1, denyViolations, 40);
 runNegatives("F0 collection", F0_COLLECTION_SCHEMA, COLL_NEG, readF0CommandCollectionV1, collectionViolations, 60);
+runNegatives("plan (emergency close, BE-P13)", COMMAND_PLAN_SCHEMA, PLAN_EC_NEG, readCommandPlanV1, planViolations, 60);
+runNegatives("F0 apply denied (BE-P13)", null, APPLY_DENIED_NEG, readF0ApplyDeniedV1, deniedApplyViolations, 80);
+runNegatives("F0 apply key conflict (BE-P13)", null, APPLY_CONFLICT_NEG, readF0ApplyKeyConflictV1, conflictApplyViolations, 50);
+runNegatives("F0 apply attempt lookup (BE-P13)", F0_APPLY_ATTEMPT_SCHEMA, LOOKUP_NEG, readF0ApplyAttemptLookupV1, lookupViolations, 100);
 runNegatives("preview", COMMAND_PREVIEW_SCHEMA, PREVIEW_NEG, readCommandPreviewV1, previewViolations, 60);
 runNegatives("problem", null, PROBLEM_NEG, readCommandProblemV1, problemViolations, 30);
 
@@ -563,10 +868,32 @@ describe("L3 · bad roots", () => {
   const readers: [string, (v: unknown) => unknown][] = [
     ["plan", readCommandPlanV1], ["operation", readCommandOperationV1], ["f0 operation", readF0BlockedOperationV1], ["relay decision", readRelayDecisionV1],
     ["collection", readF0CommandCollectionV1], ["preview", readCommandPreviewV1], ["problem", readCommandProblemV1],
+    ["apply denied", readF0ApplyDeniedV1], ["apply key conflict", readF0ApplyKeyConflictV1], ["apply answer", readF0ApplyAnswerV1], ["apply lookup", readF0ApplyAttemptLookupV1],
   ];
   it.each(rootCases().flatMap((c) => readers.map(([name, read]) => [`${name} <- ${c.name}`, read, c.value] as const)))("%s", (_label, read, value) => {
     expect(() => read(value)).not.toThrow();
     const answer = read(value) as { kind?: string } | null;
     expect(answer === null || answer.kind === "unsupported_shape").toBe(true);
+  });
+});
+
+/* ═════════════ mutation control: the "never looser than the schema" counter must be able to bite ═════════════ */
+describe("mutation control · the looser-than-schema counter is not vacuous", () => {
+  /** Deliberately loose stand-ins for the BE-P13 readers: they check the code and the shape of the key, and nothing else. */
+  const looseDenied = (v: unknown) => ((v as Draft)?.error?.code === "COMMAND_RELAY_DISABLED" && typeof (v as Draft)?.details === "object" ? {} : null);
+  const looseLookup = (v: unknown) => ((v as Draft)?.schema_version === F0_APPLY_ATTEMPT_SCHEMA ? {} : null);
+  const looserThanSchema = (read: (v: unknown) => unknown, cases: Case[], violations: (v: unknown) => string[]) =>
+    cases.filter((c) => {
+      const answer = read(c.value) as { kind?: string } | null;
+      return c.category !== "prototype-pollution" && answer !== null && answer.kind !== "unsupported_shape" && violations(c.value).length > 0;
+    }).length;
+
+  it("a loose apply-denied reader accepts schema-invalid bodies that the real reader refuses (counter > 0 for the stand-in, 0 for the reader)", () => {
+    expect(looserThanSchema(looseDenied, APPLY_DENIED_NEG, deniedApplyViolations)).toBeGreaterThan(20);
+    expect(looserThanSchema(readF0ApplyDeniedV1, APPLY_DENIED_NEG, deniedApplyViolations)).toBe(0);
+  });
+  it("a loose lookup reader accepts schema-invalid bodies that the real reader refuses (counter > 0 for the stand-in, 0 for the reader)", () => {
+    expect(looserThanSchema(looseLookup, LOOKUP_NEG, lookupViolations)).toBeGreaterThan(20);
+    expect(looserThanSchema(readF0ApplyAttemptLookupV1, LOOKUP_NEG, lookupViolations)).toBe(0);
   });
 });
