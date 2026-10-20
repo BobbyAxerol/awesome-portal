@@ -133,14 +133,19 @@
       ],
       "unavailable_fields": [
         {
-          "field": "current_stage",
-          "reason_code": "CURRENT_STAGE_GRAIN_NOT_PUBLISHED"
+          "field": "days_in_stage",
+          "reason_code": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
         },
         {
-          "field": "days_in_stage",
+          "field": "entered_at_ms",
           "reason_code": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
         }
       ]
+    },
+    "stage_lifecycle": {
+      "current_stage_rule": "SINGLE_ACTIVE_MEMBER_STAGE_IN_SELECTED_ENVIRONMENT",
+      "covers": "DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY",
+      "entry_time": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
     }
   }
 }

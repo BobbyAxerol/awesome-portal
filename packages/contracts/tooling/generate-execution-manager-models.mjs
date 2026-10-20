@@ -6,6 +6,8 @@ import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { amendManagerP1Schemas, managerCurrentOnlyProblem } from './execution-manager-p1-semantics.mjs';
+import { amendManagerLifecycleSchemas, attachManagerLifecycleSynthetic,
+  managerLifecycleLiveSyntheticFixture } from './execution-manager-lifecycle-semantics.mjs';
 import { managerP1NoFactsSyntheticOptions, attachManagerP1SyntheticOptions,
   managerP1AllWindowSyntheticFixture, managerP1PartitionsSyntheticFixture, managerP1InvariantNegativeFixture,
   applyManagerP1Ops } from './execution-manager-p1-fixtures.mjs';
@@ -80,6 +82,7 @@ schemas.ManagerCurrentOnlyProblem=structuredClone(managerCurrentOnlyProblem);
 amendManagerP1Schemas({response:schemas.ManagerDataset,query:schemas.ManagerDatasetQuery,
   metric:schemas.ManagerMetric,row:schemas.ManagerDatasetRow,
   options:schemas.ManagerQueryOptions,selectedWindow:schemas.ManagerSelectedWindow});
+amendManagerLifecycleSchemas({response:schemas.ManagerDataset,row:schemas.ManagerDatasetRow});
 Object.assign(schemas,{ManagerScoreRevisionQuery:json(revisions.managerScoreRevisionQuery),ManagerScoreRevisionHistoryQuery:json(revisions.managerScoreRevisionHistoryQuery),
   ManagerScoreRevisionView:json(revisions.managerScoreRevisionView),ManagerScoreRevisionHistory:json(revisions.managerScoreRevisionHistory),
   ManagerHistoricalComposition:json(revisions.managerHistoricalComposition),
@@ -145,13 +148,13 @@ for(const [name,context] of [
   ['execution-manager-dataset.rows.synthetic.valid.json',{
     metricKeys:['unrealized_pnl','net_pnl','allocation'],canSearchName:true,
     sortFields:['alpha_id','alpha_version_id','name','owner_user_id','portfolio_id','lifecycle','venue','health','source_state',
-      'allocation','net_pnl','unrealized_pnl','stage_presence'],
-    groupFields:['portfolio_id','owner_user_id','alpha_id','stage_presence','venue','health','source_state','lifecycle']}],
+      'allocation','net_pnl','unrealized_pnl','stage_presence','current_stage'],
+    groupFields:['portfolio_id','owner_user_id','alpha_id','stage_presence','current_stage','venue','health','source_state','lifecycle']}],
 ]){
   const base=JSON.parse(readFileSync(resolve(root,'fixtures',name),'utf8'));
   const options=managerP1NoFactsSyntheticOptions({asOf:base.value.as_of_ms,...context});
   p1.managerP1Options.parse(options);
-  const sample=attachManagerP1SyntheticOptions(base,options);
+  const sample=attachManagerP1SyntheticOptions(attachManagerLifecycleSynthetic(base),options);
   contract.managerDatasetResponse.parse(sample.value);
   outputs['fixtures/'+name]=sample;
   if(name==='execution-manager-dataset.rows.synthetic.valid.json'){
@@ -170,6 +173,9 @@ for(const [name,context] of [
         throw new Error('Negative Manager fixture case is not refused with its code: '+c.id);
     }
     outputs['fixtures/execution-manager-dataset.invariants.synthetic.negative.json']=negative;
+    const lifecycle=managerLifecycleLiveSyntheticFixture(sample);
+    contract.managerDatasetResponse.parse(lifecycle.value);
+    outputs['fixtures/execution-manager-dataset.lifecycle.live.synthetic.valid.json']=lifecycle;
   }
 }
 for (const [file, value] of Object.entries(outputs)) {
