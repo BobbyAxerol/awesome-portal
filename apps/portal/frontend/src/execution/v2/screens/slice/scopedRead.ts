@@ -24,9 +24,14 @@
  * - SS-2 page: `returned_count` equals the rows, is at most `limit` and at most `visible_count`; `has_more` is true exactly
  *   when `next_cursor` is present (the schema's own description says the runtime enforces this);
  * - SS-3 display safety of every text (whitespace-only, bidi and zero-width characters, C1 controls);
- * - SS-4 a row appears once by its identity tuple (alpha, version, portfolio, environment);
+ * - SS-4 a row appears once by ITS DATASET'S identity within an environment (`ROW_IDENTITY`): ALPHA_FLEET by alpha, version and
+ *   portfolio; PORTFOLIOS by portfolio; BINDINGS and BINDING_DETAIL by binding. The producer keys its cursor boundary on the
+ *   same fields (`resourceKey`, `scoped-manager.reader.ts`: environment, alpha, version, portfolio, binding). One portfolio in
+ *   three environments is three rows; two bindings of one environment are two rows; the SAME identity twice is refused;
  * - SS-5 at most 10,000 instances in a body (a 1 MiB body cannot hold more);
- * - SS-6 a negative zero (`-0`, `-0.00`) is not a decimal value: it has no meaning to a reader (the pattern of the schema accepts it).
+ * - SS-6 a negative zero (`-0`, `-0.00`) is not a decimal value: it has no meaning to a reader (the pattern of the schema accepts it);
+ * - SS-7 at least one environment disposition is stated (the producer requires it; the schema has no `minItems`): a page that
+ *   says nothing about which environments it covers cannot be told apart from one that hid them.
  */
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { boundedCount, clockMs, exactValue, hasAll, hasOnly, managerText, nullableText, oneOf, record } from "../../readers/managerMetric";
@@ -52,6 +57,14 @@ export const MAX_SCOPED_POLICY_REVISIONS = 3;
 export const MAX_SCOPED_INSTANCES_TOTAL = 10_000;
 export const MAX_SCOPED_CURSOR_TEXT = 4096;
 export const SCOPED_RESPONSE_BYTES = 1_048_576;
+
+/** SS-4: the identity fields of a row, per dataset. The row's environment is always part of it. */
+export const ROW_IDENTITY: Readonly<Record<ScopedSurface, readonly ("alpha_id" | "alpha_version_id" | "portfolio_id" | "binding_id")[]>> = {
+  ALPHA_FLEET: ["alpha_id", "alpha_version_id", "portfolio_id"],
+  PORTFOLIOS: ["portfolio_id"],
+  BINDINGS: ["binding_id"],
+  BINDING_DETAIL: ["binding_id"],
+};
 
 const CURSOR_TEXT = /^[A-Za-z0-9._-]+$/;
 
@@ -231,7 +244,8 @@ export function readManagerScoped(raw: unknown): ScopedReadResult {
     policyRevisions.push(text);
   }
 
-  if (!Array.isArray(body.profile_dispositions) || body.profile_dispositions.length > 3) return null;
+  // SS-7: at least one disposition.
+  if (!Array.isArray(body.profile_dispositions) || body.profile_dispositions.length < 1 || body.profile_dispositions.length > 3) return null;
   const dispositions: ScopedDisposition[] = [];
   for (const entry of body.profile_dispositions) {
     const d = record(entry);
@@ -261,8 +275,8 @@ export function readManagerScoped(raw: unknown): ScopedReadResult {
   for (const entry of body.items) {
     const read = item(entry);
     if (read === null) return null;
-    // SS-4: a row appears once by its identity tuple.
-    const tuple = JSON.stringify([read.environment, read.identity.alpha_id ?? null, read.identity.alpha_version_id ?? null, read.identity.portfolio_id ?? null]);
+    // SS-4: a row appears once by its dataset's identity (never by fields the dataset does not carry).
+    const tuple = JSON.stringify([read.environment, ...ROW_IDENTITY[surface].map((key) => read.identity[key] ?? null)]);
     if (identities.has(tuple)) return null;
     identities.add(tuple);
     instanceTotal += read.instances.length;
