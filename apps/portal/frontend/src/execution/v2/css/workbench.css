@@ -352,6 +352,17 @@
   align-items: center;
 }
 
+/*
+ * The pinned bar sits over the bottom of the viewport, so a control focused there (the "Overview" tab at 1024px, UXM-10 F-4) is
+ * covered by it (WCAG 2.4.11). A scroll margin that clears the bar (66px at 1024px, 5rem = 80px) makes the browser scroll a
+ * focused control up into the free part of the screen. Static under 661px, where the bar does not float.
+ */
+@media (min-width: 661px) {
+  .exec-wb-v2 :is(a[href], button, summary, input, select, textarea, [tabindex]) {
+    scroll-margin-bottom: 5rem;
+  }
+}
+
 /* ---- narrow ------------------------------------------------------------- */
 
 @media (max-width: 1100px) {
