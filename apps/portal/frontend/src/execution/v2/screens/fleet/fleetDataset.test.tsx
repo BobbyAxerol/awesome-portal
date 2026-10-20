@@ -257,6 +257,11 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     expect(rows.map((row) => cell(row, "Current stage"))).toEqual(["Live", "No single stagein Canary, Live"]);
     expect(cell(rows[0]!, "Health")).toBe("Not available");
     expect(screen.getByText(/Quality|The dataset is partial and stale/i)).toBeTruthy();
+    // The fixture's time is the epoch (an unset field): it never prints as "As of 1970-01-01"; the reason codes sit in the title, not in the sentence.
+    expect(document.body.textContent).not.toMatch(/1970/);
+    expect(screen.getByText("Source time not published")).toBeTruthy();
+    expect(screen.getByText(/The dataset is partial and stale/).textContent).not.toMatch(/TEST_ONLY/);
+    expect(screen.getByText(/The dataset is partial and stale/).getAttribute("title")).toMatch(/TEST_ONLY/);
   });
 
   it("reads the canonical partitions fixture on the paper lens (money partitions are in the body, none on the screen)", async () => {

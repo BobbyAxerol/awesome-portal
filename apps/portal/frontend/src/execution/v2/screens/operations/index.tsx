@@ -40,6 +40,7 @@ import { OperationDock } from "./OperationDock";
 import {
   invalidNotice, legacyFilterNotice, OPS_WINDOWS, readOpsUrl, writeOpsUrl, type Filters, type OpsWindow,
 } from "./opsUrl";
+import { profileLabel } from "../../profileLabel";
 import { humanize, TARGET_LABEL } from "./outcome";
 import { QueueTable } from "./QueueTable";
 import { StatusCounts } from "./StatusCounts";
@@ -385,7 +386,7 @@ export default function OperationsV2({
                 const state = (p.state ?? "").toUpperCase();
                 return (
                   <tr key={p.profile}>
-                    <td>{humanize(p.profile)}</td>
+                    <td title={p.profile}>{profileLabel(p.profile)}</td>
                     <td>
                       <Flag kind={state === "AVAILABLE" ? "ok" : state === "PARTIAL" ? "partial" : "unknown"} label={p.state ? humanize(p.state) : "State not stated"} size="sm" />
                       {p.reasonCode ? <span className="exec-ops-np-reason">{p.reasonCode}</span> : null}

@@ -77,6 +77,9 @@ const SEARCH_DEBOUNCE_MS = 300;
 /** The URL codec's bound for `sel` (urlState `token(256)`). */
 const SEL_MAX = 256;
 
+/** A dataset time inside 1970-01-01 is the zero value of an unset field, not a moment: it prints as "Source time not published", never "As of 1970-01-01". */
+const EPOCH_DAY_MS = 86_400_000;
+
 function freshnessFlag(freshness: string): { kind: FlagKind; label: string } {
   switch (freshness) {
     case "FRESH": return { kind: "ok", label: "Fresh" };
@@ -398,7 +401,7 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
           {datasetMode ? (
             <>
               {dataset.first && dataset.first.quality.freshness !== "FRESH" ? <Flag kind={dataset.first.quality.freshness === "STALE" ? "stale" : "unknown"} label={humanize(dataset.first.quality.freshness)} size="sm" /> : null}
-              {dataset.first ? <span>As of {utcStamp(dataset.first.asOfMs)}</span> : null}
+              {dataset.first ? <span>{dataset.first.asOfMs < EPOCH_DAY_MS ? "Source time not published" : `As of ${utcStamp(dataset.first.asOfMs)}`}</span> : null}
             </>
           ) : (
             <>
@@ -416,9 +419,8 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
       {datasetMode && dataset.first && (dataset.first.quality.completeness !== "COMPLETE" || dataset.first.quality.freshness !== "FRESH") ? (
         <div className="exec-fleet-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" />
-          <span>
+          <span title={dataset.first.quality.reasons.length > 0 ? dataset.first.quality.reasons.join(", ") : undefined}>
             The dataset is {humanize(dataset.first.quality.completeness).toLowerCase()} and {humanize(dataset.first.quality.freshness).toLowerCase()}: some rows or counts may be missing or old.
-            {dataset.first.quality.reasons.length > 0 ? ` (${dataset.first.quality.reasons.join(", ")})` : ""}
           </span>
         </div>
       ) : null}

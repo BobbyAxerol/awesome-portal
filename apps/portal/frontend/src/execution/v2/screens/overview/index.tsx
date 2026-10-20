@@ -50,6 +50,7 @@ import { NotAvailableLine, SectionPanel, type UnavailableFact } from "../../bloc
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
+import { profileLabel } from "../../profileLabel";
 import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { isInternalPath, useExecUrlState, withContext } from "../../urlState";
@@ -473,7 +474,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
               {composition.sourceHealth.profiles.map((p) => (
                 <li key={p.profile}>
                   <Flag kind={(p.state ?? "").toUpperCase() === "AVAILABLE" ? "ok" : (p.state ?? "").toUpperCase() === "PARTIAL" ? "partial" : "unknown"} label={p.state ? humanize(p.state) : "State not stated"} size="sm" />{" "}
-                  <span title={p.reasonCode ?? undefined}>{humanize(p.profile)}</span>
+                  <span title={p.reasonCode ?? undefined}>{profileLabel(p.profile)}</span>
                 </li>
               ))}
             </ul>

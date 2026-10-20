@@ -706,3 +706,19 @@ a.exec-fleet-open {
   max-width: 22rem;
   white-space: normal;
 }
+
+/* UXM-07 audit A #4: beside the 228px rail a 1024px window leaves the table 712px. Tighter cell padding and a narrower portfolios
+ * floor make the six identity columns fit without an inner scroll; the wrap still scrolls (focusable) if a long name needs more. */
+@media (min-width: 661px) and (max-width: 1279px) {
+  .exec-fleet-v2 .exec-cards thead th,
+  .exec-fleet-v2 .exec-cards tbody td {
+    padding-inline: var(--space-2);
+  }
+  .exec-fleet-v2 .exec-cards tbody td[data-l="Portfolios"] {
+    min-width: 6rem;
+  }
+  /* A health chip is a word, never cut mid-word ("ATTENTIO N"); its detail line may wrap under it. */
+  .exec-fleet-v2 .exec-cards tbody td[data-l="Health"] .exec-flag {
+    white-space: nowrap;
+  }
+}
