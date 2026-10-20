@@ -8,7 +8,7 @@
  * Mounted (UXM-09 closing step) at `EXECUTION_COMMAND_ROUTE` by `PortalRoutes`, through `storyRoute.tsx` (this page plus the published
  * catalogue), behind the `command` flag key and a raw-env lazy import, so a build without the flag carries no chunk. Props of this
  * default export are all optional:
- *   - `catalogue`: an already-read `CommandCatalogue` (tests pass the canonical file); or
+ *   - `catalogue`: an already-read catalogue (the strict V2 read, `readers/commandCatalogue.ts`, or the V1 read in older tests); or
  *   - `api`: an `ExecutionApi` whose `getCommandCatalogue()` is read once, on mount (a read, never a write);
  *   - `port`: a command port; the default is the scripted fake.
  *
@@ -23,7 +23,6 @@
  */
 import { useEffect, useMemo, useState } from "react";
 
-import type { CommandCatalogue } from "../../../adminCatalog";
 import type { ExecutionApi } from "../../../api/ports";
 import { SectionPanel } from "../../blocks";
 import { DockAction } from "../../Drawer";
@@ -32,6 +31,7 @@ import { Certification } from "./Certification";
 import { CommandFlow } from "./CommandFlow";
 import { DisabledOperations } from "./DisabledOperations";
 import { createFakeCommandPort } from "./fakePort";
+import type { CatalogueView } from "./model";
 import { formatUtcEpochMs } from "../../../screenDataContract";
 import type { CommandPort, Lane } from "./port";
 import { SEND_DISABLED_REASON } from "./port";
@@ -62,7 +62,7 @@ export const STORY_LABEL = "Fixture story: not connected to a source; fake port"
 export interface CommandStoryProps {
   /** Reads the command catalogue once, on mount. Ignored when `catalogue` is given. */
   api?: Pick<ExecutionApi, "getCommandCatalogue">;
-  catalogue?: CommandCatalogue | null;
+  catalogue?: CatalogueView | null;
   /** Overrides the scripted fake (a test). Never a connected port: this lane has none. */
   port?: CommandPort;
   initialScenario?: ScenarioId;
@@ -89,7 +89,7 @@ export default function CommandStoryPage({ api, catalogue, port, initialScenario
   const scenario = scenarioById(scenarioId);
   const fake = useMemo(() => createFakeCommandPort({ scenario: initialScenario }), [initialScenario]);
   const active: CommandPort = port ?? fake;
-  const [read, setRead] = useState<CommandCatalogue | null>(catalogue ?? null);
+  const [read, setRead] = useState<CatalogueView | null>(catalogue ?? null);
 
   // The scripted answer follows the select. Setting it is a plain assignment; no port method is called.
   fake.setScenario(scenarioId);

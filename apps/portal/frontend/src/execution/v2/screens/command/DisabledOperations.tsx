@@ -14,8 +14,7 @@
  */
 import { DockAction } from "../../Drawer";
 import { SectionPanel } from "../../blocks";
-import type { CommandCatalogue } from "../../../adminCatalog";
-import { CAPITAL_OPERATION_ROWS, EXCLUDED_FAMILY_ROWS, GRANT_NAME_NOTE, catalogueRows, type DisabledRow } from "./model";
+import { CAPITAL_OPERATION_ROWS, EXCLUDED_FAMILY_ROWS, GRANT_NAME_NOTE, catalogueRows, type CatalogueView, type DisabledRow } from "./model";
 import { ACCESS_HREF } from "./ReceiptPanel";
 
 import "../../css/command.css";
@@ -39,7 +38,7 @@ function Row({ row }: { row: DisabledRow }) {
   );
 }
 
-export function DisabledOperations({ catalogue }: { catalogue: CommandCatalogue | null }) {
+export function DisabledOperations({ catalogue }: { catalogue: CatalogueView | null }) {
   const groups = catalogue === null ? [] : catalogueRows(catalogue);
   const total = groups.reduce((n, g) => n + g.rows.length, 0);
   return (

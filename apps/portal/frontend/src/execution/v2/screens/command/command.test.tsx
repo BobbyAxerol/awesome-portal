@@ -14,6 +14,7 @@ import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BLOCKED_REASON_TEXT, readCommandCatalogue, type CommandCatalogue } from "../../../adminCatalog";
+import { catalogueOf } from "../../readers/commandCatalogue";
 import { EXEC_V2_PENDING_KEYS, EXEC_V2_SCREEN_KEYS, isV2Screen, parseV2Manifest } from "../../flags";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import { Certification } from "./Certification";
@@ -39,7 +40,9 @@ import {
 } from "./storyData";
 import { clearCommandIntents } from "./useCommandFlow";
 
-const CATALOGUE: CommandCatalogue = readCommandCatalogue(loadCanonical("execution-command-catalog"))!;
+/** The story reads its catalogue through the strict V2 reader (`catalogueLane.ts`); the V1 read below exists only for the `ExecutionApi` mock, whose port type is V1. */
+const CATALOGUE = catalogueOf(loadCanonical("execution-command-catalog"))!;
+const API_CATALOGUE: CommandCatalogue = readCommandCatalogue(loadCanonical("execution-command-catalog"))!;
 const fetchSpy = vi.fn(async () => {
   throw new Error("the fixture lane must never reach a network");
 });
@@ -719,7 +722,7 @@ describe("the story page", () => {
   });
 
   it("reads the catalogue once on mount through the api when none is passed (a read, never a write)", async () => {
-    const getCommandCatalogue = vi.fn(async () => ({ ok: true as const, value: CATALOGUE }));
+    const getCommandCatalogue = vi.fn(async () => ({ ok: true as const, value: API_CATALOGUE }));
     story({ catalogue: undefined, api: { getCommandCatalogue } });
     await waitFor(() => expect(document.querySelectorAll("[data-op]").length).toBe(64 + 8 + 6));
     expect(getCommandCatalogue).toHaveBeenCalledTimes(1);

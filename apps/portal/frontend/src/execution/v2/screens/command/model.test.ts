@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from "vitest";
 
-import { readCommandCatalogue } from "../../../adminCatalog";
+import { catalogueOf } from "../../readers/commandCatalogue";
 import { readCommandStatusV1 } from "../../readers/commandCurrency";
 import { readCommandPlanV1, readCommandPreviewV1 } from "../../readers/commandOperation";
 import { loadCanonical } from "../../testkit/loadCanonical";
@@ -322,7 +322,7 @@ describe("the status lookup grammar", () => {
 });
 
 describe("every operation that is not sendable carries its exact reason, and a capability only when one is published", () => {
-  const catalogue = readCommandCatalogue(loadCanonical("execution-command-catalog"))!;
+  const catalogue = catalogueOf(loadCanonical("execution-command-catalog"))!;
   const groups = catalogueRows(catalogue);
   const rows = groups.flatMap((g) => g.rows);
 
