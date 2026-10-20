@@ -15,7 +15,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ExecutionApi } from "../../../api/ports";
 import type { ReviewCaptureCapabilities } from "../../../api/reviewCapture";
 import type { PanelStatus } from "../../../contracts";
-import type { SandboxVersionRead } from "../../readers/dispatch";
+import type { SandboxVersionRead, StageInclude } from "../../readers/dispatch";
+
+/** BE-P12: the V2 screen asks for the identity of the deployment; the legacy body ignores it and the default request is otherwise unchanged. */
+const SANDBOX_INCLUDE: readonly StageInclude[] = ["identity"];
 
 export type SandboxRead =
   | { phase: "loading" }
@@ -34,7 +37,7 @@ export function useSandboxRead(api: ExecutionApi, deploymentId: string, workspac
     setState({ key, read: kept === null ? { phase: "loading" } : { phase: "ready", value: kept, refreshing: true } });
     const scoped = api.withReadSignal?.(abort.signal) ?? api;
     void scoped
-      .getSandboxCertificationVersioned(deploymentId, workspaceId === null ? undefined : { workspaceId })
+      .getSandboxCertificationVersioned(deploymentId, workspaceId === null ? { include: SANDBOX_INCLUDE } : { workspaceId, include: SANDBOX_INCLUDE })
       .then((result) => {
         if (abort.signal.aborted) return;
         if (result.ok) {

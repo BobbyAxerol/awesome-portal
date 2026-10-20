@@ -191,3 +191,38 @@ describe("closed, and the sealed v2 body", () => {
     expect([view.runtime, view.reconciliation, view.identity, view.figures]).toEqual([null, null, null, null]);
   });
 });
+
+describe("BE-P12: the opt-in identity of the following-parent v2 body (include=identity)", () => {
+  const parentFile = () => loadCanonical<Draft>("execution-positive-parent.synthetic");
+
+  it("the view carries the closed identity the parent reader read; a body that did not carry it is the typed absence", () => {
+    expect(viewOf(parentFile().sandbox_identity).identity).toMatchObject({ alphaId: "alpha_TEST_ONLY_identity", portfolioName: "TEST_ONLY portfolio name", alphaReasonCode: "ALPHA_NAME_NOT_PUBLISHED" });
+    expect(viewOf(parentFile().sandbox_identity_hidden).identity).toMatchObject({ alphaId: null, portfolioName: null, alphaReasonCode: "ALPHA_IDENTITY_NOT_AUTHORIZED", portfolioNameReasonCode: "PORTFOLIO_NAME_NOT_AUTHORIZED" });
+    expect(viewOf(parentFile().sandbox).identity).toBeNull();
+  });
+
+  it("published: the Alpha is linked by its id, the portfolio shows its name; the body without identity draws neither", async () => {
+    mount(parentFile().sandbox_identity);
+    await ready();
+    const crumb = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
+    expect(crumb.getByRole("link", { name: "alpha_TEST_ONLY_identity" }).getAttribute("href")).toBe("/deployments/alphas/alpha_TEST_ONLY_identity");
+    expect(crumb.getByRole("link", { name: "TEST_ONLY portfolio name" }).getAttribute("href")).toBe("/deployments/portfolios/pf_TEST_ONLY_parent");
+    expect(document.querySelector(".exec-stage-sub span[title]")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    cleanup();
+    mount(parentFile().sandbox);
+    await ready();
+    const bare = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
+    expect(bare.queryByRole("link", { name: "alpha_TEST_ONLY_identity" })).toBeNull();
+    expect(bare.getByRole("link", { name: "pf_TEST_ONLY_parent" })).toBeTruthy();
+  });
+
+  it("hidden: no Alpha link and the portfolio id stands in; the reason codes are in titles, not in a sentence", async () => {
+    mount(parentFile().sandbox_identity_hidden);
+    await ready();
+    const crumb = within(screen.getByRole("navigation", { name: "Breadcrumb" }));
+    expect(document.querySelector('a[href^="/deployments/alphas/"]:not([href="/deployments/alphas"])')).toBeNull();
+    expect(crumb.getByRole("link", { name: "pf_TEST_ONLY_parent" })).toBeTruthy();
+    expect(document.querySelector(".exec-stage-sub")!.innerHTML).toContain("ALPHA_IDENTITY_NOT_AUTHORIZED");
+    expect(screen.queryByText(/ALPHA_IDENTITY_NOT_AUTHORIZED|PORTFOLIO_NAME_NOT_AUTHORIZED/)).toBeNull();
+  });
+});

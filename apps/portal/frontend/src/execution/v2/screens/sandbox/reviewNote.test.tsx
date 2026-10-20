@@ -139,7 +139,7 @@ describe("open only when the server says so (D10)", () => {
     cleanup();
     const v2 = await mount({ manifestWorkspace: "ws_TEST_ONLY_manifest" }, `${ENTRY}?workspace_id=ws_TEST_ONLY_url`);
     // The read was asked in the URL's workspace; the note is bound to the workspace the stored record says it is in.
-    expect(v2.read).toHaveBeenCalledWith("dep_TEST_ONLY_sbx", { workspaceId: "ws_TEST_ONLY_url" });
+    expect(v2.read).toHaveBeenCalledWith("dep_TEST_ONLY_sbx", { workspaceId: "ws_TEST_ONLY_url", include: ["identity"] });
     expect(v2.capabilities).toHaveBeenCalledWith("ws_TEST_ONLY_parent");
   });
 });
