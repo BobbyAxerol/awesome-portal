@@ -507,21 +507,11 @@ async function mountRoute(flags: string, path: string) {
   const principal = { principalId: "principal-visual-baseline", username: "bobby", role: "ADMIN", sessionId: "session-1", mustChangePassword: false, authnMethods: ["password"], issuedAt: "2026-10-19T00:00:00Z", exp: 4_102_444_800 };
   let view!: ReturnType<typeof render>;
   await act(async () => {
-    view = render(
-    createElement(
-      QueryClientProvider,
-      { client },
-      createElement(
-        SessionProvider,
-        { principal },
-        createElement(
-          MemoryRouter,
-          { initialEntries: [path] },
-          createElement(PortalPresentationProvider, { registry }, createElement(PortalRoutes, { registry })),
-        ),
-      ),
-    ),
-    );
+    const routes = createElement(PortalRoutes, { registry });
+    const presented = createElement(PortalPresentationProvider, { registry, children: routes });
+    const routed = createElement(MemoryRouter, { initialEntries: [path], children: presented });
+    const session = createElement(SessionProvider, { principal, children: routed });
+    view = render(createElement(QueryClientProvider, { client, children: session }));
   });
   return view;
 }
