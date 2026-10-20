@@ -21,7 +21,7 @@ import {
 import { validateAgainst } from "../testkit/schema";
 import { COMMAND_ENVIRONMENTS, PENDING_OPERATIONS, PENDING_RESOURCE_KINDS, PENDING_VERSION_KEYS } from "./commandCurrency";
 import {
-  DISCOVERY_STATES, MAX_DISCOVERED_RECALLS, PENDING_RECALL_DISCOVERY_SCHEMA, pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl,
+  DISCOVERY_STATES, MAX_DISCOVERED_RECALLS, PENDING_RECALL_DISCOVERY_SCHEMA, POLICY_NOT_CURRENT_REASON, pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl,
   readPendingRecallDiscoveryV1, type PendingRecallDiscovery,
 } from "./pendingRecallDiscovery";
 
@@ -80,6 +80,18 @@ describe("L0 · canonical, verbatim", () => {
     expect(discoveryOf(EMPTY)!.items).toEqual([]);
   });
 
+  it("policy_revision: the exact opaque value when current, the typed reason otherwise; never defaulted or trimmed", () => {
+    for (const body of [OPEN, DEPLOYMENT]) expect(discoveryOf(body)!.policyRevision).toEqual({ availability: "PUBLISHED", value: "TEST_ONLY:portal-policy" });
+    expect(discoveryOf(EMPTY)!.policyRevision).toEqual({ availability: "NOT_PUBLISHED", reasonCode: "POLICY_NOT_CURRENT" });
+    expect((EMPTY as Draft).policy_revision.reason_code).toBe(POLICY_NOT_CURRENT_REASON);
+    const withPolicy = (value: unknown) => ({ ...clone(OPEN), policy_revision: { availability: "PUBLISHED", value } });
+    // opaque means opaque: an internal space, a colon, a long token all travel verbatim
+    for (const value of ["rev 7", "p1_TEST_ONLY", "a".repeat(256)]) {
+      expect(violations(withPolicy(value)), value).toEqual([]);
+      expect(discoveryOf(withPolicy(value))!.policyRevision).toEqual({ availability: "PUBLISHED", value });
+    }
+  });
+
   it("DEPLOYMENT: the owning account is read verbatim; PORTFOLIO carries none", () => {
     expect(discoveryOf(DEPLOYMENT)!.items[0]!.recipientAccountId).toBe("TEST_ONLY:account");
     expect(discoveryOf(OPEN)!.items.every((item) => item.recipientAccountId === null)).toBe(true);
@@ -125,6 +137,18 @@ describe("L1 · what the schema cannot say and the server enforces", () => {
     ["untracked_recalls claimed available", OPEN, (b) => { b.untracked_recalls = { availability: "AVAILABLE", reason_code: null }; }],
     ["untracked_recalls dropped", OPEN, (b) => { delete b.untracked_recalls; }],
     ["a terminal state listed as open", OPEN, (b) => { b.items[0].state = "CANCELLED"; }],
+    ["policy_revision dropped", OPEN, (b) => { delete b.policy_revision; }],
+    ["policy_revision null", OPEN, (b) => { b.policy_revision = null; }],
+    ["policy_revision as a bare string", OPEN, (b) => { b.policy_revision = "TEST_ONLY:portal-policy"; }],
+    ["PUBLISHED without its value", OPEN, (b) => { b.policy_revision = { availability: "PUBLISHED" }; }],
+    ["PUBLISHED with an empty value", OPEN, (b) => { b.policy_revision.value = ""; }],
+    ["PUBLISHED with a numeric value", OPEN, (b) => { b.policy_revision.value = 4; }],
+    ["PUBLISHED with a control character", OPEN, (b) => { b.policy_revision.value = "p\u0007x"; }],
+    ["PUBLISHED that also carries a reason", OPEN, (b) => { b.policy_revision.reason_code = "POLICY_NOT_CURRENT"; }],
+    ["NOT_PUBLISHED that also carries a value", EMPTY, (b) => { b.policy_revision.value = "TEST_ONLY:portal-policy"; }],
+    ["NOT_PUBLISHED without its reason", EMPTY, (b) => { delete b.policy_revision.reason_code; }],
+    ["NOT_PUBLISHED with another reason", EMPTY, (b) => { b.policy_revision.reason_code = "POLICY_PENDING"; }],
+    ["an unknown availability", OPEN, (b) => { b.policy_revision.availability = "AVAILABLE"; }],
     ["truncated as text", OPEN, (b) => { b.truncated = "false"; }],
     ["an int64 counter above int64", OPEN, (b) => { b.items[0].versions.budget = "9223372036854775808"; }],
   ])("%s voids the read", (_name, base, change) => {
@@ -169,7 +193,7 @@ describe("L1 · what the schema cannot say and the server enforces", () => {
 /* ═════════════════════ L3 · generated negatives ═════════════════════ */
 interface Case { name: string; category: string; value: unknown; probe: string | null }
 const ITEM_PATHS = ["original_recall_id", "currency", "recipient_account_id", "state", "amounts", "versions", "latest_receipt_id", "last_known_command_id", "unresolved_command_id", "last_operation", "updated_at_ms"];
-const TOP_PATHS = ["schema_version", "family", "coverage", "untracked_recalls", "resource", "environment", "items", "truncated", "observed_at_ms"];
+const TOP_PATHS = ["schema_version", "family", "coverage", "untracked_recalls", "resource", "environment", "policy_revision", "items", "truncated", "observed_at_ms"];
 const enumsOf = (base: Draft, path: readonly (string | number)[], valid: readonly unknown[]): Case[] =>
   enumCases(base, path, valid.map(String)).filter((c) => !valid.includes(getPath(c.value, path)));
 
@@ -178,6 +202,8 @@ const NEG: Case[] = [
   ...requiredCases(OPEN, ITEM_PATHS.map((k) => ["items", 0, k] as const)),
   ...requiredCases(OPEN, ITEM_PATHS.map((k) => ["items", 1, k] as const)),
   ...requiredCases(OPEN, [["untracked_recalls", "availability"], ["untracked_recalls", "reason_code"], ["resource", "kind"], ["resource", "id"]]),
+  ...requiredCases(OPEN, [["policy_revision", "availability"], ["policy_revision", "value"]]),
+  ...requiredCases(EMPTY, [["policy_revision", "availability"], ["policy_revision", "reason_code"]]),
   ...requiredCases(OPEN, PENDING_VERSION_KEYS.map((k) => ["items", 0, "versions", k] as const)),
   ...enumsOf(OPEN, ["environment"], [...COMMAND_ENVIRONMENTS]),
   ...enumsOf(OPEN, ["resource", "kind"], [...PENDING_RESOURCE_KINDS]),
@@ -185,6 +211,9 @@ const NEG: Case[] = [
   ...enumsOf(OPEN, ["coverage"], ["PORTAL_CONTROLLED_RECALLS_ONLY"]),
   ...enumsOf(OPEN, ["untracked_recalls", "availability"], ["NOT_PUBLISHED"]),
   ...enumsOf(OPEN, ["untracked_recalls", "reason_code"], ["RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED"]),
+  ...enumsOf(OPEN, ["policy_revision", "availability"], ["PUBLISHED"]),
+  ...enumsOf(EMPTY, ["policy_revision", "availability"], ["NOT_PUBLISHED"]),
+  ...enumsOf(EMPTY, ["policy_revision", "reason_code"], ["POLICY_NOT_CURRENT"]),
   ...enumsOf(OPEN, ["items", 0, "state"], [...DISCOVERY_STATES]),
   ...enumsOf(OPEN, ["items", 0, "last_operation"], [...PENDING_OPERATIONS]),
   ...(["requested", "applied", "pending", "cancelled", "rejected"] as const).flatMap((key) => decimalCases(OPEN, ["items", 0, "amounts", key]).filter((c) => c.category !== "huge-string")),
@@ -197,9 +226,10 @@ const NEG: Case[] = [
   ...stringCases(OPEN, ["items", 0, "last_known_command_id"]),
   ...stringCases(DEPLOYMENT, ["items", 0, "recipient_account_id"]),
   ...stringCases(OPEN, ["resource", "id"]),
+  ...stringCases(OPEN, ["policy_revision", "value"]),
   ...arrayCases(OPEN, ["items"]),
   ...schemaVersionCases(OPEN, ["schema_version"], PENDING_RECALL_DISCOVERY_SCHEMA, ["portal.execution.pending-recall-status.v1", "portal.execution.pending-recall-discovery.v2"]),
-  ...pollutionCases(OPEN, [[], ["resource"], ["untracked_recalls"], ["items", 0], ["items", 0, "amounts"], ["items", 0, "versions"]]),
+  ...pollutionCases(OPEN, [[], ["resource"], ["untracked_recalls"], ["policy_revision"], ["items", 0], ["items", 0, "amounts"], ["items", 0, "versions"]]),
 ];
 
 describe("L3 · negative · PendingRecallDiscovery", () => {

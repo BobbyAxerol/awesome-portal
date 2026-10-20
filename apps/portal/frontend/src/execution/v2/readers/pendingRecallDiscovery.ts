@@ -15,7 +15,11 @@
  * - the counters are the last known receipt's. A later source change makes them stale; the next preview rechecks them against the
  *   source, so they are a starting point and never an authority;
  * - a terminal known outcome closes a recall, so it is not listed; this reader never invents a recall and never closes one;
- * - `truncated: true` means more matched than the page holds; the items are the newest 100.
+ * - `truncated: true` means more matched than the page holds; the items are the newest 100;
+ * - `policy_revision` is the exact opaque revision the preview and submit validate `expected_policy_revision` against (the actor's
+ *   current reviewed access policy), kept as the served string, never trimmed, parsed or defaulted. When no reviewed policy is current
+ *   the server says `NOT_PUBLISHED` / `POLICY_NOT_CURRENT` and a client keeps the control form shut. A later policy change makes a
+ *   served value stale; the preview rejects it, so it is a per-read value and is never stored across reads.
  *
  * Rules the schema cannot say and the server enforces (checked here, a violation voids the read, nothing is repaired):
  * `original_recall_id` is unique within `items`; every amount partition holds (requested = applied + pending + cancelled + rejected)
@@ -35,6 +39,7 @@ export const PENDING_RECALL_DISCOVERY_PATH = "/api/v1/execution/pending-recalls"
 export const MAX_DISCOVERED_RECALLS = 100;
 export const DISCOVERY_COVERAGE = "PORTAL_CONTROLLED_RECALLS_ONLY";
 export const UNTRACKED_RECALLS_REASON = "RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED";
+export const POLICY_NOT_CURRENT_REASON = "POLICY_NOT_CURRENT";
 export const DISCOVERY_STATES = ["WAITING_ENCUMBRANCE", "UNKNOWN"] as const;
 export type DiscoveryState = (typeof DISCOVERY_STATES)[number];
 
@@ -74,11 +79,18 @@ export interface DiscoveredUnknownRecall extends DiscoveredBase {
 
 export type DiscoveredRecall = DiscoveredWaitingRecall | DiscoveredUnknownRecall;
 
+/** The revision a preview must name, exactly as served, or the typed reason there is none. */
+export type DiscoveryPolicyRevision =
+  | { availability: "PUBLISHED"; value: string }
+  | { availability: "NOT_PUBLISHED"; reasonCode: typeof POLICY_NOT_CURRENT_REASON };
+
 export interface PendingRecallDiscovery {
   resource: { kind: "PORTFOLIO" | "DEPLOYMENT"; id: string };
   environment: CommandEnvironment;
   coverage: typeof DISCOVERY_COVERAGE;
   untrackedRecalls: { availability: "NOT_PUBLISHED"; reasonCode: typeof UNTRACKED_RECALLS_REASON };
+  /** What `expected_policy_revision` of a preview must be. */
+  policyRevision: DiscoveryPolicyRevision;
   items: readonly DiscoveredRecall[];
   /** `true`: more open recalls matched than the finite page holds, and `items` are the newest. */
   truncated: boolean;
@@ -113,8 +125,23 @@ const ITEM_KEYS = [
   "unresolved_command_id", "last_operation", "updated_at_ms",
 ] as const;
 const BODY_KEYS = [
-  "schema_version", "family", "coverage", "untracked_recalls", "resource", "environment", "items", "truncated", "observed_at_ms",
+  "schema_version", "family", "coverage", "untracked_recalls", "resource", "environment", "policy_revision", "items", "truncated", "observed_at_ms",
 ] as const;
+
+function readPolicyRevision(raw: unknown): DiscoveryPolicyRevision | null {
+  const r = rec(raw);
+  if (r === null) return null;
+  if (r.availability === "PUBLISHED") {
+    const only = closed(r, ["availability", "value"]);
+    const value = plain(only?.value);
+    return value === null ? null : { availability: "PUBLISHED", value };
+  }
+  if (r.availability === "NOT_PUBLISHED") {
+    const only = closed(r, ["availability", "reason_code"]);
+    return only !== null && only.reason_code === POLICY_NOT_CURRENT_REASON ? { availability: "NOT_PUBLISHED", reasonCode: POLICY_NOT_CURRENT_REASON } : null;
+  }
+  return null;
+}
 
 function commandId(value: unknown): string | null {
   return typeof value === "string" && COMMAND_ID.test(value) ? value : null;
@@ -174,7 +201,9 @@ export function readPendingRecallDiscoveryV1(raw: unknown): PendingRecallDiscove
   const resourceId = plain(resource.id);
   const environment = oneOf(body.environment, COMMAND_ENVIRONMENTS);
   const observedAt = instant(body.observed_at_ms);
+  const policyRevision = readPolicyRevision(body.policy_revision);
   if (
+    policyRevision === null ||
     body.family !== "PENDING_RECALL_CONTROL" || body.coverage !== DISCOVERY_COVERAGE
     || untracked.availability !== "NOT_PUBLISHED" || untracked.reason_code !== UNTRACKED_RECALLS_REASON
     || kind === null || resourceId === null || environment === null || observedAt === null
@@ -194,7 +223,7 @@ export function readPendingRecallDiscoveryV1(raw: unknown): PendingRecallDiscove
     discovery: {
       resource: { kind, id: resourceId }, environment, coverage: DISCOVERY_COVERAGE,
       untrackedRecalls: { availability: "NOT_PUBLISHED", reasonCode: UNTRACKED_RECALLS_REASON },
-      items, truncated: body.truncated, observedAt,
+      policyRevision, items, truncated: body.truncated, observedAt,
     },
   };
 }

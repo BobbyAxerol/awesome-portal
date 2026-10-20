@@ -9,8 +9,8 @@
  * - It sends a rollback preview (`previewPendingControl`) and nothing else. It applies nothing, reserves nothing and has no submit:
  *   a submit needs this preview's digest and a fresh step-up, and stays dark. The result says so.
  * - It is mounted only where the build enables command previews (flag `command`; dark otherwise, nothing is drawn). It is shut when
- *   no workspace is named, the recall's outcome is unknown (no counters), or no read serves the opaque policy revision the request
- *   must name (typed gap `POLICY_REVISION_NOT_PUBLISHED`).
+ *   no workspace is named, the recall's outcome is unknown (no counters), or the discovery serves no opaque policy revision for the request
+ *   to name (`policy_revision` NOT_PUBLISHED; typed gap `POLICY_REVISION_NOT_PUBLISHED`).
  * - A refusal is shown with its closed code and the Portal's own sentence, never the server's text. A relay denial says whether anything
  *   reached the source and whether a retry is allowed. A preview that does not read, or answers another operation or recall, is not shown.
  * - A request that did not complete retries under the SAME reference with the same inputs; any change (operation, reason, versions,
