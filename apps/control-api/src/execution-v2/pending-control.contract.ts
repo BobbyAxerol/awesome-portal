@@ -150,6 +150,19 @@ export const pendingRecallDiscoveryItem = z.object({
       v.unresolved_command_id === null)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "PENDING_DISCOVERY_ITEM_INVALID" });
 });
+/** The policy revision the preview/submit will validate `expected_policy_revision` against (grantDecision):
+ * the exact opaque current reviewed policy revision of the actor's workspace, or a typed absence. */
+export const pendingPolicyRevision = z.discriminatedUnion("availability", [
+  z.object({ availability: z.literal("PUBLISHED"), value: opaqueRevision.refine(wholeText) }).strict(),
+  z.object({ availability: z.literal("NOT_PUBLISHED"), reason_code: z.literal("POLICY_NOT_CURRENT") }).strict(),
+]);
+export type PendingPolicyRevision = z.infer<typeof pendingPolicyRevision>;
+export const pendingPolicyUnavailable: PendingPolicyRevision = { availability: "NOT_PUBLISHED", reason_code: "POLICY_NOT_CURRENT" };
+/** Pure: a reviewed policy with a servable revision publishes it exactly; anything else is the typed absence. */
+export function pendingPolicyRevisionOf(policy: { revision: string } | null | undefined, ready: boolean): PendingPolicyRevision {
+  const parsed = pendingPolicyRevision.safeParse({ availability: "PUBLISHED", value: policy?.revision });
+  return ready && parsed.success ? parsed.data : pendingPolicyUnavailable;
+}
 export const pendingRecallDiscovery = z.object({
   schema_version: z.literal("portal.execution.pending-recall-discovery.v1"),
   family: z.literal("PENDING_RECALL_CONTROL"),
@@ -158,6 +171,8 @@ export const pendingRecallDiscovery = z.object({
   untracked_recalls: z.object({ availability: z.literal("NOT_PUBLISHED"),
     reason_code: z.literal("RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED") }).strict(),
   resource: pendingControlResource, environment: executionEnvironment,
+  /** Same value the preview/submit validate expected_policy_revision against; never invented, never cached across reads. */
+  policy_revision: pendingPolicyRevision,
   items: z.array(pendingRecallDiscoveryItem).max(PENDING_DISCOVERY_MAX_ITEMS),
   /** True when more open recalls matched than the finite page holds; the list is then the newest. */
   truncated: z.boolean(),
@@ -178,7 +193,8 @@ const recipientOf = (intent: PendingControlIntent) => intent.business_payload.re
   intent.business_payload.recipient_account_id : null;
 /** Pure projection of already identity-validated records (pendingRecord) of ONE exact target. */
 export function buildPendingRecallDiscovery(target: Pick<PendingControlIntent, "resource" | "environment">,
-  records: readonly DiscoveryRecord[], observedAtMs: number): PendingRecallDiscovery {
+  records: readonly DiscoveryRecord[], observedAtMs: number,
+  policyRevision: PendingPolicyRevision = pendingPolicyUnavailable): PendingRecallDiscovery {
   const groups = new Map<string, DiscoveryRecord[]>();
   for (const record of records) {
     const key = record.status.original_recall_id;
@@ -212,7 +228,7 @@ export function buildPendingRecallDiscovery(target: Pick<PendingControlIntent, "
   return pendingRecallDiscovery.parse({ schema_version: "portal.execution.pending-recall-discovery.v1",
     family: "PENDING_RECALL_CONTROL", coverage: "PORTAL_CONTROLLED_RECALLS_ONLY",
     untracked_recalls: { availability: "NOT_PUBLISHED", reason_code: "RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED" },
-    resource: target.resource, environment: target.environment,
+    resource: target.resource, environment: target.environment, policy_revision: policyRevision,
     items: open.slice(0, PENDING_DISCOVERY_MAX_ITEMS), truncated: open.length > PENDING_DISCOVERY_MAX_ITEMS,
     observed_at_ms: observedAtMs });
 }

@@ -2575,6 +2575,54 @@
               "live"
             ]
           },
+          "policy_revision": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "PUBLISHED"
+                  },
+                  "value": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "allOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^[^\\u0000-\\u001f\\u007f]+(?![\\s\\S])"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "availability",
+                  "value"
+                ]
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "availability": {
+                    "const": "NOT_PUBLISHED"
+                  },
+                  "reason_code": {
+                    "const": "POLICY_NOT_CURRENT"
+                  }
+                },
+                "required": [
+                  "availability",
+                  "reason_code"
+                ]
+              }
+            ],
+            "discriminator": {
+              "propertyName": "availability"
+            },
+            "description": "The exact opaque policy revision the preview/submit validate expected_policy_revision against, read from the same current access context (availability PUBLISHED, value). When the actor's workspace has no reviewed/current policy the value is absent with reason_code POLICY_NOT_CURRENT; a client must then keep the control form shut and never invent a revision. A later policy change makes a previously served value stale (PENDING_CONTROL_CONTEXT_INVALID / POLICY_REVISION conflict), so re-read before each preview."
+          },
           "items": {
             "type": "array",
             "items": {
@@ -2598,6 +2646,7 @@
           "untracked_recalls",
           "resource",
           "environment",
+          "policy_revision",
           "items",
           "truncated",
           "observed_at_ms"

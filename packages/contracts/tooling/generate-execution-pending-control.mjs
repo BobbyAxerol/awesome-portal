@@ -180,6 +180,7 @@ const discovery = schemas.PendingRecallDiscovery;
 discovery.properties.resource = ref('PendingControlResource');
 discovery.properties.items.items = ref('PendingRecallDiscoveryItem');
 discovery.description = 'Local read-only discovery for ONE exact authorized resource, from the Portal\'s own pending-control history only (coverage PORTAL_CONTROLLED_RECALLS_ONLY). It is NOT a census of source recalls: a recall nobody controlled through the Portal is absent, and untracked_recalls states that as NOT_PUBLISHED / RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED. original_recall_id is unique within items (runtime-enforced; JSON Schema uniqueItems cannot express a key-only uniqueness). truncated=true means more open recalls matched than the finite page holds and items are the newest. observed_at_ms is Portal evaluation time. Authorization: exact current audit.read plus TS-accepted correspondence on the resource, before any private row; hidden/wrong-workspace/unknown normalize to 404.';
+discovery.properties.policy_revision.description = 'The exact opaque policy revision the preview/submit validate expected_policy_revision against, read from the same current access context (availability PUBLISHED, value). When the actor\'s workspace has no reviewed/current policy the value is absent with reason_code POLICY_NOT_CURRENT; a client must then keep the control form shut and never invent a revision. A later policy change makes a previously served value stale (PENDING_CONTROL_CONTEXT_INVALID / POLICY_REVISION conflict), so re-read before each preview.';
 schemas.PendingRecallDiscoveryQuery.description = 'Exact resource only (PORTFOLIO or DEPLOYMENT), no wildcard, no global discovery.';
 schemas.PendingControlProblem = { type: 'object', additionalProperties: false,
   required: ['error', 'request_id'], properties: {
@@ -319,11 +320,13 @@ const discoveryRecords = [
   recordOf(secondIntent, unknown, 'ecm_00000000000000000000000000000032'),
   recordOf(thirdIntent, applied, 'ecm_00000000000000000000000000000033'),
 ];
-const discovery_open = contract.buildPendingRecallDiscovery(baseIntent, discoveryRecords, observed);
+const published = { availability: 'PUBLISHED', value: baseIntent.expected_policy_revision };
+const discovery_open = contract.buildPendingRecallDiscovery(baseIntent, discoveryRecords, observed, published);
 const discovery_deployment = contract.buildPendingRecallDiscovery(deploymentApplyIntent,
-  [recordOf(deploymentApplyIntent, waiting, 'ecm_00000000000000000000000000000034')], observed);
+  [recordOf(deploymentApplyIntent, waiting, 'ecm_00000000000000000000000000000034')], observed, published);
+// Typed absence: no reviewed/current policy, so no revision is invented and the FE form stays shut.
 const discovery_empty = contract.buildPendingRecallDiscovery(baseIntent,
-  [discoveryRecords[2]], observed);
+  [discoveryRecords[2]], observed, contract.pendingPolicyUnavailable);
 const outputs = {
   'fixtures/execution-pending-control-currency.synthetic.valid.json': {
     lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_qualified: false,

@@ -14,6 +14,10 @@
       "id": "TEST_ONLY:portfolio"
     },
     "environment": "paper",
+    "policy_revision": {
+      "availability": "PUBLISHED",
+      "value": "TEST_ONLY:portal-policy"
+    },
     "items": [
       {
         "original_recall_id": "TEST_ONLY:original-recall",
@@ -70,6 +74,10 @@
       "id": "TEST_ONLY:deployment"
     },
     "environment": "paper",
+    "policy_revision": {
+      "availability": "PUBLISHED",
+      "value": "TEST_ONLY:portal-policy"
+    },
     "items": [
       {
         "original_recall_id": "TEST_ONLY:original-recall",
@@ -113,6 +121,10 @@
       "id": "TEST_ONLY:portfolio"
     },
     "environment": "paper",
+    "policy_revision": {
+      "availability": "NOT_PUBLISHED",
+      "reason_code": "POLICY_NOT_CURRENT"
+    },
     "items": [],
     "truncated": false,
     "observed_at_ms": 1792300060000

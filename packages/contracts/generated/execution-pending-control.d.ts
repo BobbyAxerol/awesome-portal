@@ -286,6 +286,17 @@ export interface components {
             resource: components["schemas"]["PendingControlResource"];
             /** @enum {string} */
             environment: "paper" | "sandbox" | "live";
+            /** @description The exact opaque policy revision the preview/submit validate expected_policy_revision against, read from the same current access context (availability PUBLISHED, value). When the actor's workspace has no reviewed/current policy the value is absent with reason_code POLICY_NOT_CURRENT; a client must then keep the control form shut and never invent a revision. A later policy change makes a previously served value stale (PENDING_CONTROL_CONTEXT_INVALID / POLICY_REVISION conflict), so re-read before each preview. */
+            policy_revision: {
+                /** @constant */
+                availability: "PUBLISHED";
+                value: string;
+            } | {
+                /** @constant */
+                availability: "NOT_PUBLISHED";
+                /** @constant */
+                reason_code: "POLICY_NOT_CURRENT";
+            };
             items: components["schemas"]["PendingRecallDiscoveryItem"][];
             truncated: boolean;
             observed_at_ms: number;
