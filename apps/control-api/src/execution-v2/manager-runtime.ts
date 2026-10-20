@@ -18,6 +18,7 @@ import { ManagerCompositionRuntime, managerCompositionPublicationCurrent, manage
 import type { ManagerCompositionReadFence } from "./manager-composition-publication";
 import type { ManagerScorePublication } from "./manager-score-publication.contract";
 import type { ManagerCompositionPublication } from "./manager-composition-publication.contract";
+import type { ManagerSeriesPublication } from "./manager-series-publication.contract";
 import { ManagerRegimeRuntime, managerRegimePublicationCurrent,captureManagerRegimeOriginal,
   type ManagerRegimeOriginalCustody,type ApprovedManagerRegimePolicy,
   type VerifiedManagerRegimeEvidence, type ManagerRegimeRuntimeTask } from "./manager-regime-runtime";
@@ -30,6 +31,7 @@ import { ManagerScoreRecalculation, type ManagerScoreRecalculationConfig,
   type ManagerScoreRecalculationTask } from "./manager-score-recalculation";
 import { ManagerScoreRestatement, type ManagerScoreDependentComposition } from "./manager-score-restatement";
 import { captureManagerScoreOriginalInputs } from "./manager-score-original-custody";
+import type { ManagerSeriesRuntime } from "./manager-series-runtime";
 import { ManagerOriginalCustodyLifecycle,type ManagerOriginalCustodyCaps,
   type ManagerOriginalCustodyOmission,type ManagerOriginalIdleDelegate } from "./manager-original-custody-lifecycle";
 
@@ -48,6 +50,9 @@ export interface ManagerRuntimePartition {
     tasks(delivery: ManagerConsumerDelivery, signal: AbortSignal): Promise<ManagerScoreRecalculationTask[]> };
   composition?: { runtime:ManagerCompositionRuntime;maximum_tasks_per_revision:number;currentAllocation():ApprovedManagerAllocation|null;
     tasks(delivery:ManagerConsumerDelivery,signal:AbortSignal):Promise<Array<Omit<ManagerCompositionRuntimeTask,"allocation"|"raw_scores">>> };
+  /** BE-P16 opt-in: bounded NAV / NET_PNL series writer derived from this partition's retained facts only. Independent of
+   * Score/Composition/Regime (no policy, no task slots), rides the same tick, lease and transaction. */
+  series?: { runtime: ManagerSeriesRuntime };
   regime?: { runtime: ManagerRegimeRuntime; maximum_tasks_per_revision: number;
     /** Independent explicit ORIGINAL custody opt-in; no Score policy/default. */
     original_custody?:ManagerOriginalCustodyCaps;
@@ -119,7 +124,8 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
     this.partitions = installation.partitions.map(p=>({...p,scope:Object.freeze({...p.scope}),bounds:Object.freeze({...p.bounds}),
       ...(p.score?{score:Object.freeze({...p.score,...(p.score.restatement?{restatement:Object.freeze({...p.score.restatement,
         ...(p.score.restatement.composition?{composition:Object.freeze({...p.score.restatement.composition})}:{})})}:{})})}:{}),
-      ...(p.composition?{composition:Object.freeze({...p.composition})}:{}),...(p.regime?{regime:Object.freeze({...p.regime,
+      ...(p.composition?{composition:Object.freeze({...p.composition})}:{}),
+      ...(p.series?{series:Object.freeze({...p.series})}:{}),...(p.regime?{regime:Object.freeze({...p.regime,
         ...(p.regime.original_custody?{original_custody:Object.freeze({...p.regime.original_custody})}:{}),
         ...(p.regime.historical?{historical:Object.freeze({...p.regime.historical,
           config:Object.freeze({...p.regime.historical.config})})}:{})})}:{})}));
@@ -161,7 +167,8 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
         new ManagerOriginalCustodyLifecycle(p.regime.original_custody,delegates):undefined;
       if(originalCustody)this.originalCustodies.set(key(p.scope),originalCustody);
       return new ManagerProjectionConsumer({pool,source:this.materializingSource(p,recalculation,restatement,originalCustody),scope:p.scope,bounds:p.bounds,
-        commissioning:p.commissioning,recalculation:originalCustody??restatement??recalculation});
+        commissioning:p.commissioning,
+        recalculation:p.series?p.series.runtime.lifecycle(originalCustody??restatement??recalculation):originalCustody??restatement??recalculation});
     });
     this.lastState="READY";
   }
@@ -269,18 +276,19 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
       if(document.precomputed_scores!==undefined)throw new Error("MANAGER_SCORE_WORKER_RESULT_REQUIRED");
       if(document.precomputed_compositions!==undefined)throw new Error("MANAGER_COMPOSITION_WORKER_RESULT_REQUIRED");
       if(document.precomputed_regimes!==undefined)throw new Error("MANAGER_REGIME_WORKER_RESULT_REQUIRED");
+      if(document.precomputed_series!==undefined)throw new Error("MANAGER_SERIES_WORKER_RESULT_REQUIRED");
       // Lost ACK / restart must reuse the identical immutable materialization,
       // including calculation timestamps. Never recompute into the same revision.
       if(input.head?.revision===document.revision) {
         const existing=await this.repository.document(document.workspace_id,document.environment,document.profile_id,document.revision);
         if(!existing)throw new Error("MANAGER_REVISION_NOT_FOUND");
-        const {precomputed_scores:scores,precomputed_compositions:compositions,precomputed_regimes:regimes,...source}=existing;
+        const {precomputed_scores:scores,precomputed_compositions:compositions,precomputed_regimes:regimes,precomputed_series:series,...source}=existing;
         if(accessDigest(source)!==accessDigest(document))throw new Error("MANAGER_REVISION_CONFLICT");
         return {...delivery,document:{...document,...(scores===undefined?{}:{precomputed_scores:scores}),
           ...(compositions===undefined?{}:{precomputed_compositions:compositions}),
-          ...(regimes===undefined?{}:{precomputed_regimes:regimes})}};
+          ...(regimes===undefined?{}:{precomputed_regimes:regimes}),...(series===undefined?{}:{precomputed_series:series})}};
       }
-      if(!p.score&&!p.composition&&!p.regime)return {...delivery,document};
+      if(!p.score&&!p.composition&&!p.regime&&!p.series)return {...delivery,document};
       const provided=p.score?await p.score.tasks(delivery,input.signal):[];
       // The exact detached values drive BOTH original calculation and custody.
       // Capturing only in late attach would adopt provider mutation after yield.
@@ -350,10 +358,21 @@ export class ExecutionManagerRuntime implements OnModuleInit, BeforeApplicationS
           }
         }
       }
-      const materialized={...document,...(p.score?{precomputed_scores:scores}:{}),
+      const base={...document,...(p.score?{precomputed_scores:scores}:{}),
         ...(p.composition?{precomputed_compositions:compositions}:{}),...(p.regime?{precomputed_regimes:regimes}:{})};
-      if(Buffer.byteLength(JSON.stringify(materialized))>p.bounds.maximum_document_bytes)throw new Error("MANAGER_PROJECTION_LIMIT");
+      if(Buffer.byteLength(JSON.stringify(base))>p.bounds.maximum_document_bytes)throw new Error("MANAGER_PROJECTION_LIMIT");
+      // Series are derived from the facts of THIS revision plus the retained observations. They never gate the financial revision:
+      // too large or nothing publishable means the revision is published without them, with the reason kept in the series checkpoint.
+      let seriesResult=p.series?await p.series.runtime.materialize(document,input.signal):null;
+      let materialized:typeof base&{precomputed_series?:ManagerSeriesPublication[]}=base;
+      if(seriesResult&&seriesResult.publications.length){
+        const withSeries={...base,precomputed_series:seriesResult.publications};
+        if(Buffer.byteLength(JSON.stringify(withSeries))<=p.bounds.maximum_document_bytes)materialized=withSeries;
+        else seriesResult={...seriesResult,publications:[],absences:[...seriesResult.absences.filter(a=>a.reason_code!=="SERIES_DOCUMENT_BOUND"),
+          {reason_code:"SERIES_DOCUMENT_BOUND",metric:null,count:1}]};
+      }
       const result={...delivery,document:materialized};
+      if(p.series&&seriesResult)p.series.runtime.attach(result,seriesResult);
       recalculation?.attach(result,tasks);
       if(originals&&restatement&&!originalCustody){
         if(compositionOriginals.length===0)restatement.attach(result,originals);

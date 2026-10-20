@@ -12,7 +12,7 @@ import { publicationCommissioningCurrent, publicationCommissioningDeadline,
 import type { ManagerScoreRecalculation } from "./manager-score-recalculation";
 
 /** Mutually exclusive private custody/IDLE lifecycle; never a new timer or ACK. */
-type ManagerCalculationLifecycle=Pick<ManagerScoreRecalculation,"attachedDeadline"|"assertAttached"|"persistAttached"|"idle">;
+export type ManagerCalculationLifecycle=Pick<ManagerScoreRecalculation,"attachedDeadline"|"assertAttached"|"persistAttached"|"idle">;
 
 const scopeSchema = z.object({ workspace_id: z.string().min(1).max(256),
   environment: z.enum(["paper", "sandbox", "live"]), profile_id: z.string().min(1).max(256) }).strict();
