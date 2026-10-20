@@ -22,12 +22,14 @@
  * of "could not be read".
  */
 import type { ExecutionApi, Result } from "../../api/ports";
-import { readLiveReview, type LiveReviewPayload } from "../../api/profileRead";
+import { readLiveReview, readProfileEnvelope, type LiveReviewPayload, type ProfileEnvelope } from "../../api/profileRead";
 import { readGateR2Detail, readPaperExitDetail, type GateR2Detail, type PaperExitDetail } from "../../api/rows";
 import { v1Refusal } from "../../api/schemaGuard";
+import { readSubjectActivity, type SubjectActivityPage } from "../../api/subjectActivity";
 import { readCanaryControlRoom, readSandboxCertification, type CanaryControlRoom, type SandboxCertification } from "../../certification";
 import { readLiveFullOperations, type LiveFullOperations } from "../../liveFull";
 import { readStagedActivation } from "../../stagedActivation";
+import { ALPHA_RESOURCE_V2_SCHEMA, readAlphaResourceScoped, type AlphaResourceScoped } from "./alphaResourceScoped";
 import {
   FOLLOWING_PARENT_V2_SCHEMA,
   GOVERNANCE_PARENT_OPERATION_V2_SCHEMA,
@@ -45,6 +47,7 @@ import {
   type R2ParentV2,
   type SandboxParentV2,
 } from "./governanceParents";
+import { SUBJECT_RECORDS_V2_SCHEMA, readSubjectRecordsScoped, type SubjectRecordsScoped } from "./subjectRecordsScoped";
 import {
   LIVE_SOURCE_PANELS,
   LIVE_SOURCE_V2_SCHEMA,
@@ -208,6 +211,34 @@ export const readActivationByVersion = (raw: unknown) =>
     v2Schemas: ["portal.execution.activation-capabilities-read.v2", "portal.execution.activation-plan-read.v2"],
   });
 
+/**
+ * `GET /resources/alphas/{id}`: the legacy `execution.alpha-resource.v1` envelope (LEGACY_COMPATIBILITY workspace) or the
+ * `execution.alpha-resource.v2` scoped raw-facts body (SCOPED_V2 workspace), by `schema_version`. A v1 body is never read by the
+ * v2 reader and the reverse (BE-P3 S3-U2); anything else is a typed `unsupported`.
+ */
+export const readAlphaResourceByVersion = (raw: unknown) =>
+  readByVersion(raw, { v1: readLegacyAlphaResource, v2: readAlphaResourceScoped, v2Schemas: [ALPHA_RESOURCE_V2_SCHEMA], v1Schemas: ["execution.alpha-resource.v1"] });
+/** `GET /resources/alphas/{id}/orders|fills`: `portal.execution.subject-records.v1` or `.v2`, by `schema_version`. */
+export const readSubjectRecordsByVersion = (raw: unknown) =>
+  readByVersion(raw, { v1: readLegacySubjectRecords, v2: readSubjectRecordsScoped, v2Schemas: [SUBJECT_RECORDS_V2_SCHEMA], v1Schemas: ["portal.execution.subject-records.v1"] });
+
+/**
+ * The legacy readers are tolerant, so a v2 body that wears a `.v1` label would be read as a v1-shaped object that is wrong. These two
+ * wrappers refuse a body that carries a member only the SCOPED_V2 contracts publish (the authority statement of the resource body;
+ * `read_scope` and `reason_code` of the records page): the legacy schemas have none of them. Refused is `unsupported`, never read.
+ */
+const SCOPED_ALPHA_MARKERS = ["visibility", "coverage", "totals_scope", "is_full_portfolio", "read_scope"] as const;
+const SCOPED_RECORDS_MARKERS = ["read_scope", "reason_code"] as const;
+function carries(raw: unknown, markers: readonly string[]): boolean {
+  return typeof raw === "object" && raw !== null && markers.some((key) => Object.prototype.hasOwnProperty.call(raw, key));
+}
+function readLegacyAlphaResource(raw: unknown): ProfileEnvelope | null {
+  return carries(raw, SCOPED_ALPHA_MARKERS) ? null : readProfileEnvelope(raw);
+}
+function readLegacySubjectRecords(raw: unknown): SubjectActivityPage | null {
+  return carries(raw, SCOPED_RECORDS_MARKERS) ? null : readSubjectActivity(raw);
+}
+
 /* ── the cockpit's port ───────────────────────────────────────────────────── */
 
 /** The three approval kinds the cockpit reads evidence for through a version-aware port. */
@@ -272,6 +303,11 @@ export type SandboxVersionRead = VersionRead<SandboxCertification, SandboxParent
 export type CanaryVersionRead = VersionRead<CanaryControlRoom, CanaryParentV2>;
 /** What `ExecutionApi.getLiveFullVersioned` answers: V1 live full operations, V2 live-source operations, or `unsupported`. */
 export type LiveFullVersionRead = VersionRead<LiveFullOperations, LiveSourceOperationsV2>;
+
+/** What `ExecutionApi.getAlpha360ResourceVersioned` answers: the legacy envelope, the scoped raw-facts body, or `unsupported`. */
+export type AlphaResourceVersionRead = VersionRead<ProfileEnvelope, AlphaResourceScoped>;
+/** What `ExecutionApi.getSubjectActivityVersioned` answers: the legacy page, the scoped page, or `unsupported`. */
+export type SubjectRecordsVersionRead = VersionRead<SubjectActivityPage, SubjectRecordsScoped>;
 
 /** The panels `GET /deployments/{id}/live?panel=` can advance (published query enum): the eleven minus `broker_sync`, which is not commissioned and has nothing to page. */
 export const LIVE_FULL_PAGEABLE_PANELS: readonly LiveSourcePanelName[] = LIVE_SOURCE_PANELS.filter((p) => p !== "broker_sync");

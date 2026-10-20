@@ -503,6 +503,9 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
       const blocked = gate<ProfileEnvelope>("getAlpha360Resource");
       return blocked ?? fixtureRead(resourceFixture("alpha", alphaId), readProfileEnvelope, "The alpha resource");
     },
+    async getAlpha360ResourceVersioned(alphaId: string) {
+      return gate<never>("getAlpha360ResourceVersioned") ?? v1Versioned(await self.getAlpha360Resource(alphaId));
+    },
     async getPortfolio360Resource(portfolioId: string) {
       const blocked = gate<ProfileEnvelope>("getPortfolio360Resource");
       return blocked ?? fixtureRead(resourceFixture("portfolio", portfolioId), readProfileEnvelope, "The portfolio resource");
@@ -531,6 +534,9 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getEquitySparklines() { return unavailable("The fleet equity sparklines are not part of the fixture set."); },
     async getStageDrift() { return unavailable("The alpha stage drift is not part of the fixture set."); },
     async getSubjectActivity() { return unavailable("The retained subject activity BFF is not part of the fixture set."); },
+    async getSubjectActivityVersioned(query) {
+      return gate<never>("getSubjectActivityVersioned") ?? v1Versioned(await self.getSubjectActivity(query));
+    },
     async getAlphaFleet(_query: AlphaFleetQuery = {}): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>> {
       const blocked = gate<ManagerListEnvelope<AlphaFleetItem>>("getAlphaFleet");
       return blocked ?? fixtureRead(ALPHA_FLEET, readAlphaFleet, "The Alpha Fleet");

@@ -42,10 +42,12 @@ import { analyticsFailureReason, readAnalyticsFailure } from "../analyticsProble
 import { readCommandCatalogue } from "../adminCatalog";
 import { readIncidentDetail, readOperationsQueue, readWorkflowResult } from "../operations";
 import {
+  readAlphaResourceByVersion,
   readCanaryByVersion,
   readGovernanceParentByKind,
   readLiveFullByVersion,
   readSandboxByVersion,
+  readSubjectRecordsByVersion,
   stageVersionedSearch,
   unsupportedText,
   type GovernanceParentKind,
@@ -511,6 +513,13 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     readGet(`/screens/accounts/${encodeURIComponent(accountId)}`, readProfileEnvelope, "The account 360");
   const getAlpha360Resource = (alphaId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/resources/alphas/${encodeURIComponent(alphaId)}`, readProfileEnvelope, "The alpha resource");
+  // R-3: the same route, read by `schema_version` (legacy v1 envelope or the SCOPED_V2 raw-facts body); the legacy method above is unchanged.
+  const getAlpha360ResourceVersioned = (alphaId: string, options: { workspaceId?: string } = {}) =>
+    readVersioned(
+      `/resources/alphas/${encodeURIComponent(alphaId)}${options.workspaceId ? `?workspace_id=${encodeURIComponent(options.workspaceId)}` : ""}`,
+      readAlphaResourceByVersion,
+      "The alpha resource",
+    );
   const getPortfolio360Resource = (portfolioId: string): Promise<Result<ProfileEnvelope>> =>
     readGet(`/resources/portfolios/${encodeURIComponent(portfolioId)}`, readProfileEnvelope, "The portfolio resource");
   const getAccount360Resource = (accountId: string): Promise<Result<ProfileEnvelope>> =>
@@ -631,6 +640,8 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   };
   const getSubjectActivity = (query: SubjectActivityQuery): Promise<Result<SubjectActivityPage>> =>
     readGet(subjectActivityPath(query), readSubjectActivity, "The retained subject activity");
+  const getSubjectActivityVersioned = (query: SubjectActivityQuery) =>
+    readVersioned(subjectActivityPath(query), readSubjectRecordsByVersion, "The retained subject activity");
   const listParameters = (query: object) => {
     const params = new URLSearchParams();
     for (const [key, value] of Object.entries(query) as Array<[string, string | number | undefined]>) {
@@ -782,6 +793,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     getGovernanceParent,
     getAccountBroker360,
     getAlpha360Resource,
+    getAlpha360ResourceVersioned,
     getPortfolio360Resource,
     getAccount360Resource,
     getBindingResource,
@@ -800,6 +812,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     getEquitySparklines,
     getStageDrift,
     getSubjectActivity,
+    getSubjectActivityVersioned,
     getAlphaFleet,
     listPortfolios,
     getBindings,
