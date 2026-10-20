@@ -164,13 +164,20 @@ describe("sandbox review note", () => {
   const shut = (api: ExecutionApi, node = true) =>
     dock(
       node
-        ? <StageEligibilityProvider api={api}><ReviewNoteForm api={api} capability={{ state: "unavailable", reasonCode: "ADMIN_ROLE_REQUIRED" }} identity={identity} onRecorded={() => undefined} /></StageEligibilityProvider>
-        : <ReviewNoteForm api={api} capability={{ state: "unavailable", reasonCode: "ADMIN_ROLE_REQUIRED" }} identity={identity} onRecorded={() => undefined} />,
+        ? <StageEligibilityProvider api={api}><ReviewNoteForm api={api} capability={{ state: "unavailable", reasonCode: "SOME_CODE_THE_DICTIONARY_DOES_NOT_KNOW" }} identity={identity} onRecorded={() => undefined} /></StageEligibilityProvider>
+        : <ReviewNoteForm api={api} capability={{ state: "unavailable", reasonCode: "SOME_CODE_THE_DICTIONARY_DOES_NOT_KNOW" }} identity={identity} onRecorded={() => undefined} />,
     );
 
   it("a shut note without a provider reads today's sentence", () => {
     shut({} as unknown as ExecutionApi, false);
     expect(reasonOf("Record review note")).toBe(STAGE_WHY.notEnabled);
+  });
+
+  it("BE-P7: a shut note whose capabilities code the dictionary knows reads that code in words, still without a provider", () => {
+    const api = {} as unknown as ExecutionApi;
+    dock(<ReviewNoteForm api={api} capability={{ state: "unavailable", reasonCode: "RETAINED_REVIEW_READ_ONLY" }} identity={identity} onRecorded={() => undefined} />);
+    expect(reasonOf("Record review note")).toBe(STAGE_WHY.readOnly);
+    expect((screen.getByRole("button", { name: "Record review note" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("a shut note under a provider reads the server's reason for sandbox.review_note", async () => {

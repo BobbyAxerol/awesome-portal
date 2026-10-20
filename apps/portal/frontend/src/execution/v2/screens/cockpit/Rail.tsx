@@ -34,6 +34,7 @@ import {
 } from "./laneModel";
 import type { EvidenceState } from "./EvidenceFrame";
 import { StepUpBlock, type StepUpBlockProps } from "./StepUp";
+import { captureReasonText } from "../stage/reasons";
 
 export interface RailTarget {
   kind: EvidenceKind | "waiver";
@@ -293,7 +294,12 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
               <ReceiptRows
                 rows={capabilities.actions.map((action) => ({
                   label: ACTION_LABEL[action.id] ?? action.id,
-                  value: action.state === "AVAILABLE" ? "Available" : `Unavailable · ${action.reason_code ?? "no reason given"}`,
+                  // A code the stage dictionary knows (BE-P7: the same classes as the eligibility) reads in words, then the code as sent.
+                  value: action.state === "AVAILABLE"
+                    ? "Available"
+                    : captureReasonText(action.reason_code) !== null
+                      ? `Unavailable · ${captureReasonText(action.reason_code)} · ${action.reason_code}`
+                      : `Unavailable · ${action.reason_code ?? "no reason given"}`,
                 }))}
               />
             ) : capabilities.status === "failed" ? (

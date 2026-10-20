@@ -69,6 +69,21 @@ describe("open only when the server says so (D10)", () => {
     expect(within(panel()).getByRole("link", { name: /My access/ })).toBeTruthy();
   });
 
+  it.each([
+    ["RETAINED_REVIEW_READ_ONLY", "Read-only on this build"],
+    ["ADMIN_ROLE_REQUIRED", "Needs the approver grant"],
+    ["GOVERNANCE_CAPABILITY_REQUIRED", "Needs the approver grant"],
+    ["GOVERNANCE_SCOPE_MISMATCH", "Needs the approver grant"],
+    ["CAPTURE_PROJECTION_NOT_AUTHORIZED", "Not enabled for this profile"],
+  ])("BE-P7: the server's reason %s reads in words, the code stays apart, and the form stays shut", async (code, words) => {
+    await mount({ capabilities: { ok: true, value: capabilitiesBody("UNAVAILABLE", code) } });
+    expect(screen.queryByLabelText(LABEL)).toBeNull();
+    const button = within(panel()).getByRole("button", { name: "Record review note" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toBe(words);
+    expect(within(panel()).getByText(`Server reason: ${code}`)).toBeTruthy();
+  });
+
   it("the role never decides: a manager and a reviewer see exactly what the server's answer says", async () => {
     // The screen reads no session and no role name; the same body with AVAILABLE opens it for anyone the server lets in.
     await mount({ capabilities: { ok: true, value: capabilitiesBody("AVAILABLE") } });
