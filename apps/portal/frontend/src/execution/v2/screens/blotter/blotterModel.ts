@@ -27,6 +27,8 @@ import type { FlagKind } from "../../flagKinds";
 
 /** One page is 50 rows (hi-fi, BR-EX-17); the DOM never holds more than this. */
 export const PAGE_LIMIT = 50;
+/** At phone width one page is a short scroll, not fifty stacked cards (UXM-07 audit B #22); Newer and Older reach the rest. */
+export const NARROW_PAGE_LIMIT = 10;
 export const ROW_CAP = 200;
 /** Groups listed before "Showing N of M". */
 export const GROUP_CAP = 6;
@@ -475,9 +477,9 @@ export interface ServerFilters {
 
 export const NO_FILTERS: ServerFilters = { bucket: "ALL", symbol: "", venue: "", side: "" };
 
-export function blotterQuery(filters: ServerFilters, cursor: { dir: "after" | "before"; value: string } | null): BlotterQuery {
+export function blotterQuery(filters: ServerFilters, cursor: { dir: "after" | "before"; value: string } | null, limit: number = PAGE_LIMIT): BlotterQuery {
   return {
-    limit: PAGE_LIMIT,
+    limit,
     ...(filters.bucket === "ALL" ? {} : { status_bucket: filters.bucket }),
     ...(filters.symbol.trim() === "" ? {} : { symbol: filters.symbol.trim() }),
     ...(filters.venue === "" ? {} : { venue: filters.venue }),

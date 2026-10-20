@@ -2757,6 +2757,14 @@ html {
 :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn,
 :root[data-theme="execution-carbon"] .portal-topbar .portal-pref-check { display: none; }
 :root[data-theme="execution-carbon"] .portal-breadcrumbs { flex: 1; }
+/* UXM-07 audit B #24: between the phone bar and the wide bar the trail used to clip mid-word ("dep_canary_01 · c").
+   The workspace chip (one workspace, it names nothing) gives its room to the trail, and the trail wraps to a second
+   line inside the same 56px bar (two 16px lines fit) instead of cutting. The words stay in the DOM for assistive tech. */
+@media (min-width: 721px) and (max-width: 1279px) {
+  :root[data-theme="execution-carbon"] .portal-topbar > .portal-workspace { display: none; }
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs { flex-wrap: wrap; row-gap: 0; max-height: 32px; }
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs .portal-crumb { white-space: normal; min-width: 0; overflow-wrap: anywhere; }
+}
 @media (min-width: 1024px) { :root[data-theme="execution-carbon"] .portal-topbar .portal-icon-btn { display: none; } }
 :root[data-theme="execution-carbon"] .portal-topbar .badge-env { display: inline-block; font: 700 10px/14px var(--font-mono); letter-spacing: 0.08em; border-width: 2px; border-style: solid; border-radius: 0; padding: 1px 7px; }
 /* Hi-fi 4e chrome: the alerts chip and the sidebar count badge (carbon only). */
@@ -2854,6 +2862,19 @@ html {
     font-size: 14px;
     color: var(--ink);
     padding: 12px 0;
+  }
+  /* UXM-07 audit A #10, B #24: on an Execution route the one crumb wraps to two lines (a deployment id plus its stage is
+     longer than the room) and only then ellipsises; the 56px bar holds two 18px lines. Research keeps its single line. */
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs .portal-crumb--current > a,
+  :root[data-theme="execution-carbon"] .portal-breadcrumbs .portal-crumb--current > span:not(.portal-crumb-sep) {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    padding: 0;
+    font-size: 13px;
+    line-height: 18px;
   }
   .portal-alerts-chip { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 

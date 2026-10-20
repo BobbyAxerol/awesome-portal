@@ -49,7 +49,7 @@ import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NO_SCOPE, applyScope, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
   fillsFor, groupExact, humanize, isBucket, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
@@ -187,8 +187,9 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
   const live = cursor !== null && cursor.fk === fk ? cursor : null;
   const [reloadTick, setReloadTick] = useState(0);
   const realtime = useProfileRealtime("paper", "EXECUTION_FULL_BLOTTER_SCREEN");
-  const query = useMemo(() => blotterQuery(filters, live), [filters, live]);
-  const state = useBlotterRead(api, query, `${fk}|${live ? `${live.dir}:${live.value}` : ""}`, realtime.refreshKey, reloadTick);
+  const limit = narrow ? NARROW_PAGE_LIMIT : PAGE_LIMIT;
+  const query = useMemo(() => blotterQuery(filters, live, limit), [filters, live, limit]);
+  const state = useBlotterRead(api, query, `${fk}|${live ? `${live.dir}:${live.value}` : ""}|${limit}`, realtime.refreshKey, reloadTick);
   const read = state.phase === "ready" ? state.read : null;
 
   const [symbolText, setSymbolText] = useState(filters.symbol);

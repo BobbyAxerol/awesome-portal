@@ -168,8 +168,12 @@ describe("keyset paging", () => {
     expect(document.querySelectorAll(".exec-blt2-pager")).toHaveLength(1);
     expect(pager.compareDocumentPosition(table()) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(document.querySelector(".exec-blt2-count-line")!.compareDocumentPosition(pager) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // A phone page is ten rows, not fifty stacked cards (UXM-07 audit B #22); the keyset cursor reaches the rest.
+    expect(Object.fromEntries(lastQuery()).limit).toBe("10");
+    expect(bodyRows()).toHaveLength(10);
     fireEvent.click(screen.getByRole("button", { name: "Older" }));
-    await waitFor(() => expect(idOf(bodyRows()[0]!)).toBe("ord_00087"));
+    await waitFor(() => expect(idOf(bodyRows()[0]!)).toBe("ord_00127"));
+    expect(bodyRows()).toHaveLength(10);
     fireEvent.click(screen.getByRole("button", { name: "Newer" }));
     await waitFor(() => expect(idOf(bodyRows()[0]!)).toBe("ord_00137"));
   });

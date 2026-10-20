@@ -76,20 +76,19 @@ describe("V2 shell flag on", () => {
     await waitFor(() => expect(document.querySelector(".exec-ctxbar")).not.toBeNull());
   }
 
-  it("locks the environment on the V2 Blotter, with the reason, and only there", async () => {
+  it("the V2 Blotter draws no environment buttons (its read has none) and presses nothing, with the reason kept, and only there", async () => {
     await frame("shell,blotter", "EXECUTION_FULL_BLOTTER_SCREEN");
-    const paper = screen.getByRole("button", { name: "Paper" }) as HTMLButtonElement;
-    expect(paper.disabled).toBe(true);
-    const why = document.getElementById(paper.getAttribute("aria-describedby") ?? "");
-    expect(why?.textContent).toContain("Not published (FE-052)");
+    expect(screen.queryByRole("button", { name: "Paper" })).toBeNull();
+    expect(document.querySelector('[data-control="env"]')).toBeNull();
+    expect(document.querySelector(".exec-ctxbar")?.textContent).toContain("Not published (FE-052)");
+    expect(document.querySelector('[data-notice="lock"]')?.textContent).toContain("Not applied: Environment");
   });
 
   it("the V2 Blotter reads 'Window: Current retained window' (its read takes no window), and only there", async () => {
     await frame("shell,blotter", "EXECUTION_FULL_BLOTTER_SCREEN");
     expect(document.querySelector(".exec-ctxbar-lock")?.textContent).toBe("Window: Current retained window");
-    const button = screen.getByRole("group", { name: "Window" }).querySelector("button") as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Not published (FE-025)");
+    expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
+    expect(document.querySelector(".exec-ctxbar")?.textContent).toContain("Not published (FE-025)");
     cleanup();
     await frame("shell", "EXECUTION_FULL_BLOTTER_SCREEN");
     expect(document.querySelector(".exec-ctxbar-lock")).toBeNull();
@@ -108,20 +107,16 @@ describe("V2 shell flag on", () => {
 
   it("Operations states why the window is off (its own Range, FE-025) without a fixed-window chip", async () => {
     await frame("shell,ops", "EXECUTION_OPERATIONS_QUEUE_SCREEN", "/execution/operations?env=paper");
-    const group = screen.getByRole("group", { name: "Window" });
-    const buttons = [...group.querySelectorAll("button")] as HTMLButtonElement[];
-    expect(buttons.length).toBeGreaterThan(0);
-    expect(buttons.every((b) => b.disabled)).toBe(true);
-    const why = document.getElementById(buttons[0].getAttribute("aria-describedby") ?? "");
-    expect(why?.textContent).toContain("Operations has its own Range control below. The server takes no window (FE-025).");
+    expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
+    expect(document.querySelector(".exec-ctxbar")?.textContent).toContain("Operations has its own Range control below. The server takes no window (FE-025).");
     expect(document.querySelector(".exec-ctxbar-lock")).toBeNull();
   });
 
   it("another screen keeps the generic window reason, and Operations with its flag off does too", async () => {
     await frame("shell,ops", "alpha_fleet", "/execution/fleet?env=paper");
     const generic = (): string | null | undefined => {
-      const btn = screen.getByRole("group", { name: "Window" }).querySelector("button")!;
-      return document.getElementById(btn.getAttribute("aria-describedby") ?? "")?.textContent;
+      expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
+      return document.querySelector(".exec-ctxbar")?.textContent;
     };
     expect(generic()).toContain("Window applies when the server supports it.");
     cleanup();
@@ -225,10 +220,10 @@ describe("S3 stage screens flag on", () => {
     const container = await mountApp(`shell,${key}`, path);
     await waitFor(() => expect(container.querySelector(".exec-ctxbar")).not.toBeNull());
     expect(locks(container)).toContain(windowText);
-    const pressed = [...container.querySelectorAll<HTMLButtonElement>('[data-control="env"] button')].find((b) => b.getAttribute("aria-pressed") === "true");
-    expect(pressed?.dataset.v).toBe(env);
-    expect(pressed?.disabled).toBe(true);
-    expect(document.getElementById(pressed?.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The deployment fixes the environment.");
+    const chip = container.querySelector<HTMLElement>('[data-control="env"]');
+    expect(chip?.dataset.v).toBe(env);
+    expect(container.querySelector('[data-control="env"] button')).toBeNull();
+    expect(document.getElementById(chip?.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The deployment fixes the environment.");
   });
 
   it("the locks are pure: stage screens lock only on a deployment route with their own key on; a list route and a missing key keep the old words", async () => {
@@ -256,8 +251,8 @@ describe("S3 stage screens flag on", () => {
     const container = await mountApp("shell", "/deployments/live/dep_1/canary");
     await waitFor(() => expect(container.querySelector(".exec-ctxbar")).not.toBeNull());
     expect(locks(container).filter((text) => text.startsWith("Window:"))).toEqual([]);
-    const pressed = [...container.querySelectorAll<HTMLButtonElement>('[data-control="env"] button')].find((b) => b.getAttribute("aria-pressed") === "true");
-    expect(document.getElementById(pressed?.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The path sets the environment.");
+    const chip = container.querySelector<HTMLElement>('[data-control="env"]');
+    expect(document.getElementById(chip?.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The path sets the environment.");
   });
 
   it("New request leaves the light governance surface for Carbon when its flag is on, and only then", async () => {
