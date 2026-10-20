@@ -29,10 +29,10 @@ function Row({ row }: { row: DisabledRow }) {
         {row.code !== null ? <span className="exec-cf-mono exec-cf-meta">{row.code}</span> : null}
       </div>
       <DockAction label={`Send ${row.label}`} reason={row.reason} accessHref={ACCESS_HREF} />
-      <p className="exec-cf-meta" data-capability={capability.kind}>
+      <p className="exec-cf-meta" data-capability={capability.kind} title={capability.kind === "staged_activation" ? `Would be enabled by the staged-activation capability ${capability.key} once the relay is qualified. ${GRANT_NAME_NOTE}` : `${capability.because} ${GRANT_NAME_NOTE}`}>
         {capability.kind === "staged_activation"
-          ? <>Would be enabled by the staged-activation capability <span className="exec-cf-id">{capability.key}</span> once the relay is qualified. {GRANT_NAME_NOTE}</>
-          : <>{capability.because} {GRANT_NAME_NOTE}</>}
+          ? <>Needs <span className="exec-cf-id">{capability.key}</span></>
+          : <>{capability.because}</>}
       </p>
     </li>
   );
@@ -44,10 +44,10 @@ export function DisabledOperations({ catalogue }: { catalogue: CatalogueView | n
   return (
     <SectionPanel title="Operations that are not sendable" level={2}>
       <div className="exec-cf-body-wrap">
-        <p className="exec-cf-meta" data-summary="disabled">
+        <p className="exec-cf-meta" data-summary="disabled" title="Each control is disabled and says why.">
           {catalogue === null
-            ? "The command catalogue has not been read, so its operations are not listed. The capital operations and the families below do not depend on it."
-            : `${total} catalogue commands, ${CAPITAL_OPERATION_ROWS.length} capital operations and ${EXCLUDED_FAMILY_ROWS.length} families. None is sendable: each control is disabled and says why.`}
+            ? "The command catalogue has not been read, so its operations are not listed."
+            : `${total} catalogue commands, ${CAPITAL_OPERATION_ROWS.length} capital operations and ${EXCLUDED_FAMILY_ROWS.length} families. None is sendable.`}
         </p>
         <details className="exec-cf-group" data-group="capital">
           <summary>Capital commands ({CAPITAL_OPERATION_ROWS.length})</summary>

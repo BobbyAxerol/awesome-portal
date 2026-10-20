@@ -21,9 +21,9 @@ const WIDTHS = [
   ["660", 660, 900],
 ] as const;
 
-const STORY_LABEL = "Fixture story: not connected to a source; fake port";
+const STORY_LABEL = "Fixture: not connected";
 const FAKE_PORT = "Answered by the fake port: a scripted fixture answer, not a receipt from any source.";
-const SEND_DISABLED = "Command sends are not connected to a source: UXM-09 fixture";
+const SEND_DISABLED = "Command sends are not connected to a source: fixture";
 /** Any path that would be a command, a plan, an apply or an operation write/read. The story must not ask for one. */
 const COMMAND_ROUTES = /\/(commands?|plans?|apply|operations|approvals)(\/|$|\?)|\/ecm_/;
 

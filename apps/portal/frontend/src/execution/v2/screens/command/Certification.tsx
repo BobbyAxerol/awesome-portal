@@ -13,12 +13,8 @@ import "../../css/command.css";
 
 export function Certification() {
   return (
-    <SectionPanel title="Trading flows that need their own certification" level={2}>
+    <SectionPanel title="Flows that need their own certification" level={2}>
       <div className="exec-cf-body-wrap">
-        <p className="exec-cf-meta">
-          Each of these touches Live positions, funds or venue orders. A passing fixture, a Preview-only delivery or a reviewed design is not a
-          certification, and none of them is offered here.
-        </p>
         <ul className="exec-cf-ops" aria-label="Flows that require separate certification">
           {CERTIFICATION_FLOWS.map((flow) => (
             <li className="exec-cf-op" key={flow.id} data-flow={flow.id}>

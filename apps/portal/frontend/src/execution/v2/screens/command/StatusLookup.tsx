@@ -80,7 +80,7 @@ export function StatusLookup({ port }: { port: CommandPort }) {
           }}
         />
         <p id={`${base}-help`} className={problem !== null ? "exec-cf-error" : "exec-cf-meta"}>
-          {problem ?? "A command id (ecm_ and 32 hex characters) or an operation id. Looking up changes nothing."}
+          {problem ?? <span title="A command id (ecm_ and 32 hex characters) or an operation id. Looking up changes nothing.">A command id or an operation id</span>}
         </p>
       </div>
       <div className="exec-cf-acts">

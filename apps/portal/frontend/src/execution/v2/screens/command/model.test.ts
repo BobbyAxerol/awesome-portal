@@ -180,7 +180,7 @@ describe("the Submit gate and the sentence beside it are one answer", () => {
   });
 
   it("the disabled-port reason wins over everything, and is the exact sentence", () => {
-    expect(submitGate({ ...base, blockedReason: SEND_DISABLED_REASON })).toEqual({ open: false, kind: "policy", reason: "Command sends are not connected to a source: UXM-09 fixture" });
+    expect(submitGate({ ...base, blockedReason: SEND_DISABLED_REASON })).toEqual({ open: false, kind: "policy", reason: "Command sends are not connected to a source: fixture" });
     expect(submitGate({ ...base, plan: null, blockedReason: SEND_DISABLED_REASON })).toMatchObject({ kind: "policy" });
   });
 
