@@ -510,3 +510,15 @@
     margin-left: 0;
   }
 }
+
+/* R-3: the scope label's population table has column headings (the other kv tables have none): keep them apart. */
+.exec-alp2-scope thead th {
+  padding-right: 16px;
+  text-align: right;
+}
+.exec-alp2-scope thead th:first-child {
+  text-align: left;
+}
+.exec-alp2-scope tbody td {
+  text-align: right;
+}
