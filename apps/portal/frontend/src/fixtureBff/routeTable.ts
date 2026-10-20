@@ -46,7 +46,18 @@ const RES = "execution-resource-scoped.v2";
 const V2_WS = "ws_TEST_SCOPED_V2";
 const SANDBOX_NOTE = { workspace_id: "ws_TEST_ONLY", request_key: "note-key-1", summary: "Reviewed the reconciliation evidence.", certification_id: "scert_dep_sandbox_01", expected_workflow_version: 1 };
 const APPROVAL_REQUEST = { schema_version: "governance.approval-create-request.v1", request_key: "req-key-1", gate: "R1", alpha_id: "alpha_btc_trend", evidence_run_id: "run_btc_trend_a1", methodology_claim_id: "claim_btc_oos", summary: "Momentum with a venue calendar." };
-const livePanelCursor = (panel: string, page: number): string => `lps2.${panel}.${String(page).padStart(8, "0")}.1234567890.${"A".repeat(43)}`;
+/** `manager/series` carries `subjects`, `window` and `economic_partition` as JSON text in the query. */
+const seriesUrl = (metric: string, subjects: unknown[], options: { workspace?: string; window?: unknown; partition?: unknown } = {}): string =>
+  `/api/v1/execution/manager/series?environment=paper&metric=${metric}&subjects=${encodeURIComponent(JSON.stringify(subjects))}&window=${encodeURIComponent(JSON.stringify(options.window ?? "30D"))}`
+  + (options.workspace ? `&workspace_id=${options.workspace}` : "")
+  + (options.partition ? `&economic_partition=${encodeURIComponent(JSON.stringify(options.partition))}` : "");
+const FUND = [{ subject_type: "FUND" }];
+const TWO_PORTFOLIOS = [{ subject_type: "PORTFOLIO", subject_id: "TEST_ONLY:portfolio-a" }, { subject_type: "PORTFOLIO", subject_id: "TEST_ONLY:portfolio-b" }];
+const SELF_Q = "workspace_id=ws_TEST_ONLY&environment=paper";
+const BATCH_Q = `${SELF_Q}&resources=PORTFOLIO:portfolio_TEST_ONLY,DEPLOYMENT:deployment_TEST_ONLY&actions=portfolio.read,capital.top_up`;
+const RECALL_Q = (kind: string, id: string, environment = "paper"): string => `workspace_id=ws_TEST_ONLY&resource_kind=${kind}&resource_id=${encodeURIComponent(id)}&environment=${environment}`;
+const LOOKUP_PAYLOAD = "alpha_id=alpha_n29&evidence_run_id=run_TEST_ONLY&methodology_claim_id=claim_TEST_ONLY&summary=Synthetic%20summary";
+const livePanelCursor =(panel: string, page: number): string => `lps2.${panel}.${String(page).padStart(8, "0")}.1234567890.${"A".repeat(43)}`;
 
 export const ROUTES: RouteEntry[] = [
   /* fixture lane */
@@ -65,6 +76,10 @@ export const ROUTES: RouteEntry[] = [
   { method: "GET", pattern: `${ADM}/accounts`, url: `${ADM}/accounts`, status: 200, source: "bffDoubleUsers", real: "control-api", note: "123 accounts, one unpaged list; portal-account-lifecycle.openapi.json" },
   { method: "GET", pattern: `${ADM}/accounts/{user_id}`, url: `${ADM}/accounts/usr_0001`, status: 200, source: "bffDoubleUsers", real: "control-api" },
   { method: "GET", pattern: `${ADM}/step-up`, url: `${ADM}/step-up`, status: 200, source: "bffDoubleUsers", real: "control-api" },
+  { method: "GET", pattern: `${ADM}/profile-access/v2/self-navigation`, url: `${ADM}/profile-access/v2/self-navigation?${SELF_Q}`, status: 200, source: "bffDoubleSelfAccess", real: "control-api", note: "portal.self-navigation.v1, the canonical access fixture re-stamped from the fixture clock (ceiling a year later); workspace_id picks the case (ws_TEST_NONE all HIDDEN, ws_TEST_LEGACY, ws_TEST_DENIED 403, ws_TEST_UNAVAILABLE 503, ws_TEST_MALFORMED a key the closed contract lacks); the query is exactly workspace_id and environment" },
+  { method: "GET", pattern: `${ADM}/profile-access/v2/eligibility`, url: `${ADM}/profile-access/v2/eligibility?${SELF_Q}&resource_kind=PORTFOLIO&resource_id=portfolio_TEST_ONLY&actions=portfolio.read`, status: 200, source: "bffDoubleSelfAccess", real: "control-api", note: "portal.self-eligibility.v1; answers the one resource and action the fixture states, any other question is 404 NOT_IN_FIXTURE (a row for it would be a permission the fixture does not state)" },
+  { method: "GET", pattern: `${ADM}/profile-access/v2/eligibility/batch`, url: `${ADM}/profile-access/v2/eligibility/batch?${BATCH_Q}`, status: 200, source: "bffDoubleSelfAccess", real: "control-api", note: "portal.self-eligibility-batch.v2 as the OpenAPI publishes it; the fixture's two resources and two actions, any other question is 404 NOT_IN_FIXTURE; ws_TEST_STEP_UP_ACTIVE answers the ACTIVE case. The FE reader still reads v1 (FE finding)" },
+  { method: "GET", pattern: `${ADM}/profile-access/v2/self-context`, url: `${ADM}/profile-access/v2/self-context`, status: 200, source: "bffDoubleSelfAccess", real: "control-api", note: "portal.self-context.v1, the first canonical case (a sole workspace with a current grant record); the read takes no query, so no query picks a case. No FE reader exists yet" },
 
   /* shell and platform reads */
   { method: "GET", pattern: `${EX}/retained-review`, url: `${EX}/retained-review`, status: 404, source: "bffDouble", real: "control-api (typed refusal)", note: "UDB_RETAINED_REVIEW_NOT_CONFIGURED: a normal stack has no retained review" },
@@ -108,6 +123,17 @@ export const ROUTES: RouteEntry[] = [
   { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id} [alpha_empty]`, url: `${EX}/resources/alphas/alpha_empty`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "the canonical alpha_not_in_projection case: state empty" },
   { method: "GET", pattern: `${EX}/market/candles`, url: `${EX}/market/candles?environment=paper&symbol=ETHUSDT&interval=1h`, status: 200, source: "bffDouble (canonical L0 body)", real: "control-api" },
   { method: "GET", pattern: `${EX}/manager/current/{relation}`, url: `${EX}/manager/current/orders?environment=paper&limit=200`, status: 200, source: "bffDouble", real: "control-api", note: "relation from the approved catalogue of 15; any other is not served" },
+  { method: "GET", pattern: `${EX}/manager/series`, url: seriesUrl("NAV", TWO_PORTFOLIOS), status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE populated: the canonical NAV body with the ids, metric, environment and window of the question; presets resolve to the one published window, ALL is a typed gap" },
+  { method: "GET", pattern: `${EX}/manager/series [fund]`, url: seriesUrl("NAV", FUND), status: 200, source: "bffDoubleManager", real: "control-api", note: "one FUND subject: the SINGLE_SUBJECT comparison is rebuilt by the contract's rules" },
+  { method: "GET", pattern: `${EX}/manager/series [empty]`, url: seriesUrl("NAV", TWO_PORTFOLIOS.slice(0, 1), { workspace: "ws_TEST_SERIES_EMPTY" }), status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE empty (workspace_id=ws_TEST_SERIES_EMPTY)" },
+  { method: "GET", pattern: `${EX}/manager/series [unavailable]`, url: seriesUrl("NAV", TWO_PORTFOLIOS, { workspace: "ws_TEST_SERIES_UNAVAILABLE" }), status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE unavailable (workspace_id=ws_TEST_SERIES_UNAVAILABLE); NET_PNL has no canonical fixture and answers the same typed entries" },
+  { method: "GET", pattern: `${EX}/manager/series [currency-mixed]`, url: seriesUrl("NAV", TWO_PORTFOLIOS, { workspace: "ws_TEST_SERIES_CURRENCY_MIXED" }), status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE currency-mixed (workspace_id=ws_TEST_SERIES_CURRENCY_MIXED): INCOMPARABLE / CURRENCY_MIXED" },
+  { method: "GET", pattern: `${EX}/manager/series [return]`, url: seriesUrl("RETURN", TWO_PORTFOLIOS), status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE return: a RATIO stated as a FRACTION on both subjects" },
+  { method: "GET", pattern: `${EX}/manager/series [return-scale-mixed]`, url: seriesUrl("RETURN", TWO_PORTFOLIOS, { workspace: "ws_TEST_SERIES_RETURN_SCALE_MIXED" }), status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE return-scale-mixed (workspace_id=ws_TEST_SERIES_RETURN_SCALE_MIXED): INCOMPARABLE / RATIO_SCALE_MIXED" },
+  { method: "GET", pattern: `${EX}/manager/series [return-scale-not-published]`, url: seriesUrl("RETURN", TWO_PORTFOLIOS.slice(0, 1), { workspace: "ws_TEST_SERIES_RETURN_SCALE_NOT_PUBLISHED" }), status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE return-scale-not-published (workspace_id=ws_TEST_SERIES_RETURN_SCALE_NOT_PUBLISHED): the entry is UNAVAILABLE, never a guessed scale" },
+  { method: "GET", pattern: `${EX}/manager/fleet`, url: `${EX}/manager/fleet?environment=paper&limit=100`, status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE partitions (paper): 2 rows, 2 currencies. workspace_id, q, stage_filter, text filters, text sort, group_by, limit and after are applied; window, economic_partition, lifecycle_filter, before and numeric fields are 400 MANAGER_QUERY_NOT_SUPPORTED_BY_DOUBLE. The other five dataset routes are not served" },
+  { method: "GET", pattern: `${EX}/manager/fleet [live]`, url: `${EX}/manager/fleet?environment=live&limit=100`, status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE lifecycle.live: one LIVE row and one CANARY and LIVE row (current_stage null, MULTIPLE_ACTIVE_STAGES)" },
+  { method: "GET", pattern: `${EX}/manager/fleet [sandbox]`, url: `${EX}/manager/fleet?environment=sandbox&limit=1`, status: 200, source: "bffDoubleManager", real: "control-api", note: "FIXTURE dataset (the base example): an empty page" },
 
   /* portfolios */
   { method: "GET", pattern: `${EX}/portfolios`, url: `${EX}/portfolios`, status: 200, source: "bffDoublePortfolios", real: "control-api" },
@@ -137,6 +163,15 @@ export const ROUTES: RouteEntry[] = [
   { method: "GET", pattern: `${EX}/governance/exit-reviews/{review_id}`, url: `${EX}/governance/exit-reviews/EX-771`, status: 200, source: "bffDouble", real: "control-api" },
   { method: "GET", pattern: `${EX}/governance/waivers`, url: `${EX}/governance/waivers?state=OPEN&limit=50`, status: 200, source: "bffDouble", real: "control-api" },
   { method: "GET", pattern: `${EX}/governance/review-capture-capabilities`, url: `${EX}/governance/review-capture-capabilities?workspace_id=workspace_execution_manager`, status: 200, source: "bffDouble", real: "control-api" },
+  { method: "GET", pattern: `${EX}/governance/stage-action-eligibility`, url: `${EX}/governance/stage-action-eligibility`, status: 200, source: "bffDoubleGovernance", real: "control-api", note: "FIXTURE admin_with_r2_read; workspace_id picks the case (ws_TEST_PLAIN_USER, ws_TEST_NO_R2_GRANT, ws_TEST_OTHER_WORKSPACE, ws_TEST_NOT_AUTHORIZED, ws_TEST_RETAINED_REVIEW, ws_TEST_STEP_UP_ACTIVE, ws_TEST_DENIED 403, ws_TEST_UNAVAILABLE 503) and is echoed" },
+  { method: "GET", pattern: `${EX}/governance/stage-action-eligibility [plain user]`, url: `${EX}/governance/stage-action-eligibility?workspace_id=ws_TEST_PLAIN_USER`, status: 200, source: "bffDoubleGovernance", real: "control-api", note: "FIXTURE plain_user" },
+  { method: "GET", pattern: `${EX}/governance/approvals/request-lookup`, url: `${EX}/governance/approvals/request-lookup?request_key=req-NOT-STORED-1`, status: 200, source: "bffDoubleGovernance", real: "control-api", note: "NONE: the double stores one request (req-TEST_ONLY-0001) and keeps no state; the key and workspace asked are echoed" },
+  { method: "GET", pattern: `${EX}/governance/approvals/request-lookup [found]`, url: `${EX}/governance/approvals/request-lookup?request_key=req-TEST_ONLY-0001`, status: 200, source: "bffDoubleGovernance", real: "control-api", note: "FOUND / NOT_COMPARED: no payload was sent, so only existence is said" },
+  { method: "GET", pattern: `${EX}/governance/approvals/request-lookup [match]`, url: `${EX}/governance/approvals/request-lookup?request_key=req-TEST_ONLY-0001&${LOOKUP_PAYLOAD}`, status: 200, source: "bffDoubleGovernance", real: "control-api", note: "FOUND / MATCH: the stored request's four payload fields" },
+  { method: "GET", pattern: `${EX}/governance/approvals/request-lookup [conflict]`, url: `${EX}/governance/approvals/request-lookup?request_key=req-TEST_ONLY-0001&${LOOKUP_PAYLOAD.replace("alpha_n29", "alpha_other")}`, status: 200, source: "bffDoubleGovernance", real: "control-api", note: "KEY_PAYLOAD_CONFLICT / MISMATCH: another payload under the stored key" },
+  { method: "GET", pattern: `${EX}/pending-recalls`, url: `${EX}/pending-recalls?${RECALL_Q("PORTFOLIO", "TEST_ONLY:portfolio")}`, status: 200, source: "bffDoubleGovernance", real: "control-api", note: "FIXTURE discovery_open: two recalls the Portal controlled on the fixture's portfolio (one WAITING_ENCUMBRANCE, one UNKNOWN)" },
+  { method: "GET", pattern: `${EX}/pending-recalls [deployment]`, url: `${EX}/pending-recalls?${RECALL_Q("DEPLOYMENT", "TEST_ONLY:deployment")}`, status: 200, source: "bffDoubleGovernance", real: "control-api", note: "FIXTURE discovery_deployment: one recall with its owning account" },
+  { method: "GET", pattern: `${EX}/pending-recalls [none]`, url: `${EX}/pending-recalls?${RECALL_Q("PORTFOLIO", "pf_TEST_ONLY_core")}`, status: 200, source: "bffDoubleGovernance", real: "control-api", note: "FIXTURE discovery_empty naming the resource asked: none the Portal controlled (not a claim that no recall exists on the source)" },
   { method: "GET", pattern: `${EX}/deployments/{deployment_id}/certification`, url: `${EX}/deployments/dep_1/certification`, status: 200, source: "bffDouble", real: "control-api" },
   { method: "GET", pattern: `${EX}/deployments/{deployment_id}/canary`, url: `${EX}/deployments/dep_1/canary`, status: 200, source: "bffDouble", real: "control-api" },
   { method: "GET", pattern: `${EX}/deployments/{deployment_id}/live`, url: `${EX}/deployments/dep_1/live`, status: 200, source: "bffDouble", real: "control-api" },
@@ -193,7 +228,19 @@ export const SCHEMAS: Record<string, SchemaVerdict> = {
   "GET /api/v1/execution/alphas": { ref: { file: "execution-alpha-fleet-list.v2", ptr: "/$defs/AlphaFleetResponse" } },
   "GET /api/v1/execution/alphas/{alpha_id}/query-analytics": { ref: { file: "execution-query-analytics.v1", ptr: "" } },
   "GET /api/v1/execution/portfolios/{portfolio_id}/query-analytics": { ref: { file: "execution-query-analytics.v1", ptr: "" } },
-  "GET /api/v1/execution/market/candles": { ref: { file: "execution-market-context.v1", ptr: "/$defs/CandlesResponse" } },
+  "GET /api/admin/profile-access/v2/self-navigation": { ref: { file: "../openapi/execution-access.openapi.json", ptr: "/components/schemas/AccessSelfNavigation" } },
+  "GET /api/admin/profile-access/v2/eligibility": { ref: { file: "../openapi/execution-access.openapi.json", ptr: "/components/schemas/AccessEligibility" } },
+  "GET /api/admin/profile-access/v2/eligibility/batch": { ref: { file: "../openapi/execution-access.openapi.json", ptr: "/components/schemas/AccessEligibilityBatch" } },
+  "GET /api/admin/profile-access/v2/self-context": { ref: { file: "../openapi/execution-access.openapi.json", ptr: "/components/schemas/AccessSelfContext" } },
+  ...Object.fromEntries(
+    ["", " [fund]", " [empty]", " [unavailable]", " [currency-mixed]", " [return]", " [return-scale-mixed]", " [return-scale-not-published]"]
+      .map((variant) => [`GET /api/v1/execution/manager/series${variant}`, { ref: { file: "execution-manager-series.v1", ptr: "" } }] as const),
+  ),
+  ...Object.fromEntries(["", " [live]", " [sandbox]"].map((variant) => [`GET /api/v1/execution/manager/fleet${variant}`, { ref: { file: "execution-manager-dataset.v1", ptr: "" } }] as const)),
+  ...Object.fromEntries(["", " [plain user]"].map((variant) => [`GET /api/v1/execution/governance/stage-action-eligibility${variant}`, { ref: { file: "../openapi/execution-governance.openapi.json", ptr: "/components/schemas/StageActionEligibility" } }] as const)),
+  ...Object.fromEntries(["", " [found]", " [match]", " [conflict]"].map((variant) => [`GET /api/v1/execution/governance/approvals/request-lookup${variant}`, { ref: { file: "../openapi/execution-governance.openapi.json", ptr: "/components/schemas/ApprovalRequestLookup" } }] as const)),
+  ...Object.fromEntries(["", " [deployment]", " [none]"].map((variant) => [`GET /api/v1/execution/pending-recalls${variant}`, { ref: { file: "../openapi/execution-pending-control.openapi.json", ptr: "/components/schemas/PendingRecallDiscovery" } }] as const)),
+  "GET /api/v1/execution/market/candles":{ ref: { file: "execution-market-context.v1", ptr: "/$defs/CandlesResponse" } },
   "GET /api/v1/execution/portfolios": { ref: { file: "execution-portfolio-list.v1", ptr: "/$defs/PortfolioListResponse" } },
   "GET /api/v1/execution/broker-bindings": { ref: { file: "execution-manager-lists.v1", ptr: "/$defs/BindingsResponse" } },
   "GET /api/v1/execution/broker-bindings/{binding_id}": { ref: { file: "execution-manager-lists.v1", ptr: "/$defs/BindingDetailResponse" } },

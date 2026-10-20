@@ -16,7 +16,8 @@ that only these paths reach it:
   `/api/v1/portal/summary` (see "Shell bootstrap" below)
 - `/api/v1/execution/**`
 - `/api/admin/access/self`
-- `/api/admin/profile-access/v2/effective` (exact)
+- `/api/admin/profile-access/v2/effective`, `/self-navigation`, `/eligibility`, `/eligibility/batch` and
+  `/self-context` (each exact)
 - `/api/admin/accounts` and `/api/admin/accounts/**`
 - `/api/admin/step-up`
 - `/__fixture/**` (lane marker and health check)

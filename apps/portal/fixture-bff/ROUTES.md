@@ -17,6 +17,7 @@ server (so it is refused, 404), unless `FIXTURE_WEB_UPSTREAM` names a real Contr
 | `location ^~ /api/v1/execution/` | every Execution BFF read the V2 screens make |
 | `location = /api/admin/access/self` | the session capabilities, so the screens are not fail-closed |
 | `location = /api/admin/profile-access/v2/effective` | the Access screen's read (exact match: `/api/admin/profile-access` and `/activity` stay real) |
+| `location = /api/admin/profile-access/v2/self-navigation`, `= .../eligibility`, `= .../eligibility/batch`, `= .../self-context` | the four advisory self reads, answered from the canonical access fixture (each an exact match) |
 | `location = /api/admin/accounts` and `location ^~ /api/admin/accounts/` | the Users roster and detail |
 | `location = /api/admin/step-up` | the Users step-up state |
 | `location = /api/v1/quantbt/runs` | the Run Library list the New request pickers read (exact match: the rest of `/api/v1/quantbt/` stays real) |
@@ -41,8 +42,8 @@ answers them `404 {"error":"FIXTURE_ROUTE_NOT_SERVED"}` rather than invent a bod
   never shown while the fixture user is signed in)
 - `/api/v1/portal/capabilities`, `/api/v1/alphas*`
 - `/api/v1/research/*`, `/api/v1/quantbt/*` (except the exact `GET /api/v1/quantbt/runs` above), `/api/runs*`, `/api/strategies`, `/api/config/*`
-- `/api/admin/profile-access` (the legacy policy matrix), `/api/admin/profile-access/activity`,
-  `/api/admin/profile-access/v2/eligibility`, `/api/admin/profile-access/v2/self-navigation`
+- `/api/admin/profile-access` (the legacy policy matrix), `/api/admin/profile-access/activity`
+- the other five `manager/*` dataset routes (`fund-overview` and the portfolio, alpha, account and deployment overviews): only `manager/series` and `manager/fleet` are modelled
 - any other `/api/admin/*`
 
 The shell bootstrap (`bffDoubleShell.ts`) takes the registry, links and summary bodies from the same
@@ -155,6 +156,10 @@ rows keep their dates).
 | GET | `/api/admin/accounts` | 200 | bffDoubleUsers | control-api | none | 123 accounts, one unpaged list; portal-account-lifecycle.openapi.json |
 | GET | `/api/admin/accounts/{user_id}` | 200 | bffDoubleUsers | control-api | none |  |
 | GET | `/api/admin/step-up` | 200 | bffDoubleUsers | control-api | none |  |
+| GET | `/api/admin/profile-access/v2/self-navigation` | 200 | bffDoubleSelfAccess | control-api | `execution-access.openapi.json#/components/schemas/AccessSelfNavigation` | portal.self-navigation.v1, the canonical access fixture re-stamped from the fixture clock (ceiling a year later); workspace_id picks the case (ws_TEST_NONE all HIDDEN, ws_TEST_LEGACY, ws_TEST_DENIED 403, ws_TEST_UNAVAILABLE 503, ws_TEST_MALFORMED a key the closed contract lacks); the query is exactly workspace_id and environment |
+| GET | `/api/admin/profile-access/v2/eligibility` | 200 | bffDoubleSelfAccess | control-api | `execution-access.openapi.json#/components/schemas/AccessEligibility` | portal.self-eligibility.v1; answers the one resource and action the fixture states, any other question is 404 NOT_IN_FIXTURE (a row for it would be a permission the fixture does not state) |
+| GET | `/api/admin/profile-access/v2/eligibility/batch` | 200 | bffDoubleSelfAccess | control-api | `execution-access.openapi.json#/components/schemas/AccessEligibilityBatch` | portal.self-eligibility-batch.v2 as the OpenAPI publishes it; the fixture's two resources and two actions, any other question is 404 NOT_IN_FIXTURE; ws_TEST_STEP_UP_ACTIVE answers the ACTIVE case. The FE reader still reads v1 (FE finding) |
+| GET | `/api/admin/profile-access/v2/self-context` | 200 | bffDoubleSelfAccess | control-api | `execution-access.openapi.json#/components/schemas/AccessSelfContext` | portal.self-context.v1, the first canonical case (a sole workspace with a current grant record); the read takes no query, so no query picks a case. No FE reader exists yet |
 | GET | `/api/v1/execution/retained-review` | 404 | bffDouble | control-api (typed refusal) | none | UDB_RETAINED_REVIEW_NOT_CONFIGURED: a normal stack has no retained review |
 | GET | `/api/v1/execution/runtime-manifest` | 200 | bffDouble | control-api | none |  |
 | GET | `/api/v1/execution/screen-contracts` | 200 | bffDouble | control-api | DRIFT `execution-screen-bff.v1#/$defs/CatalogueResponse` |  |
@@ -192,6 +197,17 @@ rows keep their dates).
 | GET | `/api/v1/execution/resources/alphas/{alpha_id} [alpha_empty]` | 200 | bffDoubleAlpha | control-api | `execution-alpha-resource.v1#/` | the canonical alpha_not_in_projection case: state empty |
 | GET | `/api/v1/execution/market/candles` | 200 | bffDouble (canonical L0 body) | control-api | `execution-market-context.v1#/$defs/CandlesResponse` |  |
 | GET | `/api/v1/execution/manager/current/{relation}` | 200 | bffDouble | control-api | none | relation from the approved catalogue of 15; any other is not served |
+| GET | `/api/v1/execution/manager/series` | 200 | bffDoubleManager | control-api | `execution-manager-series.v1#/` | FIXTURE populated: the canonical NAV body with the ids, metric, environment and window of the question; presets resolve to the one published window, ALL is a typed gap |
+| GET | `/api/v1/execution/manager/series [fund]` | 200 | bffDoubleManager | control-api | `execution-manager-series.v1#/` | one FUND subject: the SINGLE_SUBJECT comparison is rebuilt by the contract's rules |
+| GET | `/api/v1/execution/manager/series [empty]` | 200 | bffDoubleManager | control-api | `execution-manager-series.v1#/` | FIXTURE empty (workspace_id=ws_TEST_SERIES_EMPTY) |
+| GET | `/api/v1/execution/manager/series [unavailable]` | 200 | bffDoubleManager | control-api | `execution-manager-series.v1#/` | FIXTURE unavailable (workspace_id=ws_TEST_SERIES_UNAVAILABLE); NET_PNL has no canonical fixture and answers the same typed entries |
+| GET | `/api/v1/execution/manager/series [currency-mixed]` | 200 | bffDoubleManager | control-api | `execution-manager-series.v1#/` | FIXTURE currency-mixed (workspace_id=ws_TEST_SERIES_CURRENCY_MIXED): INCOMPARABLE / CURRENCY_MIXED |
+| GET | `/api/v1/execution/manager/series [return]` | 200 | bffDoubleManager | control-api | `execution-manager-series.v1#/` | FIXTURE return: a RATIO stated as a FRACTION on both subjects |
+| GET | `/api/v1/execution/manager/series [return-scale-mixed]` | 200 | bffDoubleManager | control-api | `execution-manager-series.v1#/` | FIXTURE return-scale-mixed (workspace_id=ws_TEST_SERIES_RETURN_SCALE_MIXED): INCOMPARABLE / RATIO_SCALE_MIXED |
+| GET | `/api/v1/execution/manager/series [return-scale-not-published]` | 200 | bffDoubleManager | control-api | `execution-manager-series.v1#/` | FIXTURE return-scale-not-published (workspace_id=ws_TEST_SERIES_RETURN_SCALE_NOT_PUBLISHED): the entry is UNAVAILABLE, never a guessed scale |
+| GET | `/api/v1/execution/manager/fleet` | 200 | bffDoubleManager | control-api | `execution-manager-dataset.v1#/` | FIXTURE partitions (paper): 2 rows, 2 currencies. workspace_id, q, stage_filter, text filters, text sort, group_by, limit and after are applied; window, economic_partition, lifecycle_filter, before and numeric fields are 400 MANAGER_QUERY_NOT_SUPPORTED_BY_DOUBLE. The other five dataset routes are not served |
+| GET | `/api/v1/execution/manager/fleet [live]` | 200 | bffDoubleManager | control-api | `execution-manager-dataset.v1#/` | FIXTURE lifecycle.live: one LIVE row and one CANARY and LIVE row (current_stage null, MULTIPLE_ACTIVE_STAGES) |
+| GET | `/api/v1/execution/manager/fleet [sandbox]` | 200 | bffDoubleManager | control-api | `execution-manager-dataset.v1#/` | FIXTURE dataset (the base example): an empty page |
 | GET | `/api/v1/execution/portfolios` | 200 | bffDoublePortfolios | control-api | `execution-portfolio-list.v1#/$defs/PortfolioListResponse` |  |
 | GET | `/api/v1/execution/resources/portfolios/{portfolio_id}` | 200 | bffDoublePortfolios | control-api | DRIFT `execution-resource-scoped.v2#/$defs/PortfolioScopedResourceWireResponse` |  |
 | GET | `/api/v1/execution/derivations/portfolios/{portfolio_id}/capital` | 200 | bffDoublePortfolios | control-api | none |  |
@@ -215,6 +231,15 @@ rows keep their dates).
 | GET | `/api/v1/execution/governance/exit-reviews/{review_id}` | 200 | bffDouble | control-api | none |  |
 | GET | `/api/v1/execution/governance/waivers` | 200 | bffDouble | control-api | DRIFT `execution-governance-product.v1#/$defs/ConditionsRegisterResponse` |  |
 | GET | `/api/v1/execution/governance/review-capture-capabilities` | 200 | bffDouble | control-api | `execution-governance-review-capture.v1#/$defs/Capabilities` |  |
+| GET | `/api/v1/execution/governance/stage-action-eligibility` | 200 | bffDoubleGovernance | control-api | `execution-governance.openapi.json#/components/schemas/StageActionEligibility` | FIXTURE admin_with_r2_read; workspace_id picks the case (ws_TEST_PLAIN_USER, ws_TEST_NO_R2_GRANT, ws_TEST_OTHER_WORKSPACE, ws_TEST_NOT_AUTHORIZED, ws_TEST_RETAINED_REVIEW, ws_TEST_STEP_UP_ACTIVE, ws_TEST_DENIED 403, ws_TEST_UNAVAILABLE 503) and is echoed |
+| GET | `/api/v1/execution/governance/stage-action-eligibility [plain user]` | 200 | bffDoubleGovernance | control-api | `execution-governance.openapi.json#/components/schemas/StageActionEligibility` | FIXTURE plain_user |
+| GET | `/api/v1/execution/governance/approvals/request-lookup` | 200 | bffDoubleGovernance | control-api | `execution-governance.openapi.json#/components/schemas/ApprovalRequestLookup` | NONE: the double stores one request (req-TEST_ONLY-0001) and keeps no state; the key and workspace asked are echoed |
+| GET | `/api/v1/execution/governance/approvals/request-lookup [found]` | 200 | bffDoubleGovernance | control-api | `execution-governance.openapi.json#/components/schemas/ApprovalRequestLookup` | FOUND / NOT_COMPARED: no payload was sent, so only existence is said |
+| GET | `/api/v1/execution/governance/approvals/request-lookup [match]` | 200 | bffDoubleGovernance | control-api | `execution-governance.openapi.json#/components/schemas/ApprovalRequestLookup` | FOUND / MATCH: the stored request's four payload fields |
+| GET | `/api/v1/execution/governance/approvals/request-lookup [conflict]` | 200 | bffDoubleGovernance | control-api | `execution-governance.openapi.json#/components/schemas/ApprovalRequestLookup` | KEY_PAYLOAD_CONFLICT / MISMATCH: another payload under the stored key |
+| GET | `/api/v1/execution/pending-recalls` | 200 | bffDoubleGovernance | control-api | `execution-pending-control.openapi.json#/components/schemas/PendingRecallDiscovery` | FIXTURE discovery_open: two recalls the Portal controlled on the fixture's portfolio (one WAITING_ENCUMBRANCE, one UNKNOWN) |
+| GET | `/api/v1/execution/pending-recalls [deployment]` | 200 | bffDoubleGovernance | control-api | `execution-pending-control.openapi.json#/components/schemas/PendingRecallDiscovery` | FIXTURE discovery_deployment: one recall with its owning account |
+| GET | `/api/v1/execution/pending-recalls [none]` | 200 | bffDoubleGovernance | control-api | `execution-pending-control.openapi.json#/components/schemas/PendingRecallDiscovery` | FIXTURE discovery_empty naming the resource asked: none the Portal controlled (not a claim that no recall exists on the source) |
 | GET | `/api/v1/execution/deployments/{deployment_id}/certification` | 200 | bffDouble | control-api | `execution-sandbox-certification.v1#/$defs/CertificationResponse` |  |
 | GET | `/api/v1/execution/deployments/{deployment_id}/canary` | 200 | bffDouble | control-api | none |  |
 | GET | `/api/v1/execution/deployments/{deployment_id}/live` | 200 | bffDouble | control-api | none |  |
