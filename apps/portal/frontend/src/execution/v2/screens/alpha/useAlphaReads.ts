@@ -24,14 +24,17 @@ import type { MarketCandleInterval, MarketCandlesPayload } from "../../../api/ma
 import type { MarketContextCandles } from "../../../api/marketContext";
 import type { ObservedTimeline } from "../../../api/observedTimeline";
 import type { ExecutionApi, Result } from "../../../api/ports";
-import type { ProfileEnvelope } from "../../../api/profileRead";
-import { readAlphaFleetItem, type AlphaFleetItem } from "../../../api/profileRead";
 import type { SubjectActivityPage } from "../../../api/subjectActivity";
 import type { PanelStatus } from "../../../contracts";
 import { readReplayFills, readReplayOrders, type ReplayFill, type ReplayOrder } from "../../../components/tradeReplayModel";
 import type { StageDrift } from "../../../hifiInsight";
+import { unsupportedText } from "../../readers/dispatch";
 import { EVICTED_REASON, useScopedCacheEviction } from "../../scopedEviction";
 import type { ExecEnv } from "../../urlState";
+import { isScopedPage, scopedPageAsActivity } from "./scopedBook";
+import { legacyResource, type AlphaResource } from "./view";
+
+export type { AlphaResource } from "./view";
 
 export type ReadFailure = { status: Exclude<PanelStatus, "ok" | "loading">; reason: string };
 
@@ -159,17 +162,19 @@ export function usePagedRead<P>(
 
 /* ── named reads ──────────────────────────────────────────────────────────── */
 
-export interface AlphaResource {
-  envelope: ProfileEnvelope;
-  /** The alpha row, or `null` when the resource carries none (empty or unreadable). */
-  item: AlphaFleetItem | null;
-}
-
-export function useAlphaResource(api: ExecutionApi, alphaId: string): Read<AlphaResource> {
-  return useRead<AlphaResource>(api, true, `resource:${alphaId}`, async (scoped) => {
-    const result = await scoped.getAlpha360Resource(alphaId);
+/**
+ * The alpha resource, read by `schema_version` (R-3): the legacy `execution.alpha-resource.v1` envelope, or the SCOPED_V2
+ * `execution.alpha-resource.v2` raw-facts body. A body that is neither (a later version, a malformed v2) is an error read that
+ * names the version it saw, never a partial object. `workspaceId` is the URL's explicit `workspace_id`, when it has one.
+ */
+export function useAlphaResource(api: ExecutionApi, alphaId: string, workspaceId?: string | null): Read<AlphaResource> {
+  return useRead<AlphaResource>(api, true, `resource:${alphaId}${workspaceId ? `@${workspaceId}` : ""}`, async (scoped) => {
+    const result = await scoped.getAlpha360ResourceVersioned(alphaId, workspaceId ? { workspaceId } : undefined);
     if (!result.ok) return result;
-    return { ok: true, value: { envelope: result.value, item: readAlphaFleetItem(result.value.objects.alpha) } };
+    const read = result.value;
+    if (read.kind === "v1") return { ok: true, value: legacyResource(read.value) };
+    if (read.kind === "v2") return { ok: true, value: { variant: "scoped", scoped: read.value } };
+    return { ok: false, status: "unavailable", reason: unsupportedText(read) };
   });
 }
 
@@ -212,16 +217,37 @@ export interface SubjectBook {
   asOfMs: number | null;
   ordersMore: PagedRead<SubjectActivityPage>;
   fillsMore: PagedRead<SubjectActivityPage>;
+  /** The pages are `portal.execution.subject-records.v2` (SCOPED_V2): a retained window of authorized rows, fewer members per record. */
+  scoped: boolean;
 }
 
 const pageCursor = (page: SubjectActivityPage): string | null => (page.page.hasMore ? page.page.nextCursor : null);
 
-/** Orders and fills of one alpha in one book, each with its own keyset `Load more`. */
-export function useSubjectBook(api: ExecutionApi, alphaId: string, env: ExecEnv, enabled: boolean): SubjectBook {
-  const loadFor = (relation: "orders" | "fills") => (scoped: ExecutionApi, after: string | null) =>
-    scoped.getSubjectActivity({ environment: env, subjectKind: "alpha", subjectId: alphaId, relation, limit: 200, after });
-  const ordersMore = usePagedRead<SubjectActivityPage>(api, enabled, `orders:${alphaId}:${env}`, loadFor("orders"), pageCursor);
-  const fillsMore = usePagedRead<SubjectActivityPage>(api, enabled, `fills:${alphaId}:${env}`, loadFor("fills"), pageCursor);
+/**
+ * Orders and fills of one alpha in one book, each with its own keyset `Load more`. Each page is read by `schema_version`
+ * (`subject-records.v1` or `.v2`); the cursor is the Portal's opaque token, passed back unchanged and never parsed. A later page
+ * in another version than the first is refused (a book is read under one contract), not merged.
+ */
+export function useSubjectBook(api: ExecutionApi, alphaId: string, env: ExecEnv, enabled: boolean, workspaceId?: string | null): SubjectBook {
+  const firstVersion = useRef<{ orders: boolean | null; fills: boolean | null }>({ orders: null, fills: null });
+  const scopeKey = workspaceId ? `@${workspaceId}` : "";
+  const loadFor = (relation: "orders" | "fills") => async (scoped: ExecutionApi, after: string | null): Promise<Result<SubjectActivityPage>> => {
+    const result = await scoped.getSubjectActivityVersioned({
+      environment: env, subjectKind: "alpha", subjectId: alphaId, relation, limit: 200, after, ...(workspaceId ? { workspaceId } : {}),
+    });
+    if (!result.ok) return result;
+    const read = result.value;
+    if (read.kind === "unsupported") return { ok: false, status: "unavailable", reason: unsupportedText(read) };
+    const page = read.kind === "v1" ? read.value : scopedPageAsActivity(read.value);
+    const isScoped = read.kind === "v2";
+    if (after === null) firstVersion.current[relation] = isScoped;
+    else if (firstVersion.current[relation] !== null && firstVersion.current[relation] !== isScoped) {
+      return { ok: false, status: "unavailable", reason: "The next page came in another schema version than the first, so it is not added to it." };
+    }
+    return { ok: true, value: page };
+  };
+  const ordersMore = usePagedRead<SubjectActivityPage>(api, enabled, `orders:${alphaId}:${env}${scopeKey}`, loadFor("orders"), pageCursor);
+  const fillsMore = usePagedRead<SubjectActivityPage>(api, enabled, `fills:${alphaId}:${env}${scopeKey}`, loadFor("fills"), pageCursor);
   const orderPages = ordersMore.read.phase === "ready" ? ordersMore.read.value : [];
   const fillPages = fillsMore.read.phase === "ready" ? fillsMore.read.value : [];
   const orders = useMemo(() => readReplayOrders(orderPages.flatMap((p) => p.records.map((r) => r.values))), [orderPages]);
@@ -236,6 +262,7 @@ export function useSubjectBook(api: ExecutionApi, alphaId: string, env: ExecEnv,
     asOfMs: head?.sourceHealth.asOfMs ?? null,
     ordersMore,
     fillsMore,
+    scoped: head !== null && isScopedPage(head),
   };
 }
 

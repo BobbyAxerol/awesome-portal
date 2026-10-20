@@ -113,30 +113,38 @@ export interface DeploymentRow {
   id: string;
   stage: SpineStageId | null;
   stageLabel: string;
-  accountId: string;
+  /** Null only on a SCOPED_V2 row whose body did not state it (the legacy row always carries one). */
+  accountId: string | null;
   portfolio: string | null;
-  venue: string;
+  venue: string | null;
   runtime: { kind: FlagKind; label: string };
-  currency: string;
+  currency: string | null;
   allocation: string | null;
-  netPnl: string;
-  exposure: string;
-  health: string;
+  /** Null on a SCOPED_V2 row: the body states no total and the screen computes none. */
+  netPnl: string | null;
+  exposure: string | null;
+  health: string | null;
   href: string;
   /** Stage order, so the table reads Paper to Live. */
   rank: number;
+  /** The book the row was read from. Set on a SCOPED_V2 row (whose stage within the Live book is not published); a legacy row leaves it to its stage. */
+  env?: ExecEnv;
 }
 
 const STAGE_WORD: Readonly<Record<SpineStageId, string>> = { r1: "R1 gate", r2: "R2 gate", paper: "Paper", sandbox: "Sandbox", canary: "Canary", live: "Live" };
 export const stageWord = (stage: SpineStageId): string => STAGE_WORD[stage];
 
-function runtimeOf(deployment: AlphaFleetDeployment): { kind: FlagKind; label: string } {
-  const state = deployment.state.toUpperCase();
+/** The runtime word of a deployment state; a state the body did not state is `Not published`, never a guess. */
+export function runtimeOfState(word: string | null): { kind: FlagKind; label: string } {
+  if (word === null) return { kind: "unknown", label: "Not published" };
+  const state = word.toUpperCase();
   if (state === "ACTIVE") return { kind: "ok", label: "Running" };
-  if (state === "ENDED" || state === "COMPLETED" || state === "RETIRED") return { kind: "paused", label: humanize(deployment.state) };
-  if (state === "FAILED" || state === "HALTED") return { kind: "attention", label: humanize(deployment.state) };
-  return { kind: "unknown", label: humanize(deployment.state) };
+  if (state === "ENDED" || state === "COMPLETED" || state === "RETIRED") return { kind: "paused", label: humanize(word) };
+  if (state === "FAILED" || state === "HALTED") return { kind: "attention", label: humanize(word) };
+  return { kind: "unknown", label: humanize(word) };
 }
+
+const runtimeOf = (deployment: AlphaFleetDeployment): { kind: FlagKind; label: string } => runtimeOfState(deployment.state);
 
 /** Where a deployment's own workbench lives (V1 routes, kept). */
 export function deploymentHref(stage: SpineStageId | null, id: string): string {
@@ -505,7 +513,8 @@ export function positionRows(rows: readonly Record<string, unknown>[] | undefine
 export interface ReconRow {
   key: string;
   venue: string | null;
-  kind: string;
+  /** Null on a SCOPED_V2 row: the scoped reconciliation relation has no finding type. */
+  kind: string | null;
   status: { kind: FlagKind; label: string };
   resolvedAt: UtcEpochMs | null;
 }

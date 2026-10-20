@@ -7,23 +7,23 @@
  * position PnL, labelled current. No future layout is drawn: an illustration of
  * a number that does not exist yet would read as a number.
  */
-import type { AlphaFleetItem } from "../../../api/profileRead";
 import { Drawer, type DockMode } from "../../Drawer";
 import { Dec } from "./cells";
-import { alphaTitleWithVersion } from "./model";
 import { Np } from "./np";
+import type { AlphaView } from "./view";
 
 const COMPONENTS = ["P (performance)", "R (risk)", "B (robustness)"] as const;
 
 export interface ScoreDrawerProps {
-  item: AlphaFleetItem | null;
+  view: AlphaView | null;
   mode: DockMode;
   onClose: () => void;
 }
 
-export function ScoreDrawer({ item, mode, onClose }: ScoreDrawerProps) {
+export function ScoreDrawer({ view, mode, onClose }: ScoreDrawerProps) {
+  const here = view !== null && view.present ? view : null;
   return (
-    <Drawer title="Score" subtitle={item ? alphaTitleWithVersion(item, item.alphaId) : undefined} mode={mode} onClose={onClose}>
+    <Drawer title="Score" subtitle={here ? here.titleWithVersion : undefined} mode={mode} onClose={onClose}>
       <p className="exec-alp2-line"><Np id="FE-011">Score policy is not set</Np></p>
       <table className="exec-alp2-kv">
         <tbody>
@@ -45,11 +45,13 @@ export function ScoreDrawer({ item, mode, onClose }: ScoreDrawerProps) {
       <h3 className="exec-alp2-drawer-h">Raw economics, current</h3>
       <table className="exec-alp2-kv">
         <tbody>
-          {item && item.positionPnl.length > 0 ? (
-            item.positionPnl.map((p) => (
+          {here && !here.money.published ? (
+            <tr><th scope="row">Net PnL</th><td title={here.money.reason}><Np id="FE-005" /></td></tr>
+          ) : here && here.money.published && here.money.netPnl.length > 0 ? (
+            here.money.netPnl.map((p) => (
               <tr key={p.currency}>
                 <th scope="row">Net PnL, {p.currency}</th>
-                <td><Dec value={p.net} currency={p.currency} signed /></td>
+                <td><Dec value={p.value} currency={p.currency} signed /></td>
               </tr>
             ))
           ) : (

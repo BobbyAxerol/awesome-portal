@@ -185,10 +185,11 @@ describe("Alpha 360 read hooks (alpha/useAlphaReads)", () => {
     const late = defer<Result<unknown>>();
     let first = true;
     const api = {
-      getAlpha360Resource: () => {
+      // The hook reads the resource by `schema_version` (R-3): a legacy v1 envelope answers as a `v1` read.
+      getAlpha360ResourceVersioned: () => {
         if (first) {
           first = false;
-          return Promise.resolve(ok({ objects: { alpha: null } }));
+          return Promise.resolve(ok({ kind: "v1", schemaVersion: null, value: { objects: { alpha: null } } }));
         }
         return late.promise;
       },
@@ -201,7 +202,7 @@ describe("Alpha 360 read hooks (alpha/useAlphaReads)", () => {
     // another subject is another question: it reads, and the late answer of the first never lands
     view.rerender({ id: "a2" });
     await act(async () => {
-      late.resolve(ok({ objects: { alpha: null } }));
+      late.resolve(ok({ kind: "v1", schemaVersion: null, value: { objects: { alpha: null } } }));
       await flush(8);
     });
     expect(view.result.current.phase).toBe("ready");
