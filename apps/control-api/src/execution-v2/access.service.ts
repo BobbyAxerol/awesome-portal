@@ -26,6 +26,8 @@ import { reviewedParentAuditRoot } from "./parent-read-fields";
 import { eligibilityBatchInput, projectEligibilityBatch, eligibilityInput, navigationInput, projectEligibility, projectNavigation,
   selfProjectionPrincipalIds, stepUpPreconditionMet, NAVIGATION_ACTIONS, type RowAction, type SelfEligibilityContext } from "./self-eligibility";
 import { CAPITAL_STEP_UP_ACTIONS, stepUpProofsFor, type StepUpFamily } from "./step-up-family";
+import { projectSelfContext } from "./self-context";
+import { captureSelfContextFacts } from "./self-context.store";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
@@ -169,6 +171,18 @@ export class ExecutionAccessService {
     const context=await this.selfProjectionContext(actor,input.workspace_id,input.environment,closure);
     const expiry=await new AccountLifecycleRepository(this.pool).activeStepUpExpiry(actor.session_id,COMMAND_STEP_UP_PROOFS);
     return projectEligibilityBatch(context,input,{active_until_ms:expiry?expiry.getTime():null});
+  }
+
+  /** FE-057/058/038: the caller's own default workspace (never a guess), self-only entry route and the typed
+   * "no operation" branch for account management. One short read-only snapshot after the exact current-actor fence;
+   * the final clock check against the session lease happens in the pure projection. */
+  async selfContext(actor:AccessActor) {
+    const facts=await withTransaction(this.pool,async db=>{
+      await db.query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY");
+      await db.query("SET LOCAL statement_timeout='5000ms'");
+      return captureSelfContextFacts(db,actor);
+    });
+    return projectSelfContext(facts);
   }
 
   async selfNavigation(actor:AccessActor,input:ReturnType<typeof navigationInput.parse>) {

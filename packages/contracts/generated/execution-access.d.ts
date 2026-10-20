@@ -71,6 +71,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/profile-access/v2/self-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description Current-only self projection; reject unknown query keys, repeated/ambiguous values, subjects, roles, as_of_ms and browser profile/hash tuples. Advisory, never an execution permit. */
+        get: operations["portalScopedAccessSelfContextGetV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/profile-access/v2/preview": {
         parameters: {
             query?: never;
@@ -656,6 +673,300 @@ export interface components {
                 };
                 actions: components["schemas"]["AccessEligibilityBatchRow"][] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
             } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown))[];
+        } & unknown;
+        /**
+         * @description FE-057/058/038. The member's own session context, current-only and advisory: the default workspace (or a typed absence), the self-only entry route and the typed no-operation branch for account management. Takes no query. Cross-field producer invariants (valid_until_ms > observed_at_ms, candidates unique and sorted, one access_basis per ambiguity, self-entry route never under the admin matrix route) are runtime-enforced and stated here. Not a permit, not source readiness; every read and command rechecks current authority.
+         * @example {
+         *       "schema_version": "portal.self-context.v1",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "ALLOWED",
+         *         "route": "/administration/my-access",
+         *         "workspace_scope": "QUERY_workspace_id",
+         *         "reason_class": null,
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "account_operations": [
+         *         {
+         *           "operation": "REVISE_BINDING",
+         *           "scope": "CREDENTIAL_ONLY",
+         *           "target_kind": "BINDING",
+         *           "availability": "NOT_COMMISSIONED",
+         *           "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+         *           "basis": "NONE_PUBLISHED",
+         *           "step_up_required": null
+         *         }
+         *       ],
+         *       "default_workspace": {
+         *         "state": "RESOLVED",
+         *         "workspace_id": "ws_TEST_ONLY_shared",
+         *         "rule": "SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD"
+         *       }
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-context.v1",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "ALLOWED",
+         *         "route": "/administration/my-access",
+         *         "workspace_scope": "QUERY_workspace_id",
+         *         "reason_class": null,
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "account_operations": [
+         *         {
+         *           "operation": "REVISE_BINDING",
+         *           "scope": "CREDENTIAL_ONLY",
+         *           "target_kind": "BINDING",
+         *           "availability": "NOT_COMMISSIONED",
+         *           "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+         *           "basis": "NONE_PUBLISHED",
+         *           "step_up_required": null
+         *         }
+         *       ],
+         *       "default_workspace": {
+         *         "state": "RESOLVED",
+         *         "workspace_id": "ws_TEST_ONLY_personal",
+         *         "rule": "SOLE_MEMBERSHIP"
+         *       }
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-context.v1",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "ALLOWED",
+         *         "route": "/administration/my-access",
+         *         "workspace_scope": "QUERY_workspace_id",
+         *         "reason_class": null,
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "account_operations": [
+         *         {
+         *           "operation": "REVISE_BINDING",
+         *           "scope": "CREDENTIAL_ONLY",
+         *           "target_kind": "BINDING",
+         *           "availability": "NOT_COMMISSIONED",
+         *           "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+         *           "basis": "NONE_PUBLISHED",
+         *           "step_up_required": null
+         *         }
+         *       ],
+         *       "default_workspace": {
+         *         "state": "AMBIGUOUS",
+         *         "candidates": [
+         *           {
+         *             "workspace_id": "ws_TEST_ONLY_a",
+         *             "access_basis": "OWN_CURRENT_GRANT_RECORD"
+         *           },
+         *           {
+         *             "workspace_id": "ws_TEST_ONLY_b",
+         *             "access_basis": "OWN_CURRENT_GRANT_RECORD"
+         *           }
+         *         ]
+         *       }
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-context.v1",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "ALLOWED",
+         *         "route": "/administration/my-access",
+         *         "workspace_scope": "QUERY_workspace_id",
+         *         "reason_class": null,
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "account_operations": [
+         *         {
+         *           "operation": "REVISE_BINDING",
+         *           "scope": "CREDENTIAL_ONLY",
+         *           "target_kind": "BINDING",
+         *           "availability": "NOT_COMMISSIONED",
+         *           "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+         *           "basis": "NONE_PUBLISHED",
+         *           "step_up_required": null
+         *         }
+         *       ],
+         *       "default_workspace": {
+         *         "state": "AMBIGUOUS",
+         *         "candidates": [
+         *           {
+         *             "workspace_id": "ws_TEST_ONLY_a",
+         *             "access_basis": "MEMBER_ONLY"
+         *           },
+         *           {
+         *             "workspace_id": "ws_TEST_ONLY_b",
+         *             "access_basis": "MEMBER_ONLY"
+         *           }
+         *         ]
+         *       }
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-context.v1",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "UNAVAILABLE",
+         *         "route": null,
+         *         "workspace_scope": null,
+         *         "reason_class": "NO_WORKSPACE_MEMBERSHIP",
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "account_operations": [
+         *         {
+         *           "operation": "REVISE_BINDING",
+         *           "scope": "CREDENTIAL_ONLY",
+         *           "target_kind": "BINDING",
+         *           "availability": "NOT_COMMISSIONED",
+         *           "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+         *           "basis": "NONE_PUBLISHED",
+         *           "step_up_required": null
+         *         }
+         *       ],
+         *       "default_workspace": {
+         *         "state": "NONE",
+         *         "reason_class": "NO_WORKSPACE_MEMBERSHIP"
+         *       }
+         *     }
+         * @example {
+         *       "schema_version": "portal.self-context.v1",
+         *       "current_only": true,
+         *       "advisory_only": true,
+         *       "observed_at_ms": 1792094400000,
+         *       "valid_until_ms": 1792094405000,
+         *       "self_entry": {
+         *         "feature": "PROFILE_ACCESS",
+         *         "mode": "SELF_ONLY",
+         *         "permission": "ALLOWED",
+         *         "route": "/administration/my-access",
+         *         "workspace_scope": "QUERY_workspace_id",
+         *         "reason_class": null,
+         *         "consumer_state": "AWAITING_CONSUMER_ROUTER"
+         *       },
+         *       "account_operations": [
+         *         {
+         *           "operation": "REVISE_BINDING",
+         *           "scope": "CREDENTIAL_ONLY",
+         *           "target_kind": "BINDING",
+         *           "availability": "NOT_COMMISSIONED",
+         *           "reason_class": "COMMAND_FAMILY_NOT_COMMISSIONED",
+         *           "basis": "NONE_PUBLISHED",
+         *           "step_up_required": null
+         *         }
+         *       ],
+         *       "default_workspace": {
+         *         "state": "UNAVAILABLE",
+         *         "reason_class": "TOO_MANY_MEMBERSHIPS"
+         *       }
+         *     }
+         */
+        AccessSelfContext: {
+            /** @constant */
+            schema_version: "portal.self-context.v1";
+            /** @constant */
+            current_only: true;
+            /** @constant */
+            advisory_only: true;
+            /** @description Portal evaluation time in UTC epoch milliseconds; not source observation time. */
+            observed_at_ms: number;
+            /** @description End-exclusive ceiling of this actor's current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline. */
+            valid_until_ms: number;
+            /** @description The workspace the server resolves for this member, or a typed absence. Never a choice between several: more than one candidate is AMBIGUOUS (sorted by workspace_id, at most 16; more is UNAVAILABLE, never a first-N). A candidate is a workspace the caller is a CURRENT MEMBER of. OWN_CURRENT_GRANT_RECORD says a stored, unrevoked, in-interval ALLOW record of the caller exists under that workspace's current reviewed policy revision: a hint for choosing a workspace, NOT proof of an effective right (navigation/eligibility for the chosen workspace evaluate the full graph). No peer, role or other-member fact is ever published. */
+            default_workspace: {
+                /** @constant */
+                state: "RESOLVED";
+                /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+                workspace_id: string;
+                /** @enum {unknown} */
+                rule: "SOLE_WORKSPACE_WITH_CURRENT_GRANT_RECORD" | "SOLE_MEMBERSHIP";
+            } | {
+                /** @constant */
+                state: "AMBIGUOUS";
+                candidates: {
+                    /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
+                    workspace_id: string;
+                    /** @enum {unknown} */
+                    access_basis: "OWN_CURRENT_GRANT_RECORD" | "MEMBER_ONLY";
+                }[];
+            } | {
+                /** @constant */
+                state: "NONE";
+                /** @constant */
+                reason_class: "NO_WORKSPACE_MEMBERSHIP";
+            } | {
+                /** @constant */
+                state: "UNAVAILABLE";
+                /** @constant */
+                reason_class: "TOO_MANY_MEMBERSHIPS";
+            };
+            /** @description A self-only presentation for the member's OWN access review, distinct from the owner/admin policy matrix (/administration/profile-access, whose guards are unchanged). It is backed by the existing own effective read only and needs no peer-user selector or administration fetch. AWAITING_CONSUMER_ROUTER: the client must implement this route before navigating to it. */
+            self_entry: {
+                /** @constant */
+                feature: "PROFILE_ACCESS";
+                /** @constant */
+                mode: "SELF_ONLY";
+                /** @constant */
+                permission: "ALLOWED";
+                /** @constant */
+                route: "/administration/my-access";
+                /** @constant */
+                workspace_scope: "QUERY_workspace_id";
+                reason_class: null;
+                /** @constant */
+                consumer_state: "AWAITING_CONSUMER_ROUTER";
+            } | {
+                /** @constant */
+                feature: "PROFILE_ACCESS";
+                /** @constant */
+                mode: "SELF_ONLY";
+                /** @constant */
+                permission: "UNAVAILABLE";
+                route: null;
+                workspace_scope: null;
+                /** @constant */
+                reason_class: "NO_WORKSPACE_MEMBERSHIP";
+                /** @constant */
+                consumer_state: "AWAITING_CONSUMER_ROUTER";
+            };
+            /** @description The account-management mutation is NOT commissioned: the credential rotation behind the "Rotate credential" control is the PM REVISE_BINDING (credential-only) family, for which Portal has no route (binding.change.propose proposes only) and no qualified source. A typed refusal that holds for every member, never a permission; step_up_required is null (not determined, never false). The identifiers are display names, NOT capability names, and a navigation or menu fact never opens this mutation. A temporary client token such as execution.accounts.manage has no server authority and must not gate it. */
+            account_operations: {
+                /** @constant */
+                operation: "REVISE_BINDING";
+                /** @constant */
+                scope: "CREDENTIAL_ONLY";
+                /** @constant */
+                target_kind: "BINDING";
+                /** @constant */
+                availability: "NOT_COMMISSIONED";
+                /** @constant */
+                reason_class: "COMMAND_FAMILY_NOT_COMMISSIONED";
+                /** @constant */
+                basis: "NONE_PUBLISHED";
+                step_up_required: null;
+            }[];
         } & unknown;
         AccessSelfNavigationItem: {
             /** @enum {unknown} */
@@ -1452,6 +1763,97 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccessSelfNavigation"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            400: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            401: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            403: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            404: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            409: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed. */
+            500: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+            /** @description Typed public refusal; current authority is required even for replay. */
+            503: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessProblem"];
+                };
+            };
+        };
+    };
+    portalScopedAccessSelfContextGetV1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private,no-store; Portal application authority, not TS business activation. */
+            200: {
+                headers: {
+                    "Cache-Control": "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessSelfContext"];
                 };
             };
             /** @description Typed public refusal; current authority is required even for replay. */

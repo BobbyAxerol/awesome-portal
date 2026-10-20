@@ -12,6 +12,7 @@ import { STEP_UP_FAMILIES } from "./step-up-family";
 
 type AccessRequest=FastifyRequest&{portalUser:PortalUser;portalSession:{sessionId:string;csrfSecretHash:string}};
 /** `family` defaults to ACCESS_ADMIN (the historical request, byte-compatible); CAPITAL_COMMAND is the capital-delegate path. */
+const selfContextQuery=z.object({}).strict();
 const stepUpBody=z.object({workspace_id:accessText,password:z.string().min(1).max(256),family:z.enum(STEP_UP_FAMILIES).optional()}).strict();
 
 /** Named Portal policy operations only. No public policy-install or TS-acceptance path. */
@@ -53,6 +54,13 @@ export class ExecutionAccessController {
   async eligibilityBatch(@Req()req:AccessRequest,@Query()query:unknown) {
     const input=this.parse(eligibilityBatchQuery,query);
     return this.call(()=>this.service.eligibilityBatch(this.actor(req),input));
+  }
+  /** FE-057/058/038: no query at all. The workspace is an OUTPUT here, so there is no selector to spoof. */
+  @Get("/self-context")
+  @Header("Cache-Control","private, no-store")
+  async selfContext(@Req()req:AccessRequest,@Query()query:unknown) {
+    this.parse(selfContextQuery,query);
+    return this.call(()=>this.service.selfContext(this.actor(req)));
   }
   @Get("/self-navigation")
   @Header("Cache-Control","private, no-store")
