@@ -38,6 +38,20 @@
   flex: none;
   white-space: nowrap;
 }
+.exec-fleet-source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.exec-fleet-typed {
+  width: 150px;
+}
 .exec-fleet-banner {
   display: flex;
   align-items: center;

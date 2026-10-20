@@ -276,30 +276,126 @@ describe("search, owner, health, sort", () => {
     expect((screen.getByRole("searchbox", { name: "Search alpha" }) as HTMLInputElement).value).toBe("momentum");
   });
 
-  it("Owner options come from the loaded page and choosing one asks for it", async () => {
+  it("Owner choices are the rows loaded so far, worded as such, and choosing one asks the server for it", async () => {
     const { api, calls } = makeApi();
     mount(api);
     await loaded();
-    const owner = screen.getByRole("combobox", { name: "Owner" }) as HTMLSelectElement;
-    expect([...owner.options].map((o) => o.text)).toEqual(["Owner: all", "Bobby-001", "Lan-002", "Minh-003"]);
+    const owner = screen.getByRole("combobox", { name: "Owner" }) as HTMLInputElement;
+    // The fleet read publishes no owner list: the suggestions are only what the page shows, and the screen says so.
+    expect(owner.tagName).toBe("INPUT");
+    expect(screen.getByTestId("options-limit").textContent).toContain("Owner and Health choices are the rows loaded so far, not the whole fleet.");
+    expect(owner.title).toContain("not the whole fleet");
+    const suggestions = () => [...(document.getElementById(owner.getAttribute("list") ?? "") as HTMLDataListElement).options].map((o) => o.value);
+    expect(suggestions()).toEqual(["Bobby-001", "Lan-002", "Minh-003"]);
     fireEvent.change(owner, { target: { value: "Lan-002" } });
     await waitFor(() => expect(names()).toEqual(["Basis B"]));
     expect(search().get("owner")).toBe("Lan-002");
     expect(calls.at(-1)!.owner).toBe("Lan-002");
-    // The other owners stay choosable while one is applied.
-    expect([...owner.options].map((o) => o.text)).toContain("Minh-003");
+    // The other owners stay suggested while one is applied.
+    expect(suggestions()).toContain("Minh-003");
+  });
+
+  it("a typed owner that is not among the loaded rows is sent to the server, not refused or filtered here", async () => {
+    const { api, calls } = makeApi();
+    mount(api);
+    await loaded();
+    const owner = screen.getByRole("combobox", { name: "Owner" });
+    fireEvent.change(owner, { target: { value: "Zed-999" } });
+    // typing alone sends nothing: Enter (or leaving the field) is the commit
+    expect(calls.at(-1)!.owner).toBeUndefined();
+    fireEvent.keyDown(owner, { key: "Enter" });
+    await waitFor(() => expect(calls.at(-1)!.owner).toBe("Zed-999"));
+    expect(search().get("owner")).toBe("Zed-999");
+    expect(await screen.findByText("No alphas match these filters.")).toBeTruthy();
+    expect(screen.getByText("owner: Zed-999")).toBeTruthy();
+  });
+
+  it("Escape puts back the committed owner and an empty field clears the filter (keyboard)", async () => {
+    const { api, calls } = makeApi();
+    mount(api, "/execution/fleet?owner=Lan-002");
+    await waitFor(() => expect(names()).toEqual(["Basis B"]));
+    const owner = screen.getByRole("combobox", { name: "Owner" }) as HTMLInputElement;
+    expect(owner.value).toBe("Lan-002");
+    fireEvent.change(owner, { target: { value: "half-typ" } });
+    fireEvent.keyDown(owner, { key: "Escape" });
+    expect(owner.value).toBe("Lan-002");
+    expect(search().get("owner")).toBe("Lan-002");
+    fireEvent.change(owner, { target: { value: "" } });
+    fireEvent.keyDown(owner, { key: "Enter" });
+    await waitFor(() => expect(search().get("owner")).toBeNull());
+    await waitFor(() => expect(calls.at(-1)!.owner).toBeUndefined());
   });
 
   it("Health filters by the published word and shows its label", async () => {
     const { api, calls } = makeApi();
     mount(api);
     await loaded();
-    const health = screen.getByRole("combobox", { name: "Health" }) as HTMLSelectElement;
-    expect([...health.options].map((o) => o.text)).toEqual(["Health: all", "Needs attention", "Ready", "Research only"]);
-    fireEvent.change(health, { target: { value: "ATTENTION" } });
+    const health = screen.getByRole("combobox", { name: "Health" }) as HTMLInputElement;
+    const suggestions = () => [...(document.getElementById(health.getAttribute("list") ?? "") as HTMLDataListElement).options].map((o) => o.value);
+    expect(suggestions()).toEqual(["Needs attention", "Ready", "Research only"]);
+    // a label is a choice: it is sent as the published word
+    fireEvent.change(health, { target: { value: "Needs attention" } });
     await waitFor(() => expect(names()).toEqual(["Momentum C"]));
     expect(calls.at(-1)!.health).toBe("ATTENTION");
     expect(search().get("health")).toBe("ATTENTION");
+    expect(health.value).toBe("Needs attention");
+  });
+
+  describe("130 rows over three pages: the choices never pretend to be the whole fleet", () => {
+    /** 130 alphas, 50 per page; the owner `Zed-129` and the health `FINDING` exist only on the last row (page 3). The server filters. */
+    const wide = (params: URLSearchParams): Answer => {
+      const base = alphaFleet(new URLSearchParams()).body as Record<string, any>;
+      const template = base.page.rows[0];
+      const all = Array.from({ length: 130 }, (_, i) => ({
+        ...template, alpha_id: `alpha_${String(i).padStart(4, "0")}`, alpha_label: `Alpha ${i}`, stage: "PAPER", stages: ["PAPER"],
+        owner: i === 129 ? "Zed-129" : `Owner-${i % 3}`, health: i === 129 ? "FINDING" : "READY",
+      }));
+      const owner = params.get("owner");
+      const health = params.get("health");
+      const hit = all.filter((row) => (owner === null || row.owner === owner) && (health === null || row.health === health));
+      const limit = Number(params.get("limit") ?? 50);
+      const after = params.get("after");
+      const start = after ? hit.findIndex((r) => r.alpha_id === after) + 1 : 0;
+      const rows = hit.slice(start, start + limit);
+      const hasMore = start + limit < hit.length;
+      return {
+        status: 200,
+        body: { ...base, page: { ...base.page, rows, total_count: all.length, filtered_count: hit.length, has_more: hasMore, next_cursor: hasMore ? rows.at(-1)!.alpha_id : null, has_previous: start > 0, prev_cursor: null } },
+      };
+    };
+    const suggestionsOf = (name: string) => {
+      const input = screen.getByRole("combobox", { name }) as HTMLInputElement;
+      return [...(document.getElementById(input.getAttribute("list") ?? "") as HTMLDataListElement).options].map((o) => o.value);
+    };
+
+    it("page 1 offers only the owners it shows and says so; page 3 adds the last one; the missing one can still be typed on page 1", async () => {
+      const { api, calls } = makeApi(wide);
+      mount(api);
+      await loaded();
+      expect(suggestionsOf("Owner")).toEqual(["Owner-0", "Owner-1", "Owner-2"]);
+      expect(screen.getByTestId("options-limit")).toBeTruthy();
+      // the owner on page 3 is not offered yet, but a typed value reaches the whole fleet through the server
+      const owner = screen.getByRole("combobox", { name: "Owner" });
+      fireEvent.change(owner, { target: { value: "Zed-129" } });
+      fireEvent.keyDown(owner, { key: "Enter" });
+      await waitFor(() => expect(calls.at(-1)!.owner).toBe("Zed-129"));
+      await waitFor(() => expect(names()).toEqual(["Alpha 129"]));
+      expect(screen.getByText("1 of 1 alpha, 130 in your scope")).toBeTruthy();
+    });
+
+    it("loading the pages grows the suggestions and the screen still does not call them complete", async () => {
+      const { api } = makeApi(wide);
+      mount(api);
+      await loaded();
+      for (let step = 0; step < 2; step += 1) {
+        fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+        await waitFor(() => expect(names()).toHaveLength(PAGE_LIMIT * (step + 2) > 130 ? 130 : PAGE_LIMIT * (step + 2)));
+      }
+      expect(names()).toHaveLength(130);
+      expect(suggestionsOf("Owner")).toEqual(["Owner-0", "Owner-1", "Owner-2", "Zed-129"]);
+      expect(suggestionsOf("Health")).toEqual(["Finding open", "Ready"]);
+      expect(screen.getByTestId("options-limit")).toBeTruthy();
+    });
   });
 
   it("Sort writes the published sort token and defaults stay out of the URL", async () => {

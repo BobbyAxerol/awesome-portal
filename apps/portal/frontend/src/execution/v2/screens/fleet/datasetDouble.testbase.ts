@@ -56,6 +56,11 @@ export interface DatasetDoubleState {
   population: Record<"paper" | "sandbox" | "live", DoubleAlpha[]>;
   snapshot: string;
   calls: DatasetCall[];
+  /**
+   * Decides the variant of ONE request, at the moment its answer is built (no await in between). Concurrent requests (the rows and the
+   * Owner/Health choices ask together) cannot overwrite each other the way a `before` hook that assigns `variant` does.
+   */
+  variantFor?: (call: DatasetCall) => DatasetVariant;
   /** Awaited before the answer is built: a test holds a request here to prove a late answer is dropped. */
   before?: (call: DatasetCall) => Promise<void> | void;
   /** Edit the body (after the query was applied) to build one-off negative cases. */
@@ -313,6 +318,7 @@ export function wrapDatasetFetch(inner: typeof fetch | null, state: DatasetDoubl
     };
     state.calls.push(call);
     await state.before?.(call);
+    if (state.variantFor) state.variant = state.variantFor(call);
     const answer = datasetAnswer(path, url.searchParams, state);
     return new Response(typeof answer.body === "string" ? answer.body : JSON.stringify(answer.body), { status: answer.status, headers: { "content-type": "application/json" } });
   }) as typeof fetch;
