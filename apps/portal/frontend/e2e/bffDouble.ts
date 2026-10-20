@@ -20,6 +20,8 @@ import type { Page } from "@playwright/test";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { answerAccount } from "./bffDoubleAccount";
 import { answerAlpha } from "./bffDoubleAlpha";
+import { answerGovernance } from "./bffDoubleGovernance";
+import { answerManager } from "./bffDoubleManager";
 import { answerOverview } from "./bffDoubleOverview";
 import { answerPortfolios } from "./bffDoublePortfolios";
 import { answerStage, isStageDeployment, withStageQuality } from "./bffDoubleStage";
@@ -1118,6 +1120,12 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     // The S3 stage screens (Paper workbench, Sandbox, Canary, Live, New request): only their own deployments and writes.
     const stage = answerStage(method, path, seg, search, requestBody);
     if (stage !== null) return stage as Answer;
+  }
+
+  if (options.screensV2) {
+    // The Manager series and Fleet dataset, and the three advisory governance reads: opt-in for the V2 lane, so the V1 stubs keep their 501.
+    const published = answerManager(method, path, search) ?? answerGovernance(method, path, search);
+    if (published !== null) return published as Answer;
   }
 
   if (options.screensV2) {

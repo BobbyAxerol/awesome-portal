@@ -21,12 +21,15 @@
  *  - the session capabilities the specs inline for `GET /api/admin/access/self`, so the screens are
  *    not fail-closed;
  *  - the admin reads (`/api/admin/profile-access/v2/effective`, `/api/admin/accounts`,
- *    `/api/admin/step-up`) from their own doubles;
+ *    `/api/admin/step-up`) from their own doubles, and the four advisory self reads of `bffDoubleSelfAccess.ts`
+ *    (`self-navigation`, `eligibility`, `eligibility/batch`, `self-context`);
  *  - the Run Library list (`GET /api/v1/quantbt/runs`) the New request pickers read;
  *  - the four shell bootstrap reads (`bffDoubleShell.ts`: the fixture identity, the registry, the links and the summary), so a
  *    deployed preview needs no Control API to sign in.
  */
 import { answerAccessEffective, ACCESS_DOUBLE_DEFAULT_USER } from "./bffDoubleAccess";
+import { answerSelfAccess } from "./bffDoubleSelfAccess";
+import { fixtureNowMs } from "./bffScale";
 import { answerUsers } from "./bffDoubleUsers";
 import { answerExecutionBff, type BffDoubleOptions } from "./bffDouble";
 import { answerQuantbtRuns, QUANTBT_RUNS_PATH } from "./bffDoubleStage";
@@ -81,6 +84,13 @@ export const MANAGER_CAPABILITIES: readonly string[] = [
   "execution.operations.read",
   "portal.execution.blotter.read",
 ];
+
+/**
+ * The session ceiling the self reads publish: a year after the fixture clock. The fixture clock (`FIXTURE_NOW_ISO`) is a fixed
+ * instant that is already in the past when a preview is opened, and a read whose ceiling had passed would be refused on arrival;
+ * a year keeps the answer deterministic (the same request answers the same bytes) without being expired.
+ */
+export const SELF_ACCESS_CEILING_MS = 366 * 24 * 60 * 60 * 1000;
 
 export const EXECUTION_PREFIX = "/api/v1/execution";
 export const ACCESS_SELF_ROUTE = "/api/admin/access/self";
@@ -141,6 +151,7 @@ export function answerFixtureRequest(request: BffRequest, options: FixtureAnswer
   if (path.startsWith("/api/admin/")) {
     // The same order the V2 spec uses: the access read first, then the Users reads.
     const answer =
+      answerSelfAccess(method, path, params, { nowMs: fixtureNowMs(), ceilingMs: SELF_ACCESS_CEILING_MS }) ??
       answerAccessEffective(method, path, params, { userId: options.userId }) ??
       answerUsers(method, path, params);
     return answer === null ? null : respond(answer);
