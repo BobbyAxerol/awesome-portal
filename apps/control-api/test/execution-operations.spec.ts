@@ -1102,6 +1102,8 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     expect(counts.rows[0]).toEqual({ events: "1", audits: "1" });
   });
 
+  // Population is setup, not the timed read. Match the sibling 182k governance
+  // fixture's shared-host setup allowance; keep the 2.5s query guard below.
   it("keeps exact counts and bounded pages over the 182k queue design corpus", async () => {
     await ctx.pool.query(
       `INSERT INTO execution_operation_queue_items
@@ -1132,5 +1134,5 @@ describe("EX-BE-05b/F0 execution operations foundation", () => {
     });
     expect(response.json().page.rows).toHaveLength(250);
     expect(performance.now() - started).toBeLessThan(2_500);
-  }, 15_000);
+  }, 60_000);
 });

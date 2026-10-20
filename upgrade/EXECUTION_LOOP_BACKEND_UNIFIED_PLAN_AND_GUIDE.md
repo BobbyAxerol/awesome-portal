@@ -24474,6 +24474,106 @@ The one-shot stdin bridge exit fix also has3minimal AST-tail cases PASS
 transaction was rerun to repair the old reporting failure. These are separate
 controller checks, not3additional native authority/connected acceptance cases.
 
+### Original08 final owned cleanup and explicit owner stop —20Oct04:52UTC
+
+Scope/status: finish the remaining publication/cleanup transaction in original08,
+then stop the persistent goal as Bobby explicitly requested. This does not close
+full08 or narrow the original multi-phase objective. Connected08 remains NOT_MET;
+09connected remains NOT_STARTED. The existing detailed08 guide and finite-source
+closeout above remain authoritative; no new framework, identity issue, source
+activation, peer code/policy edit or production release belongs to this slice.
+
+Publication c6533acc466fd46f2f8b97a972b9b20628de99ac is confirmed on the approved
+feature remote. Its unmodified normal hook physically ended0:130contracts and
+717API PASS, build/PostgreSQL restore/workspace PASS; raw log SHA256
+e68add31eaf84594e1f7edca60d87f4f03d45457404987669bd057aaf4fb2a7c.
+These are regression counts, not717 newly delivered tests; the shared checkout
+contains three preserved peer untracked files, including their native-egress
+tests. Actual native lifecycle qualification remains the separately pinned39cases.
+
+Post-hook cleanup54034 ended0 at04:43:43UTC: removed only the unreferenced owned
+hook image d645453cd7ac7800c3f81b00507ab74bd35eec9125ff57fb2d0d1f72d25a7608.
+Default images91 equal the original set;323shared BuildKit metadata rows retained
+(digest698d5255c7e2370f350c23200eae433d5f5a390be8c32b8d17b5fbd6877c9acc).
+Disk available256548864000→256544841728of518933680128B is shared-host drift,
+not reclaimed-space evidence. All exact test containers/socket28446 are absent.
+No prune, volume/network, operational container, historical row or rollback removal.
+
+Exact scratch cleanup now COMPLETE: independently hash-checked10regular files
+in /tmp/epg10-08-native-lifecycle-rQxjamKL; retained7bounded raw qualification
+logs outside Git in the existing private audit directory, mode0600; removed only
+3disposable helper/append files and the now-empty exact temporary directory.
+An earlier guard stopped before any removal because a source helper contained
+a literal DSN constructor, not credential bytes. All7logs pass DSN/private-key/
+JWT-shaped-value guards; helper cleanup uses the independent exact source hashes,
+not a weakened log guard. Private scratch-cleanup.json digest
+4c2f8c5d9fd82347a42e60ed288508c02f3d98809d77c0b0fa9b48517d778288
+records every file/hash/action. Disk available256027426816→256027418624B;
+again shared drift, not reclaimed-space evidence. No secret or DB history deleted.
+
+Final exact13HK runtime tuples match the frozen baseline (receipt91d55758).
+Our obsolete correctness lease was released after all original jobs physically
+terminated. Workspace rule34b now distinguishes correctness from measurement:
+do not hold an exclusive measurement lock for builds/correctness or while waiting
+on a peer. Further absolute capacity claims still need the selected target and
+proper measurement coordination; no quiet-host or production-capacity PASS follows.
+
+Fresh Core readback: HEAD7818d563,008/009 return230c7c66 and Edge-owned request
+03a5940b unchanged.009 remains NOT_COMPOSED/NOT_CONNECTED. Core owns the reviewed
+current policy/READ grant, separately commissioned STREAM and actual same-Pool/
+coordinator/app composition. Its earlier identity/source prerequisites are now
+fulfilled and retired with evidence, not a reason to repeat identity or replay
+acceptance1. Next connected run needs matched new current-head acceptance/window
+and observer pins after Core preparation, then actual revoke/cache/cursor/SSE.
+
+Parallel file/function review confirms01/06 offline sizing,12stage cells,
+14collector mappings, comparison/observer and proposals already exist. Remaining
+runtime ResourceEnvelope/storage/backlog/collector binding needs the exact accepted
+stage image/config/source/workload composition, not another template or sampler.
+PM73473c91 latest query/correlation preparation is not commissioning; matched
+target/bounds,07authenticated submit/status/held-COMMIT and03publisher fence/
+writer publication are still their exact producer inputs.04/05 and09 bind only
+the corresponding qualified scope;10/11 full connected exits remain open.
+
+BEFORE final handoff: stage only this owned journal, run the normal unchanged
+hook, publish only this feature non-force, remove only a newly created unreferenced
+owned hook image after terminal, return the final source/cleanup pins to Core in
+the existing Edge-owned request and protected bounded return. Preserve CoreHEAD/
+index and all peer files; no second docs-only commit merely to self-reference
+this final commit. Then honor Bobby's explicit goal stop and report PAUSED,
+not COMPLETE. The external integration inputs above remain open in their original
+phases, with no new approval request or invented phase transition.
+
+**Owned verification correction,05:00UTC, BEFORE runner edit:** original final
+hook59719 physically ended1, no commit.130contracts passed; API671PASS/22FAIL/
+24SKIP,2failed suites. Preserve raw111646B log964844141382e8775b5a39550fbbf51d31d3442b97ce2a1eb1f7b1426d12e322.
+The legacy runner had no container limits; our live256MiB PostgreSQL cap was too
+small for its database-on-tmpfs workload and caused observed OOM. Increasing it
+afterward did not turn the failed specimen into PASS. Original Node/PostgreSQL
+jobs and trap cleanup are terminal; do not restart based on an observation timeout.
+
+Correct only verification resource hygiene under workspace34b: explicit CPU/RAM/
+no-swap caps on all five existing contracts/API dependency/test run calls; API
+PostgreSQL auto-remove. Contract/dependency steps2CPU/1536MiB, API Node1.5CPU/
+1536MiB plus PostgreSQL0.5CPU/2048MiB. This is a correctness safety envelope with
+17GiB host MemAvailable observed before selection, not approved production01/06
+budgets or a performance comparison. Keep the unmodified tests/assertions,
+network isolation, identities, restore gates and normal hook; no runtime/DB/auth
+change. Validate bash syntax/diff, retake the full normal hook, preserve original
+failure and exact teardown, then finish the same publication/owner-stop transaction.
+
+**05:09UTC retake97481 terminal1, BEFORE final corrective edit:**130contracts
+PASS; API716PASS/1FAIL/0SKIP. No OOM; the one failure is the182000-row operations
+fixture's15second whole-test deadline (including INSERT), not a failed domain
+assertion. Retain107527B log74bb878f141ad8e810b1988b2bd51fd3f12ae0029bf3992ef1f15e62ee06254d.
+The sibling182000-row governance fixture already allows60seconds for population.
+Use that same bounded setup deadline for operations; preserve its exact2500ms
+timed-query assertion,182000counts,250row page and every existing assertion.
+Give Node and PostgreSQL1CPU each (same2CPU combined); keep1536/2048MiB memory
+caps, no swap and auto-remove. This changes test setup scheduling only, not a
+production SLO, catalogue, authority or route. Bash/diff/normal full hook remains
+mandatory; no skipped tests, source traffic, database policy or operational restart.
+
 
 
 
