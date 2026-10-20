@@ -42,6 +42,8 @@ const FLAGS: Record<string, { dangerous: boolean; why: string }> = {
   // UDB-03 retained-review context: a page is declared retained-static only when every one of these bits reads exactly false.
   stream_enabled: { dangerous: true, why: "an unreadable stream bit must be assumed open, so the page is never declared retained-static on a guess" },
   relay_active: { dangerous: true, why: "an unreadable relay must be assumed open, not shut" },
+  // BE-P13 N16B current primitive (served catalogue): accepted for compatibility, never activated. Only the exact `false` reads as inactive.
+  runtime_active: { dangerous: true, why: "an unreadable activation bit must never read as 'not active'" },
   // `governance.paper-exit.v1` activation_plan. PREVIEW_ONLY by contract; the
   // reader keeps absent as false and the screen prints "none requested" — a
   // plan that DID request one must say so, so the flag is a warning too.
