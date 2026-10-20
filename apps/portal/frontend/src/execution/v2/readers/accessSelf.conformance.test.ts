@@ -23,6 +23,9 @@
  *       E  navigation: every order of the four features (only one is the contract)
  *       F  requests: action count x repeat x unknown x selector -> URL or null
  *       G  "this body answers this request"
+ *       I  `observed_at_ms` / `valid_until_ms` (FE-057): schema as oracle for the scalars, the producer
+ *          invariant `valid_until_ms > observed_at_ms` (stricter than the schema, named), client time x the
+ *          pair -> live / expired (end-exclusive, no grace)
  *     Mapping to the UI: ALLOWED is advice, never an enable; UNAVAILABLE keeps
  *     its published reason; HIDDEN is hidden whatever the read mode says.
  * L2  16 rows of widest-legal text, 2,000 reads of each body, a 70,000
@@ -39,9 +42,9 @@ import { afterAll, describe, expect, it } from "vitest";
 import { ACCESS_RESOURCE_KINDS } from "./accessEffective";
 
 import { canonicalDigest, loadCanonical, loadSchema, schemaEnum } from "../testkit/loadCanonical";
-import { cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, pairwise, type Draft } from "../testkit/matrix";
+import { cartesian, coverage, describeCoverage, dimension, dimensionOf, getPath, labelOf, pairwise, type Draft } from "../testkit/matrix";
 import {
-  arrayCases, enumCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
+  arrayCases, enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases,
 } from "../testkit/negative";
 import { cloneRows, MIB, serializedBytes, timed } from "../testkit/scale";
 import { validateAgainst } from "../testkit/schema";
@@ -63,9 +66,12 @@ import {
   accessSelfNavigationUrl,
   eligibilityAnswers,
   enterableSelfNavFeatures,
+  eligibilityRowNow,
+  enterableSelfNavFeaturesNow,
   navigationAnswers,
   readAccessEligibility,
   readAccessSelfNavigation,
+  selfProjectionExpiry,
   type AccessEligibility,
   type AccessSelfNavigation,
   type EligibilityAction,
@@ -549,6 +555,128 @@ describe("L1 · matrix G · a body answers its own request only", () => {
   });
 });
 
+/* ═════════ L1 · matrix I · observed_at_ms / valid_until_ms (FE-057, Codex 7818d563) ═════════ */
+describe("L1 · matrix I · projection times: the schema as oracle, then the producer invariant", () => {
+  const SAFE = Number.MAX_SAFE_INTEGER;
+  const BODIES: [string, Draft, (raw: unknown) => string[], (raw: unknown) => { observedAtMs: number; validUntilMs: number } | null][] = [
+    ["eligibility", POSITIVE, eligViolations, (raw) => eligOf(raw)],
+    ["navigation", NAV_APP_ONLY, navViolations, (raw) => navOf(raw)],
+  ];
+
+  it("the published schema requires both as integers 0..MAX_SAFE_INTEGER and says what they are not", () => {
+    const schemas = (loadSchema(OPENAPI).components as Draft).schemas;
+    for (const name of ["AccessEligibility", "AccessSelfNavigation"]) {
+      expect(schemas[name].required, name).toEqual(expect.arrayContaining(["observed_at_ms", "valid_until_ms"]));
+      for (const key of ["observed_at_ms", "valid_until_ms"]) {
+        expect(schemas[name].properties[key], `${name}.${key}`).toMatchObject({ type: "integer", minimum: 0, maximum: SAFE });
+      }
+      expect(schemas[name].additionalProperties, name).toBe(false);
+      expect(schemas[name].properties.observed_at_ms.description, name).toContain("not source observation time");
+      expect(schemas[name].properties.valid_until_ms.description, name).toContain("this actor's current session only");
+      expect(schemas[name].properties.valid_until_ms.description, name).toContain("Not a cache TTL");
+      expect(schemas[name].properties.valid_until_ms.description, name).toContain("revoked earlier");
+    }
+  });
+
+  it("every canonical body carries the pair and the reader returns it exactly, with valid_until after observed", () => {
+    for (const c of canonical.cases.filter((x) => x.type === "AccessEligibility" || x.type === "AccessSelfNavigation")) {
+      const read = c.type === "AccessEligibility" ? eligOf(c.value) : navOf(c.value);
+      expect(read, c.case_name).toMatchObject({ observedAtMs: c.value.observed_at_ms, validUntilMs: c.value.valid_until_ms });
+      expect(read!.validUntilMs, c.case_name).toBeGreaterThan(read!.observedAtMs);
+    }
+  });
+
+  const VALUES: unknown[] = [0, 1, 1792094400000, SAFE, SAFE + 1, -1, 0.5, 1e21, "1792094400000", "", null, true, [], {}, Number.NaN, Number.POSITIVE_INFINITY];
+  for (const [label, base, violations, read] of BODIES) {
+    for (const key of ["observed_at_ms", "valid_until_ms"]) {
+      it.each(VALUES.map((v) => [labelOf(v), v] as const))(`${label} ${key} = %s: the reader accepts exactly what the schema accepts, up to the producer invariant`, (_name, value) => {
+        const body = clone(base);
+        body[key] = value;
+        // Keep the pair ordered where the value is itself a legal integer, so that only the scalar rule is under test.
+        if (key === "observed_at_ms" && typeof value === "number" && Number.isSafeInteger(value) && value >= 0) body.valid_until_ms = SAFE;
+        if (key === "valid_until_ms" && typeof value === "number" && Number.isSafeInteger(value) && value >= 0) body.observed_at_ms = 0;
+        const schemaOk = violations(body).length === 0;
+        const readOk = read(body) !== null;
+        const ordered = body.valid_until_ms > body.observed_at_ms;
+        // reader accepts <=> schema valid AND the invariant the schema cannot state holds
+        expect(readOk).toBe(schemaOk && ordered);
+      });
+    }
+  }
+
+  it.each(BODIES.map(([label, base, violations, read]) => [label, base, violations, read] as const))("%s: a ceiling at or before the evaluation clock is schema-valid and refused by the reader", (_label, base, violations, read) => {
+    for (const [observed, until] of [[1792094400000, 1792094400000], [1792094400000, 1792094399999], [SAFE, SAFE], [5, 0]] as const) {
+      const body = clone(base);
+      body.observed_at_ms = observed;
+      body.valid_until_ms = until;
+      expect(violations(body), `${observed}..${until}`).toEqual([]);
+      expect(read(body), `${observed}..${until}`).toBeNull();
+    }
+    // One millisecond of session is a session.
+    const body = clone(base);
+    body.observed_at_ms = 1792094400000;
+    body.valid_until_ms = 1792094400001;
+    expect(violations(body)).toEqual([]);
+    expect(read(body)).toMatchObject({ observedAtMs: 1792094400000, validUntilMs: 1792094400001 });
+  });
+
+  it.each(BODIES.map(([label, base]) => [label, base] as const))("%s: a key beside the pair, or the pair renamed, voids the closed body", (_label, base) => {
+    for (const extra of ["expires_at_ms", "revision", "ttl_ms", "cache_until_ms", "workspace_deadline_ms"]) {
+      const body = clone(base);
+      body[extra] = 1792094405000;
+      const answer = base === POSITIVE ? readAccessEligibility(body) : readAccessSelfNavigation(body);
+      expect(answer, extra).toBeNull();
+    }
+    const renamed = clone(base);
+    renamed.observedAtMs = renamed.observed_at_ms;
+    delete renamed.observed_at_ms;
+    expect(base === POSITIVE ? readAccessEligibility(renamed) : readAccessSelfNavigation(renamed)).toBeNull();
+  });
+
+  // Client time x the pair: expired exactly when now >= valid_until_ms. No grace, no early refusal before observed_at_ms.
+  const OBS = 1792094400000;
+  const UNTIL = 1792094405000;
+  const NOWS: [string, number, "live" | "expired"][] = [
+    ["a year before observed (clock behind): not a published reason to refuse", OBS - 31_536_000_000, "live"],
+    ["one ms before observed", OBS - 1, "live"],
+    ["exactly observed", OBS, "live"],
+    ["one ms before the ceiling", UNTIL - 1, "live"],
+    ["exactly the ceiling (end-exclusive)", UNTIL, "expired"],
+    ["one ms after the ceiling (no grace)", UNTIL + 1, "expired"],
+    ["a second after the ceiling (no skew allowance)", UNTIL + 1000, "expired"],
+    ["MAX_SAFE_INTEGER", SAFE, "expired"],
+    ["NaN", Number.NaN, "expired"],
+    ["Infinity", Number.POSITIVE_INFINITY, "expired"],
+    ["-Infinity", Number.NEGATIVE_INFINITY, "expired"],
+  ];
+  it.each(NOWS)("client time %s", (_name, now, expected) => {
+    const elig = eligOf(POSITIVE)!;
+    const nav = navOf(NAV_APP_ONLY)!;
+    expect(selfProjectionExpiry(elig, now).state).toBe(expected);
+    expect(selfProjectionExpiry(nav, now).state).toBe(expected);
+    const action = elig.actions[0]!.action;
+    const rowNow = eligibilityRowNow(elig, action, now);
+    expect(rowNow.kind).toBe(expected === "live" ? "row" : "expired");
+    // An expired projection never yields the stale ALLOWED row; a live one yields exactly the row the body carried.
+    if (rowNow.kind === "row") expect(rowNow.row).toBe(elig.actions[0]);
+    expect(enterableSelfNavFeaturesNow(nav, now)).toEqual(expected === "live" ? enterableSelfNavFeatures(nav) : []);
+  });
+
+  it("the reason is the published one: the session ceiling, or an unreadable client clock; never a made-up third", () => {
+    const nav = navOf(NAV_APP_ONLY)!;
+    expect(selfProjectionExpiry(nav, UNTIL)).toEqual({ state: "expired", reason: "SESSION_CEILING_PASSED", validUntilMs: UNTIL });
+    expect(selfProjectionExpiry(nav, Number.NaN)).toEqual({ state: "expired", reason: "CLOCK_UNREADABLE", validUntilMs: UNTIL });
+    expect(selfProjectionExpiry(nav, "1792094400000" as unknown as number).state).toBe("expired");
+    expect(selfProjectionExpiry(nav, undefined as unknown as number).state).toBe("expired");
+  });
+
+  it("an absent action stays absent while live, and is expired (not 'not allowed') afterwards", () => {
+    const elig = eligOf(POSITIVE)!;
+    expect(eligibilityRowNow(elig, "audit.read", OBS)).toEqual({ kind: "absent" });
+    expect(eligibilityRowNow(elig, "audit.read", UNTIL).kind).toBe("expired");
+  });
+});
+
 /* ═════════════════════════ L2 ═════════════════════════ */
 describe("L2 · scale", () => {
   it("reads 16 rows of widest-legal text (256-byte selectors, 256-codepoint grant refs) inside the budget", () => {
@@ -637,18 +765,20 @@ const NAV_ENUMS: Case[] = [
   ...enumsOf(NAV_APP_ONLY, ["self_entry", "consumer_state"], ["AWAITING_CONSUMER_ROUTER"]),
 ];
 const ELIG_PATHS: (readonly (string | number)[])[] = [
-  ...["schema_version", "workspace_id", "environment", "resource", "current_only", "advisory_only", "actions"].map((k) => [k] as const),
+  ...["schema_version", "workspace_id", "environment", "resource", "current_only", "advisory_only", "observed_at_ms", "valid_until_ms", "actions"].map((k) => [k] as const),
   ["resource", "kind"], ["resource", "id"],
   ...["action", "permission", "reason_class", "public_copy_key", "grant_ref", "authority_mode", "step_up_required", "step_up_freshness", "challenge_availability", "command_readiness", "family_check"].map((k) => ROWP(k)),
 ];
 const NAV_PATHS: (readonly (string | number)[])[] = [
-  ...["schema_version", "workspace_id", "environment", "current_only", "advisory_only", "current_read_mode", "features", "self_entry"].map((k) => [k] as const),
+  ...["schema_version", "workspace_id", "environment", "current_only", "advisory_only", "observed_at_ms", "valid_until_ms", "current_read_mode", "features", "self_entry"].map((k) => [k] as const),
   ...["feature", "state", "authority_mode", "family_check", "source_readiness", "field_readiness", "command_readiness"].map((k) => ["features", 0, k] as const),
   ...["feature", "mode", "permission", "route", "consumer_state"].map((k) => ["self_entry", k] as const),
 ];
 const ELIG_NEG: Case[] = [
   ...ELIG_ENUMS,
   ...requiredCases(POSITIVE, ELIG_PATHS),
+  ...integerCases(POSITIVE, ["observed_at_ms"]),
+  ...integerCases(POSITIVE, ["valid_until_ms"]),
   ...stringCases(POSITIVE, ["workspace_id"]),
   ...stringCases(POSITIVE, ["resource", "id"]),
   ...stringCases(POSITIVE, [...AT, "grant_ref"]),
@@ -659,6 +789,8 @@ const ELIG_NEG: Case[] = [
 const NAV_NEG: Case[] = [
   ...NAV_ENUMS,
   ...requiredCases(NAV_APP_ONLY, NAV_PATHS),
+  ...integerCases(NAV_APP_ONLY, ["observed_at_ms"]),
+  ...integerCases(NAV_APP_ONLY, ["valid_until_ms"]),
   ...stringCases(NAV_APP_ONLY, ["workspace_id"]),
   ...arrayCases(NAV_APP_ONLY, ["features"], { idKey: "feature" }),
   ...schemaVersionCases(NAV_APP_ONLY, ["schema_version"], ACCESS_SELF_NAVIGATION_SCHEMA, [ACCESS_ELIGIBILITY_SCHEMA, "portal.access-effective.v1", "portal.self-navigation.v2"]),

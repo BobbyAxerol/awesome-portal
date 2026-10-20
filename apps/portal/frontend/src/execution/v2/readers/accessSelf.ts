@@ -25,7 +25,16 @@
  * - `current_read_mode` is Core reader-routing metadata, not a grant;
  *   `SCOPED_CURRENT` is not the `SCOPED_V2` selector;
  * - `self_entry.route` is `null` ("AWAITING_CONSUMER_ROUTER"): the server does
- *   not tell the client where Profile & Access lives.
+ *   not tell the client where Profile & Access lives;
+ * - `observed_at_ms` / `valid_until_ms` (FE-057, Codex 7818d563) are required on
+ *   both bodies. `observed_at_ms` is the Portal evaluation clock, not a source
+ *   observation or a financial freshness fact. `valid_until_ms` is the
+ *   end-exclusive ceiling of THIS actor's captured session only: not a cache TTL,
+ *   not a permission lease, not a readiness guarantee (a grant can be revoked
+ *   before it). The reader therefore uses the pair in one direction only: to
+ *   SHUT. `selfProjectionExpiry` says a projection is expired once the client
+ *   clock reaches `valid_until_ms`; nothing here ever lengthens access, adds a
+ *   grace period or turns the ceiling into "valid until then".
  *
  * Boundary rules (the same as `accessEffective.ts`):
  * - the body is `unknown` until every check passes. One bad row voids the whole
@@ -193,6 +202,10 @@ export interface AccessEligibility {
   resource: { kind: AccessResourceKind; id: string };
   currentOnly: true;
   advisoryOnly: true;
+  /** Portal evaluation time, UTC epoch ms. Not the upstream observation time. */
+  observedAtMs: number;
+  /** End-exclusive ceiling of this actor's session only (UTC epoch ms), `> observedAtMs`. Not a TTL, lease or readiness. */
+  validUntilMs: number;
   /** In the order the server answered; one row per requested action, never repeated. */
   actions: readonly EligibilityRow[];
 }
@@ -230,6 +243,10 @@ export interface AccessSelfNavigation {
   environment: AccessEnvironment;
   currentOnly: true;
   advisoryOnly: true;
+  /** Portal evaluation time, UTC epoch ms. Not the upstream observation time. */
+  observedAtMs: number;
+  /** End-exclusive ceiling of this actor's session only (UTC epoch ms), `> observedAtMs`. Not a TTL, lease or readiness. */
+  validUntilMs: number;
   /** Core reader routing for this workspace. Metadata, not a grant: `SCOPED_CURRENT` is not `SCOPED_V2`. */
   currentReadMode: SelfNavReadMode;
   /** Four items, in `SELF_NAV_FEATURES` order. */
@@ -293,6 +310,25 @@ function opaqueId(value: unknown): string | null {
   return codePoints(value) <= 256 ? value : null;
 }
 
+/**
+ * A projection time (`AccessEligibility` / `AccessSelfNavigation` `observed_at_ms`, `valid_until_ms`): a JSON integer of UTC epoch
+ * milliseconds, 0 to `Number.MAX_SAFE_INTEGER`. A float, a string, a negative, `NaN`, a beyond-safe integer or `null` is refused.
+ */
+function projectionMs(value: unknown): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+/**
+ * Both projection times, or `null`. The schema states the scalar bounds and documents `valid_until_ms > observed_at_ms` as a
+ * PRODUCER invariant without being able to express it; the reader enforces it, because a ceiling that is not after the
+ * evaluation clock is not a session ceiling and nothing may be inferred from it.
+ */
+function projectionTimes(body: Rec): { observedAtMs: number; validUntilMs: number } | null {
+  const observedAtMs = projectionMs(body.observed_at_ms);
+  const validUntilMs = projectionMs(body.valid_until_ms);
+  return observedAtMs === null || validUntilMs === null || validUntilMs <= observedAtMs ? null : { observedAtMs, validUntilMs };
+}
+
 /* ───────────────────────── eligibility reader ───────────────────────── */
 
 const ROW_KEYS = [
@@ -344,15 +380,18 @@ export function readAccessEligibility(raw: unknown): AccessEligibilityRead | nul
   if (root === null) return null;
   const version = typeof root.schema_version === "string" ? root.schema_version : null;
   if (version !== ACCESS_ELIGIBILITY_SCHEMA) return { kind: "unsupported_shape", schemaVersion: version };
-  const body = closed(root, ["schema_version", "workspace_id", "environment", "resource", "current_only", "advisory_only", "actions"]);
+  const body = closed(root, [
+    "schema_version", "workspace_id", "environment", "resource", "current_only", "advisory_only", "observed_at_ms", "valid_until_ms", "actions",
+  ]);
   const resource = closed(body?.resource, ["kind", "id"]);
   if (body === null || resource === null) return null;
   const workspaceId = selectorText(body.workspace_id);
   const environment = oneOf(body.environment, ACCESS_ENVIRONMENTS);
   const kind = oneOf(resource.kind, ACCESS_RESOURCE_KINDS);
   const resourceId = selectorText(resource.id);
+  const times = body === null ? null : projectionTimes(body);
   if (
-    workspaceId === null || environment === null || kind === null || resourceId === null
+    workspaceId === null || environment === null || kind === null || resourceId === null || times === null
     || body.current_only !== true || body.advisory_only !== true
     || !Array.isArray(body.actions) || body.actions.length < 1 || body.actions.length > MAX_ELIGIBILITY_ACTIONS
   ) return null;
@@ -366,7 +405,7 @@ export function readAccessEligibility(raw: unknown): AccessEligibilityRead | nul
   if (new Set(actions.map((row) => row.action)).size !== actions.length) return null;
   return {
     kind: "eligibility",
-    eligibility: { workspaceId, environment, resource: { kind, id: resourceId }, currentOnly: true, advisoryOnly: true, actions },
+    eligibility: { workspaceId, environment, resource: { kind, id: resourceId }, currentOnly: true, advisoryOnly: true, ...times, actions },
   };
 }
 
@@ -406,14 +445,18 @@ export function readAccessSelfNavigation(raw: unknown): AccessSelfNavigationRead
   if (root === null) return null;
   const version = typeof root.schema_version === "string" ? root.schema_version : null;
   if (version !== ACCESS_SELF_NAVIGATION_SCHEMA) return { kind: "unsupported_shape", schemaVersion: version };
-  const body = closed(root, ["schema_version", "workspace_id", "environment", "current_only", "advisory_only", "current_read_mode", "features", "self_entry"]);
+  const body = closed(root, [
+    "schema_version", "workspace_id", "environment", "current_only", "advisory_only", "observed_at_ms", "valid_until_ms",
+    "current_read_mode", "features", "self_entry",
+  ]);
   if (body === null) return null;
+  const times = projectionTimes(body);
   const workspaceId = selectorText(body.workspace_id);
   const environment = oneOf(body.environment, ACCESS_ENVIRONMENTS);
   const currentReadMode = oneOf(body.current_read_mode, SELF_NAV_READ_MODES);
   const entry = closed(body.self_entry, ["feature", "mode", "permission", "route", "consumer_state"]);
   if (
-    workspaceId === null || environment === null || currentReadMode === null || body.current_only !== true || body.advisory_only !== true
+    workspaceId === null || environment === null || currentReadMode === null || times === null || body.current_only !== true || body.advisory_only !== true
     || !Array.isArray(body.features) || body.features.length !== SELF_NAV_FEATURES.length
     || entry === null || entry.feature !== "PROFILE_ACCESS" || entry.mode !== "SELF_ONLY" || entry.permission !== "ALLOWED"
     || entry.route !== null || entry.consumer_state !== "AWAITING_CONSUMER_ROUTER"
@@ -427,7 +470,7 @@ export function readAccessSelfNavigation(raw: unknown): AccessSelfNavigationRead
   return {
     kind: "navigation",
     navigation: {
-      workspaceId, environment, currentOnly: true, advisoryOnly: true, currentReadMode, features,
+      workspaceId, environment, currentOnly: true, advisoryOnly: true, ...times, currentReadMode, features,
       selfEntry: { feature: "PROFILE_ACCESS", mode: "SELF_ONLY", route: null, consumerState: "AWAITING_CONSUMER_ROUTER" },
     },
   };
@@ -506,4 +549,50 @@ export function eligibilityAnswers(eligibility: AccessEligibility, request: Elig
 /** True when the body answers THIS request (same workspace and environment). */
 export function navigationAnswers(navigation: AccessSelfNavigation, request: SelfNavigationRequest): boolean {
   return navigation.workspaceId === request.workspaceId && navigation.environment === request.environment;
+}
+
+/* ───────────────────────── session ceiling (FE-057) ───────────────────────── */
+
+/**
+ * Why a projection is no longer usable. `SESSION_CEILING_PASSED`: the client clock has reached `valid_until_ms`, the end of this
+ * actor's captured session. `CLOCK_UNREADABLE`: the caller could not supply a finite client time, so nothing can be said to be
+ * inside the ceiling. There is no third case: no reason is made up to keep a projection alive.
+ */
+export type SelfProjectionExpiry =
+  | { state: "live" }
+  | { state: "expired"; reason: "SESSION_CEILING_PASSED" | "CLOCK_UNREADABLE"; validUntilMs: number };
+
+/**
+ * Whether a projection may still be read at client time `nowMs` (UTC epoch ms, e.g. `Date.now()`).
+ *
+ * One direction only, FAIL CLOSED: the projection is expired as soon as `nowMs >= valid_until_ms` (the ceiling is end-exclusive),
+ * with no grace, no skew allowance and no "refresh window" of the client's invention. `live` is NOT "the permissions are still
+ * valid": `valid_until_ms` is the end of the session only, a grant can be revoked earlier, and every API behind the projection
+ * rechecks. `observed_at_ms` is deliberately not compared with the client clock: a client behind the Portal clock cannot be told
+ * from a fresh answer, and "too early" is not a published reason to refuse. Pure; never throws.
+ */
+export function selfProjectionExpiry(projection: { validUntilMs: number }, nowMs: number): SelfProjectionExpiry {
+  if (typeof nowMs !== "number" || !Number.isFinite(nowMs)) return { state: "expired", reason: "CLOCK_UNREADABLE", validUntilMs: projection.validUntilMs };
+  return nowMs >= projection.validUntilMs ? { state: "expired", reason: "SESSION_CEILING_PASSED", validUntilMs: projection.validUntilMs } : { state: "live" };
+}
+
+/**
+ * The eligibility row for one action as of `nowMs`. An expired projection answers nothing: the caller gets `expired` for every
+ * action, never the stale `ALLOWED`. `absent` is "the caller did not ask about it", which is not "not allowed".
+ */
+export type EligibilityRowNow =
+  | { kind: "row"; row: EligibilityRow }
+  | { kind: "absent" }
+  | { kind: "expired"; expiry: Extract<SelfProjectionExpiry, { state: "expired" }> };
+
+export function eligibilityRowNow(eligibility: AccessEligibility, action: EligibilityAction, nowMs: number): EligibilityRowNow {
+  const expiry = selfProjectionExpiry(eligibility, nowMs);
+  if (expiry.state === "expired") return { kind: "expired", expiry };
+  const row = eligibilityRow(eligibility, action);
+  return row === undefined ? { kind: "absent" } : { kind: "row", row };
+}
+
+/** The features to list as of `nowMs`: none once the projection is expired. Still only a courtesy filter; the server refuses every route. */
+export function enterableSelfNavFeaturesNow(navigation: AccessSelfNavigation, nowMs: number): readonly SelfNavFeature[] {
+  return selfProjectionExpiry(navigation, nowMs).state === "live" ? enterableSelfNavFeatures(navigation) : [];
 }
