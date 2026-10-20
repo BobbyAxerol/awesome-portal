@@ -116,6 +116,10 @@
   .exec-ov-grid3 {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* Stacked, the list that asks for a decision comes before the chart. */
+  .exec-ov-top > :last-child {
+    order: -1;
+  }
 }
 
 /* capital block */
@@ -242,6 +246,10 @@ a.exec-ov-what-title {
   padding: var(--space-2) var(--space-3);
   font: var(--exec-font-caption);
   color: var(--ink-faint);
+}
+/* A count line under the stage cells sits on the cells' own left edge. */
+.exec-ov-cells ~ .exec-ov-note {
+  padding-left: 0;
 }
 .exec-ov-lines {
   display: inline-flex;

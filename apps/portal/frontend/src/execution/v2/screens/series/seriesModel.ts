@@ -156,6 +156,18 @@ export function seriesCaption(metric: ManagerSeriesMetric, entry: ManagerSeriesD
   ].join(" · ");
 }
 
+/**
+ * What prints under a drawn series: the measure (with the ratio scale it was stated on), the book, and the stated gaps.
+ * Basis, methodology and the exact window are in `seriesCaption`, which the panel puts in the title.
+ */
+export function seriesCaptionShort(metric: ManagerSeriesMetric, entry: ManagerSeriesDescribed): string {
+  return [
+    `${METRIC_WORD[metric]}${entry.currency ? ` in ${entry.currency}` : ratioWord(entry.ratioScale)}`,
+    `${entry.partition.economicDomain.toLowerCase()} book`,
+    ...(entry.gaps.length > 0 ? [`${entry.gaps.length} stated ${entry.gaps.length === 1 ? "gap" : "gaps"}, not filled`] : []),
+  ].join(" · ");
+}
+
 /** The latest point of a series: the exact string and when, or `null` for a series with none. Never derived or defaulted. */
 export function latestPoint(entry: ManagerSeriesDescribed): { exact: string; tsMs: number } | null {
   const last = entry.points[entry.points.length - 1];

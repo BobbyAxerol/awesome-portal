@@ -30,6 +30,8 @@ export {
   notPublishedText,
 } from "./notPublished";
 export type { FeId, GapItem, NotPublishedId, NotPublishedProps, UnpublishedFact } from "./notPublished";
+export { NotAvailableLine, unavailableTitle } from "./NotAvailableLine";
+export type { NotAvailableLineProps, UnavailableFact } from "./NotAvailableLine";
 export { EventFeed } from "./EventFeed";
 export type { EventFeedCursor, EventFeedProps, EventFeedRow } from "./EventFeed";
 export { JourneySpine, SPINE_STAGES, SPINE_STAGE_IDS, spineNodeState } from "./JourneySpine";

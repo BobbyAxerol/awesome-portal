@@ -46,16 +46,15 @@ import { canonicalHref } from "../../../links";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { SseFactory } from "../../../sse";
 import { utcStamp } from "../../../time";
-import { SectionPanel } from "../../blocks";
+import { NotAvailableLine, SectionPanel, type UnavailableFact } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { DivBars } from "../../charts";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { useContextFacts } from "../../shell/contextFacts";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { isInternalPath, useExecUrlState, withContext } from "../../urlState";
 import {
-  FE_CAPITAL, FE_CONTRIBUTORS, FE_DIGEST, FE_MONEY, FE_RESEARCHER, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
+  FE_MONEY, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
   needsAttention, openIncidents, ownRows, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact, type OwnRow,
 } from "./overviewModel";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
@@ -81,14 +80,27 @@ export interface OverviewScreenProps {
   accessHref?: string;
 }
 
-/** `Not published (FE-017)`: the word, then the request ids. Blocks' table does not carry these composites yet. */
+/** `Not published`, the request ids in the tooltip and in hidden text. Blocks' table does not carry these composites yet. */
 function Gap({ ids, children }: { ids: string; children?: string }) {
   return (
-    <span className="exec-blk-np">
-      <span className="exec-blk-np-word">Not published</span> (<span className="exec-ov-nowrap">{ids}</span>){children ? <> {children}</> : null}
+    <span className="exec-blk-np" title={ids}>
+      <span className="exec-blk-np-word">Not published</span>
+      <span className="exec-blk-sr"> ({ids})</span>
+      {children ? <> {children}</> : null}
     </span>
   );
 }
+
+/** Facts the Manager has not published, said once on one line (the ids stay in its title). */
+const NO_WINDOW = "Windowed; needs the window (FE-025)";
+const UNPUBLISHED_FUND: readonly UnavailableFact[] = [
+  { label: "Net PnL", id: "FE-005", why: NO_WINDOW },
+  { label: "Return", id: "FE-006", why: NO_WINDOW },
+  { label: "Drawdown", id: "FE-013", why: "Needs a NAV series (FE-025)" },
+  { label: "Capital", id: "FE-017", why: "Initial, added, returned funds, NAV and budget used" },
+  { label: "Since your last visit", id: "FE-024" },
+  { label: "Contributors", id: "FE-025", why: "Per-alpha contribution over a window" },
+];
 
 /**
  * The NAV cell: the latest point of the fund's published NAV series, exactly as sent, with when it is from and the
@@ -99,17 +111,17 @@ function NavCell({ read, window }: { read: SeriesReadState; window: string }) {
   const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
   const entry = series?.series[0];
   if (series === null || entry === undefined || (entry.state === "UNAVAILABLE" && entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED")) {
-    return <Cell label="NAV" note="Needs a published series"><Gap ids={FE_MONEY} /></Cell>;
+    return <Cell label="NAV"><Gap ids={FE_MONEY} /></Cell>;
   }
   if (entry.state === "UNAVAILABLE") {
-    return <Cell label="NAV" note={`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`}><span className="exec-ov-na">Not available</span></Cell>;
+    return <Cell label="NAV" note={<span title={`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`}>Series unavailable</span>}><span className="exec-ov-na">Not available</span></Cell>;
   }
   if (!isDescribed(entry)) return null;
   const last = latestPoint(entry);
-  if (last === null) return <Cell label="NAV" note={`Methodology ${entry.methodologyRef}, window ${window}`}><span className="exec-ov-na">No points in this window</span></Cell>;
+  if (last === null) return <Cell label="NAV" note={<span title={`Methodology ${entry.methodologyRef}, window ${window}`}>Window {window}</span>}><span className="exec-ov-na">No points in this window</span></Cell>;
   const shown = seriesValueText(entry, last.exact);
   return (
-    <Cell label="NAV" note={`Latest published point, ${utcStamp(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>
+    <Cell label="NAV" note={<span title={`Latest published point, ${utcStamp(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>As of {utcStamp(last.tsMs)}</span>}>
       <span className="exec-ov-num" title={last.exact}>{shown}</span>
     </Cell>
   );
@@ -232,6 +244,9 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const incidents = openIncidents(needs);
   const attention = needsAttention(needs);
   const flag = STATE_FLAG[mode]!;
+  const streamNote = fundWide && live === null
+    ? (gate.allowed ? `${reads.stream.reason} Not connected; values are as read.` : "No live stream is published for this profile. Values are as read; Refresh re-reads them.")
+    : null;
   const fresh = freshnessFlag(needs?.freshness ?? null);
   const operations = reads.operations.phase === "ready" ? reads.operations.value : null;
   const unacknowledged = operations !== null && operations !== "unsupported" ? operations.page.filteredCount : null;
@@ -261,35 +276,63 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
     { key: "pnl", label: "Open-position PnL, net", numeric: true, render: (r) => <MoneyCell value={r.netPositionPnl} signed /> },
   ];
 
+  const needsPanel = (
+    <SectionPanel title="Needs attention" aside={needs ? `${needs.counts.limit !== null ? `top ${needs.counts.limit}, ` : ""}${attention.text ?? "not counted"}` : undefined} flush>
+    {needs === null || needs.state === "unavailable" ? (
+      <PanelState status="unavailable" reason={needs?.state === "unavailable" ? "The triage sources did not answer." : "The snapshot carries no triage panel."} />
+    ) : mode === "quiet" || (triage.length === 0 && needs.state === "empty") ? (
+      <div className="exec-ov-quiet">
+        <p className="exec-ov-what-title">Nothing needs you.</p>
+        <p className="exec-ov-sub">Quiet as of {snapshot?.readAt ? utcStamp(snapshot.readAt) : "a time the server did not publish"}</p>
+      </div>
+    ) : (
+      <>
+        {needs.state === "partial" || needs.state === "stale" ? <p className="exec-ov-banner" role="status"><Flag kind={needs.state === "stale" ? "stale" : "partial"} label={needs.state === "stale" ? "Stale" : "Partial"} size="sm" /> <span title="Some triage sources did not answer">The list may be missing items</span></p> : null}
+        <ol className="exec-ov-items" aria-label="Ranked triage list">
+          {triage.map((r) => (
+            <li key={r.id} className="exec-ov-item" data-sla={r.slaState ?? undefined}>
+              <div className="exec-ov-item-t">
+                <span className="exec-ov-item-what">
+                  <span className="exec-ov-item-rank" title={r.rank === null ? "Not ranked" : `Rank ${r.rank}`}>{r.rank === null ? "Not ranked" : r.rank}</span>
+                  {r.kind ? <Flag kind={KIND_FLAG[r.kind].kind} label={KIND_FLAG[r.kind].label} size="sm" /> : <Flag kind="unknown" label="Kind not stated" size="sm" />}
+                  <span className="exec-ov-what-title">{r.title}</span>
+                </span>
+                {r.href ? (serverTo(r.href) !== null ? <Link className="exec-ov-link" to={serverTo(r.href)!}>{r.actionLabel}</Link> : <span className="exec-ov-na" title={NOT_AN_APP_LINK}>No link published</span>) : <span className="exec-ov-na" title="The owning screen for this item was not published">No link published</span>}
+              </div>
+              {r.summary ? <div className="exec-ov-sub">{r.summary}</div> : null}
+              <div className="exec-ov-sub exec-ov-item-sla" title={r.sla}>{r.slaShort}</div>
+            </li>
+          ))}
+        </ol>
+        {needs.counts.truncated !== false ? <p className="exec-ov-note"><Link className="exec-ov-link" to={ctx("/execution/operations")} title={`${attention.text ?? "More"} in total; the rest are ranked behind these`}>All in Operations</Link></p> : null}
+      </>
+    )}
+  </SectionPanel>
+  );
+
   return (
     <div className="exec-ov-v2" data-screen="overview-v2">
       <header className="exec-ov-head">
         <div>
           <h1 className="exec-ov-title">{snapshot?.actorName && fundWide ? `Overview, ${snapshot.actorName}` : heading}</h1>
-          <p className="exec-ov-subhead">
-            {fundWide ? "Fund, current facts. Windowed figures are " : "Your slice only. Windowed figures are "}
-            <Gap ids="FE-025" />.
-          </p>
         </div>
         <div className="exec-ov-chips">
           {fundWide ? <Flag kind={flag.kind} label={mode === "busy" ? `Busy, ${needs?.items.length ?? 0} ranked` : flag.label} size="sm" /> : null}
-          {fundWide ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
-          <span className="exec-ov-meta">{composition?.readAt ? `Read ${utcStamp(composition.readAt)}` : "Read time not published"}</span>
+          {fundWide && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          <span className="exec-ov-meta" title={streamNote ?? undefined}>{composition?.readAt ? `Read ${utcStamp(composition.readAt)}` : "Read time not published"}{streamNote ? " · Not live" : ""}</span>
           <button type="button" className="exec-ov-btn" onClick={refresh}>Refresh</button>
         </div>
       </header>
 
-      {fundWide ? (
-        <p className="exec-ov-stream" role="status" data-stream={live ? live.phase : "off"} data-tone={live ? streamSentence(live).tone : undefined}>
-          {live === null
-            ? (gate.allowed ? `${reads.stream.reason} Not connected; values are as read.` : "No live stream is published for this profile. Values are as read; Refresh re-reads them.")
-            : streamSentence(live).text}
+      {fundWide && live !== null ? (
+        <p className="exec-ov-stream" role="status" data-stream={live.phase} data-tone={streamSentence(live).tone}>
+          {streamSentence(live).text}
         </p>
       ) : null}
 
-      {stale ? <div className="exec-ov-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span>The last refresh failed ({stale}). These are the values from the last good read.</span></div> : null}
+      {stale ? <div className="exec-ov-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span title={`The last refresh failed (${stale}).`}>Showing the last good read</span></div> : null}
       {fundWide && composition && composition.sourceHealth.profiles.some((p) => (p.state ?? "").toUpperCase() !== "AVAILABLE") ? (
-        <div className="exec-ov-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>Some sources are partial; figures may be incomplete. See Source health below.</span></div>
+        <div className="exec-ov-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span title="See Source health below">Some figures may be incomplete</span></div>
       ) : null}
       {snapshot && snapshot.warnings.length > 0 ? (
         <ul className="exec-ov-warnings" role="status">
@@ -299,35 +342,26 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
 
       {fundWide ? (
         <>
-          <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 6 } as CSSProperties}>
+          <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 3 } as CSSProperties}>
             <NavCell read={nav} window={url.value.window} />
-            <Cell label="Net PnL" note="Windowed"><Gap ids={FE_MONEY} /></Cell>
-            <Cell label="Return" note="Windowed"><Gap ids={FE_MONEY} /></Cell>
-            <Cell label="Drawdown" note="Needs a NAV series"><Gap ids={FE_MONEY} /></Cell>
-            <Cell label="Open incidents" note={<>Incidents in the ranked list, <Link className="exec-ov-link" to={ctx("/execution/operations")}>Operations</Link></>}>
+            <Cell label="Open incidents" note={<Link className="exec-ov-link" to={ctx("/execution/operations")} title="Incidents in the ranked list">Operations</Link>}>
               {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : incidents.value}</span>}
             </Cell>
             <Cell
               label="Needs attention"
-              note={reads.operations.phase === "loading" ? "Operations awaiting acknowledgement: reading" : unacknowledged === null ? "Operations awaiting acknowledgement: not available" : <>Operations awaiting acknowledgement: <b className="exec-ov-num">{unacknowledged}</b></>}
+              note={reads.operations.phase === "loading" ? "Awaiting acknowledgement: reading" : unacknowledged === null ? "Awaiting acknowledgement: not available" : <>Awaiting acknowledgement: <b className="exec-ov-num">{unacknowledged}</b></>}
             >
               {attention.text === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{attention.text}</span>}
             </Cell>
           </dl>
 
-          <div className="exec-ov-grid2">
-            <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />} aside={<>Window: <Gap ids="FE-025" /></>}>
+          <NotAvailableLine facts={UNPUBLISHED_FUND} className="exec-ov-na-line" />
+
+          <div className="exec-ov-grid2 exec-ov-top">
+            <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />}>
               <ManagerSeriesPanel label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`} read={metric === "NAV" ? nav : measureRead} gapCopy={`Not published (${FE_MONEY})`} />
             </SectionPanel>
-            <SectionPanel title="Capital" aside="Real-funded">
-              <table className="exec-ov-cap" aria-label="Capital">
-                <tbody>
-                  {["Initial funds", "Added funds", "Returned", "NAV", "Budget used"].map((row) => (
-                    <tr key={row}><th scope="row">{row}</th><td><Gap ids={FE_CAPITAL} /></td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </SectionPanel>
+            {needsPanel}
           </div>
         </>
       ) : (
@@ -335,14 +369,13 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
           <Cell label="Alphas" note="In your slice">
             {fleet ? <span className="exec-ov-kpi">{fleet.summary ? fleet.summary.alphaCount : fleet.totalCount}</span> : <span className="exec-ov-na">Not available</span>}
           </Cell>
-          <Cell label="Allocation" note="Current, per currency below">
+          <Cell label="Allocation" note="Current">
             {facts.length === 0 ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{facts.length} {facts.length === 1 ? "currency" : "currencies"}</span>}
           </Cell>
-          <Cell label="Net PnL" note="Windowed"><Gap ids="FE-025" /></Cell>
         </dl>
       )}
 
-      <SectionPanel title="Current by currency" aside="Current facts, not a window. Never added across currencies" flush>
+      <SectionPanel title="Current by currency" flush>
         {reads.fleet.phase === "loading" ? (
           <PanelSkeleton label="Loading the fleet register" />
         ) : reads.fleet.phase === "error" ? (
@@ -354,53 +387,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
         )}
       </SectionPanel>
 
-      {fundWide ? (
-        <div className="exec-ov-grid3">
-          <SectionPanel title="Needs attention" aside={needs ? `${needs.counts.limit !== null ? `top ${needs.counts.limit}, ` : ""}${attention.text ?? "not counted"}` : undefined} flush>
-            {needs === null || needs.state === "unavailable" ? (
-              <PanelState status="unavailable" reason={needs?.state === "unavailable" ? "The triage sources did not answer." : "The snapshot carries no triage panel."} />
-            ) : mode === "quiet" || (triage.length === 0 && needs.state === "empty") ? (
-              <div className="exec-ov-quiet">
-                <p className="exec-ov-what-title">Nothing needs you.</p>
-                <p className="exec-ov-sub">Quiet as of {snapshot?.readAt ? utcStamp(snapshot.readAt) : "a time the server did not publish"}. Pending work owned by others stays in its queues.</p>
-              </div>
-            ) : (
-              <>
-                {needs.state === "partial" || needs.state === "stale" ? <p className="exec-ov-banner" role="status"><Flag kind={needs.state === "stale" ? "stale" : "partial"} label={needs.state === "stale" ? "Stale" : "Partial"} size="sm" /> Some triage sources did not answer; the list may be missing items.</p> : null}
-                <ol className="exec-ov-items" aria-label="Ranked triage list">
-                  {triage.map((r) => (
-                    <li key={r.id} className="exec-ov-item" data-sla={r.slaState ?? undefined}>
-                      <div className="exec-ov-item-t">
-                        <span className="exec-ov-item-what">
-                          <span className="exec-ov-item-rank" title={r.rank === null ? "Not ranked" : `Rank ${r.rank}`}>{r.rank === null ? "Not ranked" : r.rank}</span>
-                          {r.kind ? <Flag kind={KIND_FLAG[r.kind].kind} label={KIND_FLAG[r.kind].label} size="sm" /> : <Flag kind="unknown" label="Kind not stated" size="sm" />}
-                          <span className="exec-ov-what-title">{r.title}</span>
-                        </span>
-                        {r.href ? (serverTo(r.href) !== null ? <Link className="exec-ov-link" to={serverTo(r.href)!}>{r.actionLabel}</Link> : <span className="exec-ov-na" title={NOT_AN_APP_LINK}>No link published</span>) : <span className="exec-ov-na" title="The owning screen for this item was not published">No link published</span>}
-                      </div>
-                      {r.summary ? <div className="exec-ov-sub">{r.summary}</div> : null}
-                      <div className="exec-ov-sub exec-ov-item-sla" title={r.sla}>{r.slaShort}</div>
-                    </li>
-                  ))}
-                </ol>
-                {needs.counts.truncated !== false ? <p className="exec-ov-note">{attention.text ?? "More"} in total; the rest are ranked behind these and open in Operations.</p> : null}
-              </>
-            )}
-          </SectionPanel>
-
-          <SectionPanel title="Since your last visit" aside={<Gap ids={FE_DIGEST} />}>
-            <p className="exec-ov-na">The digest of incidents, decisions, operations, partial sources and stage moves since you last looked is not published, and none is inferred from the lists on this page.</p>
-          </SectionPanel>
-
-          <SectionPanel title="Contributors" aside={<Gap ids={FE_CONTRIBUTORS} />}>
-            <DivBars
-              label="Contributors"
-              rows={[]}
-              state={{ kind: "unavailable", copy: `Not published (${FE_CONTRIBUTORS})`, reason: "Per-alpha contribution over a window is not published." }}
-            />
-          </SectionPanel>
-        </div>
-      ) : (
+      {fundWide ? null : (
         <SectionPanel
           title="Alphas in your slice"
           aside={<>{fleet ? `${own.length} of ${fleet.totalCount} ` : null}<Link className="exec-ov-link" to={ctx("/deployments/alphas")}>Alpha Fleet</Link></>}
@@ -409,7 +396,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
           {reads.fleet.phase === "ready" ? (
             <>
               <CardsTable columns={ownColumns} rows={own} rowKey={(r) => r.alphaId} label="Your alphas" empty={<PanelState status="empty" reason="No alpha is in your slice." />} />
-              <p className="exec-ov-note">What a researcher may see is not decided (<Gap ids={FE_RESEARCHER} />); nothing beyond the server's own scoping is applied here.</p>
+              <NotAvailableLine facts={[UNPUBLISHED_FUND[0]!, { label: "Researcher field policy", id: "FE-026", why: "Undecided; only the server's own scoping applies" }]} className="exec-ov-na-line" />
             </>
           ) : reads.fleet.phase === "loading" ? <PanelSkeleton label="Loading your alphas" /> : <PanelState status={reads.fleet.status} reason={reads.fleet.reason} actions={deniedActions(reads.fleet.status, accessHref, ctx)} />}
         </SectionPanel>
@@ -417,14 +404,14 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
 
       {fundWide ? (
         <div className="exec-ov-grid2">
-          <SectionPanel title="Fleet by stage" aside={stages.length > 0 ? "An alpha in two stages is counted in each" : undefined}>
+          <SectionPanel title="Fleet by stage">
             {stages.length === 0 && cells.length === 0 && issues.length === 0 ? (
               <PanelState status={snapshot?.fleet?.state === "unavailable" ? "unavailable" : "empty"} reason="No stage counts are published." />
             ) : (
               <>
                 {stages.length > 0 ? (
                   <>
-                    <p className="exec-ov-cells-cap" id="exec-ov-cap-alphas">Alphas by stage <span className="exec-ov-cells-unit">(count of alphas, from the Fleet summary)</span></p>
+                    <p className="exec-ov-cells-cap" id="exec-ov-cap-alphas" title="Count of alphas, from the Fleet summary. An alpha in two stages is counted in each. Alphas and deployments are different units from different reads, so the rows are not expected to match.">Alphas by stage</p>
                     <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-alphas">
                       {stages.map((s) => <li key={s.stage}><span className="exec-ov-cell-label">{s.label}</span>{s.count === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{s.count}</span>}</li>)}
                     </ul>
@@ -432,7 +419,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
                 ) : null}
                 {cells.length > 0 ? (
                   <>
-                    <p className="exec-ov-cells-cap" id="exec-ov-cap-deployments">Deployments by state <span className="exec-ov-cells-unit">(count of deployments, from the Command Centre snapshot)</span></p>
+                    <p className="exec-ov-cells-cap" id="exec-ov-cap-deployments" title="Count of deployments, from the Command Centre snapshot. One alpha can have several deployments.">Deployments by state</p>
                     <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-deployments">
                       {cells.map((c) => (
                         <li key={c.label}>
@@ -445,7 +432,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
                 ) : null}
                 {issues.length > 0 ? (
                   <>
-                    <p className="exec-ov-cells-cap" id="exec-ov-cap-issues">Open issues <span className="exec-ov-cells-unit">(not deployments)</span></p>
+                    <p className="exec-ov-cells-cap" id="exec-ov-cap-issues" title="Issues, not deployments">Open issues</p>
                     <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-issues">
                       {issues.map((c) => (
                         <li key={c.label}>
@@ -456,12 +443,11 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
                     </ul>
                   </>
                 ) : null}
-                {stages.length > 0 && cells.length > 0 ? <p className="exec-ov-note">Alphas and deployments are different units from different reads; one alpha can have several deployments, so the rows are not expected to match.</p> : null}
-                {snapshot?.fleet ? <p className="exec-ov-note">Deployments: {snapshot.fleet.totalDeployments === null ? "not counted" : `${snapshot.fleet.exactTotal ? "" : "~"}${snapshot.fleet.totalDeployments}`}. Counts only; amounts live on the 360 screens.</p> : null}
+                {snapshot?.fleet ? <p className="exec-ov-note" title="Counts only; amounts live on the 360 screens">Deployments: {snapshot.fleet.totalDeployments === null ? "not counted" : `${snapshot.fleet.exactTotal ? "" : "~"}${snapshot.fleet.totalDeployments}`}</p> : null}
               </>
             )}
           </SectionPanel>
-          <SectionPanel title="Today" aside={snapshot?.today ? snapshot.today.state : undefined}>
+          <SectionPanel title="Today" aside={snapshot?.today && snapshot.today.state !== "ok" ? snapshot.today.state : undefined}>
             {today.length === 0 ? (
               <p className="exec-ov-na">{snapshot?.today ? "Nothing is scheduled for today." : "No schedule was published."}</p>
             ) : (
@@ -479,15 +465,15 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
       ) : null}
 
       {fundWide && composition ? (
-        <SectionPanel title="Source health" aside="Per profile">
+        <SectionPanel title="Source health">
           {composition.sourceHealth.profiles.length === 0 ? (
-            <p className="exec-ov-na">The source-health envelope published no profile.</p>
+            <p className="exec-ov-na">No profile published</p>
           ) : (
             <ul className="exec-ov-list" aria-label="Source health by profile">
               {composition.sourceHealth.profiles.map((p) => (
                 <li key={p.profile}>
                   <Flag kind={(p.state ?? "").toUpperCase() === "AVAILABLE" ? "ok" : (p.state ?? "").toUpperCase() === "PARTIAL" ? "partial" : "unknown"} label={p.state ? humanize(p.state) : "State not stated"} size="sm" />{" "}
-                  {humanize(p.profile)}{p.reasonCode ? <span className="exec-ov-sub"> {p.reasonCode}</span> : null}
+                  <span title={p.reasonCode ?? undefined}>{humanize(p.profile)}</span>
                 </li>
               ))}
             </ul>

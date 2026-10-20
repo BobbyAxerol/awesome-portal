@@ -633,3 +633,11 @@ button.exec-blk-spine-btn:hover {
   background: var(--paper-sunken);
   border: 1px dotted var(--line-strong);
 }
+
+/* One "Not available: A, B" line per panel or screen (NotAvailableLine). */
+.exec-blk-nal {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
