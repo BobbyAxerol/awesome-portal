@@ -62,6 +62,7 @@ import {
   PENDING_CONTROL_PREVIEW_PATH, pendingControlWords, previewAnswers, readPendingControlPreviewV1, readPendingControlProblemV1,
 } from "../v2/readers/pendingControlPreview";
 import { readStageActionEligibilityV1, stageActionEligibilityUrl } from "../v2/readers/stageActionEligibility";
+import { paperExitParentAnswers, paperExitParentUrl, readPaperExitParentV1 } from "../v2/readers/paperExitParent";
 import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
 import { ACCESS_SELF_CONTEXT_PATH, readAccessSelfContext } from "../v2/readers/accessSelfContext";
 import { ACCESS_STEP_UP_PATH, accessStepUpAnswers, accessStepUpBody, readAccessStepUp } from "../v2/readers/accessStepUp";
@@ -1121,6 +1122,16 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       const url = stageActionEligibilityUrl(workspaceId);
       if (url === null) return unavailable("The stage action eligibility query is not one the Portal accepts.");
       return readGet(url.slice(BASE.length), readStageActionEligibilityV1, "The stage action eligibility");
+    },
+
+    async getPaperExitParent(query) {
+      const url = paperExitParentUrl(query);
+      if (url === null) return unavailable("The Paper exit parent query is not one the Portal accepts.");
+      const result = await readGet(url.slice(BASE.length), readPaperExitParentV1, "The R2 parent");
+      if (result.ok && result.value.kind === "paper_exit_parent" && !paperExitParentAnswers(result.value.parent, query)) {
+        return unavailable("The R2 parent answered another deployment or workspace than the one asked, so it is not shown.");
+      }
+      return result;
     },
 
     async getSelfEligibilityBatch(request) {

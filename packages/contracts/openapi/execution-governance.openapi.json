@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Portal Execution Governance Review API",
-    "version": "1.6.0",
+    "version": "1.7.0",
     "description": "Same-origin, session-guarded Portal governance boundaries for R1/R2 review, immutable approval history, R1 request creation, conditions/waivers, Paper Exit and source-dark Sandbox Certification. No endpoint in this slice commands the Trading System."
   },
   "servers": [
@@ -1412,6 +1412,49 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApprovalRequestLookup"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/Problem"
+          }
+        }
+      }
+    },
+    "/api/v1/execution/governance/paper-exit/parent": {
+      "get": {
+        "operationId": "executionPaperExitParentV1",
+        "description": "RV-10. The R2 parent of a deployment as the PAPER_EXIT_CREATE capture context the Paper exit request is bound to; see PaperExitParent.",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/WorkspaceId"
+          },
+          {
+            "name": "deployment_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Private, no-store.",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaperExitParent"
                 }
               }
             }
@@ -2872,6 +2915,89 @@
           }
         ],
         "description": "FE-069. Read-only answer to \"what would replaying this request_key do?\" for the CALLER'S OWN requests (keyed by requester: another actor's request under the same key is indistinguishable from NONE). NONE: a replay would create. FOUND: result is exactly the governance.approval-create.v1 body a replay returns (replayed=true). KEY_PAYLOAD_CONFLICT: only when all four payload fields were supplied and differ from the stored request; a replay would answer 409 REQUEST_KEY_PAYLOAD_CONFLICT and no approval body. Without payload fields the stored payload is NOT compared (payload_check NOT_COMPARED): FOUND then only says a request exists under this key. Same authority as the replay it mirrors (current session + workspace membership, no gate capability). Writes nothing."
+      },
+      "PaperExitParent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "record_authority",
+          "workspace_id",
+          "deployment_id",
+          "state",
+          "capture_context",
+          "source_side_effect_requested"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "governance.paper-exit-parent.v1"
+          },
+          "record_authority": {
+            "const": "PORTAL"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 96
+          },
+          "deployment_id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9._:-]{1,192}$"
+          },
+          "state": {
+            "enum": [
+              "NONE",
+              "FOUND"
+            ]
+          },
+          "capture_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaptureContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_side_effect_requested": {
+            "const": false
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "FOUND"
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "capture_context": {
+                  "type": "object",
+                  "properties": {
+                    "action": {
+                      "const": "PAPER_EXIT_CREATE"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "capture_context": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ],
+        "description": "RV-10. The R2 parent of one deployment, as the SAME CaptureContext the R2 review publishes for the PAPER_EXIT_CREATE capture (parent approval id and version, Paper projection digest, the accepted deployment choice): the pins POST /governance/paper-exit/create is bound to. The R2 is the approval whose subject is the deployment: the newest approved and unexpired one, else the newest of any status (its context is then BLOCKED with the reason, e.g. R2_APPROVAL_REQUIRED or APPROVAL_EXPIRED). NONE: the deployment has no R2 and capture_context is null. FOUND: capture_context is for this workspace, is a PAPER_EXIT_CREATE context and lists only this deployment; a BLOCKED context carries no digest and no candidates. Authority is the R2 review read (governance.r2.read) plus exact session and workspace membership; the ADMIN role and the capture checks are the context's own typed availability. Grants nothing, writes nothing, calls no source; the route rechecks everything at submit."
       }
     }
   }

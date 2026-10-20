@@ -13,6 +13,7 @@ import { readCaptureContext } from "../../../api/governanceContext";
 import type { ExecutionApi, Result } from "../../../api/ports";
 import { REVIEW_CAPTURE_OUTCOME_UNKNOWN, type ReviewCapture } from "../../../api/reviewCapture";
 import { readGovernanceParentByKind } from "../../readers/dispatch";
+import { readPaperExitParentV1, type PaperExitParentQuery, type PaperExitParentRead } from "../../readers/paperExitParent";
 import { ExitGatePanel } from "./ExitGatePanel";
 import { ExitReviewRequest } from "./ExitReviewRequest";
 import { R2_PARENT_GAP, bindExitReview, checkCapture, exitFingerprint, exitStatusOf, summaryBlock, type ExitBind, type ExitReviewBinding } from "./exitReviewRequest";
@@ -486,3 +487,170 @@ describe("in the exit gate panel", () => {
   });
 });
 
+/* ── the R2 parent of the deployment, read for the control (RV-10 follow-up) ─ */
+
+describe("in the exit gate panel, bound to the R2 parent the Portal publishes for this deployment", () => {
+  const gate: GateFacts = { verdict: "met", observedDays: 30, minimumDays: 30, trades: 120, minimumTrades: 100, policy: "paper-exit.v1", windowBounded: false, reasonCode: null } as unknown as GateFacts;
+  const PUBLISHED = json("governance-requester-reads.synthetic.valid.json").paper_exit_parent;
+  /** A published body, turned to answer THIS workspace and deployment (the double does the same for the request asked). */
+  function parentBody(name: string, over: (body: any) => void = () => undefined): any {
+    const body = structuredClone(PUBLISHED[name]);
+    body.workspace_id = WS;
+    body.deployment_id = DEP;
+    if (body.capture_context !== null) {
+      body.capture_context.workspace_id = WS;
+      for (const candidate of body.capture_context.candidates) candidate.deployment_id = DEP;
+    }
+    over(body);
+    return body;
+  }
+  const answer = (body: unknown): Result<PaperExitParentRead> => {
+    const read = readPaperExitParentV1(body);
+    return read === null ? { ok: false, status: "unavailable", reason: "The R2 parent response could not be read." } : { ok: true, value: read };
+  };
+  function withParent(result: () => Result<PaperExitParentRead> | Promise<Result<PaperExitParentRead>>) {
+    const s = stub();
+    const getPaperExitParent = vi.fn(async (_query: PaperExitParentQuery) => result());
+    (s.api as unknown as { getPaperExitParent: typeof getPaperExitParent }).getPaperExitParent = getPaperExitParent;
+    return { ...s, getPaperExitParent };
+  }
+  const panel = (s: { api: ExecutionApi }, workspaceId: string | null = WS) =>
+    render(
+      <MemoryRouter initialEntries={["/deployments/paper/dep"]}>
+        <ExitGatePanel gate={gate} exitReviewsHref="/governance/exit-reviews" request={{ api: s.api, deploymentId: DEP, workspaceId }} />
+      </MemoryRouter>,
+    );
+  const button = () => screen.getByRole("button", { name: "Request review" }) as HTMLButtonElement;
+  const reason = () => document.getElementById(button().getAttribute("aria-describedby") ?? "")?.textContent ?? "";
+
+  it("asks once for this deployment in this workspace, and the control opens from the published context", async () => {
+    const s = withParent(() => answer(parentBody("found_available")));
+    panel(s);
+    await settle();
+    expect(s.getPaperExitParent).toHaveBeenCalledTimes(1);
+    expect(s.getPaperExitParent).toHaveBeenCalledWith({ deploymentId: DEP, workspaceId: WS });
+    expect(screen.getByRole("textbox")).toBeTruthy();
+    expect(document.body.textContent).not.toContain("The R2 review behind this deployment is not published.");
+  });
+
+  it("sends the pins the parent read published (approval id, version, digest) and nothing else", async () => {
+    const s = withParent(() => answer(parentBody("found_available")));
+    panel(s);
+    await settle();
+    type(TEXT);
+    fireEvent.click(send()!);
+    await settle();
+    expect(s.create).toHaveBeenCalledTimes(1);
+    expect(s.create.mock.calls[0]![0]).toEqual({
+      workspace_id: WS,
+      request_key: expect.stringMatching(/^paper_exit:/),
+      summary: TEXT,
+      r2_approval_id: "apr_TEST_ONLY_r2",
+      expected_r2_version: 3,
+      deployment_id: DEP,
+      expected_projection_digest: `sha256:${"c".repeat(64)}`,
+    });
+  });
+
+  it("while it is read the control is shut with one short reason, not the gap", async () => {
+    let release: (value: Result<PaperExitParentRead>) => void = () => undefined;
+    const s = withParent(() => new Promise<Result<PaperExitParentRead>>((done) => { release = done; }));
+    panel(s);
+    await settle();
+    expect(button().disabled).toBe(true);
+    expect(reason()).toBe("Reading the R2 review");
+    await act(async () => { release(answer(parentBody("found_available"))); });
+    await settle();
+    expect(screen.getByRole("textbox")).toBeTruthy();
+  });
+
+  it("a deployment with no R2 review is shut and says so; a published fact, not an error", async () => {
+    const s = withParent(() => answer(parentBody("none")));
+    panel(s);
+    await settle();
+    expect(button().disabled).toBe(true);
+    expect(reason()).toBe("This deployment has no R2 review.");
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(document.querySelector("[data-state='shut']")?.getAttribute("title")).toBe(`Server reason: ${R2_PARENT_GAP}`);
+  });
+
+  it.each([
+    ["found_blocked_r2_not_approved", "Not available: R2 must be approved before this can go on."],
+    ["found_blocked_expired", "Not available: this approval has expired."],
+    ["found_blocked_not_admin", "Not available: this needs an administrator role."],
+  ])("a blocked context (%s) is shut in the server's typed words, with no form and no POST", async (name, words) => {
+    const s = withParent(() => answer(parentBody(name)));
+    panel(s);
+    await settle();
+    expect(button().disabled).toBe(true);
+    expect(reason()).toBe(words);
+    expect(screen.queryByRole("textbox")).toBeNull();
+    fireEvent.click(button());
+    expect(s.create).not.toHaveBeenCalled();
+  });
+
+  it("a read that fails is shut with the Portal's own reason; it is not the same as no R2", async () => {
+    const s = withParent(() => ({ ok: false, status: "denied", reason: "Your account may not read this review." }));
+    panel(s);
+    await settle();
+    expect(button().disabled).toBe(true);
+    expect(reason()).toBe("Your account may not read this review.");
+    expect(document.querySelector("[data-state='shut']")?.getAttribute("title")).toBe("Server reason: R2_PARENT_UNREADABLE");
+  });
+
+  it("a schema this build does not read is shut, never read as a context", async () => {
+    const s = withParent(() => ({ ok: true, value: readPaperExitParentV1({ schema_version: "governance.paper-exit-parent.v2" })! }));
+    panel(s);
+    await settle();
+    expect(button().disabled).toBe(true);
+    expect(reason()).toBe("The R2 review is a shape this build does not read.");
+  });
+
+  it("an eligible verdict still never opens a shut control (the parent decides, advisory words only explain)", async () => {
+    const eligible = { kind: "stage_action_eligibility", eligibility: { workspaceId: WS, actions: [{ action: "paper.exit_review_request", verdict: "ELIGIBLE", reasonClass: "SUBMIT_CHECKS_REQUIRED", basis: "ADMIN_ROLE_AND_GOVERNANCE_R2_READ" }] } };
+    const s = withParent(() => answer(parentBody("none")));
+    (s.api as unknown as { getStageActionEligibility: unknown }).getStageActionEligibility = vi.fn(async () => ({ ok: true, value: eligible }));
+    panel(s);
+    await settle();
+    expect(button().disabled).toBe(true);
+    expect(screen.queryByRole("textbox")).toBeNull();
+  });
+
+  it("no workspace named: nothing is asked and the control is shut with that reason", async () => {
+    const s = withParent(() => answer(parentBody("found_available")));
+    panel(s, null);
+    await settle();
+    expect(s.getPaperExitParent).not.toHaveBeenCalled();
+    expect(reason()).toBe("No workspace is named for this read.");
+  });
+
+  it("a context handed in by the caller is used as is and nothing is read", async () => {
+    const s = withParent(() => answer(parentBody("none")));
+    render(
+      <MemoryRouter initialEntries={["/deployments/paper/dep"]}>
+        <ExitGatePanel gate={gate} exitReviewsHref="/governance/exit-reviews" request={{ api: s.api, deploymentId: DEP, workspaceId: WS, captureContext: context() }} />
+      </MemoryRouter>,
+    );
+    await settle();
+    expect(s.getPaperExitParent).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox")).toBeTruthy();
+  });
+
+  it("an answer that arrives after the deployment changed is dropped, not shown as the new deployment's", async () => {
+    let release: (value: Result<PaperExitParentRead>) => void = () => undefined;
+    const s = withParent(() => new Promise<Result<PaperExitParentRead>>((done) => { release = done; }));
+    const tree = (deploymentId: string) => (
+      <MemoryRouter initialEntries={["/deployments/paper/dep"]}>
+        <ExitGatePanel gate={gate} exitReviewsHref="/governance/exit-reviews" request={{ api: s.api, deploymentId, workspaceId: WS }} />
+      </MemoryRouter>
+    );
+    const view = render(tree(DEP));
+    await settle();
+    view.rerender(tree("dep_changed"));
+    await settle();
+    await act(async () => { release(answer(parentBody("found_available"))); });
+    await settle();
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(button().disabled).toBe(true);
+  });
+});

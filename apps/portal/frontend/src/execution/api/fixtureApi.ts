@@ -845,6 +845,9 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getStageActionEligibility() {
       return unavailable("The stage action eligibility is not served by the fixture port.");
     },
+    async getPaperExitParent() {
+      return unavailable("The Paper exit parent is not served by the fixture port.");
+    },
     async getSelfEligibilityBatch() {
       return unavailable("The eligibility batch is not served by the fixture port.");
     },

@@ -5,6 +5,7 @@ import { computeEvidenceManifestHash } from "./evidence-manifest";
 export { computeEvidenceManifestHash } from "./evidence-manifest";
 import { GovernanceReviewCaptureService } from "./review-capture.service";
 import { approvalRequestLookupOutcome, type ApprovalRequestLookupQuery } from "./approval-request-lookup";
+import { paperExitParentOutcome } from "./paper-exit-parent";
 import { createHash } from "crypto";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { constantTimeEqual } from "../auth/argon";
@@ -736,6 +737,26 @@ export class GovernanceService {
     await this.assertGovernance(user, "r2", "read", workspaceId);
     await this.assertParentReadCommissioned(user, workspaceId, "R2", session);
     return response;
+  }
+
+  /**
+   * RV-10 · the R2 parent of a deployment, as the capture context the Paper exit request is bound to.
+   *
+   * Authority is the R2 review's own read (`governance.r2.read`, exact session and workspace membership before and after the
+   * reads); the capture predicate inside `context()` then adds the ADMIN role and the capture checks and answers a typed BLOCKED
+   * context. The legacy parent-compatibility refusal is deliberately not applied: it guards the legacy R2 review body, and the
+   * capture route this read feeds (`POST /governance/paper-exit/create`) does not apply it either. Nothing is written.
+   */
+  async paperExitParent(user: PortalUser, session: AuthSession, workspaceId: string, deploymentId: string) {
+    await assertGovernanceReadSession(this.repository.pool, user, session, workspaceId);
+    await this.assertGovernance(user, "r2", "read", workspaceId);
+    if (!this.captures) throw new GovernanceError("REVIEW_CAPTURE_NOT_CONFIGURED", "Review capture is unavailable.", 503);
+    const approvalId = await this.repository.r2ParentOfDeployment(workspaceId, deploymentId);
+    const detail = approvalId === null ? null : await this.repository.r2Detail(workspaceId, approvalId, "R2");
+    const context = detail === null ? null : await this.captures.context(user, "PAPER_EXIT_CREATE", detail.approval,
+      detail.lineage && detail.scope ? { ...detail.lineage, portfolioId: detail.scope.portfolioId } : null);
+    await assertGovernanceReadSession(this.repository.pool, user, session, workspaceId);
+    return paperExitParentOutcome({ workspaceId, deploymentId, context });
   }
 
   /*

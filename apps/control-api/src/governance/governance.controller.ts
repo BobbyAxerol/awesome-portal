@@ -58,6 +58,7 @@ import { LiveParentReads } from "./live-parent.service";
 import { StageActionEligibilityService } from "./stage-action-eligibility.service";
 import { stageActionEligibilityQuery } from "./stage-action-eligibility";
 import { approvalRequestLookupQuery } from "./approval-request-lookup";
+import { paperExitParentQuery } from "./paper-exit-parent";
 
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -310,6 +311,18 @@ export class GovernanceController {
     }
     const workspaceId = await this.workspace(request, parsed.data.workspace_id);
     return this.governance.lookupApprovalRequest(request.portalUser, request.portalSession, { ...parsed.data, workspace_id: workspaceId });
+  }
+
+  /** RV-10: the R2 parent of a deployment as the capture context the Paper exit request is bound to. Read-only. */
+  @Get("/governance/paper-exit/parent")
+  @Header("Cache-Control", "private, no-store")
+  async paperExitParent(@Req() request: GovernanceRequest, @Query() query: Record<string, unknown>) {
+    const parsed = paperExitParentQuery.safeParse(query);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_PAPER_EXIT_PARENT_QUERY", "Invalid Paper exit parent query.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.governance.paperExitParent(request.portalUser, request.portalSession, workspaceId, parsed.data.deployment_id);
   }
 
   @Get("/governance/waivers")

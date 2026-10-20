@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-10-20",
- "route_count": 260,
+ "route_count": 261,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -2290,6 +2290,7 @@
   },
   {"route":"GET /api/admin/profile-access/v2/eligibility/batch","controller":"execution-v2/access.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-068: bounded multi-resource self-eligibility with a typed step-up state; same session, membership and Core fences as the single read; no new auth mechanism. Claude BE-P5; PostgreSQL paths not run."},
   {"route":"GET /api/v1/execution/governance/approvals/request-lookup","controller":"governance/governance.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-069: read of an idempotent create by request_key, keyed by the requester so another actor's key looks like none; writes nothing. Claude BE-P5; PostgreSQL paths not run."},
+  {"route":"GET /api/v1/execution/governance/paper-exit/parent","controller":"governance/governance.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"RV-10: the R2 parent of one deployment as the PAPER_EXIT_CREATE capture context (the pins POST /governance/paper-exit/create is bound to); same producer as the R2 review's capture_context, typed BLOCKED reasons, NONE when the deployment has no R2; governance.r2.read plus session and membership fences; writes nothing. Claude RV-10 follow-up; PostgreSQL paths not run."},
   {"route":"GET /api/v1/execution/governance/stage-action-eligibility","controller":"governance/governance.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-068: stage-action eligibility before the click; canary.* and live.* are NOT_COMMISSIONED because no Portal route exists. Claude BE-P5; PostgreSQL paths not run."},
   {"route":"GET /api/v1/execution/manager/series","controller":"execution-v2/manager-series.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-013/033: exact NAV/Net PnL/Return series and an aligned comparison with typed refusal on mixed currency; the source is MISSING today so every subject is UNAVAILABLE (SERIES_SOURCE_NOT_PUBLISHED). Claude BE-P4."},
   {"route":"GET /api/v1/execution/pending-recalls","controller":"execution-v2/pending-control.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-062: exact-resource discovery of open pending recalls the Portal controlled (PORTAL_CONTROLLED_RECALLS_ONLY); untracked recalls typed NOT_PUBLISHED. Claude BE-P5; PostgreSQL paths not run."},

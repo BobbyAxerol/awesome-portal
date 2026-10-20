@@ -1,6 +1,8 @@
 /**
  * Governance and pending-control reads for the e2e BFF double and the fixture BFF (FIXTURE_LAB / BFF_DOUBLE lane, NOT acceptance
- * evidence). Three advisory reads Claude's BE-P5 published (FE-062, FE-068, FE-069):
+ * evidence). Three advisory reads Claude's BE-P5 published (FE-062, FE-068, FE-069) and the RV-10 Paper exit parent:
+ *
+ *   GET /api/v1/execution/governance/paper-exit/parent?deployment_id=[&workspace_id=]  governance.paper-exit-parent.v1
  *
  *   GET /api/v1/execution/governance/stage-action-eligibility[?workspace_id=]        portal.stage-action-eligibility.v1
  *   GET /api/v1/execution/governance/approvals/request-lookup?request_key=[&...]     governance.approval-request-lookup.v1
@@ -159,7 +161,45 @@ export function answerPendingRecallDiscovery(method: string, path: string, searc
   return { status: 200, body };
 }
 
-/** The three reads, in the order the answerer asks. `path` has the execution prefix stripped. */
+/* ── paper exit parent (RV-10) ───────────────────────────────────────────── */
+
+export const PAPER_EXIT_PARENT_ROUTE = "/governance/paper-exit/parent";
+const DEPLOYMENT_ID = /^[A-Za-z0-9._:-]{1,192}$/;
+
+/**
+ * The case is chosen by the deployment asked (the double keeps no state): `dep_exit_none` has no R2; `dep_exit_not_approved`,
+ * `dep_exit_not_admin` and `dep_exit_expired` have a BLOCKED context with that typed reason; every other deployment has an available
+ * context. The body echoes the deployment and the workspace asked (the port refuses a body that answers another question), and the
+ * context lists only that deployment.
+ */
+const PAPER_EXIT_CASE: Readonly<Record<string, string>> = {
+  dep_exit_none: "none",
+  dep_exit_not_approved: "found_blocked_r2_not_approved",
+  dep_exit_not_admin: "found_blocked_not_admin",
+  dep_exit_expired: "found_blocked_expired",
+};
+
+export function answerPaperExitParent(method: string, path: string, search: URLSearchParams): BffAnswerGovernance | null {
+  if (path !== PAPER_EXIT_PARENT_ROUTE || method !== "GET") return null;
+  if (!keysOk(search, ["deployment_id", "workspace_id"])) return invalid("The query is deployment_id and workspace_id, nothing else.");
+  const deploymentId = search.get("deployment_id");
+  if (deploymentId === null || !DEPLOYMENT_ID.test(deploymentId)) return invalid("deployment_id is 1 to 192 characters of A-Z a-z 0-9 . _ : -.");
+  const workspaceId = search.get("workspace_id");
+  if (search.has("workspace_id") && !text(workspaceId, 96)) return invalid("workspace_id is 1 to 96 printable characters.");
+  if (workspaceId === STAGE_ACTION_DOUBLE_WORKSPACES.denied) return problem(403, "ACCESS_DENIED", "Not permitted.");
+  if (workspaceId === STAGE_ACTION_DOUBLE_WORKSPACES.unavailable) return problem(503, "ACCESS_UNAVAILABLE", "Unavailable.");
+  const body: Draft = structuredClone(canonical(REQUESTER_READS).paper_exit_parent[PAPER_EXIT_CASE[deploymentId] ?? "found_available"]);
+  body.deployment_id = deploymentId;
+  if (workspaceId !== null) body.workspace_id = workspaceId;
+  if (body.capture_context !== null) {
+    body.capture_context.workspace_id = body.workspace_id;
+    for (const candidate of body.capture_context.candidates) candidate.deployment_id = deploymentId;
+  }
+  return { status: 200, body };
+}
+
+/** The reads, in the order the answerer asks. `path` has the execution prefix stripped. */
 export function answerGovernance(method: string, path: string, search: URLSearchParams): BffAnswerGovernance | null {
-  return answerStageActionEligibility(method, path, search) ?? answerApprovalRequestLookup(method, path, search) ?? answerPendingRecallDiscovery(method, path, search);
+  return answerStageActionEligibility(method, path, search) ?? answerApprovalRequestLookup(method, path, search) ?? answerPaperExitParent(method, path, search)
+    ?? answerPendingRecallDiscovery(method, path, search);
 }
