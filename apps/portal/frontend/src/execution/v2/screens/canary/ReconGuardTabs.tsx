@@ -15,13 +15,12 @@
  */
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { NotPublished, SectionPanel, Triad, type TriadRow, type TriadSide } from "../../blocks";
+import { GapLine, SectionPanel, Triad, type TriadRow, type TriadSide } from "../../blocks";
 import { readAsOf } from "../../boundary";
 import { FE_STAGE_FACTS } from "../stage/factChips";
-import { triadRowsOf } from "../stage/triadRows";
+import { figuresUnpublished, triadRowsOf } from "../stage/triadRows";
 import type { CanaryView, PanelFact } from "./readCanary";
-import { guardRows, guardSentence, panelLine, type GuardCell, type GuardRow } from "./model";
-import { RowsNotPublished } from "./parts";
+import { FE, guardRows, guardSentence, panelLine, type GuardCell, type GuardRow } from "./model";
 
 const ROWS: readonly TriadRow[] = [{ key: "figures", label: "Figures" }];
 
@@ -33,61 +32,50 @@ function sideOf(panel: PanelFact | null): TriadSide | null {
 
 function FindingsLine({ view }: { view: CanaryView }) {
   const r = view.reconciliation;
-  if (r === null) {
-    return (
-      <p className="exec-cny-foot">
-        <NotPublished id={FE_STAGE_FACTS}>Open findings</NotPublished>
-      </p>
-    );
-  }
-  if (r.verdict.kind === "not-published") {
-    return (
-      <p className="exec-cny-foot">
-        <NotPublished id={FE_STAGE_FACTS} titleReason={r.verdict.reasonCode}>
-          Open findings
-        </NotPublished>
-      </p>
-    );
-  }
+  if (r === null) return <GapLine items={[{ label: "Open findings", id: FE_STAGE_FACTS }]} />;
+  if (r.verdict.kind === "not-published") return <GapLine items={[{ label: "Open findings", id: FE_STAGE_FACTS, reason: r.verdict.reasonCode }]} />;
   const open = r.openFindingCount.kind === "value" ? r.openFindingCount.value.toLocaleString("en-US") : null;
   const unknown = r.unknownOrderCount.kind === "value" ? r.unknownOrderCount.value.toLocaleString("en-US") : null;
   return (
-    <p className="exec-cny-foot">
+    <p className="exec-cny-foot" title="The findings relation, not a reconciliation run.">
       {r.verdict.value === "NO_OPEN_FINDINGS" ? "No open findings" : open === null ? "Open findings" : `${open} open findings`}
-      {unknown === null ? null : ` · ${unknown} unknown orders`}. This is the findings relation, not a reconciliation run.
+      {unknown === null ? null : ` · ${unknown} unknown orders`}
     </p>
   );
 }
 
 export function ReconciliationTab({ view }: { view: CanaryView }) {
   const suppressed = view.broker?.state === "suppressed" || view.difference?.state === "suppressed";
+  const unpublished = figuresUnpublished(view.figures);
   const sources: readonly [string, PanelFact | null][] = [
     ["Internal", view.internal],
     ["Broker", view.broker],
     ["Difference", view.difference],
   ];
   return (
-    <SectionPanel level={2} title="Reconciliation" aside="Internal, Broker, Difference">
+    <SectionPanel level={2} title="Reconciliation">
       {/* With the server's figures each cell is its own fact, so a source panel that reads unavailable no longer blanks the column: the side keeps no as-of. */}
-      <Triad
-        rows={view.figures === null ? ROWS : triadRowsOf(view.figures)}
-        internal={sideOf(view.internal) ?? (view.figures === null ? null : {})}
-        broker={sideOf(view.broker) ?? (view.figures === null ? null : {})}
-        suppressed={suppressed}
-      />
-      {view.figures === null ? (
-        <p className="exec-cny-foot">
-          <RowsNotPublished what="Reconciliation rows (equity, gross notional, position, open orders)" />
-        </p>
-      ) : null}
+      {unpublished.all && !suppressed ? (
+        <GapLine items={[{ label: "Internal, Broker and Difference figures", id: FE.rows, reason: unpublished.reason }]} />
+      ) : (
+        <Triad
+          rows={view.figures === null ? ROWS : triadRowsOf(view.figures)}
+          internal={sideOf(view.internal) ?? (view.figures === null ? null : {})}
+          broker={sideOf(view.broker) ?? (view.figures === null ? null : {})}
+          suppressed={suppressed}
+        />
+      )}
       <FindingsLine view={view} />
-      <ul className="exec-cny-sources" aria-label="Source panels">
-        {sources.map(([name, panel]) => (
-          <li key={name}>
-            <span className="exec-cny-source-name">{name}</span> <span className="exec-blk-na">{panelLine(panel)}</span>
-          </li>
-        ))}
-      </ul>
+      <details className="exec-cny-sources">
+        <summary>Sources</summary>
+        <ul aria-label="Source panels">
+          {sources.map(([name, panel]) => (
+            <li key={name}>
+              <span className="exec-cny-source-name">{name}</span> <span className="exec-blk-na">{panelLine(panel)}</span>
+            </li>
+          ))}
+        </ul>
+      </details>
     </SectionPanel>
   );
 }
@@ -105,7 +93,7 @@ const GUARD_COLUMNS: readonly CardsColumn<GuardRow>[] = [
 
 export function GuardRuleTab({ view }: { view: CanaryView }) {
   return (
-    <SectionPanel level={2} title="Guard rule" aside="Scale-up only">
+    <SectionPanel level={2} title="Guard rule">
       <CardsTable columns={GUARD_COLUMNS} rows={guardRows(view)} rowKey={(r) => r.condition} label="Canary guard rule" />
       <p className="exec-cny-foot">{guardSentence(view)}</p>
     </SectionPanel>

@@ -40,7 +40,7 @@ import { useExecutionRuntime } from "../../../useExecutionRuntime";
 import { Flag } from "../../Flag";
 import { CompactGaps, GapLine, KpiStrip, SectionPanel, StageHeader, Triad, UrlTabs, gapTitle, type GapItem } from "../../blocks";
 import { formatAsOf } from "../../boundary";
-import { triadRowsOf } from "../stage/triadRows";
+import { figuresUnpublished, triadRowsOf } from "../stage/triadRows";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
 import { alphaCrumb, portfolioLabel, stageIdentity } from "../stage/identity";
 import { parseUrlParams, withContext } from "../../urlState";
@@ -123,11 +123,12 @@ function Reconciliation({ view }: { view: SandboxView }) {
   const internal = panelById(view, "internal");
   const broker = panelById(view, "broker");
   // No figure at all (a V2 body, or no figures block): one line, not three columns of the same words. A withheld Broker still draws its column.
-  const noFigures = view.figures === null && !figuresSuppressed(view);
+  const unpublished = figuresUnpublished(view.figures);
+  const noFigures = unpublished.all && !figuresSuppressed(view);
   return (
     <div className="exec-sbx-recon">
       {noFigures ? (
-        <GapLine items={[{ label: "Internal, Broker and Difference figures", id: "FE-072" }]} />
+        <GapLine items={[{ label: "Internal, Broker and Difference figures", id: "FE-072", reason: unpublished.reason }]} />
       ) : (
         <Triad
           titleLevel={2}

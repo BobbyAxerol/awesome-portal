@@ -12,8 +12,8 @@
  */
 import { Link, useSearchParams } from "react-router-dom";
 
-import { BlockerList, NotPublished, SectionPanel } from "../../blocks";
-import { DockAction } from "../../Drawer";
+import { BlockerList, GapLine, NotPublished, SectionPanel, type GapItem } from "../../blocks";
+import { DecisionGroup } from "../stage/DecisionGroup";
 import { Flag } from "../../Flag";
 import { safeInternalHref } from "../../safeHref";
 import { withContext } from "../../urlState";
@@ -35,18 +35,17 @@ export function DecisionPanel() {
   const reasonFor = useStageReason();
   return (
     <SectionPanel level={2} title="Promotion decision" aside="Via exit review">
-      {DECISIONS.map((decision) => (
-        <div key={decision.label} className="exec-cny-dec">
-          <p className="exec-cny-dec-hint">{decision.hint}</p>
-          <div className="exec-cny-dec-act">
-            <DockAction label={decision.label} reason={reasonFor(DECISION_ACTION[decision.label]!, decisionReason(decision))} accessHref={ACCESS_PATH} />
-          </div>
-        </div>
-      ))}
-      <details className="exec-cny-how">
-        <summary>How promotion works</summary>
-        <p>Decisions go through Canary exit review. Elapsed time alone never promotes.</p>
-      </details>
+      <DecisionGroup
+        label="Promotion decisions"
+        accessHref={ACCESS_PATH}
+        items={DECISIONS.map((decision) => ({
+          key: decision.label,
+          label: decision.label,
+          // What each does is its button's title; decisions go through Canary exit review and elapsed time alone never promotes.
+          hint: decision.hint,
+          reason: reasonFor(DECISION_ACTION[decision.label]!, decisionReason(decision)),
+        }))}
+      />
     </SectionPanel>
   );
 }
@@ -61,7 +60,7 @@ export function BeforeScaleUp({ view }: { view: CanaryView }) {
       level={2}
       title="Before scale-up"
       items={items}
-      emptyText="Not available · no reasons were published"
+      emptyText={<span title="No reasons were published">Not available</span>}
       provenance={
         <div className="exec-cny-prov">
           <p>
@@ -87,32 +86,36 @@ export function BeforeScaleUp({ view }: { view: CanaryView }) {
 
 export function RollbackPanel({ view }: { view: CanaryView }) {
   const head = rollbackHead(view);
+  const items = rollbackItems(view);
+  // A check that says nothing (no status, no date) is not a row of `Not available`: the checks are ONE line (FE-071 and the reasons in its title).
+  const silent = (item: (typeof items)[number]) => item.status.kind !== "flag" && item.checked === null;
+  const spoken = items.filter((item) => !silent(item));
+  const gaps: GapItem[] = items
+    .filter(silent)
+    .map((item) => ({ label: item.label, id: FE.envelope, reason: [item.status.kind === "not-published" ? item.status.reasonCode : null, item.checkedReason].filter(Boolean).join(" · ") || null }));
   return (
-    <SectionPanel
-      level={2}
-      title="Rollback readiness"
-      aside={head.kind === "flag" ? <Flag kind={head.flag} label={head.label} size="sm" /> : <NotPublished id={FE.envelope}>Readiness</NotPublished>}
-    >
-      <ul className="exec-cny-rb" aria-label="Rollback readiness checks">
-        {rollbackItems(view).map((item) => (
-          <li key={item.key} className="exec-cny-rb-item">
-            <div>
-              <span className="exec-cny-rb-name">{item.label}</span>
-              <span className="exec-cny-rb-note">
-                {item.note !== "" ? `${item.note} · ` : ""}
-                {item.checkedWord} {item.checked === null ? <NotPublished id={FE.envelope} titleReason={item.checkedReason} /> : item.checked}
-              </span>
-            </div>
-            {item.status.kind === "flag" ? (
-              <Flag kind={item.status.flag} label={item.status.label} size="sm" />
-            ) : (
-              <NotPublished id={FE.envelope} titleReason={item.status.reasonCode} compact>
-                Status
-              </NotPublished>
-            )}
-          </li>
-        ))}
-      </ul>
+    <SectionPanel level={2} title="Rollback readiness" aside={head.kind === "flag" && !(head.label === "Not available" && spoken.length === 0) ? <Flag kind={head.flag} label={head.label} size="sm" /> : undefined}>
+      {spoken.length > 0 ? (
+        <ul className="exec-cny-rb" aria-label="Rollback readiness checks">
+          {spoken.map((item) => (
+            <li key={item.key} className="exec-cny-rb-item">
+              <div>
+                <span className="exec-cny-rb-name">{item.label}</span>
+                <span className="exec-cny-rb-note">
+                  {item.note !== "" ? `${item.note} · ` : ""}
+                  {item.checked === null ? null : `${item.checkedWord} ${item.checked}`}
+                </span>
+              </div>
+              {item.status.kind === "flag" ? (
+                <Flag kind={item.status.flag} label={item.status.label} size="sm" />
+              ) : (
+                <NotPublished id={FE.envelope} titleReason={item.status.reasonCode} />
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <GapLine items={gaps} />
     </SectionPanel>
   );
 }

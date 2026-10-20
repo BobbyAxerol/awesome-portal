@@ -21,6 +21,19 @@ function cellOf(c: FactCell<DecimalValue> | null): TriadCell {
   return metricOf(c.value);
 }
 
+/**
+ * Every cell of every row is the server's `NOT_PUBLISHED`: the triad would be fifteen cells of the same words. The screen prints
+ * ONE `Not available` line instead; `reason` is the first reason code the server gave, for the line's title. `figures: null` (no
+ * block at all) is not this case: the caller handles it the same way, with no reason.
+ */
+export function figuresUnpublished(figures: readonly FigureRow[] | null): { all: boolean; reason: string | null } {
+  if (figures === null) return { all: true, reason: null };
+  const cells = figures.flatMap((figure) => [figure.internal, figure.broker, figure.difference]);
+  const reasons = cells.flatMap((c) => (c !== null && c.kind === "not-published" ? [c.reasonCode] : []));
+  const all = cells.length > 0 && cells.every((c) => c === null || c.kind === "not-published") && reasons.length > 0;
+  return { all, reason: all ? (reasons[0] ?? null) : null };
+}
+
 /** One Triad row per published figure, in the published order. `COUNT` is a unit word of the server's, not a currency. */
 export function triadRowsOf(figures: readonly FigureRow[]): readonly TriadRow[] {
   return figures.map((figure) => ({

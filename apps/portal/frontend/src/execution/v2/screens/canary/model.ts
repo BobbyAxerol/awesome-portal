@@ -392,11 +392,11 @@ export function complianceNotes(view: CanaryView): ComplianceNotes {
 /* ── blockers ─────────────────────────────────────────────────────────────── */
 
 export const BLOCKER_SENTENCES: Readonly<Record<string, string>> = {
-  PRODUCTION_COMMAND_INACTIVE: "Production commands are closed on this build, so no decision can be sent.",
+  PRODUCTION_COMMAND_INACTIVE: "Production commands are closed on this build.",
   CANARY_OWNER_GATE_REQUIRED: "The Canary owner has not signed off yet.",
-  LIVE_SOURCE_UNAVAILABLE: "The live source is not available, so no live figure can be shown.",
+  LIVE_SOURCE_UNAVAILABLE: "The live source is not available.",
   BASE_RISK_PROFILE_UNVERIFIED: "The base risk profile is not verified yet.",
-  BROKER_SYNC_UNAVAILABLE: "Broker data is not available, which blocks scale-up.",
+  BROKER_SYNC_UNAVAILABLE: "Broker data is not available.",
   PROTECTIVE_CAPABILITY_UNAVAILABLE: "Protective actions are not available on this build.",
 };
 
@@ -590,28 +590,28 @@ function allPanels(view: CanaryView): readonly PanelFact[] {
 export function bannersOf(view: CanaryView): readonly Banner[] {
   const out: Banner[] = [];
   if (view.sourceActed) {
-    out.push({ key: "untrusted", text: "Not trusted. This response says a source action was requested. This screen never requests one, so the figures below are not trusted." });
+    out.push({ key: "untrusted", text: "Not trusted. A source action was requested; the figures below are not trusted." });
   }
   if (view.proposalOnly) {
-    out.push({ key: "proposal", text: "This response states the Canary proposal only. Runtime figures are not part of it." });
+    out.push({ key: "proposal", text: "Canary proposal only; no runtime figures." });
   }
   if (view.declaredStage !== null && view.declaredStage !== "LIVE_CANARY") {
-    out.push({ key: "stage", text: "This deployment does not declare the Canary stage. Its Live operations are on the Live screen." });
+    out.push({ key: "stage", text: "This deployment does not declare the Canary stage. Its operations are on the Live screen." });
   }
   const brokerStale = view.broker !== null && (view.broker.freshness === "STALE" || view.broker.state === "stale");
   if (brokerStale) {
     const asymmetric = view.scaleUp?.brokerSyncBlocks === true && view.protective?.brokerSyncBlocks === false;
     out.push({
       key: "guarded",
-      text: asymmetric ? "Broker data is stale. Scale-up is blocked. Protective actions stay open." : "Broker data is stale.",
+      text: asymmetric ? "Broker data is stale. Scale-up is blocked; protective actions stay open." : "Broker data is stale.",
     });
   }
   const panels = allPanels(view);
   if (!brokerStale && panels.some((p) => p.state === "stale")) {
-    out.push({ key: "stale", text: "Some figures are stale. The source has not updated within its freshness budget." });
+    out.push({ key: "stale", text: "Some figures are stale." });
   }
   if (panels.some((p) => p.state === "partial")) {
-    out.push({ key: "partial", text: "Some figures are missing. The source reported only part of what this screen shows." });
+    out.push({ key: "partial", text: "Some figures are missing." });
   }
   return out;
 }
@@ -623,17 +623,17 @@ export function panelLine(panel: PanelFact | null): string {
   if (panel === null) return "Not in this response";
   switch (panel.state) {
     case "ok":
-      return "The source reported this panel";
+      return "Reported";
     case "partial":
-      return "Partial: the source reported only part of it";
+      return "Partial";
     case "stale":
-      return "Stale: the source has not updated within its freshness budget";
+      return "Stale";
     case "suppressed":
       return "Withheld by the server";
     case "denied":
       return "Not permitted";
     case "empty":
-      return "The source reported it empty";
+      return "Reported empty";
     default:
       return "Source unavailable";
   }
@@ -641,10 +641,7 @@ export function panelLine(panel: PanelFact | null): string {
 
 export const FE = { runtime: "FE-067" as const, envelope: FE_ENVELOPE, rows: FE_ROWS, series: "FE-029", names: "FE-066" } as const;
 
+/** The venue only: the portfolio and the account are in the breadcrumb, so the subtitle does not say them again. */
 export function subtitleIds(view: CanaryView): readonly string[] {
-  return [
-    view.venue,
-    view.portfolioId === null ? null : `Portfolio ${view.portfolioId}`,
-    view.accountId === null ? null : `Account ${view.accountId}`,
-  ].filter((part): part is string => part !== null);
+  return view.venue === null ? [] : [view.venue];
 }

@@ -169,10 +169,11 @@ describe("the Envelope tab: the server's rows, ratio, verdict", () => {
     expect(gauges[1]).toBe("Gross notional cap (USDT): 0.00% used");
     expect(gauges[2]).toBeNull();
     expect(gauges[3]).toBe("Open orders (max): 50.00% used");
-    expect(used("Used")[2]!.querySelector(".exec-blk-np")!.getAttribute("title")).toContain("DAILY_LOSS_WINDOW_NOT_PUBLISHED");
+    expect(used("Used")[2]!.querySelector("[data-gap]")!.getAttribute("title")).toContain("DAILY_LOSS_WINDOW_NOT_PUBLISHED");
+    expect(used("Used")[2]!.textContent).toBe("Not available");
     expect(used("Consumed")[0]!.textContent).toContain("250.00");
     const panel = table.closest("section")!;
-    expect(panel.textContent).toContain("Envelope verdict");
+    expect(panel.textContent).not.toContain("Envelope verdict");
     expect(panel.textContent).toContain("Undetermined");
     expect(panel.textContent).toContain("Not proven: daily loss cap.");
     expect(panel.textContent).not.toContain("Within envelope");
@@ -205,22 +206,27 @@ describe("rollback checks and the trial calendar", () => {
     mount(published());
     await ready();
     const trial = screen.getByRole("group", { name: "Trial schedule" });
-    expect(trial.textContent).toContain("Trial day not stated");
+    // The day is not stated: it is one `Not available` line (FE-071 in its title), not a sentence.
+    expect(trial.textContent).toContain("Not available: Trial day");
+    expect(trial.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Trial day: Not published (FE-071)");
     expect(trial.textContent).toContain("Started 12 Oct 08:00Z");
     expect(trial.textContent).toContain("Exit review opens 26 Oct 08:00Z");
     expect(trial.textContent).not.toMatch(/days left|day 0|in \d+ days/);
     expect(trial.textContent).not.toContain("Not published");
   });
 
-  it("the Rollback panel shows the broker check Ready with its date and the three others Not published with their reasons", async () => {
+  it("the Rollback panel shows the broker check Ready with its date and the three others as ONE `Not available` line with their reasons in its title", async () => {
     mount(published());
     await ready();
     const panel = screen.getByRole("heading", { name: "Rollback readiness" }).closest("section")!;
     const items = Array.from(panel.querySelectorAll("li.exec-cny-rb-item"));
-    expect(items).toHaveLength(4);
-    expect(items[2]!.textContent).toContain("Last update 12 Oct 07:59Z");
-    expect(items[2]!.textContent).toContain("Ready");
-    expect(items[0]!.querySelector(".exec-blk-np")!.getAttribute("title")).toContain("FLATTEN_PLAN_NOT_RECORDED");
+    expect(items).toHaveLength(1);
+    expect(items[0]!.textContent).toContain("Last update 12 Oct 07:59Z");
+    expect(items[0]!.textContent).toContain("Ready");
+    const gap = panel.querySelector(".exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Flatten plan prepared, Paper twin running, Last rollback drill");
+    expect(gap.getAttribute("title")).toContain("FLATTEN_PLAN_NOT_RECORDED");
+    expect(gap.getAttribute("title")).toContain("ROLLBACK_DRILL_NOT_RECORDED");
   });
 });
 
@@ -235,12 +241,17 @@ describe("Positions & orders: typed rows when AVAILABLE", () => {
     expect(first.querySelector('td[data-l="Quantity"]')!.textContent).toBe("0.5");
     expect(first.querySelector('td[data-l="Mark"]')!.textContent).toBe("60,500.50");
     expect(first.querySelector('td[data-l="Unrealised PnL"]')!.textContent).toBe("250.25");
-    expect(first.querySelector('td[data-l="Leverage"] .exec-blk-np')!.getAttribute("title")).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
+    // Leverage and Ack latency are no column: no row fills them, so each is named once under its table, the reason in the title.
+    expect(first.querySelector('td[data-l="Leverage"]')).toBeNull();
+    const positionsGap = positions.closest("section")!.querySelector(".exec-blk-gaps")!;
+    expect(positionsGap.textContent).toBe("Not available: Leverage");
+    expect(positionsGap.getAttribute("title")).toContain("POSITION_LEVERAGE_NOT_IN_SOURCE_RELATION");
     const orders = screen.getByRole("table", { name: "Canary open orders" });
     const order = Array.from(orders.querySelectorAll("tbody tr"))[0]!;
     expect(order.querySelector('td[data-l="Type"]')!.textContent).toBe("LIMIT");
     expect(order.querySelector('td[data-l="Side"]')!.textContent).toBe("Buy");
-    expect(order.querySelector('td[data-l="Ack latency"] .exec-blk-np')!.getAttribute("title")).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
+    expect(order.querySelector('td[data-l="Ack latency"]')).toBeNull();
+    expect(orders.closest("section")!.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("ORDER_ACK_LATENCY_NOT_IN_SOURCE_RELATION");
     expect(screen.getByRole("tabpanel").textContent).toContain("2 of 2");
   });
 
@@ -272,9 +283,11 @@ describe("Reconciliation: the server's figures", () => {
     const openOrders = (col: Element) => Array.from(col.querySelectorAll(".exec-blk-triad-row")).find((r) => r.querySelector("dt")!.textContent === "Open orders")!;
     expect(openOrders(difference).querySelector("dd")!.textContent).toBe("1");
     const equity = Array.from(triad.querySelector('[data-col="broker"]')!.querySelectorAll(".exec-blk-triad-row")).find((r) => r.querySelector("dt")!.textContent === "Equity")!;
-    expect(equity.querySelector(".exec-blk-np")!.getAttribute("title")).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
+    expect(equity.querySelector("[data-gap]")!.getAttribute("title")).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
     expect(screen.getByRole("tabpanel").textContent).toContain("1 open finding");
-    expect(screen.getByRole("tabpanel").textContent).toContain("This is the findings relation, not a reconciliation run.");
+    // "The findings relation, not a reconciliation run" is the line's title, not a second sentence.
+    expect(screen.getByRole("tabpanel").textContent).not.toContain("not a reconciliation run");
+    expect(screen.getByRole("tabpanel").querySelector("p.exec-cny-foot[title]")!.getAttribute("title")).toBe("The findings relation, not a reconciliation run.");
   });
 });
 
@@ -284,8 +297,11 @@ describe("series and identity", () => {
     await ready();
     const panel = screen.getByRole("heading", { name: "Live vs Paper vs Backtest" }).closest("section")!;
     expect(panel.querySelector("svg")).not.toBeNull();
-    expect(panel.textContent).toContain("Methodology portal.net-pnl.TEST_ONLY.v1");
-    expect(panel.textContent).toContain("Not published (FE-029)");
+    // The methodology is the chart block's title, not a printed caption; Paper and Backtest are one `Not available` line.
+    expect(panel.querySelector("div[title]")!.getAttribute("title")).toBe("Methodology portal.net-pnl.TEST_ONLY.v1");
+    expect(panel.textContent).not.toContain("Methodology");
+    expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Paper and Backtest series");
+    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-029)");
   });
 
   it("the Alpha is linked only because alpha_id is published, the portfolio shows its name, the alpha name is Not published (FE-066) with its reason", async () => {
@@ -296,7 +312,7 @@ describe("series and identity", () => {
     expect(crumb.getByRole("link", { name: "Crypto Core" }).getAttribute("href")).toBe("/deployments/portfolios/pf_crypto");
     const sub = document.querySelector(".exec-stage-sub")!;
     expect(sub.textContent).toContain("Alpha alpha_TEST_ONLY");
-    expect(sub.querySelector(".exec-blk-np")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    expect(sub.querySelector("span[title]")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
   });
 
   it("no alpha_id, no Alpha link: a body that cannot name the alpha links nothing and the portfolio keeps its id", async () => {

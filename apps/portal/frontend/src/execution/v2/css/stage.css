@@ -120,6 +120,47 @@
   color: var(--ink-faint);
 }
 
+/* Stage actions that are all off (DecisionGroup): one row of buttons and one reason. */
+.exec-stage-decs {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.exec-stage-dec-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.exec-stage-dec-why {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
+.exec-stage-dec-why .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
+}
+.exec-stage-dec .exec-dock-action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+.exec-stage-dec .exec-dock-why {
+  flex: 0 0 auto;
+  width: 100%;
+}
+.exec-stage-dec .exec-dock-why[data-l]::before {
+  content: none;
+}
+.exec-stage-dec .exec-dock-reason {
+  overflow: visible;
+  white-space: normal;
+}
+
 /* Three chips: Runtime, Display freshness, Reconciliation. */
 .exec-stage-chips {
   display: flex;

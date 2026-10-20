@@ -117,41 +117,39 @@ describe("dark V1 body: honest absence everywhere", () => {
     mount(canaryPort(answering(v1Body())));
     await ready();
     const chips = document.querySelector<HTMLElement>(".exec-stage-chips")!;
-    expect(chips.textContent).toContain("Runtime");
-    // Runtime and Reconciliation are the server's stage facts: Not published (FE-067), the reason in the title.
-    expect(chips.textContent?.match(/Not published \(FE-067\)/g)).toHaveLength(2);
-    expect(Array.from(chips.querySelectorAll(".exec-blk-np")).map((n) => n.getAttribute("title"))).toEqual([
-      expect.stringContaining("LIVE_SOURCE_UNAVAILABLE"),
-      expect.stringContaining("LIVE_SOURCE_UNAVAILABLE"),
-    ]);
-    expect(chips.textContent).not.toMatch(/Running|Clean|Reconciled/);
-    const kpis = within(screen.getByRole("group", { name: "Canary figures" }));
-    for (const label of ["Capital consumed", "Gross notional", "Daily PnL", "Open orders", "Broker equity"]) {
-      const cell = kpis.getByText(label).closest(".exec-blk-kpi")!;
-      expect(cell.textContent, label).toContain("Not available");
-      expect(cell.textContent, label).not.toMatch(/\b0\b/);
-    }
+    // Runtime and Reconciliation are the server's stage facts: not published, so ONE `Not available` chip; FE-067 and the reason are in its title.
+    expect(chips.querySelector('[data-chip="gaps"]')!.textContent).toBe("Not availableRuntime, Reconciliation");
+    expect(chips.querySelector('[data-chip="gaps"]')!.getAttribute("title")).toContain("Runtime: Not published (FE-067)");
+    expect(chips.querySelector('[data-chip="gaps"]')!.getAttribute("title")).toContain("LIVE_SOURCE_UNAVAILABLE");
+    expect(chips.textContent).not.toMatch(/Running|Clean|Reconciled|\(FE-/);
+    // The five figures are not tiles holding the words: one line names them, the reasons in its title.
+    expect(screen.queryByRole("group", { name: "Canary figures" })).toBeNull();
+    const gap = document.querySelector(".exec-cny-v2 > .exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Capital consumed, Gross notional, Daily PnL, Open orders, Broker equity");
+    expect(gap.getAttribute("title")).toContain("Capital consumed: Not published · source unavailable");
+    expect(gap.textContent).not.toMatch(/\b0\b/);
     for (const label of ["Envelope", "Positions & orders", "Reconciliation", "Guard rule"]) {
       await openTab(label);
       expect(document.body.textContent ?? "", label).not.toMatch(NO_DASH);
     }
   });
 
-  it("the trial says what it does not know: no day 0, no countdown, both dates Not published (FE-071)", async () => {
+  it("the trial says what it does not know: no day 0, no countdown, the day and both dates one `Not available` line (FE-071 in its title)", async () => {
     mount(canaryPort(answering(v1Body())));
     await ready();
     const trial = screen.getByRole("group", { name: "Trial schedule" });
-    expect(trial.textContent).toContain("Trial day not stated");
-    expect(trial.textContent).toContain("duration 14 days");
-    expect(trial.textContent).not.toMatch(/day 0|days left|in \d+ days/);
-    expect(trial.textContent?.match(/Not published \(FE-071\)/g)).toHaveLength(2);
+    expect(trial.textContent).toContain("Not available: Trial day, Started, Exit review opens");
+    expect(trial.textContent).toContain("Duration 14 days");
+    expect(trial.textContent).not.toMatch(/day 0|days left|in \d+ days|\(FE-/);
+    expect(trial.querySelector(".exec-blk-gaps")!.getAttribute("title")?.match(/Not published \(FE-071\)/g)).toHaveLength(3);
   });
 
-  it("the series panel is Not published (FE-029): no chart, no invented line", async () => {
+  it("the series panel is `Not available` (FE-029 in its title, the source's state beside it): no chart, no invented line", async () => {
     mount(canaryPort(answering(v1Body())));
     await ready();
     const panel = screen.getByRole("heading", { name: "Live vs Paper vs Backtest" }).closest("section")!;
-    expect(panel.textContent).toContain("Not published (FE-029)");
+    expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Live, Paper and Backtest series · Source unavailable");
+    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-029)");
     expect(panel.querySelector("svg")).toBeNull();
   });
 
@@ -160,12 +158,13 @@ describe("dark V1 body: honest absence everywhere", () => {
     await ready();
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
     expect(table.textContent).toContain("5,000.00");
-    const bodyRows = Array.from(table.querySelectorAll("tbody tr"));
-    const cells = (label: string) => bodyRows.map((row) => row.querySelector(`td[data-l="${label}"] .exec-blk-np`));
-    // Duration has no compliance row: its Limit stays plain `Not published`; the four caps carry the server's reason.
-    expect(cells("Limit").slice(0, 4).map((n) => n?.getAttribute("title"))).toEqual(Array(4).fill(expect.stringContaining("BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED")));
-    expect(cells("Consumed").slice(0, 4).map((n) => n?.getAttribute("title"))).toEqual(Array(4).fill(expect.stringContaining("LIVE_SOURCE_UNAVAILABLE")));
-    expect(cells("Used").slice(0, 4).every((n) => n !== null && n !== undefined)).toBe(true);
+    // No cap has a Limit, a Consumed or a Used: those three columns are not drawn; ONE line names them, the server's reasons in its title.
+    expect(within(table).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Cap", "Proposed"]);
+    const gap = table.closest("section")!.querySelector(".exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Limit, Consumed, Used");
+    expect(gap.getAttribute("title")).toContain("Limit: Not published (FE-071)");
+    expect(gap.getAttribute("title")).toContain("BASE_RISK_PROFILE_LIMITS_NOT_PUBLISHED");
+    expect(gap.getAttribute("title")).toContain("LIVE_SOURCE_UNAVAILABLE");
     expect(table.querySelector('[role="img"]')).toBeNull();
     expect(table.textContent).not.toMatch(/\d+(\.\d+)?%/);
   });
@@ -181,27 +180,33 @@ describe("dark V1 body: honest absence everywhere", () => {
     expect(table.textContent).toContain("250.00");
     // The published compliance limits fill the Limit column (the same four caps as the envelope's, printed twice); Duration has none.
     const bodyRows = Array.from(table.querySelectorAll("tbody tr"));
-    const cell = (label: string) => bodyRows.map((row) => row.querySelector(`td[data-l="${label}"]`)?.textContent?.replace(/^Not published \(FE-071\).*$/, "NP"));
+    const cell = (label: string) => bodyRows.map((row) => row.querySelector(`td[data-l="${label}"]`)?.textContent?.replace(/^Not available$/, "NP"));
     expect(cell("Limit")).toEqual(["5,000.00", "10,000.00", "250.00", "20", "NP"]);
-    expect(cell("Consumed")).toEqual(Array(5).fill("NP"));
-    expect(screen.getByText("Base risk profile: not verified.")).toBeTruthy();
+    // Nothing fills Consumed or Used: no column, one line.
+    expect(cell("Consumed")).toEqual(Array(5).fill(undefined));
+    expect(table.closest("section")!.querySelector(".exec-blk-gaps")!.textContent).toContain("Consumed, Used");
+    expect(screen.getByText(/Base risk profile: not verified\./)).toBeTruthy();
     expect(table.textContent).toContain("Capital cap (USDT)");
     expect(table.textContent).toContain("Open orders (max)");
     expect(table.querySelector('[role="img"]')).toBeNull();
     expect(table.textContent).not.toMatch(/\d+(\.\d+)?%/);
     const panel = table.closest("section")!;
-    expect(panel.textContent).toContain("Not published (FE-071)");
-    expect(panel.textContent).toContain("Envelope verdict");
+    // No verdict in this body: it is named in the gap line (FE-071 in the title), not a sentence.
+    expect(panel.querySelector(".exec-blk-gaps")!.textContent).toContain("Verdict");
+    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Verdict: Not published (FE-071)");
     expect(panel.textContent).not.toContain("Within envelope");
+    expect(panel.textContent).toContain("Draft: values are proposed, not effective.");
   });
 
-  it("Positions & orders: the panel's state and Not published (FE-072), no empty table", async () => {
+  it("Positions & orders: the panel's state and `Not available` (FE-072 in the title), no empty table", async () => {
     mount(canaryPort(answering(v1Body())));
     await ready();
     await openTab("Positions & orders");
     expect(where()).toContain("tab=positions-orders");
     const body = screen.getByRole("tabpanel");
-    expect(body.textContent).toContain("Not published (FE-072)");
+    expect(body.textContent).toContain("Not available: Position rows");
+    expect(body.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(body.textContent).not.toContain("(FE-072)");
     expect(body.querySelector("table")).toBeNull();
   });
 
@@ -209,10 +214,11 @@ describe("dark V1 body: honest absence everywhere", () => {
     mount(canaryPort(answering(v1Body())));
     await ready();
     await openTab("Reconciliation");
-    const triad = screen.getByRole("group", { name: "Reconciliation" });
-    for (const name of ["Internal", "Broker", "Difference"]) expect(within(triad).getByRole("heading", { name })).toBeTruthy();
-    expect(triad.textContent).toContain("Not available");
-    expect(screen.getByRole("tabpanel").textContent).toContain("Not published (FE-072)");
+    // The dark body carries no figures: one `Not available` line instead of three columns of the same words.
+    const panel = screen.getByRole("tabpanel");
+    expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Internal, Broker and Difference figures");
+    expect(panel.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-072)");
+    expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
   });
 
   it("Guard rule: scale-up blocked, protective allowed, from the two flags", async () => {
@@ -232,15 +238,22 @@ describe("the four decisions (D6, D9): drawn, disabled, explained, never enabled
     mount(canaryPort(answering(v1Body())));
     await ready();
     const panel = screen.getByRole("heading", { name: "Promotion decision" }).closest("section")!;
+    // One reason and one My access link for the four decisions that are off for the same reason.
+    expect(within(panel).getAllByRole("link", { name: /My access/ })).toHaveLength(1);
+    expect(within(panel).getByRole("link", { name: "My access: Hold, Reduce, Rollback, Request scale" }).getAttribute("href")).toContain("/administration/profile-access");
+    expect(panel.textContent?.match(new RegExp(STAGE_WHY.liveClosed, "g"))).toHaveLength(1);
     for (const label of ["Hold", "Reduce", "Rollback", "Request scale"]) {
       const button = within(panel).getByRole("button", { name: label }) as HTMLButtonElement;
       expect(button.disabled, label).toBe(true);
       const reasonId = button.getAttribute("aria-describedby");
       expect(reasonId, label).toBeTruthy();
       expect(document.getElementById(reasonId!)?.textContent, label).toBe(STAGE_WHY.liveClosed);
-      expect(within(panel).getByRole("link", { name: `My access: ${label}` }).getAttribute("href")).toContain("/administration/profile-access");
       fireEvent.click(button);
     }
+    // What each does is the button's title, not a printed sentence; the "How promotion works" disclosure is gone.
+    expect(within(panel).getByRole("button", { name: "Hold" }).getAttribute("title")).toBe("Keep the envelope unchanged.");
+    expect(panel.textContent).not.toContain("Keep the envelope unchanged");
+    expect(within(panel).queryByText("How promotion works")).toBeNull();
     expect(where()).toBe(`/deployments/live/${DEP}/canary`);
   });
 
@@ -296,7 +309,7 @@ describe("what is blocking and rollback readiness", () => {
     await ready();
     const panel = screen.getByRole("heading", { name: "Before scale-up" }).closest("section")!;
     const list = within(panel).getByRole("list", { name: "Before scale-up" });
-    expect(list.textContent).toContain("Production commands are closed on this build, so no decision can be sent.");
+    expect(list.textContent).toContain("Production commands are closed on this build.");
     expect(list.textContent).toContain("The Canary owner has not signed off yet.");
     expect(list.textContent).not.toMatch(/PRODUCTION_COMMAND_INACTIVE/);
     const provenance = panel.querySelector("details")!;
@@ -315,14 +328,15 @@ describe("what is blocking and rollback readiness", () => {
     expect(rail.textContent).toContain("AP-152");
   });
 
-  it("Rollback readiness: four checks, dates Not published (FE-071), and no Ready anywhere", async () => {
+  it("Rollback readiness: four checks that say nothing are ONE `Not available` line (FE-071 in its title), and no Ready anywhere", async () => {
     mount(canaryPort(answering(v1Body())));
     await ready();
     const panel = screen.getByRole("heading", { name: "Rollback readiness" }).closest("section")!;
-    const items = within(panel).getAllByRole("listitem");
-    expect(items.map((i) => i.querySelector(".exec-cny-rb-name")?.textContent)).toEqual(["Flatten plan prepared", "Paper twin running", "Broker data fresh", "Last rollback drill"]);
-    expect(panel.textContent).toContain("Checked Not published (FE-071)");
-    expect(panel.textContent).not.toMatch(/Ready|Passed/);
+    expect(within(panel).queryAllByRole("listitem")).toHaveLength(0);
+    const gap = panel.querySelector(".exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Flatten plan prepared, Paper twin running, Broker data fresh, Last rollback drill");
+    expect(gap.getAttribute("title")).toContain("Flatten plan prepared: Not published (FE-071)");
+    expect(panel.textContent).not.toMatch(/Ready|Passed|\(FE-/);
   });
 });
 
@@ -362,7 +376,8 @@ describe("lit body (FIXTURE_LAB): figures, a fresh broker, trial day 6 of 14", (
     expect(ticks).toHaveLength(14);
     expect(trial.querySelectorAll('i[data-state="now"]')).toHaveLength(1);
     expect(trial.querySelectorAll('i[data-state="on"]')).toHaveLength(5);
-    expect(trial.textContent).toContain("Exit review opens Not published (FE-071)");
+    expect(trial.textContent).toContain("Not available: Started, Exit review opens");
+    expect(trial.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Exit review opens: Not published (FE-071)");
   });
 
   it("a fresh broker: the freshness chip carries its time and the rollback check its last update; no stale banner", async () => {
@@ -378,7 +393,7 @@ describe("lit body (FIXTURE_LAB): figures, a fresh broker, trial day 6 of 14", (
   it("a stale broker: the guarded banner says scale-up is blocked and protective actions stay open", async () => {
     mount(canaryPort(answering(populatedV1({ brokerFreshness: "STALE" }))));
     await ready();
-    expect(screen.getByText("Broker data is stale. Scale-up is blocked. Protective actions stay open.")).toBeTruthy();
+    expect(screen.getByText("Broker data is stale. Scale-up is blocked; protective actions stay open.")).toBeTruthy();
     await openTab("Guard rule");
     expect(screen.getByRole("table", { name: "Canary guard rule" }).textContent).toContain("Stale");
   });
@@ -395,18 +410,17 @@ describe("V2 following-parent body: the proposal only", () => {
     mount(canaryPort(answering(parentBody("canary"))));
     await ready();
     expect(root().getAttribute("data-body")).toBe("v2");
-    expect(screen.getByText("This response states the Canary proposal only. Runtime figures are not part of it.")).toBeTruthy();
-    const kpis = within(screen.getByRole("group", { name: "Canary figures" }));
-    const gaps = Array.from(screen.getByRole("group", { name: "Canary figures" }).querySelectorAll(".exec-blk-np"));
-    // One strip, one id: the first cell prints FE-072, the other four read Not published and carry the id in their tooltip.
-    expect(gaps.map((g) => g.textContent)).toEqual(["Not published (FE-072)", ...Array(4).fill("Not published")]);
-    expect(gaps.slice(1).every((g) => g.getAttribute("title")?.startsWith("Not published (FE-072)"))).toBe(true);
-    expect(kpis.getByText("Capital consumed")).toBeTruthy();
+    expect(screen.getByText("Canary proposal only; no runtime figures.")).toBeTruthy();
+    // No figure is published: no strip, ONE line naming the five (FE-072 in its title).
+    expect(screen.queryByRole("group", { name: "Canary figures" })).toBeNull();
+    const gap = document.querySelector(".exec-cny-v2 > .exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Capital consumed, Gross notional, Daily PnL, Open orders, Broker equity");
+    expect(gap.getAttribute("title")?.match(/Not published \(FE-072\)/g)).toHaveLength(5);
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
     expect(within(table).getByRole("columnheader", { name: "Proposed" })).toBeTruthy();
     expect(table.querySelector('[data-full="9007199254740993.123456789123456789"]')).not.toBeNull();
     expect(table.querySelector('[data-full="0.000000000000000001"]')).not.toBeNull();
-    expect(screen.getByRole("group", { name: "Trial schedule" }).textContent).toContain("proposed duration 7 days");
+    expect(screen.getByRole("group", { name: "Trial schedule" }).textContent).toContain("Proposed duration 7 days");
     const blockers = screen.getByRole("list", { name: "Before scale-up" });
     expect(blockers.textContent).toContain("The envelope is a draft: it is proposed, not effective.");
     expect(document.body.textContent ?? "").not.toMatch(NO_DASH);
@@ -416,7 +430,9 @@ describe("V2 following-parent body: the proposal only", () => {
     mount(canaryPort(answering(parentBody("canary_absent"))));
     await ready();
     expect(screen.queryByRole("table", { name: "Canary envelope caps" })).toBeNull();
-    expect(screen.getByText("Not available · PARENT_FIELD_PURPOSE_NOT_QUALIFIED")).toBeTruthy();
+    // The server's reason code is the title of `Not available`, not a second printed token.
+    expect(screen.getByText("Not available", { selector: "p.exec-blk-na" }).getAttribute("title")).toBe("PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
+    expect(document.body.textContent).not.toContain("PARENT_FIELD_PURPOSE_NOT_QUALIFIED");
   });
 
   it("the four decisions are still drawn, disabled", async () => {
@@ -534,13 +550,14 @@ describe("tabs and navigation", () => {
     expect(where()).toContain("workspace_id=ws_TEST_ONLY");
   });
 
-  it("the crumb links Alpha Fleet and names the deployment; the alpha name is Not published (FE-066)", async () => {
+  it("the crumb links Alpha Fleet and names the deployment; the alpha is `Alpha Not available` (FE-066 in its title)", async () => {
     mount(canaryPort(answering(v1Body())));
     await ready();
     const crumb = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(within(crumb).getByRole("link", { name: "Alpha Fleet" }).getAttribute("href")).toBe("/deployments/alphas");
     expect(crumb.textContent).toContain(DEP);
-    expect(document.querySelector(".exec-stage-sub")!.textContent).toContain("Not published (FE-066)");
+    expect(document.querySelector(".exec-stage-sub")!.textContent).toBe("BINANCE · Alpha Not available");
+    expect(document.querySelector('.exec-stage-sub [data-gap="FE-066"]')!.getAttribute("title")).toContain("Not published (FE-066)");
   });
 
   it("the crumb links the portfolio and the account the read published; there is no Alpha link (the alpha id is not in the read)", async () => {
@@ -643,8 +660,11 @@ describe("a lit V1 body: rows under the source's own names, compliance figures, 
     expect(Array.from(first.querySelectorAll("td")).map((td) => td.textContent)).toEqual(["BTCUSDT", "LONG", "0.0120", "64000.10", "No", "Not available"]);
     expect(screen.getByText("2 of 2")).toBeTruthy();
     expect(screen.getByText("1 of 1")).toBeTruthy();
-    expect(screen.getAllByText("Columns are the source's own field names.", { exact: false })).toHaveLength(2);
-    expect(table.closest("section")!.textContent).toContain("Not published (FE-072)");
+    // "Columns are the source's own field names" is the table's title; the typed rows are one `Not available` line.
+    expect(table.closest("div[title]")!.getAttribute("title")).toBe("Columns are the source's own field names.");
+    expect(table.closest("section")!.textContent).not.toContain("Columns are the source's own field names");
+    expect(table.closest("section")!.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Typed position rows");
+    expect(table.closest("section")!.querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("Not published (FE-072)");
     expect(table.textContent).not.toMatch(NO_DASH);
     expect(Array.from(table.querySelectorAll("tbody td")).every((td) => td.getAttribute("data-l"))).toBe(true);
   });
@@ -664,7 +684,7 @@ describe("a lit V1 body: rows under the source's own names, compliance figures, 
     mount(canaryPort(answering(populatedWithFacts())));
     await ready();
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
-    const cells = (label: string) => Array.from(table.querySelectorAll("tbody tr")).map((row) => row.querySelector(`td[data-l="${label}"]`)?.textContent?.replace(/^Not published \(FE-071\).*$/, "NP"));
+    const cells = (label: string) => Array.from(table.querySelectorAll("tbody tr")).map((row) => row.querySelector(`td[data-l="${label}"]`)?.textContent?.replace(/^Not available$/, "NP"));
     expect(cells("Consumed")).toEqual(["3,820.00", "NP", "NP", "1", "NP"]);
     const other = screen.getByRole("list", { name: "Other published figures" });
     expect(other.textContent).toContain("Headroom, capital cap 1,180.00");
@@ -696,7 +716,8 @@ describe("keyboard and focus", () => {
     await ready();
     const panel = screen.getByRole("heading", { name: "Promotion decision" }).closest("section")!;
     const reachable = Array.from(panel.querySelectorAll<HTMLElement>("a[href], button:not([disabled]), summary"));
-    expect(reachable.map((el) => el.textContent)).toEqual(["My access", "My access", "My access", "My access", "How promotion works"]);
+    // One My access link for the four decisions that share one reason; nothing else to tab to.
+    expect(reachable.map((el) => el.textContent)).toEqual(["My access"]);
     await act(async () => undefined);
   });
 });
