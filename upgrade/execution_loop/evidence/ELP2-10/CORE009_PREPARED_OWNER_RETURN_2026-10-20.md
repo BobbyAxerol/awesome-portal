@@ -120,8 +120,9 @@ Focused vitest, Node host, no PostgreSQL, no network (`--maxWorkers=2`): 9 files
 (preparation 39, owner install/conflict/replay 28, main boot path 11, validator CLI 17, composition identity 5 = 100 new) plus
 the 44 pre-existing tests of the touched modules (`elp210-native-core-runtime`, `native-core-bootstrap`,
 `native-core-application-lifecycle`, `native-manager-install-ack`). Related `elp210-native-frame-coupled` and
-`native-manager-preparation` also pass (165 tests, 52 skipped by their own gates). Scoped `tsc` of the new files: see the
-final report line (exit status recorded there). The new STREAM-ACK test is red on the previous `core-owner-commissioning.ts`;
+`native-manager-preparation` also pass (165 tests, 52 skipped by their own gates). Scoped `tsc` of the new CLI, the five specs and the fixture
+(plus everything they import): exit 0 — after one test-only type fix to the composition-identity spec, committed after the code commit
+(its first scoped run exited 2 on that one line; the earlier 5-spec scoped run was exit 0). The new STREAM-ACK test is red on the previous `core-owner-commissioning.ts`;
 every other new installer test is green on it.
 NOT_RUN: PostgreSQL-backed specs (`elp210-manager-domain-access`, `elp210-commissioning`), normal R2/R3 for these bytes,
 the full-project `tsc` (it exits 2 on 318 errors in unrelated pre-existing test files, none in these files), and anything on a runtime.

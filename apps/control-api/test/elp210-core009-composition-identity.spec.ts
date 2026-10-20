@@ -62,7 +62,7 @@ beforeAll(async () => {
 });
 afterAll(async () => { await rm(root, { recursive: true, force: true }); });
 function fakePool() {
-  const query = vi.fn(async () => ({ rowCount: 1, rows: [{ ...target, session_role_name: target.role_name }] }));
+  const query = vi.fn(async (_sql: string) => ({ rowCount: 1, rows: [{ ...target, session_role_name: target.role_name }] }));
   const end = vi.fn(async () => undefined), connect = vi.fn(async () => { throw Error("TEST_ONLY-unexpected-connect"); });
   return { pool: { options: { connectionTimeoutMillis: 1000, query_timeout: 3000 }, query, end, connect } as unknown as Pool, query, end, connect };
 }
