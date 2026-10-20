@@ -280,6 +280,32 @@ describe.skipIf(!database)("NC-01 native custody and shared Core drain, real iso
     await candidate.markNativeReadUnknown(native.lease_id, native.attempt_id);
     expect(await candidate.drainStatus("TEST_ONLY-drain")).toMatchObject({ status: "DRAIN_UNKNOWN", pending: 1 });
   });
+  it.each(["ADMITTED", "UNKNOWN"] as const)("blocks unused reverse finish on genuine %s native custody", async phase => {
+    // Reuse this real native admission fixture/API. No manufactured SQL phase,
+    // arbitrary source-terminal ACK or positive-release test backdoor.
+    const native = await candidate.admitNativeRead(actor, base()),
+      legacy = await candidate.issue(actor, binding), original = {
+        lease_id: legacy.lease_id, authority_revision: legacy.authority_revision,
+        actor: { ...actor }, binding: { ...binding },
+      };
+    if (phase === "UNKNOWN") await candidate.markNativeReadUnknown(native.lease_id, native.attempt_id);
+    const drainId = "TEST_ONLY-unused-native-global", drain = await candidate.beginDrain(drainId),
+      witness = vi.fn(() => {});
+    expect(drain).toMatchObject({ status: phase === "UNKNOWN" ? "DRAIN_UNKNOWN" : "DRAIN_PENDING", pending: 1 });
+    await expect(candidate.finishUnusedIdentityDrain(drainId, drain.authority_revision, original, witness))
+      .rejects.toMatchObject({ code: "CURRENT_HUMAN_DRAIN_UNRESOLVED" });
+    expect(witness).not.toHaveBeenCalled();
+    expect((await authority()).drain_id).toBe(drainId);
+    expect(await candidate.drainStatus(drainId))
+      .toMatchObject({ status: phase === "UNKNOWN" ? "DRAIN_UNKNOWN" : "DRAIN_PENDING", pending: 1 });
+    expect(await rows()).toMatchObject([{ lease_id: native.lease_id, attempt_id: native.attempt_id, phase }]);
+    expect((await pool.query("SELECT phase,attempt_id,terminal_receipt_digest FROM elp210_candidate.leases WHERE lease_id=$1",
+      [legacy.lease_id])).rows).toEqual([{ phase: "RETIRED", attempt_id: null, terminal_receipt_digest: null }]);
+    expect((await pool.query("SELECT phase FROM elp210_candidate.events WHERE lease_id=$1 ORDER BY event_id",
+      [legacy.lease_id])).rows.map(row => row.phase)).toEqual(["ISSUED", "RETIRED"]);
+    expect((await pool.query("SELECT count(*)::int n FROM elp210_candidate.mutations")).rows[0].n).toBe(0);
+  });
+
   it.each(["native", "legacy"] as const)("shares unresolved capacity when %s consumes the first slot", async first => {
     candidate = await CurrentHumanCandidate.create(pool, { ...config, limits: { ...config.limits, maximum_unresolved: 1 } });
     if (first === "native") {

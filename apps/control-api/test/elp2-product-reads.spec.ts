@@ -334,19 +334,20 @@ describe("ELP2-04 product reads before filtering, counts and pages", () => {
     expect(first.source.data.items).toHaveLength(1);
     expect(first.source.data.items[0].fields.order_id.value).toBe("order-own-2");
     expect(first.source.data.items[0].fields.quantity.value).toBe("12345678901234567890.123456789");
-    expect(first.source.data.projected_total_items).toBe(2);
-    expect(first.source.data.window_aggregates.status).toEqual({ OPEN: 2 });
+    expect(first.source.data).not.toHaveProperty("projected_total_items");
+    expect(first.source.data).not.toHaveProperty("window_aggregates");
     expect(JSON.stringify(first)).not.toMatch(/PEER_ONLY_STATUS|HIDDEN_VENUE|NEVER_RETURN|order-peer|epoch-1/);
     const second = await f.orders({ cursor: first.source.data.next_cursor });
     expect(second.source.data.items[0].fields.quantity.value).toBe("0");
-    expect(first.projection.sequence).toBeNull(); expect(first.projection.received_at).toBeNull();
+    expect(first).not.toHaveProperty("projection");
   });
   it("hidden value search equals unknown value search", async () => {
     const f = fixture();
     const hidden = await f.orders({ status: "PEER_ONLY_STATUS" });
     const unknown = await f.orders({ status: "NEVER_EXISTS" });
     expect(hidden).toEqual(unknown);
-    expect(hidden.source.data.filtered_total_items).toBe(0);
+    expect(hidden.source.data).not.toHaveProperty("filtered_total_items");
+    expect(hidden.source.data.items).toEqual([]);
   });
   it("forbidden field cannot be a filter or sorting oracle", async () => {
     const f = fixture({ fields: FIELDS.filter(value => value !== "venue") });

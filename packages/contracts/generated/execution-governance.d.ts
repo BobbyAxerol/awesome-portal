@@ -2110,6 +2110,8 @@ export interface components {
             /** @enum {unknown} */
             gate: "R1" | "R2" | "PAPER_EXIT" | "SANDBOX_EXIT" | "LIVE_GATE";
             subject: string;
+            /** @description Navigation only from this gate's immutable authorized scope: direct R2 or captured Paper Exit. Null for R1/unsupported/missing/ambiguous lineage. Not a filter, count scope or inferred permission. */
+            portfolio_id: string | null;
             subject_id: components["schemas"]["$defs-Identifier"];
             release_candidate: string | null;
             target: string;

@@ -80,7 +80,8 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
   if (d.members.some(member => !allowedStages.includes(member.stage)))
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ENVIRONMENT_STAGE_MISMATCH" });
 });
-const filter = z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL"]), value: text.optional() }).strict();
+const filter = z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL", "IN"]),
+  value: text.optional(), values: z.array(text).min(1).max(32).optional() }).strict();
 export const managerModelQuery = z.object({ workspace_id: text.optional(), environment: executionEnvironment,
   q: managerSearchText.optional(), q_mode: managerSearchMode.optional(), window: managerWindowQuery.optional(),
   stage_filter: z.array(financialStage).max(4).default([]), lifecycle_filter: text.optional(),
@@ -99,9 +100,13 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
   if (q.after && q.before || new Set(q.sort.map(s => s.field)).size !== q.sort.length || new Set(q.group_by).size !== q.group_by.length)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_QUERY_INVALID" });
   for (const f of q.filters) {
-    if (f.op === "IS_NULL" ? f.value !== undefined : f.value === undefined)
+    if (f.op === "IN" ? f.value !== undefined || f.values === undefined :
+      f.values !== undefined || (f.op === "IS_NULL" ? f.value !== undefined : f.value === undefined))
       c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_FILTER_INVALID" });
-    if (f.value !== undefined && MANAGER_SCALARS[f.field] === "DECIMAL" && !exactDecimal.safeParse(f.value).success)
+    if (f.values && new Set(f.values).size !== f.values.length)
+      c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_FILTER_DUPLICATE_VALUES" });
+    if (MANAGER_SCALARS[f.field] === "DECIMAL" &&
+      [ ...(f.value === undefined ? [] : [f.value]), ...(f.values ?? []) ].some(v => !exactDecimal.safeParse(v).success))
       c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_DECIMAL_FILTER_INVALID" });
   }
 });

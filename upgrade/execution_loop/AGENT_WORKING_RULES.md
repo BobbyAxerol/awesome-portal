@@ -674,3 +674,47 @@ Codex giữ HK → Edge → control-api → OpenAPI/fixture. Claude giữ reader
 **5. Cadence:** round-start (§10.1) và round-end (§10.2) như cũ; khi một bên dừng, bên đó để lại một **handoff note** trong packet (đang dở gì, file nào chưa commit, đợi gì). Ghi hai SHA nhánh và thời điểm đọc.
 
 Duyệt: **APPROVED 2026-10-18** (Bobby: check chéo; Claude được SSH đọc mẫu khi gói giao).
+
+### 10.13 Bàn giao toàn bộ backend còn lại cho Claude (Bobby, 2026-10-20)
+
+Yêu cầu mới nhất của Bobby: **Claude tiếp tục toàn bộ backend**, không chỉ frontend hoặc
+B1/B2. Addendum này thắng các giới hạn phân vai cũ trong §10.11 và §10.12; không xóa lịch sử.
+
+- Claude là implementation owner cho Portal Core/Execution backend còn lại, contracts,
+  generated fixtures, policy/composition Research, nguồn đọc/financial projection, command
+  bridge, realtime và qualification trong phạm vi đã duyệt; vẫn giữ frontend/design.
+  Không phải chờ Codex sửa từng backend request đã nằm trong giao việc.
+- Codex là reviewer/integrator và hỗ trợ source coordination, không còn độc quyền code các
+  vùng cũ. Source TS/PM/Edge vẫn do owner bên HK kiểm soát; giao backend Portal không phải
+  quyền sửa WIP hoặc deploy source bên kia.
+- Claude được SSH **đọc đầy đủ nguồn liên quan** để repin contracts/catalogue/journal/receipts,
+  không chỉ đọc một field mẫu. Mutation/runtime vẫn theo đúng gói Research/finite window đã
+  duyệt và source owner confirmation; không stable/dev/main, command/Live hay sao chép quyền stable.
+- Handoff hiện hành: [All-backend handoff 20/10](evidence/ELP2-10/CLAUDE_ALL_BACKEND_HANDOFF_2026-10-20.md).
+  Nó phân biệt đã có code, consumer, installed và connected proof; không dùng note OPEN lịch sử
+  để làm lại BE-P1…5 hoặc issue lại identity đã COMMIT/ACK.
+- Giữ one-writer trên từng file/branch; không đụng canonical WIP. Claude tiếp tục lane hiện có;
+  landing do integrator phối hợp khi sạch và gates tương ứng đạt, không tự merge/push.
+- Giữ rules verification §10.10, source authority, immutable evidence, budgets, cleanup và
+  two-way producer/consumer review. Khi cùng agent viết backend/FE, vẫn phải có hai receipt
+  phân biệt và review độc lập ở mốc; không tự biến fixture thành source owner acceptance.
+- Mỗi round nêu backend tiếp tục được gì, frontend nối gì, request nào gửi Edge/PM, blocker nào
+  cần Bobby; làm việc độc lập tiếp khi một input nguồn chưa có. Không mở ELP2-11/release bằng
+  cách thay định nghĩa gate hoặc đổi người giữ việc.
+
+### 10.10c R0 Markdown cho Codex (Bobby, 2026-10-21)
+
+Bobby duyệt áp dụng cùng R0 cho **commit thuần Markdown của Codex**, không còn
+giới hạn R0 ở nhánh Claude. Đây là ngoại lệ hẹp bổ sung §10.10.4, không thay
+quyền R1 hay gate R2/R3:
+
+- Chỉ file Markdown tài liệu/receipt/tracking; không code, generated contract,
+  schema, manifest/ledger toàn vẹn, runtime/config hoặc thay test/gate.
+- Trước commit: kiểm explicit staged path, `git diff --cached --check`, link/
+  locator của phần mới; chạy `scripts/execution-tracking-test.sh` khi sửa
+  Unified/tracker. Ghi `Verification: R0` và kết quả thật trong receipt.
+- Được `--no-verify` đúng commit R0 đó để không lặp build/test chỉ vì ghi nhận
+  bằng chứng. Code và candidate hạ cánh vẫn qua normal gate theo §10.10;
+  R0 không biến gate đỏ thành PASS hoặc source-only thành installed/connected.
+- Không giữ heavy lock cho kiểm tài liệu; giữ one-writer, commit có scope và
+  không push/deploy/dev/main nếu chưa có lệnh riêng.

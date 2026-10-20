@@ -1,5 +1,63 @@
 # ELP2-10 — Performance, quality và coexistence
 
+## Claude reader priority batch — 2026-10-19, 14:57UTC cut
+
+[Exact producer types, fixtures, focused results and consumer checklist](claude-reader-priority-return-2026-10-19.md):
+FE-044 q, FE-033 IN, FE-045 nullable portfolio, FE-046/032 bounded ledger
+continuation and FE-052 Blotter filters implemented. Source-only deficiencies
+and other subparts remain explicitly open. Node22/PG293PASS/1fixture-statusFAIL
+retained; test-only repair Blotter38PASS, final ledger8PASS and contractsPASS
+documented separately, not claimed as connected qualification. Ordinary R3 is
+required at landing. No early genuine session/JIT, repeated installation,
+frontend/runtime edit, merge or push. Peer21af6792 clean; no official request
+delta, draft066…072 not assigned. Source operational ACK/window/recoveryREADY,
+financial selection/budget/calibration, matched coexistence/G2 and genuine
+browser remainOPEN. Whole10NOT_MET;11NOT_ENTRY_READY.
+
+## Post-freeze actual return — 2026-10-19, 14:20UTC
+
+[Actual failed R3, test repair, Claude consumer and Edge next action](c7-priority-round-2026-10-19.md#post-freeze-return--2026-10-19-1420utc):
+contracts1142PASS; API8337PASS/1auth-expiry timeout/3existing skips, no commit.
+Test-only real-PG recovery transition repair is reviewed, validation pending;
+production guards/timeouts unchanged. Edge accepted exact installed bundle as
+input, **not** operational ACK/window/recovery READY. Core install is already
+complete and must not be repeated or replaced just to wait. Latest peer
+ef9014f3 still needs timestamp-reader and plan-only-copy integration.
+Financial selection/numeric approval, matched coexistence/G2 and genuine
+browser acceptance remain open. Whole10NOT_MET;11NOT_ENTRY_READY.
+14:26UTC: actual focused repaired test26/26PASS, build/scoped restorePASS and
+owned cell removed; final normal R3 remains pending, not a full repaired-tree PASS.
+
+## Final focused/source cut — 2026-10-19, 20:19 Asia/Saigon
+
+Self-projection privacy review fixed before landing: public deadline is only
+own-session ceiling; private authority-transition fence unchanged. Focused
+154API/two files and85contractsPASS; unchanged Decimal producer13PASS reused.
+First R3 stopped early for stale N29, not a passing full gate. Final retry after
+official integrity refresh remains pending. HK13:09:06UTC unchanged, no genuine
+owner ACK/window/READY. [Actual results, failed gate and ordered remaining owners](c7-priority-round-2026-10-19.md).
+No provider/runtime/source operation or session created; whole10NOT_MET.
+
+## Latest source follow-through — 2026-10-19, 20:02 Asia/Saigon
+
+[Prioritized round, focused results and unresolved source/financial gates](c7-priority-round-2026-10-19.md)
+and [exact Claude self-access handoff](../ELP2-03/self-access-consumer-return-2026-10-19.md):
+FE-057/058, Decimal128 producer guard and existing HTTP500 contract completeness
+implemented; ordinary R3 pending. No frontend or provider runtime change. The
+installed identity image/bytes below remain unchanged. No genuine owner ACK,
+identity COMMIT, READ/SSE or budget/calibration approval is invented.
+
+## Latest actual2026-10-19, 12:34UTC — installed Core / delivered Edge inputs
+
+[Actual installed Core → Edge handoff](CORE_INSTALLED_EDGE_HANDOFF_2026-10-19.md):
+implementation`f46439157fe2`, ordinary hook8309API/1141contractsPASS; actual image,
+Research backup, forward134 and registered custody verified; reverse READY and
+public readiness200. PM-only bundle actually transferred/hash-verified on HK,
+Core-server TLS1.3 verified. Source-owner ACK and physical COMMIT/Core ACK are
+still NOT_RUN; transfer is not owner acceptance. No temporary session issued,
+no command/Live/dev/main/stable/push/FE change. Whole10NOT_MET;11NOT_ENTRY_READY.
+Historical pending-installation statements below are preserved, not latest status.
+
 ## Current2026-10-19 — C7 runtime integration and source follow-through
 
 [Renewed source/commissioning audit and exact FE-054 successor](c7-closeout-followthrough-2026-10-19.md)
@@ -290,6 +348,15 @@ destructive down migration or self-activation; placement/DR detail in runbook.
 
 ## Delivery accounting — 2026-10-18, report-only
 
+Latest Core↔Edge follow-up: [008 cleanup source repair /009 native composition
+owner-return](CORE_EDGE_REQUEST_008_009_RETURN_2026-10-19.md).
+008SOURCE_IMPLEMENTED_TESTED_UNCOMMITTED, SOURCE_ONLY/NOT_INSTALLED;28modelPASS,
+PG311PASS/1connection-timeout, native-only31PASS retake/cleanupPASS, overlap.
+Late peer restart leaves preview control-api exited1/custody refusal; no Core
+reset/restart. No new source-terminal/ACK/install or STREAM right
+inferred. Original installed handoff remains historical; Edge must not use old
+bootstrap for008 acceptance. No phase11 entry or full10PASS.
+
 [48-hour work report and full450-file inventory](work-summary-2026-10-18.md):
 40commits baseline630eafc5→ff83f176, net+137910/-2624, separately classified
 backend/generated/tests/docs. HEAD's actual969contract/7427API PASS is distinct
@@ -315,3 +382,22 @@ PASS, explicit TEST_ONLY Core model. Normal-hook landing and genuine connected
 commissioning remain separate. [Core → Edge owner-return, source patch, private
 input references and next action](CORE_TO_EDGE_EPG10_08_OWNER_RETURN.md).
 No frontend field, stable change, source fixture credit or full phase PASS.
+
+## Core008 installed READY;009 owner handoff —2026-10-19 18:53UTC
+
+[Actual normal R3/commit, image/config/schema/READY pins, protected-data
+preservation and new HK-delivered private manifest](CORE_008_INSTALLED_READY_009_RETURN_2026-10-19.md).
+008INSTALLED_READY; connected cleanup still requires genuine source window.
+009 existing compiled composition NOT_COMPOSED, with exact owner inputs and
+sequenced lifecycle listed. No fake READ/STREAM/source ACK or fullELP2-10 PASS.
+
+## Fullstack review and Claude continuation — 2026-10-20
+
+[Current review/handoff](CLAUDE_FULLSTACK_REVIEW_2026-10-20.md) supersedes stale
+consumer/source-gap descriptions only where a newer receipt proves the change.
+Peer0ec70a08 reviewed against canonical7818d563; source, fixture, installed and
+connected states remain separate. V1 F0 error-envelope bug reproduced; scoped
+consumer/story/chart/accessibility/fixture gaps have concrete exit gates.
+Core009 revision3 source fixes and focused real-PG evidence now exist; ordinary
+release/install/connected window remain. Claude owns implementation, Codex
+review/integration; ACK pending. No code/runtime/merge/push in this review.

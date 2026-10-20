@@ -16,6 +16,19 @@ const fixture = load("fixtures/execution-manager-dataset.synthetic.valid.json");
 const ajv = new Ajv2020({strict:true,allErrors:true});
 const validate = ajv.compile(schema);
 describe("ELP2-06 generated named Manager BFF contract",()=>{
+  it("publishes bounded typed IN with exclusive value/values shapes and no duplicate members",()=>{
+    const sample=load("fixtures/execution-manager-query-in.synthetic.valid.json");
+    const check=ajv.compile(api.components.schemas.ManagerDatasetQuery);
+    expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");
+    for(const query of sample.cases){expect(check(query),JSON.stringify(check.errors)).toBe(true);expect(managerModelQuery.safeParse(query).success).toBe(true);}
+    for(const filter of [{field:'health',op:'IN',values:[]},{field:'health',op:'IN',values:['a','a']},
+      {field:'health',op:'IN',values:['a'],value:'a'},{field:'health',op:'EQ',values:['a']},
+      {field:'health',op:'IS_NULL',values:['a']},
+      {field:'health',op:'IN',values:Array.from({length:33},(_,i)=>String(i))}]){
+      const query={environment:'paper',filters:[filter]};
+      expect(check(query)).toBe(false);expect(managerModelQuery.safeParse(query).success).toBe(false);
+    }
+  });
   it.each(["original","restated"])("publishes %s historical fixture in Zod, JSON Schema and OpenAPI without operational authority",mode=>{
     const sample=load(`fixtures/execution-manager-score-${mode}.synthetic.valid.json`);
     expect(sample.lane).toBe("TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT");

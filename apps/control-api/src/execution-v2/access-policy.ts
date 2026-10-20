@@ -106,7 +106,9 @@ export interface AccessEvaluationContext {
   allow_test_only?: boolean;
   /** Internal read-snapshot proof, never a browser-supplied entitlement. */
   authority_fingerprint?: string;
-  /** Genuine Core min(idle, absolute) session ceiling, never a public field. */
+  /** Internal Core min(idle, absolute) session ceiling, never browser input or
+   * a serialized actor/grant record. Own advisory projection may publish its
+   * time bound explicitly as session-only, never permission validity. */
   actor_lease_until_ms?: number;
   actor_role?: "ADMIN"|"USER";
   /** Genuine Core membership; the protected-owner exception is not membership. */

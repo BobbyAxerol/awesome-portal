@@ -1,0 +1,45 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.portfolio-360-local.v1",
+    "environment": "paper",
+    "epoch_id": "TEST_ONLY",
+    "source_snapshot_id": "TEST_ONLY:1",
+    "capability_snapshot_id": "TEST_ONLY:1",
+    "source_profile": "PORTAL_LOCAL_PROJECTION",
+    "projection_sequence": 1,
+    "freshness_policy_version": "portal.execution.local-projection.v1",
+    "read_at": "2026-10-19T00:00:00Z",
+    "analytics": {
+      "schema_version": "execution.analytics.v1",
+      "formula_version": "portfolio-capital-ledger.v1",
+      "source_authority": "DERIVED",
+      "input_freshness_floor": "STALE",
+      "panel_state": "ok",
+      "input_completeness": "PARTIAL",
+      "input_as_of": "2026-10-18T00:00:00Z",
+      "warnings": [],
+      "data": {
+        "portfolio_id": "TEST_ONLY-portfolio",
+        "entry_count": 1,
+        "returned_entry_count": 1,
+        "has_more": true,
+        "next_cursor": "TEST_ONLY-not-a-runtime-cursor",
+        "page_limit": 100,
+        "totals_scope": "AUTHORIZED_VALIDATED_SOURCE_CHUNK",
+        "ordering": "CREATED_AT_DESC_WITHIN_SOURCE_CHUNK",
+        "continuation_consistency": "SOURCE_PAGE_CONTRACT_AND_CURRENT_AUTHORIZATION",
+        "window": "LATEST",
+        "rejected_row_count": 0,
+        "duplicate_row_count": 0,
+        "reason_code": "ANALYTICS_LEDGER_BOUNDED_POPULATION",
+        "buckets": [{ "currency": "USD", "entry_count": 1, "gross_increase": "0.000000000000000001", "gross_decrease": "0", "entries": [{
+          "ledger_id": "TEST_ONLY-ledger", "allocation_id": null, "account_id": "TEST_ONLY-account",
+          "movement_type": "ALLOCATE", "direction": "INCREASE", "amount": "0.000000000000000001",
+          "before_allocated": "0", "after_allocated": "0.000000000000000001",
+          "occurred_at": "2026-10-18T00:00:00Z", "seq": null, "command_id": null, "receipt_ref": null
+        }] }]
+      }
+    }
+  }
+}

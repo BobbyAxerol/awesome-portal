@@ -6,10 +6,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { generateKeyPair, SignJWT } from "jose";
-import { Pool } from "pg";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { Pool, type PoolClient } from "pg";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthService } from "../src/auth/auth.service";
 import { Argon2CredentialService, randomToken, sha256 } from "../src/auth/argon";
+import { SessionsRepository } from "../src/repos/sessions";
 import { CurrentHumanCandidate, type CurrentHumanCandidateConfig,
   type CurrentHumanBinding } from "../src/execution-v2/current-human-candidate";
 import { CurrentHumanMutations, type CurrentHumanRecoveryAttempt } from "../src/execution-v2/current-human-mutations";
@@ -175,6 +176,63 @@ describe.skipIf(!database)("ELP2-10 exact self-logout with durable current-human
     expect(retried.drain).toBeNull();
     await auth.logout(token);
     expect(await snapshot()).toEqual(retried);
+  });
+  it("lost physical logout COMMIT ACK retries the same session and mutation without another revoke or audit", async () => {
+    const otherId = `TEST_ONLY-ack-loss-other-${suffix}`;
+    await addSession(otherId, randomToken(32));
+    const original = SessionsRepository.prototype.revokeSession;
+    let restoreQuery: (() => void) | undefined;
+    const revoke = vi.spyOn(SessionsRepository.prototype, "revokeSession").mockImplementationOnce(async function (
+      this: SessionsRepository, ...args: Parameters<SessionsRepository["revokeSession"]>) {
+      await original.apply(this, args);
+      const db = (this as unknown as { pool: PoolClient }).pool;
+      const query = db.query, hadOwn = Object.hasOwn(db, "query");
+      const invoke = (...values: unknown[]) => (query as (...values: unknown[]) => Promise<unknown>).apply(db, values);
+      const restore = () => {
+        if (hadOwn) db.query = query; else Reflect.deleteProperty(db, "query");
+        restoreQuery = undefined;
+      };
+      restoreQuery = restore;
+      db.query = (async (...values: unknown[]) => {
+        const command = typeof values[0] === "string" ? values[0] : (values[0] as { text?: unknown })?.text;
+        if (command === "COMMIT") {
+          // Execute actual PostgreSQL COMMIT first; only its acknowledgement
+          // is lost. A pre-COMMIT throw/ROLLBACK does not exercise this case.
+          try { await invoke(...values); throw new Error("TEST_ONLY_LOGOUT_PHYSICAL_COMMIT_ACK_LOST"); }
+          finally { restore(); }
+        }
+        if (command === "ROLLBACK") { try { return await invoke(...values); } finally { restore(); } }
+        return invoke(...values);
+      }) as typeof db.query;
+    });
+    try {
+      await expect(auth.logout(token, "TEST_ONLY-logout-ack-lost"))
+        .rejects.toThrow("TEST_ONLY_LOGOUT_PHYSICAL_COMMIT_ACK_LOST");
+      expect(revoke).toHaveBeenCalledOnce();
+      expect(revoke).toHaveBeenCalledWith(actor.session_id, "logout");
+      const committed = await snapshot();
+      expect(committed.session).toMatchObject({ state: "REVOKED", revoke_reason: "logout" });
+      expect(committed.audits).toHaveLength(1);
+      expect(committed.audits[0].request_id).toBe("TEST_ONLY-logout-ack-lost");
+      expect(committed.intents).toMatchObject([{ state: "FINISHED", family: "AUTH_SESSION",
+        actor_id: actor.user_id, session_id: actor.session_id }]);
+      expect(Number(committed.intents[0].session_revision)).toBe(actor.session_generation);
+      expect(committed.drain).toBeNull();
+      const events = (await pool.query("SELECT * FROM elp210_candidate.mutation_events ORDER BY event_id")).rows;
+      const retryCoordinator = new CurrentHumanMutations(pool, candidate, { recover: attempt => recover(attempt) },
+        { maximum_intents: 8, maximum_recoveries_per_request: 3 });
+      await expect(service(retryCoordinator).logout(token, "TEST_ONLY-logout-ack-retry")).resolves.toBeUndefined();
+      expect(await snapshot()).toEqual(committed); // Includes the exact original mutation_id and audit.
+      expect((await pool.query("SELECT * FROM elp210_candidate.mutation_events ORDER BY event_id")).rows).toEqual(events);
+      expect(revoke).toHaveBeenCalledOnce();
+      expect((await pool.query("SELECT state FROM auth_sessions WHERE session_id=$1", [otherId])).rows[0].state)
+        .toBe("ACTIVE");
+    } finally {
+      // Also restore the connection if an earlier assertion/write failed
+      // before the wrapped COMMIT/ROLLBACK could clean up its own property.
+      restoreQuery?.();
+      revoke.mockRestore();
+    }
   });
   it("concurrent exact logout retries revoke and audit once on the same durable intent", async () => {
     await expect(Promise.all([auth.logout(token), auth.logout(token)])).resolves.toEqual([undefined, undefined]);

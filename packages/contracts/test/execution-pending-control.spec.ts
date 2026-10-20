@@ -69,7 +69,7 @@ describe("ELP2-07 separate existing pending recall control public contract", () 
     ].map(suffix => "executionPendingControl" + suffix + "V1").sort());
     for (const operation of operations as any[]) {
       expect(operation.security).toEqual([{ PortalSession: [] }]);
-      expect(Object.keys(operation.responses).sort()).toEqual(["200", "400", "401", "403", "404", "409", "503"]);
+      expect(Object.keys(operation.responses).sort()).toEqual(["200", "400", "401", "403", "404", "409", "500", "503"]);
       for (const response of Object.values(operation.responses) as any[])
         expect(response.headers["Cache-Control"].schema.const).toBe("private, no-store");
       expect(operation.responses[502]).toBeUndefined();

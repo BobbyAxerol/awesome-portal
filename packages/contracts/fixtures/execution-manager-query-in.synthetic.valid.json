@@ -1,0 +1,38 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "environment": "paper",
+      "filters": [
+        {
+          "field": "health",
+          "op": "IN",
+          "values": [
+            "HEALTHY",
+            "DEGRADED"
+          ]
+        }
+      ]
+    },
+    {
+      "environment": "paper",
+      "filters": [
+        {
+          "field": "net_pnl",
+          "op": "IN",
+          "values": [
+            "0",
+            "100.0000000000000001"
+          ]
+        }
+      ],
+      "economic_partition": {
+        "economic_domain": "PAPER",
+        "currency": "USDT",
+        "basis": "TEST_ONLY:net-ledger",
+        "native_profile_ref": "TEST_ONLY:paper",
+        "domain_proof_ref": "TEST_ONLY:proof"
+      }
+    }
+  ]
+}

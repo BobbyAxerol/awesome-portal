@@ -4,7 +4,8 @@ import { retainedReview, projectionExpired } from "./retained-read-profile";
 import { Inject, Injectable, Optional } from "@nestjs/common";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { ControlApiConfig, querySigningKeys } from "../config";
-import { ExecutionReadScopes, ExecutionReadScopeError } from "../execution-v2/read-scope";
+import { ExecutionReadScopes, ExecutionReadScopeError, scopeReadPopulation,
+  type AuthorizedExecutionReadScope } from "../execution-v2/read-scope";
 import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, retainedRelationAction, fenceRetainedSnapshot } from "./retained-operation-page";
 import { projectionRowVisible } from "../execution-v2/read-projection";
 import {scopedLiveSource} from "../profile-read/scoped-live-source";
@@ -391,6 +392,9 @@ export class ExecutionProductReadSource {
       const fields = [query.status !== undefined || query.statuses !== undefined ? "status" : null,
         query.venue !== undefined ? "venue" : null, query.symbol !== undefined ? "symbol" : null,
         query.side !== undefined ? "side" : null,
+        query.deployment_id !== undefined ? "deployment_id" : null,
+        query.account_id !== undefined ? "account_id" : null,
+        query.alpha_id !== undefined ? "alpha_id" : null,
         screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders" ?
           query.sort === "updated_at_desc" ? "updated_at" : "submitted_at" : null];
       if (fields.some(field => field !== null && !retainedFieldAllowed(readScope, field)))
@@ -412,23 +416,33 @@ export class ExecutionProductReadSource {
       Object.keys(row.fields).some(field => DECIMAL_FIELD.has(field) && !retainedFieldAllowed(readScope, field))))
       throw new ExecutionReadScopeError("EXECUTION_READ_FIELD_POLICY_PENDING", 503);
     const authorizedItems = scopedRetainedRows(readScope, projected.items);
-    const scoped = query.deploymentScope
+    const resourceScoped = query.deploymentScope
       ? scopeRows(relation, authorizedItems, query.deploymentScope)
       : { items: authorizedItems, state: "EXACT" as const, reasonCode: null };
+    // The same authorized relation population supplies rows, counts and the
+    // continuation. Never filter an already-paginated Manager page in the BFF.
+    const scoped = screenId === "EXECUTION_FULL_BLOTTER_SCREEN"
+      ? blotterScopeRows(resourceScoped, query, environment, readScope)
+      : resourceScoped;
     const scopedItems = screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
       ? filterAndSort(scoped.items, query)
       : scoped.items;
     const limit = query.limit ?? 100;
+    const cursorQuery = { ...query, cursor: undefined,
+      ...(screenId === "EXECUTION_FULL_BLOTTER_SCREEN" ? { stage: query.stage ?? "PAPER" } : {}),
+      ...(screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders"
+        ? { sort: query.sort ?? "submitted_at_desc" } : {}) };
     const cursorBinding = JSON.stringify([readScope?.fingerprint, requestedEnvironment, screenId, sourceId, relation,
-      { ...query, cursor: undefined }, snapshot.projectionEpoch, snapshot.payloadDigest]);
-    const start = isScoped ? decodeScopedCursor(this.config, query.cursor, cursorBinding) : decodeCursor(query.cursor, snapshot.payloadDigest);
+      cursorQuery, snapshot.projectionEpoch, snapshot.payloadDigest]);
+    const boundCursor = isScoped || screenId === "EXECUTION_FULL_BLOTTER_SCREEN";
+    const start = boundCursor ? decodeScopedCursor(this.config, query.cursor, cursorBinding) : decodeCursor(query.cursor, snapshot.payloadDigest);
     if (start > scopedItems.length) {
       throw new CurrentSourceProxyError("N31_PROJECTION_CURSOR_AHEAD", 409, {
         availability: "DEGRADED", retryable: false,
       });
     }
     const rows = scopedItems.slice(start, start + limit);
-    const cursor = (offset: number) => isScoped ? encodeScopedCursor(this.config, offset, cursorBinding) : encodeCursor(offset, snapshot.payloadDigest);
+    const cursor = (offset: number) => boundCursor ? encodeScopedCursor(this.config, offset, cursorBinding) : encodeCursor(offset, snapshot.payloadDigest);
     const next = start + rows.length < scopedItems.length ? cursor(start + rows.length) : null;
     const previous = start > 0 ? cursor(Math.max(0, start - limit)) : null;
     /*
@@ -442,16 +456,14 @@ export class ExecutionProductReadSource {
      * explicitly Portal-derived downstream; it is never a claim about all
      * historical Trading-System rows.
      */
-    const exactCurrentProjection = screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders" &&
-      projected.completeness === "COMPLETE" && scoped.state === "EXACT" &&
-      (!isScoped || ["status", "venue", "side"].every(field => retainedFieldAllowed(readScope, field)));
+    const exactCurrentProjection = !isScoped && screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders" &&
+      projected.completeness === "COMPLETE" && scoped.state === "EXACT";
     // Existing non-Blotter resource pages use their local count purely as a
     // bounded page/navigation aid.  Blotter is the only consumer that labels
     // a count an exact query result, so its stricter proof must not silently
     // change those independent response contracts.
-    const publishPageCounts = !(screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders") ||
-      exactCurrentProjection;
-    const visibleDigest = isScoped ? `sha256:${createHash("sha256").update(JSON.stringify(authorizedItems)).digest("hex")}` : snapshot.payloadDigest;
+    const publishPageCounts = !isScoped &&
+      (!(screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && relation === "orders") || exactCurrentProjection);
     const result = {
       schema_version: "portal.execution.local-projection-bff.v1",
       authority: "PORTAL_CONTROL_API",
@@ -460,11 +472,14 @@ export class ExecutionProductReadSource {
       profile_id: profileId,
       workspace_id: projectionWorkspaceId,
       viewer_workspace_id: principal.workspaceId,
-      projection: {
+      // A scoped retained view is not the legacy complete-mirror proof. The
+      // global checkpoint/clock stays private; do not synthesize a sequence,
+      // relax the mirror parser, or let absent proof become TS exact totals.
+      ...(!isScoped ? { projection: {
         authority: "SGP_POSTGRESQL",
-        epoch: isScoped ? "AUTHORIZED_RETAINED_VIEW" : snapshot.projectionEpoch,
-        sequence: isScoped ? null : snapshot.projectionSequence,
-        payload_digest: visibleDigest,
+        epoch: snapshot.projectionEpoch,
+        sequence: snapshot.projectionSequence,
+        payload_digest: snapshot.payloadDigest,
         source_contract_revision: snapshot.document.source_contract_revision,
         source_catalogue_sha256: snapshot.sourceCatalogueSha256 ?? snapshot.document.source_catalogue_sha256 ?? null,
         // The raw Manager checkpoint stays only in the durable SGP mirror.
@@ -472,15 +487,15 @@ export class ExecutionProductReadSource {
         // this value would make a current-page BFF an accidental source
         // selector and violates the EDS-11 revalidation boundary.
         source_cursor: null,
-        received_at: isScoped ? null : snapshot.receivedAt.toISOString(),
-        last_successful_refresh_at: isScoped ? null : snapshot.lastSuccessfulRefreshAt.toISOString(),
-      },
+        received_at: snapshot.receivedAt.toISOString(),
+        last_successful_refresh_at: snapshot.lastSuccessfulRefreshAt.toISOString(),
+      } } : {}),
       source: {
         authority: "EXECUTION_CELL",
         profile_id: profileId,
         availability: "AVAILABLE",
         freshness: retainedReview(this.config) ? "STALE" : freshness(ageMs, this.config.EXECUTION_LOCAL_PROJECTION_POLL_INTERVAL_MS),
-        completeness: isScoped ? "PARTIAL" : projected.completeness,
+        completeness: isScoped || scoped.state === "PARTIAL" ? "PARTIAL" : projected.completeness,
         as_of: isScoped ? null : projected.as_of,
         data: {
           relation: { schema: "public", relation },
@@ -498,9 +513,9 @@ export class ExecutionProductReadSource {
             filtered_total_items: scopedItems.length,
             ...(exactCurrentProjection ? { window_aggregates: countByDimensions(scopedItems) } : {}),
           } : {}),
-          scope: query.deploymentScope ? {
-            resource_kind: "DEPLOYMENT",
-            resource_id: query.deploymentScope.deploymentId,
+          scope: query.deploymentScope || hasBlotterScope(query) ? {
+            ...(query.deploymentScope ? { resource_kind: "DEPLOYMENT",
+              resource_id: query.deploymentScope.deploymentId } : {}),
             state: scoped.state,
             reason_code: scoped.reasonCode,
           } : undefined,
@@ -686,6 +701,10 @@ function namedContractError(): CurrentSourceProxyError {
 }
 
 interface LocalProductQuery {
+  stage?: "PAPER" | "SANDBOX" | "CANARY" | "LIVE";
+  deployment_id?: string;
+  account_id?: string;
+  alpha_id?: string;
   status?: string;
   statuses?: readonly string[];
   venue?: string;
@@ -696,7 +715,12 @@ interface LocalProductQuery {
 
 function hasLocalQuery(query: LocalProductQuery & DeploymentScopeQuery): boolean {
   return query.status !== undefined || query.statuses !== undefined || query.venue !== undefined || query.symbol !== undefined ||
-    query.side !== undefined || query.sort !== undefined || query.deploymentScope !== undefined;
+    query.side !== undefined || query.sort !== undefined || query.deploymentScope !== undefined || hasBlotterScope(query);
+}
+
+function hasBlotterScope(query: LocalProductQuery): boolean {
+  return query.stage !== undefined || query.deployment_id !== undefined ||
+    query.account_id !== undefined || query.alpha_id !== undefined;
 }
 
 type ScopedRows = {
@@ -704,6 +728,88 @@ type ScopedRows = {
   readonly state: "EXACT" | "PARTIAL";
   readonly reasonCode: string | null;
 };
+
+/** Closed query axes over the already-authorized relation. Alpha and strategy
+ * are different namespaces: only the qualified publication may connect them.
+ * Rows with ambiguous/missing attribution are absent with a typed PARTIAL
+ * reason, never counted as an exact empty result or assigned to one sibling.
+ */
+function blotterScopeRows(rows: ScopedRows, query: LocalProductQuery,
+  environment: ProjectionEnvironment, scope: AuthorizedExecutionReadScope | undefined): ScopedRows {
+  if (query.stage !== undefined && query.stage !== environment.toUpperCase()) {
+    throw new CurrentSourceProxyError("N22_BLOTTER_STAGE_NOT_AVAILABLE", 400, {
+      availability: "UNAVAILABLE", retryable: false,
+    });
+  }
+  const axes = ["deployment_id", "account_id", "alpha_id"] as const;
+  const requested = axes.filter(axis => query[axis] !== undefined);
+  if (requested.length === 0) return rows;
+  const selected = (tuple: Record<typeof axes[number], string>) =>
+    requested.every(axis => tuple[axis] === query[axis]);
+  const population = scope?.mode === "SCOPED_V2" ? scopeReadPopulation(scope) : null;
+  if (population && !population.allowedTuples.some(selected)) {
+    // Hidden IDs, unknown IDs and impossible correlated selections share one
+    // refusal, before counting, sorting or returning any source row.
+    throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
+  }
+  const strategyPairs = new Map<string, string>();
+  for (const pair of population?.strategyPairs ?? []) {
+    if (strategyPairs.has(pair.strategy_id))
+      throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
+    strategyPairs.set(pair.strategy_id, pair.alpha_id);
+  }
+  const anchors = ["alpha_id", "alpha_version_id", "portfolio_id", "deployment_id", "account_id"] as const;
+  const exactSelection = new Map(population?.allowedTuples.map(tuple =>
+    [JSON.stringify(anchors.map(axis => tuple[axis])), selected(tuple)] as const));
+  const partialSelection = new Map<string, boolean | null>();
+  let incomplete = false;
+  const items = rows.items.filter(row => {
+    if (!population) {
+      if (requested.some(axis => typeof row.fields[axis] !== "string" || row.fields[axis] === "")) {
+        incomplete = true;
+        return false;
+      }
+      return requested.every(axis => row.fields[axis] === query[axis]);
+    }
+    if (anchors.every(axis => typeof row.fields[axis] === "string")) {
+      const exact = exactSelection.get(JSON.stringify(anchors.map(axis => row.fields[axis])));
+      if (exact === undefined || row.fields.strategy_id !== undefined && row.fields.strategy_id !== null &&
+          (typeof row.fields.strategy_id !== "string" || strategyPairs.get(row.fields.strategy_id) !== row.fields.alpha_id)) {
+        incomplete = true;
+        return false;
+      }
+      return exact;
+    }
+    // Orders often share the same partial lineage. Cache by lineage, not by
+    // order ID, so a long retained history does not rescan every source tuple
+    // for every order. Complete tuple witnesses above stay constant-time.
+    const key = JSON.stringify([...anchors.map(axis => row.fields[axis] ?? null), row.fields.strategy_id ?? null]);
+    if (partialSelection.has(key)) {
+      const cached = partialSelection.get(key)!;
+      if (cached === null) incomplete = true;
+      return cached === true;
+    }
+    const candidates = population.allowedTuples.filter(tuple => anchors.every(axis =>
+      row.fields[axis] === undefined || row.fields[axis] === null || row.fields[axis] === tuple[axis]) &&
+      (row.fields.strategy_id === undefined || row.fields.strategy_id === null ||
+        typeof row.fields.strategy_id === "string" && strategyPairs.get(row.fields.strategy_id) === tuple.alpha_id));
+    if (candidates.length === 0) {
+      partialSelection.set(key, null);
+      incomplete = true;
+      return false;
+    }
+    const matching = candidates.filter(selected);
+    if (matching.length > 0 && matching.length !== candidates.length) {
+      partialSelection.set(key, null);
+      incomplete = true;
+      return false;
+    }
+    partialSelection.set(key, matching.length > 0);
+    return matching.length > 0;
+  });
+  return { items, state: incomplete ? "PARTIAL" : rows.state,
+    reasonCode: rows.reasonCode ?? (incomplete ? "N22_BLOTTER_SCOPE_LINEAGE_NOT_PUBLISHED" : null) };
+}
 
 /**
  * Scope rows before local keyset pagination.  A row with an explicit

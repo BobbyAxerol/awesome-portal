@@ -127,11 +127,17 @@ export class ExecutionAnalyticsController {
 
   @Get("/portfolios/:portfolioId/capital-ledger")
   async capitalLedger(@Req() request: AnalyticsRequest, @Param("portfolioId") id: string, @Query() raw: unknown = {}) {
-    const environment = panelEnvironment(raw);
+    const parsed = z.object({ environment: z.enum(["paper", "sandbox", "live"]).default("paper"),
+      limit: z.string().regex(/^(?:[1-9]\d{0,2})$/).transform(Number).pipe(z.number().int().max(250)).optional(),
+      cursor: z.string().min(1).max(4096).optional() }).strict().safeParse(raw ?? {});
+    if (!parsed.success) throw new AnalyticsProxyError("ANALYTICS_QUERY_INVALID", 400);
+    const { environment, ...page } = parsed.data;
     if (this.portfolio360?.enabled()) {
       const authorized = await this.readAuthority.authorize(request, environment);
-      return this.invoke(() => this.portfolio360!.capitalLedger(authorized, id, environment));
+      return this.invoke(() => this.portfolio360!.capitalLedger(authorized, id, environment, page));
     }
+    if (page.cursor !== undefined || page.limit !== undefined)
+      throw new AnalyticsProxyError("ANALYTICS_LEDGER_PAGINATION_UNAVAILABLE", 503);
     if (environment !== "paper") throw new AnalyticsProxyError("ANALYTICS_PROFILE_NOT_SUPPORTED", 404);
     return this.invoke(() => this.proxy.capitalLedger(principal(request), id));
   }

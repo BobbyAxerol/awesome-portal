@@ -32,6 +32,9 @@ export interface ManagerListPrincipal {
 const MAX_SOURCE_PAGES = 10;
 const SOURCE_PAGE_LIMIT = 200;
 const SNAPSHOT_MAX_AGE_MS = 5_000;
+// FE-049: match the public Decimal bound after canonical normalization,
+// including a minus sign/decimal point and any carry produced by aggregation.
+const MAX_EXACT_DECIMAL_LENGTH = 128;
 // BR-EX-76 bounds the portfolio population; a larger real population is
 // served capped and labeled truncated/PARTIAL, never silently trimmed.
 const PORTFOLIO_LIST_MAX_ITEMS = 100;
@@ -190,9 +193,14 @@ export class ManagerListsService {
    * worker cadence, never browser refreshes.
    */
   async portfolios(principal: ManagerListPrincipal, query: PortfolioListQuery) {
+    // Reuse the existing authorized search path: its name-field check precedes
+    // matching/counts/page selection and its cursor binds the complete query.
+    // Capture strings before I/O so a caller cannot mutate q during the read.
+    const captured = { ...query };
+    const scopedQuery = captured.q === undefined ? captured : { ...captured, search: captured.q };
     if (this.readScopes && this.profiles) return new ScopedManagerReader(this.profiles, this.readScopes, this.config)
-      .read(principal, "PORTFOLIOS", query, () => this.legacyPortfolios(principal, query));
-    return this.legacyPortfolios(principal, query);
+      .read(principal, "PORTFOLIOS", scopedQuery, () => this.legacyPortfolios(principal, captured));
+    return this.legacyPortfolios(principal, captured);
   }
 
   private async legacyPortfolios(principal: ManagerListPrincipal, query: PortfolioListQuery) {
@@ -206,6 +214,11 @@ export class ManagerListsService {
       page_freshness?: ManagerPage["freshness"];
     };
     const budget = projectionFreshnessBudget(this.config);
+    // Keep projection/cache population unfiltered and shared exactly as before.
+    // With policy routing this callback executes INSIDE the current authority
+    // fence; legacy authorization is profile-wide, never inferred from q.
+    const matched = query.q === undefined ? rows : rows.filter(row =>
+      row.name.toLocaleLowerCase().includes(query.q!.toLocaleLowerCase()));
     return {
       schema_version: "execution.portfolio-list.v1",
       record_authority: "PORTAL_PROJECTION",
@@ -227,7 +240,10 @@ export class ManagerListsService {
       environments: summary.branches ?? {},
       total_portfolios: summary.total_portfolios ?? rows.length,
       truncated: summary.truncated ?? false,
-      items: rows.map((row) => ({
+      // Exact retained matches only, not a global census when truncated=true.
+      // Keep the no-q compatibility response unchanged.
+      ...(query.q === undefined ? {} : { matching_portfolios: matched.length }),
+      items: matched.map((row) => ({
         portfolio_id: row.portfolioId,
         name: row.name,
         owner: row.owner,
@@ -829,7 +845,11 @@ function normalizeExact(value: string): string {
   const integer = integerRaw.replace(/^0+(?=\d)/, "") || "0";
   const fraction = fractionRaw.replace(/0+$/, "");
   const zero = integer === "0" && fraction === "";
-  return `${negative && !zero ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
+  const normalized = `${negative && !zero ? "-" : ""}${integer}${fraction ? `.${fraction}` : ""}`;
+  // Leading/trailing zeroes do not enlarge the published exact value. Check
+  // here rather than on raw input so the same bound also covers summed output.
+  if (normalized.length > MAX_EXACT_DECIMAL_LENGTH) throw new ManagerListsError("BR72_SOURCE_DECIMAL_INVALID", 502);
+  return normalized;
 }
 
 function sumExact(values: readonly string[]): string {

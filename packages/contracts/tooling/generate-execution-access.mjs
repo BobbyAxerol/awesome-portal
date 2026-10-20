@@ -144,12 +144,17 @@ const selfNavigationItem={...obj({feature:{enum:featureIds},state:{enum:['ENTERA
 const eligibilityQuery=obj({workspace_id:scopedText,environment,resource_kind:resourceKind,resource_id:scopedText,actions:eligibilityCsv});
 const selfNavigationQuery=obj({workspace_id:scopedText,environment});
 const accessProblemCode={type:'string',enum:[...ACCESS_PROBLEM_CODES],description:PROBLEM_CODE_DESCRIPTION};
+const projectionTimes={
+  observed_at_ms:{...ms,description:'Portal evaluation time in UTC epoch milliseconds; not source observation time.'},
+  valid_until_ms:{...ms,description:'End-exclusive ceiling of this actor\'s current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline.'},
+};
 const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector,AccessChange:change,
   AccessEligibilityAction:{type:'string',enum:eligibilityActions},
   AccessEligibilityQuery:eligibilityQuery,AccessSelfNavigationQuery:selfNavigationQuery,
   AccessEligibilityRow:eligibilityRow,
   AccessEligibility:{...obj({schema_version:{const:'portal.self-eligibility.v1'},workspace_id:scopedText,environment,
     resource:obj({kind:resourceKind,id:scopedText}),current_only:{const:true},advisory_only:{const:true},
+    ...projectionTimes,
     actions:{type:'array',minItems:1,maxItems:16,items:ref('AccessEligibilityRow'),
       allOf:eligibilityActions.map(action=>({contains:{type:'object',properties:{action:{const:action}},required:['action']},
         minContains:0,maxContains:1}))}}),
@@ -158,6 +163,7 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
   AccessSelfNavigationItem:selfNavigationItem,
   AccessSelfNavigation:{...obj({schema_version:{const:'portal.self-navigation.v1'},workspace_id:scopedText,environment,
     current_only:{const:true},advisory_only:{const:true},
+    ...projectionTimes,
     current_read_mode:{enum:['LEGACY_COMPATIBILITY','SCOPED_V2','NOT_ESTABLISHED'],
       description:'Current Core-workspace reader routing metadata only; not a grant, source readiness or command permit.'},
     features:{type:'array',minItems:4,maxItems:4,items:false,prefixItems:featureIds.map(feature=>({allOf:[
@@ -184,7 +190,9 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
     next_cursor:nullable({type:'string',maxLength:2048}),max_items:{const:100}}),
   AccessProblem:obj({error:obj({code:accessProblemCode,message:{type:'string'}}),request_id:{type:'string'}})};
 const response=(s,description)=>({description,content:{'application/json':{schema:ref(s)}}});
-const errors=Object.fromEntries([400,401,403,404,409,503].map(s=>[s,response('AccessProblem','Typed public refusal; current authority is required even for replay.')]));
+const errors=Object.fromEntries([400,401,403,404,409,500,503].map(s=>[s,response('AccessProblem',s===500
+  ? 'Sanitized INTERNAL_ERROR; outcome is not established and writes must not be automatically replayed.'
+  : 'Typed public refusal; current authority is required even for replay.')]));
 const workspace={name:'workspace_id',in:'query',required:true,schema:text};
 const id={name:'id',in:'path',required:true,schema:text};
 const headers=[{name:'x-portal-idempotency-key',in:'header',required:true,schema:{type:'string',pattern:'^[A-Za-z0-9._:-]{8,128}$'}},
@@ -224,13 +232,15 @@ const sampleChange={subject_user_id:'usr_TEST_ONLY_researcher',action:'portfolio
   valid_from_ms:1792094400000,valid_until_ms:null,delegable_actions:[],ceiling_grant_id:'ceiling_TEST_ONLY',expected_ceiling_revision:'r1_TEST_ONLY',
   expected_policy_revision:'p1_TEST_ONLY',expected_ts_membership_revision:null,reason:'Synthetic example, not a granted production policy'};
 const sampleEligibility={schema_version:'portal.self-eligibility.v1',workspace_id:'ws_TEST_ONLY',environment:'paper',
-  resource:{kind:'PORTFOLIO',id:'portfolio_TEST_ONLY'},current_only:true,advisory_only:true};
+  resource:{kind:'PORTFOLIO',id:'portfolio_TEST_ONLY'},current_only:true,advisory_only:true,
+  observed_at_ms:1792094400000,valid_until_ms:1792094405000};
 const sampleEligibilityRow={action:'portfolio.read',permission:'ALLOWED',reason_class:'FAMILY_CHECK_REQUIRED',
   public_copy_key:'FAMILY_CHECK_REQUIRED',grant_ref:'acg_TEST_ONLY_OWN_SYNTHETIC',authority_mode:'VERSIONED_CURRENT',
   step_up_required:false,step_up_freshness:'NOT_CHECKED',challenge_availability:'NOT_CHECKED',
   command_readiness:'NOT_CHECKED',family_check:'BUSINESS_READ_SCOPE'};
 const sampleNavigation={schema_version:'portal.self-navigation.v1',workspace_id:'ws_TEST_ONLY',environment:'paper',
-  current_only:true,advisory_only:true,current_read_mode:'NOT_ESTABLISHED',self_entry:{feature:'PROFILE_ACCESS',mode:'SELF_ONLY',permission:'ALLOWED',route:null,
+  current_only:true,advisory_only:true,observed_at_ms:1792094400000,valid_until_ms:1792094405000,
+  current_read_mode:'NOT_ESTABLISHED',self_entry:{feature:'PROFILE_ACCESS',mode:'SELF_ONLY',permission:'ALLOWED',route:null,
     consumer_state:'AWAITING_CONSUMER_ROUTER'}};
 const navigationRows=(appOnly)=>featureIds.map(feature=>{
   const positive=appOnly&&feature!=='EXECUTION_OPERATIONS';

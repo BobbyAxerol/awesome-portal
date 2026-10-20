@@ -338,7 +338,7 @@ describe("ELP2-03 eight unchanged legacy operations plus two C3 self reads and g
         expect(operation.requestBody.required).toBe(true);
         expect(operation.requestBody.content["application/json"].schema).toEqual({ $ref: `#/components/schemas/${route.input}` });
       } else expect(operation).not.toHaveProperty("requestBody");
-      for (const status of ["400", "401", "403", "404", "409", "503"])
+      for (const status of ["400", "401", "403", "404", "409", "500", "503"])
         expect(operation.responses[status].content["application/json"].schema).toEqual({ $ref: "#/components/schemas/AccessProblem" });
     }
     expect(validates("AccessProblem", { error: { code: "ACCESS_DENIED", message: "The requested access is not available." }, request_id: "TEST_ONLY_request" })).toBe(true);
@@ -454,6 +454,22 @@ describe("C3 current self projection — canonical TEST_ONLY schemas, never inst
       parity("AccessEligibility", { ...good, actions: [{ ...good.actions[0], action }] }, false);
     for (const actions of [[], Array.from({ length: 17 }, () => good.actions[0])])
       parity("AccessEligibility", { ...good, actions }, false);
+  });
+
+  it("requires finite UTC projection times in both contracts, not cached permission or source readiness", () => {
+    for (const [name] of pairs) {
+      const value = fixture(name), definition = spec.components.schemas[name];
+      expect(definition.required).toEqual(expect.arrayContaining(["observed_at_ms", "valid_until_ms"]));
+      parity(name, value, true);
+      for (const key of ["observed_at_ms", "valid_until_ms"]) {
+        const absent = { ...value }; delete absent[key];
+        parity(name, absent, false);
+        for (const invalid of [-1, 0.5, Number.MAX_SAFE_INTEGER + 1, "1792094400000", null])
+          parity(name, { ...value, [key]: invalid }, false);
+      }
+      expect(definition.properties.valid_until_ms.description).toContain("Not a cache TTL");
+      expect(definition.properties.valid_until_ms.description).toContain("revoked earlier");
+    }
   });
 
   it("each action publishes exactly its existing family and step-up prerequisite, never a generic family alias", () => {
@@ -662,7 +678,7 @@ describe("C3 current self projection — canonical TEST_ONLY schemas, never inst
     for (const operation of [eligibility, nav]) {
       expect(operation.description).toContain("Current-only");
       expect(operation.description).toContain("reject unknown query keys");
-      for (const status of ["200", "400", "401", "403", "404", "409", "503"])
+      for (const status of ["200", "400", "401", "403", "404", "409", "500", "503"])
         expect(operation.responses[status].headers["Cache-Control"])
           .toEqual({ required: true, schema: { type: "string", const: "private, no-store" } });
       expect(operation).not.toHaveProperty("requestBody");

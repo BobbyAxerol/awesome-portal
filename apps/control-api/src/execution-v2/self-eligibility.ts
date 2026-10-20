@@ -178,12 +178,21 @@ const rowSchema = z.object({ action: z.enum(ROW_ACTIONS), permission: z.enum(["A
     value.permission === "ALLOWED" && (value.grant_ref === null || value.authority_mode === "NOT_ESTABLISHED"))
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "ELIGIBILITY_ROW_INCONSISTENT" });
 });
+const projectionTimes = {
+  observed_at_ms: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
+    .describe("Portal evaluation time in UTC epoch milliseconds, not a source observation timestamp."),
+  valid_until_ms: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
+    .describe("End-exclusive ceiling of this actor's current session only, not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; each family API rechecks current authority."),
+};
 export const eligibilityResult = z.object({ schema_version: z.literal("portal.self-eligibility.v1"),
   workspace_id: scopedText, environment, resource: scopedResource,
   current_only: z.literal(true), advisory_only: z.literal(true),
+  ...projectionTimes,
   actions: z.array(rowSchema).min(1).max(16)
     .refine(rows => new Set(rows.map(row => row.action)).size === rows.length, "DUPLICATE_ACTION"),
 }).strict().superRefine((value, ctx) => {
+  if (value.valid_until_ms <= value.observed_at_ms)
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["valid_until_ms"], message: "PROJECTION_INTERVAL_INVALID" });
   for (const [index, row] of value.actions.entries()) {
     const supported = RULES[row.action].kinds.includes(value.resource.kind);
     // projectRow gives policy readiness precedence over target mismatch.
@@ -267,10 +276,20 @@ function finishProjection<T>(outcome: ProjectionOutcome<T>, context: SelfEligibi
   if (!outcome.ok) throw outcome.error;
   return outcome.value;
 }
-function projected<T>(context: SelfEligibilityContext, env: AccessEnvironment, build: () => T): T {
+function projected<T>(context: SelfEligibilityContext, env: AccessEnvironment, build: (until: number) => T): T {
   const until = projectionDeadline(context, env);
   let outcome: ProjectionOutcome<T>;
-  try { outcome = { ok: true, value: build() }; }
+  try {
+    // The full workspace graph deliberately shortens the INTERNAL final-egress
+    // fence. Its deadline must never become public: it can encode a peer's or
+    // another environment's grant/seal transition. Publish only this actor's
+    // captured session ceiling, with no invented now+TTL or MAX_SAFE fallback.
+    const publicUntil = context.actor_lease_until_ms;
+    if (!Number.isSafeInteger(publicUntil) || publicUntil! <= context.now_ms ||
+      publicUntil! > Number.MAX_SAFE_INTEGER)
+      throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED", 403);
+    outcome = { ok: true, value: build(publicUntil!) };
+  }
   catch (error) { outcome = { ok: false, error }; }
   return finishProjection(outcome, context, until);
 }
@@ -330,9 +349,10 @@ function projectRow(context: AccessEvaluationContext, action: RowAction, resourc
 export function projectEligibility(context: SelfEligibilityContext, raw: unknown) {
   const input = eligibilityInput.parse(raw);
   const current = currentContext(context, input.workspace_id);
-  return projected(current, input.environment, () => eligibilityResult.parse({
+  return projected(current, input.environment, until => eligibilityResult.parse({
     schema_version: "portal.self-eligibility.v1", workspace_id: input.workspace_id,
     environment: input.environment, resource: input.resource, current_only: true, advisory_only: true,
+    observed_at_ms: current.now_ms, valid_until_ms: until,
     actions: input.actions.map(action => projectRow(current, action, input.resource, input.environment)),
   }));
 }
@@ -350,6 +370,7 @@ const navSchema = z.object({ feature: z.enum(FEATURES), state: z.enum(["ENTERABL
 });
 export const navigationResult = z.object({ schema_version: z.literal("portal.self-navigation.v1"),
   workspace_id: scopedText, environment, current_only: z.literal(true), advisory_only: z.literal(true),
+  ...projectionTimes,
   current_read_mode: z.enum(["LEGACY_COMPATIBILITY", "SCOPED_V2", "NOT_ESTABLISHED"])
     .describe("Current Core-workspace reader routing metadata only; not a grant, source readiness or command permit."),
   features: z.array(navSchema).length(FEATURES.length).superRefine((values, ctx) => {
@@ -359,7 +380,10 @@ export const navigationResult = z.object({ schema_version: z.literal("portal.sel
   self_entry: z.object({ feature: z.literal("PROFILE_ACCESS"), mode: z.literal("SELF_ONLY"),
     permission: z.literal("ALLOWED"), route: z.null(),
     consumer_state: z.literal("AWAITING_CONSUMER_ROUTER") }).strict(),
-}).strict();
+}).strict().superRefine((value, ctx) => {
+  if (value.valid_until_ms <= value.observed_at_ms)
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["valid_until_ms"], message: "PROJECTION_INTERVAL_INVALID" });
+});
 
 /** Exact app-domain selection only. serverProfileId is SERVER configuration,
  * absent from navigationInput; field/catalogue hashes never enter/leave public
@@ -382,7 +406,7 @@ function domainMenuAllowed(context: SelfEligibilityContext, env: AccessEnvironme
 export function projectNavigation(context: SelfEligibilityContext, raw: unknown, serverProfileId?: string) {
   const input = navigationInput.parse(raw);
   const current = currentContext(context, input.workspace_id);
-  return projected(current, input.environment, () => {
+  return projected(current, input.environment, until => {
     const candidates = new Map<string, AccessResource>();
     const navActions: readonly AccessAction[] = ["business.read_all", ...NAVIGATION_ACTIONS];
     let attempts = 0;
@@ -416,6 +440,7 @@ export function projectNavigation(context: SelfEligibilityContext, raw: unknown,
     const appDomain = domainMenuAllowed(current, input.environment, serverProfileId);
     return navigationResult.parse({ schema_version: "portal.self-navigation.v1", workspace_id: input.workspace_id,
       environment: input.environment, current_only: true, advisory_only: true,
+      observed_at_ms: current.now_ms, valid_until_ms: until,
       current_read_mode: current.current_read_mode ?? "NOT_ESTABLISHED",
       features: FEATURES.map((feature, index) => {
         const mode = flags[index] ? "SCOPED_CURRENT" : appDomain && feature !== "EXECUTION_OPERATIONS" ? "APP_ONLY" : "NOT_ESTABLISHED";

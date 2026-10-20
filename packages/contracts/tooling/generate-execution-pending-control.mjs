@@ -196,9 +196,10 @@ for (const [suffix, method, operation, input, output] of [
       ? 'Verified lookup of the original same-key intent only; never resend. Requires independent current audit.read, Origin/CSRF and request idempotency. Source-dark/unverified remains unknown. Accepted-obligation service recovery does not impersonate an expired human session.'
       : 'Default-dark named pending recall control. Requires exact capital.apply_pending or capital.cancel_remaining, current membership/grants/DENY, original recall and recipient, environment and qualified source profile. Origin/CSRF and matching idempotency header required. Preview rolls back; submit requires current preview digest and fresh step-up. Durable correlation commits before source APPLY. Retained preview cannot mutate. No new recall, amount, funding, physical transfer or automatic resend.',
     ...(input ? { requestBody: { required: true, content: { 'application/json': { schema: ref(input) } } } } : {}),
-    responses: Object.fromEntries([200, 400, 401, 403, 404, 409, 503].map(code => [code, {
+    responses: Object.fromEntries([200, 400, 401, 403, 404, 409, 500, 503].map(code => [code, {
       description: code === 200 ? 'Typed rollback preview or durable pending-control status; not commissioning.'
         : code === 404 ? 'PENDING_CONTROL_NOT_FOUND: unknown/hidden/wrong workspace are indistinguishable.'
+        : code === 500 ? 'Sanitized INTERNAL_ERROR; outcome is not established. Never automatically retry or resend a mutation.'
         : 'Fixed public input/current-authority/context/capacity/source-verification refusal; never raw PM diagnostics.',
       headers: { 'Cache-Control': { schema: { type: 'string', const: 'private, no-store' } } },
       content: { 'application/json': { schema: ref(code === 200 ? output : 'PendingControlProblem') } },

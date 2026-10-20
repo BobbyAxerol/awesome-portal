@@ -1,5 +1,19 @@
 # ELP2-03 — Scoped policy, delegation and TS membership proposals
 
+## Current self-access return — 2026-10-19
+
+FE-057 source implementation publishes actual observation/deadline on both
+self projections; FE-058/Q1–Q5 have explicit navigation/environment/self-only
+versus owner-admin boundaries. [Exact types, fixtures, semantics and Claude
+acceptance checklist](self-access-consumer-return-2026-10-19.md). Public deadline
+is explicitly **own-session only**, not permission validity; private final fence
+is preserved and does not leak peer/environment transition times. Final focused154
+API cases passed across two files; contract85 cases include the existing PendingControl
+schema suite, not85 new tests. First R3 stopped at stale N29 before full tests;
+official ledger repair/final ordinary hook remains pending in the
+[active round](../ELP2-10/c7-priority-round-2026-10-19.md); no installed-policy,
+source or browser PASS is implied. Earlier C3 intake below remains history.
+
 ## Claude intake2026-10-18 — FE-015/026/037
 
 Owner Codex, consumer Claude. Exact current action × target × environment

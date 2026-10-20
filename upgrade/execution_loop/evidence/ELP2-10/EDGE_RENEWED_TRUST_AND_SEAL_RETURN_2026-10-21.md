@@ -1,0 +1,560 @@
+# Original08 — connected Research READ binding owner action
+
+## Latest matched intake —21Oct2026,09:52ICT
+
+[Core prepared return](CORE009_PREPARED_SOURCE_IMAGE_RETURN_2026-10-21.md)
+is received/reviewed: minimal Core source73435311/tree47b0651e, normal hook
+1147contracts/8780API PASS/3skip, image
+`sha256:9cf5fffac3e0bf55ea4b23c9df2b85565da556b973fbb1ce6928936f49a2950c`
+is built, **not installed**. Claude `claude/fe-parity@dbd5088b` is a broader
+parallel source, not this image. Genuine identity008 is complete; do not issue
+it again or apply old helper patches. Core008 runtime and stable28445 remain
+unchanged. Historical pending-R3/queued-image statements below are superseded.
+
+### Renewed candidate trust: prepared, not operational permission
+
+Existing Core provisioner SHA256
+`6f053a800b9a1d3e986f611b085d65f85f9128b4e3f0b4272867716918023db5`
+created one exclusive SGP bundle:
+`/home/bobby/secure/portal-research-c7-20261019/elp210-trust-dd9UCJ`.
+
+- Candidate: `elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e`.
+- Trust file SHA256: `e28b9e3256b8127953df430b586a792d22663702057c6c8c42b2e6c8ee098983`.
+- Created21Oct02:48:30UTC; expires22Oct02:48:30UTC.
+- PM workload: `elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e:pm`.
+- PM leaf DER SHA256: `59d44f22da32727cf0eff0fec96f4adb588b3611a983b2b5815d3cc415d9ce7e`.
+- Core leaf DER SHA256: `b7ad92aab571e9f25c4baa1f131864fdbe437b622d378b811a78dc4299258fc7`.
+- Human issuer stays `portal-control-api.native-manager-read`; audience is
+  `urn:elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e:pm`, signer key ID
+  `elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e:core`.
+- Core-only key references remain under the new `core/` directory on SGP;
+  never copy them to HK. The tool retired the transient CA signing key.
+
+Independent metadata/crypto retake **16PASS**: CA, leaf/signing pairs,
+server/client chain purposes and hostnames, validity/scope, exact8-file
+party membership and0700/0600 protection. The first oracle incorrectly
+expected9files and failed; corrected against actual provisioner output without
+changing keys or rerunning provisioning. This is offline trust evidence only.
+
+**Exact pending transfer approval:** auto-review rejected new PM private-key
+SGP→HK transfer before execution; no key/file was copied. Requested source is
+the new `pm/` directory above, destination
+`/home/bobby/secure/edge-core009-trust-WDEszqbY/` on HK (currently empty0700).
+Exact8files: `ca.pem`, `peer-signer.pub.pem`, `peer-tls.crt.pem`,
+`signer.key.pem`, `signer.pub.pem`, `tls.crt.pem`, `tls.key.pem`, `trust.json`;
+4,058bytes total. Two PM private keys authenticate/sign only this candidate.
+No Core key, DB credential, session cookie, operational trust or business data
+is included. Do not retry, re-encode, relay or use another route around this
+denial. Bobby must approve this exact secret payload/destination. Metadata-only
+review/preparation can continue; an SGP private reference is not usable HK key
+custody. Derived `human-jwks.json` must use the NEW Core PUBLIC signer/kid,
+not the old ninth transformed artifact. Neither old transfer controller is
+runnable unchanged: both bind historical trust/install008/probes/output paths.
+
+### Static seals and named relation independently reconciled
+
+All28immutable closure files match exact recorded sizes/hashes/protection.
+Current sealed catalogue has96relations and semantic seal0c71b72c, not its
+file hash9040f089. Serving policy file/sealb9fbe07d still matches that catalogue.
+Profile-domain file8bd82a11 contains three owner-selected descriptors; canonical
+sorted compact descriptor hashes independently equal Paper5c33c4e0,
+Sandbox04a94a5b and Live11ecb9c0. These are owner selection compatibility pins,
+**not** fresh upstream authority or proof all profiles were exercised.
+
+Core named route `account-balances` maps through checked-in
+`eds11r-manager-relation-registry.generated.ts` to `public.account_balances`,
+key `(account_id,currency)`, fields account_id/currency/free/locked/total/
+updated_at. Actual sealed catalogue and serving-policy key terms agree; decimals
+remain exact strings and timestamps retain typed handling. Registry→Manager
+data path and native source-authority transport are distinct. Static catalogue
+records are discovery, not current query-plan/runtime installation proof.
+
+**Next in this same08:** after exact transfer approval, verify local PM keys
+and derive matching public JWKS. Agree a finite operator window before official
+same-target/current-head SDK append and genuine RR observer/ready pins; do not
+open28446 just to wait. Core can prepare new Core-only references and draft
+artifacts now, then validate filled bytes, IPC-quiesce/backup/install009 and
+issue/revoke the genuine bound acceptance session. No repeated identity, SQL
+seed, generic restart, fake observer/revision/session, financial/Live mutation,
+or inferred READ→STREAM. Full08 **NOT_MET**, scoped read09 not yet qualified.
+
+**Current publication entry:** use the [canonical operator packet](../../../integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
+and [main publication/binding journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct).
+Qualified bytes are mirrored in this checkout; dated overlay/unpublished
+observations below remain provenance. [Current intake](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
+confirms Core0087818d563/image7b2c7f34/bootstrap cc6ae429 installed; old f464/
+15d94c6f locators below are historical. Use new HK transfer1df9adad and a fresh
+finite source-owner ACK.009 source composition does not commission native READ
+or STREAM. Edge owns its immutable closure/provider lifecycle and actual native
+acceptance; Core policy/composition follows genuine mapping and source inputs.
+
+## Current resumed intake —20Oct05:45UTC
+
+**Latest source disposition20Oct:** Core009 revision3 now corrects the three
+session/dry-run source defects listed historically below. Use the revision3
+intake section, not the old CHANGES_REQUESTED patch instructions. Focused
+disposable-PG qualification is terminal89PASS/build/restore PASS as recorded
+below; this is still not full ordinary R3, installation, genuine session or
+connected08 acceptance.
+
+Bobby resumed **Core009 → actual08 → scoped read09**. Published base is
+f8d3f20cc330947253de8a73d14291a236ab3edc (later custody publication is in the
+main journal; the connected runner bytes are unchanged); the old
+f464 observations below are history, not current execution instructions.
+[Actual Core read-only preflight](core009-readonly-preflight.json) confirms
+Core0087818d563/image7b2c7f34/restart0, but no native Core runtime reference is
+selected. On the physical Research DB7688673963308855330, this exact workspace
+has0policy/0grant/0policy-event rows; Bobby is ACTIVE and the protected Portal
+owner. The bounded read-only transaction rolled back and its pool closed.
+This is an observed missing Core009 composition, not another identity blocker.
+
+Genuine identity COMMIT/Core ACK/history remains valid. Native source28446 was
+retired and acceptance head2 revoked; a historical READY snapshot is not a live
+source. Core can prepare its reviewed owner artifact/current policy and same-
+Pool/app/coordinator composition from the genuine mapping/domain/trust now.
+Then coordinate fresh source current-head CAS/window/observer pins for final
+selection; do not require a completed installation before coordinating that
+window, and do not reopen a source only to wait. READ is not STREAM; candidate
+trust ends08:00:59UTC and must be fresh at opening. Stable28445 is unchanged.
+
+Edge has implemented the small operational connected-case runner in the
+existing08 harness boundary, with66TEST_ONLY unit cases PASS (40previous,
+26new active-observation/STREAM-action cases). A configured process or HTTP200 alone is not
+business/current-authority acceptance. Only actual route results with current
+source/Core policy evidence can qualify a scoped case. No raw business payload,
+cookie, private configuration or credential belongs in the public return.
+
+Status: OWNED_RUNNER_IMPLEMENTED_AND_UNIT_TESTED / CORE009_PREPARED_NOT_INSTALLED; full08 NOT_MET;
+09connected NOT_STARTED.
+Authority: existing owner-approved original08 round2, not a new phase or a new
+blanket approval gate. The current runner is in HK source; the historical overlay
+below is not installed authority or a connected test. Identity, native READ,
+Core READ and Core STREAM are distinct.
+
+### Current runner and priority assignment
+
+- [Driver](../../../../scripts/epg10-08/connected_read.py), SHA256
+  `cad1eeb6b8f3cd8244cdf7e3f3dd0001a7fefb32a105bdbfab60d7ecc519debf`.
+- [Tests](../../../../scripts/epg10-08/test_connected_read.py), SHA256
+  `a173beac18bb67c7a6e4290fccbb171425ed456ad74de2b83f763ff67afd8d2b`:
+  `python3 -I -B scripts/epg10-08/test_connected_read.py`,66PASS/0FAIL/0SKIP.
+- [Claude's priority packet](CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md)
+  delivered byte-exact to `/home/bobby/portal-research-fe` on SGP and indexed in
+  its Unified/sync docs. Claude answered with the prepared return below;
+  delivery/source preparation is not installation or connected acceptance.
+
+### Core009 preparation ACK and Edge handback —20Oct
+
+Read in full on SGP FE `claude/fe-parity` at
+892ea030b3e576e4394d9b00563da1eb0a841dce; source commit
+2062fcdc0cfeea7ae6aabec553fc838b257bd379. ELP2-10 return pins:
+
+- `CORE009_PREPARED_OWNER_RETURN_2026-10-20.md`, SHA256
+  ee256ddaba393990aede165d10c66496a10c63fb007301d8824949ea4fc1bd7b.
+- `CORE009_PREPARATION_2026-10-20.md`, SHA256
+  22b043d39dcc6a5db224504a277bd019a62e35025f424d20ca088d84b72ce007.
+- `CORE009_OPERATOR_RUNBOOK_2026-10-20.md`, SHA256
+  3283c294cf884f1bfea7071702851ae30d26cc0ac8580924791d972fd60ed226.
+
+Disposition: ACKNOWLEDGED_PREPARED_SOURCE_ONLY. Reported144focused fake-only
+tests PASS; native PG/normal R2/R3/image/config/session commissioning NOT_RUN.
+Installed008 remains separate. Its reverse bootstrap does not invoke native
+composition: setting environment references alone does not commission009.
+
+Known exact domain inputs are already in the
+[historical source return](../../../integration/execution-native-read-v1/research-identity-intake/connected-source-return.json):
+Portal subject/protected Research owner `usr_5a38d5dfb08b44748f5776fbe04a1434`,
+workspace `ws_06G19F61YB8CFR7TEWMS7HQ660`, issuer
+`portal-control-api.native-manager-read`, TS user
+`608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd`, mapping
+`ts-user:608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd:1`. Historical specimen:
+`paper` / `PAPER_BINANCE_USDM`, not a product profile ceiling.
+Known reviewed source seals (bare SHA256):
+
+| Seal | Value |
+| --- | --- |
+| catalogue | `0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44` |
+| profile | `5c33c4e0276dd849215d2662c157418a75e91a06fd405f6b369dcc172b722c03` |
+| field policy | `b9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3` |
+
+Actual reviewed static field reference is now located and handed back in the
+[revision3 qualification/input return](CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md#core009-revision3--edge-focused-qualification-and-known-input-return):
+`/home/bobby/secure/portal-manager-read-v2/runtime/serving-policy.json`.
+Its exact field seal above and prior profile-domains artifact/mount review bind
+the existing catalogue/key/profile projection semantics, not a researcher field
+matrix or a new current-runtime grant. Core uses the actual ref consistently in
+a new owner artifact, not the old hash-derived label. Static ref assembly no
+longer waits for a producer; fresh operational pins/window still do.
+
+Previously qualified preparation bounds: source/control pool1each,
+request/response32768bytes, in-flight1. These are reused finite-window bounds,
+not production capacity evidence. Exact current grants/field seal still need
+the new reviewed owner artifact; use the actual located reference above, never
+invent a reference from a hash.
+Old authority/trust/source acceptance/window pins are historical and retired.
+Do not recycle acceptance1/2, reopen28446 to wait, or reuse the FINISHED session.
+
+Core next, within the already assigned009 scope:
+
+1. Finish/review the manager-domain revoke/narrow operation through the owning
+   coordinator, with a correlated receipt. Expiry or legacy root revoke is not
+   actual manager-domain revocation evidence. No direct grant-table SQL.
+2. Prepare the genuine current-human session through the existing AuthService/
+   coordinator path or a reviewed one-shot private operator seam. No public
+   autologin, made-up cookie/JWT, password reset or repeat identity attempt.
+3. Prepare independent READ and STREAM grants in the fresh offline artifact
+   (the return's PlanB), because both are already required by the approved08
+   goal and no append-grant operation currently exists. READ never implies
+   STREAM; source permission/consumer acceptance must still be proven.
+4. Run the impacted real PG and normal release gates, return source/image/
+   schema/config/private-reference pins. Only then coordinate a fresh finite
+   source/trust window, reprove zero reverse custody and use the bootstrap's
+   IPC zero-custody shutdown before replacing the entrypoint. No generic
+   restart/stop that would discard unresolved custody.
+
+Edge owns fresh finite native publication, known-input assembly and the existing
+connected runner. It continues bounded07 custody correctness in parallel. This
+handback supplies known inputs; it does not claim private artifacts installed,
+renew trust, commission a listener, issue a session, or qualify08/09.
+
+### Core009 revision2 — CHANGES_REQUESTED before commissioning —20Oct
+
+Reviewed FE0deeee706849a02660da0ef94e7405ecb4765cc9; later792647d5
+frontend-only changes do not replace the pinned backend bytes below. Revision2
+supersedes the earlier missing-code observations: Plan B installer, official
+manager-domain revoke and actual AuthService session issuer/revoker exist.
+No fake grant/session or public autologin is needed. Core still reports actual
+PG/R3/image/install NOT_RUN. Edge publication e37a5e39009abd57c1b2d0356ea120053058eb9b
+contains the completed original07 custody slice, normal-hook PASS and cleanup;
+original08 connected runner is being bound to the official token-file shape.
+
+**Priority corrections for Core/Claude, in the same009 assignment:**
+
+1. `apps/control-api/src/execution-v2/research-acceptance-session.ts`
+   SHA256`2bd35bb2a13a77373e9b6b2777c87c9effd31d031393e4cbbdb4d0074ff80f48`:
+   revoke cleanup must be bound to the exact session/file. Reproducer without
+   any operational call: issue S1 at P → revoke S1 → issue S2 at reused P →
+   replay S1 revoke currently removes S2's live token while S2 remains ACTIVE.
+   Refuse/retain a mismatched token; preserve exact terminal/recovery semantics.
+   Add replay/reused-path/absent/mismatched-session tests, not a runtime demo.
+2. Same module's token sink ignores `FileHandle.write().bytesWritten`.
+   A short/zero write is fsynced and falsely acknowledged after session COMMIT.
+   Require complete bounded writing/verification, compensating exact-session
+   revoke on failure, and injected partial/zero-write tests. No weakened fsync.
+3. `apps/control-api/src/cli/execution-native-session.ts`
+   SHA256`df0f327756000183d776cdcb65f1dd80e7f456edbc1fbd87bc4cfa399a93a773`:
+   `--dry-run` branches only after schema DB read/composition. Honor its stated
+   offline/no-DB contract before those calls; test that dry-run cannot build
+   a pool, connect, mutate or issue a session.
+
+Return corrected source/test pins and run the actual disposable-PG/normal R3
+gates on the final composition. Refresh the lead-owned persistence ingress
+ledger for revoke/session tools. No expiry-only substitution for a revoke.
+Use existing publication/runner and Core templates, no new framework. Ordinary
+source review is not installer acceptance; do not open a source window merely
+to wait for these fixes/tests. Core operator runbook rev2 SHA256
+`3417afbdf9d0bc0c3b5f06e44ec654899f55916fd4864881927ce79eef5c0bb1`.
+
+Edge will directly read the actual six-field
+`portal.research-acceptance-session-token.v1` file in its current08 runner,
+with producer/session-id/subject/expiry/hash binding. The file remains private;
+no token transfer in public Markdown, stdout, chat or Git. Exact execution UID
+must own its0600 input; using the root-owned Core file requires an operator
+running the runner under that same UID, not chmod/chown widening. Evidence is
+`RESEARCH_APPLICATION_SESSION_NOT_CLOUDFLARE_NOT_PASSWORD_NOT_HUMAN_PRESENCE`.
+Known source seals/mapping above remain historical inputs; renewal/current
+source head and reviewed field-policy reference must come from real artifacts.
+Existing08 approval covers this correction/binding work; no new phase or blanket
+approval requested. Full08NOT_MET; scoped connected09NOT_STARTED.
+
+### Core009 revision3 intake —20Oct
+
+SGP FE source frozen at2325dd942333687dc6c953ff21247fd59835adea,
+`/home/bobby/portal-research-fe`, branch `claude/fe-parity`; its final delta
+is documentation only, backend bytes retain the e1f3938e fixes. Authoritative
+return is `upgrade/execution_loop/evidence/BE-CLAUDE-2026-10-20/BE-P10.md`,
+revision3 section, SHA256
+`1daa55426cb76ebead96be803268732ef1464a37c225dd356935446d0a4beb8d`.
+
+- Session source SHA256
+  `6a4ed7dc790318d60c4fd2593e48ac1845629afde444b38b11bbfba3661d1eb3`:
+  exact session/user/stored-token-hash cleanup preserves a reused path's new
+  session token; bounded complete write, fsync, same-FD length/content check
+  and exact-session compensation on failure.
+- CLI source SHA256
+  `fa353d3398acd79fdff8525972c1130622c8978306d0c2227c2e092be4290257`:
+  offline dry-run branches before Pool/schema/composition/AuthService.
+- Session/CLI spec SHA256 respectively
+  `81aa116b3c9645fbabe4c33c8556c45c1661afc7d017db3663fc23477c7cc464`
+  and `07c114b3724ef3fe2a3614c6b657f7af7ca4eccd453a5f854b643c5a58477b06`.
+- Operator runbook SHA256
+  `bd9c908ba238f7cc9eabd2d2c13764ab1ab6ceee30ff1e0b22b6c129f7dcb35e`.
+
+Static intake accepts these source corrections, not the producer's fake-only
+test counts as runtime authority. Edge uses a private exact source snapshot
+and existing runner for3actual-PG revoke cases plus63session/23CLI fixtures;
+build/restore and zero PG skips are required for that focused qualification.
+First attempt ended134 during tsc default-heap exhaustion:0tests, restore
+NOT_RUN, exact own cell/network/snapshot cleaned, production unchanged.
+Bounded retry sets explicit1536MiB V8 heap inside the same Node2GiB/2CPU cap;
+PG1GiB/1CPU,900s deadline, no ports/operational DSN or peer source edits.
+Actual results and both cleanup receipts belong in the
+[same approved-phase journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct).
+
+**Final focused qualification:** TERMINAL0 at10:56:44UTC,89/89PASS/0FAIL/SKIP
+(63session+23CLI fixtures and3actual-PG cases), tsc and existing dump/restore
+with four scoped-policy row digests PASS. Final copied runner SHA256
+`11343fbbf337a84d120aa951e46dfc262dd63e9948fa05a6f99a0be8f6be285d`;
+qualification log SHA256
+`d32cdc0f14946dc1dfd26ac2539617224e770c81d01978a5eaa7b67eaa522e8b`.
+The successful layout adds only the seven pinned PUBLIC templates read-only
+at `/deploy/research-preview/native-core-templates`; Core must reconcile this
+normal-runner omission for ordinary R3, not skip those fixture suites. Three
+PG cases overlap the prior failed-collection attempt, not92new tests. All
+three attempts' own containers/networks/snapshots gone,0new images/cache,
+Core008/image7b2c/restart0 unchanged. Bounded full hashes/inventory/disk and
+failed provenance are in the main journal and SGP private evidence directory
+`/home/bobby/secure/epg10-08-core009-pg-final-DzvszyhJ-evidence`.
+
+Keep root-only token operations sequential and use unique paths; fixture
+inode models are not actual root-filesystem I/O proof. Ordinary full R3 and
+installed image/schema/config/current policy/session remain distinct owner
+release inputs. Installed008, genuine identity and source seal history are
+already known; do not recreate them or open a source window merely to wait.
+Full08 NOT_MET; scoped connected09 NOT_STARTED.
+
+### Active-stream observation and independent STREAM removal —20Oct
+
+The current driver supports opt-in `observe_active_stream:true` on a baseline
+with `probe_stream:true` and actual commissioned STREAM permission. It holds
+the same physical response after its first validated notice until a valid
+terminal, EOF/timeout, eight frames, byte ceiling or the global deadline.
+Source cursor stays private. Public output has bounded canonical frame hashes,
+event classes, client UTC anchor and monotonic offsets/termination only.
+`active_stream_revocation` remains NOT_RUN and `final_egress_proved:false`:
+client timing/terminal/EOF is not server final-egress or measured revoke SLO.
+The existing private checkpoint is written before the subscription; its UTC
+time alone does not prove the stream is active. Correlate real source/Core
+receipts and actual subscribed-window facts before accepting that experiment.
+
+For STREAM-only poststage set `revoke_action:"stream.subscribe"`; retain the
+same native head, READ grant/revision/policy, scope/session and positive READ.
+Producer and private baseline include distinct actual `stream_grant_id` and
+`stream_grant_revision`. Get IDs from the installed grant ACK; get revisions
+from the pinned artifact AND real current readback (ACK has no revision field).
+The owner `revoke_return` declares `action:"stream.subscribe"` and adds a pinned
+`official_receipt:{path,sha256}` matching its `official_receipt_sha256`.
+Use the existing official CLI output envelope
+`portal.native-research-manager-revoke.v1` with exactly one selected STREAM
+`portal.manager-domain-revoke-receipt.v1`, fresh `REVOKED`/`REVOKE`, matching
+before/after revisions, unchanged validity/policy and `replayed:false`.
+No expiry/NOOP, mixed READ revoke, action label or synthetic grant substitutes.
+Its DB decision time is not a COMMIT timestamp or final-byte cutoff.
+
+That specimen validates native snapshot+deployment READ still succeeds and
+fresh/old-cursor STREAM requests return Core403/ACCESS_DENIED. These are scoped
+post-revoke observations, not active-stream/cache-HIT/unaffected-principal
+proofs. Old baseline and READ-revoke input remain compatible. No mutation is
+performed by the runner; official Core/PM operations stay externally owned.
+66unit PASS/0FAIL/SKIP under1CPU/256MiB, all fixtures TEST_ONLY; no real session,
+API/native authority, runtime or source window used by that qualification.
+
+Operational invocation, only after actual inputs are ready:
+`python3 -I -B scripts/epg10-08/connected_read.py --config PRIVATE_PATH --sha256 ACTUAL_PIN`.
+Config pins genuine `core_return` and `session` references; baseline/post_revoke
+are separate specimens. Schema fields are explicit in driver `prepare()`.
+Optional `--checkpoint-fd` writes an opaque baseline cursor only into an
+already-open empty same-UID0600 regular private file; no cursor/cookie or raw
+business payload is published. Do not use TEST_ONLY fixtures as operational inputs.
+
+Harness ready/revoke metadata comes from actual installed Core/source receipts;
+Edge may materialize it from the existing return. Core does not owe a new API or
+exporter. Native domain grant revision is independent of policy revision. Official
+revoke is external to this GET-only runner; root-grant revoke is not a substitute.
+No PM EOF, heartbeat, repeated read or reconnect is silently upgraded into native
+deny, data notice, cache-HIT or active-SSE revocation acceptance. Missing inputs
+make zero requests/NOT_READY. Full08/full09 remain NOT_MET even for scoped PASS.
+
+## Historical Edge operator input — 2026-10-19
+
+Status: IMPLEMENTED / ISOLATED_QUALIFIED_NOT_PUBLISHED. This is the remote
+public overlay, not a canonical commit, Core repair or connected acceptance.
+
+- [Operator source](../../../integration/execution-native-read-v1/research-identity-intake/identity_operator.py):
+  SHA256 `e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424`.
+- [Affected tests](../../../integration/execution-native-read-v1/research-identity-intake/test_identity_operator.py):
+  SHA256 `a9ea6d20d3574cc63ef30666d91143a8ccc1d20f938d57a6a3f99c856e4d47b5`.
+- [Current exact qualification/cleanup receipt](../../../integration/execution-native-read-v1/research-identity-intake/operator-real-tls-qualification.json):
+  SHA256 `108cd0ec4aeb532a7907c72fb3ee1ad9d16c0e4d4acaf00b117802d7c1e08be0`.
+
+Actual run14:45:25–14:45:36UTC:67PASS,0FAIL/SKIP, including65 overlapping
+regressions and2 new real CPython3.10 loopback TLS/socket lifecycle cases.
+Callbacks remain TEST_ONLY; this is not actual PM SDK/Core/DB, operational mTLS
+or production-capacity acceptance. Prior65 receipt stays historical; unchanged89
+official-helper cases are retained by exact pin, not rerun or added to67.
+Canonical `feat/execution-edge-upgrade-v1_2@6adc398b573e297b731863e5ed93f0f7f59ab2fd`
+still awaits quiet-HK mirror, ordinary hook, commit and publication. Do not
+execute an old operator/companion or treat this remote overlay as published.
+
+Root's later read-only Core IPC observation14:54:56UTC was READY,
+cookie_lost=false, unresolved0, terminal=null, with accepted/denied/in-flight/
+timed-out callback counters0. No issue/finish was called. It does not close the
+unused-finish repair, identity COMMIT/ACK or separate READ/STREAM authority.
+
+## 1. Read authority and reviewed source
+
+Read the original08 journal in
+[the unified plan](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-installed-core-binding-and-connected-identity--2026-10-19),
+[guide08](../../../upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+[official identity intake](../../../integration/execution-native-read-v1/research-identity-intake/README.md)
+and [native commissioning](../../../integration/execution-native-read-v1/native-db-commissioning/README.md).
+Core canonical return:
+`upgrade/execution_loop/evidence/ELP2-10/CORE_INSTALLED_EDGE_HANDOFF_2026-10-19.md`
+in `/home/bobby/portal-research`, branch `docs/research-loop-plan`,
+reviewed HEAD `f46439157fe25892fc4372dda532bd1f8bdc4773`.
+HK copy: `/home/bobby/secure/portal-core-c7-return-20261019-f46439157fe2-HANDOFF.md`.
+
+Current read-only source review found no changes in the relevant Core files.
+Installed identity bootstrap SHA256:
+`e997debdcbc0500dd91252f6ff5a79ad31f5571d3ddbd6caae077ec2fb298cea`.
+Core `native-core-runtime.ts` SHA256:
+`4243bbaf8a1c4f2a3b65dbdaeec7008ee4a2fe663e18313ef0d795b53b5b0761`.
+Core `core-owner-commissioning.ts` SHA256:
+`b532e8bf74a8d3ffb447c9cf9edfbb75fdeb5737e82ee8017c78ad80aa90ca33`.
+
+## 2. Exact subject and physical targets
+
+- Human issuer: `portal-control-api.native-manager-read`.
+- Research Bobby subject/Portal ID: `usr_5a38d5dfb08b44748f5776fbe04a1434`.
+- Workspace: `ws_06G19F61YB8CFR7TEWMS7HQ660`.
+- This connected candidate: paper / `PAPER_BINANCE_USDM`. This bounded
+  qualification does not reduce the product's separately declared mode support.
+- TS DB: `live_data_executor`, physical system `7674585245102796834`.
+- Research DB: `portal_control`, physical system `7688673963308855330`.
+- New subject's TS UUID/version must come from the genuine settled SDK identity
+  transaction and physical receipt; none is invented in this packet.
+- Preserve protected TS owner `a72b0e8c-70f7-4795-aff3-6ae58619149d`,
+  issuer above, stable subject `usr_3e5917c6d92545c69465fe5ab812eddb`,
+  mapping version1 and native policy revision1. Research Bobby is not installed
+  as a replacement protected owner. Core uses its own verified Portal owner.
+
+Transfer manifest SHA256:
+`15d94c6fae07e0cbb251d5193eb89bf74ca9682a2adebf43e1192955031eb4b2`.
+Candidate trust expires `2026-10-20T08:00:59Z`; check freshness again before
+activation. Transfer/hash/TLS success is not identity, READ or STREAM authority.
+
+## 3. Source owner: append only the exact READ acceptance
+
+After identity terminal receipt + genuine Core ACK, use existing
+`services/portfolio_management/business_root_read.py`:
+`BusinessRootReadMaintenance.install(exactRawManifest)`, with the independent
+reviewed raw-byte hash and exact target/importer/protected-owner/policy pins.
+Manifest schema `pma.business-root-read.install.v1` carries the actual subject
+mapping, acceptance/command IDs, expected version, workspace, environment/profile,
+catalogue/profile/field seals, expiry, `scope_kind=MANAGER_CATALOGUE_DOMAIN`,
+`action=business.read_all`, `delegable=false` and explicit revoke state.
+
+Existing native maintenance role is already designed to append this history.
+The acceptance itself needs no new schema, role, financial membership or DDL.
+Do not rerun the FRESH installation, seed SQL identity/grant rows or change the
+protected owner. `RECORDED` explicitly means `held_authority=false` and
+`runtime_enabled=false`. UNKNOWN requires `status` with the same approved
+bytes/key; historical replay cannot restore a revoked head.
+
+Reviewed frozen/current module hashes match:
+- `business_root_read.py`: `2606c1976fdc7382977ad36ba9b64cd748be538d7c768e388c49a7e982a50d66`.
+- `native_business_read_provider.py`: `0134b84aa9da5887214faa3108cc299a120a217762dabdb23386347589c9b048`.
+- `native_business_read_runtime.py`: `76c8574a5cfcdc34a1f92e7967a5fea3192d970bf72b1952db500a4409452273`.
+- `native_business_read_installation.py`: `6c3c43a33c19d413f4744eed4804b01d8e884d2e46a8b62f6b4d5623b677c040`.
+
+## 4. Source transport: do not silently replace28445 trust
+
+Existing private runtime JSON SHA256:
+`abd1549e92ff191719cfef03397324135f5216ce3636828f4463b9aa74d095bd`.
+Private entrypoint SHA256:
+`d18c555704da8542a610cbda60e5218e59ef4b0f7c265968e322b2454108fc11`.
+Installation SHA256:
+`11b311b116263c9f13004eb07421c194819171938183555752d32ac2c889aca9`.
+
+Runtime28445 has six stable Bobby/Stan x paper/sandbox/live selections and
+`maximum_bindings=6`. It has one global Core client leaf, one terminal trust and
+one workload; old Core leaf starts `036a0518`, with20261017 key material.
+The candidate Core leaf/key is different. Identity plus transferred candidate
+trust therefore cannot add Research to this running provider by itself.
+
+Use the existing typed `NativeBusinessReadRuntime` / provider / listener
+components in an explicitly reviewed versioned composition. Preserve existing
+bindings and original recovery obligations; do not replace global leaf/key or
+increase capacity silently. A finite candidate transport, if selected, must have
+an exact approved lifecycle/bounds and reuse existing components, not become a
+per-user permanent service or a new authority framework. This packet does not
+activate or restart28445 or assign an unreviewed port. Preflight must freshly
+verify actual target, catalogue, ACL, policy, acceptance and bounded pools.
+
+Existing sealed Paper domain, as compatibility inputs only:
+- Catalogue: `0c71b72cd5d23cb21e902837d2a6c496d11da5bd09af70123dca3918cd9b1b44`.
+- Profile: `5c33c4e0276dd849215d2662c157418a75e91a06fd405f6b369dcc172b722c03`.
+- Field policy: `b9fbe07d1a9826d3e9270798162c052dda3687d27a04809eb38c4ad9e1a054f3`.
+Core's current Manager catalogue matches the catalogue above. Verify the exact
+reviewed dataset/field semantics; an observed hash is not an approval artifact.
+
+## 5. Core owner: current policy and existing native composition
+
+The installed reverse bootstrap creates the identity Candidate and injects only
+`currentHumanMutations` into AppModule. It does not yet mount native READ.
+Reuse `native-core-runtime.ts` -> `composeNativeCore` ->
+`nativeCoreManagerReadConsumer` on the SAME actual Core pool, effective trust,
+mutation/recovery coordinator and retained recovery registry.
+
+Prepare the existing root-owned0600 canonical owner artifact
+`portal.private-owner-manager-commissioning.v1`, independently pin its hash,
+actual DB/login/protected Portal owner/principal-workspace target and finite
+intake interval. Through existing `privateOwnerCommissioning` /
+`installOwnerPolicies` / `installReviewedManagerDomainPolicy`, install:
+- Reviewed manager domain/field seals and exact validity.
+- Separate `business.read_all` and `stream.subscribe` ALLOW domain grants for
+  this subject, matching policy revision/seals. No entity/root/financial grants.
+
+This installer is fresh-policy-only; exact immutable replay is supported, but a
+different/nonempty policy cannot be overwritten as a repair. Read back actual
+policy/grant revisions and policy-install ACK; selection is not permission.
+Supply reviewed native source observation pins, trust references and explicit
+realtime limits to the existing native app composition. No copied fixture
+receipt, arbitrary browser actor/domain, shared admin identity or legacy fallback.
+
+28445 is authority, not Manager data HTTP or a projection writer. Keep the
+existing Manager/Source Proxy/Rust data plane and typed Core operation catalogue;
+verify actual authorized ingestion before claiming source-update SSE frames.
+
+## 6. Bounded connected acceptance and two-way return
+
+Recheck root/user measurement leases and actual peer jobs before test/runtime
+work. Reuse already-qualified unchanged source cases with attribution; new
+model/unit PASS is not genuine Core/TS/PG acceptance or production capacity.
+
+Run and retain bounded correlation/provenance for:
+1. Exact subject/domain finite positive data and wrong subject/workspace/profile/
+   issuer/audience/certificate/expired assertion denies; commands still denied.
+2. Current native acceptance and Core grant revoke; deny stale cache/cursor and
+   restricted SSE frames, with an independent unaffected-scope positive.
+3. Genuine source-update SSE frame with final-egress authority, then reconnect,
+   replay/restart and source/Core response-loss recovery using original keys.
+4. Actual native physical receipt, Core terminal ACK, drained handlers/pools,
+   source-window retirement and exact temporary-session logout.
+
+Stop new admission on failure. UNKNOWN retains owning process, pool, original
+attempt and recovery; no timeout means rollback and no forced kill/reissue.
+Use official same-key status/recovery, not fabricated finished/receipt state.
+Do not drop audit/schema/history, restore revoked authority or remove peer state.
+The separate unused-identity issue-reply cleanup repair is specified in
+[Core owner action](CORE_UNUSED_IDENTITY_FINISH_OWNER_ACTION.md); it is not a
+native READ grant and cannot be bypassed with a fake source attempt.
+
+Return only source/config/image hashes, exact binding/domain IDs, actual policy/
+receipt revisions, correlated case results and scoped cleanup/retention evidence.
+Never return token/cookie, signer/private key, DB password/DSN or raw sensitive
+business payload. Core owns Core policy/app/session; source owns native acceptance/
+provider binding; Edge owns its consumer/operator and connected qualification.
+After these genuine inputs bind, execute the remaining original08 cases without
+a new phase or repeated generic approval. Identity-only success leaves full08
+NOT_MET and09connected NOT_STARTED.

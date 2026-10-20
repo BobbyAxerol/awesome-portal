@@ -30,6 +30,7 @@
     "/api/v1/execution/screens/blotter": {
       "get": {
         "operationId": "executionFullBlotterV1",
+        "description": "Paper-only read. Scope filters run over authorized retained tuples before pagination/counts; alpha-to-strategy mapping requires qualified lineage. Missing attribution is typed PARTIAL, not exact empty. Other stages are refused, not silently routed. Scoped views omit legacy global mirror proof/totals and retain SOURCE_PARTIAL; per-order fills/costs are not synthesized from a bounded fill page.",
         "parameters": [
           { "$ref": "#/components/parameters/WorkspaceId" },
           { "name": "limit", "in": "query", "required": false, "schema": { "type": "integer", "minimum": 1, "maximum": 100, "default": 50 } },
@@ -37,6 +38,10 @@
           { "name": "before", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 4096 } },
           { "name": "status", "in": "query", "required": false, "schema": { "type": "string", "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED"] } },
           { "name": "status_bucket", "in": "query", "required": false, "schema": { "type": "string", "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN"] } },
+          { "name": "stage", "in": "query", "required": false, "description": "Only PAPER is served by this route; other stages return N22_BLOTTER_STAGE_NOT_AVAILABLE.", "schema": { "type": "string", "enum": ["PAPER", "SANDBOX", "CANARY", "LIVE"] } },
+          { "name": "deployment_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+          { "name": "account_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
+          { "name": "alpha_id", "in": "query", "required": false, "schema": { "$ref": "#/components/schemas/Identifier" } },
           { "name": "venue", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 64 } },
           { "name": "symbol", "in": "query", "required": false, "schema": { "type": "string", "maxLength": 128 } },
           { "name": "side", "in": "query", "required": false, "schema": { "type": "string", "enum": ["BUY", "SELL"] } },
@@ -93,7 +98,21 @@
           "observation_gate": { "oneOf": [{ "$ref": "#/components/schemas/NarrowRecord" }, { "type": "null" }] },
           "query_analytics": { "type": ["object", "null"], "additionalProperties": true },
           "page": { "type": "object", "additionalProperties": false, "required": ["limit", "next_cursor", "previous_cursor"], "properties": { "limit": { "type": "integer" }, "next_cursor": { "type": ["string", "null"] }, "previous_cursor": { "type": ["string", "null"] } } },
-          "query": { "type": "object", "additionalProperties": false, "required": ["filters", "sort", "filter_allowlist", "sort_allowlist", "count_scope"], "properties": { "filters": { "type": "object", "additionalProperties": false, "required": ["status", "status_bucket", "venue", "symbol", "side"], "properties": { "status": { "type": ["string", "null"], "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED", null] }, "status_bucket": { "type": ["string", "null"], "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN", null] }, "venue": { "type": ["string", "null"] }, "symbol": { "type": ["string", "null"] }, "side": { "type": ["string", "null"], "enum": ["BUY", "SELL", null] } } }, "sort": { "type": "string", "enum": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] }, "filter_allowlist": { "type": "array", "prefixItems": [{ "const": "status" }, { "const": "venue" }, { "const": "symbol" }, { "const": "side" }], "items": false }, "sort_allowlist": { "type": "array", "prefixItems": [{ "const": "submitted_at_desc" }, { "const": "submitted_at_asc" }, { "const": "updated_at_desc" }], "items": false }, "count_scope": { "type": "string", "const": "COMMITTED_HOT_PROJECTION" } } },
+          "query": { "type": "object", "additionalProperties": false, "required": ["filters", "sort", "filter_allowlist", "sort_allowlist", "count_scope"], "properties": {
+            "filters": { "type": "object", "additionalProperties": false, "required": ["status", "status_bucket", "venue", "symbol", "side", "stage", "deployment_id", "account_id", "alpha_id"], "properties": {
+              "status": { "type": ["string", "null"], "enum": ["INITIALIZED", "SUBMITTED", "ACCEPTED", "REJECTED", "DENIED", "PENDING_UPDATE", "PENDING_CANCEL", "PARTIALLY_FILLED", "FILLED", "CANCELED", "EXPIRED", "TRIGGERED", null] },
+              "status_bucket": { "type": ["string", "null"], "enum": ["FILLED", "PARTIAL", "REJECTED", "OPEN", null] },
+              "venue": { "type": ["string", "null"] }, "symbol": { "type": ["string", "null"] }, "side": { "type": ["string", "null"], "enum": ["BUY", "SELL", null] },
+              "stage": { "type": ["string", "null"], "enum": ["PAPER", null] },
+              "deployment_id": { "oneOf": [{ "$ref": "#/components/schemas/Identifier" }, { "type": "null" }] },
+              "account_id": { "oneOf": [{ "$ref": "#/components/schemas/Identifier" }, { "type": "null" }] },
+              "alpha_id": { "oneOf": [{ "$ref": "#/components/schemas/Identifier" }, { "type": "null" }] }
+            } },
+            "sort": { "type": "string", "enum": ["submitted_at_desc", "submitted_at_asc", "updated_at_desc"] },
+            "filter_allowlist": { "type": "array", "minItems": 8, "maxItems": 8, "prefixItems": [{ "const": "status" }, { "const": "venue" }, { "const": "symbol" }, { "const": "side" }, { "const": "stage" }, { "const": "deployment_id" }, { "const": "account_id" }, { "const": "alpha_id" }], "items": false },
+            "sort_allowlist": { "type": "array", "prefixItems": [{ "const": "submitted_at_desc" }, { "const": "submitted_at_asc" }, { "const": "updated_at_desc" }], "items": false },
+            "count_scope": { "type": "string", "const": "COMMITTED_HOT_PROJECTION" }
+          } },
           "exact_total": { "type": ["integer", "null"], "minimum": 0 },
           "filtered_total": { "type": ["integer", "null"], "minimum": 0 },
           "aggregates": { "type": ["object", "null"], "additionalProperties": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } } },
