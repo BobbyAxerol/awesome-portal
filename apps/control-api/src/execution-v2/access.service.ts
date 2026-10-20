@@ -4,7 +4,7 @@ import { withTransaction } from "../db/pool";
 import { randomId } from "../domain";
 import { UsersRepository } from "../repos/users";
 import { SessionsRepository } from "../repos/sessions";
-import { AccountLifecycleRepository } from "../repos/account-lifecycle";
+import { ACCESS_STEP_UP_PROOFS, AccountLifecycleRepository, COMMAND_STEP_UP_PROOFS } from "../repos/account-lifecycle";
 import { CredentialsRepository } from "../repos/credentials";
 import { AuditRepository } from "../repos/audit";
 import { AccessAction, AccessResource, AccessActor, AccessPolicyError, AccessRefusal, GrantChange, ReviewedAccessPolicy, ScopedAccessGrant,
@@ -24,7 +24,8 @@ import { CurrentHumanMutations, type CurrentHumanMutationBinding, type CurrentHu
 import { currentAcceptanceMatches, currentAccessRelations } from "./access-current-relations";
 import { reviewedParentAuditRoot } from "./parent-read-fields";
 import { eligibilityBatchInput, projectEligibilityBatch, eligibilityInput, navigationInput, projectEligibility, projectNavigation,
-  selfProjectionPrincipalIds, NAVIGATION_ACTIONS, type RowAction, type SelfEligibilityContext } from "./self-eligibility";
+  selfProjectionPrincipalIds, stepUpPreconditionMet, NAVIGATION_ACTIONS, type RowAction, type SelfEligibilityContext } from "./self-eligibility";
+import { CAPITAL_STEP_UP_ACTIONS, stepUpProofsFor, type StepUpFamily } from "./step-up-family";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
@@ -161,8 +162,12 @@ export class ExecutionAccessService {
    * evaluator and fences as eligibility(); the only extra read is THIS session's own step-up expiry, taken
    * after the exact actor/member fence and before the pure projection's final lease fence. */
   async eligibilityBatch(actor:AccessActor,input:ReturnType<typeof eligibilityBatchInput.parse>) {
-    const context=await this.selfProjectionContext(actor,input.workspace_id,input.environment,input.actions);
-    const expiry=await new AccountLifecycleRepository(this.pool).activeStepUpExpiry(actor.session_id);
+    // The step-up challenge precondition searches every step-up-requiring action, not only the requested ones, so
+    // the source-relation closure must cover them too: otherwise the batch could report a precondition the route
+    // (which loads the whole grant graph) would not, or the reverse.
+    const closure=[...new Set<RowAction>([...input.actions,...(CAPITAL_STEP_UP_ACTIONS as readonly RowAction[])])];
+    const context=await this.selfProjectionContext(actor,input.workspace_id,input.environment,closure);
+    const expiry=await new AccountLifecycleRepository(this.pool).activeStepUpExpiry(actor.session_id,COMMAND_STEP_UP_PROOFS);
     return projectEligibilityBatch(context,input,{active_until_ms:expiry?expiry.getTime():null});
   }
 
@@ -215,7 +220,9 @@ export class ExecutionAccessService {
     check:(now:number,current:AccessEvaluationContext)=>void,fn:(db:PoolClient)=>Promise<T>):Promise<T> {
     if(expected.principal_id!==actor.user_id||expected.workspace_id!==workspace||!expected.authority_fingerprint)
       throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
-    return this.transaction(workspace,actor,true,async tx=>{
+    // The step-up proof is family-bound: a capital command accepts a capital or an access-admin proof, any other
+    // action only the access-admin one (stepUpProofsFor fails closed).
+    return this.transaction(workspace,actor,stepUpProofsFor(action),async tx=>{
       tx.recheck(()=>{
         if(accessDigest([tx.context.policy,tx.context.grants])!==accessDigest([expected.policy,expected.grants]))
           throw new AccessPolicyError("ACCESS_RETRY_REQUIRED",409);
@@ -227,8 +234,10 @@ export class ExecutionAccessService {
     },[],expected);
   }
 
-  private async transaction<T>(workspace:string,actor:AccessActor,stepUp:boolean,fn:(tx:Tx)=>Promise<T>,extraPrincipals:string[]=[],
+  /** `stepUp`: false = none; true = the access-admin proof (historical); or the exact proof families accepted. */
+  private async transaction<T>(workspace:string,actor:AccessActor,stepUp:boolean|readonly StepUpFamily[],fn:(tx:Tx)=>Promise<T>,extraPrincipals:string[]=[],
     captured?:AccessEvaluationContext,mutation?:AuthorityMutation<T>):Promise<T> {
+    const proofs:readonly StepUpFamily[]|null=stepUp===false?null:stepUp===true?ACCESS_STEP_UP_PROOFS:stepUp;
     try {
       const prepared=captured??await this.readContextWithPrincipals(actor,workspace,extraPrincipals);
       if(prepared.principal_id!==actor.user_id||prepared.workspace_id!==workspace||!prepared.authority_fingerprint)
@@ -252,7 +261,7 @@ export class ExecutionAccessService {
         if(!member.rowCount && anchor!==user.userId) throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
         if(!await db.query("SELECT 1 FROM workspaces WHERE workspace_id=$1 FOR SHARE NOWAIT",[workspace]).then(r=>r.rowCount))
           throw new AccessPolicyError("ACCESS_RESOURCE_NOT_FOUND",404);
-        if(stepUp && !await lifecycle.lockActiveStepUpExpiry(actor.session_id,user.userId)) throw new AccessPolicyError("STEP_UP_REQUIRED");
+        if(proofs && !await lifecycle.lockActiveStepUpExpiry(actor.session_id,user.userId,proofs)) throw new AccessPolicyError("STEP_UP_REQUIRED");
         const repo=new AccessRepository(db),policy=await repo.policy(workspace,true),grants=await repo.grants(workspace);
         if(policy&&policy.protected_owner_user_id!==anchor)throw new AccessPolicyError("POLICY_PENDING",503);
         if(grants.length>10000) throw new AccessPolicyError("ACCESS_SCOPE_LIMIT_EXCEEDED",503);
@@ -286,7 +295,7 @@ export class ExecutionAccessService {
         // Row locks prevent revoke/generation races, not wall-clock expiry while awaiting work.
         if(!await sessions.lockActiveLease(actor.session_id,user.userId,user.sessionVersion))
           throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
-        if(stepUp && !await lifecycle.lockActiveStepUpExpiry(actor.session_id,user.userId)) throw new AccessPolicyError("STEP_UP_REQUIRED");
+        if(proofs && !await lifecycle.lockActiveStepUpExpiry(actor.session_id,user.userId,proofs)) throw new AccessPolicyError("STEP_UP_REQUIRED");
         context.now_ms=await this.now(db);
         for(const check of checks)check();
         return result;
@@ -297,7 +306,7 @@ export class ExecutionAccessService {
       return await withTransaction(this.pool,db=>run(db,fn));
     } catch(caught) {
       const error=caught instanceof CurrentHumanLeaseError?this.mutationRefusal(caught):caught;
-      if(stepUp && error instanceof AccessPolicyError) {
+      if(proofs && error instanceof AccessPolicyError) {
         // The transaction is already rolled back. Log only a current stable
         // actor and a typed refusal; no target/key/password or authority seed.
         await this.recordRefusal(actor,error);
@@ -564,23 +573,34 @@ export class ExecutionAccessService {
       throw new AccessPolicyError("DELEGATION_CEILING_EXCEEDED");
   }
 
-  /** Delegated users prove their own current password, not owner authority. It grants no capability. */
-  async stepUp(actor:AccessActor,workspace:string,password:string) {
+  /** Re-authenticate THIS session with the actor's OWN current password. It grants no capability and never makes
+   * anyone an access administrator: it records that the password was just proven, for a stated proof family.
+   *   ACCESS_ADMIN     (default, historical) needs a current own access.grant / access.revoke ALLOW.
+   *   CAPITAL_COMMAND  needs a current own ALLOW of a step-up-requiring capital / pending-control / registration
+   *                    action, judged by the full current graph (stepUpPreconditionMet, shared with the batch read).
+   * Everything else is unchanged: the proof belongs to this session only, expires with OWNER_STEP_UP_TTL_SECONDS,
+   * dies with the session (password change, logout, revoke), and every command re-checks its own authority. */
+  async stepUp(actor:AccessActor,workspace:string,password:string,family:StepUpFamily="ACCESS_ADMIN") {
     try {
+    if(family!=="ACCESS_ADMIN"&&family!=="CAPITAL_COMMAND")throw new AccessPolicyError("ACCESS_DENIED");
     const credential=await this.auth.credentials.findPassword(actor.user_id);
     const valid=credential?await this.auth.argon2.verify(credential.passwordHash,password):false;
     if(!credential) await this.auth.argon2.verifyAgainstDecoy();
     if(!valid) throw new AccessPolicyError("STEP_UP_REJECTED");
     return await this.transaction(workspace,actor,false,async tx=>{
-      if(!policyReady(tx.context)||!tx.context.grants.some(g=>g.subject_user_id===actor.user_id&&
-        g.effect==="ALLOW"&&(g.action==="access.grant"||g.action==="access.revoke")&&grantCurrent(g,tx.context))) throw new AccessPolicyError("ACCESS_DENIED");
+      // The precondition is judged on the transaction's locked, current context AFTER the password proof, and
+      // fails closed (a thrown search limit or any unreadable fact is a refusal, never a grant).
+      if(!stepUpPreconditionMet(tx.context,family)) throw new AccessPolicyError("ACCESS_DENIED");
       const current=await new CredentialsRepository(tx.db).findPassword(actor.user_id);
       if(!current||current.passwordHash!==credential!.passwordHash) throw new AccessPolicyError("CURRENT_ACTOR_AUTHORITY_REQUIRED");
-      const expiry=await new AccountLifecycleRepository(tx.db).grantStepUp({stepUpId:randomId("stp"),sessionId:actor.session_id,
-        userId:actor.user_id,ttlSeconds:this.auth.config.OWNER_STEP_UP_TTL_SECONDS});
+      const stepUpId=randomId(family==="CAPITAL_COMMAND"?"stpcap":"stp");
+      const expiry=await new AccountLifecycleRepository(tx.db).grantStepUp({stepUpId,sessionId:actor.session_id,
+        userId:actor.user_id,ttlSeconds:this.auth.config.OWNER_STEP_UP_TTL_SECONDS,family});
       const receipt=this.receipt(tx.context,{outcome:"APP_APPLIED",http_status:200});
-      await this.event(tx,actor,"STEP_UP",accessDigest([actor.user_id,workspace,"PASSWORD_VERIFIED"]),receipt,{subject_user_id:actor.user_id});
-      return {schema_version:"portal.access-step-up.v1",state:"ACTIVE",expires_at_ms:expiry.getTime()};
+      // ACCESS_ADMIN keeps its historical digest bytes; the capital proof is a distinct, family-named event.
+      await this.event(tx,actor,"STEP_UP",accessDigest(family==="ACCESS_ADMIN"?[actor.user_id,workspace,"PASSWORD_VERIFIED"]:
+        [actor.user_id,workspace,"PASSWORD_VERIFIED",family]),receipt,{subject_user_id:actor.user_id});
+      return {schema_version:"portal.access-step-up.v1",state:"ACTIVE",family,expires_at_ms:expiry.getTime()};
     });
     } catch(error) {
       if(error instanceof AccessPolicyError)await this.recordRefusal(actor,error);

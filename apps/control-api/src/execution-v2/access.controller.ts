@@ -8,9 +8,11 @@ import { SessionGuard } from "../facade/session.guard";
 import { AccessActor, AccessPolicyError, accessAuditQuery, accessPreview, accessProposal, accessRevoke, accessWorkspaceQuery, accessText } from "./access.contract";
 import { ExecutionAccessService } from "./access.service";
 import { eligibilityBatchQuery, eligibilityQuery, navigationInput } from "./self-eligibility";
+import { STEP_UP_FAMILIES } from "./step-up-family";
 
 type AccessRequest=FastifyRequest&{portalUser:PortalUser;portalSession:{sessionId:string;csrfSecretHash:string}};
-const stepUpBody=z.object({workspace_id:accessText,password:z.string().min(1).max(256)}).strict();
+/** `family` defaults to ACCESS_ADMIN (the historical request, byte-compatible); CAPITAL_COMMAND is the capital-delegate path. */
+const stepUpBody=z.object({workspace_id:accessText,password:z.string().min(1).max(256),family:z.enum(STEP_UP_FAMILIES).optional()}).strict();
 
 /** Named Portal policy operations only. No public policy-install or TS-acceptance path. */
 @Controller("/api/admin/profile-access/v2")
@@ -101,7 +103,7 @@ export class ExecutionAccessController {
   @Header("Cache-Control","private, no-store")
   async stepUp(@Req()req:AccessRequest,@Body()body:unknown,@Res({passthrough:true})reply:FastifyReply) {
     this.security(req);const input=this.parse(stepUpBody,body);reply.code(200);
-    return this.call(()=>this.service.stepUp(this.actor(req),input.workspace_id,input.password));
+    return this.call(()=>this.service.stepUp(this.actor(req),input.workspace_id,input.password,input.family??"ACCESS_ADMIN"));
   }
   @Get("/audit")
   @Header("Cache-Control","private, no-store")

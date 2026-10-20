@@ -14,6 +14,7 @@ import { CurrentHumanLeaseError } from "../execution-v2/current-human-candidate"
 import { CurrentHumanMutations, type CurrentHumanMutationBinding } from "../execution-v2/current-human-mutations";
 import { accessDigest } from "../execution-v2/access-policy";
 import {
+  ACCESS_STEP_UP_PROOFS,
   AccountLifecycleRepository,
   LifecycleAction,
   LifecycleOperationRecord,
@@ -198,7 +199,7 @@ export class AccountLifecycleService {
   }
 
   stepUpExpiry(sessionId: string): Promise<Date | null> {
-    return this.lifecycle.activeStepUpExpiry(sessionId);
+    return this.lifecycle.activeStepUpExpiry(sessionId, ACCESS_STEP_UP_PROOFS);
   }
 
   // ----------------------------------------------------------------- reads
@@ -297,7 +298,7 @@ export class AccountLifecycleService {
         return { outcome: "REPLAYED", operation: prior, account };
       }
 
-      const stepUpDeadline = await tx.lifecycle.lockActiveStepUpExpiry(request.sessionId, actor.userId);
+      const stepUpDeadline = await tx.lifecycle.lockActiveStepUpExpiry(request.sessionId, actor.userId, ACCESS_STEP_UP_PROOFS);
       const steppedUp = stepUpDeadline !== null;
       if (requiresStepUp(request) && !steppedUp) {
         return {
@@ -331,7 +332,7 @@ export class AccountLifecycleService {
           throw new LifecycleDeniedError("CURRENT_ACTOR_AUTHORITY_REQUIRED", "Access denied.", 403);
         const lifecycle = new AccountLifecycleRepository(client);
         if (requiresStepUp(request) && !await lifecycle.findByIdempotencyKey(request.idempotencyKey)
-          && !await lifecycle.lockActiveStepUpExpiry(request.sessionId, actor.userId))
+          && !await lifecycle.lockActiveStepUpExpiry(request.sessionId, actor.userId, ACCESS_STEP_UP_PROOFS))
           throw new LifecycleDeniedError("STEP_UP_REQUIRED", "Re-enter your password to confirm this action.", 403);
       } });
     if ("denial" in output) throw output.denial;

@@ -583,7 +583,7 @@
       "type": "AccessEligibilityBatch",
       "case_name": "STEP_UP_REQUIRED_NOT_ACTIVE",
       "value": {
-        "schema_version": "portal.self-eligibility-batch.v1",
+        "schema_version": "portal.self-eligibility-batch.v2",
         "workspace_id": "ws_TEST_ONLY",
         "environment": "paper",
         "current_only": true,
@@ -593,12 +593,22 @@
         "session_step_up": {
           "state": "NOT_ACTIVE",
           "valid_until_ms": null,
-          "challenge": {
-            "mechanism": "PASSWORD_REAUTH",
-            "route": "/api/admin/profile-access/v2/step-up",
-            "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-            "precondition_met": false
-          }
+          "challenges": [
+            {
+              "family": "CAPITAL_COMMAND",
+              "mechanism": "PASSWORD_REAUTH",
+              "route": "/api/admin/profile-access/v2/step-up",
+              "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+              "precondition_met": true
+            },
+            {
+              "family": "ACCESS_ADMIN",
+              "mechanism": "PASSWORD_REAUTH",
+              "route": "/api/admin/profile-access/v2/step-up",
+              "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+              "precondition_met": false
+            }
+          ]
         },
         "results": [
           {
@@ -680,7 +690,7 @@
       "type": "AccessEligibilityBatch",
       "case_name": "STEP_UP_ACTIVE",
       "value": {
-        "schema_version": "portal.self-eligibility-batch.v1",
+        "schema_version": "portal.self-eligibility-batch.v2",
         "workspace_id": "ws_TEST_ONLY",
         "environment": "paper",
         "current_only": true,
@@ -690,12 +700,22 @@
         "session_step_up": {
           "state": "ACTIVE",
           "valid_until_ms": 1792094403000,
-          "challenge": {
-            "mechanism": "PASSWORD_REAUTH",
-            "route": "/api/admin/profile-access/v2/step-up",
-            "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-            "precondition_met": true
-          }
+          "challenges": [
+            {
+              "family": "CAPITAL_COMMAND",
+              "mechanism": "PASSWORD_REAUTH",
+              "route": "/api/admin/profile-access/v2/step-up",
+              "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+              "precondition_met": true
+            },
+            {
+              "family": "ACCESS_ADMIN",
+              "mechanism": "PASSWORD_REAUTH",
+              "route": "/api/admin/profile-access/v2/step-up",
+              "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+              "precondition_met": false
+            }
+          ]
         },
         "results": [
           {

@@ -120,6 +120,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access-digest.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/self-eligibility.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/step-up-family.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access-policy.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/access-current-relations.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/current-audit-read.ts" \

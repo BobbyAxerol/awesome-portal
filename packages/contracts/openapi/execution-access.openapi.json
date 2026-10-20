@@ -7874,7 +7874,7 @@
         ],
         "properties": {
           "schema_version": {
-            "const": "portal.self-eligibility-batch.v1"
+            "const": "portal.self-eligibility-batch.v2"
           },
           "workspace_id": {
             "type": "string",
@@ -7914,7 +7914,7 @@
             "required": [
               "state",
               "valid_until_ms",
-              "challenge"
+              "challenges"
             ],
             "properties": {
               "state": {
@@ -7936,29 +7936,190 @@
                 ],
                 "description": "When THIS session's step-up ends, never later than valid_until_ms of this projection (the session ceiling) and greater than observed_at_ms; null when NOT_ACTIVE."
               },
-              "challenge": {
-                "type": "object",
-                "additionalProperties": false,
-                "required": [
-                  "mechanism",
-                  "route",
-                  "precondition",
-                  "precondition_met"
-                ],
-                "properties": {
-                  "mechanism": {
-                    "const": "PASSWORD_REAUTH"
+              "challenges": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": false,
+                "prefixItems": [
+                  {
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "family",
+                          "mechanism",
+                          "route",
+                          "precondition",
+                          "precondition_met"
+                        ],
+                        "properties": {
+                          "family": {
+                            "enum": [
+                              "ACCESS_ADMIN",
+                              "CAPITAL_COMMAND"
+                            ]
+                          },
+                          "mechanism": {
+                            "const": "PASSWORD_REAUTH"
+                          },
+                          "route": {
+                            "const": "/api/admin/profile-access/v2/step-up"
+                          },
+                          "precondition": {
+                            "enum": [
+                              "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+                              "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
+                            ]
+                          },
+                          "precondition_met": {
+                            "type": "boolean"
+                          }
+                        },
+                        "allOf": [
+                          {
+                            "if": {
+                              "properties": {
+                                "family": {
+                                  "const": "ACCESS_ADMIN"
+                                }
+                              },
+                              "required": [
+                                "family"
+                              ]
+                            },
+                            "then": {
+                              "properties": {
+                                "precondition": {
+                                  "const": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "if": {
+                              "properties": {
+                                "family": {
+                                  "const": "CAPITAL_COMMAND"
+                                }
+                              },
+                              "required": [
+                                "family"
+                              ]
+                            },
+                            "then": {
+                              "properties": {
+                                "precondition": {
+                                  "const": "CURRENT_OWN_STEP_UP_ACTION_ALLOW"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "properties": {
+                          "family": {
+                            "const": "CAPITAL_COMMAND"
+                          }
+                        },
+                        "required": [
+                          "family"
+                        ]
+                      }
+                    ]
                   },
-                  "route": {
-                    "const": "/api/admin/profile-access/v2/step-up"
-                  },
-                  "precondition": {
-                    "const": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
-                  },
-                  "precondition_met": {
-                    "type": "boolean"
+                  {
+                    "allOf": [
+                      {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "family",
+                          "mechanism",
+                          "route",
+                          "precondition",
+                          "precondition_met"
+                        ],
+                        "properties": {
+                          "family": {
+                            "enum": [
+                              "ACCESS_ADMIN",
+                              "CAPITAL_COMMAND"
+                            ]
+                          },
+                          "mechanism": {
+                            "const": "PASSWORD_REAUTH"
+                          },
+                          "route": {
+                            "const": "/api/admin/profile-access/v2/step-up"
+                          },
+                          "precondition": {
+                            "enum": [
+                              "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+                              "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
+                            ]
+                          },
+                          "precondition_met": {
+                            "type": "boolean"
+                          }
+                        },
+                        "allOf": [
+                          {
+                            "if": {
+                              "properties": {
+                                "family": {
+                                  "const": "ACCESS_ADMIN"
+                                }
+                              },
+                              "required": [
+                                "family"
+                              ]
+                            },
+                            "then": {
+                              "properties": {
+                                "precondition": {
+                                  "const": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "if": {
+                              "properties": {
+                                "family": {
+                                  "const": "CAPITAL_COMMAND"
+                                }
+                              },
+                              "required": [
+                                "family"
+                              ]
+                            },
+                            "then": {
+                              "properties": {
+                                "precondition": {
+                                  "const": "CURRENT_OWN_STEP_UP_ACTION_ALLOW"
+                                }
+                              }
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "properties": {
+                          "family": {
+                            "const": "ACCESS_ADMIN"
+                          }
+                        },
+                        "required": [
+                          "family"
+                        ]
+                      }
+                    ]
                   }
-                }
+                ],
+                "description": "One entry per proof family, fixed order CAPITAL_COMMAND then ACCESS_ADMIN. Each says which precondition POST /step-up enforces for that family (request body field `family`) and whether it holds for the caller now. Either ACTIVE-able proof satisfies the same step-up-requiring rows. Not a promise the password will be accepted."
               }
             },
             "allOf": [
@@ -7991,7 +8152,7 @@
                 }
               }
             ],
-            "description": "This session's own step-up fact, the one the access/capital mutations recheck, plus whether the build's step-up route precondition (a current own ALLOW access.grant or access.revoke) holds for the caller. Not a promise the password will be accepted; no new authentication mechanism."
+            "description": "This session's own step-up fact, the one the capital mutations recheck (a capital-family or an access-admin-family proof, whichever is live), plus, per proof family, whether the step-up route precondition holds for the caller. A capital delegate needs no access.grant/revoke: the CAPITAL_COMMAND precondition is a current own ALLOW of a step-up-requiring action. Not a promise the password will be accepted; no new authentication mechanism and no capability."
           },
           "results": {
             "type": "array",
@@ -10795,7 +10956,7 @@
         "description": "FE-068. Up to eight resources x the same 1-16 actions in one current-only self read. Each resource carries exactly the rows of portal.self-eligibility.v1 (same evaluator, same reasons, same target rules) plus a typed step_up_state. Resources are unique (runtime-enforced) and every result carries the same actions in the same order (runtime-enforced: JSON Schema cannot compare sibling arrays). An action unsupported by one resource is a typed per-resource refusal, not a batch failure. Advisory only: no permit, no lease, no target existence, no source/field qualification; per-family checks and the real step-up recheck remain authoritative.",
         "examples": [
           {
-            "schema_version": "portal.self-eligibility-batch.v1",
+            "schema_version": "portal.self-eligibility-batch.v2",
             "workspace_id": "ws_TEST_ONLY",
             "environment": "paper",
             "current_only": true,
@@ -10805,12 +10966,22 @@
             "session_step_up": {
               "state": "NOT_ACTIVE",
               "valid_until_ms": null,
-              "challenge": {
-                "mechanism": "PASSWORD_REAUTH",
-                "route": "/api/admin/profile-access/v2/step-up",
-                "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-                "precondition_met": false
-              }
+              "challenges": [
+                {
+                  "family": "CAPITAL_COMMAND",
+                  "mechanism": "PASSWORD_REAUTH",
+                  "route": "/api/admin/profile-access/v2/step-up",
+                  "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+                  "precondition_met": true
+                },
+                {
+                  "family": "ACCESS_ADMIN",
+                  "mechanism": "PASSWORD_REAUTH",
+                  "route": "/api/admin/profile-access/v2/step-up",
+                  "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+                  "precondition_met": false
+                }
+              ]
             },
             "results": [
               {
@@ -10888,7 +11059,7 @@
             ]
           },
           {
-            "schema_version": "portal.self-eligibility-batch.v1",
+            "schema_version": "portal.self-eligibility-batch.v2",
             "workspace_id": "ws_TEST_ONLY",
             "environment": "paper",
             "current_only": true,
@@ -10898,12 +11069,22 @@
             "session_step_up": {
               "state": "ACTIVE",
               "valid_until_ms": 1792094403000,
-              "challenge": {
-                "mechanism": "PASSWORD_REAUTH",
-                "route": "/api/admin/profile-access/v2/step-up",
-                "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-                "precondition_met": true
-              }
+              "challenges": [
+                {
+                  "family": "CAPITAL_COMMAND",
+                  "mechanism": "PASSWORD_REAUTH",
+                  "route": "/api/admin/profile-access/v2/step-up",
+                  "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+                  "precondition_met": true
+                },
+                {
+                  "family": "ACCESS_ADMIN",
+                  "mechanism": "PASSWORD_REAUTH",
+                  "route": "/api/admin/profile-access/v2/step-up",
+                  "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+                  "precondition_met": false
+                }
+              ]
             },
             "results": [
               {
@@ -11694,6 +11875,13 @@
             "minLength": 1,
             "maxLength": 256,
             "writeOnly": true
+          },
+          "family": {
+            "enum": [
+              "ACCESS_ADMIN",
+              "CAPITAL_COMMAND"
+            ],
+            "description": "Proof family; omitted means ACCESS_ADMIN (the historical request, unchanged). CAPITAL_COMMAND needs a current own ALLOW of a step-up-requiring capital / pending-control / registration action and never requires access.grant or access.revoke."
           }
         }
       },
@@ -12235,6 +12423,7 @@
         "required": [
           "schema_version",
           "state",
+          "family",
           "expires_at_ms"
         ],
         "properties": {
@@ -12243,6 +12432,12 @@
           },
           "state": {
             "const": "ACTIVE"
+          },
+          "family": {
+            "enum": [
+              "ACCESS_ADMIN",
+              "CAPITAL_COMMAND"
+            ]
           },
           "expires_at_ms": {
             "type": "integer",

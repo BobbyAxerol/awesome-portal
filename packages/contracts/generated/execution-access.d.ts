@@ -388,7 +388,7 @@ export interface components {
         /**
          * @description FE-068. Up to eight resources x the same 1-16 actions in one current-only self read. Each resource carries exactly the rows of portal.self-eligibility.v1 (same evaluator, same reasons, same target rules) plus a typed step_up_state. Resources are unique (runtime-enforced) and every result carries the same actions in the same order (runtime-enforced: JSON Schema cannot compare sibling arrays). An action unsupported by one resource is a typed per-resource refusal, not a batch failure. Advisory only: no permit, no lease, no target existence, no source/field qualification; per-family checks and the real step-up recheck remain authoritative.
          * @example {
-         *       "schema_version": "portal.self-eligibility-batch.v1",
+         *       "schema_version": "portal.self-eligibility-batch.v2",
          *       "workspace_id": "ws_TEST_ONLY",
          *       "environment": "paper",
          *       "current_only": true,
@@ -398,12 +398,22 @@ export interface components {
          *       "session_step_up": {
          *         "state": "NOT_ACTIVE",
          *         "valid_until_ms": null,
-         *         "challenge": {
-         *           "mechanism": "PASSWORD_REAUTH",
-         *           "route": "/api/admin/profile-access/v2/step-up",
-         *           "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-         *           "precondition_met": false
-         *         }
+         *         "challenges": [
+         *           {
+         *             "family": "CAPITAL_COMMAND",
+         *             "mechanism": "PASSWORD_REAUTH",
+         *             "route": "/api/admin/profile-access/v2/step-up",
+         *             "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+         *             "precondition_met": true
+         *           },
+         *           {
+         *             "family": "ACCESS_ADMIN",
+         *             "mechanism": "PASSWORD_REAUTH",
+         *             "route": "/api/admin/profile-access/v2/step-up",
+         *             "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+         *             "precondition_met": false
+         *           }
+         *         ]
          *       },
          *       "results": [
          *         {
@@ -481,7 +491,7 @@ export interface components {
          *       ]
          *     }
          * @example {
-         *       "schema_version": "portal.self-eligibility-batch.v1",
+         *       "schema_version": "portal.self-eligibility-batch.v2",
          *       "workspace_id": "ws_TEST_ONLY",
          *       "environment": "paper",
          *       "current_only": true,
@@ -491,12 +501,22 @@ export interface components {
          *       "session_step_up": {
          *         "state": "ACTIVE",
          *         "valid_until_ms": 1792094403000,
-         *         "challenge": {
-         *           "mechanism": "PASSWORD_REAUTH",
-         *           "route": "/api/admin/profile-access/v2/step-up",
-         *           "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
-         *           "precondition_met": true
-         *         }
+         *         "challenges": [
+         *           {
+         *             "family": "CAPITAL_COMMAND",
+         *             "mechanism": "PASSWORD_REAUTH",
+         *             "route": "/api/admin/profile-access/v2/step-up",
+         *             "precondition": "CURRENT_OWN_STEP_UP_ACTION_ALLOW",
+         *             "precondition_met": true
+         *           },
+         *           {
+         *             "family": "ACCESS_ADMIN",
+         *             "mechanism": "PASSWORD_REAUTH",
+         *             "route": "/api/admin/profile-access/v2/step-up",
+         *             "precondition": "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW",
+         *             "precondition_met": false
+         *           }
+         *         ]
          *       },
          *       "results": [
          *         {
@@ -576,7 +596,7 @@ export interface components {
          */
         AccessEligibilityBatch: {
             /** @constant */
-            schema_version: "portal.self-eligibility-batch.v1";
+            schema_version: "portal.self-eligibility-batch.v2";
             /** @description Current self-projection text only. Runtime additionally rejects malformed UTF-16 and UTF8 byte length above256; standard JSON Schema maxLength counts Unicode codepoints, not bytes. No normalization. */
             workspace_id: string;
             /** @enum {unknown} */
@@ -589,21 +609,43 @@ export interface components {
             observed_at_ms: number;
             /** @description End-exclusive ceiling of this actor's current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline. */
             valid_until_ms: number;
-            /** @description This session's own step-up fact, the one the access/capital mutations recheck, plus whether the build's step-up route precondition (a current own ALLOW access.grant or access.revoke) holds for the caller. Not a promise the password will be accepted; no new authentication mechanism. */
+            /** @description This session's own step-up fact, the one the capital mutations recheck (a capital-family or an access-admin-family proof, whichever is live), plus, per proof family, whether the step-up route precondition holds for the caller. A capital delegate needs no access.grant/revoke: the CAPITAL_COMMAND precondition is a current own ALLOW of a step-up-requiring action. Not a promise the password will be accepted; no new authentication mechanism and no capability. */
             session_step_up: {
                 /** @enum {unknown} */
                 state: "ACTIVE" | "NOT_ACTIVE";
                 /** @description When THIS session's step-up ends, never later than valid_until_ms of this projection (the session ceiling) and greater than observed_at_ms; null when NOT_ACTIVE. */
                 valid_until_ms: number | null;
-                challenge: {
-                    /** @constant */
-                    mechanism: "PASSWORD_REAUTH";
-                    /** @constant */
-                    route: "/api/admin/profile-access/v2/step-up";
-                    /** @constant */
-                    precondition: "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW";
-                    precondition_met: boolean;
-                };
+                /** @description One entry per proof family, fixed order CAPITAL_COMMAND then ACCESS_ADMIN. Each says which precondition POST /step-up enforces for that family (request body field `family`) and whether it holds for the caller now. Either ACTIVE-able proof satisfies the same step-up-requiring rows. Not a promise the password will be accepted. */
+                challenges: [
+                    ({
+                        /** @enum {unknown} */
+                        family: "ACCESS_ADMIN" | "CAPITAL_COMMAND";
+                        /** @constant */
+                        mechanism: "PASSWORD_REAUTH";
+                        /** @constant */
+                        route: "/api/admin/profile-access/v2/step-up";
+                        /** @enum {unknown} */
+                        precondition: "CURRENT_OWN_STEP_UP_ACTION_ALLOW" | "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW";
+                        precondition_met: boolean;
+                    } & (unknown & unknown)) & {
+                        /** @constant */
+                        family: "CAPITAL_COMMAND";
+                    },
+                    ({
+                        /** @enum {unknown} */
+                        family: "ACCESS_ADMIN" | "CAPITAL_COMMAND";
+                        /** @constant */
+                        mechanism: "PASSWORD_REAUTH";
+                        /** @constant */
+                        route: "/api/admin/profile-access/v2/step-up";
+                        /** @enum {unknown} */
+                        precondition: "CURRENT_OWN_STEP_UP_ACTION_ALLOW" | "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW";
+                        precondition_met: boolean;
+                    } & (unknown & unknown)) & {
+                        /** @constant */
+                        family: "ACCESS_ADMIN";
+                    }
+                ];
             } & unknown;
             results: ({
                 resource: {
@@ -954,6 +996,11 @@ export interface components {
         AccessStepUpRequest: {
             workspace_id: string;
             password: string;
+            /**
+             * @description Proof family; omitted means ACCESS_ADMIN (the historical request, unchanged). CAPITAL_COMMAND needs a current own ALLOW of a step-up-requiring capital / pending-control / registration action and never requires access.grant or access.revoke.
+             * @enum {unknown}
+             */
+            family?: "ACCESS_ADMIN" | "CAPITAL_COMMAND";
         };
         AccessReceipt: {
             /** @constant */
@@ -1062,6 +1109,8 @@ export interface components {
             schema_version: "portal.access-step-up.v1";
             /** @constant */
             state: "ACTIVE";
+            /** @enum {unknown} */
+            family: "ACCESS_ADMIN" | "CAPITAL_COMMAND";
             expires_at_ms: number;
         };
         AccessAudit: {
