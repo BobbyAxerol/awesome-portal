@@ -32,12 +32,16 @@ the same answers (`src/fixtureBff/equivalence.test.ts`).
 
 It answers the same routes with the same body shapes as `apps/control-api` for the reads the V2
 screens make, and nothing else. `ROUTES.md` lists every route, who answers it here, who serves it for
-real, and the published schema its body is judged against. Of the 96 rows, 31 bodies validate against
-a published schema, 11 are known to differ from one (reported as `DRIFT`, never hidden), and 54 have
+real, and the published schema its body is judged against. Of the 100 rows, 31 bodies validate against
+a published schema, 11 are known to differ from one (reported as `DRIFT`, never hidden), and 58 have
 no published schema that fits.
 
 It never reads a request header, so it cannot be told who is calling; the session capabilities and
-the user id are configuration. Anything it does not model is refused, not invented:
+the user id are configuration. It also answers the four reads the browser shell makes before any screen
+(`/api/auth/context`, `/api/v1/portal/registry|links|summary`; `e2e/bffDoubleShell.ts`), so the preview
+needs no Control API to sign in: the identity is a synthetic, labelled "Fixture reviewer" (`fixture: true`),
+and no session, cookie or token is ever minted or accepted. Sign-in, sign-out, password change and CSRF
+are refused. Anything it does not model is refused, not invented:
 
 - an unknown path is `404 {"error":"FIXTURE_ROUTE_NOT_SERVED"}`;
 - a write the doubles do not model is `405 {"error":"FIXTURE_METHOD_NOT_ALLOWED"}`;
@@ -86,7 +90,7 @@ Read through `loadConfig`; no file, no secret. A bad value stops the process wit
 | `FIXTURE_LANE_LABEL` | `FIXTURE_LAB` | value of `X-Fixture-Lane`; must start with `FIXTURE_LAB` |
 | `FIXTURE_SCALE` | `medium` | `small` (the specs' rows), `medium`, `large`: see `ROUTES.md` |
 | `FIXTURE_NOW_ISO` | `2026-08-22T13:00:00Z` | instant the generated operations are placed relative to (see the clock note in `ROUTES.md`) |
-| `FIXTURE_USER_ID` | `principal-visual-baseline` | the user the session and access reads describe; set it to the real principal id when the shell is signed in through the real `portal-api` |
+| `FIXTURE_USER_ID` | `principal-visual-baseline` | the id of the fixture user: `/api/auth/context`, `/api/admin/access/self` and the Access screen all describe it. It is a label, not an account; there is no reason to change it now that the fixture signs itself in |
 | `FIXTURE_WRITES` | `doubles` | `refuse` turns every non-GET into `405` |
 | `FIXTURE_VARIANTS` | none | JSON picking a double's state, for example `{"overview":{"blotter":"stale","admin":"partial"},"users":"verified"}`. Keys and values are validated: `overview` takes `commandCenter`, `fleet`, `operations`, `blotter`, `admin`, `stream` (see `bffDoubleOverview.ts`), `users` takes `paged`, `verified`, `empty`, `denied`, `broken`. The access screen's states are chosen by `?workspace_id=` (`ws_TEST_ONLY`, `ws_TEST_GRANTS`, `ws_TEST_EMPTY`, `ws_TEST_DENIED`, `ws_TEST_UNAVAILABLE`, `ws_TEST_MALFORMED`, `ws_TEST_OTHER_USER`) |
 
