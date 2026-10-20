@@ -15,7 +15,11 @@ Chúng không thay thế phase hoặc exit gate trong
   published1380ab9d/normal hook PASS. Actual
   [source return](../integration/execution-native-read-v1/research-identity-intake/connected-source-return.json)
   proves identity COMMIT/Core ACK, independent exact retirement/logout and
-  finite native source preflight/observer plus4mTLS cases; window ends04:35UTC.
+  finite native source preflight/observer plus4mTLS cases. The
+  [finite closeout](../integration/execution-native-read-v1/research-identity-intake/finite-source-closeout.json)
+  records graceful drain04:26:57UTC and official revision2 revokedtrue with
+  exact resource cleanup; candidate28446 is no longer active.4040cae8 is
+  published, normal hook130contracts/717API/build/restore PASS.
   Core009 READ/STREAM composition and genuine connected cases remain. Full08
   NOT_MET,09connectedNOT_STARTED; old source-only/paused-goal entries below are
   historical, not current blockers. No stable/provider28445 change implied.

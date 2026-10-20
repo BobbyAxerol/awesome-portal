@@ -658,11 +658,15 @@ distinct isolated PASS, published1380ab9d/normal hook PASS. Actual
 [source return](integration/execution-native-read-v1/research-identity-intake/connected-source-return.json)
 now proves identity COMMIT/Core ACK, independent receipt/mapping/role retirement
 and Core logout, finite native READ preflight/observer and4mTLS transport cases.
-Source window ends20Oct04:35UTC; Core009 READ/STREAM composition remains.
+The [finite closeout](integration/execution-native-read-v1/research-identity-intake/finite-source-closeout.json)
+records early graceful drain04:26:57UTC, current revision2 revokedtrue and exact
+container/image cleanup.4040cae8 published the real source evidence with normal
+hook130contracts/717API/build/restore PASS. Core009 READ/STREAM composition
+remains; retired revision1 must not be reused as authority.
 See [qualification](integration/execution-native-read-v1/research-identity-intake/native-lifecycle-qualification.json).
 Other phase dependencies
 do not block this owned work. Full08NOT_MET/09connectedNOT_STARTED; imported
-public source is not actual identity/READ/STREAM or capacity acceptance. Older
+public source qualification is not business READ/STREAM or capacity acceptance. Older
 dated tracking below is provenance, not the current goal/installation status.
 
 **Original08 current operator publication/binding,19Oct/20Oct — ISOLATED_QUALIFIED:**

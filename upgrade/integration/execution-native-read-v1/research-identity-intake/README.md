@@ -1,5 +1,24 @@
 # Original08 — exact Research identity prerequisite
 
+## Current finite-source closeout —20Oct04:31UTC
+
+[Actual closeout](finite-source-closeout.json) supersedes the READY snapshot
+below: the transport-only candidate was gracefully drained at04:26:57UTC,
+physical process exit0/handlers0/pools0/socket28446absent. The official SDK then
+appended current acceptance revision2 **revokedtrue**, independently read back;
+fresh RR/read-only observer denies. Both disposable containers and the
+unreferenced4040 hook image were removed;13protectedHK tuples and Core008
+image/config/restarts remain unchanged. Durable identity/mapping/receipt history
+is retained; do not repeat identity or treat revision1 as current authority.
+
+Source evidence is published4040cae8, normal hook130contracts/717API/build/restore
+PASS. Core009 is still NOT_COMPOSED; Core must return actual owner policy/grants,
+selected same-Pool/coordinator/app composition and genuine session references.
+READ does not grant STREAM. Next source use requires a matched new finite
+acceptance/runtime window and fresh observer pins; not replaying retired inputs.
+Full08NOT_MET/09connectedNOT_STARTED. Historical evidence below is not a live
+service claim or a reason to recreate the completed identity.
+
 ## Genuine identity and finite native source —20Oct
 
 [Connected source return](connected-source-return.json) supersedes the identity

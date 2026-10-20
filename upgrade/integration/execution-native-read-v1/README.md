@@ -2,6 +2,15 @@
 
 ## Current entrypoint — 19Oct Asia/Saigon
 
+**20Oct04:31UTC closeout:** [finite source receipt](research-identity-intake/finite-source-closeout.json)
+records graceful physical drain and official acceptance revision2 revokedtrue.
+Candidate28446 is retired/socketabsent; identity COMMIT/Core ACK remains valid
+history.4040cae8 is published with130contract/717API/build/restore PASS. Core009
+policy/READ+separateSTREAM/app composition remains pending; prepare a matched
+new source window only with its actual return, never replay revision1 or old
+identity issuance. Full08NOT_MET/09connectedNOT_STARTED. The following READY
+and older source/adoption blocks are dated provenance, not current activation.
+
 **20Oct continuation:** [current immutable closure/lifecycle journal](../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-immutable-closure-and-finite-native-lifecycle-20oct0315utc)
 confirms Core0087818d563 installed and new1df9adad transfer verified. Do not
 repeat the old Core source-only blocker. Edge's finite provider lifecycle is
@@ -35,22 +44,23 @@ Read in this order:
 **Pre-ENTER recovery repair:** [current helper/test packet](research-identity-intake/README.md)
 supersedes activation of the old44ee helper. OPEN + JWT expiry/cancellation
 must recover through the original fenced receipt and compatible Core
-rollback-only ACK; never force `finished` or retirement. Core's current source
-is678cf731 plus its owned recovery WIP. The newly approved temporary Research
-PREVIEW AuthService session is Core-owned, then exactly revoked; it is not
-Cloudflare/password proof. Goal remains blocked, this HK slice is source-only.
+rollback-only ACK; never force `finished` or retirement. The678cf731 recovery
+source and source-only/blocked status were historical;0087818d563 is now
+installed and the actual identity/session completed. The Research PREVIEW
+AuthService session was exactly retired; it is not Cloudflare/password proof.
 
 1. [Current target/adoption map](current-core-reconciliation/README.md#current-owner-direction--integration-first):
    actual Execution v2 consumer is Research, `/home/bobby/portal-research`,
    `docs/research-loop-plan`; stable/main is the separate genuine security
    target, dev is preview. Do not substitute stable/dev IDs, sessions or DBs.
 2. [Identity/finite-ACL operator packet](research-identity-intake/README.md):
-   source`44ee6c186de9e0822f587c37069738a8f410ae58` on
+   current published source`4040cae82a24d043e04b3c11a28a6699693ce6f1` on
    `BobbyAxerol/awesome-portal:feat/execution-edge-upgrade-v1_2`.
    Actual receipt schema + dormant role are installed on exact TS system
    `7674585245102796834`; do NOT create them again. One-shot ACL/credential/
    recovery/retirement implementation has40PG15+18baseline+14regression PASS;
-   no actual identity writer or Research human mapping has been activated.
+   actual mapping is now COMMITTED/Core ACKed and the finite identity role
+   retired. Do not recreate the schema/role or reissue that completed attempt.
 3. [Bounded source/publication return](research-identity-intake/qualification.json):
    exact source pins, normal-hook scope and cleanup, independent versus actual
    preparation, and precise Core input still required. TEST_ONLY Core ACKs are

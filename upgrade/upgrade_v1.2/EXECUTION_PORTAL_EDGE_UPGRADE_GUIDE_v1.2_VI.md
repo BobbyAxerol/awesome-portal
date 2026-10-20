@@ -1017,6 +1017,15 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**20Oct04:31UTC finite closeout:** [actual receipt](../integration/execution-native-read-v1/research-identity-intake/finite-source-closeout.json)
+records graceful SDK/handler/socket/pool drain, physical exit0, official
+acceptance revision2 revokedtrue and independent observer denial. Candidate28446
+is retired, identity COMMIT/Core ACK/history preserved. Source4040cae8 is
+published with normal hook130contracts/717API/build/restore PASS. Core009
+policy/READ+separateSTREAM/app composition and connected acceptance remain;
+do not replay retired revision1 or treat the READY snapshot below as live.
+Full08NOT_MET/09connectedNOT_STARTED; stable28445 and protected runtime unchanged.
+
 **20Oct actual identity/native source:** [bounded return](../integration/execution-native-read-v1/research-identity-intake/connected-source-return.json)
 records genuine COMMITTED/Core ACK, independent physical TS receipt/mapping and
 retired role, exact Core FINISHED/logout. Official Research READ acceptance and

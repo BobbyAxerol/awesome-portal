@@ -24353,6 +24353,127 @@ identity/JIT issue. Current READ/STREAM connected action belongs to Core009
 selection/owner policy and existing app composition using the delivered actual
 pins; never label the now-complete identity/native-source input absent again.
 
+### Original08 published source and finite-source closeout —20Oct04:25UTC
+
+Actual normal-hook session37737 physically ended exit0. Commit
+4040cae82a24d043e04b3c11a28a6699693ce6f1 records exactly8owned paths,
++378/-9lines, BobbyAxerol identity;130contracts/717API PASS, build/PostgreSQL
+restore/workspace verification PASS. Hook log SHA256
+b5614a42ebc0490a9586ea5cfd58625019563dd72c4176c9997c5aac55dc1253.
+Approved non-force feature push73334 ended0; ls-remote51968 confirms exact
+4040cae82a24d043e04b3c11a28a6699693ce6f1 on the same feature branch.
+Three unrelated untracked peer file hashes remain unchanged and unstaged.
+This publishes genuine identity/native-source evidence, not full08 acceptance.
+
+BEFORE finite cleanup: keep original session28318/candidate43026b4c until the
+SAME lifecycle proves SDK/handler/task/socket/server drain and both owned pools
+physically zero. The declared04:35UTC end is a maximum finite window, not a
+minimum retention time after the transport cases finish. Actual installed
+38-line controller SHA5089657b3b2d32b98ccce82c5fd42cf2567effa0554bddfb6e3dfd427fe262e0
+was read back from this exact container: SIGTERM calls only begin_draining +
+stop.set, then awaits the original lifecycle.close; any uncertainty loops with
+the SAME objects/custody. Request this one graceful drain now because Core009
+remains uncomposed and all declared transport cases ended; no new issue/session.
+This is not docker stop/timeout/force removal. No force-kill/restart,
+deadline-as-terminal or global shared-role session-zero assumption. UNKNOWN
+keeps original recovery/listener/pool custody. Candidate admission stops on
+expiry; preserved provider28445 and its bindings remain outside this cleanup.
+
+After that physical terminal, use the official existing maintenance SDK to
+append a revoked revision for the SAME acceptanceb922c105. Preserve subject,
+mapping/domain seals and protected owner/policy; expected_version1, new command
+UUID, revokedtrue. Frozen SDK requires expires_at in the future even for a
+revoked tombstone: owner rollback selection is a fresh bounded now+5minutes
+expiry for this revoked revision, never regrant/replay version1. Persist and
+pin exact generated manifest bytes before calling install; UNKNOWN resolves
+only status of those SAME bytes/key. Confirm exact current head2/revokedtrue,
+receipt/hash/owner/policy and fresh RR/read-only observer denial. No SQL seed,
+identity reissue, schema/history/user deletion or shared native-role change.
+
+Only after physical candidate process/socket/pool terminal remove its exact
+container. Inventory images/cache against the compatible91-image baseline,
+retain active/rollback images and323shared baseline cache rows; remove only a
+new unreferenced owned hook image in a quiet scope. Record disk before/after
+without claiming shared-host drift as reclaimed bytes. Preserve protected13HK
+runtime tuples, Core008 image/config/restarts and all operational/rollback data.
+
+Independent review confirms Core009 remains NOT_COMPOSED; actual source return
+has already supplied identity/observer/acceptance/trust/transport. Core owns
+reviewed private owner commissioning, official current READ grant and separate
+STREAM grant, source selection/app same-Pool/coordinator/recovery composition
+and its installed return/session references. No further Edge-owned binding
+code/config defect was found in this bounded read. Existing selected-pins codec
+PASS is not app authorization. Full08NOT_MET/09connectedNOT_STARTED; continue
+scoped connected drills when that actual Core input is available, not a new
+phase or repeated generic approval. Finite retirement and publication remain
+owned runnable work regardless of that peer dependency.
+
+**Actual finite closeout,20Oct04:27–04:31UTC:** exact SIGTERM request reached
+the independently verified graceful handler, no force teardown. Original28318
+reported NATIVE_PHYSICALLY_DRAINED, handlers0/sourcepool0/controlpool0/closedtrue,
+then actual process exit0. Independent Docker/socket readback confirms original
+candidate43026b4c exit0/restart0/finished04:26:57.707964008Z and28446absent.
+There were no business ISSUE/ENTER attempts from the completed transport cases;
+do not upgrade this into connected business READ or a global held-ledger proof.
+
+Official existing maintenance SDK appended SAME acceptanceb922c105 revision2,
+new command15d73e04-d510-45d0-af92-e3d324bfcd4b/manifest
+43506806fe2592ce77281a3f7e5c045830f7613ddde32c469d807cf73ec4a26c,
+revokedtrue at04:28:16.918672UTC. Exact-byte status agrees current2/not-historical;
+independent source RR/read-only head readback confirms revokedtrue/owner/policy1
+and fresh observer denies BUSINESS_READ_REVOKED_OR_EXPIRED. Both maintenance/
+observer pools closed0, process24479 exit0/stderr0; result8fd1c2e3. This is an
+actual scoped source acceptance revoke, NOT Core app cache/cursor/SSE acceptance.
+The protected owner/policy, native2/2/1caps, subject/domain seals and durable
+history are unchanged. Independent owner readback exit0/stderr0 (e252f93d)
+also proves identity role NOLOGIN/no-password/no-role-config/no-dependencies/
+no-membership/0sessions, exact physicalDB and revoked head2.
+
+Cleanup38395 exit0 removed only known-terminal candidate43026b4c and maintenance
+4d811a9b, plus unreferenced owned hook imagebf321a5b6673c6ff04030f4d2f3cfabf0586603539a7992c60f8436c1e5157b2.
+Compatible default images92→91 exactly equal original baseline; retain323
+shared BuildKit rows, no prune/old intermediate deletion. Root disk available
+257606205440→257601273856of518933680128B; shared drift is NOT reclaimed-space
+evidence. The independent readback container used --rm and physically ended.
+All13protectedHK tuples compare equal. Core runtime check14850 confirms exact
+7b2cimage/497fc5a8config/cc6ae429bootstrap/restart0 and FINISHED/unresolved0/
+callbacks-in-flight0. Stable/main/dev/provider28445/volumes/networks untouched.
+
+[Bounded finite-source receipt](integration/execution-native-read-v1/research-identity-intake/finite-source-closeout.json)
+supersedes the live READY interpretation of the immutable48ab20cd source
+snapshot. One qualified public closure and original private trust/metadata/
+receipt audit remain for the active feature; no disposable DSN/password/JWT
+file was created. Identity is already committed, so no repeat identity/JIT.
+Source revision1 is retired even before its old04:35 expiry: next real connected
+window needs current-head CAS, new reviewed acceptance/runtime expiry and fresh
+observer pins matched to Core009. Same original08/09 obligations remain open.
+
+BEFORE closeout publication: stage only this receipt/updated guides and indices,
+run the unchanged normal hook, then publish only this feature non-force. Quiet
+reservation is still our own (no foreign/root lease), extended to05:14:50UTC,
+total below3h, exclusively for normal verification/publication/cleanup. It is
+not a production capacity measurement. Remove only a new unreferenced hook
+test image after physical hook terminal and release our exact lease when all
+owned jobs/custody have ended. No generic approval, new framework or phase.
+
+**Closeout coordination/readback,20Oct04:35UTC:** copied exactly5774B bounded
+closeout JSONcaedd55ede397800a0050250739d49dc6385655fb371050de1e5b6395a8ed113
+to the same protected SGP return directory; appended3357B only to the Edge-owned
+Core request, CAS536fbc33→03a5940b. CoreHEAD7818 and empty staged digeste3b0c442
+preserved. This explicitly retires the old READY interpretation and asks Core009
+to prepare reviewed owner policy/app composition, then match a fresh source
+window/pins; no identity replay, fake STREAM grant or idle candidate lease.
+No Core Unified/sync/source/policy/config/runtime was changed. Exact old source
+snapshot48ab20cd remains immutable provenance, not current authority.
+
+Independent final exact-row check exit0/stderr0 verifies the original committed
+identity receipt/digest and ACTIVE genuine Research mappingversion1 survived
+the revoke/cleanup (c4799d8b04ce42690eae241f068e386fa6d47ac78e939d3ab97f43f3ebc41fd5).
+The one-shot stdin bridge exit fix also has3minimal AST-tail cases PASS
+(return0→exit0,return2→exit2,exception→exit2),0DB/SSH/runtime calls; no identity
+transaction was rerun to repair the old reporting failure. These are separate
+controller checks, not3additional native authority/connected acceptance cases.
+
 
 
 
