@@ -15,7 +15,7 @@
  * L3  generated negatives over the populated fixture: never throws, never leaks a probe, the reader NEVER accepts what the
  *     schema refuses, and where it is stricter than the schema it is in a named, counted group:
  *       MS-S1 display safety of every text (whitespace-only, bidi, zero-width, C1)
- *       MS-S2 negative zero is not a decimal value
+ *       MS-S2 (retired) negative zero is now refused by the schema (MD-5 option C)
  *       MS-S3/MS-S4 a window is not empty or backwards; points are strictly ascending and inside the window; gaps are ordered
  *       MS-S5 an entry carries the selected, resolved window and does not end after the cutoff
  *       MS-S6 the unit follows the metric; MONEY is in the partition's currency; the basis is the partition's
@@ -492,7 +492,6 @@ describe("L3 · schema agreement (the published schema, via testkit validateAgai
   const SAFE_TEXT_VALUE = /<- ("\s+"|"[^"]*\u202e[^"]*"|"\\u0000")$/;
   const STRICTER_GROUPS: { name: string; test: (c: Case) => boolean }[] = [
     { name: "MS-S1 display safety: whitespace-only, bidi override, in any text", test: (c) => SAFE_TEXT_VALUE.test(c.name) },
-    { name: "MS-S2 negative zero is not a decimal value", test: (c) => c.category === "negative-zero" },
     { name: "MS-S4 a cut or doubled points list changes the points (a repeated timestamp has two values)", test: (c) => /^(truncated|duplicate-id): series\.\d\.(points|gaps) <-/.test(c.name) },
     { name: "MS-S7 a subject appears once", test: (c) => /^(truncated|duplicate-id): series <-/.test(c.name) },
     { name: "MS-S9 the comparison is the value derived from the entries (an axis or common edited alone)", test: (c) => /: comparison\.(axis_ms|common)/.test(c.name) },
@@ -545,7 +544,6 @@ describe("L3 · schema agreement (the published schema, via testkit validateAgai
 
 /** The generated corpus' stricter-than-schema counts, pinned: a change means a rule moved. */
 const PINNED_STRICTER: Record<string, number> = {
-  "MS-S2 negative zero is not a decimal value": 8,
   "MS-S9 the comparison is the value derived from the entries (an axis or common edited alone)": 4,
   "MS-S1 display safety: whitespace-only, bidi override, in any text": 39,
   "MS-S7 a subject appears once": 2,
@@ -560,8 +558,6 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
   const cases: [string, (b: Draft) => void][] = [
     ["MS-S1 whitespace-only workspace_id", (b) => { b.workspace_id = "   "; }],
     ["MS-S1 bidi override in a methodology_ref", (b) => { b.series[0].methodology_ref = `m${rlo}x`; b.comparison.common.methodology_ref = `m${rlo}x`; b.series[1].methodology_ref = `m${rlo}x`; }],
-    ["MS-S2 negative zero point", (b) => { b.series[0].points[0].value = "-0"; }],
-    ["MS-S2 negative zero with decimals", (b) => { b.series[0].points[0].value = "-0.000"; }],
     ["MS-S3 an entry window with from_ms == to_ms", (b) => { for (const e of b.series) e.window = { from_ms: from, to_ms: from }; b.selected_window.resolved = { from_ms: from, to_ms: from }; b.comparison.common.window = { from_ms: from, to_ms: from }; }],
     ["MS-S3 a requested custom window backwards", (b) => { b.selected_window.requested = { from_ms: 9, to_ms: 1 }; }],
     ["MS-S4 points out of order", (b) => { b.series[0].points.reverse(); }],
@@ -592,7 +588,7 @@ describe("L3 · stricter than the schema, on purpose: each pinned case is schema
   it("prints the number of pinned groups", () => {
     const groups = new Set(cases.map(([name]) => name.split(" ")[0]));
     console.info(`series stricter-than-schema (on purpose): ${cases.length} pinned cases in ${groups.size} named groups: ${[...groups].sort().join(", ")}`);
-    expect(groups.size).toBe(10);
+    expect(groups.size).toBe(9);
   });
 });
 
