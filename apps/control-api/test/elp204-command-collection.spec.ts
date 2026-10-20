@@ -337,7 +337,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-04 trusted command collect
   }
   it("orders timestamp ties by exact id and walks without duplicates, retaining valid delivery/business distinctions", async () => {
     const f = await fixture(), first = await seed(f), added = await bulk(f, first, 3, true);
-    const expected = [first.status, ...added].map(status=>({...status,currency:first.intent.business_payload.currency}))
+    const expected = [first.status, ...added].map(status=>toPublicCommandStatus(status,first.intent.business_payload.currency))
       .sort((a, b) => a.command_id < b.command_id ? -1 : 1);
     await mounted(f, async http => {
       const one = page(await http.get({ limit: "2" })), two = page(await http.get({ limit: "2", after: one.page.next_cursor! }));

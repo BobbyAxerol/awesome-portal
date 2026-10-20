@@ -5,7 +5,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-export const TEMPLATE_DIR = join(__dirname, "../../../../deploy/research-preview/native-core-templates");
+export const TEMPLATE_DIR = process.env.PORTAL_CORE009_TEMPLATES_DIR ?? join(__dirname, "../../../../deploy/research-preview/native-core-templates");
 export const RUNTIME_TEMPLATE = "native-core-runtime.v1.template.json";
 export const OWNER_READ_TEMPLATE = "private-owner-manager-commissioning.v1.read-only.template.json";
 export const OWNER_STREAM_TEMPLATE = "private-owner-manager-commissioning.v1.read-and-stream.template.json";

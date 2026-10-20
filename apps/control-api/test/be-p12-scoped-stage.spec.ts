@@ -21,7 +21,7 @@ import { resolve } from "node:path";
 import { assertPublishedSchema } from "./stage-contract-validator";
 
 const OPERATIONS = "execution-operations.v1.schema.json";
-const contractFixture = (name: string) => JSON.parse(readFileSync(resolve(__dirname, "../../../packages/contracts/fixtures", name), "utf8"));
+const contractFixture = (name: string) => JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures", name), "utf8"));
 
 type Fixture = ReturnType<typeof liveFixture>;
 const LIVE_FIELDS = [...FIELDS, "price", "position_id", "fill_id", "balance_free", "balance_locked"];

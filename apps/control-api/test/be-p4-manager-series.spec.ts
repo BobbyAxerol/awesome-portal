@@ -450,7 +450,7 @@ describe("service + controller (synthetic adapters, no PostgreSQL)", () => {
 });
 
 describe("canonical fixtures agree with the validator and the suite's expectations", () => {
-  const load = (name: string) => JSON.parse(readFileSync(resolve(__dirname, "../../../packages/contracts/fixtures", name), "utf8"));
+  const load = (name: string) => JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures", name), "utf8"));
   it("populated / empty / unavailable / currency-mixed parse and say what they claim", () => {
     const states = (name: string) => load(`execution-manager-series.${name}.synthetic.valid.json`).value;
     expect(managerSeriesResponse.parse(states("populated"))).toEqual(states("populated"));

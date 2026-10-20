@@ -9,7 +9,7 @@ import { PENDING_DISCOVERY_MAX_ITEMS, buildPendingRecallDiscovery, pendingContro
   pendingRecallDiscovery, pendingRecallDiscoveryQuery, publishPendingControlStatus,
   type PendingControlIntent, type PendingControlStatus } from "../src/execution-v2/pending-control.contract";
 
-const fixture = JSON.parse(readFileSync(resolve(__dirname, "../../../packages/contracts/fixtures/execution-pending-control.synthetic.valid.json"), "utf8"));
+const fixture = JSON.parse(readFileSync(resolve(process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts"), "fixtures/execution-pending-control.synthetic.valid.json"), "utf8"));
 const base: PendingControlIntent = pendingControlIntent.parse(fixture.intent);
 const deployment: PendingControlIntent = pendingControlIntent.parse(fixture.intent_deployment);
 const status = (key: string): PendingControlStatus => pendingControlStatus.parse(fixture[key]);
