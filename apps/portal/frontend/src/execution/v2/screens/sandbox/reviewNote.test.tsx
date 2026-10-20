@@ -33,7 +33,7 @@ async function mount(options: FakeOptions = {}, entry = ENTRY): Promise<FakeApi>
   );
   await screen.findByRole("heading", { level: 1, name: "Sandbox certification" });
   await waitFor(() => expect(document.querySelector('[data-screen="sandbox-v2"]')?.getAttribute("data-state")).not.toBe("loading"));
-  await waitFor(() => expect(screen.queryByText(/Asking the server whether it offers this note/)).toBeNull());
+  await waitFor(() => expect(screen.queryByText(/Checking whether this note is offered/)).toBeNull());
   return api;
 }
 const field = () => screen.getByLabelText(LABEL) as HTMLTextAreaElement;
@@ -53,10 +53,12 @@ describe("open only when the server says so (D10)", () => {
   it("AVAILABLE: the form is there, the button is off until the note is long enough", async () => {
     const api = await mount();
     expect(api.capabilities).toHaveBeenCalledWith("ws_TEST_ONLY_parent");
-    expect(screen.getByText("A note records a review. It does not pass a step.")).toBeTruthy();
+    // The lead sentence is the form's title, not a printed line; the length rule is said once, in the hint.
+    expect(screen.queryByText("A note records a review. It does not pass a step.")).toBeNull();
+    expect(field().closest("[title]")!.getAttribute("title")).toBe("A note records a review. It does not pass a step.");
     expect(record().disabled).toBe(true);
     expect(hint()).toBe("Needs at least 8 characters (0 so far)");
-    expect(field().placeholder).toBe("At least 8 characters");
+    expect(field().placeholder).toBe("");
   });
 
   it("UNAVAILABLE: no form; the action is disabled with the profile reason and the server's own code kept apart", async () => {
@@ -65,7 +67,9 @@ describe("open only when the server says so (D10)", () => {
     const button = within(panel()).getByRole("button", { name: "Record review note" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toBe("Not enabled for this profile");
-    expect(within(panel()).getByText("Server reason: ADMIN_REQUIRED")).toBeTruthy();
+    // The server's own code is the actions' title, not a second printed line.
+    expect(within(panel()).queryByText("Server reason: ADMIN_REQUIRED")).toBeNull();
+    expect(panel().querySelector(".exec-sbx-actions")!.getAttribute("title")).toBe("Server reason: ADMIN_REQUIRED");
     expect(within(panel()).getByRole("link", { name: /My access/ })).toBeTruthy();
   });
 
@@ -81,7 +85,8 @@ describe("open only when the server says so (D10)", () => {
     const button = within(panel()).getByRole("button", { name: "Record review note" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toBe(words);
-    expect(within(panel()).getByText(`Server reason: ${code}`)).toBeTruthy();
+    expect(within(panel()).queryByText(`Server reason: ${code}`)).toBeNull();
+    expect(panel().querySelector(".exec-sbx-actions")!.getAttribute("title")).toBe(`Server reason: ${code}`);
   });
 
   it("the role never decides: a manager and a reviewer see exactly what the server's answer says", async () => {
@@ -111,7 +116,7 @@ describe("open only when the server says so (D10)", () => {
     api.capabilities.mockImplementation(() => new Promise(() => undefined));
     render(<MemoryRouter initialEntries={[ENTRY]}><SandboxScreen api={api} deploymentId="dep_TEST_ONLY_sbx" /></MemoryRouter>);
     await screen.findByRole("heading", { level: 1, name: "Sandbox certification" });
-    expect(within(panel()).getByRole("status").textContent).toContain("Asking the server whether it offers this note");
+    expect(within(panel()).getByRole("status").textContent).toContain("Checking whether this note is offered");
     expect(screen.queryByLabelText(LABEL)).toBeNull();
   });
 

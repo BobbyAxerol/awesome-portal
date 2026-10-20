@@ -34,7 +34,7 @@ import { Flag } from "../../Flag";
 import { SectionPanel } from "../../blocks";
 import { captureReasonText, stageWhy } from "../stage/reasons";
 import { useStageReason } from "../stage/StageEligibility";
-import { NOTE_MIN, newNoteKey, noteBlock, noteFingerprint, noteLength, type NoteInputs } from "./model";
+import { newNoteKey, noteBlock, noteFingerprint, noteLength, type NoteInputs } from "./model";
 import type { NoteCapability } from "./useSandboxReads";
 
 const ACCESS = "/administration/profile-access";
@@ -63,10 +63,9 @@ export interface ReviewNoteFormProps {
 function Shut({ reason, code }: { reason: string; code?: string }) {
   return (
     <>
-      <div className="exec-sbx-actions">
+      <div className="exec-sbx-actions" title={code === undefined ? undefined : `Server reason: ${code}`}>
         <DockAction label="Record review note" reason={reason} accessHref={ACCESS} />
       </div>
-      {code === undefined ? null : <p className="exec-sbx-code">Server reason: {code}</p>}
     </>
   );
 }
@@ -145,7 +144,7 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
 
   let body;
   if (capability.state === "loading") {
-    body = <p className="exec-sbx-note" role="status" aria-busy="true">Asking the server whether it offers this note.</p>;
+    body = <p className="exec-sbx-note" role="status" aria-busy="true">Checking whether this note is offered.</p>;
   } else if (capability.state === "unknown") {
     body = <Shut reason={`Not available. ${capability.reason}`} />;
   } else if (capability.state === "unavailable") {
@@ -203,7 +202,6 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
           value={summary}
           disabled={busy}
           aria-describedby={hintId}
-          placeholder={`At least ${NOTE_MIN} characters`}
           onChange={(event) => {
             setSummary(event.target.value);
             // A refusal belongs to the text that was refused.
@@ -250,8 +248,7 @@ export function ReviewNoteForm({ api, capability, identity, onRecorded }: Review
 
   return (
     <SectionPanel level={2} title="Record review note" aside="Portal evidence">
-      <p className="exec-sbx-note">{LEAD}</p>
-      {body}
+      <div title={LEAD}>{body}</div>
     </SectionPanel>
   );
 }

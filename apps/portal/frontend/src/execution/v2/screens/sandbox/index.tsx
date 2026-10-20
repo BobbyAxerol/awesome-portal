@@ -38,7 +38,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { useExecutionRuntime } from "../../../useExecutionRuntime";
 import { Flag } from "../../Flag";
-import { KpiStrip, NotPublished, SectionPanel, StageHeader, Triad, UrlTabs } from "../../blocks";
+import { CompactGaps, GapLine, KpiStrip, SectionPanel, StageHeader, Triad, UrlTabs, gapTitle, type GapItem } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { triadRowsOf } from "../stage/triadRows";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
@@ -91,40 +91,55 @@ function Fig({ cell }: { cell: KpiCell }) {
       <dt className="exec-blk-kpi-label">{cell.label}</dt>
       <dd className="exec-blk-kpi-body">
         <span className="exec-blk-kpi-value">
-          {cell.np !== undefined ? (
-            <NotPublished id={cell.np} />
-          ) : cell.flag !== undefined ? (
-            <Flag kind={cell.flag.kind} label={cell.flag.label} />
-          ) : cell.value !== undefined ? (
-            <span className="exec-blk-num">{cell.value}</span>
-          ) : (
-            <span className="exec-blk-na">Not available</span>
-          )}
+          {cell.flag !== undefined ? <Flag kind={cell.flag.kind} label={cell.flag.label} /> : <span className="exec-blk-num">{cell.value}</span>}
         </span>
-        {cell.value === undefined && cell.np === undefined && cell.flag === undefined && cell.absent !== undefined ? (
-          <span className="exec-blk-kpi-note">{cell.absent}</span>
-        ) : cell.basis !== undefined ? (
-          <span className="exec-blk-kpi-note">{cell.basis}</span>
-        ) : null}
+        {cell.basis !== undefined ? <span className="exec-blk-kpi-note">{cell.basis}</span> : null}
       </dd>
     </div>
+  );
+}
+
+/** A fact the strip can print: a published figure or a published verdict. The rest are ONE `Not available` line under it. */
+const hasFact = (cell: KpiCell): boolean => cell.value !== undefined || cell.flag !== undefined;
+
+function Facts({ cells }: { cells: readonly KpiCell[] }) {
+  const shown = cells.filter(hasFact);
+  const gaps: GapItem[] = cells.filter((cell) => !hasFact(cell)).map((cell) => ({ label: cell.label, id: cell.np, reason: cell.absent }));
+  return (
+    <>
+      {shown.length > 0 ? (
+        <KpiStrip label="Certification facts" columns={shown.length}>
+          {shown.map((cell) => (
+            <Fig key={cell.key} cell={cell} />
+          ))}
+        </KpiStrip>
+      ) : null}
+      <GapLine items={gaps} />
+    </>
   );
 }
 
 function Reconciliation({ view }: { view: SandboxView }) {
   const internal = panelById(view, "internal");
   const broker = panelById(view, "broker");
+  // No figure at all (a V2 body, or no figures block): one line, not three columns of the same words. A withheld Broker still draws its column.
+  const noFigures = view.figures === null && !figuresSuppressed(view);
   return (
     <div className="exec-sbx-recon">
-      <Triad
-        titleLevel={2}
-        rows={view.figures === null ? RECON_ROWS : triadRowsOf(view.figures)}
-        // With the server's figures each cell is its own fact, so a source panel that reads unavailable does not blank the column.
-        internal={internal === null ? (view.figures === null ? null : {}) : { asOf: internal.asOf }}
-        broker={broker === null ? (view.figures === null ? null : {}) : { asOf: broker.asOf }}
-        suppressed={figuresSuppressed(view)}
-      />
-      <div className="exec-sbx-panels">
+      {noFigures ? (
+        <GapLine items={[{ label: "Internal, Broker and Difference figures", id: "FE-072" }]} />
+      ) : (
+        <Triad
+          titleLevel={2}
+          rows={view.figures === null ? RECON_ROWS : triadRowsOf(view.figures)}
+          // With the server's figures each cell is its own fact, so a source panel that reads unavailable does not blank the column.
+          internal={internal === null ? (view.figures === null ? null : {}) : { asOf: internal.asOf }}
+          broker={broker === null ? (view.figures === null ? null : {}) : { asOf: broker.asOf }}
+          suppressed={figuresSuppressed(view)}
+        />
+      )}
+      <details className="exec-sbx-panels">
+        <summary>Sources</summary>
         {view.panels.length > 0 ? (
           <ul aria-label="Source panels">
             {view.panels.map((panel) => (
@@ -134,17 +149,10 @@ function Reconciliation({ view }: { view: SandboxView }) {
             ))}
           </ul>
         ) : (
-          <p className="exec-blk-na">This response carries no source panel.</p>
+          <p className="exec-blk-na">No source panel in this response.</p>
         )}
-        <p className="exec-sbx-note">
-          {view.figures === null ? (
-            <>
-              The figure for each row is <NotPublished id="FE-072">Typed reconciliation figures</NotPublished>.{" "}
-            </>
-          ) : null}
-          The Difference is the server's and is never worked out here.
-        </p>
-      </div>
+        <p className="exec-sbx-note">The Difference is the server's and is never worked out here.</p>
+      </details>
       <FindingsPanel view={view} />
     </div>
   );
@@ -211,23 +219,21 @@ function Banners({ view }: { view: SandboxView }) {
     <>
       {view.sourceActed ? (
         <div className="exec-blk-banner" role="alert">
-          <Flag kind="attention" label="Not trusted" size="sm" /> This response says a source action was requested. This screen never requests one, so the figures below are not trusted.
+          <Flag kind="attention" label="Not trusted" size="sm" /> A source action was requested; the figures below are not trusted.
         </div>
       ) : null}
       {view.version === "v2" ? (
-        <div className="exec-blk-banner" role="status">
-          <Flag kind="partial" label="Partial" size="sm" /> This response carries the stored certification and its step evaluations only. Findings, plans, the timeline and the reconciliation figures are{" "}
-          <NotPublished id="FE-072" />.
+        <div className="exec-blk-banner" role="status" title={gapTitle("FE-072", "Findings, plans, timeline and reconciliation figures")}>
+          <Flag kind="partial" label="Partial" size="sm" /> Stored certification and step evaluations only.
         </div>
       ) : !reported ? (
         <div className="exec-blk-banner" role="status">
-          <Flag kind="partial" label="Partial" size="sm" /> The source panels did not report. Figures that depend on them are Not available, not zero.
+          <Flag kind="partial" label="Partial" size="sm" /> Source panels did not report.
         </div>
       ) : null}
       {staleAt !== undefined ? (
         <div className="exec-blk-banner" role="status">
-          <Flag kind="stale" label="Stale" size="sm" />{" "}
-          {staleAt.asOf === null ? "A source has not updated within its freshness budget." : `Showing data as of ${formatAsOf(staleAt.asOf)}. A source has not updated within its freshness budget.`}
+          <Flag kind="stale" label="Stale" size="sm" /> {staleAt.asOf === null ? "A source is past its freshness budget." : `Data as of ${formatAsOf(staleAt.asOf)}.`}
         </div>
       ) : null}
     </>
@@ -236,7 +242,15 @@ function Banners({ view }: { view: SandboxView }) {
 
 /* ── the screen ───────────────────────────────────────────────────────────── */
 
-export default function SandboxScreen({ api, deploymentId, workspaceId }: SandboxScreenProps) {
+export default function SandboxScreen(props: SandboxScreenProps) {
+  return (
+    <CompactGaps>
+      <SandboxBody {...props} />
+    </CompactGaps>
+  );
+}
+
+function SandboxBody({ api, deploymentId, workspaceId }: SandboxScreenProps) {
   const [params] = useSearchParams();
   const routeWorkspace = parseUrlParams(params).value.workspace_id ?? workspaceId ?? null;
   const { read, reload } = useSandboxRead(api, deploymentId, routeWorkspace);
@@ -268,7 +282,7 @@ export default function SandboxScreen({ api, deploymentId, workspaceId }: Sandbo
   if (read.phase === "loading") {
     return (
       <div className="exec-sbx-v2" data-screen="sandbox-v2" data-state="loading">
-        <StageHeader stage="sandbox" crumb={crumb(deploymentId)} title="Sandbox certification" subtitle={`Deployment ${deploymentId}`} chips={LOADING_CHIPS} spine={{ current: "sandbox" }} renderLink={renderLink} />
+        <StageHeader stage="sandbox" crumb={crumb(deploymentId)} title="Sandbox certification" chips={LOADING_CHIPS} spine={{ current: "sandbox" }} renderLink={renderLink} />
         <PanelState status="loading" />
       </div>
     );
@@ -310,27 +324,24 @@ export default function SandboxScreen({ api, deploymentId, workspaceId }: Sandbo
         title="Sandbox certification"
         subtitle={
           <>
-            {subtitleOf(view, deploymentId)} · <AlphaNameLine identity={identity} />
+            {subtitleOf(view) === null ? null : <>{subtitleOf(view)} · </>}
+            <AlphaNameLine identity={identity} />
           </>
         }
         chips={chipsOf(view)}
         spine={{ current: "sandbox", blocked: gate === "blocked", stages: spineFacts(view), label: "Lifecycle" }}
+        actions={
+          <button type="button" className="exec-dock-btn" disabled={read.refreshing} title={read.refreshing ? "Reading the certification again" : "Read the certification again"} aria-busy={read.refreshing ? "true" : undefined} onClick={reload}>
+            Refresh
+          </button>
+        }
         renderLink={renderLink}
       />
-      <div className="exec-sbx-actions">
-        <button type="button" className="exec-dock-btn" disabled={read.refreshing} title={read.refreshing ? "Reading the certification again" : "Read the certification again"} aria-busy={read.refreshing ? "true" : undefined} onClick={reload}>
-          Refresh
-        </button>
-      </div>
       <Banners view={view} />
       <UrlTabs surface="sandbox" tabs={tabsOf(view)} label="Sandbox certification sections">
         {(tab) => (
           <div className="exec-sbx-body">
-            <KpiStrip label="Certification facts" columns={5}>
-              {cells.map((cell) => (
-                <Fig key={cell.key} cell={cell} />
-              ))}
-            </KpiStrip>
+            <Facts cells={cells} />
             <div className="exec-sbx-grid">
               <div className="exec-sbx-main">
                 {tab === "steps" ? (

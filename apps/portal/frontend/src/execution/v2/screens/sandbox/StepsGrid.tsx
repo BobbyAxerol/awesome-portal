@@ -10,7 +10,7 @@
  * Time is the published UTC instant; expiry is the server's `expires_at`, never computed.
  */
 import { Flag } from "../../Flag";
-import { NotPublished, SectionPanel } from "../../blocks";
+import { GapLine, SectionPanel } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { STEP_FLAG, sourceWord } from "./model";
 import type { StepView, StepsView } from "./readSandbox";
@@ -19,7 +19,7 @@ function Meta({ step }: { step: StepView }) {
   const who = sourceWord(step.authority);
   const parts: string[] = [];
   if (step.state === "not-recorded") parts.push("No evidence recorded");
-  else parts.push(step.asOf === null ? "Checked time not published" : `Checked ${formatAsOf(step.asOf)}`);
+  else parts.push(step.asOf === null ? "Check time not available" : `Checked ${formatAsOf(step.asOf)}`);
   if (who !== null) parts.push(who);
   if (step.expiresAt !== null) parts.push(`Expires ${formatAsOf(step.expiresAt)}`);
   return <p className="exec-sbx-step-meta">{parts.join(" · ")}</p>;
@@ -29,11 +29,8 @@ export function StepsGrid({ steps, hasSentences }: { steps: StepsView; hasSenten
   if (steps.availability === "absent") {
     return (
       <SectionPanel level={2} title="Steps">
-        <p className="exec-blk-na">{steps.text}</p>
-        {steps.code === null ? null : <p className="exec-sbx-code">{steps.code}</p>}
-        <p className="exec-sbx-note">
-          <NotPublished id="FE-028">Gate criteria</NotPublished>
-        </p>
+        <p className="exec-blk-na" title={steps.code ?? undefined}>{steps.text}</p>
+        <GapLine items={[{ label: "Gate criteria", id: "FE-028" }]} />
       </SectionPanel>
     );
   }
@@ -54,21 +51,13 @@ export function StepsGrid({ steps, hasSentences }: { steps: StepsView; hasSenten
                 </span>
                 <Flag kind={flag.kind} label={flag.label} size="sm" />
               </div>
-              {hasSentences ? (
-                <p className="exec-sbx-step-why">{step.summary ?? <span className="exec-blk-na">Not available</span>}</p>
-              ) : (
-                <p className="exec-sbx-step-why"><NotPublished id="FE-028" compact /></p>
-              )}
+              {hasSentences ? <p className="exec-sbx-step-why">{step.summary ?? <span className="exec-blk-na">Not available</span>}</p> : null}
               <Meta step={step} />
             </li>
           );
         })}
       </ol>
-      {hasSentences ? null : (
-        <p className="exec-sbx-note">
-          The stored evaluation of each step is shown. Its explanation is <NotPublished id="FE-028">Gate criteria</NotPublished>.
-        </p>
-      )}
+      {hasSentences ? null : <GapLine items={[{ label: "Step explanations", id: "FE-028" }]} />}
     </div>
   );
 }

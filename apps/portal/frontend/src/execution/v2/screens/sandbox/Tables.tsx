@@ -14,7 +14,7 @@
  */
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { NotPublished, SectionPanel } from "../../blocks";
+import { GapLine, NotPublished, SectionPanel, type GapItem } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { PanelState } from "../../../components/states";
 import { actionWord, humanize, severityFlag } from "./model";
@@ -34,10 +34,11 @@ function capLabel(loaded: number, total: number | null): string | null {
   return loaded > SANDBOX_ROW_CAP ? `Showing ${SANDBOX_ROW_CAP} of ${Math.max(loaded, total ?? 0)}` : null;
 }
 
-function shown(c: CollectionView<unknown>): string {
+function shown(c: CollectionView<unknown>): string | null {
   const cut = capLabel(c.rows.length, c.total);
   if (cut !== null) return cut;
-  if (c.total === null) return "Count not published";
+  // No published total: the table lists what the body returned and claims nothing more.
+  if (c.total === null) return null;
   return c.truncated ? `Showing ${c.returned ?? c.rows.length} of ${c.total}` : `${c.total} recorded`;
 }
 
@@ -76,18 +77,18 @@ export function FindingsPanel({ view }: { view: SandboxView }) {
   const f = view.findings;
   if (f === null) {
     return (
-      <SectionPanel level={2} title="Findings" aside="Not available">
-        <p className="exec-sbx-note"><NotPublished id="FE-072">Reconciliation findings</NotPublished></p>
+      <SectionPanel level={2} title="Findings">
+        <GapLine items={[{ label: "Reconciliation findings", id: "FE-072" }]} />
       </SectionPanel>
     );
   }
   const sourcesReported = view.panels.some((p) => p.state === "ok");
   return (
-    <SectionPanel level={2} title="Findings" aside={shown(f)} flush>
+    <SectionPanel level={2} title="Findings" aside={shown(f) ?? undefined} flush>
       {f.rows.length === 0 ? (
         <PanelState
           status="empty"
-          reason={sourcesReported ? "No findings were recorded." : "No findings were returned. With the sources unavailable this is an absence of evidence, not a clean result."}
+          reason={sourcesReported ? "No findings recorded." : "No findings returned; with the sources unavailable that is not a clean result."}
         />
       ) : (
         <CardsTable columns={FINDING_COLUMNS} rows={keyed(f.rows).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Reconciliation findings" />
@@ -98,7 +99,9 @@ export function FindingsPanel({ view }: { view: SandboxView }) {
 
 /* ── promotion plans ──────────────────────────────────────────────────────── */
 
-const PLAN_COLUMNS: readonly CardsColumn<PlanView & { k: string }>[] = [
+type PlanRow = PlanView & { k: string };
+
+const PLAN_COLUMNS: readonly CardsColumn<PlanRow>[] = [
   { key: "plan", label: "Plan", render: (r) => <span className="exec-sbx-id">{r.id}</span> },
   { key: "target", label: "Target", render: (r) => (r.target === null ? null : humanize(r.target)) },
   { key: "created", label: "Created (UTC)", render: (r) => time(r.createdAt) },
@@ -124,38 +127,44 @@ const PLAN_COLUMNS: readonly CardsColumn<PlanView & { k: string }>[] = [
     numeric: true,
     render: (r) => {
       // FE-072: the latest Canary envelope drafted from this plan. AVAILABLE with no value is the server saying none exists.
-      if (r.envelope === null) return <NotPublished id="FE-072" compact />;
-      if (r.envelope.kind === "not-published") return <NotPublished id="FE-072" titleReason={r.envelope.reasonCode} compact />;
+      if (r.envelope === null) return <NotPublished id="FE-072" />;
+      if (r.envelope.kind === "not-published") return <NotPublished id="FE-072" titleReason={r.envelope.reasonCode} />;
       return r.envelope.value === null ? "None drafted" : <span className="exec-sbx-id">{r.envelope.value.envelopeId} · rev {r.envelope.value.revision} · Draft</span>;
     },
   },
-  { key: "author", label: "Author", render: (r) => (r.author === null ? <NotPublished id="FE-072" compact /> : <span className="exec-sbx-id">{r.author}</span>) },
+  { key: "author", label: "Author", render: (r) => (r.author === null ? <NotPublished id="FE-072" /> : <span className="exec-sbx-id">{r.author}</span>) },
 ];
+
+/** A column that no row can fill is not drawn: its name joins one `Not available` line under the table. */
+function planColumns(plans: readonly PlanView[]): { columns: readonly CardsColumn<PlanRow>[]; gaps: GapItem[] } {
+  const envelopeGap = plans.every((p) => p.envelope === null || p.envelope.kind === "not-published");
+  const authorGap = plans.every((p) => p.author === null);
+  const envelopeReason = plans.flatMap((p) => (p.envelope !== null && p.envelope.kind === "not-published" ? [p.envelope.reasonCode] : []))[0] ?? null;
+  const gaps: GapItem[] = [
+    ...(envelopeGap ? [{ label: "Envelope", id: "FE-072", reason: envelopeReason }] : []),
+    ...(authorGap ? [{ label: "Author", id: "FE-072" }] : []),
+  ];
+  return { columns: PLAN_COLUMNS.filter((c) => !(c.key === "envelope" && envelopeGap) && !(c.key === "author" && authorGap)), gaps };
+}
 
 export function PlansPanel({ view }: { view: SandboxView }) {
   if (view.plans === null) {
     return (
-      <SectionPanel level={2} title="Promotion plans" aside="Not available">
-        <p className="exec-sbx-note"><NotPublished id="FE-072">Promotion plans</NotPublished></p>
+      <SectionPanel level={2} title="Promotion plans">
+        <GapLine items={[{ label: "Promotion plans", id: "FE-072" }]} />
       </SectionPanel>
     );
   }
+  const { columns, gaps } = planColumns(view.plans);
   return (
     <SectionPanel level={2} title="Promotion plans" aside={capLabel(view.plans.length, null) ?? `${view.plans.length} recorded`} flush>
       {view.plans.length === 0 ? (
-        <PanelState status="empty" reason="No promotion plan has been recorded for this certification." />
+        <PanelState status="empty" reason="No plans recorded." />
       ) : (
-        <>
-          <CardsTable columns={PLAN_COLUMNS} rows={keyed(view.plans).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Promotion plans" />
-          <p className="exec-sbx-note">
-            A plan records a refusal to promote; it does not start Canary.
-            {view.plans.some((plan) => plan.author === null || plan.envelope === null) ? (
-              <>
-                {" "}Envelope and Author are <NotPublished id="FE-072">Typed plan fields</NotPublished> in this response.
-              </>
-            ) : null}
-          </p>
-        </>
+        <div title="A plan records a refusal to promote; it does not start Canary.">
+          <CardsTable columns={columns} rows={keyed(view.plans).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Promotion plans" />
+          {gaps.length > 0 ? <div className="exec-sbx-note"><GapLine items={gaps} /></div> : null}
+        </div>
       )}
     </SectionPanel>
   );
@@ -173,15 +182,15 @@ export function TimelinePanel({ view }: { view: SandboxView }) {
   const t = view.timeline;
   if (t === null) {
     return (
-      <SectionPanel level={2} title="Timeline" aside="UTC">
-        <p className="exec-sbx-note"><NotPublished id="FE-072">Certification timeline</NotPublished></p>
+      <SectionPanel level={2} title="Timeline">
+        <GapLine items={[{ label: "Certification timeline", id: "FE-072" }]} />
       </SectionPanel>
     );
   }
   return (
-    <SectionPanel level={2} title="Timeline" aside={`UTC · ${shown(t)}`} flush>
+    <SectionPanel level={2} title="Timeline" aside={`UTC${shown(t) === null ? "" : ` · ${shown(t)}`}`} flush>
       {t.rows.length === 0 ? (
-        <PanelState status="empty" reason="No event has been recorded for this certification." />
+        <PanelState status="empty" reason="No events recorded." />
       ) : (
         <CardsTable columns={TIMELINE_COLUMNS} rows={keyed(t.rows).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Certification timeline" />
       )}

@@ -54,7 +54,7 @@ function mount(raw: unknown) {
 const ready = async () => {
   await screen.findByRole("heading", { level: 1, name: "Sandbox certification" });
   await waitFor(() => expect(document.querySelector('[data-screen="sandbox-v2"]')?.getAttribute("data-state")).not.toBe("loading"));
-  await waitFor(() => expect(screen.queryByText(/Asking the server whether it offers this note/)).toBeNull());
+  await waitFor(() => expect(screen.queryByText(/Checking whether this note is offered/)).toBeNull());
 };
 const chip = (id: string) => document.querySelector<HTMLElement>(`[data-chip="${id}"]`)!;
 async function openTab(name: string) {
@@ -96,7 +96,10 @@ describe("chips and identity", () => {
     expect(crumb.getByRole("link", { name: "Crypto Core" }).getAttribute("href")).toBe("/deployments/portfolios/pf_crypto");
     const sub = document.querySelector(".exec-stage-sub")!;
     expect(sub.textContent).toContain("Alpha alpha_TEST_ONLY");
-    expect(sub.querySelector(".exec-blk-np")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    // The name is not announced a second time: the id stands alone and the request and reason are its title.
+    expect(sub.textContent).not.toContain("Alpha name");
+    expect(sub.querySelector("span[title]")!.getAttribute("title")).toContain("ALPHA_NAME_NOT_PUBLISHED");
+    expect(sub.querySelector("span[title]")!.getAttribute("title")).toContain("FE-066");
     expect(chip("runtime").textContent).toContain("Running");
   });
 
@@ -119,7 +122,9 @@ describe("Reconciliation: the server's figures", () => {
     expect(row("internal", "Positions").querySelector("dd")!.textContent).toBe("2");
     expect(row("broker", "Positions").querySelector("dd")!.textContent).toBe("2");
     expect(row("difference", "Open orders").querySelector("dd")!.textContent).toBe("1");
-    expect(row("broker", "Equity").querySelector(".exec-blk-np")!.getAttribute("title")).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
+    const gap = row("broker", "Equity").querySelector("[data-gap]")!;
+    expect(gap.textContent).toBe("Not available");
+    expect(gap.getAttribute("title")).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
     expect(screen.getByText(/The Difference is the server's and is never worked out here\./)).toBeTruthy();
   });
 });
@@ -144,7 +149,7 @@ describe("findings and plans", () => {
     expect(screen.getByRole("tabpanel").textContent).not.toContain("Typed plan fields");
   });
 
-  it("a plan without the members says Not published (FE-072) per cell and in the note; a NOT_PUBLISHED envelope carries its reason", async () => {
+  it("a plan without the members says Not available per cell (FE-072 in the title); a NOT_PUBLISHED envelope carries its reason", async () => {
     const body = published();
     delete body.promotion_plans[1].author;
     delete body.promotion_plans[1].envelope;
@@ -153,9 +158,14 @@ describe("findings and plans", () => {
     await ready();
     await openTab("Promotion plans");
     const rowsOf = Array.from(screen.getByRole("table", { name: "Promotion plans" }).querySelectorAll("tbody tr"));
-    expect(rowsOf[0]!.querySelector('td[data-l="Envelope"] .exec-blk-np')!.getAttribute("title")).toContain("ENVELOPE_LOOKUP_NOT_AVAILABLE");
-    expect(rowsOf[1]!.querySelector('td[data-l="Author"]')!.textContent).toContain("Not published (FE-072)");
-    expect(screen.getByRole("tabpanel").textContent).toContain("Typed plan fields");
+    // No plan has an envelope, so that column is not drawn: it is one `Not available` line with the server's reason in its title.
+    expect(rowsOf[0]!.querySelector('td[data-l="Envelope"]')).toBeNull();
+    expect(screen.getByRole("tabpanel").querySelector(".exec-blk-gaps")!.getAttribute("title")).toContain("ENVELOPE_LOOKUP_NOT_AVAILABLE");
+    expect(rowsOf[1]!.querySelector('td[data-l="Author"]')!.textContent).toBe("Not available");
+    expect(rowsOf[1]!.querySelector('td[data-l="Author"] [data-gap]')!.getAttribute("title")).toContain("Not published (FE-072)");
+    // Columns that still have a value stay; no note explaining the gaps is printed.
+    expect(screen.getByRole("tabpanel").textContent).not.toContain("Typed plan fields");
+    expect(screen.getByRole("tabpanel").textContent).not.toContain("(FE-072)");
   });
 });
 

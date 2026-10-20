@@ -91,7 +91,8 @@ describe("the five facts", () => {
     expect(cell(cells, "findings")).toMatchObject({ absent: "Which are open was not published · 2 recorded" });
     expect(cell(cells, "findings").value).toBeUndefined();
     expect(cell(cells, "critical")).toMatchObject({ absent: "Which are open was not published" });
-    expect(cell(cells, "plans")).toMatchObject({ value: "0", basis: "None recorded" });
+    // A zero needs no caption saying "none recorded".
+    expect(cell(cells, "plans")).toMatchObject({ value: "0" });
     expect(cell(cells, "gate").flag).toEqual({ kind: "rejected", label: "Blocked" });
   });
 
@@ -109,7 +110,7 @@ describe("the five facts", () => {
     expect(stepTally(v1())).toBe("1 failed · 2 unavailable");
     // The server says 5 passed; the steps show 4. The browser tally is not printed beside the server's number.
     expect(stepTally(v1({ progress: { passed: 5, total: 7, eligible: false, blockerCodes: [], evidenceSetHash: null } }))).toBeNull();
-    expect(kpiCells(v1({ progress: { passed: 5, total: 7, eligible: false, blockerCodes: [], evidenceSetHash: null } }))[0]).toMatchObject({ value: "5 / 7", basis: "Server count" });
+    expect(kpiCells(v1({ progress: { passed: 5, total: 7, eligible: false, blockerCodes: [], evidenceSetHash: null } }))[0]).toMatchObject({ value: "5 / 7", basis: undefined });
   });
 
   it("a count that was not published is Not available with why, not 0 / 7", () => {
@@ -121,11 +122,11 @@ describe("the five facts", () => {
   it("Open findings and Critical open: counted from the published resolved_at of a complete list, never from the total", () => {
     const list = (rows: FindingView[]) => v1({ findings: { total: rows.length, returned: rows.length, truncated: false, rows } });
     const mixed = kpiCells(list([finding("a", "CRITICAL", "open"), finding("b", "CRITICAL", "resolved"), finding("c", "WARNING", "open"), finding("d", "INFO", "resolved")]));
-    expect(cell(mixed, "findings")).toMatchObject({ value: "2", basis: "4 recorded, open or resolved" });
-    expect(cell(mixed, "critical")).toMatchObject({ value: "1", basis: "Not resolved" });
+    expect(cell(mixed, "findings")).toMatchObject({ value: "2", basis: "4 recorded" });
+    expect(cell(mixed, "critical")).toMatchObject({ value: "1" });
     const none = kpiCells(list([finding("a", "CRITICAL", "resolved")]));
     expect(cell(none, "findings")).toMatchObject({ value: "0" });
-    expect(cell(none, "critical")).toMatchObject({ value: "0", basis: "None open" });
+    expect(cell(none, "critical")).toMatchObject({ value: "0" });
     // One unknown non-critical state: no open count, but the critical count is still known.
     const partial = kpiCells(list([finding("a", "CRITICAL", "open"), finding("b", "INFO", "unknown")]));
     expect(cell(partial, "findings").value).toBeUndefined();
@@ -142,7 +143,7 @@ describe("the five facts", () => {
     expect(cell(kpiCells(v1(none)), "critical")).toMatchObject({ absent: "Sources did not report" });
     const reported = v1({ ...none, panels: [panel("internal", { state: "ok", freshness: "OK", asOf: utc(12, 4) })] });
     expect(cell(kpiCells(reported), "findings")).toMatchObject({ value: "0" });
-    expect(cell(kpiCells(reported), "critical")).toMatchObject({ value: "0", basis: "None open" });
+    expect(cell(kpiCells(reported), "critical")).toMatchObject({ value: "0" });
   });
 
   it("an incomplete list gives no count: a truncated list says Showing N of M, a short one says incomplete", () => {
@@ -160,7 +161,7 @@ describe("the five facts", () => {
 
   it("an eligible gate says so and names the workflow state", () => {
     const view = v1({ progress: { passed: 7, total: 7, eligible: true, blockerCodes: [], evidenceSetHash: null }, steps: { availability: "available", items: steps(Array(7).fill("pass")) }, findings: { total: 0, returned: 0, truncated: false, rows: [] }, workflowState: "IN_REVIEW" });
-    expect(cell(kpiCells(view), "gate")).toMatchObject({ flag: { kind: "ok", label: "Eligible" }, basis: "Exit review · workflow in review" });
+    expect(cell(kpiCells(view), "gate")).toMatchObject({ flag: { kind: "ok", label: "Eligible" }, basis: "Workflow in review" });
   });
 });
 
@@ -254,7 +255,7 @@ describe("reconciliation, suppression and the spine", () => {
   });
 
   it("a panel line says who, what state and how fresh, in words", () => {
-    expect(panelLine(panel("internal"))).toBe("Execution · Unavailable · Freshness unknown");
+    expect(panelLine(panel("internal"))).toBe("Execution · Unavailable");
     expect(panelLine(panel("broker", { authority: "BROKER", state: "stale", freshness: "STALE", asOf: utc(11, 40) }))).toBe("Broker · Stale · Stale · 17 Oct 11:40Z");
   });
 
@@ -264,10 +265,10 @@ describe("reconciliation, suppression and the spine", () => {
     expect(Object.values(facts).some((f) => f?.outcome === "done")).toBe(false);
   });
 
-  it("subtitle: only what the body published", () => {
-    expect(subtitleOf(v1(), "route_id")).toBe("Deployment dep_TEST_ONLY_a · OKX · account okx_testnet_main");
-    expect(subtitleOf(v2({ deploymentId: "dep_TEST_ONLY_b", venue: null, accountRef: null, portfolioId: "pf_TEST_ONLY" }), "route_id")).toBe("Deployment dep_TEST_ONLY_b · portfolio pf_TEST_ONLY");
-    expect(subtitleOf(v1({ deploymentId: null, venue: null, accountRef: null }), "route_id")).toBe("Deployment route_id");
+  it("subtitle: venue and account only, and only what the body published (the deployment and portfolio are in the breadcrumb)", () => {
+    expect(subtitleOf(v1())).toBe("OKX · account okx_testnet_main");
+    expect(subtitleOf(v2({ deploymentId: "dep_TEST_ONLY_b", venue: null, accountRef: null, portfolioId: "pf_TEST_ONLY" }))).toBeNull();
+    expect(subtitleOf(v1({ deploymentId: null, venue: null, accountRef: null }))).toBeNull();
   });
 
   it("the Steps tab prints (7) only when seven steps are drawn", () => {
