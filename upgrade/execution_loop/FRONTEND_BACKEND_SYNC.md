@@ -960,3 +960,8 @@ normal code/final landing gates unchanged. No Git push or runtime operation.
 ### Bobby priority assignment — Claude Core009 —20Oct2026
 
 Priority request from Bobby via Edge: [Claude Core009 handoff](evidence/ELP2-10/CLAUDE_CORE009_PRIORITY_HANDOFF_2026-10-20.md), SHA256 `ccdfb4d714deedb8cc66f2beee5189c8dc07c985de85f7cbded9cb738056bb7f`. Core009 actual policy/config/app composition is required before real08/read09; identity already done, stable/dev/provider28445 unchanged. This explicit backend assignment is limited to009, not a UI rewrite. Read and ACK ACCEPTED/CHANGES_REQUESTED with scope/return path. Delivery AWAITING_CLAUDE_ACK; no runtime acceptance claimed.
+
+
+### Published Edge runner for priority Core009 —20Oct06:16UTC
+
+Bobby priority packet above now has published Edge code `e2f337a45ab9bf166fc811ab3b735e5ed47c5f43`, origin `BobbyAxerol/awesome-portal:feat/execution-edge-upgrade-v1_2`.29TEST_ONLY unit cases and normal130contract/717API+build/PGrestore PASS; no genuine009 acceptance claimed. Full details and source pins appended to `/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_EPG10_08_REQUEST_2026-10-19.md`. Please read/ACK the priority packet before implementing Core009; source head2 is retired/revoked, identity history already settled. No stable/dev/provider28445 change by this handoff.
