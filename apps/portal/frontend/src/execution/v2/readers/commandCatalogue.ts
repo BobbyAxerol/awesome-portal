@@ -300,9 +300,8 @@ function readEntry(raw: unknown, at: string): CommandCatalogueEntryV2 {
     constant(r.current_capability_id, "live.emergency-close", `${at}.current_capability_id`);
     singleton(r.accepted_environments, "LIVE", `${at}.accepted_environments`);
     singleton(r.accepted_target_types, "ACCOUNT", `${at}.accepted_target_types`);
-    // `true` is an activation claim: refused under the sendable-claim name, never read as "active".
-    if (r.runtime_active === true) return refuse("sendable_claim", `${at}.runtime_active`);
-    constant(r.runtime_active, false, `${at}.runtime_active`);
+    // Only the published `false` is "not active". A boolean `true` is an activation claim, refused under the sendable-claim name; anything else is not this contract.
+    if (r.runtime_active !== false) return refuse(typeof r.runtime_active === "boolean" ? "sendable_claim" : "constant_mismatch", `${at}.runtime_active`);
     currentPrimitive = {
       state: "ACCEPTED_CURRENT_PRIMITIVE", capabilityId: "live.emergency-close", acceptedEnvironments: ["LIVE"], acceptedTargetTypes: ["ACCOUNT"], runtimeActive: false,
     };
