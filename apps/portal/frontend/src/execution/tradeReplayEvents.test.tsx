@@ -244,4 +244,18 @@ describe("TradeReplayEvents panel", () => {
     );
     expect(container.textContent).toContain("N28_MARKET_CANDLES_SOURCE_NOT_ACTIVATED.");
   });
+  it("names the chart host an image in the V1 panel and a labelled group in the plain (V2) one, so the library's attribution link is not inside an image (UXM-10 F-5)", async () => {
+    const props = { orders: readReplayOrders(ORDERS), fills: readReplayFills(FILLS), candles: { state: "UNAVAILABLE", reason: null }, asOf: null, accounts: [ACCT] } as const;
+    const v1 = render(<TradeReplayEvents {...props} />);
+    await waitFor(() => expect(v1.container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
+    const v1Host = v1.container.querySelector(".exec-rp-chart-host")!;
+    expect(v1Host.getAttribute("role")).toBe("img");
+    const label = v1Host.getAttribute("aria-label");
+    v1.unmount();
+    const v2 = render(<TradeReplayEvents {...props} plain />);
+    await waitFor(() => expect(v2.container.querySelector('[data-replay-chart="ready"]')).not.toBeNull());
+    const v2Host = v2.container.querySelector(".exec-rp-chart-host")!;
+    expect(v2Host.getAttribute("role")).toBe("group");
+    expect(v2Host.getAttribute("aria-label")).toBe(label);
+  });
 });

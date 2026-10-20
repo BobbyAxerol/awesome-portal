@@ -985,6 +985,12 @@ export interface ReplayCandleChartProps {
    * scale and a level beyond it is pinned to the edge, dotted and labelled "off scale" with its exact value.
    */
   levelsInAutoscale?: boolean;
+  /**
+   * Default "img" (V1, unchanged). The library draws its attribution link inside the host, and a link may not sit
+   * inside role="img" (axe nested-interactive, WCAG 4.1.2): the V2 reading passes "group", which keeps the accessible
+   * name and lets the link stay where the library puts it (the attribution is kept, UXM-10 F-5).
+   */
+  hostRole?: "img" | "group";
 }
 const EDGE_BARS = 40;
 export type ChartStatus = "loading" | "ready" | "unavailable";
@@ -1000,7 +1006,7 @@ const reducedMotion = () => (typeof window !== "undefined" && (window.matchMedia
 type Runtime = { lib: Lib; chart: IChartApi; series: ISeriesApi<"Candlestick">; prim: TradesPrimitive; mark: IPriceLine | null };
 
 export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChartProps>(function ReplayCandleChart(
-  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onSelect, selectedId = null, onKeyDown, onStatus, onRangeEdge, focusId = null, groups = EMPTY_GROUPS, levelsInAutoscale = true },
+  { bars, intervalMs, fills, orders, trips, legs, markPrice, viewKey, opening, notice, ariaLabel, onHover, onSelect, selectedId = null, onKeyDown, onStatus, onRangeEdge, focusId = null, groups = EMPTY_GROUPS, levelsInAutoscale = true, hostRole = "img" },
   ref,
 ) {
   const edgeRef = useRef(onRangeEdge);
@@ -1216,7 +1222,7 @@ export const ReplayCandleChart = forwardRef<ReplayChartHandle, ReplayCandleChart
       className="exec-rp-chart-stage" data-replay-chart={status} data-replay-bars={bars.length} data-replay-events={fills.length}
       tabIndex={0} onKeyDown={onKeyDown ? (e) => onKeyDown(e.nativeEvent) : undefined} aria-label={`${ariaLabel}. Arrow keys step between fills.`}
     >
-      <div ref={host} className="exec-rp-chart-host" role="img" aria-label={ariaLabel} />
+      <div ref={host} className="exec-rp-chart-host" role={hostRole} aria-label={ariaLabel} />
       <div ref={hud} className="exec-rp-hud" data-kind="none" aria-live="off" />
       {card && cardData ? (
         <div className="exec-rp-card" style={{ left: cardLeft, top: Math.max(4, card.y - 12) }} data-card-for={card.id} role="tooltip">
