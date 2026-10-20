@@ -62,7 +62,7 @@ import type { ManagerSeriesQuery } from "../../readers/managerSeries";
 import { ManagerSeriesPanel } from "../series/ManagerSeriesPanel";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../series/seriesModel";
 import { useManagerSeries, type SeriesReadState } from "../series/useManagerSeries";
-import { MeasureSeg } from "./MeasureSeg";
+import { MeasureSeg, type FundMeasure } from "./MeasureSeg";
 import { useOverviewReads } from "./useOverviewReads";
 
 import "../../css/blocks.css";
@@ -173,6 +173,14 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
     [url.value.env, url.value.window, workspaceId],
   );
   const nav = useManagerSeries(api, fundWide, navQuery, seriesNonce);
+  // Net PnL and Return are enabled only when the series port SERVES the fund (its source is published, from the last good NAV
+  // read, so a refresh does not blink the switch); otherwise the measure stays NAV and the switch says why it is off.
+  const navBody = nav.phase === "ready" ? nav.value : nav.phase === "loading" || nav.phase === "error" ? nav.last : null;
+  const serves = navBody !== null && navBody.seriesSource.state === "PUBLISHED";
+  const [measure, setMeasure] = useState<FundMeasure>("NAV");
+  const metric = serves ? measure : "NAV";
+  const measureQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: metric === "NAV" ? "NET_PNL" : metric }), [navQuery, metric]);
+  const measureRead = useManagerSeries(api, fundWide && metric !== "NAV", measureQuery, seriesNonce);
   const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
   // Same fact as the heading below: only a READY session without any fund-wide read is narrowed; unknown access states nothing.
   useContextFacts({ scope: fundWide ? undefined : "Scope: Your alphas" });
@@ -308,8 +316,8 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
           </dl>
 
           <div className="exec-ov-grid2">
-            <SectionPanel title="Performance" lead={<MeasureSeg />} aside={<>Window: <Gap ids="FE-025" /></>}>
-              <ManagerSeriesPanel label="Fund performance" read={nav} gapCopy={`Not published (${FE_MONEY})`} />
+            <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />} aside={<>Window: <Gap ids="FE-025" /></>}>
+              <ManagerSeriesPanel label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`} read={metric === "NAV" ? nav : measureRead} gapCopy={`Not published (${FE_MONEY})`} />
             </SectionPanel>
             <SectionPanel title="Capital" aside="Real-funded">
               <table className="exec-ov-cap" aria-label="Capital">
