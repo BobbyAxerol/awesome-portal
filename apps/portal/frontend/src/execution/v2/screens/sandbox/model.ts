@@ -15,6 +15,7 @@ import type { BlockerItem, NotPublishedId, SpineStageFacts, SpineStageId, StageC
 import { formatAsOf } from "../../boundary";
 import { unsafeText } from "../../../unsafeText";
 import type { PanelStatus } from "../../../contracts";
+import { reconciliationChipFrom, runtimeChipFrom } from "../stage/factChips";
 import type { FindingView, PanelView, SandboxView, StepState, StepView } from "./readSandbox";
 
 /* ── words ────────────────────────────────────────────────────────────────── */
@@ -345,11 +346,29 @@ function reconciliationChip(view: SandboxView): StageChipValue {
   return reported ? { state: "flag", kind: "ok", label: "None recorded" } : { state: "not-available", reason: "Sources did not report" };
 }
 
+/**
+ * Reconciliation: the server's findings-relation statement (`stage_facts`, FE-067) when it published one; else the chip the
+ * finding rows themselves support (a count of open findings); and when neither says anything, the stage facts' reason.
+ */
+function reconciliationChipOf(view: SandboxView): StageChipValue {
+  const fromFacts = view.reconciliation === null ? null : reconciliationChipFrom(view.reconciliation);
+  if (view.reconciliation !== null && view.reconciliation.verdict.kind === "value" && fromFacts !== null) return fromFacts;
+  const legacy = reconciliationChip(view);
+  if (legacy.state === "flag" || legacy.state === "dot") return legacy;
+  return fromFacts ?? legacy;
+}
+
+/**
+ * Runtime and Reconciliation are the server's `stage_facts` (FE-067) when the body carries them: a runtime word of the closed
+ * vocabulary or `Not published (FE-067)` with the reason code in the title, and the findings-relation statement
+ * ("No open findings", never "Clean"). A body without them (the sealed V2 body, an older producer) keeps the earlier
+ * findings-derived chip.
+ */
 export function chipsOf(view: SandboxView): StageChips {
   return {
-    runtime: view.runtimeState === null ? { state: "not-published", id: "FE-027" } : { state: "dot", tone: "mute", text: humanize(view.runtimeState) },
+    runtime: runtimeChipFrom(view.runtime, view.runtimeState === null ? null : humanize(view.runtimeState)),
     freshness: freshnessChip(view.panels),
-    reconciliation: reconciliationChip(view),
+    reconciliation: reconciliationChipOf(view),
   };
 }
 

@@ -24,6 +24,11 @@
  *   exactly ISO-8601 UTC is `null`, not whatever `Date.parse` makes of it;
  * - an `unsupported` answer is a typed refusal with its sentence, never a partial view.
  *
+ * BE-P2 / BE-P3 additive members (V1 body only; read closed by `execution/stageFacts.ts`): `stage_facts` (FE-067) become
+ * `runtime` / `reconciliation`, the `certification` identity keys (FE-066) become `identity`, `source_figures` (FE-072)
+ * become `figures`, a finding's `opened_at` is the Opened column (else `created_at`), and a plan's `author` / `envelope`
+ * (FE-072) are its Author / Envelope. A V2 following-parent body carries none of them: every one reads as typed absence.
+ *
  * What it will not do: compute. No gate, no headroom, no freshness: every figure here is the
  * server's or absent (certification.ts, rules 1 and 2). A finding is `open` only when its row
  * carries `resolved_at: null` and `resolved` only when it carries an instant; a row without the
@@ -35,6 +40,17 @@ import { STEP_KEYS, type SandboxCertification, type StepKey } from "../../../cer
 import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import { unsupportedText, type SandboxVersionRead } from "../../readers/dispatch";
 import type { SandboxParentV2 } from "../../readers/governanceParents";
+import {
+  cell,
+  figureRowsOf,
+  reconciliationFactOf,
+  runtimeFactOf,
+  type FactCell,
+  type FigureRow,
+  type ReconciliationFact,
+  type RuntimeFact,
+} from "../../readers/stageFactViews";
+import type { DeploymentIdentity, PlanEnvelopeRef } from "../../../stageFacts";
 
 /* ── the view ─────────────────────────────────────────────────────────────── */
 
@@ -90,7 +106,7 @@ export interface FindingView {
   summary: string | null;
   /** `blocking` as published; `null` = not a boolean / absent. */
   blocking: boolean | null;
-  /** `created_at`: when the finding was recorded (the hi-fi's Opened column). */
+  /** `opened_at` when the body publishes it, else `created_at`: when the finding was recorded (the hi-fi's Opened column). */
   openedAt: UtcEpochMs | null;
   resolvedAt: UtcEpochMs | null;
   /** From `resolved_at` alone: `null` is open, an instant is resolved, an absent or unreadable key is unknown. */
@@ -104,12 +120,19 @@ export interface TimelineRowView {
   at: UtcEpochMs | null;
 }
 
+/** The latest Canary envelope drafted from a plan: `null` value = the lookup ran and none exists. */
+export type PlanEnvelope = { envelopeId: string; revision: number } | null;
+
 export interface PlanView {
   id: string;
   target: string | null;
   status: string | null;
   blockerCodes: readonly string[];
   createdAt: UtcEpochMs | null;
+  /** `author.user_id`; `null` = not published. */
+  author: string | null;
+  /** FE-072; `null` = the body carries none (or it was refused). */
+  envelope: FactCell<PlanEnvelope> | null;
 }
 
 export interface PanelView {
@@ -154,6 +177,13 @@ export interface SandboxView {
   runtimeState: string | null;
   /** V1 only: true if the body says the Portal asked the Trading System to act (fail-closed: unreadable is true). */
   sourceActed: boolean;
+  /** FE-067: `stage_facts.runtime` / `.reconciliation`; `null` = the response carries none (V2 body, older producer, or refused). */
+  runtime: RuntimeFact | null;
+  reconciliation: ReconciliationFact | null;
+  /** FE-066: the five identity keys of the `certification` record; `null` = none. */
+  identity: DeploymentIdentity | null;
+  /** FE-072: Internal / Broker / Difference rows; `null` = none. */
+  figures: readonly FigureRow[] | null;
   steps: StepsView;
   progress: ProgressView | null;
   findings: CollectionView<FindingView> | null;
@@ -266,6 +296,10 @@ function viewV1(cert: SandboxCertification, schemaVersion: string | null, steps:
     sourceIntegrationState: closed(cert.sourceIntegrationState, INTEGRATION_STATES),
     runtimeState: cert.runtimeState,
     sourceActed: cert.sourceSideEffectRequested || cert.runtimeActivationRequested || cert.promotionExecutionRequested,
+    runtime: runtimeFactOf(cert.stageFacts),
+    reconciliation: reconciliationFactOf(cert.stageFacts),
+    identity: cert.identity,
+    figures: figureRowsOf(cert.sourceFigures),
     steps,
     progress: progress
       ? {
@@ -288,7 +322,7 @@ function viewV1(cert: SandboxCertification, schemaVersion: string | null, steps:
           code: row.findingCode,
           summary: row.summary,
           blocking: row.blocking,
-          openedAt: isoToMs(row.createdAt),
+          openedAt: isoToMs(row.openedAt) ?? isoToMs(row.createdAt),
           resolvedAt,
           state: row.resolution === "OPEN" ? "open" : row.resolution === "RESOLVED" && resolvedAt !== null ? "resolved" : "unknown",
         };
@@ -306,6 +340,8 @@ function viewV1(cert: SandboxCertification, schemaVersion: string | null, steps:
       status: closed(plan.status, ["BLOCKED"]),
       blockerCodes: plan.blockerCodes,
       createdAt: isoToMs(plan.createdAt),
+      author: plan.author,
+      envelope: cell<PlanEnvelopeRef | null, PlanEnvelope>(plan.envelope, (ref) => ref === null ? null : { envelopeId: ref.envelopeId, revision: ref.revision }),
     })),
     panels: cert.sourcePanels.map((panel) => ({
       id: panel.panelId,
@@ -368,6 +404,11 @@ function fromV2(body: SandboxParentV2, schemaVersion: string): SandboxView {
     runtimeState: null,
     // The V2 reader refuses a body whose source flags are not exactly false.
     sourceActed: false,
+    // The following-parent v2 body is sealed: it carries no stage facts, identity or figures (typed absence; see the receipt's request).
+    runtime: null,
+    reconciliation: null,
+    identity: null,
+    figures: null,
     steps,
     progress: null,
     findings: null,

@@ -40,6 +40,9 @@ import { useExecutionRuntime } from "../../../useExecutionRuntime";
 import { Flag } from "../../Flag";
 import { KpiStrip, NotPublished, SectionPanel, StageHeader, Triad, UrlTabs } from "../../blocks";
 import { formatAsOf } from "../../boundary";
+import { triadRowsOf } from "../stage/triadRows";
+import { AlphaNameLine } from "../stage/AlphaNameLine";
+import { alphaCrumb, portfolioLabel, stageIdentity } from "../stage/identity";
 import { parseUrlParams, withContext } from "../../urlState";
 import { ExitReviewPanel } from "./ExitReviewPanel";
 import { lineageRoute } from "./lineageRoute";
@@ -115,7 +118,7 @@ function Reconciliation({ view }: { view: SandboxView }) {
     <div className="exec-sbx-recon">
       <Triad
         titleLevel={2}
-        rows={RECON_ROWS}
+        rows={view.figures === null ? RECON_ROWS : triadRowsOf(view.figures)}
         internal={internal === null ? null : { asOf: internal.asOf }}
         broker={broker === null ? null : { asOf: broker.asOf }}
         suppressed={figuresSuppressed(view)}
@@ -133,7 +136,12 @@ function Reconciliation({ view }: { view: SandboxView }) {
           <p className="exec-blk-na">This response carries no source panel.</p>
         )}
         <p className="exec-sbx-note">
-          The figure for each row is <NotPublished id="FE-072">Typed reconciliation figures</NotPublished>. The Difference is never worked out here.
+          {view.figures === null ? (
+            <>
+              The figure for each row is <NotPublished id="FE-072">Typed reconciliation figures</NotPublished>.{" "}
+            </>
+          ) : null}
+          The Difference is the server's and is never worked out here.
         </p>
       </div>
       <FindingsPanel view={view} />
@@ -244,12 +252,17 @@ export default function SandboxScreen({ api, deploymentId, workspaceId }: Sandbo
   const renderLink = (to: string, children: ReactNode) => <Link to={withContext(to, params)}>{children}</Link>;
   // The portfolio is linked only when the read published its id. The account is an external reference and the alpha id is
   // not in this read: neither is linked.
-  const crumb = (id: string, portfolioId?: string | null) => [
-    { label: "Alpha Fleet", to: FLEET_HREF },
-    { label: id },
-    ...(portfolioId ? [{ label: portfolioId, to: `/deployments/portfolios/${encodeURIComponent(portfolioId)}` }] : []),
-    { label: "Sandbox" },
-  ];
+  const crumb = (id: string, portfolioId?: string | null, who: ReturnType<typeof stageIdentity> = stageIdentity(null)) => {
+    // The Alpha is linked only when the body published `alpha_id` (FE-066); the portfolio shows its published name, else its id.
+    const alpha = alphaCrumb(who);
+    return [
+      { label: "Alpha Fleet", to: FLEET_HREF },
+      ...(alpha === null ? [] : [alpha]),
+      { label: id },
+      ...(portfolioId ? [{ label: portfolioLabel(who, portfolioId), to: `/deployments/portfolios/${encodeURIComponent(portfolioId)}` }] : []),
+      { label: "Sandbox" },
+    ];
+  };
 
   if (read.phase === "loading") {
     return (
@@ -286,14 +299,19 @@ export default function SandboxScreen({ api, deploymentId, workspaceId }: Sandbo
   const gate = gateOf(view);
   const cells = kpiCells(view);
   const shownId = view.deploymentId ?? deploymentId;
+  const identity = stageIdentity(view.identity);
 
   return (
     <div className="exec-sbx-v2" data-screen="sandbox-v2" data-version={view.version} data-refreshing={read.refreshing ? "true" : undefined}>
       <StageHeader
         stage="sandbox"
-        crumb={crumb(shownId, view.portfolioId)}
+        crumb={crumb(shownId, view.portfolioId, identity)}
         title="Sandbox certification"
-        subtitle={subtitleOf(view, deploymentId)}
+        subtitle={
+          <>
+            {subtitleOf(view, deploymentId)} · <AlphaNameLine identity={identity} />
+          </>
+        }
         chips={chipsOf(view)}
         spine={{ current: "sandbox", blocked: gate === "blocked", stages: spineFacts(view), label: "Lifecycle" }}
         renderLink={renderLink}

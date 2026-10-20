@@ -36,7 +36,7 @@ function v1(over: Partial<SandboxView> = {}): SandboxView {
   return {
     version: "v1", schemaVersion: "governance.sandbox-certification.v1", certificationId: "cert_TEST_ONLY_a", deploymentId: "dep_TEST_ONLY_a", portfolioId: null,
     venue: "OKX", accountRef: "okx_testnet_main", workflowState: "DRAFT", workflowVersion: 1, workspaceId: null, observedAt: null, policyVersion: null, formulaVersion: null,
-    deliveryProfile: "fixture", sourceIntegrationState: "UNAVAILABLE", runtimeState: null, sourceActed: false,
+    deliveryProfile: "fixture", sourceIntegrationState: "UNAVAILABLE", runtimeState: null, sourceActed: false, runtime: null, reconciliation: null, identity: null, figures: null,
     steps: { availability: "available", items: steps(["pass", "pass", "pass", "fail", "pass", "unavailable", "unavailable"]) },
     progress: { passed: 4, total: 7, eligible: false, blockerCodes: ["SANDBOX_STEP_RECONCILIATION_FAIL"], evidenceSetHash: null },
     findings: { total: 2, returned: 2, truncated: false, rows: [finding("f1", "CRITICAL"), finding("f2", "INFO")] },
@@ -153,7 +153,7 @@ describe("the five facts", () => {
   });
 
   it("plans: one status or Mixed statuses", () => {
-    const plan = (id: string, status: string | null) => ({ id, target: "CANARY", status, blockerCodes: [], createdAt: null });
+    const plan = (id: string, status: string | null) => ({ id, target: "CANARY", status, blockerCodes: [], createdAt: null, author: null, envelope: null });
     expect(cell(kpiCells(v1({ plans: [plan("a", "BLOCKED"), plan("b", "BLOCKED")] })), "plans")).toMatchObject({ value: "2", basis: "Blocked" });
     expect(cell(kpiCells(v1({ plans: [plan("a", "BLOCKED"), plan("b", null)] })), "plans")).toMatchObject({ value: "2", basis: "Mixed statuses" });
   });
@@ -209,9 +209,9 @@ describe("the exit blockers read as sentences; codes stay out of them", () => {
 });
 
 describe("the three chips never invent a state", () => {
-  it("runtime is Not published (FE-027) while the source states none; a published word is shown unstyled", () => {
-    expect(chipsOf(v1()).runtime).toEqual({ state: "not-published", id: "FE-027" });
-    expect(chipsOf(v2()).runtime).toEqual({ state: "not-published", id: "FE-027" });
+  it("runtime is Not published (FE-067) while the source states none; a legacy word on a body without stage facts is shown unstyled", () => {
+    expect(chipsOf(v1()).runtime).toEqual({ state: "not-published", id: "FE-067" });
+    expect(chipsOf(v2()).runtime).toEqual({ state: "not-published", id: "FE-067" });
     expect(chipsOf(v1({ runtimeState: "RUNNING" })).runtime).toEqual({ state: "dot", tone: "mute", text: "Running" });
   });
 

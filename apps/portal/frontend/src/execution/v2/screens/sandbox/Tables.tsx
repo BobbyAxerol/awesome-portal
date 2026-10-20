@@ -118,8 +118,18 @@ const PLAN_COLUMNS: readonly CardsColumn<PlanView & { k: string }>[] = [
         </details>
       ),
   },
-  { key: "envelope", label: "Envelope", numeric: true, render: () => <NotPublished id="FE-072" compact /> },
-  { key: "author", label: "Author", render: () => <NotPublished id="FE-072" compact /> },
+  {
+    key: "envelope",
+    label: "Envelope",
+    numeric: true,
+    render: (r) => {
+      // FE-072: the latest Canary envelope drafted from this plan. AVAILABLE with no value is the server saying none exists.
+      if (r.envelope === null) return <NotPublished id="FE-072" compact />;
+      if (r.envelope.kind === "not-published") return <NotPublished id="FE-072" titleReason={r.envelope.reasonCode} compact />;
+      return r.envelope.value === null ? "None drafted" : <span className="exec-sbx-id">{r.envelope.value.envelopeId} · rev {r.envelope.value.revision} · Draft</span>;
+    },
+  },
+  { key: "author", label: "Author", render: (r) => (r.author === null ? <NotPublished id="FE-072" compact /> : <span className="exec-sbx-id">{r.author}</span>) },
 ];
 
 export function PlansPanel({ view }: { view: SandboxView }) {
@@ -138,8 +148,12 @@ export function PlansPanel({ view }: { view: SandboxView }) {
         <>
           <CardsTable columns={PLAN_COLUMNS} rows={keyed(view.plans).slice(0, SANDBOX_ROW_CAP)} rowKey={(r) => r.k} label="Promotion plans" />
           <p className="exec-sbx-note">
-            A plan records a refusal to promote; it does not start Canary. Envelope and Author are{" "}
-            <NotPublished id="FE-072">Typed plan fields</NotPublished>.
+            A plan records a refusal to promote; it does not start Canary.
+            {view.plans.some((plan) => plan.author === null || plan.envelope === null) ? (
+              <>
+                {" "}Envelope and Author are <NotPublished id="FE-072">Typed plan fields</NotPublished> in this response.
+              </>
+            ) : null}
           </p>
         </>
       )}
