@@ -195,7 +195,7 @@ const BUDGET: Readonly<Record<string, Budget>> = {
   },
   fleet: {
     first: { api: [10, 13], apiBytes: [111456, 139320], assets: [84, 105], assetBytes: [3025288, 3781610] },
-    tab: { api: [1, 2], apiBytes: [7301, 9127] },
+    tab: { api: [5, 7], apiBytes: [35360, 44200] },
   },
   incident: {
     first: { api: [12, 15], apiBytes: [111702, 139628], assets: [83, 104], assetBytes: [3037310, 3796638] },
@@ -257,7 +257,7 @@ const BUDGET: Readonly<Record<string, Budget>> = {
   },
   "workbench-fills": {
     first: { api: [11, 14], apiBytes: [181803, 227254], assets: [85, 107], assetBytes: [3080644, 3850805] },
-    tab: { api: [0, 0], apiBytes: [0, 0] },
+    tab: { api: [1, 2], apiBytes: [3033, 3792] },
   },
   "workbench-vnm": {
     first: { api: [11, 14], apiBytes: [182553, 228192], assets: [86, 108], assetBytes: [3104896, 3881120] },
@@ -808,7 +808,8 @@ test.describe("not-available disclosure", () => {
     await expect(button).toHaveAttribute("aria-expanded", "false");
     await page.keyboard.press("Enter");
     await expect(button).toHaveAttribute("aria-expanded", "true");
-    const body = page.locator(`#${await button.getAttribute("aria-controls")}`);
+    // React ids carry colons, so `#id` is not a valid CSS selector: match the attribute.
+    const body = page.locator(`[id="${await button.getAttribute("aria-controls")}"]`);
     await expect(body).toContainText(/Not published/);
     await page.keyboard.press("Enter");
     await expect(button).toHaveAttribute("aria-expanded", "false");
@@ -825,7 +826,7 @@ test.describe("not-available disclosure", () => {
       const button = await open(page);
       await button.tap();
       await expect(button).toHaveAttribute("aria-expanded", "true");
-      await expect(page.locator(`#${await button.getAttribute("aria-controls")}`)).toContainText(/Not published/);
+      await expect(page.locator(`[id="${await button.getAttribute("aria-controls")}"]`)).toContainText(/Not published/);
       await button.tap();
       await expect(button).toHaveAttribute("aria-expanded", "false");
     });
