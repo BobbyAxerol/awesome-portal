@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { accessDigest } from "./access-digest";
+import { exactDecimal } from "./foundation.contract";
 
 /**
  * Producer invariants of the Manager dataset body that JSON Schema cannot state (equality between two fields,
@@ -10,8 +11,74 @@ import { accessDigest } from "./access-digest";
  * The published schema carries the part it can say (uniqueItems for an exact repeat, the group field enum, the
  * preset window) and the description of the rest; this file is the rest.
  *
- * Deliberately NOT here: negative zero (MD-5). That one needs an owner decision (see BE-P1 ledger).
+ * MD-5 (negative zero) is the one rule that is a form, not a relation: see "Canonical zero" below. The owner chose option C
+ * (2026-10-20): canonical zero ON EMIT, limited to the Manager decimals of the dataset and series RESPONSES.
  */
+/* ───────────── MD-5 canonical zero (owner decision C, 2026-10-20) ─────────────
+ * A zero with a minus sign ("-0", "-0.00") is a signed nothing: numerically identical to "0"/"0.00", but string equality,
+ * digests and sort ties would tell the two apart. The Manager RESPONSE therefore never carries one:
+ *   - the emit step (`canonicalizeManagerDatasetZero` / `canonicalizeManagerSeriesZero`) rewrites it, exactly once, before the
+ *     response parse: same scale, no sign ("-0" -> "0", "-0.00" -> "0.00"). It never rounds, never changes a scale and never
+ *     touches a non-zero value, so it is idempotent;
+ *   - the response decimal (`managerResponseDecimal`) refuses the form, so a body that still carries one is never emitted.
+ * What is NOT changed: the shared `exactDecimal` (other families use it), what a SOURCE document may contain (admission is
+ * unchanged), stored source facts and their digests, and the sealed score / composition / regime publications that a dataset
+ * passes through verbatim (`score_details`, `composition_details`, `regime_details`). */
+const NEGATIVE_ZERO = /^-(0(?:\.0+)?)$/;
+/** Canonical zero of one exact decimal: "-0" -> "0", "-0.00" -> "0.00"; every other string is returned as it is. */
+export function canonicalManagerZero(value: string): string;
+export function canonicalManagerZero(value: string | null): string | null;
+export function canonicalManagerZero(value: string | null): string | null { return value === null ? null : value.replace(NEGATIVE_ZERO, "$1"); }
+/** Positive zero or a non-zero value; never a signed zero. The last regex is the one the published JSON Schema carries
+ * (lookahead-free: negative values are a non-zero integer part, or a zero integer part with a non-zero fraction digit). */
+export const MANAGER_CANONICAL_DECIMAL_PATTERN = /^(?:(?:0|[1-9][0-9]*)(?:\.[0-9]+)?|-(?:[1-9][0-9]*(?:\.[0-9]+)?|0\.[0-9]*[1-9][0-9]*))$/;
+export const MANAGER_NEGATIVE_ZERO_CODE = "MANAGER_DECIMAL_NEGATIVE_ZERO";
+export const MANAGER_CANONICAL_ZERO_NOTE = "Canonical zero: a zero is never signed. \"0\" and \"0.00\" are valid, \"-0\" and \"-0.00\" are not; " +
+  "a source value of \"-0.00\" is published as \"0.00\" (same scale, no sign). The producer refuses to emit the signed form (" + MANAGER_NEGATIVE_ZERO_CODE + ").";
+/** The decimal of a Manager RESPONSE (dataset metric value/denominator, score summaries, series points). */
+export const managerResponseDecimal = exactDecimal.regex(MANAGER_CANONICAL_DECIMAL_PATTERN, MANAGER_NEGATIVE_ZERO_CODE);
+
+interface DecimalMetricLike { value: string | null; denominator: string | null }
+interface DecimalPartitionLike<M extends DecimalMetricLike> { metrics: Record<string, M> }
+export interface ManagerDatasetZeroInput<M extends DecimalMetricLike, P extends DecimalPartitionLike<M>> {
+  items: Array<{ metrics: Record<string, M>; economic_partitions: P[] }>;
+  groups: Array<{ economic_partitions: P[] }>;
+  capital_statements: P[];
+  scores: { raw: { value: string | null }; composition: { value: string | null }; direct_nav: { value: string | null } };
+}
+const canonicalMetric = <M extends DecimalMetricLike>(metric: M): M => {
+  const value = canonicalManagerZero(metric.value), denominator = canonicalManagerZero(metric.denominator);
+  return value === metric.value && denominator === metric.denominator ? metric : { ...metric, value, denominator };
+};
+const canonicalMetrics = <M extends DecimalMetricLike>(metrics: Record<string, M>): Record<string, M> =>
+  Object.fromEntries(Object.entries(metrics).map(([key, metric]) => [key, canonicalMetric(metric)]));
+const canonicalPartitions = <M extends DecimalMetricLike, P extends DecimalPartitionLike<M>>(list: P[]): P[] =>
+  list.map(entry => ({ ...entry, metrics: canonicalMetrics(entry.metrics) }));
+const canonicalSummary = <S extends { value: string | null }>(summary: S): S => {
+  const value = canonicalManagerZero(summary.value);
+  return value === summary.value ? summary : { ...summary, value };
+};
+/**
+ * The emit step of the Manager dataset (MD-5). Pure: returns a new body, never edits the input (a metric object may be the
+ * very object of a stored source fact). Covers every decimal the producer builds: row headline metrics, row / group /
+ * capital-statement partition metrics (`value`, `denominator`) and the three score summaries. Idempotent.
+ */
+export function canonicalizeManagerDatasetZero<M extends DecimalMetricLike, P extends DecimalPartitionLike<M>, B extends ManagerDatasetZeroInput<M, P>>(body: B): B {
+  return { ...body,
+    items: body.items.map(row => ({ ...row, metrics: canonicalMetrics(row.metrics), economic_partitions: canonicalPartitions(row.economic_partitions) })),
+    groups: body.groups.map(group => ({ ...group, economic_partitions: canonicalPartitions(group.economic_partitions) })),
+    capital_statements: canonicalPartitions(body.capital_statements),
+    scores: { ...body.scores, raw: canonicalSummary(body.scores.raw), composition: canonicalSummary(body.scores.composition),
+      direct_nav: canonicalSummary(body.scores.direct_nav) } };
+}
+/** The emit step of the Manager series (MD-5): every point value of every subject. Pure and idempotent. */
+export function canonicalizeManagerSeriesZero<B extends { series: Array<{ points: Array<{ value: string }> }> }>(body: B): B {
+  return { ...body, series: body.series.map(entry => ({ ...entry, points: entry.points.map(point => {
+    const value = canonicalManagerZero(point.value);
+    return value === point.value ? point : { ...point, value };
+  }) })) };
+}
+
 interface PartitionLike { economic_domain: string; currency: string; basis: string; native_profile_ref: string }
 interface MetricLike { currency: string | null }
 interface PartitionedMetricsLike { partition: PartitionLike; metrics: Record<string, MetricLike> }

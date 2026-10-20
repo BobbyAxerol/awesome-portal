@@ -1,7 +1,7 @@
 {
   "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
   "base": "execution-manager-dataset.partitions.synthetic.valid.json",
-  "note": "Each case mutates the base example. MD-5 (negative zero) is not a rule: it waits for an owner decision.",
+  "note": "Each case mutates the base example. MD-5 (negative zero): option C, canonical zero on emit, limited to the Manager decimals of the dataset and series responses.",
   "cases": [
     {
       "id": "MD-1/empty-page-with-a-count",
@@ -375,6 +375,180 @@
           "value": "1"
         }
       ]
+    },
+    {
+      "id": "MD-5/negative-zero-in-a-row-headline-and-its-partition",
+      "gap": "MD-5",
+      "rule": "a zero is never signed: \"-0\" is published as \"0\"",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_DECIMAL_NEGATIVE_ZERO",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "metrics",
+            "net_pnl",
+            "value"
+          ],
+          "value": "-0"
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "net_pnl",
+            "value"
+          ],
+          "value": "-0"
+        }
+      ]
+    },
+    {
+      "id": "MD-5/negative-zero-with-a-scale-in-a-denominator",
+      "gap": "MD-5",
+      "rule": "the scale is kept and the sign dropped: \"-0.00\" is published as \"0.00\"",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_DECIMAL_NEGATIVE_ZERO",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "metrics",
+            "net_pnl",
+            "denominator"
+          ],
+          "value": "-0.00"
+        },
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "net_pnl",
+            "denominator"
+          ],
+          "value": "-0.00"
+        }
+      ]
+    },
+    {
+      "id": "MD-5/negative-zero-in-a-capital-statement",
+      "gap": "MD-5",
+      "rule": "the rule holds in every partition list",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_DECIMAL_NEGATIVE_ZERO",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "capital_statements",
+            0,
+            "metrics",
+            "balance_total",
+            "value"
+          ],
+          "value": "-0.00"
+        }
+      ]
+    },
+    {
+      "id": "MD-5/negative-zero-in-a-group-total",
+      "gap": "MD-5",
+      "rule": "the rule holds in a group partition",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_DECIMAL_NEGATIVE_ZERO",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "groups",
+            0,
+            "economic_partitions",
+            0,
+            "metrics",
+            "net_pnl",
+            "value"
+          ],
+          "value": "-0"
+        }
+      ]
+    },
+    {
+      "id": "MD-5/negative-zero-in-a-score-summary",
+      "gap": "MD-5",
+      "rule": "the rule holds in the three score summaries",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_DECIMAL_NEGATIVE_ZERO",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "scores",
+            "raw",
+            "value"
+          ],
+          "value": "-0"
+        },
+        {
+          "op": "set",
+          "path": [
+            "scores",
+            "raw",
+            "status"
+          ],
+          "value": "available"
+        }
+      ]
+    }
+  ],
+  "emit_rule": "A source decimal that is zero with a minus sign is emitted with the same scale and no sign. Nothing else changes: no rounding, no scale change, no non-zero value touched. Idempotent.",
+  "emit_examples": [
+    {
+      "source": "-0",
+      "emitted": "0"
+    },
+    {
+      "source": "-0.00",
+      "emitted": "0.00"
+    },
+    {
+      "source": "-0.000000000000000000",
+      "emitted": "0.000000000000000000"
+    },
+    {
+      "source": "0",
+      "emitted": "0"
+    },
+    {
+      "source": "0.00",
+      "emitted": "0.00"
+    },
+    {
+      "source": "-0.01",
+      "emitted": "-0.01"
+    },
+    {
+      "source": "-10",
+      "emitted": "-10"
+    },
+    {
+      "source": "-10.00",
+      "emitted": "-10.00"
+    },
+    {
+      "source": "5",
+      "emitted": "5"
     }
   ]
 }

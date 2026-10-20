@@ -16,6 +16,7 @@ import { projectionRowVisible } from "./read-projection";
 import { assertExecutionReadScope, ExecutionReadScopeError, scopeAllowsField, scopeAllowsFullAccountingPopulation, scopeReadPopulation,
   type AuthorizedExecutionReadScope } from "./read-scope";
 import { resolveManagerWindow } from "./manager-query-p1";
+import { canonicalizeManagerSeriesZero } from "./manager-dataset-invariants";
 import { managerModelDocument, type ManagerMember, type ManagerModelDocument } from "./manager-model.contract";
 import { managerScorePopulationDigest } from "./manager-score-publication";
 import { managerSeriesQuery, managerSeriesResponse, deriveSeriesComparison, SERIES_EMPTY_REASON,
@@ -114,5 +115,6 @@ export function queryManagerSeries(inputs: readonly SeriesSubjectScope[], input:
     lineage: { reducer_revision: "manager-series.v1" as const, source_set_ref: doc.source_set_digest,
       revision: accessDigest({ scopes: inputs.map(i => i.scope.fingerprint).sort(), source: doc.revision }) } };
   if (Buffer.byteLength(JSON.stringify(response)) > 1048576) fail("EXECUTION_READ_SCOPE_LIMIT");
-  return managerSeriesResponse.parse(response);
+  // MD-5: canonical zero on emit, exactly once, before the response parse (which then refuses any signed zero left).
+  return managerSeriesResponse.parse(canonicalizeManagerSeriesZero(response));
 }

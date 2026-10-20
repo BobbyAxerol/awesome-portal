@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import Ajv2020 from "ajv/dist/2020";
 import { describe, expect, it } from "vitest";
 import { managerSeriesQuery, managerSeriesResponse, managerSeriesEntry, managerSeriesComparison } from "../../../apps/control-api/src/execution-v2/manager-series.contract";
+import { canonicalManagerZero } from "../../../apps/control-api/src/execution-v2/manager-dataset-invariants";
 import { managerSeriesPublication } from "../../../apps/control-api/src/execution-v2/manager-series-publication.contract";
 
 // BE-P4 / FE-013 + FE-033: the Manager series read in Zod, JSON Schema, OpenAPI and canonical fixtures.
@@ -77,6 +78,41 @@ describe("BE-P4 FE-013/FE-033 generated Manager series contract", () => {
       const v = base(); mutate(v);
       expect(managerSeriesResponse.safeParse(v).success).toBe(false);
       expect(check(v)).toBe(false);
+    });
+    // MD-5 (owner decision C, 2026-10-20): canonical zero on emit. A response that carries a signed zero is refused by both
+    // validators; the stored publication (a source document) is not changed and still admits it.
+    it.each(["-0", "-0.0", "-0.000000000000000000"])("MD-5 rejects a signed zero point %s in both validators", zero => {
+      for (const index of [0, 1]) {
+        const v = base(); v.series[1].points[index].value = zero;
+        const parsed = managerSeriesResponse.safeParse(v);
+        expect(parsed.success).toBe(false);
+        expect(!parsed.success && parsed.error.issues.some(i => i.message === "MANAGER_DECIMAL_NEGATIVE_ZERO")).toBe(true);
+        expect(check(v)).toBe(false);
+      }
+    });
+    it("MD-5 leaves other points alone and does not change the stored publication", () => {
+      for (const value of ["0", "0.00", "-0.5", "-100", "-0.000000000000000001"]) {
+        const v = base(); v.series[0].points[1].value = value;
+        expect(managerSeriesResponse.safeParse(v).success, value).toBe(true); expect(check(v), value).toBe(true);
+      }
+      const stored = structuredClone(fixture("-publication").value); stored.series.points[0].value = "-0.00";
+      expect(managerSeriesPublication.safeParse(stored).success).toBe(true);
+      expect(api.components.schemas.ManagerSeriesPublication.properties.series.properties.points.items.properties.value.pattern)
+        .not.toBe(schema.properties.series.items.properties.points.items.properties.value.pattern);
+    });
+    it("MD-5 publishes the negative cases and the emit examples, judged as stated", () => {
+      const negative = load("fixtures/execution-manager-series.negative-zero.synthetic.negative.json");
+      expect(negative.lane).toBe(LANE); expect(negative.base).toBe("execution-manager-series.populated.synthetic.valid.json");
+      expect(negative.cases.map((c: any) => c.id)).toEqual(["MD-5/negative-zero-point", "MD-5/negative-zero-point-with-a-scale"]);
+      for (const c of negative.cases) {
+        const v = base();
+        for (const op of c.ops) op.path.slice(0, -1).reduce((node: any, key: any) => node[key], v)[op.path.at(-1)] = op.value;
+        expect(managerSeriesResponse.safeParse(v).success, c.id).toBe(false); expect(check(v), c.id).toBe(false);
+      }
+      for (const { source, emitted } of negative.emit_examples) {
+        expect(canonicalManagerZero(source), source).toBe(emitted); expect(canonicalManagerZero(emitted), emitted).toBe(emitted);
+      }
+      expect(schema.properties.series.items.properties.points.items.properties.value.description).toMatch(/Canonical zero/);
     });
     it("rejects NOT_PUBLISHED beside an AVAILABLE series (both validators)", () => {
       const v = base(); v.series_source = { state: "NOT_PUBLISHED", reason_code: "FINANCIAL_NORMALIZED_SERIES_SOURCE_NOT_PUBLISHED" };

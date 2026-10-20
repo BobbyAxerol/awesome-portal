@@ -103,10 +103,11 @@ export function applyManagerP1Ops(base,ops){
 
 /** BE-P1 negative cases MD-1..MD-8. `refused_by` says who refuses the mutated body: SCHEMA_AND_PRODUCER (JSON Schema can
  * state it) or PRODUCER_ONLY (it cannot: equality of two fields, identity inside a list, a property of two items). `code`
- * is the producer's issue message (or Zod issue code). MD-5 (negative zero) is deliberately absent: it waits for an
- * owner decision. */
+ * is the producer's issue message (or Zod issue code). MD-5 (negative zero, owner decision C 2026-10-20) is canonical zero on
+ * emit: a response body that still carries "-0" / "-0.00" is refused (schema pattern AND producer, MANAGER_DECIMAL_NEGATIVE_ZERO),
+ * and `emit_examples` states what the emit step does with a SOURCE value. */
 export function managerP1InvariantNegativeFixture(){
-  const both='SCHEMA_AND_PRODUCER', producer='PRODUCER_ONLY';
+  const both='SCHEMA_AND_PRODUCER', producer='PRODUCER_ONLY', zero='MANAGER_DECIMAL_NEGATIVE_ZERO';
   const set=(path,value)=>({op:'set',path,value});
   const copy=(path,from)=>({op:'append_copy',path,from});
   const cases=[
@@ -139,7 +140,20 @@ export function managerP1InvariantNegativeFixture(){
       [set(['groups',0,'unique_row_count'],10)]],
     ['MD-8','usdt-headline-above-a-eur-partition',producer,'MANAGER_HEADLINE_NOT_A_PARTITION_FIGURE','a headline money figure is one partition\'s figure',
       [{op:'set_copy',path:['items',1,'metrics','net_pnl'],from:['items',0,'metrics','net_pnl']},set(['items',1,'metrics','net_pnl','value'],'1')]],
+    ['MD-5','negative-zero-in-a-row-headline-and-its-partition',both,zero,'a zero is never signed: "-0" is published as "0"',
+      [set(['items',0,'metrics','net_pnl','value'],'-0'),set(['items',0,'economic_partitions',0,'metrics','net_pnl','value'],'-0')]],
+    ['MD-5','negative-zero-with-a-scale-in-a-denominator',both,zero,'the scale is kept and the sign dropped: "-0.00" is published as "0.00"',
+      [set(['items',0,'metrics','net_pnl','denominator'],'-0.00'),set(['items',0,'economic_partitions',0,'metrics','net_pnl','denominator'],'-0.00')]],
+    ['MD-5','negative-zero-in-a-capital-statement',both,zero,'the rule holds in every partition list',
+      [set(['capital_statements',0,'metrics','balance_total','value'],'-0.00')]],
+    ['MD-5','negative-zero-in-a-group-total',both,zero,'the rule holds in a group partition',
+      [set(['groups',0,'economic_partitions',0,'metrics','net_pnl','value'],'-0')]],
+    ['MD-5','negative-zero-in-a-score-summary',both,zero,'the rule holds in the three score summaries',
+      [set(['scores','raw','value'],'-0'),set(['scores','raw','status'],'available')]],
   ].map(([gap,id,refused_by,code,rule,ops])=>({id:`${gap}/${id}`,gap,rule,refused_by,code,ops}));
   return {lane,base:'execution-manager-dataset.partitions.synthetic.valid.json',
-    note:'Each case mutates the base example. MD-5 (negative zero) is not a rule: it waits for an owner decision.',cases};
+    note:'Each case mutates the base example. MD-5 (negative zero): option C, canonical zero on emit, limited to the Manager decimals of the dataset and series responses.',
+    cases,emit_rule:'A source decimal that is zero with a minus sign is emitted with the same scale and no sign. Nothing else changes: no rounding, no scale change, no non-zero value touched. Idempotent.',
+    emit_examples:[['-0','0'],['-0.00','0.00'],['-0.000000000000000000','0.000000000000000000'],['0','0'],['0.00','0.00'],['-0.01','-0.01'],['-10','-10'],['-10.00','-10.00'],['5','5']]
+      .map(([source,emitted])=>({source,emitted}))};
 }
