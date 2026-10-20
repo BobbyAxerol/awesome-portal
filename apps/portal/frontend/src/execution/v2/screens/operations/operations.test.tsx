@@ -166,9 +166,9 @@ describe("Source health summary (OP-7)", () => {
     expect(getOperationalComposition).toHaveBeenCalledWith("operations", { workspace_id: "ws_1" });
     const profiles = screen.getByRole("table", { name: "Source health by profile" });
     expect(within(profiles).getAllByRole("row").slice(1).map((r) => r.textContent)).toEqual([
-      "Paper binance usdm✓OK: Available",
-      "Sandbox binance usdm◐PartialSOURCE_PARTIAL",
-      "Real funded binance usdm◐Partial",
+      "Paper Binance USDM✓OK: Available",
+      "Sandbox Binance USDM◐PartialSOURCE_PARTIAL",
+      "Real-funded Binance USDM◐Partial",
     ]);
     // The journal sentence stays: it is about the journal, not the profiles.
     expect(document.querySelector("details")?.textContent).toContain("Not published (FE-021)");
