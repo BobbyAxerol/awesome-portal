@@ -215,7 +215,7 @@ describe("the lifecycle spine will not infer (D13b)", () => {
     mount({ profile: { ok: true, value: envelopeOf(wire) } });
     await ready();
     expect(within(screen.getByRole("list", { name: "Deployment lifecycle" })).getByLabelText("Paper, Blocked")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Lifecycle" }).closest("section")!.textContent).toContain("observation gate");
+    expect(screen.getByRole("heading", { name: "Lifecycle" }).closest("section")!.textContent).toContain("Observation gate");
   });
 
   it("with the gate PARTIAL the spine says Paper is now, not blocked", async () => {
@@ -225,49 +225,12 @@ describe("the lifecycle spine will not infer (D13b)", () => {
   });
 });
 
-describe("Request exit review is disabled with a one-line reason (no command route)", () => {
-  it("is a disabled button described by the gate's reason, with a My access link", async () => {
+describe("the exit review request has one control, in the exit gate", () => {
+  it("the lifecycle panel no longer repeats it", async () => {
     mount();
     await ready();
-    const button = screen.getByRole("button", { name: "Request exit review" }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    const reason = document.getElementById(button.getAttribute("aria-describedby")!)!;
-    expect(reason.textContent).toBe("Blocked: the observation gate is partial.");
-    expect(reason.textContent).not.toContain("\n");
-    const access = screen.getByRole("link", { name: "My access: Request exit review" });
-    expect(access.getAttribute("href")).toBe("/administration/profile-access");
-  });
-
-  it("never fires: clicking it makes no request", async () => {
-    const m = mount();
-    await ready();
-    const before = m.calls.length;
-    fireEvent.click(screen.getByRole("button", { name: "Request exit review" }));
-    expect(m.calls).toHaveLength(before);
-  });
-
-  it("with no gate published the reason is one short sentence and the request id is the control's title", async () => {
-    const wire = paperWire();
-    delete wire.data.observation_gate;
-    mount({ profile: { ok: true, value: envelopeOf(wire) } });
-    await ready();
-    const button = screen.getByRole("button", { name: "Request exit review" });
-    expect(document.getElementById(button.getAttribute("aria-describedby")!)!.textContent).toBe("Not offered from this screen yet.");
-    expect(button.closest(".exec-wb-gate")!.getAttribute("title")).toContain("Not published (FE-028)");
-  });
-
-  it("even a MET gate does not enable it: there is no route to call", async () => {
-    const wire = paperWire();
-    wire.data.observation_gate.state = "MET";
-    mount({ profile: { ok: true, value: envelopeOf(wire) } });
-    await ready();
-    expect((screen.getByRole("button", { name: "Request exit review" }) as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("the access link is the caller's when given", async () => {
-    mount({ props: { accessHref: "/somewhere/else" } });
-    await ready();
-    expect(screen.getByRole("link", { name: "My access: Request exit review" }).getAttribute("href")).toBe("/somewhere/else");
+    expect(screen.queryByRole("button", { name: "Request exit review" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: /request review/i }).length).toBeLessThanOrEqual(1);
   });
 });
 
