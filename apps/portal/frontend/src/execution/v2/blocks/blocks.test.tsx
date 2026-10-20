@@ -10,7 +10,9 @@ import { readMetric, type Metric } from "../boundary";
 import { FE as FLEET_FE } from "../screens/fleet/fleetModel";
 import { FE as OPS_FE } from "../screens/operations/notPublished";
 import {
+  CompactGaps,
   EventFeed,
+  GapLine,
   FE_FLEET,
   FE_OPERATIONS,
   FE_REQUEST_LABEL,
@@ -75,6 +77,34 @@ describe("NotPublished and the one FE table", () => {
     const label = FE_REQUEST_LABEL["FE-067"];
     for (const stage of ["Paper", "Sandbox", "Canary", "Live"]) expect(label, stage).toContain(stage);
     expect(label).toContain("Runtime state");
+  });
+});
+
+describe("CompactGaps and GapLine (stage screens)", () => {
+  it("outside CompactGaps a gap prints its request id; inside it prints `Not available` and the id rides in the title", () => {
+    const outside = render(<NotPublished id="FE-071">Used ratio</NotPublished>);
+    expect(outside.container.textContent).toContain("Not published (FE-071)");
+    cleanup();
+    const inside = render(
+      <CompactGaps>
+        <NotPublished id="FE-071" titleReason="SOME_CODE">Used ratio</NotPublished>
+      </CompactGaps>,
+    );
+    expect(inside.container.textContent).toBe("Not available");
+    const gap = inside.container.querySelector("[data-gap]")!;
+    expect(gap.getAttribute("title")).toBe(`Not published (FE-071): Used ratio · ${FE_REQUEST_LABEL["FE-071"]} · SOME_CODE`);
+  });
+
+  it("GapLine is one line of the missing facts with every id and reason in its title, and nothing for an empty list", () => {
+    const { container } = render(
+      <GapLine items={[{ label: "Limit", id: "FE-071" }, { label: "Latency", reason: "CODE_X" }]} because="Source unavailable" />,
+    );
+    expect(container.textContent).toBe("Not available: Limit, Latency · Source unavailable");
+    const title = container.querySelector(".exec-blk-gaps")!.getAttribute("title")!;
+    expect(title).toContain("Limit: Not published (FE-071)");
+    expect(title).toContain("Latency: Not published · CODE_X");
+    cleanup();
+    expect(render(<GapLine items={[]} />).container.textContent).toBe("");
   });
 });
 

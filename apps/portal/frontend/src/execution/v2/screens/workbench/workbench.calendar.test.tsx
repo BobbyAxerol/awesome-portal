@@ -48,8 +48,8 @@ describe("VN market calendar", () => {
     const head = document.querySelector(".exec-wb-sub")!;
     expect(head.textContent).toContain("VN market calendar: ");
     expect(head.textContent).toContain("Closed");
-    expect(head.textContent).toContain("The source's statement as of 12 Oct 08:00Z");
-    expect(head.textContent).not.toContain("Not published (FE-070)");
+    expect(head.textContent).toContain("As of 12 Oct 08:00Z");
+    expect(head.querySelector('[data-gap="FE-070"]')).toBeNull();
     const panel = screen.getByRole("heading", { name: "VN market sessions" }).closest("section")!;
     expect(within(panel).getByText("Asia/Ho_Chi_Minh")).toBeTruthy();
     const items = Array.from(panel.querySelectorAll(".exec-wb-list li")).map((li) => li.textContent);
@@ -66,20 +66,24 @@ describe("VN market calendar", () => {
     expect(text()).not.toMatch(/Aging|Paused/);
   });
 
-  it("the producer's dark calendar: every member Not published (FE-070) with N28_VENUE_CALENDAR_NOT_ACTIVE in the title", async () => {
+  it("the producer's dark calendar: `Not available` in the header and ONE line in the panel, with (FE-070) and N28_VENUE_CALENDAR_NOT_ACTIVE in the titles", async () => {
     await mount(vnm(dark()));
     const head = document.querySelector(".exec-wb-sub")!;
-    const gap = Array.from(head.querySelectorAll(".exec-blk-np")).find((n) => (n.textContent ?? "").includes("(FE-070)"))!;
-    expect(gap.textContent).toContain("Not published (FE-070)");
+    const gap = head.querySelector('[data-gap="FE-070"]')!;
+    expect(gap.textContent).toBe("Not available");
+    expect(gap.getAttribute("title")).toContain("Not published (FE-070)");
     expect(gap.getAttribute("title")).toContain("N28_VENUE_CALENDAR_NOT_ACTIVE");
     const panel = screen.getByRole("heading", { name: "VN market sessions" }).closest("section")!;
-    expect(panel.querySelectorAll(".exec-blk-np")).toHaveLength(5);
-    expect(panel.textContent).not.toMatch(/Open now\s*(Open|Closed)/);
+    const line = panel.querySelector(".exec-blk-gaps")!;
+    expect(line.textContent).toBe("Not available: Open now, Time zone, Windows, Breaks, Holidays");
+    expect(line.getAttribute("title")).toContain("N28_VENUE_CALENDAR_NOT_ACTIVE");
+    expect(panel.querySelector("table")).toBeNull();
   });
 
-  it("a profile without the calendar says Not published (FE-070) without a reason and draws no sessions panel", async () => {
+  it("a profile without the calendar says Not available (FE-070 in the title) without a reason and draws no sessions panel", async () => {
     await mount(vnm(undefined));
-    expect(document.querySelector(".exec-wb-sub")!.textContent).toContain("VN market calendar: Not published (FE-070)");
+    expect(document.querySelector(".exec-wb-sub")!.textContent).toContain("VN market calendar: Not available");
+    expect(document.querySelector('.exec-wb-sub [data-gap="FE-070"]')!.getAttribute("title")).toBe("Not published (FE-070): VN market session calendar");
     expect(screen.queryByRole("heading", { name: "VN market sessions" })).toBeNull();
   });
 
@@ -93,7 +97,7 @@ describe("VN market calendar", () => {
     const c = calendar();
     mutate(c);
     await mount(vnm(c));
-    expect(document.querySelector(".exec-wb-sub")!.textContent).toContain("VN market calendar: Not published (FE-070)");
+    expect(document.querySelector(".exec-wb-sub")!.textContent).toContain("VN market calendar: Not available");
     expect(screen.queryByRole("heading", { name: "VN market sessions" })).toBeNull();
     expect(text()).not.toContain("ATO");
   });

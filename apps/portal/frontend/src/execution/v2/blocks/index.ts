@@ -20,13 +20,16 @@ export {
   FE_OPERATIONS,
   FE_REQUEST_LABEL,
   NOT_PUBLISHED,
+  CompactGaps,
+  GapLine,
   NotPublished,
   feLabel,
+  gapTitle,
   notPublishedFact,
   notPublishedReason,
   notPublishedText,
 } from "./notPublished";
-export type { FeId, NotPublishedId, NotPublishedProps, UnpublishedFact } from "./notPublished";
+export type { FeId, GapItem, NotPublishedId, NotPublishedProps, UnpublishedFact } from "./notPublished";
 export { EventFeed } from "./EventFeed";
 export type { EventFeedCursor, EventFeedProps, EventFeedRow } from "./EventFeed";
 export { JourneySpine, SPINE_STAGES, SPINE_STAGE_IDS, spineNodeState } from "./JourneySpine";

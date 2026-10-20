@@ -103,20 +103,29 @@ describe("StageHeader · the three chips", () => {
   const chipsOf = (container: HTMLElement) => [...container.querySelectorAll(".exec-stage-chip")] as HTMLElement[];
 
   it("prints Runtime, Display freshness and Reconciliation, in that order, as a term list", () => {
-    const { container } = render(header());
+    const chips: StageChips = {
+      runtime: { state: "flag", kind: "ok", label: "Running" },
+      freshness: { state: "dot", tone: "ok", text: "Fresh" },
+      reconciliation: { state: "flag", kind: "ok", label: "No open findings" },
+    };
+    const { container } = render(header({ chips }));
     expect(chipsOf(container).map((c) => c.querySelector("dt")?.textContent)).toEqual(["Runtime", "Display freshness", "Reconciliation"]);
     expect(Object.values(STAGE_CHIP_LABELS)).toEqual(["Runtime", "Display freshness", "Reconciliation"]);
     expect(screen.getByRole("group", { name: "Deployment state" })).toBeTruthy();
   });
 
-  it("a chip the backend has not published says Not published and carries its FE id (no green Running)", () => {
+  it("chips the backend has not published are ONE `Not available` chip; the FE ids, reason and source flag are in its title (no green Running)", () => {
     const { container } = render(header());
-    const [runtime, freshness, recon] = chipsOf(container);
-    expect(runtime.textContent).toContain("Not published");
-    expect(runtime.textContent).toContain("(FE-067)");
-    expect(runtime.textContent).toContain("Source flag: active");
-    expect(freshness.textContent).toContain("(FE-027)");
-    expect(recon.textContent).toContain("(FE-067)");
+    const [gaps] = chipsOf(container);
+    expect(chipsOf(container)).toHaveLength(1);
+    expect(gaps.getAttribute("data-chip")).toBe("gaps");
+    expect(gaps.textContent).toBe("Not availableRuntime, Display freshness, Reconciliation");
+    expect(gaps.textContent).not.toContain("(FE-");
+    const title = gaps.getAttribute("title") ?? "";
+    expect(title).toContain("Runtime: Not published (FE-067)");
+    expect(title).toContain("Source flag: active");
+    expect(title).toContain("Display freshness: Not published (FE-027)");
+    expect(title).toContain("Reconciliation: Not published (FE-067)");
     expect(container.querySelector(".exec-flag")).toBeNull();
     expect(container.textContent).not.toMatch(/Running|Reconciling/);
     for (const id of ["FE-027", "FE-067"] as const) expect(FE_REQUEST_LABEL[id]).toBeTruthy();
@@ -141,7 +150,8 @@ describe("StageHeader · the three chips", () => {
     expect(chipsOf(na.container)[0].textContent).toContain("Not available · Runtime source not ready");
     cleanup();
     const bare = render(header({ chips: { ...NOT_PUBLISHED_CHIPS, runtime: { state: "not-available" } } }));
-    expect(chipsOf(bare.container)[0].querySelector("dd")?.textContent).toBe("Not available");
+    // No reason: it joins the one `Not available` chip with the unpublished ones.
+    expect(chipsOf(bare.container)[0].querySelector("dd")?.textContent).toBe("Runtime, Display freshness, Reconciliation");
   });
 
   it("a state this build does not know says Not available, never a value", () => {

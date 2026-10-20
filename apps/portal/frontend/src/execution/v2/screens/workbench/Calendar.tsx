@@ -9,7 +9,7 @@
  */
 import type { ReactNode } from "react";
 
-import { NotPublished, SectionPanel } from "../../blocks";
+import { GapLine, NotPublished, SectionPanel } from "../../blocks";
 import { Flag } from "../../Flag";
 import { cell, timeCell, type FactCell } from "../../readers/stageFactViews";
 import type { VenueCalendar, VenueWindow } from "../../../stageFacts";
@@ -38,7 +38,7 @@ function OpenNow({ calendar }: { calendar: VenueCalendar }) {
   return (
     <span>
       <Flag kind={open.value ? "ok" : "neutral"} label={open.value ? "Open" : "Closed"} size="sm" />
-      {at === null ? null : <span className="exec-wb-why">The source's statement as of {at}</span>}
+      {at === null ? null : <span className="exec-wb-why">As of {at}</span>}
     </span>
   );
 }
@@ -55,6 +55,16 @@ function Value<T>({ fact, children }: { fact: VenueCalendar[keyof VenueCalendar]
 
 /** The calendar's members, one row each. Rendered only when the profile carries a calendar. */
 export function VenueCalendarPanel({ calendar }: { calendar: VenueCalendar }) {
+  const members = [calendar.timezone, calendar.windows, calendar.breaks, calendar.holidays] as readonly { availability: string; reasonCode?: string }[];
+  const open = cell(calendar.isOpen, (v) => v);
+  // A calendar that publishes none of its members is one line, not five rows of the same words; the reason is its title.
+  if (members.every((m) => m.availability === "NOT_PUBLISHED") && (open === null || open.kind === "not-published")) {
+    return (
+      <SectionPanel level={2} title="VN market sessions" aside="Venue-local time">
+        <GapLine items={[{ label: "Open now, Time zone, Windows, Breaks, Holidays", id: "FE-070", reason: members[0]?.reasonCode ?? null }]} />
+      </SectionPanel>
+    );
+  }
   return (
     <SectionPanel level={2} title="VN market sessions" aside="Venue-local time">
       <table className="exec-wb-kv">

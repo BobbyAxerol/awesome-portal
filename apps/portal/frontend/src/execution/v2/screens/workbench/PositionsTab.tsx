@@ -7,6 +7,7 @@
  */
 import type { CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
+import { GapLine } from "../../blocks";
 import type { PositionsBySide, PositionsBySideRow } from "../../../stageFacts";
 import { Fig, Na } from "./cells";
 import { PAGE_CAP, figure, humanize, type PositionRow, type PositionSide, type PositionsModel } from "./model";
@@ -17,6 +18,7 @@ const SIDE: Readonly<Record<PositionSide, string | null>> = { long: "Long", shor
 
 /** A flat position holds nothing, so it has no entry price. */
 const NO_ENTRY = "Flat: no entry price";
+
 
 const SIDE_COLUMNS: readonly CardsColumn<PositionsBySideRow>[] = [
   { key: "instrument", label: "Instrument", render: (r) => <span className="exec-blk-id">{r.instrumentId}</span> },
@@ -40,23 +42,26 @@ function excludedLine(sides: PositionsBySide): string | null {
 /** Long, Short and Gross by instrument, exactly as the server published them. */
 function SidesBlock({ sides }: { sides: PositionsBySide }) {
   const excluded = excludedLine(sides);
+  if (sides.state === "UNAVAILABLE") {
+    return (
+      <section className="exec-wb-sides" aria-label="Long, Short and Gross by instrument" data-state={sides.state}>
+        <GapLine items={[{ label: "Long, Short, Gross by instrument", id: "FE-051", reason: sides.reasonCode }]} />
+      </section>
+    );
+  }
   return (
     <section className="exec-wb-sides" aria-label="Long, Short and Gross by instrument" data-state={sides.state}>
       <h3 className="exec-wb-cap">
-        Long, Short and Gross by instrument{" "}
-        {sides.state === "PARTIAL" ? <Flag kind="partial" label="Partial" size="sm" /> : null}
-        {sides.state === "UNAVAILABLE" ? <Flag kind="na" label="Not published" size="sm" /> : null}
+        By instrument {sides.state === "PARTIAL" ? <Flag kind="partial" label="Partial" size="sm" /> : null}
       </h3>
-      {sides.state === "UNAVAILABLE" ? (
-        <p className="exec-wb-cap" title={sides.reasonCode ?? undefined}>Long, Short and Gross columns: Not published (FE-051)</p>
-      ) : sides.rows.length === 0 ? (
+      {sides.rows.length === 0 ? (
         <p className="exec-wb-empty">No open position to split by side.</p>
       ) : (
         <SideTable columns={SIDE_COLUMNS} rows={sides.rows.slice(0, PAGE_CAP)} rowKey={(r) => r.instrumentId} label="Long, Short and Gross by instrument" />
       )}
-      {sides.state === "PARTIAL" && sides.reasonCode !== null ? <p className="exec-wb-cap"><Na why={humanize(sides.reasonCode)} /></p> : null}
+      {sides.state === "PARTIAL" && sides.reasonCode !== null ? <p className="exec-wb-cap"><Na why={humanize(sides.reasonCode)} visible /></p> : null}
       {excluded === null ? null : <p className="exec-wb-cap">{excluded}</p>}
-      <p className="exec-wb-cap" title={sides.notionalReasonCode}>Notional by side: Not published (FE-051). Quantities are shown per instrument; there is no total across instruments.</p>
+      <GapLine items={[{ label: "Notional by side", id: "FE-051", reason: `${sides.notionalReasonCode}. There is no total across instruments.` }]} />
     </section>
   );
 }
@@ -73,7 +78,7 @@ export function PositionsTab({ positions, sides = null }: { positions: Positions
   return (
     <>
       <TablePanel label="Positions" noun="positions" table={positions.table} columns={columns} />
-      {sides === null ? <p className="exec-wb-cap">Long, Short and Gross columns: Not published (FE-051)</p> : <SidesBlock sides={sides} />}
+      {sides === null ? <GapLine items={[{ label: "Long, Short, Gross by instrument", id: "FE-051" }]} /> : <SidesBlock sides={sides} />}
     </>
   );
 }

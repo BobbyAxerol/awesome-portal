@@ -212,10 +212,10 @@ export function pageState(envelope: ProfileEnvelope, deployment: DeploymentFacts
   }
   if (state === "empty" || deployment === null) return replace("empty", "No deployment is present in the profile the Portal returned.");
   const partial = state === "partial" || (envelope.completeness !== null && envelope.completeness !== "COMPLETE")
-    ? "The profile is partial: some branches or rows may be missing."
+    ? "Some branches or rows may be missing."
     : null;
   const stale = state === "stale" || envelope.freshness === "STALE"
-    ? "The source has not updated this deployment within its freshness budget."
+    ? "No update within the freshness budget."
     : null;
   return { replace: null, partial, stale, nq: null };
 }
@@ -316,7 +316,7 @@ export const GATE_FLAG: Readonly<Record<GateVerdict, { kind: FlagKind; label: st
 /** The one-line reason the "Request exit review" action is not offered. */
 export function exitReviewReason(gate: GateFacts): string {
   if (gate.verdict === "none" || gate.verdict === "met" || gate.verdict === "available") {
-    return "Not published (FE-028). Exit review requests are not offered from this screen yet.";
+    return "Not offered from this screen yet.";
   }
   return `Blocked: the observation gate is ${GATE_FLAG[gate.verdict].label.toLowerCase()}.`;
 }
@@ -427,10 +427,10 @@ export function readEquity(envelope: ProfileEnvelope, page: PageState): EquityMo
       kind: "unavailable",
       copy: "Not available",
       reason: page.nq !== null
-        ? "The source is not qualified, so no equity series is available."
+        ? "Source not qualified."
         : rows.length === 0
-        ? "No equity snapshot is published for this deployment."
-        : `Only ${drawable} drawable equity ${drawable === 1 ? "snapshot is" : "snapshots are"} published; a line needs at least 2.`,
+        ? "No equity snapshot published."
+        : `${drawable} drawable equity ${drawable === 1 ? "snapshot" : "snapshots"}; a line needs 2.`,
     };
   } else if (notes.length > 0) {
     state = { kind: "partial", reason: [...notes, ...(page.stale !== null ? ["The read is also stale."] : [])].join(" ") };

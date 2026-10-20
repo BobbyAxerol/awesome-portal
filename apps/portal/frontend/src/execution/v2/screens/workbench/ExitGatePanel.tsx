@@ -12,7 +12,7 @@ import { Link } from "react-router-dom";
 
 import { formatExact } from "../../../formatExact";
 import { Flag } from "../../Flag";
-import { NotPublished, SectionPanel } from "../../blocks";
+import { GapLine, SectionPanel } from "../../blocks";
 import { Na } from "./cells";
 import { GATE_FLAG, type GateFacts } from "./model";
 
@@ -41,9 +41,8 @@ export function ExitGatePanel({ gate, exitReviewsHref }: ExitGatePanelProps) {
         <tbody>
           <tr>
             <th scope="row">Gate verdict</th>
-            <td>
+            <td title="Set by the server">
               <Flag kind={verdict.kind} label={verdict.label} size="sm" />
-              <span className="exec-wb-why">Set by the server</span>
             </td>
           </tr>
           <tr>
@@ -57,26 +56,20 @@ export function ExitGatePanel({ gate, exitReviewsHref }: ExitGatePanelProps) {
           {gate.windowBounded === null ? null : (
             <tr>
               <th scope="row">Observation window</th>
-              <td>
+              <td title={gate.reasonCode ?? undefined}>
                 {gate.windowBounded ? <Flag kind="partial" label="Bounded by the source" size="sm" /> : <span>Not bounded</span>}
-                {gate.reasonCode ? <span className="exec-wb-why">{gate.reasonCode}</span> : null}
               </td>
             </tr>
           )}
-          <tr>
-            <th scope="row">Drift vs approved band</th>
-            <td><NotPublished id="FE-029" /></td>
-          </tr>
-          <tr>
-            <th scope="row">Fills reconcile</th>
-            <td><NotPublished id="FE-028" /></td>
-          </tr>
-          <tr>
-            <th scope="row">Cost drift</th>
-            <td><NotPublished id="FE-028" /></td>
-          </tr>
         </tbody>
       </table>
+      <GapLine
+        items={[
+          { label: "Drift vs approved band", id: "FE-029" },
+          { label: "Fills reconcile", id: "FE-028" },
+          { label: "Cost drift", id: "FE-028" },
+        ]}
+      />
       {gate.policy ? <p className="exec-wb-cap">Policy {gate.policy}</p> : null}
       <p className="exec-wb-link">
         <Link className="exec-blk-link" to={exitReviewsHref}>Open exit review</Link>

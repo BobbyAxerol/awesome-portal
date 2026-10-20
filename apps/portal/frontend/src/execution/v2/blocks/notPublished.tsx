@@ -182,8 +182,52 @@ export interface NotPublishedProps {
   collapsible?: boolean;
 }
 
+/**
+ * The stage screens (Workbench, Sandbox, Canary, Live) print a gap as the plain words `Not available`: the request id, its
+ * label and the server's reason code ride on the element's `title`. Everything below a `CompactGaps` provider reads this;
+ * a screen outside one prints `Not published (FE-xxx)` exactly as before.
+ */
+const CompactGapsContext = createContext(false);
+
+export function CompactGaps({ children }: { children: ReactNode }) {
+  return <CompactGapsContext.Provider value={true}>{children}</CompactGapsContext.Provider>;
+}
+
+/** What the tooltip of a compact gap says: `Not published (FE-067): Alpha name · Runtime state ... · REASON_CODE`. */
+export function gapTitle(id: string, what?: string | null, reason?: string | null): string {
+  const label = Object.hasOwn(FE_REQUEST_LABEL, id) ? FE_REQUEST_LABEL[id as NotPublishedId] : null;
+  return `${NOT_PUBLISHED} (${id}): ${[what, label, reason].filter(Boolean).join(" · ")}`;
+}
+
+export interface GapItem {
+  /** The fact that is missing, in a word or two ("Limit"). */
+  label: string;
+  /** The request that will publish it; its id and label go in the tooltip. */
+  id?: string;
+  /** The server's reason, tooltip only. */
+  reason?: string | null;
+}
+
+/**
+ * One compact line for the facts of a panel that are not published: `Not available: Limit, Consumed, Used`. The per-fact
+ * request ids and reasons are in the tooltip, so nothing is dropped and nothing is repeated on screen.
+ */
+export function GapLine({ items, because }: { items: readonly GapItem[]; because?: string | null }) {
+  if (items.length === 0) return null;
+  const title = items
+    .map((item) => `${item.label}: ${item.id ? gapTitle(item.id, null, item.reason) : `${NOT_PUBLISHED}${item.reason ? ` · ${item.reason}` : ""}`}`)
+    .join("\n");
+  return (
+    <p className="exec-blk-gaps" title={title}>
+      <span className="exec-blk-gaps-lead">Not available:</span> {items.map((item) => item.label).join(", ")}
+      {because ? <span className="exec-blk-gaps-why"> · {because}</span> : null}
+    </p>
+  );
+}
+
 /** Inline: "Not published (FE-021)" plus what it means. */
 export function NotPublished({ id, reasonCode, titleReason, children, compact = false, collapsible = false }: NotPublishedProps) {
+  const compactGaps = useContext(CompactGapsContext);
   const ctx = useContext(ScopeContext);
   const scope = ctx === null ? null : ctx.scope;
   const owner = useId();
@@ -194,6 +238,13 @@ export function NotPublished({ id, reasonCode, titleReason, children, compact = 
     return () => scope.release(id, owner);
   }, [tracked, scope, id, owner]);
   const why = titleReason ? ` · ${titleReason}` : "";
+  if (compactGaps && !compact) {
+    return (
+      <span className="exec-blk-na" data-gap={id} title={gapTitle(id, typeof children === "string" ? children : null, [titleReason, reasonCode].filter(Boolean).join(" · ") || null)}>
+        Not available
+      </span>
+    );
+  }
   if (!first) {
     return (
       <span className="exec-blk-np" data-repeat="true" title={`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}`}>

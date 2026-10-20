@@ -37,7 +37,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
 import { Flag } from "../../Flag";
-import { PanelGate, StateBoundary, UrlTabs } from "../../blocks";
+import { CompactGaps, PanelGate, StateBoundary, UrlTabs } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { V2_CAPABILITY, holds } from "../../shell/roleNav";
 import { resolveTab } from "../../tabAliases";
@@ -132,9 +132,8 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
         {model.page.partial ? <div className="exec-blk-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /> {model.page.partial}</div> : null}
         {model.page.stale ? <div className="exec-blk-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /> {model.page.stale}</div> : null}
         {model.page.nq ? (
-          <div className="exec-blk-banner" role="status">
-            <span>Source not qualified. Figures below are not available.</span>
-            {model.page.nq.reasons.length > 0 ? <span className="exec-wb-codes">{model.page.nq.reasons.join(" · ")}</span> : null}
+          <div className="exec-blk-banner" role="status" title={model.page.nq.reasons.length > 0 ? model.page.nq.reasons.join(" · ") : undefined}>
+            <span>Source not qualified.</span>
           </div>
         ) : null}
         <LifecyclePanel gate={model.gate} accessHref={accessHref} />
@@ -160,6 +159,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
 
   const chips = showing && model !== null ? chipsOf(model.deployment, model.freshness, model.facts) : reads.profile.phase === "loading" ? LOADING_CHIPS : UNREAD_CHIPS;
   return (
+    <CompactGaps>
     <div className="exec-wb-v2" data-screen="workbench-v2" data-variant={variant}>
       <Header
         deploymentId={deploymentId}
@@ -181,5 +181,6 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
       {body}
       {showing && model !== null ? <StickySummary name={name} freshness={model.freshness} chips={chips} alphaHref={alphaHref} /> : null}
     </div>
+    </CompactGaps>
   );
 }

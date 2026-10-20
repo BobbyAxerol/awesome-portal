@@ -1,8 +1,9 @@
 /**
  * Cells for the Paper workbench: a published figure, a published instant, an
  * absence. Every digit comes from `formatExact` through the boundary reader.
- * A figure the source did not publish prints `Not available`; one it published
- * in a shape the reader refuses prints `Not available` with "Unreadable value";
+ * A figure the source did not publish prints `Not available` (the reason is its
+ * title); one it published in a shape the reader refuses prints `Not available`
+ * with "Unreadable" beside it, because that is a defect, not an absence;
  * neither is ever a zero or a dash.
  */
 import type { ReactNode } from "react";
@@ -13,11 +14,11 @@ import type { Figure } from "./model";
 
 export const NOT_AVAILABLE = "Not available";
 
-export function Na({ why }: { why?: string | null }) {
+export function Na({ why, visible = false }: { why?: string | null; visible?: boolean }) {
   return (
-    <span className="exec-blk-na">
+    <span className="exec-blk-na" title={why ? why : undefined}>
       {NOT_AVAILABLE}
-      {why ? <span className="exec-wb-why">{why}</span> : null}
+      {visible && why ? <span className="exec-wb-why">{why}</span> : null}
     </span>
   );
 }
@@ -27,14 +28,14 @@ export interface FigProps {
   currency?: string | null;
   /** Prefix `+` on a positive value and tone it by its published sign (a PnL, not a balance). */
   signed?: boolean;
-  /** Reason printed under `Not available` when the source published nothing. */
+  /** Reason carried in the title of `Not available` when the source published nothing. */
   why?: string;
 }
 
 /** A published figure, or the reason there is none. */
 export function Fig({ value, currency, signed = false, why }: FigProps): ReactNode {
   if (value.kind === "absent") return <Na why={why} />;
-  if (value.kind === "unreadable") return <Na why="Unreadable value" />;
+  if (value.kind === "unreadable") return <Na why="Unreadable value" visible />;
   const { decimal } = value;
   const tone = signed && decimal.tone !== "neutral" ? decimal.tone : undefined;
   return (
