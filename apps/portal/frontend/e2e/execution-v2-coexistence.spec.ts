@@ -756,7 +756,6 @@ async function axe(page: Page): Promise<AxeViolation[]> {
  * They are product findings (evidence/UXM-10/README.md), not accepted debt.
  */
 const KNOWN_AXE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  "alpha-360": { "link-in-text-block": 1 },
   sandbox: { "scrollable-region-focusable": 1 },
   "sandbox-plans": { "scrollable-region-focusable": 1 },
   "sandbox-steps": { "link-in-text-block": 3, "scrollable-region-focusable": 1 },
