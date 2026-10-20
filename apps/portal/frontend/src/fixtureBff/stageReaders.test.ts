@@ -233,3 +233,63 @@ describe("what did not change", () => {
     expect(run(true, "POST", "/governance/approvals", { summary: 7 })).toBe(run(false, "POST", "/governance/approvals", { summary: 7 }));
   });
 });
+
+describe("include (BE-P12): the opt-in members come from the canonical fixtures, only when asked", () => {
+  const V2 = `workspace_id=${STAGE_V2_WORKSPACE}`;
+  const answer = (route: string, deployment: string, query: string, screensV2 = true) =>
+    answerExecutionBff("GET", `/api/v1/execution/deployments/${deployment}/${route}`, new URLSearchParams(query), { operationsV2: true, screensV2 }, undefined);
+  const without = (body: unknown, ...keys: string[]) => {
+    const copy = { ...(body as Record<string, unknown>) };
+    for (const key of keys) delete copy[key];
+    return copy;
+  };
+
+  it("a V2 read that does not ask is the body it was: no identity, no stage_facts", () => {
+    for (const [route, id] of [["certification", "dep_sandbox_01"], ["canary", "dep_canary_01"], ["live", "dep_live_01"]] as const) {
+      const body = answer(route, id, V2)!.body as Record<string, unknown>;
+      expect(Object.keys(body), route).not.toContain("identity");
+      expect(Object.keys(body), route).not.toContain("stage_facts");
+    }
+  });
+
+  it("asking adds only the member(s) asked and changes nothing else", () => {
+    for (const [route, id, asked] of [["certification", "dep_sandbox_01", "identity"], ["canary", "dep_canary_01", "identity"], ["live", "dep_live_01", "identity,stage_facts"]] as const) {
+      const plain = answer(route, id, V2)!;
+      const rich = answer(route, id, `${V2}&include=${asked}`)!;
+      expect(rich.status).toBe(200);
+      expect(without(rich.body, "identity", "stage_facts"), route).toEqual(plain.body);
+      expect(Object.keys(rich.body as object).filter((k) => k === "identity" || k === "stage_facts"), route).toEqual(asked.split(","));
+    }
+    const identityOnly = answer("live", "dep_live_01", `${V2}&include=identity`)!.body as Record<string, unknown>;
+    expect(Object.keys(identityOnly)).toContain("identity");
+    expect(Object.keys(identityOnly)).not.toContain("stage_facts");
+  });
+
+  it("a repeated, empty, unknown or unpublished token is refused as the server refuses it, on the V2 body only", () => {
+    for (const bad of ["include=identity,identity", "include=", "include=nope", "include=identity,", "include=identity&include=stage_facts"]) {
+      expect(answer("live", "dep_live_01", `${V2}&${bad}`), bad).toMatchObject({ status: 400, body: { error: { code: "EXECUTION_READ_QUERY_INVALID" } } });
+    }
+    // stage_facts is a Live member: Sandbox and Canary do not publish it.
+    expect(answer("certification", "dep_sandbox_01", `${V2}&include=stage_facts`)).toMatchObject({ status: 400 });
+    expect(answer("canary", "dep_canary_01", `${V2}&include=identity,stage_facts`)).toMatchObject({ status: 400 });
+    // The legacy body ignores the parameter: V1 answers are byte-identical with or without it.
+    for (const [route, id] of [["certification", "dep_sandbox_01"], ["canary", "dep_canary_01"], ["live", "dep_live_01"], ["live", "dep_1"]] as const) {
+      expect(JSON.stringify(answer(route, id, "include=identity,stage_facts")), route).toBe(JSON.stringify(answer(route, id, "")));
+    }
+  });
+
+  it("through the product's own client and readers: the members read as typed values", async () => {
+    const sandbox = await value(api.getSandboxCertificationVersioned("dep_sandbox_01", { workspaceId: STAGE_V2_WORKSPACE, include: ["identity"] }));
+    expect(sandbox.kind === "v2" && sandbox.value.identity).toMatchObject({ alphaId: "alpha_TEST_ONLY_identity", portfolioName: "TEST_ONLY portfolio name" });
+    const canary = await value(api.getCanaryVersioned("dep_canary_01", { workspaceId: STAGE_V2_WORKSPACE, include: ["identity"] }));
+    expect(canary.kind === "v2" && canary.value.identity).toMatchObject({ alphaId: "alpha_TEST_ONLY_identity" });
+    const live = await value(api.getLiveFullVersioned("dep_live_01", { workspaceId: STAGE_V2_WORKSPACE, include: ["identity", "stage_facts"] }));
+    if (live.kind !== "v2") throw new Error("not V2");
+    expect(live.value.identity).toMatchObject({ alphaId: "alpha_TEST_ONLY_identity" });
+    expect(live.value.stageFacts!.reconciliation.verdict).toEqual({ availability: "AVAILABLE", value: "OPEN_FINDINGS" });
+    expect(live.value.stageFacts!.reconciliation.openFindingCount.availability).toBe("NOT_PUBLISHED");
+    // Not asked: the same read has neither.
+    const plain = await value(api.getLiveFullVersioned("dep_live_01", { workspaceId: STAGE_V2_WORKSPACE }));
+    expect(plain.kind === "v2" && [plain.value.identity, plain.value.stageFacts]).toEqual([null, null]);
+  });
+});

@@ -21,7 +21,10 @@
  *                              Live cannot be wire-valid, so it exists only in the screens' unit suites.
  *       ws_TEST_SCOPED_V2      the V2 body (`portal.execution.following-parent.v2` for Sandbox and Canary,
  *                              `portal.execution.live-source-operations.v2` for Live, which pages its
- *                              orders and fills in three keyset pages through `?panel=&cursor=`);
+ *                              orders and fills in three keyset pages through `?panel=&cursor=`). With `?include=` (BE-P12)
+ *                              the V2 body also carries the opt-in members, from the canonical fixtures: `identity`
+ *                              (all three), `stage_facts` (Live). Without it the body is the one it always was;
+ *                              the V1 bodies ignore the parameter;
  *       ws_TEST_DENIED         403 ACCESS_DENIED;
  *       ws_TEST_NOTE_OFF       the capabilities read answers SANDBOX_NOTE UNAVAILABLE;
  *   - what a write answers, by the TEXT of the summary (writes only read the body when it carries one):
@@ -280,13 +283,43 @@ function parentV2(key: "sandbox" | "canary", deploymentId: string): Row {
 /** Which V1/V2/denied answer a stage read gets: the workspace of the read decides. */
 type StageRoute = "certification" | "canary" | "live";
 
+/**
+ * `?include=` (BE-P12), SCOPED_V2 only: the opt-in members a stage body carries. The members come from the canonical fixtures
+ * (`sandbox_identity`, `canary_identity` of the positive-parent file; `with_members` of the live-source file); a read that
+ * does not ask gets the body it always got, byte for byte. Sandbox and Canary publish `identity`; Live publishes `identity`
+ * and `stage_facts`. A repeated parameter, an empty or repeated token, or one the route does not publish is a 400, as on the
+ * server; the legacy (V1) body ignores the parameter, so it is not read there at all.
+ */
+const INCLUDE_TOKENS: Record<StageRoute, readonly string[]> = { certification: ["identity"], canary: ["identity"], live: ["identity", "stage_facts"] };
+
+function includeAsked(route: StageRoute, search: URLSearchParams): ReadonlySet<string> | null {
+  const values = search.getAll("include");
+  if (values.length === 0) return new Set();
+  if (values.length > 1) return null;
+  const tokens = values[0]!.split(",");
+  const allowed = INCLUDE_TOKENS[route];
+  if (new Set(tokens).size !== tokens.length || tokens.some((token) => !allowed.includes(token))) return null;
+  return new Set(tokens);
+}
+
+const includeRefused = (): Answer => problem(400, "EXECUTION_READ_QUERY_INVALID", "include is a comma list of distinct tokens this read publishes.");
+
+/** The parent body with the identity the fixture publishes, when asked. */
+function withParentMembers(body: Row, key: "sandbox" | "canary", asked: ReadonlySet<string>): Row {
+  if (!asked.has("identity")) return body;
+  const published = (fresh<Row>("execution-positive-parent.synthetic.valid.json")[`${key}_identity`] ?? {}) as Row;
+  return { ...body, identity: published.identity };
+}
+
 function stageAnswer(route: StageRoute, deploymentId: string, search: URLSearchParams): Answer {
   const workspace = search.get("workspace_id");
   if (workspace === STAGE_DENIED_WORKSPACE) return problem(403, "ACCESS_DENIED", "Your session may not read this deployment's stage screen.");
   if (workspace === STAGE_V2_WORKSPACE) {
-    if (route === "certification") return ok(parentV2("sandbox", deploymentId));
-    if (route === "canary") return ok(parentV2("canary", deploymentId));
-    return liveV2(deploymentId, search);
+    const asked = includeAsked(route, search);
+    if (asked === null) return includeRefused();
+    if (route === "certification") return ok(withParentMembers(parentV2("sandbox", deploymentId), "sandbox", asked));
+    if (route === "canary") return ok(withParentMembers(parentV2("canary", deploymentId), "canary", asked));
+    return liveV2(deploymentId, search, asked);
   }
   if (route === "certification") return ok(sandboxV1(deploymentId));
   if (route === "canary") {
@@ -344,7 +377,7 @@ function livePage(base: Row, panel: (typeof LIVE_PAGED)[number], page: number): 
   return { ...base, state: "PARTIAL", reason_code: "AUTHORIZED_RETAINED_OBSERVATIONS_ONLY", records, returned_count: records.length, has_more: next !== null, next_cursor: next };
 }
 
-function liveV2(deploymentId: string, search: URLSearchParams): Answer {
+function liveV2(deploymentId: string, search: URLSearchParams, asked: ReadonlySet<string> = new Set()): Answer {
   const panel = search.get("panel");
   const cursor = search.get("cursor");
   let requested: { panel: (typeof LIVE_PAGED)[number]; page: number } | null = null;
@@ -364,7 +397,12 @@ function liveV2(deploymentId: string, search: URLSearchParams): Answer {
   for (const name of LIVE_PAGED) {
     data[name] = livePage((data[name] as Row) ?? {}, name, requested !== null && requested.panel === name ? requested.page : 0);
   }
-  return ok({ ...body, deployment_id: deploymentId, data });
+  const members = (fresh<Row>("execution-live-source.synthetic.valid.json").with_members ?? {}) as Row;
+  return ok({
+    ...body, deployment_id: deploymentId, data,
+    ...(asked.has("identity") ? { identity: members.identity } : {}),
+    ...(asked.has("stage_facts") ? { stage_facts: members.stage_facts } : {}),
+  });
 }
 
 /* ── Review capture capabilities (the workspace picks the answer) ─────────── */
