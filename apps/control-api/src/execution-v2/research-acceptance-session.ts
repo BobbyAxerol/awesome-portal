@@ -12,7 +12,7 @@
 import { z } from "zod";
 import { constants } from "node:fs";
 import { lstat, open, unlink } from "node:fs/promises";
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { dirname, normalize } from "node:path";
 import type { Pool, PoolClient } from "pg";
 import type { AuthService } from "../auth/auth.service";
@@ -97,26 +97,74 @@ export async function readPinnedAcceptanceRevoke(pin: AcceptanceArtifactPin, now
   return token;
 }
 
+/** The exact session a token file belongs to. Cleanup of a token file is allowed ONLY when the
+ * file on disk carries this session id AND a token whose SHA-256 is the stored session hash. */
+export interface AcceptanceTokenBinding { session_id: string; user_id: string; token_sha256: string }
+/** True only when `raw` is the token file of EXACTLY this session: the six-field document, same session
+ * id and user, and a token that hashes to the stored session hash. Pure; the token is never returned or logged. */
+export function acceptanceTokenFileMatches(raw: Uint8Array, binding: AcceptanceTokenBinding): boolean {
+  try {
+    const value = JSON.parse(Buffer.from(raw).toString("utf8")) as Record<string, unknown> | null;
+    if (value === null || typeof value !== "object" || value.schema_version !== ACCEPTANCE_TOKEN_SCHEMA ||
+      value.session_id !== binding.session_id || value.user_id !== binding.user_id || typeof value.token !== "string" ||
+      !/^[0-9a-f]{64}$/.test(binding.token_sha256)) return false;
+    const actual = createHash("sha256").update(value.token, "utf8").digest(), expected = Buffer.from(binding.token_sha256, "hex");
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  } catch { return false; }
+}
 /** The only sink for the secret. Injectable for fakes; the default is a root-owned 0600 file. */
 export interface AcceptanceTokenFile {
-  /** Writes the bytes once, fsyncs, closes. */
+  /** Writes ALL the bytes (bounded attempts, a zero-progress write fails), fsyncs, verifies length and content, closes.
+   * Throws ACCEPTANCE_TOKEN_FILE_REFUSED on any failure. */
   write(bytes: Buffer): Promise<void>;
   /** Removes the exclusively-created (empty or partial) file. */
   abandon(): Promise<void>;
 }
+export type AcceptanceTokenRemoval = "REMOVED" | "ABSENT" | "RETAINED_NOT_BOUND_TO_SESSION";
 export interface AcceptanceTokenFiles {
   /** Exclusive create (never overwrites). Refuses a non-root parent, a writable parent, a symlink, or a non-root-owned file. */
   create(path: string): Promise<AcceptanceTokenFile>;
-  /** Best-effort wipe + unlink of a root-owned regular file; "ABSENT" when nothing is there. */
-  remove(path: string): Promise<"REMOVED" | "ABSENT">;
+  /** Wipe + unlink the file at `path` ONLY if it is the token file of exactly `binding`'s session. "ABSENT" when nothing
+   * is there; "RETAINED_NOT_BOUND_TO_SESSION" (file untouched) when the file is anything else (another session's token,
+   * replaced, unreadable as a token file, too large). Throws ACCEPTANCE_TOKEN_FILE_REFUSED for a non-root / non-regular file. */
+  remove(path: string, binding: AcceptanceTokenBinding): Promise<AcceptanceTokenRemoval>;
 }
 const fileRefused = (): never => { throw new AcceptanceSessionError("ACCEPTANCE_TOKEN_FILE_REFUSED", 503); };
+/** A token file is one small JSON document; anything bigger is not ours. */
+export const ACCEPTANCE_TOKEN_FILE_MAX_BYTES = 4096;
+export const ACCEPTANCE_TOKEN_WRITE_MAX_ATTEMPTS = 16;
+type Handle = Awaited<ReturnType<typeof open>>;
+const missing = (error: unknown): boolean => { const code = (error as { code?: unknown } | null)?.code; return code === "ENOENT" || code === "ENOTDIR"; };
+const parentAcceptable = (parent: { isDirectory(): boolean; isSymbolicLink(): boolean; uid: number; mode: number }): boolean =>
+  parent.isDirectory() && !parent.isSymbolicLink() && parent.uid === 0 && (parent.mode & 0o022) === 0;
+/** Writes the WHOLE buffer at `position`, honouring FileHandle.write().bytesWritten. Bounded attempts; a write that
+ * makes no progress (or reports nonsense) throws. */
+async function writeFully(handle: Handle, bytes: Buffer, position: number): Promise<void> {
+  let written = 0;
+  for (let attempt = 0; written < bytes.length; attempt++) {
+    if (attempt >= ACCEPTANCE_TOKEN_WRITE_MAX_ATTEMPTS) throw new Error("write attempts exhausted");
+    const { bytesWritten } = await handle.write(bytes, written, bytes.length - written, position + written);
+    if (!Number.isSafeInteger(bytesWritten) || bytesWritten <= 0 || bytesWritten > bytes.length - written) throw new Error("no write progress");
+    written += bytesWritten;
+  }
+}
+async function readFully(handle: Handle, length: number): Promise<Buffer> {
+  const out = Buffer.alloc(length);
+  let read = 0;
+  for (let attempt = 0; read < length; attempt++) {
+    if (attempt >= ACCEPTANCE_TOKEN_WRITE_MAX_ATTEMPTS) throw new Error("read attempts exhausted");
+    const { bytesRead } = await handle.read(out, read, length - read, read);
+    if (!Number.isSafeInteger(bytesRead) || bytesRead <= 0 || bytesRead > length - read) throw new Error("no read progress");
+    read += bytesRead;
+  }
+  return out;
+}
 export const nodeAcceptanceTokenFiles: AcceptanceTokenFiles = {
   async create(path) {
-    let handle: Awaited<ReturnType<typeof open>> | undefined, created = false;
+    let handle: Handle | undefined, created = false;
     try {
       const parent = await lstat(dirname(path));
-      if (!parent.isDirectory() || parent.isSymbolicLink() || parent.uid !== 0 || (parent.mode & 0o022) !== 0) return fileRefused();
+      if (!parentAcceptable(parent)) return fileRefused();
       handle = await open(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
       created = true;
       await handle.chmod(0o600);
@@ -136,16 +184,30 @@ export const nodeAcceptanceTokenFiles: AcceptanceTokenFiles = {
       abandon: async () => { await close(); await unlink(path).catch(() => undefined); },
     };
   },
-  async remove(path) {
+  async remove(path, binding) {
     let before;
-    try { before = await lstat(path); } catch { return "ABSENT"; }
+    try { before = await lstat(path); } catch (error) { if (missing(error)) return "ABSENT"; return fileRefused(); }
     if (!before.isFile() || before.isSymbolicLink() || before.uid !== 0) return fileRefused();
-    const handle = await open(path, constants.O_WRONLY | constants.O_NOFOLLOW);
+    let handle: Handle;
+    try { handle = await open(path, constants.O_RDWR | constants.O_NOFOLLOW); } catch { return fileRefused(); }
     try {
       const stat = await handle.stat();
       if (!stat.isFile() || stat.uid !== 0 || stat.ino !== before.ino || stat.dev !== before.dev) return fileRefused();
-      if (stat.size > 0) { await handle.write(Buffer.alloc(stat.size), 0, stat.size, 0); await handle.sync(); }
-    } finally { await handle.close(); }
+      // Not ours until proven: wrong size, unreadable, another session, another token all RETAIN the file untouched.
+      if (stat.size < 1 || stat.size > ACCEPTANCE_TOKEN_FILE_MAX_BYTES) return "RETAINED_NOT_BOUND_TO_SESSION";
+      let raw: Buffer;
+      try { raw = await readFully(handle, stat.size); } catch { return "RETAINED_NOT_BOUND_TO_SESSION"; }
+      const bound = acceptanceTokenFileMatches(raw, binding);
+      raw.fill(0);
+      if (!bound) return "RETAINED_NOT_BOUND_TO_SESSION";
+      // Wipe through the verified descriptor (the inode we read), never through the path.
+      await writeFully(handle, Buffer.alloc(stat.size), 0);
+      await handle.sync();
+      // Unlink only if the path still names the inode we verified and wiped.
+      let now;
+      try { now = await lstat(path); } catch (error) { if (missing(error)) return "REMOVED"; return fileRefused(); }
+      if (now.ino !== stat.ino || now.dev !== stat.dev || !now.isFile() || now.isSymbolicLink()) return "RETAINED_NOT_BOUND_TO_SESSION";
+    } finally { await handle.close().catch(() => undefined); }
     await unlink(path);
     return "REMOVED";
   },
@@ -164,7 +226,7 @@ export interface AcceptanceIssueReceipt {
 export interface AcceptanceRevokeReceipt {
   schema_version: typeof ACCEPTANCE_REVOKE_RECEIPT_SCHEMA; session_id: string; user_id: string;
   outcome: "REVOKED" | "ALREADY_REVOKED_BY_THIS_OPERATION" | "ALREADY_TERMINAL";
-  session_state_before: "ACTIVE" | "REVOKED" | "EXPIRED"; token_file: "REMOVED" | "ABSENT" | "REMOVE_FAILED";
+  session_state_before: "ACTIVE" | "REVOKED" | "EXPIRED"; token_file: "REMOVED" | "ABSENT" | "REMOVE_FAILED" | "RETAINED_NOT_BOUND_TO_SESSION";
   other_sessions_touched: 0;
 }
 
@@ -236,20 +298,20 @@ export async function issueAcceptanceSession(deps: AcceptanceDependencies, verif
  * session (including the owner's normal ones) is refused untouched. Idempotent. */
 async function revokeSession(deps: Pick<AcceptanceDependencies, "pool" | "mutations">,
   input: { session_id: string; user_id: string; target: OwnerTarget; requestDigest: string }):
-  Promise<Pick<AcceptanceRevokeReceipt, "outcome" | "session_state_before">> {
+  Promise<Pick<AcceptanceRevokeReceipt, "outcome" | "session_state_before"> & { session_token_sha256: string }> {
   const lock = async (db: PoolClient) => {
     await db.query("SET LOCAL lock_timeout='1500ms'");
     await db.query("SET LOCAL statement_timeout='5000ms'");
     await assertOwnerTarget(db, input.target, input.user_id);
-    const row = (await db.query("SELECT session_id,user_id,state,access_subject,revoke_reason FROM auth_sessions WHERE session_id=$1 FOR UPDATE",
-      [input.session_id])).rows[0] as { user_id: string; state: "ACTIVE" | "REVOKED" | "EXPIRED"; access_subject: string | null; revoke_reason: string | null } | undefined;
+    const row = (await db.query("SELECT session_id,user_id,state,access_subject,revoke_reason,session_token_hash FROM auth_sessions WHERE session_id=$1 FOR UPDATE",
+      [input.session_id])).rows[0] as { user_id: string; state: "ACTIVE" | "REVOKED" | "EXPIRED"; access_subject: string | null; revoke_reason: string | null; session_token_hash: string } | undefined;
     if (!row) throw new AcceptanceSessionError("ACCEPTANCE_SESSION_NOT_FOUND", 404);
     if (row.user_id !== input.user_id || row.access_subject !== RESEARCH_ACCEPTANCE_ACCESS_SUBJECT)
       throw new AcceptanceSessionError("ACCEPTANCE_SESSION_NOT_ACCEPTANCE", 409);
     return row;
   };
-  const summarize = (row: { state: "ACTIVE" | "REVOKED" | "EXPIRED"; revoke_reason: string | null }, applied: boolean) => ({
-    session_state_before: row.state,
+  const summarize = (row: { state: "ACTIVE" | "REVOKED" | "EXPIRED"; revoke_reason: string | null; session_token_hash: string }, applied: boolean) => ({
+    session_state_before: row.state, session_token_sha256: row.session_token_hash,
     outcome: applied ? "REVOKED" as const : row.state === "REVOKED" && row.revoke_reason === ACCEPTANCE_REVOKE_REASON
       ? "ALREADY_REVOKED_BY_THIS_OPERATION" as const : "ALREADY_TERMINAL" as const });
   try {
@@ -261,7 +323,7 @@ async function revokeSession(deps: Pick<AcceptanceDependencies, "pool" | "mutati
       apply: async db => {
         const row = await lock(db);
         if (row.state !== "ACTIVE") return summarize(row, false);
-        const before = { state: row.state, revoke_reason: row.revoke_reason };
+        const before = { state: row.state, revoke_reason: row.revoke_reason, session_token_hash: row.session_token_hash };
         await new SessionsRepository(db).revokeSession(input.session_id, ACCEPTANCE_REVOKE_REASON);
         await new AuditRepository(db).record({ eventType: "research_acceptance_session_revoked", actorUserId: input.user_id,
           targetUserId: input.user_id, accessSubject: RESEARCH_ACCEPTANCE_ACCESS_SUBJECT, result: "SUCCESS",
@@ -281,11 +343,15 @@ export async function revokeAcceptanceSession(deps: AcceptanceDependencies, veri
   const doc = entry.document;
   const result = await revokeSession(deps, { session_id: doc.session_id, user_id: doc.user_id, target: doc.target,
     requestDigest: accessDigest({ schema: ACCEPTANCE_REVOKE_SCHEMA, document: doc }) });
-  // Only after the session is provably terminal does the (now dead) secret file go away.
+  // Only after the session is provably terminal does its (now dead) secret file go away, and ONLY if the file at the path
+  // is the token file of EXACTLY this session (id + token hash). A replayed revoke of an old session can therefore never
+  // remove the live token of a newer session that reused the path: that file is retained and the receipt says so.
+  const { session_token_sha256, ...receiptFields } = result;
   let token_file: AcceptanceRevokeReceipt["token_file"];
-  try { token_file = await deps.files.remove(doc.token_path); } catch { token_file = "REMOVE_FAILED"; }
+  try { token_file = await deps.files.remove(doc.token_path, { session_id: doc.session_id, user_id: doc.user_id, token_sha256: session_token_sha256 }); }
+  catch { token_file = "REMOVE_FAILED"; }
   return { schema_version: ACCEPTANCE_REVOKE_RECEIPT_SCHEMA, session_id: doc.session_id, user_id: doc.user_id,
-    ...result, token_file, other_sessions_touched: 0 };
+    ...receiptFields, token_file, other_sessions_touched: 0 };
 }
 
 /** Offline seam used by the CLI. */
