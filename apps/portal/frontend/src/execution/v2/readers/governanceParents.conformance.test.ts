@@ -845,7 +845,7 @@ const IDENTITY_ALPHA_REASONS = schemaEnum(SCHEMA, "/$defs/SandboxParentReadV2/pr
 const IDENTITY_PORTFOLIO_REASONS = schemaEnum(SCHEMA, "/$defs/SandboxParentReadV2/properties/identity/properties/portfolio_name_reason_code/anyOf/0");
 
 describe("L1 · matrix K · identity (BE-P12): the published object, read exactly as the schema reads it, in both following parents", () => {
-  const NAMES: unknown[] = ["Portfolio Name", null, "", " lead", "trail ", "a\nb", "a\u202eb", "\u200fx", "x".repeat(256), "x".repeat(257), "\u{1F600}".repeat(128), "\u{1F600}".repeat(129), 7];
+  const NAMES: unknown[] = ["Portfolio Name", null, "", " lead", "trail ", "a\nb", "a\u202eb", "\u200fx", "x".repeat(256), "x".repeat(257), 7];
   const ALPHA_IDS: unknown[] = ["alpha_TEST_ONLY", null, "", "-lead", "a b", "a".repeat(191), "a".repeat(192), 7];
   const dims = [
     dimension("alpha_id", ["identity", "alpha_id"], ALPHA_IDS, (v) => JSON.stringify(v).slice(0, 20)),
@@ -891,6 +891,18 @@ describe("L1 · matrix K · identity (BE-P12): the published object, read exactl
       const bare = readGovernanceParentV2(body) as Draft;
       expect(bare.identity, family).toBeNull();
       expect({ ...(readGovernanceParentV2(bodyOf(key)) as Draft), identity: null }, family).toEqual(bare);
+    }
+  });
+
+  it("the name bound is 256 CHARACTERS (code points), as the schema and the producer count it: 256 astral characters read, 257 do not", () => {
+    // The testkit checker counts UTF-16 units and would refuse the first; the schema (JSON Schema maxLength) and the
+    // producer (`[...value].length`) do not, and a reader stricter than the producer would void a body the server may send.
+    for (const [family, key, , read] of cases) {
+      const body = clone(bodyOf(key));
+      body.identity.portfolio_name = "\u{1F600}".repeat(256);
+      expect(read(body), family).not.toBeNull();
+      body.identity.portfolio_name = "\u{1F600}".repeat(257);
+      expect(read(body), family).toBeNull();
     }
   });
 

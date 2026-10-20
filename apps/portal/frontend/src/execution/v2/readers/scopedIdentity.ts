@@ -71,7 +71,7 @@ export function readScopedIdentityV2(raw: unknown, present: boolean): ScopedIden
   if ((alphaId !== null) !== (alphaReasonCode === "ALPHA_NAME_NOT_PUBLISHED")) return undefined;
   let portfolioName: string | null = null;
   if (o.portfolio_name !== null) {
-    if (typeof o.portfolio_name !== "string" || o.portfolio_name.length > 256 || !PORTFOLIO_NAME.test(o.portfolio_name)) return undefined;
+    if (typeof o.portfolio_name !== "string" || [...o.portfolio_name].length > 256 || !PORTFOLIO_NAME.test(o.portfolio_name)) return undefined;
     portfolioName = o.portfolio_name;
   }
   let portfolioNameReasonCode: PortfolioReason | null = null;
