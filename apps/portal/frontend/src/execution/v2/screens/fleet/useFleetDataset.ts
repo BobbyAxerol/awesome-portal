@@ -1,0 +1,205 @@
+/**
+ * The Manager dataset as the Fleet table's source (FE-012 / FE-027 / FE-033), keyset-paged through the
+ * `ExecutionApi.getManagerDataset` port. Two hooks:
+ *
+ * - `useDatasetPublication(api, environment)`: is the dataset PUBLISHED for this caller in this environment? One tiny read
+ *   (`limit` 1, no filter) per environment; the dataset's own `query_options` (the sort and group fields it offers) come back
+ *   with it. Anything but a readable dataset (a refusal, a 404, an absence, a port without the method) is "not published", and
+ *   the screen keeps exactly the controls it had. No environment (the All lens, a stage set across environments) makes no
+ *   request: the dataset serves one environment at a time.
+ * - `useFleetDataset(api, enabled, key, query)`: the first page replaces the loaded rows, `loadMore` appends the page after the
+ *   server's own `next_cursor`. Nothing is derived from a count the server did not send, and a filter is the SERVER's: a new
+ *   filter is a new query, never a client-side narrowing of a partial page.
+ *
+ * Honesty rules the hook keeps:
+ * - a new query (key) drops the loaded rows and the first dataset (they answered another question), cancels the request in
+ *   flight and refuses a late answer (generation counter);
+ * - a page that arrives with another snapshot or another filtered total than the first is NOT appended: the rows stay as they
+ *   were and `moreError` says the snapshot changed (the server answers 409 itself when it notices; a 200 that disagrees is
+ *   refused here);
+ * - a row key seen twice is kept once;
+ * - UXM-08: when access to the scope is revoked (`scopedEviction`) rows and dataset are dropped, both requests are cancelled
+ *   and the state is `denied` until the query changes.
+ */
+import { useCallback, useEffect, useRef, useState } from "react";
+
+import type { ExecutionApi, Result } from "../../../api/ports";
+import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
+import type { PanelStatus } from "../../../contracts";
+import type { ManagerDataset, ManagerEnvironment, ManagerRow } from "../../readers/managerDataset";
+import { EVICTED_REASON, useScopedCacheEviction } from "../../scopedEviction";
+import { useRead, type ReadState } from "../portfolios/useRead";
+
+const scoped = (api: ExecutionApi, signal: AbortSignal): ExecutionApi => api.withReadSignal?.(signal) ?? api;
+
+/** A port that predates the dataset (a test double, an older shell) has no method: that is "not published", not a crash. */
+function ask(api: ExecutionApi, query: ManagerDatasetQuery): Promise<Result<ManagerDataset>> {
+  if (typeof api.getManagerDataset !== "function") return Promise.resolve({ ok: false, status: "unavailable", reason: "The Manager dataset is not part of this port." });
+  try {
+    return api.getManagerDataset(query);
+  } catch {
+    return Promise.resolve({ ok: false, status: "unavailable", reason: "PORTAL_READ_FAILED" });
+  }
+}
+
+/* ───────────────────────── is it published for me? ───────────────────────── */
+
+export type DatasetPublication =
+  | { phase: "off" }
+  | { phase: "checking" }
+  | { phase: "published"; dataset: ManagerDataset }
+  | { phase: "unpublished"; reason: string };
+
+export function useDatasetPublication(api: ExecutionApi, environment: ManagerEnvironment | null): DatasetPublication {
+  const read: ReadState<ManagerDataset> = useRead(
+    api,
+    environment !== null,
+    `fleet-dataset-publication|${environment}`,
+    (scopedApi) => ask(scopedApi, { surface: "FLEET", environment: environment as ManagerEnvironment, limit: 1 }),
+  );
+  if (environment === null || read.phase === "idle") return { phase: "off" };
+  if (read.phase === "loading") return { phase: "checking" };
+  if (read.phase === "error") return { phase: "unpublished", reason: read.reason };
+  return { phase: "published", dataset: read.value };
+}
+
+/* ───────────────────────── the paged rows ───────────────────────── */
+
+export type FleetDatasetState =
+  | { phase: "idle" }
+  | { phase: "loading" }
+  | { phase: "error"; status: Exclude<PanelStatus, "ok" | "loading">; reason: string }
+  | { phase: "ready" };
+
+export interface FleetDatasetRead {
+  state: FleetDatasetState;
+  /** Every row loaded so far, in the server's order, each key once. */
+  rows: readonly ManagerRow[];
+  /** The first page's dataset: query options, lifecycle constants, quality, snapshot. */
+  first: ManagerDataset | null;
+  /** The newest page's dataset: the page envelope (total, cursor) and the groups (the whole filtered query). */
+  last: ManagerDataset | null;
+  /** `authorized_filtered_count` of the newest page: the denominator of "N of M". */
+  total: number | null;
+  nextCursor: string | null;
+  loadingMore: boolean;
+  moreError: string | null;
+  loadMore(): void;
+}
+
+export const SNAPSHOT_CHANGED = "SNAPSHOT_CHANGED";
+
+export function useFleetDataset(
+  api: ExecutionApi,
+  enabled: boolean,
+  key: string,
+  query: (after?: string | null) => ManagerDatasetQuery,
+): FleetDatasetRead {
+  const [state, setState] = useState<FleetDatasetState>({ phase: enabled ? "loading" : "idle" });
+  const [rows, setRows] = useState<readonly ManagerRow[]>([]);
+  const [first, setFirst] = useState<ManagerDataset | null>(null);
+  const [last, setLast] = useState<ManagerDataset | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [moreError, setMoreError] = useState<string | null>(null);
+
+  // The query builder changes identity every render; the key is what says it changed.
+  const build = useRef(query);
+  build.current = query;
+  const nextCursor = last !== null && last.hasMore ? last.page.nextCursor : null;
+  const cursorRef = useRef<string | null>(null);
+  cursorRef.current = nextCursor;
+  const firstRef = useRef<ManagerDataset | null>(null);
+  firstRef.current = first;
+  const generation = useRef(0);
+  const more = useRef<AbortController | null>(null);
+  const firstFlight = useRef<(() => void) | null>(null);
+
+  useScopedCacheEviction(() => {
+    generation.current += 1;
+    firstFlight.current?.();
+    firstFlight.current = null;
+    more.current?.abort();
+    setLoadingMore(false);
+    setMoreError(null);
+    setRows([]);
+    setFirst(null);
+    setLast(null);
+    setState((now) => (now.phase === "idle" ? now : { phase: "error", status: "denied", reason: EVICTED_REASON }));
+  });
+
+  useEffect(() => {
+    generation.current += 1;
+    more.current?.abort();
+    setLoadingMore(false);
+    setMoreError(null);
+    if (!enabled) {
+      setState({ phase: "idle" });
+      return;
+    }
+    const controller = new AbortController();
+    let cancelled = false;
+    firstFlight.current = () => {
+      cancelled = true;
+      controller.abort();
+    };
+    setState({ phase: "loading" });
+    setRows([]);
+    setFirst(null);
+    setLast(null);
+    void ask(scoped(api, controller.signal), build.current(null)).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setState({ phase: "error", status: result.status === "loading" ? "unavailable" : result.status, reason: result.reason });
+        return;
+      }
+      setRows(dedupe(result.value.items));
+      setFirst(result.value);
+      setLast(result.value);
+      setState({ phase: "ready" });
+    }).catch(() => {
+      if (!cancelled) setState({ phase: "error", status: "unavailable", reason: "PORTAL_READ_FAILED" });
+    });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [api, enabled, key]);
+
+  const loadMore = useCallback(() => {
+    const after = cursorRef.current;
+    if (!after) return;
+    const mine = generation.current;
+    const controller = new AbortController();
+    more.current?.abort();
+    more.current = controller;
+    setLoadingMore(true);
+    setMoreError(null);
+    void ask(scoped(api, controller.signal), build.current(after)).then((result) => {
+      if (mine !== generation.current) return;
+      setLoadingMore(false);
+      if (!result.ok) {
+        setMoreError(result.reason);
+        return;
+      }
+      const head = firstRef.current;
+      if (head !== null && (result.value.snapshotId !== head.snapshotId || result.value.page.authorizedFilteredCount !== head.page.authorizedFilteredCount)) {
+        // One snapshot answers one question: a page of another cut is never appended to the rows of this one.
+        setMoreError(`${SNAPSHOT_CHANGED}: the next page is from another snapshot than the rows above. Reload to read the current one.`);
+        return;
+      }
+      setRows((current) => dedupe([...current, ...result.value.items]));
+      setLast(result.value);
+    }).catch(() => {
+      if (mine !== generation.current) return;
+      setLoadingMore(false);
+      setMoreError("PORTAL_READ_FAILED");
+    });
+  }, [api]);
+
+  return { state, rows, first, last, total: last === null ? null : last.page.authorizedFilteredCount, nextCursor, loadingMore, moreError, loadMore };
+}
+
+function dedupe(rows: readonly ManagerRow[]): readonly ManagerRow[] {
+  const seen = new Set<string>();
+  return rows.filter((row) => (seen.has(row.rowKey) ? false : (seen.add(row.rowKey), true)));
+}
