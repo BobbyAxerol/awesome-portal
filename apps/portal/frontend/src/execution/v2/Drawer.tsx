@@ -202,6 +202,8 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
   closeRef.current = onClose;
   const focusRef = useRef(focusOnOpen);
   focusRef.current = focusOnOpen;
+  const modeRef = useRef(mode);
+  modeRef.current = mode;
   // Set by the controls that close the panel on the reader's say-so; read by the effect cleanup.
   const userClosed = useRef(false);
   const requestClose = useCallback(() => {
@@ -215,7 +217,8 @@ export function Drawer({ open = true, onClose, title, subtitle, children, action
     if (!open) return;
     userClosed.current = false;
     const opener = findOpener();
-    if (focusRef.current) panel.current?.focus();
+    // Docked, the panel sits beside the page: moving focus into it must not scroll the page under it.
+    if (focusRef.current) panel.current?.focus({ preventScroll: modeRef.current === "dock" });
     return () => {
       // Only if nobody has moved focus on purpose in the meantime.
       const active = document.activeElement;

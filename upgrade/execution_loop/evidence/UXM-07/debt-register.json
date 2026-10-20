@@ -114,7 +114,9 @@
       "where": "v2/Drawer.tsx useDockMode (modal below 1500px, docked at 1500px and above); v2/screens/request/RequestDrawer.tsx on the cockpit",
       "consequence": "The e2e rows run at 1440 and 390, so the docked layout of the drawer next to the queue (hi-fi 380px dock) has not been looked at or measured",
       "proposed": "Add a 1600px viewport row for ?compose=request and look at it",
-      "owner": "Claude (FE)"
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "resolution": "2026-10-19: the drawer docks at 1500px and wider as a sticky 380px column (c78f48c8); focus no longer scrolls the page under a docked panel (preventScroll in dock mode, Bobby approved 2026-10-20). Browser look at 1600px was done on the preview before the control-api incident."
     },
     {
       "id": "DEBT-UXM07-022",
@@ -122,7 +124,9 @@
       "where": "v2/screens/fleet board view (142946e3), css/fleet.css",
       "consequence": "With 8 stage lanes the board grows past its container; no overflow guard or lane wrap, and the e2e fixture does not exercise 8 lanes",
       "proposed": "Horizontal scroller inside the board with a visible edge, or wrap to two rows; add a scale case",
-      "owner": "Claude (FE)"
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "resolution": "2026-10-19: board lanes are flex with a 192px floor and scroll inside the board; empty gate lanes collapse to a labelled strip (9215c5dd)."
     },
     {
       "id": "DEBT-UXM07-023",
@@ -141,7 +145,18 @@
       "where": "src/app/Sidebar.tsx and PortalRoutes.tsx (FF-A e6127770), src/app/PortalShell.tsx, commandRouting.ts and src/portal/navigation.ts (e926b09a; CommandBar mount was decided by Bobby on 2026-10-19), execution/links.ts (65a5f74e)",
       "consequence": "CLAUDE.md section 0 says a change to shared components that may alter Research or Planning stops and asks Bobby. The edits are guarded by the shell flag (off = identical, tests prove it) but the approval for the Sidebar/PortalRoutes edit is not recorded",
       "proposed": "Bobby confirms or asks for a revert (rollback.md lists the revert commands)",
-      "owner": "Bobby"
+      "owner": "Bobby",
+      "status": "APPROVED_BY_BOBBY",
+      "resolution": "Bobby approved on 2026-10-20 (AskUserQuestion): Sidebar, PortalShell, PortalRoutes, commandRouting, navigation, links, presentation (request page shell) and Drawer edits stay, behind the V2 flags; flag-off DOM digests are pinned and proved equal on the old and new sources."
+    },
+    {
+      "id": "DEBT-UXM07-025",
+      "title": "V1 behaviour changes that are not behind a flag",
+      "where": "v2/readers certification.ts (panel_state/freshness vocabulary: ready->ok, FRESH; finding fields; additive row fields), liveFull.ts (KPI strip fail-closed for missing/DERIVED authority), canonicalHref (?operation_id= became ?operation=), captureSandboxNote (reason starts REVIEW_CAPTURE_OUTCOME_UNKNOWN: for a throw, 408/5xx or an unreadable 2xx), shared unsafeText set, components/TradeReplayEvents.tsx (V2 branch only)",
+      "consequence": "With real data V1 shows what the schema says (a ready panel is no longer read as unavailable; the broker badge can change from warning to good; deep links open the right operation). Fixture lab pixels do not change (V1 fixtures are all unavailable/UNKNOWN)",
+      "decision": "Bobby approved on 2026-10-20 as deliberate exceptions (AskUserQuestion). They are fail-closed or fix a wrong read; they are not rolled back with the V2 flags",
+      "owner": "Claude (FE)",
+      "status": "APPROVED_BY_BOBBY"
     }
   ],
   "closed": [

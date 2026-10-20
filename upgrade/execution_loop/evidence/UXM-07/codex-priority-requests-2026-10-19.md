@@ -58,3 +58,9 @@ Thẻ đầy đủ: [backend-requests.md](backend-requests.md) mục "S3"; ledge
 Chưa kiểm (nói thẳng): server có phục vụ `getFinancialChart({subjectKind:"deployment"})` / `getQueryAnalytics("deployments")` hay không (S3-U3); server có điền nhánh `sessions` / `reconciliation` của profile Paper không (FE không đọc chúng).
 
 Hai kết quả review độc lập về S3 (nếu có file) chưa có trong cây này tại thời điểm viết; nếu muộn hơn, chúng được ghi ở `evidence/UXM-07/` và README mục 5.
+
+## 7. Hook R2 — pin N28 đã re-pin (2026-10-20, Bobby duyệt)
+FE-056 đổi `packages/contracts/fixtures/execution-command-tasks.valid.json` (additive: `display_name`, `description`, `scope_label`), nên `n27_task_fixture_sha256` trong `services/portal-execution-edge-rs/contracts/n28-missing-capability-v1/missing-capability-registry.v1.json` lệch và `execution-n28-missing-capability-test.sh` đỏ. Claude đã re-pin theo đúng ba bước (registry, `MANIFEST.sha256`, `refresh-release-integrity-ledgers.sh --write`); sáu digest còn lại không đụng. Codex review lại khi tiện: chỉ một dòng digest đổi (`5ff678f8…` thành `64cf18d6…`).
+
+## 8. Yêu cầu mới: alpha id trên các read stage (design point d)
+Các read Canary, Live và Sandbox không công bố alpha/strategy id, nên màn không thể có liên kết "← Alpha" (Paper có). Đề xuất nhỏ nhất: trường nullable `alpha_id` (hoặc `strategy_ref.alpha_id`) trên ba body `execution-sandbox-certification`, `execution-canary`, `execution-live-full`, kèm fixture. Chưa có thì FE giữ văn bản thuần, không tự dựng liên kết. Hàng sổ: S3-U5.

@@ -563,3 +563,25 @@ describe("focusOnOpen and the close fallback", () => {
     expect(document.activeElement).toBe(screen.getByRole("main"));
   });
 });
+
+describe("moving focus into the panel on open", () => {
+  it("does not scroll the page when the panel is docked, and may scroll when it overlays", () => {
+    const calls: Array<{ mode: string; options: FocusOptions | undefined }> = [];
+    const original = HTMLElement.prototype.focus;
+    HTMLElement.prototype.focus = function focus(this: HTMLElement, options?: FocusOptions) {
+      if (this.getAttribute("role") === "complementary" || this.getAttribute("role") === "dialog") {
+        calls.push({ mode: this.getAttribute("data-mode") ?? "", options });
+      }
+      return original.call(this, options);
+    };
+    try {
+      const { unmount } = render(<MemoryRouter><Drawer title="Peek" onClose={() => undefined} mode="dock"><p>Body</p></Drawer></MemoryRouter>);
+      unmount();
+      render(<MemoryRouter><Drawer title="Peek" onClose={() => undefined} mode="overlay"><p>Body</p></Drawer></MemoryRouter>);
+    } finally {
+      HTMLElement.prototype.focus = original;
+    }
+    expect(calls.find((c) => c.mode === "dock")?.options?.preventScroll).toBe(true);
+    expect(calls.find((c) => c.mode === "overlay")?.options?.preventScroll).toBe(false);
+  });
+});
