@@ -20,7 +20,7 @@ import { formatAsOf } from "../../boundary";
 import { EquityPanel } from "../../charts";
 import { At, Fig, Na } from "./cells";
 import { VenueCalendarPanel } from "./Calendar";
-import { ExitGatePanel } from "./ExitGatePanel";
+import { ExitGatePanel, type ExitRequestProps } from "./ExitGatePanel";
 import { PAGE_CAP, humanize, readQuality, type AccountingFacts, type Figure, type WorkbenchModel } from "./model";
 import type { ReadState } from "./useWorkbenchReads";
 
@@ -30,6 +30,8 @@ export interface OverviewTabProps {
   notQualified?: boolean;
   quality: ReadState<DeploymentQuality>;
   exitReviewsHref: string;
+  /** The Paper exit review request (RV-10). Absent: the exit gate is read-only. */
+  exitRequest?: ExitRequestProps;
 }
 
 /** `Kpi` props for a figure: a value prints, an absence prints `Not available`, an unreadable one says so. */
@@ -200,14 +202,14 @@ function ExecutionQuality({ quality, notQualified }: { quality: ReadState<Deploy
   );
 }
 
-export function OverviewTab({ model, quality, exitReviewsHref, notQualified = false }: OverviewTabProps) {
+export function OverviewTab({ model, quality, exitReviewsHref, exitRequest, notQualified = false }: OverviewTabProps) {
   return (
     <div className="exec-wb-stack">
       {model.calendar === null ? null : <VenueCalendarPanel calendar={model.calendar} />}
       <div className="exec-wb-grid2">
         <EquityBlock model={model} />
         <div id="exec-wb-evidence">
-          <ExitGatePanel gate={model.gate} exitReviewsHref={exitReviewsHref} />
+          <ExitGatePanel gate={model.gate} exitReviewsHref={exitReviewsHref} request={exitRequest} />
         </div>
       </div>
       <div className="exec-wb-grid2">

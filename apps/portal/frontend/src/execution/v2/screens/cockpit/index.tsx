@@ -4,7 +4,8 @@
  * One Approvals screen with three panes: queue, evidence, decision rail. It
  * shows what the backend publishes today: the five gate kinds the inbox serves
  * (R1, R2, exit review, live review) and the waiver register as its own lane.
- * Archive, Reactivation and Capital are named and shown as not published.
+ * Archive, Reactivation and Capital are selectable panels that read only what the contract
+ * publishes (nothing is listed; their request control is off with one reason): `FamilyPanel`.
  *
  * It is a preview. Every decision control is disabled with
  * "Preview · not recorded" (UXM-09), and this module never calls a plan, an
@@ -63,13 +64,15 @@ import {
   quorumText,
   waiverItems,
   type EvidenceKind,
+  type FamilyLane,
   type Lane,
   type Lens,
   type Principal,
   type QueueItem,
 } from "./laneModel";
 import { KeysHelp } from "./KeysHelp";
-import { laneFromView, lensFromUrl, waiverFromUrl, writeView, type CockpitView } from "./viewUrl";
+import { familyFromView, laneFromView, lensFromUrl, waiverFromUrl, writeView, type CockpitView } from "./viewUrl";
+import { FamilyPanel, FamilyRail } from "./FamilyPanel";
 import { Queue, MAX_QUEUE_DOM, type WaiverFilter } from "./Queue";
 import { Rail, type RailTarget } from "./Rail";
 
@@ -460,16 +463,19 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   const [params, setParams] = useSearchParams();
   // Lane, lens and waiver filter are the URL's (M9): a reload and Back restore them; a bad value reads as the default.
   const lane: Lane = laneFromView(url.value.view);
+  // Archive, Reactivation and Capital are panels, not gate lanes: the gate lane then reads as All and keeps its counts.
+  const family = familyFromView(url.value.view);
   const lens: Lens = lensFromUrl(params.get("lens"));
   const waiverFilter: WaiverFilter = waiverFromUrl(params.get("waiver"));
   const setView = useCallback((patch: CockpitView) => setParams(writeView(params, patch), { replace: true }), [params, setParams]);
   const setLane = useCallback((next: Lane) => setView({ lane: next }), [setView]);
+  const setFamily = useCallback((next: FamilyLane) => setView({ family: next }), [setView]);
   const setLens = useCallback((next: Lens) => setView({ lens: next }), [setView]);
   const setWaiverFilter = useCallback((next: WaiverFilter) => setView({ waiver: next }), [setView]);
   useEffect(() => {
-    const canonical = writeView(params, { lane, lens, waiver: waiverFilter });
+    const canonical = writeView(params, { lane, lens, waiver: waiverFilter, family });
     if (canonical.toString() !== params.toString()) setParams(canonical, { replace: true });
-  }, [params, setParams, lane, lens, waiverFilter]);
+  }, [params, setParams, lane, lens, waiverFilter, family]);
   const [announcement, setAnnouncement] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -526,7 +532,9 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   let evidenceTarget: EvidenceTarget | null = null;
   let header: EvidenceHeader | null = null;
   let unknownReason: string | null = null;
-  if (selected && selected.kind !== "waiver") {
+  if (family !== null) {
+    // A family panel reads nothing of a gate: no evidence read for a leftover selection.
+  } else if (selected && selected.kind !== "waiver") {
     evidenceTarget = { kind: kindOfGate(selected.row.gate), id: selected.row.id };
     header = itemHeader(selected);
   } else if (selectedKey !== null && !selected) {
@@ -555,7 +563,7 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
 
   /* keys: J/K move, Esc clears, A/R/N announce why they do nothing */
   const keyState = useRef({ keys: [] as string[], selectedKey: null as string | null, hadSel: false });
-  keyState.current = { keys: items.slice(0, MAX_QUEUE_DOM).map((item) => item.key), selectedKey, hadSel: url.value.sel !== null };
+  keyState.current = { keys: family !== null ? [] : items.slice(0, MAX_QUEUE_DOM).map((item) => item.key), selectedKey, hadSel: url.value.sel !== null };
   // While the shortcut list is open it owns the keyboard (it closes itself on Esc).
   const helpRef = useRef(false);
   helpRef.current = helpOpen;
@@ -608,12 +616,12 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
   useEffect(() => {
     if (firstLoadDone.current || !settled) return;
     firstLoadDone.current = true;
-    if (selectedKey !== null || items.length === 0) return;
+    if (selectedKey !== null || items.length === 0 || family !== null) return;
     const wide = typeof window.matchMedia === "function" ? window.matchMedia(AUTO_SELECT_QUERY).matches : true;
     if (!wide) return;
     const first = items.find((item) => item.kind === "gate" && item.row.needsYou === true) ?? items[0]!;
     urlSet({ sel: first.key }, { replace: true });
-  }, [settled, selectedKey, items, urlSet]);
+  }, [settled, selectedKey, items, urlSet, family]);
 
   const total = inbox.filteredCount ?? inbox.totalCount;
   const footer =
@@ -653,6 +661,8 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
         <Queue
           lane={lane}
           onLane={setLane}
+          family={family}
+          onFamily={setFamily}
           lens={lens}
           onLens={setLens}
           waiverFilter={waiverFilter}
@@ -676,14 +686,20 @@ function DecisionCockpit({ api, workspaceId, pathSelection, onClearPathSelection
           historyNote={decided.note}
         />
         <section className="exec-ck-main" aria-label="Evidence">
-          {selected?.kind === "waiver" ? (
+          {family !== null ? (
+            <FamilyPanel family={family} />
+          ) : selected?.kind === "waiver" ? (
             <WaiverEvidence row={selected.row} />
           ) : (
             <EvidenceFrame kind={evidenceTarget?.kind ?? null} header={header} evidence={evidence} unknownReason={unknownReason} />
           )}
         </section>
         <aside className="exec-ck-rail" aria-label="Decision">
-          <Rail api={api} target={railTarget} evidence={evidence} principal={principal} workspaceId={workspaceId} />
+          {family !== null ? (
+            <FamilyRail family={family} />
+          ) : (
+            <Rail api={api} target={railTarget} evidence={evidence} principal={principal} workspaceId={workspaceId} />
+          )}
         </aside>
       </div>
       </DockRow>

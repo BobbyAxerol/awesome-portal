@@ -70,12 +70,17 @@ export const LANE_LABEL: Readonly<Record<Lane, string>> = {
   waiver: "Waiver",
 };
 
-/** Lanes the cockpit will own and the backend has not published. Shown, never selectable. */
-export const UNPUBLISHED_LANES = [
+/**
+ * Families the cockpit names that are not approval gates (RV-10, FE-034): no inbox row, no list route and no executor is published
+ * for them. Each is SELECTABLE, and its panel reads only what the contract publishes (see `FamilyPanel`); a request control stays
+ * disabled with one reason. `view=<id>` carries the selection in the URL.
+ */
+export const FAMILY_LANES = [
   { id: "archive", label: "Archive" },
   { id: "reactivation", label: "Reactivation" },
   { id: "capital", label: "Capital" },
 ] as const;
+export type FamilyLane = (typeof FAMILY_LANES)[number]["id"];
 
 /** A gate lane whose evidence read exists. Waiver is a register, not a gate. */
 export type EvidenceKind = "r1" | "r2" | "exit" | "live";

@@ -25,10 +25,10 @@ import {
   LANES,
   LENS_LABEL,
   LENSES,
-  NOT_PUBLISHED,
+  FAMILY_LANES,
   quorumText,
   slaView,
-  UNPUBLISHED_LANES,
+  type FamilyLane,
   type Lane,
   type Lens,
   type Principal,
@@ -45,6 +45,9 @@ const WAIVER_STATE_LABEL: Readonly<Record<WaiverFilter, string>> = { ALL: "All",
 export interface QueueProps {
   lane: Lane;
   onLane(lane: Lane): void;
+  /** A family panel (Archive, Reactivation, Capital) is open: no gate lane is pressed and the list gives way to its one line. */
+  family?: FamilyLane | null;
+  onFamily?(family: FamilyLane): void;
   lens: Lens;
   onLens(lens: Lens): void;
   waiverFilter: WaiverFilter;
@@ -161,7 +164,7 @@ function WaiverItem({ item }: { item: Extract<QueueItem, { kind: "waiver" }> }) 
 
 export function Queue(props: QueueProps) {
   const {
-    lane, onLane, lens, onLens, waiverFilter, onWaiverFilter, items, selectedKey, onSelect, loading, failure, partialNote,
+    lane, onLane, family = null, onFamily, lens, onLens, waiverFilter, onWaiverFilter, items, selectedKey, onSelect, loading, failure, partialNote,
     lensCounts, laneCounts = null, laneCountsAtLeast = false, onHelp, moreAvailable, onMore, moreBusy, moreError, footer, principal, historyNote,
   } = props;
   const shown = items.slice(0, MAX_QUEUE_DOM);
@@ -175,34 +178,26 @@ export function Queue(props: QueueProps) {
     <section className="exec-ck-panel exec-ck-q" aria-label="Decision queue">
       <div className="exec-ck-ph">
         <h2 className="exec-ck-pt">Queue</h2>
-        <span className="exec-ck-pr">{lane === "waiver" ? "By last update" : "By SLA"}</span>
+        <span className="exec-ck-pr">{family !== null ? "Not an approval gate" : lane === "waiver" ? "By last update" : "By SLA"}</span>
       </div>
 
       <div className="exec-ck-lanes" role="group" aria-label="Lane">
         {LANES.map((id) => (
-          <button key={id} type="button" className="exec-ck-chip" aria-pressed={lane === id} onClick={() => onLane(id)}>
+          <button key={id} type="button" className="exec-ck-chip" aria-pressed={family === null && lane === id} onClick={() => onLane(id)}>
             {LANE_LABEL[id]}
             {id !== "waiver" && laneCounts ? ` ${laneCounts[id]}${laneCountsAtLeast ? "+" : ""}` : ""}
           </button>
         ))}
-        {UNPUBLISHED_LANES.map((entry) => (
-          <button
-            key={entry.id}
-            type="button"
-            className="exec-ck-chip"
-            disabled
-            title={NOT_PUBLISHED.lane}
-            aria-describedby="exec-ck-lane-reason"
-          >
+        {FAMILY_LANES.map((entry) => (
+          <button key={entry.id} type="button" className="exec-ck-chip" aria-pressed={family === entry.id} onClick={() => onFamily?.(entry.id)}>
             {entry.label}
           </button>
         ))}
       </div>
-      <p id="exec-ck-lane-reason" className="exec-ck-note exec-ck-pad" title={NOT_PUBLISHED.lane}>
-        Not available: Archive, Reactivation, Capital<span className="exec-blk-sr"> ({NOT_PUBLISHED.lane})</span>
-      </p>
 
-      {lane === "waiver" ? (
+      {family !== null ? (
+        <p className="exec-ck-note exec-ck-pad" role="status">No rows: the contract publishes no list for this family.</p>
+      ) : lane === "waiver" ? (
         <div className="exec-ck-lanes" role="group" aria-label="Waiver state">
           {WAIVER_STATES.map((id) => (
             <button key={id} type="button" className="exec-ck-chip" aria-pressed={waiverFilter === id} onClick={() => onWaiverFilter(id)}>
@@ -221,15 +216,16 @@ export function Queue(props: QueueProps) {
         </div>
       )}
 
-      {loading ? <PanelSkeleton label="Loading queue" /> : null}
-      {failure ? <div className="exec-ck-pad"><PanelState status={failure.panel} reason={failure.reason} /></div> : null}
-      {partialNote ? <p className="exec-ck-note exec-ck-pad" role="status">{partialNote}</p> : null}
-      {lens === "closed" && lane !== "waiver" && historyNote ? <p className="exec-ck-note exec-ck-pad">{historyNote}</p> : null}
+      {family !== null ? null : loading ? <PanelSkeleton label="Loading queue" /> : null}
+      {family !== null ? null : failure ? <div className="exec-ck-pad"><PanelState status={failure.panel} reason={failure.reason} /></div> : null}
+      {family !== null ? null : partialNote ? <p className="exec-ck-note exec-ck-pad" role="status">{partialNote}</p> : null}
+      {family === null && lens === "closed" && lane !== "waiver" && historyNote ? <p className="exec-ck-note exec-ck-pad">{historyNote}</p> : null}
 
-      {!loading && !failure && shown.length === 0 ? (
+      {family === null && !loading && !failure && shown.length === 0 ? (
         <div className="exec-ck-pad"><PanelState status="empty" title="Nothing in this view" reason={lane === "waiver" ? "No waivers match this state on the page the server returned." : "No requests match this lane and lens on the page the server returned."} /></div>
       ) : null}
 
+      {family !== null ? null : (
       <ul className="exec-ck-list" aria-label={lane === "waiver" ? "Waivers" : "Requests"}>
         {shown.map((item) => (
           <li key={`${item.kind}:${item.key}`}>
@@ -246,8 +242,9 @@ export function Queue(props: QueueProps) {
           </li>
         ))}
       </ul>
+      )}
 
-      <div className="exec-ck-foot">
+      <div className="exec-ck-foot" hidden={family !== null}>
         <span>{footer}{items.length > MAX_QUEUE_DOM ? ` · top ${MAX_QUEUE_DOM} of ${items.length} shown` : ""}</span>
         {moreAvailable ? (
           <button type="button" className="exec-ck-more" disabled={moreBusy} aria-describedby={moreBusy ? "exec-ck-more-busy" : undefined} onClick={onMore}>

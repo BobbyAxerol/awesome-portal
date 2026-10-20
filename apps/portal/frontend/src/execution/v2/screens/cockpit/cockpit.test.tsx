@@ -412,14 +412,79 @@ describe("queue, lanes and lenses", () => {
     expect(within(queue()).getByRole("button", { name: "All gates 4+" })).toBeTruthy();
   });
 
-  it("Archive, Reactivation and Capital are shown disabled and say Not published (FE-034)", async () => {
-    await mount(standardPort());
-    for (const name of ["Archive", "Reactivation", "Capital"]) {
-      const chip = within(queue()).getByRole("button", { name }) as HTMLButtonElement;
-      expect(chip.disabled).toBe(true);
-      expect(chip.getAttribute("title")).toBe("Not published (FE-034)");
-      expect(document.getElementById(chip.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Not published (FE-034)");
-    }
+  describe("Archive, Reactivation and Capital are selectable read-only panels (RV-10)", () => {
+    const chip = (name: string) => within(queue()).getByRole("button", { name }) as HTMLButtonElement;
+
+    it("each chip is enabled and opens its panel, with the choice in the URL", async () => {
+      const p = standardPort();
+      await mount(p);
+      for (const [name, view, heading] of [["Archive", "archive", "Archive"], ["Reactivation", "reactivation", "Reactivation"], ["Capital", "capital", "Capital"]] as const) {
+        expect(chip(name).disabled).toBe(false);
+        fireEvent.click(chip(name));
+        await settle();
+        expect(where()).toContain(`view=${view}`);
+        expect(chip(name).getAttribute("aria-pressed")).toBe("true");
+        expect(within(screen.getByRole("region", { name: "Evidence" })).getByRole("heading", { name: heading })).toBeTruthy();
+      }
+      // a gate lane takes the panel away again
+      fireEvent.click(within(queue()).getByRole("button", { name: /^R1/ }));
+      await settle();
+      expect(where()).toContain("view=r1");
+      expect(screen.queryByRole("region", { name: "Capital" })).toBeNull();
+    });
+
+    it("a reload on the URL restores the panel, and the gate counts survive", async () => {
+      const p = standardPort();
+      await mount(p, "/execution/approvals?view=capital");
+      expect(chip("Capital").getAttribute("aria-pressed")).toBe("true");
+      expect(screen.getByRole("region", { name: "Capital" })).toBeTruthy();
+      expect(where()).toContain("view=capital");
+      // the All page was still read for the chip counts
+      expect(within(queue()).getByRole("button", { name: "All gates 4" })).toBeTruthy();
+    });
+
+    it("says what the contract publishes, and only that: typed absences, no invented rows", async () => {
+      await mount(standardPort(), "/execution/approvals?view=archive");
+      const panel = screen.getByRole("region", { name: "Archive" });
+      expect(within(panel).getAllByText("Not published (FE-034)").length).toBeGreaterThanOrEqual(3);
+      expect(within(queue()).queryAllByRole("listitem")).toHaveLength(0);
+      expect(within(queue()).getByText(/No rows: the contract publishes no list for this family/)).toBeTruthy();
+    });
+
+    it("Capital points to where the published recalls live and names the relay as the reason", async () => {
+      await mount(standardPort(), "/execution/approvals?view=capital&workspace_id=ws_other");
+      const link = within(screen.getByRole("region", { name: "Capital" })).getByRole("link", { name: /Operations/ });
+      expect(link.getAttribute("href")).toBe("/execution/operations?workspace_id=ws_other");
+      const request = within(rail()).getByRole("button", { name: "Request capital change" }) as HTMLButtonElement;
+      expect(request.disabled).toBe(true);
+      expect(document.getElementById(request.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Relay is not qualified yet");
+    });
+
+    it("each request control stays disabled with ONE short reason, and nothing is sent or read for a gate", async () => {
+      const p = standardPort();
+      await mount(p, "/execution/approvals?view=reactivation&sel=apr_a");
+      const request = within(rail()).getByRole("button", { name: "Request reactivation" }) as HTMLButtonElement;
+      expect(request.disabled).toBe(true);
+      expect(document.getElementById(request.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Not offered in the portal yet");
+      // a leftover selection reads no gate evidence while a family panel is open
+      expect(p.called("getGateR1")).toHaveLength(0);
+      expect(p.called("getGovernanceParent")).toHaveLength(0);
+      for (const name of ["planDecision", "applyPlan", "createApprovalRequest", "captureR2", "createPaperExit", "captureSandboxNote", "planCommand"]) expect(p.called(name)).toHaveLength(0);
+    });
+
+    it("J and K do not move a hidden selection while a panel is open (keyboard)", async () => {
+      await mount(standardPort(), "/execution/approvals?view=archive");
+      fireEvent.keyDown(document, { key: "j" });
+      await settle();
+      expect(where()).not.toContain("sel=");
+    });
+
+    it("the chips are native buttons: Enter and Space reach them in tab order", async () => {
+      await mount(standardPort());
+      const el = chip("Capital");
+      expect(el.tagName).toBe("BUTTON");
+      expect(el.tabIndex).toBe(0);
+    });
   });
 
   it("Needs you narrows the loaded page on the published flag, with counts that never claim the whole queue", async () => {
