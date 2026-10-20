@@ -55,6 +55,7 @@ import type { PendingRecallDiscoveryQuery, PendingRecallDiscoveryRead } from "..
 import type { PendingControlPreviewRead } from "../v2/readers/pendingControlPreview";
 import type { PendingControlIntentWire } from "../v2/screens/operations/pendingControlIntent";
 import type { StageActionEligibilityRead } from "../v2/readers/stageActionEligibility";
+import type { PaperExitParentQuery, PaperExitParentRead } from "../v2/readers/paperExitParent";
 import type { AccessEligibilityBatchRead, EligibilityBatchRequest } from "../v2/readers/accessSelfBatch";
 import type { AccessStepUpInput, SessionStepUpOutcome } from "../v2/readers/accessStepUp";
 import type { AccessSelfContextRead } from "../v2/readers/accessSelfContext";import type { ApprovalRequestLookupQuery, ApprovalRequestLookupRead } from "../v2/readers/approvalRequestLookup";
@@ -576,6 +577,13 @@ export interface ExecutionApi {
    * failed read keeps the generic reason the control already had.
    */
   getStageActionEligibility(workspaceId?: string): Promise<Result<StageActionEligibilityRead>>;
+  /**
+   * `GET /api/v1/execution/governance/paper-exit/parent` (RV-10): the R2 parent of one deployment as the `PAPER_EXIT_CREATE`
+   * capture context the Paper exit request is bound to (`governance.paper-exit-parent.v1`). `NONE` is a published answer (the
+   * deployment has no R2). A body for another deployment or workspace than the one asked is `unavailable`, never a context. The
+   * context only binds the request; the write route rechecks every pin.
+   */
+  getPaperExitParent(query: PaperExitParentQuery): Promise<Result<PaperExitParentRead>>;
   /**
    * `GET /api/admin/profile-access/v2/eligibility/batch` (FE-068): 1 to 8 resources x the same 1 to 16 actions, with a typed
    * step-up state (`portal.self-eligibility-batch.v1`). Advisory; the single-resource `portal.self-eligibility.v1` is unchanged.

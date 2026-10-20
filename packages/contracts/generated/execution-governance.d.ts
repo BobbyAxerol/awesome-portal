@@ -345,6 +345,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/execution/governance/paper-exit/parent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description RV-10. The R2 parent of a deployment as the PAPER_EXIT_CREATE capture context the Paper exit request is bound to; see PaperExitParent. */
+        get: operations["executionPaperExitParentV1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2173,6 +2190,20 @@ export interface components {
                 approval: components["schemas"]["Approval"];
             } | null;
         } & (unknown & unknown & unknown);
+        /** @description RV-10. The R2 parent of one deployment, as the SAME CaptureContext the R2 review publishes for the PAPER_EXIT_CREATE capture (parent approval id and version, Paper projection digest, the accepted deployment choice): the pins POST /governance/paper-exit/create is bound to. The R2 is the approval whose subject is the deployment: the newest approved and unexpired one, else the newest of any status (its context is then BLOCKED with the reason, e.g. R2_APPROVAL_REQUIRED or APPROVAL_EXPIRED). NONE: the deployment has no R2 and capture_context is null. FOUND: capture_context is for this workspace, is a PAPER_EXIT_CREATE context and lists only this deployment; a BLOCKED context carries no digest and no candidates. Authority is the R2 review read (governance.r2.read) plus exact session and workspace membership; the ADMIN role and the capture checks are the context's own typed availability. Grants nothing, writes nothing, calls no source; the route rechecks everything at submit. */
+        PaperExitParent: {
+            /** @constant */
+            schema_version: "governance.paper-exit-parent.v1";
+            /** @constant */
+            record_authority: "PORTAL";
+            workspace_id: string;
+            deployment_id: string;
+            /** @enum {unknown} */
+            state: "NONE" | "FOUND";
+            capture_context: components["schemas"]["CaptureContext"] | null;
+            /** @constant */
+            source_side_effect_requested: false;
+        } & unknown;
         Capabilities: {
             /** @constant */
             schema_version: "governance.review-capture-capabilities.v1";
@@ -4516,6 +4547,31 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalRequestLookup"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    executionPaperExitParentV1: {
+        parameters: {
+            query: {
+                workspace_id?: components["parameters"]["WorkspaceId"];
+                deployment_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Private, no-store. */
+            200: {
+                headers: {
+                    "Cache-Control"?: "private, no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaperExitParent"];
                 };
             };
             default: components["responses"]["Problem"];

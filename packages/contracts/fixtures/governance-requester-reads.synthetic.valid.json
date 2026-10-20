@@ -972,5 +972,115 @@
     "evidence_run_id": "run_TEST_ONLY",
     "methodology_claim_id": "claim_TEST_ONLY",
     "summary": "Synthetic summary"
+  },
+  "paper_exit_parent": {
+    "none": {
+      "schema_version": "governance.paper-exit-parent.v1",
+      "record_authority": "PORTAL",
+      "workspace_id": "ws_TEST_ONLY",
+      "deployment_id": "deployment_TEST_ONLY",
+      "state": "NONE",
+      "capture_context": null,
+      "source_side_effect_requested": false
+    },
+    "found_available": {
+      "schema_version": "governance.paper-exit-parent.v1",
+      "record_authority": "PORTAL",
+      "workspace_id": "ws_TEST_ONLY",
+      "deployment_id": "deployment_TEST_ONLY",
+      "state": "FOUND",
+      "capture_context": {
+        "action": "PAPER_EXIT_CREATE",
+        "workspace_id": "ws_TEST_ONLY",
+        "parent_approval_id": "apr_TEST_ONLY_r2",
+        "expected_parent_version": 3,
+        "expected_projection_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "availability": {
+          "state": "AVAILABLE",
+          "reason_code": null
+        },
+        "candidates": [
+          {
+            "deployment_id": "deployment_TEST_ONLY",
+            "portfolio_id": "portfolio_TEST_ONLY",
+            "risk_grant_id": null,
+            "currency": "USDT"
+          }
+        ],
+        "candidates_truncated": false,
+        "currency_semantics": "REVIEWER_REQUESTED_NOT_FX_CONVERSION",
+        "source_side_effect_requested": false
+      },
+      "source_side_effect_requested": false
+    },
+    "found_blocked_r2_not_approved": {
+      "schema_version": "governance.paper-exit-parent.v1",
+      "record_authority": "PORTAL",
+      "workspace_id": "ws_TEST_ONLY",
+      "deployment_id": "deployment_TEST_ONLY",
+      "state": "FOUND",
+      "capture_context": {
+        "action": "PAPER_EXIT_CREATE",
+        "workspace_id": "ws_TEST_ONLY",
+        "parent_approval_id": "apr_TEST_ONLY_r2",
+        "expected_parent_version": 3,
+        "expected_projection_digest": null,
+        "availability": {
+          "state": "BLOCKED",
+          "reason_code": "R2_APPROVAL_REQUIRED"
+        },
+        "candidates": [],
+        "candidates_truncated": false,
+        "currency_semantics": "REVIEWER_REQUESTED_NOT_FX_CONVERSION",
+        "source_side_effect_requested": false
+      },
+      "source_side_effect_requested": false
+    },
+    "found_blocked_not_admin": {
+      "schema_version": "governance.paper-exit-parent.v1",
+      "record_authority": "PORTAL",
+      "workspace_id": "ws_TEST_ONLY",
+      "deployment_id": "deployment_TEST_ONLY",
+      "state": "FOUND",
+      "capture_context": {
+        "action": "PAPER_EXIT_CREATE",
+        "workspace_id": "ws_TEST_ONLY",
+        "parent_approval_id": "apr_TEST_ONLY_r2",
+        "expected_parent_version": 3,
+        "expected_projection_digest": null,
+        "availability": {
+          "state": "BLOCKED",
+          "reason_code": "ADMIN_ROLE_REQUIRED"
+        },
+        "candidates": [],
+        "candidates_truncated": false,
+        "currency_semantics": "REVIEWER_REQUESTED_NOT_FX_CONVERSION",
+        "source_side_effect_requested": false
+      },
+      "source_side_effect_requested": false
+    },
+    "found_blocked_expired": {
+      "schema_version": "governance.paper-exit-parent.v1",
+      "record_authority": "PORTAL",
+      "workspace_id": "ws_TEST_ONLY",
+      "deployment_id": "deployment_TEST_ONLY",
+      "state": "FOUND",
+      "capture_context": {
+        "action": "PAPER_EXIT_CREATE",
+        "workspace_id": "ws_TEST_ONLY",
+        "parent_approval_id": "apr_TEST_ONLY_r2",
+        "expected_parent_version": 3,
+        "expected_projection_digest": null,
+        "availability": {
+          "state": "BLOCKED",
+          "reason_code": "APPROVAL_EXPIRED"
+        },
+        "candidates": [],
+        "candidates_truncated": false,
+        "currency_semantics": "REVIEWER_REQUESTED_NOT_FX_CONVERSION",
+        "source_side_effect_requested": false
+      },
+      "source_side_effect_requested": false
+    }
   }
 }

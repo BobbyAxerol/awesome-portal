@@ -16,6 +16,7 @@ import { reasonWords } from "../../../api/governanceContext";
 import type { ReviewCapture } from "../../../api/reviewCapture";
 import type { GovernanceParentRead } from "../../readers/dispatch";
 import { unsafeText } from "../../../unsafeText";
+import type { ExitParentState } from "./useExitParent";
 
 /** The server's published bounds for the summary (`PaperExitCreateRequest.summary`). */
 export const EXIT_SUMMARY_MIN = 8;
@@ -57,6 +58,23 @@ export function bindExitReview(input: { context: ContextRead<CaptureContext> | n
     state: "bound",
     binding: { workspaceId: c.workspaceId, parentApprovalId: c.parentApprovalId, expectedParentVersion: c.expectedParentVersion, projectionDigest: c.projectionDigest, deploymentId },
   };
+}
+
+/**
+ * The control's binding from the R2 parent read. A published context binds through `bindExitReview` (every refusal there applies:
+ * workspace, action, availability, digest, this deployment among the accepted choices). The other states are shut, each with one
+ * short reason: reading, the read failed (the Portal's own words), a shape this build does not read, or the deployment has no R2.
+ */
+export function bindExitParent(input: { parent: ExitParentState; workspaceId: string | null; deploymentId: string }): ExitBind {
+  const { parent, workspaceId, deploymentId } = input;
+  const none = () => bindExitReview({ context: null, workspaceId, deploymentId });
+  if (workspaceId === null || parent.state === "idle") return none();
+  if (parent.state === "loading") return { state: "shut", code: "R2_PARENT_LOADING", reason: "Reading the R2 review" };
+  if (parent.state === "failed") return { state: "shut", code: "R2_PARENT_UNREADABLE", reason: parent.reason };
+  const read = parent.read;
+  if (read.kind === "unsupported_shape") return { state: "shut", code: "R2_PARENT_UNSUPPORTED", reason: "The R2 review is a shape this build does not read." };
+  if (read.parent.state === "NONE") return { state: "shut", code: R2_PARENT_GAP, reason: "This deployment has no R2 review." };
+  return bindExitReview({ context: read.parent.context, workspaceId, deploymentId });
 }
 
 /* ── the summary ──────────────────────────────────────────────────────────────── */

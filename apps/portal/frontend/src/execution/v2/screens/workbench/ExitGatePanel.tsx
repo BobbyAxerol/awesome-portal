@@ -18,7 +18,8 @@ import { Flag } from "../../Flag";
 import { GapLine, GapWhy, SectionPanel } from "../../blocks";
 import { Na } from "./cells";
 import { ExitReviewRequest } from "./ExitReviewRequest";
-import { bindExitReview } from "./exitReviewRequest";
+import { bindExitParent, bindExitReview } from "./exitReviewRequest";
+import { useExitParent } from "./useExitParent";
 import { GATE_FLAG, type GateFacts } from "./model";
 
 const n = (value: number): string => formatExact(String(value), "count").display;
@@ -35,8 +36,9 @@ function progress(current: number | null, minimum: number | null, unit: string) 
 
 /**
  * What the Paper exit review request needs. Absent: the panel is the read-only gate it was (no control).
- * `captureContext` is the parent R2 review's published `capture_context`; no read of this deployment carries it today, so the
- * screen passes none and the control is shut with the typed gap (see `exitReviewRequest.ts`).
+ * The control is bound to the R2 parent of THIS deployment, read once from `GET /governance/paper-exit/parent` (`useExitParent`).
+ * `captureContext` is a context already in hand (a test, a caller that read the R2 review itself): when given it is used as is and
+ * nothing is read.
  */
 export interface ExitRequestProps {
   api: ExecutionApi;
@@ -54,11 +56,13 @@ export interface ExitGatePanelProps {
 
 export function ExitGatePanel({ gate, exitReviewsHref, request }: ExitGatePanelProps) {
   const verdict = GATE_FLAG[gate.verdict];
-  const context = request?.captureContext ?? null;
-  const bind = useMemo(
-    () => (request === undefined ? null : bindExitReview({ context, workspaceId: request.workspaceId, deploymentId: request.deploymentId })),
-    [request?.workspaceId, request?.deploymentId, context], // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  const given = request?.captureContext;
+  const parent = useExitParent(request?.api ?? null, request?.deploymentId ?? "", request?.workspaceId ?? null, request !== undefined && given === undefined);
+  const bind = useMemo(() => {
+    if (request === undefined) return null;
+    if (given !== undefined) return bindExitReview({ context: given, workspaceId: request.workspaceId, deploymentId: request.deploymentId });
+    return bindExitParent({ parent, workspaceId: request.workspaceId, deploymentId: request.deploymentId });
+  }, [request?.workspaceId, request?.deploymentId, given, parent]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <SectionPanel level={2} title="Exit gate" aside="Paper → Sandbox">
       <table className="exec-wb-kv">

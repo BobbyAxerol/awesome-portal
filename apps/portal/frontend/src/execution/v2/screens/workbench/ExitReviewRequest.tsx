@@ -9,8 +9,9 @@
  * - It is open only when the SERVER offers the action (`review-capture-capabilities`, `PAPER_EXIT_CREATE`) AND the request is bound
  *   to a published parent (`bindExitReview`: workspace, parent R2 approval and version, projection digest, this deployment). The
  *   advisory eligibility (`paper.exit_review_request`) only changes the words of a shut control; it has no way to open one.
- * - Today no read publishes the R2 parent of a deployment, so `binding` is `null` on the live screen and the control stays shut
- *   with the typed gap. The rules and the write are in place for the day a read does carry the parent's `capture_context`.
+ * - The binding comes from the one read that maps a deployment to its R2 parent (`GET /governance/paper-exit/parent`, read by the
+ *   exit gate with `useExitParent`): the same `capture_context` the R2 review publishes. While it is read, when it fails, when the
+ *   deployment has no R2 or when the context is blocked, the control stays shut with one short reason.
  * - A definite refusal is shown as worded; a request whose outcome is not known (a throw, a 5xx or 408, a 2xx that is not the answer
  *   to this request) says "may have been recorded" and retries under the SAME key with the same text, so nothing is duplicated.
  * - A second click while a request is in flight is ignored (a ref). A late answer for a request the screen has left (another

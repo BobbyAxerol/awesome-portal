@@ -888,6 +888,23 @@ export class GovernanceRepository {
     }
   }
 
+  /**
+   * The R2 approval whose subject is this deployment (R2 captures are filed under the deployment id), for the Paper exit parent
+   * read: the newest approved and unexpired one, else the newest of any status so the capture context can say why it is shut.
+   * Read-only; the caller reads the approval itself with `r2Detail`.
+   */
+  async r2ParentOfDeployment(workspaceId: string, deploymentId: string): Promise<string | null> {
+    const result = await this.pool.query<{ approval_id: string }>(
+      `SELECT approval_id FROM governance_approval_requests
+        WHERE workspace_id = $1 AND gate = 'R2' AND subject_id = $2
+        ORDER BY (status IN ('APPROVED', 'APPROVED_WITH_CONDITION') AND expires_at > now()) DESC,
+                 created_at DESC, approval_id DESC
+        LIMIT 1`,
+      [workspaceId, deploymentId],
+    );
+    return result.rows[0]?.approval_id ?? null;
+  }
+
   async detail(workspaceId: string, approvalId: string): Promise<{
     approval: ApprovalRecord;
     evidence: EvidenceRecord[];

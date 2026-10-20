@@ -7,6 +7,7 @@ import addFormats from "ajv-formats";
 import { describe, expect, it } from "vitest";
 import { stageActionEligibility, STAGE_ACTIONS } from "../../../apps/control-api/src/governance/stage-action-eligibility";
 import { approvalRequestLookup } from "../../../apps/control-api/src/governance/approval-request-lookup";
+import { paperExitParent, paperExitParentQuery } from "../../../apps/control-api/src/governance/paper-exit-parent";
 
 const root = resolve(__dirname, "..");
 const load = (path: string) => JSON.parse(readFileSync(resolve(root, path), "utf8"));
@@ -15,6 +16,8 @@ const fixture = load("fixtures/governance-requester-reads.synthetic.valid.json")
 const ajv = new Ajv2020({ strict: false, allErrors: true }); addFormats(ajv);
 ajv.addSchema(load("schemas/execution-governance-approval-workflow.v1.schema.json"),
   "https://contracts.test/schemas/execution-governance-approval-workflow.v1.schema.json");
+ajv.addSchema(load("schemas/execution-governance-review-context.v1.schema.json"),
+  "https://contracts.test/schemas/execution-governance-review-context.v1.schema.json");
 const compiled = new Map<string, ReturnType<typeof ajv.compile>>();
 const compile = (name: string) => {
   if (!compiled.has(name)) compiled.set(name, ajv.compile({ $id: "https://contracts.test/openapi/" + name + ".json", $ref: "#/components/schemas/" + name,
@@ -101,12 +104,62 @@ describe("FE-069 approval request lookup contract", () => {
   });
 });
 
+describe("RV-10 Paper exit parent contract", () => {
+  const cases = Object.entries(fixture.paper_exit_parent) as [string, any][];
+  it("publishes one private GET: deployment_id required, workspace optional, no actor or approval selector", () => {
+    const path = api.paths["/api/v1/execution/governance/paper-exit/parent"];
+    expect(Object.keys(path)).toEqual(["get"]);
+    expect(path.get.operationId).toBe("executionPaperExitParentV1");
+    expect(path.get.parameters.map((p: any) => p.name ?? p.$ref)).toEqual(["#/components/parameters/WorkspaceId", "deployment_id"]);
+    expect(path.get.parameters.find((p: any) => p.name === "deployment_id").required).toBe(true);
+    expect(path.get.responses["200"].headers["Cache-Control"].schema.const).toBe("private, no-store");
+    expect(path.get.responses.default).toEqual({ $ref: "#/components/responses/Problem" });
+    expect(paperExitParentQuery.safeParse({ deployment_id: "dep_1" }).success).toBe(true);
+    for (const bad of [{}, { deployment_id: "" }, { deployment_id: "a b" }, { deployment_id: "dep_1", approval_id: "apr_1" }, { deployment_id: "dep_1", workspace_id: "ab" }])
+      expect(paperExitParentQuery.safeParse(bad).success).toBe(false);
+  });
+  it.each(cases)("fixture %s passes JSON Schema and runtime identically", (_name, value) => {
+    both("PaperExitParent", paperExitParent, value, true);
+    both("PaperExitParent", paperExitParent, { ...value, approval_id: "apr_other" }, false);
+  });
+  it("NONE has no context; FOUND carries exactly the R2 review's PAPER_EXIT_CREATE capture context, available or blocked with its typed reason", () => {
+    const f = fixture.paper_exit_parent;
+    expect(f.none).toMatchObject({ state: "NONE", capture_context: null, source_side_effect_requested: false });
+    expect(f.found_available.capture_context).toMatchObject({ action: "PAPER_EXIT_CREATE", availability: { state: "AVAILABLE", reason_code: null },
+      parent_approval_id: "apr_TEST_ONLY_r2", expected_parent_version: 3, candidates: [{ deployment_id: "deployment_TEST_ONLY", risk_grant_id: null }] });
+    expect(f.found_available.capture_context.expected_projection_digest).toMatch(/^sha256:[0-9a-f]{64}$/);
+    for (const [name, code] of [["found_blocked_r2_not_approved", "R2_APPROVAL_REQUIRED"], ["found_blocked_not_admin", "ADMIN_ROLE_REQUIRED"], ["found_blocked_expired", "APPROVAL_EXPIRED"]] as const) {
+      expect(f[name].capture_context).toMatchObject({ availability: { state: "BLOCKED", reason_code: code }, expected_projection_digest: null, candidates: [] });
+    }
+  });
+  it("both validators refuse the same inconsistent bodies (state and context agree; PAPER_EXIT_CREATE only)", () => {
+    const f = fixture.paper_exit_parent;
+    const mutations: Array<(v: any) => void> = [
+      v => { v.state = "NONE"; }, v => { v.capture_context = null; }, v => { v.state = "CREATED"; },
+      v => { v.capture_context.action = "R2_CREATE"; v.capture_context.candidates[0].risk_grant_id = "risk_1"; },
+      v => { v.source_side_effect_requested = true; }, v => { v.record_authority = "SOURCE"; },
+      v => { v.schema_version = "governance.paper-exit-parent.v2"; }, v => { delete v.deployment_id; },
+      v => { v.capture_context.expected_projection_digest = null; },
+    ];
+    for (const mutate of mutations) { const bad = copy(f.found_available); mutate(bad); both("PaperExitParent", paperExitParent, bad, false); }
+    const none = copy(f.none); none.state = "FOUND"; both("PaperExitParent", paperExitParent, none, false);
+  });
+  it("the runtime also refuses a context for another workspace or another deployment (not expressible in JSON Schema)", () => {
+    const other = copy(fixture.paper_exit_parent.found_available);
+    other.capture_context.workspace_id = "ws_OTHER";
+    expect(paperExitParent.safeParse(other).success).toBe(false);
+    const elsewhere = copy(fixture.paper_exit_parent.found_available);
+    elsewhere.capture_context.candidates[0].deployment_id = "deployment_OTHER";
+    expect(paperExitParent.safeParse(elsewhere).success).toBe(false);
+  });
+});
+
 describe("governance requester-reads generator", () => {
   it("is idempotent and leaves every pre-existing governance path intact", () => {
-    const original = Object.keys(api.paths).filter(path => !/stage-action-eligibility|request-lookup/.test(path));
+    const original = Object.keys(api.paths).filter(path => !/stage-action-eligibility|request-lookup|paper-exit\/parent/.test(path));
     expect(original).toContain("/api/v1/execution/governance/approvals");
     expect(original).toContain("/api/v1/execution/governance/approvals/history");
     expect(api.components.schemas.StageActionEligibilityRow).toBeDefined();
-    expect(api.info.version).toBe("1.6.0");
+    expect(api.info.version).toBe("1.7.0");
   });
 });

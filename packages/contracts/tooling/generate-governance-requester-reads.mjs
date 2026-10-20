@@ -1,4 +1,4 @@
-// FE-068 stage-action eligibility + FE-069 approval-request lookup. Additive, idempotent patch of the
+// FE-068 stage-action eligibility + FE-069 approval-request lookup + RV-10 Paper exit parent. Additive, idempotent patch of the
 // governance OpenAPI plus a canonical synthetic fixture built through the SAME runtime code the
 // control-api serves with. Synthetic examples are not product receipts and not installed authority.
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -23,6 +23,8 @@ function load(path) {
 const src = '../../apps/control-api/src/governance/';
 const stage = load(resolve(root, src + 'stage-action-eligibility.ts'));
 const lookup = load(resolve(root, src + 'approval-request-lookup.ts'));
+const exitParent = load(resolve(root, src + 'paper-exit-parent.ts'));
+const reviewContext = load(resolve(root, src + 'review-context.ts'));
 
 const obj = properties => ({ type: 'object', additionalProperties: false, required: Object.keys(properties), properties });
 const nullable = schema => ({ anyOf: [schema, { type: 'null' }] });
@@ -92,6 +94,18 @@ const approvalRequestLookup = { ...lookupBody, allOf: [
     then: { properties: { payload_check: { const: 'NOT_COMPARED' }, result: { type: 'null' } } } },
 ], description: 'FE-069. Read-only answer to "what would replaying this request_key do?" for the CALLER\'S OWN requests (keyed by requester: another actor\'s request under the same key is indistinguishable from NONE). NONE: a replay would create. FOUND: result is exactly the governance.approval-create.v1 body a replay returns (replayed=true). KEY_PAYLOAD_CONFLICT: only when all four payload fields were supplied and differ from the stored request; a replay would answer 409 REQUEST_KEY_PAYLOAD_CONFLICT and no approval body. Without payload fields the stored payload is NOT compared (payload_check NOT_COMPARED): FOUND then only says a request exists under this key. Same authority as the replay it mirrors (current session + workspace membership, no gate capability). Writes nothing.' };
 
+// ---- RV-10 --------------------------------------------------------------------------------------------------
+const identifier = { type: 'string', pattern: '^[A-Za-z0-9._:-]{1,192}$' };
+const paperExitParent = { ...obj({ schema_version: { const: 'governance.paper-exit-parent.v1' }, record_authority: { const: 'PORTAL' },
+  workspace_id: workspaceId, deployment_id: identifier, state: { enum: ['NONE', 'FOUND'] },
+  capture_context: nullable(ref('CaptureContext')), source_side_effect_requested: { const: false } }),
+  allOf: [
+    { if: { properties: { state: { const: 'FOUND' } }, required: ['state'] },
+      then: { properties: { capture_context: { type: 'object', properties: { action: { const: 'PAPER_EXIT_CREATE' } } } } },
+      else: { properties: { capture_context: { type: 'null' } } } },
+  ],
+  description: 'RV-10. The R2 parent of one deployment, as the SAME CaptureContext the R2 review publishes for the PAPER_EXIT_CREATE capture (parent approval id and version, Paper projection digest, the accepted deployment choice): the pins POST /governance/paper-exit/create is bound to. The R2 is the approval whose subject is the deployment: the newest approved and unexpired one, else the newest of any status (its context is then BLOCKED with the reason, e.g. R2_APPROVAL_REQUIRED or APPROVAL_EXPIRED). NONE: the deployment has no R2 and capture_context is null. FOUND: capture_context is for this workspace, is a PAPER_EXIT_CREATE context and lists only this deployment; a BLOCKED context carries no digest and no candidates. Authority is the R2 review read (governance.r2.read) plus exact session and workspace membership; the ADMIN role and the capture checks are the context\'s own typed availability. Grants nothing, writes nothing, calls no source; the route rechecks everything at submit.' };
+
 const payloadParams = Object.entries(payloadFields).map(([name, schema]) => ({ name, in: 'query', required: false, schema,
   description: 'Optional replay payload; supply all four or none.' }));
 const noStore = { 'Cache-Control': { schema: { type: 'string', const: 'private, no-store' } } };
@@ -104,6 +118,7 @@ const api = JSON.parse(readFileSync(file, 'utf8'));
 api.components.schemas.StageActionEligibilityRow = row;
 api.components.schemas.StageActionEligibility = stageEligibility;
 api.components.schemas.ApprovalRequestLookup = approvalRequestLookup;
+api.components.schemas.PaperExitParent = paperExitParent;
 const base = '/api/v1/execution/governance';
 api.paths[base + '/stage-action-eligibility'] = { get: read('executionStageActionEligibilityV1',
   'FE-068. Advisory own eligibility for the ten stage actions; see StageActionEligibility.', [{ $ref: '#/components/parameters/WorkspaceId' }],
@@ -112,7 +127,12 @@ api.paths[base + '/approvals/request-lookup'] = { get: read('executionApprovalRe
   'FE-069. Look up the caller\'s own approval request by request_key without replaying it; see ApprovalRequestLookup.',
   [{ $ref: '#/components/parameters/WorkspaceId' }, { name: 'request_key', in: 'query', required: true, schema: requestKey }, ...payloadParams],
   'ApprovalRequestLookup') };
+api.paths[base + '/paper-exit/parent'] = { get: read('executionPaperExitParentV1',
+  'RV-10. The R2 parent of a deployment as the PAPER_EXIT_CREATE capture context the Paper exit request is bound to; see PaperExitParent.',
+  [{ $ref: '#/components/parameters/WorkspaceId' }, { name: 'deployment_id', in: 'query', required: true, schema: identifier }],
+  'PaperExitParent') };
 if (api.info.version === '1.5.0') api.info.version = '1.6.0';
+if (api.info.version === '1.6.0') api.info.version = '1.7.0';
 
 // ---- fixtures -----------------------------------------------------------------------------------------------
 const NOW = 1792300000000, WS = 'ws_TEST_ONLY';
@@ -143,6 +163,21 @@ const fixture = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', runtime_quali
       stored: { payloadHash: 'sha256:' + 'a'.repeat(64), approval } }),
   },
   approval_request_lookup_payload_example: { request_key: base_.request_key, ...payload },
+  paper_exit_parent: (() => {
+    const DEPLOYMENT = 'deployment_TEST_ONLY', parent = { approvalId: 'apr_TEST_ONLY_r2', workspaceId: WS, approvalVersion: 3 };
+    const blocked = code => reviewContext.blockedCapture(parent, 'PAPER_EXIT_CREATE', code);
+    const available = reviewContext.CaptureContextSchema.parse({ ...blocked('CAPTURE_DEPLOYMENT_SCOPE_NOT_FOUND'),
+      availability: { state: 'AVAILABLE', reason_code: null }, expected_projection_digest: 'sha256:' + 'c'.repeat(64),
+      candidates: [{ deployment_id: DEPLOYMENT, portfolio_id: 'portfolio_TEST_ONLY', risk_grant_id: null, currency: 'USDT' }] });
+    const outcome = context => exitParent.paperExitParentOutcome({ workspaceId: WS, deploymentId: DEPLOYMENT, context });
+    return {
+      none: outcome(null),
+      found_available: outcome(available),
+      found_blocked_r2_not_approved: outcome(blocked('R2_APPROVAL_REQUIRED')),
+      found_blocked_not_admin: outcome(blocked('ADMIN_ROLE_REQUIRED')),
+      found_blocked_expired: outcome(blocked('APPROVAL_EXPIRED')),
+    };
+  })(),
 };
 const outputs = { [path]: api, 'fixtures/governance-requester-reads.synthetic.valid.json': fixture };
 for (const [name, value] of Object.entries(outputs)) {
