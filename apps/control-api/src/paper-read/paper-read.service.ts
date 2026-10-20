@@ -20,6 +20,7 @@ import { PaperBlotterQuery } from "./contracts";
 import { ManagerPage, managerPage } from "./manager-records";
 import { enforceProfileLineage } from "../execution/profile-lineage";
 import { LocalQueryAnalyticsService } from "../execution/local-query-analytics.service";
+import { absentRelation, buildStageFacts, RelationInput } from "../execution/stage-facts";
 import {
   oldestStageAsOfMs,
   stagePanels,
@@ -403,6 +404,15 @@ export class PaperReadService {
         deployment: deployment ?? null,
         observation_gate: observationGate,
         query_analytics: queryAnalytics,
+        // FE-067. Typed runtime / reconciliation / sessions. The workbench screen is not bound to the
+        // sessions or reconciliation relations, so today those two are typed NOT_PUBLISHED with a reason;
+        // they publish the moment a read carries the relation (no change here).
+        stage_facts: buildStageFacts({
+          deployment: deployment ?? null,
+          sessions: paperRelationInput(relations, "sessions"),
+          reconciliation: paperRelationInput(relations, "reconciliation"),
+          reconciliationAsOf: relations.find((item) => item.spec.key === "reconciliation")?.page?.asOf ?? null,
+        }),
         ...scoped,
         ...depth.rows,
         ...(Object.keys(depth.windows).length > 0 ? { history_windows: depth.windows } : {}),
@@ -761,6 +771,19 @@ function unresolvedRelations(
     state,
     reasonCode: resolution.reasonCode,
   }));
+}
+
+/** A workbench relation as the pure stage facts read it; a relation this read never asked for is absent, not empty. */
+function paperRelationInput(relations: readonly RelationResult[], key: string): RelationInput {
+  const item = relations.find((candidate) => candidate.spec.key === key);
+  if (!item) return absentRelation("PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN");
+  return {
+    present: true,
+    state: item.state,
+    reasonCode: item.reasonCode,
+    rows: item.page?.items ?? [],
+    absentReason: "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN",
+  };
 }
 
 function asStageRelations(relations: readonly RelationResult[]): StageRelation[] {

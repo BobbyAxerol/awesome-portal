@@ -90,6 +90,11 @@ export class ProfileScreenSource {
     };
   }
 
+  /** The profile's own state for one relation (`source.<key>`); `UNAVAILABLE` when the profile states none. */
+  relationState(key: string): { state: string; reasonCode: string | null } {
+    return this.capability(key);
+  }
+
   collection(panelId: string, authority: "EXECUTION" | "BROKER", key: string) {
     const rows = this.rows(key).slice(0, 200);
     return {

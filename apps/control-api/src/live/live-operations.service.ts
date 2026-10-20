@@ -12,6 +12,7 @@ import {
   openOrders,
   ProfileScreenSource,
 } from "../execution/profile-screen-composer";
+import { profileStageFacts } from "../execution/stage-facts-profile";
 import { GovernanceError } from "../governance/governance.service";
 import { OwnerAccessService } from "../auth/owner-access.service";
 import {
@@ -241,6 +242,8 @@ export class LiveOperationsService {
         activated_at: null,
         blocker_codes: blockers,
       },
+      // FE-067: typed runtime / reconciliation / sessions; additive, see stage-facts.ts.
+      stage_facts: profileStageFacts(source, "LIVE_SOURCE_UNAVAILABLE"),
       predecessor_canary_envelope: null,
       kpis: [
         kpi("capital", "Capital", "EXECUTION", currency, capital, ["account_balances"], false, capitalReason),
@@ -459,6 +462,8 @@ export class LiveOperationsService {
         activated_at: null,
         blocker_codes: blockers,
       },
+      // FE-067: typed runtime / reconciliation / sessions; additive, see stage-facts.ts.
+      stage_facts: profileStageFacts(source, "LIVE_SOURCE_UNAVAILABLE"),
       predecessor_canary_envelope: {
         envelope_id: canary.envelope_id,
         revision: canary.revision,

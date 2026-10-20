@@ -7,6 +7,8 @@ import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
 import { ProfileReadService } from "../profile-read/profile-read.service";
 import { browserSafeProfileRead } from "../execution/browser-safe-profile-read";
+import { ProfileScreenSource } from "../execution/profile-screen-composer";
+import { profileStageFacts } from "../execution/stage-facts-profile";
 import {
   SANDBOX_CERTIFICATION_STEPS,
   SandboxCertificationCreateRequest,
@@ -324,6 +326,7 @@ export class SandboxCertificationService {
     const evaluation = evaluateSandboxCertification(detail);
     const readAt = new Date().toISOString();
     const sourceConnected = currentSource !== undefined && currentSource.state !== "unavailable";
+    const stageSource = new ProfileScreenSource(currentSource ?? {}, readAt);
     const currentIndex = evaluation.steps.findIndex((item) => item.evaluationState !== "PASS");
     const sourcePanel = (
       panelId: string,
@@ -439,6 +442,8 @@ export class SandboxCertificationService {
         expires_at: iso(item.evidence?.expires_at ?? null),
         blocker_code: item.blockerCode,
       })),
+      // FE-067: typed runtime / reconciliation / sessions from the profile source; additive.
+      stage_facts: profileStageFacts(stageSource, "SANDBOX_SOURCE_UNAVAILABLE"),
       source_panels: [
         sourcePanel("internal", "EXECUTION", ["TIMEBOXED_RUN"]),
         sourcePanel("broker", "BROKER", ["CONNECT", "SYNC", "ORDER_TYPES"]),
@@ -580,6 +585,8 @@ export class SandboxCertificationService {
         expires_at: null,
         blocker_code: reason,
       })),
+      // FE-067: typed runtime / reconciliation / sessions from the profile source; additive.
+      stage_facts: profileStageFacts(new ProfileScreenSource(currentSource, readAt), "SANDBOX_SOURCE_UNAVAILABLE"),
       source_panels: ["internal", "broker", "difference"].map((panelId) => ({
         panel_id: panelId,
         source_authority: panelId === "internal" ? "EXECUTION" : panelId === "broker" ? "BROKER" : "DERIVED",

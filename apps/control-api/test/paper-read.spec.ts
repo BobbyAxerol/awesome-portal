@@ -845,4 +845,41 @@ describe("N22 full Paper read product BFF", () => {
     expect(source.calls.every((call) => (call.query.limit ?? 0) > 0 && (call.query.limit ?? 0) <= 200)).toBe(true);
     expect(responses.every((response) => Buffer.byteLength(JSON.stringify(response)) < 1_048_576)).toBe(true);
   });
+
+  it("FE-067 publishes typed stage_facts on the workbench without a single extra source call", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE", active: true },
+    ]);
+    const result = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    const facts = result.data.stage_facts;
+    expect(facts.schema_version).toBe("execution.stage-facts.v1");
+    // `active` is a source flag, not a runtime: it is never turned into RUNNING.
+    expect(facts.runtime.runtime_state).toEqual({
+      availability: "NOT_PUBLISHED", value: null, reason_code: "SOURCE_RUNTIME_STATE_FIELD_NOT_PUBLISHED",
+    });
+    // The workbench screen is not bound to the sessions / reconciliation relations: typed absence, not an empty list.
+    expect(facts.sessions).toMatchObject({
+      availability: "NOT_PUBLISHED", reason_code: "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN", rows: [], returned_count: 0,
+    });
+    expect(facts.reconciliation.verdict).toEqual({
+      availability: "NOT_PUBLISHED", value: null, reason_code: "PAPER_WORKBENCH_RELATION_NOT_BOUND_TO_SCREEN",
+    });
+    expect(source.calls.map((call) => call.relation)).not.toContain("execution_sessions");
+    expect(source.calls.map((call) => call.relation)).not.toContain("reconciliation_findings");
+    expect(source.calls).toHaveLength(7);
+    // The V1 `sessions` / `reconciliation` Records branches are not invented either.
+    expect(result.data.sessions).toBeUndefined();
+    expect(result.data.reconciliation).toBeUndefined();
+  });
+
+  it("FE-067 keeps stage_facts on the VN market variant too", async () => {
+    const source = new FakeCurrentSource();
+    source.rows.set("strategy_deployments", [
+      { deployment_id: "dep_1", strategy_id: "str_1", account_id: "acc_1", mode: "paper", venue: "BINANCE" },
+    ]);
+    const result = await service(source).workbench(principal(), "dep_1", true) as Record<string, any>;
+    expect(result.schema_version).toBe("execution.paper-workbench-vnm.v1");
+    expect(result.data.stage_facts.sessions.availability).toBe("NOT_PUBLISHED");
+  });
 });
