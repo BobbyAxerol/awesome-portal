@@ -24,7 +24,7 @@ export async function createControlApiApp(
   try {
     const app = await NestFactory.create<NestFastifyApplication>(
       AppModule.register(config, pool, executionPool, dependencies),
-      new FastifyAdapter({ trustProxy: true }),
+      new FastifyAdapter({ trustProxy: true, routerOptions: { maxParamLength: 256 } }),   // request_key may be 192 chars (BE-P13 lookup)
       // Route-discovery logs drown the actual Vitest result in CI. Legacy
       // production keeps Nest logging; the isolated test app is silent.
       // Selected native bootstrap is a single process-owned app. Nest's public

@@ -200,7 +200,7 @@ describe.skipIf(!URL)("BE-P13 migration 146 + F0 apply-attempts: real PG + real 
         { provide: CONTROL_API_CONFIG, useValue: ctx.config },
         { provide: WorkspacesRepository, useValue: new WorkspacesRepository(ctx.pool, ctx.config) },
         { provide: ExecutionF0ReadService, useValue: w.service }] },
-      new FastifyAdapter(), { logger: false, abortOnError: false });
+      new FastifyAdapter({ routerOptions: { maxParamLength: 256 } }), { logger: false, abortOnError: false });
     try {
       app.useGlobalFilters(new HttpErrorFilter()); await app.register(cookiePlugin as never); await app.init();
       const http = app.getHttpAdapter().getInstance() as FastifyInstance; await http.ready();
@@ -451,7 +451,7 @@ describe.skipIf(!URL)("BE-P13 migration 146 + F0 apply-attempts: real PG + real 
       for (const response of [await http.lookup(mine, key, { query: new URLSearchParams({ workspace_id: next() }).toString() }),
         await http.lookup(mine, key, { account: outsider })]) {
         expect(response.statusCode).toBe(404);
-        expect(response.body).not.toMatch(/FOUND|NONE|CONFLICT|COMMAND_RELAY_DISABLED|first_recorded_at/);
+        expect(response.body).not.toMatch(/"state"|COMMAND_RELAY_DISABLED|first_recorded_at/);
       }
     });
     await mounted(other, async http => {
@@ -485,7 +485,7 @@ describe.skipIf(!URL)("BE-P13 migration 146 + F0 apply-attempts: real PG + real 
       for (const k of [key, "revoked:never-used"]) {
         const response = await http.lookup(operationId, k);
         refused(response, 404, "COMMAND_RESOURCE_NOT_FOUND"); expect(response.json().error).toEqual(unknown.json().error);
-        expect(response.body).not.toMatch(/FOUND|NONE|CONFLICT|COMMAND_RELAY_DISABLED|first_recorded_at/);
+        expect(response.body).not.toMatch(/"state"|COMMAND_RELAY_DISABLED|first_recorded_at/);
       }
     });
   });
