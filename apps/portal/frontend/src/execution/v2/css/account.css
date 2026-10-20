@@ -431,6 +431,13 @@ a.exec-acct-open {
   gap: var(--space-2);
 }
 
+/* The screen-reader-only text inside a table cell (the "(stale)" suffix) is absolutely positioned. Without a positioned
+ * ancestor inside the scroller its containing block is the page, so it escaped the table's own horizontal scroll and
+ * pushed the page sideways by the table's overhang between 661 and 1100 px (UXM-10 F-3). The wrap becomes its containing
+ * block, which clips it. Scoped to this screen: the shared cards table is used by other screens too. */
+.exec-acct-v2 .exec-cards-wrap {
+  position: relative;
+}
 .exec-acct-sr {
   position: absolute;
   width: 1px;

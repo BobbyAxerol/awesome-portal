@@ -776,7 +776,6 @@ const KNOWN_AXE: Readonly<Record<string, Readonly<Record<string, number>>>> = {
  * not accepted debt (evidence/UXM-10/README.md).
  */
 const KNOWN_ACCESS: Readonly<Record<string, string>> = {
-  "accounts@tablet:overflow": "Accounts & Bindings scrolls the page sideways by ~141px at 1024 (F-3)",
   "workbench@tablet:obscured": "the 'Overview' tab button is covered by something else when focused at 1024 (F-4)",
   "workbench-fills@tablet:obscured": "same as workbench@tablet (F-4)",
   "workbench-vnm@tablet:obscured": "same as workbench@tablet (F-4)",
