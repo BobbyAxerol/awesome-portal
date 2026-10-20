@@ -13,7 +13,7 @@ import { getPath, type Draft } from "../testkit/matrix";
 import { enumCases, integerCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases, stringCases } from "../testkit/negative";
 import { validateAgainst } from "../testkit/schema";
 import {
-  ACCESS_ELIGIBILITY_BATCH_SCHEMA, ELIGIBILITY_STEP_UP_STATES, accessEligibilityBatchUrl, batchResult, eligibilityBatchAnswers, readAccessEligibilityBatch,
+  ACCESS_ELIGIBILITY_BATCH_SCHEMA, ELIGIBILITY_STEP_UP_STATES, STEP_UP_FAMILIES, STEP_UP_PRECONDITIONS, accessEligibilityBatchUrl, batchResult, eligibilityBatchAnswers, readAccessEligibilityBatch,
   type AccessEligibilityBatch,
 } from "./accessSelfBatch";
 
@@ -55,7 +55,12 @@ describe("L0 · canonical, verbatim", () => {
 
   it("REQUIRED: a true rule with no active session step-up is REQUIRED, and a dead step-up button is told before the click", () => {
     const batch = batchOf(REQUIRED)!;
-    expect(batch.sessionStepUp).toMatchObject({ state: "NOT_ACTIVE", validUntilMs: null, challenge: { preconditionMet: false, mechanism: "PASSWORD_REAUTH" } });
+    expect(batch.sessionStepUp).toMatchObject({ state: "NOT_ACTIVE", validUntilMs: null });
+    // A capital-only actor: the capital challenge can be answered, the access-admin one cannot (they need no access.grant).
+    expect(batch.sessionStepUp.challenges.map((c) => [c.family, c.mechanism, c.precondition, c.preconditionMet])).toEqual([
+      ["CAPITAL_COMMAND", "PASSWORD_REAUTH", "CURRENT_OWN_STEP_UP_ACTION_ALLOW", true],
+      ["ACCESS_ADMIN", "PASSWORD_REAUTH", "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW", false],
+    ]);
     const portfolio = batchResult(batch, "PORTFOLIO", "portfolio_TEST_ONLY")!;
     expect(portfolio.actions.map((a) => [a.action, a.stepUpRequired, a.stepUpState])).toEqual([
       ["portfolio.read", false, "NOT_REQUIRED"], ["capital.top_up", true, "REQUIRED"],
@@ -64,7 +69,8 @@ describe("L0 · canonical, verbatim", () => {
 
   it("ACTIVE: the same rule is ACTIVE while this session holds a step-up, which ends before the session ceiling", () => {
     const batch = batchOf(ACTIVE)!;
-    expect(batch.sessionStepUp).toMatchObject({ state: "ACTIVE", validUntilMs: 1792094403000, challenge: { preconditionMet: true } });
+    expect(batch.sessionStepUp).toMatchObject({ state: "ACTIVE", validUntilMs: 1792094403000 });
+    expect(batch.sessionStepUp.challenges[0]).toMatchObject({ family: "CAPITAL_COMMAND", preconditionMet: true });
     expect(batch.sessionStepUp.validUntilMs!).toBeLessThanOrEqual(batch.validUntilMs);
     expect(batchResult(batch, "DEPLOYMENT", "deployment_TEST_ONLY")!.actions[1]).toMatchObject({ action: "capital.top_up", stepUpState: "ACTIVE" });
   });
@@ -85,7 +91,18 @@ describe("L0 · canonical, verbatim", () => {
 
   it("the closed words are the schema's, word for word", () => {
     expect([...ELIGIBILITY_STEP_UP_STATES]).toEqual([...schemaEnum(OA, `${ROW}/properties/step_up_state`)]);
-    expect(ACCESS_ELIGIBILITY_BATCH_SCHEMA).toBe("portal.self-eligibility-batch.v1");
+    expect(ACCESS_ELIGIBILITY_BATCH_SCHEMA).toBe("portal.self-eligibility-batch.v2");
+    // The two proof families, in the fixed order, and the precondition each one is bound to, word for word.
+    const challengeProps = `${PTR}/properties/session_step_up/properties/challenges/prefixItems/0/allOf/0/properties`;
+    expect([...STEP_UP_FAMILIES].sort()).toEqual([...schemaEnum(OA, `${challengeProps}/family`)].sort());
+    expect([...Object.values(STEP_UP_PRECONDITIONS)].sort()).toEqual([...schemaEnum(OA, `${challengeProps}/precondition`)].sort());
+    expect([...STEP_UP_FAMILIES]).toEqual(["CAPITAL_COMMAND", "ACCESS_ADMIN"]);
+  });
+
+  it("the batch.v1 body (one `challenge`) is another schema: typed unsupported_shape, never read", () => {
+    expect(readAccessEligibilityBatch(edit(REQUIRED, (b) => { b.schema_version = "portal.self-eligibility-batch.v1"; }))).toEqual({
+      kind: "unsupported_shape", schemaVersion: "portal.self-eligibility-batch.v1",
+    });
   });
 
   it("the v1 single-resource body is another schema: typed unsupported_shape", () => {
@@ -106,10 +123,23 @@ describe("L1 · runtime rules and cross-field rules", () => {
     ["session step-up ACTIVE ending after the session ceiling", ACTIVE, (b) => { b.session_step_up.valid_until_ms = b.valid_until_ms + 1; }, false],
     ["session step-up ACTIVE ending at the evaluation time", ACTIVE, (b) => { b.session_step_up.valid_until_ms = b.observed_at_ms; }, false],
     ["session step-up NOT_ACTIVE with an end", REQUIRED, (b) => { b.session_step_up.valid_until_ms = b.valid_until_ms; }, true],
-    ["a challenge route that is not the step-up route", REQUIRED, (b) => { b.session_step_up.challenge.route = "/api/admin/profile-access/v2/other"; }, true],
-    ["a challenge mechanism that is not PASSWORD_REAUTH", REQUIRED, (b) => { b.session_step_up.challenge.mechanism = "TOTP"; }, true],
-    ["precondition_met as text", REQUIRED, (b) => { b.session_step_up.challenge.precondition_met = "false"; }, true],
-    ["challenge dropped", REQUIRED, (b) => { delete b.session_step_up.challenge; }, true],
+    ["a challenge route that is not the step-up route", REQUIRED, (b) => { b.session_step_up.challenges[0].route = "/api/admin/profile-access/v2/other"; }, true],
+    ["a challenge mechanism that is not PASSWORD_REAUTH", REQUIRED, (b) => { b.session_step_up.challenges[1].mechanism = "TOTP"; }, true],
+    ["precondition_met as text", REQUIRED, (b) => { b.session_step_up.challenges[0].precondition_met = "true"; }, true],
+    ["the old single `challenge` instead of `challenges`", REQUIRED, (b) => { b.session_step_up.challenge = b.session_step_up.challenges[0]; delete b.session_step_up.challenges; }, true],
+    ["challenges dropped", REQUIRED, (b) => { delete b.session_step_up.challenges; }, true],
+    ["one challenge only", REQUIRED, (b) => { b.session_step_up.challenges.pop(); }, true],
+    ["three challenges", REQUIRED, (b) => { b.session_step_up.challenges.push(clone(b.session_step_up.challenges[0])); }, true],
+    ["the challenges in the other order", REQUIRED, (b) => { b.session_step_up.challenges.reverse(); }, true],
+    ["the same family twice", REQUIRED, (b) => { b.session_step_up.challenges[1] = clone(b.session_step_up.challenges[0]); }, true],
+    ["an unknown family", REQUIRED, (b) => { b.session_step_up.challenges[0].family = "PORTFOLIO_COMMAND"; }, true],
+    ["CAPITAL_COMMAND bound to the access-admin precondition", REQUIRED, (b) => { b.session_step_up.challenges[0].precondition = "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW"; }, true],
+    ["ACCESS_ADMIN bound to the capital precondition", REQUIRED, (b) => { b.session_step_up.challenges[1].precondition = "CURRENT_OWN_STEP_UP_ACTION_ALLOW"; }, true],
+    ["an unknown precondition", REQUIRED, (b) => { b.session_step_up.challenges[0].precondition = "ANYTHING"; }, true],
+    ["a key added to a challenge", REQUIRED, (b) => { b.session_step_up.challenges[1].hint = "x"; }, true],
+    // The server refuses an ALLOWED capital row beside an unmet capital challenge (STEP_UP_CHALLENGE_ROW_DISAGREE); JSON Schema cannot compare them.
+    ["an ALLOWED capital row beside an unmet capital challenge", REQUIRED, (b) => { b.session_step_up.challenges[0].precondition_met = false; }, false],
+    ["an ALLOWED capital row beside an unmet capital challenge while ACTIVE", ACTIVE, (b) => { b.session_step_up.challenges[0].precondition_met = false; }, false],
     ["the same resource twice", REQUIRED, (b) => { b.results[1].resource = clone(b.results[0].resource); }, false],
     ["resources answering different actions", REQUIRED, (b) => { b.results[1].actions.pop(); }, false],
     ["resources answering the actions in another order", REQUIRED, (b) => { b.results[1].actions.reverse(); }, false],
@@ -128,6 +158,25 @@ describe("L1 · runtime rules and cross-field rules", () => {
     expect(readAccessEligibilityBatch(body), name).toBeNull();
     // `schemaSays`: whether the published schema can express the rule. Where it cannot, the reader is stricter by design.
     if (schemaSays) expect(violations(body).length, name).toBeGreaterThan(0);
+  });
+
+  it("an unmet capital challenge is a plain fact when no capital row is ALLOWED (the read stays)", () => {
+    const body = edit(REQUIRED, (b) => {
+      b.session_step_up.challenges[0].precondition_met = false;
+      for (const result of b.results) {
+        Object.assign(result.actions[1], { permission: "UNAVAILABLE", reason_class: "NO_CURRENT_PERMISSION", public_copy_key: "NO_CURRENT_PERMISSION", grant_ref: null, authority_mode: "NOT_ESTABLISHED" });
+      }
+    });
+    expect(violations(body), "schema").toEqual([]);
+    const batch = batchOf(body);
+    expect(batch).not.toBeNull();
+    expect(batch!.sessionStepUp.challenges[0].preconditionMet).toBe(false);
+  });
+
+  it("an unmet ACCESS_ADMIN challenge never disagrees with a capital row (a delegate has no access.grant)", () => {
+    const batch = batchOf(REQUIRED)!;
+    expect(batch.sessionStepUp.challenges[1]).toMatchObject({ family: "ACCESS_ADMIN", preconditionMet: false });
+    expect(batchResult(batch, "PORTFOLIO", "portfolio_TEST_ONLY")!.actions[1]).toMatchObject({ permission: "ALLOWED", stepUpState: "REQUIRED" });
   });
 
   it("the request URL: one comma-separated resources value, canonical tokens, or refused", () => {
@@ -175,7 +224,7 @@ const ROW_FIELDS = ["action", "permission", "reason_class", "public_copy_key", "
 const NEG: Case[] = [
   ...requiredCases(REQUIRED, ["schema_version", "workspace_id", "environment", "current_only", "advisory_only", "observed_at_ms", "valid_until_ms", "session_step_up", "results"].map((k) => [k] as const)),
   ...requiredCases(REQUIRED, ["state", "valid_until_ms", "challenge"].map((k) => ["session_step_up", k] as const)),
-  ...requiredCases(REQUIRED, ["mechanism", "route", "precondition", "precondition_met"].map((k) => ["session_step_up", "challenge", k] as const)),
+  ...requiredCases(REQUIRED, [0, 1].flatMap((n) => ["family", "mechanism", "route", "precondition", "precondition_met"].map((k) => ["session_step_up", "challenges", n, k] as const))),
   ...requiredCases(REQUIRED, [["results", 0, "resource"], ["results", 0, "actions"], ["results", 0, "resource", "kind"], ["results", 0, "resource", "id"]]),
   ...requiredCases(REQUIRED, ROW_FIELDS.flatMap((k) => [["results", 0, "actions", 0, k] as const, ["results", 1, "actions", 1, k] as const])),
   ...enumsOf(REQUIRED, ["environment"], ["paper", "sandbox", "live"]),
@@ -186,8 +235,10 @@ const NEG: Case[] = [
   ...integerCases(ACTIVE, ["session_step_up", "valid_until_ms"]),
   ...stringCases(REQUIRED, ["workspace_id"]),
   ...stringCases(REQUIRED, ["results", 0, "resource", "id"]),
-  ...schemaVersionCases(REQUIRED, ["schema_version"], ACCESS_ELIGIBILITY_BATCH_SCHEMA, ["portal.self-eligibility.v1", "portal.self-eligibility-batch.v2"]),
-  ...pollutionCases(REQUIRED, [[], ["session_step_up"], ["session_step_up", "challenge"], ["results", 0], ["results", 0, "resource"], ["results", 0, "actions", 0]]),
+  ...schemaVersionCases(REQUIRED, ["schema_version"], ACCESS_ELIGIBILITY_BATCH_SCHEMA, ["portal.self-eligibility.v1", "portal.self-eligibility-batch.v1"]),
+  ...enumsOf(REQUIRED, ["session_step_up", "challenges", 0, "family"], [...STEP_UP_FAMILIES]),
+  ...enumsOf(REQUIRED, ["session_step_up", "challenges", 1, "family"], [...STEP_UP_FAMILIES]),
+  ...pollutionCases(REQUIRED, [[], ["session_step_up"], ["session_step_up", "challenges", 0], ["session_step_up", "challenges", 1], ["results", 0], ["results", 0, "resource"], ["results", 0, "actions", 0]]),
 ];
 
 describe("L3 · negative · AccessEligibilityBatch", () => {
