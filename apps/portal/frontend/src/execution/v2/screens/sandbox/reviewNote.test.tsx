@@ -71,10 +71,10 @@ describe("open only when the server says so (D10)", () => {
 
   it.each([
     ["RETAINED_REVIEW_READ_ONLY", "Read-only on this build"],
-    ["ADMIN_ROLE_REQUIRED", "Needs the approver grant"],
+    ["ADMIN_ROLE_REQUIRED", "Needs the Admin role"],
     ["GOVERNANCE_CAPABILITY_REQUIRED", "Needs the approver grant"],
-    ["GOVERNANCE_SCOPE_MISMATCH", "Needs the approver grant"],
-    ["CAPTURE_PROJECTION_NOT_AUTHORIZED", "Not enabled for this profile"],
+    ["GOVERNANCE_SCOPE_MISMATCH", "The grant does not cover this deployment"],
+    ["CAPTURE_PROJECTION_NOT_AUTHORIZED", "The paper projection is not authorised for this capture"],
   ])("BE-P7: the server's reason %s reads in words, the code stays apart, and the form stays shut", async (code, words) => {
     await mount({ capabilities: { ok: true, value: capabilitiesBody("UNAVAILABLE", code) } });
     expect(screen.queryByLabelText(LABEL)).toBeNull();

@@ -38,10 +38,10 @@ describe("stage disabled-reason dictionary (hi-fi KIT.WHY)", () => {
 describe("captureReasonText (FE-068, BE-P7: the capabilities row's reason_code in the eligibility's own words)", () => {
   it("reads every reason class the capture predicate publishes through the SAME dictionary as the eligibility", () => {
     expect(captureReasonText("RETAINED_REVIEW_READ_ONLY")).toBe("Read-only on this build");
-    expect(captureReasonText("ADMIN_ROLE_REQUIRED")).toBe("Needs the approver grant");
+    expect(captureReasonText("ADMIN_ROLE_REQUIRED")).toBe("Needs the Admin role");
     expect(captureReasonText("GOVERNANCE_CAPABILITY_REQUIRED")).toBe("Needs the approver grant");
-    expect(captureReasonText("GOVERNANCE_SCOPE_MISMATCH")).toBe("Needs the approver grant");
-    expect(captureReasonText("CAPTURE_PROJECTION_NOT_AUTHORIZED")).toBe("Not enabled for this profile");
+    expect(captureReasonText("GOVERNANCE_SCOPE_MISMATCH")).toBe("The grant does not cover this deployment");
+    expect(captureReasonText("CAPTURE_PROJECTION_NOT_AUTHORIZED")).toBe("The paper projection is not authorised for this capture");
     for (const code of Object.keys(STAGE_REASON_WHY)) expect(captureReasonText(code), code).toBe(STAGE_REASON_WHY[code as keyof typeof STAGE_REASON_WHY]);
   });
 
