@@ -55,6 +55,9 @@ import { commandId } from "../execution-v2/command.contract";
 import { CommandHttpError,commandHttpCall } from "../execution-v2/command.error";
 import { PositiveParentReads } from "./positive-parent.service";
 import { LiveParentReads } from "./live-parent.service";
+import { StageActionEligibilityService } from "./stage-action-eligibility.service";
+import { stageActionEligibilityQuery } from "./stage-action-eligibility";
+import { approvalRequestLookupQuery } from "./approval-request-lookup";
 
 interface GovernanceRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -78,6 +81,7 @@ export class GovernanceController {
     @Optional() @Inject(OperationalReadService) private readonly currentReads?: OperationalReadService,
     @Optional() @Inject(PositiveParentReads) private readonly positiveParents?: PositiveParentReads,
     @Optional() @Inject(LiveParentReads) private readonly liveParents?: LiveParentReads,
+    @Optional() @Inject(StageActionEligibilityService) private readonly stageEligibility?: StageActionEligibilityService,
   ) {}
 
   @Get("/governance/review-capture-capabilities")
@@ -279,6 +283,33 @@ export class GovernanceController {
       },
       this.requestId(request),
     );
+  }
+
+  /** FE-068: advisory own per-action eligibility BEFORE the click (verdict + reason_class + step-up state). */
+  @Get("/governance/stage-action-eligibility")
+  @Header("Cache-Control", "private, no-store")
+  async stageActionEligibility(@Req() request: GovernanceRequest, @Query() query: Record<string, unknown>) {
+    const parsed = stageActionEligibilityQuery.safeParse(query);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_STAGE_ACTION_ELIGIBILITY_QUERY", "Invalid stage action eligibility query.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    if (!this.stageEligibility) {
+      throw new GovernanceError("STAGE_ACTION_ELIGIBILITY_NOT_CONFIGURED", "Stage action eligibility is unavailable.", 503);
+    }
+    return this.stageEligibility.read(request.portalUser, request.portalSession, workspaceId);
+  }
+
+  /** FE-069: read-only "what would a replay of this request_key do?" for the caller's own requests. */
+  @Get("/governance/approvals/request-lookup")
+  @Header("Cache-Control", "private, no-store")
+  async approvalRequestLookup(@Req() request: GovernanceRequest, @Query() query: Record<string, unknown>) {
+    const parsed = approvalRequestLookupQuery.safeParse(query);
+    if (!parsed.success) {
+      throw new GovernanceError("INVALID_APPROVAL_REQUEST_LOOKUP", "Invalid approval request lookup.", 400);
+    }
+    const workspaceId = await this.workspace(request, parsed.data.workspace_id);
+    return this.governance.lookupApprovalRequest(request.portalUser, request.portalSession, { ...parsed.data, workspace_id: workspaceId });
   }
 
   @Get("/governance/waivers")
