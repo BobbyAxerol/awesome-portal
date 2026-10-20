@@ -105,11 +105,11 @@ describe("loaded queue", () => {
     expect(screen.getByRole("button", { name: "Needs attention" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("renders the kit's six columns: Time, Target and operation, Intent, Receipt, Display, Next (OP-6)", async () => {
+  it("renders four columns: Time, Target and operation, Receipt, Next; Intent and Display are named once as not available (OP-6)", async () => {
     const { api } = fakeApi();
     mount(api);
     const t = await table();
-    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Intent", "Receipt", "Display", "Next"]);
+    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Receipt", "Next"]);
     const row = within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr") as HTMLElement;
     expect(within(row).getByText("22 Aug 12:00Z")).toBeTruthy();
     expect(within(row).getByText(/Sync · Paper · Warning/)).toBeTruthy();
@@ -117,9 +117,12 @@ describe("loaded queue", () => {
     // Next is an action, not a repeat of the lens: the default lens is all UNACKNOWLEDGED.
     expect(within(row).queryByText("Unacknowledged")).toBeNull();
     expect(within(row).getByRole("button", { name: "Review" })).toBeTruthy();
-    // Intent and Display have no source yet: the cell says so with its request id; it is not empty and not a dash.
-    expect(within(row).getByText("(FE-020)", { exact: false }).closest("td")?.getAttribute("data-l")).toBe("Intent");
-    expect(within(row).getByText("(FE-032)", { exact: false }).closest("td")?.getAttribute("data-l")).toBe("Display");
+    // Intent and Display have no source yet: not an empty or "Not published" cell per row, one line with the ids in its title.
+    expect(within(row).queryByText("(FE-020)", { exact: false })).toBeNull();
+    const line = screen.getAllByTestId("not-available-line").find((node) => node.textContent?.includes("Intent"))!;
+    expect(line.textContent).toContain("Not available: Intent, Display");
+    expect(line.getAttribute("title")).toContain("Intent: Not published (FE-020)");
+    expect(line.getAttribute("title")).toContain("Display: Not published (FE-032)");
   });
 
   it("prints no dash, no N/A, and says Not published with the request ids", async () => {
@@ -129,8 +132,9 @@ describe("loaded queue", () => {
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/[—–]/);
     expect(text).not.toContain("N/A");
-    expect(text).toContain("Not published (FE-020)");
-    expect(text).toContain("Not published (FE-032)");
+    const titles = screen.getAllByTestId("not-available-line").map((node) => node.getAttribute("title")).join("\n");
+    expect(titles).toContain("Not published (FE-020)");
+    expect(titles).toContain("Not published (FE-032)");
     fireEvent.click(screen.getByRole("tab", { name: "Audit" }));
     expect(document.body.textContent).toContain("Not published (FE-021)");
     fireEvent.click(screen.getByRole("tab", { name: "Exceptions" }));
@@ -250,9 +254,11 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
       const why = document.getElementById(button.getAttribute("aria-describedby") ?? "");
       expect(why?.textContent).toMatch(/^Not published \(FE-015\)/);
     }
-    expect(dock.textContent).toContain("Not published (FE-020)");
-    expect(dock.textContent?.match(/Not published \(FE-032\)/g)).toHaveLength(2);
-    expect(dock.textContent).toContain("Not published (FE-021)");
+    const gaps = within(dock).getByTestId("not-available-line");
+    expect(gaps.textContent).toContain("Not available: Intent axis, Display axis, Amounts, Who acknowledged or resolved it");
+    expect(gaps.getAttribute("title")).toContain("Intent axis: Not published (FE-020)");
+    expect(gaps.getAttribute("title")?.match(/Not published \(FE-032\)/g)).toHaveLength(2);
+    expect(gaps.getAttribute("title")).toContain("Who acknowledged or resolved it: Not published (FE-021)");
     expect(dock.textContent).not.toMatch(/[—–]/);
     fireEvent.click(within(dock).getByText("Close"));
     expect(screen.queryByRole("complementary")).toBeNull();

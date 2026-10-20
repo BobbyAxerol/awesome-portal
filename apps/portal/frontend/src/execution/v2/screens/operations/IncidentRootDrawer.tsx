@@ -12,19 +12,20 @@
  * mode the shared Drawer is the modal dialog and in dock mode it sits beside
  * the table.
  */
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
 import { DockAction, Drawer, type DockMode } from "../../Drawer";
+import { NotAvailableLine } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { formatAsOf } from "../../boundary";
 import type { IncidentRootReadV2, IncidentRootV2, IncidentStateV2, InstantV2 } from "../../readers/operationalQueue";
 import { INCIDENT_STATES_V2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
-import { ACCESS_PATH, AccessLink, FE, NotPublished, notPublishedReason } from "./notPublished";
+import { ACCESS_PATH, AccessLink, FE, notPublishedReason } from "./notPublished";
 import { humanize } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
@@ -81,7 +82,6 @@ export interface IncidentRootDrawerProps {
 
 export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose, accessHref = ACCESS_PATH }: IncidentRootDrawerProps) {
   const [load, setLoad] = useState<Load>({ phase: "loading" });
-  const gapId = useId();
 
   useEffect(() => {
     let live = true;
@@ -137,22 +137,13 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
   // four panels here (Evidence, Operations taken, Resolution gates, Timeline), so each keeps its place with its
   // own name and one line; the reason code the server gave is the same for all of them and is printed once.
   const notPublished = (
-    <>
-      <h3 className="exec-ops-section">Not published</h3>
-      <div className="exec-ops-gaps">
-        {/* Named by their own heading (one name, not a label plus the same text again) and grouped, not four region landmarks. */}
-        {GAP_PANELS.map((panel, index) => (
-          <div key={panel} className="exec-ops-gap" role="group" aria-labelledby={`${gapId}-${index}`}>
-            <h4 id={`${gapId}-${index}`} className="exec-ops-gap-title">{panel}</h4>
-            <p className="exec-ops-np"><NotPublished id={FE.events} /></p>
-          </div>
-        ))}
-      </div>
-      <p className="exec-ops-np exec-ops-gap-assignee">
-        <span className="exec-ops-gap-title">Assignee</span> <NotPublished id={FE.assignee} />
-      </p>
-      {children.reasonCode ? <p className="exec-ops-np-reason">Reason: {children.reasonCode}</p> : null}
-    </>
+    <NotAvailableLine
+      className="exec-ops-na-line"
+      facts={[
+        ...GAP_PANELS.map((panel) => ({ label: panel, id: FE.events, why: children.reasonCode })),
+        { label: "Assignee", id: FE.assignee },
+      ]}
+    />
   );
   return (
     <Drawer
@@ -177,7 +168,7 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
         ))}
       </ol>
       <p className="exec-ops-reason">
-        Forward only. Mitigated and resolved are Portal records; they do not say the position or the source is safe.
+        Forward only. Mitigated and resolved are Portal records, not a safety statement.
       </p>
       <dl className="exec-ops-facts">
         <dt>Target</dt>
@@ -197,7 +188,7 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
         <dt>Version</dt>
         <dd><span className="exec-ops-mono">{incident.workflowVersion}</span></dd>
         <dt>Source</dt>
-        <dd>Integration {humanize(incident.sourceIntegrationState).toLowerCase()}; nothing was asked of the source.</dd>
+        <dd title="Nothing was asked of the source.">Integration {humanize(incident.sourceIntegrationState).toLowerCase()}</dd>
       </dl>
       <p className="exec-ops-reason">Resolving closes the incident only. It never resumes a deployment.</p>
     </Drawer>

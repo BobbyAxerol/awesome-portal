@@ -7,14 +7,14 @@
  */
 import type { ReactNode } from "react";
 
-import { NOT_PUBLISHED, feLabel, type NotPublishedId } from "./notPublished";
+import { FE_REQUEST_LABEL, NOT_PUBLISHED, type NotPublishedId } from "./notPublished";
 import "../css/blocks.css";
 
 export interface UnavailableFact {
   /** What is missing, in the reader's words ("Net PnL"). */
   label: string;
   /** The request that will publish it. */
-  id: NotPublishedId;
+  id?: NotPublishedId | `FE-${number}` | null;
   /** Why, when the source gave a reason (kept in the title only). */
   why?: string | null;
 }
@@ -28,8 +28,13 @@ export interface NotAvailableLineProps {
 }
 
 /** The tooltip text: one line per fact with its id, its request and its reason. */
+/** The request behind an id; a request that is not in the shared table (an id a screen still owns) has no label yet. */
+const labelOf = (id: string): string => (FE_REQUEST_LABEL as Readonly<Record<string, string>>)[id] ?? "";
+
 export function unavailableTitle(facts: readonly UnavailableFact[]): string {
-  return facts.map((fact) => `${fact.label}: ${NOT_PUBLISHED} (${fact.id}) ${feLabel(fact.id)}${fact.why ? ` · ${fact.why}` : ""}`).join("\n");
+  return facts
+    .map((fact) => (fact.id ? `${fact.label}: ${NOT_PUBLISHED} (${fact.id}) ${labelOf(fact.id)}${fact.why ? ` · ${fact.why}` : ""}` : `${fact.label}: ${fact.why ?? "Not available"}`))
+    .join("\n");
 }
 
 export function NotAvailableLine({ facts, className, note }: NotAvailableLineProps) {
@@ -40,7 +45,7 @@ export function NotAvailableLine({ facts, className, note }: NotAvailableLinePro
       {note ? <> {note}</> : null}
       <span className="exec-blk-sr">
         {" ("}
-        {facts.map((fact) => `${NOT_PUBLISHED} ${fact.id}`).join(", ")}
+        {facts.map((fact) => (fact.id ? `${NOT_PUBLISHED} ${fact.id}` : fact.label)).join(", ")}
         {")"}
       </span>
     </p>

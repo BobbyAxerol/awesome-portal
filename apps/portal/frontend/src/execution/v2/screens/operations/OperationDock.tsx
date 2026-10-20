@@ -11,7 +11,8 @@ import { formatAsOf } from "../../boundary";
 import type { InstantV2, OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { PanelState } from "../../../components/states";
-import { ACCESS_PATH, FE, NotPublished, notPublishedReason } from "./notPublished";
+import { ACCESS_PATH, FE, notPublishedReason } from "./notPublished";
+import { NotAvailableLine } from "../../blocks";
 import {
   CHECK_ORIGINAL_COPY, humanize, receiptOutcome, severityWord, triageOutcome,
 } from "./outcome";
@@ -115,13 +116,15 @@ export function OperationDock({ operationId, row, loading, mode, onClose, api, w
       {api !== undefined && discoverable(row.targetType) ? (
         <PendingRecallsSection api={api} workspaceId={workspaceId} targetType={row.targetType} targetId={row.targetId} environment={row.environment} />
       ) : null}
-      <h3 className="exec-ops-section">Not published</h3>
-      <ul className="exec-ops-np-list">
-        <li><NotPublished id={FE.intent}>Intent axis: whether the command was only previewed.</NotPublished></li>
-        <li><NotPublished id={FE.receipts}>Display axis: whether the figures shown have caught up.</NotPublished></li>
-        <li><NotPublished id={FE.receipts}>Amounts: requested, applied and pending.</NotPublished></li>
-        <li><NotPublished id={FE.audit}>Who acknowledged or resolved it.</NotPublished></li>
-      </ul>
+      <NotAvailableLine
+        className="exec-ops-na-line"
+        facts={[
+          { label: "Intent axis", id: FE.intent, why: "Whether the command was only previewed" },
+          { label: "Display axis", id: FE.receipts, why: "Whether the figures shown have caught up" },
+          { label: "Amounts", id: FE.receipts, why: "Requested, applied and pending" },
+          { label: "Who acknowledged or resolved it", id: FE.audit },
+        ]}
+      />
     </Drawer>
   );
 }

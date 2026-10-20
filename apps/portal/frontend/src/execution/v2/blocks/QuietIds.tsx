@@ -1,16 +1,17 @@
 /**
- * A sentence with its request ids kept out of sight: `Not published (FE-015). ADMIN-only write.` reads as
- * `Not published. ADMIN-only write.` on screen, while the id stays in the text for assistive tech and copy (visually
- * hidden) and in the tooltip of the caller. The text content is unchanged, so nothing that reads it changes.
+ * A sentence with its request ids and reason codes kept out of sight: `Not published (FE-015) · SOME_REASON_CODE` reads as
+ * `Not published` on screen, while the id and the code stay in the text for assistive tech and copy (visually hidden) and in
+ * the tooltip of the caller. The text content is unchanged, so nothing that reads it changes.
  */
 import { Fragment, type ReactNode } from "react";
 
 import "../css/blocks.css";
 
-const ID_GROUP = /(\s?\((?:FE-\d+(?:[/, ]+(?:FE-)?\d+)*)\))/g;
+// A request id group `(FE-015)`, `(FE-005, FE-025)`, `(FE-005/006)`, or a ` · UPPER_SNAKE` reason code.
+const HIDDEN = /(\s?\((?:[A-Z][A-Z0-9]*-\d+(?:[/, ]+(?:[A-Z][A-Z0-9]*-)?\d+)*)\)|\s·\s[A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)/g;
 
 export function QuietIds({ text }: { text: string }): ReactNode {
-  const parts = text.split(ID_GROUP);
+  const parts = text.split(HIDDEN);
   if (parts.length === 1) return text;
   return (
     <>

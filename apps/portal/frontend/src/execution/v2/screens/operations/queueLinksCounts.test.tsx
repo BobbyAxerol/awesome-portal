@@ -195,10 +195,10 @@ describe("FE-042 incident links in the queue row", () => {
     for (const group of groups) expect(group.textContent).toBe("Not published (FE-042)");
   });
 
-  it("keeps the six kit columns: the links live in the Target and operation cell", async () => {
+  it("keeps the four columns: the links live in the Target and operation cell", async () => {
     mount(queueBody());
     const t = await table();
-    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Intent", "Receipt", "Display", "Next"]);
+    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Receipt", "Next"]);
     expect(linksOf("op_TEST_ONLY_links_a").closest("td")?.getAttribute("data-l")).toBe("Target and operation");
   });
 
@@ -292,9 +292,12 @@ describe("FE-043 counts by status", () => {
     mount(queueBody());
     await table();
     const region = screen.getByRole("region", { name: "Counts by status" });
-    expect(region.textContent).toContain("Counted by the server across the whole filtered query, not just the loaded rows.");
-    expect(region.textContent).toContain("Succeeded is the Portal queue record state only");
-    expect(region.textContent).toContain("Same server snapshot as the table, observed ");
+    // The scope sentence is the heading's title, not a paragraph; Succeeded's caveat is on its own row.
+    const heading = within(region).getByRole("heading", { name: "Counts by status" });
+    expect(heading.getAttribute("title")).toContain("Counted by the server across the whole filtered query, not just the loaded rows.");
+    expect(heading.getAttribute("title")).toContain("Same server snapshot as the table, observed ");
+    expect(region.querySelector('[title^="Succeeded is the Portal queue record state only"]')).not.toBeNull();
+    expect(region.textContent).not.toContain("Counted by the server");
     // The contract publishes no snapshot id: the screen invents none.
     expect(region.textContent).not.toMatch(/snapshot (id|#)|txid/i);
   });
@@ -343,20 +346,20 @@ describe("FE-043 counts by status", () => {
     expect(failed.getAttribute("data-selected")).toBeNull();
   });
 
-  it("an absent status_counts is 'Not published (FE-043)' in every tile, and no tile prints a zero", async () => {
+  it("an absent status_counts is named once ('Not available: Triage, ... counts', FE-043 in the title), no tile is drawn and none prints a zero", async () => {
     mount(queueBody((q) => {
       delete q.page.status_counts;
     }));
     await table();
-    for (const name of ["Triage", "Verification", "Source status", "Severity"]) {
-      const group = tile(name);
-      expect(group.getAttribute("data-state")).toBe("absent");
-      expect(group.textContent).toBe(`${name}Not published (FE-043)`);
-      expect(group.querySelectorAll("li")).toHaveLength(0);
-    }
-    // The scope sentence still says what a count would cover, but there is no snapshot claim without counts.
+    for (const name of ["Triage", "Verification", "Source status", "Severity"]) expect(screen.queryByRole("group", { name: `${name} counts` }), name).toBeNull();
     const region = screen.getByRole("region", { name: "Counts by status" });
+    const line = within(region).getByTestId("not-available-line");
+    expect(line.textContent).toContain("Not available: Triage, Verification, Source status, Severity counts");
+    expect(line.getAttribute("title")).toContain("Triage: Not published (FE-043)");
+    expect(region.querySelectorAll("li")).toHaveLength(0);
+    // There is no snapshot claim without counts.
     expect(region.textContent).not.toContain("Same server snapshot");
+    expect(region.querySelector("h2")!.getAttribute("title")).not.toContain("Same server snapshot");
     // The published page counts are untouched.
     const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
     expect(within(kpis).getByText("Matching").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("3");
