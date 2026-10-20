@@ -68,7 +68,13 @@ export function ReconciliationTab({ view }: { view: CanaryView }) {
   ];
   return (
     <SectionPanel level={2} title="Reconciliation" aside="Internal, Broker, Difference">
-      <Triad rows={view.figures === null ? ROWS : triadRowsOf(view.figures)} internal={sideOf(view.internal)} broker={sideOf(view.broker)} suppressed={suppressed} />
+      {/* With the server's figures each cell is its own fact, so a source panel that reads unavailable no longer blanks the column: the side keeps no as-of. */}
+      <Triad
+        rows={view.figures === null ? ROWS : triadRowsOf(view.figures)}
+        internal={sideOf(view.internal) ?? (view.figures === null ? null : {})}
+        broker={sideOf(view.broker) ?? (view.figures === null ? null : {})}
+        suppressed={suppressed}
+      />
       {view.figures === null ? (
         <p className="exec-cny-foot">
           <RowsNotPublished what="Reconciliation rows (equity, gross notional, position, open orders)" />

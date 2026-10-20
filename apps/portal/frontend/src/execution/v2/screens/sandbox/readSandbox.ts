@@ -283,7 +283,7 @@ function viewV1(cert: SandboxCertification, schemaVersion: string | null, steps:
     schemaVersion,
     certificationId: cert.certificationId,
     deploymentId: cert.deploymentId,
-    portfolioId: null,
+    portfolioId: cert.portfolioId,
     venue: cert.venue,
     accountRef: cert.externalAccountRef,
     workflowState: closed(cert.workflowState, WORKFLOW_STATES),

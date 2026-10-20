@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 
 import { readLiveFullByVersion } from "../../readers/dispatch";
 import { LIVE_SOURCE_PANELS } from "../../readers/liveSourceOperations";
-import { setPath } from "../../testkit/matrix";
+import { setPath, type Draft } from "../../testkit/matrix";
 import { arrayCases, decimalCases, enumCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, schemaVersionCases } from "../../testkit/negative";
 import { MIB, serializedBytes, timed } from "../../testkit/scale";
 import {
@@ -230,7 +230,7 @@ describe("L1 · the V1 state matrix", () => {
     expect(m.chips.reconciliation).toEqual({ state: "not-published", id: "FE-067", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
     expect(m.chart.kind).toBe("unavailable");
     // The dark body carries `source_figures`, every side `Not published`: the rows are the server's, so `rowsPublished` is true.
-    expect(m.triad).toMatchObject({ suppressed: false, internal: null, broker: null, rowsPublished: true });
+    expect(m.triad).toMatchObject({ suppressed: false, internal: {}, broker: null, rowsPublished: true });
     expect(m.triad!.rows.map((r) => r.key)).toEqual(["equity", "gross_notional", "positions", "open_orders", "fees"]);
     expect(m.triad!.rows[0]!.internal).toEqual({ kind: "not-published", id: "FE-072", reasonCode: "LIVE_SOURCE_UNAVAILABLE" });
     expect(m.predecessor).toMatchObject({ present: true, activeFlag: { label: "Not active for Live" } });
