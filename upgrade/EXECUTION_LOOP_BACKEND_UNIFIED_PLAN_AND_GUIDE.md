@@ -26035,6 +26035,179 @@ nonexclusive correctness and no absolute measurement claim. Run normal
 private closeout and one feature-only push batch (all checked-in workflow
 triggers exclude this feature push, expected hosted CI0). No PR/merge/deploy.
 
+### Original04 — bounded selected-report HTTPS exchange — 20Oct12:15UTC
+
+**Status: ISOLATED_QUALIFIED_SOURCE_ONLY; connected04/08/09 NOT_MET.**
+Owner's runnable-first continuation covers preparation of each published source
+without waiting for unrelated Core/PM runtime returns. Latest read-only intake:
+Core009 is still prepared source (Core008 remains installed), PM7814a8f1 adds
+isolated integration rather than a commissioned report/command target, and TS
+publisher/EDS source gates remain unchanged. Do not repeat the old008/identity
+blocker or start an uncommissioned listener.
+
+**Goal/scope:** complete the narrow HTTP delivery boundary for the selected
+report wire qualified atf9a373b5. Reuse existing reqwest/TLS/bounded-streaming
+dependencies and the exact sealed `PreparedRequest` bytes; add a separate
+closed client, not a generic URL/header method or widening V1/Manager/command
+transport. This original04 preparation follows [guide04](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-04-bootstrap-delta-và-atomic-projection),
+[guide06 resource bounds](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-06-áp-resource-budgets-và-tối-ưu-hot-path)
+and the [current04 packet](evidence/execution-edge-v1_2/EPG10-04/BOOTSTRAP_PROTOCOL_AND_ACCEPTANCE.md).
+The earlier pure-wire slice's no-HTTP statement remains its historical scope;
+this additive exchange is explicitly scoped here before source edits.
+
+**Invariants:** fixed configured HTTPS origin, explicit CA and mandatory client
+identity, TLS1.3 only, no ambient proxy/redirect/retry/cookie or configurable
+path. Caller supplies an independently issued current human assertion for the
+exact POST path/body; client never signs/decodes/retains an issuer key or grants
+authority. Keep credentials/payloads out of Debug/errors/logs. Bound request and
+response bytes, in-flight count, queue wait and whole response deadline; reject
+unexpected status/wire/content/cache headers and encoded bodies. Output stays
+explicitly UNTRUSTED bytes for the existing decoder. No `Verified`, accepting
+source-proof verifier, projection apply/ACK, browser route, SQL/Redis, DB role,
+source mutation, runtime activation or new financial semantics.
+
+**Tests/exit:** isolated TEST_ONLY real ephemeral loopback TLS, required client
+certificate, wrong trust/hostname/TLS-version failures, exact method/path/body
+and bearer bytes, redirects/non200/malformed metadata/body limits, cancellation,
+queue saturation and no implicit retry. Reuse existing test TLS primitives;
+no committed private key/certificate fixture or production identity. Supported
+Rust1.85.1 fmt, selected package regression and strict all-target Clippy; then
+normal repository hook, exact staged review and one coherent source publication.
+Correctness jobs are capped/nonexclusive under34b, not capacity evidence. Test
+cleanup must remove only owned terminal cells/temp source/cache/keys; preserve
+active/rollback runtime and peer source. Record actual counts and hashes after
+execution, not expected PASS counts.
+
+**Rollback/decision boundary:** additive source-only revert; zero deployed
+configuration changes. Actual mounted producer/TLS/selected definitions,
+current HISTORY+EXPORT/human/workload authority, authenticated source fence/
+coverage and matched01/06 capacity remain producer/connected-round inputs, not
+replaced by a successful HTTPS exchange. Full04/08 stays NOT_MET until those
+own exit gates pass. Root owns mainplan/source review/publication; subagents
+review protocol/tests and capacity intake independently, without peer edits.
+
+**Pre-test review refinements:** share admission across clones, at most N active
+plus N queued (excess fail fast before body/header copies); queue waiting is
+inside the absolute whole-response deadline. Force HTTP1, Connection:close and
+zero idle pooling to avoid stale pooled/H2 resend paths, and disable every
+reqwest decompressor even if later dependency feature unification enables one.
+This selected report endpoint is not the order/fill hot path; no latency or
+connection-reuse performance claim. Cancellation releases local ownership,
+not proof of PM handler/lease rollback, physical drain or source ACK.
+
+**Independent01/06 freshness correction (same publication slice):** capacity
+review found measurement-plan reasons still presented13Oct source failures,
+Manager certificate expiry and a foreign lock as current blockers. Reconcile
+those two descriptions against DL main/tagv2.2.5c578cba1 and its pinned
+CERTIFICATE_SCOPE§3b: mixed heavy Portal workload is outside the certified
+envelope, IDR-128 remains open. This is read-only source provenance, not a fresh
+runtime attestation or inherited Edge capacity PASS. Keep all readinessfalse,
+stage/common pins and14budget approval refs unfilled; no budget, workload,
+600s6k/9k semantics or scheduling rule changes. Run affected offline observer
+checks and JSON validation, not a benchmark, for this metadata correction.
+
+**01/06 actual offline regression:** `env PYTHONDONTWRITEBYTECODE=1
+PYTHONPATH=scripts timeout 60s taskset -c 0 python3 -m unittest discover -s scripts
+-p test_execution_edge_measurement.py -v`
+exited0:60tests PASS,0FAIL/SKIP,0.048s test-run duration. These are existing
+TEST_ONLY helper/preparation cases, not60new tests or live capacity. Explicit
+one-core cap/no measurement lease; no containers/DB/filesystem cleanup required
+by this in-memory run, no bytecode written. Source certificate/scope hashes
+match the new descriptive reference; candidate readiness still false.
+
+**04 freeze/test preparation:** final pre-format tests26 (not yet PASS); review
+caught an invalid TEST_ONLY manifest cursor before execution and changed only
+its fixture to the existing `pmrb1.` shape. Frozen424public inputs include two
+new Rust files and the same required public vocabulary. A first formatting
+cell safely failed permission checks before editing/compiling; corrected
+hostUID:GID, cap-drop-all/RO-root configuration completed rustfmt. Root reviewed
+and applied only its two mechanical formatting patches: module254b54ebf6163954d39ccfd905c4e0503d868c4f9407be0c110dd8466ba55296,
+tests044a4152788b6f78cde0d346cf3cc04efe271d5695199d6baa16e52300e9206c;
+Cargo.lock8f9fd05d48501a210707ac4088460ad387afe97f23fbe8fe1cfed11b3a508f5c.
+No source assertions/production behavior were weakened by formatting.
+
+Private SGP cell `/tmp/epg10-04-report-http-xJiwxEje`, owner-qualified public
+packet only, no ENV/runtime/session/private input. Registry preflight verified
+48present locked archives,260missing,0bad; avoid a predictable repeated offline
+failure. Permit one normal private public-crates-only `cargo fetch --locked
+--target x86_64-unknown-linux-gnu` (<=300s,1CPU/1GiB), existing exact lockfile,
+no credential/config/shared-cache writes, verify archive checksums before
+offline tests. Do not trust pre-extracted shared dependency source without
+re-extraction from verified archives. Actual tests remain networkNONE, capped
+1CPU/1GiB/900s, source/toolchainRO, no image build/pull/install. No new capacity
+or runtime acceptance follows. Root closeout evidence is predeclared at
+`/home/bobby/secure/epg10-04-report-http-seznVtAv/closeout.json` (not yet emitted);
+it covers this slice's ordinary hook image and19HK protected tuples. Delegated
+lane owns exact424-input terminal SGP/HK packet cleanup and bounded receipts;
+never duplicate cleanup of another lane's resource.
+
+**04 actual tests, Clippy still pending:** private locked public fetch exited0
+12:27:30UTC;245available locked archives verified,0bad,63other-target archives
+not needed. Dependencies freshly extracted privately, not compiled from copied
+shared source. Offline supported-toolchain package tests completed63/63PASS,
+0FAIL/ignored/filtered,0doctests (26new HTTP/TLS +31wire +6baseline); fmt CHECK
+PASS. OneCPU cgroup, default Rust test-thread setting, no inferred single-thread
+or capacity claim. Strict all-target Clippy is still physically running; do not
+call the slice qualified/published yet. A disk watcher had a transient du/ENOENT
+race; restore its tolerant own-container watcher without interrupting tests,
+retain repair logs, no source assertions changed. Current observed private cell
+~1.43GB below3GiB; actual cleanup and final qualification remain to record.
+
+**Producer recheck12:30UTC:** Core009 public return remains PREPARED_SOURCE_ONLY,
+no operational install ACK/current-policy/session/window return. Recent FE
+commits are frontend consumption, not009 installation; do not infer runtime
+from source HEAD. Existing12:04priority packet is delivered, not a Claude ACK.
+Core008/identity/static field reference are not missing inputs. Continue this
+04 source publication independently; actual08binding starts as soon as the
+corresponding commissioned return/window is present, no repeat phase approval.
+
+**04 actual final qualification12:35:23UTC:** physical terminal0, supported
+Rust1.85.1/image9f841bbe, fmt CHECK PASS, full63/63tests PASS/0FAIL/ignored/
+filtered,0doctests; strict all-target Clippy PASS without allowances/skips.
+26new real loopback TLS/HTTP TEST_ONLY cases plus37unchanged package cases;
+2.30s test duration is not a production latency claim. Final module/tests/lock
+pins remain254b54eb/044a4152/8f9fd05d. No assertion or source semantics changed
+after formatting. Own test container auto-removed, all424source checks and
+exact SGP cleanup now executing; root prepares normal hook/publication only
+after these green selected checks. Keep failed setup/guard-repair provenance,
+never relabel it as a failed source test or omit it from the bounded proof.
+
+**04 SGP cleanup completed12:38:05UTC:** removed only the owned terminal cell,
+1,581,896,814logical bytes (private source/target/Cargo cache included); zero
+owned containers remain. Available disk143,453,454,336→145,107,140,608B, shared
+movement not exclusively attributable to this cleanup. No new Docker image or
+BuildKit record; retained394tag rows/328unique IDs, Docker338images and3858cache
+records. All52operational IDs/names/images unchanged;51restart/state tuples
+unchanged including Core008/restart0. One foreign market-data service increased
+restart13→15; no operational intervention or cause claim, no capacity PASS.
+All424input hashes match before/after. Actual source/log/cleanup provenance is
+now published as [bounded JSON](evidence/execution-edge-v1_2/EPG10-04/report-publication-http-qualification.json).
+Retained secureSGP evidence is bounded at
+`/home/bobby/secure/epg10-04-report-http-xJiwxEje-evidence`; no TLS key files,
+DB data or credentials were copied/retained.
+
+**Publication transaction / exact remaining cleanup:** stage only this additive
+HTTP boundary,26tests, locked dev-dependency references,01/06 descriptive scope
+correction and linked plan/guide/evidence. Three peer-untracked files remain
+excluded and their original hashes must match. Verify Bobby identity and
+diff-check, then the ordinary `.githooks/pre-commit` (not bypassed) on the existing
+capped nonexclusive correctness profile. Its actual terminal output is
+`/home/bobby/secure/epg10-04-report-http-seznVtAv/normal-hook.log`; the predeclared
+`closeout.json` records new source SHA, hook hash, exact disposable hook-image
+removal,19protected HK tuples, image/cache inventory and disk. Only the hook's
+single newly created unreferenced offline test tag is removable; no shared
+cache prune, operational/rollback image, volume/network or active worktree
+cleanup. After a green coherent commit, publish once to the existing feature
+branch and verify remote SHA; no PR/merge/deploy, expected hosted CI0 because
+checked-in triggers exclude this feature push. The delegated HK packet cleanup
+requires root publication ACK and an exact terminal receipt, not a guessed PASS.
+Its receipt will be retained at
+`/home/bobby/secure/epg10-04-report-http-seznVtAv/hk-packet-cleanup.json`.
+Connected04/08/09 remains NOT_MET; no safe newly commissioned source or009
+operational return existed at12:30. Continue the matching connected cases on
+each genuine producer return, without waiting for unrelated sources or asking
+again for the approved phases.
+
 
 
 

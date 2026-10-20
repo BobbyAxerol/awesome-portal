@@ -927,6 +927,17 @@ full08NOT_MET,09connected NOT_STARTED. This does not recertify393or717tests.
   recorded-run taint/ownership and all source/budget gates remain strict;
   no benchmark, production-capacity proof or runtime mutation follows.
 
+- **Original04 bounded report HTTPS preparation,20Oct — ISOLATED_QUALIFIED:**
+  [same-phase scope and journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original04--bounded-selected-report-https-exchange--20oct1215utc)
+  adds a separate fixed-origin TLS1.3/mTLS delivery client for the exact sealed
+  report POST bytes; externally issued request-bound assertion, bounded active
+  plus queued admission and total deadline, no proxy/redirect/application retry.
+  Responses stay UNTRUSTED; no source proof/apply/ACK, route or runtime change.
+  Offline fmt/full63tests (26new)/strict all-target Clippy PASS. Exact cleanup
+  and ordinary-hook/publication closeout remain linked from the journal. The paired
+  capacity descriptor now distinguishes historical errors from DLv2.2.5's
+  current source scope;60existing offline preparation cases PASS, no benchmark.
+
 - **Original03–11 runnable-first correctness preparation,20Oct:**
   [same approved-phase journal](EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
   pins159focused PASS (27new), nonexclusive own activity lifecycle, bounded

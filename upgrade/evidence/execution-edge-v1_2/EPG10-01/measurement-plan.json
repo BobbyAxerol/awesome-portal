@@ -11,6 +11,18 @@
     "sha256": "c7379a67a75251162b4f0c60304bc14d0c400ead7e4188e7fa34a8064580c20b",
     "usage": "Historical source/runtime tuple; current round deltas in PLACEMENT_AND_QUERY_INVENTORY.md. Re-attest before execution."
   },
+  "current_dl_scope_review": {
+    "kind": "READ_ONLY_SOURCE_SCOPE_NOT_RUNTIME_ATTESTATION",
+    "repository": "data_layer",
+    "release": "v2.2.5",
+    "source_commit": "c578cba16b7519a3696f30aaab36ed2228935456",
+    "certificate_path": "upgrade/evidence/releases/v2.2.5/certificate.json",
+    "certificate_sha256": "40e19493addc9d44cd0ac138b8fc10629b492bf410a576c33883ce156dd468d2",
+    "scope_path": "upgrade/evidence/releases/v2.2.5/CERTIFICATE_SCOPE.md",
+    "scope_sha256": "0bbdec1ecdb267b1a0f3c8518bac26f5a776c31f774e90d068a2491fe864cd5b",
+    "scope_section": "3b",
+    "edge_paired_capacity_acceptance": false
+  },
   "execution": {
     "starts_jobs": false,
     "changes_runtime": false,
@@ -26,7 +38,7 @@
     {"id": "CLEAN_HK_WINDOW", "ready": false, "owner": "TS/DL measurement owner", "reason": "120s passive EPG window completed before new foreign jobs. At18:44:45Z foreign claude-n1-opt-20261013 lock active until19:54:08Z. Historical observation does not reserve a future candidate window."},
     {"id": "CLEAN_SGP_WINDOW", "ready": false, "owner": "Edge measurement operator", "reason": "Two120s observations and bounded retained/source+isolated runs completed under own locks. Locks released; no future candidate window reserved. Recheck atomically at next run."},
     {"id": "ISOLATED_B0_B1_B2_TARGET", "ready": false, "owner": "Edge candidate owner + TS/DL runtime owners", "reason": "Exact SGP retained cell implemented and tested/cleaned, not an equivalent whole-stack B0/B1/B2 target. New producer/projector/schema/candidate artifacts belong to02/03/04, not invented in01."},
-    {"id": "PAIR_RUNTIME_AND_COVERAGE", "ready": false, "owner": "Edge + source runtime owners", "reason": "No paired immutable candidate images/config/coverage receipt. Final P184 stage100#2 has G2/G4/G7/G8 FAIL at16:59:45Z; not an Edge result, but applicable source coexistence cannot be certified PASS. Current Manager upstream TLS expired; P16/N03/full PM export remain source-dark for dependent cases only, not a blanket block on existing reads."},
+    {"id": "PAIR_RUNTIME_AND_COVERAGE", "ready": false, "owner": "Edge + source runtime owners", "reason": "No selected immutable Edge B0/B1/B2 image/config/composition and matched coverage receipt. Earlier P184 gate failures and Manager TLS expiry describe historical observations, not the current source baseline. DL v2.2.5 release source c578cba16b7519a3696f30aaab36ed2228935456 has a scoped certificate; CERTIFICATE_SCOPE.md section3b explicitly excludes mixed heavy Portal workload and keeps IDR-128 open. Its Query A/B is not Edge coexistence acceptance. Re-attest the exact selected TS/DL/Research target, source publication, current authority and coverage before dependent measurement; existing independent preparation remains permitted."},
     {"id": "FIXTURE_AND_CARDINALITY", "ready": false, "owner": "Edge + TS/DL/Research workload owners", "reason": "Retained cell3623rows/6tables exact byte parity,7account history rows/1h,100paced reads and16same-query callers bound. This is not the original600s6k/9k canonical-event fixture, live mix or heavy analytics catalogue."},
     {"id": "CLOCK_CALIBRATION", "ready": false, "owner": "Edge measurement operator", "reason": "Both hosts NTPSynchronized=yes at18:44Z; local wall-vs-monotonic drift recorded. No calibrated cross-host offset/error bound; no cross-host freshness claim."}
   ],
@@ -146,7 +158,7 @@
     {"id": "EPG10-T01-02", "status": "PARTIAL", "reason": "Real16same-query callers ->1DBcall;16snapshot cache hits ->0DBcalls. No HTTP/browser/source-poller amplification run"},
     {"id": "EPG10-T01-03", "status": "NOT_RUN", "reason": "Native schema idempotency/fixture parity and own-session recovery PASS, not full catalogue resync/live starvation/durable DR"},
     {"id": "EPG10-T01-04", "status": "PARTIAL", "reason": "10.105635s controlled retained PG idle,10health reads,0business mutations;0.05841average cores. Not whole-stack idle TS/Edge/BFF"},
-    {"id": "EPG10-T01-05", "status": "BLOCKED", "reason": "No frozen Edge candidate pair; active foreign HK lock and external P184 G2/G4/G7/G8 failure envelope. Source fixes need own accepted rerun; retain exact600s6k/9k semantics"},
+    {"id": "EPG10-T01-05", "status": "BLOCKED", "reason": "No frozen Edge B0/B1/B2 candidate composition, matched source/coverage or approved acceptance bounds. Reviewed DL v2.2.5 source scope excludes mixed heavy Portal workload; no Edge coexistence result is inherited. Recheck actual host activity only when scheduling execution; retain exact600s6k/9k semantics"},
     {"id": "EPG10-T01-06", "status": "PARTIAL", "reason": "40HK/36SGP container rosters+counters and enforced cell caps measured; allocator/copy/queue/pool totals and owned reserves remain unmeasured"}
   ]
 }

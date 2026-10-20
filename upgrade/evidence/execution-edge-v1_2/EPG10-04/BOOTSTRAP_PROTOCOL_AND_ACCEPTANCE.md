@@ -238,3 +238,31 @@ pins source, supported image/toolchain, limits and actual log hashes. A prior
 selected31PASS run overlaps the37, not68distinct cases. Missing-cache/fixture
 packaging and three test-style lint failures were fixed; failed receipts remain
 provenance, not relabelled PASS. No HTTP/native/authority/capacity acceptance.
+
+## 20Oct additive bounded HTTPS delivery — original04 preparation
+
+[Scope recorded before code](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original04--bounded-selected-report-https-exchange--20oct1215utc).
+The previous pure-wire slice above remains unchanged; this additive
+`ts-transport::report_publication_http` client delivers only its sealed three
+POST paths and exact body bytes to one private configured HTTPS origin.
+Explicit CA and client identity, TLS1.3, HTTP1 without connection reuse,
+redirect/proxy/decompression/application retries disabled. Caller supplies an
+independently issued current request-bound bearer assertion; Rust does not sign
+or decode it. Clones share at most N active and N waiting admissions (N<=16),
+queue wait and final streamed body share a finite total deadline (<=10s), and
+response bytes remain <=1MiB. Ceilings are not approved production budgets.
+
+Only expected200 JSON/wire/no-store/Authorization-Vary metadata is accepted;
+duplicate security headers, unexpected encodings and oversized declared or
+streamed bodies fail closed. Result is **UNTRUSTED bytes**, not an accepted
+source event, current grant, scan coverage, `Verified<T>` or projection ACK.
+Caller cancellation releases its local permits, not proof of producer
+rollback/lease termination/physical drain. No deployed route/config changes.
+Tests use new in-memory TEST_ONLY certs and loopback sockets only. Actual
+qualification terminal20Oct12:35:23UTC: fmt CHECK, full63tests (26new+37prior),
+strict all-target Clippy PASS;0FAIL/skip/ignored,0doctests. No allowances,
+production credential, native-source/authority or capacity acceptance. Exact
+source/log hashes and terminal SGP cleanup are in the
+[bounded qualification receipt](report-publication-http-qualification.json);
+ordinary-hook/publication and HK-packet cleanup use the journal's separate
+exact closeout receipts, not an inferred PASS in this source artifact.

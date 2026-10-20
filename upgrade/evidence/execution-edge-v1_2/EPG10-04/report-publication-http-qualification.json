@@ -1,0 +1,112 @@
+{
+  "schema_version": "epg10-04-report-http-public-qualification-v1",
+  "status": "ISOLATED_CORRECTNESS_QUALIFIED_SOURCE_ONLY",
+  "source_base_commit": "f9a373b56877315a03cbd34bdd02a98039dade31",
+  "qualified_at_utc": "2026-10-20T12:35:23Z",
+  "source_manifest_sha256": "e30ec10f5ea9279f8c577da2a468e1032e2ea13a73ec3b1c1109110d8e672096",
+  "source_files_verified_before_and_after": 424,
+  "source_pins": {
+    "report_publication_http.rs": "254b54ebf6163954d39ccfd905c4e0503d868c4f9407be0c110dd8466ba55296",
+    "report_publication_http/tests.rs": "044a4152788b6f78cde0d346cf3cc04efe271d5695199d6baa16e52300e9206c",
+    "Cargo.lock": "8f9fd05d48501a210707ac4088460ad387afe97f23fbe8fe1cfed11b3a508f5c",
+    "bootstrap_core_unchanged": "3d951b11daaa829b23684c824ae226acbd91bc4a17d7427ea76456e5b8c97b25",
+    "bootstrap_store_unchanged": "a40550cec78bb6b9fa6e114e5599d94e3bc1ab63985422a98897664f596d1859",
+    "required_public_vocabulary": "2bff34b773e24c9f477e825f70f7776c03cc1b9038364791b5167f064e487af1"
+  },
+  "test_environment": {
+    "host": "SGP",
+    "toolchain": "rustc/cargo/rustfmt/clippy 1.85.1",
+    "existing_image": "sha256:9f841bbe9e7d8e37ceb96ed907265a3a0df7f44e3737d0b100e7907a679acb36",
+    "class": "correctness",
+    "exclusive_measurement": false,
+    "cpus": 1,
+    "memory_and_swap_bytes": 1073741824,
+    "network": "none",
+    "read_only_source_and_toolchain": true,
+    "auto_remove_containers": true,
+    "outer_deadline_seconds": 900,
+    "inner_deadline_seconds": 880,
+    "private_disk_watch_threshold_bytes": 3200000000,
+    "private_disk_hard_quota_claimed": false,
+    "test_threads": "Rust harness default; CPU cap is not an explicit test-thread limit",
+    "provenance": "TEST_ONLY ephemeral in-memory TLS keys and loopback HTTP; no production credential, data, role or host-port binding"
+  },
+  "commands": [
+    "rustfmt --check --edition 2021 --config skip_children=true <five declared transport source files>",
+    "cargo test --offline --locked -p ts-transport",
+    "cargo clippy --offline --locked -p ts-transport --all-targets -- -D warnings"
+  ],
+  "results": {
+    "fmt_exit": 0,
+    "package_test_exit": 0,
+    "clippy_all_targets_deny_warnings_exit": 0,
+    "tests_pass": 63,
+    "new_http_tls_tests": 26,
+    "unchanged_package_tests": 37,
+    "tests_fail": 0,
+    "tests_ignored": 0,
+    "tests_filtered": 0,
+    "doc_tests": 0,
+    "test_duration_seconds_not_capacity": 2.3
+  },
+  "public_dependency_fetch": {
+    "source": "public crates.io HTTPS only; existing lockfile, private cache, no credentials/config/shared writes",
+    "finished_utc": "2026-10-20T12:27:30Z",
+    "exit": 0,
+    "locked_archives_verified": 245,
+    "bad_checksums": 0,
+    "fresh_private_extractions": 245,
+    "other_target_or_unused_archives_missing": 63
+  },
+  "retained_non_green_provenance": [
+    "Initial isolated formatting exited1 on UID/DAC before editing/compiling; retook with the host UID/GID, then fmt passed. This was not a failed package test.",
+    "Owned disk watcher saw transient rustc ENOENT; restored tolerant same-cgroup watcher without interrupting the job. No disk overrun observed; no source assertion changed."
+  ],
+  "cleanup_sgp": {
+    "completed_utc": "2026-10-20T12:38:05Z",
+    "removed_exact_path": "/tmp/epg10-04-report-http-xJiwxEje",
+    "removed_logical_bytes": 1581896814,
+    "available_before_bytes": 143453454336,
+    "available_after_bytes": 145107140608,
+    "disk_delta_has_shared_host_movements": true,
+    "own_containers_remaining": 0,
+    "private_source_target_and_cargo_cache_removed": true,
+    "shared_images_created_or_removed": 0,
+    "shared_buildkit_records_created_or_removed": 0,
+    "operational_volumes_networks_removed": 0,
+    "image_rows_retained": 394,
+    "unique_image_ids_retained": 328,
+    "docker_reported_image_count_retained": 338,
+    "buildkit_records_retained": 3858,
+    "runtime_ids_names_images_same": 52,
+    "runtime_tuples_unchanged": 51,
+    "foreign_runtime_observation": {
+      "service": "primus-historical-market-data-vn30f1m-vndirect-1m-1",
+      "restart_before": 13,
+      "restart_after": 15,
+      "our_operational_actions": 0,
+      "cause_not_attributed": true
+    },
+    "core008_image_unchanged": "sha256:7b2c7f34f134323201f447084440973b9aefd22318fdb09ff1e1bc35c4c4395d",
+    "core008_restart_before_after": 0
+  },
+  "bounded_evidence_sha256": {
+    "qualification_summary": "cf137501e09824d5cfd692561d500d6765bb6006a5e7b6bc6bfba9f4c00b71ab",
+    "qualification_log": "4b02d5714e35eaf3d073d19db57cc922f444550c30a770cc08f6ef4d85bca0bc",
+    "post_test_source_check": "f9d6e84664b788e8907910e4a4b69128bfcc2a385663ea63b107efcc474e2bf3",
+    "docker_inventory_before_and_after": "d09f88798b2202ff9aac1b5abdc3022ed16d0d0bc7cfc8ebb7055bed22f64e81"
+  },
+  "publication_transaction": {
+    "ordinary_hook_required": true,
+    "hook_or_publication_pass_inferred": false,
+    "hk_exact_hook_image_and_runtime_closeout": "/home/bobby/secure/epg10-04-report-http-seznVtAv/closeout.json",
+    "hk_packet_cleanup": "after root verifies source publication; independent exact receipt linked from main journal",
+    "runtime_activation": false
+  },
+  "not_proven": [
+    "Commissioned PM report endpoint or current human/workload authority",
+    "Verified publication coverage, producer fence, DB projection apply or source ACK",
+    "Connected04/08/09 acceptance",
+    "Absolute production capacity, latency, coexistence or SLO"
+  ]
+}

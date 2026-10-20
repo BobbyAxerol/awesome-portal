@@ -931,6 +931,17 @@ Fixture sử dụng dữ liệu giả/deterministic đã redact; không copy pro
 
 ### EPG10-04 Bootstrap delta và atomic projection
 
+**20Oct original04 runnable-first follow-through:** the existing selected-report
+wire now has a separately scoped bounded HTTPS-delivery preparation, recorded
+[before code in the main journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original04--bounded-selected-report-https-exchange--20oct1215utc)
+and in the [same04 packet](../evidence/execution-edge-v1_2/EPG10-04/BOOTSTRAP_PROTOCOL_AND_ACCEPTANCE.md#20oct-additive-bounded-https-delivery--original04-preparation).
+Exact sealed POST/mTLS and externally issued assertion only; responses remain
+UNTRUSTED, not source proof, projection apply/ACK or installed acceptance.
+No new source-generation/coverage guarantee is inferred. Actual isolated
+qualification is fmt/full63tests/strict all-target Clippy PASS; terminal cleanup
+and publication are recorded in the same journal. Independent work does not
+wait for Core009 and does not commission PM's still-unmounted endpoint.
+
 **Mục tiêu:** consumer có full consistent read model và recover sau crash. **Dependencies:** 02 cho isolated implementation/fixtures; 03 và Research DB capacity/permissions từ 01 trước certification từ nguồn thật. Không ghi integration PASS khi chỉ dùng fixture.
 
 **Deliverables:** snapshot/manifest protocol, staging projection, checkpoint transaction, generation pointer, resync implementation and tests.

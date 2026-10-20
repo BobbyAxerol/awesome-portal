@@ -24,5 +24,12 @@ ts-adapter-v1 = { path = "../ts-adapter-v1" }
 ts-contract-v1 = { path = "../ts-contract-v1" }
 url.workspace = true
 
+[dev-dependencies]
+axum.workspace = true
+axum-server.workspace = true
+rcgen = "0.13.2"
+rustls.workspace = true
+rustls-pemfile.workspace = true
+
 [lints]
 workspace = true

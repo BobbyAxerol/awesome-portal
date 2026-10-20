@@ -2981,13 +2981,18 @@ name = "ts-transport"
 version = "0.1.0"
 dependencies = [
  "authoritative-event-core",
+ "axum",
+ "axum-server",
  "chrono",
  "execution-contracts",
  "futures-util",
  "hex",
  "idna",
  "idna_adapter",
+ "rcgen",
  "reqwest",
+ "rustls",
+ "rustls-pemfile",
  "serde",
  "serde_json",
  "sha2",

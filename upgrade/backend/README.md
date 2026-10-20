@@ -7,6 +7,16 @@ Chúng không thay thế phase hoặc exit gate trong
 
 ## Active deep dives
 
+- **Original04 bounded report HTTPS preparation,20Oct — ISOLATED_QUALIFIED:**
+  [same-phase scope/journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original04--bounded-selected-report-https-exchange--20oct1215utc)
+  closes the independent delivery-client preparation without widening existing
+  V1/Manager/command clients. Fixed POST/mTLS/TLS1.3 and bounded admission,
+  externally issued assertion, UNTRUSTED response only. No source proof,
+  projection ACK or runtime activation. Offline fmt/full63tests (26new)/strict
+  all-target Clippy PASS; exact cleanup/publication receipt in the journal.
+  Capacity source descriptions distinguish
+  historical failures from DLv2.2.5§3b;60offline cases PASS, not capacity evidence.
+
 - **Original03–11 runnable-first correctness preparation,20Oct:**
   [same-phase journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original010608--runnable-first-continuation-and-core009-revision3-intake-20oct)
   records159focused PASS/0FAIL/SKIP,27new cases: per-owner correctness activity,
