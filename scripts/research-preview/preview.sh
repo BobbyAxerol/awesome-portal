@@ -313,9 +313,13 @@ cmd_up() {
   compose exec -T portal-web nginx -s reload
   local port
   port="$(sed -n 's/^PORTAL_HTTP_PORT=//p' "$ENV_FILE")"
+  # While the fixture lane is on, portal-web's upstream is the fixture BFF (compose.fixture-bff.yaml), so
+  # /api/control/readyz is answered 404 by design and the Control API need not run: probe the lane instead.
+  local ready_path=/api/control/readyz
+  [[ -f "$FIXTURE_MARKER" ]] && ready_path=/__fixture/healthz
   curl --fail --silent --show-error --retry 5 --retry-delay 1 --retry-all-errors \
     --connect-timeout 3 --max-time 5 --output /dev/null \
-    "http://127.0.0.1:$port/api/control/readyz"
+    "http://127.0.0.1:$port$ready_path"
   curl --fail --silent --show-error --retry 10 --retry-delay 1 --retry-all-errors \
     --connect-timeout 3 --max-time 5 --output /dev/null \
     "http://127.0.0.1:$port/api/ready"

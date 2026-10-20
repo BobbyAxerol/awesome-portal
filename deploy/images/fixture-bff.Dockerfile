@@ -18,6 +18,9 @@ RUN cd apps/portal/frontend && npm ci --no-audit --no-fund
 COPY apps/portal/frontend/tsconfig.json apps/portal/frontend/tsconfig.json
 COPY apps/portal/frontend/src apps/portal/frontend/src
 COPY apps/portal/frontend/e2e apps/portal/frontend/e2e
+# The shell bootstrap double (e2e/bffDoubleShell.ts) imports the canonical registry, links and summary
+# fixtures; the bundler inlines them, so the runtime image does not need this directory.
+COPY apps/portal/registry/fixtures/registry.public.json apps/portal/registry/fixtures/links.public.json apps/portal/registry/fixtures/summary.healthy.json apps/portal/registry/fixtures/
 COPY apps/portal/fixture-bff apps/portal/fixture-bff
 RUN cd apps/portal/fixture-bff && node build.mjs
 

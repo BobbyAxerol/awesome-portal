@@ -6,11 +6,13 @@
 #
 # It adds one private service, portal-fixture-bff (apps/portal/fixture-bff: the Playwright BFF
 # doubles behind node:http), and changes portal-web in two ways:
-#   - nginx sends the Execution V2 reads to that service instead of the Control API
+#   - nginx sends the Execution V2 reads AND the shell bootstrap (the sign-in state as a synthetic
+#     "Fixture reviewer", the registry, the links, the summary) to that service instead of the Control
+#     API, so the stack needs no control-api at all
 #     (deploy/research-preview/nginx/fixture-bff/fixture-bff.conf);
 #   - every HTML document carries a fixed, non-dismissible "FIXTURE DATA" banner.
-# Nothing else moves: /api/auth, /api/v1/portal, the legacy profile-access reads and the shell
-# registry stay on the real services. No database, no migration, no secret.
+# Nothing else moves: research, QuantBT, runs and the legacy profile-access reads stay on the real
+# services. No database, no migration, no secret, no session.
 #
 # Turn it off with `preview.sh fixture off` and `preview.sh up`: the same paths then reach the real
 # Control API again, and the frontend is unchanged because it has no fixture mode.
@@ -60,6 +62,13 @@ services:
       start_period: 5s
 
   portal-web:
+    environment:
+      # portal-web's nginx resolves its upstream by name when it starts, and a stopped control-api has no
+      # DNS entry, so a recreate would fail with "host not found in upstream". While the lane is on, the
+      # catch-all /api/ upstream is the fixture BFF itself: every /api path the fixture does not serve is
+      # refused there (404 FIXTURE_ROUTE_NOT_SERVED), never forwarded to a Control API, and the stack needs
+      # none. Set FIXTURE_WEB_UPSTREAM=control-api:4000 to let those paths reach a healthy Control API again.
+      PORTAL_WEB_UPSTREAM: ${FIXTURE_WEB_UPSTREAM:-portal-fixture-bff:4100}
     volumes:
       # Server-context nginx fragment + shared proxy settings; read by the nginx master at start.
       - ./deploy/research-preview/nginx/fixture-bff:/etc/nginx/fixture:ro
