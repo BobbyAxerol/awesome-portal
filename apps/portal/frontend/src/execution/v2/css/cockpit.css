@@ -484,6 +484,41 @@
   display: grid;
   gap: var(--space-2);
 }
+/* step-up block (FE-015/060): one password field and one Confirm button, only when a re-check can be started */
+.exec-ck-stepup-form {
+  display: grid;
+  gap: var(--space-1);
+}
+.exec-ck-input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-2);
+  font: var(--exec-font-body);
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--line-strong);
+}
+.exec-ck-input:focus-visible,
+.exec-ck-stepup-go:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.exec-ck-stepup-go {
+  justify-self: start;
+  padding: var(--space-1) var(--space-3);
+  font: var(--exec-font-label);
+  color: var(--ink);
+  background: var(--paper-sunken);
+  border: 1px solid var(--line-strong);
+  cursor: pointer;
+}
+.exec-ck-stepup-go:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+.exec-ck-stepup-failed {
+  color: var(--ink);
+}
 .exec-ck-details > summary {
   padding: var(--space-2) var(--space-4);
   font: var(--exec-font-label);

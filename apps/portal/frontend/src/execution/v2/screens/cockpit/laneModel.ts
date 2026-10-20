@@ -12,9 +12,11 @@ import type { LiveReviewPayload } from "../../../api/profileRead";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../../../api/rows";
 import type { ApprovalGate, DecidedRow } from "../../../screens/ApprovalInbox";
 import type { ActorsV2, ApprovalV2, LatestOperationV2, LiveParentV2, PaperExitParentV2, R2ParentV2, SectionV2 } from "../../readers/governanceParents";
-import { formatAsOf, readAsOf } from "../../boundary";
-import { holds, V2_CAPABILITY } from "../../shell/roleNav";
+import { formatAsOf, readAsOf } from "../../boundary";import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import type { InboxActor, InboxRowV2, InboxSlaV2 } from "./inboxRowV2";
+
+/** The step-up offer rules (FE-015/060) live in `stepUp.ts`; the cockpit imports them from here with the rest of the model. */
+export { STEP_UP_COPY, stepUpOffer, stepUpRefusalText, type StepUpOffer } from "./stepUp";
 
 /* ── words that several files print ───────────────────────────────────────── */
 

@@ -21,6 +21,7 @@ import {
   panelStatusForHttp,
   readKeysetPage,
   readOperation,
+  newRequestKey,
   readProblem,
 } from "../adapter";
 import { governanceWriteBlocked, type DeliveryPolicy } from "../profile";
@@ -56,6 +57,7 @@ import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } fr
 import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
 import { readStageActionEligibilityV1, stageActionEligibilityUrl } from "../v2/readers/stageActionEligibility";
 import { accessEligibilityBatchUrl, eligibilityBatchAnswers, readAccessEligibilityBatch } from "../v2/readers/accessSelfBatch";
+import { ACCESS_STEP_UP_PATH, accessStepUpAnswers, accessStepUpBody, readAccessStepUp } from "../v2/readers/accessStepUp";
 import { approvalRequestLookupAnswers, approvalRequestLookupUrl, readApprovalRequestLookupV1 } from "../v2/readers/approvalRequestLookup";
 import { readCanaryControlRoom, readSandboxCertification } from "../certification";
 import { readLiveFullOperations } from "../liveFull";
@@ -1078,6 +1080,46 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
         return unavailable("The eligibility batch answered another question than the one asked, so it is not shown.");
       }
       return result;
+    },
+
+    async postSessionStepUp(input) {
+      // The password is read from `input` in exactly one place: the body below. It is not logged, keyed, URL-encoded or stored.
+      const body = accessStepUpBody(input);
+      if (body === null) return { kind: "unavailable", reason: "The step-up request is not one the Portal accepts, so nothing was sent." };
+      const token = csrfToken();
+      if (token === null) return { kind: "unavailable", reason: "The session token is missing, so nothing was sent. Sign in again." };
+      let response: Response;
+      try {
+        response = await fetch(ACCESS_STEP_UP_PATH, {
+          method: "POST",
+          signal,
+          credentials: "same-origin",
+          cache: "no-store",
+          headers: {
+            accept: "application/json",
+            "content-type": "application/json",
+            [CSRF_HEADER]: token,
+            // One key per attempt: a second submit is a new intent (a different password), never a replay of the first.
+            "x-portal-idempotency-key": newRequestKey(),
+          },
+          body,
+        });
+      } catch {
+        return { kind: "unavailable", reason: "The step-up request never reached the Portal — network failure." };
+      }
+      let answer: unknown = null;
+      try { answer = await response.json(); } catch { /* the status alone still types the answer */ }
+      if (!response.ok) {
+        const code = readProblem(answer, response.status).code;
+        // `readProblem` names a body without a code `HTTP_<status>`; that is its stand-in, not a code the Portal sent.
+        return { kind: "refused", status: response.status, code: /^[A-Z][A-Z0-9_]{2,63}$/.test(code) && code !== `HTTP_${response.status}` ? code : null };
+      }
+      const read = readAccessStepUp(answer);
+      if (read === null || read.kind !== "step_up") return { kind: "unavailable", reason: "The step-up answer could not be read, so it is not used." };
+      if (!accessStepUpAnswers(read.stepUp, input.family)) {
+        return { kind: "unavailable", reason: "The step-up answer is for another proof family than the one asked, so it is not used." };
+      }
+      return { kind: "ok", stepUp: read.stepUp };
     },
 
     async lookupApprovalRequest(query) {
