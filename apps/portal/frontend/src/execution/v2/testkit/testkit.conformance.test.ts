@@ -81,6 +81,20 @@ describe("schema checker", () => {
     expect(check("/$defs/SandboxParentReadV2", doubled)).toMatch(/matched 0 oneOf branches/);
   });
 
+  it("applies boolean property schemas: `false` forbids the member, `true` allows it (the served catalogue's N16B if/then/else)", () => {
+    const entries = loadCanonical<Record<string, any>>("execution-command-catalog.served").entries as Record<string, any>[];
+    const plain = entries.find((e) => e.source_route_state !== "CURRENT_PRIMITIVE_CONFIRMED")!;
+    const n16b = entries.find((e) => e.source_route_state === "CURRENT_PRIMITIVE_CONFIRMED")!;
+    const check = (value: unknown) => validateAgainst("execution-operations.v1", "/$defs/CommandCatalogueEntry", value);
+    expect(check(plain)).toEqual([]);
+    expect(check(n16b)).toEqual([]);
+    // `else`: the five extras are `false` schemas, so one of them beside another route state is named, not ignored.
+    expect(check({ ...plain, runtime_active: false })).toEqual(["$.runtime_active: not allowed"]);
+    // `then`: `true` property schemas accept the constants, and the required list still demands them.
+    const { runtime_active: _gone, ...without } = n16b;
+    expect(check(without)).toEqual(["$.runtime_active: required"]);
+  });
+
   it("is not fooled by planted prototype keys", () => {
     const [planted] = pollutionCases(loadCanonical(SCHEMA), [[]]);
     expect(validateAgainst(SCHEMA, "", planted!.value).join()).toMatch(/not allowed/);

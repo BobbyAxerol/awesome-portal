@@ -2,14 +2,20 @@
  * Reader conformance for `commandCatalogue.ts` (Rules 9.8.3, tiers L0 to L3), UXM-09 fixture lane (FIXTURE_LAB).
  *
  * Published contract (the testkit checker reads it, so every oracle below is the published schema itself):
- *   `execution-operations.v1.schema.json#/$defs/CommandCatalogue` (+ `CommandCatalogueEntry`, `CommandCatalogueScope`, `RiskTier`)
- *   `execution-operations.openapi.json` `/api/v1/execution/commands/catalog` (200 -> that schema)
+ *   `execution-operations.v1.schema.json#/$defs/ServedCommandCatalogue` (= `CommandCatalogue` + `classification` required on every entry; also
+ *   `CommandCatalogueEntry`, `CommandCatalogueScope`, `RiskTier`)
+ *   `execution-operations.openapi.json` `/api/v1/execution/commands/catalog` (200 -> `ServedCommandCatalogue`)
+ *
+ * BE-P13: the oracle and the base body are the SERVED fixture (`execution-command-catalog.served.valid.json`): N16B enum members and extras on
+ * `ops/emergency-close`, `classification` required, CONNECTED not a member. The pinned extract (`execution-command-catalog.valid.json`) stays a
+ * digest-checked L0 file: schema-valid as `CommandCatalogue`, 64 keys, and refused by this reader (`missing_key`: no classification).
  *
  * L0  the canonical file, verbatim and digest-checked; it passes the schema; it reads; its 64 keys are the 64 `F0_COMMAND_KEYS`; every closed
- *     word the reader holds is the schema's enum, word for word (and equal to the V1 vocabulary the screens render with).
+ *     word the reader holds is the schema's enum, word for word (and equal to the V1 vocabulary the screens render with, plus the two N16B words).
  * L1  state matrices against oracles written from the contract text, not from the reader:
  *       A the constants          B entry flags: reachable x classification x tier x ceremony x method
  *       C route facts            D counts: entries x returned x duplicate x scope filter      E scope: entity x environment x requested tier
+ *       N N16B: route state x reason x extras x key (BE-P13)
  * L2  64 entries (the schema's maximum, since `total_entries` is the constant 64) at their widest strings, every prefix length 0..64, 65 refused,
  *     70,000 character fields refused fast, 1,000 reads inside a budget.
  * L3  generated negatives (enum, required, string, integer, array, schema swap, pollution, bad roots): every case is refused (or is the typed
@@ -39,6 +45,7 @@ import {
   CATALOGUE_ROUTE_STATES,
   CATALOGUE_TOTAL_ENTRIES,
   COMMAND_CATALOGUE_SCHEMA,
+  N16B_COMMAND_KEY,
   REASON_ROUTE_STATES,
   readCommandCatalogueV2,
   type CatalogueRefusal,
@@ -50,16 +57,20 @@ import { RISK_TIERS_V2 } from "./operationalQueue";
 const BUDGET_1000_READS_MS = 1500;
 const BUDGET_WIDEST_MS = 150;
 
-const FILE = "execution-command-catalog";
-const digestBefore = canonicalDigest(FILE);
+const FILE = "execution-command-catalog.served";
+/** The pinned extract: immutable evidence of the N16B acceptance record. Never the story's body. */
+const EXTRACT_FILE = "execution-command-catalog";
+const digestBefore = [FILE, EXTRACT_FILE].map(canonicalDigest);
 afterAll(() => {
-  expect(canonicalDigest(FILE)).toBe(digestBefore);
+  expect([FILE, EXTRACT_FILE].map(canonicalDigest)).toEqual(digestBefore);
 });
 
 const OPS = "execution-operations.v1";
-const violations = (v: unknown) => validateAgainst(OPS, "/$defs/CommandCatalogue", v);
+const violations = (v: unknown) => validateAgainst(OPS, "/$defs/ServedCommandCatalogue", v);
+const extractViolations = (v: unknown) => validateAgainst(OPS, "/$defs/CommandCatalogue", v);
 const clone = <T,>(value: T): T => structuredClone(value);
 const CATALOGUE: Draft = loadCanonical(FILE);
+const EXTRACT: Draft = loadCanonical(EXTRACT_FILE);
 const ENTRIES: Draft[] = CATALOGUE.entries;
 
 const read = (raw: unknown): CommandCatalogueRead => readCommandCatalogueV2(raw);
@@ -80,6 +91,10 @@ function holding(entries: Draft[], mutate?: (body: Draft) => void): Draft {
 /** The first fixture entry that has a GET route (observed, R0) and the first with a PUT route (R1, observed). */
 const GET_ENTRY: Draft = ENTRIES.find((e) => e.http_method === "GET" && e.source_route_state === "OBSERVED")!;
 const PUT_ENTRY: Draft = ENTRIES.find((e) => e.http_method === "PUT")!;
+/** The one entry that exercises the N16B branch (and its index in the body). */
+const N16B_INDEX = ENTRIES.findIndex((e) => e.key === "ops/emergency-close");
+const N16B_ENTRY: Draft = ENTRIES[N16B_INDEX];
+const N16B_FIELDS = ["current_primitive_state", "current_capability_id", "accepted_environments", "accepted_target_types", "runtime_active"] as const;
 
 /** Schema node by JSON pointer. */
 function schemaNode(pointer: string, file = `${OPS}.schema.json`): unknown {
@@ -95,10 +110,41 @@ const NAMED_STRICTER: ReadonlySet<CatalogueRefusal> = new Set<CatalogueRefusal>(
 
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
-  it("the published catalogue passes its schema through the testkit checker and reads", () => {
+  it("the served catalogue passes its schema through the testkit checker and reads", () => {
     expect(violations(CATALOGUE)).toEqual([]);
     const answer = read(CATALOGUE);
     expect(answer.kind).toBe("command_catalogue");
+  });
+
+  it("BE-P13: the pinned extract is a valid CommandCatalogue but not a ServedCommandCatalogue (no classification), and this reader refuses it by name", () => {
+    expect(extractViolations(EXTRACT)).toEqual([]);
+    expect(violations(EXTRACT)).not.toEqual([]);
+    expect(EXTRACT.entries.every((e: Draft) => e.classification === undefined)).toBe(true);
+    expect(read(EXTRACT)).toEqual({ kind: "refused", reason: "missing_key", at: "$.entries[0].classification" });
+    expect(EXTRACT.entries.map((e: Draft) => e.key)).toEqual(ENTRIES.map((e) => e.key));
+  });
+
+  it("BE-P13: the served body differs from the extract only by classification on every entry and the N16B branch on ops/emergency-close", () => {
+    const strip = (e: Draft) => {
+      const { classification: _c, ...rest } = e;
+      for (const k of N16B_FIELDS) delete rest[k];
+      return rest;
+    };
+    ENTRIES.forEach((served, i) => {
+      const extract = EXTRACT.entries[i];
+      if (served.key === "ops/emergency-close") {
+        expect(served).toMatchObject({ source_route_state: "CURRENT_PRIMITIVE_CONFIRMED", blocked_reason: "N16B_RUNTIME_ACTIVATION_PENDING", runtime_active: false });
+        expect(extract).toMatchObject({ source_route_state: "AMBIGUOUS", blocked_reason: "SOURCE_ROUTE_MAPPING_AMBIGUOUS" });
+        const { source_route_state: _a, blocked_reason: _b, ...a } = strip(served);
+        const { source_route_state: _c, blocked_reason: _d, ...b } = extract;
+        expect(a).toEqual(b);
+      } else {
+        expect(strip(served)).toEqual(extract);
+      }
+    });
+    expect(ENTRIES.filter((e) => e.source_route_state === "CURRENT_PRIMITIVE_CONFIRMED").map((e) => e.key)).toEqual(["ops/emergency-close"]);
+    expect(ENTRIES.filter((e) => e.classification.state === "SUPPORTED_BUT_INACTIVE")).toHaveLength(32);
+    expect(ENTRIES.filter((e) => e.classification.state === "SEMANTICALLY_INCOMPATIBLE")).toHaveLength(32);
   });
 
   it("the read keeps every published fact: 64 entries in published order, each with its own words", () => {
@@ -120,7 +166,11 @@ describe("L0 · canonical, verbatim", () => {
         key: raw.key, command: raw.command, action: raw.action, group: raw.group, riskTier: raw.risk_tier, sourceRiskTier: raw.source_risk_tier,
         ownerReviewRequired: raw.owner_review_required, planRequired: raw.plan_required, applyRequired: raw.apply_required, verifyRequired: raw.verify_required,
         portalReachable: false, routeState: raw.source_route_state, httpMethod: raw.http_method, httpPath: raw.http_path, blockedReason: raw.blocked_reason,
-        sourceReference: raw.source_reference, classification: null,
+        sourceReference: raw.source_reference,
+        classification: { state: raw.classification.state, reasonCode: raw.classification.reason_code },
+        currentPrimitive: raw.key === "ops/emergency-close"
+          ? { state: "ACCEPTED_CURRENT_PRIMITIVE", capabilityId: "live.emergency-close", acceptedEnvironments: ["LIVE"], acceptedTargetTypes: ["ACCOUNT"], runtimeActive: false }
+          : null,
       });
     });
   });
@@ -157,18 +207,26 @@ describe("L0 · canonical, verbatim", () => {
     expect((schemaNode("/$defs/CommandCatalogueEntry/properties/portal_reachable") as { const: boolean }).const).toBe(false);
   });
 
-  it("the words the screens render with (the V1 vocabulary) are the same words", () => {
+  it("the words the screens render with (the V1 vocabulary) are the same words, plus the two N16B words V1 does not know", () => {
     expect([...CATALOGUE_GROUPS]).toEqual([...CATALOG_GROUPS]);
     expect([...RISK_TIERS_V2]).toEqual([...CATALOG_RISK_TIERS]);
-    expect([...CATALOGUE_ROUTE_STATES]).toEqual([...ROUTE_STATES]);
-    expect([...CATALOGUE_BLOCKED_REASONS]).toEqual([...BLOCKED_REASONS]);
+    // V1 reads an unknown word as null (its `pick`), so on the served body ops/emergency-close shows no route state and no reason there. Known, and V1 stays as it is.
+    expect([...CATALOGUE_ROUTE_STATES]).toEqual([...ROUTE_STATES, "CURRENT_PRIMITIVE_CONFIRMED"]);
+    expect([...CATALOGUE_BLOCKED_REASONS]).toEqual([...BLOCKED_REASONS, "N16B_RUNTIME_ACTIVATION_PENDING"]);
     expect(Object.keys(REASON_ROUTE_STATES)).toEqual([...CATALOGUE_BLOCKED_REASONS]);
+    expect(REASON_ROUTE_STATES.N16B_RUNTIME_ACTIVATION_PENDING).toEqual(["CURRENT_PRIMITIVE_CONFIRMED"]);
+    expect(N16B_COMMAND_KEY).toBe("ops/emergency-close");
+  });
+
+  it("BE-P13: CONNECTED is not a classification word, and the schema agrees (it is refused by name, not as an unknown word)", () => {
+    expect([...CATALOGUE_CLASSIFICATION_STATES]).not.toContain("CONNECTED");
+    expect(schemaEnum(`${OPS}.schema.json`, "/$defs/CommandCatalogueEntry/properties/classification/properties/state")).not.toContain("CONNECTED");
   });
 
   it("the route document answers 200 with this schema", () => {
     const api = loadSchema("../openapi/execution-operations.openapi.json") as { paths: Record<string, { get: { responses: Record<string, { content: Record<string, { schema: { $ref: string } }> }> } }> };
     const ok = api.paths["/api/v1/execution/commands/catalog"]!.get.responses["200"]!;
-    expect(ok.content["application/json"]!.schema.$ref).toBe("../schemas/execution-operations.v1.schema.json#/$defs/CommandCatalogue");
+    expect(ok.content["application/json"]!.schema.$ref).toBe("../schemas/execution-operations.v1.schema.json#/$defs/ServedCommandCatalogue");
   });
 
   it("every refusal word is a word the reader can say, and none of them is a success", () => {
@@ -230,7 +288,7 @@ describe("L1 · matrix B · entry flags: reachable x classification x tier x cer
     ]),
     pick("reachable", ["entries", 0, "portal_reachable"], [["false", false], ["true", true], ["null", null], ["string false", "false"], ["absent", ABSENT]]),
     dimensionOf("classification", [
-      { label: "absent", apply: () => undefined },
+      { label: "absent", apply: (d: Draft) => { delete d.entries[0].classification; } },
       { label: "SUPPORTED_BUT_INACTIVE", apply: (d: Draft) => { d.entries[0].classification = { state: "SUPPORTED_BUT_INACTIVE", reason_code: "N27_COMMAND_TRANSPORT_NOT_ACTIVATED" }; } },
       { label: "SEMANTICALLY_INCOMPATIBLE", apply: (d: Draft) => { d.entries[0].classification = { state: "SEMANTICALLY_INCOMPATIBLE", reason_code: "SOURCE_ROUTE_MAPPING_AMBIGUOUS" }; } },
       { label: "CONNECTED", apply: (d: Draft) => { d.entries[0].classification = { state: "CONNECTED", reason_code: "COMMAND_TRANSPORT_ACTIVE" }; } },
@@ -245,7 +303,8 @@ describe("L1 · matrix B · entry flags: reachable x classification x tier x cer
   /** Oracle from the contract text and the generator's policy: not sendable, a known tier, and mutation needs owner review + plan + apply; a non-GET route needs owner review and is not R0. */
   const accept = (p: Record<string, string>) => {
     const tierKnown = p.tier !== "made up";
-    const class_ = p.classification === "absent" || p.classification === "SUPPORTED_BUT_INACTIVE" || p.classification === "SEMANTICALLY_INCOMPATIBLE";
+    // BE-P13: classification is required on the served body, and CONNECTED is not a member of it.
+    const class_ = p.classification === "SUPPORTED_BUT_INACTIVE" || p.classification === "SEMANTICALLY_INCOMPATIBLE";
     const owner = p.owner === "true";
     const plan = p.plan === "true";
     const apply = p.apply === "true";
@@ -266,6 +325,13 @@ describe("L1 · matrix B · entry flags: reachable x classification x tier x cer
     const connected = clone(base(GET_ENTRY));
     connected.entries[0].classification = { state: "CONNECTED", reason_code: "COMMAND_TRANSPORT_ACTIVE" };
     expect(reasonOf(connected)).toBe("sendable_claim");
+    // The schema refuses both too (const false; no CONNECTED member): the reader is never the only line.
+    expect(violations(reach)).not.toEqual([]);
+    expect(violations(connected)).not.toEqual([]);
+    const active = clone(holding([N16B_ENTRY]));
+    active.entries[0].runtime_active = true;
+    expect(reasonOf(active)).toBe("sendable_claim");
+    expect(violations(active)).not.toEqual([]);
   });
 });
 
@@ -273,7 +339,7 @@ describe("L1 · matrix C · route facts: state x reason x method x path", () => 
   const TABLE: Record<string, string[]> = {
     COMMAND_RELAY_DISABLED: ["OBSERVED"], SOURCE_ROUTE_MAPPING_AMBIGUOUS: ["AMBIGUOUS"], TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED: ["UNPUBLISHED"],
     TRADING_SYSTEM_TYPED_HTTP_ROUTE_UNPUBLISHED: ["DIRECT_ACCESS_PROHIBITED"], GENERIC_REDIS_ACCESS_PROHIBITED: ["DIRECT_ACCESS_PROHIBITED"],
-    DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED: ["OBSERVED", "AMBIGUOUS"],
+    DESTRUCTIVE_OR_LAB_ONLY_COMMAND_PROHIBITED: ["OBSERVED", "AMBIGUOUS"], N16B_RUNTIME_ACTIVATION_PENDING: ["CURRENT_PRIMITIVE_CONFIRMED"],
   };
   const mutating = { ...clone(PUT_ENTRY), http_method: null, http_path: null };
   const DIMS = [
@@ -283,14 +349,15 @@ describe("L1 · matrix C · route facts: state x reason x method x path", () => 
     pick("path", ["entries", 0, "http_path"], [["null", null], ["/v1/a", "/v1/a"]]),
   ];
   const states = cartesian(holding([mutating]), DIMS);
+  /** This entry has no N16B extras, so CURRENT_PRIMITIVE_CONFIRMED (which the schema ties to them) is never acceptable here; matrix N covers that branch. */
   const accept = (p: Record<string, string>) => {
     const hasMethod = p.method !== "null";
     const hasPath = p.path !== "null";
-    return TABLE[p.reason!]!.includes(p.state!) && hasMethod === hasPath && (p.state === "OBSERVED") === hasMethod;
+    return p.state !== "CURRENT_PRIMITIVE_CONFIRMED" && TABLE[p.reason!]!.includes(p.state!) && hasMethod === hasPath && (p.state === "OBSERVED") === hasMethod;
   };
   it("prints the matrix size", () => {
     console.info(describeCoverage("commandCatalogue C (route facts) cartesian", coverage(DIMS, states)));
-    expect(states).toHaveLength(4 * 6 * 3 * 2);
+    expect(states).toHaveLength(5 * 7 * 3 * 2);
     expect(states.filter((s) => accept(s.picks))).toHaveLength(9);
   });
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, s) => checkState(s.value, accept(s.picks)));
@@ -348,6 +415,48 @@ describe("L1 · matrix E · scope: entity x environment x requested tier", () =>
   it.each(states.map((s) => [s.name, s] as const))("%s", (_name, s) => checkState(s.value, accept(s.picks)));
 });
 
+/* ═════════════ matrix N · the N16B branch: route state x reason x extras x key ═════════════ */
+describe("L1 · matrix N · N16B: route state x reason x extras x key (the schema's if/then/else, and what the reader adds)", () => {
+  const swapKey = (d: Draft, key: string) => {
+    const [command, action] = key.split("/") as [string, string];
+    Object.assign(d.entries[0], { key, command, action });
+  };
+  const extrasEdit = (label: string, edit: (e: Draft) => void) => ({ label, apply: (d: Draft) => edit(d.entries[0]) });
+  const DIMS = [
+    dimensionOf("state", ["CURRENT_PRIMITIVE_CONFIRMED", "AMBIGUOUS", "UNPUBLISHED"].map((state) => ({ label: state, apply: (d: Draft) => { d.entries[0].source_route_state = state; } }))),
+    dimensionOf("reason", ["N16B_RUNTIME_ACTIVATION_PENDING", "SOURCE_ROUTE_MAPPING_AMBIGUOUS", "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED"].map((reason) => ({ label: reason, apply: (d: Draft) => { d.entries[0].blocked_reason = reason; } }))),
+    dimensionOf("extras", [
+      extrasEdit("complete", () => undefined),
+      extrasEdit("none", (e) => { for (const f of N16B_FIELDS) delete e[f]; }),
+      extrasEdit("no runtime_active", (e) => { delete e.runtime_active; }),
+      extrasEdit("runtime_active true", (e) => { e.runtime_active = true; }),
+      extrasEdit("other capability", (e) => { e.current_capability_id = "live.other"; }),
+      extrasEdit("two environments", (e) => { e.accepted_environments = ["LIVE", "PAPER"]; }),
+      extrasEdit("portfolio target", (e) => { e.accepted_target_types = ["PORTFOLIO"]; }),
+      extrasEdit("unknown extra", (e) => { e.extra = 1; }),
+    ]),
+    dimensionOf("key", ["ops/emergency-close", "account/sync"].map((key) => ({ label: key, apply: (d: Draft) => swapKey(d, key) }))),
+  ];
+  const states = cartesian(holding([N16B_ENTRY]), DIMS);
+  const NON_N16B_PAIRS: Record<string, string> = { AMBIGUOUS: "SOURCE_ROUTE_MAPPING_AMBIGUOUS", UNPUBLISHED: "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED" };
+  /** The schema text: the CURRENT_PRIMITIVE_CONFIRMED branch needs the N16B reason and all five constant extras; any other state forbids both. */
+  const schemaOk = (p: Record<string, string>) =>
+    p.state === "CURRENT_PRIMITIVE_CONFIRMED" ? p.reason === "N16B_RUNTIME_ACTIVATION_PENDING" && p.extras === "complete" : p.reason !== "N16B_RUNTIME_ACTIVATION_PENDING" && p.extras === "none";
+  /** Stricter, named: reason-state (the pairing table) and primitive-identity (only ops/emergency-close). */
+  const readerOk = (p: Record<string, string>) =>
+    schemaOk(p) && (p.state === "CURRENT_PRIMITIVE_CONFIRMED" ? p.key === "ops/emergency-close" : NON_N16B_PAIRS[p.state!] === p.reason);
+  it("prints the matrix size and the stricter groups' counts", () => {
+    console.info(describeCoverage("commandCatalogue N (N16B branch) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(3 * 3 * 8 * 2);
+    expect(states.filter((s) => schemaOk(s.picks))).toHaveLength(2 + 8);
+    expect(states.filter((s) => readerOk(s.picks))).toHaveLength(1 + 2 + 2);
+  });
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, s) => {
+    expect(violations(s.value).length === 0, "the served schema agrees with the hand-written oracle").toBe(schemaOk(s.picks));
+    checkState(s.value, readerOk(s.picks));
+  });
+});
+
 /* ═════════════════════════ stricter-than-schema, group by group ═════════════════════════ */
 describe("the named stricter-than-schema groups: schema-valid, refused, with the group's own reason", () => {
   const WITH_ENTRY = (mutate: (entry: Draft, body: Draft) => void): Draft => holding([ENTRIES[0]], (body) => mutate(body.entries[0], body));
@@ -367,7 +476,8 @@ describe("the named stricter-than-schema groups: schema-valid, refused, with the
     ["route-pair: a method without a path", "route_incoherent", WITH_ENTRY((e) => { e.http_path = null; })],
     ["mutation-ceremony: R2 without plan", "ceremony_understated", WITH_ENTRY((e) => { e.risk_tier = "R2_SANDBOX"; e.plan_required = false; })],
     ["mutation-ceremony: a PUT route read as R0", "ceremony_understated", WITH_ENTRY((e) => { e.risk_tier = "R0_READ"; e.plan_required = false; e.apply_required = false; })],
-    ["sendable-claim: CONNECTED classification", "sendable_claim", WITH_ENTRY((e) => { e.classification = { state: "CONNECTED", reason_code: "COMMAND_TRANSPORT_ACTIVE" }; })],
+    ["reason-state: AMBIGUOUS route beside the UNPUBLISHED reason", "reason_state_mismatch", holding([ENTRIES.find((e) => e.source_route_state === "AMBIGUOUS")!], (b) => { b.entries[0].blocked_reason = "TRADING_SYSTEM_HTTP_ROUTE_UNPUBLISHED"; })],
+    ["primitive-identity: the N16B primitive on another command key", "route_incoherent", holding([N16B_ENTRY], (b) => { Object.assign(b.entries[0], { key: "account/sync", command: "account", action: "sync" }); })],
   ];
   it.each(groups.map((g) => [g[0], g] as const))("%s", (_name, [, reason, body]) => {
     expect(violations(body), "the payload must be schema-valid for this to be a stricter-than-schema case").toEqual([]);
@@ -454,13 +564,9 @@ interface Case { name: string; category: string; value: unknown; probe: string |
 const enumsOf = (base: Draft, path: readonly (string | number)[], valid: readonly unknown[]): Case[] =>
   enumCases(base, path, valid.map(String)).filter((c) => !valid.includes(getPath(c.value, path)));
 
-/** The canonical body with two entries carrying the optional `classification`, so its containers can be attacked too. */
-const BASE: Draft = (() => {
-  const body = clone(CATALOGUE);
-  body.entries[0].classification = { state: "SUPPORTED_BUT_INACTIVE", reason_code: "N27_COMMAND_TRANSPORT_NOT_ACTIVATED" };
-  body.entries[1].classification = { state: "SEMANTICALLY_INCOMPATIBLE", reason_code: "SOURCE_ROUTE_MAPPING_AMBIGUOUS" };
-  return body;
-})();
+/** The served body: every entry carries `classification`, and entry 28 carries the N16B branch, so every container can be attacked. */
+const BASE: Draft = clone(CATALOGUE);
+const N16B_PATH = (field: string): Path => ["entries", N16B_INDEX, field];
 const E0: Path[] = [["entries", 0]];
 const entryPath = (field: string): Path => ["entries", 0, field];
 
@@ -495,10 +601,19 @@ const NEG: Case[] = [
   ...stringCases(BASE, ["scope", "workspace_id"]), ...stringCases(BASE, ["scope", "actor_user_id"]),
   ...stringCases(BASE, ["source", "trading_system_commit"]), ...stringCases(BASE, ["source", "cli_map_sha256"]), ...stringCases(BASE, ["source", "openapi_sha256"]),
   ...stringCases(BASE, ["entries", 0, "classification", "reason_code"]),
+  // BE-P13: the N16B branch of the served body.
+  ...requiredCases(BASE, N16B_FIELDS.map((f) => N16B_PATH(f))),
+  ...enumsOf(BASE, N16B_PATH("current_primitive_state"), ["ACCEPTED_CURRENT_PRIMITIVE"]),
+  ...enumsOf(BASE, N16B_PATH("current_capability_id"), ["live.emergency-close"]),
+  ...enumsOf(BASE, N16B_PATH("runtime_active"), [false]),
+  ...enumsOf(BASE, N16B_PATH("source_route_state"), [...CATALOGUE_ROUTE_STATES.filter((w) => w === "CURRENT_PRIMITIVE_CONFIRMED")]),
+  ...enumsOf(BASE, N16B_PATH("blocked_reason"), ["N16B_RUNTIME_ACTIVATION_PENDING"]),
+  ...arrayCases(BASE, N16B_PATH("accepted_environments")), ...arrayCases(BASE, N16B_PATH("accepted_target_types")),
+  ...requiredCases(BASE, [["entries", N16B_INDEX, "classification", "state"], ["entries", N16B_INDEX, "classification", "reason_code"]]),
   ...(["owner_review_required", "plan_required", "apply_required", "verify_required"] as const).flatMap((f) => enumsOf(BASE, entryPath(f), [true, false])),
   ...arrayCases(BASE, ["entries"], { idKey: "key" }),
   ...schemaVersionCases(BASE, ["schema_version"], COMMAND_CATALOGUE_SCHEMA, ["execution.command-plan.v1", "execution.command-operation.v1", "execution.command-catalog.v2"]),
-  ...pollutionCases(BASE, [[], ["capability"], ["source"], ["scope"], ...E0, ["entries", 0, "classification"]]),
+  ...pollutionCases(BASE, [[], ["capability"], ["source"], ["scope"], ...E0, ["entries", 0, "classification"], ["entries", N16B_INDEX]]),
 ];
 
 describe("L3 · negative · catalogue", () => {
@@ -564,5 +679,27 @@ describe("L3 · bad roots", () => {
     expect(() => read(value)).not.toThrow();
     const answer = read(value);
     expect(answer.kind === "refused" || answer.kind === "unsupported_shape").toBe(true);
+  });
+});
+
+/* ═════════════ mutation control: the looser-than-schema counter must be able to bite ═════════════ */
+describe("mutation control · the looser-than-schema counter is not vacuous", () => {
+  /** A deliberately loose stand-in: it checks the schema_version and that `entries` is an array. */
+  const loose = (v: unknown): CommandCatalogueRead =>
+    (v as Draft)?.schema_version === COMMAND_CATALOGUE_SCHEMA && Array.isArray((v as Draft)?.entries)
+      ? { kind: "unsupported_shape", schemaVersion: null } : { kind: "refused", reason: "bad_value", at: "$" };
+  const looserThanSchema = (reader: (v: unknown) => CommandCatalogueRead, accepts: (a: CommandCatalogueRead) => boolean) =>
+    NEG.filter((c) => c.category !== "prototype-pollution" && accepts(reader(c.value)) && violations(c.value).length > 0).length;
+
+  it("a loose reader accepts schema-invalid catalogues (counter > 0), the real reader accepts none", () => {
+    expect(looserThanSchema(loose, (a) => a.kind === "unsupported_shape")).toBeGreaterThan(100);
+    expect(looserThanSchema(read, (a) => a.kind === "command_catalogue")).toBe(0);
+  });
+
+  it("a reader that forgot the N16B if/then/else would read the extras beside any route state: those bodies are schema-invalid and refused here", () => {
+    const stray = clone(holding([GET_ENTRY]));
+    for (const f of N16B_FIELDS) stray.entries[0][f] = N16B_ENTRY[f];
+    expect(violations(stray)).not.toEqual([]);
+    expect(read(stray)).toMatchObject({ kind: "refused", reason: "unknown_key" });
   });
 });
