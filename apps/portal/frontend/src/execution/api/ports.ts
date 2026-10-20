@@ -40,6 +40,7 @@ import type { CommandCatalogue } from "../adminCatalog";
 import type { CommandPlan, CommandPlanRequestInput } from "../commandPlan";
 import type { IncidentDetail, OperationsQueue, WorkflowResult } from "../operations";
 import type {
+  AlphaResourceVersionRead,
   CanaryVersionRead,
   GovernanceParentKind,
   GovernanceParentRead,
@@ -47,6 +48,7 @@ import type {
   LiveFullVersionRead,
   SandboxVersionRead,
   StageVersionedOptions,
+  SubjectRecordsVersionRead,
 } from "../v2/readers/dispatch";
 import type { IncidentRootReadV2, OperationalQueueQueryV2, OperationalQueueReadV2 } from "../v2/readers/operationalQueue";
 import type { PendingRecallDiscoveryQuery, PendingRecallDiscoveryRead } from "../v2/readers/pendingRecallDiscovery";
@@ -372,6 +374,12 @@ export interface ExecutionApi {
   getAccountBroker360(accountId: string): Promise<Result<ProfileEnvelope>>;
   /** EDS-04 exact resource BFFs. Each resolves the resource server-side first. */
   getAlpha360Resource(alphaId: string): Promise<Result<ProfileEnvelope>>;
+  /**
+   * UXM-07 R-3 (additive): the same route read by `schema_version`. The legacy `execution.alpha-resource.v1` envelope answers
+   * `v1` (the V1 screens keep calling `getAlpha360Resource`); the SCOPED_V2 `execution.alpha-resource.v2` raw-facts body answers
+   * `v2`; anything else answers `unsupported` (an `ok` answer, named by `unsupportedText`). `workspaceId` is `?workspace_id=`.
+   */
+  getAlpha360ResourceVersioned(alphaId: string, options?: StageVersionedOptions): Promise<Result<AlphaResourceVersionRead>>;
   getPortfolio360Resource(portfolioId: string): Promise<Result<ProfileEnvelope>>;
   getAccount360Resource(accountId: string): Promise<Result<ProfileEnvelope>>;
   getBindingResource(bindingId: string): Promise<Result<ProfileEnvelope>>;
@@ -424,6 +432,8 @@ export interface ExecutionApi {
    * callers cannot choose a Manager relation, source cursor or source host.
    */
   getSubjectActivity(query: SubjectActivityQuery): Promise<Result<SubjectActivityPage>>;
+  /** UXM-07 R-3 (additive): `getSubjectActivity` read by `schema_version` (`subject-records.v1` or `.v2`); same query, same opaque cursor. */
+  getSubjectActivityVersioned(query: SubjectActivityQuery): Promise<Result<SubjectRecordsVersionRead>>;
   /** `GET /alphas` — BR-EX-72 bounded Fleet projection. */
   getAlphaFleet(query?: AlphaFleetQuery): Promise<Result<ManagerListEnvelope<AlphaFleetItem>>>;
   /** `GET /portfolios` — BR-EX-76 all-profile portfolio identity list. */

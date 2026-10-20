@@ -20,6 +20,8 @@ export interface SubjectActivityQuery {
   limit?: number;
   /** Opaque Portal continuation; it is only echoed to this exact operation. */
   after?: string | null;
+  /** `?workspace_id=`; omitted means the caller's own workspace (the request is then byte-identical to the legacy one). */
+  workspaceId?: string | null;
 }
 
 export interface SubjectActivityPage {
@@ -125,5 +127,6 @@ export function subjectActivityPath(query: SubjectActivityQuery): string {
   const limit = declaredSubjectCeiling === null ? asked : Math.min(declaredSubjectCeiling, asked);
   const params = new URLSearchParams({ environment: query.environment, limit: String(limit) });
   if (query.after) params.set("after", query.after);
+  if (query.workspaceId) params.set("workspace_id", query.workspaceId);
   return `/resources/${prefix}/${encodeURIComponent(query.subjectId)}/${query.relation}?${params.toString()}`;
 }
