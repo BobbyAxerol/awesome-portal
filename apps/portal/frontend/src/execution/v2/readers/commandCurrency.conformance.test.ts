@@ -29,6 +29,9 @@
  *       F  decimal strings: 22 spellings
  *     Mapping to the UI: an amount is never shown without its unit, a null is
  *     not zero, WAITING with applied > 0 is not "done", an int64 is a string.
+ * BE-P13 (consumer integration): `source_rejection` and `venue_fill` on every CommandStatus (typed absences, no published branch, quantities the
+ * constant null), and `CommandSubmitResult` (= status + `replayed`, the capital submit 200 only). Matrices K (typed absences) and L (replayed),
+ * named negatives with pinned counts, and a mutation control for the looser-than-schema counter.
  * L2  128 blockers of 512 bytes, 128-character decimals, 2,000 reads of each
  *     status, 70,000 character strings refused fast.
  * L3  generated negatives (enum, required, decimal, integer, string, array,
@@ -64,6 +67,7 @@ import {
   PENDING_VERSION_KEYS,
   STATUS_AUTHORITIES,
   readCommandStatusV1,
+  readCommandSubmitResultV1,
   readPendingControlStatusV1,
   type CommandStatusV1,
   type PendingControlStatusV1,
@@ -78,6 +82,8 @@ const FILES = [
   "execution-command-currency.synthetic", "execution-pending-control-currency.synthetic", "execution-workflows.synthetic",
   "execution-trusted-command-collection.synthetic", "execution-capital-workflow.synthetic", "execution-trusted-commands.synthetic",
 ];
+/** BE-P13: `CommandSubmitResult` (the capital submit's 200) is CommandStatus + `replayed`; only that route answers with it. */
+const SUBMIT_PTR = "/components/schemas/CommandSubmitResult";
 const digestsBefore = FILES.map(canonicalDigest);
 afterAll(() => {
   expect(FILES.map(canonicalDigest)).toEqual(digestsBefore);
@@ -89,6 +95,7 @@ const CMD_PTR = "/components/schemas/CommandStatus";
 const PEND_PTR = "/components/schemas/PendingControlStatus";
 const cmdViolations = (value: unknown) => validateAgainst(TRUSTED, CMD_PTR, value);
 const pendViolations = (value: unknown) => validateAgainst(PENDING_OA, PEND_PTR, value);
+const submitViolations = (value: unknown) => validateAgainst(TRUSTED, SUBMIT_PTR, value);
 const clone = <T,>(value: T): T => structuredClone(value);
 
 const currencyFile = loadCanonical<{ lane: string; runtime_qualified: boolean; stored_status: Draft; public_status: Draft }>("execution-command-currency.synthetic");
@@ -97,6 +104,10 @@ const STORED: Draft = currencyFile.stored_status;
 const SERVED: Draft = currencyFile.public_status;
 const P: Record<string, Draft> = pendingFile.statuses;
 const WAITING: Draft = P.waiting;
+const TRUSTED_FILE = loadCanonical<Record<string, Draft>>("execution-trusted-commands.synthetic");
+const SUBMIT_FIRST: Draft = TRUSTED_FILE.submit_first;
+const SUBMIT_REPLAYED: Draft = TRUSTED_FILE.submit_replayed;
+const submitOf = (raw: unknown) => { const read = readCommandSubmitResultV1(raw); return read !== null && read.kind === "command_submit_result" ? read.result : null; };
 
 /** Every capital status embedded in the other fixtures, with where it sits. */
 function embeddedCapitalStatuses(): { where: string; value: Draft }[] {
@@ -140,9 +151,10 @@ describe("L0 · canonical, verbatim", () => {
   });
 
   it("stored vs served: the stored status is the served one minus currency; the schema and the reader both refuse it", () => {
-    const { currency: _unit, ...withoutCurrency } = SERVED;
+    // The stored form predates the unit AND the BE-P13 typed absences: both are projection-time additions of the served status.
+    const { currency: _unit, source_rejection: _rejection, venue_fill: _fill, ...withoutCurrency } = SERVED;
     expect(withoutCurrency).toEqual(STORED);
-    expect(cmdViolations(STORED)).toEqual(["$.currency: required"]);
+    expect(cmdViolations(STORED)).toEqual(["$.currency: required", "$.source_rejection: required", "$.venue_fill: required"]);
     expect(cmdViolations(SERVED)).toEqual([]);
     expect(readCommandStatusV1(STORED)).toBeNull();
     expect(cmdOf(SERVED)).toMatchObject({ currency: "USDT", commandId: SERVED.command_id });
@@ -204,6 +216,35 @@ describe("L0 · canonical, verbatim", () => {
       expect(cmdOf(value), where).not.toBeNull();
     }
     expect(new Set(EMBEDDED.map((e) => e.value.business.state))).toEqual(new Set(["UNKNOWN", "APPLIED", "REJECTED", "WAITING_ENCUMBRANCE", "PARTIALLY_APPLIED", "PARTIALLY_APPLIED_CANCELLED"]));
+  });
+
+  it("BE-P13: every embedded capital status carries both typed absences, with the counts the fixtures publish", () => {
+    const rejection = (state: string) => EMBEDDED.filter((e) => e.value.source_rejection.state === state).length;
+    const fill = (state: string) => EMBEDDED.filter((e) => e.value.venue_fill.state === state).length;
+    expect([rejection("NOT_APPLICABLE"), rejection("NOT_PUBLISHED")]).toEqual([9, 2]);
+    expect([fill("NOT_APPLICABLE"), fill("NOT_PUBLISHED")]).toEqual([8, 3]);
+    for (const { where, value } of EMBEDDED) {
+      const status = cmdOf(value)!;
+      expect(status.sourceRejection, where).toEqual(value.source_rejection);
+      expect(status.venueFill, where).toEqual(value.venue_fill);
+      expect(status.venueFill.quantities, where).toBeNull();
+    }
+  });
+
+  it("BE-P13: submit_first and submit_replayed pass CommandSubmitResult, read with their bit, and are NOT a CommandStatus (the status schema refuses `replayed`)", () => {
+    expect(submitViolations(SUBMIT_FIRST)).toEqual([]);
+    expect(submitViolations(SUBMIT_REPLAYED)).toEqual([]);
+    expect(submitOf(SUBMIT_FIRST)).toMatchObject({ replayed: false });
+    expect(submitOf(SUBMIT_REPLAYED)).toMatchObject({ replayed: true });
+    for (const body of [SUBMIT_FIRST, SUBMIT_REPLAYED]) {
+      expect(cmdViolations(body)).toEqual(["$.replayed: not allowed"]);
+      expect(readCommandStatusV1(body)).toBeNull();
+    }
+    const { replayed: _bit, ...asStatus } = SUBMIT_REPLAYED;
+    expect(cmdViolations(asStatus)).toEqual([]);
+    expect(submitViolations(asStatus)).toEqual(["$.replayed: required"]);
+    expect(readCommandSubmitResultV1(asStatus)).toBeNull();
+    expect(submitOf(SUBMIT_REPLAYED)!.status).toEqual(cmdOf(asStatus));
   });
 
   it("an amount is never read without its unit: every MoneyAmount carries the status currency, byte for byte", () => {
@@ -580,6 +621,98 @@ describe("L1 · matrix F · decimal strings", () => {
   });
 });
 
+/* ═════════════ BE-P13 matrices (K, L) ═════════════ */
+describe("L1 · matrix K · capital: source_rejection x venue_fill (the typed absences, no published branch)", () => {
+  const NA_REJ = { state: "NOT_APPLICABLE", reason: null };
+  const NP_REJ = { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON" };
+  const NA_FILL = { state: "NOT_APPLICABLE", reason: null, quantities: null };
+  const NP_FILL = { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES", quantities: null };
+  const DIMS = [
+    dimensionOf("rejection", [
+      { label: "not applicable", apply: (d: Draft) => { d.source_rejection = clone(NA_REJ); } },
+      { label: "not published", apply: (d: Draft) => { d.source_rejection = clone(NP_REJ); } },
+      { label: "published", apply: (d: Draft) => { d.source_rejection = { state: "PUBLISHED", reason: "INSUFFICIENT_MARGIN" }; } },
+      { label: "NA with a reason", apply: (d: Draft) => { d.source_rejection = { state: "NOT_APPLICABLE", reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON" }; } },
+      { label: "NP without reason", apply: (d: Draft) => { d.source_rejection = { state: "NOT_PUBLISHED", reason: null }; } },
+      { label: "NP with the fill reason", apply: (d: Draft) => { d.source_rejection = { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES" }; } },
+      { label: "extra key", apply: (d: Draft) => { d.source_rejection = { ...clone(NP_REJ), message: "x" }; } },
+      { label: "null", apply: (d: Draft) => { d.source_rejection = null; } },
+      { label: "absent", apply: (d: Draft) => { delete d.source_rejection; } },
+    ]),
+    dimensionOf("fill", [
+      { label: "not applicable", apply: (d: Draft) => { d.venue_fill = clone(NA_FILL); } },
+      { label: "not published", apply: (d: Draft) => { d.venue_fill = clone(NP_FILL); } },
+      { label: "published", apply: (d: Draft) => { d.venue_fill = { state: "PUBLISHED", reason: null, quantities: null }; } },
+      { label: "quantities object", apply: (d: Draft) => { d.venue_fill = { ...clone(NP_FILL), quantities: { filled: "1", remaining: "2" } }; } },
+      { label: "quantities string", apply: (d: Draft) => { d.venue_fill = { ...clone(NP_FILL), quantities: "1" }; } },
+      { label: "NA with a reason", apply: (d: Draft) => { d.venue_fill = { ...clone(NA_FILL), reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES" }; } },
+      { label: "NP with the rejection reason", apply: (d: Draft) => { d.venue_fill = { ...clone(NP_FILL), reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON" }; } },
+      { label: "quantities absent", apply: (d: Draft) => { delete d.venue_fill.quantities; } },
+      { label: "extra key", apply: (d: Draft) => { d.venue_fill = { ...clone(NP_FILL), partial: false }; } },
+      { label: "null", apply: (d: Draft) => { d.venue_fill = null; } },
+      { label: "absent", apply: (d: Draft) => { delete d.venue_fill; } },
+    ]),
+    dimension("business", ["business", "state"], ["UNKNOWN", "REJECTED", "APPLIED"]),
+    dimension("venue", ["venue"], ["NOT_APPLICABLE", "UNKNOWN", "FILLED"]),
+  ];
+  const states = cartesian(SERVED, DIMS);
+  /** The closed unions only. The server's pairing with business.state / venue is its projection, not a schema rule: every pairing reads. */
+  const accept = (p: Record<string, string>) => (p.rejection === "not applicable" || p.rejection === "not published") && (p.fill === "not applicable" || p.fill === "not published");
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("commandCurrency K (typed absences) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(9 * 11 * 3 * 3);
+    expect(states.filter((s) => accept(s.picks))).toHaveLength(2 * 2 * 3 * 3);
+  });
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, s) => {
+    const read = cmdOf(s.value);
+    expect(read !== null).toBe(accept(s.picks));
+    expect(cmdViolations(s.value).length === 0, "the schema oracle agrees").toBe(accept(s.picks));
+    if (read !== null) {
+      expect(read.venueFill.quantities).toBeNull();
+      expect(read.sourceRejection.state).toBe(s.value.source_rejection.state);
+    }
+  });
+});
+
+describe("L1 · matrix L · submit result: replayed x status key (the bit belongs to the submit result alone)", () => {
+  const DIMS = [
+    dimensionOf("replayed", [
+      { label: "false", apply: (d: Draft) => { d.replayed = false; } },
+      { label: "true", apply: (d: Draft) => { d.replayed = true; } },
+      { label: "string true", apply: (d: Draft) => { d.replayed = "true"; } },
+      { label: "string false", apply: (d: Draft) => { d.replayed = "false"; } },
+      { label: "zero", apply: (d: Draft) => { d.replayed = 0; } },
+      { label: "null", apply: (d: Draft) => { d.replayed = null; } },
+      { label: "object", apply: (d: Draft) => { d.replayed = {}; } },
+      { label: "absent", apply: (d: Draft) => { delete d.replayed; } },
+    ]),
+    dimension("business", ["business", "state"], [...COMMAND_BUSINESS_STATES]),
+    dimension("currency", ["currency"], ["USDT", "", " USDT"]),
+    dimensionOf("extra", [
+      { label: "none", apply: () => undefined },
+      { label: "second marker", apply: (d: Draft) => { d.was_replayed = true; } },
+    ]),
+  ];
+  const states = cartesian(SUBMIT_FIRST, DIMS);
+  const accept = (p: Record<string, string>) => (p.replayed === "false" || p.replayed === "true") && p.currency === "USDT" && p.extra === "none";
+  it("prints the matrix size", () => {
+    console.info(describeCoverage("commandCurrency L (submit result) cartesian", coverage(DIMS, states)));
+    expect(states).toHaveLength(8 * 7 * 3 * 2);
+    expect(states.filter((s) => accept(s.picks))).toHaveLength(2 * 7);
+  });
+  it.each(states.map((s) => [s.name, s] as const))("%s", (_name, s) => {
+    const read = submitOf(s.value);
+    expect(read !== null).toBe(accept(s.picks));
+    if (read !== null) expect(submitViolations(s.value)).toEqual([]);
+    expect(submitViolations(s.value).length === 0, "the schema oracle agrees").toBe(accept(s.picks));
+    // The status reader refuses every body that carries the key (and so every accepted submit result), whatever its value.
+    if (s.picks.replayed !== "absent") expect(readCommandStatusV1(s.value)).toBeNull();
+    // And it reads the body once the key is gone, exactly when the submit reader would: the two readers share one status.
+    const { replayed: _bit, ...asStatus } = s.value;
+    if (read !== null) expect(cmdOf(asStatus)).toEqual(read.status);
+  });
+});
+
 /* ═════════════════════════ L2 ═════════════════════════ */
 describe("L2 · scale", () => {
   it("reads a pending-control status at its widest (128 blockers of 512 bytes, 512-byte ids, 128 character amounts) inside the budget", () => {
@@ -602,6 +735,12 @@ describe("L2 · scale", () => {
     expect(value!.business.blockers).toHaveLength(128);
     expect(ms).toBeLessThan(BUDGET_WIDEST_MS);
     expect(serializedBytes(body)).toBeLessThan(MIB);
+  });
+
+  it("BE-P13: 2,000 reads of the submit result inside the budget", () => {
+    const t = timed(() => { for (let n = 0; n < 2000; n += 1) readCommandSubmitResultV1(n % 2 === 0 ? SUBMIT_FIRST : SUBMIT_REPLAYED); });
+    console.info(`commandCurrency 2,000 submit-result reads: ${t.ms.toFixed(0)} ms (budget ${BUDGET_2000_READS_MS} ms)`);
+    expect(t.ms).toBeLessThan(BUDGET_2000_READS_MS);
   });
 
   it("2,000 reads of each status inside the budget", () => {
@@ -647,10 +786,17 @@ const CMD_ENUMS: Case[] = [
   ...enumsOf(PARTIAL, ["venue"], [...COMMAND_VENUES]),
   ...enumsOf(PARTIAL, ["next_action"], [...COMMAND_NEXT_ACTIONS]),
   ...enumsOf(PARTIAL, ["authority"], [...STATUS_AUTHORITIES]),
+  // BE-P13: the typed absences. PARTIAL's own members are NOT_APPLICABLE both; the enum fixes the state, the reason is a constant of its member.
+  ...enumsOf(PARTIAL, ["source_rejection", "state"], ["NOT_APPLICABLE", "NOT_PUBLISHED"]),
+  ...enumsOf(PARTIAL, ["venue_fill", "state"], ["NOT_APPLICABLE", "NOT_PUBLISHED"]),
+  ...enumsOf(PARTIAL, ["source_rejection", "reason"], [null]),
+  ...enumsOf(PARTIAL, ["venue_fill", "reason"], [null]),
+  ...enumsOf(PARTIAL, ["venue_fill", "quantities"], [null]),
 ];
 const CMD_PATHS: (readonly (string | number)[])[] = [
-  ...["schema_version", "command_id", "operation", "resource", "environment", "profile_ref", "delivery", "business", "projection", "venue", "next_action", "created_at_ms", "updated_at_ms", "authority", "currency"].map((k) => [k] as const),
+  ...["schema_version", "command_id", "operation", "resource", "environment", "profile_ref", "delivery", "business", "projection", "venue", "next_action", "created_at_ms", "updated_at_ms", "authority", "currency", "source_rejection", "venue_fill"].map((k) => [k] as const),
   ["resource", "kind"], ["resource", "id"],
+  ["source_rejection", "state"], ["source_rejection", "reason"], ["venue_fill", "state"], ["venue_fill", "reason"], ["venue_fill", "quantities"],
   ...["state", "receipt_ref", "source_event_ref", "revision", "amounts"].map((k) => ["business", k] as const),
   ...amountPaths(["business", "amounts"]),
 ];
@@ -666,7 +812,19 @@ const CMD_NEG: Case[] = [
   ...stringCases(PARTIAL, ["currency"]),
   ...stringCases(PARTIAL, ["business", "revision"]),
   ...schemaVersionCases(PARTIAL, ["schema_version"], COMMAND_STATUS_SCHEMA, [PENDING_CONTROL_STATUS_SCHEMA, "portal.execution.command-status.v2", "portal.execution.command-preview.v1"]),
-  ...pollutionCases(PARTIAL, [[], ["resource"], ["business"], ["business", "amounts"]]),
+  ...pollutionCases(PARTIAL, [[], ["resource"], ["business"], ["business", "amounts"], ["source_rejection"], ["venue_fill"]]),
+];
+/** `CommandSubmitResult` negatives: the marker itself plus the status fields it shares (a submit result is a status, so those cases are the same). */
+const SUBMIT_NEG: Case[] = [
+  ...enumsOf(SUBMIT_FIRST, ["replayed"], [false, true]),
+  ...requiredCases(SUBMIT_FIRST, [["replayed"], ["source_rejection"], ["venue_fill"], ["currency"], ["command_id"], ["business"], ["business", "state"]]),
+  ...enumsOf(SUBMIT_FIRST, ["operation"], [...COMMAND_OPERATIONS]),
+  ...enumsOf(SUBMIT_FIRST, ["delivery"], [...COMMAND_DELIVERIES]),
+  ...enumsOf(SUBMIT_FIRST, ["source_rejection", "state"], ["NOT_APPLICABLE", "NOT_PUBLISHED"]),
+  ...enumsOf(SUBMIT_FIRST, ["venue_fill", "state"], ["NOT_APPLICABLE", "NOT_PUBLISHED"]),
+  ...stringCases(SUBMIT_FIRST, ["command_id"]), ...stringCases(SUBMIT_FIRST, ["currency"]),
+  ...schemaVersionCases(SUBMIT_FIRST, ["schema_version"], COMMAND_STATUS_SCHEMA, [PENDING_CONTROL_STATUS_SCHEMA, "portal.execution.command-status.v2"]),
+  ...pollutionCases(SUBMIT_FIRST, [[], ["venue_fill"]]),
 ];
 
 const PEND_ENUMS: Case[] = [
@@ -789,4 +947,33 @@ function runNegatives(label: string, version: string, cases: Case[], read: (v: u
 }
 
 runNegatives("capital CommandStatus", COMMAND_STATUS_SCHEMA, CMD_NEG, readCommandStatusV1, cmdViolations, 500);
+runNegatives("CommandSubmitResult (BE-P13)", COMMAND_STATUS_SCHEMA, SUBMIT_NEG, readCommandSubmitResultV1, submitViolations, 100);
 runNegatives("PendingControlStatus", PENDING_CONTROL_STATUS_SCHEMA, PEND_NEG, readPendingControlStatusV1, pendViolations, 700);
+
+/* ═════════════ mutation control: the looser-than-schema counter must be able to bite ═════════════ */
+describe("mutation control · the looser-than-schema counter is not vacuous", () => {
+  /** A deliberately loose status reader: it checks the schema_version and the two BE-P13 keys' presence, and nothing about their members. */
+  const looseStatus = (v: unknown) => {
+    const r = v as Draft;
+    return r?.schema_version === COMMAND_STATUS_SCHEMA && r?.source_rejection !== undefined && r?.venue_fill !== undefined ? { kind: "command_status" } : null;
+  };
+  const looserThanSchema = (read: (v: unknown) => unknown, cases: Case[], violations: (v: unknown) => string[]) =>
+    cases.filter((c) => {
+      const answer = read(c.value) as { kind?: string } | null;
+      return c.category !== "prototype-pollution" && c.category !== "schema-swapped" && answer !== null && answer.kind !== "unsupported_shape" && violations(c.value).length > 0;
+    }).length;
+
+  it("a loose reader accepts schema-invalid statuses (counter > 0), the real readers accept none", () => {
+    expect(looserThanSchema(looseStatus, CMD_NEG, cmdViolations)).toBeGreaterThan(50);
+    expect(looserThanSchema(readCommandStatusV1, CMD_NEG, cmdViolations)).toBe(0);
+    expect(looserThanSchema(readCommandSubmitResultV1, SUBMIT_NEG, submitViolations)).toBe(0);
+  });
+
+  it("a reader that forgot the 'no published branch' rule would accept bodies the schema refuses: PUBLISHED is one of them", () => {
+    const published = clone(SERVED);
+    published.venue_fill = { state: "PUBLISHED", reason: null, quantities: { filled: "1" } };
+    expect(cmdViolations(published).length).toBeGreaterThan(0);
+    expect(looseStatus(published)).not.toBeNull();
+    expect(readCommandStatusV1(published)).toBeNull();
+  });
+});

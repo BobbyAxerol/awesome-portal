@@ -15,6 +15,7 @@ import {
   COMMAND_STATUS_SCHEMA,
   PENDING_CONTROL_STATUS_SCHEMA,
   readCommandStatusV1,
+  readCommandSubmitResultV1,
   readPendingControlStatusV1,
   type CommandStatusV1,
   type PendingControlStatusV1,
@@ -58,7 +59,9 @@ describe("capital CommandStatus, the canonical bodies", () => {
   it("the stored form (no currency) is NOT a served status: it is refused whole, and no unit is guessed", () => {
     expect(readCommandStatusV1(CMD.stored_status)).toBeNull();
     for (const guess of ["USD", "USDT", ""]) {
-      expect(readCommandStatusV1({ ...CMD.stored_status, currency: guess })?.kind === "command_status").toBe(guess === "USD" || guess === "USDT");
+      // The BE-P13 typed absences are required too, so they are supplied: only the unit is under test here.
+      const withAbsences = { ...CMD.stored_status, source_rejection: CMD.public_status.source_rejection, venue_fill: CMD.public_status.venue_fill };
+      expect(readCommandStatusV1({ ...withAbsences, currency: guess })?.kind === "command_status").toBe(guess === "USD" || guess === "USDT");
     }
   });
 
@@ -280,5 +283,84 @@ describe("pending-control status, the canonical bodies", () => {
       b.business.amounts = { requested: tiny, applied: tiny, pending: "0", cancelled: "0", rejected: "0" };
     });
     expect(readPendingControlStatusV1(body)).toBeNull();
+  });
+});
+
+describe("BE-P13: source_rejection and venue_fill are typed absences, never a reason or a quantity", () => {
+  const TRUSTED = loadCanonical<Record<string, Draft>>("execution-trusted-commands.synthetic");
+
+  it("the served status carries both and reads them as the server published them", () => {
+    expect(capital(CMD.public_status)).toMatchObject({
+      sourceRejection: { state: "NOT_APPLICABLE", reason: null },
+      venueFill: { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES", quantities: null },
+    });
+    expect(capital(TRUSTED.rejected)).toMatchObject({
+      business: { state: "REJECTED" },
+      sourceRejection: { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_REJECTION_REASON" },
+      venueFill: { state: "NOT_APPLICABLE", reason: null, quantities: null },
+    });
+  });
+
+  it("a status without either key is not a served status: nothing is defaulted to 'no rejection' or 'no fill'", () => {
+    for (const key of ["source_rejection", "venue_fill"]) {
+      expect(readCommandStatusV1(edit(CMD.public_status, (b) => { delete b[key]; }))).toBeNull();
+      expect(readCommandStatusV1(edit(CMD.public_status, (b) => { b[key] = null; }))).toBeNull();
+    }
+  });
+
+  it("there is no published branch: a rejection reason or a fill quantity is refused whole, not half-read", () => {
+    const bodies: Draft[] = [
+      edit(CMD.public_status, (b) => { b.source_rejection = { state: "PUBLISHED", reason: "INSUFFICIENT_MARGIN" }; }),
+      edit(CMD.public_status, (b) => { b.source_rejection = { state: "NOT_PUBLISHED", reason: "INSUFFICIENT_MARGIN" }; }),
+      edit(CMD.public_status, (b) => { b.source_rejection = { state: "NOT_APPLICABLE", reason: "INSUFFICIENT_MARGIN" }; }),
+      edit(CMD.public_status, (b) => { b.venue_fill = { state: "PUBLISHED", reason: null, quantities: { filled: "1", remaining: "2" } }; }),
+      edit(CMD.public_status, (b) => { b.venue_fill = { state: "NOT_PUBLISHED", reason: "SOURCE_RESULT_HAS_NO_FILL_QUANTITIES", quantities: { filled: "1" } }; }),
+      edit(CMD.public_status, (b) => { b.venue_fill = { state: "NOT_APPLICABLE", reason: null, quantities: "1" }; }),
+      edit(CMD.public_status, (b) => { delete b.venue_fill.quantities; }),
+    ];
+    for (const body of bodies) expect(readCommandStatusV1(body)).toBeNull();
+  });
+
+  it("the server's projection rule holds in every published fixture (an observation, not a reader rule)", () => {
+    const statuses = [CMD.public_status, TRUSTED.ack_only, TRUSTED.rejected, ...CAPITAL_WITH_AMOUNTS];
+    for (const raw of statuses) {
+      expect(raw.source_rejection.state === "NOT_PUBLISHED").toBe(raw.business.state === "REJECTED");
+      expect(raw.venue_fill.state === "NOT_APPLICABLE").toBe(raw.venue === "NOT_APPLICABLE");
+    }
+  });
+});
+
+describe("BE-P13: replayed is the submit result's, and only its", () => {
+  const TRUSTED = loadCanonical<Record<string, Draft>>("execution-trusted-commands.synthetic");
+  const submit = (raw: unknown) => {
+    const read = readCommandSubmitResultV1(raw);
+    return read?.kind === "command_submit_result" ? read.result : null;
+  };
+
+  it("submit_first reads replayed=false and submit_replayed reads replayed=true, each with the same status as a plain read of the body without the key", () => {
+    expect(submit(TRUSTED.submit_first)).toMatchObject({ replayed: false, status: { commandId: TRUSTED.submit_first.command_id } });
+    expect(submit(TRUSTED.submit_replayed)).toMatchObject({ replayed: true });
+    const { replayed: _bit, ...plain } = TRUSTED.submit_replayed;
+    expect(submit(TRUSTED.submit_replayed)!.status).toEqual(capital(plain));
+  });
+
+  it("every status read refuses the key: GET status, reconcile, collection items and workflow.status can never claim 'this call did not send'", () => {
+    expect(readCommandStatusV1(TRUSTED.submit_first)).toBeNull();
+    expect(readCommandStatusV1(TRUSTED.submit_replayed)).toBeNull();
+    for (const raw of CAPITAL_WITH_AMOUNTS) expect(readCommandStatusV1({ ...raw, replayed: false })).toBeNull();
+  });
+
+  it("a submit result without the marker, or with a marker that is not a boolean, is not read: a missing marker is never 'first send'", () => {
+    for (const value of [undefined, null, "true", "false", 0, 1, [], {}]) {
+      const body = clone(TRUSTED.submit_first);
+      if (value === undefined) delete body.replayed;
+      else body.replayed = value;
+      expect(readCommandSubmitResultV1(body)).toBeNull();
+    }
+  });
+
+  it("a pending-control status is not a submit result, and a submit result is not a pending-control status", () => {
+    expect(readCommandSubmitResultV1(PENDING.waiting)).toEqual({ kind: "unsupported_shape", schemaVersion: PENDING_CONTROL_STATUS_SCHEMA });
+    expect(readPendingControlStatusV1(TRUSTED.submit_first)).toEqual({ kind: "unsupported_shape", schemaVersion: COMMAND_STATUS_SCHEMA });
   });
 });
