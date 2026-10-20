@@ -143,6 +143,63 @@ describe("BE-P4 FE-013/FE-033 generated Manager series contract", () => {
     }
   });
 
+  describe("FE-013: the metric fixes the unit and a ratio states its scale", () => {
+    const negative = load("fixtures/execution-manager-series.metric-unit.synthetic.negative.json");
+    const pub = ajv.compile(api.components.schemas.ManagerSeriesPublication);
+    const apply = (body: any, ops: any[]) => { for (const op of ops) op.path.slice(0, -1).reduce((node: any, key: any) => node[key], body)[op.path.at(-1)] = op.value; return body; };
+    const messages = (r: { success: boolean; error?: { issues: Array<{ message: string }> } }) => r.success ? [] : r.error!.issues.map(i => i.message);
+    it.each(["return", "return-scale-mixed", "return-scale-not-published"])("the %s fixture passes Zod and JSON Schema", name => {
+      const sample = fixture("." + name);
+      expect(sample.lane).toBe(LANE); expect(sample.value.metric).toBe("RETURN");
+      expect(check(sample.value), JSON.stringify(check.errors)).toBe(true); expect(managerSeriesResponse.parse(sample.value)).toEqual(sample.value);
+    });
+    it("says what it means: RETURN states its scale, a mixed scale is refused an axis, an unscaled source is typed absence", () => {
+      const r = fixture(".return").value;
+      expect(r.series.map((s: any) => [s.unit, s.currency, s.ratio_scale])).toEqual([["RATIO", null, "FRACTION"], ["RATIO", null, "FRACTION"]]);
+      expect(r.comparison).toMatchObject({ state: "ALIGNED", common: { unit: "RATIO", ratio_scale: "FRACTION", currency: null } });
+      expect(fixture(".return-scale-mixed").value.comparison).toMatchObject({ state: "INCOMPARABLE", reason_code: "RATIO_SCALE_MIXED", common: null, axis_ms: null });
+      expect(fixture(".return-scale-not-published").value.series[0]).toMatchObject({ state: "UNAVAILABLE", reason_code: "RATIO_SCALE_NOT_PUBLISHED", ratio_scale: null, unit: null, points: [] });
+      for (const name of [".populated", ".empty", ".currency-mixed"]) for (const e of fixture(name).value.series) expect(e.ratio_scale).toBeNull();
+      expect(schema.properties.series.items.properties.ratio_scale.anyOf[0].enum).toEqual(["FRACTION", "PERCENT"]);
+    });
+    it("publishes the scale vocabulary in the negative fixture", () => {
+      expect(negative.lane).toBe(LANE); expect(Object.keys(negative.scales)).toEqual(["FRACTION", "PERCENT"]);
+      expect(negative.cases.map((c: any) => c.id)).toContain("FE-013/nav-as-ratio");
+    });
+    it.each(JSON.parse(readFileSync(resolve(root, "fixtures/execution-manager-series.metric-unit.synthetic.negative.json"), "utf8")).cases.map((c: any) => [c.id, c]))(
+      "response case %s is refused by Zod with its code, and by JSON Schema where it is expressible", (_id: string, c: any) => {
+        const v = apply(structuredClone(load(`fixtures/${negative.bases[c.base]}`).value), c.ops);
+        expect(messages(managerSeriesResponse.safeParse(v)), c.id).toContain(c.code);
+        expect(check(v) === false, c.id).toBe(c.refused_by === "SCHEMA_AND_PRODUCER");
+      });
+    it.each(JSON.parse(readFileSync(resolve(root, "fixtures/execution-manager-series.metric-unit.synthetic.negative.json"), "utf8")).stored_cases.map((c: any) => [c.id, c]))(
+      "stored case %s is refused by Zod with its code and by JSON Schema", (_id: string, c: any) => {
+        const v = apply(structuredClone(load(`fixtures/${negative.bases[c.base]}`).value), c.ops);
+        expect(messages(managerSeriesPublication.safeParse(v)), c.id).toContain(c.code);
+        expect(pub(v), c.id).toBe(false);
+      });
+    it("the stored RETURN publication passes both validators; an unscaled ratio is admitted only when empty", () => {
+      const v = load("fixtures/execution-manager-series-publication.return.synthetic.valid.json").value;
+      expect(pub(v), JSON.stringify(pub.errors)).toBe(true); expect(managerSeriesPublication.safeParse(v).success).toBe(true);
+      const empty = apply(structuredClone(v), [{ path: ["series", "ratio_scale"], value: null }, { path: ["series", "points"], value: [] }]);
+      expect(pub(empty)).toBe(true); expect(managerSeriesPublication.safeParse(empty).success).toBe(true);
+    });
+    it("the standalone entry component carries the scale rules", () => {
+      const entry = ajv.compile(api.components.schemas.ManagerSeriesEntry), r = fixture(".return").value.series[0];
+      expect(entry(r)).toBe(true); expect(managerSeriesEntry.safeParse(r).success).toBe(true);
+      for (const bad of [{ ...r, ratio_scale: null }, { ...r, currency: "USDT" }, { ...fixture(".populated").value.series[0], ratio_scale: "FRACTION" }]) {
+        expect(entry(bad)).toBe(false); expect(managerSeriesEntry.safeParse(bad).success).toBe(false);
+      }
+    });
+    it("a metric-unit mismatch is the same refusal in both validators, whatever the metric", () => {
+      for (const [metric, unit] of [["NAV", "RATIO"], ["NET_PNL", "RATIO"], ["RETURN", "MONEY"]] as const) {
+        const v = structuredClone(fixture(metric === "RETURN" ? ".return" : ".populated").value);
+        v.metric = metric; v.series.forEach((s: any) => { s.unit = unit; s.currency = unit === "MONEY" ? "USDT" : null; s.ratio_scale = unit === "RATIO" ? "FRACTION" : null; });
+        expect(managerSeriesResponse.safeParse(v).success, metric + unit).toBe(false); expect(check(v), metric + unit).toBe(false);
+      }
+    });
+  });
+
   describe("query", () => {
     const q = ajv.compile(api.components.schemas.ManagerSeriesQuery);
     it("accepts the canonical cases in both validators", () => {

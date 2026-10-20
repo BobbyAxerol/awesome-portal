@@ -44,6 +44,7 @@
         },
         "unit": "MONEY",
         "currency": "USDT",
+        "ratio_scale": null,
         "basis": "TEST_ONLY:nav-ledger",
         "methodology_ref": "TEST_ONLY:nav-twr.v1",
         "window": {
@@ -75,6 +76,7 @@
         "currency": "USDT",
         "basis": "TEST_ONLY:nav-ledger",
         "unit": "MONEY",
+        "ratio_scale": null,
         "methodology_ref": "TEST_ONLY:nav-twr.v1",
         "window": {
           "from_ms": 1797408000000,

@@ -1,0 +1,430 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "nav": "execution-manager-series.populated.synthetic.valid.json",
+    "return": "execution-manager-series.return.synthetic.valid.json",
+    "unscaled": "execution-manager-series.return-scale-not-published.synthetic.valid.json",
+    "pub": "execution-manager-series-publication.synthetic.valid.json",
+    "pubReturn": "execution-manager-series-publication.return.synthetic.valid.json"
+  },
+  "note": "FE-013: the metric fixes the unit. NAV and NET_PNL are MONEY with a currency (the partition currency); RETURN is a RATIO with a ratio_scale and no currency; nothing else. The scale is stated by the source, never inferred from magnitudes.",
+  "scales": {
+    "FRACTION": "1 = 100% (0.0123 is 1.23%)",
+    "PERCENT": "100 = 100% (1.23 is 1.23%)"
+  },
+  "cases": [
+    {
+      "id": "FE-013/nav-as-ratio",
+      "base": "nav",
+      "rule": "NAV is MONEY",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_METRIC_UNIT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "unit"
+          ],
+          "value": "RATIO"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "unit"
+          ],
+          "value": "RATIO"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "ratio_scale"
+          ],
+          "value": "FRACTION"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "ratio_scale"
+          ],
+          "value": "FRACTION"
+        }
+      ]
+    },
+    {
+      "id": "FE-013/net-pnl-as-ratio",
+      "base": "nav",
+      "rule": "NET_PNL is MONEY",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_METRIC_UNIT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "metric"
+          ],
+          "value": "NET_PNL"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "unit"
+          ],
+          "value": "RATIO"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "unit"
+          ],
+          "value": "RATIO"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "ratio_scale"
+          ],
+          "value": "PERCENT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "ratio_scale"
+          ],
+          "value": "PERCENT"
+        }
+      ]
+    },
+    {
+      "id": "FE-013/return-as-money",
+      "base": "return",
+      "rule": "RETURN is a RATIO",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_METRIC_UNIT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "unit"
+          ],
+          "value": "MONEY"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "unit"
+          ],
+          "value": "MONEY"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "currency"
+          ],
+          "value": "USDT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "currency"
+          ],
+          "value": "USDT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "ratio_scale"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "ratio_scale"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "FE-013/return-without-a-scale",
+      "base": "return",
+      "rule": "a RATIO states its scale",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_RATIO_SCALE_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "ratio_scale"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "ratio_scale"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "FE-013/money-with-a-scale",
+      "base": "nav",
+      "rule": "a scale belongs to a ratio only",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_RATIO_SCALE_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "ratio_scale"
+          ],
+          "value": "FRACTION"
+        }
+      ]
+    },
+    {
+      "id": "FE-013/return-with-a-currency",
+      "base": "return",
+      "rule": "a RATIO has no currency",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_UNIT_CURRENCY_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "currency"
+          ],
+          "value": "USDT"
+        }
+      ]
+    },
+    {
+      "id": "FE-013/unavailable-with-a-scale",
+      "base": "unscaled",
+      "rule": "an absence carries no scale",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_UNAVAILABLE_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "ratio_scale"
+          ],
+          "value": "FRACTION"
+        }
+      ]
+    },
+    {
+      "id": "FE-013/scale-reason-on-a-money-metric",
+      "base": "unscaled",
+      "rule": "RATIO_SCALE_NOT_PUBLISHED can only be said of RETURN",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_REASON_METRIC_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "metric"
+          ],
+          "value": "NAV"
+        }
+      ]
+    },
+    {
+      "id": "FE-013/scales-mixed-called-aligned",
+      "base": "return",
+      "rule": "two scales share no axis (comparison is re-derived)",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_SERIES_COMPARISON_NOT_DERIVED",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "ratio_scale"
+          ],
+          "value": "PERCENT"
+        }
+      ]
+    }
+  ],
+  "stored_cases": [
+    {
+      "id": "FE-013/stored-nav-as-ratio",
+      "base": "pub",
+      "rule": "NAV is MONEY",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_METRIC_UNIT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "unit"
+          ],
+          "value": "RATIO"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "currency"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "ratio_scale"
+          ],
+          "value": "FRACTION"
+        }
+      ]
+    },
+    {
+      "id": "FE-013/stored-return-as-money",
+      "base": "pubReturn",
+      "rule": "RETURN is a RATIO",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_METRIC_UNIT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "unit"
+          ],
+          "value": "MONEY"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "currency"
+          ],
+          "value": "USDT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "ratio_scale"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "FE-013/stored-return-points-without-a-scale",
+      "base": "pubReturn",
+      "rule": "values need a stated scale; an unscaled ratio may only be empty",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_RATIO_SCALE_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "ratio_scale"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "FE-013/stored-money-with-a-scale",
+      "base": "pub",
+      "rule": "a scale belongs to a ratio only",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_RATIO_SCALE_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "ratio_scale"
+          ],
+          "value": "PERCENT"
+        }
+      ]
+    }
+  ]
+}

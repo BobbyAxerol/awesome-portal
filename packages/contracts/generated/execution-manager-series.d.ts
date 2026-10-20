@@ -72,7 +72,7 @@ export interface components {
                 };
                 /** @enum {string} */
                 state: "AVAILABLE" | "EMPTY" | "UNAVAILABLE";
-                reason_code: ("SERIES_SOURCE_NOT_PUBLISHED" | "EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED" | "ECONOMIC_PARTITION_REQUIRED" | "SERIES_SCOPE_NOT_AUTHORIZED" | "SOURCE_NOT_QUALIFIED" | "AMBIGUOUS_SERIES_PUBLICATION" | "SUBJECT_HAS_NO_ACTIVE_MEMBERS" | "NO_POINTS_PUBLISHED_IN_WINDOW") | null;
+                reason_code: ("SERIES_SOURCE_NOT_PUBLISHED" | "EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED" | "ECONOMIC_PARTITION_REQUIRED" | "SERIES_SCOPE_NOT_AUTHORIZED" | "SOURCE_NOT_QUALIFIED" | "AMBIGUOUS_SERIES_PUBLICATION" | "SUBJECT_HAS_NO_ACTIVE_MEMBERS" | "RATIO_SCALE_NOT_PUBLISHED" | "NO_POINTS_PUBLISHED_IN_WINDOW") | null;
                 partition: {
                     /** @enum {string} */
                     economic_domain: "ACTUAL" | "PAPER" | "SANDBOX";
@@ -83,6 +83,7 @@ export interface components {
                 } | null;
                 unit: ("MONEY" | "RATIO") | null;
                 currency: string | null;
+                ratio_scale: ("FRACTION" | "PERCENT") | null;
                 basis: string | null;
                 methodology_ref: string | null;
                 window: {
@@ -116,7 +117,7 @@ export interface components {
             comparison: {
                 /** @enum {string} */
                 state: "SINGLE_SUBJECT" | "ALIGNED" | "INCOMPARABLE" | "UNAVAILABLE";
-                reason_code: ("CURRENCY_MIXED" | "ECONOMIC_PARTITION_MIXED" | "BASIS_MIXED" | "UNIT_MIXED" | "METHODOLOGY_MIXED" | "WINDOW_MISMATCH" | "SUBJECT_SERIES_UNAVAILABLE") | null;
+                reason_code: ("CURRENCY_MIXED" | "ECONOMIC_PARTITION_MIXED" | "BASIS_MIXED" | "UNIT_MIXED" | "RATIO_SCALE_MIXED" | "METHODOLOGY_MIXED" | "WINDOW_MISMATCH" | "SUBJECT_SERIES_UNAVAILABLE") | null;
                 /** @constant */
                 transform: "NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM";
                 common: {
@@ -127,6 +128,7 @@ export interface components {
                     basis: string;
                     /** @enum {string} */
                     unit: "MONEY" | "RATIO";
+                    ratio_scale: ("FRACTION" | "PERCENT") | null;
                     methodology_ref: string;
                     window: {
                         from_ms: number;
@@ -141,7 +143,7 @@ export interface components {
                 source_set_ref: string;
                 revision: string;
             };
-        } & unknown;
+        } & (unknown & unknown);
         ManagerSeriesQuery: {
             workspace_id?: string;
             /** @enum {string} */
@@ -174,7 +176,7 @@ export interface components {
             };
             /** @enum {string} */
             state: "AVAILABLE" | "EMPTY" | "UNAVAILABLE";
-            reason_code: ("SERIES_SOURCE_NOT_PUBLISHED" | "EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED" | "ECONOMIC_PARTITION_REQUIRED" | "SERIES_SCOPE_NOT_AUTHORIZED" | "SOURCE_NOT_QUALIFIED" | "AMBIGUOUS_SERIES_PUBLICATION" | "SUBJECT_HAS_NO_ACTIVE_MEMBERS" | "NO_POINTS_PUBLISHED_IN_WINDOW") | null;
+            reason_code: ("SERIES_SOURCE_NOT_PUBLISHED" | "EXACT_METRIC_WINDOW_NOT_PUBLISHED" | "ALL_HISTORY_WINDOW_NOT_PUBLISHED" | "ECONOMIC_PARTITION_REQUIRED" | "SERIES_SCOPE_NOT_AUTHORIZED" | "SOURCE_NOT_QUALIFIED" | "AMBIGUOUS_SERIES_PUBLICATION" | "SUBJECT_HAS_NO_ACTIVE_MEMBERS" | "RATIO_SCALE_NOT_PUBLISHED" | "NO_POINTS_PUBLISHED_IN_WINDOW") | null;
             partition: {
                 /** @enum {string} */
                 economic_domain: "ACTUAL" | "PAPER" | "SANDBOX";
@@ -185,6 +187,7 @@ export interface components {
             } | null;
             unit: ("MONEY" | "RATIO") | null;
             currency: string | null;
+            ratio_scale: ("FRACTION" | "PERCENT") | null;
             basis: string | null;
             methodology_ref: string | null;
             window: {
@@ -218,7 +221,7 @@ export interface components {
         ManagerSeriesComparison: {
             /** @enum {string} */
             state: "SINGLE_SUBJECT" | "ALIGNED" | "INCOMPARABLE" | "UNAVAILABLE";
-            reason_code: ("CURRENCY_MIXED" | "ECONOMIC_PARTITION_MIXED" | "BASIS_MIXED" | "UNIT_MIXED" | "METHODOLOGY_MIXED" | "WINDOW_MISMATCH" | "SUBJECT_SERIES_UNAVAILABLE") | null;
+            reason_code: ("CURRENCY_MIXED" | "ECONOMIC_PARTITION_MIXED" | "BASIS_MIXED" | "UNIT_MIXED" | "RATIO_SCALE_MIXED" | "METHODOLOGY_MIXED" | "WINDOW_MISMATCH" | "SUBJECT_SERIES_UNAVAILABLE") | null;
             /** @constant */
             transform: "NONE_NO_REBASE_NO_CROSS_CURRENCY_SUM";
             common: {
@@ -229,6 +232,7 @@ export interface components {
                 basis: string;
                 /** @enum {string} */
                 unit: "MONEY" | "RATIO";
+                ratio_scale: ("FRACTION" | "PERCENT") | null;
                 methodology_ref: string;
                 window: {
                     from_ms: number;
@@ -261,6 +265,7 @@ export interface components {
                 /** @enum {string} */
                 unit: "MONEY" | "RATIO";
                 currency: string | null;
+                ratio_scale: ("FRACTION" | "PERCENT") | null;
                 basis: string;
                 methodology_ref: string;
                 points: {
@@ -300,7 +305,7 @@ export interface components {
                 policy_revision: string;
                 source_as_of_ms: number;
             };
-        };
+        } & (unknown & unknown);
         ManagerSeriesProblem: {
             error: {
                 /** @enum {string} */

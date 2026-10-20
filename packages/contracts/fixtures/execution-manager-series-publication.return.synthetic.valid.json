@@ -1,0 +1,62 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "binding": {
+      "subject_type": "portfolio",
+      "subject_id": "TEST_ONLY:portfolio-a",
+      "tuple_population_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+      "stage_filter": [
+        "PAPER"
+      ],
+      "metric": "RETURN",
+      "partition": {
+        "economic_domain": "PAPER",
+        "currency": "USDT",
+        "basis": "TEST_ONLY:nav-ledger",
+        "native_profile_ref": "TEST_ONLY:paper-ledger",
+        "domain_proof_ref": "TEST_ONLY:domain-proof"
+      },
+      "window_start_ms": 1797408000000,
+      "window_end_ms": 1800000000000
+    },
+    "series": {
+      "unit": "RATIO",
+      "currency": null,
+      "ratio_scale": "FRACTION",
+      "basis": "TEST_ONLY:nav-ledger",
+      "methodology_ref": "TEST_ONLY:return-twr.v1",
+      "points": [
+        {
+          "ts_ms": 1797408000000,
+          "value": "0"
+        },
+        {
+          "ts_ms": 1797494400000,
+          "value": "0.0123"
+        }
+      ],
+      "gaps": []
+    },
+    "quality": {
+      "completeness": "COMPLETE",
+      "freshness": "FRESH",
+      "reasons": []
+    },
+    "source_confidence": "VERIFIED",
+    "provenance": {
+      "scope": {
+        "workspace_id": "TEST_ONLY:workspace",
+        "environment": "paper",
+        "profile_id": "TEST_ONLY:paper-profile",
+        "catalogue_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      },
+      "source_revision": "TEST_ONLY:model-r1",
+      "source_set_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "source_qualification": "SOURCE_VERIFIED",
+      "input_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+      "calculation_revision": "TEST_ONLY:calc",
+      "policy_revision": "TEST_ONLY:policy",
+      "source_as_of_ms": 1800000000000
+    }
+  }
+}
