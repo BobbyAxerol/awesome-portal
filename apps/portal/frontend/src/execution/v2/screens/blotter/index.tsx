@@ -39,6 +39,7 @@ import type { ConditionalGroupRead } from "../../../derivedReads";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { useProfileRealtime } from "../../../profileRealtime";
 import { utcStamp } from "../../../time";
+import { QuietIds } from "../../blocks";
 import { CardsTable } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
@@ -360,17 +361,16 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
       <header className="exec-blt2-head">
         <div>
           <h1 className="exec-blt2-title">{heading}</h1>
-          <p className="exec-blt2-sub">{accountsVisible ? "Orders and fills, newest first" : "Your slice only, newest first"}. Paper profile, current retained window.</p>
         </div>
         <div className="exec-blt2-fresh">
-          <Flag kind={fresh === "FRESH" ? "ok" : fresh === "STALE" ? "stale" : "unknown"} label={fresh === "FRESH" ? "Fresh" : fresh === "STALE" ? "Stale" : page.freshness ? humanize(page.freshness) : "Freshness not stated"} size="sm" />
+          {fresh === "FRESH" ? null : <Flag kind={fresh === "STALE" ? "stale" : "unknown"} label={fresh === "STALE" ? "Stale" : page.freshness ? humanize(page.freshness) : "Freshness not stated"} size="sm" />}
           {page.asOf ? <span className="exec-blt2-meta">As of {utcStamp(page.asOf)}</span> : <span className="exec-blt2-meta">Source time not published</span>}
         </div>
       </header>
 
       {urlNotices.map((text) => <div key={text} className="exec-blt2-banner" role="status" data-kind="info"><Flag kind="na" label="Not applied" size="sm" /><span>{text}</span></div>)}
-      {staleReason ? <div className="exec-blt2-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span>The last refresh failed ({staleReason}). The rows below are the last good read.</span></div> : null}
-      {incomplete ? <div className="exec-blt2-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>Some figures are missing. The read is {humanize(page.completeness ?? page.state)}.</span></div> : null}
+      {staleReason ? <div className="exec-blt2-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span title={`The last refresh failed (${staleReason}).`}>Showing the last good read</span></div> : null}
+      {incomplete ? <div className="exec-blt2-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span title={`The read is ${humanize(page.completeness ?? page.state)}`}>Some figures are missing</span></div> : null}
       {page.skippedOrders > 0 ? <div className="exec-blt2-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>{page.skippedOrders} {page.skippedOrders === 1 ? "row" : "rows"} on this page could not be read and {page.skippedOrders === 1 ? "is" : "are"} not shown.</span></div> : null}
       {scoped?.deploymentNotApplied ? <div className="exec-blt2-banner" role="status"><Flag kind="na" label="Not applied" size="sm" /><span>The deployment scope could not be applied: the orders read carries no deployment id.</span></div> : null}
       {scope.order !== null || scope.fill !== null ? (
@@ -385,8 +385,8 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
 
       <section className="exec-blt2-panel" aria-label="Filters">
         <div className="exec-blt2-scope">
-          <span className="exec-blt2-chip" data-lock="read"><span className="exec-blt2-chip-k">environment</span>Paper<span className="exec-blt2-na"> set by this read</span></span>
-          <span className="exec-blt2-chip" data-lock="read"><span className="exec-blt2-chip-k">window</span>Current retained window<span className="exec-blt2-na"> set by this read</span></span>
+          <span className="exec-blt2-chip" data-lock="read" title="Set by this read, not by the context bar"><span className="exec-blt2-chip-k">environment</span>Paper</span>
+          <span className="exec-blt2-chip" data-lock="read" title="Set by this read, not by the context bar"><span className="exec-blt2-chip-k">window</span>Current retained window</span>
           {!accountsVisible ? <span className="exec-blt2-chip"><span className="exec-blt2-chip-k">scope</span>Your slice only</span> : null}
           {(["deployment", "account", "alpha"] as const).map((key) =>
             scope[key] !== null && !(key === "account" && !accountsVisible) ? (
@@ -404,7 +404,8 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
           </p>
         ) : null}
 
-        <p className="exec-blt2-note" id={`${noteId}-ctx`}>
+        {/* The chips above carry the short form; the full sentence stays for assistive tech (and in the chips' titles). */}
+        <p className="exec-blt2-sr" id={`${noteId}-ctx`}>
           Environment and window come from this read, not from the context bar: the orders read has no environment or window filter yet (Not published, FE-052, FE-025, FE-041). The environment highlighted in the context bar does not change these rows.
         </p>
 
@@ -482,7 +483,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
               ) : null}
             </span>
             <button type="button" className="exec-blt2-btn" disabled aria-describedby={`${colMenuId}-export`}>Export</button>
-            <span id={`${colMenuId}-export`} className="exec-blt2-note">Not published (FE-016)</span>
+            <span id={`${colMenuId}-export`} className="exec-blt2-note" title="Not published (FE-016)"><QuietIds text="Not published (FE-016)" /></span>
           </div>
         </div>
 
@@ -563,17 +564,17 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
 
       <FoldPanel
         title="Order funnel"
-        aside={lastOpened ? `Order ${lastOpened}` : "Open an order to see its path"}
+        aside={lastOpened ? `Order ${lastOpened}` : undefined}
         defaultOpen
       >
         {lastOpened === null ? (
-          <p className="exec-blt2-na">Expand an order to read its path: submitted, risk grant, venue acknowledged, fill.</p>
+          <p className="exec-blt2-na" title="Expand an order to read its path: submitted, risk grant, venue acknowledged, fill.">Open an order to see its path</p>
         ) : (funnels[lastOpened]?.phase ?? "loading") === "loading" ? (
           <p className="exec-blt2-na" role="status">Reading the order funnel</p>
         ) : funnels[lastOpened]?.phase === "error" ? (
           <PanelState status={(funnels[lastOpened] as Extract<FunnelRead, { phase: "error" }>).status} reason={(funnels[lastOpened] as Extract<FunnelRead, { phase: "error" }>).reason} />
         ) : (
-          <table className="exec-blt2-inner" aria-label="Order funnel">
+          <table className="exec-blt2-inner" aria-label="Order funnel" title="Intent and signal steps happen before the order and are not carried here.">
             <thead><tr><th>Stage</th><th>State</th><th data-numeric="true">Events</th><th data-numeric="true">Quantity</th></tr></thead>
             <tbody>
               {(funnels[lastOpened] as Extract<FunnelRead, { phase: "ready" }>).funnel.stages.map((stage) => (
@@ -587,7 +588,6 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
             </tbody>
           </table>
         )}
-        <p className="exec-blt2-note">Intent and signal steps happen before the order and are not carried here.</p>
       </FoldPanel>
 
       <FoldPanel title="Conditional groups" defaultOpen={page.groups.length > 0 && page.groups.length <= GROUP_CAP} aside={page.groups.length === 0 ? "None on this page" : `${Math.min(GROUP_CAP, page.groups.length)} of ${page.groups.length} on this page`}>
