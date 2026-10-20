@@ -118,7 +118,8 @@ export function useDockSelection(): DockSelection {
   return { selection: value.sel, select, close };
 }
 
-const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+// `summary` is a tab stop (a disclosure); without it the trap wraps at the last button and a disclosure after it is unreachable.
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
 
 export interface DrawerProps {
   /** Rendered only while true. Defaults to true so `{selection ? <Drawer/> : null}` also works. */
