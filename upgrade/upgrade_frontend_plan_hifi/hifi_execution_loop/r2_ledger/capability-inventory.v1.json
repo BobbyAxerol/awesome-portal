@@ -1,7 +1,7 @@
 {
  "schema": "capability-inventory.v1",
  "generated_at": "2026-10-20",
- "route_count": 258,
+ "route_count": 259,
  "class_enum": [
   "AUTO_READ",
   "INTERACTION_READ",
@@ -2291,7 +2291,8 @@
   {"route":"GET /api/v1/execution/governance/approvals/request-lookup","controller":"governance/governance.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-069: read of an idempotent create by request_key, keyed by the requester so another actor's key looks like none; writes nothing. Claude BE-P5; PostgreSQL paths not run."},
   {"route":"GET /api/v1/execution/governance/stage-action-eligibility","controller":"governance/governance.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-068: stage-action eligibility before the click; canary.* and live.* are NOT_COMMISSIONED because no Portal route exists. Claude BE-P5; PostgreSQL paths not run."},
   {"route":"GET /api/v1/execution/manager/series","controller":"execution-v2/manager-series.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-013/033: exact NAV/Net PnL/Return series and an aligned comparison with typed refusal on mixed currency; the source is MISSING today so every subject is UNAVAILABLE (SERIES_SOURCE_NOT_PUBLISHED). Claude BE-P4."},
-  {"route":"GET /api/v1/execution/pending-recalls","controller":"execution-v2/pending-control.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-062: exact-resource discovery of open pending recalls the Portal controlled (PORTAL_CONTROLLED_RECALLS_ONLY); untracked recalls typed NOT_PUBLISHED. Claude BE-P5; PostgreSQL paths not run."}
+  {"route":"GET /api/v1/execution/pending-recalls","controller":"execution-v2/pending-control.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-062: exact-resource discovery of open pending recalls the Portal controlled (PORTAL_CONTROLLED_RECALLS_ONLY); untracked recalls typed NOT_PUBLISHED. Claude BE-P5; PostgreSQL paths not run."},
+  {"route":"GET /api/admin/profile-access/v2/self-context","controller":"execution-v2/access.controller.ts","interaction_class":"INTERACTION_READ","consumer":"FRONTEND","unused_capability":true,"owner":"claude","test_owner":"codex","evidence":"FE-057/058/038: the caller's own default authorized workspace (RESOLVED / AMBIGUOUS / NONE / UNAVAILABLE from genuine memberships), a self-only entry route and the typed REVISE_BINDING no-operation branch; session fenced first, private no-store, no query. Claude BE-P7; PostgreSQL paths not run."}
  ],
  "phase_2_round_2": "The mirror recorded gaps and conflicts that no route and no screen read. This publishes the aggregate only: entity_key, row_id and the payload digests stay in the database.",
  "code_inventory_updated_at": "2026-10-03"
