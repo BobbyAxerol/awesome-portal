@@ -202,9 +202,10 @@ const STAGE_ORDER = ["PAPER", "SANDBOX", "CANARY", "LIVE"] as const;
 /**
  * One entry per lifecycle stage, plus any other stage the server sent. A stage
  * the summary does not list has `count: null` ("Not available"), never 0: the
- * schema does not say whether the source omits stages that hold none or stages
- * it did not publish (the fleet lens counts, DEFECT D4, follow the same rule).
- * A published 0 stays 0. Nothing downstream adds these up.
+ * server omits a stage exactly when it did not read that stage's environment
+ * completely (FE-048, control-api `fleetStageCounts`), and lists a completely
+ * read stage with its exact count, so a published 0 is a fact and stays 0
+ * (the fleet lens counts follow the same rule). Nothing downstream adds these up.
  */
 export function stageCounts(summary: AlphaFleetSummary | null): { stage: string; label: string; count: number | null }[] {
   if (summary === null) return [];

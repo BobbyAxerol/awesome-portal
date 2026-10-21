@@ -79,6 +79,23 @@ export function canonicalizeManagerSeriesZero<B extends { series: Array<{ points
   }) })) };
 }
 
+/* ───────────── MD-S1 / MD-S4: the reader's display-safety rules, held on emit (DEBT-UXM07-004) ─────────────
+ * The FE reader (`managerText`, `PARTITION_METRIC_KEY`, `MAX_PARTITION_METRICS`) is STRICTER than the published schema on purpose
+ * and refuses the WHOLE read for one offending string. The producer therefore refuses to emit what the reader would refuse, so the
+ * failure is a typed 503 here (never a degraded body) and not a silent "unreadable" on every screen. Same sets as the reader
+ * (accessEffective / commandCurrency / managerMetric): C0/C1 controls and DEL, zero-width and bidi-control format characters
+ * (U+200B..U+200F, U+202A..U+202E, U+2060..U+2064, U+2066..U+2069, U+061C, U+180E, U+FEFF), lone surrogates, whitespace-only. */
+const MANAGER_UNSAFE_TEXT = /[\u0000-\u001f\u007f-\u009f؜᠎​-‏‪-‮⁠-⁤⁦-⁩﻿]/;
+const MANAGER_LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+export const MANAGER_TEXT_UNSAFE_CODE = "MANAGER_TEXT_UNSAFE";
+/** True when `value` may reach a screen as text: none of the characters above, well-formed UTF-16, not whitespace-only. */
+export function managerDisplaySafe(value: string): boolean {
+  return !MANAGER_UNSAFE_TEXT.test(value) && !MANAGER_LONE_SURROGATE.test(value) && value.trim().length > 0;
+}
+/** A partition metric key is a lower-case token (`__proto__` cannot reach a map) and a partition holds at most 64 metrics. */
+export const MANAGER_PARTITION_METRIC_KEY = /^[a-z][a-z0-9_]{0,63}$/;
+export const MANAGER_MAX_PARTITION_METRICS = 64;
+
 interface PartitionLike { economic_domain: string; currency: string; basis: string; native_profile_ref: string }
 interface MetricLike { currency: string | null }
 interface PartitionedMetricsLike { partition: PartitionLike; metrics: Record<string, MetricLike> }
@@ -122,6 +139,10 @@ export function validateManagerDatasetInvariants(v: ManagerDatasetInvariantInput
       const identity = partitionIdentity(entry.partition);
       if (seen.has(identity)) issue([...path, i, "partition"], "MANAGER_PARTITION_DUPLICATE");
       seen.add(identity);
+      // MD-S4: the reader keys a map by the metric key and bounds a partition at 64 metrics.
+      if (Object.keys(entry.metrics).length > MANAGER_MAX_PARTITION_METRICS) issue([...path, i, "metrics"], "MANAGER_PARTITION_METRICS_OVER_BOUND");
+      for (const key of Object.keys(entry.metrics))
+        if (!MANAGER_PARTITION_METRIC_KEY.test(key)) issue([...path, i, "metrics", key], "MANAGER_PARTITION_METRIC_KEY_INVALID");
       for (const [key, metric] of Object.entries(entry.metrics))
         if (metric.currency !== null && metric.currency !== entry.partition.currency)
           issue([...path, i, "metrics", key, "currency"], "MANAGER_PARTITION_CURRENCY_MISMATCH");

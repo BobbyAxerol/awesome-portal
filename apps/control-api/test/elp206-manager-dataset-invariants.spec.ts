@@ -251,3 +251,55 @@ describe("MD-5 canonical zero on emit (owner decision C, 2026-10-20)", () => {
     expect(canonicalizeManagerSeriesZero(out)).toEqual(out);
   });
 });
+
+/* ───────────── MD-S1 / MD-S4 (DEBT-UXM07-004): the producer holds the strict reader's display-safety rules ───────────── */
+describe("MD-S1 / MD-S4 · the producer refuses to emit what the strict reader would refuse", () => {
+  it("accepts the rich canonical body", () => {
+    expect(messages(rich())).toEqual([]);
+  });
+  // Written as escapes so no invisible character sits in this source.
+  const unsafe: Array<[string, string]> = [
+    ["a right-to-left override (U+202E)", "TEST_ONLY:alpha‮-b"],
+    ["a zero-width space (U+200B)", "TEST_ONLY:alpha​-b"],
+    ["a byte order mark (U+FEFF)", "﻿TEST_ONLY:alpha-b"],
+    ["a word joiner (U+2060)", "TEST_ONLY:⁠alpha-b"],
+    ["an isolate (U+2067)", "TEST_ONLY:alpha⁧-b"],
+    ["a C1 control (U+0085)", "TEST_ONLY:alpha\u0085-b"],
+    ["an Arabic letter mark (U+061C)", "TEST_ONLY:alpha؜-b"],
+    ["a lone surrogate", "TEST_ONLY:alpha\ud800-b"],
+    ["only spaces", "   "],
+    ["only no-break spaces", "  "],
+  ];
+  it.each(unsafe)("refuses a text with %s, in a row, a child and a partition", (_name, value) => {
+    const row = rich(); row.items[0].alpha_id = value;
+    expect(messages(row)).toContain("MANAGER_TEXT_UNSAFE");
+    const child = rich(); child.items[0].children[0].deployment_id = value;
+    expect(messages(child)).toContain("MANAGER_TEXT_UNSAFE");
+    const part = rich(); part.items[0].economic_partitions[0].partition.basis = value;
+    expect(messages(part)).toContain("MANAGER_TEXT_UNSAFE");
+  });
+  it("accepts ordinary international text, an inner space, and a no-break space inside a word", () => {
+    for (const value of ["TEST_ONLY:alpha b", "Alpha 中文 ไทย", "TEST_ONLY:café", "a b", "🚀 launch"]) {
+      const row = rich(); row.items[0].alpha_id = value;
+      expect(messages(row), value).not.toContain("MANAGER_TEXT_UNSAFE");
+    }
+  });
+  it("refuses a partition metric key that is not a lower-case token, and a partition over 64 metrics", () => {
+    for (const key of ["Net_Pnl", "Constructor", "net pnl", "1net", "net-pnl", "a".repeat(65), ""]) {
+      const one = rich();
+      const metrics = one.items[1].economic_partitions[0].metrics;
+      // defineProperty: plain assignment of `__proto__` would set the prototype, not an own key.
+      Object.defineProperty(metrics, key, { value: clone(metrics.net_pnl), enumerable: true, configurable: true, writable: true });
+      expect(messages(one), JSON.stringify(key)).toContain("MANAGER_PARTITION_METRIC_KEY_INVALID");
+    }
+    const over = rich();
+    const base = over.items[1].economic_partitions[0].metrics.net_pnl;
+    for (let n = 0; n < 64; n += 1) over.items[1].economic_partitions[0].metrics[`m_${n}`] = clone(base);
+    expect(messages(over)).toContain("MANAGER_PARTITION_METRICS_OVER_BOUND");
+  });
+  it("keeps the published metric keys valid: every key of the canonical body is a token", () => {
+    const body = rich();
+    for (const entry of [...body.capital_statements, ...body.items.flatMap((row: Json) => row.economic_partitions)])
+      for (const key of Object.keys(entry.metrics)) expect(key).toMatch(/^[a-z][a-z0-9_]{0,63}$/);
+  });
+});

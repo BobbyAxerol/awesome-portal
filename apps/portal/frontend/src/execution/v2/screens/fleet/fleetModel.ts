@@ -253,11 +253,10 @@ export const COUNT_NOT_AVAILABLE = "Not available";
  * Real-funded sum can count an alpha in both Canary and Live twice: it is an
  * upper bound and printed with `~`. Archived has no count: it is not published.
  *
- * A stage the summary does not list is "Not available", not 0: the schema does
- * not say whether the source omits stages that hold none or stages it did not
- * publish (DEFECT D4, a question for Codex). Real-funded needs both Canary and
- * Live, so it is not available when either is missing. If Codex answers that
- * absence means zero, this line relaxes.
+ * A stage the summary does not list is "Not available", not 0. The server's meaning is now fixed (FE-048, control-api
+ * `fleetStageCounts`): a stage of a source environment it read COMPLETE is listed with its exact count, 0 included; a stage of an
+ * environment it did not read, or read PARTIAL, is omitted and states nothing. So absence is exactly "not stated" and a listed 0
+ * is a fact. Real-funded needs both Canary and Live, so it is not available when either is missing.
  */
 export function lensCounts(summary: AlphaFleetSummary | null): Readonly<Record<FleetLens, LensCount>> {
   const none: LensCount = { text: null, approximate: false };

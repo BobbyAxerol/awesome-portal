@@ -3,7 +3,7 @@ import { managerSearchText, managerSearchMode, managerWindowQuery, managerSelect
   managerP1Options, managerWindowAbsenceReason, validateManagerP1Response } from "./manager-query-p1.contract";
 import { utcMilliseconds, executionEnvironment, financialStage, exactDecimal, opaqueRevision } from "./foundation.contract";
 import { publicationDigest } from "./publication.contract";
-import { validateManagerDatasetInvariants, managerResponseDecimal } from "./manager-dataset-invariants";
+import { validateManagerDatasetInvariants, managerResponseDecimal, managerDisplaySafe, MANAGER_TEXT_UNSAFE_CODE } from "./manager-dataset-invariants";
 import { managerScorePublication } from "./manager-score-publication.contract";
 export { managerScorePublication } from "./manager-score-publication.contract";
 import { managerCompositionPublication } from "./manager-composition-publication.contract";
@@ -13,7 +13,9 @@ export { managerRegimePublication } from "./manager-regime-publication.contract"
 import { managerStageLifecycleReasons, managerStageLifecyclePolicy, validateManagerLifecycle } from "./manager-lifecycle";
 import { managerSeriesPublication, validateManagerSeriesPublications } from "./manager-series-publication.contract";
 
-const text = z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/);
+// MD-S1 (DEBT-UXM07-004): the display-safety rules of the FE reader are held here too, so the producer refuses to emit a string the
+// reader would refuse (see manager-dataset-invariants.ts). The published JSON Schema keeps the looser pattern it always had.
+const text = z.string().min(1).max(256).regex(/^[^\u0000-\u001f\u007f]+$(?![\s\S])/).refine(managerDisplaySafe, MANAGER_TEXT_UNSAFE_CODE);
 export const MANAGER_SCALARS = {
   alpha_id: "TEXT", alpha_version_id: "TEXT", name: "TEXT", owner_user_id: "TEXT", portfolio_id: "TEXT",
   lifecycle: "TEXT", venue: "TEXT", health: "TEXT", source_state: "TEXT", stage_presence: "TEXT", current_stage: "TEXT",
