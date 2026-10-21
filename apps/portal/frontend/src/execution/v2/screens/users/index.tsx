@@ -43,7 +43,7 @@ import { useSession } from "../../../../auth/session";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { ExecutionSurface } from "../../../ExecutionSurface";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { GapWhy, SectionPanel, gapTitle } from "../../blocks";
+import { NotAvailableLine, SectionPanel, gapTitle } from "../../blocks";
 import { Drawer, DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
@@ -112,18 +112,6 @@ const LAST_SIGN_IN_REQUEST = "FE-053";
 
 const CHANGES_ELSEWHERE = "Account changes are made on the current Users screen.";
 
-/** `Not published (FE-015, FE-026, FE-037, FE-038)`: the word, then the request ids. */
-/** `Not published` on screen; the request ids stay in the title and in hidden text. */
-function Unpublished({ ids, what }: { ids: string; what?: string }) {
-  return (
-    <span className="exec-blk-np">
-      <GapWhy className="exec-blk-np-word" gap={ids} text="Not published" name="Not published, reason" rows={[gapTitle(ids)]} />
-      <span className="exec-blk-sr"> ({ids})</span>
-      {what ? <> {what}</> : null}
-    </span>
-  );
-}
-
 function flagsOf(account: AccountSummary) {
   return (
     <span className="exec-usr-flags">
@@ -164,7 +152,6 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
   const columns = useMemo(() => columnsFor(me), [me]);
   const { selection, select, close } = useDockSelection();
   const mode = useDockMode();
-  const reasonId = useId();
   const searchId = useId();
 
   const [roster, setRoster] = useState<RosterState>({ phase: "loading" });
@@ -397,14 +384,17 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                     ))}
                   </select>
                 </label>
-                <button type="button" className="exec-usr-btn" disabled aria-describedby={reasonId}>Invite account</button>
                 {filtered ? <button type="button" className="exec-usr-btn" onClick={clearFilters}>Clear filters</button> : null}
               </div>
-              <ul id={reasonId} className="exec-usr-unpub">
-                <li><Unpublished ids={PRESET_REQUESTS} what="Role presets" /></li>
-                <li><Unpublished ids={LAST_SIGN_IN_REQUEST} what="Last sign-in" /></li>
-                <li>{CHANGES_ELSEWHERE}</li>
-              </ul>
+              <div className="exec-usr-unpub">
+                <NotAvailableLine
+                  facts={[
+                    { label: "Role presets", why: gapTitle(PRESET_REQUESTS) },
+                    { label: "Last sign-in", id: LAST_SIGN_IN_REQUEST },
+                  ]}
+                />
+                <p>{CHANGES_ELSEWHERE}</p>
+              </div>
 
               {counts.awaitingFirstPassword > 0 ? (
                 <p className="exec-usr-note">{counts.awaitingFirstPassword} {counts.awaitingFirstPassword === 1 ? "account is" : "accounts are"} awaiting a first password.</p>

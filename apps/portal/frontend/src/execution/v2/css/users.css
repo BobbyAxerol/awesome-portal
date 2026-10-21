@@ -146,10 +146,8 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 0;
-  list-style: none;
 }
-.exec-usr-unpub,
+.exec-usr-unpub p,
 .exec-usr-note {
   margin: 0;
   font: var(--exec-font-caption);

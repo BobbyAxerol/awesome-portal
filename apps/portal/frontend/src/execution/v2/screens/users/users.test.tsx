@@ -88,19 +88,20 @@ describe("roster", () => {
     expect(texts.some((t) => t.includes("Locked"))).toBe(true);
   });
 
-  it("names role presets and last sign-in as not published, with their request ids", async () => {
+  it("names role presets and last sign-in on one Not available line, with their request ids behind the disclosure", async () => {
     mount("/administration/users?sel=usr_0001");
     await loaded();
     const note = document.querySelector(".exec-usr-unpub")!;
-    expect(note.textContent).toContain("Not published (FE-015, FE-026, FE-037, FE-038) Role presets");
-    expect(note.textContent).toContain("Not published (FE-053) Last sign-in");
-    expect(note.querySelectorAll("li").length).toBe(3);
+    expect(note.querySelectorAll('[data-testid="not-available-line"]').length).toBe(1);
+    expect(note.textContent).toContain("Not available: Role presets, Last sign-in");
+    expect(note.textContent).toContain("Account changes are made on the current Users screen.");
     expect(note.textContent).not.toMatch(/no request/i);
-    // The drawer does not repeat the two gaps: they are on the toolbar line, ids in their titles.
+    // The drawer does not repeat the two gaps: they are on the toolbar line.
     const dock = await screen.findByRole("complementary");
-    expect(dock.textContent).not.toContain("Not published");
-    expect(whyText(note.querySelectorAll(".exec-blk-np")[1] ?? null)).toContain("FE-053");
-    expect(whyText(note.querySelector(".exec-blk-np"))).toContain("FE-015, FE-026, FE-037, FE-038");
+    expect(dock.textContent).not.toContain("Not available");
+    const why = whyText(note.querySelector(".exec-blk-nal"));
+    expect(why).toContain("FE-015, FE-026, FE-037, FE-038");
+    expect(why).toContain("FE-053");
   });
 
   it("renders inside an execution surface, so the type roles apply (USR-B1)", async () => {
@@ -433,7 +434,7 @@ describe("drawer", () => {
     const legacy = within(dock).getAllByRole("link", { name: /^Current Users screen: / });
     expect(legacy.length).toBeGreaterThan(0);
     for (const link of legacy) expect(link.getAttribute("href")).toContain("legacy=1");
-    expect((screen.getByRole("button", { name: "Invite account" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "Invite account" })).toBeNull();
   });
 
   it("never writes: the screen only issues GETs", async () => {

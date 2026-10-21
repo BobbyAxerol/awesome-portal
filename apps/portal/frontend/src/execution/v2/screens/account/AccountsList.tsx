@@ -28,7 +28,7 @@ import { BindingDrawer } from "./BindingDrawer";
 import { StateFlag, CredentialFlag, Updated } from "./parts";
 import { useBindingPages } from "./reads";
 import {
-  ALL_ENVIRONMENTS, CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, accountHref, freshnessFlag, humanize, inScope, matchesCredential, notPublished,
+  CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, accountHref, freshnessFlag, humanize, inScope, matchesCredential,
   readCredentialFilter, timeOf, toBindingRow, type BindingEnv, type BindingRow,
 } from "./model";
 import { GapWhy } from "../../blocks";
@@ -90,8 +90,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     setParams(next, { replace: true });
   };
   const pickEnv = (next: ExecEnv) => url.set({ env: next, sel: null });
-  // Same roving tabindex and arrow keys as Account 360 and My access. "All environments" is
-  // aria-disabled and not offered, so the arrows cycle the three real tabs only.
+  // Same roving tabindex and arrow keys as Account 360 and My access: the arrows cycle the three environments.
   const envKeys = (event: KeyboardEvent<HTMLDivElement>) => {
     const at = ENV_TABS.findIndex((id) => id === env);
     const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
@@ -239,18 +238,6 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 {env === id && envelope !== null ? <span className="exec-acct-tab-count">{envelope.page.filteredCount}</span> : null}
               </button>
             ))}
-            <button
-              type="button"
-              role="tab"
-              aria-selected={false}
-              aria-disabled="true"
-              tabIndex={-1}
-              className="exec-acct-tab"
-              title={`${notPublished(ALL_ENVIRONMENTS)}. ${ALL_ENVIRONMENTS.what} is not offered, so each environment is its own read.`}
-              onClick={(event) => event.preventDefault()}
-            >
-              All environments
-            </button>
           </div>
 
           <div className="exec-acct-tool" role="search">

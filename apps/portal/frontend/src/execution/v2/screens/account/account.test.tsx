@@ -148,9 +148,9 @@ describe("Accounts list", () => {
     mount("/deployments/accounts");
     await loadedList();
     expect(stub.paths("/api/v1/execution/broker-bindings")[0]).toContain("environment=live");
-    const all = screen.getByRole("tab", { name: "All environments" });
-    expect(all.getAttribute("aria-disabled")).toBe("true");
-    expect(all.getAttribute("title")).toContain("Not published (ELP2-REQ-FE-014)");
+    // The three environments are the whole strip: no disabled "All environments" tab (a dead control).
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent?.replace(/\d+$/, ""))).toEqual(["Real-funded", "Paper", "Sandbox"]);
+    expect(screen.queryByRole("tab", { name: "All environments" })).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: /^Paper/ }));
     await waitFor(() => expect(search().get("env")).toBe("paper"), SLOW);
     await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(1), SLOW);
@@ -1083,11 +1083,11 @@ describe("Accounts list: the environment tablist is keyboard-operable", () => {
     await loadedList();
     const list = screen.getByRole("tablist", { name: "Environment" });
     const tabs = within(list).getAllByRole("tab");
-    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["0", "-1", "-1", "-1"]);
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["0", "-1", "-1"]);
     expect(tabs[0]!.getAttribute("aria-selected")).toBe("true");
   });
 
-  it("ArrowRight selects and focuses the next environment, ArrowLeft wraps; the disabled tab is skipped", async () => {
+  it("ArrowRight selects and focuses the next environment, ArrowLeft wraps", async () => {
     stubFetch();
     mount("/deployments/accounts");
     await loadedList();
