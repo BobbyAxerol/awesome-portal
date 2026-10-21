@@ -98,7 +98,13 @@ export function planManagerSuccessor(document: ManagerSuccessorDocument, current
       accessDigest(before) !== entry.expected_digest) return conflict();
     const g = entry.grant;
     if (stored.some(old => old.grant_id === g.grant_id) || g.revision === before.revision) return conflict();
-    if (before.workspace_id !== t.workspace_id || before.policy_revision !== current.revision ||
+    // The predecessor is historical CAS evidence, not today's authority. A
+    // READ-only policy advance must not strand a separately renewed STREAM.
+    // Its exact domain/field identity must still be sealed by CURRENT policy;
+    // the NEW grant remains strictly bound to next.revision and its window.
+    if (before.workspace_id !== t.workspace_id ||
+      !current.manager_read_domains?.some(s => s.environment === before.environment &&
+        accessDigest(s.domain) === accessDigest(before.domain) && s.field_policy_ref === before.field_policy_ref) ||
       before.effect !== "ALLOW" || before.revoked_at_ms === null && before.valid_until_ms > now ||
       g.workspace_id !== t.workspace_id || g.subject_user_id !== before.subject_user_id ||
       g.issued_by !== t.protected_owner_user_id || before.issued_by !== t.protected_owner_user_id ||

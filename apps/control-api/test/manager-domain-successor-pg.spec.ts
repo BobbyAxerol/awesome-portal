@@ -123,6 +123,25 @@ describe.skipIf(!DATABASE)("successor writer real disposable PG (synthetic autho
     await expect(withTransaction(pool, db => evaluateManagerDomainStream(db, request()))).rejects.toBeTruthy();
     expect(await count()).toBe(3);
   });
+  it("later STREAM uses the current seal without invalidating READ installed by the preceding policy advance", async () => {
+    const readDoc = document(randomUUID(), false);
+    await invoke(readDoc);
+    await expect(withTransaction(pool, db => evaluateManagerDomainStream(db, request()))).rejects.toBeTruthy();
+    const repo = new AccessRepository(pool), current = (await repo.policy(workspace))!;
+    const retainedRead = (await repo.storedGrants(workspace)).find(g => g.fact.grant_id === readDoc.grants[0]!.grant.grant_id)!.fact;
+    const beforeSessions = accessDigest((await pool.query("SELECT * FROM auth_sessions ORDER BY session_id")).rows);
+    const streamDoc = document();
+    streamDoc.expected_policy = { revision: current.revision, digest: accessDigest(current) };
+    streamDoc.policy = current;
+    streamDoc.grants = streamDoc.grants.filter(g => g.grant.action === "stream.subscribe");
+    await invoke(streamDoc);
+    await expect(withTransaction(pool, db => evaluateManagerDomainRead(db, request()))).resolves.toBeDefined();
+    await expect(withTransaction(pool, db => evaluateManagerDomainStream(db, request()))).resolves.toBeDefined();
+    expect(await count()).toBe(4);
+    expect((await repo.storedGrants(workspace)).find(g => g.fact.grant_id === retainedRead.grant_id)!.fact).toEqual(retainedRead);
+    expect((await repo.policy(workspace))!).toEqual(current);
+    expect(accessDigest((await pool.query("SELECT * FROM auth_sessions ORDER BY session_id")).rows)).toBe(beforeSessions);
+  });
   it.each(["policy", "grant", "target"])("refuses stale %s before writes", async axis => {
     const doc = document();
     if (axis === "policy") doc.expected_policy.digest = accessDigest("TEST_ONLY-wrong");

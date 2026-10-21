@@ -98,6 +98,26 @@ describe("Manager successor pure SYNTHETIC CAS and append-only planning", () => 
     resealPredecessor(f);
     expect(run(f).grants.map(g => g.action)).toEqual(["stream.subscribe"]);
   });
+  it("READ-only ADVANCE does not prevent later explicit STREAM KEEP from an older-policy predecessor", () => {
+    const f = fixture("ADVANCE");
+    const streamBefore: ManagerDomainGrant = { ...structuredClone(f.before), grant_id: "TEST_ONLY-predecessor-stream", action: "stream.subscribe" };
+    f.stored.push(streamBefore);
+    const readAfter = run(f).grants[0]!;
+    const current = structuredClone(f.document.policy), stored = [...f.stored, readAfter];
+    const document: ManagerSuccessorDocument = { ...structuredClone(f.document), successor_id: "TEST_ONLY-stream-later",
+      expected_policy: { revision: current.revision, digest: accessDigest(current) }, policy: current,
+      grants: [{ predecessor_grant_id: streamBefore.grant_id, expected_revision: streamBefore.revision, expected_digest: accessDigest(streamBefore),
+        grant: { ...structuredClone(streamBefore), grant_id: "TEST_ONLY-successor-stream", revision: "TEST_ONLY-stream-r2",
+          policy_revision: current.revision, valid_from_ms: NOW, valid_until_ms: NOW + 60_000 } }] };
+    const history = structuredClone(stored);
+    const result = planManagerSuccessor(document, current, stored, NOW, f.pin);
+    expect(result.policyChanged).toBe(false);
+    expect(result.grants.map(g => g.action)).toEqual(["stream.subscribe"]);
+    expect(stored).toEqual(history); // active READ and historical STREAM remain byte-identical
+    document.grants[0]!.expected_digest = accessDigest("TEST_ONLY-wrong-history");
+    expect(() => planManagerSuccessor(document, current, stored, NOW, f.pin))
+      .toThrowError(expect.objectContaining({ code: "MANAGER_SUCCESSOR_REVISION_CONFLICT" }));
+  });
   it.each(["revision", "digest"] as const)("rejects stale policy %s CAS", field => {
     const f = fixture();
     f.document.expected_policy[field] = field === "revision" ? "TEST_ONLY-stale" : accessDigest(["TEST_ONLY-stale"]);
@@ -158,13 +178,12 @@ describe("Manager successor exact identity/scope and constraint preservation", (
     if (variant === "unlisted-subject") f.document.target.principal_workspace_pins[0]!.user_id = "TEST_ONLY-other-reader";
     refused(f);
   });
-  it.each(["active", "deny", "owner", "workspace", "policy"] as const)("refuses ineligible %s predecessor even with correct CAS", variant => {
+  it.each(["active", "deny", "owner", "workspace"] as const)("refuses ineligible %s predecessor even with correct CAS", variant => {
     const f = fixture();
     if (variant === "active") f.before.valid_until_ms = NOW + 1;
     if (variant === "deny") f.before.effect = "DENY";
     if (variant === "owner") f.before.issued_by = "TEST_ONLY-other-owner";
     if (variant === "workspace") f.before.workspace_id = "TEST_ONLY-other-workspace";
-    if (variant === "policy") f.before.policy_revision = "TEST_ONLY-other-policy";
     resealPredecessor(f);
     refused(f);
   });
