@@ -4,7 +4,7 @@
  * observer; it is NOT connected source acceptance and exercises no DB, no
  * proxy, no egress and no Core session. */
 import { createHash, randomBytes, randomUUID } from "node:crypto";
-import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, existsSync, linkSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -13,11 +13,12 @@ import {
   FileNativeCacheObservationSink, MemoryNativeCacheObservationSink, NATIVE_CACHE_OBSERVATION_MAX_FILE_BYTES,
   NATIVE_CACHE_OBSERVATION_MAX_MEMORY_RECORDS, NATIVE_CACHE_OBSERVATION_MAX_RECORD_BYTES, NativeCacheObserver,
   NativeCacheObservationError, buildNativeCacheObservation, cacheStateOfAdmission, captureCacheBranch,
-  carryCacheBranch, correlateNativeCacheObservation, loadNativeCacheObservationKey, nativeCacheIdentityMatches,
-  noteCacheBranch,
+  carryCacheBranch, correlateNativeCacheObservation, egressPhaseOfRecovery, loadNativeCacheObservationKey,
+  nativeCacheIdentityMatches, noteCacheBranch, readDescriptorBounded,
   takeCacheBranch, type NativeCacheAdmissionKind, type NativeCacheObservationInput,
   type NativeCacheObservationRecord, type NativeCacheState,
 } from "../src/execution-v2/native-cache-observation";
+import type { NativeHTTPRecovery } from "../src/execution-v2/current-human-candidate";
 
 const sha = (value: string) => `sha256:${createHash("sha256").update(value).digest("hex")}`;
 const KEY = randomBytes(32);
@@ -147,9 +148,10 @@ describe("redaction / absence of secrets", () => {
     expect(names.filter(n => /secret|token|cookie|jwt|password|authorization|private|base_body|bearer|session|(^|_)key($|_)|_at|_ms|time|bytes/i.test(n))).toEqual([]);
   });
   it("names the EXISTING egress witness and never calls a local send a browser ACK", () => {
-    const kinds = (["SERVED", "ABORTED", "UNKNOWN"] as const).map(egress_phase =>
+    const kinds = (["SERVED", "ABORTED", "UNKNOWN", "NOT_OBSERVED_IN_RETURN"] as const).map(egress_phase =>
       buildNativeCacheObservation(KEY, input("MISS", identity, EPOCH_A, { egress_phase })));
-    expect(kinds.map(r => r.egress_evidence_kind)).toEqual(["FINAL_HTTP_SEND_COMPLETED", "FINAL_HTTP_ABORT_CONFIRMED", "NO_FINAL_WITNESS"]);
+    expect(kinds.map(r => r.egress_evidence_kind)).toEqual(["FINAL_HTTP_SEND_COMPLETED", "FINAL_HTTP_ABORT_CONFIRMED",
+      "NO_FINAL_WITNESS", "EGRESS_NOT_OBSERVED_IN_RETURN"]);
     expect(new Set(kinds.map(r => r.egress_semantics))).toEqual(new Set(["LOCAL_CORE_HTTP_EGRESS_ONLY"]));
   });
   it("the in-process carrier is invisible to the DTO: JSON, spread and structuredClone", () => {
@@ -307,5 +309,175 @@ describe("operator receipt: observation x existing durable custody projection", 
     const record = buildNativeCacheObservation(KEY, input("HIT", identity));
     for (const extra of [{ base_body: "{}" }, { terminal: "eyJhbGciOi" }, { cookie: "sid" }, { session_id: "s" }])
       expect(() => correlateNativeCacheObservation(record, custody(record, extra))).toThrow(/CUSTODY_REFUSED/);
+  });
+});
+
+describe("P22-1: the ACTUAL NativeHTTPRecovery return shapes (current-human-candidate.ts:184-186)", () => {
+  const identity = sharedReadIdentity(scope(EPOCH_A)).cacheKey;
+  // `context` is the private NativeBase; the observation must never read it.
+  const context = { poison: "base_body-cookie-jwt" } as unknown as NativeHTTPRecovery["context"];
+  const reconciled: NativeHTTPRecovery = { state: "RECONCILED", context };
+  const terminal = (phase: "SERVED" | "ABORTED"): NativeHTTPRecovery => ({ state: "TERMINAL", phase, context, terminal: "eyJ.jwt.sig" });
+  const unknown: NativeHTTPRecovery = { state: "UNKNOWN", context };
+  const unsent: NativeHTTPRecovery = { state: "UNSENT_FENCED", context };
+  const custody = (record: NativeCacheObservationRecord, extra: Record<string, unknown> = {}) => ({
+    lease_id: record.lease_id, attempt_id: record.attempt_id, phase: "SERVED", body_digest: record.body_digest,
+    receipt_digest: sha("receipt"), source_ack_digest: sha("ack"), source_reconciled: true, ...extra,
+  });
+  const observe = (recovery: unknown) => buildNativeCacheObservation(KEY, input("HIT", identity, EPOCH_A, { egress_phase: egressPhaseOfRecovery(recovery) }));
+
+  it("maps every real return explicitly; RECONCILED carries no phase and is NOT 'no witness'", () => {
+    expect(egressPhaseOfRecovery(terminal("SERVED"))).toBe("SERVED");
+    expect(egressPhaseOfRecovery(terminal("ABORTED"))).toBe("ABORTED");
+    expect(egressPhaseOfRecovery(unknown)).toBe("UNKNOWN");
+    expect(egressPhaseOfRecovery(unsent)).toBe("UNKNOWN");
+    expect(egressPhaseOfRecovery(reconciled)).toBe("NOT_OBSERVED_IN_RETURN");
+    // reconcile threw / returned nothing, or a shape we do not know: no claim either way.
+    for (const odd of [undefined, null, 5, "TERMINAL", {}, { state: "TERMINAL" }, { state: "TERMINAL", phase: "CANCELLED" }, { state: "NEW_STATE" }])
+      expect(egressPhaseOfRecovery(odd)).toBe("NOT_OBSERVED_IN_RETURN");
+    expect(JSON.stringify(observe(reconciled))).not.toContain("poison");
+  });
+
+  it("RECONCILED return joined with durable SERVED is CORRELATED (the successful ACKed response)", () => {
+    const record = observe(reconciled);
+    expect(record.egress_evidence_kind).toBe("EGRESS_NOT_OBSERVED_IN_RETURN");
+    const receipt = correlateNativeCacheObservation(record, custody(record, { phase: "SERVED" }));
+    expect(receipt.verdict).toBe("CORRELATED");
+    expect(receipt.durable_egress).toBe("SERVED");
+    expect(receipt.checks).toEqual({ lease_attempt_match: true, body_digest_match: true, egress_phase_consistent: true });
+  });
+
+  it("RECONCILED return joined with durable ABORTED is CORRELATED and reported as ABORTED", () => {
+    const record = observe(reconciled);
+    const receipt = correlateNativeCacheObservation(record, custody(record, { phase: "ABORTED" }));
+    expect(receipt.verdict).toBe("CORRELATED");
+    expect(receipt.durable_egress).toBe("ABORTED");
+  });
+
+  it("RECONCILED joined with a non-terminal durable row makes no terminal claim (NO_TERMINAL), not SERVED", () => {
+    const record = observe(reconciled);
+    const receipt = correlateNativeCacheObservation(record, custody(record, { phase: "UNKNOWN", receipt_digest: null }));
+    expect(receipt.durable_egress).toBe("NO_TERMINAL");
+    expect(receipt.verdict).toBe("CORRELATED");
+  });
+
+  it("a durable terminal without its immutable receipt digest is refused for every witness kind", () => {
+    for (const recovery of [reconciled, terminal("SERVED")]) {
+      const record = observe(recovery);
+      expect(correlateNativeCacheObservation(record, custody(record, { phase: "SERVED", receipt_digest: null })).verdict).toBe("MISMATCH");
+    }
+  });
+
+  it("the observed TERMINAL witnesses still need the matching durable phase", () => {
+    const served = observe(terminal("SERVED")), aborted = observe(terminal("ABORTED"));
+    expect(correlateNativeCacheObservation(served, custody(served, { phase: "SERVED" })).verdict).toBe("CORRELATED");
+    expect(correlateNativeCacheObservation(aborted, custody(aborted, { phase: "ABORTED" })).verdict).toBe("CORRELATED");
+    expect(correlateNativeCacheObservation(served, custody(served, { phase: "ABORTED" })).verdict).toBe("MISMATCH");
+    expect(correlateNativeCacheObservation(aborted, custody(aborted, { phase: "SERVED" })).verdict).toBe("MISMATCH");
+    expect(correlateNativeCacheObservation(served, custody(served, { phase: "UNKNOWN", receipt_digest: null })).verdict).toBe("MISMATCH");
+  });
+
+  it("explicit UNKNOWN / UNSENT_FENCED keeps its unsettled meaning: a durable terminal contradicts it", () => {
+    for (const recovery of [unknown, unsent]) {
+      const record = observe(recovery);
+      expect(record.egress_evidence_kind).toBe("NO_FINAL_WITNESS");
+      expect(correlateNativeCacheObservation(record, custody(record, { phase: "UNKNOWN", receipt_digest: null })).verdict).toBe("CORRELATED");
+      expect(correlateNativeCacheObservation(record, custody(record, { phase: "SENDING", receipt_digest: null })).verdict).toBe("CORRELATED");
+      expect(correlateNativeCacheObservation(record, custody(record, { phase: "SERVED" })).verdict).toBe("MISMATCH");
+      expect(correlateNativeCacheObservation(record, custody(record, { phase: "ABORTED" })).verdict).toBe("MISMATCH");
+    }
+  });
+
+  it("digest, lease and attempt mismatches are refused for the not-observed kind too", () => {
+    const record = observe(reconciled), other = observe(reconciled);
+    expect(correlateNativeCacheObservation(record, custody(record, { body_digest: sha("different") })).checks.body_digest_match).toBe(false);
+    expect(correlateNativeCacheObservation(record, custody(record, { body_digest: null })).verdict).toBe("MISMATCH");
+    expect(correlateNativeCacheObservation(record, custody(record, { lease_id: other.lease_id })).checks.lease_attempt_match).toBe(false);
+    expect(correlateNativeCacheObservation(record, custody(record, { attempt_id: other.attempt_id })).checks.lease_attempt_match).toBe(false);
+    expect(correlateNativeCacheObservation(record, custody(record, { lease_id: other.lease_id })).verdict).toBe("MISMATCH");
+  });
+});
+
+describe("P22-2: files are size-checked on the opened descriptor before any read", () => {
+  const identity = sharedReadIdentity(scope(EPOCH_A)).cacheKey;
+  const privateDir = () => { const d = tempDir(); chmodSync(d, 0o700); return d; };
+
+  it("refuses an oversized and an undersized existing key and leaves the file exactly as found", () => {
+    for (const bytes of [33, 31, 1024, 0, 5 * 1024 * 1024]) {
+      const dir = privateDir(), path = join(dir, "observation.key"), content = randomBytes(bytes);
+      writeFileSync(path, content, { mode: 0o600 });
+      for (const create of [false, true]) expect(() => loadNativeCacheObservationKey(dir, create)).toThrow(/KEY_REFUSED/);
+      expect(readFileSync(path).equals(content)).toBe(true); // never replaced / truncated / re-minted
+    }
+  });
+  it("accepts exactly the 32-byte key", () => {
+    const dir = privateDir(), key = randomBytes(32);
+    writeFileSync(join(dir, "observation.key"), key, { mode: 0o600 });
+    expect(loadNativeCacheObservationKey(dir, false).equals(key)).toBe(true);
+  });
+  it("refuses a symlinked key, a hard-linked key and a non-regular key", () => {
+    const outside = tempDir(), real = join(outside, "real.key");
+    writeFileSync(real, randomBytes(32), { mode: 0o600 });
+    const sym = privateDir(); symlinkSync(real, join(sym, "observation.key"));
+    expect(() => loadNativeCacheObservationKey(sym, false)).toThrow(/KEY_REFUSED/);
+    expect(() => loadNativeCacheObservationKey(sym, true)).toThrow(/KEY_REFUSED/);
+    const hard = privateDir(); linkSync(real, join(hard, "observation.key"));
+    expect(() => loadNativeCacheObservationKey(hard, false)).toThrow(/FILE_REFUSED/);
+    const notFile = privateDir(); mkdirSync(join(notFile, "observation.key"));
+    expect(() => loadNativeCacheObservationKey(notFile, false)).toThrow(/KEY_REFUSED|FILE_REFUSED/);
+  });
+
+  it("refuses to read an oversized existing log; it is neither read nor deleted nor truncated", () => {
+    const dir = privateDir(), path = join(dir, "observation.jsonl");
+    const big = Buffer.alloc(NATIVE_CACHE_OBSERVATION_MAX_FILE_BYTES + 1, 0x78);
+    writeFileSync(path, big, { mode: 0o600 });
+    const sink = new FileNativeCacheObservationSink(dir);
+    expect(() => sink.find(randomUUID(), randomUUID())).toThrow(/LOG_OVERSIZE/);
+    expect(() => sink.append(buildNativeCacheObservation(KEY, input("HIT", identity)))).toThrow(/LOG_FULL/);
+    expect(statSync(path).size).toBe(big.length);
+  });
+  it("a full-but-legal log (exactly the cap) is readable, still bounded, and append is refused", async () => {
+    const dir = privateDir(), path = join(dir, "observation.jsonl");
+    const record = buildNativeCacheObservation(KEY, input("MISS", identity));
+    const line = `${JSON.stringify(record)}\n`;
+    const filler = Buffer.alloc(NATIVE_CACHE_OBSERVATION_MAX_FILE_BYTES - Buffer.byteLength(line), 0x0a);
+    writeFileSync(path, Buffer.concat([filler, Buffer.from(line)]), { mode: 0o600 });
+    const sink = new FileNativeCacheObservationSink(dir);
+    expect(sink.find(record.lease_id, record.attempt_id)?.cache_state).toBe("MISS");
+    expect(await new NativeCacheObserver(KEY, sink).record(input("HIT", identity))).toEqual({ recorded: false, reason: "SINK_FAILED" });
+    expect(statSync(path).size).toBe(NATIVE_CACHE_OBSERVATION_MAX_FILE_BYTES);
+  });
+  it("the read itself is bounded: growth after fstat cannot exceed the cap", () => {
+    const dir = privateDir(), path = join(dir, "grown");
+    writeFileSync(path, Buffer.alloc(4096, 0x61), { mode: 0o600 });
+    const read = (max: number) => {
+      const fd = openSync(path, "r"); // sequential reads: a fresh descriptor per attempt
+      try { return readDescriptorBounded(fd, max, "NATIVE_CACHE_OBSERVATION_LOG_OVERSIZE"); } finally { closeSync(fd); }
+    };
+    // Pretend fstat saw <= 1024 bytes; the descriptor now yields 4096.
+    expect(() => read(1024)).toThrow(/LOG_OVERSIZE/);
+    expect(read(4096).length).toBe(4096);
+    expect(read(8192).length).toBe(4096);
+  });
+  it("refuses a symlinked or hard-linked log and does not follow it", async () => {
+    const outside = tempDir(), real = join(outside, "elsewhere.jsonl");
+    writeFileSync(real, "", { mode: 0o600 });
+    const sym = privateDir(); symlinkSync(real, join(sym, "observation.jsonl"));
+    const symSink = new FileNativeCacheObservationSink(sym);
+    expect(() => symSink.find(randomUUID(), randomUUID())).toThrow(/FILE_REFUSED/);
+    expect(await new NativeCacheObserver(KEY, symSink).record(input("HIT", identity))).toEqual({ recorded: false, reason: "SINK_FAILED" });
+    const hard = privateDir(); linkSync(real, join(hard, "observation.jsonl"));
+    const hardSink = new FileNativeCacheObservationSink(hard);
+    expect(() => hardSink.find(randomUUID(), randomUUID())).toThrow(/FILE_REFUSED/);
+    expect(await new NativeCacheObserver(KEY, hardSink).record(input("HIT", identity))).toEqual({ recorded: false, reason: "SINK_FAILED" });
+    expect(readFileSync(real, "utf8")).toBe(""); // nothing written through either link
+  });
+  it("a missing log is the only empty answer; a torn line is skipped without leaking its text", () => {
+    const dir = privateDir();
+    const sink = new FileNativeCacheObservationSink(dir);
+    expect(sink.find(randomUUID(), randomUUID())).toBeUndefined();
+    const record = buildNativeCacheObservation(KEY, input("COALESCED", identity));
+    writeFileSync(join(dir, "observation.jsonl"), `{"torn":\n${JSON.stringify(record)}\n`, { mode: 0o600 });
+    expect(sink.find(record.lease_id, record.attempt_id)?.cache_state).toBe("COALESCED");
   });
 });

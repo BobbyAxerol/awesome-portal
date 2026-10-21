@@ -16,7 +16,7 @@
  * does not pretend to carry one. Observation failure never changes a response.
  */
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
-import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, writeSync } from "node:fs";
+import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readSync, writeSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
 
@@ -91,13 +91,32 @@ export function takeCacheBranch(target: unknown): NativeCacheBranchCapture | und
 
 /* ---------- record ---------- */
 
-export type NativeCacheEgressPhase = "SERVED" | "ABORTED" | "UNKNOWN";
+/** What the in-process delivery/recovery RETURN carried, nothing more.
+ * NOT_OBSERVED_IN_RETURN is the honest answer when the return has no terminal
+ * phase (the real RECONCILED return, or a recovery that threw): it is NOT a
+ * claim that no final witness exists. The durable projection decides at the
+ * private operator join. */
+export type NativeCacheEgressPhase = "SERVED" | "ABORTED" | "UNKNOWN" | "NOT_OBSERVED_IN_RETURN";
 /** Existing evidence names, never invented here. UNKNOWN has no witness. */
 const EGRESS_EVIDENCE = {
   SERVED: "FINAL_HTTP_SEND_COMPLETED",
   ABORTED: "FINAL_HTTP_ABORT_CONFIRMED",
   UNKNOWN: "NO_FINAL_WITNESS",
+  NOT_OBSERVED_IN_RETURN: "EGRESS_NOT_OBSERVED_IN_RETURN",
 } as const;
+
+/** Maps the structural shape of `NativeHTTPRecovery` (current-human-candidate)
+ * without importing it. Only a TERMINAL return with a SERVED/ABORTED phase is a
+ * witness; UNKNOWN / UNSENT_FENCED are explicitly unsettled; RECONCILED (which
+ * the real code returns WITHOUT a phase after recording the source ACK) and a
+ * missing return are "not observed in return". Never throws, never guesses. */
+export function egressPhaseOfRecovery(recovery: unknown): NativeCacheEgressPhase {
+  if (typeof recovery !== "object" || recovery === null) return "NOT_OBSERVED_IN_RETURN";
+  const { state, phase } = recovery as { state?: unknown; phase?: unknown };
+  if (state === "TERMINAL") return phase === "SERVED" || phase === "ABORTED" ? phase : "NOT_OBSERVED_IN_RETURN";
+  if (state === "UNKNOWN" || state === "UNSENT_FENCED") return "UNKNOWN";
+  return "NOT_OBSERVED_IN_RETURN";
+}
 
 const recordSchema = z.object({
   schema_version: z.literal(NATIVE_CACHE_OBSERVATION_SCHEMA),
@@ -105,7 +124,7 @@ const recordSchema = z.object({
   cache_state: cacheState,
   cache_identity_mac: mac, native_epoch_mac: mac,
   body_digest: sha,
-  egress_evidence_kind: z.enum(["FINAL_HTTP_SEND_COMPLETED", "FINAL_HTTP_ABORT_CONFIRMED", "NO_FINAL_WITNESS"]),
+  egress_evidence_kind: z.enum(["FINAL_HTTP_SEND_COMPLETED", "FINAL_HTTP_ABORT_CONFIRMED", "NO_FINAL_WITNESS", "EGRESS_NOT_OBSERVED_IN_RETURN"]),
   egress_semantics: z.literal("LOCAL_CORE_HTTP_EGRESS_ONLY"),
 }).strict();
 export type NativeCacheObservationRecord = Readonly<z.infer<typeof recordSchema>>;
@@ -114,7 +133,7 @@ const inputSchema = z.object({
   lease_id: uuid, attempt_id: uuid, operation_id: operationId,
   capture: captureSchema,
   native_epoch_digest: sha, body_digest: sha,
-  egress_phase: z.enum(["SERVED", "ABORTED", "UNKNOWN"]),
+  egress_phase: z.enum(["SERVED", "ABORTED", "UNKNOWN", "NOT_OBSERVED_IN_RETURN"]),
 }).strict();
 export type NativeCacheObservationInput = z.input<typeof inputSchema>;
 
@@ -191,33 +210,59 @@ function privateDirectory(dir: string): void {
     (typeof process.getuid === "function" && stat.uid !== process.getuid()))
     throw new NativeCacheObservationError("NATIVE_CACHE_OBSERVATION_DIRECTORY_REFUSED");
 }
-function privateFileStat(fd: number): void {
+const KEY_BYTES = 32;
+function refused(code: string): never { throw new NativeCacheObservationError(code); }
+/** Descriptor-level guards: regular file, current owner, no group/other access,
+ * exactly one link (a hard link to a file outside the private directory is
+ * refused). Returns the size observed on THIS descriptor. */
+function privateFileStat(fd: number): number {
   const stat = fstatSync(fd);
-  if (!stat.isFile() || (stat.mode & 0o077) !== 0 ||
+  if (!stat.isFile() || (stat.mode & 0o077) !== 0 || stat.nlink !== 1 ||
     (typeof process.getuid === "function" && stat.uid !== process.getuid()))
-    throw new NativeCacheObservationError("NATIVE_CACHE_OBSERVATION_FILE_REFUSED");
+    refused("NATIVE_CACHE_OBSERVATION_FILE_REFUSED");
+  return stat.size;
+}
+/** Read at most `max` bytes from the descriptor. It reads into a buffer of
+ * max+1 and never grows it, so a file that grew after fstat cannot make this
+ * allocate or return more than the cap: one extra byte is proof of overflow
+ * and is refused, not truncated. */
+export function readDescriptorBounded(fd: number, max: number, code: string): Buffer {
+  const buffer = Buffer.allocUnsafe(max + 1);
+  let filled = 0;
+  while (filled < buffer.length) {
+    const n = readSync(fd, buffer, filled, buffer.length - filled, null);
+    if (n === 0) break;
+    filled += n;
+  }
+  if (filled > max) refused(code);
+  return buffer.subarray(0, filled);
+}
+function openRefusing(path: string, flags: number, mode: number | undefined, code: string): number {
+  try { return mode === undefined ? openSync(path, flags) : openSync(path, flags, mode); }
+  catch { return refused(code); }
 }
 
 /** Load (or, with create, mint) the 32-byte MAC key next to the log. The key
  * never enters a record, a log line, an error or a return value other than
- * this Buffer. */
+ * this Buffer. An existing key is NEVER replaced: a wrong-sized, linked or
+ * loose file is refused, and the file is left exactly as found. */
 export function loadNativeCacheObservationKey(dir: string, create: boolean): Buffer {
   privateDirectory(dir);
   const path = join(dir, KEY_FILE);
   if (create) {
     try {
       const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 0o600);
-      try { writeSync(fd, randomBytes(32)); } finally { closeSync(fd); }
+      try { writeSync(fd, randomBytes(KEY_BYTES)); } finally { closeSync(fd); }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw new NativeCacheObservationError("NATIVE_CACHE_OBSERVATION_KEY_REFUSED");
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") refused("NATIVE_CACHE_OBSERVATION_KEY_REFUSED");
     }
   }
-  let fd: number;
-  try { fd = openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW); }
-  catch { throw new NativeCacheObservationError("NATIVE_CACHE_OBSERVATION_KEY_REFUSED"); }
+  const fd = openRefusing(path, constants.O_RDONLY | constants.O_NOFOLLOW, undefined, "NATIVE_CACHE_OBSERVATION_KEY_REFUSED");
   try {
-    privateFileStat(fd);
-    const key = readFileSync(fd);
+    // Size is validated on the opened descriptor BEFORE any read.
+    if (privateFileStat(fd) !== KEY_BYTES) refused("NATIVE_CACHE_OBSERVATION_KEY_REFUSED");
+    const key = readDescriptorBounded(fd, KEY_BYTES, "NATIVE_CACHE_OBSERVATION_KEY_REFUSED");
+    if (key.length !== KEY_BYTES) refused("NATIVE_CACHE_OBSERVATION_KEY_REFUSED");
     assertKey(key);
     return key;
   } finally { closeSync(fd); }
@@ -225,29 +270,38 @@ export function loadNativeCacheObservationKey(dir: string, create: boolean): Buf
 
 /** Append-only JSONL under an operator-private directory (0700 / 0600). Bounded:
  * once the file reaches the cap new observations are dropped (best effort, never
- * custody) rather than growing without limit. */
+ * custody) rather than growing without limit. A log over the cap is refused, not
+ * truncated, deleted or rotated: the operator decides. */
 export class FileNativeCacheObservationSink implements NativeCacheObservationSink {
   readonly #path: string;
   constructor(dir: string) { privateDirectory(dir); this.#path = join(dir, LOG_FILE); }
   append(record: NativeCacheObservationRecord): void {
     const line = `${JSON.stringify(recordSchema.parse(record))}\n`;
-    const fd = openSync(this.#path, constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | constants.O_NOFOLLOW, 0o600);
+    const fd = openRefusing(this.#path, constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | constants.O_NOFOLLOW, 0o600,
+      "NATIVE_CACHE_OBSERVATION_FILE_REFUSED");
     try {
-      privateFileStat(fd);
-      if (fstatSync(fd).size + Buffer.byteLength(line) > NATIVE_CACHE_OBSERVATION_MAX_FILE_BYTES)
-        throw new NativeCacheObservationError("NATIVE_CACHE_OBSERVATION_LOG_FULL");
+      if (privateFileStat(fd) + Buffer.byteLength(line) > NATIVE_CACHE_OBSERVATION_MAX_FILE_BYTES)
+        refused("NATIVE_CACHE_OBSERVATION_LOG_FULL");
       writeSync(fd, line);
     } finally { closeSync(fd); }
   }
   find(leaseId: string, attemptId: string): NativeCacheObservationRecord | undefined {
     let fd: number;
-    try { fd = openSync(this.#path, constants.O_RDONLY | constants.O_NOFOLLOW); } catch { return undefined; }
+    try { fd = openSync(this.#path, constants.O_RDONLY | constants.O_NOFOLLOW); }
+    catch (error) {
+      // Only "no log yet" is an empty answer; a symlink or any other failure is a refusal.
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      return refused("NATIVE_CACHE_OBSERVATION_FILE_REFUSED");
+    }
     try {
-      privateFileStat(fd);
+      if (privateFileStat(fd) > NATIVE_CACHE_OBSERVATION_MAX_FILE_BYTES) refused("NATIVE_CACHE_OBSERVATION_LOG_OVERSIZE");
+      const text = readDescriptorBounded(fd, NATIVE_CACHE_OBSERVATION_MAX_FILE_BYTES, "NATIVE_CACHE_OBSERVATION_LOG_OVERSIZE").toString("utf8");
       let found: NativeCacheObservationRecord | undefined;
-      for (const line of readFileSync(fd, "utf8").split("\n")) {
+      for (const line of text.split("\n")) {
         if (!line) continue;
-        const parsed = recordSchema.safeParse(JSON.parse(line));
+        let json: unknown;
+        try { json = JSON.parse(line); } catch { continue; } // a torn/foreign line proves nothing
+        const parsed = recordSchema.safeParse(json);
         if (parsed.success && parsed.data.lease_id === leaseId && parsed.data.attempt_id === attemptId) found = parsed.data;
       }
       return found;
@@ -297,27 +351,42 @@ export interface NativeCacheOperatorReceipt {
   observation: NativeCacheObservationRecord;
   custody: NativeCacheObligationProjection;
   checks: { lease_attempt_match: boolean; body_digest_match: boolean; egress_phase_consistent: boolean };
+  /** What the DURABLE row says about final egress, independent of what the
+   * in-process return carried. NO_TERMINAL = not (yet) SERVED/ABORTED. */
+  durable_egress: "SERVED" | "ABORTED" | "NO_TERMINAL";
   verdict: "CORRELATED" | "MISMATCH";
 }
 
+/** The durable row is the authority for SERVED / ABORTED; the in-process
+ * observation only has to not contradict it.
+ *  - FINAL_HTTP_SEND_COMPLETED  needs durable SERVED  (+ terminal receipt digest)
+ *  - FINAL_HTTP_ABORT_CONFIRMED needs durable ABORTED (+ terminal receipt digest)
+ *  - NO_FINAL_WITNESS           the return was explicitly UNKNOWN/UNSENT_FENCED:
+ *                               a durable terminal contradicts it
+ *  - EGRESS_NOT_OBSERVED_IN_RETURN makes NO claim (e.g. the real RECONCILED
+ *                               return has no phase): a durable SERVED/ABORTED
+ *                               is accepted as the witness, a non-terminal row
+ *                               is accepted as "no terminal yet". */
 export function correlateNativeCacheObservation(record: NativeCacheObservationRecord,
   custody: unknown): NativeCacheOperatorReceipt {
   const row = nativeCacheObligationProjectionSchema.safeParse(custody);
   if (!row.success) throw new NativeCacheObservationError("NATIVE_CACHE_OBSERVATION_CUSTODY_REFUSED");
   const c = row.data;
+  const durable = c.phase === "SERVED" || c.phase === "ABORTED" ? c.phase : "NO_TERMINAL" as const;
+  // A durable terminal row always carries its immutable receipt digest.
+  const terminalReceiptPresent = durable === "NO_TERMINAL" || c.receipt_digest !== null;
   const checks = {
     lease_attempt_match: c.lease_id === record.lease_id && c.attempt_id === record.attempt_id,
     body_digest_match: c.body_digest !== null && c.body_digest === record.body_digest,
-    // The durable terminal (not the in-process observation) is the authority
-    // for SERVED / ABORTED; "NO_FINAL_WITNESS" matches any non-terminal phase.
-    egress_phase_consistent:
-      record.egress_evidence_kind === "FINAL_HTTP_SEND_COMPLETED" ? c.phase === "SERVED"
-      : record.egress_evidence_kind === "FINAL_HTTP_ABORT_CONFIRMED" ? c.phase === "ABORTED"
-      : !["SERVED", "ABORTED"].includes(c.phase),
+    egress_phase_consistent: terminalReceiptPresent && (
+      record.egress_evidence_kind === "FINAL_HTTP_SEND_COMPLETED" ? durable === "SERVED"
+      : record.egress_evidence_kind === "FINAL_HTTP_ABORT_CONFIRMED" ? durable === "ABORTED"
+      : record.egress_evidence_kind === "NO_FINAL_WITNESS" ? durable === "NO_TERMINAL"
+      : true),
   };
   return Object.freeze({
     schema_version: "portal.native-cache-observation-receipt.v1" as const,
-    observation: record, custody: c, checks,
+    observation: record, custody: c, checks, durable_egress: durable,
     verdict: Object.values(checks).every(Boolean) ? "CORRELATED" as const : "MISMATCH" as const,
   });
 }
