@@ -335,6 +335,12 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 pending recall real Cor
     f.effects.clear(); expect(await restarted.reconcile(actor, f.workspace, first.command_id)).toEqual(known);
     expect(f.counts()).toEqual({ sends: 1, lookups: 2, effects: 0 });
   });
+  // 2026-10-21 finding (R2 hook / Core009 R3): this timed out at 30000 ms when
+  // other heavy jobs shared the host, yet passed on a quiet cell. Budget: fixture
+  // setup (PG + keys, up to ~10 s loaded) + the genuine 10 s local source timeout
+  // + 3 competing previews and capacity probes (~5 s) + recovery (settle held
+  // work, preview, reconcile, ~10 s loaded) = ~35 s worst case; 90 s gives ~2.5x
+  // margin. Only the test timeout changes; no assertion is relaxed.
   it("actual ten-second timeout retains four abort-ignoring source slots and recovers without second APPLY", async () => {
     const f = await fixture(), started = deferred(), held = deferred(), send = f.trust.send;
     const sourceWork: Array<Promise<unknown>> = [];
@@ -370,7 +376,7 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("ELP2-07 pending recall real Cor
     const row = (await ctx.pool.query("SELECT command_id FROM execution_pending_recall_commands WHERE workspace_id=$1", [f.workspace])).rows[0];
     expect((await f.service.reconcile(actor, f.workspace, row.command_id)).business.state).toBe("WAITING_ENCUMBRANCE");
     expect(f.counts().sends).toBe(1); expect(f.counts().effects).toBe(1);
-  }, 30_000);
+  }, 90_000);
   it("missing/verified-UNKNOWN/stale-null lookup cannot clear an active genuine sender UUID", async () => {
     const f = await fixture(), started = deferred(), held = deferred(), send = f.trust.send;
     f.trust.send = async input => { started.release(); await held.promise; return send(input); };

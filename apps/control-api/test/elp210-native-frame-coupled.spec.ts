@@ -149,6 +149,13 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
   },20000);
 
   async function sourceFixture(){
+    // 2026-10-21 finding (Core009 R3 / R2 hook runs): the native expires_at and
+    // the installation expiry were computed from two separate Date.now() calls
+    // separated by key generation and TLS listen. Under load a >10 s gap made
+    // installation (+110 s) exceed native expiry (+120 s) and createNativeRead
+    // threw CURRENT_HUMAN_NATIVE_CONFIG_INVALID. Both now derive from ONE base
+    // instant, so the 10 s ordering margin (native > installation) is invariant.
+    const t0=Date.now();
     const human=await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true}),
       terminal=await generateKeyPair("EdDSA",{crv:"Ed25519",extractable:true});
     humanKey=human.publicKey;terminalKey=terminal.publicKey;
@@ -158,7 +165,7 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
     fixturePeople.set(actor.user_id,{human:humanPins,session_id:actor.session_id});
     const nativePins={revision:"1",receipt_id:"44444444-4444-4444-4444-444444444444",receipt_digest:hash("1"),document_digest:hash("2"),
       policy_revision:"1",owner_mapping_revision:"ts-user:"+tsUser+":1",semantic_revision:hash("3"),
-      effective_from:new Date(Date.now()-1000).toISOString(),expires_at:new Date(Date.now()+120000).toISOString()};
+      effective_from:new Date(t0-1000).toISOString(),expires_at:new Date(t0+120000).toISOString()};
     server=createHttpsServer({key:pm.key,cert:pm.cert,ca:core.ca,requestCert:true,rejectUnauthorized:true,
       minVersion:"TLSv1.3",maxVersion:"TLSv1.3"},(req,res)=>{
       const chunks:Buffer[]=[];req.on("error",()=>undefined);res.on("error",()=>undefined);
@@ -233,7 +240,7 @@ describe.skipIf(!pgUrl)("TEST_ONLY native scoped-notice actual PG/TLS/HTTP coupl
     server.on("connection",socket=>{peerSockets.add(socket);socket.once("close",()=>peerSockets.delete(socket));});
     await bounded(new Promise<void>((resolve,reject)=>{server.once("error",reject);server.listen(0,"127.0.0.1",resolve);}));
     const address=server.address();if(!address||typeof address==="string")throw Error("TEST_ONLY_FRAME_PEER_LISTEN");
-    const installation=Date.now()+110000;
+    const installation=t0+110000; // same t0 as native expires_at (t0+120000): 10 s margin preserved
     selectedInput={transport:{
       origin:"https://127.0.0.1:"+address.port,tls:{key:core.key,cert:core.cert,ca:pm.ca},pm_leaf_sha256:pm.pin,
       workload_id:"TEST_ONLY-frame-pm",deadline_ms:5000,request_bytes:32768,response_bytes:32768,max_inflight:4},
