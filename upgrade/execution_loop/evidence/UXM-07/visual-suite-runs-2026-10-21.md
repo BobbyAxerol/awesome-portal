@@ -55,3 +55,6 @@ Không có ca nào trong 7 là lệch pixel (log lần 2 không có dòng `Scree
 - Không có lần chạy cả suite nào **sau** `97454777`: bảy ca đỏ của lần 2 được sửa mà chưa có chạy lại cả suite xác nhận. Cái "xanh" của chúng chỉ dựa vào lần chạy tập trung của lead lúc sửa, không có receipt nào ở đây.
 - Cả hai lần chạy đều trước các commit baseline V2 (`fe84ee69`, `bc83e84b`, `2fb75539`) và trước các cell mới (New request, drawer, NaWhy, pager trang 2, dock) của `5b9e2d32` trở đi.
 - Không phải gate trên SHA đóng băng của DEBT-UXM07-037: nó vẫn mở cho lần chạy cả suite trên SHA cuối. Receipt này chỉ khép phần "hai lần chạy ngày 2026-10-21 không có file".
+
+## Run 3 trên SHA đóng băng d58361ea (15:03–15:34 UTC)
+683 passed / 0 failed / 16 skipped, exit=0, một lệnh có khóa trong worktree sạch; log sha256 `4a1be04bb3aff8bcf48d6e422441ffee4535080a08f6a49576cbcb2e4e0d8422`. Đây là bằng chứng ảnh cho SHA đóng băng (xem `ELP2-10/CLAUDE_FROZEN_HOOK_RUN_2026-10-21.md`).

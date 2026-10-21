@@ -16,3 +16,6 @@ Lý do: không có cổng R2/R3 nào được xếp cho SHA đóng băng và má
 | Gate khác | N29 (`changed:false`), EDS-12, route census, R3-2, tracking reconciliation, "Portal monorepo verification passed" |
 | sha256 log (đã bỏ mã màu) | `afb8290dd953e48dff7b0f91834c7cb6cd252b709d6d68d8770939c26522418d` (`hook-frozen2.plain`) |
 | Giới hạn | đây là hook **R2** trên SHA đóng băng ở máy này; không phải R3 trên ứng viên Core, không phải ảnh pinned toàn bộ (ảnh V2 61 ô đã so sánh riêng), chưa qua cổng ff-only của tích hợp viên |
+
+## So sánh ảnh pinned toàn bộ trên cùng SHA (2026-10-21, 15:03–15:34 UTC)
+Một lệnh `scripts/portal-web-visual.sh --workers=2` bọc khóa heavy, trong worktree sạch detached ở `d58361ea`, ảnh `mcr.microsoft.com/playwright:v1.62.1-noble`, chế độ so sánh (không `--update`). **Kết quả: 683 đạt / 0 lỗi / 16 bỏ qua, exit=0** (lần so sánh toàn bộ trước đó trên tip cũ: 580/37/16 rồi 609/7/16; các lỗi đó đã sửa). Gồm 61 ô baseline V2, các ô V1 (`execution-fixtures`, `execution-journeys`, `surface-audit`), research-loop và visual shell. sha256 log (đã bỏ mã màu): `4a1be04bb3aff8bcf48d6e422441ffee4535080a08f6a49576cbcb2e4e0d8422` (`visual-frozen.plain`). Giới hạn: FIXTURE_LAB/BFF_DOUBLE, không phải nguồn thật; 16 ca bỏ qua là ca chỉ chạy ở cấu hình khác (preview thật cần credential).

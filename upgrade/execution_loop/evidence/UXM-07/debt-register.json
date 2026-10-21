@@ -133,14 +133,15 @@
     },
     {
       "id": "DEBT-UXM07-037",
-      "title": "Landing gates on the exact frozen SHA are not run; Core carry pending",
+      "title": "Landing into the canonical branch is the integrator's step; Claude-side gates on the frozen SHA are done",
       "where": "HOOK_RESULT_2026-10-20.md (hook a896bd08 on tip 9d15755f; later code, test and visual commits 5bc040f6, a13b4fa6, 97454777, fe84ee69, bc83e84b, 2fb75539, 63201e94, 1328d1b7, 6da309df, 9810f8ef, ec228e53, dd9609af); F1_F9_CLOSURE row F4 (landing not done); CODEX_LANDING_REVIEW sections 6, 8, 10",
       "consequence": "ELP2-10 stays NOT_MET and landing into the canonical branch is an integrator-only ff after one exact-SHA gate. The two 2026-10-21 whole-suite visual compares now have a receipt (visual-suite-runs-2026-10-21.md: 580 passed / 37 failed / 16 skipped on 03634f6e, then 609 / 7 / 16 on the tip before 97454777; none of the 7 is a pixel diff) but there is no whole-suite run after 97454777, so the fixes of those 7 are not confirmed by one; Codex's native-business-read-client.ts and its regression spec (two paths, +43/-3) are not carried yet",
-      "proposed": "Freeze and repin; Claude carries the two Codex paths once the primary returns their SHA; clean rebase on the canonical tip preserving both sides of Unified/sync/rules; one R2/R3 hook, one whole-suite pinned-image compare, then the integrator's ff-only",
+      "proposed": "Integrator (Codex): reuse the two results above for the frozen SHA (no second hook unless SHA/tree changes), carry post-freeze commits after landing, then merge --ff-only; record the resulting SHA.",
       "owner": "Claude (gates, carry); Codex integrator (ff-only landing, native client SHA)",
       "status": "STILL_OPEN (new 2026-10-21)",
       "opened": "2026-10-21",
-      "next_action": "Claude: one whole-suite compare on the final SHA (after the freeze) and its receipt; the 'no receipt' part for the 2026-10-21 runs is resolved."
+      "next_action": "Claude: one whole-suite compare on the final SHA (after the freeze) and its receipt; the 'no receipt' part for the 2026-10-21 runs is resolved.",
+      "closed_part": "2026-10-21: on the frozen SHA d58361ea (tree 64bcd565): full R2 hook exit 0 (contracts 90/1,577, control-api 480/9,729 + restore drill) and whole-suite pinned-image visual compare 683 passed / 0 failed / 16 skipped; logs sha256 afb8290d… and 4a1be04b… in ELP2-10/CLAUDE_FROZEN_HOOK_RUN_2026-10-21.md and UXM-07/visual-suite-runs-2026-10-21.md. Codex's committed native-transport fix 9d88e40a is carried path-level at 3394b04f in the post-freeze lane."
     },
     {
       "id": "DEBT-UXM07-038",
