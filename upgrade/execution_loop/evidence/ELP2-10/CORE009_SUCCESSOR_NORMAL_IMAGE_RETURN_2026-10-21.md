@@ -1,6 +1,7 @@
 # Core009 successor — frozen normal/image and commissioning return
 
-**RUNNING / NOT_INSTALLED / NOT_CONNECTED_READY**, read cut21Oct18:06UTC.
+**NORMAL_FAILED / FOCUSED_RETAKE_PASS / IMAGE_BUILT / NOT_INSTALLED /
+NOT_CONNECTED_READY**, latest cut21Oct18:56UTC; earlier observations below retain their times.
 This is the new return for corrected source. Earlier first-focused and
 sequential returns already sent to HK remain immutable. No push, dev/main,
 stable/provider28445, command/Live, UI or source activation is authorized by
@@ -176,3 +177,128 @@ note describes that separate provisional variant, not an additional mandatory
 suite or authority to replace the now explicit original08 schedule. Preserve
 20reserve and real9history; derive authoritative frame and maintenance bounds,
 then submit the concrete numeric decision. No cap/reserve/grant was changed.
+
+## 6. Actual normal terminal and minimal continuation21Oct18:39UTC
+
+The original frozen8ac normal completed **18:36:13UTC, EXIT1**, not PASS:
+API486files =480PASS/2FAIL/4SKIP;9829cases =9818PASS/4FAIL/7SKIP.
+Contract91files/1629PASS remains a different sublane, not added into API totals.
+Final stacks establish:
+
+1. Registration: final `finishMutation` authority deadline
+   (`instance-registration.service.ts:110`, `ACCESS_RETRY_REQUIRED`). The
+   source refused after expiry; no proof the provider slot was released early.
+2. Planning: PG statement_timeout in `UsersRepository.lockById:78` via
+   `AdminService.resetCredential` and `seedUser:194`, before the Planning call.
+   A statement timeout alone does not identify a row-lock blocker.
+3. ADMIN and mismatched-CSRF cases: real20s test timeouts; no proof yet of a
+   changed authorization outcome. Preserve assertions/TTLs/security fences.
+
+The image continuation ended18:36:16 EXIT1 without any build/install, correctly
+requiring the original normalEXIT0. That controller/result is immutable.
+The focused continuation owns only the2failed files(62cases), same8ac source,
+fresh disposable PG, unchanged caps/timeouts and official restore drill. Its
+private controller is `retake-failed.sh`; it waits without a heavy lock for
+>=6GiB MemAvailable, stops after10minutes if unavailable, then locks only the
+official `control-api-test.sh` command. No other full normal is scheduled.
+
+The previously uncovered static suffix now actuallyPASS: N29, offline R3-2
+closure and Execution tracking. N29 reports changed:false/written:false;
+frozen source remains clean. PG restore is NOT_RUN until focused API passes.
+If focused gates pass, report the original FAIL plus exact retake/suffix
+qualification transparently; never edit `normal-exit.txt` to0 or call this a
+green original hook. A qualified build continuation must explicitly verify
+that aggregate coverage, not bypass an unresolved failure.
+
+## 7. Focused terminal / qualified image continuation21Oct18:44UTC
+
+Actual failed-file continuation started18:39:06, terminal **18:43:41 EXIT0**:
+**2files/62casesPASS**, official forward migration/build and full scoped-access
+row-digest restorePASS. The registration case now took10228ms with the SAME
+source, authority fences, fixture TTLs and assertions; no timeout/permission
+was weakened. The four previous failures are resolved on this exact-source
+retake, not relabeled as a successful original normal.
+
+| Artifact | Actual SHA256 |
+| --- | --- |
+| Original normal log, retained FAIL | `a40ca655a5cad267e613a5db6621efd9ca30a78fdbc506c0a1b1ac1ce1c8cf92` |
+| Original normal terminal, retained EXIT1 | `1d755f770e4278a7172d12d45669c2a454b944cff1fe2bb062a3370cbd2e61d8` |
+| Focused2file/restore log | `489a6905fea0092ab3819998321e8a3e1d98039c5adfae72bbfda80b6d7eec9d` |
+| Focused terminal EXIT0 | `1d1c7f94bcbb064c65f146d2fb8dcb67318ee3b5b08cd5a76655a2e6dc90f3a5` |
+| N29 uncovered suffix | `a72bc182ab5ef6585625435cbe29184e54471bb90814f1f74b331cf0589282d6` |
+| R3-2closure suffix | `c3b4426ef142b6194d27b32faa3e23b89e2a738b340d7c3ca63b9452709edce4` |
+| Tracking suffix | `1a45ec29669974f84c3c599d697d7f2994c666ccb4e7703b447ca24775d8352b` |
+
+Qualification follows campaign§10.10c.5: retain whole original result, retake
+only failed files and supply the uncovered suffix/restore. No second normal
+hook and no addition of repeat test counts as new coverage. Exact retake
+Node/PG/network cleanup is verified separately at closeout.
+
+Image build started **18:44:05UTC**, same frozen8ac, session34681, approved
+3CPU/3GiB/900s/disk guards. The NEW transparent continuation
+`build-qualified-successor.sh` checks `qualified-gates.json` and every actual
+log hash before building. It does not alter/reuse the old EXIT0-only script
+or pretend the original normal passed. No image ID is claimed until actual
+terminal `image-receipt.txt`. No install, policy/session/source change.
+
+[Finite original08 proposal](CORE009_FINITE_08_BOUNDS_PROPOSAL_2026-10-21.md)
+now returns concrete **C288 / one60s STREAM / K1 / reserve20**, PROPOSAL_ONLY,
+including the current single-principal independent-scope gap and safe retained
+limit rollback. It is not production budget/calibration or permission to
+issue a grant. Owner review/current source pins remain mandatory.
+
+## 8. Actual image terminal / safe serving preflight21Oct18:56UTC
+
+The guarded build completed **18:47:40UTC, EXIT0**, at the unchanged frozen
+source8ac4f553/tree4a29ae9e. Actual image `.Id` is
+**`sha256:a96c754dfbd52801f6d451dfa329eeeb3ab37fe9e467db145e201c9fa9acf121`**;
+tag `local/elp210-core009-candidate:8ac4f5530adf`. Do not substitute BuildKit's
+different configuration digest for this Docker image identity.
+
+| Artifact | Actual SHA256 |
+| --- | --- |
+| Guarded build controller | `65f901dc30d6df3a56b601b2af1dedff4314e8e43c509c9ff5a00b9197352af0` |
+| Build log | `633cbc97c31ea8167f1a6ee8c1c99e34202a279838e0745fc7835a585b4038ac` |
+| Image input Git tree listing | `01eb162fb30a75935cd6459359eff4c13b7e6c522310e53bfca5af787ce85585` |
+| Explicit focused-retake qualification record | `728dee188387a364140ca6a007e92a5c0f85e6bef511c76530ec8f60be935d66` |
+| Protected runtime before AND after | `5191596564aab277203668044bb22e6e0570d377b9b09ec4f6a9e0ec335cd8ab` |
+
+Qualification is **QUALIFIED_AFTER_FOCUSED_RETAKE_NOT_ORIGINAL_NORMAL_PASS**.
+The build verified those real log hashes and did not change the original
+EXIT1. No duplicate full suite was run. Build-entry caps3CPU/3GiB/900s held;
+post-build free disk150853402624/665811062784bytes(22.66%). The exact owned
+successful build context was removed, evidence and rollback images retained.
+
+Operational image checks PASS: successor CLI exists and parses, migration149
+SQL is readable, npm is absent, custody schema is still826e4e08/root0644.
+An initial check incorrectly looked for a migration `.js`; that operator
+locator failure is retained and the corrected `.sql` check passed. A root-UID
+config check correctly refused a Bobby-owned private artifact. The unchanged
+real Research bundle was then constructed at the **actual serving UID1000:1000**
+in an offline/read-only/no-network container: **EXPIRED_RUNTIME_CONSTRUCTIBLE**.
+No DB connection, grant, session, source request or new authority resulted.
+All of these small check containers used `--rm`.
+
+The existing target is managed by its private resolved Compose artifact, NOT
+the currently absent `execution-native/runtime.env` helper path. Image-only
+rollout must clone that exact private configuration, preserve its mounted
+runtime/auth references, and replace **both** API and migrator image pins.
+Use official forward migration135–149 after backup/quiesce; retain the expired
+authority bundle. This can install qualified code/schema without pretending
+finite source/grants are ready. No migration or installation has happened at
+this cut. A peer-owned PG gate is active; no overlapping heavy job is started.
+
+The concrete60s/C288 proposal was delivered **18:47:34UTC** to both approved
+PM/Edge public Markdown mailboxes; both readbacks match
+`8db9c9fa5dd3d273815c82263a76a6c25a34332b711dce3f3d70e8220e8ceebe`.
+It uses **B244**(240poll opportunities+4boundary allowances), not the earlier
+review draft's242. Edge18:52 source-mechanism ACK is conditional; numeric
+approval remains pending, cap32 stays unchanged. Edge offers19:15–19:45UTC;
+match actual install/config/source pins before any finite request. The
+independent-control scope remains NOT_PROVED, not waived by either proposal.
+
+Root is landing only the two already-qualified writer commits. Claude is
+currently rebasing its own lane with a debt-register conflict; Root does not
+touch that tree or import incomplete peer work. Manager issuance, financial
+source leaves, production numeric/calibration, G2 and real browser gates
+remain independently OPEN; no new UI field is required by this writer.

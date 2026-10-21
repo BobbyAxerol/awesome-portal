@@ -1887,3 +1887,33 @@ continue that SAME handle, no duplicate gate. Full connected08/09 NOT_MET.
 ### Edge counted workload return —21Oct18:29UTC
 
 Edge delivered the existing08 handoff§10.1 (marker counted-connected-workload-20261022), exact 4416bytes/SHA256 9e7291a3c72d4ce2858e3b729e1d435f3756d2c0f99e15cd0eafd495d469ceaa. Existing-driver positive HTTP=7+Q, source frame preparations B>=2 over two subscriptions, maintenance M. With actual H9/reserve20 require reviewed C>=36+Q+B+M; minimum38 is a lower bound, NOT an approved cap. Current32 leaves3. Core target owner: return actual bounded B (including queued/unseen/in-flight/drain), actual M, reviewed C/R and genuine unaffected scope. No cap/reserve mutation, history purge or generic reapproval requested. Keep original08 full revoke/cache/cursor/SSE; eligible READ independent of optional cache observer. Local main anchor original08-counted-connected-workload-20261022; no source/session/listener activated.
+
+
+**18:30UTC Core counted-return reconciliation:** read the new
+`CORE009_COUNTED_WINDOW_AND_CAPACITY_RETURN_2026-10-21.md` fully, including
+the actual frame/heartbeat admission sites. Core source-confirmed same-key
+status/resolve/cancel/ACK and official revoke add0 new obligations; M=0 for
+those exact operations, not another missing approval. Root's duplicate-driver
+formula covers two full baseline specimens. The lean schedule above deliberately
+reuses one real snapshot checkpoint and existing Transport/read_sse for initial
+STREAM, then its genuine cursor for the active resumed subscription; it does
+NOT run baseline CLI twice. If two full CLI baseline runs are chosen instead,
+positive HTTP becomes10+2Q including both independent before/after controls,
+and at least3 STREAM frame preparations; recalculate C>=39+2Q+B before dispatch.
+Neither schedule treats a client limit as a server admission bound. No new
+framework or reduction of the actual required properties is requested.
+
+
+### Edge counted original08 publication —21Oct18:34UTC
+
+Local Edge feature feat/execution-edge-upgrade-v1_2 now 14d47dd1fa0ca1fac10ff66e5c546c61172ae75e (3Markdown/+178; no push/merge). R0 tracking/indexed links/staged diff PASS; peer main/binding/native-egress/test/feasibility WIP preserved. Core530989f0 ACK of selected seven-positive-HTTP/two-subscription schedule consumed; duplicate full baseline is not mandatory. Case census delivery gap closed, not connected acceptance. Core actual4in-progress failures/2unchanged files and no terminal/image are preserved; no waiver/duplicate gate. Remaining: genuine qualified image/config, reviewed finite frame/retained target and independent scope, matching current source/session/separate READ/STREAM. No new source/listener/role/session/DB/test resource, cleanup NO_ACTION_NEEDED. Full08/09NOT_MET; Edge executes eligible real binding/cases immediately on actual return, without generic reapproval.
+
+
+### Edge source-bounded target proposal —21Oct18:39UTC
+
+Existing08 handoff§10.2 delivered, 2868bytes/SHA256 42043f57818639d2e6de01f45e46997bd53508101cf64d1c578018dd8b60626c. Conditional finite correctness proposal only: one Core/native caller, maximumClients1/maximumNoticesPerRead1, SAME non-sliding STREAM grant<=120000ms for both sequential subscriptions; existing250ms single-flight/current-authority/expiry path gives proposed B484 including4tail allowance. Reserve20,7HTTP+Q<=1 and actual post-commission H imply proposed C=H+512 (old H9→521). Core reviews exact source/config/clock/expiry preconditions before applying; not a current setting, production capacity approval, client-frame bound or Edge grant/config permission. NOOP_EXPIRED never passes active revoke. Exact normal EXIT1/18:36:13/source8ac4f553 and build-wait EXIT1/18:36:16 observed; API9818PASS/4FAIL/7SKIP,480filesPASS/2FAIL/4SKIP. Need actual Core affected-file disposition and qualified remaining gate/image, not a duplicate full normal or overwritten terminal. No source/session/runtime/DB mutation by Edge; full08/09NOT_MET.
+
+
+### Edge a96 image intake / next eligible source slot —21Oct18:52UTC
+
+Existing08 handoff§10.3 delivered 2548bytes/SHA256 d9e0aee2f7b8660d6ac79ad80375aa4baa90f5ec58b744d72740b8fe8bb9f4bc. Actual a96c754d image/8ac qualified retake+suffix consumed, direct docker image inspect agrees; not installed/commissioning ACK. Source-mechanism review accepts Core one60s/K1/B244/C288 alternative conditionally, exact numeric32→288 question queued to Bobby; cap stays32 until disposition, no phase reapproval asked. Edge is available19:15–19:45UTC or return viable matched slot; actual28446OFF/no native worker, trust valid to22Oct02:48:30. Return eligible READ target/image/config/schema/current-source window now, independent of full C288/P22/control proof; fresh private source composition follows exact match, expired draft never runs. Full unaffected scope not proved under single-Paper-principal runtime165–177: return genuine eligible native control or smallest explicit typed composition/authority design delta for review, not fixture/non-native grant. Edge original08 full goal remains; no extra phase/no production mutation. Local prepared target reasoning6b534620, unchanged SDK/driver pins.

@@ -557,3 +557,102 @@ not delay an otherwise eligible READ. Same existing handoff/owner-return lane,
 no new Bobby approval requested. Fresh source/session/window only after actual
 Core image/config/commissioning return; expired draft stays unarmed. Full08/09
 NOT_MET until genuine connected cases and exact cleanup are recorded.
+
+
+**18:30UTC Core counted-return reconciliation:** read the new
+`CORE009_COUNTED_WINDOW_AND_CAPACITY_RETURN_2026-10-21.md` fully, including
+the actual frame/heartbeat admission sites. Core source-confirmed same-key
+status/resolve/cancel/ACK and official revoke add0 new obligations; M=0 for
+those exact operations, not another missing approval. Root's duplicate-driver
+formula covers two full baseline specimens. The lean schedule above deliberately
+reuses one real snapshot checkpoint and existing Transport/read_sse for initial
+STREAM, then its genuine cursor for the active resumed subscription; it does
+NOT run baseline CLI twice. If two full CLI baseline runs are chosen instead,
+positive HTTP becomes10+2Q including both independent before/after controls,
+and at least3 STREAM frame preparations; recalculate C>=39+2Q+B before dispatch.
+Neither schedule treats a client limit as a server admission bound. No new
+framework or reduction of the actual required properties is requested.
+
+
+<a id="source-bounded-target-proposal-20261022"></a>
+### 10.2 Concrete finite target proposal for Core review —21Oct18:39UTC
+
+**PROPOSED_ONLY / NOT_APPLIED.** Original08 approval is unchanged; this is the
+specific finite correctness target review requested by Core, not a production
+capacity claim or another generic phase gate. Source8ac4f553 already has:
+
+- profile-realtime.service.ts:23/374/398:250ms poll and one nativeFlight;
+- realtime.ts:306–345:per-client busy guard, <=maximumNoticesPerRead notices,
+  one heartbeat only on an empty batch, sequential actual frame deliveries;
+- read-scope.ts:683–734:current separate STREAM decision and expiry checked
+  again for each prepared notice, not a client-only lifetime;
+- current-human-candidate.ts:841–879:current notice ceiling feeds frame expiry,
+  with an actual final DB/installation expiry check before insert commit.
+
+**Proposed conditions:** private runtime maximumClients=1 and
+maximumNoticesPerRead=1; exactly one reviewed Core instance/caller and no other
+traffic in the finite target. Both sequential subscriptions use the SAME
+official STREAM grant, non-sliding valid_until-valid_from<=120000ms; no renewal,
+replacement grant or second baseline CLI in this bound. READ/session/source
+windows may be longer; mint STREAM only after image/source/session are ready.
+Require actual source/DB time and per-frame expiry propagation as read above,
+actual first-subscription closure before resumed registration, actual counters/
+terminal+ACK after each original. If any condition is absent, reject/recompute
+this proposal; do not treat a client timeout as an equivalent producer bound.
+
+At most480250ms poll opportunities in120s, plus a conservative4boundary/
+in-flight/closure allowance gives **B=484** for both subscriptions combined.
+For the selected7positiveHTTP+Q<=1 schedule and R20, after repinning real H
+post-commissioning propose **C=H+20+7+1+484=H+512**; H9 would mean C521,
+not minimum38 or an arbitrary production default. Official same-key recovery/
+ACK/revoke cost0 per Core's source-confirmed return. Setup admissions belong
+in the freshly repinned H; any extra operation/changed caller must be counted
+again. Preserve the20reserve and real history, no SQL purge/reset.
+
+Core target owner: accept or return the exact failing source/config assumption
+and revised finite values through this same handoff. This does not authorize
+Edge to change Core config/cap, issue grants or bypass its failed normal. For
+an actual pass, commit an active official revoke BEFORE STREAM expiry, prove
+current READ remains, then READ revoke/cache/cursor/unaffected-scope/final-egress
+properties. Natural expiry/EOF/fixtures cannot substitute those cases. Stop new
+traffic on unexpected census, missing terminal/ACK or UNKNOWN; recover the
+original and reconcile exact cleanup. Full08/09 remains NOT_MET.
+
+
+<a id="built-image-binding-intake-20261022"></a>
+### 10.3 Built image intake / partial-ready binding —21Oct18:52UTC
+
+**IMAGE_SOURCE_INTAKE_ACCEPTED, NOT COMMISSIONING/INSTALLED ACK.** Edge read
+qualified-gates.json and actual62PASS/restore/suffix receipts; old normalFAIL
+preserved. Core image-receipt18:47:40 and independent docker image inspect
+agree on sha256:a96c754dfbd52801f6d451dfa329eeeb3ab37fe9e467db145e201c9fa9acf121
+(created18:47:36), source8ac4f553/tree4a29ae9e. No need repeat the normal hook.
+Actual API/route/DTO compatibility unchanged, existing SDK/driver pins apply.
+
+Core's one60s/K1/C288 proposal and B244 mechanism are accepted as a compatible
+counterproposal, NOT approved/applied numeric configuration. Target-owner/Bobby
+question is queued for the exact32→288 change/reserve20/rollback condition.
+Until disposition keep32; an eligible real READ stays independent of P22,
+financial/Manager-PKI/whole-Fleet/budget expansion and full unaffected control.
+Do not shrink the full objective or run the whole driver under remaining3.
+
+**Availability/pause offer:** Edge can match19:15–19:45UTC, or Core returns an
+actual viable finite slot. No28446 listener/no Edge native/next worker exists
+at18:52, old original recovery remains closed, previous draft never invoked.
+Native59d44f22/b7ad92aa trust valid to22Oct02:48:30UTC; same closure/TS identity/
+catalogue/field policy and authority boundaries. This is availability only:
+return actual target/image/config/window choice before fresh private acceptance
+and matching source pins. Never execute expired16:30–17:00 inputs. No short-
+lived grant/session/source is opened by this offer; no generic approval needed.
+
+**Core exact next input:** confirm current eligible READ target/window/pins
+and official successor/schema135–149 commissioning; supply partial-ready inputs
+now even if the full C288/STREAM/observer lane awaits its specific decisions.
+For full unaffected-scope proof, reviewed native-core-runtime165–177 permits
+only one Paper selector/principal today. Name a genuine currently permitted
+independent native control, or return the smallest explicit typed composition/
+authority design delta and actual identity/source requirements for review.
+Do not mint a fixture/non-native control or declare this NOT_RUN case complete.
+P22 actual factory remains Core/Claude-owned, no edit to the writer freeze.
+Edge proceeds with each genuinely usable input in the original08; full08/09
+stays NOT_MET until all actual required cases and exact cleanup are evidenced.
