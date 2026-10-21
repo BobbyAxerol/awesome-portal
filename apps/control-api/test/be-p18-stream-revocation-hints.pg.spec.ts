@@ -106,7 +106,7 @@ describe.skipIf(!DATABASE_URL)("BE-P18 stream revocation hints on real PostgreSQ
   });
 
   it("a password change revokes every session of the user and hints the user, sessions already gone at hint time", async () => {
-    const user = await account("p18-password");
+    const user = await account("p18-pwchange");
     const a = await login(user.username, user.password), b = await login(user.username, user.password);
     take();
     await auth.changePassword({ sessionToken: a.token, csrfToken: a.csrfToken, currentPassword: user.password, newPassword: `${user.password}-2` });
