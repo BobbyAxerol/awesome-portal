@@ -175,7 +175,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
 
   // The stream's way to re-read the table: first page, in place, and the lineage it carries (`null`: it did not succeed).
   const refreshDataset = dataset.refresh;
-  const refreshLineage = useCallback(() => refreshDataset().then((next) => (next === null ? null : next.lineage.revision)), [refreshDataset]);
+  const refreshLineage = useCallback((signal: AbortSignal) => refreshDataset(signal).then((next) => (next === null ? null : next.lineage.revision)), [refreshDataset]);
   const afterAccessEnded = useCallback(() => void refreshDataset(), [refreshDataset]);
   const streamOn = streamFlag && datasetMode && scope !== null;
 

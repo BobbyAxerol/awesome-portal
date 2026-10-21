@@ -40,6 +40,8 @@ interface Rig {
   /** The `lineage.revision` the dataset double last answered. */
   lineage: () => string | null;
   streams: FakeStream[];
+  /** Every request of the page, in order, with the signal it was given. */
+  requests: { path: string; signal: AbortSignal | null }[];
   /** What the barrier answers; the call index is passed so a test can move the head. */
   barrierFor: (index: number, lineage: string) => Response | Record<string, unknown>;
   streamFor: (index: number, stream: FakeStream) => Response;
@@ -51,13 +53,15 @@ function rig(): Rig {
   const realtime: string[] = [];
   let lineage: string | null = null;
   const streams: FakeStream[] = [];
+  const requests: { path: string; signal: AbortSignal | null }[] = [];
   const r: Rig = {
-    api: undefined as unknown as ExecutionApi, state, realtime, lineage: () => lineage, streams,
+    api: undefined as unknown as ExecutionApi, state, realtime, lineage: () => lineage, streams, requests,
     barrierFor: (_i, current) => barrier(current, (body) => { body.environment = "live"; }),
     streamFor: (_i, stream) => stream.response,
   };
   vi.stubGlobal("fetch", (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), "http://portal.test");
+    requests.push({ path: url.pathname, signal: init?.signal ?? null });
     if (url.pathname === ALPHA_FLEET_SNAPSHOT_PATH) {
       const index = realtime.filter((p) => p === url.pathname).length;
       realtime.push(url.pathname);
@@ -88,7 +92,12 @@ function rig(): Rig {
     const envelope = reply.status === 200 ? readAlphaFleet(reply.body) : null;
     return envelope ? { ok: true as const, value: envelope } : { ok: false as const, status: "unavailable" as const, reason: "UNREADABLE_ALPHA_FLEET" };
   });
-  r.api = { getAlphaFleet, getManagerDataset: http.getManagerDataset } as unknown as ExecutionApi;
+  // As in production, a read made under a signal goes through the real client's `withReadSignal`, so a cancelled read cancels its fetch.
+  function portWith(signal: AbortSignal | null): ExecutionApi {
+    const client = signal === null ? http : http.withReadSignal!(signal);
+    return { getAlphaFleet, getManagerDataset: client.getManagerDataset, withReadSignal: portWith } as unknown as ExecutionApi;
+  }
+  r.api = portWith(null);
   return r;
 }
 
@@ -294,5 +303,99 @@ describe("flag on", () => {
     await waitFor(() => expect(r.streams.length).toBeGreaterThanOrEqual(2));
     expect(r.streams[0]!.cancelled()).toBe(true);
     await waitFor(() => expect(fleetStreamSessionCount()).toBe(1));
+  });
+});
+
+/** Cancellation review (flag key `fleet-stream`): every request the stream causes is cancelled with its owner, and a dark stream adds nothing. */
+describe("cancellation and the dark stream", () => {
+  const signalsTo = (r: Rig, path: string) => r.requests.filter((request) => request.path === path).map((request) => request.signal);
+
+  it("flag off: the requests are exactly the screen's own; flag on with no stream offered adds ONE (the barrier) and no table read", async () => {
+    const off = rig();
+    mount(off, LIVE_URL, { streamFlag: false });
+    await table();
+    await settle();
+    const own = off.requests.map((request) => request.path).sort();
+    expect(own.some((path) => path.includes("/manager/fleet/realtime-snapshot") || path.includes("/manager/fleet/stream"))).toBe(false);
+    cleanup();
+
+    const { snapshotCase } = await import("../../fleetStream/fleetStream.testbase");
+    const dark = rig();
+    dark.barrierFor = () => {
+      const body = snapshotCase("AFR-SNAPSHOT-STREAM-NOT-GRANTED");
+      body.environment = "live";
+      return body;
+    };
+    mount(dark, LIVE_URL, { streamFlag: true });
+    await table();
+    await waitFor(() => expect(chip()?.getAttribute("data-state")).toBe("stopped"));
+    await act(async () => { await settle(); });
+    expect(dark.requests.map((request) => request.path).filter((path) => path !== ALPHA_FLEET_SNAPSHOT_PATH).sort()).toEqual(own);
+    expect(only(dark, ALPHA_FLEET_SNAPSHOT_PATH)).toHaveLength(1);
+    expect(only(dark, ALPHA_FLEET_STREAM_PATH)).toHaveLength(0);
+  });
+
+  it("unmount cancels the open stream's signal and an in-flight table refresh, and nothing is requested afterwards", async () => {
+    const r = rig();
+    r.barrierFor = (index, current) => barrier(index === 1 ? NEWER : current, (body) => { body.environment = "live"; });
+    mount(r, LIVE_URL, { streamFlag: true });
+    await table();
+    await waitFor(() => expect(r.streams).toHaveLength(1));
+    // hold the table's next read
+    let open!: () => void;
+    const gate = new Promise<void>((resolve) => { open = resolve; });
+    r.state.before = async (call) => {
+      if (call.query.get("limit") === "50") await gate;
+    };
+    const pagesBefore = r.requests.filter((request) => request.path.endsWith("/manager/fleet")).length;
+    r.streams[0]!.push(wireCase("AFR-WIRE-REVALIDATE"));
+    await waitFor(() => expect(r.requests.filter((request) => request.path.endsWith("/manager/fleet")).length).toBe(pagesBefore + 1), { timeout: 4000 });
+    const refresh = r.requests.filter((request) => request.path.endsWith("/manager/fleet")).at(-1)!;
+    expect(refresh.signal?.aborted).toBe(false);
+    cleanup();
+    expect(refresh.signal?.aborted).toBe(true);
+    expect(signalsTo(r, ALPHA_FLEET_STREAM_PATH)[0]?.aborted).toBe(true);
+    expect(r.streams[0]!.cancelled()).toBe(true);
+    open();
+    const total = r.requests.length;
+    await settle();
+    expect(r.requests).toHaveLength(total);
+    expect(fleetStreamSessionCount()).toBe(0);
+  });
+
+  it("leaving the scope (the All lens) while a barrier is out cancels it and opens no stream", async () => {
+    const r = rig();
+    let release!: (response: Response) => void;
+    r.barrierFor = () => new Response(null);
+    const original = globalThis.fetch;
+    vi.stubGlobal("fetch", ((input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input).includes("/manager/fleet/realtime-snapshot")) {
+        r.requests.push({ path: ALPHA_FLEET_SNAPSHOT_PATH, signal: init?.signal ?? null });
+        return new Promise<Response>((resolve) => { release = resolve; });
+      }
+      return original(input, init);
+    }) as typeof fetch);
+    mount(r, LIVE_URL, { streamFlag: true });
+    await table();
+    await waitFor(() => expect(signalsTo(r, ALPHA_FLEET_SNAPSHOT_PATH)).toHaveLength(1));
+    expect(signalsTo(r, ALPHA_FLEET_SNAPSHOT_PATH)[0]?.aborted).toBe(false);
+    fireEvent.click(screen.getByRole("tab", { name: /^All/ }));
+    await waitFor(() => expect(signalsTo(r, ALPHA_FLEET_SNAPSHOT_PATH)[0]?.aborted).toBe(true));
+    release(jsonResponse(200, barrier(r.lineage() ?? "", (body) => { body.environment = "live"; })));
+    await act(async () => { await settle(); });
+    expect(only(r, ALPHA_FLEET_STREAM_PATH)).toHaveLength(0);
+    expect(chip()).toBeNull();
+    expect(fleetStreamSessionCount()).toBe(0);
+  });
+
+  it("changing the lens to another environment cancels the old stream's signal", async () => {
+    const r = rig();
+    mount(r, LIVE_URL, { streamFlag: true });
+    await table();
+    await waitFor(() => expect(r.streams).toHaveLength(1));
+    r.barrierFor = (_i, current) => barrier(current, (body) => { body.environment = "sandbox"; });
+    fireEvent.click(screen.getByRole("tab", { name: /Sandbox/ }));
+    await waitFor(() => expect(signalsTo(r, ALPHA_FLEET_STREAM_PATH)[0]?.aborted).toBe(true));
+    expect(r.streams[0]!.cancelled()).toBe(true);
   });
 });

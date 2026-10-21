@@ -21,7 +21,7 @@ export interface FleetStreamChipProps {
   /** `lineage.revision` of the fleet read on screen; `null` while it has not loaded. The last non-null value is kept. */
   lineage: string | null;
   /** Read the fleet again in place; resolves with the new `lineage.revision`, or `null`. */
-  refresh: () => Promise<string | null>;
+  refresh: (signal: AbortSignal) => Promise<string | null>;
   /** The stream ended because access changed: read again so the table says what its own READ authority says. */
   onAccessEnded?: () => void;
   /** Tests only. */
@@ -41,8 +41,8 @@ export function FleetStreamChip({ scope, lineage, refresh, onAccessEnded, deps }
   const consumer = useMemo<FleetStreamConsumer>(
     () => ({
       lineage: () => seen.current,
-      reread: async () => {
-        const next = await refreshRef.current();
+      reread: async (signal) => {
+        const next = await refreshRef.current(signal);
         if (next !== null) seen.current = next;
         return next;
       },

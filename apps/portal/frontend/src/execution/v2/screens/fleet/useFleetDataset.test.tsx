@@ -12,16 +12,17 @@ import { readManagerDataset, type ManagerDataset } from "../../readers/managerDa
 import { alphasOf, datasetAnswer, newDatasetDouble, SNAPSHOT_B, type DatasetDoubleState } from "./datasetDouble.testbase";
 import { useDatasetPublication, useFleetDataset } from "./useFleetDataset";
 
-interface Pending { query: ManagerDatasetQuery; release(): void }
+interface Pending { query: ManagerDatasetQuery; release(): void; signal: AbortSignal | null }
 
-/** A port whose answers wait until the test releases them, in any order. */
+/** A port whose answers wait until the test releases them, in any order. `signal` is the one `withReadSignal` handed that request. */
 function controlled(state: DatasetDoubleState) {
   const pending: Pending[] = [];
-  const api = {
+  const port = (signal: AbortSignal | null) => ({
     getManagerDataset: (query: ManagerDatasetQuery) =>
       new Promise<Result<ManagerDataset>>((resolve) => {
         pending.push({
           query,
+          signal,
           release: () => {
             const request = encodeManagerDatasetQuery(query)!;
             const answer = datasetAnswer(`/api/v1/execution${request.path}`, new URLSearchParams(request.wire), state);
@@ -32,7 +33,9 @@ function controlled(state: DatasetDoubleState) {
           },
         });
       }),
-  } as unknown as ExecutionApi;
+    withReadSignal: (next: AbortSignal) => port(next),
+  });
+  const api = port(null) as unknown as ExecutionApi;
   return { api, pending };
 }
 
@@ -214,5 +217,155 @@ describe("useDatasetPublication", () => {
     const bare = renderHook(() => useDatasetPublication(bareApi, "live"));
     await waitFor(() => expect(bare.result.current.phase).toBe("unpublished"));
     if (bare.result.current.phase === "unpublished") expect(bare.result.current.reason).toContain("not part of this port");
+  });
+});
+
+/**
+ * `refresh()` (the Fleet STREAM's way to read the first page again in place; flag key `fleet-stream`), cancellation. Lane: FIXTURE_LAB (unit).
+ * Each case records the `AbortSignal` the request was given and holds the answer, so "cancelled" is a fact about the signal and a late
+ * answer is a real late answer.
+ */
+describe("useFleetDataset.refresh · cancellation", () => {
+  async function loaded() {
+    const state = newDatasetDouble({ live: alphasOf(8, [["LIVE"]]) });
+    const port = controlled(state);
+    const hook = renderHook(({ key }: { key: string }) => useFleetDataset(port.api, true, key, live()), { initialProps: { key: "k" } });
+    await waitFor(() => expect(port.pending).toHaveLength(1));
+    act(() => port.pending[0]!.release());
+    await waitFor(() => expect(hook.result.current.state.phase).toBe("ready"));
+    return { ...port, ...hook, state };
+  }
+
+  it("replaces the first page in place: the rows stay while the request is out, and the new first dataset is returned", async () => {
+    const h = await loaded();
+    const before = h.result.current.rows;
+    let answer: Promise<ManagerDataset | null> | undefined;
+    act(() => void (answer = h.result.current.refresh()));
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    expect(h.result.current.rows).toBe(before);
+    expect(h.result.current.state.phase).toBe("ready");
+    let dataset = null as ManagerDataset | null;
+    await act(async () => {
+      h.pending[1]!.release();
+      dataset = await answer!;
+    });
+    expect(dataset?.lineage.revision).toMatch(/^sha256:/);
+    await waitFor(() => expect(h.result.current.first).toBe(dataset));
+    expect(h.pending[1]!.signal?.aborted).toBe(false);
+  });
+
+  it("two refreshes share ONE request (they do not stack and do not cancel each other)", async () => {
+    const h = await loaded();
+    let a: Promise<ManagerDataset | null> | undefined;
+    let b: Promise<ManagerDataset | null> | undefined;
+    act(() => {
+      a = h.result.current.refresh();
+      b = h.result.current.refresh();
+    });
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    await Promise.resolve();
+    expect(h.pending).toHaveLength(2);
+    expect(h.pending[1]!.signal?.aborted).toBe(false);
+    await act(async () => {
+      h.pending[1]!.release();
+      await a;
+    });
+    expect(await a).not.toBeNull();
+    expect(await b).toBe(await a);
+    // the flight is over: the next refresh is a new request
+    act(() => void h.result.current.refresh());
+    await waitFor(() => expect(h.pending).toHaveLength(3));
+  });
+
+  it("is cancelled when its only caller cancels, and the late answer changes nothing", async () => {
+    const h = await loaded();
+    const before = h.result.current.rows;
+    const caller = new AbortController();
+    let answer: Promise<ManagerDataset | null> | undefined;
+    act(() => void (answer = h.result.current.refresh(caller.signal)));
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    caller.abort();
+    expect(h.pending[1]!.signal?.aborted).toBe(true);
+    act(() => h.pending[1]!.release());
+    expect(await answer).toBeNull();
+    expect(h.result.current.rows).toBe(before);
+  });
+
+  it("with two callers, one cancelling keeps the request; the last one cancelling ends it", async () => {
+    const h = await loaded();
+    const one = new AbortController();
+    const two = new AbortController();
+    act(() => {
+      void h.result.current.refresh(one.signal);
+      void h.result.current.refresh(two.signal);
+    });
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    one.abort();
+    expect(h.pending[1]!.signal?.aborted).toBe(false);
+    two.abort();
+    expect(h.pending[1]!.signal?.aborted).toBe(true);
+  });
+
+  it("a caller whose signal is already cancelled does not keep a request alive", async () => {
+    const h = await loaded();
+    const gone = new AbortController();
+    gone.abort();
+    act(() => void h.result.current.refresh(gone.signal));
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    expect(h.pending[1]!.signal?.aborted).toBe(true);
+  });
+
+  it("a new query cancels the refresh of the old one and its answer is never applied", async () => {
+    const h = await loaded();
+    let answer: Promise<ManagerDataset | null> | undefined;
+    act(() => void (answer = h.result.current.refresh()));
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    h.rerender({ key: "other" });
+    expect(h.pending[1]!.signal?.aborted).toBe(true);
+    await waitFor(() => expect(h.pending).toHaveLength(3));
+    act(() => h.pending[1]!.release());
+    expect(await answer).toBeNull();
+    expect(h.result.current.state.phase).toBe("loading");
+    expect(h.result.current.rows).toEqual([]);
+    act(() => h.pending[2]!.release());
+    await waitFor(() => expect(h.result.current.state.phase).toBe("ready"));
+  });
+
+  it("unmounting cancels the request, and the late answer updates nothing and warns of nothing", async () => {
+    const h = await loaded();
+    let answer: Promise<ManagerDataset | null> | undefined;
+    act(() => void (answer = h.result.current.refresh()));
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    h.unmount();
+    expect(h.pending[1]!.signal?.aborted).toBe(true);
+    h.pending[1]!.release();
+    expect(await answer).toBeNull();
+  });
+
+  it("unmounting during a loadMore cancels it too", async () => {
+    const state = newDatasetDouble({ live: alphasOf(120, [["LIVE"]]) });
+    const port = controlled(state);
+    const hook = renderHook(() => useFleetDataset(port.api, true, "k", live()));
+    await waitFor(() => expect(port.pending).toHaveLength(1));
+    act(() => port.pending[0]!.release());
+    await waitFor(() => expect(hook.result.current.nextCursor).not.toBeNull());
+    act(() => hook.result.current.loadMore());
+    await waitFor(() => expect(port.pending).toHaveLength(2));
+    hook.unmount();
+    expect(port.pending[1]!.signal?.aborted).toBe(true);
+  });
+
+  it("a refresh that fails (not a denial) leaves the rows and the ready state as they were", async () => {
+    const h = await loaded();
+    const before = h.result.current.rows;
+    act(() => void h.result.current.refresh());
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    h.state.variant = "status:503";
+    act(() => h.pending[1]!.release());
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(h.result.current.rows).toBe(before);
+    expect(h.result.current.state.phase).toBe("ready");
   });
 });

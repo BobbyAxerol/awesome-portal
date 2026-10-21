@@ -91,7 +91,7 @@ export interface FleetDatasetRead {
    * `null` when the read did not succeed or the query changed meanwhile; a failed refresh leaves everything as it was, except a
    * `denied` answer, which drops the rows exactly as an eviction does. Nothing calls it unless a stream is attached.
    */
-  refresh(): Promise<ManagerDataset | null>;
+  refresh(signal?: AbortSignal): Promise<ManagerDataset | null>;
 }
 
 export const SNAPSHOT_CHANGED = "SNAPSHOT_CHANGED";
@@ -126,6 +126,8 @@ export function useFleetDataset(
     firstFlight.current?.();
     firstFlight.current = null;
     more.current?.abort();
+    refreshFlight.current?.controller.abort();
+    refreshFlight.current = null;
     setLoadingMore(false);
     setMoreError(null);
     setRows([]);
@@ -137,6 +139,9 @@ export function useFleetDataset(
   useEffect(() => {
     generation.current += 1;
     more.current?.abort();
+    // A refresh asks the OLD query: cancelled with the rest, and its answer is refused by the generation.
+    refreshFlight.current?.controller.abort();
+    refreshFlight.current = null;
     setLoadingMore(false);
     setMoreError(null);
     if (!enabled) {
@@ -203,34 +208,73 @@ export function useFleetDataset(
     });
   }, [api]);
 
-  const refresh = useCallback((): Promise<ManagerDataset | null> => {
-    const mine = generation.current;
-    const controller = new AbortController();
-    more.current?.abort();
-    more.current = controller;
-    return ask(scoped(api, controller.signal), build.current(null)).then((result) => {
-      if (mine !== generation.current || controller.signal.aborted) return null;
-      if (!result.ok) {
-        if (result.status === "denied") {
-          generation.current += 1;
-          setLoadingMore(false);
-          setMoreError(null);
-          setRows([]);
-          setFirst(null);
-          setLast(null);
-          setState({ phase: "error", status: "denied", reason: result.reason });
-        }
-        return null;
-      }
+  // At most ONE refresh request is in flight. A second caller shares it (two refreshes never stack and never cancel each other); the
+  // request is cancelled when every caller that passed a signal has cancelled, when the query changes, and when the screen unmounts.
+  const refreshFlight = useRef<{ promise: Promise<ManagerDataset | null>; controller: AbortController; waiters: number } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      // Unmount: nothing in flight may answer into a screen that is gone.
       generation.current += 1;
-      setLoadingMore(false);
-      setMoreError(null);
-      setRows(dedupe(result.value.items));
-      setFirst(result.value);
-      setLast(result.value);
-      setState({ phase: "ready" });
-      return result.value;
-    }).catch(() => null);
+      more.current?.abort();
+      refreshFlight.current?.controller.abort();
+      refreshFlight.current = null;
+    };
+  }, []);
+
+  const refresh = useCallback((signal?: AbortSignal): Promise<ManagerDataset | null> => {
+    let flight = refreshFlight.current;
+    if (flight === null) {
+      const mine = generation.current;
+      const controller = new AbortController();
+      const created = { controller, waiters: 0, promise: Promise.resolve<ManagerDataset | null>(null) };
+      const clear = () => {
+        if (refreshFlight.current === created) refreshFlight.current = null;
+      };
+      created.promise = ask(scoped(api, controller.signal), build.current(null)).then((result) => {
+        clear();
+        // A superseded answer (the query changed, the screen left, every caller cancelled) is never applied.
+        if (mine !== generation.current || controller.signal.aborted) return null;
+        if (!result.ok) {
+          if (result.status === "denied") {
+            generation.current += 1;
+            more.current?.abort();
+            setLoadingMore(false);
+            setMoreError(null);
+            setRows([]);
+            setFirst(null);
+            setLast(null);
+            setState({ phase: "error", status: "denied", reason: result.reason });
+          }
+          return null;
+        }
+        generation.current += 1;
+        more.current?.abort();
+        setLoadingMore(false);
+        setMoreError(null);
+        setRows(dedupe(result.value.items));
+        setFirst(result.value);
+        setLast(result.value);
+        setState({ phase: "ready" });
+        return result.value;
+      }).catch(() => {
+        clear();
+        return null;
+      });
+      refreshFlight.current = created;
+      flight = created;
+    }
+    const shared = flight;
+    shared.waiters += 1;
+    if (signal !== undefined) {
+      const leave = () => {
+        shared.waiters -= 1;
+        if (shared.waiters <= 0) shared.controller.abort();
+      };
+      if (signal.aborted) leave();
+      else signal.addEventListener("abort", leave, { once: true });
+    }
+    return shared.promise;
   }, [api]);
 
   return { state, rows, first, last, total: last === null ? null : last.page.authorizedFilteredCount, nextCursor, loadingMore, moreError, loadMore, refresh };

@@ -56,7 +56,7 @@ async function useVariant(page: Page, workspace: string): Promise<void> {
   });
 }
 
-async function open(page: Page, workspace: string | null, viewport = { width: 1280, height: 900 }): Promise<Traffic> {
+async function open(page: Page, workspace: string | null, viewport = { width: 1280, height: 900 }, beforeGoto?: () => Promise<void>): Promise<Traffic> {
   // No frozen clock here (unlike the screenshot specs): the machine's coalescing window and the adapter's reconnect window read Date.now().
   await page.setViewportSize(viewport);
   await usePreferences(page, "operations");
@@ -85,6 +85,7 @@ async function open(page: Page, workspace: string | null, viewport = { width: 12
       read();
     });
   });
+  await beforeGoto?.();
   await page.goto("/deployments/alphas?stage=paper");
   await expect(page.getByRole("table", { name: "Alpha fleet" })).toBeVisible();
   return traffic;
@@ -237,6 +238,28 @@ test.describe("FIXTURE_LAB · Fleet STREAM chip", () => {
     await page.waitForTimeout(3_000);
     expect({ streams: traffic.streams.length, snapshots: traffic.snapshots.length }).toEqual(frozen);
     expect(watch.take()).toEqual([]);
+  });
+
+  test("leaving the scope while the barrier is still out cancels the request (nothing is left orphaned) and opens no stream", async ({ page, baseURL }) => {
+    const watch = watchPage(page, baseURL);
+    const failed: string[] = [];
+    page.on("requestfailed", (request) => failed.push(`${new URL(request.url()).pathname} ${request.failure()?.errorText ?? ""}`));
+    // The double answers at once; hold the barrier so it is genuinely in flight when the lens changes.
+    const traffic = await open(page, null, { width: 1280, height: 900 }, async () => {
+      await page.route("**/api/v1/execution/manager/fleet/realtime-snapshot*", async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 3_000));
+        await route.fallback().catch(() => undefined);
+      });
+    });
+    await expect.poll(() => traffic.snapshots.length).toBe(1);
+    await page.getByRole("tab", { name: /^All/ }).click();
+    await expect.poll(() => failed.some((line) => line.startsWith(SNAPSHOT) && /ABORTED/.test(line)), { timeout: 5_000 }).toBe(true);
+    await page.waitForTimeout(4_000);
+    expect(traffic.streams).toHaveLength(0);
+    expect(traffic.snapshots).toHaveLength(1);
+    await expect(chip(page)).toHaveCount(0);
+    await expect(table(page)).toBeVisible();
+    expect(watch.take().filter((line) => !/ERR_ABORTED/.test(line))).toEqual([]);
   });
 
   test("660px: the chip fits, nothing overflows", async ({ page, baseURL }) => {
