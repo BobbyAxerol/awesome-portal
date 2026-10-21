@@ -11,7 +11,9 @@
  * COMPLETE -> IN_PROGRESS in the same transaction, keeping the keyset cursor). The next idle ticks then replay only the retained revisions
  * AFTER the cursor that still have no series row, 1..16 per tick, and `finish` closes the backfill again and moves the cursor to the newest
  * retained revision. While nothing failed, an idle tick is one checkpoint point-read. A revision whose repair is refused as well becomes a
- * stated gap (cursor passes it); it is never retried forever. A `DIGEST_MISMATCH` is recorded as `SERIES_DIGEST_MISMATCH` (it does NOT reopen
+ * stated gap (cursor passes it) after SERIES_REPAIR_ATTEMPTS refusals; it is never retried forever. The refusals spent are kept PER REVISION
+ * (`repair_attempts`, migration 148, pure rules in manager-series-repair.ts), not in the single `last_error_*` diagnostic: a later live failure of
+ * another revision overwrites the diagnostic but neither resets nor consumes the budget of the revision being repaired. A `DIGEST_MISMATCH` is recorded as `SERIES_DIGEST_MISMATCH` (it does NOT reopen
  * anything: the stored rows stay as they are).
  * Both are idempotent: the primary keys make a repeat a no-op, and a repeat with different content is reported
  * (`DIGEST_MISMATCH`), never overwritten (the tables are append-only).
@@ -24,6 +26,9 @@ import { managerModelDocument, managerPartition } from "./manager-model.contract
 import { deriveSeriesObservations, MANAGER_SERIES_CALCULATION_REVISION, type DerivedSeriesRevision, type SeriesAbsence, type SeriesConfidence,
   type SeriesObservation, type SeriesRevisionMarker, type SeriesSubjectType, type DerivedSeriesMetric } from "./manager-series-observation";
 import type { SeriesHistory } from "./manager-series-materializer";
+import { parseRepairEntries, refuse, SERIES_REPAIR_ATTEMPTS, type RepairEntry } from "./manager-series-repair";
+
+export { SERIES_REPAIR_ATTEMPTS };
 
 const keyOf = (s: ManagerLeaseScope) => [s.workspace_id, s.environment, s.profile_id];
 const num = (v: string | number | null): number | null => {
@@ -33,14 +38,18 @@ const num = (v: string | number | null): number | null => {
   return n;
 };
 export const SERIES_DIGEST_MISMATCH = "SERIES_DIGEST_MISMATCH";
-export const SERIES_REPAIR_ATTEMPTS = 3;
+/** SQL: the checkpoint's repair_attempts array without the entry of the revision bound to `param` (only that revision's budget is cleared). */
+const repairWithout = (param: string) => `COALESCE((SELECT jsonb_agg(t.e ORDER BY t.o) FROM jsonb_array_elements(execution_manager_series_checkpoints.repair_attempts)
+  WITH ORDINALITY AS t(e,o) WHERE t.e->>'revision' <> ${param}),'[]'::jsonb)`;
 const SERIES_REPAIR_RETRY_PREFIX = "SERIES_REPAIR_RETRY_";
 export type SeriesRecordState = "RECORDED" | "DUPLICATE" | "DIGEST_MISMATCH";
 export interface SeriesBackfillInput { lease: ManagerProjectionLease; signal: AbortSignal; deadline_ms: number; transaction_timeout_ms: number;
   lease_ttl_ms: number; maximum_revisions: number; }
 export interface SeriesBackfillResult { state: "COMPLETE" | "PROGRESS" | "TIME_LIMIT" | "NO_WORK"; processed: number; failed: number; }
 export interface SeriesCheckpoint { head_revision: string | null; head_as_of_ms: number | null; backfill_state: "NOT_STARTED" | "IN_PROGRESS" | "COMPLETE";
-  backfill_processed: number; last_absence_revision: string | null; last_absences: SeriesAbsence[]; last_error_code: string | null; last_error_revision: string | null; }
+  backfill_processed: number; last_absence_revision: string | null; last_absences: SeriesAbsence[]; last_error_code: string | null; last_error_revision: string | null;
+  /** Repair refusals already spent per revision still being repaired (CR-02; independent of the last_error diagnostic). */
+  repair_attempts: RepairEntry[]; }
 
 export class ManagerSeriesStore {
   private readonly leases: ManagerProjectionLeases;
@@ -79,6 +88,7 @@ export class ManagerSeriesStore {
           THEN EXCLUDED.last_absence_revision ELSE execution_manager_series_checkpoints.last_absence_revision END,
         last_absences=CASE WHEN execution_manager_series_checkpoints.head_as_of_ms IS NULL OR EXCLUDED.head_as_of_ms>=execution_manager_series_checkpoints.head_as_of_ms
           THEN EXCLUDED.last_absences ELSE execution_manager_series_checkpoints.last_absences END,
+        repair_attempts=${repairWithout("$4")},
         writer_fencing_token=EXCLUDED.writer_fencing_token,updated_at=clock_timestamp()`,
     [...key, m.revision, m.as_of_ms, JSON.stringify(derived.absences)]);
     return "RECORDED";
@@ -105,9 +115,10 @@ export class ManagerSeriesStore {
 
   async checkpoint(scope: ManagerLeaseScope): Promise<SeriesCheckpoint | null> {
     const r = (await this.pool.query(`SELECT head_revision,head_as_of_ms::text,backfill_state,backfill_processed::text,last_absence_revision,last_absences,
-      last_error_code,last_error_revision FROM execution_manager_series_checkpoints WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`, keyOf(scope))).rows[0];
+      last_error_code,last_error_revision,repair_attempts FROM execution_manager_series_checkpoints WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`, keyOf(scope))).rows[0];
     return r ? { head_revision: r.head_revision, head_as_of_ms: num(r.head_as_of_ms), backfill_state: r.backfill_state, backfill_processed: Number(r.backfill_processed),
-      last_absence_revision: r.last_absence_revision, last_absences: r.last_absences, last_error_code: r.last_error_code, last_error_revision: r.last_error_revision } : null;
+      last_absence_revision: r.last_absence_revision, last_absences: r.last_absences, last_error_code: r.last_error_code, last_error_revision: r.last_error_revision,
+      repair_attempts: parseRepairEntries(r.repair_attempts) } : null;
   }
 
   /** Bounded read of what a window needs: the revision chain and the observations from `floor_ms` up to `to_ms`, plus the last revision
@@ -173,9 +184,9 @@ export class ManagerSeriesStore {
         catch (error) {
           if (input.signal.aborted || (error instanceof Error && error.message === "MANAGER_LEASE_LOST")) throw error;
           // The write itself was refused (possibly transiently, e.g. the fault that refused the live write). Bounded retry: one attempt per tick,
-          // the cursor stays, the attempt is remembered as a typed disposition; after SERIES_REPAIR_ATTEMPTS the revision is a stated gap.
-          const attempt = await this.repairAttempt(scope, row.revision);
-          if (attempt < SERIES_REPAIR_ATTEMPTS) { await this.remember(input, scope, row.revision, `${SERIES_REPAIR_RETRY_PREFIX}${attempt}`); return { ...out, state: "PROGRESS" }; }
+          // the cursor stays; the attempt is charged to THIS revision's own budget (not to the shared last_error diagnostic, which a live failure
+          // of another revision overwrites) and shown as a typed disposition; the last of SERIES_REPAIR_ATTEMPTS makes the revision a stated gap.
+          if (!await this.chargeRefusal(input, scope, row.revision)) return { ...out, state: "PROGRESS" };
           failure = "SERIES_REPLAY_REFUSED";
         }
       }
@@ -186,16 +197,19 @@ export class ManagerSeriesStore {
     return { ...out, state: "PROGRESS" };
   }
 
-  /** The attempt number this refusal is (1-based), counted from the typed dispositions already recorded for this very revision. */
-  private async repairAttempt(scope: ManagerLeaseScope, revision: string): Promise<number> {
-    const r = (await this.pool.query(`SELECT last_error_code,last_error_revision FROM execution_manager_series_checkpoints
-      WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`, keyOf(scope))).rows[0];
-    const seen = r?.last_error_revision === revision ? Number(new RegExp(`^${SERIES_REPAIR_RETRY_PREFIX}(\\d+)$`).exec(r.last_error_code ?? "")?.[1] ?? 0) : 0;
-    return seen + 1;
-  }
-
-  private async remember(input: SeriesBackfillInput, scope: ManagerLeaseScope, revision: string, code: string) {
-    await this.withFencedTransaction(input, scope, client => this.recordFailure(client, scope, revision, code));
+  /** Charges one refused repair to the revision's own budget and, in the same lease-fenced transaction, shows it as `SERIES_REPAIR_RETRY_n`.
+   * Returns true when the budget is exhausted: nothing is written then, the caller states the gap (and `skip` clears the entry). */
+  private async chargeRefusal(input: SeriesBackfillInput, scope: ManagerLeaseScope, revision: string): Promise<boolean> {
+    return this.withFencedTransaction(input, scope, async client => {
+      const stored = (await client.query(`SELECT repair_attempts FROM execution_manager_series_checkpoints
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 FOR UPDATE`, keyOf(scope))).rows[0];
+      const refusal = refuse(parseRepairEntries(stored?.repair_attempts), revision);
+      if (refusal.exhausted) return true;
+      await this.recordFailure(client, scope, revision, `${SERIES_REPAIR_RETRY_PREFIX}${refusal.attempt}`);
+      await client.query(`UPDATE execution_manager_series_checkpoints SET repair_attempts=$4::jsonb
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`, [...keyOf(scope), JSON.stringify(refusal.entries)]);
+      return false;
+    });
   }
 
   private async withFencedTransaction<T>(input: SeriesBackfillInput, scope: ManagerLeaseScope, work: (client: PoolClient) => Promise<T>): Promise<T> {
@@ -217,9 +231,11 @@ export class ManagerSeriesStore {
     return this.withFencedTransaction(input, scope, async client => {
       const state = await this.recordRevision(client, scope, derived);
       if (state === "DIGEST_MISMATCH") await this.recordFailure(client, scope, row.revision, SERIES_DIGEST_MISMATCH, { reopen: false });
-      else if (state === "RECORDED") // the failure this repair resolved is no longer an open disposition
-        await client.query(`UPDATE execution_manager_series_checkpoints SET last_error_code=NULL,last_error_revision=NULL,updated_at=clock_timestamp()
-          WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND last_error_revision=$4 AND last_error_code<>$5`, [...keyOf(scope), row.revision, SERIES_DIGEST_MISMATCH]);
+      // Only THIS revision's budget (and, when it was repaired, its disposition) ends here: another revision's last_error or budget is left as it is.
+      await client.query(`UPDATE execution_manager_series_checkpoints SET repair_attempts=${repairWithout("$4")},
+        last_error_code=CASE WHEN $6::boolean AND last_error_revision=$4 AND last_error_code<>$5 THEN NULL ELSE last_error_code END,
+        last_error_revision=CASE WHEN $6::boolean AND last_error_revision=$4 AND last_error_code<>$5 THEN NULL ELSE last_error_revision END,
+        updated_at=clock_timestamp() WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`, [...keyOf(scope), row.revision, SERIES_DIGEST_MISMATCH, state === "RECORDED"]);
       await this.moveCursor(client, scope, row, "IN_PROGRESS", state === "RECORDED" ? 1 : 0);
       return state;
     });
@@ -228,6 +244,8 @@ export class ManagerSeriesStore {
   private async skip(input: SeriesBackfillInput, scope: ManagerLeaseScope, row: { created_at: string; revision: string }, code: string) {
     await this.withFencedTransaction(input, scope, async client => {
       await this.recordFailure(client, scope, row.revision, code);
+      await client.query(`UPDATE execution_manager_series_checkpoints SET repair_attempts=${repairWithout("$4")}
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`, [...keyOf(scope), row.revision]);   // a stated gap ends the budget
       await this.moveCursor(client, scope, row, "IN_PROGRESS", 0);
     });
   }
