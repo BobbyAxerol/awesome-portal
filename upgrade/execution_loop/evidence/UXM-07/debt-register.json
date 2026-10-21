@@ -43,23 +43,23 @@
     },
     {
       "id": "DEBT-UXM07-016",
-      "title": "V2 pixel baselines exist for 20 screens; New request (page and drawer) and the interaction states have none",
-      "where": "Done: fe84ee69 + bc83e84b + 2fb75539, e2e/execution-v2-visual.spec.ts, 46 images (chromium-v2, pinned image mcr.microsoft.com/playwright:v1.62.1-noble, recorder scripts/portal-web-visual-record-v2.sh); recorded 46 passed, compared twice 46/46 and, after the second pass, twice again 46/46 (v2-baselines-2026-10-21/README.md). Covers Fleet, Overview, Portfolios, Portfolio 360, Alpha 360 (3 tabs), Account 360, Compare, Blotter, Workbench Paper, Live, Canary, Sandbox, Admin, Users, Trade Replay, Access, Cockpit, Operations, scoped slice. Not covered: New request page and the queue drawer (?compose=request, including the docked layout at 1500px+), Operations dock and incident drawer, Fleet Board/Map views and drawer, Workbench exit-request form, pending-control preview form, Sandbox note submitted",
-      "consequence": "A pixel regression on those states would not be caught; the baselines are FIXTURE_LAB over BFF_DOUBLE and say nothing about a real read",
-      "proposed": "Add cells for the listed states to execution-v2-visual.spec.ts and record with the recorder; review the contact sheets; restore zero-diff files",
+      "title": "V2 pixel baselines exist for 27 screens and states; Fleet Board/Map, the exit-request form, the pending-control preview form and a submitted Sandbox note have none",
+      "where": "Done: fe84ee69 + bc83e84b + 2fb75539 (46 images) and, since 5b9e2d32 (cells) / 14883423 (images), 15 more: New request page (1440, 390), the request drawer (docked 1600, overlay 1440 and 390), an open NaWhy disclosure (Users, 1440 and 390), the scoped slice pager on page 2 (1440, 390), the Operations dock and the incident drawer (1600, 1440, 390 each). All e2e/execution-v2-visual.spec.ts (chromium-v2, pinned image mcr.microsoft.com/playwright:v1.62.1-noble, recorder scripts/portal-web-visual-record-v2.sh, --workers=2), 61 files; recorded, then the WHOLE spec compared twice in a row, both green (v2-baselines-2026-10-21/README.md, section 'Third pass'; that run predates the merge of a512d55d). Every new image was looked at; the one product defect found is fixed in b74a4d29 (scoped slice Financial data cell). PENDING after the merge of fe-parity a512d55d (Access words, Compare on /deployments/compare, registry rev 9): re-record v2-access-1440/390 and the Compare cells (and any other cell the recorder shows changed), then two whole-spec compares; the heavy-lock wait passed 10 minutes and was stopped (AGENT_WORKING_RULES 10.10b). Not covered: Fleet Board/Map views and drawer, Workbench exit-request form, pending-control preview form, Sandbox note submitted",
+      "consequence": "A pixel regression on those four states would not be caught; the baselines are FIXTURE_LAB over BFF_DOUBLE and say nothing about a real read",
+      "proposed": "Add cells for the four listed states to execution-v2-visual.spec.ts the same way (act step + recorder); review the images; restore zero-diff files",
       "owner": "Claude (FE) at R2",
-      "status": "STILL_OPEN (narrowed)",
-      "next_action": "Claude, after the landing freeze so the baselines are not re-recorded twice; no Bobby decision needed (copy approved 2026-10-21)."
+      "status": "STILL_OPEN (narrowed again 2026-10-21)",
+      "next_action": "Claude: (1) the post-merge re-record and two whole-spec compares when the heavy lock is free; (2) the four uncovered states when next touched. No Bobby decision needed (copy approved 2026-10-21)."
     },
     {
       "id": "DEBT-UXM07-018",
-      "title": "Missing conformance suites for the Paper workbench reader, the New request reader and readLiveFull (V1 body)",
-      "where": "Still without a *.conformance.test: v2/screens/workbench/model.ts against execution-paper-read.v1 (the folder has model.test, workbench.negative.test and workbench.scale.test only); v2/screens/request/model.ts + useNewRequest.ts + OutcomePanel against the governance.approval-create-request outcomes (request/ has httpClassification, eligibility and lookup tests; the lookup reader has its own conformance, approvalRequestLookup.conformance.test.ts, FE-069). The Live V1 body readLiveFullByVersion is covered only at dispatcher level by readers/dispatch.conformance.test.ts (6 V1 bodies x 8 routes, L0-L3); liveFull.ts has no L0-L3 file of its own. Closed since: Sandbox and Canary (already), command catalogue, scoped alpha/subject, fleet realtime, BE-P4/P12/P14/P15/P17 readers",
-      "consequence": "These three screens are proven against hand-written doubles and unit cases, not against the published schemas; a schema drift would not fail a test",
-      "proposed": "Add *.conformance.test.ts per reader as for Sandbox and Canary (conformance-matrix-2026-10-19.md gets three rows)",
+      "title": "Missing conformance suite for readLiveFull (V1 body); the Paper workbench reader and the New request outcomes now have theirs",
+      "where": "Closed since efe0f0d0: v2/screens/workbench/workbench.conformance.test.ts (92 cases; execution-paper-read.v1 as oracle; 2502 schema-invalid mutations tried, 0 read looser; the reader is v2/readers/paperRead.ts, wired at getPaperWorkbenchProfile) and v2/screens/request/request.conformance.test.ts (176 cases; ApprovalCreateResponse, Problem and ApprovalCreateRequest as oracles; 564 schema-invalid bodies, 0 read looser; the readers are v2/readers/approvalCreate.ts and the port's marks, read by model.readOutcome; the lookup replay now uses the strict reader). Differences from the schemas are pinned in each suite's ledger and listed to Codex as FE-073 and FE-074 (backend-requests.md). Still without its own L0-L3 file: the Live V1 body readLiveFullByVersion (liveFull.ts), covered at dispatcher level only (readers/dispatch.conformance.test.ts: 6 V1 bodies x 8 routes)",
+      "consequence": "The Live V1 body is proven against hand-written doubles and the dispatcher's cases, not against its published schema; a schema drift there would not fail a test",
+      "proposed": "Decide whether dispatcher-level coverage is enough for the V1 body; if not, add liveFull.conformance.test.ts (L0-L3, schema as oracle) and a matrix row",
       "owner": "Claude (FE)",
-      "status": "STILL_OPEN (narrowed)",
-      "next_action": "Claude adds workbench.conformance.test.ts and a request-outcome conformance test (and a liveFull one if dispatcher-only is not enough) and three rows in conformance-matrix-2026-10-19.md; canonical fixtures exist under packages/contracts/fixtures (execution-paper-overview.*, execution-paper-workbench*.json)."
+      "status": "STILL_OPEN (narrowed again 2026-10-21)",
+      "next_action": "Claude: decide with the lead whether readLiveFull needs its own file (the V1 body is behind the same fail-closed reader the V2 screens no longer use); the matrix rows for the two new suites are in conformance-matrix-2026-10-19.md."
     },
     {
       "id": "DEBT-UXM07-026",
@@ -162,24 +162,15 @@
       "opened": "2026-10-21"
     },
     {
-      "id": "DEBT-UXM07-036",
-      "title": "CR-01 has no focused execution receipt",
-      "where": "dd9609af (ACCEPT source in CODEX_LANDING_REVIEW section 9); BE-CLAUDE-2026-10-20/BE-P17.md section 9 records the implementation and generator checks but no run counts; be-p17-fleet-pairing.spec.ts has four cases; one PG assertion is NOT_RUN; the last full hook (a896bd08, tip 9d15755f) predates the change",
-      "consequence": "The changed service, contract and FE leaf tests have no recorded result on this SHA; older counts cannot stand in",
-      "proposed": "Run only the focused service, contract and FE leaf tests for dd9609af and append the counts to BE-P17 section 9; keep the PG assertion pending until it is run",
-      "owner": "Claude",
-      "status": "STILL_OPEN (new 2026-10-21)",
-      "opened": "2026-10-21"
-    },
-    {
       "id": "DEBT-UXM07-037",
       "title": "Landing gates on the exact frozen SHA are not run; Core carry pending",
       "where": "HOOK_RESULT_2026-10-20.md (hook a896bd08 on tip 9d15755f; later code, test and visual commits 5bc040f6, a13b4fa6, 97454777, fe84ee69, bc83e84b, 2fb75539, 63201e94, 1328d1b7, 6da309df, 9810f8ef, ec228e53, dd9609af); F1_F9_CLOSURE row F4 (landing not done); CODEX_LANDING_REVIEW sections 6, 8, 10",
-      "consequence": "ELP2-10 stays NOT_MET and landing into the canonical branch is an integrator-only ff after one exact-SHA gate. The whole-suite visual compare on the final SHA has no receipt file (the lead reports 609 passed / 7 failed, then fixed); Codex's native-business-read-client.ts and its regression spec (two paths, +43/-3) are not carried yet",
+      "consequence": "ELP2-10 stays NOT_MET and landing into the canonical branch is an integrator-only ff after one exact-SHA gate. The two 2026-10-21 whole-suite visual compares now have a receipt (visual-suite-runs-2026-10-21.md: 580 passed / 37 failed / 16 skipped on 03634f6e, then 609 / 7 / 16 on the tip before 97454777; none of the 7 is a pixel diff) but there is no whole-suite run after 97454777, so the fixes of those 7 are not confirmed by one; Codex's native-business-read-client.ts and its regression spec (two paths, +43/-3) are not carried yet",
       "proposed": "Freeze and repin; Claude carries the two Codex paths once the primary returns their SHA; clean rebase on the canonical tip preserving both sides of Unified/sync/rules; one R2/R3 hook, one whole-suite pinned-image compare, then the integrator's ff-only",
       "owner": "Claude (gates, carry); Codex integrator (ff-only landing, native client SHA)",
       "status": "STILL_OPEN (new 2026-10-21)",
-      "opened": "2026-10-21"
+      "opened": "2026-10-21",
+      "next_action": "Claude: one whole-suite compare on the final SHA (after the freeze) and its receipt; the 'no receipt' part for the 2026-10-21 runs is resolved."
     },
     {
       "id": "DEBT-UXM07-038",
@@ -461,6 +452,17 @@
       "closed_by": "8c70b177: registry.json revision 8 -> 9 adds the EXECUTION_COMPARE_SCREEN screen row at /deployments/compare (feature EXECUTION_PORTFOLIOS, fixture delivery contract equal to the portfolio 360, no flag enabled; registry.public.json and the six summary fixtures from scripts/export_handoff_contract.py); PortalRoutes claims the path only while the compare flag is on; the pre-rev-9 URL /deployments/portfolios[/:id]?view=compare redirects to it; N29 acceptance and verifier re-pinned 8 -> 9 as in 6d87825b, refresh-release-integrity-ledgers.sh --write and --check green.",
       "evidence": "registry pytest (contract, api, handoff, navigation, summary) green; vitest routeContract/linkTargets/navigation/Sidebar/execution green; flag-off DOM digests (PortalShell.flagOff) unchanged because the route does not exist flag off. NOT_RUN: the Playwright e2e (URL moved in v2Lane, s1, links, visual specs) and the visual compare on the pinned image. The two Compare baselines v2-compare-1440/390 are expected to compare at zero diff (same screen, same env/window locks, breadcrumb outside #portal-content) and were NOT re-recorded.",
       "residual": "FE-039 (hide the legacy APPROVALS rail entry) was not part of rev 9 and is untouched here; C-5 also named EXECUTION_ARCHIVED_ALPHAS_SCREEN, which the Fleet lens replaced (key archived is reserved)."
+    },
+    {
+      "id": "DEBT-UXM07-036",
+      "title": "CR-01 has no focused execution receipt",
+      "where": "dd9609af (ACCEPT source in CODEX_LANDING_REVIEW section 9); BE-CLAUDE-2026-10-20/BE-P17.md section 9 records the implementation and generator checks but no run counts; be-p17-fleet-pairing.spec.ts has four cases; one PG assertion is NOT_RUN; the last full hook (a896bd08, tip 9d15755f) predates the change",
+      "consequence": "The changed service, contract and FE leaf tests have no recorded result on this SHA; older counts cannot stand in",
+      "proposed": "Run only the focused service, contract and FE leaf tests for dd9609af and append the counts to BE-P17 section 9; keep the PG assertion pending until it is run",
+      "owner": "Claude",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "Focused receipt written at 35a1577a: BE-CLAUDE-2026-10-20/BE-P17.md section 9.1 (what be-p17-fleet-pairing.spec.ts proves, the four cases, and the run: be-p17-fleet-pairing 4/4, be-p16-alpha-fleet-realtime 50/50, elp206-manager-service 19/19, contracts execution-alpha-fleet-realtime 57/57 with the generator --check clean, FE alphaFleetRealtime.conformance + fixtureBff fleetRealtime 1388/1388). control-api and contracts are byte-identical to 799effc8. The PG assertion in elp2-read-scope.spec.ts is NOT_RUN (the whole file needs PG: 117 skipped) and stays pending until it is run; the hook on a frozen SHA is DEBT-UXM07-037."
     }
   ],
   "followup_after": "27b42bd2"
