@@ -9676,6 +9676,15 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**21 October16:33 actual landing:** [Core/Claude source ff-only return](execution_loop/evidence/ELP2-10/CORE009_INTEGRATED_LANDING_OWNER_RETURN_2026-10-21.md).
+Canonical now218b9428/tree20e7ffaa, clean; qualified432 source unchanged
+except Markdown.460 accumulated integration commits preserved, not new work
+count. Normal contracts1,629/API9,740PASS/0FAIL,7SKIP and scoped restore PASS.
+No push/runtime install. Claude successor010, dark Fleet and measurement
+focused CHANGE remain explicit; Edge sourceOFF/slot NOT_STARTED. Manager trust,
+financial mapping, approved bounds/calibration, coexistence/G2/browser remain
+open; ELP2-10 not closed and ELP2-11 not started.
+
 **21 October16:28 actual normal terminal:** [combined-source gate PASS](execution_loop/evidence/ELP2-10/CORE_INTEGRATED_NORMAL_GATE_RETURN_2026-10-21.md).
 432da03d contracts1,629/API9,740PASS,0FAIL,7API skips; build/scoped restore
 PASS, owned test cells/network cleaned. Canonical610de62f was merged as

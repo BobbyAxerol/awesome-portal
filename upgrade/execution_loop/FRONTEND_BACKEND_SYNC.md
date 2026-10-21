@@ -9,6 +9,18 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October16:33 UTC — integrated source actually ff-landed
+
+[Actual landing owner-return / next owners](evidence/ELP2-10/CORE009_INTEGRATED_LANDING_OWNER_RETURN_2026-10-21.md):
+canonical610de62f →218b9428 ff-only, clean,460 existing integration commits
+preserved (not460 new fixes this round). Qualified432 non-Markdown source
+unchanged; actual normal1,629contract/9,740API PASS,0FAIL,7SKIP/restore PASS.
+No image install/push/connected READY. Claude ACT_NOW010 successor writer,
+dark Fleet and focused measurement review; post-freeze371224f0 preserved
+outside landing. Do not rebase the whole integrated campaign to import it.
+Edge source remains OFF; no16:30 activation. Manager trust, financial
+mapping, numeric/calibration, coexistence/G2 and browser stay open.
+
 ### 21 October16:28 terminal — combined normal PASS, ff landing next
 
 [Actual combined-source normal receipt](evidence/ELP2-10/CORE_INTEGRATED_NORMAL_GATE_RETURN_2026-10-21.md):
