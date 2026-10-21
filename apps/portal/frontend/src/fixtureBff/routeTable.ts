@@ -75,7 +75,8 @@ export const ROUTES: RouteEntry[] = [
   /* session and admin reads (outside /api/v1/execution) */
   { method: "GET", pattern: `${ADM}/access/self`, url: `${ADM}/access/self`, status: 200, source: "bffAnswerer (the manager session the V2 spec inlines)", real: "control-api", note: "portal.owner-access.v1; no published schema" },
   { method: "GET", pattern: `${ADM}/profile-access/v2/effective`, url: `${ADM}/profile-access/v2/effective?workspace_id=ws_TEST_GRANTS`, status: 200, source: "bffDoubleAccess", real: "none yet", note: "no controller in apps/control-api/src at this commit; state chosen by workspace_id" },
-  { method: "GET", pattern: `${ADM}/accounts`, url: `${ADM}/accounts`, status: 200, source: "bffDoubleUsers", real: "control-api", note: "123 accounts, one unpaged list; portal-account-lifecycle.openapi.json" },
+  { method: "GET", pattern: `${ADM}/accounts`, url: `${ADM}/accounts`, status: 200, source: "bffDoubleUsers", real: "control-api", note: "123 accounts, the whole list when no query is sent (the V1 screen's transition); portal-account-lifecycle.openapi.json" },
+  { method: "GET", pattern: `${ADM}/accounts [paged]`, url: `${ADM}/accounts?limit=10`, status: 200, source: "bffDoubleUsers", real: "control-api", note: "BE-P23: any of limit, cursor, q, role, state is one keyset page by username, with page and exact roster-wide counts" },
   { method: "GET", pattern: `${ADM}/accounts/{user_id}`, url: `${ADM}/accounts/usr_0001`, status: 200, source: "bffDoubleUsers", real: "control-api" },
   { method: "GET", pattern: `${ADM}/step-up`, url: `${ADM}/step-up`, status: 200, source: "bffDoubleUsers", real: "control-api" },
   { method: "GET", pattern: `${ADM}/profile-access/v2/self-navigation`, url: `${ADM}/profile-access/v2/self-navigation?${SELF_Q}`, status: 200, source: "bffDoubleSelfAccess", real: "control-api", note: "portal.self-navigation.v1, the canonical access fixture re-stamped from the fixture clock (ceiling a year later); workspace_id picks the case (ws_TEST_NONE all HIDDEN, ws_TEST_LEGACY, ws_TEST_DENIED 403, ws_TEST_UNAVAILABLE 503, ws_TEST_MALFORMED a key the closed contract lacks); the query is exactly workspace_id and environment" },
@@ -307,6 +308,7 @@ export const SCHEMAS: Record<string, SchemaVerdict> = {
   /* a published schema exists and the double does not conform to it: reported, not hidden */
   "GET /api/v1/execution/screen-contracts": { ref: { file: "execution-screen-bff.v1", ptr: "/$defs/CatalogueResponse" }, drift: "the unit fixture lacks read_at, actor, exact_total and has more than the 23 screens the schema allows" },
   "GET /api/v1/execution/alphas/{alpha_id}/stage-drift": { ref: { file: "execution-alpha-stage-drift.v2", ptr: "" }, drift: "the double serves the pre-v2 stage-drift body (no schema_version, alpha_id, qualification)" },
+  "GET /api/admin/accounts [paged]": { ref: { file: "../openapi/portal-account-lifecycle.openapi.json", ptr: "/components/schemas/AccountRoster" } },
   "GET /api/v1/execution/resources/alphas/{alpha_id}": { ref: { file: "execution-alpha-resource.v1", ptr: "" } },
   "GET /api/v1/execution/resources/alphas/{alpha_id}/orders": { ref: { file: "execution-subject-records.v1", ptr: "" } },
   "GET /api/v1/execution/resources/alphas/{alpha_id}/fills": { ref: { file: "execution-subject-records.v1", ptr: "" } },
