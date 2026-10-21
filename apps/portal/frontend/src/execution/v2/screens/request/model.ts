@@ -379,7 +379,12 @@ export function readOutcome(raw: unknown): ApprovalCreateOutcome {
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) return unreadable;
   const o = raw as Record<string, unknown>;
   const str = (v: unknown): string | null => (typeof v === "string" && v !== "" ? v : null);
+  // The HTTP port marks what it saw against the published schemas (`approvalCreate.ts`): a created body that breaks it is answered-not-readable, and a
+  // problem that is not the published shape has no typed code: the status it came with is all that is left of it.
+  const untyped = typeof o.untyped === "object" && o.untyped !== null && Number.isInteger((o.untyped as { status?: unknown }).status) ? (o.untyped as { status: number }).status : null;
+  const untypedReason = untyped === null ? null : `HTTP_${untyped}: The request failed.`;
   if (o.kind === "created" || o.kind === "replayed") {
+    if (Array.isArray(o.schemaViolations) && o.schemaViolations.length > 0) return unreadable;
     const approvalId = str(o.approvalId);
     if (approvalId === null) return unreadable;
     return {
@@ -393,10 +398,13 @@ export function readOutcome(raw: unknown): ApprovalCreateOutcome {
       requester: str(o.requester),
     };
   }
-  if (o.kind === "duplicate") return { kind: "duplicate", existingApprovalId: str(o.existingApprovalId), reason: str(o.reason) ?? "Open work for this alpha and run already exists." };
+  if (o.kind === "duplicate") {
+    if (untypedReason !== null) return { kind: "failed", status: "unavailable", reason: untypedReason };
+    return { kind: "duplicate", existingApprovalId: str(o.existingApprovalId), reason: str(o.reason) ?? "Open work for this alpha and run already exists." };
+  }
   if (o.kind === "failed") {
     const status = (FAILED_STATUS as readonly unknown[]).includes(o.status) ? (o.status as (typeof FAILED_STATUS)[number]) : "unavailable";
-    return { kind: "failed", status, reason: str(o.reason) ?? "The request failed.", ...(o.offline === true ? { offline: true } : {}) };
+    return { kind: "failed", status, reason: untypedReason ?? str(o.reason) ?? "The request failed.", ...(o.offline === true ? { offline: true } : {}) };
   }
   return unreadable;
 }

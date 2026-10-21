@@ -21,7 +21,7 @@
  * `schema_version` is `unsupported_shape`; never throws.
  */
 import type { ApprovalCreateOutcome } from "../../api/ports";
-import { readApprovalCreated } from "../../api/rows";
+import { readApprovalCreateV1 } from "./approvalCreate";
 import { closed, oneOf, plain, rec, type UnsupportedStatusShape } from "./commandCurrency";
 
 export const APPROVAL_REQUEST_LOOKUP_SCHEMA = "governance.approval-request-lookup.v1";
@@ -52,14 +52,12 @@ function workspaceText(value: unknown): string | null {
   return text !== null && text.length >= 3 ? text : null;
 }
 
-/** `result` of a FOUND: exactly the replay body. Closed envelope, then the same reader a replay uses (`readApprovalCreated`). */
+/** `result` of a FOUND: exactly the replay body. Closed envelope, then the strict reader of the create route's own body. */
 function readReplay(raw: unknown): ReplayedApproval | null {
   const envelope = closed(raw, ["schema_version", "replayed", "approval"]);
   if (envelope === null || envelope.schema_version !== "governance.approval-create.v1" || envelope.replayed !== true) return null;
-  const approval = rec(envelope.approval);
-  // `readApprovalCreated` defaults an absent status to PENDING; a lookup states what the server stored, so an absent status is refused.
-  if (approval === null || typeof approval.status !== "string" || approval.status === "") return null;
-  const outcome = readApprovalCreated(envelope);
+  // The strict reader (`approvalCreate.ts`): the Approval exactly as the schema writes it, no default for an absent member.
+  const outcome = readApprovalCreateV1(envelope);
   return outcome !== null && outcome.kind === "replayed" ? outcome : null;
 }
 

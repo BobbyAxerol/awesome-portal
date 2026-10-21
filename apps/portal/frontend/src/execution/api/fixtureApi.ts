@@ -101,6 +101,7 @@ import type {
 } from "./ports";
 import { isPaperExitDecision, unavailable } from "./ports";
 import type { CapitalPreviewInput, InsightBatchInput, DecisionPlan } from "./ports";
+import { readPaperWorkbenchProfile } from "../v2/readers/paperRead";
 
 /** Wire-shaped, snake_case, exactly as the endpoint will send it. */
 /* The five pending rows of the Approval Inbox hi-fi, and they are the cast's.
@@ -471,7 +472,7 @@ export function createFixtureApi(options: FixtureApiOptions = {}): ExecutionApi 
     async getPaperWorkbenchProfile(_deploymentId: string, variant: "paper" | "vnm" = "paper") {
       const blocked = gate<ProfileEnvelope>("getPaperWorkbenchProfile");
       if (blocked) return blocked;
-      return fixtureRead(variant === "vnm" ? PAPER_WORKBENCH_VNM_PARTIAL : PAPER_WORKBENCH_PARTIAL, readProfileEnvelope, "The paper workbench");
+      return fixtureRead(variant === "vnm" ? PAPER_WORKBENCH_VNM_PARTIAL : PAPER_WORKBENCH_PARTIAL, readPaperWorkbenchProfile, "The paper workbench");
     },
     async getQueryAnalytics(_subject: "alphas" | "portfolios" | "deployments", _subjectId: string, _options: { sourceFacts?: boolean } = {}) {
       const blocked = gate<QueryAnalytics>("getQueryAnalytics");
