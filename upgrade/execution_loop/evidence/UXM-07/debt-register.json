@@ -102,13 +102,14 @@
     },
     {
       "id": "DEBT-UXM07-031",
-      "title": "Phone Users and Alpha 360 Orders & Fills are bounded in code (bf4e02ee); their two 390 px baselines are not yet re-recorded",
+      "title": "Phone Users and Alpha 360 Orders & Fills are bounded (bf4e02ee) and their 390 px baselines re-recorded (9cf6b04b); remaining: server-paged roster and a two-column Alpha card",
       "where": "bf4e02ee: v2/usePhoneRows.ts (the 660px query of Live and the Blotter, plus a window), screens/users/index.tsx (ten cards, Load more draws ten more of the roster already read; above 660px unchanged at 50 per Load more), screens/alpha/OrdersTab.tsx (three cards per table, Load more draws three more of the loaded rows and only then asks the server; the focused order is always inside the window). Measured on a host build at 390 (host Playwright, 6 orders and 3 fills in the double; 123 accounts): Users 7,729 -> 2,179 px, Alpha 360 Orders & Fills 4,522 -> 3,836 px (360: 4,600 -> 3,888); at 1440 both are byte-for-byte the same height (3,065 and 1,841 px); after one Load more at 390 Users is 20 cards (3,560 px). No new sentence (existing pager caption and Load more). Tests: users.test.tsx and alpha.test.tsx (phone window, Load more, no second read), plus testHygiene, absentValues, failClosed, v2Hygiene, linkTargets, titleAbsence, cardsTable, flagOff, flagOn green; tsc has no error in the touched files",
       "consequence": "The two V2 phone baselines v2-users-390 and v2-alpha-360-orders-390 still show the old long pages, so the pinned visual suite will fail those two cells until they are re-recorded. Re-record by the recorder in a clean worktree: scripts/portal-web-visual-record-v2.sh 'Users @ 390|Alpha 360 / Orders & Fills @ 390', then review the contact sheet. v2-na-why-open-390 (Users, viewport shot) should be byte-identical (the table is below the first screen): verify, do not assume. Unchanged: every 1440 and 1024 cell, the Alpha 360 Orders & Fills 1024 cell, Live, Blotter. Not baselined at all: 360 px (Alpha at 360 was measured only on the host)",
-      "proposed": "Claude: re-record the two cells (Bobby's rule: recorder runs directly, restore zero-diff files, review the images) and run the whole spec twice. Not done and not asked: a server-paged roster (the Users read is still one unpaged list, so the 'ten cards' window is a view of the list already read; if the roster grows past a few thousand rows a keyset route is a Codex request), and a two-column card grid for the Alpha order card (the Blotter's treatment) if three cards of about 250 px each is still judged long",
+      "proposed": "Remaining and not asked: a keyset route for the Users roster (Codex request if the roster grows past a few thousand rows) and a two-column card for the Alpha order card (Blotter treatment).",
       "owner": "Claude (re-record); Codex only if the roster needs server paging",
       "status": "STILL_OPEN (narrowed 2026-10-21: code done in bf4e02ee, two baselines to re-record)",
-      "opened": "2026-10-21"
+      "opened": "2026-10-21",
+      "closed_part": "2026-10-21: bounded in code (89536bda); the two V2 cells (Users @390, Alpha 360 Orders & Fills @390) re-recorded in a clean worktree, two consecutive compares green, V2 spec 61 cells (9cf6b04b)."
     },
     {
       "id": "DEBT-UXM07-032",
