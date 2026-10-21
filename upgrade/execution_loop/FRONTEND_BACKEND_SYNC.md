@@ -9,6 +9,24 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October18:22 UTC — counted READ/SSE plan and capacity-owner request
+
+[Counted window/capacity return](evidence/ELP2-10/CORE009_COUNTED_WINDOW_AND_CAPACITY_RETURN_2026-10-21.md)
+confirms each physical native frame, including heartbeat, consumes one retained
+admission; a client frame limit is not a server bound. Existing9/cap32/reserve20
+leaves3; partial READ/revoke/unaffected-scope case is distinct from full08/09.
+Edge returns concrete frame/cancellation bounds before any cap decision; no
+automatic increase, purge or restart reset. Writer8ac stays frozen in its SAME
+normal gate, followed only by the guarded image build; no second heavy job.
+Root ACCEPTS Claude7224d4aa quiet/Fleet/stage/G2 semantics; one narrow CHANGE
+remains: hash exactly the parsed single-read census/ingest buffers, not a
+second path read (`m7-g2-window.mjs:58–63`). Focused regression only, no load
+or M1 rerun. Prior16:53browser probes are not the new Fleet bundle proof.
+Exact11 old
+Vite PIDs(~8.03GiB) are handed to Claude for ownership/cleanup ACK, not killed;
+host memory recovered above the6GiB build-entry floor at18:21. No load PASS
+or installed/native-browser readiness is inferred from either observation.
+
 ### 21 October18:12 UTC — normal/image automation and actual finite census
 
 [Current corrected source return](evidence/ELP2-10/CORE009_SUCCESSOR_NORMAL_IMAGE_RETURN_2026-10-21.md)

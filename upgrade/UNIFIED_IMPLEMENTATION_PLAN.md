@@ -14505,3 +14505,16 @@ census already delivered/hash-verified. Core932c4fdf actual-factory ACK consumed
 No Edge product/config/DB/source/session/grant/runtime mutation or new test cell.
 Corrected normalPID3044368 confirmed live18:12:28UTC with progressing tests;
 continue that SAME handle, no duplicate gate. Full connected08/09 NOT_MET.
+
+### Core21Oct18:22UTC — counted frame budget and exact hygiene handoff
+
+[Finite-window/capacity return](execution_loop/evidence/ELP2-10/CORE009_COUNTED_WINDOW_AND_CAPACITY_RETURN_2026-10-21.md)
+distinguishes3 remaining admissions from unlimited STREAM: each admitted
+physical frame/heartbeat counts, client frame flags are not server limits.
+Edge must return counted bounds before a full-suite cap proposal is applied;
+one eligible partial READ is not held by optional cache/Manager inputs. No
+source activation, grant/session, cap increase, purge or restart occurred.
+Claude receives the exact11 old Vite processes for ownership ACK/cleanup,
+not a broad kill request. The existing guarded build floor remains6GiB.
+Three read-only agents reused; new Claude guards/Fleet source under review.
+Same8ac normal continues, ELP2-10 OPEN and no ELP2-11/release. Verification:R0.
