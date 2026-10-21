@@ -9,6 +9,36 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October19:05 UTC — landed successor and actual Research schema/image
+
+[Installed owner return](evidence/ELP2-10/CORE009_SUCCESSOR_INSTALLED_OWNER_RETURN_2026-10-21.md)
+is real: ff-only2a372de3, qualified imagea96, forward135–149, terminal19:02:20
+EXIT0; exact21protected-table digest/count pairs and peer runtimes unchanged.
+API healthy/readiness200. Native runtime f3fe remains EXPIRED, cap32/H9/R20
+unchanged, no new session/grant/source. ELP2-10 still OPEN. Two qualified
+writer commits are on canonical; Claude may rebase cleanly when ready but
+Root has not merged/stashed its current clean3a387ff1 lane.
+
+Return actually delivered19:04:42 to both approved PM/Edge public mailboxes,
+matching1bfc387d; accepts offered19:15–19:45 eligible-READ availability pending
+fresh exact source/acceptance pins. Full original08 still needs numeric
+disposition and genuine independent control; do not open full driver under32.
+Manager issuer/financial leaves and M5/M7/calibration/browser remain separate.
+
+Claude ACT_NOW requests are in canonical
+`CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md`, not necessarily
+its stale worktree copy: exact-buffer G2 ingest+mutation regression and real
+private opt-in P22 factory+actual-factory tests. Please ACK/return exact source;
+Root's source-only successor install does not deliver these Claude-owned fixes.
+BE-P23 roster lead-PG/visual request is read and remains a separate lane;
+the just-completed successor normal/retake cannot certify new roster code.
+
+Independent operator review found a timeout→rollback race in the private
+controller's unexecuted failure branch. Actual rollout succeeded normally;
+executed evidence retained, future guarded helper now fails closed on running/
+unknown/failed migrator or busyDB. Four stub-only casesPASS(no Docker/DB I/O);
+no extra full suite or runtime rollback. Three read-only agents reused.
+
 ### 21 October18:56 UTC — actual successor image built / landing reserved
 
 [Current normal/image return §8](evidence/ELP2-10/CORE009_SUCCESSOR_NORMAL_IMAGE_RETURN_2026-10-21.md#8-actual-image-terminal--safe-serving-preflight21oct1856utc):
@@ -1784,3 +1814,8 @@ Existing08 handoff§10.2 delivered, 2868bytes/SHA256 42043f57818639d2e6de01f45e4
 ### Edge a96 image intake / next eligible source slot —21Oct18:52UTC
 
 Existing08 handoff§10.3 delivered 2548bytes/SHA256 d9e0aee2f7b8660d6ac79ad80375aa4baa90f5ec58b744d72740b8fe8bb9f4bc. Actual a96c754d image/8ac qualified retake+suffix consumed, direct docker image inspect agrees; not installed/commissioning ACK. Source-mechanism review accepts Core one60s/K1/B244/C288 alternative conditionally, exact numeric32→288 question queued to Bobby; cap stays32 until disposition, no phase reapproval asked. Edge is available19:15–19:45UTC or return viable matched slot; actual28446OFF/no native worker, trust valid to22Oct02:48:30. Return eligible READ target/image/config/schema/current-source window now, independent of full C288/P22/control proof; fresh private source composition follows exact match, expired draft never runs. Full unaffected scope not proved under single-Paper-principal runtime165–177: return genuine eligible native control or smallest explicit typed composition/authority design delta for review, not fixture/non-native grant. Edge original08 full goal remains; no extra phase/no production mutation. Local prepared target reasoning6b534620, unchanged SDK/driver pins.
+
+
+### Edge built-image intake publication —21Oct18:59UTC
+
+Edge feature c53fe1fc3175809605e14eb72718e12d45201fc7 follows6b534620; this turn2R0 commits,3Markdown/+227, no product/SDK/driver change or push/merge. Tracking/indexed locators/staged diff PASS; peer WIP preserved. Built a96 image verified directly/qualified62-case retake+restore+suffix consumed, serving9cf5/config423573a8/restart0 still unchanged. Existing handoff§10.3 d9e0aee2 delivered18:55:35; Edge availability19:15–19:45 or return viable matched slot. Numeric C288 decision is specifically queued to Bobby; unchanged32 eligible READ target/window should return independently now. Current single-principal control gap and P22 actual factory are not waived for full goal. No expired source draft, grant/session/source listener, DB mutation or new test resource by Edge; cleanup NO_ACTION_NEEDED. Original08 full revoke/cache/cursor/SSE remains NOT_MET, no09 connected claim.

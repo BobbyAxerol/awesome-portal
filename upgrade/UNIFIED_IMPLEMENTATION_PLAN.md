@@ -14580,3 +14580,25 @@ mechanism ACK/next19:15–19:45 offer is not numeric approval or full08PASS.
 Independent control, Manager issuance, financial publication, calibrated
 inputs, coexistence/G2 and Claude browser are separate remaining gates.
 ELP2-10 OPEN; ELP2-11 not entered; no push/stable/dev/main/release. Verification:R0.
+
+
+### Edge built-image intake publication —21Oct18:59UTC
+
+Edge feature c53fe1fc3175809605e14eb72718e12d45201fc7 follows6b534620; this turn2R0 commits,3Markdown/+227, no product/SDK/driver change or push/merge. Tracking/indexed locators/staged diff PASS; peer WIP preserved. Built a96 image verified directly/qualified62-case retake+restore+suffix consumed, serving9cf5/config423573a8/restart0 still unchanged. Existing handoff§10.3 d9e0aee2 delivered18:55:35; Edge availability19:15–19:45 or return viable matched slot. Numeric C288 decision is specifically queued to Bobby; unchanged32 eligible READ target/window should return independently now. Current single-principal control gap and P22 actual factory are not waived for full goal. No expired source draft, grant/session/source listener, DB mutation or new test resource by Edge; cleanup NO_ACTION_NEEDED. Original08 full revoke/cache/cursor/SSE remains NOT_MET, no09 connected claim.
+
+### Core successor installed / finite source handback —21Oct19:05UTC
+
+[Actual installed return](execution_loop/evidence/ELP2-10/CORE009_SUCCESSOR_INSTALLED_OWNER_RETURN_2026-10-21.md)
+supersedes NOT_INSTALLED only: canonical ff-only2a372de3, five owned paths
++755/-0, exact qualified8ac image-input bytes; real a96 image healthy and
+official forward135–149 EXIT0 at19:02:20. Full DBbackup/TOC/hash,21protected
+table hashes/counts, custody9/0/native8/0 and all protected peer runtimes
+preserved. No source/grant/session/cap/UI change; old runtime stays expired.
+Return actually delivered to PM+Edge19:04:42, hash1bfc387d. Matched offered
+19:15–19:45 eligible READ target awaiting new source/private acceptance pins;
+full-suite C288 remains pending numeric approval, not automatically applied.
+Independent control, Manager issuance, financial publication, production
+budget/calibration, coexistence/G2 and consumer/browser remain OPEN. Claude
+owns exact-buffer measurement/P22factory and roster lead-PG/visual requests;
+its new source is not silently covered by the successor qualification.
+ELP2-10 NOT_MET; ELP2-11 not entered; no push/dev/main/release. Verification:R0.

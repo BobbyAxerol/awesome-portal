@@ -1,7 +1,8 @@
 # Core009 successor — frozen normal/image and commissioning return
 
-**NORMAL_FAILED / FOCUSED_RETAKE_PASS / IMAGE_BUILT / NOT_INSTALLED /
-NOT_CONNECTED_READY**, latest cut21Oct18:56UTC; earlier observations below retain their times.
+**NORMAL_FAILED / FOCUSED_RETAKE_PASS / IMAGE_BUILT_AND_INSTALLED /
+NOT_CONNECTED_READY**, latest cut21Oct19:02UTC; earlier observations below retain their times.
+Actual installation is in the separately delivered [installed owner return](CORE009_SUCCESSOR_INSTALLED_OWNER_RETURN_2026-10-21.md).
 This is the new return for corrected source. Earlier first-focused and
 sequential returns already sent to HK remain immutable. No push, dev/main,
 stable/provider28445, command/Live, UI or source activation is authorized by
@@ -302,3 +303,16 @@ currently rebasing its own lane with a debt-register conflict; Root does not
 touch that tree or import incomplete peer work. Manager issuance, financial
 source leaves, production numeric/calibration, G2 and real browser gates
 remain independently OPEN; no new UI field is required by this writer.
+
+## 9. Actual landing/installation successor21Oct19:02UTC
+
+Writer landed ff-only as424a6c35/2a372de3, exact non-Markdown bytes and image
+inputs equal frozen8ac; no code loss or duplicate hook/build. Official135–149
+migrations and a96 image-only installation actually EXIT0 at19:02:20.
+All21 protected table hashes/counts and peer runtime snapshots unchanged,
+API healthy/direct readiness200; old native authority/cap32 remains expired.
+Detailed backup/config/target/cleanup and source-owner action pins are in
+the separate installed return above. Its bytes were actually copied to the
+approved PM+Edge mailboxes19:04:42 with SHA256
+`1bfc387d03bf0648fa656d3afebf7c260c81217d35a83f2d572c06e075b576cf`.
+Delivery is not fresh source/window ACK or connected READ acceptance.
