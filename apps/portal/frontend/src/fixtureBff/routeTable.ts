@@ -297,6 +297,7 @@ export const SCHEMAS: Record<string, SchemaVerdict> = {
   "GET /api/v1/execution/operations/{operation_id}": { ref: { file: OPS, ptr: "/$defs/OperationWorkflowResponse" } },
   "GET /api/v1/execution/commands/tasks": { ref: { file: "execution-command-tasks.v1", ptr: "" } },
   "GET /api/v1/execution/commands/catalog": { ref: { file: OPS, ptr: "/$defs/CommandCatalogue" } },
+  "GET /api/v1/execution/screens/paper/{deployment_id} [stage id]": { ref: { file: "execution-paper-read.v1", ptr: "" } },
   "POST /api/v1/execution/governance/approvals": { ref: { file: "execution-governance-product.v1", ptr: "/$defs/ApprovalCreateResponse" } },
   "POST /api/v1/execution/governance/sandbox/capture-note": { ref: { file: "execution-governance-review-capture.v1", ptr: "/$defs/CaptureResponse" } },
   "POST /api/v1/execution/commands/plans": { ref: { file: OPS, ptr: "/$defs/ExecutionCommandPlan" } },
@@ -304,7 +305,6 @@ export const SCHEMAS: Record<string, SchemaVerdict> = {
   "POST /api/v1/execution/operations/{operation_id}/resolve": { ref: { file: OPS, ptr: "/$defs/OperationWorkflowResponse" } },
 
   /* a published schema exists and the double does not conform to it: reported, not hidden */
-  "GET /api/v1/execution/screens/paper/{deployment_id} [stage id]": { ref: { file: "execution-paper-read.v1", ptr: "" }, drift: "data.history_windows is not in the published Data schema; the V1 reader and the V2 workbench read it for the downsample caption (everything else conforms)" },
   "GET /api/v1/execution/screen-contracts": { ref: { file: "execution-screen-bff.v1", ptr: "/$defs/CatalogueResponse" }, drift: "the unit fixture lacks read_at, actor, exact_total and has more than the 23 screens the schema allows" },
   "GET /api/v1/execution/alphas/{alpha_id}/stage-drift": { ref: { file: "execution-alpha-stage-drift.v2", ptr: "" }, drift: "the double serves the pre-v2 stage-drift body (no schema_version, alpha_id, qualification)" },
   "GET /api/v1/execution/resources/alphas/{alpha_id}": { ref: { file: "execution-alpha-resource.v1", ptr: "" } },

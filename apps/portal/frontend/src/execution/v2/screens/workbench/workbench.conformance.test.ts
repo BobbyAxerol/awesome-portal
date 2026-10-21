@@ -18,15 +18,16 @@
  *
  * Differences from the schema, all pinned here so a schema change shows up as a red test (the `ledger` block):
  *   S-1  the seven Full Blotter members are refused in a workbench body (the schema allows them; the workbench reads none).
- *   X-1  the five members the server sends and the schema does not list (`read_at_ms`, `as_of_ms`, `panels`, `history_windows`,
- *        `lineage_scoped_out`) are read; the schema rejects each. Schema issue for Codex (backend-requests.md).
  *   R-1  a body that names another paper-read version (overview, full blotter) is refused by the screen, not by the schema.
+ * There is no looser-than-schema entry. Since FE-073 (c02f63d8) the schema lists the five members the server sends (`read_at_ms`,
+ * `as_of_ms`, `panels`, `data.history_windows`, `lineage_scoped_out`) and types `account_equity` as retained history (no 200-row cap);
+ * the reader checks each exactly as published, and the oracle below is the whole schema with nothing set aside.
  */
 import { afterAll, describe, expect, it } from "vitest";
 
 import { paperProfile } from "../../../../../e2e/bffDoubleStage";
 import type { ProfileEnvelope } from "../../../api/profileRead";
-import { BLOTTER_ONLY_MEMBERS, UNPUBLISHED_CAPABILITY_MEMBERS, UNPUBLISHED_DATA_MEMBERS, UNPUBLISHED_ROOT_MEMBERS, paperReadViolations, readPaperWorkbenchProfile } from "../../readers/paperRead";
+import { BLOTTER_ONLY_MEMBERS, paperReadViolations, readPaperWorkbenchProfile } from "../../readers/paperRead";
 import { canonicalDigest, loadCanonical, schemaEnum } from "../../testkit/loadCanonical";
 import { cartesian, coverage, describeCoverage, dimension, type Draft } from "../../testkit/matrix";
 import { mutationsOf as mutate, PROBE } from "../../testkit/mutate";
@@ -44,6 +45,7 @@ const FILES = [
   "execution-paper-workbench.positions-by-side.valid.json",
   "execution-paper-workbench.positions-by-side.partial.valid.json",
   "execution-paper-workbench.positions-by-side.unavailable.valid.json",
+  "execution-paper-read.served-envelope.valid.json",
 ] as const;
 const digests = Object.fromEntries(FILES.map((f) => [f, canonicalDigest(f)]));
 afterAll(() => {
@@ -53,18 +55,8 @@ afterAll(() => {
 /* ═════════════════════ the oracle and the chain ═════════════════════ */
 
 const clone = <T,>(value: T): T => structuredClone(value);
-const withoutUnpublished = (body: Draft): Draft => {
-  const copy = clone(body);
-  if (copy === null || typeof copy !== "object") return copy;
-  for (const key of UNPUBLISHED_ROOT_MEMBERS) delete copy[key];
-  if (copy.data && typeof copy.data === "object") for (const key of UNPUBLISHED_DATA_MEMBERS) delete copy.data[key];
-  if (Array.isArray(copy.capabilities)) {
-    for (const c of copy.capabilities) if (c && typeof c === "object") for (const key of UNPUBLISHED_CAPABILITY_MEMBERS) delete c[key];
-  }
-  return copy;
-};
-/** The schema's verdict on a body, with the five unpublished members (X-1) set aside. */
-const oracle = (body: unknown): string[] => validateAgainst(SCHEMA, "", withoutUnpublished(body));
+/** The schema's verdict on a body: the whole schema, nothing set aside. */
+const oracle = (body: unknown): string[] => validateAgainst(SCHEMA, "", body);
 
 type Locus = "body" | "stage_facts" | "positions_by_side" | "venue_calendar" | "identity";
 /** Where the schema's complaints lie. `deployment` is a oneOf, so its complaint does not say whether it is the record or the identity keys: ask the record alone. */
@@ -90,7 +82,17 @@ function read(body: unknown): Read {
 const refused = (r: Read): boolean => r.model === null || (r.model.page.replace !== null && r.model.page.replace.status !== "empty");
 
 const RICH = { orders: 3, fills: 2, positions: 2, equity: 6, history: true, identity: true, stageFacts: "published", sides: "available" } as const;
-const base = (): Draft => paperWire(RICH);
+const SERVED = "execution-paper-read.served-envelope.valid.json";
+/** What the server also sends (FE-073): the EDS-02 clocks, a panel envelope and the lineage counter, in the published shapes. */
+function served(body: Draft): Draft {
+  const canonical = loadCanonical<Draft>(SERVED);
+  body.read_at_ms = Date.parse(body.read_at);
+  body.as_of_ms = body.as_of === null ? null : Date.parse(body.as_of);
+  body.panels = clone(canonical.panels);
+  body.capabilities[0].lineage_scoped_out = clone(canonical.capabilities[0].lineage_scoped_out);
+  return body;
+}
+const base = (): Draft => served(paperWire(RICH));
 
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
@@ -126,18 +128,16 @@ describe("L0 · canonical, verbatim", () => {
     expect(m.facts).not.toBeNull();
   });
 
-  it("the harness body (derived from the canonical one, with rows, equity, identity, stage facts and sides) conforms apart from the unpublished member", () => {
+  it("the harness body (derived from the canonical one, with rows, equity, history window, identity, stage facts, sides, clocks and panels) conforms", () => {
     const body = base();
     expect(oracle(body)).toEqual([]);
-    expect(validateAgainst(SCHEMA, "", body)).toEqual(["$.data.history_windows: not allowed"]);
     expect(paperReadViolations(body)).toEqual([]);
     expect(refused(read(body))).toBe(false);
   });
 
-  it.each(["standard", "vn-market"] as const)("the e2e double's %s workbench body (what the pixel baselines photograph) conforms apart from the unpublished member", (variant) => {
+  it.each(["standard", "vn-market"] as const)("the e2e double's %s workbench body (what the pixel baselines photograph) conforms", (variant) => {
     const body = paperProfile("dep_paper_01", variant);
     expect(oracle(body)).toEqual([]);
-    expect(validateAgainst(SCHEMA, "", body)).toEqual(["$.data.history_windows: not allowed"]);
     expect(paperReadViolations(body)).toEqual([]);
     const r = read(body);
     expect(refused(r)).toBe(false);
@@ -162,32 +162,96 @@ describe("L0 · canonical, verbatim", () => {
 
 /* ═════════════ the ledger: every difference between the reader and the schema, pinned ═════════════ */
 describe("the ledger · the differences are exactly the listed ones", () => {
-  it("X-1: the schema rejects each unpublished member and the reader reads it", () => {
-    const withMembers = base();
-    withMembers.read_at_ms = Date.parse("2026-10-17T09:14:02Z");
-    withMembers.as_of_ms = Date.parse("2026-10-17T09:14:00Z");
-    withMembers.panels = {};
-    withMembers.capabilities[0].lineage_scoped_out = { account: 1 };
-    expect(oracle(withMembers)).toEqual([]);
-    const complaints = validateAgainst(SCHEMA, "", withMembers);
-    for (const where of ["$.read_at_ms", "$.as_of_ms", "$.panels", "$.data.history_windows", "$.capabilities[0].lineage_scoped_out"]) {
-      expect(complaints.some((c) => c.startsWith(where)), `the schema no longer rejects ${where}: delete it from the X-1 list in paperRead.ts`).toBe(true);
-    }
-    const r = read(withMembers);
+  it("FE-073: the five served members are published; the reader reads them as published", () => {
+    const body = base();
+    expect(oracle(body)).toEqual([]);
+    expect(paperReadViolations(body)).toEqual([]);
+    for (const where of ["read_at_ms", "as_of_ms", "panels", "history_windows", "lineage_scoped_out"]) expect(JSON.stringify(body), where).toContain(where);
+    const r = read(body);
     expect(refused(r)).toBe(false);
-    expect(r.envelope?.asOfMs).toBe(Date.parse("2026-10-17T09:14:00Z"));
-    expect(r.envelope?.readAtMs).toBe(Date.parse("2026-10-17T09:14:02Z"));
-    // Each is only tolerated in its own place and in its own shape.
-    for (const [path, value] of [["panels", 5], ["data.history_windows", []], ["data.history_windows", 5]] as const) {
-      const body = clone(withMembers);
-      if (path === "panels") body.panels = value;
-      else body.data.history_windows = value;
-      expect(refused(read(body)), `${path} <- ${JSON.stringify(value)}`).toBe(path !== "panels");
+    expect(r.envelope?.asOfMs).toBe(Date.parse(body.as_of));
+    expect(r.envelope?.readAtMs).toBe(Date.parse(body.read_at));
+    expect(Object.keys(r.envelope?.panels ?? {})).toEqual(["orders"]);
+    expect(r.model!.equity.serverEnvelope).toMatchObject({ sourceCount: 1438, method: "PER_SERIES_BUCKET_EXTREMA" });
+  });
+
+  it.each([
+    ["read_at_ms is a string", (b: Draft) => { b.read_at_ms = "1792569601000"; }],
+    ["read_at_ms is fractional", (b: Draft) => { b.read_at_ms = 1.5; }],
+    ["read_at_ms is null", (b: Draft) => { b.read_at_ms = null; }],
+    ["read_at_ms is beyond the date range", (b: Draft) => { b.read_at_ms = 8_640_000_000_000_001; }],
+    ["as_of_ms is a string", (b: Draft) => { b.as_of_ms = "1"; }],
+    ["panels is a number", (b: Draft) => { b.panels = 5; }],
+    ["panels is an array", (b: Draft) => { b.panels = []; }],
+    ["a panel name outside the grammar", (b: Draft) => { b.panels.Orders = b.panels.orders; }],
+    ["35 panels", (b: Draft) => { for (let i = 0; i < 34; i += 1) b.panels[`p_${i}`] = clone(b.panels.orders); }],
+    ["a panel with a lower-case state", (b: Draft) => { b.panels.orders.state = "ready"; }],
+    ["a READY panel without data", (b: Draft) => { b.panels.orders.state = "READY"; b.panels.orders.data = null; }],
+    ["an EMPTY panel with data", (b: Draft) => { b.panels.orders.state = "EMPTY"; }],
+    ["a panel without clocks", (b: Draft) => { delete b.panels.orders.clocks; }],
+    ["a panel clock that is not an instant", (b: Draft) => { b.panels.orders.clocks.as_of_ms = "x"; }],
+    ["a panel without read_at_ms in its clocks", (b: Draft) => { b.panels.orders.clocks.read_at_ms = null; }],
+    ["a panel with an extra member", (b: Draft) => { b.panels.orders.note = "x"; }],
+    ["a panel with 201 returned rows", (b: Draft) => { b.panels.orders.coverage.returned_count = 201; }],
+    ["a panel total that is not a digit string", (b: Draft) => { b.panels.orders.coverage.source_total = 3; }],
+    ["a panel gap without a reason", (b: Draft) => { delete b.panels.orders.coverage.gaps[0].reason_code; }],
+    ["a panel formula with a malformed digest", (b: Draft) => { b.panels.orders.formula = { formula_id: "f", formula_version: "v1", input_revision: null, input_digest: "sha256:zz", composite_read_revision: null }; }],
+    ["a panel that is not retryable-typed", (b: Draft) => { b.panels.orders.retryable = "no"; }],
+    ["history_windows is an array", (b: Draft) => { b.data.history_windows = []; }],
+    ["history_windows is a number", (b: Draft) => { b.data.history_windows = 5; }],
+    ["history_windows names another window", (b: Draft) => { b.data.history_windows.portfolio_equity = clone(b.data.history_windows.account_equity); }],
+    ["a window on another basis", (b: Draft) => { b.data.history_windows.account_equity.basis = "ACCOUNT_EQUITY_SNAPSHOTS"; }],
+    ["a truncated window", (b: Draft) => { b.data.history_windows.account_equity.truncated = true; }],
+    ["a window without returned_rows", (b: Draft) => { delete b.data.history_windows.account_equity.returned_rows; }],
+    ["a window of 0 days", (b: Draft) => { b.data.history_windows.account_equity.days = 0; }],
+    ["a downsample by another method", (b: Draft) => { b.data.history_windows.account_equity.downsample.method = "bucket_last"; }],
+    ["a downsample without series_count", (b: Draft) => { delete b.data.history_windows.account_equity.downsample.series_count; }],
+    ["a downsample of 0 series", (b: Draft) => { b.data.history_windows.account_equity.downsample.series_count = 0; }],
+    ["lineage_scoped_out is empty", (b: Draft) => { b.capabilities[0].lineage_scoped_out = {}; }],
+    ["lineage_scoped_out names an unknown source", (b: Draft) => { b.capabilities[0].lineage_scoped_out = { planet: 1 }; }],
+    ["lineage_scoped_out counts 0", (b: Draft) => { b.capabilities[0].lineage_scoped_out = { account: 0 }; }],
+  ])("FE-073: %s is refused, because the schema refuses it", (_name, edit) => {
+    const body = base();
+    edit(body);
+    expect(oracle(body)).not.toEqual([]);
+    expect(refused(read(body))).toBe(true);
+  });
+
+  it("FE-073: the nullable and optional words of the five members are readings, not refusals", () => {
+    const edits: [string, (b: Draft) => void][] = [
+      ["as_of_ms null with as_of null", (b) => { b.as_of = null; b.as_of_ms = null; }],
+      ["no served members at all", (b) => { delete b.read_at_ms; delete b.as_of_ms; delete b.panels; delete b.data.history_windows; delete b.capabilities[0].lineage_scoped_out; }],
+      ["empty panels", (b) => { b.panels = {}; }],
+      ["a window without a downsample (exact rows)", (b) => { delete b.data.history_windows.account_equity.downsample; }],
+      ["empty history_windows", (b) => { b.data.history_windows = {}; }],
+      ["an EMPTY panel with null data and a null formula", (b) => { b.panels.orders.state = "EMPTY"; b.panels.orders.data = null; }],
+      ["a panel clock at the date range's end", (b) => { b.panels.orders.clocks.event_time_ms = -8_640_000_000_000_000; }],
+    ];
+    for (const [name, edit] of edits) {
+      const body = base();
+      edit(body);
+      expect(oracle(body), name).toEqual([]);
+      expect(refused(read(body)), name).toBe(false);
     }
-    const strays = base();
-    strays.data.lineage_scoped_out = {};
-    strays.capabilities[0].extra_unpublished = 1;
-    expect(refused(read(strays))).toBe(true);
+  });
+
+  it("FE-073: account_equity is retained history: 201 and 2500 rows are valid and all are carried, while every other branch stays capped at 200", () => {
+    for (const rows of [201, 2500]) {
+      const body = base();
+      body.data.account_equity = cloneRows(body.data.account_equity[0], rows, (r: Draft, i: number) => {
+        r.ts = new Date(Date.UTC(2026, 9, 1) + i * 60_000).toISOString();
+        r.equity = (100_000 + i).toFixed(2);
+      });
+      expect(oracle(body), String(rows)).toEqual([]);
+      const r = read(body);
+      expect(refused(r), String(rows)).toBe(false);
+      expect(r.model!.equity.rows, "every retained row is carried, none is cut to the snapshot page").toBe(rows);
+      expect(r.model!.equity.points.length).toBe(rows);
+    }
+    const over = base();
+    over.data.fills = cloneRows(over.data.fills[0], 201, (r: Draft, i: number) => { r.fill_id = `fill_${pad(i)}`; });
+    expect(oracle(over)).not.toEqual([]);
+    expect(refused(read(over))).toBe(true);
   });
 
   it.each([
@@ -403,15 +467,13 @@ describe("L2 · the schema's bounds", () => {
 });
 
 /* ═════════════════════════ L3 ═════════════════════════ */
-/** What the schema says nothing about (X-1) cannot be held to it; the ledger block checks those members own shapes. */
-const skipUnpublished = (path: readonly (string | number)[]): boolean =>
-  path.some((step) => (UNPUBLISHED_DATA_MEMBERS as readonly string[]).includes(String(step)) || (UNPUBLISHED_ROOT_MEMBERS as readonly string[]).includes(String(step)));
-const mutationsOf = (source: Draft) => mutate(source, { skip: skipUnpublished });
+const mutationsOf = (source: Draft) => mutate(source);
 
 const SOURCES: [string, () => Draft][] = [
   ["the rich harness body", () => base()],
   ["the VN market body", () => loadCanonical<Draft>("execution-paper-workbench-vnm.partial.valid.json")],
   ["positions_by_side partial", () => loadCanonical<Draft>("execution-paper-workbench.positions-by-side.partial.valid.json")],
+  ["the served envelope (clocks, panels, history window, lineage counter)", () => loadCanonical<Draft>(SERVED)],
 ];
 
 interface Tally { total: number; schemaInvalid: number; refusedAll: number; demoted: number; looser: string[]; stricter: string[] }

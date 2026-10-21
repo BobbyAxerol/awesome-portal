@@ -257,7 +257,7 @@ describe("the HTTP consumer — same-origin, CSRF, typed failures", () => {
 
   it("maps DUPLICATE 409 to the duplicate outcome with the existing id", async () => {
     vi.stubGlobal("fetch", async () =>
-      new Response(JSON.stringify({ error: { code: "DUPLICATE_OPEN_APPROVAL", message: "Open work exists — decide apr_01J6N29PRODUCT first." }, request_id: "r1" }), { status: 409, headers: { "content-type": "application/json" } }),
+      new Response(JSON.stringify({ error: { code: "DUPLICATE_OPEN_APPROVAL", message: "An open approval already exists for this alpha and evidence run." }, request_id: "r1", details: { approval_id: "apr_01J6N29PRODUCT" } }), { status: 409, headers: { "content-type": "application/json" } }),
     );
     const out = await api().createApprovalRequest(INPUT);
     expect(out.kind).toBe("duplicate");

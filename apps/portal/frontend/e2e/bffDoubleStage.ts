@@ -193,7 +193,7 @@ export function paperProfile(deploymentId: string, variant: "standard" | "vn-mar
       orders: ORDERS.map((o) => ({ ...o })),
       fills: paperFills(),
       account_equity: equityRows(),
-      history_windows: { account_equity: { days: 90, source_rows: 1438, basis: "ACCOUNT_EQUITY_SNAPSHOTS", downsample: { method: "bucket_last", bucket_seconds: 3600 } } },
+      history_windows: { account_equity: { days: 90, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: equityRows().length, source_rows: 1438, truncated: false, downsample: { method: "PER_SERIES_BUCKET_EXTREMA", bucket_seconds: 3600, series_count: 1, input_rows: 1438, output_rows: equityRows().length } } },
     },
   };
 }
@@ -473,7 +473,7 @@ function hex(text: string): string {
 }
 
 /** The published problem for the create route carries request_id (approval-create schema); the generic stage `problem` does not. */
-const createProblem = (status: number, code: string, message: string): Answer => ({ status, body: { error: { code, message }, request_id: "req_double_approval_create" } });
+const createProblem = (status: number, code: string, message: string, extra: Record<string, unknown> = {}): Answer => ({ status, body: { error: { code, message }, request_id: "req_double_approval_create", ...extra } });
 
 /** The R1 request. `null` when the body is not a request (the golden's POST carries none). */
 export function answerApprovalCreate(body: unknown): Answer | null {
@@ -481,7 +481,8 @@ export function answerApprovalCreate(body: unknown): Answer | null {
   const summary = summaryOf(body);
   if (summary.startsWith("DENIED")) return createProblem(403, "APPROVAL_CREATE_DENIED", "Your session may not open an approval request in this workspace.");
   if (summary.startsWith("DUPLICATE")) {
-    return createProblem(409, "APPROVAL_DUPLICATE_OPEN_REQUEST", "An open R1 request already exists for this alpha and run: AP-201.");
+    // The server's own shape (FE-074 `DuplicateOpenApprovalProblem`): the existing approval is `details.approval_id`, not part of the message.
+    return createProblem(409, "DUPLICATE_OPEN_APPROVAL", "An open approval already exists for this alpha and evidence run.", { details: { approval_id: "AP-201" } });
   }
   if (summary.startsWith("REFUSE")) {
     return createProblem(422, "CLAIM_NOT_ELIGIBLE", "The methodology claim is not eligible for R1 on this run, so no request was opened.");

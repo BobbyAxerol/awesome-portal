@@ -264,7 +264,7 @@ rows keep their dates).
 | GET | `/api/v1/execution/deployments/{deployment_id}/certification` | 200 | bffDouble | control-api | `execution-sandbox-certification.v1#/$defs/CertificationResponse` |  |
 | GET | `/api/v1/execution/deployments/{deployment_id}/canary` | 200 | bffDouble | control-api | none |  |
 | GET | `/api/v1/execution/deployments/{deployment_id}/live` | 200 | bffDouble | control-api | none |  |
-| GET | `/api/v1/execution/screens/paper/{deployment_id} [stage id]` | 200 | bffDoubleStage | control-api | DRIFT `execution-paper-read.v1#/` | populated: 40 orders (one UNKNOWN), fills, positions, 200 equity snapshots, observation gate; capabilities say what stays dark |
+| GET | `/api/v1/execution/screens/paper/{deployment_id} [stage id]` | 200 | bffDoubleStage | control-api | `execution-paper-read.v1#/` | populated: 40 orders (one UNKNOWN), fills, positions, 200 equity snapshots, observation gate; capabilities say what stays dark |
 | GET | `/api/v1/execution/screens/paper/{deployment_id}/vn-market [stage id]` | 200 | bffDoubleStage | control-api | none | the same rows on the VN market body |
 | GET | `/api/v1/execution/derivations/deployments/{deployment_id}/execution-quality [stage id]` | 200 | bffDoubleStage | control-api | none | PARTIAL: counts agree with the profile rows, latency UNAVAILABLE |
 | GET | `/api/v1/execution/deployments/{deployment_id}/certification [stage id]` | 200 | bffDoubleStage | control-api | `execution-sandbox-certification.v1#/$defs/CertificationResponse` | V1 body made rich at the view-model level (steps PASS/FAIL/UNAVAILABLE, findings, plans, timeline), still schema-valid |
