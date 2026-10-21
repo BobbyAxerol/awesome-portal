@@ -186,13 +186,14 @@ describe("paging, search and filters (keyset pages and server-side filters, BE-P
     }
   });
 
-  it("disables Load more while the next page is on its way, and asks once", async () => {
+  it("marks Load more busy while the next page is on its way (no reasonless disabled control), and asks once", async () => {
     mount();
     await loaded();
     const button = screen.getByRole("button", { name: "Load more" }) as HTMLButtonElement;
     fireEvent.click(button);
     fireEvent.click(button);
-    expect(button.disabled).toBe(true);
+    expect(button.getAttribute("aria-busy")).toBe("true");
+    expect(button.disabled).toBe(false);   // §3.5: a disabled control must state its reason; a busy guard needs none
     await waitFor(() => expect(rowsOf()).toHaveLength(100));
     expect(rosterGets()).toHaveLength(2);
   });

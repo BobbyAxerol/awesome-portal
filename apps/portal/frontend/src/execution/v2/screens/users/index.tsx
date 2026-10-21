@@ -427,7 +427,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                     : `Showing ${visible.length} of ${counts.matching}${filtered ? " matching" : ""} accounts, ${counts.total} in the roster read`}
                 </span>
                 {moreToRead ? (
-                  <button type="button" className="exec-usr-btn" disabled={roster.phase === "ready" && roster.loadingMore} onClick={loadMore}>Load more</button>
+                  <button type="button" className="exec-usr-btn" aria-busy={roster.phase === "ready" && roster.loadingMore} onClick={() => { if (!(roster.phase === "ready" && roster.loadingMore)) loadMore(); }}>Load more</button>
                 ) : null}
                 {capped ? <span className="exec-usr-note">Showing the first {ROW_CAP} rows. Narrow the search to see the rest.</span> : null}
               </div>
