@@ -1,0 +1,218 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-6",
+  "sub": "a",
+  "title": "Lease race / takeover / autocommit / expiry-at-COMMIT / ABA / restore-epoch invariants on local disposable PG (capped correctness)",
+  "status": "RUN_FIXTURE",
+  "lane": "FIXTURE_LAB",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": true,
+    "tracked_dirty_digest": "sha256:e729c610c0e79e575c98d55f5bc0ccff469449eceab0aceb102856692c34013f"
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 4.97,
+    "loadavg_5m_at_capture": 6.23
+  },
+  "started_at": "2026-10-21T07:19:41.153Z",
+  "ended_at": "2026-10-21T07:21:26.870Z",
+  "started_at_ms": 1792567181153,
+  "ended_at_ms": 1792567286870,
+  "duration_ms": 105717,
+  "workload": {
+    "source": "the same PG cell run as M-4a; tests named T10-07 in elp206-manager-store.spec.ts (tip has renew(..., notAfterMs))",
+    "repetitions_valid": 2,
+    "fresh_postgres_per_repetition": true,
+    "specs": [
+      "test/elp210-performance.spec.ts",
+      "test/elp206-manager-store.spec.ts",
+      "test/elp206-manager-model.spec.ts",
+      "test/elp206-manager-service.spec.ts",
+      "test/elp2-read-projection.spec.ts"
+    ]
+  },
+  "resource_limits": {
+    "node_cpus": "2",
+    "node_memory": "2g",
+    "postgres_cpus": "1",
+    "postgres_memory": "1g",
+    "total_cpus": 3,
+    "workers": 1,
+    "network": "DISPOSABLE_INTERNAL_ONLY",
+    "pg_pool_max_in_test": 2,
+    "deviation_from_manifest_cell": "manifest isolated_cell is node 3 CPU/3 GiB + PG 1 CPU/1 GiB (4/4); this cell is node 2/2 GiB + PG 1/1 GiB (3/3) per the 3 CPU / 3 GiB run cap, so absolute ms are NOT comparable with measurements.md run1"
+  },
+  "stop_conditions": [
+    "rep with exit code != 0 is reported",
+    "no production database, no restore of production data"
+  ],
+  "results": {
+    "binary_invariants_per_rep": [
+      {
+        "rep": 1,
+        "tests": [
+          {
+            "name": "T10-07 refuses autocommit before any projection/checkpoint write",
+            "status": "passed",
+            "duration_ms": 24.97
+          },
+          {
+            "name": "T10-07 validates finite lease duration and strict scope before issuing SQL",
+            "status": "passed",
+            "duration_ms": 14.04
+          },
+          {
+            "name": "T10-07 two connections elect one holder; release/reclaim fences same-owner ABA and preserves one effect",
+            "status": "passed",
+            "duration_ms": 71.26
+          },
+          {
+            "name": "T10-07 committed takeover rejects a prefetched old batch and never ACKs it",
+            "status": "passed",
+            "duration_ms": 59.44
+          },
+          {
+            "name": "T10-07 expiry after writes is rejected by the deferred COMMIT fence and rolls back head plus checkpoint",
+            "status": "passed",
+            "duration_ms": 34.77
+          },
+          {
+            "name": "T10-07 restore epoch CAS invalidates old receipts without deleting fencing or historical facts",
+            "status": "passed",
+            "duration_ms": 87.38
+          },
+          {
+            "name": "T10-07 rejects mismatched workspace/environment/profile lease and captures it before caller mutation",
+            "status": "passed",
+            "duration_ms": 54.75
+          },
+          {
+            "name": "T10-07 SOURCE_VERIFIED-shaped private input remains source-dark; fixture flags are not activation",
+            "status": "passed",
+            "duration_ms": 18.89
+          }
+        ]
+      },
+      {
+        "rep": 2,
+        "tests": [
+          {
+            "name": "T10-07 refuses autocommit before any projection/checkpoint write",
+            "status": "passed",
+            "duration_ms": 17.06
+          },
+          {
+            "name": "T10-07 validates finite lease duration and strict scope before issuing SQL",
+            "status": "passed",
+            "duration_ms": 10.2
+          },
+          {
+            "name": "T10-07 two connections elect one holder; release/reclaim fences same-owner ABA and preserves one effect",
+            "status": "passed",
+            "duration_ms": 42.1
+          },
+          {
+            "name": "T10-07 committed takeover rejects a prefetched old batch and never ACKs it",
+            "status": "passed",
+            "duration_ms": 21.72
+          },
+          {
+            "name": "T10-07 expiry after writes is rejected by the deferred COMMIT fence and rolls back head plus checkpoint",
+            "status": "passed",
+            "duration_ms": 17.42
+          },
+          {
+            "name": "T10-07 restore epoch CAS invalidates old receipts without deleting fencing or historical facts",
+            "status": "passed",
+            "duration_ms": 31.12
+          },
+          {
+            "name": "T10-07 rejects mismatched workspace/environment/profile lease and captures it before caller mutation",
+            "status": "passed",
+            "duration_ms": 22.34
+          },
+          {
+            "name": "T10-07 SOURCE_VERIFIED-shaped private input remains source-dark; fixture flags are not activation",
+            "status": "passed",
+            "duration_ms": 8.35
+          }
+        ]
+      }
+    ],
+    "all_passed": true,
+    "covered": [
+      "autocommit refused before any write",
+      "two connections elect one holder; release/reclaim fences same-owner ABA",
+      "expiry at COMMIT (deferred DB fence)",
+      "resetAfterRestore CAS: wrong epoch refused, correct epoch bumps token + epoch, old holder cannot commit",
+      "scope mismatch / captured lease"
+    ],
+    "takeover_or_RTO_time_ms": "NOT_MEASURED_HERE: these are invariants. The restore drill with RTO is receipt M-6 sub b (restore drill)."
+  },
+  "resources": {
+    "per_rep": [
+      {
+        "rep": 1,
+        "node": {
+          "samples": 16,
+          "cpu_percent_mean": 125.2,
+          "cpu_percent_max": 161.04,
+          "mem_bytes_max_sampled": 609012940.8,
+          "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+        },
+        "postgres": {
+          "samples": 16,
+          "cpu_percent_mean": 8.7,
+          "cpu_percent_max": 92.71,
+          "mem_bytes_max_sampled": 134846873.6,
+          "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+        }
+      },
+      {
+        "rep": 2,
+        "node": {
+          "samples": 15,
+          "cpu_percent_mean": 120.9,
+          "cpu_percent_max": 157.57,
+          "mem_bytes_max_sampled": 683252121.6,
+          "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+        },
+        "postgres": {
+          "samples": 15,
+          "cpu_percent_mean": 11.1,
+          "cpu_percent_max": 92.09,
+          "mem_bytes_max_sampled": 129708851.2,
+          "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+        }
+      }
+    ]
+  },
+  "cleanup": {
+    "suffix": "m127010",
+    "containers_left": 0,
+    "networks_left": 0,
+    "deps_dir_removed": true
+  },
+  "limitations": [
+    "Invariants are binary pass/fail on a disposable PG; no RTO/RPO number is derived. RPO/RTO/retention horizon are decided only after M-6b/c (proposal D6).",
+    "lease_ttl default stays null: NO BASIS until takeover timing is measured against a real source deadline."
+  ],
+  "notes": [],
+  "raw_dir_not_committed": "/home/bobby/.local/state/portal-execution-elp210/20261021/m4-m6-1792565895389",
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:79da81f9c618f80ffc5bce392ba4fafe904f4c3283a5f5af51781897b1787bed"
+}

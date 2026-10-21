@@ -1,0 +1,58 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-1",
+  "sub": "c connected browser cost",
+  "title": "Same specs on a stack with the real BFF after Core009",
+  "status": "BLOCKED",
+  "lane": "NOT_RUN",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 11.58,
+    "loadavg_5m_at_capture": 11.14
+  },
+  "started_at": null,
+  "ended_at": null,
+  "started_at_ms": null,
+  "ended_at_ms": null,
+  "duration_ms": null,
+  "workload": {
+    "target_lane": "REAL_READ_QUALIFIED only when the Source Truth Board row is EXISTS_MOUNTED with a real-source receipt; otherwise BFF_DOUBLE"
+  },
+  "resource_limits": null,
+  "stop_conditions": [],
+  "results": {
+    "reason": "No stack with a real BFF composed (Core009 not installed).",
+    "unmet": [
+      "upgrade/execution_loop/evidence/ELP2-10/CORE009_INTEGRATION_RETURN_2026-10-21.md section 2: integration prepared; hook, image build and runtime readback PENDING; installed image sha256:7b2c7f34... is NOT Core009"
+    ],
+    "ready": [
+      "apps/portal/frontend/e2e/_probe-measure-m1-browser-cost.spec.ts runs unchanged against a real origin once a --real variant of the lane is given a storage state; not wired because no origin exists"
+    ]
+  },
+  "resources": null,
+  "cleanup": null,
+  "limitations": [
+    "HTTP 200 / TLS / parser pass is not enough to label a lane REAL_READ_* (handoff :114)."
+  ],
+  "notes": [],
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:b54f61ba1a29080150f4f1d35b50eb2da2034a2f55302f070d20720da15ef9f6"
+}
