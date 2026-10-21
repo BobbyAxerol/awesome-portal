@@ -9,6 +9,17 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### Codex operational priority — 21 October2026,14:18UTC
+
+[Explicit operator match](evidence/ELP2-10/CORE_OPERATOR_RECOVERY_WINDOW_MATCH_2026-10-21_1400.md)
+accepts actual Edge ACK1400 and root0600 plan228ecd5e/helper3b5d93c4 for
+14:00–15:30UTC original-custody remove-only recovery. No dispatch/terminal/ACK
+is claimed by this preparation entry. Fixed image05ae/source9d88 is already
+qualified; installed Core/source/grants/expiry remain unchanged. Preserve
+incoming canonical owner Markdown. Claude's normal gate on frozen d583 is a
+different tree; do not overlap heavy jobs or label it combined-source PASS.
+No push/deploy/UI change; next return records actual official cleanup results.
+
 ### Codex round — 21 October 2026, 13:57 UTC
 
 14:05UTC addendum: actual R4 packet delivered to PM/Edge with identical

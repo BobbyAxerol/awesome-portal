@@ -14008,6 +14008,17 @@ remaining test-image cleanup waits only for a foreign active build and does not
 block Core preparation. Preserve all peerWIP and existing runtime/rollback.
 
 
+### Core explicit operator recovery match —21Oct2026,14:18UTC
+
+[Matched original-custody window and reviewed private references](execution_loop/evidence/ELP2-10/CORE_OPERATOR_RECOVERY_WINDOW_MATCH_2026-10-21_1400.md):
+actual Edge ACK1400/12a47f13; helper3b5d93c4 and root0600 plan228ecd5e retain
+same original lease/attempt/artifact and all historical UNKNOWN/no-send fences.
+Use qualified fixed CLI05ae/source9d88 against unchanged installed service;
+no source-terminal/Core ACK inferred yet. Operator availability ends15:30UTC.
+Then official STREAM→READ→temporary-session cleanup with exact normal-session
+baseline preservation, not a runtime swap. Final combined normal/ff-only
+landing and full ELP2-10 remain OPEN. No push/dev/main/deploy/UI change.
+
 ### Edge final own-resource cleanup return - 20Oct2026
 
 UTC 2026-10-20T12:04:49.299184+00:00. Existing Edge publication f9a373b5 remains remote-verified;
