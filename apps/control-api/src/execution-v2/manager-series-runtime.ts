@@ -76,7 +76,8 @@ export class ManagerSeriesRuntime {
         const scope: ManagerLeaseScope = { workspace_id: doc.workspace_id, environment: doc.environment, profile_id: doc.profile_id };
         await client.query("SAVEPOINT manager_optional_series");
         try {
-          await store.recordRevision(client, scope, item.current);
+          // A non-throwing DIGEST_MISMATCH is recorded explicitly (typed error disposition); nothing was written for it.
+          await store.recordLive(client, scope, item.current);
           await client.query("RELEASE SAVEPOINT manager_optional_series");
         } catch (error) {
           // The series is optional derivation. A refusal (bound, constraint, statement timeout of its own) rolls back only the series

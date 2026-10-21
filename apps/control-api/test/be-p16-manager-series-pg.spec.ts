@@ -156,7 +156,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 Manager series writer on
       for (const d of docs) await inTransaction(l, c => store.recordRevision(c, scope, deriveSeriesObservations(d)));
       const h = await store.history(scope, { floor_ms: T0 - 30 * DAY, to_ms: T0, exclude_revision: docs[3].revision, maximum_rows: 100 });
       expect(h.revisions.map(r => r.revision)).toEqual([docs[0].revision, docs[1].revision, docs[2].revision]);
-      expect(new Set(h.observations.map(o => o.revision))).toEqual(new Set([docs[1].revision, docs[2].revision]));
+      // CR-03: the anchor revision's OBSERVATIONS come back too (a marker alone does not prove the key was observed at the window start)
+      expect(new Set(h.observations.map(o => o.revision))).toEqual(new Set([docs[0].revision, docs[1].revision, docs[2].revision]));
       const capped = await store.history(scope, { floor_ms: T0 - 30 * DAY, to_ms: T0, exclude_revision: docs[3].revision, maximum_rows: 2 });
       expect(capped.observations).toHaveLength(3);   // maximum + 1: the overflow is visible to the materializer, never silently cut
     });
@@ -213,6 +214,66 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 Manager series writer on
       const stop = new AbortController(); stop.abort(new Error("MANAGER_RUNTIME_STOPPED"));
       await expect(store.backfill({ ...input(l, 10), signal: stop.signal })).rejects.toThrow("MANAGER_RUNTIME_STOPPED");
       expect(await count("execution_manager_series_revisions")).toBe(0);
+    });
+  });
+
+  describe("CR-02 recovery and dispositions at the store", () => {
+    const snapshot = async () => ({ revisions: (await pool.query(`SELECT revision,observation_digest FROM execution_manager_series_revisions ORDER BY 1`)).rows,
+      observations: (await pool.query(`SELECT revision,subject_id,metric,partition_key,value,reason_code,input_digest FROM execution_manager_series_observations ORDER BY 1,2,3,4`)).rows });
+    it("a live DIGEST_MISMATCH changes nothing stored, is recorded as SERIES_DIGEST_MISMATCH, and does not reopen a COMPLETE backfill", async () => {
+      for (const d of docs) await seed(d);
+      const l = await lease();
+      expect(await store.backfill(input(l, 10))).toEqual({ state: "COMPLETE", processed: 4, failed: 0 });
+      const before = await snapshot(), d3 = deriveSeriesObservations(docs[3]);
+      expect(await inTransaction(l, c => store.recordLive(c, scope, { ...d3, observation_digest: accessDigest("different") }))).toBe("DIGEST_MISMATCH");
+      expect(await snapshot()).toEqual(before);
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "COMPLETE", last_error_code: "SERIES_DIGEST_MISMATCH", last_error_revision: docs[3].revision });
+      expect(await store.backfill(input(l, 10))).toEqual({ state: "NO_WORK", processed: 0, failed: 0 });
+      // a compatible replay is a plain DUPLICATE and does not erase the standing disposition
+      expect(await inTransaction(l, c => store.recordLive(c, scope, d3))).toBe("DUPLICATE");
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_DIGEST_MISMATCH" });
+    });
+    it("a DIGEST_MISMATCH met by the backfill replay is an explicit disposition and the cursor passes it (no silent advance, no overwrite)", async () => {
+      for (const d of docs.slice(0, 2)) await seed(d);
+      const l = await lease();
+      await inTransaction(l, c => store.recordRevision(c, scope, deriveSeriesObservations(docs[1])));
+      const before = await snapshot(), stamp = (await pool.query(`SELECT created_at::text FROM execution_manager_model_revisions WHERE revision=$1`, [docs[1].revision])).rows[0].created_at;
+      const replay = (store as unknown as { replay: (i: unknown, s: unknown, d: unknown, r: unknown) => Promise<string> }).replay.bind(store);
+      expect(await replay(input(l, 1), scope, { ...deriveSeriesObservations(docs[1]), observation_digest: accessDigest("different") }, { created_at: stamp, revision: docs[1].revision }))
+        .toBe("DIGEST_MISMATCH");
+      expect(await snapshot()).toEqual(before);
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_DIGEST_MISMATCH", last_error_revision: docs[1].revision, backfill_state: "IN_PROGRESS" });
+      expect((await pool.query(`SELECT backfill_cursor_revision FROM execution_manager_series_checkpoints`)).rows[0].backfill_cursor_revision).toBe(docs[1].revision);
+    });
+    it("a refusal that persists is retried once per tick, at most SERIES_REPAIR_ATTEMPTS times, then becomes a stated gap and never blocks or loops", async () => {
+      for (const d of docs.slice(0, 2)) await seed(d);
+      await pool.query(`CREATE OR REPLACE FUNCTION series_boom() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'SERIES_BOOM'; END $$`);
+      await pool.query(`CREATE TRIGGER series_boom BEFORE INSERT ON execution_manager_series_revisions FOR EACH ROW EXECUTE FUNCTION series_boom()`);
+      const l = await lease();
+      expect(await store.backfill(input(l, 4))).toEqual({ state: "PROGRESS", processed: 0, failed: 0 });
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: docs[0].revision });
+      expect(await store.backfill(input(l, 4))).toEqual({ state: "PROGRESS", processed: 0, failed: 0 });
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_2", last_error_revision: docs[0].revision });
+      expect(await store.backfill(input(l, 4))).toEqual({ state: "PROGRESS", processed: 0, failed: 1 });   // r0 is a stated gap; r1 starts its own attempts
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: docs[1].revision });
+      await pool.query(`DROP TRIGGER series_boom ON execution_manager_series_revisions`);
+      expect(await store.backfill(input(l, 4))).toEqual({ state: "COMPLETE", processed: 1, failed: 0 });
+      expect((await pool.query(`SELECT revision FROM execution_manager_series_revisions`)).rows.map(r => r.revision)).toEqual([docs[1].revision]);
+      expect(await store.backfill(input(l, 4))).toEqual({ state: "NO_WORK", processed: 0, failed: 0 });
+    });
+    it("a repair is lease fenced: a holder that lost its lease cannot repair, and a reopened backfill resumes on the new holder", async () => {
+      for (const d of docs.slice(0, 2)) await seed(d);
+      const old = await lease();
+      expect(await store.backfill(input(old, 10))).toEqual({ state: "COMPLETE", processed: 2, failed: 0 });
+      await seed(docs[2]);                                                          // a later retained revision whose live series write never happened
+      await inTransaction(old, c => store.recordFailure(c, scope, docs[2].revision, "SERIES_RECORD_REFUSED"));
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "IN_PROGRESS" });
+      await pool.query(`UPDATE execution_manager_consumer_fences SET expires_at=clock_timestamp()-interval '1 second'`);
+      const next = await lease();
+      await expect(store.backfill(input(old, 10))).rejects.toThrow(/MANAGER_LEASE_LOST/);
+      expect(await count("execution_manager_series_revisions")).toBe(2);
+      expect(await new ManagerSeriesStore(pool).backfill(input(next, 10))).toEqual({ state: "COMPLETE", processed: 1, failed: 0 });
+      expect(await count("execution_manager_series_revisions")).toBe(3);
     });
   });
 
@@ -281,6 +342,43 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 Manager series writer on
       expect(await count("execution_manager_series_observations")).toBe(observations);
       expect(h.acknowledge).toHaveBeenCalledTimes(2);
     });
+    it("CR-02: backfill COMPLETE -> one live series write refused while the financial revision commits -> fault removed -> bounded idle repair -> restart -> exactly one immutable observation set", async () => {
+      const w = world(), pending = { value: false }, h = await install(w, pending);
+      await h.runtime.tick();                                                       // initial backfill of r0..r2
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "COMPLETE", backfill_processed: 3 });
+      await pool.query(`CREATE OR REPLACE FUNCTION series_boom() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'SERIES_BOOM'; END $$`);
+      await pool.query(`CREATE TRIGGER series_boom BEFORE INSERT ON execution_manager_series_revisions FOR EACH ROW WHEN (NEW.revision='TEST_ONLY:r3') EXECUTE FUNCTION series_boom()`);
+      pending.value = true;
+      await h.runtime.tick();                                                       // r3: the series write is refused, the financial revision is NOT
+      expect(h.runtime.status().state).toBe("TICK_OK");
+      expect(h.acknowledge).toHaveBeenCalledTimes(1);
+      expect(await count("execution_manager_model_revisions")).toBe(4);
+      expect(await count("execution_manager_series_revisions")).toBe(3);
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "IN_PROGRESS", last_error_code: "SERIES_BOOM", last_error_revision: "TEST_ONLY:r3" });
+      // the fault is still there: one idle tick makes one bounded attempt, remembers it, and neither skips nor re-scans the history
+      await h.runtime.tick();
+      expect(await count("execution_manager_series_revisions")).toBe(3);
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "IN_PROGRESS", last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: "TEST_ONLY:r3" });
+      await pool.query(`DROP TRIGGER series_boom ON execution_manager_series_revisions`);
+      await h.runtime.tick();                                                       // idle repair: only r3 is revisited
+      expect(h.runtime.status().state).toBe("TICK_OK");
+      expect(await count("execution_manager_series_revisions")).toBe(4);
+      const expected = deriveSeriesObservations(w.live);
+      expect(Number((await pool.query(`SELECT count(*)::text AS n FROM execution_manager_series_observations WHERE revision='TEST_ONLY:r3'`)).rows[0].n)).toBe(expected.observations.length);
+      expect((await pool.query(`SELECT observation_digest FROM execution_manager_series_revisions WHERE revision='TEST_ONLY:r3'`)).rows[0].observation_digest).toBe(expected.observation_digest);
+      const closed = await pool.query(`SELECT backfill_state,backfill_cursor_revision,last_error_code,last_error_revision,backfill_processed::text FROM execution_manager_series_checkpoints`);
+      expect(closed.rows[0]).toEqual({ backfill_state: "COMPLETE", backfill_cursor_revision: "TEST_ONLY:r3", last_error_code: null, last_error_revision: null, backfill_processed: "4" });
+      const snapshot = async () => (await pool.query(`SELECT revision,subject_id,metric,partition_key,value,reason_code,input_digest FROM execution_manager_series_observations ORDER BY 1,2,3,4`)).rows;
+      const before = await snapshot();
+      await h.runtime.beforeApplicationShutdown();                                  // restart the holder: nothing new, nothing rewritten
+      const restarted = new ExecutionManagerRuntime(pool, h.installation); runtimes.push(restarted);
+      await restarted.tick(); await restarted.tick();
+      expect(restarted.status().state).toBe("TICK_OK");
+      expect(await snapshot()).toEqual(before);
+      expect(await count("execution_manager_series_revisions")).toBe(4);
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "COMPLETE", backfill_processed: 4 });
+      await expect(pool.query(`UPDATE execution_manager_series_observations SET value='1' WHERE revision='TEST_ONLY:r3'`)).rejects.toThrow(/append-only/);
+    });
     it("without the opt-in slot nothing changes: no series, no series rows", async () => {
       const w = world(), pending = { value: true }, h = await install(w, pending);
       const plain: ManagerRuntimeInstallation = { ...h.installation, partitions: [{ ...h.installation.partitions[0], series: undefined }] };
@@ -339,7 +437,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 Manager series writer on
       expect(await consumerFor(source, series).tick()).toMatchObject({ state: "COMMITTED", committed: 1, acknowledged: 1 });
       expect(await count("execution_manager_model_revisions")).toBe(1);
       expect(await count("execution_manager_series_revisions")).toBe(0);
-      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPLAY_REFUSED", last_error_revision: "TEST_ONLY:r0" });
+      // the live refusal (SERIES_BOOM) is followed, in the idle iteration of the same tick, by the first (also refused) bounded repair attempt (CR-02)
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: "TEST_ONLY:r0", backfill_state: "NOT_STARTED" });
       await pool.query(`DROP TRIGGER series_boom ON execution_manager_series_revisions`);
     });
     it("when the source has nothing new the idle tick backfills retained revisions a bounded number at a time", async () => {

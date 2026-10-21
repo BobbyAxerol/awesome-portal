@@ -263,6 +263,50 @@ describe("BE-P16 gaps are stated, never filled; what cannot be vouched for is PA
   });
 });
 
+describe("BE-P16 CR-03: a revision marker is not proof that a subject/metric was observed", () => {
+  const fund = (r: ReturnType<typeof materializeManagerSeries>) => find(r, "TEST_ONLY:workspace", "NAV")!;
+  it("marker before the window + early missing/refused observations + one valid current point is PARTIAL, with no invented boundary point", () => {
+    // r0: marker only (TEST_ONLY carries no observation); r1: methodology refused (typed null); r2: valued by another methodology; r3: the only valid point.
+    const docs = chain(NAVS, undefined, (n, o) => n === 0 ? { ...o, qualification: "TEST_ONLY" as const }
+      : n === 1 ? { ...o, facts: facts(o.asOf, "101.5", "50.25", { method: null }) }
+      : n === 2 ? { ...o, facts: facts(o.asOf, "99.25", "50", { method: "TEST_ONLY:method.v2" }) } : o);
+    const p = fund(materializeManagerSeries(docs[3], historyOf(docs.slice(0, 3)), CFG));
+    expect(p.series.points).toEqual([{ ts_ms: T0, value: "152.5" }]);             // nothing interpolated, carried forward or invented
+    expect(p.series.gaps).toEqual([]);
+    expect(p.quality.completeness).toBe("PARTIAL");
+    expect(p.quality.reasons).toEqual(expect.arrayContaining(["OBSERVATIONS_MISSING_BEFORE_FIRST_POINT", "OBSERVATIONS_OF_ANOTHER_BASIS_EXCLUDED"]));
+    expect(p.quality.reasons).not.toContain("HISTORY_STARTS_AFTER_WINDOW_START");   // the chain does reach the window start: that alone proves nothing
+  });
+  it("a missing prefix is PARTIAL for every kind of absence: no observation row at all, a typed null, or a marker-only anchor in front of valued points", () => {
+    const markerOnlyAnchor = chain(NAVS, undefined, (n, o) => n === 0 ? { ...o, qualification: "TEST_ONLY" as const } : o);
+    const a = fund(materializeManagerSeries(markerOnlyAnchor[3], historyOf(markerOnlyAnchor.slice(0, 3)), CFG));
+    expect(a.series.points.map(x => x.value)).toEqual(["151.75", "149.25", "152.5"]);
+    expect(a.quality).toMatchObject({ completeness: "PARTIAL", reasons: ["OBSERVATIONS_MISSING_BEFORE_FIRST_POINT"] });
+    const noRows = chain(NAVS), h = historyOf(noRows.slice(0, 3));
+    const stripped = { revisions: h.revisions, observations: h.observations.filter(o => o.revision !== noRows[1].revision) };
+    expect(fund(materializeManagerSeries(noRows[3], stripped, CFG)).quality.reasons).toContain("OBSERVATIONS_MISSING_BEFORE_FIRST_POINT");
+    const nulled = chain(NAVS, undefined, (n, o) => n === 1 ? { ...o, facts: facts(o.asOf, "101.5", "50.25", { freshness: "STALE" as const }) } : o);
+    const b = fund(materializeManagerSeries(nulled[3], historyOf(nulled.slice(0, 3)), CFG));
+    expect(b.series.points.map(x => x.value)).toEqual(["149.25", "152.5"]);
+    expect(b.quality.completeness).toBe("PARTIAL");
+  });
+  it("is per series: a key that was observed all along stays COMPLETE while the key that was not is PARTIAL", () => {
+    // PRIVATE portfolio has no fact in r1 (census incomplete there => typed null for the fund and that portfolio only); OWN is observed everywhere.
+    const docs = chain(NAVS, undefined, (n, o) => n === 1 ? { ...o, facts: facts(o.asOf, "101.5", "50.25").slice(0, 2) } : o);
+    const r = materializeManagerSeries(docs[3], historyOf(docs.slice(0, 3)), CFG);
+    expect(find(r, OWN.portfolio_id, "NAV")!.quality).toEqual({ completeness: "COMPLETE", freshness: "FRESH", reasons: [] });
+    expect(find(r, PRIVATE.portfolio_id, "NAV")!.series.points.map(x => x.value)).toEqual(["50", "50.5"]);
+  });
+  it("sparse but fully observed history (no daily cadence assumed) and an inside-window gap keep their previous verdicts", () => {
+    const docs = chain(NAVS), ok = fund(materializeManagerSeries(docs[3], historyOf(docs.slice(0, 3)), CFG));
+    expect(ok.quality).toEqual({ completeness: "COMPLETE", freshness: "FRESH", reasons: [] });
+    const gap = chain(NAVS, undefined, (n, o) => n === 2 ? { ...o, facts: facts(o.asOf, "99.25", "50", { method: null }) } : o);
+    const g = fund(materializeManagerSeries(gap[3], historyOf(gap.slice(0, 3)), CFG));
+    expect(g.series.gaps).toEqual([{ from_ms: T0 - 10 * DAY, to_ms: T0, reason: "SOURCE_GAP" }]);
+    expect(g.quality.reasons).toEqual(["GAPS_STATED"]);
+  });
+});
+
 describe("BE-P16 bounds and configuration", () => {
   const docs = chain(NAVS, PNLS), history = historyOf(docs.slice(0, 3));
   it("a document-wide point budget stops publication deterministically with a stated reason, never a prefix of a series", () => {
@@ -330,6 +374,37 @@ describe("BE-P16 runtime slot: the series writer may refuse, it can never fail t
     expect(sql.some(s => s.startsWith("ROLLBACK TO SAVEPOINT manager_optional_series"))).toBe(true);
     expect(sql.some(s => s.startsWith("INSERT INTO execution_manager_series_checkpoints"))).toBe(true);
     expect(sql.some(s => s.startsWith("RELEASE SAVEPOINT manager_optional_series"))).toBe(true);
+  });
+  it("CR-02: a non-throwing DIGEST_MISMATCH is recorded as an explicit disposition, writes nothing, never reopens the backfill and never fails the revision", async () => {
+    const runtime = new ManagerSeriesRuntime({ query: vi.fn().mockResolvedValue({ rows: [] }) } as unknown as Pool, { ...CFG, maximum_backfill_revisions: 1 });
+    const delivery = delivered(), materialized = await runtime.materialize((delivery as { document: ManagerModelDocument }).document, abort.signal);
+    runtime.attach(delivery, materialized);
+    const calls: Array<{ text: string; params: unknown[] }> = [];
+    const client = { query: vi.fn(async (text: string, params: unknown[] = []) => {
+      calls.push({ text, params });
+      return { rows: /SELECT observation_digest/.test(text) ? [{ observation_digest: `sha256:${"0".repeat(64)}` }] : [], rowCount: 0 };
+    }) } as unknown as PoolClient;
+    await expect(runtime.lifecycle().persistAttached(client, delivery)).resolves.toBeUndefined();
+    expect(calls.some(c => /INSERT INTO execution_manager_series_(revisions|observations)/.test(c.text))).toBe(false);
+    const failure = calls.find(c => /INSERT INTO execution_manager_series_checkpoints/.test(c.text))!;
+    expect(failure.params.slice(3)).toEqual(["SERIES_DIGEST_MISMATCH", "TEST_ONLY:r3", false]);   // reopen = false
+    expect(calls.some(c => /ROLLBACK TO SAVEPOINT/.test(c.text))).toBe(false);
+    expect(calls.some(c => /RELEASE SAVEPOINT/.test(c.text))).toBe(true);
+  });
+  it("CR-02: a refused live write reopens the backfill (reopen = true) with the refusal code", async () => {
+    const runtime = new ManagerSeriesRuntime({ query: vi.fn().mockResolvedValue({ rows: [] }) } as unknown as Pool, { ...CFG, maximum_backfill_revisions: 1 });
+    const delivery = delivered(), materialized = await runtime.materialize((delivery as { document: ManagerModelDocument }).document, abort.signal);
+    runtime.attach(delivery, materialized);
+    const calls: Array<{ text: string; params: unknown[] }> = [];
+    const client = { query: vi.fn(async (text: string, params: unknown[] = []) => {
+      calls.push({ text, params });
+      if (/INSERT INTO execution_manager_series_revisions/.test(text)) throw new Error("SERIES_STATEMENT_REFUSED");
+      return { rows: [], rowCount: 0 };
+    }) } as unknown as PoolClient;
+    await runtime.lifecycle().persistAttached(client, delivery);
+    const failure = calls.find(c => /INSERT INTO execution_manager_series_checkpoints/.test(c.text) && c.params.length === 6)!;
+    expect(failure.params.slice(3)).toEqual(["SERIES_STATEMENT_REFUSED", "TEST_ONLY:r3", true]);
+    expect(failure.text).toMatch(/backfill_state=CASE WHEN \$6::boolean AND .*backfill_state='COMPLETE' THEN 'IN_PROGRESS'/s);
   });
   it("a delivery without an attached materialization (a lost-ACK replay) writes nothing", async () => {
     const runtime = new ManagerSeriesRuntime({ query: vi.fn() } as unknown as Pool, { ...CFG, maximum_backfill_revisions: 1 });

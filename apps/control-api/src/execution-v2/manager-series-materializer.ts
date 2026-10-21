@@ -138,6 +138,21 @@ export function materializeManagerSeries(doc: ManagerModelDocument, history: Ser
           if (chain[k].supersedes_revision !== chain[k - 1].revision || chain[k].source_epoch !== chain[k - 1].source_epoch ||
             chain[k].projection_generation !== chain[k - 1].projection_generation) broken = true;
         if (!chain.some(r => r.as_of_ms <= window.from_ms)) reasons.push("HISTORY_STARTS_AFTER_WINDOW_START");
+        // CR-03: a revision MARKER proves the chain, not that this subject/metric was observed. From the revision that reaches the window
+        // start (or the oldest one retained) up to the first published point, every revision must itself carry a usable observation of
+        // this key (valued, same basis; its instant may precede the window: nothing is carried into it). Otherwise the prefix is missing.
+        const usable = new Set<number>();
+        for (const o of rows) {
+          const at = index.get(o.revision);
+          if (at !== undefined && o.value !== null && o.population_digest === cur.population_digest && o.methodology_ref === cur.methodology_ref &&
+            o.origin_ms === cur.origin_ms) usable.add(at);
+        }
+        let anchor = -1;
+        for (let k = 0; k < chain.length; k++) if (chain[k].as_of_ms <= window.from_ms) anchor = k;
+        const firstPoint = Math.min(...[...firstAt.values()]);
+        let leadingMissing = false;
+        for (let k = Math.max(anchor, 0); k < firstPoint; k++) if (!usable.has(k)) leadingMissing = true;
+        if (leadingMissing) reasons.push("OBSERVATIONS_MISSING_BEFORE_FIRST_POINT");
         if (broken) reasons.push("REVISION_CHAIN_BREAK");
         if (gaps.length) reasons.push("GAPS_STATED");
         if (excluded) reasons.push("OBSERVATIONS_OF_ANOTHER_BASIS_EXCLUDED");

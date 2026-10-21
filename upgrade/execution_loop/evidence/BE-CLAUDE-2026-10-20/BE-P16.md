@@ -80,3 +80,20 @@ Mới: `migrations/1723680000147_execution-manager-series-observations.sql`, `sr
 ## 7. Đề xuất cho lead (không sửa ở round này)
 
 `HANDOFF_TO_CODEX.md` §10 hàng "Financial publication (ELP2-05/06)": "writer/materializer bounded **có** (BE-P16, opt-in, PG NOT_RUN); NAV/NET_PNL sinh từ fact khi nguồn đủ; RETURN, FX, ALL, subject Alpha/Deployment, lineage restated vẫn typed absence; chờ PG gate + quyết định lấy mẫu + chủ nguồn #7/#9/#10/#11/#12".
+
+## 8. Receipt CR-02 / CR-03 (Claude, 2026-10-21; review: CODEX_CLAUDE_PRODUCER_REVIEW_2026-10-21.md)
+
+Không migration mới (148 không dùng): marker "cần sửa" là cột đã có `backfill_state`, con trỏ keyset là cao điểm (high-water).
+
+**CR-02 — phục hồi có biên sau một lần từ chối ghi live.**
+- `recordFailure` (chạy trong transaction của revision tài chính, sau ROLLBACK TO SAVEPOINT) nay lật `COMPLETE -> IN_PROGRESS` và GIỮ con trỏ. Revision tài chính, head, ACK, hàng bất biến, lease fence không đổi.
+- Idle tick: trạng thái COMPLETE vẫn là một point-read. Sau khi mở lại, `backfill` chỉ replay các revision SAU con trỏ chưa có hàng series (anti-join `LIMIT 1`, 1..16 revision/tick, mỗi cái một transaction có fence lease), rồi `finish` kiểm lại dưới advisory lock "manager-model" và đưa con trỏ tới revision mới nhất đã lưu (lần mở lại sau chỉ quét phần mới hơn). Sống sót qua restart vì marker nằm trong DB.
+- Thử lại có biên: ghi replay bị từ chối (có thể tạm thời) => ghi disposition `SERIES_REPAIR_RETRY_n`, con trỏ đứng yên, một lần thử mỗi tick; sau `SERIES_REPAIR_ATTEMPTS = 3` => `SERIES_REPLAY_REFUSED`, revision thành khoảng trống đã nêu, con trỏ đi qua (không vòng lặp, không chặn các revision sau). Lỗi tất định (payload không parse / lệch digest) vẫn bỏ qua ngay như trước.
+- Repair thành công (RECORDED) xóa `last_error_*` của đúng revision đó (trừ `SERIES_DIGEST_MISMATCH`).
+- `DIGEST_MISMATCH`: đường live (`recordLive`) và đường replay của backfill đều ghi disposition tường minh `SERIES_DIGEST_MISMATCH` (không mở lại backfill, không ghi đè, không coi là replay tương thích); replay của backfill còn đẩy con trỏ qua revision và đếm `failed`.
+
+**CR-03 — marker không chứng minh đã quan sát.**
+- `history()` trả thêm các observation của revision neo (revision cuối trước floor), không chỉ marker.
+- Materializer: từ revision neo (hoặc revision cũ nhất còn giữ) tới revision mang điểm đầu tiên trong cửa sổ, mỗi revision phải có observation dùng được của đúng key (có giá trị, cùng population/methodology/origin; instant có thể trước cửa sổ, không mang vào cửa sổ). Thiếu => `PARTIAL` + lý do `OBSERVATIONS_MISSING_BEFORE_FIRST_POINT`. Không nội suy, không carry-forward, không điểm biên bịa; không giả định nhịp ngày. Lịch sử thưa nhưng quan sát đủ và gap trong cửa sổ giữ nguyên kết quả cũ.
+
+**Tests.** Không PG: `be-p16-manager-series-materializer.spec.ts` 42/42 (4 test CR-03 mới, 2 test runtime CR-02 mới; hai test CR-03 chính đỏ khi bỏ fix). `tsc` xem commit. PG (lead chạy, `TEST_DATABASE_URL`, `--maxWorkers=1`): `be-p16-manager-series-pg.spec.ts` — mới: "CR-02 recovery and dispositions at the store" (4 test: live digest mismatch, replay digest mismatch, thử lại có biên 3 lần, repair có lease fence + holder mới), và trong "end to end": "CR-02: backfill COMPLETE -> ... -> exactly one immutable observation set". Sửa kỳ vọng: history trả observation của revision neo; test consumer "series writer can refuse" nay thấy `SERIES_REPAIR_RETRY_1` (lần thử repair đầu cùng tick idle) thay vì `SERIES_REPLAY_REFUSED`. Chưa chạy PG ở đây.

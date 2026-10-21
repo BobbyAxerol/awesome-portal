@@ -7,6 +7,12 @@
  *    lease through `persistManagerProjection`), so a revision and its observations commit together or not at all;
  *  - BACKFILL: `backfill` replays revisions that were retained before the writer was installed (or whose live write was refused),
  *    a bounded number per call, each in its own lease-fenced transaction, resumable by a keyset cursor after a restart.
+ * RECOVERY (CR-02): a refused LIVE write never fails the financial revision, but it REOPENS a COMPLETE backfill (`recordFailure` flips
+ * COMPLETE -> IN_PROGRESS in the same transaction, keeping the keyset cursor). The next idle ticks then replay only the retained revisions
+ * AFTER the cursor that still have no series row, 1..16 per tick, and `finish` closes the backfill again and moves the cursor to the newest
+ * retained revision. While nothing failed, an idle tick is one checkpoint point-read. A revision whose repair is refused as well becomes a
+ * stated gap (cursor passes it); it is never retried forever. A `DIGEST_MISMATCH` is recorded as `SERIES_DIGEST_MISMATCH` (it does NOT reopen
+ * anything: the stored rows stay as they are).
  * Both are idempotent: the primary keys make a repeat a no-op, and a repeat with different content is reported
  * (`DIGEST_MISMATCH`), never overwritten (the tables are append-only).
  */
@@ -26,6 +32,9 @@ const num = (v: string | number | null): number | null => {
   if (!Number.isSafeInteger(n)) throw new Error("MANAGER_SERIES_ROW_INVALID");
   return n;
 };
+export const SERIES_DIGEST_MISMATCH = "SERIES_DIGEST_MISMATCH";
+export const SERIES_REPAIR_ATTEMPTS = 3;
+const SERIES_REPAIR_RETRY_PREFIX = "SERIES_REPAIR_RETRY_";
 export type SeriesRecordState = "RECORDED" | "DUPLICATE" | "DIGEST_MISMATCH";
 export interface SeriesBackfillInput { lease: ManagerProjectionLease; signal: AbortSignal; deadline_ms: number; transaction_timeout_ms: number;
   lease_ttl_ms: number; maximum_revisions: number; }
@@ -75,12 +84,23 @@ export class ManagerSeriesStore {
     return "RECORDED";
   }
 
-  /** After a refused live write (ROLLBACK TO SAVEPOINT): remember why, in the caller's transaction. Never throws a second time. */
-  async recordFailure(client: PoolClient, scope: ManagerLeaseScope, revision: string, code: string): Promise<void> {
+  /** After a refused live write (ROLLBACK TO SAVEPOINT) or an explicit disposition: remember why, in the caller's transaction. Never throws a
+   * second time. `reopen` (default) turns a COMPLETE backfill back into IN_PROGRESS so the revisions after its cursor are revisited. */
+  async recordFailure(client: PoolClient, scope: ManagerLeaseScope, revision: string, code: string, options: { reopen?: boolean } = {}): Promise<void> {
     const safe = /^[A-Z][A-Z0-9_]{2,127}$/.test(code) ? code : "SERIES_RECORD_REFUSED";
     await client.query(`INSERT INTO execution_manager_series_checkpoints(workspace_id,environment,profile_id,last_error_code,last_error_revision)
       VALUES($1,$2,$3,$4,$5) ON CONFLICT(workspace_id,environment,profile_id) DO UPDATE SET last_error_code=EXCLUDED.last_error_code,
-      last_error_revision=EXCLUDED.last_error_revision,updated_at=clock_timestamp()`, [...keyOf(scope), safe, revision]);
+      last_error_revision=EXCLUDED.last_error_revision,
+      backfill_state=CASE WHEN $6::boolean AND execution_manager_series_checkpoints.backfill_state='COMPLETE' THEN 'IN_PROGRESS'
+        ELSE execution_manager_series_checkpoints.backfill_state END,updated_at=clock_timestamp()`, [...keyOf(scope), safe, revision, options.reopen !== false]);
+  }
+
+  /** The live path: records the revision inside the caller's transaction and turns the non-throwing `DIGEST_MISMATCH` into an explicit
+   * disposition (nothing was written for it; the stored rows are never overwritten nor treated as a compatible replay). */
+  async recordLive(client: PoolClient, scope: ManagerLeaseScope, derived: DerivedSeriesRevision): Promise<SeriesRecordState> {
+    const state = await this.recordRevision(client, scope, derived);
+    if (state === "DIGEST_MISMATCH") await this.recordFailure(client, scope, derived.marker.revision, SERIES_DIGEST_MISMATCH, { reopen: false });
+    return state;
   }
 
   async checkpoint(scope: ManagerLeaseScope): Promise<SeriesCheckpoint | null> {
@@ -91,7 +111,7 @@ export class ManagerSeriesStore {
   }
 
   /** Bounded read of what a window needs: the revision chain and the observations from `floor_ms` up to `to_ms`, plus the last revision
-   * before the floor (it proves the history reaches back to the window start). `maximum_rows` + 1 rows are returned at most: the caller
+   * before the floor AND its observations (CR-03: a marker alone proves the chain reaches the window start, not that the key was observed). `maximum_rows` + 1 rows are returned at most: the caller
    * sees the overflow and publishes nothing rather than a truncated history. */
   async history(scope: ManagerLeaseScope, input: { floor_ms: number; to_ms: number; exclude_revision: string; maximum_rows: number }): Promise<SeriesHistory> {
     const key = keyOf(scope), cap = input.maximum_rows + 1;
@@ -103,7 +123,9 @@ export class ManagerSeriesStore {
         ORDER BY as_of_ms,revision LIMIT $7)`, [...key, input.floor_ms, input.to_ms, input.exclude_revision, cap]);
     const rows = await this.pool.query(`SELECT revision,subject_type,subject_id,metric,partition_key,economic_partition,population_digest,as_of_ms::text,point_ts_ms::text,value,
         reason_code,currency,basis,methodology_ref,origin_ms::text,source_confidence,input_digest
-      FROM execution_manager_series_observations WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND as_of_ms>=$4 AND as_of_ms<=$5 AND revision<>$6
+      FROM execution_manager_series_observations WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND revision<>$6
+        AND ((as_of_ms>=$4 AND as_of_ms<=$5) OR revision=(SELECT revision FROM execution_manager_series_revisions
+          WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND as_of_ms<$4 AND revision<>$6 ORDER BY as_of_ms DESC,revision DESC LIMIT 1))
       ORDER BY as_of_ms,revision,subject_type,subject_id,metric,partition_key LIMIT $7`, [...key, input.floor_ms, input.to_ms, input.exclude_revision, cap]);
     return {
       revisions: revisions.rows.map((r): SeriesRevisionMarker => ({ revision: r.revision, supersedes_revision: r.supersedes_revision, source_epoch: r.source_epoch,
@@ -138,24 +160,42 @@ export class ManagerSeriesStore {
          WHERE r.workspace_id=$1 AND r.environment=$2 AND r.profile_id=$3 AND s.revision IS NULL
            AND ($4::timestamptz IS NULL OR (r.created_at,r.revision)>($4::timestamptz,$5))
          ORDER BY r.created_at,r.revision LIMIT 1`, [...key, cursor?.at ?? null, cursor?.revision ?? null])).rows[0];
-      if (!row) {
-        await this.finish(input, scope, "COMPLETE", cursor);
-        return { ...out, state: "COMPLETE" };
-      }
+      if (!row) return await this.finish(input, scope, cursor) ? { ...out, state: "COMPLETE" } : { ...out, state: "PROGRESS" };
       if (!await this.leases.renew(input.lease, input.lease_ttl_ms)) throw new Error("MANAGER_LEASE_LOST");
-      let failure: string | null = null;
-      try {
+      let failure: string | null = null, derived: DerivedSeriesRevision | null = null;
+      try { // deterministic refusals: the same bytes would be refused again, so the revision becomes a stated gap at once
         const doc = managerModelDocument.parse(row.payload);
-        if (accessDigest(doc) !== row.payload_digest) failure = "SERIES_PAYLOAD_DIGEST_MISMATCH";
-        else await this.replay(input, scope, deriveSeriesObservations(doc), row);
-      } catch (error) {
-        if (input.signal.aborted || (error instanceof Error && error.message === "MANAGER_LEASE_LOST")) throw error;
-        failure = "SERIES_REPLAY_REFUSED";
+        if (accessDigest(doc) !== row.payload_digest) failure = "SERIES_PAYLOAD_DIGEST_MISMATCH"; else derived = deriveSeriesObservations(doc);
+      } catch { failure = "SERIES_REPLAY_REFUSED"; }
+      let state: SeriesRecordState | null = null;
+      if (derived) {
+        try { state = await this.replay(input, scope, derived, row); }
+        catch (error) {
+          if (input.signal.aborted || (error instanceof Error && error.message === "MANAGER_LEASE_LOST")) throw error;
+          // The write itself was refused (possibly transiently, e.g. the fault that refused the live write). Bounded retry: one attempt per tick,
+          // the cursor stays, the attempt is remembered as a typed disposition; after SERIES_REPAIR_ATTEMPTS the revision is a stated gap.
+          const attempt = await this.repairAttempt(scope, row.revision);
+          if (attempt < SERIES_REPAIR_ATTEMPTS) { await this.remember(input, scope, row.revision, `${SERIES_REPAIR_RETRY_PREFIX}${attempt}`); return { ...out, state: "PROGRESS" }; }
+          failure = "SERIES_REPLAY_REFUSED";
+        }
       }
       cursor = { at: row.created_at, revision: row.revision };
-      if (failure) { out.failed++; await this.skip(input, scope, row, failure); } else out.processed++;
+      if (state === "DIGEST_MISMATCH") out.failed++; // the disposition and the cursor were written by `replay`
+      else if (failure) { out.failed++; await this.skip(input, scope, row, failure); } else out.processed++;
     }
     return { ...out, state: "PROGRESS" };
+  }
+
+  /** The attempt number this refusal is (1-based), counted from the typed dispositions already recorded for this very revision. */
+  private async repairAttempt(scope: ManagerLeaseScope, revision: string): Promise<number> {
+    const r = (await this.pool.query(`SELECT last_error_code,last_error_revision FROM execution_manager_series_checkpoints
+      WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3`, keyOf(scope))).rows[0];
+    const seen = r?.last_error_revision === revision ? Number(new RegExp(`^${SERIES_REPAIR_RETRY_PREFIX}(\\d+)$`).exec(r.last_error_code ?? "")?.[1] ?? 0) : 0;
+    return seen + 1;
+  }
+
+  private async remember(input: SeriesBackfillInput, scope: ManagerLeaseScope, revision: string, code: string) {
+    await this.withFencedTransaction(input, scope, client => this.recordFailure(client, scope, revision, code));
   }
 
   private async withFencedTransaction<T>(input: SeriesBackfillInput, scope: ManagerLeaseScope, work: (client: PoolClient) => Promise<T>): Promise<T> {
@@ -172,10 +212,16 @@ export class ManagerSeriesStore {
     finally { client.release(); }
   }
 
-  private async replay(input: SeriesBackfillInput, scope: ManagerLeaseScope, derived: DerivedSeriesRevision, row: { created_at: string; revision: string }) {
-    await this.withFencedTransaction(input, scope, async client => {
+  /** Returns the record state. A mismatch is recorded as an explicit disposition AND the cursor passes the revision, in one transaction. */
+  private async replay(input: SeriesBackfillInput, scope: ManagerLeaseScope, derived: DerivedSeriesRevision, row: { created_at: string; revision: string }): Promise<SeriesRecordState> {
+    return this.withFencedTransaction(input, scope, async client => {
       const state = await this.recordRevision(client, scope, derived);
+      if (state === "DIGEST_MISMATCH") await this.recordFailure(client, scope, row.revision, SERIES_DIGEST_MISMATCH, { reopen: false });
+      else if (state === "RECORDED") // the failure this repair resolved is no longer an open disposition
+        await client.query(`UPDATE execution_manager_series_checkpoints SET last_error_code=NULL,last_error_revision=NULL,updated_at=clock_timestamp()
+          WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 AND last_error_revision=$4 AND last_error_code<>$5`, [...keyOf(scope), row.revision, SERIES_DIGEST_MISMATCH]);
       await this.moveCursor(client, scope, row, "IN_PROGRESS", state === "RECORDED" ? 1 : 0);
+      return state;
     });
   }
 
@@ -186,11 +232,24 @@ export class ManagerSeriesStore {
     });
   }
 
-  private async finish(input: SeriesBackfillInput, scope: ManagerLeaseScope, state: "COMPLETE", cursor: { at: string; revision: string } | null) {
-    await this.withFencedTransaction(input, scope, async client => {
+  /** Closes the backfill only when, under the same lock the live writer takes, no retained revision after the cursor lacks a series row;
+   * then the cursor moves to the newest retained revision so a later reopen scans only what is newer. False = a hole appeared: keep going. */
+  private async finish(input: SeriesBackfillInput, scope: ManagerLeaseScope, cursor: { at: string; revision: string } | null): Promise<boolean> {
+    return this.withFencedTransaction(input, scope, async client => {
+      const key = keyOf(scope);
+      const hole = await client.query(`SELECT 1 FROM execution_manager_model_revisions r
+        LEFT JOIN execution_manager_series_revisions s USING(workspace_id,environment,profile_id,revision)
+        WHERE r.workspace_id=$1 AND r.environment=$2 AND r.profile_id=$3 AND s.revision IS NULL
+          AND ($4::timestamptz IS NULL OR (r.created_at,r.revision)>($4::timestamptz,$5)) LIMIT 1`, [...key, cursor?.at ?? null, cursor?.revision ?? null]);
+      if (hole.rows.length) return false;
+      const newest = (await client.query<{ created_at: string; revision: string }>(`SELECT created_at::text,revision FROM execution_manager_model_revisions
+        WHERE workspace_id=$1 AND environment=$2 AND profile_id=$3 ORDER BY created_at DESC,revision DESC LIMIT 1`, key)).rows[0];
+      const at = newest?.created_at ?? cursor?.at ?? null, revision = newest?.revision ?? cursor?.revision ?? null;
       await client.query(`INSERT INTO execution_manager_series_checkpoints(workspace_id,environment,profile_id,backfill_state,backfill_cursor_created_at,backfill_cursor_revision)
-        VALUES($1,$2,$3,$4,$5::timestamptz,$6) ON CONFLICT(workspace_id,environment,profile_id) DO UPDATE SET backfill_state=EXCLUDED.backfill_state,updated_at=clock_timestamp()`,
-      [...keyOf(scope), state, cursor?.at ?? null, cursor?.revision ?? null]);
+        VALUES($1,$2,$3,'COMPLETE',$4::timestamptz,$5) ON CONFLICT(workspace_id,environment,profile_id) DO UPDATE SET backfill_state='COMPLETE',
+        backfill_cursor_created_at=EXCLUDED.backfill_cursor_created_at,backfill_cursor_revision=EXCLUDED.backfill_cursor_revision,updated_at=clock_timestamp()`,
+      [...key, at, revision]);
+      return true;
     });
   }
 
