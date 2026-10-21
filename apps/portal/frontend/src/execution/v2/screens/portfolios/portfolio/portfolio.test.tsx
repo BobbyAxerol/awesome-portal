@@ -681,7 +681,9 @@ describe("Actions rail", () => {
       const button = within(rail).getByRole("button", { name }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
       const reason = document.getElementById(button.getAttribute("aria-describedby")!)!;
-      expect(reason.textContent).toContain("Not published (FE-015)");
+      // No workspace in this address: nothing was asked. The three controls with an eligibility action say so; the other three keep
+      // their typed absence (railEligibility.test.tsx holds the rest).
+      expect(reason.textContent).toContain(["Return capital", "Lock allocation", "Deploy version"].includes(name) ? "Not published (FE-015)" : "names no workspace");
     }
     expect(rail.textContent).toContain("Not published (FE-020)");
     expect(within(rail).getByRole("link", { name: "See what you can access" }).getAttribute("href")).toContain("/administration/profile-access");

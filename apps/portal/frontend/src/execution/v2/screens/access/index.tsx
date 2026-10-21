@@ -282,10 +282,12 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
               <CardsTable columns={doColumns} rows={doRows(capabilities)} rowKey={(r) => r.id} label="What you can do" />
               {/*
                 FE-015 WORDING: "Not published" is no longer exact for per-action eligibility. A published body
-                (portal.self-eligibility.v1) and a strict reader (readers/accessSelf.ts) exist but are NOT wired here
-                (DEBT-UXM07-011), and serving of the route is not verified. Recommended honest words until it is wired and
-                served: "Not read yet by this screen"; "Not published" stays only for what no body states (who granted
-                an item, a role preset). Left unchanged on purpose: nothing is wired in this slice.
+                (portal.self-eligibility.v1 and the batch v2) and strict readers (readers/accessSelf.ts, accessSelfBatch.ts) exist.
+                They are wired where a screen carries a capital action: the Portfolio 360 Actions rail (DEBT-UXM07-011,
+                portfolio/useRailEligibility.ts). They are deliberately NOT read by this screen: eligibility is asked per resource and
+                action, and this page has neither. The cell therefore means "not read by this screen". The copy that says so
+                ("Not read yet by this screen", recommended) is Bobby's to approve; it is left unchanged here so no unapproved
+                words reach the screen (and the Access baselines stay as recorded for it).
               */}
             </>
           )}
@@ -300,7 +302,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           { label: "Who granted each item", id: "FE-015" },
         ]}
       />
-      <p className="exec-acc-caption" title={`Portfolios, Accounts, Operations and Blotter are not capabilities (${ACCESS_FE.capabilityNames}). The server publishes them as four navigation rows, and this list follows that read.`}>
+      <p className="exec-acc-caption" title={`The server publishes Portfolios, Accounts, Operations and Blotter as four navigation rows, and this list follows that read (${ACCESS_FE.capabilityNames}).`}>
         Menu entries from your navigation read: Portfolios, Accounts, Operations, Blotter
         {others.length > 0 ? <> · Other capabilities in your session: <span className="exec-acc-code">{others.join(", ")}</span></> : null}
       </p>
