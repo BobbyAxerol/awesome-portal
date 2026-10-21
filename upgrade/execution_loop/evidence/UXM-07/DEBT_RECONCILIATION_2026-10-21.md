@@ -66,3 +66,19 @@ Lệch SHA: nhiều SHA trong sổ cũ và trong lời giao việc là SHA trư�
 **Chủ nguồn (Edge/PM/Core):** notice source Fleet (026) · statement đếm account chung một lần theo ownership (029) · nguồn PnL/equity theo deployment (Bobby đã chốt chưa mở subject Alpha/Deployment, 2026-10-21).
 
 Không đổi: ELP2-10 vẫn NOT_MET; Core009 `PREPARED_SOURCE_ONLY`; các gate đo M-1..M-7/G2 chờ Core009 + nguồn tài chính.
+
+## 4. Làm tiếp sau đối soát, 2026-10-21 (Claude; backend và registry giờ là của Claude, Codex chỉ review)
+
+Nền: `799effc8` + sổ `6d6ecf04`. Bốn commit mã, mỗi commit một việc. Lane FIXTURE_LAB/BFF_DOUBLE; không Docker, không `--update` ảnh, không PG.
+
+| Mục | Kết quả | Commit | Còn lại và chủ |
+| --- | --- | --- | --- |
+| 006 Compare không có row | **ĐÓNG** | `8c70b177` | Registry rev 8 -> 9 thêm screen `EXECUTION_COMPARE_SCREEN` (`/deployments/compare`, feature `EXECUTION_PORTFOLIOS`, fixture policy như portfolio 360, không cờ nào bật); fixture từ exporter; `PortalRoutes` chỉ nhận đường dẫn khi cờ `compare` bật nên digest flag-off đứng nguyên; URL cũ `?view=compare` chuyển hướng; N29 + verifier ghim 8 -> 9 như `6d87825b`, ledger refresh `--write` rồi `--check` xanh. Chưa chạy: Playwright (URL đã đổi ở 4 spec) và so sánh visual; hai baseline Compare dự kiến zero-diff, không ghi lại |
+| 005 tên capability tạm | **THU HẸP** | `9d0eb97f` | Bốn tên `execution.*` không có trong namespace server nay là token menu `nav:<feature id server công bố>` (W2 cách A); không còn chữ nào in tên giả. Backend không thiếu gì cho rail. Còn: năm màn tự thu hẹp từ tập session (alpha, replay, blotter, overview, workbench) — RK-1, Bobby chọn bỏ thu hẹp hay nối tập đã gộp. Ảnh hưởng điểm ảnh: chữ Access đổi, baseline `v2-access-1440/390` cần ghi lại (mục 041) |
+| 011 reader chưa nối | **THU HẸP** | `b2e00eea` | Rail Actions của Portfolio 360 hỏi batch self-eligibility một lần khi mở và có `workspace_id`, cho 5 action vốn; `ALLOWED` chỉ là câu chữ, nút vẫn tắt; test `railEligibility.test.tsx` (16). Return/Lock/Deploy, Rotate credential, ghi của Operations không có action trong 28 action: giữ "Not published (FE-015)" kèm phần thiếu (mục 042, Codex/PM). Ô Access giữ nguyên chữ chờ Bobby; step-up của cockpit chưa có chỗ gọi vì không quyết định nào nêu capital action |
+| 004 reader defects | **ĐÓNG** | `27b42bd2` | FE-048 do producer trả lời: `fleetStageCounts` liệt kê stage của môi trường đọc COMPLETE kèm số đúng (kể cả 0), bỏ stage của môi trường không đọc/PARTIAL; vắng = "không nói", FE giữ "Not available". MD-S1/S4: producer dataset từ chối phát chữ có C1, zero-width/bidi, surrogate lẻ, chỉ khoảng trắng và khoá metric sai/65 metric. Năm `it.fails` là vĩnh viễn (JSON Schema không so được độ dài mảng với số). Chưa chạy: `manager-lists.spec.ts` (cần PG) |
+| 013 | không đụng | | khác vùng (V1-shared); không làm |
+
+Mục mới: **041** baseline Access đổi chữ (Claude, cần Docker, gộp vào 037) · **042** từ vựng eligibility thiếu action cho nhiều nút (Codex/PM) · **043** `accessText` ở producer access nhận chữ mà reader chặt từ chối; siết phía ghi cần kiểm hàng đã lưu trên DB trước (Claude). Sổ: 24 mở, 19 đóng.
+
+Không kiểm: parity producer của `commandCurrency` với reader (xem 043); `test_compat_parity.py::test_committed_snapshots_regenerate_identically` đỏ ở `portal-api.openapi.json` so với snapshot BAR-02; exporter không đổi OpenAPI nên không do rev 9, nhưng chưa chạy lại trên nền sạch (NOT_RUN).

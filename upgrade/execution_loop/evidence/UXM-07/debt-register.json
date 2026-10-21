@@ -4,32 +4,15 @@
   "reconciled_at_head": "799effc8",
   "open": [
     {
-      "id": "DEBT-UXM07-004",
-      "title": "Reader defects documented by the L3 conformance suites",
-      "where": "server meaning of an absent stage in stage_counts (FE-048); the five intentional it.fails pins in v2/readers/managerDataset.conformance.test.ts (producer-only constraints that JSON Schema cannot state)",
-      "status": "STILL_OPEN (FE side done)",
-      "owner": "Codex (FE-048); FE side closed",
-      "next_action": "Codex answers FE-048 in the ledger: does stage_counts omit a stage because it is 0 or because it is not published? Until then the FE prints 'Not available' (4c65f2e4), never 0. MD-1..MD-8 are delivered by BE-P1/P6/P8 (ACK_ALL_BACKEND section 3.3: FIXTURE_VERIFIED, Codex ACCEPTED); readers followed in 3f459836."
-    },
-    {
       "id": "DEBT-UXM07-005",
       "title": "Nav and screen gating use provisional capability names",
-      "where": "v2/shell/roleNav.ts V2_CAPABILITY (execution.portfolios.read, execution.accounts.read, execution.operations.read, portal.execution.blotter.read, execution.accounts.manage)",
-      "consequence": "Projection-driven navigation is built and flagged (a68f17a6 W1 useSelfNavigation and W3 shell merge, 9c90e68a self-only route and rail entry; consumer-receipt-self-navigation-2026-10-20) and execution.accounts.manage was dropped. The four remaining provisional names (execution.portfolios.read, execution.accounts.read, execution.operations.read, portal.execution.blotter.read) are still in v2/shell/roleNav.ts V2_CAPABILITY: with today's session nobody holds them, so those entries stay fail-closed unless the projection says ENTERABLE; the V2 browser spec injects them",
-      "proposed": "Codex FE-037/038 projection; rename one constant when it lands",
-      "owner": "Codex (FE-037)",
-      "status": "STILL_OPEN (owner decision)",
-      "next_action": "Codex/Bobby confirm or rename the four names (FE-037 OWNER_DECISION in ACK_ALL_BACKEND); Claude then renames one constant block and the spec injection. The image still has to serve the projection fields (FE-057 ACCEPTED at reader level, real read NOT_RUN)."
-    },
-    {
-      "id": "DEBT-UXM07-006",
-      "title": "Compare has no registry row",
-      "where": "previewRegistry / registry.json (Codex)",
-      "consequence": "Compare still rides /deployments/portfolios?view=compare; registry.json is at revision 8 (PROFILE_ACCESS_SELF) and has no EXECUTION_COMPARE_SCREEN row. The V2 pixel baselines v2-compare-1440/390 were recorded on the ?view=compare URL",
-      "proposed": "registry rev 7 adds EXECUTION_COMPARE_SCREEN at /deployments/compare",
-      "owner": "Codex (FE-039/C-5)",
-      "status": "STILL_OPEN",
-      "next_action": "Codex adds EXECUTION_COMPARE_SCREEN (additive, next registry revision, together with FE-039 hide-old-APPROVALS); Claude then switches the route and re-records the two Compare baselines in one step."
+      "where": "Five screens still pre-narrow from the SESSION capability set against the menu tokens: alpha/index.tsx (sliceOnly), alpha/replay/index.tsx, blotter/index.tsx (accountsVisible), overview/index.tsx (fundWide), workbench/index.tsx. A real session never carries a menu token (only a live self-navigation projection adds one, in the shell), so for a real session they narrow for everyone; the e2e and lab sessions inject the tokens as a stand-in.",
+      "consequence": "Display narrowing only (Your slice chip, account links, deployer column); the API behind each screen refuses by itself. Wiring the shell's merged set into the screens would let a menu fact shape content, which RK-1 forbids.",
+      "proposed": "W4 of the self-contract review, one of: (a) drop the pre-narrowing and let the API refusal and the batch eligibility decide, or (b) feed the shell's merged navigation set to those five screens and accept menu-shaped content. The exact missing backend item for a data-grade answer: a published per-screen scope fact (\"fund-wide\" vs \"own slice\"); the 28 eligibility actions name resources, not scopes.",
+      "owner": "Bobby (RK-1 policy) then Claude",
+      "status": "NARROWED (rail names closed; screen pre-narrowing open)",
+      "next_action": "Bobby picks (a) or (b); Claude then changes five screens and their tests. Also: the Access v2-access-1440/390 baselines changed with 9d0eb97f copy (DEBT-UXM07-041).",
+      "closed_part": "9d0eb97f: the four invented names (execution.portfolios.read, execution.accounts.read, execution.operations.read, portal.execution.blotter.read) are gone from the client vocabulary. V2_NAV_TOKEN holds nav:<served portal.self-navigation.v1 feature id> (EXECUTION_PORTFOLIOS, EXECUTION_ACCOUNTS_BINDINGS, EXECUTION_OPERATIONS, EXECUTION_BLOTTER), V2_CAPABILITY keeps only the real governance.* names, and no copy prints an invented capability (Access rows and denials say \"Portfolios in your navigation read\"). Nothing is missing on the backend for the rail: the server publishes the four rows. execution.accounts.manage stays dropped (no server capability exists)."
     },
     {
       "id": "DEBT-UXM07-008",
@@ -43,11 +26,11 @@
     {
       "id": "DEBT-UXM07-011",
       "title": "Readers for self-eligibility/self-navigation/currency exist but are not wired",
-      "where": "Done since: readers 4b12bb0c, W1 useSelfNavigation and W3 shell merge a68f17a6, self-only route 9c90e68a, projection times 84f0ee53, Codex answered Q1-Q6 (ELP2-03/self-access-consumer-return-2026-10-19). Remaining: (a) v2/screens/access/index.tsx:284 still prints 'Not published (FE-015)' for per-action eligibility with the FE-015 WORDING comment unresolved; (b) laneModel is not yet fed by the batch eligibility on every screen that carries a capital action (FE-059/FE-060: cockpit PARTIAL)",
+      "where": "Done: readers 4b12bb0c, W1/W3 a68f17a6, self-only route 9c90e68a, projection times 84f0ee53, W2 9d0eb97f (tokens are the served feature ids), W6 b2e00eea (Portfolio 360 Actions rail asks the self-eligibility batch once, only while open and with a workspace in the address, for PORTFOLIO x initial_grant, top_up, recall_partial, recall_full, adjust_target_budget; ALLOWED is a sentence, never an enabled button; tests in portfolio/railEligibility.test.tsx). Remaining: (a) access/index.tsx still prints \"Not published (FE-015)\" for per-action eligibility: the Access page asks per resource and action and has neither, so it deliberately does not read; \"Not read yet by this screen\" is Bobby's to approve; (b) controls with no action in the 28-action vocabulary keep Not published (FE-015) with the missing item named: Return capital, Lock allocation, Deploy version (Portfolio rail), Rotate credential (Account 360, REVISE_BINDING family not commissioned), acknowledge/mitigate/resolve (Operations); (c) the cockpit StepUpBlock has no caller: no cockpit decision names a capital action; (d) the lab double answers the rail question with a typed 404 (the canonical fixture states a different question, and the double invents no row), so the lab shows the unavailable state only; the other states are pinned in unit tests built from the canonical batch case.",
       "consequence": "FE-037 stays provisional until Codex answers Q1-Q5 in consumer-review-self-contracts-2026-10-19.md; wiring plan W1-W8 is documented, not built. Navigation projection must stay menu-only (RK-1). Wording decision owed (Bobby/Codex): the Access cell 'Not published (FE-015)' for per-action eligibility may be stale now that portal.self-eligibility.v1 is published; proposed 'Not read yet by this screen' until the route is served and wired.",
-      "owner": "Codex (Q1-Q5) then Claude (W1-W8)",
-      "status": "STILL_OPEN (partly done)",
-      "next_action": "Bobby/Codex approve 'Not read yet by this screen' (or keep 'Not published') for the Access cell; Claude then wires eligibility into laneModel per the W-plan and updates the Access cell. Navigation must stay menu-only (RK-1)."
+      "owner": "Bobby (Access cell wording) and Codex/PM (missing eligibility actions); Claude for the rest",
+      "status": "NARROWED (W6 wired on the Portfolio rail; typed absences listed)",
+      "next_action": "Codex/PM: say which actions (if any) cover return, lock, deploy-version, binding credential rotation and the operator writes, or confirm none; and which approval gate carries a capital action for the cockpit step-up. Bobby: Access cell wording and the proposed reason-class copy used on the rail. Claude: wire each new action when published; re-run the rail tests."
     },
     {
       "id": "DEBT-UXM07-013",
@@ -230,6 +213,39 @@
     },
     {
       "id": "DEBT-UXM07-041",
+      "title": "Access baselines changed with the menu-token copy",
+      "where": "e2e/execution-v2-visual.spec.ts cells v2-access-1440 and v2-access-390 (Access: \"What you can see\" reasons now read \"Portfolios in your navigation read\"; the caption now reads \"Menu entries from your navigation read\"), commit 9d0eb97f",
+      "consequence": "The visual suite compares the old pixels and will be red for those two images until they are re-recorded and the contact sheet reviewed. Flag-off pixels are unaffected.",
+      "proposed": "Re-record with scripts/portal-web-visual-record-v2.sh inside the pinned image, forced =all, review the contact sheet.",
+      "owner": "Claude (integrator step, needs Docker)",
+      "status": "OPEN",
+      "opened": "2026-10-21",
+      "next_action": "Fold into DEBT-UXM07-037 (gate on the frozen SHA)."
+    },
+    {
+      "id": "DEBT-UXM07-042",
+      "title": "Eligibility vocabulary has no action for several rail and operator controls",
+      "where": "readers/accessSelf.ts ELIGIBILITY_ACTION_RULES (28 actions): no action for returning capital (capital.return_capital exists in ACCESS_ACTIONS but not in the eligibility vocabulary), locking an allocation, starting a version on an account (deployment.register registers an instance), rotating a binding credential (REVISE_BINDING, COMMAND_FAMILY_NOT_COMMISSIONED), acknowledge/mitigate/resolve an incident",
+      "consequence": "Those controls cannot say why they are off from a server fact; they keep Not published (FE-015) with the missing item named.",
+      "proposed": "Codex/PM publish an action (and its family) for each control they want eligibility for, or confirm that none exists.",
+      "owner": "Codex / PM (vocabulary); Claude wires on publish",
+      "status": "OPEN",
+      "opened": "2026-10-21",
+      "next_action": "Ask in the ELP2-03 ledger; no FE change until named."
+    },
+    {
+      "id": "DEBT-UXM07-043",
+      "title": "Access text safety: the strict readers refuse what the access producer admits",
+      "where": "control-api access.contract.ts accessText (no bidi, zero-width, C1 or whitespace-only check) against the readers accessSelf/accessEffective/commandCurrency, which refuse the whole read for one such string (reader stricter than the schema, named in their conformance suites)",
+      "consequence": "One grant, selector or id carrying such a character voids the whole self read for that member. The Manager dataset was fixed the same way in 27b42bd2; accessText is shared with stored-row parsing, so tightening it could make existing rows unreadable.",
+      "proposed": "Tighten only the WRITE side (grant proposals, previews, revokes) and audit stored rows first; commandCurrency producer parity is not yet audited.",
+      "owner": "Claude (access write path), needs a stored-row audit on a database",
+      "status": "OPEN",
+      "opened": "2026-10-21",
+      "next_action": "Count stored grants with such characters (read-only SQL), then add the write-side refine with a test."
+    },
+    {
+      "id": "DEBT-UXM07-044",
       "title": "M-1 rule R-A is falsified for the workbench route: 12 requests with 1 worker, 11 with 2",
       "where": "upgrade/execution_loop/evidence/ELP2-10/measurements (M-1a receipts), BE-P19-measurements.md",
       "consequence": "The request count per route is not worker-independent on workbench, so a per-route read budget cannot be pinned from one run; counts elsewhere hold.",
@@ -239,7 +255,7 @@
       "pre_commit_hook_blocks": false
     },
     {
-      "id": "DEBT-UXM07-042",
+      "id": "DEBT-UXM07-045",
       "title": "M-1 access · canary fails 2 of 2 even alone on the fixture lane",
       "where": "measurements M-1a receipts (access · canary)",
       "consequence": "One route cannot be measured; unknown whether the cause is the harness or a product defect on /administration/my-access with the canary key.",
@@ -249,11 +265,11 @@
       "pre_commit_hook_blocks": false
     },
     {
-      "id": "DEBT-UXM07-043",
+      "id": "DEBT-UXM07-046",
       "title": "M-4a p95 varies 43% and 75% between repetitions (limit R-C 25%); cell was 3 CPU / 3 GiB, not the manifest's 4/4",
       "where": "measurements M-4a receipts",
-      "consequence": "No stable p95 can be quoted; the fixture numbers must not become a budget. Hook-time tests also flake when other heavy jobs run (see 2026-10-21 hook run).",
-      "proposed": "Rerun M-4a on a quiet host in the 4/4 cell with three repetitions; never run heavy jobs in parallel with the hook (rule recorded in HANDOFF section 11).",
+      "consequence": "No stable p95 can be quoted; the fixture numbers must not become a budget. Hook-time tests also flake when other heavy jobs run (2026-10-21 hook run: elp207 timeout, elp210 frame-coupled setup delay, profile-projection 60s read count).",
+      "proposed": "Rerun M-4a on a quiet host in the 4/4 cell with three repetitions; never run heavy jobs in parallel with the hook.",
       "owner": "Claude",
       "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
       "pre_commit_hook_blocks": false
@@ -426,6 +442,26 @@
       "owner": "Claude (FE)",
       "status": "ACCEPTED_EXCEPTION",
       "resolution": "Accepted exceptions, not debt to pay: fail-closed or wrong-read fixes that are deliberately not rolled back with the V2 flags (Bobby 2026-10-20). Listed so a future flag rollback knows they stay."
+    },
+    {
+      "id": "DEBT-UXM07-004",
+      "title": "Reader defects documented by the L3 conformance suites",
+      "where": "server meaning of an absent stage in stage_counts (FE-048); the five intentional it.fails pins in v2/readers/managerDataset.conformance.test.ts (producer-only constraints that JSON Schema cannot state)",
+      "owner": "Claude (backend is Claude's since 2026-10-21; Codex reviews)",
+      "closed_by": "27b42bd2. FE-048 answered by the producer: manager-lists.service.ts fleetStageCounts lists a stage of a source environment read COMPLETE (strategies and deployments) with its exact count, 0 included (paper=PAPER, sandbox=SANDBOX, live=CANARY+LIVE), and omits a stage of an environment not read or read PARTIAL, so absence means \"not stated\" and the FE keeps Not available; no schema change. MD-S1/MD-S4: the Manager dataset producer now refuses to emit text with C1 controls, zero-width/bidi format characters, lone surrogates or only whitespace (MANAGER_TEXT_UNSAFE) and a partition metric key that is not a lower-case token or a 65th metric, the rules the strict reader enforced alone. The five it.fails in managerDataset.conformance.test.ts are PERMANENT: JSON Schema cannot compare an array length to a number or a field to its sibling list; the producer enforces each (manager-dataset-invariants.ts MD-1..MD-8, elp206-manager-dataset-invariants.spec.ts) and the reader holds each.",
+      "evidence": "control-api: fleet-stage-counts.spec.ts (6) and elp206-manager-dataset-invariants.spec.ts (48) green, tsc -p tsconfig.build.json clean, N29 ledgers refreshed. NOT_RUN: manager-lists.spec.ts (needs PostgreSQL, none here).",
+      "residual": "See DEBT-UXM07-043 (access text safety) and the commandCurrency producer parity, which was not audited."
+    },
+    {
+      "id": "DEBT-UXM07-006",
+      "title": "Compare has no registry row",
+      "where": "previewRegistry / registry.json (Codex)",
+      "consequence": "Compare still rides /deployments/portfolios?view=compare; registry.json is at revision 8 (PROFILE_ACCESS_SELF) and has no EXECUTION_COMPARE_SCREEN row. The V2 pixel baselines v2-compare-1440/390 were recorded on the ?view=compare URL",
+      "owner": "Claude (registry and backend are Claude's since 2026-10-21; Codex reviews)",
+      "closed_by": "8c70b177: registry.json revision 8 -> 9 adds the EXECUTION_COMPARE_SCREEN screen row at /deployments/compare (feature EXECUTION_PORTFOLIOS, fixture delivery contract equal to the portfolio 360, no flag enabled; registry.public.json and the six summary fixtures from scripts/export_handoff_contract.py); PortalRoutes claims the path only while the compare flag is on; the pre-rev-9 URL /deployments/portfolios[/:id]?view=compare redirects to it; N29 acceptance and verifier re-pinned 8 -> 9 as in 6d87825b, refresh-release-integrity-ledgers.sh --write and --check green.",
+      "evidence": "registry pytest (contract, api, handoff, navigation, summary) green; vitest routeContract/linkTargets/navigation/Sidebar/execution green; flag-off DOM digests (PortalShell.flagOff) unchanged because the route does not exist flag off. NOT_RUN: the Playwright e2e (URL moved in v2Lane, s1, links, visual specs) and the visual compare on the pinned image. The two Compare baselines v2-compare-1440/390 are expected to compare at zero diff (same screen, same env/window locks, breadcrumb outside #portal-content) and were NOT re-recorded.",
+      "residual": "FE-039 (hide the legacy APPROVALS rail entry) was not part of rev 9 and is untouched here; C-5 also named EXECUTION_ARCHIVED_ALPHAS_SCREEN, which the Fleet lens replaced (key archived is reserved)."
     }
-  ]
+  ],
+  "followup_after": "27b42bd2"
 }
