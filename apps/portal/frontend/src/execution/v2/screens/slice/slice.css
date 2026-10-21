@@ -113,6 +113,20 @@
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.exec-slice-btn:disabled {
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+.exec-slice-pager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.exec-slice-pagerbtns {
+  display: inline-flex;
+  gap: var(--space-2);
+}
 .exec-slice-details {
   font: var(--exec-font-body);
   color: var(--ink);
