@@ -35,7 +35,7 @@ export interface WireOptions {
   positions?: number;
   /** Equity snapshots; 0 leaves the branch empty. */
   equity?: number;
-  /** Adds `data.history_windows.account_equity` (not in the published `Data` schema, which the V1 reader still reads). */
+  /** Adds `data.history_windows.account_equity`, the published `PaperHistoryWindow` (FE-073): source rows 1438, returned rows = the equity rows, per-series bucket extrema. */
   history?: boolean;
   /** Publishes the five identity keys (FE-066): a qualified `alpha_id`, no alpha name (ALPHA_NAME_NOT_PUBLISHED) and a portfolio name. */
   identity?: boolean;
@@ -124,7 +124,7 @@ export function paperWire(options: WireOptions = {}): Wire {
     },
   );
   if (history) {
-    data.history_windows = { account_equity: { days: 90, source_rows: 1438, basis: "ACCOUNT_EQUITY_SNAPSHOTS", downsample: { method: "bucket_last", bucket_seconds: 3600 } } };
+    data.history_windows = { account_equity: { days: 90, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: equity, source_rows: 1438, truncated: false, downsample: { method: "PER_SERIES_BUCKET_EXTREMA", bucket_seconds: 3600, series_count: 1, input_rows: 1438, output_rows: equity } } };
   }
   return wire;
 }

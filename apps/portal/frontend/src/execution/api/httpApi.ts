@@ -57,7 +57,7 @@ import {
 } from "../v2/readers/dispatch";
 import { refusalReason } from "./schemaGuard";
 import { readPaperWorkbenchProfile } from "../v2/readers/paperRead";
-import { approvalCreateViolations, problemViolations } from "../v2/readers/approvalCreate";
+import { DUPLICATE_OPEN_APPROVAL, approvalCreateViolations, duplicateApprovalId, problemViolations } from "../v2/readers/approvalCreate";
 import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
 import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
 import {
@@ -333,9 +333,9 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
     const problemBody = readProblem(body, response.status);
     // The code is acted on only when the body is the published problem; the V2 screen drops it otherwise and keeps the status.
     const untyped = problemViolations(body).length > 0 ? { untyped: { status: response.status } } : {};
-    if (response.status === 409 && /DUPLICATE/i.test(problemBody.code)) {
-      const match = /\b(apr_[A-Za-z0-9]+|AP-\d+)\b/.exec(problemBody.message);
-      return { kind: "duplicate", existingApprovalId: match ? match[1] : null, reason: problemBody.message, ...untyped };
+    if (response.status === 409 && problemBody.code === DUPLICATE_OPEN_APPROVAL) {
+      // FE-074: the existing approval is `details.approval_id` of the published `DuplicateOpenApprovalProblem`; the message is prose and is never parsed.
+      return { kind: "duplicate", existingApprovalId: duplicateApprovalId(body), reason: problemBody.message, ...untyped };
     }
     return {
       kind: "failed",

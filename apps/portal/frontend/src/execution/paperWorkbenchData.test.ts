@@ -49,7 +49,7 @@ function envelopeOf(over: Partial<ProfileEnvelope> = {}): ProfileEnvelope {
     objects: {
       deployment: DEPLOYMENT,
       observation_gate: GATE,
-      history_windows: { account_equity: { days: 30, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: 2, source_rows: 6661, truncated: false, downsample: { method: "PER_SERIES_BUCKET_EXTREMA", bucket_seconds: 3637 } } },
+      history_windows: { account_equity: { days: 30, basis: "PORTAL_SGP_HISTORY_MIRROR", returned_rows: 2, source_rows: 6661, truncated: false, downsample: { method: "PER_SERIES_BUCKET_EXTREMA", bucket_seconds: 3637, series_count: 1, input_rows: 6661, output_rows: 2 } } },
     },
     ...over,
   } as ProfileEnvelope;

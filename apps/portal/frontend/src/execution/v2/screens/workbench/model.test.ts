@@ -332,7 +332,7 @@ describe("equity and accounting", () => {
 
   it("the server's own downsample is repeated verbatim and never claims extrema", () => {
     expect(model(paperWire({ history: false })).equity.serverEnvelope).toBeUndefined();
-    expect(model(paperWire({ history: true, equity: 6 })).equity.serverEnvelope).toEqual({ sourceCount: 1438, shownCount: 6, method: "bucket_last", keepsExtrema: false });
+    expect(model(paperWire({ history: true, equity: 6 })).equity.serverEnvelope).toEqual({ sourceCount: 1438, shownCount: 6, method: "PER_SERIES_BUCKET_EXTREMA", keepsExtrema: false });
     const smaller = paperWire({ history: true, equity: 6 });
     smaller.data.history_windows.account_equity.source_rows = 3;
     expect(model(smaller).equity.serverEnvelope).toBeUndefined();

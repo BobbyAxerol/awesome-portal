@@ -19,23 +19,21 @@
  *     and a 409 is not a duplicate;
  *   - a 4xx is definite: it never carries the offline flag.
  *
- * Differences from the schemas, pinned in the `ledger` block so a schema change shows up as a red test:
- *   SI-1  `ApprovalCreateRequest` requires `workspace_id`; the server's own validator makes it optional (contracts.ts) and the client does not send
- *         one (the literal "primary" answered 404). Schema issue for Codex.
- *   SI-2  `Problem` closes the object, but the server also sends `details`, `public_copy_key`, `safe_next_action`. In a 409 DUPLICATE_OPEN_APPROVAL
- *         the existing approval's id is `details.approval_id` and the message carries no id, so the screen's link to the existing request (read
- *         from the message) is dark on the real server. Request to Codex: publish `details` for that code.
- *   SI-3  `problem.valid.json` (the only Problem fixture) is RFC 9457 shaped and does not match `Problem`; there is no canonical problem body for the
- *         create route. The samples here are TEST_ONLY and checked against the schema.
+ * The one difference from the schemas, pinned in the `ledger` block so a schema change shows up as a red test:
  *   S-1   `subject_label` and `requester.username` are printed: text with a control or bidi-format character is refused (the schema has no pattern).
- *   X-2   the three members of SI-2 are tolerated in their own shape and never read.
+ *
+ * No entry is looser than a schema. Since FE-074 (c02f63d8) the schemas publish what the server sends: `workspace_id` is optional in the request
+ * (the server resolves and authorizes the session's workspace; omission is never global scope, so the client sends none), `Problem` lists
+ * `details`, `public_copy_key` and `safe_next_action`, and `DuplicateOpenApprovalProblem` closes `details` to `{ approval_id }` for
+ * DUPLICATE_OPEN_APPROVAL. The id of the existing request is read from there and from nowhere else (never the message). The canonical bodies are
+ * `execution-governance.duplicate-open.valid.json` and `execution-governance.served-problem.valid.json` (TEST_ONLY_SYNTHETIC).
  */
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { createHttpApi } from "../../../api/httpApi";
 import type { ApprovalCreateOutcome } from "../../../api/ports";
 import type { DeliveryPolicy } from "../../../profile";
-import { PROBLEM_UNPUBLISHED_MEMBERS, approvalCreateViolations, problemViolations, readApprovalCreateV1 } from "../../readers/approvalCreate";
+import { approvalCreateViolations, duplicateApprovalId, problemViolations, readApprovalCreateV1 } from "../../readers/approvalCreate";
 import { readApprovalRequestLookupV1 } from "../../readers/approvalRequestLookup";
 import { canonicalDigest, loadCanonical } from "../../testkit/loadCanonical";
 import { type Draft } from "../../testkit/matrix";
@@ -47,7 +45,9 @@ import { failureKind, readOutcome, refusalOf, showable } from "./model";
 
 const CREATED_FILE = "execution-governance.approval-create.valid.json";
 const LOOKUP_FILE = "governance-requester-reads.synthetic.valid.json";
-const digests = { [CREATED_FILE]: canonicalDigest(CREATED_FILE), [LOOKUP_FILE]: canonicalDigest(LOOKUP_FILE) };
+const DUPLICATE_FILE = "execution-governance.duplicate-open.valid.json";
+const PROBLEM_FILE = "execution-governance.served-problem.valid.json";
+const digests = Object.fromEntries([CREATED_FILE, LOOKUP_FILE, DUPLICATE_FILE, PROBLEM_FILE].map((f) => [f, canonicalDigest(f)]));
 afterAll(() => {
   for (const [file, digest] of Object.entries(digests)) expect(canonicalDigest(file), file).toBe(digest);
 });
@@ -56,13 +56,9 @@ const PRODUCT = "execution-governance-product.v1.schema.json";
 const OA = "../openapi/execution-governance.openapi.json";
 const successViolations = (body: unknown) => validateAgainst(PRODUCT, "/$defs/ApprovalCreateResponse", body);
 const requestViolations = (body: unknown) => validateAgainst(PRODUCT, "/$defs/ApprovalCreateRequest", body);
-const withoutProblemExtras = (body: Draft): Draft => {
-  const copy = structuredClone(body);
-  if (copy !== null && typeof copy === "object" && !Array.isArray(copy)) for (const key of PROBLEM_UNPUBLISHED_MEMBERS) delete copy[key];
-  return copy;
-};
-/** The schema's verdict on a problem body, the three unpublished members (X-2) set aside. */
-const problemOracle = (body: unknown) => validateAgainst(OA, "/components/schemas/Problem", withoutProblemExtras(body));
+/** The schema's verdict on a problem body: `Problem`, whose rule for DUPLICATE_OPEN_APPROVAL is the closed `DuplicateOpenApprovalProblem` shape. */
+const problemOracle = (body: unknown) => validateAgainst(OA, "/components/schemas/Problem", body);
+const duplicateOracle = (body: unknown) => validateAgainst(OA, "/components/schemas/DuplicateOpenApprovalProblem", body);
 
 const OPEN: DeliveryPolicy = {
   policyRevision: 9, queryEnabled: true, projectionIngestionEnabled: false, sseEnabled: false, governanceWriteEnabled: true, paperCommandsEnabled: false,
@@ -99,7 +95,8 @@ async function told(wire: Wire): Promise<Told> {
 const CREATED = (): Draft => loadCanonical<Draft>(CREATED_FILE);
 const REPLAYED = (): Draft => ({ ...CREATED(), replayed: true });
 const problem = (code: string, message = "As stated by the server.", extra: Draft = {}): Draft => ({ error: { code, message }, request_id: "req-TEST_ONLY-1", ...extra });
-const DUPLICATE_BODY = (): Draft => problem("DUPLICATE_OPEN_APPROVAL", "An open approval already exists for this alpha and evidence run.", { details: { approval_id: "apr_01J6N29PRODUCT" } });
+const DUPLICATE_BODY = (): Draft => loadCanonical<Draft>(DUPLICATE_FILE);
+const duplicate = (extra: Draft = {}, message = "An open approval already exists for this alpha and evidence run."): Draft => problem("DUPLICATE_OPEN_APPROVAL", message, extra);
 
 /* ═════════════════════════ L0 ═════════════════════════ */
 describe("L0 · canonical, verbatim", () => {
@@ -148,40 +145,45 @@ describe("L0 · canonical, verbatim", () => {
       evidence_run_id: INPUT.evidenceRunId, methodology_claim_id: INPUT.methodologyClaimId, summary: INPUT.summary,
     });
   });
+
+  it("FE-074 request: no workspace_id is sent and the body conforms; a named workspace conforms too (the server still authorizes it)", async () => {
+    await told({ status: 201, body: CREATED() });
+    expect(sent[0]!.body).not.toHaveProperty("workspace_id");
+    expect(requestViolations(sent[0]!.body)).toEqual([]);
+    expect(requestViolations({ ...(sent[0]!.body as Draft), workspace_id: "ws_TEST_ONLY" })).toEqual([]);
+    // Omission is not a wildcard: the schema still bounds a named one.
+    expect(requestViolations({ ...(sent[0]!.body as Draft), workspace_id: "x" })).not.toEqual([]);
+  });
+
+  it("FE-074 problem: the two published bodies conform to Problem, and the duplicate one to its closed variant", () => {
+    const dup = loadCanonical<Draft>(DUPLICATE_FILE);
+    const served = loadCanonical<Draft>(PROBLEM_FILE);
+    for (const [name, body] of [["duplicate", dup], ["served problem", served]] as const) {
+      expect(problemOracle(body), name).toEqual([]);
+      expect(problemViolations(body), name).toEqual([]);
+    }
+    expect(duplicateOracle(dup)).toEqual([]);
+    expect(duplicateApprovalId(dup)).toBe("apr_TEST_ONLY_existing");
+    expect(duplicateApprovalId(served)).toBeNull();
+  });
+
+  it("FE-074 problem: a 409 duplicate names the existing request from details.approval_id, and only from there", async () => {
+    const t = await told({ status: 409, body: DUPLICATE_BODY() });
+    expect(t.outcome).toEqual({ kind: "duplicate", existingApprovalId: "apr_TEST_ONLY_existing", reason: "An open approval already exists for this alpha and evidence run." });
+    expect(t.kind).toBe("duplicate");
+    // The message is prose: an id in it is never read, whatever it looks like.
+    const prose = await told({ status: 409, body: duplicate({ details: { approval_id: "apr_TEST_ONLY_typed" } }, "Open approval apr_01J6N29PRODUCT already exists (AP-352).") });
+    expect(prose.outcome).toMatchObject({ kind: "duplicate", existingApprovalId: "apr_TEST_ONLY_typed" });
+  });
+
+  it("FE-074 problem: the served problem (public_copy_key, safe_next_action) is typed, and its code leads the reason as for any problem", async () => {
+    const t = await told({ status: 422, body: loadCanonical<Draft>(PROBLEM_FILE) });
+    expect(t.outcome).toEqual({ kind: "failed", status: "unavailable", reason: "COMMAND_STATUS_UNVERIFIED: The command status could not be verified." });
+  });
 });
 
 /* ═════════════ the ledger: every difference from the schemas, pinned ═════════════ */
-describe("the ledger · the differences are exactly the listed ones", () => {
-  it("SI-1: the schema requires workspace_id, the client sends none, and that is the only difference", async () => {
-    await told({ status: 201, body: CREATED() });
-    expect(requestViolations(sent[0]!.body)).toEqual(["$.workspace_id: required"]);
-    // With a workspace named the same body conforms: nothing else about the request is off.
-    expect(requestViolations({ ...(sent[0]!.body as Draft), workspace_id: "ws_TEST_ONLY" })).toEqual([]);
-  });
-
-  it("SI-2: the server's problem members are not in the schema; the reader tolerates them in their own shape and reads none", async () => {
-    const real = DUPLICATE_BODY();
-    expect(validateAgainst(OA, "/components/schemas/Problem", real)).not.toEqual([]);
-    for (const key of PROBLEM_UNPUBLISHED_MEMBERS) {
-      expect(validateAgainst(OA, "/components/schemas/Problem", { ...problem("X_CODE"), [key]: key === "details" ? {} : "text" }).join(), key).toMatch(new RegExp(`\\$\\.${key}`));
-    }
-    expect(problemOracle(real)).toEqual([]);
-    expect(problemViolations(real)).toEqual([]);
-    // The real 409: a duplicate, and the id is in `details`, which nothing reads: the link to the existing request is dark.
-    const t = await told({ status: 409, body: real });
-    expect(t.outcome).toEqual({ kind: "duplicate", existingApprovalId: null, reason: "An open approval already exists for this alpha and evidence run." });
-    // Each member only in its own shape.
-    for (const bad of [{ details: [] }, { details: "x" }, { public_copy_key: 4 }, { safe_next_action: {} }, { public_copy_key: "" }]) {
-      expect(problemViolations({ ...problem("X_CODE"), ...bad }), JSON.stringify(bad)).not.toEqual([]);
-    }
-  });
-
-  it("SI-3: the only Problem fixture is not a Problem, so the samples here are the test's own", () => {
-    const fixture = loadCanonical<Draft>("problem.valid.json");
-    expect(validateAgainst(OA, "/components/schemas/Problem", fixture)).not.toEqual([]);
-    expect(problemViolations(fixture)).not.toEqual([]);
-  });
-
+describe("the ledger · the one difference is the listed one", () => {
   it("S-1: a hostile character in the printed text of a created body is refused, though the schema has no pattern for it", async () => {
     const BIDI = String.fromCharCode(0x202e);
     for (const edit of [
@@ -203,7 +205,7 @@ describe("L1 · status x body: what may have been created", () => {
     created: () => ({ body: CREATED() }),
     replayed: () => ({ body: REPLAYED() }),
     problem: () => ({ body: problem("EVIDENCE_RUN_NOT_FOUND") }),
-    "problem + server members": () => ({ body: problem("EVIDENCE_RUN_NOT_FOUND", "As stated.", { details: { a: 1 }, public_copy_key: "k", safe_next_action: "a" }) }),
+    "problem + server members": () => ({ body: problem("EVIDENCE_RUN_NOT_FOUND", "As stated.", { details: { a: 1 }, public_copy_key: "EVIDENCE_RUN_NOT_FOUND", safe_next_action: "REVIEW_BLOCKER" }) }),
     "problem without request_id": () => ({ body: { error: { code: "EVIDENCE_RUN_NOT_FOUND", message: "As stated." } } }),
     "created, approval without status": () => { const b = CREATED(); delete b.approval.status; return { body: b }; },
     html: () => ({ text: "<html>bad gateway</html>" }),
@@ -243,13 +245,34 @@ describe("L1 · status x body: what may have been created", () => {
   });
 
   describe("409: the conflict shapes", () => {
-    it("DUPLICATE_OPEN_APPROVAL is a duplicate; the id is read from the message only when the message carries one", async () => {
-      const bare = await told({ status: 409, body: problem("DUPLICATE_OPEN_APPROVAL", "An open approval already exists for this alpha and evidence run.") });
-      expect(bare.outcome).toMatchObject({ kind: "duplicate", existingApprovalId: null });
-      const withId = await told({ status: 409, body: problem("DUPLICATE_OPEN_APPROVAL", "An open approval apr_01J6N29PRODUCT already exists.") });
-      expect(withId.outcome).toMatchObject({ kind: "duplicate", existingApprovalId: "apr_01J6N29PRODUCT" });
-      const queued = await told({ status: 409, body: problem("DUPLICATE_OPEN_APPROVAL", "Open approval AP-352 already exists.") });
+    it("DUPLICATE_OPEN_APPROVAL is a duplicate; the existing id is details.approval_id of the published variant", async () => {
+      const typed = await told({ status: 409, body: DUPLICATE_BODY() });
+      expect(typed.outcome).toMatchObject({ kind: "duplicate", existingApprovalId: "apr_TEST_ONLY_existing" });
+      expect(typed.port).not.toHaveProperty("untyped");
+      const queued = await told({ status: 409, body: duplicate({ details: { approval_id: "AP-352" } }) });
       expect(queued.outcome).toMatchObject({ kind: "duplicate", existingApprovalId: "AP-352" });
+    });
+
+    it.each([
+      ["no details", {}],
+      ["empty details", { details: {} }],
+      ["another member beside the id", { details: { approval_id: "apr_TEST_ONLY_1", extra: 1 } }],
+      ["an id outside the Identifier grammar", { details: { approval_id: "x/../y" } }],
+      ["a non-string id", { details: { approval_id: 7 } }],
+      ["details that is not an object", { details: "apr_TEST_ONLY_1" }],
+    ])("a 409 DUPLICATE_OPEN_APPROVAL with %s is not the published variant: not a duplicate, and its message is not read for an id", async (_name, extra) => {
+      const body = duplicate(extra as Draft, "Open approval apr_01J6N29PRODUCT already exists.");
+      expect(duplicateOracle(body)).not.toEqual([]);
+      expect(problemOracle(body)).not.toEqual([]);
+      const t = await told({ status: 409, body });
+      expect(t.kind).toBe("unavailable");
+      expect(t.outcome).toMatchObject({ kind: "failed", reason: "HTTP_409: The request failed." });
+    });
+
+    it("another 409 code is never a duplicate, whatever its details say", async () => {
+      const t = await told({ status: 409, body: problem("REQUEST_KEY_CONFLICT", "Request key payload conflicts.", { details: { approval_id: "apr_TEST_ONLY_1" } }) });
+      expect(t.kind).toBe("refused");
+      expect(t.outcome).not.toHaveProperty("existingApprovalId");
     });
 
     it.each(["REQUEST_KEY_PAYLOAD_CONFLICT", "REQUEST_KEY_CONFLICT", "APPROVAL_CREATE_SERIALIZATION_CONFLICT", "EVIDENCE_ARTIFACT_CHANGED"])("%s is a definite refusal with its own sentence, not a duplicate and not uncertain", async (code) => {
@@ -260,7 +283,7 @@ describe("L1 · status x body: what may have been created", () => {
     });
 
     it("a 409 whose body is not the published problem is not a duplicate even if it says so", async () => {
-      const t = await told({ status: 409, body: { error: { code: "DUPLICATE_OPEN_APPROVAL", message: "open approval apr_01J6N29PRODUCT" } } });
+      const t = await told({ status: 409, body: { error: { code: "DUPLICATE_OPEN_APPROVAL", message: "open approval apr_01J6N29PRODUCT" }, details: { approval_id: "apr_01J6N29PRODUCT" } } });
       expect(t.kind).toBe("unavailable");
       expect(t.outcome).toMatchObject({ kind: "failed", reason: "HTTP_409: The request failed." });
     });
@@ -300,7 +323,7 @@ describe("L2 · the schema's bounds", () => {
     for (const summary of ["12345678", "x".repeat(2000)]) {
       stub({ status: 201, body: CREATED() });
       await createHttpApi({ policy: OPEN }).createApprovalRequest({ ...INPUT, summary });
-      expect(requestViolations({ ...(sent.at(-1)!.body as Draft), workspace_id: "ws_TEST_ONLY" })).toEqual([]);
+      expect(requestViolations(sent.at(-1)!.body)).toEqual([]);
     }
   });
 
@@ -388,14 +411,15 @@ describe("L3 · generated negatives, schema as oracle", () => {
 
   it("problem body: the code is acted on only when the body keeps Problem (the server's own members set aside)", async () => {
     const t: Tally = { total: 0, invalid: 0, looser: [], stricter: [] };
-    for (const [status, source] of [[400, problem("EVIDENCE_RUN_NOT_FOUND", "The run was not found.")], [409, DUPLICATE_BODY()]] as const) {
-      // The server's own members are tolerated in their own shape (ledger); the schema says nothing about them.
-      for (const m of mutationsOf(source, { skip: (path) => (PROBLEM_UNPUBLISHED_MEMBERS as readonly string[]).includes(String(path[0])) })) {
+    for (const [status, source] of [[400, problem("EVIDENCE_RUN_NOT_FOUND", "The run was not found.")], [422, loadCanonical<Draft>(PROBLEM_FILE)], [409, DUPLICATE_BODY()]] as const) {
+      for (const m of mutationsOf(source)) {
         t.total += 1;
         const violations = problemOracle(m.value);
         const out = await told({ status, body: m.value });
         const typedCode = (m.value as Draft)?.error?.code;
         const actedOn = out.outcome.kind === "duplicate" || (out.outcome.kind === "failed" && !out.outcome.reason.startsWith(`HTTP_${status}:`));
+        // The link target is the typed id or nothing: a duplicate whose body does not keep the variant never names one.
+        if (out.outcome.kind === "duplicate") expect(out.outcome.existingApprovalId, m.name).toBe(duplicateApprovalId(m.value));
         if (violations.length > 0) {
           t.invalid += 1;
           if (actedOn) t.looser.push(`${status}: ${m.name} -> ${violations[0]}`);
@@ -408,7 +432,7 @@ describe("L3 · generated negatives, schema as oracle", () => {
       }
     }
     report("problem body", t);
-    expect(t.total).toBeGreaterThan(60);
+    expect(t.total).toBeGreaterThan(100);
     expect(t.looser, `acted on although the schema rejects it:\n${t.looser.slice(0, 15).join("\n")}`).toEqual([]);
     expect(t.stricter, `ignored although the schema accepts it:\n${t.stricter.slice(0, 15).join("\n")}`).toEqual([]);
   }, 120_000);
@@ -449,7 +473,7 @@ describe("L3 · generated negatives, schema as oracle", () => {
       expect(readApprovalCreateV1(c.value), c.name).toBeNull();
       expect(prototypeIsClean()).toBe(true);
     }
-    for (const c of pollutionCases(problem("X_CODE"), [[], ["error"]])) {
+    for (const c of pollutionCases(DUPLICATE_BODY(), [[], ["error"], ["details"]])) {
       const t = await told({ status: 400, body: c.value });
       expect(leaked(t.outcome, c.probe), c.name).toBe(false);
       expect(prototypeIsClean()).toBe(true);

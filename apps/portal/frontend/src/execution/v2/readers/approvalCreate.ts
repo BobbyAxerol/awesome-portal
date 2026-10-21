@@ -13,8 +13,10 @@
  * Differences from the schema, counted in `request.conformance.test.ts` (S = stricter, X = looser):
  *   S-1  `subject_label` and `requester.username` are printed, so text with a control or a bidi-format character is refused (the schema
  *        states no pattern for them).
- *   X-2  the server also sends `details`, `public_copy_key` and `safe_next_action` in a problem body (`http-error.filter.ts`); the published
- *        `Problem` closes the object and lists none of them. They are tolerated in their own shape and never read. Schema issue for Codex.
+ * No entry is looser than the schema. Since FE-074 (c02f63d8) the published `Problem` lists `details`, `public_copy_key` and `safe_next_action`,
+ * and `DuplicateOpenApprovalProblem` closes `details` to `{ approval_id }` for `DUPLICATE_OPEN_APPROVAL`; `problemViolations` enforces both.
+ * `ApprovalCreateRequest.workspace_id` is optional (the server resolves the session's workspace and still authorizes it; omitting it is never
+ * global scope), so the client sends none.
  */
 import type { ApprovalCreateOutcome } from "../../api/ports";
 import { unsafeText } from "../../unsafeText";
@@ -107,16 +109,21 @@ export function readApprovalCreateV1(raw: unknown): CreatedOrReplayed | null {
   };
 }
 
-/** The problem members the server sends beyond the published `Problem` (X-2). */
-export const PROBLEM_UNPUBLISHED_MEMBERS = ["details", "public_copy_key", "safe_next_action"] as const;
+export const DUPLICATE_OPEN_APPROVAL = "DUPLICATE_OPEN_APPROVAL";
+const COPY_KEY = /^[A-Z][A-Z0-9_]*$/;
+const NEXT_ACTIONS: readonly unknown[] = ["QUERY_SAME_INTENT", "REVIEW_BLOCKER"];
 
-/** Where a non-2xx body breaks `Problem` (X-2 members set aside); empty = it is a typed problem and its `error.code` may be acted on. */
+/**
+ * Where a non-2xx body breaks `Problem`, including the closed `DuplicateOpenApprovalProblem` rule for its code; empty = it is a typed
+ * problem and its `error.code` may be acted on.
+ */
 export function problemViolations(raw: unknown): readonly string[] {
   const out: string[] = [];
   if (!isObject(raw)) return ["root: not an object"];
-  for (const key of Object.keys(raw)) if (!["error", "request_id"].includes(key) && !(PROBLEM_UNPUBLISHED_MEMBERS as readonly string[]).includes(key)) out.push(`${key}: not allowed`);
+  for (const key of Object.keys(raw)) if (!["error", "request_id", "details", "public_copy_key", "safe_next_action"].includes(key)) out.push(`${key}: not allowed`);
   for (const key of ["error", "request_id"]) if (!Object.hasOwn(raw, key)) out.push(`${key}: required`);
   if (Object.hasOwn(raw, "request_id") && !text(raw.request_id, 1, 128)) out.push("request_id: not 1..128 characters");
+  let duplicate = false;
   if (Object.hasOwn(raw, "error")) {
     const error = raw.error;
     if (!isObject(error)) out.push("error: not an object");
@@ -124,9 +131,32 @@ export function problemViolations(raw: unknown): readonly string[] {
       for (const key of Object.keys(error)) if (key !== "code" && key !== "message") out.push(`error.${key}: not allowed`);
       if (!text(error.code, 1, 128)) out.push("error.code: not 1..128 characters");
       if (!text(error.message, 1, 512)) out.push("error.message: not 1..512 characters");
+      duplicate = error.code === DUPLICATE_OPEN_APPROVAL;
     }
   }
-  if (Object.hasOwn(raw, "details") && !isObject(raw.details)) out.push("details: not an object");
-  for (const key of ["public_copy_key", "safe_next_action"]) if (Object.hasOwn(raw, key) && !text(raw[key], 1, 256)) out.push(`${key}: not 1..256 characters`);
+  const details = raw.details;
+  if (Object.hasOwn(raw, "details")) {
+    if (!isObject(details)) out.push("details: not an object");
+    else if (Object.keys(details).length > 32) out.push("details: more than 32 members");
+  }
+  // The named variant carries one thing: the existing approval's id. It is navigation metadata, and it is never read from the message.
+  if (duplicate) {
+    if (!Object.hasOwn(raw, "details")) out.push("details: required");
+    else if (isObject(details)) {
+      for (const key of Object.keys(details)) if (key !== "approval_id") out.push(`details.${key}: not allowed`);
+      if (!Object.hasOwn(details, "approval_id")) out.push("details.approval_id: required");
+      else if (typeof details.approval_id !== "string" || !IDENTIFIER.test(details.approval_id)) out.push("details.approval_id: not an identifier");
+    }
+  }
+  if (Object.hasOwn(raw, "public_copy_key") && (!text(raw.public_copy_key, 1, 128) || !COPY_KEY.test(raw.public_copy_key))) out.push("public_copy_key: not 1..128 characters of the published pattern");
+  if (Object.hasOwn(raw, "safe_next_action") && !NEXT_ACTIONS.includes(raw.safe_next_action)) out.push("safe_next_action: not a published word");
   return out.slice(0, MAX_LISTED);
+}
+
+/** The existing approval of a 409 `DUPLICATE_OPEN_APPROVAL`: `details.approval_id` of a body that keeps the published variant; `null` for any other body. */
+export function duplicateApprovalId(raw: unknown): string | null {
+  if (problemViolations(raw).length > 0) return null;
+  const root = raw as Json;
+  if ((root.error as Json).code !== DUPLICATE_OPEN_APPROVAL) return null;
+  return (root.details as Json).approval_id as string;
 }
