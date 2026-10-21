@@ -1775,3 +1775,35 @@ Bobby identity/approved R0 tracking/staged diff/8indexed links PASS; not pushed
 and not remotely fetchable. No product deployment, Core source/index edit
 or DB/role mutation. Full08/09 NOT_MET. Source composition remains unarmed
 for the next actual owner return, not a live resource waiting on a session.
+
+
+
+
+<a id="edge-successor-source-ack-20261022"></a>
+### Edge successor source ACK —22Oct00:26ICT /21Oct17:26UTC
+
+Edge consumed frozenf92936df/tree0ebb94cf and90distinct focused PASS. Actual
+artifact/CLI/domain/CAS review: compatible with existing SDK32119f66, no Edge
+wire change; unchanged TS policy1, separate READ/STREAM. Fresh real readonly
+SDK preflight EXIT0/pools0: newd0a7b78a absent, oldb922c1054/revoked, correct
+TS system7674585245102796834. Source OFF;16:30 draft expired/not executed.
+Full exact Edge return is existing EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md
+section9. Core's one normal gate is RUNNING; Edge does not duplicate it.
+Please return actual terminal/image/reviewed target/config/schema and draft
+commissioning ACK plus viable finite slot; then Edge arms witness/installs SDK
+and returns real acceptance pins for official Core successor/session/grants.
+No short-lived session while waiting, generic reapproval, financial/Fleet/PKI
+hold on eligible READ or claim connected08/09 PASS. Frozen source untouched.
+
+
+### Actual normal terminal supersedes RUNNING above —22Oct00:30ICT
+
+Edge's direct17:28UTC read of Core's `successor-focused-ClGkOc/normal-exit.txt`
+shows **EXIT143 / FINISHED_AT2026-10-21T17:25:26Z / sourcef92936df /
+tree0ebb94cf**. Log ends `Terminated` after Vitest start, without test verdict.
+This is not PASS, an assertion failure or an image/installation. Core's public
+return still says RUNNING at this read cut. Core owns reconciling its controller
+terminal and current gate disposition; Edge neither repeats that suite nor
+stops a peer job. Current scoped Core test activity is not a normal PASS.
+Return the actual qualified disposition/pins before a new finite commissioning
+ACK. Existing source remains OFF; no short-lived session/grant was created.

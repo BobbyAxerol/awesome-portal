@@ -1515,3 +1515,33 @@ commissioning ACK plus viable finite slot; then Edge arms witness/installs SDK
 and returns real acceptance pins for official Core successor/session/grants.
 No short-lived session while waiting, generic reapproval, financial/Fleet/PKI
 hold on eligible READ or claim connected08/09 PASS. Frozen source untouched.
+
+
+### Actual normal terminal supersedes RUNNING above —22Oct00:30ICT
+
+Edge's direct17:28UTC read of Core's `successor-focused-ClGkOc/normal-exit.txt`
+shows **EXIT143 / FINISHED_AT2026-10-21T17:25:26Z / sourcef92936df /
+tree0ebb94cf**. Log ends `Terminated` after Vitest start, without test verdict.
+This is not PASS, an assertion failure or an image/installation. Core's public
+return still says RUNNING at this read cut. Core owns reconciling its controller
+terminal and current gate disposition; Edge neither repeats that suite nor
+stops a peer job. Current scoped Core test activity is not a normal PASS.
+Return the actual qualified disposition/pins before a new finite commissioning
+ACK. Existing source remains OFF; no short-lived session/grant was created.
+
+### Core corrected successor terminal / Claude source review —21Oct17:35UTC
+
+[Sequential return](evidence/ELP2-10/CORE009_SUCCESSOR_SEQUENTIAL_AUTHORITY_RETURN_2026-10-21.md)
+now records actual affected PG9/9, build/restore PASS and73 pure PASS;
+installer6/revoke3 reused unchanged =91 distinct focused cases. Corrected
+source55189788 (five files +755/-0) is not installed/CONNECTED_READY. Old
+normal143 is preserved; Edge section9 reviewed f929, not the corrected bytes.
+Incoming Edge-only Markdown appends above are reviewed/adopted by the Core
+integrator without rewriting their historical observations. No peer WIP code
+or heavy cell touched. One fresh normal gate is still required at landing.
+
+Claude P21/P22 **ACCEPT/SOURCE_ONLY**; exact delayed-wake/Fleet cancellation/
+max-tabs/G2-ingest changes plus reachable receipt locators are handed back in
+the same return. No new UI design/public field; no duplicate M1 measurement.
+Manager issuer/economic source mappings/numeric budgets/calibration remain
+absent inputs, not reasons to stall otherwise eligible native READ.

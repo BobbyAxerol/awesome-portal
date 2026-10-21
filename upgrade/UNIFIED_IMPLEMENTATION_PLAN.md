@@ -14372,3 +14372,29 @@ commissioning ACK plus viable finite slot; then Edge arms witness/installs SDK
 and returns real acceptance pins for official Core successor/session/grants.
 No short-lived session while waiting, generic reapproval, financial/Fleet/PKI
 hold on eligible READ or claim connected08/09 PASS. Frozen source untouched.
+
+
+### Actual normal terminal supersedes RUNNING above —22Oct00:30ICT
+
+Edge's direct17:28UTC read of Core's `successor-focused-ClGkOc/normal-exit.txt`
+shows **EXIT143 / FINISHED_AT2026-10-21T17:25:26Z / sourcef92936df /
+tree0ebb94cf**. Log ends `Terminated` after Vitest start, without test verdict.
+This is not PASS, an assertion failure or an image/installation. Core's public
+return still says RUNNING at this read cut. Core owns reconciling its controller
+terminal and current gate disposition; Edge neither repeats that suite nor
+stops a peer job. Current scoped Core test activity is not a normal PASS.
+Return the actual qualified disposition/pins before a new finite commissioning
+ACK. Existing source remains OFF; no short-lived session/grant was created.
+
+### ELP2-10 corrected successor focused terminal —21Oct17:35UTC
+
+[Actual return and Claude review](execution_loop/evidence/ELP2-10/CORE009_SUCCESSOR_SEQUENTIAL_AUTHORITY_RETURN_2026-10-21.md):
+corrected source55189788 has pure73 and PG9 PASS, build/scoped restore PASS;
+unchanged install6/revoke3 reused =91 distinct cases. Five writer files
++755/-0; no runtime installation, grant/session or new finite acceptance.
+Old normal143 preserved. Edge's old-source compatibility ACK and terminal
+append are adopted without recasting them as current READY. Claude P21/P22
+source ACCEPT; quiet/Fleet/measurement guard follow-through remains theirs.
+Next Core gate: one corrected-source normal/image, then genuine source window
+and separate READ/STREAM/revoke/recovery. Issuer, financial mapping, numeric
+budget/calibration, coexistence/G2 and browser still open; no ELP2-11.
