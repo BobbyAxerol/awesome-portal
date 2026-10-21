@@ -1,5 +1,6 @@
 import { Pool, PoolClient } from "pg";
 import { AuthService } from "../auth/auth.service";
+import { hintUserAuthorityChanged } from "../auth/stream-revocation-hints";
 import { withTransaction } from "../db/pool";
 import { randomId } from "../domain";
 import { UsersRepository } from "../repos/users";
@@ -533,7 +534,8 @@ export class ExecutionAccessService {
   async revoke(actor:AccessActor,workspace:string,id:string,policyRevision:string,grantRevision:string,key:string,reason="Access revoked."):Promise<OperationResult> {
     actor={...actor};
     const digest=accessDigest([actor.user_id,workspace,id,policyRevision,grantRevision,reason]),keyDigest=accessDigest(["REVOKE",key]);
-    return this.transaction(workspace,actor,true,async tx=>{
+    let revokedSubject:string|null=null;
+    const result=await this.transaction(workspace,actor,true,async tx=>{
       const grant=this.assertRevokeAuthority(tx,actor,id);
       const prior=await tx.repo.keyedEvent(workspace,keyDigest);
       if(prior) return this.replay(prior,actor,digest);
@@ -543,6 +545,7 @@ export class ExecutionAccessService {
         ts_authority:grant.requires_ts_acceptance?"UNKNOWN":"NOT_REQUIRED"});
       await tx.repo.saveGrant(updated);await tx.repo.revokeProposals(id);
       await this.event(tx,actor,"REVOKE",digest,receipt,{key_digest:keyDigest,subject_user_id:grant.subject_user_id,before_fact:grant,after_fact:{grant:updated,reason}});
+      revokedSubject=grant.subject_user_id;
       return {receipt,replayed:false};
     },[],undefined,{
       binding:{family:"EXECUTION_ACCESS",operation:"REVOKE_GRANT",actor_id:actor.user_id,session_id:actor.session_id,
@@ -555,6 +558,10 @@ export class ExecutionAccessService {
         this.assertRevokeRevisions(tx,grant,policyRevision,grantRevision);
       },terminal:result=>this.mutationTerminal(result),
     });
+    // Committed. A stream hint for the grantee only (BE-P18); the streams' own per-poll/per-write recheck stays the authority.
+    // Delegated children of the grant, if any, are not named here and are ended by that recheck.
+    if(revokedSubject!==null)hintUserAuthorityChanged(this.auth,revokedSubject);
+    return result;
   }
 
   /** Advisory revoke diff; hidden and unknown grants share the same public404. */
@@ -743,13 +750,18 @@ export class ExecutionAccessService {
         return this.priorManagerRevoke(new AccessRepository(db),doc,requestDigest);
       });
       if(prior)return prior; // immutable historical receipts, never a repair/re-apply
-      return await this.authorityMutations.executeVerified({family:"REVIEWED_POLICY",operation:"REVOKE_MANAGER_GRANT",
+      const subjects=new Set<string>();
+      const receipts=await this.authorityMutations.executeVerified({family:"REVIEWED_POLICY",operation:"REVOKE_MANAGER_GRANT",
         key_digest:managerRevokeIntentKey(t.workspace_id,doc.revocation_id),request_digest:requestDigest,target_id:t.workspace_id},{
         retain_after_application_rollback:true,
         authorize:async db=>{await this.revokeManagerDomainOn(db,doc,requestDigest,false);},
-        apply:db=>this.revokeManagerDomainOn(db,doc,requestDigest,true),
+        apply:db=>this.revokeManagerDomainOn(db,doc,requestDigest,true,subjects),
         terminal:receipts=>({outcome:"APPLIED",receipt_ref:accessDigest(receipts.map(r=>r.receipt_id)),reason_code:null}),
       });
+      // Committed. In-process stream hint for each grantee whose grant was revoked or narrowed. The official CLI runs in its own
+      // process with no stream listener, so there this is a no-op and a running server relies on its per-poll recheck (BE-P18).
+      for(const subject of subjects)hintUserAuthorityChanged(this.auth,subject);
+      return receipts;
     }catch(error){throw this.managerRevokeFailure(error);}
   }
 
@@ -788,7 +800,7 @@ export class ExecutionAccessService {
     return found.map(event=>({...(event.after_fact as {receipt:ManagerRevokeReceipt}).receipt,replayed:true}));
   }
 
-  private async revokeManagerDomainOn(db:PoolClient,doc:ManagerRevokeDocument,requestDigest:string,write:boolean):Promise<ManagerRevokeReceipt[]>{
+  private async revokeManagerDomainOn(db:PoolClient,doc:ManagerRevokeDocument,requestDigest:string,write:boolean,subjects?:Set<string>):Promise<ManagerRevokeReceipt[]>{
     const t=doc.target;
     await db.query("SET LOCAL lock_timeout='1500ms'");
     await db.query("SET LOCAL statement_timeout='5000ms'");
@@ -816,7 +828,7 @@ export class ExecutionAccessService {
         revoked_at_ms:effective.revoked_at_ms,policy_revision:policy.revision,decided_at_ms:now,replayed:false};
       receipts.push(receipt);
       if(!write)continue;
-      if(step.after)await repo.saveManagerDomainGrant(step.after,false);
+      if(step.after){await repo.saveManagerDomainGrant(step.after,false);subjects?.add(step.before.subject_user_id);}
       const access:AccessReceipt={schema_version:"portal.access-operation.v1",operation_id:receiptId,proposal_id:null,
         grant_id:step.before.grant_id,outcome:step.after?"REVOKED":"DENIED",http_status:200,reason_code:step.outcome,
         policy_revision:policy.revision,grant_revision:effective.revision,decided_at_ms:now,ts_authority:"NOT_REQUIRED"};

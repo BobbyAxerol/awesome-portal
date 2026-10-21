@@ -2,6 +2,7 @@ import { randomId } from "../domain";
 import { Pool } from "pg";
 import { ControlApiConfig } from "../config";
 import { AuthService } from "../auth/auth.service";
+import { hintUserAuthorityChanged } from "../auth/stream-revocation-hints";
 import { randomToken, sha256 } from "../auth/argon";
 import { OwnerAccessRepository } from "../repos/owner-access";
 import { withTransaction } from "../db/pool";
@@ -75,7 +76,7 @@ export class AdminService {
     // This legacy bootstrap/test path must be as atomic as the owner-facing
     // lifecycle writer. In particular a drain refusal at the user mutation
     // must roll back both activation revocation and the new activation row.
-    return withTransaction(this.pool, async db => {
+    const reset = await withTransaction(this.pool, async db => {
       await db.query("SET LOCAL lock_timeout='1500ms'");
       await db.query("SET LOCAL statement_timeout='5000ms'");
       const users = new UsersRepository(db), credentials = new CredentialsRepository(db);
@@ -128,12 +129,17 @@ export class AdminService {
       });
       return { activationToken: token };
     });
+    // Committed: the user's sessions are revoked. Stream hint only, after the commit.
+    hintUserAuthorityChanged(this.auth, userId);
+    return reset;
   }
 
   async revokeSessions(userId: string): Promise<void> {
     const user = await this.auth.users.findById(userId);
     if (!user) throw new AdminNotFoundError("user not found");
     await this.auth.sessions.revokeAllForUser(userId, "admin_revoke");
+    // The revoke statement has committed; hint now so an audit failure below cannot leave streams open.
+    hintUserAuthorityChanged(this.auth, userId);
     await this.auth.audit.record({
       eventType: "sessions_revoked",
       targetUserId: userId,
@@ -167,6 +173,7 @@ export class AdminService {
     }
     await this.auth.users.update({ userId, status: "DISABLED" });
     await this.auth.sessions.revokeAllForUser(userId, "admin_disable");
+    hintUserAuthorityChanged(this.auth, userId);
     await this.auth.audit.record({
       eventType: "user_disabled",
       targetUserId: userId,

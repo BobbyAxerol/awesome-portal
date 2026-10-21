@@ -18,6 +18,7 @@ import type { Pool, PoolClient } from "pg";
 import type { AuthService } from "../auth/auth.service";
 import { AuthError, RESEARCH_ACCEPTANCE_ACCESS_SUBJECT, RESEARCH_ACCEPTANCE_MAX_TTL_SECONDS } from "../auth/auth.service";
 import { SESSION_COOKIE } from "../auth/cookies";
+import { hintSessionEnded } from "../auth/stream-revocation-hints";
 import { AuditRepository } from "../repos/audit";
 import { SessionsRepository } from "../repos/sessions";
 import { accessDigest } from "./access-digest";
@@ -380,6 +381,9 @@ export async function revokeAcceptanceSession(deps: AcceptanceDependencies, veri
   const doc = entry.document;
   const result = await revokeSession(deps, { session_id: doc.session_id, user_id: doc.user_id, target: doc.target,
     requestDigest: accessDigest({ schema: ACCEPTANCE_REVOKE_SCHEMA, document: doc }) });
+  // Committed: stream hint for this exact session id (BE-P18). The CLI is its own process, so this is a no-op there; it exists for any
+  // in-process caller and never affects the revoke.
+  hintSessionEnded(deps.auth, doc.session_id);
   // Only after the session is provably terminal does its (now dead) secret file go away, and ONLY if the file at the path
   // is the token file of EXACTLY this session (id + token hash). A replayed revoke of an old session can therefore never
   // remove the live token of a newer session that reused the path: that file is retained and the receipt says so.

@@ -361,3 +361,47 @@ describe("remove-only invariant (pure)", () => {
     expect(new CurrentHumanMutationPending("m", "DRAIN_PENDING").code).toBe("CURRENT_HUMAN_MUTATION_PENDING");
   });
 });
+
+/* BE-P18: the in-process stream hint after the official revoke. The CLI runs in its own process, so the hint is inert there; these prove
+ * what an in-process caller sees: the grantee is hinted once, after the commit, only for grants whose row really changed, and a hint that
+ * throws changes nothing about the receipts. The hint is never authority: the evaluators above still decide. */
+describe("BE-P18 revoke hints the grantee's streams after the commit, and only when a grant row changed", () => {
+  const hinted = (w: FakeCoreWorld, over: { throwing?: boolean } = {}) => {
+    const calls: Array<{ user: string; events: number }> = [];
+    const auth = { streamHints: { userAuthorityChanged: (user: string) => { calls.push({ user, events: w.events.length }); if (over.throwing) throw new Error("TEST_ONLY hint broke"); } } };
+    const svc = new ExecutionAccessService(w.pool, auth as unknown as AuthService, unqualifiedAccessTrust, false, w.coordinator.asMutations());
+    return { calls, svc };
+  };
+  const run = async (svc: ExecutionAccessService, doc: object) => svc.revokeReviewedManagerDomainGrants(await readPinnedManagerRevoke(mount(doc), NOW));
+
+  it("REVOKE of READ and STREAM (one subject) hints that subject once, with the audit rows already written", async () => {
+    const w = makeWorld(), { calls, svc } = hinted(w);
+    await run(svc, document([item(READ), item(STREAM)]));
+    expect(calls).toEqual([{ user: T.protected_owner_user_id, events: 2 }]);
+  });
+  it("NARROW hints too; a typed no-op (already revoked, expired) and an exact replay do not", async () => {
+    const w = makeWorld(), { calls, svc } = hinted(w);
+    await run(svc, document([item(READ, "NARROW", { valid_until_ms: NOW + 20 * 60_000 })]));
+    expect(calls).toHaveLength(1);
+    await run(svc, document([item(READ, "NARROW", { valid_until_ms: NOW + 20 * 60_000 })]));      // exact replay of the same revocation_id
+    expect(calls).toHaveLength(1);
+    const done = makeWorld(), second = hinted(done);
+    await run(second.svc, document([item(READ)]));
+    await run(second.svc, document([{ ...item(READ), expected_grant_revision: "anything" }], { revocation_id: "TEST_ONLY-revocation-2" }));
+    expect(second.calls).toHaveLength(1);                                                         // the second artifact was NOOP_ALREADY_REVOKED
+    const expired = makeWorld({ now: NOW + 3 * 3_600_000 }), third = hinted(expired);
+    await run(third.svc, document([item(READ)]));
+    expect(third.calls).toEqual([]);
+  });
+  it("a refused artifact hints nothing, and a throwing hint changes neither the receipts nor the stored facts", async () => {
+    const w = makeWorld(), { calls, svc } = hinted(w);
+    await expect(svc.revokeReviewedManagerDomainGrants({} as never)).rejects.toSatisfy(typed("MANAGER_REVOKE_ARTIFACT_REFUSED"));
+    await expect(run(svc, document([{ ...item(READ), expected_grant_revision: "stale" }]))).rejects.toBeInstanceOf(ManagerRevokeError);
+    expect(calls).toEqual([]);
+    const bare = makeWorld(), loud = hinted(bare, { throwing: true }), quiet = makeWorld(), plain = hinted(quiet);
+    const loudReceipts = await run(loud.svc, document([item(READ)])), plainReceipts = await run(plain.svc, document([item(READ)]));
+    expect(loud.calls).toHaveLength(1);
+    expect(loudReceipts.map(r => [r.grant_id, r.outcome, r.revoked_at_ms])).toEqual(plainReceipts.map(r => [r.grant_id, r.outcome, r.revoked_at_ms]));
+    await expect(read(bare)).rejects.toSatisfy(denied("ACCESS_DENIED"));
+  });
+});

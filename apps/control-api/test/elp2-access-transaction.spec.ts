@@ -377,6 +377,24 @@ describe.skipIf(!DATABASE_URL)("ELP2-03 TEST_ONLY policy with real PostgreSQL au
       expect(await authorityRows(f)).toEqual(before);
     });
 
+  it("BE-P18 revoking a grant hints its grantee's streams after the commit; a refused revoke hints nothing and an exact replay hints nothing again", async () => {
+    const f = await fixture(), hinted: string[] = [];
+    const off = auth.streamHints.subscribe({ sessionEnded: () => undefined, userAuthorityChanged: id => { hinted.push(id); } });
+    try {
+      await expect(f.service.revoke(actor(owner), f.workspace, f.managerRoot.grant_id, f.policy.revision, "TEST_ONLY-stale-revision",
+        next("TEST_ONLY-stale-revoke-hint"))).rejects.toMatchObject({ code: "GRANT_REVISION_CONFLICT" });
+      expect(hinted).toEqual([]);
+      const key = next("TEST_ONLY-revoke-hint");
+      const revoked = await f.service.revoke(actor(owner), f.workspace, f.managerRoot.grant_id, f.policy.revision, f.managerRoot.revision, key);
+      expect(revoked.receipt.outcome).toBe("REVOKED");
+      expect(hinted).toEqual([f.managerRoot.subject_user_id]);
+      expect(await storedGrant(f.managerRoot.grant_id)).toMatchObject({ revoked_at_ms: expect.any(Number) });
+      expect(await f.service.revoke(actor(owner), f.workspace, f.managerRoot.grant_id, f.policy.revision, f.managerRoot.revision, key))
+        .toEqual({ receipt: revoked.receipt, replayed: true });
+      expect(hinted).toEqual([f.managerRoot.subject_user_id]);
+    } finally { off(); }
+  });
+
   it("ELP2-10 historical policy replay acknowledges its original receipt without restoring a revoked root", async () => {
     const f = await fixture(), original = structuredClone(f.trust.artifact);
     const revoked = await f.service.revoke(actor(owner), f.workspace, f.managerRoot.grant_id,

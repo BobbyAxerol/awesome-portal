@@ -24,6 +24,7 @@ import { withTransaction } from "../db/pool";
 import { accessDigest } from "../execution-v2/access-policy";
 import { CurrentHumanMutations, type CurrentHumanMutationBinding } from "../execution-v2/current-human-mutations";
 import { CurrentHumanLeaseError } from "../execution-v2/current-human-candidate";
+import { StreamRevocationHints, hintSessionEnded, hintUserAuthorityChanged } from "./stream-revocation-hints";
 
 /** Dedicated access-subject marker of a Research acceptance session (never a Cloudflare subject). */
 export const RESEARCH_ACCEPTANCE_ACCESS_SUBJECT = "research-acceptance:v1";
@@ -65,6 +66,8 @@ export class AuthService {
   readonly sessions: SessionsRepository;
   readonly audit: AuditRepository;
   readonly verifier: CloudflareJwtVerifier | null;
+  /** Fast-purge hints for realtime streams of this process (BE-P18). Never authority; see `stream-revocation-hints.ts`. */
+  readonly streamHints = new StreamRevocationHints();
 
   constructor(
     readonly pool: Pool,
@@ -592,6 +595,9 @@ export class AuthService {
         error.message !== "CURRENT_HUMAN_DRAIN_REQUIRED" && error.message !== "CURRENT_HUMAN_DRAIN_COORDINATOR_REQUIRED") {
         throw error;
       }
+    } finally {
+      // Invalidity was established by identity/generation above, whether or not the bookkeeping write landed.
+      hintSessionEnded(this, sessionId);
     }
   }
 
@@ -1089,6 +1095,8 @@ export class AuthService {
         });
       }
     } catch (error) { this.rethrowCurrentHumanAuthError(error); }
+    // Committed: every session of this user is revoked. Hint only; the stream's own recheck is the authority.
+    hintUserAuthorityChanged(this, user.userId);
   }
 
   // ------------------------------------------------------------- logout
@@ -1148,6 +1156,9 @@ export class AuthService {
       // cookie clearing without disclosing another session. Drain/UNKNOWN,
       // storage and audit failures are NOT success and must still propagate.
       if (!(error instanceof AuthError) || error.code !== "LOGOUT_SESSION_CHANGED") this.rethrowCurrentHumanAuthError(error);
+      return;
     }
+    // Committed (or an exact finished retry): end this session's open streams now. Hint only, after the commit.
+    hintSessionEnded(this, row.sessionId);
   }
 }

@@ -4,6 +4,7 @@ import { Pool, type PoolClient } from "pg";
 import { ControlApiConfig } from "../config";
 import { AuthService } from "../auth/auth.service";
 import { randomToken, sha256 } from "../auth/argon";
+import { hintUserAuthorityChanged } from "../auth/stream-revocation-hints";
 import { PortalUser, Role, accountStateOf, randomId } from "../domain";
 import { OwnerAccessRepository } from "../repos/owner-access";
 import { UsersRepository } from "../repos/users";
@@ -336,6 +337,10 @@ export class AccountLifecycleService {
           throw new LifecycleDeniedError("STEP_UP_REQUIRED", "Re-enter your password to confirm this action.", 403);
       } });
     if ("denial" in output) throw output.denial;
+    // Committed. Mirrors `applySideEffects`: every action but CREATE_INVITED and a profile change without a role calls
+    // `invalidateAccess`. A stream hint only (BE-P18); the stream's own authority recheck is unchanged.
+    const endsSessions = request.action !== "CREATE_INVITED" && (request.action !== "UPDATE_PROFILE" || request.role !== undefined);
+    if (endsSessions && request.targetUserId) hintUserAuthorityChanged(this.auth, request.targetUserId);
     return output;
   }
 
