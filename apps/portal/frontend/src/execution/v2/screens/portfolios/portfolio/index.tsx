@@ -51,6 +51,7 @@ import { readAccounts, readDeployments, readIdentity, environmentsOf } from "./m
 import { Overview } from "./Overview";
 import { PeopleTab } from "./People";
 import { ActionsRail, RAIL_SELECTION } from "./Rail";
+import { useRailEligibility } from "./useRailEligibility";
 import { RiskTab } from "./Risk";
 import { usePortfolioReads, type Visited } from "./use360";
 
@@ -135,6 +136,9 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
   }, [activeTab]);
 
   const id = portfolioId ?? "";
+  // The caller's own eligibility for the capital actions the Actions rail names: asked once, only while the rail is open and the
+  // address names a workspace (DEBT-UXM07-011). It words the rail's reasons; it never enables a control.
+  const railEligibility = useRailEligibility(api, { enabled: selection === RAIL_SELECTION && permitted, workspaceId: url.value.workspace_id, environment: url.value.env, portfolioId: id });
   const reads = usePortfolioReads(api, id, permitted && id !== "", url.value.window, visited);
 
   const resource = reads.resource.phase === "ready" ? reads.resource.value : reads.resource.phase === "loading" || reads.resource.phase === "error" ? reads.resource.last : null;
@@ -281,6 +285,8 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
             mode={mode}
             onClose={close}
             access={<Link to={withContext(routes.access, params)}>See what you can access</Link>}
+            eligibility={railEligibility.view}
+            onRetry={railEligibility.retry}
           />
         ) : null}
       </div>
