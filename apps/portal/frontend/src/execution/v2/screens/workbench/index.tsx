@@ -23,9 +23,8 @@
  * internal link. The environment is not a choice here: a paper deployment is
  * the Paper book.
  *
- * Roles: the capability set decides, never a role name. Without
- * `nav:EXECUTION_ACCOUNTS_BINDINGS` (menu token) the Account links are withheld and the sub-line says
- * "Account not available"; the server stays the boundary.
+ * Roles: none. The session's capabilities narrow nothing (RK-1, DEBT-UXM07-005): the Account links
+ * and the account line follow what the profile served ("Account not published" when it did not).
  *
  * | Cardinality | Break point | Degradation | Server contract | Invariant | Perf budget |
  * |---|---|---|---|---|---|
@@ -34,12 +33,10 @@
 import { useEffect, useMemo, useRef } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
 import { Flag } from "../../Flag";
 import { CompactGaps, GapWhy, PanelGate, StateBoundary, UrlTabs } from "../../blocks";
 import { formatAsOf } from "../../boundary";
-import { V2_NAV_TOKEN, holds } from "../../shell/roleNav";
 import { resolveTab } from "../../tabAliases";
 import { withContext } from "../../urlState";
 import { stageIdentity } from "../stage/identity";
@@ -67,20 +64,13 @@ export interface PaperWorkbenchScreenProps {
   routes?: Partial<WorkbenchRoutes>;
   /** Where "My access" lives (the grant behind the disabled action and a denied read). */
   accessHref?: string;
-  /** The session's capabilities when the caller already holds them; otherwise read from the session. */
-  capabilities?: ReadonlySet<string>;
 }
 
-export default function PaperWorkbenchScreen({ api, deploymentId, variant = "paper", routes, accessHref = DEFAULT_ACCESS_HREF, capabilities }: PaperWorkbenchScreenProps) {
+export default function PaperWorkbenchScreen({ api, deploymentId, variant = "paper", routes, accessHref = DEFAULT_ACCESS_HREF }: PaperWorkbenchScreenProps) {
   const [params] = useSearchParams();
-  const { access } = useSession();
   const reads = useWorkbenchReads(api, deploymentId, variant);
   const r: WorkbenchRoutes = useMemo(() => ({ ...DEFAULT_ROUTES, ...routes }), [routes]);
   const ctx = (href: string) => withContext(href, params);
-
-  // Unknown access states nothing (the link stays; the server is the boundary); a ready session without the grant narrows.
-  const caps = capabilities ?? (access.kind === "ready" ? new Set(access.access.capabilities) : null);
-  const accountsVisible = caps === null || holds(caps, { allOf: [V2_NAV_TOKEN.accounts] });
 
   const envelope = reads.profile.phase === "ready" ? reads.profile.value : null;
   const qualityValue = reads.quality.phase === "ready" ? reads.quality.value : null;
@@ -169,7 +159,6 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
         chips={chips}
         identity={identity}
         calendar={model?.calendar ?? null}
-        accountsVisible={accountsVisible}
         links={{
           alpha: alphaHref,
           fleet: ctx(r.fleet),

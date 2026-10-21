@@ -649,7 +649,7 @@ describe("Orders, Fills, Positions, Sessions", () => {
   });
 });
 
-describe("roles: the capability set decides, never a role name", () => {
+describe("roles: the session pre-narrows nothing (RK-1, DEBT-UXM07-005); the Account facts are the server's", () => {
   it("a manager sees the Account links and the portfolio and alpha links (the alpha link needs a published alpha_id)", async () => {
     mount({ profile: { ok: true, value: envelopeOf(paperWire({ identity: true })) } });
     await ready();
@@ -660,23 +660,23 @@ describe("roles: the capability set decides, never a role name", () => {
     expect(text()).not.toContain("Account not available");
   });
 
-  it("a researcher loses both Account links and reads Account not available; the rest is the same", async () => {
+  it("a researcher session does not hide the Account links or the account the server served", async () => {
     session.current = sessionOf(V2_ROLE_PRESETS.researcher);
-    mount();
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ identity: true })) } });
     await ready();
-    expect(screen.queryByRole("link", { name: "Account" })).toBeNull();
-    expect(screen.queryByRole("link", { name: ACCOUNT })).toBeNull();
-    expect(text()).toContain("Account not available");
-    expect(text()).not.toContain(ACCOUNT);
+    expect(screen.getAllByRole("link", { name: "Account" })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: ACCOUNT }).getAttribute("href")).toBe(`/deployments/accounts/${ACCOUNT}`);
+    expect(text()).not.toContain("Account not available");
     expect(screen.getByRole("link", { name: "Operations" })).toBeTruthy();
-    expect(screen.getByRole("link", { name: PORTFOLIO })).toBeTruthy();
+    expect(screen.getByRole("link", { name: PORTFOLIO_NAME })).toBeTruthy();
   });
 
-  it("the capabilities prop wins over the session", async () => {
-    session.current = sessionOf(V2_ROLE_PRESETS.manager);
-    mount({ props: { capabilities: new Set([V2_NAV_TOKEN.portfolios]) } });
+  it("a session holding only the portfolios menu token shows the same Account facts as a manager", async () => {
+    session.current = sessionOf([V2_NAV_TOKEN.portfolios]);
+    mount({ profile: { ok: true, value: envelopeOf(paperWire({ identity: true })) } });
     await ready();
-    expect(text()).toContain("Account not available");
+    expect(screen.getByRole("link", { name: ACCOUNT })).toBeTruthy();
+    expect(text()).not.toContain("Account not available");
   });
 
   it("while access is still loading the screen states nothing about accounts", async () => {
@@ -684,6 +684,14 @@ describe("roles: the capability set decides, never a role name", () => {
     mount();
     await ready();
     expect(text()).not.toContain("Account not available");
+  });
+
+  it("a server refusal of the profile still shows its reason and the My access link under a researcher session", async () => {
+    session.current = sessionOf(V2_ROLE_PRESETS.researcher);
+    mount({ profile: fail("denied", "Your session may not read this profile.") as never });
+    await screen.findByRole("button", { name: "Try again" });
+    expect(screen.getByRole("link", { name: "My access" })).toBeTruthy();
+    expect(text()).toContain("Your session may not read this profile.");
   });
 });
 
@@ -781,8 +789,8 @@ describe("states of the profile read (L1 matrix: outcome x quality x role)", () 
       expect(whyText(chip("gaps"))).toContain("Runtime: Not published (FE-067)");
       expect(screen.queryAllByText("Source not qualified.").length > 0).toBe(picks.profile === "nq");
     }
-    // Account facts follow the capability set in every state.
-    expect(Boolean(screen.queryByText("Account not available"))).toBe(picks.role === "researcher" && !replaced ? true : picks.role === "researcher");
+    // The session narrows nothing: no role prints "Account not available".
+    expect(screen.queryByText("Account not available")).toBeNull();
     expect(text()).not.toMatch(NO_DASH);
   });
 });

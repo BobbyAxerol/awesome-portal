@@ -22,10 +22,9 @@
  * filter), `focus` (`order:<id>`, opens Replay), `sel=score` (the Score
  * drawer), `workspace_id` and `from` (carried).
  *
- * Roles: the capability set decides, never a role name. Without
- * `nav:EXECUTION_ACCOUNTS_BINDINGS` (menu token) the account links, the deployer column and the
- * replay's account chip are withheld and the page says "Your slice only"; the
- * server remains the boundary (FE-026 is undecided, so nothing more is hidden).
+ * Roles: none. The session's capabilities narrow nothing here (RK-1, DEBT-UXM07-005): the account
+ * links, the deployer line and the replay's account chip follow what the server served (an account it
+ * did not serve is "Not available"), and a scoped read is labelled by the server's own scope banner.
  *
  * | Cardinality | Break point | Degradation | Server contract | Invariant | Perf budget |
  * |---|---|---|---|---|---|
@@ -34,15 +33,12 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
-import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { withoutOrigin } from "../../backTo";
 import { NotAvailableLine, notPublishedReason } from "../../blocks";
 import { Flag } from "../../Flag";
-import { useContextFacts } from "../../shell/contextFacts";
-import { V2_NAV_TOKEN, holds } from "../../shell/roleNav";
 import { applyTab, resolveTab } from "../../tabAliases";
 import { useMediaQuery } from "../../useMediaQuery";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
@@ -125,12 +121,6 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   const { selection, select, close } = useDockSelection();
   const mode = useDockMode();
   const uid = useId();
-  const { access } = useSession();
-  const capabilities = useMemo(() => new Set(access.kind === "ready" ? access.access.capabilities : []), [access]);
-  const canSeeAccounts = holds(capabilities, { allOf: [V2_NAV_TOKEN.accounts] });
-  const sliceOnly = !canSeeAccounts && !holds(capabilities, { allOf: [V2_NAV_TOKEN.portfolios] });
-  // Only a READY session is narrowed; while access loads (empty set) the screen's banner shows, but the bar states nothing.
-  useContextFacts({ scope: sliceOnly && access.kind === "ready" ? "Scope: Your slice" : undefined });
   // `from` and `back` belong to this page's own Back; onward links must not inherit them (Account 360 opened from here is not "from the Fleet").
   const linkTo = (href: string) => withContext(href, withoutOrigin(params));
   const back = alphaBack(params);
@@ -278,7 +268,6 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
         </div>
       </header>
 
-      {sliceOnly ? <div className="exec-blk-banner" role="note">Your slice only. Peers and fund totals are hidden.</div> : null}
       {view?.scope ? <ScopeBanner scope={view.scope} withheld={view.withheld} /> : null}
       {resolution.notice ? <div className="exec-blk-banner" role="status">{resolution.notice}</div> : null}
       {stale ? <div className="exec-blk-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /> The source has not updated for this alpha within its freshness budget.</div> : null}
@@ -374,7 +363,6 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
               {tab === "deployments" ? (
                 <DeploymentsTab
                   rows={rows}
-                  canSeeAccounts={canSeeAccounts}
                   linkTo={linkTo}
                   scopedNoTotals={view?.money.published === false ? view.money.reason : null}
                   unplaced={view?.unplaced.deployments ?? 0}
@@ -394,13 +382,12 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                   venueOf={view?.venueOf ?? NO_VENUE}
                   book={book}
                   focus={focus}
-                  canSeeAccounts={canSeeAccounts}
                   ordersHref={linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`)}
                   back={replayBack(params, linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`))}
                 />
               ) : null}
               {tab === "positions" ? (
-                <PositionsTab rows={view?.positions ?? NO_POSITIONS} canSeeAccounts={canSeeAccounts} linkTo={linkTo} unplaced={view?.unplaced.positions ?? 0} withheld={view?.withheld ?? null} />
+                <PositionsTab rows={view?.positions ?? NO_POSITIONS} linkTo={linkTo} unplaced={view?.unplaced.positions ?? 0} withheld={view?.withheld ?? null} />
               ) : null}
               {tab === "reconciliation" ? <ReconciliationTab rows={view?.reconciliation ?? NO_RECON} scoped={view?.variant === "scoped"} withheld={view?.withheld ?? null} /> : null}
             </div>

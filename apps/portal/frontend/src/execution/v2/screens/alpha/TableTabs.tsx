@@ -48,7 +48,6 @@ function FinancialCell({ f, member, fallbackCurrency, signed = false }: { f: Dep
 
 export interface DeploymentsTabProps {
   rows: readonly DeploymentRow[];
-  canSeeAccounts: boolean;
   linkTo: (href: string) => string;
   /** SCOPED_V2: the money columns the body does not state read `Not published (FE-005)` with its reason; a stage inside the Live book is not named. */
   scopedNoTotals?: string | null;
@@ -58,7 +57,7 @@ export interface DeploymentsTabProps {
   withheld?: string | null;
 }
 
-export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = null, unplaced = 0, withheld = null }: DeploymentsTabProps) {
+export function DeploymentsTab({ rows, linkTo, scopedNoTotals = null, unplaced = 0, withheld = null }: DeploymentsTabProps) {
   const shown = rows.slice(0, ROW_CAP);
   const scoped = scopedNoTotals !== null;
   const columns: CardsColumn<DeploymentRow>[] = [
@@ -69,7 +68,7 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = 
       label: "Account · portfolio",
       render: (r) => (
         <>
-          {canSeeAccounts && r.accountId !== null ? <Link className="exec-blk-link" to={linkTo(`/deployments/accounts/${encodeURIComponent(r.accountId)}`)}>{r.accountId}</Link> : <Na />}
+          {r.accountId !== null ? <Link className="exec-blk-link" to={linkTo(`/deployments/accounts/${encodeURIComponent(r.accountId)}`)}>{r.accountId}</Link> : <Na />}
           {r.portfolio ? <span className="exec-alp2-dim"> · {r.portfolio}</span> : null}
         </>
       ),
@@ -93,7 +92,7 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = 
   // Dates, deployer and receipts have no source: ONE line under the table, not a "Not published" cell per row and column (UX audit A).
   const missing: UnavailableFact[] = [
     { label: "Dates", id: "FE-027" },
-    ...(canSeeAccounts ? [{ label: "Deployed by", id: "FE-021" as const }] : []),
+    { label: "Deployed by", id: "FE-021" },
     { label: "Receipts", id: "FE-032" },
   ];
   return (
@@ -110,7 +109,6 @@ export function DeploymentsTab({ rows, canSeeAccounts, linkTo, scopedNoTotals = 
       <CapNote shown={shown.length} total={rows.length} noun="deployments" />
       <NotAvailableLine facts={missing} className="exec-alp2-nal" />
       <p className="exec-alp2-cap">
-        {canSeeAccounts ? null : <span>Only deployments in your slice</span>}
         <span>No allocation total: rows sit in different partitions</span>
         {withEquity ? <span>One snapshot row per deployment, not summed</span> : null}
         {unplaced > 0 ? <span>{unplaced} {unplaced === 1 ? "row" : "rows"} without a deployment id not shown</span> : null}
@@ -177,8 +175,8 @@ export function RegimeTab() {
 /* ── positions ────────────────────────────────────────────────────────────── */
 
 export function PositionsTab({
-  rows, canSeeAccounts, linkTo, unplaced = 0, withheld = null,
-}: { rows: readonly PositionRow[]; canSeeAccounts: boolean; linkTo: (href: string) => string; unplaced?: number; withheld?: string | null }) {
+  rows, linkTo, unplaced = 0, withheld = null,
+}: { rows: readonly PositionRow[]; linkTo: (href: string) => string; unplaced?: number; withheld?: string | null }) {
   const shown = rows.slice(0, ROW_CAP);
   const columns: CardsColumn<PositionRow>[] = [
     { key: "symbol", label: "Symbol", render: (r) => r.symbol },
@@ -186,7 +184,7 @@ export function PositionsTab({
     {
       key: "account",
       label: "Account",
-      render: (r) => (canSeeAccounts && r.accountId ? <Link className="exec-blk-link" to={linkTo(`/deployments/accounts/${encodeURIComponent(r.accountId)}`)}>{r.accountId}</Link> : <Na />),
+      render: (r) => (r.accountId ? <Link className="exec-blk-link" to={linkTo(`/deployments/accounts/${encodeURIComponent(r.accountId)}`)}>{r.accountId}</Link> : <Na />),
     },
     { key: "qty", label: "Quantity", numeric: true, render: (r) => <Dec value={r.quantity} unit="qty" /> },
     { key: "entry", label: "Entry", numeric: true, render: (r) => <Dec value={r.entry} /> },

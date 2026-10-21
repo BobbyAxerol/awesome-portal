@@ -234,11 +234,26 @@ describe("states", () => {
     expect(screen.getByRole("note").textContent).toContain("no public klines for this alpha's venue");
   });
 
-  it("a researcher's slice does not see the account", async () => {
+  // RK-1 (DEBT-UXM07-005): the account on the replay comes from the orders and fills the server served, not from the session's capabilities.
+  it("a researcher session does not hide the account the server served", async () => {
     session.current = sessionOf(V2_ROLE_PRESETS.researcher);
     mount();
     await settled();
-    expect(chip("Account")).toBe("Account Not available");
-    expect(props().accounts).toEqual([]);
+    expect(chip("Account")).not.toBe("Account Not available");
+    expect(props().accounts?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it("a manager session shows the same account", async () => {
+    session.current = sessionOf(V2_ROLE_PRESETS.manager);
+    mount();
+    await settled();
+    expect(chip("Account")).not.toBe("Account Not available");
+    expect(props().accounts?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it("a server refusal still shows its reason under a researcher session", async () => {
+    session.current = sessionOf(V2_ROLE_PRESETS.researcher);
+    mount("/replay", undefined, "alpha_denied");
+    expect(await screen.findByText(/outside your slice/)).toBeTruthy();
   });
 });

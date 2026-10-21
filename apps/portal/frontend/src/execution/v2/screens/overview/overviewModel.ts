@@ -17,7 +17,7 @@
  * The ranking is the server's: items stay in the order they arrived, with the
  * rank shown, and the browser applies no second sort.
  */
-import type { AlphaFleetItem, AlphaFleetSummary, CurrencyValue } from "../../../api/profileRead";
+import type { AlphaFleetSummary, CurrencyValue } from "../../../api/profileRead";
 import type { SubscriptionState } from "../../../subscription";
 import { countLabel, type Counts, type FleetPanel, type NeedsYouPanel, type TriageItem, type TriageKind, type TodayPanel } from "../../../commandCenter";
 import { readDecimal, type BoundaryDecimal } from "../../boundary";
@@ -239,30 +239,6 @@ export function modeOf(panel: NeedsYouPanel | null, serverMode: string | null): 
   if (panel === null || panel.state === "unavailable" || panel.state === "partial" || panel.state === "stale") return panel === null ? "unknown" : "degraded";
   if (panel.items.length > 0) return "busy";
   return serverMode === "QUIET" || panel.state === "empty" ? "quiet" : "unknown";
-}
-
-/* ── fleet rows (researcher variant) ───────────────────────────────────── */
-
-export interface OwnRow {
-  alphaId: string;
-  label: string;
-  version: string;
-  stages: readonly string[];
-  allocations: readonly { currency: string; decimal: BoundaryDecimal | null }[];
-  pnl: readonly { currency: string; decimal: BoundaryDecimal | null }[];
-  health: string;
-}
-
-export function ownRows(items: readonly AlphaFleetItem[]): OwnRow[] {
-  return items.slice(0, ROW_CAP).map((item) => ({
-    alphaId: item.alphaId,
-    label: item.alphaLabel,
-    version: item.version,
-    stages: item.stages.length > 0 ? item.stages : [item.stage],
-    allocations: item.allocations.map((a) => ({ currency: a.currency, decimal: readMoney(a.value) })),
-    pnl: item.positionPnl.map((p) => ({ currency: p.currency, decimal: readMoney(p.net) })),
-    health: item.health,
-  }));
 }
 
 /* ── the stream, in words ──────────────────────────────────────────────── */

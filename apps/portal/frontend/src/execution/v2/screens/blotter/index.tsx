@@ -33,7 +33,6 @@
 import { Fragment, useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
 import type { ConditionalGroupRead } from "../../../derivedReads";
 import { PanelSkeleton, PanelState } from "../../../components/states";
@@ -41,8 +40,6 @@ import { useProfileRealtime } from "../../../profileRealtime";
 import { GapWhy, QuietIds } from "../../blocks";
 import { CardsTable } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { useContextFacts } from "../../shell/contextFacts";
-import { holds, V2_NAV_TOKEN } from "../../shell/roleNav";
 import { useMediaQuery } from "../../useMediaQuery";
 import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
@@ -61,8 +58,6 @@ export const BLOTTER_SCREEN_KEY = "blotter" as const;
 
 export interface BlotterScreenProps {
   api: ExecutionApi;
-  /** The session's capabilities when the caller already holds them; otherwise read from the session. */
-  capabilities?: ReadonlySet<string>;
   /** Where "My access" lives, for the denied state. */
   accessHref?: string;
   /** The chart deep link for an order. Defaults to the V1 Trade Replay link; return null for none. */
@@ -109,10 +104,9 @@ type GroupRead =
   | { phase: "ready"; groupId: string; read: ConditionalGroupRead }
   | { phase: "error"; groupId: string; status: "denied" | "unavailable" | "empty" | "partial" | "stale" | "insufficient_data" | "terminal"; reason: string };
 
-export default function BlotterScreen({ api, capabilities, accessHref, chartHref: chartHrefProp }: BlotterScreenProps) {
+export default function BlotterScreen({ api, accessHref, chartHref: chartHrefProp }: BlotterScreenProps) {
   const [params, setParams] = useSearchParams();
   const chartHref = chartHrefProp ?? ((order: BlotterOrder) => defaultChartHref(order, params));
-  const { access } = useSession();
   const colMenuId = useId();
   const noteId = useId();
   // At phone width the cards make the page ~20,000px tall (BLT-B7): the pager then sits above them, once, in DOM order.
@@ -197,11 +191,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
   /* ── columns ──────────────────────────────────────────────────────── */
   const [columns, setColumns] = useState<ReadonlySet<ColumnId>>(DEFAULT_COLUMNS);
   const [chooserOpen, setChooserOpen] = useState(false);
-  const caps = capabilities ?? (access.kind === "ready" ? new Set(access.access.capabilities) : null);
-  const accountsVisible = caps === null || holds(caps, { allOf: [V2_NAV_TOKEN.accounts] });
-  const visibleColumns = COLUMNS.filter((c) => columns.has(c.id) && !(c.id === "account" && !accountsVisible));
-  // Same fact as the "Your orders" heading and the scope chip below; unknown access (caps null) states nothing.
-  useContextFacts({ scope: accountsVisible ? undefined : "Scope: Your orders" });
+  const visibleColumns = COLUMNS.filter((c) => columns.has(c.id));
 
   /* ── expansion, funnel, groups ────────────────────────────────────── */
   const [open, setOpen] = useState<ReadonlySet<string>>(new Set());
@@ -281,7 +271,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
   const staleReason = state.phase === "ready" ? state.stale : null;
   const incomplete = read !== null && ((read.completeness ?? "COMPLETE").toUpperCase() !== "COMPLETE" || read.state.toLowerCase() === "partial");
   const filtered = filters.bucket !== "ALL" || filters.symbol !== "" || filters.venue !== "" || filters.side !== "";
-  const heading = accountsVisible ? "Blotter" : "Your orders";
+  const heading = "Blotter";
 
   const clearAll = () => {
     const next = new URLSearchParams(params);
@@ -386,9 +376,8 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
       <section className="exec-blt2-panel" aria-label="Filters">
         <div className="exec-blt2-scope">
           <span className="exec-blt2-chip" data-lock="read" title="Set by this read, not by the context bar"><span className="exec-blt2-chip-k">environment</span>Paper</span>
-          {!accountsVisible ? <span className="exec-blt2-chip"><span className="exec-blt2-chip-k">scope</span>Your slice only</span> : null}
           {(["deployment", "account", "alpha"] as const).map((key) =>
-            scope[key] !== null && !(key === "account" && !accountsVisible) ? (
+            scope[key] !== null ? (
               <span className="exec-blt2-chip" key={key}>
                 <span className="exec-blt2-chip-k">{SCOPE_LABEL[key].toLowerCase()}</span>{scope[key]}
                 <button type="button" className="exec-blt2-x" aria-label={`Remove ${SCOPE_LABEL[key].toLowerCase()} scope`} onClick={() => clearScope([key])}>Remove</button>
@@ -462,7 +451,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
               <button type="button" className="exec-blt2-btn" aria-expanded={chooserOpen} aria-controls={colMenuId} onClick={() => setChooserOpen((v) => !v)}>Columns</button>
               {chooserOpen ? (
                 <div className="exec-blt2-menu" id={colMenuId} role="group" aria-label="Choose columns">
-                  {COLUMNS.filter((c) => !(c.id === "account" && !accountsVisible)).map((c) => (
+                  {COLUMNS.map((c) => (
                     <label key={c.id} className="exec-blt2-check">
                       <input
                         type="checkbox"

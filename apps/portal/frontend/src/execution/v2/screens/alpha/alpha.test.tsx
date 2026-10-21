@@ -365,23 +365,31 @@ describe("Deployments", () => {
     expect(within(table).getAllByRole("link", { name: "acct_binance_02" }).length).toBeGreaterThan(0);
   });
 
-  it("a researcher's slice: no account link, no deployer column, the banner says so", async () => {
+  // RK-1 (DEBT-UXM07-005): the session's capabilities pre-narrow nothing; the rows and the scope label are the server's.
+  it("a researcher session does not hide what the server served: the account link and the deployer line stay, no slice banner is inferred", async () => {
     const table = await open(V2_ROLE_PRESETS.researcher);
-    expect(within(table).queryByRole("link", { name: "acct_binance_02" })).toBeNull();
-    expect(table.closest("section")!.querySelector("[data-testid='not-available-line']")!.textContent).not.toContain("Deployed by");
-    expect(screen.getByText("Your slice only. Peers and fund totals are hidden.")).toBeTruthy();
-    expect(screen.getByText("Only deployments in your slice")).toBeTruthy();
+    expect(within(table).getAllByRole("link", { name: "acct_binance_02" }).length).toBeGreaterThan(0);
+    expect(table.closest("section")!.querySelector("[data-testid='not-available-line']")!.textContent).toContain("Deployed by");
+    expect(screen.queryByText(/Your slice only/)).toBeNull();
+    expect(screen.queryByText("Only deployments in your slice")).toBeNull();
+    expect(facts()).toEqual({});
   });
 
-  it("a manager sees no slice banner", async () => {
-    await open();
+  it("a manager session shows the same account links and no inferred slice banner", async () => {
+    const table = await open();
+    expect(within(table).getAllByRole("link", { name: "acct_binance_02" }).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Your slice only/)).toBeNull();
     expect(facts()).toEqual({});
   });
 
-  it("the context bar states the slice scope for a researcher, not for a manager", async () => {
-    await open(V2_ROLE_PRESETS.researcher);
-    expect(facts()).toEqual({ scope: "Scope: Your slice" });
+  it("a server refusal still shows its reason under a manager session and under a researcher session", async () => {
+    for (const caps of [V2_ROLE_PRESETS.manager, V2_ROLE_PRESETS.researcher]) {
+      session.current = sessionOf(caps);
+      mount(undefined, undefined, "alpha_denied");
+      expect(await screen.findByText(/outside your slice/)).toBeTruthy();
+      expect(screen.queryByRole("tablist")).toBeNull();
+      cleanup();
+    }
   });
 });
 

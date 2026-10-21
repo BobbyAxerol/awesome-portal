@@ -10,9 +10,8 @@ import { INITIAL_SUBSCRIPTION } from "../../../subscription";
 import { canonicalDigest, loadCanonical } from "../../testkit/loadCanonical";
 import { ABSENT, dimension, pairwise, coverage, describeCoverage, type Draft } from "../../testkit/matrix";
 import { decimalCases, enumCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases } from "../../testkit/negative";
-import { cloneRows, pad, timed } from "../../testkit/scale";
 import {
-  ROW_CAP, ageLabel, currencyFacts, fleetCells, modeOf, needsAttention, openIncidents, ownRows, stageCounts, streamSentence, todayRows, triageRows,
+  ageLabel, currencyFacts, fleetCells, modeOf, needsAttention, openIncidents, stageCounts, streamSentence, todayRows, triageRows,
 } from "./overviewModel";
 
 const VARIANTS = ["busy", "empty", "partial", "stale", "unavailable"] as const;
@@ -193,18 +192,6 @@ describe("the stream in words", () => {
   it("auth expiry and source loss keep the server's note and the last good time", () => {
     expect(at({ phase: "auth_expired", note: "Session expired (401)." }).text).toBe("Session expired (401).");
     expect(at({ phase: "source_lost", note: "Source gone.", lastGoodAsOf: "2026-10-17T11:00:00Z" }).text).toBe("Source gone. Last good as of 2026-10-17T11:00:00Z.");
-  });
-});
-
-describe("researcher rows", () => {
-  it("one row per alpha with its own currencies, capped at the DOM budget", () => {
-    const raw = loadCanonical<Draft>(FLEET);
-    raw.page.rows = cloneRows(raw.page.rows[0], 260, (row, i) => { row.alpha_id = `a_${pad(i)}`; });
-    const items = readAlphaFleet(raw)!.page.rows;
-    const { value, ms } = timed(() => ownRows(items));
-    expect(value).toHaveLength(ROW_CAP);
-    expect(ms).toBeLessThan(500);
-    expect(value[0]!.allocations[0]!.currency).toBe("USDT");
   });
 });
 
