@@ -1,3 +1,5 @@
+> **Bản preview đã rebuild (2026-10-21 ~19:00 UTC):** build từ `b1ec8b87` (nhánh `claude/post-freeze-20261021`), `http://127.0.0.1:8095`. Đã bật thêm các cờ chỉ dành cho fixture lab: `scoped` (slice + pager, `/execution/slice?fixture=chain`) và `fleet-stream` (chip Live/Paused/Stopped trên Fleet); `FIXTURE_WRITES=doubles` nên luồng Exit gửi được vào double (thành công / trùng / từ chối / bị cấm). Cờ `command` vẫn **tắt**. Các mục đánh dấu "sau rebuild" bên dưới đã có trên bản này. 19 URL chính đã nạp thử đều trả 200 và hiển thị đúng màn V2; mỗi trang còn đúng một dòng lỗi console của fixture (`/api/v1/execution/retained-review` trả 404 có kiểu, đã ghi trong sổ nợ). Mọi số liệu là dữ liệu mẫu, không phải dữ liệu thật.
+
 # Hướng dẫn review UI/UX Execution V2 trên research-portal (user stories) — 2026-10-21
 
 Dành cho: Bobby (reviewer). Mục đích: duyệt **giao diện và luồng dùng** của Execution V2 **trước khi** backend (Codex / Edge / PM / TS) nghiệm thu xong.
