@@ -202,9 +202,13 @@ export class MemoryNativeCacheObservationSink implements NativeCacheObservationS
 }
 
 const KEY_FILE = "observation.key", LOG_FILE = "observation.jsonl";
-function privateDirectory(dir: string): void {
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
-  const stat = lstatSync(dir);
+/** `create=false` (operator read) never creates a directory: a missing one is a refusal. */
+function privateDirectory(dir: string, create = true): void {
+  let stat;
+  try {
+    if (create) mkdirSync(dir, { recursive: true, mode: 0o700 });
+    stat = lstatSync(dir);
+  } catch { throw new NativeCacheObservationError("NATIVE_CACHE_OBSERVATION_DIRECTORY_REFUSED"); }
   // Operator-only: our own, not a symlink, no group/other access.
   if (!stat.isDirectory() || stat.isSymbolicLink() || (stat.mode & 0o077) !== 0 ||
     (typeof process.getuid === "function" && stat.uid !== process.getuid()))
@@ -247,7 +251,7 @@ function openRefusing(path: string, flags: number, mode: number | undefined, cod
  * this Buffer. An existing key is NEVER replaced: a wrong-sized, linked or
  * loose file is refused, and the file is left exactly as found. */
 export function loadNativeCacheObservationKey(dir: string, create: boolean): Buffer {
-  privateDirectory(dir);
+  privateDirectory(dir, create);
   const path = join(dir, KEY_FILE);
   if (create) {
     try {
@@ -274,7 +278,11 @@ export function loadNativeCacheObservationKey(dir: string, create: boolean): Buf
  * truncated, deleted or rotated: the operator decides. */
 export class FileNativeCacheObservationSink implements NativeCacheObservationSink {
   readonly #path: string;
-  constructor(dir: string) { privateDirectory(dir); this.#path = join(dir, LOG_FILE); }
+  /** `create:false` is the operator READ mode: it never creates the directory. */
+  constructor(dir: string, options: { create?: boolean } = {}) {
+    privateDirectory(dir, options.create !== false);
+    this.#path = join(dir, LOG_FILE);
+  }
   append(record: NativeCacheObservationRecord): void {
     const line = `${JSON.stringify(recordSchema.parse(record))}\n`;
     const fd = openRefusing(this.#path, constants.O_WRONLY | constants.O_CREAT | constants.O_APPEND | constants.O_NOFOLLOW, 0o600,
@@ -389,4 +397,40 @@ export function correlateNativeCacheObservation(record: NativeCacheObservationRe
     observation: record, custody: c, checks, durable_egress: durable,
     verdict: Object.values(checks).every(Boolean) ? "CORRELATED" as const : "MISMATCH" as const,
   });
+}
+
+/* ---------- the ONE bounded operator join (used by cli/execution-native-cache-observation.ts) ---------- */
+
+/** The 7 existing obligation columns, nothing else: never base_body, cookies,
+ * session tokens, source-terminal JWTs, signing/TLS inputs or any other column.
+ * Exact (lease_id, attempt_id) equality on indexed unique keys: it can return at
+ * most one row, so there is no list / range / enumerate form of this query. */
+export const NATIVE_CACHE_OBLIGATION_COLUMNS = ["lease_id", "attempt_id", "phase", "body_digest",
+  "receipt_digest", "source_ack_digest", "source_reconciled"] as const;
+export const NATIVE_CACHE_OBLIGATION_SQL =
+  `SELECT ${NATIVE_CACHE_OBLIGATION_COLUMNS.join(", ")} FROM elp210_candidate.native_read_obligations WHERE lease_id = $1 AND attempt_id = $2`;
+
+const joinKeySchema = z.object({ lease_id: uuid, attempt_id: uuid }).strict();
+
+export type NativeCacheJoinResult =
+  | NativeCacheOperatorReceipt
+  | { schema_version: "portal.native-cache-observation-receipt.v1"; verdict: "NO_OBSERVATION" }
+  | { schema_version: "portal.native-cache-observation-receipt.v1"; verdict: "NO_CUSTODY_ROW"; observation: NativeCacheObservationRecord };
+
+/** `readObligation` is an injected, caller-bounded read-only fetch that MUST run
+ * NATIVE_CACHE_OBLIGATION_SQL with exactly these two parameters. A missing
+ * observation is reported as such (it proves nothing about the cache); a missing
+ * custody row is reported, never synthesised; more than one row is refused. */
+export async function joinNativeCacheObservation(sink: NativeCacheObservationSink,
+  readObligation: (leaseId: string, attemptId: string) => Promise<readonly unknown[]>,
+  leaseId: string, attemptId: string): Promise<NativeCacheJoinResult> {
+  const key = joinKeySchema.safeParse({ lease_id: leaseId, attempt_id: attemptId });
+  if (!key.success) throw new NativeCacheObservationError("NATIVE_CACHE_OBSERVATION_JOIN_KEY_REFUSED");
+  const observation = await sink.find(key.data.lease_id, key.data.attempt_id);
+  const schema_version = "portal.native-cache-observation-receipt.v1" as const;
+  if (!observation) return { schema_version, verdict: "NO_OBSERVATION" };
+  const rows = await readObligation(key.data.lease_id, key.data.attempt_id);
+  if (rows.length > 1) throw new NativeCacheObservationError("NATIVE_CACHE_OBSERVATION_CUSTODY_REFUSED");
+  if (rows.length === 0) return { schema_version, verdict: "NO_CUSTODY_ROW", observation };
+  return correlateNativeCacheObservation(observation, rows[0]);
 }
