@@ -626,6 +626,16 @@ Duyệt: **APPROVED (Bobby, 2026-10-18)**, phương án A của câu hỏi "Hook
 5. **Hook đầy đủ chỉ ở mốc** (R2/R3 và trước hạ cánh); commit trong lát dùng `--no-verify` sau gate tập trung (§10.10). Khi sửa mã dùng chung, chứng minh đường mặc định không đổi bằng cách chạy test mới trên **mã cũ** trong worktree tạm (test "default" phải xanh, test mới phải đỏ).
 6. **Review độc lập chỉ-đọc chạy song song với việc đang đóng băng** (hook đang chạy): đọc `git diff`, không chạy test nặng.
 
+### 10.10b Khóa heavy: chỉ khi có điều khoản, chỉ bọc đúng một lệnh (Bobby, 2026-10-21; áp dụng cho Claude và Codex như nhau)
+Bổ sung cho §10.10a và §10.11.5. Khóa `/tmp/portal-heavy.lock` là quy ước, không ai bị ép, nên mọi lần dùng phải có lý do chính đáng viết ra được:
+1. **Danh sách được khóa (đóng):** hook R2/R3 (`git commit` qua pre-commit), `scripts/control-api-test.sh`, `scripts/portal-web-visual.sh` và recorder, build ảnh Docker của preview/Core, job PostgreSQL một lần dùng có Docker (EXPLAIN quy mô lớn, restore drill). Ngoài danh sách này **không khóa**: vitest, tsc, Playwright V2 trên host, generator/ledger, git, docs, đọc file, script đo nhẹ. Muốn khóa lệnh ngoài danh sách phải trích điều khoản hoặc được Bobby cho phép.
+2. **Bọc đúng một lệnh nặng**, không bọc cả chuỗi (không `flock ... bash -c "build && test && ghi file && git add"`), không giữ khóa lúc chờ, ngủ, đọc kết quả hay viết receipt. Lấy khóa, chạy, nhả.
+3. **Subagent (writer) không tự lấy khóa** trừ khi brief nêu đúng tên lệnh và lý do. Mặc định writer chỉ chạy kiểm tập trung nhẹ và ghi "PG spec cho lead chạy"; người tích hợp chạy gộp một lần (§10.10a.1).
+4. **Không chen hàng.** Việc đã xếp hàng trước hoặc khe độc quyền đã đăng ký của bên kia (hook R3 đang đợi, cửa sổ Edge) đi trước; không đặt thêm job nặng chồng lên khi một hook đang chạy, kể cả ngoài danh sách (đây là nguyên nhân ba test đỏ do tải ngày 2026-10-21).
+5. **Chờ quá 10 phút thì dừng và báo** người giao việc thay vì xếp thêm yêu cầu; không dùng `kill`/`pkill -f` rộng để mở khóa của người khác.
+6. **Dọn đúng phần mình tạo:** container, mạng, volume, worktree, thư mục tạm (đĩa gốc đang ~80%); không `docker prune`.
+7. Vi phạm (khóa ngoài danh sách, giữ khóa lúc chờ, chạy chồng với hook) được ghi vào receipt của lát đó cùng cách khắc phục.
+
 ### 10.11 Chia việc Codex / Claude sau khi backend đã đi trước (Bobby, 2026-10-18)
 
 Bối cảnh: Codex đã làm phần lớn nền backend (ELP2-02…10); Bobby giao Claude **làm chính FE và làm cả backend ở phần contract mà FE cần** để rút ngắn workflow, thay vì chờ từng request. Đây là một **giao việc có phạm vi** theo CLAUDE.md (Research override: "either may work both sides within an explicit assignment"); nó không bỏ quy tắc "backend authority thuộc Codex" cho phần còn lại.
