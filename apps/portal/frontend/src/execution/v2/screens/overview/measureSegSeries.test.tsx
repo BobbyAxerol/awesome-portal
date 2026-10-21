@@ -4,7 +4,7 @@
  * a source acceptance: `REAL_READ_QUALIFIED` is NOT_RUN (the financial series source is MISSING on the producer).
  *
  * Net PnL and Return are enabled only when the port serves the fund (the NAV read says its source is published). RETURN prints as
- * the series reader prints a ratio (a plain ratio, no `%`) until the server publishes a scale. Equity is never enabled.
+ * the series reader prints a ratio (a plain ratio, no `%`) until the server publishes a scale. There is no Equity button.
  */
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
@@ -40,12 +40,12 @@ const performance = () => screen.getByRole("region", { name: "Performance" });
 const metricsAsked = () => series.calls.map((call) => call.metric);
 
 describe("the fund series is not served: the switch is off, with its reason, and asks for nothing", () => {
-  it("source NOT_PUBLISHED: Net PnL, Return and Equity are disabled 'Not published (FE-025)' and only the NAV is asked", async () => {
+  it("source NOT_PUBLISHED: Net PnL and Return are disabled 'Not published (FE-025)' and only the NAV is asked", async () => {
     series.variant = "unavailable";
     mount();
     const group = await seg();
     await waitFor(() => expect(series.calls).toHaveLength(1));
-    for (const name of ["Net PnL", "Return", "Equity"]) {
+    for (const name of ["Net PnL", "Return"]) {
       const b = button(group, name);
       expect(b.disabled, name).toBe(true);
       expect(b.title, name).toContain("Not published (FE-025)");
@@ -62,7 +62,7 @@ describe("the fund series is not served: the switch is off, with its reason, and
     const group = await seg();
     await waitFor(() => expect(series.calls).toHaveLength(1));
     await waitFor(() => expect(performance().textContent).toContain("The series could not be read"));
-    expect(["Net PnL", "Return", "Equity"].every((name) => button(group, name).disabled)).toBe(true);
+    expect(["Net PnL", "Return"].every((name) => button(group, name).disabled)).toBe(true);
   });
 });
 
@@ -76,14 +76,11 @@ describe("the fund series is served (source published)", () => {
     return group;
   };
 
-  it("enables Net PnL and Return; Equity stays 'Not published (FE-025)'; nothing is pressed (the NAV line is shown)", async () => {
+  it("enables Net PnL and Return; there is no Equity button; nothing is pressed (the NAV line is shown)", async () => {
     const group = await ready();
     expect(button(group, "Net PnL").getAttribute("aria-pressed")).toBe("false");
     expect(button(group, "Return").disabled).toBe(false);
-    const equity = button(group, "Equity");
-    expect(equity.disabled).toBe(true);
-    expect(equity.title).toContain("Not published (FE-025)");
-    expect(equity.title).toContain("no published fund series");
+    expect(within(group).queryByRole("button", { name: "Equity" })).toBeNull();
     expect(performance().querySelector("[data-testid='series-caption']")!.textContent).toContain("NAV in USDT");
   });
 
