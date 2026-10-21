@@ -40,6 +40,7 @@
  *   a body that ignores them: `window`, `economic_partition`, `lifecycle_filter`, `before`, a numeric `filters`/`sort` field. The other
  *   five dataset routes (fund, portfolio, alpha, account, deployment overview) are not served (`null`).
  */
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -58,6 +59,19 @@ const fixtureValue = (name: string): Draft => (JSON.parse(readFileSync(join(CONT
 const clone = <T,>(value: T): T => structuredClone(value);
 
 const problem = (status: number, code: string, message: string): BffAnswerManager => ({ status, body: { error: { code, message } } });
+
+/**
+ * The fleet lineage identity, derived the way the backend derives it (`managerLineageRevision` = `accessDigest({scope, source})`: canonical
+ * JSON with sorted keys, sha256). BOTH the fleet answer and the realtime snapshot of this double call `fleetDoubleLineageRevision`, so
+ * they pair because they share one derivation over one published head, not because two strings were made equal on purpose: a different
+ * environment or workspace (the double's stand-in for the read scope) is a different string, and so is a different head.
+ */
+const canonicalJson = (value: unknown): unknown => Array.isArray(value) ? value.map(canonicalJson) : value !== null && typeof value === "object" ?
+  Object.fromEntries(Object.entries(value).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)).map(([key, item]) => [key, canonicalJson(item)])) : value;
+const accessDigest = (value: unknown): string => `sha256:${createHash("sha256").update(JSON.stringify(canonicalJson(value))).digest("hex")}`;
+const fleetDoubleScope = (environment: string, workspaceId: string): string => accessDigest({ double: "fleet-read-scope", environment, workspace_id: workspaceId });
+export const fleetDoubleLineageRevision = (environment: string, workspaceId: string, headRevision: string): string =>
+  accessDigest({ scope: fleetDoubleScope(environment, workspaceId), source: headRevision });
 
 const ENVIRONMENTS = ["paper", "sandbox", "live"] as const;
 const WORKSPACE = /^[^\u0000-\u001f\u007f]{1,256}$/;
@@ -305,6 +319,8 @@ export function answerManagerFleet(method: string, path: string, search: URLSear
   const snapshot = body.snapshot_id as string;
   body.environment = env;
   if (workspaceId !== null) body.workspace_id = workspaceId;
+  // The public lineage identity of this read: the scope (environment + workspace) bound to the published head the realtime barrier also names.
+  body.lineage.revision = fleetDoubleLineageRevision(env, body.workspace_id as string, fleetDoubleHeadRevision());
 
   interface Candidate { row: Draft; visible: string[] }
   const textOf = (c: Candidate, field: string): string | null => {
@@ -416,8 +432,8 @@ export const MANAGER_FLEET_REALTIME_STREAM_ROUTE = "/manager/fleet/stream";
  *             ws_TEST_FLEET_RT_SLOW              AFR-WIRE-RESYNC-SLOW-CLIENT
  *             ws_TEST_FLEET_RT_LIMIT             AFR-WIRE-UNAVAILABLE-RECONNECT-LIMIT
  *
- * The snapshot names the SAME publication revision as the fleet answer this double serves for that environment (its
- * `lineage.revision`), so a screen that reads both pairs them. The stream is a finite body: a fixture lane keeps no connection and no
+ * The snapshot names the fleet answer this double serves for that environment and workspace by deriving the same `lineage.revision`
+ * (`fleetDoubleLineageRevision`), so a screen that reads both pairs them, while a different workspace or head would not. The stream is a finite body: a fixture lane keeps no connection and no
  * state between requests, so it cannot hold one open; a consumer sees one answer, then the response ends. The double reads the cursor
  * from `?cursor=` only (the contract's `Last-Event-ID` header never reaches a double).
  */
@@ -435,6 +451,8 @@ const realtimeCase = (id: string) => {
   if (found === undefined) throw new Error(`no published case ${id}`);
   return found;
 };
+/** The head every fleet read of this double is "published" at: the raw revision of the published realtime baseline. */
+const fleetDoubleHeadRevision = (): string => realtimeCase("AFR-SNAPSHOT-AVAILABLE").response.baseline.revision as string;
 const SSE = (body: string): BffAnswerManager => ({ status: 200, body, contentType: "text/event-stream" });
 
 /** The two ELP2-09 routes, or `null` when the request is neither. `path` has the execution prefix stripped. */
@@ -470,13 +488,9 @@ export function answerManagerFleetRealtime(method: string, path: string, search:
   const body = clone(realtimeCase(id).response);
   body.environment = environment;
   if (workspaceId !== null) body.workspace_id = workspaceId;
-  // The barrier names the publication the fleet double serves for this environment, so the two reads pair.
-  const fleet = answerManagerFleet("GET", MANAGER_FLEET_ROUTE, new URLSearchParams({ environment }));
-  const revision = (fleet?.body as Draft | undefined)?.lineage?.revision;
-  if (typeof revision === "string") {
-    body.baseline.revision = revision;
-    body.named_snapshot.lineage_revision = revision;
-  }
+  // CR-01: the barrier keeps the raw published head in `baseline.revision` (what its cursor counts) and names the fleet read by the SAME
+  // derivation the fleet answer uses for its `lineage.revision`, over the same environment, workspace and head. No string is copied across.
+  body.named_snapshot.lineage_revision = fleetDoubleLineageRevision(environment, body.workspace_id as string, body.baseline.revision as string);
   return { status: 200, body };
 }
 

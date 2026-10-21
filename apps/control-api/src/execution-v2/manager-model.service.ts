@@ -8,7 +8,7 @@ import { QueryContractError } from "../query/contracts";
 import { ExecutionReadScopes, ExecutionReadScopeError, scopeReadPopulation, type ReadScopePrincipal, type ReadScopeRequirement } from "./read-scope";
 import { managerModelQuery, type ManagerMember } from "./manager-model.contract";
 import { ManagerModelRepository } from "./manager-model.store";
-import { queryManagerModel, type ManagerSurface } from "./manager-model";
+import { fleetReadRequirement, queryManagerModel, type ManagerSurface } from "./manager-model";
 import { ExecutionManagerRuntime } from "./manager-runtime";
 import type { ManagerScorePublication } from "./manager-score-publication.contract";
 import type { ManagerCompositionPublication } from "./manager-composition-publication.contract";
@@ -47,9 +47,11 @@ export class ManagerModelService {
         surface === "DEPLOYMENT" ? "DEPLOYMENT" as const : "ALPHA" as const, id };
       // Deployment ownership is evaluated through the authorized Alpha tuples,
       // not a new/invented alpha.read grant on a DEPLOYMENT resource.
-      const requirement: ReadScopeRequirement = { action, resource: surface === "DEPLOYMENT" ? undefined : resource,
-        requireWholePopulation: surface === "FUND", dataset: { dataset_id: "alpha_fleet_overview", source_revision: head?.revision ?? "NOT_PUBLISHED",
-          projection_generation: head?.projection_generation ?? "NOT_PUBLISHED", catalogue_revision: head?.catalogue_digest ?? null, window: null } };
+      const dataset = { dataset_id: "alpha_fleet_overview", source_revision: head?.revision ?? "NOT_PUBLISHED",
+        projection_generation: head?.projection_generation ?? "NOT_PUBLISHED", catalogue_revision: head?.catalogue_digest ?? null, window: null };
+      // The Fleet requirement is shared with the realtime baseline (CR-01): it names the scope whose fingerprint `lineage.revision` carries.
+      const requirement: ReadScopeRequirement = surface === "FLEET" && resource === undefined ? fleetReadRequirement(dataset) :
+        { action, resource: surface === "DEPLOYMENT" ? undefined : resource, requireWholePopulation: surface === "FUND", dataset };
       let scope;
       try { scope = await this.scopes.authorize(principal, { environment: env, profileId: profile }, requirement); }
       catch (error) {

@@ -2,7 +2,8 @@ import { resolveManagerWindow, managerFactsForWindow, managerPublicationsForWind
   matchesManagerName, managerQueryOptions, managerMissingScoreWindow } from "./manager-query-p1";
 import { accessDigest } from "./access-policy";
 import { assertExecutionReadScope, ExecutionReadScopeError, scopeAllowsField, scopeReadPopulation, scopeAllowsFullAccountingPopulation,
-  type AuthorizedExecutionReadScope } from "./read-scope";
+  type AuthorizedExecutionReadScope, type ReadScopeRequirement } from "./read-scope";
+import type { ReadDatasetBinding } from "./read-publication";
 import { projectionRowVisible } from "./read-projection";
 import { KeysetCursorCodec } from "../query/cursor";
 import { sumExactDecimals } from "../research/exact-decimal";
@@ -384,9 +385,27 @@ export function queryManagerModel(scope: AuthorizedExecutionReadScope, input: un
     ...(doc.precomputed_regimes !== undefined ? { regime_details: regimes } : {}),
     funding_bucket_pnl: { value: null, reason_code: "LOT_ATTRIBUTION_METHOD_NOT_APPROVED" as const },
     lineage: { reducer_revision: "manager-model.v1" as const, source_set_ref: accessDigest(facts.map(f => [f.fact_id, f.revision]).sort()),
-      revision: accessDigest({ scope: scope.fingerprint, source: doc.revision }), supersedes_revision: doc.supersedes_revision ? accessDigest({ scope: scope.fingerprint, source: doc.supersedes_revision }) : null },
+      revision: managerLineageRevision(scope.fingerprint, doc.revision),
+      supersedes_revision: doc.supersedes_revision ? managerLineageRevision(scope.fingerprint, doc.supersedes_revision) : null },
   };
   if (Buffer.byteLength(JSON.stringify(response)) > 1048576) fail("EXECUTION_READ_SCOPE_LIMIT");
   // MD-5: canonical zero on emit, exactly once, before the response parse (which then refuses any signed zero left).
   return managerDatasetResponse.parse(canonicalizeManagerDatasetZero(response));
 }
+
+/**
+ * The PUBLIC lineage identity of a Manager read: the stored source revision bound to the exact read scope that served it. It is the
+ * only place the formula lives; `lineage.revision` of a dataset and the `named_snapshot.lineage_revision` of the Fleet realtime
+ * baseline (CR-01) both come from here, so they cannot drift apart. A different actor, session, grant, visible resource or source
+ * revision is a different string.
+ */
+export const managerLineageRevision = (scopeFingerprint: string, sourceRevision: string): string =>
+  accessDigest({ scope: scopeFingerprint, source: sourceRevision });
+
+/**
+ * The exact scope requirement `GET /manager/fleet` authorizes under (`alpha.read`, no resource, no whole-population demand). The
+ * Fleet realtime baseline mints the same requirement to learn the scope fingerprint the named read WILL carry, so the two reads
+ * pair on one derivation instead of on a string both sides promise to match.
+ */
+export const fleetReadRequirement = (dataset: ReadDatasetBinding): ReadScopeRequirement =>
+  ({ action: "alpha.read", resource: undefined, requireWholePopulation: false, dataset });

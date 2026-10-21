@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Named dataset `alpha_fleet_overview`: the baseline barrier a stream starts from. It names the Manager publication revision, generation, epoch and checkpoint ordinal the paired GET /api/v1/execution/manager/fleet answers, the authorization fingerprint, and either a resume token or a typed reason there is no stream. Read the fleet and the barrier together and compare `baseline.revision` with `lineage.revision`; a mismatch means a newer publication exists and the barrier must be re-read. Carries no figure; never an event replay. */
+        /** @description Named dataset `alpha_fleet_overview`: the baseline barrier a stream starts from. It names the Manager publication revision, generation, epoch and checkpoint ordinal the paired GET /api/v1/execution/manager/fleet answers, the authorization fingerprint, and either a resume token or a typed reason there is no stream. Read the fleet and the barrier together and compare `named_snapshot.lineage_revision` with `lineage.revision` of the fleet answer; a mismatch means a newer publication or another authorization scope, and the barrier must be re-read. Carries no figure; never an event replay. */
         get: operations["executionAlphaFleetRealtimeSnapshotGetV1"];
         put?: never;
         post?: never;
@@ -90,7 +90,7 @@ export interface components {
             reason_code: "WHOLE_FLEET_AUTHORITY_REQUIRED" | "STREAM_AUTHORITY_NOT_GRANTED" | "STREAM_CAPACITY_REACHED";
             resume_cursor: null;
         };
-        /** @description Baseline barrier of the named fleet read, not a figure. `baseline.revision` MUST equal `named_snapshot.lineage_revision` and the `lineage.revision` of the paired GET /manager/fleet answer (a cross-field rule JSON Schema cannot state; the producer validator and the browser reader enforce it). `scope_fingerprint` changes whenever the authorization identity changes: a consumer holding a different fingerprint than before must re-baseline. `source` states where a notice would come from; no Edge scoped-notice source is commissioned for this dataset. */
+        /** @description Baseline barrier of the named fleet read, not a figure. `baseline.revision` is the stored head revision (what the cursor and the ordinal count); it is NOT compared with the fleet answer. `named_snapshot.lineage_revision` is the exact public lineage identity of the paired GET /manager/fleet answer for this actor, session, workspace, environment, grants and head (a sha256 digest bound to the alpha.read read scope and the head revision); the consumer pairs by exact string equality with the `lineage.revision` of that answer, and any other string is a stale or foreign barrier. `scope_fingerprint` changes whenever the authorization identity changes: a consumer holding a different fingerprint than before must re-baseline. `source` states where a notice would come from; no Edge scoped-notice source is commissioned for this dataset. */
         AlphaFleetRealtimeSnapshot: {
             /** @constant */
             schema_version: "portal.execution.alpha-fleet-realtime-snapshot.v1";

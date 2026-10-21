@@ -59,7 +59,10 @@ export const alphaFleetRealtimeSnapshot = z.object({
   /** Digest of the current authorization identity (actor, session, policy, visible resources). A change means a new scope. */
   scope_fingerprint: sha256,
   baseline: z.object({
-    /** The Manager publication revision this barrier names; equals `lineage.revision` of the named fleet read it pairs with. */
+    /**
+     * The stored Manager publication revision at the head (what the cursor and the ordinal count). It is NOT the public lineage
+     * identity of the named read: that one is bound to the read scope (`named_snapshot.lineage_revision`).
+     */
     revision: text,
     projection_generation: text,
     source_epoch: text,
@@ -70,7 +73,13 @@ export const alphaFleetRealtimeSnapshot = z.object({
   named_snapshot: z.object({
     operation_id: z.literal(ALPHA_FLEET_NAMED_SNAPSHOT_OPERATION),
     path: z.literal(ALPHA_FLEET_NAMED_SNAPSHOT_PATH),
-    lineage_revision: text,
+    /**
+     * The exact `lineage.revision` the named fleet read returns for THIS actor, session, workspace, environment, grants and head:
+     * `sha256(canonical({scope: <alpha.read scope fingerprint>, source: baseline.revision}))`. A consumer pairs by exact string
+     * equality with `lineage.revision` of `GET /manager/fleet`; a different actor, grant, visible resource or head is a different
+     * string, so a barrier never pairs with another scope's read. It is a digest, never the raw head revision.
+     */
+    lineage_revision: sha256,
   }).strict(),
   /**
    * Where a notice comes from, typed. Today the origin is the Portal's own publication head; no Edge scoped-notice source
@@ -84,10 +93,7 @@ export const alphaFleetRealtimeSnapshot = z.object({
   stream: z.union([alphaFleetStreamAvailable, alphaFleetStreamUnavailable]),
   /** Quality of the BARRIER, not of any fleet figure; a named-snapshot read states the quality of the data. */
   quality: edgeMetadataSchema.shape.quality,
-}).strict().superRefine((snapshot, context) => {
-  if (snapshot.baseline.revision !== snapshot.named_snapshot.lineage_revision)
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "ALPHA_FLEET_BASELINE_REVISION_MISMATCH" });
-});
+}).strict();
 
 /** Query of the snapshot. The workspace is never a selector for another workspace; a mismatch is a 404. */
 export const alphaFleetRealtimeQuery = z.object({ environment: executionEnvironment, workspace_id: text.optional() }).strict();

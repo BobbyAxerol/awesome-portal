@@ -18,6 +18,7 @@ import { ExecutionAccessService } from "../src/execution-v2/access.service";
 import { ScopedReplayCursorCodec,ScopedReplayHub,scopedNoticeGuard } from "../src/execution-v2/realtime";
 import { ScopedReplayError } from "../src/execution-v2/scoped-replay-cursor";
 import { ScopesFleetAuthority } from "../src/execution-v2/alpha-fleet-realtime.authority";
+import { fleetReadRequirement } from "../src/execution-v2/manager-model";
 import type { ScopedRealtimeFrame } from "../src/execution-v2/realtime.contract";
 import type { AccessTrustProvider, ReviewedPolicyArtifact } from "../src/execution-v2/access-trust";
 import { readPublication, type ExecutionReadPublication, type ExecutionReadPublicationRequest } from "../src/execution-v2/read-publication";
@@ -1073,6 +1074,10 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 TEST_ONLY scoped reads with real Postgre
     expect(granted.field_policy_revision).toMatch(/^portal\.execution\.full-business-fields\.v1:sha256:/);
     const fresh = await full.scopes.authorizeFleetRoot(full.p, BINDING, structuredClone(DATASET));
     expect(granted.identity).toBe(scopeRealtimeIdentity(fresh.scope));
+    // CR-01: the pairing scope is the alpha.read scope the named Fleet read mints, NOT the root business scope the stream identity names.
+    const named = await full.scopes.authorize(full.p, BINDING, fleetReadRequirement(structuredClone(DATASET)));
+    expect(granted.named_scope_fingerprint).toBe(named.fingerprint);
+    expect(granted.named_scope_fingerprint).not.toBe(fresh.scope.fingerprint);
   });
 
   it("BE-P16 fleet authority: the stream guard re-resolves current authority on every poll and every write; a revoke delivers nothing", async () => {

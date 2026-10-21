@@ -14,7 +14,7 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { answerFixtureRequest, V2_OPTIONS } from "../../e2e/bffAnswerer";
-import { FLEET_REALTIME_DOUBLE_WORKSPACES as WS, FLEET_REALTIME_FIXTURE_TOKEN } from "../../e2e/bffDoubleManager";
+import { FLEET_REALTIME_DOUBLE_WORKSPACES as WS, FLEET_REALTIME_FIXTURE_TOKEN, fleetDoubleLineageRevision } from "../../e2e/bffDoubleManager";
 import { createFixtureServer, loadConfig, resetFixtureGlobals } from "../../../fixture-bff/app";
 import {
   ALPHA_FLEET_SNAPSHOT_PATH, ALPHA_FLEET_STREAM_PATH, baselineOf, pairBaselineWithFleet, readAlphaFleetRealtimeSnapshot, readFleetSseBlock,
@@ -53,14 +53,25 @@ describe("the snapshot", () => {
       expect(snapshotOf({ environment }).environment).toBe(environment);
     }
   });
-  it("pairs with the fleet double's own lineage revision, per environment", () => {
+  it("pairs with the fleet double's own lineage revision, per environment, through one derivation (CR-01)", () => {
     for (const environment of ["paper", "sandbox", "live"]) {
-      const fleet = ask("/manager/fleet", { environment, limit: "1" })!.body as { lineage: { revision: string } };
+      const fleet = ask("/manager/fleet", { environment, limit: "1" })!.body as { workspace_id: string; lineage: { revision: string } };
       const snapshot = snapshotOf({ environment });
-      expect(snapshot.baseline.revision).toBe(fleet.lineage.revision);
+      // The raw head is the cursor's coordinate and is NOT what the fleet read returns; the pairing identity is the derived digest.
+      expect(snapshot.baseline.revision).not.toBe(fleet.lineage.revision);
+      expect(snapshot.pairsWithRevision).toBe(fleetDoubleLineageRevision(environment, fleet.workspace_id, snapshot.baseline.revision));
       expect(pairBaselineWithFleet(snapshot, fleet.lineage.revision)).toBe("PAIRED");
+      expect(pairBaselineWithFleet(snapshot, snapshot.baseline.revision)).toBe("STALE_BASELINE");
       expect(pairBaselineWithFleet(snapshot, "TEST_ONLY:another-revision")).toBe("STALE_BASELINE");
     }
+  });
+  it("does not pair across environments, workspaces or heads", () => {
+    const fleet = (query: Record<string, string>) => (ask("/manager/fleet", { limit: "1", ...query })!.body as { lineage: { revision: string } }).lineage.revision;
+    const paper = snapshotOf({ environment: "paper" });
+    expect(pairBaselineWithFleet(paper, fleet({ environment: "paper" }))).toBe("PAIRED");
+    expect(pairBaselineWithFleet(paper, fleet({ environment: "live" }))).toBe("STALE_BASELINE");
+    expect(pairBaselineWithFleet(paper, fleet({ environment: "paper", workspace_id: "ws_TEST_OTHER" }))).toBe("STALE_BASELINE");
+    expect(pairBaselineWithFleet(paper, fleetDoubleLineageRevision("paper", paper.workspaceId, "TEST_ONLY:fleet-r8"))).toBe("STALE_BASELINE");
   });
   it("offers a cursor when the stream is available, and no cursor at all when it is not", () => {
     expect(snapshotOf({}).stream).toMatchObject({ state: "available", cursor: FLEET_REALTIME_FIXTURE_TOKEN });

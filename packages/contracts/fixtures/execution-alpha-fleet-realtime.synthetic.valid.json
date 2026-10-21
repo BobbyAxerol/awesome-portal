@@ -22,7 +22,7 @@
         "named_snapshot": {
           "operation_id": "executionManagerFleetGetV1",
           "path": "/api/v1/execution/manager/fleet",
-          "lineage_revision": "TEST_ONLY:fleet-r7"
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
         },
         "source": {
           "notice_origin": "PORTAL_PUBLICATION_REVISION",
@@ -74,7 +74,7 @@
         "named_snapshot": {
           "operation_id": "executionManagerFleetGetV1",
           "path": "/api/v1/execution/manager/fleet",
-          "lineage_revision": "TEST_ONLY:fleet-r7"
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
         },
         "source": {
           "notice_origin": "PORTAL_PUBLICATION_REVISION",
@@ -126,7 +126,7 @@
         "named_snapshot": {
           "operation_id": "executionManagerFleetGetV1",
           "path": "/api/v1/execution/manager/fleet",
-          "lineage_revision": "TEST_ONLY:fleet-r7"
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
         },
         "source": {
           "notice_origin": "PORTAL_PUBLICATION_REVISION",
@@ -174,7 +174,7 @@
         "named_snapshot": {
           "operation_id": "executionManagerFleetGetV1",
           "path": "/api/v1/execution/manager/fleet",
-          "lineage_revision": "TEST_ONLY:fleet-r7"
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
         },
         "source": {
           "notice_origin": "PORTAL_PUBLICATION_REVISION",
@@ -222,7 +222,7 @@
         "named_snapshot": {
           "operation_id": "executionManagerFleetGetV1",
           "path": "/api/v1/execution/manager/fleet",
-          "lineage_revision": "TEST_ONLY:fleet-r7"
+          "lineage_revision": "sha256:d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4"
         },
         "source": {
           "notice_origin": "PORTAL_PUBLICATION_REVISION",

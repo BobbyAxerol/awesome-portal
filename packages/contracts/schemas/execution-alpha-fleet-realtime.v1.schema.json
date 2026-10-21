@@ -513,9 +513,7 @@
             },
             "lineage_revision": {
               "type": "string",
-              "minLength": 1,
-              "maxLength": 256,
-              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
             }
           },
           "required": [
@@ -571,7 +569,7 @@
         "stream",
         "quality"
       ],
-      "description": "Baseline barrier of the named fleet read, not a figure. `baseline.revision` MUST equal `named_snapshot.lineage_revision` and the `lineage.revision` of the paired GET /manager/fleet answer (a cross-field rule JSON Schema cannot state; the producer validator and the browser reader enforce it). `scope_fingerprint` changes whenever the authorization identity changes: a consumer holding a different fingerprint than before must re-baseline. `source` states where a notice would come from; no Edge scoped-notice source is commissioned for this dataset."
+      "description": "Baseline barrier of the named fleet read, not a figure. `baseline.revision` is the stored head revision (what the cursor and the ordinal count); it is NOT compared with the fleet answer. `named_snapshot.lineage_revision` is the exact public lineage identity of the paired GET /manager/fleet answer for this actor, session, workspace, environment, grants and head (a sha256 digest bound to the alpha.read read scope and the head revision); the consumer pairs by exact string equality with the `lineage.revision` of that answer, and any other string is a stale or foreign barrier. `scope_fingerprint` changes whenever the authorization identity changes: a consumer holding a different fingerprint than before must re-baseline. `source` states where a notice would come from; no Edge scoped-notice source is commissioned for this dataset."
     },
     "Problem": {
       "type": "object",

@@ -67,8 +67,11 @@ describe("BE-P16 ELP2-09 alpha_fleet_overview: published operations", () => {
     expect(ALPHA_FLEET_NAMED_SNAPSHOT_PATH).toBe("/api/v1/execution/manager/fleet");
     const models = load("openapi/execution-manager-models.openapi.json");
     expect(models.paths[ALPHA_FLEET_NAMED_SNAPSHOT_PATH].get.operationId).toBe("executionManagerFleetGetV1");
-    expect(sample("AFR-SNAPSHOT-AVAILABLE").named_snapshot).toEqual({
-      operation_id: "executionManagerFleetGetV1", path: ALPHA_FLEET_NAMED_SNAPSHOT_PATH, lineage_revision: sample("AFR-SNAPSHOT-AVAILABLE").baseline.revision });
+    const available = sample("AFR-SNAPSHOT-AVAILABLE");
+    expect(available.named_snapshot).toMatchObject({ operation_id: "executionManagerFleetGetV1", path: ALPHA_FLEET_NAMED_SNAPSHOT_PATH });
+    // CR-01: the pairing identity is the scope-bound digest of the named read, never the raw head revision the cursor counts.
+    expect(available.named_snapshot.lineage_revision).toMatch(/^sha256:[a-f0-9]{64}$/);
+    expect(available.named_snapshot.lineage_revision).not.toBe(available.baseline.revision);
   });
 });
 
@@ -83,11 +86,10 @@ describe("BE-P16 ELP2-09 alpha_fleet_overview: fixtures agree between AJV 2020 a
     expect(validates(entry.schema, entry.response), "generated schema").toBe(true);
     expect(runtime[entry.schema].safeParse(entry.response).success, "runtime schema").toBe(true);
   });
-  // JSON Schema cannot state a cross-field equality; the runtime validator and the browser reader hold it. Named, not hidden.
-  const RUNTIME_ONLY = new Set(["revision-pairing-broken"]);
+  // No cross-field rule remains (CR-01): every refusal is stated by the generated schema as well as by the producer validator.
   it.each(negative.cases)("$id is refused ($rule)", (entry: any) => {
     expect(runtime[entry.schema].safeParse(entry.response).success, "runtime schema").toBe(false);
-    if (!RUNTIME_ONLY.has(entry.id)) expect(validates(entry.schema, entry.response), "generated schema").toBe(false);
+    expect(validates(entry.schema, entry.response), "generated schema").toBe(false);
   });
   it("covers the five stream states and every typed reason the snapshot can give", () => {
     expect(new Set(valid.cases.filter((c: any) => c.schema === "ScopedRealtimeFrame").map((c: any) => c.response.event_type)))

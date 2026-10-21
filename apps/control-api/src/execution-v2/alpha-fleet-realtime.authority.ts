@@ -13,6 +13,7 @@ import { ExecutionReadScopes, ExecutionReadScopeError, scopeRealtimeIdentity, sc
 import type { ReadDatasetBinding } from "./read-publication";
 import { scopedNoticeGuard, type ReplayDeliveryGuard } from "./realtime";
 import type { AlphaFleetStreamUnavailableReason } from "./alpha-fleet-realtime.contract";
+import { fleetReadRequirement } from "./manager-model";
 
 export type FleetEnvironment = "paper" | "sandbox" | "live";
 export type FleetStreamEligibility = { eligible: true } | { eligible: false; reason: AlphaFleetStreamUnavailableReason };
@@ -20,6 +21,12 @@ export type FleetStreamEligibility = { eligible: true } | { eligible: false; rea
 export interface FleetSnapshotAuthorization<T> {
   /** `scopeRealtimeIdentity`: stable across publication revisions, changes with actor, session, policy, grants, visible resources. */
   identity: string;
+  /**
+   * Fingerprint of the `alpha.read` scope `GET /manager/fleet` mints for this actor and this dataset binding (CR-01). The named
+   * read's `lineage.revision` is bound to it. It is NOT `identity`: the stream identity is the root business scope and excludes the
+   * changing source revision. It is never sent on its own; only the digest derived from it is.
+   */
+  named_scope_fingerprint: string;
   stream: FleetStreamEligibility;
   /** Only meaningful when `stream.eligible`: the revisions a cursor for this stream binds. */
   policy_revision: string | null;
@@ -58,7 +65,11 @@ export class ScopesFleetAuthority implements AlphaFleetAuthority {
     }
     if (root) {
       const { scope, resource } = root;
-      const value = await this.scopes.deliver(scope, read);
+      // The named Fleet read is an `alpha.read` read, not the root business read the stream is gated on. Mint ITS scope too and fence
+      // the baseline under both, so the identity published for pairing is one the actor really holds right now. A root holder the
+      // named read would refuse gets no baseline: a barrier that can never pair is not offered.
+      const named = await this.scopes.authorize(principal, binding, fleetReadRequirement(dataset));
+      const value = await this.scopes.deliver(named, () => this.scopes.deliver(scope, read));
       let stream: FleetStreamEligibility = { eligible: true };
       try { await this.scopes.deliverRealtime(scope, resource, () => true); }
       catch (error) {
@@ -66,14 +77,14 @@ export class ScopesFleetAuthority implements AlphaFleetAuthority {
         if (error instanceof AccessPolicyError && error.code === "ACCESS_DENIED") stream = { eligible: false, reason: "STREAM_AUTHORITY_NOT_GRANTED" };
         else throw error;
       }
-      return { identity: scopeRealtimeIdentity(scope), stream,
+      return { identity: scopeRealtimeIdentity(scope), named_scope_fingerprint: named.fingerprint, stream,
         policy_revision: stream.eligible ? scope.policyRevision : null,
         field_policy_revision: stream.eligible ? scopeReplayFieldPolicyRevision(scope) : null, value };
     }
     // Same scope the named fleet read mints: a partial viewer still gets the baseline, with a typed "no stream for you".
-    const scope = await this.scopes.authorize(principal, binding, { action: "alpha.read", dataset });
+    const scope = await this.scopes.authorize(principal, binding, fleetReadRequirement(dataset));
     const value = await this.scopes.deliver(scope, read);
-    return { identity: scopeRealtimeIdentity(scope), stream: { eligible: false, reason: "WHOLE_FLEET_AUTHORITY_REQUIRED" },
+    return { identity: scopeRealtimeIdentity(scope), named_scope_fingerprint: scope.fingerprint, stream: { eligible: false, reason: "WHOLE_FLEET_AUTHORITY_REQUIRED" },
       policy_revision: null, field_policy_revision: null, value };
   }
 
