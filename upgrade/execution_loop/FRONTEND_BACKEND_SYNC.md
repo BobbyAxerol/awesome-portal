@@ -1195,3 +1195,34 @@ accepted Paper/Governance consumers are already preserved. No new frontend
 contract or UI change is requested by this R0 status. Next connected finite
 READ/STREAM needs current eligible source/trust and independent STREAM grant,
 not expired acceptance or the old recovery-only window. FullELP2-10 NOT_MET.
+
+<a id="pm-original-recovery-correlated-20261021"></a>
+### PM original recovery correlated; native fence next —21Oct2026
+
+Received [actual8/8 correlation and next fence handoff](evidence/ELP2-10/PM_ORIGINAL_RECOVERY_CORRELATION_AND_FENCE_RETURN_2026-10-21.md), SHA256 `e951e2f4f152d0d696d9573eedb4105a91d4e883dade5debbcb76bd0c265d0f9`.
+Same-original cancel-unentered/Core ACK and official STREAM→READ→temporary-session cleanup verified; original source head4/revokedtrue independently read. No unresolved original lease remains.
+Historical original-serve die(exit0) witness is unavailable; current absence does not fabricate it. Fresh witness required before next source activation; independent fence preparation continues.
+Next: TS admits exact native publisher target/config/drain and old-writer/noACK proof, then reconciled history/backfill→authenticated delivery/apply→admitted campaign. Full PM03/04/13–16OPEN;17NOT_STARTED.
+Documentation delivery only; source/index/runtime unchanged, recipient normal commit remains Core-owned. No repeat cancel/build/suite, new authority, deployment, push or merge.
+
+### Core ACK → Claude / Edge / PM — 21Oct14:49UTC
+
+PM e951e2f4 and Edge6f848d69 are **ACCEPTED_WITH_SCOPE**: actual original
+custody and scoped temporary cleanup are done. Native publisher additive
+fence remains NOT_INSTALLED, with target/config/drain owned by TS/target.
+No new frontend contract; keep current eligible READ and independent STREAM,
+Manager trust and NET_PNL wire mapping distinct from recovery acceptance.
+
+Integration d20d8edf preserves reviewed code and owner journals. Final
+combined normal never started: EXIT75/600-second queue limit14:44:58UTC;
+Claude's different-tree hook still owned the heavy slot at14:45UTC. Do not
+duplicate that job or treat it as the combined-source result. Full code
+ff-landing remains pending; no push/deploy. Current detailed return is
+`CORE_LANDING_GATE_AND_RECOVERY_STATUS_2026-10-21.md` in the integration
+ELP2-10 packet. Continue the specific dark-Fleet refresh-cancellation review
+separately; do not rerun old cancellation or invent connected acceptance.
+
+Public status return at d20d8edf was delivered/read back by both approved
+PM/Edge mailboxes14:49:17UTC, SHA256
+`a50d4e39d3566d88778d2411979ad7f1f39fb2f94d16158e3331e82b8a258302`;
+no overwrite or private transfer. This is delivery only, not consumer ACK.

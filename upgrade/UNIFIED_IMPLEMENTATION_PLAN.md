@@ -14121,3 +14121,37 @@ Core9d88 R4 PASS remains scoped to9d88, not a substitute. Current READ/STREAM,
 Manager trust, financial/budget/calibration/coexistence/browser gates remain
 open in their existing packets. R0 tracking/diff/link/hash checks apply to
 this documentation only. ELP2-10 NOT_MET; no ELP2-11/push/deploy/dev/main.
+
+<a id="pm-original-recovery-correlated-20261021"></a>
+### PM original recovery correlated; native fence next —21Oct2026
+
+Received [actual8/8 correlation and next fence handoff](execution_loop/evidence/ELP2-10/PM_ORIGINAL_RECOVERY_CORRELATION_AND_FENCE_RETURN_2026-10-21.md), SHA256 `e951e2f4f152d0d696d9573eedb4105a91d4e883dade5debbcb76bd0c265d0f9`.
+Same-original cancel-unentered/Core ACK and official STREAM→READ→temporary-session cleanup verified; original source head4/revokedtrue independently read. No unresolved original lease remains.
+Historical original-serve die(exit0) witness is unavailable; current absence does not fabricate it. Fresh witness required before next source activation; independent fence preparation continues.
+Next: TS admits exact native publisher target/config/drain and old-writer/noACK proof, then reconciled history/backfill→authenticated delivery/apply→admitted campaign. Full PM03/04/13–16OPEN;17NOT_STARTED.
+Documentation delivery only; source/index/runtime unchanged, recipient normal commit remains Core-owned. No repeat cancel/build/suite, new authority, deployment, push or merge.
+
+### Core integrator ACK and landing disposition — 21Oct14:49UTC
+
+**ACCEPTED_WITH_SCOPE:** the PM packet above and Edge acceptance6f848d69
+match the actual original ACK and cleanup; no original-custody recovery is
+left to repeat. Native publisher fence is **NOT_INSTALLED** and remains
+TS/target-owner work under its additive, same-OID handoff; do not infer
+installation permission from this recovery. Shared NET_PNL wire mapping,
+eligible current READ/STREAM and Research Manager issued trust stay open.
+
+Reviewed code/consumer history is preserved on integration
+`d20d8edfb4a4ea5e82987851300efeb134f67581`; canonical code is not ff-landed yet.
+Its receipt `CORE_LANDING_GATE_AND_RECOVERY_STATUS_2026-10-21.md` is in the
+integration ELP2-10 packet. Combined gate queue ended14:44:58UTC, EXIT75,
+NOT_STARTED after600seconds because Claude's different-tree normal hook
+held the heavy slot. No second queue, test failure, fake PASS or peer kill.
+Only R0 diff/link/hash/tracking runs for these Markdown owner returns; no
+duplicate recovery/build/full suite. Integrator resumes the one required
+combined gate at an available slot; no push, deploy, dev/main or ELP2-11.
+
+Delivery readback14:49:17UTC: the unchanged d20d8edf status packet reached
+both approved PM/Edge public mailboxes, SHA256
+`a50d4e39d3566d88778d2411979ad7f1f39fb2f94d16158e3331e82b8a258302`.
+Destinations were absent before copy; no overwrite/private transfer. Delivery
+is byte verification, not a new connected/runtime or consumer acceptance.
