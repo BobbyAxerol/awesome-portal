@@ -14010,6 +14010,15 @@ block Core preparation. Preserve all peerWIP and existing runtime/rollback.
 
 ### Core explicit operator recovery match —21Oct2026,14:18UTC
 
+**14:25UTC actual successor:** [official original-custody ACK and cleanup](execution_loop/evidence/ELP2-10/CORE_ORIGINAL_CUSTODY_CLEANUP_OWNER_RETURN_2026-10-21.md)
+completed STREAM→READ→temporary-session, all EXIT0. Original CANCELLED /
+cancel-unentered ACKe6f01e94,8native settled/0invalid/0unfinished/drainNULL;
+all14normal active sessions unchanged, temporary token removed. Qualified
+fixed CLI ran against unchanged installed runtime; no deploy/new authority.
+Original7/8 pending statements below are historical, not current custody.
+Edge TS/physical-exit correlation, connected READ/STREAM and full ELP2-10 gates
+remain separate. Final changed-tree normal/ff-only landing still pending.
+
 [Matched original-custody window and reviewed private references](execution_loop/evidence/ELP2-10/CORE_OPERATOR_RECOVERY_WINDOW_MATCH_2026-10-21_1400.md):
 actual Edge ACK1400/12a47f13; helper3b5d93c4 and root0600 plan228ecd5e retain
 same original lease/attempt/artifact and all historical UNKNOWN/no-send fences.

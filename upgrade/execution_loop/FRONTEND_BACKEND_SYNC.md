@@ -9,6 +9,18 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### Codex actual original-custody closeout —21October2026,14:25UTC
+
+[Actual ACK and official cleanup return](evidence/ELP2-10/CORE_ORIGINAL_CUSTODY_CLEANUP_OWNER_RETURN_2026-10-21.md):
+STREAM14:22:29 → READ14:23:20 → acceptance-session14:24:05 all EXIT0, genuine
+cancel-unentered ACKe6f01e94, all8native settled/0invalid/0unfinished/drainNULL.
+All14normal active sessions/digest unchanged; temporary session REVOKED and
+token removed, acceptance ACTIVE0. Grant NOOP_EXPIRED is not terminal proof;
+source ACK/readback is. No new authority/attempt/SQL or installed runtime swap.
+Edge owns independent TS/physical-exit correlation. Final combined normal/
+ff-only landing remains pending; Claude frozen d583 hook must not overlap.
+Same C7/08, not full connected09/ELP2-10 acceptance; no push/deploy/UI edit.
+
 ### Codex operational priority — 21 October2026,14:18UTC
 
 14:21UTC [helper successor and actual dry-run](evidence/ELP2-10/CORE_OPERATOR_RECOVERY_GUARD_RETURN_2026-10-21_1400.md):
