@@ -29854,6 +29854,49 @@ claimed as own reclamation. Cleanup:three --rm workers removed, no new images/
 cache to prune; preserve active/explicit rollback/shared resources and the
 active finite proposal. No global prune, DB deletion or runtime restart.
 
+**19:24UTC full-case preparation refinement:** actual source review confirms
+cache data epoch includes current authority fingerprint and manager-domain
+grants. STREAM revoke may invalidate the pre-STREAM cache specimen before
+READ revoke. Require a genuine current-epoch HIT immediately before READ
+revoke: existing post-STREAM preserved deployment GET primes; if its P22
+receipt is MISS, one identical repeat E1 (else E0). Full schedule7+Q+E HTTP,
+worst8+Q; H9/R20/Q1/B244 implies proposed Cmin282, still below pending288.
+No numerical config or source change; this is owned acceptance preparation,
+not a new external gate. Existing handoff§10.6 records the exact source lines
+and correlation; eligible finite READ remains independent. Source remains
+OFF awaiting actual Core hash-matched commissioning ACK, not another image.
+Publication d3f55951:4Markdown/+309, R0 actual PASS, no push/merge/hosted CI.
+
+**Actual refinement delivery19:24:55UTC:** handoff§10.6 is1144bytes/SHA256
+a918c300bb24789f00b29611eb6621693ea32878b919e6e43cfb817aef3bc094;
+locator722bytes/ba7dd963778e2c127324af31eb64e9c07eebf540167077d26ea147f88ab40df2
+reached Core task/Unified/sync, four prefix/readbacks PASS. Source helper pins
+40e8f8af (unarmed operator) and5c76ae94 (reused ready observer) are private
+configuration references, no secret material in Git. Actual19:27HK port28446
+is closed, six operational Edge/projection containers retain d6aa7a51. Current
+canonical checkout manager-v2/feat/manager-v2-paper-read54c6f5f3, active feature
+upgrade-v1_2/d3f55951; existing Core a96/configf251d677 and previous9cf5 backup/
+rollback retained. Stable release a9b10385 is untouched. No further test workers,
+images, caches, credentials or source authority were created by this refinement.
+Only remaining source activation prerequisite is the actual filled-input Core
+commissioning/config/session return for fresh6f082bf9, not another generic
+owner approval or successor build. P22/full bounds/genuine control remain
+separate full-case inputs; no real connected08 or09 PASS follows.
+
+**19:28UTC remaining-work partition / publication:** Core canonical3ddafc24
+still has no newer filled-input source ACK/config/session. Runnable-now owned
+fresh composition,8glue tests, real readonly source proof, reused READY helper,
+counted current-epoch specimen, exact owner routing and tracking are complete.
+Do not spend the three admissions or open expiring source merely to wait.
+Core owner action: existing08 handoff§10.5 exact6f082bf9 pins -> commissioning
+ACK/config plan -> Edge actual install/READY -> Core official current READ/
+private session -> one bounded genuine READ/terminal/CoreACK/drain/retire proof.
+Separate full-suite inputs remain P22 actual factory/qualified installation,
+numeric bound disposition and genuine unaffected-control composition. These
+are recorded inputs, not new phases or replacement of the full goal by READ.
+Verification:R0 execution-tracking EXIT0 for this refinement, staged scoped
+diff/anchor/link check required before commit; no further heavy tests or CI.
+
 
 
 

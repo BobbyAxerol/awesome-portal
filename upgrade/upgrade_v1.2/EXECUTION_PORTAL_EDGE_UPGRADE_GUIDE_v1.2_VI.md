@@ -1047,6 +1047,8 @@ install/serve; genuine current READ/session follows observed READY. Keep
 C32/R20/H9, no automatic cap change or full SSE run. P22 factory request now
 actually reaches Claude; delivery is not factory completion. Full08 remains
 NOT_MET, not09connected. See [current binding journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-installed-successor-fresh-source-20261021).
+Full future schedule7+Q+E includes E0/1 for an actual post-STREAM current-epoch
+cache HIT before READ revoke (handoff§10.6); historical HIT is not that proof.
 
 **Built-image intake21Oct18:52UTC:** actual a96c754d image from8ac exists,
 62-case retake/restore+suffix qualified; not installed. Core counterproposal

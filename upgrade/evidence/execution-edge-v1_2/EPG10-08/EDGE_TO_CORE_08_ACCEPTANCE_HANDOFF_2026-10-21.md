@@ -714,3 +714,21 @@ current installed runtime/READ/session when real NATIVE_READY is available.
 Do not require P22/full-suite cap first; unchanged C32/R20/H9 leaves3 and is
 enough only for an otherwise eligible finite READ. No automatic C288/STREAM/
 control-identity approval, no old-custody replay. Full08 remains NOT_MET.
+
+### 10.6 Current-epoch cache specimen correction —21Oct19:24UTC
+
+Read actual installed-source `maximum-data-operation.service.ts:70–80` and
+`current-human-snapshot.ts:41–48,136–143`: cache data epoch includes the current
+authority fingerprint, and that fingerprint includes manager-domain grants.
+STREAM install/revoke can therefore change the READ cache epoch even though
+READ stays authorized. Do not reuse only the pre-STREAM HIT as evidence of a
+current-epoch cached entry immediately before READ revoke.
+
+Use the existing post-STREAM preserved deployment GET as the current-epoch
+prime; if its genuine P22 receipt is MISS, repeat exactly that GET once to
+prove HIT before READ revoke. Let E=0/1 be this extra positive request. Complete
+schedule is7+Q+E HTTP, with Q<=1, not a second baseline/framework. Proposed
+worst-case Cmin=H+20+8+1+244; at H9 it is282, still within proposed288 (spare6),
+subject to the same pending numeric approval and post-setup census. Current
+C32 eligible READ is unaffected. Correlate actual epoch/operation/body/terminal/
+sourceACK; repeated200 or a prior epoch is not a cache HIT. No runtime change.
