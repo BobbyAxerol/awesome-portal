@@ -117,8 +117,9 @@
       "consequence": "Wide runs go red without a product change, which trains people to ignore red; DEBT-UXM07-010 was the same class and was fixed by waiting on the ready element",
       "proposed": "Apply the readyDrawer-style wait (await the ready state, not a timer) to each; accept only after three solo and three --maxWorkers=3 runs",
       "owner": "Claude (FE)",
-      "status": "STILL_OPEN (new 2026-10-21)",
-      "opened": "2026-10-21"
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "025f3f22 (2026-10-21): the cause was testing-library's 1000 ms default for waitFor/findBy against a 130-row render under a loaded machine, not a timer in the tests. src/execution/v2/waitsTestUtil.ts adds SLOW ({ timeout: 8000 }) and SLOW_TEST (60 s); applied to the table-loaded helpers and the positive waits in fleetDataset, fleet index, account, admin and portfolios tests, and as an explicit per-test budget on the multi-step flows (paging 50/100/130, Close on the auto-opened pane, search and venue). No expect changed and no 'nothing happened' check got the longer limit. Evidence: the five files pass alone and together at --maxWorkers=1 (340 tests); the fleet + account + admin + portfolios folders pass at --maxWorkers=2 (25 files, 2153 tests, no failure, no act() warning); testHygiene, v2Hygiene, testkit, absentValues, failClosed, linkTargets and titleAbsence green; tsc clean for src/execution/v2. Caveat: the quiet machine never reproduced the flake, so the fix is by cause, not by observed red-to-green; if it recurs in a whole-suite run, reopen with the failing test name."
     },
     {
       "id": "DEBT-UXM07-035",
