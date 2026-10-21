@@ -32,6 +32,9 @@ import { captureSelfContextFacts } from "./self-context.store";
 import { ManagerRevokeError, MANAGER_REVOKE_EVENT_SOURCE, MANAGER_REVOKE_RECEIPT_SCHEMA, managerRevokeIntentKey,
   managerRevokeItemKey, managerRevokeRequestDigest, planManagerRevoke, verifiedManagerRevoke,
   type ManagerRevokeDocument, type ManagerRevokeReceipt } from "./manager-domain-revoke";
+import { MANAGER_SUCCESSOR_SCHEMA, ManagerSuccessorError, verifiedManagerSuccessor,
+  managerSuccessorKey, managerSuccessorDigest, planManagerSuccessor, assertSuccessorWindow,
+  type ManagerSuccessorDocument, type ManagerSuccessorPin } from "./manager-domain-successor";
 
 type Tx={db:PoolClient;repo:AccessRepository;context:AccessEvaluationContext;recheck:(check:()=>void)=>void};
 type OperationResult={receipt:AccessReceipt;replayed:boolean};
@@ -729,6 +732,90 @@ export class ExecutionAccessService {
       grant_id:null,proposal_id:null,source:null,source_receipt_id:null,before_fact:null,
       after_fact:{policy:artifact.policy,provenance_ref:artifact.provenance_ref,
         manager_grant_digests:artifact.manager_domain_grants!.map(g=>({grant_id:g.grant_id,grant_digest:accessDigest(g)}))},receipt});
+    return receipt;
+  }
+
+  /** PRIVATE append-only finite successor. Existing first-install/replay behavior
+   * stays unchanged. A verified root-owned artifact is not an application login. */
+  async installReviewedManagerDomainSuccessor(input:unknown):Promise<AccessReceipt>{
+    const token=verifiedManagerSuccessor(input);
+    if(!token||!this.authorityMutations)throw new ManagerSuccessorError("MANAGER_SUCCESSOR_ARTIFACT_REFUSED",503);
+    const {document:doc,pin}=token,digest=managerSuccessorDigest(doc,pin.approved_sha256);
+    try{
+      const prior=await withTransaction(this.pool,async db=>{
+        await db.query("SET TRANSACTION READ ONLY");
+        await this.assertManagerTarget(db,doc.target);
+        return this.priorManagerSuccessor(new AccessRepository(db),doc,digest);
+      });
+      if(prior)return prior; // historical receipt ONLY: no grant/session repair
+      return await this.authorityMutations.executeVerified({family:"REVIEWED_POLICY",operation:"INSTALL_POLICY",
+        key_digest:managerSuccessorKey(doc.target.workspace_id,doc.successor_id),request_digest:digest,target_id:doc.target.workspace_id},{
+        retain_after_application_rollback:true,
+        // A synchronous local expiry fence is rechecked by the existing
+        // coordinator after its LAST metadata await, immediately before COMMIT.
+        // It does not pretend to be a source/current-human authority provider.
+        acquire_fence:async()=>({assertCurrent:()=>assertSuccessorWindow(pin,Date.now()),release:async()=>undefined}),
+        authorize:async db=>{await this.installManagerSuccessorOn(db,doc,pin,digest,false);},
+        apply:async db=>(await this.installManagerSuccessorOn(db,doc,pin,digest,true))!,
+        terminal:receipt=>({outcome:"APPLIED",receipt_ref:receipt.operation_id,reason_code:null}),
+      });
+    }catch(error){
+      if(error instanceof ManagerSuccessorError)throw error;
+      if(error instanceof CurrentHumanLeaseError)throw new ManagerSuccessorError(
+        error.code==="CURRENT_HUMAN_MUTATION_KEY_CONFLICT"?"MANAGER_SUCCESSOR_KEY_CONFLICT":"MANAGER_SUCCESSOR_RETRY_REQUIRED",
+        error.code==="CURRENT_HUMAN_MUTATION_KEY_CONFLICT"?409:503);
+      if(error instanceof AccessPolicyError)throw new ManagerSuccessorError("MANAGER_SUCCESSOR_TARGET_MISMATCH",409);
+      throw new ManagerSuccessorError("MANAGER_SUCCESSOR_RETRY_REQUIRED",503);
+    }
+  }
+
+  private async priorManagerSuccessor(repo:AccessRepository,doc:ManagerSuccessorDocument,digest:string):Promise<AccessReceipt|null>{
+    const event=await repo.keyedEvent(doc.target.workspace_id,managerSuccessorKey(doc.target.workspace_id,doc.successor_id));
+    if(!event)return null;
+    if(event.source!==MANAGER_SUCCESSOR_SCHEMA||event.request_digest!==digest||event.operation!=="POLICY_INSTALL")
+      throw new ManagerSuccessorError("MANAGER_SUCCESSOR_KEY_CONFLICT");
+    return event.receipt;
+  }
+
+  private async installManagerSuccessorOn(db:PoolClient,doc:ManagerSuccessorDocument,pin:ManagerSuccessorPin,
+    digest:string,write:boolean):Promise<AccessReceipt|null>{
+    const t=doc.target;
+    await db.query("SET LOCAL lock_timeout='1500ms'; SET LOCAL statement_timeout='5000ms'");
+    await db.query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))",[`portal-access-v2:${t.workspace_id}`]);
+    await this.assertManagerTarget(db,t);
+    const repo=new AccessRepository(db),prior=await this.priorManagerSuccessor(repo,doc,digest);
+    if(prior)return prior;
+    const anchor=(await db.query("SELECT user_id FROM portal_owner_anchor WHERE anchor_id='PORTAL_OWNER' FOR SHARE NOWAIT")).rows[0]?.user_id;
+    if(anchor!==t.protected_owner_user_id)throw new ManagerSuccessorError("MANAGER_SUCCESSOR_TARGET_MISMATCH");
+    const current=await repo.policy(t.workspace_id,true),stored=await repo.storedGrants(t.workspace_id),now=await this.now(db);
+    const plan=planManagerSuccessor(doc,current,stored.map(r=>r.fact),now,pin);
+    if(plan.policyChanged&&await repo.policyInstall(t.workspace_id,doc.policy.revision))
+      throw new ManagerSuccessorError("MANAGER_SUCCESSOR_REVISION_CONFLICT");
+    const ids=[...new Set([anchor,...t.principal_workspace_pins.map(p=>p.user_id)])].sort();
+    const users=await db.query(`SELECT user_id,status,must_change_password,archived_at FROM portal_users
+      WHERE user_id=ANY($1::text[]) ORDER BY user_id FOR SHARE NOWAIT`,[ids]);
+    if(users.rows.length!==ids.length||users.rows.some(u=>u.status!=="ACTIVE"||u.must_change_password||u.archived_at))
+      throw new ManagerSuccessorError("MANAGER_SUCCESSOR_TARGET_MISMATCH");
+    for(const p of t.principal_workspace_pins){
+      const ws=await db.query("SELECT workspace_id FROM workspaces WHERE workspace_id=$1 FOR SHARE NOWAIT",[p.workspace_id]);
+      const member=await db.query("SELECT user_id FROM workspace_members WHERE workspace_id=$1 AND user_id=$2 FOR SHARE NOWAIT",[p.workspace_id,p.user_id]);
+      if(ws.rowCount!==1||member.rowCount!==1)throw new ManagerSuccessorError("MANAGER_SUCCESSOR_TARGET_MISMATCH");
+    }
+    if(!write)return null;
+    if(plan.policyChanged)await repo.putPolicy(doc.policy);
+    for(const g of plan.grants)await repo.saveManagerDomainGrant(g,true);
+    const receipt:AccessReceipt={schema_version:"portal.access-operation.v1",operation_id:randomId("ace"),proposal_id:null,grant_id:null,
+      outcome:"APP_APPLIED",http_status:200,reason_code:null,policy_revision:doc.policy.revision,grant_revision:null,
+      decided_at_ms:now,ts_authority:"NOT_REQUIRED"};
+    await repo.event({event_id:receipt.operation_id,workspace_id:t.workspace_id,actor_user_id:anchor,subject_user_id:null,
+      operation:"POLICY_INSTALL",key_digest:managerSuccessorKey(t.workspace_id,doc.successor_id),request_digest:digest,
+      policy_revision:doc.policy.revision,grant_id:null,proposal_id:null,source:MANAGER_SUCCESSOR_SCHEMA,source_receipt_id:doc.successor_id,
+      before_fact:{policy:current,predecessors:doc.grants.map(e=>({grant_id:e.predecessor_grant_id,revision:e.expected_revision,digest:e.expected_digest}))},
+      after_fact:{policy:doc.policy,approval_ref:doc.approval_ref,provenance_ref:doc.provenance_ref,artifact_sha256:pin.approved_sha256,
+        successor_grants:plan.grants.map(g=>({grant_id:g.grant_id,revision:g.revision,digest:accessDigest(g)}))},receipt});
+    // Authorize and apply do not reuse an earlier snapshot clock across locks
+    // or inserts. If the operator window expires here, all writes roll back.
+    assertSuccessorWindow(pin,await this.now(db));
     return receipt;
   }
 
