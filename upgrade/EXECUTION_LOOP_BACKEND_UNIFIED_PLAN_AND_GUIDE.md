@@ -27030,6 +27030,331 @@ current acceptance/observer/listener depends on that local custody and matched
 Core window. Core draft/install/session remains Core-owned; neither old trust
 nor fabricated SDK facts close the dependency. Full08/09 remain NOT_MET.
 
+#### Tested publication and exact closeout —21Oct10:03ICT
+
+Committed reviewed intake3docs/+431lines as
+`8ca132c5fbc35272b62665de334ec13637be9f06`, BobbyAxerol identity, on
+`feat/execution-edge-upgrade-v1_2` at the owned upgrade worktree. Normal
+`git -c core.hooksPath=.githooks commit` (finite1500s wrapper), no bypass,
+terminal0:130contracts/1file and717API/72files PASS,0FAIL/SKIP, build/PG restore/
+tracking/workspace verification PASS. API717 includes57unchanged peer-egress
+cases, not717new tests; no real connected source/session was exercised.
+Log `/home/bobby/secure/edge-core009-trust-docs-hook-8k7ZEfv0/normal-hook.log`,
+SHA256 `6ca6bcd92ac38b4dacfa35233a8652f53fb354ca360262ed5c5ea98a32751cc7`.
+No push/merge/hosted CI minutes. Post-commit receipt facts below are the local
+ongoing08 journal update, retained for the next coherent authorized slice.
+
+Actual public return delivered to canonical Core original task, not just
+described: `upgrade/execution_loop/evidence/ELP2-10/EDGE_RENEWED_TRUST_AND_SEAL_RETURN_2026-10-21.md`
+on SGP, exact SHA256b6f95e03. Original Core request and its Unified each
+CAS-verified/atomically appended the locator/new trust/seal/pending-approval
+metadata; no peer code/index/HEAD changes. Fresh return remains a delivery,
+not Core operator ACK or a matched window. Core73435311 clean; actual Research
+5f3252b7/image7b2c7f34/config497fc5a8/restart0 still unchanged at final readback.
+
+**Exact hook cleanup03:03:14UTC:** reused witness proves original Git terminal0;
+only own test image `portal-source-proxy-d4-offline:test-3880276`, immutable
+`sha256:416b74f5929a5ab80d8f8bd99c23fc203b543a2fd29cdb5692ecae0260ec8e2c`,
+removed non-force after quiet guard. Exact PG15e98eb3/Node8cf0643c,
+networkcontrol-api-test-net-3894730 and `/tmp/tmp.1vQnNw71bG` absent.
+All99preexisting images retained; BuildKit387→387, intentionally no shared
+cache prune during parallel campaigns. Cleanup disk-free
+250603245568→250595102720B is shared-host change, not exclusive reclaim.
+Receipt `/home/bobby/secure/edge-core009-trust-docs-hook-8k7ZEfv0/closeout.json`,
+SHA256 `61b8b494f17d1f790847c22cd7e5cb16de299ed07402fa243156a7d2284200df`.
+No volume/network/peer process or operational-container deletion. Baseline44
+runtime rows:39tuples identical,4foreign P184 test cells no longer running;
+pre-existing Paper worker2601→2634restarts with same ID/image/config, not a
+new restart performed by Edge. Other5Edge/3Manager/2DLquery/4DLstream roster
+unchanged; do not claim all44fully unchanged or diagnose/restart that worker
+under this intake. Three peer-file hashes still exact originals.
+
+**Retained inputs, not disposable tests:** new SGP18-file private trust bundle
+has only its4party private keys, transient CAkey already retired. Retain exact
+named dd9UCJ for this pending finite08 handoff, no duplicate PKI or active
+listener. Empty HK0700 WDEszqbY is retained only as the exact approval target;
+0files transferred. Core candidate9cf5fffa and installed0087b2c7f34 remain
+named next/rollback inputs. Existing native source28ea/configf33f19ca on28445,
+six Edge/worker servicesd6aa7a51, three SourceProxyaa14e21c, PaperManager28ea
+and Sandbox/LiveManager0bd48db3 remain operational; nothing redeployed here.
+Canonical Edge checkout remains portal-execution-manager-v2/
+feat/manager-v2-paper-read@54c6f5f3; upgrade feature and Core candidate remain
+active worktrees, not new stable releases. No stable release or rollback
+artifact moved/removed. Final scope is tested preparation only: original08
+NOT_MET, scoped read09 not qualified. Next permitted action is exact PM-only
+key-transfer approval, then same-window native SDK/observer and Core009 binding;
+do not wait for unrelated03/07/capacity or ask for generic08approval again.
+
+#### Original08 public-only preparation continuation —21Oct10:06ICT
+
+Previous goal turn is PROGRESS: actual new candidate trust, verified source/
+image intake, normal-hook commit and exact teardown, not a verified waiting
+process. The new PM-key transfer rejection/approval is unchanged and has not
+been retried. Complete one remaining independent item before treating this as
+an impasse: materialize the required **public** human JWKS on SGP from the new
+Core PUBLIC signer only. Use Node createPublicKey/exportJWK, the existing PM/
+operator exact six-field Ed25519 JWK contract and new pinned kid. Verify new
+Core SPKI against e28b9e32 trust, byte equality with PM peer public key, public
+round-trip and no private `d` property. Store a new exclusive `public-adapter/`
+child under dd9UCJ (not inside the exact8-file PM half);0600/0700, bounded
+nonsecret manifest. Read no private key, sign no assertion, transfer no files,
+start no runtime process/service/listener/DB authority. It does NOT unblock HK private
+key custody and is not a route around the SCP rejection. Same08/reviewed guides
+above; no new auth framework or source implementation. On failure retain exact
+bounded metadata for triage, no blind overwrite. Retain this named public
+adapter with its candidate/history; no disposable container/image/cache created.
+Refresh Core operator ACK and PM/TS target admissions independently; only new
+admitted inputs can enable their respective connected cases.
+
+**Actual result21Oct03:10UTC:** new exclusive SGP `public-adapter/` now holds
+`human-jwks.json`173B, SHA256
+`ca778484d655755a8722086f188291b6e026fa093b27ff1fc5f5466e51184bfe`,
+and665B `preparation-receipt.json`, SHA256
+`990160fe8698fc395ff04997274c03fdd95b651fd308314ec2c70c3b0e34c4a9`.
+Generation10 checks PASS; independent readback9 checks PASS on metadata,
+exact hashes, public-only six-field Ed25519 JWK, new candidate kid and SPKI
+round-trip1a9f3785. These are two views of the same preparation, not19 new
+unit/connected tests. Private keys read0, transferred files0, assertions0,
+runtime listeners/authority installations0. Receipt explicitly records
+`PUBLIC_ONLY_PREPARED_NOT_AUTHORITY`; new paths inherit the named dd9UCJ
+candidate retention, not an operational release. Original eight-file PM
+transfer remains blocked before execution; do not add this public artifact
+to the pending private payload or imply its custody is solved.
+
+**Fresh producer delta03:06–03:10UTC:** PM advanced23c29371→
+`7a3a81f24849adbb0c90bbc6f90857d51036d1c3` with TS Paper admission/recovery
+composition; owning evidence0a215d9a records165isolated PASS (118unit+47PG),
+not tests rerun by Edge. Additive publisher d5c2efcc remains qualified source
+NOT_INSTALLED; genuine command runtime/native targets remain empty in
+7b62d7e1/83d251e8; pilot771955a5 has no execution/measurement approval.
+TS-next0cd356da/N03f3a49603 remains SOURCE_DARK_NOT_ACCEPTED. Thus new source
+does not enable an actual03/07/01/06 target; exact producer actions remain
+PM Unified§58.303/304. Core minimal73435311 remains clean, Claude dbd5088b
+unchanged, no new operator ACK in the original request. No false blanket
+waiting: the remaining public-only preparation has actually been completed.
+
+Delivered the exact public JWKS reference/hash to Core's existing original
+request and Unified by hash-guarded atomic append,1518B each, readback verified.
+Core request SHA256 now67642cf2c3dfc4c647b9f1447cb5f4009510525fe056f17196036bfe064b8257;
+Core Unified now652b83cc16eeeb72a65fb37b32be3452710da02ac493969bd55adc28b8bd526a.
+No peer source/index/HEAD mutation; delivery is not an operator ACK.
+Three preserved peer-file hashes remain unchanged; local diff-check PASS.
+Keep these continuation/closeout facts in the ongoing08 journal
+for the next coherent publication rather than rerunning the unchanged full
+normal hook only to publish another metadata-only increment. No push/merge/
+hosted CI. No new test image/container/cache/volume or disposable path was
+created, so cleanup NO_ACTION_NEEDED for this continuation; retain only the
+two named public metadata files with the already retained candidate. Prior
+exact hook cleanup and all protected runtime/rollback retention still stand.
+Full08/connected09 remain NOT_MET; runnable metadata work is done, next real
+binding requires exact PM-key transfer approval plus Core-owned matched
+configuration/window/install/session, not repeated generic08 approval.
+
+#### Original08 new Core ACK and draft intake —21Oct2026
+
+Previous goal turn is PROGRESS: the missing public-only JWKS was actually
+created, verified and handed off. This continuation found and fully read the
+337-line SGP `CORE009_INTEGRATOR_RETURN_2026-10-21.md`, SHA256
+`f155aff381e8115694e35b5efd04d877565792cacb14f30a81ade2853e115251`.
+Its09:52ICT follow-through and subsequent owner-ACK section supersede the
+prior "no Core operator ACK in original request" discovery: Core **accepts
+the dedicated prepared trust candidate**. This is not a matched installation
+window, filled runtime, connected source or permission to retry the rejected
+PM private transfer. Core source73435311/Claude dbd5088b unchanged; actual
+Research container5f3252b7/image7b2c7f34/config497fc5a8/restart0 unchanged.
+
+Core also prepared five private drafts in
+`/home/bobby/secure/core009-prepared-20261021-UiZDk2`, status
+PARTIAL_DRAFT_NOT_VALIDATED_NOT_INSTALLABLE. Independently verified six
+regular0600/single-link files and bounded JSON shape without printing their
+values. Metadata `preparation.json`4864B hashes exactly
+`aa6dbf7e3a8bd3bb9cadae67ea362bf47ce25c3a05a9adaf23d1c5fdea7607d1`;
+18resolved names/71pending names/5drafts match the owning return. Draft file
+hashes: runtime dd2a8467, commissioning f3387934, manager-revoke05fc04eb,
+session-issue87539506, session-revoke a70ec06e. These are preparation pins,
+not installed effective-config or artifact approval. No credentials/session
+values disclosed and no Core private key opened by Edge.
+
+**Input partition, no blanket wait:** the remaining Core-owned signer/TLS
+file-reference/hash pairs and reviewed pool/egress/realtime/recovery bounds
+can be resolved by Core independently from its own trust/runbook. Do not
+call all71 names blocked on Edge or invent numeric bounds. Fresh native
+receipt/head/semantics/observer and window-derived dates/grant/session facts
+remain genuinely dependent on matched source readiness. Ask Core in its
+existing task to finish the independent references/limits and return updated
+metadata while the exact PM transfer approval is pending; do not edit its
+drafts, start a service, read its private keys, or infer READ→STREAM.
+
+**Other source gates revalidated directly:** PM7a3a81f2 still has no genuine
+qualified command/native targets; additive handoff d5c2efcc NOT_INSTALLED.
+Resource-successor proposal is exactly771955a5 (`...finite-pilot-resource-
+successor-proposal.json`), predecessor target-successor bb45abab; both clean
+committed preparation, not a new admission. Numeric3CPU/2560MiB remains
+proposed, execution/measurement false. TS-next canonical feature path is
+`/home/bobby/.worktrees/trading-system-next-upgrade`@0cd356da, not a guessed
+`trading-system-next` path; N03 manifest f3a49603 has null image and owner
+acceptance false. Missing-path diagnostic reads made no changes and were
+retaken against the actual worktree. No new runnable03/07/01/06 producer
+binding is present. This continuation changes the next coordination action
+from awaiting trust ACK to consuming ACK and completing Core-owned draft
+inputs, not to activation. Full08/09connected remain NOT_MET. No tests,
+containers, images, DB changes, key transfers, commit/push/merge or hosted CI;
+cleanup NO_ACTION_NEEDED, prior named runtime/rollback/input retention stands.
+
+**Coordination actually delivered/read back03:17UTC:** Core original request
+now has exactly one "Edge consumed Core trust ACK and partial drafts" section
+at line857; Core Unified same section at line12922. Resulting hashes
+413c87aef551923be4b7104cce01924b136162220967ab555533c5d519177bf2
+and b7fe2bbcb23ab8a82f6e87fa37f76b7c3719bc9da8ac38af4f44e59995a97e5e,
+respectively. Local output wrapper shadowed its `text()` helper after the
+remote command ran and threw TypeError; did NOT infer write failure/retry.
+Independent SSH readback verified both exact appended sections/hashes;
+no duplicate write or hidden mutation. `git diff --check` PASS, owned branch
+still8ca132c5 and three unrelated untracked peer paths remain untouched.
+
+#### Goal blocked audit —21Oct03:19UTC
+
+Previous turn is PROGRESS (new owning Core trust ACK/draft evidence consumed
+and independently runnable Core inputs delivered), not a verified wait.
+Current direct readback has no new input: Core73435311/Claude dbd5088b,
+Core return f155aff3, draft metadata aa6dbf7e, PM7a3a81f2 and TS0cd356da
+unchanged; Research5f3252b7/image7b2c7f34/config497fc5a8/restart0 unchanged.
+HK exact PM destination remains empty. No confirmed live owned process/job
+is being polled; owner conversation/files are not a verified wait.
+
+Same exact PM-key transfer approval barrier recurred in the initial renewed
+trust intake, public-JWKS continuation, Core-ACK continuation and this audit.
+The independent public/crypto/metadata/handoff work was completed while it
+persisted, but did not resolve it. It has now repeated for at least three
+consecutive goal turns; no further safe Edge-owned binding is runnable with
+the available inputs. Mark persistent goal **BLOCKED**, not paused/complete.
+Do not retry the denied transfer or generate substitute grants/sessions to
+avoid it. Preserve the original whole objective, not a narrower docs finish.
+
+| Original goal scope | Current proof / exact outstanding input |
+| --- | --- |
+|08 identity/native security|Closure/lifecycle and actual identity COMMIT/Core ACK complete; trust ACK/public JWKS prepared. Actual READ/STREAM/revoke/cache/cursor/SSE unproven. Exact PM8-file/4058B SGP dd9UCJ/pm→HK WDEszqbY approval still missing; then finite native source pins and Core-owned filled config/window/install/session.|
+|01/06 capacity|Preparation done; resource-successor771955a5 remains execution/measurement false. Target owner must admit the physical target/numeric bounds/coexistence window. No absolute capacity claim.|
+|03 ordering|Publisher additive d5c2efcc remains NOT_INSTALLED; TS N03 f3a49603 SOURCE_DARK/image null/owner false. TS/PM must publish installed fence/writer/export/coverage proof.|
+|04/05 projection/history/fanout|Independent implementation remains; bind each genuinely published source with08/current authority and its applicable capacity. Missing source is not permission to invent replay authority.|
+|07 commands|Existing relay/ledger/source transport remains;83d251e8 qualified runtime/native targets still empty. PM must commission authenticated submit/status and authority held through COMMIT.|
+|09 connected|Approved scoped read cases resume after08 inputs; no full09 acceptance, and command/source cases keep their own producer dependencies.|
+
+Exact owner actions already delivered in the existing Core request/Unified;
+no new phase or generic approval is required. Next user unblock is approval
+of the exact previously listed eight-file candidate PM payload/destination,
+NOT Core keys, DB credentials or session secrets. A genuine new owner return
+can independently unblock its own row. Existing Core-owned reference/bounds
+preparation may continue under its owner; Edge must not edit peer drafts.
+No new source/test/runtime/DB/secret transfer or resource cleanup this audit;
+cleanup NO_ACTION_NEEDED. Keep named trust/public metadata pending resolution,
+candidate009 image and installed008 rollback; do not claim an extended PKI
+lifetime. Canonical Edge54c6f5f3 and feature8ca132c5 unchanged; journal WIP
+retained locally, three peer WIP paths untouched, no commit/push/merge/CI.
+
+#### Core009 PM transfer — exact owner approval executed,21Oct10:27ICT
+
+[Verified transfer receipt](evidence/execution-edge-v1_2/EPG10-08/CORE009_PM_TRANSFER_RECEIPT_2026-10-21.md)
+SHA256 c225b5fd015c6854352fa1bf6395377463483b4c97cc955df3454077c280e56c.
+Bobby explicitly approved the exact8-file PM candidate payload/destination.
+SCP0; HK readback8/8 matching hashes/sizes,4,058bytes; directory0700/files0600,
+HK Bobby1001 owner. Candidate elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e,
+truste28b9e32, destination /home/bobby/secure/edge-core009-trust-WDEszqbY.
+The prior transfer approval blocker is RESOLVED. No Core private keys, stable
+permission, DB/session/grant/listener/service changed. Existing key lifetime
+is unchanged. Edge can verify local PM custody and continue matched native
+acceptance/observer/window preparation; no installed009 or connected PASS claimed.
+
+#### Original08 approved PM custody intake and resumed binding —21Oct10:35ICT
+
+Bobby confirms exact transfer approval and Core delivery; persistent goal is
+active again. Root independently read the full receipt c225b5fd and verified
+local exact8 names/hashes/sizes4058B,0700/0600,UID1001/single links. Do NOT
+transfer again or keep the old approval blocker active. Preserve three peer
+WIP files and newly delivered public receipt, existing Core/PM/TS ownership.
+
+Same08 goal/guides and rollback remain: match renewed candidate e28b9e32,
+validate local PM TLS/signer pairs and Core public signer/JWK, finite official
+native acceptance/current-head/observer and Core installation/session before
+genuine READ/independent STREAM/revoke/cache/cursor/SSE. No repeat identity008,
+shared28445/trust/old six bindings/caps change, SQL seed, arbitrary DB query,
+command or Live mutation. Frozen closure32119f66 and exact SDK remain authority.
+
+Runnable now: finish local crypto/public-JWKS hydration in a new private owned
+preparation child outside the approved8-file directory; read current SDK/
+sealed runtime inputs and original receipt head without mutation; coordinate
+matched<=120min operator window against actual Core ready state. Existing
+runner/runbook is reused; no new framework or unchanged full-suite rerun.
+Reusable read-only agents review Core readiness and connected-case/cleanup
+composition while root owns private local config/SDK. Never publish secret
+values. Preserve actual original attempt/receipt/ACK through UNKNOWN and retain
+recovery until physical listener/task/pools terminate, then official same-key
+revocation and exact scoped cleanup. Newly hydrated private/public metadata
+stays out of Git; public hashes/provenance/results go in this same journal.
+Do not start native28446 merely to wait for Core or invent authority/window
+pins. Real connected acceptance remains NOT_MET until it is actually exercised.
+
+**Local intake result:** exact new public JWKS173B/ca778484 hydrated from SGP
+into `/home/bobby/secure/edge-core009-binding-kkmO9cv7` (not a ninth private
+transfer file). Independent HK38 crypto/metadata checks PASS: local PM TLS/
+signer key pairs, CA/leaf signatures/pins/scope/validity and new Core JWK/SPKI.
+No signatures/assertions/authority/listener. Existing root credential references
+resolved by name only; no values printed. Host has no asyncpg, so reuse existing
+194MB immutable image28ea3958; no build/pull. Prepare capped read-only observer
+container0.5CPU/256MiB/64pids, nonroot1001, readonly source/config, min0/max1
+source+control pools and3s commands/10s idle. Only those two DSNs enter private
+stdin; schema/maintenance credential never enters this observation. Pin frozen
+closure/operator/lifecycle and new config bytes before import. Run current
+native catalogue/fingerprint/admission/head and official observer/control
+qualification inside READ ONLY transactions, expect existing revoked head2
+denial rather than grant it. No ISSUE/ENTER/install/DDL/listener; always close
+both physical pools and auto-remove the exact short-lived container, preserving
+shared role caps2/2/1 and all stable consumers. Root owns this narrow original08
+preflight; Core owns its draft/window/install, agents made no peer mutations.
+
+First observation specimen exited2 at constructor `HUMAN_RECOVERY_MTLS_REQUIRED`:
+private operator glue selected TLS1.2 minimum, while the immutable SDK requires
+exact TLS1.3 min/max. Guard correctly failed before native queries/listener;
+both lazy pools physically0, stderr0 and exact --rm container absent. Correct
+only private composition to explicit PROTOCOL_TLS_SERVER/TLS1.3 min=max and
+CERT_REQUIRED, matching the existing qualified operator; do not weaken SDK.
+Retake the same bounded read-only step, keep this failed specimen separate.
+
+**Actual readonly retake exit0/stderr0:** frozen official SDK validates current
+DB/system/source+control roles, source fingerprint5a67e653, native catalogue
+5dfb0873/function pins and original admission8/4096/25d2b3ef. Current Research
+headb922c105 remains2/revokedtrue; official fresh RR/READONLY observer denies
+BUSINESS_READ_REVOKED_OR_EXPIRED. Both physical pool sizes0; no authority,
+attempt, listener or role mutation. Inert new runtime6282e1e0 validates new
+candidate trust and preserves original one-binding/inflight1/pools1+1/32768B.
+Exact preflight container auto-removes; no build/pull/new image or cache.
+[Fresh actual-source return](evidence/execution-edge-v1_2/EPG10-08/CORE009_FRESH_TRUST_SOURCE_PREFLIGHT_RETURN_2026-10-21.md)
+records this evidence and proposes21Oct04:15–05:45UTC (11:15–12:45ICT),90min.
+This is NOT yet a matched Core window. Deliver to Core existing task/Unified
+now; request actual readiness/window ACK while Core finishes its independent
+private references/bounds. Do not start28446, append active native acceptance
+or install009 merely to wait. Once ACK is real, source owner executes fresh
+same-head SDK acceptance/observer/readiness and supplies genuine pins; Core
+then validates/quiesces/backs up/installs/session and Edge runs connected cases.
+
+**Actual Core delivery:** sanitized return78d98314 copied into canonical Core
+ELP2-10 as `EDGE_FRESH_TRUST_SOURCE_PREFLIGHT_RETURN_2026-10-21.md`, exact hash
+verified. Existing Core request and Unified atomically appended1713B each,
+readback verified; hashes932f4206 and2eef55b6 respectively. This communicates
+the proposed window, not an ACK. Transfer blocker resolved, current source
+preflight is real, and source is deliberately not yet listening or granted.
+
+**Coherent publication now:** reuse exact normal-hook/witness/cleanup pattern
+for ONLY this main plan, c225b5fd transfer receipt and78d98314 fresh-source
+return. Inspect staged scope/diff/secret guard/Bobby identity; normal unchanged
+`.githooks` commit, no bypass/push/merge/hosted CI. Read-only agent prepares
+fresh resource inventory and witnesses actual Git terminal; remove only its
+new unreferenced hook test image/cells/network/tmp after quiet/terminal proof,
+preserve shared BuildKit during concurrent campaigns. Root prepares private
+source lifecycle/SDK artifacts independently, no shared working-tree writes
+while staging/hook runs. Prior public docs/ops source suites are unchanged;
+normal commit gate still required, its tests are not connected acceptance.
+
 
 
 
