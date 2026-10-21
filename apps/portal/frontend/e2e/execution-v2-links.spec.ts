@@ -270,6 +270,12 @@ async function checkStateParams(page: Page, url: URL, problems: string[], notes:
     else problems.push(`sel=${sel}: nothing on the page shows the selection and no notice`);
   }
 
+  // Registry rev 9: Compare is the path /deployments/compare (it used to be `?view=compare` on the portfolios route).
+  if (url.pathname === "/deployments/compare") {
+    if ((await page.locator('[data-screen="compare-v2"]').count()) > 0) notes.push("/deployments/compare: Compare screen shown");
+    else problems.push("/deployments/compare: Compare screen did not mount");
+  }
+
   const view = params.get("view");
   if (view !== null && view !== "") {
     if (view === "compare") {

@@ -61,7 +61,7 @@ const CELLS: readonly Cell[] = [
     group: "Compare",
     // Canary and Pilot: the double's one comparable pair (both USDT, both Simulated, neither a mixed book). Core is a mixed
     // book and Satellite publishes no series, so that pair draws the "Pick two comparable portfolios" state instead.
-    route: "/deployments/portfolios?view=compare&in=pf_TEST_ONLY_canary,pf_TEST_ONLY_empty",
+    route: "/deployments/compare?in=pf_TEST_ONLY_canary,pf_TEST_ONLY_empty",
     root: '[data-screen="compare-v2"]',
     widths: TWO,
   },

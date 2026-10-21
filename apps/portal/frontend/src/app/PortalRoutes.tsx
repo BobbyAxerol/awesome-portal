@@ -29,6 +29,8 @@ import { isV2Screen } from "../execution/v2/flags";
 import { withContext } from "../execution/v2/urlState";
 import { SELF_ENTRY_PATH } from "./selfNavView";
 
+const COMPARE_SCREEN_ID = "EXECUTION_COMPARE_SCREEN";
+
 /**
  * Heavy modules are loaded when their route is entered, not before.
  *
@@ -220,7 +222,10 @@ function NotFound() {
 
 export function PortalRoutes({ registry }: { registry: PortalRegistryDocument }) {
   const previewScreens = EXECUTION_PREVIEW_ENABLED
-    ? registry.screens.filter((screen) => hasExecutionPreview(screen.screen_id))
+    ? registry.screens
+        .filter((screen) => hasExecutionPreview(screen.screen_id))
+        // A screen that exists only as a V2 screen (Compare, rev 9) claims its path only while its flag is on; flag off the path stays unclaimed.
+        .filter((screen) => screen.screen_id !== COMPARE_SCREEN_ID || isV2Screen("compare"))
     : [];
   const previewByExactRoute = new Map(previewScreens.map((screen) => [screen.route, screen]));
   // The cockpit's New request drawer posts to the New-request screen's route, so it is bound to THAT screen's delivery policy:

@@ -94,6 +94,7 @@ const ROUTES: readonly [string, string][] = [
   ["/deployments/live/:deploymentId", "EXECUTION_LIVE_FULL_OPERATIONS_SCREEN"],
   ["/deployments/portfolios", "EXECUTION_PORTFOLIO_360_SCREEN"],
   ["/deployments/portfolios/:portfolioId", "EXECUTION_PORTFOLIO_360_SCREEN"],
+  ["/deployments/compare", "EXECUTION_COMPARE_SCREEN"],
 ];
 
 async function mountRoute(url: string) {
@@ -183,9 +184,9 @@ describe("envLockFor (D6)", () => {
     expect(envLockFor("EXECUTION_ALPHA_360_SCREEN", { hasAlphaId: false }, none)).toBeUndefined();
   });
 
-  it("the portfolios route is locked only while Compare is what is mounted", () => {
-    expect(envLockFor("EXECUTION_PORTFOLIO_360_SCREEN", { compare: true }, all)).toBeDefined();
-    expect(envLockFor("EXECUTION_PORTFOLIO_360_SCREEN", { compare: false }, all)).toBeUndefined();
+  it("Compare has its own screen id and is locked while the compare flag is on; the portfolios route is never locked", () => {
+    expect(envLockFor("EXECUTION_COMPARE_SCREEN", {}, all)).toBeDefined();
+    expect(envLockFor("EXECUTION_COMPARE_SCREEN", {}, none)).toBeUndefined();
     expect(envLockFor("EXECUTION_PORTFOLIO_360_SCREEN", {}, all)).toBeUndefined();
   });
 
@@ -338,6 +339,32 @@ describe("compare flag (M2)", () => {
     flags("shell,portfolios,compare");
     await mountRoute("/deployments/portfolios");
     expect((await screen.findByTestId("portfolios")).getAttribute("data-compare")).toBe("true");
+  });
+
+  it("Compare mounts on its own route (registry rev 9) with the compare flag on", async () => {
+    flags("shell,portfolios,compare");
+    await mountRoute("/deployments/compare?in=pf_1,pf_2&env=paper");
+    expect(await screen.findByTestId("compare")).toBeTruthy();
+    expect(where()).toBe("/deployments/compare?in=pf_1,pf_2&env=paper");
+  });
+
+  it("the pre-rev-9 URL is redirected to it: `view` dropped, every other param kept, the path's portfolio becomes the first pick", async () => {
+    flags("shell,portfolios,compare");
+    await mountRoute("/deployments/portfolios?view=compare&in=pf_1,pf_2&from=portfolios&workspace_id=ws_1");
+    expect(await screen.findByTestId("compare")).toBeTruthy();
+    expect(where()).toBe("/deployments/compare?in=pf_1%2Cpf_2&from=portfolios&workspace_id=ws_1");
+    cleanup();
+    await mountRoute("/deployments/portfolios/pf_9?view=compare&env=paper");
+    expect(await screen.findByTestId("compare")).toBeTruthy();
+    expect(where()).toBe("/deployments/compare?env=paper&in=pf_9");
+  });
+
+  it("with the compare flag off the old URL is the portfolios screen again, not a redirect", async () => {
+    flags("shell,portfolios");
+    await mountRoute("/deployments/portfolios?view=compare");
+    expect(await screen.findByTestId("portfolios")).toBeTruthy();
+    expect(screen.queryByTestId("compare")).toBeNull();
+    expect(where()).toBe("/deployments/portfolios?view=compare");
   });
 
   it("outside any route (a screen under test) Compare reads as available", () => {

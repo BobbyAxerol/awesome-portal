@@ -51,7 +51,7 @@
       "same_origin_read_routes": 3,
       "screen_extensions": 2,
       "bounded_page_maximum": 50,
-      "registry_revision": 8,
+      "registry_revision": 9,
       "canonical_live_review_fixture": true,
       "frontend_consumer_parity": true
     },
@@ -68,7 +68,7 @@
     "n28_registry_sha256": "sha256:639388b2cad4285388f82e1db8e697bda4502e9cfcf14b0d027a2176c434e071",
     "n28_owner_request_sha256": "sha256:d194aa076443121b2028adaacbfee389e987fd68a75d330ba33bb4781d7cf300",
     "screen_bff_catalogue_sha256": "sha256:8cf2a5f0a6f6c8d5c9ceb264dbf4a0a111a1c38e8189d491d364b80c32362e3e",
-    "frontend_product_route_sha256": "sha256:41642207d25366d7f87247b0a3de747d4311d5caba831645b539edec264b6749",
+    "frontend_product_route_sha256": "sha256:5c9f7ee5c229f84b740b9c48fa9c578acb27073fd96756d8b02e48e3e89860a6",
     "frontend_product_boundary_test_sha256": "sha256:e628c6514064fb6cf1cc42a6bb65ff5e7ff1f9559598474c1257a63c50276a08",
     "frontend_consumer_return_packet_sha256": "sha256:dd566764d0980bd1453aa831914eae6f366c85973f3e2ed3ac379d19a38f5dc8",
     "frontend_consumer_evidence_sha256": "sha256:05509658533aff6460b9ddc152200515a9d7ece2d52a7f863bd13eb8fc666785",
@@ -96,13 +96,13 @@
     "br76_fixture_sha256": "sha256:23db8c70822e109af7ca54be9ee21a900adc1dec550191eea2f0a40125bc1961",
     "br72_source_boundary_test_sha256": "sha256:16e575a8ffd082afa249b9665df91f91eb22a9b5958513ebc052ef7bb5d6a1fd",
     "br72_live_review_fixture_sha256": "sha256:5f3d744843847c10e3389c2b60728aad8453fc88a3d532035a991697473ae9c8",
-    "br72_registry_source_sha256": "sha256:6b43a070b76bc169d6a82aed240ac19d2866220c4a9f659dab7560b22ac16160",
-    "br72_registry_public_sha256": "sha256:51e8739a0c90df7c373d5edc311de1f4b64028200a7f7f888e7e6e9267de1e84",
+    "br72_registry_source_sha256": "sha256:24e09b4e46fdcbb0908f9d8a284390618068d49a77ed7907b450a82253b523d9",
+    "br72_registry_public_sha256": "sha256:1879aab444c9b247690353633b6157235910f51b69a9dc332e44bed2a0c88c57",
     "br72_frontend_test_sha256": "sha256:f8689528fd85e239578439de3817bea4e5c8176dd94fa31e4033025560b7c44b",
     "br72_frontend_containers_sha256": "sha256:a78b235bf75762ca2136be20e0ac457af774cc8eea020bbeaa9701a9384c12eb",
     "br72_frontend_alpha_fleet_sha256": "sha256:9155452a2d22d81867b699450c6b4218bad167081377a3427a98107da5e0fe29",
     "br72_frontend_recompose_sha256": "sha256:99c0c3f4587f9d6daba1dd61c2358ce70d29e155b1fcccf05d130cbc9bc0e69f",
-    "br72_frontend_registry_sha256": "sha256:66e6fbf3b9dfcfe8b915e1b6b4b88ab17305290b74f100af4d95a29fd17b33f0"
+    "br72_frontend_registry_sha256": "sha256:91a04942ca7a66f708f14e134821df5cc5418629feec3e4d662bbf1f2fcece83"
   },
   "rehearsals": {
     "multi_replica_admission": "PASS_N21",

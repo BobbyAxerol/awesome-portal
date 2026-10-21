@@ -32,7 +32,7 @@ def _features(source: dict) -> dict:
 def test_revision7_is_metadata_only_and_preserves_both_approval_routes() -> None:
     source = _source()
     features = _features(source)
-    assert source["revision"] == 8
+    assert source["revision"] == 9
     assert features["APPROVALS"]["canonical_route"] == "/backtests/approvals"
     assert features["EXECUTION_APPROVALS"]["canonical_route"] == "/governance/approvals"
     assert features["APPROVALS"]["screen_ids"] == ["APPROVAL_INBOX_SCREEN"]
