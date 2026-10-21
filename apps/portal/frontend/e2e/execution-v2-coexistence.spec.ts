@@ -440,7 +440,10 @@ const FLAG_OFF_ORIGIN = "http://127.0.0.1:4175";
 const V2_MARKERS = '[data-screen$="-v2"], [data-screen="new-request-drawer-v2"], .exec-ctxbar, .exec-cmdbar, .exec-fleet-v2, .exec-ops, .exec-ck, .exec-acct-v2, .exec-acc-kpi';
 
 // Routes whose V1 page is an Execution surface (`.exec-surface`); Users and Access are portal admin pages with no surface.
-const NOT_EXECUTION_SURFACE = new Set(["users", "access"]);
+// Compare has its own registry screen since rev 9 and its path is mounted only with the flag on, so on the flag-off build
+// `/deployments/compare` is unclaimed (not found, no surface); the V1 page for it is the pre-rev-9 URL, checked below.
+const NOT_EXECUTION_SURFACE = new Set(["users", "access", "compare"]);
+const FLAG_OFF_V1_ROUTE: Readonly<Record<string, string>> = { compare: "/deployments/portfolios?view=compare&in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite" };
 
 for (const [name, route, root] of SCREENS) {
   test(`coexistence · ${name} · flag-off build serves V1, flag-on build serves V2 at the same URL`, async ({ page }) => {
@@ -453,6 +456,14 @@ for (const [name, route, root] of SCREENS) {
     expect(await page.locator(root).count(), "V2 root on the flag-off build").toBe(0);
     expect(await page.locator(V2_MARKERS).count(), "any V2 marker on the flag-off build").toBe(0);
     if (!NOT_EXECUTION_SURFACE.has(name)) expect(await page.locator(".exec-surface").count(), "V1 surface on the flag-off build").toBeGreaterThan(0);
+    const v1Route = FLAG_OFF_V1_ROUTE[name];
+    if (v1Route !== undefined) {
+      await page.goto(`${FLAG_OFF_ORIGIN}${v1Route}`);
+      await page.waitForLoadState("networkidle");
+      await page.waitForTimeout(400);
+      expect(await page.locator(V2_MARKERS).count(), "any V2 marker on the flag-off build at the pre-rev-9 URL").toBe(0);
+      expect(await page.locator(".exec-surface").count(), "V1 surface on the flag-off build at the pre-rev-9 URL").toBeGreaterThan(0);
+    }
 
     // Flag on: the same route on the V2 build.
     await page.goto(route);

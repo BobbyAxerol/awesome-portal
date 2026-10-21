@@ -472,16 +472,19 @@ function hex(text: string): string {
   return h.toString(16).padStart(8, "0");
 }
 
+/** The published problem for the create route carries request_id (approval-create schema); the generic stage `problem` does not. */
+const createProblem = (status: number, code: string, message: string): Answer => ({ status, body: { error: { code, message }, request_id: "req_double_approval_create" } });
+
 /** The R1 request. `null` when the body is not a request (the golden's POST carries none). */
 export function answerApprovalCreate(body: unknown): Answer | null {
   if (!isRow(body) || typeof body.summary !== "string") return null;
   const summary = summaryOf(body);
-  if (summary.startsWith("DENIED")) return problem(403, "APPROVAL_CREATE_DENIED", "Your session may not open an approval request in this workspace.");
+  if (summary.startsWith("DENIED")) return createProblem(403, "APPROVAL_CREATE_DENIED", "Your session may not open an approval request in this workspace.");
   if (summary.startsWith("DUPLICATE")) {
-    return problem(409, "APPROVAL_DUPLICATE_OPEN_REQUEST", "An open R1 request already exists for this alpha and run: AP-201.");
+    return createProblem(409, "APPROVAL_DUPLICATE_OPEN_REQUEST", "An open R1 request already exists for this alpha and run: AP-201.");
   }
   if (summary.startsWith("REFUSE")) {
-    return problem(422, "CLAIM_NOT_ELIGIBLE", "The methodology claim is not eligible for R1 on this run, so no request was opened.");
+    return createProblem(422, "CLAIM_NOT_ELIGIBLE", "The methodology claim is not eligible for R1 on this run, so no request was opened.");
   }
   const created = fresh<Row>("execution-governance.approval-create.valid.json");
   const approval = created.approval as Row;
