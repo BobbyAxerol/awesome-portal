@@ -346,9 +346,12 @@ test("Sandbox: a workspace the server does not open the note for shuts the form 
   const root = page.locator('[data-screen="sandbox-v2"]');
   await expect(root).toBeVisible();
   const rail = root.getByRole("complementary", { name: "Exit review and review note" });
-  // FE-068 (ac81f2c2): a code the stage dictionary has no words for reads as the generic sentence; the server's own code rides in the actions' title, not as printed text.
+  // FE-068 (ac81f2c2): a code the stage dictionary has no words for reads as the generic sentence; the server's own code is behind a "Server reason" disclosure (RV-06), not printed and not on a title.
   await expect(rail.getByRole("button", { name: "Record review note" })).toBeDisabled();
-  await expect(rail.locator('[title="Server reason: SANDBOX_NOTE_NOT_OPEN_FOR_THIS_ACTOR"]')).toHaveCount(1);
+  await expect(rail.locator("[title*='SANDBOX_NOTE_NOT_OPEN_FOR_THIS_ACTOR']")).toHaveCount(0);
+  await expect(rail.getByText("SANDBOX_NOTE_NOT_OPEN_FOR_THIS_ACTOR")).toHaveCount(0);
+  await rail.getByRole("button", { name: "Server reason" }).click();
+  await expect(rail.locator(".exec-blk-why-row")).toHaveText("Server reason: SANDBOX_NOTE_NOT_OPEN_FOR_THIS_ACTOR");
   await expect(rail.getByRole("textbox")).toHaveCount(0);
   expect(writes).toEqual([]);
 });
