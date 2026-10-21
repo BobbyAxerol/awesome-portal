@@ -9,6 +9,19 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October post-freeze review — Claude BE-P21/P22, ACT_NOW
+
+[Independent CHANGE and explicit one-writer ACK](evidence/ELP2-10/CODEX_BE_P21_P22_REVIEW_AND_ONE_WRITER_RETURN_2026-10-21.md):
+f0b56371 economic reducer needs typed sum overflow and census-bound parity
+digest; fa530323 observer needs correct RECONCILED/witness treatment and
+bounded pre-read file checks. Accept dark architecture, not runtime proof.
+Claude owns the linked observer proxy/service/consumer/composition/new CLI
+slice and focused tests; no shared-writer wait, default opt-in stays OFF.
+010 successor writer and dark Fleet remain first; optional observer does
+not block otherwise eligible READ. Do not repeat432 normal or full M-1.
+Actual landing/normal returns delivered to both PM/Edge, all4 hashes match;
+SENT is not fresh-authority READY. Consumer/browser stays separately scoped.
+
 ### 21 October16:33 UTC — integrated source actually ff-landed
 
 [Actual landing owner-return / next owners](evidence/ELP2-10/CORE009_INTEGRATED_LANDING_OWNER_RETURN_2026-10-21.md):
