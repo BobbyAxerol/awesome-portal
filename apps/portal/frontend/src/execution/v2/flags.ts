@@ -33,6 +33,8 @@ export const EXEC_V2_SCREEN_KEYS = [
   "replay",
   // UXM-08: the fixture-only scoped slice at /execution/slice (v2/screens/slice). OFF unless the manifest names it.
   "scoped",
+  // ELP2-09: the Fleet realtime STREAM chip (v2/fleetStream), mounted inside the Fleet. Needs the `fleet` key too. OFF unless the manifest names it.
+  "fleet-stream",
 ] as const;
 export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
 

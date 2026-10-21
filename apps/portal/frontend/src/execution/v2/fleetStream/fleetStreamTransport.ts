@@ -324,9 +324,16 @@ export function createFleetStreamTransport(scope: FleetStreamScope, sink: Transp
       return;
     }
 
+    let reader: ReadableStreamDefaultReader<Uint8Array>;
+    try {
+      reader = response.body.getReader();
+    } catch {
+      // A body that cannot be read (already locked or used) is a connection that failed.
+      scheduleReconnect("failure");
+      return;
+    }
     accepted = true;
     setStatus("open");
-    const reader = response.body.getReader();
     connection.reader = reader;
     const decoder = new TextDecoder();
     // A block is `id:` (a cursor, at most 4096 characters) + `event:` + one `data:` line of at most `maxFrameBytes`.

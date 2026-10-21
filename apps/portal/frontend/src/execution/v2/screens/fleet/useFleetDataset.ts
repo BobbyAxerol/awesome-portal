@@ -85,6 +85,13 @@ export interface FleetDatasetRead {
   loadingMore: boolean;
   moreError: string | null;
   loadMore(): void;
+  /**
+   * Read the first page again IN PLACE (the Fleet STREAM, flag `fleet-stream`): the rows on screen stay until the new page arrives, then
+   * all of them are replaced by it (a page-2 row is not carried over from another snapshot). Resolves with the new first dataset, or
+   * `null` when the read did not succeed or the query changed meanwhile; a failed refresh leaves everything as it was, except a
+   * `denied` answer, which drops the rows exactly as an eviction does. Nothing calls it unless a stream is attached.
+   */
+  refresh(): Promise<ManagerDataset | null>;
 }
 
 export const SNAPSHOT_CHANGED = "SNAPSHOT_CHANGED";
@@ -196,7 +203,37 @@ export function useFleetDataset(
     });
   }, [api]);
 
-  return { state, rows, first, last, total: last === null ? null : last.page.authorizedFilteredCount, nextCursor, loadingMore, moreError, loadMore };
+  const refresh = useCallback((): Promise<ManagerDataset | null> => {
+    const mine = generation.current;
+    const controller = new AbortController();
+    more.current?.abort();
+    more.current = controller;
+    return ask(scoped(api, controller.signal), build.current(null)).then((result) => {
+      if (mine !== generation.current || controller.signal.aborted) return null;
+      if (!result.ok) {
+        if (result.status === "denied") {
+          generation.current += 1;
+          setLoadingMore(false);
+          setMoreError(null);
+          setRows([]);
+          setFirst(null);
+          setLast(null);
+          setState({ phase: "error", status: "denied", reason: result.reason });
+        }
+        return null;
+      }
+      generation.current += 1;
+      setLoadingMore(false);
+      setMoreError(null);
+      setRows(dedupe(result.value.items));
+      setFirst(result.value);
+      setLast(result.value);
+      setState({ phase: "ready" });
+      return result.value;
+    }).catch(() => null);
+  }, [api]);
+
+  return { state, rows, first, last, total: last === null ? null : last.page.authorizedFilteredCount, nextCursor, loadingMore, moreError, loadMore, refresh };
 }
 
 function dedupe(rows: readonly ManagerRow[]): readonly ManagerRow[] {
