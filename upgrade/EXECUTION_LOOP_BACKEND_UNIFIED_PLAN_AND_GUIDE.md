@@ -29152,6 +29152,124 @@ fresh actual source/session/independent grant/window and issued Manager trust
 are the remaining respective producer inputs. Continue original08 on each
 eligible return; not09 connected, release, UI or command activation.
 
+**Actual scoped publication / final pin:** Bobby commit
+`26aa8820e898e6f3d72ce814830712df229f4c24` at15:50:41UTC, exactly6owned
+Markdown files/+967/-0; Verification:R0 using the recorded owner approval,
+tracking/diff and14added links/anchors PASS. No code or peer hunk included,
+no push/merge/hostedCI. Core task/Unified/sync received that HK-local commit
+pin15:51:20.700UTC (the15:52heading is a label, not the actual transfer time).
+Core canonical advanced to`c40ab4ca942d299ace37b41db7bf7351023e7622` solely
+preserving the new current08 handoff:4Markdown/+97, not a READY/grant/session
+return. Last read still has no new eligible source/session/READ/STREAM input.
+Peer main10lines/binding56lines and original untracked peer files remain;
+index empty. This small post-commit operational journal remains owned WIP
+for the next coherent batch. No runtime/test resource cleanup was needed;
+active/rollback images/configs, stable release and active worktrees unchanged.
+
+<a id="original08-next-native-source-binding-20261021"></a>
+### Original08 — next finite native source binding —21Oct16:04UTC
+
+**IN_PROGRESS / CONNECTED_NOT_RUN / FULL08_NOT_MET.** Continue only the
+approved READ/STREAM acceptance, following original08 detailed guide and
+[Core's current return](evidence/execution-edge-v1_2/EPG10-08/CORE009_CURRENT_TRUST_AND_READ_STREAM_RETURN_2026-10-21.md)
+§3. Core requests Edge/PM's next source acceptance; do not leave that owned
+preparation waiting for Core. Actual READ ONLY TS check confirms exact DB
+live_data_executor/system7674585245102796834, original acceptance head4/revoked,
+policy1/protected owner unchanged, both existing identities ACTIVE, source/
+control/maintenance connection caps2/2/1. No installed authority is inferred.
+
+Prepare a separate private successor using the same frozen SDK/runtime/trust,
+same actor/domain and CAS head4→5, distinct command; pre-pin official retirement
+head5→6. The old manifests/operators stay immutable. Proposed finite window
+21Oct16:30–17:30UTC is NOT matched until Core explicitly ACKs target/config,
+source eligibility and current session/grants. Require the actual ACK before
+install/serve; arm the existing exact-ID physical-exit witness first. Validate
+private glue and readonly catalogue/fingerprint/observer/control against the
+actual head4, with capped reused image and physical pool0/--rm cleanup. Then
+return exact proposal hashes to the existing Core task, not another framework.
+
+No Core/Claude source/index edit, service swap, session/grant, ISSUE/ENTER,
+old-head replay or Manager TLS change. Core still owns eligible API source and
+installed-target decision (fixed05ae is qualified, serving9cf5 is old), genuine
+session and distinct READ/STREAM rights. Missing matched input blocks only its
+dependent connected cases. Rollback retains original custody through UNKNOWN;
+official same-manifest status/retirement only after genuine terminal/Core ACK.
+Record tests, observed pins and cleanup below; no09 connected transition.
+
+**16:10UTC new Core proposal consumed immediately:** canonical032dbedd now
+contains CORE009_NATIVE_FINITE_WINDOW_1630_PROPOSAL_2026-10-21.md, written16:02,
+selecting qualified9d88/05ae (NOT installed), proposing16:30–17:00UTC and
+requiring a fresh acceptance rather than renewal of retired head4. Initial
+Edge16:08 unarmed CAS4→5 proposal is therefore SUPERSEDED_NOT_EXECUTED, not
+an accepted renewal. Align owned private preparation to a NEW acceptanceID
+CAS0→1/retirement1→2 and Core's shorter proposed slot; old head4 stays revoked
+and immutable. Runtime's sole binding acceptanceID and associated exact hashes
+change; identity/domain/trust/SDK/caps do not. Return source-only availability
+ACK to the exact Core proposal, not an install/session/runtime READY claim.
+Repeat only affected private validation/8glue tests and fresh-ID readonly
+absence/official observer denial. No source activation before actual target,
+matching filled-input ACK and fresh exact-ID exit witness.
+
+**Actual16:13UTC result:** final fresh acceptanced0a7b78a/CAS0→1/install11550a9c,
+runtime9bb5d5ae/manifest3fd0632c/document0a6d91eb; pre-pinned retirement1→2/
+24f4f786. Full pins, actor/domain/trust/caps and sequence in
+[same handoff §8](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#8-match-core1602-proposal--fresh-acceptance-no-retired-head-renewal).
+Runtime changes only binding acceptanceID; original closure/lifecycle/driver
+and trust unchanged. Real validate EXIT0/PROPOSED_NOT_MATCHED/connections0;
+real readonlySDK preflight EXIT0/stderr0/source+control pool0, catalogue/
+functions/fingerprint/admission/identity/policy verified; fresh head ABSENT/
+official BUSINESS_READ_ACCEPTANCE_MISSING, original head4 still revoked.
+Affected glue retake **8PASS/0FAIL**; initial-version8PASS is separate, not16
+distinct cases or connected proof. No install/source/session/grant/API request.
+
+Core proposal received verbatim; source-only16:30–17:00availability ACK and
+§8 delivered16:12UTC to existing packet/task/Unified/sync, prior bytes preserved
+(then2965bytes/SHA51d72b84). Subsequent ordering clarification: Core ACKs exact
+draft/source commissioning first; Edge witnesses/installs/serves and returns
+ACTUAL native receipt/effective pins; Core fills/installs its reviewed target,
+returns actual session/separate grants; only then Edge sends API requests.
+Do not demand a source receipt before permission to commission that source.
+Initial §7 longer-window/CAS4→5 proposal is SUPERSEDED_NOT_EXECUTED.
+
+Cleanup: all6exact --rm workers removed, own DB backend0/source28446 absent;
+no build/pull/new image/BuildKit. Existing28ea/194293271B retained as operational
+image, no shared prune. Disk pre used307566981120B/available211349921792B;
+intermediate307769225216B/211147677696B, no reclamation or peer-growth attribution.
+Retain only9small0600files in owned0700 unarmed preparationCTQrvcGr for the
+matched slot; no copied credentials/private keys. SGP docs only/no test cell.
+CanonicalHK54c6f5f3/stable releasea9b10385, serving3Edge d6aa7a51/config6180b9bf,
+cd79e9c6,98a191c7/restart0 unchanged. Core032dbedd/integration432da03d/Claude
+eb498116 are source, not serving4095/9cf5/restart0/runtimef3fe876d/schema826e4e08;
+qualified9d88/05ae still NOT installed. Existing active worktrees/rollback and
+peer WIP retained; no TS/PM/DL source, role, DB data, stable/dev/provider change.
+
+**Owned preparation/affected tests/availability ACK DONE.** Source activation
+waits only for actual Core commissioning/filled-input ACK and viable target
+slot; Edge then produces current source proof. API READ waits for actual Core
+installed/config/session/current grant. STREAM needs its separate eligible
+source-set/grant; cache-HIT/final-egress/unaffected-scope need owning receipts.
+Manager all-mode issuance/trust stays independent. FULL08/FULL09_NOT_MET;
+continue corresponding connected cases in08, no new phase/approval/framework.
+
+**16:18UTC bounded Core baseline:** actual ResearchDB portal_control/system
+7688673963308855330, existing actor/workspace8retained/0unreconciled/0unfinished,
+last native event45/14:22:28UTC. SELECT-only exact projection; no base_body,
+cookie/token/JWT/key value read. Initial shell quoting failed before DB exec;
+corrected private-stdin invocation EXIT0/ROLLBACK. Core's new observation review
+accepts existing custody/egress and requests a private cache-HIT correlation
+from Claude; not a new public field or a reason to hold current READ. Physical
+cache deletion is not required: native authority-epoch invalidation is logical.
+Actual cache-HIT/revoke/final-egress cases still need genuine current receipts.
+
+**Publication scope:** Verification:R0 under Bobby's actual campaign§10.10c,
+six Markdown files only (main owned append excluding peer C5hunk, guide,
+handoff and three exact received Core inputs needed by those links). Tracking,
+staged scope/diff/link checks; no product-code/gate bypass, push or merge.
+Private tested composition remains outside Git and unarmed. Final §8 including
+ordering clarification is3585bytes/SHAfb40a857; HK/SGP exact-byte readback PASS.
+First readback differed only by one added blank line; both copies now match,
+all remote preexisting prefixes preserved. No runtime claim follows from R0.
+
 
 
 

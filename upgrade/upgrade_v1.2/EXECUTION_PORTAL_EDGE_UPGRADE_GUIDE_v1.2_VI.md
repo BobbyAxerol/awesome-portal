@@ -1036,6 +1036,19 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**21Oct16:13UTC source follow-through:** Edge consumed Core's16:30–17:00
+proposal and returned availability ACK. Fresh acceptanced0a7b78a/CAS0→1/
+runtime9bb5d5ae/manifest3fd0632c prepared, NOT installed; originalb922c105 stays
+4/revoked. Actual readonlySDK preflight EXIT0/pools0 and fresh-ID missing-
+acceptance denial,8affected glue tests PASS; six --rm workers cleaned, no image/
+build/cache created. Core ACKs reviewed draft/source commissioning first;
+Edge witnesses/activates/returns real native pins, then Core installs reviewed
+config and returns actual session/independent grants before API requests. See
+[current main](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-next-native-source-binding-20261021)
+and [handoff §8](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#8-match-core1602-proposal--fresh-acceptance-no-retired-head-renewal).
+Source unarmed, no role/data/grant/session/service/Manager-trust mutation.
+**Full08/09 remain NOT_MET; not connected READ/revoke/cache/cursor/SSE PASS.**
+
 **21Oct15:47UTC current continuation:** Core ACKs original recovery and scoped
 cleanup; old unresolved1/qualification blockers are closed. Current-source/
 session/READ and separate STREAM/window are NOT yet returned. The existing
