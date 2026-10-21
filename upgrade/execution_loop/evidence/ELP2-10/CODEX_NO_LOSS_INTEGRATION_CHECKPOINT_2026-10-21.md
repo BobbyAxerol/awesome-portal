@@ -140,3 +140,25 @@ Canonical remains5325a45a clean, original Claude refs d58361ea/7c158019 are
 unchanged.14:00–15:30UTC (21:00–22:30 Vietnam) is still a proposal, not a
 matching recovery-window ACK. Issued Research Manager leaf, independent pause,
 same-original terminal/Core ACK and separate Fleet STREAM remain required.
+
+## Resume / request intake — 13:28 UTC
+
+Read-only peer review reconfirmed clean post-freeze Claude7c158019 and frozen
+d58361ea, with no new request/source overlap. The producer FE073/074 delivery
+is available in committed c02f63d8/b85e4d48. Consumer acceptance is separate:
+Workbench still strips five fields before its schema oracle and expects their
+rejection (`screens/workbench/workbench.conformance.test.ts:56,67,165–174`);
+New Request/approval must consume the typed duplicate identifier. These are
+Claude-owned consumer updates, not an excuse to relax the published schema or
+edit accepted UI from Core's lane.
+
+PM R4 remained active at13:27UTC:1147contractsPASS, API tests progressing,
+no terminal/image yet. No new heavy job or source edit in PM's freeze.
+HK public readpoint13:24UTC: PM91390ca1, Edge d52f156d; no newly returned
+matching14:00–15:30window, independent pause ACK, issued Research leaf/issuer
+or original custody terminal. The actual transport/trust gate is not supplied
+by the proposed availability or public CSR/JWK. Two existing agents were
+reused for these disjoint read-only deltas; neither ran tests or mutations.
+Own landing still b0dcc726 plus the same nine source/derived dirty paths;
+canonical5325a45a and original peer refs are unchanged. Markdown updates use
+the scoped R0 path; they cannot turn the pending normal/connected gates green.

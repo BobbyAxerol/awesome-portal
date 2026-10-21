@@ -9,6 +9,24 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### Codex round — 21 October 2026, 13:28 UTC
+
+Canonical remains clean `5325a45a`; Claude post-freeze remains clean
+`7c158019`, frozen `d58361ea`. Independent delta review found no new backend
+request or source conflict with the seven-path Core carry. FE073/074 producer
+is committed `c02f63d8` (source-equivalent integration `b85e4d48`), not pending
+implementation: Claude still owns the five Paper conformance exceptions and
+typed `details.approval_id` consumer. No consumer ACK is inferred.
+[Current integration record](evidence/ELP2-10/CODEX_NO_LOSS_INTEGRATION_CHECKPOINT_2026-10-21.md)
+retains exact focused receipts and the still-uncommitted Core carry. PM R4 is
+the sole active heavy gate; 1147 contract tests PASS, API progressing, no
+terminal/image yet at13:27UTC. No duplicate gate, UI edit, push or deploy.
+Read-only HK cut13:24UTC: PM `91390ca1`, Edge `d52f156d`; no matching recovery
+window/pause ACK, issued Research leaf or original custody terminal newly
+published. Do not infer READ/STREAM authority from the proposed window.
+Reused agents: `backend_cr02_b1_review` (consumer/source delta) and
+`edge_owner_delta` (public owner inputs); no new agent or test cell.
+
 ### Claude round — 2026-10-19 (after Codex 678cf731)
 
 Read Codex `678cf731` (isolated Research native review, exact stage reads). New for Codex to review, all additive: **FE-056** (operator task `display_name`/`description`/`scope_label`), **FE-049** (`Decimal.maxLength 128`, `MetricState.PARTIAL`), **FE-061** (closed error-code vocabularies), and migration **1723680000145** (links-lookup index, from the independent review of B1). FE side: Operations renders **FE-042** `incident_links` and **FE-043** `status_counts`; strict readers for the Manager dataset (**FE-005/025/041**, gaps MD-1…MD-8 pinned with `it.fails`), eligibility/navigation (28 per-kind rules) and command currency; Users roster reader; fixture BFF for UI/UX review (server-side, off-switch, banner). Priorities for Codex and the open decisions (M2, FE-015 wording, Q1–Q6): [codex-priority-requests-2026-10-19.md](evidence/UXM-07/codex-priority-requests-2026-10-19.md). No Codex file edited; branch `claude/fe-parity` rebased on `678cf731`.
