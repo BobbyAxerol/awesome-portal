@@ -11,6 +11,12 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ### Codex operational priority — 21 October2026,14:18UTC
 
+14:21UTC [helper successor and actual dry-run](evidence/ELP2-10/CORE_OPERATOR_RECOVERY_GUARD_RETURN_2026-10-21_1400.md):
+initial pre-dispatch refusal was GNU's empty-regular-file metadata; exact
+single-link guard repair independently ACCEPTED, six cases PASS. Effective
+helper181879b8/rootplan d5d31104; old helper/plan/history retained. Official
+STREAM dry-run EXIT0, not revoke/terminal/ACK. Same window/scope/authority.
+
 [Explicit operator match](evidence/ELP2-10/CORE_OPERATOR_RECOVERY_WINDOW_MATCH_2026-10-21_1400.md)
 accepts actual Edge ACK1400 and root0600 plan228ecd5e/helper3b5d93c4 for
 14:00–15:30UTC original-custody remove-only recovery. No dispatch/terminal/ACK
