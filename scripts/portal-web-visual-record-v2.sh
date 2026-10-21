@@ -44,7 +44,9 @@ fi
 
 # --workers=2: the pinned image runs three Vite builds first; more workers only add timing noise.
 common=("${SPEC}" "--project=${PROJECT}" "--workers=2")
-[ -z "${GREP}" ] || common+=(-g "${GREP}")
+# portal-web-visual.sh pastes its arguments into an `sh -lc` string, so a bare | ( ) & would be read as shell syntax
+# there; they are backslash-escaped here and reach Playwright as the regex the caller wrote.
+[ -z "${GREP}" ] || common+=(-g "$(printf '%s' "${GREP}" | sed 's/[|()&]/\\&/g')")
 
 printf '== record %s%s\n' "${SPEC}" "${GREP:+ (grep: ${GREP})}"
 "${ROOT_DIR}/scripts/portal-web-visual.sh" --update "${common[@]}"
