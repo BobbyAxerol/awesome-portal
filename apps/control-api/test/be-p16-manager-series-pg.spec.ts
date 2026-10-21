@@ -80,7 +80,8 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 Manager series writer on
     const admin = new Pool({ connectionString: connection("postgres"), max: 1 });
     try { await admin.query(`CREATE DATABASE ${name}`); } finally { await admin.end(); }
     pool = new Pool({ connectionString: connection(name), max: 4, connectionTimeoutMillis: 2_000, query_timeout: 8_000 });
-    for (const filename of ["1723680000135_execution-manager-models.sql", "1723680000137_execution-manager-consumer-fence.sql", "1723680000147_execution-manager-series-observations.sql"])
+    for (const filename of ["1723680000135_execution-manager-models.sql", "1723680000137_execution-manager-consumer-fence.sql", "1723680000147_execution-manager-series-observations.sql",
+      "1723680000148_execution-manager-series-repair-attempts.sql"])
       await pool.query(readFileSync(resolve(__dirname, "../migrations", filename), "utf8").split("-- Down Migration")[0]);
     leases = new ManagerProjectionLeases(pool); store = new ManagerSeriesStore(pool);
   }, 60_000);
@@ -251,15 +252,57 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 Manager series writer on
       await pool.query(`CREATE TRIGGER series_boom BEFORE INSERT ON execution_manager_series_revisions FOR EACH ROW EXECUTE FUNCTION series_boom()`);
       const l = await lease();
       expect(await store.backfill(input(l, 4))).toEqual({ state: "PROGRESS", processed: 0, failed: 0 });
-      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: docs[0].revision });
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: docs[0].revision,
+        repair_attempts: [{ revision: docs[0].revision, attempts: 1 }] });
       expect(await store.backfill(input(l, 4))).toEqual({ state: "PROGRESS", processed: 0, failed: 0 });
-      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_2", last_error_revision: docs[0].revision });
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_2", last_error_revision: docs[0].revision,
+        repair_attempts: [{ revision: docs[0].revision, attempts: 2 }] });
       expect(await store.backfill(input(l, 4))).toEqual({ state: "PROGRESS", processed: 0, failed: 1 });   // r0 is a stated gap; r1 starts its own attempts
-      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: docs[1].revision });
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: docs[1].revision,
+        repair_attempts: [{ revision: docs[1].revision, attempts: 1 }] });                                  // the gap ended r0's budget: only r1's remains
       await pool.query(`DROP TRIGGER series_boom ON execution_manager_series_revisions`);
       expect(await store.backfill(input(l, 4))).toEqual({ state: "COMPLETE", processed: 1, failed: 0 });
+      expect((await store.checkpoint(scope))!.repair_attempts).toEqual([]);
       expect((await pool.query(`SELECT revision FROM execution_manager_series_revisions`)).rows.map(r => r.revision)).toEqual([docs[1].revision]);
       expect(await store.backfill(input(l, 4))).toEqual({ state: "NO_WORK", processed: 0, failed: 0 });
+    });
+    it("CR-02 interleave: a live failure of another revision neither resets nor consumes a revision's repair budget; the budget survives a lease handoff; the exhausted revision is a stated gap and the next one has its own budget", async () => {
+      const d4 = doc(4, T0 - 500, "103"), [r2, r3, r4] = [docs[2].revision, docs[3].revision, d4.revision];
+      for (const d of docs.slice(0, 3)) await seed(d);
+      const old = await lease();
+      expect(await store.backfill(input(old, 10))).toEqual({ state: "COMPLETE", processed: 3, failed: 0 });
+      await seed(docs[3]); await seed(d4);                                         // r3 and r4: retained, their live series writes were refused
+      await pool.query(`CREATE OR REPLACE FUNCTION series_boom() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'SERIES_BOOM'; END $$`);
+      await pool.query(`CREATE TRIGGER series_boom BEFORE INSERT ON execution_manager_series_revisions FOR EACH ROW WHEN (NEW.revision IN ('${r3}','${r4}')) EXECUTE FUNCTION series_boom()`);
+      await inTransaction(old, c => store.recordFailure(c, scope, r3, "SERIES_BOOM"));
+      expect(await store.backfill(input(old, 4))).toEqual({ state: "PROGRESS", processed: 0, failed: 0 });
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: r3, repair_attempts: [{ revision: r3, attempts: 1 }] });
+      // the interleaved live failure of r4 overwrites the diagnostic, NOT r3's budget
+      await inTransaction(old, c => store.recordFailure(c, scope, r4, "SERIES_BOOM"));
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_BOOM", last_error_revision: r4, repair_attempts: [{ revision: r3, attempts: 1 }] });
+      // lease handoff: the old holder is fenced out and changes nothing; the new holder continues r3 at attempt 2 (not 1)
+      await pool.query(`UPDATE execution_manager_consumer_fences SET expires_at=clock_timestamp()-interval '1 second'`);
+      const next = await lease(), before = await store.checkpoint(scope);
+      await expect(store.backfill(input(old, 4))).rejects.toThrow(/MANAGER_LEASE_LOST/);
+      expect(await store.checkpoint(scope)).toEqual(before);
+      const restarted = new ManagerSeriesStore(pool);
+      expect(await restarted.backfill(input(next, 4))).toEqual({ state: "PROGRESS", processed: 0, failed: 0 });
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_2", last_error_revision: r3, repair_attempts: [{ revision: r3, attempts: 2 }] });
+      await inTransaction(next, c => store.recordFailure(c, scope, r4, "SERIES_BOOM"));   // another interleave right before the last attempt
+      expect(await store.checkpoint(scope)).toMatchObject({ repair_attempts: [{ revision: r3, attempts: 2 }] });
+      // attempt 3: r3 is a stated gap and the cursor passes it; r4 starts its OWN budget in the same bounded call
+      expect(await restarted.backfill(input(next, 4))).toEqual({ state: "PROGRESS", processed: 0, failed: 1 });
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: r4, repair_attempts: [{ revision: r4, attempts: 1 }] });
+      expect((await pool.query(`SELECT backfill_cursor_revision FROM execution_manager_series_checkpoints`)).rows[0].backfill_cursor_revision).toBe(r3);
+      expect(await count("execution_manager_series_revisions")).toBe(3);
+      await pool.query(`DROP TRIGGER series_boom ON execution_manager_series_revisions`);
+      expect(await restarted.backfill(input(next, 4))).toEqual({ state: "COMPLETE", processed: 1, failed: 0 });
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "COMPLETE", last_error_code: null, last_error_revision: null, repair_attempts: [] });
+      const revisions = (await pool.query(`SELECT revision FROM execution_manager_series_revisions ORDER BY as_of_ms`)).rows.map(r => r.revision);
+      expect(revisions).toEqual([docs[0].revision, docs[1].revision, r2, r4]);      // r3 stays a stated gap: never silently filled, never retried again
+      const stable = await snapshot();
+      expect(await restarted.backfill(input(next, 4))).toEqual({ state: "NO_WORK", processed: 0, failed: 0 });
+      expect(await snapshot()).toEqual(stable);
     });
     it("a repair is lease fenced: a holder that lost its lease cannot repair, and a reopened backfill resumes on the new holder", async () => {
       for (const d of docs.slice(0, 2)) await seed(d);
@@ -288,21 +331,28 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 Manager series writer on
         family_ids: [live.family_id], purposes: ["BUSINESS"], receipt_pins: { source_read: "SYNTHETIC:read", transport_trust: "SYNTHETIC:transport", privacy: "SYNTHETIC:privacy", field_policy: "SYNTHETIC:fields" } };
       const bytes = JSON.stringify(artifact), commissioning = loadPublicationCommissioning(bytes, { artifact_sha256: hash(bytes), adapter_id: artifact.adapter_id,
         approval_ref: "SYNTHETIC_NOT_OWNER_APPROVAL", approved_at_ms: at[3] - 1000, valid_until_ms: Date.now() + 120_000 }, Date.now());
-      const publication = JSON.parse(readFileSync(resolve(contracts, "fixtures/execution-dataset-publication.synthetic.valid.json"), "utf8")).value as DatasetPublication;
-      Object.assign(publication, { environment: scope.environment, profile_id: scope.profile_id, family_id: live.family_id, catalogue_digest: live.catalogue_digest,
-        history_capability: "CURRENT_ONLY", barrier: null, issued_at_ms: at[3] - 1000, expires_at_ms: Date.now() + 120_000, source_as_of_ms: live.as_of_ms, observed_at_ms: live.observed_at_ms });
-      for (const k of ["source_read", "transport_trust", "privacy", "field_policy"] as const) publication[k] = { qualification: "SOURCE_VERIFIED", receipt_ref: artifact.receipt_pins[k] };
-      publication.authority = { ...publication.authority, ...scope, qualification: "SOURCE_VERIFIED", tuples: [tupleA], resources: [],
-        binding: { dataset_id: live.family_id, source_revision: live.revision, projection_generation: live.projection_generation, catalogue_revision: live.catalogue_digest, window: null } };
-      return { retained, live, publication, commissioning };
+      const publicationFor = (d: ManagerModelDocument) => {
+        const publication = JSON.parse(readFileSync(resolve(contracts, "fixtures/execution-dataset-publication.synthetic.valid.json"), "utf8")).value as DatasetPublication;
+        Object.assign(publication, { environment: scope.environment, profile_id: scope.profile_id, family_id: d.family_id, catalogue_digest: d.catalogue_digest,
+          history_capability: "CURRENT_ONLY", barrier: null, issued_at_ms: at[3] - 1000, expires_at_ms: Date.now() + 120_000, source_as_of_ms: d.as_of_ms, observed_at_ms: d.observed_at_ms });
+        for (const k of ["source_read", "transport_trust", "privacy", "field_policy"] as const) publication[k] = { qualification: "SOURCE_VERIFIED", receipt_ref: artifact.receipt_pins[k] };
+        publication.authority = { ...publication.authority, ...scope, qualification: "SOURCE_VERIFIED", tuples: [tupleA], resources: [],
+          binding: { dataset_id: d.family_id, source_revision: d.revision, projection_generation: d.projection_generation, catalogue_revision: d.catalogue_digest, window: null } };
+        return publication;
+      };
+      // a second live revision (r4) for the interleaved-failure cases: it supersedes r3 and is published right after it
+      const live4 = managerModelDocument.parse({ ...doc(4, now - 3_000, "103"), source_set_digest: accessDigest([tupleA]), observed_at_ms: now - 2_000 });
+      return { retained, live, live4, publication: publicationFor(live), publicationFor, commissioning };
     }
-    async function install(w: ReturnType<typeof world>, pending: { value: boolean }) {
+    async function install(w: ReturnType<typeof world>, pending: { value: boolean; queue?: ManagerModelDocument[] }) {
       for (const d of w.retained) await seed(d);
       const last = w.retained[2];
       await pool.query(`INSERT INTO execution_manager_model_heads(workspace_id,environment,profile_id,revision,source_epoch,source_sequence,projection_generation,payload_digest,catalogue_digest)
         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [...key, last.revision, last.source_epoch, last.source_sequence, last.projection_generation, accessDigest(last), last.catalogue_digest]);
       const acknowledge = vi.fn(async () => undefined);
-      const source: ManagerProjectionSource = { read: vi.fn(async () => { if (!pending.value) return null; pending.value = false;
+      const source: ManagerProjectionSource = { read: vi.fn(async () => {
+        if (pending.queue) { const next = pending.queue.shift(); return next ? structuredClone({ document: next, publication: w.publicationFor(next) }) as ManagerConsumerDelivery : null; }
+        if (!pending.value) return null; pending.value = false;
         return structuredClone({ document: w.live, publication: w.publication }) as ManagerConsumerDelivery; }), recheck: vi.fn(async () => ({})), acknowledge };
       const series = new ManagerSeriesRuntime(pool, { ...CFG, maximum_backfill_revisions: 4 });
       const installation: ManagerRuntimeInstallation = { trust: unqualifiedAccessTrust, cadence_ms: 1000, maximum_publication_reads: 1,
@@ -378,6 +428,45 @@ describe.skipIf(!process.env.TEST_DATABASE_URL)("BE-P16 Manager series writer on
       expect(await count("execution_manager_series_revisions")).toBe(4);
       expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "COMPLETE", backfill_processed: 4 });
       await expect(pool.query(`UPDATE execution_manager_series_observations SET value='1' WHERE revision='TEST_ONLY:r3'`)).rejects.toThrow(/append-only/);
+    });
+    it("CR-02: a second live failure (r4) interleaves with r3's bounded repair: r3's budget is NOT reset, r4 gets its own, both are repaired when the fault is removed, one immutable observation set each after a restart", async () => {
+      const w = world(), pending = { value: false, queue: [] as ManagerModelDocument[] }, h = await install(w, pending);
+      await h.runtime.tick();                                                       // initial backfill of r0..r2 -> COMPLETE
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "COMPLETE", backfill_processed: 3 });
+      await pool.query(`CREATE OR REPLACE FUNCTION series_boom() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'SERIES_BOOM'; END $$`);
+      await pool.query(`CREATE TRIGGER series_boom BEFORE INSERT ON execution_manager_series_revisions FOR EACH ROW WHEN (NEW.revision IN ('TEST_ONLY:r3','TEST_ONLY:r4')) EXECUTE FUNCTION series_boom()`);
+      pending.queue.push(w.live); await h.runtime.tick();                           // r3: live series write refused, financial revision committed
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "IN_PROGRESS", last_error_code: "SERIES_BOOM", last_error_revision: "TEST_ONLY:r3" });
+      await h.runtime.tick();                                                       // idle: repair attempt 1 of r3, refused
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_1", last_error_revision: "TEST_ONLY:r3", repair_attempts: [{ revision: "TEST_ONLY:r3", attempts: 1 }] });
+      pending.queue.push(w.live4); await h.runtime.tick();                          // r4: ANOTHER live failure, interleaved between r3's attempts
+      expect(h.runtime.status().state).toBe("TICK_OK");
+      expect(await count("execution_manager_model_revisions")).toBe(5);
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_BOOM", last_error_revision: "TEST_ONLY:r4", repair_attempts: [{ revision: "TEST_ONLY:r3", attempts: 1 }] });
+      await h.runtime.tick();                                                       // idle: r3's attempt is 2, not 1 again
+      expect(await store.checkpoint(scope)).toMatchObject({ last_error_code: "SERIES_REPAIR_RETRY_2", last_error_revision: "TEST_ONLY:r3", repair_attempts: [{ revision: "TEST_ONLY:r3", attempts: 2 }] });
+      expect(await count("execution_manager_series_revisions")).toBe(3);
+      await pool.query(`DROP TRIGGER series_boom ON execution_manager_series_revisions`);
+      await h.runtime.tick();                                                       // fault removed: one bounded idle tick repairs r3 and then r4
+      expect(h.runtime.status().state).toBe("TICK_OK");
+      expect(await count("execution_manager_series_revisions")).toBe(5);
+      expect((await pool.query(`SELECT backfill_state,backfill_cursor_revision,last_error_code,last_error_revision,backfill_processed::text,repair_attempts FROM execution_manager_series_checkpoints`)).rows[0])
+        .toEqual({ backfill_state: "COMPLETE", backfill_cursor_revision: "TEST_ONLY:r4", last_error_code: null, last_error_revision: null, backfill_processed: "5", repair_attempts: [] });
+      const perRevision = async () => (await pool.query(`SELECT revision,count(*)::int AS n FROM execution_manager_series_observations GROUP BY revision ORDER BY revision`)).rows;
+      const all = [...w.retained, w.live, w.live4];
+      expect(await perRevision()).toEqual(all.map(d => ({ revision: d.revision, n: deriveSeriesObservations(d).observations.length })).sort((a, b) => (a.revision < b.revision ? -1 : 1)));
+      for (const d of [w.live, w.live4])
+        expect((await pool.query(`SELECT observation_digest FROM execution_manager_series_revisions WHERE revision=$1`, [d.revision])).rows[0].observation_digest).toBe(deriveSeriesObservations(d).observation_digest);
+      const dump = async () => (await pool.query(`SELECT revision,subject_id,metric,partition_key,value,reason_code,input_digest FROM execution_manager_series_observations ORDER BY 1,2,3,4`)).rows;
+      const before = await dump();
+      await h.runtime.beforeApplicationShutdown();                                  // restart the holder: nothing new, nothing rewritten, nothing re-scanned
+      const restarted = new ExecutionManagerRuntime(pool, h.installation); runtimes.push(restarted);
+      await restarted.tick(); await restarted.tick();
+      expect(restarted.status().state).toBe("TICK_OK");
+      expect(await dump()).toEqual(before);
+      expect(await count("execution_manager_series_revisions")).toBe(5);
+      expect(await store.checkpoint(scope)).toMatchObject({ backfill_state: "COMPLETE", backfill_processed: 5, repair_attempts: [] });
+      await expect(pool.query(`UPDATE execution_manager_series_observations SET value='1' WHERE revision='TEST_ONLY:r4'`)).rejects.toThrow(/append-only/);
     });
     it("without the opt-in slot nothing changes: no series, no series rows", async () => {
       const w = world(), pending = { value: true }, h = await install(w, pending);

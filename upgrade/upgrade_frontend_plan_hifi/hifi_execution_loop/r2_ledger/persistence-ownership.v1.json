@@ -386,7 +386,7 @@
       "rows_stable": null,
       "retention": "RETAIN_BACKFILL_RESUME_POINTER",
       "disposal_decision": "NO_AUTOMATIC_DELETE",
-      "note": "BE-P16 migration147: append-only keyset checkpoint for the bounded NAV / NET_PNL series backfill; written inside the Manager runtime lease transaction, never by a route.",
+      "note": "BE-P16 migration147: keyset checkpoint for the bounded NAV / NET_PNL series backfill; written inside the Manager runtime lease transaction, never by a route. Migration148 (additive column, CR-02): repair_attempts = revision-scoped retry budget, a jsonb array hard-capped at 16 entries [{revision,attempts}], cleared per revision on repair, live record or stated gap; writer state, not a diagnostic, not an observation. Observation and revision tables stay append-only.",
       "reached_via": "manager-series.store.ts"
     },
     {
