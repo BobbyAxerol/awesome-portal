@@ -8,6 +8,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
+import { SLOW } from "../../waitsTestUtil";
 
 import { PF, answerPortfolios } from "../../../../../e2e/bffDoublePortfolios";
 import type { ExecutionApi } from "../../../api/ports";
@@ -35,7 +36,7 @@ const mount = (api: ExecutionApi, entry = "/deployments/portfolios", capabilitie
 const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Portfolios" });
-const loaded = () => screen.findByRole("table", { name: "Portfolios" });
+const loaded = () => screen.findByRole("table", { name: "Portfolios" }, SLOW);
 const bodyRows = () => within(table()).getAllByRole("row").slice(1);
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const names = () => bodyRows().map((row) => row.querySelector(".exec-pf-title")?.textContent ?? "");
@@ -236,7 +237,7 @@ describe("search, domain, currency and sort", () => {
     mount(makeApi().api);
     await loaded();
     fireEvent.change(screen.getByPlaceholderText("Search portfolio or owner"), { target: { value: "nguyen" } });
-    await waitFor(() => expect(search().get("q")).toBe("nguyen"));
+    await waitFor(() => expect(search().get("q")).toBe("nguyen"), SLOW);
     expect(names()).toEqual(["Canary", "Satellite"]);
     expect(screen.getAllByText("2 of the top 6 / 9 portfolios").length).toBeGreaterThan(0);
     expect(screen.getByText("Filters cover the 6 loaded portfolios only.").getAttribute("title")).toContain("The read has no server filter");

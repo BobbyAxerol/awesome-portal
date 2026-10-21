@@ -9,6 +9,7 @@ import { whyText } from "../../gapWhyTestUtil";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SLOW, SLOW_TEST } from "../../waitsTestUtil";
 
 import { alphaFleet } from "../../../../../e2e/bffDouble";
 import type { AlphaFleetQuery, ExecutionApi } from "../../../api/ports";
@@ -67,7 +68,7 @@ const mount = (api: ExecutionApi, entry: string, workspaceId?: string) =>
 const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
-const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" });
+const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
 const dataRows = () => within(table()).getAllByRole("row").slice(1);
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
 const ids = () => dataRows().map((row) => cell(row, "Alpha"));
@@ -107,7 +108,7 @@ describe("not published: today's screen, exactly", () => {
       const { api, state, legacy } = harness({ live: MIXED }, variant);
       mount(api, "/execution/fleet?stage=live");
       await loaded();
-      await waitFor(() => expect(probeCalls(state)).toHaveLength(1));
+      await waitFor(() => expect(probeCalls(state)).toHaveLength(1), SLOW);
       expect(legacy.length).toBeGreaterThanOrEqual(1);
       expect(isLegacyTable()).toBe(true);
       expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
@@ -178,7 +179,7 @@ describe("published: the dataset is the source, chosen by the data (no toggle)",
     view.unmount();
     const second = harness({ live: MIXED });
     mount(second.api, "/execution/fleet?stage=canary,live&view=board");
-    await waitFor(() => expect(second.legacy.length).toBeGreaterThan(0));
+    await waitFor(() => expect(second.legacy.length).toBeGreaterThan(0), SLOW);
     expect(await screen.findByText(/Loaded rows only/)).toBeTruthy();
     expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
     expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
@@ -290,12 +291,12 @@ describe("dataset mode: sort and group by current stage (FE-012)", () => {
     const sort = screen.getByRole("combobox", { name: "Sort" }) as HTMLSelectElement;
     expect([...sort.options].map((option) => option.textContent)).toEqual(["Sort: Server order", "Sort: Name, A to Z", "Sort: Current stage, A to Z", "Sort: Current stage, Z to A"]);
     fireEvent.change(sort, { target: { value: "current_stage:asc" } });
-    await waitFor(() => expect(search().get("sort")).toBe("current_stage:asc"));
-    await waitFor(() => expect(datasetCalls(state)).toHaveLength(2));
+    await waitFor(() => expect(search().get("sort")).toBe("current_stage:asc"), SLOW);
+    await waitFor(() => expect(datasetCalls(state)).toHaveLength(2), SLOW);
     expect(datasetCalls(state)[1]!.sort).toEqual([{ field: "current_stage", direction: "asc" }, { field: "alpha_id", direction: "asc" }]);
-    await waitFor(() => expect(dataRows().map((row) => cell(row, "Current stage").slice(0, 6))).toEqual(["Canary", "Canary", "Live", "Live", "No sin", "No sin"]));
+    await waitFor(() => expect(dataRows().map((row) => cell(row, "Current stage").slice(0, 6))).toEqual(["Canary", "Canary", "Live", "Live", "No sin", "No sin"]), SLOW);
     fireEvent.change(sort, { target: { value: "current_stage:desc" } });
-    await waitFor(() => expect(dataRows().map((row) => cell(row, "Current stage").slice(0, 6))).toEqual(["Live", "Live", "Canary", "Canary", "No sin", "No sin"]));
+    await waitFor(() => expect(dataRows().map((row) => cell(row, "Current stage").slice(0, 6))).toEqual(["Live", "Live", "Canary", "Canary", "No sin", "No sin"]), SLOW);
     expect(datasetCalls(state)[2]!.sort).toEqual([{ field: "current_stage", direction: "desc" }, { field: "alpha_id", direction: "asc" }]);
   });
 
@@ -314,9 +315,9 @@ describe("dataset mode: sort and group by current stage (FE-012)", () => {
     expect(group.disabled).toBe(false);
     expect([...group.options].map((option) => option.textContent)).toEqual(["Group: none", "Group: Portfolio", "Group: Current stage", "Group: Owner", "Group: Health"]);
     fireEvent.change(group, { target: { value: "current_stage" } });
-    await waitFor(() => expect(search().get("group")).toBe("current_stage"));
+    await waitFor(() => expect(search().get("group")).toBe("current_stage"), SLOW);
     const groups = await screen.findByTestId("dataset-groups");
-    await waitFor(() => expect([...groups.querySelectorAll("li")].map((li) => li.textContent)).toEqual(["Canary: 43", "Live: 44", "No single stage: 43"]));
+    await waitFor(() => expect([...groups.querySelectorAll("li")].map((li) => li.textContent)).toEqual(["Canary: 43", "Live: 44", "No single stage: 43"]), SLOW);
     expect(datasetCalls(state).at(-1)!.query.get("group_by")).toBe("current_stage");
     // 43 + 44 + 43 = 130 rows in the filtered result, and 50 on the page
     expect(dataRows()).toHaveLength(50);
@@ -328,16 +329,16 @@ describe("dataset mode: sort and group by current stage (FE-012)", () => {
     state.variantFor = (call) => (call.query.get("limit") === "1" ? "ok" : "status:503");
     mount(api, `${LIVE_URL}&group=current_stage&health=ATTENTION,READY`);
     fireEvent.click(await screen.findByRole("button", { name: "Use the fleet read" }));
-    await waitFor(() => expect(search().get("src")).toBe("fleet"));
+    await waitFor(() => expect(search().get("src")).toBe("fleet"), SLOW);
     expect(search().get("group")).toBeNull();
     expect(search().get("health")).toBeNull();
-    await waitFor(() => expect(isLegacyTable()).toBe(true));
+    await waitFor(() => expect(isLegacyTable()).toBe(true), SLOW);
     // the override is explicit and reversible, and it is the only way across
     state.variantFor = undefined;
     state.variant = "ok";
     fireEvent.click(screen.getByRole("button", { name: "Use the dataset" }));
-    await waitFor(() => expect(search().get("src")).toBeNull());
-    await waitFor(() => expect(isDatasetTable()).toBe(true));
+    await waitFor(() => expect(search().get("src")).toBeNull(), SLOW);
+    await waitFor(() => expect(isDatasetTable()).toBe(true), SLOW);
   });
 });
 
@@ -349,13 +350,13 @@ describe("dataset mode: filters are the server's (never a client-side narrowing 
     fireEvent.click(screen.getByRole("button", { name: "Health" }));
     const menu = screen.getByRole("group", { name: "Health" });
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Ready" }));
-    await waitFor(() => expect(search().get("health")).toBe("READY"));
-    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "health", op: "EQ", value: "READY" }]));
-    await waitFor(() => expect(dataRows()).toHaveLength(2));
+    await waitFor(() => expect(search().get("health")).toBe("READY"), SLOW);
+    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "health", op: "EQ", value: "READY" }]), SLOW);
+    await waitFor(() => expect(dataRows()).toHaveLength(2), SLOW);
     fireEvent.click(within(screen.getByRole("group", { name: "Health" })).getByRole("checkbox", { name: "Needs attention" }));
-    await waitFor(() => expect(search().get("health")).toBe("ATTENTION,READY"));
-    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "health", op: "IN", values: ["ATTENTION", "READY"] }]));
-    await waitFor(() => expect(dataRows()).toHaveLength(4));
+    await waitFor(() => expect(search().get("health")).toBe("ATTENTION,READY"), SLOW);
+    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "health", op: "IN", values: ["ATTENTION", "READY"] }]), SLOW);
+    await waitFor(() => expect(dataRows()).toHaveLength(4), SLOW);
     expect(screen.getByRole("button", { name: "Health" }).textContent).toContain("Health: Needs attention +1");
     expect(screen.getByText("health: Needs attention, Ready")).toBeTruthy();
   });
@@ -364,7 +365,7 @@ describe("dataset mode: filters are the server's (never a client-side narrowing 
     const { api } = harness({ live: MIXED }, "wrong:filter");
     mount(api, `${LIVE_URL}&health=READY`);
     // the probe has no filter, so it is published; the filtered read is the one the guard refuses
-    await waitFor(() => expect(document.body.textContent).toContain("MANAGER_DATASET_ANSWERS_ANOTHER_QUERY filters"));
+    await waitFor(() => expect(document.body.textContent).toContain("MANAGER_DATASET_ANSWERS_ANOTHER_QUERY filters"), SLOW);
     expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull();
     expect(screen.getByText("Unavailable")).toBeTruthy();
   });
@@ -399,13 +400,14 @@ describe("dataset mode: filters are the server's (never a client-side narrowing 
     mount(api, `${LIVE_URL}&owner=Lan-002`);
     await loaded();
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
-    await waitFor(() => expect(search().get("owner")).toBeNull());
+    await waitFor(() => expect(search().get("owner")).toBeNull(), SLOW);
     expect(search().get("stage")).toBeNull();
-    await waitFor(() => expect(isLegacyTable()).toBe(true));
+    await waitFor(() => expect(isLegacyTable()).toBe(true), SLOW);
   });
 });
 
 describe("dataset mode: paging with the cursor and honest counts", () => {
+  // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
   it("walks 130 rows in pages of 50 with Showing N of M, no duplicate, and no button after the last page", async () => {
     const { api, state } = harness({ live: alphasOf(130, [["LIVE"]]) });
     mount(api, LIVE_URL);
@@ -414,32 +416,33 @@ describe("dataset mode: paging with the cursor and honest counts", () => {
     expect(dataRows()).toHaveLength(50);
     expect(line()).toBe("Showing 50 of 130 rows. Load more for the rest.");
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(dataRows()).toHaveLength(100));
+    await waitFor(() => expect(dataRows()).toHaveLength(100), SLOW);
     expect(line()).toBe("Showing 100 of 130 rows. Load more for the rest.");
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(dataRows()).toHaveLength(130));
+    await waitFor(() => expect(dataRows()).toHaveLength(130), SLOW);
     expect(line()).toBe("Showing all 130 rows");
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(new Set(ids()).size).toBe(130);
     const calls = datasetCalls(state);
     expect(calls.map((call) => call.query.has("after"))).toEqual([false, true, true]);
     expect(calls[1]!.query.get("after")).not.toBe(calls[2]!.query.get("after"));
-  });
+  }, SLOW_TEST);
 
+  // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
   it("a 200-row page budget: after four pages the cap is named and no further page is offered", async () => {
     const { api } = harness({ live: alphasOf(260, [["LIVE"]]) });
     mount(api, LIVE_URL);
     await loaded();
     for (let page = 1; page < 4; page += 1) {
-      fireEvent.click(await screen.findByRole("button", { name: "Load more" }));
-      await waitFor(() => expect(dataRows()).toHaveLength(50 * (page + 1)));
+      fireEvent.click(await screen.findByRole("button", { name: "Load more" }, SLOW));
+      await waitFor(() => expect(dataRows()).toHaveLength(50 * (page + 1)), SLOW);
     }
     expect(dataRows()).toHaveLength(200);
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(document.body.textContent).toContain("Showing the first 200 rows. Narrow the filters to see the rest.");
     // the line does not promise a page the screen no longer offers
     expect(document.querySelector(".exec-fleet-count-line")?.textContent).toBe("Showing 200 of 260 rows.");
-  });
+  }, SLOW_TEST);
 
   it("a page from another snapshot is NOT appended: the rows stay, the reason is said, Reload re-reads", async () => {
     const { api, state } = harness({ live: alphasOf(130, [["LIVE"]]) });
@@ -454,8 +457,8 @@ describe("dataset mode: paging with the cursor and honest counts", () => {
     expect(dataRows()).toHaveLength(50);
     state.mutate = undefined;
     fireEvent.click(within(screen.getByRole("alert")).getByRole("button", { name: "Reload" }));
-    await waitFor(() => expect(datasetCalls(state).filter((call) => !call.query.has("after")).length).toBe(2));
-    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+    await waitFor(() => expect(datasetCalls(state).filter((call) => !call.query.has("after")).length).toBe(2), SLOW);
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull(), SLOW);
   });
 
   it("a second page that fails keeps the first page's rows and says so", async () => {
@@ -494,12 +497,12 @@ describe("dataset mode: answers that must not become rows", () => {
     const { api, state } = harness({ live: MIXED });
     state.variantFor = (call) => (call.query.get("limit") === "1" ? "ok" : variant);
     mount(api, LIVE_URL, variant === "wrong:workspace" ? "ws-1" : undefined);
-    await waitFor(() => expect(document.body.textContent).toContain(fragment));
+    await waitFor(() => expect(document.body.textContent).toContain(fragment), SLOW);
     expect(screen.getByText("Unavailable")).toBeTruthy();
     expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Use the fleet read" }));
-    await waitFor(() => expect(search().get("src")).toBe("fleet"));
-    await waitFor(() => expect(isLegacyTable()).toBe(true));
+    await waitFor(() => expect(search().get("src")).toBe("fleet"), SLOW);
+    await waitFor(() => expect(isLegacyTable()).toBe(true), SLOW);
   });
 
   it("a late answer for a query the reader has left is dropped", async () => {
@@ -510,13 +513,13 @@ describe("dataset mode: answers that must not become rows", () => {
       if (call.query.get("limit") !== "1" && !call.query.has("q")) await held;
     };
     mount(api, LIVE_URL);
-    await waitFor(() => expect(datasetCalls(state)).toHaveLength(1));
+    await waitFor(() => expect(datasetCalls(state)).toHaveLength(1), SLOW);
     // the reader narrows the search while the first answer (every row) is still on its way
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "a-001" } });
     fireEvent.keyDown(screen.getByRole("searchbox"), { key: "Enter" });
-    await waitFor(() => expect(datasetCalls(state).some((call) => call.query.get("q") === "a-001")).toBe(true));
+    await waitFor(() => expect(datasetCalls(state).some((call) => call.query.get("q") === "a-001")).toBe(true), SLOW);
     await loaded();
-    await waitFor(() => expect(dataRows()).toHaveLength(1));
+    await waitFor(() => expect(dataRows()).toHaveLength(1), SLOW);
     release!();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(dataRows()).toHaveLength(1);
@@ -526,7 +529,7 @@ describe("dataset mode: answers that must not become rows", () => {
   it("the board is built from the fleet read, whatever the dataset publishes", async () => {
     const { api, legacy, state } = harness({ live: MIXED });
     mount(api, "/execution/fleet?stage=canary,live&view=board");
-    await waitFor(() => expect(legacy.length).toBeGreaterThan(0));
+    await waitFor(() => expect(legacy.length).toBeGreaterThan(0), SLOW);
     expect(datasetCalls(state)).toEqual([]);
     expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
   });
@@ -555,12 +558,13 @@ describe("Owner and Health choices are the authorized population, or they say th
     };
   };
 
+  // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
   it("published: every owner and health of the lens is offered although only page 1 is loaded", async () => {
     const { api, state } = harness({ live: wide() });
     mount(api, LIVE_URL);
     await loaded();
     expect(dataRows()).toHaveLength(50);
-    await waitFor(() => expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]));
+    await waitFor(() => expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]), SLOW);
     expect(ownerControl().tagName).toBe("SELECT");
     // the whole population is on offer, so there is no "loaded so far" sentence
     expect(screen.queryByTestId("options-limit")).toBeNull();
@@ -573,32 +577,34 @@ describe("Owner and Health choices are the authorized population, or they say th
       expect(Object.fromEntries(call.query)).toEqual({ environment: "live", limit: "1", group_by: call.query.get("group_by") });
       expect(call.filters).toBeNull();
     }
-  });
+  }, SLOW_TEST);
 
+  // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
   it("choosing the owner that only page 3 holds filters on the server, and the choices do not shrink or reload", async () => {
     const { api, state } = harness({ live: wide() });
     mount(api, LIVE_URL);
     await loaded();
-    await waitFor(() => expect(ownerValues()).toContain("Zed-129"));
+    await waitFor(() => expect(ownerValues()).toContain("Zed-129"), SLOW);
     fireEvent.change(ownerControl(), { target: { value: "Zed-129" } });
-    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "owner_user_id", op: "EQ", value: "Zed-129" }]));
-    await waitFor(() => expect(dataRows()).toHaveLength(1));
+    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "owner_user_id", op: "EQ", value: "Zed-129" }]), SLOW);
+    await waitFor(() => expect(dataRows()).toHaveLength(1), SLOW);
     expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]);
     expect(optionCalls(state)).toHaveLength(2);
-  });
+  }, SLOW_TEST);
 
   it("a search, an owner and a health already chosen never narrow the choices", async () => {
     const { api, state } = harness({ live: wide() });
     mount(api, `${LIVE_URL}&q=a-00&owner=Lan-002&health=READY`);
     await loaded();
-    await waitFor(() => expect(optionCalls(state)).toHaveLength(2));
+    await waitFor(() => expect(optionCalls(state)).toHaveLength(2), SLOW);
     for (const call of optionCalls(state)) {
       expect(call.query.has("q")).toBe(false);
       expect(call.filters).toBeNull();
     }
-    await waitFor(() => expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]));
+    await waitFor(() => expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]), SLOW);
   });
 
+  // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
   it("a dataset that cannot group by owner or health: the choices are the loaded rows, worded so, and a typed value reaches the server", async () => {
     const { api, state } = harness({ live: wide() });
     withoutOwnerHealthGroups(state);
@@ -610,19 +616,20 @@ describe("Owner and Health choices are the authorized population, or they say th
     expect(ownerValues()).toEqual(["Bobby-001", "Lan-002"]);
     // paging brings the rest of the rows, and with them the missing owner; the sentence stays
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(dataRows()).toHaveLength(100));
+    await waitFor(() => expect(dataRows()).toHaveLength(100), SLOW);
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(dataRows()).toHaveLength(130));
+    await waitFor(() => expect(dataRows()).toHaveLength(130), SLOW);
     expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]);
     expect(screen.getByTestId("options-limit")).toBeTruthy();
     // and a value the person types is the server's to filter, even before its page is loaded
     const owner = ownerControl();
     fireEvent.change(owner, { target: { value: "Zed-129" } });
     fireEvent.keyDown(owner, { key: "Enter" });
-    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "owner_user_id", op: "EQ", value: "Zed-129" }]));
-    await waitFor(() => expect(dataRows()).toHaveLength(1));
-  });
+    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "owner_user_id", op: "EQ", value: "Zed-129" }]), SLOW);
+    await waitFor(() => expect(dataRows()).toHaveLength(1), SLOW);
+  }, SLOW_TEST);
 
+  // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
   it("the Health menu of a dataset that does not publish the list takes a typed value too", async () => {
     const { api, state } = harness({ live: wide() });
     withoutOwnerHealthGroups(state);
@@ -634,16 +641,16 @@ describe("Owner and Health choices are the authorized population, or they say th
     fireEvent.change(add, { target: { value: "finding" } });
     fireEvent.keyDown(add, { key: "Enter" });
     // the typed word is kept as typed when no loaded row has it: the server decides
-    await waitFor(() => expect(search().get("health")).toBe("finding"));
-    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "health", op: "EQ", value: "finding" }]));
-  });
+    await waitFor(() => expect(search().get("health")).toBe("finding"), SLOW);
+    await waitFor(() => expect(datasetCalls(state).at(-1)!.filters).toEqual([{ field: "health", op: "EQ", value: "finding" }]), SLOW);
+  }, SLOW_TEST);
 
   it("an answer about another environment is refused: the choices fall back to the loaded rows and say so", async () => {
     const { api, state } = harness({ live: wide() });
     state.mutate = (body, call) => { if (call.query.has("group_by")) body.environment = "paper"; };
     mount(api, LIVE_URL);
     await loaded();
-    await waitFor(() => expect(optionCalls(state).length).toBeGreaterThan(0));
+    await waitFor(() => expect(optionCalls(state).length).toBeGreaterThan(0), SLOW);
     expect(ownerControl().tagName).toBe("INPUT");
     expect(screen.getByTestId("options-limit")).toBeTruthy();
   });
@@ -653,7 +660,7 @@ describe("Owner and Health choices are the authorized population, or they say th
     state.variantFor = (call) => (call.query.has("group_by") ? "status:503" : "ok");
     mount(api, LIVE_URL);
     await loaded();
-    await waitFor(() => expect(optionCalls(state).length).toBe(2));
+    await waitFor(() => expect(optionCalls(state).length).toBe(2), SLOW);
     expect(ownerControl().tagName).toBe("INPUT");
     expect(ownerValues()).toEqual(["Bobby-001", "Lan-002"]);
     expect(screen.getByTestId("options-limit")).toBeTruthy();
@@ -671,8 +678,8 @@ describe("Owner and Health choices are the authorized population, or they say th
     mount(api, LIVE_URL);
     await loaded();
     fireEvent.click(screen.getByRole("tab", { name: /^Paper/ }));
-    await waitFor(() => expect(optionCalls(state).some((call) => call.query.get("environment") === "paper")).toBe(true));
-    await waitFor(() => expect(ownerValues()).toEqual(["Paper-Owner"]));
+    await waitFor(() => expect(optionCalls(state).some((call) => call.query.get("environment") === "paper")).toBe(true), SLOW);
+    await waitFor(() => expect(ownerValues()).toEqual(["Paper-Owner"]), SLOW);
     release!();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(ownerValues()).toEqual(["Paper-Owner"]);
@@ -683,7 +690,7 @@ describe("Owner and Health choices are the authorized population, or they say th
     const { api } = harness({ live: alphasOf(200, [["LIVE"]], { owners }) });
     mount(api, LIVE_URL);
     await loaded();
-    await waitFor(() => expect(ownerControl().tagName).toBe("INPUT"));
+    await waitFor(() => expect(ownerControl().tagName).toBe("INPUT"), SLOW);
     expect(ownerValues()).toHaveLength(200);
     expect(screen.getByTestId("options-limit").textContent).toContain("Owner choices may be cut short by the server.");
     // Health has fewer groups than the bound, so it is not named
@@ -695,7 +702,7 @@ describe("Owner and Health choices are the authorized population, or they say th
     const { api } = harness({ live: alphasOf(201, [["LIVE"]], { owners }) });
     mount(api, LIVE_URL);
     await loaded();
-    await waitFor(() => expect(screen.getByTestId("options-limit")).toBeTruthy());
+    await waitFor(() => expect(screen.getByTestId("options-limit")).toBeTruthy(), SLOW);
     expect(ownerValues()).toEqual(owners.slice(0, 50));
   });
 

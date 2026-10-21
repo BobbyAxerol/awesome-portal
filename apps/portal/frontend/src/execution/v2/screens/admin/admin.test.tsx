@@ -7,6 +7,7 @@ import { whyText } from "../../gapWhyTestUtil";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SLOW, SLOW_TEST } from "../../waitsTestUtil";
 
 import { resetOverviewDouble, setOverviewDoubleVariants } from "../../../../../e2e/bffDoubleOverview";
 import type { ExecutionApi } from "../../../api/ports";
@@ -37,9 +38,9 @@ const mount = (entry = "/administration/actions", props: Partial<React.Component
   );
 
 const search = () => new URLSearchParams((screen.getByTestId("where").textContent ?? "").split("?")[1] ?? "");
-const loaded = () => screen.findByRole("heading", { name: "Read" });
+const loaded = () => screen.findByRole("heading", { name: "Read" }, SLOW);
 const tierTable = (label: string) => screen.getByRole("table", { name: `${label} actions` });
-const dock = () => screen.findByRole("complementary");
+const dock = () => screen.findByRole("complementary", {}, SLOW);
 /** The real client with some reads replaced; `withReadSignal` is dropped so the screen's scoped copy keeps the replacements. */
 const override = (over: Partial<ExecutionApi>): ExecutionApi => ({ ...httpApi(), withReadSignal: undefined, ...over });
 const posts = () => calls.filter((c) => c.method === "POST");
@@ -78,12 +79,12 @@ describe("tiers", () => {
     mount();
     await loaded();
     fireEvent.click(screen.getByRole("button", { name: /^Start elsewhere 4$/ }));
-    await waitFor(() => expect(search().get("state")).toBe("elsewhere"));
+    await waitFor(() => expect(search().get("state")).toBe("elsewhere"), SLOW);
     expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual(["Portfolio capital"]);
     fireEvent.click(screen.getByRole("button", { name: /^Ready 0$/ }));
     expect(await screen.findByText("No action is in this state.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Show all" }));
-    await waitFor(() => expect(search().get("state")).toBeNull());
+    await waitFor(() => expect(search().get("state")).toBeNull(), SLOW);
   });
 
   it("cards: every cell is labelled", async () => {
@@ -163,7 +164,7 @@ describe("the detail pane", () => {
   it("closes with Esc and returns the URL", async () => {
     await open("/administration/actions?sel=account-sync");
     fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(search().get("sel")).toBeNull());
+    await waitFor(() => expect(search().get("sel")).toBeNull(), SLOW);
   });
 });
 
@@ -200,7 +201,7 @@ describe("links (D4, M12)", () => {
     mount("/administration/actions?cmd=account/sync");
     const pane = await dock();
     expect(within(pane).getByRole("heading", { name: /Account sync|Sync/i })).toBeTruthy();
-    await waitFor(() => expect(search().get("sel")).toBe("account-sync"));
+    await waitFor(() => expect(search().get("sel")).toBe("account-sync"), SLOW);
     const note = screen.getByRole("note", { name: "What the link asked for" });
     expect(note.textContent).toContain("command account/sync");
     expect(note.textContent).toContain("Nothing was run.");
@@ -210,7 +211,7 @@ describe("links (D4, M12)", () => {
   it("action selects by task id, and the binding is named with a way back", async () => {
     mount("/administration/actions?action=account-sync&binding=deribit_main_01&env=paper");
     await dock();
-    await waitFor(() => expect(search().get("sel")).toBe("account-sync"));
+    await waitFor(() => expect(search().get("sel")).toBe("account-sync"), SLOW);
     const note = screen.getByRole("note", { name: "What the link asked for" });
     expect(note.textContent).toContain("binding deribit_main_01");
     expect(calls.filter((c) => c.method === "POST")).toHaveLength(0);
@@ -267,7 +268,7 @@ describe("planning", () => {
 
     await fill(pane);
     fireEvent.click(makePlan(pane));
-    await waitFor(() => expect(posts()).toHaveLength(1));
+    await waitFor(() => expect(posts()).toHaveLength(1), SLOW);
     expect(posts()[0]!.path).toBe("/commands/plans");
     expect(posts()[0]!.body).toMatchObject({
       schema_version: "execution.command-plan-request.v1",
@@ -279,23 +280,23 @@ describe("planning", () => {
       expected_target_version: 3,
       payload: { note: "Pause while the broker is checked" },
     });
-    await waitFor(() => expect(within(pane).getByRole("list", { name: "Command state" }).querySelector("[aria-current='step']")?.textContent).toContain("Accepted"));
+    await waitFor(() => expect(within(pane).getByRole("list", { name: "Command state" }).querySelector("[aria-current='step']")?.textContent).toContain("Accepted"), SLOW);
     expect(pane.textContent).toContain("op_DOUBLE_PLAN_ACCEPTED");
     expect(pane.textContent).toContain("Not published (FE-020)");
 
     // The same inputs again are a retry: same request key. An edit is a new intent: a new key.
     const firstKey = (posts()[0]!.body as { request_key: string }).request_key;
     fireEvent.click(makePlan(pane));
-    await waitFor(() => expect(posts()).toHaveLength(2));
+    await waitFor(() => expect(posts()).toHaveLength(2), SLOW);
     expect((posts()[1]!.body as { request_key: string }).request_key).toBe(firstKey);
-    await waitFor(() => expect(within(pane).getByRole("list", { name: "Command state" }).querySelector("[aria-current='step']")?.textContent).toContain("Uncertain"));
+    await waitFor(() => expect(within(pane).getByRole("list", { name: "Command state" }).querySelector("[aria-current='step']")?.textContent).toContain("Uncertain"), SLOW);
     expect(pane.textContent).toContain("This plan asked the Trading System to act");
 
     await fill(pane, { note: "Pause while the broker is rechecked" });
     fireEvent.click(makePlan(pane));
-    await waitFor(() => expect(posts()).toHaveLength(3));
+    await waitFor(() => expect(posts()).toHaveLength(3), SLOW);
     expect((posts()[2]!.body as { request_key: string }).request_key).not.toBe(firstKey);
-    await waitFor(() => expect(within(pane).getByRole("list", { name: "Command state" }).querySelector("[aria-current='step']")?.textContent).toContain("Preview"));
+    await waitFor(() => expect(within(pane).getByRole("list", { name: "Command state" }).querySelector("[aria-current='step']")?.textContent).toContain("Preview"), SLOW);
     expect(pane.textContent).toContain("COMMAND_RELAY_DISABLED");
     expect(pane.textContent).toContain("Nothing was asked of the Trading System");
   });
@@ -307,8 +308,8 @@ describe("planning", () => {
     expect(pane.textContent).toContain("Make a plan first");
     await fill(pane);
     fireEvent.click(makePlan(pane));
-    await waitFor(() => expect(posts()).toHaveLength(1));
-    await waitFor(() => expect(pane.textContent).toContain("COMMAND_R2: kill switch engaged"));
+    await waitFor(() => expect(posts()).toHaveLength(1), SLOW);
+    await waitFor(() => expect(pane.textContent).toContain("COMMAND_R2: kill switch engaged"), SLOW);
     expect((within(pane).getByRole("button", { name: "Apply" }) as HTMLButtonElement).disabled).toBe(true);
     expect(calls.some((c) => /\/apply$/.test(c.path))).toBe(false);
   });
@@ -319,7 +320,7 @@ describe("planning", () => {
     const pane = await dock();
     await fill(pane, { note: "my secret-token-abc123 note" });
     fireEvent.click(makePlan(pane));
-    await waitFor(() => expect(pane.textContent).toContain("named like a credential"));
+    await waitFor(() => expect(pane.textContent).toContain("named like a credential"), SLOW);
     expect(document.body.textContent).not.toContain("secret-token-abc123 note\n");
     expect(pane.textContent).not.toContain("abc123");
   });
@@ -331,9 +332,9 @@ describe("the first ready action opens on arrival (ADM-B2)", () => {
     mount();
     const pane = await dock();
     expect(within(pane).getByRole("heading", { name: "System health" })).toBeTruthy();
-    await waitFor(() => expect(search().get("sel")).toBe("health"));
+    await waitFor(() => expect(search().get("sel")).toBe("health"), SLOW);
     fireEvent.click(within(pane).getByRole("button", { name: "Close" }));
-    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull(), SLOW);
     expect(search().get("sel")).toBeNull();
   });
 
@@ -360,7 +361,7 @@ describe("a local read", () => {
     fireEvent.change(within(pane).getByLabelText(/^mode/), { target: { value: "paper" } });
     expect(run.disabled).toBe(false);
     fireEvent.click(run);
-    await waitFor(() => expect(pane.textContent).toContain("Source command sent: no"));
+    await waitFor(() => expect(pane.textContent).toContain("Source command sent: no"), SLOW);
     expect(posts()[0]!.path).toBe("/commands/tasks/health/run");
     expect(posts()[0]!.body).toMatchObject({ params: { mode: "paper" } });
     expect(pane.textContent).toContain("sha256:");
@@ -464,7 +465,7 @@ describe("the auto-open is once, filter-aware and does not take focus", () => {
     expect(search().get("sel")).toBeNull();
     // Showing everything afterwards does not open it either: the one chance was the first load.
     fireEvent.click(screen.getByRole("button", { name: /^All \d+$/ }));
-    await waitFor(() => expect(search().get("state")).toBeNull());
+    await waitFor(() => expect(search().get("state")).toBeNull(), SLOW);
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(screen.queryByRole("complementary")).toBeNull();
     cleanup();
@@ -481,21 +482,23 @@ describe("the auto-open is once, filter-aware and does not take focus", () => {
     expect(pane.contains(document.activeElement)).toBe(false);
     const other = within(tierTable("Read")).getAllByRole("row").slice(1).find((r) => !r.textContent?.includes("System health"))!;
     fireEvent.click(other);
-    await waitFor(() => expect(search().get("sel")).not.toBe("health"));
+    await waitFor(() => expect(search().get("sel")).not.toBe("health"), SLOW);
     const next = await dock();
-    await waitFor(() => expect(document.activeElement).toBe(next));
+    await waitFor(() => expect(document.activeElement).toBe(next), SLOW);
   });
 
+  // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
   it("Close on the auto-opened pane leaves focus on the first table row, not lost on the body", async () => {
     setOverviewDoubleVariants({ admin: "connected-read" });
     mount();
     const pane = await dock();
     fireEvent.click(within(pane).getByRole("button", { name: "Close" }));
-    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull(), SLOW);
     const first = within(tierTable("Read")).getAllByRole("row")[1]!;
     expect(document.activeElement).toBe(first);
-  });
+  }, SLOW_TEST);
 
+  // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
   it("a pane the reader opened themselves takes focus and gives it back to that row on Close", async () => {
     mount();
     await loaded();
@@ -503,11 +506,11 @@ describe("the auto-open is once, filter-aware and does not take focus", () => {
     row.focus();
     fireEvent.click(row);
     const pane = await dock();
-    await waitFor(() => expect(document.activeElement).toBe(pane));
+    await waitFor(() => expect(document.activeElement).toBe(pane), SLOW);
     fireEvent.click(within(pane).getByRole("button", { name: "Close" }));
-    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull(), SLOW);
     expect(document.activeElement).toBe(row);
-  });
+  }, SLOW_TEST);
 });
 
 describe("the auto-open: first successful load, tier order, per workspace", () => {
@@ -539,7 +542,7 @@ describe("the auto-open: first successful load, tier order, per workspace", () =
     const value = { ...base, tasks: [health, { ...other, state: "CONNECTED" }], totalTasks: 2, taskGroups: [other.taskGroup, health.taskGroup] };
     mount("/administration/actions", {}, override({ getOperatorTasks: asTasks(value as TaskCatalogue) }));
     await dock();
-    await waitFor(() => expect(search().get("sel")).toBe(other.taskId));
+    await waitFor(() => expect(search().get("sel")).toBe(other.taskId), SLOW);
   });
 
   it("a new workspace is a new arrival and may open once; the same workspace refreshing opens nothing more", async () => {
@@ -553,16 +556,16 @@ describe("the auto-open: first successful load, tier order, per workspace", () =
     );
     const view = render(tree("ws_1"));
     const pane = await dock();
-    await waitFor(() => expect(search().get("sel")).toBe("health"));
+    await waitFor(() => expect(search().get("sel")).toBe("health"), SLOW);
     fireEvent.click(within(pane).getByRole("button", { name: "Close" }));
-    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull(), SLOW);
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
     await loaded();
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(screen.queryByRole("complementary")).toBeNull();
     view.rerender(tree("ws_2"));
     await dock();
-    await waitFor(() => expect(search().get("sel")).toBe("health"));
+    await waitFor(() => expect(search().get("sel")).toBe("health"), SLOW);
   });
 });
 
@@ -593,7 +596,7 @@ describe("a failed refresh keeps the last good reads, and acting waits for a goo
     fireEvent.click(run);
     expect(posts()).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    await waitFor(() => expect(screen.queryByText(/The refresh failed/)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(/The refresh failed/)).toBeNull(), SLOW);
     expect(pane.textContent).not.toMatch(STALE);
     // What the reader typed before the failed refresh is still there.
     expect((within(pane).getByLabelText(/^mode/) as HTMLInputElement).value).toBe("paper");
@@ -623,7 +626,7 @@ describe("a failed refresh keeps the last good reads, and acting waits for a goo
     fireEvent.click(make);
     expect(posts()).toHaveLength(0);
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    await waitFor(() => expect(screen.queryByText(/The refresh failed/)).toBeNull());
+    await waitFor(() => expect(screen.queryByText(/The refresh failed/)).toBeNull(), SLOW);
     expect((within(pane).getByLabelText(/^Note/) as HTMLInputElement).value).toBe("Pause while the broker is checked");
     expect((within(pane).getByRole("button", { name: "Make plan" }) as HTMLButtonElement).disabled).toBe(false);
   });
@@ -717,7 +720,7 @@ describe("states: empty is not stale is not unavailable", () => {
     // A good refresh clears it.
     calls = 0;
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    await waitFor(() => expect(document.querySelector(".exec-adm-tiers")?.getAttribute("data-stale")).toBeNull());
+    await waitFor(() => expect(document.querySelector(".exec-adm-tiers")?.getAttribute("data-stale")).toBeNull(), SLOW);
     expect(screen.queryByText(/The refresh failed/)).toBeNull();
   });
 
