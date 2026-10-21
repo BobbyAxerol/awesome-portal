@@ -9,6 +9,7 @@ import {installResearchCurrentHumanSchema,assertRegisteredResearchCurrentHumanSc
 import {AuthService} from "../auth/auth.service";
 import {Argon2CredentialService} from "../auth/argon";
 import {ExecutionAccessService} from "../execution-v2/access.service";
+import {nativeInstallFailureCode} from "../execution-v2/native-install-error";
 
 async function main(){
   const [operation,...extra]=process.argv.slice(2),config=loadConfig();
@@ -46,6 +47,6 @@ async function main(){
 }
 void main().catch(error=>{
   // Neither paths, private JSON, SQL details, URLs nor source exceptions.
-  const code=error instanceof Error&&/^(CURRENT_HUMAN_SCHEMA_[A-Z_]+|NATIVE_RESEARCH_INSTALL_GRANT_WINDOW_REQUIRED)$/.test(error.message)?error.message:"NATIVE_RESEARCH_INSTALL_FAILED";
+  const code=nativeInstallFailureCode(error);
   process.stderr.write(JSON.stringify({code})+"\n");process.exitCode=1;
 });
