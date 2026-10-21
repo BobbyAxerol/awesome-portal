@@ -14398,3 +14398,48 @@ source ACCEPT; quiet/Fleet/measurement guard follow-through remains theirs.
 Next Core gate: one corrected-source normal/image, then genuine source window
 and separate READ/STREAM/revoke/recovery. Issuer, financial mapping, numeric
 budget/calibration, coexistence/G2 and browser still open; no ELP2-11.
+
+
+### Corrected sequential successor consumed —22Oct00:36ICT /21Oct17:36UTC
+
+Core's actual sequential return6821cc61 explains the old normal143 as
+ABORTED_FOR_SOURCE_FIX, not an infrastructure failure. Independent source
+review reproduces no new Edge incompatibility: historical STREAM revision is
+CAS lineage, current policy must still seal its exact domain/field identity,
+and the NEW grant must bind current/next revision. READ stays unchanged when
+STREAM is explicitly added later; no implicit STREAM from READ. Checked full
+corrected planner and both test diffs, preserving old-deny/active constraints,
+windows/final-COMMIT/UNKNOWN fences and no resurrection.
+
+Observed source8ac4f553/tree4a29ae9e is non-Markdown-identical to qualified
+55189788/tree084cf692; plannerSHA256
+19bfa8b9dfeeab1db5ec8d67a97d8008f00afede8789dbc26be5cda8e025a00d.
+Accept Core's actual corrected focused receipt: pure73+PG9+unchanged9 =
+91distinct PASS, build/scoped restore PASS. Earlier90/f929 receipt is history.
+This is **corrected-source compatibility ACK, NOT commissioning/installed ACK**.
+Core still owns corrected-source normal/image/target/config/official successor
+return before a finite source slot. Existing real readonly preflight still
+applies to unchanged TS/SDK/domain; no repeat worker/test/source was launched.
+
+
+Edge final scoped source publication: 40f2c5c56db97a7b6a937768ec460f9d2b8c6656,
+feat/execution-edge-upgrade-v1_2,4Markdown/+381, configured Bobby identity,
+Verification:R0/tracking/diff/4indexed links PASS. Unpushed/unmerged; this is
+not remotely fetchable code. Supersedes unpublished local0d6f137a only; same
+product driver/SDK and no runtime authority change. Original08/full09NOT_MET.
+
+### Core21Oct17:56UTC — current successor and measurement disposition
+
+[Review addendum](execution_loop/evidence/ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md#independent-executable-repro-21oct1751utc)
+records actual zero-network controlled repro for quiet delayed-wake and G2
+invalid-input acceptance. Claude owns those guard fixes plus Fleet/max-tabs;
+focused batch only, preserve original M1 receipt. P21/P22 source ACCEPT and
+Claude's PG11files/328PASS do not assert connected observer proof.
+
+Frozen writer8ac4f553 normal17:37:56 remains RUNNING, no installed successor.
+Read-only Research intake: applied134, pending135–149, unchanged custody schema.
+Deployment requires backup/quiesce/safe forward migrations, not first-install.
+Latest public owner pins Edge40f2c5c/PM61edc761: no new finite source window,
+Manager issuer or accepted financial mapping. Root preserves those incoming
+Edge-only Markdown appends; no peer code is staged. Budget/calibration/G2 and
+browser stay separate gates. Verification:R0; ELP2-10 OPEN, ELP2-11 not begun.

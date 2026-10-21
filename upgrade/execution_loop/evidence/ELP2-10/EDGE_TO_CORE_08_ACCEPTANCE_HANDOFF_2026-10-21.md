@@ -406,3 +406,32 @@ terminal and current gate disposition; Edge neither repeats that suite nor
 stops a peer job. Current scoped Core test activity is not a normal PASS.
 Return the actual qualified disposition/pins before a new finite commissioning
 ACK. Existing source remains OFF; no short-lived session/grant was created.
+
+
+### Corrected sequential successor consumed —22Oct00:36ICT /21Oct17:36UTC
+
+Core's actual sequential return6821cc61 explains the old normal143 as
+ABORTED_FOR_SOURCE_FIX, not an infrastructure failure. Independent source
+review reproduces no new Edge incompatibility: historical STREAM revision is
+CAS lineage, current policy must still seal its exact domain/field identity,
+and the NEW grant must bind current/next revision. READ stays unchanged when
+STREAM is explicitly added later; no implicit STREAM from READ. Checked full
+corrected planner and both test diffs, preserving old-deny/active constraints,
+windows/final-COMMIT/UNKNOWN fences and no resurrection.
+
+Observed source8ac4f553/tree4a29ae9e is non-Markdown-identical to qualified
+55189788/tree084cf692; plannerSHA256
+19bfa8b9dfeeab1db5ec8d67a97d8008f00afede8789dbc26be5cda8e025a00d.
+Accept Core's actual corrected focused receipt: pure73+PG9+unchanged9 =
+91distinct PASS, build/scoped restore PASS. Earlier90/f929 receipt is history.
+This is **corrected-source compatibility ACK, NOT commissioning/installed ACK**.
+Core still owns corrected-source normal/image/target/config/official successor
+return before a finite source slot. Existing real readonly preflight still
+applies to unchanged TS/SDK/domain; no repeat worker/test/source was launched.
+
+
+Edge final scoped source publication: 40f2c5c56db97a7b6a937768ec460f9d2b8c6656,
+feat/execution-edge-upgrade-v1_2,4Markdown/+381, configured Bobby identity,
+Verification:R0/tracking/diff/4indexed links PASS. Unpushed/unmerged; this is
+not remotely fetchable code. Supersedes unpublished local0d6f137a only; same
+product driver/SDK and no runtime authority change. Original08/full09NOT_MET.

@@ -234,3 +234,42 @@ Claude keeps these paths. Existing Fleet-flight, stage pre-I/O cap and G2
 source/apparatus/population binding requests remain open until their own
 fix/receipts. No source authority/calibration values or acceptance is inferred.
 
+## Independent executable repro —21Oct17:51UTC
+
+This addendum supersedes only the earlier statement that the following two
+findings were source-review-only. Root imported the actual functions from
+Claude's source58c782ede5c0b006c458dc5dcb78b828ee83ec59 (current89f561c4 adds
+Markdown only) and exercised controlled inputs. No fetch, provider, browser,
+DB, source/fixture edit, heavy lock or load measurement was used.
+
+| Guard | Controlled input | Actual result | Disposition |
+| --- | --- | --- | --- |
+| `e2e/quietGate.mjs` | start0; cap15000ms; quiet400ms; activity14900ms; delayed wake15500ms; earliest possible quiet15300ms | `RETURNED_PASS`, waited15500ms | **CHANGE**: deadline already passed before quiet could be achieved; add delayed-wake regression and make exact-cap semantics explicit. |
+| `scripts/measure/lib/g2.mjs` | one synthetic row, `samples:1.25,p95_ms:10,max_ms:1`; no apparatus/source/window/census | `ORIGINAL_GATE_MET_FOR_SUPPLIED_POPULATION` | **CHANGE**: reject invalid counts/percentiles and missing exact-run/population authority before a genuine G2 ingestion. |
+
+Captured result, retained privately without credentials:
+`/home/bobby/.local/state/portal-execution-elp210/20261021/successor-frozen-ErfjOY/claude-guard-source-repro.json`.
+SHA256 `eef6c8509b28a91ef66fb698a176a28fa9720dfedbcbb234e02d19b9a55fbae0`.
+The synthetic row is explicitly TEST_ONLY, not an Edge census or a financial
+source value. These are two reproduced guard defects, **not** two new product
+measurements, a failed P184 source run, or permission to change its thresholds.
+
+Claude remains the writer for both fixes, Fleet cancellation and pre-I/O tab
+validation. Return their focused regressions together; no full M1 rerun.
+
+### BE-P22 actual PG return / independent disposition
+
+Claude89f561c4 records **11 files /328 PASS /EXIT0** for the owned PG lane
+30108061488512459. Its stripped log SHA256 is
+`313eed52c6fb444860f777fcb7694386f372378252868359cc156465c9216a6d`;
+the source/command/cleanup locator is Claude's source checkout
+`/home/bobby/portal-research-fe/upgrade/execution_loop/evidence/BE-CLAUDE-2026-10-20/BE-P22-native-cache-observation.md`
+at89f561c4 (last section; not yet landed into canonical).
+That job completed before Root's fresh normal gate began17:37:56UTC.
+Root accepts the source fixes and this bounded test receipt; it did not rerun
+those328 tests or count them as connected HIT/egress/CLI proof. Observer stays
+OFF, no source or identity is activated by this disposition.
+
+**Verification: R0.** This addendum changes only Markdown. Code/normal gates
+remain with their frozen source; historical measurement receipts are unchanged.
+
