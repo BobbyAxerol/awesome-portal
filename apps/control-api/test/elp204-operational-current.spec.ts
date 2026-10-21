@@ -620,7 +620,7 @@ describe.skipIf(!URL)("ELP2-04 current operational parents / actual PG+HTTP / TE
     expect(found.rowCount).toBe(1);
     expect(found.rows[0].indexdef).not.toMatch(/UNIQUE|WHERE/);
     expect(found.rows[0].indexdef.replace(/\s+/g, " ")).toMatch(/\(workspace_id, \( ?CASE WHEN \(\(octet_length\(target_id\) >= 1\) AND \(octet_length\(target_id\) <= 191\)\) THEN target_id ELSE NULL::text END\), target_type, environment\)$/);
-    expect((await ctx.pool.query("SELECT 1 FROM pgmigrations WHERE name = '1723680000148_execution-operation-queue-scope-lookup-index'")).rowCount).toBe(1);
+    expect((await ctx.pool.query("SELECT 1 FROM pgmigrations WHERE name = '1723680000149_execution-operation-queue-scope-lookup-index'")).rowCount).toBe(1);
     // The view's target_id must be that very expression, or the index could never be used by the queue.
     const view = (await ctx.pool.query<{ def: string }>("SELECT pg_get_viewdef('execution_operation_queue_v2'::regclass) AS def")).rows[0].def.replace(/\s+/g, " ");
     expect(view).toContain("CASE WHEN ((octet_length(target_id) >= 1) AND (octet_length(target_id) <= 191)) THEN target_id ELSE NULL::text END AS target_id");
