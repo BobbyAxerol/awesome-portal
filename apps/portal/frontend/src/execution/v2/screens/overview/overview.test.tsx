@@ -75,7 +75,7 @@ describe("BUSY", () => {
     expect(nav?.textContent).toBe(MONEY_GAP);
     expect((nav?.textContent ?? "").replace(/\(FE-[\d/]+\)/, "")).not.toMatch(/\d/);
     // The visible word is "Not published"; the ids are in its title and in hidden text.
-    expect(nav?.querySelector(".exec-blk-np")?.getAttribute("title")).toBe("FE-005/006/013/025");
+    expect(whyText(nav?.querySelector(".exec-blk-np") ?? null)).toContain("FE-005/006/013/025");
     for (const label of ["Net PnL", "Return", "Drawdown"]) expect(kpi(label), label).toBeUndefined();
     const line = screen.getByTestId("not-available-line");
     expect(screen.getAllByTestId("not-available-line")).toHaveLength(1);
@@ -116,7 +116,7 @@ describe("BUSY", () => {
     expect(rows[0]!.querySelector(".exec-ov-what-title")?.textContent).toContain("Broker sync diverged");
     // One short SLA line in the third-width panel; the full instant is one hover away.
     expect(rows[0]!.querySelector(".exec-ov-item-sla")?.textContent).toContain("Overdue since 22 Aug 11:58Z");
-    expect(rows[0]!.querySelector(".exec-ov-item-sla")?.getAttribute("title")).toContain("Overdue (since 2026-08-22 11:58:00 UTC)");
+    expect(rows[0]!.querySelector(".exec-ov-item-sla")?.getAttribute("title")).toContain("Overdue (since 22 Aug 11:58Z)");
     const href = (r: HTMLElement) => r.querySelector("a")?.getAttribute("href");
     expect(href(rows[0]!)).toBe("/execution/operations/incidents/inc_44");
     expect(href(rows[1]!)).toBe("/execution/operations?operation=op_1251");
@@ -203,7 +203,7 @@ describe("the other snapshots", () => {
     mount();
     await loaded();
     expect(screen.getByText("Nothing needs you.")).toBeTruthy();
-    expect(screen.getByText(/Quiet as of 2026-08-22 12:00:00 UTC/)).toBeTruthy();
+    expect(screen.getByText(/Quiet as of 22 Aug 12:00Z/)).toBeTruthy();
     expect(screen.getByText("Quiet")).toBeTruthy();
     expect(kpi("Open incidents").querySelector(".exec-blk-kpi-value")?.textContent).toBe("0");
     expect(kpi("Needs attention").querySelector(".exec-blk-kpi-value")?.textContent).toBe("0");
@@ -214,7 +214,8 @@ describe("the other snapshots", () => {
     setOverviewDoubleVariants({ commandCenter: "partial" });
     mount();
     await loaded();
-    expect(screen.getByTitle("Some triage sources did not answer").textContent).toBe("The list may be missing items");
+    expect(screen.getByText("The list may be missing items")).toBeTruthy();
+    expect(whyText(screen.getByText("The list may be missing items").parentElement)).toBe("Some triage sources did not answer");
     expect(screen.getAllByText("Partial").length).toBeGreaterThan(0);
     expect(kpi("Needs attention").querySelector(".exec-blk-kpi-value")?.textContent).toBe("~1 seen");
     expect(kpi("Open incidents").querySelector(".exec-blk-kpi-value")?.textContent).toBe("None seen");
@@ -227,7 +228,8 @@ describe("the other snapshots", () => {
     mount();
     await loaded();
     expect(screen.getAllByText("Stale").length).toBeGreaterThan(0);
-    expect(screen.getByTitle("Some triage sources did not answer").textContent).toBe("The list may be missing items");
+    expect(screen.getByText("The list may be missing items")).toBeTruthy();
+    expect(whyText(screen.getByText("The list may be missing items").parentElement)).toBe("Some triage sources did not answer");
   });
 
   it("feed-unavailable shows Not available for every count the feed would have given, not zero", async () => {
@@ -344,7 +346,7 @@ describe("page states", () => {
     await loaded();
     fail = true;
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    expect((await screen.findByText("Showing the last good read")).getAttribute("title")).toBe("The last refresh failed (UPSTREAM_503).");
+    expect(whyText((await screen.findByText("Showing the last good read")).parentElement)).toBe("The last refresh failed (UPSTREAM_503).");
     expect(kpi("Needs attention").querySelector(".exec-blk-kpi-value")?.textContent).toBe("3 of 214");
   });
 });
@@ -638,7 +640,7 @@ describe("the fund NAV series (FE-013, BE-P4 manager series)", () => {
     await waitFor(() => expect(performance().textContent).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED"));
     expect(performance().textContent).toContain("All history is not a published window");
     expect(performance().textContent).toContain("Not available");
-    expect(kpi("NAV").querySelector(".exec-blk-kpi-note span")!.getAttribute("title")).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED");
+    expect(whyText(kpi("NAV").querySelector(".exec-blk-kpi-note"))).toContain("ALL_HISTORY_WINDOW_NOT_PUBLISHED");
     expect(navCell()).toBe("Not available");
   });
 

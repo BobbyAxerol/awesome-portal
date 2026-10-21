@@ -7,6 +7,7 @@
  *
  * Hostile characters are built with `String.fromCodePoint`, so no invisible character sits in this source.
  */
+import { whyText } from "../../gapWhyTestUtil";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -193,7 +194,7 @@ describe("the page: what it shows", () => {
     const { api, createApprovalRequest } = port(() => CREATED);
     mountPage(api);
     const unavailable = await screen.findByText("Run Library not available. Type the ids below.");
-    expect(unavailable.getAttribute("title")).toMatch(/The Research run list could not be read/);
+    expect(whyText(unavailable)).toMatch(/The Research run list could not be read/);
     expect(alphaSel().matches(":disabled")).toBe(true);
     const hand = document.querySelector("details.exec-rq-hand") as HTMLDetailsElement;
     expect(hand.open).toBe(true);
@@ -284,7 +285,7 @@ describe("the form: pickers and the 'Still needed' bar", () => {
     fireEvent.change(alphaSel(), { target: { value: "alpha_TEST_ONLY_c" } });
     expect(runSel()).toHaveProperty("value", "");
     fireEvent.change(runSel(), { target: { value: "run_TEST_ONLY_c1" } });
-    expect(screen.getByText("Claims cannot be listed for this run. Type the claim id below.").getAttribute("title")).toContain("R1_CLAIMS_NOT_PUBLISHED");
+    expect(whyText(screen.getByText("Claims cannot be listed for this run. Type the claim id below."))).toContain("R1_CLAIMS_NOT_PUBLISHED");
   });
 
   it("changing the alpha drops a run and claim that belonged to the old one", async () => {
@@ -341,7 +342,7 @@ describe("submit: the one road to the port", () => {
     expect(within(panel).getByText("apr_TEST_ONLY_203")).toBeTruthy();
     expect(within(panel).getByText("R1 · a quant reviewer, not you")).toBeTruthy();
     expect(within(panel).getByText("2").textContent).toBe("2");
-    expect(within(panel).getByText("2026-10-20 12:00 UTC")).toBeTruthy();
+    expect(within(panel).getByText("20 Oct 12:00Z")).toBeTruthy();
     expect(within(panel).getByText("approval.v3")).toBeTruthy();
     expect(within(panel).getByText("lan")).toBeTruthy();
     expect(within(panel).getByRole("link", { name: "Open request" }).getAttribute("href")).toBe("/governance/approvals/apr_TEST_ONLY_203/r1");

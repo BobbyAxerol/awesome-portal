@@ -36,7 +36,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 
 import type { ExecutionApi } from "../../../../api/ports";
 import { PanelState } from "../../../../components/states";
-import { utcStamp } from "../../../../time";
 import { useDockMode, useDockSelection } from "../../../Drawer";
 import { Flag } from "../../../Flag";
 import { holds, V2_CAPABILITY } from "../../../shell/roleNav";
@@ -56,6 +55,8 @@ import { RiskTab } from "./Risk";
 import { usePortfolioReads, type Visited } from "./use360";
 
 import "../../../css/portfolios.css";
+import { formatInstant } from "../../../boundary";
+import { GapWhy } from "../../../blocks";
 
 export const PORTFOLIO_SCREEN_KEY = "portfolios" as const;
 
@@ -199,7 +200,7 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
     return (
       <>
         {resource.completeness !== null && resource.completeness.toUpperCase() !== "COMPLETE" ? (
-          <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /> <span title={`The resource is ${humanize(resource.completeness).toLowerCase()}`}>Some relations may be missing</span></p>
+          <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /> <span>Some relations may be missing</span><GapWhy name="Why relations may be missing" rows={[`The resource is ${humanize(resource.completeness).toLowerCase()}`]} next={null} /></p>
         ) : null}
         {resource.unavailableBranches.length > 0 ? (
           <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Branch not whole" size="sm" /> Not available: {resource.unavailableBranches.map(humanize).join(", ")}</p>
@@ -260,10 +261,10 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
         <div className="exec-pf-ctrls">
           {identity ? <Flag kind={identity.stateKind} label={identity.stateLabel} size="sm" /> : null}
           {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
-          {resource ? <span className="exec-pf-dim">{resource.asOf ? `As of ${utcStamp(resource.asOf)}` : "Source time not published"}</span> : null}
+          {resource ? <span className="exec-pf-dim">{resource.asOf ? `As of ${formatInstant(resource.asOf)}` : "Source time not published"}</span> : null}
           {compareHref === null ? (
             <span className="exec-pf-btnwhy">
-              <button type="button" className="exec-pf-btn" disabled title={COMPARE_OFF_REASON} aria-describedby={`${tabsId}-compare`}>Compare with</button>
+              <button type="button" className="exec-pf-btn" disabled aria-describedby={`${tabsId}-compare`}>Compare with</button>
               <span id={`${tabsId}-compare`} className="exec-pf-why">{COMPARE_OFF_REASON}</span>
             </span>
           ) : (

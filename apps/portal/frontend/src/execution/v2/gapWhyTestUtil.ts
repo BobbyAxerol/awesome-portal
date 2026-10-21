@@ -27,3 +27,12 @@ export function whyText(scope: Element | null): string {
   if (!wasOpen) fireEvent.click(button);
   return text;
 }
+
+const MONTH_INDEX: Readonly<Record<string, number>> = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 };
+
+/** A sortable key for the house instant `17 Oct 09:14Z` (one year; a text sort would put `2 Jul` after `17 Oct`). */
+export function instantKey(text: string): number {
+  const m = /^(\d{1,2}) ([A-Z][a-z]{2}) (\d{2}):(\d{2})(?::(\d{2}))?Z$/.exec(text);
+  if (m === null) throw new Error(`not a house instant: ${text}`);
+  return (MONTH_INDEX[m[2]] * 100 + Number(m[1])) * 1_000_000 + Number(m[3]) * 10_000 + Number(m[4]) * 100 + Number(m[5] ?? "0");
+}

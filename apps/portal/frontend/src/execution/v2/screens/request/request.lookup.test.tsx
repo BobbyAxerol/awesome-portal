@@ -6,6 +6,7 @@
  * is a stubbed same-origin `fetch` shaped like `research.run-library.v1`. Lane: FIXTURE_LAB. The write-safety rules of the form
  * (no Enter submit, an uncertain outcome locks the payload, one idempotency key) are asserted again here around the new read.
  */
+import { whyText } from "../../gapWhyTestUtil";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -305,7 +306,7 @@ describe("the run list: server filter and cursor", () => {
     runsAnswer = () => ({ items: [run(1, "alpha_near", "Near Alpha")] });
     mount(port().api);
     await screen.findByRole("option", { name: "Near Alpha" });
-    expect(screen.getByText(/Alphas of the loaded runs only/).getAttribute("title")).toContain("did not publish its alpha list");
+    expect(whyText(screen.getByText(/Alphas of the loaded runs only/))).toContain("did not publish its alpha list");
   });
 
   it("the write-safety rules of the form hold with the new reads: Enter in an id field never submits", async () => {

@@ -244,7 +244,7 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
     mount(api);
     const t = await table();
     fireEvent.click(within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr")!);
-    const dock = await screen.findByRole("complementary", { name: "account/sync" });
+    const dock = await screen.findByRole("complementary", { name: "Sync" });
     expect(screen.getByTestId("where").textContent).toContain("sel=op_01K3COMMANDPLAN000000000000");
     expect(within(dock).getByText("op_01K3COMMANDPLAN000000000000")).toBeTruthy();
     expect(within(dock).getAllByText("Blocked").length).toBeGreaterThan(0);
@@ -281,7 +281,7 @@ describe("Mine, Acknowledge, Resolve are disabled with a reason", () => {
   it("a link that names an operation opens it; one that is not loaded says so", async () => {
     const { api } = fakeApi();
     mount(api, { requestedOperation: "op_TEST_ONLY_s01" });
-    expect(await screen.findByRole("complementary", { name: "portfolio/adjust-target-budget" })).toBeTruthy();
+    expect(await screen.findByRole("complementary", { name: "Adjust target budget" })).toBeTruthy();
     cleanup();
     mount(fakeApi().api, { requestedOperation: "op_missing" });
     expect(await screen.findByText("Not in the loaded rows")).toBeTruthy();

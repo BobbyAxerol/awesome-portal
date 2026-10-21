@@ -14,7 +14,6 @@
 import type { CapitalLedger } from "../../../../analytics";
 import { NotAvailableLine, SectionPanel } from "../../../blocks";
 import { CardsTable, type CardsColumn } from "../../../cardsTable";
-import { utcStamp } from "../../../../time";
 import { PF_FE } from "../fe";
 import { Money, envWord } from "../format";
 import type { TabCtx } from "./ctx";
@@ -23,12 +22,13 @@ import { CapitalEnv } from "./CapitalEnv";
 import { InternalLink, ReadGate } from "./parts";
 
 import "../../../css/portfolios.css";
+import { formatInstant } from "../../../boundary";
 
 const LEDGER_ROW_CAP = 200;
 
 function ledgerColumns(ctx: TabCtx): readonly CardsColumn<LedgerRowView>[] {
   return [
-    { key: "time", label: "Time · UTC", render: (row) => (row.entry.occurredAt === null ? <span className="exec-pf-na">Time not published</span> : utcStamp(row.entry.occurredAt)) },
+    { key: "time", label: "Time · UTC", render: (row) => (row.entry.occurredAt === null ? <span className="exec-pf-na">Time not published</span> : formatInstant(row.entry.occurredAt)) },
     { key: "event", label: "Event", render: (row) => row.movement },
     { key: "direction", label: "Direction", render: (row) => row.direction },
     {

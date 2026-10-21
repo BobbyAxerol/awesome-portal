@@ -193,7 +193,7 @@ describe("window and filters in the URL (M3)", () => {
 describe("?operation= (M3)", () => {
   it("selects the operation as sel with replace, removes operation from the URL, and Back leaves the screen", async () => {
     const { router } = mountRouted("/execution/operations?operation=op_TEST_ONLY_s01&workspace_id=ws_1&lens=all");
-    expect(await screen.findByRole("complementary", { name: "portfolio/adjust-target-budget" })).toBeTruthy();
+    expect(await screen.findByRole("complementary", { name: "Adjust target budget" })).toBeTruthy();
     await waitFor(() => expect(params().get("sel")).toBe("op_TEST_ONLY_s01"));
     expect(params().has("operation")).toBe(false);
     expect(params().get("workspace_id")).toBe("ws_1");
@@ -204,7 +204,7 @@ describe("?operation= (M3)", () => {
 
   it("is not forced again after the reader closes the dock", async () => {
     mountRouted("/execution/operations?operation=op_TEST_ONLY_s01");
-    const dock = await screen.findByRole("complementary", { name: "portfolio/adjust-target-budget" });
+    const dock = await screen.findByRole("complementary", { name: "Adjust target budget" });
     fireEvent.click(within(dock).getByText("Close"));
     await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
     expect(params().has("sel")).toBe(false);
@@ -213,7 +213,7 @@ describe("?operation= (M3)", () => {
 
   it("a sel already in the URL wins, and operation is still removed", async () => {
     mountRouted("/execution/operations?operation=op_TEST_ONLY_s01&sel=op_TEST_ONLY_s02&lens=all");
-    expect(await screen.findByRole("complementary", { name: "portfolio/recall" })).toBeTruthy();
+    expect(await screen.findByRole("complementary", { name: "Recall" })).toBeTruthy();
     await waitFor(() => expect(params().has("operation")).toBe(false));
     expect(params().get("sel")).toBe("op_TEST_ONLY_s02");
   });
@@ -226,7 +226,7 @@ describe("?operation= (M3)", () => {
 
   it("the prop the route passes is consumed once, without a param in the URL", async () => {
     mountRouted("/execution/operations", { requestedOperation: "op_TEST_ONLY_s01" });
-    expect(await screen.findByRole("complementary", { name: "portfolio/adjust-target-budget" })).toBeTruthy();
+    expect(await screen.findByRole("complementary", { name: "Adjust target budget" })).toBeTruthy();
     expect(params().get("sel")).toBe("op_TEST_ONLY_s01");
   });
 });
@@ -288,7 +288,7 @@ describe("targets are links (#5)", () => {
 
   it("the operation dock links its target too", async () => {
     mountPlain("/execution/operations?workspace_id=ws_1&sel=op_TEST_ONLY_s04&lens=all");
-    const dock = await screen.findByRole("complementary", { name: "deployment/archive" });
+    const dock = await screen.findByRole("complementary", { name: "Archive" });
     const link = within(dock).getByRole("link", { name: "Deployment dep_TEST_ONLY_btc" });
     expect(link.getAttribute("href")).toBe("/deployments/sandbox/dep_TEST_ONLY_btc?workspace_id=ws_1");
   });

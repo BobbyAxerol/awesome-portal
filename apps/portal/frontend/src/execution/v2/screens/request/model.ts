@@ -19,6 +19,8 @@
  */
 import type { ApprovalCreateOutcome } from "../../../api/ports";
 import type { RunClaim, RunOption } from "../../../runSuggestions";
+import { readUtcEpochMs } from "../../../screenDataContract";
+import { formatAsOf } from "../../boundary";
 
 /* ── limits (execution-governance-product.v1.schema.json: ApprovalCreateRequest) ── */
 
@@ -467,12 +469,11 @@ export const QUEUE_HREF = "/governance/approvals";
 export const RUN_LIBRARY_HREF = "/research/quantbt/runs";
 export const NEW_REQUEST_HREF = "/governance/approvals/new";
 
-/** UTC `2026-10-19 12:04 UTC` from an ISO instant; null when the text is not one (never a made-up time). */
+/** The house instant `19 Oct 12:04Z` from an ISO instant; null when the text is not one (never a made-up time). */
 export function dueText(iso: string | null): string | null {
   if (iso === null) return null;
-  const ms = Date.parse(iso);
-  if (!Number.isFinite(ms)) return null;
-  return `${new Date(ms).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+  const ms = readUtcEpochMs(Date.parse(iso));
+  return ms === null ? null : formatAsOf(ms);
 }
 
 /** The key lifecycle's identity: same fields, same intent. */

@@ -16,7 +16,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import type { ProfileEnvelope } from "../../../api/profileRead";
 import { PanelState } from "../../../components/states";
-import { SectionPanel, StateBoundary } from "../../blocks";
+import { GapWhy, SectionPanel, StateBoundary } from "../../blocks";
 import { readUtcEpochMs, type UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
@@ -193,7 +193,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
           <SectionPanel title="Physical binding" aside="Native">
             <dl className="exec-acct-facts">
               <Fact label="Venue">{identity.venue ?? <Na />}</Fact>
-              <Fact label="Native account"><span className="exec-acct-withheld" title={WITHHELD}>Withheld</span></Fact>
+              <Fact label="Native account"><span className="exec-acct-withheld"><GapWhy text="Withheld" name="Withheld, reason" rows={[WITHHELD]} next={null} /></span></Fact>
               <Fact label="Product"><Np fact={FE.product} /></Fact>
               <Fact label="Margin mode">{identity.marginMode ?? <Na />}</Fact>
               <Fact label="Environment">{environment ? ENV_LABEL[environment] : <Na />}</Fact>
@@ -286,7 +286,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
       {staleReason !== null ? (
         <div className="exec-acct-banner" role="status">
           <Flag kind="stale" size="sm" />
-          <span title={`The last refresh failed (${staleReason}).`}>Showing the last good read</span>
+          <span>Showing the last good read</span><GapWhy name="Why the read is stale" rows={[`The last refresh failed (${staleReason}).`]} next={null} />
         </div>
       ) : null}
       {population.shared ? (
@@ -308,7 +308,8 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
       {tabNotice !== null ? <p className="exec-acct-note" role="status">{tabNotice}</p> : null}
       {view.gaps.length > 0 ? (
         <p className="exec-acct-note" role="status">
-          <span title={view.gaps.map((gap) => `${RELATION_LABEL[gap.relation] ?? gap.relation}: ${gap.code}`).join("\n")}>Not available: {view.gaps.map((gap) => RELATION_LABEL[gap.relation] ?? gap.relation).join(", ")}</span>
+          <span>Not available: {view.gaps.map((gap) => RELATION_LABEL[gap.relation] ?? gap.relation).join(", ")}</span>
+          <GapWhy name="Why not available" rows={view.gaps.map((gap) => `${RELATION_LABEL[gap.relation] ?? gap.relation}: ${gap.code}`)} />
         </p>
       ) : null}
       {reason !== undefined && status !== "ok" ? <p className="exec-acct-note">Source reasons: {reason}</p> : null}

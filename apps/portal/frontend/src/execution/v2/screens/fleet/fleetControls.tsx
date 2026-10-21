@@ -81,7 +81,7 @@ export function ColumnsMenu({ hidden, onToggle }: ColumnsMenuProps) {
             </label>
           ))}
           {UNPUBLISHED_COLUMNS.map((column) => (
-            <label key={column.label} className="exec-fleet-menuitem" data-disabled="true" title={notPublished(column.fact)}>
+            <label key={column.label} className="exec-fleet-menuitem" data-disabled="true">
               <input type="checkbox" checked={false} disabled readOnly />
               {column.label}
               <span className="exec-fleet-np">{notPublished(column.fact)}</span>

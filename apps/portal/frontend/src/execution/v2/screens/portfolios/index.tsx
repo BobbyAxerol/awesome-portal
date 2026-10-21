@@ -31,8 +31,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
-import { NotAvailableLine, type UnavailableFact } from "../../blocks";
-import { utcStamp } from "../../../time";
+import { GapWhy, NotAvailableLine, type UnavailableFact } from "../../blocks";
 import { Flag } from "../../Flag";
 import { holds, V2_CAPABILITY } from "../../shell/roleNav";
 import { useExecUrlState, withContext } from "../../urlState";
@@ -47,6 +46,7 @@ import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom,
 import { useRead } from "./useRead";
 
 import "../../css/portfolios.css";
+import { formatInstant } from "../../boundary";
 
 export const PORTFOLIOS_SCREEN_KEY = "portfolios" as const;
 
@@ -233,7 +233,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
         </div>
         <div className="exec-pf-fresh">
           {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
-          {envelope ? <span>{envelope.sourceAsOf ? `As of ${utcStamp(envelope.sourceAsOf)}` : "Source time not published"}</span> : null}
+          {envelope ? <span>{envelope.sourceAsOf ? `As of ${formatInstant(envelope.sourceAsOf)}` : "Source time not published"}</span> : null}
         </div>
       </header>
 
@@ -242,14 +242,14 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
         <div className="exec-pf-banner" role="status">
           {incomplete && envelope ? (
             <p className="exec-pf-banner-line">
-              <Flag kind="partial" label="Partial" size="sm" /> <span title={`The read is ${humanize(envelope.completeness).toLowerCase()}`}>Some portfolios or figures may be missing</span>
+              <Flag kind="partial" label="Partial" size="sm" /> <span>Some portfolios or figures may be missing</span><GapWhy name="Why portfolios or figures may be missing" rows={[`The read is ${humanize(envelope.completeness).toLowerCase()}`]} next={null} />
             </p>
           ) : null}
           {degraded.length > 0 ? (
             <p className="exec-pf-banner-line">
               <Flag kind="partial" label="Branch not whole" size="sm" /> {degraded.map((d, i) => (
-                <span key={d.environment} className="exec-pf-branch" title={d.reasonCode ? `Reason code: ${d.reasonCode}` : undefined}>
-                  {i > 0 ? " · " : ""}{humanize(d.environment)}: {humanize(d.state)}{d.reasonCode ? ` (${branchReasonText(d.reasonCode).text})` : ""}
+                <span key={d.environment} className="exec-pf-branch">
+                  {i > 0 ? " · " : ""}{humanize(d.environment)}: {humanize(d.state)}{d.reasonCode ? ` (${branchReasonText(d.reasonCode).text})` : ""}{d.reasonCode ? <GapWhy name={`Reason code for ${humanize(d.environment)}`} rows={[`Reason code: ${d.reasonCode}`]} next={null} /> : null}
                 </span>
               ))}
             </p>
@@ -329,7 +329,10 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             {comparable && compareHref !== null ? (
               <Link className="exec-pf-link-btn" data-variant="primary" to={compareHref}>Compare {chosen.length}</Link>
             ) : (
-              <button type="button" className="exec-pf-btn" disabled title={compareWhy} aria-describedby={reasonId}>Compare</button>
+              <>
+                <button type="button" className="exec-pf-btn" disabled aria-describedby={reasonId}>Compare</button>
+                <GapWhy name="Why Compare is off" rows={[compareWhy]} next={null} />
+              </>
             )}
           </div>
           <p id={reasonId} className="exec-pf-sr">
@@ -352,7 +355,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
           <div className="exec-pf-foot">
             <span className="exec-pf-count-line" role="status" aria-live="polite">{line ? line.text : null}</span>
             {envelope.truncated ? (
-              <button type="button" className="exec-pf-btn" disabled title={LOAD_MORE_REASON} aria-describedby={reasonId}>Load more</button>
+              <button type="button" className="exec-pf-btn" disabled aria-describedby={reasonId}>Load more</button>
             ) : null}
             {envelope.truncated ? <span className="exec-pf-note">{LOAD_MORE_REASON}</span> : null}
             {capped ? <span className="exec-pf-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}

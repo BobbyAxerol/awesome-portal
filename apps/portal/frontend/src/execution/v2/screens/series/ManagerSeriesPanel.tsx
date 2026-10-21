@@ -18,6 +18,7 @@ import type { SeriesReadState } from "./useManagerSeries";
 import { METRIC_WORD, chartPointsOf, chartStateOf, chartUnit, emptyCaption, isSigned, seriesCaption, seriesCaptionShort, unavailableChart } from "./seriesModel";
 
 import "../../css/series.css";
+import { GapWhy } from "../../blocks";
 
 export interface ManagerSeriesPanelProps {
   /** Accessible name of the chart. */
@@ -46,7 +47,7 @@ export function ManagerSeriesPanel({ label, read, gapCopy = "Not published (FE-0
   }
   const entry = series.series[0]!;
   const stale = read.phase === "error" ? read.reason : null;
-  const banner = stale ? <p className="exec-ser-note" role="status" data-testid="series-stale"><Flag kind="stale" label="Stale" size="sm" /> <span title={`The last refresh failed (${stale}).`}>Last good read</span></p> : null;
+  const banner = stale ? <p className="exec-ser-note" role="status" data-testid="series-stale"><Flag kind="stale" label="Stale" size="sm" /> <span>Last good read</span><GapWhy name="Why the read is stale" rows={[`The last refresh failed (${stale}).`]} next={null} /></p> : null;
 
   if (entry.state === "UNAVAILABLE") {
     const { copy, reason } = unavailableChart(entry);

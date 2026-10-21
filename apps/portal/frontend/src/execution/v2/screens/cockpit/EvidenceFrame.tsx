@@ -19,7 +19,7 @@ import { readGateR2Detail } from "../../../api/rows";
 import type { GateR1Detail, GateR2Detail, PaperExitDetail } from "../../../api/rows";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { reviewRouteFor, type ApprovalGate } from "../../../screens/ApprovalInbox";
-import { QuietIds } from "../../blocks";
+import { QuietIdsWhy } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
@@ -123,7 +123,7 @@ export function useEvidenceRead(api: ExecutionApi, target: EvidenceTarget | null
 /* ── small pieces ─────────────────────────────────────────────────────────── */
 
 function NotPublished({ text }: { text: string }) {
-  return <span className="exec-ck-np" title={text}><QuietIds text={text} /></span>;
+  return <span className="exec-ck-np"><QuietIdsWhy text={text} /></span>;
 }
 
 /** A published word, or the absence named with the FE request that will publish it. */

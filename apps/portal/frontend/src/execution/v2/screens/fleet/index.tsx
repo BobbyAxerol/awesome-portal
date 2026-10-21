@@ -34,9 +34,8 @@ import { useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
-import { utcStamp } from "../../../time";
 import { useDockMode, useDockSelection } from "../../Drawer";
-import { Kpi, KpiStrip } from "../../blocks";
+import { GapWhy, Kpi, KpiStrip } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { withOrigin } from "../../backTo";
@@ -64,6 +63,7 @@ import {
 import { useFleetRead } from "./useFleetRead";
 
 import "../../css/fleet.css";
+import { formatInstant } from "../../boundary";
 
 export const FLEET_SCREEN_KEY = "fleet" as const;
 
@@ -395,20 +395,21 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
           <span className="exec-fleet-seg" role="group" aria-label="View">
             <button type="button" className="exec-fleet-segbtn" aria-pressed={tableView} onClick={() => url.set({ view: null })}>Table</button>
             <button type="button" className="exec-fleet-segbtn" aria-pressed={boardView} onClick={() => url.set({ view: "board" })}>Board</button>
-            <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} disabled title={notPublished(FE.map)} aria-describedby={reasonId}>Map</button>
+            <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} disabled aria-describedby={reasonId}>Map</button>
+            <GapWhy name="Why Map is off" gap={FE.map.fe} rows={[notPublished(FE.map)]} next={null} />
           </span>
           {sourceChip}
           {datasetMode ? (
             <>
               {dataset.first && dataset.first.quality.freshness !== "FRESH" ? <Flag kind={dataset.first.quality.freshness === "STALE" ? "stale" : "unknown"} label={humanize(dataset.first.quality.freshness)} size="sm" /> : null}
-              {dataset.first ? <span>{dataset.first.asOfMs < EPOCH_DAY_MS ? "Source time not published" : `As of ${utcStamp(dataset.first.asOfMs)}`}</span> : null}
+              {dataset.first ? <span>{dataset.first.asOfMs < EPOCH_DAY_MS ? "Source time not published" : `As of ${formatInstant(dataset.first.asOfMs)}`}</span> : null}
             </>
           ) : (
             <>
               {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
               {envelope ? (
                 <span>
-                  {envelope.sourceAsOf ? `As of ${utcStamp(envelope.sourceAsOf)}` : "Source time not published"}
+                  {envelope.sourceAsOf ? `As of ${formatInstant(envelope.sourceAsOf)}` : "Source time not published"}
                 </span>
               ) : null}
             </>
@@ -419,16 +420,17 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
       {datasetMode && dataset.first && (dataset.first.quality.completeness !== "COMPLETE" || dataset.first.quality.freshness !== "FRESH") ? (
         <div className="exec-fleet-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" />
-          <span title={dataset.first.quality.reasons.length > 0 ? dataset.first.quality.reasons.join(", ") : undefined}>
+          <span>
             The dataset is {humanize(dataset.first.quality.completeness).toLowerCase()} and {humanize(dataset.first.quality.freshness).toLowerCase()}: some rows or counts may be missing or old.
           </span>
+          {dataset.first.quality.reasons.length > 0 ? <GapWhy name="Why rows or counts may be missing or old" rows={dataset.first.quality.reasons} next={null} /> : null}
         </div>
       ) : null}
 
       {!datasetMode && incomplete && envelope ? (
         <div className="exec-fleet-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" />
-          <span title={`The read is ${humanize(envelope.completeness).toLowerCase()}`}>Some rows or counts may be missing</span>
+          <span>Some rows or counts may be missing</span><GapWhy name="Why rows or counts may be missing" rows={[`The read is ${humanize(envelope.completeness).toLowerCase()}`]} next={null} />
         </div>
       ) : null}
 
@@ -445,7 +447,7 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
         </KpiStrip>
       ) : null}
       {!archived && datasetMode ? (
-        <p className="exec-fleet-counts-src" data-testid="counts-source" title={countsRead.envelope?.sourceAsOf ? `${COUNTS_SOURCE_TITLE} Counts as of ${utcStamp(countsRead.envelope.sourceAsOf)}.` : COUNTS_SOURCE_TITLE}>
+        <p className="exec-fleet-counts-src" data-testid="counts-source" title={countsRead.envelope?.sourceAsOf ? `${COUNTS_SOURCE_TITLE} Counts as of ${formatInstant(countsRead.envelope.sourceAsOf)}.` : COUNTS_SOURCE_TITLE}>
           Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in {scopeWords}.
         </p>
       ) : null}
@@ -569,7 +571,7 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
                   {groupOptions.map((option) => <option key={option.id} value={option.field ?? ""}>{option.label}</option>)}
                 </select>
               ) : (
-                <select className="exec-fleet-select" disabled title={notPublished(FE.group)} aria-describedby={reasonId} value="">
+                <select className="exec-fleet-select" disabled aria-describedby={reasonId} value="">
                   <option value="">Group: none</option>
                 </select>
               )}
@@ -579,9 +581,10 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
           </div>}
           {archived ? null : <FilterChips chips={chips} onClearAll={clearFilters} urlText={urlText} onFocusFallback={() => searchInput.current?.focus()} />}
           {/* Tied to every disabled control by aria-describedby: the visible words are the names, the ids are in the title and the hidden text. The Archived lens has no list to filter, so its panel says the one thing and this line is for assistive tech only. */}
-          <p id={reasonId} className={archived ? "exec-fleet-sr" : "exec-fleet-unpub"} title={unpublishedList.map((fact) => `${fact.what}: ${notPublished(fact)}`).join("\n")}>
+          <p id={reasonId} className={archived ? "exec-fleet-sr" : "exec-fleet-unpub"}>
             Not available: {unpublishedList.map((fact) => fact.what).join(", ")}
             <span className="exec-fleet-sr"> ({unpublishedList.map((fact) => `${fact.what} (${fact.fe})`).join(", ")})</span>
+            {archived ? null : <GapWhy name="Why these are not available" rows={unpublishedList.map((fact) => `${fact.what}: ${notPublished(fact)}`)} />}
           </p>
           {datasetNote ? <p className="exec-fleet-sr" data-testid="dataset-note">{datasetNote}</p> : null}
           {limitNote ? <p className="exec-fleet-note exec-fleet-limit" data-testid="options-limit">{limitNote}</p> : null}
@@ -660,8 +663,9 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
               <>
                 {boardView ? (
                   <>
-                    <p className="exec-fleet-note exec-fleet-board-note" title="Stage counts are for your whole scope. Readiness and days in stage are not published.">
+                    <p className="exec-fleet-note exec-fleet-board-note">
                       Loaded rows only: {visible.length} {visible.length === 1 ? "alpha" : "alphas"}; an alpha in several stages is in each of its lanes
+                      <GapWhy name="Why only loaded rows" rows={["Stage counts are for your whole scope. Readiness and days in stage are not published."]} next={null} />
                     </p>
                     {visible.length === 0 ? emptyBlock : (
                       <FleetBoard

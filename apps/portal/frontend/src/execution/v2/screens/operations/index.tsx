@@ -536,7 +536,7 @@ export default function OperationsV2({
                     </span>
                   </form>
                 </div>
-                <p id={mineReasonId} className="exec-ops-reason" title={MINE_REASON}>Mine: <QuietIds text={MINE_REASON} /></p>
+                <p id={mineReasonId} className="exec-ops-reason">Mine: <QuietIds text={MINE_REASON} /></p>
                 <NotAvailableLine
                   className="exec-ops-na-line"
                   facts={[

@@ -9,6 +9,7 @@
 import type { ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
+import { GapWhy, NOT_PUBLISHED, gapTitle } from "../../blocks";
 import "../../css/blocks.css";
 import { withContext } from "../../urlState";
 
@@ -60,8 +61,8 @@ export interface NotPublishedProps {
 /** Inline: "Not published (FE-021)" plus what it means. */
 export function NotPublished({ id, reasonCode, children }: NotPublishedProps) {
   return (
-    <span className="exec-ops-np" title={reasonCode ? `${id} · ${reasonCode}` : id}>
-      <span className="exec-ops-np-word">Not published</span>
+    <span className="exec-ops-np">
+      <GapWhy className="exec-ops-np-word" gap={id} text={NOT_PUBLISHED} name="Not published, reason" rows={[gapTitle(id, null, reasonCode)]} />
       <span className="exec-blk-sr"> ({id})</span>
       {children ? <> {children}</> : null}
       {reasonCode ? <span className="exec-blk-sr"><span className="exec-ops-np-reason">{reasonCode}</span></span> : null}

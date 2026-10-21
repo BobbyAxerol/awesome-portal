@@ -31,6 +31,7 @@ import {
   ALL_ENVIRONMENTS, CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, accountHref, freshnessFlag, humanize, inScope, matchesCredential, notPublished,
   readCredentialFilter, timeOf, toBindingRow, type BindingEnv, type BindingRow,
 } from "./model";
+import { GapWhy } from "../../blocks";
 
 const SEARCH_DEBOUNCE_MS = 300;
 
@@ -215,7 +216,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
       {incomplete && envelope ? (
         <div className="exec-acct-banner" role="status">
           <Flag kind="partial" label="Partial" size="sm" />
-          <span title={`The read is ${humanize(envelope.completeness).toLowerCase()}`}>Some bindings may be missing</span>
+          <span>Some bindings may be missing</span><GapWhy name="Why bindings may be missing" rows={[`The read is ${humanize(envelope.completeness).toLowerCase()}`]} next={null} />
         </div>
       ) : null}
 
@@ -320,7 +321,8 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                   empty={empty}
                 />
                 <div className="exec-acct-foot">
-                  <span className="exec-acct-count" role="status" aria-live="polite" title={narrowedHere ? "The server does not filter these, so they narrow only what is loaded." : undefined}>{countLine}</span>
+                  <span className="exec-acct-count" role="status" aria-live="polite">{countLine}</span>
+                  {narrowedHere ? <GapWhy name="Why the filters narrow only what is loaded" rows={["The server does not filter these, so they narrow only what is loaded."]} next={null} /> : null}
                   {pages.nextCursor && !capped ? (
                     <button type="button" className="exec-acct-btn" disabled={pages.loadingMore} title={pages.loadingMore ? "Loading the next page" : "Load the next page"} onClick={pages.loadMore}>
                       {pages.loadingMore ? "Loading" : "Load more"}

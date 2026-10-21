@@ -67,14 +67,14 @@ describe("page", () => {
     expect(screen.getByRole("button", { name: "Portfolios" }).getAttribute("aria-pressed")).toBe("true");
     const alphas = screen.getByRole("button", { name: "Alphas" }) as HTMLButtonElement;
     expect(alphas.disabled).toBe(true);
-    expect(alphas.title).toContain("Not published (FE-033)");
+    expect(whyText(alphas.parentElement)).toContain("Not published (FE-033)");
     expect(alphas.getAttribute("aria-describedby")).toBeTruthy();
   });
 
   it("says alphas are not comparable when the address asks for them, and shows portfolios", async () => {
     mount(makeApi().api, "?kind=alpha");
     await loaded();
-    expect(screen.getByText("Comparing alphas is not available. Showing portfolios.").getAttribute("title")).toBe("Not published (FE-033)");
+    expect(whyText(screen.getByText("Comparing alphas is not available. Showing portfolios."))).toBe("Not published (FE-033)");
   });
 
   it("points Back where the link came from", async () => {
@@ -564,8 +564,11 @@ describe("metric table", () => {
   it("carries a missing owner and an empty allocation as statements", async () => {
     mount(makeApi().api, pick(PF.empty, PF.satellite));
     await loaded();
+    const td = (name: string) => row(name).querySelector<HTMLElement>("td[data-l='Pilot']");
     expect(cell(row("Owner"), "Pilot")).toBe("Not available · owner not published");
+    expect(whyText(td("Owner"))).toBe("owner not published");
     expect(cell(row("Allocated capital"), "Pilot")).toBe("Not available · no allocation published");
+    expect(whyText(td("Allocated capital"))).toBe("no allocation published");
   });
 
   it("stacks as cards: every cell carries its column label", async () => {

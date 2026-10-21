@@ -84,7 +84,7 @@ export function FamilyPanel({ family }: { family: FamilyLane }) {
           {spec.facts.map((fact) => (
             <tr key={fact.label}>
               <th scope="row">{fact.label}</th>
-              <td>{typeof fact.value === "string" && fact.value.startsWith("Not published") ? <span className="exec-ck-np" title={fact.value}>{fact.value}</span> : fact.value}</td>
+              <td>{typeof fact.value === "string" && fact.value.startsWith("Not published") ? <span className="exec-ck-np">{fact.value}</span> : fact.value}</td>
             </tr>
           ))}
         </tbody>

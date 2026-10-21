@@ -14,9 +14,9 @@ import { JourneySpine } from "../../blocks";
 import { Flag } from "../../Flag";
 import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
-import { utcStamp } from "../../../time";
 import { alphaHref, FE, notPublished, type FleetRow } from "./fleetModel";
 import { spineStage } from "./FleetTable";
+import { formatInstant } from "../../boundary";
 
 export interface FleetDrawerProps {
   /** The `sel` value. */
@@ -94,7 +94,7 @@ export function FleetDrawer({ alphaId, row, loading, mode, onClose }: FleetDrawe
             <Fact label="Owner">{row.owner ?? <span className="exec-fleet-na">Not available</span>}</Fact>
             <Fact label="Highest stage">{row.stage}</Fact>
             <Fact label="Stages">{row.stageCodes.map((s) => s.charAt(0) + s.slice(1).toLowerCase()).join(", ")}</Fact>
-            <Fact label="Updated">{utcStamp(row.updatedAt)}</Fact>
+            <Fact label="Updated">{formatInstant(row.updatedAt)}</Fact>
           </dl>
         </section>
 

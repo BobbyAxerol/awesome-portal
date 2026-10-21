@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf, type Metric } from "../../boundary";
-import { GapWhy, MetricText, NaWhy, QuietIds } from "../../blocks";
+import { GapWhy, MetricText, NaWhy, QuietIdsWhy, gapTitle } from "../../blocks";
 import { Flag } from "../../Flag";
 import { credentialView, notPublished, stateView, updatedAgo, type UnpublishedFact } from "./model";
 
@@ -23,8 +23,8 @@ export function Na({ why }: { why?: string }) {
 /** `Not published (FE-017)`: the gap and the request that closes it. */
 export function Np({ fact, children }: { fact: UnpublishedFact; children?: ReactNode }) {
   return (
-    <span className="exec-acct-np" title={`${fact.fe} · ${fact.what}`}>
-      <QuietIds text={notPublished(fact)} />
+    <span className="exec-acct-np">
+      <QuietIdsWhy text={notPublished(fact)} gap={fact.fe} rows={[gapTitle(fact.fe, fact.what)]} />
       {children ? <span className="exec-acct-why">{children}</span> : null}
     </span>
   );

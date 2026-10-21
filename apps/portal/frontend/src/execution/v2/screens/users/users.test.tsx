@@ -2,6 +2,7 @@
  * Users V2: the roster, the filters, the drawer and every state, through the
  * real `accountApi` client against the Playwright double's routes.
  */
+import { whyText } from "../../gapWhyTestUtil";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -98,8 +99,8 @@ describe("roster", () => {
     // The drawer does not repeat the two gaps: they are on the toolbar line, ids in their titles.
     const dock = await screen.findByRole("complementary");
     expect(dock.textContent).not.toContain("Not published");
-    expect(note.querySelector('[title="FE-053"]')).not.toBeNull();
-    expect(note.querySelector('[title="FE-015, FE-026, FE-037, FE-038"]')).not.toBeNull();
+    expect(whyText(note.querySelectorAll(".exec-blk-np")[1] ?? null)).toContain("FE-053");
+    expect(whyText(note.querySelector(".exec-blk-np"))).toContain("FE-015, FE-026, FE-037, FE-038");
   });
 
   it("renders inside an execution surface, so the type roles apply (USR-B1)", async () => {
@@ -215,7 +216,7 @@ describe("step-up state", () => {
     mount();
     await loaded();
     expect(await screen.findByText("Step-up verified")).toBeTruthy();
-    expect(screen.getByText(/until 2026-10-17 12:11:00 UTC/)).toBeTruthy();
+    expect(screen.getByText(/until 17 Oct 12:11Z/)).toBeTruthy();
   });
 
   it("says it was not read, rather than required, when that read fails", async () => {

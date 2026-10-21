@@ -15,7 +15,7 @@ import { seriesBodyFor, type SeriesVariant } from "../../series/seriesDouble.tes
 import PortfolioScreen, { PORTFOLIO_SCREEN_KEY } from "./index";
 import { incidentRoute } from "./People";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES } from "../routes";
-import { whyText } from "../../../gapWhyTestUtil";
+import { instantKey, whyText } from "../../../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -54,7 +54,7 @@ describe("header", () => {
     expect(screen.getByText("Active")).toBeTruthy();
     // FRESH prints no chip; the as-of line says it. Score is on the Overview's one 'Not available' line.
     expect(screen.queryByText("Fresh")).toBeNull();
-    expect(screen.getByText(/As of 2026-10-17/)).toBeTruthy();
+    expect(screen.getByText(/As of 17 Oct/)).toBeTruthy();
     expect(screen.queryByText(/Score: Not published/)).toBeNull();
     expect(screen.getByTestId("not-available-line").textContent).toContain("Score");
   });
@@ -84,7 +84,6 @@ describe("header", () => {
     expect(screen.queryByRole("link", { name: "Compare with" })).toBeNull();
     const button = screen.getByRole("button", { name: "Compare with" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
-    expect(button.title).toBe(COMPARE_OFF_REASON);
     expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toBe(COMPARE_OFF_REASON);
     expect(document.querySelector("a[href*='view=compare']")).toBeNull();
   });
@@ -130,7 +129,7 @@ describe("Overview", () => {
     expect(figure).toBeTruthy();
     expect(screen.getByText("Retained snapshots")).toBeTruthy();
     expect(screen.getByText("Account equity, not NAV")).toBeTruthy();
-    expect(screen.getByText("Account equity, not NAV").getAttribute("title")).toBe("Benchmark: not available");
+    expect(whyText(screen.getByText("Account equity, not NAV").parentElement)).toBe("Benchmark: not available");
     expect(document.body.textContent).toContain("Retained snapshot gap");
     expect(document.body.textContent).toContain("Server: 40 of 4,592 points, MIN_MAX_LAST_BUCKET_V1");
     expect(document.body.textContent).toContain("1 gap drawn as a gap, not joined");
@@ -347,7 +346,7 @@ describe("Allocations", () => {
     expect(cell(rows[0], "Allocated after")).toContain("120,000.00");
     expect(cell(rows[4], "Event")).toBe("Initial allocation");
     expect(cell(rows[2], "Direction")).toBe("Unchanged");
-    expect(rows.map((r) => cell(r, "Time · UTC"))).toEqual([...rows.map((r) => cell(r, "Time · UTC"))].sort().reverse());
+    expect(rows.map((r) => cell(r, "Time · UTC"))).toEqual([...rows.map((r) => cell(r, "Time · UTC"))].sort((x, y) => instantKey(y) - instantKey(x)));
     expect(within(table).queryByRole("columnheader", { name: "Receipt" })).toBeNull();
     const block = screen.getByRole("region", { name: "Capital ledger in Live" });
     expect(block.textContent).toContain("Showing 5 of 12.");
@@ -452,7 +451,7 @@ describe("Accounts", () => {
     expect(cell(binance, "Serves here")).toBe("2 deployments");
     expect(cell(binance, "Venue balance, total")).toContain("412,880.00");
     expect(cell(binance, "Status")).toContain("Stale");
-    expect(cell(binance, "Last synced")).toContain("2026-10-17 11:50");
+    expect(cell(binance, "Last synced")).toContain("17 Oct 11:50Z");
     const okx = rows.find((r) => cell(r, "Account").startsWith("OKX-01"))!;
     expect(cell(okx, "Status")).toContain("Synced");
     expect(panel().textContent).toContain("never this portfolio's capital or added to it");
@@ -488,7 +487,13 @@ describe("Risk and Health", () => {
     mount(makeApi().api);
     await ready();
     await goto("Risk and Health");
-    expect((await screen.findByTitle("No correlation data source")).textContent).toContain("Not available");
+    const none = await waitFor(() => {
+      const found = panel().querySelector<HTMLElement>(".exec-pf-note .exec-pf-na");
+      if (found === null) throw new Error("the correlation note is not drawn yet");
+      return found;
+    });
+    expect(none.textContent).toContain("Not available");
+    expect(whyText(none)).toBe("No correlation data source");
     const matrix = panel().querySelector('[role="img"][aria-label="Correlation matrix, not available"]')!;
     expect(matrix.querySelectorAll('.exec-pf-mx-cell[data-hatch="true"]').length).toBe(16);
     expect(panel().textContent).toContain("The source system serves no route for this panel");
@@ -728,7 +733,7 @@ describe("states", () => {
   it("shows a portfolio with no allocation and no deployments as identity with stated absences", async () => {
     mount(makeApi().api, "", PF.empty);
     await ready();
-    expect(screen.getByText("Some relations may be missing").getAttribute("title")).toBe("The resource is partial");
+    expect(whyText(screen.getByText("Some relations may be missing").parentElement)).toBe("The resource is partial");
     const strip = screen.getByRole("group", { name: "Portfolio identity" });
     expect(within(strip).getByText("Allocated (current)").closest("div")!.textContent).toContain("Not available · no allocation published");
     await goto("Alphas");

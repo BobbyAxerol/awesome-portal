@@ -434,10 +434,10 @@ describe("EventFeed", () => {
     const table = screen.getByRole("table", { name: "Events for BTC-Trend v3" });
     const rows = within(table).getAllByRole("row").slice(1);
     expect(rows).toHaveLength(3);
-    expect(rows[0].textContent).toContain("2026-10-17 09:14:00 UTC");
+    expect(rows[0].textContent).toContain("17 Oct 09:14Z");
     expect(rows[0].textContent).toContain("Recall applied");
     expect(rows[0].textContent).toContain("Budget returned");
-    expect(rows[2].textContent).toContain("2026-10-01 00:05:00 UTC");
+    expect(rows[2].textContent).toContain("1 Oct 00:05Z");
     expect(within(table).getByRole("link", { name: "BTC-Trend v3" }).getAttribute("href")).toBe("/alphas/btc");
     expect(within(table).getAllByRole("columnheader").map((c) => c.textContent)).toEqual(["When (UTC)", "Kind", "Target", "Outcome"]);
     expect(screen.getByRole("region", { name: "Events" })).toBeTruthy();
@@ -700,7 +700,7 @@ describe("Triad", () => {
     render(<Triad rows={rows} internal={{ asOf: at(Date.UTC(2026, 9, 17, 9, 14)) }} broker={{ asOf: null }} />);
     const group = screen.getByRole("group", { name: "Reconciliation" });
     const [internal, broker, diff] = within(group).getAllByRole("region");
-    expect(internal.textContent).toContain("Virtual ledger · 2026-10-17 09:14:00 UTC");
+    expect(internal.textContent).toContain("Virtual ledger · 17 Oct 09:14Z");
     expect(broker.textContent).toContain("Venue report · Not available");
     expect(diff.textContent).toContain("Derived · matching scopes only");
     const exact = internal.querySelector(".exec-blk-num") as HTMLElement;

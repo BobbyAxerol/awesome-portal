@@ -3,6 +3,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ConnectedContextBar, ContextBar, WINDOW_NOT_SERVED_REASON, invalidNotice } from "./ContextBar";
+import { whyText } from "../gapWhyTestUtil";
 
 afterEach(cleanup);
 
@@ -59,7 +60,7 @@ describe("ContextBar", () => {
     // The environment is not locked: it stays a live choice.
     expect((screen.getByRole("button", { name: "Paper" }) as HTMLButtonElement).disabled).toBe(false);
     expect(screen.getByText("Window: ALL")).toBeTruthy();
-    expect(document.querySelector('[data-notice="lock"]')?.getAttribute("title")).toContain("Window applies when the server supports it.");
+    expect(whyText(document.querySelector('[data-notice="lock"]'))).toContain("Window applies when the server supports it.");
     const access = screen.getByRole("link", { name: "My access" });
     expect(access.getAttribute("href")).toBe("/administration/profile-access#do");
     // A router link: the click is handled in the page (cancelled), not left to the browser as a full reload.
@@ -98,7 +99,7 @@ describe("ContextBar", () => {
     expect(chip.getAttribute("aria-label")).toBe("Environment: Paper");
     expect(document.getElementById(chip.getAttribute("aria-describedby") ?? "")?.textContent).toBe("The deployment fixes the environment.");
     expect(screen.getByText("Set by the deployment")).toBeTruthy();
-    expect(document.querySelector('[data-notice="lock"]')?.getAttribute("title")).toBe("The deployment fixes the environment.");
+    expect(whyText(document.querySelector('[data-notice="lock"]'))).toBe("The deployment fixes the environment.");
   });
 
   it.each([
@@ -184,7 +185,7 @@ describe("ConnectedContextBar", () => {
     expect(screen.queryByRole("button", { name: "30D" })).toBeNull();
     const line = document.querySelector('[data-notice="lock"]')!;
     expect(line.textContent).toBe("Not applied: Window");
-    expect(line.getAttribute("title")).toContain(WINDOW_NOT_SERVED_REASON);
+    expect(whyText(line)).toContain(WINDOW_NOT_SERVED_REASON);
     expect(where()).toBe("/execution");
   });
 

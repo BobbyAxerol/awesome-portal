@@ -3,6 +3,7 @@
  * tiers, the first reason nothing is live, the plan walk (Accepted, Uncertain,
  * Preview), the local read, and the states.
  */
+import { whyText } from "../../gapWhyTestUtil";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -413,7 +414,8 @@ describe("states", () => {
     const spy = override({ getActivationCapabilities: async () => ({ ok: false, status: "unavailable", reason: "ACTIVATION_DOWN" }) });
     mount("/administration/actions", {}, spy);
     await loaded();
-    expect(screen.getByTitle(/staged-activation read failed \(ACTIVATION_DOWN\)/).textContent).toBe("Reasons limited to the task catalogue");
+    const limited = screen.getByText("Reasons limited to the task catalogue");
+    expect(whyText(limited.parentElement)).toMatch(/staged-activation read failed \(ACTIVATION_DOWN\)/);
   });
 
   it("loading", async () => {

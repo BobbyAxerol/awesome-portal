@@ -16,7 +16,7 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { ExecutionSurface } from "../../../ExecutionSurface";
-import { SectionPanel, StateBoundary, MetricText, NotPublished } from "../../blocks";
+import { GapWhy, SectionPanel, StateBoundary, MetricText, NotPublished } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
@@ -125,7 +125,7 @@ function ScopePanel({ read }: { read: ScopedRead }) {
           {dispositionChips(read).map((d) => (
             <li key={d.environment} data-state={d.state}>
               {ENV_LABEL[d.environment]} <Flag kind={DISPOSITION_FLAG[d.state] ?? "unknown"} label={d.stateWord} size="sm" />
-              {d.reasonWord === null ? <span className="exec-slice-muted"> No reason published</span> : <span className="exec-slice-muted" title={d.reasonCode ?? undefined}> {d.reasonWord}</span>}
+              {d.reasonWord === null ? <span className="exec-slice-muted"> No reason published</span> : <span className="exec-slice-muted"> {d.reasonWord}{d.reasonCode ? <GapWhy name={`Reason code for ${d.reasonWord}`} rows={[d.reasonCode]} next={null} /> : null}</span>}
             </li>
           ))}
         </ul>

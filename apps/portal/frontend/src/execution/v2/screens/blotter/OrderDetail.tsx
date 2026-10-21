@@ -8,14 +8,13 @@
  */
 import { Link, useSearchParams } from "react-router-dom";
 
-import { utcStamp } from "../../../time";
 import type { FunnelStage, OrderFunnel } from "../../../analytics";
 import type { PanelStatus } from "../../../contracts";
 import { PanelState } from "../../../components/states";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
 import type { FlagKind } from "../../flagKinds";
-import { groupExact, humanize, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder, type Exact } from "./blotterModel";
+import { groupExact, humanize, shortUtc, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder, type Exact } from "./blotterModel";
 
 export type FunnelRead =
   | { phase: "loading" }
@@ -77,7 +76,7 @@ function PathRows({ stages }: { stages: readonly FunnelStage[] }) {
           <tr key={stage.name}>
             <td>{STAGE_LABEL[stage.name] ?? humanize(stage.name)}</td>
             <td>
-              {at !== null ? <span className="exec-blt2-num">{utcStamp(at)}</span> : <Flag kind={STAGE_KIND[stage.state] ?? "unknown"} label={stage.state === "MISSING" ? "Not reached" : humanize(stage.state)} size="sm" />}
+              {at !== null ? <span className="exec-blt2-num">{shortUtc(at)}</span> : <Flag kind={STAGE_KIND[stage.state] ?? "unknown"} label={stage.state === "MISSING" ? "Not reached" : humanize(stage.state)} size="sm" />}
             </td>
             <td className="exec-blt2-na">{gap ?? ""}</td>
             <td className="exec-blt2-na">
@@ -139,7 +138,7 @@ export function OrderDetail({
               {fills.map((fill) => (
                 <tr key={fill.fillId}>
                   <td><span className="exec-blt2-id">{fill.fillId}</span></td>
-                  <td>{fill.tradeTime ? utcStamp(fill.tradeTime) : <span className="exec-blt2-na">Not available</span>}</td>
+                  <td>{fill.tradeTime ? shortUtc(fill.tradeTime) : <span className="exec-blt2-na">Not available</span>}</td>
                   <td data-numeric="true"><ExactText value={fill.quantity} /></td>
                   <td data-numeric="true"><ExactText value={fill.price} /></td>
                   <td data-numeric="true">

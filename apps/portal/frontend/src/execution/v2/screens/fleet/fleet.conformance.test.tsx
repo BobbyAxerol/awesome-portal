@@ -23,7 +23,8 @@ import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AlphaFleetQuery, ExecutionApi } from "../../../api/ports";
 import { readAlphaFleet, readAlphaFleetItem, type AlphaFleetItem } from "../../../api/profileRead";
-import { utcStamp } from "../../../time";
+import { formatInstant } from "../../boundary";
+import { whyText } from "../../gapWhyTestUtil";
 import { ABSENT, cartesian, coverage, describeCoverage, dimension, dimensionOf, pairwise, type Draft } from "../../testkit/matrix";
 import { canonicalDigest, loadCanonical, schemaEnum } from "../../testkit/loadCanonical";
 import {
@@ -222,14 +223,14 @@ describe("L1 · matrix A · envelope states", () => {
         expect(banner).not.toBeNull();
         expect(banner!.querySelector('[data-k="partial"]')).not.toBeNull();
         expect(banner!.querySelector('[data-k="ok"]')).toBeNull();
-        // The tier word is the banner's title; the visible line is one short clause.
-        expect(`${banner!.textContent} ${[...banner!.querySelectorAll("[title]")].map((t) => t.getAttribute("title")).join(" ")}`.toLowerCase()).toContain(d.completeness.toLowerCase());
+        // The tier word is behind the banner's "?" disclosure; the visible line is one short clause.
+        expect(`${banner!.textContent} ${whyText(banner)}`.toLowerCase()).toContain(d.completeness.toLowerCase());
       }
 
       // An unpublished source time is said so; it is never a date, a zero or a dash.
       const fresh = container.querySelector(".exec-fleet-fresh")!.textContent!;
       if (d.source_as_of === null) expect(fresh).toContain("Source time not published");
-      else expect(fresh).toContain(`As of ${utcStamp(d.source_as_of)}`);
+      else expect(fresh).toContain(`As of ${formatInstant(d.source_as_of)}`);
       expect(fresh).not.toMatch(/\b0\b|N\/A|\u2014|\u2013/);
 
       await waitFor(() => expect(container.textContent).toMatch(d.page.rows.length === 0 ? /The fleet read published no alphas/ : /Alpha fleet|Carry A/));

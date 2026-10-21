@@ -3,6 +3,7 @@
  * reader: lenses, filters, sort, paging, the peek drawer, and every state the
  * screen must keep apart.
  */
+import { whyText } from "../../gapWhyTestUtil";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -781,7 +782,7 @@ describe("states", () => {
     }));
     mount(api);
     await loaded();
-    expect(screen.getByText("Some rows or counts may be missing").getAttribute("title")).toBe("The read is partial");
+    expect(whyText(screen.getByText("Some rows or counts may be missing").parentElement)).toBe("The read is partial");
   });
 
   it("stale freshness is a Stale flag with the as-of time", async () => {
@@ -791,7 +792,7 @@ describe("states", () => {
     mount(api);
     await loaded();
     expect(screen.getByText("Stale")).toBeTruthy();
-    expect(screen.getByText("As of 2026-09-01 15:00:00 UTC")).toBeTruthy();
+    expect(screen.getByText("As of 1 Sep 15:00Z")).toBeTruthy();
   });
 
   it("unavailable and unreadable keep their own words and the reason", async () => {

@@ -38,8 +38,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
-import { utcStamp } from "../../../time";
-import { NotAvailableLine, SectionPanel, type UnavailableFact } from "../../blocks";
+import { GapWhy, NotAvailableLine, SectionPanel, type UnavailableFact } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ChartTools, CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
 import { Flag } from "../../Flag";
@@ -59,6 +58,7 @@ import { backTarget, basisOf, resolveSelection, selectionHint, selectionState } 
 
 import "../../css/portfolios.css";
 import "../../css/compare.css";
+import { formatInstant } from "../../boundary";
 
 export const COMPARE_SCREEN_KEY = "compare" as const;
 
@@ -245,7 +245,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
         </div>
         <div className="exec-pf-ctrls">
           {fresh && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
-          {envelope ? <span className="exec-pf-dim">{envelope.sourceAsOf ? `As of ${utcStamp(envelope.sourceAsOf)}` : "Source time not published"}</span> : null}
+          {envelope ? <span className="exec-pf-dim">{envelope.sourceAsOf ? `As of ${formatInstant(envelope.sourceAsOf)}` : "Source time not published"}</span> : null}
           <Link to={withContext(backHref, params)}>{backLabel}</Link>
         </div>
       </header>
@@ -259,7 +259,8 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             <div className="exec-pf-tool">
               <span className="exec-pf-seg" role="group" aria-label="Compare">
                 <button type="button" className="exec-pf-segbtn" aria-pressed="true">Portfolios</button>
-                <button type="button" className="exec-pf-segbtn" aria-pressed="false" disabled title={npReason(PF_FE.compareSeries, "Comparing alphas needs the multi-subject read.")} aria-describedby={reasonId}>Alphas</button>
+                <button type="button" className="exec-pf-segbtn" aria-pressed="false" disabled aria-describedby={reasonId}>Alphas</button>
+                <GapWhy name="Why comparing alphas is not available" gap={PF_FE.compareSeries.fe} rows={[npReason(PF_FE.compareSeries, "Comparing alphas needs the multi-subject read.")]} next={null} />
               </span>
               <label className="exec-pf-field">
                 <span className="exec-pf-sr">Filter portfolios</span>
@@ -269,7 +270,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             </div>
             <p id={reasonId} className="exec-pf-sr">Alphas: {npText(PF_FE.compareSeries)}</p>
             {kindWanted !== null && kindWanted !== "portfolio" && kindWanted !== "pf" ? (
-              <p className="exec-pf-banner" role="status" title={npText(PF_FE.compareSeries)}>Comparing alphas is not available. Showing portfolios.</p>
+              <p className="exec-pf-banner" role="status">Comparing alphas is not available. Showing portfolios.<GapWhy name="Why comparing alphas is not available" gap={PF_FE.compareSeries.fe} rows={[npText(PF_FE.compareSeries)]} next={null} /></p>
             ) : null}
             <div className="exec-cmpr-pick" role="group" aria-label="Portfolios to compare">
               {chips.map((row) => {

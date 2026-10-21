@@ -28,8 +28,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { activationSentence } from "../../../stagedActivation";
-import { utcStamp } from "../../../time";
-import { PanelGate, SectionPanel } from "../../blocks";
+import { GapWhy, PanelGate, SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
@@ -42,6 +41,7 @@ import {
 import { useAdminReads } from "./useAdminReads";
 
 import "../../css/admin.css";
+import { formatInstant } from "../../boundary";
 
 export const ADMIN_SCREEN_KEY = "admin" as const;
 
@@ -294,7 +294,7 @@ export default function AdminScreen({
         <div className="exec-adm-chips">
           <span className="exec-adm-fresh">
             <Flag kind={fresh.kind} label={fresh.label} size="sm" />
-            {composition?.readAt ? <span className="exec-adm-meta">Read {utcStamp(composition.readAt)}</span> : null}
+            {composition?.readAt ? <span className="exec-adm-meta">Read {formatInstant(composition.readAt)}</span> : null}
           </span>
           <Link className="exec-adm-link" data-variant="outline" to={withContext(operationsHref, params)}>Open in Operations</Link>
           <button type="button" className="exec-adm-btn" onClick={reads.reload}>Refresh</button>
@@ -313,7 +313,8 @@ export default function AdminScreen({
       {reads.activation.phase === "error" ? (
         <div className="exec-adm-banner" role="status">
           <Flag kind="unknown" label="Activation not read" size="sm" />
-          <span title={`The staged-activation read failed (${reads.activation.reason}), so the first reason an action is not live is limited to what the task catalogue states.`}>Reasons limited to the task catalogue</span>
+          <span>Reasons limited to the task catalogue</span>
+          <GapWhy name="Why reasons are limited" rows={[`The staged-activation read failed (${reads.activation.reason}), so the first reason an action is not live is limited to what the task catalogue states.`]} next={null} />
         </div>
       ) : null}
       {staleReads.length > 0 ? (

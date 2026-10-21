@@ -11,7 +11,6 @@ import { CorrelationState } from "./Correlation";
 import { SectionPanel } from "../../../blocks";
 import { CardsTable, type CardsColumn } from "../../../cardsTable";
 import { Flag } from "../../../Flag";
-import { utcStamp } from "../../../../time";
 import { PF_FE } from "../fe";
 import { Absent, Money, Np } from "../format";
 import type { TabCtx } from "./ctx";
@@ -19,6 +18,7 @@ import { contributionByCurrency, type AccountView, type DeploymentView } from ".
 import { CapNote, InternalLink, capped } from "./parts";
 
 import "../../../css/portfolios.css";
+import { formatInstant } from "../../../boundary";
 
 export function RiskTab({ ctx }: { ctx: TabCtx }) {
   const exposureColumns: CardsColumn<DeploymentView>[] = [
@@ -45,7 +45,7 @@ export function RiskTab({ ctx }: { ctx: TabCtx }) {
   ];
   const reconColumns: CardsColumn<AccountView>[] = [
     { key: "account", label: "Account", render: (a) => (ctx.mayOpenAccounts ? <InternalLink to={ctx.routes.account(a.accountId)} search={ctx.search}>{a.accountId}</InternalLink> : a.accountId) },
-    { key: "last", label: "Last synced · UTC", render: (a) => (a.lastSyncedAt === null ? <Absent reason="not published" /> : utcStamp(a.lastSyncedAt)) },
+    { key: "last", label: "Last synced · UTC", render: (a) => (a.lastSyncedAt === null ? <Absent reason="not published" /> : formatInstant(a.lastSyncedAt)) },
     { key: "status", label: "Status", render: (a) => <Flag kind={a.syncKind} label={a.syncLabel} size="sm" /> },
     { key: "findings", label: "Open findings", numeric: true, render: (a) => (a.openFindings === null ? <Absent reason="findings not carried" /> : String(a.openFindings)) },
   ];

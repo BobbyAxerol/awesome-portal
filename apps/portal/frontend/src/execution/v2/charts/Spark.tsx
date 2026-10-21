@@ -69,7 +69,7 @@ export function Spark({ values, label, unit = "money", tone = "series", width = 
 
   if (model.drawable === 0 || model.lo === null || model.hi === null || model.first === null || model.last === null) {
     return (
-      <span className="exec-sp2 exec-sp2-na" role="img" aria-label={`${label}: ${unavailable}`} style={{ width, height }} title={unavailable}>
+      <span className="exec-sp2 exec-sp2-na" role="img" aria-label={`${label}: ${unavailable}`} style={{ width, height }}>
         <span className="exec-c2-sr">{unavailable}</span>
       </span>
     );

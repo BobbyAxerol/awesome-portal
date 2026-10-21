@@ -169,16 +169,10 @@
   flex: 1 1 auto;
   min-width: 0;
   margin: 0;
-  overflow: hidden;
   font: var(--exec-font-caption);
   color: var(--ink-faint);
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.exec-dock-why:hover .exec-dock-reason,
-.exec-dock-why:focus-within .exec-dock-reason {
-  overflow: visible;
-  white-space: normal;
+  /* The reason is read in full, wrapped: an ellipsis that opens on hover cannot be read on touch (RV-06). */
+  overflow-wrap: anywhere;
 }
 .exec-dock-access {
   flex: none;

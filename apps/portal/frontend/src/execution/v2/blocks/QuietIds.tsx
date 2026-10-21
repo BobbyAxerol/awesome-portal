@@ -5,6 +5,8 @@
  */
 import { Fragment, type ReactNode } from "react";
 
+import { GapWhy } from "./notPublished";
+
 import "../css/blocks.css";
 
 // A request id group `(FE-015)`, `(FE-005, FE-025)`, `(FE-005/006)`, or a ` · UPPER_SNAKE` reason code.
@@ -22,6 +24,23 @@ export function QuietIds({ text }: { text: string }): ReactNode {
           <Fragment key={index}>{part}</Fragment>
         ),
       )}
+    </>
+  );
+}
+
+/**
+ * `QuietIds` plus the way to reach what it hides (RV-06): the ids and reason codes stay out of the headline, and a "?" after the
+ * text opens them by keyboard and touch instead of a `title`. A text with nothing hidden is the plain text (nothing to open).
+ * `rows` overrides what the disclosure says; the default is the whole sentence, ids and codes included.
+ */
+export function QuietIdsWhy({ text, rows, gap }: { text: string; rows?: readonly string[]; gap?: string }): ReactNode {
+  const parts = text.split(HIDDEN);
+  if (parts.length === 1) return text;
+  const shown = parts.filter((_, index) => index % 2 === 0).join("").trim();
+  return (
+    <>
+      <QuietIds text={text} />
+      <GapWhy name={`Why: ${shown}`} rows={rows ?? [text]} gap={gap} />
     </>
   );
 }

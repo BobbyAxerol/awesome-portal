@@ -607,7 +607,7 @@ describe("Account 360: the physical binding view", () => {
     await within(panel).findByText("LIVE_BINANCE_USDM");
     expect(panel.textContent).toContain("bnc_main@BINANCE");
     expect(panel.textContent).toContain("Withheld");
-    expect(within(panel).getByText("Withheld").getAttribute("title")).toBe("Withheld. The portal never shows the broker account reference.");
+    expect(whyText(within(panel).getByText("Withheld"))).toBe("Withheld. The portal never shows the broker account reference.");
     expect(panel.textContent).toContain("Not published (A360-4)");
     expect(panel.textContent).toContain("Not published (A360-3)");
     expect(panel.textContent).toContain("Real-funded");
@@ -710,7 +710,7 @@ describe("Account 360: states", () => {
     account("acc_okx_main");
     await loaded360("OKX main");
     expect((await screen.findAllByText(/BROKER_SYNC_UNAVAILABLE/)).length).toBeGreaterThan(0);
-    expect(screen.getByText("Not available: Broker sync").getAttribute("title")).toContain("Broker sync: BROKER_SYNC_UNAVAILABLE");
+    expect(whyText(screen.getByText("Not available: Broker sync").parentElement)).toContain("Broker sync: BROKER_SYNC_UNAVAILABLE");
     expect(screen.getByRole("tablist", { name: "Account sections" })).toBeTruthy();
     expect(screen.getByText("Broker sync not available")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Authorities" }).textContent).toContain("Not available");
@@ -731,7 +731,7 @@ describe("Account 360: states", () => {
     await loaded360("Binance sub account");
     fail = true;
     fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-    expect((await screen.findByText("Showing the last good read")).getAttribute("title")).toMatch(/The last refresh failed \(ACCOUNT_RESOURCE_UNAVAILABLE/);
+    expect(whyText((await screen.findByText("Showing the last good read")).parentElement)).toMatch(/The last refresh failed \(ACCOUNT_RESOURCE_UNAVAILABLE/);
     expect(screen.getByRole("heading", { level: 1, name: "Binance sub account" })).toBeTruthy();
   });
 
@@ -739,7 +739,7 @@ describe("Account 360: states", () => {
     stubFetch();
     account("acc_bnc_sub");
     await loaded360("Binance sub account");
-    expect(screen.getByText("Not available: Margin").getAttribute("title")).toContain("Margin: MARGIN_SOURCE_GAP");
+    expect(whyText(screen.getByText("Not available: Margin").parentElement)).toContain("Margin: MARGIN_SOURCE_GAP");
     const margin = screen.getByRole("region", { name: "Margin" });
     expect(margin.textContent).toContain("Initial marginNot available");
     expect(margin.textContent).toContain("MaintenanceNot available");

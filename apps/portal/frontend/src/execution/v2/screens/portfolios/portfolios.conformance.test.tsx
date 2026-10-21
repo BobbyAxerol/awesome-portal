@@ -27,7 +27,8 @@ import { afterAll, afterEach, describe, expect, it } from "vitest";
 
 import { readPortfolioList } from "../../../api/profileRead";
 import type { ExecutionApi } from "../../../api/ports";
-import { utcStamp } from "../../../time";
+import { formatInstant } from "../../boundary";
+import { whyText } from "../../gapWhyTestUtil";
 import { cartesian, coverage, describeCoverage, dimension, dimensionOf, pairwise, type Draft } from "../../testkit/matrix";
 import { canonicalDigest, loadCanonical, loadSchema, schemaEnum } from "../../testkit/loadCanonical";
 import {
@@ -187,15 +188,15 @@ describe("L1 · matrix A · envelope states", () => {
         expect(flag!.getAttribute("data-k")).toBe("stale");
         expect(flag!.textContent).toContain(d.freshness === "STALE" ? "Stale" : "Aging");
       }
-      // The completeness sentence is the banner's title; the visible line is one short clause.
-      const banners = [...container.querySelectorAll(".exec-pf-banner[role='status']")].map((b) => `${b.textContent ?? ""} ${[...b.querySelectorAll("[title]")].map((t) => t.getAttribute("title")).join(" ")}`);
+      // The completeness sentence is behind the banner's "?" disclosure; the visible line is one short clause.
+      const banners = [...container.querySelectorAll(".exec-pf-banner[role='status']")].map((b) => `${b.textContent ?? ""} ${[...b.querySelectorAll("button[aria-expanded]")].map((t) => whyText(t)).join(" ")}`);
       if (d.completeness === "COMPLETE") expect(banners.some((b) => /The read is/.test(b))).toBe(false);
       else expect(banners.find((b) => b.includes("The read is"))?.toLowerCase()).toContain(d.completeness.toLowerCase());
       const notWhole = Object.entries<Draft>(d.environments).filter(([, b]) => b.state === "UNAVAILABLE" || b.state === "PARTIAL");
       expect(banners.filter((b) => b.includes("Branch not whole"))).toHaveLength(notWhole.length > 0 ? 1 : 0);
       const fresh = container.querySelector(".exec-pf-fresh")!.textContent!;
       if (d.source_as_of === null) expect(fresh).toContain("Source time not published");
-      else expect(fresh).toContain(`As of ${utcStamp(d.source_as_of)}`);
+      else expect(fresh).toContain(`As of ${formatInstant(d.source_as_of)}`);
       if (d.items.length === 0) {
         expect(await screen.findByText(/published no portfolios/)).toBeTruthy();
         expect(container.querySelectorAll("tbody tr[tabindex]")).toHaveLength(0);

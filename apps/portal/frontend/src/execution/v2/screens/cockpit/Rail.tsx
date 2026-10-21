@@ -15,7 +15,7 @@ import type { ReviewCaptureCapabilities } from "../../../api/reviewCapture";
 import type { DecidedRow } from "../../../screens/ApprovalInbox";
 import { formatAsOf } from "../../boundary";
 import { DockAction } from "../../Drawer";
-import { NotAvailableLine, QuietIds } from "../../blocks";
+import { NotAvailableLine, QuietIdsWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { ActorsV2, LatestOperationV2, SectionV2 } from "../../readers/governanceParents";
 import type { InboxRowV2 } from "./inboxRowV2";
@@ -117,7 +117,7 @@ function ReceiptRows({ rows }: { rows: readonly { label: string; value: ReactNod
 }
 
 function Np({ text }: { text: string }) {
-  return <span className="exec-ck-np" title={text}><QuietIds text={text} /></span>;
+  return <span className="exec-ck-np"><QuietIdsWhy text={text} /></span>;
 }
 
 /** A stored actor id, or the absence as the server gave it (a section withheld for this viewer is still FE-030's datum). */

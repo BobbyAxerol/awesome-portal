@@ -23,7 +23,6 @@ import { planOutcomeText, planApplicable, PLAN_ENVIRONMENTS, type CommandPlan } 
 import type { PanelStatus } from "../../../contracts";
 import { PanelState } from "../../../components/states";
 import type { StagedActivation } from "../../../stagedActivation";
-import { utcStamp } from "../../../time";
 import { NotPublished } from "../../blocks";
 import { DockAction, Drawer, type DockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
@@ -32,6 +31,7 @@ import {
   COMMAND_STATES, COMMAND_STATE_VIEW, KIND_VIEW, NOTE_MIN, ROW_STATE_VIEW, applyReason, commandStateOf, defaultEnvironment,
   firstReasonFor, formProblem, humanize, planGate, planRequest, type ActionRow, type PlanForm,
 } from "./adminModel";
+import { formatInstant } from "../../boundary";
 
 const STALE_REASON = "The last refresh failed; refresh before acting.";
 
@@ -122,7 +122,7 @@ function PlanResult({ plan, operationsHref, params }: { plan: CommandPlan; opera
         <Fact term="Blockers">{plan.blockers.length > 0 ? plan.blockers.join(", ") : "None stated"}</Fact>
         <Fact term="Can be applied">{applicable.allowed ? "Yes" : applicable.reason}</Fact>
         <Fact term="What would change"><NotPublished id="FE-020" /></Fact>
-        {plan.expiresAt ? <Fact term="Expires">{utcStamp(plan.expiresAt)}</Fact> : null}
+        {plan.expiresAt ? <Fact term="Expires">{formatInstant(plan.expiresAt)}</Fact> : null}
         {plan.planDigest ? <Fact term="Digest"><span className="exec-adm-mono">{plan.planDigest}</span></Fact> : null}
         {plan.replayed ? <Fact term="Request">Replayed: the server recognised this request key and returned the existing plan.</Fact> : null}
       </dl>

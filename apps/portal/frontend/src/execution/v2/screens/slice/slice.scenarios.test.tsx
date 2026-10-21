@@ -2,6 +2,7 @@
  * The slice screen over the RV-12 canonical scenarios (BE-P14, TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT): each page goes through the
  * strict reader, then the fixture lane, then the screen; the assertions are on the rendered DOM. FIXTURE ONLY.
  */
+import { whyText } from "../../gapWhyTestUtil";
 import { act, cleanup, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
@@ -84,7 +85,7 @@ describe("per-environment disposition chips (typed reason, short)", () => {
       ["DENIED", "Sandbox Denied Policy pending"],
       ["UNAVAILABLE", "Real-funded Unavailable Not recorded"],
     ]);
-    expect(container.querySelector('[data-state="DENIED"] .exec-slice-muted')?.getAttribute("title")).toBe("EXECUTION_READ_POLICY_PENDING");
+    expect(whyText(container.querySelector('[data-state="DENIED"] .exec-slice-muted'))).toBe("EXECUTION_READ_POLICY_PENDING");
     expect(container.textContent).toContain("Showing 1 of 2");
     expect(container.textContent).toContain("More pages exist.");
   });

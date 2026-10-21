@@ -59,7 +59,7 @@ describe("ReplayPanel frame", () => {
     render(<ReplayPanel subject="X" logRows={LOG} qtyDp={8} />);
     const table = screen.getByRole("table", { name: "Trade log for X" });
     const rows = within(table).getAllByRole("row").slice(1);
-    expect(rows[0].textContent).toContain("2026-10-17 09:14:30 UTC");
+    expect(rows[0].textContent).toContain("17 Oct 09:14Z");
     expect(rows[0].textContent).toContain("12,345,678,901,234,567,890.12345679");
     expect(rows[0].textContent).toContain("67,200.5");
     expect(rows[0].textContent).toContain("Not available");

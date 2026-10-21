@@ -156,9 +156,9 @@ export interface InStageView {
 }
 
 /** Days in stage. Published numbers print as published; otherwise `Not published (FE-027)` with the reason from the row. */
-export function inStageOf(row: ManagerRow, utcStamp: (ms: number) => string): InStageView {
+export function inStageOf(row: ManagerRow, stamp: (ms: number) => string): InStageView {
   if (row.daysInStage !== null && row.enteredAtMs !== null) {
-    return { text: row.daysInStage === 1 ? "1 day" : `${row.daysInStage} days`, detail: `In this stage since ${utcStamp(row.enteredAtMs)}`, published: true };
+    return { text: row.daysInStage === 1 ? "1 day" : `${row.daysInStage} days`, detail: `In this stage since ${stamp(row.enteredAtMs)}`, published: true };
   }
   const reason = row.stageLifecycleReasons.daysInStage ?? row.stageLifecycleReasons.enteredAtMs ?? "STAGE_ENTRY_TIME_NOT_PUBLISHED";
   return { text: `Not published (${FE_STAGE_ENTRY.fe})`, detail: reason, published: false };

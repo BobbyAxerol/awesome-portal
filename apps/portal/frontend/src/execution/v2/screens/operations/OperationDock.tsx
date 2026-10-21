@@ -15,7 +15,7 @@ import { PanelState } from "../../../components/states";
 import { ACCESS_PATH, FE, notPublishedReason } from "./notPublished";
 import { NotAvailableLine } from "../../blocks";
 import {
-  CHECK_ORIGINAL_COPY, humanize, receiptOutcome, severityWord, triageOutcome,
+  CHECK_ORIGINAL_COPY, commandLabel, humanize, receiptOutcome, severityWord, triageOutcome,
 } from "./outcome";
 import { PendingRecallsSection, discoverable } from "./PendingRecalls";
 import { TargetLink } from "./TargetLink";
@@ -82,9 +82,11 @@ export function OperationDock({ operationId, row, loading, mode, onClose, api, w
   const outcome = receiptOutcome(row.sourceStatus, row.verificationResult);
   const triage = triageOutcome(row.triageState);
   return (
-    <Drawer title={row.commandKey} subtitle={row.operationId} onClose={onClose} mode={mode} actions={actions}>
+    <Drawer title={commandLabel(row.commandKey)} subtitle={row.operationId} onClose={onClose} mode={mode} actions={actions}>
       {outcome.checkOriginal ? <p className="exec-ops-banner" data-tone="unknown">{CHECK_ORIGINAL_COPY}</p> : null}
       <dl className="exec-ops-facts">
+        <dt>Command</dt>
+        <dd><span className="exec-ops-mono">{row.commandKey}</span></dd>
         <dt>Receipt</dt>
         <dd><Flag kind={outcome.kind} label={outcome.label} size="sm" /></dd>
         <dt>Source status</dt>

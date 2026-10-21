@@ -18,11 +18,11 @@
 import { createElement, type ReactNode } from "react";
 
 import type { Metric } from "../boundary";
-import { utcStamp } from "../../time";
 import type { UtcEpochMs } from "../../screenDataContract";
 import { MetricText, NO_VALUE_COPY } from "./metric";
 import { GapWhy, NotPublished, type NotPublishedId } from "./notPublished";
 import "../css/blocks.css";
+import { formatInstant } from "../boundary";
 
 /** The source says the figure is deliberately not computed, and why. */
 export interface TriadNotComputed {
@@ -123,7 +123,7 @@ function sub(column: Column, side: TriadSide | null | undefined, differenceNote:
   if (column === "difference") return differenceNote;
   const lead = column === "internal" ? "Virtual ledger" : "Venue report";
   if (withheld) return lead;
-  const when = side === null || side === undefined || side.asOf === null || side.asOf === undefined ? NO_VALUE_COPY : utcStamp(side.asOf);
+  const when = side === null || side === undefined || side.asOf === null || side.asOf === undefined ? NO_VALUE_COPY : formatInstant(side.asOf);
   return `${lead} · ${when}`;
 }
 

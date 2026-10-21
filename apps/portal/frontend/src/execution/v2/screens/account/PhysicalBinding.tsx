@@ -14,7 +14,7 @@
 import type { BindingExposure } from "../../../analytics";
 import type { BindingDetailRead } from "../../../api/profileRead";
 import { PanelState } from "../../../components/states";
-import { SectionPanel } from "../../blocks";
+import { GapWhy, SectionPanel } from "../../blocks";
 import { DockAction } from "../../Drawer";
 import { ENV_LABEL } from "../../urlState";
 import type { ReadState } from "./reads";
@@ -48,7 +48,7 @@ export function PhysicalBinding({ view, detail, exposure, rotate }: PhysicalBind
         <dl className="exec-acct-facts">
           <Fact label="Binding">{identity.bindingId ?? <Na why="The account resource names no binding" />}</Fact>
           <Fact label="Venue">{identity.venue ?? item?.venue ?? <Na />}</Fact>
-          <Fact label="Native account"><span className="exec-acct-withheld" title={WITHHELD}>Withheld</span></Fact>
+          <Fact label="Native account"><span className="exec-acct-withheld"><GapWhy text="Withheld" name="Withheld, reason" rows={[WITHHELD]} next={null} /></span></Fact>
           <Fact label="Product"><Np fact={FE.product} /></Fact>
           <Fact label="Margin mode">{identity.marginMode ?? <Np fact={FE.product} />}</Fact>
           <Fact label="Environment">{environment ?? <Na />}</Fact>
