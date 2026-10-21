@@ -9,9 +9,11 @@
  *
  * 1. `readAlphaFleetRealtimeSnapshot`: the BASELINE BARRIER of the named fleet read (`GET /manager/fleet`). It carries no figure.
  *    What the reader holds, beyond the closed key set:
- *    - AF-1 the barrier names the publication it pairs with: `baseline.revision` equals `named_snapshot.lineage_revision`, and the
- *      screen compares that with `lineage.revision` of the fleet answer (`pairBaselineWithFleet`); a different revision is
- *      `STALE_BASELINE`, never "close enough";
+ *    - AF-1 the barrier names the exact PUBLIC lineage identity of the fleet read it pairs with (CR-01):
+ *      `named_snapshot.lineage_revision` is a sha256 digest bound to the read scope and the head, and the screen compares it by exact
+ *      string equality with `lineage.revision` of the fleet answer (`pairBaselineWithFleet`); anything else is `STALE_BASELINE`
+ *      (a newer head, or another actor, grant or visible resource), never "close enough". `baseline.revision` is the raw stored head
+ *      the cursor and the ordinal count; it is NOT compared with the fleet answer;
  *    - AF-2 ordinals are canonical decimal STRINGS (the checkpoint is numeric(19,0)); a number, a leading zero or a sign voids the read;
  *    - AF-3 an available stream has a cursor and its bounds; an unavailable one has a finite reason and NO cursor key value: a
  *      consumer holding a cursor would resume a stream the server never offered;
@@ -24,7 +26,8 @@
  * Stricter than the schema, on purpose and named so the conformance suite can count them:
  * - AF-S1 display safety of every text (`managerText`: whitespace-only, bidi, zero-width, C1);
  * - AF-S2 clocks stay inside the Date range;
- * - AF-S3 the revision pairing (a cross-field equality JSON Schema cannot state);
+ * - AF-S3 (retired by CR-01) was the `baseline.revision == lineage_revision` equality; the two now name different things, so no
+ *   cross-field rule remains and the number is not reused;
  * - AF-S4 the reconnect/backoff words are not part of this contract: an extra key is a refusal, never ignored.
  */
 import type { UtcEpochMs } from "../../screenDataContract";
@@ -73,7 +76,7 @@ const ORDINAL = /^(?:0|[1-9][0-9]{0,18})$/;
 /* ───────────────────────── types ───────────────────────── */
 
 export interface AlphaFleetBaseline {
-  /** The Manager publication revision this barrier names; the fleet answer it pairs with carries the same `lineage.revision`. */
+  /** The stored Manager head revision the cursor and ordinal count. Not the fleet answer's `lineage.revision` (see `pairsWithRevision`). */
   revision: string;
   generation: string;
   epoch: string;
@@ -103,7 +106,7 @@ export interface AlphaFleetRealtimeSnapshot {
   /** Digest of the authorization identity. A different value than the last read means a new scope: re-baseline. */
   scopeFingerprint: string;
   baseline: AlphaFleetBaseline;
-  /** The `lineage.revision` the paired fleet read must carry. */
+  /** The `lineage.revision` the paired fleet read must carry for the same scope and head: a scope-bound digest, compared exactly. */
   pairsWithRevision: string;
   /** Where a notice comes from. Typed, so the screen can say "Portal publication revision", never "live Edge feed". */
   noticeOrigin: "PORTAL_PUBLICATION_REVISION";
@@ -119,7 +122,7 @@ export type AlphaFleetDropReason = (typeof ALPHA_FLEET_DROP_REASONS)[number];
 
 /** Which rule a `MALFORMED` snapshot broke. Never the offending value: a refused payload is never echoed. */
 export const ALPHA_FLEET_MALFORMED_DETAILS = [
-  "closed_keys", "required_keys", "workspace", "environment", "fingerprint", "baseline", "ordinal", "named_snapshot", "pairing", "stream_state",
+  "closed_keys", "required_keys", "workspace", "environment", "fingerprint", "baseline", "ordinal", "named_snapshot", "stream_state",
   "stream_cursor", "stream_bounds", "stream_path", "stream_reason", "quality",
 ] as const;
 export type AlphaFleetMalformedDetail = (typeof ALPHA_FLEET_MALFORMED_DETAILS)[number];
@@ -166,9 +169,9 @@ export function readAlphaFleetRealtimeSnapshot(raw: unknown): AlphaFleetSnapshot
   const named = record(body.named_snapshot);
   if (named === null || !hasOnly(named, NAMED_KEYS) || !hasAll(named, NAMED_KEYS)) return malformed("named_snapshot");
   if (named.operation_id !== ALPHA_FLEET_NAMED_SNAPSHOT_OPERATION || named.path !== ALPHA_FLEET_NAMED_SNAPSHOT_PATH) return malformed("named_snapshot");
-  const pairs = managerText(named.lineage_revision);
+  // A raw head revision is not a lineage identity: the named read only ever returns a digest, so anything else can never pair.
+  const pairs = typeof named.lineage_revision === "string" && SHA256.test(named.lineage_revision) ? named.lineage_revision : null;
   if (pairs === null) return malformed("named_snapshot");
-  if (pairs !== revision) return malformed("pairing"); // AF-S3
 
   const source = record(body.source);
   if (source === null || !hasOnly(source, SOURCE_KEYS) || !hasAll(source, SOURCE_KEYS)) return malformed("closed_keys");

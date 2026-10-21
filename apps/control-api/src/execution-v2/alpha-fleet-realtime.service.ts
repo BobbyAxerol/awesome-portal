@@ -15,6 +15,13 @@
  *   or a moved head is `resync_required`, never a skipped ordinal;
  * - no start-at-head: a stream without a snapshot cursor is refused (`SNAPSHOT_REQUIRED`).
  *
+ * Pairing with the named read (CR-01). Two scopes are involved and they are deliberately NOT merged: the STREAM is gated on the root
+ * business scope (`business.read_all` + `stream.subscribe`), the named `GET /manager/fleet` read on an `alpha.read` scope. The
+ * snapshot publishes `baseline.revision` (the raw head, what cursors and ordinals count) AND `named_snapshot.lineage_revision` =
+ * `managerLineageRevision(<alpha.read scope fingerprint>, head.revision)`, the exact string the named read returns as
+ * `lineage.revision` for the same actor, session, workspace, environment, grants and head. The root scope still binds the cursor and the
+ * stream identity; READ alone never produces an AVAILABLE stream.
+ *
  * The service installs a timer only while at least one client is connected, polls at one bounded cadence regardless of the
  * number of browsers (identical scoped flights coalesce inside the Hub), and never reads a payload document.
  */
@@ -25,6 +32,7 @@ import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
 import { ExecutionReadScopeError, ExecutionReadScopes, type ReadScopePrincipal } from "./read-scope";
 import type { ReadDatasetBinding } from "./read-publication";
 import { ManagerModelRepository } from "./manager-model.store";
+import { managerLineageRevision } from "./manager-model";
 import type { ScopedRealtimeFrame, ScopedReplayBinding } from "./realtime.contract";
 import { ScopedReplayHub, type ScopedReplayLimits } from "./realtime";
 import { ScopedReplayCursorCodec, ScopedReplayError, decodeScopedReplayContinuationWithBinding } from "./scoped-replay-cursor";
@@ -131,7 +139,7 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
         workspace_id: workspace, environment: selection.environment, scope_fingerprint: authorized.identity,
         baseline: { revision: head.revision, projection_generation: head.projection_generation, source_epoch: head.source_epoch,
           ordinal: baseline.ordinal, catalogue_digest: head.catalogue_digest },
-        named_snapshot: { operation_id: ALPHA_FLEET_NAMED_SNAPSHOT_OPERATION, path: ALPHA_FLEET_NAMED_SNAPSHOT_PATH, lineage_revision: head.revision },
+        named_snapshot: { operation_id: ALPHA_FLEET_NAMED_SNAPSHOT_OPERATION, path: ALPHA_FLEET_NAMED_SNAPSHOT_PATH, lineage_revision: managerLineageRevision(authorized.named_scope_fingerprint, head.revision) },
         source: { notice_origin: "PORTAL_PUBLICATION_REVISION", edge_notice_source: "NOT_COMMISSIONED", qualification: "SOURCE_VERIFIED" },
         stream,
         quality: { completeness: "PARTIAL", freshness: "UNKNOWN", coverage: "AUTHORIZED_ONLY", source_as_of_ms: null, portal_observed_at_ms: observed,

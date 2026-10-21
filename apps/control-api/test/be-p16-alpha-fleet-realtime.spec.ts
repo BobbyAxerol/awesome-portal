@@ -16,6 +16,7 @@ import { scopedRealtimeFrame, type ScopedRealtimeFrame, type ScopedReplayBinding
 import { ScopedReplayCursorCodec, ScopedReplayError } from "../src/execution-v2/scoped-replay-cursor";
 import { AlphaFleetRealtimeController } from "../src/execution-v2/alpha-fleet-realtime.controller";
 import { Reflector } from "@nestjs/core";
+import { managerLineageRevision } from "../src/execution-v2/manager-model";
 
 const WS = "TEST_ONLY:workspace", PROFILE = "TEST_ONLY:paper", EPOCH = "TEST_ONLY:epoch-1", GEN = "TEST_ONLY:g1", CAT = "sha256:" + "a1".repeat(32);
 const SECRET = "TEST_ONLY-never-a-runtime-key-".repeat(3);
@@ -45,13 +46,15 @@ class Log implements FleetRevisionLog {
   }
 }
 interface AuthState { stream: FleetStreamEligibility; revoked: boolean; denyOpen: boolean; writes: number; flip: boolean; }
+/** Stands in for the alpha.read scope fingerprint of the named read; the real derivation is proved in be-p17-fleet-pairing.spec.ts. */
+const namedScope = (p: ReadScopePrincipal) => `sha256:${(p.user.userId + "a".repeat(64)).slice(0, 64).replace(/[^a-f0-9]/g, "c")}`;
 function authority(log: Log, state: AuthState): AlphaFleetAuthority {
   const identity = (p: ReadScopePrincipal) => `sha256:${(p.user.userId + "0".repeat(64)).slice(0, 64).replace(/[^a-f0-9]/g, "e")}`;
   return {
     async snapshot(principal, _env, _profile, _dataset, read) {
       if (state.revoked) throw new ExecutionReadScopeError("EXECUTION_READ_NOT_AVAILABLE", 404);
       const value = await read();
-      return { identity: identity(principal), stream: state.stream, policy_revision: state.stream.eligible ? "TEST_ONLY:policy" : null,
+      return { identity: identity(principal), named_scope_fingerprint: namedScope(principal), stream: state.stream, policy_revision: state.stream.eligible ? "TEST_ONLY:policy" : null,
         field_policy_revision: state.stream.eligible ? "TEST_ONLY:fields" : null, value };
     },
     async openStream(principal, _env, _profile, _dataset, currentDataset) {
@@ -126,7 +129,7 @@ describe("BE-P16 snapshot: the baseline barrier of the named fleet read", () => 
     expect(alphaFleetRealtimeSnapshot.safeParse(s).success).toBe(true);
     expect(s).toMatchObject({ dataset: "alpha_fleet_overview", semantics: "NOTIFICATION_ONLY", workspace_id: WS, environment: "paper",
       baseline: { revision: "TEST_ONLY:fleet-r7", projection_generation: GEN, source_epoch: EPOCH, ordinal: "7", catalogue_digest: CAT },
-      named_snapshot: { operation_id: "executionManagerFleetGetV1", path: "/api/v1/execution/manager/fleet", lineage_revision: "TEST_ONLY:fleet-r7" },
+      named_snapshot: { operation_id: "executionManagerFleetGetV1", path: "/api/v1/execution/manager/fleet", lineage_revision: managerLineageRevision(namedScope(principal()), "TEST_ONLY:fleet-r7") },
       source: { notice_origin: "PORTAL_PUBLICATION_REVISION", edge_notice_source: "NOT_COMMISSIONED", qualification: "SOURCE_VERIFIED" } });
     expect(s.stream).toMatchObject({ state: "AVAILABLE", stream_path: "/api/v1/execution/manager/fleet/stream", heartbeat_interval_ms: 60_000,
       replay_window_ms: TTL, max_frame_bytes: 16384, max_streams_per_session: 2 });

@@ -12,7 +12,7 @@
  * L1  state matrix S against the schema as oracle (reader accepts iff the schema does): stream x environment x ordinal x edge source.
  * L2  every numeric bound at both sides, 256/257 texts, 4096/4097 cursor, 20,000 reads, 70,000-character strings, a 5,000-deep object.
  * L3  generated negatives over the snapshot: never looser than the schema, never throws, never leaks its probe. Where the reader is
- *     stricter it is on purpose and named: AF-S1 display safety, AF-S2 Date range, AF-S3 revision pairing, AF-S4 closed source words.
+ *     stricter it is on purpose and named: AF-S1 display safety, AF-S2 Date range, AF-S4 closed source words (AF-S3, the revision-equality pairing, was retired by CR-01).
  */
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -84,7 +84,10 @@ describe("L0 · canonical, verbatim", () => {
     const { snapshot } = read;
     expect(snapshot.environment).toBe(c.response.environment);
     expect(snapshot.baseline.ordinal).toBe(c.response.baseline.ordinal);
-    expect(snapshot.pairsWithRevision).toBe(c.response.baseline.revision);
+    // CR-01: the pairing identity is the named lineage digest, NOT the raw head the cursor counts.
+    expect(snapshot.pairsWithRevision).toBe(c.response.named_snapshot.lineage_revision);
+    expect(snapshot.baseline.revision).toBe(c.response.baseline.revision);
+    expect(snapshot.pairsWithRevision).not.toBe(snapshot.baseline.revision);
     expect(snapshot.noticeOrigin).toBe("PORTAL_PUBLICATION_REVISION");
     expect(snapshot.edgeNoticeSource).toBe("NOT_COMMISSIONED");
     // The barrier's quality is kept apart from any data quality.
@@ -115,13 +118,11 @@ describe("L0 · canonical, verbatim", () => {
     expect(read.frame).toEqual((readScopedRealtimeFrame(c.response) as { frame: unknown }).frame);
   });
 
-  it("every negative case is refused by the reader; the schema refuses all of them except the named cross-field rule", () => {
+  it("every negative case is refused by the reader and by the schema (no cross-field rule remains)", () => {
     expect(negative.cases.length).toBeGreaterThan(20);
     for (const c of negative.cases) {
       expect(accepted(c.response), c.id).toBe(false);
-      const violations = snapshotViolations(c.response);
-      if (c.id === "revision-pairing-broken") expect(violations, "AF-S3 is a cross-field equality the schema cannot state").toEqual([]);
-      else expect(violations.length, c.id).toBeGreaterThan(0);
+      expect(snapshotViolations(c.response).length, c.id).toBeGreaterThan(0);
     }
   });
 
@@ -170,7 +171,7 @@ describe("L0 · canonical, verbatim", () => {
     const envs: readonly Env[] = ALPHA_FLEET_ENVIRONMENTS;
     expect(envs).toEqual([...ALPHA_FLEET_ENVIRONMENTS]);
     expect(ALPHA_FLEET_DROP_REASONS.length).toBe(6);
-    expect(ALPHA_FLEET_MALFORMED_DETAILS.length).toBe(15);
+    expect(ALPHA_FLEET_MALFORMED_DETAILS.length).toBe(14); // "pairing" retired by CR-01
     expect(FLEET_SSE_DROP_REASONS.length).toBe(10);
   });
 });
@@ -255,10 +256,9 @@ describe("L2 · scale and bounds", () => {
       expect(accepted(withField(AVAILABLE, path, "x".repeat(256))), path.join(".")).toBe(true);
       expect(accepted(withField(AVAILABLE, path, "x".repeat(257))), path.join(".")).toBe(false);
     }
-    const both = withField(withField(AVAILABLE, ["baseline", "revision"], "r".repeat(256)), ["named_snapshot", "lineage_revision"], "r".repeat(256));
-    expect(accepted(both)).toBe(true);
-    const long = withField(withField(AVAILABLE, ["baseline", "revision"], "r".repeat(257)), ["named_snapshot", "lineage_revision"], "r".repeat(257));
-    expect(accepted(long)).toBe(false);
+    // The raw head revision is free text up to 256; the named lineage identity is a digest, so it has no text length to probe.
+    expect(accepted(withField(AVAILABLE, ["baseline", "revision"], "r".repeat(256)))).toBe(true);
+    expect(accepted(withField(AVAILABLE, ["baseline", "revision"], "r".repeat(257)))).toBe(false);
   });
   it("an ordinal of 19 digits reads, 20 do not", () => {
     expect(accepted(withField(AVAILABLE, ["baseline", "ordinal"], "9".repeat(19)))).toBe(true);
@@ -363,8 +363,8 @@ describe.each([["available", AVAILABLE], ["unavailable", UNAVAILABLE]] as const)
     console.info(`alpha fleet L3 ${label}: reader accepts ${looser} of ${invalid} schema-invalid payloads; refuses ${stricter.length} schema-valid ones`);
     expect(invalid).toBeGreaterThan(80);
     expect(looser).toBe(0);
-    // Every schema-valid payload the reader refuses is AF-S1 (blank/NUL/bidi text) or AF-S3 (the revision pairing broken by a text edit).
-    for (const name of stricter) expect(name, name).toMatch(/huge-string: .*("   "|\\u0000|‮)|huge-string: (baseline\.revision|named_snapshot\.lineage_revision) <-/);
+    // Every schema-valid payload the reader refuses is AF-S1 (blank/NUL/bidi text).
+    for (const name of stricter) expect(name, name).toMatch(/huge-string: .*("   "|\\u0000|‮)/);
   });
 });
 
@@ -383,18 +383,21 @@ describe("L3 · where the reader is stricter than the schema, on purpose", () =>
     ["AF-S1 zero-width in epoch", (b: Draft) => { b.baseline.source_epoch = `e${zwsp}1`; }],
     ["AF-S1 C1 control in a reason", (b: Draft) => { b.quality.reasons = [`r${c1}1`]; }],
     ["AF-S2 portal_observed_at_ms beyond the Date range", (b: Draft) => { b.quality.portal_observed_at_ms = 9_007_199_254_740_991; }],
-    ["AF-S3 the barrier names another revision than the one it pairs with", (b: Draft) => { b.named_snapshot.lineage_revision = "TEST_ONLY:other"; }],
-    ["AF-S3 pairing broken on the baseline side", (b: Draft) => { b.baseline.revision = "TEST_ONLY:other"; }],
   ])("%s: schema valid, reader refuses", (_name, change) => {
     const body = structuredClone(AVAILABLE);
     change(body);
     expect(snapshotViolations(body)).toEqual([]);
     expect(accepted(body)).toBe(false);
   });
-  it("AF-S3 names its detail", () => {
+  it("CR-01 the raw head revision is not a lineage identity: it names its detail and is never read as a pairing", () => {
     const body = structuredClone(AVAILABLE);
-    body.named_snapshot.lineage_revision = "TEST_ONLY:other";
-    expect(readAlphaFleetRealtimeSnapshot(body)).toEqual({ ok: false, drop: { reason: "MALFORMED", detail: "pairing" } });
+    body.named_snapshot.lineage_revision = body.baseline.revision;
+    expect(readAlphaFleetRealtimeSnapshot(body)).toEqual({ ok: false, drop: { reason: "MALFORMED", detail: "named_snapshot" } });
+  });
+  it("CR-01 the raw head and the lineage identity may differ freely: the reader does not equate them", () => {
+    const body = structuredClone(AVAILABLE);
+    body.baseline.revision = "TEST_ONLY:fleet-r8";
+    expect(accepted(body)).toBe(true);
   });
   it("AF-4 a claimed Edge source is refused as UNSUPPORTED_SOURCE, never shown as a live feed", () => {
     const body = structuredClone(AVAILABLE);
@@ -412,8 +415,10 @@ describe("pairing, scope and the machine's baseline", () => {
   };
   it("pairBaselineWithFleet: the fleet answer's lineage revision, or the barrier is stale", () => {
     const snapshot = read(AVAILABLE);
-    expect(pairBaselineWithFleet(snapshot, AVAILABLE.baseline.revision)).toBe("PAIRED");
-    for (const other of ["TEST_ONLY:fleet-r8", "", null, undefined, 7, {}, [AVAILABLE.baseline.revision]]) expect(pairBaselineWithFleet(snapshot, other), String(other)).toBe("STALE_BASELINE");
+    const lineage = AVAILABLE.named_snapshot.lineage_revision as string;
+    expect(pairBaselineWithFleet(snapshot, lineage)).toBe("PAIRED");
+    // The raw head revision never pairs: it is what the real read does NOT return (CR-01).
+    for (const other of [AVAILABLE.baseline.revision, "sha256:" + "0".repeat(64), "", null, undefined, 7, {}, [lineage]]) expect(pairBaselineWithFleet(snapshot, other), String(other)).toBe("STALE_BASELINE");
   });
   it("baselineOf gives the machine the cursor, or 'no stream'; never a cursor for an unavailable stream", () => {
     expect(baselineOf(read(AVAILABLE))).toEqual({ kind: "baseline", cursor: AVAILABLE.stream.resume_cursor });

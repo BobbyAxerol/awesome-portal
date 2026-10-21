@@ -50,7 +50,7 @@ const ref = name => ({ $ref: '#/components/schemas/' + name });
 
 /* ── schemas ─────────────────────────────────────────────────────────────────────────────────── */
 const snapshot = json(c.alphaFleetRealtimeSnapshot);
-snapshot.description = 'Baseline barrier of the named fleet read, not a figure. `baseline.revision` MUST equal `named_snapshot.lineage_revision` and the `lineage.revision` of the paired GET /manager/fleet answer (a cross-field rule JSON Schema cannot state; the producer validator and the browser reader enforce it). `scope_fingerprint` changes whenever the authorization identity changes: a consumer holding a different fingerprint than before must re-baseline. `source` states where a notice would come from; no Edge scoped-notice source is commissioned for this dataset.';
+snapshot.description = 'Baseline barrier of the named fleet read, not a figure. `baseline.revision` is the stored head revision (what the cursor and the ordinal count); it is NOT compared with the fleet answer. `named_snapshot.lineage_revision` is the exact public lineage identity of the paired GET /manager/fleet answer for this actor, session, workspace, environment, grants and head (a sha256 digest bound to the alpha.read read scope and the head revision); the consumer pairs by exact string equality with the `lineage.revision` of that answer, and any other string is a stale or foreign barrier. `scope_fingerprint` changes whenever the authorization identity changes: a consumer holding a different fingerprint than before must re-baseline. `source` states where a notice would come from; no Edge scoped-notice source is commissioned for this dataset.';
 snapshot.properties.quality = ref('Quality');
 const stream = snapshot.properties.stream;
 stream.anyOf = [ref('AlphaFleetStreamAvailable'), ref('AlphaFleetStreamUnavailable')];
@@ -77,7 +77,7 @@ const problem = description => ({ description, headers: noStore, content: { 'app
 const paths = {
   [c.ALPHA_FLEET_SNAPSHOT_PATH]: { get: {
     operationId: 'executionAlphaFleetRealtimeSnapshotGetV1', security: [{ PortalSession: [] }],
-    description: 'Named dataset `alpha_fleet_overview`: the baseline barrier a stream starts from. It names the Manager publication revision, generation, epoch and checkpoint ordinal the paired GET /api/v1/execution/manager/fleet answers, the authorization fingerprint, and either a resume token or a typed reason there is no stream. Read the fleet and the barrier together and compare `baseline.revision` with `lineage.revision`; a mismatch means a newer publication exists and the barrier must be re-read. Carries no figure; never an event replay.',
+    description: 'Named dataset `alpha_fleet_overview`: the baseline barrier a stream starts from. It names the Manager publication revision, generation, epoch and checkpoint ordinal the paired GET /api/v1/execution/manager/fleet answers, the authorization fingerprint, and either a resume token or a typed reason there is no stream. Read the fleet and the barrier together and compare `named_snapshot.lineage_revision` with `lineage.revision` of the fleet answer; a mismatch means a newer publication or another authorization scope, and the barrier must be re-read. Carries no figure; never an event replay.',
     parameters: queryParams,
     responses: {
       200: { description: 'Current authorized barrier; a stream that cannot be offered is `stream.state: UNAVAILABLE` with a reason, never an error.', headers: noStore,
@@ -112,7 +112,7 @@ const available = { state: 'AVAILABLE', resume_cursor: TOKEN, stream_path: c.ALP
 const base = { schema_version: c.ALPHA_FLEET_SNAPSHOT_SCHEMA, dataset: 'alpha_fleet_overview', semantics: 'NOTIFICATION_ONLY', workspace_id: 'TEST_ONLY:workspace',
   environment: 'paper', scope_fingerprint: sha('b2'),
   baseline: { revision: 'TEST_ONLY:fleet-r7', projection_generation: 'TEST_ONLY:g1', source_epoch: 'TEST_ONLY:epoch-1', ordinal: '7', catalogue_digest: sha('a1') },
-  named_snapshot: { operation_id: 'executionManagerFleetGetV1', path: '/api/v1/execution/manager/fleet', lineage_revision: 'TEST_ONLY:fleet-r7' },
+  named_snapshot: { operation_id: 'executionManagerFleetGetV1', path: '/api/v1/execution/manager/fleet', lineage_revision: sha('d4') },
   source: { notice_origin: 'PORTAL_PUBLICATION_REVISION', edge_notice_source: 'NOT_COMMISSIONED', qualification: 'SOURCE_VERIFIED' },
   stream: available, quality };
 const unavailable = reason => ({ state: 'UNAVAILABLE', reason_code: reason, resume_cursor: null });
@@ -152,7 +152,7 @@ const refused = [
   ['ordinal-as-number', 'ordinals are decimal strings', v => { v.baseline.ordinal = 7; }],
   ['ordinal-leading-zero', 'canonical decimal only', v => { v.baseline.ordinal = '07'; }],
   ['ordinal-negative', 'unsigned only', v => { v.baseline.ordinal = '-1'; }],
-  ['revision-pairing-broken', 'baseline revision must equal the named snapshot lineage revision', v => { v.named_snapshot.lineage_revision = 'TEST_ONLY:fleet-r8'; }],
+  ['lineage-revision-raw-head', 'the named lineage identity is a scope-bound digest, never the raw head revision (CR-01)', v => { v.named_snapshot.lineage_revision = v.baseline.revision; }],
   ['named-snapshot-other-operation', 'the pairing names exactly the fleet read', v => { v.named_snapshot.operation_id = 'executionManagerFundOverviewGetV1'; }],
   ['edge-source-claimed', 'no Edge notice source is commissioned', v => { v.source.edge_notice_source = 'COMMISSIONED'; }],
   ['origin-edge', 'notices originate from the Portal publication head', v => { v.source.notice_origin = 'EDGE_NOTICE'; }],
