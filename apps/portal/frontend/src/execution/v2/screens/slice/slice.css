@@ -96,6 +96,14 @@
   gap: var(--space-1);
   min-width: 0;
 }
+/* Financial data: the flag keeps its own width instead of stretching to the reason code beneath it, and a code that cannot fit beside the
+ * label at phone width wraps, so the cell's label is not pushed past the card's left padding (the 390 px cards pack label and value to the right). */
+.exec-slice-avail {
+  align-items: flex-start;
+}
+.exec-slice-avail .exec-slice-muted {
+  overflow-wrap: anywhere;
+}
 .exec-slice-link {
   font: var(--exec-font-control);
   color: var(--accent);
