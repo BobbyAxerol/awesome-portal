@@ -143,6 +143,7 @@ export class NativeBusinessReadClient {
     return new Promise((resolve, reject) => {
       let req: ClientRequest | undefined, response: IncomingMessage | undefined, socket: TLSSocket | undefined;
       let settled = false, released = false, sent = false, tlsAllowed = false, ended = false;
+      let completedResult: NativeBusinessReadResult | undefined;
       let deadline: ReturnType<typeof setTimeout> | undefined;
       const release = () => {
         if (released) return;
@@ -217,8 +218,11 @@ export class NativeBusinessReadClient {
                 binding_digest: correlation.binding_digest, stable_core_digest: correlation.stable_core_digest,
                 response_sha256: `sha256:${createHash("sha256").update(bytes).digest("hex")}`, result: parsed,
               }) });
-              settled = true; resolve(parsed);
-              // Admission/timer remain until the request's real close event.
+              // A complete authenticated reply is not physical request closure.
+              // Retain it privately until close returns the transport slot, so
+              // SAME-attempt status -> cancel/resolve can immediately continue
+              // with max_inflight=1 without a fabricated capacity release.
+              completedResult = parsed;
             } catch { abort(); }
             finally { chunks.length = 0; }
           });
@@ -228,7 +232,16 @@ export class NativeBusinessReadClient {
         // then refuses excess instead of silently discarding them.
         req.maxHeadersCount = 0;
         req.on("error", fail);
-        req.once("close", () => { if (!settled) abort(); release(); });
+        req.once("close", () => {
+          if (!settled && completedResult) {
+            settled = true;
+            release();
+            resolve(completedResult);
+          } else {
+            if (!settled) abort();
+            release();
+          }
+        });
         req.once("socket", candidate => {
           if (!(candidate instanceof TLSSocket)) { abort(); return; }
           socket = candidate; socket.on("error", fail);

@@ -205,6 +205,33 @@ describe("ELP2-10 real native business READ TLS transport — synthetic wire, no
       expect(await client.call(prepared())).toEqual(nativeReply());await drained(client);expect(lane.received).toHaveLength(2);
     }finally{release.resolve();await first.catch(()=>{});}
   });
+  it.each(["finite", "scoped-notice"] as const)(
+    "allows immediate SAME-attempt %s status -> cancel after physical close with one slot",async kind=>{
+      const requestFor=(action:NativeBusinessReadAction)=>kind==="finite"?nativeRequest(action):nativeNoticeRequest(action);
+      const lane=await endpoint((req,res,body)=>{
+        const action=req.url?.endsWith("/status")?"status":"cancel-unentered";
+        const reply=nativeReply(action);
+        reply.binding={...JSON.parse(body.toString("utf8")).binding};
+        json(res,action==="status"?{...reply,recovery:{state:"RECORDED",phase:"ISSUED",
+          source_digest:"e".repeat(64),expires_at:deadline,terminal_authority:false,release_permitted:false}}:reply);
+      });
+      const client=new NativeBusinessReadClient(config(lane.origin));
+      const status=prepareNativeBusinessReadRequest("status",requestFor("status"),LIMITS);
+      const cancel=prepareNativeBusinessReadRequest("cancel-unentered",requestFor("cancel-unentered"),LIMITS);
+      const observed=await client.call(status);
+      expect(observed).toMatchObject({state:"OBSERVATION",recovery:{state:"RECORDED",phase:"ISSUED"}});
+      expect(client.snapshot().in_flight).toBe(0);
+      // Deliberately no drained(), poll, timer or new attempt between calls.
+      const cancelled=await client.call(cancel);
+      expect(cancelled).toMatchObject({state:"CANCELLED",recovery:{release_permitted:true}});
+      expect(client.snapshot().in_flight).toBe(0);
+      expect(lane.received.map(item=>item.path)).toEqual([
+        "/internal/elp210/business-root-read/status","/internal/elp210/business-root-read/cancel-unentered"]);
+      expect(lane.received[0].body.equals(lane.received[1].body)).toBe(true);
+      expect(nativeBusinessReadAuthenticatedResult(client,observed).base_body).toBe(status.base_body);
+      expect(nativeBusinessReadAuthenticatedResult(client,cancelled).base_body).toBe(status.base_body);
+      expect(cancel.base_body).toBe(status.base_body);
+    });
   it("times out after actual HTTP send without fabricating rollback/release, then reuses admission after real close",async()=>{
     const entered=deferred();let reply=false;
     const lane=await endpoint((_req,res)=>{entered.resolve();if(reply)json(res,nativeReply());});
