@@ -14,3 +14,13 @@ Nhánh `claude/fe-parity` vẫn đóng băng ở `d58361ea` (mã `f394c0a1`) ch�
 
 ## Còn chờ phía Codex / Edge
 Bản sửa BUSY của client native (chưa commit), cổng R2/R3 trên SHA đóng băng, cấp grant `stream.subscribe`, nguồn notice, và ACK các commit đã trả (`4ebc4d9e`, CR-02, B1, BE-P20 bản sửa).
+
+## Cập nhật tiếp (sau 15:35 UTC, cùng nhánh `claude/post-freeze-20261021`)
+| Việc | Commit | Làn đã chạy | Ghi chú |
+| --- | --- | --- | --- |
+| Nhận bản sửa BUSY của Codex (path-level từ `9d88e40a`, 7 đường dẫn) + ledger bằng script | `3394b04f` | vitest 128/128 (2 spec liên quan), `bash -n` cho 3 script | không mang cả commit |
+| DEBT-031 trang phone Users 10 thẻ, Alpha Orders & Fills 3 thẻ/bảng, Load more | `89536bda` | vitest users/alpha 625 | Users 390 px: 7.729 → 2.179 px; **2 ô ảnh cần ghi lại** (Users @390, Alpha 360 Orders & Fills @390), chưa ghi vì Codex đang giữ máy |
+| DEBT-044 request workbench ổn định theo số worker; DEBT-045 thu hẹp (không tái hiện) | `e299c3df`, `371224f0` | vitest workbench; `node --test` 9/9 | thêm `data-state` vào root workbench (V2) |
+| BE-P22 quan sát cache riêng tư: bộ quan sát thuần + bản vá đề xuất cho 3 file dùng chung (chưa áp dụng) | `fa530323` | vitest 26/26 | cần Codex đồng ý người ghi duy nhất |
+| BE-P21 bộ giảm kinh tế nguồn (dark, không nối) | `f0b56371` | vitest 64/64 | ánh xạ nguồn thật còn nợ PM/Edge |
+| Rà soát hủy `refresh` của Fleet: 3 lỗi thật đã sửa | `776cf9be` | vitest 14 + 8 + 4 test mới; Playwright 13/13; cả thư mục Fleet 1.348 test xanh hai lần | FIXTURE_LAB |
