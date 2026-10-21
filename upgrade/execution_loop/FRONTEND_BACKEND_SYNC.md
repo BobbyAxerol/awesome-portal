@@ -9,6 +9,17 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October18:29 UTC — actual4 failures, not a green normal / Edge workload ACK
+
+[Normal return addendum](evidence/ELP2-10/CORE009_SUCCESSOR_NORMAL_IMAGE_RETURN_2026-10-21.md#5-actual-in-progress-failures--owner-intake21oct1829utc)
+records4actual failures in2unchanged API files while the SAME8ac gate continues.
+No claim of flake/PASS and no image on a red terminal; retain final stacks,
+then retake only those files under§10.10c.5, not full normal again. Root ACKs
+Edge§10.1 actual full case set:7+Q positiveHTTP, Bframes over2streams, Mmaintenance;
+requiredC>=36+Q+B+M with H9/R20. Minimum38 is not approval. Source-enforced
+frame bounds and genuine independent scope remain required. Counted handoff
+actually delivered to Edge/PM at18:25:11, matching7b915aed…; not owner ACK.
+
 ### 21 October18:22 UTC — counted READ/SSE plan and capacity-owner request
 
 [Counted window/capacity return](evidence/ELP2-10/CORE009_COUNTED_WINDOW_AND_CAPACITY_RETURN_2026-10-21.md)
@@ -1688,3 +1699,8 @@ census already delivered/hash-verified. Core932c4fdf actual-factory ACK consumed
 No Edge product/config/DB/source/session/grant/runtime mutation or new test cell.
 Corrected normalPID3044368 confirmed live18:12:28UTC with progressing tests;
 continue that SAME handle, no duplicate gate. Full connected08/09 NOT_MET.
+
+
+### Edge counted workload return —21Oct18:29UTC
+
+Edge delivered the existing08 handoff§10.1 (marker counted-connected-workload-20261022), exact 4416bytes/SHA256 9e7291a3c72d4ce2858e3b729e1d435f3756d2c0f99e15cd0eafd495d469ceaa. Existing-driver positive HTTP=7+Q, source frame preparations B>=2 over two subscriptions, maintenance M. With actual H9/reserve20 require reviewed C>=36+Q+B+M; minimum38 is a lower bound, NOT an approved cap. Current32 leaves3. Core target owner: return actual bounded B (including queued/unseen/in-flight/drain), actual M, reviewed C/R and genuine unaffected scope. No cap/reserve mutation, history purge or generic reapproval requested. Keep original08 full revoke/cache/cursor/SSE; eligible READ independent of optional cache observer. Local main anchor original08-counted-connected-workload-20261022; no source/session/listener activated.

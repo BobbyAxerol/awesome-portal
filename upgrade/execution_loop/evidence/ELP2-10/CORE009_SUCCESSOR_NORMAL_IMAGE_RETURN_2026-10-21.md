@@ -141,3 +141,38 @@ policy/grant/audit history; no SQL deletes, force kill or blind DB restore.
 **Exit:** code-focused qualified; normal/image/installed/connected not yet
 qualified at this cut. ELP2-10 OPEN, ELP2-11 not entered. Verification:R0 for
 this Markdown only; no duplicate tests for documentation.
+
+## 5. Actual in-progress failures / owner intake21Oct18:29UTC
+
+The same frozen normal is still running, **not PASS**. Its API sublane has
+already reported4failed cases in2unchanged files:
+
+- `test/elp207-instance-registration-transaction.spec.ts`: the four
+  abort-ignoring provider-slot/ten-second timeout case(100590ms).
+- `test/facade.spec.ts`: Planning session actor(15733ms), ADMIN snapshot
+  initialization(37284ms), mismatched CSRF header(21615ms).
+
+Final stacks/terminal are pending; timing/resource starvation is a hypothesis,
+not an established flake. These files are outside the5path successor diff;
+independent diagnosis is checking the exact source. The existing continuation
+requires actual normalEXIT0 and therefore will refuse image build on failure.
+Keep the original complete result. Per rules§10.10c.5, retake only failed files
+after terminal/cleanup, at the same source, not another full normal. Any
+remaining gate coverage or actual source defect must still be resolved before
+landing/image readiness; never overwrite the normal terminal to0.
+
+The [counted capacity/Claude delta return](CORE009_COUNTED_WINDOW_AND_CAPACITY_RETURN_2026-10-21.md)
+was actually delivered to the approved Edge and PM public Markdown mailboxes
+at18:25:11UTC, both verified SHA256
+`7b915aed2479035ccc25494240575e8d48cec49c81f470af39d669c93720a67c`.
+Delivery is not owner acceptance. No secret or Git push was involved.
+
+Incoming Edge§10.1 now specifies the **actual complete original08 case set**:
+positive HTTP7+Q, two sequential subscriptions with total admitted/prepared
+framesB, maintenanceM; require reviewed `C >= H + R + 7 + Q + B + M`, currently
+`36 + Q + B + M`. Root ACKs this selected case set; its minimum38(Q0/B2/M0)
+is not an approved cap. The earlier2driver formula38+2R+F+C in the sent count
+note describes that separate provisional variant, not an additional mandatory
+suite or authority to replace the now explicit original08 schedule. Preserve
+20reserve and real9history; derive authoritative frame and maintenance bounds,
+then submit the concrete numeric decision. No cap/reserve/grant was changed.

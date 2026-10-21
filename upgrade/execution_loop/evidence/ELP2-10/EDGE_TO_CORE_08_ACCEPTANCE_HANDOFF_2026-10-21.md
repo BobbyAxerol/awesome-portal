@@ -506,3 +506,54 @@ time, inspect real terminal/counters, and stop before the returned bound.
 No automatic cap increase, historical-row purge, restart-as-reset or synthetic
 positive control. This does not hold an eligible single READ; it prevents a
 repeat of consuming the recovery margin before revoke/retirement completes.
+
+
+<a id="counted-connected-workload-20261022"></a>
+### 10.1 Edge return: counted full-case workload —21Oct18:29UTC
+
+**PROPOSED_SCHEDULE / NOT_DISPATCHED / no cap or reserve approval implied.**
+This answers Core's normal/image return request for an actual per-case census.
+It preserves the complete original08 objective, not a three-request substitute.
+The existing runner's real baseline and post-revoke paths are the authority
+for these counts; no new driver/framework or producer grant is invented.
+
+| Ordered case | New retained admissions | Required real evidence |
+| --- | --- | --- |
+| Deployments prime and identical repeat | 2 | Same actual selected scope/epoch/cache identity; private P22 proves MISS/HIT (or honest actual branch), exact terminal+ACK. Repeat200 alone is not cache proof. |
+| Profile snapshot | 1 | Real native current baseline and private opaque cursor; no fixture cursor. |
+| Separately selected relation | Q=0 or1 | Q=1 only when the return publishes that actual relation source; otherwise NOT_SELECTED, never implied by deployments. |
+| Unaffected independently authorized scope, before READ revoke | 1 | Genuine eligible independent actor/domain grant and real terminal; not a fabricated user/control. |
+| Initial STREAM then positive cursor resume held across official STREAM revoke | B>=2 | Two sequential real subscriptions. B counts ALL server frame preparations/admissions, including queued/in-flight/unseen work, not client frames. Resume has current source-set/generation and separately current STREAM right. |
+| After active STREAM revoke: deployments AND snapshot still READ | 2 | Existing post-revoke driver checks both positive READs, unchanged READ authority, official committed active STREAM revoke. |
+| STREAM reconnect without cursor and with old cursor, after STREAM revoke | Expected0 | Two genuine403/ACCESS_DENIED responses; counter readback must confirm no source admission. |
+| After official READ revoke: deployment denied and old stream cursor refused | Expected0 | Existing driver accepted denial codes plus matching current authority/custody. No cached body or later final-SSE egress admitted under revoked right. |
+| Same independent unaffected scope after READ revoke | 1 | Real positive control matching its pre-revoke scope, not STREAM-revoked principal re-labelled independent. |
+| Official session/successor/revoke/retirement operations in this population | M | Core enumerates actual upper bound; do not assume M=0 without source/target confirmation. |
+
+Thus positive HTTP subtotal is **7+Q**, not the provisional6 (the post-STREAM
+driver also performs snapshot). Total new retained work N=7+Q+B+M. With actual
+historic H=9 and retained recovery reserve R=20, require
+**C>=H+R+N=36+Q+B+M**, minimum38 only if Q=0/B=2/M=0. Current C=32 supports3
+new admissions while preserving R, so it cannot support this whole schedule.
+This is the lower-bound computation, NOT a request to blindly configure38.
+
+**Core target owner return:** reviewed C/R, actual bounded B across both
+subscriptions (including producer poll/drain/in-flight work), actual M and
+eligible unaffected scope; count any other enabled driver case too. Keep
+R=20 unless that owner explicitly reviews a different recovery bound. A client
+8-frame/2-frame limit or EOF does not bound producer preparations. Core's
+maximumClients bounds concurrency, not cumulative lifetime admissions. Return
+the exact source/config mechanism and observation/stop boundary used for B;
+Edge will sequence one original at a time and check real durable counters,
+terminal/source ACK and remaining reserve. Pre-admission denials and replayed
+recovery must be verified as such; unexpected increments/UNKNOWN stop new
+traffic and retain original attempt/physical receipt for official recovery.
+
+At commissioning, repin H from the real target; if H changes, recompute instead
+of deleting history. No cap raise/reserve reduction, SQL reset, fake control,
+implicit STREAM, duplicate attempt or phase closure follows from this return.
+Private observation must be actually installed for the HIT/cache case; it does
+not delay an otherwise eligible READ. Same existing handoff/owner-return lane,
+no new Bobby approval requested. Fresh source/session/window only after actual
+Core image/config/commissioning return; expired draft stays unarmed. Full08/09
+NOT_MET until genuine connected cases and exact cleanup are recorded.

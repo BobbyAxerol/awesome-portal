@@ -14518,3 +14518,15 @@ Claude receives the exact11 old Vite processes for ownership ACK/cleanup,
 not a broad kill request. The existing guarded build floor remains6GiB.
 Three read-only agents reused; new Claude guards/Fleet source under review.
 Same8ac normal continues, ELP2-10 OPEN and no ELP2-11/release. Verification:R0.
+
+
+### Edge counted workload return —21Oct18:29UTC
+
+Edge delivered the existing08 handoff§10.1 (marker counted-connected-workload-20261022), exact 4416bytes/SHA256 9e7291a3c72d4ce2858e3b729e1d435f3756d2c0f99e15cd0eafd495d469ceaa. Existing-driver positive HTTP=7+Q, source frame preparations B>=2 over two subscriptions, maintenance M. With actual H9/reserve20 require reviewed C>=36+Q+B+M; minimum38 is a lower bound, NOT an approved cap. Current32 leaves3. Core target owner: return actual bounded B (including queued/unseen/in-flight/drain), actual M, reviewed C/R and genuine unaffected scope. No cap/reserve mutation, history purge or generic reapproval requested. Keep original08 full revoke/cache/cursor/SSE; eligible READ independent of optional cache observer. Local main anchor original08-counted-connected-workload-20261022; no source/session/listener activated.
+
+Core ACKs this exact original08 case set, not a requirement to run both its
+earlier provisional2driver count and this schedule. Actual same8ac normal has
+4case failures in2unchanged API files, still running; [failure/retake plan](execution_loop/evidence/ELP2-10/CORE009_SUCCESSOR_NORMAL_IMAGE_RETURN_2026-10-21.md#5-actual-in-progress-failures--owner-intake21oct1829utc).
+No green normal/image/install claim, no concurrent retake or source action.
+After terminal, focused failed-file retake only and preserve original outcome.
+ELP2-10 OPEN. Verification:R0; reviewed incoming4Markdown appends preserved.
