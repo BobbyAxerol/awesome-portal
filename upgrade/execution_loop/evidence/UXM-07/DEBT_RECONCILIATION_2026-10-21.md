@@ -83,3 +83,30 @@ Nền: `799effc8` + sổ `6d6ecf04`. Bốn commit mã, mỗi commit một việc
 Mục mới: **041** baseline Access đổi chữ (Claude, cần Docker, gộp vào 037) · **042** từ vựng eligibility thiếu action cho nhiều nút (Codex/PM) · **043** `accessText` ở producer access nhận chữ mà reader chặt từ chối; siết phía ghi cần kiểm hàng đã lưu trên DB trước (Claude). Sổ: 24 mở, 19 đóng; sau 005 (`7e327456`): 25 mở, 21 đóng theo `debt-register.json` hiện tại.
 
 Không kiểm: parity producer của `commandCurrency` với reader (xem 043); `test_compat_parity.py::test_committed_snapshots_regenerate_identically` đỏ ở `portal-api.openapi.json` so với snapshot BAR-02; exporter không đổi OpenAPI nên không do rev 9, nhưng chưa chạy lại trên nền sạch (NOT_RUN).
+
+## 5. Refresh 2026-10-21 evening (DEBT-UXM07-038)
+
+Nền: `claude/post-freeze-20261021` @ `89f561c4`. Chỉ đọc git, mã và tài liệu Codex dưới `ELP2-10` (đọc từ `/home/bobby/portal-research`); không chạy test, Docker, PG, hook. SHA dưới đây đều qua `git cat-file -t` = commit và `git merge-base --is-ancestor <sha> HEAD` = có trong HEAD, trừ khi ghi rõ. Sổ: 20 mở, 27 đóng (trước: 24 mở, 23 đóng; 032 và 044 đã mang trạng thái CLOSED nhưng nằm trong mảng mở, nay đã chuyển mảng).
+
+| id | Trước | Sau | Bằng chứng (SHA) |
+| --- | --- | --- | --- |
+| 027 revokeSession | MỞ, "không có nơi gọi" | THU HẸP: nối ở đường trong tiến trình; còn gợi ý xuyên process cho CLI revoke/session cần DB LISTEN/NOTIFY (chưa làm, chưa đề xuất) | `966fc18a` (BE-P18; BE-P17.md §10) |
+| 028 B1 EXPLAIN | MỞ, gate chưa chạy | THU HẸP: gate EXPLAIN 10^6 PASS, deadline cả request; còn Codex quyết index thứ tự của view 141 (to_char IMMUTABLE) và `include=`; page scope rộng sort ~340k dòng (~0,6 s) | `343f5bbb`, `4ebc4d9e`, `90f84643` (BE-P18-b1-explain.md) |
+| 029 NET_PNL | MỞ | THU HẸP: bộ giảm dark tồn tại, Codex ACCEPT P21-1/P21-2; còn ánh xạ producer đã chọn của PM/Edge | `f0b56371`, `0201df80` |
+| 032 vitest flaky | CLOSED nhưng nằm trong mảng mở | ĐÓNG, chuyển mảng; SHA trong nhánh này là `3442f72c` | `3442f72c`, `e3d7b546` (`025f3f22` là bản trước rebase, không có trong HEAD) |
+| 035 CR-02 | MỞ (CHANGE) | ĐÓNG: ngân sách retry theo revision (migration 148); Codex "ACCEPT source design"; PG tập trung 380/380 (10 file) rồi 328/328 (11 file) | `75c3d7e6`, `ec228e53`, `89f561c4` |
+| 037 landing | MỞ | THU HẸP: đã hạ cánh ff-only 16:33 UTC, canonical `218b9428` (commit tồn tại, nằm trên `docs/research-loop-plan`, KHÔNG phải tổ tiên của nhánh post-freeze); còn: integrator mang các lát post-freeze và một lần đóng băng | `218b9428` (ngoài HEAD), `3394b04f`, `0201df80`, `bb541418`, `2c1b8717` |
+| 044 M-1 workbench | CLOSED nhưng nằm trong mảng mở | ĐÓNG, chuyển mảng; case QUIET-DELAYED-WAKE (`quietGate.mjs:41-42`) là việc riêng | `e299c3df`, `371224f0` |
+| 045 access canary | MỞ | GIỮ MỞ: UNREPRODUCED / CAUSE_UNKNOWN; next action làm mới (trace khi đỏ lại; receipt gốc khôi phục) | `a0b885b6`, `2c1b8717` |
+| 041 baseline Access | MỞ | ĐÓNG: `v2-access-390` ghi lại, 1440 trùng byte; 61 ô so sánh hai lần xanh | `54ebc7ac`, `f6b2cc6d`, `9cf6b04b` |
+| 016 baseline V2 | MỞ, "PENDING sau merge a512d55d" | THU HẸP: phần sau merge xong (61 ô); còn bốn trạng thái chưa phủ (Fleet Board/Map, form Exit, form pending-control, Sandbox note đã gửi) | `54ebc7ac`, `f6b2cc6d`, `9cf6b04b`, `a512d55d` |
+| 018 thiếu conformance | MỞ, thu hẹp | THU HẸP thêm: chỉ còn thân Live V1 `readLiveFull` (không có `liveFull.conformance*`); SHA quy về nhánh này | `f4770841`, `e1fb7906`, `2f8eec78` |
+| 026 notice Fleet | MỞ | GIỮ: Edge commission notice source; Codex: thao tác snapshot/STREAM đã có, thiếu là quyền, notice, bằng chứng nối | `ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md` §5 |
+| 030 pager | MỞ, "không có operation trang" | GIỮ, tiền đề sửa: `listAlphaFleet` After/Before/Limit đã publish; việc thật là ánh xạ `ScopedPagePort` sang operation sinh sẵn, hai envelope tách biệt | `ELP2-10/CODEX_DEBT030_042_DISPOSITION_2026-10-21.md` |
+| 042 từ vựng eligibility | MỞ | GIỮ: next action theo từng control (Return/Lock/Deploy NOT_COMMISSIONED; Rotate đã có refusal có kiểu; Incident là route Portal-only, thiếu eligibility advisory) | cùng tài liệu Codex |
+| 047 Records cap 200 | MỞ | GIỮ: Codex lượng hoá chiều sâu history trước; không cắt, không bịa trần; SHA quy về nhánh này | `e1fb7906`, `2f8eec78`; `ELP2-10/FE073_FE074_SERVED_CONTRACT_RETURN_2026-10-21.md` |
+| 031 trang phone | THU HẸP | GIỮ: sửa trạng thái cũ ("2 baseline cần ghi lại") theo `closed_part` đã có | `89536bda`, `9cf6b04b` |
+
+Đếm: 4 đóng (032, 035, 041, 044), 6 thu hẹp (027, 028, 029, 037, 016, 018), 6 giữ (026, 030, 042, 045, 047, 031). Không đổi: 008, 011, 013, 038, 039, 040, 043, 046.
+
+Chưa kiểm được trong lượt này: test composition-path của B1 (câu hỏi 6) không thấy trong `BE-P18-b1-explain.md`; không chạy lại bất kỳ test hay PG nào. Các việc Codex yêu cầu trong review 17:18 chưa thấy commit (Fleet-flight FLEET-1, stage pre-I/O cap MEASURE-1, G2 binding MEASURE-2, QUIET-DELAYED-WAKE) vẫn mở, chưa có hàng sổ riêng.
