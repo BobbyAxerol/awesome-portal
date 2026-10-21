@@ -412,8 +412,10 @@ export function readEquity(envelope: ProfileEnvelope, page: PageState): EquityMo
   const downsample = window !== null && isRow(window.downsample) ? window.downsample : null;
   const sourceRows = window === null ? null : count(window.source_rows);
   const method = downsample === null ? null : text(downsample.method);
+  // The published window states its reduction by name; the only published method keeps the per-series bucket extrema, so only that
+  // name may say so. Any other (or unstated) method keeps the "does not guarantee extrema" flag (FE-073, schema const).
   const serverEnvelope: ServerEnvelope | undefined = sourceRows !== null && method !== null && sourceRows >= points.length
-    ? { sourceCount: sourceRows, shownCount: points.length, method, keepsExtrema: false }
+    ? { sourceCount: sourceRows, shownCount: points.length, method, keepsExtrema: method === "PER_SERIES_BUCKET_EXTREMA" }
     : undefined;
 
   const notes: string[] = [];
