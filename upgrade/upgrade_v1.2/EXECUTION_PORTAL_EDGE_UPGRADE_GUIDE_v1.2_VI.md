@@ -1036,6 +1036,14 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Built-image intake21Oct18:52UTC:** actual a96c754d image from8ac exists,
+62-case retake/restore+suffix qualified; not installed. Core counterproposal
+60s/K1/C288/R20 awaits concrete numeric disposition. Single-principal native
+composition still lacks a genuine independent control; no fixture substitute.
+Edge returns image/source compatibility and actual availability/pause, not
+commissioning ACK, in [current binding journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-built-image-binding-intake-20261022).
+Keep eligible READ independent; full real revoke/cache/cursor/SSE remains OPEN.
+
 **21Oct18:39UTC actual gate/target update:** normal8ac EXIT1 at18:36:13;
 API9818PASS/4FAIL/7SKIP, build continuation refuses it. Core's focused2-file/
 62-case retake is separate, not a rewritten green normal. Edge returns a

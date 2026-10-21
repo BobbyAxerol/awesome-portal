@@ -29711,6 +29711,64 @@ Verification:R0; arithmetic6checks/tracking/indexed2new anchors/staged diff
 PASS,3Markdown paths only. Peer main/binding and3native-egress/test/feasibility
 pins preserved. No hosted CI, push/merge, own test resources or runtime writes.
 
+<a id="original08-built-image-binding-intake-20261022"></a>
+### Original08 — built-image binding intake —21Oct18:52UTC
+
+**IN_PROGRESS / NOT_INSTALLED / full08 and09 NOT_MET.** Actual Core image
+receipt completes18:47:40UTC; independent docker image inspect confirms
+sha256:a96c754dfbd52801f6d451dfa329eeeb3ab37fe9e467db145e201c9fa9acf121,
+created18:47:36, from8ac/tree4a29/qualified retake+suffix, not green original
+normal. Protected before/after hash51915965 matches. Consume Core finite08
+proposal fully: same reasoning but60s/K1 gives B244, CminH+20+7+Q+244;
+H9/Q1→281, proposed C288. Core accepts Edge's mechanism, not an applied cap.
+It explicitly requests target-owner/Bobby numeric disposition. One async
+question asks ONLY that concrete32→288 change, unchanged reserve/rights and
+rollback constraint; no generic phase reapproval or secret requested. Do not
+apply288 before that disposition or promise288→32 after history exceeds32.
+
+New concrete full-case gap: nativeCoreResearchReviewTarget:165–177 intentionally
+allows one Paper selector/intake/principal. Independent same-source unaffected
+control is not currently proven. Ask Core to name an actual valid control or
+return the smallest exact typed composition/authority design delta using
+already approved genuine identities/scopes; no invented grant, fixture or
+non-native control substitution, no implicit extension to a second identity.
+Current READ and other eligible cases do not wait for this control or P22,
+but the full original objective cannot claim PASS with those cases NOT_RUN.
+
+Runnable scope: source/image compatibility and availability/pause ACK through
+existing handoff§10.3, unchanged C32 for any otherwise eligible initial READ,
+proposed19:15–19:45UTC current-source slot subject to actual Core match. Do not
+re-date/invoke expired16:30 draft or create expiring authority before matching
+source/window pins. Actual HK18:52 checks: port28446 not listening, no matching
+edge-core009-native/next containers; native server59d44f22 and peerb7ad92aa
+leaves valid to22Oct02:48:30UTC. No source role/DB/session/listener/key mutation.
+No new disposable resources/cleanup; retain existing operational/rollback set.
+R0 main/handoff/guide tracking/links/diff only; peer WIP/source pins preserved.
+Source/current runtime tuple remains canonical54c6f5f3/feature6b534620,
+Edge d6aa7a51/Core9cf5/config423573a8; built a96 is NOT deployed. No push/merge/
+CI or performance claim. Next actual Core target/window response makes fresh
+private source composition runnable; close real cases only on actual receipts.
+
+**Actual delivery/readback:**18:55:35UTC full§10.3 is2548bytes/SHA256
+d9e0aee2f7b8660d6ac79ad80375aa4baa90f5ec58b744d72740b8fe8bb9f4bc,
+locator1202bytes/SHAe1113f8764f9c68a7da7f1e9a8a29a921c7c19116cbf9b93b87710ec73b5776f
+reached existing Core task/Unified/sync;4exact-prefix/readbacks PASS. Core
+still serves9cf5/config423573a8/restart0 at18:57:10UTC; built a96 is not
+installed. New current window/config/session/binding ACK has not arrived;
+eligible source preparation depends on that exact input, not another generic
+phase approval. No new SDK worker/test/private proposal/credential was created
+merely to fill this wait; expired draft is retained as unexecuted history.
+Runnable source-derived sizing/image-compatibility/availability work is done;
+remaining full-case bound decision, Core target commission/current inputs,
+actual P22 factory and genuine independent-control design remain exact owning
+inputs. They do not authorize marking the goal complete or substituting an
+eligible partial READ for the full real revoke/cache/cursor/SSE objective.
+
+R0 actual precommit: execution-tracking EXIT0, indexed new locator/anchors
+PASS, staged diff check PASS;3Markdown/+99 before this receipt. Only the owned
+main append is staged; peer10line main/56line binding/native source/test/
+feasibility pins are unchanged. No duplicate build/test/CI or cleanup action.
+
 
 
 
