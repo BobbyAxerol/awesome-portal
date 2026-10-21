@@ -31,7 +31,7 @@ import { withContext } from "../../urlState";
 import { captureReasonText, stageActionReason, stageWhy } from "../stage/reasons";
 import { useStageActionEligibility } from "../stage/StageEligibility";
 import {
-  checkCapture, exitFingerprint, exitStatusOf, newExitKey, summaryBlock, summaryLength,
+  checkCapture, exitFingerprint, exitStatusOf, newExitKey, refusalWords, summaryBlock, summaryLength,
   type ExitBind, type ExitReviewBinding, type ExitStatus,
 } from "./exitReviewRequest";
 
@@ -84,9 +84,20 @@ function useExitCapability(api: ExecutionApi, workspaceId: string | null): Capab
 
 type Outcome =
   | { kind: "recorded"; reviewId: string; replayed: boolean; key: string }
-  | { kind: "refused"; reason: string; status: string };
+  | { kind: "refused"; reason: string };
 
 interface Unknown { fingerprint: string; key: string; reason: string }
+
+/** A definite refusal: what the server did not do, in the dictionary's words (or its own), with its code behind the disclosure. */
+function RefusalNote({ reason }: { reason: string }) {
+  const words = refusalWords(reason);
+  return (
+    <div className="exec-wb-xr-refusal" role="alert" data-outcome="refused">
+      <p>The server did not record this request. {words.text}</p>
+      {words.code === null ? null : <GapWhy name="Server reason" rows={[`Server reason: ${words.code}`]} next={null} />}
+    </div>
+  );
+}
 
 export interface ExitReviewRequestProps {
   api: ExecutionApi;
@@ -182,7 +193,7 @@ export function ExitReviewRequest({ api, deploymentId, workspaceId, bind }: Exit
         setOutcome(null);
         setUnknown({ fingerprint: fp, key, reason: result.reason });
       } else {
-        setOutcome({ kind: "refused", reason: result.reason, status: result.status });
+        setOutcome({ kind: "refused", reason: result.reason });
         setUnknown((u) => (u?.key === key ? null : u));
       }
     } catch {
@@ -286,7 +297,7 @@ export function ExitReviewRequest({ api, deploymentId, workspaceId, bind }: Exit
         <span id={hintId} className="exec-wb-xr-hint">{block !== null ? block.text : `${summaryLength(summary)} characters`}</span>
       </div>
       {outcome?.kind === "refused" ? (
-        <p className="exec-wb-xr-refusal" role="alert">The server did not record this request ({outcome.status}). {outcome.reason}</p>
+        <RefusalNote reason={outcome.reason} />
       ) : null}
       {unknown === null ? null : (
         <div className="exec-wb-xr-refusal" role="alert" data-outcome="unknown">

@@ -743,6 +743,39 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       : unavailable("The triage response could not be read.");
   };
 
+  /**
+   * DEBT-UXM07-033: `captureR2` and `createPaperExit` classify like `captureSandboxNote`. Once the request is sent, a thrown fetch,
+   * a 408/5xx, or a 2xx the client cannot read or that is not this request's answer does not say the review was NOT recorded: those
+   * carry `REVIEW_CAPTURE_OUTCOME_UNKNOWN` (a retry reuses the caller's request key). A definite 4xx stays the typed refusal.
+   */
+  const unknownAwareCapture = async (
+    path: string,
+    input: object,
+    accepts: (value: NonNullable<ReturnType<typeof readReviewCapture>>) => boolean,
+  ): Promise<Result<NonNullable<ReturnType<typeof readReviewCapture>>>> => {
+    const unknownOutcome = (why: string) => unavailable(`${REVIEW_CAPTURE_OUTCOME_UNKNOWN}: ${why}`);
+    let response: Response;
+    try {
+      response = await post(path, input, signal);
+    } catch {
+      return unknownOutcome("The request ended before the Portal's answer was read.");
+    }
+    if (!response.ok) {
+      const refused = await problem(response);
+      return response.status >= 500 || response.status === 408
+        ? unknownOutcome(refused.ok ? `HTTP ${response.status}` : refused.reason)
+        : refused;
+    }
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      return unknownOutcome("The Portal answered but the answer could not be read.");
+    }
+    const value = readReviewCapture(body);
+    return value !== null && accepts(value) ? { ok: true as const, value } : unknownOutcome("REVIEW_CAPTURE_CONTRACT_INVALID");
+  };
+
   return {
     createApprovalRequest,
     withReadSignal: (child: AbortSignal) => createHttpApi({ policy, signal: signal ? AbortSignal.any([signal,child]) : child, readScope }),
@@ -753,18 +786,10 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       return value ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
     },
     async captureR2(input: R2CaptureInput) {
-      const response = await post("/governance/r2/capture",input,signal);
-      if (!response.ok) return problem(response);
-      const value = readReviewCapture(await response.json());
-      return value?.action === "R2_CREATE" && value.workspace_id === input.workspace_id
-        ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+      return unknownAwareCapture("/governance/r2/capture", input, (value) => value.action === "R2_CREATE" && value.workspace_id === input.workspace_id);
     },
     async createPaperExit(input: PaperExitCreateInput) {
-      const response = await post("/governance/paper-exit/create",input,signal);
-      if (!response.ok) return problem(response);
-      const value = readReviewCapture(await response.json());
-      return value?.action === "PAPER_EXIT_CREATE" && value.workspace_id === input.workspace_id
-        ? {ok:true as const,value} : unavailable("REVIEW_CAPTURE_CONTRACT_INVALID");
+      return unknownAwareCapture("/governance/paper-exit/create", input, (value) => value.action === "PAPER_EXIT_CREATE" && value.workspace_id === input.workspace_id);
     },
     async captureSandboxNote(input: SandboxNoteInput) {
       // Once the request is sent, a thrown fetch, a 5xx/408, or a 2xx the client cannot read does not

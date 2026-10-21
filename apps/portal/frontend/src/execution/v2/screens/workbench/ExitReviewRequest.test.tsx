@@ -12,11 +12,12 @@ import type { CaptureContext, ContextRead } from "../../../api/governanceContext
 import { readCaptureContext } from "../../../api/governanceContext";
 import type { ExecutionApi, Result } from "../../../api/ports";
 import { REVIEW_CAPTURE_OUTCOME_UNKNOWN, type ReviewCapture } from "../../../api/reviewCapture";
+import { createHttpApi } from "../../../api/httpApi";
 import { readGovernanceParentByKind } from "../../readers/dispatch";
 import { readPaperExitParentV1, type PaperExitParentQuery, type PaperExitParentRead } from "../../readers/paperExitParent";
 import { ExitGatePanel } from "./ExitGatePanel";
 import { ExitReviewRequest } from "./ExitReviewRequest";
-import { R2_PARENT_GAP, bindExitReview, checkCapture, exitFingerprint, exitStatusOf, summaryBlock, type ExitBind, type ExitReviewBinding } from "./exitReviewRequest";
+import { R2_PARENT_GAP, bindExitReview, checkCapture, exitFingerprint, exitStatusOf, refusalWords, summaryBlock, type ExitBind, type ExitReviewBinding } from "./exitReviewRequest";
 import type { GateFacts } from "./model";
 import { whyText } from "../../gapWhyTestUtil";
 
@@ -379,10 +380,88 @@ describe("open: bound to the parent and offered by the server", () => {
     type(TEXT);
     fireEvent.click(send()!);
     await settle();
-    expect(screen.getByRole("alert").textContent).toContain("The server did not record this request (denied). APPROVAL_NOT_PENDING");
+    expect(screen.getByRole("alert").textContent).toContain("The server did not record this request. APPROVAL_NOT_PENDING");
     expect(document.querySelector("[data-state='recorded']")).toBeNull();
     type(`${TEXT}!`);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  /* DEBT-UXM07-034: the panel word of a failure ("unavailable" for every 409) is not a reason and is never printed. */
+  it.each([
+    ["APPROVAL_VERSION_CONFLICT", "The R2 approval moved to another version; read it again before requesting an exit review."],
+    ["CAPTURE_PROJECTION_VERSION_CONFLICT", "The Paper projection moved since the request was prepared; read it again."],
+  ])("a 409 %s says what the server said, keeps the code behind the disclosure, and never prints '(unavailable)'", async (code, message) => {
+    const s = stub({ create: async () => ({ ok: false, status: "unavailable", reason: `${code}: ${message}` }) });
+    mount(s);
+    await settle();
+    type(`REFUSE ${TEXT}`);
+    fireEvent.click(send()!);
+    await settle();
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toContain(`The server did not record this request. ${message}`);
+    expect(alert.textContent).not.toContain("(unavailable)");
+    expect(alert.textContent).not.toContain("(denied)");
+    expect(alert.getAttribute("data-outcome")).toBe("refused");
+    expect(whyText(alert.querySelector(".exec-blk-why"))).toBe(`Server reason: ${code}`);
+    expect(alert.textContent).not.toContain("Unknown");
+  });
+
+  it("a refusal whose code the stage dictionary knows reads in the dictionary's words", async () => {
+    const s = stub({ create: async () => ({ ok: false, status: "denied", reason: "ADMIN_ROLE_REQUIRED: Requesting a Paper exit review needs the admin role in this workspace." }) });
+    mount(s);
+    await settle();
+    type(`DENIED ${TEXT}`);
+    fireEvent.click(send()!);
+    await settle();
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toContain("The server did not record this request. Needs the Admin role");
+    expect(alert.textContent).not.toContain("(denied)");
+    expect(whyText(alert.querySelector(".exec-blk-why"))).toBe("Server reason: ADMIN_ROLE_REQUIRED");
+  });
+
+  it("a 5xx from the real port is unknown, never 'did not record', and the retry reuses the same reference and text", async () => {
+    const bodies: any[] = [];
+    let n = 0;
+    vi.stubGlobal("fetch", async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return n++ === 0
+        ? new Response(JSON.stringify({ error: { code: "UPSTREAM_UNAVAILABLE", message: "upstream" } }), { status: 503, headers: { "content-type": "application/json" } })
+        : new Response(JSON.stringify(capture()), { status: 201, headers: { "content-type": "application/json" } });
+    });
+    const real = createHttpApi({ policy: null });
+    const s = stub({ create: (input) => real.createPaperExit(input) });
+    mount(s);
+    await settle();
+    type(TEXT);
+    fireEvent.click(send()!);
+    await settle();
+    const alert = screen.getByRole("alert");
+    expect(alert.getAttribute("data-outcome")).toBe("unknown");
+    expect(alert.textContent).toContain("Unknown: it may have been recorded.");
+    expect(alert.textContent).not.toContain("did not record");
+    expect(alert.textContent).toContain(`Sending again uses the same reference (${bodies[0].request_key})`);
+    fireEvent.click(send()!);
+    await settle();
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1].request_key).toBe(bodies[0].request_key);
+    expect(bodies[1].summary).toBe(bodies[0].summary);
+    expect(document.querySelector("[data-state='recorded']")).toBeTruthy();
+    vi.unstubAllGlobals();
+  });
+
+  it("an unreadable 2xx from the real port is unknown too", async () => {
+    vi.stubGlobal("fetch", async () => new Response("<html>proxy</html>", { status: 200 }));
+    const real = createHttpApi({ policy: null });
+    const s = stub({ create: (input) => real.createPaperExit(input) });
+    mount(s);
+    await settle();
+    type(TEXT);
+    fireEvent.click(send()!);
+    await settle();
+    const alert = screen.getByRole("alert");
+    expect(alert.getAttribute("data-outcome")).toBe("unknown");
+    expect(alert.textContent).not.toContain("did not record");
+    vi.unstubAllGlobals();
   });
 
   it("an unknown outcome retries under the SAME key; an edited text goes under a new key and says both could exist", async () => {
@@ -653,5 +732,13 @@ describe("in the exit gate panel, bound to the R2 parent the Portal publishes fo
     await settle();
     expect(screen.queryByRole("textbox")).toBeNull();
     expect(button().disabled).toBe(true);
+  });
+});
+
+describe("refusalWords: the words of a definite refusal", () => {
+  it("uses the stage dictionary for a code it knows, the server message otherwise, and the whole reason when it is not typed", () => {
+    expect(refusalWords("GOVERNANCE_SCOPE_MISMATCH: x")).toEqual({ text: "The grant does not cover this deployment", code: "GOVERNANCE_SCOPE_MISMATCH" });
+    expect(refusalWords("APPROVAL_VERSION_CONFLICT: The R2 approval moved.")).toEqual({ text: "The R2 approval moved.", code: "APPROVAL_VERSION_CONFLICT" });
+    expect(refusalWords("something went wrong")).toEqual({ text: "something went wrong", code: null });
   });
 });

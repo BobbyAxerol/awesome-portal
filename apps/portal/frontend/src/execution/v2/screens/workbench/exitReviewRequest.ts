@@ -16,6 +16,7 @@ import { reasonWords } from "../../../api/governanceContext";
 import type { ReviewCapture } from "../../../api/reviewCapture";
 import type { GovernanceParentRead } from "../../readers/dispatch";
 import { unsafeText } from "../../../unsafeText";
+import { captureReasonText } from "../stage/reasons";
 import type { ExitParentState } from "./useExitParent";
 
 /** The server's published bounds for the summary (`PaperExitCreateRequest.summary`). */
@@ -105,6 +106,20 @@ export function newExitKey(): string {
       : `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}`;
   const key = `paper_exit:${random}`;
   return KEY_SHAPE.test(key) ? key : `paper_exit:${Date.now().toString(16)}`;
+}
+
+/* ── a definite refusal, in words (DEBT-UXM07-034) ─────────────────────────────── */
+
+/**
+ * A refusal arrives as `CODE: message`. The words come from the stage dictionary when it has the code (`captureReasonText`, the same
+ * sentences the shut control uses); otherwise they are the server's own message, unchanged. The code is returned apart so the screen
+ * keeps it behind the "Server reason" disclosure. The panel word of the failure ("unavailable" for every 409) is not a reason and is
+ * never printed.
+ */
+export function refusalWords(reason: string): { text: string; code: string | null } {
+  const match = /^([A-Z][A-Z0-9_]{2,}): ([\s\S]+)$/.exec(reason);
+  if (match === null) return { text: reason, code: null };
+  return { text: captureReasonText(match[1]) ?? match[2]!, code: match[1]! };
 }
 
 /* ── what a settled answer must match ─────────────────────────────────────────── */
