@@ -1069,6 +1069,17 @@ full-mode activation requires a reviewed THREE-serving-Edge reconcile/rollback,
 superseding the earlier Paper-only one-service proposal. No such rollout, new
 grant/session, directDB or command/Live-trading activation is implied here.
 
+**21Oct08:21UTC runnable all-mode TLS qualification:** actual SGP→HK
+Paper8443/Sandbox8444/Live8445 each verifies the serverCA/IP/TLS1.3 and rejects
+a missing client certificate explicitly:3/3PASS, zero HTTP/JWT/clientkey/DB.
+Canary reuses governed Live facts; no fourth endpoint. See the
+[single connected return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md#all-mode-tls-only-qualification-and-existing-rollout-path--0821utc)
+for failed prechecks/corrected alert-wait mechanics, actual CA-versus-JWT
+identity boundary and existing exact three-service rollback sequence. This
+closes only that TLS-negative slice, not positive policy/READ/STREAM, active
+revocation, cross-profile JWT cases or full08/09. Actual issuer/Research leaf
+and Core's next all-mode config/bindings remain the named owner inputs.
+
 **21Oct05:40UTC actual connected continuation:** the
 [single bounded return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md#actual-continuation-and-active-revoke-recovery-05250539utc)
 now records three genuine retained snapshots/four heartbeat frames with exact

@@ -28427,6 +28427,59 @@ unchanged product checks are corroboration only. After actual terminal, remove
 only exact new owned unreferenced test image under fresh quiet guard; retain
 baseline images/cache, operational/rollback/source28446 and witness48128.
 
+**08:21UTC actual publication/C4 and all-mode TLS slice:** eight owned public
+documents landed `dd83992df4991d5477848a8ac0f4fa2a3019ae70`, Bobby identity,
+636insertions/10deletions, normal tracked hook physically exit0:130contracts,
+717API/72files, TypeScript build and scopedPGrestore PASS. No push/merge or
+hostedCI; unchanged-source retests are corroboration, not new coverage. Exact
+Git/process/resource witness92760b7b and hookloga02d6968 retained privately.
+C4 closeout `/home/bobby/secure/edge-data-leg-readiness-docs-hook-3EAUWlb8/closeout.json`
+SHA9e841e2a29fabfc2c4f2043ef632cbd718b4d7eccb2bdb4d5f3c07cd3a0cef63:
+fresh quiet guard PASS, only new owned image770794f3/test1010496 removed
+nonforce; exact own PG/Node/network/tmp absent. All102baseline imageIDs and
+406cache records retained/no prune. Free249156673536→249145438208B is shared
+host movement, not claimed reclaimed bytes.40/41baseline tuples exact; known
+Paper projection-worker sameID/image/config restart3561→3606 observed only,
+not intervened in or causally attributed. ServingEdges/Manager/native4/DL
+query2/stream4 remain exact; source7d28446 and witness48128 are retained.
+PeerC5 ten-line hunk/packet11ce1e87/three original WIP hashes preserved.
+
+Independent runnable TLS checks at08:21:13: SGP→Paper8443/Sandbox8444/Live8445
+**3/3 PASS** for verified real serverCA+IP/TLS1.3 plus explicit missing-client
+certificate_required rejection. Zero HTTP/JWT/client keys/source calls/DB writes.
+First parent-permission attempt failed before TLS; an EOF-only diagnostic
+collected no rejection and was NOT PASS. Corrected bounded -ign_eof waits for
+the actual server alert; final cases counted once. Canary is governed Live,
+not a fourth endpoint. Exact mechanics, implemented CA-versus-JWT identity
+boundary and three-serving-service rollback recipe are in the existing
+[single connected return](evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md#all-mode-tls-only-qualification-and-existing-rollout-path--0821utc).
+Do not claim wrong-SAN matching, positive authorization, fresh data, active
+revoke or full08/09 from these TLS negatives. PKI issuer/issued leaf and Core's
+next versioned all-mode config/current-policy commissioning remain concrete
+owner inputs; request is delivered in Core's existing task and Unified.
+
+Latest bounded producer refresh: PM20aabaf3 adds original-lease metadata
+correlation only. TS03manifestf3a49603 stays SOURCE_DARK, PM07manifest83d251e8
+unmounted, target771955a5 proposed/not execution ready; no new runtime authority
+or numeric bounds. Core's normalR3 was actually live/progressing at08:11:20;
+no final PASS/build/install or recovery retry inferred. SGP132794863616B free
+of665811062784B is just below20%; actual capacity decision precedes its next
+disk-intensive build, no broad prune. Same original09:00–09:30 recovery-only
+ACK stands. Continue original08 inputs/binding; full08/09 remain NOT_MET.
+
+**08:27UTC final all-mode TLS evidence publication preflight:** publish the
+three owned plan/guide/connected-return changes with normal tracked hooks,
+CPU0,1/nice15; no product source or runtime change. Fresh C4 baseline
+`/home/bobby/secure/edge-allmode-tls-docs-hook-8TvL9Uh1/preflight.json`,
+SHA c6717a4767e55e7a28da1aa688b0b082c34453ab65af8f30917e91792d34146a,
+records102image rows/406cache records/free249796825088B. The same private
+directory retains normal-hook.log, original-process hook-witness.json and
+final closeout.json; require actual terminal before exact scoped teardown.
+No new semantic coverage is inferred from repeated unchanged product tests;
+the new connected evidence is the three TLS denials only. Keep peer changes,
+all baseline/rollback images, original28446 custody, passive observer and PKI
+drafts; no push/merge or hostedCI. Full08/09 status remains NOT_MET.
+
 
 
 

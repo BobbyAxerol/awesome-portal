@@ -398,3 +398,60 @@ No such rollout is executed here. Core/PKI received the exact matrix/issuer
 action; no duplicate keysets, Paper fallback, Proxy/DB/worker/source28446 change
 or implicit command/Live trading authority. Exact current-policy/issued-workload
 mapping and future operational package remain required for real all-mode reads.
+
+### All-mode TLS-only qualification and existing rollout path — 08:21UTC
+
+At `2026-10-21T08:21:13.065277Z`, three bounded SGP-to-HK TLS-only checks
+passed: Paper8443, Sandbox8444 and Live8445 each verified the real server CA
+and IP10.70.0.2 with TLS1.3, then received the explicit
+`certificate_required` rejection without a client certificate. **3/3 PASS**;
+zero HTTP bytes, JWTs, client keys, source requests or DB writes. Canary uses
+the existing Live transport with its independent governance, not another TLS
+endpoint. This is missing-client denial, not positive human/read/STREAM,
+cross-profile JWT authorization, production capacity or full08 acceptance.
+
+Reuse the existing audit's TLS verification mechanics, without invoking its
+signer/credential-dependent whole harness. The exact public server CA is
+`/srv/primus/portal/control-api/edge-server-ca.crt` on SGP, PEM SHA256
+`8fff563d58edd385e8be0963050e0e3619227dcbc6cea2b8dfcba7e3acf302b7`.
+The initial non-sudo invocation could not traverse its protected parent and
+failed before any TLS connection. A subsequent stdin-EOF probe verified all
+three servers but exited before collecting a rejection: **0/3 denial proof**,
+not evidence of accepted unauthenticated requests. The corrected finite
+`openssl s_client -tls1_3 -brief -verify_return_error -verify_ip 10.70.0.2
+-CAfile <exact-public-CA> -connect 10.70.0.2:<port> -ign_eof` waited for the
+actual alert, with eight seconds maximum per case. No failed assertion was
+waived or timeout/EOF relabelled PASS; count the three final cases once.
+
+Source review distinguishes the actual boundaries: `edge-service/src/main.rs`
+4439–4469 uses stock WebPkiClientVerifier, checking the trusted client chain,
+validity and clientAuth purpose, not a CN/SAN/SPIFFE/profile string allowlist.
+JWT audience/environment/resource/profile checks are separate. The historical
+`/control-api/paper` CSR URI therefore neither grants all-mode access nor
+technically prohibits Sandbox/Live. One issued Research workload can serve
+the existing three transports if its PKI/current-policy owner confirms that
+mapping. Do not claim wrong-SAN rejection from CA-only validation; D1's older
+identity-inventory language is stronger than the implemented string matching.
+
+Existing deployment, not a new framework, supplies the future rollback path:
+use each current project's exact Docker-label Compose file set, runtime ENV
+and pinned image under releasea9b10385. Paper uses compose.paper-read.yaml;
+Sandbox/Live use compose.profile-read.yaml plus compose.profile-source-proxy.yaml;
+all retain their existing durable-projection/analytics/realtime overlays.
+After the real issued leaf, genuine per-mode policy/session and reviewed
+window exist, preserve the exact public JWKS/optional CA, ENV/config/image
+pins and reconcile **only** each serving execution-edge, sequentially, with
+`--no-deps --no-build --pull never --force-recreate`. `--pull never` prevents
+the installed base's pull_policy:always from changing the image. Rollback
+disables the Research data leg, restores the saved public trust and reconciles
+the same serving services, never grants or historical receipts. No Proxy,
+Manager/issuer, worker, database or native28446 reconcile is authorized here.
+Do not use the historical D3 probe renderer or obsolete D2 flags for this.
+
+The existing `scripts/execution-d3-manager-live-audit.sh` supports actual
+per-mode inputs; reuse its bounded operator checks when issued credentials
+exist. Separately require the six real-profile off-diagonal JWT/origin denials,
+cache/cursor isolation, genuine human business scope and Canary Live governance.
+Operator metadata checks alone do not establish those connected boundaries.
+Issuer/leaf and next all-mode configuration are Core/PKI-owned concrete inputs;
+new TS capture publication is not a prerequisite for this existing data leg.
