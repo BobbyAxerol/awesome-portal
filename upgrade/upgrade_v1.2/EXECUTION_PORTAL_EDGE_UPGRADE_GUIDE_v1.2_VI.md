@@ -1036,6 +1036,17 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**21Oct18:39UTC actual gate/target update:** normal8ac EXIT1 at18:36:13;
+API9818PASS/4FAIL/7SKIP, build continuation refuses it. Core's focused2-file/
+62-case retake is separate, not a rewritten green normal. Edge returns a
+source-derived conditional finite correctness target (single client/notice,
+same <=120s STREAM grant, proposed B484 and C=actualH+512/reserve20) for Core
+review, NOT applied/current/production capacity. See [current target journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-source-bounded-target-proposal-20261022).
+Full08/09NOT_MET; actual image/config/current commissioning still required.
+Retake now actually62/62PASS+PG restore/EXIT0 at18:43:41; aggregate qualifies
+the same source transparently, original normal stays FAIL. New image build
+controller3364462 is live from18:44:05, not an installed/connected PASS.
+
 **Counted connected schedule,21Oct18:29UTC:** existing baseline/post-revoke
 driver plus independent before/after controls require7positive HTTP+Qrelation,
 B>=2 actual server frame preparations over initial/resumed STREAM, and M actual

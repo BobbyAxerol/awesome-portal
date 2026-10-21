@@ -29643,6 +29643,74 @@ and reviewed finite target, then Edge binds and runs original08 without
 another generic approval. This is a live owning pipeline wait, not source-
 only readiness or a reduced goal. Documentation commit stays local/unpushed.
 
+<a id="original08-source-bounded-target-proposal-20261022"></a>
+### Original08 — source-bounded target proposal —21Oct18:39UTC
+
+**IN_PROGRESS; connected08/09 NOT_MET.** Previous goal turn made progress:
+Core ACKed the delivered full case census. This round observes a real terminal,
+not another stale wait: normalEXIT1/finished18:36:13UTC/source8ac4f553/tree4a29ae9e;
+API480files PASS/2FAIL/4SKIP,9818tests PASS/4FAIL/7SKIP. Contracts1629PASS are
+a separate sublane. Build continuationEXIT1 at18:36:16, no image. Exact stacks
+are access expiry at InstanceRegistrationService.finishMutation:110, Planning
+seedUser→UsersRepository.lockById:78 statement timeout, plus facade test411/759
+timeouts. Do not call these proven flakes, hide failures or rewrite terminals.
+Core owns diagnosis/affected-file retake and remaining gate coverage; no Edge
+duplicate suite, source edit or old-image activation is authorized.
+
+Runnable owned work is the source-derived finite target calculation requested
+by Core. Existing source was read, including single-flight250ms runtime poll,
+per-client busy guard, batch upper bound, repeated current STREAM evaluation,
+prepared-notice expiry and final transaction expiry before frame insert commit.
+Prepare the conditional concrete proposal in existing
+[handoff§10.2](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#source-bounded-target-proposal-20261022), not a new
+framework: one native client, one notice per poll, same fixed STREAM grant for
+both sequential subscriptions with <=120000ms non-sliding lifetime. A frame
+bound484 allows480poll opportunities plus4boundary/in-flight/closure allowance.
+With Q<=1, H repinned after commissioning and reserve20, proposed C=H+512
+(H9→521). Core must verify exact deployed caller/clock/expiry/grant/config
+conditions and approve the finite target before applying it; this is NOT a
+certified capacity/SLO, current runtime setting or numeric production budget.
+READ/session/source windows need not be shortened to120s; only the separately
+governed test STREAM grant has that finite lifetime. Actual active revoke must
+precede expiry; NOOP_EXPIRED does not pass. No grant extension/new attempt or
+second baseline run is hidden in the bound. Missing preconditions invalidate
+the calculation and require repinning, not a guessed cap or smaller goal.
+
+Scope: existing main/handoff documentation only, R0 tracking/link/diff/arithmetic
+checks, no new unit/build/cell/DB/source/listener/session/authority mutation.
+Rollback withdraws the unexecuted proposal. Preserve peer WIP, active/rollback
+images, private keys and real history. No resources created, cleanup
+NO_ACTION_NEEDED; runtime/source tuple and latest disk observation from the
+preceding journal remain unchanged. No push/merge/CI. Next: Core disposition on
+the actual failed gate and finite target; qualified image/config/current inputs
+make original08 binding/real cases immediately runnable, no generic reapproval.
+
+**Delivery/verification:**18:40:56UTC full proposal2868bytes/SHA256
+42043f57818639d2e6de01f45e46997bd53508101cf64d1c578018dd8b60626c
+and locator1110bytes/SHAa37651bc30119f9a9db6460f979671a61fc7f619635981e135efe928cdd39198
+actually reached existing4Core readpoints; preserved-prefix/readback PASS.
+Six arithmetic reserve sanity checks PASS (not six runtime cases), tracking
+EXIT0/diff check PASS. Normal failure retained; Core now has a distinct
+focused retake on the same freeze, controllerPID3332371 actually live18:44UTC,
+retake-started18:39:06/memory6405672KiB,62actual cases in2failed files only.
+No final retake/PG restore/image/install PASS inferred from Vitest startup.
+This is a specific verified process wait; no duplicate suite or lock owned.
+
+**Actual retake terminal18:43:41UTC:** EXIT0 at the same8ac freeze; exact
+registration16+facade46=62PASS/0FAIL/0SKIP, real PG/scoped-access restore PASS.
+LogSHA489a6905fea0092ab3819998321e8a3e1d98039c5adfae72bbfda80b6d7eec9d.
+Original normalEXIT1 remains immutable, not re-labelled PASS. Read actual Core
+qualified-gates.json: aggregate QUALIFIED_AFTER_FOCUSED_RETAKE_NOT_ORIGINAL_NORMAL_PASS,
+unchanged source/tree plus failed-file retake and previously uncovered static
+suffix, installedfalse/connectedfalse. Core build started18:44:05UTC;
+exact controllerPID3364462 actually live, current log compiling candidate
+image from8ac. This is new verified progress, not another unmet writer-source
+request or an image pin inferred from its tag. Core still owns aggregate
+publication, image result, finite target review and actual commissioning.
+Verification:R0; arithmetic6checks/tracking/indexed2new anchors/staged diff
+PASS,3Markdown paths only. Peer main/binding and3native-egress/test/feasibility
+pins preserved. No hosted CI, push/merge, own test resources or runtime writes.
+
 
 
 
