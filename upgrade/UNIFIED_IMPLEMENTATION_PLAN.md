@@ -13851,3 +13851,32 @@ Source physical-exit evidence disposition: retained old witness expired12:05 wit
 Core/Claude next input in SAME08: exact eligible finite source/config pins, genuine current session private reference, current-policy READ and SEPARATE STREAM grant plus agreed revoke/cache/cursor/reconnect/SSE actions/window. Existing identities stay; no expired-cookie/head3 replay. Native recovery is no longer the blocker; original14:00–15:30 slot remains RECOVERY_ONLY, not new acquisition. Independently return genuine Research Manager issued-leaf/issuer/per-mode configuration for Paper/Sandbox/Canary/Live (Canary uses governed Live facts); native28446 trust is not Manager8443/8444/8445 trust. No new generic phase approval or broad gate rerun requested.
 
 Delivery is byte verification, not Core/Claude consumer ACK. Receiver preserves frozen candidate/index and peer WIP; R0-only delivery is pending the canonical owner's next scoped journal commit. Edge continues exact eligible cases on actual input; no new framework, phase or blanket gate.
+
+
+<a id="pm-original-recovery-correlated-20261021"></a>
+### PM original recovery correlated; native fence next —21Oct2026
+
+Received [actual8/8 correlation and next fence handoff](execution_loop/evidence/ELP2-10/PM_ORIGINAL_RECOVERY_CORRELATION_AND_FENCE_RETURN_2026-10-21.md), SHA256 `e951e2f4f152d0d696d9573eedb4105a91d4e883dade5debbcb76bd0c265d0f9`.
+Same-original cancel-unentered/Core ACK and official STREAM→READ→temporary-session cleanup verified; original source head4/revokedtrue independently read. No unresolved original lease remains.
+Historical original-serve die(exit0) witness is unavailable; current absence does not fabricate it. Fresh witness required before next source activation; independent fence preparation continues.
+Next: TS admits exact native publisher target/config/drain and old-writer/noACK proof, then reconciled history/backfill→authenticated delivery/apply→admitted campaign. Full PM03/04/13–16OPEN;17NOT_STARTED.
+Documentation delivery only; source/index/runtime unchanged, recipient normal commit remains Core-owned. No repeat cancel/build/suite, new authority, deployment, push or merge.
+
+### Core integrator ACK and landing disposition — 21Oct14:49UTC
+
+**ACCEPTED_WITH_SCOPE:** the PM packet above and Edge acceptance6f848d69
+match the actual original ACK and cleanup; no original-custody recovery is
+left to repeat. Native publisher fence is **NOT_INSTALLED** and remains
+TS/target-owner work under its additive, same-OID handoff; do not infer
+installation permission from this recovery. Shared NET_PNL wire mapping,
+eligible current READ/STREAM and Research Manager issued trust stay open.
+
+Reviewed code/consumer history is preserved on integration
+`d20d8edfb4a4ea5e82987851300efeb134f67581`; canonical code is not ff-landed yet.
+Its receipt `CORE_LANDING_GATE_AND_RECOVERY_STATUS_2026-10-21.md` is in the
+integration ELP2-10 packet. Combined gate queue ended14:44:58UTC, EXIT75,
+NOT_STARTED after600seconds because Claude's different-tree normal hook
+held the heavy slot. No second queue, test failure, fake PASS or peer kill.
+Only R0 diff/link/hash/tracking runs for these Markdown owner returns; no
+duplicate recovery/build/full suite. Integrator resumes the one required
+combined gate at an available slot; no push, deploy, dev/main or ELP2-11.

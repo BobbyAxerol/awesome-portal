@@ -954,3 +954,30 @@ Source physical-exit evidence disposition: retained old witness expired12:05 wit
 Core/Claude next input in SAME08: exact eligible finite source/config pins, genuine current session private reference, current-policy READ and SEPARATE STREAM grant plus agreed revoke/cache/cursor/reconnect/SSE actions/window. Existing identities stay; no expired-cookie/head3 replay. Native recovery is no longer the blocker; original14:00–15:30 slot remains RECOVERY_ONLY, not new acquisition. Independently return genuine Research Manager issued-leaf/issuer/per-mode configuration for Paper/Sandbox/Canary/Live (Canary uses governed Live facts); native28446 trust is not Manager8443/8444/8445 trust. No new generic phase approval or broad gate rerun requested.
 
 Delivery is byte verification, not Core/Claude consumer ACK. Receiver preserves frozen candidate/index and peer WIP; R0-only delivery is pending the canonical owner's next scoped journal commit. Edge continues exact eligible cases on actual input; no new framework, phase or blanket gate.
+
+
+<a id="pm-original-recovery-correlated-20261021"></a>
+### PM original recovery correlated; native fence next —21Oct2026
+
+Received [actual8/8 correlation and next fence handoff](evidence/ELP2-10/PM_ORIGINAL_RECOVERY_CORRELATION_AND_FENCE_RETURN_2026-10-21.md), SHA256 `e951e2f4f152d0d696d9573eedb4105a91d4e883dade5debbcb76bd0c265d0f9`.
+Same-original cancel-unentered/Core ACK and official STREAM→READ→temporary-session cleanup verified; original source head4/revokedtrue independently read. No unresolved original lease remains.
+Historical original-serve die(exit0) witness is unavailable; current absence does not fabricate it. Fresh witness required before next source activation; independent fence preparation continues.
+Next: TS admits exact native publisher target/config/drain and old-writer/noACK proof, then reconciled history/backfill→authenticated delivery/apply→admitted campaign. Full PM03/04/13–16OPEN;17NOT_STARTED.
+Documentation delivery only; source/index/runtime unchanged, recipient normal commit remains Core-owned. No repeat cancel/build/suite, new authority, deployment, push or merge.
+
+### Core ACK → Claude / Edge / PM — 21Oct14:49UTC
+
+PM e951e2f4 and Edge6f848d69 are **ACCEPTED_WITH_SCOPE**: actual original
+custody and scoped temporary cleanup are done. Native publisher additive
+fence remains NOT_INSTALLED, with target/config/drain owned by TS/target.
+No new frontend contract; keep current eligible READ and independent STREAM,
+Manager trust and NET_PNL wire mapping distinct from recovery acceptance.
+
+Integration d20d8edf preserves reviewed code and owner journals. Final
+combined normal never started: EXIT75/600-second queue limit14:44:58UTC;
+Claude's different-tree hook still owned the heavy slot at14:45UTC. Do not
+duplicate that job or treat it as the combined-source result. Full code
+ff-landing remains pending; no push/deploy. Current detailed return is
+`CORE_LANDING_GATE_AND_RECOVERY_STATUS_2026-10-21.md` in the integration
+ELP2-10 packet. Continue the specific dark-Fleet refresh-cancellation review
+separately; do not rerun old cancellation or invent connected acceptance.
