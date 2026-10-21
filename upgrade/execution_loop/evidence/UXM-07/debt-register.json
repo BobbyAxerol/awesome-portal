@@ -4,17 +4,6 @@
   "reconciled_at_head": "799effc8",
   "open": [
     {
-      "id": "DEBT-UXM07-005",
-      "title": "Nav and screen gating use provisional capability names",
-      "where": "Five screens still pre-narrow from the SESSION capability set against the menu tokens: alpha/index.tsx (sliceOnly), alpha/replay/index.tsx, blotter/index.tsx (accountsVisible), overview/index.tsx (fundWide), workbench/index.tsx. A real session never carries a menu token (only a live self-navigation projection adds one, in the shell), so for a real session they narrow for everyone; the e2e and lab sessions inject the tokens as a stand-in.",
-      "consequence": "Display narrowing only (Your slice chip, account links, deployer column); the API behind each screen refuses by itself. Wiring the shell's merged set into the screens would let a menu fact shape content, which RK-1 forbids.",
-      "proposed": "W4 of the self-contract review, one of: (a) drop the pre-narrowing and let the API refusal and the batch eligibility decide, or (b) feed the shell's merged navigation set to those five screens and accept menu-shaped content. The exact missing backend item for a data-grade answer: a published per-screen scope fact (\"fund-wide\" vs \"own slice\"); the 28 eligibility actions name resources, not scopes.",
-      "owner": "Bobby (RK-1 policy) then Claude",
-      "status": "NARROWED (rail names closed; screen pre-narrowing open)",
-      "next_action": "Bobby picks (a) or (b); Claude then changes five screens and their tests. Also: the Access v2-access-1440/390 baselines changed with 9d0eb97f copy (DEBT-UXM07-041).",
-      "closed_part": "9d0eb97f: the four invented names (execution.portfolios.read, execution.accounts.read, execution.operations.read, portal.execution.blotter.read) are gone from the client vocabulary. V2_NAV_TOKEN holds nav:<served portal.self-navigation.v1 feature id> (EXECUTION_PORTFOLIOS, EXECUTION_ACCOUNTS_BINDINGS, EXECUTION_OPERATIONS, EXECUTION_BLOTTER), V2_CAPABILITY keeps only the real governance.* names, and no copy prints an invented capability (Access rows and denials say \"Portfolios in your navigation read\"). Nothing is missing on the backend for the rail: the server publishes the four rows. execution.accounts.manage stays dropped (no server capability exists)."
-    },
-    {
       "id": "DEBT-UXM07-008",
       "title": "HIFI fidelity rows not fixed after pass 2 (class B, MINOR/uncertain)",
       "where": "hifi-comparison-2026-10-18.md section 'Pass 2 (2026-10-19)': Chua lam. Refresh 2026-10-21: T-B5 Table/Expand now exist (charts/ChartTools.tsx on Workbench, Compare, Live, Canary, Alpha Performance; expand height fixed in 693ee04d); the new copy of RV-11, the Exit control and audit A/B was approved by Bobby on 2026-10-21 (BOBBY_DECISIONS_2026-10-21 row 1) and the Fleet defaults (row 4) stay",
@@ -463,7 +452,18 @@
       "status": "CLOSED",
       "opened": "2026-10-21",
       "resolution": "Focused receipt written at 35a1577a: BE-CLAUDE-2026-10-20/BE-P17.md section 9.1 (what be-p17-fleet-pairing.spec.ts proves, the four cases, and the run: be-p17-fleet-pairing 4/4, be-p16-alpha-fleet-realtime 50/50, elp206-manager-service 19/19, contracts execution-alpha-fleet-realtime 57/57 with the generator --check clean, FE alphaFleetRealtime.conformance + fixtureBff fleetRealtime 1388/1388). control-api and contracts are byte-identical to 799effc8. The PG assertion in elp2-read-scope.spec.ts is NOT_RUN (the whole file needs PG: 117 skipped) and stays pending until it is run; the hook on a frozen SHA is DEBT-UXM07-037."
+    },
+    {
+      "id": "DEBT-UXM07-005",
+      "title": "Nav and screen gating use provisional capability names",
+      "where": "Five screens still pre-narrow from the SESSION capability set against the menu tokens: alpha/index.tsx (sliceOnly), alpha/replay/index.tsx, blotter/index.tsx (accountsVisible), overview/index.tsx (fundWide), workbench/index.tsx. A real session never carries a menu token (only a live self-navigation projection adds one, in the shell), so for a real session they narrow for everyone; the e2e and lab sessions inject the tokens as a stand-in.",
+      "consequence": "Display narrowing only (Your slice chip, account links, deployer column); the API behind each screen refuses by itself. Wiring the shell's merged set into the screens would let a menu fact shape content, which RK-1 forbids.",
+      "proposed": "W4 of the self-contract review, one of: (a) drop the pre-narrowing and let the API refusal and the batch eligibility decide, or (b) feed the shell's merged navigation set to those five screens and accept menu-shaped content. The exact missing backend item for a data-grade answer: a published per-screen scope fact (\"fund-wide\" vs \"own slice\"); the 28 eligibility actions name resources, not scopes.",
+      "owner": "Bobby (RK-1 policy) then Claude",
+      "status": "CLOSED",
+      "closed_part": "9d0eb97f: the four invented names (execution.portfolios.read, execution.accounts.read, execution.operations.read, portal.execution.blotter.read) are gone from the client vocabulary. V2_NAV_TOKEN holds nav:<served portal.self-navigation.v1 feature id> (EXECUTION_PORTFOLIOS, EXECUTION_ACCOUNTS_BINDINGS, EXECUTION_OPERATIONS, EXECUTION_BLOTTER), V2_CAPABILITY keeps only the real governance.* names, and no copy prints an invented capability (Access rows and denials say \"Portfolios in your navigation read\"). Nothing is missing on the backend for the rail: the server publishes the four rows. execution.accounts.manage stays dropped (no server capability exists).",
+      "resolution": "Bobby chose (a) on 2026-10-21: drop the FE pre-narrowing. Closed at 7e327456 (apps/portal/frontend/src/execution/v2/screens): alpha/index.tsx + alpha/TableTabs.tsx + alpha/replay/{index,ReplayView}.tsx, blotter/index.tsx, overview/{index,useOverviewReads,overviewModel}.ts(x) and workbench/{index,Header}.tsx no longer read the session's capabilities. Gone: sliceOnly, canSeeAccounts, accountsVisible, fundWide, the inferred 'Your slice only' / 'Only deployments in your slice' / 'Your orders' / 'Your alphas' / 'Account not available' texts and the 'Scope: Your ...' context facts, the Overview researcher panel 'Alphas in your slice' (and ownRows/OwnRow), and the capabilities props of Overview, Blotter and Workbench. The account links, the deployer line, the Account column and the fund reads now follow what the server served; a refusal shows the server's typed reason (denied panel + My access link). Per screen, a test pins that a served answer is not hidden by a restricted session and that a refusal keeps its reason (alpha.test, replay.test, blotter.test, overview.test, workbench.test); the blotter, overview and workbench suites run under a session with no menu token. Gates green on the touched folders: tsc, vitest alpha/blotter/overview/workbench, testHygiene, absentValues, failClosed, v2Hygiene, linkTargets, titleAbsence, flagOff/flagOn, shell, app. No image baseline changes: the e2e and lab sessions are manager-like (e2e/v2Lane.ts MANAGER_CAPABILITIES), so every recorded cell renders the same DOM. Left open elsewhere: nav and Portfolio/Compare/Account screens still gate on the menu tokens (permitted = holds(...)); that is not part of this entry."
     }
   ],
-  "followup_after": "27b42bd2"
+  "followup_after": "7e327456"
 }
