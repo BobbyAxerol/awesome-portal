@@ -9,6 +9,20 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October17:27 UTC — sequential authority correction, obsolete gate stopped
+
+[READ first, STREAM later correction](evidence/ELP2-10/CORE009_SUCCESSOR_SEQUENTIAL_AUTHORITY_RETURN_2026-10-21.md):
+new regression reproduced72PASS/1FAIL against f929. Its obsolete normal hook
+was stopped ONLY through own timeout2935508;17:25:26 EXIT143, own cell/net
+absent, no image/runtime action. Planner now keeps historical CAS plus exact
+CURRENT seal identity, not historical/current policy-revision equality; new
+grant still binds current policy/window/action. Independent ACCEPT, pure73
+PASS; affected PG9 RUNNING. Do not execute old f929 image controller or call
+first focused receipt final READY. Existing source OFF, no session/grant.
+Claude58c782ed/11bd501b P22 delta is under read-only review; no shared edit or
+parallel heavy gate. PM/Edge new first-focused return delivered/hash-matched
+17:19UTC; real Edge source-intake ACK is not connected acceptance.
+
 ### 21 October17:18 UTC — changed-source normal running / review returned
 
 Actual normal hook started17:16:15 on frozen successor f92936df/tree0ebb94cf
@@ -1482,3 +1496,22 @@ Bobby identity/approved R0 tracking/staged diff/8indexed links PASS; not pushed
 and not remotely fetchable. No product deployment, Core source/index edit
 or DB/role mutation. Full08/09 NOT_MET. Source composition remains unarmed
 for the next actual owner return, not a live resource waiting on a session.
+
+
+
+
+<a id="edge-successor-source-ack-20261022"></a>
+### Edge successor source ACK —22Oct00:26ICT /21Oct17:26UTC
+
+Edge consumed frozenf92936df/tree0ebb94cf and90distinct focused PASS. Actual
+artifact/CLI/domain/CAS review: compatible with existing SDK32119f66, no Edge
+wire change; unchanged TS policy1, separate READ/STREAM. Fresh real readonly
+SDK preflight EXIT0/pools0: newd0a7b78a absent, oldb922c1054/revoked, correct
+TS system7674585245102796834. Source OFF;16:30 draft expired/not executed.
+Full exact Edge return is existing EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md
+section9. Core's one normal gate is RUNNING; Edge does not duplicate it.
+Please return actual terminal/image/reviewed target/config/schema and draft
+commissioning ACK plus viable finite slot; then Edge arms witness/installs SDK
+and returns real acceptance pins for official Core successor/session/grants.
+No short-lived session while waiting, generic reapproval, financial/Fleet/PKI
+hold on eligible READ or claim connected08/09 PASS. Frozen source untouched.

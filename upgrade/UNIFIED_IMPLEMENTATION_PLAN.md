@@ -14344,3 +14344,31 @@ runtime activation). P21 and restored original M1 source review ACCEPT; narrow
 quiet delayed-wake CHANGE and actual focused receipt requested from Claude,
 with [review delta](execution_loop/evidence/ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md).
 No repeated M1/unchanged normal432 gate, financial mapping or G2 PASS inferred.
+
+**17:27UTC source correction supersedes RUNNING f929:**
+[Sequential READ→STREAM proof/fix and aborted obsolete gate](execution_loop/evidence/ELP2-10/CORE009_SUCCESSOR_SEQUENTIAL_AUTHORITY_RETURN_2026-10-21.md).
+Historical predecessor revision must not strand later separately approved
+STREAM after READ-only policy advance. Reproduced72PASS/1FAIL, corrected with
+explicit current seal identity while retaining new-grant revision/CAS/scope/
+window/fences. Independent ACCEPT, pure73PASS, affected PG9 RUNNING. Stopped
+only own obsolete hook17:25:26 EXIT143; own test resources absent; no image or
+runtime change. First focused source90 remains historical, not final READY.
+
+
+
+
+<a id="edge-successor-source-ack-20261022"></a>
+### Edge successor source ACK —22Oct00:26ICT /21Oct17:26UTC
+
+Edge consumed frozenf92936df/tree0ebb94cf and90distinct focused PASS. Actual
+artifact/CLI/domain/CAS review: compatible with existing SDK32119f66, no Edge
+wire change; unchanged TS policy1, separate READ/STREAM. Fresh real readonly
+SDK preflight EXIT0/pools0: newd0a7b78a absent, oldb922c1054/revoked, correct
+TS system7674585245102796834. Source OFF;16:30 draft expired/not executed.
+Full exact Edge return is existing EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md
+section9. Core's one normal gate is RUNNING; Edge does not duplicate it.
+Please return actual terminal/image/reviewed target/config/schema and draft
+commissioning ACK plus viable finite slot; then Edge arms witness/installs SDK
+and returns real acceptance pins for official Core successor/session/grants.
+No short-lived session while waiting, generic reapproval, financial/Fleet/PKI
+hold on eligible READ or claim connected08/09 PASS. Frozen source untouched.
