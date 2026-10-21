@@ -10150,14 +10150,21 @@ Owned7.365GB test copies/cache/logs removed;12HK+5SGP tuples unchanged/restarts0
 **Vòng triển khai độc lập lịch sử16/10:** COMPLETE — **Vòng2 actual provider:** IN_PROGRESS_OWNED_IMPLEMENTATION; connected acceptance OPEN.
 **Đi tiếp:** GO cho phần09 độc lập sau khi09 được duyệt; không đợi đóng toàn bộ08.
 Đây không phải COMPLETE toàn phase hoặc quyền mở runtime chưa được nghiệm thu.
-**Latest actual21Oct06:15UTC:** Core00973435311/image9cf5 is installed on the
+**Latest actual21Oct07:55UTC:** Core00973435311/image9cf5 is installed on the
 isolated Research backend; genuine scoped retained READ/SSE has3snapshot+
 4frame exact independent TS/Core terminal/ACK matches. Genuine expired-session
 denial401 created zero native admissions. Active STREAM revoke exposed one
 original CoreADMITTED/sourceISSUED obligation (retained8/unresolved1), not PASS.
-Core's transport lifecycle repair has54/54 focused source tests; normal
-hook FAILED/INTERRUPTED (seven API cases/four files); no fixed build/CLI.
-ACKed06:45–07:15 recovery-only
+Core's transport lifecycle repair has54/54 focused source tests; prior normal
+hook FAILED/INTERRUPTED (seven API cases/four files). Actual six-file retake
+finished07:19:34/exit0:379/379PASS+compile/scopedPGrestore. NormalR3 retake is
+physically running (bash262325/Node379b7c8); no fixed commit/build/CLI yet.
+The first focused queue06:13–06:43 was NOT_RUN, not another failed test.
+Independent review confirms the two-anchor expiry fixture hazard remains in
+the unmodified fixture; a passing retake neither fixes it nor proves the earlier
+failure cause. Exact06:54:31 TS readback still shows original ISSUED/event22/
+terminalNULL; no fresh recovery/ACK is inferred.
+ACKed09:00–09:30UTC21Oct recovery-only (separate scheduling ACK below)
 window retains original28446 SDK, not renewed grants/session/acceptance/ISSUE.
 Full08/09connected remains NOT_MET, no restart/cleanup of original custody.
 [Single current connected return](evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md)
@@ -28229,6 +28236,196 @@ SHA256`cfb92aa37df0135d8f227688e2be0e3113cfbf87d16351c8d27f18ca8d341bc4`,
 45running/102image rows/406cache/free240189038592B; peer3+packet11ce1e87 match.
 Same caps, no push/merge/CI, exact new test-only cleanup after actual terminal.
 No Core source/test/runtime edits or duplicate repair/recovery are authorized.
+
+**06:46:52UTC final amend C4 actual closeout:** Root physically observed Git0;
+finalcommit66b2bddb3eea404580b1c7c747bb6cf23735869b, ten docs/+813, no push/merge.
+Normal tracked hook PASS; bounded hooklogSHA933654366d7642643b3eabd193e8d2b61dc0842abc1035250aa3a3989cfe11ec.
+Complete exact-PID witnessSHAbac42c68 preserves original Git672621 custody.
+Private `/home/bobby/secure/edge-data-owner-intake-final-hook-nmaaTRdi/closeout.json`
+SHA256`3238b3514a4d41309448be3932a8d93de64d1e9089a813c7066d7af021176c5e`.
+Fresh quiet guard permitted ONLY unreferenced own99383e54/test676036 image
+nonforce removal; exact own PG/Node/network/tmp are absent, no other deletion.
+All102baseline image IDs and406BuildKit records retained, no shared prune.
+Free239063863296→239030214656B is shared-host movement, not exclusive reclaim.
+43/45baseline tuples exact; one foreign P184 test job no longer running.
+Known Paper worker SAME ID/image/config restart3285→3320 observed-only,
+no runtime intervention or causal attribution; Manager/native4 and DLquery2/
+DLstream4 exact, original source7d034810/28ea/restart0 and passive18463 untouched.
+Peer C5 ten-line addition/packet11ce1e87/three original WIP hashes preserved;
+index empty. No new product tests/DB/runtime action; full08/09 remain NOT_MET.
+
+**06:55UTC actual readiness, source and publication handoff:** read the full
+[Core readiness return](evidence/execution-edge-v1_2/EPG10-08/CORE009_RECOVERY_READINESS_UPDATE_2026-10-21.md),
+SHA256`2c6a638d33cd2fd779a9b3af221ea7a200af061c6e3467f9f8def5f62578e595`.
+First focused queue expired without a cell (NOT_RUN); one six-file replacement
+is Core-owned. Claude R2 has9530PASS/3FAIL/3SKIP, not normalR3 or installed
+recovery. Independent read-only review confirms both current specs still have
+the two-anchor native120s/installation110s fixture bug beforeHTTP; one common
+anchor is the minimal proposed correction, no product timeout/guard weakening.
+Projection metadata804 versus required>1000 and pending-control failures remain
+real open gates, not waived as unrelated or harmless flakes.
+
+Exact read-only TS transaction06:54:31 verified system7674585245102796834,
+live_data_executor, original lease785387ba/attempt07becd72, ISSUED/event22,
+terminal receipt/digestNULL. The first connection used nonexistent postgres
+role and failed before SQL; configured POSTGRES_USER=bobby was then verified
+and the bounded readonly query succeeded. No data/schema/role mutation.
+Exact source/control app-name backend query returned no rows at that instant;
+the SDK pools are min0/max1 with10s idle retirement, so this is NOT physical
+pool shutdown or original process exit. Source7d034810 remains running,
+restart0/listening28446; passive witness has no die/destroy. Keep original
+custody until genuine source terminal/CoreACK/SDK close and physical exit.
+
+Sent final local66b2bddb publication, normal130/717 gates, actual C4 receipt
+3238b351 and precise fixture finding to the existing Core task/Unified.
+No push/merge/hostedCI, new product test, HTTP/grant/session/head, source cancel
+or recovery retry.06:45–07:15 is conditional maintenance only; Core must return
+qualified pins and a separately ACKed exact schedule if it cannot fit. Full08/
+09remain NOT_MET. No disposable resources were created by this readonly slice;
+the passive witness remains intentionally bounded to07:20. Subsequent status
+journal/received return stays pending the next coherent publication batch,
+without re-running unchanged full hooks solely for another polling update.
+
+**07:00UTC independent data-leg/queue preparation:** received Core's
+[source-only data-leg return](evidence/execution-edge-v1_2/EPG10-08/CORE009_EXISTING_MANAGER_DATA_LEG_PREPARATION_2026-10-21.md).
+Installed legacy refs/origin28446 are frozen recovery-only, not fresh Manager
+data configuration; ordinary projection worker is disabled. Record actual
+Paper service/image/config/public-trust pins and minimum one-service reconcile/
+rollback conditions in the existing connected return; no shared runtime change
+is executed or inferred. Core owns inactive Research signer/client-CSR private
+preparation; HK does not search/read/copy issuer keys or substitute test trust.
+Read the actual Core test runner: per-PID isolated names/EXIT cleanup, Node3CPU/
+3GiB+PG1CPU/1GiB, no intrinsic heavy flock. Sent exact external-queue finding
+to Core: owner coordinates genuine headroom/measurement needs under34b, only
+its own queued invocation may be changed, no duplicate/peer-lock mutation.
+Fresh producer review still finds TS03 SOURCE_DARK/f3a49603, PM07 unmounted/
+83d251e8 and target proposed-not-run/771955a5 atPMc0095d12; source ACK is not a
+qualified runtime target. No new binding input for03/07/01/06, no new tests,
+HTTP, DB mutation or disposable resources. Full08/09NOT_MET, goal remains active.
+
+**07:48UTC runnable original08 continuation / pre-change record:** original
+queued job4151115 has physically ended; Core's six-file focused runner actually
+finished07:19:34/exit0,379/379PASS, compile/scopedPGrestore PASS, logSHA5e065fc3.
+Normal R3 is now actually running (bash262325/Node379b7c8), not yet PASS.
+Read full [C1–C7 return](evidence/execution-edge-v1_2/EPG10-08/CORE009_C1_C7_RETURN_2026-10-21.md)
+and [inactive PKI return](evidence/execution-edge-v1_2/EPG10-08/CORE009_INACTIVE_MANAGER_PKI_RETURN_2026-10-21.md).
+Four public inputs on HK match all recorded hashes/0700dir/0600Bobby files.
+CSR signature/extensions and RSA3072 public JWK shape are valid; no private key
+is read/copied. Proposed research-20261021-c185ee3d remains untrusted.
+Scope now: prepare a separate inactive public-JWKS overlap draft retaining the
+stable key exactly, compare CSR/public key, and return hashes to Core. No write
+to production JWKS/CA, issuer, DB, grant, session, source config or runtime.
+Actual issued leaf/offline-issuer custody and exact shared-Paper reconcile
+remain separate owner/runtime gates; do not invent a CA or assert new authority.
+
+Read [Core's separate09:00 request](evidence/execution-edge-v1_2/EPG10-08/CORE009_RECOVERY_ONLY_WINDOW_0900_REQUEST_2026-10-21.md).
+Edge explicitly ACKs09:00–09:30UTC21Oct (16:00–16:30Asia/Saigon) for SAME
+original lifecycle endpoint/lease785387ba/attempt07becd72/artifactd9e3c07d.
+Prior06:45–07:15 ended without dispatch; this is a separate maintenance schedule,
+not shifted acquisition/head/session/grant/trust/ISSUE/ENTER. Core alone dispatches
+after actual normal-hook/helper/image pins and remaining bounds qualify. Keep
+UNKNOWN custody after any end, no force retirement. Original passive observer
+18463 physically exited0 at its07:20 bound with0eventbytes, not source exit.
+Prepare a fresh exact-ID passive die/destroy witness to09:35, no source attach/
+cancel/retry/stop. Root owns its terminal receipt and scoped cleanup. Preserve
+peer WIP and existing source7d034810/28ea/restart0. Full08/09NOT_MET.
+
+**07:55UTC actual inactive trust review and fresh witness:** completed public
+CSR signature/expectedCAfalse+digitalSignature+clientAuth+URI checks; CSR/public
+SPKI are identical SHA256c164a42f98c9cb16103b4705d424eb23984d997a76cbcf2059321bd4fbcc192f.
+Public RSA3072 JWK has unique proposedkidresearch-20261021-c185ee3d, no private
+parameters; all four input hashes/permissions match Core's return. Prepared
+ONLY separate inactive public overlap
+`/home/bobby/secure/edge-core009-manager-overlap-Ysuwkxpf/control-api.jwks.OVERLAP.DRAFT.json`,
+1345B/SHA2566c4c1df64080f348043582e4d618962630a4d43ac93681db88d3dd01be24e0b5,
+0700dir/0600Bobby. Stable JWK object retained exactly, two distinctkids, no
+production JWKS/CA/config write or trust activation. Signer/client private keys
+stay SGP; HK read only public inputs. Requested missing actual issuer reference
+asynchronously, not secret value or generic phase approval. CSR is not a leaf.
+
+Original finite observer33926 physically ended0/noevents at07:52; original
+source still running. New passive witness48128 uses exact original container
+ID through09:35 and private `edge-core009-exit-witness-ZzmTzm51/events.actor-id.jsonl`.
+The first format used unsupported Docker Message.ID and exited64 before watch;
+kept its0B file, then corrected to Actor.ID in a distinct file. No source
+operation/restart/attach or fabricated exit proof. Both files0600/dir0700Bobby;
+only this named observer stays bounded for actual original recovery.
+Delivered explicit09:00–09:30 availability ACK, focused379 receipt and public
+overlap/SPKI review to existing Core task/Unified. No new admission or deadline
+rights; actual Core qualified helper/image is still required before dispatch.
+No Docker image/cache/build/test cell was created by this slice; inactive public
+draft and passive witness are intentionally retained until exact handoff closes.
+Peer WIP remains untouched; journal/public returns await coherent publication,
+no additional unchanged full-suite run or push. Full08/09 remain NOT_MET.
+
+**21Oct07:59UTC owner clarification / all-mode read scope:** Bobby explicitly
+requires all modes, and asks Edge to obtain issuer references from Core/PKI
+agents instead of asking him to locate key custody. Paper denotes only the
+first finite qualification/credential profile, NOT the product ceiling.
+Original08 data-leg preparation now explicitly inventories/binds existing
+Paper/Sandbox/Canary/Live read profiles as available under real contracts;
+no invented Canary enum or Paper fallback. Read-only runtime confirms existing
+Paper8443/Sandbox8444/Live8445 on10.70.0.2. Canary's governed lane must come
+from the actual owner contract. Existing profile-specific authorization remains;
+all-mode business read does not enable command/order/capital/financial effects.
+
+Sent ALL-MODE_READ_PKI_ISSUER action to Core's existing task and Unified: actual
+issuer/config/secret-store owner/ref, real issued Research leaf/public chain,
+full mode→profile/audience/origin/CA/kid/workload/policy qualification matrix,
+compatible Research-only refs and smallest existing-factory delta if needed.
+Do not copy stable/native keys, invent a CA, route native28446 as data, widen
+private grants or execute shared runtime changes from this preparation. Exact
+source/peer ownership and reconcile/rollback gates remain. This broad read-plane
+requirement does not wait for command07 or delay the already ACKed same-original
+09:00–09:30 recovery. Missing mode inputs block only their dependent bindings;
+finish available work now, no repeat generic approval or extra phase.
+
+**21Oct08:03UTC actual all-mode map / owning request delivered:** actual Docker
+mount inspection confirms all three serving Edge services share
+`/srv/primus/portal/execution-edge` publicJWKS/clientCA. Independent existing-code/
+config review confirms issuerportal-control-api and exact per-request tuples:
+Paper8443/PAPER_BINANCE_USDM/audienceportal-execution-edge-paper;
+Sandbox8444/SANDBOX_BINANCE_USDM/audienceportal-execution-edge-sandbox;
+Live8445/LIVE_BINANCE_USDM/audienceportal-execution-edge-live.
+Canary is N23 PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS, not a fourth TS mode:
+it reads qualified Live facts with separate governance, never Paper fallback.
+
+Sent this actual matrix and issuer action to existing Core task/Unified; no
+need for Bobby to find keys. Existing global four-reference factory can be
+reused where compatible; do not invent a per-mode framework/duplicate keys.
+One public overlap draft is adequate for shared JWKS, but startup-only full-mode
+activation needs THREE serving Edge reconciles, not the historical Paper-only
+one-service proposal. That earlier proposed blast radius is superseded for
+all-mode activation, NOT executed/implicitly approved as a runtime change.
+Prepare exact three-image/config retention/rollback and wrong-profile/audience
+denials; no Proxy/Manager/issuer/DB/worker/stableCore/native28446 change.
+Approved all-mode workload/issued-leaf mapping still comes from PKI/current
+policy owner, not certificate-name inference. Recovery09:00–09:30 stays separate.
+No new tests/resources/auth/runtime mutation; actual mode discovery makes the
+next data-leg package precise, not full08/09 acceptance.
+
+**All-mode concrete runnable producer delta:** Core current-source.proxy.ts
+73435311/SHAfa0d8a6d already builds three profile transports from one four-file
+bundle. Its Research compose.native-review.yaml/SHA99d2c72b explicitly clears
+Sandbox/Live origins and disables those flags. Sent exact source-only delta to
+Core: prepare the next versioned all-mode data config/bindings and per-profile
+positive/cross-profile denials via existing factory, outside the frozen recovery
+candidate whileR3 runs. This is owned config preparation, not a missing TS
+journal or a reason to recreate a client/framework. Current original recovery
+overlay is not changed. Issuer action is with Core/PKI as Bobby directed.
+
+**08:06UTC coherent original08 documentation publication preparation:** scope
+is the actual379focused receipt/R3live disposition, separate09:00 availability
+ACK, inactive public PKI/JWKS review, actual all-mode matrix and Core issuer/
+config action. Product source is unchanged. Stage only owned plan hunks,
+detailed08 guide, connected return and five received public Core returns.
+Exclude exact peerC5 ten-line hunk, peer binding packet and three original WIP
+files; no private inputs/drafts or witness files enterGit. Fresh metadata-only
+C4 baseline and normal tracked hook onCPU0,1/nice15 precede Bobby commit.
+No push/merge/hostedCI, no duplicate Core test or runtime mutation. Repeat
+unchanged product checks are corroboration only. After actual terminal, remove
+only exact new owned unreferenced test image under fresh quiet guard; retain
+baseline images/cache, operational/rollback/source28446 and witness48128.
 
 
 

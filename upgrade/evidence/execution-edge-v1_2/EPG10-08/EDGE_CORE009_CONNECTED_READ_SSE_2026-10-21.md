@@ -268,3 +268,133 @@ source dispositions only, not installed authenticated command cells, approved
 measurement bounds or TS publisher acceptance. Independent preparation continues;
 original recovery/actual connected read remain separate. No financial formula,
 economic source mapping, command effect or whole08/09 closure is claimed.
+
+### Actual readiness and original-source readback —06:55UTC
+
+[Core readiness return](CORE009_RECOVERY_READINESS_UPDATE_2026-10-21.md) records
+the first focused queue as NOT_RUN, a single Core-owned replacement and no fixed
+commit/image/CLI. Independent read-only source review confirms the two-anchor
+120s/110s fixture defect; no product guard or other failed gate is waived.
+Exact TS read-only transaction06:54:31 verified the same physical system/DB,
+lease785387ba/attempt07becd72, ISSUED/event22 and NULL terminal receipt/digest.
+No matching SDK backend was present at that instant; min0/max1 idle pools make
+that insufficient for physical-close proof. Source7d034810 is still running,
+restart0/listening28446; passive observer has no die/destroy. Retain custody.
+
+Final local docs publication66b2bddb has actual normal130contracts/717API/build/
+PGrestore+verify PASS and scoped C4 closeout3238b351; no push/merge/hostedCI.
+Core received the exact pin and fixture review in its existing task/Unified.
+The exact06:45–07:15 recovery-only ACK remains conditional, not a renewed grant,
+session, acquisition head or authority. Full08/09 and active revoke are NOT_MET.
+Current status/received return awaits the next coherent publication batch;
+unchanged product suites are not rerun for a polling-only documentation update.
+
+### Existing-data trust/reconcile preparation —07:00UTC
+
+Received [Core data-leg preparation](CORE009_EXISTING_MANAGER_DATA_LEG_PREPARATION_2026-10-21.md):
+the installed legacy factory refs/origin28446 are not a qualified Manager data
+transport. Native review disables the ordinary projection worker. Preserve the
+original recovery configuration; do not reinterpret retained snapshot/heartbeat
+proof as fresh Manager data or an observed outbound-error rate.
+
+Read-only HK preflight identifies the minimum future service boundary:
+
+| Item | Actual pin / retention |
+| --- | --- |
+| Paper Compose project/service | `portal-execution-edge` / `execution-edge` |
+| Existing container | `131c8c7ef16dfa512dc388c47a52f1c7e5e0305de7d046ba2014174e9fdce4c1` |
+| Immutable image | `sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e` |
+| Compose config hash | `6180b9bf3d7d16cc8b9ada67ccb6c860e3c83430412de14758961f9857db90f6` |
+| Current public JWKS byteSHA | `e52e026a2dabed206153669d6aca25379a0494cf325b7f3c26035546f330452a` |
+| Loaded client CA certificate SHA256 | `78a6de84cde14837ff64afe39dde694d9488fe5124ffea44437babd7166bc2c` |
+| Loaded server certificate SHA256 | `ccd65b3196200a4c410dce729b850f0367701629374200bf90472f1e166aea9b` |
+
+Compose labels point to the existing six-file deployment under release
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`
+and private runtime config `/srv/primus/portal/runtime/execution-manager-v2.env`.
+Those references are not read out as secret values. Current bind is the private
+`/srv/primus/portal/execution-edge` directory at `/run/secrets`, read-only.
+Only future public JWK overlap/optional reviewed public CA overlap and ONE
+Paper Edge reconcile are in the proposed blast radius. Preserve the original
+JWK/trust/image/config for rollback; SourceProxy, Manager, issuer, DB, workers,
+Sandbox/Live and original native28446 must not be recreated or changed.
+
+Before any operational change require reviewed Research public JWK/issued CSR
+receipt and private-reference metadata, a stable-path positive/negative-control
+plan, exact reconcile window and rollback package. Rendered config must retain
+the pinned image and all unrelated values; no implicit pull/build/dependency
+restart. Rollback disables the new Research data leg, restores only the saved
+public overlap configuration and reconciles only that same Paper Edge service;
+it never restores revoked grants or rewrites original custody. Source preparation
+does not itself authorize/execute this shared-runtime change.
+
+Core is tasked to finish inactive, separately custodied Research signer/client
+CSR preparation without waiting for its queued R3 or TS journal; exact offline
+issuance custody remains owner-provided, not a TEST_ONLY CA substitution.
+No key/CSR was created by this HK read-only preflight. All four Paper
+Edge/Proxy/Manager/issuer tuples remain exact/restart0. No resources created.
+
+### Separate09:00–09:30 recovery-only availability ACK —07:48UTC
+
+Edge ACKs the exact [Core later request](CORE009_RECOVERY_ONLY_WINDOW_0900_REQUEST_2026-10-21.md)
+for21October09:00–09:30UTC (16:00–16:30Asia/Saigon). Original28446 endpoint/
+SDK/custody remain for SAME lease785387ba/attempt07becd72/Base/source/binding
+and d9e3c07d revoke artifact/idempotency only. This separately replaces the
+unexecuted06:45–07:15 scheduling proposal, not expired acquisition, session,
+grant, head, trust or issue/enter rights. Core alone dispatches official
+continuation after actual normalR3/helper/image qualification. If not qualified
+or unresolved, retain originals; no forced stop, synthetic terminal or fakeACK.
+
+Actual focused six-file379/379+compile/scopedPGrestore PASS finished07:19:34,
+logSHA5e065fc3; normal R3 is running, not completed. The one-anchor fixture
+correction is not in the frozen two-file repair; a passing retake does not
+prove the earlier failure cause or eliminate that separate test hazard.
+Old passive observer18463 exited0 at07:20 with0eventbytes; source7d034810
+remains running/restart0. Prepare a new bounded passive exact-ID exit witness
+to09:35, not authority renewal or evidence of SDK/physical close.
+
+### Actual inactive public overlap / witness —07:55UTC
+
+Four PKI public inputs match Core's published hashes and0700dir/0600Bobby
+custody. CSR signature, requested leaf extensions and public key match verified;
+CSR/public SPKI SHA256c164a42f98c9cb16103b4705d424eb23984d997a76cbcf2059321bd4fbcc192f.
+Prepared only inactive public overlap1345B at
+`/home/bobby/secure/edge-core009-manager-overlap-Ysuwkxpf/control-api.jwks.OVERLAP.DRAFT.json`,
+SHA2566c4c1df64080f348043582e4d618962630a4d43ac93681db88d3dd01be24e0b5.
+Stable JWK object unchanged, two distinctkids, no private parameters or active
+trust. Production JWKS/config/runtime unchanged. Actual issuer reference and
+issued leaf remain required for the separate Manager data leg; user asked for
+the reference asynchronously, never key bytes. Core received these review pins
+and explicit09:00–09:30 maintenance ACK in its original task/Unified.
+
+Old finite observer33926 exited0/noevents. Corrected passive observer48128 is
+live until09:35 at exact original source7d034810; first unsupported.ID template
+exited64 before watch, recorded separately0B, corrected.Actor.ID file not an
+overwritten exit receipt. Source remains running/restart0, not physically
+retired. No new HTTP/grant/session/head/recovery retry or product test here.
+
+### Owner all-mode clarification —21Oct07:59UTC
+
+Bobby requires all existing modes, not Paper-only, and directs the issuer
+request to Core/PKI agents. Paper is the first finite qualification case only.
+Current read origins: Paper8443, Sandbox8444, Live8445 on10.70.0.2. Derive
+Canary from its actual governed profile/lane, no invented enum/Paper fallback.
+Core received the full mode/trust/authorization/qualification matrix request
+and real issuer/Research leaf action in its existing task/Unified. Private
+CA/signer/session values must not cross; actual public leaf/reference return
+is still needed. Prepare all compatible read bindings via existing architecture;
+no directDB, broad trust/grant change, command/capital/Live trading activation
+or shared runtime reconcile follows. Original recovery window is unchanged.
+
+Actual mount/code review confirms the three Edge services share the same
+publicJWKS/clientCA directory. Existing issuerportal-control-api, audiences
+portal-execution-edge-paper/sandbox/live bind PAPER_/SANDBOX_/LIVE_BINANCE_USDM
+respectively. N23 Canary is PORTAL_CANARY_GOVERNANCE_OVER_LIVE_FACTS on the
+Live profile/origin/audience, with its own governance, not a fourth TS mode.
+Existing global factory can be reused where compatible. One public overlap
+draft is shared, but startup-only all-mode activation would reconcile THREE
+serving Edge services, superseding the old proposed Paper-only blast radius.
+No such rollout is executed here. Core/PKI received the exact matrix/issuer
+action; no duplicate keysets, Paper fallback, Proxy/DB/worker/source28446 change
+or implicit command/Live trading authority. Exact current-policy/issued-workload
+mapping and future operational package remain required for real all-mode reads.

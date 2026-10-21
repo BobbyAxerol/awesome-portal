@@ -1036,20 +1036,38 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
-**21Oct06:17UTC latest original08 disposition:** the transport repair has54/54
-focused source tests, but normal R3 FAILED/INTERRUPTED (seven API cases/four
-files; contracts1147/1147 and compilation passed). No new commit/image/CLI or
-actual recovery is qualified by the focused result. One original sourceISSUED /
+**21Oct07:55UTC latest original08 disposition:** the transport repair has54/54
+focused source tests. Prior normal R3 FAILED/INTERRUPTED; the actual six-file
+retake379/379+compile/scopedPGrestore now PASS, finished07:19:34/exit0. NormalR3
+retake is physically running, not PASS/commit/build/CLI yet. No actual recovery
+is qualified by that focused result. One original sourceISSUED /
 CoreADMITTED obligation remains retained; full08/09NOT_MET. Exact acknowledged
-06:45–07:15UTC maintenance is original-key recovery only, not renewed session,
+09:00–09:30UTC21Oct separately ACKed maintenance is original-key recovery only,
+not renewed session,
 grant, native head or acquisition. Keep original SDK/listener until actual
 source terminal/CoreACK/physical drain; never force cleanup or waive failed
-assertions. Latest [bounded R3 diagnostic](../evidence/execution-edge-v1_2/EPG10-08/CORE009_R3_DIAGNOSTIC_2026-10-21.md)
+assertions. The first focused retake expired in its queue without starting a
+cell (NOT_RUN), separately from the actual successful379retake. The unmodified
+two-anchor expiry fixture hazard remains; PASS is not a diagnosis or its repair.
+Exact06:54:31 source ledger remains ISSUED/event22/terminalNULL; retained custody
+is not physical exit or actual revoke PASS. Latest [bounded R3 diagnostic](../evidence/execution-edge-v1_2/EPG10-08/CORE009_R3_DIAGNOSTIC_2026-10-21.md)
 and [connected return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md)
 supersede historical running-hook observations below. Separate existing Manager
 data transport preparation proceeds with new Research-only RS256/mTLS private
 references and public trust overlap; no stable-key reuse, new TS journal, direct
 DB access, deployment or positive request is implied by that preparation.
+
+**21Oct owner scope clarification:** data-read preparation covers all existing
+Paper/Sandbox/Canary/Live modes, not Paper-only. Paper is qualification order.
+Actual Edge origins8443/8444/8445 bind PAPER_/SANDBOX_/LIVE_BINANCE_USDM and
+their exact paper/sandbox/live audiences. N23 Canary is governance over Live
+facts, not a fourth TS profile. Core's existing factory supports all3 transports;
+Research's current Paper-only overlay is a concrete config/binding task for its
+owner, not a global TS-publication blocker. Obtain issuer references through
+Core/PKI, never ask Bobby for key bytes. Shared public trust loads at startup:
+full-mode activation requires a reviewed THREE-serving-Edge reconcile/rollback,
+superseding the earlier Paper-only one-service proposal. No such rollout, new
+grant/session, directDB or command/Live-trading activation is implied here.
 
 **21Oct05:40UTC actual connected continuation:** the
 [single bounded return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md#actual-continuation-and-active-revoke-recovery-05250539utc)
