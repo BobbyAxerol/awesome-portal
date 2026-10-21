@@ -7,7 +7,7 @@ Sinh tự động bởi `apps/control-api/test/be-p18-b1-explain.pg.spec.ts` (qu
 ## Quy mô và môi trường
 
 - Corpus TEST_ONLY, seed xác định (251.4 s), scale 1.0: **1,000,000 operation, 200,000 incident, 599,978 link**, 5 workspace (600k/150k/150k/50k/50k op), target lệch (hot head, cold tail), `created_at` là hoán vị của thứ tự chèn (heap KHÔNG tương quan với khóa sort).
-- DB dùng một lần, migrate bằng migration của repo (142 migration, cuối: `1723680000149_execution-operation-queue-scope-lookup-index`).
+- DB dùng một lần, migrate bằng migration của repo (142 migration, cuối: `1723680000148_execution-operation-queue-scope-lookup-index`).
 - PostgreSQL 16.15; effective_cache_size=2621448kB, jit=on, max_parallel_workers_per_gather=2, random_page_cost=4, shared_buffers=983048kB, work_mem=4096kB.
 - Cache nóng: 1 lần warm + 3 lần đo, lấy median; plan lấy từ một lần chạy riêng dưới EXPLAIN (ANALYZE, BUFFERS) (không tính vào ngân sách).
 
@@ -42,8 +42,8 @@ Sinh tự động bởi `apps/control-api/test/be-p18-b1-explain.pg.spec.ts` (qu
 
 - Lab (scale 0.3, workspace lớn 180k dòng, scope 2000 tuple), dạng predicate CŨ (row-IN literal): COUNT(*) 312 s (bị hủy bởi trần 120 s), page 575 s, tức là 503 chắc chắn ở trần 2 s của production. 50 tuple: 225 ms; 200 tuple: 1161 ms (tuyến tính theo số tuple x số dòng).
 - Lab, dạng MỚI (text[] + semi-join), cùng dữ liệu: COUNT 118 ms, page 168 ms, GROUP 123 ms (Hash Join + Parallel Seq Scan workspace).
-- Chạy gate scale 1.0 SAU khi sửa predicate nhưng TRƯỚC migration 149: mọi request <= 2.0 s tổng (broad default 1776 ms, page 628 ms là câu chậm nhất), nhưng scope hẹp (3 tuple, 155 dòng) vẫn 932 ms vì đọc cả bảng 1M dòng ở 6 câu; 268 vi phạm Seq Scan; mid1/broad 15% bảng cũng Seq Scan.
-- Chạy gate scale 1.0 SAU migration 149 nhưng CHƯA có ngưỡng `rowScopeIndexMaxTuples`: scope hẹp rất nhanh (cold 24 ms, hot 170 ms, 200 tuple 750 ms, 0 Seq Scan vi phạm) nhưng scope 2000 tuple CHẬM HƠN 2x (broad default 3904 ms, page 1640 ms, limit250 vượt 2 s = 503) vì planner nhân selectivity từng cột, đánh giá thấp số dòng khớp và chọn hàng nghìn probe index. Đó là lý do có ngưỡng.
+- Chạy gate scale 1.0 SAU khi sửa predicate nhưng TRƯỚC migration 148: mọi request <= 2.0 s tổng (broad default 1776 ms, page 628 ms là câu chậm nhất), nhưng scope hẹp (3 tuple, 155 dòng) vẫn 932 ms vì đọc cả bảng 1M dòng ở 6 câu; 268 vi phạm Seq Scan; mid1/broad 15% bảng cũng Seq Scan.
+- Chạy gate scale 1.0 SAU migration 148 nhưng CHƯA có ngưỡng `rowScopeIndexMaxTuples`: scope hẹp rất nhanh (cold 24 ms, hot 170 ms, 200 tuple 750 ms, 0 Seq Scan vi phạm) nhưng scope 2000 tuple CHẬM HƠN 2x (broad default 3904 ms, page 1640 ms, limit250 vượt 2 s = 503) vì planner nhân selectivity từng cột, đánh giá thấp số dòng khớp và chọn hàng nghìn probe index. Đó là lý do có ngưỡng.
 
 ## Kết quả theo request
 
@@ -150,3 +150,6 @@ Plan đầy đủ của MỌI câu của MỌI request (cây node, rows, loops, 
 - Ngưỡng `rowScopeIndexMaxTuples`=500 được chọn giữa hai điểm đo (200 tuple: index nhanh hơn; 2000 tuple: scan nhanh hơn); gate đo thêm 400 và 800 tuple để kiểm hai phía của ngưỡng. Hình dạng phụ thuộc phân bố dòng/target thật; cần đo lại khi có số liệu production.
 - Không đo tải đồng thời (nhiều request song song) và không đo bảng đang bị ghi; chỉ một request tuần tự.
 - Corpus tổng hợp (TEST_ONLY): phân bố target/trạng thái là giả định có chủ đích (lệch mạnh), không phải dữ liệu thật.
+
+## Ghi chú đánh số migration (2026-10-21, không sửa số liệu quan sát ở trên)
+Các số đo và `plans.json` ở trên được quan sát khi file index mang số `1723680000148_execution-operation-queue-scope-lookup-index` trên chuỗi 142 migration. Khi gộp vào `claude/fe-parity`, số 148 đã thuộc `1723680000148_execution-manager-series-repair-attempts` (CR-02), nên file index được đổi tên thành `1723680000149_execution-operation-queue-scope-lookup-index`. Nội dung file không đổi: SHA256 `f306ecc973f2ea878c70bc26c000f888801c39d88274589562c3ca96b22d3c7b` trước và sau khi đổi tên. Hiệu năng đã đo vì vậy giữ nguyên; chuỗi hiện tại (143 migration) cần một lần kiểm PG ngắn cho CR-02 và index, không cần lặp lại benchmark một triệu dòng.

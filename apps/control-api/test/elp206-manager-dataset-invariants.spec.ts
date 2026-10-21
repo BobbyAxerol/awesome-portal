@@ -9,8 +9,9 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { managerDatasetResponse, managerMoneyFields } from "../src/execution-v2/manager-model.contract";
-import { MANAGER_DATASET_MONEY_KEYS, MANAGER_NEGATIVE_ZERO_CODE, canonicalManagerZero, canonicalizeManagerDatasetZero,
-  canonicalizeManagerSeriesZero } from "../src/execution-v2/manager-dataset-invariants";
+import { MANAGER_DATASET_MONEY_KEYS, MANAGER_NEGATIVE_ZERO_CODE, MANAGER_TEXT_WALK_BUDGET_CODE, MANAGER_TEXT_WALK_MAX_DEPTH, canonicalManagerZero,
+  canonicalizeManagerDatasetZero, canonicalizeManagerSeriesZero, validateManagerDisplayText } from "../src/execution-v2/manager-dataset-invariants";
+import { z } from "zod";
 import { managerP1Options } from "../src/execution-v2/manager-query-p1.contract";
 import { managerQueryOptions } from "../src/execution-v2/manager-query-p1";
 
@@ -301,5 +302,28 @@ describe("MD-S1 / MD-S4 · the producer refuses to emit what the strict reader w
     const body = rich();
     for (const entry of [...body.capital_statements, ...body.items.flatMap((row: Json) => row.economic_partitions)])
       for (const key of Object.keys(entry.metrics)) expect(key).toMatch(/^[a-z][a-z0-9_]{0,63}$/);
+  });
+});
+
+describe("Display-safety walker budget (Codex review 2026-10-21): an unvisited suffix is never accepted silently", () => {
+  const run = (body: unknown, maxNodes?: number): string[] => {
+    const issues: string[] = [];
+    validateManagerDisplayText(body, { addIssue: (issue: { message?: string }) => { issues.push(String(issue.message)); }, path: [] } as unknown as z.RefinementCtx, maxNodes);
+    return issues;
+  };
+  it("accepts a body inside the budget and reports an unsafe string at its path", () => {
+    expect(run({ a: ["x", { b: "y" }] })).toEqual([]);
+    expect(run({ a: ["x", { b: "\u200bz" }] })).toEqual(["MANAGER_TEXT_UNSAFE"]);
+  });
+  it("reports the budget as an issue when the node cap is reached before the end (the suffix would otherwise be unvisited)", () => {
+    expect(run({ items: Array.from({ length: 10 }, () => "ok") }, 5)).toEqual([MANAGER_TEXT_WALK_BUDGET_CODE]);
+  });
+  it("reports the budget as an issue when the nesting is deeper than the depth cap", () => {
+    let deep: unknown = "\u200bhidden";
+    for (let i = 0; i < MANAGER_TEXT_WALK_MAX_DEPTH + 2; i++) deep = { next: deep };
+    expect(run(deep)).toEqual([MANAGER_TEXT_WALK_BUDGET_CODE]);
+  });
+  it("still stops early after eight unsafe strings", () => {
+    expect(run({ rows: Array.from({ length: 30 }, () => "\u200b") })).toHaveLength(8);
   });
 });

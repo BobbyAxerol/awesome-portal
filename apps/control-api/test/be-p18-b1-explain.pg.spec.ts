@@ -55,8 +55,8 @@ const REMAINING: readonly string[] = [
 const MEASUREMENT_HISTORY: readonly string[] = [
   "Lab (scale 0.3, workspace lớn 180k dòng, scope 2000 tuple), dạng predicate CŨ (row-IN literal): COUNT(*) 312 s (bị hủy bởi trần 120 s), page 575 s, tức là 503 chắc chắn ở trần 2 s của production. 50 tuple: 225 ms; 200 tuple: 1161 ms (tuyến tính theo số tuple x số dòng).",
   "Lab, dạng MỚI (text[] + semi-join), cùng dữ liệu: COUNT 118 ms, page 168 ms, GROUP 123 ms (Hash Join + Parallel Seq Scan workspace).",
-  "Chạy gate scale 1.0 SAU khi sửa predicate nhưng TRƯỚC migration 149: mọi request <= 2.0 s tổng (broad default 1776 ms, page 628 ms là câu chậm nhất), nhưng scope hẹp (3 tuple, 155 dòng) vẫn 932 ms vì đọc cả bảng 1M dòng ở 6 câu; 268 vi phạm Seq Scan; mid1/broad 15% bảng cũng Seq Scan.",
-  "Chạy gate scale 1.0 SAU migration 149 nhưng CHƯA có ngưỡng `rowScopeIndexMaxTuples`: scope hẹp rất nhanh (cold 24 ms, hot 170 ms, 200 tuple 750 ms, 0 Seq Scan vi phạm) nhưng scope 2000 tuple CHẬM HƠN 2x (broad default 3904 ms, page 1640 ms, limit250 vượt 2 s = 503) vì planner nhân selectivity từng cột, đánh giá thấp số dòng khớp và chọn hàng nghìn probe index. Đó là lý do có ngưỡng.",
+  "Chạy gate scale 1.0 SAU khi sửa predicate nhưng TRƯỚC migration 148: mọi request <= 2.0 s tổng (broad default 1776 ms, page 628 ms là câu chậm nhất), nhưng scope hẹp (3 tuple, 155 dòng) vẫn 932 ms vì đọc cả bảng 1M dòng ở 6 câu; 268 vi phạm Seq Scan; mid1/broad 15% bảng cũng Seq Scan.",
+  "Chạy gate scale 1.0 SAU migration 148 nhưng CHƯA có ngưỡng `rowScopeIndexMaxTuples`: scope hẹp rất nhanh (cold 24 ms, hot 170 ms, 200 tuple 750 ms, 0 Seq Scan vi phạm) nhưng scope 2000 tuple CHẬM HƠN 2x (broad default 3904 ms, page 1640 ms, limit250 vượt 2 s = 503) vì planner nhân selectivity từng cột, đánh giá thấp số dòng khớp và chọn hàng nghìn probe index. Đó là lý do có ngưỡng.",
 ];
 
 type Json = Record<string, unknown>;

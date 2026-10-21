@@ -13885,3 +13885,16 @@ Source/isolated qualification/publication slice complete; installed009 and
 connected08/read09 remain separate. Core009 ordinary release/current-policy/
 session/window return is the next concrete dependency, not identity/Core008,
 old helper patches, missing field-policy reference or Edge cleanup.
+
+
+### Edge four-input priority handoff — 20Oct2026, 23:25 ICT
+
+Bobby approved delivery: [consolidated owner request](execution_loop/evidence/ELP2-10/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md), SHA256 `e94b332f850699246624afd6cf8da9fc302eeaaf591edfcb3ec085ab0c0b493b`.
+Core009 → original08/read09 is P0; PM command07, TS publisher03 and actual
+target/bounds01/06 remain independently owned inputs. Follow canonical
+campaign rules§10.13: Claude implements Portal backend, Core Codex reviews/
+integrates; do not alter TS/PM authority. Edge source `bc4b8fe1` is published.
+Status: DELIVERED / AWAITING_PORTAL_ACK, not runtime acceptance. ACK with
+selected source, runnable slice and exact return path in this existing
+ledger; send partial genuine returns promptly, no secret values. No code,
+DB, service, auth, Git HEAD/index or deployment change is authorized here.

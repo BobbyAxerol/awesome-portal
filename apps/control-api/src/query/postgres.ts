@@ -503,16 +503,24 @@ export class ControlPlaneQueryService {
     // Every statement after BEGIN goes through here. With a total deadline, the
     // server-side statement_timeout is lowered to the remaining budget (never
     // raised) and a statement is not even started once the budget is spent.
+    // The total budget starts at BEGIN: it covers the transaction on its own connection and does NOT include the wait for a pool
+    // connection, so it is a bound on read work, not a measure of complete request latency.
+    const remainingBudget = (): number => (deadlineAt === null ? Infinity : Math.ceil(deadlineAt - performance.now()));
+    const assertWithinBudget = (): void => {
+      if (deadlineAt !== null && inTransaction && remainingBudget() < 1) {
+        throw new QueryContractError("QUERY_TIMEOUT", "Query exceeded its bounded execution time.", 503);
+      }
+    };
     const client: Queryable = {
       query: async <R extends QueryResultRow = QueryResultRow>(sql: string, values?: readonly unknown[]) => {
         if (deadlineAt !== null && inTransaction) {
-          const remaining = Math.ceil(deadlineAt - performance.now());
-          if (remaining < 1) {
-            throw new QueryContractError("QUERY_TIMEOUT", "Query exceeded its bounded execution time.", 503);
-          }
+          assertWithinBudget();
+          const remaining = remainingBudget();
           if (remaining < armedMs) {
             await connection.query("SELECT set_config('statement_timeout', $1, true)", [`${remaining}ms`]);
             armedMs = remaining;
+            // The arming round trip spends budget too: re-check before the statement itself starts.
+            assertWithinBudget();
           }
         }
         return connection.query<R>(sql, values === undefined ? undefined : [...values]);
@@ -595,6 +603,8 @@ export class ControlPlaneQueryService {
         };
         try { snapshot = await read(lent); } finally { open = false; }
       }
+      // A reader can finish late without issuing another statement; that must not be committed as a success.
+      assertWithinBudget();
       await connection.query("COMMIT");
       inTransaction = false;
 
