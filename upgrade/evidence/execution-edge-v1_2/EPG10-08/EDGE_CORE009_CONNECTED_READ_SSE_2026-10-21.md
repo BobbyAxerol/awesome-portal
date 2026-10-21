@@ -173,3 +173,98 @@ active source/rollback/custody and all peer WIP remain untouched. No push/merge.
 Full08/09 acceptance remains NOT_MET. Next: Core repair qualification and
 same-original cancellation/Core ACK, then truthful connected revoke controls
 inside a genuinely commissioned window; no expiry-based completion.
+
+### Recovery-only endpoint availability ACK —05:44UTC
+
+Edge ACKs the exact [Core05:50–06:20 maintenance request](CORE009_RECOVERY_ONLY_WINDOW_REQUEST_2026-10-21.md):
+the original28446 lifecycle listener/SDK/1+1pools remain available for ORIGINAL
+lease785387ba/attempt07becd72 status/cancel/resolve. Frozen05:45 expiry stops new
+ISSUE and retains custody while unresolved. This does not extend acceptance
+head3, grant/session TTL, issue/enter rights, trust or business authority.
+Core alone owns same d9e3c07d artifact/idempotency continuation using reviewed
+fixed CLI; Edge will independently verify actual source terminal and Core ACK.
+No duplicate source cancellation, manualSQL, restart or acceptance-head retire
+before that proof. At maintenance end unresolved custody is still retained,
+not force-killed or silently converted into new acquisition authority.
+Core reports54/54 focused tests; no fixed image/recovery/active-revoke PASS is
+inferred until actual pins and terminal evidence arrive. Expired-grant NOOP
+and expired-session cleanup remain explicitly distinct from active revocation.
+
+### Separate later recovery-only window ACK —05:56UTC
+
+Read the Core request's explicit scheduling correction: the prior normal API
+hook needed2560.28s, so no fixed CLI action has run in the first proposal.
+Edge ACKs **06:45–07:15UTC,21October**, replacing that unexecuted maintenance
+proposal only. Original28446 SDK/listener/custody remain available for the SAME
+lease/attempt/Base and artifact/idempotency key. No new issue/enter, read/stream,
+acceptance/head, session, grant, trust or installation-date extension follows.
+Core alone owns the reviewed fixed-helper/image dispatch in that exact window;
+do not run after it without fresh explicit scheduling. Unknown original custody
+remains preserved before/after the window, never killed on a timer.
+
+Public TLS certificate metadata independently confirms source, pinned peer and
+CA validity through22October02:48:30UTC; no replacement/rotation is needed for
+this recovery-only window. Source59d44f22, peerb7ad92aa, CA78ba04dd fingerprints
+are unchanged; all eight PM files remain4058B/0700dir/0600files/Bobby custody.
+This availability ACK is not actual recovery, source cancellation, Core ACK,
+installed service repair or active-grant revoke proof. Original05:45 acquisition
+expiry and05:36:54.553 session expiry remain unchanged and historical.
+
+### Independent existing-data leg preparation —06:15UTC
+
+Real HK Manager/SourceProxy are already present. Their data transport is
+Core → existing Edge `https://10.70.0.2:8443` → SourceProxy → Manager, separate
+from native authority28446. Core's existing factory needs four Research-only
+private file references (signer, Edge CA, client certificate, client key);
+the reviewed Research overlay requires NEW material, not stable-key copying.
+No new TS journal, DB access or service framework is needed for this leg.
+
+Existing ingress accepts RS256/issuer`portal-control-api`/audience
+`portal-execution-edge-paper`/profile`PAPER_BINANCE_USDM`/maximumTTL60. Core PKI
+prepares a new SGP-only RS256 signer/public JWK and client key/public CSR under
+the existing clientAuth/URI profile. Public JWK/CSR only cross to HK. Exact
+kid/identity/private references come from that owner; native trust is not
+interchangeable. Existing production PKI runbook declares an offline owner,
+not an on-host CA signing-key reference or production issuance command.
+
+TLS/JWKS are startup-only: future public JWK overlap under the existing trusted
+client CA requires exactly one Paper Edge reconcile with old config/JWK/image
+retained for rollback. A new CA would require reviewed public CA overlap too.
+This paragraph prepares the exact change, DOES NOT execute/authorize it, create
+keys/grants/session, change frozen source bytes or issue another HTTP request.
+Original source custody/recovery has priority. Core should return reviewed
+transport/config/selector metadata and refresh its stale transfer-pending packet.
+Native SQL seal5dfb0873, Manager semantic catalogue0c71b72c and catalogue file
+bytehash9040f089 are distinct; none is a substitute authority or permission.
+
+### Actual R3 diagnostic intake —06:17UTC
+
+Core's normal hook is FAILED/INTERRUPTED, not running/PASS:1147contracts and
+APIcompile passed, seven API cases/four files failed before full completion;
+Gitexit1, no commit/build/install. Focused54/54 remains scoped source evidence.
+Core owns a single focused retake and actual failure repair; Edge does not
+duplicate it, waive assertions as loadflake, bypass hooks, retry recovery or
+replace SDK custody. Exact own Core disposable cell was removed per diagnostic;
+original source28446/lease785387ba/attempt07becd72 stays retained. The ACKed
+06:45–07:15 window remains recovery-only and requires genuinely qualified
+helper/image pins before dispatch. No new positive admission or deadline/grant/
+session extension. If it cannot fit, exact operator scheduling must be ACKed
+separately; source authority does not slide. Full08/09 remain NOT_MET.
+
+### Person and producer coverage disposition —06:36UTC
+
+The genuine private proof above is Bobby-only within the expired finite matrix;
+it is not a never-installed provider, current renewed permission, stable/public
+Cloudflare or cross-person acceptance. Stan requires verified current mapping
+and policy under the already approved protected-Bobby/delegated-ceiling rule.
+Thanhvuong requires verified temporal alpha/user link and approved restricted
+field/metric/aggregate policy. Stable ACTIVE discovery is not native authority;
+do not recreate accounts or infer rights from usernames. Current Manager/native
+certificates are valid; historical16Oct expired-leaf observations are not the
+current blocker. Those preparations do not justify another grant or session.
+
+PM acknowledged command/target owner requests atc0095d12, but explicitly returned
+source dispositions only, not installed authenticated command cells, approved
+measurement bounds or TS publisher acceptance. Independent preparation continues;
+original recovery/actual connected read remain separate. No financial formula,
+economic source mapping, command effect or whole08/09 closure is claimed.

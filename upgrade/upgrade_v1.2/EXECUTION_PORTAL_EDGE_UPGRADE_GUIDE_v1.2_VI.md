@@ -1036,6 +1036,21 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**21Oct06:17UTC latest original08 disposition:** the transport repair has54/54
+focused source tests, but normal R3 FAILED/INTERRUPTED (seven API cases/four
+files; contracts1147/1147 and compilation passed). No new commit/image/CLI or
+actual recovery is qualified by the focused result. One original sourceISSUED /
+CoreADMITTED obligation remains retained; full08/09NOT_MET. Exact acknowledged
+06:45–07:15UTC maintenance is original-key recovery only, not renewed session,
+grant, native head or acquisition. Keep original SDK/listener until actual
+source terminal/CoreACK/physical drain; never force cleanup or waive failed
+assertions. Latest [bounded R3 diagnostic](../evidence/execution-edge-v1_2/EPG10-08/CORE009_R3_DIAGNOSTIC_2026-10-21.md)
+and [connected return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md)
+supersede historical running-hook observations below. Separate existing Manager
+data transport preparation proceeds with new Research-only RS256/mTLS private
+references and public trust overlap; no stable-key reuse, new TS journal, direct
+DB access, deployment or positive request is implied by that preparation.
+
 **21Oct05:40UTC actual connected continuation:** the
 [single bounded return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md#actual-continuation-and-active-revoke-recovery-05250539utc)
 now records three genuine retained snapshots/four heartbeat frames with exact
