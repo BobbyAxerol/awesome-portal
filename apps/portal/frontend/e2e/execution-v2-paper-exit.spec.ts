@@ -143,14 +143,18 @@ test("a workspace where the server does not open the request, and a deployment w
   const root = page.locator('[data-screen="workbench-v2"]');
   await expect(root.locator('.exec-wb-xr[data-state="shut"]')).toBeVisible();
   await expect(root.locator('.exec-wb-xr[data-state="shut"]').getByRole("button", { name: "Request review" })).toBeDisabled();
-  await expect(root.locator('.exec-wb-xr[title="Server reason: PAPER_EXIT_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE"]')).toHaveCount(1);
+  // RV-06: the server's code is behind one "Server reason" disclosure button, not on a title.
+  await expect(root.locator(".exec-wb-xr[title]")).toHaveCount(0);
+  await root.locator('.exec-wb-xr[data-state="shut"]').getByRole("button", { name: "Server reason" }).click();
+  await expect(root.locator('.exec-wb-xr[data-state="shut"] .exec-blk-why-row')).toHaveText("Server reason: PAPER_EXIT_REVIEW_NOT_OPEN_FOR_THIS_WORKSPACE");
   await expect(root.getByRole("textbox")).toHaveCount(0);
 
   await page.goto(exitUrl(PAPER_EXIT_OPEN_WORKSPACE, "dep_exit_not_approved"));
   const shut = page.locator('[data-screen="workbench-v2"] .exec-wb-xr[data-state="shut"]');
   await expect(shut).toBeVisible();
   await expect(shut.getByRole("button", { name: "Request review" })).toBeDisabled();
-  await expect(page.locator('[data-screen="workbench-v2"] .exec-wb-xr[title="Server reason: R2_APPROVAL_REQUIRED"]')).toHaveCount(1);
+  await shut.getByRole("button", { name: "Server reason" }).click();
+  await expect(shut.locator(".exec-blk-why-row")).toHaveText("Server reason: R2_APPROVAL_REQUIRED");
 
   // Without a workspace in the URL the control is not asked for at all.
   await page.goto(`/deployments/paper/${DEPLOYMENT}`);

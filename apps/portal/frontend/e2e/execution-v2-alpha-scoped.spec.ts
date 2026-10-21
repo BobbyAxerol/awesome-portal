@@ -46,7 +46,8 @@ async function openLane(page: Page, width: number): Promise<ScopedBff> {
 async function openAlpha(page: Page, url = ALPHA_URL): Promise<void> {
   await page.goto(url);
   await expect(page.locator(ROOT).first()).toBeVisible();
-  await expect(page.locator(`${ROOT} .exec-alp2-meta, ${ROOT} [aria-label="Alpha state"]`).first()).toBeVisible();
+  // The meta line is empty (hidden) when the body names no owner and no portfolio; the header's Not available line or the state section then says the read landed.
+  await expect(page.locator(`${ROOT} .exec-alp2-meta:not(:empty), ${ROOT} [data-testid="not-available-line"], ${ROOT} [aria-label="Alpha state"]`).first()).toBeVisible();
   await settle(page);
 }
 
@@ -91,10 +92,15 @@ for (const [label, width] of WIDTHS) {
     await expect(banner).toContainText(ALPHA_V2_WORKSPACE);
     await expect(banner).toContainText("TEST_ONLY-policy-live-4");
     // What the body does not publish reads Not published (FE-xxx), never a literal and never a figure.
+    // The header's gaps are ONE "Not available:" line (UX audit A); each id and reason is behind its disclosure button, not printed per fact.
     const meta = page.locator(".exec-alp2-meta");
-    await expect(meta).toContainText("Name Not published (FE-066)");
-    await expect(meta).toContainText("Version Not published (FE-066)");
-    await expect(meta).toContainText("Owner Not published (FE-030)");
+    const gaps = page.getByTestId("not-available-line").filter({ hasText: "Not available: Name" });
+    await expect(gaps).toContainText("Not available: Name, Version, Owner, Run, Evidence");
+    await gaps.getByRole("button", { name: "Why not available: Name, Version, Owner, Run, Evidence" }).click();
+    await expect(gaps.locator(".exec-blk-why-row", { hasText: /^Name:/ })).toContainText("Not published (FE-066)");
+    await expect(gaps.locator(".exec-blk-why-row", { hasText: /^Version:/ })).toContainText("Not published (FE-066)");
+    await expect(gaps.locator(".exec-blk-why-row", { hasText: /^Owner:/ })).toContainText("Not published (FE-030)");
+    await expect(meta).toContainText("Core");
     await expect(page.getByLabel("Current facts")).toContainText("Not published (FE-005)");
     // Screenshots are for review only and are never compared.
     const shots = process.env.UXM07_SHOT_DIR;
