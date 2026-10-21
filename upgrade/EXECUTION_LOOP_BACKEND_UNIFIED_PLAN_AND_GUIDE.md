@@ -29454,6 +29454,92 @@ or upstream history rewrite. Same four Markdown paths only; peer main/binding/
 source inputs preserved. Full08/09NOT_MET. Next remains qualified corrected
 Core image/config/commissioning return, then original08 actual finite cases.
 
+<a id="original08-connected-goal-followthrough-20261022"></a>
+### Original08 — connected goal follow-through —22Oct00:54ICT /21Oct17:54UTC
+
+**IN_PROGRESS; full connected objective unchanged.** Previous turn is progress:
+real SDK preflight and corrected-writer91-case source review changed next action,
+then exact owner ACK delivered. Not a completed08/09 or a reduced compatibility
+objective. This round re-read rules/phase/detailed guide and actual Core state.
+Corrected Core normal is **confirmed live**, timeoutPID3044368/parent3044367,
+started17:37:56UTC in portal-core009-successor@8ac4f553/tree4a29ae9e; new private
+controller successor-frozen-ErfjOY. This is a verified process wait, not the old
+f929/143 run or a stale lock. Do not duplicate/stop that owning gate.
+
+Runnable Edge scope: consume current private cache/egress observation contract,
+check exact existing finite-driver/official revoke/cursor/SSE evidence inputs
+and actual target composition while the gate runs. Preserve the same SDK,
+authority/identity/domain, source-custody/UNKNOWN and cleanup invariants. No
+expired draft/window invocation, phantom READY, data/grant/session mutation or
+new framework. Full result still requires genuine current baseline, official
+nonexpired revoke, correlated cache/authority/cursor/last-egress and independent
+scope controls. Core owns corrected qualification/image/config/commissioning;
+Edge owns actual finite binding/case execution as soon as each input is usable.
+Journal real terminal/source changes/results and exact cleanup before closure.
+
+**Connected-case intake:** read existing driver/finite probe and current P22
+builder436lines/CLI91lines plus actual construction/delivery sites at Core
+Claude89f561c4. Frozen successor8ac lacks observer/CLI; Claude's optional
+cacheObserver constructor is never instantiated/passed by current app.module.
+No runtime HIT receipt can be inferred from source fixtures/repeated GET.
+The existing handoff§10 requests the actual reviewed opt-in provider/image/
+config/sink from Core integrator/P22 owner, preserving the running freeze and
+READ independence. This is not a new public field/endpoint, Edge SQL repair,
+measurement budget or generic phase approval. Edge can reuse existing exact
+lease/attempt READ ONLY7-column CLI; require actual SERVED/terminal/sourceACK,
+not merely CORRELATED for a nonterminal row. Existing active-SSE/final-egress
+and unaffected-scope requirements remain; no partial proof closes the goal.
+No code change/test/worker/authority mutation from this read-only review.
+
+Actual scoped Core DB observation (single3s-bounded READ ONLY transaction,
+ROLLBACK/EXIT0): system7688673963308855330/portal_control,9retained/0unresolved,
+native8/0unreconciled. This supersedes old8-retained scheduling assumptions,
+not the closed original recovery. Reviewed candidate865–867 counts retained
+globally; existing32cap minus9 minus20reserved leaves3new admissions. Never
+run the default multi-request baseline blindly. Existing handoff§10 adds the
+actual finite-case/recovery budget input to Core target return; Edge sequences
+one request + physical terminal/counter check, no cap raise/purge/reset or fake
+independent scope. An eligible single READ is not blocked by full-case budget.
+No SQL, session, data or authority write occurred.
+
+Public §10 actually delivered17:59:07UTC (3392bytes/SHA3e73d85f), locator877B/
+SHAf2ee3b09 to existing Core task/Unified/sync; all4prefix/readbacks PASS.
+Actual source8ac normalPID3044368 stays live and logs progress. No duplicate
+gate, test cell, new Docker image/cache/listener or source activation owned.
+
+**Actual owner adoption and finite delivery:** Core932c4fdf independently
+accepts the missing runtime observer factory and hands the exact smallest P22
+completion to Claude; defaultOFF/private-only/actual-factory focused evidence,
+no freeze edit or repeated writer hook. The new capacity paragraph1134bytes/
+SHA420fb869 delivered18:03:58UTC to the same four readpoints, preserved-prefix
+readback PASS. Source-only adoption is not an installed observation provider.
+NormalPID3044368 is confirmed still live18:06:46UTC; log advances through
+actual recovery and analytics cases. Specific live handle = VERIFIED_WAIT,
+not a stopped process, stale lock or readiness inferred from intent.
+
+**This slice verification/publication boundary:** same original08 objective,
+three owned Markdown files only (main append excluding peerC5hunk, detailed
+guide and existing Core handoff). Verification:R0 under actual campaign10.10d;
+tracking/new links/staged diff checks precede Bobby commit. No changed product
+code or new unit/build run/CI minutes. Single bounded SELECT transaction
+really rolled back; zero Edge test resources/keys/source rows created this
+round, cleanup NO_ACTION_NEEDED. No Docker image/cache cleanup while the
+foreign gate is running; preserve active/rollback images and existing source
+custody/unarmed private candidate. Canonical source/worktree/stable release
+tuple from preceding entry unchanged;3Edge d6aa7a51 and serving Core9cf5 remain
+separate from corrected8ac/Claude89f source. Full08/09NOT_MET. Next: observe
+this live gate's genuine terminal, consume actual reviewed image/config/
+commissioning return, then run each eligible real finite case without another
+generic approval. No automatic source/session/grant activation from this wait.
+
+Actual R0 checks: execution-tracking EXIT0, added guide link/indexed explicit
+anchor PASS, staged diff PASS;3owned Markdown paths/+158 before this receipt,
+peer main/binding/native-egress/test/feasibility pins unchanged. Current3Edge
+full image/config/restart0 and Core4095/9cf5/restart0 independently reverified.
+HK used322071748608B/free196845154304B; no disk reclamation or cache cleanup
+claimed. Specific Core normalPID3044368 still live with advancing test output;
+no normal/image/install/connected PASS inferred. No push/merge or hosted CI.
+
 
 
 

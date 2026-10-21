@@ -1036,6 +1036,17 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Connected-goal follow-through:** corrected-source normal is confirmed live
+on8ac4f553/PID3044368 (new17:37:56UTC controller), not oldf929/143. Full real
+revoke/cache/cursor/SSE remains the objective. Edge found the P22 actual-factory
+gap; Core932c4fdf independently accepts and assigns its private opt-in binding
+to Claude without stopping the writer freeze or holding eligible READ. Actual
+Core census9retained/0unresolved/native8reconciled plus the current32cap must
+inform a finite workload/recovery budget; no blind multi-request run, cap raise
+or historical purge. See [current goal journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-connected-goal-followthrough-20261022)
+and existing owner handoff§10. These are real producer/composition inputs, not
+a new phase or generic reapproval. Source stays OFF until actual commissioning.
+
 **22Oct00:36ICT /21Oct17:36UTC current gate:** Core's corrected successor now
 has91 distinct focused PASS (pure73/PG9/reused install6+revoke3), build/restore
 PASS, five files/+755. Sequential READ-only policy advance no longer strands
