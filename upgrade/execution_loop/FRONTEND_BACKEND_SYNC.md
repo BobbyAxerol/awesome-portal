@@ -9,6 +9,18 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### Codex independent return and integration freeze —21October2026,14:33UTC
+
+[Actual independent acceptance / C1–C7 handoff](evidence/ELP2-10/CORE_CLEANUP_INDEPENDENT_REVIEW_AND_CLAUDE_HANDOFF_2026-10-21.md):
+all3Core cleanup receipts independently ACCEPTED, final status3a1fa30a; normal
+14sessions unchanged/token removed. Edge independently saw exact source
+RETIRED/event23 at14:22:28; SQL terminal receipt actuallyNULL, not fabricated.
+Physical-exit witness expired12:05, so its scope is still a source-owner gap.
+Owner return02be/SHA573f764d delivered both mailboxes14:28:15UTC. Canonical
+incoming5Markdown paths preserved atb535; integration37068 retains both
+conflict sides, no non-Markdown delta. Final code gate/ff-only pending;
+Claude's d583 hook currently owns heavy slot, not combined-tree PASS.
+
 ### Codex actual original-custody closeout —21October2026,14:25UTC
 
 [Actual ACK and official cleanup return](evidence/ELP2-10/CORE_ORIGINAL_CUSTODY_CLEANUP_OWNER_RETURN_2026-10-21.md):
