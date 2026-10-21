@@ -64,9 +64,9 @@ describe("header", () => {
     await ready();
     expect(screen.getByRole("link", { name: "Portfolios" }).getAttribute("href")).toContain("/deployments/portfolios");
     const compare = new URL(screen.getByRole("link", { name: "Compare with" }).getAttribute("href")!, "http://x");
-    // The only URL the app mounts Compare on (no registry row yet): the portfolios route with ?view=compare.
-    expect(compare.pathname).toBe("/deployments/portfolios");
-    expect(compare.searchParams.get("view")).toBe("compare");
+    // Compare's own route (registry rev 9, EXECUTION_COMPARE_SCREEN); the old ?view=compare URL is only redirected.
+    expect(compare.pathname).toBe("/deployments/compare");
+    expect(compare.searchParams.get("view")).toBeNull();
     expect(compare.searchParams.get("in")).toBe(PF.core);
     expect(compare.searchParams.get("from")).toBe(`portfolio:${PF.core}`);
     expect(compare.searchParams.get("env")).toBe("paper");
@@ -85,7 +85,7 @@ describe("header", () => {
     const button = screen.getByRole("button", { name: "Compare with" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
     expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toBe(COMPARE_OFF_REASON);
-    expect(document.querySelector("a[href*='view=compare']")).toBeNull();
+    expect(document.querySelector("a[href*='/deployments/compare']")).toBeNull();
   });
 
   it("says Not available for an owner or base currency the resource did not publish", async () => {

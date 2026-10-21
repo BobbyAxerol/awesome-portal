@@ -120,6 +120,23 @@ describe("flag on", () => {
     expect(current("/execution/operations", false)).toHaveLength(2);
   });
 
+  it("Compare (a screen with no rail entry of its own, registry rev 9) keeps Portfolios current", () => {
+    const current = (url: string) => {
+      const view = render(
+        <MemoryRouter initialEntries={[url]}>
+          <Sidebar registry={registry} options={{ capabilities: [...V2_ROLE_PRESETS.manager] }} collapsed={false} v2Shell />
+        </MemoryRouter>,
+      );
+      const active = [...view.container.querySelectorAll("a.portal-navitem-active")].map((a) => a.querySelector(".portal-navitem-label")?.textContent);
+      cleanup();
+      return active;
+    };
+    expect(current("/deployments/compare?in=pf_1,pf_2")).toEqual(["Portfolios"]);
+    expect(current("/deployments/portfolios")).toEqual(["Portfolios"]);
+    // A path nothing claims marks nothing.
+    expect(current("/deployments/nothing")).toEqual([]);
+  });
+
   it("Research and Planning entries keep their registry labels and plain hrefs", () => {
     const { links } = rail(true, [...V2_ROLE_PRESETS.manager], "/execution?env=paper&workspace_id=ws_1&window=30d");
     for (const route of ["/research/quantbt", "/planning", "/portal-map", "/research/alphas"]) {

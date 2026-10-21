@@ -190,6 +190,19 @@ export function PreviewBanner({ profile, screenId, registryWord }: { profile: st
   );
 }
 const ACCESS_PATH = "/administration/profile-access";
+/** Where Compare lives since registry rev 9 (EXECUTION_COMPARE_SCREEN). */
+export const COMPARE_PATH = "/deployments/compare";
+/**
+ * Where the pre-rev-9 Compare URL (`/deployments/portfolios[/:id]?view=compare`) goes: the same query without `view`, and the
+ * portfolio the old path named as the first pick when the query names none (the old mount seeded Compare from `:portfolioId`).
+ */
+export function legacyCompareTarget(portfolioId: string | undefined, search: URLSearchParams): string {
+  const next = new URLSearchParams(search);
+  next.delete("view");
+  if (portfolioId && !next.has("in") && !next.has("ids")) next.set("in", portfolioId);
+  const query = next.toString();
+  return query === "" ? COMPARE_PATH : `${COMPARE_PATH}?${query}`;
+}
 const APPROVALS_PATH = "/governance/approvals";
 /** The query Esc keeps when it leaves a path selection: all context (`workspace_id`, `from`, ...), no `sel` (a leftover one would reselect). */
 export function cockpitClearSearch(search: URLSearchParams | string): string {
@@ -233,8 +246,6 @@ export function windowLockFor(screenId: string, context: EnvLockContext = {}, is
 }
 /** What the route knows about the URL that decides whether the environment applies. */
 export interface EnvLockContext {
-  /** The screen mounted is the V2 Compare (`?view=compare` on the portfolios route, `compare` flag on). */
-  compare?: boolean;
   /** The alpha route carries an alpha id (a 360); without one it is the Fleet list. */
   hasAlphaId?: boolean;
   /** The stage route carries a deployment id; without one it is a list (the Fleet, or the V1 overview). */
@@ -284,8 +295,9 @@ export function envLockFor(screenId: string, context: EnvLockContext = {}, isV2:
     case "EXECUTION_ALPHA_360_SCREEN":
       // A 360 reads per environment; only the list route (no alpha id) is the Fleet.
       return context.hasAlphaId !== true && isV2("fleet") ? NO_ENV_LOCK : undefined;
-    case "EXECUTION_PORTFOLIO_360_SCREEN":
-      return context.compare === true ? NO_ENV_LOCK : undefined;
+    case "EXECUTION_COMPARE_SCREEN":
+      // Compare reads the portfolio list and one series read, neither filtered by environment (registry rev 9, DEBT-UXM07-006).
+      return isV2("compare") ? NO_ENV_LOCK : undefined;
     case "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN":
       return isV2("admin") ? NO_ENV_LOCK : undefined;
     case "EXECUTION_OPERATIONS_QUEUE_SCREEN":
@@ -620,10 +632,11 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
       // Feature canonical route (/deployments/portfolios) = the real portfolio
       // register; /:portfolioId opens that portfolio's 360. The default derives
       // from data, never from a canonical-cast constant (P4-A / BR-EX-76).
-      // UXM-07: Compare has no registry row yet (rev 7 is Codex's), so it rides the portfolios route as ?view=compare.
+      // Compare has its own route since registry rev 9 (EXECUTION_COMPARE_SCREEN, DEBT-UXM07-006). The URL it used to ride,
+      // `?view=compare` on this route, is still answered while the screen is on: it is redirected, never rendered here.
       // The Portfolios mounts sit in RouteFeaturesProvider so they can leave the Compare link out when `compare` is off (audit M2).
-      content = V2Compare && compareOn && search.get("view") === "compare"
-        ? <Suspense fallback={null}><V2Compare api={api} portfolioId={params.portfolioId} /></Suspense>
+      content = compareOn && search.get("view") === "compare"
+        ? <Navigate to={legacyCompareTarget(params.portfolioId, search)} replace />
         : params.portfolioId
           ? V2Portfolio && isV2Screen("portfolios")
             ? <RouteFeaturesProvider value={routeFeatures}><Suspense fallback={null}><V2Portfolio api={api} portfolioId={params.portfolioId} /></Suspense></RouteFeaturesProvider>
@@ -631,6 +644,12 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
           : V2PortfolioList && isV2Screen("portfolios")
             ? <RouteFeaturesProvider value={routeFeatures}><Suspense fallback={null}><V2PortfolioList api={api} /></Suspense></RouteFeaturesProvider>
             : <PortfolioListRichContainer api={api} />;
+      break;
+    case "EXECUTION_COMPARE_SCREEN":
+      // Mounted only while the `compare` flag is on (PortalRoutes leaves the route out otherwise), so flag off the path stays unclaimed.
+      content = V2Compare && compareOn
+        ? <RouteFeaturesProvider value={routeFeatures}><Suspense fallback={null}><V2Compare api={api} /></Suspense></RouteFeaturesProvider>
+        : null;
       break;
     case "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN":
       content = V2Account && isV2Screen("account")
@@ -660,7 +679,7 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
       content = null;
   }
 
-  const lockContext: EnvLockContext = { compare: compareOn && search.get("view") === "compare", hasAlphaId: Boolean(params.alphaId), hasDeploymentId: deploymentId !== null };
+  const lockContext: EnvLockContext = { hasAlphaId: Boolean(params.alphaId), hasDeploymentId: deploymentId !== null };
   return (
     <PreviewFrame
       screenId={screenId}

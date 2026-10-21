@@ -46,12 +46,12 @@ describe("context facts", () => {
   });
 
   it("a screen that states a currency shows it without the URL carrying one", () => {
-    mount("/deployments/portfolios?view=compare", { ccy: "USDT" });
+    mount("/deployments/compare", { ccy: "USDT" });
     expect(chips()).toEqual(["USDT"]);
   });
 
   it("a screen that states no currency hides one left in the URL by another screen", () => {
-    mount("/deployments/portfolios?view=compare&ccy=eur", { ccy: null });
+    mount("/deployments/compare?ccy=eur", { ccy: null });
     expect(chips()).toEqual([]);
   });
 

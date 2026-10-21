@@ -78,7 +78,13 @@ test("the Compare links on Portfolios and Portfolio 360 open the Compare screen"
   }
   await page.getByRole("link", { name: "Compare 2" }).click();
   await expect(page.locator('[data-screen="compare-v2"]').first()).toBeVisible();
-  expect(new URL(page.url()).searchParams.get("view")).toBe("compare");
+  expect(new URL(page.url()).pathname).toBe("/deployments/compare");
+
+  // The pre-rev-9 URL is redirected, not rendered on the portfolios route.
+  await page.goto("/deployments/portfolios?view=compare&in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite");
+  await expect(page.locator('[data-screen="compare-v2"]').first()).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe("/deployments/compare");
+  expect(new URL(page.url()).searchParams.get("view")).toBeNull();
 
   await page.goto("/deployments/portfolios/pf_TEST_ONLY_core");
   await expect(page.locator('[data-screen="portfolio-360-v2"]').first()).toBeVisible();

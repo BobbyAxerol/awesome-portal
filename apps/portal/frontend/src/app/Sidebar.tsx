@@ -15,7 +15,7 @@ import {
   EXECUTION_PREVIEW_FEATURE_DEFAULTS,
 } from "../execution/previewRegistry";
 import type { PortalFeatureDefinition, PortalRegistryDocument } from "../portal/contracts";
-import { sidebarGroups, type NavOptions } from "../portal/navigation";
+import { featureByRoutePrefix, featureForScreenRoute, sidebarGroups, type NavOptions } from "../portal/navigation";
 import { EXECUTION_V2_SHELL, isV2Screen } from "../execution/v2/flags";
 import { applyV2Nav } from "../execution/v2/shell/roleNav";
 import { RAIL_CONTEXT_KEYS, withContext } from "../execution/v2/urlState";
@@ -141,8 +141,11 @@ export function Sidebar({
   selfEntry?: { workspaceId: string } | null;
   selfEntryMounted?: boolean;
 }) {
-  const { search } = useLocation();
+  const { search, pathname } = useLocation();
   const base = railGroups(registry, options, v2Shell, search);
+  // A path only a registry screen claims (Compare, `/deployments/compare`) keeps its feature's rail entry current.
+  // Paths a feature route already covers are decided by NavLink alone, as before.
+  const screenOwnerId = featureByRoutePrefix(registry, pathname) === null ? featureForScreenRoute(registry, pathname)?.id ?? null : null;
   const groups = v2Shell && selfEntryMounted ? withSelfEntry(base, registry, selfEntry, search) : base;
   const badge = usePresentationChrome()?.chrome.navBadge ?? null;
 
@@ -177,7 +180,7 @@ export function Sidebar({
                   <NavLink
                     to={to}
                     end={end}
-                    className={({ isActive }) => `portal-navitem${isActive ? " portal-navitem-active" : ""}`}
+                    className={({ isActive }) => `portal-navitem${isActive || feature.id === screenOwnerId ? " portal-navitem-active" : ""}`}
                     style={{ opacity: previewMounted ? 1 : presentation.opacity }}
                     title={collapsed ? `${label} — ${feature.description}` : feature.description}
                     data-maturity={feature.maturity}

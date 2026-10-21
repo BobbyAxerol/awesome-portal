@@ -26,9 +26,9 @@ const enc = encodeURIComponent;
 export const DEFAULT_ROUTES: PortfolioRoutes = {
   list: "/deployments/portfolios",
   portfolio: (id) => `/deployments/portfolios/${enc(id)}`,
-  // Compare has no registry row yet (rev 7 is Codex's, DEBT-UXM07-006): it rides the portfolios route as ?view=compare,
-  // which is the only URL the app mounts it on. A path that carries its own query is joined with `joinQuery`.
-  compare: "/deployments/portfolios?view=compare",
+  // Compare has its own registry screen since rev 9 (EXECUTION_COMPARE_SCREEN, DEBT-UXM07-006). The pre-rev-9 URL,
+  // `/deployments/portfolios?view=compare`, is redirected here while the screen is on. `joinQuery` still joins a query to either shape.
+  compare: "/deployments/compare",
   alpha: (id) => `/deployments/alphas/${enc(id)}`,
   fleet: "/deployments/alphas",
   account: (id) => `/deployments/accounts/${enc(id)}`,

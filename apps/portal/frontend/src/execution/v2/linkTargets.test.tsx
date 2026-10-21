@@ -50,7 +50,8 @@ const registry: PortalRegistryDocument = JSON.parse(
 
 beforeEach(() => {
   vi.stubEnv("VITE_EXECUTION_PREVIEW_ENABLED", "true");
-  vi.stubEnv("VITE_EXECUTION_V2_SCREENS", "");
+  // Compare is the one screen whose path exists only while its flag is on (registry rev 9), so the sweep runs with it on.
+  vi.stubEnv("VITE_EXECUTION_V2_SCREENS", "compare");
   vi.resetModules();
 });
 afterEach(() => {
@@ -82,9 +83,15 @@ async function mountedAt(path: string): Promise<string> {
 const pathOf = (target: string) => target.split(/[?#]/)[0];
 
 describe("the guard itself", () => {
-  it("sees a path nothing mounts as NOT_FOUND (the /deployments/compare bug)", async () => {
-    expect(await mountedAt("/deployments/compare")).toBe("NOT_FOUND");
+  it("sees a path nothing mounts as NOT_FOUND", async () => {
     expect(await mountedAt("/execution/portfolios")).toBe("NOT_FOUND");
+  });
+
+  it("Compare's own path (registry rev 9) is mounted with the flag on and is NOT_FOUND with it off, as before the row existed", async () => {
+    expect(await mountedAt("/deployments/compare")).toBe("EXECUTION_COMPARE_SCREEN");
+    vi.stubEnv("VITE_EXECUTION_V2_SCREENS", "");
+    vi.resetModules();
+    expect(await mountedAt("/deployments/compare")).toBe("NOT_FOUND");
   });
 });
 
@@ -93,8 +100,8 @@ describe("the shared route builders produce mounted paths", () => {
   const SCREEN_FOR: [string, string, string][] = [
     ["portfolios list", DEFAULT_ROUTES.list, "EXECUTION_PORTFOLIO_360_SCREEN"],
     ["portfolio 360", DEFAULT_ROUTES.portfolio(ID), "EXECUTION_PORTFOLIO_360_SCREEN"],
-    ["compare", DEFAULT_ROUTES.compare as string, "EXECUTION_PORTFOLIO_360_SCREEN"],
-    ["compare with ids", joinQuery(DEFAULT_ROUTES.compare as string, "in=a,b"), "EXECUTION_PORTFOLIO_360_SCREEN"],
+    ["compare", DEFAULT_ROUTES.compare as string, "EXECUTION_COMPARE_SCREEN"],
+    ["compare with ids", joinQuery(DEFAULT_ROUTES.compare as string, "in=a,b"), "EXECUTION_COMPARE_SCREEN"],
     ["alpha 360", DEFAULT_ROUTES.alpha(ID), "EXECUTION_ALPHA_360_SCREEN"],
     ["fleet", DEFAULT_ROUTES.fleet, "EXECUTION_ALPHA_FLEET_LIST_SCREEN"],
     ["account 360", DEFAULT_ROUTES.account(ID), "EXECUTION_ACCOUNT_BROKER_360_SCREEN"],

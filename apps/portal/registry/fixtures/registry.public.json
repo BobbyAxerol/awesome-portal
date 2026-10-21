@@ -267,6 +267,7 @@
         "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
         "EXECUTION_ALPHA_360_SCREEN",
         "EXECUTION_PORTFOLIO_360_SCREEN",
+        "EXECUTION_COMPARE_SCREEN",
         "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
         "EXECUTION_ACCOUNT_BROKER_360_SCREEN",
         "EXECUTION_ADMIN_ACTION_DRAWER_SCREEN"
@@ -277,7 +278,7 @@
       "task_ids": []
     }
   ],
-  "content_digest": "sha256:5ecadfdcd38a8cda1a11c8438e7074d187dd64959f1c77a4c6c14f53d1cfa8c0",
+  "content_digest": "sha256:b876d6aecdecb22f8506d61b5abf6b38dd51e1ad57e17215b45682f801a85679",
   "feature_groups": [
     {
       "id": "command",
@@ -1162,7 +1163,8 @@
       "prototype_frame_id": "WF-1H-3A",
       "roadmap_epic_id": "EXECUTION-LOOP",
       "screen_ids": [
-        "EXECUTION_PORTFOLIO_360_SCREEN"
+        "EXECUTION_PORTFOLIO_360_SCREEN",
+        "EXECUTION_COMPARE_SCREEN"
       ],
       "source_module": null,
       "summary_source_ids": []
@@ -1457,7 +1459,7 @@
     }
   ],
   "registry_id": "portal-default",
-  "revision": 8,
+  "revision": 9,
   "schema_version": "portal.registry.v1",
   "screens": [
     {
@@ -2840,6 +2842,42 @@
       "related_task_ids": [],
       "route": "/deployments/portfolios/:portfolioId",
       "screen_id": "EXECUTION_PORTFOLIO_360_SCREEN"
+    },
+    {
+      "activation_gate": "Execution Loop Phase 16 portfolio list and manager series reads (BE-P4) pass for two to four portfolios on one basis.",
+      "backend_dependency_ids": [],
+      "concern_ids": [
+        "CONCERN_EXECUTION_LOOP_BACKEND_CONTRACT"
+      ],
+      "contract_revision": 2,
+      "data_mode": "NONE",
+      "delivery_policy": {
+        "governance_write_enabled": false,
+        "live_protective_commands_enabled": false,
+        "live_risk_increasing_commands_enabled": false,
+        "paper_commands_enabled": false,
+        "policy_revision": 2,
+        "projection_ingestion_enabled": false,
+        "query_enabled": false,
+        "sandbox_commands_enabled": false,
+        "sse_enabled": false
+      },
+      "delivery_profile": "fixture",
+      "feature_id": "EXECUTION_PORTFOLIOS",
+      "inputs": [],
+      "maturity": "COMMISSIONED",
+      "permissions": [
+        "live.read"
+      ],
+      "primary_action": null,
+      "primary_decision": "Which two to four portfolios on one currency and domain basis differ, and on which published figures?",
+      "primary_persona": "portfolio_manager",
+      "related_repositories": [
+        "apps/portal"
+      ],
+      "related_task_ids": [],
+      "route": "/deployments/compare",
+      "screen_id": "EXECUTION_COMPARE_SCREEN"
     },
     {
       "activation_gate": "N29 BR-EX-72 bounded binding projection, no-secret contract and workspace-isolation evidence pass.",

@@ -400,7 +400,7 @@ describe("Compare is off (M2)", () => {
     expect(button.disabled).toBe(true);
     expect(whyText(button.nextElementSibling)).toBe(COMPARE_OFF_REASON);
     expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toContain(`Compare: ${COMPARE_OFF_REASON}`);
-    expect(document.querySelector("a[href*='view=compare']")).toBeNull();
+    expect(document.querySelector("a[href*='/deployments/compare']")).toBeNull();
   });
 
   it("the row boxes are off with the same reason, and the selection bar does not promise a comparison", async () => {
@@ -434,9 +434,9 @@ describe("Compare selection", () => {
     fireEvent.click(box("Satellite"));
     const link = screen.getByRole("link", { name: "Compare 2" });
     const href = new URL(link.getAttribute("href")!, "http://x");
-    // The only URL the app mounts Compare on (no registry row yet): the portfolios route with ?view=compare.
-    expect(href.pathname).toBe("/deployments/portfolios");
-    expect(href.searchParams.get("view")).toBe("compare");
+    // Compare's own route (registry rev 9, EXECUTION_COMPARE_SCREEN); the old ?view=compare URL is only redirected.
+    expect(href.pathname).toBe("/deployments/compare");
+    expect(href.searchParams.get("view")).toBeNull();
     expect(href.searchParams.get("in")).toBe(`${PF.core},${PF.satellite}`);
     expect(href.searchParams.get("from")).toBe("portfolios");
   });

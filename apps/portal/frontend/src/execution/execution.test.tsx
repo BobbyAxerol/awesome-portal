@@ -1113,7 +1113,8 @@ describe("registry revision 7 — parsed against the registry actually shipped",
   it("parses every policy and enables only the commissioned Portal governance write", () => {
     // Revision 7 (Codex e19ad906) adds one thing to revision 6: `scoped_v2_replacement` on the APPROVALS navigation (pinned below).
     // Revision 8 adds the self-only PROFILE_ACCESS_SELF feature (pinned in the Sidebar/registry tests); no delivery policy changes.
-    expect(registry.revision).toBe(8);
+    // Revision 9 adds the EXECUTION_COMPARE_SCREEN screen row (fixture delivery policy, no flag enabled; pinned in the registry contract test).
+    expect(registry.revision).toBe(9);
     // Not `continue`. A policy this build cannot parse used to skip the check
     // silently, so the loop passed loudest exactly when it understood least —
     // a registry that switched a command on in a shape we could not read would

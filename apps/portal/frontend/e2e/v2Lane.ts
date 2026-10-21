@@ -23,7 +23,7 @@ export const SCREENS = [
   ["cockpit-r1", "/governance/approvals/AP-201/r1", ".exec-ck"],
   ["portfolios", "/deployments/portfolios", '[data-screen="portfolios-v2"]'],
   ["portfolio-360", "/deployments/portfolios/pf_TEST_ONLY_core", '[data-screen="portfolio-360-v2"]'],
-  ["compare", "/deployments/portfolios?view=compare&in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite", '[data-screen="compare-v2"]'],
+  ["compare", "/deployments/compare?in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite", '[data-screen="compare-v2"]'],
   ["alpha-360", "/deployments/alphas/alpha_btc_trend", '[data-screen="alpha-360-v2"]'],
   ["alpha-replay", "/deployments/alphas/alpha_btc_trend?tab=replay", '[data-screen="alpha-360-v2"]'],
   ["accounts", "/deployments/accounts", ".exec-acct-v2"],
