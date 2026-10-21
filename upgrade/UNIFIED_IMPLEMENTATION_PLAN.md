@@ -9676,6 +9676,17 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**21 October15:50 current return:** [Core trust correction / exact next READ–STREAM inputs](execution_loop/evidence/ELP2-10/CORE009_CURRENT_TRUST_AND_READ_STREAM_RETURN_2026-10-21.md).
+Original recovery is settled; do not rerun old cancellation. Additive public
+DER-SPKI correction delivered/hash-verified on HK,12 public checks PASS;
+genuine issued Manager leaf/current eligible source/window still absent.
+Combined integration normal is RUNNING at432da03d, not PASS yet. Claude owns
+dark-Fleet cancellation, consumer/browser and the [financial producer CHANGE](execution_loop/evidence/ELP2-10/C5_FINANCIAL_PRODUCER_REVIEW_AND_CLAUDE_HANDOFF_2026-10-21.md):
+trusted source-ID/disjoint-leaf mapping/reducer, not physical-account dedupe.
+D1–D7 decisions already approved are retained; numeric production bounds,
+calibration and matched coexistence/G2 receipts remain open. No push, runtime
+swap, dev/main/release or ELP2-11. Earlier checkpoints below remain historical.
+
 **21 October07:22 current return:** [C1–C7 disposition and actual379/379 receipt](execution_loop/evidence/ELP2-10/CORE009_C1_C7_RETURN_2026-10-21.md).
 Six-file focused retake, compile and PG restore PASS; owned cell cleaned.
 One ordinary R3 commit queued, not committed/installed/merged yet. C4/C5/C6
@@ -13890,3 +13901,9 @@ Core ACCEPTED_WITH_SCOPE recovery is received: no unresolved original duty remai
 Claude/Core owns current eligible source-set/head/domain/catalogue/epoch, actual actor/workspace/profile/current READ plus separate STREAM grant/source_set_ref, finite genuine application-session private ref and next explicit window. Return partial eligible inputs immediately; no new TS journal required merely for current READ. Core must also return correlated server cache-HIT/invalidation/final-egress and independent unaffected-scope controls: driver repeated read/403/EOF alone is NOT full08 PASS. Edge existing driver/composition/witness review found no new owned defect; primary is ready to bind actual filled inputs, not rewrite a framework or mint stale rights.
 
 PKI request is now tied to actual SG P-client CA cert78a6de84 / CN Primus Portal SGP Client CA v1 / issuer Primus Portal Execution Offline Root v1. Return controlled issuer/issuance-service reference or named issuer owner+forwarding receipt, then matching Research CSR41a94f89 issued public leaf/chain and per-mode config. Public CA is not signing custody; Manager internal CAe4a0ff8f/native28446 trust is not a substitute. Research existing private keys stay SGP; no regeneration/stable-key copy. All-mode includes governed Canary-on-Live, no Paper-only cap. Three-Edge reconcile and new sessions/grants/source require their exact reviewed inputs/window; this packet executes none. No new generic phase approval, suite/build, command/Live trading or phase09 acceptance.
+
+
+**Edge scoped publication21Oct15:52UTC:** local feature commit26aa8820e898e6f3d72ce814830712df229f4c24 on feat/execution-edge-upgrade-v1_2, six owned Markdown files/+967, Bobby identity. Verification:R0 under approved campaign10.10c; tracking/staged diff and14added link/anchor checks PASS, handoff section2e87181d/all4prefix readbacks PASS. No push/merge; commit is HK-local, NOT available by remote Git fetch yet. Product drivercad1eeb6/source/lifecycle and all runtimes unchanged; peer WIP excluded. Use existing delivered handoff section6 for current READ/STREAM/source/session/window and actual issuer inputs, not the retired recovery-only slot. Edge source commit does not commission authority or close08/09.
+
+
+**Edge publication clock clarification:** commit26aa8820 was actually created21Oct15:50:41UTC; the source-pin transfer receipt is15:51:20.700UTC. Prior15:52 heading is a label, not the operation timestamp. No session/grant/window or runtime authority depends on that label.
