@@ -27,6 +27,7 @@ function controlled(state: DatasetDoubleState) {
             const request = encodeManagerDatasetQuery(query)!;
             const answer = datasetAnswer(`/api/v1/execution${request.path}`, new URLSearchParams(request.wire), state);
             const read = readManagerDataset(answer.body);
+            if (answer.status === 403) return resolve({ ok: false, status: "denied", reason: "HTTP 403" });
             if (answer.status !== 200 || read === null || read.kind !== "dataset") return resolve({ ok: false, status: "unavailable", reason: `HTTP ${answer.status}` });
             const mismatch = datasetQueryMismatch(read.dataset, query);
             resolve(mismatch === null ? { ok: true, value: read.dataset } : { ok: false, status: "unavailable", reason: `answers another question (${mismatch})` });
@@ -353,6 +354,126 @@ describe("useFleetDataset.refresh · cancellation", () => {
     await waitFor(() => expect(port.pending).toHaveLength(2));
     hook.unmount();
     expect(port.pending[1]!.signal?.aborted).toBe(true);
+  });
+
+  /* FLEET-1 (CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21 section 2): no clock, every answer is a deferred promise. */
+
+  it("FLEET-1 a cancelled flight is not an answer for a new caller: it waits for the cancelled request to settle, then reads ONCE", async () => {
+    const h = await loaded();
+    const first = new AbortController();
+    let cancelled: Promise<ManagerDataset | null> | undefined;
+    let fresh: Promise<ManagerDataset | null> | undefined;
+    let alsoFresh: Promise<ManagerDataset | null> | undefined;
+    act(() => void (cancelled = h.result.current.refresh(first.signal)));
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    first.abort();
+    expect(h.pending[1]!.signal?.aborted).toBe(true);
+    // the new callers arrive BEFORE the cancelled request settles
+    act(() => {
+      fresh = h.result.current.refresh();
+      alsoFresh = h.result.current.refresh(new AbortController().signal);
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(h.pending).toHaveLength(2); // no second physical request beside the cancelled one
+    await act(async () => {
+      h.pending[1]!.release();
+      await cancelled;
+    });
+    expect(await cancelled).toBeNull();
+    await waitFor(() => expect(h.pending).toHaveLength(3)); // exactly one fresh read, shared by both new callers
+    expect(h.pending[2]!.signal?.aborted).toBe(false);
+    await act(async () => {
+      h.pending[2]!.release();
+      await fresh;
+    });
+    const answer = await fresh;
+    expect(answer).not.toBeNull();
+    expect(await alsoFresh).toBe(answer);
+    expect(h.pending).toHaveLength(3);
+    await waitFor(() => expect(h.result.current.first).toBe(answer));
+  });
+
+  it("FLEET-1 a fresh read that loses every caller while it waits makes no request at all", async () => {
+    const h = await loaded();
+    const first = new AbortController();
+    const second = new AbortController();
+    let waiting: Promise<ManagerDataset | null> | undefined;
+    act(() => void h.result.current.refresh(first.signal));
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    first.abort();
+    act(() => void (waiting = h.result.current.refresh(second.signal)));
+    second.abort();
+    expect(await waiting).toBeNull();
+    await act(async () => {
+      h.pending[1]!.release();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    expect(h.pending).toHaveLength(2);
+    // and the chain is free again: the next caller reads at once
+    act(() => void h.result.current.refresh());
+    await waitFor(() => expect(h.pending).toHaveLength(3));
+  });
+
+  it("FLEET-1 cancellation is per waiter: the caller that left gets null, the survivor gets the shared answer, no extra request", async () => {
+    const h = await loaded();
+    const one = new AbortController();
+    const two = new AbortController();
+    let left: Promise<ManagerDataset | null> | undefined;
+    let stayed: Promise<ManagerDataset | null> | undefined;
+    act(() => {
+      left = h.result.current.refresh(one.signal);
+      stayed = h.result.current.refresh(two.signal);
+    });
+    await waitFor(() => expect(h.pending).toHaveLength(2));
+    one.abort();
+    expect(h.pending[1]!.signal?.aborted).toBe(false);
+    expect(await left).toBeNull();
+    await act(async () => {
+      h.pending[1]!.release();
+      await stayed;
+    });
+    const answer = await stayed;
+    expect(answer).not.toBeNull();
+    expect(await left).toBeNull();
+    expect(h.pending).toHaveLength(2);
+    await waitFor(() => expect(h.result.current.first).toBe(answer));
+  });
+
+  it("FLEET-1 access ended: the independent read runs after the cancelled one settles, and its denial drops rows, head and cursor", async () => {
+    const state = newDatasetDouble({ live: alphasOf(120, [["LIVE"]]) });
+    const port = controlled(state);
+    const hook = renderHook(() => useFleetDataset(port.api, true, "k", live()));
+    await waitFor(() => expect(port.pending).toHaveLength(1));
+    act(() => port.pending[0]!.release());
+    await waitFor(() => expect(hook.result.current.state.phase).toBe("ready"));
+    expect(hook.result.current.rows.length).toBeGreaterThan(0);
+    expect(hook.result.current.nextCursor).not.toBeNull();
+    const session = new AbortController();
+    act(() => void hook.result.current.refresh(session.signal)); // the stream's notice read
+    await waitFor(() => expect(port.pending).toHaveLength(2));
+    session.abort(); // the session stops on the revocation: its read is cancelled
+    let independent: Promise<ManagerDataset | null> | undefined;
+    act(() => void (independent = hook.result.current.refresh())); // onAccessEnded: the table's own READ
+    expect(port.pending).toHaveLength(2);
+    state.variant = "status:403";
+    await act(async () => {
+      port.pending[1]!.release();
+      await Promise.resolve();
+    });
+    await waitFor(() => expect(port.pending).toHaveLength(3));
+    await act(async () => {
+      port.pending[2]!.release();
+      await independent;
+    });
+    expect(await independent).toBeNull();
+    await waitFor(() => expect(hook.result.current.state).toMatchObject({ phase: "error", status: "denied" }));
+    expect(hook.result.current.rows).toEqual([]);
+    expect(hook.result.current.first).toBeNull();
+    expect(hook.result.current.last).toBeNull();
+    expect(hook.result.current.nextCursor).toBeNull();
+    expect(port.pending).toHaveLength(3);
   });
 
   it("a refresh that fails (not a denial) leaves the rows and the ready state as they were", async () => {

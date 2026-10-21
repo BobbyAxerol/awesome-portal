@@ -221,6 +221,36 @@ describe("flag on", () => {
     expect(only(r, ALPHA_FLEET_STREAM_PATH)).toHaveLength(1);
   });
 
+  it("FLEET-1 access ended while the table's notice read is out: that read is cancelled, the independent READ still runs, and its denial clears the table", async () => {
+    const r = rig();
+    r.barrierFor = (index, current) => barrier(index === 1 ? NEWER : current, (body) => { body.environment = "live"; });
+    mount(r, LIVE_URL, { streamFlag: true });
+    await table();
+    await waitFor(() => expect(r.streams).toHaveLength(1));
+    // hold the table's next read (the notice's re-read), and let the READ that follows it answer 403
+    let open!: () => void;
+    const gate = new Promise<void>((resolve) => { open = resolve; });
+    let held = 0;
+    r.state.before = async (call) => {
+      if (call.query.get("limit") === "50" && (held += 1) === 1) await gate;
+    };
+    r.state.variantFor = () => (held >= 2 ? "status:403" : "ok");
+    const pagesBefore = datasetPages(r).length;
+    r.streams[0]!.push(wireCase("AFR-WIRE-REVALIDATE"));
+    await waitFor(() => expect(datasetPages(r).length).toBe(pagesBefore + 1), { timeout: 4000 });
+    const cancelled = r.requests.filter((request) => request.path.endsWith("/manager/fleet")).at(-1)!;
+    r.streams[0]!.push(wireCase("AFR-WIRE-REVOKED"));
+    await waitFor(() => expect(chip()?.getAttribute("data-state")).toBe("stopped"));
+    expect(cancelled.signal?.aborted).toBe(true);
+    // the real client settles a cancelled read at once; the independent READ then runs (one more page request) and is refused
+    await waitFor(() => expect(datasetPages(r)).toHaveLength(pagesBefore + 2));
+    await waitFor(() => expect(screen.queryByRole("table", { name: "Alpha fleet" })).toBeNull());
+    open();
+    await act(async () => { await settle(); });
+    expect(datasetPages(r)).toHaveLength(pagesBefore + 2);
+    expect(only(r, ALPHA_FLEET_STREAM_PATH)).toHaveLength(1);
+  });
+
   it("a typed refusal of the stream stops it with its code behind the disclosure and Start over reads the barrier again", async () => {
     const r = rig();
     r.streamFor = (index, stream) => (index === 0 ? problem(404, "EXECUTION_READ_NOT_AVAILABLE") : stream.response);
