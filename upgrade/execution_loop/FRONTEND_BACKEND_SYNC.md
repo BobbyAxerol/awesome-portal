@@ -11,6 +11,15 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ### Codex round — 21 October 2026, 13:57 UTC
 
+14:05UTC addendum: actual R4 packet delivered to PM/Edge with identical
+SHA25601de0b15 at14:01:22UTC. Independent review ACCEPTS PM48ec3187's helper
+afde6a52/verifier74a6edb4 and genuine provenancef8212436, not operation READY.
+[Exact owner action](evidence/ELP2-10/CORE_R4_HELPER_REVIEW_AND_RECOVERY_ACTION_2026-10-21.md):
+helper still pins expired10:30–12:00; matching Edge recovery-only window and
+reviewed successor/root0600 plan remain. Client pause is swap-specific; no
+deploy permitted. Normal gate has not started while Claude records visual;
+no overlap or invented terminal/ACK. Source review did not rerun tests.
+
 Core R4 actual normal EXIT0 at13:41:13UTC, source `9d88e40a`; image
 `sha256:05ae2af5e1f6b04b11fd612e752d2120831b3e3f80ad7b0290a74740ec1b5dfd`
 built13:45UTC, NOT_INSTALLED, protected runtime unchanged.

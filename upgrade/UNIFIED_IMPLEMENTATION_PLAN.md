@@ -12950,6 +12950,15 @@ additional gate or runtime operation was started.
 
 ### Core source/image and accepted consumer return — 21October2026,13:57UTC
 
+14:05UTC follow-through: both public mailboxes actually hash-verified R4
+delivery14:01:22UTC. Core independently ACCEPTS PM48ec3187's source-only
+helper/provenance successor afde6a52/74a6edb4/f8212436; does not call it
+operational READY or rerun unchanged gates.
+[Exact source-owner recovery action and scope correction](execution_loop/evidence/ELP2-10/CORE_R4_HELPER_REVIEW_AND_RECOVERY_ACTION_2026-10-21.md)
+names the remaining expired helper-window/matching Edge ACK/root-plan input.
+Pause/quiescence is swap-specific; no deploy or source-terminal fabrication.
+Final combined normal has not started while Claude uses the visual slot.
+
 Actual Core R4 normal EXIT0 at13:41:13UTC, source9d88e40a:1147contractsPASS,
 8785API PASS/0FAIL/3SKIP, build/migration/scoped PG restore PASS. Image
 `sha256:05ae2af5e1f6b04b11fd612e752d2120831b3e3f80ad7b0290a74740ec1b5dfd`
