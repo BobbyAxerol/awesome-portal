@@ -29769,6 +29769,91 @@ PASS, staged diff check PASS;3Markdown/+99 before this receipt. Only the owned
 main append is staged; peer10line main/56line binding/native source/test/
 feasibility pins are unchanged. No duplicate build/test/CI or cleanup action.
 
+<a id="original08-p22-owner-routing-20261022"></a>
+### Original08 — P22 owner routing correction —21Oct19:05UTC
+
+**IN_PROGRESS, not connected acceptance.** Previous goal turn made progress:
+62-case/restore qualification, actual image and concrete target returned.
+Current Core2a372de3 has landed the two qualified writer commits; serving
+9cf5 is still unchanged. Root has image-only/config-clone preflight but no
+actual current-source commissioning return. No request or authority is inferred.
+
+Runnable communication defect found: actual Claude3a387ff1 receipt BE-P22§9
+still says runtime construction is unowned/intentionally absent; its Unified/
+sync/frontend readpoints do not contain the current factory request. Core's
+canonical CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW§18:00 already explicitly
+assigns the smallest factory+tests completion to Claude. Existing module/PG328
+acceptance is not that completion. Deliver only that precise input to the
+owning BE-CLAUDE-2026-10-20 directory and link it from the actual FE Unified/
+sync plus Core coordination; do not edit source/index, rebase, run a gate or
+ask for generic approval. Exact request is preserved in existing handoff§10.4.
+DefaultOFF/no extra authority/public fields, actual-factory tests and genuine
+SERVED/sourceACK evidence remain invariant. Delivery is not ACK/code/installed
+proof. R0 hash/prefix/link checks, no heavy job or disposable resource; cleanup
+NO_ACTION_NEEDED. Existing runtime/rollback/source tuple unchanged; full08/09
+NOT_MET. Next remains actual Core target/window and each genuinely ready case.
+
+<a id="original08-installed-successor-fresh-source-20261021"></a>
+### Original08 — installed successor / fresh source binding —21Oct19:18UTC
+
+**IN_PROGRESS, full connected08 NOT_MET.** Read actual installed owner return:
+[Core successor install](evidence/execution-edge-v1_2/EPG10-08/CORE009_SUCCESSOR_INSTALLED_OWNER_RETURN_2026-10-21.md)
+SHA2561bfc387d03bf0648fa656d3afebf7c260c81217d35a83f2d572c06e075b576cf.
+Research image a96c754d/container593acd09/schema149/restart0 is now installed;
+old9cf5 is retained rollback, not current. Stable/dev/TS writer unchanged.
+Core accepts finite eligible READ19:15–19:45UTC conditional on exact fresh
+source/config/window pins. This makes Edge private preparation runnable now.
+
+Approved scope: copy the existing nine-file operator composition to a new0700
+private directory; fresh acceptance/install/revoke IDs and finite window only,
+unchanged target, SDK/lifecycle/trust, field policy and PM admission limits.
+Keep historical CTQrvcGr draft immutable and new operator UNARMED until actual
+hash-matched Core return. Test eight affected modeled glue cases, validate
+without DB/listener, then SDK readonly target/fingerprint/catalogue/admission/
+fresh-ID-absence/old-revoked-head preflight. No authority follows from validation.
+Only matched ACK permits exact CAS0→1 install/finite listener and current Core
+READ. Capture durable SDK drain/pool-zero and actual Docker exit witness before
+opening; same-original recovery on UNKNOWN, no kill/forced-finish/history purge.
+Close exact Core/session/grant first, then drain/retire CAS1→2 and verify cleanup.
+Keep C32/R20/H9 (three new admissions); no full driver or C288 change pending
+specific numeric disposition. P22 and genuine unaffected-control proof remain
+separate full08 dependencies, not blockers for otherwise eligible READ.
+
+P22 actual owner routing completed19:07:29UTC: exact2547-byte packet SHA256
+977cbaaf2ca2caf77f747105ae61fc6888ba756826e750eec4788aecb1c4f6fa
+reached Claude's BE-CLAUDE-2026-10-20 lane; seven prefix/readback checks PASS,
+peer source/index unchanged. Delivery is ACK_PENDING, not factory completion.
+No phase transition, push/merge/CI, performance or all-mode acceptance implied.
+
+**Actual fresh preparation/test/delivery19:19UTC:** private directory
+`/home/bobby/secure/edge-core009-next-read-B2X8jda4/`,0700/0600. Acceptance
+6f082bf9/install9773c19b/revokede173da8; runtime81cfa9a2/manifest04dc797b/
+document9db9d263; revokeed5651b5/document7549e24c. Nine named files copied,
+only IDs/window/pins/path changed; tenth existing SDK ready-observation helper
+reused mechanically with the same fresh runtime/revision1/receipt pin for
+post-install use. No new authority or product adapter. Eight modeled tests
+PASS/0FAIL, SDKvalidate EXIT0/stderr0/db0/listenerfalse, readonlySDK EXIT0/
+stderr0/source-control pools[0,0] verifies actual live_data_executor/system
+7674585245102796834/fingerprint/catalogue/admission25d2b3ef/freshIDabsence/
+oldhead4revoked. Three capped--rm workers exited/removed, no image/build/cache.
+Four public Core prefix/readbacks PASS19:19:17UTC: handoff§10.5 is2450bytes/
+SHA256ee75483b45b8b910311bf0f9907ded07ffaa25d26bd8950f41c15280d12bacb4;
+locator525bytes/c8e933237c82030cc773c0725fb1d0366a39511ee2570ee2bc18c01e91fb4c81
+reached task/Unified/sync. ACK_PENDING; install/serve still refuse unarmed ACK.
+Private drafts retained for this active matched window, not disposable secrets
+to delete before recovery. Before-disk used317017305088/free201899597824B.
+
+**Verification:R0 publication preflight19:22UTC:** execution-tracking EXIT0,
+owned diff check PASS, both new main anchors and guide locator resolve.
+Three peer source/test/feasibility hashes match their starting pins; main10line
+and binding56line peer hunks remain unstaged. No fresh native workers remain.
+Docker inventory124images/570BuildKit records is shared, not generated by these
+three workers; image-ID-set SHA2550b4eeb9d0ade62e6444b9caf40d688dc823734c7e5cb45f535c97b4c80533.
+After-disk used317559672832/free201357230080B; concurrent host growth is not
+claimed as own reclamation. Cleanup:three --rm workers removed, no new images/
+cache to prune; preserve active/explicit rollback/shared resources and the
+active finite proposal. No global prune, DB deletion or runtime restart.
+
 
 
 

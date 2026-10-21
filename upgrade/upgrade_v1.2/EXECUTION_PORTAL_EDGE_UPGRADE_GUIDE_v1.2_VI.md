@@ -1036,6 +1036,18 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Installed successor21Oct19:19UTC:** Core now actually serves a96c754d,
+schema149/container593acd09/restart0; prior built-only status below is history.
+Fresh Edge acceptance6f082bf9/runtime81cfa9a2/window19:15–19:45UTC prepared
+UNARMED;8modeled glue PASS, SDK validation EXIT0/db0 and actual readonly
+source preflight EXIT0/pools[0,0]/fresh head absent/old head4 revoked. Exact
+pins delivered to existing Core handoff§10.5 at19:19:17UTC, four prefix/readback
+checks PASS. Core hash-matched commissioning ACK precedes actual source
+install/serve; genuine current READ/session follows observed READY. Keep
+C32/R20/H9, no automatic cap change or full SSE run. P22 factory request now
+actually reaches Claude; delivery is not factory completion. Full08 remains
+NOT_MET, not09connected. See [current binding journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-installed-successor-fresh-source-20261021).
+
 **Built-image intake21Oct18:52UTC:** actual a96c754d image from8ac exists,
 62-case retake/restore+suffix qualified; not installed. Core counterproposal
 60s/K1/C288/R20 awaits concrete numeric disposition. Single-principal native
