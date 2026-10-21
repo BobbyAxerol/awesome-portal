@@ -200,7 +200,8 @@ const SCHEMAS: ReadonlySet<string> = new Set(["execution.paper-workbench.v1", "e
 export function pageState(envelope: ProfileEnvelope, deployment: DeploymentFacts | null): PageState {
   const none: PageState = { replace: null, partial: null, stale: null, nq: null };
   const replace = (status: ReplaceStatus, reason: string): PageState => ({ ...none, replace: { status, reason } });
-  if (!SCHEMAS.has(envelope.schemaVersion)) {
+  // A body that breaks the published schema is not the contract this screen claims, whatever version it names (paperRead.ts).
+  if (!SCHEMAS.has(envelope.schemaVersion) || (envelope.schemaViolations?.length ?? 0) > 0) {
     return replace("terminal", "The Portal answered with a body that is not a paper-workbench profile.");
   }
   // Exact words: the published enum is lower case, and a case or spacing variant is a word this build does not know.

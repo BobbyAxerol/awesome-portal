@@ -56,6 +56,8 @@ import {
   type VersionRead,
 } from "../v2/readers/dispatch";
 import { refusalReason } from "./schemaGuard";
+import { readPaperWorkbenchProfile } from "../v2/readers/paperRead";
+import { approvalCreateViolations, problemViolations } from "../v2/readers/approvalCreate";
 import { operationalQueueSearch, readIncidentRootV2, readOperationalQueueV2 } from "../v2/readers/operationalQueue";
 import { pendingRecallDiscoveryAnswers, pendingRecallDiscoveryUrl, readPendingRecallDiscoveryV1 } from "../v2/readers/pendingRecallDiscovery";
 import {
@@ -321,14 +323,19 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       try { body = await response.json(); } catch { /* handled below */ }
       const outcome = readApprovalCreated(body);
       // A 2xx whose body is not a created approval: the server answered, so the request may well exist. Uncertain, not "not sent".
-      return outcome ?? { kind: "failed", status: "unavailable", reason: "The create response could not be read.", offline: true };
+      if (outcome === null) return { kind: "failed", status: "unavailable", reason: "The create response could not be read.", offline: true };
+      // V1 reads the body as it always did; the schema verdict rides along for the V2 screen (it reads a marked answer as not readable).
+      const violations = approvalCreateViolations(body);
+      return violations.length === 0 || outcome.kind === "failed" || outcome.kind === "duplicate" ? outcome : { ...outcome, schemaViolations: violations };
     }
     let body: unknown = null;
     try { body = await response.json(); } catch { /* status alone still types the failure */ }
     const problemBody = readProblem(body, response.status);
+    // The code is acted on only when the body is the published problem; the V2 screen drops it otherwise and keeps the status.
+    const untyped = problemViolations(body).length > 0 ? { untyped: { status: response.status } } : {};
     if (response.status === 409 && /DUPLICATE/i.test(problemBody.code)) {
       const match = /\b(apr_[A-Za-z0-9]+|AP-\d+)\b/.exec(problemBody.message);
-      return { kind: "duplicate", existingApprovalId: match ? match[1] : null, reason: problemBody.message };
+      return { kind: "duplicate", existingApprovalId: match ? match[1] : null, reason: problemBody.message, ...untyped };
     }
     return {
       kind: "failed",
@@ -337,6 +344,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       // 408 and 5xx: the server may have acted before it failed, so the outcome is unknown (same class as a dropped network).
       // A definite 4xx refusal carries no flag: the server did not create the request.
       ...(response.status === 408 || response.status >= 500 ? { offline: true } : {}),
+      ...untyped,
     };
   };
 
@@ -396,7 +404,7 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
   const getPaperWorkbenchProfile = (deploymentId: string, variant: "paper" | "vnm" = "paper"): Promise<Result<ProfileEnvelope>> =>
     readGet(
       `/screens/paper/${encodeURIComponent(deploymentId)}${variant === "vnm" ? "/vn-market" : ""}`,
-      readProfileEnvelope,
+      readPaperWorkbenchProfile,
       "The paper workbench",
     );
   const getQueryAnalytics = (

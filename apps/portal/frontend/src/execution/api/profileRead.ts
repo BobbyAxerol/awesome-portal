@@ -50,6 +50,12 @@ export interface ProfileEnvelope {
   unavailableBranches: readonly string[];
   /** Dynamic, generated EDS-02 panel contracts keyed by product branch. */
   panels: Readonly<Record<string, GeneratedPanelEnvelope>>;
+  /**
+   * Where the body breaks its published schema, when a reader that holds the schema checked it (the Paper workbench reader,
+   * `v2/readers/paperRead.ts`). Absent = nobody checked; present and non-empty = the body is not the published contract and a screen
+   * that claims the contract draws none of it. Never set by `readProfileEnvelope` itself.
+   */
+  schemaViolations?: readonly string[];
 }
 
 function obj(raw: unknown): Record<string, unknown> | null {

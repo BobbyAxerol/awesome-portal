@@ -373,7 +373,7 @@ describe("negative generators", () => {
 describe("testkit hygiene (the same rules the product scans apply to these files)", () => {
   const files = readdirSync(__dirname).filter((name) => /\.ts$/.test(name) && !/\.test\.ts$/.test(name));
   it("scans the generators", () => {
-    expect(files.sort()).toEqual(["loadCanonical.ts", "matrix.ts", "negative.ts", "scale.ts", "schema.ts"]);
+    expect(files.sort()).toEqual(["loadCanonical.ts", "matrix.ts", "mutate.ts", "negative.ts", "scale.ts", "schema.ts"]);
   });
   it.each(files)("%s has no fixture-producer import, no cast name, no dash character", (file) => {
     const text = readFileSync(join(__dirname, file), "utf8");

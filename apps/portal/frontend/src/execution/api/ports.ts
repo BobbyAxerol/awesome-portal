@@ -242,9 +242,24 @@ export type ApprovalCreateOutcome =
       policyVersion: string | null;
       quorumRequired: number | null;
       requester: string | null;
+      /**
+       * Where the 2xx body breaks `governance.approval-create.v1` (`v2/readers/approvalCreate.ts`); set by the HTTP port, absent when nobody
+       * checked or the body keeps the schema. V1 ignores it; the V2 screen reads a marked answer as "answered, not readable".
+       */
+      schemaViolations?: readonly string[];
     }
-  | { kind: "duplicate"; existingApprovalId: string | null; reason: string }
-  | { kind: "failed"; status: PanelStatus; reason: string; offline?: boolean };
+  | { kind: "duplicate"; existingApprovalId: string | null; reason: string; untyped?: { status: number } }
+  | {
+      kind: "failed";
+      status: PanelStatus;
+      reason: string;
+      offline?: boolean;
+      /**
+       * Set by the HTTP port when the problem body is not the published `Problem` (its `error.code` is then not a typed code): the HTTP
+       * status it answered with. V1 ignores it; the V2 screen drops the code and keeps the status (`HTTP_<status>`).
+       */
+      untyped?: { status: number };
+    };
 
 export type WaiverStateCode = "OPEN" | "WAIVED" | "EXPIRING" | "LAPSED";
 
