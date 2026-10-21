@@ -148,10 +148,14 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
     );
   })();
 
+  // The root says what the body is, as the other stage screens do: `loading` until the profile has answered, so a reader (a person
+  // waiting, a test, the M-1 harness) can tell "the body is mounted and has asked for what it needs" from "the first read is out".
+  const state = reads.profile.phase === "loading" ? "loading" : reads.profile.phase === "error" ? reads.profile.failure.status : model === null ? "unavailable" : model.page.replace !== null ? model.page.replace.status : "ready";
+
   const chips = showing && model !== null ? chipsOf(model.deployment, model.freshness, model.facts) : reads.profile.phase === "loading" ? LOADING_CHIPS : UNREAD_CHIPS;
   return (
     <CompactGaps>
-    <div className="exec-wb-v2" data-screen="workbench-v2" data-variant={variant}>
+    <div className="exec-wb-v2" data-screen="workbench-v2" data-state={state} data-variant={variant}>
       <Header
         deploymentId={deploymentId}
         deployment={deployment}

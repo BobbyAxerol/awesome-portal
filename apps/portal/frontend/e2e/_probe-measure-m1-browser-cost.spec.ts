@@ -46,6 +46,7 @@ for (const scale of SCALES) {
         const readyMs = Date.now() - t0;
         await page.waitForLoadState("networkidle");
         await page.waitForTimeout(300);
+        await net.quiet();
         const idleMs = Date.now() - t0;
         const first = await net.snap();
         const afterLoad = await cdpRead(cdp);
@@ -62,6 +63,7 @@ for (const scale of SCALES) {
           await page.waitForLoadState("networkidle");
           await page.waitForTimeout(250);
           await page.waitForLoadState("networkidle");
+          await net.quiet();
           const wallMs = Date.now() - t1;
           const after = await net.snap();
           const afterTab = await cdpRead(cdp);
