@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 
+import { MEASUREMENT_QUIET_TIMEOUT, MeasurementQuietTimeout, waitForQuiet } from "../../apps/portal/frontend/e2e/quietGate.mjs";
 import { evaluateG2, G2_INPUT_SCHEMA } from "./lib/g2.mjs";
 import { buildReceipt, canonical, percentile, sha256File, summarize } from "./lib/receipt.mjs";
 import { buildSchedule, offeredPeak, resolvePath, runReplay, validateWorkload } from "./lib/replay.mjs";
@@ -103,4 +104,56 @@ test("the original G2 gate is applied per feed, with a different max for trade a
   assert.equal(bad.failing.length, 3);
   assert.throws(() => evaluateG2({ schema_version: "x", population: [] }), /G2_INPUT_SCHEMA/);
   assert.throws(() => evaluateG2({ schema_version: G2_INPUT_SCHEMA, population: [] }), /G2_POPULATION_EMPTY/);
+});
+
+/* ── quiet gate (apps/portal/frontend/e2e/quietGate.mjs): controlled time, no 15 s waits ─────────────────────────── */
+
+function fakeClock(onTick = () => {}) {
+  const c = { t: 1_000_000, sleeps: 0, inFlight: 0, lastActivity: 1_000_000 };
+  c.now = () => c.t;
+  c.sleep = async (ms) => { c.sleeps += 1; c.t += ms; onTick(c); };
+  c.state = () => ({ inFlight: c.inFlight, lastActivity: c.lastActivity });
+  return c;
+}
+const gate = (c, over = {}) => waitForQuiet({ quietMs: 400, capMs: 15_000, now: c.now, sleep: c.sleep, state: c.state, ...over });
+
+test("quiet gate: genuine quiet resolves after the quiet interval, counted from the call", async () => {
+  const c = fakeClock();
+  c.lastActivity = c.t - 10_000; // old activity does not extend the window
+  const r = await gate(c);
+  assert.ok(r.waitedMs >= 400 && r.waitedMs < 500, `waited ${r.waitedMs}`);
+});
+
+test("quiet gate: a request that finishes inside the cap and then a quiet interval is a pass", async () => {
+  const c = fakeClock((k) => { if (k.inFlight && k.t >= 1_000_000 + 2_000) { k.inFlight = 0; k.lastActivity = k.t; } });
+  c.inFlight = 1;
+  const r = await gate(c);
+  assert.ok(r.waitedMs >= 2_400 && r.waitedMs < 2_600, `waited ${r.waitedMs}`);
+});
+
+test("quiet gate: a permanently pending request is MEASUREMENT_QUIET_TIMEOUT at the cap, never a normal return", async () => {
+  const c = fakeClock();
+  c.inFlight = 1;
+  await assert.rejects(gate(c), (e) => {
+    assert.ok(e instanceof MeasurementQuietTimeout);
+    assert.equal(e.code, MEASUREMENT_QUIET_TIMEOUT);
+    assert.equal(e.invalidMeasurement, true);
+    assert.equal(e.detail.inFlight, 1);
+    assert.equal(e.detail.capMs, 15_000);
+    assert.ok(e.detail.waitedMs >= 15_000 && e.detail.waitedMs < 15_100, "the deadline is not extended");
+    assert.match(e.message, /^MEASUREMENT_QUIET_TIMEOUT: INVALID_MEASUREMENT/);
+    return true;
+  });
+});
+
+test("quiet gate: recurring activity (nothing in flight, but never 400 ms still) is MEASUREMENT_QUIET_TIMEOUT", async () => {
+  const c = fakeClock((k) => { if ((k.t - 1_000_000) % 300 === 0) k.lastActivity = k.t; });
+  await assert.rejects(gate(c), (e) => e instanceof MeasurementQuietTimeout && e.detail.inFlight === 0 && e.detail.msSinceActivity < 400 && e.detail.waitedMs < 15_100);
+});
+
+test("quiet gate: the cap is the caller's, an injected short cap fails at that cap and no silent increase happens", async () => {
+  const c = fakeClock();
+  c.inFlight = 2;
+  await assert.rejects(gate(c, { capMs: 1_500 }), (e) => e.detail.capMs === 1_500 && e.detail.waitedMs < 1_600);
+  assert.ok(c.sleeps <= 31, `slept ${c.sleeps} steps`);
 });

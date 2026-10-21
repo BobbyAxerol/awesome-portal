@@ -17,6 +17,7 @@ import { appendFileSync } from "node:fs";
 import { stubExecutionBff } from "./bffDouble";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 import { usePreferences, stubPortalApi } from "./fixtures";
+import { waitForQuiet } from "./quietGate.mjs";
 import { SCREENS, stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 
 const MEASURE_OUT = process.env.UXM10_MEASURE_OUT;
@@ -73,6 +74,7 @@ interface Meter {
    * Resolves once nothing is in flight and nothing started or finished for `quietMs`. `networkidle` is not that: Playwright resolves it
    * at once when the document has been idle at any earlier moment, so a read that a heavy render starts later (an effect of the body
    * that the first answer mounts) lands after it on a slow worker and in the next window (DEBT-UXM07-044).
+   * Throws MEASUREMENT_QUIET_TIMEOUT (an invalid measurement, never a PASS) when the cap ends without quiet.
    */
   quiet(quietMs?: number): Promise<void>;
 }
@@ -137,9 +139,7 @@ function meter(page: Page, baseURL: string | undefined): Meter {
       return { api: state.api, apiUnique: state.unique.size, apiBytes: state.apiBytes, assets: state.assets, assetBytes: state.assetBytes, foreign: state.foreign };
     },
     async quiet(quietMs = QUIET_MS) {
-      lastActivity = Math.max(lastActivity, Date.now());
-      const deadline = Date.now() + QUIET_CAP_MS;
-      while (Date.now() < deadline && (inFlight > 0 || Date.now() - lastActivity < quietMs)) await page.waitForTimeout(50);
+      await waitForQuiet({ quietMs, capMs: QUIET_CAP_MS, now: Date.now, sleep: (ms) => page.waitForTimeout(ms), state: () => ({ inFlight, lastActivity }) });
     },
   };
 }
