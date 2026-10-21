@@ -24,12 +24,34 @@ export type RecordDetailValue = string | number | null;
 const text = (raw: unknown): string | undefined =>
   typeof raw === "string" && raw.length > 0 && [...raw].length <= 256 && !CONTROL.test(raw) ? raw : undefined;
 
-/** UTC epoch milliseconds from an ISO instant or an already-integer stamp; sub-millisecond digits are truncated. */
+/**
+ * The only text grammar a source instant may use: an ISO-8601 / RFC 3339 date-time with an EXPLICIT zone (`Z` or `+hh:mm`/`-hh:mm`),
+ * one to nine fractional-second digits optional. Date-only, zone-less, space-separated, lowercase, numeric-string and any other
+ * spelling is ambiguous or local and is rejected rather than guessed (CR-04).
+ */
+const ISO_INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?(?:(Z)|([+-])(\d{2}):(\d{2}))$/;
+
+/**
+ * UTC epoch milliseconds from an explicit-zone ISO instant or an already-safe non-negative integer epoch-ms NUMBER; sub-millisecond
+ * digits are truncated. A digit string is NOT an epoch stamp (the source contract documents none): it is malformed. Calendar fields
+ * are validated by round trip, so `2026-02-30T..`, month 13, hour 24 and a leap second never roll over into another real instant.
+ * This is the one shared parser: the record detail, the scoped adapter, subject records and Resource360 all call it.
+ */
 export function epochMsFrom(raw: unknown): number | undefined {
   if (typeof raw === "number") return Number.isSafeInteger(raw) && raw >= 0 ? raw : undefined;
-  if (typeof raw !== "string" || raw.length === 0 || raw.length > 64 || CONTROL.test(raw)) return undefined;
-  const parsed = Date.parse(raw);
-  return Number.isSafeInteger(parsed) && parsed >= 0 ? parsed : undefined;
+  if (typeof raw !== "string" || raw.length > 64) return undefined;
+  const match = ISO_INSTANT.exec(raw);
+  if (!match) return undefined;
+  const [year, month, day, hour, minute, second] = match.slice(1, 7).map(Number);
+  const offsetHour = match[10] === undefined ? 0 : Number(match[10]), offsetMinute = match[11] === undefined ? 0 : Number(match[11]);
+  if (hour > 23 || minute > 59 || second > 59 || offsetHour > 23 || offsetMinute > 59) return undefined;
+  const wall = new Date(0);
+  wall.setUTCFullYear(year, month - 1, day);
+  wall.setUTCHours(hour, minute, second, 0);
+  if (wall.getUTCFullYear() !== year || wall.getUTCMonth() !== month - 1 || wall.getUTCDate() !== day) return undefined;
+  const sign = match[9] === "-" ? -1 : 1;
+  const ms = wall.getTime() + Number((match[7] ?? "").padEnd(3, "0").slice(0, 3)) - sign * (offsetHour * 60 + offsetMinute) * 60_000;
+  return Number.isSafeInteger(ms) && ms >= 0 ? ms : undefined;
 }
 
 /** `undefined` = omit the member; `null` = the source stated no value. */

@@ -1,6 +1,7 @@
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { accessDigest } from "../execution-v2/access-policy";
 import { projectionRowVisible } from "../execution-v2/read-projection";
+import { epochMsFrom } from "../execution-v2/record-detail";
 import { ExecutionReadScopeError, ExecutionReadScopes, scopeAllowsField, scopeReadPopulation, scopeResources,
   type AuthorizedExecutionReadScope, type PortfolioCollectionPurpose, type ReadScopePrincipal } from "../execution-v2/read-scope";
 import { ExecutionProfileProjectionRepository, type ProfileProjectionSnapshot, type ProjectionEnvironment } from "../execution/profile-projection.repository";
@@ -427,7 +428,9 @@ function publish(scope: AuthorizedExecutionReadScope, row: Facts) {
     if (!scopeAllowsField(scope, sourceKey) || row[sourceKey] === undefined) continue;
     const value = row[sourceKey];
     if (key === "updated_at_ms") {
-      output[key] = value === null ? null : typeof value === "number" ? value : typeof value === "string" ? Date.parse(value) : NaN;
+      // CR-04: shared explicit-zone parser; a malformed source instant stays absent (the member is optional), never a guessed instant.
+      const ms = value === null ? null : epochMsFrom(value);
+      if (ms !== undefined) output[key] = ms;
     } else if (decimals.has(key)) {
       if (value !== null && (typeof value !== "string" || !decimal.test(value))) fail("EXECUTION_READ_AUTHORITY_UNAVAILABLE", 503);
       output[key] = value;

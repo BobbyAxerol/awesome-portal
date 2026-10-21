@@ -144,7 +144,7 @@ export class ExecutionSubjectActivityService {
       let after:{ts:string;rowId:string}|null=null;
       if(request.after){
         const [ts,rowId]=this.cursors.decode(request.after,{resourceId,workspaceId:principal.workspaceId,direction:"after",queryFingerprint:fingerprint,boundarySize:2});
-        if(typeof ts!=="string"||!Number.isFinite(Date.parse(ts))||typeof rowId!=="string")throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_CURSOR_INVALID",400);
+        if(typeof ts!=="string"||epochMsFrom(ts)===undefined||typeof rowId!=="string")throw new SubjectActivityError("EDS12_SUBJECT_ACTIVITY_CURSOR_INVALID",400);
         after={ts,rowId};
       }
       const {page,coverage}=await this.mirror.scopedSubjectRead({workspaceId:principal.workspaceId,environment:request.environment,profileId},key,
@@ -165,9 +165,9 @@ export class ExecutionSubjectActivityService {
             if(source[from]!==undefined&&scopeAllowsField(scope,to))source[to]=source[from];
           for(const key of ["created_at","updated_at","timestamp_ms","occurred_at_ms"])
             if(typeof source[key]==="string"){
-              const parsed=Date.parse(source[key]);
+              const parsed=epochMsFrom(source[key]);
               // An unreadable source instant is omitted and named (time_reason_code); it never fails the page nor becomes a guess.
-              if(Number.isSafeInteger(parsed)&&parsed>=0)source[key]=parsed;else delete source[key];
+              if(parsed!==undefined)source[key]=parsed;else delete source[key];
             }
           // Record detail is sanitised member by member below; the generic filter must not let a raw column of the same name through.
           const values:Record<string,unknown>=Object.fromEntries(Object.entries(source).filter(([key])=>
@@ -480,8 +480,7 @@ function unavailableResponse(
 
 function epochMs(value: string | null): number | null {
   if (!value) return null;
-  const parsed = Date.parse(value);
-  return Number.isFinite(parsed) ? parsed : null;
+  return epochMsFrom(value) ?? null;
 }
 
 function cursorResourceId(principal: SubjectActivityPrincipal, request: SubjectActivityRequest, profileId: string): string {
