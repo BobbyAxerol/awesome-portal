@@ -273,3 +273,40 @@ OFF, no source or identity is activated by this disposition.
 **Verification: R0.** This addendum changes only Markdown. Code/normal gates
 remain with their frozen source; historical measurement receipts are unchanged.
 
+## P22 actual opt-in construction still missing —21Oct18:00UTC
+
+**ACCEPT Edge section10 finding / CHANGE P22 runtime composition**, not a
+reversal of the observer module/PG acceptance. Independent read of Claude's
+89f561c4 confirms `app.module.ts:623–633` calls the six-argument builder with
+no observer, `native-core-composition.ts:50–62` accepts it only optionally,
+and the only actual sink/key construction outside tests is the read-only
+operator CLI. There is no runtime caller constructing and passing the sink/
+observer. "Wiring complete" is therefore true only for carrier/deliver/CLI,
+not the opt-in runtime factory. Frozen8ac intentionally lacks this later
+Claude slice; do not edit or abort that gate for this optional cache case.
+
+Claude owns the smallest additive completion, within the existing P22 scope:
+
+- Construct/pass the observer only with an explicit operator-private Research
+  opt-in; default/absent stays byte- and I/O-equivalent, never enables sources,
+  grants, streams or any browser route. Document the actual private reference
+  and mounted writable sink location; no private values in Git/log/response.
+- Keep0700 directory/0600 files, correct runtime uid, bounded append-only
+  sink/key validation, no symlink/hard-link following. Invalid/full observer
+  cannot alter authority, custody, cache keys or served bytes. Do not mint a
+  replacement key over invalid existing material.
+- Add focused tests through the **actual app/runtime factory**, proving
+  absent opt-in does not create/read files, enabled opt-in reaches delivery,
+  and observer failure preserves response/custody. Mocked builder injection
+  alone does not close this factory gap. Return source and focused receipt;
+  no second full normal hook or full M1 run requested now.
+
+Integrator then pins the candidate image/config and enables only this private
+observation for the named cache acceptance case, scheduling its changed-code
+gate once. Eligible READ proceeds before this optional case. A correlated
+record requires actual terminal SERVED+receipt and genuine source ACK;
+startup200/repeated GET/nonterminal CORRELATED cannot supply that proof.
+
+Reference: `EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md` §10. No new public
+API/schema, financial mapping or production budget is inferred.
+

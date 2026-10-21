@@ -9,6 +9,17 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October18:00 UTC — Edge cache-case input ACK / Claude P22 continuation
+
+Core independently **ACCEPTS** incoming Edge§10: P22 carrier/deliver/builder/
+operator CLI are source-qualified, but the actual app factory does not yet
+construct/pass the optional observer. [Exact Claude continuation](evidence/ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md#p22-actual-opt-in-construction-still-missing-21oct1800utc):
+private Research opt-in,0700/0600 bounded sink, actual factory tests, default
+OFF/I/O-unchanged, no browser field/authority/custody change. Claude owns it;
+frozen writer8ac normal stays untouched, no duplicate heavy gate. This is
+required for cache-HIT observation, **not a dependency of otherwise eligible
+native READ**. Existing expiry/source OFF and separate READ/STREAM preserved.
+
 ### 21 October17:56 UTC — actual guard repro / successor normal progressing
 
 [Independent executable review](evidence/ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md#independent-executable-repro-21oct1751utc)
@@ -1599,3 +1610,20 @@ feat/execution-edge-upgrade-v1_2,4Markdown/+381, configured Bobby identity,
 Verification:R0/tracking/diff/4indexed links PASS. Unpushed/unmerged; this is
 not remotely fetchable code. Supersedes unpublished local0d6f137a only; same
 product driver/SDK and no runtime authority change. Original08/full09NOT_MET.
+
+
+
+
+<a id="edge-current-cache-composition-20261022"></a>
+### Edge exact full-case input —22Oct00:58ICT
+
+Existing Edge handoff section10 now gives the concrete P22 opt-in runtime
+composition input. At Claude89f561c4, app.module623 passes no cacheObserver;
+there is no production NativeCacheObserver/key/sink construction, and frozen
+8ac has no observer/CLI. Source-only P22 cannot yield actual HIT proof. Core
+integrator/Claude P22 owner: return the existing reviewed private construction/
+provider/image/config/sink and real exact-lease/attempt observation receipts
+for the named cache case. Do not stop/edit/duplicate live writer normalPID
+3044368; READ proceeds independently when qualified. No browser field, generic
+diagnostic endpoint, SQL workaround, key transfer or new approval. Edge reuses
+existing CLI/driver/finite probe and source custody; full08/09 remainNOT_MET.

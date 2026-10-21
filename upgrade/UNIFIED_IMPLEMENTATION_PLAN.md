@@ -14443,3 +14443,27 @@ Latest public owner pins Edge40f2c5c/PM61edc761: no new finite source window,
 Manager issuer or accepted financial mapping. Root preserves those incoming
 Edge-only Markdown appends; no peer code is staged. Budget/calibration/G2 and
 browser stay separate gates. Verification:R0; ELP2-10 OPEN, ELP2-11 not begun.
+
+
+
+
+<a id="edge-current-cache-composition-20261022"></a>
+### Edge exact full-case input —22Oct00:58ICT
+
+Existing Edge handoff section10 now gives the concrete P22 opt-in runtime
+composition input. At Claude89f561c4, app.module623 passes no cacheObserver;
+there is no production NativeCacheObserver/key/sink construction, and frozen
+8ac has no observer/CLI. Source-only P22 cannot yield actual HIT proof. Core
+integrator/Claude P22 owner: return the existing reviewed private construction/
+provider/image/config/sink and real exact-lease/attempt observation receipts
+for the named cache case. Do not stop/edit/duplicate live writer normalPID
+3044368; READ proceeds independently when qualified. No browser field, generic
+diagnostic endpoint, SQL workaround, key transfer or new approval. Edge reuses
+existing CLI/driver/finite probe and source custody; full08/09 remainNOT_MET.
+
+Core integrator18:00UTC independently ACCEPTS the actual-factory gap and
+[hands its smallest P22 completion to Claude](execution_loop/evidence/ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md#p22-actual-opt-in-construction-still-missing-21oct1800utc).
+Default OFF, private opt-in/file bounds and actual-factory focused tests;
+no frozen-writer edit/repeat hook, public endpoint or automatic READ→STREAM.
+P22 source/PG acceptance stays valid for its actual scope, not installed cache
+proof. Eligible native READ is not held by optional observation. ELP2-10 OPEN.

@@ -435,3 +435,55 @@ feat/execution-edge-upgrade-v1_2,4Markdown/+381, configured Bobby identity,
 Verification:R0/tracking/diff/4indexed links PASS. Unpushed/unmerged; this is
 not remotely fetchable code. Supersedes unpublished local0d6f137a only; same
 product driver/SDK and no runtime authority change. Original08/full09NOT_MET.
+
+
+## 10. Full connected-case composition —22Oct00:58ICT /21Oct17:58UTC
+
+**READ_NOT_HELD / CACHE_CASE_NEEDS_ACTUAL_OBSERVER_BINDING.** Corrected Core
+normal is really live: timeoutPID3044368 started17:37:56UTC on8ac4f553,
+new controller successor-frozen-ErfjOY; log progresses through actual tests.
+Do not abort/duplicate it or edit its frozen source for this observation ask.
+Original08 still requires real revoke/cache/cursor/SSE, not just a source ACK.
+
+Edge read the current P22 builder/join/CLI and actual callers at Claude/Core
+89f561c4. `native-core-composition.ts:50–62` accepts optional cacheObserver;
+`native-manager-consumer.ts:353–358` records only when that dependency exists.
+No production source caller constructs NativeCacheObserver/key/sink, and the
+current app.module factory does not pass it. Frozen8ac lacks the observer/CLI.
+Thus P22 source/fixture acceptance alone cannot produce a runtime cache-HIT
+receipt; no flag, repeated GET, startup200 or CORRELATED/nonterminal row
+substitutes one. This is a concrete Core composition input, not an Edge SQL
+workaround or a reason to stop otherwise eligible READ.
+
+**Core integrator / Claude P22 owner:** return the reviewed private opt-in
+construction/binding (or actual existing owning provider reference) and the
+image/config where it is installed, with an operator-private0700/0600 sink.
+Keep existing coordinator/custody/authority/cache keys/DTO/route behavior and
+observer default OFF; observation failure must not affect served bytes. No
+browser field, generic diagnostic endpoint, key transfer or new phase. Use
+the existing one-writer/affected-gate integration, not a patch to the running
+writer freeze. Eligible current READ proceeds before this optional case input.
+
+Edge reuses the existing private operator CLI after genuine requests:
+`node dist/cli/execution-native-cache-observation.js --dir <private-sink> --lease <actual> --attempt <actual>`.
+It reads exactly7indexed obligation columns in READ ONLY and does not load the
+MAC key. Return real branch HIT/MISS/COALESCED, same-key cache/epoch MAC and
+body digest, exact lease/attempt, durable terminal receipt+source ACK/reconciled.
+CORRELATED is only a join verdict: require durable SERVED/terminal receipt
+and genuine reconciled ACK for the successful request; do not treat UNKNOWN/
+NO_TERMINAL/NO_OBSERVATION as final egress. Logical authority/epoch invalidation
+is valid; physical cache deletion is not required. Compare actual pre-revoke
+HIT and post-revoke denial/current epoch; do not expose cached payload or key.
+
+For active SSE retain current separate STREAM grant/source_set/generation,
+official active revoke and real final-SSE-egress/authority receipts; bounded
+client frames/EOF are observation only. STREAM-only revoke keeps READ as a
+positive control; full READ revoke needs a genuine independent unaffected
+scope as well. Existing driver and private finite probe remain unchanged.
+Keep Core32 cumulative receipts with>=20reserved recovery capacity, inspect
+actual originals/counters between finite requests, retain UNKNOWN custody.
+
+Return each ready source/image/config/commissioning/session/grant input through
+this same task; no new Bobby approval. Source28446 remains OFF, expired draft
+never invoked. This section adds only the newly identified actual-observer
+composition requirement for the named cache case, not a READ activation gate.
