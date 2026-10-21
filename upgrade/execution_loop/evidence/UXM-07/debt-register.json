@@ -43,7 +43,7 @@
     {
       "id": "DEBT-UXM07-018",
       "title": "Missing conformance suite for readLiveFull (V1 body); the Paper workbench reader and the New request outcomes now have theirs",
-      "where": "Closed since efe0f0d0: v2/screens/workbench/workbench.conformance.test.ts (92 cases; execution-paper-read.v1 as oracle; 2502 schema-invalid mutations tried, 0 read looser; the reader is v2/readers/paperRead.ts, wired at getPaperWorkbenchProfile) and v2/screens/request/request.conformance.test.ts (176 cases; ApprovalCreateResponse, Problem and ApprovalCreateRequest as oracles; 564 schema-invalid bodies, 0 read looser; the readers are v2/readers/approvalCreate.ts and the port's marks, read by model.readOutcome; the lookup replay now uses the strict reader). Differences from the schemas are pinned in each suite's ledger and listed to Codex as FE-073 and FE-074 (backend-requests.md). Still without its own L0-L3 file: the Live V1 body readLiveFullByVersion (liveFull.ts), covered at dispatcher level only (readers/dispatch.conformance.test.ts: 6 V1 bodies x 8 routes)",
+      "where": "Closed since efe0f0d0: v2/screens/workbench/workbench.conformance.test.ts (92 cases; execution-paper-read.v1 as oracle; 2502 schema-invalid mutations tried, 0 read looser; the reader is v2/readers/paperRead.ts, wired at getPaperWorkbenchProfile) and v2/screens/request/request.conformance.test.ts (176 cases; ApprovalCreateResponse, Problem and ApprovalCreateRequest as oracles; 564 schema-invalid bodies, 0 read looser; the readers are v2/readers/approvalCreate.ts and the port's marks, read by model.readOutcome; the lookup replay now uses the strict reader). The differences from the schemas that were pinned in each suite's ledger and listed to Codex as FE-073 and FE-074 (backend-requests.md) are CLOSED: Codex published the five Paper members and the create-request outcomes in c02f63d8 (cherry-picked 56fabbbb) and the FE consumes them (c942919f) exactly as published (the five exceptions X-1, SI-1, SI-2, SI-3 and X-2 are removed from both suites; only S-1 stays in the request ledger and S-1/R-1 in the workbench ledger; workbench L3 3550 schema-invalid bodies and request L3 632, 0 read looser). Still without its own L0-L3 file: the Live V1 body readLiveFullByVersion (liveFull.ts), covered at dispatcher level only (readers/dispatch.conformance.test.ts: 6 V1 bodies x 8 routes)",
       "consequence": "The Live V1 body is proven against hand-written doubles and the dispatcher's cases, not against its published schema; a schema drift there would not fail a test",
       "proposed": "Decide whether dispatcher-level coverage is enough for the V1 body; if not, add liveFull.conformance.test.ts (L0-L3, schema as oracle) and a matrix row",
       "owner": "Claude (FE)",
@@ -232,6 +232,16 @@
       "proposed": "Rerun M-4a on a quiet host in the 4/4 cell with three repetitions; never run heavy jobs in parallel with the hook.",
       "owner": "Claude",
       "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
+      "pre_commit_hook_blocks": false
+    },
+    {
+      "id": "DEBT-UXM07-047",
+      "title": "Paper snapshot Records cap (200 rows) vs retained equity history (target 2000, not a ceiling): history depth, response bytes and render budget are not qualified",
+      "where": "execution-paper-read.v1 `Records` (maxItems 200) vs `PaperHistoryRecords` (no cap) for data.account_equity, published in c02f63d8 (FE-073, consumed in c942919f); FE reader v2/readers/paperRead.ts `historyRecords` carries every retained row and validates each as a NarrowRecord; chart reduces client-side in v2/charts (reduceRuns) and the server's own reduction is shown in the envelope caption from data.history_windows",
+      "consequence": "No hard ceiling is asserted and none is invented: the FE neither truncates account_equity to the 200-row snapshot page nor claims a maximum. The cost is that the 7 MiB / 200-row L2 budgets of workbench.conformance.test.ts are measured with snapshot-sized history only; a history of several thousand rows (the 720-row producer case is valid, 2000 is a target, not a bound) has no response-byte or parse-time budget behind it, and Codex states the DTO does not qualify one.",
+      "proposed": "Codex qualifies the cardinality and response-byte budget of the history array (and says whether a hard output ceiling exists). Then Claude adds an L2 scale cell at that depth to workbench.conformance.test.ts (parse + model inside a budget) and, if the depth is bounded, a 'Showing N of M' line on the Paper equity table from history_windows.account_equity.source_rows/returned_rows. Until then the follow-up stays explicit instead of a silent cut.",
+      "owner": "Codex (bound) then Claude (scale cell)",
+      "origin": "FE-073 consumption 2026-10-21 (served-contract return, c02f63d8)",
       "pre_commit_hook_blocks": false
     }
   ],
