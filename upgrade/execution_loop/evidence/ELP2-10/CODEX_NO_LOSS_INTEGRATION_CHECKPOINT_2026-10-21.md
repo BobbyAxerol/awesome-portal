@@ -162,3 +162,36 @@ reused for these disjoint read-only deltas; neither ran tests or mutations.
 Own landing still b0dcc726 plus the same nine source/derived dirty paths;
 canonical5325a45a and original peer refs are unchanged. Markdown updates use
 the scoped R0 path; they cannot turn the pending normal/connected gates green.
+
+## Actual Core normal terminal — 13:41 UTC
+
+PM's single R4 normal gate finished `2026-10-21T13:41:13Z`, **EXIT0**.
+Core source is now committed and clean as
+`9d88e40a963f4eb2245f8ec0343c2c511a98bd68`, tree
+`8ffbc319baf9f2fcc07299834724f44c543f853b`.
+Actual contracts1147PASS; API8785PASS/0FAIL/3SKIP,437filesPASS/2SKIP;
+TypeScript build and unchanged scoped PostgreSQL restore/four access digests
+PASS. Log SHA256 `b2c0030cfb73173c2fa268bc461c82420e7518cf9645bc72c91886d7d656fc6f`;
+terminal SHA256 `4ff7861268b1b90382248f058475670977716fb9c55767e2848aa80384220883`.
+The owner's conditional image build actually started13:41:19UTC; image pin,
+final cleanup and protected-runtime comparison await its real result. No
+installation or recovery was dispatched.
+
+The integrator preserves the full52-line Unified and20-line sync additions
+from committed9d88e40a, including prior failure/cleanup history. These are
+additive historical records, never wholesale replacement of newer Claude or
+canonical documents. Its seven source/test/harness files plus two officially
+regenerated EDS12 files are staged (+139/-28); staged binary diff SHA256
+`8e6031f23b283f21e1e1f9165090d7a1893f5d93b03a5dd520df919621b2602e`.
+The owning Core normal PASS is not a full combined-tree PASS. A single normal
+gate on the final integrated freeze remains before ff-only landing, scheduled
+only after the current image build releases resources.
+
+Independent C4/C5 review also reconfirms eight hash-matched owner deliveries,
+so no redundant resend. PM's trusted source/leaves duplication rules are
+accepted, but selected-producer wire mapping is still absent; current Portal
+fact-ID/snapshot dedupe cannot prove NET_PNL populations disjoint. Keep
+financial commissioning closed until producer bridge/reconciled examples and
+the shared reducer mapping are reviewed. This is not a new UI task or a Portal
+choice of economic authority. C1–C3/C7 remain the relevant assigned Core work;
+no unrelated source request was silently dropped or reopened.
