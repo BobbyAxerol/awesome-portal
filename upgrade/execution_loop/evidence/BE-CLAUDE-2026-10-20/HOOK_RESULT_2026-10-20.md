@@ -24,3 +24,14 @@ Mức: **SOURCE_ONLY → hook xanh**. Không phải INSTALLED / CONNECTED / OWNE
 - Vitest/tsc frontend không nằm trong hook: chạy riêng theo từng nhánh.
 - Core009 vẫn `PREPARED_SOURCE_ONLY`; PG spec migration 146 (BE-P13) chưa chạy: 17/20 test skip khi không có `TEST_DATABASE_URL`.
 - Nhánh RV-06/10/11/13/14 và gói trả Edge chưa vào tip này; mỗi nhánh cần hook/gate riêng khi landing.
+
+## Lần chạy cuối của đợt 2 (2026-10-20/21)
+
+| Mục | Giá trị |
+| --- | --- |
+| Commit hook | `a896bd08`, exit=0 |
+| Tip được kiểm | `9d15755f` (claude/fe-parity): BE-P15/P16/P17, parent Paper Exit, RV-06/10/11/13/14, registry rev 8 + re-pin N29, sửa UX nhóm A/B, fixture Exit |
+| Contracts | 90 file / 1.577 test PASS |
+| Control API (PG dùng một lần) | 472 file PASS, 2 skip / 9.445 test PASS, 3 skip |
+| Gate khác | P01 route ledger 319 route, N17A…N29, EDS-12, R3-2, tracking reconciliation: PASS |
+| Ngoài hook | Frontend `src/execution` + `src/app` 80.1xx test PASS, `tsc` sạch; spec PG BE-P15/P16 (16/16), P17 + parent Paper Exit (301) PASS; visual đã chạy so sánh một lần (580/37/16), 37 đỏ đã sửa, chưa chạy lại trên SHA cuối |
