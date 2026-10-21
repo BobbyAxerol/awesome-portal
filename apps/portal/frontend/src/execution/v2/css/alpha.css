@@ -473,6 +473,34 @@
 }
 
 @media (max-width: 660px) {
+  /* Orders and fills at phone width: the Blotter's card (a two-column grid, label above value) instead of one line per field, so
+   * an order is about half the height. The id cell takes the full width and no label (DEBT-UXM07-031). Nothing sticks. */
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px var(--space-3);
+    padding: 8px 12px;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l] {
+    display: block;
+    padding: 4px 0;
+    min-width: 0;
+    text-align: left;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l]::before {
+    display: block;
+    margin-right: 0;
+    padding-right: 0;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Order"],
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Fill"] {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Order"]::before,
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Fill"]::before {
+    display: none;
+  }
   /* The trade log becomes cards, the same rule as cards.css: the header row goes, each cell prints its label. */
   .exec-alp2-replay table[data-plain] {
     display: block;

@@ -207,6 +207,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
               rowKey={(o) => o.orderId}
               selectedKey={focusOrder}
               label="Orders of this alpha"
+              className="exec-alp2-cardgrid"
               empty={<PanelState status="empty" reason="No order is present for this alpha in the retained projection window." />}
             />
             <MoreRow page={book.ordersMore} noun="orders" loaded={orders.length} shown={orderRows.length} undrawn={orderRows.length < Math.min(orders.length, ROW_CAP)} onDraw={orderPhone.grow} />
@@ -225,6 +226,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
               rows={fillRows}
               rowKey={(f) => f.fillId}
               label="Fills of this alpha"
+              className="exec-alp2-cardgrid"
               empty={<PanelState status="empty" reason="No fill is present for this alpha in the retained projection window." />}
             />
             <MoreRow page={book.fillsMore} noun="fills" loaded={fills.length} shown={fillRows.length} undrawn={fillRows.length < Math.min(fills.length, ROW_CAP)} onDraw={fillPhone.grow} />

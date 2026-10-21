@@ -16,3 +16,21 @@ describe("Alpha 360 current-facts link carries a non-colour cue", () => {
     expect(read("blocks.css")).not.toMatch(/\.exec-blk-link\s*\{[^}]*text-decoration/);
   });
 });
+
+describe("Alpha 360 orders and fills are two-column cards at phone width (DEBT-UXM07-031)", () => {
+  const css = read("alpha.css");
+  const phone = css.slice(css.indexOf("@media (max-width: 660px)"));
+
+  it("the grid is scoped to .exec-alp2-cardgrid, inside the 660px query, label above value", () => {
+    expect(phone).toMatch(/\.exec-alp2-cardgrid tbody tr:not\(\.exec-cards-empty\)\s*\{[^}]*grid-template-columns:\s*1fr 1fr/);
+    expect(phone).toMatch(/\.exec-alp2-cardgrid tbody tr:not\(\.exec-cards-empty\) td\[data-l\]::before\s*\{[^}]*display:\s*block/);
+  });
+
+  it("the id cell is the full-width first line with no label", () => {
+    expect(phone).toMatch(/td\[data-l="Order"\],[\s\S]*?td\[data-l="Fill"\]\s*\{[^}]*grid-column:\s*1 \/ -1;[^}]*order:\s*-1/);
+  });
+
+  it("above 660px the table is the table it was: no cardgrid rule outside the query", () => {
+    expect(css.slice(0, css.indexOf("@media (max-width: 660px)"))).not.toMatch(/exec-alp2-cardgrid/);
+  });
+});
