@@ -23,14 +23,17 @@ EDS11R_MANAGER_CENSUS_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contra
 # Each invocation owns an isolated disposable cell.  The historical fixed
 # names made two concurrent local/CI verification runs collide even though
 # neither touches Portal runtime state.  A caller may still pin all names for
-# diagnostics, but the default process-id suffix makes concurrent runs safe.
-TEST_RUN_SUFFIX="${CONTROL_API_TEST_RUN_SUFFIX:-$$}"
+# diagnostics. Fresh numeric PID/random suffixes also preserve the native
+# suites' strict disposable-PostgreSQL hostname guard.
+DEPS_DIR="$(mktemp -d)"
+trap 'rm -rf -- "${DEPS_DIR}"' EXIT
+TEST_RUN_SUFFIX="${CONTROL_API_TEST_RUN_SUFFIX:-$$${RANDOM}${RANDOM}}"
 NETWORK="${CONTROL_API_TEST_NETWORK:-control-api-test-net-${TEST_RUN_SUFFIX}}"
 PG_CONTAINER="${CONTROL_API_TEST_POSTGRES_CONTAINER:-control-api-test-postgres-${TEST_RUN_SUFFIX}}"
 NODE_CONTAINER="${CONTROL_API_TEST_NODE_CONTAINER:-control-api-test-node-${TEST_RUN_SUFFIX}}"
 NODE_IMAGE="node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32"
 POSTGRES_IMAGE="postgres@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6"
-DEPS_DIR="$(mktemp -d)"
+
 WORK_DIR="${DEPS_DIR}/work"
 RUN_UID="${HOST_UID:-$(id -u)}"
 RUN_GID="${HOST_GID:-$(id -g)}"
@@ -71,6 +74,17 @@ cleanup() {
   "${DOCKER[@]}" network rm "${NETWORK}" >/dev/null 2>&1 || true
   rm -rf -- "${DEPS_DIR}"
 }
+# Reject occupied explicit names before registering resource cleanup.
+for test_container in "${NODE_CONTAINER}" "${PG_CONTAINER}"; do
+  if "${DOCKER[@]}" container inspect "${test_container}" >/dev/null 2>&1; then
+    printf 'Refusing occupied Control API container: %s\n' "${test_container}" >&2
+    exit 1
+  fi
+done
+if "${DOCKER[@]}" network inspect "${NETWORK}" >/dev/null 2>&1; then
+  printf 'Refusing occupied Control API network: %s\n' "${NETWORK}" >&2
+  exit 1
+fi
 trap cleanup EXIT
 
 # Dependency resolution sees package metadata only; the repository source is
@@ -123,7 +137,7 @@ ln -s ../node_modules "${WORK_DIR}/node_modules"
 # mounted read-only and all generated/runtime files live in tmpfs.
 "${DOCKER[@]}" network create --internal "${NETWORK}" >/dev/null
 
-"${DOCKER[@]}" run -d --name "${PG_CONTAINER}" --network "${NETWORK}" --read-only \
+"${DOCKER[@]}" run -d --rm --name "${PG_CONTAINER}" --network "${NETWORK}" --read-only \
   --cpus 1 --memory 1g --pids-limit 256 \
   --tmpfs /var/lib/postgresql/data:rw,exec,mode=0700,size=2048m \
   --tmpfs /run/postgresql:rw,exec,mode=1777,size=16m \
@@ -168,6 +182,12 @@ fi
   "${NODE_IMAGE}" sh -c '
     set -e
     npm run build
+    # A focused pure spec may never initialize PostgreSQL itself. Prepare the
+    # same disposable database before tests, never repair their post-test state
+    # before the unchanged restore drill. No-argument full suites are unchanged.
+    if [ "$#" -gt 0 ]; then
+      DATABASE_URL="${TEST_DATABASE_URL:?Disposable test database URL is required}" node dist/cli/migrate.js
+    fi
     npm test -- "$@"
   ' sh "$@"
 

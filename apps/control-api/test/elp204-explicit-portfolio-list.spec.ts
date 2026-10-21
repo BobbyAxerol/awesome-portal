@@ -326,6 +326,26 @@ describe("ELP2-04 mixed Portfolio list / TEST_ONLY authority", () => {
   it.each(["grant-start", "grant-expiry", "receipt-expiry", "target-expiry", "deny-start", "deny-expiry"] as const)(
     "rejects clock-only %s crossing during a later profile's final adapter wait", async transition => {
       const f = fixture({ direct: [PRIVATE.portfolio_id], linked: false }), t = f.context.now_ms, direct = grant(f, "portfolio.read");
+      // This is an interval/composition fence test, not the mixed-graph
+      // redaction cases above. Keep one COMPLETE private tuple and its exact
+      // lineage so all three profiles still mint real positive scopes without
+      // repeatedly evaluating unrelated shared/peer resource graphs.
+      const publication = f.access.readPublication.getMockImplementation()!;
+      f.access.readPublication.mockImplementation(async request => {
+        const published = await publication(request);
+        return { ...published,
+          resources: published.resources.filter(resource =>
+            resource.kind === "ALPHA" && resource.id === PRIVATE.alpha_id ||
+            resource.kind === "ALPHA_VERSION" && resource.id === PRIVATE.alpha_version_id ||
+            resource.kind === "PORTFOLIO" && resource.id === PRIVATE.portfolio_id ||
+            resource.kind === "DEPLOYMENT" && resource.id === PRIVATE.deployment_id ||
+            resource.kind === "ACCOUNT" && resource.id === PRIVATE.account_id),
+          tuples: [PRIVATE],
+          current_linkage: { ...published.current_linkage, pairs: [{ alpha_id: PRIVATE.alpha_id, portfolio_id: PRIVATE.portfolio_id }] },
+          strategy_lineage: { ...published.strategy_lineage,
+            pairs: published.strategy_lineage.pairs.filter(pair => pair.alpha_id === PRIVATE.alpha_id) },
+        };
+      });
       // Stable later-profile positives keep the composition non-vacuous. Only
       // paper authority crosses its interval while live's final adapter waits;
       // a live reissue alone must NOT stand in for the final all-outcome clock.

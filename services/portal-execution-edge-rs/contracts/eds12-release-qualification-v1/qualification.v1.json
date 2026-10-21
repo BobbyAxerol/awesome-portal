@@ -75,7 +75,7 @@
     {
       "id": "n17a_dr_harness",
       "file": "scripts/execution-n17a-production-dr-test.sh",
-      "sha256": "sha256:66d34c408752bd034c3178e706b89bb985e9b5e44d1f760448d6c8a076600cd4"
+      "sha256": "sha256:2b5671285267759a0ed885265ce97849273c244b78d78966ab85da77fe61c71e"
     },
     {
       "id": "n17b_current_acceptance",

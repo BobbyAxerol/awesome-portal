@@ -3,7 +3,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-RESOURCE_PREFIX="portal-n17a-dr-test"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf -- "${TMP_DIR}"' EXIT
+RESOURCE_PREFIX="portal-n17a-dr-test-${TMP_DIR##*/}"
 NETWORK="${RESOURCE_PREFIX}-net"
 PRIMARY_CONTAINER="${RESOURCE_PREFIX}-primary-pg"
 RESTORE_CONTAINER="${RESOURCE_PREFIX}-restore-pg"
@@ -12,7 +14,6 @@ ARCHIVE_VOLUME="${RESOURCE_PREFIX}-wal-archive"
 BASE_VOLUME="${RESOURCE_PREFIX}-base-backup"
 RESTORE_VOLUME="${RESOURCE_PREFIX}-restore-data"
 POSTGRES_IMAGE="postgres:16-alpine@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6"
-TMP_DIR="$(mktemp -d)"
 
 command -v docker >/dev/null 2>&1 || { printf 'Docker CLI is required for N17A.\n' >&2; exit 1; }
 command -v openssl >/dev/null 2>&1 || { printf 'OpenSSL is required for N17A encrypted-backup rehearsal.\n' >&2; exit 1; }
@@ -35,25 +36,41 @@ cleanup() {
   "${DOCKER[@]}" network rm "${NETWORK}" >/dev/null 2>&1 || true
   rm -rf -- "${TMP_DIR}"
 }
+# Refuse existing names before installing a cleanup trap: no stale or peer sweep.
+for item in "${PRIMARY_CONTAINER}" "${RESTORE_CONTAINER}"; do
+  if "${DOCKER[@]}" container inspect "${item}" >/dev/null 2>&1; then
+    rm -rf -- "${TMP_DIR}"
+    printf 'Refusing occupied N17A container: %s\n' "${item}" >&2
+    exit 1
+  fi
+done
+for item in "${PRIMARY_VOLUME}" "${ARCHIVE_VOLUME}" "${BASE_VOLUME}" "${RESTORE_VOLUME}"; do
+  if "${DOCKER[@]}" volume inspect "${item}" >/dev/null 2>&1; then
+    rm -rf -- "${TMP_DIR}"
+    printf 'Refusing occupied N17A volume: %s\n' "${item}" >&2
+    exit 1
+  fi
+done
+if "${DOCKER[@]}" network inspect "${NETWORK}" >/dev/null 2>&1; then
+  rm -rf -- "${TMP_DIR}"
+  printf 'Refusing occupied N17A network: %s\n' "${NETWORK}" >&2
+  exit 1
+fi
 trap cleanup EXIT
-
-# Exact test-owned resources are safe to remove after an interrupted prior run.
-cleanup
-TMP_DIR="$(mktemp -d)"
 
 python3 "${ROOT_DIR}/scripts/execution-n17a-readiness.py" verify-static
 python3 "${ROOT_DIR}/scripts/test_execution_n17a_readiness.py"
 
-"${DOCKER[@]}" network create --internal "${NETWORK}" >/dev/null
+"${DOCKER[@]}" network create --internal --label "io.primus.test.owner=${RESOURCE_PREFIX}" --label io.primus.test.family=n17a "${NETWORK}" >/dev/null
 for volume in "${PRIMARY_VOLUME}" "${ARCHIVE_VOLUME}" "${BASE_VOLUME}" "${RESTORE_VOLUME}"; do
-  "${DOCKER[@]}" volume create "${volume}" >/dev/null
+  "${DOCKER[@]}" volume create --label "io.primus.test.owner=${RESOURCE_PREFIX}" --label io.primus.test.family=n17a "${volume}" >/dev/null
 done
-"${DOCKER[@]}" run --rm \
+"${DOCKER[@]}" run --rm --pull never --label "io.primus.test.owner=${RESOURCE_PREFIX}" --label io.primus.test.family=n17a --network none --cpus .5 --memory 256m --pids-limit 64 \
   -v "${ARCHIVE_VOLUME}:/archive" \
   -v "${BASE_VOLUME}:/base" \
   "${POSTGRES_IMAGE}" sh -eu -c 'chmod 0777 /archive /base'
 
-"${DOCKER[@]}" run -d --name "${PRIMARY_CONTAINER}" --network "${NETWORK}" \
+"${DOCKER[@]}" run -d --rm --pull never --label "io.primus.test.owner=${RESOURCE_PREFIX}" --label io.primus.test.family=n17a --cpus 1 --memory 1g --pids-limit 128 --name "${PRIMARY_CONTAINER}" --network "${NETWORK}" \
   -e POSTGRES_USER=portal -e POSTGRES_PASSWORD=portal -e POSTGRES_DB=portal_control \
   -v "${PRIMARY_VOLUME}:/var/lib/postgresql/data" \
   -v "${ARCHIVE_VOLUME}:/archive" \
@@ -103,7 +120,7 @@ target_lsn="$("${DOCKER[@]}" exec "${PRIMARY_CONTAINER}" psql -U portal -d porta
 sleep 2
 "${DOCKER[@]}" stop "${PRIMARY_CONTAINER}" >/dev/null
 
-"${DOCKER[@]}" run --rm \
+"${DOCKER[@]}" run --rm --pull never --label "io.primus.test.owner=${RESOURCE_PREFIX}" --label io.primus.test.family=n17a --network none --cpus .5 --memory 256m --pids-limit 64 \
   -e TARGET_LSN="${target_lsn}" \
   -v "${BASE_VOLUME}:/from:ro" \
   -v "${RESTORE_VOLUME}:/to" \
@@ -119,7 +136,7 @@ sleep 2
     chown -R postgres:postgres /to
   '
 
-"${DOCKER[@]}" run -d --name "${RESTORE_CONTAINER}" --network "${NETWORK}" \
+"${DOCKER[@]}" run -d --rm --pull never --label "io.primus.test.owner=${RESOURCE_PREFIX}" --label io.primus.test.family=n17a --cpus 1 --memory 1g --pids-limit 128 --name "${RESTORE_CONTAINER}" --network "${NETWORK}" \
   -v "${RESTORE_VOLUME}:/var/lib/postgresql/data" \
   -v "${ARCHIVE_VOLUME}:/archive:ro" \
   "${POSTGRES_IMAGE}" >/dev/null

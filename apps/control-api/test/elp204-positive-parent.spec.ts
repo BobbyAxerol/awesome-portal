@@ -979,10 +979,10 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
     expect(activitySql.every(sql=>sql.includes("workspace_id=r.workspace_id")&&sql.includes("LIMIT 33"))).toBe(true);
     expect(f.sql.join("\n")).not.toMatch(/(?:FROM|JOIN)\s+(?:portal_users|auth_users)\b/i);
   });
-  it("C5 new optional purposes require BOTH current anchor leaves and activity also needs independent operation purpose",async()=>{
+  it.each(["RECORDED_PORTAL_ACTIVITY","R2_RECORDED_VERDICTS","DECISION_OPERATION"] as const)(
+    "C5 optional purpose %s requires BOTH current anchor leaves independently",async purpose=>{
     const captured=await fixture({purposes:recordedPurposes}),f={...captured,r2:await seededR2(captured)};
     await seedRecordedDecision(f,"R2");await seedRecordedFinding(f,0);
-    for(const purpose of ["RECORDED_PORTAL_ACTIVITY","R2_RECORDED_VERDICTS","DECISION_OPERATION"] as const){
       for(const anchor of ["DEPLOYMENT","PORTFOLIO"] as const){
         const leaf=f.accepted.find(g=>g.field_policy_ref===`TEST_ONLY:${purpose}`&&g.selector.kind==="EXPLICIT_RESOURCE_SET"&&g.selector.resource_kind===anchor)!;
         const entry=f.source.grants.find(g=>g.grant_id===leaf.grant_id)!,saved=entry.targets,start=f.sql.length;entry.targets=[];
@@ -996,7 +996,8 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
           }
         }finally{entry.targets=saved;}
       }
-    }
+  });
+  it("C5 legacy grants without optional purposes never expose recorded activity or verdicts",async()=>{
     const old=await fixture(),body=r2ParentRead.parse(await read(old,"R2"));
     expect(body.recorded_activity).toEqual(purposeMissing);expect(body.recorded_verdicts).toEqual(purposeMissing);
     expect(old.sql.join("\n")).not.toMatch(/recent AS MATERIALIZED|FROM governance_approval_findings/);
