@@ -1,0 +1,185 @@
+{
+  "schema_version": "portal.elp2-10.read-workload.v1",
+  "revision": "r1",
+  "status": "PROPOSED_NOT_APPROVED",
+  "generated_from": "ELP2-10 M-1 first-load read sets at FIXTURE_SCALE small (BFF double), 2026-10-21",
+  "note": "Stage shapes are proposals for the Edge coexistence plan to pin. B1 = steady Overview polling by open tabs; B2 = B1 plus dashboard / history / analytics screen visits. GET only.",
+  "seed": 20261021,
+  "sets": {
+    "shell-common": [
+      "GET /api/admin/access/self",
+      "GET /api/auth/context",
+      "GET /api/v1/portal/registry",
+      "GET /api/v1/portal/summary"
+    ],
+    "overview-poll": [
+      "GET /api/v1/execution/compositions/command-center",
+      "GET /api/v1/execution/operations?triage_state=UNACKNOWLEDGED&limit=1"
+    ],
+    "visit:fleet": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/alphas?limit=50",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts"
+    ],
+    "visit:portfolios": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/portfolios",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts"
+    ],
+    "visit:portfolio-360": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/derivations/portfolios/pf_TEST_ONLY_core/capital?environment=live",
+      "GET /api/v1/execution/derivations/portfolios/pf_TEST_ONLY_core/capital?environment=paper",
+      "GET /api/v1/execution/derivations/portfolios/pf_TEST_ONLY_core/capital?environment=sandbox",
+      "GET /api/v1/execution/manager/series?environment=live&metric=NAV&subjects=%5B%7B%22subject_type%22%3A%22PORTFOLIO%22%2C%22subject_id%22%3A%22pf_TEST_ONLY_core%22%7D%5D&window=%2290D%22&workspace_id=workspace_execution_manager",
+      "GET /api/v1/execution/portfolios/pf_TEST_ONLY_core/capital-ledger?environment=live",
+      "GET /api/v1/execution/resources/portfolios/pf_TEST_ONLY_core",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts",
+      "GET /api/v1/execution/views/equity-chart?environment=live&subject_kind=portfolio&subject_id=pf_TEST_ONLY_core&metric=equity&viewport_px=1440&from_ms=1784462640000&to_ms=1792238640000&workspace_id=workspace_execution_manager"
+    ],
+    "visit:alpha-360": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/alphas/alpha_btc_trend/stage-drift",
+      "GET /api/v1/execution/resources/alphas/alpha_btc_trend",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts",
+      "GET /api/v1/execution/views/equity-chart?environment=live&subject_kind=alpha&subject_id=alpha_btc_trend&metric=equity&viewport_px=1440&workspace_id=workspace_execution_manager"
+    ],
+    "visit:account-360": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE/exposure",
+      "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE?environment=live",
+      "GET /api/v1/execution/resources/accounts/acc_bnc_core",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts",
+      "GET /api/v1/execution/views/equity-chart?environment=live&subject_kind=account&subject_id=acc_bnc_core&metric=equity&viewport_px=960&workspace_id=ws_fixture"
+    ],
+    "visit:blotter": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/profiles/paper/realtime-snapshot",
+      "GET /api/v1/execution/profiles/paper/stream?cursor=e2e-paper%3A1",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts",
+      "GET /api/v1/execution/screens/blotter?limit=50"
+    ],
+    "visit:operations": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/compositions/operations",
+      "GET /api/v1/execution/operations?triage_state=UNACKNOWLEDGED&limit=50",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts"
+    ],
+    "visit:workbench-fills": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/derivations/deployments/dep_paper_01/execution-quality?environment=paper",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts",
+      "GET /api/v1/execution/screens/paper/dep_paper_01"
+    ],
+    "visit:admin": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/activation/capabilities",
+      "GET /api/v1/execution/commands/catalog",
+      "GET /api/v1/execution/commands/tasks",
+      "GET /api/v1/execution/compositions/admin-action-drawer",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts"
+    ],
+    "visit:accounts": [
+      "GET /api/admin/profile-access/v2/self-context",
+      "GET /api/admin/profile-access/v2/self-navigation?workspace_id=ws_TEST_ONLY_shared&environment=live",
+      "GET /api/v1/execution/broker-bindings?environment=live&limit=50",
+      "GET /api/v1/execution/retained-review",
+      "GET /api/v1/execution/runtime-manifest",
+      "GET /api/v1/execution/screen-contracts"
+    ]
+  },
+  "stages": {
+    "B1": [
+      {
+        "set": "overview-poll",
+        "tabs": 8,
+        "cadence_ms": 15000
+      }
+    ],
+    "B2": [
+      {
+        "set": "overview-poll",
+        "tabs": 8,
+        "cadence_ms": 15000
+      },
+      {
+        "set": "visit:fleet",
+        "tabs": 2,
+        "cadence_ms": 30000
+      },
+      {
+        "set": "visit:portfolios",
+        "tabs": 2,
+        "cadence_ms": 30000
+      },
+      {
+        "set": "visit:portfolio-360",
+        "tabs": 2,
+        "cadence_ms": 30000
+      },
+      {
+        "set": "visit:alpha-360",
+        "tabs": 2,
+        "cadence_ms": 30000
+      },
+      {
+        "set": "visit:account-360",
+        "tabs": 2,
+        "cadence_ms": 30000
+      },
+      {
+        "set": "visit:blotter",
+        "tabs": 2,
+        "cadence_ms": 30000
+      },
+      {
+        "set": "visit:operations",
+        "tabs": 2,
+        "cadence_ms": 30000
+      },
+      {
+        "set": "visit:workbench-fills",
+        "tabs": 2,
+        "cadence_ms": 30000
+      },
+      {
+        "set": "visit:admin",
+        "tabs": 2,
+        "cadence_ms": 30000
+      },
+      {
+        "set": "visit:accounts",
+        "tabs": 2,
+        "cadence_ms": 30000
+      }
+    ]
+  },
+  "digest_input": "sha256:f4fbac577ab5dc3d0a56b7efbf92c55aa1d87c8eebdaef51f15512daf5dd99dd"
+}

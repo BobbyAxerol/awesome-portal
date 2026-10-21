@@ -1,0 +1,208 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-3",
+  "sub": "a",
+  "title": "Realtime failure / slow / reconnect / revocation invariants at component level",
+  "status": "RUN_FIXTURE",
+  "lane": "FIXTURE_LAB",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 11.05,
+    "loadavg_5m_at_capture": 10.74
+  },
+  "started_at": "2026-10-21T07:11:34.820Z",
+  "ended_at": "2026-10-21T07:13:10.778Z",
+  "started_at_ms": 1792566694820,
+  "ended_at_ms": 1792566790778,
+  "duration_ms": 95958,
+  "workload": {
+    "repetitions": 3,
+    "fe_files": [
+      "src/execution/v2/budgets.test.ts",
+      "src/execution/v2/realtime/scopedStreamMachine.test.ts",
+      "src/execution/v2/realtime/scopedStreamController.test.ts",
+      "src/execution/v2/realtime/scopedStream.scale.test.ts",
+      "src/execution/sse.test.ts",
+      "src/execution/realtimeRecovery.test.ts",
+      "src/execution/streamHardening.test.tsx",
+      "src/execution/v2/readers/scopedRealtime.test.ts",
+      "src/execution/v2/readers/scopedRealtime.conformance.test.ts"
+    ],
+    "server_files": [
+      "test/elp209-realtime.spec.ts",
+      "test/elp209-native-frame-coordinator.spec.ts"
+    ],
+    "ports": "injected failing / slow ports, fake timers (FE); mocked trusted adapter, no PG (server)"
+  },
+  "resource_limits": {
+    "workers": 2,
+    "docker": "NONE",
+    "lock": "none (light job)"
+  },
+  "stop_conditions": [
+    "a vitest run with a non-zero exit is reported per repetition",
+    "an unstable test (pass/fail across repetitions) is listed"
+  ],
+  "results": {
+    "all_suites_green": true,
+    "per_repetition": [
+      {
+        "rep": 1,
+        "fe_exit": 0,
+        "server_exit": 0,
+        "passed": 3497,
+        "failed": 0,
+        "skipped": 0,
+        "wall_ms": 32199
+      },
+      {
+        "rep": 2,
+        "fe_exit": 0,
+        "server_exit": 0,
+        "passed": 3497,
+        "failed": 0,
+        "skipped": 0,
+        "wall_ms": 30392
+      },
+      {
+        "rep": 3,
+        "fe_exit": 0,
+        "server_exit": 0,
+        "passed": 3497,
+        "failed": 0,
+        "skipped": 0,
+        "wall_ms": 33285
+      }
+    ],
+    "wall_ms": {
+      "n": 3,
+      "p50": 32199,
+      "p95": 33285,
+      "p99": 33285,
+      "max": 33285,
+      "mean": 31959
+    },
+    "binary_criteria": [
+      {
+        "id": "reads_per_second_per_screen_bounded",
+        "criterion": "<= 1 read/s/screen: a delta storm or a steady 100/s stream folds into bounded re-reads",
+        "matching_tests": 16,
+        "failing": [],
+        "passed_all_reps": true
+      },
+      {
+        "id": "auto_resync_budget_then_unavailable",
+        "criterion": "<= 3 auto-resync per 60 s then unavailable; a gap earns one resnapshot, a second gap closes the channel",
+        "matching_tests": 418,
+        "failing": [],
+        "passed_all_reps": true
+      },
+      {
+        "id": "no_unbounded_reconnect",
+        "criterion": "no infinite reconnect: a dying transport / failing bootstrap is final, no retry loop",
+        "matching_tests": 9,
+        "failing": [],
+        "passed_all_reps": true
+      },
+      {
+        "id": "hidden_tab_asks_nothing",
+        "criterion": "a hidden tab triggers no re-read (one on becoming visible)",
+        "matching_tests": 15,
+        "failing": [],
+        "passed_all_reps": true
+      },
+      {
+        "id": "revocation_no_protected_frame_after_commit",
+        "criterion": "0 restricted frame after a revocation: purge queued frames, deny before read, ignore late completion",
+        "matching_tests": 542,
+        "failing": [],
+        "passed_all_reps": true
+      },
+      {
+        "id": "stale_or_foreign_cursor_rejected",
+        "criterion": "stale / replayed / other-filter cursor is rejected before any read",
+        "matching_tests": 2030,
+        "failing": [],
+        "passed_all_reps": true
+      },
+      {
+        "id": "bounded_resources",
+        "criterion": "queues, clients and in-flight reads are bounded; stop drains without a leak",
+        "matching_tests": 70,
+        "failing": [],
+        "passed_all_reps": true
+      }
+    ],
+    "unstable_tests": [],
+    "slowest_tests_ms": [
+      {
+        "name": "V2 screens · mounting and unmounting leave nothing registered flag-on overview: V2 root mounts, unmount returns document/window listeners and intervals to the baseline",
+        "ms": 7306.63
+      },
+      {
+        "name": "L2 · backlog a terminal frame behind a flood of 100,000 notices is applied at once",
+        "ms": 4998.44
+      },
+      {
+        "name": "L2 · frame rate a million heartbeats start no read and leave the state constant-size",
+        "ms": 3280.63
+      },
+      {
+        "name": "V2 screens · mounting and unmounting leave nothing registered flag-off: the same routes serve V1 (no V2 root, no V2 chrome) and a second pass adds nothing",
+        "ms": 2108.77
+      },
+      {
+        "name": "L2 · frame rate an hour of a notice every 10 ms: at most one read start per window, never two in flight",
+        "ms": 1913.95
+      },
+      {
+        "name": "L2 · backlog a tab hidden for an hour under a notice every 10 ms starts no read, and pays exactly one on return",
+        "ms": 1821.2
+      },
+      {
+        "name": "V2 screens · mounting and unmounting leave nothing registered flipping the list between V2 and V1 mounts (what two builds amount to) accumulates no listener or interval",
+        "ms": 1311.58
+      },
+      {
+        "name": "state is bounded the serialised state does not grow with the number of frames",
+        "ms": 967.76
+      }
+    ],
+    "record_only": {
+      "revocation_to_stream_close_latency": "NOT_MEASURED: needs a real stream; no threshold exists (NO BASIS, needs Edge/Bobby)"
+    }
+  },
+  "resources": null,
+  "cleanup": {
+    "containers": "none created",
+    "note": "vitest workers exit with the run"
+  },
+  "limitations": [
+    "Component level: injected ports and fake timers, no real EventSource, no source, no Core009.",
+    "Transport drop, slow consumer, epoch rebuild, READ-only / STREAM-only revoke on a real stream, 1-hour hidden tab are not run (window M-3c).",
+    "Criteria matching is by test-name pattern: a criterion with zero matching tests would show matching_tests=0 and passed_all_reps=false.",
+    "Durations are host-load dependent; the invariants are not."
+  ],
+  "notes": [],
+  "raw_dir_not_committed": "/home/bobby/.local/state/portal-execution-elp210/20261021/m3-1792566694819",
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:20946dd0b495d69b163a87dbe03a42043cb14b096391768cb75248dfc426b5d5"
+}

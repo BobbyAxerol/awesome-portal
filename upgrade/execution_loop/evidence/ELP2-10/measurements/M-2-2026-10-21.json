@@ -1,0 +1,929 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-2",
+  "sub": "tiers 1-2",
+  "title": "Browser -> Portal amplification by tab count (tiers 1-2, fixture)",
+  "status": "RUN_FIXTURE",
+  "lane": "BFF_DOUBLE",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 13.92,
+    "loadavg_5m_at_capture": 11.54
+  },
+  "started_at": "2026-10-21T07:09:24.130Z",
+  "ended_at": "2026-10-21T07:16:11.037Z",
+  "started_at_ms": 1792566564130,
+  "ended_at_ms": 1792566971037,
+  "duration_ms": 406907,
+  "workload": {
+    "tab_sweep": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "users": "1 fixture user (ACCESS_DOUBLE_DEFAULT_USER)",
+    "scope_classes": "single fixture scope",
+    "per_tab": "open Overview; idle visible 600 s virtual; 19 screens x 1 round (client-side navigation); back to Overview; hidden 300 s virtual; show; reload",
+    "spec": "apps/portal/frontend/e2e/_probe-measure-m2-tab-sweep.spec.ts",
+    "clock": "Playwright fake clock per page (pauseAt / runFor in 1 s steps, 15 ms real wait per step)",
+    "measurement_layers": {
+      "tier1": "browser request events to the Portal origin",
+      "tier2": "requests answered by the BFF double (counting route)",
+      "tier3": "NOT_MEASURABLE_IN_FIXTURE (Core -> Edge / source calls; gap G-2)",
+      "tier4": "NOT_MEASURABLE_IN_FIXTURE (TS / PM calls attributed to Portal)"
+    },
+    "cells_not_run": [
+      {
+        "users": 2,
+        "scope": "same scope",
+        "reason": "needs real sessions + real scope; the double has one scope"
+      },
+      {
+        "users": 2,
+        "scope": "different scope",
+        "reason": "same"
+      }
+    ]
+  },
+  "resource_limits": {
+    "workers": 1,
+    "chromium_pages_max": 16,
+    "docker": "NONE",
+    "memory_floor_stop": "MemAvailable < 1.5 GiB before opening a tab aborts the cell"
+  },
+  "stop_conditions": [
+    "MemAvailable < 1.5 GiB before opening a tab: cell recorded as ABORTED, not shortened",
+    "any foreign request fails the cell",
+    "hidden tabs must issue 0 requests (asserted per cell)"
+  ],
+  "results": {
+    "per_cell": [
+      {
+        "tabs": 1,
+        "users": 1,
+        "open_overview": {
+          "tier1_total": 13,
+          "per_tab": [
+            13
+          ],
+          "bytes_total": 124242
+        },
+        "idle_visible": {
+          "virtual_s": 600,
+          "tier1_total": 80,
+          "tier2_total": 80,
+          "per_tab": [
+            80
+          ],
+          "per_tab_per_60s": 8,
+          "bff_req_per_s_total": 0.133,
+          "bytes_total": 400480,
+          "wall_ms": 18840
+        },
+        "walk_19_screens": {
+          "tier1_total": 70,
+          "per_tab_mean": 70,
+          "tier2_total": 70,
+          "bytes_total": 525852,
+          "wall_ms": 6430
+        },
+        "hidden": {
+          "virtual_s": 300,
+          "tier1_total": 0,
+          "tier2_total": 0,
+          "includes": "hide_transition (the visibilitychange itself) + the hidden window"
+        },
+        "show_again": {
+          "tier1_total": 0
+        },
+        "reload": {
+          "tier1_total": 13,
+          "per_tab_mean": 13
+        },
+        "tier2_equals_tier1": true,
+        "phase_windows_ms": {
+          "open_overview": [
+            1792566570030,
+            1792566571961
+          ],
+          "idle_visible": [
+            1792566572379,
+            1792566591219
+          ],
+          "walk_19_screens_x1": [
+            1792566591225,
+            1792566597655
+          ],
+          "hide_transition": [
+            1792566598085,
+            1792566598510
+          ],
+          "hidden": [
+            1792566598510,
+            1792566611106
+          ],
+          "show_again": [
+            1792566611116,
+            1792566611440
+          ],
+          "reload": [
+            1792566611440,
+            1792566613337
+          ]
+        },
+        "lane": "BFF_DOUBLE",
+        "foreign_total": 0,
+        "memory_available_mib_min": 2944,
+        "wall_ms": 43593,
+        "bff_double_paths": {
+          "GET /api/admin/access/self": 2,
+          "GET /api/admin/accounts": 1,
+          "GET /api/admin/profile-access/v2/effective": 1,
+          "GET /api/admin/profile-access/v2/self-context": 4,
+          "GET /api/admin/profile-access/v2/self-navigation": 4,
+          "GET /api/admin/step-up": 1,
+          "GET /api/auth/context": 2,
+          "GET /api/v1/execution/activation/capabilities": 1,
+          "GET /api/v1/execution/alphas": 4,
+          "GET /api/v1/execution/alphas/alpha_btc_trend/stage-drift": 1,
+          "GET /api/v1/execution/broker-bindings": 1,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE": 1,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE/exposure": 1,
+          "GET /api/v1/execution/commands/catalog": 1,
+          "GET /api/v1/execution/commands/tasks": 1,
+          "GET /api/v1/execution/compositions/admin-action-drawer": 1,
+          "GET /api/v1/execution/compositions/command-center": 43,
+          "GET /api/v1/execution/compositions/operations": 2,
+          "GET /api/v1/execution/deployments/dep_canary_01/canary": 1,
+          "GET /api/v1/execution/deployments/dep_live_01/live": 1,
+          "GET /api/v1/execution/deployments/dep_sandbox_01/certification": 1,
+          "GET /api/v1/execution/derivations/deployments/dep_paper_01/execution-quality": 1,
+          "GET /api/v1/execution/derivations/portfolios/pf_TEST_ONLY_core/capital": 3,
+          "GET /api/v1/execution/governance/approvals": 1,
+          "GET /api/v1/execution/governance/approvals/AP-352/r2": 1,
+          "GET /api/v1/execution/governance/approvals/history": 1,
+          "GET /api/v1/execution/governance/review-capture-capabilities": 2,
+          "GET /api/v1/execution/governance/stage-action-eligibility": 3,
+          "GET /api/v1/execution/manager/series": 4,
+          "GET /api/v1/execution/operations": 45,
+          "GET /api/v1/execution/operations/incidents/inc_fixture_44": 1,
+          "GET /api/v1/execution/portfolios": 1,
+          "GET /api/v1/execution/portfolios/pf_TEST_ONLY_core/capital-ledger": 1,
+          "GET /api/v1/execution/profiles/paper/realtime-snapshot": 1,
+          "GET /api/v1/execution/profiles/paper/stream": 1,
+          "GET /api/v1/execution/resources/accounts/acc_bnc_core": 1,
+          "GET /api/v1/execution/resources/alphas/alpha_btc_trend": 1,
+          "GET /api/v1/execution/resources/portfolios/pf_TEST_ONLY_core": 1,
+          "GET /api/v1/execution/retained-review": 2,
+          "GET /api/v1/execution/runtime-manifest": 10,
+          "GET /api/v1/execution/screen-contracts": 10,
+          "GET /api/v1/execution/screens/blotter": 1,
+          "GET /api/v1/execution/screens/paper/dep_paper_01": 1,
+          "GET /api/v1/execution/views/equity-chart": 3,
+          "GET /api/v1/portal/registry": 2,
+          "GET /api/v1/portal/summary": 2,
+          "GET /api/v1/quantbt/runs": 1
+        }
+      },
+      {
+        "tabs": 2,
+        "users": 1,
+        "open_overview": {
+          "tier1_total": 26,
+          "per_tab": [
+            13,
+            13
+          ],
+          "bytes_total": 248484
+        },
+        "idle_visible": {
+          "virtual_s": 600,
+          "tier1_total": 160,
+          "tier2_total": 160,
+          "per_tab": [
+            80,
+            80
+          ],
+          "per_tab_per_60s": 8,
+          "bff_req_per_s_total": 0.267,
+          "bytes_total": 800960,
+          "wall_ms": 18803
+        },
+        "walk_19_screens": {
+          "tier1_total": 140,
+          "per_tab_mean": 70,
+          "tier2_total": 140,
+          "bytes_total": 1020225,
+          "wall_ms": 6057
+        },
+        "hidden": {
+          "virtual_s": 300,
+          "tier1_total": 0,
+          "tier2_total": 0,
+          "includes": "hide_transition (the visibilitychange itself) + the hidden window"
+        },
+        "show_again": {
+          "tier1_total": 0
+        },
+        "reload": {
+          "tier1_total": 26,
+          "per_tab_mean": 13
+        },
+        "tier2_equals_tier1": true,
+        "phase_windows_ms": {
+          "open_overview": [
+            1792566613818,
+            1792566616580
+          ],
+          "idle_visible": [
+            1792566617019,
+            1792566635822
+          ],
+          "walk_19_screens_x1": [
+            1792566635830,
+            1792566641887
+          ],
+          "hide_transition": [
+            1792566642251,
+            1792566642674
+          ],
+          "hidden": [
+            1792566642674,
+            1792566651122
+          ],
+          "show_again": [
+            1792566651131,
+            1792566651456
+          ],
+          "reload": [
+            1792566651457,
+            1792566653565
+          ]
+        },
+        "lane": "BFF_DOUBLE",
+        "foreign_total": 0,
+        "memory_available_mib_min": 4550,
+        "wall_ms": 40078,
+        "bff_double_paths": {
+          "GET /api/admin/access/self": 4,
+          "GET /api/admin/accounts": 2,
+          "GET /api/admin/profile-access/v2/effective": 2,
+          "GET /api/admin/profile-access/v2/self-context": 8,
+          "GET /api/admin/profile-access/v2/self-navigation": 8,
+          "GET /api/admin/step-up": 2,
+          "GET /api/auth/context": 4,
+          "GET /api/v1/execution/activation/capabilities": 2,
+          "GET /api/v1/execution/alphas": 8,
+          "GET /api/v1/execution/alphas/alpha_btc_trend/stage-drift": 2,
+          "GET /api/v1/execution/broker-bindings": 2,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE": 2,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE/exposure": 2,
+          "GET /api/v1/execution/commands/catalog": 2,
+          "GET /api/v1/execution/commands/tasks": 2,
+          "GET /api/v1/execution/compositions/admin-action-drawer": 2,
+          "GET /api/v1/execution/compositions/command-center": 86,
+          "GET /api/v1/execution/compositions/operations": 4,
+          "GET /api/v1/execution/deployments/dep_canary_01/canary": 2,
+          "GET /api/v1/execution/deployments/dep_live_01/live": 2,
+          "GET /api/v1/execution/deployments/dep_sandbox_01/certification": 2,
+          "GET /api/v1/execution/derivations/deployments/dep_paper_01/execution-quality": 2,
+          "GET /api/v1/execution/derivations/portfolios/pf_TEST_ONLY_core/capital": 6,
+          "GET /api/v1/execution/governance/approvals": 2,
+          "GET /api/v1/execution/governance/approvals/AP-352/r2": 2,
+          "GET /api/v1/execution/governance/approvals/history": 2,
+          "GET /api/v1/execution/governance/review-capture-capabilities": 4,
+          "GET /api/v1/execution/governance/stage-action-eligibility": 6,
+          "GET /api/v1/execution/manager/series": 8,
+          "GET /api/v1/execution/operations": 90,
+          "GET /api/v1/execution/operations/incidents/inc_fixture_44": 2,
+          "GET /api/v1/execution/portfolios": 2,
+          "GET /api/v1/execution/portfolios/pf_TEST_ONLY_core/capital-ledger": 2,
+          "GET /api/v1/execution/profiles/paper/realtime-snapshot": 2,
+          "GET /api/v1/execution/profiles/paper/stream": 2,
+          "GET /api/v1/execution/resources/accounts/acc_bnc_core": 2,
+          "GET /api/v1/execution/resources/alphas/alpha_btc_trend": 2,
+          "GET /api/v1/execution/resources/portfolios/pf_TEST_ONLY_core": 2,
+          "GET /api/v1/execution/retained-review": 4,
+          "GET /api/v1/execution/runtime-manifest": 20,
+          "GET /api/v1/execution/screen-contracts": 20,
+          "GET /api/v1/execution/screens/blotter": 2,
+          "GET /api/v1/execution/screens/paper/dep_paper_01": 2,
+          "GET /api/v1/execution/views/equity-chart": 6,
+          "GET /api/v1/portal/registry": 4,
+          "GET /api/v1/portal/summary": 4,
+          "GET /api/v1/quantbt/runs": 2
+        }
+      },
+      {
+        "tabs": 4,
+        "users": 1,
+        "open_overview": {
+          "tier1_total": 52,
+          "per_tab": [
+            13,
+            13,
+            13,
+            13
+          ],
+          "bytes_total": 496968
+        },
+        "idle_visible": {
+          "virtual_s": 600,
+          "tier1_total": 320,
+          "tier2_total": 320,
+          "per_tab": [
+            80,
+            80,
+            80,
+            80
+          ],
+          "per_tab_per_60s": 8,
+          "bff_req_per_s_total": 0.533,
+          "bytes_total": 1601920,
+          "wall_ms": 20470
+        },
+        "walk_19_screens": {
+          "tier1_total": 280,
+          "per_tab_mean": 70,
+          "tier2_total": 280,
+          "bytes_total": 2103408,
+          "wall_ms": 7205
+        },
+        "hidden": {
+          "virtual_s": 300,
+          "tier1_total": 0,
+          "tier2_total": 0,
+          "includes": "hide_transition (the visibilitychange itself) + the hidden window"
+        },
+        "show_again": {
+          "tier1_total": 0
+        },
+        "reload": {
+          "tier1_total": 52,
+          "per_tab_mean": 13
+        },
+        "tier2_equals_tier1": true,
+        "phase_windows_ms": {
+          "open_overview": [
+            1792566654170,
+            1792566657580
+          ],
+          "idle_visible": [
+            1792566658014,
+            1792566678484
+          ],
+          "walk_19_screens_x1": [
+            1792566678490,
+            1792566685695
+          ],
+          "hide_transition": [
+            1792566686040,
+            1792566686475
+          ],
+          "hidden": [
+            1792566686475,
+            1792566695693
+          ],
+          "show_again": [
+            1792566695701,
+            1792566696042
+          ],
+          "reload": [
+            1792566696042,
+            1792566700841
+          ]
+        },
+        "lane": "BFF_DOUBLE",
+        "foreign_total": 0,
+        "memory_available_mib_min": 4314,
+        "wall_ms": 47183,
+        "bff_double_paths": {
+          "GET /api/admin/access/self": 8,
+          "GET /api/admin/accounts": 4,
+          "GET /api/admin/profile-access/v2/effective": 4,
+          "GET /api/admin/profile-access/v2/self-context": 16,
+          "GET /api/admin/profile-access/v2/self-navigation": 16,
+          "GET /api/admin/step-up": 4,
+          "GET /api/auth/context": 8,
+          "GET /api/v1/execution/activation/capabilities": 4,
+          "GET /api/v1/execution/alphas": 16,
+          "GET /api/v1/execution/alphas/alpha_btc_trend/stage-drift": 4,
+          "GET /api/v1/execution/broker-bindings": 4,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE": 4,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE/exposure": 4,
+          "GET /api/v1/execution/commands/catalog": 4,
+          "GET /api/v1/execution/commands/tasks": 4,
+          "GET /api/v1/execution/compositions/admin-action-drawer": 4,
+          "GET /api/v1/execution/compositions/command-center": 172,
+          "GET /api/v1/execution/compositions/operations": 8,
+          "GET /api/v1/execution/deployments/dep_canary_01/canary": 4,
+          "GET /api/v1/execution/deployments/dep_live_01/live": 4,
+          "GET /api/v1/execution/deployments/dep_sandbox_01/certification": 4,
+          "GET /api/v1/execution/derivations/deployments/dep_paper_01/execution-quality": 4,
+          "GET /api/v1/execution/derivations/portfolios/pf_TEST_ONLY_core/capital": 12,
+          "GET /api/v1/execution/governance/approvals": 4,
+          "GET /api/v1/execution/governance/approvals/AP-352/r2": 4,
+          "GET /api/v1/execution/governance/approvals/history": 4,
+          "GET /api/v1/execution/governance/review-capture-capabilities": 8,
+          "GET /api/v1/execution/governance/stage-action-eligibility": 12,
+          "GET /api/v1/execution/manager/series": 16,
+          "GET /api/v1/execution/operations": 180,
+          "GET /api/v1/execution/operations/incidents/inc_fixture_44": 4,
+          "GET /api/v1/execution/portfolios": 4,
+          "GET /api/v1/execution/portfolios/pf_TEST_ONLY_core/capital-ledger": 4,
+          "GET /api/v1/execution/profiles/paper/realtime-snapshot": 4,
+          "GET /api/v1/execution/profiles/paper/stream": 4,
+          "GET /api/v1/execution/resources/accounts/acc_bnc_core": 4,
+          "GET /api/v1/execution/resources/alphas/alpha_btc_trend": 4,
+          "GET /api/v1/execution/resources/portfolios/pf_TEST_ONLY_core": 4,
+          "GET /api/v1/execution/retained-review": 8,
+          "GET /api/v1/execution/runtime-manifest": 40,
+          "GET /api/v1/execution/screen-contracts": 40,
+          "GET /api/v1/execution/screens/blotter": 4,
+          "GET /api/v1/execution/screens/paper/dep_paper_01": 4,
+          "GET /api/v1/execution/views/equity-chart": 12,
+          "GET /api/v1/portal/registry": 8,
+          "GET /api/v1/portal/summary": 8,
+          "GET /api/v1/quantbt/runs": 4
+        }
+      },
+      {
+        "tabs": 8,
+        "users": 1,
+        "open_overview": {
+          "tier1_total": 104,
+          "per_tab": [
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13
+          ],
+          "bytes_total": 993936
+        },
+        "idle_visible": {
+          "virtual_s": 600,
+          "tier1_total": 640,
+          "tier2_total": 640,
+          "per_tab": [
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80
+          ],
+          "per_tab_per_60s": 8,
+          "bff_req_per_s_total": 1.067,
+          "bytes_total": 3203840,
+          "wall_ms": 39985
+        },
+        "walk_19_screens": {
+          "tier1_total": 559,
+          "per_tab_mean": 69.9,
+          "tier2_total": 559,
+          "bytes_total": 4195907,
+          "wall_ms": 21636
+        },
+        "hidden": {
+          "virtual_s": 300,
+          "tier1_total": 0,
+          "tier2_total": 0,
+          "includes": "hide_transition (the visibilitychange itself) + the hidden window"
+        },
+        "show_again": {
+          "tier1_total": 0
+        },
+        "reload": {
+          "tier1_total": 104,
+          "per_tab_mean": 13
+        },
+        "tier2_equals_tier1": true,
+        "phase_windows_ms": {
+          "open_overview": [
+            1792566702229,
+            1792566712248
+          ],
+          "idle_visible": [
+            1792566712798,
+            1792566752783
+          ],
+          "walk_19_screens_x1": [
+            1792566752809,
+            1792566774445
+          ],
+          "hide_transition": [
+            1792566774838,
+            1792566775353
+          ],
+          "hidden": [
+            1792566775353,
+            1792566793736
+          ],
+          "show_again": [
+            1792566793761,
+            1792566794184
+          ],
+          "reload": [
+            1792566794184,
+            1792566804828
+          ]
+        },
+        "lane": "BFF_DOUBLE",
+        "foreign_total": 0,
+        "memory_available_mib_min": 3164,
+        "wall_ms": 103838,
+        "bff_double_paths": {
+          "GET /api/admin/access/self": 16,
+          "GET /api/admin/accounts": 8,
+          "GET /api/admin/profile-access/v2/effective": 8,
+          "GET /api/admin/profile-access/v2/self-context": 32,
+          "GET /api/admin/profile-access/v2/self-navigation": 32,
+          "GET /api/admin/step-up": 8,
+          "GET /api/auth/context": 16,
+          "GET /api/v1/execution/activation/capabilities": 8,
+          "GET /api/v1/execution/alphas": 32,
+          "GET /api/v1/execution/alphas/alpha_btc_trend/stage-drift": 8,
+          "GET /api/v1/execution/broker-bindings": 8,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE": 8,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE/exposure": 8,
+          "GET /api/v1/execution/commands/catalog": 8,
+          "GET /api/v1/execution/commands/tasks": 8,
+          "GET /api/v1/execution/compositions/admin-action-drawer": 8,
+          "GET /api/v1/execution/compositions/command-center": 344,
+          "GET /api/v1/execution/compositions/operations": 16,
+          "GET /api/v1/execution/deployments/dep_canary_01/canary": 8,
+          "GET /api/v1/execution/deployments/dep_live_01/live": 8,
+          "GET /api/v1/execution/deployments/dep_sandbox_01/certification": 8,
+          "GET /api/v1/execution/derivations/deployments/dep_paper_01/execution-quality": 8,
+          "GET /api/v1/execution/derivations/portfolios/pf_TEST_ONLY_core/capital": 24,
+          "GET /api/v1/execution/governance/approvals": 8,
+          "GET /api/v1/execution/governance/approvals/AP-352/r2": 8,
+          "GET /api/v1/execution/governance/approvals/history": 8,
+          "GET /api/v1/execution/governance/review-capture-capabilities": 15,
+          "GET /api/v1/execution/governance/stage-action-eligibility": 24,
+          "GET /api/v1/execution/manager/series": 32,
+          "GET /api/v1/execution/operations": 360,
+          "GET /api/v1/execution/operations/incidents/inc_fixture_44": 8,
+          "GET /api/v1/execution/portfolios": 8,
+          "GET /api/v1/execution/portfolios/pf_TEST_ONLY_core/capital-ledger": 8,
+          "GET /api/v1/execution/profiles/paper/realtime-snapshot": 8,
+          "GET /api/v1/execution/profiles/paper/stream": 8,
+          "GET /api/v1/execution/resources/accounts/acc_bnc_core": 8,
+          "GET /api/v1/execution/resources/alphas/alpha_btc_trend": 8,
+          "GET /api/v1/execution/resources/portfolios/pf_TEST_ONLY_core": 8,
+          "GET /api/v1/execution/retained-review": 16,
+          "GET /api/v1/execution/runtime-manifest": 80,
+          "GET /api/v1/execution/screen-contracts": 80,
+          "GET /api/v1/execution/screens/blotter": 8,
+          "GET /api/v1/execution/screens/paper/dep_paper_01": 8,
+          "GET /api/v1/execution/views/equity-chart": 24,
+          "GET /api/v1/portal/registry": 16,
+          "GET /api/v1/portal/summary": 16,
+          "GET /api/v1/quantbt/runs": 8
+        }
+      },
+      {
+        "tabs": 16,
+        "users": 1,
+        "open_overview": {
+          "tier1_total": 208,
+          "per_tab": [
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13,
+            13
+          ],
+          "bytes_total": 1987872
+        },
+        "idle_visible": {
+          "virtual_s": 600,
+          "tier1_total": 1280,
+          "tier2_total": 1280,
+          "per_tab": [
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80,
+            80
+          ],
+          "per_tab_per_60s": 8,
+          "bff_req_per_s_total": 2.133,
+          "bytes_total": 6407680,
+          "wall_ms": 49688
+        },
+        "walk_19_screens": {
+          "tier1_total": 1120,
+          "per_tab_mean": 70,
+          "tier2_total": 1120,
+          "bytes_total": 8412252,
+          "wall_ms": 45855
+        },
+        "hidden": {
+          "virtual_s": 300,
+          "tier1_total": 0,
+          "tier2_total": 0,
+          "includes": "hide_transition (the visibilitychange itself) + the hidden window"
+        },
+        "show_again": {
+          "tier1_total": 0
+        },
+        "reload": {
+          "tier1_total": 210,
+          "per_tab_mean": 13.1
+        },
+        "tier2_equals_tier1": true,
+        "phase_windows_ms": {
+          "open_overview": [
+            1792566806701,
+            1792566824324
+          ],
+          "idle_visible": [
+            1792566824877,
+            1792566874565
+          ],
+          "walk_19_screens_x1": [
+            1792566874589,
+            1792566920444
+          ],
+          "hide_transition": [
+            1792566920969,
+            1792566921737
+          ],
+          "hidden": [
+            1792566921738,
+            1792566941737
+          ],
+          "show_again": [
+            1792566941760,
+            1792566942378
+          ],
+          "reload": [
+            1792566942378,
+            1792566970402
+          ]
+        },
+        "lane": "BFF_DOUBLE",
+        "foreign_total": 0,
+        "memory_available_mib_min": 2781,
+        "wall_ms": 165426,
+        "bff_double_paths": {
+          "GET /api/admin/access/self": 32,
+          "GET /api/admin/accounts": 16,
+          "GET /api/admin/profile-access/v2/effective": 16,
+          "GET /api/admin/profile-access/v2/self-context": 64,
+          "GET /api/admin/profile-access/v2/self-navigation": 64,
+          "GET /api/admin/step-up": 16,
+          "GET /api/auth/context": 32,
+          "GET /api/v1/execution/activation/capabilities": 16,
+          "GET /api/v1/execution/alphas": 64,
+          "GET /api/v1/execution/alphas/alpha_btc_trend/stage-drift": 16,
+          "GET /api/v1/execution/broker-bindings": 16,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE": 16,
+          "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE/exposure": 16,
+          "GET /api/v1/execution/commands/catalog": 16,
+          "GET /api/v1/execution/commands/tasks": 16,
+          "GET /api/v1/execution/compositions/admin-action-drawer": 16,
+          "GET /api/v1/execution/compositions/command-center": 689,
+          "GET /api/v1/execution/compositions/operations": 32,
+          "GET /api/v1/execution/deployments/dep_canary_01/canary": 16,
+          "GET /api/v1/execution/deployments/dep_live_01/live": 16,
+          "GET /api/v1/execution/deployments/dep_sandbox_01/certification": 16,
+          "GET /api/v1/execution/derivations/deployments/dep_paper_01/execution-quality": 16,
+          "GET /api/v1/execution/derivations/portfolios/pf_TEST_ONLY_core/capital": 48,
+          "GET /api/v1/execution/governance/approvals": 16,
+          "GET /api/v1/execution/governance/approvals/AP-352/r2": 16,
+          "GET /api/v1/execution/governance/approvals/history": 16,
+          "GET /api/v1/execution/governance/review-capture-capabilities": 32,
+          "GET /api/v1/execution/governance/stage-action-eligibility": 48,
+          "GET /api/v1/execution/manager/series": 64,
+          "GET /api/v1/execution/operations": 721,
+          "GET /api/v1/execution/operations/incidents/inc_fixture_44": 16,
+          "GET /api/v1/execution/portfolios": 16,
+          "GET /api/v1/execution/portfolios/pf_TEST_ONLY_core/capital-ledger": 16,
+          "GET /api/v1/execution/profiles/paper/realtime-snapshot": 16,
+          "GET /api/v1/execution/profiles/paper/stream": 16,
+          "GET /api/v1/execution/resources/accounts/acc_bnc_core": 16,
+          "GET /api/v1/execution/resources/alphas/alpha_btc_trend": 16,
+          "GET /api/v1/execution/resources/portfolios/pf_TEST_ONLY_core": 16,
+          "GET /api/v1/execution/retained-review": 32,
+          "GET /api/v1/execution/runtime-manifest": 160,
+          "GET /api/v1/execution/screen-contracts": 160,
+          "GET /api/v1/execution/screens/blotter": 16,
+          "GET /api/v1/execution/screens/paper/dep_paper_01": 16,
+          "GET /api/v1/execution/views/equity-chart": 48,
+          "GET /api/v1/portal/registry": 32,
+          "GET /api/v1/portal/summary": 32,
+          "GET /api/v1/quantbt/runs": 16
+        }
+      }
+    ],
+    "fits": {
+      "idle_visible_total_vs_tabs": {
+        "intercept": 0,
+        "slope_requests_per_tab": 80,
+        "r_squared": 1,
+        "points": 5
+      },
+      "walk_total_vs_tabs": {
+        "intercept": -0.125,
+        "slope_requests_per_tab": 69.988,
+        "r_squared": 1,
+        "points": 5
+      }
+    },
+    "aborted_cells": [],
+    "playwright_exit_code": 0,
+    "reading": {
+      "per_tab_idle_requests_per_60s": [
+        8,
+        8,
+        8,
+        8,
+        8
+      ],
+      "idle_total_is_linear_in_tabs": true,
+      "meaning": "In the fixture lane every tab polls independently (no shared state), so browser reads grow linearly with tabs: slope = the cost ONE visible Overview tab adds. Whether the BFF/Core/Edge absorb that without growing source calls is tier 3, which this lane cannot show."
+    },
+    "pass_rules_status": {
+      "hidden_tab_zero_requests": true,
+      "browser_requests_within_guard_x_N": "NOT_EVALUATED: guard B-1..B-8 x N is applied by the window script against the same counters; fixture sweep records the numbers",
+      "source_calls_slope_zero_R_A": "NOT_EVALUABLE_IN_FIXTURE (tier 3 absent)"
+    }
+  },
+  "resources": {
+    "host_loadavg_samples_15s": [
+      {
+        "t": 1792566579161,
+        "l1": 8.76
+      },
+      {
+        "t": 1792566594245,
+        "l1": 8.02
+      },
+      {
+        "t": 1792566609318,
+        "l1": 8.84
+      },
+      {
+        "t": 1792566624364,
+        "l1": 9.29
+      },
+      {
+        "t": 1792566639442,
+        "l1": 8.42
+      },
+      {
+        "t": 1792566654445,
+        "l1": 8.5
+      },
+      {
+        "t": 1792566669519,
+        "l1": 10.21
+      },
+      {
+        "t": 1792566684595,
+        "l1": 9.92
+      },
+      {
+        "t": 1792566699669,
+        "l1": 8.67
+      },
+      {
+        "t": 1792566714737,
+        "l1": 10.2
+      },
+      {
+        "t": 1792566729812,
+        "l1": 10.58
+      },
+      {
+        "t": 1792566744885,
+        "l1": 10.38
+      },
+      {
+        "t": 1792566759957,
+        "l1": 9.24
+      },
+      {
+        "t": 1792566775031,
+        "l1": 11.71
+      },
+      {
+        "t": 1792566790105,
+        "l1": 11.49
+      },
+      {
+        "t": 1792566805106,
+        "l1": 10.69
+      },
+      {
+        "t": 1792566820181,
+        "l1": 14.87
+      },
+      {
+        "t": 1792566835258,
+        "l1": 13.77
+      },
+      {
+        "t": 1792566850329,
+        "l1": 13.22
+      },
+      {
+        "t": 1792566865401,
+        "l1": 11.23
+      },
+      {
+        "t": 1792566880473,
+        "l1": 9.72
+      },
+      {
+        "t": 1792566895547,
+        "l1": 9.84
+      },
+      {
+        "t": 1792566910624,
+        "l1": 10.18
+      },
+      {
+        "t": 1792566925697,
+        "l1": 9.47
+      },
+      {
+        "t": 1792566940769,
+        "l1": 8.2
+      },
+      {
+        "t": 1792566955845,
+        "l1": 13.92
+      },
+      {
+        "t": 1792566970846,
+        "l1": 13.92
+      }
+    ],
+    "loadavg_1m_max": 14.87
+  },
+  "cleanup": {
+    "pages": "all pages closed in finally; Playwright stops its own webServer (port 4376)"
+  },
+  "limitations": [
+    "Fixture BFF has no store, no pool, no source, no cross-tab state: tiers 2-4 are not measurable; tier 2 equals tier 1 by construction.",
+    "Virtual clock: 10 min idle / 5 min hidden are virtual (poll cadence is counted, wall time is not the window).",
+    "Only the Overview tab polls in the fixture; real per-tab cost with a live stream adds delta-driven re-reads (not present here).",
+    "Not a capacity claim: 0.133 req/s/tab at 15 s x 2 reads is the multiplier a real BFF must absorb; the multiplication to N users is illustrative until D5 names a target."
+  ],
+  "notes": [],
+  "raw_dir_not_committed": "/home/bobby/.local/state/portal-execution-elp210/20261021/m2-1792566564129",
+  "playwright_json_sha256": "sha256:6483312cc723728368c628a5811e8615c4a157883899ccff63e25c90977a3bce",
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:b42d36d1de210324dceb58f91a930159e40b732f606fc30a5d0d6e19d681db0b"
+}

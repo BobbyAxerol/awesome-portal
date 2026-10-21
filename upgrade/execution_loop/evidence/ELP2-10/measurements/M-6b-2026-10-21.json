@@ -1,0 +1,235 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-6",
+  "sub": "b restore drill",
+  "title": "Backup -> restore -> reset-after-restore -> old holder fenced -> new tenure commits (disposable PostgreSQL)",
+  "status": "RUN_FIXTURE",
+  "lane": "FIXTURE_LAB",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": true,
+    "tracked_dirty_digest": "sha256:e729c610c0e79e575c98d55f5bc0ccff469449eceab0aceb102856692c34013f"
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 4.77,
+    "loadavg_5m_at_capture": 6
+  },
+  "started_at": "2026-10-21T06:58:59.446Z",
+  "ended_at": "2026-10-21T07:21:48.519Z",
+  "started_at_ms": 1792565939446,
+  "ended_at_ms": 1792567308519,
+  "duration_ms": 1369073,
+  "workload": {
+    "runner": "scripts/measure/m6-drill-cell.sh + apps/control-api/test/elp210-measure-m6-restore-drill.spec.ts (skipped unless M6_PHASE is set)",
+    "repetitions": 2,
+    "sequence": [
+      "seed: lease acquired (300 s TTL, left LIVE), 2 immutable revisions committed",
+      "pg_dump (custom) of the source DB",
+      "createdb + pg_restore --exit-on-error into a new DB",
+      "hazard check: the old holder can still renew on the restored DB",
+      "resetAfterRestore with a WRONG epoch (refused) then the recorded epoch (accepted)",
+      "old holder: renew false, release false, commit rejected MANAGER_LEASE_LOST",
+      "new tenure acquires (token and epoch advance) and commits the next revision",
+      "history and old revisions byte-identical; table signatures equal"
+    ],
+    "data": "TEST_ONLY synthetic Manager documents (a few KB); NOT a production dataset"
+  },
+  "resource_limits": {
+    "node_cpus": "2",
+    "node_memory": "2g",
+    "postgres_cpus": "1",
+    "postgres_memory": "1g",
+    "network": "DISPOSABLE_INTERNAL_ONLY"
+  },
+  "stop_conditions": [
+    "any failed phase stops the cell; the receipt keeps the failing repetition",
+    "pg_restore --exit-on-error",
+    "timeout per node phase"
+  ],
+  "results": {
+    "all_repetitions_passed": true,
+    "binary_checks_per_rep": [
+      {
+        "rep": 1,
+        "checks": {
+          "hazard_old_holder_valid_before_reset": true,
+          "wrong_epoch_refused": true,
+          "reset_ok": true,
+          "old_holder_renew_false": true,
+          "old_holder_release_false": true,
+          "old_holder_commit_rejected": true,
+          "new_token_greater": true,
+          "new_epoch_differs": true,
+          "new_head_is_new_revision": true,
+          "history_preserved": true,
+          "old_revisions_byte_identical": true
+        },
+        "signatures_equal": true,
+        "verify_exit": 0
+      },
+      {
+        "rep": 2,
+        "checks": {
+          "hazard_old_holder_valid_before_reset": true,
+          "wrong_epoch_refused": true,
+          "reset_ok": true,
+          "old_holder_renew_false": true,
+          "old_holder_release_false": true,
+          "old_holder_commit_rejected": true,
+          "new_token_greater": true,
+          "new_epoch_differs": true,
+          "new_head_is_new_revision": true,
+          "history_preserved": true,
+          "old_revisions_byte_identical": true
+        },
+        "signatures_equal": true,
+        "verify_exit": 0
+      }
+    ],
+    "timings_ms": {
+      "dump": {
+        "n": 2,
+        "p50": 202,
+        "p95": 230,
+        "p99": 230,
+        "max": 230,
+        "mean": 216
+      },
+      "restore": {
+        "n": 2,
+        "p50": 264,
+        "p95": 310,
+        "p99": 310,
+        "max": 310,
+        "mean": 287
+      },
+      "rto_restore_start_to_first_valid_revision": {
+        "n": 2,
+        "p50": 3398,
+        "p95": 4686,
+        "p99": 4686,
+        "max": 4686,
+        "mean": 4042
+      },
+      "reset_to_first_commit": {
+        "n": 2,
+        "p50": 26,
+        "p95": 39,
+        "p99": 39,
+        "max": 39,
+        "mean": 33
+      }
+    },
+    "rto_definition": "from the start of createdb + pg_restore to the first valid revision committed by the NEW tenure (protocol M-6)",
+    "dump_bytes": [
+      11796,
+      11794
+    ],
+    "tokens": [
+      {
+        "old": "1",
+        "new": "3"
+      },
+      {
+        "old": "1",
+        "new": "3"
+      }
+    ],
+    "steps_rep1": [
+      {
+        "step": "hazard_old_holder_renew_before_reset",
+        "at_ms": 1792565944452,
+        "result": true
+      },
+      {
+        "step": "restored_head_matches_seed_head",
+        "at_ms": 1792565944455,
+        "result": true
+      },
+      {
+        "step": "reset_with_wrong_epoch",
+        "at_ms": 1792565944457,
+        "result": false
+      },
+      {
+        "step": "reset_with_recorded_epoch",
+        "at_ms": 1792565944458,
+        "result": true
+      },
+      {
+        "step": "old_holder_after_reset",
+        "at_ms": 1792565944470,
+        "result": {
+          "renewed": false,
+          "released": false,
+          "commit": "MANAGER_LEASE_LOST"
+        }
+      },
+      {
+        "step": "new_tenure_acquired",
+        "at_ms": 1792565944473,
+        "result": {
+          "token": "3",
+          "epoch_changed": true
+        }
+      },
+      {
+        "step": "first_valid_revision_committed",
+        "at_ms": 1792565944484,
+        "result": {
+          "state": "APPLIED_IN_TRANSACTION",
+          "revision": "TEST_ONLY:model-r3",
+          "digest": "sha256:ae6f2040a95d1aa29bb41db31055321f8caf2b045d279630a2ddf624c6ac0880"
+        }
+      }
+    ],
+    "not_covered": [
+      "grant restoration (no grants in this scope; Core009 not mounted)",
+      "source epoch / generation / floor comparison and resnapshot (needs a source)",
+      "quiescing replicas (single PG, single writer)",
+      "pg_restore of a production-size database"
+    ]
+  },
+  "resources": null,
+  "cleanup": [
+    {
+      "rep": 1,
+      "suffix": "d29088",
+      "containers_left": 0,
+      "networks_left": 0
+    },
+    {
+      "rep": 2,
+      "suffix": "d137286",
+      "containers_left": 0,
+      "networks_left": 0
+    }
+  ],
+  "limitations": [
+    "RTO here is the cost of the mechanism on kilobytes of TEST_ONLY rows; it is NOT an RTO for production data and must not become one. RPO / RTO / retention are set by Bobby after M-6 (D6).",
+    "M-6c (fill 1,024 revisions / 8 MiB to see the stop-without-delete behaviour on production-like data) is not run: it needs the exclusive window and is never run against a production database.",
+    "The measured RTO (3-5 s) is dominated by starting the verify container (docker run + vitest start) between pg_restore and the first commit; pg_dump ~0.2 s and pg_restore ~0.3 s on ~12 KB. It is a mechanism check, never an RTO.",
+    "The hazard step proves why the ops reset exists: after a plain restore the old holder is still valid until reset."
+  ],
+  "notes": [],
+  "raw_dirs_not_committed": [
+    "/home/bobby/.local/state/portal-execution-elp210/20261021/m6b-1792564471052/rep-1",
+    "/home/bobby/.local/state/portal-execution-elp210/20261021/m6b-1792564471052/rep-2"
+  ],
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:311f8e1113a913f5f8740a914f19b9c3d483bdbe980cd273b0c09de87bec623c"
+}

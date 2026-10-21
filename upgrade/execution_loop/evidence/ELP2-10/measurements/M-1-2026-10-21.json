@@ -1,0 +1,3073 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-1",
+  "sub": "a+b",
+  "title": "Cost of one browser tab at fixture volume: counts, bytes, heap, DOM, main-thread time, gzip transfer",
+  "status": "RUN_FIXTURE",
+  "lane": "BFF_DOUBLE",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 6.73,
+    "loadavg_5m_at_capture": 11.03
+  },
+  "started_at": "2026-10-21T06:31:35.415Z",
+  "ended_at": "2026-10-21T07:08:02.434Z",
+  "started_at_ms": 1792564295415,
+  "ended_at_ms": 1792566482434,
+  "duration_ms": 2187019,
+  "workload": {
+    "routes": 32,
+    "scales": [
+      "small",
+      "medium",
+      "large"
+    ],
+    "per_route": "cold load (new context = empty cache), first tab switch where a tablist exists",
+    "uxm_spec": "apps/portal/frontend/e2e/execution-v2-coexistence.spec.ts (measure mode on 1 and 2 workers, then guard mode)",
+    "spec": "apps/portal/frontend/e2e/_probe-measure-m1-browser-cost.spec.ts",
+    "config": "apps/portal/frontend/playwright.measure.config.ts",
+    "browser": "Playwright chromium (headless), viewport 1440x900, cache cold per test, page clock fixed at the double's NOW",
+    "doubles": "in-process BFF doubles (apps/portal/frontend/e2e/bffDouble*.ts), FIXTURE_SCALE via bffScale.setFixtureScale",
+    "gzip_front": "emulates deploy/nginx/portal.conf (gzip level 5, >= 1024 B, json/js/css/text/svg, immutable /assets/)"
+  },
+  "resource_limits": {
+    "workers": 2,
+    "docker": "NONE",
+    "chromium_instances": "1 per worker",
+    "note": "host Playwright/node only"
+  },
+  "stop_conditions": [
+    "any request leaving the app origin fails the test (foreign must be 0)",
+    "a failing Playwright test is listed in failed_titles and marks the stage failed",
+    "worker cap 2",
+    "no Docker, no lock, no other container touched"
+  ],
+  "results": {
+    "guards_and_determinism": {
+      "measure_w1": {
+        "expected": 65,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0,
+        "duration_ms": 294306,
+        "failed_titles": []
+      },
+      "measure_w2": {
+        "expected": 64,
+        "unexpected": 1,
+        "skipped": 0,
+        "flaky": 0,
+        "duration_ms": 333516,
+        "failed_titles": [
+          "budget · sandbox-steps · first load, and a tab switch where there is a tablist"
+        ]
+      },
+      "guard_mode": {
+        "expected": 105,
+        "unexpected": 1,
+        "skipped": 133,
+        "flaky": 0,
+        "duration_ms": 828978,
+        "failed_titles": [
+          "access · canary · no sideways scroll, a clean Tab walk, a visible focus ring, axe, at 1440 / 1024 / 390"
+        ]
+      },
+      "count_rows_compared": 65,
+      "count_differences_between_worker_counts": 1,
+      "differences": [
+        {
+          "row": "budget:workbench",
+          "one_worker": {
+            "kind": "budget",
+            "name": "workbench",
+            "first": {
+              "api": 12,
+              "apiUnique": 12,
+              "apiBytes": 185519,
+              "assets": 87,
+              "assetBytes": 3139088,
+              "foreign": 0
+            },
+            "tab": {
+              "api": 0,
+              "apiBytes": 0
+            }
+          },
+          "two_workers": {
+            "kind": "budget",
+            "name": "workbench",
+            "first": {
+              "api": 11,
+              "apiUnique": 11,
+              "apiBytes": 182486,
+              "assets": 86,
+              "assetBytes": 3114836,
+              "foreign": 0
+            },
+            "tab": {
+              "api": 0,
+              "apiBytes": 3033
+            }
+          }
+        }
+      ],
+      "idle": {
+        "routes": 32,
+        "visible_idle_requests_10s_max": 0,
+        "visible_idle_requests_60s": {
+          "overview": 8
+        },
+        "hidden_requests_60s_max": 0,
+        "resumed_requests_max": 0
+      },
+      "first_load_api_requests_max": 16,
+      "listeners": {
+        "kind": "listeners",
+        "perScreen": {
+          "overview": {
+            "total": 13,
+            "intervals": 1
+          },
+          "fleet": {
+            "total": 13,
+            "intervals": 0
+          },
+          "operations": {
+            "total": 13,
+            "intervals": 0
+          },
+          "incident": {
+            "total": 14,
+            "intervals": 0
+          },
+          "cockpit": {
+            "total": 14,
+            "intervals": 0
+          },
+          "portfolios": {
+            "total": 13,
+            "intervals": 0
+          },
+          "portfolio-360": {
+            "total": 13,
+            "intervals": 0
+          },
+          "alpha-360": {
+            "total": 13,
+            "intervals": 0
+          },
+          "accounts": {
+            "total": 13,
+            "intervals": 0
+          },
+          "account-360": {
+            "total": 13,
+            "intervals": 0
+          },
+          "blotter": {
+            "total": 14,
+            "intervals": 0
+          },
+          "admin": {
+            "total": 13,
+            "intervals": 0
+          },
+          "users": {
+            "total": 13,
+            "intervals": 0
+          },
+          "access": {
+            "total": 11,
+            "intervals": 0
+          },
+          "workbench": {
+            "total": 14,
+            "intervals": 0
+          },
+          "sandbox": {
+            "total": 14,
+            "intervals": 0
+          },
+          "canary": {
+            "total": 14,
+            "intervals": 0
+          },
+          "live": {
+            "total": 14,
+            "intervals": 0
+          },
+          "new-request": {
+            "total": 14,
+            "intervals": 0
+          }
+        },
+        "pass1First": {
+          "listeners": {
+            "document:selectionchange:bubble": 1,
+            "window:popstate:bubble": 1,
+            "window:visibilitychange:bubble": 1,
+            "window:online:bubble": 1,
+            "window:offline:bubble": 1,
+            "window:beforeprint:bubble": 1,
+            "window:afterprint:bubble": 1,
+            "window:keydown:bubble": 1,
+            "document:visibilitychange:bubble": 2,
+            "window:focus:bubble": 2
+          },
+          "total": 12,
+          "intervals": 1
+        },
+        "pass3First": {
+          "listeners": {
+            "document:selectionchange:bubble": 1,
+            "window:popstate:bubble": 1,
+            "window:visibilitychange:bubble": 1,
+            "window:online:bubble": 1,
+            "window:offline:bubble": 1,
+            "window:beforeprint:bubble": 1,
+            "window:afterprint:bubble": 1,
+            "window:keydown:bubble": 1,
+            "document:visibilitychange:bubble": 2,
+            "window:focus:bubble": 2,
+            "document:click:capture": 1
+          },
+          "total": 13,
+          "intervals": 1
+        }
+      }
+    },
+    "m1a_by_scale": {
+      "small": {
+        "routes": 32,
+        "first_load_api_requests": {
+          "n": 32,
+          "p50": 11,
+          "p95": 15,
+          "p99": 16,
+          "max": 16,
+          "mean": 11.563
+        },
+        "first_load_api_bytes": {
+          "n": 32,
+          "p50": 118949,
+          "p95": 186269,
+          "p99": 205523,
+          "max": 205523,
+          "mean": 126998.063
+        },
+        "first_load_assets": {
+          "n": 32,
+          "p50": 86,
+          "p95": 90,
+          "p99": 92,
+          "max": 92,
+          "mean": 83.438
+        },
+        "first_load_asset_bytes": {
+          "n": 32,
+          "p50": 3105631,
+          "p95": 3160695,
+          "p99": 3330599,
+          "max": 3330599,
+          "mean": 2979073.375
+        },
+        "js_heap_used_bytes": {
+          "n": 32,
+          "p50": 6837988,
+          "p95": 7748672,
+          "p99": 8234424,
+          "max": 8234424,
+          "mean": 6841207.125
+        },
+        "dom_nodes": {
+          "n": 32,
+          "p50": 1006,
+          "p95": 2405,
+          "p99": 2852,
+          "max": 2852,
+          "mean": 1107.344
+        },
+        "main_thread_task_s": {
+          "n": 32,
+          "p50": 0.9952,
+          "p95": 1.5617,
+          "p99": 1.5909,
+          "max": 1.5909,
+          "mean": 1.0327
+        },
+        "script_s": {
+          "n": 32,
+          "p50": 0.2615,
+          "p95": 0.384,
+          "p99": 0.3896,
+          "max": 0.3896,
+          "mean": 0.2624
+        },
+        "layout_s": {
+          "n": 32,
+          "p50": 0.1225,
+          "p95": 0.3065,
+          "p99": 0.3176,
+          "max": 0.3176,
+          "mean": 0.1396
+        },
+        "style_recalc_s": {
+          "n": 32,
+          "p50": 0.0624,
+          "p95": 0.1146,
+          "p99": 0.1272,
+          "max": 0.1272,
+          "mean": 0.0679
+        },
+        "route_ready_wall_ms": {
+          "n": 32,
+          "p50": 1030,
+          "p95": 1522,
+          "p99": 1890,
+          "max": 1890,
+          "mean": 1117.2
+        },
+        "rows_like_elements": {
+          "n": 32,
+          "p50": 40,
+          "p95": 68,
+          "p99": 75,
+          "max": 75,
+          "mean": 39.25
+        },
+        "tab_switch_api_requests": {
+          "n": 21,
+          "p50": 0,
+          "p95": 2,
+          "p99": 5,
+          "max": 5,
+          "mean": 0.571
+        },
+        "tab_switch_api_bytes": {
+          "n": 21,
+          "p50": 0,
+          "p95": 3033,
+          "p99": 35360,
+          "max": 35360,
+          "mean": 2141.619
+        },
+        "foreign_requests_total": 0,
+        "console_noise_total": 0
+      },
+      "medium": {
+        "routes": 32,
+        "first_load_api_requests": {
+          "n": 32,
+          "p50": 11,
+          "p95": 15,
+          "p99": 16,
+          "max": 16,
+          "mean": 11.563
+        },
+        "first_load_api_bytes": {
+          "n": 32,
+          "p50": 121249,
+          "p95": 189217,
+          "p99": 205523,
+          "max": 205523,
+          "mean": 133588.125
+        },
+        "first_load_assets": {
+          "n": 32,
+          "p50": 86,
+          "p95": 90,
+          "p99": 92,
+          "max": 92,
+          "mean": 83.438
+        },
+        "first_load_asset_bytes": {
+          "n": 32,
+          "p50": 3105631,
+          "p95": 3160695,
+          "p99": 3330599,
+          "max": 3330599,
+          "mean": 2979073.375
+        },
+        "js_heap_used_bytes": {
+          "n": 32,
+          "p50": 6963436,
+          "p95": 7748668,
+          "p99": 8442752,
+          "max": 8442752,
+          "mean": 6927968.875
+        },
+        "dom_nodes": {
+          "n": 32,
+          "p50": 1038,
+          "p95": 2492,
+          "p99": 2852,
+          "max": 2852,
+          "mean": 1373.125
+        },
+        "main_thread_task_s": {
+          "n": 32,
+          "p50": 1.0898,
+          "p95": 1.867,
+          "p99": 2.2084,
+          "max": 2.2084,
+          "mean": 1.1727
+        },
+        "script_s": {
+          "n": 32,
+          "p50": 0.2673,
+          "p95": 0.3701,
+          "p99": 0.383,
+          "max": 0.383,
+          "mean": 0.2687
+        },
+        "layout_s": {
+          "n": 32,
+          "p50": 0.1474,
+          "p95": 0.4084,
+          "p99": 0.4842,
+          "max": 0.4842,
+          "mean": 0.1826
+        },
+        "style_recalc_s": {
+          "n": 32,
+          "p50": 0.0685,
+          "p95": 0.1247,
+          "p99": 0.1847,
+          "max": 0.1847,
+          "mean": 0.0754
+        },
+        "route_ready_wall_ms": {
+          "n": 32,
+          "p50": 1155,
+          "p95": 1957,
+          "p99": 2376,
+          "max": 2376,
+          "mean": 1250.4
+        },
+        "rows_like_elements": {
+          "n": 32,
+          "p50": 43,
+          "p95": 68,
+          "p99": 75,
+          "max": 75,
+          "mean": 46.563
+        },
+        "tab_switch_api_requests": {
+          "n": 21,
+          "p50": 0,
+          "p95": 2,
+          "p99": 5,
+          "max": 5,
+          "mean": 0.571
+        },
+        "tab_switch_api_bytes": {
+          "n": 21,
+          "p50": 0,
+          "p95": 5226,
+          "p99": 35707,
+          "max": 35707,
+          "mean": 2311.381
+        },
+        "foreign_requests_total": 0,
+        "console_noise_total": 0
+      },
+      "large": {
+        "routes": 32,
+        "first_load_api_requests": {
+          "n": 32,
+          "p50": 11,
+          "p95": 15,
+          "p99": 16,
+          "max": 16,
+          "mean": 11.5
+        },
+        "first_load_api_bytes": {
+          "n": 32,
+          "p50": 121556,
+          "p95": 198681,
+          "p99": 205523,
+          "max": 205523,
+          "mean": 135179.688
+        },
+        "first_load_assets": {
+          "n": 32,
+          "p50": 86,
+          "p95": 90,
+          "p99": 92,
+          "max": 92,
+          "mean": 83.438
+        },
+        "first_load_asset_bytes": {
+          "n": 32,
+          "p50": 3105631,
+          "p95": 3160695,
+          "p99": 3330599,
+          "max": 3330599,
+          "mean": 2979073.375
+        },
+        "js_heap_used_bytes": {
+          "n": 32,
+          "p50": 7087124,
+          "p95": 7967248,
+          "p99": 8386356,
+          "max": 8386356,
+          "mean": 6980543.875
+        },
+        "dom_nodes": {
+          "n": 32,
+          "p50": 1038,
+          "p95": 2899,
+          "p99": 3418,
+          "max": 3418,
+          "mean": 1510.938
+        },
+        "main_thread_task_s": {
+          "n": 32,
+          "p50": 1.341,
+          "p95": 3.9702,
+          "p99": 5.294,
+          "max": 5.294,
+          "mean": 1.9788
+        },
+        "script_s": {
+          "n": 32,
+          "p50": 0.3347,
+          "p95": 1.0729,
+          "p99": 1.1005,
+          "max": 1.1005,
+          "mean": 0.4721
+        },
+        "layout_s": {
+          "n": 32,
+          "p50": 0.2071,
+          "p95": 0.7523,
+          "p99": 1.2313,
+          "max": 1.2313,
+          "mean": 0.2927
+        },
+        "style_recalc_s": {
+          "n": 32,
+          "p50": 0.0944,
+          "p95": 0.348,
+          "p99": 0.3541,
+          "max": 0.3541,
+          "mean": 0.1302
+        },
+        "route_ready_wall_ms": {
+          "n": 32,
+          "p50": 1710,
+          "p95": 4663,
+          "p99": 5890,
+          "max": 5890,
+          "mean": 2207.9
+        },
+        "rows_like_elements": {
+          "n": 32,
+          "p50": 44,
+          "p95": 85,
+          "p99": 86,
+          "max": 86,
+          "mean": 49.688
+        },
+        "tab_switch_api_requests": {
+          "n": 21,
+          "p50": 0,
+          "p95": 2,
+          "p99": 5,
+          "max": 5,
+          "mean": 0.571
+        },
+        "tab_switch_api_bytes": {
+          "n": 21,
+          "p50": 0,
+          "p95": 10353,
+          "p99": 35721,
+          "max": 35721,
+          "mean": 2556.19
+        },
+        "foreign_requests_total": 0,
+        "console_noise_total": 0
+      }
+    },
+    "m1a_growth_vs_small": {
+      "medium_vs_small": [
+        {
+          "route": "accounts",
+          "api_bytes_x": 1.07,
+          "dom_nodes_x": 3.56,
+          "rows_small": 18,
+          "rows_scale": 65,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "fleet",
+          "api_bytes_x": 1.58,
+          "dom_nodes_x": 2.63,
+          "rows_small": 20,
+          "rows_scale": 55,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "operations",
+          "api_bytes_x": 1.19,
+          "dom_nodes_x": 1.88,
+          "rows_small": 26,
+          "rows_scale": 54,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "portfolios",
+          "api_bytes_x": 1.05,
+          "dom_nodes_x": 1.88,
+          "rows_small": 24,
+          "rows_scale": 43,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "incident",
+          "api_bytes_x": 1.19,
+          "dom_nodes_x": 1.79,
+          "rows_small": 29,
+          "rows_scale": 57,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "cockpit",
+          "api_bytes_x": 1.06,
+          "dom_nodes_x": 1.69,
+          "rows_small": 41,
+          "rows_scale": 66,
+          "api_requests_small": 13,
+          "api_requests_scale": 13
+        },
+        {
+          "route": "cockpit-r1",
+          "api_bytes_x": 1.06,
+          "dom_nodes_x": 1.63,
+          "rows_small": 40,
+          "rows_scale": 65,
+          "api_requests_small": 13,
+          "api_requests_scale": 13
+        },
+        {
+          "route": "new-request-drawer",
+          "api_bytes_x": 1.06,
+          "dom_nodes_x": 1.59,
+          "rows_small": 41,
+          "rows_scale": 66,
+          "api_requests_small": 15,
+          "api_requests_scale": 15
+        },
+        {
+          "route": "compare",
+          "api_bytes_x": 1.05,
+          "dom_nodes_x": 1.12,
+          "rows_small": 25,
+          "rows_scale": 25,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "overview",
+          "api_bytes_x": 1.52,
+          "dom_nodes_x": 1.03,
+          "rows_small": 41,
+          "rows_scale": 43,
+          "api_requests_small": 13,
+          "api_requests_scale": 13
+        },
+        {
+          "route": "portfolio-360",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 32,
+          "rows_scale": 32,
+          "api_requests_small": 16,
+          "api_requests_scale": 16
+        },
+        {
+          "route": "alpha-360",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 35,
+          "rows_scale": 35,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "alpha-replay",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 25,
+          "rows_scale": 25,
+          "api_requests_small": 15,
+          "api_requests_scale": 15
+        },
+        {
+          "route": "account-360",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 24,
+          "rows_scale": 24,
+          "api_requests_small": 14,
+          "api_requests_scale": 14
+        },
+        {
+          "route": "blotter",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 68,
+          "rows_scale": 68,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "admin",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 63,
+          "rows_scale": 63,
+          "api_requests_small": 13,
+          "api_requests_scale": 13
+        },
+        {
+          "route": "users",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 68,
+          "rows_scale": 68,
+          "api_requests_small": 8,
+          "api_requests_scale": 8
+        },
+        {
+          "route": "access",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 39,
+          "rows_scale": 39,
+          "api_requests_small": 6,
+          "api_requests_scale": 6
+        },
+        {
+          "route": "workbench",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 43,
+          "rows_scale": 43,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "workbench-fills",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 54,
+          "rows_scale": 54,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "workbench-vnm",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 43,
+          "rows_scale": 43,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "sandbox",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 36,
+          "rows_scale": 36,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "sandbox-steps",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 43,
+          "rows_scale": 43,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "sandbox-plans",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 33,
+          "rows_scale": 33,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "sandbox-v2body",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 26,
+          "rows_scale": 26,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "canary",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 48,
+          "rows_scale": 48,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "canary-guard",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 44,
+          "rows_scale": 44,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "canary-v2body",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 40,
+          "rows_scale": 40,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "live",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 44,
+          "rows_scale": 44,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "live-continuity",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 50,
+          "rows_scale": 50,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "live-v2body",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 75,
+          "rows_scale": 75,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "new-request",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 18,
+          "rows_scale": 18,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        }
+      ],
+      "large_vs_small": [
+        {
+          "route": "accounts",
+          "api_bytes_x": 1.07,
+          "dom_nodes_x": 3.56,
+          "rows_small": 18,
+          "rows_scale": 65,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "portfolios",
+          "api_bytes_x": 1.14,
+          "dom_nodes_x": 3.4,
+          "rows_small": 24,
+          "rows_scale": 78,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "fleet",
+          "api_bytes_x": 1.66,
+          "dom_nodes_x": 3.1,
+          "rows_small": 20,
+          "rows_scale": 65,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "cockpit",
+          "api_bytes_x": 1.11,
+          "dom_nodes_x": 2.29,
+          "rows_small": 41,
+          "rows_scale": 86,
+          "api_requests_small": 13,
+          "api_requests_scale": 13
+        },
+        {
+          "route": "cockpit-r1",
+          "api_bytes_x": 1.11,
+          "dom_nodes_x": 2.19,
+          "rows_small": 40,
+          "rows_scale": 85,
+          "api_requests_small": 13,
+          "api_requests_scale": 13
+        },
+        {
+          "route": "operations",
+          "api_bytes_x": 1.19,
+          "dom_nodes_x": 2.11,
+          "rows_small": 26,
+          "rows_scale": 61,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "incident",
+          "api_bytes_x": 1.19,
+          "dom_nodes_x": 1.99,
+          "rows_small": 29,
+          "rows_scale": 64,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "new-request-drawer",
+          "api_bytes_x": 1.07,
+          "dom_nodes_x": 1.98,
+          "rows_small": 41,
+          "rows_scale": 67,
+          "api_requests_small": 15,
+          "api_requests_scale": 13
+        },
+        {
+          "route": "compare",
+          "api_bytes_x": 1.14,
+          "dom_nodes_x": 1.38,
+          "rows_small": 25,
+          "rows_scale": 25,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "overview",
+          "api_bytes_x": 1.6,
+          "dom_nodes_x": 1.03,
+          "rows_small": 41,
+          "rows_scale": 43,
+          "api_requests_small": 13,
+          "api_requests_scale": 13
+        },
+        {
+          "route": "portfolio-360",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 32,
+          "rows_scale": 32,
+          "api_requests_small": 16,
+          "api_requests_scale": 16
+        },
+        {
+          "route": "alpha-360",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 35,
+          "rows_scale": 35,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "alpha-replay",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 25,
+          "rows_scale": 25,
+          "api_requests_small": 15,
+          "api_requests_scale": 15
+        },
+        {
+          "route": "account-360",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 24,
+          "rows_scale": 24,
+          "api_requests_small": 14,
+          "api_requests_scale": 14
+        },
+        {
+          "route": "blotter",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 68,
+          "rows_scale": 68,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "admin",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 63,
+          "rows_scale": 63,
+          "api_requests_small": 13,
+          "api_requests_scale": 13
+        },
+        {
+          "route": "users",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 68,
+          "rows_scale": 68,
+          "api_requests_small": 8,
+          "api_requests_scale": 8
+        },
+        {
+          "route": "access",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 39,
+          "rows_scale": 39,
+          "api_requests_small": 6,
+          "api_requests_scale": 6
+        },
+        {
+          "route": "workbench",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 43,
+          "rows_scale": 43,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "workbench-fills",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 54,
+          "rows_scale": 54,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "workbench-vnm",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 43,
+          "rows_scale": 43,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "sandbox",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 36,
+          "rows_scale": 36,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "sandbox-steps",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 43,
+          "rows_scale": 43,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "sandbox-plans",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 33,
+          "rows_scale": 33,
+          "api_requests_small": 12,
+          "api_requests_scale": 12
+        },
+        {
+          "route": "sandbox-v2body",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 26,
+          "rows_scale": 26,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "canary",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 48,
+          "rows_scale": 48,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "canary-guard",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 44,
+          "rows_scale": 44,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "canary-v2body",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 40,
+          "rows_scale": 40,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "live",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 44,
+          "rows_scale": 44,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "live-continuity",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 50,
+          "rows_scale": 50,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        },
+        {
+          "route": "live-v2body",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 75,
+          "rows_scale": 75,
+          "api_requests_small": 10,
+          "api_requests_scale": 10
+        },
+        {
+          "route": "new-request",
+          "api_bytes_x": 1,
+          "dom_nodes_x": 1,
+          "rows_small": 18,
+          "rows_scale": 18,
+          "api_requests_small": 11,
+          "api_requests_scale": 11
+        }
+      ]
+    },
+    "m1a_per_route": [
+      {
+        "scale": "small",
+        "route": "overview",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 124242,
+        "assets": 88,
+        "asset_bytes": 3103804,
+        "heap_bytes": 7052352,
+        "dom_nodes": 931,
+        "task_s": 1.2562,
+        "ready_ms": 1387,
+        "rows_like": 41,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "fleet",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 112139,
+        "assets": 84,
+        "asset_bytes": 3053987,
+        "heap_bytes": 6868100,
+        "dom_nodes": 934,
+        "task_s": 0.8438,
+        "ready_ms": 1004,
+        "rows_like": 20,
+        "tab_api": 5
+      },
+      {
+        "scale": "small",
+        "route": "operations",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 111632,
+        "assets": 84,
+        "asset_bytes": 3070144,
+        "heap_bytes": 6826812,
+        "dom_nodes": 1188,
+        "task_s": 0.8251,
+        "ready_ms": 824,
+        "rows_like": 26,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "incident",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 112385,
+        "assets": 84,
+        "asset_bytes": 3070144,
+        "heap_bytes": 6837988,
+        "dom_nodes": 1331,
+        "task_s": 1.0928,
+        "ready_ms": 1193,
+        "rows_like": 29,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "cockpit",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 109317,
+        "assets": 86,
+        "asset_bytes": 3148348,
+        "heap_bytes": 7080696,
+        "dom_nodes": 1012,
+        "task_s": 1.0094,
+        "ready_ms": 988,
+        "rows_like": 41,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "cockpit-r1",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 109114,
+        "assets": 86,
+        "asset_bytes": 3148348,
+        "heap_bytes": 6971988,
+        "dom_nodes": 1101,
+        "task_s": 1.067,
+        "ready_ms": 1115,
+        "rows_like": 40,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "portfolios",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 106171,
+        "assets": 84,
+        "asset_bytes": 3013995,
+        "heap_bytes": 6539100,
+        "dom_nodes": 1006,
+        "task_s": 0.8766,
+        "ready_ms": 970,
+        "rows_like": 24,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "portfolio-360",
+        "api": 16,
+        "api_unique": 16,
+        "api_bytes": 124390,
+        "assets": 92,
+        "asset_bytes": 3151443,
+        "heap_bytes": 7269724,
+        "dom_nodes": 1157,
+        "task_s": 0.9757,
+        "ready_ms": 1014,
+        "rows_like": 32,
+        "tab_api": 1
+      },
+      {
+        "scale": "small",
+        "route": "compare",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 106171,
+        "assets": 89,
+        "asset_bytes": 3107179,
+        "heap_bytes": 6499912,
+        "dom_nodes": 740,
+        "task_s": 0.9559,
+        "ready_ms": 1029,
+        "rows_like": 25,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "alpha-360",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 131437,
+        "assets": 87,
+        "asset_bytes": 3160695,
+        "heap_bytes": 7130288,
+        "dom_nodes": 1005,
+        "task_s": 1.1055,
+        "ready_ms": 1095,
+        "rows_like": 35,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "alpha-replay",
+        "api": 15,
+        "api_unique": 15,
+        "api_bytes": 140177,
+        "assets": 87,
+        "asset_bytes": 3330599,
+        "heap_bytes": 8234424,
+        "dom_nodes": 1093,
+        "task_s": 1.0781,
+        "ready_ms": 955,
+        "rows_like": 25,
+        "tab_api": 1
+      },
+      {
+        "scale": "small",
+        "route": "accounts",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 104991,
+        "assets": 85,
+        "asset_bytes": 3143319,
+        "heap_bytes": 6488760,
+        "dom_nodes": 700,
+        "task_s": 0.9375,
+        "ready_ms": 1015,
+        "rows_like": 18,
+        "tab_api": 2
+      },
+      {
+        "scale": "small",
+        "route": "account-360",
+        "api": 14,
+        "api_unique": 13,
+        "api_bytes": 114138,
+        "assets": 85,
+        "asset_bytes": 3143319,
+        "heap_bytes": 7027164,
+        "dom_nodes": 1038,
+        "task_s": 1.0674,
+        "ready_ms": 1117,
+        "rows_like": 24,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "blotter",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 168946,
+        "assets": 80,
+        "asset_bytes": 3025468,
+        "heap_bytes": 7649628,
+        "dom_nodes": 2405,
+        "task_s": 1.293,
+        "ready_ms": 1332,
+        "rows_like": 68,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "admin",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 205523,
+        "assets": 81,
+        "asset_bytes": 3020495,
+        "heap_bytes": 6988436,
+        "dom_nodes": 1437,
+        "task_s": 1.5617,
+        "ready_ms": 1522,
+        "rows_like": 63,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "users",
+        "api": 8,
+        "api_unique": 8,
+        "api_bytes": 114397,
+        "assets": 45,
+        "asset_bytes": 1152670,
+        "heap_bytes": 4715088,
+        "dom_nodes": 1805,
+        "task_s": 0.7732,
+        "ready_ms": 903,
+        "rows_like": 68,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "access",
+        "api": 6,
+        "api_unique": 6,
+        "api_bytes": 93536,
+        "assets": 40,
+        "asset_bytes": 1117214,
+        "heap_bytes": 4511172,
+        "dom_nodes": 1019,
+        "task_s": 1.1157,
+        "ready_ms": 1216,
+        "rows_like": 39,
+        "tab_api": 2
+      },
+      {
+        "scale": "small",
+        "route": "workbench",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 185519,
+        "assets": 87,
+        "asset_bytes": 3139088,
+        "heap_bytes": 7285688,
+        "dom_nodes": 1034,
+        "task_s": 0.9485,
+        "ready_ms": 1030,
+        "rows_like": 43,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "workbench-fills",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 182486,
+        "assets": 86,
+        "asset_bytes": 3114836,
+        "heap_bytes": 7248440,
+        "dom_nodes": 1441,
+        "task_s": 0.8986,
+        "ready_ms": 934,
+        "rows_like": 54,
+        "tab_api": 1
+      },
+      {
+        "scale": "small",
+        "route": "workbench-vnm",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 186269,
+        "assets": 87,
+        "asset_bytes": 3139088,
+        "heap_bytes": 7400392,
+        "dom_nodes": 1057,
+        "task_s": 0.9461,
+        "ready_ms": 1002,
+        "rows_like": 43,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "sandbox",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 118949,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6811864,
+        "dom_nodes": 890,
+        "task_s": 1.0145,
+        "ready_ms": 1070,
+        "rows_like": 36,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "sandbox-steps",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 118949,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6804460,
+        "dom_nodes": 959,
+        "task_s": 1.198,
+        "ready_ms": 1299,
+        "rows_like": 43,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "sandbox-plans",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 118949,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6923824,
+        "dom_nodes": 837,
+        "task_s": 1.0718,
+        "ready_ms": 1890,
+        "rows_like": 33,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "sandbox-v2body",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 110273,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6656728,
+        "dom_nodes": 753,
+        "task_s": 0.7834,
+        "ready_ms": 868,
+        "rows_like": 26,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "canary",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 122944,
+        "assets": 89,
+        "asset_bytes": 3105631,
+        "heap_bytes": 6777836,
+        "dom_nodes": 814,
+        "task_s": 1.1529,
+        "ready_ms": 1300,
+        "rows_like": 48,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "canary-guard",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 122944,
+        "assets": 89,
+        "asset_bytes": 3105631,
+        "heap_bytes": 6781488,
+        "dom_nodes": 786,
+        "task_s": 0.9952,
+        "ready_ms": 1180,
+        "rows_like": 44,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "canary-v2body",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 108114,
+        "assets": 89,
+        "asset_bytes": 3105631,
+        "heap_bytes": 6654360,
+        "dom_nodes": 801,
+        "task_s": 0.9468,
+        "ready_ms": 1039,
+        "rows_like": 40,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "live",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 121249,
+        "assets": 90,
+        "asset_bytes": 3106293,
+        "heap_bytes": 6754484,
+        "dom_nodes": 719,
+        "task_s": 0.8645,
+        "ready_ms": 1025,
+        "rows_like": 44,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "live-continuity",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 121249,
+        "assets": 90,
+        "asset_bytes": 3106293,
+        "heap_bytes": 6690444,
+        "dom_nodes": 782,
+        "task_s": 0.8546,
+        "ready_ms": 920,
+        "rows_like": 50,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "live-v2body",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 134661,
+        "assets": 90,
+        "asset_bytes": 3106293,
+        "heap_bytes": 7748672,
+        "dom_nodes": 2852,
+        "task_s": 1.1381,
+        "ready_ms": 1194,
+        "rows_like": 75,
+        "tab_api": 0
+      },
+      {
+        "scale": "small",
+        "route": "new-request",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 108635,
+        "assets": 84,
+        "asset_bytes": 3037193,
+        "heap_bytes": 6425128,
+        "dom_nodes": 631,
+        "task_s": 0.807,
+        "ready_ms": 889,
+        "rows_like": 18,
+        "tab_api": null
+      },
+      {
+        "scale": "small",
+        "route": "new-request-drawer",
+        "api": 15,
+        "api_unique": 15,
+        "api_bytes": 114042,
+        "assets": 86,
+        "asset_bytes": 3148348,
+        "heap_bytes": 7263188,
+        "dom_nodes": 1177,
+        "task_s": 1.5909,
+        "ready_ms": 1431,
+        "rows_like": 41,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "overview",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 189217,
+        "assets": 88,
+        "asset_bytes": 3103804,
+        "heap_bytes": 7088492,
+        "dom_nodes": 963,
+        "task_s": 1.253,
+        "ready_ms": 1443,
+        "rows_like": 43,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "fleet",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 177142,
+        "assets": 84,
+        "asset_bytes": 3053987,
+        "heap_bytes": 7487992,
+        "dom_nodes": 2457,
+        "task_s": 1.1455,
+        "ready_ms": 1170,
+        "rows_like": 55,
+        "tab_api": 5
+      },
+      {
+        "scale": "medium",
+        "route": "operations",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 132657,
+        "assets": 84,
+        "asset_bytes": 3070144,
+        "heap_bytes": 7081076,
+        "dom_nodes": 2235,
+        "task_s": 1.0998,
+        "ready_ms": 1181,
+        "rows_like": 54,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "incident",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 133410,
+        "assets": 84,
+        "asset_bytes": 3070144,
+        "heap_bytes": 7234380,
+        "dom_nodes": 2378,
+        "task_s": 1.2532,
+        "ready_ms": 1370,
+        "rows_like": 57,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "cockpit",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 116001,
+        "assets": 86,
+        "asset_bytes": 3148348,
+        "heap_bytes": 7174788,
+        "dom_nodes": 1706,
+        "task_s": 1.2069,
+        "ready_ms": 982,
+        "rows_like": 66,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "cockpit-r1",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 115798,
+        "assets": 86,
+        "asset_bytes": 3148348,
+        "heap_bytes": 7183364,
+        "dom_nodes": 1795,
+        "task_s": 0.9837,
+        "ready_ms": 1068,
+        "rows_like": 65,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "portfolios",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 111682,
+        "assets": 84,
+        "asset_bytes": 3013995,
+        "heap_bytes": 6818308,
+        "dom_nodes": 1894,
+        "task_s": 0.8181,
+        "ready_ms": 880,
+        "rows_like": 43,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "portfolio-360",
+        "api": 16,
+        "api_unique": 16,
+        "api_bytes": 124390,
+        "assets": 92,
+        "asset_bytes": 3151443,
+        "heap_bytes": 7258948,
+        "dom_nodes": 1157,
+        "task_s": 1.396,
+        "ready_ms": 1496,
+        "rows_like": 32,
+        "tab_api": 1
+      },
+      {
+        "scale": "medium",
+        "route": "compare",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 111682,
+        "assets": 89,
+        "asset_bytes": 3107179,
+        "heap_bytes": 6543260,
+        "dom_nodes": 832,
+        "task_s": 0.8744,
+        "ready_ms": 983,
+        "rows_like": 25,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "alpha-360",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 131437,
+        "assets": 87,
+        "asset_bytes": 3160695,
+        "heap_bytes": 7118544,
+        "dom_nodes": 1005,
+        "task_s": 0.9434,
+        "ready_ms": 992,
+        "rows_like": 35,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "alpha-replay",
+        "api": 15,
+        "api_unique": 15,
+        "api_bytes": 140177,
+        "assets": 87,
+        "asset_bytes": 3330599,
+        "heap_bytes": 8442752,
+        "dom_nodes": 1093,
+        "task_s": 1.0675,
+        "ready_ms": 1048,
+        "rows_like": 25,
+        "tab_api": 1
+      },
+      {
+        "scale": "medium",
+        "route": "accounts",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 112808,
+        "assets": 85,
+        "asset_bytes": 3143319,
+        "heap_bytes": 7477960,
+        "dom_nodes": 2492,
+        "task_s": 1.03,
+        "ready_ms": 1105,
+        "rows_like": 65,
+        "tab_api": 2
+      },
+      {
+        "scale": "medium",
+        "route": "account-360",
+        "api": 14,
+        "api_unique": 13,
+        "api_bytes": 114138,
+        "assets": 85,
+        "asset_bytes": 3143319,
+        "heap_bytes": 7106292,
+        "dom_nodes": 1038,
+        "task_s": 1.0389,
+        "ready_ms": 1109,
+        "rows_like": 24,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "blotter",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 168909,
+        "assets": 80,
+        "asset_bytes": 3025468,
+        "heap_bytes": 7412340,
+        "dom_nodes": 2405,
+        "task_s": 1.0024,
+        "ready_ms": 954,
+        "rows_like": 68,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "admin",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 205523,
+        "assets": 81,
+        "asset_bytes": 3020495,
+        "heap_bytes": 6963436,
+        "dom_nodes": 1437,
+        "task_s": 1.2742,
+        "ready_ms": 1270,
+        "rows_like": 63,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "users",
+        "api": 8,
+        "api_unique": 8,
+        "api_bytes": 114397,
+        "assets": 45,
+        "asset_bytes": 1152670,
+        "heap_bytes": 4686080,
+        "dom_nodes": 1805,
+        "task_s": 1.0898,
+        "ready_ms": 1155,
+        "rows_like": 68,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "access",
+        "api": 6,
+        "api_unique": 6,
+        "api_bytes": 93536,
+        "assets": 40,
+        "asset_bytes": 1117214,
+        "heap_bytes": 4447660,
+        "dom_nodes": 1019,
+        "task_s": 0.6155,
+        "ready_ms": 666,
+        "rows_like": 39,
+        "tab_api": 2
+      },
+      {
+        "scale": "medium",
+        "route": "workbench",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 185519,
+        "assets": 87,
+        "asset_bytes": 3139088,
+        "heap_bytes": 7325136,
+        "dom_nodes": 1034,
+        "task_s": 0.9725,
+        "ready_ms": 1085,
+        "rows_like": 43,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "workbench-fills",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 182486,
+        "assets": 86,
+        "asset_bytes": 3114836,
+        "heap_bytes": 6899836,
+        "dom_nodes": 1441,
+        "task_s": 0.822,
+        "ready_ms": 932,
+        "rows_like": 54,
+        "tab_api": 1
+      },
+      {
+        "scale": "medium",
+        "route": "workbench-vnm",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 186269,
+        "assets": 87,
+        "asset_bytes": 3139088,
+        "heap_bytes": 7384664,
+        "dom_nodes": 1057,
+        "task_s": 0.9591,
+        "ready_ms": 1028,
+        "rows_like": 43,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "sandbox",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 118949,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6815268,
+        "dom_nodes": 890,
+        "task_s": 0.8244,
+        "ready_ms": 903,
+        "rows_like": 36,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "sandbox-steps",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 118949,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6803460,
+        "dom_nodes": 959,
+        "task_s": 1.1694,
+        "ready_ms": 1356,
+        "rows_like": 43,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "sandbox-plans",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 118949,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6888516,
+        "dom_nodes": 837,
+        "task_s": 0.9353,
+        "ready_ms": 988,
+        "rows_like": 33,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "sandbox-v2body",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 110273,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6630016,
+        "dom_nodes": 753,
+        "task_s": 1.1084,
+        "ready_ms": 1185,
+        "rows_like": 26,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "canary",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 122944,
+        "assets": 89,
+        "asset_bytes": 3105631,
+        "heap_bytes": 6767172,
+        "dom_nodes": 814,
+        "task_s": 1.3911,
+        "ready_ms": 1506,
+        "rows_like": 48,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "canary-guard",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 122944,
+        "assets": 89,
+        "asset_bytes": 3105631,
+        "heap_bytes": 6742860,
+        "dom_nodes": 786,
+        "task_s": 2.2084,
+        "ready_ms": 2376,
+        "rows_like": 44,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "canary-v2body",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 108114,
+        "assets": 89,
+        "asset_bytes": 3105631,
+        "heap_bytes": 6717008,
+        "dom_nodes": 801,
+        "task_s": 1.6901,
+        "ready_ms": 1957,
+        "rows_like": 40,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "live",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 121249,
+        "assets": 90,
+        "asset_bytes": 3106293,
+        "heap_bytes": 6714960,
+        "dom_nodes": 719,
+        "task_s": 1.867,
+        "ready_ms": 1923,
+        "rows_like": 44,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "live-continuity",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 121249,
+        "assets": 90,
+        "asset_bytes": 3106293,
+        "heap_bytes": 6742980,
+        "dom_nodes": 784,
+        "task_s": 1.646,
+        "ready_ms": 1794,
+        "rows_like": 50,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "live-v2body",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 134661,
+        "assets": 90,
+        "asset_bytes": 3106293,
+        "heap_bytes": 7748668,
+        "dom_nodes": 2852,
+        "task_s": 1.4932,
+        "ready_ms": 1683,
+        "rows_like": 75,
+        "tab_api": 0
+      },
+      {
+        "scale": "medium",
+        "route": "new-request",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 108635,
+        "assets": 84,
+        "asset_bytes": 3037193,
+        "heap_bytes": 6407620,
+        "dom_nodes": 631,
+        "task_s": 1.088,
+        "ready_ms": 1205,
+        "rows_like": 18,
+        "tab_api": null
+      },
+      {
+        "scale": "medium",
+        "route": "new-request-drawer",
+        "api": 15,
+        "api_unique": 15,
+        "api_bytes": 120726,
+        "assets": 86,
+        "asset_bytes": 3148348,
+        "heap_bytes": 7581168,
+        "dom_nodes": 1871,
+        "task_s": 1.2588,
+        "ready_ms": 1220,
+        "rows_like": 66,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "overview",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 198681,
+        "assets": 88,
+        "asset_bytes": 3103804,
+        "heap_bytes": 7119416,
+        "dom_nodes": 963,
+        "task_s": 1.152,
+        "ready_ms": 1296,
+        "rows_like": 43,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "fleet",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 186575,
+        "assets": 84,
+        "asset_bytes": 3053987,
+        "heap_bytes": 7654780,
+        "dom_nodes": 2899,
+        "task_s": 1.2385,
+        "ready_ms": 1425,
+        "rows_like": 65,
+        "tab_api": 5
+      },
+      {
+        "scale": "large",
+        "route": "incident",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 133555,
+        "assets": 84,
+        "asset_bytes": 3070144,
+        "heap_bytes": 7235980,
+        "dom_nodes": 2655,
+        "task_s": 1.0021,
+        "ready_ms": 1116,
+        "rows_like": 64,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "cockpit",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 121200,
+        "assets": 86,
+        "asset_bytes": 3148348,
+        "heap_bytes": 7584556,
+        "dom_nodes": 2322,
+        "task_s": 1.0933,
+        "ready_ms": 1141,
+        "rows_like": 86,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "cockpit-r1",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 120997,
+        "assets": 86,
+        "asset_bytes": 3148348,
+        "heap_bytes": 7440592,
+        "dom_nodes": 2411,
+        "task_s": 1.2401,
+        "ready_ms": 1270,
+        "rows_like": 85,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "portfolios",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 121556,
+        "assets": 84,
+        "asset_bytes": 3013995,
+        "heap_bytes": 7277464,
+        "dom_nodes": 3418,
+        "task_s": 0.9605,
+        "ready_ms": 1049,
+        "rows_like": 78,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "portfolio-360",
+        "api": 16,
+        "api_unique": 16,
+        "api_bytes": 124390,
+        "assets": 92,
+        "asset_bytes": 3151443,
+        "heap_bytes": 7227604,
+        "dom_nodes": 1157,
+        "task_s": 1.1136,
+        "ready_ms": 1068,
+        "rows_like": 32,
+        "tab_api": 1
+      },
+      {
+        "scale": "large",
+        "route": "compare",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 121556,
+        "assets": 89,
+        "asset_bytes": 3107179,
+        "heap_bytes": 6551536,
+        "dom_nodes": 1023,
+        "task_s": 0.8931,
+        "ready_ms": 856,
+        "rows_like": 25,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "alpha-360",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 131437,
+        "assets": 87,
+        "asset_bytes": 3160695,
+        "heap_bytes": 7152568,
+        "dom_nodes": 1005,
+        "task_s": 1.1513,
+        "ready_ms": 1180,
+        "rows_like": 35,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "alpha-replay",
+        "api": 15,
+        "api_unique": 15,
+        "api_bytes": 140177,
+        "assets": 87,
+        "asset_bytes": 3330599,
+        "heap_bytes": 8386356,
+        "dom_nodes": 1093,
+        "task_s": 1.2755,
+        "ready_ms": 1279,
+        "rows_like": 25,
+        "tab_api": 1
+      },
+      {
+        "scale": "large",
+        "route": "accounts",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 112807,
+        "assets": 85,
+        "asset_bytes": 3143319,
+        "heap_bytes": 7429200,
+        "dom_nodes": 2494,
+        "task_s": 1.341,
+        "ready_ms": 1363,
+        "rows_like": 65,
+        "tab_api": 2
+      },
+      {
+        "scale": "large",
+        "route": "account-360",
+        "api": 14,
+        "api_unique": 13,
+        "api_bytes": 114138,
+        "assets": 85,
+        "asset_bytes": 3143319,
+        "heap_bytes": 7064784,
+        "dom_nodes": 1038,
+        "task_s": 5.294,
+        "ready_ms": 5890,
+        "rows_like": 24,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "blotter",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 168919,
+        "assets": 80,
+        "asset_bytes": 3025468,
+        "heap_bytes": 7358000,
+        "dom_nodes": 2405,
+        "task_s": 3.2559,
+        "ready_ms": 3706,
+        "rows_like": 68,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "admin",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 205523,
+        "assets": 81,
+        "asset_bytes": 3020495,
+        "heap_bytes": 6948208,
+        "dom_nodes": 1437,
+        "task_s": 3.3003,
+        "ready_ms": 3288,
+        "rows_like": 63,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "users",
+        "api": 8,
+        "api_unique": 8,
+        "api_bytes": 114397,
+        "assets": 45,
+        "asset_bytes": 1152670,
+        "heap_bytes": 4670524,
+        "dom_nodes": 1805,
+        "task_s": 1.5782,
+        "ready_ms": 1715,
+        "rows_like": 68,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "access",
+        "api": 6,
+        "api_unique": 6,
+        "api_bytes": 93536,
+        "assets": 40,
+        "asset_bytes": 1117214,
+        "heap_bytes": 4550152,
+        "dom_nodes": 1019,
+        "task_s": 1.3016,
+        "ready_ms": 1710,
+        "rows_like": 39,
+        "tab_api": 2
+      },
+      {
+        "scale": "large",
+        "route": "workbench",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 185519,
+        "assets": 87,
+        "asset_bytes": 3139088,
+        "heap_bytes": 7136628,
+        "dom_nodes": 1034,
+        "task_s": 1.9231,
+        "ready_ms": 2293,
+        "rows_like": 43,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "workbench-fills",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 182486,
+        "assets": 86,
+        "asset_bytes": 3114836,
+        "heap_bytes": 7204636,
+        "dom_nodes": 1441,
+        "task_s": 2.19,
+        "ready_ms": 2380,
+        "rows_like": 54,
+        "tab_api": 1
+      },
+      {
+        "scale": "large",
+        "route": "workbench-vnm",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 186269,
+        "assets": 87,
+        "asset_bytes": 3139088,
+        "heap_bytes": 7325512,
+        "dom_nodes": 1057,
+        "task_s": 2.2248,
+        "ready_ms": 2480,
+        "rows_like": 43,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "sandbox",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 118949,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6797024,
+        "dom_nodes": 890,
+        "task_s": 1.5554,
+        "ready_ms": 1866,
+        "rows_like": 36,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "sandbox-steps",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 118949,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6808908,
+        "dom_nodes": 959,
+        "task_s": 1.0412,
+        "ready_ms": 1149,
+        "rows_like": 43,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "sandbox-plans",
+        "api": 12,
+        "api_unique": 12,
+        "api_bytes": 118949,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6841864,
+        "dom_nodes": 837,
+        "task_s": 1.0437,
+        "ready_ms": 1130,
+        "rows_like": 33,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "sandbox-v2body",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 110273,
+        "assets": 84,
+        "asset_bytes": 3038713,
+        "heap_bytes": 6697172,
+        "dom_nodes": 753,
+        "task_s": 1.058,
+        "ready_ms": 1159,
+        "rows_like": 26,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "canary",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 122944,
+        "assets": 89,
+        "asset_bytes": 3105631,
+        "heap_bytes": 6805820,
+        "dom_nodes": 814,
+        "task_s": 1.5097,
+        "ready_ms": 2164,
+        "rows_like": 48,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "canary-guard",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 122944,
+        "assets": 89,
+        "asset_bytes": 3105631,
+        "heap_bytes": 6771256,
+        "dom_nodes": 786,
+        "task_s": 1.5088,
+        "ready_ms": 1734,
+        "rows_like": 44,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "canary-v2body",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 108114,
+        "assets": 89,
+        "asset_bytes": 3105631,
+        "heap_bytes": 6671704,
+        "dom_nodes": 801,
+        "task_s": 3.9337,
+        "ready_ms": 4663,
+        "rows_like": 40,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "live",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 121249,
+        "assets": 90,
+        "asset_bytes": 3106293,
+        "heap_bytes": 6729524,
+        "dom_nodes": 719,
+        "task_s": 3.6708,
+        "ready_ms": 4211,
+        "rows_like": 44,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "live-continuity",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 121249,
+        "assets": 90,
+        "asset_bytes": 3106293,
+        "heap_bytes": 6744164,
+        "dom_nodes": 784,
+        "task_s": 3.3739,
+        "ready_ms": 4032,
+        "rows_like": 50,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "live-v2body",
+        "api": 10,
+        "api_unique": 10,
+        "api_bytes": 134661,
+        "assets": 90,
+        "asset_bytes": 3106293,
+        "heap_bytes": 7731780,
+        "dom_nodes": 2852,
+        "task_s": 3.3291,
+        "ready_ms": 3745,
+        "rows_like": 75,
+        "tab_api": 0
+      },
+      {
+        "scale": "large",
+        "route": "new-request",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 108635,
+        "assets": 84,
+        "asset_bytes": 3037193,
+        "heap_bytes": 6405320,
+        "dom_nodes": 631,
+        "task_s": 2.5913,
+        "ready_ms": 2983,
+        "rows_like": 18,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "new-request-drawer",
+        "api": 13,
+        "api_unique": 13,
+        "api_bytes": 122314,
+        "assets": 86,
+        "asset_bytes": 3148348,
+        "heap_bytes": 7967248,
+        "dom_nodes": 2336,
+        "task_s": 3.9702,
+        "ready_ms": 4058,
+        "rows_like": 67,
+        "tab_api": null
+      },
+      {
+        "scale": "large",
+        "route": "operations",
+        "api": 11,
+        "api_unique": 11,
+        "api_bytes": 132802,
+        "assets": 84,
+        "asset_bytes": 3070144,
+        "heap_bytes": 7087124,
+        "dom_nodes": 2512,
+        "task_s": 1.2054,
+        "ready_ms": 1254,
+        "rows_like": 61,
+        "tab_api": 0
+      }
+    ],
+    "m1b_gzip_front": {
+      "routes": 32,
+      "front": "gzip level 5, min 1024 B, nginx types, immutable /assets/, no-store index.html (deploy/nginx/portal.conf)",
+      "cold_assets_decoded_bytes": {
+        "n": 32,
+        "p50": 3105631,
+        "p95": 3160695,
+        "p99": 3330599,
+        "max": 3330599,
+        "mean": 2979073.375
+      },
+      "cold_assets_wire_bytes": {
+        "n": 32,
+        "p50": 1008721,
+        "p95": 1038416,
+        "p99": 1076093,
+        "max": 1076093,
+        "mean": 973808.844
+      },
+      "cold_wire_over_decoded_assets": {
+        "n": 32,
+        "p50": 0.325,
+        "p95": 0.349,
+        "p99": 0.365,
+        "max": 0.365,
+        "mean": 0.328
+      },
+      "cold_api_decoded_bytes": {
+        "n": 32,
+        "p50": 118949,
+        "p95": 186269,
+        "p99": 205523,
+        "max": 205523,
+        "mean": 126998.063
+      },
+      "cold_api_gzip_estimate_bytes": {
+        "n": 32,
+        "p50": 18687,
+        "p95": 24541,
+        "p99": 26527,
+        "max": 26527,
+        "mean": 19272.375
+      },
+      "warm_cache": "NOT_MEASURED: Playwright page.route() (needed for the BFF doubles) disables the HTTP cache, so the second navigation re-downloaded everything (same file count, same wire bytes as cold). A warm-cache figure needs the API served by a real process (fixture BFF behind the front) instead of route stubs; not built here.",
+      "warm_second_navigation_api_requests": {
+        "n": 32,
+        "p50": 11,
+        "p95": 15,
+        "p99": 16,
+        "max": 16,
+        "mean": 11.563
+      },
+      "per_route": [
+        {
+          "route": "fleet",
+          "cold_asset_files": 84,
+          "cold_asset_decoded": 3053987,
+          "cold_asset_wire": 987794,
+          "cold_api_decoded": 112139,
+          "cold_api_gzip_est": 17122,
+          "warm_api_requests": 10
+        },
+        {
+          "route": "operations",
+          "cold_asset_files": 84,
+          "cold_asset_decoded": 3070144,
+          "cold_asset_wire": 1010057,
+          "cold_api_decoded": 111632,
+          "cold_api_gzip_est": 17906,
+          "warm_api_requests": 11
+        },
+        {
+          "route": "incident",
+          "cold_asset_files": 84,
+          "cold_asset_decoded": 3070144,
+          "cold_asset_wire": 1010057,
+          "cold_api_decoded": 112385,
+          "cold_api_gzip_est": 18658,
+          "warm_api_requests": 12
+        },
+        {
+          "route": "cockpit",
+          "cold_asset_files": 86,
+          "cold_asset_decoded": 3148348,
+          "cold_asset_wire": 1031914,
+          "cold_api_decoded": 109317,
+          "cold_api_gzip_est": 18502,
+          "warm_api_requests": 13
+        },
+        {
+          "route": "cockpit-r1",
+          "cold_asset_files": 86,
+          "cold_asset_decoded": 3148348,
+          "cold_asset_wire": 1031914,
+          "cold_api_decoded": 109114,
+          "cold_api_gzip_est": 18445,
+          "warm_api_requests": 13
+        },
+        {
+          "route": "portfolios",
+          "cold_asset_files": 84,
+          "cold_asset_decoded": 3013995,
+          "cold_asset_wire": 978472,
+          "cold_api_decoded": 106171,
+          "cold_api_gzip_est": 16377,
+          "warm_api_requests": 10
+        },
+        {
+          "route": "portfolio-360",
+          "cold_asset_files": 92,
+          "cold_asset_decoded": 3151443,
+          "cold_asset_wire": 1037893,
+          "cold_api_decoded": 124390,
+          "cold_api_gzip_est": 21835,
+          "warm_api_requests": 16
+        },
+        {
+          "route": "compare",
+          "cold_asset_files": 89,
+          "cold_asset_decoded": 3107179,
+          "cold_asset_wire": 1024763,
+          "cold_api_decoded": 106171,
+          "cold_api_gzip_est": 16378,
+          "warm_api_requests": 10
+        },
+        {
+          "route": "alpha-360",
+          "cold_asset_files": 87,
+          "cold_asset_decoded": 3160695,
+          "cold_asset_wire": 1038416,
+          "cold_api_decoded": 131437,
+          "cold_api_gzip_est": 20240,
+          "warm_api_requests": 12
+        },
+        {
+          "route": "alpha-replay",
+          "cold_asset_files": 87,
+          "cold_asset_decoded": 3330599,
+          "cold_asset_wire": 1076093,
+          "cold_api_decoded": 140177,
+          "cold_api_gzip_est": 23279,
+          "warm_api_requests": 15
+        },
+        {
+          "route": "accounts",
+          "cold_asset_files": 85,
+          "cold_asset_decoded": 3143319,
+          "cold_asset_wire": 1030984,
+          "cold_api_decoded": 104991,
+          "cold_api_gzip_est": 16171,
+          "warm_api_requests": 10
+        },
+        {
+          "route": "account-360",
+          "cold_asset_files": 85,
+          "cold_asset_decoded": 3143319,
+          "cold_asset_wire": 1030984,
+          "cold_api_decoded": 114138,
+          "cold_api_gzip_est": 19744,
+          "warm_api_requests": 14
+        },
+        {
+          "route": "blotter",
+          "cold_asset_files": 80,
+          "cold_asset_decoded": 3025468,
+          "cold_asset_wire": 978311,
+          "cold_api_decoded": 168946,
+          "cold_api_gzip_est": 21636,
+          "warm_api_requests": 12
+        },
+        {
+          "route": "admin",
+          "cold_asset_files": 81,
+          "cold_asset_decoded": 3020495,
+          "cold_asset_wire": 978676,
+          "cold_api_decoded": 205523,
+          "cold_api_gzip_est": 26527,
+          "warm_api_requests": 13
+        },
+        {
+          "route": "users",
+          "cold_asset_files": 45,
+          "cold_asset_decoded": 1152670,
+          "cold_asset_wire": 420618,
+          "cold_api_decoded": 114397,
+          "cold_api_gzip_est": 15262,
+          "warm_api_requests": 8
+        },
+        {
+          "route": "access",
+          "cold_asset_files": 40,
+          "cold_asset_decoded": 1117214,
+          "cold_asset_wire": 389818,
+          "cold_api_decoded": 93536,
+          "cold_api_gzip_est": 13556,
+          "warm_api_requests": 6
+        },
+        {
+          "route": "workbench",
+          "cold_asset_files": 87,
+          "cold_asset_decoded": 3139088,
+          "cold_asset_wire": 1032180,
+          "cold_api_decoded": 185519,
+          "cold_api_gzip_est": 24412,
+          "warm_api_requests": 12
+        },
+        {
+          "route": "workbench-fills",
+          "cold_asset_files": 86,
+          "cold_asset_decoded": 3114836,
+          "cold_asset_wire": 1007691,
+          "cold_api_decoded": 182486,
+          "cold_api_gzip_est": 23854,
+          "warm_api_requests": 11
+        },
+        {
+          "route": "workbench-vnm",
+          "cold_asset_files": 87,
+          "cold_asset_decoded": 3139088,
+          "cold_asset_wire": 1032180,
+          "cold_api_decoded": 186269,
+          "cold_api_gzip_est": 24541,
+          "warm_api_requests": 12
+        },
+        {
+          "route": "sandbox",
+          "cold_asset_files": 84,
+          "cold_asset_decoded": 3038713,
+          "cold_asset_wire": 985917,
+          "cold_api_decoded": 118949,
+          "cold_api_gzip_est": 19395,
+          "warm_api_requests": 12
+        },
+        {
+          "route": "sandbox-steps",
+          "cold_asset_files": 84,
+          "cold_asset_decoded": 3038713,
+          "cold_asset_wire": 985917,
+          "cold_api_decoded": 118949,
+          "cold_api_gzip_est": 19395,
+          "warm_api_requests": 12
+        },
+        {
+          "route": "sandbox-plans",
+          "cold_asset_files": 84,
+          "cold_asset_decoded": 3038713,
+          "cold_asset_wire": 985917,
+          "cold_api_decoded": 118949,
+          "cold_api_gzip_est": 19396,
+          "warm_api_requests": 12
+        },
+        {
+          "route": "sandbox-v2body",
+          "cold_asset_files": 84,
+          "cold_asset_decoded": 3038713,
+          "cold_asset_wire": 985917,
+          "cold_api_decoded": 110273,
+          "cold_api_gzip_est": 17321,
+          "warm_api_requests": 11
+        },
+        {
+          "route": "canary",
+          "cold_asset_files": 89,
+          "cold_asset_decoded": 3105631,
+          "cold_asset_wire": 1007780,
+          "cold_api_decoded": 122944,
+          "cold_api_gzip_est": 18866,
+          "warm_api_requests": 11
+        },
+        {
+          "route": "canary-guard",
+          "cold_asset_files": 89,
+          "cold_asset_decoded": 3105631,
+          "cold_asset_wire": 1007780,
+          "cold_api_decoded": 122944,
+          "cold_api_gzip_est": 18866,
+          "warm_api_requests": 11
+        },
+        {
+          "route": "canary-v2body",
+          "cold_asset_files": 89,
+          "cold_asset_decoded": 3105631,
+          "cold_asset_wire": 1007780,
+          "cold_api_decoded": 108114,
+          "cold_api_gzip_est": 16405,
+          "warm_api_requests": 10
+        },
+        {
+          "route": "live",
+          "cold_asset_files": 90,
+          "cold_asset_decoded": 3106293,
+          "cold_asset_wire": 1008721,
+          "cold_api_decoded": 121249,
+          "cold_api_gzip_est": 18686,
+          "warm_api_requests": 11
+        },
+        {
+          "route": "live-continuity",
+          "cold_asset_files": 90,
+          "cold_asset_decoded": 3106293,
+          "cold_asset_wire": 1008721,
+          "cold_api_decoded": 121249,
+          "cold_api_gzip_est": 18687,
+          "warm_api_requests": 11
+        },
+        {
+          "route": "live-v2body",
+          "cold_asset_files": 90,
+          "cold_asset_decoded": 3106293,
+          "cold_asset_wire": 1008721,
+          "cold_api_decoded": 134661,
+          "cold_api_gzip_est": 18155,
+          "warm_api_requests": 10
+        },
+        {
+          "route": "new-request",
+          "cold_asset_files": 84,
+          "cold_asset_decoded": 3037193,
+          "cold_asset_wire": 985052,
+          "cold_api_decoded": 108635,
+          "cold_api_gzip_est": 16670,
+          "warm_api_requests": 11
+        },
+        {
+          "route": "new-request-drawer",
+          "cold_asset_files": 86,
+          "cold_asset_decoded": 3148348,
+          "cold_asset_wire": 1031914,
+          "cold_api_decoded": 114042,
+          "cold_api_gzip_est": 19508,
+          "warm_api_requests": 15
+        },
+        {
+          "route": "overview",
+          "cold_asset_files": 88,
+          "cold_asset_decoded": 3103804,
+          "cold_asset_wire": 1022931,
+          "cold_api_decoded": 124242,
+          "cold_api_gzip_est": 20921,
+          "warm_api_requests": 13
+        }
+      ],
+      "brotli": "NOT_MEASURED: deploy/nginx/portal.conf enables gzip only (no brotli module configured); a brotli front is a deployment decision, not a measurement here."
+    },
+    "playwright": {
+      "m1": {
+        "expected": 126,
+        "unexpected": 2,
+        "skipped": 0,
+        "flaky": 0,
+        "duration_ms": 593726,
+        "failed_titles": [
+          "m1b · small · overview",
+          "m1a · large · operations"
+        ]
+      },
+      "reruns_of_failed_tests": {
+        "uxm-measure-w2": {
+          "original_failed_titles": [
+            "budget · sandbox-steps · first load, and a tab switch where there is a tablist"
+          ],
+          "rerun": {
+            "expected": 1,
+            "unexpected": 0,
+            "skipped": 0,
+            "flaky": 0,
+            "duration_ms": 5948,
+            "failed_titles": []
+          },
+          "exit_code": 0
+        },
+        "uxm-guard": {
+          "original_failed_titles": [
+            "access · canary · no sideways scroll, a clean Tab walk, a visible focus ring, axe, at 1440 / 1024 / 390"
+          ],
+          "rerun": {
+            "expected": 0,
+            "unexpected": 1,
+            "skipped": 0,
+            "flaky": 0,
+            "duration_ms": 49722,
+            "failed_titles": [
+              "access · canary · no sideways scroll, a clean Tab walk, a visible focus ring, axe, at 1440 / 1024 / 390"
+            ]
+          },
+          "exit_code": 1
+        },
+        "m1": {
+          "original_failed_titles": [
+            "m1b · small · overview",
+            "m1a · large · operations"
+          ],
+          "rerun": {
+            "expected": 2,
+            "unexpected": 0,
+            "skipped": 0,
+            "flaky": 0,
+            "duration_ms": 10429,
+            "failed_titles": []
+          },
+          "exit_code": 0
+        }
+      },
+      "note": "an original failure is a visibility timeout under host load; the failing tests were re-run once, rows appended"
+    },
+    "failed_runs_original": [],
+    "failed_runs_after_rerun": [
+      "uxm-guard"
+    ]
+  },
+  "resources": {
+    "host_loadavg_samples_15s": [],
+    "loadavg_1m_start": null,
+    "loadavg_1m_max": null,
+    "note": "task/script/layout times and wall times are valid only with the loadavg shown; counts and bytes are load-independent"
+  },
+  "cleanup": {
+    "webserver_port": 4376,
+    "note": "Playwright stops its own webServer; contexts are closed by the runner; dist-v2 is gitignored build output"
+  },
+  "limitations": [
+    "Doubles answer in-process with 5-50 rows per list (small) up to 1,500 orders / 400 operations (large): NOT 10^3-10^5 rows, so the virtualization break point is not located.",
+    "Byte counts depend on the fixtures; they are regression guards, never production budgets (rule R-B).",
+    "JS heap is after a forced GC at one instant; main-thread time is CDP TaskDuration (cumulative from page start) - no CPU throttling, no real device.",
+    "route_ready_wall_ms is a TTI proxy (navigation to the V2 root being non-loading) on a loaded shared host, not Lighthouse TTI.",
+    "Real source, real API latency, real network and brotli are not part of this run (M-1c needs Core009 + a window).",
+    "FIXTURE numbers are not calibration evidence and approve nothing."
+  ],
+  "notes": [],
+  "raw_dir_not_committed": "/home/bobby/.local/state/portal-execution-elp210/20261021/m1-1792564295416",
+  "dist_v2_index_html_sha256": "sha256:a7510937d2afeeb994909277e63215ca404b3a2b724b05f9f7ff3a3170dbaef4",
+  "spec_json_digests": {
+    "uxm-measure-w1": "sha256:07c4303670d600b3eb72c1ce49d0a81f7ce26dbe903a036d711fa90c3a335c9b",
+    "uxm-measure-w2": "sha256:d0b4d587f0212607c97d4372d5dbe06890ec8b60075f807ded03cb58c67d78dc",
+    "uxm-guard": "sha256:97a8e173ff1e61ea456f7ddd9f51595f2492e81334af76a7af708b5af8407cde",
+    "m1": "sha256:50f5ec911f7056eeecc68beb5067f7d63d2571eee1430d517405f2e4a0569dfe"
+  },
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:147aa6b42ee842bec925f937684f67ccf89d942fa69d70225295f812499d509b"
+}

@@ -1,0 +1,634 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-5",
+  "sub": "driver-selftest",
+  "title": "Window load driver selftest against the fixture BFF (B1 then B2) - proves the driver, measures nothing about Portal capacity",
+  "status": "RUN_FIXTURE",
+  "lane": "FIXTURE_LAB",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 8.72,
+    "loadavg_5m_at_capture": 10.62
+  },
+  "started_at": "2026-10-21T07:10:04.775Z",
+  "ended_at": "2026-10-21T07:10:34.774Z",
+  "started_at_ms": 1792566604775,
+  "ended_at_ms": 1792566634774,
+  "duration_ms": 29999,
+  "workload": {
+    "stage": "driver-selftest",
+    "seed": 20261021,
+    "planned_duration_ms": 30000,
+    "offered_peak_rps": 14,
+    "offered_mean_rps": 4.933,
+    "workload_sha256": "sha256:3a5d7d92f3f96cf04b3f3e0cf83f677e8057eba29a6651b2b05c32c02b815e3d"
+  },
+  "resource_limits": {
+    "window_max_rps": 200,
+    "window_max_tabs": 64,
+    "window_max_duration_ms": 120000,
+    "in_flight_cap": 64
+  },
+  "stop_conditions": [
+    "STOP_429",
+    "STOP_5XX_RATE (>2% of >=20 in trailing 30 s)",
+    "STOP_NETWORK_RATE (>5% of >=20)",
+    "STOP_OVERLOAD (>64 in flight)",
+    "STOP_SIGNAL",
+    "window end minus 5 s",
+    "offered peak above window max_rps refuses to start"
+  ],
+  "results": {
+    "replay": {
+      "stage": "B2",
+      "seed": 20261021,
+      "planned_duration_ms": 30000,
+      "actual_duration_ms": 29999,
+      "started_at_ms": 1792566604775,
+      "ended_at_ms": 1792566634774,
+      "stop_reason": "STOP_DEADLINE",
+      "ran_to_planned_end": true,
+      "events_planned": 36,
+      "events_fired": 36,
+      "offered_peak_requests_per_s": 14,
+      "offered_mean_requests_per_s": 4.933,
+      "requests_completed": 148,
+      "achieved_requests_per_s": 4.933,
+      "max_in_flight": 10,
+      "status_histogram": {
+        "200": 128,
+        "404": 20
+      },
+      "error_rate": 0.1351,
+      "latency_ms": {
+        "n": 148,
+        "p50": 4.66,
+        "p95": 22.51,
+        "p99": 27.62,
+        "max": 27.94,
+        "mean": 7.57
+      },
+      "bytes_total": 1029472,
+      "per_endpoint": {
+        "GET /api/v1/execution/:id": {
+          "n": 40,
+          "p50": 6.59,
+          "p95": 25.95,
+          "p99": 27.94,
+          "max": 27.94,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/activation/capabilities": {
+          "n": 2,
+          "p50": 3.39,
+          "p95": 5.29,
+          "p99": 5.29,
+          "max": 5.29,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/alphas": {
+          "n": 2,
+          "p50": 5.54,
+          "p95": 9.71,
+          "p99": 9.71,
+          "max": 9.71,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/alphas/:id/stage-drift": {
+          "n": 2,
+          "p50": 2.73,
+          "p95": 4.66,
+          "p99": 4.66,
+          "max": 4.66,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/broker-bindings": {
+          "n": 2,
+          "p50": 2.06,
+          "p95": 22.51,
+          "p99": 22.51,
+          "max": 22.51,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE": {
+          "n": 2,
+          "p50": 3.49,
+          "p95": 4,
+          "p99": 4,
+          "max": 4,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE/exposure": {
+          "n": 2,
+          "p50": 3.46,
+          "p95": 3.57,
+          "p99": 3.57,
+          "max": 3.57,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/commands/catalog": {
+          "n": 2,
+          "p50": 3.27,
+          "p95": 5.66,
+          "p99": 5.66,
+          "max": 5.66,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/commands/tasks": {
+          "n": 2,
+          "p50": 3.54,
+          "p95": 16.92,
+          "p99": 16.92,
+          "max": 16.92,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/compositions/:id": {
+          "n": 2,
+          "p50": 3.81,
+          "p95": 20.94,
+          "p99": 20.94,
+          "max": 20.94,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/compositions/command-center": {
+          "n": 16,
+          "p50": 2.8,
+          "p95": 6.74,
+          "p99": 6.74,
+          "max": 6.74,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/compositions/operations": {
+          "n": 2,
+          "p50": 4,
+          "p95": 4.79,
+          "p99": 4.79,
+          "max": 4.79,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/derivations/deployments/:id/:id": {
+          "n": 2,
+          "p50": 3.48,
+          "p95": 7.67,
+          "p99": 7.67,
+          "max": 7.67,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/derivations/portfolios/:id/capital": {
+          "n": 6,
+          "p50": 6.75,
+          "p95": 18.2,
+          "p99": 18.2,
+          "max": 18.2,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/manager/series": {
+          "n": 2,
+          "p50": 6.85,
+          "p95": 17.66,
+          "p99": 17.66,
+          "max": 17.66,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/operations": {
+          "n": 18,
+          "p50": 2.85,
+          "p95": 6.78,
+          "p99": 6.78,
+          "max": 6.78,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/portfolios": {
+          "n": 2,
+          "p50": 3.89,
+          "p95": 5.32,
+          "p99": 5.32,
+          "max": 5.32,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/portfolios/:id/capital-ledger": {
+          "n": 2,
+          "p50": 5.49,
+          "p95": 17.48,
+          "p99": 17.48,
+          "max": 17.48,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/profiles/paper/:id": {
+          "n": 2,
+          "p50": 2.72,
+          "p95": 2.86,
+          "p99": 2.86,
+          "max": 2.86,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/profiles/paper/stream": {
+          "n": 2,
+          "p50": 2.53,
+          "p95": 2.78,
+          "p99": 2.78,
+          "max": 2.78,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/resources/accounts/:id": {
+          "n": 2,
+          "p50": 5.88,
+          "p95": 6.53,
+          "p99": 6.53,
+          "max": 6.53,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/resources/alphas/:id": {
+          "n": 2,
+          "p50": 3.35,
+          "p95": 17.38,
+          "p99": 17.38,
+          "max": 17.38,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/resources/portfolios/:id": {
+          "n": 2,
+          "p50": 5.48,
+          "p95": 18.64,
+          "p99": 18.64,
+          "max": 18.64,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/retained-review": {
+          "n": 20,
+          "p50": 5.28,
+          "p95": 25.83,
+          "p99": 27.52,
+          "max": 27.52,
+          "non_2xx": 20
+        },
+        "GET /api/v1/execution/screens/blotter": {
+          "n": 2,
+          "p50": 5.06,
+          "p95": 8.4,
+          "p99": 8.4,
+          "max": 8.4,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/screens/paper/:id": {
+          "n": 2,
+          "p50": 6.85,
+          "p95": 8.55,
+          "p99": 8.55,
+          "max": 8.55,
+          "non_2xx": 0
+        },
+        "GET /api/v1/execution/views/equity-chart": {
+          "n": 6,
+          "p50": 7.27,
+          "p95": 23,
+          "p99": 23,
+          "max": 23,
+          "non_2xx": 0
+        }
+      },
+      "peak_achieved_requests_in_one_second": 14,
+      "skipped_unmapped_fixture_paths": {},
+      "workload_sha256": "sha256:3a5d7d92f3f96cf04b3f3e0cf83f677e8057eba29a6651b2b05c32c02b815e3d"
+    },
+    "completed_planned_duration": true
+  },
+  "resources": null,
+  "cleanup": {
+    "requests_in_flight_at_end": 0,
+    "session_revocation": "NOT_PERFORMED_BY_THIS_SCRIPT: the grantor revokes temporary sessions with the official revoker and reads back zero custody (Core009 runbook G5)",
+    "credential_file_digest_not_recorded": true
+  },
+  "limitations": [
+    "Fixture BFF on 127.0.0.1: latency is the doubles' in-process answer time. NOT M-5: no TS, DL, Edge, Core009, plan or window.",
+    "Only /api/v1/execution/* read paths of the read-set workload are replayed (the fixture BFF does not model /api/admin or /api/auth).",
+    "Authorisation is self-issued for the selftest; a real run requires the grantor's record and sha256."
+  ],
+  "notes": [],
+  "authorisation": {
+    "self_issued_selftest": true
+  },
+  "b1": {
+    "stage": "B1",
+    "seed": 20261021,
+    "planned_duration_ms": 30000,
+    "actual_duration_ms": 30001,
+    "started_at_ms": 1792566574772,
+    "ended_at_ms": 1792566604773,
+    "stop_reason": "STOP_DEADLINE",
+    "ran_to_planned_end": true,
+    "events_planned": 16,
+    "events_fired": 16,
+    "offered_peak_requests_per_s": 2,
+    "offered_mean_requests_per_s": 1.067,
+    "requests_completed": 32,
+    "achieved_requests_per_s": 1.067,
+    "max_in_flight": 2,
+    "status_histogram": {
+      "200": 32
+    },
+    "error_rate": 0,
+    "latency_ms": {
+      "n": 32,
+      "p50": 3.22,
+      "p95": 8.08,
+      "p99": 9.61,
+      "max": 9.61,
+      "mean": 4.15
+    },
+    "bytes_total": 160192,
+    "per_endpoint": {
+      "GET /api/v1/execution/compositions/command-center": {
+        "n": 16,
+        "p50": 3.22,
+        "p95": 8.08,
+        "p99": 8.08,
+        "max": 8.08,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/operations": {
+        "n": 16,
+        "p50": 3.14,
+        "p95": 9.61,
+        "p99": 9.61,
+        "max": 9.61,
+        "non_2xx": 0
+      }
+    },
+    "peak_achieved_requests_in_one_second": 2,
+    "skipped_unmapped_fixture_paths": {},
+    "workload_sha256": "sha256:3a5d7d92f3f96cf04b3f3e0cf83f677e8057eba29a6651b2b05c32c02b815e3d"
+  },
+  "b2": {
+    "stage": "B2",
+    "seed": 20261021,
+    "planned_duration_ms": 30000,
+    "actual_duration_ms": 29999,
+    "started_at_ms": 1792566604775,
+    "ended_at_ms": 1792566634774,
+    "stop_reason": "STOP_DEADLINE",
+    "ran_to_planned_end": true,
+    "events_planned": 36,
+    "events_fired": 36,
+    "offered_peak_requests_per_s": 14,
+    "offered_mean_requests_per_s": 4.933,
+    "requests_completed": 148,
+    "achieved_requests_per_s": 4.933,
+    "max_in_flight": 10,
+    "status_histogram": {
+      "200": 128,
+      "404": 20
+    },
+    "error_rate": 0.1351,
+    "latency_ms": {
+      "n": 148,
+      "p50": 4.66,
+      "p95": 22.51,
+      "p99": 27.62,
+      "max": 27.94,
+      "mean": 7.57
+    },
+    "bytes_total": 1029472,
+    "per_endpoint": {
+      "GET /api/v1/execution/:id": {
+        "n": 40,
+        "p50": 6.59,
+        "p95": 25.95,
+        "p99": 27.94,
+        "max": 27.94,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/activation/capabilities": {
+        "n": 2,
+        "p50": 3.39,
+        "p95": 5.29,
+        "p99": 5.29,
+        "max": 5.29,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/alphas": {
+        "n": 2,
+        "p50": 5.54,
+        "p95": 9.71,
+        "p99": 9.71,
+        "max": 9.71,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/alphas/:id/stage-drift": {
+        "n": 2,
+        "p50": 2.73,
+        "p95": 4.66,
+        "p99": 4.66,
+        "max": 4.66,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/broker-bindings": {
+        "n": 2,
+        "p50": 2.06,
+        "p95": 22.51,
+        "p99": 22.51,
+        "max": 22.51,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE": {
+        "n": 2,
+        "p50": 3.49,
+        "p95": 4,
+        "p99": 4,
+        "max": 4,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/broker-bindings/bnc_main%40BINANCE/exposure": {
+        "n": 2,
+        "p50": 3.46,
+        "p95": 3.57,
+        "p99": 3.57,
+        "max": 3.57,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/commands/catalog": {
+        "n": 2,
+        "p50": 3.27,
+        "p95": 5.66,
+        "p99": 5.66,
+        "max": 5.66,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/commands/tasks": {
+        "n": 2,
+        "p50": 3.54,
+        "p95": 16.92,
+        "p99": 16.92,
+        "max": 16.92,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/compositions/:id": {
+        "n": 2,
+        "p50": 3.81,
+        "p95": 20.94,
+        "p99": 20.94,
+        "max": 20.94,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/compositions/command-center": {
+        "n": 16,
+        "p50": 2.8,
+        "p95": 6.74,
+        "p99": 6.74,
+        "max": 6.74,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/compositions/operations": {
+        "n": 2,
+        "p50": 4,
+        "p95": 4.79,
+        "p99": 4.79,
+        "max": 4.79,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/derivations/deployments/:id/:id": {
+        "n": 2,
+        "p50": 3.48,
+        "p95": 7.67,
+        "p99": 7.67,
+        "max": 7.67,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/derivations/portfolios/:id/capital": {
+        "n": 6,
+        "p50": 6.75,
+        "p95": 18.2,
+        "p99": 18.2,
+        "max": 18.2,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/manager/series": {
+        "n": 2,
+        "p50": 6.85,
+        "p95": 17.66,
+        "p99": 17.66,
+        "max": 17.66,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/operations": {
+        "n": 18,
+        "p50": 2.85,
+        "p95": 6.78,
+        "p99": 6.78,
+        "max": 6.78,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/portfolios": {
+        "n": 2,
+        "p50": 3.89,
+        "p95": 5.32,
+        "p99": 5.32,
+        "max": 5.32,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/portfolios/:id/capital-ledger": {
+        "n": 2,
+        "p50": 5.49,
+        "p95": 17.48,
+        "p99": 17.48,
+        "max": 17.48,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/profiles/paper/:id": {
+        "n": 2,
+        "p50": 2.72,
+        "p95": 2.86,
+        "p99": 2.86,
+        "max": 2.86,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/profiles/paper/stream": {
+        "n": 2,
+        "p50": 2.53,
+        "p95": 2.78,
+        "p99": 2.78,
+        "max": 2.78,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/resources/accounts/:id": {
+        "n": 2,
+        "p50": 5.88,
+        "p95": 6.53,
+        "p99": 6.53,
+        "max": 6.53,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/resources/alphas/:id": {
+        "n": 2,
+        "p50": 3.35,
+        "p95": 17.38,
+        "p99": 17.38,
+        "max": 17.38,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/resources/portfolios/:id": {
+        "n": 2,
+        "p50": 5.48,
+        "p95": 18.64,
+        "p99": 18.64,
+        "max": 18.64,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/retained-review": {
+        "n": 20,
+        "p50": 5.28,
+        "p95": 25.83,
+        "p99": 27.52,
+        "max": 27.52,
+        "non_2xx": 20
+      },
+      "GET /api/v1/execution/screens/blotter": {
+        "n": 2,
+        "p50": 5.06,
+        "p95": 8.4,
+        "p99": 8.4,
+        "max": 8.4,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/screens/paper/:id": {
+        "n": 2,
+        "p50": 6.85,
+        "p95": 8.55,
+        "p99": 8.55,
+        "max": 8.55,
+        "non_2xx": 0
+      },
+      "GET /api/v1/execution/views/equity-chart": {
+        "n": 6,
+        "p50": 7.27,
+        "p95": 23,
+        "p99": 23,
+        "max": 23,
+        "non_2xx": 0
+      }
+    },
+    "peak_achieved_requests_in_one_second": 14,
+    "skipped_unmapped_fixture_paths": {},
+    "workload_sha256": "sha256:3a5d7d92f3f96cf04b3f3e0cf83f677e8057eba29a6651b2b05c32c02b815e3d"
+  },
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:0eb1fb37409e14ea49c7032f9ad54ad584a600a953babd0aedf564716023ce22"
+}

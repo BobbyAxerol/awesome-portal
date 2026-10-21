@@ -34,13 +34,13 @@ Không packet nào nêu số người dùng × tab đồng thời của release 
 | B-3 | Byte API lần tải đầu | guard hồi quy tối đa 253,570 B (admin, đo 202,856); **production: NO BASIS: needs measurement M-1c** | R-B; double 5–50 dòng | FIXTURE_VERIFIED (guard), NO BASIS (production) | Luôn: dữ liệu thật đổi cỡ body | M-1 (bffScale large), M-1c |
 | B-4 | Request khi đổi tab (class) | 4 (ngoại lệ đã biết `portfolio-360`: đo 12, lỗi F-8, **không** duyệt 12 như budget) | max các route còn lại = 3 (`account-360`, `alpha-replay`) × 1.25 = 3.75 → 4; trung vị 2, p90 2 | FIXTURE_VERIFIED, PROPOSED_NOT_APPROVED | Sửa F-8 xong portfolio-360 vẫn >4 | M-1 |
 | B-5 | Byte khi đổi tab | guard 99,158 B (`workbench-vnm`, đo 79,326); production NO BASIS: needs measurement M-1c | R-B | như B-3 | như B-3 | M-1c |
-| B-6 | Asset cache lạnh | guard 117 file / 4,068,544 B giải mã (đo 42–93 file, 1.08–3.25 MB); **transfer size (gzip/brotli), cache ấm: NO BASIS: needs measurement M-1b** | R-A/R-B; F-7: ~2.9 MB gần như đồng đều ⇒ cần bundle analysis | FIXTURE_VERIFIED (guard) | Nén thực tế đổi nhiều bậc | M-1b |
+| B-6 | Asset cache lạnh | guard 117 file / 4,068,544 B giải mã (đo 42–93 file, 1.08–3.25 MB); **transfer size gzip (cold): ĐÃ ĐO 2026-10-21, bundle thật qua gzip level 5 như `deploy/nginx/portal.conf`: 86–92 file, p50 1,008,721 B, max 1,076,093 B (tỷ lệ 0,33 so với giải mã); brotli: nginx hiện chỉ bật gzip, không phải số đo mà là quyết định triển khai; cache ấm: NO BASIS: needs measurement M-1b (lần đo ấm không hợp lệ vì `page.route` tắt HTTP cache, xem M-1 receipt)** | R-A/R-B; F-7: ~2.9 MB gần như đồng đều ⇒ cần bundle analysis | FIXTURE_VERIFIED (guard); transfer gzip cold = MEASURED_BUILD (asset thật, không phải số fixture-dữ-liệu), PROPOSED_NOT_APPROVED | Nén thực tế đổi nhiều bậc | M-1b (ấm) |
 | B-7 | Tab ẩn | 0 request trong 60 s trên cả 32 route; quay lại hiển thị: 0 request bù | Bất biến đo được (UXM-10 `README.md:57-59`), không phải con số | FIXTURE_VERIFIED, đề xuất duyệt như bất biến | Một route ẩn mà vẫn gọi | M-1 |
 | B-8 | Tab hiện, rảnh 60 s | 0 request trên 31 route; Overview 8 (guard 10) | 4 tick × 2 đọc; `IDLE_VISIBLE_60S` (spec `:341-348`) | FIXTURE_VERIFIED | Xem §5 | M-2 |
 | B-9 | Cân bằng listener/interval | trở về mức nền sau unmount; 5 chu kỳ drawer | Bất biến (UXM-10 `:83-87`) | FIXTURE_VERIFIED | Phát hiện rò rỉ | M-1 |
-| B-10 | CPU, heap, TTI mỗi tab | NO BASIS: needs measurement M-1 (chưa có bộ thu) | UXM-10 `:112` chưa đo | — | — | M-1 (gap G-3) |
-| B-11 | DOM node/dòng khi 10³–10⁵ dòng, điểm vỡ virtualization | NO BASIS: needs measurement M-1 (bffScale large chỉ 1,500 order) | UXM-10 `:110`; `CLAUDE.md` §8 | — | — | M-1 |
-| B-12 | Số tab đồng thời mỗi người dùng | NO BASIS: needs Bobby D5 + measurement M-2 | Không có trong packet | — | — | M-2 |
+| B-10 | CPU, heap, TTI mỗi tab | NO BASIS: needs measurement M-1c (bộ thu đã có và đã chạy trên fixture: số heap/CPU/TTI chỉ ghi nhận trong `ELP2-10/measurements/M-1-2026-10-21.json`, lane BFF_DOUBLE trên host tải cao, không phải cơ sở budget) | UXM-10 `:112` | — | — | M-1 (gap G-3) |
+| B-11 | DOM node/dòng khi 10³–10⁵ dòng, điểm vỡ virtualization | NO BASIS: needs measurement M-1c (bffScale large chỉ 1,500 order; fixture 3 cỡ đã ghi nhận trong M-1 receipt, chưa định vị điểm vỡ virtualization) | UXM-10 `:110`; `CLAUDE.md` §8 | — | — | M-1 |
+| B-12 | Số tab đồng thời mỗi người dùng | NO BASIS: needs Bobby D5 (quét 1/2/4/8/16 đã duyệt) + measurement M-2c (fixture: tầng 1 tuyến tính 80 đọc/tab/600 s, tầng 3-4 chưa đo được) | Không có trong packet | — | — | M-2 |
 
 ## 4. Fan-out truy vấn và trần trang (server, SOURCE_ONLY)
 
@@ -119,3 +119,7 @@ M-8 (mô tả ngắn, không số): quần thể comparable-basis cố định, 
 | D7 | Calibration Score (T10-13): chỉ định người duyệt độc lập và quần thể calibration; tách khỏi duyệt budget? | Tách riêng; chỉ định người duyệt trước khi M-8 bắt đầu |
 
 Chưa quyết (không hỏi ở đây): cap server ở §4 giữ nguyên (R-D), đổi chỉ khi M-4 cho bằng chứng.
+
+## 9. Cập nhật 2026-10-21 sau khi chạy M-1…M-7 (không duyệt thêm gì)
+
+Bobby đã duyệt D1–D4, quét D5 = 1/2/4/8/16 tab, D6 = được xin cửa sổ độc quyền, D7 = Codex là người duyệt độc lập. Receipt ở `ELP2-10/measurements/`, bảng tóm tắt ở `BE-P19-measurements.md`. **Chỉ một ô được thay `NO BASIS` bằng số đo (B-6, transfer gzip cold của bundle thật); mọi số fixture khác giữ nguyên nhãn, không số nào thành budget được duyệt, không số nào là calibration** (`calibration_evidence:false` trong mọi receipt đã chạy). Ô còn `NO BASIS` cần cửa sổ: M-1c, M-2c, M-3c, M-4b, M-5, M-6c, M-7 (`WINDOW_REQUESTS_2026-10-21.md`).

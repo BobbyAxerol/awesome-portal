@@ -1,0 +1,95 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-2",
+  "sub": "c tiers 3-4 on a real origin",
+  "title": "Tab sweep 1/2/4/8/16 against the real BFF with Edge's source-call counter",
+  "status": "READY_NEEDS_WINDOW",
+  "lane": "NOT_RUN",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 11.58,
+    "loadavg_5m_at_capture": 11.14
+  },
+  "started_at": null,
+  "ended_at": null,
+  "started_at_ms": null,
+  "ended_at_ms": null,
+  "duration_ms": null,
+  "workload": {
+    "target_lane": "REAL_READ_QUALIFIED",
+    "command": "node scripts/measure/m2-tab-amplification.mjs --window --authorization A.json --authorization-sha256 sha256:... --storage-state ~/secret/state.json [--route-map map.json] --tabs 1,2,4,8,16",
+    "real_time_cells": "idle visible 10 min, 19-screen walk, hidden 5 min, reload; about 16 min per cell, 80 min for the sweep",
+    "two_user_cells": "users 2 same scope / different scope: need two real sessions; run the same command twice with two storage states and merge by the grantor's counter windows (phase_windows_ms in the receipt)"
+  },
+  "resource_limits": null,
+  "stop_conditions": [],
+  "results": {
+    "ready": [
+      {
+        "path": "scripts/measure/m2-tab-amplification.mjs",
+        "sha256": "sha256:59b03ed0b94ac97586bbc7acb9afc9264c80fec46032481b7ca6fb60cf25af22"
+      },
+      {
+        "path": "apps/portal/frontend/e2e/_probe-measure-m2-tab-sweep.spec.ts",
+        "sha256": "sha256:b210539bf762d5c02af40673fc1e121b586422f99d415dc8f06aab5c4ddac69f"
+      },
+      {
+        "path": "apps/portal/frontend/playwright.measure-real.config.ts",
+        "sha256": "sha256:de3425b9314dd812f8fb02e9387560e926080471e4944348824973cd0c456e83"
+      },
+      {
+        "path": "scripts/measure/lib/window.mjs",
+        "sha256": "sha256:78917fb2aa754958cae9a6904aa9db340e48beded6403f7578c14ced727dfd2e"
+      },
+      {
+        "path": "scripts/measure/lib/replay.mjs",
+        "sha256": "sha256:bb24eb98c267546d9aa2d231837b563e4401381577fe31fd6c942becded07d5e"
+      },
+      {
+        "path": "scripts/measure/lib/stage.mjs",
+        "sha256": "sha256:84c891f587023b67c2049be23054f8c9e4df7428499f32ef15476b35251d7d47"
+      },
+      {
+        "path": "scripts/measure/workloads/read-sets.v1.json",
+        "sha256": "sha256:83809ec2950c1bb471077b62a45a0cc5780107f9aef6937a37b788bd27fd704f"
+      }
+    ],
+    "fixture_run_receipt": "upgrade/execution_loop/evidence/ELP2-10/measurements/M-2-2026-10-21.json",
+    "missing": [
+      "window + authorisation record",
+      "Core009 composed with READ and STREAM split (BE-P10)",
+      "Edge export of source calls per window (gap G-2) over the phase windows",
+      "a real session (storage state, 0600, outside the repository)"
+    ],
+    "unmet": [
+      "upgrade/execution_loop/evidence/ELP2-10/CORE009_INTEGRATION_RETURN_2026-10-21.md section 2: integration prepared; hook, image build and runtime readback PENDING; installed image sha256:7b2c7f34... is NOT Core009"
+    ],
+    "window_request": "upgrade/execution_loop/evidence/ELP2-10/measurements/WINDOW_REQUESTS_2026-10-21.md section 3 (M-2c)"
+  },
+  "resources": null,
+  "cleanup": null,
+  "limitations": [
+    "Counts are capped-correctness; p95 at any tier only inside the exclusive window of M-5/M-7."
+  ],
+  "notes": [],
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:e70437ccce3a344929ba4695108c0e27b3bc56f8c2d99a4237fc8f9cd9dcc482"
+}

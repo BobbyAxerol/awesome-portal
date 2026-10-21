@@ -1,0 +1,470 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-4",
+  "sub": "a",
+  "title": "Mixed query + ingest on a local disposable PostgreSQL (capped correctness)",
+  "status": "RUN_FIXTURE",
+  "lane": "FIXTURE_LAB",
+  "run_kind": "CAPPED_CORRECTNESS",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": true,
+    "tracked_dirty_digest": "sha256:e729c610c0e79e575c98d55f5bc0ccff469449eceab0aceb102856692c34013f"
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 4.97,
+    "loadavg_5m_at_capture": 6.23
+  },
+  "started_at": "2026-10-21T07:19:41.153Z",
+  "ended_at": "2026-10-21T07:21:26.870Z",
+  "started_at_ms": 1792567181153,
+  "ended_at_ms": 1792567286870,
+  "duration_ms": 105717,
+  "workload": {
+    "fixture": "1 member, 1000 facts, serialized ~1,197,252 B (spec elp206-manager-store 'T10-04/05')",
+    "readers_per_round": 20,
+    "order": "ABBA_WARM: UNCOALESCED_REFERENCE, COALESCED, COALESCED, UNCOALESCED_REFERENCE",
+    "mixed": "1 committed successor + 20 reads of the immutable previous revision",
+    "repetitions_requested": 2,
+    "repetitions_valid": 2,
+    "fresh_postgres_per_repetition": true,
+    "source_calls": "NONE_BY_CONSTRUCTION",
+    "specs": [
+      "test/elp210-performance.spec.ts",
+      "test/elp206-manager-store.spec.ts",
+      "test/elp206-manager-model.spec.ts",
+      "test/elp206-manager-service.spec.ts",
+      "test/elp2-read-projection.spec.ts"
+    ],
+    "images": {
+      "node": "node@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32",
+      "postgres": "postgres@sha256:44c4ee9810eff91f7eab4d822642e01115b1a9eccce4bcbdde7604752d68eac6"
+    }
+  },
+  "resource_limits": {
+    "node_cpus": "2",
+    "node_memory": "2g",
+    "postgres_cpus": "1",
+    "postgres_memory": "1g",
+    "total_cpus": 3,
+    "workers": 1,
+    "network": "DISPOSABLE_INTERNAL_ONLY",
+    "pg_pool_max_in_test": 2,
+    "deviation_from_manifest_cell": "manifest isolated_cell is node 3 CPU/3 GiB + PG 1 CPU/1 GiB (4/4); this cell is node 2/2 GiB + PG 1/1 GiB (3/3) per the 3 CPU / 3 GiB run cap, so absolute ms are NOT comparable with measurements.md run1"
+  },
+  "stop_conditions": [
+    "rep with exit code != 0 is reported and excluded from the numbers",
+    "container timeout",
+    "any other container touched = abort (the cell names only elp210m-*)"
+  ],
+  "results": {
+    "hard_assertions": {
+      "description": "same result digest, 20 vs 1 document SELECTs, finite admission, no stale commit/ACK, history preserved",
+      "test_status_per_rep": [
+        {
+          "rep": 1,
+          "status": "passed",
+          "duration_ms": 12178.39
+        },
+        {
+          "rep": 2,
+          "status": "passed",
+          "duration_ms": 8777.4
+        }
+      ],
+      "all_passed": true
+    },
+    "by_mode_across_reps": {
+      "uncoalesced-reference": {
+        "document_selects_per_round": [
+          20
+        ],
+        "max_pool_waiting_count": [
+          20
+        ],
+        "wall_ms": {
+          "n": 4,
+          "p50": 2745.049,
+          "p95": 4328.791,
+          "p99": 4328.791,
+          "max": 4328.791,
+          "mean": 3139.577
+        },
+        "p50_ms_of_rounds": {
+          "n": 4,
+          "p50": 1285.239,
+          "p95": 2433.247,
+          "p99": 2433.247,
+          "max": 2433.247,
+          "mean": 1630.09
+        },
+        "p95_ms_of_rounds": {
+          "n": 4,
+          "p50": 2581.658,
+          "p95": 4098.904,
+          "p99": 4098.904,
+          "max": 4098.904,
+          "mean": 2957.07
+        },
+        "p99_ms_of_rounds": {
+          "n": 4,
+          "p50": 2714.488,
+          "p95": 4288.419,
+          "p99": 4288.419,
+          "max": 4288.419,
+          "mean": 3102.032
+        },
+        "process_cpu_user_us": {
+          "n": 4,
+          "p50": 2959181,
+          "p95": 4689736,
+          "p99": 4689736,
+          "max": 4689736,
+          "mean": 3447740.5
+        },
+        "process_cpu_system_us": {
+          "n": 4,
+          "p50": 407920,
+          "p95": 811984,
+          "p99": 811984,
+          "max": 811984,
+          "mean": 516924
+        },
+        "rounds": 4
+      },
+      "coalesced": {
+        "document_selects_per_round": [
+          1
+        ],
+        "max_pool_waiting_count": [
+          1
+        ],
+        "wall_ms": {
+          "n": 4,
+          "p50": 1057.915,
+          "p95": 1413.704,
+          "p99": 1413.704,
+          "max": 1413.704,
+          "mean": 1208.95
+        },
+        "p50_ms_of_rounds": {
+          "n": 4,
+          "p50": 740.208,
+          "p95": 1012.804,
+          "p99": 1012.804,
+          "max": 1012.804,
+          "mean": 846.316
+        },
+        "p95_ms_of_rounds": {
+          "n": 4,
+          "p50": 1000.926,
+          "p95": 1346.93,
+          "p99": 1346.93,
+          "max": 1346.93,
+          "mean": 1143.609
+        },
+        "p99_ms_of_rounds": {
+          "n": 4,
+          "p50": 1029.626,
+          "p95": 1381.856,
+          "p99": 1381.856,
+          "max": 1381.856,
+          "mean": 1176.703
+        },
+        "process_cpu_user_us": {
+          "n": 4,
+          "p50": 1092410,
+          "p95": 1531104,
+          "p99": 1531104,
+          "max": 1531104,
+          "mean": 1276363.25
+        },
+        "process_cpu_system_us": {
+          "n": 4,
+          "p50": 176390,
+          "p95": 192474,
+          "p99": 192474,
+          "max": 192474,
+          "mean": 170041.75
+        },
+        "rounds": 4
+      }
+    },
+    "p95_spread_percent_between_reps": {
+      "coalesced": 42.7,
+      "uncoalesced_reference": 74.7,
+      "rule": "R-C: variance between independent repetitions above 25% means more repetitions, not a wider margin"
+    },
+    "select_reduction": {
+      "uncoalesced": [
+        20
+      ],
+      "coalesced": [
+        1
+      ]
+    },
+    "per_rep": [
+      {
+        "rep": 1,
+        "payload_bytes": 1197252,
+        "members": 1,
+        "facts": 1000,
+        "order": "ABBA_WARM_NOT_COLD_HOST",
+        "plan_node": "Index Scan",
+        "plan_index": "execution_manager_model_revis_workspace_id_environment_prof_key",
+        "plan_execution_ms": 0.052,
+        "relation_bytes": 122880,
+        "pg_version": "16.15",
+        "rounds": [
+          {
+            "mode": "uncoalesced-reference",
+            "selects": 20,
+            "wall_ms": 4328.791314,
+            "p50_ms": 2433.246601,
+            "p95_ms": 4098.904328999999,
+            "p99_ms": 4288.418964,
+            "pool_waiting": 20,
+            "rss_before": 121171968,
+            "rss_after": 150921216
+          },
+          {
+            "mode": "coalesced",
+            "selects": 1,
+            "wall_ms": 1413.704259,
+            "p50_ms": 1012.8037009999998,
+            "p95_ms": 1346.9298630000003,
+            "p99_ms": 1381.8560689999995,
+            "pool_waiting": 1,
+            "rss_before": 150921216,
+            "rss_after": 158576640
+          },
+          {
+            "mode": "coalesced",
+            "selects": 1,
+            "wall_ms": 1360.762812,
+            "p50_ms": 957.3239720000001,
+            "p95_ms": 1282.787778,
+            "p99_ms": 1319.8422839999994,
+            "pool_waiting": 1,
+            "rss_before": 158576640,
+            "rss_after": 184266752
+          },
+          {
+            "mode": "uncoalesced-reference",
+            "selects": 20,
+            "wall_ms": 2979.8573910000014,
+            "p50_ms": 1600.7047679999996,
+            "p95_ms": 2801.2479810000004,
+            "p99_ms": 2937.076287,
+            "pool_waiting": 20,
+            "rss_before": 184266752,
+            "rss_after": 185958400
+          }
+        ],
+        "resources": {
+          "node": {
+            "samples": 16,
+            "cpu_percent_mean": 125.2,
+            "cpu_percent_max": 161.04,
+            "mem_bytes_max_sampled": 609012940.8,
+            "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+          },
+          "postgres": {
+            "samples": 16,
+            "cpu_percent_mean": 8.7,
+            "cpu_percent_max": 92.71,
+            "mem_bytes_max_sampled": 134846873.6,
+            "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+          }
+        }
+      },
+      {
+        "rep": 2,
+        "payload_bytes": 1197252,
+        "members": 1,
+        "facts": 1000,
+        "order": "ABBA_WARM_NOT_COLD_HOST",
+        "plan_node": "Index Scan",
+        "plan_index": "execution_manager_model_revis_workspace_id_environment_prof_key",
+        "plan_execution_ms": 0.042,
+        "relation_bytes": 122880,
+        "pg_version": "16.15",
+        "rounds": [
+          {
+            "mode": "uncoalesced-reference",
+            "selects": 20,
+            "wall_ms": 2504.6113649999998,
+            "p50_ms": 1201.1696080000002,
+            "p95_ms": 2346.469502,
+            "p99_ms": 2468.143038,
+            "pool_waiting": 20,
+            "rss_before": 119427072,
+            "rss_after": 144613376
+          },
+          {
+            "mode": "coalesced",
+            "selects": 1,
+            "wall_ms": 1003.4173359999995,
+            "p50_ms": 674.9295780000002,
+            "p95_ms": 943.7935019999995,
+            "p99_ms": 975.4875569999995,
+            "pool_waiting": 1,
+            "rss_before": 144613376,
+            "rss_after": 158932992
+          },
+          {
+            "mode": "coalesced",
+            "selects": 1,
+            "wall_ms": 1057.9152249999997,
+            "p50_ms": 740.2083109999994,
+            "p95_ms": 1000.9257289999996,
+            "p99_ms": 1029.6264359999996,
+            "pool_waiting": 1,
+            "rss_before": 158932992,
+            "rss_after": 174055424
+          },
+          {
+            "mode": "uncoalesced-reference",
+            "selects": 20,
+            "wall_ms": 2745.0487390000008,
+            "p50_ms": 1285.2390929999992,
+            "p95_ms": 2581.658458,
+            "p99_ms": 2714.488397000001,
+            "pool_waiting": 20,
+            "rss_before": 174055424,
+            "rss_after": 174264320
+          }
+        ],
+        "resources": {
+          "node": {
+            "samples": 15,
+            "cpu_percent_mean": 120.9,
+            "cpu_percent_max": 157.57,
+            "mem_bytes_max_sampled": 683252121.6,
+            "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+          },
+          "postgres": {
+            "samples": 15,
+            "cpu_percent_mean": 11.1,
+            "cpu_percent_max": 92.09,
+            "mem_bytes_max_sampled": 129708851.2,
+            "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+          }
+        }
+      }
+    ],
+    "paired_tuple_diagnostic": [
+      {
+        "proof": "ELP2_10_TEST_ONLY_PAIRED_TUPLE_DIAGNOSTIC",
+        "population_rows": 256,
+        "input_rows": 512,
+        "repetitions": 4,
+        "authorized_results": 1024,
+        "result_digest": "sha256:47379721474a014d9dfbe439f3797fecf3c565b352371e4e1ba403d2742658de",
+        "input_digest": "sha256:51fb9dc719155ce31b80603582fa6e84981a43d39781eff68b9b61f0d336adc8",
+        "reference_linear_ms": 41.19086900000002,
+        "indexed_ms": 11.941507000000456,
+        "qualification": "PURE_COMPONENT_NOT_PRODUCTION_SLO_OR_TS_DL_COEXISTENCE"
+      },
+      {
+        "proof": "ELP2_10_TEST_ONLY_PAIRED_TUPLE_DIAGNOSTIC",
+        "population_rows": 256,
+        "input_rows": 512,
+        "repetitions": 4,
+        "authorized_results": 1024,
+        "result_digest": "sha256:47379721474a014d9dfbe439f3797fecf3c565b352371e4e1ba403d2742658de",
+        "input_digest": "sha256:51fb9dc719155ce31b80603582fa6e84981a43d39781eff68b9b61f0d336adc8",
+        "reference_linear_ms": 34.490452000000005,
+        "indexed_ms": 9.886868999999933,
+        "qualification": "PURE_COMPONENT_NOT_PRODUCTION_SLO_OR_TS_DL_COEXISTENCE"
+      }
+    ],
+    "full_suite_status_per_rep": [
+      {
+        "rep": 1,
+        "exit_code": 0,
+        "passed": 398,
+        "failed": 0,
+        "skipped": 0
+      },
+      {
+        "rep": 2,
+        "exit_code": 0,
+        "passed": 398,
+        "failed": 0,
+        "skipped": 0
+      }
+    ]
+  },
+  "resources": {
+    "per_rep": [
+      {
+        "rep": 1,
+        "node": {
+          "samples": 16,
+          "cpu_percent_mean": 125.2,
+          "cpu_percent_max": 161.04,
+          "mem_bytes_max_sampled": 609012940.8,
+          "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+        },
+        "postgres": {
+          "samples": 16,
+          "cpu_percent_mean": 8.7,
+          "cpu_percent_max": 92.71,
+          "mem_bytes_max_sampled": 134846873.6,
+          "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+        }
+      },
+      {
+        "rep": 2,
+        "node": {
+          "samples": 15,
+          "cpu_percent_mean": 120.9,
+          "cpu_percent_max": 157.57,
+          "mem_bytes_max_sampled": 683252121.6,
+          "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+        },
+        "postgres": {
+          "samples": 15,
+          "cpu_percent_mean": 11.1,
+          "cpu_percent_max": 92.09,
+          "mem_bytes_max_sampled": 129708851.2,
+          "note": "docker stats samples at ~1 Hz; a peak between samples is not seen"
+        }
+      }
+    ]
+  },
+  "cleanup": {
+    "suffix": "m127010",
+    "containers_left": 0,
+    "networks_left": 0,
+    "deps_dir_removed": true
+  },
+  "limitations": [
+    "Local disposable PG, in-process driver: NOT 20 authenticated HTTP users, NOT a source, NOT TS/DL/Research coexistence.",
+    "Warm ABBA order; no OS/PG cache flush; no parent-binary execution. The uncoalesced reference is the same loader with one repository per reader.",
+    "p50/p95/p99 are across 20 simultaneous readers in one process: a mechanism diagnostic, never comparable with UDB 500/600 ms or P184 per-feed 500 ms.",
+    "RSS is sequential in-process sampling, not peak RSS or a memory saving. docker stats is ~1 Hz.",
+    "Not measured here: host IO, WAL amplification, connection-wait milliseconds (the driver records waiting COUNT only, gap G-5), ingest/replay lag, browser latency.",
+    "Export is N/A (no Execution Manager export route is mounted).",
+    "The connected variant M-4b needs a mounted writer and an exclusive window (see WINDOW_REQUESTS)."
+  ],
+  "notes": [],
+  "raw_dir_not_committed": "/home/bobby/.local/state/portal-execution-elp210/20261021/m4-m6-1792565895389",
+  "evidence_capture": "private 0700 directory; logs not committed, sha256 recorded per rep",
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:c29cfa105b33ccc1b6756d78b60977d436eca52f0676c408c9c7f06117112c56"
+}

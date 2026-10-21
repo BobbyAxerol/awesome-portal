@@ -1,0 +1,55 @@
+{
+  "schema_version": "portal.elp2-10.measurement-receipt.v1",
+  "measurement": "M-6",
+  "sub": "c production-size DR timing / cap fill",
+  "title": "Fill to 1,024 revisions or 8 MiB to observe stop-without-delete; restore timing on real data",
+  "status": "BLOCKED",
+  "lane": "NOT_RUN",
+  "run_kind": "ABSOLUTE_MEASUREMENT",
+  "evidence_class": "TEST_ONLY_FIXTURE_NOT_CALIBRATION_EVIDENCE",
+  "calibration_evidence": false,
+  "approved_budget": false,
+  "window_id": null,
+  "git": {
+    "sha": "799effc8093d64f4d82d7524b2a356f28ef6c929",
+    "branch": "worktree-agent-af9a5067bf7198475",
+    "tracked_dirty": false,
+    "tracked_dirty_digest": null
+  },
+  "machine": {
+    "hostname": "ubuntu-s-8vcpu-32gb-640gb-intel-sgp1",
+    "os": "linux 5.15.0-185-generic",
+    "cpus": 8,
+    "cpu_model": "DO-Premium-Intel",
+    "mem_total_bytes": 33651220480,
+    "node": "v20.20.2",
+    "loadavg_1m_at_capture": 11.58,
+    "loadavg_5m_at_capture": 11.14
+  },
+  "started_at": null,
+  "ended_at": null,
+  "started_at_ms": null,
+  "ended_at_ms": null,
+  "duration_ms": null,
+  "workload": {
+    "target_lane": "REAL_READ_RETAINED"
+  },
+  "resource_limits": null,
+  "stop_conditions": [],
+  "results": {
+    "reason": "Needs real data and a decision by Bobby on RPO/RTO/retention (D6) after M-6b; never run against a production database. The cap behaviour itself (stop, no ACK, no delete) is covered by the unit/PG invariants.",
+    "unmet": [
+      "RPO/RTO/retention horizon named by Bobby after M-6b",
+      "a disposable clone of real data produced by Core ops"
+    ],
+    "window_request": "not requested now (WINDOW_REQUESTS section 6 explains why)"
+  },
+  "resources": null,
+  "cleanup": null,
+  "limitations": [],
+  "notes": [],
+  "receipt_digest_excludes": [
+    "receipt_digest"
+  ],
+  "receipt_digest": "sha256:f7bbda15b6deef45f9e70b06fd519814b861eca9b75226129f6959e45e47f1e6"
+}
