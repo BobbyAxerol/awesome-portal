@@ -13,6 +13,8 @@
  * - refusals are read by status + code (`scopedRefusal.ts`), never by text: a cursor refusal (400) restarts the chain from its
  *   first page, a 409 EXECUTION_READ_ACCESS_CHANGED discards the page and reads the scope again from its first page. Either
  *   restart happens ONCE per user action: a refusal of the restart itself is shown, not retried;
+ * - `cursorRefusal: "stop"` (the slice): a cursor refusal is NOT retried by the pager; it is shown as a typed refusal and the
+ *   caller offers one way out (`open(query)` again, "Start over"). `reset()` forgets everything (rows, cursors, answers in flight);
  * - every other refusal clears the rows (a withheld read is not an empty list); an unreadable body or a failed transport
  *   clears them too. A page of another workspace, surface or environment than the chain's first page is unreadable.
  */
@@ -62,6 +64,8 @@ export interface ScopedPager {
   open(query: string): Promise<void>;
   next(): Promise<void>;
   previous(): Promise<void>;
+  /** Forget the chain: rows, cursors and any answer still in flight (it is discarded on arrival). */
+  reset(): void;
 }
 
 const initial = (): PagerState => ({
@@ -69,7 +73,13 @@ const initial = (): PagerState => ({
   counters: { reads: 0, ignored: 0, dropped: 0, restarts: 0 },
 });
 
-export function createScopedPager(port: ScopedPagePort): ScopedPager {
+export interface ScopedPagerOptions {
+  /** `restart` (default): a cursor refusal reads the first page once. `stop`: it is shown as a refusal and the caller decides. */
+  cursorRefusal?: "restart" | "stop";
+}
+
+export function createScopedPager(port: ScopedPagePort, options: ScopedPagerOptions = {}): ScopedPager {
+  const stopOnCursor = options.cursorRefusal === "stop";
   let state = initial();
   let generation = 0;
   let inFlight = false;
@@ -124,6 +134,7 @@ export function createScopedPager(port: ScopedPagePort): ScopedPager {
     if ("transport" in answer) return clear("unreadable", null);
     const refusal = readScopedRefusal(answer.status, answer.body);
     if (refusal === null) return clear("unreadable", null);
+    if (refusal.action === "restart_chain" && stopOnCursor) return clear("refused", refusal);
     if (refusal.action !== "show_absence" && mayRestart && state.query !== null) {
       bump("restarts");
       next = null;
@@ -147,6 +158,14 @@ export function createScopedPager(port: ScopedPagePort): ScopedPager {
       previous = null;
       set({ query, position: 1 });
       await read({ query, direction: "first", cursor: null }, 1, true);
+    },
+    reset() {
+      generation += 1;
+      inFlight = false;
+      next = null;
+      previous = null;
+      anchor = null;
+      set({ ...initial(), counters: state.counters });
     },
     async next() {
       if (inFlight || next === null || state.query === null || state.phase !== "ready") return bump("ignored");

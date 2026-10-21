@@ -11,11 +11,13 @@
  * polls or sends: the "snapshot port" answers from memory.
  */
 import realtimeFixtures from "../../../../../../../../packages/contracts/fixtures/execution-scoped-realtime.synthetic.valid.json";
+import chainFixtures from "../../../../../../../../packages/contracts/fixtures/execution-manager-scoped.scenarios.synthetic.valid.json";
 import scopedFixtures from "../../../../../../../../packages/contracts/fixtures/execution-manager-scoped.synthetic.valid.json";
 import { readNativeBaselineHeaders, type NativeBaseline } from "../../readers/scopedRealtime";
 import type { SnapshotOutcome, SnapshotFailure } from "../../realtime/scopedStreamMachine";
 import type { SnapshotPort } from "../../realtime/scopedStreamController";
 import { readManagerScoped, type ScopedRead } from "./scopedRead";
+import type { ScopedPageAnswer, ScopedPagePort, ScopedPageRequest } from "./scopedPager";
 
 export const FIXTURE_LANE_MARKER = "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT";
 
@@ -48,6 +50,25 @@ export function fixtureScopedRead(): ScopedRead | null {
   const read = readManagerScoped(structuredClone(SCOPED_CASES[0]));
   return read !== null && read.kind === "scoped" ? read.read : null;
 }
+
+/** The published 3-page cursor chain (RV-12 `fleet-owner-paper-chain`, ALPHA_FLEET, paper, `limit: 1`): the raw bodies, as the reader answered them. */
+export const CHAIN_SCENARIO_ID = "fleet-owner-paper-chain";
+export type PageChain = readonly unknown[];
+
+/** A fresh copy of the chain's bodies. `null` = the published scenario is gone (the lane then serves nothing it cannot back). */
+export function fixtureChain(): PageChain | null {
+  const found = (chainFixtures as unknown as { scenarios: { id: string; pages: { response: unknown }[] }[] }).scenarios.find((s) => s.id === CHAIN_SCENARIO_ID);
+  return found === undefined || found.pages.length === 0 ? null : found.pages.map((p) => structuredClone(p.response));
+}
+
+/** Page 1 of the chain through the strict reader: the slice's snapshot when the chain is served. */
+export function chainScopedRead(): ScopedRead | null {
+  const chain = fixtureChain();
+  const read = chain === null ? null : readManagerScoped(chain[0]);
+  return read !== null && read.kind === "scoped" ? read.read : null;
+}
+
+const refusalBody = (code: string) => ({ error: { code, message: "TEST_ONLY fixture refusal" }, request_id: "req_TEST_ONLY" });
 
 export type NextRead = "ok" | "denied" | "unavailable" | "no_stream";
 export const NEXT_READ_LABEL: Readonly<Record<NextRead, string>> = {
@@ -90,6 +111,12 @@ export interface FixtureLane {
   /** The view learned that access to this lane's scope was withdrawn: every later read of it is DENIED (when a memory was given). */
   revoke(): void;
   reads(): number;
+  /** The keyset pages of the lane (the served chain), or `null` when the lane serves one page. Never the snapshot port. */
+  pages: ScopedPagePort | null;
+  /** The fixture server stops accepting the cursors it issued (the next first-page read issues fresh ones). */
+  expireCursors(): void;
+  /** Page reads answered so far (snapshot reads are `reads()`). */
+  pageReads(): number;
 }
 
 /**
@@ -97,9 +124,45 @@ export interface FixtureLane {
  * authorize it: the fixture never answers one scope's rows for another. `source` is the read the lane answers (default: the
  * published ALPHA_FLEET example); a test passes a page of the RV-12 scenarios through the same strict reader.
  */
-export function createFixtureLane(context: LaneContext, revocations?: RevocationMemory, source: () => ScopedRead | null = fixtureScopedRead): FixtureLane {
+export function createFixtureLane(
+  context: LaneContext,
+  revocations?: RevocationMemory,
+  source: () => ScopedRead | null = fixtureScopedRead,
+  chain: PageChain | null = null,
+): FixtureLane {
   let next: NextRead = "ok";
   let reads = 0;
+  let pageReads = 0;
+  let expired = false;
+  const covered = (scoped: ScopedRead): boolean =>
+    (context.workspaceId === null || context.workspaceId === scoped.workspaceId) &&
+    (context.environment === null || scoped.environment === "all" || context.environment === scoped.environment);
+  const pages: ScopedPagePort | null =
+    chain === null || chain.length === 0
+      ? null
+      : {
+          async read(request: ScopedPageRequest): Promise<ScopedPageAnswer> {
+            pageReads += 1;
+            const first = readManagerScoped(structuredClone(chain[0]));
+            if (first === null || first.kind !== "scoped") return { ok: false, transport: true };
+            if (!covered(first.read) || next === "denied" || revocations?.has(scopeOf(context)) === true) {
+              return { ok: false, status: 404, body: refusalBody("EXECUTION_READ_NOT_AVAILABLE") };
+            }
+            if (request.direction === "first") {
+              expired = false;
+              return { ok: true, body: structuredClone(chain[0]) };
+            }
+            // The server side of the fixture may look inside; the browser never does. A cursor is found by its exact text.
+            const at = (i: number) => (chain[i] as { page: { next_cursor: string | null; previous_cursor: string | null } }).page;
+            const known = chain.findIndex((_p, i) => at(i).next_cursor === request.cursor || at(i).previous_cursor === request.cursor);
+            if (known < 0) return { ok: false, status: 400, body: refusalBody("INVALID_CURSOR") };
+            if (expired) return { ok: false, status: 400, body: refusalBody("CURSOR_EXPIRED") };
+            const target = request.direction === "after" ? known + 1 : known - 1;
+            const fits = request.direction === "after" ? at(known).next_cursor === request.cursor : at(known).previous_cursor === request.cursor;
+            if (!fits) return { ok: false, status: 400, body: refusalBody("CURSOR_CONTEXT_MISMATCH") };
+            return { ok: true, body: structuredClone(chain[target]) };
+          },
+        };
   const failure = (reason: SnapshotFailure): SnapshotOutcome<ScopedRead> => ({ ok: false, failure: reason });
   return {
     setNext: (value) => {
@@ -107,15 +170,17 @@ export function createFixtureLane(context: LaneContext, revocations?: Revocation
     },
     revoke: () => revocations?.add(scopeOf(context)),
     reads: () => reads,
+    pages,
+    expireCursors: () => {
+      expired = true;
+    },
+    pageReads: () => pageReads,
     port: {
       readSnapshot: async () => {
         reads += 1;
         const scoped = source();
         if (scoped === null) return failure("MALFORMED");
-        const covers =
-          (context.workspaceId === null || context.workspaceId === scoped.workspaceId) &&
-          (context.environment === null || scoped.environment === "all" || context.environment === scoped.environment);
-        if (!covers || next === "denied" || revocations?.has(scopeOf(context)) === true) return failure("DENIED");
+        if (!covered(scoped) || next === "denied" || revocations?.has(scopeOf(context)) === true) return failure("DENIED");
         if (next === "unavailable") return failure("UNAVAILABLE");
         const baseline = next === "no_stream" ? baselineOf("N10-NATIVE-NO-STREAM-HEADERS") : baselineOf("N10-NATIVE-BASELINE-HEADERS");
         return { ok: true, data: scoped, readAtMs: scoped.readAtMs, baseline };

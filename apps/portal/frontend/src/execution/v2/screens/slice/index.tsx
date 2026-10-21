@@ -10,7 +10,8 @@
  * UX-F02/03/04/05/07/19/21 are covered only as far as the examples reach; `evidence/UXM-08/README.md` lists what they cannot.
  *
  * Scale and degradation: one page of at most 100 rows (the contract's own cap), no client paging, sorting or totals; the
- * server's page is the page. Past one page the screen says "More pages exist" and offers nothing it cannot back.
+ * server's page is the page. Past one page the screen says "More pages exist". A lane that serves the published page chain
+ * (`?fixture=chain`) also gets Newer / Older (`useSlicePager.ts`); the one-page example offers nothing it cannot back.
  */
 import { useEffect, useMemo, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -24,7 +25,7 @@ import { readAsOf, formatAsOf } from "../../boundary";
 import type { Clock } from "../../realtime/scopedStreamController";
 import { useScopedStream } from "../../realtime/useScopedStream";
 import type { StreamConfig, StreamState } from "../../realtime/scopedStreamMachine";
-import { DROP_COPY, FIXTURE_LANE_LABEL, NOT_CONNECTED_LABEL, POSTURE_COPY, causeCopy, streamHeadline } from "../../realtime/streamView";
+import { DROP_COPY, FIXTURE_LANE_LABEL, LOCAL_CAUSE_COPY, NOT_CONNECTED_LABEL, POSTURE_COPY, causeCopy, streamHeadline } from "../../realtime/streamView";
 import { evictScopedCaches } from "../../scopedEviction";
 import { ENV_LABEL, withContext } from "../../urlState";
 import { DEFAULT_ROUTES } from "../portfolios/routes";
@@ -32,7 +33,9 @@ import {
   FIXTURE_FRAME_IDS,
   NEXT_READ_LABEL,
   PAGE_REVOCATIONS,
+  chainScopedRead,
   createFixtureLane,
+  fixtureChain,
   fixtureFrame,
   type FixtureFrameId,
   type FixtureLane,
@@ -58,6 +61,8 @@ import {
   type SliceContext,
 } from "./model";
 import type { ScopedRead } from "./scopedRead";
+import type { ScopedRefusal } from "./scopedRefusal";
+import { useSlicePager, type SlicePager } from "./useSlicePager";
 
 import "../../css/blocks.css";
 import "../../css/flag.css";
@@ -65,6 +70,9 @@ import "../../css/cards.css";
 import "./slice.css";
 
 export const SLICE_SCREEN_KEY = "scoped" as const;
+/** The route's one fixture dial: `?fixture=chain` (see `SliceRoute`). */
+export const SLICE_FIXTURE_PARAM = "fixture";
+export const SLICE_FIXTURE_CHAIN = "chain";
 
 export interface SliceScreenProps {
   /** The URL context the lane is asked to authorize. */
@@ -328,6 +336,54 @@ function ReadPanels({ read, search }: { read: ScopedRead; search: URLSearchParam
   );
 }
 
+/** The published code a refusal is shown by (the code waits behind the disclosure, in the words the screens already use). */
+const REFUSAL_CODE: Readonly<Record<Exclude<ScopedRefusal["kind"], "cursor_reset">, string>> = {
+  access_changed: "EXECUTION_READ_ACCESS_CHANGED",
+  authority_unavailable: "EXECUTION_READ_AUTHORITY_UNAVAILABLE",
+  not_available: "EXECUTION_READ_NOT_AVAILABLE",
+  policy_pending: "EXECUTION_READ_POLICY_PENDING",
+  field_policy_pending: "EXECUTION_READ_FIELD_POLICY_PENDING",
+};
+
+/** Newer / Older and the same two-part note as the Blotter's keyset pager. The cursors are not here: only whether they exist. */
+function SlicePagerBar({ pager }: { pager: SlicePager }) {
+  const { state } = pager;
+  const noteId = "slice-pager-note";
+  return (
+    <div className="exec-slice-pager" data-testid="slice-pager">
+      <span className="exec-slice-pagerbtns">
+        <button type="button" className="exec-slice-btn" disabled={!state.hasPrevious || state.busy} aria-describedby={!state.hasPrevious ? noteId : undefined} onClick={pager.previous}>
+          Newer
+        </button>
+        <button type="button" className="exec-slice-btn" disabled={!state.hasNext || state.busy} aria-describedby={!state.hasNext ? noteId : undefined} onClick={pager.next}>
+          Older
+        </button>
+      </span>
+      <span id={noteId} className="exec-slice-muted">
+        {state.hasPrevious ? "Newer rows exist" : "At the newest rows"}
+        {state.hasNext ? ", older rows exist" : ", at the oldest rows"}
+      </span>
+    </div>
+  );
+}
+
+/** A refused or unreadable page: no rows (a withheld read is not an empty list), the typed reason, one way out. */
+function PagerRefusal({ pager }: { pager: SlicePager }) {
+  const { refusal, phase } = pager.state;
+  const reason = phase === "unreadable" || refusal === null ? LOCAL_CAUSE_COPY.SNAPSHOT_MALFORMED : refusal.kind === "cursor_reset" ? refusal.code : REFUSAL_CODE[refusal.kind];
+  return (
+    <StateBoundary
+      status="unavailable"
+      reason={reason}
+      actions={
+        <button type="button" className="exec-slice-btn" onClick={pager.startOver}>
+          Start over
+        </button>
+      }
+    />
+  );
+}
+
 function boundaryFor<T>(state: StreamState<T>): {
   status: "ok" | "loading" | "stale" | "unavailable" | "denied";
   reason?: string;
@@ -368,6 +424,18 @@ export function SliceScreen({ context, clock, config, lane: injected, revocation
   const chip = headline.chip;
   const boundary = boundaryFor(state);
   const read = state.data;
+  const pager = useSlicePager(lane, read, connection);
+  // A later page is the server's page of the SAME snapshot (the stream was not asked again); page 1 is the snapshot itself.
+  const paged = pager !== null && pager.state.phase === "ready" && pager.state.position > 1 ? pager.state.page : null;
+  const shown = paged ?? read;
+  const refusedPage = pager !== null && (pager.state.phase === "refused" || pager.state.phase === "unreadable");
+  const pageBody =
+    shown === null ? null : (
+      <>
+        {pager === null || pager.state.phase !== "ready" ? null : <SlicePagerBar pager={pager} />}
+        {pager !== null && refusedPage ? <PagerRefusal pager={pager} /> : <ReadPanels read={shown} search={search} />}
+      </>
+    );
   const readAt = read === null ? null : readAsOf(read.readAtMs);
 
   const send = (id: FixtureFrameId, on: string = connection) => receive(fixtureFrame(id), on);
@@ -491,10 +559,10 @@ export function SliceScreen({ context, clock, config, lane: injected, revocation
           <StateBoundary status="unavailable" reason={boundary.reason ?? "The stream is not available."} actions={actions} />
         ) : read === null ? null : boundary.status === "stale" ? (
           <StateBoundary status="stale" reason={boundary.reason} actions={actions}>
-            <ReadPanels read={read} search={search} />
+            {pageBody}
           </StateBoundary>
         ) : (
-          <ReadPanels read={read} search={search} />
+          pageBody
         )}
       </div>
     </ExecutionSurface>
@@ -507,5 +575,9 @@ export default function SliceRoute() {
   const workspaceId = search.get("workspace_id");
   const environment = search.get("env");
   const context = useMemo<SliceContext>(() => ({ workspaceId, environment }), [workspaceId, environment]);
-  return <SliceScreen context={context} revocations={PAGE_REVOCATIONS} />;
+  // `?fixture=chain` serves the published 3-page chain (RV-12 `fleet-owner-paper-chain`) instead of the one-page example. It is
+  // read here and nowhere else, and it is not a context key: links to other screens do not carry it.
+  const chain = search.get(SLICE_FIXTURE_PARAM) === SLICE_FIXTURE_CHAIN;
+  const lane = useMemo(() => (chain ? createFixtureLane(context, PAGE_REVOCATIONS, chainScopedRead, fixtureChain()) : undefined), [chain, context]);
+  return <SliceScreen context={context} revocations={PAGE_REVOCATIONS} lane={lane} />;
 }
