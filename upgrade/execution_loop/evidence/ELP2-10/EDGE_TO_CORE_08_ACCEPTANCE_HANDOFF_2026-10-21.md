@@ -148,3 +148,70 @@ Do not repeat these completed, separately scoped receipts merely for counts:
 Edge consumes/verifies it and records exact case dispositions in original08.
 No new phase or repeat generic phase approval; do not declare09 connected,
 10cutover,11acceptance, stable release or the whole master request complete.
+
+
+## 6. Current READ/STREAM follow-through —21Oct15:45UTC
+
+This section supersedes the earlier11:25 status/install-first wording, not its
+authority and preservation boundaries. Core has accepted the exact original
+recovery return6f848d69; Core canonical now
+`docs/research-loop-plan@3e9a76f70e1acdc8d9c776cb803fd473250c82ba`;
+qualified recovery CLI9d88/image05ae remains separate from installed Core
+4095/image9cf5/config423573a8/restart0. The original head4 is revoked and
+native28446 absent.14:00–15:30 was recovery-only and has expired. Do not
+rerun cancellation, reissue old head3 or call old grant NOOP active-revoke.
+
+**Implementation owner:** Claude/Core at
+`/home/bobby/portal-research-fe`, branch`claude/post-freeze-20261021`,
+observed`eb498116aeb7687109cd5800a745f724d2aff0d5`.
+Core integrator owns source qualification/landing and installed-target choice;
+Edge owns the reviewed HK source composition, finite driver and witness.
+No agent changes another's frozen source/index or accepted UI.
+
+Return the following concrete references through the existing canonical
+ELP2-10 task; partial eligible returns are consumed immediately:
+
+| Input / owner | Exact done-when for existing08 |
+| --- | --- |
+| Core/Claude: actual eligible source | Published source-set/head and domain/catalogue/field-policy/profile/epoch plus coverage, or explicit retained-only limitation. Whole-Fleet STREAM cannot use the old native heartbeat as publication. No new TS journal is imposed on an otherwise eligible current READ. |
+| Core: current native composition | Reviewed source/config/schema/image pins, actual actor/workspace/environment/profile and matching READ acceptance/grant. Use existing identities; return fresh manifest proposal for Edge review, not implicit restoration of expired rights. |
+| Core: session custody | Genuine finite application session reference/hash for that actor and target, expiry beyond each case deadline. Official application-session proof stays distinct from Cloudflare/password/human presence. Never send the token in Markdown or chat. |
+| Core: separate STREAM | Distinct grant ID/revision and actual source_set_ref/publication generation; explicit current-policy grant/expiry. READ does not grant STREAM. Return source-unavailable honestly before creating a grant. |
+| Core/Edge: finite slot | Explicit UTC start/end and matching ACK for new qualification, NOT the retired recovery-only slot. Edge arms the existing finite exact-ID exit witness before activation and preserves custody/receipt capacity. Do not mint while merely waiting for another build or source. |
+| Core: active revoke evidence | Baseline/current ready+revoke receipts and official revision transition; STREAM-only revoke leaves READ intact. READ revoke must cover cache HIT/invalidation, cursor/reconnect and active SSE with correlated last-server-egress/authority observation; independent unaffected scope stays readable. |
+
+Existing `scripts/epg10-08/connected_read.py` remains the driver, <=60seconds
+and200rows/1MiB, no mutating operations. Its repeated read is not cache-HIT
+evidence; client frame timestamps/EOF are not final-server-egress proof.
+`cache_revocation`, `active_stream_revocation`, `unaffected_scope` remain
+NOT_RUN until actual owning receipts/controls qualify them. Metadata/checkpoint
+composition uses the existing private0600FD and pinned references; no new
+framework or code defect was identified by the independent read-only review.
+
+### Independent all-mode trust — exact issuer reference, not a key request
+
+Fresh Edge public CA observation: CN`Primus Portal SGP Client CA v1`, issuer
+CN`Primus Portal Execution Offline Root v1`, certificateSHA256
+`78a6de84cde14837ff64afe39dde694d9488fe5124ffea44437babd7166bc2c`,
+valid24Aug2026→23Aug2028. Its public file at HK
+`/srv/primus/portal/execution-edge/sgp-client-ca.crt` is NOT signing custody.
+The Manager internal CAe4a0ff8f is a different authority, not a substitute.
+
+Core/PKI owner: return the controlled issuer/issuance-service reference for
+this actual client CA, or the named owner plus forwarded request receipt.
+Do not bounce the same unanswered key question back to Bobby or copy stable
+workload keys. Research CSR41a94f89/JWKa8b44aad and SGP-only private custody
+already exist; do not regenerate them. An issued public leaf/chain with
+matching CSR/SPKI/SAN/EKU/validity and its source reference is the required
+return, not the presence of an unrelated CA key. Reviewed per-mode config
+covers Paper8443/Sandbox8444/Live8445 and governed Canary-on-Live. Three
+serving Edge IDs/images/configs/restart0 were reverified unchanged15:44UTC;
+no reconciliation or new authority was performed. Keep this trust path
+separate from any eligible native acceptance cases.
+
+**Next action:** Core/Claude fill the exact current inputs and propose the
+finite slot; Edge verifies and runs each eligible connected case in08 at once.
+If whole-Fleet source/trust is not commissioned, return its exact owner/action,
+but continue eligible current READ and independent source preparation. No
+new generic phase approval, broad hook rerun for this packet, command or
+financial/Live-trading activation. Full08/09 remain NOT_MET.

@@ -981,3 +981,13 @@ ff-landing remains pending; no push/deploy. Current detailed return is
 `CORE_LANDING_GATE_AND_RECOVERY_STATUS_2026-10-21.md` in the integration
 ELP2-10 packet. Continue the specific dark-Fleet refresh-cancellation review
 separately; do not rerun old cancellation or invent connected acceptance.
+
+
+<a id="edge-current08-read-stream-inputs-20261021-1545"></a>
+### Edge current08 intake / exact next owner inputs —21Oct15:45UTC
+
+Core ACCEPTED_WITH_SCOPE recovery is received: no unresolved original duty remains. Read newly appended §6 of `EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md` in canonical ELP2-10, exact section65lines/5190bytes/SHA256 `2e87181ddefb8a8382365f917700bcd3c5a843e4fb655f2e8942eadf8e1f8818`. Core canonical3e9a76f7, Claude post-freeze eb498116, landing432da03d and recovery-only9d88/05ae are independently repinned; installed Core9cf5 and all3serving Edge tuples/restart0 unchanged. The14:00–15:30 RECOVERY_ONLY slot expired, no new acquisition.
+
+Claude/Core owns current eligible source-set/head/domain/catalogue/epoch, actual actor/workspace/profile/current READ plus separate STREAM grant/source_set_ref, finite genuine application-session private ref and next explicit window. Return partial eligible inputs immediately; no new TS journal required merely for current READ. Core must also return correlated server cache-HIT/invalidation/final-egress and independent unaffected-scope controls: driver repeated read/403/EOF alone is NOT full08 PASS. Edge existing driver/composition/witness review found no new owned defect; primary is ready to bind actual filled inputs, not rewrite a framework or mint stale rights.
+
+PKI request is now tied to actual SG P-client CA cert78a6de84 / CN Primus Portal SGP Client CA v1 / issuer Primus Portal Execution Offline Root v1. Return controlled issuer/issuance-service reference or named issuer owner+forwarding receipt, then matching Research CSR41a94f89 issued public leaf/chain and per-mode config. Public CA is not signing custody; Manager internal CAe4a0ff8f/native28446 trust is not a substitute. Research existing private keys stay SGP; no regeneration/stable-key copy. All-mode includes governed Canary-on-Live, no Paper-only cap. Three-Edge reconcile and new sessions/grants/source require their exact reviewed inputs/window; this packet executes none. No new generic phase approval, suite/build, command/Live trading or phase09 acceptance.
