@@ -222,9 +222,25 @@ describe("Phase 1 SGP-local profile projection", () => {
       }) as any);
       const start = performance.now();
       await new Promise(done=>setTimeout(done,60_000));
-      expect(fullReads).toBe(0);
-      expect(metadataReads).toBeGreaterThan(1000);
-      expect(metadataReads).toBeLessThanOrEqual(6*241);
+      // 2026-10-21 finding (R2 hook / Core009 R3): metadataReads was 804 (< 1000)
+      // when other heavy jobs shared the host; it passed on a quiet cell. The
+      // floor is unchanged (not lowered). The assertion messages now PRINT the
+      // measured reads, elapsed ms, expected tick count and event-loop delay so
+      // a future failure shows whether it was machine load (high loop p95/max,
+      // elapsed >> 60000, reads per tick near expected) or a logic regression
+      // (loop idle but reads/tick collapsed, or any full-payload read).
+      const elapsedMs = Math.round(performance.now()-start);
+      const pollMs = Number(replicas[0].diagnostics().local_tail_poll_ms);
+      const evidence = () => JSON.stringify({
+        metadata_reads: metadataReads, full_payload_reads: fullReads, elapsed_ms: elapsedMs,
+        tail_poll_ms: pollMs, expected_ticks: Math.floor(elapsedMs/pollMs),
+        achieved_ticks_per_replica: Math.round(metadataReads/(replicas.length*profiles.length)),
+        event_loop_delay_p95_ms: eventLoop.percentile(95)/1e6, event_loop_delay_max_ms: eventLoop.max/1e6,
+        event_loop_delay_mean_ms: eventLoop.mean/1e6, replica_counters: replicas.map(r => r.diagnostics().counters),
+      });
+      expect(fullReads, `BE-R2-9 full-payload tail reads: ${evidence()}`).toBe(0);
+      expect(metadataReads, `BE-R2-9 metadata reads floor 1000: ${evidence()}`).toBeGreaterThan(1000);
+      expect(metadataReads, `BE-R2-9 metadata reads ceiling ${6*241}: ${evidence()}`).toBeLessThanOrEqual(6*241);
       const latencies: number[] = [];
       for (let i=0;i<6;i++) {
         const env = profiles[i%3];
