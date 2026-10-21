@@ -97,10 +97,19 @@ export function managerDisplaySafe(value: string): boolean {
  * and NOT on the shared document building blocks: original custody parses the same document schema and must keep accepted source
  * identifier bytes exactly as sent (ELP2-06). Walks the whole body (bounded: depth and node cap) and reports the first unsafe path.
  */
-export function validateManagerDisplayText(body: unknown, c: z.RefinementCtx): void {
-  let nodes = 0, reported = 0;
+export const MANAGER_TEXT_WALK_MAX_DEPTH = 12;
+export const MANAGER_TEXT_WALK_MAX_NODES = 200_000;
+export const MANAGER_TEXT_WALK_BUDGET_CODE = "MANAGER_TEXT_WALK_BUDGET_EXCEEDED";
+export function validateManagerDisplayText(body: unknown, c: z.RefinementCtx, maxNodes = MANAGER_TEXT_WALK_MAX_NODES): void {
+  let nodes = 0, reported = 0, exhausted = false;
   const walk = (value: unknown, path: Array<string | number>, depth: number): void => {
-    if (reported >= 8 || depth > 12 || ++nodes > 200_000) return;
+    if (reported >= 8 || exhausted) return; // early stop once enough issues are reported
+    // An unvisited suffix must never be accepted silently: running out of depth or nodes is itself a validation issue.
+    if (depth > MANAGER_TEXT_WALK_MAX_DEPTH || ++nodes > maxNodes) {
+      exhausted = true;
+      c.addIssue({ code: z.ZodIssueCode.custom, path, message: MANAGER_TEXT_WALK_BUDGET_CODE });
+      return;
+    }
     if (typeof value === "string") {
       if (!managerDisplaySafe(value)) { reported++; c.addIssue({ code: z.ZodIssueCode.custom, path, message: MANAGER_TEXT_UNSAFE_CODE }); }
     } else if (Array.isArray(value)) value.forEach((entry, i) => walk(entry, [...path, i], depth + 1));

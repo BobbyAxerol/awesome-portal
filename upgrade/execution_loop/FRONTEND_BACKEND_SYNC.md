@@ -603,3 +603,16 @@ Priority request from Bobby via Edge: [Claude Core009 handoff](evidence/ELP2-10/
 ### Published Edge runner for priority Core009 —20Oct06:16UTC
 
 Bobby priority packet above now has published Edge code `e2f337a45ab9bf166fc811ab3b735e5ed47c5f43`, origin `BobbyAxerol/awesome-portal:feat/execution-edge-upgrade-v1_2`.29TEST_ONLY unit cases and normal130contract/717API+build/PGrestore PASS; no genuine009 acceptance claimed. Full details and source pins appended to `/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_EPG10_08_REQUEST_2026-10-19.md`. Please read/ACK the priority packet before implementing Core009; source head2 is retired/revoked, identity history already settled. No stable/dev/provider28445 change by this handoff.
+
+
+### Edge four-input priority handoff — 20Oct2026, 23:25 ICT
+
+Bobby approved delivery: [consolidated owner request](evidence/ELP2-10/EDGE_CONNECTED_ACCEPTANCE_PRIORITY_HANDOFF_2026-10-20.md), SHA256 `e94b332f850699246624afd6cf8da9fc302eeaaf591edfcb3ec085ab0c0b493b`.
+Core009 → original08/read09 is P0; PM command07, TS publisher03 and actual
+target/bounds01/06 remain independently owned inputs. Follow canonical
+campaign rules§10.13: Claude implements Portal backend, Core Codex reviews/
+integrates; do not alter TS/PM authority. Edge source `bc4b8fe1` is published.
+Status: DELIVERED / AWAITING_PORTAL_ACK, not runtime acceptance. ACK with
+selected source, runnable slice and exact return path in this existing
+ledger; send partial genuine returns promptly, no secret values. No code,
+DB, service, auth, Git HEAD/index or deployment change is authorized here.

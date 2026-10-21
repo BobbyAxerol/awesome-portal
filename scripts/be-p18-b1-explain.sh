@@ -45,7 +45,7 @@ cd "${APP_DIR}"
 export TEST_DATABASE_URL="postgres://postgres:${PASSWORD}@127.0.0.1:${PORT}/postgres"
 STATUS=0
 # Functional regression of what the gate's two fixes touch (row-scope predicate, deadline engine, queue V2 service and
-# index migration 149), on the SAME disposable server, before the heavy corpus. B1_EXPLAIN_REGRESSION= (empty) skips it.
+# index migration 148 (renumbered 149 on merge, see the receipt note)), on the SAME disposable server, before the heavy corpus. B1_EXPLAIN_REGRESSION= (empty) skips it.
 REGRESSION="${B1_EXPLAIN_REGRESSION-test/elp2-query-scope.spec.ts test/query-snapshot-reader.spec.ts test/elp204-operational-current.spec.ts}"
 if [ -n "${REGRESSION}" ]; then
   # shellcheck disable=SC2086

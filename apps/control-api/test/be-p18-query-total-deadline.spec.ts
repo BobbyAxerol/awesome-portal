@@ -54,6 +54,39 @@ describe("BE-P18 B1 m4: total request deadline of the query engine", () => {
     expect(released()).toBe(1);
   });
 
+  it("refuses a final reader that finishes LATE without issuing another statement (503 QUERY_TIMEOUT, rolled back, never committed)", async () => {
+    const { pool, log, released } = fakePool(5);
+    const failure = await new ControlPlaneQueryService(pool, codec).listWithSnapshot(resource({ totalDeadlineMs: 400 }), actor, { limit: 10 },
+      async () => { await new Promise(resolve => setTimeout(resolve, 600)); return 1; }) // no lent.query: only wall time passes
+      .then(() => null, (error: unknown) => error);
+    expect(failure).toBeInstanceOf(QueryContractError);
+    expect(failure).toMatchObject({ code: "QUERY_TIMEOUT", status: 503 });
+    expect(log).not.toContain("COMMIT"); expect(log.at(-1)).toBe("ROLLBACK");
+    expect(released()).toBe(1);
+  });
+
+  it("re-checks the budget after the statement_timeout arming round trip, before the statement starts", async () => {
+    const log: string[] = []; let released = 0;
+    const client = {
+      query: async (sql: string, values?: unknown[]) => {
+        const control = /^(BEGIN|COMMIT|ROLLBACK)/.test(sql);
+        log.push(sql.includes("set_config(") ? `set_config ${(values as string[])[0]}` : control ? sql.split(" ")[0] : sql.slice(0, 24));
+        // the arming call itself is slow (only the ones after the first, which is the initial 400 ms), spending the whole budget
+        if (sql.includes("set_config(") && log.filter(entry => entry.startsWith("set_config")).length > 1) await new Promise(resolve => setTimeout(resolve, 450));
+        if (sql.startsWith("SELECT COUNT(*)")) { await new Promise(resolve => setTimeout(resolve, 50)); return { rows: [{ count: "2" }], rowCount: 1 }; }
+        if (sql.startsWith('SELECT "id"')) return { rows: [{ id: 1 }], rowCount: 1 };
+        return { rows: [], rowCount: 0 };
+      },
+      release: () => { released += 1; },
+    };
+    const pool = { connect: async () => client } as unknown as Pool;
+    const failure = await new ControlPlaneQueryService(pool, codec).listWithSnapshot(resource({ totalDeadlineMs: 400 }), actor, { limit: 10 },
+      async () => 1).then(() => null, (error: unknown) => error);
+    expect(failure).toMatchObject({ code: "QUERY_TIMEOUT", status: 503 });
+    expect(log).not.toContain("COMMIT"); expect(log.at(-1)).toBe("ROLLBACK");
+    expect(released).toBe(1);
+  });
+
   it("does not interfere when the request finishes inside the budget", async () => {
     const { pool, log } = fakePool(5);
     const { page, snapshot } = await new ControlPlaneQueryService(pool, codec).listWithSnapshot(resource({ totalDeadlineMs: 5000 }), actor,
