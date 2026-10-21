@@ -636,6 +636,15 @@ Bổ sung cho §10.10a và §10.11.5. Khóa `/tmp/portal-heavy.lock` là quy ư�
 6. **Dọn đúng phần mình tạo:** container, mạng, volume, worktree, thư mục tạm (đĩa gốc đang ~80%); không `docker prune`.
 7. Vi phạm (khóa ngoài danh sách, giữ khóa lúc chờ, chạy chồng với hook) được ghi vào receipt của lát đó cùng cách khắc phục.
 
+### 10.10c Hook thông minh: không phải lúc nào cũng chạy hook (Bobby, 2026-10-21; áp dụng cho Claude và Codex như nhau)
+Hook đầy đủ mất 45–50 phút và chiếm khoá heavy; chạy thừa chặn cả hai agent và còn gây lỗi do tải. Vì vậy:
+1. **Một hook đầy đủ cho mỗi SHA đóng băng, do người hạ cánh chạy** (tích hợp viên). Người còn lại **dùng lại kết quả đó**, không chạy bản thứ hai. Kết quả gắn với tree SHA: nếu tree không đổi (chỉ thêm tài liệu) thì dùng lại, không chạy lại.
+2. **Không chờ hook để làm việc tiếp.** Chờ hook của bên kia không phải việc của người còn lại; làm việc song song ở nhánh/worktree khác, hoặc bàn giao SHA đóng băng và để người hạ cánh lập lịch. Không viết script "đợi rồi chạy hook chồng" cho cùng SHA.
+3. **Chọn gate theo đường dẫn đã đổi**, không mặc định hook: `scripts/select-gates.sh [base]` in ra làn tối thiểu (docs-only: không chạy gì; FE V2: tsc + vitest thư mục chạm + Playwright V2 host chỉ spec chạm; BE thuần: tsc build + vitest module chạm; BE chạm PG/migration: `control-api-test.sh` với đường dẫn spec PG cụ thể; contracts: generator/snapshot/ledger `--check`; image: kiểm quyền; ảnh V2: so sánh một spec, ghi lại chỉ ô lỗi). Làn là mức sàn: thêm làn khi diff chạm thứ bảng không nêu.
+4. **Hook đầy đủ chỉ khi:** (a) landing/ff-only trên SHA đóng băng, (b) diff chạm script cổng/pin mà làn riêng không bao phủ, (c) Bobby yêu cầu. Mọi trường hợp khác (commit giữa lát, docs, sửa test, đổi ledger bằng script) dùng làn nhỏ và `--no-verify` sau gate tập trung (§10.10).
+5. **Đỏ trong hook thì chạy lại đúng file đỏ** (`control-api-test.sh` với đường dẫn file đó) trước khi nghĩ đến hook lần hai; phân biệt lỗi tải và lỗi thật bằng log (một lỗi có nguyên nhân mã được nêu thì không gọi là flake).
+6. **Ghi trong receipt:** SHA/tree, làn đã chạy, lý do bỏ qua hook, ai dùng lại kết quả nào.
+
 ### 10.11 Chia việc Codex / Claude sau khi backend đã đi trước (Bobby, 2026-10-18)
 
 Bối cảnh: Codex đã làm phần lớn nền backend (ELP2-02…10); Bobby giao Claude **làm chính FE và làm cả backend ở phần contract mà FE cần** để rút ngắn workflow, thay vì chờ từng request. Đây là một **giao việc có phạm vi** theo CLAUDE.md (Research override: "either may work both sides within an explicit assignment"); nó không bỏ quy tắc "backend authority thuộc Codex" cho phần còn lại.
