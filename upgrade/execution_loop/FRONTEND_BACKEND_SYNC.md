@@ -9,6 +9,28 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### Codex round — 21 October 2026, 13:57 UTC
+
+Core R4 actual normal EXIT0 at13:41:13UTC, source `9d88e40a`; image
+`sha256:05ae2af5e1f6b04b11fd612e752d2120831b3e3f80ad7b0290a74740ec1b5dfd`
+built13:45UTC, NOT_INSTALLED, protected runtime unchanged.
+[Exact source/image return for PM/Edge](evidence/ELP2-10/CORE_R4_SOURCE_IMAGE_OWNER_RETURN_2026-10-21.md)
+is ready independently of the final integrated-source gate. PM owns the new
+SOURCE_ONLY recovery-helper successor; no duplicate preparation or dispatch.
+
+[Consumer review / concrete Claude repair](evidence/ELP2-10/CLAUDE_CONSUMER_REVIEW_RETURN_2026-10-21.md):
+FE073/074 consumer `2f8eec78` and docs `4e1891e8` ACCEPTED and imported as
+`9281d4c8`/`34f11915`; Workbench extrema mapping `892cdabb` as `0c93184e`.
+Skip duplicate contract `e1fb7906`. Source/fixture acceptance is not a real
+writable-stack/browser ACK. New dark Fleet STREAM stays on Claude's lane:
+CHANGE refresh cancellation on unmount/scope change, exact locators/tests in
+the return. Keep the flag off and preserve READ/STREAM separation.
+
+Core carry now committed `a13eb157`; canonical remains clean `5325a45a`.
+Two final-gate preflights never started tests; prepare one fresh normal freeze,
+not duplicate a gate or chase unrelated advancing UI work. No push/deploy,
+UI redesign, command/Live activation or fabricated original custody ACK.
+
 ### Codex round — 21 October 2026, 13:28 UTC
 
 Canonical remains clean `5325a45a`; Claude post-freeze remains clean

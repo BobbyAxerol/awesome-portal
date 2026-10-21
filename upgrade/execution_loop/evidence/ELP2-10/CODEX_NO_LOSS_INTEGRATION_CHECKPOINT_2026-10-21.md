@@ -195,3 +195,30 @@ financial commissioning closed until producer bridge/reconciled examples and
 the shared reducer mapping are reviewed. This is not a new UI task or a Portal
 choice of economic authority. C1–C3/C7 remain the relevant assigned Core work;
 no unrelated source request was silently dropped or reopened.
+
+## Actual image and accepted consumer carry — 13:57 UTC
+
+Core R4 image really completed13:45UTC, EXIT0, image ID
+`sha256:05ae2af5e1f6b04b11fd612e752d2120831b3e3f80ad7b0290a74740ec1b5dfd`
+from committed9d88e40a; protected-runtime before/after fingerprints match.
+[Source/image owner return](CORE_R4_SOURCE_IMAGE_OWNER_RETURN_2026-10-21.md)
+is independently ready for PM/Edge, explicitly NOT_INSTALLED. It is not the
+newer combined Claude tree or a connected recovery/ACK receipt.
+
+Seven Core source/test/harness paths and two regenerated EDS12 files are now
+committed as `a13eb157` (+139/-28), using exact owning R3 evidence and hashes
+under the smart-gate rule. Integrated consumer `2f8eec78` → `9281d4c8`,
+docs `4e1891e8` → `34f11915`, extrema mapping `892cdabb` → `0c93184e`.
+No duplicate contract import, frontend redesign or loss of earlier documents.
+[Independent consumer/Fleet return](CLAUDE_CONSUMER_REVIEW_RETURN_2026-10-21.md)
+accepts FE073/074 source while requesting the exact new dark Fleet refresh
+cancellation repair from Claude. New Fleet commits stay on the peer lane,
+not silently discarded and not claimed qualified in this freeze.
+
+The old final-gate controller was superseded BEFORE any test: first preflight
+could not open the shared lock; second correctly exited75 when Claude's visual
+job held it. Neither attempt entered STARTED, invoked a hook or committed.
+Preserve its state/logs as NOT_STARTED, not normal PASS/FAIL. Current canonical
+remains clean5325a45a. Prepare one fresh final normal gate on this integrated
+commit/tree, without waiting for unrelated advancing Fleet work. N29/EDS12
+official checks after consumer carry are current and unchanged.

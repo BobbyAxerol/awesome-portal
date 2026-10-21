@@ -12948,6 +12948,28 @@ window/pause ACK, issued Research leaf and original custody terminal. Current
 separates these authority prerequisites from source/fixture delivery; no
 additional gate or runtime operation was started.
 
+### Core source/image and accepted consumer return — 21October2026,13:57UTC
+
+Actual Core R4 normal EXIT0 at13:41:13UTC, source9d88e40a:1147contractsPASS,
+8785API PASS/0FAIL/3SKIP, build/migration/scoped PG restore PASS. Image
+`sha256:05ae2af5e1f6b04b11fd612e752d2120831b3e3f80ad7b0290a74740ec1b5dfd`
+built13:45UTC, NOT_INSTALLED, protected runtime unchanged.
+[Independent source/image owner return](execution_loop/evidence/ELP2-10/CORE_R4_SOURCE_IMAGE_OWNER_RETURN_2026-10-21.md)
+gives PM/Edge ready pins without waiting for combined Claude landing.
+PM alone owns its new SOURCE_ONLY helper successor; actual matching window,
+reviewed helper, pause/quiescence and original-key terminal/Core ACK remain.
+
+Integrator committed qualified seven-path Core carry+derived EDS12 as
+a13eb157; imported accepted FE073/074 consumer/docs as9281d4c8/34f11915,
+and exact-method extrema mapping as0c93184e. Duplicate contract was skipped.
+[Claude review/handoff](execution_loop/evidence/ELP2-10/CLAUDE_CONSUMER_REVIEW_RETURN_2026-10-21.md)
+accepts consumer source/fixtures but requests the dark Fleet refresh-cancel
+repair before enablement; keep those independent new feature commits on the
+peer lane until reviewed. No UI redesign by Codex. Final combined normal
+gate/ff-only remains pending; neither preflight ran tests. Canonical5325a45a
+is still clean. No push/deploy/dev/main, false STREAM or connected PASS;
+financial publication/calibration/budget/coexistence/G2/browser remain open.
+
 ### Preserved Core009 owner journal — source9d88e40a, 21October2026
 
 Exact additive owner history below is retained from the committed Core009 source. These dated BEFORE/AFTER records are historical, not a new runtime claim; the later normal terminal is recorded in the integration checkpoint.
