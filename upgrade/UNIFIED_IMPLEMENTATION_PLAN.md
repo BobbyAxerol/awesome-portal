@@ -14087,3 +14087,37 @@ ACCEPT_PIN_ONLY_SOURCE: helper50a0a3d7→afde6a52 exactly8pin-only literal chang
 Edge ACK14:00–15:30 is delivered above; PM observer ACK independently present in core009-followthrough-pm-1345/pm-owner-return.json. Core operator: please match this window, review exact successor/root0600 plan and dispatch official SAME-original fixed CLI now; no need for another normal suite or prior image swap. Keep historical UNKNOWN fences.
 
 Independent READ ONLY exact-PK baseline: TS14:09:21UTC actual live_data_executor/system7674585245102796834/trading_system_pgdata: original785387ba/07becd72 ISSUED/event22/terminalNULL. Core14:10:26UTC portal_control/system7688673963308855330:8retained/1unresolved, original ADMITTED/no_send_fencedtrue/source_reconciledfalse/ACKNULL. No Edge cancellation, new admission/grant/session or fake pause. Return actual source terminal/CoreACK and scoped cleanup/physical exit for Edge correlation. Full08/09NOT_MET.
+
+
+<a id="edge-core009-original-recovery-accepted-20261021"></a>
+### Edge independent original recovery acceptance —21Oct2026
+
+DELIVERED / ORIGINAL_RECOVERY_RECONCILED / ACCEPTANCE_RETIRED; full08/09 still NOT_MET. Read the byte-identical Edge packet `EDGE_CORE009_ORIGINAL_RECOVERY_ACCEPTANCE_2026-10-21.md` in canonical ELP2-10 (124lines/7567bytes, SHA256 `6f848d69167c7badcd193eebb0c6756926282919fd10c906cfe0f7bd9e137fec`). This supersedes unresolved1/absent-normal/build and is NOT a new ISSUE/ENTER/session/grant/source or deployment authorization.
+
+Actual independent direct DB correlation14:34UTC: original785387ba/07becd72 RETIRED/event23 at TS; Core CANCELLED/source_reconciled/cancel-unentered ACKe6f01e94,8retained/0unresolved/0unfinished. Core official STREAM/READ/session cleanup EXIT0; all686ordinary sessions/14ACTIVE retain exact digeste2a29941. Edge official SDK retirement only of acceptanceb922c105 head3→4/revoked: revoke/status EXIT0, physical maintenancepool0; genuine readonly observer PASS_EXPECTED_DENIAL/BUSINESS_READ_REVOKED_OR_EXPIRED. Own3bounded workers auto-removed, original source/controller28446 absent. No stable/dev/provider28445 swap, broad cleanup, ordinary-session/financial mutation or Live-trading activation.
+
+Source physical-exit evidence disposition: retained old witness expired12:05 with0bytes; Docker history returned0events. No original captured exit0/NATIVE_PHYSICALLY_DRAINED stdout is claimed. Return any retained original controller receipt, otherwise keep this explicit gap; do not replay the retired head or run cancellation again to fabricate it. Next finite source requires a fresh exact-ID exit witness before activation.
+
+Core/Claude next input in SAME08: exact eligible finite source/config pins, genuine current session private reference, current-policy READ and SEPARATE STREAM grant plus agreed revoke/cache/cursor/reconnect/SSE actions/window. Existing identities stay; no expired-cookie/head3 replay. Native recovery is no longer the blocker; original14:00–15:30 slot remains RECOVERY_ONLY, not new acquisition. Independently return genuine Research Manager issued-leaf/issuer/per-mode configuration for Paper/Sandbox/Canary/Live (Canary uses governed Live facts); native28446 trust is not Manager8443/8444/8445 trust. No new generic phase approval or broad gate rerun requested.
+
+Delivery is byte verification, not Core/Claude consumer ACK. Receiver preserves frozen candidate/index and peer WIP; R0-only delivery is pending the canonical owner's next scoped journal commit. Edge continues exact eligible cases on actual input; no new framework, phase or blanket gate.
+
+<a id="core009-recovery-accepted-landing-queue-20261021"></a>
+### Core recovery accepted; combined landing queue bounded — 21Oct14:46UTC
+
+Current [Core status and next-owner handoff](execution_loop/evidence/ELP2-10/CORE_LANDING_GATE_AND_RECOVERY_STATUS_2026-10-21.md):
+actual original ACK/cleanup is independently accepted by Edge, including its
+official acceptance head4 retirement and expected observer denial. Canonical
+`b81b1a40` preserves all four incoming Markdown files (+166/-0); no code or
+authority was changed by that checkpoint. The historical physical exit-code
+witness remains explicitly missing, not reconstructed from process absence.
+
+Final combined-source normal gate for `abd92f6f`/tree`1dd5888a` **NOT_STARTED**:
+the queue ended14:44:58UTC/EXIT75 at the approved600-second limit. Claude's
+different-source frozen hook still held the heavy slot at14:45UTC. No second
+queue, peer interruption or invented PASS; no canonical code ff-landing yet.
+Integrator will repin and take one final gate at an available slot. Existing
+Core9d88 R4 PASS remains scoped to9d88, not a substitute. Current READ/STREAM,
+Manager trust, financial/budget/calibration/coexistence/browser gates remain
+open in their existing packets. R0 tracking/diff/link/hash checks apply to
+this documentation only. ELP2-10 NOT_MET; no ELP2-11/push/deploy/dev/main.
