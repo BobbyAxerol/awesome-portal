@@ -13,7 +13,8 @@
  *                                   and "same physical account" is never a substitute for a source id.
  *   2. REFUSAL     -> REFUSED       a comparability key differs from the expectation (currency / basis / environment / cut / window /
  *                                   revision / metric / restatement relation); a source outside the census; the same source id with
- *                                   changed content (REPORT_SOURCE_CONFLICT); different ids whose leaves overlap (REPORT_SOURCE_OVERLAP).
+ *                                   changed content (REPORT_SOURCE_CONFLICT); different ids whose leaves overlap (REPORT_SOURCE_OVERLAP); an exact sum that no longer fits the
+ *                                   shared decimal bound (ECONOMIC_SUM_OVERFLOW, null value, never truncated / rounded / widened).
  *   3. COVERAGE    -> PARTIAL       a census source with no row, a row with no valuation proof, a row with no ownership proof, a row
  *                                   stating missing cost layers. PARTIAL carries NO number (not a subtotal, never zero).
  *   4. otherwise   -> COMPLETE      the exact decimal sum of each trusted, immutable source counted once.
@@ -36,6 +37,7 @@
  */
 import { accessDigest } from "./access-digest";
 import { sumExactDecimals } from "../research/exact-decimal";
+import { exactDecimal } from "./foundation.contract";
 import { economicSourceReduction, economicSourceReductionInput, MANAGER_ECONOMIC_SOURCE_REDUCER_REVISION,
   MANAGER_ECONOMIC_SOURCE_STATUS, MAX_ECONOMIC_FINDINGS, type EconomicComparabilityField, type EconomicExpectation,
   type EconomicFinding, type EconomicFindingCode, type EconomicProvenRow, type EconomicSourceReduction } from "./manager-economic-source.contract";
@@ -43,7 +45,7 @@ import { economicSourceReduction, economicSourceReductionInput, MANAGER_ECONOMIC
 const cmp = (a: string, b: string) => a < b ? -1 : a > b ? 1 : 0;
 const idKey = (namespace: string, sourceId: string) => JSON.stringify([namespace, sourceId]);
 const REFUSAL_CODES: ReadonlySet<EconomicFindingCode> = new Set(["REPORT_SOURCE_CONFLICT", "REPORT_SOURCE_OVERLAP",
-  "ECONOMIC_COMPARABILITY_MISMATCH", "ECONOMIC_SOURCE_OUTSIDE_CENSUS", "ECONOMIC_SOURCE_INPUT_INVALID"]);
+  "ECONOMIC_COMPARABILITY_MISMATCH", "ECONOMIC_SOURCE_OUTSIDE_CENSUS", "ECONOMIC_SOURCE_INPUT_INVALID", "ECONOMIC_SUM_OVERFLOW"]);
 
 /** Findings are deduplicated, ordered canonically and bounded; the bound is stated (`findings_truncated`), never silent. */
 class Findings {
@@ -164,11 +166,19 @@ export function reduceEconomicSource(raw: unknown): EconomicSourceReduction {
     if (s.row.cost_layers.missing.length) findings.add("ECONOMIC_COST_LAYERS_MISSING", s.namespace, s.source_id, [...s.row.cost_layers.missing].sort(cmp).join(","));
   }
   const counted = sources.map(({ namespace, source_id, content_digest, portal_fact_ids }) => ({ namespace, source_id, content_digest, portal_fact_ids }));
-  const economic_set_digest = accessDigest({ expectation, census_ref: census!.census_ref,
+  // The set digest binds the census CONTENT (canonical sorted expected identities), not just its opaque ref: the same ref with another
+  // population must not give COMPLETE and PARTIAL the same digest.
+  const expectedSources = [...expected].sort(cmp);
+  const economic_set_digest = accessDigest({ expectation, census_ref: census!.census_ref, expected_sources: expectedSources,
     sources: counted.map(s => [s.namespace, s.source_id, s.content_digest]) });
   if (findings.size) return emit({ state: "PARTIAL", value: null, sources: counted, collapsed_duplicate_count: collapsed, economic_set_digest, ...base }, findings);
 
   // 4. COMPLETE: the only place a number is produced. Exact BigInt decimal sum, one term per counted source.
   const value = sumExactDecimals(sources.map(s => s.row.amount));
+  // Two valid inputs at the shared bound can sum past it. That is a typed refusal with no number: never truncated, rounded or widened.
+  if (value === null || !exactDecimal.safeParse(value).success) {
+    findings.add("ECONOMIC_SUM_OVERFLOW", null, null, "SUM_EXCEEDS_EXACT_DECIMAL_BOUND");
+    return emit({ state: "REFUSED", ...NONE, ...base }, findings);
+  }
   return emit({ state: "COMPLETE", value, sources: counted, collapsed_duplicate_count: collapsed, economic_set_digest, ...base }, findings);
 }

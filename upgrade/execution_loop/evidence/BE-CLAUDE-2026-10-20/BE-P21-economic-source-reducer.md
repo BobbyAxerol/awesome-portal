@@ -46,3 +46,12 @@ Từ bảng "PM/Edge return" của handoff: (1) namespace + vòng đời source 
 ## 7. Evidence
 
 `tsc` chỉ 3 file: sạch. `vitest` spec mới: 64 passed. Mutation kiểm tra: nới điều kiện overlap làm đỏ 3 test (overlap, physical-account, order-independence). Commit `--no-verify` theo §10.10b.
+
+## 8. Sửa theo review Codex (CHANGES_REQUESTED, `CODEX_BE_P21_P22_REVIEW_AND_ONE_WRITER_RETURN_2026-10-21` mục BE-P21) — 2026-10-21
+
+Vẫn dark (không import runtime), không đổi `exactDecimal` toàn cục, không widen/truncate/round. Chỉ sửa đúng hai điểm:
+
+- **P21-1 (sum overflow)**: hai input hợp lệ 128 chữ số cộng ra 129 chữ số làm `emit()` ném khi parse output. Nay bước COMPLETE kiểm tổng bằng chính `exactDecimal` (bound dùng chung); vượt bound -> `REFUSED`, `value: null`, `sources: []`, `economic_set_digest: null`, reason code mới `ECONOMIC_SUM_OVERFLOW` (detail `SUM_EXCEEDS_EXACT_DECIMAL_BOUND`). Không dùng output type rộng hơn. Code mới thêm vào enum `economicFindingCode` (contract) và `REFUSAL_CODES` (reducer). Tổng nằm đúng biên 128 ký tự vẫn COMPLETE.
+- **P21-2 (population không vào digest)**: `economic_set_digest` nay gộp thêm `expected_sources` là danh sách danh tính census chuẩn hoá, sắp xếp (`JSON.stringify([namespace, source_id])`, sort), nên cùng `census_ref` mờ với quần thể khác -> digest khác; thứ tự census không ảnh hưởng. Giá trị digest đổi so với bản trước (chưa có consumer nào ghim). Comment contract cập nhật.
+
+Test: +4 (`BE-P21 review fixes`): overflow 2x128 chữ số -> REFUSED/overflow (kèm BigInt độc lập 129 chữ số) ; cộng thập phân thường + biên 128 ký tự vẫn COMPLETE; cùng census_ref + cùng dòng, census `[a]` vs `[a,b]` vs `[a,c]` -> digest khác; thứ tự census bất biến. Tổng **68 passed** (trước 64; các test parity cũ vẫn xanh). `tsc` chỉ 2 file contract/reducer: sạch. NOT_RUN như mục đầu (full tsc, spec khác, PG, Docker, hook, lock).

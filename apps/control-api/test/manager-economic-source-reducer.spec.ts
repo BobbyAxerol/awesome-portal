@@ -281,6 +281,40 @@ describe("BE-P21 case 9: reader / writer economic-set parity", () => {
   });
 });
 
+describe("BE-P21 review fixes (Codex P21-1 / P21-2)", () => {
+  const nines = "9".repeat(128);
+  it("P21-1: two valid 128-digit positives sum to 129 digits -> typed REFUSED / ECONOMIC_SUM_OVERFLOW, null value, no throw", () => {
+    expect(nines).toHaveLength(128);
+    expect((BigInt(nines) * 2n).toString()).toHaveLength(129); // independent arithmetic: the inputs fit, the sum does not
+    expect(economicProvenRow.safeParse(row("a", ["l1"], nines)).success).toBe(true);
+    const r = reduce([row("a", ["l1"], nines), row("b", ["l2"], nines)]);
+    expect(r.state).toBe("REFUSED"); expect(r.value).toBeNull();
+    expect(codes(r)).toEqual(["ECONOMIC_SUM_OVERFLOW"]);
+    expect(r.economic_set_digest).toBeNull(); expect(r.sources).toEqual([]);
+    expect(economicSourceReduction.safeParse(r).success).toBe(true);
+  });
+  it("P21-1: an ordinary exact-decimal sum is untouched; a sum landing exactly on the 128-char bound is still COMPLETE", () => {
+    const ordinary = reduce([row("a", ["l1"], "0.1"), row("b", ["l2"], "0.2"), row("c", ["l3"], "-0.25")], { census: ["a", "b", "c"] });
+    expect(ordinary.state).toBe("COMPLETE"); expect(ordinary.value).toBe("0.05");
+    const edge = reduce([row("a", ["l1"], "9".repeat(127)), row("b", ["l2"], "1")]);
+    expect(edge.state).toBe("COMPLETE"); expect(edge.value).toBe("1" + "0".repeat(127)); expect(edge.value).toHaveLength(128);
+  });
+  it("P21-2: the same census_ref and the same present rows, with another expected population, change the digest (COMPLETE vs PARTIAL)", () => {
+    const complete = reduce([A()], { census: ["a"] }), partial = reduce([A()], { census: ["a", "b"] }), other = reduce([A()], { census: ["a", "c"] });
+    expect(complete.state).toBe("COMPLETE"); expect(partial.state).toBe("PARTIAL"); expect(other.state).toBe("PARTIAL");
+    expect(complete.census_ref).toBe(partial.census_ref);
+    expect(complete.economic_set_digest).not.toBe(partial.economic_set_digest);
+    expect(partial.economic_set_digest).not.toBe(other.economic_set_digest);
+  });
+  it("P21-2: census order does not change the digest", () => {
+    const ab = reduce([A(), B()], { census: ["a", "b"] }), ba = reduce([A(), B()], { census: ["b", "a"] });
+    expect(ba.economic_set_digest).toBe(ab.economic_set_digest);
+    expect(JSON.stringify(ba)).toBe(JSON.stringify(ab));
+    const pab = reduce([A()], { census: ["a", "b"] }), pba = reduce([A()], { census: ["b", "a"] });
+    expect(pba.economic_set_digest).toBe(pab.economic_set_digest);
+  });
+});
+
 describe("BE-P21 properties", () => {
   const rng = (seed: number) => () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const shuffle = <T,>(items: T[], next: () => number) => { const a = [...items]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(next() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };

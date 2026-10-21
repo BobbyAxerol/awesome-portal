@@ -121,6 +121,9 @@ export const economicFindingCode = z.enum([
   // REFUSED: the set is provably not summable as given
   "REPORT_SOURCE_CONFLICT", "REPORT_SOURCE_OVERLAP", "ECONOMIC_COMPARABILITY_MISMATCH", "ECONOMIC_SOURCE_OUTSIDE_CENSUS",
   "ECONOMIC_SOURCE_INPUT_INVALID",
+  // REFUSED: every input is valid but the exact sum does not fit the shared public decimal bound (`exactDecimal`). Never truncated,
+  // rounded or widened: the sum is refused with a null value.
+  "ECONOMIC_SUM_OVERFLOW",
   // PARTIAL: what is stated is consistent but not the whole expected population
   "ECONOMIC_SOURCE_MISSING", "ECONOMIC_VALUATION_MISSING", "ECONOMIC_OWNERSHIP_MISSING", "ECONOMIC_COST_LAYERS_MISSING",
 ]);
@@ -146,7 +149,8 @@ export const economicSourceReduction = z.object({
   /** The sources that were counted (COMPLETE) or are present and consistent (PARTIAL); empty when the proof gate failed. */
   sources: z.array(economicCountedSource).max(MAX_ECONOMIC_SOURCE_ROWS),
   collapsed_duplicate_count: z.number().int().min(0).max(MAX_ECONOMIC_SOURCE_ROWS),
-  /** Digest of (expectation, census, [namespace, source_id, content_digest]): reader and writer must agree on it. */
+  /** Digest of (expectation, census_ref, the canonical sorted expected census identities, [namespace, source_id, content_digest]):
+   * reader and writer must agree on it. The census CONTENT is bound, so an opaque census_ref reused with another population differs. */
   economic_set_digest: digest.nullable(),
   reason_codes: z.array(economicFindingCode).max(16),
   findings: z.array(economicFinding).max(MAX_ECONOMIC_FINDINGS),
