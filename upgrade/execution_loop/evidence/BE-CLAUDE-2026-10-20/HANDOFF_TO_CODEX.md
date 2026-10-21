@@ -83,3 +83,19 @@ Không mục nào dưới đây được gọi là xong. "Chủ" = người làm
 | Visual trên SHA cuối | Đã chạy so sánh trên tip 2026-10-20: 580 đạt / 37 đỏ / 16 skip; 1 lệch ảnh thật (phase-3-gate-r2 laptop, sticky bar lệch 26px) đã ghi lại một file; 36 còn lại là kỳ vọng test cũ hoặc môi trường, đã sửa. Chưa chạy lại trên SHA cuối; baseline nhóm V2 mới chưa ghi | Claude | Chạy lại ở SHA cuối sau đợt sửa UX, xem contact sheet, ghi baseline V2 sau khi Bobby duyệt copy |
 | Connected acceptance | 0/14 `CONNECTED_VERIFIED`; INSTALLED, OWNER_ACCEPTED: 0 | Claude (consumer + receipt thật); Codex (hoán đổi Core009); Edge (nguồn); Bobby (nhận) | Khi Core009 cài và có financial input: REAL_RECEIPT sạch qua cùng consumer, đối chiếu grain/time/unit/population; matrix lên từng module, không gộp |
 | Hook R2/R3 đầy đủ | PENDING; `HOOK_RESULT_2026-10-20.md` chưa tồn tại | Claude (lead chạy) | Chạy hook ở commit kế tiếp, ghi kết quả thật vào file đó; không khai trước |
+
+
+## 11. Phối hợp song song với Codex (2026-10-21)
+
+Nguyên tắc: một người ghi cho mỗi vùng file; nhận qua `git show <sha>:<path>`, không cherry-pick cả commit; không stash/reset cây của bên kia.
+
+| Vùng | Người ghi | Ghi chú |
+| --- | --- | --- |
+| `apps/control-api/src/execution-v2/native-business-read-client.ts` + spec (lỗi BUSY: giữ slot tới `close` thật, status → cancel cùng attempt) | **Codex** (nhánh `chore/core009-connected-20261021`) | Claude không sửa. Khi Codex commit, Claude nhận bằng `git show` vào nhánh này trước khi landing, kèm test `elp210-native-business-read-client` |
+| Cài/ghép Core009, session, grant, dọn, cửa sổ Edge | **Codex** (+ Edge) | Claude chỉ nhận receipt, không đổi file cài đặt native khi vận hành viên ghim ứng viên 73435311 |
+| CR-01…04, BE-P15/16/17, series, fleet pairing, parent Paper Exit | **Claude** | Đã vào nhánh: `dd9609af` (CR-01), `ec228e53` (CR-02/03), `63201e94` (CR-04); Codex review ACCEPT/CHANGE |
+| Quyền đọc SQL không bí mật trong image control-api | **Claude** (`66b501f2` + test tĩnh trong hook) | Khớp phát hiện vận hành: schema SQL UID1000/0600 không đọc được bởi root cap-drop-ALL |
+| Landing (rebase sạch, ff-only) | **Codex** là tích hợp viên duy nhất; Claude đóng băng nguồn khi được báo | Trình tự theo `CODEX_LANDING_REVIEW_2026-10-21.md` §6 |
+| Preview 8095 (fixture overlay trên `/api/v1/execution/`) | **Claude** (FIXTURE_LAB, build từ cây sạch) | Đã xác nhận: đường dẫn execution đi tới fixture-BFF theo thiết kế. Cắt sang route thật cần Claude nhận route/consumer riêng; chưa làm |
+
+Hàng §10 đã cập nhật theo bảng §5 của landing review: pager slice, kiểu giờ, `title=`, baseline V2 (46 ảnh) là **SOURCE/FIXTURE delivered** (`a13b4fa6`, `5bc040f6`, `97454777`, `fe84ee69`); `HOOK_RESULT` có thật; BE-P13 PG đã chạy; BE-P15/16/17 là nguồn đã implement, chưa qualified; Alpha/Deployment series không mở theo quyết định Bobby.
