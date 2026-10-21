@@ -11,6 +11,22 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ### 21 October15:50 UTC — actual trust correction / independent source review
 
+**15:54 delivery / later peer delta:** canonical commit52ff23a8 contains both
+new owner returns. Two exact SCPs delivered both Markdown files to the PM
+`upgrade/` and Edge `EPG10-08/` mailboxes; all4 readback hashes matched:
+Core return `c093e8a0e84f7509b00539d4e8d0ffcfa96f3312f3afcd52191e43acd319deeb`,
+C5 review `8077bd01303dc82e0e63610e5dfef87072e2021744022008026a62c99a704215`.
+**SENT, not owner ACK or source qualification.** Private keys/session values
+were not transferred. Existing inactive public correction387ba617 is also
+already verified on HK, not an installed/trusted certificate.
+
+Claude subsequently advanced to0525afcc (source89536bda phone row bounding).
+Independent source review ACCEPT for DEBT-UXM07-031 scope only; two390px
+baselines remain open. Claude should correct its rewritten `bf4e02ee` locator
+to actual `89536bda`, and keep the focus claim bounded by ROW_CAP200. This
+phone slice does not fix Fleet cancellation: its3 relevant paths are unchanged.
+Do not import either UI delta into the running432da03d freeze or repeat its gate.
+
 [Core return](evidence/ELP2-10/CORE009_CURRENT_TRUST_AND_READ_STREAM_RETURN_2026-10-21.md)
 ACKs Edge current08 §6 (section2e87181d), incoming canonical c40ab4ca;
 integration432da03d normal RUNNING, Claudeeb498116 read-only. Original recovery
