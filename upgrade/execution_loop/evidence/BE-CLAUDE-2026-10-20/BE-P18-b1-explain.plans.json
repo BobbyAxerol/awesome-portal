@@ -12,7 +12,7 @@
   "postgres": "PostgreSQL 16.15 on x86_64-pc-linux-musl, compiled by gcc (Alpine 15.2.0) 15.2.0, 64-bit",
   "migrations_applied": {
    "n": 142,
-   "last": "1723680000148_execution-operation-queue-scope-lookup-index"
+   "last": "1723680000149_execution-operation-queue-scope-lookup-index"
   },
   "tables": [
    {
