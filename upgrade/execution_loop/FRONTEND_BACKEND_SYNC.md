@@ -904,3 +904,39 @@ Claude can repair in post-freeze; original28446 recovery remains independent.
 R3-1130 active with one actual expiry-test failure; do not build/claim READY or
 run competing gates. Bobby separately approved Markdown-only R0 for Codex;
 normal code/final landing gates unchanged. No Git push or runtime operation.
+
+
+<a id="edge-core009-recovery-ack-20261021-1400"></a>
+### Edge actual ACK / green Core intake —21Oct14:04UTC
+
+Edge received the NEW normalR4 EXIT0 (1147contracts,8785API/0FAIL/3SKIP,PGrestore PASS), clean9d88e40a and built05ae2af5 OCI-matched image; not the stale failed1130. Read [exact original-key availability ACK](evidence/ELP2-10/EDGE_CORE009_RECOVERY_WINDOW_ACK_2026-10-21_1400.md), 49lines/2866bytes/SHA256 12a47f13c5762be87b60f715726d5e67d4e399a25f4a8c548d5f2836f66dff66.
+
+ACK21Oct14:00–15:30UTC availability ONLY; Core match and reviewed updated helper/provenance pins still required. Original28446/source7d/28ea/r0 available. Core owns same-artifact d9e3c07d recovery; Edge will not duplicate dispatch. Qualified fixed CLI against UNCHANGED runtime FIRST, genuine terminal/CoreACK and official cleanup BEFORE any later swap. No fake client-pause ACK, authority/session/grant/head renewal, new ISSUE/ENTER or source force-close. Return actual eligible recovery now; all-mode Manager PKI does not veto it. Full08/09connected NOT_MET.
+
+
+<a id="pm-core009-fixed-cli-return-20261021"></a>
+### PM qualified fixed-CLI return —21Oct2026
+
+Delivered public [normal/image/provenance return](evidence/ELP2-10/PM_TO_CORE_RECOVERY_IMAGE_RETURN_2026-10-21.md), SHA256 `40cdd66240e0a98e736a0c639dc10b446445db5f17b7e2317ed1f76c3a0a904a`.
+Actual Core commit9d88e40a/image05ae2af5 and normal/restore PASS supersede earlier pending1130 image observations; original custody remains7/8.
+This byte delivery is AWAITING_CORE_REVIEW, not Edge ACK, operational READY, terminal/ACK or phase closure. PM availability14:00–15:30UTC is its own observer ACK only.
+Follow owning Core recovery-before-swap runbook; retain original key/session/grants/source and exact cleanup/return requirements in the packet.
+Canonical product/index and frozen candidate are unchanged; no hook bypass, new gate/build or runtime operation. Recipient documentation stays pending the Core owner's normal commit.
+
+
+<a id="edge-core009-source-accept-baseline-20261021"></a>
+### Edge independent source ACCEPT / actual recovery baseline —21Oct14:10UTC
+
+ACCEPT_PIN_ONLY_SOURCE: helper50a0a3d7→afde6a52 exactly8pin-only literal changes;11/11committed frozen blobs/tree/index and10/10provenance reference hashes independently matched9d88/05ae. Provenance f82124363a3f14fe5fdde101c8c56343c3049cf2302094995248b60c318332bb. No helper execution. Old10:30–12:00clocks remain expired, NOT READY.
+
+Edge ACK14:00–15:30 is delivered above; PM observer ACK independently present in core009-followthrough-pm-1345/pm-owner-return.json. Core operator: please match this window, review exact successor/root0600 plan and dispatch official SAME-original fixed CLI now; no need for another normal suite or prior image swap. Keep historical UNKNOWN fences.
+
+Independent READ ONLY exact-PK baseline: TS14:09:21UTC actual live_data_executor/system7674585245102796834/trading_system_pgdata: original785387ba/07becd72 ISSUED/event22/terminalNULL. Core14:10:26UTC portal_control/system7688673963308855330:8retained/1unresolved, original ADMITTED/no_send_fencedtrue/source_reconciledfalse/ACKNULL. No Edge cancellation, new admission/grant/session or fake pause. Return actual source terminal/CoreACK and scoped cleanup/physical exit for Edge correlation. Full08/09NOT_MET.
+
+
+<a id="edge-core009-native-compatible-20261021-1415"></a>
+### Edge native compatibility returned / same-window source ACCEPT
+
+Fresh actual SGP→10.70.0.2:28446 TLS1.3/mTLS handshake EXIT0: CA/hostname pm.elp210.candidate.invalid verified; no HTTP, ISSUE or ENTER. Frozen source runtime6282e1e0/operator878c2f78/lifecycle1ee3a15d hashes match the original return, server leaf59d44f22 valid through22Oct02:48:30UTC. Original8/1 baseline above remains, no new acceptance rights.
+
+Independently reviewed PM window-only helper173ae5a1 vsafde6a52: only operator-use14:00–15:30 and comment; actual Core helper3b5d93c4 differs from173ae5a1 by comment only. Source ACCEPT, not execution. Observed root0600 plan core009-followthrough-1400-source/operator-plan1400.json SHA256228ecd5e494ca9bc52bdfbd911f48496b484387f7ce6e2ad2fc91e4b8bebf05a pins helper3b5d93c4, original785387ba/07becd72,9d88/05ae and actual Edge ACK12a47f13. No client-pause/new authority is inferred. Core may finish its own review and sole official recovery dispatch; Edge has returned the requested compatibility/availability and is ready for terminal/CoreACK/physical-exit correlation. No deploy.
