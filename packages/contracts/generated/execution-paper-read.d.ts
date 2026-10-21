@@ -73,6 +73,74 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Scalar: string | number | boolean | null;
+        /** @description Retained account-equity history, not a bounded snapshot page. The existing producer returns exact sparse rows or per-series bucket extrema (target2000 is not a hard output ceiling). Inspect history_windows for coverage/downsampling; do not assert a fabricated row ceiling or truncate history to the snapshot page size. This DTO does not qualify projection cardinality/response-byte budgets. */
+        PaperHistoryRecords: components["schemas"]["NarrowRecord"][];
+        PaperHistoryWindows: {
+            account_equity?: components["schemas"]["PaperHistoryWindow"];
+        };
+        PaperHistoryWindow: {
+            days: number;
+            /** @constant */
+            basis: "PORTAL_SGP_HISTORY_MIRROR";
+            returned_rows: number;
+            source_rows: number;
+            /** @constant */
+            truncated: false;
+            downsample?: components["schemas"]["PaperHistoryDownsample"];
+        };
+        PaperHistoryDownsample: {
+            /** @constant */
+            method: "PER_SERIES_BUCKET_EXTREMA";
+            bucket_seconds: number;
+            series_count: number;
+            input_rows: number;
+            output_rows: number;
+        };
+        Digest: string;
+        PanelIdentifier: string;
+        PanelCoverage: {
+            from_ms: components["schemas"]["UtcEpochMs"] | null;
+            to_ms: components["schemas"]["UtcEpochMs"] | null;
+            source_total: string | null;
+            filtered_total: string | null;
+            returned_count: number;
+            truncated: boolean;
+            downsampled: boolean;
+            has_more: boolean;
+            next_cursor: string | null;
+            gaps: {
+                from_ms: components["schemas"]["UtcEpochMs"];
+                to_ms: components["schemas"]["UtcEpochMs"];
+                reason_code: components["schemas"]["PanelIdentifier"];
+            }[];
+        };
+        UtcEpochMs: number;
+        PanelEnvelope: {
+            /** @enum {unknown} */
+            state: "READY" | "EMPTY" | "PARTIAL" | "STALE" | "UNAVAILABLE" | "DENIED" | "ERROR";
+            data: unknown;
+            clocks: {
+                event_time_ms: components["schemas"]["UtcEpochMs"] | null;
+                source_published_at_ms: components["schemas"]["UtcEpochMs"] | null;
+                received_at_ms: components["schemas"]["UtcEpochMs"] | null;
+                ingested_at_ms: components["schemas"]["UtcEpochMs"] | null;
+                processed_at_ms: components["schemas"]["UtcEpochMs"] | null;
+                as_of_ms: components["schemas"]["UtcEpochMs"] | null;
+                read_at_ms: components["schemas"]["UtcEpochMs"];
+            };
+            coverage: components["schemas"]["PanelCoverage"];
+            source_history_semantics: string;
+            formula: null | {
+                formula_id: components["schemas"]["PanelIdentifier"];
+                formula_version: components["schemas"]["PanelIdentifier"];
+                input_revision: string | null;
+                input_digest: components["schemas"]["Digest"] | null;
+                composite_read_revision: string | null;
+            };
+            reason_code: string | null;
+            retryable: boolean;
+        } & (unknown & unknown);
         /** @description FE-070. Present only on the VN market workbench variant. Every member is a Fact: the Portal holds no trading-calendar source of truth, so each is NOT_PUBLISHED (N28_VENUE_CALENDAR_NOT_ACTIVE) until the market-data-layer session calendar is wired. is_open is the SOURCE's own statement at as_of; a client never infers PAUSED or AGING from window arithmetic. */
         VenueCalendar: {
             /** @constant */
@@ -275,6 +343,9 @@ export interface components {
             lineage_rejects?: {
                 [key: string]: number;
             };
+            lineage_scoped_out?: {
+                [key: string]: number;
+            };
         };
         /** @description FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace. */
         DeploymentDisplayName: string | null;
@@ -328,15 +399,16 @@ export interface components {
             };
         } & (unknown & unknown & unknown & unknown & unknown);
         NarrowRecord: {
-            [key: string]: string | number | boolean | null | (string | number | boolean | null)[];
+            [key: string]: components["schemas"]["Scalar"] | components["schemas"]["Scalar"][];
         };
         PaperData: {
+            history_windows?: components["schemas"]["PaperHistoryWindows"];
             deployment?: components["schemas"]["DeploymentRecord"] | null;
             deployments?: components["schemas"]["NarrowRecord"][];
             positions?: components["schemas"]["NarrowRecord"][];
             sessions?: components["schemas"]["NarrowRecord"][];
             performance?: components["schemas"]["NarrowRecord"][];
-            account_equity?: components["schemas"]["NarrowRecord"][];
+            account_equity?: components["schemas"]["PaperHistoryRecords"];
             portfolio_equity?: components["schemas"]["NarrowRecord"][];
             orders?: components["schemas"]["NarrowRecord"][];
             fills?: components["schemas"]["NarrowRecord"][];
@@ -468,6 +540,11 @@ export interface components {
             read_at: string;
             /** Format: date-time */
             as_of: string | null;
+            read_at_ms?: components["schemas"]["UtcEpochMs"];
+            as_of_ms?: components["schemas"]["UtcEpochMs"] | null;
+            panels?: {
+                [key: string]: components["schemas"]["PanelEnvelope"];
+            };
             /** @enum {string} */
             state: "ready" | "empty" | "stale" | "partial" | "unavailable";
             /** @enum {string} */

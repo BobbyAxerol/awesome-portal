@@ -366,6 +366,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description An existing open approval in the authenticated workspace. The ID is navigation metadata, never a permission grant. */
+        DuplicateOpenApprovalProblem: {
+            error: {
+                /** @constant */
+                code: "DUPLICATE_OPEN_APPROVAL";
+                message: string;
+            };
+            request_id: string;
+            details: {
+                approval_id: string;
+            };
+            public_copy_key?: string;
+            /** @enum {unknown} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
+        };
         /** @description Verified same-read Paper Exit manifest pins, not lineage/finding digests. AVAILABLE allows planning only in intersection with existing per-verb eligibility; self-promotion and unmet evidence remain blocked by PROMOTE policy, while safe extend/reject retain their policy. This records a Portal decision/grant only, never TS activation. */
         PaperExitDecisionContext: {
             /** @constant */
@@ -496,7 +511,14 @@ export interface components {
                 message: string;
             };
             request_id: string;
-        };
+            /** @description Public structured refusal context. Do not parse arbitrary details as authority or an identifier; use a named error variant. */
+            details?: {
+                [key: string]: unknown;
+            };
+            public_copy_key?: string;
+            /** @enum {unknown} */
+            safe_next_action?: "QUERY_SAME_INTENT" | "REVIEW_BLOCKER";
+        } & unknown;
         R1DecisionPlanRequest: {
             /** @constant */
             schema_version: "governance.r1-decision-plan-request.v1";
@@ -2358,7 +2380,8 @@ export interface components {
         ApprovalCreateRequest: {
             /** @constant */
             schema_version: "governance.approval-create-request.v1";
-            workspace_id: string;
+            /** @description When omitted, resolves from the authenticated session. Current workspace membership is still required; omission is not a wildcard. */
+            workspace_id?: string;
             request_key: string;
             /** @constant */
             gate: "R1";
@@ -3957,6 +3980,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApprovalCreateResponse"];
+                };
+            };
+            /** @description Duplicate open request (typed approval_id) or another structured conflict. An existing approval ID does not grant read access. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DuplicateOpenApprovalProblem"] | components["schemas"]["Problem"];
                 };
             };
             default: components["responses"]["Problem"];

@@ -27,7 +27,15 @@ const fixture=load("fixtures/"+parentFixtureName),definitions=parentCurrentSchem
 // to accommodate the legacy OpenAPI document or unrelated historical schemas.
 const ajv=new Ajv2020({strict:true,allErrors:true});addFormats(ajv);
 ajv.addSchema({$id:"TEST_ONLY:positive-parent",$defs:definitions});
-const validate=(name:string,value:unknown)=>ajv.compile({$ref:"TEST_ONLY:positive-parent#/$defs/"+name})(value);
+// Reuse the same compiled canonical validator. A new anonymous $ref schema
+// per assertion recompiled the whole parent graph hundreds of times and made
+// unrelated finite contract cases exceed their unchanged20-second deadline.
+const validators=new Map<string,ReturnType<typeof ajv.compile>>();
+const validate=(name:string,value:unknown)=>{
+  let check=validators.get(name);
+  if(!check){check=ajv.compile({$ref:"TEST_ONLY:positive-parent#/$defs/"+name});validators.set(name,check);}
+  return check(value);
+};
 const clone=<T>(value:T):T=>structuredClone(value);
 const runtime={R2ParentReadV2:r2ParentRead,PaperExitParentReadV2:paperExitParentRead,
   LiveParentReadV2:liveParentRead,

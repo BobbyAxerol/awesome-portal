@@ -13,6 +13,9 @@
     "workspace_id": { "$ref": "#/$defs/Identifier" },
     "read_at": { "$ref": "#/$defs/DateTime" },
     "as_of": { "oneOf": [{ "$ref": "#/$defs/DateTime" }, { "type": "null" }] },
+    "read_at_ms": { "$ref": "#/$defs/UtcEpochMs" },
+    "as_of_ms": { "oneOf": [{ "$ref": "#/$defs/UtcEpochMs" }, { "type": "null" }] },
+    "panels": { "type": "object", "maxProperties": 34, "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,127}$" }, "additionalProperties": { "$ref": "#/$defs/PanelEnvelope" } },
     "state": { "enum": ["ready", "empty", "stale", "partial", "unavailable"] },
     "freshness": { "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] },
     "completeness": { "enum": ["COMPLETE", "PARTIAL"] },
@@ -29,6 +32,425 @@
     }
   ],
   "$defs": {
+    "PaperHistoryRecords": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/NarrowRecord"
+      },
+      "description": "Retained account-equity history, not a bounded snapshot page. The existing producer returns exact sparse rows or per-series bucket extrema (target2000 is not a hard output ceiling). Inspect history_windows for coverage/downsampling; do not assert a fabricated row ceiling or truncate history to the snapshot page size. This DTO does not qualify projection cardinality/response-byte budgets."
+    },
+    "PaperHistoryWindows": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "account_equity": {
+          "$ref": "#/$defs/PaperHistoryWindow"
+        }
+      }
+    },
+    "PaperHistoryWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "days",
+        "basis",
+        "returned_rows",
+        "source_rows",
+        "truncated"
+      ],
+      "properties": {
+        "days": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "basis": {
+          "const": "PORTAL_SGP_HISTORY_MIRROR"
+        },
+        "returned_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "source_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "truncated": {
+          "const": false
+        },
+        "downsample": {
+          "$ref": "#/$defs/PaperHistoryDownsample"
+        }
+      }
+    },
+    "PaperHistoryDownsample": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "bucket_seconds",
+        "series_count",
+        "input_rows",
+        "output_rows"
+      ],
+      "properties": {
+        "method": {
+          "const": "PER_SERIES_BUCKET_EXTREMA"
+        },
+        "bucket_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "series_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "input_rows": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "output_rows": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "PanelIdentifier": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191
+    },
+    "PanelCoverage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "from_ms",
+        "to_ms",
+        "source_total",
+        "filtered_total",
+        "returned_count",
+        "truncated",
+        "downsampled",
+        "has_more",
+        "next_cursor",
+        "gaps"
+      ],
+      "properties": {
+        "from_ms": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "to_ms": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/UtcEpochMs"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_total": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]+$"
+        },
+        "filtered_total": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]+$"
+        },
+        "returned_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "downsampled": {
+          "type": "boolean"
+        },
+        "has_more": {
+          "type": "boolean"
+        },
+        "next_cursor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 4096
+        },
+        "gaps": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "from_ms",
+              "to_ms",
+              "reason_code"
+            ],
+            "properties": {
+              "from_ms": {
+                "$ref": "#/$defs/UtcEpochMs"
+              },
+              "to_ms": {
+                "$ref": "#/$defs/UtcEpochMs"
+              },
+              "reason_code": {
+                "$ref": "#/$defs/PanelIdentifier"
+              }
+            }
+          }
+        }
+      }
+    },
+    "UtcEpochMs": {
+      "type": "integer",
+      "minimum": -8640000000000000,
+      "maximum": 8640000000000000
+    },
+    "PanelEnvelope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "data",
+        "clocks",
+        "coverage",
+        "source_history_semantics",
+        "formula",
+        "reason_code",
+        "retryable"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "READY",
+            "EMPTY",
+            "PARTIAL",
+            "STALE",
+            "UNAVAILABLE",
+            "DENIED",
+            "ERROR"
+          ]
+        },
+        "data": {},
+        "clocks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "event_time_ms",
+            "source_published_at_ms",
+            "received_at_ms",
+            "ingested_at_ms",
+            "processed_at_ms",
+            "as_of_ms",
+            "read_at_ms"
+          ],
+          "properties": {
+            "event_time_ms": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/UtcEpochMs"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "source_published_at_ms": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/UtcEpochMs"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "received_at_ms": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/UtcEpochMs"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "ingested_at_ms": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/UtcEpochMs"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "processed_at_ms": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/UtcEpochMs"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "as_of_ms": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/UtcEpochMs"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "read_at_ms": {
+              "$ref": "#/$defs/UtcEpochMs"
+            }
+          }
+        },
+        "coverage": {
+          "$ref": "#/$defs/PanelCoverage"
+        },
+        "source_history_semantics": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "formula": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "formula_id",
+                "formula_version",
+                "input_revision",
+                "input_digest",
+                "composite_read_revision"
+              ],
+              "properties": {
+                "formula_id": {
+                  "$ref": "#/$defs/PanelIdentifier"
+                },
+                "formula_version": {
+                  "$ref": "#/$defs/PanelIdentifier"
+                },
+                "input_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 256
+                },
+                "input_digest": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/$defs/Digest"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "composite_read_revision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "maxLength": 256
+                }
+              }
+            }
+          ]
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "READY",
+                  "PARTIAL",
+                  "STALE"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "not": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "EMPTY",
+                  "UNAVAILABLE",
+                  "DENIED",
+                  "ERROR"
+                ]
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "properties": {
+              "data": {
+                "type": "null"
+              }
+            }
+          }
+        }
+      ]
+    },
     "VenueCalendar": {
       "type": "object",
       "additionalProperties": false,
@@ -823,14 +1245,52 @@
           "type": "object", "minProperties": 1, "maxProperties": 7,
           "propertyNames": { "enum": ["account", "external_account", "deployment", "strategy", "portfolio", "session", "group"] },
           "additionalProperties": { "type": "integer", "minimum": 1 }
+        },
+        "lineage_scoped_out": {
+          "type": "object", "minProperties": 1, "maxProperties": 7,
+          "propertyNames": { "enum": ["account", "external_account", "deployment", "strategy", "portfolio", "session", "group"] },
+          "additionalProperties": { "type": "integer", "minimum": 1 }
         }
       }
     },
-    "Scalar": { "oneOf": [{ "type": "string", "maxLength": 8192 }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] },
+    "Scalar": {
+      "oneOf": [
+        {
+          "type": "string",
+          "maxLength": 8192
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "NarrowRecord": {
-      "type": "object", "minProperties": 1, "maxProperties": 40,
-      "propertyNames": { "pattern": "^(?!record_key$)(?!raw_)(?!.*(?:secret|credential|password|token|dsn)).+$" },
-      "additionalProperties": { "oneOf": [{ "$ref": "#/$defs/Scalar" }, { "type": "array", "maxItems": 100, "items": { "$ref": "#/$defs/Scalar" } }] }
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 40,
+      "propertyNames": {
+        "pattern": "^(?!record_key$)(?!raw_)(?!.*(?:secret|credential|password|token|dsn)).+$"
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/Scalar"
+          },
+          {
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/$defs/Scalar"
+            }
+          }
+        ]
+      }
     },
     "DeploymentDisplayName": { "type": ["string", "null"], "minLength": 1, "maxLength": 256, "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])", "description": "FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace." },
     "AlphaIdentityReason": { "enum": ["ALPHA_MEMBERSHIP_NOT_QUALIFIED", "ALPHA_MEMBERSHIP_NOT_PUBLISHED", "ALPHA_MEMBERSHIP_AMBIGUOUS", "ALPHA_IDENTITY_NOT_AUTHORIZED", "ALPHA_NAME_NOT_PUBLISHED", "DEPLOYMENT_IDENTITY_NOT_READ", null], "description": "FE-066: why alpha_id or alpha_name is null. NOT_QUALIFIED = this read path has no qualified deployment-to-alpha publication; a strategy id is never promoted to an alpha id." },
@@ -1022,12 +1482,13 @@
     "Data": {
       "type": "object", "additionalProperties": false, "minProperties": 1,
       "properties": {
+        "history_windows": { "$ref": "#/$defs/PaperHistoryWindows" },
         "deployment": { "oneOf": [{ "$ref": "#/$defs/DeploymentRecord" }, { "type": "null" }] },
         "deployments": { "$ref": "#/$defs/Records" },
         "positions": { "$ref": "#/$defs/Records" },
         "sessions": { "$ref": "#/$defs/Records" },
         "performance": { "$ref": "#/$defs/Records" },
-        "account_equity": { "$ref": "#/$defs/Records" },
+        "account_equity": { "$ref": "#/$defs/PaperHistoryRecords" },
         "portfolio_equity": { "$ref": "#/$defs/Records" },
         "orders": { "$ref": "#/$defs/Records" },
         "fills": { "$ref": "#/$defs/Records" },

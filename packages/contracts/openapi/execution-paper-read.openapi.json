@@ -60,6 +60,442 @@
       "Problem": { "description": "Safe Portal problem", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
     },
     "schemas": {
+      "Scalar": {
+        "oneOf": [
+          {
+            "type": "string",
+            "maxLength": 8192
+          },
+          {
+            "type": "number"
+          },
+          {
+            "type": "boolean"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "PaperHistoryRecords": {
+        "type": "array",
+        "items": {
+          "$ref": "#/components/schemas/NarrowRecord"
+        },
+        "description": "Retained account-equity history, not a bounded snapshot page. The existing producer returns exact sparse rows or per-series bucket extrema (target2000 is not a hard output ceiling). Inspect history_windows for coverage/downsampling; do not assert a fabricated row ceiling or truncate history to the snapshot page size. This DTO does not qualify projection cardinality/response-byte budgets."
+      },
+      "PaperHistoryWindows": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [],
+        "properties": {
+          "account_equity": {
+            "$ref": "#/components/schemas/PaperHistoryWindow"
+          }
+        }
+      },
+      "PaperHistoryWindow": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "days",
+          "basis",
+          "returned_rows",
+          "source_rows",
+          "truncated"
+        ],
+        "properties": {
+          "days": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "basis": {
+            "const": "PORTAL_SGP_HISTORY_MIRROR"
+          },
+          "returned_rows": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "source_rows": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "truncated": {
+            "const": false
+          },
+          "downsample": {
+            "$ref": "#/components/schemas/PaperHistoryDownsample"
+          }
+        }
+      },
+      "PaperHistoryDownsample": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "method",
+          "bucket_seconds",
+          "series_count",
+          "input_rows",
+          "output_rows"
+        ],
+        "properties": {
+          "method": {
+            "const": "PER_SERIES_BUCKET_EXTREMA"
+          },
+          "bucket_seconds": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "series_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "input_rows": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "output_rows": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "Digest": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "PanelIdentifier": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 191
+      },
+      "PanelCoverage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from_ms",
+          "to_ms",
+          "source_total",
+          "filtered_total",
+          "returned_count",
+          "truncated",
+          "downsampled",
+          "has_more",
+          "next_cursor",
+          "gaps"
+        ],
+        "properties": {
+          "from_ms": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UtcEpochMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "to_ms": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UtcEpochMs"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_total": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          },
+          "filtered_total": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9]+$"
+          },
+          "returned_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "downsampled": {
+            "type": "boolean"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 4096
+          },
+          "gaps": {
+            "type": "array",
+            "maxItems": 200,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "from_ms",
+                "to_ms",
+                "reason_code"
+              ],
+              "properties": {
+                "from_ms": {
+                  "$ref": "#/components/schemas/UtcEpochMs"
+                },
+                "to_ms": {
+                  "$ref": "#/components/schemas/UtcEpochMs"
+                },
+                "reason_code": {
+                  "$ref": "#/components/schemas/PanelIdentifier"
+                }
+              }
+            }
+          }
+        }
+      },
+      "UtcEpochMs": {
+        "type": "integer",
+        "minimum": -8640000000000000,
+        "maximum": 8640000000000000
+      },
+      "PanelEnvelope": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "state",
+          "data",
+          "clocks",
+          "coverage",
+          "source_history_semantics",
+          "formula",
+          "reason_code",
+          "retryable"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "READY",
+              "EMPTY",
+              "PARTIAL",
+              "STALE",
+              "UNAVAILABLE",
+              "DENIED",
+              "ERROR"
+            ]
+          },
+          "data": {},
+          "clocks": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "event_time_ms",
+              "source_published_at_ms",
+              "received_at_ms",
+              "ingested_at_ms",
+              "processed_at_ms",
+              "as_of_ms",
+              "read_at_ms"
+            ],
+            "properties": {
+              "event_time_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "source_published_at_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "received_at_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "ingested_at_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "processed_at_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "as_of_ms": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/UtcEpochMs"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "read_at_ms": {
+                "$ref": "#/components/schemas/UtcEpochMs"
+              }
+            }
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/PanelCoverage"
+          },
+          "source_history_semantics": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "formula": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "formula_id",
+                  "formula_version",
+                  "input_revision",
+                  "input_digest",
+                  "composite_read_revision"
+                ],
+                "properties": {
+                  "formula_id": {
+                    "$ref": "#/components/schemas/PanelIdentifier"
+                  },
+                  "formula_version": {
+                    "$ref": "#/components/schemas/PanelIdentifier"
+                  },
+                  "input_revision": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 256
+                  },
+                  "input_digest": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/Digest"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "composite_read_revision": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 256
+                  }
+                }
+              }
+            ]
+          },
+          "reason_code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 128
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "READY",
+                    "PARTIAL",
+                    "STALE"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "data": {
+                  "not": {
+                    "type": "null"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "EMPTY",
+                    "UNAVAILABLE",
+                    "DENIED",
+                    "ERROR"
+                  ]
+                }
+              },
+              "required": [
+                "state"
+              ]
+            },
+            "then": {
+              "properties": {
+                "data": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
       "VenueCalendar": {
         "type": "object",
         "additionalProperties": false,
@@ -836,7 +1272,8 @@
           "status_map_version": { "type": "string" },
           "authority": { "type": ["string", "null"], "enum": ["DERIVED", "TRADING_SYSTEM", null] },
           "formula_version": { "type": ["string", "null"], "pattern": "^[a-z0-9.-]{3,96}$" },
-          "lineage_rejects": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } }
+          "lineage_rejects": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } },
+          "lineage_scoped_out": { "type": "object", "minProperties": 1, "maxProperties": 7, "propertyNames": { "enum": ["account", "external_account", "deployment", "strategy", "portfolio", "session", "group"] }, "additionalProperties": { "type": "integer", "minimum": 1 } }
         }
       },
       "DeploymentDisplayName": { "type": ["string", "null"], "minLength": 1, "maxLength": 256, "pattern": "^[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069](?:[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069]*[^\\s\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069])?$(?![\\s\\S])", "description": "FE-066: a display name or null (see the sibling reason code). No control or bidirectional-format characters; no leading or trailing whitespace." },
@@ -872,16 +1309,38 @@
           { "if": { "properties": { "state": { "const": "PARTIAL" } } }, "then": { "properties": { "reason_code": { "type": "string" } } } }
         ]
       },
-      "NarrowRecord": { "type": "object", "maxProperties": 40, "additionalProperties": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }, { "type": "array", "items": { "oneOf": [{ "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "null" }] } }] } },
+      "NarrowRecord": {
+        "type": "object",
+        "minProperties": 1,
+        "maxProperties": 40,
+        "propertyNames": {
+          "pattern": "^(?!record_key$)(?!raw_)(?!.*(?:secret|credential|password|token|dsn)).+$"
+        },
+        "additionalProperties": {
+          "oneOf": [
+            {
+              "$ref": "#/components/schemas/Scalar"
+            },
+            {
+              "type": "array",
+              "maxItems": 100,
+              "items": {
+                "$ref": "#/components/schemas/Scalar"
+              }
+            }
+          ]
+        }
+      },
       "PaperData": {
         "type": "object", "additionalProperties": false,
         "properties": {
+          "history_windows": { "$ref": "#/components/schemas/PaperHistoryWindows" },
           "deployment": { "oneOf": [{ "$ref": "#/components/schemas/DeploymentRecord" }, { "type": "null" }] },
           "deployments": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "positions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "sessions": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "performance": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
-          "account_equity": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
+          "account_equity": { "$ref": "#/components/schemas/PaperHistoryRecords" },
           "portfolio_equity": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "orders": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
           "fills": { "type": "array", "items": { "$ref": "#/components/schemas/NarrowRecord" } },
@@ -975,6 +1434,9 @@
           "schema_version": { "type": "string", "enum": ["execution.paper-overview.v1", "execution.paper-workbench.v1", "execution.paper-workbench-vnm.v1", "execution.full-blotter.v1"] },
           "record_authority": { "type": "string", "const": "PORTAL_CONTROL" }, "source_authority": { "type": "string", "const": "TRADING_SYSTEM" }, "delivery_profile": { "type": "string", "const": "PAPER_BINANCE_USDM" },
           "workspace_id": { "$ref": "#/components/schemas/Identifier" }, "read_at": { "type": "string", "format": "date-time" }, "as_of": { "type": ["string", "null"], "format": "date-time" },
+          "read_at_ms": { "$ref": "#/components/schemas/UtcEpochMs" },
+          "as_of_ms": { "oneOf": [{ "$ref": "#/components/schemas/UtcEpochMs" }, { "type": "null" }] },
+          "panels": { "type": "object", "maxProperties": 34, "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,127}$" }, "additionalProperties": { "$ref": "#/components/schemas/PanelEnvelope" } },
           "state": { "type": "string", "enum": ["ready", "empty", "stale", "partial", "unavailable"] }, "freshness": { "type": "string", "enum": ["FRESH", "AGING", "STALE", "UNKNOWN"] }, "completeness": { "type": "string", "enum": ["COMPLETE", "PARTIAL"] },
           "actor": { "$ref": "#/components/schemas/Actor" }, "resource": { "type": "object", "additionalProperties": false, "required": ["kind", "id"], "properties": { "kind": { "type": "string", "const": "DEPLOYMENT" }, "id": { "$ref": "#/components/schemas/Identifier" } } },
           "capabilities": { "type": "array", "items": { "$ref": "#/components/schemas/Capability" } }, "data": { "$ref": "#/components/schemas/PaperData" }

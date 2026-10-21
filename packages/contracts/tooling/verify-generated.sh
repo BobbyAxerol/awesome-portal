@@ -50,6 +50,7 @@ node tooling/generate-execution-retained-scoped.mjs --check
 node tooling/generate-execution-analytics-scoped.mjs --check
 node tooling/generate-execution-stage-drift.mjs --check
 node tooling/generate-execution-stage-facts.mjs --check
+node tooling/generate-execution-served-envelopes.mjs --check
 generate_and_compare openapi/execution-stage-drift.openapi.json generated/execution-stage-drift.d.ts
 node tooling/generate-execution-financial-chart.mjs --check
 generate_and_compare openapi/execution-financial-chart.openapi.json generated/execution-financial-chart.d.ts

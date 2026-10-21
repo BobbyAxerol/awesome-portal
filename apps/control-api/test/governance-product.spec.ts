@@ -1,4 +1,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import Ajv2020 from "ajv/dist/2020";
 import { AdminService } from "../src/admin/admin.service";
 import { Argon2CredentialService } from "../src/auth/argon";
 import { AuthService } from "../src/auth/auth.service";
@@ -16,6 +19,24 @@ const DATABASE_URL =
   process.env.TEST_DATABASE_URL ??
   "postgres://portal:portal@127.0.0.1:5432/portal_control_test";
 const ARTIFACT_HASH = `sha256:${"a".repeat(64)}`;
+
+// FE-074: compare actual HTTP producer responses and requests with the
+// published definitions. Schema validity never substitutes workspace membership.
+const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+const governanceApi = JSON.parse(readFileSync(resolve(contractsRoot, "openapi/execution-governance.openapi.json"), "utf8"));
+const governanceProductContract = JSON.parse(readFileSync(resolve(contractsRoot, "schemas/execution-governance-product.v1.schema.json"), "utf8"));
+const governanceAjv = new Ajv2020({ strict: false, allErrors: true });
+const validateDuplicateProblem = governanceAjv.compile(governanceApi.components.schemas.DuplicateOpenApprovalProblem);
+const validateApprovalCreate = governanceAjv.compile({
+  $defs: governanceProductContract.$defs,
+  $ref: "#/$defs/ApprovalCreateRequest",
+});
+function assertDuplicateProblem(value: unknown) {
+  expect(validateDuplicateProblem(value), JSON.stringify(validateDuplicateProblem.errors)).toBe(true);
+}
+function assertApprovalCreateContract(value: unknown) {
+  expect(validateApprovalCreate(value), JSON.stringify(validateApprovalCreate.errors)).toBe(true);
+}
 
 interface Actor {
   userId: string;
@@ -267,6 +288,7 @@ describe("N29 governance product closeout", () => {
     });
     expect(missingCsrf.statusCode).toBe(403);
 
+    assertApprovalCreateContract(createPayload());
     const created = await mutation(stan, "/api/v1/execution/governance/approvals", createPayload());
     expect(created.statusCode).toBe(201);
     expect(created.json().replayed).toBe(false);
@@ -294,6 +316,7 @@ describe("N29 governance product closeout", () => {
     );
     expect(duplicate.statusCode).toBe(409);
     expect(duplicate.json().error.code).toBe("DUPLICATE_OPEN_APPROVAL");
+    assertDuplicateProblem(duplicate.json());
     expect(duplicate.json().details.approval_id).toBe(created.json().approval.approval_id);
 
     const stored = await ctx.pool.query(
@@ -587,10 +610,12 @@ describe("N29 governance product closeout", () => {
     expect(ineligible.statusCode).toBe(422);
     expect(ineligible.json().error.code).toBe("EVIDENCE_RUN_NOT_ELIGIBLE");
 
-    const crossWorkspace = await mutation(stan, "/api/v1/execution/governance/approvals", {
+    const crossWorkspacePayload = {
       ...createPayload("cross-workspace"),
       workspace_id: "ws_not_visible",
-    });
+    };
+    assertApprovalCreateContract(crossWorkspacePayload);
+    const crossWorkspace = await mutation(stan, "/api/v1/execution/governance/approvals", crossWorkspacePayload);
     expect(crossWorkspace.statusCode).toBe(404);
   });
 
@@ -620,6 +645,30 @@ describe("N29 governance product closeout", () => {
     expect(distinctKeys.map((item) => item.statusCode).sort()).toEqual([201, 409]);
     expect(distinctKeys.find((item) => item.statusCode === 409)?.json().error.code)
       .toBe("DUPLICATE_OPEN_APPROVAL");
+    assertDuplicateProblem(distinctKeys.find((item) => item.statusCode === 409)!.json());
+  });
+
+  it("resolves omitted workspace from the authenticated session, not the evidence run", async () => {
+    const { workspace_id: _explicitWorkspace, ...sessionWorkspacePayload } = createPayload();
+    assertApprovalCreateContract(sessionWorkspacePayload);
+    // The shared fixture is in Bobby's workspace; omission must not infer that
+    // workspace from a run ID even though Stan is also a member there.
+    const wrongSessionScope = await mutation(stan, "/api/v1/execution/governance/approvals", sessionWorkspacePayload);
+    expect(wrongSessionScope.statusCode).toBe(422);
+    expect(wrongSessionScope.json().error.code).toBe("EVIDENCE_RUN_NOT_FOUND");
+    const personal = await ctx.pool.query<{ workspace_id: string }>(
+      "SELECT workspace_id FROM workspaces WHERE owner_user_id = $1",
+      [stan.userId],
+    );
+    expect(personal.rows).toHaveLength(1);
+    await ctx.pool.query("UPDATE run_read_models SET workspace_id = $1 WHERE run_id = 'run_n29'", [personal.rows[0].workspace_id]);
+    const created = await mutation(stan, "/api/v1/execution/governance/approvals", sessionWorkspacePayload);
+    expect(created.statusCode).toBe(201);
+    const stored = await ctx.pool.query<{ workspace_id: string }>(
+      "SELECT workspace_id FROM governance_approval_requests WHERE approval_id = $1",
+      [created.json().approval.approval_id],
+    );
+    expect(stored.rows).toEqual([{ workspace_id: personal.rows[0].workspace_id }]);
   });
 
   it("separates empty request scope, policy block and unavailable external panels", async () => {
