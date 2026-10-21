@@ -1,5 +1,67 @@
 # Original08 — actual private native READ and finite SSE
 
+**21Oct15:47UTC continuation:** Core has ACCEPTED_WITH_SCOPE the original
+recovery, not commissioned a new current READ/STREAM source. Current Core/
+Claude branches and actual installed runtime are repinned in the
+[main continuation](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-current-read-stream-continuation-20261021).
+The existing [Core handoff §6](EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#6-current-readstream-follow-through-21oct1545utc)
+now requests exact current source/session/READ, separate STREAM/window and
+server cache/final-egress/unaffected-scope evidence. Existing driver audit
+finds no new owned defect; repeat-read/403/EOF do not close those three cases.
+No new source/grant/session, service swap or current connected PASS; the old
+recovery-only slot expired. Independent all-mode Manager trust is still separate.
+
+**Latest21Oct14:35UTC:** original recovery is now genuinely reconciled,
+not pending. [Acceptance/retirement return](EDGE_CORE009_ORIGINAL_RECOVERY_ACCEPTANCE_2026-10-21.md):
+Core3official cleanup operations EXIT0; direct Core DB confirms8retained/
+0unresolved/0unfinished, originalCANCELLED/reconciled/cancel-unentered ACK;
+686ordinary sessions/14ACTIVE state hash unchanged. Independent TS confirms
+same originalRETIRED/event23. Edge officially retired only expired acceptance
+head3→4/revoked; readonly status EXIT0/pool0 and actual SDK observer correctly
+denies BUSINESS_READ_REVOKED_OR_EXPIRED. Exact workers/controller/source port/
+backends absent. Original captured serve exit0/stdout is not available and is
+not inferred from absence. New actual READ/STREAM/revoke/cache/cursor/SSE
+window and independent all-mode Manager PKI remain; full08/09NOT_MET.
+
+**Latest21Oct14:18UTC follow-through:** genuine native TLS1.3/mTLS compatibility
+SGP→28446 EXIT0/CA+hostname verified, no HTTP/admission. Actual root0600 Core
+plan228ecd5e now pins window14:00–15:30, original tuple,9d88/05ae and Edge
+ACK12a47f13. Its helper3b5d93c4 differs from accepted PM window successor173ae5a1
+only by comment; that successor changes only the approved operator window,
+not original acceptance dates. Native runtime/operator/lifecycle hashes match.
+All requested Edge inputs/source reviews delivered to Core task/sync;14:18
+readback found no new recovery receipt. Core owns final plan/operator match
+and sole dispatch; source terminal/CoreACK/physical exit remain unproven.
+No deploy or further phase activation. Full08/09NOT_MET.
+
+**Latest21Oct14:10UTC supersedes the old qualification/window status below:**
+actual normalR4 EXIT0, source9d88e40a clean;1147contracts and8785API PASS,
+0FAIL/3SKIP, scopedPGrestore PASS. Image05ae2af5 is built/OCI-revision matched,
+NOT installed. Edge independently verified the complete11-blob committed freeze,
+source tree/index digest and10provenance reference hashes; helper successorafde6a52
+differs from reviewed50a0a3d7 in exactly8pin literals, no operational logic or
+clock changes. ACCEPT_PIN_ONLY_SOURCE, not operational permission. Historical
+10:30–12:00 helper clocks remain expired: Core must prepare/review its successor
+for the genuinely matched window, not run that old helper or change authority.
+Edge [14:00–15:30 recovery-only ACK](EDGE_CORE009_RECOVERY_WINDOW_ACK_2026-10-21_1400.md)
+was actually delivered14:05:35UTC with byte/hash verification. Core operator
+matching ACK/root-reviewed original-operation plan remain separate. Qualified
+fixed CLI against unchanged runtime comes BEFORE any image swap; preserve the
+same original artifact/idempotency and no duplicate Edge cancellation.
+
+Fresh exact-PK READ ONLY observations on the verified physical targets:
+TS14:09:21UTC live_data_executor/system7674585245102796834/trading_system_pgdata:
+same lease785387ba/attempt07becd72/bindingef98/source42f88, ISSUED/event22,
+terminal receipt/digestNULL. Core14:10:26UTC portal_control/system7688673963308855330:
+8retained/1unresolved, original ADMITTED/no_send_fencedtrue/bodyNULL,
+source_reconciledfalse/ACKNULL. Both used3sstatement/500mslock and READ ONLY
+rollback; no business/authority/session changes. This is a real unmatched
+recovery obligation, not merely old documentation or process health. Original
+source7d/28ea/restart0/listener28446 remains retained. Core has genuine inputs
+for its owned review/dispatch; Edge has completed availability/provenance/before
+correlation and will verify the returned terminal/CoreACK/physical exit. No
+new current READ/STREAM, PKI commissioning, full08/09 or swap PASS is claimed.
+
 **Latest21Oct10:26UTC:** retained proof below is historical, not active
 authority. One original lease785387ba/attempt07becd72 remains unresolved;
 source28446/SDK custody retained. Core normalR3 failed one20s C5 case, current

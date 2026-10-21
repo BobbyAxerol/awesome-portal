@@ -1036,6 +1036,53 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**21Oct15:47UTC current continuation:** Core ACKs original recovery and scoped
+cleanup; old unresolved1/qualification blockers are closed. Current-source/
+session/READ and separate STREAM/window are NOT yet returned. The existing
+[single owner handoff §6](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#6-current-readstream-follow-through-21oct1545utc)
+freezes exact input/owner/return and independently requested all-mode PKI.
+Existing runner audit finds no owned defect; cache-HIT, server last-egress/
+active revoke and unaffected-scope proof are not implied by repeat-read/EOF.
+No fresh rights, acquisition or rollout; full08/09 remain NOT_MET.
+
+**21Oct14:35UTC actual recovery/retirement supersedes unresolved1 below:**
+[correlated acceptance](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_ORIGINAL_RECOVERY_ACCEPTANCE_2026-10-21.md)
+records Core official STREAM→READ→session cleanup EXIT0, direct durable
+8retained/0unresolved/0unfinished/originalcancelACK, TSsame-originalRETIRED and
+unchanged686normal session states. Owned official SDK acceptance retirement
+head3→4/revoked, readonly status/pool0 and expected real observer denial PASS;
+exact worker/source socket/backends absent. Original serve exit0/stdout is not
+captured, not manufactured. Next genuine finite read/STREAM window and scoped
+active revoke/cache/cursor/SSE plus independent Manager PKI remain; full08/09
+NOT_MET. Do not wait for the now-closed normal/build/original recovery gap.
+
+**21Oct14:18UTC follow-through:** actual native SGP→28446 TLS1.3/mTLS/CA/
+hostname qualification EXIT0, no HTTP/ISSUE/ENTER. Matching-window successor
+3b5d93c4 and root0600 plan228ecd5e are now prepared with original tuple,
+9d88/05ae and actual Edge ACK12a47f13. Pin/window-only source review accepted;
+requested Edge availability/compatible pins returned. Core owns operational
+review/match/dispatch; no recovery receipt at14:18, no terminal/ACK/exit or
+swap/phase PASS. Historical expired helper must still not be used. Main and
+single connected return retain exact real-source8/1 baseline and next action.
+
+**21Oct14:10UTC current qualified-source override:** Core normalR4 physically
+EXIT0, clean9d88e40a,1147contracts/8785API PASS,0FAIL/3SKIP, PGrestore PASS;
+image05ae2af5 built/OCI matched, NOT installed. Edge verified11frozen committed
+blobs/index/tree,10provenance references and8literal-only helper repin. Exact
+[14:00–15:30 recovery-only availability ACK](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_RECOVERY_WINDOW_ACK_2026-10-21_1400.md)
+is delivered; original10:30–12:00 helper is still expired, NOT executable READY.
+Core owns matched-window/root-plan review and official same-key fixed-CLI
+recovery against unchanged service BEFORE any later image swap. No need for
+another generic approval or repeat of the green suite. Fresh independent
+TS/Core READ ONLY correlation still shows the exact original ISSUED/event22 /
+ADMITTED/no_send_fenced,8retained/1unresolved/noACK. Keep original custody;
+no new session/grant/head or fake client-pause. See the
+[single connected return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md)
+and [main original08 journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-core-green-return-and-recovery-ack-20261021).
+Old failures below remain historical, no longer an absent-normal/build blocker.
+Full08/09 connected NOT_MET; actual terminal/ACK/exit and current eligible
+read/revoke/cache/cursor/SSE inputs remain, separate from all-mode PKI.
+
 **21Oct10:26UTC latest qualification:** Edge's isolated exact-source retake is
 4PASS/0FAIL/297explicit-filter-SKIP (301total), scopedPGrestore PASS. Build is
 inherited by1951/1951 matching public-input hashes; all assertions and20s limits
