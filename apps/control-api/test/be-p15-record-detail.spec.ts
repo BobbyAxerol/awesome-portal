@@ -84,6 +84,48 @@ describe("BE-P15 recordDetailValue never coerces", () => {
     expect(epochMsFrom(1790812800123)).toBe(1790812800123);
     expect(epochMsFrom("")).toBeUndefined();
   });
+  // CR-04: only an explicit-zone ISO instant (or a safe integer epoch-ms NUMBER) is an instant; everything else is absent.
+  const at = (iso: string) => Date.parse(iso);
+  it.each([
+    ["2026-10-01T00:00:00Z", 1790812800000], ["2026-10-01T00:00:00.5Z", 1790812800500], ["1970-01-01T00:00:00Z", 0],
+    ["2028-02-29T12:00:00Z", Date.UTC(2028, 1, 29, 12)], ["2000-02-29T00:00:00Z", Date.UTC(2000, 1, 29)],
+    ["2026-12-31T23:59:59Z", Date.UTC(2026, 11, 31, 23, 59, 59)],
+    ["2026-10-01T07:00:00+07:00", 1790812800000], ["2026-09-30T17:00:00-07:00", 1790812800000],
+    ["2026-10-01T05:30:00+05:30", Date.UTC(2026, 9, 1, 0, 0, 0)], ["2026-10-01T00:00:00+00:00", 1790812800000], ["2026-10-01T00:00:00-00:00", 1790812800000],
+  ])("accepts %s", (raw, expected) => {
+    expect(epochMsFrom(raw)).toBe(expected);
+  });
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9])("accepts %i fractional-second digits and truncates to milliseconds", (digits) => {
+    const fraction = "123456789".slice(0, digits);
+    expect(epochMsFrom(`2026-10-01T00:00:00.${fraction}Z`)).toBe(1790812800000 + Number(fraction.padEnd(3, "0").slice(0, 3)));
+  });
+  it("keeps a zero-padded short fraction exact (.05 is 50 ms, .005 is 5 ms)", () => {
+    expect(epochMsFrom("2026-10-01T00:00:00.05Z")).toBe(1790812800050);
+    expect(epochMsFrom("2026-10-01T00:00:00.005Z")).toBe(1790812800005);
+    expect(epochMsFrom("2026-10-01T00:00:00.0009999Z")).toBe(1790812800000);
+  });
+  it.each([
+    ["2026-02-30T12:00:00Z"], ["2026-02-29T12:00:00Z"], ["2100-02-29T00:00:00Z"], ["2026-04-31T00:00:00Z"], ["2026-13-01T00:00:00Z"], ["2026-00-10T00:00:00Z"],
+    ["2026-10-00T00:00:00Z"], ["2026-10-32T00:00:00Z"], ["2026-10-01T24:00:00Z"], ["2026-10-01T23:60:00Z"], ["2026-10-01T23:59:60Z"],
+    ["2026-10-01T00:00:00+24:00"], ["2026-10-01T00:00:00+07:60"],
+    ["2026-10-01"], ["2026-10-01T00:00:00"], ["2026-10-01T00:00"], ["2026-10-01 00:00:00Z"], ["2026-10-01 00:00:00"], ["2026-10-01t00:00:00z"],
+    ["2026-10-01T00:00:00+0700"], ["2026-10-01T00:00:00+07"], ["2026-10-01T00:00:00.Z"], ["2026-10-01T00:00:00.1234567890Z"],
+    ["1"], ["1790812800123"], ["0"], ["  1790812800123"], ["1e3"], ["2001"], ["Oct 1 2026 00:00:00 GMT"], ["Thu, 01 Oct 2026 00:00:00 GMT"],
+    ["1969-12-31T23:59:59Z"], ["+002026-10-01T00:00:00Z"], ["2026-10-01T00:00:00Z\n"], ["2026-10-01T00:00:00Z "], ["not a time"], [""],
+  ])("rejects %j as malformed", (raw) => {
+    expect(epochMsFrom(raw)).toBeUndefined();
+    expect(recordDetailValue("submitted_at_ms", raw)).toBeUndefined();
+  });
+  it("accepts only an already-safe non-negative integer number as an epoch stamp", () => {
+    for (const raw of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1]) expect(epochMsFrom(raw)).toBeUndefined();
+    for (const raw of [undefined, null, true, {}, [], 1n]) expect(epochMsFrom(raw)).toBeUndefined();
+    expect(epochMsFrom(0)).toBe(0);
+    expect(epochMsFrom(Number.MAX_SAFE_INTEGER)).toBe(Number.MAX_SAFE_INTEGER);
+  });
+  it("agrees with the engine on every valid instant it accepts (no hand-rolled calendar drift)", () => {
+    for (const iso of ["2024-02-29T01:02:03.456Z", "2026-03-01T00:00:00Z", "2026-12-31T23:59:59.999+14:00", "2038-01-19T03:14:08Z", "9999-12-31T23:59:59Z"])
+      expect(epochMsFrom(iso)).toBe(at(iso));
+  });
 });
 
 describe("BE-P15 subject records (RV-11 R-5, R-9)", () => {
@@ -152,6 +194,14 @@ describe("BE-P15 subject records (RV-11 R-5, R-9)", () => {
     expect(orders.records[0].values.client_order_id).toBe("client-entry");
     expect(orders.records[0].values.order_type).toBeUndefined();
     expect(orders.records[0].time_reason_code).toBe("SUBMITTED_AT_NOT_IN_POLICY");
+  });
+  it("CR-04: an impossible, zone-less or numeric-string order time is named SOURCE_TIME_UNPARSEABLE, not invented as an instant", async () => {
+    const bad = ["2026-02-30T12:00:00Z", "1", "2026-10-01T00:00:00", "2026-10-01"];
+    const { read } = subject({ full: true, orders: bad.map((submitted_at, index) => order({ order_id: `b${index}`, submitted_at })) });
+    const page = await read("orders");
+    expect(page.records.map((record: any) => record.time_reason_code)).toEqual(bad.map(() => "SOURCE_TIME_UNPARSEABLE"));
+    for (const record of page.records) expect(record.values.submitted_at_ms).toBeUndefined();
+    expect(scopedSubjectActivitySchema.safeParse(page).success).toBe(true);
   });
   it("a source that states no order time, or an unreadable one, is named - never a guess, never a failed page", async () => {
     const { read } = subject({ full: true, orders: [order({ submitted_at: null }), order({ order_id: "o2", submitted_at: "garbage" }), order({ order_id: "o3" })] });

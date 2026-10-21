@@ -4,7 +4,7 @@ import { scopedAdapterFieldsSchema, scopedAdapterGroupSchema, scopedAdapterRespo
 export { scopedAdapterFieldsSchema, scopedAdapterResponseSchema } from "../execution-v2/profile-adapter.contract";
 import { ExecutionReadScopes, ExecutionReadScopeError, scopeAllowsField, scopeReadPopulation, type ReadScopePrincipal } from "../execution-v2/read-scope";
 import { projectionRowVisible, redactProjectionFields } from "../execution-v2/read-projection";
-import { addRecordDetail } from "../execution-v2/record-detail";
+import { addRecordDetail, epochMsFrom } from "../execution-v2/record-detail";
 import { fenceRetainedSnapshot } from "./retained-operation-page";
 import { ControlApiConfig } from "../config";
 import { projectionExpired } from "./retained-read-profile";
@@ -197,7 +197,11 @@ export class ExecutionProfileReadAdapterService {
           const mapped: Record<string, unknown> = { ...row };
           for (const [from, to] of Object.entries(ADAPTER_FIELD_MAPPING)) if (row[from] !== undefined) mapped[to] = row[from];
           for (const field of ["timestamp_ms", "occurred_at_ms", "created_at", "updated_at"])
-            if (typeof mapped[field] === "string") mapped[field] = Date.parse(mapped[field] as string);
+            if (typeof mapped[field] === "string") {
+              // CR-04: the shared explicit-zone parser; an unreadable source instant is omitted, never guessed or sent as NaN.
+              const ms = epochMsFrom(mapped[field]);
+              if (ms === undefined) delete mapped[field]; else mapped[field] = ms;
+            }
           const visible = redactProjectionFields(scope, mapped);
           const dto: Record<string, unknown> = Object.fromEntries(Object.entries(visible).filter(([key]) => Object.hasOwn(scopedAdapterFieldsSchema.shape, key)));
           // BE-P15 record detail: a separate closed vocabulary, admitted per scope; a malformed cell is omitted, never coerced.
