@@ -120,3 +120,27 @@ Base `799effc8` (`claude/fe-parity`). Thay §4.3 và §8.5 ("`revokeSession` ch�
 Rủi ro lần chạy đầu: assert `listeners === 2` (probe + service) giả định đúng một `AlphaFleetRealtimeService` trong app; probe đọc DB bằng truy vấn khởi động đồng bộ tại hint nên giá trị đúng khi hint đến sau commit (đã chứng minh thứ tự ở spec non-PG).
 
 **Còn nợ:** hint xuyên process (CLI -> server) = `LISTEN/NOTIFY`, ngoài phạm vi; grant con ủy quyền của grant bị revoke chỉ kết thúc bằng fence; `tsc` toàn bộ `test/` bị OOM trên máy này (chỉ chạy được src + 4 spec liên quan: một diagnostic cũ `node-pg-migrate` ở `test/harness.ts`).
+
+### 9.1 Receipt chạy tập trung cho CR-01 (2026-10-21, DEBT-UXM07-036)
+
+Mã được chứng: `dd9609af` (nằm trong `799effc8`). Chạy trên worktree `claude/fe-parity` @ `799effc8` cộng các commit chỉ-FE của gói UXM-07 (conformance Workbench/New request, baseline V2): `apps/control-api/` và `packages/contracts/` **không đổi** so với `799effc8`. Host, không Docker, không PG, TEST_ONLY. `node_modules` của control-api lấy từ cây `portal-research` (cài ngày 2 Oct), không phải image của hook; số dưới đây là của lần chạy này, không thay hook R2/R3.
+
+**`apps/control-api/test/be-p17-fleet-pairing.spec.ts` chứng gì.** Một bài kiểm chéo dịch vụ: `ManagerModelService` thật (`GET /manager/fleet`), `AlphaFleetRealtimeService` thật với `ScopesFleetAuthority` thật, `ExecutionReadScopes` thật, access evaluation thật, `ScopedReplayCursorCodec` thật. Chỉ biên I/O là double (access context, publication reader, hàng định danh SQL, kho revision Manager), như `elp206-manager-service.spec.ts`. Hai dịch vụ đọc **cùng một** kho (một head, một tài liệu SOURCE_VERIFIED mỗi revision), nên hai bản sao không thể lệch nhau. Bốn ca:
+
+1. **Cùng nguồn, cùng actor/session/workspace/environment:** `named_snapshot.lineage_revision` của barrier bằng từng byte `lineage.revision` của Fleet read; `baseline.revision` vẫn là head thô (`TEST_ONLY:r1`) và khác cả hai (head thô không còn là định danh ghép, đúng sai sót CR-01); đọc lại thì cùng giá trị; công thức là hàm `managerLineageRevision` (đầu ra dạng `sha256:<64 hex>`).
+2. **Khác session, actor, grant hoặc resource nhìn thấy thì không ghép:** barrier của principal này không bằng read của principal khác, nhưng mỗi bên ghép với read của chính nó; thêm một grant đổi định danh (vẫn ghép với read mới); bớt một deployment peer khỏi tập công bố cũng đổi.
+3. **Head đổi giữa hai lần đọc thì stale:** barrier cũ không bằng read mới; đọc lại barrier ở head mới thì ghép lại và `baseline.revision` là `TEST_ONLY:r2`.
+4. **Chỉ READ (`business.read_all`, không `stream.subscribe`) vẫn ghép nhưng không mở stream:** `stream = {state: UNAVAILABLE, reason_code: STREAM_AUTHORITY_NOT_GRANTED, resume_cursor: null}`; thêm grant stream thì `AVAILABLE` và vẫn ghép theo read; rút grant thì cursor cũ mở ra khung terminal, không có `revalidate`/`heartbeat`.
+
+**Kết quả chạy** (mỗi dòng là một lệnh riêng, đếm thật):
+
+| Gate | Kết quả |
+| --- | --- |
+| `cd apps/control-api && vitest run test/be-p17-fleet-pairing.spec.ts` | 4/4 (20 s) |
+| cùng thư mục: `test/be-p16-alpha-fleet-realtime.spec.ts` | 50/50 |
+| `test/elp206-manager-service.spec.ts` (đường `GET /manager/fleet` thật) | 19/19 |
+| `test/elp2-read-scope.spec.ts` | 117 skipped, 0 chạy: **cả file cần PG**, gồm assert PG của CR-01 → **NOT_RUN** |
+| `cd packages/contracts && vitest run test/execution-alpha-fleet-realtime.spec.ts` | 57/57; `node tooling/generate-execution-alpha-fleet-realtime.mjs --check` exit 0 (sinh lại khớp) |
+| FE: `alphaFleetRealtime.conformance.test.ts` + `fixtureBff/fleetRealtime.test.ts` | 1388/1388 (hai file) |
+
+**Chưa chứng:** assert PG của CR-01 trong `elp2-read-scope.spec.ts` (không có PG ở lần chạy này); fingerprint scope thật trên DB; không có grant `stream.subscribe` thật nào được tạo hay xác nhận (TEST_ONLY: không qualify publication hay grant production); hook R2/R3 trên SHA đóng băng (DEBT-UXM07-037). `tsc` của control-api không chạy ở đây.
