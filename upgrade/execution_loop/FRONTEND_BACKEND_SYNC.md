@@ -9,6 +9,20 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October18:12 UTC — normal/image automation and actual finite census
+
+[Current corrected source return](evidence/ELP2-10/CORE009_SUCCESSOR_NORMAL_IMAGE_RETURN_2026-10-21.md)
+pins8ac4f553 normal RUNNING and file-result build continuation85550 (no lock
+while waiting, no second hook/install/authority). Actual Research migrations
+pending135–149 and tiny index base-table metadata are recorded, not applied.
+Independent READ ONLY census18:12:38 agrees with Edge: retained9/native8,
+unresolved0;32cap minus20recovery reserve leaves **3** new admissions maximum.
+Do not dispatch full driver, purge history, reset with restart or silently
+raise caps. Edge returns explicit finite case/frame/recovery budget; eligible
+single READ is independent of optional observer/Manager/financial inputs.
+Claude review was actually copied to approved Edge mailbox with matching SHA
+1d4933b4840751a778e64a032a7f8f520f4e9bdf6036e94845c738935d09e8a3.
+
 ### 21 October18:00 UTC — Edge cache-case input ACK / Claude P22 continuation
 
 Core independently **ACCEPTS** incoming Edge§10: P22 carrier/deliver/builder/
@@ -1627,3 +1641,32 @@ for the named cache case. Do not stop/edit/duplicate live writer normalPID
 3044368; READ proceeds independently when qualified. No browser field, generic
 diagnostic endpoint, SQL workaround, key transfer or new approval. Edge reuses
 existing CLI/driver/finite probe and source custody; full08/09 remainNOT_MET.
+
+
+### Actual finite-admission census, not an assumed empty target
+
+Edge's real BEGIN READ ONLY/ROLLBACK on Core system7688673963308855330 /
+portal_control returns **9retained/0unresolved**, native8/0unreconciled, EXIT0.
+No rows/authority were changed. Source admission counts ALL retained obligations
+(`current-human-candidate.ts:865–867`), not only unresolved or this session.
+At the existing32cap, preserving the previously declared20recovery reserve
+leaves at most3new admissions, not23. A full default multi-GET/stream driver
+must not be dispatched blindly: snapshot/cursor, real cache-HIT baseline,
+active SSE and unaffected READ controls collectively need more than that.
+
+Core target/config return should include the actual admission census and
+reviewed finite case/recovery budget. Edge will do one eligible request at a
+time, inspect real terminal/counters, and stop before the returned bound.
+No automatic cap increase, historical-row purge, restart-as-reset or synthetic
+positive control. This does not hold an eligible single READ; it prevents a
+repeat of consuming the recovery margin before revoke/retirement completes.
+
+
+<a id="edge-full-case-intake-publication-e055fb95"></a>
+Edge original08 full-case intake publication: e055fb95e9a6504c3075b5c005574329d34159a2,
+feat/execution-edge-upgrade-v1_2,3Markdown/+166; Verification:R0 tracking/indexed
+link/staged diff PASS, Bobby identity. Unpushed/unmerged; actual §10 and finite
+census already delivered/hash-verified. Core932c4fdf actual-factory ACK consumed.
+No Edge product/config/DB/source/session/grant/runtime mutation or new test cell.
+Corrected normalPID3044368 confirmed live18:12:28UTC with progressing tests;
+continue that SAME handle, no duplicate gate. Full connected08/09 NOT_MET.

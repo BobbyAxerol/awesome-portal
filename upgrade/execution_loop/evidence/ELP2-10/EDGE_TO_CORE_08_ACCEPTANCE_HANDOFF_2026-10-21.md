@@ -487,3 +487,22 @@ Return each ready source/image/config/commissioning/session/grant input through
 this same task; no new Bobby approval. Source28446 remains OFF, expired draft
 never invoked. This section adds only the newly identified actual-observer
 composition requirement for the named cache case, not a READ activation gate.
+
+
+### Actual finite-admission census, not an assumed empty target
+
+Edge's real BEGIN READ ONLY/ROLLBACK on Core system7688673963308855330 /
+portal_control returns **9retained/0unresolved**, native8/0unreconciled, EXIT0.
+No rows/authority were changed. Source admission counts ALL retained obligations
+(`current-human-candidate.ts:865–867`), not only unresolved or this session.
+At the existing32cap, preserving the previously declared20recovery reserve
+leaves at most3new admissions, not23. A full default multi-GET/stream driver
+must not be dispatched blindly: snapshot/cursor, real cache-HIT baseline,
+active SSE and unaffected READ controls collectively need more than that.
+
+Core target/config return should include the actual admission census and
+reviewed finite case/recovery budget. Edge will do one eligible request at a
+time, inspect real terminal/counters, and stop before the returned bound.
+No automatic cap increase, historical-row purge, restart-as-reset or synthetic
+positive control. This does not hold an eligible single READ; it prevents a
+repeat of consuming the recovery margin before revoke/retirement completes.

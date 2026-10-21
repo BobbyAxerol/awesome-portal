@@ -1853,3 +1853,32 @@ for the named cache case. Do not stop/edit/duplicate live writer normalPID
 3044368; READ proceeds independently when qualified. No browser field, generic
 diagnostic endpoint, SQL workaround, key transfer or new approval. Edge reuses
 existing CLI/driver/finite probe and source custody; full08/09 remainNOT_MET.
+
+
+### Actual finite-admission census, not an assumed empty target
+
+Edge's real BEGIN READ ONLY/ROLLBACK on Core system7688673963308855330 /
+portal_control returns **9retained/0unresolved**, native8/0unreconciled, EXIT0.
+No rows/authority were changed. Source admission counts ALL retained obligations
+(`current-human-candidate.ts:865–867`), not only unresolved or this session.
+At the existing32cap, preserving the previously declared20recovery reserve
+leaves at most3new admissions, not23. A full default multi-GET/stream driver
+must not be dispatched blindly: snapshot/cursor, real cache-HIT baseline,
+active SSE and unaffected READ controls collectively need more than that.
+
+Core target/config return should include the actual admission census and
+reviewed finite case/recovery budget. Edge will do one eligible request at a
+time, inspect real terminal/counters, and stop before the returned bound.
+No automatic cap increase, historical-row purge, restart-as-reset or synthetic
+positive control. This does not hold an eligible single READ; it prevents a
+repeat of consuming the recovery margin before revoke/retirement completes.
+
+
+<a id="edge-full-case-intake-publication-e055fb95"></a>
+Edge original08 full-case intake publication: e055fb95e9a6504c3075b5c005574329d34159a2,
+feat/execution-edge-upgrade-v1_2,3Markdown/+166; Verification:R0 tracking/indexed
+link/staged diff PASS, Bobby identity. Unpushed/unmerged; actual §10 and finite
+census already delivered/hash-verified. Core932c4fdf actual-factory ACK consumed.
+No Edge product/config/DB/source/session/grant/runtime mutation or new test cell.
+Corrected normalPID3044368 confirmed live18:12:28UTC with progressing tests;
+continue that SAME handle, no duplicate gate. Full connected08/09 NOT_MET.

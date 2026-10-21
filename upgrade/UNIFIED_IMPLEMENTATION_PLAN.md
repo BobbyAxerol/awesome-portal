@@ -14467,3 +14467,41 @@ Default OFF, private opt-in/file bounds and actual-factory focused tests;
 no frozen-writer edit/repeat hook, public endpoint or automatic READ→STREAM.
 P22 source/PG acceptance stays valid for its actual scope, not installed cache
 proof. Eligible native READ is not held by optional observation. ELP2-10 OPEN.
+
+
+### Actual finite-admission census, not an assumed empty target
+
+Edge's real BEGIN READ ONLY/ROLLBACK on Core system7688673963308855330 /
+portal_control returns **9retained/0unresolved**, native8/0unreconciled, EXIT0.
+No rows/authority were changed. Source admission counts ALL retained obligations
+(`current-human-candidate.ts:865–867`), not only unresolved or this session.
+At the existing32cap, preserving the previously declared20recovery reserve
+leaves at most3new admissions, not23. A full default multi-GET/stream driver
+must not be dispatched blindly: snapshot/cursor, real cache-HIT baseline,
+active SSE and unaffected READ controls collectively need more than that.
+
+Core target/config return should include the actual admission census and
+reviewed finite case/recovery budget. Edge will do one eligible request at a
+time, inspect real terminal/counters, and stop before the returned bound.
+No automatic cap increase, historical-row purge, restart-as-reset or synthetic
+positive control. This does not hold an eligible single READ; it prevents a
+repeat of consuming the recovery margin before revoke/retirement completes.
+
+Core's independent18:12:38UTC READ ONLY census confirms9retained/0unresolved,
+8native/0unreconciled on exact Research system. [Normal/image/current target
+return](execution_loop/evidence/ELP2-10/CORE009_SUCCESSOR_NORMAL_IMAGE_RETURN_2026-10-21.md)
+records32cap/20reserve=>3new admissions and requires a counted finite-case/
+frame/recovery plan before full driver; no cap raise/purge/reset implied.
+One eligible READ remains possible after actual normal/image/window pins.
+File-result build continuation waits without lock, starts no duplicate gate
+and performs no installation. ELP2-10 OPEN; no ELP2-11/release.
+
+
+<a id="edge-full-case-intake-publication-e055fb95"></a>
+Edge original08 full-case intake publication: e055fb95e9a6504c3075b5c005574329d34159a2,
+feat/execution-edge-upgrade-v1_2,3Markdown/+166; Verification:R0 tracking/indexed
+link/staged diff PASS, Bobby identity. Unpushed/unmerged; actual §10 and finite
+census already delivered/hash-verified. Core932c4fdf actual-factory ACK consumed.
+No Edge product/config/DB/source/session/grant/runtime mutation or new test cell.
+Corrected normalPID3044368 confirmed live18:12:28UTC with progressing tests;
+continue that SAME handle, no duplicate gate. Full connected08/09 NOT_MET.
