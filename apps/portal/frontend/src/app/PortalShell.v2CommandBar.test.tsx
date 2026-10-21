@@ -150,7 +150,7 @@ describe("shell flag on", () => {
     expect(withNone).not.toContain("Blotter");
     cleanup();
 
-    await mount("/execution", ON, ["execution.accounts.read", "portal.execution.blotter.read"]);
+    await mount("/execution", ON, ["nav:EXECUTION_ACCOUNTS_BINDINGS", "nav:EXECUTION_BLOTTER"]);
     ctrlK();
     const some = await screen.findByRole("dialog", { name: "Command bar" });
     const withSome = within(some).getAllByRole("option").map((option) => option.textContent);
@@ -166,7 +166,7 @@ describe("shell flag on", () => {
   });
 
   it("choosing a row navigates and closes the bar", async () => {
-    await mount("/execution?env=paper", ON, ["execution.accounts.read"]);
+    await mount("/execution?env=paper", ON, ["nav:EXECUTION_ACCOUNTS_BINDINGS"]);
     ctrlK();
     const dialog = await screen.findByRole("dialog", { name: "Command bar" });
     fireEvent.click(within(dialog).getByRole("option", { name: "Accounts" }));

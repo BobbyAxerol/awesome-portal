@@ -33,7 +33,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
 import { GapWhy, NotAvailableLine, type UnavailableFact } from "../../blocks";
 import { Flag } from "../../Flag";
-import { holds, V2_CAPABILITY } from "../../shell/roleNav";
+import { holds, V2_NAV_TOKEN } from "../../shell/roleNav";
 import { useExecUrlState, withContext } from "../../urlState";
 import { freshnessFlag, humanize } from "./format";
 import {
@@ -54,7 +54,7 @@ export interface PortfolioListScreenProps {
   api: ExecutionApi;
   /**
    * The session's capability list. When given, a caller without
-   * `execution.portfolios.read` is told so instead of seeing the register;
+   * `nav:EXECUTION_PORTFOLIOS` (menu token) is told so instead of seeing the register;
    * omitted, the route guard is the only gate (the server refuses regardless).
    */
   capabilities?: ReadonlySet<string>;
@@ -96,7 +96,7 @@ export function DeniedPortfolios({ routes }: { routes: PortfolioRoutes }) {
         <h1 className="exec-pf-h1">Portfolios</h1>
       </header>
       <section className="exec-pf-denied" aria-label="Access">
-        <PanelState status="denied" reason="Your session does not hold execution.portfolios.read." />
+        <PanelState status="denied" reason="Portfolios is not listed in your navigation read." />
         <Link to={routes.access}>See what you can access</Link>
       </section>
     </div>
@@ -108,7 +108,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   const [params, setParams] = useSearchParams();
   const searchId = useId();
   const reasonId = useId();
-  const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_CAPABILITY.portfoliosRead] });
+  const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_NAV_TOKEN.portfolios] });
 
   const read = useRead(api, permitted, "list", (scoped) => scoped.listPortfolios());
   const envelope = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;

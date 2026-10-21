@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { readAccessSelfNavigation, type AccessSelfNavigation } from "../readers/accessSelf";
 import { loadCanonical } from "../testkit/loadCanonical";
-import { V2_CAPABILITY } from "./roleNav";
+import { V2_NAV_TOKEN } from "./roleNav";
 import type { SelfNavigationOutcome, SelfNavigationPort, SelfNavigationQuestion } from "./selfNavigationPort";
 import { useSelfNavigation, type UseSelfNavigationOptions } from "./useSelfNavigation";
 
@@ -24,7 +24,7 @@ function projection(scope: { workspaceId: string; environment: "paper" | "sandbo
 }
 
 const T0 = 1_800_000_000_000;
-const PORTFOLIOS = V2_CAPABILITY.portfoliosRead;
+const PORTFOLIOS = V2_NAV_TOKEN.portfolios;
 
 interface Pending {
   question: SelfNavigationQuestion;

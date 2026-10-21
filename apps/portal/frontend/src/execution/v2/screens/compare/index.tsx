@@ -43,7 +43,7 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ChartTools, CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
 import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
-import { holds, V2_CAPABILITY } from "../../shell/roleNav";
+import { holds, V2_NAV_TOKEN } from "../../shell/roleNav";
 import type { ManagerSeriesMetric, ManagerSeriesQuery } from "../../readers/managerSeries";
 import { METRIC_WORD, MISMATCH_SENTENCE, UNAVAILABLE_SENTENCE, chartPointsOf, chartStateOf, chartUnit, commonCaption, isSigned, sourceNotPublished } from "../series/seriesModel";
 import { useManagerSeries } from "../series/useManagerSeries";
@@ -66,7 +66,7 @@ export interface CompareScreenProps {
   api: ExecutionApi;
   /** A portfolio to start from (the 360's "Compare with"); used only while the URL names no pick. */
   portfolioId?: string;
-  /** The session's capability list; without `execution.portfolios.read` the screen is the denial. */
+  /** The session's capability list; without `nav:EXECUTION_PORTFOLIOS` (menu token) the screen is the denial. */
   capabilities?: ReadonlySet<string>;
   routes?: PortfolioRoutes;
 }
@@ -107,7 +107,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   const [params, setParams] = useSearchParams();
   const reasonId = useId();
   const partsId = useId();
-  const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_CAPABILITY.portfoliosRead] });
+  const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_NAV_TOKEN.portfolios] });
   const read = useRead(api, permitted, "list", (scoped) => scoped.listPortfolios());
   const envelope = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
 
@@ -157,7 +157,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
       <div className="exec-cmpr-v2" data-screen="compare-v2">
         <header className="exec-pf-head"><h1 className="exec-pf-h1">Compare</h1></header>
         <section className="exec-pf-denied" aria-label="Access">
-          <PanelState status="denied" reason="Your session does not hold execution.portfolios.read." />
+          <PanelState status="denied" reason="Portfolios is not listed in your navigation read." />
           <Link to={routes.access}>See what you can access</Link>
         </section>
       </div>

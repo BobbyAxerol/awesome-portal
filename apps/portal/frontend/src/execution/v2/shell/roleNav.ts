@@ -4,8 +4,8 @@
  * The registry still owns which features exist and where they live; this file
  * only says what V2 calls them, in what order, and which capability a caller
  * needs before the entry is listed. Role is never read: a researcher loses
- * Accounts and Portfolios because they hold no `execution.accounts.read`, not
- * because of a label. Pure, so the presets below can be tested without a
+ * Accounts and Portfolios because the set holds no `nav:EXECUTION_ACCOUNTS_BINDINGS`
+ * (a menu token, see `V2_NAV_TOKEN`), not because of a label. Pure, so the presets below can be tested without a
  * session and `Sidebar` can import it without pulling the V2 chunk in.
  *
  * Hiding a menu entry is a courtesy, never the boundary. The server refuses
@@ -15,13 +15,8 @@ import type { PortalFeatureDefinition } from "../../../portal/contracts";
 import type { NavGroup } from "../../../portal/navigation";
 
 /**
- * Capability names the V2 nav tests for.
- *
- * Only the `governance.*` reads exist in the server namespace today
- * (control-api `PORTAL_CAPABILITIES`). The `execution.*` reads and the blotter
- * read are REQUESTED from the backend: until the session issues them, the
- * entries they guard are listed for nobody (fail closed). The blotter name is
- * the one V1 already prints in its denial copy.
+ * Capability names the V2 nav tests for: the `governance.*` reads and decides, which are in the server namespace
+ * (control-api `PORTAL_CAPABILITIES`) and are issued in the session's `access.capabilities`.
  */
 export const V2_CAPABILITY = {
   governanceR1Read: "governance.r1.read",
@@ -32,11 +27,36 @@ export const V2_CAPABILITY = {
   governanceR2Decide: "governance.r2.decide",
   governanceCanaryDecide: "governance.canary.decide",
   governanceLiveDecide: "governance.live.decide",
-  portfoliosRead: "execution.portfolios.read",
-  accountsRead: "execution.accounts.read",
-  operationsRead: "execution.operations.read",
-  blotterRead: "portal.execution.blotter.read",
 } as const;
+
+/**
+ * Menu tokens: what the four `portal.self-navigation.v1` rows stand for in this file's capability sets (DEBT-UXM07-005, FE-037).
+ *
+ * These are NOT capability names and the server never issues them. They replace four invented names (`execution.portfolios.read`,
+ * `execution.accounts.read`, `execution.operations.read`, `portal.execution.blotter.read`) that read like server capabilities and
+ * are in no server namespace (Codex FE-058 Q1/Q3). The served fact is the self-navigation row's `feature` id
+ * (control-api `self-eligibility.ts` FEATURES), so each token is that id and nothing else: `nav:<served feature>`. A token enters a
+ * set in two ways only: a LIVE `ENTERABLE` row (selfNavGate.ts), or a lab/test that stands in for one. It lists an entry; it never
+ * opens data, a button or a command (RK-1), and no client token is sent back to a server as authority.
+ */
+export const V2_NAV_TOKEN = {
+  portfolios: "nav:EXECUTION_PORTFOLIOS",
+  accounts: "nav:EXECUTION_ACCOUNTS_BINDINGS",
+  operations: "nav:EXECUTION_OPERATIONS",
+  blotter: "nav:EXECUTION_BLOTTER",
+} as const;
+
+const NAV_TOKEN_LABEL: Readonly<Record<string, string>> = {
+  [V2_NAV_TOKEN.portfolios]: "Portfolios",
+  [V2_NAV_TOKEN.accounts]: "Accounts",
+  [V2_NAV_TOKEN.operations]: "Operations",
+  [V2_NAV_TOKEN.blotter]: "Blotter",
+};
+
+/** The entry a menu token lists (`Portfolios`), or `null` for any other token. For copy: a token string is never printed to a reader. */
+export function navTokenLabel(token: string): string | null {
+  return NAV_TOKEN_LABEL[token] ?? null;
+}
 
 /** What a caller must hold. No need at all is `undefined`, never an empty object. */
 export interface CapabilityNeed {
@@ -85,12 +105,12 @@ interface V2NavRule {
  */
 export const V2_NAV_RULES: readonly V2NavRule[] = [
   { featureId: "EXECUTION_COMMAND_CENTER", surface: "nav", label: "Overview", order: 10, home: "execution" },
-  { featureId: "EXECUTION_PORTFOLIOS", surface: "nav", label: "Portfolios", order: 20, home: "execution", needs: { allOf: [V2_CAPABILITY.portfoliosRead] } },
+  { featureId: "EXECUTION_PORTFOLIOS", surface: "nav", label: "Portfolios", order: 20, home: "execution", needs: { allOf: [V2_NAV_TOKEN.portfolios] } },
   { featureId: "EXECUTION_ALPHA_FLEET", surface: "nav", label: "Alpha Fleet", order: 30, home: "execution" },
-  { featureId: "EXECUTION_ACCOUNTS_BINDINGS", surface: "nav", label: "Accounts", order: 40, home: "execution", needs: { allOf: [V2_CAPABILITY.accountsRead] } },
-  { featureId: "EXECUTION_OPERATIONS", surface: "nav", label: "Operations", order: 50, home: "execution", needs: { allOf: [V2_CAPABILITY.operationsRead] } },
+  { featureId: "EXECUTION_ACCOUNTS_BINDINGS", surface: "nav", label: "Accounts", order: 40, home: "execution", needs: { allOf: [V2_NAV_TOKEN.accounts] } },
+  { featureId: "EXECUTION_OPERATIONS", surface: "nav", label: "Operations", order: 50, home: "execution", needs: { allOf: [V2_NAV_TOKEN.operations] } },
   { featureId: "EXECUTION_APPROVALS", surface: "nav", label: "Approvals", order: 60, home: "execution", needs: ANY_APPROVAL_READ },
-  { featureId: "EXECUTION_BLOTTER", surface: "link-only", label: "Blotter", order: 70, home: "execution", needs: { allOf: [V2_CAPABILITY.blotterRead] } },
+  { featureId: "EXECUTION_BLOTTER", surface: "link-only", label: "Blotter", order: 70, home: "execution", needs: { allOf: [V2_NAV_TOKEN.blotter] } },
   { featureId: "PROFILE_ACCESS", surface: "nav", label: "Profile & Access", home: "registry" },
   { featureId: "EXECUTION_WAIVERS", surface: "hidden" },
   { featureId: "EXECUTION_EXIT_REVIEWS", surface: "hidden" },
@@ -238,10 +258,10 @@ export type V2RolePreset = "manager" | "researcher" | "operator" | "reviewer";
  */
 export const V2_ROLE_PRESETS: Readonly<Record<V2RolePreset, ReadonlySet<string>>> = {
   manager: new Set<string>([
-    V2_CAPABILITY.portfoliosRead,
-    V2_CAPABILITY.accountsRead,
-    V2_CAPABILITY.operationsRead,
-    V2_CAPABILITY.blotterRead,
+    V2_NAV_TOKEN.portfolios,
+    V2_NAV_TOKEN.accounts,
+    V2_NAV_TOKEN.operations,
+    V2_NAV_TOKEN.blotter,
     V2_CAPABILITY.governanceR1Read,
     V2_CAPABILITY.governanceR2Read,
     V2_CAPABILITY.governanceCanaryRead,
@@ -254,13 +274,13 @@ export const V2_ROLE_PRESETS: Readonly<Record<V2RolePreset, ReadonlySet<string>>
   // Own R1 requests only (05 M10); no portfolios, accounts or operations.
   researcher: new Set<string>([V2_CAPABILITY.governanceR1Read]),
   operator: new Set<string>([
-    V2_CAPABILITY.portfoliosRead,
-    V2_CAPABILITY.accountsRead,
-    V2_CAPABILITY.operationsRead,
-    V2_CAPABILITY.blotterRead,
+    V2_NAV_TOKEN.portfolios,
+    V2_NAV_TOKEN.accounts,
+    V2_NAV_TOKEN.operations,
+    V2_NAV_TOKEN.blotter,
   ]),
   reviewer: new Set<string>([
-    V2_CAPABILITY.portfoliosRead,
+    V2_NAV_TOKEN.portfolios,
     V2_CAPABILITY.governanceR1Read,
     V2_CAPABILITY.governanceR2Read,
     V2_CAPABILITY.governanceCanaryRead,

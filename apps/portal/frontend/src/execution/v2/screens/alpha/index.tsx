@@ -23,7 +23,7 @@
  * drawer), `workspace_id` and `from` (carried).
  *
  * Roles: the capability set decides, never a role name. Without
- * `execution.accounts.read` the account links, the deployer column and the
+ * `nav:EXECUTION_ACCOUNTS_BINDINGS` (menu token) the account links, the deployer column and the
  * replay's account chip are withheld and the page says "Your slice only"; the
  * server remains the boundary (FE-026 is undecided, so nothing more is hidden).
  *
@@ -42,7 +42,7 @@ import { withoutOrigin } from "../../backTo";
 import { NotAvailableLine, notPublishedReason } from "../../blocks";
 import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
-import { V2_CAPABILITY, holds } from "../../shell/roleNav";
+import { V2_NAV_TOKEN, holds } from "../../shell/roleNav";
 import { applyTab, resolveTab } from "../../tabAliases";
 import { useMediaQuery } from "../../useMediaQuery";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
@@ -127,8 +127,8 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
   const uid = useId();
   const { access } = useSession();
   const capabilities = useMemo(() => new Set(access.kind === "ready" ? access.access.capabilities : []), [access]);
-  const canSeeAccounts = holds(capabilities, { allOf: [V2_CAPABILITY.accountsRead] });
-  const sliceOnly = !canSeeAccounts && !holds(capabilities, { allOf: [V2_CAPABILITY.portfoliosRead] });
+  const canSeeAccounts = holds(capabilities, { allOf: [V2_NAV_TOKEN.accounts] });
+  const sliceOnly = !canSeeAccounts && !holds(capabilities, { allOf: [V2_NAV_TOKEN.portfolios] });
   // Only a READY session is narrowed; while access loads (empty set) the screen's banner shows, but the bar states nothing.
   useContextFacts({ scope: sliceOnly && access.kind === "ready" ? "Scope: Your slice" : undefined });
   // `from` and `back` belong to this page's own Back; onward links must not inherit them (Account 360 opened from here is not "from the Fleet").

@@ -10,7 +10,7 @@ import type { PortalRegistryDocument } from "../../../portal/contracts";
 import { sidebarGroups } from "../../../portal/navigation";
 import { readAccessSelfNavigation, type AccessSelfNavigation } from "../readers/accessSelf";
 import { loadCanonical } from "../testkit/loadCanonical";
-import { V2_CAPABILITY, applyV2Nav, goToEntries } from "./roleNav";
+import { V2_CAPABILITY, V2_NAV_TOKEN, applyV2Nav, goToEntries } from "./roleNav";
 import { SELF_NAV_TOKEN, expiredNavigationMessage, navCapabilities, selfNavigationGate } from "./selfNavGate";
 
 type Draft = any;
@@ -48,10 +48,20 @@ describe("selfNavigationGate", () => {
   it("inside the ceiling: one token per ENTERABLE feature, and the ceiling is reported, not extended", () => {
     const gate = selfNavigationGate(APP_ONLY, UNTIL - 1);
     expect(gate.kind).toBe("live");
-    expect([...gate.tokens].sort()).toEqual([V2_CAPABILITY.accountsRead, V2_CAPABILITY.blotterRead, V2_CAPABILITY.portfoliosRead].sort());
+    expect([...gate.tokens].sort()).toEqual([V2_NAV_TOKEN.accounts, V2_NAV_TOKEN.blotter, V2_NAV_TOKEN.portfolios].sort());
     expect(gate).toMatchObject({ validUntilMs: UNTIL });
     // Every token is one the rail rules know; none is invented here.
-    for (const token of Object.values(SELF_NAV_TOKEN)) expect(Object.values(V2_CAPABILITY)).toContain(token);
+    for (const token of Object.values(SELF_NAV_TOKEN)) expect(Object.values(V2_NAV_TOKEN)).toContain(token);
+  });
+
+  it("a token is the served feature id and nothing else: no invented capability name, and none in the server namespace (DEBT-UXM07-005)", () => {
+    for (const [feature, token] of Object.entries(SELF_NAV_TOKEN)) expect(token).toBe(`nav:${feature}`);
+    expect(Object.keys(SELF_NAV_TOKEN)).toEqual(["EXECUTION_PORTFOLIOS", "EXECUTION_ACCOUNTS_BINDINGS", "EXECUTION_OPERATIONS", "EXECUTION_BLOTTER"]);
+    // The four names that read like server capabilities are gone from the client vocabulary altogether.
+    const gone = ["execution.portfolios.read", "execution.accounts.read", "execution.operations.read", "portal.execution.blotter.read"];
+    for (const value of [...Object.values(V2_CAPABILITY), ...Object.values(V2_NAV_TOKEN)]) expect(gone).not.toContain(value);
+    // A menu token can never be mistaken for a session capability: the server's finite namespace is dotted lower-case.
+    for (const token of Object.values(V2_NAV_TOKEN)) expect(token).toMatch(/^nav:[A-Z_]+$/);
   });
 
   it("a HIDDEN feature gives no token, live or not", () => {

@@ -8,12 +8,13 @@
  *    no preset, no "granted by";
  *  - `AccessEffective` (readers/accessEffective), for the grants table.
  *
- * The `execution.*` capability names are provisional (FE-037): the session
- * issues only `administration.*` and `governance.*` today. Those rows are
- * therefore "Not shown" for every caller until the names are issued, and the
- * screen says so in one caption instead of hiding the row.
+ * Portfolios, Accounts, Operations and Blotter are not capabilities (FE-037,
+ * DEBT-UXM07-005): the session issues only `administration.*` and `governance.*`,
+ * and the server publishes those four as navigation rows. Their rows here are
+ * "Not shown" until the navigation read lists them, and the screen says so in
+ * one caption instead of hiding the row.
  */
-import { V2_CAPABILITY, V2_NAV_RULES, holds, type CapabilityNeed } from "../../shell/roleNav";
+import { V2_CAPABILITY, V2_NAV_RULES, holds, navTokenLabel, type CapabilityNeed } from "../../shell/roleNav";
 import { formatAsOf } from "../../boundary";
 import type { AccessEffective, AccessGrant, AccessSelector, AccessTsAuthority } from "../../readers/accessEffective";
 import type { FlagKind } from "../../flagKinds";
@@ -24,7 +25,7 @@ export const ACCESS_FE = {
   reasons: "FE-015",
   /** Researcher field-policy matrix: Bobby decides, the policy stays PENDING. */
   researcher: "FE-026",
-  /** `execution.*` capability names the session does not issue yet. */
+  /** The four menu entries that follow the navigation read, not a capability. */
   capabilityNames: "FE-037",
 } as const;
 
@@ -55,10 +56,16 @@ export const ADMIN_CAPABILITY = {
   profileAccessManage: "administration.profile_access.manage",
 } as const;
 
+/** A capability as the reader sees it: its name, or for a menu token the entry the navigation read has to list. */
+function tokenWords(token: string): string {
+  const entry = navTokenLabel(token);
+  return entry === null ? token : `${entry} in your navigation read`;
+}
+
 export function needsText(need: CapabilityNeed | undefined): string | null {
   if (need === undefined) return null;
-  const all = need.allOf ?? [];
-  const any = need.anyOf ?? [];
+  const all = (need.allOf ?? []).map(tokenWords);
+  const any = (need.anyOf ?? []).map(tokenWords);
   const parts: string[] = [];
   if (all.length > 0) parts.push(all.join(" and "));
   if (any.length > 0) parts.push(any.length === 1 ? any[0] : `any of ${any.join(", ")}`);
@@ -90,7 +97,7 @@ function row(id: string, label: string, capabilities: ReadonlySet<string>, need:
   const reason = need === undefined
     ? openWord
     : allowed
-      ? held.join(", ")
+      ? held.map(tokenWords).join(", ")
       : `Needs ${text}`;
   return { id, label, allowed, need, held, reason };
 }

@@ -34,7 +34,7 @@ describe("no capability", () => {
     expect(see["nav:EXECUTION_COMMAND_CENTER"].reason).toBe("No capability needed");
     expect(see["nav:PROFILE_ACCESS"].allowed).toBe(true);
     expect(see["nav:EXECUTION_PORTFOLIOS"].allowed).toBe(false);
-    expect(see["nav:EXECUTION_PORTFOLIOS"].reason).toBe("Needs execution.portfolios.read");
+    expect(see["nav:EXECUTION_PORTFOLIOS"].reason).toBe("Needs Portfolios in your navigation read");
     expect(see["nav:EXECUTION_APPROVALS"].reason).toMatch(/^Needs any of governance\.r1\.read, /);
     expect(see["gate:live"].allowed).toBe(false);
     expect(allowed(doRows(none))).toEqual([]);

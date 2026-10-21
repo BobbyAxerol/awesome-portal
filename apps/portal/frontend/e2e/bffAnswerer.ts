@@ -63,9 +63,9 @@ export interface FixtureAnswererOptions extends BffDoubleOptions {
 }
 
 /**
- * A manager-like session: the owner capabilities the portal issues today plus the provisional
- * execution names (FE-037). Without the execution names every Accounts, Portfolios and Operations
- * page correctly stays fail-closed. Copied from `e2e/execution-v2-s1.spec.ts`; a test keeps the two
+ * A manager-like session: the owner capabilities the portal issues today plus the four menu tokens a live
+ * self-navigation read would add (`nav:<served feature id>`, FE-037, DEBT-UXM07-005; no server capability). Without
+ * them every Accounts, Portfolios and Operations page correctly stays fail-closed. Copied from `e2e/execution-v2-s1.spec.ts`; a test keeps the two
  * lists equal.
  */
 export const MANAGER_CAPABILITIES: readonly string[] = [
@@ -79,10 +79,10 @@ export const MANAGER_CAPABILITIES: readonly string[] = [
   "governance.r1.read",
   "governance.r2.decide",
   "governance.r2.read",
-  "execution.portfolios.read",
-  "execution.accounts.read",
-  "execution.operations.read",
-  "portal.execution.blotter.read",
+  "nav:EXECUTION_PORTFOLIOS",
+  "nav:EXECUTION_ACCOUNTS_BINDINGS",
+  "nav:EXECUTION_OPERATIONS",
+  "nav:EXECUTION_BLOTTER",
 ];
 
 /**

@@ -11,7 +11,7 @@
  *
  * Sandbox and Live keep their own V1 inline Triad; this package does not touch them.
  *
- * Access: the screen needs `execution.accounts.read` (roleNav `V2_CAPABILITY`, FE-037).
+ * Access: the screen needs `nav:EXECUTION_ACCOUNTS_BINDINGS` (menu token) (roleNav `V2_NAV_TOKEN`, FE-037).
  * A session without it sees the denial, which names the missing area and links My
  * access, never a role. Binding actions (rotate, sync, dry-run) are off for everyone
  * today and say why: nothing publishes a grant for them (FE-015) or a command for them

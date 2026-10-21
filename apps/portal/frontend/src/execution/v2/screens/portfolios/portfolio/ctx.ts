@@ -17,6 +17,6 @@ export interface TabCtx {
   search: URLSearchParams;
   reads: PortfolioReads;
   window: string;
-  /** Whether the session may see accounts (`execution.accounts.read`); links to them are off without it. */
+  /** Whether the session may see accounts (`nav:EXECUTION_ACCOUNTS_BINDINGS` (menu token)); links to them are off without it. */
   mayOpenAccounts: boolean;
 }

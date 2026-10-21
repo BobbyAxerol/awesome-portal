@@ -27,7 +27,7 @@ import { readDecimal, readMetric, type Metric } from "../../boundary";
 import type { TriadCell, TriadRow } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
 import type { AccountOperation } from "../../readers/accessSelfContext";
-import { V2_CAPABILITY, type CapabilityNeed } from "../../shell/roleNav";
+import { V2_NAV_TOKEN, type CapabilityNeed } from "../../shell/roleNav";
 import { NOT_COMMISSIONED_WHY } from "../stage/reasons";
 import type { SeriesPoint } from "../../charts";
 
@@ -72,13 +72,13 @@ export const notPublishedReason = (fact: UnpublishedFact, because: string): stri
 /* ── capabilities ───────────────────────────────────────────────────────── */
 
 /**
- * `execution.accounts.read` is the roleNav name (FE-037). There is no "manage" capability: `execution.accounts.manage` was a requested
+ * `nav:EXECUTION_ACCOUNTS_BINDINGS` is the roleNav menu token (`V2_NAV_TOKEN`, FE-037; it lists the Accounts entry and is no server capability). There is no "manage" capability: `execution.accounts.manage` was a requested
  * name that nothing ever issued and the server says does not exist (BE-P7 `1449455e`, FE-037/058). The only control it would have
  * gated, "Rotate credential", is the PM `REVISE_BINDING` (credential-only) family, which has no Portal route; it is off for EVERY
  * caller and `rotateCredential` below says why. A navigation or read capability never opens it.
  */
 export const ACCOUNT_CAPABILITY = {
-  read: V2_CAPABILITY.accountsRead,
+  read: V2_NAV_TOKEN.accounts,
 } as const;
 
 export const ACCOUNT_NEEDS: Readonly<Record<"read", CapabilityNeed>> = {

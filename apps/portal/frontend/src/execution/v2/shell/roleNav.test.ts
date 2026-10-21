@@ -9,18 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PortalRegistryDocument } from "../../../portal/contracts";
 import { sidebarGroups } from "../../../portal/navigation";
-import {
-  GO_TO_GROUP,
-  V2_CAPABILITY,
-  V2_NAV_RULES,
-  V2_ROLE_PRESETS,
-  applyV2Nav,
-  filterEntriesByCapabilities,
-  goToEntries,
-  holds,
-  type CommandEntry,
-  type V2RolePreset,
-} from "./roleNav";
+import { GO_TO_GROUP, V2_NAV_TOKEN, V2_NAV_RULES, V2_ROLE_PRESETS, applyV2Nav, filterEntriesByCapabilities, goToEntries, holds, type CommandEntry, type V2RolePreset } from "./roleNav";
 
 const registry: PortalRegistryDocument = JSON.parse(
   readFileSync(join(process.cwd(), "../registry/fixtures/registry.public.json"), "utf8"),
@@ -89,7 +78,7 @@ describe("applyV2Nav presets", () => {
   });
 
   it("follows the capability, not a name: a researcher holding accounts.read gets Accounts", () => {
-    const extended = new Set([...V2_ROLE_PRESETS.researcher, V2_CAPABILITY.accountsRead]);
+    const extended = new Set([...V2_ROLE_PRESETS.researcher, V2_NAV_TOKEN.accounts]);
     expect(executionLabels(extended)).toContain("Accounts");
   });
 
@@ -192,7 +181,7 @@ describe("goToEntries and filterEntriesByCapabilities", () => {
 
   it("filters caller-supplied entries by their own need", () => {
     const entries: CommandEntry[] = [
-      { id: "a", group: "Account", label: "Binance-02", href: "/a", requires: { allOf: [V2_CAPABILITY.accountsRead] } },
+      { id: "a", group: "Account", label: "Binance-02", href: "/a", requires: { allOf: [V2_NAV_TOKEN.accounts] } },
       { id: "b", group: "Alpha", label: "BTC-Trend v3", href: "/b" },
     ];
     expect(filterEntriesByCapabilities(entries, V2_ROLE_PRESETS.researcher).map((e) => e.id)).toEqual(["b"]);

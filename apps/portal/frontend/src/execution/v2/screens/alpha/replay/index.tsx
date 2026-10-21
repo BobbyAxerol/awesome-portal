@@ -21,7 +21,7 @@ import { PanelState } from "../../../../components/states";
 import type { ExecutionApi } from "../../../../api/ports";
 import { useSession } from "../../../../../auth/session";
 import { Flag } from "../../../Flag";
-import { V2_CAPABILITY, holds } from "../../../shell/roleNav";
+import { V2_NAV_TOKEN, holds } from "../../../shell/roleNav";
 import { withoutOrigin } from "../../../backTo";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../../urlState";
 import { replayBack } from "../backLinks";
@@ -51,7 +51,7 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
   const [params] = useSearchParams();
   const { access } = useSession();
   const capabilities = new Set(access.kind === "ready" ? access.access.capabilities : []);
-  const canSeeAccounts = holds(capabilities, { allOf: [V2_CAPABILITY.accountsRead] });
+  const canSeeAccounts = holds(capabilities, { allOf: [V2_NAV_TOKEN.accounts] });
   // The page's own `from` is its Back; the chips onward start fresh.
   const linkTo = (href: string) => withContext(href, withoutOrigin(params));
   const ordersHref = linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`);

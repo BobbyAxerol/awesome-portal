@@ -9,7 +9,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { PF, answerPortfolios } from "../../../../../../e2e/bffDoublePortfolios";
 import type { ExecutionApi } from "../../../../api/ports";
-import { V2_CAPABILITY } from "../../../shell/roleNav";
+import { V2_NAV_TOKEN } from "../../../shell/roleNav";
 import { makeApi, type Override } from "../harness.fixtures";
 import { seriesBodyFor, type SeriesVariant } from "../../series/seriesDouble.testbase";
 import PortfolioScreen, { PORTFOLIO_SCREEN_KEY } from "./index";
@@ -839,20 +839,20 @@ describe("states", () => {
 });
 
 describe("capability", () => {
-  it("withholds the whole page, and reads nothing, without execution.portfolios.read", async () => {
+  it("withholds the whole page, and reads nothing, when Portfolios is not in the navigation read", async () => {
     const { api, calls } = makeApi();
-    mount(api, "", PF.core, new Set([V2_CAPABILITY.accountsRead]));
+    mount(api, "", PF.core, new Set([V2_NAV_TOKEN.accounts]));
     expect(screen.getByText("Withheld")).toBeTruthy();
     expect(screen.getByRole("link", { name: "See what you can access" })).toBeTruthy();
     await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
     expect(calls).toEqual([]);
   });
 
-  it("drops the Accounts tab and every account link without execution.accounts.read, and says so on a direct link", async () => {
-    mount(makeApi().api, "?tab=accounts", PF.core, new Set([V2_CAPABILITY.portfoliosRead]));
+  it("drops the Accounts tab and every account link when Accounts is not in the navigation read, and says so on a direct link", async () => {
+    mount(makeApi().api, "?tab=accounts", PF.core, new Set([V2_NAV_TOKEN.portfolios]));
     await ready();
     expect(screen.queryByRole("tab", { name: "Accounts" })).toBeNull();
-    expect(screen.getByText(/needs execution\.accounts\.read/)).toBeTruthy();
+    expect(screen.getByText(/Accounts is not listed in your navigation read/)).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Overview" }).getAttribute("aria-selected")).toBe("true");
     await goto("Alphas");
     const row = rowsOf("Alphas and deployments")[0];
@@ -861,7 +861,7 @@ describe("capability", () => {
   });
 
   it("shows everything to a caller who holds both", async () => {
-    mount(makeApi().api, "", PF.core, new Set([V2_CAPABILITY.portfoliosRead, V2_CAPABILITY.accountsRead]));
+    mount(makeApi().api, "", PF.core, new Set([V2_NAV_TOKEN.portfolios, V2_NAV_TOKEN.accounts]));
     await ready();
     expect(screen.getByRole("tab", { name: "Accounts" })).toBeTruthy();
   });

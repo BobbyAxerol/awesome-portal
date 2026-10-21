@@ -372,12 +372,13 @@ describe("what you can see and do come from capabilities alone", () => {
     expect(cell(allowedRow, "Why").textContent).toBe("governance.r1.decide");
   });
 
-  it("says once that the execution capability names are provisional, and what is not published", async () => {
+  it("says once that the four menu entries follow the navigation read and are no capability, and what is not published", async () => {
     mount();
     await granted();
     // One short line (the full sentence and FE-037 are its title), and one "Not available" line with FE-015.
-    expect(screen.getAllByText(/Provisional capability names/)).toHaveLength(1);
-    expect(screen.getByText(/Provisional capability names/).getAttribute("title")).toContain("are provisional (FE-037)");
+    expect(screen.getAllByText(/Menu entries from your navigation read/)).toHaveLength(1);
+    expect(screen.getByText(/Menu entries from your navigation read/).getAttribute("title")).toContain("are not capabilities (FE-037)");
+    expect(document.body.textContent).not.toMatch(/execution\.(portfolios|accounts|operations)\.read|blotter\.read|Provisional capability/);
     const gaps = screen.getByTestId("not-available-line");
     expect(gaps.textContent).toContain("Per-action eligibility");
     expect(whyText(gaps)).toContain("Per-action eligibility: Not published (FE-015)");

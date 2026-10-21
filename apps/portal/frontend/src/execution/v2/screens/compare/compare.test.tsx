@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { PF } from "../../../../../e2e/bffDoublePortfolios";
 import type { ExecutionApi } from "../../../api/ports";
 import { useContextFactsValue } from "../../shell/contextFacts";
-import { V2_CAPABILITY } from "../../shell/roleNav";
+import { V2_NAV_TOKEN } from "../../shell/roleNav";
 import { makeApi, type Override } from "../portfolios/harness.fixtures";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import { oracleComparison, type Draft } from "../../readers/managerSeries.testbase";
@@ -606,17 +606,17 @@ describe("states and capability", () => {
     expect(screen.queryByRole("table", { name: "Metrics" })).toBeNull();
   });
 
-  it("withholds the page, and reads nothing, without execution.portfolios.read", async () => {
+  it("withholds the page, and reads nothing, when Portfolios is not in the navigation read", async () => {
     const { api, calls } = makeApi();
-    mount(api, pick(PF.core), { capabilities: new Set([V2_CAPABILITY.accountsRead]) });
+    mount(api, pick(PF.core), { capabilities: new Set([V2_NAV_TOKEN.accounts]) });
     expect(screen.getByText("Withheld")).toBeTruthy();
     expect(screen.getByRole("link", { name: "See what you can access" })).toBeTruthy();
     await new Promise((r) => setTimeout(r, 20));
     expect(calls).toEqual([]);
   });
 
-  it("shows the page to a caller who holds the capability", async () => {
-    mount(makeApi().api, "", { capabilities: new Set([V2_CAPABILITY.portfoliosRead]) });
+  it("shows the page to a caller whose navigation read lists Portfolios", async () => {
+    mount(makeApi().api, "", { capabilities: new Set([V2_NAV_TOKEN.portfolios]) });
     await loaded();
     expect(screen.getByRole("button", { name: "Portfolios" })).toBeTruthy();
   });
