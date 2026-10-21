@@ -35,3 +35,6 @@ Mức: **SOURCE_ONLY → hook xanh**. Không phải INSTALLED / CONNECTED / OWNE
 | Control API (PG dùng một lần) | 472 file PASS, 2 skip / 9.445 test PASS, 3 skip |
 | Gate khác | P01 route ledger 319 route, N17A…N29, EDS-12, R3-2, tracking reconciliation: PASS |
 | Ngoài hook | Frontend `src/execution` + `src/app` 80.1xx test PASS, `tsc` sạch; spec PG BE-P15/P16 (16/16), P17 + parent Paper Exit (301) PASS; visual đã chạy so sánh một lần (580/37/16), 37 đỏ đã sửa, chưa chạy lại trên SHA cuối |
+
+## Hook trên SHA đóng băng d58361ea (2026-10-21, chạy trong worktree sạch)
+Xanh, exit=0, kết thúc 15:00:47 UTC: contracts 90 file / 1.577 test PASS; control-api 480 file PASS (4 skip) / 9.729 test PASS (7 skip), restore drill PASS; N29/EDS-12/route census/R3-2/tracking: PASS. Tree `64bcd565…`. Log sha256 `afb8290d…2418d`. Chi tiết và giới hạn: `ELP2-10/CLAUDE_FROZEN_HOOK_RUN_2026-10-21.md`. Lần đỏ trước đó (`90f84643`, 5 test) có hai nguyên nhân thật đã sửa trước khi đóng băng.
