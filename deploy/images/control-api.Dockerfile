@@ -23,9 +23,20 @@ WORKDIR /opt/control-api
 
 COPY --chown=node:node --from=build /opt/control-api/node_modules ./node_modules
 COPY --chown=node:node --from=build /opt/control-api/dist ./dist
-COPY --chown=node:node apps/control-api/migrations ./migrations
-COPY --chown=node:node apps/control-api/src/execution-v2/current-human-candidate.sql ./native-schema/current-human-candidate.sql
-COPY --chown=node:node apps/control-api/package.json ./
+# Non-secret SQL/COPY inputs. A self-hosted checkout may be umask-0077, and COPY
+# keeps the context's file modes, so a bare COPY made the pinned schema SQL
+# node-owned 0600: the runtime could read it but the root cap-drop-ALL
+# maintenance one-shot (no DAC_OVERRIDE) could not, and the official policy
+# install refused before any DB write. These inputs are image-owned and
+# read-only for every runtime user: root:root, files 0644, directories 0755.
+# Bytes are untouched (the schema SQL is sha256-pinned in the runtime).
+COPY --chown=root:root --chmod=0755 apps/control-api/migrations ./migrations
+RUN find ./migrations -type f -exec chmod 0644 {} +
+RUN mkdir -m 0755 ./native-schema
+COPY --chown=root:root --chmod=0644 apps/control-api/src/execution-v2/current-human-candidate.sql ./native-schema/current-human-candidate.sql
+COPY --chown=root:root --chmod=0644 apps/control-api/package.json ./
+# Private input: owner and mode deliberately unchanged (node-owned, context
+# mode). Never widen this one.
 COPY --chown=node:node deploy/control-api/bootstrap-users.yaml ./bootstrap-users.yaml
 
 ENV NODE_ENV=production
