@@ -9,6 +9,31 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October16:18 UTC — genuine successor commissioning gap / Claude ACT_NOW
+
+**ELP2-REQ-10-010:** [successor authority writer request and Core NOT_READY return](evidence/ELP2-10/CORE009_SUCCESSOR_AUTHORITY_REQUEST_2026-10-21.md).
+Reviewed installed734, qualified9d88/image05ae and frozen integration432:
+official manager-domain installation is first-install-only. New policy/grants
+conflict; old ACK replay never renews expired authority. Do not run an installer
+or swap an image and call it fresh READ READY. Claude backend: implement the
+private finite successor/CAS path, preserve old grants/audit and independently
+gate READ/STREAM; focused tests then one new-source gate. Do not edit432's
+currently running normal freeze. No new generic Bobby approval is requested.
+
+Edge §8 now matches16:30–17:00 scheduling with fresh acceptanced0a7b78a,
+not retiredb922/head4. Independent raw-file checks match manifest3fd0632c,
+retirement24f4f786/runtime9bb5d5ae; original§7 is SUPERSEDED_NOT_EXECUTED.
+**NOT_READY / do not activate the short-lived source merely to wait for Core.**
+No session/grant was minted, no runtime/DB was changed. Source readiness and
+an actual operator/source ACK remain separate from scheduling availability.
+
+[Native observation review / bounded Claude request](evidence/ELP2-10/CORE009_NATIVE_OBSERVATION_REVIEW_AND_CLAUDE_REQUEST_2026-10-21.md):
+reuse existing final-egress/authority receipts. Request-specific cache HIT
+correlation is missing; don't infer HIT from repeated GET or call epoch
+invalidation physical deletion. This observer does not block eligible READ.
+Claude371224f0/e299c3df subsequent measurement/phone slices remain outside
+the432 freeze; cancellation remains its own ACT_NOW handoff. No UI edits here.
+
 ### 21 October15:50 UTC — actual trust correction / independent source review
 
 **16:02 next concrete step:** [native finite slot16:30–17:00 proposal](evidence/ELP2-10/CORE009_NATIVE_FINITE_WINDOW_1630_PROPOSAL_2026-10-21.md).
@@ -1035,3 +1060,47 @@ PKI request is now tied to actual SG P-client CA cert78a6de84 / CN Primus Portal
 
 
 **Edge publication clock clarification:** commit26aa8820 was actually created21Oct15:50:41UTC; the source-pin transfer receipt is15:51:20.700UTC. Prior15:52 heading is a label, not the operation timestamp. No session/grant/window or runtime authority depends on that label.
+
+
+<a id="edge-native-source-proposal-20261021-1608"></a>
+### Edge next native source proposal —21Oct16:08UTC
+
+Edge has answered Core current-return §3: existing handoff
+`EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md` now has §7,
+SHA256 `b29a4ed99cc7b72ee77be51d2aa8f18a2ca669affb409c88f2c5714f3326d463` (5136bytes). Actual TS source/control readonly
+SDK preflight EXIT0/pools0, current head4 revoked, identity/policy/domain and
+role caps unchanged;8private composition tests PASS. Proposal CAS4→5
+manifestd2f3db37 / retirement5→6 manifest58da2c37; actor/workspace unchanged.
+Window proposed21Oct16:30–17:30UTC, NOT yet matched. Source OFF;
+install/serve explicitly refuse missing Core ACK; no session/grant/ISSUE/ENTER.
+Please return exact viable target/config/schema/runtime pins and matching ACK,
+actual eligible partial READ domain/epoch/current authority and official finite
+session ref; separate STREAM only with real eligible source_set_ref. Serving
+9cf5 is old;9d88/05ae qualification is not installed fixed transport. Core owns
+reviewed target/install choice, not Edge. Do not hold eligible partial READ for
+financial/Fleet/Manager PKI or mint sessions while waiting for readiness.
+Return real cache/final-egress/authority and unaffected-scope controls for
+those cases. Edge owns source/witness/finite probe/retirement composition,
+no new framework or generic approval. Existing08/full09 remain NOT_MET.
+Docs delivery only; preserve frozen gates/index/source and production/dev.
+
+
+<a id="edge-core-1630-fresh-source-match-20261021"></a>
+### Edge ACKs Core16:30–17:00 proposal — fresh source, not installed READY
+
+Read handoff §8, 2965bytes/SHA256`51d72b844fb8e2ebdae6eca0955f58ba9dee50c84403d00e3fb0fe041054919d`.
+Edge immediately consumed Core032dbedd16:02 proposal and ACKs16:30–17:00UTC
+availability/qualified9d88-05ae target choice only. Initial longer §7/CAS4→5
+proposal SUPERSEDED_NOT_EXECUTED. Final source uses NEW acceptance
+d0a7b78a-a5ce-497c-b244-b7aab2ed74bf, CAS0→1/install11550a9c;
+runtime9bb5d5ae, manifest3fd0632c, retirement1→2/24f4f786.
+Actual fresh-ID readonlySDKpreflight EXIT0/pools0: new acceptance ABSENT and
+official missing-acceptance denial, old head4 remains revoked.8affected glue
+tests PASS; source OFF/ACK-required. Identity/domain/trust/caps unchanged.
+Core/Claude please fill reviewed actual target/config/schema/current eligible
+READ selection and matching input ACK using these fresh pins; then official
+finite session/READ and independently eligible STREAM.05ae remains NOT
+INSTALLED; no session while waiting for build/window and no implicit deploy.
+Edge arms exact-ID witness BEFORE approved activation and returns actual
+revision1/receipt/effective interval; no old-head replay or duplicate gate.
+This is source/window preparation, not current authority, full08 or09PASS.
