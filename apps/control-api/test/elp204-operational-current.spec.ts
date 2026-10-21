@@ -614,6 +614,17 @@ describe.skipIf(!URL)("ELP2-04 current operational parents / actual PG+HTTP / TE
     expect(found.rows.length).toBeGreaterThanOrEqual(2); // the primary key is still there
     expect((await ctx.pool.query("SELECT 1 FROM pgmigrations WHERE name = '1723680000145_execution-incident-links-operation-lookup-index'")).rowCount).toBe(1);
   });
+  it("BE-P18 B1: the queue table has the scope lookup index whose expression is the view's target_id expression (migration 148)", async () => {
+    const found = await ctx.pool.query<{ indexdef: string }>(
+      "SELECT indexdef FROM pg_indexes WHERE schemaname = current_schema() AND indexname = 'execution_operation_queue_scope_idx'");
+    expect(found.rowCount).toBe(1);
+    expect(found.rows[0].indexdef).not.toMatch(/UNIQUE|WHERE/);
+    expect(found.rows[0].indexdef.replace(/\s+/g, " ")).toMatch(/\(workspace_id, \( ?CASE WHEN \(\(octet_length\(target_id\) >= 1\) AND \(octet_length\(target_id\) <= 191\)\) THEN target_id ELSE NULL::text END\), target_type, environment\)$/);
+    expect((await ctx.pool.query("SELECT 1 FROM pgmigrations WHERE name = '1723680000148_execution-operation-queue-scope-lookup-index'")).rowCount).toBe(1);
+    // The view's target_id must be that very expression, or the index could never be used by the queue.
+    const view = (await ctx.pool.query<{ def: string }>("SELECT pg_get_viewdef('execution_operation_queue_v2'::regclass) AS def")).rows[0].def.replace(/\s+/g, " ");
+    expect(view).toContain("CASE WHEN ((octet_length(target_id) >= 1) AND (octet_length(target_id) <= 191)) THEN target_id ELSE NULL::text END AS target_id");
+  });
   it("FE-042 M1: on 60k link rows the planner seq-scans a PK-only table but uses exactly this index definition for the queue's (workspace_id, operation_id = ANY) lookup", async () => {
     const real = (await ctx.pool.query<{ indexdef: string }>(
       "SELECT indexdef FROM pg_indexes WHERE schemaname = current_schema() AND indexname = 'execution_incident_operation_links_operation_idx'")).rows[0].indexdef;

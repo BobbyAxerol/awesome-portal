@@ -1,6 +1,6 @@
 import { performance } from "perf_hooks";
 import { createHash } from "crypto";
-import { Pool, PoolClient, QueryResultRow } from "pg";
+import { Pool, QueryResult, QueryResultRow } from "pg";
 import {
   AppliedSort,
   KeysetPage,
@@ -24,11 +24,17 @@ import { normalizeKeysetQuery } from "./request";
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/;
 const DEFAULT_STATEMENT_TIMEOUT_MS = 2_000;
 const MAX_STATEMENT_TIMEOUT_MS = 10_000;
+const MAX_TOTAL_DEADLINE_MS = 30_000;
 const MAX_SCOPE_COLUMNS = 8;
 const MAX_SCOPE_TUPLES = 2_000;
 const MAX_SCOPE_STRING_BYTES = 4_096;
 const MAX_SCOPE_BYTES = 1_048_576;
 const TIMESTAMP_BOUNDARY_PREFIX = "__query_timestamp_boundary_";
+
+/** The one statement entry point of a read transaction (the pg client, or its deadline-guarded wrapper). */
+interface Queryable {
+  query<R extends QueryResultRow = QueryResultRow>(sql: string, values?: readonly unknown[]): Promise<QueryResult<R>>;
+}
 
 interface SqlPart {
   sql: string;
@@ -161,6 +167,18 @@ function rowScopeSql<TRow extends Record<string, unknown>, TItem>(
   if (!scope) return null;
   if (scope.allowedTuples.length === 0) return "FALSE";
   const columns = scope.columns.map(identifier).join(", ");
+  // BE-P18 B1: a literal row-IN of N tuples is an OR of N conjunctions, evaluated per candidate row (O(rows x N),
+  // N up to 2000) and it cannot be joined or hashed. When every value is a string, the SAME composite equality is
+  // sent as one text[] bind per column and planned as a semi-join (hash or index nested loop). Mixed scalar
+  // types keep the literal form. Row-wise equality, so there is still no cross-product between columns.
+  const allText = scope.columns.every((_, column) => scope.allowedTuples.every((tuple) => typeof tuple[column] === "string"));
+  if (allText) {
+    const arrays = scope.columns.map((_, column) =>
+      `${bindings.add(scope.allowedTuples.map((tuple) => tuple[column]))}::text[]`);
+    const broad = resource.rowScopeIndexMaxTuples !== undefined && scope.allowedTuples.length > resource.rowScopeIndexMaxTuples;
+    const left = broad ? scope.columns.map((column) => `(${identifier(column)} || '')`).join(", ") : columns;
+    return `(${left}) IN (SELECT * FROM unnest(${arrays.join(", ")}))`;
+  }
   const tuples = scope.allowedTuples.map((tuple) =>
     `(${tuple.map((value) => bindings.add(value)).join(", ")})`);
   return `(${columns}) IN (${tuples.join(", ")})`;
@@ -275,6 +293,14 @@ function validateResource<TRow extends Record<string, unknown>, TItem>(
   const timeout = resource.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS;
   if (!Number.isInteger(timeout) || timeout < 50 || timeout > MAX_STATEMENT_TIMEOUT_MS) {
     throw new Error("query statement timeout is outside the safe range");
+  }
+  const indexMax = resource.rowScopeIndexMaxTuples;
+  if (indexMax !== undefined && (!Number.isInteger(indexMax) || indexMax < 1 || indexMax > MAX_SCOPE_TUPLES)) {
+    throw new Error("query row scope index threshold is outside the safe range");
+  }
+  const deadline = resource.totalDeadlineMs;
+  if (deadline !== undefined && (!Number.isInteger(deadline) || deadline < timeout || deadline > MAX_TOTAL_DEADLINE_MS)) {
+    throw new Error("query total deadline must be an integer between the statement timeout and 30000 ms");
   }
 }
 
@@ -468,15 +494,34 @@ export class ControlPlaneQueryService {
         })
       : null;
 
-    const client = await this.pool.connect();
+    const connection = await this.pool.connect();
     const started = performance.now();
     let inTransaction = false;
+    const statementTimeoutMs = resource.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS;
+    const deadlineAt = resource.totalDeadlineMs === undefined ? null : started + resource.totalDeadlineMs;
+    let armedMs = statementTimeoutMs;
+    // Every statement after BEGIN goes through here. With a total deadline, the
+    // server-side statement_timeout is lowered to the remaining budget (never
+    // raised) and a statement is not even started once the budget is spent.
+    const client: Queryable = {
+      query: async <R extends QueryResultRow = QueryResultRow>(sql: string, values?: readonly unknown[]) => {
+        if (deadlineAt !== null && inTransaction) {
+          const remaining = Math.ceil(deadlineAt - performance.now());
+          if (remaining < 1) {
+            throw new QueryContractError("QUERY_TIMEOUT", "Query exceeded its bounded execution time.", 503);
+          }
+          if (remaining < armedMs) {
+            await connection.query("SELECT set_config('statement_timeout', $1, true)", [`${remaining}ms`]);
+            armedMs = remaining;
+          }
+        }
+        return connection.query<R>(sql, values === undefined ? undefined : [...values]);
+      },
+    };
     try {
-      await client.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
+      await connection.query("BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY");
       inTransaction = true;
-      await client.query("SELECT set_config('statement_timeout', $1, true)", [
-        `${resource.statementTimeoutMs ?? DEFAULT_STATEMENT_TIMEOUT_MS}ms`,
-      ]);
+      await connection.query("SELECT set_config('statement_timeout', $1, true)", [`${statementTimeoutMs}ms`]);
       const totalSql = countQuery(resource, actor.workspaceId, []);
       const totalResult = await client.query<{ count: string }>(totalSql.sql, totalSql.values);
       const totalCount = countValue(totalResult.rows[0]?.count);
@@ -550,7 +595,7 @@ export class ControlPlaneQueryService {
         };
         try { snapshot = await read(lent); } finally { open = false; }
       }
-      await client.query("COMMIT");
+      await connection.query("COMMIT");
       inTransaction = false;
 
       const cursorInput = {
@@ -608,18 +653,18 @@ export class ControlPlaneQueryService {
         },
       };
     } catch (error) {
-      if (inTransaction) await this.rollback(client);
+      if (inTransaction) await this.rollback(connection);
       if ((error as { code?: string }).code === "57014") {
         throw new QueryContractError("QUERY_TIMEOUT", "Query exceeded its bounded execution time.", 503);
       }
       throw error;
     } finally {
-      client.release();
+      connection.release();
     }
   }
 
   private async filteredCount<TRow extends Record<string, unknown>, TItem>(
-    client: PoolClient,
+    client: Queryable,
     resource: PostgresListResource<TRow, TItem>,
     workspaceId: string,
     filters: readonly NormalizedFilter[],
@@ -630,7 +675,7 @@ export class ControlPlaneQueryService {
   }
 
   private async existsBeyond<TRow extends Record<string, unknown>, TItem>(
-    client: PoolClient,
+    client: Queryable,
     resource: PostgresListResource<TRow, TItem>,
     workspaceId: string,
     query: NormalizedKeysetQuery,
@@ -656,7 +701,7 @@ export class ControlPlaneQueryService {
     }
   }
 
-  private async rollback(client: PoolClient): Promise<void> {
+  private async rollback(client: Pick<import("pg").PoolClient, "query">): Promise<void> {
     try {
       await client.query("ROLLBACK");
     } catch {

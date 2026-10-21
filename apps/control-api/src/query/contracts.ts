@@ -176,7 +176,25 @@ export interface PostgresListResource<TRow extends Record<string, unknown>, TIte
   };
   /** Optional only for compatibility; Execution adapters must supply a minted scope. */
   rowScope?: PostgresRowScope;
+  /**
+   * Planner steering for BROAD scopes (all-text scopes only). A scope with more tuples than this selects most of its
+   * workspace, where one scan + hash semi-join is cheaper than thousands of per-tuple btree probes, but the planner
+   * multiplies per-column selectivities of the composite key and under-estimates the match count, so it picks the
+   * probes (measured 2x-4x slower by the BE-P18 B1 EXPLAIN gate). Above the threshold the scope columns are compared
+   * as `(col || '')`, which no btree index matches: same rows, same semantics, no probe path. Absent = never.
+   */
+  rowScopeIndexMaxTuples?: number;
   statementTimeoutMs?: number;
+  /**
+   * Optional deadline for the WHOLE read transaction (every count, page, edge
+   * and snapshot-reader statement together). `statementTimeoutMs` only bounds
+   * each statement, so a request of N statements could otherwise run N times
+   * longer. Before each statement the engine tightens `statement_timeout` to
+   * the remaining budget and refuses to start one once it is spent; either way
+   * the caller sees the same fail-closed `QUERY_TIMEOUT` 503. Absent = previous
+   * behavior (per-statement only).
+   */
+  totalDeadlineMs?: number;
   maxFilters?: number;
   mapRow: (row: TRow) => TItem;
 }
