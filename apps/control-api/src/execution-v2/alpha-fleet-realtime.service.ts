@@ -29,6 +29,8 @@ import { BeforeApplicationShutdown, Inject, Injectable, OnApplicationShutdown, O
 import type { Pool } from "pg";
 import { ControlApiConfig, querySigningKeys } from "../config";
 import { CONTROL_API_CONFIG, EXECUTION_DATA_POOL } from "../tokens";
+import { AuthService } from "../auth/auth.service";
+import type { StreamRevocationHints } from "../auth/stream-revocation-hints";
 import { ExecutionReadScopeError, ExecutionReadScopes, type ReadScopePrincipal } from "./read-scope";
 import type { ReadDatasetBinding } from "./read-publication";
 import { ManagerModelRepository } from "./manager-model.store";
@@ -54,6 +56,8 @@ export const ALPHA_FLEET_REALTIME_OPTIONS = Symbol("ALPHA_FLEET_REALTIME_OPTIONS
 export interface AlphaFleetRealtimeOptions {
   authority?: AlphaFleetAuthority; log?: FleetRevisionLog; codec?: ScopedReplayCursorCodec; limits?: ScopedReplayLimits;
   pollMs?: number; streamsPerSession?: number; replayWindowMs?: number; now?: () => number;
+  /** Overrides the AuthService's hint carrier (tests). Hints are a fast purge only, never authority. */
+  hints?: StreamRevocationHints;
 }
 
 /** The part of a response the service writes to. The controller wraps `reply.raw`; a test wraps an array. */
@@ -78,8 +82,10 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
   private readonly now: () => number;
   /** session id -> open streams; the only per-user state, and it empties as streams end. */
   private readonly sessions = new Map<string, number>();
-  /** identity digest -> session ids holding a stream on it, for the revoke purge hint. */
-  private readonly identities = new Map<string, Map<string, number>>();
+  /** One record per reserved open (pending or live), so a revoke hint can name streams by session or user and also reach an open that
+   * has not subscribed yet. Bounded by `sessions`: a record exists exactly as long as its slot. */
+  private readonly opens = new Set<OpenRecord>();
+  private unsubscribeHints: (() => void) | null = null;
   private timer: ReturnType<typeof setInterval> | null = null;
   private inflight: Promise<void> | null = null;
   private stopped = false;
@@ -87,7 +93,8 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
 
   constructor(@Inject(EXECUTION_DATA_POOL) pool: Pool, @Inject(ExecutionReadScopes) scopes: ExecutionReadScopes,
     @Inject(CONTROL_API_CONFIG) private readonly config: ControlApiConfig,
-    @Optional() @Inject(ALPHA_FLEET_REALTIME_OPTIONS) options: AlphaFleetRealtimeOptions = {}) {
+    @Optional() @Inject(ALPHA_FLEET_REALTIME_OPTIONS) options: AlphaFleetRealtimeOptions = {},
+    @Optional() @Inject(AuthService) auth?: Pick<AuthService, "streamHints">) {
     this.log = options.log ?? new ManagerModelRepository(pool);
     this.authority = options.authority ?? new ScopesFleetAuthority(scopes);
     this.now = options.now ?? Date.now;
@@ -98,6 +105,9 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
     this.streamsPerSession = options.streamsPerSession ?? ALPHA_FLEET_STREAMS_PER_SESSION;
     if (!Number.isSafeInteger(this.pollMs) || this.pollMs < 1 || !Number.isSafeInteger(this.streamsPerSession) || this.streamsPerSession < 1 ||
       this.streamsPerSession > 16) throw new Error("ALPHA_FLEET_REALTIME_BOUND_INVALID");
+    // Revoke hints: a session or grant that ended in this process ends its open streams in the same tick. Authority does not depend on it.
+    this.unsubscribeHints = (options.hints ?? auth?.streamHints)?.subscribe({
+      sessionEnded: sessionId => this.revokeSession(sessionId), userAuthorityChanged: userId => this.revokeUser(userId) }) ?? null;
   }
 
   /** Built on first use, never at boot: a process that never serves this dataset needs no signing key for it, and an invalid key
@@ -164,7 +174,8 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
     const token = lastEventId ?? query.cursor;
     const sink = begin();
     const session = principal.session.sessionId;
-    let tracked = false, identity: string | null = null, handle: { close: () => void } | null = null, released = false, reserved = false;
+    let handle: { close: () => void } | null = null, released = false, reserved = false;
+    const open: OpenRecord = { session, user: principal.user.userId, identity: null, revoked: false };
     const finish = () => {
       if (released) return;
       released = true;
@@ -173,7 +184,7 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
         const left = (this.sessions.get(session) ?? 1) - 1;
         if (left <= 0) this.sessions.delete(session); else this.sessions.set(session, left);
       }
-      if (identity !== null && tracked) this.untrack(identity, session);
+      this.opens.delete(open);
       this.idleCheck();
     };
     const terminate = (reason: NonNullable<ScopedRealtimeFrame["reason_code"]>) => {
@@ -186,6 +197,7 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
     // Reserve the slot before any await: concurrent opens of one session cannot all pass the check.
     this.sessions.set(session, (this.sessions.get(session) ?? 0) + 1);
     reserved = true;
+    this.opens.add(open);
     sink.onClose(finish);
     try {
       // No start-at-head: the only way in is the cursor of a snapshot (or of a previous frame).
@@ -200,15 +212,13 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
           fleetSourceSetDigest(selection, current) !== expected.source_set) throw new ScopedReplayError("GENERATION_CHANGED");
         return datasetOf(current);
       });
-      identity = authorization.identity;
       const resolved = decodeScopedReplayContinuationWithBinding(this.codec, token, source => {
         const coordinate = decodeFleetCoordinate(source);
         return bindingFor(selection, head, coordinate.original_snapshot_id, authorization.identity, authorization.policy_revision, authorization.field_policy_revision);
       });
       expected = { epoch: resolved.binding.source_continuity_epoch, generation: resolved.binding.projection_generation, source_set: resolved.binding.source_set_digest };
       if (sink.closed()) { finish(); return; }
-      this.track(authorization.identity, session);
-      tracked = true;
+      open.identity = authorization.identity;
       handle = await this.hub.subscribe({ binding: resolved.binding, guard: authorization.guard, baselineCursor: resolved.source, lastEventId: token,
         write: frame => {
           if (sink.closed()) return false;
@@ -217,6 +227,8 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
           if (frame.terminal) { sink.end(); finish(); }
           return accepted;
         } });
+      // A revoke hint that landed while this open was still subscribing found no client to end: end it now, before any frame.
+      if (open.revoked && open.identity !== null) this.endIdentities(new Set([open.identity]));
       if (released || sink.closed()) { handle.close(); finish(); return; }
       this.ensureTimer();
       void this.pollOnce();
@@ -225,15 +237,15 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
     }
   }
 
-  /** Fast purge hint on top of the per-poll and per-write fences: every stream of this session ends with `access_revoked`. */
-  revokeSession(sessionId: string): void {
-    const identities = new Set<string>();
-    for (const [identity, sessions] of this.identities) if (sessions.has(sessionId)) identities.add(identity);
-    if (identities.size) this.hubValue?.revoke(binding => identities.has(binding.principal_scope_digest));
-  }
+  /** Fast purge hint on top of the per-poll and per-write fences: every stream of this session ends with `access_revoked`. Total: it
+   * never throws, and an id nobody holds is a no-op. Authority never depends on it. */
+  revokeSession(sessionId: string): void { this.endStreams(open => open.session === sessionId); }
+  /** Same, for every session of one user (logout of all, password change, disable, a grant of the user revoked or narrowed). */
+  revokeUser(userId: string): void { this.endStreams(open => open.user === userId); }
 
   diagnostics() {
-    return { ...(this.hubValue?.diagnostics() ?? IDLE_HUB), sessions: this.sessions.size, tracked_identities: this.identities.size, timer: this.timer !== null,
+    return { ...(this.hubValue?.diagnostics() ?? IDLE_HUB), sessions: this.sessions.size,
+      tracked_identities: new Set([...this.opens].flatMap(open => open.identity === null ? [] : [open.identity])).size, timer: this.timer !== null,
       poll_failures: this.pollFailures, stopped: this.stopped };
   }
 
@@ -252,6 +264,8 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
 
   beforeApplicationShutdown(): void {
     this.stopped = true;
+    this.unsubscribeHints?.();
+    this.unsubscribeHints = null;
     this.hubValue?.stop();
     this.clearTimer();
   }
@@ -279,17 +293,16 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
       throw new ExecutionReadScopeError("EXECUTION_READ_PUBLICATION_NOT_QUALIFIED", 503);
     return head;
   }
-  private track(identity: string, session: string) {
-    const sessions = this.identities.get(identity) ?? new Map<string, number>();
-    sessions.set(session, (sessions.get(session) ?? 0) + 1);
-    this.identities.set(identity, sessions);
+  private endStreams(match: (open: OpenRecord) => boolean) {
+    try {
+      const identities = new Set<string>();
+      for (const open of this.opens) if (match(open)) { open.revoked = true; if (open.identity !== null) identities.add(open.identity); }
+      this.endIdentities(identities);
+    } catch { /* a hint can never fail its caller; the per-poll and per-write fences still end the stream */ }
   }
-  private untrack(identity: string, session: string) {
-    const sessions = this.identities.get(identity);
-    if (!sessions?.has(session)) return;
-    const left = sessions.get(session)! - 1;
-    if (left <= 0) sessions.delete(session); else sessions.set(session, left);
-    if (!sessions.size) this.identities.delete(identity);
+  private endIdentities(identities: Set<string>) {
+    // An identity binds actor and session, so ending an identity ends only the revoked principal's streams.
+    if (identities.size) this.hubValue?.revoke(binding => identities.has(binding.principal_scope_digest));
   }
   private ensureTimer() {
     if (this.timer || this.stopped) return;
@@ -300,6 +313,8 @@ export class AlphaFleetRealtimeService implements BeforeApplicationShutdown, OnA
   /** An idle process holds no timer and no poll. */
   private idleCheck() { if ((this.hubValue?.diagnostics().clients ?? 0) === 0) this.clearTimer(); }
 }
+
+interface OpenRecord { readonly session: string; readonly user: string; identity: string | null; revoked: boolean; }
 
 const IDLE_HUB = { clients: 0, queued_bytes: 0, source_flights: 0, pending_subscriptions: 0, timed_out_flights: 0, browser_source_calls: 0, semantics: "NOTIFICATION_ONLY" as const };
 
