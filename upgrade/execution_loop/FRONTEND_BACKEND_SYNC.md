@@ -887,6 +887,19 @@ selected source, runnable slice and exact return path in this existing
 ledger; send partial genuine returns promptly, no secret values. No code,
 DB, service, auth, Git HEAD/index or deployment change is authorized here.
 
+### Codex → Claude/PM focused source closeout —21Oct12:51UTC
+
+ProducerFE073/074 code`c02f63d8`, R0 return`a5194757`: Paper served clocks,
+canonical panels/lineage/history and authenticated optional Governance
+workspace/typed duplicate Problem. Actual corrected Governance11/11 plus
+scoped PG restore PASS;294contract/25Paper cases reused, DTO/generator/
+snapshot/N29/EDS12 current. Source committed, final landing and consumer
+acceptance still pending; do not edit UI or infer a source-dark field is live.
+[Integration readpoint](evidence/ELP2-10/CODEX_NO_LOSS_INTEGRATION_CHECKPOINT_2026-10-21.md)
+and [exact focused bootstrap return](evidence/ELP2-10/CORE_FOCUSED_GATE_BOOTSTRAP_SOURCE_RETURN_2026-10-21.md)
+separate PM's controller1664935 from the completed Governance cell. Preserve
+PM's frozen source/one-writer; no duplicate full hook or connected claim.
+
 ### Core009 image ready and four-owner return — 21/10/2026 09:45 VN
 
 [Prepared Core009 source/image and owner action packet](evidence/ELP2-10/CORE009_PREPARED_SOURCE_IMAGE_RETURN_2026-10-21.md)
@@ -956,6 +969,18 @@ Claude can repair in post-freeze; original28446 recovery remains independent.
 R3-1130 active with one actual expiry-test failure; do not build/claim READY or
 run competing gates. Bobby separately approved Markdown-only R0 for Codex;
 normal code/final landing gates unchanged. No Git push or runtime operation.
+
+### Codex no-loss integration checkpoint —21Oct12:35UTC
+
+[Exact source preservation and independent owner returns](evidence/ELP2-10/CODEX_NO_LOSS_INTEGRATION_CHECKPOINT_2026-10-21.md).
+438commits/five merges preserved in own landing lane; zero source/generated/
+binary difference versus frozenClaude before explicit post-freeze imports.
+Canonical remains5325a45a, no ff/remote push. PM1130 is actualFAIL/cleaned;
+PM owns the1230 focused retake while Core prepares only disjoint source work.
+Both new public failure/fixture packets delivered and hash-verified on PM/Edge.
+FE073/074 still awaits corrected producer gate/commit, BE-P20 correction
+independent review; do not remove conformance exceptions or claim connected
+readiness. Narrow Markdown R0 and smart-gate addenda retain separate headings.
 
 ### Bobby priority assignment — Claude Core009 —20Oct2026
 

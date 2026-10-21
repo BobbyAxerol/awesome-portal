@@ -721,7 +721,11 @@ B1/B2. Addendum này thắng các giới hạn phân vai cũ trong §10.11 và �
   cần Bobby; làm việc độc lập tiếp khi một input nguồn chưa có. Không mở ELP2-11/release bằng
   cách thay định nghĩa gate hoặc đổi người giữ việc.
 
-### 10.10c R0 Markdown cho Codex (Bobby, 2026-10-21)
+### 10.10d R0 Markdown cho Codex (Bobby, 2026-10-21)
+
+Trước khi ghép với Claude, ngoại lệ R0 này được ghi là §10.10c trong các
+receipt Codex. Đổi số thành §10.10d để không trùng §10.10c "Hook thông minh"
+của Claude; giữ nguyên lịch sử, nội dung phê duyệt và điều kiện kiểm chứng.
 
 Bobby duyệt áp dụng cùng R0 cho **commit thuần Markdown của Codex**, không còn
 giới hạn R0 ở nhánh Claude. Đây là ngoại lệ hẹp bổ sung §10.10.4, không thay

@@ -12914,6 +12914,20 @@ selected source, runnable slice and exact return path in this existing
 ledger; send partial genuine returns promptly, no secret values. No code,
 DB, service, auth, Git HEAD/index or deployment change is authorized here.
 
+### Core focused source closeout — 21Oct2026,12:51UTC
+
+FE073/074 producer code`c02f63d8` (22paths,+1745/-31) and separate R0 return
+`a5194757` are committed in the own contract lane. Actual Governance11/11 and
+scoped PG restore PASS;294contract/25Paper cases reused at unchanged hashes,
+generator/DTO/snapshot/N29/EDS12 checks PASS. Final combined normal/ff-only
+landing and Claude consumer acceptance remain pending; no UI/runtime change.
+[No-loss integration checkpoint](execution_loop/evidence/ELP2-10/CODEX_NO_LOSS_INTEGRATION_CHECKPOINT_2026-10-21.md)
+preserves438Claude commits/five merges and canonical source5325a45a.
+[Bootstrap source return](execution_loop/evidence/ELP2-10/CORE_FOCUSED_GATE_BOOTSTRAP_SOURCE_RETURN_2026-10-21.md):
+PM applied the focused-only migration setup and owns controller1664935 started
+12:44:05; no competing gate or inferred PASS. Original recovery/ACK, actual
+trust/STREAM, financial/budget/calibration/G2/browser gates stay open.
+
 ### Core009 integrator ACK và return từng input — 21/10/2026
 
 [Owner-return Codex](execution_loop/evidence/ELP2-10/CORE009_INTEGRATOR_RETURN_2026-10-21.md).
@@ -13809,6 +13823,18 @@ that exact base without changing its bytes. BE-P20 needs single-Research-kid
 compatibility, not three new signers. Current PM R3 has an actual failure and
 no normal terminal/image; keep recovery/STREAM/landing pending. Markdown-only
 R0 for Codex is approved in campaign§10.10c; code/final candidate gates remain.
+
+**21Oct12:35UTC no-loss integration checkpoint:**
+[Preserved source, exact imports and pending final gate](execution_loop/evidence/ELP2-10/CODEX_NO_LOSS_INTEGRATION_CHECKPOINT_2026-10-21.md).
+Own landing lane retains438Claude commits/five merges; comparison at543bcec3
+against frozen d58361ea has zero non-Markdown changes. Imported reviewed
+post-freeze46877cae/7c158019 separately, not into canonical. Actual1130 normal
+ended1/one20s expiry timeout; PM owns focused whole-file retake, no duplicate
+Core Docker job. The20-line test-only proposal and failure/cleanup packets
+were delivered byte-exact to PM/Edge. Canonical5325a45a and all original refs
+remain untouched; no image/recovery/STREAM/ff landing or whole10PASS inferred.
+Codex's narrow Markdown R0 addendum is now §10.10d to distinguish Claude's
+smart-gate §10.10c; both histories and final candidate gates are preserved.
 
 
 
