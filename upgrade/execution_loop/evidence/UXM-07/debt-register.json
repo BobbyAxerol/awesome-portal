@@ -227,6 +227,36 @@
       "owner": "Claude; Bobby for the design calls",
       "status": "STILL_OPEN (new 2026-10-21)",
       "opened": "2026-10-21"
+    },
+    {
+      "id": "DEBT-UXM07-041",
+      "title": "M-1 rule R-A is falsified for the workbench route: 12 requests with 1 worker, 11 with 2",
+      "where": "upgrade/execution_loop/evidence/ELP2-10/measurements (M-1a receipts), BE-P19-measurements.md",
+      "consequence": "The request count per route is not worker-independent on workbench, so a per-route read budget cannot be pinned from one run; counts elsewhere hold.",
+      "proposed": "Find the request that appears only at 1 worker (likely a race between the eligibility batch and the self-context read), make the order deterministic or declare it in the budget; rerun M-1a at 1/2/4 workers.",
+      "owner": "Claude",
+      "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
+      "pre_commit_hook_blocks": false
+    },
+    {
+      "id": "DEBT-UXM07-042",
+      "title": "M-1 access · canary fails 2 of 2 even alone on the fixture lane",
+      "where": "measurements M-1a receipts (access · canary)",
+      "consequence": "One route cannot be measured; unknown whether the cause is the harness or a product defect on /administration/my-access with the canary key.",
+      "proposed": "Reproduce in the harness with a trace, decide product defect vs fixture gap, fix or document.",
+      "owner": "Claude",
+      "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
+      "pre_commit_hook_blocks": false
+    },
+    {
+      "id": "DEBT-UXM07-043",
+      "title": "M-4a p95 varies 43% and 75% between repetitions (limit R-C 25%); cell was 3 CPU / 3 GiB, not the manifest's 4/4",
+      "where": "measurements M-4a receipts",
+      "consequence": "No stable p95 can be quoted; the fixture numbers must not become a budget. Hook-time tests also flake when other heavy jobs run (see 2026-10-21 hook run).",
+      "proposed": "Rerun M-4a on a quiet host in the 4/4 cell with three repetitions; never run heavy jobs in parallel with the hook (rule recorded in HANDOFF section 11).",
+      "owner": "Claude",
+      "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
+      "pre_commit_hook_blocks": false
     }
   ],
   "closed": [
