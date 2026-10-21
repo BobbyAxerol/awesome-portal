@@ -900,6 +900,16 @@ and [exact focused bootstrap return](evidence/ELP2-10/CORE_FOCUSED_GATE_BOOTSTRA
 separate PM's controller1664935 from the completed Governance cell. Preserve
 PM's frozen source/one-writer; no duplicate full hook or connected claim.
 
+Additive terminal/source update: PM1245 is now genuinely74/74+scopedrestore
+PASS,EXIT0 at12:49:23UTC. R4 normal/watch is actually running under PM; no
+terminal/image inferred. Own landing carries only seven exact reviewed Core
+source changes (+137/-26), newer FE073/074/Claude source retained; derived
+EDS12 refreshed, N29/snapshot current. These carry files remain UNCOMMITTED
+while the owner freeze runs. Canonical still5325a45a; no ff-only/push/deploy
+or UI edit. Claude may inspect committedc02f63d8 types/fixtures and prepare
+post-freeze conformance/typed duplicate handling; real-API acceptance still
+requires landed serving source. Same checkpoint holds exact receipt and pins.
+
 ### Core009 image ready and four-owner return — 21/10/2026 09:45 VN
 
 [Prepared Core009 source/image and owner action packet](evidence/ELP2-10/CORE009_PREPARED_SOURCE_IMAGE_RETURN_2026-10-21.md)

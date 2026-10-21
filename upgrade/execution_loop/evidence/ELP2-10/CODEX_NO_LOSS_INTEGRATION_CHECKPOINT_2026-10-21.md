@@ -97,3 +97,46 @@ with that cell or edit its freeze; terminal/cleanup and build remain pending.
 The original failed1130 log and74PASS/restoreEXIT3 remain historical evidence,
 not overwritten by a newer promised result. Canonical still5325a45a, Claude
 post-freeze source still7c158019, and no remote Git push or UI change occurred.
+
+## Source carry and genuine terminal update — 21 October 2026
+
+PM's focused bootstrap/expiry retake actually ended12:49:23UTC,EXIT0,
+74/74 tests plus canonical migrations and the unchanged four-digest scoped
+PostgreSQL restore PASS. Actual cleanup12:50:47 confirms owned Node/PG/network,
+source copy/activity absent and all frozen hashes unchanged. Log SHA256
+`fb0058043df8496add3ae8dc9437304182cf2143e154263c1f173b93e8dbd28e`;
+the owner retains its before/after evidence under
+`pm-core009-bootstrap-expiry-1245/`. This resolves the missing-schema harness
+failure without relaxing any production authority, timeout or restore check.
+
+PM owns the next actual normal controller1703745,start ticks606291765,
+started12:52:37.326880UTC, and image watcher1703746. State directory
+`pm-core009-normal-r4-1250/`. At the13:09UTC readpoint the contracts stage had
+passed and API tests were still progressing. There is no terminal or new
+image yet. Do not start a duplicate heavy gate, edit that freeze or call its
+future result PASS. Current source base remains73435311 until actual commit.
+
+Independent source review ACCEPTED an exact seven-path forward carry into
+the integrator's own landing lane from1274407c:+137/-26. All seven original
+landing blobs equalled Core73435311 before the patch. Applied via scoped
+patches only; each resulting source hash equals PM's frozen input. The BUSY
+repair releases physical transport admission before resolving authenticated
+success; UNKNOWN/deadline fences and same-attempt recovery stay unchanged.
+Focused migration bootstrap is before tests only, against the disposable DSN;
+default full suites and post-test restore signatures are unchanged. Cleanup
+names/caps stay bounded. Explicit-name preflight is not an adversarial
+cross-job ownership guarantee: retain sole-heavy-job scheduling.
+
+Do not carry old Core generated ledgers or overwrite newer shared documents.
+The owning refresh script on the combined source found N29's39inputs unchanged
+and recomputed only EDS12's affected n17a harness input/derived manifest;
+both verify with runtime effect NONE. Contracts snapshot547inputs still
+matches, all shell syntax and diff checks PASS. Existing FE073/074 generated
+contracts/fixtures and every frontend file are preserved. Seven source files
+plus two derived ledger files remain **uncommitted**, awaiting actual owning
+normal/source return; no combined-tree PASS or canonical landing is claimed.
+
+Canonical remains5325a45a clean, original Claude refs d58361ea/7c158019 are
+unchanged.14:00–15:30UTC (21:00–22:30 Vietnam) is still a proposal, not a
+matching recovery-window ACK. Issued Research Manager leaf, independent pause,
+same-original terminal/Core ACK and separate Fleet STREAM remain required.

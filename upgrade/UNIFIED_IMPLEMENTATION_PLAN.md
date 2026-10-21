@@ -12928,6 +12928,16 @@ PM applied the focused-only migration setup and owns controller1664935 started
 12:44:05; no competing gate or inferred PASS. Original recovery/ACK, actual
 trust/STREAM, financial/budget/calibration/G2/browser gates stay open.
 
+Focused terminal update: PM retake1245 actually PASS74/74+migrations+scoped
+restore,EXIT0 at12:49:23UTC; cleanup verified12:50:47. PM now owns normal
+controller1703745 (started12:52:37) and conditional image watcher, no terminal
+yet. Integrator prepared only the independently accepted seven-path Core
+carry,+137/-26, preserving newer Claude/FE073/074 source; EDS12 refreshed by
+its owner script,N29/snapshot unchanged. Source carry is UNCOMMITTED and
+combined final gate/ff-only still pending. See the same
+[no-loss checkpoint](execution_loop/evidence/ELP2-10/CODEX_NO_LOSS_INTEGRATION_CHECKPOINT_2026-10-21.md).
+No duplicate heavy job, push, deploy, UI edit or manufactured recovery ACK.
+
 ### Core009 integrator ACK và return từng input — 21/10/2026
 
 [Owner-return Codex](execution_loop/evidence/ELP2-10/CORE009_INTEGRATOR_RETURN_2026-10-21.md).
