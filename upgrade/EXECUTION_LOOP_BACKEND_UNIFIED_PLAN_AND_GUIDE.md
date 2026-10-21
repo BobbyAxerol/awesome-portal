@@ -27355,6 +27355,266 @@ source lifecycle/SDK artifacts independently, no shared working-tree writes
 while staging/hook runs. Prior public docs/ops source suites are unchanged;
 normal commit gate still required, its tests are not connected acceptance.
 
+**Publication terminal / private SDK operator preparation,21Oct11:00ICT:**
+Normal commit actually ended0 as d15de83ee56ac57e68f33075f5920321a1cf54f0,
+only3docs/+489lines, Bobby identity;130contracts/717API across72files/build/
+isolated PG restore+verification PASS. No push/merge/hosted CI. Exact hook
+resource cleanup is still being witnessed; do not claim it finished early.
+Core refresh03:57–03:59UTC confirms73435311/9cf5fffa remains built, not installed;
+Research still008/7b2c7f34/config497fc5a8/restart0. No window ACK yet. Claude
+UI branch97454777 is not an operational Core009 return.
+
+Root prepared ONLY private SDK glue in edge-core009-binding-kkmO9cv7, preserving
+the immutable21-file PM closure and public lifecycle. Draft exact-manifest
+be129582 has original command1d95276c-b837-4a6c-a582-67630a222c37, expected
+head2 and proposed expiry05:45UTC; it is UNATTEMPTED, not a native acceptance.
+Document digest6fe37118 is a draft digest, not an observer receipt. Existing
+maintenance SDK install/status uses these same bytes/command after uncertainty;
+never fabricate a head/COMMIT, grant, subject or second recovery identity.
+Separate validate/status/install/serve modes reuse the official SDK, bounded
+source/control pools1+1, nonroot1001 and existing image28ea3958. Install/serve
+remain forbidden until matched Core readiness/window; maintenance DSN is not
+read by validate. First capped validation physically exited0/stderr0, TLS1.3,
+zero DB connections/listener; this does NOT test native serving or recovery.
+
+Independent review caught an owned private-glue defect before any activation:
+lifecycle deadline was mistakenly passed as an absolute float, but the existing
+helper contract requires an async context-manager factory. Correct this now
+using the frozen PM portal_human_candidate._deadline, retaining a separate
+finite-window admission timer. Recovery/cleanup must remain usable after the
+window ends; never force-close UNKNOWN to make a deadline. Revalidate the
+actual factory composition with no DB/listener, review same-command UNKNOWN
+and physical drain, then supply only sanitized UNATTEMPTED metadata to Core.
+Do not change shared SDK/lifecycle or peer source. This is original08 owned
+operator preparation, not a new phase or external technical debt. Keep private
+drafts/keys out of Git; record subsequent actual hashes/results/cleanup here.
+
+**Private composition review and finite cleanup preparation,21Oct11:08ICT:**
+Fixed the owned glue before any install/serve: use frozen callable deadline;
+drain stderr to EOF retaining only byte count/hash (no bounded-pipe deadlock);
+check stop/draining/window before and after awaited observer; reopen exact
+8-file/public-JWKS pins with existing safe-reference helper and retain checked
+public key objects. Server admission checks full TLS1.3/window/cert lifetime;
+maintenance status/revoke never depends on a READ-window that has already
+expired. Maintenance receipts are explicitly recorded history, not held or
+current business authority. UNKNOWN exits non-success with original exact
+manifest/command retained for SDK status. Require exact/nonhistorical current
+version3 receipt before installation can be called recorded, then a fresh
+official RR observer before reporting READY; no receipt invented here.
+
+Pinned cleanup draft1bbe119f uses the same acceptance/subject/domain, expected
+head3/new operationa69bd97b-3834-423b-8c4e-f44d73985b23 and revoked=true.
+Its expiry22Oct05:45UTC is solely a finite ability to record the revoked head,
+not extension of READ (official observer rejects every revoked revision).
+Revoke/status always reuse that draft's original exact bytes; no automatic
+new command on UNKNOWN. Both install and revoke remain UNATTEMPTED. Install/
+serve still await actual Core window/config readiness, not just wall clock.
+
+Validate actual SDK/static trust composition again in the same capped existing
+image; no DB/listener/secret stdin. Add only small private standard-library
+unit cases for the new glue's UNKNOWN/historical/current-result classification,
+late READY and stderr draining; modeled fixtures are explicitly not authority
+or connected acceptance. Do not add product APIs, framework, grants or alter
+the immutable SDK. Run within1CPU/512MiB/64pids and auto-remove cells. Afterward
+record actual checks/pins, hand back sanitized UNATTEMPTED metadata to Core's
+existing request, and recheck any real owner response.
+
+Hook cleanup receipt5b728e3d: exact testimage23805f4d remains named deferred
+because the quiet-build guard sees1 live foreign build client; no bypass or
+peer stop. All owned PG/Node/network/tmp cells are physically absent. Baseline
+102images/406BuildKit retained; free248963035136→239964721152B includes
+concurrent host activity and is NOT claimed as our reclaimed space.39/40 runtime
+tuples unchanged; only pre-existing Paper worker restart2786→2820 observed,
+sameID/image/config, not modified. Three peer hashes unchanged. Retry exact
+image removal after foreign build terminal, never prune shared cache.
+
+**Actual window ACK consumed / original08 source commissioning approved,
+21Oct11:13ICT:** Core delivered
+[operator ACK](evidence/execution-edge-v1_2/EPG10-08/CORE009_OPERATOR_WINDOW_ACK_2026-10-21.md)
+SHA18a04d74ad455cd3daafe24751251d19560d2b5ab3827e11bd4a9b4835ca01ed.
+The previously proposed04:15–05:45UTC window is now genuinely MATCHED. Core
+resolved its own trust references/bounds; only9 actual native facts and genuine
+session ID remain. Do not continue reporting transfer/window approval blocked.
+ACK exact hostname spelling https://pm.elp210.candidate.invalid:28446 with
+container-local mapping10.70.0.2, not an IP URL whose SAN would fail. Source
+still binds10.70.0.2, same renewed leaf/workload, TLS1.3/CERT_REQUIRED and
+existing5s native listener/control bound. No shared DNS/stable28445 change.
+
+Owned private tests8f89ea8a actually7/7PASS (0.353s), network=none/1CPU/512MiB/
+64pids/--rm, modeled fixtures only. Actual frozen-SDK/static composition16635ab4
+then exit0/stderr0, no DB/listener; runtime6282e1e0, installbe129582 and
+revoke1bbe119f pinned. New PM55d54f1e/return821a59e9 agrees with current-head2/
+selected runtime6282e1e0 and explicitly does not replace Edge's composition;
+its17focused tests are producer-reported preparation, not commissioning.
+
+At actual04:15UTC, execute official SDK install of exact be129582 on the
+verified live_data_executor/system7674585245102796834 using existing narrow
+maintenance identity only (no schema/user/grants/DDL). UNKNOWN means status
+same original bytes/command, not a second install or fake rollback. Require
+RECORDED current/nonhistorical head3/exact digest, then start existing finite
+SDK/lifecycle in a nonroot capped1CPU/512MiB/64pids --rm cell on dedicated28446,
+source/control pools1+1 and no new role. Require actual fresh RR observer and
+physical listener before sanitized READY return. Retain original resources
+through UNKNOWN; no force close. Real acceptance—not static draft—then goes
+to Core existing task; Core owns validate/zero-custody008 quiesce/post-backup/
+009 install/session. Revoke/install cleanup draft is conditional on confirmed
+own head3 and actual terminal source/Core obligations; never revoke a peer
+head or assume prospective4 stored. Scope remains original Research Paper,
+not commands/Live/stable, and full08/09 acceptance stays NOT_MET until cases.
+
+Before activation, preserve custody even if the controller stdout disappears:
+reuse frozen helper's bounded/nonthrowing emitter, propagate failed READY
+delivery as a failed callback so the same lifecycle drains/retires rather than
+advertising readiness or losing live resources. Keep the source observer facts
+separate from maintenance history. Rerun only targeted7private glue tests and
+actual zero-DB static validation after this last operational guard; no new API.
+
+**Actual source transition,21Oct11:15–11:16ICT:** SDK install exit0/stderr0,
+RECORDED current/nonhistorical version3, effective04:15:32.604872UTC, exact
+command1d95276c/manifestbe129582/document6fe37118; maintenance physical pool0.
+Finite SDK source container7d03481095835ab0b4cc356a51e55da6d403fa007df7a3e16a16a0884cf622fb
+started04:15:51UTC/image28ea3958/restart0/config6282e1e0,1CPU/512MiB/64pids/
+--rm. Actual official RR observer accepted this head and physical28446 listener
+is retained under lifecycle; this is source readiness, NOT Core009 installed,
+held lease, READ/STREAM or acceptance. Live operator878c2f78 is now immutable.
+
+Obtain a separate tiny READONLY/RR SDK observation through the existing private
+readback wrapper's optional ready mode (source credential only, poolmax1,
+0.5CPU/256MiB/--rm). Return the exact9 native pins and original observer-byte
+semantic SHA defined by frozen BusinessRootHeldBridge, source fingerprint and
+bounded generated receipt; no ISSUE/ENTER/DDL or fake held authority. Do not
+edit/restart the live source. Preserve current-version CAS/receipt/owner mapping
+and pass actual metadata to Core existing task immediately, DNS origin/5s ACK.
+
+**Actual pins ready,21Oct11:19ICT:** first separate observer failed before
+pool creation due private-glue counter type conversion; retain failed specimen,
+use existing native.identity/counter helpers, never weaken SDK. Retake exited0/
+stderr0, physical pool0, no ISSUE/listener. Generated752B actual artifact
+faed4bbe is0600/UID1001/single-link; native semantic revisionb2d61795 follows
+exact SHA of observed bytes. Source live operator remains878c2f78 unchanged.
+[Actual native source return](evidence/execution-edge-v1_2/EPG10-08/CORE009_NATIVE_SOURCE_READY_2026-10-21.md)
+contains all9 genuine pins plus source/container/config/trust/DNS/5s facts.
+Deliver immediately to Core existing task/Unified; do not confuse native
+observer readiness with held permission, Core009 installation or READ/SSE PASS.
+
+**Actual handoff ACK / scoped cleanup / bounded connected preparation,
+21Oct04:29UTC:** Core received exact source-return90dfdc58 and ACKed all9
+actual facts. Its numeric-pins draft was preserved; current reviewed-schema
+runtime f3fe876d (5344B) spells revision/policy revision as canonical decimal
+strings without changing their values. Actual009 install/session remains
+Core-owned and not yet returned; do not probe008 with the new selection.
+
+Core's retained lease cap32 is cumulative, not a reusable concurrency budget;
+250ms SSE authorization may consume an admission per frame/heartbeat. Reuse
+existing connected_read.py preparation, pinned session, TLS transport and DTO
+validators through small private operational glue: first ONE finite native
+snapshot READ, inspect official terminal/counter correlation, then separately
+at most1–2frames SSE. Reserve at least20admissions for revoke/failure/recovery;
+no idle browser, automatic four-READ baseline or silent cap increase. Prepare
+and unit-test only modeled transport fixtures now; genuine requests wait for
+actual installed009/session refs and whole-deadline freshness. Do not change
+public contracts, peer source, original authority, or live operator878c2f78.
+Core owns app grant/session revoke; Edge owns exact case/native correlation,
+physical source drain and original same-command cleanup. UNKNOWN preserves
+original resources and cannot be turned into EOF/rollback/PASS.
+
+Hook resource cleanup actually completed: receipt17080df0 in private
+edge-core009-custody-docs-hook-ubWBc4y0/closeout.json; exact testimage23805f4d
+nonforce-removed after fresh quiet guard, owned PG/Node/network/tmp absent.
+All102baseline images and406shared cache records retained/no prune; free
+248705802240→248697245696B is shared-host movement, NOT reclaimed-space proof.
+39/40baseline tuples exact; known Paper worker sameID/image/config restart
+2786→2893 observed-only. Manager3/DLquery2/DLstream4 and3peer hashes unchanged.
+Finite source7d034810/image28ea3958 remains running/restart0 for this window;
+it and its exact trust/custody are deliberately retained until terminal, not
+forgotten disposable artifacts. No stable28445, commands/Live, push/merge or
+hosted CI; source commit remains d15de83e. Full08/09 remain NOT_MET.
+
+**Private finite probe verified / current producer survey,21Oct04:33UTC:**
+Owned private finite_probe.py6173014a (9278B) reuses exact public drivercad1eeb6
+and existing parser/transport/DTO validators; no public product/source change.
+Modeled standard-library tests0de38ec0 actually10/10PASS/0FAIL/SKIP,0.081s,
+CPU0/nice15/256MiB/10s CPU bound, zero HTTP/DB/SDK/listener. READ is exactly
+one snapshot with new O_EXCL0600 checkpoint; STREAM is a separate invocation,
+1s deadline/1–2validated frames, CLIENT_FRAME_LIMIT explicitly client-imposed,
+quiet0frames NOT_RUN, no automatic resume/retry. Client exit/frame count never
+proves server final-egress, admission count or custody release. Actual Core
+installed/session/provenance and terminal/counter inspection remain mandatory.
+Private preparation directory0700/two files0600/Bobby/single-link retained
+for actual use; modeled test tempdirs/caches/jobs absent. Guide08 now links
+the actual21Oct source state; its full connected requirements stay unchanged.
+
+Read-only parallel survey: PM55d54f1e command descriptor83d251e8 already has
+qualified lifecycle-bound transport source, but no commissioned authenticated
+target/held-COMMIT return. PM additive N03d5c2efcc remains NOT_INSTALLED;
+TS0cd356da N03f3a49603 image=null/owner=false and EDS11R312d1f75 gates false.
+Resource771955a5 is3CPU/2560MiB PROPOSED/execution=false/measurement=false;
+not an admitted capacity target. PM current-read WIP8657b713 remains disabled,
+and intakec3958c58 reflects original08 source readiness only. No new runnable
+binding in03/07/01+06; don't mislabel qualified source as missing code or
+invent admission. Core09/read08 remains immediate priority; no peer mutation.
+
+**Core commissioning observed,21Oct04:34UTC:** readonly SGP review found actual
+service/root validator PASS at04:31:30/32 and issue-dry exit0. Core-owned008
+IPC quiesce reached FINISHED/unresolved0→SHUTDOWN_READY04:32:43; authoritative
+post-quiescence backup31,100,869B verified/receiptde8be370. Official policy
+install exited1 at04:33:25, result007c5850, bounded token-free reason
+CURRENT_HUMAN_SCHEMA_INPUT_CHANGED. No installed009/session or connected
+request follows this failure. Core owns original install/status/rollback and
+schema-input diagnosis; Edge independently locates the guard read-only,
+preserves original source28446/custody and finite window, and never substitutes
+an invented install receipt, schema repair, new command or automatic retry.
+This is an actual commissioning gate, not missing trust transfer/native pins.
+
+**Source-readiness publication preflight,21Oct04:39UTC:** coherent docs-only
+slice is this main journal, guide08 latest-state paragraph and three public
+Core window ACK/native pin ACK/actual source READY returns. Inspect exact
+staged scope, secret guard/diff check/Bobby identity, then unchanged normal
+commit hook; no push/merge/hosted CI. Peer binding-action18line delta and three
+original peer WIP files remain excluded and hash-preserved. During hook,
+freeze tracked journal/index; private connected preparation/source monitoring
+can proceed without changing its files. Witness exact terminal and own test
+resources before C4 cleanup; preserve live source28446/image28ea/trust and
+Core rollback/backup. This is source readiness publication only; actual
+Core packaging/install/session and08/09 connected gates remain unqualified.
+
+Publication intake refinement: mirrored the exact public Core commissioning
+snapshot9425abbd so the Core ACK's current-round link resolves in this evidence
+directory; its peer review/producer locators remain relative to the original
+SGP canonical ELP2-10 packet, not new Edge deliverables. Six docs in the final
+scope, no peer source. Core's latest pin-ACK confirms the same-byte SQL exists
+but UID1000/0600 blocks UID0 with capabilities dropped; Core fixes only its
+root CLI mount/custody. Native28446 is lifecycle-only, not Manager relation-
+page data origin; initial finite READ is the retained scoped snapshot. Native
+snapshot/STREAM evidence never certifies uncommissioned dataset-origin pages.
+
+**Actual Core009 installed,21Oct04:40UTC (supersedes install blocker):**
+Core official same-artifact retake exit0/04:37:26, start exit0/04:37:54;
+actual container4095af125f9e31d1b8a4dcb6048553546a877092a24463918739ee0a1db11aaa,
+image9cf5fffac3e0bf55ea4b23c9df2b85565da556b973fbb1ce6928936f49a2950c,
+config423573a8e40e5cd5fbc552078d13a170713c449ea927478fdf9815a1b0e56db0,
+restart0; build73435311/PG ready. Runtime proofd0a28a26 and policy ACK968f969b
+are actual Core evidence, not execution by Edge. Genuine AuthService issue
+exit0/04:38:51, session5e86a430/idle05:08:51/absolute05:38:51UTC. Its evidence
+class is RESEARCH_APPLICATION_SESSION_NOT_CLOUDFLARE_NOT_PASSWORD_NOT_HUMAN_PRESENCE.
+Independent READ/STREAM grants actually installed, bothrev1/end05:45/commandfalse.
+No Edge request yet: Core still binds issued-session revoke template and
+releases pinned private session/connection spec with real projection/source
+facts; token reference existence alone is not sanctioned handoff. Keep the
+one-snapshot→counter→short-SSE sequence; Core008 is retained rollback, not the
+currently selected Research image. Full08/09 remain unqualified.
+
+**Publication gate correction,21Oct04:43UTC:** initial local commit1eb9a695
+returned0 immediately with6docs/+669lines, but core.hooksPath is UNSET here;
+default Git did not invoke the tracked .githooks. This is an owned operator
+error, not tested/gated publication and not external debt. No push/merge or
+test resource followed it. Record it explicitly, then run the unchanged
+standard hook using `git -c core.hooksPath=.githooks commit --amend --no-edit`
+on ONLY this own unpublished commit, with this journal update staged. Do not
+disable/skip a hook or rewrite shared history. Require actual hook tests,
+physical Git exit and scoped cleanup witness before reporting publication
+qualified; original d15de83e test evidence is not a fresh hook result.
+
 
 
 

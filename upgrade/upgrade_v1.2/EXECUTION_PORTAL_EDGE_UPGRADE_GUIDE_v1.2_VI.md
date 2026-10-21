@@ -1036,6 +1036,22 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**21Oct04:15–05:45UTC matched finite window:**
+[actual source return](../evidence/execution-edge-v1_2/EPG10-08/CORE009_NATIVE_SOURCE_READY_2026-10-21.md)
+records the official current/nonhistorical acceptance head3 and fresh SDK
+observer, finite candidate28446 READY, exact renewed trust and9native pins.
+This supersedes the retired20Oct source snapshot, not its custody/history.
+Core ACKed the pins, then actually installed009 at04:37UTC and issued its
+genuine application acceptance session at04:38UTC; see the linked main plan
+and public Core commissioning return. No connected READ/STREAM yet: private
+session/revoke/connection handoff still precedes requests. Source/process-up
+or application-session issue is not full08/09 or Cloudflare/human evidence.
+Core32retained leases are cumulative; coordinate one finite READ, actual
+terminal/counter check, then1–2frame finite SSE, reserving20for recovery.
+Expiry stops new ISSUE; UNKNOWN retains original resources until physical
+drain and same-command official cleanup. Stable28445/commands/Live unchanged.
+Latest execution/evidence/cleanup remains in the linked main plan original08.
+
 **20Oct06:03UTC resumed08:** [main plan](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-resumed--core009-binding-then-scoped-read09--20oct0540utc)
 and [current binding packet](../evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md#current-runner-and-priority-assignment)
 record the small bounded Core API runner,29TEST_ONLY unit cases PASS and priority
