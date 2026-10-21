@@ -497,7 +497,10 @@ export class ManagerListsService {
     const sourceAsOf = oldestDate(...pages.map((page) => page.asOf));
     await this.repository.replaceAlphaFleet({
       workspaceId: principal.workspaceId, environment, sourceAsOf,
-      completeness: completeness(...pages), rows, summary: fleetSummary(rows),
+      completeness: completeness(...pages), rows,
+      // A stage is a stated 0 only for an environment whose strategies and deployments were both read COMPLETE (FE-048).
+      summary: fleetSummary(rows, sourceEnvironments.filter((_, index) =>
+        reads[index]!.strategies.completeness === "COMPLETE" && reads[index]!.deployments.completeness === "COMPLETE")),
     });
     return requiredSnapshot(this.repository, principal.workspaceId, environment, "ALPHA_FLEET");
   }
@@ -769,7 +772,32 @@ function emptyPage(): ManagerPage {
   return { items: [], nextCursor: null, asOf: null, freshness: "FRESH", completeness: "COMPLETE" };
 }
 
-function fleetSummary(rows: readonly AlphaProjectionRecord[]): Record<string, unknown> {
+/**
+ * The stages a source environment can hold, in the order of `stageRank`. The real-funded domain (`live`) holds both Canary and
+ * Live; Paper and Sandbox hold their own. This is the FE's own mapping (`PATH_ENV`: canary and live both belong to `live`).
+ */
+export const ENVIRONMENT_STAGES: Readonly<Record<ManagerListEnvironment, readonly string[]>> = {
+  paper: ["PAPER"], sandbox: ["SANDBOX"], live: ["CANARY", "LIVE"],
+};
+
+/**
+ * `summary.stage_counts` and what an absent stage means (FE-048, DEBT-UXM07-004).
+ *
+ * A key is present with its exact count (including 0) for every stage of a source environment whose strategies AND deployments were
+ * read COMPLETE: that read could have found an alpha at the stage and found none, so 0 is a fact. A stage of an environment that was
+ * not read, or read PARTIAL, is ABSENT: the snapshot states nothing about it, and an absent stage is never zero. A stage that is
+ * outside the table above (a source `mode` this Portal does not know) appears only when an alpha holds it. `RESEARCH` appears only
+ * when an alpha holds no deployment. The schema allows every shape here (`additionalProperties` integer >= 0).
+ */
+export function fleetStageCounts(
+  rows: readonly Pick<AlphaProjectionRecord, "stages">[],
+  completeEnvironments: readonly ManagerListEnvironment[],
+): Record<string, number> {
+  const known = new Set([...rows.flatMap((row) => row.stages), ...completeEnvironments.flatMap((environment) => ENVIRONMENT_STAGES[environment])]);
+  return Object.fromEntries([...known].sort().map((stage) => [stage, rows.filter((row) => row.stages.includes(stage)).length]));
+}
+
+function fleetSummary(rows: readonly AlphaProjectionRecord[], completeEnvironments: readonly ManagerListEnvironment[]): Record<string, unknown> {
   const deployments = rows.flatMap((row) => row.deployments);
   const portfolios = new Set(rows.flatMap((row) => row.portfolios.map((item) => item.portfolio_id)));
   return {
@@ -778,8 +806,7 @@ function fleetSummary(rows: readonly AlphaProjectionRecord[]): Record<string, un
     portfolio_count: portfolios.size,
     needs_attention_count: rows.filter((row) => row.health === "ATTENTION").length,
     research_only_count: rows.filter((row) => row.health === "RESEARCH_ONLY").length,
-    stage_counts: Object.fromEntries([...new Set(rows.flatMap((row) => row.stages))].sort()
-      .map((stage) => [stage, rows.filter((row) => row.stages.includes(stage)).length])),
+    stage_counts: fleetStageCounts(rows, completeEnvironments),
     allocation_by_currency: aggregateCurrencyValues(rows.flatMap((row) => row.allocations)),
     exposure_by_currency: aggregateCurrencyValues(rows.flatMap((row) => row.exposure)),
     current_position_pnl_by_currency: aggregateCurrencyPnl(rows.flatMap((row) => row.positionPnl)),
