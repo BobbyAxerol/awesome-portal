@@ -8,7 +8,7 @@
  * (1024 as well for Fleet and Alpha 360). Stable by construction: the page clock is fixed, Math.random is seeded,
  * polling intervals of 1 s or more are neutralised, CSS animation/transition/caret are off, the focus ring and scroll
  * offsets are reset, fonts are loaded and canvases have painted before the shutter, and `mask` covers the few elements
- * whose text is a clock or a request id. A route nobody stubbed (501), a console error or a failed response fails the
+ * whose text is a clock. A route nobody stubbed (501), a console error or a failed response fails the
  * cell: a fixture gap is never photographed as an empty screen.
  *
  * Compare-only: `updateSnapshots: "none"` in the config stands. Baselines are recorded by scripts/portal-web-visual-record-v2.sh
@@ -59,7 +59,9 @@ const CELLS: readonly Cell[] = [
   {
     slug: "compare",
     group: "Compare",
-    route: "/deployments/portfolios?view=compare&in=pf_TEST_ONLY_core,pf_TEST_ONLY_satellite",
+    // Canary and Pilot: the double's one comparable pair (both USDT, both Simulated, neither a mixed book). Core is a mixed
+    // book and Satellite publishes no series, so that pair draws the "Pick two comparable portfolios" state instead.
+    route: "/deployments/portfolios?view=compare&in=pf_TEST_ONLY_canary,pf_TEST_ONLY_empty",
     root: '[data-screen="compare-v2"]',
     widths: TWO,
   },
@@ -89,11 +91,12 @@ const CELLS: readonly Cell[] = [
 ];
 
 /**
- * Elements whose text depends on the wall clock or on an id the server mints: the relative age ("14 min ago", Account)
- * and the request id an error state prints (Access). Absolute instants ("17 Oct 12:04Z") are fixture data under the
- * fixed clock and stay visible: masking every <time> would blank real content of the tables.
+ * Elements whose text depends on the wall clock: the relative age ("14 min ago", Account). Absolute instants
+ * ("17 Oct 12:04Z") are fixture data under the fixed clock and stay visible: masking every <time> would blank real content
+ * of the tables. `.exec-acc-code` is not masked: it is also the class of the signed-in user id (a constant of the fixture
+ * session), and a request id only prints in an error state, which fails the cell (console error / failed response) anyway.
  */
-const VOLATILE = [".exec-acct-ago", ".exec-acc-code", "[data-volatile]"];
+const VOLATILE = [".exec-acct-ago", "[data-volatile]"];
 
 const STILL_CSS = `
   *, *::before, *::after {

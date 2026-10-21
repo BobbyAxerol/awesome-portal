@@ -2,6 +2,7 @@
  * Small pieces of Live operations that more than one tab prints: a model `Cell`, a keyed two-column
  * table, the guard-rule table, the capped keyset panel table and the chart slot.
  */
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
@@ -13,6 +14,7 @@ import { readAsOf } from "../../boundary";
 import { ExactCell } from "../canary/parts";
 import { formatAsOf } from "../../boundary";
 import { withContext } from "../../urlState";
+import { useMediaQuery } from "../../useMediaQuery";
 import type { LiveSourcePanelV2, LiveSourceRecordV2 } from "../../readers/liveSourceOperations";
 import type { TypedOrderRow, TypedPositionRow } from "../../../stageFacts";
 import { PanelState } from "../../../components/states";
@@ -277,6 +279,10 @@ export function V1RowsSection({ title, aside, rows, what }: { title: string; asi
   );
 }
 
+/** Where a table becomes cards (css/cards.css), and how many cards one phone page holds. */
+const PHONE_QUERY = "(max-width: 660px)";
+const PHONE_ROWS = 5;
+
 export interface PanelSectionProps {
   panel: LiveSourcePanelV2;
   page: PanelPage;
@@ -285,16 +291,21 @@ export interface PanelSectionProps {
 
 /**
  * One retained panel. Counts are the page's, never a total: `exact_total` is null on every V2 panel, so the
- * caption says what is loaded and that the total is not published. At most `ROW_CAP` rows are drawn.
+ * caption says what is loaded and that the total is not published. At most `ROW_CAP` rows are drawn; at phone width a table is
+ * five cards (a Live card has ten fields) and Load more first shows five more of the rows already loaded, then asks the server for its next page.
  */
 export function PanelSection({ panel, page, onMore }: PanelSectionProps) {
   const title = panelTitle(panel.name);
   const noun = panelNoun(panel.name);
   const aside = panel.state === "PARTIAL" ? <Flag kind="partial" label="Partial" size="sm" /> : undefined;
   const columns = panelColumns(page.records);
-  const shown = page.records.slice(0, ROW_CAP);
+  const phone = useMediaQuery(PHONE_QUERY);
+  const [phoneRows, setPhoneRows] = useState(PHONE_ROWS);
+  const shown = page.records.slice(0, phone ? Math.min(ROW_CAP, phoneRows) : ROW_CAP);
+  // Loaded rows the phone layout has not drawn yet.
+  const undrawn = shown.length < Math.min(page.records.length, ROW_CAP);
   // Past the cap Load more would only add rows nobody can see: say so and point at the Blotter.
-  const atCap = page.hasMore && page.records.length >= ROW_CAP;
+  const atCap = page.hasMore && page.records.length >= ROW_CAP && !undrawn;
   const cols: CardsColumn<LiveSourceRecordV2>[] = columns.map((column) => ({
     key: column.field,
     label: column.label,
@@ -317,8 +328,17 @@ export function PanelSection({ panel, page, onMore }: PanelSectionProps) {
               ? `First ${shown.length} shown of ${page.records.length} loaded · more available; use Blotter for the full list`
               : capCaption({ shown: shown.length, loaded: page.records.length, total: null, hasMore: page.hasMore, noun })}
           </span>
-          {page.hasMore && !atCap ? (
-            <button type="button" className="exec-blk-btn" aria-busy={page.loading ? "true" : undefined} onClick={() => { if (!page.loading) onMore(); }}>
+          {undrawn || (page.hasMore && !atCap) ? (
+            <button
+              type="button"
+              className="exec-blk-btn"
+              aria-busy={page.loading ? "true" : undefined}
+              onClick={() => {
+                if (page.loading) return;
+                setPhoneRows((n) => n + PHONE_ROWS);
+                if (!undrawn) onMore();
+              }}
+            >
               {page.loading ? "Loading more" : page.error ? "Try again" : "Load more"}
             </button>
           ) : null}

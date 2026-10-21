@@ -9,7 +9,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { unsupportedText } from "../../readers/dispatch";
 import LiveScreen, { LIVE_SCREEN_KEY } from "./index";
@@ -684,6 +684,30 @@ describe("V2 · 200 rows and keyset Load more", () => {
     expect(within(ordersPanel()).queryByRole("button")).toBeNull();
     expect(rowCount()).toBe(200);
     expect(m.calls).toHaveLength(4);
+  });
+
+  it("at 660px and narrower a table is five cards; Load more shows five more of the loaded rows, then asks the server", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(max-width: 660px)", media: query, addEventListener: () => {}, removeEventListener: () => {},
+    }));
+    try {
+      const m = mount(pagesOf());
+      await loaded();
+      expect(rowCount()).toBe(5);
+      expect(ordersPanel().textContent).toContain(`Top 5 of ${SIZE} orders loaded · total not published · more available`);
+      for (let shown = 10; shown <= SIZE; shown += 5) {
+        fireEvent.click(more());
+        await waitFor(() => expect(rowCount()).toBe(shown));
+      }
+      // Every loaded row is drawn and nothing was asked of the server yet.
+      expect(m.calls).toHaveLength(1);
+      expect(ordersPanel().textContent).toContain(`${SIZE} orders loaded · total not published · more available`);
+      fireEvent.click(more());
+      await waitFor(() => expect(m.calls).toHaveLength(2));
+      await waitFor(() => expect(rowCount()).toBe(SIZE + 5));
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("the cursor and the panel are read parameters: neither is ever in the page URL", async () => {
