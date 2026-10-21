@@ -170,7 +170,7 @@
     {
       "id": "subject_activity_bff",
       "file": "apps/control-api/src/execution/subject-activity.service.ts",
-      "sha256": "sha256:bb0946e9a502c15a422fcab8dffdc91ede8418988c58c248a15d228560bbd061"
+      "sha256": "sha256:0f80d9926ee869a3a1600d44ecd08535b83b6db9add0637942e4b656be86216f"
     },
     {
       "id": "subject_activity_ui",

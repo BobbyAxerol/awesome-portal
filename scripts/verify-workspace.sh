@@ -1887,6 +1887,7 @@ docker compose --project-directory "${ROOT_DIR}" \
 "${ROOT_DIR}/scripts/execution-d3-test.sh"
 "${ROOT_DIR}/scripts/execution-be-r2-2-test.sh"
 "${ROOT_DIR}/scripts/execution-image-publication-test.sh"
+"${ROOT_DIR}/scripts/control-api-image-permissions-test.sh"
 "${ROOT_DIR}/scripts/execution-n15a-gateway-test.sh"
 "${ROOT_DIR}/scripts/execution-n15b-current-gateway-test.sh"
 "${ROOT_DIR}/scripts/execution-n16b-current-protective-test.sh"
