@@ -55,3 +55,35 @@ Not changed, noted: Users at 390 is 7 673 px (123 rows in one page), Alpha 360 O
 Re-recorded with the recorder (grep): Live 1440/390, Compare 1440/390, Access 1440/390, Alpha 360 Orders & Fills 1024, Alpha 360 Deployments 1024, Scoped slice 1440 (9 images; the recorder compared each group twice). The other 37 snapshot files are byte-identical. The recorder now escapes `| ( ) &` in its grep so an alternation reaches Playwright intact.
 
 Full set compared twice after the second pass: 46 passed, 46 passed.
+
+## Third pass: New request and the interaction states (DEBT-UXM07-016)
+
+Cells added to `execution-v2-visual.spec.ts` in `5b9e2d32`; images recorded with the recorder (`--workers=2`, grep over the new groups plus Scoped slice, whose cell the fix below touches), then **the whole spec** (every V2 cell, 61 files) compared twice in a row: 61 passed, 61 passed (before the merge of fe-parity `a512d55d`; see "Pending" below). A cell can now carry `act` (what the reader does to reach the state) and `shot: "viewport"` (a modal drawer is fixed to the window, so the window is photographed instead of a document grown to its height).
+
+| Cell | Widths | How the state is reached |
+|---|---|---|
+| New request | 1440, 390 | `/governance/approvals/new` |
+| New request drawer | 1600 (docked), 1440, 390 (overlay behind a scrim) | `/governance/approvals?compose=request`, viewport shot |
+| NaWhy open | 1440, 390 | Users, click the first "Not published" button (aria-label "Not published, reason"); viewport shot |
+| Pager page 2 | 1440, 390 | scoped slice `fixture=chain`, click Older: "Newer rows exist, older rows exist" |
+| Operations dock | 1600 (docked), 1440, 390 | click the first row's target button, viewport shot |
+| Incident drawer | 1600 (docked), 1440, 390 | `/execution/operations/incidents/inc_fixture_44`, viewport shot |
+
+15 new images. Every one was looked at (all widths).
+
+| Screen | Widths | ok? | Notes |
+|---|---|---|---|
+| new-request | 1440 / 390 | ok | form column is 880 px wide at 1440 (HIFI form width); at 390 the 1 / 2 / 3 stepper stacks to three rows |
+| new-request-drawer | 1600 / 1440 / 390 | ok, note | docked at 1600 beside the queue; overlay at 1440 and 390. At 1440 the "?" help mark after "type its id below." wraps alone onto the next line (the shared GapWhy mark). Not changed: the fix is in a shared block and would move other baselines |
+| na-why-open | 1440 / 390 | ok | the disclosure body ("Not published (FE-015, FE-026, FE-037, FE-038): It appears here once the source publishes it.") opens under its value and above the next label |
+| scoped-slice-page-2 | 1440 / 390 | defect found, fixed | see below. "1 reads started" in the stream facts is the approved copy and the unit test pins it (slice.test.tsx); noted for Bobby, not changed |
+| operations-dock | 1600 / 1440 / 390 | ok | Acknowledge and Resolve are `disabled` (computed grey) with their reason and "My access" beside them at every width |
+| incident-drawer | 1600 / 1440 / 390 | ok | the four actions are `disabled` the same way at every width |
+
+### Defect found and fixed
+
+At 390 the scoped slice's Fleet cards pushed the label of the Financial data cell ("FINANCIAL DATA") 9 px past the card's left padding: the flag stretched to the width of the reason code under it (`AUTHORIZED_RETAINED_FACTS`, which cannot break), and a flex row with `justify-content: flex-end` overflows at its start. At 1440 the same flag was drawn as a bar as wide as the code. `slice.css`: `.exec-slice-avail` aligns its items to the start, and its reason code may wrap (`overflow-wrap: anywhere`). No copy changed. The pre-existing `v2-scoped-slice-1440` and `-390` images show the same cell, so they were re-recorded; the other baselines are byte-identical.
+
+### Pending (not done)
+
+After these images were recorded, fe-parity `a512d55d` was merged (Access words on the Access screen, Compare mounted at `/deployments/compare` with registry revision 9, the Portfolio 360 Actions rail words). `v2-access-1440/390`, the Compare cells (the spec already uses the new route) and any other cell the recorder shows as changed must be re-recorded, then the whole spec compared twice. That run waited more than 10 minutes for `/tmp/portal-heavy.lock` and was stopped (AGENT_WORKING_RULES 10.10b); nothing was recorded after the merge.
