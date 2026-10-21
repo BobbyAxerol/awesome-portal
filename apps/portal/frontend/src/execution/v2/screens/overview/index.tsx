@@ -22,10 +22,9 @@
  * open-position PnL per currency from the Fleet register summary (one row per
  * currency, never added across currencies, never called a window).
  *
- * A caller whose session holds no fund-wide read capability gets "Your alphas":
- * the same Fleet read (the server scopes it) and nothing fund-wide. Which
- * fields a researcher may see is undecided (FE-026), so nothing researcher
- * specific is added beyond that.
+ * The session's capabilities narrow nothing (RK-1, DEBT-UXM07-005): every read is asked, the server
+ * scopes it, and a refusal is shown with its typed reason. Which fields a researcher may see is
+ * undecided (FE-026), so nothing researcher specific is added.
  *
  * Scale and degradation (evidence/UXM07/README.md 2b):
  *
@@ -38,10 +37,8 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
 import { streamGate } from "../../../commandCenter";
-import { ID_ROUTES } from "../../../idLinks";
 import { canonicalHref } from "../../../links";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { SseFactory } from "../../../sse";
@@ -50,12 +47,10 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { profileLabel } from "../../profileLabel";
-import { useContextFacts } from "../../shell/contextFacts";
-import { holds, V2_NAV_TOKEN } from "../../shell/roleNav";
 import { isInternalPath, useExecUrlState, withContext } from "../../urlState";
 import {
   FE_MONEY, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
-  needsAttention, openIncidents, ownRows, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact, type OwnRow,
+  needsAttention, openIncidents, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact,
 } from "./overviewModel";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
 import { ManagerSeriesPanel } from "../series/ManagerSeriesPanel";
@@ -73,8 +68,6 @@ export const OVERVIEW_SCREEN_KEY = "overview" as const;
 export interface OverviewScreenProps {
   api: ExecutionApi;
   workspaceId?: string;
-  /** The session's capabilities when the caller already holds them; otherwise read from the session. */
-  capabilities?: ReadonlySet<string>;
   /** Injected so a test can prove nothing connects; `undefined` uses the browser's EventSource when it exists. */
   sseFactory?: SseFactory | null;
   /** Where "My access" lives. A denied read links there; without it a denied panel offers nothing to follow. */
@@ -168,15 +161,11 @@ function deniedActions(status: string, accessHref: string | undefined, to: (href
   return status === "denied" && accessHref ? <Link className="exec-ov-link" to={to(accessHref)}>See what you can access</Link> : undefined;
 }
 
-export default function OverviewScreen({ api, workspaceId, capabilities, sseFactory, accessHref }: OverviewScreenProps) {
-  const { access } = useSession();
+export default function OverviewScreen({ api, workspaceId, sseFactory, accessHref }: OverviewScreenProps) {
   const [params] = useSearchParams();
 
-  const caps = capabilities ?? (access.kind === "ready" ? new Set(access.access.capabilities) : null);
-  // Unknown access reads as fund-wide: every read is scoped by the server anyway, and a block that
-  // says "Not published" costs nothing. A READY session without any fund-wide read gets "Your alphas".
-  const fundWide = caps === null || holds(caps, { anyOf: [V2_NAV_TOKEN.portfolios, V2_NAV_TOKEN.accounts, V2_NAV_TOKEN.operations] });
-  const reads = useOverviewReads(api, workspaceId, sseFactory, fundWide);
+  // Every read is asked and scoped by the server; a refusal is shown with its own typed reason (no pre-narrowing from the session's capabilities, RK-1).
+  const reads = useOverviewReads(api, workspaceId, sseFactory);
   // FE-013: the fund's NAV series for the URL's environment and window, through the port. One read on open and on Refresh
   // (the series is a current-only snapshot; it does not ride the 15 s composition tick).
   const url = useExecUrlState();
@@ -185,7 +174,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
     () => ({ environment: url.value.env, metric: "NAV", window: url.value.window, subjects: [{ subjectType: "FUND" }], ...(workspaceId ? { workspaceId } : {}) }),
     [url.value.env, url.value.window, workspaceId],
   );
-  const nav = useManagerSeries(api, fundWide, navQuery, seriesNonce);
+  const nav = useManagerSeries(api, true, navQuery, seriesNonce);
   // Net PnL and Return are enabled only when the series port SERVES the fund (its source is published, from the last good NAV
   // read, so a refresh does not blink the switch); otherwise the measure stays NAV and the switch says why it is off.
   const navBody = nav.phase === "ready" ? nav.value : nav.phase === "loading" || nav.phase === "error" ? nav.last : null;
@@ -193,23 +182,20 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const [measure, setMeasure] = useState<FundMeasure>("NAV");
   const metric = serves ? measure : "NAV";
   const measureQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: metric === "NAV" ? "NET_PNL" : metric }), [navQuery, metric]);
-  const measureRead = useManagerSeries(api, fundWide && metric !== "NAV", measureQuery, seriesNonce);
+  const measureRead = useManagerSeries(api, metric !== "NAV", measureQuery, seriesNonce);
   const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
-  // Same fact as the heading below: only a READY session without any fund-wide read is narrowed; unknown access states nothing.
-  useContextFacts({ scope: fundWide ? undefined : "Scope: Your alphas" });
 
   const { snapshot } = reads;
   const fleet = reads.fleet.phase === "ready" ? reads.fleet.value : null;
   const facts = useMemo(() => currencyFacts(fleet?.summary ?? null), [fleet]);
   const stages = useMemo(() => stageCounts(fleet?.summary ?? null), [fleet]);
   const triage = useMemo(() => triageRows(snapshot?.needsYou ?? null, formatInstant, reads.composition.phase === "ready" ? reads.composition.value.readAt : null), [snapshot, reads.composition]);
-  const own = useMemo(() => ownRows(fleet?.items ?? []), [fleet]);
   const gate = streamGate(snapshot);
   const live = reads.stream.live;
 
   /* ── page-level states ─────────────────────────────────────────────── */
-  const heading = fundWide ? "Overview" : "Your alphas";
-  if (reads.composition.phase === "loading" && fundWide) {
+  const heading = "Overview";
+  if (reads.composition.phase === "loading") {
     return (
       <div className="exec-ov-v2" data-screen="overview-v2">
         <h1 className="exec-ov-title">{heading}</h1>
@@ -217,7 +203,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
       </div>
     );
   }
-  if (reads.composition.phase === "error" && fundWide) {
+  if (reads.composition.phase === "error") {
     return (
       <div className="exec-ov-v2" data-screen="overview-v2">
         <h1 className="exec-ov-title">{heading}</h1>
@@ -229,7 +215,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
       </div>
     );
   }
-  if (reads.snapshotUnreadable && fundWide) {
+  if (reads.snapshotUnreadable) {
     return (
       <div className="exec-ov-v2" data-screen="overview-v2">
         <h1 className="exec-ov-title">{heading}</h1>
@@ -245,7 +231,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const incidents = openIncidents(needs);
   const attention = needsAttention(needs);
   const flag = STATE_FLAG[mode]!;
-  const streamNote = fundWide && live === null
+  const streamNote = live === null
     ? (gate.allowed ? `${reads.stream.reason} Not connected; values are as read.` : "No live stream is published for this profile. Values are as read; Refresh re-reads them.")
     : null;
   const fresh = freshnessFlag(needs?.freshness ?? null);
@@ -261,14 +247,6 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
     return isInternalPath(target) ? withContext(target, params) : null;
   };
   const NOT_AN_APP_LINK = "The link published for this item is not a path inside this app, so it is not offered";
-
-  const ownColumns: readonly CardsColumn<OwnRow>[] = [
-    { key: "alpha", label: "Alpha", render: (r) => <span className="exec-ov-what"><Link className="exec-ov-what-title exec-ov-link" to={ctx(ID_ROUTES.alpha(r.alphaId))}>{r.label}</Link><span className="exec-ov-sub">{r.version}</span></span> },
-    { key: "stage", label: "Stage", render: (r) => r.stages.map((s) => humanize(s)).join(", ") },
-    { key: "allocation", label: "Allocation (current)", numeric: true, render: (r) => (r.allocations.length === 0 ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-lines">{r.allocations.map((a) => <span key={a.currency}><MoneyCell value={a.decimal} /> <small className="exec-blk-unit">{a.currency}</small></span>)}</span>) },
-    { key: "pnl", label: "Open-position PnL (current)", numeric: true, render: (r) => (r.pnl.length === 0 ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-lines">{r.pnl.map((a) => <span key={a.currency}><MoneyCell value={a.decimal} /> <small className="exec-blk-unit">{a.currency}</small></span>)}</span>) },
-    { key: "health", label: "Health", render: (r) => humanize(r.health) },
-  ];
 
   const currencyColumns: readonly CardsColumn<CurrencyFact>[] = [
     { key: "ccy", label: "Currency", render: (r) => r.currency },
@@ -315,24 +293,24 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
     <div className="exec-ov-v2" data-screen="overview-v2">
       <header className="exec-ov-head">
         <div>
-          <h1 className="exec-ov-title">{snapshot?.actorName && fundWide ? `Overview, ${snapshot.actorName}` : heading}</h1>
+          <h1 className="exec-ov-title">{snapshot?.actorName ? `Overview, ${snapshot.actorName}` : heading}</h1>
         </div>
         <div className="exec-ov-chips">
-          {fundWide ? <Flag kind={flag.kind} label={mode === "busy" ? `Busy, ${needs?.items.length ?? 0} ranked` : flag.label} size="sm" /> : null}
-          {fundWide && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          <Flag kind={flag.kind} label={mode === "busy" ? `Busy, ${needs?.items.length ?? 0} ranked` : flag.label} size="sm" />
+          {fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
           <span className="exec-ov-meta" title={streamNote ?? undefined}>{composition?.readAt ? `Read ${formatInstant(composition.readAt)}` : "Read time not published"}{streamNote ? " · Not live" : ""}</span>
           <button type="button" className="exec-ov-btn" onClick={refresh}>Refresh</button>
         </div>
       </header>
 
-      {fundWide && live !== null ? (
+      {live !== null ? (
         <p className="exec-ov-stream" role="status" data-stream={live.phase} data-tone={streamSentence(live).tone}>
           {streamSentence(live).text}
         </p>
       ) : null}
 
       {stale ? <div className="exec-ov-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span>Showing the last good read</span><GapWhy name="Why the read is stale" rows={[`The last refresh failed (${stale}).`]} next={null} /></div> : null}
-      {fundWide && composition && composition.sourceHealth.profiles.some((p) => (p.state ?? "").toUpperCase() !== "AVAILABLE") ? (
+      {composition && composition.sourceHealth.profiles.some((p) => (p.state ?? "").toUpperCase() !== "AVAILABLE") ? (
         <div className="exec-ov-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>Some figures may be incomplete</span><GapWhy name="Where to look" rows={["See Source health below"]} next={null} /></div>
       ) : null}
       {snapshot && snapshot.warnings.length > 0 ? (
@@ -341,40 +319,27 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
         </ul>
       ) : null}
 
-      {fundWide ? (
-        <>
-          <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 3 } as CSSProperties}>
-            <NavCell read={nav} window={url.value.window} />
-            <Cell label="Open incidents" note={<Link className="exec-ov-link" to={ctx("/execution/operations")} title="Incidents in the ranked list">Operations</Link>}>
-              {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : incidents.value}</span>}
-            </Cell>
-            <Cell
-              label="Needs attention"
-              note={reads.operations.phase === "loading" ? "Awaiting acknowledgement: reading" : unacknowledged === null ? "Awaiting acknowledgement: not available" : <>Awaiting acknowledgement: <b className="exec-ov-num">{unacknowledged}</b></>}
-            >
-              {attention.text === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{attention.text}</span>}
-            </Cell>
-          </dl>
+      <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 3 } as CSSProperties}>
+        <NavCell read={nav} window={url.value.window} />
+        <Cell label="Open incidents" note={<Link className="exec-ov-link" to={ctx("/execution/operations")} title="Incidents in the ranked list">Operations</Link>}>
+          {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : incidents.value}</span>}
+        </Cell>
+        <Cell
+          label="Needs attention"
+          note={reads.operations.phase === "loading" ? "Awaiting acknowledgement: reading" : unacknowledged === null ? "Awaiting acknowledgement: not available" : <>Awaiting acknowledgement: <b className="exec-ov-num">{unacknowledged}</b></>}
+        >
+          {attention.text === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{attention.text}</span>}
+        </Cell>
+      </dl>
 
-          <NotAvailableLine facts={UNPUBLISHED_FUND} className="exec-ov-na-line" />
+      <NotAvailableLine facts={UNPUBLISHED_FUND} className="exec-ov-na-line" />
 
-          <div className="exec-ov-grid2 exec-ov-top">
-            <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />}>
-              <ManagerSeriesPanel label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`} read={metric === "NAV" ? nav : measureRead} gapCopy={`Not published (${FE_MONEY})`} tools />
-            </SectionPanel>
-            {needsPanel}
-          </div>
-        </>
-      ) : (
-        <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Your figures" style={{ "--exec-kpi-n": 3 } as CSSProperties}>
-          <Cell label="Alphas" note="In your slice">
-            {fleet ? <span className="exec-ov-kpi">{fleet.summary ? fleet.summary.alphaCount : fleet.totalCount}</span> : <span className="exec-ov-na">Not available</span>}
-          </Cell>
-          <Cell label="Allocation" note="Current">
-            {facts.length === 0 ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{facts.length} {facts.length === 1 ? "currency" : "currencies"}</span>}
-          </Cell>
-        </dl>
-      )}
+      <div className="exec-ov-grid2 exec-ov-top">
+        <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />}>
+          <ManagerSeriesPanel label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`} read={metric === "NAV" ? nav : measureRead} gapCopy={`Not published (${FE_MONEY})`} tools />
+        </SectionPanel>
+        {needsPanel}
+      </div>
 
       <SectionPanel title="Current by currency" flush>
         {reads.fleet.phase === "loading" ? (
@@ -388,84 +353,67 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
         )}
       </SectionPanel>
 
-      {fundWide ? null : (
-        <SectionPanel
-          title="Alphas in your slice"
-          aside={<>{fleet ? `${own.length} of ${fleet.totalCount} ` : null}<Link className="exec-ov-link" to={ctx("/deployments/alphas")}>Alpha Fleet</Link></>}
-          flush
-        >
-          {reads.fleet.phase === "ready" ? (
+      <div className="exec-ov-grid2">
+        <SectionPanel title="Fleet by stage">
+          {stages.length === 0 && cells.length === 0 && issues.length === 0 ? (
+            <PanelState status={snapshot?.fleet?.state === "unavailable" ? "unavailable" : "empty"} reason="No stage counts are published." />
+          ) : (
             <>
-              <CardsTable columns={ownColumns} rows={own} rowKey={(r) => r.alphaId} label="Your alphas" empty={<PanelState status="empty" reason="No alpha is in your slice." />} />
-              <NotAvailableLine facts={[UNPUBLISHED_FUND[0]!, { label: "Researcher field policy", id: "FE-026", why: "Undecided; only the server's own scoping applies" }]} className="exec-ov-na-line" />
+              {stages.length > 0 ? (
+                <>
+                  <p className="exec-ov-cells-cap" id="exec-ov-cap-alphas" title="Count of alphas, from the Fleet summary. An alpha in two stages is counted in each. Alphas and deployments are different units from different reads, so the rows are not expected to match.">Alphas by stage</p>
+                  <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-alphas">
+                    {stages.map((s) => <li key={s.stage}><span className="exec-ov-cell-label">{s.label}</span>{s.count === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{s.count}</span>}</li>)}
+                  </ul>
+                </>
+              ) : null}
+              {cells.length > 0 ? (
+                <>
+                  <p className="exec-ov-cells-cap" id="exec-ov-cap-deployments" title="Count of deployments, from the Command Centre snapshot. One alpha can have several deployments.">Deployments by state</p>
+                  <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-deployments">
+                    {cells.map((c) => (
+                      <li key={c.label}>
+                        <span className="exec-ov-cell-label">{c.label}</span>
+                        {c.value === null ? <span className="exec-ov-na">Not available</span> : c.href && serverTo(c.href) !== null ? <Link className="exec-ov-kpi exec-ov-link" to={serverTo(c.href)!}>{c.value}</Link> : <span className="exec-ov-kpi">{c.value}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              {issues.length > 0 ? (
+                <>
+                  <p className="exec-ov-cells-cap" id="exec-ov-cap-issues" title="Issues, not deployments">Open issues</p>
+                  <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-issues">
+                    {issues.map((c) => (
+                      <li key={c.label}>
+                        <span className="exec-ov-cell-label">{c.label}</span>
+                        {c.value === null ? <span className="exec-ov-na">Not available</span> : c.href && serverTo(c.href) !== null ? <Link className="exec-ov-kpi exec-ov-link" to={serverTo(c.href)!}>{c.value}</Link> : <span className="exec-ov-kpi">{c.value}</span>}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : null}
+              {snapshot?.fleet ? <p className="exec-ov-note" title="Counts only; amounts live on the 360 screens">Deployments: {snapshot.fleet.totalDeployments === null ? "not counted" : `${snapshot.fleet.exactTotal ? "" : "~"}${snapshot.fleet.totalDeployments}`}</p> : null}
             </>
-          ) : reads.fleet.phase === "loading" ? <PanelSkeleton label="Loading your alphas" /> : <PanelState status={reads.fleet.status} reason={reads.fleet.reason} actions={deniedActions(reads.fleet.status, accessHref, ctx)} />}
+          )}
         </SectionPanel>
-      )}
+        <SectionPanel title="Today" aside={snapshot?.today && snapshot.today.state !== "ok" ? snapshot.today.state : undefined}>
+          {today.length === 0 ? (
+            <p className="exec-ov-na">{snapshot?.today ? "Nothing is scheduled for today." : "No schedule was published."}</p>
+          ) : (
+            <ul className="exec-ov-list">
+              {today.map((item) => (
+                <li key={item.id}>
+                  <span className="exec-ov-sub">{item.kind ? humanize(item.kind) : "Kind not published"}</span>{" "}
+                  {item.href && (item.kind === "CONDITION_EXPIRY" || serverTo(item.href) !== null) ? <Link className="exec-ov-link" to={item.kind === "CONDITION_EXPIRY" ? ctx("/governance/waivers") : serverTo(item.href)!}>{item.label}</Link> : item.label}
+                </li>
+              ))}
+            </ul>
+          )}
+        </SectionPanel>
+      </div>
 
-      {fundWide ? (
-        <div className="exec-ov-grid2">
-          <SectionPanel title="Fleet by stage">
-            {stages.length === 0 && cells.length === 0 && issues.length === 0 ? (
-              <PanelState status={snapshot?.fleet?.state === "unavailable" ? "unavailable" : "empty"} reason="No stage counts are published." />
-            ) : (
-              <>
-                {stages.length > 0 ? (
-                  <>
-                    <p className="exec-ov-cells-cap" id="exec-ov-cap-alphas" title="Count of alphas, from the Fleet summary. An alpha in two stages is counted in each. Alphas and deployments are different units from different reads, so the rows are not expected to match.">Alphas by stage</p>
-                    <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-alphas">
-                      {stages.map((s) => <li key={s.stage}><span className="exec-ov-cell-label">{s.label}</span>{s.count === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{s.count}</span>}</li>)}
-                    </ul>
-                  </>
-                ) : null}
-                {cells.length > 0 ? (
-                  <>
-                    <p className="exec-ov-cells-cap" id="exec-ov-cap-deployments" title="Count of deployments, from the Command Centre snapshot. One alpha can have several deployments.">Deployments by state</p>
-                    <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-deployments">
-                      {cells.map((c) => (
-                        <li key={c.label}>
-                          <span className="exec-ov-cell-label">{c.label}</span>
-                          {c.value === null ? <span className="exec-ov-na">Not available</span> : c.href && serverTo(c.href) !== null ? <Link className="exec-ov-kpi exec-ov-link" to={serverTo(c.href)!}>{c.value}</Link> : <span className="exec-ov-kpi">{c.value}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : null}
-                {issues.length > 0 ? (
-                  <>
-                    <p className="exec-ov-cells-cap" id="exec-ov-cap-issues" title="Issues, not deployments">Open issues</p>
-                    <ul className="exec-ov-cells" aria-labelledby="exec-ov-cap-issues">
-                      {issues.map((c) => (
-                        <li key={c.label}>
-                          <span className="exec-ov-cell-label">{c.label}</span>
-                          {c.value === null ? <span className="exec-ov-na">Not available</span> : c.href && serverTo(c.href) !== null ? <Link className="exec-ov-kpi exec-ov-link" to={serverTo(c.href)!}>{c.value}</Link> : <span className="exec-ov-kpi">{c.value}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </>
-                ) : null}
-                {snapshot?.fleet ? <p className="exec-ov-note" title="Counts only; amounts live on the 360 screens">Deployments: {snapshot.fleet.totalDeployments === null ? "not counted" : `${snapshot.fleet.exactTotal ? "" : "~"}${snapshot.fleet.totalDeployments}`}</p> : null}
-              </>
-            )}
-          </SectionPanel>
-          <SectionPanel title="Today" aside={snapshot?.today && snapshot.today.state !== "ok" ? snapshot.today.state : undefined}>
-            {today.length === 0 ? (
-              <p className="exec-ov-na">{snapshot?.today ? "Nothing is scheduled for today." : "No schedule was published."}</p>
-            ) : (
-              <ul className="exec-ov-list">
-                {today.map((item) => (
-                  <li key={item.id}>
-                    <span className="exec-ov-sub">{item.kind ? humanize(item.kind) : "Kind not published"}</span>{" "}
-                    {item.href && (item.kind === "CONDITION_EXPIRY" || serverTo(item.href) !== null) ? <Link className="exec-ov-link" to={item.kind === "CONDITION_EXPIRY" ? ctx("/governance/waivers") : serverTo(item.href)!}>{item.label}</Link> : item.label}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </SectionPanel>
-        </div>
-      ) : null}
-
-      {fundWide && composition ? (
+      {composition ? (
         <SectionPanel title="Source health">
           {composition.sourceHealth.profiles.length === 0 ? (
             <p className="exec-ov-na">No profile published</p>

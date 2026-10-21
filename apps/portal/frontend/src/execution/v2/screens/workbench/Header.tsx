@@ -70,8 +70,6 @@ export interface HeaderProps {
   identity: StageIdentity;
   /** FE-070: the VN market calendar (the VN variant); `null` = not in the profile. */
   calendar: VenueCalendar | null;
-  /** Whether the reader may open Account 360 (the capability set decides, never a role name). */
-  accountsVisible: boolean;
   links: {
     alpha: string | null;
     fleet: string;
@@ -83,7 +81,7 @@ export interface HeaderProps {
   read: { atLabel: string | null; refreshing: boolean; failure: string | null; onRefresh(): void };
 }
 
-export function Header({ deploymentId, deployment, variant, chips, identity, calendar, accountsVisible, links, read }: HeaderProps) {
+export function Header({ deploymentId, deployment, variant, chips, identity, calendar, links, read }: HeaderProps) {
   const strategy = deployment?.strategyId ?? null;
   const title = strategy ?? deploymentId;
   return (
@@ -110,17 +108,13 @@ export function Header({ deploymentId, deployment, variant, chips, identity, cal
           ) : (
             <span>Portfolio not published</span>
           )}
-          {accountsVisible ? (
-            links.account && deployment?.accountId ? <Link className="exec-blk-link" to={links.account}>{deployment.accountId}</Link> : <span>Account not published</span>
-          ) : (
-            <span>Account not available</span>
-          )}
+          {links.account && deployment?.accountId ? <Link className="exec-blk-link" to={links.account}>{deployment.accountId}</Link> : <span>Account not published</span>}
           <span><AlphaNameLine identity={identity} /></span>
           {variant === "vnm" ? <span>VN market calendar: <VenueCalendarLine calendar={calendar} /></span> : null}
         </p>
       </div>
       <div className="exec-wb-ctrls">
-        {accountsVisible && links.account ? <Link className="exec-blk-link" to={links.account}>Account</Link> : null}
+        {links.account ? <Link className="exec-blk-link" to={links.account}>Account</Link> : null}
         <Link className="exec-blk-link" to={links.operations}>Operations</Link>
         <button type="button" className="exec-wb-btn" onClick={read.onRefresh} aria-busy={read.refreshing ? true : undefined}>
           {read.refreshing ? "Refreshing…" : "Refresh"}

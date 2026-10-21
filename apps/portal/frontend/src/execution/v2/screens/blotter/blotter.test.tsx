@@ -15,12 +15,17 @@ import { resolveBack } from "../../backTo";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import { cloneRows, pad } from "../../testkit/scale";
 import { useContextFactsValue } from "../../shell/contextFacts";
+import { sessionOf } from "../alpha/testApi";
 import BlotterScreen, { BLOTTER_SCREEN_KEY } from "./index";
+
+const session = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
 
 let calls: Call[] = [];
 beforeEach(() => {
   resetOverviewDouble();
   calls = serveDoubles();
+  session.current = sessionOf(["governance.r1.read"]);
 });
 afterEach(() => {
   cleanup();
@@ -639,32 +644,33 @@ describe("scale", () => {
   });
 });
 
-describe("the context bar", () => {
-  it("states the slice scope for a session without account visibility, and nothing otherwise", async () => {
-    mount("/execution/blotter", { capabilities: new Set(["governance.r1.read"]) });
-    await loaded();
-    expect(facts()).toEqual({ scope: "Scope: Your orders" });
-    cleanup();
-    mount("/execution/blotter", { capabilities: new Set(["nav:EXECUTION_ACCOUNTS_BINDINGS"]) });
-    await loaded();
-    expect(facts()).toEqual({});
-  });
-
-  it("states nothing while access is unknown", async () => {
+// RK-1 (DEBT-UXM07-005): the screen reads no session capability. This session holds no menu token at all; if the screen
+// ever narrows from it again, the Account column, the heading and the scope chips below change and these tests fail.
+describe("a session without any menu token narrows nothing", () => {
+  it("states no scope to the context bar, with or without the account scope in the address", async () => {
     mount();
     await loaded();
     expect(facts()).toEqual({});
   });
-});
 
-describe("researcher without account visibility", () => {
-  it("is titled for the slice and has no Account column or scope chip", async () => {
-    mount("/execution/blotter?account=acc_paper_okx_01", { capabilities: new Set(["governance.r1.read"]) });
+  it("keeps the title, the Account column, its chooser entry and the account scope chip the server's scope asks for", async () => {
+    mount("/execution/blotter?account=acc_paper_okx_01");
     await loaded();
-    expect(screen.getByRole("heading", { name: "Your orders" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Blotter" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Your orders" })).toBeNull();
+    expect(screen.queryByText("Your slice only")).toBeNull();
+    expect(screen.getByRole("button", { name: "Remove account scope" })).toBeTruthy();
+    // Account is an optional column: the chooser offers it and choosing it adds the column.
     expect(within(table()).queryByRole("columnheader", { name: "Account" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Remove account scope" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Columns" }));
-    expect(screen.queryByRole("checkbox", { name: "Account" })).toBeNull();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Account" }));
+    expect(within(table()).getByRole("columnheader", { name: "Account" })).toBeTruthy();
+  });
+
+  it("a server refusal still shows its reason and the access link", async () => {
+    setOverviewDoubleVariants({ blotter: "denied" });
+    mount("/execution/blotter", { accessHref: "/administration/profile-access" });
+    expect(await screen.findByText("The blotter is outside what your access allows.")).toBeTruthy();
+    expect(screen.getByRole("link", { name: "See what you can access" })).toBeTruthy();
   });
 });

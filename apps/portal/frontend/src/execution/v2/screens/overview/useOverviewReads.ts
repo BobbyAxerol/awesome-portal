@@ -96,17 +96,16 @@ export interface OverviewReads {
 
 const defaultFactory: SseFactory = (url) => new EventSource(url);
 
-export function useOverviewReads(api: ExecutionApi, workspaceId: string | undefined, sseFactory: SseFactory | null | undefined, fundWide = true): OverviewReads {
+export function useOverviewReads(api: ExecutionApi, workspaceId: string | undefined, sseFactory: SseFactory | null | undefined): OverviewReads {
   const tick = usePollTick(PROJECTION_POLL_MS);
   const [manual, setManual] = useState(0);
   const scope = `${workspaceId ?? ""}`;
 
   const composition = useRead(
     () => api.getOperationalComposition("command-center", workspaceId ? { workspace_id: workspaceId } : undefined),
-    [api, tick, manual, scope, fundWide],
+    [api, tick, manual, scope],
     `composition|${scope}`,
     true,
-    fundWide,
   );
   const fleet = useRead<FleetRegister>(
     () => api.getAlphaFleet({ limit: 50 }).then((result): Result<FleetRegister> =>
@@ -129,10 +128,9 @@ export function useOverviewReads(api: ExecutionApi, workspaceId: string | undefi
   const operations = useRead<OperationalQueueV2 | "unsupported">(
     () => api.listOperationalQueueV2({ workspaceId, triageState: "UNACKNOWLEDGED", limit: 1 }).then((result): Result<OperationalQueueV2 | "unsupported"> =>
       result.ok ? { ok: true, value: result.value.kind === "queue" ? result.value.queue : "unsupported" } : result),
-    [api, tick, manual, scope, fundWide],
+    [api, tick, manual, scope],
     `operations|${scope}`,
     true,
-    fundWide,
   );
 
   const snapshot = useMemo(

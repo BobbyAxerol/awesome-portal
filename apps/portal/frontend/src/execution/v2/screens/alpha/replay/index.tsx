@@ -19,9 +19,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { PanelState } from "../../../../components/states";
 import type { ExecutionApi } from "../../../../api/ports";
-import { useSession } from "../../../../../auth/session";
 import { Flag } from "../../../Flag";
-import { V2_NAV_TOKEN, holds } from "../../../shell/roleNav";
 import { withoutOrigin } from "../../../backTo";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../../urlState";
 import { replayBack } from "../backLinks";
@@ -49,9 +47,6 @@ export interface AlphaReplayProps {
 export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
   const url = useExecUrlState();
   const [params] = useSearchParams();
-  const { access } = useSession();
-  const capabilities = new Set(access.kind === "ready" ? access.access.capabilities : []);
-  const canSeeAccounts = holds(capabilities, { allOf: [V2_NAV_TOKEN.accounts] });
   // The page's own `from` is its Back; the chips onward start fresh.
   const linkTo = (href: string) => withContext(href, withoutOrigin(params));
   const ordersHref = linkTo(`/deployments/alphas/${encodeURIComponent(alphaId)}?tab=orders`);
@@ -67,7 +62,7 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
   const label = view?.titleWithVersion ?? alphaId;
   const rows = view?.rows ?? [];
   const deployment = rows.find((row) => (row.env !== undefined ? row.env === env : row.stage !== null && ENV_STAGES[env].includes(row.stage))) ?? rows[0] ?? null;
-  const accountId = canSeeAccounts ? (book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? deployment?.accountId ?? null) : null;
+  const accountId = book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? deployment?.accountId ?? null;
   const fresh = view ? freshnessFlag(view.freshness) : null;
 
   return (
@@ -97,7 +92,6 @@ export default function AlphaReplay({ api, alphaId, focus }: AlphaReplayProps) {
           venueOf={view?.venueOf ?? NO_VENUE}
           book={book}
           focus={focus ?? params.get("focus")}
-          canSeeAccounts={canSeeAccounts}
           ordersHref={ordersHref}
           back={back}
         />

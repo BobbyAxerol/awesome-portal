@@ -31,14 +31,13 @@ export interface ReplayViewProps {
   book: SubjectBook;
   /** `order:<id>` or `fill:<id>`. */
   focus: string | null;
-  canSeeAccounts: boolean;
   /** Where the Orders & Fills tab lives, for the banner's way back. */
   ordersHref: string;
   /** The list the reader came from (the Blotter with `from=blotter`); absent means the Orders & Fills tab. */
   back?: { label: string; to: string };
 }
 
-export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus, canSeeAccounts, ordersHref, back }: ReplayViewProps) {
+export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus, ordersHref, back }: ReplayViewProps) {
   const target = focusTarget(focus);
   const symbols = useMemo(() => symbolsOf(book.orders, book.fills), [book.orders, book.fills]);
   const focusSymbol = useMemo(() => {
@@ -76,7 +75,7 @@ export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus
   // Symbol and Interval are the chart bar's own selects; naming them again here said everything twice.
   const chips: ReplayChip[] = [
     { label: "Book", value: ENV_LABEL[env] },
-    { label: "Account", value: canSeeAccounts ? (book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? "Not available") : "Not available" },
+    { label: "Account", value: book.orders[0]?.accountId ?? book.fills[0]?.accountId ?? "Not available" },
     ...(book.scoped ? [{ label: "Read", value: "Scoped: authorized rows only" }] : []),
   ];
 
@@ -86,7 +85,7 @@ export function ReplayView({ api, alphaId, alphaLabel, env, venueOf, book, focus
     fills: book.fills,
     candles: verdict.context,
     asOf: book.asOfMs === null ? null : new Date(book.asOfMs).toISOString(),
-    accounts: canSeeAccounts ? [...new Set([...book.orders.map((o) => o.accountId), ...book.fills.map((f) => f.accountId)].filter((a): a is string => a !== null))] : [],
+    accounts: [...new Set([...book.orders.map((o) => o.accountId), ...book.fills.map((f) => f.accountId)].filter((a): a is string => a !== null))],
     market: venuePayload,
     marketTransport: candles.venue.phase === "error" ? candles.venue.status : candles.venue.phase === "ready" ? "ok" : "loading",
     marketReason: candles.venue.phase === "error" ? candles.venue.reason : null,

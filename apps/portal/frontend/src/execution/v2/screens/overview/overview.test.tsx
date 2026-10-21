@@ -17,11 +17,19 @@ import { useContextFactsValue } from "../../shell/contextFacts";
 import { newSeriesDouble, wrapFetch, type SeriesDoubleState } from "../series/seriesDouble.testbase";
 import OverviewScreen, { OVERVIEW_SCREEN_KEY } from "./index";
 import { whyText } from "../../gapWhyTestUtil";
+import { sessionOf } from "../alpha/testApi";
+
+// RK-1 (DEBT-UXM07-005): the screen reads no session capability. Every test here runs under a session that holds no menu token
+// (what a real session carries); if the screen narrows from it again, the fund-wide assertions below fail.
+const session = vi.hoisted(() => ({ current: null as unknown }));
+vi.mock("../../../../auth/session", () => ({ useSession: () => session.current }));
 
 let calls: Call[] = [];
 /** FE-013: the series route is the BFF double's too. By default the backend answers as it does today: no series source is published. */
 let series: SeriesDoubleState = newSeriesDouble("unavailable");
 beforeEach(() => {
+  // No principal: the retained-review reader (which the stream gate reads) keys on it; the capability set is what matters here.
+  session.current = { ...sessionOf(["governance.r1.read"]), principal: null };
   resetOverviewDouble();
   setOverviewDoubleVariants({ fleet: "multi-currency" });
   calls = serveDoubles();
@@ -420,81 +428,38 @@ describe("the stream gate", () => {
   });
 });
 
-describe("the context bar's scope", () => {
-  it("says Your alphas for a session without a fund-wide read", async () => {
-    mount({ capabilities: new Set(["governance.r1.read"]) });
-    await screen.findByRole("heading", { level: 1, name: "Your alphas" });
-    expect(facts()).toEqual({ scope: "Scope: Your alphas" });
-  });
-
-  it("says nothing for a fund-wide session, and nothing while access is unknown", async () => {
-    mount({ capabilities: new Set(["nav:EXECUTION_OPERATIONS"]) });
-    await loaded();
-    expect(facts()).toEqual({});
-    cleanup();
+describe("a session without any menu token narrows nothing", () => {
+  it("says nothing to the context bar and titles the page Overview", async () => {
     mount();
     await loaded();
+    expect(screen.queryByRole("heading", { level: 1, name: "Your alphas" })).toBeNull();
     expect(facts()).toEqual({});
   });
-});
 
-describe("a caller without a fund-wide read", () => {
-  it("gets their own alphas and nothing fund-wide, and the researcher policy is named as undecided", async () => {
-    mount({ capabilities: new Set(["governance.r1.read"]) });
-    expect(await screen.findByRole("heading", { level: 1, name: "Your alphas" })).toBeTruthy();
-    expect(screen.queryByLabelText("Fund figures")).toBeNull();
-    expect(screen.queryByRole("region", { name: "Capital" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "Source health" })).toBeNull();
-    const table = await screen.findByRole("table", { name: "Your alphas" });
-    await waitFor(() => expect(screen.queryByRole("status", { name: /^Loading/ })).toBeNull());
-    expect(within(table).getAllByRole("row")).toHaveLength(4);
-    expect(screen.getByTestId("not-available-line").textContent).toContain("Researcher field policy");
-    expect(whyText(screen.getByTestId("not-available-line"))).toContain("Not published (FE-026)");
-    // Nothing fund-wide is even asked for.
-    expect(calls.some((c) => c.path === "/compositions/command-center" || c.path === "/operations")).toBe(false);
-    expect(calls.some((c) => c.path === "/alphas")).toBe(true);
-  });
-
-  it("a manager preset sees the fund", async () => {
-    mount({ capabilities: new Set(["nav:EXECUTION_OPERATIONS"]) });
+  it("shows the fund figures and asks the fund reads; no 'Alphas in your slice' panel is inferred", async () => {
+    mount();
     await loaded();
     expect(screen.getByLabelText("Fund figures")).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Source health" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Alphas in your slice" })).toBeNull();
+    expect(calls.some((c) => c.path === "/compositions/command-center")).toBe(true);
+    expect(calls.some((c) => c.path === "/operations")).toBe(true);
+  });
+
+  it("a refused composition still shows the server's refusal with the access link", async () => {
+    const denied = override({
+      getOperationalComposition: async () => ({ ok: false, status: "denied", reason: "OPERATIONAL_READ_DENIED" }),
+    });
+    mount({ accessHref: "/administration/profile-access" }, denied);
+    expect(await screen.findByText(/OPERATIONAL_READ_DENIED/)).toBeTruthy();
+    expect(screen.getByRole("link", { name: "See what you can access" })).toBeTruthy();
+    expect(screen.queryByLabelText("Fund figures")).toBeNull();
   });
 });
 
 describe("links (#7, M11, D9)", () => {
-  const researcher = new Set(["governance.r1.read"]);
-
-  it("the researcher view links each alpha name to Alpha 360 and the panel to Alpha Fleet, keeping the context", async () => {
-    mount({ capabilities: researcher }, httpApi(), "/execution?env=paper&workspace_id=ws_1");
-    const table = await screen.findByRole("table", { name: "Your alphas" });
-    await waitFor(() => expect(screen.queryByRole("status", { name: /^Loading/ })).toBeNull());
-    const links = within(table).getAllByRole("link");
-    expect(links.length).toBe(3);
-    for (const link of links) {
-      const url = new URL(link.getAttribute("href")!, "http://x");
-      expect(url.pathname).toMatch(/^\/deployments\/alphas\/[^/]+$/);
-      expect(url.searchParams.get("env")).toBe("paper");
-      expect(url.searchParams.get("workspace_id")).toBe("ws_1");
-      expect(link.textContent).toBeTruthy();
-    }
-    const panelNode = screen.getByRole("region", { name: "Alphas in your slice" });
-    const fleet = within(panelNode).getByRole("link", { name: "Alpha Fleet" });
-    expect(fleet.getAttribute("href")).toBe("/deployments/alphas?env=paper&workspace_id=ws_1");
-  });
-
-  it("the alpha link is keyboard-reachable and named by the alpha, not by 'link' or a bare id", async () => {
-    mount({ capabilities: researcher });
-    const table = await screen.findByRole("table", { name: "Your alphas" });
-    await waitFor(() => expect(screen.queryByRole("status", { name: /^Loading/ })).toBeNull());
-    const first = within(table).getAllByRole("link")[0]!;
-    expect(first.getAttribute("tabindex")).not.toBe("-1");
-    expect(first.getAttribute("aria-label")).toBeNull();
-    expect(first.closest("td")?.getAttribute("data-l")).toBe("Alpha");
-  });
-
-  it("the manager view has no Alpha Fleet panel link and its alpha-less layout is unchanged", async () => {
-    mount({ capabilities: new Set(["nav:EXECUTION_OPERATIONS"]) });
+  it("the overview has no Alpha Fleet panel link and its alpha-less layout is unchanged", async () => {
+    mount();
     await loaded();
     expect(screen.queryByRole("link", { name: "Alpha Fleet" })).toBeNull();
     expect(screen.queryByRole("table", { name: "Your alphas" })).toBeNull();
@@ -659,11 +624,10 @@ describe("the fund NAV series (FE-013, BE-P4 manager series)", () => {
     await waitFor(() => expect(series.calls.length).toBe(2));
   });
 
-  it("a caller with no fund-wide read asks for no fund series", async () => {
+  it("a session without any menu token still asks for the fund series; the server decides", async () => {
     series.variant = "populated";
-    mount({ capabilities: new Set(["governance.r1.read"]) });
-    await screen.findByRole("heading", { name: /^Your alphas/ });
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(series.calls).toEqual([]);
+    mount();
+    await loaded();
+    await waitFor(() => expect(series.calls.length).toBeGreaterThan(0));
   });
 });
