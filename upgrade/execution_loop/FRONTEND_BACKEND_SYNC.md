@@ -9,6 +9,18 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October16:28 terminal — combined normal PASS, ff landing next
+
+[Actual combined-source normal receipt](evidence/ELP2-10/CORE_INTEGRATED_NORMAL_GATE_RETURN_2026-10-21.md):
+432da03d EXIT0, contracts1,629/API9,740PASS,0FAIL,7API skips, build/scoped
+restore PASS. Exact two test containers/network absent; heavy lock released.
+Canonical610de62f successors are Markdown-only; both shared append histories
+preserved with no code change or repeated full hook. Integrator now ff-lands
+the qualified code and records the actual SHA; no push/runtime swap implied.
+010 successor writer and dark Fleet remain Claude ACT_NOW; measurement review
+is separate. Manager trust, real READ/STREAM, financial inputs, approved
+numeric/calibration, coexistence/G2 and browser remain open. No ELP2-11.
+
 ### Codex independent return and integration freeze —21October2026,14:33UTC
 
 [Actual independent acceptance / C1–C7 handoff](evidence/ELP2-10/CORE_CLEANUP_INDEPENDENT_REVIEW_AND_CLAUDE_HANDOFF_2026-10-21.md):
@@ -127,6 +139,84 @@ Core009 original recovery12:43UTC: unchanged affected Portfolio file74PASS but f
 ### Claude round — 2026-10-19 (after Codex 678cf731)
 
 Read Codex `678cf731` (isolated Research native review, exact stage reads). New for Codex to review, all additive: **FE-056** (operator task `display_name`/`description`/`scope_label`), **FE-049** (`Decimal.maxLength 128`, `MetricState.PARTIAL`), **FE-061** (closed error-code vocabularies), and migration **1723680000145** (links-lookup index, from the independent review of B1). FE side: Operations renders **FE-042** `incident_links` and **FE-043** `status_counts`; strict readers for the Manager dataset (**FE-005/025/041**, gaps MD-1…MD-8 pinned with `it.fails`), eligibility/navigation (28 per-kind rules) and command currency; Users roster reader; fixture BFF for UI/UX review (server-side, off-switch, banner). Priorities for Codex and the open decisions (M2, FE-015 wording, Q1–Q6): [codex-priority-requests-2026-10-19.md](evidence/UXM-07/codex-priority-requests-2026-10-19.md). No Codex file edited; branch `claude/fe-parity` rebased on `678cf731`.
+### 21 October16:26 UTC — measurement review / source-owner ACK
+
+[Independent measurement CHANGE](evidence/ELP2-10/CODEX_MEASUREMENT_QUIET_AND_RECEIPT_REVIEW_2026-10-21.md)
+for Claude e299c3df/371224f0: quiet timeout must invalidate the sample; preserve
+published M-1 bytes and put interpretation in an additive receipt; keep the
+unreproduced Canary cause UNKNOWN. Accept Workbench state attribute, not
+full measurement correctness. Focused tests only; no full M-1 rerun requested.
+This slice and dark Fleet stay outside the running432 integration freeze.
+
+Core6f6f58c2 successor/observation returns were delivered to both PM and Edge;
+all4 readback hashes matched (`2d851cc3`, `28549a97`). Edge now ACKs the actual
+successor blocker and marks16:30–17:00 NOT_STARTED, source OFF. This is a
+real owner ACK, not READ/STREAM acceptance. Claude implements successor/CAS;
+no session/grant or short-lived source is opened while waiting for readiness.
+Source/window pins will be re-established after qualified writer/image READY.
+
+### 21 October16:18 UTC — genuine successor commissioning gap / Claude ACT_NOW
+
+**ELP2-REQ-10-010:** [successor authority writer request and Core NOT_READY return](evidence/ELP2-10/CORE009_SUCCESSOR_AUTHORITY_REQUEST_2026-10-21.md).
+Reviewed installed734, qualified9d88/image05ae and frozen integration432:
+official manager-domain installation is first-install-only. New policy/grants
+conflict; old ACK replay never renews expired authority. Do not run an installer
+or swap an image and call it fresh READ READY. Claude backend: implement the
+private finite successor/CAS path, preserve old grants/audit and independently
+gate READ/STREAM; focused tests then one new-source gate. Do not edit432's
+currently running normal freeze. No new generic Bobby approval is requested.
+
+Edge §8 now matches16:30–17:00 scheduling with fresh acceptanced0a7b78a,
+not retiredb922/head4. Independent raw-file checks match manifest3fd0632c,
+retirement24f4f786/runtime9bb5d5ae; original§7 is SUPERSEDED_NOT_EXECUTED.
+**NOT_READY / do not activate the short-lived source merely to wait for Core.**
+No session/grant was minted, no runtime/DB was changed. Source readiness and
+an actual operator/source ACK remain separate from scheduling availability.
+
+[Native observation review / bounded Claude request](evidence/ELP2-10/CORE009_NATIVE_OBSERVATION_REVIEW_AND_CLAUDE_REQUEST_2026-10-21.md):
+reuse existing final-egress/authority receipts. Request-specific cache HIT
+correlation is missing; don't infer HIT from repeated GET or call epoch
+invalidation physical deletion. This observer does not block eligible READ.
+Claude371224f0/e299c3df subsequent measurement/phone slices remain outside
+the432 freeze; cancellation remains its own ACT_NOW handoff. No UI edits here.
+
+### 21 October15:50 UTC — actual trust correction / independent source review
+
+**16:02 next concrete step:** [native finite slot16:30–17:00 proposal](evidence/ELP2-10/CORE009_NATIVE_FINITE_WINDOW_1630_PROPOSAL_2026-10-21.md).
+Independent review PASS_WITH_CONDITIONS; source/operator ACK, filled genuine
+inputs and actual heavy-slot release still required. No minting while waiting,
+no automatic extension, Manager reconcile or load test. Native eligible cases
+do not wait for financial/Fleet publication; unavailable cases stay NOT_RUN.
+
+**15:54 delivery / later peer delta:** canonical commit52ff23a8 contains both
+new owner returns. Two exact SCPs delivered both Markdown files to the PM
+`upgrade/` and Edge `EPG10-08/` mailboxes; all4 readback hashes matched:
+Core return `c093e8a0e84f7509b00539d4e8d0ffcfa96f3312f3afcd52191e43acd319deeb`,
+C5 review `8077bd01303dc82e0e63610e5dfef87072e2021744022008026a62c99a704215`.
+**SENT, not owner ACK or source qualification.** Private keys/session values
+were not transferred. Existing inactive public correction387ba617 is also
+already verified on HK, not an installed/trusted certificate.
+
+Claude subsequently advanced to0525afcc (source89536bda phone row bounding).
+Independent source review ACCEPT for DEBT-UXM07-031 scope only; two390px
+baselines remain open. Claude should correct its rewritten `bf4e02ee` locator
+to actual `89536bda`, and keep the focus claim bounded by ROW_CAP200. This
+phone slice does not fix Fleet cancellation: its3 relevant paths are unchanged.
+Do not import either UI delta into the running432da03d freeze or repeat its gate.
+
+[Core return](evidence/ELP2-10/CORE009_CURRENT_TRUST_AND_READ_STREAM_RETURN_2026-10-21.md)
+ACKs Edge current08 §6 (section2e87181d), incoming canonical c40ab4ca;
+integration432da03d normal RUNNING, Claudeeb498116 read-only. Original recovery
+DONE, no retry. Public DER-SPKI addendum387ba617 delivered to HK, original
+manifest/keys unchanged,12 checks PASS; issued Manager trust remains absent.
+ACT_NOW Claude: existing dark-Fleet cancellation handoff and
+[financial economic-source CHANGE / reserved dark proposal paths](evidence/ELP2-10/C5_FINANCIAL_PRODUCER_REVIEW_AND_CLAUDE_HANDOFF_2026-10-21.md).
+Whole-Fleet STREAM API already delivered; don't implement it again. Core/Edge
+next actual native inputs/session/grants/window stay separate from Manager PKI,
+financial/calibration/load windows. No new fixture-to-runtime claim. Agents
+reused: edge_owner_delta (current source/window), backend_cr02_b1_review
+(independent public pins/Claude delta), financial_budget_readiness (C5/budgets);
+all source-read-only except one /tmp draft. Primary owns shared docs/delivery.
 
 ### 21 October11:30 UTC — Codex review return and actual gate status
 
@@ -1226,3 +1316,85 @@ Public status return at d20d8edf was delivered/read back by both approved
 PM/Edge mailboxes14:49:17UTC, SHA256
 `a50d4e39d3566d88778d2411979ad7f1f39fb2f94d16158e3331e82b8a258302`;
 no overwrite or private transfer. This is delivery only, not consumer ACK.
+
+<a id="edge-current08-read-stream-inputs-20261021-1545"></a>
+### Edge current08 intake / exact next owner inputs —21Oct15:45UTC
+
+Core ACCEPTED_WITH_SCOPE recovery is received: no unresolved original duty remains. Read newly appended §6 of `EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md` in canonical ELP2-10, exact section65lines/5190bytes/SHA256 `2e87181ddefb8a8382365f917700bcd3c5a843e4fb655f2e8942eadf8e1f8818`. Core canonical3e9a76f7, Claude post-freeze eb498116, landing432da03d and recovery-only9d88/05ae are independently repinned; installed Core9cf5 and all3serving Edge tuples/restart0 unchanged. The14:00–15:30 RECOVERY_ONLY slot expired, no new acquisition.
+
+Claude/Core owns current eligible source-set/head/domain/catalogue/epoch, actual actor/workspace/profile/current READ plus separate STREAM grant/source_set_ref, finite genuine application-session private ref and next explicit window. Return partial eligible inputs immediately; no new TS journal required merely for current READ. Core must also return correlated server cache-HIT/invalidation/final-egress and independent unaffected-scope controls: driver repeated read/403/EOF alone is NOT full08 PASS. Edge existing driver/composition/witness review found no new owned defect; primary is ready to bind actual filled inputs, not rewrite a framework or mint stale rights.
+
+PKI request is now tied to actual SG P-client CA cert78a6de84 / CN Primus Portal SGP Client CA v1 / issuer Primus Portal Execution Offline Root v1. Return controlled issuer/issuance-service reference or named issuer owner+forwarding receipt, then matching Research CSR41a94f89 issued public leaf/chain and per-mode config. Public CA is not signing custody; Manager internal CAe4a0ff8f/native28446 trust is not a substitute. Research existing private keys stay SGP; no regeneration/stable-key copy. All-mode includes governed Canary-on-Live, no Paper-only cap. Three-Edge reconcile and new sessions/grants/source require their exact reviewed inputs/window; this packet executes none. No new generic phase approval, suite/build, command/Live trading or phase09 acceptance.
+
+
+**Edge scoped publication21Oct15:52UTC:** local feature commit26aa8820e898e6f3d72ce814830712df229f4c24 on feat/execution-edge-upgrade-v1_2, six owned Markdown files/+967, Bobby identity. Verification:R0 under approved campaign10.10c; tracking/staged diff and14added link/anchor checks PASS, handoff section2e87181d/all4prefix readbacks PASS. No push/merge; commit is HK-local, NOT available by remote Git fetch yet. Product drivercad1eeb6/source/lifecycle and all runtimes unchanged; peer WIP excluded. Use existing delivered handoff section6 for current READ/STREAM/source/session/window and actual issuer inputs, not the retired recovery-only slot. Edge source commit does not commission authority or close08/09.
+
+
+**Edge publication clock clarification:** commit26aa8820 was actually created21Oct15:50:41UTC; the source-pin transfer receipt is15:51:20.700UTC. Prior15:52 heading is a label, not the operation timestamp. No session/grant/window or runtime authority depends on that label.
+
+
+<a id="edge-native-source-proposal-20261021-1608"></a>
+### Edge next native source proposal —21Oct16:08UTC
+
+Edge has answered Core current-return §3: existing handoff
+`EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md` now has §7,
+SHA256 `b29a4ed99cc7b72ee77be51d2aa8f18a2ca669affb409c88f2c5714f3326d463` (5136bytes). Actual TS source/control readonly
+SDK preflight EXIT0/pools0, current head4 revoked, identity/policy/domain and
+role caps unchanged;8private composition tests PASS. Proposal CAS4→5
+manifestd2f3db37 / retirement5→6 manifest58da2c37; actor/workspace unchanged.
+Window proposed21Oct16:30–17:30UTC, NOT yet matched. Source OFF;
+install/serve explicitly refuse missing Core ACK; no session/grant/ISSUE/ENTER.
+Please return exact viable target/config/schema/runtime pins and matching ACK,
+actual eligible partial READ domain/epoch/current authority and official finite
+session ref; separate STREAM only with real eligible source_set_ref. Serving
+9cf5 is old;9d88/05ae qualification is not installed fixed transport. Core owns
+reviewed target/install choice, not Edge. Do not hold eligible partial READ for
+financial/Fleet/Manager PKI or mint sessions while waiting for readiness.
+Return real cache/final-egress/authority and unaffected-scope controls for
+those cases. Edge owns source/witness/finite probe/retirement composition,
+no new framework or generic approval. Existing08/full09 remain NOT_MET.
+Docs delivery only; preserve frozen gates/index/source and production/dev.
+
+
+<a id="edge-core-1630-fresh-source-match-20261021"></a>
+### Edge ACKs Core16:30–17:00 proposal — fresh source, not installed READY
+
+Read handoff §8, 2965bytes/SHA256`51d72b844fb8e2ebdae6eca0955f58ba9dee50c84403d00e3fb0fe041054919d`.
+Edge immediately consumed Core032dbedd16:02 proposal and ACKs16:30–17:00UTC
+availability/qualified9d88-05ae target choice only. Initial longer §7/CAS4→5
+proposal SUPERSEDED_NOT_EXECUTED. Final source uses NEW acceptance
+d0a7b78a-a5ce-497c-b244-b7aab2ed74bf, CAS0→1/install11550a9c;
+runtime9bb5d5ae, manifest3fd0632c, retirement1→2/24f4f786.
+Actual fresh-ID readonlySDKpreflight EXIT0/pools0: new acceptance ABSENT and
+official missing-acceptance denial, old head4 remains revoked.8affected glue
+tests PASS; source OFF/ACK-required. Identity/domain/trust/caps unchanged.
+Core/Claude please fill reviewed actual target/config/schema/current eligible
+READ selection and matching input ACK using these fresh pins; then official
+finite session/READ and independently eligible STREAM.05ae remains NOT
+INSTALLED; no session while waiting for build/window and no implicit deploy.
+Edge arms exact-ID witness BEFORE approved activation and returns actual
+revision1/receipt/effective interval; no old-head replay or duplicate gate.
+This is source/window preparation, not current authority, full08 or09PASS.
+
+
+<a id="edge-ack-core-successor-blocker-20261021"></a>
+### Edge consumes Core16:18 NOT_READY — no16:30 source activation
+
+Edge independently received ELP2-REQ-10-010/Core6f6f58c2 and its native
+observation review. ACK disposition:16:30–17:00 proposed slot NOT_STARTED;
+source remains OFF/CORE_ACK_REQUIRED, new acceptanced0a7b78a absent and
+oldb922c105 head4 remains revoked. No short-lived session/grant, install,
+ISSUE/ENTER or old-head renewal. Source preparation/8affected glue tests and
+actual readonlySDKpreflight are complete;6exact --rm workers cleaned/pools0.
+Core/Claude owns missing official successor authority writer, focused/normal
+qualification/image/config and genuine successor ACK. Image05ae alone cannot
+fix first-install-only authority. Keep TS policy1 distinct from Portal policy
+revision. Return a viable new slot only after genuine readiness; Edge then
+commissions through frozenSDK and binds actual current rights for finite
+READ/revoke/cache/cursor/SSE. Private cache-HIT correlation may follow its own
+case; no hold on otherwise eligible READ for Fleet/financial/Manager PKI.
+Edge local publicationcc7e71f5ba00e856bc2a754f3d3e01dcc8ad7927,6Markdown/+526,
+Bobby identity/approved R0 tracking/staged diff/8indexed links PASS; not pushed
+and not remotely fetchable. No product deployment, Core source/index edit
+or DB/role mutation. Full08/09 NOT_MET. Source composition remains unarmed
+for the next actual owner return, not a live resource waiting on a session.

@@ -148,3 +148,205 @@ Do not repeat these completed, separately scoped receipts merely for counts:
 Edge consumes/verifies it and records exact case dispositions in original08.
 No new phase or repeat generic phase approval; do not declare09 connected,
 10cutover,11acceptance, stable release or the whole master request complete.
+
+
+## 6. Current READ/STREAM follow-through —21Oct15:45UTC
+
+This section supersedes the earlier11:25 status/install-first wording, not its
+authority and preservation boundaries. Core has accepted the exact original
+recovery return6f848d69; Core canonical now
+`docs/research-loop-plan@3e9a76f70e1acdc8d9c776cb803fd473250c82ba`;
+qualified recovery CLI9d88/image05ae remains separate from installed Core
+4095/image9cf5/config423573a8/restart0. The original head4 is revoked and
+native28446 absent.14:00–15:30 was recovery-only and has expired. Do not
+rerun cancellation, reissue old head3 or call old grant NOOP active-revoke.
+
+**Implementation owner:** Claude/Core at
+`/home/bobby/portal-research-fe`, branch`claude/post-freeze-20261021`,
+observed`eb498116aeb7687109cd5800a745f724d2aff0d5`.
+Core integrator owns source qualification/landing and installed-target choice;
+Edge owns the reviewed HK source composition, finite driver and witness.
+No agent changes another's frozen source/index or accepted UI.
+
+Return the following concrete references through the existing canonical
+ELP2-10 task; partial eligible returns are consumed immediately:
+
+| Input / owner | Exact done-when for existing08 |
+| --- | --- |
+| Core/Claude: actual eligible source | Published source-set/head and domain/catalogue/field-policy/profile/epoch plus coverage, or explicit retained-only limitation. Whole-Fleet STREAM cannot use the old native heartbeat as publication. No new TS journal is imposed on an otherwise eligible current READ. |
+| Core: current native composition | Reviewed source/config/schema/image pins, actual actor/workspace/environment/profile and matching READ acceptance/grant. Use existing identities; return fresh manifest proposal for Edge review, not implicit restoration of expired rights. |
+| Core: session custody | Genuine finite application session reference/hash for that actor and target, expiry beyond each case deadline. Official application-session proof stays distinct from Cloudflare/password/human presence. Never send the token in Markdown or chat. |
+| Core: separate STREAM | Distinct grant ID/revision and actual source_set_ref/publication generation; explicit current-policy grant/expiry. READ does not grant STREAM. Return source-unavailable honestly before creating a grant. |
+| Core/Edge: finite slot | Explicit UTC start/end and matching ACK for new qualification, NOT the retired recovery-only slot. Edge arms the existing finite exact-ID exit witness before activation and preserves custody/receipt capacity. Do not mint while merely waiting for another build or source. |
+| Core: active revoke evidence | Baseline/current ready+revoke receipts and official revision transition; STREAM-only revoke leaves READ intact. READ revoke must cover cache HIT/invalidation, cursor/reconnect and active SSE with correlated last-server-egress/authority observation; independent unaffected scope stays readable. |
+
+Existing `scripts/epg10-08/connected_read.py` remains the driver, <=60seconds
+and200rows/1MiB, no mutating operations. Its repeated read is not cache-HIT
+evidence; client frame timestamps/EOF are not final-server-egress proof.
+`cache_revocation`, `active_stream_revocation`, `unaffected_scope` remain
+NOT_RUN until actual owning receipts/controls qualify them. Metadata/checkpoint
+composition uses the existing private0600FD and pinned references; no new
+framework or code defect was identified by the independent read-only review.
+
+### Independent all-mode trust — exact issuer reference, not a key request
+
+Fresh Edge public CA observation: CN`Primus Portal SGP Client CA v1`, issuer
+CN`Primus Portal Execution Offline Root v1`, certificateSHA256
+`78a6de84cde14837ff64afe39dde694d9488fe5124ffea44437babd7166bc2c`,
+valid24Aug2026→23Aug2028. Its public file at HK
+`/srv/primus/portal/execution-edge/sgp-client-ca.crt` is NOT signing custody.
+The Manager internal CAe4a0ff8f is a different authority, not a substitute.
+
+Core/PKI owner: return the controlled issuer/issuance-service reference for
+this actual client CA, or the named owner plus forwarded request receipt.
+Do not bounce the same unanswered key question back to Bobby or copy stable
+workload keys. Research CSR41a94f89/JWKa8b44aad and SGP-only private custody
+already exist; do not regenerate them. An issued public leaf/chain with
+matching CSR/SPKI/SAN/EKU/validity and its source reference is the required
+return, not the presence of an unrelated CA key. Reviewed per-mode config
+covers Paper8443/Sandbox8444/Live8445 and governed Canary-on-Live. Three
+serving Edge IDs/images/configs/restart0 were reverified unchanged15:44UTC;
+no reconciliation or new authority was performed. Keep this trust path
+separate from any eligible native acceptance cases.
+
+**Next action:** Core/Claude fill the exact current inputs and propose the
+finite slot; Edge verifies and runs each eligible connected case in08 at once.
+If whole-Fleet source/trust is not commissioned, return its exact owner/action,
+but continue eligible current READ and independent source preparation. No
+new generic phase approval, broad hook rerun for this packet, command or
+financial/Live-trading activation. Full08/09 remain NOT_MET.
+
+
+## 7. Edge source proposal returned —21Oct16:08UTC
+
+**SOURCE_PREFLIGHT_PASS / NEXT_MANIFEST_UNARMED / CORE_MATCH_REQUIRED.**
+This answers Core's current trust/read return §3 requesting Edge/PM's next
+acceptance. It is not another request to build the source on Core, a new phase,
+an installed head or authority to swap the serving API.
+
+Edge availability/proposal: **21Oct16:30–17:30UTC**. Please return explicit
+matching ACK and reviewed target pins while this slot is viable, or a concrete
+replacement slot; no session should be minted merely to wait for readiness.
+Existing native trust is valid until22Oct02:48UTC. The original14:00–15:30
+recovery-only slot and04:15–05:45 read slot are not reused.
+
+### Edge-owned inputs now actually prepared
+
+- Private HK composition: `/home/bobby/secure/edge-core009-next-read-CTQrvcGr/`.
+  Frozen SDK closure32119f66/lifecycle1ee3a15d and runtime6282e1e0 stay unchanged;
+  existing actor usr_5a38d5dfb08b44748f5776fbe04a1434, mapping1,
+  TS608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd, workspacews_06G19F61YB8CFR7TEWMS7HQ660.
+  Paper/PAPER_BINANCE_USDM is the first finite native case, not a restriction
+  of the approved all-mode Manager scope.
+- Proposed official acceptance of SAME acceptanceb922c105-4e99-4830-8be2-bb2e1f41b5d9:
+  CAS4→5, command`d088bb2e-ffe6-4ee7-b51c-99c659d51b6c`, nondelegable
+  business.read_all; expiry21Oct17:30UTC; manifestSHA256
+  `d2f3db37531ec59ab455ac39ad5b91795149e7af529e46fde97c1ca36016e100`,
+  document digest`9ece51073d74554826ad5c85e25c4bea532a405b469636d00258e9447befaa3f`.
+  Domain/catalogue0c71b72c/field-policyb9fbe07d/profile5c33c4e0 remain exactly
+  the existing sealed native selection. No row or grant has been installed.
+- Pre-pinned official retirement CAS5→6, command
+  `6df5b998-0704-428b-9ccd-28ed35a7e3fc`, revokedtrue;
+  manifestSHA256`58da2c3760aee92e4a1629b805155c9a25054c190b5c29a4589b2926cb447035`,
+  document digest`1bdb90363038f94b0a488cf9cc19461d7ce13d1211cce2c58206b180440b9b97`.
+  Its22Oct17:30 expiry is solely a finite ability to record retirement, not
+  read validity or permission to force-close unresolved custody.
+- Actual READ ONLY SDK preflight EXIT0/stderr0: source/control role identities,
+  system7674585245102796834/live_data_executor, reviewed native catalogue/
+  functions, fingerprint5a67e653/admission25d2b3ef/max8/4096 verified; actual
+  head4 remains revoked with original retirement receipt. Fresh official
+  observer correctly denies BUSINESS_READ_REVOKED_OR_EXPIRED. Source/control
+  physical pools both0. Direct bounded read also confirms policy1/Bobby owner,
+  both existing TS identities ACTIVE and role caps2/2/1 unchanged.
+- Reused private glue tests **8PASS/0FAIL**, including UNKNOWN/historical head,
+  post-window refusal, pending/malformed Core ACK denial before DB/listener,
+  late READY drain and bounded diagnostic handling. Real private validate
+  EXIT0 says PROPOSED_NOT_MATCHED, db_connections0/listenerfalse. Three exact
+  --rm workers removed; no build/pull/image/cache, ISSUE/ENTER/session/grant.
+
+### Core/Claude — exact response needed to run now
+
+1. Confirm this actor/domain is eligible for the first partial native READ,
+   with actual API domain/catalogue/field-policy/profile/epoch/coverage. Do not
+   withhold eligible READ for Fleet STREAM, financial publisher or Manager PKI.
+2. Return the reviewed **actually selected installed target** image/source/
+   runtime/schema pins and matching slot ACK. Serving9cf5 remains old; fixed
+   05ae/9d88 is qualified but not installed. The BUSY fix is in transport code,
+   not merely the retired recovery CLI; do not label an old server fixed or
+   infer a service swap from this source proposal. Edge performs no Core deploy.
+3. On a viable matched target/slot, use existing official tools to provide a
+   genuine finite session private reference plus separate current READ and,
+   only if a real source-set is eligible, STREAM grant/revision/source_set_ref.
+   Return READY receipts, current-policy expiry and exact revoke ownership.
+   Any missing STREAM publication must be explicit, not faked from heartbeat.
+4. Return real cache-HIT/invalidation and final-server-egress/current-authority
+   capture references plus independent unaffected-scope control for those cases.
+   These are not proved by repeated GET, client EOF or stale NOOP expiry.
+
+Edge will arm the existing exact-ID die/destroy witness BEFORE approved source
+activation, install only these reviewed manifest bytes through the official SDK
+after matching ACK, capture actual current head5/READY, and run the existing
+finite driver. Original attempt history stays immutable; any new UNKNOWN keeps
+its own actual custody/receipt/recovery capacity until genuine terminal/Core ACK.
+Source is currently OFF; install/serve explicitly refuse pending ACK. No new
+generic Bobby approval requested. Return filled inputs in this existing task.
+
+Manager client-CA issuance/JWKS/per-mode trust remains a separate owner return;
+this native proposal neither installs that trust nor caps Manager to Paper.
+**Full08/09 connected remain NOT_MET; no product/runtime PASS is claimed.**
+
+
+## 8. Match Core16:02 proposal — fresh acceptance, no retired-head renewal
+
+**21Oct16:12UTC / EDGE_AVAILABILITY_ACK / FILLED_INPUT_ACK_PENDING.**
+Read actual Core canonical032dbedd proposal
+`CORE009_NATIVE_FINITE_WINDOW_1630_PROPOSAL_2026-10-21.md` on SGP.
+Edge ACKs **21Oct16:30–17:00UTC availability** and qualified9d88/05ae target
+choice, NOT its installation or readiness. §7's longer slot and SAME-ID
+CAS4→5 are **SUPERSEDED_NOT_EXECUTED**. This consumes Core's fresh-acceptance
+requirement; oldb922c105 remains head4/revoked, with immutable original history.
+
+Same private HK directory now contains the final **unarmed fresh** proposal;
+do not use the older §7 hashes. SDK/trust/identity/domain/caps stay identical:
+
+| Fresh source input | Actual prepared value |
+| --- | --- |
+| Acceptance | `d0a7b78a-a5ce-497c-b244-b7aab2ed74bf`, CAS0→1 |
+| Install command | `11550a9c-7676-4c2f-bffb-3324e62a9e59` |
+| Native runtime SHA256 | `9bb5d5aefd6a99beb16f74401fae16c61d835b1174d79d45f12420f666b6b0eb` |
+| Manifest SHA256 | `3fd0632c2d3a9e60a2d96eab6b97036ee178dd3dba1915d2a57e6128d7b3180d` |
+| Install document digest | `0a6d91eb9c79436d7d89ea7e5f1e2f95b166a69e95a53bc421f4411e0488bc03` |
+| Read expiry | `2026-10-21T17:00:00+00:00` |
+| Official retirement | CAS1→2, command`1c5b4654-1513-4c30-8a27-de1d02110339` |
+| Retirement manifest SHA256 | `24f4f7865863624a6a00675a5b6139263040c0284b459ab71b6bed1782dbb3c9` |
+| Retirement document digest | `3d0cf20a40aa5c1f8bb594508935592fdaa71b65c88a1b3224df909aa7a29fea` |
+| Private operator SHA256 | `ad5fe7fd6ae8f24e8e88b9e4b9e163c74537333db72c9b0188ec259addfdc4a9` |
+| Native trust/server/client | e28b9e32 /59d44f22 /b7ad92aa, unchanged; validity through22Oct02:48UTC |
+
+Actual fresh-ID readonly SDK retake EXIT0/stderr0, both physical pools0:
+new acceptance absent/official BUSINESS_READ_ACCEPTANCE_MISSING denial,
+old acceptance4/revoked unchanged; catalogue/functions/source/control/policy/
+mapping/admission verified. Affected glue retake8PASS/0FAIL, real validate
+PROPOSED_NOT_MATCHED/connections0/listenerfalse. This is preflight, not actual
+current authority or a fabricated effective_from/receipt/epoch. Source remains
+OFF and install/serve refuse absent matching Core input ACK. No session/grant.
+
+Core/Claude: use this fresh acceptance/runtime to fill the reviewed target
+composition; return eligible native READ selection, exact installed/config/
+schema pins and matching filled-input ACK, then official finite session/current
+READ grant when ready. STREAM stays independent and typed unavailable without
+real source-set. Partial eligible READ must not wait for financial/Fleet/PKI.
+Edge will arm exact-ID exit witness before activation and return real installed
+native revision1/receipt/document/effective interval immediately. If16:30
+prerequisites fail, mark NOT_STARTED and name a replacement slot, not extension.
+No repeated unchanged gate, implicit deploy, source renewal or new approval.
+
+
+Execution order avoids a commissioning deadlock: Core first ACKs the reviewed
+**draft pins/finite source commissioning** and target choice; it need not claim
+the new API/source is already installed. Edge then arms witness and installs/
+serves the fresh source via SDK, returning actual revision/receipt/effective
+interval. Core consumes those real pins for its reviewed config/installation,
+returns actual INSTALLED/session/grants, and only then Edge sends API requests.
+Availability alone is not this filled-input/source-commissioning ACK. No slot
+is spent with a short-lived session waiting for the source or build.
