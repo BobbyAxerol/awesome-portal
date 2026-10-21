@@ -3,8 +3,7 @@
 Ngày 2026-10-21. Nhánh `claude/post-freeze-20261021`. Trả lời mục "Small request
 to Claude — private observation only" trong
 `ELP2-10/CORE009_NATIVE_OBSERVATION_REVIEW_AND_CLAUDE_REQUEST_2026-10-21.md`.
-Trạng thái: **DESIGN + phần thuần đã làm; wiring vào file dùng chung = ĐỀ XUẤT,
-CHƯA ÁP DỤNG, chờ Codex one-writer OK.** Không DB/Docker/hook/lock đã chạy.
+Trạng thái: **ĐÃ ÁP DỤNG trên nhánh `claude/post-freeze-20261021` (one-writer ACK của Codex, CODEX_BE_P21_P22_REVIEW_AND_ONE_WRITER_RETURN_2026-10-21.md) — P22-1/P22-2 đã sửa; wiring 4 file dùng chung + CLI operator riêng đã làm; observer opt-in, MẶC ĐỊNH VẮNG MẶT, không cài runtime.** Chưa là bằng chứng nối nguồn thật (xem §6, §9). Không DB/Docker/hook/lock đã chạy ở lượt này; spec PG dành cho lead (§9).
 
 ## 0. Tóm tắt
 
@@ -12,7 +11,7 @@ CHƯA ÁP DỤNG, chờ Codex one-writer OK.** Không DB/Docker/hook/lock đã c
   (HIT/MISS/COALESCED thật từ nhánh `shared.kind`), MAC có khóa của cache key,
   MAC có khóa của native epoch, `lease_id`/`attempt_id`, `body_digest` hiện có,
   và **tên** witness egress hiện có (`FINAL_HTTP_SEND_COMPLETED` /
-  `FINAL_HTTP_ABORT_CONFIRMED` / `NO_FINAL_WITNESS`).
+  `FINAL_HTTP_ABORT_CONFIRMED` / `NO_FINAL_WITNESS` / `EGRESS_NOT_OBSERVED_IN_RETURN` — xem §8 P22-1).
 - Lưu: **JSONL append-only trong thư mục operator 0700 + CLI operator đọc** (không
   DDL, không route, không permission, không field browser). Chi tiết §3.
 - Không có timestamp, không có byte count, không có thời điểm ghi vật lý (§6).
@@ -49,7 +48,7 @@ cache_state: HIT|MISS|COALESCED,
 cache_identity_mac: hmac-sha256:<64hex>   # HMAC(key, schema\0cache-identity\0 cacheKey)
 native_epoch_mac:   hmac-sha256:<64hex>   # HMAC(key, schema\0native-epoch\0 epoch)
 body_digest: sha256:<64hex>               # đúng giá trị hàng obligation đã có
-egress_evidence_kind: FINAL_HTTP_SEND_COMPLETED|FINAL_HTTP_ABORT_CONFIRMED|NO_FINAL_WITNESS
+egress_evidence_kind: FINAL_HTTP_SEND_COMPLETED|FINAL_HTTP_ABORT_CONFIRMED|NO_FINAL_WITNESS|EGRESS_NOT_OBSERVED_IN_RETURN
 egress_semantics: LOCAL_CORE_HTTP_EGRESS_ONLY
 ```
 
@@ -68,15 +67,15 @@ egress_semantics: LOCAL_CORE_HTTP_EGRESS_ONLY
 | B. Một bảng append-only trong `elp210_candidate` | **có** | `current-human-candidate.sql` + `current-human-schema.ts` (pin/hash) + candidate.ts + DB đã cài phải áp DDL | Schema candidate là "fresh disposable", đã cài cho acceptance => DDL + re-pin + cài lại. Đắt nhất. |
 | **C. JSONL append-only 0600 trong thư mục 0700 + CLI** | **không** | 3 file ở §4 (P1–P7), CLI mới | **Chọn**: ít chạm nhất, không đổi schema/pin đã cài, không route/permission, mặc định tắt. |
 
-CLI `cli/execution-native-cache-observation.ts` (FILE MỚI, bước sau): đọc
-`--lease --attempt`, `find()` đúng cặp, SELECT chỉ-đọc **6 cột** obligation
+CLI `cli/execution-native-cache-observation.ts` (FILE MỚI, ĐÃ LÀM — §8): đọc
+`--lease --attempt`, `find()` đúng cặp, SELECT chỉ-đọc **7 cột** obligation
 (`lease_id,attempt_id,phase,body_digest,receipt_digest,source_ack_digest,source_reconciled`),
 gọi `correlateNativeCacheObservation` (đã có, thuần) => in một receipt
 `CORRELATED|MISMATCH`. Không in `base_body`/JWT/cookie; không liệt kê.
 Cô lập: không có list/enumerate; chỉ cặp (lease_id, attempt_id) — hai UUID ngẫu nhiên
 lấy từ hàng custody — mới tìm được; thư mục/tập tin phải 0700/0600 do chính uid.
 
-## 4. Đề xuất one-writer (cần Codex OK trước khi chạm)
+## 4. One-writer (Codex ACK 2026-10-21: Claude là người ghi duy nhất của 4 file + CLI; ACK không phải chấp nhận code)
 
 File **mới** (Claude sở hữu, đã commit): `execution-v2/native-cache-observation.ts`,
 `test/native-cache-observation.spec.ts`.
@@ -94,7 +93,7 @@ Không chạm: `current-human-candidate.{ts,sql}`, `native-read-egress.ts`,
 config.ts, safe DTO, grants, cache key, custody, tài chính.
 
 Một người ghi 1–3 trong **một commit** (3 file kiểu liên kết, type-check cùng nhau).
-Patch dưới đây `git apply --check` sạch trên cây này và đã type-check sạch trên bản sao scratch ngoài repo (tsc scoped 3 file); chưa chạy test hiện có của các file đó.
+Đã áp dụng trong các commit ở §8 (không còn là đề xuất); kiểm chứng ở §8–§9.
 
 ## 5. Kế hoạch test
 
@@ -119,167 +118,72 @@ Sau khi Codex OK (chạy trong lane của họ):
 - Revoke = invalidation logic (epoch đổi), không phải xoá vật lý.
 - Nếu `relationFor*Operation` bọc lại response (hiện `return this.request(...)` trực tiếp ở các call-site đã xem) thì carry no-op => không có record, không bao giờ record sai.
 
-## 7. Patch đề xuất cho file dùng chung (unified diff — KHÔNG ÁP DỤNG)
+## 7. Patch đề xuất cho file dùng chung — ĐÃ ÁP DỤNG
 
-Gốc: `claude/post-freeze-20261021` @371224f0. Áp bằng `git apply` từ gốc repo bởi người ghi duy nhất.
+Patch gốc (diff đề xuất ở lượt trước) đã được áp dụng, có chỉnh sửa theo P22-1, trong các commit ở §8. Diff không còn
+được chép ở đây để tránh hai bản lệch nhau; xem `git show` của các sha ở §8. Khác biệt so với đề xuất gốc:
 
-```diff
---- a/apps/control-api/src/execution/current-source.proxy.ts
-+++ b/apps/control-api/src/execution/current-source.proxy.ts
-@@ -21,6 +21,7 @@
-   SharedReadCacheValue,
-   SharedReadScope,
- } from "./shared-read.repository";
-+import { noteCacheBranch } from "../execution-v2/native-cache-observation";
- 
- export const CURRENT_SOURCE_ENVIRONMENTS = ["paper", "sandbox", "live", "canary"] as const;
- export type CurrentSourceEnvironment = (typeof CURRENT_SOURCE_ENVIRONMENTS)[number];
-@@ -1038,10 +1039,10 @@
-     const shared = await this.sharedReads.begin(scope);
-     if (shared.kind === "CACHE_HIT") {
-       this.increment(profile.profileId, "cacheHits", telemetryOperationId);
--      return this.composedResponse(
-+      return noteCacheBranch(this.composedResponse(
-         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
-         shared.value, "HIT", gatewayContext,
--      );
-+      ), { cache_state: "HIT", cache_identity: shared.cacheKey });
-     }
-     if (shared.kind === "FOLLOWER") {
-       this.increment(profile.profileId, "coalescedFollowers", telemetryOperationId);
-@@ -1051,10 +1052,10 @@
-           availability: "DEGRADED", retryable: false,
-         });
-       }
--      return this.composedResponse(
-+      return noteCacheBranch(this.composedResponse(
-         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
-         value, "COALESCED", gatewayContext,
--      );
-+      ), { cache_state: "COALESCED", cache_identity: shared.cacheKey });
-     }
-     if (shared.kind === "DENIED") {
-       this.increment(profile.profileId, "admissionDenied", telemetryOperationId);
-@@ -1131,10 +1132,10 @@
-       }
-       const value = await this.sharedReads.complete(scope, shared, source);
-       sharedCompleted = true;
--      return this.composedResponse(
-+      return noteCacheBranch(this.composedResponse(
-         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
-         value, "MISS", gatewayContext,
--      );
-+      ), { cache_state: "MISS", cache_identity: shared.cacheKey });
-     } finally {
-       release();
-       if (!sharedCompleted) {
---- a/apps/control-api/src/execution/maximum-data-operation.service.ts
-+++ b/apps/control-api/src/execution/maximum-data-operation.service.ts
-@@ -34,6 +34,7 @@
- } from "./eds11r-manager-relation.registry";
- import { MAXIMUM_DATA_INTAKE_V1, MaximumDataEnvironment } from "./maximum-data-intake";
- import { managerTimestamp } from "./manager-timestamp";
-+import { carryCacheBranch, takeCacheBranch } from "../execution-v2/native-cache-observation";
- 
- // The continuation repository emits mdc1. plus a UUID (41 ASCII bytes).
- // Reserve exactly that public size before persisting a private source cursor.
-@@ -145,7 +146,9 @@
-       { limit: query.limit, ...(sourceCursor ? { cursor: sourceCursor } : {}) },
-       maximumDataDeploymentPolicy(query.environment),
-     );
--    return this.translateDeploymentPage(response, query, scope);
-+    const dto = await this.translateDeploymentPage(response, query, scope);
-+    carryCacheBranch(response, dto); // in-process only; never part of the DTO
-+    return dto;
-   }
- 
-   /**
-@@ -186,7 +189,9 @@
-       managerRelationOperationPolicy(operation, query.environment),
-       { limit: query.limit, ...(sourceCursor ? { cursor: sourceCursor } : {}) },
-     );
--    return this.translateRelationPage(response, operation, query, scope, binding.profileId);
-+    const dto = await this.translateRelationPage(response, operation, query, scope, binding.profileId);
-+    carryCacheBranch(response, dto); // in-process only; never part of the DTO
-+    return dto;
-   }
- 
-   /** PRIVATE selected consumer preparation. Genuine selected source and actual
-@@ -246,7 +251,7 @@
-     const privatePrincipal={...principal,nativeEpochDigest};
-     const dto=operation.kind==="DEPLOYMENTS"?await this.prepareDeploymentData(privatePrincipal,query):
-       await this.prepareRelationData(privatePrincipal,relation!,query);
--    return {decision,dto,nativeEpochDigest};
-+    return {decision,dto,nativeEpochDigest,cacheBranch:takeCacheBranch(dto)};
-   }
- 
-   private async authorizeOperation(principal: MaximumDataOperationPrincipal, operation: ManagerRelationOperation,
---- a/apps/control-api/src/execution-v2/native-manager-consumer.ts
-+++ b/apps/control-api/src/execution-v2/native-manager-consumer.ts
-@@ -31,6 +31,7 @@
- import { nativeProfileRealtimeHeaders,type ScopedReplayBinding,type NativeProfileRealtimeHeaders } from "./realtime.contract";
- import type { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
- import type { ExecutionProfileRealtimeService } from "../execution/profile-realtime.service";
-+import type { NativeCacheBranchCapture, NativeCacheObserver } from "./native-cache-observation";
- 
- type Composition = Pick<Awaited<ReturnType<typeof composeNativeCore>>, "selectedCandidate">;
- type Selection = ReturnType<typeof selectedNativeBusinessReadSelection>;
-@@ -66,7 +67,8 @@
-   private realtimePreparationIdle=Promise.resolve();
-   private resolveRealtimePreparationIdle?:()=>void;
-   constructor(private readonly pool:Pool, private readonly operations:MaximumDataOperationService,
--    private readonly composition:Composition, selections:readonly NativeCoreSelection[], realtime?:NativeManagerRealtimeOptions) {
-+    private readonly composition:Composition, selections:readonly NativeCoreSelection[], realtime?:NativeManagerRealtimeOptions,
-+    private readonly cacheObserver?:NativeCacheObserver) {
-     if(selections.length<1||selections.length>64)throw unavailable();
-     const entries:Entry[]=[],keys=new Set<string>();
-     for(const entry of selections){
-@@ -143,12 +145,12 @@
-     const actor:AccessActor={user_id:principal.user.userId,session_id:principal.session.sessionId,
-       session_generation:principal.session.sessionVersion};
-     // Genuine DB authority, not a DTO/config/nativeEpochDigest authorization.
--    const {decision,dto,nativeEpochDigest}=await this.operations.prepareNativeManagerPage(
-+    const {decision,dto,nativeEpochDigest,cacheBranch}=await this.operations.prepareNativeManagerPage(
-       this.pool,principal,operation,query,entry.selectedSource);
-     if(decision.actor.user_id!==actor.user_id||decision.actor.session_id!==actor.session_id||
-       decision.actor.session_generation!==actor.session_generation||
-       decision.field_policy_sha256!==entry.source.domain.field_policy_sha256)throw denied();
--    return this.deliver(entry,candidate,principal,query,decision,nativeEpochDigest,selected.operation_id,dto,reply);
-+    return this.deliver(entry,candidate,principal,query,decision,nativeEpochDigest,selected.operation_id,dto,reply,cacheBranch);
-   }
- 
-   /** Same captured snapshot -> READ-baseline token, not an app STREAM grant.
-@@ -302,7 +304,7 @@
-   }
-   private async deliver(entry:Entry,candidate:ReturnType<Composition["selectedCandidate"]>,principal:MaximumDataOperationPrincipal,
-     query:MaximumDataDeploymentQuery,decision:ManagerDomainReadDecision,nativeEpochDigest:string,
--    operationId:string,dto:unknown,reply:FastifyReply):Promise<boolean>{
-+    operationId:string,dto:unknown,reply:FastifyReply,cacheBranch?:NativeCacheBranchCapture):Promise<boolean>{
-     const actor:AccessActor={user_id:principal.user.userId,session_id:principal.session.sessionId,
-       session_generation:principal.session.sessionVersion};
-     if(decision.actor.user_id!==actor.user_id||decision.actor.session_id!==actor.session_id||
-@@ -337,15 +339,21 @@
-     // No Nest/Fastify automatic writer can reply after uncertain admission.
-     // hijack itself emits zero HTTP bytes. Candidate owns final physical send.
-     reply.hijack();
-+    let settled:Awaited<ReturnType<typeof candidate.sendNativeRead>>|undefined;
-     try{
-       const handle=await candidate.acquireNativeRead(actor,base,decision.scope_digest);
--      await candidate.sendNativeRead(handle,reply.raw,body);
-+      settled=await candidate.sendNativeRead(handle,reply.raw,body);
-     }catch{
-       // Same durable key/recovery owner. Never ordinary error JSON, response
-       // replay, fake terminal, TTL-as-closure or a fallback after admission.
-       reply.raw.destroy();
--      await candidate.reconcileNativeRead(base.binding.lease_id).catch(()=>undefined);
-+      settled=await candidate.reconcileNativeRead(base.binding.lease_id).catch(()=>undefined);
-     }
-+    // Private observation AFTER delivery/recovery: best effort, never throws,
-+    // never changes the response or any custody state.
-+    if(this.cacheObserver&&cacheBranch)await this.cacheObserver.record({lease_id:binding.lease_id,
-+      attempt_id:binding.attempt_id,operation_id:operationId,capture:cacheBranch,native_epoch_digest:nativeEpochDigest,
-+      body_digest:bodyDigest(body),egress_phase:settled?.state==="TERMINAL"?settled.phase:"UNKNOWN"});
-     return true;
-   }
-   private operation(operation:NativeManagerOperation,environment:"paper"|"sandbox"|"live"){
-```
+- consumer không còn `settled?.state==="TERMINAL"?settled.phase:"UNKNOWN"`; dùng `egressPhaseOfRecovery(settled)` (P22-1);
+- `settled` được gán cả ở nhánh `catch` từ `reconcileNativeRead(...).catch(()=>undefined)` — thứ tự await không đổi;
+- `record(...)` được bọc thêm `.catch(()=>undefined)` (phòng thủ; `record` vốn không ném);
+- `nativeCoreManagerReadConsumer(..., realtime?, cacheObserver?)` nhận observer tùy chọn; **không ai truyền** (không sửa `app.module.ts`).
+
+## 8. Lượt 2026-10-21 (sau Codex review) — thay đổi, commit, kiểm chứng
+
+| # | Việc | Commit |
+| --- | --- | --- |
+| 1 | P22-1 + P22-2 (module thuần + test) | `8de1e50f` |
+| 2 | Wiring 4 file dùng chung (proxy, service, consumer, composition) | `3580ef8e` |
+| 3 | CLI operator riêng + join có chặn + test CLI + test wiring thật | `fdcaf69f` |
+| 4 | Receipt này | commit docs ngay sau (tip nhánh) |
+
+### P22-1 — RECONCILED không phải "không có witness"
+
+`current-human-candidate.ts:1358–1360/1221/1261` trả `RECONCILED` **không có phase** sau khi ghi source ACK thật. Cách sửa:
+
+- `egressPhaseOfRecovery(ret)` ánh xạ đúng 4 hình dạng `NativeHTTPRecovery`: `TERMINAL`+`SERVED|ABORTED` -> witness có tên;
+  `UNKNOWN|UNSENT_FENCED` -> `NO_FINAL_WITNESS` (chưa chốt, nói rõ); `RECONCILED`, return rỗng/không biết -> **`EGRESS_NOT_OBSERVED_IN_RETURN`**
+  (không khẳng định gì). Không đọc `context`/`terminal`, không tạo/sửa custody.
+- Join operator: **bảng durable là nguồn quyết định** SERVED/ABORTED. `EGRESS_NOT_OBSERVED_IN_RETURN` + durable SERVED/ABORTED -> `CORRELATED`
+  (`durable_egress` ghi rõ); + hàng chưa terminal -> `durable_egress: NO_TERMINAL`. Terminal durable thiếu `receipt_digest` -> MISMATCH (mọi loại witness).
+- Vẫn từ chối: lease/attempt khác, `body_digest` khác/NULL, `FINAL_HTTP_SEND_COMPLETED` vs durable ABORTED/UNKNOWN (và ngược lại),
+  `NO_FINAL_WITNESS` mà durable đã terminal (giữ nghĩa "unsettled": một quan sát UNKNOWN sau đó thành SERVED sẽ báo MISMATCH — cố ý, xem §6).
+- `schema_version` của record vẫn `v1`: enum chỉ được mở rộng thêm một giá trị và chưa có record nào được ghi ở đâu (không cài runtime).
+
+### P22-2 — đọc có chặn, trên descriptor đã mở
+
+- Key: `fstat` trên fd -> đúng 32 byte **trước** khi đọc; đọc tối đa 33 byte (`readDescriptorBounded`), 33+ -> từ chối. Key sai cỡ/oversize **không bị thay, cắt hay mint lại** (test kiểm nội dung file nguyên vẹn, cả `create=true`).
+- Log: `fstat` <= 1 MiB trước khi đọc; đọc tối đa cap+1 byte nên log phình sau `fstat` không vượt cap; log > cap -> `LOG_OVERSIZE`, **không xoá/cắt/xoay**; log đầy đúng cap vẫn đọc được, `append` bị từ chối (`LOG_FULL`).
+- Giữ: file thường, `O_NOFOLLOW`, đúng uid, không quyền group/other, **thêm `nlink===1`** (hard link bị từ chối). Mở log thất bại không phải `ENOENT` (symlink...) -> từ chối thay vì "rỗng". Dòng hỏng bị bỏ qua, không rò nội dung.
+- Chế độ đọc operator `new FileNativeCacheObservationSink(dir,{create:false})` / `loadNativeCacheObservationKey(dir,false)` **không tạo thư mục**.
+
+### Wiring (4 file ACK) — cái gì đổi, cái gì không
+
+- `current-source.proxy.ts`: 3 chỗ `return noteCacheBranch(composedResponse(...), {cache_state, cache_identity: shared.cacheKey})` (HIT/COALESCED/MISS). Không vào JSON, cache value, cache key, scope.
+- `maximum-data-operation.service.ts`: `carryCacheBranch(response,dto)` ở `prepareDeploymentData/prepareRelationData`; `prepareNativeManagerPage` trả thêm `cacheBranch: takeCacheBranch(dto)` (one-shot).
+- `native-manager-consumer.ts`: tham số constructor `cacheObserver?` (undefined = hành vi cũ); `deliver` ghi **sau** send/recover.
+- `native-core-composition.ts`: `nativeCoreManagerReadConsumer(...,realtime?,cacheObserver?)` chuyển tiếp. **Không** sửa `app.module.ts`: không có runtime installation.
+- Không chạm: `current-human-candidate.*`, `native-read-egress.ts`, `shared-read.repository.ts`, continuation repo, controller, config, DTO an toàn, grants, SQL/schema custody, `access.service.ts`, `current-human-mutations.ts`, `manager-domain-successor.ts`, `cli/execution-native-successor.ts` (đường dành riêng của Codex).
+
+### CLI operator `cli/execution-native-cache-observation.ts`
+
+`--dir <abs 0700> --lease <uuid> --attempt <uuid>`; **không** có list/enumerate/search/range, không route/permission/field browser, không ghi, **không nạp MAC key**.
+Một `SELECT` chỉ đọc 7 cột (`NATIVE_CACHE_OBLIGATION_COLUMNS`) với `lease_id=$1 AND attempt_id=$2`, trong `BEGIN READ ONLY`, cùng pool profile hash-pinned + kiểm schema đã đăng ký như các tool native offline khác
+(`nativeResearchReview` + `PORTAL_ENV=local` + `AUTH_MODE=dev`). In một receipt: `CORRELATED|MISMATCH`, hoặc `NO_OBSERVATION` / `NO_CUSTODY_ROW` (nói thẳng là không chứng minh gì về cache).
+
+### Test (không PG)
+
+- `test/native-cache-observation.spec.ts` 42 test (26 cũ + 16: hình dạng RECONCILED thật join SERVED/ABORTED/non-terminal, UNKNOWN/UNSENT giữ nghĩa, lệch digest/lease/attempt, key/log oversize, growth sau fstat, symlink/hard link, log đầy).
+- `test/native-cache-observation-wiring.spec.ts` 28 test trên **code thật** proxy `request()` + service + consumer (double chỉ ở: shared-read repo, transport h2, pool/READ evaluation, Candidate):
+  HIT/COALESCED/MISS từ nhánh admission thật + cache key thật; lặp GET không phải HIT; DENIED/leader lỗi không ghi gì; response **byte-giống** có/không ghi nhánh; scope/cache key không thêm trường; service trả `cacheBranch` ngoài DTO; DTO byte-giống public `deploymentPage`;
+  consumer: record đúng lease/attempt/body digest/MAC cache + epoch, ánh xạ cả 5 hình dạng return, lỗi send -> dùng return của recovery (recovery ném -> not-observed), thứ tự acquire -> send -> recovery -> observer, observer vắng/ném/reject không đổi gì, bốn request đồng thời cô lập, log không chứa secret.
+  Đã kiểm chứng không vacuous: đổi nhãn COALESCED trong proxy làm 4 test đỏ.
+- `test/native-cache-observation-cli.spec.ts` 20 test: argv, SQL đúng 7 cột/không `*`/không LIMIT, join, NO_OBSERVATION không chạm DB, NO_CUSTODY_ROW không tổng hợp, cột lạ bị từ chối, file sink chế độ đọc, bề mặt không list/key/write.
+- Spec sẵn có của file đã chạm (non-PG), xanh: `execution-current-source`, `native-manager-preparation`, `eds11r-manager-relation-bff`, `eds11r-market-context`, `elp210-core009-composition-identity`, `elp210-native-core-runtime`, `native-profile-realtime-mount`, `native-core-bootstrap`, `elp2-stream-boundary` (9 file, 155 test). `--maxWorkers=1`, không lock.
+
+## 9. NOT_RUN / dành cho lead
+
+- Spec cần PG thật chạm 4 file (lead chạy trong lane có PG): `maximum-data-operation.spec.ts`, `profile-projection.spec.ts`, `elp210-native-frame-coupled.spec.ts`, `eds11r-rich-screen-warmup.spec.ts`, `elp205-current-page.spec.ts`,
+  `elp204-account-policy-capture.spec.ts`, `elp204-account-sync-capture.spec.ts`, `elp204-heartbeat-capture.spec.ts`, `elp204-bracket-capture.spec.ts` (+ `elp2-product-read.fixture.ts` dùng chung); cache thật: `execution-shared-admission.spec.ts`, `execution-shared-read-cache-maintenance.spec.ts`.
+- Chưa chạy: CLI với DB thật (SELECT/READ ONLY/schema assert), HIT thật qua hai request cùng epoch trong TTL cache, egress thật. Acceptance nối nguồn = **NOT_RUN** cho tới khi có receipt thật.
+- Chưa có người cài observer vào runtime (cố ý). Muốn bật: dựng `loadNativeCacheObservationKey(dir,true)` + `FileNativeCacheObservationSink(dir)` + `new NativeCacheObserver(key,sink)` ở nơi gọi `nativeCoreManagerReadConsumer`, thư mục 0700 do operator cấu hình — bước riêng, có tên case.
