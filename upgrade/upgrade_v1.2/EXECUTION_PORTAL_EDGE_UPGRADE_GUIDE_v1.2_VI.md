@@ -1036,6 +1036,44 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**21Oct10:26UTC latest qualification:** Edge's isolated exact-source retake is
+4PASS/0FAIL/297explicit-filter-SKIP (301total), scopedPGrestore PASS. Build is
+inherited by1951/1951 matching public-input hashes; all assertions and20s limits
+remain. Exact disposable Node/PG/network/source cell removed after real exit0.
+This supersedes only the earlier in-progress affected-case observations below;
+whole-file expiry remains recorded and Core broader normalR3/install/recovery
+are not closed by four cases. Full08/09NOT_MET; same original custody retained.
+
+**21Oct10:00UTC current override:** actual Core normalR3 ended with8781PASS,
+1C5 test-timeout FAIL/3SKIP, not a passing installed repair. Edge prepares an
+assertion-preserving test-only split on an isolated copy; Core owns application,
+normal commit and installation. No timeout/TTL/authority change or peer source
+edit. The acknowledged09:00–09:30UTC recovery-only window expired without
+dispatch; original source remains retained. Require a new exact matched window
+after genuine qualification, never renew grants/session/head implicitly.
+See main original08 C5-DRAFT task and single connected return; full08/09NOT_MET.
+
+**10:01UTC superseding preflight:** Core already implemented the stronger
+three-purpose parameterization plus separate legacy case, currenttestSHAc6022e03.
+Edge cancelled its stale draft BEFORE transfer/source-copy/test; no overwrite,
+duplicate job or disposable SGP resource. Independent assertion parity accepted;
+await actual Core focused/normalR3/install results, not fixture/full08 PASS.
+
+Edge has delivered10:30–12:00UTC21Oct original-key recovery-only availability;
+Core's exact matching ACK and qualified pins are required before dispatch.
+This does not renew session/grant/head/trust or permit new ISSUE/ENTER/read.
+
+Actual Core focused run ended10:01:31/exit1 BEFORE tests (readonly Vite config
+cache EROFS). Edge delivered installed-supported loader/writable disposable
+cell correction; zero C5 cases executed, no PASS inferred. Core owns retake.
+
+**10:22UTC Edge canonical qualification:** tscbuild actually PASS;600s outer
+whole-file run expired without file verdict, so case counts UNKNOWN/restore
+NOT_RUN. Exact own cell was cleaned. Retake targets four changed C5 cases,
+unchanged20s limits and real PG, with build inherited only by complete matching
+input manifest. Core normalR3/full regression/install remains mandatory and
+separate. No blanket PASS or runtime recovery follows a bounded partial run.
+
 **21Oct07:55UTC latest original08 disposition:** the transport repair has54/54
 focused source tests. Prior normal R3 FAILED/INTERRUPTED; the actual six-file
 retake379/379+compile/scopedPGrestore now PASS, finished07:19:34/exit0. NormalR3

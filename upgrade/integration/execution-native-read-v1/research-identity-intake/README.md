@@ -1,5 +1,18 @@
 # Original08 — exact Research identity prerequisite
 
+## Latest consumer entrypoint —21Oct
+
+The20Oct finite-source closeout below is historical and MUST NOT be treated as
+the current21Oct custody/runtime status. Read the
+[single current connected return](../../../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md)
+and [main original08](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#epg10-08-hoàn-thiện-revocation-scope-và-tls)
+first. Core00973435311 is installed; its later transport-close repair is not.
+One21Oct original lease remains unresolved, source28446/SDK retained. Genuine
+historical retained READ/SSE does not prove active revocation, fresh publication,
+public Cloudflare/human security or full08/09. Do not repeat completed identity
+installation or replay expired grants/session/head/windows. Read scope covers
+Paper/Sandbox/Canary/Live; each actual qualification requires current inputs.
+
 ## Current finite-source closeout —20Oct04:31UTC
 
 [Actual closeout](finite-source-closeout.json) supersedes the READY snapshot

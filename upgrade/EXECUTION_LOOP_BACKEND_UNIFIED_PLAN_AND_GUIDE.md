@@ -10150,22 +10150,30 @@ Owned7.365GB test copies/cache/logs removed;12HK+5SGP tuples unchanged/restarts0
 **Vòng triển khai độc lập lịch sử16/10:** COMPLETE — **Vòng2 actual provider:** IN_PROGRESS_OWNED_IMPLEMENTATION; connected acceptance OPEN.
 **Đi tiếp:** GO cho phần09 độc lập sau khi09 được duyệt; không đợi đóng toàn bộ08.
 Đây không phải COMPLETE toàn phase hoặc quyền mở runtime chưa được nghiệm thu.
-**Latest actual21Oct07:55UTC:** Core00973435311/image9cf5 is installed on the
+**Latest actual21Oct10:26UTC:** Core00973435311/image9cf5 is installed on the
 isolated Research backend; genuine scoped retained READ/SSE has3snapshot+
 4frame exact independent TS/Core terminal/ACK matches. Genuine expired-session
 denial401 created zero native admissions. Active STREAM revoke exposed one
 original CoreADMITTED/sourceISSUED obligation (retained8/unresolved1), not PASS.
 Core's transport lifecycle repair has54/54 focused source tests; prior normal
 hook FAILED/INTERRUPTED (seven API cases/four files). Actual six-file retake
-finished07:19:34/exit0:379/379PASS+compile/scopedPGrestore. NormalR3 retake is
-physically running (bash262325/Node379b7c8); no fixed commit/build/CLI yet.
+finished07:19:34/exit0:379/379PASS+compile/scopedPGrestore. NormalR3 physically
+ended08:29:49:8781PASS/1C5-timeoutFAIL/3SKIP. Core's current assertion-preserving
+parameterized testc6022e03 is source-only; its custom focused runner ended
+10:01:31/exit1 BEFORE tests (readonly Vite cache EROFS), not a C5 assertion
+result. Edge independently qualified the four changed current-source C5 cases:
+4PASS/0FAIL/297explicit-filter-SKIP (301total), scopedPGrestore PASS. Build
+inheritance is backed by1951/1951 matching public-input hashes. Earlier bounded
+whole-file expiry remains recorded, not erased; Core broader normalR3 is still
+running, with no qualified repaired commit/image/install or full-file claim.
 The first focused queue06:13–06:43 was NOT_RUN, not another failed test.
 Independent review confirms the two-anchor expiry fixture hazard remains in
 the unmodified fixture; a passing retake neither fixes it nor proves the earlier
 failure cause. Exact06:54:31 TS readback still shows original ISSUED/event22/
 terminalNULL; no fresh recovery/ACK is inferred.
-ACKed09:00–09:30UTC21Oct recovery-only (separate scheduling ACK below)
-window retains original28446 SDK, not renewed grants/session/acceptance/ISSUE.
+ACKed09:00–09:30UTC expired without dispatch. Edge offered10:30–12:00UTC21Oct
+recovery-only availability; Core matching ACK/qualified pins are still needed.
+Retain original28446 SDK, not renewed grants/session/acceptance/ISSUE.
 Full08/09connected remains NOT_MET, no restart/cleanup of original custody.
 [Single current connected return](evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md)
 and latest §23 journal supersede the historical undeployed observations below.
@@ -28479,6 +28487,201 @@ No new semantic coverage is inferred from repeated unchanged product tests;
 the new connected evidence is the three TLS denials only. Keep peer changes,
 all baseline/rollback images, original28446 custody, passive observer and PKI
 drafts; no push/merge or hostedCI. Full08/09 status remains NOT_MET.
+
+**21Oct10:00UTC /17:00Asia/Saigon original08 C5 unblock preparation:**
+Core normalR3 physically ended08:29:49: 8781PASS/1FAIL/3SKIP in439files
+(436PASS/1FAIL/2SKIP), logSHA1b7777dcc946f7e4a5e1a72884294d44b9e770ebae70518759d2b9d4e3b03e62.
+The one C5 case took20503ms against the unchanged20000ms limit; no failed
+business predicate or proven deadlock. Core HEAD73435311 and staged transport
+repair remain separate from an installed release. The09:00–09:30UTC recovery
+window expired without dispatch; no session/grant/head/window renewal inferred.
+Original source7d/28446 remains retained; passive witness48128 ended09:35/exit0
+with zero events, NOT physical source exit.
+
+Runnable task C5-DRAFT, within original08: prepare the minimal test-only split
+on a source-only isolated copy, pinning original elp204-positive-parent.spec.ts
+SHA4f89b85d73d36a44b70f4fb5e3adf052c4f5c59b76b25724b585ab4ed049c965.
+Preserve all six purpose×anchor denials, legacy absence/no-SQL assertions,
+finally restoration, genuine fixture setup and existing20s limits; do not
+change product/TTL/authority. Reuse scripts/control-api-test.sh for affected
+file, TypeScript build and scoped PGrestore. No peer checkout/index edits,
+commit/install, runtime HTTP, source recovery, credentials or production DB.
+Only the owning Core agent may apply/land/install the reviewed patch.
+SGP140136296448B free/665811062784B (>20%): no image build; bounded source-only
+copy and existing pinned Node/PG images, Node3CPU/3GiB + PG1CPU/1GiB, internal
+network/no host ports, exact per-run names/trap cleanup. Correctness under34b,
+not a capacity claim. Rollback: discard only the isolated source/cell after
+physical terminal, preserve bounded public patch/result and original custody.
+
+Task map: primary owns patch/publication/main/guide/return and integration;
+operator_cleanup_finish owns isolated source copy/test/C4 only (no peer files,
+Git or journal); read_binding_review independently checks assertion/timeout
+parity (read-only); data_layer_survey checks new producer returns read-only.
+Three existing agents reused, zero new agents; one writer per file. Acceptance:
+affected file/build/restore actual PASS, unchanged peer pins and exact cleanup;
+handoff remains SOURCE_ONLY/AWAITING_CORE_REVIEW, not normalR3 or full08/09PASS.
+If timeout remains, parameterize by purpose while retaining both anchor checks
+and20s per case; no repeated identical failing run or timeout increase.
+
+Prior80abaaf24e70f0393695bc8c192f089ce4a3739b actual normal hook exit0:
+130contracts/717API/build/scopedPGrestore PASS. Its09:50:23 C4 receipt
+`/home/bobby/secure/edge-allmode-tls-docs-hook-8TvL9Uh1/closeout.json`,
+SHA78ef66b8165cf48a4518e1894a4841a696304789bf4e93c17d1f4731e62686f8,
+confirms only owned image20b8ea40/test1082848 removed nonforce; exact test
+containers/network/tmp absent, all102baseline images/406cache IDs retained.
+Current108image rows/446cache records include peer additions, not pruned.
+Free241278873600→241262501888B is shared-host movement.40/42baseline tuples
+exact; a prior foreign test ended and known Paper worker sameID/image/config
+restart3623→3863 observed only. Original28446 and serving services unchanged.
+No push/merge/hostedCI. Actual new C5 result will be journalled before closure.
+
+**10:01UTC collision avoidance / Core C5 producer now runnable:** fresh
+preflight caught Core's own concurrent implementation before copying/testing.
+Core test nowSHAc6022e0352551a2c7d0fdea541b0527e7b85cce08ea2d971bb6b89299a5362bc,
+three it.each purpose cases×two anchors plus separate legacy case. Independent
+review ACCEPTS assertion/finally/fixture/20s parity. Core's recorded task and
+actual focused runner863719 already own this qualification. Cancel C5-DRAFT
+application; discard only the unused local42be90b2 patch, never transferred or
+applied. ZERO own SGP source copies/testjobs/containers/networks/images/cache
+or production mutations, so no disposable cleanup required. Do not duplicate
+Core's test or overwrite its WIP/index. Reuse actual current Core result after
+physical terminal; Core owns normalR3/image/install and new exact window return.
+This supersedes the earlier conditional isolated-copy execution, not its safety
+invariants. Full08/09 remain NOT_MET; next independent work is matched pins/
+all-mode issuer/config intake, then original-key recovery when qualified.
+
+**10:03UTC exact scheduling return delivered:** Edge offers21Oct10:30–12:00UTC
+(17:30–19:00Asia/Saigon) original-key RECOVERY_ONLY availability, delivered to
+the existing Core task/Unified with current C5 review. Core must explicitly
+match and return qualified source/helper/image/config before dispatch. This is
+scheduling only, not session/grant/head/trust/acquisition/newISSUE/ENTER rights.
+Same lease785387ba/attempt07becd72/source/binding/artifact/idempotency only;
+if unqualified/UNKNOWN retain custody, no forced stop or fake terminal/ACK.
+No measurement lock held, actual source-exit/SDKdrain/CoreACK still required.
+Delivered request is not a Core ACK; no runtime operation has occurred.
+
+**10:05UTC actual focused terminal / actionable harness finding:** Core runner
+863719 actually ended10:01:31/exit1 BEFORE tests, EROFS at readonly
+/cell/node_modules/.vite-temp/config bundle; zero executed C5 cases, not an
+assertion failure/PASS. LogSHA579bac272c8cbfef3e2e782b456bb21bca7e800c723c74b9d131313220e8357b.
+Reviewed installed Vitest CLI/config loader plumbing; delivered concrete
+--configLoader runner proposal (or existing writable disposable harness) to
+Core's original task/Unified. Keep source/dependency mounts read-only; no shared
+cache write, assertion/timeout change or identical failing rerun. Core owns
+corrected focused/build/restore/normalR3/install, Edge no duplicate test. Full
+08/09NOT_MET, same original custody/qualification/window prerequisites.
+
+**10:06UTC runnable C5-QUALIFY / matched current owner source:** Core's custom
+focused run is physically over and executed zero cases. To avoid leaving owned
+qualification preparation idle, Edge now reuses the UNCHANGED canonical
+scripts/control-api-test.sh in an isolated source copy with current reviewed
+Core testSHAc6022e03 (NOT discarded42be draft). Pin Core73435311, transport
+65d3d8ff/054abcaa, testc6022e03 and lock81f9975e; copy only required public
+source/contracts/templates, no .git/ENV/secret/runtime data or peer edits.
+Same operator_cleanup_finish owns the isolated cell and C4; primary integrates
+result/coordination, no new agent/framework. Actual affected-file/build/restore
+PASS is the target; no normalR3/install/production or absolute-capacity claim.
+Reuse existing pinned images, Node3CPU3GiB/PG1CPU1GiB, internal network/noports,
+short300s test-cell correctness window, exact suffix and physical-exit cleanup.
+No timeout/assertion/TTL changes. If source pin changes before copy, stop before
+test and review; if test fails, report exact cause before another run. Core's
+last EROFS result remains retained. Deliver this explicit small qualification
+scope to the existing Core task before launch to avoid accidental duplicate
+normal runs; no claim of consumer ACK. Rollback exact disposable copy/cell only.
+
+Original-source observation preparation: open one finite metadata-only Docker
+die/destroy observer for exact7d03481095835ab0b4cc356a51e55da6d403fa007df7a3e16a16a0884cf622fb,
+bounded through12:05UTC, output only Actor.ID/action/time/exitCode in private
+evidence. It creates no container/listener/grant, performs no source control
+or recovery, and is not a proof until actual event/process terminal is observed.
+Preserve the original SDK/process; do not fabricate terminal from idle pools.
+No measurement lock or CPU-heavy workload; stop only the observer at its own
+finite deadline, retain bounded metadata for Core's original-ACK correlation.
+
+Observer actually started10:06:32UTC, session73358/private
+`/home/bobby/secure/edge-core009-exit-witness-ESAqICDs/events.actor-id.jsonl`,
+Actor.ID filter, historical09:35 through finite12:05. It remains observation
+only, no outcome/physical-exit assertion until real events and final witness.
+
+Harness safety correction before launch: canonical PG starts with-d but lacks
+--rm (its exact EXIT trap already removes it). In the DISPOSABLE source copy
+only, add --rm to that one PG run line to obey34b. All other harness bytes,
+assertions/timeouts/build/restore remain unchanged; pin the one-flag diff and
+original/copy hashes. Never change owning Core harness/index. This supersedes
+the earlier literal UNCHANGED wording only for auto-removal plumbing, not test
+semantics or resource caps. Exact trap still checks absence after terminal.
+
+Publication preparation for this coherent source-intake/qualification batch:
+fresh HK baseline10:11:43 at
+`/home/bobby/secure/edge-c5-qualification-docs-hook-z3JG2MAz/preflight.json`,
+SHA34dcc607e87c1a2efa94d71e747d0336ea01c0d1c43b586a02fb98869c8428f5,
+62running tuples/108image rows/456cache records/free239460200448B; peer hashes
+match. No hook started yet. Reuse the prior exact process witness/C4 helpers,
+changing only this evidence directory and baseline hash. After actual focused
+result, normal tracked hook onCPU0,1/nice15 and Bobby commit stage only owned
+main hunks/guide/connected return/identity README. Exclude peerC5 ten-line main
+hunk, binding packet11ce1e87 and three original WIP files. No push/merge/hostedCI.
+All operational/rollback/source28446 images retained; fresh quiet-build guard
+precedes removal of any exact new owned unreferenced hook image. Repeated
+unchanged HK product tests are corroboration, not new C5/production coverage.
+
+Coordination route correction: actual C5 implementation/operator is now PM's
+approved cross-project task §58.311, not just the canonical Core mailbox.
+Deliver one additive Edge-owned status/window locator in that existing PM
+task; no PM code/index/runtime/evidence copy or rewrite of peer paragraphs.
+Core's normalR3 has started concurrently (no terminal inferred); the focused
+Edge result overlaps its affected file and must not be double-counted. Preserve
+Core source freeze; do not write its staged candidate Unified/sync while hook
+runs. Actual current Core and Claude work remain owned by their assigned agents.
+
+**10:22UTC actual canonical attempt / bounded retake decision:** isolated
+whole-file attempt physically ended after601.670s/inner exit124; actual tsc
+PASS, no Vitest file verdict, scoped restore NOT_RUN. This is outer test-budget
+expiry, NOT a C5 assertion FAIL/PASS. Source cell37836538B and exact Node/PG/net
+are absent; private summarySHA b839cf0954f236ac3b4153ca7aacdf6fa839a66d6a6abc7bf995508b5dfa7594
+at `/home/bobby/secure/epg10-08-c5-qualify-z2z5c592/qualification-summary.json`.
+Core HEAD/three target file pins/lock still match; peer staged-index evolution
+must be reported separately, not overwritten or attributed to Edge.
+
+Next runnable qualification targets exactly the four changed C5 cases (three
+parameterized purposes×both anchors, plus legacy absence), verbose reporter,
+using the same disposable canonical harness/caps with600s outer bound. This is
+an impact-filtered retake, not an identical whole-file rerun or raised20s limit.
+Inherit the actual unchanged build ONLY if the complete public build-input
+manifest matches the first snapshot; otherwise build remains required. Keep
+real PG/HTTP/acceptances, source/dependency isolation and canonical restore.
+Only disposable harness changes: PG--rm, explicit C5-name filter/reporter and
+documented matching-source build inheritance. No product/peer changes, new
+framework, dropped assertion or pretend whole-file regression PASS. Core's
+actual normalR3/full-file/commit/image/install gates remain required. Operator
+owns exact retake resources/cleanup; primary owns evidence/coordination.
+
+**10:26UTC actual affected-case qualification / cleanup:** current owner test
+c6022e0352551a2c7d0fdea541b0527e7b85cce08ea2d971bb6b89299a5362bc:
+4PASS/0FAIL/297explicit-filter-SKIP,301total. Purpose cases took4862/4278/4521ms,
+legacy2135ms, unchanged20s deadlines; Vitest35.89s, whole cell56.099s/exit0.
+All six purpose×anchor denials and legacy absence/no-SQL assertions remain.
+Canonical scoped56-table/four-access-digest PostgreSQL restore PASS. Actual
+tscbuild from the preceding attempt is inherited only because1951/1951 current
+public input hashes still match after testing; peer index evolution is not an
+Edge edit or source-content drift. Core normalR3/full-file/commit/image/install
+remains separate and mandatory. This result closes only the affected-case
+qualification, not original recovery, active-revoke or full08/09 acceptance.
+
+Bounded evidence on SGP:
+`/home/bobby/secure/epg10-08-c5-filtered-jkvso0_t/filtered-result.json`,
+SHA3abdf722d3f8ce8c81973226bc160df9404dad513e482dc9c05ba20f6c44cfe1;
+logSHAb61ff9d0eacac4170b036fed36a700c1b5775eabebc569ce950f8f7025e0fa68.
+Physical controller exited0; exact own Node91b9825c/PG053f56b6/internal network/
+tmp/source copy absent;1951files/37836695B removed. Free139721613312→139764088832B
+is shared-host movement, not exclusive reclaimed-byte proof.63/64baseline
+runtime tuples exact; known foreignVN30 sameID/image/config restart458→459
+observed only, without action or causal attribution. All334baseline image IDs/
+400rows retained, BuildKit3929 unchanged; no image/cache actions/build/pull.
+HK created0Docker resources; only private bounded controllers/evidence retained.
+Original28446 source/SDK and passive finite witness remain intentionally held
+for genuine same-key settlement/CoreACK/physical exit, not disposable garbage.
+No source/index/credential/HTTP/runtime/DB mutation, no push/merge/hostedCI.
 
 
 
