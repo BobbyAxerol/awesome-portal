@@ -1036,6 +1036,17 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Counted connected schedule,21Oct18:29UTC:** existing baseline/post-revoke
+driver plus independent before/after controls require7positive HTTP+Qrelation,
+B>=2 actual server frame preparations over initial/resumed STREAM, and M actual
+maintenance admissions. With real historic9 and reserve20, reviewed cap must
+satisfy C>=36+Q+B+M (minimum38, not an approved setting); current32 leaves3.
+Core returns actual cumulative frame/drain/recovery bounds, not a client-frame
+cap or invented budget. No automatic cap/reserve change, historic purge or
+scope reduction. See [counted main journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-counted-connected-workload-20261022)
+and existing handoff§10.1. Eligible single READ remains independent; full08
+revoke/cache/cursor/SSE still requires actual current commissioning and proofs.
+
 **Connected-goal follow-through:** corrected-source normal is confirmed live
 on8ac4f553/PID3044368 (new17:37:56UTC controller), not oldf929/143. Full real
 revoke/cache/cursor/SSE remains the objective. Edge found the P22 actual-factory

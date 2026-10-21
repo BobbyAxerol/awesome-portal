@@ -29540,6 +29540,109 @@ HK used322071748608B/free196845154304B; no disk reclamation or cache cleanup
 claimed. Specific Core normalPID3044368 still live with advancing test output;
 no normal/image/install/connected PASS inferred. No push/merge or hosted CI.
 
+<a id="original08-counted-connected-workload-20261022"></a>
+### Original08 — counted connected workload —22Oct01:29ICT /21Oct18:29UTC
+
+**IN_PROGRESS / full08 and09 NOT_MET.** Core's current normal/image return
+explicitly requests Edge's counted workload before dispatch. This is runnable
+Edge work under the original approval, not another phase or generic approval.
+Owned scope: append the exact existing-driver case envelope to the existing
+[Core handoff §10.1](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#counted-connected-workload-20261022),
+align the detailed08 guide and deliver through existing Core readpoints.
+No product/test/runtime/config/schema/grant/session mutation, peer-source edit
+or new framework. Existing goal, custody/UNKNOWN/official-revoke/cleanup and
+private-data invariants apply. R0 tracking/link/diff checks; no redundant build.
+Rollback is withdrawal of an unexecuted schedule, not deletion of history.
+
+Actual driver inspection corrects the provisional six-call estimate: baseline
+deployments/repeat/snapshot3, post-STREAM-revoke deployments AND snapshot2,
+independent unaffected scope before/after READ revoke2 = **7 positive HTTP
+admissions**; separately selected relation adds Q=1, otherwise Q=0 and honest
+unavailable/not-selected disposition. Positive cursor resume and active-SSE
+revoke use two sequential genuine subscriptions, requiring B>=2 actual server
+preparations in total, including queued/in-flight/unseen work. Client frame
+limit is not a producer-side bound. Four expected pre-admission denials must
+be checked against real counters, not assumed free after the event. Official
+maintenance/session/revoke operations sharing the population add M, which
+Core must enumerate. No fabricated independent actor/scope or reset of rows.
+
+With independently observed historic H=9 and recovery reserve R=20,
+new N=7+Q+B+M; required retained cap C>=36+Q+B+M (minimum38 for Q=0/B=2/M=0).
+The current C=32 leaves3 and cannot run this complete matrix. This is an exact
+**target-review input**, not permission to set38, lower reserve, purge rows or
+skip cases. Core owns reviewed C/R/B/M and the actual eligible independent
+scope/current grants; Edge sequences originals with terminal/counter readback.
+If those inputs support only a subset, record that subset without full08 PASS.
+Unexpected admission/UNKNOWN stops new traffic and preserves original custody.
+Eligible current READ still does not wait for optional cache observer/fleet/
+financial/all-mode-PKI work. Full cache case does require actual installed P22
+factory/private sink; source-only observer qualification is insufficient.
+
+At18:24:44UTC the same normal timeoutPID3044368 remains live, elapsed2808s,
+advancing logs through native runtime/deployment/paper/RS03 cases. No final
+normal/image/installed result inferred. Core's review identifies forward
+migrations135–149 from current134; Core owns quiesce/backup/official forward
+install and unchanged custody schema, not an Edge SQL workaround. Expired
+16:30–17:00 draft remains unarmed; no source listener or short-lived rights
+opened during this wait. This slice creates no disposable resources, Docker
+images/cache, secret/session or DB rows; cleanup NO_ACTION_NEEDED. Keep active
+and named rollback resources; no broad cleanup while Core gate is active.
+Canonical source54c6f5f3, featuree055fb95, stable release and actual3Edge/Core
+image/config/service tuples from the preceding journal remain unchanged.
+No push/merge/hosted CI. Next: Core returns actual gate/image plus reviewed
+counted target; match a fresh commissioning window and run original08 cases.
+
+Actual delivery18:27:27UTC: full handoff§10.1 is4416bytes/SHA256
+9e7291a3c72d4ce2858e3b729e1d435f3756d2c0f99e15cd0eafd495d469ceaa;
+locator875bytes/SHA08ea5a5e70f2a7200a259929b6e32ef977e8300b261bd7213fb462ccf4a8850a
+reached existing Core task/Unified/sync;4/4exact-prefix/readbacks PASS. Draft
+18:29 heading is a preparation label, not the actual delivery time. Core's new
+counted-window/capacity packet was consumed fully: source confirms exact
+same-key recovery/ACK/official revoke M=0; no redundant request for that input.
+The proposed lean schedule reuses one real snapshot/cursor and existing
+Transport/read_sse. If Core elects two whole baseline CLI specimens instead,
+include duplicated baselines and both independent controls:10+2Qpositive HTTP,
+B>=3, C>=39+2Q+B. No confusion between these different workloads or claim
+that8/2client frames bounds server custody. R0 tracking EXIT0/diff check PASS;
+no runtime/authority/test-resource mutation. Source normal remains live at
+18:28UTC with advancing verdicts, not a completed normal or installed image.
+
+Reconciliation989bytes/SHA256
+2baf6fad7fc8ab8dd3c7edcef312e886c65f71bca603a7d131448d82e1f66362
+actually delivered18:30:21UTC to the same4readpoints, prefix/readbacks PASS.
+Verification:R0 per Core campaign§10.10d: execution-tracking EXIT0, indexed
+new anchors/links PASS, staged diff check PASS. Exactly3owned Markdown paths,
+142insertions before this receipt; peer10line main/56line binding diff and
+three egress/test/feasibility hashes remain unchanged. No code gate bypass,
+new test/build, CI use, source/session/grant activation or garbage created.
+Normal18:30:46UTC has363completed file verdicts/9927tests in those files,
+still no terminal; partial progress only, never a final gate PASS.
+
+**Core530989f0 actual ACK / gate disposition18:32UTC:** read the new counted
+capacity return and updated normal/image packet. Core explicitly ACKs the
+selected seven-HTTP/two-subscription original08 schedule; the earlier two-full-
+baseline formula is not another mandatory suite. Thus the missing Edge
+case-census input is delivered/adopted, not left as external debt. Target
+frame/cap review and actual independent scope remain Core's finite binding
+inputs. Core reports4actual in-progress normal failures in2unchanged files:
+elp207-instance-registration-transaction(1) and facade(3). Timing/resource
+starvation is unproven; retain actual stacks/terminal and diagnose/retake only
+the affected files at the frozen source after normal/cleanup. Edge does not
+waive the gate, launch a duplicate suite or mint rights under the old image.
+Builder correctly requires a qualified gate disposition; image not ready.
+Exact normalPID3044368 still live18:32:58UTC, no normal-exit terminal yet.
+
+Read-only runtime reconciliation18:32UTC: canonical54c6f5f3 and feature58ddbe69,
+3Edge/projection workers d6aa7a51,3Source Proxy aa14e21c and3projection PG
+cf78e766 unchanged. Serving Core4095/9cf5/config423573a8/restart0 unchanged.
+Stable a9b10385 release and retained operationalSDK28ea/rollback resources
+untouched. HK used316978950144B/free201937952768B/62%; shared-host movement,
+no claimed reclamation or owned disposable resource. No broad GC during Core
+qualification. Full08/09NOT_MET; next actual Core gate repair/qualified image
+and reviewed finite target, then Edge binds and runs original08 without
+another generic approval. This is a live owning pipeline wait, not source-
+only readiness or a reduced goal. Documentation commit stays local/unpushed.
+
 
 
 
