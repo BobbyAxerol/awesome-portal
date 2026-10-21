@@ -164,6 +164,28 @@ describe("CardsTable scroll region (UXM-10 F-5, scrollable-region-focusable)", (
     expect(region.className).toBe("exec-cards-wrap");
   });
 
+  it("names the cut-off side in data-more (end at the start of the scroll), and nothing while the table fits", () => {
+    overflow(900, 500);
+    const { container, unmount } = table({ onRowOpen: () => undefined });
+    const wrap = container.querySelector<HTMLElement>(".exec-cards-wrap")!;
+    expect(wrap.getAttribute("data-more")).toBe("end");
+    wrap.scrollLeft = 200;
+    fireEvent.scroll(wrap);
+    expect(wrap.getAttribute("data-more")).toBe("both");
+    wrap.scrollLeft = 400;
+    fireEvent.scroll(wrap);
+    expect(wrap.getAttribute("data-more")).toBe("start");
+    unmount();
+    overflow(500, 500);
+    expect(table().container.querySelector(".exec-cards-wrap")!.hasAttribute("data-more")).toBe(false);
+  });
+
+  it("fades the cut-off edge in the stylesheet, and only while data-more says there is more", () => {
+    const css = readFileSync(join(__dirname, "css/cards.css"), "utf8");
+    expect(css).toMatch(/\.exec-cards-wrap\[data-more="end"\]\s*\{[^}]*mask-image/);
+    expect(css).toMatch(/\.exec-cards-wrap\[data-more="both"\]\s*\{[^}]*mask-image/);
+  });
+
   it("stays a plain div when it scrolls but a row is focusable (the rows already take focus)", () => {
     overflow(900, 500);
     const { container } = table({ onRowOpen: () => undefined });
