@@ -118,6 +118,21 @@ to the real Control API, the real login returns, and the frontend is unchanged. 
 screens but let the other paths reach a healthy Control API, set `FIXTURE_WEB_UPSTREAM=control-api:4000`
 in the env file instead of turning the lane off.
 
+## Cutover một route thật, từng bước (chưa áp dụng; thiết kế)
+
+Muốn một route Execution đi tới Core thật qua 8095 mà **không** gỡ overlay fixture: mỗi bước thêm đúng một
+`location =` (khớp chính xác, thắng prefix `^~ /api/v1/execution/`) vào một tệp **không theo dõi**
+`deploy/research-preview/nginx/fixture-bff/real-routes.conf` (thư mục này đã mount `:ro` và `portal.conf` đã
+`include /etc/nginx/fixture/*.conf`), rồi `nginx -t` và `nginx -s reload` trong `portal-web`. Không `compose up`, không
+recreate, không đụng `control-api`. Khối mẫu, upstream biến + `resolver` (để nginx vẫn khởi động khi `control-api` dừng),
+dấu `X-Real-Route` và timeout hữu hạn nằm ở `deploy/research-preview/nginx-real-routes.conf.example` (tệp mẫu nằm ngoài
+thư mục mount nên không thể bị include nhầm). Rollback: xóa `real-routes.conf`, `nginx -t`, reload. Chỉ bật khi đủ điều
+kiện: Codex chấp nhận route, cửa sổ hữu hạn Core/Edge/Claude khớp, cookie phiên do Core cấp, không tăng cap; heartbeat
+native giữ admission nên ca phải ngắn. Các đường danh tính (`/api/auth/context`, `/api/admin/access/self`, `self-context`,
+`effective`) đã là `location =` trong `fixture-bff.conf`, nên KHÔNG thể ghi đè bằng include. Phản hồi từ route đã chuyển
+mang `X-Real-Route: core` và không có `X-Fixture-Overlay`; mọi thứ khác trên trang vẫn là fixture (banner còn). Kế hoạch
+đầy đủ và danh sách biên nhận: `upgrade/execution_loop/evidence/ELP2-10/CLAUDE_CONSUMER_CONNECTED_PLAN_2026-10-21.md`.
+
 ## Turn it off later
 
 `scripts/research-preview/preview.sh fixture off`, then `scripts/research-preview/preview.sh up`. `portal-web`
