@@ -113,9 +113,12 @@ test("typed denials render as the server worded them and nothing is shown as req
   ] as const) {
     await control.getByRole("textbox").fill(summary);
     await control.getByRole("button", { name: "Request review" }).click();
+    // DEBT-UXM07-034: the sentence is the dictionary's (or the server's own) words; the typed code sits behind "Server reason".
+    await expect(control.getByRole("alert")).toContainText("The server did not record this request.");
+    await expect(control.getByRole("alert")).not.toContainText(/\((unavailable|denied)\)/);
+    if (status === "403") await expect(control.getByRole("alert")).toContainText("Needs the Admin role");
+    await control.getByRole("alert").getByRole("button", { name: "Server reason" }).click();
     await expect(control.getByRole("alert")).toContainText(code);
-    await expect(control.getByRole("alert")).toContainText("The server did not record this request");
-    if (status === "403") await expect(control.getByRole("alert")).toContainText("(denied)");
     await expect(root.locator('.exec-wb-xr[data-state="recorded"]')).toHaveCount(0);
   }
   expect(writes.map((write) => write.path)).toEqual([CREATE, CREATE, CREATE]);
