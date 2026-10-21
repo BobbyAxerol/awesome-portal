@@ -34,6 +34,7 @@ import {
 } from "./eds11r-manager-relation.registry";
 import { MAXIMUM_DATA_INTAKE_V1, MaximumDataEnvironment } from "./maximum-data-intake";
 import { managerTimestamp } from "./manager-timestamp";
+import { carryCacheBranch, takeCacheBranch } from "../execution-v2/native-cache-observation";
 
 // The continuation repository emits mdc1. plus a UUID (41 ASCII bytes).
 // Reserve exactly that public size before persisting a private source cursor.
@@ -145,7 +146,9 @@ export class MaximumDataOperationService {
       { limit: query.limit, ...(sourceCursor ? { cursor: sourceCursor } : {}) },
       maximumDataDeploymentPolicy(query.environment),
     );
-    return this.translateDeploymentPage(response, query, scope);
+    const dto = await this.translateDeploymentPage(response, query, scope);
+    carryCacheBranch(response, dto); // in-process WeakMap move only; never part of the DTO
+    return dto;
   }
 
   /**
@@ -186,7 +189,9 @@ export class MaximumDataOperationService {
       managerRelationOperationPolicy(operation, query.environment),
       { limit: query.limit, ...(sourceCursor ? { cursor: sourceCursor } : {}) },
     );
-    return this.translateRelationPage(response, operation, query, scope, binding.profileId);
+    const dto = await this.translateRelationPage(response, operation, query, scope, binding.profileId);
+    carryCacheBranch(response, dto); // in-process WeakMap move only; never part of the DTO
+    return dto;
   }
 
   /** PRIVATE selected consumer preparation. Genuine selected source and actual
@@ -246,7 +251,9 @@ export class MaximumDataOperationService {
     const privatePrincipal={...principal,nativeEpochDigest};
     const dto=operation.kind==="DEPLOYMENTS"?await this.prepareDeploymentData(privatePrincipal,query):
       await this.prepareRelationData(privatePrincipal,relation!,query);
-    return {decision,dto,nativeEpochDigest};
+    // One-shot private observation of the ACTUAL proxy branch; absent unless
+    // the proxy noted one. Not part of dto, authority or any cache key.
+    return {decision,dto,nativeEpochDigest,cacheBranch:takeCacheBranch(dto)};
   }
 
   private async authorizeOperation(principal: MaximumDataOperationPrincipal, operation: ManagerRelationOperation,

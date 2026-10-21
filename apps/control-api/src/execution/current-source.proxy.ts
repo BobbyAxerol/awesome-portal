@@ -21,6 +21,7 @@ import {
   SharedReadCacheValue,
   SharedReadScope,
 } from "./shared-read.repository";
+import { noteCacheBranch } from "../execution-v2/native-cache-observation";
 
 export const CURRENT_SOURCE_ENVIRONMENTS = ["paper", "sandbox", "live", "canary"] as const;
 export type CurrentSourceEnvironment = (typeof CURRENT_SOURCE_ENVIRONMENTS)[number];
@@ -1038,10 +1039,12 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
     const shared = await this.sharedReads.begin(scope);
     if (shared.kind === "CACHE_HIT") {
       this.increment(profile.profileId, "cacheHits", telemetryOperationId);
-      return this.composedResponse(
+      // Private in-process branch note only (WeakMap carrier, never in the
+      // response JSON, cache value or cache key; never throws).
+      return noteCacheBranch(this.composedResponse(
         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
         shared.value, "HIT", gatewayContext,
-      );
+      ), { cache_state: "HIT", cache_identity: shared.cacheKey });
     }
     if (shared.kind === "FOLLOWER") {
       this.increment(profile.profileId, "coalescedFollowers", telemetryOperationId);
@@ -1051,10 +1054,10 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
           availability: "DEGRADED", retryable: false,
         });
       }
-      return this.composedResponse(
+      return noteCacheBranch(this.composedResponse(
         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
         value, "COALESCED", gatewayContext,
-      );
+      ), { cache_state: "COALESCED", cache_identity: shared.cacheKey });
     }
     if (shared.kind === "DENIED") {
       this.increment(profile.profileId, "admissionDenied", telemetryOperationId);
@@ -1131,10 +1134,10 @@ export class ExecutionCurrentSourceProxy implements OnApplicationShutdown {
       }
       const value = await this.sharedReads.complete(scope, shared, source);
       sharedCompleted = true;
-      return this.composedResponse(
+      return noteCacheBranch(this.composedResponse(
         requestedEnvironment, sourceEnvironment, screenId, profile.profileId,
         value, "MISS", gatewayContext,
-      );
+      ), { cache_state: "MISS", cache_identity: shared.cacheKey });
     } finally {
       release();
       if (!sharedCompleted) {

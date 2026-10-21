@@ -17,6 +17,7 @@ import { privateOwnerRevocation } from "./manager-domain-revoke";
 import type { AccessTrustProvider } from "./access-trust";
 import type { ExecutionAccessService } from "./access.service";
 import { NativeManagerReadConsumer, type NativeManagerRealtimeOptions } from "./native-manager-consumer";
+import type { NativeCacheObserver } from "./native-cache-observation";
 import type { MaximumDataOperationService } from "../execution/maximum-data-operation.service";
 import { isManagerRuntimeTrustDelegate } from "./manager-runtime";
 
@@ -51,12 +52,14 @@ export function nativeCoreManagerReadConsumer(
   operations:MaximumDataOperationService,
   dependencies:{executionAccessTrust?:AccessTrustProvider;currentHumanMutations?:CurrentHumanMutations},
   realtime?:NativeManagerRealtimeOptions,
+  /** Optional private cache observer; no caller installs one by default. */
+  cacheObserver?:NativeCacheObserver,
 ):NativeManagerReadConsumer{
   const binding=managerBindings.get(composition);
   if(!binding||binding.pool!==pool||
     (binding.trust!==dependencies.executionAccessTrust&&!isManagerRuntimeTrustDelegate(dependencies.executionAccessTrust,binding.trust))||
     binding.mutations!==dependencies.currentHumanMutations)return invalid();
-  return new NativeManagerReadConsumer(pool,operations,composition,binding.selections,realtime);
+  return new NativeManagerReadConsumer(pool,operations,composition,binding.selections,realtime,cacheObserver);
 }
 const invalid=():never=>{throw new CurrentHumanLeaseError("CURRENT_HUMAN_NATIVE_CONFIG_INVALID");};
 function own(value:unknown,keys:readonly string[]):Record<string,unknown>{
