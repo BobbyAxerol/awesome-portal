@@ -14337,3 +14337,10 @@ P21Claude0201df80 ACCEPT, dark projection only. Parallel source/measurement
 owner request actually delivered/hash-verified to both PM/Edge17:07:39UTC;
 SENT not source acceptance. Consumer/browser and all genuine source/budget/
 calibration/coexistence/G2 gates remain separately OPEN.
+
+**17:18UTC follow-through:** successor frozenf92936df/tree0ebb94cf original
+normal hook actually RUNNING since17:16:15 in its isolated worktree (no image/
+runtime activation). P21 and restored original M1 source review ACCEPT; narrow
+quiet delayed-wake CHANGE and actual focused receipt requested from Claude,
+with [review delta](execution_loop/evidence/ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md).
+No repeated M1/unchanged normal432 gate, financial mapping or G2 PASS inferred.

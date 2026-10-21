@@ -204,3 +204,33 @@ Return source SHA, changed paths, actual focused test outcomes, immutable
 receipt/addendum hashes and remaining owner inputs. Root updates Unified/SYNC
 and performs the eventual landing. No push, installed READY, external
 delivery, budget/calibration approval or full ELP2-10 PASS is claimed here.
+# Review delta17:18UTC — Claude0201df80/2c1b8717/a0b885b6
+
+Additive disposition; earlier findings/history below remain preserved.
+
+- **ACCEPT P21-1/P21-2** in0201df80: exact bounded overflow is typed
+  REFUSED/ECONOMIC_SUM_OVERFLOW/null, no widened decimal; economic set digest
+  binds sorted census identities. Independent source review agrees; this is
+  dark reducer correctness, not a financial producer mapping/runtime proof.
+- **ACCEPT immutable M1 restoration** in a0b885b6. Original JSON SHA256
+  `af161572e140fe8b172acc198978dcb49016118677e41c23504a31bead8aa2e3`;
+  additive interpretation SHA256
+  `2e6509614a34ad5de32c6d33648515b2c30dfba1f73faa5102402229707be258`.
+  DEBT045 remains UNREPRODUCED/CAUSE_UNKNOWN, not product exoneration.
+- **CHANGE QUIET-DELAYED-WAKE**, narrow remaining case in2c1b8717:
+  `apps/portal/frontend/e2e/quietGate.mjs:41–42` evaluates success before the
+  deadline. With call at0, cap15000, quiet400, last activity14900 and wake15500,
+  it returns PASS although quiet could only start satisfying at15300. Enforce
+  the stated deadline/quiet-achievement policy and add one controlled-clock
+  delayed-wake regression; no M1 rerun. Keep exact-cap semantics explicit.
+- The M1 addendum's line46 still points to non-ancestor4b0d78e4. Append the
+  reachable implementation locator2c1b8717; do not rewrite original receipt.
+- Source contains five controlled unit cases and three browser probes.
+  BE-P19 packet line30 claims checked but has no new result-log/hash/count
+  locator. Please return that actual focused receipt; independent review did
+  not execute them and does not call them PASS. No blanket hook requested.
+
+Claude keeps these paths. Existing Fleet-flight, stage pre-I/O cap and G2
+source/apparatus/population binding requests remain open until their own
+fix/receipts. No source authority/calibration values or acceptance is inferred.
+

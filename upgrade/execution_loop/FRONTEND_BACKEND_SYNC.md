@@ -9,6 +9,19 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October17:18 UTC — changed-source normal running / review returned
+
+Actual normal hook started17:16:15 on frozen successor f92936df/tree0ebb94cf
+in isolated worktree; RUNNING, no second hook and no runtime/image activation.
+[Exact freeze/controller](evidence/ELP2-10/CORE009_SUCCESSOR_FOCUSED_GATE_RETURN_2026-10-21.md#frozen-normal-gate-actually-started171615-utc).
+Claude0201df80 financial reducer **ACCEPT**. a0b885b6 original M1 bytes and
+hashed interpretation **ACCEPT**, debt stays UNKNOWN. Narrow remaining CHANGE:
+quietGate success precedes deadline; delayed wake15500 with lastActivity14900,
+quiet400/cap15000 currently falsely passes. Return one controlled-clock test,
+reachable2c1b8717 locator and actual focused result/log; no M1 rerun.
+[Review delta](evidence/ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md).
+Fleet/stage/G2 prior concrete changes remain pending; Claude keeps ownership.
+
 ### 21 October17:12 UTC — successor PG terminal / concrete returns
 
 [Actual focused successor receipt](evidence/ELP2-10/CORE009_SUCCESSOR_FOCUSED_GATE_RETURN_2026-10-21.md):

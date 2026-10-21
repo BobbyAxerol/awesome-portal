@@ -86,3 +86,19 @@ landing under campaign10.10c, not repeated for this Markdown return.
 No frontend API change is needed for this private writer. Claude keeps UI/
 financial/observer/measurement fixes; their fixture/browser receipts remain
 separate. No remote Git push, stable/dev/main change, command or Live activation.
+
+## Frozen normal gate actually started17:16:15 UTC
+
+After another Markdown-only canonical rebase, frozen source is
+`f92936df24e78895c2e72832d8ade387e2c83863`, tree
+`0ebb94cf7d8954acff130257025d69702f8fd1be`; owned code bytes unchanged from
+the focused receipt. Actual original `.githooks/pre-commit` is running in the
+isolated worktree under the one heavy lock. **RUNNING, not PASS**. No edits to
+that frozen tree while it runs; no second hook on Claude's branch for this SHA.
+
+Private controller/log/terminal paths are in the same `successor-focused-ClGkOc`
+directory (`run-normal.sh`, `normal.log`, `normal-started.txt`, then
+`normal-exit.txt` only once terminal). Capacity preflight20% disk and6 GiB
+MemAvailable passed:135,011,934,208 disk bytes available and9,107,644 KiB
+MemAvailable. Deadline7200s; private controller does not install/build/grant
+anything after completion. A later actual terminal and image remain required.
