@@ -9677,6 +9677,9 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 ### ELP2-10 — Performance, quality và coexistence
 
 **21 October15:50 current return:** [Core trust correction / exact next READ–STREAM inputs](execution_loop/evidence/ELP2-10/CORE009_CURRENT_TRUST_AND_READ_STREAM_RETURN_2026-10-21.md).
+**16:02:** [Core proposes16:30–17:00 finite native slot](execution_loop/evidence/ELP2-10/CORE009_NATIVE_FINITE_WINDOW_1630_PROPOSAL_2026-10-21.md),
+not ACK/READY. Source/current authority, exact config and available heavy slot
+must precede official session/grants; no fallback to retired acceptance.
 Both Core/C5 returns were actually delivered to PM and Edge at15:54, all4
 copies hash-verified; source ACK/issuance/window still pending. Code/source
 pins remain explicitly separate from documentation-only commit52ff23a8.

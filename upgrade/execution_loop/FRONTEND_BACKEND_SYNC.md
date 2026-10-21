@@ -11,6 +11,12 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ### 21 October15:50 UTC — actual trust correction / independent source review
 
+**16:02 next concrete step:** [native finite slot16:30–17:00 proposal](evidence/ELP2-10/CORE009_NATIVE_FINITE_WINDOW_1630_PROPOSAL_2026-10-21.md).
+Independent review PASS_WITH_CONDITIONS; source/operator ACK, filled genuine
+inputs and actual heavy-slot release still required. No minting while waiting,
+no automatic extension, Manager reconcile or load test. Native eligible cases
+do not wait for financial/Fleet publication; unavailable cases stay NOT_RUN.
+
 **15:54 delivery / later peer delta:** canonical commit52ff23a8 contains both
 new owner returns. Two exact SCPs delivered both Markdown files to the PM
 `upgrade/` and Edge `EPG10-08/` mailboxes; all4 readback hashes matched:
