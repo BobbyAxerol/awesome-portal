@@ -518,3 +518,49 @@ describe("state is bounded", () => {
     expect(state.resyncStamps.length).toBeLessThanOrEqual(DEFAULT_STREAM_CONFIG.maxAutoResyncs);
   });
 });
+
+describe("R8 a transport adapter ends a live stream without a frame (Fleet STREAM transport)", () => {
+  const ended = (state: StreamState<Data>, outcome: "denied" | "refused" | "gave_up" | "capped") =>
+    apply(state, { type: "transport_ended", outcome, now: T0 + 500 });
+
+  it("denied is an access end: data leaves the view, the stream closes, nothing retries", () => {
+    const run = ended(live(), "denied");
+    expect(run.state.phase).toBe("access_revoked");
+    expect(run.state.cause).toEqual({ origin: "local", code: "SNAPSHOT_DENIED" });
+    expect(run.state.data).toBeNull();
+    expect(run.effects.map((e) => e.type)).toEqual(expect.arrayContaining(["close_stream", "clear_scoped_data"]));
+    expect(reads(run.effects)).toHaveLength(0);
+  });
+
+  it.each([
+    ["refused", { origin: "local", code: "SNAPSHOT_FAILED" }],
+    ["gave_up", { origin: "frame", code: "RECONNECT_LIMIT" }],
+    ["capped", { origin: "frame", code: "STOPPED" }],
+  ] as const)("%s ends the stream as unavailable with the approved cause, keeps the data as not confirmed and reads nothing", (outcome, cause) => {
+    const run = ended(live(), outcome);
+    expect(run.state.phase).toBe("unavailable");
+    expect(run.state.cause).toEqual(cause);
+    expect(run.state.posture).toBe("not_confirmed");
+    expect(run.state.data).toEqual(DATA);
+    expect(run.effects.map((e) => e.type)).toContain("close_stream");
+    expect(reads(run.effects)).toHaveLength(0);
+  });
+
+  it("is ignored by a stream that is not live (a late call of a closed adapter)", () => {
+    const revoked = drive([frame(FRAMES.revoked(), T0 + 20)], live()).state;
+    for (const state of [initialStreamState<Data>(), drive([start()]).state, ended(live(), "gave_up").state, revoked]) {
+      const run = ended(state, "denied");
+      expect(run.state.phase).toBe(state.phase);
+      expect(run.effects).toEqual([]);
+    }
+  });
+
+  it("ends a revalidating stream and drops the read in flight", () => {
+    const revalidating = drive([frame(FRAMES.revalidate(), T0 + 2_000)], live()).state;
+    expect(revalidating.phase).toBe("revalidating");
+    const run = ended(revalidating, "gave_up");
+    expect(run.state.phase).toBe("unavailable");
+    expect(run.state.inFlight).toBeNull();
+    expect(run.effects.map((e) => e.type)).toContain("abort_read");
+  });
+});
