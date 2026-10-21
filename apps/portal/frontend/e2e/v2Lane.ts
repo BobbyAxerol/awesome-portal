@@ -52,9 +52,11 @@ export const SCREENS = [
 
 /**
  * A manager-like session for the V2 pages: the owner capabilities the portal
- * issues today plus the provisional execution names (FE-037). Without the
- * execution names every Accounts/Portfolios/Operations page correctly stays
- * fail-closed, which is the default-session case covered by the unit tests.
+ * issues today plus the four menu tokens a live self-navigation read would add
+ * (`nav:<served feature id>`, FE-037, DEBT-UXM07-005; they are no server capability and this
+ * lab session injects them as a stand-in for the projection). Without them every
+ * Accounts/Portfolios/Operations page correctly stays fail-closed, which is the
+ * default-session case covered by the unit tests.
  */
 export const MANAGER_CAPABILITIES = [
   "administration.profile_access.manage",
@@ -67,10 +69,10 @@ export const MANAGER_CAPABILITIES = [
   "governance.r1.read",
   "governance.r2.decide",
   "governance.r2.read",
-  "execution.portfolios.read",
-  "execution.accounts.read",
-  "execution.operations.read",
-  "portal.execution.blotter.read",
+  "nav:EXECUTION_PORTFOLIOS",
+  "nav:EXECUTION_ACCOUNTS_BINDINGS",
+  "nav:EXECUTION_OPERATIONS",
+  "nav:EXECUTION_BLOTTER",
 ];
 
 const ACCESS_SELF_BODY = JSON.stringify({

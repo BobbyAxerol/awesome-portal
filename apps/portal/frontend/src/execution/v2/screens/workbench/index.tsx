@@ -24,7 +24,7 @@
  * the Paper book.
  *
  * Roles: the capability set decides, never a role name. Without
- * `execution.accounts.read` the Account links are withheld and the sub-line says
+ * `nav:EXECUTION_ACCOUNTS_BINDINGS` (menu token) the Account links are withheld and the sub-line says
  * "Account not available"; the server stays the boundary.
  *
  * | Cardinality | Break point | Degradation | Server contract | Invariant | Perf budget |
@@ -39,7 +39,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import { Flag } from "../../Flag";
 import { CompactGaps, GapWhy, PanelGate, StateBoundary, UrlTabs } from "../../blocks";
 import { formatAsOf } from "../../boundary";
-import { V2_CAPABILITY, holds } from "../../shell/roleNav";
+import { V2_NAV_TOKEN, holds } from "../../shell/roleNav";
 import { resolveTab } from "../../tabAliases";
 import { withContext } from "../../urlState";
 import { stageIdentity } from "../stage/identity";
@@ -80,7 +80,7 @@ export default function PaperWorkbenchScreen({ api, deploymentId, variant = "pap
 
   // Unknown access states nothing (the link stays; the server is the boundary); a ready session without the grant narrows.
   const caps = capabilities ?? (access.kind === "ready" ? new Set(access.access.capabilities) : null);
-  const accountsVisible = caps === null || holds(caps, { allOf: [V2_CAPABILITY.accountsRead] });
+  const accountsVisible = caps === null || holds(caps, { allOf: [V2_NAV_TOKEN.accounts] });
 
   const envelope = reads.profile.phase === "ready" ? reads.profile.value : null;
   const qualityValue = reads.quality.phase === "ready" ? reads.quality.value : null;

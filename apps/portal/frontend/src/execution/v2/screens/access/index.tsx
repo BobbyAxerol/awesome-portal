@@ -300,8 +300,8 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           { label: "Who granted each item", id: "FE-015" },
         ]}
       />
-      <p className="exec-acc-caption" title={`The capability names behind Portfolios, Accounts, Operations and Blotter are provisional (${ACCESS_FE.capabilityNames}) and may change.`}>
-        Provisional capability names: Portfolios, Accounts, Operations, Blotter
+      <p className="exec-acc-caption" title={`Portfolios, Accounts, Operations and Blotter are not capabilities (${ACCESS_FE.capabilityNames}). The server publishes them as four navigation rows, and this list follows that read.`}>
+        Menu entries from your navigation read: Portfolios, Accounts, Operations, Blotter
         {others.length > 0 ? <> · Other capabilities in your session: <span className="exec-acc-code">{others.join(", ")}</span></> : null}
       </p>
 

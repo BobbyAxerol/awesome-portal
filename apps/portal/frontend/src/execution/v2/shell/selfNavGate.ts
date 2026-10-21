@@ -2,9 +2,9 @@
  * The self-navigation projection as the rail's capability input, with its session ceiling enforced (FE-057, W2/W3 of the
  * UXM-07 self-contract review; Codex 7818d563 `observed_at_ms` / `valid_until_ms`).
  *
- * `applyV2Nav` / `goToEntries` (roleNav.ts) decide from a capability set. The four temporary `execution.*` names in
- * `V2_CAPABILITY` are answered by the four self-navigation features, so an `ENTERABLE` feature is turned into the token its rail
- * rule needs. This file is that translation and nothing else; it lives beside roleNav.ts, not in it, so the V1 sidebar (which
+ * `applyV2Nav` / `goToEntries` (roleNav.ts) decide from a capability set. The four menu tokens in `V2_NAV_TOKEN` (`nav:<served
+ * feature id>`, DEBT-UXM07-005) are answered by the four self-navigation features, so an `ENTERABLE` feature is turned into the
+ * token its rail rule needs. This file is that translation and nothing else; it lives beside roleNav.ts, not in it, so the V1 sidebar (which
  * imports roleNav) does not pull the access reader into its chunk.
  *
  * The one rule the timestamps add is a FAIL-CLOSED rule. `valid_until_ms` is the end-exclusive ceiling of this actor's
@@ -19,14 +19,14 @@
  * whether the body it is handed may still be read.
  */
 import { selfProjectionExpiry, type AccessSelfNavigation, type SelfNavFeature, type SelfProjectionExpiry } from "../readers/accessSelf";
-import { V2_CAPABILITY } from "./roleNav";
+import { V2_NAV_TOKEN } from "./roleNav";
 
-/** Which rail token each self-navigation feature stands for (FE-037: the four `execution.*` names). */
+/** Which rail token each self-navigation feature stands for: `nav:` plus the feature id the server published (pinned in selfNavGate.test.ts). */
 export const SELF_NAV_TOKEN: Readonly<Record<SelfNavFeature, string>> = {
-  EXECUTION_PORTFOLIOS: V2_CAPABILITY.portfoliosRead,
-  EXECUTION_ACCOUNTS_BINDINGS: V2_CAPABILITY.accountsRead,
-  EXECUTION_OPERATIONS: V2_CAPABILITY.operationsRead,
-  EXECUTION_BLOTTER: V2_CAPABILITY.blotterRead,
+  EXECUTION_PORTFOLIOS: V2_NAV_TOKEN.portfolios,
+  EXECUTION_ACCOUNTS_BINDINGS: V2_NAV_TOKEN.accounts,
+  EXECUTION_OPERATIONS: V2_NAV_TOKEN.operations,
+  EXECUTION_BLOTTER: V2_NAV_TOKEN.blotter,
 };
 
 const NO_TOKENS: ReadonlySet<string> = new Set<string>();

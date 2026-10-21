@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { PortalRegistryDocument } from "../../../portal/contracts";
 import type { NavOptions } from "../../../portal/navigation";
 import { ENTITY_SEARCH_NOTICE, EXEC_COMMAND_PLACEHOLDER, ExecCommandBar, execGoToEntries } from "./ExecCommandBar";
-import { V2_CAPABILITY, V2_ROLE_PRESETS } from "./roleNav";
+import { V2_CAPABILITY, V2_NAV_TOKEN, V2_ROLE_PRESETS } from "./roleNav";
 
 afterEach(cleanup);
 
@@ -35,11 +35,11 @@ describe("execGoToEntries", () => {
   });
 
   it("offers a gated entry only to somebody who holds its capability", () => {
-    expect(ids([V2_CAPABILITY.accountsRead])).toContain("go:EXECUTION_ACCOUNTS_BINDINGS");
-    expect(ids([V2_CAPABILITY.accountsRead])).not.toContain("go:EXECUTION_OPERATIONS");
-    expect(ids([V2_CAPABILITY.operationsRead])).toContain("go:EXECUTION_OPERATIONS");
-    expect(ids([V2_CAPABILITY.portfoliosRead])).toContain("go:EXECUTION_PORTFOLIOS");
-    expect(ids([V2_CAPABILITY.blotterRead])).toContain("go:EXECUTION_BLOTTER");
+    expect(ids([V2_NAV_TOKEN.accounts])).toContain("go:EXECUTION_ACCOUNTS_BINDINGS");
+    expect(ids([V2_NAV_TOKEN.accounts])).not.toContain("go:EXECUTION_OPERATIONS");
+    expect(ids([V2_NAV_TOKEN.operations])).toContain("go:EXECUTION_OPERATIONS");
+    expect(ids([V2_NAV_TOKEN.portfolios])).toContain("go:EXECUTION_PORTFOLIOS");
+    expect(ids([V2_NAV_TOKEN.blotter])).toContain("go:EXECUTION_BLOTTER");
     expect(ids([V2_CAPABILITY.governanceLiveRead])).toContain("go:EXECUTION_APPROVALS");
     // The registry layer gates Profile & Access on its own enforced capability.
     expect(ids([PROFILE])).toContain("go:PROFILE_ACCESS");
@@ -74,9 +74,9 @@ describe("execGoToEntries", () => {
       ...registry,
       features: registry.features.map((feature) => (feature.id === "EXECUTION_BLOTTER" ? { ...feature, maturity: "HIDDEN" as const } : feature)),
     };
-    const offered = execGoToEntries(hidden, options([V2_CAPABILITY.blotterRead])).map((entry) => entry.id);
+    const offered = execGoToEntries(hidden, options([V2_NAV_TOKEN.blotter])).map((entry) => entry.id);
     expect(offered).not.toContain("go:EXECUTION_BLOTTER");
-    expect(execGoToEntries(registry, options([V2_CAPABILITY.blotterRead])).map((entry) => entry.id)).toContain("go:EXECUTION_BLOTTER");
+    expect(execGoToEntries(registry, options([V2_NAV_TOKEN.blotter])).map((entry) => entry.id)).toContain("go:EXECUTION_BLOTTER");
   });
 });
 
@@ -118,7 +118,7 @@ describe("ExecCommandBar rendering", () => {
   });
 
   it("lists only the permitted Go to rows", () => {
-    openBar([V2_CAPABILITY.accountsRead]);
+    openBar([V2_NAV_TOKEN.accounts]);
     const rows = screen.getAllByRole("option").map((row) => row.textContent);
     expect(rows).toContain("Accounts");
     expect(rows).not.toContain("Operations");
@@ -126,7 +126,7 @@ describe("ExecCommandBar rendering", () => {
   });
 
   it("offers a typed filter over the permitted rows, and never a row the caller cannot enter", () => {
-    const { input } = openBar([V2_CAPABILITY.accountsRead]);
+    const { input } = openBar([V2_NAV_TOKEN.accounts]);
     fireEvent.change(input, { target: { value: "operations" } });
     expect(screen.queryAllByRole("option")).toHaveLength(0);
     expect(screen.getAllByText("No result").length).toBeGreaterThan(0);
@@ -135,7 +135,7 @@ describe("ExecCommandBar rendering", () => {
 
 describe("ExecCommandBar navigation", () => {
   it("navigates to the chosen row and carries env, window and currency over, leaving screen-local params behind", () => {
-    const { input } = openBar([V2_CAPABILITY.accountsRead]);
+    const { input } = openBar([V2_NAV_TOKEN.accounts]);
     fireEvent.change(input, { target: { value: "accounts" } });
     fireEvent.keyDown(input, { key: "Enter" });
     const where = screen.getByTestId("where").textContent ?? "";

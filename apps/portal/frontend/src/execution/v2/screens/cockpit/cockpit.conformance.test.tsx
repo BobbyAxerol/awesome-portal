@@ -355,7 +355,7 @@ describe("L1 · C2 · SLA grid, separation of duty, access", () => {
       expect(deriveAccess(set).mode, [...set].join()).toBe(want);
       count += 1;
     }
-    expect(deriveAccess(new Set(["governance.r1.decide", "governance.r2.decide", "execution.operations.read"])).mode).toBe("denied");
+    expect(deriveAccess(new Set(["governance.r1.decide", "governance.r2.decide", "nav:EXECUTION_OPERATIONS"])).mode).toBe("denied");
     console.info(`cockpit C2 access grid: ${count} capability sets`);
   });
 

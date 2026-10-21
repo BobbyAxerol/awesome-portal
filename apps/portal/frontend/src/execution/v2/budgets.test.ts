@@ -464,7 +464,7 @@ const registry: PortalRegistryDocument = JSON.parse(readFileSync(join(process.cw
 const MANAGER_CAPABILITIES = [
   "administration.profile_access.manage", "administration.users.manage", "governance.canary.decide", "governance.canary.read",
   "governance.live.decide", "governance.live.read", "governance.r1.decide", "governance.r1.read", "governance.r2.decide", "governance.r2.read",
-  "execution.portfolios.read", "execution.accounts.read", "execution.operations.read", "portal.execution.blotter.read",
+  "nav:EXECUTION_PORTFOLIOS", "nav:EXECUTION_ACCOUNTS_BINDINGS", "nav:EXECUTION_OPERATIONS", "nav:EXECUTION_BLOTTER",
 ];
 
 /** The V1/V2 route doubles of the Playwright lane, plus the admin reads that live outside /api/v1/execution. */

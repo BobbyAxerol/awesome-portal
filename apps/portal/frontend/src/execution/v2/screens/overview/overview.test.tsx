@@ -428,7 +428,7 @@ describe("the context bar's scope", () => {
   });
 
   it("says nothing for a fund-wide session, and nothing while access is unknown", async () => {
-    mount({ capabilities: new Set(["execution.operations.read"]) });
+    mount({ capabilities: new Set(["nav:EXECUTION_OPERATIONS"]) });
     await loaded();
     expect(facts()).toEqual({});
     cleanup();
@@ -456,7 +456,7 @@ describe("a caller without a fund-wide read", () => {
   });
 
   it("a manager preset sees the fund", async () => {
-    mount({ capabilities: new Set(["execution.operations.read"]) });
+    mount({ capabilities: new Set(["nav:EXECUTION_OPERATIONS"]) });
     await loaded();
     expect(screen.getByLabelText("Fund figures")).toBeTruthy();
   });
@@ -494,7 +494,7 @@ describe("links (#7, M11, D9)", () => {
   });
 
   it("the manager view has no Alpha Fleet panel link and its alpha-less layout is unchanged", async () => {
-    mount({ capabilities: new Set(["execution.operations.read"]) });
+    mount({ capabilities: new Set(["nav:EXECUTION_OPERATIONS"]) });
     await loaded();
     expect(screen.queryByRole("link", { name: "Alpha Fleet" })).toBeNull();
     expect(screen.queryByRole("table", { name: "Your alphas" })).toBeNull();

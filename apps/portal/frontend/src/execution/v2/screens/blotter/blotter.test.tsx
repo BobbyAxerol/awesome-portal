@@ -645,7 +645,7 @@ describe("the context bar", () => {
     await loaded();
     expect(facts()).toEqual({ scope: "Scope: Your orders" });
     cleanup();
-    mount("/execution/blotter", { capabilities: new Set(["execution.accounts.read"]) });
+    mount("/execution/blotter", { capabilities: new Set(["nav:EXECUTION_ACCOUNTS_BINDINGS"]) });
     await loaded();
     expect(facts()).toEqual({});
   });

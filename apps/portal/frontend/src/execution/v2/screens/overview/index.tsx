@@ -51,7 +51,7 @@ import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { profileLabel } from "../../profileLabel";
 import { useContextFacts } from "../../shell/contextFacts";
-import { holds, V2_CAPABILITY } from "../../shell/roleNav";
+import { holds, V2_NAV_TOKEN } from "../../shell/roleNav";
 import { isInternalPath, useExecUrlState, withContext } from "../../urlState";
 import {
   FE_MONEY, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
@@ -175,7 +175,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const caps = capabilities ?? (access.kind === "ready" ? new Set(access.access.capabilities) : null);
   // Unknown access reads as fund-wide: every read is scoped by the server anyway, and a block that
   // says "Not published" costs nothing. A READY session without any fund-wide read gets "Your alphas".
-  const fundWide = caps === null || holds(caps, { anyOf: [V2_CAPABILITY.portfoliosRead, V2_CAPABILITY.accountsRead, V2_CAPABILITY.operationsRead] });
+  const fundWide = caps === null || holds(caps, { anyOf: [V2_NAV_TOKEN.portfolios, V2_NAV_TOKEN.accounts, V2_NAV_TOKEN.operations] });
   const reads = useOverviewReads(api, workspaceId, sseFactory, fundWide);
   // FE-013: the fund's NAV series for the URL's environment and window, through the port. One read on open and on Refresh
   // (the series is a current-only snapshot; it does not ride the 15 s composition tick).

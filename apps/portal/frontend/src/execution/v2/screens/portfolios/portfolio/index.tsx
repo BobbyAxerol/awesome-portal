@@ -38,7 +38,7 @@ import type { ExecutionApi } from "../../../../api/ports";
 import { PanelState } from "../../../../components/states";
 import { useDockMode, useDockSelection } from "../../../Drawer";
 import { Flag } from "../../../Flag";
-import { holds, V2_CAPABILITY } from "../../../shell/roleNav";
+import { holds, V2_NAV_TOKEN } from "../../../shell/roleNav";
 import { applyTab, resolveTab } from "../../../tabAliases";
 import { useExecUrlState, withContext } from "../../../urlState";
 import { freshnessFlag, humanize } from "../format";
@@ -66,8 +66,8 @@ export interface PortfolioScreenProps {
   portfolioId?: string;
   /**
    * The session's capability list. When given, a caller without
-   * `execution.portfolios.read` gets the denial, and without
-   * `execution.accounts.read` the Accounts tab and account links are off.
+   * `nav:EXECUTION_PORTFOLIOS` (menu token) gets the denial, and without
+   * `nav:EXECUTION_ACCOUNTS_BINDINGS` (menu token) the Accounts tab and account links are off.
    */
   capabilities?: ReadonlySet<string>;
   routes?: PortfolioRoutes;
@@ -103,8 +103,8 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
   const { selection, select, close } = useDockSelection();
   const mode = useDockMode();
 
-  const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_CAPABILITY.portfoliosRead] });
-  const mayOpenAccounts = capabilities === undefined || holds(capabilities, { allOf: [V2_CAPABILITY.accountsRead] });
+  const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_NAV_TOKEN.portfolios] });
+  const mayOpenAccounts = capabilities === undefined || holds(capabilities, { allOf: [V2_NAV_TOKEN.accounts] });
 
   /* ── tab from the URL ─────────────────────────────────────────────── */
   const resolution = useMemo(() => resolveTab("portfolio", url.value.tab), [url.value.tab]);
@@ -172,7 +172,7 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
       <div className="exec-pf-v2" data-screen="portfolio-360-v2">
         <header className="exec-pf-head"><h1 className="exec-pf-h1">Portfolio</h1></header>
         <section className="exec-pf-denied" aria-label="Access">
-          <PanelState status="denied" reason="Your session does not hold execution.portfolios.read." />
+          <PanelState status="denied" reason="Portfolios is not listed in your navigation read." />
           <Link to={routes.access}>See what you can access</Link>
         </section>
       </div>
@@ -205,7 +205,7 @@ export default function PortfolioScreen({ api, portfolioId, capabilities, routes
         {resource.unavailableBranches.length > 0 ? (
           <p className="exec-pf-banner" role="status"><Flag kind="partial" label="Branch not whole" size="sm" /> Not available: {resource.unavailableBranches.map(humanize).join(", ")}</p>
         ) : null}
-        {accountsRefused ? <p className="exec-pf-banner" role="status">The Accounts tab needs execution.accounts.read, which your session does not hold. Showing Overview.</p> : null}
+        {accountsRefused ? <p className="exec-pf-banner" role="status">Accounts is not listed in your navigation read, so the Accounts tab is off. Showing Overview.</p> : null}
         {resolution.notice ? <p className="exec-pf-banner" role="status">{resolution.notice}</p> : null}
         <div>
           <div className="exec-pf-tabs" role="tablist" aria-label="Portfolio sections">

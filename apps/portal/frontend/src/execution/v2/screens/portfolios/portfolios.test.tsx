@@ -11,7 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { PF, answerPortfolios } from "../../../../../e2e/bffDoublePortfolios";
 import type { ExecutionApi } from "../../../api/ports";
-import { V2_CAPABILITY } from "../../shell/roleNav";
+import { V2_NAV_TOKEN } from "../../shell/roleNav";
 import { makeApi, type Override } from "./harness.fixtures";
 import PortfolioListScreen, { PORTFOLIOS_SCREEN_KEY } from "./index";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES } from "./routes";
@@ -532,18 +532,18 @@ describe("states", () => {
 });
 
 describe("capability", () => {
-  it("tells a caller without execution.portfolios.read so, links to access and makes no read", async () => {
+  it("tells a caller whose navigation read does not list Portfolios so, links to access and makes no read", async () => {
     const { api, calls } = makeApi();
-    mount(api, "/deployments/portfolios", new Set(["execution.accounts.read"]));
+    mount(api, "/deployments/portfolios", new Set([V2_NAV_TOKEN.accounts]));
     expect(screen.getByText("Withheld")).toBeTruthy();
-    expect(screen.getByText(/execution\.portfolios\.read/)).toBeTruthy();
+    expect(screen.getByText(/Portfolios is not listed in your navigation read/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "See what you can access" }).getAttribute("href")).toBe("/administration/profile-access");
     await new Promise((r) => setTimeout(r, 20));
     expect(calls).toEqual([]);
   });
 
   it("shows the register to a caller who holds it", async () => {
-    mount(makeApi().api, "/deployments/portfolios", new Set([V2_CAPABILITY.portfoliosRead]));
+    mount(makeApi().api, "/deployments/portfolios", new Set([V2_NAV_TOKEN.portfolios]));
     await loaded();
     expect(names()).toHaveLength(6);
   });

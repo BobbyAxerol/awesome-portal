@@ -183,7 +183,7 @@ describe("the product reads the fixture BFF", () => {
   it("the session capabilities open the V2 screens", async () => {
     const response = await realFetch(`${origin}/api/admin/access/self`);
     const body = (await response.json()) as { capabilities: string[]; user_id: string };
-    expect(body.capabilities).toEqual(expect.arrayContaining(["execution.portfolios.read", "execution.accounts.read", "execution.operations.read", "portal.execution.blotter.read"]));
+    expect(body.capabilities).toEqual(expect.arrayContaining(["nav:EXECUTION_PORTFOLIOS", "nav:EXECUTION_ACCOUNTS_BINDINGS", "nav:EXECUTION_OPERATIONS", "nav:EXECUTION_BLOTTER"]));
     expect(body.user_id).toBe("principal-visual-baseline");
   });
 });

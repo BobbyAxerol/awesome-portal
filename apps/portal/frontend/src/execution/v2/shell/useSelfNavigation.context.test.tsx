@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readAccessSelfNavigation, type AccessSelfNavigation } from "../readers/accessSelf";
 import { readAccessSelfContext, type AccessSelfContext } from "../readers/accessSelfContext";
 import { loadCanonical } from "../testkit/loadCanonical";
-import { V2_CAPABILITY } from "./roleNav";
+import { V2_NAV_TOKEN } from "./roleNav";
 import type { SelfContextOutcome, SelfContextQuestion, SelfNavigationOutcome, SelfNavigationPort, SelfNavigationQuestion } from "./selfNavigationPort";
 import { SELF_CONTEXT_COPY, useSelfNavigation, type UseSelfNavigationOptions } from "./useSelfNavigation";
 
@@ -108,7 +108,7 @@ describe("RESOLVED", () => {
     expect(navReads[0]!.question).toEqual({ workspaceId: "ws_TEST_ONLY_shared", environment: "paper", sessionKey: "sess_1" });
     await act(async () => navReads[0]!.resolve(navOk(navigation("ws_TEST_ONLY_shared"))));
     expect(view.result.current.phase).toBe("live");
-    expect(view.result.current.gate.tokens.has(V2_CAPABILITY.portfoliosRead)).toBe(true);
+    expect(view.result.current.gate.tokens.has(V2_NAV_TOKEN.portfolios)).toBe(true);
     expect(view.result.current.selfEntry).toEqual({ workspaceId: "ws_TEST_ONLY_shared" });
     expect(view.result.current.chooser).toBeNull();
   });

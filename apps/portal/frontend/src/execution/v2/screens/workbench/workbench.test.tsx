@@ -13,7 +13,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ExecutionApi } from "../../../api/ports";
-import { V2_CAPABILITY, V2_ROLE_PRESETS } from "../../shell/roleNav";
+import { V2_NAV_TOKEN, V2_ROLE_PRESETS } from "../../shell/roleNav";
 import { ABSENT, dimension, dimensionOf, pairwise, type Draft } from "../../testkit/matrix";
 import PaperWorkbenchScreen, { WORKBENCH_SCREEN_KEY, type PaperWorkbenchScreenProps } from "./index";
 import {
@@ -674,7 +674,7 @@ describe("roles: the capability set decides, never a role name", () => {
 
   it("the capabilities prop wins over the session", async () => {
     session.current = sessionOf(V2_ROLE_PRESETS.manager);
-    mount({ props: { capabilities: new Set([V2_CAPABILITY.portfoliosRead]) } });
+    mount({ props: { capabilities: new Set([V2_NAV_TOKEN.portfolios]) } });
     await ready();
     expect(text()).toContain("Account not available");
   });
