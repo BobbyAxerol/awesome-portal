@@ -14621,3 +14621,15 @@ no broad process/cache cleanup. ELP2-10 OPEN. Verification:R0.
 ### Edge08 / existing P22 factory assignment delivered to owning branch —21Oct19:06UTC
 
 Exact Core18:00 factory assignment is now delivered to `/home/bobby/portal-research-fe/upgrade/execution_loop/evidence/BE-CLAUDE-2026-10-20/BE-P22-FACTORY-EDGE08-OWNER-ACTION-2026-10-22.md`, 2547bytes/SHA256 977cbaaf2ca2caf77f747105ae61fc6888ba756826e750eec4788aecb1c4f6fa. Scope is ONLY actual app/runtime factory + focused tests under existing P22 one-writer assignment, no deploy/source/grant/schema/UI/frozen-writer change. Existing BE-P22§9 intentionally-uninstalled statement is not a reason to omit the newly assigned source factory. DefaultOFF/no I/O when absent, actual factory tests and private sink protections; module328PG is not factory or connected evidence. ACK/CHANGES_REQUESTED and exact source/test return to Core remain pending. Edge full08 cache case is still NOT_RUN; eligible READ independent. No peer code/index/rebase/commit altered by delivery. Canonical assignment: Core CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md§P22 actual opt-in construction.
+
+### Successor commissioning current disposition —21Oct19:16UTC
+
+[Current readiness / delivery](execution_loop/evidence/ELP2-10/CORE009_SUCCESSOR_CURRENT_READINESS_2026-10-21.md)
+records actual installed source/image/schema, original failed normal plus
+successful focused qualification, and both hash-matched PM/Edge deliveries.
+READ/STREAM needs fresh source authority; Manager needs genuine issuance;
+financial needs C5 source mapping and shared builder; numeric calibration and
+coexistence/G2 need their approved population/workload/window. Claude's factory,
+same-buffer measurement and consumer/browser work remains separate. No source
+window or full08/09 PASS follows from image installation. ELP2-10 OPEN,
+ELP2-11 not entered; no push/dev/main/release. Verification:R0.

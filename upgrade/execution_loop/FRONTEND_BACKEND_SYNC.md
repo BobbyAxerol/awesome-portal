@@ -9,6 +9,17 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October19:16 UTC — successor installed / supplemental return delivered
+
+[Current readiness](evidence/ELP2-10/CORE009_SUCCESSOR_CURRENT_READINESS_2026-10-21.md)
+records the actual normal/image Markdown delivery to both PM/Edge, readback
+SHA256 db73d3fc…, and separates the six remaining commissioning lanes.
+Direct19:15 Edge read has no fresh source composition yet; matched availability
+does not renew expired authority. Keep current32 bounds, no premature session
+or STREAM. Manager issuance/C5 producer mapping/numeric calibration/G2 window
+remain owner inputs; Claude retains observer factory/same-buffer guard and
+browser ownership. No duplicate test/build/load or UI change. Verification:R0.
+
 ### 21 October19:10 UTC — financial independent review / source slot pending
 
 [C5 independent refresh](evidence/ELP2-10/C5_FINANCIAL_PRODUCER_REVIEW_AND_CLAUDE_HANDOFF_2026-10-21.md#independent-refresh21oct1910utc--accept-dark-reducer-not-mounted-finance)
