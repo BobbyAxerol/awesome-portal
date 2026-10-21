@@ -92,6 +92,23 @@ export const MANAGER_TEXT_UNSAFE_CODE = "MANAGER_TEXT_UNSAFE";
 export function managerDisplaySafe(value: string): boolean {
   return !MANAGER_UNSAFE_TEXT.test(value) && !MANAGER_LONE_SURROGATE.test(value) && value.trim().length > 0;
 }
+/**
+ * Response-only display-safety: every string a dataset RESPONSE carries must be display-safe. Held here, on the response schema,
+ * and NOT on the shared document building blocks: original custody parses the same document schema and must keep accepted source
+ * identifier bytes exactly as sent (ELP2-06). Walks the whole body (bounded: depth and node cap) and reports the first unsafe path.
+ */
+export function validateManagerDisplayText(body: unknown, c: z.RefinementCtx): void {
+  let nodes = 0, reported = 0;
+  const walk = (value: unknown, path: Array<string | number>, depth: number): void => {
+    if (reported >= 8 || depth > 12 || ++nodes > 200_000) return;
+    if (typeof value === "string") {
+      if (!managerDisplaySafe(value)) { reported++; c.addIssue({ code: z.ZodIssueCode.custom, path, message: MANAGER_TEXT_UNSAFE_CODE }); }
+    } else if (Array.isArray(value)) value.forEach((entry, i) => walk(entry, [...path, i], depth + 1));
+    else if (value !== null && typeof value === "object")
+      for (const [key, entry] of Object.entries(value as Record<string, unknown>)) walk(entry, [...path, key], depth + 1);
+  };
+  walk(body, [], 0);
+}
 /** A partition metric key is a lower-case token (`__proto__` cannot reach a map) and a partition holds at most 64 metrics. */
 export const MANAGER_PARTITION_METRIC_KEY = /^[a-z][a-z0-9_]{0,63}$/;
 export const MANAGER_MAX_PARTITION_METRICS = 64;
