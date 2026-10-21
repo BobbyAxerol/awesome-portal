@@ -28,12 +28,19 @@ describe("TEST_ONLY BE-P20 manager data-leg config: positives", () => {
   it("accepts a coherent all-mode issued-leaf config (READ and STREAM separate, canary = live facts)", () => {
     const report = inspectManagerDataLegConfig(goodConfig(), OPTIONS);
     expect(report.errors).toEqual([]);
-    expect(report).toMatchObject({ ok: true, summary: { modes: ["paper", "sandbox", "live"], stream_enabled_modes: ["paper", "sandbox", "live"], canary: "LIVE_FACTS", kids: 3, leaf: "ISSUED" } });
+    expect(report).toMatchObject({ ok: true, summary: { modes: ["paper", "sandbox", "live"], stream_enabled_modes: ["paper", "sandbox", "live"], canary: "LIVE_FACTS", kids: 1, leaf: "ISSUED" } });
   });
   it("accepts the inactive preparation (CSR only, STREAM off) only when the leaf is allowed to be absent", () => {
     const report = inspectManagerDataLegConfig(inactiveConfig(), { ...OPTIONS, requireIssuedLeaf: false });
     expect(report).toMatchObject({ ok: true, warnings: [{ code: "ISSUED_LEAF_NOT_YET_RETURNED", path: "/public_inputs/client_leaf" }], summary: { leaf: "ABSENT", stream_enabled_modes: [] } });
     expect(codes(inactiveConfig())).toEqual([{ code: "ISSUED_LEAF_MISSING", path: "/public_inputs/client_leaf" }]);
+  });
+  it("shared kid: the same one reviewed Research kid in all three modes is required and counted once", () => {
+    const c = goodConfig();
+    expect(new Set(["paper", "sandbox", "live"].map(m => c.modes[m].kid)).size).toBe(1);
+    const report = inspectManagerDataLegConfig(c, OPTIONS);
+    expect(report.ok).toBe(true);
+    expect(report.summary.kids).toBe(1);
   });
   it("is deterministic and never mutates its input", () => {
     const input = goodConfig(), before = JSON.stringify(input);
@@ -47,8 +54,7 @@ describe("TEST_ONLY BE-P20 manager data-leg config: positives", () => {
     expect(report.summary.input_sha256).toMatch(/^[a-f0-9]{64}$/);
   });
   it("honours reviewed kids and the caller's stable-hash denylist when they are clean", () => {
-    const kids = ["research-synth-paper-0001", "research-synth-sandbox-0002", "research-synth-live-0003"];
-    expect(codes(goodConfig(), { reviewedKids: kids, knownStableSha256: [pad("something-else")] })).toEqual([]);
+    expect(codes(goodConfig(), { reviewedKids: ["research-synth-shared-0001"], knownStableSha256: [pad("something-else")] })).toEqual([]);
   });
 });
 
@@ -75,11 +81,14 @@ const MATRIX: Row[] = [
   ["test CA marker in the issuer ref", c => { c.public_inputs.client_leaf.issuer_ref = "synthetic-test-ca"; }, "TEST_CA_MARKER", "/public_inputs/client_leaf/issuer_ref"],
   ["self-signed marker in the issuer ref", c => { c.public_inputs.client_leaf.issuer_ref = "self-signed-root"; }, "TEST_CA_MARKER", "/public_inputs/client_leaf/issuer_ref"],
   // kid
-  ["duplicate kid across modes", c => { c.modes.sandbox.kid = c.modes.paper.kid; }, "DUPLICATE_KID_ACROSS_MODES", "/modes/sandbox/kid"],
+  ["differing kid: sandbox has its own kid", c => { c.modes.sandbox.kid = "research-synth-other-0002"; }, "KID_DIFFERS_ACROSS_MODES", "/modes/sandbox/kid"],
+  ["differing kid: three distinct kids", c => { c.modes.sandbox.kid = "research-synth-b-0002"; c.modes.live.kid = "research-synth-c-0003"; }, "KID_DIFFERS_ACROSS_MODES", "/modes/live/kid"],
+  ["differing kid: live differs from the shared one", c => { c.modes.live.kid = "research-synth-live-0003"; }, "KID_DIFFERS_ACROSS_MODES", "/modes/live/kid"],
   ["kid not research scoped", c => { c.modes.paper.kid = "prod-kid-1"; }, "KID_NOT_RESEARCH_SCOPED", "/modes/paper/kid"],
   ["kid missing", c => { delete c.modes.live.kid; }, "KID_MISSING", "/modes/live/kid"],
   ["kid over the 32 character runtime bound", c => { c.modes.live.kid = "research-" + "k".repeat(30); }, "KID_NOT_RESEARCH_SCOPED", "/modes/live/kid"],
-  ["kid outside the reviewed set", c => { c.modes.paper.kid = "research-unreviewed-01"; }, "KID_NOT_REVIEWED", "/modes/paper/kid", { reviewedKids: ["research-synth-sandbox-0002", "research-synth-live-0003"] }],
+  ["kid outside the reviewed set", c => { for (const m of ["paper", "sandbox", "live"]) c.modes[m].kid = "research-unreviewed-01"; }, "KID_NOT_REVIEWED", "/modes/paper/kid", { reviewedKids: ["research-synth-shared-0001"] }],
+  ["stable kid marker on one mode only", c => { c.modes.sandbox.kid = "execution-k1"; }, "STABLE_KEY_REUSE_MARKER", "/modes/sandbox/kid"],
   // ttl
   ["ttl over 60 seconds", c => { c.modes.paper.ttl_seconds = 61; }, "TTL_OVER_60_SECONDS", "/modes/paper/ttl_seconds"],
   ["ttl far over 60 seconds", c => { c.modes.live.ttl_seconds = 3600; }, "TTL_OVER_60_SECONDS", "/modes/live/ttl_seconds"],
@@ -184,7 +193,7 @@ describe("TEST_ONLY BE-P20 manager data-leg config: negative matrix", () => {
   });
   it("covers every rejection class the request lists", () => {
     const seen = new Set(MATRIX.map(r => r[2]));
-    for (const code of ["STABLE_KEY_REUSE_MARKER", "CSR_PRESENTED_AS_LEAF", "TEST_CA_MARKER", "DUPLICATE_KID_ACROSS_MODES", "TTL_OVER_60_SECONDS",
+    for (const code of ["STABLE_KEY_REUSE_MARKER", "CSR_PRESENTED_AS_LEAF", "TEST_CA_MARKER", "KID_DIFFERS_ACROSS_MODES", "TTL_OVER_60_SECONDS",
       "ORIGIN_PORT_MODE_MISMATCH", "ORIGIN_NOT_EXACT", "PROFILE_ID_MISMATCH", "AUDIENCE_MISMATCH", "ISSUER_MISMATCH", "WORKSPACE_MISMATCH",
       "KEY_MATERIAL_PEM_HEADER", "KEY_MATERIAL_BASE64_BLOB", "SECRET_LOOKING_KEY_NAME", "READ_GRANTS_STREAM", "STREAM_GRANT_SAME_AS_READ",
       "FEATURE_MUST_BE_DISABLED", "ACTIVATION_NOT_DISABLED", "CANARY_HAS_OWN_ENDPOINT_FIELD", "CANARY_NOT_RESOLVED_AS_LIVE", "FILE_REF_PATH_MISMATCH"])

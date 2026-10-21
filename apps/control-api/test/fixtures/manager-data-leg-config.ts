@@ -9,15 +9,14 @@ export const SYNTHETIC_NOW = Date.UTC(2026, 9, 21, 12, 0, 0);
 export const pad = (name: string): string => createHash("sha256").update("TEST_ONLY:" + name).digest("hex");
 const deep = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 
-export const SYNTHETIC_KIDS: Record<ManagerDataLegMode, string> = {
-  paper: "research-synth-paper-0001", sandbox: "research-synth-sandbox-0002", live: "research-synth-live-0003",
-};
+/** ONE Research workload kid shared by the three mode entries (runtime has one signer and one EXECUTION_EDGE_KEY_ID). */
+export const SYNTHETIC_KID = "research-synth-shared-0001";
 
 function mode(m: ManagerDataLegMode, stream: boolean) {
   const pin = MANAGER_DATA_LEG_MODES[m];
   return {
     origin: pin.origin, profile_id: pin.profile_id, audience: pin.audience, workspace_id: SYNTHETIC_WORKSPACE,
-    kid: SYNTHETIC_KIDS[m], ttl_seconds: 45,
+    kid: SYNTHETIC_KID, ttl_seconds: 45,
     read: { enabled: true, resources: ["execution:manager-v2:read"], grants_stream: false, grant_ref_sha256: pad(`read-grant-${m}`) },
     stream: stream
       ? { enabled: true, resources: ["execution:manager-realtime"], grant_ref_sha256: pad(`stream-grant-${m}`) }

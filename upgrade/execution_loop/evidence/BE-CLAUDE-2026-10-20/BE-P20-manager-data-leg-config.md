@@ -12,7 +12,7 @@ Mọi giá trị fixture là `TEST_ONLY`/synthetic. **Không phải** PKI issuan
 | `apps/control-api/src/execution-v2/manager-data-leg-config.ts` | Hàm thuần `inspectManagerDataLegConfig(value, opts)` + `...Bytes(bytes, opts)` (bytes phải là JSON compact canonical, như Core009). Không fs/net/DB/đồng hồ (caller đưa `nowMs`). |
 | `apps/control-api/src/cli/manager-data-leg-validate.ts` | CLI offline theo mẫu `core009-validate`: chỉ mở đúng 1 file `--config`; validate mọi option trước khi mở; exit 0/1/2. |
 | `apps/control-api/test/fixtures/manager-data-leg-config.ts` | Fixture dương synthetic: `goodConfig()` (3 mode, leaf đã cấp, STREAM bật riêng) và `inactiveConfig()` (mới có CSR, chưa leaf, STREAM tắt). |
-| `apps/control-api/test/be-p20-manager-data-leg-config.spec.ts` | 119 test: 5 dương + 106 hàng ma trận âm + 5 test biên (workspace kỳ vọng, input rỗng/không canonical, độ sâu/số node, không echo giá trị) + 3 test CLI. |
+| `apps/control-api/test/be-p20-manager-data-leg-config.spec.ts` | 123 test: 6 dương (gồm ca 'shared kid') + 109 hàng ma trận âm (gồm 3 ca 'differing kid') + 5 test biên (workspace kỳ vọng, input rỗng/không canonical, độ sâu/số node, không echo giá trị) + 3 test CLI. |
 
 ## Tài liệu cấu hình (`portal.manager-data-leg-config.v1`)
 
@@ -22,7 +22,7 @@ Mọi giá trị fixture là `TEST_ONLY`/synthetic. **Không phải** PKI issuan
 ## Kiểm gì
 
 - Bốn key `EXECUTION_EDGE_PRIVATE_KEY_FILE | _CA_FILE | _CLIENT_CERT_FILE | _CLIENT_KEY_FILE` đúng bằng `/run/secrets/research-native/{edge-signing,edge-ca,edge-client,edge-client-key}.pem`; thiếu/thừa key, lệch path, trùng path, `..` đều bị từ chối.
-- Mỗi mode: origin đúng `https://10.70.0.2:{8443,8444,8445}` (cổng của mode khác = `ORIGIN_PORT_MODE_MISMATCH`; 28446/http/host khác/dấu `/` cuối = `ORIGIN_NOT_EXACT`), profile `*_BINANCE_USDM`, audience `portal-execution-edge-{paper,sandbox,live}` (pin N13B của `config.ts`), issuer `portal-control-api`, workspace đúng workspace Research truyền vào (bắt buộc truyền, không có mặc định), kid `research-*` duy nhất giữa các mode (<=32 ký tự như `EXECUTION_EDGE_KEY_ID`), TTL số nguyên 1..60.
+- Mỗi mode: origin đúng `https://10.70.0.2:{8443,8444,8445}` (cổng của mode khác = `ORIGIN_PORT_MODE_MISMATCH`; 28446/http/host khác/dấu `/` cuối = `ORIGIN_NOT_EXACT`), profile `*_BINANCE_USDM`, audience `portal-execution-edge-{paper,sandbox,live}` (pin N13B của `config.ts`), issuer `portal-control-api`, workspace đúng workspace Research truyền vào (bắt buộc truyền, không có mặc định), đúng MỘT kid Research đã duyệt (`research-*`, <=32 ký tự như `EXECUTION_EDGE_KEY_ID`), tách khỏi stable/native, dùng chung ở cả ba mode (runtime chỉ có một signer + một `EXECUTION_EDGE_KEY_ID`); kid khác nhau giữa các mode = `KID_DIFFERS_ACROSS_MODES`; summary báo `kids: 1`, TTL số nguyên 1..60.
 - READ và STREAM tách: read chỉ `execution:manager-v2:read`, `grants_stream=false`, resource realtime trong read = `READ_GRANTS_STREAM`; stream chỉ `execution:manager-realtime`, bật thì phải có grant hash riêng và khác grant READ; scope delegation đúng `["execution.read"]`.
 - Tắt: `FEATURE_EXECUTION_COMMAND_RELAY`, `_REALTIME_SSE` (legacy SSE), `_LOCAL_R0_TASKS`, `_CURRENT_SOURCE_PAPER_DNSE` phải `"false"`; `activation.command/capital/live_trading` phải `false`; ba `CURRENT_SOURCE_{PAPER,SANDBOX,LIVE}` + `EDGE` phải `"true"`.
 - Canary chỉ `{resolves_as:"live"}`; mọi field endpoint riêng hoặc `modes.canary` bị từ chối.
@@ -42,9 +42,12 @@ Không mở/stat file nào được tham chiếu (test CLI khẳng định chỉ
 2. Edge/target owner chạy cùng lệnh trên cùng bytes (đối chiếu `input_sha256` trong report) trước khi chốt pin TLS/JWKS cũ/mới + rollback cho shared reconcile; hai bên phải ra cùng report.
 3. Report không thay `Core validates issued material` và không thay review của owner PKI; chỉ chặn các lỗi cấu trúc rẻ trước khi chạm listener đang chạy.
 
-## Điểm mở cần owner quyết (validator đang theo yêu cầu, nghiêm hơn runtime)
+## Kết luận Codex về kid (CODEX_FREEZE_ACK_AND_BE_P20_REVIEW_2026-10-21, CHANGES_REQUESTED - tương thích)
 
-- **Kid theo từng mode vs một kid**: runtime hiện chỉ có một `EXECUTION_EDGE_KEY_ID` và một private key dùng cho cả ba profile (`current-source.proxy.ts` ~L756-760), nên overlay kiểu hiện tại sẽ có cùng một kid ở cả 3 mode. Validator theo yêu cầu (kid duy nhất giữa các mode) sẽ từ chối cấu hình đó. Cần Core/Edge chốt: (a) cấp 3 signer/kid riêng và Edge JWKS overlap 3 kid (cần sửa runtime sau này, ngoài P20), hoặc (b) cho phép một kid dùng chung có review (đổi rule `DUPLICATE_KID_ACROSS_MODES` thành cảnh báo). Chưa đổi gì.
+Runtime có MỘT signer Research và MỘT `EXECUTION_EDGE_KEY_ID` (`current-source.proxy.ts:749-761`, `config.ts:314`), nên quy tắc "kid riêng từng mode" là sai. Chuẩn bị được duyệt = một kid workload Research duy nhất, tách khỏi stable/native, dùng chung bởi ba mode. Đã sửa: validator yêu cầu cùng một kid ở cả ba mode và từ chối kid khác nhau; không đòi PKI cấp ba khoá. Giữ nguyên: từ chối kid mang marker stable, audience/profile/origin/workspace theo mode, kiểm tra leaf, tách READ/STREAM và mọi disclaimer source-only. Không sửa runtime.
+
+## Điểm mở còn lại
+
 - SAN leaf: dùng đúng URI Paper trong CSR (`.../control-api/paper`) cho cả 3 mode theo prep note; handoff cũng nói URI "Paper-named" không tự động là grant cho mọi môi trường. Nếu owner PKI yêu cầu SAN khác theo mode, cần đổi sang SAN theo mode trước khi cấp.
 
 ## Còn nợ ở source owner (source-head/writer handoff, không thuộc P20)

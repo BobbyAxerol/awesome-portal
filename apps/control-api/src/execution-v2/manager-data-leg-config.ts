@@ -65,7 +65,7 @@ export interface ManagerDataLegOptions {
   requireIssuedLeaf?: boolean;
   /** Default `MANAGER_DATA_LEG_DEFAULT_LEAF_SAN`; a different reviewed workload SAN must be passed explicitly. */
   expectedLeafSanUri?: string;
-  /** If given, every mode kid must be one of these reviewed kids. */
+  /** If given, the single shared kid must be one of these reviewed kids. */
   reviewedKids?: readonly string[];
   /** Public hashes of stable/native workload material; any equal public hash is a reuse. */
   knownStableSha256?: readonly string[];
@@ -295,8 +295,10 @@ function modeEntry(mode: ManagerDataLegMode, entry: unknown, path: string, optio
     if (!KID.test(kid)) err("KID_NOT_RESEARCH_SCOPED", `${path}/kid`);
     if (STABLE_MARKER.test(kid)) err("STABLE_KEY_REUSE_MARKER", `${path}/kid`);
     if (options.reviewedKids && !options.reviewedKids.includes(kid)) err("KID_NOT_REVIEWED", `${path}/kid`);
-    if (kidsSeen.has(kid)) err("DUPLICATE_KID_ACROSS_MODES", `${path}/kid`);
-    else kidsSeen.set(kid, mode);
+    // Runtime has ONE Research signer and ONE EXECUTION_EDGE_KEY_ID (config.ts, current-source.proxy.ts):
+    // all three mode entries must carry the same single reviewed kid. Differing kids are refused.
+    if (kidsSeen.size > 0 && !kidsSeen.has(kid)) err("KID_DIFFERS_ACROSS_MODES", `${path}/kid`);
+    if (!kidsSeen.has(kid)) kidsSeen.set(kid, mode);
   }
 
   readStream(entry.read, entry.stream, path, mode, summary, err);
