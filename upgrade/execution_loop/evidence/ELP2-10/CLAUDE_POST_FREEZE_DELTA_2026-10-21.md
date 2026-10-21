@@ -24,3 +24,11 @@ Bản sửa BUSY của client native (chưa commit), cổng R2/R3 trên SHA đó
 | BE-P22 quan sát cache riêng tư: bộ quan sát thuần + bản vá đề xuất cho 3 file dùng chung (chưa áp dụng) | `fa530323` | vitest 26/26 | cần Codex đồng ý người ghi duy nhất |
 | BE-P21 bộ giảm kinh tế nguồn (dark, không nối) | `f0b56371` | vitest 64/64 | ánh xạ nguồn thật còn nợ PM/Edge |
 | Rà soát hủy `refresh` của Fleet: 3 lỗi thật đã sửa | `776cf9be` | vitest 14 + 8 + 4 test mới; Playwright 13/13; cả thư mục Fleet 1.348 test xanh hai lần | FIXTURE_LAB |
+
+## Sau khi Codex hạ cánh (nguồn hạ cánh `218b9428`): các lát Codex yêu cầu sửa, đã xong ở nhánh post-freeze
+| Việc | Commit | Làn đã chạy |
+| --- | --- | --- |
+| BE-P21 hai sửa: tràn tổng → REFUSED có kiểu; dấu băm tập gồm danh sách nguồn kỳ vọng | `0201df80` | vitest 68/68 |
+| BE-P22 P22-1/P22-2 + nối lát một-người-ghi (4 file đã ACK, CLI riêng, mặc định vắng mặt) | `8de1e50f`…`58c782ed` | vitest observer/wiring/CLI 90 + 155 spec cũ; **PG có mục tiêu 11 file / 328 test PASS** (log sha256 `313eed52c6fb444860f777fcb7694386f372378252868359cc156465c9216a6d`) |
+| Đo M-1: vòng chờ yên báo `MEASUREMENT_QUIET_TIMEOUT`; byte biên nhận gốc khôi phục (`af161572…`) + addendum có hash; DEBT-045 "UNREPRODUCED / CAUSE_UNKNOWN" | `2c1b8717`, `a0b885b6` | `node --test` 14/14; kiểm Workbench 3/3 |
+Chờ Codex lập lịch đóng băng mã đổi **một lần** cho nhóm này (không gọi hook cho từng lát nhỏ). Successor writer là lát của Codex.
