@@ -12,6 +12,7 @@ import { Fragment, type ReactNode } from "react";
 
 import type { CurrencyValue } from "../../../api/profileRead";
 import { readDecimal } from "../../boundary";
+import { GapWhy, NaWhy, gapTitle } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
 import { NOT_PUBLISHED_WORD, type Unpublished } from "./fe";
 
@@ -19,8 +20,8 @@ import "../../css/portfolios.css";
 
 export function Np({ fact, children }: { fact: Unpublished; children?: ReactNode }) {
   return (
-    <span className="exec-pf-np" title={`${fact.fe} · ${fact.what}`}>
-      {NOT_PUBLISHED_WORD}
+    <span className="exec-pf-np">
+      <GapWhy gap={fact.fe} text={NOT_PUBLISHED_WORD} name="Not published, reason" rows={[gapTitle(fact.fe, fact.what)]} />
       <span className="exec-blk-sr"> <FeIds fe={fact.fe} /></span>
       {children ? <> {children}</> : null}
     </span>
@@ -44,10 +45,10 @@ function FeIds({ fe }: { fe: string }) {
 
 /** A value the source did not send. It is a statement, never an empty cell. */
 export function Absent({ reason }: { reason?: string }) {
-  // The reason stays in the title and in hidden text; the visible word is "Not available".
+  // The reason sits behind a disclosure (RV-06) and stays in hidden text for assistive tech and copy; the visible word is "Not available".
   return (
-    <span className="exec-pf-na" title={reason}>
-      Not available
+    <span className="exec-pf-na">
+      <NaWhy reason={reason} className="" />
       {reason ? <span className="exec-blk-sr"> · {reason}</span> : null}
     </span>
   );

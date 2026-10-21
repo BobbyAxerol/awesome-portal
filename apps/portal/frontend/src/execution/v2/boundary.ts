@@ -167,3 +167,23 @@ export function formatAsOf(value: UtcEpochMs): string {
   const pad = (part: number) => String(part).padStart(2, "0");
   return `${date.getUTCDate()} ${MONTHS[date.getUTCMonth()]} ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}Z`;
 }
+
+const INSTANT_ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/;
+
+/**
+ * `formatAsOf` for an instant that arrives as epoch milliseconds or as an ISO-8601 string that states its zone. Absent is
+ * `not published`; a string that is not an instant is returned as the source wrote it, never blanked. One house style for
+ * every V2 screen except the Blotter table (`shortUtc`, hi-fi measured).
+ */
+export function formatInstant(value: string | number | null | undefined): string {
+  if (typeof value === "number") {
+    const epoch = readUtcEpochMs(value);
+    return epoch === null ? "not published" : formatAsOf(epoch);
+  }
+  if (!value) return "not published";
+  const raw = value.trim();
+  if (!INSTANT_ISO.test(raw)) return value;
+  const ms = Date.parse(raw);
+  const epoch = readUtcEpochMs(ms);
+  return epoch === null ? value : formatAsOf(epoch);
+}

@@ -37,7 +37,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 import { useSession } from "../../../../auth/session";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
-import { utcStamp } from "../../../time";
 import { DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { withoutOrigin } from "../../backTo";
 import { NotAvailableLine, notPublishedReason } from "../../blocks";
@@ -85,6 +84,7 @@ import {
 import type { SpineStageId } from "../../blocks";
 
 import "../../css/alpha.css";
+import { formatInstant } from "../../boundary";
 
 export const ALPHA_SCREEN_KEY = "alpha" as const;
 
@@ -274,7 +274,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
             </div>
           ) : null}
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
-          {view?.asOfMs ? <span>As of {utcStamp(new Date(view.asOfMs).toISOString())}</span> : view ? <span>Source time not published</span> : null}
+          {view?.asOfMs ? <span>As of {formatInstant(new Date(view.asOfMs).toISOString())}</span> : view ? <span>Source time not published</span> : null}
         </div>
       </header>
 

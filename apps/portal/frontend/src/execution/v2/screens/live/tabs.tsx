@@ -66,7 +66,7 @@ export function ProtectiveLadder({ model }: { model: LiveModel }) {
       </div>
       {same ? (
         <div className="exec-stage-dec-why">
-          <p id={reasonId} className="exec-dock-reason" title={reasons[0]}>{reasons[0]}</p>
+          <p id={reasonId} className="exec-dock-reason">{reasons[0]}</p>
           <Link className="exec-dock-access" to={withContext(ACCESS_PATH, withoutOrigin(params))} aria-label={`My access: ${model.ladder.map((rung) => rung.title).join(", ")}`}>My access</Link>
         </div>
       ) : null}

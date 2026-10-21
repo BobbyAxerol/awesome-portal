@@ -34,9 +34,8 @@ import { stepUp, type AccountSummary, type HistoryEntry, type StepUpState } from
 import { useSession } from "../../../../auth/session";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { ExecutionSurface } from "../../../ExecutionSurface";
-import { utcStamp } from "../../../time";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { SectionPanel } from "../../blocks";
+import { GapWhy, SectionPanel, gapTitle } from "../../blocks";
 import { Drawer, DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
@@ -47,6 +46,7 @@ import {
 } from "./usersModel";
 
 import "../../css/users.css";
+import { formatInstant } from "../../boundary";
 
 export const USERS_SCREEN_KEY = "users" as const;
 
@@ -88,8 +88,8 @@ const CHANGES_ELSEWHERE = "Account changes are made on the current Users screen.
 /** `Not published` on screen; the request ids stay in the title and in hidden text. */
 function Unpublished({ ids, what }: { ids: string; what?: string }) {
   return (
-    <span className="exec-blk-np" title={ids}>
-      <span className="exec-blk-np-word">Not published</span>
+    <span className="exec-blk-np">
+      <GapWhy className="exec-blk-np-word" gap={ids} text="Not published" name="Not published, reason" rows={[gapTitle(ids)]} />
       <span className="exec-blk-sr"> ({ids})</span>
       {what ? <> {what}</> : null}
     </span>
@@ -272,7 +272,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
           ) : (
             <span className="exec-usr-step" data-step={stepView.kind}>
               <Flag kind={stepView.kind} label={stepView.label} size="sm" />
-              {stepView.until ? <span className="exec-usr-meta">until {utcStamp(stepView.until)}</span> : null}
+              {stepView.until ? <span className="exec-usr-meta">until {formatInstant(stepView.until)}</span> : null}
             </span>
           )}
           {legacyHref ? <Link className="exec-usr-link" to={legacyHref}>Open the current Users screen</Link> : null}
@@ -421,7 +421,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                   <ol className="exec-usr-history" aria-label="Account history">
                     {history.history.slice(0, ROW_CAP).map((entry) => (
                       <li key={`${entry.operationId}:${entry.occurredAt}`}>
-                        <span className="exec-usr-meta">{utcStamp(entry.occurredAt)}</span>
+                        <span className="exec-usr-meta">{formatInstant(entry.occurredAt)}</span>
                         <span>{entry.action}</span>
                         <Flag
                           kind={entry.outcome === "APPLIED" ? "applied" : entry.outcome === "REPLAYED" ? "neutral" : entry.outcome === "CONFLICT" ? "partial" : "rejected"}

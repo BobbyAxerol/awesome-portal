@@ -9,7 +9,7 @@
  */
 import type { ReactNode } from "react";
 
-import { GapWhy, NOT_PUBLISHED, NotPublished, type NotPublishedId } from "../../blocks";
+import { GapWhy, NOT_PUBLISHED, NotPublished, gapTitle, type NotPublishedId } from "../../blocks";
 
 /** Ids this screen prints that `FE_REQUEST_LABEL` does not list. */
 export const LOCAL_FE = {
@@ -30,9 +30,9 @@ export const npText = (id: AlphaFeId): string => `${NOT_PUBLISHED} (${id})`;
 export function Np({ id, children }: { id: AlphaFeId; children?: ReactNode }) {
   if (!isLocal(id)) return <NotPublished id={id}>{children}</NotPublished>;
   return (
-    // Same markup as the shared block: the id is for whoever asks (title, hidden text), not for the reader scanning the page.
-    <span className="exec-blk-np" title={`${id} · ${LOCAL_FE[id]}`}>
-      <span className="exec-blk-np-word">{NOT_PUBLISHED}</span>
+    // Same words as the shared block: the id is for whoever asks (disclosure, hidden text), not for the reader scanning the page.
+    <span className="exec-blk-np">
+      <GapWhy className="exec-blk-np-word" gap={id} text={NOT_PUBLISHED} name="Not published, reason" rows={[gapTitle(id, LOCAL_FE[id])]} />
       <span className="exec-blk-sr">{` (${id})`}</span>
       {children ? <> {children}</> : null}
     </span>

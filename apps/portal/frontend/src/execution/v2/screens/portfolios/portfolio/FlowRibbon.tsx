@@ -18,7 +18,6 @@ import { useState } from "react";
 
 import type { CapitalLedger } from "../../../../analytics";
 import { formatExact } from "../../../../formatExact";
-import { utcStamp } from "../../../../time";
 import { EventKindChips, EventRibbon, type ChartDomain, type EventKind } from "../../../charts";
 import { CardsTable, type CardsColumn } from "../../../cardsTable";
 import { Money, envWord } from "../format";
@@ -27,6 +26,7 @@ import { RIBBON_UNPUBLISHED, ledgerFlow, unreadEntries, type LedgerRowView } fro
 import { ReadGate } from "./parts";
 
 import "../../../css/portfolios.css";
+import { formatInstant } from "../../../boundary";
 
 const TABLE_CAP = 200;
 const count = (n: number): string => formatExact(String(n), "count").display;
@@ -42,7 +42,7 @@ export function boundedCaption(ledger: CapitalLedger): string {
 
 function tableColumns(): readonly CardsColumn<LedgerRowView>[] {
   return [
-    { key: "time", label: "Time · UTC", render: (row) => (row.entry.occurredAt === null ? "Time not published" : utcStamp(row.entry.occurredAt)) },
+    { key: "time", label: "Time · UTC", render: (row) => (row.entry.occurredAt === null ? "Time not published" : formatInstant(row.entry.occurredAt)) },
     { key: "event", label: "Event", render: (row) => row.movement },
     { key: "direction", label: "Direction", render: (row) => row.direction },
     { key: "account", label: "Account", render: (row) => row.entry.accountId },

@@ -615,7 +615,7 @@ describe("states", () => {
     mount();
     await loaded();
     expect(screen.getByText("Stale")).toBeTruthy();
-    expect(screen.getByText(/As of 2026-10-17 11:46/)).toBeTruthy();
+    expect(screen.getByText(/As of 17 Oct 11:46:\d\dZ/)).toBeTruthy();
   });
 
   it("loading", async () => {

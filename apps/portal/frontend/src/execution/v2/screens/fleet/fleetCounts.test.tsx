@@ -102,7 +102,7 @@ describe("the KPI strip and the lens counts stay on a dataset table (Bobby 2026-
     const line = await screen.findByTestId("counts-source");
     expect(line.textContent).toBe("Counts: Fleet read, alphas in your whole scope. Table: Manager dataset, alpha versions in Real-funded.");
     expect(line.title).toContain("not narrowed by the lens or the filters");
-    expect(line.title).toMatch(/Counts as of \d{4}-\d{2}-\d{2}/);
+    expect(line.title).toMatch(/Counts as of \d{1,2} [A-Z][a-z]{2} \d{2}:\d{2}Z/);
     expect(line.title).toContain("one row per alpha version in a portfolio");
     expect(document.querySelectorAll("[data-testid='counts-source']")).toHaveLength(1);
     // the tab count says what it counts, in its tooltip

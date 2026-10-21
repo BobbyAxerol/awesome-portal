@@ -15,7 +15,7 @@ import type { BindingExposure } from "../../../analytics";
 import type { ProfileEnvelope } from "../../../api/profileRead";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { KpiStrip, Kpi, NotAvailableLine, SectionPanel, Triad } from "../../blocks";
+import { GapWhy, KpiStrip, Kpi, NotAvailableLine, SectionPanel, Triad } from "../../blocks";
 import { withoutOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import {
@@ -87,7 +87,7 @@ export function SleevesPanel({ ctx }: { ctx: PanelContext }) {
   return (
     <SectionPanel title="Sleeves on this binding" aside="Physical" flush>
       <CardsTable columns={columns} rows={rows} rowKey={(row) => row.accountId} label="Sleeves on this binding" selectedKey={ctx.accountId} />
-      <p className="exec-acct-cap" title="The native balance spans all sleeves; no source attributes it to one.">
+      <p className="exec-acct-cap">
         Not totalled: native balance is not split among sleeves
         {population.partial ? `. ${population.published} of ${population.expected} sleeves are published here` : ""}
       </p>
@@ -266,7 +266,7 @@ export function SyncHistory({ entries }: { entries: readonly SyncEntry[] }) {
         label="Sync history"
         empty={<span className="exec-acct-note">No sync row is published for this account.</span>}
       />
-      {entries.length > shown.length ? <p className="exec-acct-cap" title="Rows are listed as the source gave them; gaps in time are not filled.">Showing the newest {shown.length} of {entries.length}</p> : null}
+      {entries.length > shown.length ? <p className="exec-acct-cap">Showing the newest {shown.length} of {entries.length}<GapWhy name="Why gaps in time are not filled" rows={["Rows are listed as the source gave them; gaps in time are not filled."]} next={null} /></p> : null}
     </SectionPanel>
   );
 }

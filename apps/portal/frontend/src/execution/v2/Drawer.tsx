@@ -334,7 +334,7 @@ export function DockAction({ label, onAction, reason, accessHref, accessLabel = 
       {blocked && quietReason ? <p id={reasonId} className="exec-dock-sr">{text}</p> : null}
       {blocked && !quietReason ? (
         <div className="exec-dock-why" data-l={reasonLabel ?? label}>
-          <p id={reasonId} className="exec-dock-reason" title={text}><QuietIds text={text} /></p>
+          <p id={reasonId} className="exec-dock-reason"><QuietIds text={text} /></p>
           {accessHref ? <Link className="exec-dock-access" to={withContext(accessHref, withoutOrigin(params))} aria-label={`${accessLabel}: ${label}`}>{accessLabel}</Link> : null}
         </div>
       ) : null}

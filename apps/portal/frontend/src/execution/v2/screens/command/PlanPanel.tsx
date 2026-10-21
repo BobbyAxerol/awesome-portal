@@ -5,13 +5,13 @@
 import { useEffect, useRef } from "react";
 
 import { BLOCKED_REASON_TEXT, type BlockedReason } from "../../../adminCatalog";
-import { formatUtcEpochMs } from "../../../screenDataContract";
 import { notPublishedText } from "../../blocks";
 import { Flag } from "../../Flag";
 import { F0_NO_EFFECT, showable, type PlanFact, type PlanPrimitive } from "./model";
 import { Facts } from "./parts";
 import { READ_DISABLED_REASON } from "./port";
 import type { CommandFlow } from "./useCommandFlow";
+import { formatAsOf } from "../../boundary";
 
 function blockerSentence(code: string): string | null {
   return Object.prototype.hasOwnProperty.call(BLOCKED_REASON_TEXT, code) ? BLOCKED_REASON_TEXT[code as BlockedReason] : null;
@@ -130,7 +130,7 @@ export function PlanPanel({ flow }: { flow: CommandFlow }) {
 
       <Facts
         label="Validity"
-        rows={[{ label: "Valid until", value: view.expiresAtMs === null ? "No expiry published" : formatUtcEpochMs(view.expiresAtMs) }]}
+        rows={[{ label: "Valid until", value: view.expiresAtMs === null ? "No expiry published" : formatAsOf(view.expiresAtMs) }]}
       />
       {view.lane === "F0" ? <p className="exec-cf-meta">{F0_NO_EFFECT}</p> : null}
       {view.confirmable.ok && view.confirmable.note !== null ? <p className="exec-cf-meta">{view.confirmable.note}</p> : null}

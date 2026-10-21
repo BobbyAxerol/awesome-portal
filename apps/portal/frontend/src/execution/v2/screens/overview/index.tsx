@@ -45,8 +45,7 @@ import { ID_ROUTES } from "../../../idLinks";
 import { canonicalHref } from "../../../links";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { SseFactory } from "../../../sse";
-import { utcStamp } from "../../../time";
-import { NotAvailableLine, SectionPanel, type UnavailableFact } from "../../blocks";
+import { NaWhy, GapWhy, NotAvailableLine, SectionPanel, gapTitle, type UnavailableFact } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
@@ -67,6 +66,7 @@ import { useOverviewReads } from "./useOverviewReads";
 
 import "../../css/blocks.css";
 import "../../css/overview.css";
+import { formatInstant } from "../../boundary";
 
 export const OVERVIEW_SCREEN_KEY = "overview" as const;
 
@@ -84,8 +84,8 @@ export interface OverviewScreenProps {
 /** `Not published`, the request ids in the tooltip and in hidden text. Blocks' table does not carry these composites yet. */
 function Gap({ ids, children }: { ids: string; children?: string }) {
   return (
-    <span className="exec-blk-np" title={ids}>
-      <span className="exec-blk-np-word">Not published</span>
+    <span className="exec-blk-np">
+      <GapWhy className="exec-blk-np-word" gap={ids} text="Not published" name="Not published, reason" rows={[gapTitle(ids)]} />
       <span className="exec-blk-sr"> ({ids})</span>
       {children ? <> {children}</> : null}
     </span>
@@ -115,14 +115,14 @@ function NavCell({ read, window }: { read: SeriesReadState; window: string }) {
     return <Cell label="NAV"><Gap ids={FE_MONEY} /></Cell>;
   }
   if (entry.state === "UNAVAILABLE") {
-    return <Cell label="NAV" note={<span title={`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`}>Series unavailable</span>}><span className="exec-ov-na">Not available</span></Cell>;
+    return <Cell label="NAV" note={<><span>Series unavailable</span><GapWhy name="Why the series is unavailable" rows={[`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`]} next={null} /></>}><span className="exec-ov-na">Not available</span></Cell>;
   }
   if (!isDescribed(entry)) return null;
   const last = latestPoint(entry);
   if (last === null) return <Cell label="NAV" note={<span title={`Methodology ${entry.methodologyRef}, window ${window}`}>Window {window}</span>}><span className="exec-ov-na">No points in this window</span></Cell>;
   const shown = seriesValueText(entry, last.exact);
   return (
-    <Cell label="NAV" note={<span title={`Latest published point, ${utcStamp(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>As of {utcStamp(last.tsMs)}</span>}>
+    <Cell label="NAV" note={<span title={`Latest published point, ${formatInstant(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>As of {formatInstant(last.tsMs)}</span>}>
       <span className="exec-ov-num" title={last.exact}>{shown}</span>
     </Cell>
   );
@@ -202,7 +202,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
   const fleet = reads.fleet.phase === "ready" ? reads.fleet.value : null;
   const facts = useMemo(() => currencyFacts(fleet?.summary ?? null), [fleet]);
   const stages = useMemo(() => stageCounts(fleet?.summary ?? null), [fleet]);
-  const triage = useMemo(() => triageRows(snapshot?.needsYou ?? null, utcStamp, reads.composition.phase === "ready" ? reads.composition.value.readAt : null), [snapshot, reads.composition]);
+  const triage = useMemo(() => triageRows(snapshot?.needsYou ?? null, formatInstant, reads.composition.phase === "ready" ? reads.composition.value.readAt : null), [snapshot, reads.composition]);
   const own = useMemo(() => ownRows(fleet?.items ?? []), [fleet]);
   const gate = streamGate(snapshot);
   const live = reads.stream.live;
@@ -284,11 +284,11 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
     ) : mode === "quiet" || (triage.length === 0 && needs.state === "empty") ? (
       <div className="exec-ov-quiet">
         <p className="exec-ov-what-title">Nothing needs you.</p>
-        <p className="exec-ov-sub">Quiet as of {snapshot?.readAt ? utcStamp(snapshot.readAt) : "a time the server did not publish"}</p>
+        <p className="exec-ov-sub">Quiet as of {snapshot?.readAt ? formatInstant(snapshot.readAt) : "a time the server did not publish"}</p>
       </div>
     ) : (
       <>
-        {needs.state === "partial" || needs.state === "stale" ? <p className="exec-ov-banner" role="status"><Flag kind={needs.state === "stale" ? "stale" : "partial"} label={needs.state === "stale" ? "Stale" : "Partial"} size="sm" /> <span title="Some triage sources did not answer">The list may be missing items</span></p> : null}
+        {needs.state === "partial" || needs.state === "stale" ? <p className="exec-ov-banner" role="status"><Flag kind={needs.state === "stale" ? "stale" : "partial"} label={needs.state === "stale" ? "Stale" : "Partial"} size="sm" /> <span>The list may be missing items</span><GapWhy name="Why the list may be missing items" rows={["Some triage sources did not answer"]} next={null} /></p> : null}
         <ol className="exec-ov-items" aria-label="Ranked triage list">
           {triage.map((r) => (
             <li key={r.id} className="exec-ov-item" data-sla={r.slaState ?? undefined}>
@@ -298,7 +298,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
                   {r.kind ? <Flag kind={KIND_FLAG[r.kind].kind} label={KIND_FLAG[r.kind].label} size="sm" /> : <Flag kind="unknown" label="Kind not stated" size="sm" />}
                   <span className="exec-ov-what-title">{r.title}</span>
                 </span>
-                {r.href ? (serverTo(r.href) !== null ? <Link className="exec-ov-link" to={serverTo(r.href)!}>{r.actionLabel}</Link> : <span className="exec-ov-na" title={NOT_AN_APP_LINK}>No link published</span>) : <span className="exec-ov-na" title="The owning screen for this item was not published">No link published</span>}
+                {r.href ? (serverTo(r.href) !== null ? <Link className="exec-ov-link" to={serverTo(r.href)!}>{r.actionLabel}</Link> : <NaWhy className="exec-ov-na" text="No link published" reason={NOT_AN_APP_LINK} />) : <NaWhy className="exec-ov-na" text="No link published" reason="The owning screen for this item was not published" />}
               </div>
               {r.summary ? <div className="exec-ov-sub">{r.summary}</div> : null}
               <div className="exec-ov-sub exec-ov-item-sla" title={r.sla}>{r.slaShort}</div>
@@ -320,7 +320,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
         <div className="exec-ov-chips">
           {fundWide ? <Flag kind={flag.kind} label={mode === "busy" ? `Busy, ${needs?.items.length ?? 0} ranked` : flag.label} size="sm" /> : null}
           {fundWide && fresh.kind !== "ok" ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
-          <span className="exec-ov-meta" title={streamNote ?? undefined}>{composition?.readAt ? `Read ${utcStamp(composition.readAt)}` : "Read time not published"}{streamNote ? " · Not live" : ""}</span>
+          <span className="exec-ov-meta" title={streamNote ?? undefined}>{composition?.readAt ? `Read ${formatInstant(composition.readAt)}` : "Read time not published"}{streamNote ? " · Not live" : ""}</span>
           <button type="button" className="exec-ov-btn" onClick={refresh}>Refresh</button>
         </div>
       </header>
@@ -331,9 +331,9 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
         </p>
       ) : null}
 
-      {stale ? <div className="exec-ov-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span title={`The last refresh failed (${stale}).`}>Showing the last good read</span></div> : null}
+      {stale ? <div className="exec-ov-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span>Showing the last good read</span><GapWhy name="Why the read is stale" rows={[`The last refresh failed (${stale}).`]} next={null} /></div> : null}
       {fundWide && composition && composition.sourceHealth.profiles.some((p) => (p.state ?? "").toUpperCase() !== "AVAILABLE") ? (
-        <div className="exec-ov-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span title="See Source health below">Some figures may be incomplete</span></div>
+        <div className="exec-ov-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>Some figures may be incomplete</span><GapWhy name="Where to look" rows={["See Source health below"]} next={null} /></div>
       ) : null}
       {snapshot && snapshot.warnings.length > 0 ? (
         <ul className="exec-ov-warnings" role="status">
@@ -474,7 +474,7 @@ export default function OverviewScreen({ api, workspaceId, capabilities, sseFact
               {composition.sourceHealth.profiles.map((p) => (
                 <li key={p.profile}>
                   <Flag kind={(p.state ?? "").toUpperCase() === "AVAILABLE" ? "ok" : (p.state ?? "").toUpperCase() === "PARTIAL" ? "partial" : "unknown"} label={p.state ? humanize(p.state) : "State not stated"} size="sm" />{" "}
-                  <span title={p.reasonCode ?? undefined}>{profileLabel(p.profile)}</span>
+                  <span>{profileLabel(p.profile)}</span>{p.reasonCode ? <GapWhy name={`Reason code for ${profileLabel(p.profile)}`} rows={[p.reasonCode]} next={null} /> : null}
                 </li>
               ))}
             </ul>

@@ -51,7 +51,7 @@ export function DecisionGroup({ items, accessHref, label }: { items: readonly De
         ))}
       </div>
       <div className="exec-stage-dec-why">
-        <p id={reasonId} className="exec-dock-reason" title={reason}>{reason}</p>
+        <p id={reasonId} className="exec-dock-reason">{reason}</p>
         <Link className="exec-dock-access" to={withContext(accessHref, withoutOrigin(params))} aria-label={`My access: ${items.map((item) => item.label).join(", ")}`}>My access</Link>
       </div>
     </div>

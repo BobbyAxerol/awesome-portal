@@ -14,7 +14,6 @@ import { DivBars } from "../../../charts";
 import { SectionPanel } from "../../../blocks";
 import { CardsTable, type CardsColumn } from "../../../cardsTable";
 import { Flag } from "../../../Flag";
-import { utcStamp } from "../../../../time";
 import { PF_FE } from "../fe";
 import { Absent, Money, Np } from "../format";
 import type { TabCtx } from "./ctx";
@@ -22,6 +21,7 @@ import { contributionByCurrency, groupAlphas, type AccountView, type DeploymentV
 import { CapNote, InternalLink, capped } from "./parts";
 
 import "../../../css/portfolios.css";
+import { formatInstant } from "../../../boundary";
 
 export function AlphasTab({ ctx }: { ctx: TabCtx }) {
   const groups = groupAlphas(ctx.deployments);
@@ -102,7 +102,7 @@ export function AccountsTab({ ctx }: { ctx: TabCtx }) {
         : <span className="exec-pf-ccylist">{a.balances.map((b) => <Money key={b.currency} value={b.total} currency={b.currency} />)}</span>),
     },
     { key: "status", label: "Status", render: (a) => <Flag kind={a.syncKind} label={a.syncLabel} size="sm" /> },
-    { key: "synced", label: "Last synced", render: (a) => (a.lastSyncedAt === null ? <Absent reason="not published" /> : utcStamp(a.lastSyncedAt)) },
+    { key: "synced", label: "Last synced", render: (a) => (a.lastSyncedAt === null ? <Absent reason="not published" /> : formatInstant(a.lastSyncedAt)) },
   ];
   return (
     <div className="exec-pf-stack">

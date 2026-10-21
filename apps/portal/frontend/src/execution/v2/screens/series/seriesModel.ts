@@ -13,7 +13,6 @@
  * Plain TypeScript, no React.
  */
 import type { ExactUnit } from "../../../formatExact";
-import { utcStamp } from "../../../time";
 import { showDecimal, type ChartState, type SeriesPoint } from "../../charts";
 import type {
   ManagerSeries,
@@ -28,6 +27,7 @@ import type {
   SeriesComparisonMismatch,
   SeriesUnavailableReason,
 } from "../../readers/managerSeries";
+import { formatInstant } from "../../boundary";
 
 export const METRIC_WORD: Readonly<Record<ManagerSeriesMetric, string>> = { NAV: "NAV", NET_PNL: "Net PnL", RETURN: "Return" };
 
@@ -138,7 +138,7 @@ export function chartStateOf(entry: ManagerSeriesDescribed): ChartState {
   return entry.quality.freshness === "STALE" ? { kind: "stale", reason } : { kind: "partial", reason };
 }
 
-const windowText = (entry: Pick<ManagerSeriesDescribed, "window">): string => `${utcStamp(entry.window.fromMs)} to ${utcStamp(entry.window.toMs)}`;
+const windowText = (entry: Pick<ManagerSeriesDescribed, "window">): string => `${formatInstant(entry.window.fromMs)} to ${formatInstant(entry.window.toMs)}`;
 
 /** What a ratio is stated in, for a caption: `, a ratio stated as a fraction (1.0 is 100%), shown in %`. */
 const ratioWord = (scale: ManagerSeriesRatioScale | null): string =>
@@ -187,7 +187,7 @@ export function commonCaption(metric: ManagerSeriesMetric, comparison: Extract<M
     `${c.economicDomain.toLowerCase()} book`,
     `basis ${c.basis}`,
     `methodology ${c.methodologyRef}`,
-    `window ${utcStamp(c.window.fromMs)} to ${utcStamp(c.window.toMs)} (UTC)`,
+    `window ${formatInstant(c.window.fromMs)} to ${formatInstant(c.window.toMs)} (UTC)`,
     "points as published: nothing rebased, filled or converted",
   ].join(" · ");
 }

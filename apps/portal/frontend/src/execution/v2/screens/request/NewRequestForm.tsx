@@ -13,6 +13,7 @@
 import { useId } from "react";
 import { Link } from "react-router-dom";
 
+import { GapWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import { ALPHA_SCOPE_LABEL, ID_PATTERN, ID_RULE, claimHint, runLabel, RUN_LIBRARY_HREF, stillNeeded, summaryCounter, MAX_SUMMARY, MIN_SUMMARY } from "./model";
 import { MAX_RUN_PAGES, RUN_PAGE_LIMIT } from "./runLibrary";
@@ -157,13 +158,13 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
               {state.alphas.map((a) => <option key={a.id} value={a.id}>{a.label}</option>)}
             </select>
             {runs.status === "unavailable" ? (
-              <p id={`${base}-alpha-help`} className="exec-rq-note" role="status" title={runs.reason ?? undefined}>Run Library not available. Type the ids below.</p>
+              <p id={`${base}-alpha-help`} className="exec-rq-note" role="status">Run Library not available. Type the ids below.{runs.reason ? <GapWhy name="Why the Run Library is not available" rows={[runs.reason]} next={null} /> : null}</p>
             ) : !listReady || state.alphas.length === 0 ? (
               runs.status === "loading" ? null : (
                 <p id={`${base}-alpha-help`} className="exec-rq-note">{runs.catalog === null ? "No completed run to pick. Type the ids below." : "No alpha to pick. Type the ids below."}</p>
               )
             ) : derivedAlphas ? (
-              <p className="exec-rq-note" title="The Run Library did not publish its alpha list, so these are the alphas of the runs loaded so far.">Alphas of the loaded runs only. If yours is missing, type its id below.</p>
+              <p className="exec-rq-note">Alphas of the loaded runs only. If yours is missing, type its id below.<GapWhy name="Why only the loaded runs" rows={["The Run Library did not publish its alpha list, so these are the alphas of the runs loaded so far."]} next={null} /></p>
             ) : null}
           </div>
 
@@ -240,7 +241,7 @@ export function NewRequestForm({ state, variant, accessHref }: NewRequestFormPro
             ) : state.claim.kind === "none-listed" ? (
               <p className="exec-rq-note" title="The server refuses a typed claim that is not eligible.">No eligible claim listed for this run. Type the id below.</p>
             ) : state.claim.kind === "cannot-list" ? (
-              <p className="exec-rq-note" title={state.claim.reason}>Claims cannot be listed for this run. Type the claim id below.</p>
+              <p className="exec-rq-note">Claims cannot be listed for this run. Type the claim id below.{state.claim.reason ? <GapWhy name="Why claims cannot be listed" rows={[state.claim.reason]} next={null} /> : null}</p>
             ) : (
               <p className="exec-rq-note">Claims are not listed for this run. Type the claim id below.</p>
             )}

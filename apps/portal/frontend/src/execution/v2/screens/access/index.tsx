@@ -20,7 +20,7 @@ import { useSession } from "../../../../auth/session";
 import { SELF_ENTRY_PATH } from "../../../../app/selfNavView";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
-import { NotAvailableLine, PanelHead } from "../../blocks";
+import { GapWhy, NotAvailableLine, PanelHead } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ExecutionSurface } from "../../../ExecutionSurface";
 import { Flag } from "../../Flag";
@@ -341,7 +341,8 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
             {grantView.label !== null ? (
               <p className="exec-acc-foot" role="status" data-testid="exec-acc-grants-cap">
                 <span data-testid="exec-acc-grants-cap-label">{grantView.label}</span>
-                <span title={`These are the first ${grantView.rows.length} in the order the Portal sent them; the other ${grantView.total - grantView.rows.length} are not drawn here.`}>{`. The other ${grantView.total - grantView.rows.length} are not drawn here`}</span>
+                <span>{`. The other ${grantView.total - grantView.rows.length} are not drawn here`}</span>
+                <GapWhy name="Why the other grants are not drawn" rows={[`These are the first ${grantView.rows.length} in the order the Portal sent them; the other ${grantView.total - grantView.rows.length} are not drawn here.`]} next={null} />
               </p>
             ) : null}
             <p className="exec-acc-foot">State and trading-system columns are the Portal&apos;s own evaluation.</p>
@@ -367,7 +368,8 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
             <dt>Owner recovery</dt>
             <dd>
               <Flag kind="neutral" size="sm" label="Off" />{" "}
-              <span title={effective.ownerRecovery.reasonCode}>{reasonText(effective.ownerRecovery.reasonCode).text}</span>
+              <span>{reasonText(effective.ownerRecovery.reasonCode).text}</span>
+              <GapWhy name="Owner recovery, reason code" rows={[effective.ownerRecovery.reasonCode]} next={null} />
               <span className="exec-blk-sr"> {effective.ownerRecovery.reasonCode}</span>
             </dd>
           </dl>

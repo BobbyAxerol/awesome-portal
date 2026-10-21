@@ -7,6 +7,7 @@
  * UX-F18 (repeated clicks, timeout, back, cancel, reconnect) is covered by the double-click, the unknown/retry/discard and the unmount
  * tests; UX-F17 (applied + projection lag + venue partial) by `applied-lagging`; UX-F14 to UX-F16 by the certification rows.
  */
+import { whyText } from "../../gapWhyTestUtil";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -349,7 +350,7 @@ describe("ACCEPTED (four independent answers)", () => {
     expect(within(panel).getAllByText("100.000000000000000001 USDT").length).toBeGreaterThanOrEqual(2);
     const fillLine = within(rows[3]!).getByText("Fill: not published");
     expect(fillLine.getAttribute("data-state")).toBe("not_published");
-    expect(fillLine.getAttribute("title")).toMatch(/Not published \(FE-032\)/);
+    expect(whyText(fillLine)).toMatch(/Not published \(FE-032\)/);
     expect(within(rows[1]!).getByText("Reason: not applicable").getAttribute("data-state")).toBe("not_applicable");
     expect(within(panel).getByText("9007199254740994")).toBeTruthy();
     expect(within(panel).getAllByText(COMMAND_ID_APPLIED).length).toBeGreaterThan(0);
@@ -395,7 +396,7 @@ describe("REJECTED (typed)", () => {
     const panel = await screen.findByLabelText("Rejected");
     const reason = within(panel).getByText("Reason: not published");
     expect(reason.getAttribute("data-absence")).toBe("rejection");
-    expect(reason.getAttribute("title")).toMatch(/Not published \(FE-032\)/);
+    expect(whyText(reason)).toMatch(/Not published \(FE-032\)/);
     expect(panel.textContent).not.toMatch(/FE-032/);
     expect(within(panel).getByText("None published")).toBeTruthy();
     expect(within(panel).queryByRole("button", { name: "Change the request" })).toBeNull();
@@ -903,7 +904,7 @@ describe("the status lookup", () => {
     lookup();
     const found = await ask(F0_OPERATION_BODY.operation_id);
     expect(within(found).getByText("Blocked, not sent")).toBeTruthy();
-    expect(within(found).getAllByText("2026-08-22 12:00:00 UTC", { selector: "dd" })).toHaveLength(2);
+    expect(within(found).getAllByText("22 Aug 12:00Z", { selector: "dd" })).toHaveLength(2);
     expect(within(found).getByText(/Created and updated are Portal times, not source freshness/)).toBeTruthy();
     expect(within(found).getByRole("link", { name: "Open in Operations" })).toBeTruthy();
   });
@@ -1062,7 +1063,7 @@ describe("the story page", () => {
     fireEvent.click(screen.getByRole("button", { name: "Read the plan" }));
     await screen.findByLabelText(/^Plan: /);
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(document.body.textContent).toContain("Fixture clock: 2026-08-22 12:01:00 UTC");
+    expect(document.body.textContent).toContain("Fixture clock: 22 Aug 12:01Z");
   });
 
   it("runs the whole F0 path: plan, typed confirmation, denial", async () => {

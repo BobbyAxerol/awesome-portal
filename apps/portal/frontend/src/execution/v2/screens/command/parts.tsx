@@ -4,7 +4,6 @@
  */
 import { Link, useSearchParams } from "react-router-dom";
 
-import { formatUtcEpochMs } from "../../../screenDataContract";
 import { Flag } from "../../Flag";
 import type { CommandStatusV1 } from "../../readers/commandCurrency";
 import type { CommandOperationV1 } from "../../readers/commandOperation";
@@ -14,6 +13,8 @@ import type { LookupView } from "./lookup";
 import { NEXT_ACTION_COPY, operationHref, showable, statusFacets } from "./model";
 
 import "../../css/command.css";
+import { GapWhy } from "../../blocks";
+import { formatAsOf } from "../../boundary";
 
 export function Facts({ rows, label }: { rows: readonly { label: string; value: string; mono?: boolean }[]; label?: string }) {
   return (
@@ -38,8 +39,9 @@ export function FacetList({ status }: { status: CommandStatusV1 }) {
           <Flag kind={facet.kind} label={facet.label} size="sm" />
           <span className="exec-cf-meta">{facet.note}</span>
           {facet.absence !== undefined ? (
-            <span className="exec-cf-meta exec-cf-facet-absence" data-absence={facet.absence.field} data-state={facet.absence.state.toLowerCase()} title={facet.absence.title}>
+            <span className="exec-cf-meta exec-cf-facet-absence" data-absence={facet.absence.field} data-state={facet.absence.state.toLowerCase()}>
               {facet.absence.text}
+              <GapWhy name={`${facet.dimension}, reason`} rows={[facet.absence.title]} next={null} />
             </span>
           ) : null}
         </li>
@@ -86,7 +88,7 @@ export function StatusBody({ status }: { status: CommandStatusV1 }) {
           { label: "Receipt", value: status.business.receiptRef ?? "None yet", mono: status.business.receiptRef !== null },
           { label: "Source event", value: status.business.sourceEventRef ?? "None yet", mono: status.business.sourceEventRef !== null },
           { label: "Revision", value: status.business.revision ?? "None yet", mono: status.business.revision !== null },
-          { label: "Last update", value: formatUtcEpochMs(status.updatedAt) },
+          { label: "Last update", value: formatAsOf(status.updatedAt) },
         ]}
       />
       <p className="exec-cf-next">{NEXT_ACTION_COPY[status.nextAction]}</p>
@@ -114,8 +116,8 @@ export function OperationBody({ operation }: { operation: CommandOperationV1 }) 
           { label: "Blocked by", value: operation.blockers.join(", "), mono: true },
           { label: "Relay receipt", value: "None: nothing was relayed" },
           { label: "Request sent to the Trading System", value: operation.sourceSideEffectRequested ? "Possibly: verify first" : "No" },
-          { label: "Created", value: formatUtcEpochMs(operation.createdAt.ms) },
-          { label: "Updated", value: formatUtcEpochMs(operation.updatedAt.ms) },
+          { label: "Created", value: formatAsOf(operation.createdAt.ms) },
+          { label: "Updated", value: formatAsOf(operation.updatedAt.ms) },
         ]}
       />
       <p className="exec-cf-meta">Created and updated are Portal times, not source freshness.</p>

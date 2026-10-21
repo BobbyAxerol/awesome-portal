@@ -38,8 +38,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import type { ConditionalGroupRead } from "../../../derivedReads";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { useProfileRealtime } from "../../../profileRealtime";
-import { utcStamp } from "../../../time";
-import { QuietIds } from "../../blocks";
+import { GapWhy, QuietIds } from "../../blocks";
 import { CardsTable } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { useContextFacts } from "../../shell/contextFacts";
@@ -365,13 +364,13 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
         </div>
         <div className="exec-blt2-fresh">
           {fresh === "FRESH" ? null : <Flag kind={fresh === "STALE" ? "stale" : "unknown"} label={fresh === "STALE" ? "Stale" : page.freshness ? humanize(page.freshness) : "Freshness not stated"} size="sm" />}
-          {page.asOf ? <span className="exec-blt2-meta">As of {utcStamp(page.asOf)}</span> : <span className="exec-blt2-meta">Source time not published</span>}
+          {page.asOf ? <span className="exec-blt2-meta">As of {shortUtc(page.asOf)}</span> : <span className="exec-blt2-meta">Source time not published</span>}
         </div>
       </header>
 
       {urlNotices.map((text) => <div key={text} className="exec-blt2-banner" role="status" data-kind="info"><Flag kind="na" label="Not applied" size="sm" /><span>{text}</span></div>)}
-      {staleReason ? <div className="exec-blt2-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span title={`The last refresh failed (${staleReason}).`}>Showing the last good read</span></div> : null}
-      {incomplete ? <div className="exec-blt2-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span title={`The read is ${humanize(page.completeness ?? page.state)}`}>Some figures are missing</span></div> : null}
+      {staleReason ? <div className="exec-blt2-banner" role="status"><Flag kind="stale" label="Stale" size="sm" /><span>Showing the last good read</span><GapWhy name="Why the read is stale" rows={[`The last refresh failed (${staleReason}).`]} next={null} /></div> : null}
+      {incomplete ? <div className="exec-blt2-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>Some figures are missing</span><GapWhy name="Why figures are missing" rows={[`The read is ${humanize(page.completeness ?? page.state)}`]} next={null} /></div> : null}
       {page.skippedOrders > 0 ? <div className="exec-blt2-banner" role="status"><Flag kind="partial" label="Partial" size="sm" /><span>{page.skippedOrders} {page.skippedOrders === 1 ? "row" : "rows"} on this page could not be read and {page.skippedOrders === 1 ? "is" : "are"} not shown.</span></div> : null}
       {scoped?.deploymentNotApplied ? <div className="exec-blt2-banner" role="status"><Flag kind="na" label="Not applied" size="sm" /><span>The deployment scope could not be applied: the orders read carries no deployment id.</span></div> : null}
       {scope.order !== null || scope.fill !== null ? (
@@ -453,8 +452,9 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
             })}
           </div>
           {unchipped.length > 0 ? (
-            <span className="exec-blt2-na exec-blt2-unchipped" title="The server has no status bucket for these, so the list cannot be filtered to them">
+            <span className="exec-blt2-na exec-blt2-unchipped">
               No chip: {unchipped.map((u) => `${u.label} ${u.count}`).join(", ")}
+              <GapWhy name="Why there is no chip" rows={["The server has no status bucket for these, so the list cannot be filtered to them"]} next={null} />
             </span>
           ) : null}
           <div className="exec-blt2-tools">
@@ -483,7 +483,7 @@ export default function BlotterScreen({ api, capabilities, accessHref, chartHref
               ) : null}
             </span>
             <button type="button" className="exec-blt2-btn" disabled aria-describedby={`${colMenuId}-export`}>Export</button>
-            <span id={`${colMenuId}-export`} className="exec-blt2-note" title="Not published (FE-016)"><QuietIds text="Not published (FE-016)" /></span>
+            <span id={`${colMenuId}-export`} className="exec-blt2-note"><QuietIds text="Not published (FE-016)" /></span>
           </div>
         </div>
 

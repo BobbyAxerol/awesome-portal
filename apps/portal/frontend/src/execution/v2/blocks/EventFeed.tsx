@@ -17,13 +17,13 @@ import type { PanelStatus } from "../../contracts";
 import { CardsTable, type CardsColumn } from "../cardsTable";
 import { Flag } from "../Flag";
 import type { FlagKind } from "../flagKinds";
-import { utcStamp } from "../../time";
 import { isInternalPath } from "../urlState";
 import type { UtcEpochMs } from "../../screenDataContract";
-import { NotPublished, type NotPublishedId } from "./notPublished";
+import { GapWhy, NotPublished, type NotPublishedId } from "./notPublished";
 import { SectionPanel } from "./SectionPanel";
 import { PanelGate } from "./StateBoundary";
 import "../css/blocks.css";
+import { formatInstant } from "../boundary";
 
 export interface EventFeedRow {
   /** Stable id of the event (keyset cursor id); used as the React key. */
@@ -94,7 +94,7 @@ function isoOf(at: UtcEpochMs): string | undefined {
 function EventLink({ href, children }: { href: string; children: ReactNode }) {
   if (isInternalPath(href)) return <Link className="exec-blk-link" to={href}>{children}</Link>;
   if (/^https?:\/\/[^\s\\\u0000-\u001f\u007f]+$/i.test(href)) return <a className="exec-blk-link" href={href} rel="noopener noreferrer">{children}</a>;
-  return <span title="Link not shown: the address is not a safe app path or web address.">{children}</span>;
+  return <span>{children}<GapWhy name="Why there is no link" rows={["Link not shown: the address is not a safe app path or web address."]} next={null} /></span>;
 }
 
 function columns(withActor: boolean): CardsColumn<EventFeedRow>[] {
@@ -102,7 +102,7 @@ function columns(withActor: boolean): CardsColumn<EventFeedRow>[] {
     {
       key: "at",
       label: "When (UTC)",
-      render: (r) => <time dateTime={isoOf(r.at)}>{utcStamp(r.at)}</time>,
+      render: (r) => <time dateTime={isoOf(r.at)}>{formatInstant(r.at)}</time>,
     },
     { key: "kind", label: "Kind", render: (r) => <Flag kind={r.kind} label={r.kindLabel} size="sm" /> },
     {

@@ -13,6 +13,10 @@ import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import Cockpit, { type CockpitProps } from "./index";
 import { whyText } from "../../gapWhyTestUtil";
 
+/** The `Not published (FE-xxx)` cells of a scope: the ids are hidden text in the cell and the full sentence is behind its "?" disclosure. */
+const npCells = (scope: HTMLElement, text: string): HTMLElement[] =>
+  Array.from(scope.querySelectorAll<HTMLElement>(".exec-ck-np")).filter((cell) => cell.textContent === text);
+
 /* ── the session, standing in for useSession ─────────────────────────────── */
 
 const session = vi.hoisted(() => ({
@@ -632,11 +636,11 @@ describe("evidence frame", () => {
     const evidence = screen.getByRole("region", { name: "Evidence" });
     expect(within(evidence).getByRole("heading", { name: "Alpha One" })).toBeTruthy();
     const checklist = within(evidence).getByRole("region", { name: "Checklist findings" });
-    expect(within(checklist).getAllByTitle("Not published (FE-028)").length).toBe(3);
+    expect(npCells(checklist, "Not published (FE-028)").length).toBe(3);
     expect(within(checklist).getByText("Capacity evidence covers the top 3 symbols only")).toBeTruthy();
     expect(within(checklist).getByText("Approve with a condition")).toBeTruthy();
     expect(within(checklist).getByText("Watch")).toBeTruthy();
-    expect(within(evidence).getByTitle("Not published (FE-029)")).toBeTruthy();
+    expect(npCells(evidence, "Not published (FE-029)").length).toBeGreaterThan(0);
     expect(within(evidence).getByRole("region", { name: "Artifact passport" })).toBeTruthy();
   });
 
@@ -834,7 +838,8 @@ describe("decision rail", () => {
     const stepUp = within(rail()).getByLabelText("Step-up confirmation");
     expect(stepUp.textContent).toContain("Not published (FE-015)");
     expect(stepUp.textContent).not.toContain("Informational only");
-    expect(within(stepUp).queryAllByRole("button")).toHaveLength(0);
+    // The "?" disclosure of the absence is a button too; there is no decision control.
+    expect(within(stepUp).queryAllByRole("button").filter((b) => !b.hasAttribute("aria-expanded"))).toHaveLength(0);
     cleanup();
     await mount(standardPort(), "/execution/approvals?sel=apr_a");
     expect(within(rail()).queryByLabelText("Step-up confirmation")).toBeNull();
@@ -906,7 +911,7 @@ describe("waiver lane", () => {
     await settle();
     const evidence = screen.getByRole("region", { name: "Evidence" });
     expect(within(evidence).getByRole("region", { name: "Condition" }).textContent).toContain("Keep paper exposure below the certified envelope.");
-    expect(within(evidence).getByTitle("Not published (FE-029)")).toBeTruthy();
+    expect(npCells(evidence, "Not published (FE-029)").length).toBeGreaterThan(0);
     // The "?" reason disclosures (GapWhy) are buttons too; this is about the decision controls.
     const buttons = (within(rail()).getAllByRole("button") as HTMLButtonElement[]).filter((b) => !b.hasAttribute("aria-expanded"));
     expect(buttons.map((b) => b.textContent)).toEqual(["Extend 14 days", "Other decisions"]);

@@ -13,12 +13,11 @@
 import { useState } from "react";
 
 import { ChartTools, EquityPanel, domainOfSeries, type ChartDomain } from "../../../charts";
-import { NotAvailableLine, SectionPanel, type UnavailableFact } from "../../../blocks";
+import { GapWhy, NotAvailableLine, SectionPanel, type UnavailableFact } from "../../../blocks";
 import { Flag } from "../../../Flag";
-import { formatAsOf } from "../../../boundary";
+import { formatAsOf, formatInstant } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
 import { PF_FE, npText } from "../fe";
-import { utcStamp } from "../../../../time";
 import { ManagerSeriesPanel } from "../../series/ManagerSeriesPanel";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../../series/seriesModel";
 import { Absent, MoneyList, Np } from "../format";
@@ -46,7 +45,7 @@ function NavFigure({ ctx, withNote = true }: { ctx: TabCtx; withNote?: boolean }
   return (
     <span title={last.exact}>
       {seriesValueText(entry, last.exact)}
-      {withNote ? <small className="exec-pf-dim exec-pf-stamp">{utcStamp(last.tsMs)}</small> : null}
+      {withNote ? <small className="exec-pf-dim exec-pf-stamp">{formatInstant(last.tsMs)}</small> : null}
     </span>
   );
 }
@@ -117,7 +116,7 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
               <FlowRibbonNotes ctx={ctx} />
               <div className="exec-pf-caption">
                 <Flag kind="neutral" label="Retained snapshots" size="sm" />
-                <span title="Benchmark: not available">Account equity, not NAV</span>
+                <span>Account equity, not NAV</span><GapWhy name="Why there is no benchmark" rows={["Benchmark: not available"]} next={null} />
                 {payload.clocks.asOfMs !== null && readUtcEpochMs(payload.clocks.asOfMs) !== null ? <span>As of {formatAsOf(readUtcEpochMs(payload.clocks.asOfMs)!)}</span> : null}
               </div>
             </div>

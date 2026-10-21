@@ -9,9 +9,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import { utcStamp } from "../../../time";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { JourneySpine } from "../../blocks";
+import { JourneySpine, NaWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { ManagerRow } from "../../readers/managerDataset";
 import { healthView, humanize } from "./fleetModel";
@@ -19,6 +18,7 @@ import { inStageOf, lifecycleFlagOf, stageViewOf } from "./fleetDatasetModel";
 import { spineStage } from "./FleetTable";
 
 import "../../css/fleet.css";
+import { formatInstant } from "../../boundary";
 
 function StageCell({ row }: { row: ManagerRow }) {
   const view = stageViewOf(row);
@@ -35,12 +35,12 @@ function StageCell({ row }: { row: ManagerRow }) {
     );
   }
   if (view.kind === "unpublished") {
-    return <span className="exec-fleet-np" title={view.reason ?? undefined}>{view.label}</span>;
+    return <NaWhy className="exec-fleet-np" text={view.label} reason={view.reason} />;
   }
   return (
     <span className="exec-fleet-stagecell">
       <span className="exec-fleet-stageline">
-        <span className="exec-fleet-none" title={view.reason ?? undefined}>{view.label}</span>
+        <NaWhy className="exec-fleet-none" text={view.label} reason={view.reason} />
         {view.presence.length > 0 ? <span className="exec-fleet-also">in {view.presence.join(", ")}</span> : null}
       </span>
     </span>
@@ -48,10 +48,10 @@ function StageCell({ row }: { row: ManagerRow }) {
 }
 
 function InStageCell({ row }: { row: ManagerRow }) {
-  const view = inStageOf(row, utcStamp);
+  const view = inStageOf(row, formatInstant);
   return view.published
     ? <span title={view.detail}>{view.text}</span>
-    : <span className="exec-fleet-np" title={view.detail}>{view.text}</span>;
+    : <NaWhy className="exec-fleet-np" text={view.text} reason={view.detail} />;
 }
 
 export interface FleetDatasetTableProps {

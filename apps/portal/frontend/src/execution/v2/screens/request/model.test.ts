@@ -446,7 +446,7 @@ describe("routes and times", () => {
   });
 
   it("a due time is UTC to the minute, or nothing when the text is not an instant", () => {
-    expect(dueText("2026-10-20T12:34:56.000Z")).toBe("2026-10-20 12:34 UTC");
+    expect(dueText("2026-10-20T12:34:56.000Z")).toBe("20 Oct 12:34Z");
     expect(dueText("tomorrow")).toBeNull();
     expect(dueText(null)).toBeNull();
   });

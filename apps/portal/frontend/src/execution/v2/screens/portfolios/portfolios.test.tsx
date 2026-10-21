@@ -86,7 +86,9 @@ describe("register", () => {
     await loaded();
     const pilot = bodyRows().find((r) => r.textContent?.includes("Pilot"))!;
     expect(cell(pilot, "Allocated capital")).toBe("Not available · no allocation published");
+    expect(whyText(pilot.querySelector("td[data-l='Allocated capital']"))).toBe("no allocation published");
     expect(cell(pilot, "Owner")).toBe("Not available · owner not published");
+    expect(whyText(pilot.querySelector("td[data-l='Owner']"))).toBe("owner not published");
     expect(cell(pilot, "Allocations")).toBe("0");
   });
 
@@ -171,12 +173,12 @@ describe("header, banners and footer", () => {
     await loaded();
     // FRESH prints no chip: the as-of line says it. A tier that is not fresh keeps its chip (conformance matrix).
     expect(screen.queryByText("Fresh")).toBeNull();
-    expect(screen.getByText(/As of 2026-10-17/)).toBeTruthy();
-    expect(screen.getByText("Some portfolios or figures may be missing").getAttribute("title")).toBe("The read is partial");
+    expect(screen.getByText(/As of 17 Oct/)).toBeTruthy();
+    expect(whyText(screen.getByText("Some portfolios or figures may be missing").parentElement)).toBe("The read is partial");
     const branch = screen.getByText(/Paper: Partial \(the data feed is running behind\)/);
     expect(branch).toBeTruthy();
     expect(branch.textContent).not.toMatch(/N31_|_LAGGING/);
-    expect(branch.getAttribute("title")).toBe("Reason code: N31_PROJECTION_LAGGING");
+    expect(whyText(branch)).toBe("Reason code: N31_PROJECTION_LAGGING");
     expect(screen.queryByText(/Names and allocation only/)).toBeNull();
   });
 
@@ -186,7 +188,7 @@ describe("header, banners and footer", () => {
     expect(screen.getAllByText("Top 6 / 9 portfolios").length).toBeGreaterThan(0);
     const more = screen.getByRole("button", { name: "Load more" }) as HTMLButtonElement;
     expect(more.disabled).toBe(true);
-    expect(more.title).toContain("no cursor");
+    expect(screen.getByText(/no cursor/)).toBeTruthy();
     expect(more.getAttribute("aria-describedby")).toBeTruthy();
   });
 
@@ -396,7 +398,7 @@ describe("Compare is off (M2)", () => {
     expect(screen.queryByRole("link", { name: /^Compare/ })).toBeNull();
     const button = screen.getByRole("button", { name: "Compare" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
-    expect(button.title).toBe(COMPARE_OFF_REASON);
+    expect(whyText(button.nextElementSibling)).toBe(COMPARE_OFF_REASON);
     expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toContain(`Compare: ${COMPARE_OFF_REASON}`);
     expect(document.querySelector("a[href*='view=compare']")).toBeNull();
   });

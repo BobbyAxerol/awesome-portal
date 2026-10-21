@@ -20,6 +20,7 @@
  */
 import { useId } from "react";
 import { Link } from "react-router-dom";
+import { GapWhy } from "../blocks";
 
 import {
   ENV_LABEL,
@@ -151,8 +152,9 @@ export function ContextBar({ env, window: selectedWindow, ccy, onChange, windowL
       {locked ? <span id={reasonId} className="exec-ctxbar-sr">{windowLock.reason}</span> : null}
       {windowLock?.effective ? <span className="exec-ctxbar-lock" title="Window fixed by this screen">Window: {windowLock.effective}</span> : null}
       {lockLine.length > 0 || (locked && accessHref) ? (
-        <span className="exec-ctxbar-reason" title={[envLock?.reason, windowLock?.reason].filter(Boolean).join(" ")} data-notice="lock">
+        <span className="exec-ctxbar-reason" data-notice="lock">
           {lockLine.join(" · ")}
+          {[envLock?.reason, windowLock?.reason].some(Boolean) ? <GapWhy name="Why this is locked" rows={[envLock?.reason, windowLock?.reason].filter((r): r is string => Boolean(r))} next={null} /> : null}
           {locked && accessHref ? (
             <>
               {" "}

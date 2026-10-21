@@ -124,7 +124,7 @@ export function EventRibbon({ label, events, domain, stages = [], enabled = {}, 
               <div key={kind} className="exec-ribbon-lane" data-kind={kind} data-off={on(kind) ? "false" : "true"} data-unpublished={unpublished[kind] !== undefined ? "true" : undefined} style={{ top: 4 + row * 18 }}>
                 <span className="exec-ribbon-lane-name">{EVENT_KIND_TABLE[kind].label}</span>
                 {unpublished[kind] !== undefined ? (
-                  <span className="exec-ribbon-lane-np" data-testid="ribbon-lane-np" title={unpublished[kind]}>{unpublished[kind]}</span>
+                  <span className="exec-ribbon-lane-np" data-testid="ribbon-lane-np">{unpublished[kind]}</span>
                 ) : (
                   <span className="exec-ribbon-lane-axis" />
                 )}

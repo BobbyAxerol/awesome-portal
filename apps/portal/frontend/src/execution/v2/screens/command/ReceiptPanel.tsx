@@ -16,10 +16,10 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
-import { formatUtcEpochMs } from "../../../screenDataContract";
 import { KEY_CHECK_UNANSWERED_COPY, UNKNOWN_COPY, operationHref, showable, type Receipt } from "./model";
 import { Facts, LookupResult, StatusBody } from "./parts";
 import type { CommandFlow } from "./useCommandFlow";
+import { formatAsOf } from "../../boundary";
 
 /** What the reader must see before an unknown send is forgotten. */
 export const DISCARD_WARNING = "This command may already have been applied. Check it before creating another.";
@@ -307,7 +307,7 @@ function Body({ receipt, flow, rootRef, keepKey, asking, setAsking, accessHref }
             rows={[
               { label: "Retry allowed", value: receipt.decision.retryAllowed ? "Yes" : "No" },
               { label: "Sent to the Trading System", value: receipt.decision.sourceRequestSent ? "Possibly: verify first" : "No" },
-              { label: "First recorded", value: formatUtcEpochMs(receipt.firstRecordedAt.ms) },
+              { label: "First recorded", value: formatAsOf(receipt.firstRecordedAt.ms) },
               { label: "Stored answer", value: "Yes: the first answer for this key" },
             ]}
           />

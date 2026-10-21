@@ -388,7 +388,9 @@ describe("priority slot and footer", () => {
     expect(lines).toHaveLength(2);
     expect(lines[0].getAttribute("data-l")).toBe("Acknowledge");
     const p = lines[0].querySelector("p")!;
-    expect(p.getAttribute("title")).toBe(p.textContent);
+    // The reason is printed in full and wraps; it is not an ellipsis that a hover opens (RV-06).
+    expect(p.getAttribute("title")).toBeNull();
+    expect(p.textContent).toContain("Acknowledging is an ADMIN-only write.");
     expect(screen.getAllByText("Acknowledge")).toHaveLength(1);
   });
 });

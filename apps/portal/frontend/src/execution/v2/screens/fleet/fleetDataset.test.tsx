@@ -5,6 +5,7 @@
  * (`lifecycle.live`, `partitions`), so the real reader and the real answers-this-question guard judge every body. The legacy fleet
  * read is the Playwright double's five rows. A fixture is never a source acceptance; there is no REAL_READ here.
  */
+import { whyText } from "../../gapWhyTestUtil";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -113,7 +114,8 @@ describe("not published: today's screen, exactly", () => {
       // the control set is unchanged: Group is the disabled "Not published (FE-012)" select, Health is a plain select, Sort has the fleet words
       const group = screen.getByRole("combobox", { name: "Group by" }) as HTMLSelectElement;
       expect(group.disabled).toBe(true);
-      expect(group.title).toBe("Not published (FE-012)");
+      // The reason is the line the select is described by (and its "?" disclosure), not a hover.
+      expect(document.getElementById(group.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Group by");
       expect(screen.getByRole("combobox", { name: "Health" })).toBeTruthy();
       const sort = screen.getByRole("combobox", { name: "Sort" }) as HTMLSelectElement;
       expect([...sort.options].map((option) => option.textContent)).toEqual([
@@ -208,10 +210,10 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     expect(cell(byId("a-002"), "Current stage")).toBe("Canary");
     expect(cell(byId("a-001"), "Current stage")).toContain("No single stage");
     expect(cell(byId("a-001"), "Current stage")).toContain("in Canary, Live");
-    expect(byId("a-001").querySelector("td[data-l='Current stage'] [title]")?.getAttribute("title")).toBe("MULTIPLE_ACTIVE_STAGES");
+    expect(whyText(byId("a-001").querySelector("td[data-l='Current stage']"))).toBe("MULTIPLE_ACTIVE_STAGES");
     for (const row of rows) {
       expect(cell(row, "In stage")).toBe("Not published (FE-027)");
-      expect(row.querySelector("td[data-l='In stage'] [title]")?.getAttribute("title")).toBe("STAGE_ENTRY_TIME_NOT_PUBLISHED");
+      expect(whyText(row.querySelector("td[data-l='In stage']"))).toBe("STAGE_ENTRY_TIME_NOT_PUBLISHED");
     }
     expect(cell(byId("a-000"), "Portfolio")).toBe("pf-1");
     expect(cell(byId("a-000"), "Owner")).toBe("Lan-002");
@@ -261,7 +263,7 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     expect(document.body.textContent).not.toMatch(/1970/);
     expect(screen.getByText("Source time not published")).toBeTruthy();
     expect(screen.getByText(/The dataset is partial and stale/).textContent).not.toMatch(/TEST_ONLY/);
-    expect(screen.getByText(/The dataset is partial and stale/).getAttribute("title")).toMatch(/TEST_ONLY/);
+    expect(whyText(screen.getByText(/The dataset is partial and stale/).parentElement)).toMatch(/TEST_ONLY/);
   });
 
   it("reads the canonical partitions fixture on the paper lens (money partitions are in the body, none on the screen)", async () => {

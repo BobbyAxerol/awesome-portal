@@ -4,6 +4,7 @@
  * place (flow); every other lane says it has no source. Per currency, bounded,
  * with a table for whoever cannot use the picture.
  */
+import { instantKey } from "../../../gapWhyTestUtil";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
@@ -111,7 +112,7 @@ describe("ribbon under the equity", () => {
     expect(cell(rows[0]!, "Direction")).toBe("Decrease");
     expect(cell(rows[0]!, "Amount")).toContain("20,000.00");
     expect(cell(rows[0]!, "Amount")).toContain("USDT");
-    expect(rows.map((r) => cell(r, "Time · UTC"))).toEqual([...rows.map((r) => cell(r, "Time · UTC"))].sort().reverse());
+    expect(rows.map((r) => cell(r, "Time · UTC"))).toEqual([...rows.map((r) => cell(r, "Time · UTC"))].sort((x, y) => instantKey(y) - instantKey(x)));
     expect(within(table).queryByText(/total/i)).toBeNull();
   });
 

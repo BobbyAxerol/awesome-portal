@@ -32,7 +32,6 @@ import { CommandFlow } from "./CommandFlow";
 import { DisabledOperations } from "./DisabledOperations";
 import { createFakeCommandPort } from "./fakePort";
 import type { CatalogueView } from "./model";
-import { formatUtcEpochMs } from "../../../screenDataContract";
 import type { CommandPort, Lane } from "./port";
 import { SEND_DISABLED_REASON } from "./port";
 import { ACCESS_HREF } from "./ReceiptPanel";
@@ -53,6 +52,7 @@ import {
 } from "./storyData";
 
 import "../../css/command.css";
+import { formatAsOf } from "../../boundary";
 
 export const COMMAND_SCREEN_KEY = "command" as const;
 
@@ -141,7 +141,7 @@ export default function CommandStoryPage({ api, catalogue, port, initialScenario
             </select>
             <p id="exec-cf-scenario-sum" className="exec-blk-sr">{scenario.summary}</p>
           </div>
-          <p className="exec-cf-meta" data-notice="clock" title="A plan's expiry is judged against the fixture clock, not against real time.">Fixture clock: {formatUtcEpochMs(STORY_NOW_MS)}</p>
+          <p className="exec-cf-meta" data-notice="clock" title="A plan's expiry is judged against the fixture clock, not against real time.">Fixture clock: {formatAsOf(STORY_NOW_MS)}</p>
         </div>
       </SectionPanel>
 

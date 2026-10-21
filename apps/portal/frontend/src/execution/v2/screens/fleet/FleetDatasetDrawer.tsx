@@ -9,9 +9,8 @@
 import type { ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
-import { utcStamp } from "../../../time";
 import { withOrigin } from "../../backTo";
-import { JourneySpine } from "../../blocks";
+import { JourneySpine, NaWhy } from "../../blocks";
 import { DockAction, Drawer, type DockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
 import type { ManagerRow } from "../../readers/managerDataset";
@@ -19,6 +18,7 @@ import { withContext } from "../../urlState";
 import { inStageOf, lifecycleFlagOf, stageViewOf } from "./fleetDatasetModel";
 import { alphaHref, FE, healthView, humanize, notPublished } from "./fleetModel";
 import { spineStage } from "./FleetTable";
+import { formatInstant } from "../../boundary";
 
 export interface FleetDatasetDrawerProps {
   /** The `sel` value (a row key). */
@@ -72,7 +72,7 @@ export function FleetDatasetDrawer({ rowKey, row, loading, mode, onClose }: Flee
   }
 
   const stage = stageViewOf(row);
-  const inStage = inStageOf(row, utcStamp);
+  const inStage = inStageOf(row, formatInstant);
   const health = row.health === null ? null : healthView(row.health);
   const lifecycle = lifecycleFlagOf(row.lifecycle);
   const spine = stage.kind === "single" && stage.code !== null ? spineStage(stage.code) : null;
@@ -101,11 +101,11 @@ export function FleetDatasetDrawer({ rowKey, row, loading, mode, onClose }: Flee
             <Fact label="Owner">{row.ownerUserId ?? <span className="exec-fleet-na">Not available</span>}</Fact>
             <Fact label="Portfolio">{row.portfolioId}</Fact>
             <Fact label="Current stage">
-              {stage.kind === "single" ? stage.label : <span className="exec-fleet-np" title={stage.reason ?? undefined}>{stage.label}</span>}
+              {stage.kind === "single" ? stage.label : <NaWhy className="exec-fleet-np" text={stage.label} reason={stage.reason} />}
             </Fact>
             {stage.kind !== "single" && stage.presence.length > 0 ? <Fact label="In stages">{stage.presence.join(", ")}</Fact> : null}
             <Fact label="In stage">
-              {inStage.published ? <span title={inStage.detail}>{inStage.text}</span> : <span className="exec-fleet-np" title={inStage.detail}>{inStage.text}</span>}
+              {inStage.published ? <span title={inStage.detail}>{inStage.text}</span> : <NaWhy className="exec-fleet-np" text={inStage.text} reason={inStage.detail} />}
             </Fact>
             <Fact label="Source">{row.sourceState === null ? <span className="exec-fleet-na">Not available</span> : humanize(row.sourceState)}</Fact>
           </dl>
