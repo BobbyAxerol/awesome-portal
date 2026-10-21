@@ -347,3 +347,78 @@ interval. Core consumes those real pins for its reviewed config/installation,
 returns actual INSTALLED/session/grants, and only then Edge sends API requests.
 Availability alone is not this filled-input/source-commissioning ACK. No slot
 is spent with a short-lived session waiting for the source or build.
+
+## 9. Successor source intake —22Oct00:26ICT /21Oct17:26UTC
+
+**EDGE_CONTRACT_COMPATIBLE / REAL_SOURCE_PREFLIGHT_PASS / NOT_ARMED.** Edge
+consumed both actual successor returns: implementationb1a8c03e and focused
+32311edf. Frozenf92936df/tree0ebb94cf matches28646bef's code;90 distinct
+focused PASS/build/restore accepted with the fixture failure retained. The
+one normal hook RUNNING since17:16:15 is Core-owned; Edge does not duplicate
+it or label old05ae a successor image. This supersedes missing-writer status.
+
+Reviewed actual `manager-domain-successor.ts`, service and CLI: owner-pinned
+artifact, exact policy/predecessor CAS, same actor/workspace/domain/fields,
+fresh append-only grant IDs, unchanged current-human coordinator/final-COMMIT
+fence, historical replay/no resurrection, independent READ/STREAM. The new
+source acceptance ID is outside business-domain equality. No public contract,
+adapter change or TS policy1 bump is needed. Implementation remains the named
+Core writer's scope; Claude's observation/financial/UI files stay untouched.
+
+New bounded **real readonly SDK** preflight EXIT0/stderr0 confirms TS
+system7674585245102796834/live_data_executor and the pinned source/control
+identities, fingerprint5a67e653/admission25d2b3ef/max8/4096. Proposed fresh
+d0a7b78a is absent, official BUSINESS_READ_ACCEPTANCE_MISSING; original
+b922c105 stays4/revoked. Both physical pools0; exact --rm worker absent.
+No head/role/session/grant/ISSUE/ENTER/listener or serving runtime mutation.
+
+The16:30–17:00 draft is EXPIRED_NOT_EXECUTED, not authority to re-date/install.
+Existing SDK32119f66/lifecycle1ee3a15d/GET-drivercad1eeb6 and exact-ID Docker
+exit-observation mechanism are reused. No witness starts while waiting for
+qualification; arm it before genuine source activation and retain physical
+drain/Core ACK custody on UNKNOWN. Native trust ends22Oct02:48UTC
+(09:48ICT); a viable finite slot must fit or use a separately reviewed renewal.
+
+**Core next return:** actual terminal normal result, immutable successor image,
+reviewed target/schema/config and draft/source-commissioning ACK. Then Edge
+returns fresh finite manifest pins and actual SDK acceptance/READY; Core uses
+those real pins for official successor installation/current finite session
+and independent eligible grants. No commissioning deadlock: draft ACK need
+not falsely claim source already installed. After actual installed/current
+authority Edge runs eligible READ immediately, then each qualified revoke/
+cursor/cache/SSE case. Do not mint sessions while waiting for normal/build;
+cache-HIT observation, Fleet/financial and Manager PKI remain separate cases.
+Full08/09 NOT_MET. Continue this same08, no new generic approval or framework.
+
+### Actual normal terminal supersedes RUNNING above —22Oct00:30ICT
+
+Edge's direct17:28UTC read of Core's `successor-focused-ClGkOc/normal-exit.txt`
+shows **EXIT143 / FINISHED_AT2026-10-21T17:25:26Z / sourcef92936df /
+tree0ebb94cf**. Log ends `Terminated` after Vitest start, without test verdict.
+This is not PASS, an assertion failure or an image/installation. Core's public
+return still says RUNNING at this read cut. Core owns reconciling its controller
+terminal and current gate disposition; Edge neither repeats that suite nor
+stops a peer job. Current scoped Core test activity is not a normal PASS.
+Return the actual qualified disposition/pins before a new finite commissioning
+ACK. Existing source remains OFF; no short-lived session/grant was created.
+
+### Corrected sequential successor consumed —22Oct00:36ICT /21Oct17:36UTC
+
+Core's actual sequential return6821cc61 explains the old normal143 as
+ABORTED_FOR_SOURCE_FIX, not an infrastructure failure. Independent source
+review reproduces no new Edge incompatibility: historical STREAM revision is
+CAS lineage, current policy must still seal its exact domain/field identity,
+and the NEW grant must bind current/next revision. READ stays unchanged when
+STREAM is explicitly added later; no implicit STREAM from READ. Checked full
+corrected planner and both test diffs, preserving old-deny/active constraints,
+windows/final-COMMIT/UNKNOWN fences and no resurrection.
+
+Observed source8ac4f553/tree4a29ae9e is non-Markdown-identical to qualified
+55189788/tree084cf692; plannerSHA256
+19bfa8b9dfeeab1db5ec8d67a97d8008f00afede8789dbc26be5cda8e025a00d.
+Accept Core's actual corrected focused receipt: pure73+PG9+unchanged9 =
+91distinct PASS, build/scoped restore PASS. Earlier90/f929 receipt is history.
+This is **corrected-source compatibility ACK, NOT commissioning/installed ACK**.
+Core still owns corrected-source normal/image/target/config/official successor
+return before a finite source slot. Existing real readonly preflight still
+applies to unchanged TS/SDK/domain; no repeat worker/test/source was launched.

@@ -29270,6 +29270,190 @@ ordering clarification is3585bytes/SHAfb40a857; HK/SGP exact-byte readback PASS.
 First readback differed only by one added blank line; both copies now match,
 all remote preexisting prefixes preserved. No runtime claim follows from R0.
 
+**16:22UTC decisive Core return / current status supersedes scheduling above:**
+Core canonical6f6f58c2 publishes
+[ELP2-REQ-10-010](evidence/execution-edge-v1_2/EPG10-08/CORE009_SUCCESSOR_AUTHORITY_REQUEST_2026-10-21.md):
+official Portal manager-domain installer is first-install-only at qualified9d88
+and integration432; existing policy rejects a successor POLICY_REVISION_CONFLICT.
+Old ACK/revoke/05ae swap cannot create fresh authority. This is an actual Core
+implementation gap assigned to Claude backend, Core integrator reviews; not a
+new Bobby approval, an Edge defect or a need to upgrade TS publisher for READ.
+Core explicitly returns NOT_READY at16:18 and says DO_NOT_ARM/INSTALL16:30;
+therefore planned slot is **NOT_STARTED**, no source acceptance/session/grant
+created. Edge ACKs this disposition and retains its small unarmed composition;
+new slot follows real successor source/normal/image/config/official ACK.
+Keep Portal successor-policy CAS distinct from unchanged TS protected-owner
+policy1. Core's existing custody/final-egress accepted; request-specific private
+cache-HIT correlation remains Claude-owned and does not hold otherwise eligible
+READ. Full08/09 NOT_MET; next primary gap **Core ELP2-REQ-10-010**, then Edge
+binds the official successor and runs actual READ/revoke/cache/cursor/SSE.
+Owned docs publicationcc7e71f5ba00e856bc2a754f3d3e01dcc8ad7927:
+6Markdown/+526, Bobby identity, R0 tracking/staged diff/8indexed links PASS,
+no push/merge. Peer10line main/56line binding and source WIP preserved. Latest
+bounded disk used309325774848B/available209591128064B, no reclamation claim;
+all3Edge full image/config/restart0 reverified, Core9cf5/restart0 unchanged.
+This post-commit owner-return/operational journal is WIP for the next coherent
+publication, not another unchanged hook/build or permission to change Core.
+
+Final delivery: Core existing task/Unified/sync each received1491byte ACK/
+SHA7c4956ea with prior prefixes preserved, actual EXIT0. It acknowledges
+ELP2-REQ-10-010/NOT_READY and returns Edge cc7e71f5/tests/cleanup, explicitly
+NO16:30 source activation and no generic approval request. Final tracking and
+diff checks PASS; index empty, peer source hashes unchanged. Current owner
+packets received locally (successor request SHA2d851cc3 and observation review
+SHA28549a97; full hashes verified by sha256sum); these post-publication inputs stay
+with the next coherent journal batch. No additional runtime/test resources.
+
+<a id="original08-successor-source-intake-20261022"></a>
+### Original08 — successor source intake —22Oct00:18ICT /21Oct17:18UTC
+
+**IN_PROGRESS / SOURCE_FOCUSED_QUALIFIED / CONNECTED_NOT_RUN.** Bobby resumes
+the same08 binding/READ/revoke/cache/cursor/SSE scope, no new phase or generic
+approval. Read current root/project rules, main08/deep guide, Core landing and
+new successor implementation/focused returns. Core28646bef/tree29e32f3a has
+90distinct focused PASS/build/scoped restore after one documented fixture
+failure; no full normal/image/install/authority follows from that. Canonical
+72ab2ad2 source/docs is not serving4095/9cf5. Core now owns the named writer
+slice itself; prior Claude-only assignment is superseded by its explicit Bobby
+handoff, not a request for Edge to edit reserved Core files.
+
+Runnable Edge work: review the actual official successor artifact/CLI contract
+and finite source-cap/identity/domain compatibility; refresh one bounded real
+TS readonlySDK preflight and exact own cleanup, then ACK consumed source pins
+through the existing Core task. Reuse frozen SDK/driver/lifecycle and existing
+private preparation; never run its expired16:30–17:00 manifest. Do not run an
+unchanged full suite or duplicate Core normal gate. New source manifest/window
+and exact-ID witness are armed only after Core returns actually qualified
+source/image and a viable matching commissioning ACK. Source receipt then
+feeds Core's reviewed config/official successor/session/independent grants;
+only actual installed/current rights permit API requests.
+
+Invariants/test gates: same actor/workspace/protected-owner mapping, domain and
+TS policy1; no revival of old head4/grants, no financial/command/Live activation,
+no shared listener28445 or serving3Edge/Manager trust change. Pending source
+head stays absent. Correctness probe capped0.5CPU/256MiB/min0max1pools/3s and
+--rm; close physical pools. UNKNOWN retains actual attempt/custody/ACK until
+terminal, never force-clean it. Cache-HIT/private observation is independent
+from current READ; no heartbeat/GET/EOF substitutes a missing acceptance case.
+Core's normal/image/config/official successor ACK remain genuine producer
+inputs. Record actual results and runnable/blocked partition below; full08/09
+NOT_MET and no phase transition. No push/merge or peer-source edits.
+
+**22Oct00:26ICT /21Oct17:26UTC actual intake result:** both public Core
+inputs read fully and received with exact hash verification. Source locators
+are SGP `/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/`:
+`CORE009_SUCCESSOR_WRITER_IMPLEMENTATION_RETURN_2026-10-21.md`, SHA256
+`b1a8c03e8ff2d2fe3afa1f15a8de13882bbbd3116ab4ebc1bb183905f696b9e3`;
+`CORE009_SUCCESSOR_FOCUSED_GATE_RETURN_2026-10-21.md`, SHA256
+`32311edf7b5b88aa3e6ab854381fce466ebea6c75e762a0ee23a1c94645cce4f`.
+Exact received snapshots stay in the existing local input mailbox; this plan
+publishes their bounded contract/result/provenance, not unrelated Core docs.
+Sourcef92936df/tree0ebb94cf is
+code-identical to focused28646bef (non-Markdown diff empty). Independently
+reviewed actual private artifact/planner115lines, CLI52 and service87: no
+wire/API/Edge-adapter change, same identity/domain/field/action/TS policy1,
+fresh grant CAS/history, current-human/final-COMMIT fence reused. Acceptance ID
+is not the business-domain seal, so fresh SDK acceptance is compatible. No
+new owned code defect identified or peer-source edit. Core normal hook really
+RUNNING since17:16:15; no normal/image/installed PASS inferred.
+
+Actual `sudo -n python3 -I -B .../edge-core009-next-read-CTQrvcGr/invoke_readback.py`
+EXIT0/stderr0: READONLY_SOURCE_OBSERVED_NOT_AUTHORITY, correct TS
+system7674585245102796834/live_data_executor/source role, source fingerprint
+5a67e653/admission25d2b3ef/max8/4096/control target verified. Freshd0a7b78a
+ABSENT and BUSINESS_READ_ACCEPTANCE_MISSING; originalb922c1054/revoked.
+Physical source/control pools[0,0], authority_changedfalse/listenerfalse/
+issued_attempts0. Exact --rm readback worker absent afterwards. No additional
+suite/build/pull/image/cache/source/session/grant/role/data mutation. Disk
+used322173665280B/available196743237632B after shared-host work; no pre/post
+reclamation claim. No SGP test resource created; old empty witness files
+retained as historical metadata, not false source-exit proof.
+
+**Runnable/blocked partition:** owned contract/compatibility review, exact
+public-input receipt, real readonlySDK check, cleanup and the existing
+[handoff §9](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#9-successor-source-intake-22oct0026ict-21oct1726utc)
+ACK are complete/prepared for exact delivery. No new framework, unchanged
+full-suite rerun or owner-missing code is parked as Edge debt. Actual new
+manifest/window/witness/source activation and connected requests depend on
+Core's genuine terminal normal/image/reviewed-config/commissioning ACK.
+Old16:30 draft is expired and never invoked; native trust ends22Oct02:48UTC
+(09:48ICT). Do not spend short-lived authority waiting for qualification.
+Return one viable finite slot with actual pins, then SDK installation/real
+receipt, official Core successor/session/separate grants, actual08 cases.
+No generic reapproval; no09 transition or all-mode/financial/command claim.
+
+**22Oct00:30ICT actual terminal / delivery correction:** §9 (2726bytes,
+SHAa41e26f5) and locator1042bytes/SHAaebf4c78 actually delivered17:26:56UTC
+to Core's existing handoff/task/Unified/sync, four prior prefixes preserved,
+readback EXIT0. Subsequent direct17:28UTC terminal read supersedes RUNNING:
+Core normal-exit.txt says EXIT143/finished17:25:26UTC/sourcef92936df/
+tree0ebb94cf; log ends Terminated after Vitest start, no test verdict. Do not
+promote old public RUNNING text or focused90PASS to normal/image/installed.
+No assertion-failure cause is invented. Core owns reconciling actual controller
+outcome and required qualification; Edge starts no duplicate gate or finite
+source. Actual serving Core4095/image9cf5/restart0 and all3Edge full image/
+config/restart0 unchanged. Own worker absent; peer WIP hashes unchanged.
+
+Terminal correction763bytes/SHA2a5ebb5a actually delivered17:30:14UTC to the
+same four Core readpoints, exact-prefix/readback EXIT0. This is an actionable
+owner return, not an instruction for another agent to repeat an unchanged
+failed full suite. Correctness/image disposition remains Core-owned.
+
+**Publication/cleanup scope:** Verification:R0, Bobby's actual campaign
+`upgrade/execution_loop/AGENT_WORKING_RULES.md` §10.10d (renumbered from prior
+10.10c, owner approval unchanged). Four owned Markdown paths only: main owned
+append excluding peer10line C5hunk, detailed guide, existing Core handoff and
+the exact received original successor request needed by the historical link.
+No product/test/config/ledger change; tracking/staged diff/new locator checks
+required. Keep received peer packets/WIP outside this commit. No push/merge,
+hosted CI or repeated build/unit suite for docs. HK120unique images observed;
+no new image/buildcache, so no owned garbage collection. Broad cache inventory/
+pruning intentionally deferred during foreign active build/test work, not a
+phase-close claim. Read-only disk used314901135360B/available204015767552B;
+shared-host movement, zero claimed reclamation. Keep all running/rollback
+images, frozenSDK and the named unarmed private candidate for the actual next
+window; no pending owned test process/container. SGP has no Edge-owned cell.
+Canonical Edge source54c6f5f3 at portal-execution-manager-v2; active feature
+feat/execution-edge-upgrade-v1_2@cc7e71f5 remains this checkout. Stable release
+/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy
+untouched; running3Edge d6aa7a51/config6180b9bf,cd79e9c6,98a191c7/restart0.
+Core source076eb58f and successor featuref92936df remain separate from serving
+9cf5/config423573a8/restart0. Full08/09NOT_MET. Next permitted step is actual
+Core gate/image/commissioning return, then same08 finite binding/acceptance.
+
+**Actual R0 precommit checks:** execution-tracking EXIT0, indexed new links/
+anchors4/4 PASS, staged diff check PASS. Exactly four Markdown paths; peer
+10line main/56line binding diff and native egress source/test/feasibility hashes
+unchanged. No hosted CI minutes consumed; no claim that R0 qualifies Core code.
+
+**22Oct00:36ICT /21Oct17:36UTC corrected successor intake:** Core sequential
+return at the same SGP input directory,
+`CORE009_SUCCESSOR_SEQUENTIAL_AUTHORITY_RETURN_2026-10-21.md`, SHA256
+`6821cc61d65f3bd74166f24fb94c1b8e97406d7c5e1b560d26339c23cc5f257f`,
+was read fully. Actual READ ADVANCE→later STREAM KEEP bug reproduced
+72PASS/1FAIL, then fixed;73pure/9PG/build/restore PASS plus unchanged9 =
+**91distinct focused cases**, five writer files/+755. Original normal143 is
+now explained ABORTED_FOR_SOURCE_FIX, not infra failure. New normal/image and
+official runtime authority remain pending; no image05ae substitution.
+
+Edge reviewed the +47/-3 planner/two-test delta in place, no peer edits. Current
+policy still seals exact predecessor domain/field identity; historical grant
+revision is lineage only. New grant's current/next revision/window, exact CAS,
+same identity/action and all existing safety fences remain. Separate later
+STREAM preserves current READ. Observed8ac4f553/tree4a29ae9e matches qualified
+55189788/tree084cf692 in every non-Markdown byte; full plannerSHA256
+19bfa8b9dfeeab1db5ec8d67a97d8008f00afede8789dbc26be5cda8e025a00d.
+Existing Edge SDK/driver needs no code change or repeated readonly probe.
+Corrected-source ACK is appended to the same handoff§9; it is NOT source-
+commissioning ACK, install, session, grant or connected acceptance. No new
+artifact/worker/listener or cleanup obligation was created by this review.
+
+Final R0 receipt is folded into the still-unpushed local documentation slice
+(initial0d6f137a, no remote branch contains it), not a second build/test commit
+or upstream history rewrite. Same four Markdown paths only; peer main/binding/
+source inputs preserved. Full08/09NOT_MET. Next remains qualified corrected
+Core image/config/commissioning return, then original08 actual finite cases.
+
 
 
 

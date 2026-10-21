@@ -1036,6 +1036,27 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**22Oct00:36ICT /21Oct17:36UTC current gate:** Core's corrected successor now
+has91 distinct focused PASS (pure73/PG9/reused install6+revoke3), build/restore
+PASS, five files/+755. Sequential READ-only policy advance no longer strands
+separately approved STREAM from a historical predecessor. Edge re-reviewed
+the actual +47/-3 delta: current domain/field seal, fresh current-policy grant,
+exact historical CAS and unchanged fences remain; no public API/adapter change.
+Observed8ac4f553 has identical code to qualified55189788, plannerSHA19bfa8b9.
+Oldf929 normal EXIT143 was intentionally ABORTED_FOR_SOURCE_FIX, not an infra
+or test PASS. Corrected-source normal/image/installed remain pending. This
+supersedes the missing-implementation/first90-case statuses, not connected08.
+New readonlySDK preflight
+EXIT0/pools0 confirms correct real TS target, fresh acceptance absent and old
+head4 revoked. Source remains OFF; expired16:30 proposal cannot run. Core owns
+the gate disposition/image/reviewed successor/config/commissioning ACK; Edge binds a
+viable new window and runs READ plus independently eligible STREAM/revoke/
+cache/cursor/SSE. Exact Core input paths/hashes and SDK receipt are indexed in
+[current main](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-successor-source-intake-20261022)
+and [existing handoff §9](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#9-successor-source-intake-22oct0026ict-21oct1726utc).
+**Full08/09 still NOT_MET; real connected cases NOT_RUN.** No generic
+reapproval or financial/Fleet/all-mode-PKI prerequisite is added to eligible READ.
+
 **21Oct16:13UTC source follow-through:** Edge consumed Core's16:30–17:00
 proposal and returned availability ACK. Fresh acceptanced0a7b78a/CAS0→1/
 runtime9bb5d5ae/manifest3fd0632c prepared, NOT installed; originalb922c105 stays
