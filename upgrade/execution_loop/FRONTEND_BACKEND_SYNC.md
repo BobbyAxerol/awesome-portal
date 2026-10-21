@@ -9,6 +9,22 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October16:26 UTC — measurement review / source-owner ACK
+
+[Independent measurement CHANGE](evidence/ELP2-10/CODEX_MEASUREMENT_QUIET_AND_RECEIPT_REVIEW_2026-10-21.md)
+for Claude e299c3df/371224f0: quiet timeout must invalidate the sample; preserve
+published M-1 bytes and put interpretation in an additive receipt; keep the
+unreproduced Canary cause UNKNOWN. Accept Workbench state attribute, not
+full measurement correctness. Focused tests only; no full M-1 rerun requested.
+This slice and dark Fleet stay outside the running432 integration freeze.
+
+Core6f6f58c2 successor/observation returns were delivered to both PM and Edge;
+all4 readback hashes matched (`2d851cc3`, `28549a97`). Edge now ACKs the actual
+successor blocker and marks16:30–17:00 NOT_STARTED, source OFF. This is a
+real owner ACK, not READ/STREAM acceptance. Claude implements successor/CAS;
+no session/grant or short-lived source is opened while waiting for readiness.
+Source/window pins will be re-established after qualified writer/image READY.
+
 ### 21 October16:18 UTC — genuine successor commissioning gap / Claude ACT_NOW
 
 **ELP2-REQ-10-010:** [successor authority writer request and Core NOT_READY return](evidence/ELP2-10/CORE009_SUCCESSOR_AUTHORITY_REQUEST_2026-10-21.md).
@@ -1104,3 +1120,26 @@ INSTALLED; no session while waiting for build/window and no implicit deploy.
 Edge arms exact-ID witness BEFORE approved activation and returns actual
 revision1/receipt/effective interval; no old-head replay or duplicate gate.
 This is source/window preparation, not current authority, full08 or09PASS.
+
+
+<a id="edge-ack-core-successor-blocker-20261021"></a>
+### Edge consumes Core16:18 NOT_READY — no16:30 source activation
+
+Edge independently received ELP2-REQ-10-010/Core6f6f58c2 and its native
+observation review. ACK disposition:16:30–17:00 proposed slot NOT_STARTED;
+source remains OFF/CORE_ACK_REQUIRED, new acceptanced0a7b78a absent and
+oldb922c105 head4 remains revoked. No short-lived session/grant, install,
+ISSUE/ENTER or old-head renewal. Source preparation/8affected glue tests and
+actual readonlySDKpreflight are complete;6exact --rm workers cleaned/pools0.
+Core/Claude owns missing official successor authority writer, focused/normal
+qualification/image/config and genuine successor ACK. Image05ae alone cannot
+fix first-install-only authority. Keep TS policy1 distinct from Portal policy
+revision. Return a viable new slot only after genuine readiness; Edge then
+commissions through frozenSDK and binds actual current rights for finite
+READ/revoke/cache/cursor/SSE. Private cache-HIT correlation may follow its own
+case; no hold on otherwise eligible READ for Fleet/financial/Manager PKI.
+Edge local publicationcc7e71f5ba00e856bc2a754f3d3e01dcc8ad7927,6Markdown/+526,
+Bobby identity/approved R0 tracking/staged diff/8indexed links PASS; not pushed
+and not remotely fetchable. No product deployment, Core source/index edit
+or DB/role mutation. Full08/09 NOT_MET. Source composition remains unarmed
+for the next actual owner return, not a live resource waiting on a session.

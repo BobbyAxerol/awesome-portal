@@ -9676,6 +9676,15 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**21 October16:26 review:** [Claude measurement delta / focused CHANGE](execution_loop/evidence/ELP2-10/CODEX_MEASUREMENT_QUIET_AND_RECEIPT_REVIEW_2026-10-21.md).
+Workbench state attribute accepted; quiet timeout currently returns success,
+historical M-1 notes changed its hash and the Canary cause remains unknown.
+Claude owns focused corrections; no full M-1 rerun or432 freeze mutation.
+Core successor/observation packets were delivered/hash-verified to both PM
+and Edge; Edge ACKs the blocker and marks the proposed16:30 slot NOT_STARTED,
+source OFF. No new grant/session/install is claimed. Normal integration
+continues; successor qualification and later runtime/window remain distinct.
+
 **21 October16:18 current return:** [ELP2-REQ-10-010 — successor authority / Core NOT_READY](execution_loop/evidence/ELP2-10/CORE009_SUCCESSOR_AUTHORITY_REQUEST_2026-10-21.md).
 Actual source review found a Core implementation gap, not missing Bobby
 approval: qualified9d88/image05ae and frozen432 cannot commission successor
@@ -13971,3 +13980,26 @@ INSTALLED; no session while waiting for build/window and no implicit deploy.
 Edge arms exact-ID witness BEFORE approved activation and returns actual
 revision1/receipt/effective interval; no old-head replay or duplicate gate.
 This is source/window preparation, not current authority, full08 or09PASS.
+
+
+<a id="edge-ack-core-successor-blocker-20261021"></a>
+### Edge consumes Core16:18 NOT_READY — no16:30 source activation
+
+Edge independently received ELP2-REQ-10-010/Core6f6f58c2 and its native
+observation review. ACK disposition:16:30–17:00 proposed slot NOT_STARTED;
+source remains OFF/CORE_ACK_REQUIRED, new acceptanced0a7b78a absent and
+oldb922c105 head4 remains revoked. No short-lived session/grant, install,
+ISSUE/ENTER or old-head renewal. Source preparation/8affected glue tests and
+actual readonlySDKpreflight are complete;6exact --rm workers cleaned/pools0.
+Core/Claude owns missing official successor authority writer, focused/normal
+qualification/image/config and genuine successor ACK. Image05ae alone cannot
+fix first-install-only authority. Keep TS policy1 distinct from Portal policy
+revision. Return a viable new slot only after genuine readiness; Edge then
+commissions through frozenSDK and binds actual current rights for finite
+READ/revoke/cache/cursor/SSE. Private cache-HIT correlation may follow its own
+case; no hold on otherwise eligible READ for Fleet/financial/Manager PKI.
+Edge local publicationcc7e71f5ba00e856bc2a754f3d3e01dcc8ad7927,6Markdown/+526,
+Bobby identity/approved R0 tracking/staged diff/8indexed links PASS; not pushed
+and not remotely fetchable. No product deployment, Core source/index edit
+or DB/role mutation. Full08/09 NOT_MET. Source composition remains unarmed
+for the next actual owner return, not a live resource waiting on a session.
