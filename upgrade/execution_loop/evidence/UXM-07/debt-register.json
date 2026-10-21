@@ -121,26 +121,6 @@
       "opened": "2026-10-21"
     },
     {
-      "id": "DEBT-UXM07-033",
-      "title": "createPaperExit and captureR2 do not mark a 5xx or an unreadable 2xx as an unknown outcome",
-      "where": "apps/portal/frontend/src/execution/api/httpApi.ts:754 createPaperExit and captureR2 (problem(response) for any !ok; REVIEW_CAPTURE_CONTRACT_INVALID for an unreadable 2xx) versus captureSandboxNote, which maps throw, 408, 5xx and an unreadable 2xx to REVIEW_CAPTURE_OUTCOME_UNKNOWN; v2/screens/workbench/ExitReviewRequest.tsx:182-185 and :288",
-      "consequence": "After a 5xx the Exit request screen says 'The server did not record this request', which is false when the write may have landed (only a thrown fetch reaches the 'Unknown: it may have been recorded' path). A retry reuses the same request_key so nothing is duplicated, but the sentence is wrong",
-      "proposed": "Classify like captureSandboxNote (throw, 408, 5xx, unreadable 2xx are OUTCOME_UNKNOWN) in createPaperExit and captureR2, with tests. httpApi.ts is shared with V1 (containers.tsx:564 and :918): treat it as a deliberate V1 exception like DEBT-UXM07-025 and get Bobby's yes, or wrap it V2-only",
-      "owner": "Claude (FE); Bobby for the V1 exception",
-      "status": "STILL_OPEN (new 2026-10-21)",
-      "opened": "2026-10-21"
-    },
-    {
-      "id": "DEBT-UXM07-034",
-      "title": "Exit request refusal sentence prints '(unavailable)' for a 409",
-      "where": "v2/screens/workbench/ExitReviewRequest.tsx:288 prints ({outcome.status}) where status is the panel word; execution/adapter.ts:599 panelStatusForHttp maps 409 (and every 4xx except 401/403/429) to 'unavailable'; fixture BFF case POST /governance/paper-exit/create [summary REFUSE] -> 409 APPROVAL_VERSION_CONFLICT (fixtureBff/routeTable.ts:191)",
-      "consequence": "The reader sees 'The server did not record this request (unavailable). APPROVAL_VERSION_CONFLICT: ...': a panel-state word where the HTTP status, or nothing, belongs",
-      "proposed": "Print the HTTP status (or drop the word) and keep the typed code behind the disclosure; fix with its test",
-      "owner": "Claude (FE)",
-      "status": "STILL_OPEN (new 2026-10-21)",
-      "opened": "2026-10-21"
-    },
-    {
       "id": "DEBT-UXM07-035",
       "title": "CR-02 is still CHANGE: repair retry state shares mutable last_error_*",
       "where": "CODEX_LANDING_REVIEW_2026-10-21.md sections 8 and 10 (canonical checkout /home/bobby/portal-research, untracked at 799effc8); ec228e53; apps/control-api/src/execution-v2/manager-series.store.ts (last_error_code, last_error_revision)",
@@ -463,6 +443,28 @@
       "status": "CLOSED",
       "closed_part": "9d0eb97f: the four invented names (execution.portfolios.read, execution.accounts.read, execution.operations.read, portal.execution.blotter.read) are gone from the client vocabulary. V2_NAV_TOKEN holds nav:<served portal.self-navigation.v1 feature id> (EXECUTION_PORTFOLIOS, EXECUTION_ACCOUNTS_BINDINGS, EXECUTION_OPERATIONS, EXECUTION_BLOTTER), V2_CAPABILITY keeps only the real governance.* names, and no copy prints an invented capability (Access rows and denials say \"Portfolios in your navigation read\"). Nothing is missing on the backend for the rail: the server publishes the four rows. execution.accounts.manage stays dropped (no server capability exists).",
       "resolution": "Bobby chose (a) on 2026-10-21: drop the FE pre-narrowing. Closed at 7e327456 (apps/portal/frontend/src/execution/v2/screens): alpha/index.tsx + alpha/TableTabs.tsx + alpha/replay/{index,ReplayView}.tsx, blotter/index.tsx, overview/{index,useOverviewReads,overviewModel}.ts(x) and workbench/{index,Header}.tsx no longer read the session's capabilities. Gone: sliceOnly, canSeeAccounts, accountsVisible, fundWide, the inferred 'Your slice only' / 'Only deployments in your slice' / 'Your orders' / 'Your alphas' / 'Account not available' texts and the 'Scope: Your ...' context facts, the Overview researcher panel 'Alphas in your slice' (and ownRows/OwnRow), and the capabilities props of Overview, Blotter and Workbench. The account links, the deployer line, the Account column and the fund reads now follow what the server served; a refusal shows the server's typed reason (denied panel + My access link). Per screen, a test pins that a served answer is not hidden by a restricted session and that a refusal keeps its reason (alpha.test, replay.test, blotter.test, overview.test, workbench.test); the blotter, overview and workbench suites run under a session with no menu token. Gates green on the touched folders: tsc, vitest alpha/blotter/overview/workbench, testHygiene, absentValues, failClosed, v2Hygiene, linkTargets, titleAbsence, flagOff/flagOn, shell, app. No image baseline changes: the e2e and lab sessions are manager-like (e2e/v2Lane.ts MANAGER_CAPABILITIES), so every recorded cell renders the same DOM. Left open elsewhere: nav and Portfolio/Compare/Account screens still gate on the menu tokens (permitted = holds(...)); that is not part of this entry."
+    },
+    {
+      "id": "DEBT-UXM07-033",
+      "title": "createPaperExit and captureR2 do not mark a 5xx or an unreadable 2xx as an unknown outcome",
+      "where": "apps/portal/frontend/src/execution/api/httpApi.ts:754 createPaperExit and captureR2 (problem(response) for any !ok; REVIEW_CAPTURE_CONTRACT_INVALID for an unreadable 2xx) versus captureSandboxNote, which maps throw, 408, 5xx and an unreadable 2xx to REVIEW_CAPTURE_OUTCOME_UNKNOWN; v2/screens/workbench/ExitReviewRequest.tsx:182-185 and :288",
+      "consequence": "After a 5xx the Exit request screen says 'The server did not record this request', which is false when the write may have landed (only a thrown fetch reaches the 'Unknown: it may have been recorded' path). A retry reuses the same request_key so nothing is duplicated, but the sentence is wrong",
+      "proposed": "Classify like captureSandboxNote (throw, 408, 5xx, unreadable 2xx are OUTCOME_UNKNOWN) in createPaperExit and captureR2, with tests. httpApi.ts is shared with V1 (containers.tsx:564 and :918): treat it as a deliberate V1 exception like DEBT-UXM07-025 and get Bobby's yes, or wrap it V2-only",
+      "owner": "Claude (FE); Bobby for the V1 exception",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "Closed at 9e74a91c (Bobby approved the V1 exception 2026-10-21). apps/portal/frontend/src/execution/api/httpApi.ts: createPaperExit and captureR2 now go through one helper (unknownAwareCapture) that classifies like captureSandboxNote: a thrown fetch, a 408 or 5xx, a 2xx that is not JSON, and a 2xx the reader refuses or that is not this request's answer are REVIEW_CAPTURE_OUTCOME_UNKNOWN (the server's words kept after the prefix); a definite 4xx is unchanged (status and 'CODE: message'). New branches only: the 2xx success path and every other V1 route are untouched; the Exit request screen already kept the same request_key for an unknown outcome, so its 'Unknown: it may have been recorded' wording now also covers a 5xx. Tests: api/captureWrites.port.test.ts (unit, both calls, 5xx/408/throw/unreadable 2xx/wrong workspace/wrong kind -> unknown; 400/403/404/409/422/429 -> not unknown; the fixture BFF's DENIED/REFUSE/STALE bodies) and ExitReviewRequest.test.tsx (real port with a stubbed fetch: 503 -> unknown wording, retry sends the same request_key and summary). captureSandboxNote itself is unchanged. No image baseline is affected (no baseline cell shows a write failure)."
+    },
+    {
+      "id": "DEBT-UXM07-034",
+      "title": "Exit request refusal sentence prints '(unavailable)' for a 409",
+      "where": "v2/screens/workbench/ExitReviewRequest.tsx:288 prints ({outcome.status}) where status is the panel word; execution/adapter.ts:599 panelStatusForHttp maps 409 (and every 4xx except 401/403/429) to 'unavailable'; fixture BFF case POST /governance/paper-exit/create [summary REFUSE] -> 409 APPROVAL_VERSION_CONFLICT (fixtureBff/routeTable.ts:191)",
+      "consequence": "The reader sees 'The server did not record this request (unavailable). APPROVAL_VERSION_CONFLICT: ...': a panel-state word where the HTTP status, or nothing, belongs",
+      "proposed": "Print the HTTP status (or drop the word) and keep the typed code behind the disclosure; fix with its test",
+      "owner": "Claude (FE)",
+      "status": "CLOSED",
+      "opened": "2026-10-21",
+      "resolution": "Closed at 9e74a91c. exitReviewRequest.ts refusalWords splits 'CODE: message'; ExitReviewRequest.tsx prints 'The server did not record this request. <words>' where the words are the stage dictionary's sentence for the code (captureReasonText: ADMIN_ROLE_REQUIRED -> 'Needs the Admin role', and the others there) and, for a code the dictionary has no entry for (APPROVAL_VERSION_CONFLICT, CAPTURE_PROJECTION_VERSION_CONFLICT), the server's own message unchanged: no new sentence was written and the generic 'Not enabled for this profile' was NOT used because it would misstate a version conflict. The typed code sits behind the 'Server reason' disclosure; the panel word ('unavailable', 'denied') is no longer printed. Tests: ExitReviewRequest.test.tsx (409 x2 and 403 cases, refusalWords). e2e/execution-v2-paper-exit.spec.ts is updated for the new wording and was not run (heavy lane, owed to the next Playwright run). The sandbox note form (ReviewNoteForm.tsx:230) prints the same '(status)' word and was not in scope."
     }
   ],
   "followup_after": "7e327456"
