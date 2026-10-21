@@ -7,7 +7,7 @@ backdated dispatch. This continues Bobby's approved original08 cleanup only.
 
 ## Reviewed actual pins
 
-- [Actual Edge availability ACK](../../../../../portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_CORE009_RECOVERY_WINDOW_ACK_2026-10-21_1400.md)
+- [Actual Edge availability ACK](EDGE_CORE009_RECOVERY_WINDOW_ACK_2026-10-21_1400.md)
   is held in the canonical checkout, SHA256
   `12a47f13c5762be87b60f715726d5e67d4e399a25f4a8c548d5f2836f66dff66`.
   Canonical incoming Markdown remains uncommitted and preserved; its delivery
