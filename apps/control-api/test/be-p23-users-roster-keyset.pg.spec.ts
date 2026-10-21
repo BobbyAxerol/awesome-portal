@@ -65,9 +65,9 @@ describe.skipIf(!DATABASE_URL)("BE-P23 owner roster keyset page on real PostgreS
     // 120 more invited accounts: collation-sensitive names, a few archived, disabled and locked ones.
     const names = Array.from({ length: 120 }, (_, i) => {
       const n = String(i).padStart(3, "0");
-      return [`user-${n}`, `User_${n}`, `user${n}`, `Zed-${n}`][i % 4]!;
+      return [`user-${n}`, `user_${n}`, `user${n}`, `zed-${n}`][i % 4]!;
     });
-    for (const name of names) await admin.createUser({ username: name, displayName: i2(name), role: name.startsWith("Zed") ? "ADMIN" : "USER" });
+    for (const name of names) await admin.createUser({ username: name, displayName: i2(name), role: name.startsWith("zed") ? "ADMIN" : "USER" });
     await ctx.pool.query("UPDATE portal_users SET status='DISABLED', disabled_at=now() WHERE username LIKE 'user-0%1'");
     await ctx.pool.query("UPDATE portal_users SET archived_at=now(), status='DISABLED' WHERE username LIKE 'user-0%2'");
     await ctx.pool.query("UPDATE portal_users SET locked_until=now()+interval '1 hour' WHERE username LIKE 'user-0%3'");
@@ -182,7 +182,7 @@ describe.skipIf(!DATABASE_URL)("BE-P23 owner roster keyset page on real PostgreS
     expect(changed.json().error.code).toBe("ROSTER_CURSOR_CHANGED");
     const filtered = await roster(`?limit=10&role=USER&cursor=${encodeURIComponent(cursor)}`);
     expect(filtered.statusCode).toBe(409);
-    for (const response of [tampered, changed, filtered]) expect(JSON.stringify(response.json())).not.toMatch(/user-|User_|Zed-|bobby|usr_/);
+    for (const response of [tampered, changed, filtered]) expect(JSON.stringify(response.json())).not.toMatch(/user-|user_|zed-|bobby|usr_/);
   });
 
   it("a non-owner ADMIN gets the same 403 whether its q matches an account or not, and cannot replay the owner's cursor", async () => {
