@@ -459,6 +459,25 @@ describe("Orders & Fills", () => {
     expect(states.filter((s) => s.includes("Cancelled"))).toHaveLength(1);
   });
 
+  it("at 660px and narrower the orders are three cards; Load more draws the rest of the loaded rows first, then asks the server", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(max-width: 660px)", media: query, addEventListener: () => {}, removeEventListener: () => {},
+    }));
+    const { table } = await open();
+    const rows = () => within(table).getAllByRole("row").slice(1);
+    expect(rows()).toHaveLength(3);
+    expect(screen.getByText(/Top 3 of 6 orders loaded, more in the retained window/)).toBeTruthy();
+    const more = () => screen.getAllByRole("button", { name: "Load more" })[0]!;
+    fireEvent.click(more());
+    await waitFor(() => expect(rows()).toHaveLength(6));
+    expect(screen.queryByText(/Top \d of/)).toBeNull();
+    // Nothing was asked of the server yet: the page still says there is more.
+    expect(screen.getByText(/6 orders loaded, more in the retained window/)).toBeTruthy();
+    fireEvent.click(more());
+    await waitFor(() => expect(screen.getByText(/8 orders loaded, the whole retained window/)).toBeTruthy());
+    expect(rows()).toHaveLength(8);
+  });
+
   it("a rejected order carries the source's reason; a fill without a commission says Fee not published", async () => {
     const { table } = await open();
     expect(table.textContent).toContain("Margin is insufficient for this order.");

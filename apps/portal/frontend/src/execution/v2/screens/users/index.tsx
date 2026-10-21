@@ -23,7 +23,7 @@
  *
  * | cardinality | break point | degradation | server contract | invariant | perf budget |
  * |---|---|---|---|---|---|
- * | roster of tens, p95 a few hundred, max thousands (one unpaged read) | 200 rows in the DOM | 50 rows, `Load more` to 200, then "narrow the search" | none yet: the roster is a single list, so a keyset page would replace this | counts are over the roster read and say so; no row is dropped by the cap without a count | one read; filtering is in memory; at most 200 table rows |
+ * | roster of tens, p95 a few hundred, max thousands (one unpaged read) | 200 rows in the DOM; at 660px and narrower a card list of 123 rows is 7,673 px | 50 rows (ten at 660px and narrower), `Load more` to 200, then "narrow the search" | none yet: the roster is a single list, so a keyset page would replace this | counts are over the roster read and say so; no row is dropped by the cap without a count | one read; filtering is in memory; at most 200 table rows |
  *
  * URL: `q`, `sel` (the account's user id), and the screen-local `role` and `state`.
  */
@@ -39,10 +39,11 @@ import { GapWhy, SectionPanel, gapTitle } from "../../blocks";
 import { Drawer, DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
+import { usePhoneRows } from "../../usePhoneRows";
 import { readDetailFromServer, readRosterFromServer } from "./rosterReader";
 import {
   ACCOUNT_ROLES, ACCOUNT_STATES, PAGE_SIZE, PRESET_REQUESTS, ROLE_LABEL, ROW_CAP, STATE_VIEW,
-  failureOf, filterAccounts, isRole, isState, rosterCounts, stepUpView, type UsersFilters,
+  PHONE_PAGE_SIZE, failureOf, filterAccounts, isRole, isState, rosterCounts, stepUpView, type UsersFilters,
 } from "./usersModel";
 
 import "../../css/users.css";
@@ -145,6 +146,8 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
   const [detail, setDetail] = useState<DetailState>({ phase: "idle" });
   const [reload, setReload] = useState(0);
   const [shown, setShown] = useState(PAGE_SIZE);
+  // At 660px and narrower the rows are cards: ten per page, Load more draws ten more of the roster already read.
+  const phoneRows = usePhoneRows(PHONE_PAGE_SIZE);
 
   const roleParam = params.get("role");
   const stateParam = params.get("state");
@@ -211,7 +214,11 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
     };
   }, [client, selection, reload]);
 
-  useEffect(() => setShown(PAGE_SIZE), [filterKey]);
+  const resetPhone = phoneRows.reset;
+  useEffect(() => {
+    setShown(PAGE_SIZE);
+    resetPhone();
+  }, [filterKey, resetPhone]);
 
   /* ── search box: the URL is the state, written after a pause ───────── */
   const [text, setText] = useState(url.value.q ?? "");
@@ -248,7 +255,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
   // Filtering follows the text box at once; the URL catches up after the pause.
   const live: UsersFilters = useMemo(() => ({ ...filters, q: text }), [filters, text]);
   const matching = useMemo(() => filterAccounts(all, live), [all, live]);
-  const visible = matching.slice(0, Math.min(shown, ROW_CAP));
+  const visible = matching.slice(0, Math.min(phoneRows.phone ? phoneRows.rows : shown, ROW_CAP));
   const capped = matching.length > ROW_CAP && visible.length >= ROW_CAP;
   const filtered = live.q.trim() !== "" || live.role !== null || live.state !== null;
   const selected = selection === null ? null : all.find((a) => a.userId === selection) ?? null;
@@ -379,7 +386,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                     : `Showing ${visible.length} of ${matching.length}${filtered ? " matching" : ""} accounts, ${counts.total} in the roster read`}
                 </span>
                 {visible.length < matching.length && visible.length < ROW_CAP ? (
-                  <button type="button" className="exec-usr-btn" onClick={() => setShown((n) => n + PAGE_SIZE)}>Load more</button>
+                  <button type="button" className="exec-usr-btn" onClick={() => (phoneRows.phone ? phoneRows.grow() : setShown((n) => n + PAGE_SIZE))}>Load more</button>
                 ) : null}
                 {capped ? <span className="exec-usr-note">Showing the first {ROW_CAP} rows. Narrow the search to see the rest.</span> : null}
               </div>

@@ -5,7 +5,7 @@
 import { whyText } from "../../gapWhyTestUtil";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { answerUsers, setUsersDoubleVariant, USERS_DOUBLE_COUNT, type UsersDoubleVariant } from "../../../../../e2e/bffDoubleUsers";
 import type { AccountSummary } from "../../../../features/admin/accountApi";
@@ -137,6 +137,30 @@ describe("paging, search and filters (in memory, over the roster read)", () => {
     expect(rowsOf()).toHaveLength(ROW_CAP > USERS_DOUBLE_COUNT ? USERS_DOUBLE_COUNT : ROW_CAP);
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(screen.getByText(/Showing 123 of 123 accounts/)).toBeTruthy();
+  });
+
+  it("at 660px and narrower a page is ten cards; Load more draws ten more of the roster already read, never asks again", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(max-width: 660px)", media: query, addEventListener: () => {}, removeEventListener: () => {},
+    }));
+    try {
+      mount();
+      await loaded();
+      expect(rowsOf()).toHaveLength(10);
+      expect(screen.getByText(/Showing 10 of 123 accounts, 123 in the roster read/)).toBeTruthy();
+      const reads = calls.filter((c) => c.method === "GET" && c.path.endsWith("/accounts")).length;
+      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+      expect(rowsOf()).toHaveLength(20);
+      expect(screen.getByText(/Showing 20 of 123 accounts/)).toBeTruthy();
+      expect(calls.filter((c) => c.method === "GET" && c.path.endsWith("/accounts")).length).toBe(reads);
+      // A row is still a keyboard-reachable control of the same table.
+      expect(rowsOf()[0]!.getAttribute("tabindex")).toBe("0");
+      // A filter starts the window over.
+      fireEvent.change(screen.getByRole("searchbox", { name: "Search accounts" }), { target: { value: "a" } });
+      await waitFor(() => expect(rowsOf().length).toBeLessThanOrEqual(10));
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it("filters by name or username and writes the search to the URL after a pause", async () => {

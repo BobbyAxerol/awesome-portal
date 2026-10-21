@@ -18,6 +18,8 @@ import type { FlagKind } from "../../flagKinds";
 export const ROW_CAP = 200;
 /** Rows added by one `Load more`. */
 export const PAGE_SIZE = 50;
+/** Rows a page and a `Load more` hold at 660px and narrower, where a row is a card (DEBT-UXM07-031). */
+export const PHONE_PAGE_SIZE = 10;
 
 export const ACCOUNT_STATES: readonly AccountState[] = ["ACTIVE", "INVITED", "DISABLED", "ARCHIVED"];
 export const ACCOUNT_ROLES: readonly AccountRole[] = ["ADMIN", "USER"];
