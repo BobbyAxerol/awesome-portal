@@ -27813,6 +27813,156 @@ unaffectedREAD control and actual custody before later READ/native revocation.
 No idle stream while awaiting coordination. Normal-hook baseline i68c8r5O is
 READY (50runtime rows/102images/406cache/free249574129664B), source28446 retained.
 
+**05:22UTC exact Core delegation consumed:** Core continuation return explicitly
+delegates one `core009-cleanup.mjs revoke stream 1 d9e3c07d…` to Edge's SGP
+operator, while real stream remains open; Core will not duplicate it. Read the
+complete helper and verified SHA f360f1d0593e67e3f46c2f83e1c17e3eb11c3a78190b7b42f27ce620bf7560a6.
+It validates exact root artifact/target/window/image/READ preservation, requires
+matching offline dryrun, records original before/dispatch/result/after, never
+retries or edits source. UNKNOWN/typedretry retains original custody.
+Prepare one fresh new-session baseline then finiteSSE with action triggered
+after first genuine valid frame (also afterHTTP200), max4frames/10s/64KiB;
+official Core revoke worker is armed without action beforeHTTP and outside
+HTTP-only256MiB limit so Docker's Go reservation remains valid. No test grant
+creation, manualSQL mutation or regrant. Keep>=20/32admissions; if clientcap wins
+before revoke, explicitly fail active-revoke proof. Verify actual official
+COMMIT/lastframe timeline and sourceACK, then same-session unaffectedREAD and
+STREAM/cursor deny. Do not use expiry/EOF/count-only as revocation proof.
+Normal tracked hook concurrently runs CPU0,1/nice15, GitPID295909, exec50047;
+witness attached, cleanupHOLD. Incremental journal remains unstaged untilterminal.
+
+05:23UTC new-session baseline preflight stopped BEFOREHTTP/admission: Core
+provided3f1db92c labeled pathSHA, actual protected327B credential byteSHAf339db03.
+Do not adopt observedbytes blindly or reissue credentials; requested independent
+Core byte-pin clarification in existing task+Unified. No revoke worker armed/
+dispatched, source/session/grants unchanged. Public return's prior tokenhash
+wording is superseded by this explicit distinction; original credential private.
+
+05:26UTC operator correction, no new authority gate: independently computing
+SHA256 of the APPROVED PATH string exactly reproduces3f1db92c. Core's written
+handoff explicitly says pathSHA, not byteSHA. Fix the owned consumer to validate
+that declared locator plus canonical path/root0600/singlelink/327B and exact
+issued session/subject/schema/expiry. Genuine AuthService remains credential
+and current-policy authority. Do not adopt observedf339 as an owner pin, change
+file bytes or wait for an extra requirement not present in the handed contract.
+Earlier clarification is informational, not a reason to defer runnable tests.
+Same permitted genuine new-session baseline/STREAM revoke now proceeds.
+
+**05:26–05:27UTC actual active STREAM revoke / original recovery:** new-session
+baseline05:25:57HTTP200/nativecursorae21d228. One active stream05:26:12.501280UTC
+received genuine first heartbeat at13.753867, then invoked EXACT delegated
+official command at13.753942 (worker3762211). Twoframes received; serverEOF
+at~15.923 (3422ms), no clientframecap/timecap. Official original attempt1 exits75
+MANAGER_REVOKE_DRAIN_PENDING at16.612; helperexit1 NOT revokePASS.
+Private SGPevidence core009-active-revoke-h2lbzpt4, result124c2406/stderr0277c669.
+READ and STREAM grants stillrev1/nonrevoked; Coreauthority41/drain630a04a2,
+one REVIEWED_POLICY/PENDING and one unresolved original MANAGER_SSE_FRAME.
+Lease785387ba-ef57-455d-a7ba-f92663baae60/attempt07becd72-1e11-4ab9-8a96-d5fd7339f1a0
+is ADMITTED/no_send_fencedtrue/body/receipt/sourceACKnull. Retained8 total;
+do not replace keys, infer absence/rollback from TTL, retry grant mutation or
+force drain/restart. Source28446 stays live; inspect exact source ledger and
+official Core same-key recover/cancel-unentered seam, then coordinate typed
+sameartifact continuation only after actual terminal/ACK. No unrelated route,
+grant, DB data or stable/Live mutation. Remaining work is runnable recovery.
+
+**05:34UTC actual publication terminal and same-key recovery intake:** normal
+tracked hook exec50047 physically exited0; commitdd82b6a7024018b832485d92db5e3861421d8c59
+contains nine owned documentation/producer-return files (+661/-5), Bobby identity,
+no push/merge/hostedCI. Gates130contracts/717API/72files/build/isolatedPGrestore
+and verification PASS. Bounded hooklog91399bytes SHA256
+e47d5c1b18f08761f4f05fd7f8c6059c03bd312a5d4227d09d29886e6ac4352f.
+Exact own test image9739ebcb cleanup is runnable after quiet inventory; retain
+all102baseline image IDs/406shared cache and every operational/rollback artifact.
+
+Independent exact TS source readback: originallease785387ba/attempt07becd72 is
+ISSUED/operationREAD; bindingef98ed112e70b264857d42172b51980661238045ea3e8fa5f1cb0afe480eb69b,
+source42f88db9a0195feaf60cbd54c842d30660eba2e22a929bad7a86fd19e5791826,
+events onlyISSUED/terminalNULL. Core official retry2 at05:28:07.746 againexit75;
+no Root duplicate retry3 or newclient/source revoke/restart. Sent exact source
+facts to existing Core task and Unified. Installed sanctioned same-key
+reconcileNativeRead(originalLease) reads same immutable Base, cancels ISSUED,
+then records actual Core ACK; coordinator currently masks error as pending.
+Frozen provider confirms recovery status/cancel do not require JWT or an
+unexpired deadline. Core owns typed diagnostic/official mutation continuation;
+Edge continues source-side diagnosis without synthesizing terminal authority.
+
+Other producer intake refreshed read-only05:28: PM366913b6 qualified_runtime_cells
+and qualified_native_targets remain empty; authenticated command COMMIT proof
+NOT_PUBLISHED. TS0cd356da N03 manifestf3a49603 remains SOURCE_DARK/imageNULL/
+ownerfalse; actual target/bounds remain proposed, not approved/execution-ready.
+These dependencies do not block current08 recovery. Preserve peer-owned tracked
+binding packet and original three WIP files; freeze owned journal/index during
+exact cleanup quiet guard. Full08 and09connected remain NOT_MET.
+
+**05:34:59UTC actual scoped hook cleanup:** private receipt
+`/home/bobby/secure/edge-connected-proof-docs-hook-i68c8r5O/closeout.json`
+SHA256 `8e962d0c3e66938a96c31f7bf126d1163eed3fb105e8445749c336eae088d557`
+records terminal0 and fresh quiet-build guard, then nonforce removal of ONLY
+hook image9739ebcb/tagtest-300046. Exact owned PG/Node/network/tmp are absent.
+All102baseline image IDs and406BuildKit records retained; no shared prune,
+operational/rollback removal, runtime restart or DB action. Free bytes
+249381588992→249369243648 are shared-host observations, NOT exclusive reclaimed
+space.44/50baseline tuples exact; five foreign P184 changes (one test ended,
+four named replacements) and known Paper worker restart3053→3101 on same
+ID/image/config are observed-only, without intervention or causal attribution.
+Manager/native-source4, DLquery2 and DLstream4 tuples are unchanged; live28446
+and ongoing original Core recovery custody remain deliberately retained.
+Three original peer WIP hashes and exact owner packet bytes were preserved;
+extra untracked Core returns untouched. SourceHEADdd82b6a7/indexempty, no
+push/merge/hostedCI. This cleanup does not close08/09 or grant/recovery evidence.
+
+**05:36UTC concrete recovery finding / independent work:** received and mirrored
+[Core BUSY finding](evidence/execution-edge-v1_2/EPG10-08/CORE009_RECOVERY_BUSY_FINDING_2026-10-21.md).
+Installed client exposes response at end while max_inflight1 remains occupied
+until actual request close; immediate status-to-cancel therefore fails BUSY.
+Core owns minimal lifecycle repair, Edge independent review confirms defer
+success until genuine close/release, keeping deadline/error/cancel protections.
+No capincrease, sleep, direct sourcecancel, ACK synthesis, blind retry or restart.
+Original ISSUED remains custody; expiry is not rollback. Core received ACK and
+exact source facts via existing task/Unified; no parallel duplicate repair.
+
+Runnable bounded negative: after actual new-session absolute expiry05:36:54.553,
+ONE same-token READ to SAME pinned private backend, max5s/4KiB. Validate existing
+root0600/singlelink credential and exact issued identity; never mint/change it.
+Expected genuine session denial with no new native admission, not STREAM-grant
+revoke, public Cloudflare, active-stream recovery or full08 PASS. If Core image,
+token custody/session or fixed target changed, stop preflight; no retry/reissue.
+Capture only bounded error/hash metadata privately; preserve original recovery.
+
+**05:37:41UTC actual genuine expiry negative:** one SGP-only same-token private
+READ returned401/SESSION_REQUIRED,89bytes/bodySHA256
+1af0aecaf063526d298383bbe37110df5cd083600a794e415b5f6cf8f15739e0.
+Before request exact auth_session was ACTIVE/revoked_atNULL and absolute expiry
+05:36:54.553 had physically elapsed. Operator source337ce934 was statically
+compiled, then executed once via approved SSHstdin, no copied source file,
+credential transfer, newidentity, extra request or deployment. Private bounded
+receipt/error reside SGP core009-expired-session-eo2qwirz/root0600; no payload
+or cookie in Git/chat. Latency10ms is an observation, not capacity/SLO proof.
+No grant-revoke/Cloudflare/publicTLS claim; original recovery remains preserved.
+
+05:39UTC exact postcheck confirms same session ACTIVE/revoked_atNULL with
+both DB expiry timestamps05:36:54.553, native8/1 unchanged. Independent exact-PK
+Core/TS correlation also qualifies new HTTP400871dd and SSE144eaf12/0fec7e14:
+same originalattempt/binding/source, body digests, physical terminal IDs/digests,
+SERVED/source_reconciledtrue/ACKresolve. Genuine total3snapshot+4frame terminals,
+one unresolved original785387ba; no count-only recovery claim. Updated the
+[single bounded return](evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md)
+with exact bounded IDs/digests, active-revoke outcome, concrete BUSY producer
+repair, expiry denial and cleanup; originals and failed evidence retained.
+
+**05:43UTC coherent bounded recovery/expiry publication:** detailed08 guide now
+agrees with actual8/1 and seven terminal proofs. Fresh private baseline
+edge-recovery-expiry-docs-hook-0fLLeLW9/SHA3ab348b2 records49running rows (not all
+production),102image tags/406cache/free248430596096B. Original source28446
+7d034810/image28ea/restart0 and three peer WIP hashes unchanged; exact peer
+binding packet56+/SHA11ce1e87 remains excluded. Stage ONLY owned plan/guide/
+connected return and five bounded public Core diagnostic/coordination returns.
+Run tracked normal hook CPU0,1/nice15, Bobby identity; no push/merge/hostedCI.
+Hook result/actual new artifact cleanup are pending, not inherited fromdd82.
+This docs-only publication does not alter Core repair, grant, source or runtime.
+At05:45 source's frozen timer stops new ISSUE; original status/cancel/resolve
+and physical SDK custody remain until real terminal/ACK. Never force cleanup.
+
 
 
 

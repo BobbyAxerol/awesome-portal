@@ -1036,6 +1036,21 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**21Oct05:40UTC actual connected continuation:** the
+[single bounded return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md#actual-continuation-and-active-revoke-recovery-05250539utc)
+now records three genuine retained snapshots/four heartbeat frames with exact
+independent Core/TS terminal/ACK correlation, plus one genuine expired-session
+401 denial with zero native admissions. Active STREAM-only revoke returned75,
+not PASS: Core retained8/unresolved1, original no-send-fenced lease sourceISSUED.
+[Core transport finding](../evidence/execution-edge-v1_2/EPG10-08/CORE009_RECOVERY_BUSY_FINDING_2026-10-21.md)
+identifies response-end before physical-request-close BUSY race; minimal repair
+is Core-owned, independently reviewed, not yet qualified/installed. Keep original
+source28446/attempt custody, same-key recovery and real ACK; no capincrease,
+sleep, blind retry, manualSQL, sourcecancel-only, fake terminal or forced restart.
+Session expired05:36:54.553; source acquisition window still ends05:45. Expiry
+does not settle originals or commission a new window. Full08/09NOT_MET; prior
+unresolved0 below is historical05:09 proof, not the current recovery state.
+
 **21Oct04:15–05:45UTC matched finite window:**
 [actual source return](../evidence/execution-edge-v1_2/EPG10-08/CORE009_NATIVE_SOURCE_READY_2026-10-21.md)
 records the official current/nonhistorical acceptance head3 and fresh SDK

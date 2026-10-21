@@ -112,3 +112,64 @@ publication/source-update/replay, public consumer/browser and command authority
 retain their own unmet gates; no full08/09 acceptance or phase transition.
 
 Main authority/journal: [Unified plan](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).
+
+## Actual continuation and active revoke recovery —05:25–05:39UTC
+
+The new genuine session `ses_f1c6ea88ef394c4290a7bf393b0710d8` was issued by
+Core, not copied from stable or invented by Edge. It expired at05:36:54.553;
+no extension or further positive request follows. Public continuation's
+`3f1db92c…` is the approved **path hash**, not credential-byte hash; the
+[separate Core byte attestation](CORE009_CONTINUATION_BYTE_PIN_2026-10-21.md)
+does not change custody. The token stayed SGP root0600 throughout.
+
+One fresh retained snapshot05:25:57 returned200 with the same actual stale
+snapshot body. One active stream began05:26:12.501280; first heartbeat was
+observed05:26:13.753867. Immediately after that frame, Edge invoked exactly
+one delegated official STREAM-only revoke at05:26:13.753942. Second frame
+arrived05:26:15.068622, then actual server EOF at3422ms, before the client
+four-frame/ten-second cap. Official command returned exit75
+`MANAGER_REVOKE_DRAIN_PENDING`, not a successful revoke. No retry by Edge,
+source cancellation, restart, regrant or manual authority mutation followed.
+
+Independent actual Core/TS queries05:39 matched the three new delivered
+rows' exact lease/attempt/binding/source/physical terminal receipt/digest.
+Core body digests match private snapshot/frame bytes and source ACK is resolve:
+
+| Kind | Lease / attempt | Physical terminal receipt | Receipt digest SHA256 |
+| --- | --- | --- | --- |
+|HTTP3|400871dd-106d-44a4-bf0d-7d6e19945046 /8169f8a1-58f2-4665-98d5-4101cd45c811|822bb83c-3742-417a-8340-8fd4c1c37152|f00f571d3e6004662ce5a0734341d14b8c8bfdfc6c4418051567c3d797ff598c|
+|SSE3|144eaf12-46c1-49b4-aa6d-9086a4e4754b /42d671c3-db41-4d1c-86a6-66be23ac79eb|5cd177e6-950f-41a5-98ee-f0ae58557e51|d7e470f4c549e0c472d08440877cc5e2417be572c662dbb1c132ca53a51f139f|
+|SSE4|0fec7e14-a8e5-40cf-86dd-5603faa9d2af /cee86028-5dd9-45f4-9ba5-4d8436ce871c|0466f5b0-3807-408a-888e-aae3df8e0f1d|1ed8ea2a567798cf72011a7fddd351c0a24574f3a52869dea312f237b17842b8|
+
+This raises genuine served proof to three snapshots/four frames, **not** seven
+HTTP calls or complete recovery. Core retained8/unresolved1; the eighth lease
+`785387ba-ef57-455d-a7ba-f92663baae60`, attempt
+`07becd72-1e11-4ab9-8a96-d5fd7339f1a0`, is Core ADMITTED/no-send-fenced,
+source ISSUED with no terminal. Both grants remain rev1/nonrevoked. Core's
+official same-artifact retry2 again returned75; no blind third retry.
+
+[Concrete Core diagnostic](CORE009_RECOVERY_BUSY_FINDING_2026-10-21.md)
+exposed a transport lifecycle defect: status result resolves before actual
+request close returns the single inflight slot; immediate cancel sees BUSY.
+Core owns the minimal repair, Edge independently reviewed it. Correctness
+requires authenticated result only after physical close/release once, keeping
+deadline/error guards. Do not raise cap, sleep, manually cancel source or
+synthesize ACK. Source28446 and original custody remain deliberately live.
+Expiry stops acquisition but cannot settle or kill this original obligation.
+
+One independently runnable expiry negative05:37:41 used the **same genuine
+token after actual absolute expiry**, returning401/SESSION_REQUIRED/89bytes,
+bodySHA256 `1af0aecaf063526d298383bbe37110df5cd083600a794e415b5f6cf8f15739e0`.
+Exact session was ACTIVE/revoked_atNULL before and after; native counts stayed
+8/1, original ADMITTED unchanged. This qualifies expired-session denial only,
+not active grant revocation, public Cloudflare or recovery. Its operator ran
+once via SSHstdin with no staged SGP source, new credential or retry.
+
+Normal docs publication is `dd82b6a7` with130contracts/717API/build/PGrestore
+PASS. Actual05:34:59 cleanup removed only new test image9739ebcb, retaining all
+102baseline image IDs/406shared cache. Free249381588992→249369243648B is shared
+variation, not claimed reclaimed space. Owned PG/Node/network/tmp are absent;
+active source/rollback/custody and all peer WIP remain untouched. No push/merge.
+Full08/09 acceptance remains NOT_MET. Next: Core repair qualification and
+same-original cancellation/Core ACK, then truthful connected revoke controls
+inside a genuinely commissioned window; no expiry-based completion.
