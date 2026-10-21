@@ -9,6 +9,23 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October17:12 UTC — successor PG terminal / concrete returns
+
+[Actual focused successor receipt](evidence/ELP2-10/CORE009_SUCCESSOR_FOCUSED_GATE_RETURN_2026-10-21.md):
+code28646bef in the reserved isolated branch,5paths+711/-0. Pure73/install6/
+revoke3 PASS; successor PG first3PASS/5FAIL from a fixture121s>120s guard,
+fixture-only correction then8/8PASS/build/restore EXIT0.90 distinct tests,
+not connected proof. Independent commit-window re-review ACCEPT. Normal
+changed-code landing/image still pending; no source/session/grant or install.
+
+Claude read a0b885b6 clean: P21 fix0201df80 **ACCEPT** (typed overflow and
+census-bound digest), still dark/no producer mapping. Quiet2c1b8717 and
+immutable-M1a0b885b6 are under read-only review; do not rerun M1. Fleet race,
+pre-I/O tab cap and G2 input binding remain the concrete follow-ups.
+[Parallel owner input request](evidence/ELP2-10/CORE_PARALLEL_OWNER_INPUT_REQUEST_2026-10-21.md)
+was actually copied to PM and Edge17:07:39UTC, both hashes match e5984abd;
+SENT is not issuer/financial/window acceptance. No secret transfer or activation.
+
 ### 21 October17:03 UTC — successor implementation / focused qualification
 
 Codex's reserved successor slice now has private artifact/planner, transactional

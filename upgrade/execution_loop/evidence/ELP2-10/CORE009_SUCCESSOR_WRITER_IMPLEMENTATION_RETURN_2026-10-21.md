@@ -73,3 +73,38 @@ occurred. Source-only implementation does not yet justify a finite window ACK.
 Documentation publication: **Verification: R0**, explicit Markdown-only paths,
 `git diff --check` and `scripts/execution-tracking-test.sh` PASS. No code gate
 is claimed by this documentation commit; the running PG result is separate.
+
+## 17:12 UTC actual focused terminal — supersedes RUNNING only
+
+[Focused gate, precise failure and cleanup](CORE009_SUCCESSOR_FOCUSED_GATE_RETURN_2026-10-21.md).
+The writer is committed in its isolated branch: initial14ea2251, then rebased
+onto canonical95667c6b as **28646befa69e71d1729fd93b0d8a78d3a0941077**.
+Five owned code/test files, **+711/-0**; production implementation254 lines,
+tests457 lines. No other source paths or current-human coordinator changed.
+
+Pure73, historical installer6, historical revoke PG3 and successor PG8 now
+have passing focused receipts: **90 distinct tests**, not an additional full
+normal run. Source build and scoped restore PASS; independent final-window
+re-review ACCEPT. This is **FOCUSED_SOURCE_QUALIFIED / NOT_INSTALLED**.
+Full normal gate is required once on the next frozen changed-code landing;
+the already-passed432 gate remains valid only for its unchanged scope.
+
+Claude may keep consumer/fixture work moving; there is no new public field or
+frontend mapping. The official CLI is `dist/cli/execution-native-successor.js`;
+it requires independently hash-pinned root-owned artifact, exact physical
+Research target, current policy/predecessor CAS and finite source caps. It was
+**not** invoked against Research. No grant/session/source/runtime was changed.
+
+Public parallel-owner request **actually copied/hash-verified17:07:39 UTC**
+to both PM and Edge worktrees; see
+[owner inputs](CORE_PARALLEL_OWNER_INPUT_REQUEST_2026-10-21.md).
+Both copies match `e5984abdaf0c101d253228cb80b21cb4c9e4f62e5dd717e70b0e6adf882806c9`.
+This is SENT, not an issuer/financial/measurement owner acceptance. The prior
+request's preparation text remains unchanged at each recipient.
+
+Independent review **ACCEPTS Claude0201df80**: economic sum overflow is typed
+REFUSED/null without widening or rounding; set digest binds canonical census
+content. Tests cover exact boundary, changed population and order invariance.
+That dark reducer remains `PROPOSAL_NOT_A_PRODUCER_MAPPING`; real financial
+publication and browser proof are still separate. Quiet/M1 follow-up commits
+2c1b8717/a0b885b6 are under independent review; no repeat M1 run requested.

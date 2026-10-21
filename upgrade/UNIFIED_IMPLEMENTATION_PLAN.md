@@ -14325,3 +14325,15 @@ at read cut16:54:46 (PM0956eaa/Edgecc7e71f5); PM37source-only collateral cases
 do not close them. D1–D7 approvals remain recorded; actual source numeric bounds,
 load/window and calibration population/config still require owner artifacts.
 ELP2-10 remains IN_PROGRESS; ELP2-11, push/dev/main/release are not opened.
+
+**21October17:12UTC actual successor terminal:**
+[Focused gate/failure/cleanup](execution_loop/evidence/ELP2-10/CORE009_SUCCESSOR_FOCUSED_GATE_RETURN_2026-10-21.md).
+Isolated code28646bef,5files+711/-0.90 distinct focused tests have passing
+results after fixture-only PG correction (121s fixture exceeded120s cap;
+first85PASS/5FAIL retained, affected-file retry8PASS); build/scoped restore PASS.
+Independent final-window review ACCEPT; full normal changed-code landing,
+image and real source/window installation still pending. No connected READY.
+P21Claude0201df80 ACCEPT, dark projection only. Parallel source/measurement
+owner request actually delivered/hash-verified to both PM/Edge17:07:39UTC;
+SENT not source acceptance. Consumer/browser and all genuine source/budget/
+calibration/coexistence/G2 gates remain separately OPEN.
