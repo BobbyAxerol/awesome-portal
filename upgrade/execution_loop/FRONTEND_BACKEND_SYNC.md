@@ -9,6 +9,22 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October19:10 UTC — financial independent review / source slot pending
+
+[C5 independent refresh](evidence/ELP2-10/C5_FINANCIAL_PRODUCER_REVIEW_AND_CLAUDE_HANDOFF_2026-10-21.md#independent-refresh21oct1910utc--accept-dark-reducer-not-mounted-finance)
+ACCEPTS dark P21 refusal/null/exact-sum behavior atClaude3a387ff1, not runtime.
+Legacy NET_PNL and series paths still need one shared accepted-source builder;
+empty cost lists are not required-cost census proof. No mapping/source was
+invented or mounted by the successor installation. Existing C5 owner request
+and D1–D7 decisions retained; no new formula or generic approval question.
+
+Claude now has an actual Edge P22 owner-action file in its own packet;
+delivery is observed, ACK/source completion still absent. Users FE WIP stays
+untouched. Root installer is terminal/clean, capacity19:07:free150841335808B,
+MemAvailable9563320KiB; exact owned retake/migrator cells/net absent, no prune.
+Peer heavy work has the slot now; no new gate scheduled. Root waiting only on
+fresh source/window input for eligible READ, not a duplicate hook or new phase.
+
 ### 21 October19:05 UTC — landed successor and actual Research schema/image
 
 [Installed owner return](evidence/ELP2-10/CORE009_SUCCESSOR_INSTALLED_OWNER_RETURN_2026-10-21.md)
@@ -1819,3 +1835,8 @@ Existing08 handoff§10.3 delivered 2548bytes/SHA256 d9e0aee2f7b8660d6ac79ad80375
 ### Edge built-image intake publication —21Oct18:59UTC
 
 Edge feature c53fe1fc3175809605e14eb72718e12d45201fc7 follows6b534620; this turn2R0 commits,3Markdown/+227, no product/SDK/driver change or push/merge. Tracking/indexed locators/staged diff PASS; peer WIP preserved. Built a96 image verified directly/qualified62-case retake+restore+suffix consumed, serving9cf5/config423573a8/restart0 still unchanged. Existing handoff§10.3 d9e0aee2 delivered18:55:35; Edge availability19:15–19:45 or return viable matched slot. Numeric C288 decision is specifically queued to Bobby; unchanged32 eligible READ target/window should return independently now. Current single-principal control gap and P22 actual factory are not waived for full goal. No expired source draft, grant/session/source listener, DB mutation or new test resource by Edge; cleanup NO_ACTION_NEEDED. Original08 full revoke/cache/cursor/SSE remains NOT_MET, no09 connected claim.
+
+
+### Edge08 / existing P22 factory assignment delivered to owning branch —21Oct19:06UTC
+
+Exact Core18:00 factory assignment is now delivered to `/home/bobby/portal-research-fe/upgrade/execution_loop/evidence/BE-CLAUDE-2026-10-20/BE-P22-FACTORY-EDGE08-OWNER-ACTION-2026-10-22.md`, 2547bytes/SHA256 977cbaaf2ca2caf77f747105ae61fc6888ba756826e750eec4788aecb1c4f6fa. Scope is ONLY actual app/runtime factory + focused tests under existing P22 one-writer assignment, no deploy/source/grant/schema/UI/frozen-writer change. Existing BE-P22§9 intentionally-uninstalled statement is not a reason to omit the newly assigned source factory. DefaultOFF/no I/O when absent, actual factory tests and private sink protections; module328PG is not factory or connected evidence. ACK/CHANGES_REQUESTED and exact source/test return to Core remain pending. Edge full08 cache case is still NOT_RUN; eligible READ independent. No peer code/index/rebase/commit altered by delivery. Canonical assignment: Core CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md§P22 actual opt-in construction.

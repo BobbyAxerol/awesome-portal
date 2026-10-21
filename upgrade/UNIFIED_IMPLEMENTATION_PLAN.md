@@ -14602,3 +14602,22 @@ budget/calibration, coexistence/G2 and consumer/browser remain OPEN. Claude
 owns exact-buffer measurement/P22factory and roster lead-PG/visual requests;
 its new source is not silently covered by the successor qualification.
 ELP2-10 NOT_MET; ELP2-11 not entered; no push/dev/main/release. Verification:R0.
+
+### C5/measurement independent follow-through —21Oct19:10UTC
+
+[Financial review refresh](execution_loop/evidence/ELP2-10/C5_FINANCIAL_PRODUCER_REVIEW_AND_CLAUDE_HANDOFF_2026-10-21.md#independent-refresh21oct1910utc--accept-dark-reducer-not-mounted-finance)
+accepts Claude's dark reducer only, keeps the legacy NET_PNL/shared-series
+builder and required-cost census as explicit before-mount gates. No new
+financial publication, issued Manager leaf, numeric production calibration or
+M5/M7/G2 result. Claude actual P22 factory owner-action delivery is observed;
+factory/single-buffer fixes still need source receipts. Source03/PM07 and
+target01/06 remain separate owner lanes, not closed by the successor install.
+Root's installed19:02 return is sent/hash-matched; awaiting fresh finite
+source inputs for19:15–19:45 eligible READ, no duplicate tests or history purge.
+CleanupC4:owned retake/migrator/check resources absent, backups/rollback kept,
+no broad process/cache cleanup. ELP2-10 OPEN. Verification:R0.
+
+
+### Edge08 / existing P22 factory assignment delivered to owning branch —21Oct19:06UTC
+
+Exact Core18:00 factory assignment is now delivered to `/home/bobby/portal-research-fe/upgrade/execution_loop/evidence/BE-CLAUDE-2026-10-20/BE-P22-FACTORY-EDGE08-OWNER-ACTION-2026-10-22.md`, 2547bytes/SHA256 977cbaaf2ca2caf77f747105ae61fc6888ba756826e750eec4788aecb1c4f6fa. Scope is ONLY actual app/runtime factory + focused tests under existing P22 one-writer assignment, no deploy/source/grant/schema/UI/frozen-writer change. Existing BE-P22§9 intentionally-uninstalled statement is not a reason to omit the newly assigned source factory. DefaultOFF/no I/O when absent, actual factory tests and private sink protections; module328PG is not factory or connected evidence. ACK/CHANGES_REQUESTED and exact source/test return to Core remain pending. Edge full08 cache case is still NOT_RUN; eligible READ independent. No peer code/index/rebase/commit altered by delivery. Canonical assignment: Core CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md§P22 actual opt-in construction.

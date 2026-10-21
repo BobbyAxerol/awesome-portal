@@ -119,3 +119,48 @@ SHA256 `877bf281c10188224c3d678ff47900094f3c654383bf56ddfa7d1f28baba51d3`
 is retained at `/tmp/elp210-financial-source-review-20261021.md`; root verified
 the cited reducer/contract and latest decision record. Verification: R0 repo
 diff/link/tracking; no financial runtime PASS or ELP2-10 closure claimed.
+
+## Independent refresh21Oct19:10UTC — ACCEPT dark reducer, not mounted finance
+
+Reviewed actual Claude `3a387ff1a11aaa799872d9cfdc5b33254e392831`:
+P21 source remains `0201df8027bef15cff3719535834737a6a08009c`; the later
+Roster/FE changes do not deliver a financial producer bridge. The independent
+read-only reviewer and Root checked these concrete invariants without rerunning
+the68case receipt:
+
+- `manager-economic-source-reducer.ts:119–174`: missing census, untrusted
+  source, overlap/conflict and missing ownership/valuation/stated costs yield
+  refusal or null/typed absence; no missing-cost-to-zero fallback.
+- `:75–92`: mixed currency/basis/window/cut/source revisions are refused.
+- **ACCEPT_WITH_SOURCE_GAP** for the dark implementation. It remains unimported
+  by runtime, not financial qualification or dataset/series parity proof.
+
+Before source admission, **CHANGE remains open**, not an absent engine feature:
+`manager-model.ts:109–115` ownership handling covers snapshot kinds, not
+NET_PNL; `:88–98` can sum distinct legacy facts, while
+`manager-series-observation.ts:104–105` calls that same legacy aggregation.
+Two facts on one physical account cannot be declared safe/disjoint from that
+implementation alone. Keep financial source commissioning closed until C5's
+accepted mapping feeds **one shared input builder/reducer** on both paths,
+including economic-set digest parity and the existing negative cases.
+
+Cost-completeness evidence is independently still required:
+`manager-economic-source.contract.ts:58–59` allows both included/missing lists
+empty. That is a proposal, not proof every required cost class is known.
+PM/TS must publish the authoritative required-cost census/absence semantics;
+Portal must not invent that list or accept an empty list as full-cost proof.
+This is the existing C5 mapping request, not a duplicate queue or a request to
+change the chosen Score formula.
+
+PM owning rule pin remains `c0095d120e855a17ba53e2523231b4d6566164fa`,
+received-intake SHA256
+`3e29f0395e3b07f885baecf3a0c0057367d3111359de34382af37fe904c8c407`.
+Latest read-only PM source3935435c generation/history progress is not a new
+accepted financial mapping. Source Truth row10 remains unqualified. Manager
+CSR/CA is still not issued leaf/chain. Production numeric budget/calibration,
+M5/M7 and P184G2 remain independent of the now-installed successor image.
+
+Claude can continue its owned pure fixtures/contract review and return the
+shared input-builder design now; actual wiring waits for accepted mapping and
+one-writer scheduling. Root edits no financial/series/UI implementation here.
+No load, DB, source mutation or new test resources. Verification:R0.
