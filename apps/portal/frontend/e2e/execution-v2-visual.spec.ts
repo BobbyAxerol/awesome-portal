@@ -11,6 +11,11 @@
  * whose text is a clock. A route nobody stubbed (501), a console error or a failed response fails the
  * cell: a fixture gap is never photographed as an empty screen.
  *
+ * Interaction states (DEBT-UXM07-016) are cells too: a cell may carry `act` (what the reader does to reach the state: open the
+ * drawer, open a NaWhy disclosure, take the next page) and `shot: "viewport"` (a modal drawer is fixed to the window, so the window
+ * is photographed instead of a document grown to its height). The drawer cells run at 1600 (docked beside the page), 1440 and 390
+ * (overlay behind a scrim).
+ *
  * Compare-only: `updateSnapshots: "none"` in the config stands. Baselines are recorded by scripts/portal-web-visual-record-v2.sh
  * inside the pinned Playwright image. Outside that image the cells skip, so the behavioural V2 lane stays usable on a host.
  */
@@ -24,10 +29,12 @@ import { V2_WORKSPACE, stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2L
 
 const PINNED = Boolean(process.env.PORTAL_VISUAL_PINNED_IMAGE);
 
-type Width = 1440 | 1024 | 390;
-const HEIGHT: Record<Width, number> = { 1440: 900, 1024: 800, 390: 844 };
+type Width = 1600 | 1440 | 1024 | 390;
+const HEIGHT: Record<Width, number> = { 1600: 900, 1440: 900, 1024: 800, 390: 844 };
 const TWO: readonly Width[] = [1440, 390];
 const THREE: readonly Width[] = [1440, 1024, 390];
+/** 1600 docks a drawer beside the page (the dock is wide-only above 1500); 1440 and 390 overlay it behind a scrim. */
+const DOCK: readonly Width[] = [1600, 1440, 390];
 
 interface Cell {
   /** File-name stem; the image is `v2-<slug>-<width>`. */
@@ -43,6 +50,16 @@ interface Cell {
   /** Extra elements to mask (volatile text). */
   mask?: string[];
   scoped?: boolean;
+  /**
+   * An interaction state: what the reader does to reach it (open a disclosure, take the next page, open the drawer). It runs once the
+   * screen is ready and before the frame is still, and must wait for its own result to be on the page.
+   */
+  act?: (page: Page) => Promise<void>;
+  /**
+   * What is photographed. `main` (default) is #portal-content grown to the document height. `viewport` is the window as it is, for a
+   * modal drawer: its scrim and panel are fixed to the viewport, so growing the window would stretch them over the whole document.
+   */
+  shot?: "main" | "viewport";
 }
 
 const WS = `workspace_id=${V2_WORKSPACE}`;
@@ -86,6 +103,74 @@ const CELLS: readonly Cell[] = [
     ready: async (page) => {
       await expect(page.getByRole("heading", { name: "Scoped slice" })).toBeVisible();
       await expect(page.getByTestId("stream-chip")).toContainText("Live (fixture)");
+    },
+  },
+  // ── New request and the interaction states (DEBT-UXM07-016) ──────────────────────────────────────────────────────────────────
+  { slug: "new-request", group: "New request", route: "/governance/approvals/new", root: '[data-screen="new-request-v2"]', widths: TWO },
+  {
+    slug: "new-request-drawer",
+    group: "New request drawer",
+    route: "/governance/approvals?compose=request",
+    root: '[data-screen="new-request-drawer-v2"]',
+    widths: DOCK,
+    shot: "viewport",
+    ready: async (page) => {
+      await expect(page.getByRole("combobox", { name: /^Alpha/ })).toBeEnabled();
+    },
+  },
+  {
+    slug: "na-why-open",
+    group: "NaWhy open",
+    route: "/administration/users",
+    root: '[data-screen="users-v2"]',
+    widths: TWO,
+    shot: "viewport",
+    act: async (page) => {
+      // The first "Not published" with a reason: the NaWhy button, not the plain word.
+      const button = page.locator('[data-screen="users-v2"] button[aria-label="Not published, reason"]').first();
+      await button.click();
+      await expect(button).toHaveAttribute("aria-expanded", "true");
+      await expect(page.locator('[data-screen="users-v2"] .exec-blk-why-body').first()).toBeVisible();
+    },
+  },
+  {
+    slug: "scoped-slice-page-2",
+    group: "Pager page 2",
+    route: `${SLICE_URL}&fixture=chain`,
+    root: '[data-screen="slice-v2"]',
+    widths: TWO,
+    scoped: true,
+    ready: async (page) => {
+      await expect(page.getByRole("heading", { name: "Scoped slice" })).toBeVisible();
+      await expect(page.getByTestId("stream-chip")).toContainText("Live (fixture)");
+    },
+    act: async (page) => {
+      await page.getByRole("button", { name: "Older", exact: true }).click();
+      await expect(page.getByRole("region", { name: "Fleet on this page" }).getByRole("link", { name: "alpha_TEST_ONLY_A2" })).toBeVisible();
+      await expect(page.locator("#slice-pager-note")).toHaveText("Newer rows exist, older rows exist");
+    },
+  },
+  {
+    slug: "operations-dock",
+    group: "Operations dock",
+    route: "/execution/operations",
+    root: ".exec-ops",
+    widths: DOCK,
+    shot: "viewport",
+    act: async (page) => {
+      await page.locator("td[data-l] button").first().click();
+      await expect(page.locator(".exec-dock")).toHaveCount(1);
+    },
+  },
+  {
+    slug: "incident-drawer",
+    group: "Incident drawer",
+    route: "/execution/operations/incidents/inc_fixture_44",
+    root: ".exec-ops",
+    widths: DOCK,
+    shot: "viewport",
+    ready: async (page) => {
+      await expect(page.locator(".exec-dock")).toHaveCount(1);
     },
   },
 ];
@@ -170,12 +255,21 @@ for (const cell of CELLS) {
       await expect(page.locator(cell.root).first()).toBeVisible();
       await expect(page.locator(cell.root).first()).not.toHaveAttribute("data-state", "loading");
       if (cell.ready) await cell.ready(page);
+      if (cell.act) await cell.act(page);
       await settle(page);
       await stillFrame(page);
 
       expect(gaps, `unstubbed routes: ${gaps.join(", ")}`).toEqual([]);
       expect(watch.foreign).toEqual([]);
       expect(watch.take()).toEqual([]);
+
+      const main = page.locator("#portal-content");
+      const masks = [...VOLATILE, ...(cell.mask ?? [])].map((selector) => main.locator(selector));
+      if (cell.shot === "viewport") {
+        // A modal drawer is fixed to the window: photograph the window as the reader sees it, not a stretched document.
+        await expect(page).toHaveScreenshot(`v2-${cell.slug}-${width}.png`, { caret: "hide", animations: "disabled", mask: masks });
+        return;
+      }
 
       // Photograph the page at its full height instead of letting the element shot scroll and stitch: a sticky bar
       // (Workbench) would otherwise be drawn again over the middle of the content.
@@ -189,12 +283,7 @@ for (const cell of CELLS) {
           }),
       );
 
-      const main = page.locator("#portal-content");
-      await expect(main).toHaveScreenshot(`v2-${cell.slug}-${width}.png`, {
-        caret: "hide",
-        animations: "disabled",
-        mask: [...VOLATILE, ...(cell.mask ?? [])].map((selector) => main.locator(selector)),
-      });
+      await expect(main).toHaveScreenshot(`v2-${cell.slug}-${width}.png`, { caret: "hide", animations: "disabled", mask: masks });
     });
   }
 }
