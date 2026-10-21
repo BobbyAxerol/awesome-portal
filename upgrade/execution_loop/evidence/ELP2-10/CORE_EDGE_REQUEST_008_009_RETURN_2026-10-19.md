@@ -331,3 +331,8 @@ creating a second simultaneous app/coordinator. Missing source authority is not
 manufactured by local config. Three reused read-only agents assist peer source,
 custody review and composition; primary owns integration/resources/runtime.
 
+Actual follow-through: [normal R3/7818d563, installed008 READY, new image/config/
+schema/backup pins and HK-delivered manifest; real009 remaining owner inputs](CORE_008_INSTALLED_READY_009_RETURN_2026-10-19.md).
+This newer receipt supersedes the installation-PENDING line above.009 remains
+NOT_COMPOSED, not a fictional READ/STREAM qualification.
+

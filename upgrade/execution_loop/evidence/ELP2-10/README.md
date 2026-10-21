@@ -382,3 +382,22 @@ PASS, explicit TEST_ONLY Core model. Normal-hook landing and genuine connected
 commissioning remain separate. [Core → Edge owner-return, source patch, private
 input references and next action](CORE_TO_EDGE_EPG10_08_OWNER_RETURN.md).
 No frontend field, stable change, source fixture credit or full phase PASS.
+
+## Core008 installed READY;009 owner handoff —2026-10-19 18:53UTC
+
+[Actual normal R3/commit, image/config/schema/READY pins, protected-data
+preservation and new HK-delivered private manifest](CORE_008_INSTALLED_READY_009_RETURN_2026-10-19.md).
+008INSTALLED_READY; connected cleanup still requires genuine source window.
+009 existing compiled composition NOT_COMPOSED, with exact owner inputs and
+sequenced lifecycle listed. No fake READ/STREAM/source ACK or fullELP2-10 PASS.
+
+## Fullstack review and Claude continuation — 2026-10-20
+
+[Current review/handoff](CLAUDE_FULLSTACK_REVIEW_2026-10-20.md) supersedes stale
+consumer/source-gap descriptions only where a newer receipt proves the change.
+Peer0ec70a08 reviewed against canonical7818d563; source, fixture, installed and
+connected states remain separate. V1 F0 error-envelope bug reproduced; scoped
+consumer/story/chart/accessibility/fixture gaps have concrete exit gates.
+Core009 revision3 source fixes and focused real-PG evidence now exist; ordinary
+release/install/connected window remain. Claude owns implementation, Codex
+review/integration; ACK pending. No code/runtime/merge/push in this review.
