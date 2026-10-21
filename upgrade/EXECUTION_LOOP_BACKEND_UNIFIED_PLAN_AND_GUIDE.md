@@ -27615,6 +27615,204 @@ disable/skip a hook or rewrite shared history. Require actual hook tests,
 physical Git exit and scoped cleanup witness before reporting publication
 qualified; original d15de83e test evidence is not a fresh hook result.
 
+**Installed handoff consumed / first bounded observation preaction,
+21Oct04:50UTC:** Core officially released installed-return46d36b84 and exact
+SGP-only root0600/327B token ref0af6f5d3; actual-ID cleanup3dd1de26 reviewed/
+dry-run PASS, no value copied to HK/Git/chat. Core explicitly hands ONE
+retained snapshot through its existing private SGP8095 operator path. It
+does not publish a generic Manager-page connection-spec: do not invent its
+projection/catalogue/field-policy facts or impose that unrelated client model
+as a new authority gate. Use ordinary SSH/private fixed-route HTTP observation
+on SGP:127.0.0.1:8095, genuine session, research Host only, one GET paper
+realtime-snapshot,5s whole deadline/1MiB maximum/no redirect or retry. Validate
+private reference hash/UID/mode/shape/subject/session/expiry before request;
+keep body and genuine cursor in new root0700/0600 private evidence only.
+Output bounded hashes/status/scope, not rows/token/cursor. This is loopback
+Research application-session evidence, not public TLS/Cloudflare/financial
+source or authority-PASS. Actual scope/DTO/current-native terminal/Core ACK
+and counter correlation still gate any credit and subsequent SSE. UNKNOWN
+retains original recovery custody; no repeated positive request. No general
+Manager pages or fallback28445, SQL/grant/identity/command mutation. Append
+this preaction unstaged while publication hook runs; its frozen staged tree
+and all source/peer files remain unchanged. Record exact journal diff for
+the post-hook cleanup guard; no index changes until physical Git terminal.
+
+**Gated publication and first real READ specimen,21Oct04:54UTC:** actual
+normal tracked hook now physically exited0, source7672e701b56d3fa6d6c3dc8eaa8aa915de189569,
+6docs/+680lines, Bobby identity/no push/merge. Actual amend log0552ee7e:
+130contracts/717API72files/build/isolated PG restore+verification PASS;
+worktree tests include preserved peer WIP hashes, not a new production/source
+release claim. Prior1eb9a695 was only our unpublished predecessor, superseded
+by properly gated amendment; no shared history rewritten. Witnessa420d41f
+captured own D4image12247b12/test-153726 and scoped PG/Node/network/tmp;
+destructive cleanup remains HOLD until final journal/delta pins and freshquiet.
+
+Root's fixed-route sourcee865aef0 was statically compiled only (not the modeled
+10case generic probe). It consumed exact sanctioned token0af6f5d3 locally on
+SGP, never exported it, and sent exactlyONE snapshot GET at04:52:01.046508UTC.
+HTTP200/15ms/237B/body304a4455, but NO native-state/cursor response headers or
+scope/availability/freshness fields. Minimal body has8snapshot keys and an
+11character body cursor (SHA8e899b9b), not an independently qualified native
+cursor. Do not report 'no cursor at all' or use this one blindly for SSE.
+Native snapshot schema alone is insufficient; observed outcome is
+HTTP_OBSERVED_ONLY/authority_proved=false/full08+09NOT_MET, NOT READ PASS.
+
+SGP evidence core009-first-read-nlv_z6i3 is root0700 with root0600 body/headers/
+receipt; receipt72260d84. Payload/cursor/token never printed or copied to HK.
+Returned exact disposition to existing Core task AND Unified; Core/Edge now
+inspect selection/routing/native provider counters and original terminal/ACK.
+No duplicate GET, SSE, source/DB/grant/session change or inferred release.
+Source28446 remains under its original finite lifecycle through05:45UTC;
+UNKNOWN recovery objects remain owned. The returned legacy-looking/minimal
+DTO must be diagnosed, not relabeled as success or an external data upgrade.
+
+**04:59UTC actual routing disposition / bounded corrected request:** Core's
+[fixture diagnosis](evidence/execution-edge-v1_2/EPG10-08/CORE009_FIXTURE_ROUTE_DIAGNOSIS_2026-10-21.md)
+proves nginx8095's specific Execution prefix deliberately targets Claude's
+fixture BFF. First237B specimen is FIXTURE_ONLY, native obligations0; preserve it,
+do not remove the fixture overlay or misreport a native failure/retry/PASS.
+Actual Core container4095af12/image9cf5fffa/restart0/private network172.22.0.5
+was rechecked read-only. Approved next action is exactlyONE corrected private
+backend GET to172.22.0.5:4000, same genuine SGP-only token and research Host,
+5s/1MiB/no redirects/no retry. Recheck exact Docker binding inside operator;
+fail closed on drift. This is not public route/Cloudflare/browser acceptance.
+Use native headers/cursor and original source terminal/Core ACK/counter delta;
+only after that separately bound1–2frame SSE. Actual retained DTO quality is
+reported, never upgraded to FRESH; original current-publication gate stays
+NOT_MET per Core's linked retained-scope return. Window/expiry/caps unchanged.
+
+Second normal-hook cleanup actually finished04:58:58UTC: exact unreferenced
+image12247b12/test-153726 removed nonforce; own PG/Node/network/tmp already gone.
+Private closeout7dc75fc3/removalde4bd78b; free248613715968→248606572544B on shared
+host (not claimed reclaimed bytes). All102baseline imageIDs retained,406BuildKit
+unchanged; no broad prune. Manager+native4/DLquery2/DLstream4 exact; five foreign
+P184 changes and known Paper-worker restart2939→2994 observed only, not touched.
+Source28446/image28ea/custody preserved. Three peer WIP hashes unchanged; index
+empty/HEAD7672e701/no push/merge/hostedCI. Journal freeze released after cleanup.
+
+05:00UTC two corrected-probe preflights stopped before credential read or HTTP:
+Docker CLI exit2. The first format hypothesis was not established; a bounded
+Docker-only diagnostic actually confirms Go virtual-memory reservation refusal
+under inherited256MiB address-space limit (stderr05fed933, no credential/HTTP).
+Keep whitelisted scalar/network pins; perform Docker-only verification before
+applying the256MiB limit to the credential/HTTP operator. No admission, request
+retry, Docker mutation, authority change or case-budget consumption occurred.
+
+**05:01UTC corrected actual native snapshot observed:** exactlyONE GET to
+verified privateCore172.22.0.5:4000 at05:01:14.444827UTC returnedHTTP200/1608B/
+1181ms, bodye3e8043d, nativecursorheaderb68fa8e6. Schema/workspace/paper match,
+AVAILABLEtrue/FRESHfalse (retained quality preserved),20expected DTO keys.
+Private SGP root0700/0600 evidence core009-corrected-read-s1sa_mot; no raw
+body/cursor/token exported. Actual operator kept5s/1MiB/no-retry. Forwarded
+observed result to Core's existing request AND Unified; awaiting exact original
+MANAGER_HTTP→SERVED physical receipt/source_reconciled+ACKresolve, admissions
+delta and unresolved0 before authority/custody/PASS claim or separate bounded
+SSE. This is genuine backend transport evidence, not fixture/public-browser/
+Cloudflare/current financial freshness/full08+09 acceptance. No extra GET/SSE,
+grant/session/DB/source mutation or silent extension followed from HTTP200.
+
+**05:05UTC independent original-receipt match:** exact read-only CoreDB
+portal_control/system7688673963308855330 has ONE retained MANAGER_HTTP lease
+22bc1a61-a900-48d3-b1fb-432d74056cc9/attempt56fed375-3366-49ce-a1f2-7aa70fa9a54d,
+SERVED/bodye3e8043d/receipt3f58c27b-7144-42d0-819a-647e2f6328d0,
+receipt digestd147e865/source_reconciledtrue/ACKresolve digestdb00e814,
+unresolved0. Own admissions delta0→1; history retained, not deleted for capacity.
+Independent exact-PK TSDB live_data_executor/system7674585245102796834 readback
+matches SAME lease/attempt/binding138c7e95/sourcea54517a3. Immutable events
+ISSUED05:01:15.322685→ENTERED15.545924→SERVED16.045560UTC have same terminal
+receipt3f58/digestd147; signed-terminal token hash07a80509 (not token value).
+Actual retained native READ authority/terminal/ACK is qualified for this one
+private backend case, NOT current FRESH/public browser/full08 qualification.
+Header NATIVE_SCOPED_BASELINE_V1 and genuine scoped continuation differ from
+raw local body cursor intentionally. Quality AVAILABLE/STALE/PARTIAL/HEALTHY,
+last real refresh10Oct10:46:16.362Z/source_as_ofnull; never upgrade timestamps.
+
+Next owned action in same approved window: exactlyONE finite STREAM on private
+Core /profiles/paper/stream, SAME session and genuine header Last-Event-ID only,
+separate installed STREAM grant,5s/64KiB/max2completeframes. No retry/idle client;
+client frame-limit/EOF is not source terminal/revoke. Retain original rows and
+independently reconcile each MANAGER_SSE_FRAME/sourceACK after close, verify
+reserve>=20/32. Source updates/FRESH publication stay NOT_MET when only heartbeat
+or UNKNOWN-quality notification is observed. No grant or source change here.
+
+**05:06:44UTC actual finite SSE refused:** exactlyONE stream request to the
+verified private backend used genuine original baseline headercursorb68fa8e6.
+HTTP409/61ms/no SSE content type/0frames, no retry. Private SGP evidence
+core009-finite-stream-22728tga; observer reports UNCERTAIN_OR_REFUSED, not PASS.
+The cursor is now~330s old; inspect exact frozen continuation TTL/reason and
+original custody/counter before another request. Do not invent a terminal or
+attribute this to DB/source without proof. Operator asserted200 before reading
+non-SSE error body, so no409 body retained; fix that owned observer limitation
+before further cases. Full08/09 not closed; source/window/trust unchanged.
+
+Frozen native codec hard-cap300s confirms original cursor age330s necessarily
+expired; server maps to409/CURSOR_INVALID_OR_EXPIRED before subscribe/admission.
+This is source-confirmed consistency, not a captured409 body. Actual Core
+readback: authority39/native_retained1/unresolved0/sessionACTIVE, idle expiry
+05:08:51 unchanged. No failed native lease to recover. Scope permits fresh
+bounded READ then immediate separatelygranted SSE with genuine new headercursor;
+do not extend session/TTL. Fix observer to retain non200 body/partialwire, exact
+projection_generation key and full frame semantics/cursor bounds. Same caps
+and one-client/no-retry percase; record individual outcomes and actual custody.
+
+**05:08–05:09UTC real adjacent READ→SSE qualified:** freshREAD05:08:15.260307UTC
+HTTP200/1608B/916ms/bodye3e8043d/newheadercursore526133c; immediately ONE stream
+05:08:27.109910UTC HTTP200/2619ms/15912B/exact2validheartbeats, same generation,
+NOTIFICATION_ONLY/qualitynull. Private SGP evidence vuegq57u and14muccue;
+wire03abf6d4, frame46d7e9dd/40d9e5e2. Client-frame-cap is not terminal proof.
+Actual Core read-only retained4/unresolved0: twoHTTP+twoSSE rows ALL SERVED and
+source_reconciledtrue/ACKresolve. Independent exact-PK TS source matches each
+lease/attempt/binding/source/terminalreceipt/digest:
+READ0e035e95/7daebe8c/receiptdfe41ac4/digestda5d5ac3;
+SSE6d789240/77ae1a67/receiptfc5ef779/digest2d79f527;
+SSE263ad2e7/331420ab/receiptd49abbed/digest12d212ec.
+No additional admission after close; reserve28/32, original history preserved.
+This qualifies scoped retained-native backend READ+SSE authority/egress/ACK,
+not new-data/resume-update/FRESH/public browser/full08 or09 completion.
+
+Real session idle expiry05:08:51 did not autoextend; no further positive request
+with expired cookie. Sent exact priority Core task AND Unified action: official
+retire only oldacceptancesession then issue new genuine same-subject/session
+artifact within existing05:45window/grants; preserve14normal sessions. Core owns
+that operation; Edge continues publication/evidence/driver correction meanwhile.
+Remaining08: live STREAM-only revoke with unaffectedREAD positive, READ/native
+revoke/cache/cursor/recovery. Do not conflate expiredcookie401 with grantrevoke.
+No owner approval repeated, grant/TTL widened or shadow session fabricated.
+
+Runnable same08 negative now: one bounded READ using the original genuine
+cookie AFTER actual05:08:51idleexpiry, no cookie alteration/reissue. Retain
+typedresponse privately and correlate no new native admission/custody. Report
+expired-session denial only if actual session remains ACTIVE/idleexpired;
+if Core has already revoked it, classify exact observed state, not grantrevoke.
+
+**05:16UTC bounded publication/actual cleanup handoff:** old-cookie negative
+preflight found Core's token file already absent BEFORE credential read/HTTP;
+no expiry test executed. Received Core actual official revoke05:10:23 exit0,
+outcomeREVOKED/tokenREMOVED/other_sessions_touched0, receipte99e706c, preserved
+14ACTIVE/672REVOKED normal sessions. Core prepares a separately pinned genuine
+20minute continuation within SAME05:45window; do not reuse old session/cursor.
+
+[Single bounded Edge connected return](evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md)
+now reconciles all five actual HTTP requests, four native admissions, exact
+independent source/Core terminal proofs, honest expired-cursor evidence gap,
+actual cleanup and original remaining08 gates. Detailed guide updated to agree;
+full08/09NOT_MET, genuine scoped retained READ+SSE qualified. Publication slice
+stages ONLY owned plan/guide/return and exact public producer returns, not peer
+WIP or Core's concurrently amended binding packet. Run normal tracked hook with
+Bobby identity/resource caps, then exact C4 cleanup; no push/merge/hostedCI.
+
+**05:18UTC actual new continuation received:** [Core READY](evidence/execution-edge-v1_2/EPG10-08/CORE009_CONTINUATION_READY_2026-10-21.md)
+records official genuine session ses_f1c6ea88ef394c4290a7bf393b0710d8, expiry
+05:36:54.553UTC (idle=absolute/1200s), SAME subject/workspace/grants/runtime/
+native head. Token stays SGP-root0600/327B/hash3f1db92c; issue receipt5358a369,
+exact new cleanup artifact83d84017 dry-revoke PASS. Old token not reused.
+Adapt only private observer session pins/deadline; do not modify live source
+operator, existing retired artifacts, TTL or business authority. Coordinate
+short active STREAM-only revoke with Core exact official artifact/action time,
+unaffectedREAD control and actual custody before later READ/native revocation.
+No idle stream while awaiting coordination. Normal-hook baseline i68c8r5O is
+READY (50runtime rows/102images/406cache/free249574129664B), source28446 retained.
+
 
 
 

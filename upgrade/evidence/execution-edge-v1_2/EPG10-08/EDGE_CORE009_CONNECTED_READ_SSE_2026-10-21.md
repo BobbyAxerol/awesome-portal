@@ -1,0 +1,114 @@
+# Original08 — actual private native READ and finite SSE
+
+Observed 21 October2026,04:52–05:10UTC. **SCOPED_RETAINED_READ_SSE_QUALIFIED;
+FULL08_NOT_MET / FULL09_NOT_MET.** This is genuine private backend authority
+and final-egress/source-ACK evidence, not a fixture, public-browser, Cloudflare,
+fresh financial publication, source-update/replay or active-revocation claim.
+
+## Source, trust and actual target
+
+- Edge source `feat/execution-edge-upgrade-v1_2@7672e701`; actual observer glue
+  is private, never part of the deployment or a new authority implementation.
+- Core source `734353113d8bec85f78b35ab81c9c1a40e93a67e`, image
+  `sha256:9cf5fffac3e0bf55ea4b23c9df2b85565da556b973fbb1ce6928936f49a2950c`.
+  Actual container `4095af125f9e31d1b8a4dcb6048553546a877092a24463918739ee0a1db11aaa`,
+  restart0, verified private172.22.0.5:4000. Runtime config `f3fe876d…`.
+- Native source28446, image `28ea3958…`, config `6282e1e0…`, exact finite
+  window04:15–05:45UTC, strict TLS1.3/mTLS/CA/hostname/leaf checks unchanged.
+  Actual current head3/source receipt `1d95276c-b837-4a6c-a582-67630a222c37`;
+  full pins: [source READY](CORE009_NATIVE_SOURCE_READY_2026-10-21.md).
+- CoreDB `portal_control`, system `7688673963308855330`; TS physical source
+  `live_data_executor`, system `7674585245102796834`, volume
+  `trading_system_pgdata`. Independent exact-PK READ ONLY transactions used
+  statement3s/lock500ms bounds; no business rows, secrets, writes or DDL.
+- Genuine Research application session
+  `ses_5e86a430f62b4f77ad2af3053113dd9f`, workspace
+  `ws_06G19F61YB8CFR7TEWMS7HQ660`, Paper. Token remained root0600 on SGP;
+  none copied to HK, Git, arguments, logs or this document. Separate finite
+  READ/STREAM grants: [installed return](CORE009_INSTALLED_READY_RETURN_2026-10-21.md).
+
+## Cases actually executed
+
+| Case | Observed result | Disposition |
+| --- | --- | --- |
+|04:52:01 GET through8095|200/237B/15ms, minimal fixture DTO|Excluded from native admission/acceptance; Claude fixture overlay preserved.|
+|05:01:14 corrected private snapshot|200/1608B/1181ms, scoped native header/cursor|Actual retained native READ qualified after independent receipt/ACK match.|
+|05:06:44 stream with original cursor|409/61ms/0frames, no new admission|Cursor age330s exceeds native hard TTL300s. Error body was not captured; source-confirmed consistency, not a captured typed-error PASS.|
+|05:08:15 fresh private snapshot|200/1608B/916ms/new genuine scoped cursor|Second actual retained native READ qualified.|
+|05:08:27 adjacent stream|200/2619ms/15912B/exactly2heartbeats|Scoped generation and wire/receipt/sourceACK match for both frames. No data-update claim.|
+|Old-cookie negative preparation after idle expiry|Token file already removed by official Core cleanup; no HTTP sent|Not counted as expiry/revocation test. No token reconstruction or replacement by Edge.|
+
+Five total HTTP requests, including the excluded fixture request and expired
+cursor refusal. Four genuine native admissions: two snapshots + two SSE frames.
+Do not count frames as separate streams or aggregate overlapping tests.
+
+Snapshot body SHA256
+`e3e8043d58826e17240019f87c3361cd1d9885d44a8aa52548990558ae334989`.
+Header `NATIVE_SCOPED_BASELINE_V1`; opaque header cursor intentionally differs
+from local projection cursor in the body. STREAM used only the genuine
+`Last-Event-ID` header, never a fabricated/body cursor. Actual quality is
+AVAILABLE/STALE/PARTIAL/HEALTHY, last refresh2026-10-10T10:46:16.362Z and
+source_as_ofnull. No freshness/timestamp correction was manufactured.
+
+## Independent original terminal and source ACK correlation
+
+All four Core rows are retained `SERVED`, `source_reconciled=true`, ACK action
+`resolve`. The Core body digest matches actual private HTTP bytes / SSE wire.
+Independent TS ledger matches the SAME lease, attempt, binding, source digest,
+terminal receipt and receipt digest, not just a count or service health.
+
+| Kind | Lease / attempt | Physical terminal receipt | Receipt digest SHA256 |
+| --- | --- | --- | --- |
+|HTTP1|22bc1a61-a900-48d3-b1fb-432d74056cc9 /56fed375-3366-49ce-a1f2-7aa70fa9a54d|3f58c27b-7144-42d0-819a-647e2f6328d0|d147e86531d3c4f228c8ebad4ceb2c07c49454225b2f3ec0e3efc6ee044a0da3|
+|HTTP2|0e035e95-69c2-480d-ab6a-57a76d06d089 /7daebe8c-f14b-4a9c-87db-98d565d175cd|dfe41ac4-0794-49a9-942e-f82e21d00969|da5d5ac381ad8e93a93277837c6f4040981c5d88e87e71ceec1b9f28577fc100|
+|SSE1|6d789240-5ca9-4694-a7bd-94c846ab7998 /77ae1a67-bdad-4f72-826c-2385b70a39b6|fc5ef779-bf65-4764-b4cb-5fdc364f78b1|2d79f527f236c749be1182577c3f15576870c02f66ee31319985271ddf1e5a2d|
+|SSE2|263ad2e7-fa48-48a8-bb0e-a3f3bb69957f /331420ab-c2a4-4160-a0f1-e317e7a7a1a1|d49abbed-dc1b-4b67-bc9f-8d5f4f98494d|12d212ec7ca4613a02d3ee1972c742e7082fbde3648a17335bccf58787834a75|
+
+SSE wire digests `46d7e9dd5896b019f1143245f76be6de295be634849a9ad5274f53212d1e6060`
+and `40d9e5e27c17e304c8e84211de3cf9036924527bb8bb15c6591077a9f5eaa60e` match
+the corresponding Core frame body digests. Each is NOTIFICATION_ONLY,
+heartbeat/qualitynull, correct projection_generation and real continuation.
+Whole stream wire digest `03abf6d4cf07e78809dd220cd19be659fe246b16ef6cd66262cf89a82f4370f8`.
+Client frame cap/EOF was NOT used as custody/revocation proof. Actual post-close
+Core retained4/unresolved0; no extra frame admitted,28/32 remaining. No history
+deletion or cap increase. [Core correlation](CORE009_FIRST_NATIVE_READ_CORRELATION_2026-10-21.md)
+and [SSE/session return](CORE009_SSE_TERMINAL_AND_SESSION_ROTATION_2026-10-21.md)
+are complementary producer evidence, not substituted source checks.
+
+## Operator defects and cleanup
+
+Docker-only preflight initially failed before reading credentials/HTTP because
+the Go Docker CLI inherited256MiB address-space limit. A bounded diagnostic
+proved reservation refusal; Docker identity verification now precedes the
+HTTP-only memory limit. No admission/authority was changed by these failures.
+SSE observer now retains non200/partial response bytes, validates exact frozen
+frame keys and projection_generation, and enforces deadline/cursor/frame limits.
+The real two-frame case exercised the corrected parser; no synthetic evidence
+is represented as native qualification.
+
+Private evidence stays SGP-root0700/0600 during connected recovery; public
+return contains only bounded metrics/IDs/hashes. The original session expired
+at05:08:51UTC; Core officially revoked it05:10:23, removed its token and changed
+zero other sessions. All14ACTIVE/672REVOKED normal sessions unchanged.
+No old-token negative was sent after token removal; no expiry/grant-revoke PASS
+is inferred. A new genuine finite session is Core-owned and separately pinned.
+
+Normal-hook disposable cleanup actually completed04:58:58: exact unreferenced
+test image `12247b12…` removed nonforce, own PG/Node/network/tmp absent,102baseline
+images and406BuildKit entries retained, source28446/image28ea unchanged.
+Free248613715968→248606572544B is shared-host disk variation, not claimed reclaim.
+No broad prune, volume/data/source/worktree deletion, stable restart or traffic
+change. Active source/trust remain until their original physical SDK drain and
+same-key revocation; UNKNOWN never permits forced kill or fake cleanup.
+
+## Remaining original08 work and next action
+
+Within the already-approved window, Core retires old session and returns a
+new genuine same-user/private session plus exact cleanup receipt. Edge then
+coordinates STREAM-only revoke with unaffected READ control, followed by
+READ/native revoke, cache/cursor/recovery and true per-frame egress checks.
+Do not conflate cookie expiry with grant revocation. Current FRESH financial
+publication/source-update/replay, public consumer/browser and command authority
+retain their own unmet gates; no full08/09 acceptance or phase transition.
+
+Main authority/journal: [Unified plan](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md).

@@ -1041,11 +1041,16 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 records the official current/nonhistorical acceptance head3 and fresh SDK
 observer, finite candidate28446 READY, exact renewed trust and9native pins.
 This supersedes the retired20Oct source snapshot, not its custody/history.
-Core ACKed the pins, then actually installed009 at04:37UTC and issued its
-genuine application acceptance session at04:38UTC; see the linked main plan
-and public Core commissioning return. No connected READ/STREAM yet: private
-session/revoke/connection handoff still precedes requests. Source/process-up
-or application-session issue is not full08/09 or Cloudflare/human evidence.
+Core ACKed the pins and actually installed009 at04:37UTC. Genuine private
+backend READ and two finite SSE heartbeat frames now have independently matched
+Core/TS original terminal receipts and sourceACK; see the
+[actual connected return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_CORE009_CONNECTED_READ_SSE_2026-10-21.md).
+TwoHTTP+twoframes are retainedSERVED/reconciled, unresolved0. Actual retained
+quality STALE/PARTIAL is not currentFRESH publication. Shared8095 preview's
+fixture overlay remains unchanged/excluded. Original session was officially
+revoked/tokenremoved05:10; a new finite Core-owned session precedes remaining
+live revoke/cache/cursor/recovery cases. Full08/09 and publicTLS/Cloudflare/
+human/browser acceptance remain NOT_MET, not implied by scoped transport proof.
 Core32retained leases are cumulative; coordinate one finite READ, actual
 terminal/counter check, then1–2frame finite SSE, reserving20for recovery.
 Expiry stops new ISSUE; UNKNOWN retains original resources until physical
