@@ -214,7 +214,9 @@
       "proposed": "Find the request that appears only at 1 worker (likely a race between the eligibility batch and the self-context read), make the order deterministic or declare it in the budget; rerun M-1a at 1/2/4 workers.",
       "owner": "Claude",
       "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
-      "pre_commit_hook_blocks": false
+      "pre_commit_hook_blocks": false,
+      "status": "CLOSED",
+      "resolution": "5de8c4b9 (2026-10-21): the missing request is GET /governance/stage-action-eligibility (3033 B). The Paper exit control starts it when it mounts, after the profile answered and the body rendered, so its moment follows render time. There is no race between reads and no duplicate: one read per mount, none while the profile is loading, none on a tab without the control (the Fills tab asks once when Overview is opened). The meter judged idle with networkidle, which Playwright resolves at once when the page was idle at any earlier moment, so on the slower worker the read landed after the first-load snapshot (first load 11 requests and 182486 B, the 3033 B in the tab window) and on the faster one before it (12 and 185519 B). Fix: the workbench root carries data-state (loading until the profile answers, then ready or the typed status), as the other stage screens already do and as the harness ready() already assumed; the budget and M-1a meters get quiet() (nothing in flight and no activity for 400 ms, counted from the call). Pinned by workbench.requests.test.tsx (set and order, ready implies complete, Fills asks none, Overview asks once). Evidence: under 8x CPU throttling 15 of 15 loads count 12 requests and 186692 B, where networkidle alone landed the read late in 1 of 3 and the state wait alone in 5 of 8; budget measure mode on workbench, workbench-fills and workbench-vnm is byte-identical on 1 and 2 workers; all 33 budget guards pass; tsc and the workbench, stage and flagOn vitest folders green; no image baseline cell changes (data attribute only); no budget ceiling changed (workbench is now 12 against the table's 11, ceiling 14). Remainder: the M-1a receipt itself is not re-cut (the 1-worker count of 12 in it is the correct one); the next full M-1 run at 1 and 2 workers (the host cap is 2) is the confirmation, not a precondition."
     },
     {
       "id": "DEBT-UXM07-045",
@@ -224,7 +226,10 @@
       "proposed": "Reproduce in the harness with a trace, decide product defect vs fixture gap, fix or document.",
       "owner": "Claude",
       "origin": "BE-P19 measurements 2026-10-21 (d832a88e)",
-      "pre_commit_hook_blocks": false
+      "pre_commit_hook_blocks": false,
+      "status": "NARROWED (not a product defect on the fixture lane; not reproduced; cause of the M-1 red unproven)",
+      "narrowed": "2026-10-21: the dist-v2 recorded in the M-1 receipt (index.html sha256 a7510937...) was rebuilt from the d832a88e tree and is byte-identical, and with it access · canary passes alone (11.7 s, 1 worker, trace on) as do canary-guard and canary-v2body; on the post-freeze tree it passes at 1 and 2 workers and under TZ=Asia/Ho_Chi_Minh and America/Los_Angeles. The product bundle, the double and the route are therefore not the cause. On /administration/my-access no canary key is involved: the failing line is ready() for [data-screen=canary-v2], and every branch of the Canary screen renders that root, so the page never mounted it in 45 s while the same bundle mounts it in 3 s elsewhere; the M-1 error context has no page snapshot at all. 5de8c4b9 keeps a Playwright trace on failure in playwright.measure.config.ts so the next red is attributable.",
+      "next_action": "If access · canary is red again in an M-1 guard run, open the retained trace (network: does the canary lazy chunk or the self-access read hang; console: a mount error) and record the cause here; until then the route is measurable (m1a canary rows exist at all three scales) and the guard is not weakened."
     },
     {
       "id": "DEBT-UXM07-046",

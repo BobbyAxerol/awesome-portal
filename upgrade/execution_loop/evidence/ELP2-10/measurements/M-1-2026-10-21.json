@@ -3057,7 +3057,10 @@
     "Real source, real API latency, real network and brotli are not part of this run (M-1c needs Core009 + a window).",
     "FIXTURE numbers are not calibration evidence and approve nothing."
   ],
-  "notes": [],
+  "notes": [
+    "DEBT-UXM07-044 (closed at 5de8c4b9): the 1-worker count of 12 for workbench is the correct one. The 12th request is GET /governance/stage-action-eligibility (3033 B), started by the Paper exit control when it mounts after the profile answered; in the 2-worker run the read landed after the first-load snapshot (first load 11 requests, 182486 B; 3033 B in the tab window) because networkidle resolves at once when the page was idle earlier. This receipt is not re-cut: its numbers are the run as it happened.",
+    "DEBT-UXM07-045 (narrowed): the dist_v2_index_html_sha256 above was rebuilt from d832a88e byte-identically and access · canary passes alone with it; the red in this run is not reproduced and its cause is unproven. The measure config now keeps a trace on failure."
+  ],
   "raw_dir_not_committed": "/home/bobby/.local/state/portal-execution-elp210/20261021/m1-1792564295416",
   "dist_v2_index_html_sha256": "sha256:a7510937d2afeeb994909277e63215ca404b3a2b724b05f9f7ff3a3170dbaef4",
   "spec_json_digests": {
@@ -3069,5 +3072,5 @@
   "receipt_digest_excludes": [
     "receipt_digest"
   ],
-  "receipt_digest": "sha256:147aa6b42ee842bec925f937684f67ccf89d942fa69d70225295f812499d509b"
+  "receipt_digest": "sha256:d4326a49bc79276643c5d8d18d44cc2181e43b80ad88b707656a0517a7e9d5f7"
 }
