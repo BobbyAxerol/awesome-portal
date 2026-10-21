@@ -112,6 +112,8 @@ export default defineConfig({
     {
       name: "chromium-v2",
       testMatch: ["**/execution-v2-*.spec.ts"],
+      // Needs the `fleet-stream` key ON (its own build and port): playwright.fleet-stream.config.ts.
+      testIgnore: ["**/execution-v2-fleet-stream.spec.ts"],
       use: { ...devices["Desktop Chrome"], baseURL: "http://127.0.0.1:4176" },
     },
   ],
