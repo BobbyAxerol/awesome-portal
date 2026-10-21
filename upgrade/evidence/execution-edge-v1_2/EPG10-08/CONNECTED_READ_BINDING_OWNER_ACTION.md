@@ -1,5 +1,83 @@
 # Original08 — connected Research READ binding owner action
 
+## Latest matched intake —21Oct2026,09:52ICT
+
+[Core prepared return](CORE009_PREPARED_SOURCE_IMAGE_RETURN_2026-10-21.md)
+is received/reviewed: minimal Core source73435311/tree47b0651e, normal hook
+1147contracts/8780API PASS/3skip, image
+`sha256:9cf5fffac3e0bf55ea4b23c9df2b85565da556b973fbb1ce6928936f49a2950c`
+is built, **not installed**. Claude `claude/fe-parity@dbd5088b` is a broader
+parallel source, not this image. Genuine identity008 is complete; do not issue
+it again or apply old helper patches. Core008 runtime and stable28445 remain
+unchanged. Historical pending-R3/queued-image statements below are superseded.
+
+### Renewed candidate trust: prepared, not operational permission
+
+Existing Core provisioner SHA256
+`6f053a800b9a1d3e986f611b085d65f85f9128b4e3f0b4272867716918023db5`
+created one exclusive SGP bundle:
+`/home/bobby/secure/portal-research-c7-20261019/elp210-trust-dd9UCJ`.
+
+- Candidate: `elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e`.
+- Trust file SHA256: `e28b9e3256b8127953df430b586a792d22663702057c6c8c42b2e6c8ee098983`.
+- Created21Oct02:48:30UTC; expires22Oct02:48:30UTC.
+- PM workload: `elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e:pm`.
+- PM leaf DER SHA256: `59d44f22da32727cf0eff0fec96f4adb588b3611a983b2b5815d3cc415d9ce7e`.
+- Core leaf DER SHA256: `b7ad92aab571e9f25c4baa1f131864fdbe437b622d378b811a78dc4299258fc7`.
+- Human issuer stays `portal-control-api.native-manager-read`; audience is
+  `urn:elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e:pm`, signer key ID
+  `elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e:core`.
+- Core-only key references remain under the new `core/` directory on SGP;
+  never copy them to HK. The tool retired the transient CA signing key.
+
+Independent metadata/crypto retake **16PASS**: CA, leaf/signing pairs,
+server/client chain purposes and hostnames, validity/scope, exact8-file
+party membership and0700/0600 protection. The first oracle incorrectly
+expected9files and failed; corrected against actual provisioner output without
+changing keys or rerunning provisioning. This is offline trust evidence only.
+
+**Exact pending transfer approval:** auto-review rejected new PM private-key
+SGP→HK transfer before execution; no key/file was copied. Requested source is
+the new `pm/` directory above, destination
+`/home/bobby/secure/edge-core009-trust-WDEszqbY/` on HK (currently empty0700).
+Exact8files: `ca.pem`, `peer-signer.pub.pem`, `peer-tls.crt.pem`,
+`signer.key.pem`, `signer.pub.pem`, `tls.crt.pem`, `tls.key.pem`, `trust.json`;
+4,058bytes total. Two PM private keys authenticate/sign only this candidate.
+No Core key, DB credential, session cookie, operational trust or business data
+is included. Do not retry, re-encode, relay or use another route around this
+denial. Bobby must approve this exact secret payload/destination. Metadata-only
+review/preparation can continue; an SGP private reference is not usable HK key
+custody. Derived `human-jwks.json` must use the NEW Core PUBLIC signer/kid,
+not the old ninth transformed artifact. Neither old transfer controller is
+runnable unchanged: both bind historical trust/install008/probes/output paths.
+
+### Static seals and named relation independently reconciled
+
+All28immutable closure files match exact recorded sizes/hashes/protection.
+Current sealed catalogue has96relations and semantic seal0c71b72c, not its
+file hash9040f089. Serving policy file/sealb9fbe07d still matches that catalogue.
+Profile-domain file8bd82a11 contains three owner-selected descriptors; canonical
+sorted compact descriptor hashes independently equal Paper5c33c4e0,
+Sandbox04a94a5b and Live11ecb9c0. These are owner selection compatibility pins,
+**not** fresh upstream authority or proof all profiles were exercised.
+
+Core named route `account-balances` maps through checked-in
+`eds11r-manager-relation-registry.generated.ts` to `public.account_balances`,
+key `(account_id,currency)`, fields account_id/currency/free/locked/total/
+updated_at. Actual sealed catalogue and serving-policy key terms agree; decimals
+remain exact strings and timestamps retain typed handling. Registry→Manager
+data path and native source-authority transport are distinct. Static catalogue
+records are discovery, not current query-plan/runtime installation proof.
+
+**Next in this same08:** after exact transfer approval, verify local PM keys
+and derive matching public JWKS. Agree a finite operator window before official
+same-target/current-head SDK append and genuine RR observer/ready pins; do not
+open28446 just to wait. Core can prepare new Core-only references and draft
+artifacts now, then validate filled bytes, IPC-quiesce/backup/install009 and
+issue/revoke the genuine bound acceptance session. No repeated identity, SQL
+seed, generic restart, fake observer/revision/session, financial/Live mutation,
+or inferred READ→STREAM. Full08 **NOT_MET**, scoped read09 not yet qualified.
+
 **Current publication entry:** use the [canonical operator packet](../../../integration/execution-native-read-v1/research-identity-intake/README.md#current-operator-and-connected-binding--19oct20oct-asiasaigon)
 and [main publication/binding journal](../../../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-operator-publication-and-connected-preparation--renewed-assignment19oct).
 Qualified bytes are mirrored in this checkout; dated overlay/unpublished

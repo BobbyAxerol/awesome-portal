@@ -26888,6 +26888,148 @@ not recipient ACK, installed009 or any connected PASS; full08/09 and original
 is claimed. This task incurs no hosted CI minutes and does not request a PR,
 main/dev merge, mirror push or workflow dispatch.
 
+### Original08 — Core009 owner-return intake and fresh binding —21Oct09:36ICT
+
+**Before owned continuation: IN_PROGRESS; full08 NOT_MET / connected09 not
+qualified.** Bobby says both Portal lanes have returned and directs Edge to
+continue. Read current Claude ACK `86664380` and Codex integrator return
+`CORE009_INTEGRATOR_RETURN_2026-10-21.md`, not the stale AWAITING snapshot above.
+Claude current branch `claude/fe-parity@dbd5088b769e95e3e6c6473db7a8b3c564e3cc93`;
+canonical Core stays `docs/research-loop-plan@7818d563` with preserved shared
+Markdown WIP. Reviewed minimal integration is separate:
+`/home/bobby/portal-core009-integration`,
+`chore/core009-connected-20261021@734353113d8bec85f78b35ab81c9c1a40e93a67e`,
+tree `47b0651ecf651b58ad8a20842ea619856cdb7e64`, clean source.
+
+**Actual independent checks:** source hook log matches SHA256
+`9e38382ea7c91b324aa3b2f461fa1031311d6907da82c520818638d9a868bb9d`;
+reported1147contracts,8780API PASS/3skip, build/PG restore PASS remain owning
+isolated evidence, not Edge execution or connected acceptance. Image job is no
+longer queued: terminal receipt SHA256
+`2bbe2c99e2eed5431a554d08c1cf916d30781db08acb56a9415f557a67658e42`
+and actual Docker inspect agree on
+`sha256:9cf5fffac3e0bf55ea4b23c9df2b85565da556b973fbb1ce6928936f49a2950c`,
+`local/elp210-core009-candidate:734353113d8b`, user node. Status
+IMAGE_BUILT_NOT_INSTALLED; completed21Oct02:00:26ICT. Research still exact
+Core0085f3252b7/image7b2c7f34/config497fc5a8/restart0; do not reissue008 identity.
+
+**Goal/guide/scope:** finish Edge-owned source/trust/seal/window preparation
+in this original08, using [binding owner action](evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md),
+[08 guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls)
+and existing [native lifecycle](integration/execution-native-read-v1/research-identity-intake/README.md).
+Inspect current installed/frozen PM closure, private reference metadata and
+owning PKI/maintenance paths. Prove seal-to-domain/relation mapping from actual
+catalogue/profile definitions; distinguish file digest from semantic seal.
+Prepare protected candidate-only renewed trust references and finite matched
+window using existing identities, then current-head SDK acceptance/observer
+when its own prerequisites are ready. Reuse lifecycle/connected runner; no new
+framework, SQL grant/identity seed, guessed approval/session/pin or broad merge.
+Return source/image/config/window status to the existing Core request; Core
+operator retains install/quiesce/session/revoke authority. No stable/dev/main,
+provider28445/six-binding/role-cap, financial command/Live activation or peer
+WIP mutation. No private key/DSN/token values in chat/Git or source packets.
+
+**Gates/rollback:** validate current target/system/role, source closure and
+PKI key/issuer/expiry; offline composition/negative gates before any source
+listener. Do not open28446 merely to wait; no final manifest with expired rev1/2.
+Core returns final reviewed artifacts/install/session in the matched window,
+then actual READ/STREAM separately and08 revoke/cache/cursor/SSE/recovery;
+qualified read09 cases follow without waiting for unrelated PM/TS/load. UNKNOWN
+retains original custody/recovery, expiry is not release. Drain actual owned
+handlers/socket/tasks/pools before official native revoke and exact cleanup.
+Inventory own test images/cache and pre/post disk/runtime metadata; preserve
+shared resources/active+rollback. Source-only/correctness evidence never closes
+capacity or installed/connected gates. Root owns plan/source publication;
+reuse read-only PM/TS survey agent for current additive source handoffs only.
+
+#### Core integrator public return delivered —21Oct09:50ICT
+
+[Prepared source/image and exact four-owner action packet](evidence/execution-edge-v1_2/EPG10-08/CORE009_PREPARED_SOURCE_IMAGE_RETURN_2026-10-21.md)
+delivered from SGP, 13,158 bytes, SHA256
+`30e9131e0be7050866fbf781d1a0b0a1d0e2ea679d823fc60911d3c7d40bcef0`.
+Candidate73435311/image9cf5fffa is BUILT_NOT_INSTALLED; normal R3 already PASS.
+Core asks for dedicated fresh trust/current-head acceptance/observer and matched
+window now, not a finished Core install before preparation. Packet section3
+corrects backup/session-revoke ordering; section4 pins PM additive fence and
+the corrected two-PG resource proposal without changing authority or approval.
+Public file delivery only; receiver ACK, installed configuration and connected
+READ/STREAM proof remain separate. No source/runtime/credential/index mutation.
+
+**Offline trust preparation decision,21Oct:** both old candidate CA and leaf
+expired20Oct08:00:59UTC; re-signing a leaf under that CA is insufficient. Reuse
+the reviewed137-line Core tool `scripts/execution-v2/provision-candidate-trust.mjs`
+at73435311, SHA256
+`6f053a800b9a1d3e986f611b085d65f85f9128b4e3f0b4272867716918023db5`.
+It creates one new exclusive child in existing SGP
+`/home/bobby/secure/portal-research-c7-20261019` (real0700, UID1000), one24h
+candidate CA/Core/PM trust pair, then shreds its transient CA signing key.
+No policy, session, native acceptance, listener or service changes. Core half
+stays on SGP; only the exact PM half belongs to Edge. Never copy Core signing
+or TLS private keys to HK. Retain this named candidate for the immediately
+coordinated08 window; on abandonment/expiry retire only its exact owned private
+keys after zero custody, preserving bounded public fingerprints/history. Do not
+extend/overwrite earlier trust or clean any peer/operational key. This is
+approved08 preparation, not a new acceptance or production trust rotation.
+
+**Prepared actual candidate,21Oct02:48:30UTC:** existing tool exited0, new SGP
+child `elp210-trust-dd9UCJ`, candidate
+`elp210-f9b8f85c-f84f-4544-b2ee-34e4d065fb7e`, trust SHA256
+`e28b9e3256b8127953df430b586a792d22663702057c6c8c42b2e6c8ee098983`,
+expires22Oct02:48:30UTC. Independent Node/OpenSSL metadata/crypto retake16PASS:
+CA signature/pin, exact scope/freshness, both TLS/signing key pairs, both
+server/client chain+hostname purposes, exact0700/0600 party protection and
+transient CA-key absence. Initial metadata oracle incorrectly expected9files
+per party; tool actually creates8, independently inventoried and retaken with
+the exact8-name allowlist. It was a verifier failure, not a key repair; no
+second bundle/retry or concealed initial PASS. Existing ninth transformed
+`human-jwks.json` must derive from this candidate's NEW Core PUBLIC signer/kid.
+Next preparation may pull ONLY the8PM-party files into one new private HK
+directory, derive public JWKS and bounded transfer manifest with explicit
+PREPARED_NOT_INSTALLED status. No Core key copy, old installation receipt as
+009 evidence, active28444 probe with uninstalled new trust, listener, SQL or
+session/grant is authorized by a successful file/crypto check.
+
+**Actual transfer gate:** auto-review rejected SCP of the8PM files before
+execution because this exact NEW secret payload and cross-host destination
+need explicit approval. No transfer/alternative relay was attempted afterward.
+HK `/home/bobby/secure/edge-core009-trust-WDEszqbY` is empty0700; SGP remains
+sole custodian of both new halves. Only PM half4,058B is requested, including
+its2candidate private keys; Core secrets are excluded. Bobby was asked this
+precise question in commentary while independent metadata/handoff work proceeds.
+The [updated existing binding action](evidence/execution-edge-v1_2/EPG10-08/CONNECTED_READ_BINDING_OWNER_ACTION.md#latest-matched-intake-21oct20260952ict)
+contains exact source/destination/file list, new public pins and next sequence.
+No repeated generic phase approval is requested and the denial is not bypassed.
+
+**Source-only checks actually run:** retained closure28/28 exact sizes/hashes/
+non-group-writable regular files match. Current catalogue96 and serving-policy
+catalogue seals agree. Independently canonicalized each profile descriptor
+with sorted compact JSON: Paper5c33c4e0, Sandbox04a94a5b, Live11ecb9c0 all agree
+with the reviewed domain artifact; full profile file8bd82a11 is NOT the profile
+semantic seal. `account-balances` registry, sealed catalogue and serving-policy
+terms agree on public.account_balances/(account_id,currency)/six typed fields.
+No business rows/DB connections, current authority or capacity claims. First
+certificate metadata diagnostic used a newer cryptography API unavailable on
+HK and failed before changes; retook using installed API successfully. Keep
+both diagnostic/verifier failures explicit, not hidden inside PASS totals.
+
+**Parallel owner delta:** PM23c29371 handoffd5c2efcc is additive qualified
+source, not installed. Corrected pilot771955a5 proposes2PG+worker3CPU/2560MiB,
+still not approved/execution-ready. Later PM276/277 implemented mounted
+lifecycle/handler/bootstrap transport; old UNMOUNTED manifest labels are
+historical, not missing source. Genuine commissioned targets/authority through
+COMMIT remain empty. TS-next0cd356da/N03f3a49603 stays SOURCE_DARK/not accepted;
+new TS986b0cc1 Paper source being integrated by PM is not publication/command
+commissioning. No newly runnable03/07/capacity binding is concealed as waiting
+for Core. Reused read-only agent made no writes/tests/resources.
+
+**Runnable versus dependent:** complete source/seal/crypto metadata and deliver
+this precise return immediately. No more unchanged source suites are needed to
+prove their already recorded facts; mandatory normal commit hook remains.
+HK private-key validation/JWKS hydration needs exact transfer approval; native
+current acceptance/observer/listener depends on that local custody and matched
+Core window. Core draft/install/session remains Core-owned; neither old trust
+nor fabricated SDK facts close the dependency. Full08/09 remain NOT_MET.
+
 
 
 
