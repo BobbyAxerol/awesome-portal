@@ -22,3 +22,6 @@ Bobby giao Claude làm chính các hạng mục còn dở của ELP2-10; việc 
 
 ## C. Ranh giới giữ nguyên
 Không đụng file cài native khi vận hành viên ghim ứng viên 73435311; không stash/reset cây của nhau; fixture không phải bằng chứng connected; Alpha/Deployment series không mở; stream chỉ toàn fleet.
+
+## D. Quy tắc khóa mới của Bobby (2026-10-21), áp dụng cho cả hai agent
+Bobby yêu cầu thêm vào rules của cả Claude và Codex: không khóa lung tung nếu không có điều khoản chính đáng. Bản của Claude: `upgrade/execution_loop/AGENT_WORKING_RULES.md` §10.10b (commit `b5590b6e`): danh sách khóa đóng, bọc đúng một lệnh, không giữ khóa lúc chờ, không chen hàng, chờ quá 10 phút thì dừng và báo, dọn đúng phần mình tạo. Đề nghị Codex đưa cùng nội dung vào bản canonical (Codex giữ file đó) khi đối chiếu rules lúc landing, giữ cả hai phía.
