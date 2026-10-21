@@ -14302,3 +14302,26 @@ Bobby identity/approved R0 tracking/staged diff/8indexed links PASS; not pushed
 and not remotely fetchable. No product deployment, Core source/index edit
 or DB/role mutation. Full08/09 NOT_MET. Source composition remains unarmed
 for the next actual owner return, not a live resource waiting on a session.
+
+<a id="core009-successor-writer-20261021"></a>
+### Core009 named successor writer / parallel focused repairs —21October2026
+
+Bobby's latest direct assignment prioritizes READ/STREAM successor authority,
+Manager trust, financial mapping, budget/calibration, coexistence/G2 and browser.
+[Codex one-writer implementation return](execution_loop/evidence/ELP2-10/CORE009_SUCCESSOR_WRITER_IMPLEMENTATION_RETURN_2026-10-21.md)
+reserves the named writer in an isolated canonical-based worktree. This narrow
+assignment supplements §10.13, not Claude's other backend/UI ownership. Private
+artifact/planner/service/CLI exist;73synthetic pure tests PASS. Independent
+review's final COMMIT-window gap was fixed; actual disposable PG/install/revoke
+regression gate started17:03, RUNNING. Not installed/READY, no session/grant or
+new source activation. Existing current-human coordinator is reused unchanged.
+
+[Concrete Claude review/repair packet](execution_loop/evidence/ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md)
+adds Fleet cancelled-flight/per-waiter regressions, pre-I/O measurement tab cap,
+and G2 apparatus/population binding. P21 overflow/census and quiet/immutable-M1
+changes remain open; focused checks only, reuse normal432 for unchanged scope.
+Manager issued Research leaf/chain and genuine economic mapping remain absent
+at read cut16:54:46 (PM0956eaa/Edgecc7e71f5); PM37source-only collateral cases
+do not close them. D1–D7 approvals remain recorded; actual source numeric bounds,
+load/window and calibration population/config still require owner artifacts.
+ELP2-10 remains IN_PROGRESS; ELP2-11, push/dev/main/release are not opened.

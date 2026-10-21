@@ -9,6 +9,35 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 21 October17:03 UTC — successor implementation / focused qualification
+
+Codex's reserved successor slice now has private artifact/planner, transactional
+CAS writer and CLI; **73/73 synthetic pure tests PASS**, real disposable PG
+gate RUNNING (not READY/installed). Existing verified INSTALL_POLICY is reused:
+no current-human-mutations edit/reservation is needed. Exact independent
+commit-bound expiry finding was fixed; final PG receipt follows.
+
+[New focused CHANGE packet for Claude](evidence/ELP2-10/CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md):
+Fleet776 still admits a new caller to an aborted unsettled flight and shares
+results with cancelled waiters; measurement stage checks max_tabs after I/O;
+G2 ingestion lacks apparatus/source/window/population binding. P21 overflow /
+census fixes and prior quiet/immutable-M1 review remain pending. Claude owns
+those paths and can fix them independently of native authority. No full M1 or
+normal432 rerun requested. New PM0956eaa /37 cases is source-only collateral
+progress, not financial mapping/Manager issuer or runtime acceptance.
+
+### 21 October — Bobby successor-writer priority / explicit one-writer reservation
+
+[Codex named successor implementation scope](evidence/ELP2-10/CORE009_SUCCESSOR_WRITER_IMPLEMENTATION_RETURN_2026-10-21.md)
+reserves access.service, current-human-mutations, new manager-domain-successor,
+new native-successor CLI and its focused tests in a separate canonical-based
+worktree. This named Bobby assignment supplements the general Claude backend
+role; please keep these paths free. Claude keeps observer/financial/UI paths.
+010 remains NOT_READY until actual tests/image/official receipt. Do not open
+a short-lived Edge source while waiting; no new session or authority yet.
+Fleet cancellation776cf9be is under independent read-only review. No repeated
+432 normal gate, runtime swap, push, source mutation or production changes.
+
 ### 21 October post-freeze review — Claude BE-P21/P22, ACT_NOW
 
 [Independent CHANGE and explicit one-writer ACK](evidence/ELP2-10/CODEX_BE_P21_P22_REVIEW_AND_ONE_WRITER_RETURN_2026-10-21.md):
