@@ -1,0 +1,82 @@
+{
+  "schema_version": "execution.paper-workbench.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "PAPER_BINANCE_USDM",
+  "workspace_id": "ws_TEST_ONLY",
+  "read_at": "2026-10-21T08:00:01.000Z",
+  "read_at_ms": 1792569601000,
+  "as_of": "2026-10-21T08:00:00.000Z",
+  "as_of_ms": 1792569600000,
+  "state": "partial",
+  "freshness": "FRESH",
+  "completeness": "PARTIAL",
+  "actor": { "user_id": "usr_TEST_ONLY", "username": "TEST_ONLY", "roles": ["ADMIN"] },
+  "resource": { "kind": "DEPLOYMENT", "id": "dep_TEST_ONLY" },
+  "capabilities": [
+    {
+      "capability_id": "source.orders",
+      "state": "PARTIAL",
+      "relations": ["orders"],
+      "reason_code": "N22_LINEAGE_NOT_PUBLISHED",
+      "retryable": false,
+      "lineage_rejects": { "deployment": 1 },
+      "lineage_scoped_out": { "account": 2, "strategy": 1 }
+    }
+  ],
+  "panels": {
+    "orders": {
+      "state": "PARTIAL",
+      "data": { "rows": [{ "order_id": "order_TEST_ONLY", "status": "ACCEPTED" }] },
+      "clocks": {
+        "event_time_ms": 1792569600000,
+        "source_published_at_ms": 1792569600000,
+        "received_at_ms": 1792569600000,
+        "ingested_at_ms": 1792569600000,
+        "processed_at_ms": 1792569600000,
+        "as_of_ms": 1792569600000,
+        "read_at_ms": 1792569601000
+      },
+      "coverage": {
+        "from_ms": null,
+        "to_ms": 1792569600000,
+        "source_total": "3",
+        "filtered_total": "1",
+        "returned_count": 1,
+        "truncated": false,
+        "downsampled": false,
+        "has_more": false,
+        "next_cursor": null,
+        "gaps": [{ "from_ms": 1792569600000, "to_ms": 1792569600000, "reason_code": "N22_LINEAGE_NOT_PUBLISHED" }]
+      },
+      "source_history_semantics": "CURRENT_STATE_ONLY",
+      "formula": null,
+      "reason_code": "N22_LINEAGE_NOT_PUBLISHED",
+      "retryable": false
+    }
+  },
+  "data": {
+    "deployment": { "deployment_id": "dep_TEST_ONLY", "mode": "paper" },
+    "orders": [{ "order_id": "order_TEST_ONLY", "status": "ACCEPTED" }],
+    "account_equity": [
+      { "account_id": "acc_TEST_ONLY", "equity": "20000.00", "ts": "2026-10-20T08:00:00.000Z", "ts_ms": 1792483200000 },
+      { "account_id": "acc_TEST_ONLY", "equity": "20001.25", "ts": "2026-10-21T08:00:00.000Z", "ts_ms": 1792569600000 }
+    ],
+    "history_windows": {
+      "account_equity": {
+        "days": 1,
+        "basis": "PORTAL_SGP_HISTORY_MIRROR",
+        "returned_rows": 2,
+        "source_rows": 5000,
+        "truncated": false,
+        "downsample": {
+          "method": "PER_SERIES_BUCKET_EXTREMA",
+          "bucket_seconds": 3600,
+          "series_count": 1,
+          "input_rows": 5000,
+          "output_rows": 2
+        }
+      }
+    }
+  }
+}

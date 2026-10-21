@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "DUPLICATE_OPEN_APPROVAL",
+    "message": "An open approval already exists for this alpha and evidence run."
+  },
+  "request_id": "req_TEST_ONLY_duplicate",
+  "details": { "approval_id": "apr_TEST_ONLY_existing" }
+}

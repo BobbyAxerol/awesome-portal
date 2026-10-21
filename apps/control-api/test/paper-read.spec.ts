@@ -1,10 +1,25 @@
 import { describe, expect, it } from "vitest";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import Ajv2020 from "ajv/dist/2020";
+import addFormats from "ajv-formats";
 import { loadConfig } from "../src/config";
 import { AuthSession, PortalUser } from "../src/domain";
 import { ExecutionProductReadSource } from "../src/execution/product-read-source";
 import { ExecutionAnalyticsProxy } from "../src/execution/analytics.proxy";
 import { PaperReadService } from "../src/paper-read/paper-read.service";
 import { PaperBlotterQuerySchema } from "../src/paper-read/contracts";
+
+// FE-073: validate the producer's actual envelope, not only a synthetic JSON
+// fixture. These service tests use fake source relations and are not runtime receipts.
+const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+const paperContract = JSON.parse(readFileSync(resolve(contractsRoot, "schemas/execution-paper-read.v1.schema.json"), "utf8"));
+const paperAjv = new Ajv2020({ strict: false, allErrors: true });
+addFormats(paperAjv);
+const validatePaperContract = paperAjv.compile(paperContract);
+function assertPaperContract(value: unknown) {
+  expect(validatePaperContract(value), JSON.stringify(validatePaperContract.errors)).toBe(true);
+}
 
 const user: PortalUser = {
   userId: "usr_bobby", username: "bobby", displayName: "Bobby", role: "ADMIN", status: "ACTIVE",
@@ -276,6 +291,7 @@ describe("N22 full Paper read product BFF", () => {
     source.rows.set("strategy_deployments", [{ deployment_id: "dep_default", strategy_id: "str_default", account_id: "acc_default", portfolio_id: "pf_default", mode: "paper", venue: "BINANCE" }]);
     source.rows.set("positions_v2", [{ position_id: "pos_1", strategy_id: "str_default", account_id: "acc_default", mode: "paper", venue: "BINANCE", quantity: "1.25" }]);
     const result = await service(source).overview(principal()) as Record<string, any>;
+    assertPaperContract(result);
     expect(result).toMatchObject({
       schema_version: "execution.paper-overview.v1",
       record_authority: "PORTAL_CONTROL",
@@ -286,6 +302,9 @@ describe("N22 full Paper read product BFF", () => {
     });
     expect(source.calls).toHaveLength(6);
     expect(result.data.deployments[0]).toEqual(expect.objectContaining({ deployment_id: "dep_default" }));
+    expect(result.read_at_ms).toBe(Date.parse(result.read_at));
+    expect(result.as_of_ms).toBe(Date.parse(result.as_of));
+    expect(result.panels.positions).toBeDefined();
     expect(JSON.stringify(result)).not.toContain("record_key");
     expect(JSON.stringify(result)).not.toContain("raw_response");
     expect(JSON.stringify(result)).not.toContain("opaque-strategy");
@@ -336,6 +355,7 @@ describe("N22 full Paper read product BFF", () => {
       emptySource.rows.set(relation, []);
     }
     const empty = await service(emptySource).overview(principal()) as Record<string, any>;
+    assertPaperContract(empty);
     expect(empty.state).toBe("empty");
     // P4-G: `derived_insights` is a derived block, null on an empty source.
     expect(empty.data.derived_insights).toBeNull();
@@ -345,15 +365,32 @@ describe("N22 full Paper read product BFF", () => {
     const staleSource = new FakeCurrentSource();
     staleSource.stale.add("positions_v2");
     const stale = await service(staleSource).overview(principal()) as Record<string, any>;
+    assertPaperContract(stale);
     expect(stale).toMatchObject({ state: "stale", freshness: "STALE" });
 
     const failedSource = new FakeCurrentSource();
     failedSource.failures.add("positions_v2");
     const partial = await service(failedSource).overview(principal()) as Record<string, any>;
+    assertPaperContract(partial);
     expect(partial).toMatchObject({ state: "partial", completeness: "PARTIAL" });
     expect(partial.capabilities).toContainEqual(expect.objectContaining({
       capability_id: "source.positions", state: "UNAVAILABLE", reason_code: "N22_SOURCE_UNAVAILABLE",
     }));
+  });
+
+  it("publishes null source clocks when every overview relation is unavailable (FE-073)", async () => {
+    const source = new FakeCurrentSource();
+    for (const relation of ["strategy_deployments", "positions_v2", "execution_sessions", "performance_snapshots", "account_equity_snapshots", "portfolio_equity_snapshots"]) {
+      source.failures.add(relation);
+    }
+    const result = await service(source).overview(principal()) as Record<string, any>;
+    assertPaperContract(result);
+    expect(result.state).toBe("unavailable");
+    expect(result.as_of).toBeNull();
+    expect(result.as_of_ms).toBeNull();
+    expect(result.read_at_ms).toBe(Date.parse(result.read_at));
+    expect(result.panels.positions).toMatchObject({ state: "UNAVAILABLE", data: null });
+    expect(JSON.stringify(result)).not.toContain("source detail must not escape");
   });
 
   it("derives overview insights from fetched relations without extra fan-out (P4-G / F15)", async () => {
@@ -440,6 +477,7 @@ describe("N22 full Paper read product BFF", () => {
       },
     };
     const result = await service(source, undefined, projection).workbench(principal(), "dep_1", false) as Record<string, any>;
+    assertPaperContract(result);
     // Full 30-day depth from the local mirror, declared as such.
     expect(result.data.account_equity).toHaveLength(720);
     expect(result.data.history_windows.account_equity).toMatchObject({
@@ -455,6 +493,7 @@ describe("N22 full Paper read product BFF", () => {
 
     // Without a mirror at all, the envelope is exactly the pre-depth shape.
     const bare = await service(source).workbench(principal(), "dep_1", false) as Record<string, any>;
+    assertPaperContract(bare);
     expect(bare.data.history_windows).toBeUndefined();
     expect(bare.data.account_equity).toHaveLength(1);
   });
@@ -485,6 +524,7 @@ describe("N22 full Paper read product BFF", () => {
       lineage_scoped_out: { account: 2, strategy: 1 },
     });
     expect(positions.lineage_rejects).toBeUndefined();
+    assertPaperContract(result);
   });
 
   it("publishes the versioned observation policy and an honest gate verdict (P4-I / F16)", async () => {

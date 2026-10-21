@@ -294,6 +294,23 @@
               }
             }
           },
+          "409": {
+            "description": "Duplicate open request (typed approval_id) or another structured conflict. An existing approval ID does not grant read access.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/DuplicateOpenApprovalProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/Problem"
+                    }
+                  ]
+                }
+              }
+            }
+          },
           "default": {
             "$ref": "#/components/responses/Problem"
           }
@@ -1537,6 +1554,66 @@
       }
     },
     "schemas": {
+      "DuplicateOpenApprovalProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id",
+          "details"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "const": "DUPLICATE_OPEN_APPROVAL"
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 512
+              }
+            }
+          },
+          "request_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "approval_id"
+            ],
+            "properties": {
+              "approval_id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+              }
+            }
+          },
+          "public_copy_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "safe_next_action": {
+            "enum": [
+              "QUERY_SAME_INTENT",
+              "REVIEW_BLOCKER"
+            ]
+          }
+        },
+        "description": "An existing open approval in the authenticated workspace. The ID is navigation metadata, never a permission grant."
+      },
       "PaperExitDecisionContext": {
         "$ref": "../schemas/execution-governance-review-context.v1.schema.json#/$defs/PaperExitDecisionContext"
       },
@@ -1799,8 +1876,68 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 128
+          },
+          "details": {
+            "type": "object",
+            "maxProperties": 32,
+            "additionalProperties": true,
+            "description": "Public structured refusal context. Do not parse arbitrary details as authority or an identifier; use a named error variant."
+          },
+          "public_copy_key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Z][A-Z0-9_]*$"
+          },
+          "safe_next_action": {
+            "enum": [
+              "QUERY_SAME_INTENT",
+              "REVIEW_BLOCKER"
+            ]
           }
-        }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "error": {
+                  "type": "object",
+                  "required": [
+                    "code"
+                  ],
+                  "properties": {
+                    "code": {
+                      "const": "DUPLICATE_OPEN_APPROVAL"
+                    }
+                  }
+                }
+              },
+              "required": [
+                "error"
+              ]
+            },
+            "then": {
+              "required": [
+                "details"
+              ],
+              "properties": {
+                "details": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "approval_id"
+                  ],
+                  "properties": {
+                    "approval_id": {
+                      "type": "string",
+                      "pattern": "^[A-Za-z0-9._:-]{1,191}$"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
       },
       "R1DecisionPlanRequest": {
         "$ref": "../schemas/execution-governance-portal-decisions.v1.schema.json#/$defs/R1DecisionPlanRequest"

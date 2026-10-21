@@ -113,10 +113,10 @@
     "ApprovalCreateRequest": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["schema_version", "workspace_id", "request_key", "gate", "alpha_id", "evidence_run_id", "methodology_claim_id", "summary"],
+      "required": ["schema_version", "request_key", "gate", "alpha_id", "evidence_run_id", "methodology_claim_id", "summary"],
       "properties": {
         "schema_version": { "const": "governance.approval-create-request.v1" },
-        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96 },
+        "workspace_id": { "type": "string", "minLength": 3, "maxLength": 96, "description": "When omitted, resolves from the authenticated session. Current workspace membership is still required; omission is not a wildcard." },
         "request_key": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$" },
         "gate": { "const": "R1" },
         "alpha_id": { "$ref": "#/$defs/Identifier" },

@@ -20,6 +20,11 @@ from typing import Any
 CONTRACTS_ROOT = Path(__file__).resolve().parents[1]
 
 TRACKED = (
+    "tooling/generate-execution-served-envelopes.mjs",
+    "schemas/execution-governance-product.v1.schema.json",
+    "fixtures/execution-paper-read.served-envelope.valid.json",
+    "fixtures/execution-governance.duplicate-open.valid.json",
+    "fixtures/execution-governance.served-problem.valid.json",
     "fixtures/execution-manager-metric.derived-reasons.synthetic.valid.json",
     "fixtures/execution-manager-composition.synthetic.valid.json",
     "fixtures/execution-manager-regime.synthetic.valid.json",
