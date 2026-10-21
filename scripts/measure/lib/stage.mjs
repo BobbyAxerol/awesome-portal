@@ -1,11 +1,12 @@
 /**
- * One Portal-side load stage for a window run (shared by m5 and m7): authorisation first, then the replay, then a receipt that
- * labels the lane exactly as the authorisation did. The stage never decides "pass the budget".
+ * One Portal-side load stage for a window run (shared by m5 and m7): authorisation first (workload shape, tab census against the
+ * window's max_tabs, origin, duration), then the replay, then a receipt that labels the lane exactly as the authorisation did.
+ * Every refusal happens BEFORE any header file is read and before any network I/O. The stage never decides "pass the budget".
  */
 import { readFileSync } from "node:fs";
 
 import { buildReceipt, sha256File } from "./receipt.mjs";
-import { runReplay } from "./replay.mjs";
+import { runReplay, validateWorkload } from "./replay.mjs";
 import { assertSameOrigin, remainingMs } from "./window.mjs";
 
 export function readHeaders(path) {
@@ -31,16 +32,38 @@ export function mapMetrics(metricMapPath, replay) {
   }), note: null };
 }
 
-export async function runStage({ window: w, measurement, stage, workload, headersPath, idMapPath, durationMs, seed, onlyPrefix = null, real, extraWorkloadPin = null }) {
+/**
+ * Tab census of one stage: the TOTAL virtual-tab population the stage opens, compared with the window's `max_tabs`.
+ *
+ * Rule: total = the SUM of `tabs` over the stage's entries. Justification, all from the existing specs in this folder:
+ *  - lib/replay.mjs buildSchedule creates `entry.tabs` independent virtual tabs per entry, each firing its own set on its own cadence
+ *    (stream key `${seed}:${stage}:${entryIdx}:${tab}`); tab 0 of entry 0 and tab 0 of entry 1 are two different tabs, never one shared tab.
+ *  - measurements/WINDOW_REQUESTS_2026-10-21.md section 1 defines the shape additively: "B1 = 8 tab Overview ... B2 = B1 + 10 man x 2 tab",
+ *    i.e. B1 = 8 tabs and B2 = 8 + 10 x 2 = 28 tabs concurrently open (not max(8, 2) = 8).
+ * The maximum entry count (the previous reading) under-counted B2 by 20 tabs. The census is computed on the APPROVED workload, before
+ * any `onlyPrefix` line filter (that filter narrows the paths of a set, never the tab population), and nothing is shrunk to pass.
+ */
+export function stageTabCensus(workload, stage) {
+  validateWorkload(workload);
+  const entries = workload.stages?.[stage];
+  if (!Array.isArray(entries) || entries.length === 0) throw new Error(`WORKLOAD_UNKNOWN_STAGE:${stage}`);
+  const perEntry = entries.map((e) => ({ set: e.set, tabs: e.tabs }));
+  return { stage, entries: perEntry, total_tabs: perEntry.reduce((a, e) => a + e.tabs, 0) };
+}
+
+export async function runStage({ window: w, measurement, stage, workload, headersPath, idMapPath, durationMs, seed, onlyPrefix = null, real, extraWorkloadPin = null, replayImpl = runReplay }) {
+  // 1. Everything that can be decided from the inputs alone, before the header file is read and before any request.
+  const census = stageTabCensus(workload, stage);
+  if (!Number.isFinite(w.max_tabs) || w.max_tabs < 1) throw new Error(`WINDOW_MAX_TABS_INVALID:${w.max_tabs}`);
+  if (census.total_tabs > w.max_tabs) throw new Error(`TABS_EXCEED_WINDOW:${census.total_tabs}>${w.max_tabs}`);
   assertSameOrigin(w, w.origin);
   const allowed = remainingMs(w);
   if (durationMs > allowed) throw new Error(`DURATION_EXCEEDS_WINDOW:${durationMs}>${allowed}`);
+  // 2. Only now: headers, id map, replay (network).
   const wl = onlyPrefix ? { ...workload, sets: Object.fromEntries(Object.entries(workload.sets).map(([k, v]) => [k, v.filter((l) => l.slice(4).startsWith(onlyPrefix))])) } : workload;
   const idMap = idMapPath ? JSON.parse(readFileSync(idMapPath, "utf8")) : {};
-  const replay = await runReplay({ origin: w.origin, headers: readHeaders(headersPath), workload: wl, stage, durationMs, seed, maxRps: w.max_rps, idMap, real });
-  const tabs = Math.max(...(wl.stages[stage] ?? []).map((e) => e.tabs), 0);
-  if (tabs > w.max_tabs) throw new Error(`TABS_EXCEED_WINDOW:${tabs}>${w.max_tabs}`);
-  return { replay, workload_pin: extraWorkloadPin };
+  const replay = await replayImpl({ origin: w.origin, headers: readHeaders(headersPath), workload: wl, stage, durationMs, seed, maxRps: w.max_rps, idMap, real });
+  return { replay, workload_pin: extraWorkloadPin, tab_census: census };
 }
 
 export function stageReceipt({ measurement, window: w, stage, replay, title, limitations = [], extra = {}, selfTest = false }) {
