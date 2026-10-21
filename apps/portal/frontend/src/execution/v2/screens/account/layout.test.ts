@@ -19,12 +19,17 @@ describe("Accounts register table does not widen the page", () => {
   });
 });
 
-describe("Account 360 demoted body keeps AA text contrast (UXM-10 F-5)", () => {
-  it("re-points the faint ink to the soft ink inside .exec-blk-demoted, on this screen only", () => {
-    expect(css).toMatch(/\.exec-acct-v2 \.exec-blk-demoted\s*\{[^}]*--ink-faint:\s*var\(--ink-soft\)/);
-    const blocks = readFileSync(resolve(__dirname, "../../css/blocks.css"), "utf8");
-    // The shared rule is untouched: Workbench, Replay and the Event feed share it.
-    expect(blocks).toMatch(/\.exec-blk-demoted\s*\{[^}]*opacity:\s*0\.85/);
-    expect(blocks).not.toMatch(/\.exec-blk-demoted[^{]*\{[^}]*--ink-faint/);
+describe("The demoted body is one shared cue and keeps AA text contrast (UXM-10 F-5, DEBT-UXM07-039)", () => {
+  const blocks = readFileSync(resolve(__dirname, "../../css/blocks.css"), "utf8");
+  const rule = /(?:^|\})\s*\.exec-blk-demoted\s*\{([^}]*)\}/m.exec(blocks.replace(/\/\*[\s\S]*?\*\//g, ""))?.[1] ?? "";
+
+  it("steps the ink down one token and never uses opacity (opacity .85 put the faint label at 4.0:1)", () => {
+    expect(rule).toMatch(/--ink:\s*var\(--ink-soft\)/);
+    expect(rule).not.toMatch(/opacity/);
+    expect(rule).not.toMatch(/--ink-faint/);
+  });
+
+  it("no screen overrides the demotion: Account 360 uses the same rule as Workbench, Replay and the Event feed", () => {
+    expect(css).not.toMatch(/exec-blk-demoted/);
   });
 });
