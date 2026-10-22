@@ -1036,6 +1036,16 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest actual22Oct14:33 Asia/Saigon:** Core exactACKc5f73cde accepted
+the NEW slot/source/sole-client ownership. Official CAS6→7 RECORDED at
+07:30:43.989302UTC and actual finite source SDK_READY/listener28446 proved;
+[actual READY packet](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_STREAM_ACTUAL_READY_2026-10-22.md)
+returns original752B observer230aaa74/receipt8d672aee/semantic661f19f0 already
+in Core private ref, physical98449616/image28ea/1CPU512MiB/restart0.
+Expiry07:45UTC unchanged. Core independently configures/grants READ+STREAM/
+session and is sole HTTP/SSE executor. Actual source READY is not Core READY,
+active revoke/recovery/FRESH/full08/read09 proof. Preserve original custody.
+
 **Latest proposal22Oct14:05 Asia/Saigon:**
 [NEW independent STREAM window](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_STREAM_WINDOW_PROPOSAL_2026-10-22.md)
 is PREPARED/UNARMED for07:15–07:45UTC, exact install6→7/revoke7→8;

@@ -30561,6 +30561,52 @@ read09 connected acceptance remain NOT_MET, no phase promotion/release.
 R0 Markdown publication uses explicit staged4path/scope/diff/link/secret checks
 plus tracking PASS, per Core working rules10.10d; no CI/push/merge triggered.
 
+### Original08 STREAM exact ACK and finite source execution —22Oct2026
+
+Bobby resumes source install/READY→Core independent grants/session→STREAM/
+active revoke/restart recovery in original08/read09. Rules/current guide and
+proposal8ae25606 reread; feature b06dfbec, peer WIP preserved. Actual Core
+ACK received at07:29UTC from canonical ELP2-10/CORE_TO_EDGE_08_STREAM_HASH_ACK_2026-10-22.md,
+rawSHA256 c5f73cde13aad37cb7ee3435ec9bb0eb596534d10640d2f779e96b2092b7b2ee.
+It exactly accepts source/runtime/install/revoke/trust/lifecycle/SDK/window
+07:15–07:45UTC and Core sole HTTP/SSE execution. No renewed approval needed.
+Core config C288/session/grants remain PREPARING, not inferred READY.
+
+Approved immediate slice: arm only CORE_WINDOW_ACK_SHA256 in private2pOaSGvN
+helper; keep prepared bytes immutable, revalidate db0/ACK then official SDK
+install23d39406 CAS6→7 in this slot, serve capped finite TLS source28446 and
+return actual SDK observation/process/receipt pins to Core now. No duplicate
+HTTP/SSE, oldREAD replay or oldwindow. Edge keeps all original UNKNOWN
+custody, exact same-manifest STATUS/recovery, graceful drain only after real
+terminal/CoreACK. Native revoke84d18247 CAS7→8 after settlement; no forced
+kill/history removal or silent expiry extension. Core owns independent fixed60s
+STREAM/session/currentREAD, actual active-revoke/restart/cache/cursor proofs.
+No Manager/G2/command/Live/stable/dev/provider28445 change. Test gates actual
+install/readback/listener/physical exit + Core receipt correlation, not health.
+Main/guide/current return record each coherent actual stage and final cleanup.
+
+**Actual14:33 Asia/Saigon:** ACKc5f73cde matched, helper armeda559dc3b
+from immutablepreparede8ae, db0validate EXIT0/stderr0. Officialinstall23d39406
+CAS6→7 RECORDED/current7 at07:30:43.989302UTC, pool0/EXIT0/stderr0.
+Actualsource98449616/image28ea/start07:31:18.59891248UTC/restart0/1CPU512MiB/
+autoRemovetrue/listener10.70.0.2:28446/realREADYcallback. Actual SDK752B
+read-only observation230aaa7435ad6b9c1b6ed706949afae4f86d4f3151ca8c96404a8c3d7d9935ae
+native7/receipt23d39406/8d672aee/document585dc37c/semantic661f19f0/pool0/
+issued0 actually copied root0600 into Core current1OXiioSB source-ready ref.
+[Actual READY return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_STREAM_ACTUAL_READY_2026-10-22.md)
+raw4cb8964b2c1c92517b778d567430d85734b564c12965988042b2ad82eeb229ca
+delivered byte-verified to canonical Core+3locators. Slot expires07:45UTC.
+Source custody/event observer/wrapper retained; Core current config/grants/
+session/STREAM specimens not yet proven by this actual Edge READY.
+
+Verification actual stage: exact received public Core ACK3382B/rawc5f73cde
+preserved at [Core ACK](evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_08_STREAM_HASH_ACK_2026-10-22.md),
+same bytes as SGP. Tracking reconciliation PASS; R0 staged4Markdown paths,
+diff/link/secret/scope gates before commit, no CI/push/merge. Frozen product
+code/test/source/config unchanged apart from approved private ACK arm and
+official source revision7. Full08/read09 NOT_MET; do not conflate current
+actual SDK_READY with historical UNARMED preparation or Core READY.
+
 
 
 
