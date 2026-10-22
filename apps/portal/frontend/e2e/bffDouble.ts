@@ -1127,15 +1127,15 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
 
   if (options.screensV2) {
     // The Manager series and Fleet dataset, and the three advisory governance reads: opt-in for the V2 lane, so the V1 stubs keep their 501.
+    // Opt-in (`reviewManager`): the Manager dataset routes (fleet dataset and the five overview surfaces) come from the fixture-bff
+    // review answerer (populated profile, small scale), so a visual cell that reads them is stubbed instead of 501/400. The sparse
+    // default of the fixture BFF is unchanged. The series and realtime routes stay the sparse doubles.
+    if (options.reviewManager === true) {
+      const dataset = answerReviewDataset(method, path, search);
+      if (dataset !== null) return dataset as Answer;
+    }
     const published = answerManager(method, path, search) ?? answerGovernance(method, path, search, requestBody);
     if (published !== null) return published as Answer;
-    // Opt-in (`reviewManager`): the other five Manager dataset surfaces (fund, portfolio, alpha, account, deployment overviews) from the
-    // fixture-bff review answerer (the populated profile, small scale), so a visual cell that reads them is stubbed instead of 501.
-    // Off by default: the sparse default of the fixture BFF is unchanged.
-    if (options.reviewManager === true && path.includes("/manager/")) {
-      const review = answerReviewManager(method, path, search, "populated");
-      if (review !== null) return review as Answer;
-    }
   }
 
   if (options.screensV2) {
@@ -1370,6 +1370,36 @@ function bodyOf(request: { method(): string; url(): string; postDataJSON?: () =>
 }
 
 /** Register the double on a page. Same-origin only — nothing else is stubbed here. */
+/**
+ * The review answerer for the Manager dataset routes, for the visual lane only. The small-scale universe has the canonical template
+ * rows, not this suite's ids (`pf_TEST_ONLY_core`, ...): a resource surface is answered from the FLEET dataset with the asked id
+ * written into the rows, the group key and the surface, so the reader's scope/group checks hold and the simulated keys show.
+ */
+function answerReviewDataset(method: string, path: string, search: URLSearchParams): { status: number; body: unknown } | null {
+  const match = /^\/api\/v1\/execution\/manager\/(fund-overview|fleet|(portfolios|alphas|accounts|deployments)\/([^/]+)\/overview)$/.exec(path);
+  if (match === null || method !== "GET") return null;
+  const resource = match[2] as "portfolios" | "alphas" | "accounts" | "deployments" | undefined;
+  const id = match[3] === undefined ? null : decodeURIComponent(match[3]);
+  const asked = new URLSearchParams(search);
+  const reply = answerReviewManager("GET", resource === undefined ? path : "/api/v1/execution/manager/fleet", asked, "populated");
+  if (reply === null || reply.status !== 200 || resource === undefined || id === null) return reply;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body = structuredClone(reply.body) as any;
+  body.surface = { portfolios: "PORTFOLIO", alphas: "ALPHA", accounts: "ACCOUNT", deployments: "DEPLOYMENT" }[resource];
+  for (const row of body.items as any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (resource === "portfolios") row.portfolio_id = id;
+    if (resource === "alphas") row.alpha_id = id;
+    if (resource === "accounts") for (const child of row.children) child.account_id = id;
+    if (resource === "deployments") for (const child of row.children) child.deployment_id = id;
+    row.row_key = JSON.stringify([row.alpha_id, row.alpha_version_id, row.portfolio_id]);
+  }
+  for (const group of body.groups as any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (resource === "portfolios") for (const part of group.key) if (part.field === "portfolio_id") part.value = id;
+    if (resource === "alphas") for (const part of group.key) if (part.field === "alpha_id") part.value = id;
+  }
+  return { status: 200, body };
+}
+
 export async function stubExecutionBff(page: Page, options: BffDoubleOptions = {}): Promise<void> {
   await page.route("**/api/v1/execution/**", (route) => {
     const request = route.request();
