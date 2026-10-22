@@ -42,7 +42,7 @@ import { streamGate } from "../../../commandCenter";
 import { canonicalHref } from "../../../links";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { SseFactory } from "../../../sse";
-import { NaWhy, GapWhy, NotAvailableLine, SectionPanel, gapTitle, type UnavailableFact } from "../../blocks";
+import { NaWhy, GapWhy, SectionPanel, gapTitle } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
@@ -85,15 +85,15 @@ function Gap({ ids, children }: { ids: string; children?: string }) {
   );
 }
 
-/** Facts the Manager has not published, said once on one line (the ids stay in its title). */
-const NO_WINDOW = "Windowed; needs the window (FE-025)";
-const UNPUBLISHED_FUND: readonly UnavailableFact[] = [
-  { label: "Net PnL", id: "FE-005", why: NO_WINDOW },
-  { label: "Return", id: "FE-006", why: NO_WINDOW },
-  { label: "Drawdown", id: "FE-013", why: "Needs a NAV series (FE-025)" },
-  { label: "Capital", id: "FE-017", why: "Initial, added, returned funds, NAV and budget used" },
-  { label: "Since your last visit", id: "FE-024" },
-  { label: "Contributors", id: "FE-025", why: "Per-alpha contribution over a window" },
+/** Why a windowed figure has no value; the ids ride behind each cell's disclosure. */
+const NO_WINDOW = "Windowed; needs the window";
+/** The capital block (hi-fi): every row stays, each says it is not published (FE-017). */
+const CAPITAL_ROWS: readonly { label: string; ids: string }[] = [
+  { label: "Initial funds", ids: "FE-017" },
+  { label: "Added funds", ids: "FE-017" },
+  { label: "Returned", ids: "FE-017" },
+  { label: "NAV", ids: "FE-013" },
+  { label: "Budget used", ids: "FE-017" },
 ];
 
 /**
@@ -319,8 +319,11 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
         </ul>
       ) : null}
 
-      <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 3 } as CSSProperties}>
+      <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 6 } as CSSProperties}>
         <NavCell read={nav} window={url.value.window} />
+        <Cell label="Net PnL" note={NO_WINDOW}><Gap ids="FE-005, FE-025" /></Cell>
+        <Cell label="Return" note={NO_WINDOW}><Gap ids="FE-006, FE-025" /></Cell>
+        <Cell label="Drawdown" note="Needs a NAV series"><Gap ids="FE-013, FE-025" /></Cell>
         <Cell label="Open incidents" note={<Link className="exec-ov-link" to={ctx("/execution/operations")} title="Incidents in the ranked list">Operations</Link>}>
           {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : incidents.value}</span>}
         </Cell>
@@ -332,13 +335,34 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
         </Cell>
       </dl>
 
-      <NotAvailableLine facts={UNPUBLISHED_FUND} className="exec-ov-na-line" />
-
       <div className="exec-ov-grid2 exec-ov-top">
         <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />}>
           <ManagerSeriesPanel label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`} read={metric === "NAV" ? nav : measureRead} gapCopy={`Not published (${FE_MONEY})`} tools />
         </SectionPanel>
+        <SectionPanel title="Capital" aside="Real-funded">
+          <table className="exec-ov-cap" aria-label="Capital">
+            <tbody>
+              {CAPITAL_ROWS.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row">{row.label}</th>
+                  <td><Gap ids={row.ids} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </SectionPanel>
+      </div>
+
+      <div className="exec-ov-grid3">
         {needsPanel}
+        <SectionPanel title="Since your last visit">
+          <p className="exec-ov-na"><Gap ids="FE-024" /></p>
+          <p className="exec-ov-note">The change feed since your last visit is not published.</p>
+        </SectionPanel>
+        <SectionPanel title="Contributors" aside="Amount · Portfolios">
+          <p className="exec-ov-na"><Gap ids="FE-025" /></p>
+          <p className="exec-ov-note">Per-alpha contribution over a window is not published.</p>
+        </SectionPanel>
       </div>
 
       <SectionPanel title="Current by currency" flush>

@@ -116,10 +116,6 @@
   .exec-ov-grid3 {
     grid-template-columns: minmax(0, 1fr);
   }
-  /* Stacked, the list that asks for a decision comes before the chart. */
-  .exec-ov-top > :last-child {
-    order: -1;
-  }
 }
 
 /* capital block */
