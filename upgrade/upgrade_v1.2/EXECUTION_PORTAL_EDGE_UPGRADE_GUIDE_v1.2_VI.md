@@ -1036,6 +1036,14 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Owner coordination22Oct:** [Single TS/PM→Edge→Core request](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md)
+is the current cross-owner action index. PM is a TS upgrade component; Edge is
+Core's single integration counterpart and owns return review/distribution.
+Core must answer each of7deduplicated rows with pins/proof or exact dependency/
+owner/action/checkpoint. Closed PM schema/union-runner/ACL prerequisites are
+credited; financial authority/history/fence/destination remain distinct. This
+coordination request neither activates runtime nor renews an expired slot.
+
 **Latest preparation22Oct16:55 Asia/Saigon:** Bobby approved review/preparation
 steps1–2 only. [Missing-only active-revoke proposal](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_PREPARED_2026-10-22.md)
 returns NEW17:30–18:00VN/10:30–11:00UTC, exact install8→9/revoke9→10 pins,

@@ -30782,6 +30782,120 @@ actual Edge READY. Execution is not part of this preparation slice. Full08/
 read09 remains NOT_MET; remaining Manager/G2 and other original phase gates
 stay separate, no09connected/10cutover/11release promotion.
 
+### TS–PM–Edge single Core coordination request —22Oct2026
+
+**OWNER_ASSIGNED / IN_PROGRESS / documentation and delivery only.** Bobby
+directs Edge to consolidate PM/TS and Edge needs into ONE Core request and
+own the return/verification loop. PM is a TS upgrade component, not a separate
+product or another Portal integration endpoint. Core↔Edge is the single
+integration counterpart; Edge↔TS/PM coordinates business/source authority.
+Do not route Core directly to a new PM data client, DB, Redis or second ledger.
+Existing reverse human-identity/authority side-leg remains explicit and is not
+the financial data path. Core's5f8de2ca counterpart directive agrees with this.
+
+Approved slice: inspect latest PM plan/guide/code/evidence, current Core return
+and Edge07/08/01/06 gates; remove already-closed/stale requests, publish one
+deduplicated action/response matrix and send it to canonical Core with verified
+hash + locator/readback. Core must ACK receipt and return every row with real
+pins/proof or exact named dependency/action/next checkpoint; no silence or
+generic BLOCKED and no invented READY. Edge remains responsible for consuming
+that return and distributing relevant accepted parts back to TS/PM. A missing
+row is incomplete handoff, not phase closure. No runtime activation, grant,
+role, session, source copy, release, PM source edit, push or merge is authorized
+by this coordination task. Preserve all parallel WIP and original custody.
+
+Current inspected PM73c33a397991f765fba1379d9d0abe1f4dc64c89 supersedes stale
+bc5a/absent-schema reports: actual DB union128/74relations/reapply0/head0;
+reviewed whole authority6cda8050 and original native/ACL retained. TS release
+entrypoint/native-generation source+actual wrapper qualification87PASS is
+candidate-export only, NOT built/published/deployed PM image. Do not ask Core
+to recreate this schema/runner/ACL review or produce TS financial history/fence.
+TS/PM still own final image/native/writer fence, economic provenance/valuation/
+mapping/backfill; Core supplies its current policy/session/held-lease inputs
+and consumer acceptance, Edge supplies transport/projection/receipt binding.
+Actual native READ/STREAM/restart remains credited, not financial data proof.
+
+Scope invariants/gates: one versioned request and return locator with stable
+row IDs, distinct Core/Edge/TS-PM actions, source-vs-installed pins, private
+references only, no duplicate completed tests. Preserve all-mode product scope;
+concrete Paper specimens do not enable commands or Live trading. Current
+10:30–11:00UTC proposal has no matching ACK at10:40UTC; no implicit extension
+or new manifest is made here. Core returns exact feasible ACK or a NEW finite
+availability; actual preparation/activation remains separately governed.
+Verification is R0: explicit staged Markdown scope, indexed links/locators,
+source hashes/row coverage/diff/secret checks and tracking PASS before coherent
+local Bobby commit. Delivery preserves Core prefixes/index. No correctness/
+performance/connected tests or test resources needed for this doc-only action;
+rollback is preserve prior packets and correct via explicit append, not erase
+history. Full08/read09/07 and PM full03/04/13–16 remain OPEN at their own gates.
+
+**Actual17:48Asia/Saigon / SENT_AND_HASH_VERIFIED, not CORE_ACK:**
+[Single consolidated request](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md)
+15857B/rawSHA256 f7d6db650dac0d2e37dcd4be39c48ab1d6599ac44777f0f8aeda2728f6f4fb65
+delivered into SGP /home/bobby/portal-research/upgrade/execution_loop/evidence/
+ELP2-10/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md, exact byte/hash
+readback PASS. Core Unified/sync/originalEdge19Oct request all appended with
+this current priority/index; prefixes and staged-index unchanged. No source,
+credential, PM data/evidence file or private key transferred; only this one
+public Markdown. Source facts/paths/hashes in it let Core read the owning PM
+code/evidence on HK without creating a new Core→PM client. No separate PM
+request is left for Bobby to translate or carry between teams.
+
+CORE-01 native ACK/finite missing revoke;02Manager trust/data;03current PM
+financial human/workload/app/field held lease through owning COMMIT;04financial
+destination/schema/dedup/atomic checkpoint;05command actor/catalogue/status
+inputs;06P22/cache/cursor controls;07Core resource/apparatus contribution.
+Each row names Core outputs AND owned Edge/TS-PM counterpart, preventing the
+TS economic history/fence/source mapping from being handed back to Core.
+Core must ACK next working response, name coordinator/UTC checkpoint, complete
+runnable Core work and return all7rows in ONE CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md
+under canonical ELP2-10, mirrored into HK Edge08 with hash. Missing inputs need
+exact owner/action/time; generic BLOCKED or placeholder READY is not acceptance.
+Edge must validate each returned row and distribute relevant accepted parts
+back to TS/PM, not consider this delivery completion of connected integration.
+
+PM73c33a39 unchanged at final inspection. Read §§58.337–338, detailed03/04/
+13–16 guide, original CurrentReadAuthority/AcceptedCurrentAccess/operator
+composition and current runbook; exact4evidence/runbook hashes match committed
+PM source, no related peer diff. Scope closes stale missing-schema/runner/ACL
+requests only. Native READ/STREAM200 and current strong identity are not real
+financial dataset/provenance/held-lease acceptance. Core5f8de2ca's fixture
+follow-up confirms same Edge-only counterpart and separates DARK consumer
+work from missing source truth; accepted pure reducer/fixture work is reused,
+not assigned as missing implementation. Existing reverse-human control leg
+is encapsulated explicitly; no architecture redesign or new authority surface.
+
+Verification:R0 — tracking reconciliation PASS, new links/7-row coverage/
+committed-source hashes/secret-pattern/diff/staged identity checks before
+local3Markdown commit. No product/PG/security/connected/load test rerun; reuse
+87PM/12glue/Core103offline only at their reported historical scopes. Initial
+read-only probes used absent PM AGENTS and old guessed optional filenames;
+nearest root rules and actual rg file list/code read instead. No failed
+implementation test hidden or out-of-scope fix. Peer main C5 hunk/56line owner
+action/moving Core READ addendum and sourceWIP fe4fcfc7/1cf04b20/109659d2 remain
+excluded; PM46peer WIP paths not edited, no peer index/branch changed.
+
+Runtime/cleanup: no container/build/cache/image/testcopy/network/role/grant/
+session/row created by this task, cleanup NO_ACTION_NEEDED; do not prune any
+shared/rollback/volume/custody. Selected actual HK3RustEdges image d6aa7a51,
+config6180b9bf/cd79e9c6/98a191c7 and operationalnative28ea3958/configf33f19ca
+all restart0. Source28446 absent. Core Research actual a96/container46c94107/
+restart0, candidate3cb7 uninstalled; old a814/ce339 scope expired, no new config
+installed. No blanket claim for parallel host activity/Manager worker restarts.
+Disk observed330587160576→330155323392B used/free188329742336→188761579520B:
+shared movement, no own cleanup reclaim claim. Canonical Edge54c6f5f3/branch
+feat/manager-v2-paper-read and6active feature worktrees unchanged, active
+upgradefe3da43f before this docs slice. TS canonical668e1032, PM73c33a39;
+stable release /srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy
+and explicitly retained active/rollback image set untouched. No push/merge/CI.
+
+Next permitted step: Core returns exact7row pack/checkpoint; Edge consumes and
+replies ACCEPTED/CHANGE per row, immediately connects independently runnable
+approved work, and coordinates TS/PM-owned financial/fence/history returns
+within the same owner chain. Current task does not activate native or renew
+10:30–11:00 slot. Full07/08/read09 and PM full03/04/13–16 OPEN, not a reason
+to stop other independently approved work or open another ad hoc phase.
+
 
 
 
