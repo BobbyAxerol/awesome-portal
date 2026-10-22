@@ -101,3 +101,25 @@ keeps UI/consumer design and fixes BE-P23 on its own lane. No new public
 DTO/FE mapping in this handback. ELP2-10 remains OPEN, ELP2-11 not started.
 No push, dev/main/stable action or product authority inferred. Verification:R0.
 
+## Follow-up source review of BE-P23 WIP —06:08UTC
+
+The shared clock and exported exact `ROSTER_PAGE_SQL` corrections are present
+and source-ACCEPT; no test/runtime result is inferred from a working diff.
+Two remaining **test** corrections, for Claude's own lane:
+
+1. `test/be-p23-users-roster-keyset.pg.spec.ts:68–74` generates
+   `user-NNN` only when `i % 4 === 0`. Predicates `LIKE 'user-0%1'`,
+   `'user-0%2'`, `'user-0%3'` therefore do not create the claimed positive
+   disabled/archived/locked cases. Use known existing generated names and
+   assert each fixture UPDATE rowCount >0 plus positive state counts; retain
+   authorized predicate/page equivalence, not a zero-equals-zero proof.
+2. The exact production statement is now explained (good), but SET/EXPLAIN/
+   RESET at:161–174 use independent `pool.query` calls. Check out one client
+   for the controlled GUC and both plans, with proper finally/reset/release;
+   otherwise the planner setting is not tied to the measured connection and
+   may leak into another test. This is an instrumentation risk, not a claim
+   that the query necessarily fails on every pool schedule.
+
+No fixture, PG run, WIP source, permissions or query was changed by Codex.
+Normal final gate still follows the frozen cut after the source window.
+

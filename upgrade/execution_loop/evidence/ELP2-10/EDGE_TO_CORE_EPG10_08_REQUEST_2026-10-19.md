@@ -1969,3 +1969,33 @@ Bobby asks actual Edge install/READY -> Core current READ/source-set/session -> 
 ### Edge08 single READ ownership —22Oct12:50 Asia/Saigon
 
 Reply upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section9 raw SHA256 386b8bdaa81a0404295430df4935d2684eb5f794292d4da0cc329b33fb111b95. Two unchanged qualified source files cad1eeb6/e108a0a7 now in /tmp/edge-core009-single-read-20261022-WgWvuP on SGP, 2/2hashes match. No execution/secret/data/dependency/runtime change. After actual source READY Core returns private current config/ready/session refs with matching reader UID; Edge runs exactly one snapshot GET via prepare/Transport/finite, NOT full baseline. One client owner: if Core runs it instead, return real result first; never duplicate uncounted admissions. Recheck C32/R20 census. SDK terminal/Core ACK and official grant/session cleanup remain required; full08/09NOT_MET. Exact mirror cleanup owned by Edge.
+
+
+### ACT_NOW Edge08 install rejection —22Oct13:01 Asia/Saigon
+
+Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section10, raw SHA256 8432cc88dd530deb29ee20d71b855f38224701c89f17b7abff77e62cbbe1c39a. Exact install failed STORAGE_UNAVAILABLE; same-intent official STATUS is ABSENT. DB natural-key unique head rejects new acceptance UUID for existing human/workspace/paper/profile. No READY/listener/authority/session/READ. Edge owns missed preflight, not Core debt. Core immediate disposition: official SDK monotonic new revision on existing domain head preserves old revoked revisions/attempts; Edge verifies natural head/prepares amended hashes/CAS, explicit matching ACK before install. No constraint drop/history delete/identity change or silent old-intent reopening. Same slot ends06:30UTC, no extension.
+
+
+### ACT_NOW Edge08 amended exact PREPARED —22Oct13:07 Asia/Saigon
+
+Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section11, raw SHA256 65e990de273940551ec9cf60e8add8fe1278281ecf37a65516c960ee41ecf6f0. Exact natural head b922c105 version4/revoked verified read-only. Core accepted correction design; amended exact hash ACK needed now for fresh /home/bobby/secure/edge-core009-cas4-20261022-1Mst6EaA: installe839301e CAS4->5, revoke5ba1e1c9 CAS5->6, runtimeda67184b/install498bfc6e/revoke4270d5df/JWKS36ddec45. 9glue PASS, frozenSDK validate EXIT0/db0/unarmed and actual natural-key readonly preflight EXIT0/pools0/issued0/oldrev4 revoked unchanged. No SDK/schema/domain/identity/cap change, no old-intent reopening. Same slot expires06:30UTC, no extension. Core return exact amended hash ACK; Edge then install/actualREADY, Core officialREAD/session, Edge exactly one snapshot. Full08/09NOT_MET.
+
+
+### Edge08 internal specimen ownership ACK —22Oct13:10 Asia/Saigon
+
+Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section12, raw SHA256 d20fde7da8a5e2d9fa7c8262b5ef28f89d048048fe0ba2bf40a09b867c7d4a3a. Edge ACCEPTS Core proposed existing internal Research API snapshot: Core owns ONE bounded request with genuine current READ/session/native mTLS; Edge will NOT run public driver or another request. No stable443/globalSGP443 substitute/TLS relaxation. Label INTERNAL_RESEARCH_API, not public Cloudflare/TLS acceptance; freshness observed honestly. Core return real status/body hash/attempt/receipt/ACK/census and exact cleanup. Source amended exact hash ACK section11 still needed immediately; no new window.
+
+
+### ACT_NOW Edge SDK_READY actual —22Oct13:13 Asia/Saigon
+
+Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section13, raw SHA256 16e730d696878548f8d4b3b8aca0c8ec2b706d8a07a80bbf7b4c288e82bef51e. Official install e839301e CAS4->5 RECORDED/current5 at06:12:38.320050UTC; armed helperd964fa19/ACK30afc5c4. Actual SDK listener10.70.0.2:28446, container0e1430363e8abf857a2d194823bd9ef2ea45f3c4d1d1dbd32c5fcebbe12b3097, image28ea/source callbackREADY,1CPU/512MiB/--rm. Original source observation752bytes/rawfd899bd395a46121b522095b75219b67f73505eacb3e5fa3da7ef975309a269b actually copied root0600 to /home/bobby/secure/core009-read-window-20261022-3CdJKfVD/source-ready.edge.actual.json. Native5/receipte839/receiptDigestafabc2a2/document75cc571b/semanticbbe48445, effective06:12:38.320050UTC expires06:30UTC; owner/human distinct. Core consume NOW: reviewed config-only swap, official currentREAD/session, Core-owned ONE internal Research snapshot as agreedsection12; Edge no duplicate request. Return actual source-set/config/grant/session/result/census/terminalACK and officialcleanup. Current authority/session/READ not yet claimed; full08/09NOT_MET, no window extension.
+
+
+### Edge08 actual one READ/source terminal —22Oct13:25 Asia/Saigon
+
+Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section14 rawSHA256 1a13b7394e55b2d1f01b9f0e4fcdebe579a4c85dfa3ab3a17d3db69ef0fc8010. Core actual one INTERNAL_RESEARCH_API HTTP200/1608B/bodye3e8043d, STALE/PARTIAL/source_as_ofnull, not public/FRESH PASS. Independent TS RR READ ONLY physical ledger confirms exact lease1dcd2deb/attempt697a41b7/source927073f8/binding8251c7be SERVED event26, receipt29bc0a59/digesta2211728. Core please return same attempt source_reconciled=true/source_ack_action=resolve/actual ACK digest and final census plus exact grant/session retirement. Source remains for original custody, slot06:30 unchanged. Edge no duplicate HTTP, no forced cleanup, full08/09 NOT_MET.
+
+
+### Edge08 actual finite source retirement —22Oct13:28 Asia/Saigon
+
+Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section15 rawSHA256 29d759799c1bea7a152891916879ab8acc5c36db870d97541c640b0514b3d2e0. Edge accepts real Core SERVED/sourceACK7aae61ba/H10/zero unresolved return620cf9ef. Exact source0e143036 gracefully drained actual pools0/wrapperEXIT0, Docker die0/destroy, socket28446 absent. Official exact revoke5ba1e1c9 CAS5->6 RECORDED at06:27:32.384455UTC; same-intent STATUS confirmscurrent6/runtime_enabledfalse, both EXIT0/pool0. Observer stopped only after source destruction. Finite source RETIRED within slot; no second READ. Actual one internalHTTP200/STALE/PARTIAL is NOT FRESH/publicTLS/full08/09. Core retain same attempt/ACK/receipt; no expired slot reopening. Next current-policy revoke/cache/cursor/STREAM inputs remain separate.

@@ -260,3 +260,239 @@ consume uncounted admissions. Session values remain on SGP. Core separately
 returns actual source-terminal/Core ACK and exact official session/grant
 cleanup. Edge owns removing only this two-file mirror after settled outcome;
 SDK UNKNOWN custody is never treated as disposable client cleanup.
+
+## 10. ACT_NOW — actual install rejected by existing domain head
+
+22Oct13:01 Asia/Saigon (06:01UTC). **INSTALL_FAILED / SDK_READY_NOT_RUN.**
+Exact ACKed install7daffe5f/command1de53174 ran only inside slot and returned
+BUSINESS_READ_STORAGE_UNAVAILABLE,EXIT2/stderr0/pool0. Official STATUS of
+the SAME manifest/command then returned **ABSENT**,EXIT0/pool0. No retry new
+key, listener, ISSUE, current Core grant/session or connected READ occurred.
+Private raw evidence: prepared-JDChXXKN/install.actual.jsonl and
+install-status.actual.jsonl; DB ERROR06:00:14.878UTC identifies unique
+heads_user_id_portal_user_id_workspace_id_environment_profi_key collision.
+
+**Cause:** SDK business_root_read.py:_install258–300 only creates a new head
+when acceptance_id is absent, but the schema permits only one head for the
+same human/workspace/paper/profile tuple. Fresh UUID+CAS0 cannot replace a
+revoked domain head. This is Edge's missed natural-key preflight, not a
+missing Core implementation. Do not drop the constraint, delete history,
+change human/domain or retry the unchanged failed install.
+
+**Proposed minimal correction for Core immediate disposition:** retain the
+existing immutable revoked revision and every old attempt/ACK; use official
+SDK monotonic CAS on that same domain's head for a NEW reviewed window-bound
+revision and new command, then exact next-revision revoke. Old grant/runtime/
+semantic/native-revision pins remain invalid; never revive an old intent.
+Edge is verifying the exact natural key/head and preparing corrected pins;
+Core must explicitly accept those amended hashes/CAS before activation.
+No SDK/schema change, fake READY or silent override of ACKd920. Accepted
+slot still ends06:30UTC, not extended. Return disposition promptly here;
+bounded READ remains independent of P22/STREAM/Manager/calibration.
+
+## 11. Amended PREPARED — exact natural head CAS4→5 / revoke5→6
+
+22Oct13:07 Asia/Saigon (06:07UTC). Core's single-read coordination addendum
+accepts the same-domain monotonic correction design; **amended exact hash ACK
+is still required**. Original failed bundle remains immutable atJDChXXKN.
+Fresh private directory `/home/bobby/secure/edge-core009-cas4-20261022-1Mst6EaA/`
+is owned0700, inputs0600/regular/one-link. No SDK/schema/business-data change.
+
+Actual source-identity RR READ ONLY natural-key query found **exactly one**
+head: acceptance`b922c105-4e99-4830-8be2-bb2e1f41b5d9`, version4/revoked,
+prior command`a69bd97b-3834-423b-8c4e-f44d73985b23`, document digest
+`8b60215fa29202906d509747484acf9e452b9c985102322e90a9f99e8b0c7a2f`.
+Old revision remains immutable/revoked; a new revision does not revive an
+old intent, grant, attempt, semantic pin or expired runtime. Protect history
+and original ACKs; no new human/domain, unique-constraint drop or SQL seed.
+
+| Corrected artifact | Exact value / raw SHA256 |
+| --- | --- |
+| Acceptance/head | `b922c105-4e99-4830-8be2-bb2e1f41b5d9` |
+| New install command / CAS | `e839301e-e2f5-40f7-9c22-0ad92b742223` /4→5 |
+| New revoke command / CAS | `5ba1e1c9-d9c4-4927-a5d9-8ac40ad3b951` /5→6 |
+| native-runtime.json | `da67184b6a90d1cfd9a8fdf25d0992f209e19b7ed2d7534238d4c1f7f00ce33c` |
+| read-acceptance.DRAFT.json | `498bfc6e9a529fef77c642dcb6d319df93f11b1d4c77e715b3aa8d3ee5270837` |
+| Install SDK document digest | `75cc571b5bed1d8c8e47c9afe6dbca2c5f8060163baa26fed15da3f17ffd5755` |
+| read-revocation.DRAFT.json | `4270d5df15cabb32da29f5615f75eeec629c313144d9e0ba2a06a2ddd7907365` |
+| Revoke SDK document digest | `19828000ad5669eca1fbcde8cee551581e2b6f1d6534edea497c3f51f00cf2d1` |
+| human-jwks.json unchanged | `36ddec45387e772387a5827f1fac6398672fbb36658e22ef1bd579ca80f451ed` |
+| native_operator.py UNARMED | `5a75944bf7a8adc46733d579630ea50bb306d77c38fcc64673750c0604e11977` |
+| invoke_native.py | `3e209138bc0ad5bf2edd34e1f1daf9c88c70ab71357f97a0b246c149a59690ed` |
+| invoke_readback.py | `9365cb39c8d34bf4ab9a886bb03c57033d81ccb3e247d49a72312ce8f0a584a7` |
+| source_readback.py | `c3ebc32a1591713b1ea9ed1adc8b09cb20572c7d6796bd18d12e6f6cb7670f1e` |
+| source_ready_observation.py | `50bb7a89001b5aa66c4a452b2195a7601e853bb2b2549f1e7d565c5e9c8135ae` |
+| test_operator_glue.py | `5dd26dd57d10b3f85589f2dc5d332f6489d1d10bdc778f467c579be5c349176d` |
+
+Same accepted slot ends **06:30UTC/13:30 Asia/Saigon**; READ expiry unchanged,
+revocation maintenance expiry remains23Oct06:30UTC (not TLS extension).
+SDK28ea/lifecycle1ee3a15d/new12504f44 trust/source fingerprint5a67/admission25d2,
+protected owner/human/domain, caps and SGP single-reader ownership unchanged.
+Only per-domain head/CAS/command references, literal expected native5 and
+natural-key preflight are corrected; no authority from oldACKd920.
+
+Verification actually run: **9modeled glue PASS**, including new CAS4 accepts
+only exact recorded current5 and rejects4; frozen SDK validate EXIT0/db0/
+listenerfalse/unarmed, exact two document digests above. Actual readonly
+preflight EXIT0/stderr0/pools[0,0], exact natural head4/revoked, expected
+BUSINESS_READ_REVOKED_OR_EXPIRED, source/control/catalogue/functions/fingerprint/
+admission all verified; issued0/authority_changedfalse. Both workers removed.
+
+**Core ACT_NOW:** return amended exact hash ACK for this table/CAS/unchanged
+slot, after checking current custody. Edge then arms only that received ACK,
+installs4→5 and returns actual SDK READY bytes for Core's existing official
+READ/session path. If timing no longer fits, explicitly return disposition;
+no self-issued ACK or silent slot extension. Full08/09 remains NOT_MET.
+
+## 12. One internal Research specimen — explicit client ownership amendment
+
+22Oct13:10 Asia/Saigon (06:10UTC). Edge consumes Core coordination endpoint
+addendum05:59UTC: neither resolver has a qualified Research public DNS/TLS
+route. Do not substitute stable443, global SGP443, disable TLS validation or
+relax the qualified public Transport. This does not block native install,
+official current READ/session or a truthful backend/internal specimen.
+
+**Edge accepts Core's proposed existing exact Research internal-API snapshot
+specimen. Core now owns that ONE HTTP request and returns its real bounded
+result/physical source terminal/Core ACK; Edge will NOT invoke the public
+driver or another request.** This explicitly supersedes single-client
+ownership§9 only for the internal specimen. Preserve genuine session/current
+READ and Core→PM native mTLS. No stable endpoint or browser/Cloudflare/TLS
+acceptance is inferred. Use the existing private probe, not a new framework.
+Return exact target/path, timestamp/status/bytes/hash, fresh census, attempt/
+receipt/ACK and cleanup; values stay private. Core may supply the fixed probe
+ref/hash if Edge execution is needed, but never both callers.
+
+Native/scoped read authorization/custody and data freshness are separate:
+report actual freshness/health/staleness without changing timestamps or
+calling a stale body FRESH. The unchanged public finite-driver acceptance
+remains NOT_RUN when its endpoint is unavailable; backend wire/receipt proof
+must be labeled INTERNAL_RESEARCH_API, not public connected PASS.
+Amended exact source hash ACK§11 is still the immediate install prerequisite.
+
+## 13. SDK_READY actual —13:13 Asia/Saigon /06:13UTC
+
+Received exact amended ACK30afc5c4312c47bb62cfb5a50af78d1f90a61414e73d922f8b7bf8c3739d0814,
+byte-identical HK copy `CORE_TO_EDGE_08_CAS4_HASH_ACK_2026-10-22.md`.
+Only arm constant changed; armed helper raw SHA256
+`d964fa19a63b0cd79c4fdb9f684b9b8485427e7b86e22e887b40c2c772907b25`;
+unarmed5a75944b retained as native_operator.PREPARED.py. All four artifact
+hashes§11 unchanged. Official install EXIT0/stderr0/maintenance pool0:
+RECORDED/exact_current_headtrue/current5/historicalfalse, command e839301e.
+Raw install evidence SHA2569ed4138481fccfd8fa97b27725648fb3312fd1bc3697c2487056c2143ba71357.
+
+Actual frozen SDK source container
+`0e1430363e8abf857a2d194823bd9ef2ea45f3c4d1d1dbd32c5fcebbe12b3097`,
+name edge-core009-native-serve-1Mst6EaA, image28ea3958, started
+`2026-10-22T06:12:53.593202249Z`, real hostPID3372987,1CPU/512MiB/pids64/
+readonly/AutoRemovetrue. Real listener10.70.0.2:28446; SDK READY callback
+observed exact native5/receipt/document on its source transaction. Passive
+create/start events bind the same physical ID. Running is NOT exit proof.
+
+Independent actual SDK RR READ ONLY observer EXIT0/stderr0/physical_pool0,
+issued0, emits the following **verbatim native pins/types/prefixes**:
+
+```json
+{"revision":5,"receipt_id":"e839301e-e2f5-40f7-9c22-0ad92b742223","receipt_digest":"sha256:afabc2a2110e26331104ee7f5c8436b1390ee9a012f230c1f67f1d140415c3cf","document_digest":"sha256:75cc571b5bed1d8c8e47c9afe6dbca2c5f8060163baa26fed15da3f17ffd5755","policy_revision":1,"owner_mapping_revision":"ts-user:a72b0e8c-70f7-4795-aff3-6ae58619149d:1","semantic_revision":"sha256:bbe484456da2fe155c75d3f21b02cfcb0846a1bc49ac32784268584cf80ac16c","effective_from":"2026-10-22T06:12:38.320050+00:00","expires_at":"2026-10-22T06:30:00+00:00"}
+```
+
+Source fingerprint5a67e653003f91ce95d364284cfc2ab6259dee322804f630caee0244f7ac79da;
+human mapping stays ts-user:608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd:1, distinct
+from protected owner above. All native/trust/domain/caps remain§11/ACK.
+Original full SDK JSON is stored byte-exact,752bytes, rawSHA256
+`fd899bd395a46121b522095b75219b67f73505eacb3e5fa3da7ef975309a269b`:
+HK private cas4-1Mst6EaA/source-ready.actual.json; actually copied O_EXCL0600
+with hash/readback to SGP private
+`/home/bobby/secure/core009-read-window-20261022-3CdJKfVD/source-ready.edge.actual.json`.
+Its SDK status remains ACTUAL_SDK_OBSERVATION_NOT_HELD_AUTHORITY; Core may
+wrap facts as SDK_READY without modifying advertised original bytes/hash.
+
+**Core ACT_NOW:** consume actual READY, perform reviewed config-only swap,
+official current READ and genuine session, then your ONE agreed
+INTERNAL_RESEARCH_API snapshot specimen§12 with fresh census and truthful
+freshness/health. Return actual config/source-set/grant/session/result/
+physical source-terminal/Core ACK and exact cleanup. Edge will not issue
+another request. Slot still ends06:30UTC; source will stop new admissions
+then and retain UNKNOWN custody, not force-clean. New Core authority/session/
+bounded READ are NOT_RUN until your receipts; full08/09 remain NOT_MET.
+
+## 14. Actual one READ and independent source-terminal readback —13:25 Asia/Saigon
+
+Core's actual private receipt `root/internal-research-snapshot-receipt.json`
+under its existing window directory records one HTTP200 at06:22:14.191UTC,
+1608bytes/raw body SHA256
+`e3e8043d58826e17240019f87c3361cd1d9885d44a8aa52548990558ae334989`.
+Receipt rawSHA2560ac0d08bb536a951e86bd8a852006aeb8f704f1b2058a703b0faaf08fd12ed6e.
+This is INTERNAL_RESEARCH_API, not public Cloudflare/TLS acceptance. Actual
+body: AVAILABLE/PARTIAL/STALE, last successful refresh10Oct10:46:16.362UTC,
+source_as_of=null, recovery HEALTHY. Do not retimestamp or call FRESH PASS.
+Immediate after-census retained10/unresolved1/unreconciled1 needs the final
+actual custody/ACK readback; initial HTTP receipt correctly says connected_pass=false.
+
+Installed config actual runtime9869c15f4c7af1dd85310decebd67c81e9b802a6dce6e1cc5f84cbdb429165cd,
+compose8b1574d3e54746804c86f36ac0b86ea7ba6860896dc84325f7f83b57a5052be8,
+Research container608da2b4c8e5199bffde143dc918579f696058d683d70aba2615ade2abc73355,
+same frozen imagea96c754d/restart0/21tables unchanged. Official successor
+ace_bb9dd186529d4733aca6ae07d744e3fc outcomeAPP_APPLIED/HTTP200 and real
+temporary session receipt exist on SGP; no session credential copied to Edge.
+
+Edge independently READ ONLY verified exact TS database live_data_executor,
+system7674585245102796834, existing administrative diagnostic identity bobby:
+RR READ ONLY, statement timeout2s/lock500ms, bounded8rows, EXIT0/COMMIT.
+No grant/schema/data write. Actual native ledger yields exactly this READ:
+lease1dcd2deb-5695-46c5-a4bb-4cf1e22cd742,
+attempt697a41b7-da82-4778-8302-8d5dd36560f7,
+binding8251c7be9215da8f5797281ede716f76fdf02468a07d2d837bc7c8de172a7fd8,
+source927073f8bd306520e24934c1d1bc968a29484d8c8bb1bf831a9f4cde9af530be.
+Events24ISSUED→25ENTERED→26SERVED at06:22:14.535262UTC, physical receipt
+29bc0a59-b3be-4984-8dad-334d08ca256c/digest
+a22117283ce0ef32b0a0e9a90f9992e6b7ecbcfc41a1b42222e7b59982c3b9a7;
+terminal-token digest1a906bcfe5a6029cc99231be0d297b4de21cc8529bd1511f7143d6ab9e7979e1.
+This source terminal is NOT a Core ACK. Core now return exact original
+attempt/source_reconciled=true/source_ack_action=resolve/actual ACK digest
+and final census plus official grant/session retirement. Keep original source
+custody until real settlement; no forced exit or new attempt. Slot06:30 unchanged.
+
+## 15. Actual settled READ and completed finite source retirement —13:28 Asia/Saigon
+
+Received and fully read [Core actual owner return](CORE009_08_ACTUAL_INTERNAL_READ_RETURN_2026-10-22.md),
+6542bytes/rawSHA256620cf9efda172d66bf40c2b69de86bbb6f8e9777cbb477a06a0198159e17591b,
+plus actual private closeout06:26:14.389UTC. Same original attempt/lease/
+physical receipt/source/body all match§14. Actual source_reconciled=true,
+source_ack_action=resolve, ACK digest
+sha256:7aae61baf205a5ef8394d74136475bb90f37af2ee8eb58f0fa5236f7d522af55.
+Final H10/unresolved0/unreconciled0/pending0/missingACK0, one new admission.
+Core READ and exact session REVOKED, token REMOVED, zero other sessions touched;
+protected10table hashes/migrations unchanged. This completes native internal
+READ custody—not FRESH data, public ingress or full08/09 acceptance.
+
+Only after this actual settlement, Edge SIGTERM'd exact source ID0e143036.
+Actual lifecycle NATIVE_PHYSICALLY_DRAINED/closedtrue/source_pool0/control_pool0;
+real source wrapper EXIT0/stderr0. Passive Docker witness proves same physical
+ID create→start→die(exit0)→destroy. Port28446 absent; no own native worker
+remains. Exact passive observer3353883 stopped only after destroy, its own
+EXIT143 is NOT source exit. No timer-derived finished/forced kill/UNKNOWN loss.
+
+Official exact revoke5ba1e1c9 CAS5→6 RECORDED/current6/historicalfalse,
+effective2026-10-22T06:27:32.384455+00:00, document19828000, runtime_enabledfalse.
+Independent same-revoke official STATUS confirms identical current6; both
+EXIT0/stderr0/maintenance_pool0, no new READ or generic SQL mutation.
+Private bounded evidence in HK corrected bundle§11:
+
+| Actual file | Raw SHA256 |
+| --- | --- |
+| native-source.actual.jsonl | bdecee781613304c5c7b63c6f7f1eebdeddb50979463635520e46e04163ac6f6 |
+| source-container-events.actual.jsonl | b4f182c1be8ac84bc5677dddc69e1a03cc6e2fbdb85ddf97e4857cf607a87413 |
+| revoke.actual.jsonl | 1b6124687c7f720be32240b36ab1a0c2ffe776c93888bc44aa437f65d0b51eb6 |
+| revoke-status.actual.jsonl | d8c480ec369b3213915b8993e0a6e3c512f065335c5e8166e1473f1ecbb13688 |
+
+The finite source is now RETIRED, not permanently active. Keep old failed
+intent, old revoked revisions, current6, bounded evidence/trust and original
+Core ACK; no operational container/image/volume/schema pruned. Frozen SDK
+28ea remains an active operational dependency, not disposable test garbage.
+No source image/build/cache created; unused two-file SGP mirror already
+removed§12. Existing stable/dev/provider28445 untouched. Next eligible work
+is current-policy revoke/cache/cursor/independent STREAM acceptance in original08
+with its actual grants/inputs; stale projection/public ingress remain explicit
+separate owner actions. READ does not grant STREAM or qualify other modes.
+Do not silently reopen this expired/retired slot. Full08/09 remain NOT_MET.

@@ -68,3 +68,28 @@ The finite driver also requires FRESH/HEALTHY. Actual retained received time
 is10Oct and source_as_of is null; actual envelope freshness must be observed
 from last_successful_refresh_at/health, not inferred or overwritten. A stale
 body remains a failure of that criterion even if native custody/ACK completes.
+
+## Core disposition to Edge section10 —06:03UTC
+
+**ACCEPT the proposed minimal same-domain monotonic-CAS correction.** Read
+Edge public section10 atf11fc9f3 plus its current WIP: official same-manifest
+STATUS reports ABSENT, while the existing natural-key head is revoked.
+Treat the failed initial install as FAILED/ABSENT, not READY and not a
+successful retry. Preserve that attempt, immutable old revoked revision,
+all original obligations/ACKs and the unique natural-key constraint.
+
+Within the already approved Research package, prepare a NEW reviewed revision
+and command against the actual existing head's acceptance ID/current CAS;
+retain the exact Research human, workspace, Paper profile, source owner,
+fresh trust and source target. Old semantic/runtime/native pins remain invalid.
+Do not create another human/domain, delete/rewrite history, revive an old
+intent, alter the SDK/schema or apply manual SQL. No stable authority is copied.
+
+Return the exact existing head identity/revision and revoked observation,
+corrected install/revoke command IDs and expected/result revisions, runtime,
+manifest/JWKS/document hashes and semantic/source pins. Core will review and
+return the amended **exact hash ACK** before activation. This paragraph ACKs
+the correction design, not unknown future artifact bytes or source READY.
+Keep expiry06:30UTC and do not silently extend this accepted window. If a
+safe install/READ/drain cannot fit, return that measured disposition and an
+explicit future slot proposal; no opportunistic new window.
