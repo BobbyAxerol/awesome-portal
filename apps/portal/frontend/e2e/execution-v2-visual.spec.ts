@@ -72,6 +72,7 @@ const CELLS: readonly Cell[] = [
   { slug: "alpha-360-overview", group: "Alpha 360 / Overview", route: "/deployments/alphas/alpha_btc_trend", root: '[data-screen="alpha-360-v2"]', widths: THREE },
   { slug: "alpha-360-orders", group: "Alpha 360 / Orders & Fills", route: "/deployments/alphas/alpha_btc_trend?tab=orders", root: '[data-screen="alpha-360-v2"]', widths: THREE },
   { slug: "alpha-360-deployments", group: "Alpha 360 / Deployments", route: "/deployments/alphas/alpha_btc_trend?tab=deployments", root: '[data-screen="alpha-360-v2"]', widths: THREE },
+  { slug: "accounts-list", group: "Accounts list", route: "/deployments/accounts", root: '[data-screen="accounts-v2"]', widths: TWO },
   { slug: "account-360", group: "Account", route: "/deployments/accounts/acc_bnc_core", root: ".exec-acct-v2", widths: TWO },
   {
     slug: "compare",
