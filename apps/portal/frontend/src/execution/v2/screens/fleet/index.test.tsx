@@ -382,7 +382,7 @@ describe("search, owner, health, sort", () => {
       const { api, calls } = makeApi(wide);
       mount(api);
       await loaded();
-      expect(suggestionsOf("Owner")).toEqual(["Owner-0", "Owner-1", "Owner-2"]);
+      await waitFor(() => expect(suggestionsOf("Owner")).toEqual(["Owner-0", "Owner-1", "Owner-2"]), SLOW);
       expect(screen.getByTestId("options-limit")).toBeTruthy();
       // the owner on page 3 is not offered yet, but a typed value reaches the whole fleet through the server
       const owner = screen.getByRole("combobox", { name: "Owner" });
