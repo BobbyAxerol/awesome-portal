@@ -265,7 +265,7 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     expect(whyText(screen.getByText(/The dataset is partial and stale/).parentElement)).toMatch(/TEST_ONLY/);
   });
 
-  it("reads the canonical partitions fixture on the paper lens (money partitions are in the body, none on the screen)", async () => {
+  it("reads the canonical partitions fixture on the paper lens: one money cell per economic partition, exact, never merged", async () => {
     vi.stubGlobal("fetch", async (url: string) => {
       const asked = new URL(url, "http://portal.test");
       const body = pagedLike(fixtureValue(FIXTURE_PARTITIONS), Number(asked.searchParams.get("limit")));
@@ -277,7 +277,115 @@ describe("dataset mode: rows, current stage, days in stage", () => {
     const { container } = mount({ getAlphaFleet: legacyFleet().getAlphaFleet, getManagerDataset: http.getManagerDataset } as unknown as ExecutionApi, "/execution/fleet?stage=paper");
     await loaded();
     expect(dataRows().map((row) => cell(row, "Current stage"))).toEqual(["Paper", "Paper"]);
-    expect(container.textContent).not.toMatch(/USDT|EUR/);
+    const rows = dataRows();
+    const parts = (row: HTMLElement, label: string) => [...row.querySelectorAll(`td[data-l='${label}'] .exec-fleet-part`)].map((part) => part.textContent);
+    const exact = (row: HTMLElement) => [...row.querySelectorAll("td[data-l='Net PnL'] .exec-mgr-num")].map((node) => (node.getAttribute("title") ?? "").split(" · ")[0]);
+    // Row 1: one USDT partition. A TRUE ZERO is a value (not a dash, not "Not available"); the published unrealized key is not a column.
+    expect(parts(rows[0]!, "Net PnL")).toEqual(["Paper · USDT0.00 USDT"]);
+    expect(exact(rows[0]!)).toEqual(["0"]);
+    expect(rows[0]!.querySelector("td[data-l='Net PnL'] .exec-mgr-num")?.getAttribute("data-zero")).toBe("true");
+    // Row 2: two currencies of one domain are TWO cells; the row's own net_pnl says MIXED_ECONOMIC_DOMAINS and nothing is summed.
+    expect(parts(rows[1]!, "Net PnL")).toEqual(["Paper · USDT0.00 USDT", "Paper · EUR-12.50 EUR"]);
+    expect(exact(rows[1]!)).toEqual(["0", "-12.5"]);
+    expect(cell(rows[1]!, "Net PnL")).not.toMatch(/-12\.5\d*\s*USDT|\+|MIXED/);
+    // Allocation: the fixture carries the key in query_options but no partition publishes it: a typed absence per partition, not 0.
+    expect(parts(rows[0]!, "Allocation")).toEqual(["Paper · USDTNot available"]);
+    expect(parts(rows[1]!, "Allocation")).toEqual(["Paper · USDTNot available", "Paper · EURNot available"]);
+    expect(cell(rows[0]!, "Allocation")).not.toMatch(/\b0\b/);
+    // Equity: the dataset does not carry equity_30d_end_value: Not published with its request id, not a figure.
+    expect(cell(rows[0]!, "Equity")).toBe("Not published (FE-013)");
+    expect(container.textContent).not.toMatch(/ACTUAL/);
+  });
+});
+
+describe("dataset mode: money columns when the dataset publishes the keys", () => {
+  it("prints Allocation / Net PnL / Equity from a Real-funded partition as published, signed and exact", async () => {
+    vi.stubGlobal("fetch", async (url: string) => {
+      const asked = new URL(url, "http://portal.test");
+      const body = pagedLike(fixtureValue(FIXTURE_LIFECYCLE_LIVE), Number(asked.searchParams.get("limit")));
+      body.query_options.metric_keys = [...body.query_options.metric_keys, "equity_30d_end_value"];
+      body.query_options.sort_fields = [...body.query_options.sort_fields, "equity_30d_end_value"];
+      body.query_options.economic_partition_required_for = [...body.query_options.economic_partition_required_for, "equity_30d_end_value"];
+      body.items.forEach((item: Draft, index: number) => {
+        const partition = item.economic_partitions[0];
+        const make = (value: string): Draft => ({ ...partition.metrics.net_pnl, value, unit: "MONEY", currency: "USDT", availability: "AVAILABLE", reason_code: null });
+        partition.metrics.allocation = make(index === 0 ? "1500.250000000000000001" : "0");
+        partition.metrics.net_pnl = make(index === 0 ? "-42.5" : "7");
+        partition.metrics.equity_30d_end_value = make("1457.750000000000000001");
+        item.metrics.allocation = partition.metrics.allocation;
+        item.metrics.net_pnl = partition.metrics.net_pnl;
+        item.metrics.equity_30d_end_value = partition.metrics.equity_30d_end_value;
+      });
+      return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    });
+    const http = createHttpApi({ policy: OPEN, readScope: {} });
+    mount({ getAlphaFleet: legacyFleet().getAlphaFleet, getManagerDataset: http.getManagerDataset } as unknown as ExecutionApi, LIVE_URL);
+    await loaded();
+    const rows = dataRows();
+    const titleOf = (row: HTMLElement, label: string) => [...row.querySelectorAll(`td[data-l='${label}'] .exec-mgr-num`)].map((node) => (node.getAttribute("title") ?? "").split(" · ")[0]);
+    expect(titleOf(rows[0]!, "Allocation")).toEqual(["1500.250000000000000001"]);
+    expect(titleOf(rows[0]!, "Net PnL")).toEqual(["-42.5"]);
+    expect(titleOf(rows[0]!, "Equity")).toEqual(["1457.750000000000000001"]);
+    expect(cell(rows[0]!, "Net PnL")).toBe("Real-funded · USDT-42.50 USDT");
+    // A true zero allocation is a figure, with its zero marker, not an absence.
+    expect(cell(rows[1]!, "Allocation")).toBe("Real-funded · USDT0.00 USDT");
+    expect(rows[1]!.querySelector("td[data-l='Allocation'] .exec-mgr-num")?.getAttribute("data-zero")).toBe("true");
+    expect(cell(rows[1]!, "Net PnL")).toBe("Real-funded · USDT+7.00 USDT");
+  });
+});
+
+describe("dataset mode: Map (tile size = published allocation of ONE partition, colour = health)", () => {
+  const mapApi = (withAllocation: boolean) => {
+    vi.stubGlobal("fetch", async (url: string) => {
+      const asked = new URL(url, "http://portal.test");
+      const body = pagedLike(fixtureValue(FIXTURE_PARTITIONS), Number(asked.searchParams.get("limit")));
+      body.groups = [];
+      if (withAllocation) {
+        const give = (partition: Draft, value: string, currency: string): void => {
+          partition.metrics.allocation = { ...partition.metrics.net_pnl, value, unit: "MONEY", currency, availability: "AVAILABLE", reason_code: null };
+        };
+        const [first, second] = body.items;
+        give(first.economic_partitions[0], "1000", "USDT");
+        first.metrics.allocation = first.economic_partitions[0].metrics.allocation;
+        if (second === undefined) return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+        // One book (one native profile) holds the USDT figure of both rows; the EUR figure is a second partition of the second row.
+        second.economic_partitions[0].partition.native_profile_ref = first.economic_partitions[0].partition.native_profile_ref;
+        give(second.economic_partitions[0], "250.5", "USDT");
+        give(second.economic_partitions[1], "40.000000000000000001", "EUR");
+        first.health = "READY";
+        second.health = "ATTENTION";
+      }
+      return new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/json" } });
+    });
+    const http = createHttpApi({ policy: OPEN, readScope: {} });
+    return { getAlphaFleet: legacyFleet().getAlphaFleet, getManagerDataset: http.getManagerDataset } as unknown as ExecutionApi;
+  };
+
+  it("draws one partition at a time; a row with no figure there is listed with its reason, never drawn as 0", async () => {
+    mount(mapApi(true), "/execution/fleet?stage=paper&view=map");
+    const map = await screen.findByTestId("fleet-map", undefined, SLOW);
+    const tiles = () => within(map).getAllByRole("listitem").filter((li) => li.classList.contains("exec-fleet-tile"));
+    // USDT is the first published partition: both rows have it. Sizes are geometry; the figure is the exact string.
+    expect(tiles().map((tile) => tile.textContent)).toEqual([expect.stringContaining("1,000.00 USDT"), expect.stringContaining("250.50 USDT")]);
+    expect(tiles().map((tile) => tile.getAttribute("data-health"))).toEqual(["ok", "attention"]);
+    expect(tiles().map((tile) => (tile as HTMLElement).style.flexGrow)).toEqual(["100", "25"]);
+    expect(within(map).queryByText(/EUR/, { selector: ".exec-mgr-num" })).toBeNull();
+    // EUR: only the second row publishes it; the first is NOT drawn and says why.
+    fireEvent.click(within(map).getByRole("button", { name: "Paper · EUR" }));
+    expect(tiles()).toHaveLength(1);
+    expect(tiles()[0]!.textContent).toContain("40.00 EUR");
+    expect(within(map).getByTestId("map-undrawn").textContent).toContain("Not drawn, no allocation figure in Paper · EUR");
+    expect(within(map).getByTestId("map-undrawn").textContent).toContain("Not available");
+    expect(whyText(within(map).getByTestId("map-undrawn"))).toContain("no economic partition matching");
+    // Nothing is added across the two partitions.
+    expect(map.textContent).not.toMatch(/1290|1250|total/i);
+  });
+
+  it("says plainly when no loaded row publishes an allocation, instead of drawing equal tiles", async () => {
+    mount(mapApi(false), "/execution/fleet?stage=paper&view=map");
+    const empty = await screen.findByTestId("map-empty", undefined, SLOW);
+    expect(empty.textContent).toContain("No loaded row publishes an allocation figure");
+    expect(document.querySelector(".exec-fleet-tile")).toBeNull();
   });
 });
 

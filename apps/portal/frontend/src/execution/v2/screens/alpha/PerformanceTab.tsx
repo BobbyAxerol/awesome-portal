@@ -21,6 +21,7 @@ import { NaWhy, NotAvailableLine, SectionPanel } from "../../blocks";
 import { ChartTools, DivBars, EquityPanel, Spark, type DivBarRow } from "../../charts";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
 import { Na } from "./cells";
+import { WindowedFigures, type DatasetReadState } from "./DatasetFigures";
 import { ROW_CAP, stageWord, type DeploymentRow, type EquityPanelInput, type StagePath } from "./model";
 import { Np } from "./np";
 import type { Read } from "./useAlphaReads";
@@ -37,6 +38,8 @@ export interface PerformanceTabProps {
   rows: readonly DeploymentRow[];
   /** Set on a SCOPED_V2 read: the body's reason for stating no money total (then no bar is drawn from a row). */
   noTotals?: string | null;
+  /** The Manager dataset read for this alpha and Book (windowed figures); absent when the caller does not read it. */
+  dataset?: DatasetReadState;
   env: ExecEnv;
   equity: Read<FinancialChartPayload>;
   drift: Read<StageDrift>;
@@ -168,6 +171,8 @@ export function PerformanceTab(props: PerformanceTabProps) {
       <SectionPanel title="Contribution" aside="Current">
         <Contribution rows={rows} noTotals={props.noTotals ?? null} />
       </SectionPanel>
+
+      {props.dataset ? <WindowedFigures read={props.dataset} /> : null}
 
       {/* Hi-fi keeps Cost drag and Forward observation as panels; every row says Not published. The four charts with no source stay on one line. */}
       <div className="exec-alp2-pair">

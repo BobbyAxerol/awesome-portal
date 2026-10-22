@@ -2,8 +2,8 @@
  * Fleet rows read from the Manager DATASET (FE-012 / FE-027), on the shared CardsTable.
  *
  * One row is an alpha version in one portfolio, as the dataset publishes it (the legacy table is one row per alpha). The
- * columns are identity plus the stage lifecycle and nothing financial: money lives in per-currency partitions and this screen
- * prints none. Every absence is a statement: no owner is "Not available"; no single stage names why; days in stage is
+ * money columns (Allocation, Net PnL, Equity) are the row's `economic_partitions`, one cell per partition, never summed or merged
+ * across currencies or economic domains (`PartitionFigures`). Every absence is a statement: no owner is "Not available"; no single stage names why; days in stage is
  * `Not published (FE-027)` with the typed reason on its title, never a dash and never 0.
  */
 import type { ReactNode } from "react";
@@ -13,8 +13,9 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { JourneySpine, NaWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { ManagerRow } from "../../readers/managerDataset";
-import { healthView, humanize } from "./fleetModel";
+import { FE, healthView, humanize, type UnpublishedFact } from "./fleetModel";
 import { inStageOf, lifecycleFlagOf, stageViewOf } from "./fleetDatasetModel";
+import { PartitionFigures } from "./PartitionFigures";
 import { spineStage } from "./FleetTable";
 
 import "../../css/fleet.css";
@@ -54,8 +55,14 @@ function InStageCell({ row }: { row: ManagerRow }) {
     : <NaWhy className="exec-fleet-np" text={view.text} reason={view.detail} />;
 }
 
+/** The requests that publish a money column when the dataset does not carry its metric key. */
+const ALLOCATION_GAP: UnpublishedFact = { fe: "BQ-FLEET-ALLOC", what: "Allocation" };
+const EQUITY_GAP: UnpublishedFact = { fe: "FE-013", what: "Equity" };
+
 export interface FleetDatasetTableProps {
   rows: readonly ManagerRow[];
+  /** `query_options.metric_keys` of the dataset the rows came from; `null` when unknown. */
+  metricKeys?: readonly string[] | null;
   /** The Alpha 360 of the row's alpha, with the context the Fleet carries. */
   hrefFor(row: ManagerRow): string;
   empty?: ReactNode;
@@ -65,7 +72,7 @@ export interface FleetDatasetTableProps {
   onOpen?(row: ManagerRow): void;
 }
 
-export function FleetDatasetTable({ rows, hrefFor, empty, selectedKey, onOpen }: FleetDatasetTableProps) {
+export function FleetDatasetTable({ rows, metricKeys = null, hrefFor, empty, selectedKey, onOpen }: FleetDatasetTableProps) {
   const columns: readonly CardsColumn<ManagerRow>[] = [
     {
       key: "alpha",
@@ -81,6 +88,9 @@ export function FleetDatasetTable({ rows, hrefFor, empty, selectedKey, onOpen }:
     { key: "portfolio", label: "Portfolio", render: (row) => row.portfolioId },
     { key: "stage", label: "Current stage", render: (row) => <StageCell row={row} /> },
     { key: "in-stage", label: "In stage", render: (row) => <InStageCell row={row} /> },
+    { key: "allocation", label: "Allocation", numeric: true, render: (row) => <PartitionFigures partitions={row.economicPartitions} metricKey="allocation" metricKeys={metricKeys} gap={ALLOCATION_GAP} /> },
+    { key: "pnl", label: "Net PnL", numeric: true, render: (row) => <PartitionFigures partitions={row.economicPartitions} metricKey="net_pnl" metricKeys={metricKeys} gap={FE.window} signed /> },
+    { key: "equity", label: "Equity", numeric: true, render: (row) => <PartitionFigures partitions={row.economicPartitions} metricKey="equity_30d_end_value" metricKeys={metricKeys} gap={EQUITY_GAP} /> },
     {
       key: "health",
       label: "Health",
