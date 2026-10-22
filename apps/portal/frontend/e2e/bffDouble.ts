@@ -22,6 +22,7 @@ import { answerAccount } from "./bffDoubleAccount";
 import { answerAlpha } from "./bffDoubleAlpha";
 import { answerGovernance } from "./bffDoubleGovernance";
 import { answerManager } from "./bffDoubleManager";
+import { answerReviewManager } from "../../fixture-bff/review-manager";
 import { answerOverview } from "./bffDoubleOverview";
 import { answerPortfolios } from "./bffDoublePortfolios";
 import { answerStage, isStageDeployment, withStageQuality } from "./bffDoubleStage";
@@ -1126,6 +1127,13 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     // The Manager series and Fleet dataset, and the three advisory governance reads: opt-in for the V2 lane, so the V1 stubs keep their 501.
     const published = answerManager(method, path, search) ?? answerGovernance(method, path, search, requestBody);
     if (published !== null) return published as Answer;
+    // The other five Manager dataset surfaces (fund, portfolio, alpha, account, deployment overviews): the fixture-bff review answerer
+    // serves them from the published canonical template (small scale: no generated universe), so a screen that reads them is stubbed
+    // instead of 501. Same bodies the preview's fixture BFF serves in the populated profile.
+    if (path.includes("/manager/")) {
+      const review = answerReviewManager(method, path, search, "populated");
+      if (review !== null) return review as Answer;
+    }
   }
 
   if (options.screensV2) {
