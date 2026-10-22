@@ -1045,6 +1045,15 @@ All7rows reviewed: available source facts accepted; exact remaining factory/
 reducer/command/P22/workload CHANGE actions stay in original phases. Financial/
 Manager/G2 cannot hold eligible native preparation; full08/read09 NOT_MET.
 
+**22Oct merged-source/all-mode trust review:** [53890231 and genuine issuer](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TS_PM_53890231_AND_ALL_MODE_MANAGER_TRUST_REVIEW_2026-10-22.md)
+records resolved PM conflict, unchanged owning contracts, current transport
+912fe9d8/lifecycle evidence and post-merge formattingcd6d8743. Genuine SGP
+Client CA78a6de84/root036ce3ad custody is located; actual three-mode ingress,
+JWT audience/profile and Manager upstream trust agree, Canary uses Live facts.
+Research issued leaf/chain and additive trust/config activation remain separate;
+no key/cert/runtime change or all-mode connected PASS. New Core§8 preparation
+ACK is credited, not still reported absent; do not force its12:24 READY bound.
+
 **Owner coordination22Oct:** [Single TS/PM→Edge→Core request](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md)
 is the current cross-owner action index. PM is a TS upgrade component; Edge is
 Core's single integration counterpart and owns return review/distribution.

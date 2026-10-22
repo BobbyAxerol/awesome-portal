@@ -31012,7 +31012,116 @@ PASS. Core cumulative return rechecked11:54UTC remains exactd5f22ff3, no new
 matched ACK at that observation; delivered review remains exactd8bc917b.
 Do not confuse successful delivery/preparation with Core ACK or source READY.
 
+### Original08 TS–PM merged-source and all-mode Manager trust review —22Oct2026
 
+**OWNER_APPROVED / IN_PROGRESS.** Bobby approves two independent tasks now:
+compare exact TS–PM merge53890231 with existing Edge authority/generation/
+native pins/Rust adapters, and locate genuine Manager CA custody/issuer plus
+identity/audience/configuration for Paper/Sandbox/Canary/Live. This is not
+permission to create keys, issue/replace active certificates, write source DB,
+arm/install native28446, restart/reconfigure shared listeners or enable traffic.
+No peer TS/PM/Core code/index/branch may be changed. Preserve all original
+receipts/UNKNOWN custody and existing return history. Existing08 guide and
+single TS–PM–Edge→Core request/review remain the authority/action index.
 
+Goal/exit for THIS approved slice: enumerate exact changed versus unchanged
+owning contracts and generation/native inputs at53890231; validate current
+Rust consumer compatibility or identify precise source break with evidence;
+trace actual CA public fingerprint to documented custody/service references
+without exposing private material; return truthful per-mode Manager trust and
+audience status plus exact missing owner/action. Source merge is not deployed
+runtime or native installation. Paper-named identity is neither all-mode grant
+nor automatic all-mode refusal; inspect actual verifier behavior/contracts.
 
+Test gates: committed-tree/hash/merge-resolution and typed-field/state/mode
+checks; existing focused correctness validators only when impacted, under
+CPU/memory caps and root34b; public certificate/CSR/JWKS/SPKI/chain validity;
+actual read-only runtime mount/config pins. No duplicated broad suites or
+absolute load campaign. Publish sanitized evidence/updated current inputs to
+Core existing consolidated mailbox; keep old hash-bound native PREPARED packet
+immutable. R0 Markdown scope/diff/link/secret/tracking before coherent commit.
+Rollback is additive correction of this review, not revert a peer merge or
+runtime trust. Cleanup exact disposable verification resources; preserve
+active/explicit rollback images and public/private custody references.
+Full08/read09 remain NOT_MET until genuine connected receipts, no phase change.
 
+**Tested review,12:23UTC:** completed the two independent approved tasks in
+[source/trust return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TS_PM_53890231_AND_ALL_MODE_MANAGER_TRUST_REVIEW_2026-10-22.md).
+Exact53890231 parents/tree verified, unresolved paths0; PM advanced to
+cd6d8743 formatting, not an installed revision. Zero changed paths under
+economics/owner facade/PM baseline/DB migrations versus PM parent;9 committed
+pin equalities at parent/merge/post-format PASS. Corrected current handoff
+transport from historical descriptor3885c72d to actual912fe9d8 plus existing
+82f237b9 lifecycle evidence; no source wire break or Rust patch required.
+Generation/native input guards and union release seal preserved. New merged/
+formatted binary/image must be qualified by TS/PM; old121ce77e/native28ea and
+generation-head0/finite-installcounter8 are not interchangeable. CLI catalogue
+validator74 entries PASS; AST onlycmd_ops changes/61other functions unchanged,
+new emergency-close per-invocation retry key is not a new command permission.
+Canonical N19 source/static three-profile compatibility gate PASS.
+
+Located actual SGP PKI custody at
+`/home/bobby/secure/portal-execution-pki-v1/authority`: Client CA78a6de84
+matches HK mounted CA; root036ce3ad, serverCA63354fd3. Keys0600/Bobby checked
+metadata only, never read/copied/used. SGP intermediate/root and client-purpose
+checks2PASS. Actual Rust8443/4/5 gates true with distinct audience/profile;
+Canary uses governedLive, not a fourth enum or invented key. Actual verifier
+uses trusted TLS workload plus issuer/audience/environment/profile authorization,
+not Paper-named SAN as a mode grant/refusal. Separate HK ManagerCA e439296e,
+server/client leaves valid through15Nov;2chain+2hostname+1client-purpose checks
+PASS. Both actual per-mode facade/issuer config pairs match subject/EdDSA
+audience/TTL/cert binding and command/broker/CLI false. Research CSR signature/
+SPKI and public-only additiveJWKS/exactoldkey retention PASS; new Research
+leaf/chain and activation are NOT_INSTALLED. Resolved issuer lookup is not
+relabelled a missing external reference; no issuance/replacement authorized.
+
+Read current Core return after hash drift: newrawbf623144 at12:23 includes
+12:10 ACK_PREPARATION_PINS and12:13 backup/H16 capacity checkpoint. ACK is
+credited, not absent; >6min remaining/READYbefore12:24 required by Core. This
+two-task review does not install/arm native or fabricate READY; preserve
+original8/revoked custody and old hash-bound proposals, prepare a new exact
+window in subsequent original08 work rather than forcing an undersized slot.
+Core owns PKI leaf/inactive mode config and accepted CHANGE implementation;
+TS/PM owns final merged native/image/authority return; Edge owns binding and
+connected evidence after reviewed runtime change, not another generic approval.
+
+Runtime impact0: actual3Rustd6aa,3Proxyaa14 and6Manager28ea/0bd4 retain
+their existing config hashes/restart0; native28445 unchanged, no28446 install.
+Stablea9b10385 and explicitly retained rollback artifacts untouched. Docker
+inventory112images/43active,599cacheentries68.38GB shared; no resource created
+by this slice, no broad prune. Disk observation used335259955200B/free183656947712B;
+no deletion/reclaimed-space claim. Active six Portal feature worktrees remain
+documented/not merged; canonical54c6f5f3 and ownedfeature23a7c189 unchanged at
+review. Verification:R0 staged Markdown/link/tracking/publication checks pending
+below; no new Rust/PG/load/security-runtime test or CI minutes consumed.
+
+**Delivery12:25:30UTC:** public return16476B/rawSHA256
+`823aecfd3aa8f15a65f0870ff051916dda8a620eb133cada4aca40e52f578439`
+delivered and read-back equal at SGP Core
+`/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TS_PM_53890231_AND_ALL_MODE_MANAGER_TRUST_REVIEW_2026-10-22.md`.
+Appended exact locators to existing Core Unified/sync/original mailbox;
+prefix/index unchanged, no peer code/config change. Tracking reconciliation
+PASS. Approved source/issuer/config review **OWNED_SLICE_COMPLETE / SOURCE_ONLY**;
+full08/read09 still NOT_MET, no all-mode Research binding/install claim. Core
+PKI now has actual issuer reference and existing CSR; next permitted Manager
+action is issued public leaf/chain + reviewed inactive configuration/precise
+additive rollout set, not key regeneration or reusing stable private material.
+Separately native requires a fresh feasible slot after12:24 READY bound, not
+another assertion that Core never ACKed. Local coherent3Markdown R0 publication
+follows; no push/merge/CI or cleanup of other owners' resources authorized.
+
+**Final R0:**3explicit Markdown staged paths/5indexed links/secret scan/
+`git diff --cached --check` PASS; tracking reconciliation PASS. Three original
+peer WIP source hashes unchanged; unstaged scope remains exactly peer C5+10,
+CONNECTED_READ+56 and actualREAD+20/−3. No private material or generated
+integrity ledger staged. Narrow Markdown-only commit uses Bobby identity and
+the existing owner-approved R0§10.10d exception, not a code/runtime hook bypass.
+
+**Final parallel-head readback:** PM advanced again to9c99e0dc69977956281fd22d10685fec142d4f37
+viaadafed4f (split Cargo CLI/writer feature resolution) and9c99e0dc (forward
+physical-fence kwargs in owning poller fixture). Read exact3-path delta from
+cd6d8743: Dockerfile/journal/test only; authority/generation/transport/native
+source pins remain equal. Latest Dockerfile49cfc96d differs from frozen merge
+42aded57; both are explicit source pins, neither a deployed image. Delivered
+review823aecfd stays immutable; this addendum/current HEAD also goes to the
+same Core mailbox, without silently repinning any accepted runtime artifact.
