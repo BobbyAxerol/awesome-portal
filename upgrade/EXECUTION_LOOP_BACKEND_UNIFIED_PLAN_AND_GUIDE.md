@@ -29968,6 +29968,154 @@ private rollout backup remain retained rollback. Stable a9b10385 release path
 unchanged. This docs slice is committed locally only, no push/merge; final
 commit SHA is reported from Git after scoped R0 checks.
 
+### Core stage1 ACK actually delivered —22Oct10:19 Asia/Saigon
+
+Core integration `docs/research-loop-plan@4ce35cb8` has committed the requested
+`CORE009_CURRENT_08_BINDING_RETURN_2026-10-22.md`; the exact public file is
+already in this EPG10-08 directory, SHA256
+`39be21784b34682a8f9a8cb7a8368179c4d3fadf9a8159760656b20435fd145d`.
+Additive `CORE009_CURRENT_08_TRUST_DELIVERY_AND_BOUNDS_2026-10-22.md`, SHA256
+`6c5dafea32d90d4f8ab5bca87ca705d455803ec8c3b667803c98dc22d8b0dce4`,
+records actual authorized8PM-file delivery/8hash matches and Bobby C288
+Research-only approval. No Core private key transferred or cap applied.
+Fresh native trust12504f44 expires23Oct10:00:58 Asia/Saigon; current offered
+slot22Oct10:15-10:45 Asia/Saigon/03:15-03:45UTC needs Edge real binding ACK.
+**Edge ACT_NOW:** prepare the matching new acceptance/install/revoke/source
+pins, return them for Core hash ACK, then observe actual SDK READY. Do not
+reuse expired6f082bf9/section10.5. Core will then issue official READ/session;
+no source/grant/session or connected PASS is implied by this notification.
+P22/G2 separate source return is also delivered, SHA256
+`e6204be971b0983c7b8d7881cd17b9b0d4e187df6c3c0a9dfc8e9f937de0e820`.
+Eligible bounded READ does not wait for its later landing/install, independent
+STREAM/control, Manager, financial publication or calibration/load inputs.
+Notification is Markdown-only; preserve WIP/index and stable/dev/provider28445.
+
+<a id="original08-edge-prepared-reply-20261022"></a>
+
+### Original08 — fresh Edge PREPARED reply, 22 October 2026
+
+**IN_PROGRESS / PREPARED target, not ACK_MATCHED or SDK_READY.** Bobby directs
+execution of the received
+[Core prompt](evidence/execution-edge-v1_2/EPG10-08/PROMPT_FOR_EDGE_08_CORE009_REPLY_2026-10-22.md)
+and [current action handoff](evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_08_ACTION_HANDOFF_2026-10-22.md),
+following detailed guide EPG10-08 and original handoff§11. Confirmed feature
+checkout feat/execution-edge-upgrade-v1_2@e021276a; retain peer main/binding
+hunks and all unrelated untracked input/source. Four delivered immutable
+receipts must match Core's declared hashes before preparation. C288 is now
+owner-approved Research-only but not installed; TS admission remains4096/8.
+
+**Goal/scope/invariants:** reuse frozen SDK28ea3958/lifecycle1ee3a15d/closure
+32119f66 and existing private operator/test harness. Validate new12504f44 PM
+trust, create new acceptance/install/revoke/runtime bytes in one exclusive
+0700private directory, repin configuration references and public keys, run
+modeled regression/SDK db0 validation/real RR READ ONLY preflight. Proposed
+slot22Oct13:00–13:30 Asia/Saigon (06:00–06:30UTC); never use expired10:15 slot
+or6f082bf9. Protected TS owner and human subject/mapping are different and
+must remain unchanged. No install, role/grant/session, listener or production
+data mutation during PREPARED. No stable/dev/provider28445 modification;
+no P22/STREAM/Manager/financial/calibration prerequisite for bounded READ.
+
+**Test/exit/rollback:** verify exact input hashes, all trust file protections,
+validity/chain/key binding and derived public JWKS; unchanged operator logic
+apart from exact configuration pins; modeled8cases, real SDK validation,
+actual target/system/catalogue/fingerprint/admission/current-head readback
+with pools0 and no ISSUE/ENTER/listener. Write requested public reply, link
+it here, return/deliver full path+SHA256 with actual PREPARED evidence and
+missing-field owner/action. Keep CORE_WINDOW_ACK_SHA256=None. Only a later
+received exact hash ACK permits arm/install in the matched finite slot and
+real READY observation. UNKNOWN keeps original custody; no fresh-key retry.
+Cleanup capped --rm verification workers; retain private source/trust inactive
+for ACK and finite recovery. No build/push/merge/CI or new phase implied.
+
+**Actual PREPARED and tests22Oct12:05 Asia/Saigon:** private directory
+`/home/bobby/secure/edge-core009-prepared-20261022-JDChXXKN/`,0700/10files0600.
+Acceptancebc432e2e/install1de53174/revoke211c3ab5/CAS0→1→2; runtime940a3a71,
+install7daffe5f/documentf270f140, revoke8fdf944a/documentb6847b29. Exact public
+reply [EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md)
+SHA256 `b92e487466fc46848d19dd2452c05ffdadb14ba077881c8fe943b90a3258f229`.
+Slot13:00–13:30 Asia/Saigon/06:00–06:30UTC, Core ACK requested by12:50;
+CORE_WINDOW_ACK_SHA256 remainsNone, no source listener/head/grant/session.
+Source_set_ref is honestly NOT_PUBLISHED_AT_PREPARED: SDK returns native
+receipt/revision/document/fingerprint after installation; Core maps its real
+current source set with official READ afterward, not an invented UUID label.
+
+Four received receipt SHA256 match.31actual trust/mapping/protection/crypto
+checks PASS. Eight unchanged modeled glue cases PASS after preloading crypto
+outside patch.dict's module rollback. Initial direct host run2PASS/6ERROR
+(PyO3 extension re-import), plus first metadata command's unavailable UTC
+certificate property, remain failed attempts; corrected compatible invocation
+and timestamp/signature APIs retaken, no dependency install/source weakening.
+`sudo -n python3 .../invoke_native.py validate` EXIT0/stderr0/db0/listenerfalse,
+actual frozen SDK digests match. `.../invoke_readback.py` EXIT0/stderr0, RR
+READ ONLY actual DB/system/login/catalogue/function/fingerprint/admission and
+control checks PASS; fresh head absent, BUSINESS_READ_ACCEPTANCE_MISSING,
+oldb922head4revoked unchanged, issued0, physical pools[0,0]. Source only,
+not authority or connected acceptance. Ten copied files mechanically repinned
+only for IDs/dates/trust/config references; frozen SDK/lifecycle unchanged.
+
+**Actual delivery12:06:57 Asia/Saigon:** exact11585-byte public reply reached
+Core canonical `upgrade/execution_loop/evidence/ELP2-10/` under the same name,
+hash above matches. Three append-only locators reached Core Unified/sync/task,
+all prefix/readbacks PASS, Core index unchanged. Core readbackbce2fd1e and
+Claude2465c350 replace historical source observations, not installed-image
+claims. DELIVERED_PREPARED / HASH_ACK_PENDING. Core owns the exact matching
+ACK/config now; Edge owns install/READY after ACK only. Full08/09 NOT_MET;
+no P22/STREAM/Manager/control/calibration hold on eligible bounded READ.
+
+**Safety/cleanup observation:** both capped --rm verify workers are absent;
+no new image/cache built or owned disposable directories to remove. Active
+private draft/trust retained inactive for ACK/recovery. Current shared image
+ID-set SHA256fefdd2cf6b36fca75fbd1cb5cfa754ff035c60c5ea3bc04563f05c0e7818628d,
+BuildKit572records; no broad prune. Before disk used324528820224/free194388082688B.
+Paper projection worker independently restarts (observed restart6718/start
+12:03:46 Asia/Saigon), already restarting before our SDK verification. No
+action taken on that unrelated operational worker; source preflight is the
+separate native DB path. This is NOT an unchanged-runtime/capacity claim.
+Runtime tuple/disk follow-up and R0 publication checks are recorded below.
+
+**Runtime reconciliation / scoped cleanup follow-up:** canonical source remains
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+feat/manager-v2-paper-read@54c6f5f3cccd68f400f4dd25ae6f4b17320a7db4;
+active feature is this upgrade-v1_2 checkout/feat/execution-edge-upgrade-v1_2.
+Actual three execution-edge services retain image
+`sha256:d6aa7a510ddfbc3fc2080b19eebfd70818377a4e59690247195ada7dd92aff2e`,
+restart0/configs Paper6180b9bf/Sandboxcd79e9c6/Live98a191c7. Three Source Proxy
+services retain `sha256:aa14e21c546997a94c61238ee46cf92cb650e822c4ea22f357090e275886246b`,
+restart0/configs21786bb0/da4b44c0/9bb20c88. Projection workers use d6aa;
+configs95e96a9b/12294191/1582b40c, Paper restart6725, Sandbox/Live0. Three
+projection-postgres retain
+`sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685`,
+restart0/config79c88b6a. Paper worker ongoing restart is outside this binding;
+operational owner should inspect its bounded error/retry path separately.
+Do not treat that observation as our restart or as capacity evidence.
+Current Core a96/schema149 and prior9cf5/rollout backup are owner-return pins,
+not changed here; stable release remains
+`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy`.
+SDK28ea remains the named active qualification dependency. All shared images,
+BuildKit, volumes and rollback artifacts retained; no owned test image/cache.
+After disk used325686120448/free193230782464B; concurrent growth is not own
+reclamation. Both named preflight containers absent; only active private
+draft/trust retained deliberately. Cleanup complete for this PREPARED slice.
+
+**Publication scope:** version this reply, this owned journal hunk and guide
+update as one coherent R0 slice. Received public Core inputs remain unchanged
+owner files, already published on Core's canonical source branch; do not scoop
+peer input/WIP into this commit or rewrite financial context outside this task.
+Preserve all other untracked files and the original main10line/binding56line hunks.
+Run document tracking/link/staged diff checks; no heavy hook/build/hosted CI
+or push/merge. Record actual verification/commit from Git; handoff remains
+DELIVERED_PREPARED with Core exact hash ACK outstanding, not phase closure.
+
+**Actual final checks:** Edge tracking EXIT0; Core tracking EXIT0 and repeated
+remote reply SHA256 match after delivery. Six copied Python ASTs preserve
+identical logic after normalizing configuration literals; runtime differs
+only at eight exact acceptance/trust/workload reference paths. Protected
+owner/admission/bounds unchanged. No matching fresh Core ACK found in the
+checked current return directory at this cut; don't arm the prepared helper.
+Verification:R0 staged Markdown diff/path/link checks precede local commit;
+private source configuration proof and real SDK preflight are recorded above,
+not mislabeled as code-hook or connected PASS. Hosted CI minutes0.
+
 
 
 

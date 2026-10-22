@@ -1036,6 +1036,16 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Current PREPARED22Oct12:05 Asia/Saigon:**
+[fresh Edge reply](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md)
+uses new trust12504f44, acceptancebc432e2e/runtime940a3a71 and proposed
+13:00–13:30 Asia/Saigon slot.31trust checks/8modeled cases PASS, frozen SDK
+db0 validation and actual RR READ ONLY source/control preflight EXIT0/pools0.
+UNARMED pending Core exact hash ACK; no install/session/listener/connected
+proof. C288 is now approved Research-only, not applied here. Eligible bounded
+READ does not wait for P22/STREAM/Manager/calibration. See
+[current journal](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-edge-prepared-reply-20261022).
+
 **Current owner action22Oct09:47 Asia/Saigon:**
 [handoff §11](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#11-current-owner-action--22-october-2026)
 supersedes the expired §10.5 action window. Successor is installed; require
