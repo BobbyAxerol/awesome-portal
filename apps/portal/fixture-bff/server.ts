@@ -17,8 +17,10 @@ try {
 
 const server = createFixtureServer(config);
 server.listen(config.port, config.host, () => {
+  const address = server.address();
+  const port = address !== null && typeof address !== "string" ? address.port : config.port;
   process.stdout.write(
-    `fixture-bff: ${config.laneLabel} on ${config.host}:${config.port} scale=${config.scale} now=${config.nowIso} writes=${config.writes} (NOT acceptance evidence)\n`,
+    `fixture-bff: ${config.laneLabel} on ${config.host}:${port} scale=${config.scale} now=${config.nowIso} writes=${config.writes} profile=${config.reviewProfile} (NOT acceptance evidence)\n`,
   );
 });
 

@@ -42,6 +42,8 @@ services:
       # Optional knobs from the host-bound env file; an empty value means "server default".
       # FIXTURE_LANE_LABEL is deliberately not overridable here: the image fixes it to FIXTURE_LAB.
       FIXTURE_SCALE: ${FIXTURE_SCALE:-medium}
+      # Data-only opt-in. Never a real-upstream fallback or a production profile.
+      FIXTURE_REVIEW_PROFILE: ${FIXTURE_REVIEW_PROFILE:-sparse-realistic}
       # Default `refuse`: every non-GET is 405, so the preview never shows a fake successful command.
       # `doubles` answers the canned successes the Playwright specs use (they store nothing).
       FIXTURE_WRITES: ${FIXTURE_WRITES:-refuse}

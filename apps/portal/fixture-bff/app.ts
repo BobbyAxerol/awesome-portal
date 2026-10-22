@@ -18,6 +18,9 @@ import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "../frontend/e2e/bffDoubleV2";
 import { ACCESS_DOUBLE_DEFAULT_USER } from "../frontend/e2e/bffDoubleAccess";
 import { setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../frontend/e2e/bffScale";
+import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
+import { answerReviewManager } from "./review-manager";
+import { transformReviewBody } from "./review-relations";
 
 export const LANE_HEADER = "x-fixture-lane";
 export const DEFAULT_LANE = "FIXTURE_LAB";
@@ -35,6 +38,8 @@ export interface FixtureConfig {
   writes: "doubles" | "refuse";
   overview: Partial<OverviewDoubleVariants>;
   users: UsersDoubleVariant | null;
+  /** Opt-in server-only data. Never a browser/real-API fallback. */
+  reviewProfile: ReviewProfile;
 }
 
 /* ── configuration ──────────────────────────────────────────────────────── */
@@ -73,6 +78,8 @@ export function loadConfig(env: Record<string, string | undefined>): FixtureConf
 
   const writes = text("FIXTURE_WRITES") ?? "doubles";
   if (writes !== "doubles" && writes !== "refuse") throw new ConfigError("FIXTURE_WRITES must be doubles or refuse");
+  const reviewProfile = text("FIXTURE_REVIEW_PROFILE") ?? "sparse-realistic";
+  if (!isReviewProfile(reviewProfile)) throw new ConfigError("FIXTURE_REVIEW_PROFILE must be sparse-realistic, populated or layout-stress");
 
   let overview: Partial<OverviewDoubleVariants> = {};
   let users: UsersDoubleVariant | null = null;
@@ -106,6 +113,7 @@ export function loadConfig(env: Record<string, string | undefined>): FixtureConf
     writes,
     overview,
     users,
+    reviewProfile,
   };
 }
 
@@ -140,6 +148,7 @@ function send(response: ServerResponse, config: FixtureConfig, status: number, b
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
     [LANE_HEADER]: config.laneLabel,
+    "x-fixture-profile": config.reviewProfile,
     ...headers,
   });
   response.end(payload);
@@ -183,6 +192,9 @@ function laneBody(config: FixtureConfig): Record<string, unknown> {
     scale: config.scale,
     fixture_now_iso: config.nowIso,
     writes: config.writes,
+    review_profile: config.reviewProfile,
+    review_catalog: "/__fixture/review",
+    real_api_fallback: false,
   };
 }
 
@@ -191,7 +203,14 @@ function answererOptions(config: FixtureConfig): FixtureAnswererOptions {
 }
 
 function answerFor(config: FixtureConfig, request: BffRequest): BffResponse | null {
-  return answerFixtureRequest(request, answererOptions(config));
+  const profile = config.reviewProfile;
+  const review = profile === "sparse-realistic" ? null : answerReviewManager(request.method, request.path,
+    new URLSearchParams(request.search), profile);
+  const answered = review === null ? answerFixtureRequest(request, answererOptions(config)) : {
+    ...review, headers: { "content-type": "application/json" },
+  };
+  if (answered === null || profile === "sparse-realistic" || answered.status !== 200 || request.method !== "GET") return answered;
+  return { ...answered, body: transformReviewBody(request.path, answered.body, profile) };
 }
 
 export function createFixtureServer(config: FixtureConfig): Server {
@@ -227,6 +246,16 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
   }
 
   // The lane endpoints belong to this server alone.
+  if (url.pathname === "/__fixture/review" || url.pathname === "/__fixture/review.html") {
+    if (method !== "GET") {
+      send(response, config, 405, { error: "FIXTURE_METHOD_NOT_ALLOWED" }, { allow: "GET" });
+      return;
+    }
+    const html = url.pathname.endsWith(".html");
+    send(response, config, 200, html ? reviewHtml(config.reviewProfile, config.scale) : reviewCatalog(config.reviewProfile, config.scale),
+      html ? { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'" } : {});
+    return;
+  }
   if (url.pathname === LANE_PATH || url.pathname === HEALTH_PATH) {
     if (method !== "GET") {
       send(response, config, 405, { error: "FIXTURE_METHOD_NOT_ALLOWED" }, { allow: "GET" });
@@ -273,7 +302,7 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
     const answered = answerFor(config, { ...request, method: "GET" });
     if (answered === null) send(response, config, 404, { error: "FIXTURE_ROUTE_NOT_SERVED" });
     else {
-      response.writeHead(answered.status, { ...answered.headers, "cache-control": "no-store", [LANE_HEADER]: config.laneLabel });
+      response.writeHead(answered.status, { ...answered.headers, "cache-control": "no-store", [LANE_HEADER]: config.laneLabel, "x-fixture-profile": config.reviewProfile });
       response.end();
     }
     return;

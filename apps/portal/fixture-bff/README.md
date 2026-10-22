@@ -89,6 +89,7 @@ Read through `loadConfig`; no file, no secret. A bad value stops the process wit
 | `FIXTURE_HOST` | `0.0.0.0` | bind address. Wide open on purpose: the container network is private and nginx is the only caller. Never publish this port |
 | `FIXTURE_LANE_LABEL` | `FIXTURE_LAB` | value of `X-Fixture-Lane`; must start with `FIXTURE_LAB` |
 | `FIXTURE_SCALE` | `medium` | `small` (the specs' rows), `medium`, `large`: see `ROUTES.md` |
+| `FIXTURE_REVIEW_PROFILE` | `sparse-realistic` | `sparse-realistic` preserves existing answers; `populated` adds Manager data and known account links; `layout-stress` also uses long display labels and denser series. Server/test-only, not a UI flag |
 | `FIXTURE_NOW_ISO` | `2026-08-22T13:00:00Z` | instant the generated operations are placed relative to (see the clock note in `ROUTES.md`) |
 | `FIXTURE_USER_ID` | `principal-visual-baseline` | the id of the fixture user: `/api/auth/context`, `/api/admin/access/self` and the Access screen all describe it. It is a label, not an account; there is no reason to change it now that the fixture signs itself in |
 | `FIXTURE_WRITES` | `doubles` | `refuse` turns every non-GET into `405` |
@@ -98,6 +99,50 @@ Limits: request bodies are capped at 1 MiB (`413`), header and request timeouts 
 there is no outbound network call and no state between requests. Answers are deterministic: the same
 request twice gives the same bytes (volume is generated from a fixed seed, with no `Math.random`
 and no clock).
+
+## Explicit populated/layout review (22 October 2026)
+
+Use the **same HTTP API and the same accepted frontend**, but a separate fixture origin/process.
+Never catch a failed real Edge read and substitute a fixture. The existing sparse-realistic default
+and L0 canonical files are unchanged. `X-Fixture-Profile`, `X-Fixture-Lane`, `/__fixture/lane` and
+`/__fixture/review` identify the active lane. `/__fixture/review.html` is a plain link index, not a
+new product screen.
+
+- `populated`: all six Manager dataset surfaces; exact-string NAV/RETURN/NET_PNL with 240 points;
+  shared scaled resource IDs, text search/filter/sort/grouping and bound forward/back cursors.
+- `layout-stress`: the same contract, with 1440 points and long UTF-8 display labels. Select
+  `FIXTURE_SCALE=large` for 120 generated Alphas, 240 accounts and 1500 blotter orders. Responses
+  remain paginated/bounded; a large universe is not permission to render all rows at once.
+- Both retain true zero, negative values, null/typed absence, explicit gaps and mixed-currency
+  separation. Score remains `policy_pending`. Unsupported numeric/window/economic dataset queries
+  are explicit 400s, not silently ignored. `ALL` and special negative workspaces keep their gaps.
+- Three known Portfolio account aliases resolve to existing Account fixtures. This fixes links,
+  **not** an economic tie-out across the historical fixture books. Unmatched IDs stay refused.
+- This does not fill a missing contract or a hard-coded UI placeholder. Consumer gaps belong in
+  the Claude handoff; they must not be hidden by relabelling synthetic source facts as qualified.
+
+Run a disposable private process (stop with Ctrl-C):
+
+```bash
+cd apps/portal/fixture-bff
+node build.mjs
+FIXTURE_HOST=127.0.0.1 PORT=4100 FIXTURE_SCALE=large FIXTURE_REVIEW_PROFILE=populated FIXTURE_WRITES=refuse node dist/server.mjs
+```
+
+The standalone bundle build takes no product build. For browser measurements against an already
+running loopback preview, run the focused config from `apps/portal/frontend`:
+
+```bash
+npx playwright test -c playwright.fixture-review.config.ts --workers=1
+```
+
+It starts its **own** bundled fixture servers on ephemeral loopback ports, intercepts every API
+request inside the test browser only, and measures 25 routes/subtabs × two profiles × 1280/660px.
+It records API bytes/status, console, page overflow and table/chart/panel bounds in test attachments.
+No shared nginx, API credentials, database, accepted pixel baseline or real service is changed.
+It is a fixture/UI probe, **not** a HiFi comparison or connected API acceptance receipt. Servers
+are stopped after the run. Remove the profile environment variable to restore sparse answers;
+turn the existing fixture overlay off for actual API review. No migration or data cleanup is needed.
 
 ## Cutover to the real BFF
 

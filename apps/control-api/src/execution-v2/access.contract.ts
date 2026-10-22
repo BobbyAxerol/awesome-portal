@@ -21,6 +21,16 @@ export const accessAction = z.enum(ACCESS_ACTIONS);
 export type AccessAction = z.infer<typeof accessAction>;
 export const accessText = z.string().min(1).regex(/^[^\u0000-\u001f\u007f]+$/u)
   .refine(value=>[...value].length<=256,"TEXT_TOO_LONG");
+/** Browser writes must be readable by the strict access consumers. Do not
+ * tighten accessText itself: it also decodes immutable legacy facts. These
+ * predicates preserve the submitted bytes (no trim/normalization), and never
+ * apply to opaque revisions or source receipts. Same unsafe set as the FE
+ * manager/access text readers, including malformed UTF-16. */
+const unsafeAccessWriteText=/[\u0000-\u001f\u007f-\u009f\u061c\u180e\u200b-\u200f\u202a-\u202e\u2060-\u2064\u2066-\u2069\ufeff]/u;
+const malformedAccessWriteText=/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/u;
+const readableAccessWriteText=(value:string):boolean=>
+  value.trim().length>0&&!unsafeAccessWriteText.test(value)&&!malformedAccessWriteText.test(value);
+export const accessWriteText=accessText.refine(readableAccessWriteText,"UNSAFE_ACCESS_WRITE_TEXT");
 export const resourceKind = z.enum(["ROOT", "PORTFOLIO", "ALPHA", "ALPHA_VERSION", "DEPLOYMENT", "ACCOUNT", "BINDING", "USER"]);
 export const accessResource = z.object({ kind: resourceKind, id: accessText }).strict();
 export type AccessResource = z.infer<typeof accessResource>;
@@ -36,22 +46,30 @@ const environments = z.array(executionEnvironment).min(1).max(3).refine(v => new
 const actionSet = z.array(accessAction).max(ACCESS_ACTIONS.length).refine(v => new Set(v).size === v.length, "DUPLICATE_ACTION");
 const accessReason = z.string().min(1).regex(/^[^\u0000-\u001f\u007f]+$/u)
   .refine(value=>[...value].length<=512,"TEXT_TOO_LONG");
+const accessWriteReason=accessReason.refine(readableAccessWriteText,"UNSAFE_ACCESS_WRITE_TEXT");
+const accessWriteSelector=resourceSelector.superRefine((selector,context)=>{
+  const entries=selector.kind==="EXPLICIT_RESOURCE_SET"?selector.ids.map((value,index)=>({value,path:["ids",index]})):
+    selector.kind==="PORTFOLIO_MEMBERSHIP"?selector.portfolio_ids.map((value,index)=>({value,path:["portfolio_ids",index]})):
+    selector.kind==="ROOT_SCOPE"?[{value:selector.root_id,path:["root_id"]}]:[];
+  for(const entry of entries)if(!readableAccessWriteText(entry.value))
+    context.addIssue({code:z.ZodIssueCode.custom,message:"UNSAFE_ACCESS_WRITE_TEXT",path:entry.path});
+});
 export const grantChange = z.object({
-  subject_user_id: accessText, action: accessAction, effect: z.enum(["ALLOW", "DENY"]),
-  selector: resourceSelector, environments, valid_from_ms: utcMilliseconds,
+  subject_user_id: accessWriteText, action: accessAction, effect: z.enum(["ALLOW", "DENY"]),
+  selector: accessWriteSelector, environments, valid_from_ms: utcMilliseconds,
   valid_until_ms: utcMilliseconds.nullable(), delegable_actions: actionSet,
-  ceiling_grant_id: accessText, expected_ceiling_revision: opaqueRevision,
+  ceiling_grant_id: accessWriteText, expected_ceiling_revision: opaqueRevision,
   expected_policy_revision: opaqueRevision, expected_ts_membership_revision: opaqueRevision.nullable(),
-  reason: accessReason,
+  reason: accessWriteReason,
 }).strict().refine(v => v.valid_until_ms === null || v.valid_until_ms > v.valid_from_ms, "INVALID_INTERVAL")
   .refine(v => v.action === "access.grant" || v.delegable_actions.length === 0, "ONWARD_DELEGATION_REQUIRES_ACCESS_GRANT");
 export type GrantChange = z.infer<typeof grantChange>;
 export const accessWorkspaceQuery = z.object({ workspace_id: accessText }).strict();
-export const accessRevoke = z.object({ workspace_id: accessText, expected_policy_revision: opaqueRevision,
-  expected_grant_revision: opaqueRevision, reason: accessReason }).strict();
-export const accessProposal = z.object({ workspace_id: accessText, change: grantChange,
+export const accessRevoke = z.object({ workspace_id: accessWriteText, expected_policy_revision: opaqueRevision,
+  expected_grant_revision: opaqueRevision, reason: accessWriteReason }).strict();
+export const accessProposal = z.object({ workspace_id: accessWriteText, change: grantChange,
   preview_digest: z.string().regex(/^sha256:[0-9a-f]{64}$/) }).strict();
-export const accessPreview = z.object({ workspace_id: accessText, change: grantChange }).strict();
+export const accessPreview = z.object({ workspace_id: accessWriteText, change: grantChange }).strict();
 export const accessAuditQuery = z.object({ workspace_id: accessText, subject_user_id: accessText,
   limit: z.coerce.number().int().min(1).max(100).default(25), after: z.string().min(1).max(2048).optional() }).strict();
 

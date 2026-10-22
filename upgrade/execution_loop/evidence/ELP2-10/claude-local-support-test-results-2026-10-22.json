@@ -1,0 +1,52 @@
+{
+  "scope": "CLAUDE_LOCAL_BACKEND_SUPPORT",
+  "date_utc": "2026-10-22",
+  "tier": "R1_FOCUSED_SOURCE_ONLY",
+  "base_commit": "5f8de2ca865c937cdeee3791fc5ea38028a48129",
+  "parent_commit": "e5b8c9b660ef6c2af49b7132f3ba65910724247c",
+  "runtime_installed": false,
+  "connected_accepted": false,
+  "source_sha256": {
+    "access.contract.ts": "91ad7209dca2a3a5e3da1208a3d57586d948273e91b27601b86e3a2b4223bb55",
+    "profile-projection.repository.ts": "9466945626ba8501d0508dbabcbcb9274d817aab0285da8d6ed892b655fac569",
+    "incident-eligibility.ts": "43a335ba6b93fe5ab6321b0bda2e4bcdf4b1bff05b374a3708609890a6b4bc9f",
+    "fixture-bff/review-manager.ts": "6749eb482ea3fd549a698cfb54fe250ea0f31b94b3eccaa79f7ac1ba00f2b9c7"
+  },
+  "lanes": [
+    { "name": "access-write-text-safety", "status": "PASS", "tests": 9 },
+    { "name": "incident-eligibility-unit", "status": "PASS", "tests": 20 },
+    { "name": "execution-access-contract", "status": "PASS", "tests": 71 },
+    { "name": "incident-eligibility-contract", "status": "PASS", "tests": 8 },
+    { "name": "paper-depth-and-population-synthetic", "status": "PASS", "tests": 12 },
+    { "name": "rich-manager-fixture", "status": "PASS", "tests": 19 },
+    { "name": "route-ownership-r2-ledger", "status": "PASS", "tests": 22 },
+    { "name": "existing-incident-read-boundary", "status": "PASS", "tests": 4 },
+    { "name": "control-api-typescript-build", "status": "PASS" },
+    { "name": "disposable-pg-incident-workflow", "status": "PASS", "tests": 4 },
+    { "name": "disposable-pg-paper-sparse", "status": "PASS", "tests": 1 },
+    { "name": "disposable-pg-restore-with-four-access-digests", "status": "PASS" },
+    { "name": "two-generators-and-regenerated-types", "status": "PASS" },
+    { "name": "contracts-snapshot", "status": "PASS", "files": 552 },
+    { "name": "live-route-census", "status": "PASS", "routes": 320, "collisions": 0, "protected_kernel": "MATCH" },
+    { "name": "release-integrity-ledgers", "status": "PASS", "runtime_effect": "NONE" },
+    { "name": "execution-tracking", "status": "PASS" }
+  ],
+  "test_cell": {
+    "suffix": "36525811398412719",
+    "node_limit": { "cpus": 3, "memory_gib": 3 },
+    "postgres_limit": { "cpus": 1, "memory_gib": 1 },
+    "sample_not_peak_node_cpu_percent": [98.08, 113.83],
+    "sample_not_peak_node_memory_gib": [1.275, 1.403],
+    "sample_not_peak_postgres_memory_mib": [72.95, 73.73],
+    "cleanup": "PASS: 2026-10-22T11:31:19Z exact suffix container and network queries both returned zero resources; runner exit0"
+  },
+  "open": [
+    "Research runtime installation and real API consumer acceptance",
+    "Claude component binding and browser/DOM scale acceptance",
+    "Hard byte/paging policy not commissioned; 32000-row synthetic envelope exceeds 16MiB",
+    "Other DEBT-042 economic controls remain NOT_COMMISSIONED",
+    "commandCurrency producer parity remains separately unaudited",
+    "Full frozen-candidate landing gate not run for this intermediate slice",
+    "CORE-01..07 connected/economic inputs retain individual dispositions"
+  ]
+}

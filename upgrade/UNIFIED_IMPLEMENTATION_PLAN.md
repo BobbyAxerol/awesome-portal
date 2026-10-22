@@ -9676,6 +9676,46 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**22 October Core support + single Edge ACK:** Codex owns the explicitly
+assigned access write-validation, Portal incident eligibility and Paper history
+measurement slice; accepted Claude components remain untouched. Source-only
+tests/fixtures are not installed/connected acceptance. Consolidated
+[CORE-01…07 return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md)
+ACKs Edge as sole external counterpart, Codex as Core coordinator and11:35UTC
+checkpoint. Expired10:30–11:00UTC native proposal stays unarmed; new conditional
+availability12:00–12:30UTC requires fresh matching pins/ACK/READY. Every row
+has owner/input/action; no blanket BLOCKED, source activation or new phase.
+Concrete validation/eligibility/history/fixture changes and Claude's exact
+consumer steps: [local backend support receipt/handoff](execution_loop/evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md).
+Source-only closure does not close install/browser or the remaining economic
+controls. Paper target2000 is not a cap;32k history measured17.13MB, not a
+production/DOM budget. Existing Claude components and peer WIP are preserved.
+Actual support commit **cab09dc94cd47584d2fe4a28379c04b63d823ca5**:
+35files,+2754/−50; API build, disposable PG5/5 and restore with four access
+digests PASS, exact cell cleanup verified. Focused source lanes only under
+§10.10c; runtime/Claude browser still pending. Initial seven-row ACK committed
+e5b8c9b6; final source/test/mirror pins in the linked accumulating return/sync.
+Final public return mirrored/read back on HK **11:33:00UTC**, matching raw
+SHA256`d5f22ff327111695a9962b3973cafbf894ca3eb499809b0d215792f9955a3026`;
+all seven rows answered before11:35checkpoint. Delivery is not connected
+acceptance; actual native/financial/Manager/G2 gates retain their dispositions.
+
+**22 October — explicit fixture review, not source commissioning:**
+[Data, browser results and Claude handoff](execution_loop/evidence/ELP2-10/FIXTURE_REVIEW_DATA_2026-10-22.md).
+Bobby assigned removable populated/layout-stress data alongside real APIs.
+Sparse-realistic defaults and accepted UI stay unchanged; six Manager surfaces,
+rich series, bounded pages and long names are opt-in in the standalone fixture
+BFF only. Source/financial/STREAM/commands and ELP2-10 acceptance are not closed
+by these synthetic cases. Claude owns the listed consumer/HiFi follow-through;
+Core owns data/boundary tests. No production/dev/main or shared-preview cutover.
+
+Follow-up report: the same packet lists DEBT-043/047 local backend work,
+DEBT-027/028 decisions/measurements, and remaining source/financial/command
+qualification. Fleet already has a scoped Manager consumer; Overview still
+needs typed binding. New requests go **Core ↔ Edge only**, with PM/TS behind
+Edge; native authority proof is not Manager data commissioning. Profiles remain
+SOURCE_TESTED/not installed. Report-only R0, no new runtime assignment.
+
 **21 October post-freeze backend review:** [BE-P21/P22 CHANGE + one-writer ACK](execution_loop/evidence/ELP2-10/CODEX_BE_P21_P22_REVIEW_AND_ONE_WRITER_RETURN_2026-10-21.md).
 Claude new dark source f0b56371/fa530323 has four concrete fixes: sum overflow,
 census-bound economic digest, RECONCILED/witness interpretation and bounded
@@ -14902,4 +14942,6 @@ Edge commits2a87d405b4942d7a1c08c0080193bb1b84a1b057 and5b1016e0436417b2788bdb7c
 ### Core active-revoke repair integrated source / new offer —22Oct2026
 
 [Superseding exact owner-return §§6–7](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md#6-superseding-repair-review-and-new-availability-22oct0854utc): full normal hook EXIT0`de8f6382`/tree4309b790, contracts1,633/API10,015PASS with explicit skips; positive BE-P23 PG10/10PASS. P22/G2/Claude ancestry and canonical104otherwise-absent documents preserved, no deletions. Narrow mapper repair`3265ce18`2paths/+47/−1, production build PASS, focused56PASS; old post-expiry409 corrected as SNAPSHOT_REQUIRED/non-proof. Private runner103/103offlinePASS with typed denial/no-admission/real remote-close distinctions; capacity freshH+266≤288, no custody pruning. Broad historical test-fixture typecheck EXIT2 is recorded, not called clean. Minimal one-module candidate image3cb7f24a built/probed, not installed and not full integration deployment. Withdraw08:50offer; NEW09:30–10:00UTC requires fresh Edge PREPARED/exact ACK/actual READY. Source/runner ready; bindingNOT_READY/full08/read09NOT_MET, ELP2-11notentered. [Integration impact/cleanup](execution_loop/evidence/ELP2-10/CORE009_INTEGRATION_CUT_2026-10-22.md#actual-final-gate-and-additive-repair-22oct2026); [Claude handback](execution_loop/evidence/ELP2-10/CORE_TO_CLAUDE_ACTIVE_REVOKE_DENIAL_REPAIR_2026-10-22.md). No push/dev/main/stable/provider28445/command/Live changes.
+
+Actual landing addendum: canonical ff-only29f57e36→4c7f809e completed, clean; Claude/private source are ancestors, Research backend subtree unchanged by this integration. Exact [landing/cleanup/next-owner return §8](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md#8-canonical-ff-only-landing-completed-22oct2026). Root remains sole integrator; no push/runtime/connected PASS.
 

@@ -5,7 +5,7 @@ import { AuthError, AuthService } from "../auth/auth.service";
 import { mutationSecurityDenial, MUTATION_SECURITY_MESSAGE } from "../auth/mutation-security";
 import { PortalUser } from "../domain";
 import { SessionGuard } from "../facade/session.guard";
-import { AccessActor, AccessPolicyError, accessAuditQuery, accessPreview, accessProposal, accessRevoke, accessWorkspaceQuery, accessText } from "./access.contract";
+import { AccessActor, AccessPolicyError, accessAuditQuery, accessPreview, accessProposal, accessRevoke, accessWorkspaceQuery, accessText, accessWriteText } from "./access.contract";
 import { ExecutionAccessService } from "./access.service";
 import { eligibilityBatchQuery, eligibilityQuery, navigationInput } from "./self-eligibility";
 import { STEP_UP_FAMILIES } from "./step-up-family";
@@ -13,7 +13,7 @@ import { STEP_UP_FAMILIES } from "./step-up-family";
 type AccessRequest=FastifyRequest&{portalUser:PortalUser;portalSession:{sessionId:string;csrfSecretHash:string}};
 /** `family` defaults to ACCESS_ADMIN (the historical request, byte-compatible); CAPITAL_COMMAND is the capital-delegate path. */
 const selfContextQuery=z.object({}).strict();
-const stepUpBody=z.object({workspace_id:accessText,password:z.string().min(1).max(256),family:z.enum(STEP_UP_FAMILIES).optional()}).strict();
+const stepUpBody=z.object({workspace_id:accessWriteText,password:z.string().min(1).max(256),family:z.enum(STEP_UP_FAMILIES).optional()}).strict();
 
 /** Named Portal policy operations only. No public policy-install or TS-acceptance path. */
 @Controller("/api/admin/profile-access/v2")
@@ -97,14 +97,14 @@ export class ExecutionAccessController {
   @Header("Cache-Control","private, no-store")
   async revoke(@Req()req:AccessRequest,@Body()body:unknown,@Param("id")id:string,@Res({passthrough:true})reply:FastifyReply) {
     const key=this.security(req),input=this.parse(accessRevoke,body);
-    const result=await this.call(()=>this.service.revoke(this.actor(req),input.workspace_id,this.parse(accessText,id),input.expected_policy_revision,input.expected_grant_revision,key,input.reason));
+    const result=await this.call(()=>this.service.revoke(this.actor(req),input.workspace_id,this.parse(accessWriteText,id),input.expected_policy_revision,input.expected_grant_revision,key,input.reason));
     reply.code(result.receipt.http_status);return {schema_version:"portal.access-result.v1",...result};
   }
   @Post("/grants/:id/preview-revoke")
   @Header("Cache-Control","private, no-store")
   async previewRevoke(@Req()req:AccessRequest,@Body()body:unknown,@Param("id")id:string,@Res({passthrough:true})reply:FastifyReply) {
     this.security(req);const input=this.parse(accessRevoke,body);reply.code(200);
-    return this.call(()=>this.service.previewRevoke(this.actor(req),input.workspace_id,this.parse(accessText,id),
+    return this.call(()=>this.service.previewRevoke(this.actor(req),input.workspace_id,this.parse(accessWriteText,id),
       input.expected_policy_revision,input.expected_grant_revision,input.reason));
   }
   @Post("/step-up")
