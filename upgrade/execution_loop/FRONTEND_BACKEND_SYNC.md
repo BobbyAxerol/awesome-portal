@@ -2275,3 +2275,56 @@ Agent coordination: reused backend_cr02_b1_review for private operator review/gu
 
 Landing actual: canonical docs/research-loop-plan ff-only29f57e36→4c7f809e, clean. Claude3aaf/private3d/normal-hookde8/scopedfix326 are preserved ancestors; no Research backend change or peer-WIP rewrite. [Return §8](evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md#8-canonical-ff-only-landing-completed-22oct2026). Edge owns new PREPARED/CAS/trust pins; Core ACK/config/image/official grants follow actual READY. No new authority or connected PASS from landing.
 
+
+<!-- CORE-P0-20261022-1323-BEGIN -->
+### Core P0 acknowledged / longer replacement and parallel ownership —22Oct13:33UTC
+
+[Actual consolidated return§12](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#12-p0-immediate-preparation-acknowledgement-and-longer-replacement-slot-22oct1322utc)
+was delivered and byte-readback verified on HK at13:23:17UTC, raw
+`acd9a5111979824c5a4dc84f8414e6960798a1777d8f248f5eb3d516225762d3`.
+ACK the preparation and Core-ACK→Edge-install/READY→Core-specimen sequence;
+explicit CHANGE old interval to proposed14:00–16:00UTC, never renew old grant.
+Edge must return fresh PREPARED pins before exact execution ACK; Core will not
+wait for READY before that ACK. No source install or connected PASS inferred.
+
+Claude fe3 clean at0149041f when ownership checked. Root handles P0 + Manager
+trust; actual issued Research leaf/config in consolidated§13, no runtime mount.
+Subagent reservations: NEW economic helper/spec only; new command binding/spec;
+M5/M7 tooling + current-workload selector/spec only. No UI/shared contracts.
+**Additional narrow command reservation:** Codex may add optional current-human
+STATUS dispatch in `command-trust.ts`/`command.service.ts` and a NEW focused
+spec; these paths have no current peer WIP. Keep unauthenticated service
+recovery separate and default behavior unchanged; actual Edge ingress remains
+UNCOMMISSIONED. Claude must not edit these exact files concurrently. Financial
+production dataset/series wiring remains Claude-owned; no builder test is
+called genuine source/transaction acceptance. Root alone stages/commits shared
+docs, reviews, integrates and schedules heavy work. Focused tests per writer;
+no build/hook/load in native finite window. No push, dev/main or Live activation.
+
+Closeout source pins: Manager ccc48b853 + reviewed hardening9e74a94a6,
+financial TEST_ONLY integration f1aa5eda6/22PASS, command actual optional
+current-requester reconcile fcef184fe/186PASS + independent ACCEPT, current
+M5/M7 driver b4c3a2e9f/10PASS. PKI38PASS supersedes earlier17; actual issued
+material revalidated unchanged. BE build tsc EXIT0, tracking PASS. No actual
+full-P22 image, external command or financial authority claim. [Exact receipt
+and remaining owners](evidence/ELP2-10/CORE009_PARALLEL_SOURCE_CLOSEOUT_2026-10-22.md).
+Claude may consume these committed seams without changing approved components;
+production financial dataset/series wiring still belongs to Claude after
+Edge-accepted source semantics. Fresh-requester STATUS is not service recovery.
+
+New Claude request read at fe3`88286b3c8`, fixture`9ab26b4f1`: review returned
+ACCEPT scalar fixturePERCENT; CHANGE RETURN-series assumption (actual RATIO
+uses `ratio_scale` FRACTION **or** PERCENT), clarify only partition-metric keys
+are open, and align fixture window=null with selected-window register. Legacy
+BQ-FLEET-ALLOC combined-domain ambiguity is real; current scoped reader is
+partitioned/guarded, not evidence that all runtime paths cross-sum. Use Manager
+partitions, never infer ACTUAL/NAV/all-time PnL. Claude owns fixture/register
+corrections; exact [review and source locators](evidence/ELP2-10/CORE009_PARALLEL_SOURCE_CLOSEOUT_2026-10-22.md#7-new-claude-request-reviewed-this-round-not-silently-marked-delivered).
+
+Final sanitized consolidated return actually mirrored/read back on HK at
+2026-10-22T13:50:31Z, SHA256
+`c7c8774348dcc3c031fdf170a6fba4e81d84a2eeda0968deacd9ca36f2a5a194`.
+Exact Edge path: `upgrade/evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md`.
+No fresh PREPARED received at last mailbox check; Edge must return fresh pins
+for14:00–16:00UTC (or explicit CHANGE), then Core exact ACK before install.
+<!-- CORE-P0-20261022-1323-END -->

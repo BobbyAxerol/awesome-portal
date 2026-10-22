@@ -14996,3 +14996,37 @@ their own subsequent evidence, not manufactured connected coverage.
 
 Actual landing addendum: canonical ff-only29f57e36→4c7f809e completed, clean; Claude/private source are ancestors, Research backend subtree unchanged by this integration. Exact [landing/cleanup/next-owner return §8](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md#8-canonical-ff-only-landing-completed-22oct2026). Root remains sole integrator; no push/runtime/connected PASS.
 
+
+<!-- CORE-P0-20261022-1343-BEGIN -->
+### Core P0 + parallel source integration checkpoint —22Oct13:43UTC
+
+Bobby prioritizes Edge08 ACK before parallel preparation. [Consolidated
+return§12](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#12-p0-immediate-preparation-acknowledgement-and-longer-replacement-slot-22oct1322utc)
+actually delivered to HK13:23:17UTC/acd9a511: preparation ACK, explicit CHANGE
+expired13:00–13:30 to proposed **14:00–16:00UTC**, never use old grant/window.
+Edge fresh PREPARED → Core exact hash ACK **before READY** → Edge install/READY
+→ sole Core missing-active-revoke test. No new packet received as of13:43UTC;
+current status PREPARATION_ACKED/NEW_SLOT_PROPOSED, full08/read09NOT_MET.
+
+Manager existing-CSR leaf actually issued seven days, public leaf/chain/inactive
+config delivered, actual Paper TLS1.3/Verification OK; no new keys or private-key
+transfer, no HTTP/JWT authorization or runtime mount claimed. §13 readback on
+HK13:41:24UTC/99b41a23. Independent review accepted actual public artifact pins
+and identified two bounded tooling hardening items, now fixed in9e74a94a6:
+38/38PKI tests + actual public-material read-only revalidation PASS, no
+reissuance/config rewrite. [Round receipt](execution_loop/evidence/ELP2-10/CORE009_PARALLEL_SOURCE_CLOSEOUT_2026-10-22.md).
+
+Source commits: ccc48b853 Manager tooling/receipt; f1aa5eda6 financial integration
+tests22PASS; b4c3a2e9f current workload driver10PASS; fcef184fe actual optional
+current-requester reconcile/retained original186PASS. Build tsc noEmit EXIT0,
+independent workload/command review ACCEPT. Test-only financial/SQL traces are
+not accepted producer/PostgreSQL evidence. Financial production dataset/series
+wiring stays Claude-owned against Edge-accepted semantics; external command
+gateway stays Edge-owned/uncommissioned. Core owns full-P22 prior buildFAIL134.
+No UI/contracts/migration/runtime, push/dev/main/Live action. Heavy frozen
+landing gate deferred under§10.10c, not claimed PASS; R0 docs follow§10.10d.
+Final consolidated public return actually delivered/read back on HK13:50:31UTC,
+SHA256`c7c8774348dcc3c031fdf170a6fba4e81d84a2eeda0968deacd9ca36f2a5a194`.
+Latest Claude fixture-key/source-domain request88286b3c8 reviewed with explicit
+ACCEPT/CHANGE in round receipt§7; fixture scale/window fixes remain Claude-owned.
+<!-- CORE-P0-20261022-1343-END -->

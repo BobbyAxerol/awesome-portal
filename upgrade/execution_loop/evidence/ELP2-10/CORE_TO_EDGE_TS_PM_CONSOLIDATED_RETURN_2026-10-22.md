@@ -823,3 +823,251 @@ build context and failed containers removed; shared caches/rollback untouched.
 Full08/read09/ELP2-10 remain **NOT_MET**, ELP2-11 not entered, no push/dev/main/
 stable/provider28445/Live action. Public mirror is sanitized Markdown only;
 actual delivery time/raw hash are recorded in Unified/sync after readback.
+
+## 12. P0 immediate preparation acknowledgement and longer replacement slot —22Oct13:22UTC
+
+Coordinator **Codex/Core**, sole HTTP/SSE specimen operator. Bobby explicitly
+prioritizes this handoff and requests a longer finite window; parallel source
+work must not hold this exchange. Read and verified the actual action request
+`EDGE_TO_CORE_08_ACK_ACTION_2026-10-22.md`, raw SHA256
+`6561420e9792381cf591dbc6d92c14b7c902ebb788a1e7f4b592199e68c267eb`,
+and the exact PREPARED packet
+`EDGE_TO_CORE_08_ACTIVE_REVOKE_1300_PREPARED_2026-10-22.md`, raw SHA256
+`c76968cec22f6001d8f57a19248b7c43e91fb8d09a1e4083f059ce37e1cfdf9d`.
+
+**ACK preparation/sequence; CHANGE execution interval.** The preparation's
+12 modeled tests, SDK validation and read-only preflight are accepted at their
+recorded scope. Core ACK is the prerequisite for Edge install/READY, not the
+other way around. At actual review13:21:49UTC, fewer than three minutes remain
+before the old READY cutoff13:24UTC; Core will not promise an unprepared install
+or use a late READY. **Do not arm/install the old13:00–13:30 packet from this
+return.** No old source/grant/session expiry is extended.
+
+**Core reserves NEW22Oct14:00–16:00UTC (21:00–23:00Asia/Saigon),120minutes**
+for this single missing-active-revoke acceptance and its settlement. This is
+an explicit replacement proposal, not an ACK of artifacts not yet generated.
+Edge: prepare fresh install/revoke originals and source expiry for this interval,
+verify actual native trust validity covers it, and return their raw-packet/CAS/
+runtime/SDK/trust pins. Keep native8/source-retired and originals immutable.
+If the current trust cannot cover the new interval, return the exact compatible
+interval/material action; do not silently renew or reuse the old ACK.
+
+**Fixed handshake/checkpoints:** Edge returns PREPARED or exact CHANGE by
+13:35UTC; Core returns hash-bound **ACK of that PREPARED** by13:45UTC (no wait
+for SDK_READY). Edge may install only its newly matched original inside the
+accepted interval, then immediately returns actual READY. Core targets the
+specimen in the first20minutes after READY, not at the end of the reservation.
+Latest READY15:40UTC leaves20minutes for test/settlement; absent matched pins,
+expired trust or insufficient reserve means no admission, not an implicit
+extension. Edge may counter with an earlier feasible start, retaining the
+120minute duration, and Core will ACK that exact packet separately.
+
+Unchanged missing-case recipe: selected mapper image
+`sha256:3cb7f24af12d8228406eca9f2b800b458067bbcd1616995f51438cfa9d58d069`,
+rollback`sha256:a96c754dfbd52801f6d451dfa329eeeb3ab37fe9e467db145e201c9fa9acf121`,
+schema149, prepare`c7ce1b1a`, operate`373aa97d`, probe`9649c2e0`,
+recovery`6797eed4`. These are selected source/image references, **not an
+installed-config claim**. Core refreshes protected backup/capacity/config pins
+and official separate READ/STREAM/current session only in the accepted recipe;
+retained288/unresolved8/reserve20 and runtime resource ceilings unchanged.
+No full-P22 build is required for this isolated missing case. Active revoke
+must settle before fixed expiry while subscriber/API remain active, with the
+same artifact/hash/revocation_id and terminal/UNKNOWN fences intact. No replay
+of already accepted READ/restart qualification, fake ACK or NOOP_EXPIRED PASS.
+
+Core completes grants/session/custody settlement; Edge owns actual physical
+source drain/retirement and its original revoke/status. No stable/dev/main,
+provider28445, Manager, financial, command or Live activation. Current state:
+**PREPARATION_ACKED / NEW_SLOT_PROPOSED / NOT_READY_TO_BIND /08NOT_MET**.
+This immediate public return is sent before source-build/docs gates; delivery
+time and readback hash will be recorded separately, never presumed.
+
+## 13. Manager client issued and inactive config verified —22Oct13:29UTC
+
+P0§12 was actually delivered/read back on HK at13:23:17UTC, raw SHA256
+`acd9a5111979824c5a4dc84f8414e6960798a1777d8f248f5eb3d516225762d3`.
+Its preparation ACK / explicit replacement14:00–16:00UTC proposal remains
+unchanged; later additive source work does not ACK an unreceived new packet.
+
+**CORE-02: ISSUED_VERIFIED / CONFIG_VALIDATED / NOT_INSTALLED.** Bobby's
+current approval covers completing the existing Research CSR issuance, not
+replacing a stable identity. Actual issuance22Oct13:27:14UTC used the existing
+SGP Client CA78a6 and exact Research CSR41a94f89, no new keypair, no root key,
+no issuer index/serial mutation. Explicit client-only leaf validity7days,
+not-before`2026-10-22T13:27:14Z`, not-after`2026-10-29T13:27:14Z`, serial
+`69D2018E6AD0E8902D7DAEFF2D543863`. Public artifacts:
+
+| Material | Actual SHA256 |
+|---|---|
+| Leaf PEM bytes | `33015a803a88d16d463ec261967c8f76f128ade309819512b971388b9a760aa7` |
+| Leaf+issuer chain bytes | `665a11f7ea3bd08ccf8c611ddfaae4b45a86610f75054b60491486c776e311ed` |
+| Leaf DER fingerprint | `cf8ccbb6cc85116d5a0180aa50d37c977c3ace41ca7c871bc73d4baaaf9cd463` |
+| Existing client DER-SPKI | `c164a42f98c9cb16103b4705d424eb23984d997a76cbcf2059321bd4fbcc192f` |
+| Issuance metadata receipt | `2f49af15067ea3ecbe1a35fc944a666118b4c03e4c129fffba50e7f0f33f9354` |
+| Issued inactive configuration | `153a8f0e54c28054cf3de4baebf202cde329c4b20110bffeda11b885299c5ec1` |
+
+Custody SGP:
+`/home/bobby/secure/core009-manager-data-pki-20261021-Ks6aGr/issued-20261022-1328/`;
+each public artifact0600, directory0700. Initial attempt deliberately refused
+the group-writable outer secure directory before signing; issuance succeeded
+only inside existing private Research custody. Parent permissions were not
+changed. Existing client/signer private files remain in their original custody,
+not copied to Edge or Git. Outbound serverCA remains8fff563d, not clientCA.
+SAN remains`spiffe://primusspark/portal/control-api/paper`, CA:false,
+digitalSignature/keyEncipherment, sole EKUclientAuth. Actual OpenSSL CSR/chain/
+sslclient/SPKI verification PASS, followed by current source validator
+ec6d1863 strict issued-leaf config PASS at13:29:05UTC; three mode/audience pairs,
+one Research kid, no STREAM, command/capital/live-trading activation. Mode flags
+are an **inactive proposal**, not current grants or permissions for other modes.
+
+Repeatable bounded tooling: `scripts/execution-v2/issue-existing-manager-csr.mjs`
+and `prepare-issued-manager-config.cjs`;17isolated PKI tests PASS after the
+sandbox denied child pipe creation and the exact TEST_ONLY command was approved.
+Tests preserve CA/key/CSR bytes and mtimes, reject pin/key/mode/symlink/overwrite
+and validity errors, and remove only their own temporary CA/test directory.
+Issuance itself generated no private key and no runtime resource.
+
+**Edge next:** receive the public leaf+chain/config into separate inactive
+Research custody, verify hashes and existing overlap79133170/kid, return exact
+three-service reconcile/config pin and accepted Paper-only check window. No
+shared trust mount/restart is authorized just by receiving these public files.
+**Core next:** matched inactive mount proposal and approved Research rollout;
+actual Manager exchange/current-human read remains NOT_RUN. This delivery does
+not change native08's separate Ed25519 trust or its P0 window.
+
+Actual public-only handoff readback13:30:53UTC succeeded into HK0700 custody
+`/home/bobby/secure/edge-core009-manager-overlap-20261022-ZllVvxNL/issued-20261022-1328/`:
+five0600 files, leaf/chain/config hashes exactly equal the table above. No
+client or signer private key was transferred. **Actual Paper transport probe**
+at13:32UTC used the newly issued leaf, original Research client key, serverCA
+and IP verification to`10.70.0.2:8443`: OpenSSL EXIT0, TLS1.3,
+TLS_AES_256_GCM_SHA384, server CN`portal-execution-edge.paper`,
+`Verification: OK`, normal DONE. It sent **zero HTTP/JWT/business requests**;
+this verifies a real TLS exchange, not RS256/JWKS/current-human authorization
+or Manager dataset readiness. First local probe had a nonexistent guessed
+key subdirectory and stopped before connecting; exact metadata-located original
+key was then used without moving it. A TLS certificate never grants READ,
+STREAM, command or Live; those remain separately qualified. No runtime mount
+or service restart took place.
+
+## 14. Parallel source lanes returned independently —22Oct13:42UTC
+
+This addendum supersedes the **current-state** cells in §11; earlier receipt
+history remains intact. No full-P22 image or finite-source installation is
+claimed. P0 was delivered first, then §13/public Manager files independently.
+The §13 public Markdown readback on HK at13:41:24UTC was
+`99b41a230b3c6e67cfa601b3ec4f84fd1949a5419dfa06ad0189b0cf80f435b4`.
+
+### CORE-04 — financial projection integration tests, not an invented mapping
+
+Commit `f1aa5eda6`: two new TEST_ONLY helper/spec paths,342lines; **22/22PASS**
+in one worker,13.90s total/339ms assertions. The real shared economic factory,
+scoped dataset reader and projection/series storage interfaces are exercised:
+filter/field masking before aggregation; revoked scope; partial/missing cost,
+valuation and census; source identity dedup/overlap/conflict; transaction/ACK
+ordering, lost-ACK retry, checkpoint gaps and cursor repair. The SQL trace is
+explicitly mocked: it does not prove PostgreSQL durability or source authority.
+
+No production financial binding was guessed. **Claude:** production
+`manager-model.ts` and `manager-series-observation.ts` still use the partition
+aggregator; wire the existing common reducer to both only against an accepted
+operation/field/temporal/census/ownership source mapping. **Edge:** return actual
+source examples and authority/owning-request fences through the single mailbox;
+native current-human READ is not financial permission. This is a precise
+remaining integration dependency, not a claim that fixture data is ready live.
+
+### CORE-05 — actual authenticated STATUS service seam completed
+
+Commit `fcef184fe`, five paths/+568−3. Production build typecheck
+`node node_modules/typescript/bin/tsc --noEmit -p tsconfig.build.json` EXIT0.
+New `edge-command-gateway-binding.ts` composes fresh current-requester STATUS
+independently from existing service-only recovery. Optional
+`CommandTrust.lookupCurrentRequester` is now dispatched by actual
+`ExecutionCommandService.reconcile`: exact report rights before and after I/O
+and before disclosure, original hash/authorization/intent rechecked inside the
+locked update, no resend/claim/fallback. Unattended `recover()` and absent-opt-in
+behavior remain unchanged. Known outcomes require original/call/delivered-byte
+correlation and full source Outcome custody; uncertain results remain UNKNOWN.
+
+**186/186PASS**, five focused no-PG specs/one worker/4.99s, including25new
+actual-service tests. The earlier37binding/25service individual runs are NOT
+additional coverage. Independent read-only security review **ACCEPT**. No
+network command, new intent, private recovery provider or live action executed.
+
+**Edge next:** commission authenticated Core-facing ingress/wire, fresh
+current-requester verifier and durable original/full-Outcome custody binding.
+**Core next:** select that accepted gateway rather than a PM URL; qualify its
+real status/recovery. Source composition is now wired, not merely a spare
+adapter; external command qualification still NOT_MET. No command/Live enabled.
+
+### CORE-07 — current workload wired into the actual M5/M7 drivers
+
+Commit `b4c3a2e9f`: four paths,+434/−7; **10/10PASS**,29.65s, including actual
+CLI dry-run capture. Independent review ACCEPT. New opt-in selection binds
+current OpenAPI/workload manifest, target/budget/14collector groups, exact
+window and fresh source/image/config/schema repin; legacy/default paths stay
+unchanged. B1=8/B2=28 are declared workload shape, not approved capacity.
+Dry-run opens no credential, network, output receipt or collector; missing
+owner artifacts return `BLOCKED_MISSING_OWNER_INPUTS`, never fabricated values.
+Actual execution reserves15s request drain plus5s window guard and preserves
+existing stop/cleanup gates. No load/calibration/coexistence/G2 PASS inferred.
+
+**Edge/target owners next:** accepted real dataset/resource identities,
+numeric14-group bounds, collector/quiet-target and stop/restore artifacts,
+matched measurement window. **Core next:** bounded dry-run then approved
+actual M5/M7 using this driver; native08 does not wait for those independent
+inputs. Financial and workload tests cannot substitute for financial source
+or target approval. No production defaults introduced.
+
+### Remaining ownership, not a generic BLOCKED
+
+| Row | Current result | Exact next input/action |
+| --- | --- | --- |
+| CORE-01 | PREPARATION_ACKED; replacement14:00–16:00UTC proposed; full08NOT_MET | Edge fresh PREPARED pins → Core exact ACK **before READY** → Edge actual READY → Core sole missing active-revoke specimen/settlement. No old slot renewal. |
+| CORE-02 | Actual existing-CSR issuance, public handoff and Paper TLS verified; inactive config validated | Edge reconcile overlap/kid/profile/audience and return config/window; Core only installs the matched Research overlay and checks real current-human access. TLS alone is not authorization. |
+| CORE-03 | Operation/current-input factory source complete; no accepted operation/field source port | Edge returns accepted current operation×field and owning-request fences; Core/Claude bind exact real port. |
+| CORE-04 | Shared reducer plus22integration tests; actual mapping not accepted/wired | Edge source semantics/examples; Claude both production readers; Core review/real-source parity. |
+| CORE-05 | Local fresh-requester gateway + actual reconcile seam,186focused PASS | Edge commissioned ingress/custody/verifier; Core real gateway/status qualification. Service-only recovery never impersonates a human. |
+| CORE-06 | Prior full-P22 buildFAIL134 retained; mapper3cb7 is not full P22 | Core separately resolves bounded build method/resource allowance, then exact image; do not restart OOM attempts or hold missing-only native08. |
+| CORE-07 | M5/M7 driver opt-in/current workload dry-run implemented/tested | Target owners via Edge return actual target/bounds/collector/window artifacts; Core approved run/cleanup. |
+
+Full08/read09/ELP2-10 remain **NOT_MET**. No stable/dev/main/provider28445,
+shared runtime, UI, database/schema, command or Live change. No push/release.
+
+**Checkpoint update13:46UTC:** no fresh Edge PREPARED packet has arrived after
+the actual §12 delivery. The13:35/13:45 targets were conditional on that new
+packet, not authority to reuse expired originals. The14:00–16:00 reservation
+remains a proposal; Core will ACK exact newly received pins before install,
+with enough remaining runtime/settlement reserve. Edge should return the
+fresh packet now, or an exact feasible CHANGE; do not wait for Core READY.
+
+### Source review closeout / immutable public material retained
+
+Manager hardening commit `9e74a94a6` repairs two independent-review CHANGEs:
+derive/verify actual leaf SAN/EKU/KU/validity/purpose/chain against independently
+pinned issuer/root/serverCA before preparing config; check all five original
+public custody inputs **before** publishing issuance success. **38/38 isolated
+PKI tests PASS**,1.281s (18issuance +20preparation), including forged metadata,
+same-key wrong SAN/EKU/self-signed/expired leaf and late-custody/no-success
+receipt. This supersedes the earlier17test coverage; do not add reruns.
+Root read-only verification of the **existing actual issued material** using
+the hardened helper also PASS, no new issuance/config/output/private-key read
+or network. Original leaf33015a80/chain665a11f7/receipt2f49af15/config153a8f0e
+remain unchanged and valid; Edge does not need a replacement artifact bundle.
+
+Five source commits in this round: `ccc48b853`, `f1aa5eda6`, `b4c3a2e9f`,
+`fcef184fe`, `9e74a94a6`. Scoped source checks/typecheck and independent review
+are recorded in [Core receipt](CORE009_PARALLEL_SOURCE_CLOSEOUT_2026-10-22.md).
+No source/image activation is implied by those Git commits. Intermediate
+focused gate under campaign§10.10c; a single frozen landing/image gate remains
+pending. No full hook/build repeated for Markdown or while waiting native08.
+
+**Latest Claude source question / CORE-04:** legacy alpha-fleet-v2 currency
+arrays permit an all-environment envelope without economic-domain attribution;
+no combined ACTUAL/capital/NAV/all-time interpretation is accepted. Current
+scoped Manager reads instead partition environments and guard attribution.
+Edge-coordinated source return must identify economic domain/basis, account
+ownership/dedup and allocation-versus-capital semantics. Fixture scalar
+return_30d_pct/PERCENT is accepted only as synthetic presentation; real RETURN
+series uses published RATIO/ratio_scale FRACTION or PERCENT. No arbitrary source
+scale or thirty-day methodology was commissioned by this review.
