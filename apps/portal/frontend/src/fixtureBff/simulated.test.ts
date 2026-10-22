@@ -41,7 +41,7 @@ describe("operations queue status_counts (FE-043)", () => {
   it("validates in the real reader and counts the rows by integer tally", () => {
     expect(queue.kind).toBe("queue");
     expect(counts).not.toBeNull();
-    const rows = (queue as { queue: { page: { rows: { verificationResult: string }[]; filteredCount: number } } }).queue.page;
+    const rows = (queue as unknown as { queue: { page: { rows: { verificationResult: string }[]; filteredCount: number } } }).queue.page;
     expect(counts!.verificationResult.total).toBe(rows.filteredCount);
     expect(counts!.verificationResult.counts.UNCERTAIN).toBe(rows.rows.filter((r) => r.verificationResult === "UNCERTAIN").length);
     expect(counts!.verificationResult.counts.UNCERTAIN).toBeGreaterThan(0);
