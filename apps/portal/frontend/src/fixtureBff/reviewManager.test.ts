@@ -246,7 +246,7 @@ describe("six opt-in review Manager datasets", () => {
     setFixtureNow(NOW);
     const query = new URLSearchParams({ environment: "paper" });
     const before = structuredClone(answerManagerFleet("GET", "/manager/fleet", query));
-    expect(before?.body.capital_statements).toBeDefined();
+    expect((before?.body as { capital_statements?: unknown } | undefined)?.capital_statements).toBeDefined();
     ask("/manager/fund-overview");
     expect(answerManagerFleet("GET", "/manager/fleet", query)).toEqual(before);
   });
