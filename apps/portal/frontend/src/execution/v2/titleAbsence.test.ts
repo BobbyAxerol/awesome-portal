@@ -32,7 +32,6 @@ const ABSENCE = /\bwhy\b|NOT_PUBLISHED|reason|unpublished|notPublished|npText|np
 const MAY_STAY: Readonly<Record<string, string>> = {
   "blocks/notPublished.tsx :: {`${NOT_PUBLISHED} (${id}): ${feLabel(id)}${why}${code}`}": "the shared cell: the id and reason code are in its visually hidden text; the title adds only the request label",
   "blocks/notPublished.tsx :: {`${id} · ${feLabel(id)}${why}${code}`}": "the shared cell: the id and reason code are in its visually hidden text; the title adds only the request label",
-  "charts/EventRibbon.tsx :: {unpublished[kind]}": "the disabled chip prints the same sentence as its count; the title is the reason the disabled-control guard reads",
   "screens/command/DisabledOperations.tsx :: \"Each control is disabled and says why.\"": "explains the line it sits on; each control prints its own reason",
   "screens/request/NewRequestForm.tsx :: \"This run is not in the list. The server refuses a claim that is not eligible.\"": "explains a rule next to a typed field, not an absence",
   "screens/request/NewRequestForm.tsx :: \"The server refuses a typed claim that is not eligible.\"": "explains a rule next to a typed field, not an absence",
