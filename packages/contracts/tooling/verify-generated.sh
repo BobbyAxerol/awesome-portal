@@ -26,6 +26,8 @@ node tooling/generate-portal-profile.mjs --check
 generate_and_compare openapi/portal-profile.openapi.json generated/portal-profile.d.ts
 node tooling/generate-execution-access.mjs --check
 generate_and_compare openapi/execution-access.openapi.json generated/execution-access.d.ts
+node tooling/generate-execution-incident-eligibility.mjs --check
+generate_and_compare openapi/execution-incident-eligibility.openapi.json generated/execution-incident-eligibility.d.ts
 node tooling/generate-governance-requester-reads.mjs --check
 node tooling/generate-execution-publication.mjs --check
 generate_and_compare openapi/execution-publication-catalogue.openapi.json generated/execution-publication-catalogue.d.ts

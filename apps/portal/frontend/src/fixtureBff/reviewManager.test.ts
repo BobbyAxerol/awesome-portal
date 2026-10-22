@@ -203,6 +203,54 @@ describe("six opt-in review Manager datasets", () => {
     expect(all.body.as_of_ms).toBeLessThanOrEqual(fixtureNowMs());
   });
 
+  it.each(["populated", "layout-stress"] as const)("%s serves explicit capital facts through the unchanged FUND reader", async (profile) => {
+    const api = client(profile);
+    const raw = ask("/manager/fund-overview", { environment: "live", limit: "200" }, profile);
+    expect(raw.status).toBe(200);
+    schema(raw.body, "execution-manager-dataset.v1");
+    const statements = raw.body.capital_statements as Body[];
+    expect(statements.length).toBeGreaterThan(1);
+    for (const { partition, metrics } of statements) {
+      expect(Object.keys(metrics).sort()).toEqual(["added_funds", "current_budget", "current_nav", "initial_funds", "pending_amount", "returned_capital"]);
+      for (const [kind, entry] of Object.entries<Body>(metrics)) {
+        expect(entry).toMatchObject({ currency: partition.currency, unit: "MONEY", window: null,
+          denominator: null, source_confidence: "PROVISIONAL", calculation_revision: "FIXTURE_LAB:capital-review.v1" });
+        expect(entry.quality.reasons).toContain("FIXTURE_LAB_SYNTHETIC");
+        expect(entry.provenance_refs).toHaveLength(1);
+        expect(entry.provenance_refs[0]).toMatch(/^sha256:[0-9a-f]{64}$/);
+        expect(entry.availability).toBe(entry.value === null ? "UNAVAILABLE" : "AVAILABLE");
+        expect(entry.reason_code).toBe(entry.value === null ? "SOURCE_FACTS_NOT_PUBLISHED" : null);
+        if (kind !== "pending_amount") expect(typeof entry.value).toBe("string");
+      }
+      expect(metrics.added_funds).toMatchObject({ value: "0", availability: "AVAILABLE", reason_code: null });
+      expect(metrics.initial_funds.value).toMatch(/\.000000000000000001$/);
+    }
+    expect(statements[0].metrics.pending_amount).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "SOURCE_FACTS_NOT_PUBLISHED" });
+    expect(statements[1].metrics.pending_amount).toMatchObject({ value: "0", availability: "AVAILABLE" });
+    expect(statements[1].metrics.current_nav.value).toBe("-125.500000000000000001");
+    expect(raw.body.statement_scope).toBe("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS");
+    // Smaller pages and a table search do not alter the capital source/population.
+    const filtered = ask("/manager/fund-overview", { environment: "live", q: "not-in-the-synthetic-book", limit: "1" }, profile);
+    expect(filtered.body.items).toEqual([]);
+    expect(filtered.body.capital_statements).toEqual(statements);
+    const parsed = await api.getManagerDataset({ surface: "FUND", environment: "live", limit: 1 });
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.capitalStatements).toHaveLength(statements.length);
+    expect(parsed.value.capitalStatements[0]!.metrics.get("pending_amount")).toMatchObject({ kind: "absent", reasonCode: "SOURCE_FACTS_NOT_PUBLISHED" });
+    expect(parsed.value.capitalStatements[1]!.metrics.get("current_nav")).toMatchObject({ kind: "value", exact: "-125.500000000000000001" });
+  });
+
+  it("does not inject rich capital statements into the existing sparse fixture", () => {
+    setFixtureScale("small");
+    setFixtureNow(NOW);
+    const query = new URLSearchParams({ environment: "paper" });
+    const before = structuredClone(answerManagerFleet("GET", "/manager/fleet", query));
+    expect(before?.body.capital_statements).toBeDefined();
+    ask("/manager/fund-overview");
+    expect(answerManagerFleet("GET", "/manager/fleet", query)).toEqual(before);
+  });
+
   it("refuses unsupported query options explicitly and preserves the old default body", () => {
     prepare();
     const query = new URLSearchParams({ environment: "paper" });

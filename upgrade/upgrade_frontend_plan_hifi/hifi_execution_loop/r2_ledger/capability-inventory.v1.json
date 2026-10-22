@@ -948,6 +948,16 @@
    "test_owner": "codex"
   },
   {
+   "route": "GET /api/v1/execution/operations/incidents/:incident_id/eligibility",
+   "controller": "operations/incident.controller.ts",
+   "interaction_class": "INTERACTION_READ",
+   "consumer": "FRONTEND",
+   "unused_capability": true,
+   "evidence": "DEBT-UXM07-042: additive current-only advisory for EXISTING Portal ADMIN incident workflow. Single scoped incident/EXISTS read; pre/post current mode, membership, session and ADMIN fences. SCOPED_V2 refuses INCIDENT_SCOPED_PARENT_NOT_COMMISSIONED; no new grant action, maintenance alias or TS/resume authority. Focused contract/unit/disposable-PG tests; Claude consumer still pending.",
+   "owner": "codex",
+   "test_owner": "codex"
+  },
+  {
    "route": "GET /api/v1/execution/orders/:orderId/funnel",
    "controller": "execution/analytics.controller.ts",
    "interaction_class": "INTERACTION_READ",

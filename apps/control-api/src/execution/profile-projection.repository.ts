@@ -550,10 +550,26 @@ export class ExecutionProfileProjectionRepository {
     const seriesCount = Math.max(1, Number(meta.rows[0]?.k ?? 0));
     if (inputRows === 0) return { rows: [], sourceRows: 0, downsample: null };
     if (inputRows <= query.targetPoints) {
-      const exact = await this.timeSeriesHistory(workspaceId, environment, profileId, relationKey, {
-        from: query.from, to: query.to ?? null, entity: query.entity ?? null, limit: query.targetPoints, scope: query.scope,
-      }, reader);
-      return { rows: exact.rows, sourceRows: inputRows, downsample: null };
+      // The ordinary history reader also returns null/non-numeric values.
+      // Reusing it here made a numeric-eligible count describe a different
+      // population and its target-sized LIMIT could hide valid later rows.
+      // Keep exactly the same eligibility/scope/range predicates as the count
+      // and dense branch. The target is not a history ceiling: a legacy
+      // non-transactional append between queries must not silently lose rows.
+      const exact = await (reader ?? this.pool).query<{
+        row_id: string; ts: string; fields: Record<string, ProjectionScalar>;
+      }>(
+        `SELECT row_id, to_char(ts AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.${query.scope?.mode === "SCOPED_V2" ? "US" : "MS"}"Z"') AS ts, fields
+           FROM ${this.historyTable()}
+          WHERE ${base.join(" AND ")}
+          ORDER BY ts ASC, row_id ASC`,
+        values.slice(0, valueParam),
+      );
+      return {
+        rows: exact.rows.map(row => ({ rowId: row.row_id, ts: row.ts, fields: row.fields })),
+        sourceRows: exact.rows.length,
+        downsample: null,
+      };
     }
     const spanSeconds = Math.max(1,
       (Date.parse(meta.rows[0]!.t1!) - Date.parse(meta.rows[0]!.t0!)) / 1000);

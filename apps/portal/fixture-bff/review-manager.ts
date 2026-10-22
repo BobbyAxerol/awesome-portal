@@ -155,6 +155,47 @@ function aggregate(rows: Draft[]): Draft[] {
   return [...byPartition.values()];
 }
 
+/** Separate synthetic capital receipts, NOT aliases for the table's allocation/PnL.
+ * Like the real statement projection, scope and selected stages are applied first,
+ * table filters/page limits never change the statement, and currencies stay apart.
+ * The fixture's account identity is its economic ownership identity; repeated
+ * deployments of that account do not invent another NAV/budget snapshot.
+ */
+function capitalStatements(rows: Draft[]): Draft[] {
+  const partitions = new Map<string, { partition: Draft; accounts: Set<string>; template: Draft }>();
+  for (const row of rows) for (const entry of row.economic_partitions) {
+    const key = JSON.stringify(entry.partition);
+    const found = partitions.get(key) ?? { partition: entry.partition, accounts: new Set<string>(), template: row.metrics.net_pnl };
+    for (const child of row.children) found.accounts.add(child.account_id);
+    partitions.set(key, found);
+  }
+  return [...partitions.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, entry], index) => {
+    const accounts = [...entry.accounts].sort();
+    const count = BigInt(accounts.length);
+    const scale = 1_000_000_000_000_000_000n;
+    // These are explicit synthetic receipt/valuation amounts. A negative NAV
+    // is a deliberate adverse-book case, not a negative budget or missing value.
+    const values: Record<string, string | null> = {
+      initial_funds: decimal(count * 10_000n * scale + 1n, 18),
+      added_funds: "0",
+      returned_capital: decimal(count * 125n * scale, 18),
+      current_nav: index === 1 ? "-125.500000000000000001" : decimal(count * 11_500n * scale + 7n, 18),
+      current_budget: decimal(count * 9_000n * scale, 18),
+      pending_amount: index === 0 ? null : "0",
+    };
+    return { partition: copy(entry.partition), metrics: Object.fromEntries(Object.entries(values).map(([kind, value]) => {
+      const out = metric(entry.template, value, entry.partition.currency);
+      // Current/cumulative capital receipts have no performance-window claim.
+      out.window = null;
+      out.denominator = null;
+      out.methodology_ref = value === null ? null : "FIXTURE_LAB:synthetic-capital-receipts-v1";
+      out.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC_CAPITAL", key, accounts, kind])];
+      out.calculation_revision = "FIXTURE_LAB:capital-review.v1";
+      return [kind, out];
+    })) };
+  });
+}
+
 function rowsFor(environment: string, template: Draft): Draft[] {
   const universe = scaled();
   if (universe.alphas.length === 0) return copy(template.items);
@@ -263,7 +304,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   body.recorded_through_ms = fixtureNowMs();
   body.facts_through_ms = fixtureNowMs();
   body.quality = { completeness: "PARTIAL", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC", "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED"] };
-  body.capital_statements = aggregate(rows); // Selected resource/stages BEFORE table filters.
+  body.capital_statements = capitalStatements(rows); // Selected resource/stages BEFORE table filters.
   const textOf = (row: Draft, field: string): string | null => field === "stage_presence" ? row.stage_presence.join(",") : typeof row[field] === "string" ? row[field] : null;
   const q = search.get("q")?.toLowerCase();
   rows = rows.filter((row) => (lifecycle === null || row.lifecycle === lifecycle)

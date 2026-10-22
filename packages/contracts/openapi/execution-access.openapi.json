@@ -1890,7 +1890,8 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+              "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
             }
           }
         ],
@@ -2099,7 +2100,8 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 256,
-              "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+              "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+              "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
             }
           }
         ],
@@ -2942,6 +2944,255 @@
             "minLength": 1,
             "maxLength": 512,
             "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          }
+        },
+        "description": "End-exclusive interval: valid_until_ms must be greater than valid_from_ms or null. Exact single current parent ceiling; no browser actor/issuer/TS-acceptance fields.",
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "action": {
+                  "not": {
+                    "const": "access.grant"
+                  }
+                }
+              },
+              "required": [
+                "action"
+              ]
+            },
+            "then": {
+              "properties": {
+                "delegable_actions": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AccessWriteText": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+        "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
+      },
+      "AccessWriteSelector": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "resource_kind",
+              "ids"
+            ],
+            "properties": {
+              "kind": {
+                "const": "EXPLICIT_RESOURCE_SET"
+              },
+              "resource_kind": {
+                "enum": [
+                  "ROOT",
+                  "PORTFOLIO",
+                  "ALPHA",
+                  "ALPHA_VERSION",
+                  "DEPLOYMENT",
+                  "ACCOUNT",
+                  "BINDING",
+                  "USER"
+                ]
+              },
+              "ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+                  "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
+                },
+                "minItems": 1,
+                "maxItems": 200,
+                "uniqueItems": true
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "const": "OWN_ALPHA"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "portfolio_ids"
+            ],
+            "properties": {
+              "kind": {
+                "const": "PORTFOLIO_MEMBERSHIP"
+              },
+              "portfolio_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+                  "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
+                },
+                "minItems": 1,
+                "maxItems": 200,
+                "uniqueItems": true
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "kind",
+              "root_id"
+            ],
+            "properties": {
+              "kind": {
+                "const": "ROOT_SCOPE"
+              },
+              "root_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+                "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
+              }
+            }
+          }
+        ],
+        "discriminator": {
+          "propertyName": "kind"
+        }
+      },
+      "AccessWriteChange": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "subject_user_id",
+          "action",
+          "effect",
+          "selector",
+          "environments",
+          "valid_from_ms",
+          "valid_until_ms",
+          "delegable_actions",
+          "ceiling_grant_id",
+          "expected_ceiling_revision",
+          "expected_policy_revision",
+          "expected_ts_membership_revision",
+          "reason"
+        ],
+        "properties": {
+          "subject_user_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+            "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
+          },
+          "action": {
+            "$ref": "#/components/schemas/AccessAction"
+          },
+          "effect": {
+            "enum": [
+              "ALLOW",
+              "DENY"
+            ]
+          },
+          "selector": {
+            "$ref": "#/components/schemas/AccessWriteSelector"
+          },
+          "environments": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 3,
+            "uniqueItems": true
+          },
+          "valid_from_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "valid_until_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "delegable_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccessAction"
+            },
+            "minItems": 0,
+            "maxItems": 59,
+            "uniqueItems": true
+          },
+          "ceiling_grant_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+            "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
+          },
+          "expected_ceiling_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "expected_policy_revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "expected_ts_membership_revision": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])"
           }
         },
         "description": "End-exclusive interval: valid_until_ms must be greater than valid_from_ms or null. Exact single current parent ceiling; no browser actor/issuer/TS-acceptance fields.",
@@ -12349,10 +12600,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 256,
-            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+            "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
           },
           "change": {
-            "$ref": "#/components/schemas/AccessChange"
+            "$ref": "#/components/schemas/AccessWriteChange"
           }
         }
       },
@@ -12369,10 +12621,11 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 256,
-            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+            "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
           },
           "change": {
-            "$ref": "#/components/schemas/AccessChange"
+            "$ref": "#/components/schemas/AccessWriteChange"
           },
           "preview_digest": {
             "type": "string",
@@ -12394,7 +12647,8 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 256,
-            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+            "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
           },
           "expected_policy_revision": {
             "type": "string",
@@ -12410,7 +12664,7 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 512,
-            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])"
           }
         }
       },
@@ -12553,7 +12807,8 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 256,
-            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+            "pattern": "^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])",
+            "description": "New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords."
           },
           "password": {
             "type": "string",

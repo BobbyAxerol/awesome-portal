@@ -148,9 +148,9 @@
       "consequence": "Those controls cannot say why they are off from a server fact; they keep Not published (FE-015) with the missing item named.",
       "proposed": "Codex/PM publish an action (and its family) for each control they want eligibility for, or confirm that none exists.",
       "owner": "Codex / PM (vocabulary); Claude wires on publish",
-      "status": "OPEN (kept 2026-10-21 evening)",
+      "status": "PARTIAL_SOURCE_DELIVERY (2026-10-22: incident advisory published; other controls remain explicitly NOT_COMMISSIONED; consumer/install pending)",
       "opened": "2026-10-21",
-      "next_action": "Codex disposition (CODEX_DEBT030_042_DISPOSITION_2026-10-21.md), per control: Return capital = NOT_COMMISSIONED (capital.return_capital is in access.contract.ts:14 but not in self-eligibility.ts:37 or the executor allowlist; no alias to recall); Lock allocation = NOT_COMMISSIONED (ADMIN_LOCK/ADMIN_UNLOCK is a candidate codec only; not the same as freeze edit controls); Deploy version / start on account = NOT_COMMISSIONED (deployment.register only registers an instance); Rotate credential = Claude consumes the already published typed refusal (self-context.ts:48-55), no invented action; Incident acknowledge / mitigate / resolve = mounted Portal-only routes (incident.controller.ts:87,172,189) that lack only an advisory eligibility vocabulary and consumer, and resolution_gate is already published (incident.service.ts:340) so 'No gate is published' copy is stale. Claude: correct the stale ledger/copy rows and wire the typed refusal and resolution gate; keep economic families disabled with the exact reason. PM/source owner: real writer qualification before any capital action is enabled. Codex: review any new family contract."
+      "next_action": "Codex source support: GET /operations/incidents/:incident_id/eligibility, executionIncidentActionEligibilityGetV1 / IncidentActionEligibility; canonical open/mitigation_ready/resolution_ready/resolved fixtures. Existing Portal ADMIN workflow only, exact POST hash/version checks and SCOPED_V2 refusal retained. Actual TypeScript build, disposable incident HTTP/workflow4/4, existing boundary4/4, fresh migrations/restore and exact cell cleanup PASS 2026-10-22. Claude consumes sibling route in existing rail, not maintenance.execute or a new grant action. Return capital, allocation lock, deployment activation and credential rotation remain NOT_COMMISSIONED as CODEX_DEBT030_042_DISPOSITION_2026-10-21.md; never alias recall/register to them. Receipt: evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md. Source-only; runtime/consumer/browser pending."
     },
     {
       "id": "DEBT-UXM07-043",
@@ -158,10 +158,10 @@
       "where": "control-api access.contract.ts accessText (no bidi, zero-width, C1 or whitespace-only check) against the readers accessSelf/accessEffective/commandCurrency, which refuse the whole read for one such string (reader stricter than the schema, named in their conformance suites)",
       "consequence": "One grant, selector or id carrying such a character voids the whole self read for that member. The Manager dataset was fixed the same way in 27b42bd2; accessText is shared with stored-row parsing, so tightening it could make existing rows unreadable.",
       "proposed": "Tighten only the WRITE side (grant proposals, previews, revokes) and audit stored rows first; commandCurrency producer parity is not yet audited.",
-      "owner": "Claude (access write path), needs a stored-row audit on a database",
-      "status": "OPEN",
+      "owner": "Codex (Bobby-assigned local write validation); Claude consumer",
+      "status": "SOURCE_TESTED / NOT_INSTALLED (2026-10-22)",
       "opened": "2026-10-21",
-      "next_action": "Count stored grants with such characters (read-only SQL), then add the write-side refine with a test."
+      "next_action": "Research-only READ ONLY audit 2026-10-22T10:50:03.503Z: 5 grant_fact rows, 0 unsafe/whitespace-only/malformed fields; no values or IDs emitted. Input-only AccessWriteText/WriteSelector/WriteChange now reject the FE unsafe set without rewriting stored/read schemas, opaque revisions or password bytes. Boundary9/9 and OpenAPI/Zod contract71/71 PASS. Receipt: evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md. Not production/stable audit or runtime install; commandCurrency producer parity remains separately unaudited."
     },
     {
       "id": "DEBT-UXM07-045",
@@ -195,8 +195,8 @@
       "owner": "Codex (bound) then Claude (scale cell)",
       "origin": "FE-073 consumption 2026-10-21 (served-contract return, c02f63d8)",
       "pre_commit_hook_blocks": false,
-      "status": "OPEN (kept 2026-10-21 evening)",
-      "next_action": "Codex (FE073_FE074_SERVED_CONTRACT_RETURN_2026-10-21.md, CODEX_CR02_B1_REVIEW_RETURN): qualify the history cardinality and response-byte budget and say whether a hard output ceiling exists; the existing target 2000 is not a proven ceiling and the producer's 720-row case is valid. Until then Claude does not truncate and does not invent a cap; after the bound, add the L2 scale cell to workbench.conformance.test.ts and, if bounded, the 'Showing N of M' line from history_windows.account_equity."
+      "status": "MEASURED_SUPPORT_POINTS / NO_HARD_CEILING / FE_DOM_BUDGET_OPEN (2026-10-22)",
+      "next_action": "Actual synthetic retained-adapter producer→JSON→existing FE reader/model→chart-reducer measured at 720/2000/8000/32000 rows, 0.39/1.07/4.28/17.13 MB JSON; table and scope in evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md. target2000 is not a SQL LIMIT/global ceiling; no cap invented. Sparse numeric-population mismatch fixed without changing ordinary reader; population+depth12/12 and actual sparse PostgreSQL1/1, TypeScript build, isolated migrations/restore/cleanup PASS. Claude adds measured corpus L2 and browser DOM/overflow disposition, uses history_windows not snapshot cap200. The32k synthetic envelope exceeds16MiB; not qualified cached HTTP/DOM capacity or approved G2 budget. Pagination/byte policy remains separate contract work if required; runtime/consumer/browser pending."
     },
     {
       "id": "DEBT-UXM07-048",

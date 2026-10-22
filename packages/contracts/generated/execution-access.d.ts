@@ -241,6 +241,46 @@ export interface components {
             expected_ts_membership_revision: string | null;
             reason: string;
         } & unknown;
+        /** @description New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords. */
+        AccessWriteText: string;
+        AccessWriteSelector: {
+            /** @constant */
+            kind: "EXPLICIT_RESOURCE_SET";
+            /** @enum {unknown} */
+            resource_kind: "ROOT" | "PORTFOLIO" | "ALPHA" | "ALPHA_VERSION" | "DEPLOYMENT" | "ACCOUNT" | "BINDING" | "USER";
+            ids: string[];
+        } | {
+            /** @constant */
+            kind: "OWN_ALPHA";
+        } | {
+            /** @constant */
+            kind: "PORTFOLIO_MEMBERSHIP";
+            portfolio_ids: string[];
+        } | {
+            /** @constant */
+            kind: "ROOT_SCOPE";
+            /** @description New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords. */
+            root_id: string;
+        };
+        /** @description End-exclusive interval: valid_until_ms must be greater than valid_from_ms or null. Exact single current parent ceiling; no browser actor/issuer/TS-acceptance fields. */
+        AccessWriteChange: {
+            /** @description New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords. */
+            subject_user_id: string;
+            action: components["schemas"]["AccessAction"];
+            /** @enum {unknown} */
+            effect: "ALLOW" | "DENY";
+            selector: components["schemas"]["AccessWriteSelector"];
+            environments: ("paper" | "sandbox" | "live")[];
+            valid_from_ms: number;
+            valid_until_ms: number | null;
+            delegable_actions: components["schemas"]["AccessAction"][];
+            /** @description New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords. */
+            ceiling_grant_id: string;
+            expected_ceiling_revision: string;
+            expected_policy_revision: string;
+            expected_ts_membership_revision: string | null;
+            reason: string;
+        } & unknown;
         /** @enum {string} */
         AccessEligibilityAction: "alpha.read" | "portfolio.read" | "portfolio.read_restricted" | "portfolio.discover_linked" | "account.read" | "binding.read" | "audit.read" | "governance.r1.read" | "governance.r2.read" | "governance.canary.read" | "governance.live.read" | "governance.r1.decide" | "governance.r2.decide" | "governance.canary.decide" | "governance.live.decide" | "maintenance.read" | "development.read" | "capital.fund" | "capital.initial_grant" | "capital.top_up" | "capital.immediate_decrease" | "capital.recall_partial" | "capital.recall_full" | "capital.adjust_target_budget" | "capital.set_root_limit" | "capital.apply_pending" | "capital.cancel_remaining" | "deployment.register";
         AccessEligibilityQuery: {
@@ -1258,15 +1298,18 @@ export interface components {
             };
         };
         AccessPreviewRequest: {
+            /** @description New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords. */
             workspace_id: string;
-            change: components["schemas"]["AccessChange"];
+            change: components["schemas"]["AccessWriteChange"];
         };
         AccessProposalRequest: {
+            /** @description New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords. */
             workspace_id: string;
-            change: components["schemas"]["AccessChange"];
+            change: components["schemas"]["AccessWriteChange"];
             preview_digest: string;
         };
         AccessRevokeRequest: {
+            /** @description New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords. */
             workspace_id: string;
             expected_policy_revision: string;
             expected_grant_revision: string;
@@ -1305,6 +1348,7 @@ export interface components {
             advisory_only: true;
         };
         AccessStepUpRequest: {
+            /** @description New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords. */
             workspace_id: string;
             password: string;
             /**

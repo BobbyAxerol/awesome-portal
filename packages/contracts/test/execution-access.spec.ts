@@ -117,6 +117,36 @@ describe("ELP2-03 canonical TEST_ONLY access fixtures", () => {
 });
 
 describe("ELP2-03 finite vocabulary and server/schema structural parity", () => {
+  it("rejects unsafe new write text in OpenAPI and Zod without changing legacy read schemas", () => {
+    const bad=[...Array.from({length:160},(_,i)=>i).filter(i=>i<32||i>=127),0x61c,0x180e,
+      ...Array.from({length:5},(_,i)=>0x200b+i),...Array.from({length:5},(_,i)=>0x202a+i),
+      ...Array.from({length:5},(_,i)=>0x2060+i),...Array.from({length:4},(_,i)=>0x2066+i),0xfeff]
+      .map(cp=>`TEST_ONLY:${String.fromCodePoint(cp)}`);
+    bad.push(" ","\u00a0\u3000","TEST_ONLY:\ud800","TEST_ONLY:\udfff");
+    for(const value of bad){
+      for(const mutation of [{...change(),subject_user_id:value},{...change(),ceiling_grant_id:value},
+        {...change(),reason:value},{...change(),selector:{kind:"ROOT_SCOPE",root_id:value}},
+        {...change(),selector:{kind:"PORTFOLIO_MEMBERSHIP",portfolio_ids:[value]}}]){
+        const body={workspace_id:"ws_TEST_ONLY",change:mutation};
+        expect(validates("AccessPreviewRequest",body),JSON.stringify(body)).toBe(false);
+        expect(accessPreview.safeParse(body).success).toBe(false);
+        expect(validates("AccessProposalRequest",{...body,preview_digest:digest})).toBe(false);
+      }
+      expect(validates("AccessRevokeRequest",{...revokeRequest(),reason:value})).toBe(false);
+      expect(validates("AccessStepUpRequest",{workspace_id:value,password:"TEST_ONLY"})).toBe(false);
+    }
+    for(const value of ["TEST_ONLY:\u0085","TEST_ONLY:\u200d"," ","TEST_ONLY:\ud800"]){
+      expect(validates("AccessChange",{...change(),subject_user_id:value})).toBe(true);
+      expect(validates("AccessSelector",{kind:"ROOT_SCOPE",root_id:value})).toBe(true);
+    }
+    const readable="  TEST_ONLY:Cafe\u0301 日本語 😀  ",opaque="TEST_ONLY:\u200d\ud800";
+    const body={workspace_id:readable,change:{...change(),subject_user_id:readable,reason:"😀".repeat(512),
+      expected_policy_revision:opaque,expected_ceiling_revision:opaque,expected_ts_membership_revision:opaque}};
+    expect(validates("AccessPreviewRequest",body)).toBe(true);
+    expect(accessPreview.parse(body)).toEqual(body);
+    expect(validates("AccessPreviewRequest",{...body,change:{...body.change,reason:"😀".repeat(513)}})).toBe(false);
+    expect(validates("AccessStepUpRequest",{workspace_id:readable,password:opaque})).toBe(true);
+  });
   it("has exactly the same finite action vocabulary as the server, including unchanged legacy actions", () => {
     const actions: string[] = spec.components.schemas.AccessAction.enum;
     expect(actions).toEqual([...ACCESS_ACTIONS]);

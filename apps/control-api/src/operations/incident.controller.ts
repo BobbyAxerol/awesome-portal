@@ -29,11 +29,13 @@ import {
   IncidentCorrelateOperationRequestSchema,
   IncidentCreateRequestSchema,
   IncidentEvidenceRequestSchema,
+  IdentifierSchema,
   IncidentMitigateRequestSchema,
   IncidentResolveRequestSchema,
 } from "./contracts";
 import { IncidentService } from "./incident.service";
 import { OperationalReadService } from "./operational-read.service";
+import { incidentEligibilityQuery } from "./incident-eligibility";
 
 interface IncidentRequest extends FastifyRequest {
   portalUser: PortalUser;
@@ -82,6 +84,19 @@ export class IncidentController {
     };
     if (await this.currentReads?.mode(principal) === "SCOPED_V2") return this.currentReads!.incident(principal, incidentId);
     return this.incidents.detail(request.portalUser, workspaceId, incidentId, principal);
+  }
+
+  @Get(":incident_id/eligibility")
+  @Header("Cache-Control", "private, no-store")
+  async eligibility(@Req() request: IncidentRequest, @Param("incident_id") incidentId: string, @Query() raw: unknown) {
+    const query = incidentEligibilityQuery.safeParse(raw);
+    if (!query.success || !IdentifierSchema.safeParse(incidentId).success)
+      throw new GovernanceError("INVALID_INCIDENT_ELIGIBILITY", "Invalid incident eligibility request.", 400);
+    const workspaceId = await this.workspace(request, query.data.workspace_id);
+    return this.incidents.eligibility(request.portalUser, workspaceId, incidentId, {
+      user: request.portalUser, session: request.portalSession, workspaceId,
+      viewerWorkspaceId: request.portalViewerWorkspaceId ?? request.portalWorkspaceId,
+    });
   }
 
   @Post(":incident_id/acknowledge")
