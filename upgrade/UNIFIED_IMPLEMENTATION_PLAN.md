@@ -15061,3 +15061,35 @@ No P22/Manager/financial dependency; no fabricated acceptance or old READ rerun.
 Cutoff return actually delivered/read back on HK15:42:22UTC, raw SHA256
 24aa76fbcc75380aa5ffbae0cb3603391447129fce26ad199994a043c8682f99.
 <!-- CORE-READY-CUTOFF-1540-END -->
+
+<!-- CODEX_CORE_FIRST_20261023_BEGIN -->
+### ELP2-10 / C7 — Core chuẩn bị xong trước, Bobby chủ động gọi Edge (23Oct VN)
+
+Yêu cầu mới nhất của Bobby thay lịch đề xuất16:00–18:00UTC ở trên: **không đặt
+cửa sổ trong lúc còn chuẩn bị**. Không có reservation/ACK mới đang mở.
+
+**CORE_LOCAL_READY_FOR_NEW_PREPARED; SOURCE_UNBOUND / UNARMED.**
+[Readiness, implementation, tests và handoff](execution_loop/evidence/ELP2-10/CORE009_CORE_FIRST_READINESS_2026-10-23.md).
+[Owner-return đã gửi Edge](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_08_CORE_FIRST_READY_RETURN_2026-10-23.md).
+Code commit `27111ee8615108a820ba86ea47630939bf4e774b`,4script/testfiles+662/-0.
+Mapper3cb/source3265 đã cài thật, compiled hash3904, inactive configa814 giữ nguyên;
+backup31,217,766bytes/hash37a2621c,21/21tabledigests không đổi, healthy, noauthority/
+pending/unresolved/unreconciled/nativeleases/children. No schema/UI change.
+Focused public32+52 và private28+15+14+5 PASS, không gọi là connected acceptance.
+§10.10c focused intermediate lane; không lặp fullhook/build khi app không đổi.
+
+Core đã chốt one-shot missing-only runner, validation-before-artifacts,
+future-start original60sSTREAM apply, samehash/intent recovery, bounded failure
+capture và remove-only settlement riêng; UNKNOWN/still-open không cleanup cạnh
+tranh. Core không cần đợi window để build/sửa tiếp phần này.
+
+**Tiếp theo:** Bobby gọi Edge → new exactPREPARED → CoreACK trước install →
+actualSDKREADY → Core specimen/settlement → Edge đối soát. Không reuse6d/native8/
+oldACK, không chạy lạiREAD/restart đã đóng. READY cần còn>20min, native trust hiện
+hết23Oct03:00:58UTC; đây là expiry, không phải lịch hẹn. No new authority now.
+Publicreturn SHA256 `8f2cec7b5214a9f2af865a860b521e327da696297bedc0353781e3277de36c89`
+đã SCP/readback tại HK17:44:43UTC. Claude tiếp fixture/UI/visual độc lập;
+P22/Manager/financial/budget/calibration/coexistence/G2/browser vẫn theo gate riêng.
+**Full08/read09 NOT_MET; ELP2-10 chưa đóng, ELP2-11 chưa mở.** Không push,
+stable/dev/main/provider28445/command/Live. Peer WIP được giữ nguyên.
+<!-- CODEX_CORE_FIRST_20261023_END -->

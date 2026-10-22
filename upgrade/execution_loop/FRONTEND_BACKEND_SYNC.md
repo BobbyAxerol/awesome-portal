@@ -2355,3 +2355,33 @@ no P22/Manager/financial hold. Claude's implementation/UI WIP is untouched.
 Actual HK readback15:42:22UTC/rawSHA256
 24aa76fbcc75380aa5ffbae0cb3603391447129fce26ad199994a043c8682f99.
 <!-- CORE-READY-CUTOFF-1540-END -->
+
+<!-- CODEX_CORE_FIRST_20261023_BEGIN -->
+### Core-first native08 — local ready, source-unbound (23Oct VN)
+
+Bobby: chuẩn bị Core xong rồi mới gọi Edge, không giữ lịch chờ code/build.
+Lịch đề xuất16:00–18:00UTC trước đó không còn là reservation đang mở.
+**CORE_LOCAL_READY_FOR_NEW_PREPARED / UNARMED**, code `27111ee86` (+662/-0,4files).
+[Execution/results/owners](evidence/ELP2-10/CORE009_CORE_FIRST_READINESS_2026-10-23.md).
+[Sanitized return đã giao Edge](evidence/ELP2-10/CORE_TO_EDGE_08_CORE_FIRST_READY_RETURN_2026-10-23.md),
+SHA256 `8f2cec7b5214a9f2af865a860b521e327da696297bedc0353781e3277de36c89`,
+HK readback17:44:43UTC. Không phải authorityACK/newwindow/connectedPASS.
+
+Actualmapper3cb/source3265 installed healthy; runtimea814 expired/inactive byte-
+identical, backuphash37a2621c,21table digests preserved, currentREAD/STREAM/
+acceptance-session=0,custody/children=0. New32+52public and28+15+14+5private
+focused tests PASS (fakeeffects != sourceproof). No contract/DTO/UI change.
+Private runner oneentry explicit missing-only, validated-before-local-artifacts,
+future-start same60sgrant, standalone75/hash/physicalclose proof, successrecovery
+reuse, UNKNOWN-safe boundedcapture/removal/restore; no leftovertestprocess.
+
+**Claude:** lane `3add6058…` unchanged/clean at review; fixture/UI/visual can
+continue. Do not run broad conformance against native08; P22factory/cache,
+Manager, financial, workload/G2/browser remain independent lanes. No new FE
+consumer field is being handed over or requested in this round.
+**Core/Edge after Bobby calls:** newPREPARED→exactACK→actualSDKREADY; remaining
+pins are actual native/trust/window inputs, not unimplemented Core code.
+No oldnative8/6d/window/grant reuse, no READ/restart retake. Existingtrust expires
+23Oct03:00:58UTC; no session/source extension. Full08/read09 NOT_MET and ELP2-10
+not closed; no ELP2-11/release/push/stable/dev/provider28445/command/Live.
+<!-- CODEX_CORE_FIRST_20261023_END -->
