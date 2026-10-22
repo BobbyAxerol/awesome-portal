@@ -51,3 +51,9 @@ From the subagent reports of 2026-10-22; each is a field to ask Codex for, with 
 1. Edge publishes a key at the level above (same name, unit and partition rule): the screen draws it with no code change.
 2. Remove the key from `review-manager.ts` (or serve the real upstream on the review lane); the screen returns to its `Not published (FE-xxx)` cell.
 3. Run `npx vitest run src/execution/v2/coverage` after a contract change: `fieldCoverage.baseline.json` shows which offered fields the readers touch.
+
+## 5. Preview state (2026-10-22, after the rollout)
+- research-portal.primusspark.com (preview stack `portal-research-preview`, port 8095) serves lane tip `89a496612`: `portal-web` and `portal-fixture-bff` rebuilt and rolled out scoped (`preview.sh build portal-web portal-fixture-bff`, `preview.sh up portal-web portal-fixture-bff`); `control-api` and the databases were not touched (control-api uptime unchanged). Running image ids equal the tags; the public bundle name equals the local one (`index-DTaOU6vP.js`).
+- The fixture BFF runs the `populated` profile at medium scale (`FIXTURE_REVIEW_PROFILE=populated` appended to the host env file `~/.config/portal-research-preview/preview.env`, outside the repo). Back to the sparse default: delete that line, then `preview.sh up portal-fixture-bff`. Off entirely: `preview.sh fixture off` then `preview.sh up portal-web`.
+- The yellow "FIXTURE DATA" banner stays on every page. Nothing here is acceptance evidence.
+- Build input: the approved HMD reader wheel was copied (untracked, not committed) into `vendor/hmd-reader/` of the Claude worktree to satisfy the build.
