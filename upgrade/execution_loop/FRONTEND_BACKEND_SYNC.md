@@ -2341,3 +2341,17 @@ P22 dependency. Actual imagea96 healthy; mapper3cb7 present but not installed;
 fresh custodyH16/0pending/0unresolved/0unreconciled. Full08/read09NOT_MET.
 Do not edit the acknowledged packet/return bytes before exact Edge consumption.
 <!-- CORE-EXACT-ACK-1531-END -->
+
+<!-- CORE-READY-CUTOFF-1540-BEGIN -->
+### Core native08 READY cutoff return —22Oct15:40UTC
+ACK6d09378a actually delivered15:31:35UTC/941be9da before deadline; unchanged.
+Actual READY was not received before15:40, confirmed15:40:19. **CHANGE**, no
+admission/specimen/runtime/grant/session mutation, full08/read09NOT_MET.
+[Owner return / fresh-slot proposal / actual backup and custody](evidence/ELP2-10/CORE_TO_EDGE_08_EXACT_ACK_CUTOFF_RETURN_2026-10-22.md).
+Edge owns current install/status reconciliation plus fresh originals for
+proposed16:00–18:00UTC; Core exact ACK16:00/READYtarget16:10/missing-only specimen/
+settlement16:30, absolute latestREADY17:40. No renewal of old source or grants,
+no P22/Manager/financial hold. Claude's implementation/UI WIP is untouched.
+Actual HK readback15:42:22UTC/rawSHA256
+24aa76fbcc75380aa5ffbae0cb3603391447129fce26ad199994a043c8682f99.
+<!-- CORE-READY-CUTOFF-1540-END -->

@@ -15044,3 +15044,20 @@ READY, not P22/Manager/financial. Actual rollbacka96 healthy, mapper3cb7 present
 not installed, H16/pending0/unresolved0/unreconciled0, capacity282<=288.
 No grant/session/source activation or connected PASS inferred by ACK.
 <!-- CORE-EXACT-ACK-1531-END -->
+
+<!-- CORE-READY-CUTOFF-1540-BEGIN -->
+### Native08 READY cutoff disposition —22Oct15:40UTC
+Exact PREPARED6d09378a ACK was delivered/read back on HK15:31:35UTC,
+before15:32 (commit a6c437797, raw941be9da); those ACK bytes remain unchanged.
+No actual READY received by the strictly-before15:40 fence, including the
+15:40:19 HK/local mailbox check. **CHANGE / no admission / full08NOT_MET**,
+not a failed specimen. [Actual observations, owners and fresh reservation](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_08_EXACT_ACK_CUTOFF_RETURN_2026-10-22.md).
+Edge reconciles install/STATUS/custody, then fresh matched originals for proposed
+16:00–18:00UTC (PREPARED15:55/ACK16:00/targetREADY16:10/specimen16:10–16:20/
+settlement16:30/latestREADY17:40/fixedexpiry18:00); no old-window extension.
+Core backup completed15:33:06/37fb2dbd;15:40:54 actual imagea96 healthy/restart0,
+custodyH16/0pending/0unresolved/0unreconciled, no grant/session/runtime change.
+No P22/Manager/financial dependency; no fabricated acceptance or old READ rerun.
+Cutoff return actually delivered/read back on HK15:42:22UTC, raw SHA256
+24aa76fbcc75380aa5ffbae0cb3603391447129fce26ad199994a043c8682f99.
+<!-- CORE-READY-CUTOFF-1540-END -->
