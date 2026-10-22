@@ -8,6 +8,7 @@
  * as zero, a typed absence with its reason, and the screens that keep `Not published` when no surface is served or no contract
  * carries the figure.
  */
+import { moneyMetric } from "../../readers/managerDataset.testbase";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
@@ -46,15 +47,44 @@ describe("Portfolios list: Net PnL column from the FLEET dataset grouped by port
     expect(asked[0]).toMatchObject({ surface: "FLEET", environment: "paper", window: "90D", groupBy: ["portfolio_id"] });
   });
 
-  it("a portfolio with no group in the dataset says so, never a zero; the columns no contract carries keep Not published with their ids", async () => {
+  it("a portfolio with no group in the dataset says so in every measure column, never a zero; a group that lacks a key keeps that column's Not published with its id", async () => {
     mountList(withDataset(makeApi().api, () => datasetFor("FLEET", "someone-else")));
     const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
     await waitFor(() => expect(table.querySelector("td[data-l='Net PnL'] .exec-pf-na")).not.toBeNull());
     const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
     expect(row.querySelector("td[data-l='Net PnL']")?.textContent).toContain("No paper figures are published for this portfolio");
+    for (const label of ["NAV", "Return", "Drawdown", "Concentration"]) {
+      expect(row.querySelector(`td[data-l='${label}']`)?.textContent, label).toContain("No paper figures are published for this portfolio");
+    }
+  });
+
+  it("a group that publishes only net_pnl keeps NAV, Return, Drawdown and Concentration on their own Not published ids", async () => {
+    mountList(withDataset(makeApi().api, () => datasetFor("FLEET", PF.core)));
+    const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
+    await waitFor(() => expect(table.querySelector("td[data-l='Net PnL'] .exec-part")).not.toBeNull());
+    const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
     for (const [label, id] of [["NAV", "FE-013"], ["Return", "FE-006, FE-025"], ["Drawdown", "FE-013, FE-025"], ["Concentration", "FE-005"]] as const) {
       expect(row.querySelector(`td[data-l='${label}']`)?.textContent, label).toContain(`Not published (${id})`);
     }
+  });
+
+  it("a group that publishes the simulated keys prints each, one line per partition", async () => {
+    const withKeys = (body: any) => {
+      for (const entry of body.groups[0].economic_partitions) {
+        entry.metrics.current_nav = moneyMetric({ currency: entry.partition.currency, value: "10250.75" });
+        entry.metrics.return_30d_pct = { ...moneyMetric({ value: "3.42" }), unit: "PERCENT", currency: null };
+        entry.metrics.max_drawdown_pct = { ...moneyMetric({ value: "-4.80" }), unit: "PERCENT", currency: null };
+        entry.metrics.concentration_hhi = { ...moneyMetric({ value: "0.2850" }), unit: "RATIO", currency: null };
+      }
+    };
+    mountList(withDataset(makeApi().api, () => datasetFor("FLEET", PF.core, withKeys)));
+    const table = await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
+    await waitFor(() => expect(table.querySelector("td[data-l='NAV'] .exec-part")).not.toBeNull());
+    const row = [...table.querySelectorAll("tbody tr")].find((tr) => tr.textContent?.includes(PF.core)) as HTMLElement;
+    expect(row.querySelector("td[data-l='NAV']")?.textContent).toContain("10,250.75");
+    expect(row.querySelector("td[data-l='Return']")?.textContent).toContain("+3.42%");
+    expect(row.querySelector("td[data-l='Drawdown']")?.textContent).toContain("-4.80%");
+    expect(row.querySelector("td[data-l='Concentration']")?.textContent).toContain("0.2850");
   });
 
   it("keeps Not published (FE-005, FE-025) when the dataset is not served", async () => {

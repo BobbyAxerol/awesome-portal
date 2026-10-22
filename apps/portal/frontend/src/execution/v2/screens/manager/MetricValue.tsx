@@ -21,6 +21,8 @@ export function metricTitle(metric: ManagerMetricRead): string {
 export function MetricValue({ metric, signed = false }: { metric: ManagerMetricRead | undefined | null; signed?: boolean }) {
   if (metric === undefined || metric === null) return <NaWhy reason="This metric is not in the published set for this row." className="exec-mgr-na" />;
   if (metric.kind === "absent") return <NaWhy reason={metric.copy} className="exec-mgr-na" />;
-  const text = metric.unit === "MONEY" ? showDecimal(metric.exact, { unit: "money", currency: metric.currency ?? undefined, signed }) : metric.exact;
+  const text = metric.unit === "MONEY"
+    ? showDecimal(metric.exact, { unit: "money", currency: metric.currency ?? undefined, signed })
+    : metric.unit === "PERCENT" ? showDecimal(metric.exact, { unit: "pct", signed }) : metric.exact;
   return <span className="exec-mgr-num" title={`${metric.exact} · ${metricTitle(metric)}`} data-zero={metric.zero ? "true" : undefined}>{text}</span>;
 }

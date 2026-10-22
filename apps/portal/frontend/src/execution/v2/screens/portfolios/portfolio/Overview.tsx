@@ -18,6 +18,7 @@ import { Flag } from "../../../Flag";
 import { formatAsOf, formatInstant } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
 import { PF_FE, npText } from "../fe";
+import type { ManagerPartitionedMetrics } from "../../../readers/managerMetric";
 import { PartitionFigures, figureSource, publishes } from "../PartitionFigures";
 import { ManagerSeriesPanel } from "../../series/ManagerSeriesPanel";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../../series/seriesModel";
@@ -179,11 +180,17 @@ function CapitalCard({ ctx }: { ctx: TabCtx }) {
 }
 
 /** Concentration (HHI) keeps its panel; shares need the Manager grouping, so no share is drawn or worked out here. */
-function ConcentrationCard() {
+function ConcentrationCard({ list }: { list: readonly ManagerPartitionedMetrics[] | null }) {
   return (
     <SectionPanel title="Concentration" aside="HHI">
-      <p className="exec-pf-note"><Np fact={PF_FE.concentration} /></p>
-      <p className="exec-pf-note">Shares need the Manager grouping, so none is drawn or worked out here.</p>
+      {list !== null ? (
+        <PartitionFigures list={list} metricKey="concentration_hhi" />
+      ) : (
+        <>
+          <p className="exec-pf-note"><Np fact={PF_FE.concentration} /></p>
+          <p className="exec-pf-note">Shares need the Manager grouping, so none is drawn or worked out here.</p>
+        </>
+      )}
     </SectionPanel>
   );
 }
@@ -226,6 +233,9 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
   const alphaCount = new Set(deployments.map((d) => d.strategyId ?? d.alphaLabel)).size;
   const simulated = environments.some((env) => env !== "live");
   const netPnlList = figureSource(datasetOf(ctx), "net_pnl", identity.portfolioId);
+  const returnList = figureSource(datasetOf(ctx), "return_30d_pct", identity.portfolioId);
+  const drawdownList = figureSource(datasetOf(ctx), "max_drawdown_pct", identity.portfolioId);
+  const hhiList = figureSource(datasetOf(ctx), "concentration_hhi", identity.portfolioId);
   return (
     <div className="exec-pf-stack">
       {simulated ? <p className="exec-pf-banner" data-tone="info">Simulated capital. It is never added to Real-funded figures.</p> : null}
@@ -234,8 +244,12 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
         <PfKpi label="Net PnL" note={netPnlList !== null ? `Window ${ctx.window}` : "Windowed; needs the window"}>
           {netPnlList !== null ? <PartitionFigures list={netPnlList} metricKey="net_pnl" signed /> : <Np fact={PF_FE.netPnl} />}
         </PfKpi>
-        <PfKpi label="Return" note="Windowed; methodology per source"><Np fact={PF_FE.ret} /></PfKpi>
-        <PfKpi label="Drawdown" note="Needs the NAV series"><Np fact={PF_FE.drawdown} /></PfKpi>
+        <PfKpi label="Return" note={returnList !== null ? `Window ${ctx.window}` : "Windowed; methodology per source"}>
+          {returnList !== null ? <PartitionFigures list={returnList} metricKey="return_30d_pct" signed /> : <Np fact={PF_FE.ret} />}
+        </PfKpi>
+        <PfKpi label="Drawdown" note={drawdownList !== null ? `Max, window ${ctx.window}` : "Needs the NAV series"}>
+          {drawdownList !== null ? <PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed /> : <Np fact={PF_FE.drawdown} />}
+        </PfKpi>
         <PfKpi label="Allocated (current)">
           <MoneyList entries={identity.allocationByCurrency} empty={<Absent reason="no allocation published" />} />
         </PfKpi>
@@ -249,7 +263,7 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
       <EquityCard ctx={ctx} />
       <div className="exec-pf-grid2">
         <Attention ctx={ctx} />
-        <ConcentrationCard />
+        <ConcentrationCard list={hhiList} />
       </div>
     </div>
   );

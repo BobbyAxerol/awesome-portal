@@ -221,6 +221,8 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   const fund = fundRead.phase === "ready" ? fundRead.value : fundRead.phase === "loading" || fundRead.phase === "error" ? fundRead.last : null;
   const statements = fund?.capitalStatements ?? [];
   const netPnlList = figureSource(fund, "net_pnl");
+  const returnList = figureSource(fund, "return_30d_pct");
+  const drawdownList = figureSource(fund, "max_drawdown_pct");
   const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
 
   const { snapshot } = reads;
@@ -365,8 +367,16 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
         ) : (
           <SeriesCell label="Net PnL" read={pnlRead} window={url.value.window} gapIds="FE-005, FE-025" />
         )}
-        <SeriesCell label="Return" read={returnRead} window={url.value.window} gapIds="FE-006, FE-025" />
-        <Cell label="Drawdown" note="Needs a NAV series"><Gap ids="FE-013, FE-025" /></Cell>
+        {returnList !== null ? (
+          <Cell label="Return" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={returnList} metricKey="return_30d_pct" signed /></Cell>
+        ) : (
+          <SeriesCell label="Return" read={returnRead} window={url.value.window} gapIds="FE-006, FE-025" />
+        )}
+        {drawdownList !== null ? (
+          <Cell label="Drawdown" note={<span title={`Fund dataset, window ${url.value.window}`}>Max, window {url.value.window}</span>}><PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed /></Cell>
+        ) : (
+          <Cell label="Drawdown" note="Needs a NAV series"><Gap ids="FE-013, FE-025" /></Cell>
+        )}
         <Cell label="Open incidents" note={<Link className="exec-ov-link" to={ctx("/execution/operations")} title="Incidents in the ranked list">Operations</Link>}>
           {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : incidents.value}</span>}
         </Cell>

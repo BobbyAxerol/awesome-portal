@@ -15,7 +15,7 @@ import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
 import type { ManagerPartitionedMetrics } from "../../readers/managerMetric";
 import { PF_FE, npText, type Unpublished } from "./fe";
-import { PartitionFigures } from "./PartitionFigures";
+import { PartitionFigures, publishes } from "./PartitionFigures";
 import { Absent, MoneyList } from "./format";
 import type { PortfolioRow, SortKey } from "./listModel";
 import type { PortfolioRoutes } from "./routes";
@@ -185,12 +185,23 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
   );
 }
 
+/** The dataset group metric each measure column reads (one line per economic partition; never totalled). */
+const GROUP_KEY: Readonly<Partial<Record<ColumnId, { key: string; signed: boolean }>>> = {
+  nav: { key: "current_nav", signed: false },
+  pnl: { key: "net_pnl", signed: true },
+  ret: { key: "return_30d_pct", signed: true },
+  dd: { key: "max_drawdown_pct", signed: true },
+  hhi: { key: "concentration_hhi", signed: false },
+};
+
 function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null) {
-  if (id === "pnl" && figures !== null) {
+  const source = GROUP_KEY[id];
+  if (source !== undefined && figures !== null) {
     if (row.unallocated) return <Absent reason="The source publishes no figure for capital that no portfolio holds" />;
     const group = figures.groups.get(row.portfolioId);
     if (group === undefined) return <Absent reason={`No ${figures.environment} figures are published for this portfolio`} />;
-    return <PartitionFigures list={group} metricKey="net_pnl" signed />;
+    // A group that does not publish this key keeps the column's own Not published (the contract has not spoken for it).
+    if (publishes(group, source.key)) return <PartitionFigures list={group} metricKey={source.key} signed={source.signed} />;
   }
   const fact = UNPUBLISHED[id];
   if (fact) return <Absent reason={`${npText(fact)}: ${fact.what}`} />;
