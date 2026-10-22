@@ -41,6 +41,12 @@ export interface CommandTrust {
    * Accepted recovery uses explicit service authority, independent of expired human login.
    * Current requester report rights are verified separately before public disclosure. */
   lookup(input:{authorization:CommandAuthorization;intent:CommandIntent;signal:AbortSignal}):Promise<SourceCommandResult|null>;
+  /** Optional authenticated STATUS of the same durable original. The caller
+   * verifies this ACTUAL requester's current exact report rights before/after
+   * I/O; the owning Edge port separately verifies fresh human/source fences.
+   * Never used by unattended recovery or as a new send/retry authority. */
+  lookupCurrentRequester?(input:{actor:AccessActor;authorization:CommandAuthorization;intent:CommandIntent;
+    signal:AbortSignal}):Promise<SourceCommandResult|null>;
 }
 export const unqualifiedCommandTrust:CommandTrust={prepare:async()=>null,
   send:async()=>{throw new Error("COMMAND_RELAY_NOT_QUALIFIED");},lookup:async()=>null};

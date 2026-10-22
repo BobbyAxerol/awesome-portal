@@ -10,7 +10,7 @@ import { accessDigest,evaluateAccess,type AccessEvaluationContext } from "./acce
 import { ExecutionAccessService } from "./access.service";
 import { assertAmountPartition } from "./foundation.contract";
 import { CommandError,commandIntent,commandPreview,commandStatus,submitCommandStatus,toPublicCommandStatus,type CommandIntent,type CommandStatus,type PublicCommandStatus,type SubmitCommandStatus } from "./command.contract";
-import { CommandStore,type CommandRecord } from "./command.store";
+import { CommandStore,type CommandRecord,type WorkflowCommandCandidate } from "./command.store";
 import { capitalWorkflow } from "./workflow";
 import { publicCommandRecord,workflowCommandRecord,workflowCommandTarget } from "./capital-workflow-record";
 import { commandMembershipCurrent } from "./command-current-authority";
@@ -184,12 +184,12 @@ export class ExecutionCommandService {
   }
   private async storedReport<T>(actor:AccessActor,workspace:string,id:string,
     project:(record:ReturnType<typeof workflowCommandRecord>,current:AccessEvaluationContext,
-      decision:ReturnType<typeof requireCurrentTsAuditRead>)=>T):Promise<T> {
+      decision:ReturnType<typeof requireCurrentTsAuditRead>,row:WorkflowCommandCandidate)=>T):Promise<T> {
     const prepared=await this.reads.prepareExact<T>(actor,workspace,async()=>{
       const row=await this.store.workflowCandidate(workspace,id);
       if(!row)throw new CommandError("COMMAND_RESOURCE_NOT_FOUND",404);
       const target=workflowCommandTarget(row); // bounded target ONLY, not private decode
-      return {target,decode:(current,decision)=>project(workflowCommandRecord(row,workspace,id,target),current,decision)};
+      return {target,decode:(current,decision)=>project(workflowCommandRecord(row,workspace,id,target),current,decision,row)};
     },error=>this.readError(error));
     return this.reads.finish(prepared);
   }
@@ -274,8 +274,47 @@ export class ExecutionCommandService {
     return this.reads.finish(prepared);
   }
   async reconcile(actor:AccessActor,workspace:string,id:string) {
+    if(this.trust.lookupCurrentRequester)return this.reconcileCurrentRequester(structuredClone(actor),workspace,id);
     await this.status(actor,workspace,id);
     await this.recover(workspace,id);
+    return this.status(actor,workspace,id);
+  }
+  /** Same existing exact report flight, including final source/Core/session
+   * fences. This private snapshot is never returned through the public API. */
+  private requesterOriginal(actor:AccessActor,workspace:string,id:string):Promise<Omit<CommandRecord,"attempt">> {
+    return this.storedReport(actor,workspace,id,({intent,status},_current,_decision,row)=>({
+      id:row.id,actor:row.actor,hash:row.hash,intent,status,authorization:commandAuthorization.parse(row.authorization)}));
+  }
+  private sameOriginal(current:Omit<CommandRecord,"attempt">,original:Omit<CommandRecord,"attempt">):void {
+    const tuple=(record:Omit<CommandRecord,"attempt">)=>({id:record.id,actor:record.actor,hash:record.hash,
+      intent:record.intent,authorization:record.authorization});
+    if(accessDigest(tuple(current))!==accessDigest(tuple(original)))throw new CommandError("COMMAND_STATUS_UNVERIFIED",502);
+  }
+  /** Authenticated requester STATUS is not service recovery. Old author/send
+   * expiry cannot impersonate this requester; no fallback, claim or resend. */
+  private async reconcileCurrentRequester(actor:AccessActor,workspace:string,id:string) {
+    const original=await this.requesterOriginal(actor,workspace,id);
+    if(original.status.delivery==="PREPARED"||original.status.delivery==="FAILED_BEFORE_SEND")return this.status(actor,workspace,id);
+    let result:SourceCommandResult|null=null;
+    if(original.authorization.idempotency_retained_until_ms>Date.now()) {
+      try{result=await this.bounded(signal=>this.trust.lookupCurrentRequester!({actor:structuredClone(actor),
+        authorization:structuredClone(original.authorization),intent:structuredClone(original.intent),signal}));}
+      catch{/* Ambiguous STATUS remains UNKNOWN, never fallback/resend. */}
+    }
+    // Revocation/session/scope changes during source I/O cannot write or expose
+    // its response. Validate the SAME immutable original, not a newly resolved
+    // target; update's locked callback repeats that check against concurrent I/O.
+    const checked=await this.requesterOriginal(actor,workspace,id);this.sameOriginal(checked,original);
+    const unresolved=(current:CommandRecord)=>{
+      this.sameOriginal(current,original);
+      return current.status.delivery==="SENDING"?{...current.status,delivery:"DELIVERY_UNKNOWN" as const,
+        next_action:"QUERY_SAME_INTENT" as const}:current.status;
+    };
+    if(result) {
+      try{await this.store.update(workspace,id,null,current=>{this.sameOriginal(current,original);return mergeSource(current,result!);});}
+      catch{await this.store.update(workspace,id,null,unresolved);throw new CommandError("COMMAND_STATUS_UNVERIFIED",502);}
+    }else await this.store.update(workspace,id,null,unresolved);
+    // Final disclosure is still the unchanged exact current report reader.
     return this.status(actor,workspace,id);
   }
   /** Internal accepted-intent recovery. No human impersonation, no new send,
