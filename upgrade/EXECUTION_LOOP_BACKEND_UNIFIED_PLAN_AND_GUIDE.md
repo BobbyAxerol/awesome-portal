@@ -31443,3 +31443,73 @@ canonical manager-v2 source54c6f5f3 unchanged. Full08/read09 NOT_MET.
 remote locator/hash/preserved prefixes/index verified; tracking reconciliation,
 diff/secret and peer-WIP checks PASS. Local documentation publication only,
 no push/merge/CI. Actual ACK/install/READY still require their own receipts.
+
+### Original08 — consume Core-first readiness and prepare fresh binding
+
+**OWNER_APPROVED / IN_PROGRESS,23Oct00:54Asia/Saigon (22Oct17:54UTC).**
+Bobby calls Edge after Core-first handoff. Fully read155-line return
+CORE_TO_EDGE_08_CORE_FIRST_READY_RETURN_2026-10-23.md; HK/SGP raw SHA256
+8f2cec7b5214a9f2af865a860b521e327da696297bedc0353781e3277de36c89 matches.
+Current Core sourcec5e0ea0b, installed mapper3cb7f24a/inactivea814/schema149,
+frozen runner eb5e9515 is credited as READY_FOR_NEW_PREPARED, not still build-
+blocked and not an ACK of new source. Scope: prepare NEW install/revoke
+originals against freshly observed revoked predecessor, finite window proposal
+22Oct18:00–20:00UTC /23Oct01:00–03:00VN, current native trust, frozen SDK/
+closure/lifecycle, capped correctness and real read-only preflight. Target ACK
+18:15; latest actual READY19:39 leaves strictly more than20minutes. Exact Core
+ACK precedes official install/STATUS/SDK_READY, then Core's one-shot active-
+revoke-only runner and settlement; Edge owns physical drain and exact original
+revoke/status. No completed READ/restart replay, generic new approval, source
+expiry extension, P22/Manager/financial/G2 dependency or peer branch changes.
+
+Guide: existing EPG10-08 plus Core-first§§1–5 and original finite lifecycle.
+Invariants/test gates: retired native8/natural key/identity/fingerprint/census
+must actually match; fresh commands are not old originals; validate SDKdb0,
+modeled ACK/window/CAS/UNKNOWN/drain/lateREADY tests; actual RR READ ONLY
+preflight with pools0. All original custody retained. Rollback is same-original
+STATUS after ambiguity, Core's genuine settlement, physical guarded drain,
+then exact revoke CAS9→10; no forced kill/fake ACK. No source install, grant,
+session or socket before ACK; stable/dev/provider28445/command/Live protected.
+Update evidence/journal after tested slices; preserve peer WIP, no push/merge.
+
+**Fresh PREPARED delivered22Oct17:57:30.020502UTC /23Oct00:57VN:**
+[Core-first binding](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_CORE_FIRST_PREPARED_2026-10-23.md),
+6631B/raw99e775f3ec06cd5338fd2d2fc863e7de223e589979133a211960088c0c667935,
+byte-identical Core canonicalELP2-10. Core original mailbox/Unified/sync appended
+exact locator/ACK action, old prefixes and index preserved. No private file or
+key transferred. NEW4b9dce98/CAS8→9/installrawc64601c9/SDK16dc7829 and
+4c1c3dbd/CAS9→10/revokerawa0ab8a7b/SDKb649348c, finite18:00–20:00UTC,
+latest actualREADY19:39. Private0100-yHoOlP contains14regular0600Bobby/nlink1
+files in0700directory; operator e3e7972c equals preserved PREPARED/ACKnull.
+Mechanical diff only fresh commands/expiry/window/pins/private paths; runtime,
+JWKS/source_readback unchanged and old1400 originals' three hashes preserved.
+
+**Actual checks:**14unique modeled PASS/0FAIL/0.254s; frozenSDKvalidate EXIT0/
+stderr0/db0/listenerfalse, CA/client/server freshness through20:00 verified.
+One real bounded RR READ ONLY preflight EXIT0/stderr0: correct DB/system/
+native-source identity/fingerprint5a67e653/head8revoked/original84d18247,
+mapping1/policy1/naturalkey/control/catalogue verified, no operator issuance,
+pools[0,0]. Core5runner hashes and manifesteb5e9515 independently matched;
+actual Research container3cb7 verified. Core owns fresh admission/custody census
+and grant/session operations, not inferred from this source-only observation.
+Direct Core-owned ACK search17:58:42 still0new99e775f3 ACK, not reused8f2cec7b.
+No install/serve/ISSUE/ENTER or connected PASS in preparation; full08/read09NOT_MET.
+
+**Cleanup/source/release:** all3capped --rm preparation containers physically
+absent; socket28446 absent. No image/build created,112images/43active and
+589BuildKit/68.29GB shared inventory retained, no shared prune. Disk used
+339020275712→338978701312/free179896627200→179938201600B reflects shared
+activity, not attributed cleanup saving. Native28ea and all3protectedEdge d6aa
+restart0; existing Manager/Proxy/config/stable/rollback matrix retained, not
+newly activated. Canonical Edge54c6f5f3 and active featuref651a015 unchanged
+before docs publication; no merged worktree/branch removal or SGP test resource.
+Private prepared14files are retained for exact ACK/activation/custody, not
+abandoned build cache. No push/merge/CI. Remaining runnable source step begins
+only with Core's exact raw-packet ACK: official install/STATUS then SDK_READY;
+Core build/runner is no longer a dependency. No other Edge preparation deferred.
+
+**Verification: R0:** exact3Markdown paths/owned hunks, local links/anchors,
+secret/diff and tracking reconciliation PASS; original3peer WIP hashes and
+peer tracked hunks preserved. Current08 detailed guide and Unified agree on
+PREPARED/UNARMED, not READY/connected. Core receives source-publication pin
+without overwriting its producer return or claiming its ACK.

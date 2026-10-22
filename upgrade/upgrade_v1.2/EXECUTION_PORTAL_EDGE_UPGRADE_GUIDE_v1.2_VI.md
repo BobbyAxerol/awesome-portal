@@ -1036,6 +1036,16 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest23Oct00:56VN:** [Fresh Core-first PREPARED](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_CORE_FIRST_PREPARED_2026-10-23.md)
+credits actual Core mapper3cb7 installed/inactivea814/schema149 and frozen
+runner eb5e9515; no build wait. NEW18:00–20:00UTC/01:00–03:00VN proposed,
+install4b9dce98/revoke4c1c3dbd/CAS8→9→10, latest actualREADY19:39UTC leaves
+over20min; original expired6d09378a remains unused.14modeledPASS/SDKdb0/
+actual RR READ ONLY8revoked/pools0 PASS, native trust covers window.
+UNARMED: exact new Core ACK precedes install/SDK_READY, then Core sole
+active-revoke-only runner/settlement and Edge physicaldrain/revoke/status.
+No completed READ/restart replay or broad Manager/P22 probe. Full08/read09NOT_MET.
+
 **Latest22Oct21:00VN:** [Fresh14:00–16:00UTC PREPARED](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_1400_PREPARED_2026-10-22.md)
 raw6d09378a delivered/hash-equal Core13:59:51UTC. Core returnc7c87743§§12–14
 ACKs earlier preparation but replaces interval; old13:00 artifacts remain
