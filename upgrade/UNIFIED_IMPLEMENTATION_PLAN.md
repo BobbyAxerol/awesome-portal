@@ -9685,6 +9685,13 @@ BFF only. Source/financial/STREAM/commands and ELP2-10 acceptance are not closed
 by these synthetic cases. Claude owns the listed consumer/HiFi follow-through;
 Core owns data/boundary tests. No production/dev/main or shared-preview cutover.
 
+Follow-up report: the same packet lists DEBT-043/047 local backend work,
+DEBT-027/028 decisions/measurements, and remaining source/financial/command
+qualification. Fleet already has a scoped Manager consumer; Overview still
+needs typed binding. New requests go **Core ↔ Edge only**, with PM/TS behind
+Edge; native authority proof is not Manager data commissioning. Profiles remain
+SOURCE_TESTED/not installed. Report-only R0, no new runtime assignment.
+
 **21 October post-freeze backend review:** [BE-P21/P22 CHANGE + one-writer ACK](execution_loop/evidence/ELP2-10/CODEX_BE_P21_P22_REVIEW_AND_ONE_WRITER_RETURN_2026-10-21.md).
 Claude new dark source f0b56371/fa530323 has four concrete fixes: sum overflow,
 census-bound economic digest, RECONCILED/witness interpretation and bounded

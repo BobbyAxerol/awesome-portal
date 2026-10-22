@@ -1,5 +1,32 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex round-start —22Oct2026, support/debt report and single Edge counterpart
+
+Bobby asks what the fixture work unblocks, remaining Claude/backend requests,
+and next work; this round is an audit/report, not a runtime assignment.
+Canonical `b7327450`, Claude `3aaf24f4`; no new Claude committed delta since
+the fixture packet. Both checkouts' existing WIP is preserved. Reused read-only
+reviewers `backend_cr02_b1_review` (current request disposition) and
+`edge_owner_delta` (Edge/connected debt). No new code/test/build/grant/window.
+Latest Bobby routing direction: Core coordinates **only with Execution Portal
+Edge**. PM/TS are upstream authorities behind Edge, not new direct Core clients
+or separate request destinations. Historical owner requests remain evidence;
+future financial/PKI/command/target questions go through Edge. This does not
+transfer economic authority to Core or turn native receipts into Manager proof.
+ACT_NOW: distinguish source-tested fixtures from installed/consumed data and
+old OPEN rows from delivered contracts. NEXT_GATE: eligible Core/Edge actual
+commissioning, Manager/financial/command inputs and measurements, separately.
+
+Round return: [audited support/debt and owner split](evidence/ELP2-10/FIXTURE_REVIEW_DATA_2026-10-22.md#follow-up-support-backend-debt-and-one-edge-counterpart).
+New rich profiles remain SOURCE_TESTED/not installed. Fleet already consumes
+Manager in single-environment/table mode; Overview's hard-coded gap remains.
+True local follow-through: DEBT-043 write safety, DEBT-047 Paper history
+qualification, DEBT-042 incident eligibility; DEBT-027 cross-process latency
+and DEBT-028 broad-query choices stay explicit decisions/measurements, not
+missing implementations. Source/financial/command/whole-Fleet notices and
+actual revoke/G2 remain separately open. Edge alone receives new upstream
+requests. R0 report only; no code, window execution, remote delivery or push.
+
 ## Codex round-start —22Oct2026, explicit review fixtures
 
 Canonical clean `82848983`; Claude `3aaf24f4`, no new committed delta; its PG/docs

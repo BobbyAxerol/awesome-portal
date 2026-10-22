@@ -171,3 +171,100 @@ relation source `review-relations.ts`:
 `988475f085badbbfd3c3e965886b98307a67d40713ee88c3c2e1acb6d80f740b`.
 The bundle does not contain the browser probe; the final probe cleanup change
 does not require a bundle rebuild or engine/provider requalification.
+
+## Follow-up: support, backend debt and one Edge counterpart
+
+Bobby's follow-up22Oct asks for a report/next recommendation, not another
+runtime activation. Entry canonical `b732745078123c95d973c5b5e008f7c653981c18`;
+Claude remains `3aaf24f4e66bca6c27962ddbbc2049cfb6505421` plus its preserved
+PG/docs WIP. No new Claude committed delta since the fixture round. Reused
+two read-only reviewers; no new test/build, credential or runtime change.
+
+### What this actually unblocks for Claude
+
+- `ba6d565e` supplies schema-tested populated/stress HTTP data for the same
+  product reader; `b7327450` supplies reproducible commands and consumer debt.
+  Claude no longer needs a separate invented field model or a live source to
+  develop the accepted financial panels, long-name wrapping and paging states.
+- This is SOURCE_TESTED, not installed, consumed, full interactive/HiFi accepted
+  or connected. Overview's hard-coded `UNPUBLISHED_FUND` still needs explicit
+  typed Manager binding. The 25-route probe is not every drawer/filter/write.
+- Correction to the earlier broad consumer note: Fleet already reads Manager
+  datasets in a single-environment/table scope (`screens/fleet/index.tsx:143`).
+  Default `All` producing no dataset calls does not prove absent wiring. Test
+  `/execution/fleet?stage=paper` separately; Overview's placeholder is a genuine
+  independent gap. Do not replace Fleet's existing consumer wholesale.
+- C-1…C-6 integration/review are not six newly missing implementations: the
+  top terminal addendum in [landing ACK](CODEX_TO_CLAUDE_LANDING_ACK_2026-10-22.md)
+  supersedes its historical OPEN tables. Keep real source/consumer gates open.
+
+### Single integration counterpart — latest Bobby direction
+
+Core sends upstream requests **only to Execution Portal Edge**; Edge coordinates
+its PM/TS/issuer/target owners and returns one versioned contract/receipt pack.
+PM/TS remain economic/business authorities, Portal remains identity/app policy
+authority. Do not create a new Core→PM/TS business-data adapter or second ledger.
+Historical direct-owner delivery records are retained, not future routing rules.
+
+The existing Edge request already defines the product DATA path:
+`Core → Paper Edge8443 → SourceProxy → Manager`
+([exact request](EDGE_TO_CORE_EPG10_08_REQUEST_2026-10-19.md), §“EDGE runnable
+existing-data leg preparation”, line1206 at this cut). Native28446 is the
+separate qualification authority/custody leg. Source confirmation:
+`native-business-read-client.ts:71–72,168–177` calls fixed internal lease verbs;
+`native-business-read-codec.ts:94–105` returns permission/lease, not financial
+dataset rows; `native-manager-consumer.ts:171` obtains a local retained snapshot.
+Thus native200 does not prove Manager data integration, and is not evidence of
+direct PM business-data/SQL access. Ask Edge to make ownership/encapsulation of
+that authority side-leg explicit under the new single-counterpart requirement;
+do not silently redesign it or open another direct integration.
+
+### Ordered remaining Core/Edge work, not blanket missing backend
+
+| Priority | Remaining work / precise split | Done-when |
+|---|---|---|
+| 1, independent of real source | Core: prepare an explicit rich-fixture review lane, field→HTTP/type/fixture mapping and producer review; Claude: wire Overview Manager fields, DEBT-013 boundaries, DEBT-030 existing paging and DEBT-042 published refusal/gate. Preserve Fleet's existing scoped consumer and accepted design | Named installed profile/bundle and consumer receipt after assigned installation; no automatic fixture fallback or claim all states passed |
+| 2 | C7/EPG10-08: mapper/runner repair exists, minimal3cb7 image is not installed. Edge's fresh proposal is PREPARED_UNARMED, not SDK_READY or execution permission. Core reviews exact ACK/config/image; execute only in an authorized matched window | Actual active revoke BEFORE fixed expiry, independent READ remains authorized, same-artifact recovery/terminal ACK and cleanup; no repeated already-proven READ/restart |
+| 3 | Manager trust/data: existing JWK/CSR/inactive config are preparation. Edge returns its accepted client trust, actual target/source pins and reconcile window; Core configures the existing Edge-facing data proxy, not a PM data client | Real served Manager surfaces pass the same readers with current scope/revision, schema/error/page/cache provenance and source availability |
+| 4 | Financial mapping: accepted dark reducer exists; Edge still owes trusted source-row identity, ownership leaves/census, valuation/window/currency, required-cost census and correction mapping. Claude connects one shared selected-source builder for dataset AND series; Codex independently reviews | No double counting, fake cost0 or inferred ownership; comparable real responses or explicit typed absence with provenance |
+| 5 | C8/ELP2-07 and DEBT-042 missing economic families: local command/status/unknown recovery exists; commissioned Edge submit/status/effect and exact gate/action capability are not proven. Incident advisory eligibility remains separate from source capital commands | Correct Edge outcome/audit/idempotency/current authority; uncommissioned Return/Lock/Deploy stays disabled, never enabled from READ/fixture evidence |
+| 6 | P22/cache/cursor/control + actual coexistence/G2/calibration: landed source/harness is not an installed measurement. Edge consolidates target14-group numeric budget, apparatus/workload/population/stop/window; Core supplies the exact Portal image/driver | Current-epoch authorized controls, genuine independently authorized control, actual M5/M7/paired G2 and reviewed calibration; C288 correctness ceiling is not load/production budget |
+
+### Additional local backend requests / measured limits
+
+These requests are distinct from missing Edge source inputs. Claude retains
+implementation ownership under campaign §10.13; Codex reviews/integrates or
+takes an expressly assigned support slice, without editing parallel WIP.
+
+| ID | Remaining work and evidence at this cut | Closure / next owner action |
+|---|---|---|
+| DEBT-043 | `access.contract.ts:22` write text accepts C1/bidi/zero-width or whitespace-only cases the strict FE reader rejects. Shared storage parsing must not strand existing grants | Read-only stored-row audit, then write-side validation and negatives for proposals/previews/revokes; retain opaque IDs and source pins. Claude implementation, Codex review; currency producer parity still needs its own audit |
+| DEBT-047 | Paper retained-equity history depth, response bytes, parse/render costs not qualified. Snapshot `Records` cap200 is not a history limit; 720 producer rows are legitimate, target2000 is not a published maximum | Codex can measure existing reader at increasing real depths and publish safe bounds; Claude tests the matching L2 view/caption. No arbitrary cut to200 to pass |
+| DEBT-027 | In-process logout/admin/revoke hints are wired and tested. Separate CLI/native processes still rely on per-poll/per-write fences with a bound up to5s | Preserve current fences; decide whether this CLI bound is acceptable or a separate cross-process notification design is needed. Do not describe the in-process fix as absent or promise sub-poll latency |
+| DEBT-028 | Large B1 EXPLAIN gate already PASS. Broad sort/request paths remain bounded but expensive (reported ~0.6s sort, median2137ms under2500ms budget); no concurrent-cold proof | Review ordered-query/index and optional-include proposals against measured impact; qualify large revision/digest paths. No repeat million-row run merely to update docs, no unsupported SQL immutability wrapper |
+| DEBT-042 local portion | Incident ack/mitigate/resolve routes and `resolution_gate` exist; advisory eligibility remains incomplete. Capital return/allocation lock/deploy are separate uncommissioned source families | Claude publishes eligibility/consumer states; Codex checks contract parity. Do not alias capital actions to recall/halt/register or enable them from local incident evidence |
+
+C7/DEBT-UXM07-026 additionally retains `edge_notice_source: NOT_COMMISSIONED`
+in `alpha-fleet-realtime.service.ts:153`; existing native STREAM receipts do
+not qualify the whole Fleet notice source. DEBT-029's accepted dark reducer
+is not runtime economic-source wiring: one selected-source builder must serve
+both dataset and series after Edge supplies the actual mapping/census.
+
+The [Core repair return](CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md)
+§§6–8 and [owner-input packet](CORE009_MANAGER_FINANCIAL_BUDGET_ACTIONS_2026-10-22.md)
+hold exact prior pins; do not rewrite their history. Delegate's read-only HK
+metadata cut is Edge `fe3da43f50545783be47b6ddb8940d1469616c42` plus Unified
+WIP, not a new runtime observation. Latest local Edge PREPARED public hash is
+`b974abaf740d59f05678b5edf19e7884f080404a99fa648549b78db7a12d2d64`;
+its10:30–11:00UTC proposal is not accepted execution or installed READY.
+
+Next recommendation: finish visible fixture consumption without waiting for
+sources; in parallel Core takes the exact Edge-only commissioning inputs and
+missing-case review. Then financial/command source qualification and measured
+coexistence. ELP2-10 remains OPEN; ELP2-11 needs its own entry/assignment and
+does not start from this report. Source Truth Board needs a current per-family
+addendum after actual receipts, not promotion of every row from one native200.
+No implementation/runtime action or remote delivery is claimed in this round.
+Verification tier R0: changed Markdown links, tracking reconciliation and
+diff whitespace only; no new code tests or runtime qualification. Existing
+fixture/source test counts above are reused evidence, not new measurements.
