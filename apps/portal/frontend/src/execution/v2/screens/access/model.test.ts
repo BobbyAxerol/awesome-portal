@@ -7,10 +7,12 @@ import { describe, expect, it } from "vitest";
 
 import { V2_CAPABILITY, V2_ROLE_PRESETS } from "../../shell/roleNav";
 import type { AccessGrant } from "../../readers/accessEffective";
+import { ROOT_CAPITAL_ACTIONS } from "./useRootCapitalEligibility";
 import {
   ADMIN_CAPABILITY,
   ROW_CAP,
   grantWindow,
+  capitalRow,
   doRows,
   needsText,
   otherCapabilities,
@@ -45,6 +47,71 @@ describe("no capability", () => {
     for (const hidden of ["EXECUTION_WAIVERS", "EXECUTION_EXIT_REVIEWS", "EXECUTION_ADMIN_ACTIONS", "PAPER_TRADING"]) {
       expect(ids).not.toContain(`nav:${hidden}`);
     }
+  });
+});
+
+describe("the design's action rows (DEBT-UXM07-051)", () => {
+  const labels = (rows: CapabilityRow[]) => rows.map((r) => r.label);
+
+  it("lists the design's actions in its order, plus Manage users which the session names", () => {
+    expect(labels(doRows(none))).toEqual([
+      "Decide at R1 gate", "Decide at R2 gate", "Decide at Canary gate", "Decide at Live gate",
+      "Approve archive and reactivation", "Request an archive", "Start a reactivation review", "Send capital commands",
+      "Acknowledge and resolve operations", "Manage grants", "Manage users", "Change your own admin rights", "Export tables",
+    ]);
+  });
+
+  it("the rows no read answers are 'absent' with a request id, never allowed, and name no capability", () => {
+    const absent = doRows(V2_ROLE_PRESETS.manager).filter((r) => r.absent);
+    expect(absent.map((r) => r.id)).toEqual(["do:archive-approve", "do:archive-request", "do:reactivation", "do:capital", "do:operations", "do:own-admin", "do:export"]);
+    for (const r of absent) {
+      expect(r.allowed).toBe(false);
+      expect(r.need).toBeUndefined();
+      expect(r.absent!.fe).toMatch(/^FE-\d+$/);
+    }
+    expect(byId(doRows(none))["do:export"].absent!.fe).toBe("FE-016");
+  });
+
+  it("a held capability never turns an absent row into an answer (a manager preset still has no archive row)", () => {
+    const rows = byId(doRows(V2_ROLE_PRESETS.manager));
+    expect(rows["do:archive-approve"].allowed).toBe(false);
+    expect(rows["do:archive-approve"].absent).toBeDefined();
+  });
+
+  const root = (rows: readonly object[]) => ({ phase: "ready", rows }) as never;
+  const allowedRow = (action: string, stepUpState: string) => ({ action, permission: "ALLOWED", reasonClass: "FAMILY_CHECK_REQUIRED", stepUpState }) as never;
+  const unavailable = (action: string, reasonClass: string) => ({ action, permission: "UNAVAILABLE", reasonClass }) as never;
+
+  it("capital: idle, loading and a failed read stay absent with the reason", () => {
+    expect(capitalRow({ phase: "idle", reason: "No root." }).absent?.fe).toBe("FE-068");
+    expect(capitalRow({ phase: "idle", reason: "No root." }).reason).toBe("No root.");
+    expect(capitalRow({ phase: "loading" }).absent).toBeDefined();
+    expect(capitalRow({ phase: "unavailable", reason: "It failed." }).reason).toBe("It failed.");
+    expect(capitalRow({ phase: "expired", reason: "Ended." }).absent).toBeDefined();
+  });
+
+  it("capital: a current root-level grant is Allowed, with the step-up fact the batch states and the count", () => {
+    const row = capitalRow(root([allowedRow("capital.fund", "REQUIRED"), unavailable("capital.top_up", "NO_CURRENT_PERMISSION")]));
+    expect(row.allowed).toBe(true);
+    expect(row.absent).toBeUndefined();
+    expect(row.stepUp).toBe("REQUIRED");
+    expect(row.reason).toContain(`1 of ${ROOT_CAPITAL_ACTIONS.length} capital commands`);
+    expect(capitalRow(root([allowedRow("capital.fund", "ACTIVE")])).stepUp).toBe("ACTIVE");
+  });
+
+  it("capital: only unavailable rows is Not allowed, in the reason's words, once per distinct reason", () => {
+    const row = capitalRow(root([unavailable("capital.fund", "NO_CURRENT_PERMISSION"), unavailable("capital.top_up", "NO_CURRENT_PERMISSION")]));
+    expect(row.allowed).toBe(false);
+    expect(row.absent).toBeUndefined();
+    expect(row.reason.match(/No current root-level grant/g)).toHaveLength(1);
+    expect(capitalRow(root([unavailable("capital.fund", "POLICY_PENDING")])).reason).toBe("Access policy isn't active for your workspace yet");
+  });
+
+  it("the eight capital actions that accept a ROOT are the ones asked", () => {
+    expect([...ROOT_CAPITAL_ACTIONS]).toEqual([
+      "capital.fund", "capital.initial_grant", "capital.top_up", "capital.immediate_decrease",
+      "capital.recall_partial", "capital.recall_full", "capital.adjust_target_budget", "capital.set_root_limit",
+    ]);
   });
 });
 

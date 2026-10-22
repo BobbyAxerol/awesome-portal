@@ -84,8 +84,12 @@ export const KIND_VIEW: Readonly<Record<ActionKind, { kind: FlagKind; label: str
 
 export interface ActionRow {
   id: string;
+  /** The catalogue's display name when it publishes one (FE-056), else its title. */
   title: string;
+  /** One sentence for the manager (`description`); null when the task catalogue publishes none. */
+  summary: string | null;
   group: string;
+  /** The scope as a manager reads it (`scope_label`), else the catalogue's own scope words. */
   scope: string;
   kind: ActionKind;
   state: RowState;
@@ -114,12 +118,17 @@ export function entryFor(task: OperatorTask, catalogue: CommandCatalogue | null)
   return catalogue.entries.find((entry) => entry.key === task.catalogKey) ?? null;
 }
 
+function nonEmpty(value: string | null | undefined): string | null {
+  return value === null || value === undefined || value.trim() === "" ? null : value;
+}
+
 export function toRows(tasks: readonly OperatorTask[], catalogue: CommandCatalogue | null): ActionRow[] {
   return tasks.map((task) => ({
     id: task.taskId,
-    title: task.title,
+    title: nonEmpty(task.displayName) ?? task.title,
+    summary: nonEmpty(task.description),
     group: task.taskGroup,
-    scope: task.scope,
+    scope: nonEmpty(task.scopeLabel) ?? task.scope,
     kind: kindOf(task),
     state: stateOf(task),
     task,

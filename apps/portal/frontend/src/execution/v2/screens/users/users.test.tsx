@@ -104,6 +104,29 @@ describe("roster", () => {
     expect(why).toContain("FE-053");
   });
 
+  it("keeps Role preset and Last seen as typed absences with their FE ids, and every row's action off with a reason", async () => {
+    mount();
+    await loaded();
+    const rows = rowsOf();
+    for (const row of rows) {
+      const preset = row.querySelector("td[data-l='Role preset']")!;
+      expect(preset.textContent).toContain("Not available");
+      expect(preset.querySelector("[data-gap='FE-015']")).not.toBeNull();
+      expect(whyText(preset.querySelector(".exec-blk-why"))).toContain("FE-015, FE-026, FE-037, FE-038");
+      const seen = row.querySelector("td[data-l='Last seen (UTC)']")!;
+      expect(seen.textContent).toContain("Not available");
+      expect(whyText(seen.querySelector(".exec-blk-why"))).toContain("FE-053");
+      const action = row.querySelector("td[data-l='Actions']")!;
+      const button = action.querySelector("button[disabled]") as HTMLButtonElement | null;
+      if (button) expect(["Enable", "Disable"]).toContain(button.textContent);
+      else expect(action.textContent).toContain("Archived accounts stay as they are");
+    }
+    // Opening the reason of a row's action does not open the row's drawer.
+    const why = rows.map((r) => r.querySelector("td[data-l='Actions'] .exec-blk-why-btn")).find((n) => n !== null)!;
+    fireEvent.click(why);
+    expect(search().get("sel")).toBeNull();
+  });
+
   it("renders inside an execution surface, so the type roles apply (USR-B1)", async () => {
     mount();
     await loaded();
@@ -124,7 +147,7 @@ describe("roster", () => {
     mount();
     await loaded();
     for (const cell of rowsOf()[0]!.querySelectorAll("td")) expect(cell.getAttribute("data-l")).toBeTruthy();
-    expect(within(table()).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Account", "State", "Role", "Revision"]);
+    expect(within(table()).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Account", "State", "Role preset", "Role", "Last seen (UTC)", "Revision", "Actions"]);
   });
 });
 
@@ -435,7 +458,8 @@ describe("drawer", () => {
     const legacy = within(dock).getAllByRole("link", { name: /^Current Users screen: / });
     expect(legacy.length).toBeGreaterThan(0);
     for (const link of legacy) expect(link.getAttribute("href")).toContain("legacy=1");
-    expect(screen.queryByRole("button", { name: "Invite account" })).toBeNull();
+    // Invite is on the page as an off control, never a working one.
+    expect((screen.getByRole("button", { name: "Invite account" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("never writes: the screen only issues GETs", async () => {

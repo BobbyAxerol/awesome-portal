@@ -18,6 +18,8 @@ import { V2_CAPABILITY, V2_NAV_RULES, holds, navTokenLabel, type CapabilityNeed 
 import { formatAsOf } from "../../boundary";
 import type { AccessEffective, AccessGrant, AccessSelector, AccessTsAuthority } from "../../readers/accessEffective";
 import type { FlagKind } from "../../flagKinds";
+import type { EligibilityUnavailableReason } from "../../readers/accessSelf";
+import { ROOT_CAPITAL_ACTIONS, type CapitalEligibilityView } from "./useRootCapitalEligibility";
 
 /** Open requests this screen waits on. Ids live in this one table so a closed request changes one line. */
 export const ACCESS_FE = {
@@ -27,6 +29,8 @@ export const ACCESS_FE = {
   researcher: "FE-026",
   /** The four menu entries that follow the navigation read, not a capability. */
   capabilityNames: "FE-037",
+  /** Export of tables: not built (the same id every Export control carries). */
+  exportTables: "FE-016",
 } as const;
 
 /**
@@ -88,14 +92,13 @@ export interface CapabilityRow {
   held: readonly string[];
   /** Words for the reason column: why it is on, or what is missing. */
   reason: string;
-  /** The action is listed (hi-fi) but this screen does not read its eligibility: neither allowed nor denied. */
-  unread?: boolean;
-}
-
-/** An action the hi-fi lists whose eligibility is asked per resource and action (FE-015); this page has neither, so it says so. */
-const UNREAD_REASON = "Not read yet by this screen: eligibility is asked per resource and action (FE-015).";
-function unreadRow(id: string, label: string): CapabilityRow {
-  return { id, label, allowed: false, need: undefined, held: [], reason: UNREAD_REASON, unread: true };
+  /**
+   * Set when NO published read answers this row. The status reads "Not available yet", never Allowed or Not allowed, and the
+   * request id sits behind the reason's disclosure. `allowed` is false, but it is not a refusal.
+   */
+  absent?: { fe: string; what: string };
+  /** Set on an advisory eligibility row: the step-up fact the batch states for the allowed commands. */
+  stepUp?: "REQUIRED" | "ACTIVE";
 }
 
 function row(id: string, label: string, capabilities: ReadonlySet<string>, need: CapabilityNeed | undefined, openWord: string): CapabilityRow {
@@ -131,25 +134,77 @@ export function seeRows(capabilities: ReadonlySet<string>): CapabilityRow[] {
   return [...entries, ...gates];
 }
 
+/** A row of the design's action list that no published read answers: "Not available yet" with the reason and its request id. */
+function absentRow(id: string, label: string, fe: string, what: string, reason: string): CapabilityRow {
+  return { id, label, allowed: false, need: undefined, held: [], reason, absent: { fe, what } };
+}
+
+const ARCHIVE_WHY = "No capability or eligibility action names archive or reactivation, so nothing says whether you may.";
+
+/** Reason classes in words; the same proposed copy the Portfolio Actions rail prints (railEligibility.ts), kept here as this page's own table. */
+const CAPITAL_REASON: Readonly<Record<EligibilityUnavailableReason, string>> = {
+  NO_CURRENT_PERMISSION: "No current root-level grant for capital commands. Portfolio-level grants are answered on each portfolio.",
+  POLICY_PENDING: "Access policy isn't active for your workspace yet",
+  FIELD_POLICY_PENDING: "Restricted view isn't available yet",
+  ACTION_TARGET_UNSUPPORTED: "Not available for this kind of item",
+};
+
 /**
- * What the caller can do: the actions whose capability the server names.
- * Everything that needs a per-row eligibility (commands, archive, export) is
- * not published and is said so by the screen (FE-015), never guessed here.
+ * "Send capital commands" from the self-eligibility batch asked about the caller's ROOT (see useRootCapitalEligibility). ALLOWED
+ * means a current own root-level grant exists for at least one of the root capital actions: advice, rechecked by every API
+ * behind it. The step-up fact is the batch's own, for the allowed commands.
  */
-export function doRows(capabilities: ReadonlySet<string>): CapabilityRow[] {
+export function capitalRow(view: CapitalEligibilityView): CapabilityRow {
+  const id = "do:capital";
+  const label = "Send capital commands";
+  const what = "Self-eligibility for capital commands";
+  switch (view.phase) {
+    case "idle":
+      return absentRow(id, label, "FE-068", what, view.reason);
+    case "loading":
+      return absentRow(id, label, "FE-068", what, "Reading your eligibility.");
+    case "denied":
+    case "unavailable":
+    case "expired":
+      return absentRow(id, label, "FE-068", what, view.reason);
+    case "ready": {
+      const allowedRows = view.rows.filter((r) => r.permission === "ALLOWED");
+      const total = ROOT_CAPITAL_ACTIONS.length;
+      if (allowedRows.length > 0) {
+        const state = allowedRows.some((r) => r.stepUpState === "REQUIRED") ? "REQUIRED" : allowedRows.some((r) => r.stepUpState === "ACTIVE") ? "ACTIVE" : undefined;
+        return {
+          id, label, allowed: true, need: undefined, held: [],
+          reason: `A current root-level grant covers ${allowedRows.length} of ${total} capital commands. Each command is checked again when it is sent.`,
+          stepUp: state,
+        };
+      }
+      const reasons = [...new Set(view.rows.flatMap((r) => (r.permission === "UNAVAILABLE" ? [CAPITAL_REASON[r.reasonClass]] : [])))];
+      return { id, label, allowed: false, need: undefined, held: [], reason: reasons.length > 0 ? reasons.join(". ") : "The read listed no capital command." };
+    }
+  }
+}
+
+/**
+ * What the caller can do, in the design's order. Three kinds of row, never mixed:
+ *  - a capability the server names (the four gate decisions, Manage grants, Manage users);
+ *  - an advisory eligibility row ("Send capital commands", from the ROOT question);
+ *  - a row no published read answers: "Not available yet" with the reason and its request id (FE-015, FE-016). Nothing is
+ *    inferred from a role name, a preset or a neighbour's capability.
+ */
+export function doRows(capabilities: ReadonlySet<string>, capital: CapitalEligibilityView = { phase: "idle", reason: "Not asked." }): CapabilityRow[] {
   const decide = GATES.map((gate) =>
     row(`decide:${gate.id}`, `Decide at ${gate.label.replace(" gate", "")} gate`, capabilities, { allOf: [gate.decide] }, "No capability needed"));
   return [
     ...decide,
-    unreadRow("do:archive-decide", "Approve archive and reactivation"),
-    unreadRow("do:archive-request", "Request an archive"),
-    unreadRow("do:reactivation", "Start a reactivation review"),
-    unreadRow("do:capital", "Send capital commands"),
-    unreadRow("do:operations", "Acknowledge and resolve operations"),
+    absentRow("do:archive-approve", "Approve archive and reactivation", "FE-015", "Per-action eligibility", ARCHIVE_WHY),
+    absentRow("do:archive-request", "Request an archive", "FE-015", "Per-action eligibility", ARCHIVE_WHY),
+    absentRow("do:reactivation", "Start a reactivation review", "FE-015", "Per-action eligibility", ARCHIVE_WHY),
+    capitalRow(capital),
+    absentRow("do:operations", "Acknowledge and resolve operations", "FE-015", "Per-action eligibility", "The eligibility vocabulary has no action for acknowledging or resolving an operation."),
     row("manage:grants", "Manage grants", capabilities, { allOf: [ADMIN_CAPABILITY.profileAccessManage] }, "No capability needed"),
     row("manage:users", "Manage users", capabilities, { allOf: [ADMIN_CAPABILITY.usersManage] }, "No capability needed"),
-    unreadRow("do:own-admin", "Change your own admin rights"),
-    unreadRow("do:export", "Export tables"),
+    absentRow("do:own-admin", "Change your own admin rights", "FE-015", "Per-action eligibility", "No read says whether you may change your own admin rights."),
+    absentRow("do:export", "Export tables", ACCESS_FE.exportTables, "Export", "Export is not available yet."),
   ];
 }
 
