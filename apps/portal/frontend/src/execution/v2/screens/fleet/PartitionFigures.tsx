@@ -6,6 +6,8 @@
  * publish the key shows the typed absence; a dataset whose `query_options.metric_keys` does not carry the key shows
  * `Not published (FE id)` for the whole column. The figure itself is `MetricValue` (exact string, true zero kept, absence + reason).
  */
+import type { ReactNode } from "react";
+
 import { NaWhy } from "../../blocks";
 import type { ManagerEconomicDomain, ManagerMetricRead, ManagerPartitionedMetrics } from "../../readers/managerMetric";
 import { MetricValue } from "../manager/MetricValue";
@@ -24,11 +26,13 @@ export interface PartitionFiguresProps {
   /** The request that publishes the figure when the dataset does not carry the key. */
   gap: UnpublishedFact;
   signed?: boolean;
+  /** How a figure of another unit prints (a percent, a count of days). Default: the money / exact renderer. */
+  cell?: (metric: ManagerMetricRead | null) => ReactNode;
 }
 
 export const partitionTag = (entry: ManagerPartitionedMetrics): string => `${DOMAIN_LABEL[entry.partition.economicDomain]} · ${entry.partition.currency}`;
 
-export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signed = false }: PartitionFiguresProps) {
+export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signed = false, cell }: PartitionFiguresProps) {
   if (metricKeys !== null && !metricKeys.includes(metricKey)) {
     return <NaWhy className="exec-fleet-np" text={notPublished(gap)} reason={`The Manager dataset does not carry ${metricKey} in its published metric set.`} />;
   }
@@ -43,7 +47,7 @@ export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signe
           <span key={`${entry.partition.economicDomain}|${entry.partition.currency}|${entry.partition.basis}|${entry.partition.nativeProfileRef}`}
             className="exec-fleet-part" data-domain={entry.partition.economicDomain} data-testid={`part-${metricKey}`}>
             <span className="exec-fleet-part-tag" title={`${entry.partition.basis} · ${entry.partition.nativeProfileRef}`}>{partitionTag(entry)}</span>
-            <MetricValue metric={metric} signed={signed} />
+            {cell ? cell(metric) : <MetricValue metric={metric} signed={signed} />}
           </span>
         );
       })}

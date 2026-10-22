@@ -134,6 +134,10 @@ new product screen.
 | `current_nav` | group by `portfolio_id` (per partition) | sum of the members' balance_total in that partition | portfolio NAV statement |
 | `return_30d_pct` | group | group net_pnl * 100 / group allocation | portfolio return |
 | `max_drawdown_pct` | group | deterministic negative; typed absence for about 1 group in 6 | portfolio NAV drawdown |
+| `max_drawdown_pct` | row (per partition) | exact `0` when net_pnl is a true zero, else deterministic -2.00 to -19.99 (scaled by window); typed absence when allocation is unpublished | NAV-series drawdown of the book |
+| `cost_drag_fees` / `_funding` / `_slippage` | row (per partition) | allocation * 5 / 2 / 1 bp * window days / 30, bigint, USDT of the partition; slippage a typed absence for about 1 row in 4 | fee, funding and fill-benchmark ledgers |
+| `forward_observation_days` | row (per partition) | 5..40 whole days, unit DAYS, currency null, no window | forward-observation day count |
+| small-scale rows | rows | with no generated universe the lane answers the e2e suite ids: alpha_a, alpha_b, alpha_c, alpha_d, alpha_btc_trend in portfolios pf_main (Main), pf_sat (Satellite), pf_core (Core); one single-book partition per row | real fleet / alpha rows |
 | window presets | all six surfaces | `window` 7D / 30D / 90D, bare or JSON-quoted: `selected_window.resolved` = [FIXTURE_NOW - N days, FIXTURE_NOW]; AVAILABLE `net_pnl`, `return_30d_pct`, `max_drawdown_pct`, `equity_30d_end_value` (rows, capital, groups) carry that window; allocation, balance and NAV keep window null. net_pnl is the 30D base times 1/4 (7D), 1 (30D), 5/2 (90D), bigint; derived keys follow; a true zero stays `0`. `ALL` is the typed gap (`ALL_HISTORY_WINDOW_NOT_PUBLISHED`) with the windowed metrics as typed absences. Custom ranges stay 400 | a windowed metric published per preset by the source |
 | `concentration_hhi` | group | sum of squared allocation shares of the members in that partition, unit RATIO, 0..1; typed absence when any allocation is unpublished | portfolio concentration (HHI) publication |
 

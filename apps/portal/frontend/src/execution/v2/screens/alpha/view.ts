@@ -100,6 +100,8 @@ export interface AlphaView {
   versionReason: string;
   owner: OwnerCell;
   portfolioNames: readonly string[];
+  /** The stated name of each portfolio id the body names; an id with no stated name is absent (the caller prints the id). */
+  portfolioNameById: ReadonlyMap<string, string>;
   current: SpineStageId | null;
   /** Why there is no current stage (scoped only); the legacy line stays as it was. */
   currentNote: string | null;
@@ -138,6 +140,7 @@ function legacyView(envelope: ProfileEnvelope, item: AlphaFleetItem | null, alph
     versionReason: "UNVERSIONED",
     owner: item?.owner ? { kind: "value", value: item.owner } : { kind: "not-available" },
     portfolioNames: item?.portfolios.map((p) => p.name) ?? [],
+    portfolioNameById: new Map((item?.portfolios ?? []).map((p) => [p.portfolioId, p.name] as const)),
     current: item === null ? null : currentStageOf(item),
     currentNote: null,
     rows,
@@ -334,6 +337,7 @@ function scopedView(scoped: AlphaResourceScoped, alphaId: string): AlphaView {
     versionReason: absent("version", "execution.alpha-resource.v2 states no alpha version"),
     owner: { kind: "not-published", id: "FE-030", reason: absent("owner", "execution.alpha-resource.v2 states no owner") },
     portfolioNames: names,
+    portfolioNameById: portfolioNames(scoped),
     current: null,
     currentNote: absent("stage", "The scoped body carries no alpha-level stage; it states each deployment's book only."),
     rows,
