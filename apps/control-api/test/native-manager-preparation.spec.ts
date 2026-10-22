@@ -437,8 +437,53 @@ describe("TEST_ONLY SAME snapshot and independent current STREAM",()=>{
     try{
       await f.capture();vi.mocked(evaluateManagerDomainStream).mockRejectedValue(new AccessPolicyError("ACCESS_DENIED",403));
       await expect(f.consumer.serveProfileStream(f.p,"paper",f.profile,f.token(),reply()))
-        .rejects.toMatchObject({code:"EXECUTION_READ_AUTHORITY_UNAVAILABLE"});
+        .rejects.toMatchObject({code:"EXECUTION_READ_SCOPE_REQUIRED",status:403});
       expect(subscribe).not.toHaveBeenCalled();expect(f.repository.snapshotMetadata).not.toHaveBeenCalled();
+      expect(f.acquire).toHaveBeenCalledOnce(); // only the separately authorized READ baseline
+      expect(f.source.relationForNamedOperation).not.toHaveBeenCalled();
+      expect(f.source.relationForCataloguedOperation).not.toHaveBeenCalled();
+    }finally{await f.close();}
+  });
+  it("revoked STREAM is an authority403 before native preparation, while independent READ remains allowed",async()=>{
+    const f=await realtimeFixture(),close=vi.fn(),subscribe=vi.spyOn(ScopedReplayHub.prototype,"subscribeNative")
+      .mockResolvedValue({id:"TEST_ONLY-stream",close}),originalResponse=reply();
+    try{
+      await f.capture();
+      expect(await f.consumer.serveProfileStream(f.p,"paper",f.profile,f.token(),originalResponse)).toBe(true);
+      expect(subscribe).toHaveBeenCalledOnce();expect(evaluateManagerDomainStream).toHaveBeenCalledOnce();
+      // TEST_ONLY DB evaluator changes; the actual scope issuer and consumer map the refusal.
+      // The original signed READ-baseline token is kept, not omitted or replaced.
+      vi.mocked(evaluateManagerDomainStream).mockRejectedValue(new AccessPolicyError("ACCESS_DENIED",403));
+      f.repository.snapshotMetadata.mockClear();subscribe.mockClear();f.acquire.mockClear();f.send.mockClear();
+      const refusedResponse=reply();
+      await expect(f.consumer.serveProfileStream(f.p,"paper",f.profile,f.token(),refusedResponse))
+        .rejects.toMatchObject({code:"EXECUTION_READ_SCOPE_REQUIRED",status:403,
+          message:"The requested Execution read is not available."});
+      expect(subscribe).not.toHaveBeenCalled();expect(f.repository.snapshotMetadata).not.toHaveBeenCalled();
+      expect(f.acquire).not.toHaveBeenCalled();expect(f.send).not.toHaveBeenCalled();
+      expect(refusedResponse.hijack).not.toHaveBeenCalled();expect(refusedResponse.raw.headersSent).toBe(false);
+      expect(f.source.relationForNamedOperation).not.toHaveBeenCalled();
+      expect(f.source.relationForCataloguedOperation).not.toHaveBeenCalled();
+      expect(await f.consumer.serveProfileSnapshot(f.p,"paper",f.profile,f.local,reply())).toBe(true);
+      expect(evaluateManagerDomainRead).toHaveBeenCalledTimes(2);
+      expect(f.acquire).toHaveBeenCalledOnce();expect(f.send).toHaveBeenCalledOnce();
+      expect(subscribe).not.toHaveBeenCalled();expect(evaluateManagerDomainStream).toHaveBeenCalledTimes(2);
+    }finally{originalResponse.raw.emit("close");await f.close();}
+  });
+  it("genuine STREAM authority DB failure stays a sanitized503, not an authority403 or native admission",async()=>{
+    const f=await realtimeFixture(),subscribe=vi.spyOn(ScopedReplayHub.prototype,"subscribeNative");
+    try{
+      await f.capture();f.acquire.mockClear();f.send.mockClear();
+      vi.mocked(evaluateManagerDomainStream).mockRejectedValue(new Error("TEST_ONLY-private-DB-failure"));
+      const response=reply();
+      await expect(f.consumer.serveProfileStream(f.p,"paper",f.profile,f.token(),response))
+        .rejects.toMatchObject({code:"EXECUTION_READ_AUTHORITY_UNAVAILABLE",status:503,
+          message:"The requested Execution read is not available."});
+      expect(subscribe).not.toHaveBeenCalled();expect(f.repository.snapshotMetadata).not.toHaveBeenCalled();
+      expect(f.acquire).not.toHaveBeenCalled();expect(f.send).not.toHaveBeenCalled();
+      expect(response.hijack).not.toHaveBeenCalled();expect(response.raw.headersSent).toBe(false);
+      expect(f.source.relationForNamedOperation).not.toHaveBeenCalled();
+      expect(f.source.relationForCataloguedOperation).not.toHaveBeenCalled();
     }finally{await f.close();}
   });
   it("head advancement preserves original seq10 baseline and authenticates resume in the SAME Hub",async()=>{

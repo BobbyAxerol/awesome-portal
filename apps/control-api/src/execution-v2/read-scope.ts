@@ -94,6 +94,7 @@ function fail(code:ReadScopeErrorCode,status=403):never {throw new ExecutionRead
 function rethrowReadScopeError(error:unknown):never {
   if(error instanceof ExecutionReadScopeError)throw error;
   if(error instanceof AccessPolicyError){
+    if(error.code==="ACCESS_DENIED")fail("EXECUTION_READ_SCOPE_REQUIRED");
     if(error.code==="ACCESS_RETRY_REQUIRED")fail("EXECUTION_READ_ACCESS_CHANGED",409);
     if(error.code==="CURRENT_ACTOR_AUTHORITY_REQUIRED"||error.code==="ACCESS_RESOURCE_NOT_FOUND")fail("EXECUTION_READ_NOT_AVAILABLE",404);
     if(error.code==="POLICY_PENDING")fail("EXECUTION_READ_POLICY_PENDING");
