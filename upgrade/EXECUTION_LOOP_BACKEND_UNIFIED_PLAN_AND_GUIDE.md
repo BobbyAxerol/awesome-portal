@@ -31513,3 +31513,81 @@ secret/diff and tracking reconciliation PASS; original3peer WIP hashes and
 peer tracked hunks preserved. Current08 detailed guide and Unified agree on
 PREPARED/UNARMED, not READY/connected. Core receives source-publication pin
 without overwriting its producer return or claiming its ACK.
+
+### Original08 — execute Core-first matched ACK and actual source READY
+
+**OWNER_APPROVED / EXECUTING,23Oct01:34VN /22Oct18:34UTC.** Bobby directs
+immediate execution after actual Core ACK. Fully read
+CORE_TO_EDGE_08_CORE_FIRST_PREPARED_ACK_2026-10-23.md; local and original SGP
+raw06ead936fe6465b44c7dbdb942a1e11ef003c966cc7dc1c44e6462d3934a3166 match.
+ACK explicitly accepts PREPARED99e775f3/allpins, interval18:00–20:00,
+latestREADY19:39, CAS8→9/install4b9dce98 and revoke4c1c3dbd/CAS9→10,
+sole Core specimen operator and Edge physical lifecycle. No new approval needed.
+Before source mutation: verify frozen private pins, arm only working operator
+with actual ACK digest while preserving PREPARED, SDKdb0 validation and fresh
+RR READ ONLY predecessor/trust/port checks. Then official exact install and
+same-original STATUS, finite source/SDK actual observer and independent READY
+observation; immediately deliver public actual pins plus approved private raw
+READY to Core. No product code/DSN/credential/trust change or old-original reuse.
+Keep exact-ID lifecycle witness, monitor finite source until Core settlement;
+then guarded physical drain/pools0/exit0/die/destroy/socketabsent and official
+native revoke/status. UNKNOWN retains original custody, never forced close.
+Core owns fresh H/census/config/grants/session and active-revoke-only runner.
+Scope/guide/tests remain original08/Core-first/PREPARED; no broad probe or
+completed READ/restart replay. Protect stable/dev/provider28445/Manager/command/
+Live. Full08/read09 still NOT_MET pending actual correlated acceptance.
+
+**ACTUAL SOURCE READY,23Oct01:36–01:38VN:** all11raw-file rows in ACK plus
+3preserved runtime-support pins verified. First read-only verifier incorrectly
+expected12table rows instead of11 and stopped before arm; corrected count+
+explicit3support hashes PASS, no authority impact. Only working ACK literal
+armed to06ead936; workingSHA1f4bea4a, preservedPREPARED e3e7972c unchanged.
+ArmedSDKvalidate EXIT0/stderr0/db0 and fresh bounded RR READ ONLY predecessor
+EXIT0/pools[0,0] confirmed exact8revoked/system/fingerprint/identity/catalogue.
+Official install4b9dce98 CAS8→9 **18:35:29.147025UTC**, then same-original
+STATUS both RECORDED/exact_current_headtrue/historicalfalse/EXIT0/stderr0;
+each maintenance pool closed0. Installstdout59b6f038 / STATUS4be3a244.
+
+Actual source ee7e2e752ad1f151ab2121033b6d32c4a6a90ed62259776335ab54c637ceb639,
+nameedge-core009-native-serve-0100-yHoOlP, started18:36:02.103188992UTC,
+image28ea/1CPU512MiB/read-only/dropALL/no-new-privileges/--rm/restart0,
+real10.70.0.2:28446 listener. SDK emittedNATIVE_READY_ACTUAL_OBSERVER and
+independent RR READY observer EXIT0/stderr0, observer's ownpool0/issued0
+(not a serving-pool-drained/global-census claim). Actual752B READY raw
+59bc4568b8ddaacdfa2c624e481824930ad4eb3f933aaca9fc1241a632f21453,
+native9/receipt4b9dce98/digestf027fb0f/install16dc7829/semanticd658ed35/
+source5a67e653/policy1/ownerMapping1. Expiry20:00UTC unchanged, actualREADY
+comfortably before19:39. No new Core grant/session/specimen inferred.
+
+**Actual delivery:** raw752B copied/readback18:37:19.489820UTC into Core's
+existing private custody, new0700/0600subpath
+`/home/bobby/secure/core009-core-first-20261023-Ig8Gqs/edge-ready-0100-yHoOlP/source-ready.actual.json`;
+exact hash above, no credential/key/cookie. Public
+[actual READY return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_CORE_FIRST_ACTUAL_READY_2026-10-23.md)
+5481B/raw8dbe5218756c5b3a422434cd6929b3ac0c17a8943da5b825e84e07425fbd450c
+delivered/readback18:38:57.126249UTC to canonical CoreELP2-10; original request/
+Unified/sync locators appended, oldprefixes/index preserved. Core action is
+now frozen active-revoke-only and genuine settlement, not another ACK/build/
+READY preparation. At18:40:03 no Core-owned specimen/settlement response yet.
+
+**Lifecycle/cleanup still active:** exact source wrapper execsession49317;
+scoped lifecycle witness session38057, hard observer stop20:15UTC, create/start
+captured exact ID. Initial observer Go-template.ID failedEXIT64; corrected
+Actor.ID and recovered create/start history without restarting source. No
+exit/destroy/drained proof claimed before actual terminal. Source self-drains
+at fixed20:00; unresolved custody is retained, never force-killed. On Core's
+settled-original receipts Edge sends guarded SIGTERM to this exact ID, waits
+pools0/exit0/die/destroy/socketabsent, then native revoke4c1c3dbd+STATUS.
+Five short-lived capped verifier/maintenance/observer containers gone; only
+approved serving source remains. No image/build/newcache, inventory112images/
+43active,589BuildKit68.29GB retained; no shared prune. Current disk used
+348653789184/free170263113728B; no cleanup saving claimed. Native28445 and
+3protectedEdge images/restarts unchanged(28ea/d6aa,all0); existing Proxy/Manager/
+stable/rollback retained, not promoted. Canonical54c6f5f3 and activefeature
+d56ca71c source lines retained; no push/merge/CI or peer WIP change.
+
+**Verification: R0:** exact3Markdown/ownedhunks/local links+anchors/secret/diff/
+tracking and original3peerWIP hashes PASS. Original08 source readiness is
+implemented and observed; **full08/read09 NOT_MET**, no09connected promotion.
+Pending producer action: Core sole missing-case run/actual receipts/settlement;
+source retirement deliberately follows custody, not an unfinished code task.

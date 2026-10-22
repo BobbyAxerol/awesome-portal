@@ -1036,6 +1036,16 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest23Oct01:38VN:** [Actual Core-first READY](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_CORE_FIRST_ACTUAL_READY_2026-10-23.md)
+ACK06ead936 matched → official install4b9dce98/CAS8→9+STATUS RECORDED/EXIT0
+→ real sourceSDK_READY/RRobserver EXIT0, actual752B59bc4568 delivered to Core
+private custody and public return8dbe5218 delivered18:38:57UTC. Sourceee7e2e75/
+image28ea/1CPU512MiB/restart0/listener28446 active, fixed expiry20:00UTC/03:00VN.
+Core now sole active-revoke-only runner/settlement; no further build/ACK/READY
+preparation. Source physical drain/native retirement pending Core custody
+settlement, not falsely cleaned while serving. Full08/read09NOT_MET; no broad
+probe/completedREAD/restart replay or stable/dev/provider28445/Live change.
+
 **Latest23Oct00:56VN:** [Fresh Core-first PREPARED](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_CORE_FIRST_PREPARED_2026-10-23.md)
 credits actual Core mapper3cb7 installed/inactivea814/schema149 and frozen
 runner eb5e9515; no build wait. NEW18:00–20:00UTC/01:00–03:00VN proposed,
