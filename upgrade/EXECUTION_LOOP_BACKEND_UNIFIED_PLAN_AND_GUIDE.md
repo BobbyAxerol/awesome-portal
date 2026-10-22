@@ -30674,6 +30674,114 @@ silently deferred. User/unrelated worktree/index preserved. Current feature
 unchanged as preceding journal. No source/worktree/branch cleanup warranted
 for this still-active feature; shared operational/retained rollback untouched.
 
+### Original08 active-revoke preparation only —22Oct2026
+
+Bobby explicitly approves steps1–2 only: review latest Core repair and actual
+retired source/trust/DB; prepare and deliver a fresh UNARMED missing-case
+proposal. This slice does NOT install/arm/serve, mint authority/session or run
+connected HTTP/SSE, even if Core ACK arrives. Feature5b1016e0 and peer WIP
+preserved. Governing [EPG10-08 guide](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls)
+and previous actual retirement/partial receipts remain authoritative history.
+Received Core repair return rawaac02d41a6a04612f5f5c3879dfcbc14a6004d606fa6419628248f2c19e0fae5
+qualifies source/runner offline, not connected PASS. Full integration gate
+de8f6382 passed; minimal mapper image3cb7f24a is UNINSTALLED, unlike actual
+Research a96/schema149. Genuine authority failures still fail closed.
+
+Propose NEW22Oct10:30–11:00UTC /17:30–18:00Asia/Saigon, not reuse or extension
+of Core09:30–10:00 offer, which was missed before preparation. Private source
+directory edge-core009-active-revoke-20261022-pSaE4LlC stays0700/0600 and outside
+Git. Reuse frozen SDK28ea/lifecycle1ee3/runtime da67184b/trust12504f44; install
+5f8f6fc0-c111-40dc-aa88-2b7760e6e798 expected8→9, exact revoke
+0f2556d0-3dbe-4e7c-bc03-60c5d9e8b73e expected9→10. Preserve natural-key
+acceptanceb922c105 and all prior custody. Approval here creates neither head9
+nor READY. Core remains sole future specimen client; no old READ/restart replay.
+
+Test gates: modeled glue rejection/CAS/window/recovery regression; frozen
+SDK db0 validation; actual RR READ ONLY head8/revoked + exact DB/system,
+catalogue/fingerprint/identity/control/admission verification; trust expiry
+covering proposed slot. All pools close, no listener/issued attempt. No image
+build, source/DB/schema/identity change, stable/dev/provider28445/command/Live
+mutation. Future activation needs exact Core hash ACK and separate authorized
+execution; missing-only current source image/config/session/capacity are Core
+owned, not invented pins. Rollback this preparation leaves existing revoked8
+unchanged; retain only exact reviewed private proposal/trust/bounded evidence.
+Scoped --rm verifier cleanup, disk/image/cache/runtime restart inventory and
+SGP public handoff hash readback are part of this slice. Full08/read09 NOT_MET;
+no new phase or release. Evidence/results follow before coherent publication.
+
+**Actual16:57 Asia/Saigon preparation/delivery:**
+[Exact fresh proposal](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_PREPARED_2026-10-22.md)
+13649B/rawSHA256 b974abaf740d59f05678b5edf19e7884f080404a99fa648549b78db7a12d2d64
+actually transferred to SGP canonical /home/bobby/portal-research/upgrade/
+execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACTIVE_REVOKE_PREPARED_2026-10-22.md.
+Exact byte/hash readback and three locator prefix/index-preservation PASS;
+Core Unified/sync/original Edge request now point to this current packet. Core
+can ACK specific source/CAS/window/trust and its qualified candidate/rollback;
+this preparation-only scope still does not install even if an ACK arrives.
+No old artifact/grant/session/request/window reused. Fresh Core09:55UTC
+READ ONLY census H16/unresolved0/unreconciled0/pending0 => min282/C288 then,
+not future capacity evidence; Core rechecks fresh H<=22 before live apply.
+
+Final12modeled glue PASS/0fail, actual frozenSDK validate db0/listenerfalse/
+ACKnull EXIT0/stderr0; final RR READ ONLY source/control EXIT0/stderr0/
+pools[0,0]/issued0. Exact current head8/old command84d18247/raw2ddd06b8/
+document0f20ec80 and natural head verified; observer checks owner/human ACTIVE/
+mapping1/policy/domain before expected revoked denial. Source target/system/
+fingerprint/catalogue/control/admission unchanged. New install b9e93f00 SDK
+digest47a0f5d5/revoke5791d1c6 digest5de2d00c pinned; helper/PREPARED894c7157
+identical UNARMED. Generated bounded private evidence d301c4bb/d1066b87/
+c658ca5a retained with exact full hashes in proposal. No failed correctness
+test in this slice; initial read-only service inspection used project names
+rather than actual container names, corrected exact-service inspection proves
+restart0. Remote rg unavailable caused a read-only inspection EXIT127; used
+grep to read exact R0§10.10d, no runtime/code mutation or suppressed failure.
+
+Actual SSH verifies latest Core repair return aac02d41, probe9649c2e0/helper
+6797eed4/tests c083db6c and freshdraft preparec7ce1b1a/operator373aa97d.
+Core reports103offline/9guardPASS; Edge does not claim it reran them. Candidate
+3cb7 exists, installed container46c94107 still imagea96/restart0/schema149;
+new runtime/config/session NOT_READY. Combined hook source de8f6382 PASS is
+distinct from narrow3265 mapper production-build/56focusedPASS/117PGSKIP and
+separately disclosed broad fixture-typecheck EXIT2. No false full clean gate.
+
+Cleanup/retention: every capped --rm verifier gone, no own pSaE4LlC container,
+socket28446 absent. No image/build cache/role/row/grant/session created. Keep
+only new private14files proposal+bounded evidence/trust for ACK review; exact
+0700/0600/Bobby/nlink1 regular-file protections PASS, no new secret/key copied.
+Three Edge d6aa7a51 and operationalnative28ea3958 restart0 unchanged; shared
+inventory109images/42active and585BuildKit/66.37GB unchanged by own work,
+no shared prune/volume/network/source/custody deletion. HK used326627889152→
+328817758208B/free192289013760→190099144704B is shared activity, not own
+reclaim. SGP snapshot used517388541952/free148405743616B; no test resource
+started there, only public Markdown delivery/read-only inspection. Cleanup
+decision NO_ACTION_NEEDED beyond --rm verifiers; active/explicit rollback and
+Core a96/3cb7 image retention untouched. No quiet measurement/absolute claims.
+
+Read-only parallel source pins: TS canonical668e10320c0b on
+fix/dev-consumer-recovery-integration; PM activeworktree8c199f1b6770 on
+feat/portfolio-account-v1_1-parallel; DL canonicalmainc578cba16b75 and active
+data-layer-dev detached098c94b43cd7. No peer checkout/fetch/merge/DB change.
+PM8c199f1b source/journal reviewed: owner-approved additive shared schema is
+now expanded128ledger/74relations, no generation adoption/writer/financial
+authority; its online reload is not capacity proof. Existing native/catalogue/
+identity invariants retained and actual frozen Edge preflight above PASS.
+No migration CLI is run here; the new union ledger requires the PM/TS release
+bundle rather than an old TS-only runner. Financial acceptance remains separate.
+Peer WIP fe4fcfc7/1cf04b20/109659d2 and unrelated main C5 hunk/56line binding
+owner addendum/Core actual-READ addendum excluded from staged scope. Canonical
+Edge54c6f5f3/feat-manager-v2-paper-read path and six active feature worktrees
+remain as preceding inventory; active upgrade branch5b1016e0 before this slice.
+Stable releasea9b10385 under /srv/primus/portal/releases unchanged; no cleanup
+of still-active worktrees/branches. R0 explicit3Markdown paths/diff/link/secret
+and tracking checks precede local commit, no push/merge/CI minutes consumed.
+
+Owned approved steps1–2 complete. Next actionable owner is Core: read actual
+delivered packet, return exact new hash/window/candidate/rollback ACK or a
+specific mismatch, then current config/receipt readiness after authorized
+actual Edge READY. Execution is not part of this preparation slice. Full08/
+read09 remains NOT_MET; remaining Manager/G2 and other original phase gates
+stay separate, no09connected/10cutover/11release promotion.
+
 
 
 

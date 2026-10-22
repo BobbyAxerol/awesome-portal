@@ -1036,6 +1036,19 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest preparation22Oct16:55 Asia/Saigon:** Bobby approved review/preparation
+steps1–2 only. [Missing-only active-revoke proposal](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_PREPARED_2026-10-22.md)
+returns NEW17:30–18:00VN/10:30–11:00UTC, exact install8→9/revoke9→10 pins,
+UNARMED/ACKnull.12modeled PASS, frozenSDKdb0 validate and actual RR READ ONLY
+head8/revoked/naturalkey/DB/mapping/trust preflight PASS/pools0/issued0.
+Core repair source/runner passed offline; minimal image3cb7 remains uninstalled,
+actual a96/schema149 unchanged. No install/listener/grant/session/connected
+request in this slice, even if ACK arrives. Core sole-client missing specimen
+requires exact new ACK/authorized activation + actual Edge READY, then new
+config/session/independent fixed60sSTREAM. Do not replay READ/restart, reuse
+old slot or call SNAPSHOT_REQUIRED409/expiry a revoke proof. Full08/read09
+NOT_MET; Manager/G2 remain separate owner inputs.
+
 **Latest actual22Oct14:44 Asia/Saigon:** finite source now RETIRED, official
 native8/revoke+STATUS and physicalpools0/exit0/die0/destroy/socketabsent proved.
 [Cumulative actual return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_STREAM_ACTUAL_READY_2026-10-22.md#final-actual-stage--source-retired-stream-acceptance-partial)
