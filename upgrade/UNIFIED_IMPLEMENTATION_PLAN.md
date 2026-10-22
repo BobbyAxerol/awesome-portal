@@ -9676,6 +9676,15 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**22 October — explicit fixture review, not source commissioning:**
+[Data, browser results and Claude handoff](execution_loop/evidence/ELP2-10/FIXTURE_REVIEW_DATA_2026-10-22.md).
+Bobby assigned removable populated/layout-stress data alongside real APIs.
+Sparse-realistic defaults and accepted UI stay unchanged; six Manager surfaces,
+rich series, bounded pages and long names are opt-in in the standalone fixture
+BFF only. Source/financial/STREAM/commands and ELP2-10 acceptance are not closed
+by these synthetic cases. Claude owns the listed consumer/HiFi follow-through;
+Core owns data/boundary tests. No production/dev/main or shared-preview cutover.
+
 **21 October post-freeze backend review:** [BE-P21/P22 CHANGE + one-writer ACK](execution_loop/evidence/ELP2-10/CODEX_BE_P21_P22_REVIEW_AND_ONE_WRITER_RETURN_2026-10-21.md).
 Claude new dark source f0b56371/fa530323 has four concrete fixes: sum overflow,
 census-bound economic digest, RECONCILED/witness interpretation and bounded

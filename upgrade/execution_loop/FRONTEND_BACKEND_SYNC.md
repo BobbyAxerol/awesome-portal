@@ -1,5 +1,27 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex round-start —22Oct2026, explicit review fixtures
+
+Canonical clean `82848983`; Claude `3aaf24f4`, no new committed delta; its PG/docs
+WIP remains untouched. Bobby assigned removable, rich fixture data alongside real
+Edge APIs, not a UI redesign or authority/source commissioning. ACT_NOW: F5–F7
+fixture completeness/scale and cross-screen identity coherence. NEXT_GATE:
+qualified-source/finance/STREAM/commands retain their real acceptance requirements.
+C-1…C-6 use the completed landing ACK; no duplicate full hook.
+[Scope, requests and actual results](evidence/ELP2-10/FIXTURE_REVIEW_DATA_2026-10-22.md).
+Reused agents `backend_cr02_b1_review` (fixture data/tests, separate files) and
+`financial_budget_readiness` (Claude request audit + separate fixture relations/tests); root integrates.
+
+Round return: fixture/API+boundary353PASS/1SKIP, final tsc EXIT0; browser initial
+98/100, two blank-root cases retained, scoped retake plus control6/6PASS.
+Rich source committed locally as `ba6d565e` (+1090/−3,11 code/config/test files),
+NOT installed on shared preview or pushed. Final cleanup smoke1/1PASS, no own
+fixture child remains. Focused gates per §10.10c, not a frozen landing. Claude handoff in
+the linked packet: consume Manager fields instead of hard-coded Overview gaps,
+DEBT-013 four boundary defects, DEBT-030 existing page-port wiring, DEBT-042
+published refusal/gate, uncovered visual states. Actual source/finance/STREAM/
+commands and full ELP2-10 remain open; no synthetic→connected relabelling.
+
 Chủ ghi: Claude (phía FE). Codex đọc ở **đầu mỗi round**, trả lời bằng cách đổi `Status` trong packet phase sở hữu và
 nêu ID ở đây (xem [Rules §10](AGENT_WORKING_RULES.md)). Đây là **ledger duy nhất cho request FE → BE** và cho review
 của FE về backend; ledger BE → FE vẫn nằm trong packet từng phase. Không nhân bản sang file khác.

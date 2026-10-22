@@ -1,0 +1,37 @@
+{
+  "schema": "execution-fixture-review-result.v1",
+  "date": "2026-10-22",
+  "tier": "FOCUSED_DEVELOPMENT_10.10c",
+  "source_commit": "ba6d565e810def05d399a574808a6b12a04a67e7",
+  "source_tree": "c939dfecb20ebd93ea01330b28bb5f3bcfbac6f4",
+  "lane": "FIXTURE_LAB",
+  "profiles": ["sparse-realistic", "populated", "layout-stress"],
+  "bundle_sha256": "dad129a7403e3ca6c7241d8fef8e3c9d1ac89556e44450601dc13bb9099f121e",
+  "shared_preview_installed": false,
+  "remote_pushed": false,
+  "connected_acceptance": false,
+  "tests": {
+    "fixture_api_product_boundary": {"passed": 353, "skipped": 1, "exit_code": 0, "seconds": 20.26},
+    "typecheck": {"command": "npx tsc -b --pretty false", "exit_code": 0},
+    "fixture_bundle": {"command": "node build.mjs", "exit_code": 0},
+    "browser_initial_matrix": {
+      "passed": 98,
+      "failed": 2,
+      "total": 100,
+      "seconds": 195,
+      "failed_cases": ["layout-stress/account/1280", "layout-stress/operations/660"],
+      "failure": "blank before expected root mounted; cause unproven"
+    },
+    "browser_scoped_retake": {"passed": 6, "failed": 0, "seconds": 17, "repetitions_per_case": 2},
+    "browser_final_cleanup_smoke": {"passed": 1, "failed": 0, "seconds": 4, "case": "layout-stress/account/1280"},
+    "tracking_reconciliation": {"exit_code": 0},
+    "markdown_local_links": {"checked": 6, "missing": 0},
+    "diff_check": {"exit_code": 0},
+    "full_hook": {"status": "NOT_RUN", "reason": "campaign 10.10c focused development; no frozen landing, ff-merge, push or gate-script/pin change"},
+    "hifi_visual_interactive_accessibility_acceptance": {"status": "NOT_RUN", "owner": "Claude"}
+  },
+  "measurement_scope": "Observation cuts after root visibility/fonts/two animation frames; not proof all asynchronous panels settled",
+  "first_matrix_completed_cuts": {"api_replies": 1147, "api_bytes": 13978800, "visible_boxes": 253},
+  "cleanup": {"own_fixture_children_remaining": 0, "shared_service_changed": false, "database_changed": false},
+  "not_closed": ["full ELP2-10", "real source/trust/READ/STREAM", "commands", "financial publication/calibration", "coexistence/G2", "Claude consumer gaps"]
+}
