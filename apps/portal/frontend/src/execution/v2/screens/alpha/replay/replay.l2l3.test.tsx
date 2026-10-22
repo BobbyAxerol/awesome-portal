@@ -208,15 +208,15 @@ describe("L3 · records that cannot be read are counted, never dropped quietly",
     expect(shortfall()!.textContent).toContain("left out of the log and chart");
   });
 
-  it("KNOWN GAP (V1 model, components/tradeReplayModel.ts `str`): a JSON number price is stringified and drawn, not refused", async () => {
-    // The contract publishes prices as exact decimal strings. The V1 replay model turns a finite JS number into its String(),
-    // so 0.1 + 0.2 would print as 0.30000000000000004. Reported to the owner of that file; pinned here so a fix shows up as a change.
+  it("a JSON number price is refused, not stringified: 2 of 3 fills are drawn and the screen says 1 could not be read (DEBT-UXM07-013)", async () => {
+    // The contract publishes prices as exact decimal strings. A JS number has already lost digits, and String(0.1 + 0.2) would print
+    // 0.30000000000000004 as if the source had said it. decimalText refuses it, so the fill is counted as unreadable.
     const rows = three();
     rows[1].price = 67000.5;
     mount({ fills: rows });
     await ready();
-    expect(logWords()).toBe("3 events");
-    expect(shortfall()).toBeNull();
+    expect(logWords()).toBe("2 events");
+    expect(shortfall()!.textContent).toContain("1 of 3 fill records could not be read");
   });
 
   it("a null price is never printed as 0 and never becomes a row", async () => {

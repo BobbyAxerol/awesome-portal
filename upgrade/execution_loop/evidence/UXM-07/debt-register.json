@@ -27,7 +27,7 @@
       "where": "Closed: testkit/schema.ts IGNORED now holds 'discriminator' (ad118f15) and the AccessEffective test no longer writes a temp schema copy. Remaining and verified at HEAD: components/tradeReplayModel.ts:55 str() stringifies a JSON number (pinned KNOWN GAP in v2/screens/alpha/replay/replay.l2l3.test.tsx:211); api/subjectActivity.ts:69 treats a non-array records as []; v2/screens/portfolios/format.tsx:86 MoneyList keys by currency (duplicate-key warning when a currency repeats); V1 features/admin/accountApi.ts:163 roster returns [] for a malformed body (Users V2 uses rosterReader.ts)",
       "consequence": "Replay/Users/Portfolios edge cases only; no secret or authority effect",
       "owner": "Claude (FE files); testkit owner for IGNORED",
-      "status": "STILL_OPEN (4 of 5 items remain)",
+      "status": "FOUR CASES FIXED 2026-10-22 (Codex FIXTURE_REVIEW_DATA handoff): decimalText for replay prices (a JSON number is refused, KNOWN GAP test flipped), subject-activity records container, duplicate-currency keys, V1 roster malformed answer; regressions in src/execution/debt013.test.tsx. Remaining part of this debt, if any, is not changed here.",
       "next_action": "Claude, next time those files are touched: refuse a numeric price, make a non-array records a typed unavailable, key MoneyList by index and currency, give the V1 roster a typed error. tradeReplayModel and accountApi are V1-shared: same deliberate-exception question as DEBT-UXM07-025 if V1 pixels or copy change."
     },
     {
@@ -217,7 +217,7 @@
       "proposed": "Restore the columns/rows with per-cell 'Not available · reason' and 'Pending · policy not set' for score; window selectors; Fleet tabs All/Live/Canary/Sandbox/Paper. Fixture-only, no invented figures.",
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go)",
-      "status": "IN PROGRESS 2026-10-22: Overview, Portfolios, Fleet columns/panels restored on fixture (commits 3d2fb063, eb553985, Fleet commit); visual baselines not yet re-recorded; Allocation held back pending BQ-FLEET-ALLOC; Overview window/domain selectors and Fleet Map/Group/Then not done"
+      "status": "IN PROGRESS 2026-10-22: Overview (6 KPI tiles incl. Net PnL/Return read from the series port, Capital, Since-last-visit, Contributors), Portfolios (5 measure columns) and Fleet (Allocation/Net PnL/Equity) restored on fixture; Fleet/Overview/Portfolios baselines re-recorded (two compares green) except Overview after the series wiring (re-record pending). Not done: Overview window/domain selectors, Fleet Map/Group/Then, Allocation held back (BQ-FLEET-ALLOC)."
     },
     {
       "id": "DEBT-UXM07-050",

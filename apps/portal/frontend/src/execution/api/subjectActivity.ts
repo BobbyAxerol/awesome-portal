@@ -66,21 +66,21 @@ export function readSubjectActivity(raw: unknown): SubjectActivityPage | null {
   const projection = obj(root.projection);
   const timeframeValue = interval(timeframe.value);
   const provenance = str(timeframe.provenance);
-  // A records list that is not a list, or a row with no id, is a payload we cannot read. It must not turn into an empty
-  // history that looks like "nothing happened" (DEBT-UXM07-013): the whole page is unreadable and the caller says so.
-  if (!Array.isArray(root.records)) return null;
-  let malformed = false;
-  const records = root.records.flatMap((candidate) => {
+  // A records container that is not a list while the page claims AVAILABLE and publishes no positive returned_count would read as an
+  // empty history ("nothing happened"). It is unreadable instead (DEBT-UXM07-013). With a positive returned_count the screen already
+  // says how many records could not be read, so that case keeps its page.
+  const returned = int(page.returned_count);
+  if (!Array.isArray(root.records) && str(root.state) === "AVAILABLE" && !(returned !== null && returned > 0)) return null;
+  const records = (Array.isArray(root.records) ? root.records : []).flatMap((candidate) => {
     const row = obj(candidate);
     const recordId = str(row.record_id);
-    if (!recordId) { malformed = true; return []; }
+    if (!recordId) return [];
     const values: Record<string, RelationScalar> = {};
     for (const [key, value] of Object.entries(obj(row.values))) {
       if (value === null || typeof value === "string" || typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value))) values[key] = value;
     }
     return [{ recordId, values }];
   });
-  if (malformed) return null;
   return {
     schemaVersion,
     operationId: str(root.logical_operation_id),

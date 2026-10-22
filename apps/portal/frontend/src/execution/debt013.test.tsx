@@ -34,18 +34,21 @@ describe("trade replay prices are exact text, never a coerced number", () => {
   });
 });
 
-describe("subject activity: an unreadable records list is not an empty history", () => {
+describe("subject activity: an unreadable records container is not an empty history", () => {
   const base = { schema_version: "execution.subject-activity.v1", state: "AVAILABLE" };
-  it("records that is not a list reads as null", () => {
-    expect(readSubjectActivity({ ...base, records: "nope" })).toBeNull();
+  it("an AVAILABLE page whose records is not a list and which counts no returned rows reads as null", () => {
+    expect(readSubjectActivity({ ...base, records: "nope", page: { returned_count: 0 } })).toBeNull();
     expect(readSubjectActivity({ ...base, records: { a: 1 } })).toBeNull();
     expect(readSubjectActivity({ ...base })).toBeNull();
   });
-  it("one row with no record id makes the page unreadable instead of silently dropping the row", () => {
-    expect(readSubjectActivity({ ...base, records: [{ record_id: "r1", values: {} }, { values: { x: 1 } }] })).toBeNull();
+  it("with a positive returned_count the page is kept, so the screen can say how many records could not be read", () => {
+    const page = readSubjectActivity({ ...base, records: "nope", page: { returned_count: 3 } });
+    expect(page).not.toBeNull();
+    expect(page?.records).toEqual([]);
+    expect(page?.page.returnedCount).toBe(3);
   });
   it("a genuinely empty list is still an empty page", () => {
-    const page = readSubjectActivity({ ...base, records: [] });
+    const page = readSubjectActivity({ ...base, records: [], page: { returned_count: 0 } });
     expect(page).not.toBeNull();
     expect(page?.records).toEqual([]);
   });
