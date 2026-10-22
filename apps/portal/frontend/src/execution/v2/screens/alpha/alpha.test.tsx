@@ -135,7 +135,9 @@ describe("the lifecycle spine", () => {
     expect(current).toHaveLength(1);
     expect(current[0].textContent).toContain("Live");
     expect(spine.textContent).not.toContain("Done");
-    expect(spine.textContent).toContain("Not published (FE-027/028)");
+    // UXM07-048/3: the cards print only published facts; the one note under the list names the gap
+    expect(spine.textContent).not.toContain("Not published");
+    expect(spine.parentElement!.textContent).toContain("Not published (FE-027/028)");
     expect(spine.textContent).toContain("Real-funded domain");
   });
 
