@@ -30443,6 +30443,124 @@ authorize reopening this retired slot. Own reply§15 already records actual
 source retirement independently. R0 staged-link check initially caught that
 moving peer sidecar dependency; corrected the index scope, not the peer file.
 
+### Original08 independent STREAM proposal and read09 continuation —22Oct2026
+
+**Approved/resumed scope22Oct13:42 Asia/Saigon:** Bobby requests a NEW finite
+proposal for independent STREAM, active revoke and restart/recovery alongside
+Core, not replay of the completed internal READ or expired06:00–06:30window.
+Rules/root34b, current phase08/read09, detailed EDGE08 and current Core
+actual-return plus AFTER_REAL_READ_OWNER_ACTIONS reviewed. Feature baseline
+fe32799e; preserve all peer WIP/index, original READ lease/ACK/history and
+revoked nativehead6. Source SDK28ea/lifecycle1ee3a15d remain authoritative.
+
+Runnable now: prepare exact fresh official install6→7/revoke7→8 artifacts and
+new unarmed operator with future slot, readonly natural-head/identity/trust/
+catalogue/function preflight, affected glue/SDK db0 validation; return exact
+hashes and source/interface/process plan to Core. Proposed target slot
+22Oct14:15–14:45 Asia/Saigon /07:15–07:45UTC, NOT accepted or armed yet.
+Core must ACK actual bytes/window before any source install/serve. If review
+cannot finish before start, return NOT_READY/new explicit proposal rather than
+silently shifting dates/expiry. No old command/attempt/session reused.
+
+Ownership/acceptance: Edge owns source install/actual READY/original custody/
+finite drain/exact revoke; Core owns its config/capacity/grant/session and is
+proposed sole HTTP/SSE specimen executor on SGP. Explicit one-client ACK
+precedes execution. Keep independently issued READ and fixed60s non-sliding
+STREAM; real active STREAM revoke while subscriber connected, original-key
+restart/recovery, current-epoch cache/cursor proof before exact READ revoke.
+Repin H and accepted C288/reserve20/B244 schedule before admission; API/CLI
+resource partition remains Core-reviewed configuration, not a measured budget.
+No automatic cap rise in TS, guard loosening or unaffected-domain invention.
+
+Return separate existing Manager three-target TLS/JWKS readiness and G2
+apparatus, READY/NOT_READY with exact actual pins/missing owner action. No
+issuer/key fabrication, Manager rollout, load/absolute performance claim,
+stable/dev/provider28445, command/Live, schema or custody deletion.
+Tests distinguish modeled/readonly preparation from actual grants/SDK READY/
+connected receipt; STALE/PARTIAL never FRESH. UNKNOWN retains exact custody,
+same-command STATUS and SDK recovery, no forced process close or new-key retry.
+Cleanup only exact disposable verifier resources; retain private proposal and
+evidence through review. Main plan/guide/return updated with every tested slice.
+
+**Actual preparation13:56 Asia/Saigon:** fresh private2pOaSGvN directory0700/
+files0600, official install23d39406 CAS6→7/revoke84d18247 CAS7→8; no old
+manifest/session replay. Final12modeled glue PASS, actual SDK validate EXIT0/
+db0/UNARMED and source/control RR READ ONLY preflight EXIT0/pools[0,0]/issued0,
+exact nativehead6 revoked/naturalkey/DB/system/catalogue/functions unchanged.
+Initial test2PASS/7ERROR PyO3 module re-import corrected by real pre-import;
+initial db0 validate2 caught stale revoke literals, corrected exact7/newcommand
+and added regression. Both original failures retained, not external debt or PASS.
+
+[New STREAM proposal](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_STREAM_WINDOW_PROPOSAL_2026-10-22.md)
+14443B/raw8ae256067dbb65ccadd612d1598ae982b4926af1d9c4d6bb78c6629b093fb57f
+actually delivered to Core canonical +3locator journals with exact readback/
+prefix/index PASS. Proposed07:15–07:45UTC; Core owns sole HTTP/SSE specimens,
+config/C288/partition/independent grants/session/restart procedure; Edge only
+installs after exact ACK, no source/listener/grants now. Native maximum_attempts8
+is pending-local custody, released only after real ACK, not cumulative capacity;
+Core historicalH10→Cmin283 is recomputed fresh, no authority/counter reset.
+
+Separate Manager readiness found correct ingress is THREE Rust Edge8443/4/5
+(d6aa/config6180/cd79/98a1), not loopback Manager backends' EdDSA/JWKS/TLS.
+Current common RSA kidportal-d3, server cert valid toFeb2027, clientCA78a6
+valid2028; Research JWK/CSR already exist in HK publicdirectoryc185ee3d.
+Runnable follow-through: reverify those exact4public files/CSR, prepare an
+INACTIVE additive old+new public JWKS candidate using existing keypair only;
+no shared mount/three-Edge reload/grant/PKI issuance. Real signed client leaf/
+controlled issuer locator still missing; candidate config/image/readiness must
+not be called installed. G2 existing apparatus/source pins returned separately,
+numeric14group budget/population/quiet window still owner inputs, no measurement.
+
+**Actual independent Manager preparation14:05 Asia/Saigon:** all4already
+received publicfiles protection/hash PASS, actual CSR signature verification
+PASS. Prepared additive INACTIVE1345B publicJWKS raw7913317056d41e4406744153995aec8fcc69f6b4c90fce60f1663b1f4a07a73e
+in private0700/0600 directoryZllVvxNL; exactly2distinct publicRSAkids, old and
+new key exact-equality/no-private-fields checks PASS. Actual sharedmount
+e52e unchanged; no keys generated, signed leaf invented, JWT minted, service
+restarted or Manager request sent. First sandbox sudo verifier denied by
+no-new-privileges before read; approved elevated read-only verifier PASS.
+[Separate actual readiness packet](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_MANAGER_AND_G2_READINESS_2026-10-22.md)
+7245B/raw68fa30afa41b6ffd18ede233ca373f6abf680816d437b1549d4d4b53382035c3
+actually delivered to canonical Core evidence+3locators, byte readback and
+prefix/index preservation PASS. No repeated request for already received
+JWK/CSR or private keys. Real controlled issuer/leaf-chain/mode plan and
+matched three-service reconcile remain Manager inputs; G2 numeric/apparatus/
+population/quiet inputs returned separately, no measurement started.
+
+At14:05 new native proposal still UNARMED; no Core ACK received on read-only
+mailbox checks, no source/listener/grant/session. Source slot stays explicitly
+07:15–07:45UTC. Core sole-client ACK/config/restart/capacity pins are required
+before applicable execution; no stale slot or automatic extension. Root34b
+correctness preflights do not reserve measurement windows or claim capacity.
+
+**Verification/publication preparation14:07 Asia/Saigon:** execution-tracking
+reconciliation PASS. Exact3peer WIP source/review hashes fe4fcfc7/1cf04b20/
+109659d2 unchanged; peer10line C5 main-plan hunk,56line binding-owner action
+and moving Core actual-return addenda remain excluded from own staged scope.
+No native matching worker remains, socket28446 absent, actual3Edge image
+d6aa7a51/restart0 unchanged. Docker inventory109images/43active, BuildKit
+572records/64.64GB unchanged from this task's baseline; no own image/build
+cache was created. Shared inventory is not permission to prune peer rollback
+or operational resources. Disposable --rm verifiers gone; retain only own
+private sourceproposal/bounded evidence and inactive publicJWKS for ACK review.
+Disk used318360141824→318991437824B/free200556761088→199925465088B reflects
+shared-host activity, not cleanup reclaim. No source/worktree/volume/custody
+deleted, no operational restart. Active feature6checkout list unchanged;
+canonical /home/bobby/.worktrees/portal-execution-manager-v2 at54c6f5f3 on
+feat/manager-v2-paper-read, current feature atfe32799e before this docs slice.
+Stable release /srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy
+and explicitly retained operational/rollback image set untouched.
+
+Remaining decision boundaries: Core exact new-window/sourcehash/sole-client
+ACK makes Edge install/READY runnable in the proposed slot; without it source
+stays UNARMED, no fake READY or fresh session. Core owns source-set/config/
+C288/current grants/session and enumerated specimen/restart plan. Manager
+issuer/real leaf-chain and G2 numeric/population/apparatus inputs are separate
+owner actions, not reasons to block eligible native specimens. Full08 and
+read09 connected acceptance remain NOT_MET, no phase promotion/release.
+R0 Markdown publication uses explicit staged4path/scope/diff/link/secret checks
+plus tracking PASS, per Core working rules10.10d; no CI/push/merge triggered.
+
 
 
 

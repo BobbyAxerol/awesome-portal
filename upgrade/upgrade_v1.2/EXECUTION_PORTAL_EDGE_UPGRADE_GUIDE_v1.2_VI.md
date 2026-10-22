@@ -1036,6 +1036,25 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest proposal22Oct14:05 Asia/Saigon:**
+[NEW independent STREAM window](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_STREAM_WINDOW_PROPOSAL_2026-10-22.md)
+is PREPARED/UNARMED for07:15–07:45UTC, exact install6→7/revoke7→8;
+12modeled PASS, frozen SDK db0 validate and actual read-only head6/revoked
+preflight EXIT0/pools0/issued0. Actual prior READ/SERVED/CoreACK and finite
+retirement below remain complete; do not replay them. Core exact artifact/
+window/sole-client ACK precedes source arm/install/actual READY; Core owns
+its grants/session and all HTTP/SSE specimens. READ never authorizes STREAM.
+Independent fixed60s STREAM active revoke/restart/original-key recovery needs
+real connected receipts; proposal alone is not READY/full08/09 acceptance.
+
+[Separate Manager/G2 readiness](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_MANAGER_AND_G2_READINESS_2026-10-22.md)
+pins actual three Rust8443/4/5 ingress and existing Research public CSR/JWK.
+Additive public JWKS candidate79133170 is prepared INACTIVE, old/current key
+preserved, no shared mount/restart. Controlled issuer/issued leaf+chain still
+needed for new Research Manager binding. G2 preparation exists; accepted
+numeric/population/apparatus/quiet inputs remain separate. Neither blocks
+eligible native STREAM or permits fabricated FRESH/all-mode/measurement proof.
+
 **Latest actual22Oct13:28 Asia/Saigon:** requested finite chain EXECUTED:
 official install5/actualREADY → Core currentREAD+genuine session → ONE internal
 snapshotHTTP200/1608B → exact sourceSERVED/CoreACK → READ/session revoke /
