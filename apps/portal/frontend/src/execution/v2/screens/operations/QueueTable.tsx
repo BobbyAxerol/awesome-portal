@@ -1,19 +1,17 @@
 /**
- * The commands table, in the kit's column order: Time, Target and operation,
- * Receipt, Next. Intent (FE-020) and Display (FE-032) have no source, so they are not columns of "Not published":
- * the screen names them once ("Not available: Intent, Display").
+ * The commands table, in the hi-fi column order: Time, Target and operation, Intent, Receipt, Display, Next.
+ * Intent (FE-020) and Display (FE-032) have no source, so each cell says "Not available" and the request id is behind its disclosure.
  *
  * Time is `created_at`; Target + operation is the target and `command_key`;
  * Receipt is `source_status` with `verification_result`; Next is
  * `triage_state`. The incidents an operation is linked to (FE-042) sit under the
- * target, so the six kit columns stay six. Intent (FE-020) and Display (FE-032) have no source yet, so
- * they stay columns, as in the kit, and each cell says "Not published" with its
- * request id instead of the table silently losing two of its six columns.
+ * target, so the six kit columns stay six.
  */
 import { useMemo, type MouseEvent, type ReactNode } from "react";
 import type { To } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
+import { NaWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import { formatAsOf } from "../../boundary";
 import type { OperationV2 } from "../../readers/operationalQueue";
@@ -45,6 +43,11 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       ),
     },
     {
+      key: "intent",
+      label: "Intent",
+      render: () => <NaWhy reason="Not published (FE-020): whether the command was only previewed." />,
+    },
+    {
       key: "receipt",
       label: "Receipt",
       render: (row) => {
@@ -56,6 +59,11 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
           </span>
         );
       },
+    },
+    {
+      key: "display",
+      label: "Display",
+      render: () => <NaWhy reason="Not published (FE-032): whether the figures shown have caught up." />,
     },
     {
       key: "next",

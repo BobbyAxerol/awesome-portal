@@ -197,10 +197,10 @@ describe("FE-042 incident links in the queue row", () => {
     for (const group of groups) expect(group.textContent).toBe("Not published (FE-042)");
   });
 
-  it("keeps the four columns: the links live in the Target and operation cell", async () => {
+  it("keeps the six columns: the links live in the Target and operation cell", async () => {
     mount(queueBody());
     const t = await table();
-    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Receipt", "Next"]);
+    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Intent", "Receipt", "Display", "Next"]);
     expect(linksOf("op_TEST_ONLY_links_a").closest("td")?.getAttribute("data-l")).toBe("Target and operation");
   });
 
@@ -227,6 +227,9 @@ describe("FE-042 incident links in the queue row", () => {
         "Account acc_TEST_ONLY_operational",
         "Open incident inc_TEST_ONLY_links_1, linked to operation op_TEST_ONLY_links_b",
         "Incident not attested, reason",
+        // The Intent and Display cells carry their own reason disclosures (hi-fi keeps both columns).
+        "Not available, reason",
+        "Not available, reason",
         "Check original request",
       ]);
       expect(row.getAttribute("tabindex")).toBe("0");

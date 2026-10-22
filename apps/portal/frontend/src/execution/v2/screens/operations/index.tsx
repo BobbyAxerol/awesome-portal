@@ -540,8 +540,6 @@ export default function OperationsV2({
                 <NotAvailableLine
                   className="exec-ops-na-line"
                   facts={[
-                    { label: "Intent", id: "FE-020", why: "Whether the command was only previewed" },
-                    { label: "Display", id: "FE-032", why: "Whether the figures shown have caught up" },
                     ...(ready?.rows.some((row) => row.incidentLinks === undefined) ? [{ label: "Linked incidents", id: "FE-042" as const, why: "An older server body omits the field" }] : []),
                   ]}
                 />
