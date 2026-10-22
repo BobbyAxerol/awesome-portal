@@ -65,6 +65,7 @@ const realtimeLimits=z.object({maximumClients:positive.max(4096),maximumEntriesP
   .strict().refine(v=>v.maximumClientBytes>=v.maximumFrameBytes&&v.maximumTotalBytes>=v.maximumClientBytes);
 const manifest=z.object({schema_version:z.literal("portal.native-core-runtime.v1"),pool_profile:poolProfile,
   realtime_limits:realtimeLimits.optional(),
+  cache_observation:z.object({schema_version:z.literal("portal.native-cache-observation-config.v1"),directory:path}).strict().optional(),
   composition:z.object({expected_workload_id:text,selections:z.array(selection).min(1).max(64),
     retained_recovery:z.array(selection).max(63),owner_intakes:z.array(ownerIntake).min(1).max(2),
     mutation_limits:z.object({maximum_intents:positive.max(4096),maximum_recoveries_per_request:positive.max(16)}).strict(),
@@ -195,6 +196,10 @@ export async function prepareNativeCoreRuntime(input:NativeCoreRuntimeReference)
       if(!Buffer.from(JSON.stringify(value),"utf8").equals(bytes))return fail();
       parsed=manifest.parse(value);
     }finally{bytes.fill(0);}
+    // Observation is opt-in and Research single-Paper-only. Validate before
+    // hydration; never interpret this as an owner/grant/source installation.
+    if(parsed.cache_observation!==undefined)
+      nativeCoreResearchReviewTarget(parsed,parsed.composition.owner_intakes[0]!.target.workspace_id);
     const selections:NativeCoreSelection[]=[],retained:NativeCoreSelection[]=[];
     // Sequential bounded construction: no source request, Core DB query,
     // listener, owner-artifact read, policy installation or background job.
@@ -223,7 +228,8 @@ export async function prepareNativeCoreRuntime(input:NativeCoreRuntimeReference)
         // and genuine composition provenance. Never construct another consumer
         // here or expose an unrecognized dependency property that mounts nothing.
         return Object.freeze({...composed.dependencies,nativeManagerRead:composed,
-          ...(parsed.realtime_limits===undefined?{}:{nativeManagerRealtimeLimits:Object.freeze({...parsed.realtime_limits})})
+          ...(parsed.realtime_limits===undefined?{}:{nativeManagerRealtimeLimits:Object.freeze({...parsed.realtime_limits})}),
+          ...(parsed.cache_observation===undefined?{}:{nativeManagerCacheObservation:Object.freeze({directory:parsed.cache_observation.directory})})
         }) satisfies ControlApiDependencies;
       }catch{return fail();}
     }});

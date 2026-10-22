@@ -165,7 +165,8 @@ describe("TEST_ONLY native runtime private reference loader", () => {
     const deps = await prepared.compose(actual.pool), composed = await vi.mocked(composeNativeCore).mock.results[0]!.value;
     expect(vi.mocked(composeNativeCore).mock.calls[0]![0]).toBe(actual.pool); expect(deps.nativeManagerRead).toBe(composed);
     expect(deps.executionAccessTrust).toBe(composed.dependencies.executionAccessTrust); expect(deps.currentHumanMutations).toBe(composed.dependencies.currentHumanMutations);
-    expect(deps).not.toHaveProperty("nativeManagerRealtimeLimits"); expect(composed.installOwnerPolicies).not.toHaveBeenCalled();
+    expect(deps).not.toHaveProperty("nativeManagerRealtimeLimits");
+    expect(deps).not.toHaveProperty("nativeManagerCacheObservation"); expect(composed.installOwnerPolicies).not.toHaveBeenCalled();
     expect(opened).not.toContain("/root/TEST_ONLY-OFFLINE-owner-artifact.json");
     expect(new Set(opened)).toEqual(new Set(["/TEST_ONLY/native-runtime/config.json", f.caRef.path, f.certRef.path, f.tlsKeyRef.path, f.keyRef.path, f.terminalRef.path]));
   });
@@ -189,5 +190,22 @@ describe("TEST_ONLY native runtime private reference loader", () => {
     const f = fixture(), { readTimeoutMs: _, ...partial } = valid;
     await expect(prepareNativeCoreRuntime(register("/TEST_ONLY/native-runtime/config.json", JSON.stringify({ ...f.value, realtime_limits: partial }))))
       .rejects.toMatchObject({ code: "CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID" });
+  });
+  it("rejects unsafe observation config and non-Research Paper composition before any key hydration",async()=>{
+    const observation={schema_version:"portal.native-cache-observation-config.v1",directory:"/TEST_ONLY/observation"};
+    const limits={maximumClients:2,maximumEntriesPerClient:4,maximumFrameBytes:32768,maximumClientBytes:65536,
+      maximumTotalBytes:131072,maximumNoticesPerRead:8,readTimeoutMs:1000};
+    for(const change of [
+      {cache_observation:{...observation,directory:"relative"}},
+      {cache_observation:{...observation,directory:"/TEST_ONLY/../observation"}},
+      {cache_observation:{...observation,extra:true}},
+      {cache_observation:{...observation,schema_version:"other"}},
+      {cache_observation:observation}, // lacks realtime and single-Paper proof
+      {cache_observation:observation,realtime_limits:limits}, // wrong profile
+    ]){
+      const f=fixture();await expect(prepareNativeCoreRuntime(register("/TEST_ONLY/native-runtime/config.json",JSON.stringify({...f.value,...change}))))
+        .rejects.toMatchObject({code:"CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID"});
+      expect(opened).toEqual(["/TEST_ONLY/native-runtime/config.json"]);
+    }
   });
 });
