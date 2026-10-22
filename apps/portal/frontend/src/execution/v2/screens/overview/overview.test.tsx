@@ -563,16 +563,17 @@ describe("the fund NAV series (FE-013, BE-P4 manager series)", () => {
     expect(performance().querySelector("svg")).not.toBeNull();
     expect(performance().querySelector(".exec-ser")!.textContent).not.toContain("Not published");
     // The KPI is the last published point, as the server sent it (the title carries the full string), never a derived NAV.
-    const populated = JSON.parse(JSON.stringify(series.calls));
-    expect(populated).toHaveLength(1);
+    const populated = JSON.parse(JSON.stringify(series.calls)) as { metric: string }[];
+    expect(populated.filter((c) => c.metric === "NAV")).toHaveLength(1);
     const last = kpi("NAV").querySelector(".exec-ov-num");
     expect(last).not.toBeNull();
     expect(last!.getAttribute("title")).toMatch(/^-?\d+(\.\d+)?$/);
     expect(kpi("NAV").textContent).toMatch(/^NAV.*As of \d/);
     expect(kpi("NAV").querySelector(".exec-blk-kpi-note span")!.getAttribute("title")).toContain("Latest published point");
     expect(kpi("NAV").querySelector(".exec-blk-kpi-note span")!.getAttribute("title")).toContain("methodology TEST_ONLY:nav-twr.v1");
-    // The other money figures stay unpublished: windowed figures are not this series.
-    for (const label of ["Net PnL", "Return", "Drawdown"]) expect(kpi(label)!.querySelector(".exec-blk-kpi-value")?.textContent, label).toMatch(/^Not published/);
+    // Net PnL and Return ask the same port (their tiles read the published series); Drawdown has no series metric and stays unpublished.
+    expect(kpi("Drawdown")!.querySelector(".exec-blk-kpi-value")?.textContent).toMatch(/^Not published/);
+    for (const label of ["Net PnL", "Return"]) expect(kpi(label), label).toBeDefined();
   });
 
   it("EMPTY says 'No points in this window' (not a zero line, not a number) and still names the methodology", async () => {

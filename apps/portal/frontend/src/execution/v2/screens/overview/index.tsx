@@ -85,8 +85,6 @@ function Gap({ ids, children }: { ids: string; children?: string }) {
   );
 }
 
-/** Why a windowed figure has no value; the ids ride behind each cell's disclosure. */
-const NO_WINDOW = "Windowed; needs the window";
 /** The capital block (hi-fi): every row stays, each says it is not published (FE-017). */
 const CAPITAL_ROWS: readonly { label: string; ids: string }[] = [
   { label: "Initial funds", ids: "FE-017" },
@@ -101,21 +99,21 @@ const CAPITAL_ROWS: readonly { label: string; ids: string }[] = [
  * methodology. No point is `No points in this window`; a series that is not published (or a read that has not answered) keeps
  * the request ids; any other typed reason is printed with its code. Never a derived or defaulted number.
  */
-function NavCell({ read, window }: { read: SeriesReadState; window: string }) {
+function SeriesCell({ label, read, window, gapIds }: { label: string; read: SeriesReadState; window: string; gapIds: string }) {
   const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
   const entry = series?.series[0];
   if (series === null || entry === undefined || (entry.state === "UNAVAILABLE" && entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED")) {
-    return <Cell label="NAV"><Gap ids={FE_MONEY} /></Cell>;
+    return <Cell label={label}><Gap ids={gapIds} /></Cell>;
   }
   if (entry.state === "UNAVAILABLE") {
-    return <Cell label="NAV" note={<><span>Series unavailable</span><GapWhy name="Why the series is unavailable" rows={[`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`]} next={null} /></>}><span className="exec-ov-na">Not available</span></Cell>;
+    return <Cell label={label} note={<><span>Series unavailable</span><GapWhy name="Why the series is unavailable" rows={[`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`]} next={null} /></>}><span className="exec-ov-na">Not available</span></Cell>;
   }
   if (!isDescribed(entry)) return null;
   const last = latestPoint(entry);
-  if (last === null) return <Cell label="NAV" note={<span title={`Methodology ${entry.methodologyRef}, window ${window}`}>Window {window}</span>}><span className="exec-ov-na">No points in this window</span></Cell>;
+  if (last === null) return <Cell label={label} note={<span title={`Methodology ${entry.methodologyRef}, window ${window}`}>Window {window}</span>}><span className="exec-ov-na">No points in this window</span></Cell>;
   const shown = seriesValueText(entry, last.exact);
   return (
-    <Cell label="NAV" note={<span title={`Latest published point, ${formatInstant(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>As of {formatInstant(last.tsMs)}</span>}>
+    <Cell label={label} note={<span title={`Latest published point, ${formatInstant(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>As of {formatInstant(last.tsMs)}</span>}>
       <span className="exec-ov-num" title={last.exact}>{shown}</span>
     </Cell>
   );
@@ -183,6 +181,11 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   const metric = serves ? measure : "NAV";
   const measureQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: metric === "NAV" ? "NET_PNL" : metric }), [navQuery, metric]);
   const measureRead = useManagerSeries(api, metric !== "NAV", measureQuery, seriesNonce);
+  // The Net PnL and Return tiles ask the same port for the same fund once the NAV read says the series is served; a typed refusal keeps its ids.
+  const pnlQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: "NET_PNL" }), [navQuery]);
+  const returnQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: "RETURN" }), [navQuery]);
+  const pnlRead = useManagerSeries(api, serves, pnlQuery, seriesNonce);
+  const returnRead = useManagerSeries(api, serves, returnQuery, seriesNonce);
   const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
 
   const { snapshot } = reads;
@@ -320,9 +323,9 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
       ) : null}
 
       <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 6 } as CSSProperties}>
-        <NavCell read={nav} window={url.value.window} />
-        <Cell label="Net PnL" note={NO_WINDOW}><Gap ids="FE-005, FE-025" /></Cell>
-        <Cell label="Return" note={NO_WINDOW}><Gap ids="FE-006, FE-025" /></Cell>
+        <SeriesCell label="NAV" read={nav} window={url.value.window} gapIds={FE_MONEY} />
+        <SeriesCell label="Net PnL" read={pnlRead} window={url.value.window} gapIds="FE-005, FE-025" />
+        <SeriesCell label="Return" read={returnRead} window={url.value.window} gapIds="FE-006, FE-025" />
         <Cell label="Drawdown" note="Needs a NAV series"><Gap ids="FE-013, FE-025" /></Cell>
         <Cell label="Open incidents" note={<Link className="exec-ov-link" to={ctx("/execution/operations")} title="Incidents in the ranked list">Operations</Link>}>
           {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : incidents.value}</span>}
