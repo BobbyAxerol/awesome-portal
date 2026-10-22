@@ -31353,3 +31353,59 @@ locations are untouched, not re-inspected as a new release in this HK slice.
 Owner-approved Core§10.10d docs-only local publication; no repeated full hook,
 no push/merge/CI. PREPARED is complete at its gates, exact new Core ACK still
 pending before any operational admission; full08/read09 NOT_MET.
+
+### Original08 — execute exact two-hour binding after Core ACK
+
+**OWNER_APPROVED / EXECUTION_REQUESTED,22Oct14:21UTC (21:21VN).** Bobby
+directs immediate exact Core ACK→Edge install/SDK_READY, no independent side
+lane. Re-read root/local rules, current08 guide/Unified and frozen private
+operator. Source featuree50952e8; fresh immutable public packet6d09378a and
+private1400-0sOa1z/install d680f9f1/revoke2c3bba6e stay selected. No new generic
+approval or new packet/window required:14:00–16:00 still current, latestREADY
+15:40. Scope authorizes only exact official source install/status/CAS8→9,
+finite28446 and real SDK/RR READY, original-custody recovery/drain/retirement
+CAS9→10 as already documented. Core owns current grants/session/specimen.
+
+Actual read-only Core lookup14:21:45UTC: canonicald30fef89 return is still
+c7c87743§§12–14 and no CORE*.md contains exact new6d09378a packet hash. Thus
+the specific NEW hash-bound ACK is genuinely not yet returned, not merely
+missing from the HK mirror. Re-send immediate action in original mailbox,
+then fresh bounded RR READ ONLY predecessor/trust/pins/port check; arm only
+the actual ACK digest once received. Do not forge another agent's ACK or
+reinterpret Core§12's explicit replacement proposal as this new-pin acceptance.
+Missing exact ACK blocks install alone; all in-scope preinstall verification
+continues now. No stable/dev/provider28445/Manager/command/Live change.
+Tests/rollback remain original08: actual RECORDED+same-original STATUS,
+SDK_READY+real observer, finite expiry, Core settlement then physicalpool0/
+exit0/die/destroy/socketabsent and official revoke/status; retain UNKNOWN.
+
+**Actual execution checkpoint14:29UTC:** refreshed bounded RR READ ONLY
+preinstall check EXIT0/stderr0, correct DB/system/fingerprint and exact
+head8revoked predecessor; issued0/pools[0,0]. Private
+preinstall-readonly.actual.jsonl SHA256720b38504ff977fc8583634438ebe8380e33c818a635680646a3d1af589ce18a.
+No new ISSUE/ENTER/install/serve. Capped --rm verifier is physically absent,
+socket28446 absent; operator and preserved PREPARED remain ae9ec5c9/ACKnull.
+Core original request/Unified/sync received urgent exact-ACK action at
+14:23:20UTC; checkpoint14:25 requested, not a fabricated ACK. Direct lookup
+14:27:38 and broader original-mailbox/hash-prefix check still find only
+Edge's requests, not Core's ACK. Core return remains c7c87743 and HEADd30fef89.
+Thus only exact Core producer ACK blocks the already approved install;
+no independently runnable preparation remains deferred. Core/Codex must return
+ACK6d09378a or explicit CHANGE; Edge then executes existing frozen recipe
+before15:40, without another generic approval. Full08/read09 NOT_MET.
+
+Cleanup/readback14:29: Docker112images/43active,589BuildKit/68.29GB unchanged;
+no new image/build/cache, no test container retained or shared cleanup.
+Disk used336964239360→332643938304/free181952663552→186272964608B reflects
+shared-host activity, not attributed cleanup savings. Native28ea restart0;
+three Edge d6aa/SourceProxy aa14 and six Manager28ea/0bd48 remain present,
+no protected restart/config mutation. Canonical source54c6f5f3 and active
+featuree50952e8 unchanged; prior SGP stable/explicit rollback retained, no
+worktree/branch removal. Private prepared custody retained for exact pending
+workflow; no secret transfer/push/merge/CI. Peer WIP excluded from publication.
+
+**Verification: R0.** Original08 guide unchanged; explicit single Markdown
+plan hunk only, no peer C5 hunk or other staged path. Tracking reconciliation
+PASS, added-text secret-pattern/diff checks PASS, no new link/anchor to
+validate. Final direct Core-owned hash-prefix search14:29:27UTC still0ACK.
+This is a verified preinstall checkpoint, not installed/READY/connected proof.
