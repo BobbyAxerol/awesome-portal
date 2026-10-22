@@ -68,6 +68,7 @@ import {
   type ReconRow,
 } from "./model";
 import { Np, WhyMark } from "./np";
+import { ReturnFig, useAlphaDataset } from "./DatasetFigures";
 import { alphaViewOf } from "./view";
 import { ReplayView } from "./replay/ReplayView";
 import {
@@ -221,6 +222,8 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
     return null;
   })();
   const present = view !== null && view.present;
+  // The Manager dataset for this alpha in the chosen Book: the Return tile and the windowed figures. Asked once the alpha is known; only a workspace the caller named is sent (never the body's own).
+  const dataset = useAlphaDataset(api, present, alphaId, env, explicitWs);
 
   const panelId = `${uid}-panel`;
   const tabId = (key: string) => `${uid}-tab-${key}`;
@@ -305,7 +308,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                     ? view.money.exposure.map((e) => <span key={e.currency} className="exec-alp2-fig"><Dec value={e.value} currency={e.currency} /></span>)
                     : <Na />}
               </Fig>
-              <Fig label="Return" basis="Windowed; methodology per source"><Np id="FE-006" /></Fig>
+              <Fig label="Return" basis="30D; methodology per source"><ReturnFig read={dataset} /></Fig>
               <Fig label="Max drawdown" basis="Needs the window"><Np id="FE-025" /></Fig>
               <Fig label="Regime fit" basis="Policy not set"><Np id="FE-011" /></Fig>
             </dl>
@@ -369,7 +372,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
 
             <div role="tabpanel" id={panelId} aria-labelledby={inMore ? undefined : tabId(tab)} aria-label={inMore ? ALPHA_MORE_TABS.find((t) => t.key === tab)?.label : undefined} className="exec-alp2-panel">
               {tab === "performance" ? (
-                <PerformanceTab rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
+                <PerformanceTab rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
               ) : null}
               {tab === "deployments" ? (
                 <DeploymentsTab

@@ -104,6 +104,8 @@ describe("picks", () => {
     const fifth = chip("Pilot");
     expect(fifth.disabled).toBe(true);
     expect(fifth.title).toBe("At most 4");
+    // The picks start dataset reads; let them settle inside the test.
+    await waitFor(() => expect(screen.queryByText("Loading")).toBeNull());
   });
 
   it("removes a pick with the same chip and keeps the order of the rest", async () => {
@@ -112,6 +114,7 @@ describe("picks", () => {
     fireEvent.click(chip("Satellite"));
     expect(search().get("in")).toBe(`${PF.core},${PF.canary}`);
     expect(chip("Satellite").getAttribute("aria-pressed")).toBe("false");
+    await waitFor(() => expect(screen.queryByText("Loading")).toBeNull());
   });
 
   it("numbers the picks by position with a colour role and a glyph, so colour is never the only cue", async () => {

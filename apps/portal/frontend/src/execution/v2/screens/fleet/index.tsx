@@ -49,6 +49,7 @@ import { OptionFilter } from "./OptionFilter";
 import { FleetBoard } from "./FleetBoard";
 import { FleetDatasetDrawer } from "./FleetDatasetDrawer";
 import { FleetDatasetTable } from "./FleetDatasetTable";
+import { FleetMap } from "./FleetMap";
 import { FleetDrawer } from "./FleetDrawer";
 import { FleetTable } from "./FleetTable";
 import {
@@ -148,8 +149,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const published = publication.phase === "published" && scope !== null;
   // The legacy read is NOT started while the answer to "is it published?" is pending for a lens the dataset could serve: a
   // request for the fleet read that the dataset then replaces would be a wasted read and a flash of the other table.
-  const waitingForDataset = !forceFleet && scope !== null && tableView && publication.phase === "checking";
-  const datasetMode = published && !forceFleet && tableView;
+  // The Map reads the same dataset rows as the table (its tile size is the published allocation), so it is a dataset view too.
+  const waitingForDataset = !forceFleet && scope !== null && (tableView || mapView) && publication.phase === "checking";
+  const datasetMode = published && !forceFleet && (tableView || mapView);
   const offered = publication.phase === "published" ? publication.dataset.queryOptions : null;
   const sortOptions = useMemo(() => datasetSortOptions(offered === null ? null : offered.sortFields), [offered]);
   const groupOptions = useMemo(() => datasetGroupOptions(offered === null ? null : offered.groupFields), [offered]);
@@ -355,7 +357,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
 
   /* ONE chip says where the table comes from and what a row is: the two sources count different things. */
   const sourceChip = (() => {
-    if (archived || mapView || waitingForDataset) return null;
+    if (archived || (mapView && !datasetMode) || waitingForDataset) return null;
     if (datasetMode) {
       return (
         <span className="exec-fleet-source" role="status" data-source="dataset" title={datasetNote ?? "One row per alpha version in a portfolio, filtered and grouped by the server"}>
@@ -399,7 +401,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
 
   // Group by is a control only when the dataset can group; otherwise the gap is one word on this line, not a disabled select.
   const canGroup = datasetMode && groupOptions.some((option) => option.field !== null);
-  const unpublishedList = datasetMode ? [...(canGroup ? [] : [FE.group]), FE.map, FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST;
+  const unpublishedList = datasetMode ? [...(canGroup ? [] : [FE.group]), FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST;
   const unpublishedView = (fact: { fe: string; what: string }) => (
     <div className="exec-fleet-nppanel" role="status">
       <strong>{fact.what}</strong>
@@ -417,6 +419,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
           <span className="exec-fleet-seg" role="group" aria-label="View">
             <button type="button" className="exec-fleet-segbtn" aria-pressed={tableView} onClick={() => url.set({ view: null })}>Table</button>
             <button type="button" className="exec-fleet-segbtn" aria-pressed={boardView} onClick={() => url.set({ view: "board" })}>Board</button>
+            {/* The Map exists only where the Manager dataset is the source: its tiles are sized by the published allocation. A control that cannot work stays out (DEBT-048). */}
+            {published && !forceFleet ? <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} onClick={() => url.set({ view: "map" })}>Map</button> : null}
           </span>
           {sourceChip}
           {streamOn && scope !== null ? (
@@ -624,7 +628,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                   <span aria-hidden="true">Not available</span>
                 </p>
               </div>
-            ) : mapView ? (
+            ) : mapView && !datasetMode ? (
               <>
                 {unpublishedView(FE.map)}
                 <button type="button" className="exec-fleet-btn" onClick={() => url.set({ view: null })}>Back to Table</button>
@@ -654,14 +658,27 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                       ))}
                     </ul>
                   ) : null}
-                  <FleetDatasetTable
-                    rows={datasetRows}
-                    hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
-                    selectedKey={selection}
-                    // `sel` is a 256-character token and a row key may be longer: such a row has no peek (its name still opens the alpha).
-                    onOpen={(row) => { if (row.rowKey.length <= SEL_MAX) select(row.rowKey); }}
-                    empty={emptyBlock}
-                  />
+                  {mapView ? (
+                    datasetRows.length === 0 ? emptyBlock : (
+                      <FleetMap
+                        rows={datasetRows}
+                        metricKeys={dataset.first === null ? null : dataset.first.queryOptions.metricKeys}
+                        hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
+                        selectedKey={selection}
+                        onOpen={(row) => { if (row.rowKey.length <= SEL_MAX) select(row.rowKey); }}
+                      />
+                    )
+                  ) : (
+                    <FleetDatasetTable
+                      rows={datasetRows}
+                      metricKeys={dataset.first === null ? null : dataset.first.queryOptions.metricKeys}
+                      hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
+                      selectedKey={selection}
+                      // `sel` is a 256-character token and a row key may be longer: such a row has no peek (its name still opens the alpha).
+                      onOpen={(row) => { if (row.rowKey.length <= SEL_MAX) select(row.rowKey); }}
+                      empty={emptyBlock}
+                    />
+                  )}
                   <div className="exec-fleet-foot">
                     <span className="exec-fleet-count-line" role="status" aria-live="polite">{countLine}</span>
                     {dataset.nextCursor && !datasetCapped ? (
