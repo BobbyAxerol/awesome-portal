@@ -115,7 +115,7 @@ Nguồn: `ELP2-10/CODEX_TO_CLAUDE_LANDING_ACK_2026-10-22.md` (BE-P23).
    Limit 51, đọc đúng 51 hàng; pha đếm = `Seq Scan` 40.121 hàng (chi phí O(số tài khoản), nêu thẳng). Có lọc
    (`role=USER`, `q=bulk-03`): cùng index, trả 51 hàng, loại 30.006 hàng theo filter (không phải `limit + 1`).
 3. **Biên nhận.** "27 PG" trong báo cáo trước là sai: đúng là **10 PG + 17 unit** (nay unit là 19 với hai ca
-   ranh giới). §5 ghi `NOT_RUN` là đúng tại thời điểm viết; log PG thật của nguồn hiện tại: PG_LOG_PENDING.
+   ranh giới). §5 ghi `NOT_RUN` là đúng tại thời điểm viết; log PG thật của nguồn hiện tại sha256 822a4e3f82840b09…: 10/10 PG pass.
    Không nhân đôi test chỉ để sửa mô tả.
 4. **Lịch sử chạy (không viết lại).** Lần 1 (`be-p23-pg` + unit, log sha256 7c10e438f0f381bc…): 28 pass / 1 fail, ca
    EXPLAIN mới fail vì điều kiện tìm nút quá chặt. Lần 2: kế hoạch thật trên bảng 121 hàng là
