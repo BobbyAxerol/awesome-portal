@@ -66,9 +66,31 @@ describe("Overview from the FUND dataset", () => {
     expect(row("Allocated").querySelector("[data-zero='true']")?.getAttribute("title")).toMatch(/^0 · /);
     expect(allocated[2]).toContain("Not available");
     expect(whyText(row("Allocated").querySelectorAll(".exec-part-line")[2]!)).toContain("SOURCE_FACTS_NOT_PUBLISHED");
-    for (const label of ["Initial funds", "Added funds", "Returned", "Budget used"]) expect(row(label).textContent, label).toBe(`${label}Not published (FE-017)`);
+    for (const label of ["Initial funds", "Added funds", "Returned", "Budget"]) expect(row(label).textContent, label).toBe(`${label}Not published (FE-017)`);
     expect(row("NAV").textContent).toBe("NAVNot published (FE-013)");
     expect(asked[0]).toMatchObject({ surface: "FUND", environment: "paper", window: "30D" });
+  });
+
+  it("Capital rows read the populated lane's capital-statement keys: initial_funds, added_funds (a true zero), returned_capital, current_budget, one line per partition", async () => {
+    const withCapital = (body: any) => {
+      for (const entry of body.capital_statements) {
+        const p = entry.partition;
+        entry.metrics.initial_funds = moneyMetric({ currency: p.currency, value: "10000.00" });
+        entry.metrics.added_funds = moneyMetric({ currency: p.currency, value: "0" });
+        entry.metrics.returned_capital = moneyMetric({ currency: p.currency, value: "125.00" });
+        entry.metrics.current_budget = moneyMetric({ currency: p.currency, value: "9000.00" });
+      }
+    };
+    mount(withDataset(httpApi(), () => datasetFor("FUND", "unused", withCapital)));
+    await loaded();
+    const table = await screen.findByRole("table", { name: "Capital" });
+    await waitFor(() => expect(table.querySelector(".exec-part")).not.toBeNull());
+    const row = (label: string) => [...table.querySelectorAll("tr")].find((tr) => tr.querySelector("th")?.textContent === label) as HTMLElement;
+    expect(lines(row("Initial funds"))).toEqual(["Real-funded · USDT10,000.00 USDT", "Paper · USDT10,000.00 USDT", "Paper · EUR10,000.00 EUR"]);
+    expect(lines(row("Returned"))).toEqual(["Real-funded · USDT125.00 USDT", "Paper · USDT125.00 USDT", "Paper · EUR125.00 EUR"]);
+    expect(lines(row("Budget"))).toEqual(["Real-funded · USDT9,000.00 USDT", "Paper · USDT9,000.00 USDT", "Paper · EUR9,000.00 EUR"]);
+    expect(row("Added funds").querySelector("[data-zero='true']")?.getAttribute("title")).toMatch(/^0 · /);
+    expect(row("Initial funds").textContent).not.toContain("Not published");
   });
 
   it("Net PnL tile prints each partition's published net_pnl on its own line (signed, true zero, no total); Return and Drawdown stay Not published", async () => {
@@ -106,7 +128,7 @@ describe("Overview from the FUND dataset", () => {
     await loaded();
     const table = screen.getByRole("table", { name: "Capital" });
     expect([...table.querySelectorAll("tr")].map((tr) => tr.textContent)).toEqual([
-      "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "NAVNot published (FE-013)", "Budget usedNot published (FE-017)",
+      "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "NAVNot published (FE-013)", "BudgetNot published (FE-017)",
     ]);
     expect(document.querySelector(".exec-part")).toBeNull();
   });

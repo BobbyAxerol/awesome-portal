@@ -136,7 +136,15 @@ const UNPUBLISHED_OVERVIEW: readonly UnavailableFact[] = [
 ];
 
 /** Capital statements (hi-fi right column): every row stays; none is published (FE-017), so each says so. Nothing is summed from the allocation. */
-const CAPITAL_ROWS = ["Initial funds", "Added funds", "Returned", "Net external flows", "Approved budget", "Recalling", "Headroom"] as const;
+const CAPITAL_ROWS: readonly { label: string; key?: string }[] = [
+  { label: "Initial funds", key: "initial_funds" },
+  { label: "Added funds", key: "added_funds" },
+  { label: "Returned", key: "returned_capital" },
+  { label: "Net external flows" },
+  { label: "Approved budget", key: "current_budget" },
+  { label: "Recalling" },
+  { label: "Headroom" },
+];
 /** Capital-statement keys the dataset publishes, each with a row of its own (one line per economic partition, never totalled). */
 const STATEMENT_ROWS: readonly { key: string; label: string }[] = [
   { key: "balance_total", label: "Balance total" },
@@ -159,7 +167,10 @@ function CapitalCard({ ctx }: { ctx: TabCtx }) {
             <tr key={row.key}><th scope="row">{row.label}</th><td><PartitionFigures list={statements} metricKey={row.key} /></td></tr>
           ))}
           {CAPITAL_ROWS.map((row) => (
-            <tr key={row}><th scope="row">{row}</th><td><Np fact={PF_FE.statements} /></td></tr>
+            <tr key={row.label}>
+              <th scope="row">{row.label}</th>
+              <td>{row.key !== undefined && publishes(statements, row.key) ? <PartitionFigures list={statements} metricKey={row.key} /> : <Np fact={PF_FE.statements} />}</td>
+            </tr>
           ))}
         </tbody>
       </table>

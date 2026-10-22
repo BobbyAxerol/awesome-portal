@@ -96,13 +96,17 @@ const STATEMENT_ROWS: readonly { key: string; label: string }[] = [
   { key: "allocation", label: "Allocated" },
 ];
 
-/** The capital block (hi-fi): every row stays, each says it is not published (FE-017). */
-const CAPITAL_ROWS: readonly { label: string; ids: string }[] = [
-  { label: "Initial funds", ids: "FE-017" },
-  { label: "Added funds", ids: "FE-017" },
-  { label: "Returned", ids: "FE-017" },
+/**
+ * The capital block (hi-fi): every row stays. A row with a `key` reads that metric of the dataset's `capital_statements`, one line
+ * per economic partition (the populated fixture lane publishes initial_funds, added_funds, returned_capital, current_budget);
+ * where no partition publishes it the row says Not published with its id.
+ */
+const CAPITAL_ROWS: readonly { label: string; ids: string; key?: string }[] = [
+  { label: "Initial funds", ids: "FE-017", key: "initial_funds" },
+  { label: "Added funds", ids: "FE-017", key: "added_funds" },
+  { label: "Returned", ids: "FE-017", key: "returned_capital" },
   { label: "NAV", ids: "FE-013" },
-  { label: "Budget used", ids: "FE-017" },
+  { label: "Budget", ids: "FE-017", key: "current_budget" },
 ];
 
 /**
@@ -384,7 +388,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
               {CAPITAL_ROWS.map((row) => (
                 <tr key={row.label}>
                   <th scope="row">{row.label}</th>
-                  <td>{row.label === "NAV" ? <CapitalNav read={nav} /> : <Gap ids={row.ids} />}</td>
+                  <td>{row.label === "NAV" ? <CapitalNav read={nav} /> : row.key !== undefined && publishes(statements, row.key) ? <PartitionFigures list={statements} metricKey={row.key} /> : <Gap ids={row.ids} />}</td>
                 </tr>
               ))}
               {STATEMENT_ROWS.filter((row) => publishes(statements, row.key)).map((row) => (

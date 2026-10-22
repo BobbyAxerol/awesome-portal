@@ -101,7 +101,7 @@ describe("BUSY", () => {
     const capital = screen.getByRole("table", { name: "Capital" });
     const rows = [...capital.querySelectorAll("tr")].map((tr) => tr.textContent);
     expect(rows).toEqual([
-      "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "NAVNot published (FE-013)", "Budget usedNot published (FE-017)",
+      "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "NAVNot published (FE-013)", "BudgetNot published (FE-017)",
     ]);
     expect(panel("Since your last visit").textContent).toContain("Not published (FE-024)");
     expect(panel("Contributors").textContent).toContain("Not published (FE-025)");
