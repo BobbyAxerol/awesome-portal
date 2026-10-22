@@ -483,8 +483,20 @@ export interface AccountIdentity {
   bindingId: string | null;
 }
 
+/**
+ * Display names the read itself carries, by id. A row may name its portfolio (`portfolio_name`), its alpha
+ * (`strategy_name`) or itself (`display_name` / `label` / `name`); the first one found per id wins. An id with no
+ * published name is absent here and the screen prints the id, which is the identity, not a stand-in (FE-066).
+ */
+export interface DisplayNames {
+  portfolios: Readonly<Record<string, string>>;
+  deployments: Readonly<Record<string, string>>;
+  alphas: Readonly<Record<string, string>>;
+}
+
 export interface AccountView {
   identity: AccountIdentity;
+  names: DisplayNames;
   /** Distinct currencies the account's own ledger rows name, sorted. */
   currencies: readonly string[];
   sleeves: readonly Sleeve[];
@@ -494,6 +506,21 @@ export interface AccountView {
   sync: readonly SyncEntry[];
   /** Every relation the source reported unavailable or empty, for the header note. */
   gaps: readonly { relation: string; code: string }[];
+}
+
+function displayNames(deployments: readonly Row[], allocations: readonly Row[]): DisplayNames {
+  const portfolios: Record<string, string> = {};
+  const deploymentNames: Record<string, string> = {};
+  const alphas: Record<string, string> = {};
+  const put = (into: Record<string, string>, id: string | null, name: string | null) => {
+    if (id !== null && name !== null && name !== id && into[id] === undefined) into[id] = name;
+  };
+  for (const row of [...deployments, ...allocations]) {
+    put(portfolios, text(row.portfolio_id), text(row.portfolio_name));
+    put(alphas, text(row.strategy_id), text(row.strategy_name) ?? text(row.alpha_name));
+    put(deploymentNames, text(row.deployment_id), text(row.deployment_name) ?? text(row.display_name) ?? text(row.label) ?? text(row.name));
+  }
+  return { portfolios, deployments: deploymentNames, alphas };
 }
 
 const SENSITIVE = /(^|_)(secret|credential|password|token|dsn|external_account_ref|raw)(_|$)/;
@@ -507,12 +534,13 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
   const venueRow = venueRows.find((row) => text(row.account_id) === accountId) ?? null;
   const bindingId = venueRow ? text(venueRow.binding_id) : null;
 
+  const names = displayNames(rowsOf(profile, "deployments"), rowsOf(profile, "portfolio_allocations"));
   const portfolioOf = (id: string): string | null => {
-    const names = [...new Set(rowsOf(profile, "deployments").filter((row) => text(row.account_id) === id).flatMap((row) => {
+    const shown = [...new Set(rowsOf(profile, "deployments").filter((row) => text(row.account_id) === id).flatMap((row) => {
       const pf = text(row.portfolio_id);
-      return pf ? [pf] : [];
+      return pf ? [names.portfolios[pf] ?? pf] : [];
     }))];
-    return names.length > 0 ? names.join(", ") : null;
+    return shown.length > 0 ? shown.join(", ") : null;
   };
 
   const labelOf = (row: Row | null, id: string): string => (row ? text(row.label) ?? text(row.display_name) ?? text(row.name) : null) ?? id;
@@ -593,6 +621,7 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
 
   const typeWord = account ? text(account.account_type) : null;
   return {
+    names,
     identity: {
       accountId,
       label: labelOf(account, accountId),

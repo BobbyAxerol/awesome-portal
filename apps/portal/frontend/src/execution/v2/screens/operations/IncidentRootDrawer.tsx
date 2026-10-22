@@ -19,6 +19,8 @@ import type { ExecutionApi } from "../../../api/ports";
 import type { PanelStatus } from "../../../contracts";
 import { DockAction, Drawer, type DockMode } from "../../Drawer";
 import { NotAvailableLine } from "../../blocks";
+import type { IncidentDetail } from "../../../operations";
+import { IncidentSections } from "./IncidentSections";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { formatAsOf } from "../../boundary";
@@ -42,7 +44,7 @@ export const INCIDENT_ACTION_REASONS = {
   acknowledge: notPublishedReason(FE.eligibility, "ADMIN-only write, not offered yet."),
   assign: notPublishedReason(FE.assignee, "No assignee is published."),
   mitigate: notPublishedReason(FE.eligibility, "ADMIN-only write, not offered yet."),
-  resolve: notPublishedReason(FE.eligibility, "No gate is published."),
+  resolve: notPublishedReason(FE.eligibility, "ADMIN-only write, not offered yet."),
 } as const;
 
 function instant(value: InstantV2 | null, absent: string) {
@@ -55,9 +57,6 @@ const STATE_FLAG: Readonly<Record<IncidentStateV2, { kind: FlagKind; label: stri
   // A Portal record. It is never green: the source may still be diverged.
   RESOLVED: { kind: "neutral", label: "Resolved in the Portal" },
 };
-
-/** The four panels of the HIFI incident page that have no published source yet, in its order. */
-const GAP_PANELS = ["Evidence", "Operations taken", "Resolution gates", "Timeline"] as const;
 
 export interface StepView {
   state: IncidentStateV2;
@@ -82,10 +81,21 @@ export interface IncidentRootDrawerProps {
 
 export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose, accessHref = ACCESS_PATH }: IncidentRootDrawerProps) {
   const [load, setLoad] = useState<Load>({ phase: "loading" });
+  /** The incident detail (`execution.incident-detail.v1`), when the server published it beside the root. */
+  const [detail, setDetail] = useState<IncidentDetail | null>(null);
 
   useEffect(() => {
     let live = true;
     setLoad({ phase: "loading" });
+    setDetail(null);
+    // Best effort and separate from the root: a route that answers only the root, or a failed detail read, leaves
+    // each section with its own typed absence. Test doubles that predate the method are tolerated.
+    if (typeof api.getIncident === "function") {
+      api.getIncident(incidentId, workspaceId).then(
+        (result) => { if (live && result.ok) setDetail(result.value); },
+        () => undefined,
+      );
+    }
     api.getIncidentRootV2(incidentId, workspaceId).then(
       (result) => {
         if (!live) return;
@@ -133,18 +143,11 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
   const incident = load.incident;
   const flag = STATE_FLAG[incident.workflowState];
   const children = incident.historicalChildren;
-  // The facts table below is long: what is missing goes in the drawer's priority slot, above it. The HIFI has
-  // four panels here (Evidence, Operations taken, Resolution gates, Timeline), so each keeps its place with its
-  // own name and one line; the reason code the server gave is the same for all of them and is printed once.
-  const notPublished = (
-    <NotAvailableLine
-      className="exec-ops-na-line"
-      facts={[
-        ...GAP_PANELS.map((panel) => ({ label: panel, id: FE.events, why: children.reasonCode })),
-        { label: "Assignee", id: FE.assignee },
-      ]}
-    />
-  );
+  // The four HIFI sections (Evidence, Operations taken, Resolution gates, Timeline) each keep their place in the body
+  // with their own content or their own typed absence. Only the assignee, a fact of the head, rides the priority slot.
+  const notPublished = detail === null
+    ? <NotAvailableLine className="exec-ops-na-line" facts={[{ label: "Assignee", id: FE.assignee }]} />
+    : undefined;
   return (
     <Drawer
       title={`Incident ${incident.incidentId}`}
@@ -185,11 +188,18 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
         <dd>{instant(incident.mitigatedAt, "Not mitigated")}</dd>
         <dt>Resolved</dt>
         <dd>{instant(incident.resolvedAt, "Not resolved")}</dd>
+        {detail ? (
+          <>
+            <dt>Assignee</dt>
+            <dd>{detail.assignedTo ?? "Unassigned"}</dd>
+          </>
+        ) : null}
         <dt>Version</dt>
         <dd><span className="exec-ops-mono">{incident.workflowVersion}</span></dd>
         <dt>Source</dt>
         <dd title="Nothing was asked of the source.">Integration {humanize(incident.sourceIntegrationState).toLowerCase()}</dd>
       </dl>
+      <IncidentSections detail={detail} reasonCode={children.reasonCode} />
       <p className="exec-ops-reason">Resolving closes the incident only. It never resumes a deployment.</p>
     </Drawer>
   );

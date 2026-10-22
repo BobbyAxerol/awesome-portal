@@ -13,7 +13,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { BindingExposure } from "../../../analytics";
 import type { ExecutionApi, Result } from "../../../api/ports";
 import type { BindingDetailRead, BindingItem, ManagerListEnvelope, ProfileEnvelope } from "../../../api/profileRead";
-import type { FinancialChartPayload } from "../../../api/financialChart";
+import type { FinancialChartPayload, FinancialMetric } from "../../../api/financialChart";
 import type { SubjectActivityPage } from "../../../api/subjectActivity";
 import type { PanelStatus } from "../../../contracts";
 import { bindingQuery, mergeBindings, type BindingEnv } from "./model";
@@ -111,9 +111,16 @@ export const useBindingDetail = (api: ExecutionApi, bindingId: string | null, en
     return first ?? { ok: false as const, status: "unavailable" as const, reason: "NO_ENVIRONMENT_TO_ASK" };
   });
 
-export const useAccountEquity = (api: ExecutionApi, accountId: string, environment: "paper" | "sandbox" | "live" | null, workspaceId: string | null, enabled: boolean) =>
-  useRead<FinancialChartPayload>(api, `equity:${accountId}:${environment ?? ""}:${workspaceId ?? ""}`, enabled && environment !== null, (scopedApi) =>
-    scopedApi.getFinancialChart({ environment: environment ?? "live", subjectKind: "account", subjectId: accountId, metric: "equity", workspaceId }));
+export const useAccountEquity = (
+  api: ExecutionApi,
+  accountId: string,
+  environment: "paper" | "sandbox" | "live" | null,
+  workspaceId: string | null,
+  enabled: boolean,
+  metric: FinancialMetric = "equity",
+) =>
+  useRead<FinancialChartPayload>(api, `${metric}:${accountId}:${environment ?? ""}:${workspaceId ?? ""}`, enabled && environment !== null, (scopedApi) =>
+    scopedApi.getFinancialChart({ environment: environment ?? "live", subjectKind: "account", subjectId: accountId, metric, workspaceId }));
 
 /* ── keyset-paged subject activity (one relation at a time) ──────────────── */
 

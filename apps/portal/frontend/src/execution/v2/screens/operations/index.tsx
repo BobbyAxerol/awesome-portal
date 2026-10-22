@@ -35,7 +35,7 @@ import {
 } from "../../readers/operationalQueue";
 import { ENV_LABEL, EXEC_ENVS, serializeUrlParams, useExecUrlState, type ExecEnv } from "../../urlState";
 import { IncidentRootDrawer } from "./IncidentRootDrawer";
-import { ACCESS_PATH, AccessLink, FE, NotPublished, notPublishedReason } from "./notPublished";
+import { ACCESS_PATH, AccessLink, FE, FE_B1, NotPublished, notPublishedReason } from "./notPublished";
 import { OperationDock } from "./OperationDock";
 import {
   invalidNotice, legacyFilterNotice, OPS_WINDOWS, readOpsUrl, writeOpsUrl, type Filters, type OpsWindow,
@@ -342,6 +342,19 @@ export default function OperationsV2({
           </div>
         ) : null}
       </div>
+
+      {ready ? (
+        <KpiStrip label="Operations health" columns={4}>
+          {/* Unknown outcomes: the server's UNCERTAIN verification bucket, printed as received (FE-043). */}
+          {ready.queue.page.statusCounts
+            ? <Kpi label="Unknown outcomes" value={number(ready.queue.page.statusCounts.verificationResult.counts.UNCERTAIN)} basis="Verification uncertain" />
+            : <Kpi label="Unknown outcomes" absentReason={`Not published (${FE_B1.counts}): the server sent no status counts.`} />}
+          {/* Capital receipts are a separate read with their own grain; the queue carries no receipt state. */}
+          <Kpi label="Pending receipts" notPublished={FE.receipts} />
+          <Kpi label="Display catching up" absentReason="The queue read publishes no projection display state." />
+          <Kpi label="Open exceptions" notPublished={FE.events} />
+        </KpiStrip>
+      ) : null}
 
       {ready ? (
         <KpiStrip label="Queue counts" columns={4}>

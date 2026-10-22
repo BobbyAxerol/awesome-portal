@@ -314,6 +314,15 @@ describe("CSV export of the loaded rows", () => {
   const order = (over: Partial<BlotterOrder>): BlotterOrder => ({ ...base, ...over });
   const cols = (...ids: string[]) => COLUMNS.filter((c) => ids.includes(c.id));
 
+  it("the Deployment cell is the row's own deployment_id when the read publishes one, an empty cell when it does not; Avg price and Fee stay empty", () => {
+    const csv = blotterCsv(
+      [order({ orderId: "o1", deploymentId: "dep_btc_live" }), order({ orderId: "o2", deploymentId: null })],
+      cols("order", "deployment", "avg", "fee"),
+    );
+    const lines = csv.trim().split(/\r?\n/);
+    expect(lines.slice(1)).toEqual(["o1,dep_btc_live,,", "o2,,,"]);
+  });
+
   it("prints the visible labels once, then each row as shown: exact decimals ungrouped, UTC short form, absent as an empty cell", () => {
     const csv = blotterCsv(
       [order({ orderId: "o1", submittedAt: "2026-10-17T09:58:00Z", quantity: { kind: "value", text: "1250.0400" }, price: { kind: "absent" }, side: "BUY", orderType: "MARKET", status: "FILLED" })],

@@ -23,7 +23,7 @@ import { Flag } from "../../Flag";
 import { backLinkFor, withoutOrigin } from "../../backTo";
 import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
 import { PhysicalBinding } from "./PhysicalBinding";
-import { ActivityPanel, EquityBlock } from "./readPanels";
+import { ActivityPanel, DrawdownBlock, EquityBlock } from "./readPanels";
 import { AllocationsPanel, AuthorityKpis, FeesPanel, MarginPanel, PositionsPanel, ReconciliationPanel, SleevesPanel, type PanelContext } from "./panels";
 import { Fact, Na, Np, StateFlag, WITHHELD } from "./parts";
 import { useAccountResource, useBindingDetail, useBindingExposure } from "./reads";
@@ -151,7 +151,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
   const sleeve = mode === "sleeve";
   const title = sleeve ? identity.label : `${identity.venue ? humanize(identity.venue) : "Venue"} account`;
   const subtitle = sleeve
-    ? [identity.portfolios.join(", "), identity.baseCurrency, environment ? ENV_LABEL[environment] : null].filter((part): part is string => part !== null && part !== "").join(" · ")
+    ? [identity.portfolios.map((pf) => view.names.portfolios[pf] ?? pf).join(", "), identity.baseCurrency, environment ? ENV_LABEL[environment] : null].filter((part): part is string => part !== null && part !== "").join(" · ")
     : `${population.published} ${population.published === 1 ? "sleeve" : "sleeves"} · 1 physical binding`;
 
   const setMode = (next: "sleeve" | "physical") => url.set({ view: next === "sleeve" ? null : next });
@@ -178,13 +178,13 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
               <Fact label="Name">{identity.label}</Fact>
               <Fact label="Portfolio">
                 {identity.portfolios.length === 0 ? <Na /> : identity.portfolios.map((pf, index) => (
-                  <span key={pf}>{index > 0 ? ", " : ""}<Link className="exec-acct-link" to={withContext(portfolioHref(pf), withoutOrigin(params))}>{pf}</Link></span>
+                  <span key={pf}>{index > 0 ? ", " : ""}<Link className="exec-acct-link" to={withContext(portfolioHref(pf), withoutOrigin(params))}>{view.names.portfolios[pf] ?? pf}</Link></span>
                 ))}
               </Fact>
               <Fact label="Domain">{[environment ? ENV_LABEL[environment] : null, identity.baseCurrency].filter((part): part is string => part !== null).join(" · ") || <Na />}</Fact>
               <Fact label="Deployments">
                 {view.deployments.length === 0 ? <Na /> : view.deployments.map((dep, index) => (
-                  <span key={dep.id}>{index > 0 ? ", " : ""}<Link className="exec-acct-link" to={withContext(deploymentHref(dep.id, dep.mode, dep.stage), withoutOrigin(params))}>{dep.id}</Link></span>
+                  <span key={dep.id}>{index > 0 ? ", " : ""}<Link className="exec-acct-link" to={withContext(deploymentHref(dep.id, dep.mode, dep.stage), withoutOrigin(params))}>{view.names.deployments[dep.id] ?? dep.id}</Link></span>
                 ))}
               </Fact>
             </dl>
@@ -234,7 +234,10 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
                 <MarginPanel ctx={ctx} />
               </div>
               {sleeve ? (
-                <EquityBlock api={api} accountId={accountId} environment={environment} workspaceId={profile.workspaceId} currency={currency} />
+                <>
+                  <EquityBlock api={api} accountId={accountId} environment={environment} workspaceId={profile.workspaceId} currency={currency} />
+                  <DrawdownBlock api={api} accountId={accountId} environment={environment} workspaceId={profile.workspaceId} currency={currency} />
+                </>
               ) : null}
             </>
           ) : null}

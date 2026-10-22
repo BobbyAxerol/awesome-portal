@@ -367,7 +367,7 @@ describe("FE-043 counts by status", () => {
     expect(region.textContent).not.toContain("Same server snapshot");
     expect(region.querySelector("h2")!.getAttribute("title")).not.toContain("Same server snapshot");
     // The published page counts are untouched.
-    const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
+    const kpis = screen.getByRole("group", { name: "Queue counts" });
     expect(within(kpis).getByText("Matching").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("3");
   });
 
@@ -399,7 +399,7 @@ describe("FE-043 counts by status", () => {
     expect(within(t).queryAllByRole("row")).toHaveLength(3);
     expect(figure(bucket(tile("Triage"), "Unacknowledged"))).toBe("1");
     expect(tile("Triage").querySelector(".exec-ops-dim-total")?.textContent).toBe("3under every filter");
-    const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
+    const kpis = screen.getByRole("group", { name: "Queue counts" });
     expect(within(kpis).getByText("Loaded").nextElementSibling?.textContent).toContain("of 3 matching");
   });
 
@@ -442,7 +442,7 @@ describe("FE-043 counts by status", () => {
     expect(figure(bucket(tile("Triage"), "Unacknowledged"))).toBe("1,000");
     expect(figure(bucket(tile("Source status"), "Running"))).toBe("4");
     // 200 loaded rows against 1,234 matching: the loaded figure is its own tile, never fed back into a count.
-    const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
+    const kpis = screen.getByRole("group", { name: "Queue counts" });
     expect(within(kpis).getByText("Loaded").nextElementSibling?.textContent).toBe("200of 1,234 matching");
     // Every one of the 200 rows says it has no readable links, and none says 'No incident'.
     expect(screen.getAllByText("No readable incident links")).toHaveLength(ROW_CAP);
@@ -462,6 +462,46 @@ describe("FE-043 counts by status", () => {
     ]);
     // The selected bucket is said in words, not only in weight.
     expect(tile("Severity").textContent).toContain("Warning (filtered)");
+  });
+});
+
+describe("Operations health tiles (design: Unknown outcomes, Pending receipts, Display catching up, Open exceptions)", () => {
+  const health = () => screen.getByRole("group", { name: "Operations health" });
+  const cell = (label: string) => within(health()).getByText(label).nextElementSibling as HTMLElement;
+
+  it("Unknown outcomes is the server's UNCERTAIN verification bucket, printed as received; the other three say why they are not available", async () => {
+    mount(queueBody());
+    await table();
+    // The canonical fixture publishes verification_result.counts.UNCERTAIN = 1 (total 3).
+    expect(cell("Unknown outcomes").querySelector(".exec-blk-kpi-value")?.textContent).toBe("1");
+    expect(cell("Unknown outcomes").textContent).toContain("Verification uncertain");
+    expect(cell("Pending receipts").textContent).toContain("Not published");
+    expect(cell("Pending receipts").textContent).toContain("FE-032");
+    expect(cell("Display catching up").textContent).toContain("Not available");
+    expect(cell("Display catching up").textContent).toContain("publishes no projection display state");
+    expect(cell("Open exceptions").textContent).toContain("FE-031");
+    expect(health().textContent).not.toMatch(/[—–]|N\/A/);
+  });
+
+  it("a published zero is a value, not an absence", async () => {
+    mount(queueBody((q) => {
+      const counts = q.page.status_counts.dimensions.verification_result.counts;
+      counts.UNCERTAIN = 0;
+      counts.FAILED = 1;
+    }));
+    await table();
+    expect(cell("Unknown outcomes").querySelector(".exec-blk-kpi-value")?.textContent).toBe("0");
+  });
+
+  it("without status_counts Unknown outcomes is a typed absence naming FE-043, never 0", async () => {
+    mount(queueBody((q) => {
+      delete q.page.status_counts;
+    }));
+    await table();
+    const unknown = cell("Unknown outcomes");
+    expect(unknown.textContent).toContain("Not available");
+    expect(unknown.textContent).toContain("FE-043");
+    expect(unknown.querySelector(".exec-blk-kpi-value")?.textContent).not.toMatch(/^\d/);
   });
 });
 

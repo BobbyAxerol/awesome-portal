@@ -619,3 +619,30 @@ describe("L3 negative: bad published values never reach a view as a number", () 
     }
   });
 });
+
+describe("display names the read publishes (FE-066)", () => {
+  const rawCore = () => JSON.parse(JSON.stringify(ask("/resources/accounts/acc_bnc_core"))) as { data: Record<string, Record<string, unknown>[]> };
+
+  it("a row that names its portfolio, deployment and alpha supplies the names; an id with none stays an id", () => {
+    const raw = rawCore();
+    for (const row of raw.data.deployments ?? []) if (row.portfolio_id === "pf_core") row.portfolio_name = "Core";
+    for (const row of raw.data.portfolio_allocations ?? []) {
+      row.deployment_name = "BTC Trend live";
+      row.strategy_name = "BTC Trend";
+    }
+    const named = readAccountView(readProfileEnvelope(raw)!, "acc_bnc_core");
+    expect(named.names.portfolios).toEqual({ pf_core: "Core" });
+    expect(named.names.deployments).toEqual({ dep_btc_live: "BTC Trend live" });
+    expect(named.names.alphas).toEqual({ btc_trend: "BTC Trend" });
+    expect(named.sleeves[0]!.portfolio).toBe("Core");
+    const plain = readAccountView(profile("acc_bnc_core"), "acc_bnc_core");
+    expect(plain.names).toEqual({ portfolios: {}, deployments: {}, alphas: {} });
+    expect(plain.sleeves[0]!.portfolio).toBe("pf_core");
+  });
+
+  it("a name equal to its id is not a name", () => {
+    const raw = rawCore();
+    for (const row of raw.data.deployments ?? []) if (row.portfolio_id === "pf_core") row.portfolio_name = "pf_core";
+    expect(readAccountView(readProfileEnvelope(raw)!, "acc_bnc_core").names.portfolios).toEqual({});
+  });
+});

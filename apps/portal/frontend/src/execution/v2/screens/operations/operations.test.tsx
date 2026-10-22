@@ -88,7 +88,7 @@ describe("loaded queue", () => {
     const { api } = fakeApi();
     mount(api);
     await table();
-    const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
+    const kpis = screen.getByRole("group", { name: "Queue counts" });
     expect(within(kpis).getByText("In scope").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("12");
     expect(within(kpis).getByText("Matching").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
     expect(within(kpis).getByText("Loaded").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
@@ -223,7 +223,7 @@ describe("a state word is not drawn as a number (OP-9)", () => {
     const { api } = fakeApi();
     mount(api);
     await table();
-    const read = within(document.querySelector(".exec-blk-kpis") as HTMLElement).getByText("Read").nextElementSibling as HTMLElement;
+    const read = within(screen.getByRole("group", { name: "Queue counts" })).getByText("Read").nextElementSibling as HTMLElement;
     expect(read.querySelector(".exec-ops-kpi-word")?.textContent).toBe("Available");
     expect(read.querySelector(".exec-blk-num")).toBeNull();
   });
@@ -528,7 +528,7 @@ describe("states", () => {
     fireEvent.change(screen.getByLabelText("Environment"), { target: { value: "sandbox" } });
     expect(await screen.findByText("Nothing matched these filters.")).toBeTruthy();
     expect(screen.getByText(/0 of 0 matching · 12 in scope/)).toBeTruthy();
-    const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
+    const kpis = screen.getByRole("group", { name: "Queue counts" });
     expect(within(kpis).getByText("Read").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("Empty");
   });
 
