@@ -13,6 +13,8 @@ import { readOperationalQueueV2 } from "../../readers/operationalQueue";
 import { IncidentRootDrawer, INCIDENT_ACTION_REASONS, railFor } from "./IncidentRootDrawer";
 import OperationsV2 from "./index";
 import { whyText } from "../../gapWhyTestUtil";
+import { loadCanonical } from "../../testkit/loadCanonical";
+import { readIncidentDetail } from "../../../operations";
 
 afterEach(() => {
   cleanup();
@@ -158,28 +160,66 @@ describe("root content", () => {
     expect(railFor("RESOLVED").map((s) => s.step)).toEqual(["done", "done", "current"]);
   });
 
-  it("evidence, operations, gates and timeline are named once on one 'Not available' line (FE-031); assignee is FE-030 (INC-3)", async () => {
+  it("without a detail read each of the four sections keeps its place and its own typed absence with the root's reason code (FE-031); assignee is FE-030", async () => {
     const drawer = await readyDrawer(api().port);
+    for (const name of ["Evidence", "Operations taken", "Resolution gates", "Timeline"]) {
+      const section = within(drawer).getByRole("region", { name });
+      expect(within(section).getByRole("heading", { name })).toBeTruthy();
+      const line = within(section).getByTestId("not-available-line");
+      expect(line.textContent).toContain(`Not available: ${name}`);
+      const why = whyText(line);
+      expect(why, name).toContain(`${name}: Not published (FE-031)`);
+      expect(why, name).toContain("ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED");
+    }
     const priority = drawer.querySelector(".exec-dock-priority") as HTMLElement;
-    const line = within(priority).getByTestId("not-available-line");
-    expect(line.textContent).toContain("Not available: Evidence, Operations taken, Resolution gates, Timeline, Assignee");
-    // Ids and the server's reason code are in the title, once per fact; no panel, heading or landmark per gap.
-    const title = whyText(line);
-    for (const name of ["Evidence", "Operations taken", "Resolution gates", "Timeline"]) expect(title, name).toContain(`${name}: Not published (FE-031)`);
-    expect(title).toContain("Assignee: Not published (FE-030)");
-    expect(within(priority).queryAllByRole("group")).toHaveLength(0);
-    expect(priority.querySelectorAll("h4")).toHaveLength(0);
-    expect(within(priority).queryAllByRole("region")).toHaveLength(0);
-    // The one "?" disclosure button is labelled; nothing else in the block is.
-    expect(priority.querySelectorAll("[aria-label]:not(button[aria-expanded])")).toHaveLength(0);
-    expect(title.match(/ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED/g)).toHaveLength(4);
-    // The block rides the Drawer's priority slot, so it sits above the long facts table.
-    const facts = drawer.querySelector(".exec-ops-facts") as HTMLElement;
-    expect(priority.compareDocumentPosition(facts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(whyText(within(priority).getByTestId("not-available-line"))).toContain("Assignee: Not published (FE-030)");
     // No timeline is drawn from nothing: no list of events, no gate verdicts.
-    expect(drawer.textContent).not.toMatch(/gates are not met|0 references|2 events/);
-    expect(drawer.textContent).not.toMatch(/[—–]/);
+    expect(drawer.textContent).not.toMatch(/gates are not met|0 references|2 events|eligible to resolve/);
+    expect(drawer.textContent).not.toMatch(/[\u2014\u2013]/);
     expect(drawer.textContent).not.toContain("N/A");
+  });
+
+  it("with the published incident detail the four sections show its evidence, operations, resolution_gate and timeline (canonical fixture)", async () => {
+    const raw = loadCanonical<Record<string, unknown>>("execution-incident-detail.open");
+    const detail = readIncidentDetail(raw);
+    expect(detail).not.toBeNull();
+    const base = api();
+    const port = { ...base.port, getIncident: vi.fn(async () => ({ ok: true as const, value: detail! })) } as unknown as ExecutionApi;
+    const drawer = await readyDrawer(port);
+    await waitFor(() => expect(within(drawer).queryAllByTestId("not-available-line")).toHaveLength(0));
+    // Operations taken: the correlated operation, its relationship and verification.
+    const ops = within(drawer).getByRole("region", { name: "Operations taken" });
+    expect(ops.textContent).toContain("account/sync");
+    expect(ops.textContent).toContain("Triggered by");
+    expect(ops.textContent).toContain("Not started");
+    // Evidence: the server published an empty collection (total 0), which is a statement, not an absence.
+    expect(within(drawer).getByRole("region", { name: "Evidence" }).textContent).toContain("No evidence references are recorded");
+    // Resolution gates: eligible false and the four blocker codes, as published.
+    const gates = within(drawer).getByRole("region", { name: "Resolution gates" });
+    expect(gates.textContent).toContain("not yet eligible");
+    const blockers = within(within(gates).getByRole("list", { name: "Blockers" })).getAllByRole("listitem").map((li) => li.textContent);
+    expect(blockers).toEqual([
+      "Incident acknowledgement required",
+      "Incident assignee required",
+      "Incident not mitigated",
+      "Clean dry run evidence required",
+    ]);
+    expect(gates.textContent).toContain("Clean dry-run evidence is not present.");
+    // Timeline: both events with their version steps.
+    const timeline = within(drawer).getByRole("region", { name: "Timeline" });
+    expect(timeline.textContent).toContain("Create");
+    expect(timeline.textContent).toContain("v0 to v1");
+    expect(timeline.textContent).toContain("Annotate");
+    expect(timeline.textContent).toContain("v1 to v2");
+    // The assignee is now a published fact (unassigned), not a gap line.
+    expect(within(drawer).getByText("Unassigned")).toBeTruthy();
+  });
+
+  it("a detail read that fails leaves the four sections absent, each on its own", async () => {
+    const base = api();
+    const port = { ...base.port, getIncident: vi.fn(async () => ({ ok: false as const, status: "unavailable" as const, reason: "x" })) } as unknown as ExecutionApi;
+    const drawer = await readyDrawer(port);
+    expect(within(drawer).getAllByTestId("not-available-line").length).toBeGreaterThanOrEqual(5);
   });
 
   it("every blocked action links to My access, the Access screen's real route (INC-8)", async () => {
