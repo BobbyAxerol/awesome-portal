@@ -35,7 +35,7 @@
  *
  * URL: `q`, `sel` (the account's user id), and the screen-local `role` and `state`.
  */
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { stepUp, type AccountSummary, type HistoryEntry, type StepUpState } from "../../../../features/admin/accountApi";
@@ -43,7 +43,7 @@ import { useSession } from "../../../../auth/session";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { ExecutionSurface } from "../../../ExecutionSurface";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { NotAvailableLine, SectionPanel, gapTitle } from "../../blocks";
+import { GapWhy, NaWhy, NotAvailableLine, SectionPanel, gapTitle } from "../../blocks";
 import { Drawer, DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
@@ -109,6 +109,10 @@ const EMPTY_COUNTS: RosterCounts = {
 };
 
 const LAST_SIGN_IN_REQUEST = "FE-053";
+/** The request a role preset waits on (the first of PRESET_REQUESTS, the one the gap line is filed under). */
+const ROLE_PRESET_FE = "FE-015";
+/** Per-row Disable / Enable and Invite: the reason a control is off is the eligibility request. */
+const ROW_ACTION_FE = "FE-015";
 
 const CHANGES_ELSEWHERE = "Account changes are made on the current Users screen.";
 
@@ -119,6 +123,25 @@ function flagsOf(account: AccountSummary) {
       {account.locked ? <Flag kind="attention" label="Locked" size="sm" /> : null}
       {account.mustChangePassword && account.accountState !== "ARCHIVED" ? <Flag kind="pending" label="Awaiting first password" size="sm" /> : null}
     </span>
+  );
+}
+
+/** A cell's disclosure or control: a click or key in it is its own and never opens the row's drawer. */
+function Inert({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={className} onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>{children}</span>;
+}
+
+/** The per-row action: off, with its reason. Archived accounts and the signed-in account carry the design's rule words. */
+function rowActionOf(account: AccountSummary, me: string | null): ReactNode {
+  if (account.accountState === "ARCHIVED") return <span className="exec-usr-meta">Archived accounts stay as they are</span>;
+  const label = account.accountState === "DISABLED" ? "Enable" : "Disable";
+  const self = me !== null && account.userId === me;
+  // The click must not open the row's drawer: the control is off, and its reason is a disclosure of its own.
+  return (
+    <Inert className="exec-usr-rowact">
+      <button type="button" className="exec-usr-btn" disabled aria-label={`${label} ${account.username}`}>{label}</button>
+      <GapWhy name={`Why ${label} is off for ${account.username}`} rows={[self ? "You cannot disable yourself" : gapTitle(ROW_ACTION_FE, "Per-row action", CHANGES_ELSEWHERE)]} next={null} />
+    </Inert>
   );
 }
 
@@ -139,8 +162,19 @@ function columnsFor(me: string | null): readonly CardsColumn<AccountSummary>[] {
       ),
     },
     { key: "state", label: "State", render: flagsOf },
+    {
+      key: "preset",
+      label: "Role preset",
+      render: () => <Inert><NaWhy reason={gapTitle(PRESET_REQUESTS, "Role preset")} gap={ROLE_PRESET_FE} className="exec-usr-na" /></Inert>,
+    },
     { key: "role", label: "Role", render: (a) => ROLE_LABEL[a.role] },
+    {
+      key: "lastSeen",
+      label: "Last seen (UTC)",
+      render: () => <Inert><NaWhy reason={gapTitle(LAST_SIGN_IN_REQUEST, "Last sign-in")} gap={LAST_SIGN_IN_REQUEST} className="exec-usr-na" /></Inert>,
+    },
     { key: "revision", label: "Revision", numeric: true, render: (a) => String(a.accountRevision) },
+    { key: "actions", label: "Actions", render: (a) => rowActionOf(a, me) },
   ];
 }
 
@@ -385,6 +419,10 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                   </select>
                 </label>
                 {filtered ? <button type="button" className="exec-usr-btn" onClick={clearFilters}>Clear filters</button> : null}
+                <span className="exec-usr-invite">
+                  <button type="button" className="exec-usr-btn" disabled aria-label="Invite account">Invite account</button>
+                  <GapWhy name="Why Invite account is off" rows={[gapTitle(ROW_ACTION_FE, "Invite", CHANGES_ELSEWHERE)]} next={null} />
+                </span>
               </div>
               <div className="exec-usr-unpub">
                 <NotAvailableLine
