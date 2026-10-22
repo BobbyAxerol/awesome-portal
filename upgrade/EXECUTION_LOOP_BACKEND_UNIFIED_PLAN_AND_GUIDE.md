@@ -31409,3 +31409,37 @@ plan hunk only, no peer C5 hunk or other staged path. Tracking reconciliation
 PASS, added-text secret-pattern/diff checks PASS, no new link/anchor to
 validate. Final direct Core-owned hash-prefix search14:29:27UTC still0ACK.
 This is a verified preinstall checkpoint, not installed/READY/connected proof.
+
+### Original08 — owner-directed concise Core ACK request
+
+**REQUEST_PUBLICATION_IN_PROGRESS,22Oct15:27UTC /22:27VN.** Bobby requests
+an actionable Core request and delivery, not a new activation packet or runtime
+change. Current direct readback15:27:01UTC still CoreHEADd30fef89/returnc7c87743,
+no Core-owned6d09378a ACK. Write/link one concise request, mirror it into Core's
+canonical ELP2-10 and append its locator to the existing original mailbox;
+verify byte hashes/preserved prefixes/index. Core must ACK original PREPARED
+6d09378a (not the request's own hash) or give explicit CHANGE if latest READY
+15:40 is no longer feasible. No repeated full build/P22 or independent Manager/
+financial dependency, no silent extension/reuse of originals. This docs-only
+slice does not install/serve/grant/session or touch stable/dev/provider28445.
+R0 gates: exact staged Markdown, links/locators, secret/diff/tracking checks;
+preserve peer WIP and publish locally only. No build/test resources to clean.
+
+**DELIVERED15:28:43.506549UTC /22:28VN:**
+[Concise Core ACK request](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_EXACT_ACK_REQUEST_2026-10-22.md)
+3935B/raw2bc62066fb774ecb21efb066dd7cf573dfc53c52b1be6691242de556d80177f7,
+identical in SGP canonicalELP2-10. Existing original request/Unified/sync
+received locator+action, all old byte prefixes and staged index preserved;
+no peer source edits or extra activation artifact. Exact PREPARED6d09378a is
+the ACK subject, not this request's hash. Requested ACK15:32UTC/22:32VN;
+strict latest READY15:40UTC/22:40VN and source expiry16:00 remain unchanged.
+Core must answer feasible ACK or explicit CHANGE now; no extra Bobby approval.
+No runtime/DB/credential transfer/build/container, so cleanup NO_ACTION_NEEDED;
+active source/release/rollback matrix remains preceding checkpoint, not newly
+observed or promoted. Feature705f656c on feat/execution-edge-upgrade-v1_2;
+canonical manager-v2 source54c6f5f3 unchanged. Full08/read09 NOT_MET.
+
+**Verification: R0:** two explicit Markdown paths; added local link resolves,
+remote locator/hash/preserved prefixes/index verified; tracking reconciliation,
+diff/secret and peer-WIP checks PASS. Local documentation publication only,
+no push/merge/CI. Actual ACK/install/READY still require their own receipts.
