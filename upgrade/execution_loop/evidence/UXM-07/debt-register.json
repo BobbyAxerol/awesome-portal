@@ -248,6 +248,16 @@
       "opened": "2026-10-22",
       "owner": "Codex (contract); Claude (consumer)",
       "status": "OPEN"
+    },
+    {
+      "id": "DEBT-UXM07-053",
+      "title": "Whole-suite flakes under load: synchronous reads right after loaded() in Fleet tests, and the seq hash write in the research execute test",
+      "where": "fleet/fleetDataset.test.tsx (owner list after load), fleet/index.test.tsx (owner suggestions), research/executeRoute.seq.test.tsx (c)",
+      "consequence": "Two full runs at 2026-10-22 (884 s, 864 s, --maxWorkers=2): 1 and 2 failures, each passing alone and on rerun (6/6, 3/3). Same pattern as DEBT-UXM07-032: an assertion made before the render or the hash write lands. Fixed per test (cfed8fe61, d5cadc1b3, the seq test budget); other tests with the same read pattern may remain.",
+      "proposed": "Review expects placed straight after loaded() in Fleet and research tests; prefer waitFor with the shared SLOW budget.",
+      "opened": "2026-10-22",
+      "owner": "Claude",
+      "status": "OPEN"
     }
   ],
   "closed": [

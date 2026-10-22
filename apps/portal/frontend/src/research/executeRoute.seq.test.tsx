@@ -117,10 +117,11 @@ describe("S08 retained lane · seq", () => {
     await retainedReady(container);
     for (let at = 1; at <= 3; at += 1) {
       fireEvent.click(container.querySelector("[aria-label='step forward']")!);
-      await waitFor(() => expect(readout(container)).toBe(String(FIRST + at)));
+      await waitFor(() => expect(readout(container)).toBe(String(FIRST + at)), { timeout: 5000 });
     }
-    await waitFor(() => expect(seqInHash()).toBe(String(FIRST + 4)));
-  });
+    // Whole-suite flake 2026-10-22 (DEBT-UXM07-053): the hash write trails the playhead under load; explicit budget.
+    await waitFor(() => expect(seqInHash()).toBe(String(FIRST + 4)), { timeout: 5000 });
+  }, 20000);
 
   it("(e) a mount with no movement writes no seq", async () => {
     const { container } = mountRetained("#stage=execute");
