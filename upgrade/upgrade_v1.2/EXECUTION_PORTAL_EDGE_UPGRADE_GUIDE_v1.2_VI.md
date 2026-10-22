@@ -1036,6 +1036,17 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest22Oct21:00VN:** [Fresh14:00–16:00UTC PREPARED](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_1400_PREPARED_2026-10-22.md)
+raw6d09378a delivered/hash-equal Core13:59:51UTC. Core returnc7c87743§§12–14
+ACKs earlier preparation but replaces interval; old13:00 artifacts remain
+immutable/unused. New installd680f9f1/revoke2c3bba6e/CAS8→9→10 and expiry16:00,
+14unique modeledPASS + finalSDKdb0 + actual RR READ ONLY8revoked/pools0 PASS.
+Native trust valid23Oct03:00:58 covers slot. Exact NEW Core ACK still precedes
+arm/install/SDK_READY; helper enforces15:40latestREADY reserve. Elapsed13:35/
+13:45checkpoints explicitly CHANGEd, not time-shifted execution. UNARMED/no
+listener/grant/session. Core issued Manager material/TLS and actual current-
+requester STATUS seam are credited only at returned scope; full08/read09NOT_MET.
+
 **Current continuation22Oct13:05UTC:** Bobby directs the finite execution after
 Core's107-test source return. [Fresh13:00 packet](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_1300_PREPARED_2026-10-22.md)
 rawc76968ce was delivered12:53:51UTC: NEW13:00–13:30UTC/install03033ad5/

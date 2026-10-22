@@ -31259,3 +31259,97 @@ no repeated product hook. Exact remote action hash read back equal. Core return
 still36f08a4d/no new ACK at final check; install/serve remain UNARMED. No new
 test/build resource or cleanup delta after the recorded inventory; private
 finite preparation/custody retained, shared rollback/cache and peer WIP intact.
+
+### Original08 — fresh two-hour PREPARED after Core return §§12–14
+
+**OWNER_APPROVED / PREPARATION_IN_PROGRESS,22Oct13:53UTC (20:53VN).**
+Bobby requests fresh14:00–16:00UTC/21:00–23:00VN PREPARED or exact CHANGE.
+Actual mailbox return SHA256
+c7c8774348dcc3c031fdf170a6fba4e81d84a2eeda0968deacd9ca36f2a5a194
+matches user pin; read entire§§12–14. Core§12 ACKs prior preparation/handshake
+but explicitly CHANGEs its execution interval; old13:00 originals must NOT arm.
+Core has supplied the requested replacement, not remained generically silent.
+
+Goal/scope: reuse frozen SDK28ea/closure/lifecycle and existing native trust;
+create new private preparation directory and fresh install/revoke UUIDs for
+CAS8→9/9→10, fixed read expiry22Oct16:00 and recovery-only maintenance expiry
+23Oct16:00. Preserve all older originals/receipt custody. No new CA/key/role,
+source install/listener, Core session/grant, shared config or runtime mutation
+in this preparation slice. Exact Core ACK of this NEW raw packet remains
+required before a later authorized install/SDK_READY. Core remains sole client.
+
+Guides: approved EPG10-08, Core consolidated§12 recipe and original lifecycle
+closure; [previous finite preparation](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_1300_PREPARED_2026-10-22.md)
+is reuse knowledge ONLY, not an accepted current original. Gates: modeled
+glue correctness; frozen SDKdb0 validation/trust covers full slot; actual RR
+READ ONLY current natural head8revoked/DB system/fingerprint/mapping/policy/
+catalogue/control; issue0/pools0; public hash-equal Core delivery and exact
+explicit ACK request. Latest actual READY15:40 leaves20min settlement; Core
+targets specimen in first20min after READY. The earlier13:35PREPARED/13:45ACK
+checkpoints already passed before this task arrived: report that precise
+schedule deviation, do not falsify a timely return or silently shift14–16.
+
+Rollback: no operational mutation to undo; every capped verifier --rm and
+physically exits; retain only bounded private preparation/evidence for the
+pending handoff, no shared image/cache/volume cleanup. UNKNOWN cannot be
+relabelled rolled back. Core§13 issued Research leaf/inactive config and real
+Paper TLS are credited at their scope (no business authorization);§14 reducer,
+fresh-requester command seam and workload tests remain SOURCE_ONLY, not native
+or financial acceptance. No expansion into those independent runtime lanes.
+Full08/read09 NOT_MET; no new phase/push/merge/CI, preserve peer WIP/index.
+
+**13:59:51.875898UTC actual PREPARED delivered before new interval:**
+[Fresh two-hour packet](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_1400_PREPARED_2026-10-22.md),
+raw6d09378aaa0337ba12f937bc126300efafde9d0682373ccddfe5feb7b31c9156,
+byte-equal in Core canonicalELP2-10; Core Unified/sync/original request appended
+with exact hash-bound next ACK action, old prefixes/index preserved. Checkpoint
+CHANGE is only elapsed13:35/13:45→actual return/requested14:10ACK; accepted
+14:00–16:00 interval not silently shifted. New private1400-0sOa1z directory
+14regular0600/Bobby/nlink1 files under0700. No private material copied to Core.
+
+Fresh install d680f9f1/CAS8→9/rawb738ddb6/SDK3dc3c556; revoke2c3bba6e/
+CAS9→10/raw0bcdc744/SDKf2050f06. Final operatorae9ec5c9 equals preserved
+PREPARED, ACKnull. Private glue explicitly rejects new install/serve at15:40,
+and late READY before/after observer, preserving source expiry16:00 and
+outside-read-window exact maintenance/status recovery. Two new modeled cases
+cover that Core-owned reserve; final14unique PASS/0FAIL/0.479s, earlier12subset
+not summed. Final frozenSDK validation EXIT0/stderr0/db0/listenerfalse, trust
+all valid until23Oct03:00:58UTC. Actual RR READ ONLY EXIT0/stderr0 verified
+same DB/system/fingerprint/natural head8revoked/mapping1/policy1/catalogue/
+admission/control; issue0/pools[0,0]. No install/serve/grant/session/ISSUE.
+Old13:00 helper84b2eb2e/install62940d5e/revoke198c01f9 hashes unchanged.
+
+Independent return state corrected: Core already delivered replacement§12;
+Manager issuance/inactive config/PaperTLS and latest38PKI checks are credited,
+not still called unknown issuer. Fresh-current-requester STATUS is now wired
+in Core's actual reconcile with186focusedPASS; prior Core-only mismatch claim
+is superseded at that scope, not proof of commissioned Edge ingress or service
+recovery. Mocked financial22tests/workload10dry-run remain source qualification.
+Source/image/authority/measurement lanes do not hold this native preparation.
+
+**Preparation cleanup/release reconciliation:** five completed capped --rm
+verifier executions (initial/final glue, initial/final SDK, one RR) physically
+gone; exact1400-0sOa1z name scan empty and socket28446 absent. No image/build
+created, Docker112images/43active and589BuildKit/68.29GB unchanged; shared
+active/explicitrollback images/cache/volumes not pruned. Private14files retained
+for pending exact ACK/custody, not disposable forgotten test containers. Disk
+used335399747584→336964239360/free183517155328→181952663552B reflects shared
+host activity; no cleanup-savings attribution. Native28ea and three protected
+Edge d6aa images directly inspected/restart0, no operational restart or config
+change. Existing per-mode runtime matrix/config pins and Manager/Proxy set
+remain the prior readback, not newly installed artifacts. Canonical Edge source
+/home/bobby/.worktrees/portal-execution-manager-v2, feat/manager-v2-paper-read;
+active feature /home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2,
+feat/execution-edge-upgrade-v1_2 (pre-slice28e5dfce). Stable/explicit rollback
+release locations retained; no merged worktree/branch cleanup in this active
+campaign. No push/merge/CI minutes; unfinished integration still original08.
+
+**Verification R0:** exact3Markdown staged paths/5indexed links+anchors/
+secret-pattern scan/diffcheck PASS; tracking reconciliation PASS; three
+original peer WIP hashes unchanged and peer tracked hunks excluded. Canonical
+Edge source actual54c6f5f3; frozen Core selected/rollback pins remain packet§3,
+not a deployed-source claim. Prior recorded SGP stable release and rollback
+locations are untouched, not re-inspected as a new release in this HK slice.
+Owner-approved Core§10.10d docs-only local publication; no repeated full hook,
+no push/merge/CI. PREPARED is complete at its gates, exact new Core ACK still
+pending before any operational admission; full08/read09 NOT_MET.
