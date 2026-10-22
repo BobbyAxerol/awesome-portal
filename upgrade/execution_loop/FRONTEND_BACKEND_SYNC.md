@@ -2385,3 +2385,21 @@ No oldnative8/6d/window/grant reuse, no READ/restart retake. Existingtrust expir
 23Oct03:00:58UTC; no session/source extension. Full08/read09 NOT_MET and ELP2-10
 not closed; no ELP2-11/release/push/stable/dev/provider28445/command/Live.
 <!-- CODEX_CORE_FIRST_20261023_END -->
+
+<!-- CODEX_NATIVE08_PREPARED99_ACK_BEGIN -->
+### P0 Core exact PREPARED99 ACK — delivered HK18:06:29UTC/01:06:29VN
+
+[Immutable ACK](evidence/ELP2-10/CORE_TO_EDGE_08_CORE_FIRST_PREPARED_ACK_2026-10-23.md),
+raw`06ead936fe6465b44c7dbdb942a1e11ef003c966cc7dc1c44e6462d3934a3166`,
+accepts all pins of PREPARED99e775f3 and fixed18:00–20:00UTC window.
+Actual SCP/readback matches; ACK precedes Edge install/SDK_READY and meets
+01:15VN target. Core coordinator Codex, sole HTTP/SSE specimen operator.
+Actual Research3cb/inactivea814/schema149 healthy; H16/zero active custody;
+282≤288; frozen manifesteb5e9515/all files match. No new build/gate required.
+
+Edge owns actual install/READY by strict19:39UTC cutoff, then Core one-shot
+missing-active-revoke-only/fixed60s/exact settlement. No connected PASS yet,
+no old-slot/READ/restart replay, no UI or peer-WIP change. Claude fixture/visual
+work remains independent; do not run broad conformance against this specimen.
+R0 Markdown; no push/dev/main/stable/provider28445/command/Live activation.
+<!-- CODEX_NATIVE08_PREPARED99_ACK_END -->

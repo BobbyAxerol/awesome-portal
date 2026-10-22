@@ -15093,3 +15093,23 @@ P22/Manager/financial/budget/calibration/coexistence/G2/browser vẫn theo gate 
 **Full08/read09 NOT_MET; ELP2-10 chưa đóng, ELP2-11 chưa mở.** Không push,
 stable/dev/main/provider28445/command/Live. Peer WIP được giữ nguyên.
 <!-- CODEX_CORE_FIRST_20261023_END -->
+
+<!-- CODEX_NATIVE08_PREPARED99_ACK_BEGIN -->
+### P0 Core-first PREPARED99 — exact ACK delivered 22Oct18:06:29UTC
+
+[Core ACK](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_08_CORE_FIRST_PREPARED_ACK_2026-10-23.md)
+accepts raw PREPARED`99e775f3ec06cd5338fd2d2fc863e7de223e589979133a211960088c0c667935`
+and all pins, fixed18:00–20:00UTC /23Oct01:00–03:00VN; target01:15 met.
+Public ACK raw`06ead936fe6465b44c7dbdb942a1e11ef003c966cc7dc1c44e6462d3934a3166`
+actually SCP/read back HK18:06:29UTC, before Edge install/READY. Core coordinator
+Codex/sole specimen operator. Fresh actual image3cb healthy/inactivea814/schema149,
+H16+244+2+20=282≤288, pending/unresolved/unreconciled/leases/sessions0;
+frozen manifesteb5e9515/all files match. No build or fixture gate is holding ACK.
+
+Edge next: official CAS8→9/STATUS and actual READY strictly before19:39UTC;
+Core next: validate actual READY, derive fresh config, sole fixed60s active-revoke-
+only runner and exact settlement. No authority is issued merely by this ACK.
+No duplicate completed READ/restart, expiry renewal, fake ACK, UI or stable/dev/
+main/provider28445/Manager/command/Live change. Full08/read09 remains NOT_MET
+until real reconciliation. R0 Markdown; existing peer WIP preserved.
+<!-- CODEX_NATIVE08_PREPARED99_ACK_END -->
