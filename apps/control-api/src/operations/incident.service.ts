@@ -4,6 +4,7 @@ import { ExecutionReadScopes, ExecutionReadScopeError, type ReadScopePrincipal }
 import { PortalUser } from "../domain";
 import { GovernanceError } from "../governance/governance.service";
 import { newUlid } from "../id";
+import { projectIncidentEligibility } from "./incident-eligibility";
 import {
   IncidentAcknowledgeRequest,
   IncidentAnnotateRequest,
@@ -83,6 +84,21 @@ export class IncidentService {
       correlatedOperationIds: input.correlated_operation_ids,
     });
     return this.mutationResponse(result.detail, user, result.replayed);
+  }
+
+  /** Additive sibling: no new fields on the accepted v1/v2 detail envelopes. */
+  async eligibility(user: PortalUser, workspaceId: string, incidentId: string, principal?: ReadScopePrincipal) {
+    this.assertAdmin(user);
+    if (this.readScopes) {
+      if (!principal || principal.user.userId !== user.userId || principal.workspaceId !== workspaceId)
+        throw new ExecutionReadScopeError("EXECUTION_READ_SCOPE_REQUIRED");
+      if (await this.readScopes.coreSelectionMode(principal) !== "LEGACY_COMPATIBILITY")
+        throw new GovernanceError("INCIDENT_SCOPED_PARENT_NOT_COMMISSIONED", "Incident workflow authority is not commissioned.", 503);
+    }
+    const fact = await this.repository.eligibility(workspaceId, incidentId);
+    if (this.readScopes && await this.readScopes.coreSelectionMode(principal!) !== "LEGACY_COMPATIBILITY")
+      throw new ExecutionReadScopeError("EXECUTION_READ_ACCESS_CHANGED", 409);
+    return projectIncidentEligibility(fact, workspaceId, Date.now());
   }
 
   async acknowledge(

@@ -85,8 +85,8 @@ describe("identity strip", () => {
     expect(within(strip).getByText("usr_me")).toBeTruthy();
     expect(within(strip).getByText("Owner").nextElementSibling?.textContent).toBe("Not an owner");
     expect(within(strip).getByText("Capabilities held").nextElementSibling?.textContent).toBe("1");
-    // Role preset is not a KPI cell: it is on the one "Not available" line.
-    expect(within(strip).queryByText("Role preset")).toBeNull();
+    // Role preset keeps its tile (hi-fi) and says Not available: no preset name is invented from the capabilities.
+    expect(within(strip).getByText("Role preset").nextElementSibling?.textContent).toBe("Not available");
     // "Researcher field policy" is a published policy field, not a preset name.
     const text = (document.body.textContent ?? "").replace("Researcher field policy", "");
     for (const preset of ["Manager", "Researcher", "Operator", "Reviewer", "Viewer"]) {

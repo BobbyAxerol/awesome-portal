@@ -5,6 +5,10 @@ import {ACCESS_PROBLEM_CODES,PROBLEM_CODE_DESCRIPTION} from './execution-problem
 const root=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const obj=p=>({type:'object',additionalProperties:false,required:Object.keys(p),properties:p});
 const text={type:'string',minLength:1,maxLength:256,pattern:'^[^\\u0000-\\u001f\\u007f]+$'};
+// Input-only safety; leave immutable historical response/selector schemas intact.
+// No trim/normalization. JSON Schema maxLength counts Unicode code points.
+const writeTextPattern='^(?!\\s*$)(?![\\s\\S]*(?:[\\ud800-\\udbff](?![\\udc00-\\udfff])|(?<![\\ud800-\\udbff])[\\udc00-\\udfff]))[^\\u0000-\\u001f\\u007f-\\u009f\\u061c\\u180e\\u200b-\\u200f\\u202a-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff]+$(?![\\s\\S])';
+const writeText={...text,pattern:writeTextPattern,description:'New browser input only: reject whitespace-only, invisible/control/bidi text and malformed UTF-16. Preserve exact bytes; never applied retroactively to stored facts, opaque revisions or passwords.'};
 const rev={type:'string',minLength:1,maxLength:256};
 const ms={type:'integer',minimum:0,maximum:Number.MAX_SAFE_INTEGER};
 const scopedText={...text,pattern:'^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])',
@@ -30,12 +34,18 @@ const resourceKind={enum:['ROOT','PORTFOLIO','ALPHA','ALPHA_VERSION','DEPLOYMENT
 const selector={oneOf:[obj({kind:{const:'EXPLICIT_RESOURCE_SET'},resource_kind:resourceKind,ids:list(text,200,1)}),
   obj({kind:{const:'OWN_ALPHA'}}),obj({kind:{const:'PORTFOLIO_MEMBERSHIP'},portfolio_ids:list(text,200,1)}),
   obj({kind:{const:'ROOT_SCOPE'},root_id:text})],discriminator:{propertyName:'kind'}};
+const writeSelector={oneOf:[obj({kind:{const:'EXPLICIT_RESOURCE_SET'},resource_kind:resourceKind,ids:list(writeText,200,1)}),
+  obj({kind:{const:'OWN_ALPHA'}}),obj({kind:{const:'PORTFOLIO_MEMBERSHIP'},portfolio_ids:list(writeText,200,1)}),
+  obj({kind:{const:'ROOT_SCOPE'},root_id:writeText})],discriminator:{propertyName:'kind'}};
 const reason={type:'string',minLength:1,maxLength:512,pattern:'^[^\\u0000-\\u001f\\u007f]+$'};
+const writeReason={...reason,pattern:writeTextPattern};
 const change={...obj({subject_user_id:text,action:ref('AccessAction'),effect:{enum:['ALLOW','DENY']},selector:ref('AccessSelector'),
   environments,valid_from_ms:ms,valid_until_ms:nullable(ms),delegable_actions:list(ref('AccessAction'),actions.length),
   ceiling_grant_id:text,expected_ceiling_revision:rev,expected_policy_revision:rev,expected_ts_membership_revision:nullable(rev),reason}),
   description:'End-exclusive interval: valid_until_ms must be greater than valid_from_ms or null. Exact single current parent ceiling; no browser actor/issuer/TS-acceptance fields.',
   allOf:[{if:{properties:{action:{not:{const:'access.grant'}}},required:['action']},then:{properties:{delegable_actions:{maxItems:0}}}}]};
+const writeChange={...change,properties:{...change.properties,subject_user_id:writeText,
+  selector:ref('AccessWriteSelector'),ceiling_grant_id:writeText,reason:writeReason}};
 const receipt=obj({schema_version:{const:'portal.access-operation.v1'},operation_id:text,proposal_id:nullable(text),grant_id:nullable(text),
   outcome:{enum:['APP_APPLIED','TS_PENDING','REVOKED','DENIED','TS_APPLIED','TS_REJECTED','TS_UNKNOWN']},
   http_status:{type:'integer',minimum:200,maximum:599},reason_code:nullable(text),policy_revision:nullable(rev),grant_revision:nullable(rev),
@@ -194,6 +204,7 @@ const projectionTimes={
   valid_until_ms:{...ms,description:'End-exclusive ceiling of this actor\'s current session only, greater than observed_at_ms (producer invariant), not the validity of permissions or source facts. Grants/native facts may expire or be revoked earlier. Not a cache TTL, permission lease or readiness guarantee; no-store and per-family current checks still apply. Never exposes the internal workspace-wide authority-transition deadline.'},
 };
 const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector,AccessChange:change,
+  AccessWriteText:writeText,AccessWriteSelector:writeSelector,AccessWriteChange:writeChange,
   AccessEligibilityAction:{type:'string',enum:eligibilityActions},
   AccessEligibilityQuery:eligibilityQuery,AccessSelfNavigationQuery:selfNavigationQuery,
   AccessEligibilityRow:eligibilityRow,
@@ -239,15 +250,15 @@ const schemas={AccessAction:{type:'string',enum:actions},AccessSelector:selector
     self_entry:obj({feature:{const:'PROFILE_ACCESS'},mode:{const:'SELF_ONLY'},permission:{const:'ALLOWED'},route:{type:'null'},
       consumer_state:{const:'AWAITING_CONSUMER_ROUTER'}})}),
     description:'Exactly four ordered own menu facts. APP_ONLY is exact reviewed Portal Manager domain permission, never source/field/economic/native/command readiness and never Operations audit. No target IDs, domain digests, peer grants or synthetic capability aliases.'},
-  AccessPreviewRequest:obj({workspace_id:text,change:ref('AccessChange')}),
-  AccessProposalRequest:obj({workspace_id:text,change:ref('AccessChange'),preview_digest:digest}),
-  AccessRevokeRequest:obj({workspace_id:text,expected_policy_revision:rev,expected_grant_revision:rev,reason}),
+  AccessPreviewRequest:obj({workspace_id:writeText,change:ref('AccessWriteChange')}),
+  AccessProposalRequest:obj({workspace_id:writeText,change:ref('AccessWriteChange'),preview_digest:digest}),
+  AccessRevokeRequest:obj({workspace_id:writeText,expected_policy_revision:rev,expected_grant_revision:rev,reason:writeReason}),
   AccessRevokePreview:obj({schema_version:{const:'portal.access-revoke-preview.v1'},preview_digest:digest,policy_revision:rev,
     before:obj({grant_id:text,grant_revision:rev,action:ref('AccessAction'),effect:{enum:['ALLOW','DENY']},selector:ref('AccessSelector'),environments,revoked_at_ms:nullable(ms)}),
     after:obj({grant_state:{const:'REVOKED_ON_COMMIT'},effective_access:{const:'CURRENT_POLICY_REEVALUATED'},ts_revocation:{enum:['NOT_CONFIRMED','NOT_REQUIRED']},
       descendants:{const:'CURRENT_CHAIN_RECHECKED'},committed_obligations:{const:'CONTINUE'}}),
     step_up_required:{const:true},advisory_only:{const:true}}),
-  AccessStepUpRequest:{...obj({workspace_id:text,password:{type:'string',minLength:1,maxLength:256,writeOnly:true},family:{enum:stepUpFamilies,
+  AccessStepUpRequest:{...obj({workspace_id:writeText,password:{type:'string',minLength:1,maxLength:256,writeOnly:true},family:{enum:stepUpFamilies,
     description:'Proof family; omitted means ACCESS_ADMIN (the historical request, unchanged). CAPITAL_COMMAND needs a current own ALLOW of a step-up-requiring capital / pending-control / registration action and never requires access.grant or access.revoke.'}}),
     required:['workspace_id','password']},
   AccessReceipt:receipt,AccessResult:obj({schema_version:{const:'portal.access-result.v1'},receipt:ref('AccessReceipt'),replayed:{type:'boolean'}}),
@@ -265,6 +276,7 @@ const errors=Object.fromEntries([400,401,403,404,409,500,503].map(s=>[s,response
   : 'Typed public refusal; current authority is required even for replay.')]));
 const workspace={name:'workspace_id',in:'query',required:true,schema:text};
 const id={name:'id',in:'path',required:true,schema:text};
+const writeId={...id,schema:writeText};
 const headers=[{name:'x-portal-idempotency-key',in:'header',required:true,schema:{type:'string',pattern:'^[A-Za-z0-9._:-]{8,128}$'}},
   {name:'x-portal-csrf',in:'header',required:true,schema:text},{name:'Origin',in:'header',required:true,schema:text}];
 const read=(operationId,s,parameters)=>({operationId,security:[{PortalSession:[]}],parameters,
@@ -294,8 +306,8 @@ const document={openapi:'3.1.0',info:{title:'Portal scoped access and delegation
   [`${prefix}/preview`]:{post:write('portalScopedAccessPreviewPostV1','AccessPreviewRequest','AccessPreview')},
   [`${prefix}/proposals`]:{post:write('portalScopedAccessProposalPostV1','AccessProposalRequest','AccessResult',[],true)},
   [`${prefix}/proposals/{id}`]:{get:read('portalScopedAccessProposalGetV1','AccessProposal',[workspace,id])},
-  [`${prefix}/grants/{id}/revoke`]:{post:write('portalScopedAccessRevokePostV1','AccessRevokeRequest','AccessResult',[id])},
-  [`${prefix}/grants/{id}/preview-revoke`]:{post:write('portalScopedAccessRevokePreviewPostV1','AccessRevokeRequest','AccessRevokePreview',[id])},
+  [`${prefix}/grants/{id}/revoke`]:{post:write('portalScopedAccessRevokePostV1','AccessRevokeRequest','AccessResult',[writeId])},
+  [`${prefix}/grants/{id}/preview-revoke`]:{post:write('portalScopedAccessRevokePreviewPostV1','AccessRevokeRequest','AccessRevokePreview',[writeId])},
   [`${prefix}/step-up`]:{post:write('portalScopedAccessStepUpPostV1','AccessStepUpRequest','AccessStepUp')},
   [`${prefix}/audit`]:{get:read('portalScopedAccessAuditGetV1','AccessAudit',[workspace,
     {name:'subject_user_id',in:'query',required:true,schema:text},{name:'limit',in:'query',required:false,schema:{type:'integer',minimum:1,maximum:100,default:25}},

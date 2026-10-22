@@ -149,7 +149,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
     {
       key: "status",
       label: "Status",
-      render: (r) => r.allowed ? <Flag kind="ok" size="sm" label={allowedWord} /> : <Flag kind="na" size="sm" label={deniedWord} />,
+      render: (r) => r.unread ? <Flag kind="na" size="sm" label="Not available yet" /> : r.allowed ? <Flag kind="ok" size="sm" label={allowedWord} /> : <Flag kind="na" size="sm" label={deniedWord} />,
     },
     {
       key: "reason",
@@ -157,7 +157,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
       render: (r) => (
         <span className="exec-acc-why">
           {r.reason}
-          {withLink && !r.allowed ? <> · <Link className="exec-acc-link" to={myAccessHref}>My access</Link></> : null}
+          {withLink && !r.allowed && !r.unread ? <> · <Link className="exec-acc-link" to={myAccessHref}>My access</Link></> : null}
         </span>
       ),
     },
@@ -234,6 +234,11 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           <KpiValue text={ownerWord ?? (access.kind === "loading" ? "Loading" : "Not available")} absent={!ownerWord} />
         </div>
         <div className="exec-acc-kpi">
+          <dt>Role preset</dt>
+          <KpiValue text="Not available" absent />
+          <dd className="exec-acc-kpi-note">Access is shown by capability (FE-015)</dd>
+        </div>
+        <div className="exec-acc-kpi">
           <dt>Capabilities held</dt>
           <KpiValue text={session ? String(session.capabilities.length) : access.kind === "loading" ? "Loading" : "Not available"} absent={!session} />
         </div>
@@ -293,7 +298,6 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
       <NotAvailableLine
         className="exec-acc-caption"
         facts={[
-          { label: "Role preset", id: "FE-015", why: "Access is shown by capability" },
           { label: "Per-action eligibility", id: "FE-015", why: "The reason a control is off is not published for commands, archive and export" },
           { label: "Who granted each item", id: "FE-015" },
         ]}

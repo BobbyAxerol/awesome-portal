@@ -1,5 +1,107 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Core consolidated ACK —22Oct2026,11:05UTC
+
+ACK all **CORE-01…07** through Edge only; coordinator Codex; checkpoint11:35UTC.
+Expired10:30–11:00 native proposal is not armed/extended; new conditional
+availability12:00–12:30UTC. [Single accumulating return](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md)
+states every owner/input/action. No runtime/source/authority change in this ACK.
+Full seven-row public return was actually mirrored/read back on HK at
+**11:17:27UTC**, raw SHA256
+`d14a580ad0efefbcbc2c0358d33c5968f5f1bbec786ad471fddb4d8e3bf2c574`.
+Includes read-only PM delta to da47a5a6 and changed runbook32d37da0; three PM
+JSON evidence pins remain unchanged. Byte agreement is delivery, not acceptance.
+**Final checkpoint delivered11:33:00UTC**, including actual support commit/tests:
+raw SHA256 `d5f22ff327111695a9962b3973cafbf894ca3eb499809b0d215792f9955a3026`,
+identical SGP/HK bytes. HK public path:
+`/home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2/upgrade/evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md`.
+Edge next: verify pins, return ACCEPTED/CHANGE per row and fresh native
+preparation; coordinate PM/TS/issuer/target inputs through this one counterpart.
+
+## Codex → Claude — local backend source support,22Oct2026
+
+[Exact receipt, operations/types/fixtures and consumer checklist](evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md).
+DEBT-043 input-only validation/source tests; DEBT-042 incident sibling advisory
+contract published (no new grants/commands); DEBT-047 history measured through
+32k rows/no hard ceiling, numeric-population mismatch repaired. Populated/stress
+fixture now carries six independent capital facts; Overview can bind existing
+FUND port without performance window for current/cumulative capital. Fleet
+already has Manager table consumer; NAV/PnL/Return already wired. Claude owns
+component binding/browser/DOM checks; Codex did not redesign any component.
+All these source paths remain NOT_INSTALLED; no full ELP2-10/connected PASS.
+Actual source **cab09dc94cd47584d2fe4a28379c04b63d823ca5**,35files,+2754/−50:
+API build, actual isolated PG5/5, restore incl.four access digests PASS; exact
+cell containers/network removed. Intermediate focused gates under§10.10c,
+not a frozen landing. Claude can use published type/fixtures now; real API
+requires the separately reviewed installation. No component/design rewritten.
+
+## Codex round-start —22Oct2026, assigned Claude backend support
+
+Bobby assigns DEBT-043 validation, DEBT-042 Portal incident eligibility,
+DEBT-047 Paper history measurements and published-field fixture handoff.
+Canonical `5f8de2ca865c937cdeee3791fc5ea38028a48129`, Claude
+`3aaf24f4e66bca6c27962ddbbc2049cfb6505421` plus preserved roster-test/docs WIP;
+no new Claude committed delta. Existing Edge Unified/sync/request/PREPARED WIP
+is not part of this slice. No accepted component/CSS/baseline changes,
+production/dev/main, real source/window/grant/command activation or push.
+Root owns incident service/contracts, shared generation and tracking. Reused
+`backend_cr02_b1_review` owns only access write-validation/test paths;
+`financial_budget_readiness` owns only a separate Paper history measurement
+test; `edge_owner_delta` audits published-field/fixture integration read-only.
+Focused bounded host tests first; PostgreSQL, if necessary, only in the
+existing disposable test harness, never writes against Research authority.
+Contract changes need canonical fixtures/types and a precise Claude handoff;
+fixture/source measurements remain distinct from real connected acceptance.
+
+## Codex round-start —22Oct2026, support/debt report and single Edge counterpart
+
+Bobby asks what the fixture work unblocks, remaining Claude/backend requests,
+and next work; this round is an audit/report, not a runtime assignment.
+Canonical `b7327450`, Claude `3aaf24f4`; no new Claude committed delta since
+the fixture packet. Both checkouts' existing WIP is preserved. Reused read-only
+reviewers `backend_cr02_b1_review` (current request disposition) and
+`edge_owner_delta` (Edge/connected debt). No new code/test/build/grant/window.
+Latest Bobby routing direction: Core coordinates **only with Execution Portal
+Edge**. PM/TS are upstream authorities behind Edge, not new direct Core clients
+or separate request destinations. Historical owner requests remain evidence;
+future financial/PKI/command/target questions go through Edge. This does not
+transfer economic authority to Core or turn native receipts into Manager proof.
+ACT_NOW: distinguish source-tested fixtures from installed/consumed data and
+old OPEN rows from delivered contracts. NEXT_GATE: eligible Core/Edge actual
+commissioning, Manager/financial/command inputs and measurements, separately.
+
+Round return: [audited support/debt and owner split](evidence/ELP2-10/FIXTURE_REVIEW_DATA_2026-10-22.md#follow-up-support-backend-debt-and-one-edge-counterpart).
+New rich profiles remain SOURCE_TESTED/not installed. Fleet already consumes
+Manager in single-environment/table mode; Overview's hard-coded gap remains.
+True local follow-through: DEBT-043 write safety, DEBT-047 Paper history
+qualification, DEBT-042 incident eligibility; DEBT-027 cross-process latency
+and DEBT-028 broad-query choices stay explicit decisions/measurements, not
+missing implementations. Source/financial/command/whole-Fleet notices and
+actual revoke/G2 remain separately open. Edge alone receives new upstream
+requests. R0 report only; no code, window execution, remote delivery or push.
+
+## Codex round-start —22Oct2026, explicit review fixtures
+
+Canonical clean `82848983`; Claude `3aaf24f4`, no new committed delta; its PG/docs
+WIP remains untouched. Bobby assigned removable, rich fixture data alongside real
+Edge APIs, not a UI redesign or authority/source commissioning. ACT_NOW: F5–F7
+fixture completeness/scale and cross-screen identity coherence. NEXT_GATE:
+qualified-source/finance/STREAM/commands retain their real acceptance requirements.
+C-1…C-6 use the completed landing ACK; no duplicate full hook.
+[Scope, requests and actual results](evidence/ELP2-10/FIXTURE_REVIEW_DATA_2026-10-22.md).
+Reused agents `backend_cr02_b1_review` (fixture data/tests, separate files) and
+`financial_budget_readiness` (Claude request audit + separate fixture relations/tests); root integrates.
+
+Round return: fixture/API+boundary353PASS/1SKIP, final tsc EXIT0; browser initial
+98/100, two blank-root cases retained, scoped retake plus control6/6PASS.
+Rich source committed locally as `ba6d565e` (+1090/−3,11 code/config/test files),
+NOT installed on shared preview or pushed. Final cleanup smoke1/1PASS, no own
+fixture child remains. Focused gates per §10.10c, not a frozen landing. Claude handoff in
+the linked packet: consume Manager fields instead of hard-coded Overview gaps,
+DEBT-013 four boundary defects, DEBT-030 existing page-port wiring, DEBT-042
+published refusal/gate, uncovered visual states. Actual source/finance/STREAM/
+commands and full ELP2-10 remain open; no synthetic→connected relabelling.
+
 Chủ ghi: Claude (phía FE). Codex đọc ở **đầu mỗi round**, trả lời bằng cách đổi `Status` trong packet phase sở hữu và
 nêu ID ở đây (xem [Rules §10](AGENT_WORKING_RULES.md)). Đây là **ledger duy nhất cho request FE → BE** và cho review
 của FE về backend; ledger BE → FE vẫn nằm trong packet từng phase. Không nhân bản sang file khác.
@@ -2110,4 +2212,6 @@ Edge commits2a87d405b4942d7a1c08c0080193bb1b84a1b057 and5b1016e0436417b2788bdb7c
 [Exact handback §§6–7](evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md#6-superseding-repair-review-and-new-availability-22oct0854utc): one normal hook de8f6382 EXIT0, contracts1,633/API10,015PASS+explicit skips; genuine roster PG positives10/10PASS. Claude3aaf24f4 and private P22/G2 ancestry retained; no peer WIP/index rewritten. Narrow existing403 mapper repair3265ce18/+47−1 has API build/focused56PASS; no frontend field/design change or duplicate implementation needed. Global historical fixture-typecheck EXIT2 remains a separate disclosed debt, not a PASS. Operator103offlinePASS and private fresh preparation9PASS preserve same-intent/source-terminal/UNKNOWN fences; H+266≤288 checked fresh. Candidate one-module image3cb7f24a exists but uninstalled; P22/G2/financial source integration is not deployment. Old409was SNAPSHOT_REQUIRED, not proof of revoke.08:50offer withdrawn; NEW09:30–10:00UTC needs Edge exact PREPARED/CAS/trust and Core ACK before actual READY. Source8/current grants/session remain retired. Source/runner ready, bindingNOT_READY/full08read09NOT_MET. Integrator is sole lander; Claude reuses normal gate and continues UI/independent source work. No push/stable/dev/main/provider28445/commands/Live.
 
 Agent coordination: reused backend_cr02_b1_review for private operator review/guard repair (no Docker/DB); reused financial_budget_readiness for narrow source review/2path implementation. Root alone integrates, runs source gates, builds one-module candidate and transfers public return. No new agent spawned in this continuation.
+
+Landing actual: canonical docs/research-loop-plan ff-only29f57e36→4c7f809e, clean. Claude3aaf/private3d/normal-hookde8/scopedfix326 are preserved ancestors; no Research backend change or peer-WIP rewrite. [Return §8](evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md#8-canonical-ff-only-landing-completed-22oct2026). Edge owns new PREPARED/CAS/trust pins; Core ACK/config/image/official grants follow actual READY. No new authority or connected PASS from landing.
 

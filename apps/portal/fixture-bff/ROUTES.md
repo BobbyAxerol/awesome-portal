@@ -53,6 +53,28 @@ canonical files `e2e/fixtures.ts` (`stubPortalApi`) reads, and `src/fixtureBff/s
 person. The id in it is `FIXTURE_USER_ID` (default `principal-visual-baseline`), the same id
 `/api/admin/access/self` and the Access screen use, so the Access screen no longer refuses the fixture's body.
 
+## Opt-in review data (22 October 2026)
+
+The generated route table below describes the **unchanged sparse-realistic default**.
+`FIXTURE_REVIEW_PROFILE=populated|layout-stress` additionally answers these GETs,
+using `review-manager.ts` and the existing Manager schemas/readers:
+
+| Path | Review-only behavior |
+|---|---|
+| `/__fixture/review`, `/__fixture/review.html` | JSON case catalog / escaped no-script link index; every profile |
+| `/api/v1/execution/manager/fleet` | Scaled, query-bound rows and forward/back pages |
+| `/api/v1/execution/manager/fund-overview` | Synthetic FUND dataset |
+| `/api/v1/execution/manager/portfolios/{id}/overview` | Known selected portfolio only |
+| `/api/v1/execution/manager/alphas/{id}/overview` | Known selected Alpha only |
+| `/api/v1/execution/manager/accounts/{id}/overview` | Known selected account; no fabricated child PnL attribution |
+| `/api/v1/execution/manager/deployments/{id}/overview` | Known selected deployment only |
+| `/api/v1/execution/manager/series` | NAV / RETURN / NET_PNL, 240 or 1440 exact-string samples, explicit gap |
+
+Unknown resources remain typed refusals; unsupported dataset window/economic/numeric
+queries remain explicit 400s. Negative workspace cases and `ALL` history gaps remain.
+These are synthetic routes, not new real endpoints or source qualification. See
+[profiles, browser probe and removal](README.md#explicit-populatedlayout-review-22-october-2026).
+
 ## How an answer is chosen
 
 `e2e/bffAnswerer.ts` (`answerFixtureRequest`) takes the request as data and answers it as data. For

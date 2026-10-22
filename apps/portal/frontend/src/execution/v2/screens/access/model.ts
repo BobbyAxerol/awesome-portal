@@ -88,6 +88,14 @@ export interface CapabilityRow {
   held: readonly string[];
   /** Words for the reason column: why it is on, or what is missing. */
   reason: string;
+  /** The action is listed (hi-fi) but this screen does not read its eligibility: neither allowed nor denied. */
+  unread?: boolean;
+}
+
+/** An action the hi-fi lists whose eligibility is asked per resource and action (FE-015); this page has neither, so it says so. */
+const UNREAD_REASON = "Not read yet by this screen: eligibility is asked per resource and action (FE-015).";
+function unreadRow(id: string, label: string): CapabilityRow {
+  return { id, label, allowed: false, need: undefined, held: [], reason: UNREAD_REASON, unread: true };
 }
 
 function row(id: string, label: string, capabilities: ReadonlySet<string>, need: CapabilityNeed | undefined, openWord: string): CapabilityRow {
@@ -133,8 +141,15 @@ export function doRows(capabilities: ReadonlySet<string>): CapabilityRow[] {
     row(`decide:${gate.id}`, `Decide at ${gate.label.replace(" gate", "")} gate`, capabilities, { allOf: [gate.decide] }, "No capability needed"));
   return [
     ...decide,
+    unreadRow("do:archive-decide", "Approve archive and reactivation"),
+    unreadRow("do:archive-request", "Request an archive"),
+    unreadRow("do:reactivation", "Start a reactivation review"),
+    unreadRow("do:capital", "Send capital commands"),
+    unreadRow("do:operations", "Acknowledge and resolve operations"),
     row("manage:grants", "Manage grants", capabilities, { allOf: [ADMIN_CAPABILITY.profileAccessManage] }, "No capability needed"),
     row("manage:users", "Manage users", capabilities, { allOf: [ADMIN_CAPABILITY.usersManage] }, "No capability needed"),
+    unreadRow("do:own-admin", "Change your own admin rights"),
+    unreadRow("do:export", "Export tables"),
   ];
 }
 
