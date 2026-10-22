@@ -238,6 +238,16 @@
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go, order)",
       "status": "IN PROGRESS 2026-10-22 (late): Portfolio 360, Alpha 360, Compare, Operations (health strip, Intent/Display columns), Incident (sections), Account 360 (tiles, drawdown panel), Blotter (columns), Access (13 actions, Role preset), Users (columns, actions), Admin (detail panel) restored by subagents and merged; baselines re-recording. Not done: Trade replay as a standalone screen (feasible, design decision), Accounts list baseline, ops-drawer design frame is mis-exported."
+    },
+    {
+      "id": "DEBT-UXM07-052",
+      "title": "Accounts list reads two resources per row (N+1) for Physical equity, Virtual headroom and Check",
+      "where": "src/execution/v2/screens/account/reads.ts (listRowFacts), ROW_FACTS_CAP=20, concurrency 4",
+      "consequence": "Up to 40 extra reads per list view; rows beyond 20 show a typed absence and the footer says so. Acceptable on the fixture lane, not at real scale.",
+      "proposed": "Backend request: add physical_equity, virtual_used, headroom and check (or an aggregate per binding) to the bindings list row, and per-environment counts for the ALL/ISSUES/REAL-FUNDED/PAPER/TESTNET tabs. Then delete listRowFacts.",
+      "opened": "2026-10-22",
+      "owner": "Codex (contract); Claude (consumer)",
+      "status": "OPEN"
     }
   ],
   "closed": [

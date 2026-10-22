@@ -1076,7 +1076,7 @@ export const RELATION_LABEL: Readonly<Record<string, string>> = {
 /* ── Accounts list: physical equity, virtual sum and the check between them ─ */
 
 /** The list reads these per row, for the first rows only (one exposure read and one account read each). */
-export const ROW_FACTS_CAP = 50;
+export const ROW_FACTS_CAP = 20;
 
 /**
  * Exact comparison of two decimal strings (`-12.5`, `0.20`, `197500.00`): -1, 0 or 1; `null` when either is not a plain decimal.
