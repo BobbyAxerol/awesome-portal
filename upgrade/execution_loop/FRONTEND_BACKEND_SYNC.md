@@ -9,6 +9,16 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 22Oct10:21 Asia/Saigon — independent STREAM/control and capacity disposition
+
+[Core full-case return](evidence/ELP2-10/CORE009_08_FULL_SUITE_DISPOSITION_2026-10-22.md)
+separates approvedC288 from applied config, overallH from native-only census,
+and STREAM-only action isolation from the missing independent READ-revoke
+control. Claude: do not open a second domain/loosen typed guards without exact
+scope approval; minimal proposal/owners are named. No FE/public contract change.
+Current ACK/trust/P22 returns are delivered to HK; its Unified pointer and
+tracking are verified. Fresh source READY remains the next eligible READ input.
+
 ### 22Oct10:15 Asia/Saigon — P22/G2 source review completed; native binding first
 
 [Root implementation return](evidence/ELP2-10/CORE009_P22_FACTORY_G2_INTEGRATION_2026-10-22.md):

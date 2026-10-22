@@ -14699,3 +14699,15 @@ the missing exact quietGate helper; no frontend path edited by Root. Edge
 already has current ACK/fresh8PM trust/C288 disposition; fresh source READY
 and official current READ/session remain the immediate operational priority,
 independent of P22/financial/load work. ELP2-10 OPEN. Verification:R0.
+
+### Core original08 full-suite disposition —22Oct10:21 Asia/Saigon
+
+[Exact independent-case disposition](execution_loop/evidence/ELP2-10/CORE009_08_FULL_SUITE_DISPOSITION_2026-10-22.md)
+records C288 approved/not yet applied, distinct overall-H/native census,
+Cmin=H+273, independent STREAM/active revoke/current-epoch cache sequence and
+why the current single-domain composition cannot supply an unaffected native
+READ-revoke control. Minimal second-domain proposal is NOT_AUTHORIZED; no
+guard loosening or fake control. Edge Unified now directly points to delivered
+current ACK/trust/source returns; remote index unchanged/tracking PASS. Core
+waits only fresh Edge bind/READY for eligible Paper READ/session, not P22 or
+those independent full-suite inputs. ELP2-10 OPEN. Verification:R0.
