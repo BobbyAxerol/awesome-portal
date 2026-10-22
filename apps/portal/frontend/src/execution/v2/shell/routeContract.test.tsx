@@ -15,7 +15,7 @@ import { join } from "node:path";
 import { MemoryRouter, Route, Routes, useLocation, useNavigationType } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { envLockFor, cockpitClearSearch, PATH_ENV_REASON } from "../../ExecutionPreviewRoute";
+import { envLockFor, windowLockFor, cockpitClearSearch, PATH_ENV_REASON } from "../../ExecutionPreviewRoute";
 import { useRouteFeatures } from "./routeFeatures";
 
 // V1 containers are markers: "stays on V1" is observable and nothing reads data.
@@ -161,8 +161,13 @@ describe("envLockFor (D6)", () => {
     for (const isV2 of [all, none]) expect(envLockFor(screenId, {}, isV2)).toMatchObject({ reason: PATH_ENV_REASON, effective: env });
   });
 
+  it("Overview is not locked: its fund series reads take the environment and the window, so the bar's controls are drawn", () => {
+    expect(envLockFor("EXECUTION_COMMAND_CENTER_SCREEN", {}, all)).toBeUndefined();
+    expect(windowLockFor("EXECUTION_COMMAND_CENTER_SCREEN", {}, all)).toBeNull();
+    expect(windowLockFor("EXECUTION_COMMAND_CENTER_SCREEN", {}, none)).toBeUndefined();
+  });
+
   it.each([
-    "EXECUTION_COMMAND_CENTER_SCREEN",
     "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
     "EXECUTION_APPROVAL_INBOX_SCREEN",
     "EXECUTION_GATE_R1_REVIEW_SCREEN",

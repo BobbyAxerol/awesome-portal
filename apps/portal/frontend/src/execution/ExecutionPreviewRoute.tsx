@@ -226,7 +226,10 @@ const LIVE_WINDOW_LOCK = { reason: "Live operations reads from activation.", sho
  * The window lock a V2 screen's own read implies; `undefined` keeps the bar's generic "server takes no window" lock.
  * The stage screens are V2 only on their deployment route (`context.hasDeploymentId`): a list route is the Fleet or the V1 list.
  */
-export function windowLockFor(screenId: string, context: EnvLockContext = {}, isV2: (key: Parameters<typeof isV2Screen>[0]) => boolean = isV2Screen): WindowLock | undefined {
+export function windowLockFor(screenId: string, context: EnvLockContext = {}, isV2: (key: Parameters<typeof isV2Screen>[0]) => boolean = isV2Screen): WindowLock | null | undefined {
+  // Overview: its fund series reads (NAV, Net PnL, Return) take the bar's window, so the control is drawn and pressed means followed.
+  // `null` is "no lock"; `undefined` would keep the bar's generic "server takes no window" lock.
+  if (screenId === "EXECUTION_COMMAND_CENTER_SCREEN" && isV2("overview")) return null;
   if (screenId === "EXECUTION_OPERATIONS_QUEUE_SCREEN" && isV2("ops")) return OPERATIONS_WINDOW_LOCK;
   if (screenId === "EXECUTION_FULL_BLOTTER_SCREEN" && isV2("blotter")) return BLOTTER_WINDOW_LOCK;
   if (context.hasDeploymentId !== true) return undefined;
@@ -289,7 +292,8 @@ export function envLockFor(screenId: string, context: EnvLockContext = {}, isV2:
     case "EXECUTION_FULL_BLOTTER_SCREEN":
       return isV2("blotter") ? BLOTTER_ENV_LOCK : undefined;
     case "EXECUTION_COMMAND_CENTER_SCREEN":
-      return isV2("overview") ? NO_ENV_LOCK : undefined;
+      // The fund series reads take the environment; the lists and counts are current. The screen says which is which.
+      return undefined;
     case "EXECUTION_ALPHA_FLEET_LIST_SCREEN":
       return isV2("fleet") ? NO_ENV_LOCK : undefined;
     case "EXECUTION_ALPHA_360_SCREEN":
@@ -308,7 +312,7 @@ export function envLockFor(screenId: string, context: EnvLockContext = {}, isV2:
   }
 }
 
-export function PreviewFrame({ screenId, profile, envLock, windowLock, children }: { screenId: string; profile?: string | null; /** Overrides the lock `envLockFor` derives from the screen alone. */ envLock?: EnvLock | null; /** Overrides the lock `windowLockFor` derives from the screen alone (the route knows whether a deployment id is in the path). */ windowLock?: WindowLock; children: ReactNode }) {
+export function PreviewFrame({ screenId, profile, envLock, windowLock, children }: { screenId: string; profile?: string | null; /** Overrides the lock `envLockFor` derives from the screen alone. */ envLock?: EnvLock | null; /** Overrides the lock `windowLockFor` derives from the screen alone (the route knows whether a deployment id is in the path). */ windowLock?: WindowLock | null; children: ReactNode }) {
   const sessionKey = retainedSessionKey(useSession().principal);
   // Bind before children's passive effects; never fetch or notify another component during render.
   useLayoutEffect(() => { ensureRetainedReview(sessionKey); }, [sessionKey]);

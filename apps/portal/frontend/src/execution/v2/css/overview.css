@@ -289,3 +289,10 @@ a.exec-ov-what-title {
   font: var(--exec-font-meta);
   color: var(--ink-faint);
 }
+
+/* One line under the title: which figures follow the context bar and which are current. */
+.exec-ov-scope {
+  margin: 4px 0 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
