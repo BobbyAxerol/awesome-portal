@@ -1,4 +1,4 @@
-FROM node:22.23.2-alpine3.24@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32 AS build
+FROM node:26.7.0-alpine3.24@sha256:aadf416b2cdce311a8811ba3f0608a61b77dbf997500e2eafe781b51f6a0b019 AS build
 
 WORKDIR /opt/control-api
 
@@ -9,7 +9,7 @@ COPY apps/control-api/tsconfig.json apps/control-api/tsconfig.build.json ./
 COPY apps/control-api/src ./src
 RUN npm run build && npm prune --omit=dev
 
-FROM node:22.23.2-alpine3.24@sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32
+FROM node:26.7.0-alpine3.24@sha256:aadf416b2cdce311a8811ba3f0608a61b77dbf997500e2eafe781b51f6a0b019
 
 # The API runtime only executes the compiled service with Node. Package
 # managers are build-time tools; retaining npm would ship its unrelated
