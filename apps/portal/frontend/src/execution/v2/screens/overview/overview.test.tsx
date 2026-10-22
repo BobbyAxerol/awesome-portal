@@ -8,7 +8,6 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { answerOperationsV2 } from "../../../../../e2e/bffDoubleV2";
 import { resetOverviewDouble, setOverviewDoubleVariants } from "../../../../../e2e/bffDoubleOverview";
 import type { ExecutionApi } from "../../../api/ports";
 import type { SseLike } from "../../../sse";
