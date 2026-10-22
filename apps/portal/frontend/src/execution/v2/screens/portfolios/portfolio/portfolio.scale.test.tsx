@@ -54,9 +54,10 @@ describe("60 deployments, 20 accounts", () => {
     mount(makeApi(big).api);
     await ready();
     const strip = screen.getByRole("group", { name: "Portfolio identity" });
-    expect(within(strip).getByText("Alphas").closest("div")!.textContent).toContain("24");
-    expect(within(strip).getByText("Deployments").closest("div")!.textContent).toContain("60");
-    expect(within(strip).getByText("Accounts").closest("div")!.textContent).toContain("20");
+    const deployments = within(strip).getByText("Deployments").closest("div")!.textContent ?? "";
+    expect(deployments).toContain("60");
+    expect(deployments).toContain("24 alphas");
+    expect(deployments).toContain("20 accounts");
     for (const [tab, table, count] of [["Alphas", "Alphas and deployments", 60], ["Accounts", "Accounts", 20], ["Risk and Health", "Exposure by deployment", 60]] as const) {
       const started = performance.now();
       fireEvent.click(screen.getByRole("tab", { name: tab }));

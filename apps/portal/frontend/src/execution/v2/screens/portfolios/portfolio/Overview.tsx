@@ -127,17 +127,38 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
   );
 }
 
-/** What the Overview does not carry, said once (ids and reasons in the line's title). */
+/** What the Overview does not carry and has no tile or panel for, said once (ids and reasons in the line's title). */
 const UNPUBLISHED_OVERVIEW: readonly UnavailableFact[] = [
-  { label: "Net PnL", id: "FE-005", why: "Windowed; needs FE-025" },
-  { label: "Return", id: "FE-006", why: "Windowed; methodology per source" },
-  { label: "Drawdown", id: "FE-013", why: "Needs the NAV series" },
-  { label: "Concentration", id: "FE-005", why: "Shares need the Manager grouping, so none is drawn or worked out here" },
-  { label: "Capital statements", id: "FE-017", why: "Initial, added and returned funds, net external flows, approved budget, recalling, headroom" },
   { label: "Funding source", id: "FE-032", why: "No per-source attribution" },
   { label: "Stage, decision, incident and recall lanes", id: "FE-031", why: "No source is published (FE-032 as well); the chart draws the Flow lane only" },
-  { label: "Score", id: "FE-011" },
+  { label: "Score", id: "FE-011", why: "Policy not set" },
 ];
+
+/** Capital statements (hi-fi right column): every row stays; none is published (FE-017), so each says so. Nothing is summed from the allocation. */
+const CAPITAL_ROWS = ["Initial funds", "Added funds", "Returned", "Net external flows", "Approved budget", "Recalling", "Headroom"] as const;
+function CapitalCard() {
+  return (
+    <SectionPanel title="Capital" aside="Statements">
+      <table className="exec-pf-captable" aria-label="Capital statements">
+        <tbody>
+          {CAPITAL_ROWS.map((row) => (
+            <tr key={row}><th scope="row">{row}</th><td><Np fact={PF_FE.statements} /></td></tr>
+          ))}
+        </tbody>
+      </table>
+    </SectionPanel>
+  );
+}
+
+/** Concentration (HHI) keeps its panel; shares need the Manager grouping, so no share is drawn or worked out here. */
+function ConcentrationCard() {
+  return (
+    <SectionPanel title="Concentration" aside="HHI">
+      <p className="exec-pf-note"><Np fact={PF_FE.concentration} /></p>
+      <p className="exec-pf-note">Shares need the Manager grouping, so none is drawn or worked out here.</p>
+    </SectionPanel>
+  );
+}
 
 function Attention({ ctx }: { ctx: TabCtx }) {
   const deployments = ctx.deployments.filter((d) => d.healthKind !== "ok");
@@ -180,18 +201,25 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
     <div className="exec-pf-stack">
       {simulated ? <p className="exec-pf-banner" data-tone="info">Simulated capital. It is never added to Real-funded figures.</p> : null}
       <PfKpiStrip label="Portfolio identity">
-        <PfKpi label="Alphas">{alphaCount}</PfKpi>
-        <PfKpi label="Deployments" note={identity.holdingsCount !== null ? `${identity.holdingsCount} holdings` : undefined}>{deployments.length}</PfKpi>
-        <PfKpi label="Accounts">{accounts.length}</PfKpi>
+        <PfKpi label="NAV"><NavFigure ctx={ctx} /></PfKpi>
+        <PfKpi label="Net PnL" note="Windowed; needs the window"><Np fact={PF_FE.netPnl} /></PfKpi>
+        <PfKpi label="Return" note="Windowed; methodology per source"><Np fact={PF_FE.ret} /></PfKpi>
+        <PfKpi label="Drawdown" note="Needs the NAV series"><Np fact={PF_FE.drawdown} /></PfKpi>
         <PfKpi label="Allocated (current)">
           <MoneyList entries={identity.allocationByCurrency} empty={<Absent reason="no allocation published" />} />
         </PfKpi>
-        <PfKpi label="NAV"><NavFigure ctx={ctx} /></PfKpi>
+        <PfKpi label="Deployments" note={`${alphaCount} ${alphaCount === 1 ? "alpha" : "alphas"} · ${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}${identity.holdingsCount !== null ? ` · ${identity.holdingsCount} holdings` : ""}`}>{deployments.length}</PfKpi>
       </PfKpiStrip>
       <NotAvailableLine facts={UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />
-      <NavCard ctx={ctx} />
+      <div className="exec-pf-grid2">
+        <NavCard ctx={ctx} />
+        <CapitalCard />
+      </div>
       <EquityCard ctx={ctx} />
-      <Attention ctx={ctx} />
+      <div className="exec-pf-grid2">
+        <Attention ctx={ctx} />
+        <ConcentrationCard />
+      </div>
     </div>
   );
 }

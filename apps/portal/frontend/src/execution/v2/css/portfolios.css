@@ -721,3 +721,25 @@ div.exec-pf-banner {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+
+/* Capital statements: label left, value right, one row per statement. */
+.exec-pf-captable {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-pf-captable th {
+  padding: 6px 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-pf-captable td {
+  padding: 6px 0;
+  text-align: right;
+  border-bottom: 1px solid var(--line-soft);
+}
