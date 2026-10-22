@@ -123,3 +123,19 @@ describe("blotter order row", () => {
     expect(order.feeCurrency).toBe("USDT");
   });
 });
+
+describe("binding exposure headroom", () => {
+  const buckets = (options: BffDoubleOptions) =>
+    ((ask("/broker-bindings/bnc_main@BINANCE/exposure", options) as { analytics: { data: { buckets: { currency: string; used: string; headroom: string }[] } } }).analytics.data.buckets);
+
+  it("the shared binding's USDT headroom is physical equity less the virtual sum, by integer arithmetic (412880.25 - 197500.00)", () => {
+    const usdt = buckets(ON).find((b) => b.currency === "USDT")!;
+    expect(usdt.used).toBe("197500.00");
+    expect(usdt.headroom).toBe("215380.25");
+    expect(buckets(ON).find((b) => b.currency === "USDC")!.headroom).toBe("2000.00");
+  });
+
+  it("off, the double's own headroom is untouched", () => {
+    expect(buckets(OFF).find((b) => b.currency === "USDT")!.headroom).toBe("13880.25");
+  });
+});

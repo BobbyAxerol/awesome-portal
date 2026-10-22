@@ -123,15 +123,41 @@ describe("Accounts list", () => {
     expect(flags).toEqual(["ok", "stale", "attention"]);
   });
 
-  it("does not draw three columns of 'Not available' for equity, headroom and check; never a dash or a zero", async () => {
+  it("keeps the design's Physical equity, Σ Virtual · Headroom and Check columns, the subtitle, the sleeves count and the Export note; each figure is published or a typed absence, never a dash or a zero", async () => {
     stubFetch();
     const { container } = mount("/deployments/accounts");
     const rows = bodyRows(await loadedList());
-    for (const row of rows) {
-      for (const label of ["Physical equity", "Σ Virtual · Headroom", "Check"]) expect(row.querySelector(`td[data-l="${label}"]`), label).toBeNull();
-    }
-    expect(container.textContent).not.toMatch(/—|N\/A/);
-    for (const td of Array.from(container.querySelectorAll("td"))) expect(td.textContent?.trim()).not.toMatch(/^(-|–|0)$/);
+    expect(screen.getByText("Venue bindings and the sleeves on them")).toBeTruthy();
+    const note = screen.getByText(/Export is not available yet/);
+    expect(within(note).getByRole("link", { name: "My access" }).getAttribute("href")).toContain("/administration/profile-access");
+    expect((screen.getByRole("button", { name: "Export" }) as HTMLButtonElement).disabled).toBe(true);
+    // The sparse default publishes no wallet balance: physical equity and the check are typed absences with their reason.
+    await waitFor(() => expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("197,500.00"), SLOW);
+    expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("Headroom 13,880.25");
+    expect(cell(rows[0]!, "Physical equity")).toContain("Not available");
+    expect(cell(rows[0]!, "Physical equity")).toContain("Venue report not published");
+    expect(cell(rows[0]!, "Check")).toContain("Not available");
+    expect(cell(rows[0]!, "Account")).toContain("3 sleeves");
+    expect(container.textContent).not.toMatch(/\u2014|\u2013|N\/A/);
+    for (const td of Array.from(container.querySelectorAll("td"))) expect(td.textContent?.trim()).not.toMatch(/^(-|\u2013|0)$/);
+  });
+
+  it("SIMULATED lane: physical equity from the account's native custody, the exposure's virtual sum and headroom, and the check from an exact comparison", async () => {
+    stubFetch({
+      answer: (url) => {
+        const answer = answerAccount("GET", url.pathname, url.searchParams);
+        return answer === null ? null : simulate("GET", url.pathname.replace(/^\/api\/v1\/execution/, ""), url.searchParams, answer);
+      },
+    });
+    mount("/deployments/accounts");
+    const rows = bodyRows(await loadedList());
+    await waitFor(() => expect(cell(rows[0]!, "Check")).toContain("Within physical"), SLOW);
+    expect(cell(rows[0]!, "Physical equity")).toContain("412,880.25");
+    expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("197,500.00");
+    expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("Headroom 215,380.25");
+    // The expired-credential binding has no broker report: its check stays a typed absence.
+    await waitFor(() => expect(cell(rows[2]!, "Check")).toContain("Not available"), SLOW);
+    expect(cell(rows[2]!, "Physical equity")).toContain("Venue report not published");
   });
 
   it("shows the server's counts and the environment it answered", async () => {
@@ -286,7 +312,7 @@ describe("Accounts list", () => {
     const { container } = mount("/deployments/accounts");
     await loadedList();
     const labels = Array.from(container.querySelectorAll("tbody tr:first-child td")).map((td) => td.getAttribute("data-l"));
-    expect(labels).toEqual(["Binding · Venue", "Account", "State", "Credential", "Updated"]);
+    expect(labels).toEqual(["Binding · Venue", "Account", "State", "Credential", "Physical equity", "Σ Virtual · Headroom", "Check", "Updated"]);
     expect(container.querySelector("table.exec-cards")).not.toBeNull();
   });
 
@@ -420,7 +446,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     mount("/deployments/accounts?sel=bnc_main%40BINANCE");
     const later = await screen.findByRole("complementary");
     await within(later).findByRole("link", { name: "Open account" });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(later.textContent).toContain("Not allowed. Your access does not include managing accounts.");
     expect((within(later).getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement).disabled).toBe(true);
   });
@@ -430,7 +456,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     mount("/deployments/accounts?sel=bnc_main%40BINANCE");
     const drawer = await screen.findByRole("complementary");
     await waitFor(() => expect(drawer.textContent).toContain("Not offered in the portal yet"), SLOW);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
     expect(stub.paths(CONTEXT_PATH)).toEqual([CONTEXT_PATH]);
   });
 

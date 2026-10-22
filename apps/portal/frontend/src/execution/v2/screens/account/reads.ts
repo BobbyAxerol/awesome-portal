@@ -16,7 +16,7 @@ import type { BindingDetailRead, BindingItem, ManagerListEnvelope, ProfileEnvelo
 import type { FinancialChartPayload, FinancialMetric } from "../../../api/financialChart";
 import type { SubjectActivityPage } from "../../../api/subjectActivity";
 import type { PanelStatus } from "../../../contracts";
-import { bindingQuery, mergeBindings, type BindingEnv } from "./model";
+import { ROW_FACTS_CAP, bindingQuery, listRowFacts, mergeBindings, type BindingEnv, type ListRowFacts } from "./model";
 
 export type ReadState<T> =
   | { phase: "idle" }
@@ -267,4 +267,55 @@ export function useBindingPages(
   }, [api]);
 
   return { state, items, envelope, nextCursor, loadingMore, moreError, loadMore };
+}
+
+/* ── the Accounts list: physical and virtual figures, per row ────────────── */
+
+export type RowFactsState = { phase: "loading" } | { phase: "ready"; facts: ListRowFacts; exposureFailed: boolean; accountFailed: boolean };
+
+const ROW_FACT_CONCURRENCY = 4;
+
+/**
+ * Physical equity (the account's native custody) and the binding's virtual figures are not on the bindings projection. They are
+ * read per row through the same port, for the first `ROW_FACTS_CAP` rows only, four at a time. A row beyond the cap is never
+ * read and the list says so; a failed read leaves that figure absent, never zero.
+ */
+export function useRowFacts(api: ExecutionApi, rows: readonly { bindingId: string; accountId: string }[]): ReadonlyMap<string, RowFactsState> {
+  const [facts, setFacts] = useState<ReadonlyMap<string, RowFactsState>>(new Map());
+  const wanted = rows.slice(0, ROW_FACTS_CAP);
+  const key = wanted.map((row) => `${row.bindingId}|${row.accountId}`).join(",");
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+    const scopedApi = scoped(api, controller.signal);
+    const queue = wanted.filter((row) => facts.get(row.bindingId)?.phase !== "ready");
+    let next = 0;
+    const worker = async () => {
+      while (!cancelled && next < queue.length) {
+        const row = queue[next++]!;
+        const [exposure, account] = await Promise.all([
+          scopedApi.getBindingExposure(row.bindingId).catch(() => null),
+          scopedApi.getAccount360Resource(row.accountId).catch(() => null),
+        ]);
+        if (cancelled) return;
+        const state: RowFactsState = {
+          phase: "ready",
+          facts: listRowFacts(account !== null && account.ok ? account.value : null, exposure !== null && exposure.ok ? exposure.value.exposure : null),
+          exposureFailed: exposure === null || !exposure.ok,
+          accountFailed: account === null || !account.ok,
+        };
+        setFacts((prev) => new Map(prev).set(row.bindingId, state));
+      }
+    };
+    void Promise.all(Array.from({ length: Math.min(ROW_FACT_CONCURRENCY, queue.length) }, worker));
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+    // `key` stands for `wanted`; `facts` is read once per run to skip rows already read.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, key]);
+
+  return facts;
 }

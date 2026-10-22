@@ -442,6 +442,8 @@ export interface BrokerFacts {
   walletBalance: Metric | null | undefined;
   /** The venue's native equity (`broker_sync.native_equity`); `undefined` = not published. */
   nativeEquity: Metric | null | undefined;
+  /** The currency of the broker report row (`broker_sync.currency`); `null` when the row names none. */
+  currency: string | null;
   status: string | null;
   asOf: UtcEpochMs | null;
 }
@@ -741,6 +743,7 @@ export function brokerFacts(profile: ProfileEnvelope, currency: string | null): 
     buyingPower: metricOf(row.buying_power, "money"),
     walletBalance: metricOf(row.wallet_balance, "money"),
     nativeEquity: metricOf(row.native_equity, "money"),
+    currency: text(row.currency),
     status: text(row.status),
     asOf: timeOf(row, "synced_at"),
   };
@@ -1069,3 +1072,71 @@ export const RELATION_LABEL: Readonly<Record<string, string>> = {
   exposure_headroom: "Headroom",
   positions: "Positions",
 };
+
+/* ── Accounts list: physical equity, virtual sum and the check between them ─ */
+
+/** The list reads these per row, for the first rows only (one exposure read and one account read each). */
+export const ROW_FACTS_CAP = 50;
+
+/**
+ * Exact comparison of two decimal strings (`-12.5`, `0.20`, `197500.00`): -1, 0 or 1; `null` when either is not a plain decimal.
+ * Integer arithmetic on the digits; no float, no rounding. This is the only arithmetic the list does.
+ */
+export function compareDecimals(a: string, b: string): -1 | 0 | 1 | null {
+  const parse = (text: string): { neg: boolean; int: string; frac: string } | null => {
+    const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(text);
+    return m === null ? null : { neg: m[1] === "-", int: m[2]!, frac: m[3] ?? "" };
+  };
+  const x = parse(a);
+  const y = parse(b);
+  if (x === null || y === null) return null;
+  const width = Math.max(x.frac.length, y.frac.length);
+  const scaled = (v: { neg: boolean; int: string; frac: string }): bigint => {
+    const n = BigInt(`${v.int}${v.frac.padEnd(width, "0")}`);
+    return v.neg ? -n : n;
+  };
+  const p = scaled(x);
+  const q = scaled(y);
+  return p < q ? -1 : p > q ? 1 : 0;
+}
+
+export interface ListRowFacts {
+  /** The venue's wallet balance of the whole account (native custody) and its currency. */
+  physical: Metric | null | undefined;
+  currency: string | null;
+  /** The binding's virtual figures for the SAME currency: the sum of allocations (`used`) and the published headroom. */
+  virtual: Metric | null | undefined;
+  headroom: Metric | null | undefined;
+  /** Sleeves on the binding: the expected count the exposure read publishes, else the count it covered. */
+  sleeves: number | null;
+}
+
+export type CheckWord = { kind: "within" } | { kind: "exceeded" } | { kind: "unavailable"; reason: string };
+
+const exactOf = (metric: Metric | null | undefined): string | null => (metric && metric.kind === "value" ? metric.decimal.full : null);
+
+/** Virtual against physical, same currency, both published; anything else is not available and says why. */
+export function checkOf(physical: Metric | null | undefined, virtual: Metric | null | undefined): CheckWord {
+  const phys = exactOf(physical);
+  const virt = exactOf(virtual);
+  if (phys === null) return { kind: "unavailable", reason: "The venue report is not published, so there is no physical figure to compare." };
+  if (virt === null) return { kind: "unavailable", reason: "No virtual sum is published in the physical figure's currency." };
+  const order = compareDecimals(virt, phys);
+  if (order === null) return { kind: "unavailable", reason: "A figure could not be read as an exact decimal." };
+  return { kind: order <= 0 ? "within" : "exceeded" };
+}
+
+/** One row's facts from the two reads. A read that is missing contributes nothing (the cell says so). */
+export function listRowFacts(profile: ProfileEnvelope | null, exposure: BindingExposure | null): ListRowFacts {
+  const broker = profile === null ? null : brokerFacts(profile, null);
+  const currency = broker?.currency ?? null;
+  const bucket = exposure === null || currency === null ? null : exposure.buckets.find((entry) => entry.currency === currency) ?? null;
+  const money = (value: unknown) => (typeof value === "string" ? metricOf(value, "money") : value === null ? metricOf(null, "money") : undefined);
+  return {
+    physical: broker === null ? undefined : broker.walletBalance,
+    currency,
+    virtual: bucket === null ? undefined : money(bucket.used),
+    headroom: bucket === null ? undefined : money(bucket.headroom),
+    sleeves: exposure === null ? null : exposure.expectedAccountCount ?? exposure.accountCount,
+  };
+}

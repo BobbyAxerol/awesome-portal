@@ -25,10 +25,10 @@ import { Flag } from "../../Flag";
 import { withOrigin } from "../../backTo";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
 import { BindingDrawer } from "./BindingDrawer";
-import { StateFlag, CredentialFlag, Updated } from "./parts";
-import { useBindingPages } from "./reads";
+import { StateFlag, CredentialFlag, Na, Updated, Value } from "./parts";
+import { useBindingPages, useRowFacts } from "./reads";
 import {
-  CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, accountHref, freshnessFlag, humanize, inScope, matchesCredential,
+  ACCESS_PATH, CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, ROW_FACTS_CAP, accountHref, checkOf, freshnessFlag, humanize, inScope, matchesCredential,
   readCredentialFilter, timeOf, toBindingRow, type BindingEnv, type BindingRow,
 } from "./model";
 import { GapWhy } from "../../blocks";
@@ -46,6 +46,8 @@ function mergeSeen(current: readonly string[], next: readonly string[]): readonl
   const merged = [...new Set([...current, ...next])].sort((a, b) => a.localeCompare(b));
   return merged.length === current.length ? current : merged;
 }
+
+const BEYOND = `Physical and virtual figures are read one row at a time for the first ${ROW_FACTS_CAP} rows only.`;
 
 export function AccountsList({ api, binding = null, capabilities }: AccountsListProps) {
   const url = useExecUrlState();
@@ -75,6 +77,13 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     () => all.filter((row) => inScope(row, issuesOnly) && matchesCredential(row, credentialFilter)).slice(0, ROW_CAP),
     [all, issuesOnly, credentialFilter],
   );
+  const rowFacts = useRowFacts(api, visible);
+  const factsCapped = visible.length > ROW_FACTS_CAP;
+  const factsOf = (row: BindingRow) => {
+    const index = visible.indexOf(row);
+    if (index >= ROW_FACTS_CAP) return "beyond" as const;
+    return rowFacts.get(row.bindingId) ?? ({ phase: "loading" } as const);
+  };
   const selected = selection === null ? null : all.find((row) => row.bindingId === selection) ?? null;
 
   // Venue options come from rows the page has shown and survive filtering.
@@ -148,12 +157,74 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     {
       key: "account",
       label: "Account",
-      render: (row) => (
-        <Link className="exec-acct-link" to={withContext(withOrigin(accountHref(row.accountId), { kind: "accounts" }, params), params)} onClick={(event) => event.stopPropagation()}>{row.accountId}</Link>
-      ),
+      render: (row) => {
+        const state = factsOf(row);
+        const sleeves = state !== "beyond" && state.phase === "ready" ? state.facts.sleeves : null;
+        return (
+          <span className="exec-acct-cell">
+            <Link className="exec-acct-link" to={withContext(withOrigin(accountHref(row.accountId), { kind: "accounts" }, params), params)} onClick={(event) => event.stopPropagation()}>{row.accountId}</Link>
+            {sleeves !== null ? <span className="exec-acct-sub">{sleeves} {sleeves === 1 ? "sleeve" : "sleeves"}</span> : null}
+          </span>
+        );
+      },
     },
     { key: "state", label: "State", render: (row) => <StateFlag word={row.stateWord} /> },
     { key: "credential", label: "Credential", render: (row) => <CredentialFlag word={row.credentialWord} /> },
+    {
+      key: "physical",
+      label: "Physical equity",
+      numeric: true,
+      render: (row) => {
+        const state = factsOf(row);
+        if (state === "beyond") return <Na why={BEYOND} />;
+        if (state.phase === "loading") return <span className="exec-acct-sub">Loading</span>;
+        return (
+          <span className="exec-acct-cell">
+            <Value metric={state.facts.physical} suffix={state.facts.currency ?? undefined} />
+            {state.facts.physical === undefined ? <span className="exec-acct-sub">{state.accountFailed ? "Account read failed" : "Venue report not published"}</span> : null}
+          </span>
+        );
+      },
+    },
+    {
+      key: "virtual",
+      label: "Σ Virtual · Headroom",
+      numeric: true,
+      render: (row) => {
+        const state = factsOf(row);
+        if (state === "beyond") return <Na why={BEYOND} />;
+        if (state.phase === "loading") return <span className="exec-acct-sub">Loading</span>;
+        const { virtual, headroom, currency } = state.facts;
+        return (
+          <span className="exec-acct-cell">
+            <Value metric={virtual} suffix={currency ?? undefined} />
+            {virtual === undefined ? (
+              <span className="exec-acct-sub">{state.exposureFailed ? "Exposure read failed" : currency === null ? "No physical currency to match" : "No virtual sum in this currency"}</span>
+            ) : (
+              <span className="exec-acct-sub">Headroom <Value metric={headroom} /></span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "check",
+      label: "Check",
+      render: (row) => {
+        const state = factsOf(row);
+        if (state === "beyond") return <Flag kind="na" label="Not available" size="sm" />;
+        if (state.phase === "loading") return <span className="exec-acct-sub">Loading</span>;
+        const word = checkOf(state.facts.physical, state.facts.virtual);
+        if (word.kind === "within") return <Flag kind="ok" label="Within physical" size="sm" />;
+        if (word.kind === "exceeded") return <Flag kind="attention" label="Exceeded" size="sm" />;
+        return (
+          <span className="exec-acct-cell">
+            <Flag kind="na" label="Not available" size="sm" />
+            <GapWhy name="Why the check is not available" rows={[word.reason]} next={null} />
+          </span>
+        );
+      },
+    },
     {
       key: "updated",
       label: "Updated",
@@ -200,6 +271,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
       <header className="exec-acct-head">
         <div>
           <h1 className="exec-acct-title">Accounts</h1>
+          <p className="exec-acct-subtitle">Venue bindings and the sleeves on them</p>
         </div>
         <div className="exec-acct-fresh">
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
@@ -278,6 +350,10 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
               Issues only{issueCountText !== null ? <span className="exec-acct-tab-count">{issueCountText}</span> : null}
             </button>
             {filtered ? <button type="button" className="exec-acct-btn" onClick={clearFilters}>Clear all</button> : null}
+            <span className="exec-acct-export">
+              <button type="button" className="exec-acct-btn" disabled aria-describedby={`${panelId}-export`}>Export</button>
+              <span id={`${panelId}-export`} className="exec-acct-note">Export is not available yet · <Link className="exec-acct-link" to={withContext(ACCESS_PATH, params)}>My access</Link></span>
+            </span>
           </div>
 
           {chips.length > 0 ? (
@@ -315,6 +391,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                       {pages.loadingMore ? "Loading" : "Load more"}
                     </button>
                   ) : null}
+                  {factsCapped ? <span className="exec-acct-note">{BEYOND}</span> : null}
                   {pages.nextCursor && capped ? <span className="exec-acct-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
                 </div>
                 {pages.moreError ? (

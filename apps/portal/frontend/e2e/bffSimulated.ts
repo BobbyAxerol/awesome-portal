@@ -42,6 +42,7 @@ function ratio6(value: string, peak: string): string {
 
 /* ── account resource (`/resources/accounts/{id}`) ──────────────────────── */
 
+const WALLET_BALANCE_CORE = "412880.25";
 const NAMES = { portfolio: { pf_core: "Core" }, strategy: { btc_trend: "BTC Trend" }, deployment: { dep_btc_live: "BTC Trend live" } } as const;
 
 function overlayAccountResource(body: Obj, accountId: string): Obj {
@@ -64,7 +65,7 @@ function overlayAccountResource(body: Obj, accountId: string): Obj {
   const newest = sync.sort((a, b) => (b.synced_at_ms as number) - (a.synced_at_ms as number))[0];
   if (newest) {
     if (accountId === "acc_bnc_core") {
-      newest.wallet_balance = "412880.25";
+      newest.wallet_balance = WALLET_BALANCE_CORE;
       newest.native_equity = "414010.40";
     } else if (accountId === "acc_bnc_sub") {
       newest.wallet_balance = "118050.00";
@@ -83,6 +84,28 @@ function overlayAccountResource(body: Obj, accountId: string): Obj {
       row.exposure_long = "61300.00";
       row.exposure_short = "35100.00";
       row.exposure_gross = addCents("61300.00", "35100.00");
+    }
+  }
+  return out;
+}
+
+/* ── binding exposure (`/broker-bindings/{id}/exposure`) ─────────────────── */
+
+/**
+ * The shared binding's USDT headroom is its physical equity (the wallet balance simulated on the account) less the virtual sum
+ * (`used`), by integer arithmetic in one currency: 412880.25 - 197500.00 = 215380.25. Other bindings keep the double's own figures.
+ */
+function overlayExposure(body: Obj): Obj {
+  const out = clone(body);
+  const analytics = out.analytics;
+  if (!isObj(analytics) || !isObj(analytics.data) || !Array.isArray(analytics.data.buckets)) return out;
+  for (const bucket of analytics.data.buckets) {
+    if (isObj(bucket) && bucket.currency === "USDT" && typeof bucket.used === "string") {
+      const cents = (text: string) => BigInt(text.replace(".", ""));
+      const left = cents(WALLET_BALANCE_CORE) - cents(bucket.used);
+      const negative = left < 0n;
+      const abs = negative ? -left : left;
+      bucket.headroom = `${negative ? "-" : ""}${abs / 100n}.${(abs % 100n).toString().padStart(2, "0")}`;
     }
   }
   return out;
@@ -151,6 +174,7 @@ export function simulate<T extends SimulatedAnswer>(method: string, path: string
   if (path === "/views/equity-chart" && search.get("subject_kind") === "account" && search.get("subject_id") === "acc_bnc_core") {
     return { ...answer, body: overlayChart(answer.body, search.get("metric") ?? "equity") };
   }
+  if (seg[0] === "broker-bindings" && seg[1] === "bnc_main@BINANCE" && seg[2] === "exposure" && seg.length === 3) return { ...answer, body: overlayExposure(answer.body) };
   if (path === "/screens/blotter") return { ...answer, body: overlayBlotter(answer.body) };
   return answer;
 }

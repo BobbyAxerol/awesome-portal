@@ -29,6 +29,19 @@ Source: `apps/portal/fixture-bff/review-manager.ts`, README section "Explicit po
 | group by portfolio_id | return_30d_pct, max_drawdown_pct | PERCENT | one group in six a typed absence | Portfolios, Compare | FE-006/013/025 |
 | group by portfolio_id | concentration_hhi | RATIO | sum of squared allocation shares, 0..1, one partition | Portfolios, Portfolio 360 | FE-005 |
 
+## 2b. Accounts list columns (22 October 2026, `e2e/bffSimulated.ts`; opt-in, same routes and readers)
+`execution.bindings-list.v1` rows are closed (`binding_id`, `account_id`, `venue`, `state`, `credential_state`, `updated_at`), so Physical equity, Σ Virtual · Headroom, Check and the sleeves count come from two published carriers read per row (first 50 rows, four at a time, later rows say so): the account resource's `broker_sync.wallet_balance` and the binding exposure's bucket `used` / `headroom` / `expected_account_count`.
+
+| Column | Source | Rule | Expected real source |
+|---|---|---|---|
+| Physical equity | `GET /resources/accounts/{id}` `broker_sync.wallet_balance` | published string, currency of the broker row; typed absence when the venue report is not published | bindings list native equity |
+| Σ Virtual | `GET /broker-bindings/{id}/exposure` bucket `used` in the same currency | published string, no summing; typed absence when no bucket in that currency | bindings list virtual sum |
+| Headroom | same bucket `headroom` | simulated for `bnc_main@BINANCE` as 412880.25 - 197500.00 = 215380.25 (integer arithmetic) | bindings list headroom |
+| Check | exact decimal comparison, virtual vs physical, same currency | within / exceeded; "Not available" when either is absent | server verdict (BR-EX-26 aggregate) |
+| Sleeves | exposure `expected_account_count`, else `account_count` | published integer | bindings list sleeve count |
+
+Not done: the design's tab counts across environments (ALL, ISSUES, REAL-FUNDED, PAPER, TESTNET): one environment per bindings read (ELP2-REQ-FE-014), so the counts are not published.
+
 ## 3. Facts no published route carries yet (proposed; not served; screens keep Not published)
 From the subagent reports of 2026-10-22; each is a field to ask Codex for, with the value the fixture lane would simulate.
 

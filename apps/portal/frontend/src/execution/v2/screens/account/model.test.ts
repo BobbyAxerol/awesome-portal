@@ -22,7 +22,7 @@ import {
   capitalRows, chooseCurrency, countMetric, coverageFlag, credentialView, deploymentHref, diffFacts, equityModel, freshnessFlag, headroomFacts,
   isNegative, ledgerPnl, marginFacts, matchesCredential, mergeBindings, metricOf, notPublished, notPublishedReason, populationOf, readAccountView,
   readCredentialFilter, readTab, readViewMode, resourceReason, resourceStatus, sleeveRows, stateView, syncView, timeOf, toBindingRow, triadModel,
-  inScope, ROTATE_FALLBACK_REASON, rotateCredential, type AccountView,
+  checkOf, compareDecimals, inScope, ROTATE_FALLBACK_REASON, rotateCredential, type AccountView,
 } from "./model";
 import { NOT_COMMISSIONED_WHY } from "../stage/reasons";
 
@@ -644,5 +644,30 @@ describe("display names the read publishes (FE-066)", () => {
     const raw = rawCore();
     for (const row of raw.data.deployments ?? []) if (row.portfolio_id === "pf_core") row.portfolio_name = "pf_core";
     expect(readAccountView(readProfileEnvelope(raw)!, "acc_bnc_core").names.portfolios).toEqual({});
+  });
+});
+
+describe("Accounts list check (exact comparison only)", () => {
+  it("compares decimal strings exactly, across scales and signs; refuses a non-decimal", () => {
+    expect(compareDecimals("197500.00", "412880.25")).toBe(-1);
+    expect(compareDecimals("92400.00", "85000.00")).toBe(1);
+    expect(compareDecimals("1.10", "1.1")).toBe(0);
+    expect(compareDecimals("-0.01", "0")).toBe(-1);
+    expect(compareDecimals("0.1000000000000000001", "0.1")).toBe(1);
+    expect(compareDecimals("abc", "1")).toBeNull();
+    expect(compareDecimals("1e3", "1")).toBeNull();
+  });
+
+  const metric = (text: string) => metricOf(text, "money");
+  it("within when virtual <= physical, exceeded when above, equal is within", () => {
+    expect(checkOf(metric("412880.25"), metric("197500.00"))).toEqual({ kind: "within" });
+    expect(checkOf(metric("85000.00"), metric("92400.00"))).toEqual({ kind: "exceeded" });
+    expect(checkOf(metric("100.00"), metric("100.00"))).toEqual({ kind: "within" });
+  });
+
+  it("not available, with a reason, when either figure is absent", () => {
+    expect(checkOf(undefined, metric("1.00"))).toMatchObject({ kind: "unavailable" });
+    expect(checkOf(metric("1.00"), undefined)).toMatchObject({ kind: "unavailable" });
+    expect(checkOf(null, null)).toMatchObject({ kind: "unavailable" });
   });
 });
