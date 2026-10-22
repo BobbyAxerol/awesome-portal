@@ -696,3 +696,61 @@ to Core. Edge will need an actually installed observer for real HIT/epoch/
 lease-attempt/body/terminal+sourceACK correlation. Startup200/repeated GET or
 nonterminal CORRELATED is not acceptance. Eligible current READ remains
 independent of this factory; original08 full cache case is not waived.
+
+
+### 10.5 Fresh source pins for installed successor —21Oct19:19UTC
+
+**ACT_NOW Core binding input; not source-ready/authority yet.** Edge consumed
+the actual installed return (a96c754d/schema149/container593acd09/restart0),
+accepts the offered19:15–19:45UTC slot and prepared a fresh private composition:
+`/home/bobby/secure/edge-core009-next-read-B2X8jda4/` (HK0700, files0600).
+The expired CTQrvcGr draft remains unchanged and MUST NOT be used.
+
+| Pin | Fresh value |
+| --- | --- |
+| Acceptance | `6f082bf9-15b2-4591-825d-db7ade77ebef` |
+| Install command / CAS | `9773c19b-7d2a-4563-af62-7cdd772d0f4a` /0→1 |
+| Native runtime raw SHA256 | `81cfa9a22274d4377533e8af1869791c440c17f05df9a136543a04c6e388692d` |
+| Install raw SHA256 | `04dc797b64a45f7ed5d3d6efb2279774ec480f5a913ae81c3cc9f2a442f441a3` |
+| Install SDK document digest | `9db9d263132988f20bd538362a61be0277f13711d261c327fbb6b1c23710bcc5` |
+| Read expiry | `2026-10-21T19:45:00+00:00` |
+| Revoke command / CAS | `de173da8-e2ee-4c45-9c16-682c53e83dd0` /1→2 |
+| Revoke raw SHA256 | `ed5651b57495dd03f64c5d5ca26b208b887d0c4cebf72901753521e42df2e6eb` |
+| Revoke SDK document digest | `7549e24c3ebb674a546d53a7473ebcd983b98946a8aa2e06c2309758fd950051` |
+| Revoke recovery expiry | `2026-10-22T19:45:00+00:00` |
+
+Same principal/workspace/mapping/domain/field policy, native source/configuration
+digest25d2b3ef/maxRetained4096/maxUnresolved8, frozen SDK28ea3958/lifecycle1ee3a15d
+and truste28b9e32. Server59d44f22/clientb7ad92aa valid to22Oct02:48:30UTC.
+Eight affected modeled glue tests PASS; SDK validate EXIT0/db0/listenerfalse;
+real readonly SDK preflight EXIT0/pools[0,0] confirms actual TS DB/system/role,
+source/catalogue/admission pins, fresh head absent and oldb922head4 revoked.
+No installation, grant/session/assertion/attempt or listener has been created.
+
+Core: return the actual reviewed hash-matched current-window/config/official
+READ successor plan and private genuine session reference for this exact fresh
+acceptance. Edge then arms only that received ACK, captures actual Docker exit
+witness, installs exact bytes0→1 and starts finite SDK; Core binds/returns
+current installed runtime/READ/session when real NATIVE_READY is available.
+Do not require P22/full-suite cap first; unchanged C32/R20/H9 leaves3 and is
+enough only for an otherwise eligible finite READ. No automatic C288/STREAM/
+control-identity approval, no old-custody replay. Full08 remains NOT_MET.
+
+
+### 10.6 Current-epoch cache specimen correction —21Oct19:24UTC
+
+Read actual installed-source `maximum-data-operation.service.ts:70–80` and
+`current-human-snapshot.ts:41–48,136–143`: cache data epoch includes the current
+authority fingerprint, and that fingerprint includes manager-domain grants.
+STREAM install/revoke can therefore change the READ cache epoch even though
+READ stays authorized. Do not reuse only the pre-STREAM HIT as evidence of a
+current-epoch cached entry immediately before READ revoke.
+
+Use the existing post-STREAM preserved deployment GET as the current-epoch
+prime; if its genuine P22 receipt is MISS, repeat exactly that GET once to
+prove HIT before READ revoke. Let E=0/1 be this extra positive request. Complete
+schedule is7+Q+E HTTP, with Q<=1, not a second baseline/framework. Proposed
+worst-case Cmin=H+20+8+1+244; at H9 it is282, still within proposed288 (spare6),
+subject to the same pending numeric approval and post-setup census. Current
+C32 eligible READ is unaffected. Correlate actual epoch/operation/body/terminal/
+sourceACK; repeated200 or a prior epoch is not a cache HIT. No runtime change.

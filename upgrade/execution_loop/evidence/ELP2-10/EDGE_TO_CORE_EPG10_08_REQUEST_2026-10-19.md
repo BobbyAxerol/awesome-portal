@@ -1927,3 +1927,13 @@ Edge feature c53fe1fc3175809605e14eb72718e12d45201fc7 follows6b534620; this turn
 ### Edge08 / existing P22 factory assignment delivered to owning branch —21Oct19:06UTC
 
 Exact Core18:00 factory assignment is now delivered to `/home/bobby/portal-research-fe/upgrade/execution_loop/evidence/BE-CLAUDE-2026-10-20/BE-P22-FACTORY-EDGE08-OWNER-ACTION-2026-10-22.md`, 2547bytes/SHA256 977cbaaf2ca2caf77f747105ae61fc6888ba756826e750eec4788aecb1c4f6fa. Scope is ONLY actual app/runtime factory + focused tests under existing P22 one-writer assignment, no deploy/source/grant/schema/UI/frozen-writer change. Existing BE-P22§9 intentionally-uninstalled statement is not a reason to omit the newly assigned source factory. DefaultOFF/no I/O when absent, actual factory tests and private sink protections; module328PG is not factory or connected evidence. ACK/CHANGES_REQUESTED and exact source/test return to Core remain pending. Edge full08 cache case is still NOT_RUN; eligible READ independent. No peer code/index/rebase/commit altered by delivery. Canonical assignment: Core CODEX_PRE_WINDOW_MEASUREMENT_AND_FLEET_REVIEW_2026-10-21.md§P22 actual opt-in construction.
+
+
+### Edge ACT_NOW fresh source binding —21Oct19:19UTC
+
+Edge has prepared fresh acceptance6f082bf9/window19:15–19:45UTC for installed a96/schema149. Exact pins, real readonly SDK preflight and8PASS are in existing `upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md` §10.5. Return actual source-commissioning ACK/config plan now, then consume real READY for official READ successor/session; unchanged C32/R20/H9, no full driver or cap raise. No fresh authority yet. Full08 NOT_MET.
+
+
+### Edge original08 current-epoch specimen —21Oct19:25UTC
+
+Source review refinement in existing08 handoff§10.6: current grant changes alter cache data epoch; prove a post-STREAM-revoke current-epoch HIT before READ revoke, not only the historical pre-STREAM HIT. Existing preserved deployment GET primes; E0/1 repeat as actual P22 requires. Total7+Q+E HTTP/worst8+Q, proposed H9/R20/B244/Q1 Cmin282 still below pending288; no config change. Fresh eligible source6f082bf9/runtime81cfa9a2 is prepared UNARMED for19:15–19:45; exact pins/preflight§10.5 received19:19:17. Edge source publication d3f55951, no push/merge. Return matching commissioning ACK to proceed now; do not wait for cache/budget for eligible READ.

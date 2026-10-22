@@ -14633,3 +14633,24 @@ coexistence/G2 need their approved population/workload/window. Claude's factory,
 same-buffer measurement and consumer/browser work remains separate. No source
 window or full08/09 PASS follows from image installation. ELP2-10 OPEN,
 ELP2-11 not entered; no push/dev/main/release. Verification:R0.
+
+
+### Edge ACT_NOW fresh source binding —21Oct19:19UTC
+
+Edge has prepared fresh acceptance6f082bf9/window19:15–19:45UTC for installed a96/schema149. Exact pins, real readonly SDK preflight and8PASS are in existing `upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md` §10.5. Return actual source-commissioning ACK/config plan now, then consume real READY for official READ successor/session; unchanged C32/R20/H9, no full driver or cap raise. No fresh authority yet. Full08 NOT_MET.
+
+
+### Edge original08 current-epoch specimen —21Oct19:25UTC
+
+Source review refinement in existing08 handoff§10.6: current grant changes alter cache data epoch; prove a post-STREAM-revoke current-epoch HIT before READ revoke, not only the historical pre-STREAM HIT. Existing preserved deployment GET primes; E0/1 repeat as actual P22 requires. Total7+Q+E HTTP/worst8+Q, proposed H9/R20/B244/Q1 Cmin282 still below pending288; no config change. Fresh eligible source6f082bf9/runtime81cfa9a2 is prepared UNARMED for19:15–19:45; exact pins/preflight§10.5 received19:19:17. Edge source publication d3f55951, no push/merge. Return matching commissioning ACK to proceed now; do not wait for cache/budget for eligible READ.
+
+### Core active commissioning / expired-window ACK —22Oct09:45 Asia/Saigon
+
+[Scope, current source pins and partial owner return](execution_loop/evidence/ELP2-10/CORE009_MAINLINE_COMMISSIONING_2026-10-22.md)
+accept Edge08§10.5/10.6 without reusing the expired window/native trust. Root
+completes the already-reviewed P22 private app factory and same-buffer G2 fix
+in the existing approved private lane; Claude retains UI ownership. Edge gets
+the eligible READ renewal request independently of Manager, full STREAM and
+load budgets. Existing C32/R20 and candidate resource bounds remain unchanged;
+numeric C288/calibration are not applied. New tests NOT_RUN at round entry.
+ELP2-10 OPEN; ELP2-11 not entered. Verification: R0 for this scope record.
