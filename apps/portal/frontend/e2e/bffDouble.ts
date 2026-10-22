@@ -1106,6 +1106,8 @@ export interface BffDoubleOptions {
   operationsV2?: boolean;
   /** UXM-07 S2: sparse-realistic answers for the V2 overview/blotter/admin/alpha/account/portfolio screens (they override the canonical ones the V1 journeys read). */
   screensV2?: boolean;
+  /** The other five Manager dataset surfaces from the fixture-bff review answerer (populated profile). Off by default: the sparse default is unchanged. */
+  reviewManager?: boolean;
 }
 
 /**
@@ -1127,10 +1129,10 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     // The Manager series and Fleet dataset, and the three advisory governance reads: opt-in for the V2 lane, so the V1 stubs keep their 501.
     const published = answerManager(method, path, search) ?? answerGovernance(method, path, search, requestBody);
     if (published !== null) return published as Answer;
-    // The other five Manager dataset surfaces (fund, portfolio, alpha, account, deployment overviews): the fixture-bff review answerer
-    // serves them from the published canonical template (small scale: no generated universe), so a screen that reads them is stubbed
-    // instead of 501. Same bodies the preview's fixture BFF serves in the populated profile.
-    if (path.includes("/manager/")) {
+    // Opt-in (`reviewManager`): the other five Manager dataset surfaces (fund, portfolio, alpha, account, deployment overviews) from the
+    // fixture-bff review answerer (the populated profile, small scale), so a visual cell that reads them is stubbed instead of 501.
+    // Off by default: the sparse default of the fixture BFF is unchanged.
+    if (options.reviewManager === true && path.includes("/manager/")) {
       const review = answerReviewManager(method, path, search, "populated");
       if (review !== null) return review as Answer;
     }

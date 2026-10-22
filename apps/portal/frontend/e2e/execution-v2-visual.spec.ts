@@ -240,7 +240,7 @@ for (const cell of CELLS) {
       await freezeNondeterminism(page);
       await usePreferences(page, "operations");
       await stubPortalApi(page, "healthy");
-      await stubExecutionBff(page, { operationsV2: true, screensV2: true });
+      await stubExecutionBff(page, { operationsV2: true, screensV2: true, reviewManager: true });
       await stubAdminRoutes(page);
       await stubQuantbtRuns(page);
       if (cell.scoped) await stubScopedBff(page);
