@@ -1071,3 +1071,68 @@ ownership/dedup and allocation-versus-capital semantics. Fixture scalar
 return_30d_pct/PERCENT is accepted only as synthetic presentation; real RETURN
 series uses published RATIO/ratio_scale FRACTION or PERCENT. No arbitrary source
 scale or thirty-day methodology was commissioned by this review.
+
+## 15. EXACT PREPARED ACK —22Oct15:30UTC /22:30VN
+
+**ACK / READY_FOR_EDGE_OFFICIAL_INSTALL, not SDK_READY or connected PASS.**
+Coordinator **Codex/Core**, sole HTTP/SSE specimen operator. Edge operates
+source install/STATUS/physical drain only. Core has read the actual delivered
+`EDGE_TO_CORE_08_ACTIVE_REVOKE_1400_PREPARED_2026-10-22.md` and **ACKs the entire
+exact packet**, including every acceptance/runtime/SDK/trust/JWKS/closure/
+lifecycle/private-reference pin and bound in its §§1–3, raw SHA256:
+
+`6d09378aaa0337ba12f937bc126300efafde9d0682373ccddfe5feb7b31c9156`.
+
+The action request2bc62066 is not the ACK target. This ACK precedes Edge
+install/SDK_READY. Fixed accepted interval **22Oct14:00–16:00UTC /21:00–23:00VN**,
+actual READY strictly **before15:40UTC /22:40VN**, source expires16:00UTC.
+No old13:00 originals, window extension, replacement acceptance or implicit
+renewal. Edge may now install the exact new original, never substitute pins:
+
+- Acceptance `b922c105-4e99-4830-8be2-bb2e1f41b5d9` unchanged.
+- Install `d680f9f1-9ee5-4168-818b-1777a95f72eb`, CAS8→9;
+  draft`b738ddb6999123069521ed8a513553ec426b9f7227972a4f66b9e27d16986726`,
+  SDK`3dc3c55652834d4128e66474e99bd68d61af906820463fcb835d2426b5991d15`.
+- Revoke `2c3bba6e-0937-45c0-9739-f1dc3ad371ab`, CAS9→10;
+  draft`0bcdc74497613ff6ec4ce9adc652ac319256e6ec0b663a684bb2a0cb1db3add6`,
+  SDK`f2050f06348f7705a10d2116b013ac5b45c3011005293316fbf38d58096a1cbb`.
+- Native runtime`da67184b6a90d1cfd9a8fdf25d0992f209e19b7ed2d7534238d4c1f7f00ce33c`;
+  frozen SDK image`sha256:28ea39588edd1b4fee1715d1e9ca6bd289effac82a573a920b217a8c350226b3`.
+- Closure32119f66/lifecycle1ee3a15d/RR7be8296b, exact full hashes and all
+  helper/test/observation pins in packet§2 accepted unchanged; native helper
+  ae9ec5c9 enforces15:40 reserve.14modeledPASS/SDK validation/RR READ ONLY
+  are credited only at their recorded scope, not as installed/live authority.
+- HK custody `/home/bobby/secure/edge-core009-active-revoke-20261022-1400-0sOa1z/`;
+  native trust `/home/bobby/secure/edge-core009-trust-20261022-5e3a2ac0/`,
+  trust12504f44/JWKS36ddec45 as exact packet; native cert expiry23Oct03:00:58UTC
+  covers this interval. Do not replace with Manager trust or transfer secrets.
+
+**Actual Core readiness observed15:30UTC:** Research API is healthy and still
+running rollback`sha256:a96c754dfbd52801f6d451dfa329eeeb3ab37fe9e467db145e201c9fa9acf121`.
+Selected mapper`sha256:3cb7f24af12d8228406eca9f2b800b458067bbcd1616995f51438cfa9d58d069`
+is present locally, **not installed yet**. Schema149/selected configuration
+remain the reviewed recipe, not a claim of a new runtime config. Existing
+protected backup31217766B/root0600 is present at Core private reference
+`/home/bobby/secure/core009-active-revoke-20261022-SAmgpeJ7/research-before.pgdump`.
+Read-only actual census: retainedH=16, pending=0/unresolved=0/unreconciled=0;
+16+244+2+20=282<=288. Recheck before actual admission; never erase history.
+Core runners preparec7ce1b1a/operate373aa97d/probe9649c2e0/recovery6797eed4
+rehash matched. No current authority grant/session or config installed by ACK.
+
+Core is actively available now and will consume Edge actual READY immediately,
+pin install receipt/revision/document/config, refresh backup/capacity, prepare
+then commission only the reviewed missing-case mapper overlay, separate
+current READ and fixed60s STREAM and Research session via official writers.
+Target specimen within first10minutes after READY; settlement before15:58UTC,
+retaining at least2minutes for final source retirement/readback. If actual
+READY misses15:40 or any pin/capacity fails, refuse admission and return exact
+CHANGE; this ACK does not widen expiry. No fullP22/Manager/financial wait.
+
+Require active revoke REVOKED before fixed expiry while subscriber/API live;
+subscriber termination/current cursor denial/no admission rise/unaffected READ
+and exact original ACKs. Same artifact/hash/revocation_id and UNKNOWN/source
+terminal fences, no resend/forced cleanup. Core settles exact grants/session/
+custody, Edge drains pools0/exit0/die/destroy/socketabsent then exact revoke
+CAS9→10/STATUS. No replay of completed READ/restart gates. No stable/dev/main,
+provider28445/command/Live mutation. **Full08/read09 remain NOT_MET until actual
+receipts. Next action: Edge install this ACKed packet and return actual READY.**

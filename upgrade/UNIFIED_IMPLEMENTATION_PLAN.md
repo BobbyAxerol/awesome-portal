@@ -15030,3 +15030,17 @@ SHA256`c7c8774348dcc3c031fdf170a6fba4e81d84a2eeda0968deacd9ca36f2a5a194`.
 Latest Claude fixture-key/source-domain request88286b3c8 reviewed with explicit
 ACCEPT/CHANGE in round receipt§7; fixture scale/window fixes remain Claude-owned.
 <!-- CORE-P0-20261022-1343-END -->
+
+<!-- CORE-EXACT-ACK-1531-BEGIN -->
+### Core exact native08 ACK delivered —22Oct22:31:35VN
+P0 [consolidated§15](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#15-exact-prepared-ack-22oct1530utc-2230vn)
+ACKs PREPARED6d09378aaa0337ba12f937bc126300efafde9d0682373ccddfe5feb7b31c9156,
+install d680f9f1/CAS8→9 and revoke2c3bba6e/CAS9→10, fixed14:00–16:00UTC.
+Actually delivered/read back on HK15:31:35UTC, before15:32 cutoff:
+941be9da267692e577a7846af8ed9bfdaa0a3855bd60c06ed83195dcc5859985.
+Core sole specimen operator. Edge can now install/return actual READY before
+15:40UTC/22:40VN; Core actively prepares backup/custody and waits only actual
+READY, not P22/Manager/financial. Actual rollbacka96 healthy, mapper3cb7 present
+not installed, H16/pending0/unresolved0/unreconciled0, capacity282<=288.
+No grant/session/source activation or connected PASS inferred by ACK.
+<!-- CORE-EXACT-ACK-1531-END -->

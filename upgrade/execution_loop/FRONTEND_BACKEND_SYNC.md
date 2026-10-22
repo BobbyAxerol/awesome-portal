@@ -2328,3 +2328,16 @@ Exact Edge path: `upgrade/evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_TS_
 No fresh PREPARED received at last mailbox check; Edge must return fresh pins
 for14:00–16:00UTC (or explicit CHANGE), then Core exact ACK before install.
 <!-- CORE-P0-20261022-1323-END -->
+
+<!-- CORE-EXACT-ACK-1531-BEGIN -->
+### Core exact native08 ACK actually delivered —22Oct22:31:35VN
+Read request2bc62066 and actual PREPARED6d09378a. Whole-packet exact ACK in
+[consolidated§15](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#15-exact-prepared-ack-22oct1530utc-2230vn),
+actual HK receipt15:31:35UTC/22:31:35VN:
+941be9da267692e577a7846af8ed9bfdaa0a3855bd60c06ed83195dcc5859985.
+Fixed14:00–16:00UTC, READY before15:40. Edge install d680f9f1/CAS8→9 then
+actual READY; Core sole missing-only specimen and settlement, no UI/financial/
+P22 dependency. Actual imagea96 healthy; mapper3cb7 present but not installed;
+fresh custodyH16/0pending/0unresolved/0unreconciled. Full08/read09NOT_MET.
+Do not edit the acknowledged packet/return bytes before exact Edge consumption.
+<!-- CORE-EXACT-ACK-1531-END -->
