@@ -17,7 +17,7 @@ import type { FinancialChartPayload } from "../../../api/financialChart";
 import type { StageDrift } from "../../../hifiInsight";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { NotAvailableLine, SectionPanel } from "../../blocks";
+import { NaWhy, NotAvailableLine, SectionPanel } from "../../blocks";
 import { ChartTools, DivBars, EquityPanel, Spark, type DivBarRow } from "../../charts";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
 import { Na } from "./cells";
@@ -169,14 +169,30 @@ export function PerformanceTab(props: PerformanceTabProps) {
         <Contribution rows={rows} noTotals={props.noTotals ?? null} />
       </SectionPanel>
 
-      {/* Cost drag, forward observation and four charts had no published value: one line instead of two panels, a caption and a dozen "Not published". */}
+      {/* Hi-fi keeps Cost drag and Forward observation as panels; every row says Not published. The four charts with no source stay on one line. */}
+      <div className="exec-alp2-pair">
+        <SectionPanel title="Cost drag" aside="Window">
+          <table className="exec-alp2-gaptable" aria-label="Cost drag">
+            <tbody>
+              <tr><th scope="row">Fees</th><td><Np id="FE-025" /></td></tr>
+              <tr><th scope="row">Funding</th><td><Np id="FE-025" /></td></tr>
+              <tr><th scope="row">Slippage</th><td><NaWhy reason="Fill benchmark not published" /></td></tr>
+            </tbody>
+          </table>
+        </SectionPanel>
+        <SectionPanel title="Forward observation" aside="Not an actual track record">
+          <table className="exec-alp2-gaptable" aria-label="Forward observation">
+            <tbody>
+              <tr><th scope="row">Forward days</th><td><Np id="FE-029" /></td></tr>
+              <tr><th scope="row">Actual days</th><td><Np id="FE-029" /></td></tr>
+              <tr><th scope="row">Mixed return</th><td><Np id="FE-029" /></td></tr>
+              <tr><th scope="row">Mixed score</th><td><Np id="FE-011" /></td></tr>
+            </tbody>
+          </table>
+        </SectionPanel>
+      </div>
       <NotAvailableLine
         facts={[
-          { label: "Fees and funding", id: "FE-025" },
-          { label: "Slippage", why: "Fill benchmark not published" },
-          { label: "Forward and actual days", id: "FE-029" },
-          { label: "Mixed return", id: "FE-029" },
-          { label: "Mixed score", id: "FE-011" },
           { label: "Rolling correlation", id: "FE-029" },
           { label: "Return histogram", id: "FE-029" },
           { label: "Risk utilization", id: "FE-029" },

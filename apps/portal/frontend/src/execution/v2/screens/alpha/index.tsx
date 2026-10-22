@@ -305,9 +305,11 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                     ? view.money.exposure.map((e) => <span key={e.currency} className="exec-alp2-fig"><Dec value={e.value} currency={e.currency} /></span>)
                     : <Na />}
               </Fig>
+              <Fig label="Return" basis="Windowed; methodology per source"><Np id="FE-006" /></Fig>
+              <Fig label="Max drawdown" basis="Needs the window"><Np id="FE-025" /></Fig>
+              <Fig label="Regime fit" basis="Policy not set"><Np id="FE-011" /></Fig>
             </dl>
             )}
-            {tab === "replay" ? null : <NotAvailableLine facts={[{ label: "Return", id: "FE-006" }, { label: "Max drawdown", id: "FE-025" }, { label: "Regime fit", id: "FE-011" }]} />}
 
             <div className="exec-alp2-tabbar">
               <div ref={stripRef} className="exec-alp2-tabs" role="tablist" aria-label="Alpha detail">

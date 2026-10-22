@@ -563,3 +563,25 @@
 .exec-alp2-scope tbody td {
   text-align: right;
 }
+
+/* Cost drag and Forward observation: label left, value right, one row per figure. */
+.exec-alp2-gaptable {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-alp2-gaptable th {
+  padding: 6px 0;
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+  border-bottom: 1px solid var(--line-soft);
+}
+.exec-alp2-gaptable td {
+  padding: 6px 0;
+  text-align: right;
+  border-bottom: 1px solid var(--line-soft);
+}

@@ -176,12 +176,11 @@ describe("current facts", () => {
     const facts = screen.getByLabelText("Current facts");
     expect(within(facts).getByText("+1,120.80")).toBeTruthy();
     expect(facts.textContent).toContain("All stages, current facts");
-    // The windowed figures are ONE line under the strip, not a "Not published" tile each (UX audit A).
-    expect(facts.textContent).not.toContain("Return");
-    const lines = screen.getAllByTestId("not-available-line").map((line) => line.textContent ?? "");
-    expect(lines.some((text) => text.includes("Not available: Return, Max drawdown, Regime fit"))).toBe(true);
-    expect(lines.join(" ")).toContain("Not published FE-006");
-    expect(lines.join(" ")).toContain("Not published FE-025");
+    // The windowed figures keep their tiles (hi-fi), each Not published with its id.
+    for (const [label, id] of [["Return", "FE-006"], ["Max drawdown", "FE-025"], ["Regime fit", "FE-011"]] as const) {
+      const tile = within(facts).getByText(label).closest("div")!;
+      expect(tile.textContent, label).toContain(`Not published (${id})`);
+    }
   });
 });
 
