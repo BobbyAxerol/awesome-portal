@@ -118,6 +118,24 @@ new product screen.
   are explicit 400s, not silently ignored. `ALL` and special negative workspaces keep their gaps.
 - Three known Portfolio account aliases resolve to existing Account fixtures. This fixes links,
   **not** an economic tie-out across the historical fixture books. Unmatched IDs stay refused.
+- **SIMULATED derived metrics** (added 22 October 2026; every metric keeps `methodology_ref` / provenance `FIXTURE_LAB`,
+  availability AVAILABLE unless stated). Exact decimals by integer arithmetic only; every sum, ratio and share stays inside
+  ONE economic partition (domain, currency, basis, profile). `query_options.metric_keys` and `sort_fields` list the three
+  row keys; `economic_partition_required_for` adds the two money ones.
+
+| key | level | rule (SIMULATED) | real Edge source expected |
+|---|---|---|---|
+| `balance_total` | row (per partition) | allocation + net_pnl of that partition; typed absence when either is unpublished | account/ledger balance snapshot |
+| `equity_30d_end_value` | row (per partition) | balance_total + unrealized_pnl; typed absence when unrealized PnL is unpublished (about 1 row in 7) | last point of the 30-day equity series |
+| `return_30d_pct` | row | net_pnl * 100 / allocation, 6 places truncated, unit PERCENT, currency null; exact `0` when net_pnl is a true zero | certified 30D return with methodology |
+| `net_pnl` | capital statement (per partition) | sum of that partition's rows' net_pnl, window null | fund/portfolio ledger PnL for the selected window |
+| `return_30d_pct` | capital statement | net_pnl * 100 / initial_funds (denominator = initial_funds); typed absence for the second partition | TWR or money-weighted return on contributed capital |
+| `max_drawdown_pct` | capital statement | first partition exact `0` (true zero), others a deterministic value -2.00 to -19.99 | peak-to-trough on the NAV series |
+| `current_nav` | group by `portfolio_id` (per partition) | sum of the members' balance_total in that partition | portfolio NAV statement |
+| `return_30d_pct` | group | group net_pnl * 100 / group allocation | portfolio return |
+| `max_drawdown_pct` | group | deterministic negative; typed absence for about 1 group in 6 | portfolio NAV drawdown |
+| `concentration_hhi` | group | sum of squared allocation shares of the members in that partition, unit RATIO, 0..1; typed absence when any allocation is unpublished | portfolio concentration (HHI) publication |
+
 - This does not fill a missing contract or a hard-coded UI placeholder. Consumer gaps belong in
   the Claude handoff; they must not be hidden by relabelling synthetic source facts as qualified.
 
