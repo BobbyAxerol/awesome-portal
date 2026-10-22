@@ -1036,6 +1036,15 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Return review22Oct11:50UTC:** [Seven-row review + NEW native preparation](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REVIEW_2026-10-22.md)
+raw d8bc917b delivered/hash-verified at Core. New12:00–12:30UTC preparation
+has fresh install247fa469/revoke116605c1,12modeled PASS + SDKdb0 validation +
+actual RR READ ONLY8/revoked preflight/pools0. UNARMED/ACKnull, no install or
+connected test. Core must return matched new pins/ACK, not the expired slot.
+All7rows reviewed: available source facts accepted; exact remaining factory/
+reducer/command/P22/workload CHANGE actions stay in original phases. Financial/
+Manager/G2 cannot hold eligible native preparation; full08/read09 NOT_MET.
+
 **Owner coordination22Oct:** [Single TS/PM→Edge→Core request](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md)
 is the current cross-owner action index. PM is a TS upgrade component; Edge is
 Core's single integration counterpart and owns return review/distribution.

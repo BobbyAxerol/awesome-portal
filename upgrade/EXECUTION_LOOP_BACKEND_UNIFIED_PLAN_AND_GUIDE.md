@@ -30896,6 +30896,122 @@ within the same owner chain. Current task does not activate native or renew
 10:30–11:00 slot. Full07/08/read09 and PM full03/04/13–16 OPEN, not a reason
 to stop other independently approved work or open another ad hoc phase.
 
+### Consolidated Core return review and fresh native preparation —22Oct2026
+
+**IN_PROGRESS / original08, read09 and correlated07/01/06.** Bobby directs
+Edge to verify the delivered seven-row Core return and continue runnable work;
+return exact CHANGE requests for missing Core-owned implementation. Actual
+HK/SGP bytes match supplied raw SHA256
+`d5f22ff327111695a9962b3973cafbf894ca3eb499809b0d215792f9955a3026`.
+All471lines read; seven answered rows are not seven READY/accepted runtimes.
+Core offers NEW12:00–12:30UTC conditional availability, not execution ACK.
+Previous10:30–11:00UTC packet remains expired and immutable/UNARMED.
+
+Owned scope now: fresh private native proposal/CAS command IDs for the new
+finite slot, reuse frozen SDK/lifecycle/trust, modeled correctness + SDKdb0
+validate + actual RR READ ONLY predecessor preflight; no arm/install/listener,
+grant/session or connected request from preparation. Review actual Core
+source/image/public trust pins and current PM committed runbook/evidence;
+send one row-wise ACCEPTED/CHANGE reply with exact producer/consumer actions
+and next checkpoint, not seven new scattered packets. PM is part of TS and
+Edge remains the single Core counterpart. Preserve peer WIP/original custody.
+Guide: EPG10-08 in upgrade_v1.2; existing native preparation and Manager/G2
+readiness are reused, not new product contracts or another framework.
+
+Tests/gates: fresh trust covers slot, native8/revoked/natural key and exact
+DB/system/catalogue/fingerprint/admission/control still match; helper stays
+ACKnull and DB/listener-free validate. No secret/key copy, migration, image
+build, provider28445/stable/dev/command/Live change or absolute measurement.
+Record actual tests/cleanup and real hashes before R0 Markdown publication;
+manual drafts stay outside Git. Rollback preparation leaves revoked8 intact.
+New source runtime activation still requires exact matched Core ACK and the
+approved execution boundary, never inferred from a PREPARED row. Full08/read09
+NOT_MET; other dependencies cannot block this independent preparation.
+
+**Actual11:50:49UTC / REVIEW_DELIVERED_AND_HASH_VERIFIED:**
+[One cumulative seven-row review and fresh PREPARED](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REVIEW_2026-10-22.md)
+218lines/17352B/rawSHA256
+`d8bc917b9d51ca515e5952a483bfc561138e30d2db5a9677c64a81ba525b7485`
+actually written to SGP canonical ELP2-10, hash readback PASS; Core Unified,
+sync and original19Oct mailbox appended, exact old prefixes/index preserved.
+No private file/source/key copied; Core has the exact new pins and requested
+11:55UTC ACK/checkpoint, not a vague wait. Seven row-wise ACCEPTED facts plus
+CHANGE requests distinguish answered/source/prepared/installed/connected.
+Next Core native action is exact matched ACK/candidate/rollback/config/backup;
+other source-independent Core factory/reducer/command/driver work is explicitly
+runnable now, not external debt. Edge remains responsible for correlating
+TS/PM economic authority/current mapping/target and numeric-source returns.
+
+Actual new preparation path
+`/home/bobby/secure/edge-core009-active-revoke-20261022-A4r4gh/` retains14files
+0700dir/0600Bobby/regular/nlink1. Fresh install247fa469/CAS8→9/raw25800df3/
+SDKc582bf1d, revoke116605c1/CAS9→10/rawab3e5fb8/SDK8f5782a4;
+helper/PREPAREDd02dc797 identical and ACKnull. New slot12:00–12:30UTC;
+revoke-maintenance23Oct12:30 is recovery only. Old pSaE4LlC/expired slot is
+unaltered history. Frozen runtime da67184b/lifecycle1ee3/trust12504f44/image28ea
+unchanged; no credential/key copied or authority granted. Actual current
+native8/revoked/old84d18247 manifest2ddd06b8/document0f20ec80/natural key,
+DB live_data_executor/system7674585245102796834/fingerprint5a67/control/
+catalogue/admission/mapping1/policy1 independently reverified read-only.
+
+Tests ACTUALLY RUN: three capped --rm correctness workers, aggregate ceiling
+2CPU/1024MiB; modeled12PASS/0FAIL; frozen SDK validateEXIT0/stderr0/db0/
+listenerfalse; actual RR READ ONLY preflightEXIT0/stderr0/pools[0,0]/issued0/
+authority_changedfalse. New private evidence8d11cbce/40e15467/ebf379f2 has
+full hashes in reply. No performance claim, real STREAM/revoke or image build.
+Ten Core source hashes match actual committed HEAD348c9668 and returned pins;
+five current-human/composition plus four measurement artifacts are source,
+not installation. Old success103/9/56tests stays historical, not rerun totals.
+
+Concurrent PM progress reviewed: da47a5a6 candidate qualification,9dc20b35
+actual-wheel generation validation; peer advanced to337e7140 while reviewing.
+Runbook32d37da0 historical at9dc is now committed dfd6fcfc; current three
+JSON evidence remain4434db7f/88f3ed87/3e29f039, command descriptor83d251e8
+and transport3885c72d unchanged. PM-only candidate44PASS/c6f79e31 was already
+cleaned by its owner, not retained rollout image or connected finance proof.
+Exact wire/current-access/read-policy/dedup/correction source interfaces are
+returned to Core now; no more request for already existing command wire,
+schema/ACL/union runner/accounts. PM main is concurrently UU/unmerged during
+TS–PM integration; no PM file/index/merge state is edited or committed here.
+Owning existing PM07/net-PnL/target requests remain their intake; one Edge
+review correlates Core inputs rather than a second Core→PM data path.
+
+Actual runtime readback:3HK RustEdges d6aa7a51/config6180b9bf/cd79e9c6/
+98a191c7 and operationalnative28ea/configf33f19ca all running/restart0.
+Core Research a96/restart0 now reports compose config b5a600e9; old scope is
+expired and remains NOT_READY. Mapper3cb7 is not P22 installation. No source
+28446 socket, install/grant/session/command/Live/provider28445/stable/dev write.
+This is a selected-service report, not a claim that peer host jobs stopped.
+Docker inventory112images/43active,592BuildKit/68.34GB is shared state;
+own3verifier containers absent, no image/cache created, no shared prune.
+HK disk used334704295936→334367817728B/free184212606976→184549085184B,
+shared movement, not claimed own reclaim. Scoped scratch re-pin script removed;
+retain exact new proposal/trust/bounded evidence for current review and original
+custody/history. No test resources on SGP, only sanitized Markdown delivery.
+
+Verification:R0 explicit3Markdown paths/diff/indexedlinks/secret/sourcepin/
+tracking checks before coherent Bobby local commit; zero GitHub CI minutes,
+no push/merge. Peer10line main C5 hunk/+56bindingowner/+20−3READaddendum and
+three WIP file hashes fe4fcfc7/1cf04b20/109659d2 preserved/excluded. Canonical
+Edge54c6f5f3/feat-manager-v2-paper-read, active upgrade7b0d085c before commit,
+six active feature worktrees retained, TS canonical668e1032 unchanged.
+Stable /srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy
+and active/explicit rollback a96/qualified candidate3cb7 retention unchanged.
+No active worktree/branch cleanup is appropriate for this ongoing campaign.
+
+Owned unarmed preparation/review/delivery complete; Full08/read09 NOT_MET.
+Core exact new ACK/config/rollback and genuinely current financial/Manager/
+P22/measurement inputs retain their specific owner gates. Do not promote09
+connected/10cutover/11acceptance or restart completed READ/restart specimens.
+Continue eligible binding immediately on actual accepted inputs within its
+existing execution authority; do not infer activation from this preparation.
+
+Final R0 PASS:3explicit Markdown paths/6indexedlinks+anchors/7rows/
+hash+secret+identity+diff+peer-scope checks; execution tracking reconciliation
+PASS. Core cumulative return rechecked11:54UTC remains exactd5f22ff3, no new
+matched ACK at that observation; delivered review remains exactd8bc917b.
+Do not confuse successful delivery/preparation with Core ACK or source READY.
+
 
 
 
