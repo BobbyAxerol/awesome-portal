@@ -334,7 +334,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
       <header className="exec-ov-head">
         <div>
           <h1 className="exec-ov-title">{snapshot?.actorName ? `Overview, ${snapshot.actorName}` : heading}</h1>
-          <p className="exec-ov-scope" data-testid="overview-scope">Environment and window apply to NAV, Net PnL, Return and the chart. Lists and counts are current.</p>
+          <p className="exec-ov-scope" data-testid="overview-scope">Environment and window apply to NAV, Net PnL, Return and the chart. Lists and counts are current. Scope: every portfolio you may see. Basis: each currency on its own, never converted or summed.</p>
         </div>
         <div className="exec-ov-chips">
           <Flag kind={flag.kind} label={mode === "busy" ? `Busy, ${needs?.items.length ?? 0} ranked` : flag.label} size="sm" />
