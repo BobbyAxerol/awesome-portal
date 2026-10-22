@@ -54,3 +54,28 @@ Read in full: claude.ai/artifact/X7Aqzz9rEA4Q51C7ifnKAQ ("Execution V2 Screens",
 **Honest cause.** Reusable parts exist in the code (CommandBar, ContextBar, CapitalFlow, JourneySpine, DivBars, a Contributors model) but the three screens render them only when a read carries the data, and DEBT-048 removed controls that did nothing. The artifact's own "Source not qualified" variant shows the intended answer: keep the control or cell, mark it unavailable with the reason. So the layout gap is a build decision of mine, not a data limit and not a permission limit on bobby. The Concepts artifact is explicitly "not approved"; the Screens artifact adopts Cmd K, fleet board/map, capital flow, spine, ribbon and cockpit as highlights, so the adopted scope needs Bobby's confirmation per item.
 
 DEBT-UXM07-049 stands. DEBT-UXM07-050 is narrowed to: Fleet Archived tab content, Fleet Map view, Since your last visit digest.
+
+## 6. Remaining screens vs the V2 Screens artifact (read-only comparison by three subagents, 2026-10-22)
+
+Status of this section: SUBAGENT_REPORT. I opened Overview, Portfolios and Fleet myself (section 5) and fixed them. The rows below come from the agents' reading of the design frames and the 1440 baselines; I verified only that the baselines named exist (Users and Trade replay do; there is no Accounts-list baseline). Fixture data is sparse, so a value that differs is not counted; only a missing element is.
+
+**One pattern, every screen:** the design keeps each tile, panel, column and action and writes "Not available" plus a reason in it. V2 collapses what is unpublished into one "Not available: ..." line or drops the element. Same cause as DEBT-UXM07-049.
+
+| Screen | What is collapsed or dropped (HIGH only) |
+|---|---|
+| Alpha 360 | KPI strip has 2 of 4 tiles (Return, Max drawdown, Regime fit folded into a line); lifecycle R1..Canary cards are dashed empties instead of per-card Not available; no Cost drag panel; no Forward observation panel; Performance chart is equity, not Net PnL, with no drawdown strip |
+| Portfolio 360 | KPI set is Alphas/Deployments/Accounts/Allocated/NAV instead of NAV/Net PnL/Return/Drawdown; no Capital panel; no Concentration (HHI) panel; one stacked chart pair instead of one Net PnL/Return/NAV chart with drawdown; Allocations flow and Actions drawer have no baseline (untested) |
+| Account 360 | Third tile renamed and has no per-cell rows (PM capital this sleeve); drawdown sub-panel dropped; raw ids (pf_core, dep_btc_live) instead of names; Recon and Physical frames have no baseline |
+| Compare | Metrics table replaced by identity rows; NAV, Net PnL, Return, Max drawdown, Score gone into a footnote; Portfolios/Alpha mode tabs missing; basis text printed twice (defect) |
+| Blotter | Columns dropped: Deployment, Filled/Qty, Avg price, Fee; Export is active while the design says "not available yet"; funnel is empty |
+| Operations | KPI tiles differ (design: Unknown outcomes, Pending receipts, Display catching up, Open exceptions); columns INTENT and DISPLAY dropped |
+| Incident | Design is a full page with state stepper, Evidence, Operations taken, Resolution gates, Timeline; current is a drawer with one "Not available" line |
+| Users | Roster lacks Role preset, Last seen, per-row actions, Invite; 123 accounts shown vs 7 in the design (data, not a defect) |
+| Access | "What you can do" shows 6 allowed rows with raw capability ids instead of 13 actions with Why text; role-preset matrix and SEE/DECIDE grid absent |
+| Admin | Right detail panel absent; row subtext is a raw slug |
+| Trade replay | Baseline route is `alpha_btc_trend?tab=replay` inside the Alpha 360 shell; the design is a screen of its own with candles, TP/SL boxes, stage/decision/incident lanes and a 10-row log. Whether a standalone screen is wanted is a design question |
+| Accounts list | No baseline exists, so the design frame is unverified |
+
+Design-reference caveats: `hl-ops-drawer.jpg` shows Portfolio "Core" Overview, not an Operations drawer (mis-exported frame); `hl-admin`, `hl-replay`, `hl-access`, `hl-compare`, `hl-blotter` duplicate their `-mgr` frames.
+
+Registered as DEBT-UXM07-051. Not started: each screen needs its own pass (panel by panel, per-cell Not available, tests, baseline), about the size of the three done today.

@@ -228,6 +228,16 @@
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go)",
       "status": "OPEN (found 2026-10-22; not previously tracked)"
+    },
+    {
+      "id": "DEBT-UXM07-051",
+      "title": "The remaining V2 screens collapse unpublished tiles, panels, columns and actions into one 'Not available' line instead of keeping them with per-cell reasons",
+      "where": "Alpha 360, Portfolio 360, Account 360, Compare, Blotter, Operations, Incident, Users, Access, Admin vs V2 Screens artifact; see HIFI_LOWFI_GAP_AUDIT_2026-10-22.md section 6",
+      "consequence": "Same as DEBT-049: the manager layout in the design changes with data. No data effect. Findings are subagent reports, partly unverified by Claude.",
+      "proposed": "One pass per screen: restore the element with 'Not available' and its reason, update tests and baseline. Order by manager value: Portfolio 360, Alpha 360, Compare, Operations, Blotter, Account 360, Incident, Access, Users, Admin. Trade replay and Accounts list need a design decision and a baseline first.",
+      "opened": "2026-10-22",
+      "owner": "Claude (build, fixture-only); Bobby (go, order)",
+      "status": "OPEN"
     }
   ],
   "closed": [
