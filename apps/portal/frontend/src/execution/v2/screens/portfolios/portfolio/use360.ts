@@ -23,6 +23,9 @@ import { useMemo } from "react";
 
 import { environmentsOf, readDeployments, type Environment } from "./model";
 import { useRead } from "../useRead";
+import type { ManagerDatasetQuery } from "../../../../api/managerDatasetQuery";
+import { useManagerDataset } from "../../manager/useManagerDataset";
+import { servesDataset } from "../PartitionFigures";
 import type { ManagerSeriesQuery } from "../../../readers/managerSeries";
 import { useManagerSeries } from "../../series/useManagerSeries";
 
@@ -77,6 +80,17 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
   );
   const nav = useManagerSeries(api, enabled && ready !== null, navQuery);
 
+  // The portfolio's Manager dataset (PORTFOLIO surface, grouped by portfolio so its own totals come as a group) for the selected
+  // environment and the page window: capital statements and Net PnL per economic partition. Same port as everything else.
+  const datasetQuery = useMemo<ManagerDatasetQuery | null>(
+    () => (navWindow === null ? null : {
+      surface: "PORTFOLIO", id: portfolioId, environment: selected, window: navWindow, groupBy: ["portfolio_id"], limit: 1,
+      ...(ready?.workspaceId ? { workspaceId: ready.workspaceId } : {}),
+    }),
+    [selected, navWindow, portfolioId, ready?.workspaceId],
+  );
+  const dataset = useManagerDataset(api, enabled && ready !== null && servesDataset(api), datasetQuery);
+
   const ledgers = {
     live: useRead(api, enabled && (visited.allocations || selected === "live") && present.includes("live"), `ledger|${portfolioId}|live`, (scoped) => scoped.getCapitalLedger(portfolioId, "live")),
     paper: useRead(api, enabled && (visited.allocations || selected === "paper") && present.includes("paper"), `ledger|${portfolioId}|paper`, (scoped) => scoped.getCapitalLedger(portfolioId, "paper")),
@@ -97,7 +111,7 @@ export function usePortfolioReads(api: ExecutionApi, portfolioId: string, enable
     (scoped) => scoped.listOperationalQueueV2({ targetType: "PORTFOLIO", targetId: portfolioId, limit: 10 }),
   );
 
-  return { resource, capital, chart, nav, ledgers, correlation, operations, selected, range, present };
+  return { resource, capital, chart, nav, dataset, ledgers, correlation, operations, selected, range, present };
 }
 
 export type PortfolioReads = ReturnType<typeof usePortfolioReads>;
