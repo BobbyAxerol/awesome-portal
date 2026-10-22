@@ -397,7 +397,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     );
   })();
 
-  const unpublishedList = datasetMode ? [FE.map, FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST;
+  // Group by is a control only when the dataset can group; otherwise the gap is one word on this line, not a disabled select.
+  const canGroup = datasetMode && groupOptions.some((option) => option.field !== null);
+  const unpublishedList = datasetMode ? [...(canGroup ? [] : [FE.group]), FE.map, FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST;
   const unpublishedView = (fact: { fe: string; what: string }) => (
     <div className="exec-fleet-nppanel" role="status">
       <strong>{fact.what}</strong>
@@ -415,8 +417,6 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
           <span className="exec-fleet-seg" role="group" aria-label="View">
             <button type="button" className="exec-fleet-segbtn" aria-pressed={tableView} onClick={() => url.set({ view: null })}>Table</button>
             <button type="button" className="exec-fleet-segbtn" aria-pressed={boardView} onClick={() => url.set({ view: "board" })}>Board</button>
-            <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} disabled aria-describedby={reasonId}>Map</button>
-            <GapWhy name="Why Map is off" gap={FE.map.fe} rows={[notPublished(FE.map)]} next={null} />
           </span>
           {sourceChip}
           {streamOn && scope !== null ? (
@@ -589,9 +589,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 </select>
               )}
             </label>
-            <label className="exec-fleet-field">
-              <span className="exec-fleet-sr">Group by</span>
-              {datasetMode && groupOptions.some((option) => option.field !== null) ? (
+            {canGroup ? (
+              <label className="exec-fleet-field">
+                <span className="exec-fleet-sr">Group by</span>
                 <select
                   className="exec-fleet-select"
                   value={datasetFilters?.group ?? ""}
@@ -600,12 +600,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 >
                   {groupOptions.map((option) => <option key={option.id} value={option.field ?? ""}>{option.label}</option>)}
                 </select>
-              ) : (
-                <select className="exec-fleet-select" disabled aria-describedby={reasonId} value="">
-                  <option value="">Group: none</option>
-                </select>
-              )}
-            </label>
+              </label>
+            ) : null}
             <span className="exec-fleet-grow" />
             <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />
           </div>}

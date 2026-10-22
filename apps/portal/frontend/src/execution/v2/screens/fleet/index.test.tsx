@@ -156,10 +156,11 @@ describe("identity table", () => {
   it("a deep link to Map explains itself and offers the Table; it asks nothing", async () => {
     const { api, getAlphaFleet } = makeApi();
     mount(api, "/execution/fleet?view=map");
-    expect(screen.getAllByText("Map").length).toBeGreaterThan(1);
+    // The Map segment is gone (the gap is one word on the "Not available:" line); the deep link still names itself once.
+    expect(screen.getAllByText("Map")).toHaveLength(1);
     expect(screen.getAllByText("Not published (FE-035)").length).toBeGreaterThan(0);
     expect(getAlphaFleet).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Map" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Back to Table" }));
     await loaded();
     expect(where()).toBe("/execution/fleet");
@@ -868,14 +869,14 @@ describe("board view", () => {
     };
   };
 
-  it("the Board button is a real toggle that writes view=board, and Table clears it; Map stays disabled", async () => {
+  it("the Board button is a real toggle that writes view=board, and Table clears it; there is no Map segment", async () => {
     const { api } = makeApi();
     mount(api);
     await loaded();
     const boardBtn = screen.getByRole("button", { name: "Board" });
     expect(boardBtn.getAttribute("aria-pressed")).toBe("false");
     expect(boardBtn.hasAttribute("disabled")).toBe(false);
-    expect(screen.getByRole("button", { name: "Map" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
     fireEvent.click(boardBtn);
     await board();
     expect(search().get("view")).toBe("board");

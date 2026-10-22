@@ -112,11 +112,9 @@ describe("not published: today's screen, exactly", () => {
       expect(legacy.length).toBeGreaterThanOrEqual(1);
       expect(isLegacyTable()).toBe(true);
       expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
-      // the control set is unchanged: Group is the disabled "Not published (FE-012)" select, Health is a plain select, Sort has the fleet words
-      const group = screen.getByRole("combobox", { name: "Group by" }) as HTMLSelectElement;
-      expect(group.disabled).toBe(true);
-      // The reason is the line the select is described by (and its "?" disclosure), not a hover.
-      expect(document.getElementById(group.getAttribute("aria-describedby") ?? "")?.textContent).toContain("Group by");
+      // The control set: Group by is not drawn as a disabled select (the gap is one word on the "Not available:" line), Health is a plain select, Sort has the fleet words.
+      expect(screen.queryByRole("combobox", { name: "Group by" })).toBeNull();
+      expect(document.querySelector(".exec-fleet-unpub")?.textContent).toContain("Group by");
       expect(screen.getByRole("combobox", { name: "Health" })).toBeTruthy();
       const sort = screen.getByRole("combobox", { name: "Sort" }) as HTMLSelectElement;
       expect([...sort.options].map((option) => option.textContent)).toEqual([
