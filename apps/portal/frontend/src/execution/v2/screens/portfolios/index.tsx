@@ -40,7 +40,7 @@ import {
   ROW_CAP, SORT_KEYS, branchReasonText, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
   type DomainFilter, type SortKey,
 } from "./listModel";
-import { OPTIONAL_COLUMNS, PortfolioTable, UNPUBLISHED, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
+import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
 import { useRead } from "./useRead";
@@ -74,14 +74,9 @@ const SORT_LABEL: Readonly<Record<SortKey, string>> = {
 };
 
 const LOAD_MORE_REASON = "The read publishes no cursor.";
-/** What the register does not carry, said once (the ids and reasons are in the line's title). */
+/** What the register does not carry and has no column for, said once (the five measures are columns). */
 const UNPUBLISHED_MEASURES: readonly UnavailableFact[] = [
-  { label: "NAV", id: "FE-013" },
-  { label: "Net PnL", id: "FE-005", why: "Windowed; needs FE-025" },
-  { label: "Return", id: "FE-006", why: "Windowed; methodology is per source" },
-  { label: "Drawdown", id: "FE-013", why: "Needs the NAV series" },
-  { label: "Concentration", id: "FE-005" },
-  { label: "Score", id: "FE-011" },
+  { label: "Score", id: "FE-011", why: "Policy not set" },
 ];
 const SORT_RULES: readonly (readonly [string, string])[] = [
   ["Money", "Sorts inside one currency; pick the currency first"],
@@ -313,7 +308,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
               <summary className="exec-pf-btn">Columns</summary>
               <div className="exec-pf-menu" role="group" aria-label="Columns">
                 <label className="exec-pf-menuitem"><input type="checkbox" checked disabled title="Portfolio is always shown" /> Portfolio</label>
-                {OPTIONAL_COLUMNS.filter((c) => UNPUBLISHED[c.id] === undefined).map((c) => (
+                {OPTIONAL_COLUMNS.map((c) => (
                   <label key={c.id} className="exec-pf-menuitem">
                     <input type="checkbox" checked={!hidden.has(c.id)} onChange={(event) => toggleColumn(c.id, event.target.checked)} /> {c.label}
                   </label>

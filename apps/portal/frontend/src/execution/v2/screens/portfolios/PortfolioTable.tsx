@@ -13,8 +13,8 @@ import { Link } from "react-router-dom";
 import { CardsTable, type CardsColumn, type CardsSort } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
-import { PF_FE, type Unpublished } from "./fe";
-import { Absent, MoneyList, Np } from "./format";
+import { PF_FE, npText, type Unpublished } from "./fe";
+import { Absent, MoneyList } from "./format";
 import type { PortfolioRow, SortKey } from "./listModel";
 import type { PortfolioRoutes } from "./routes";
 import { COMPARE_OFF_REASON } from "./routes";
@@ -48,8 +48,9 @@ export const OPTIONAL_COLUMNS: readonly ColumnSpec[] = [
 ];
 
 /**
- * Measures the read does not publish. They are not drawn as five columns of "Not published": the screen names them once
- * ("Not available: NAV, Net PnL, ..."). The day a fact is published, delete it from this table and add its `cell` case.
+ * Measures the read does not publish. They stay as columns (hi-fi and the "Source not qualified" frame keep every column
+ * and print "Not available" in each cell, the request id behind the cell's disclosure). The day a fact is published,
+ * delete it from this table and add its `cell` case.
  */
 export const UNPUBLISHED: Readonly<Partial<Record<ColumnId, Unpublished>>> = {
   nav: PF_FE.nav,
@@ -150,7 +151,7 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
         </span>
       ),
     },
-    ...OPTIONAL_COLUMNS.filter((c) => !hidden.has(c.id) && UNPUBLISHED[c.id] === undefined).map<CardsColumn<PortfolioRow>>((c) => ({
+    ...OPTIONAL_COLUMNS.filter((c) => !hidden.has(c.id)).map<CardsColumn<PortfolioRow>>((c) => ({
       key: c.id,
       label: c.label,
       numeric: c.numeric,
@@ -174,7 +175,7 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
 
 function cell(id: ColumnId, row: PortfolioRow) {
   const fact = UNPUBLISHED[id];
-  if (fact) return <Np fact={fact} />;
+  if (fact) return <Absent reason={`${npText(fact)}: ${fact.what}`} />;
   switch (id) {
     case "owner":
       return row.owner ?? <Absent reason="owner not published" />;

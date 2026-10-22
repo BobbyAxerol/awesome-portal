@@ -93,16 +93,22 @@ describe("register", () => {
     expect(cell(pilot, "Allocations")).toBe("0");
   });
 
-  it("names NAV, Net PnL, Return, Drawdown, Concentration and Score ONCE, with their requests in the title, and draws no column for them", async () => {
+  it("keeps NAV, Net PnL, Return, Drawdown and Concentration as columns (hi-fi), each cell Not available with its request id; Score is named once", async () => {
     mount(makeApi().api);
     await loaded();
-    for (const row of bodyRows()) for (const label of ["NAV", "Net PnL", "Return", "Drawdown", "Concentration"]) expect(row.querySelector(`td[data-l="${label}"]`), label).toBeNull();
+    const ids: Record<string, string> = { NAV: "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025", Concentration: "FE-005" };
+    for (const row of bodyRows()) {
+      for (const [label, id] of Object.entries(ids)) {
+        const td = row.querySelector(`td[data-l="${label}"]`);
+        expect(td, label).not.toBeNull();
+        expect(td?.textContent, label).toContain("Not available");
+        expect(td?.textContent, label).toContain(`Not published (${id})`);
+      }
+    }
     const line = screen.getByTestId("not-available-line");
     expect(screen.getAllByTestId("not-available-line")).toHaveLength(1);
-    expect(line.textContent).toContain("Not available: NAV, Net PnL, Return, Drawdown, Concentration, Score");
-    const title = whyText(line);
-    for (const id of ["FE-013", "FE-005", "FE-006", "FE-011"]) expect(title, id).toContain(`Not published (${id})`);
-    expect(document.body.textContent).not.toMatch(/Not published \(FE-005, FE-025\)/);
+    expect(line.textContent).toContain("Not available: Score");
+    expect(whyText(line)).toContain("Not published (FE-011)");
   });
 
   it("treats Unallocated as a bucket: not linked, not selectable, every figure Not published", async () => {
@@ -133,7 +139,7 @@ describe("register", () => {
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Compare", "Portfolio", "Owner", "State", "Allocations", "Deployments", "Allocated capital",
+        "Compare", "Portfolio", "Owner", "State", "Allocations", "Deployments", "Allocated capital", "NAV", "Net PnL", "Return", "Drawdown", "Concentration",
       ]);
     }
     expect(search().has("hide")).toBe(false);
@@ -151,7 +157,7 @@ describe("register", () => {
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Compare", "Portfolio", "Owner", "State", "Domain", "Allocations", "Deployments", "Allocated capital",
+        "Compare", "Portfolio", "Owner", "State", "Domain", "Allocations", "Deployments", "Allocated capital", "NAV", "Net PnL", "Return", "Drawdown", "Concentration",
       ]);
     }
     expect(table().className).toBe("exec-cards");
@@ -206,11 +212,11 @@ describe("header, banners and footer", () => {
     expect(screen.getAllByText("6 portfolios").length).toBeGreaterThan(0);
   });
 
-  it("never adds a total NAV for the set: NAV is on the one 'Not available' line", async () => {
+  it("never adds a total NAV for the set: every NAV cell is Not available", async () => {
     mount(makeApi().api);
     await loaded();
     expect(screen.queryByText(/Total NAV/)).toBeNull();
-    expect(screen.getByTestId("not-available-line").textContent).toContain("NAV");
+    for (const row of bodyRows()) expect(cell(row, "NAV")).toContain("Not available");
   });
 
   it("switches to a compact table from the toolbar and the URL", async () => {
@@ -288,8 +294,8 @@ describe("search, domain, currency and sort", () => {
     // Money sorts inside one currency: with none chosen the head is not a control and says why.
     expect(within(head("Allocated capital")).queryByRole("button")).toBeNull();
     expect(head("Allocated capital").getAttribute("title")).toBe("Money sorts inside one currency; pick the currency first");
-    // The unpublished measures are not columns at all.
-    expect(within(table()).queryByRole("columnheader", { name: "NAV" })).toBeNull();
+    // The unpublished measures are columns with no sort: the head is not a control.
+    expect(within(head("NAV")).queryByRole("button")).toBeNull();
   });
 
   it("does not repeat the Context or the domain under the title: the bar and the Domain control already say them", async () => {
@@ -364,8 +370,8 @@ describe("columns", () => {
     await loaded();
     const menu = screen.getByRole("group", { name: "Columns" });
     expect((within(menu).getByRole("checkbox", { name: "Portfolio" }) as HTMLInputElement).disabled).toBe(true);
-    // The unpublished measures are not in the chooser: there is no column to bring back.
-    expect(within(menu).queryByRole("checkbox", { name: "NAV" })).toBeNull();
+    // The unpublished measures are in the chooser like any other column.
+    expect(within(menu).getByRole("checkbox", { name: "NAV" })).not.toBeNull();
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Deployments" }));
     fireEvent.click(within(menu).getByRole("checkbox", { name: "Allocations" }));
     expect(search().get("hide")).toBe("domain,allocations,deployments");
