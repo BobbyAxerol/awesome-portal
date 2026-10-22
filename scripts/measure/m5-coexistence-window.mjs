@@ -21,6 +21,9 @@
  *        --repin R.json --repin-max-age-ms 900000 --plan P.json --plan-sha256 sha256:... --repetition-id rep1 --stage B1 \
  *        --header-file ~/secret/session.hdr [--id-map ids.json] [--metric-map map.json] [--out receipt.json]
  *   node scripts/measure/m5-coexistence-window.mjs --selftest      # fixture BFF on 127.0.0.1, FIXTURE_LAB, proves the driver
+ *   node scripts/measure/m5-coexistence-window.mjs --dry-run --stage B2 --duration-ms <explicit> \
+ *        --current-workload-manifest <selection.json> --current-workload-manifest-sha256 sha256:...
+ *     Current selection is opt-in; dry-run reads public inputs only, no headers/network/collectors.
  *
  * Stop / rollback: STOP_* conditions in lib/replay.mjs end the load at once (the load is GET-only, so there is nothing to roll
  * back on the Portal; session revocation is the grantor's step). Exit codes: 0 completed, 2 stopped early by a safety condition, 3 refused.
@@ -42,9 +45,11 @@ const args = parseArgs(process.argv.slice(2), {
   plan: { default: "" }, "plan-sha256": { default: "" }, "repetition-id": { default: "" }, stage: { default: "" }, "header-file": { default: "" },
   "id-map": { default: "" }, "metric-map": { default: "" }, workload: { default: join(here, "workloads/read-sets.v1.json") }, out: { default: "" },
   selftest: { flag: true }, "duration-ms": { number: true, default: 0 }, "receipt-dir": { default: "" },
+  "current-workload-manifest": { default: "" }, "current-workload-manifest-sha256": { default: "" }, "dry-run": { flag: true },
 });
 const refuse = (e) => { console.error(String(e.message ?? e)); process.exit(e instanceof WindowRefused || String(e.message).startsWith("REFUSED") ? 3 : 1); };
 const receiptDir = args["receipt-dir"] || join(repoRoot, "upgrade/execution_loop/evidence/ELP2-10/measurements");
+let currentTooling = null; // Lazy: the unchanged legacy/default path needs no new schema toolchain.
 
 /* ── selftest: the driver against the fixture BFF, labelled FIXTURE_LAB ────────────────────────────────────────────── */
 async function freePort() { return new Promise((ok, no) => { const s = createServer(); s.listen(0, "127.0.0.1", () => { const p = s.address().port; s.close(() => ok(p)); }); s.on("error", no); }); }
@@ -107,8 +112,13 @@ async function windowRun() {
   if (!Array.isArray(order) || !order.includes(args.stage)) throw new Error("REFUSED:STAGE_NOT_IN_PLAN_ORDER_FOR_REPETITION");
   const duration = args["duration-ms"] || plan.minimum_duration_ms;
   if (!(duration >= plan.minimum_duration_ms)) throw new Error("REFUSED:DURATION_BELOW_PLAN_MINIMUM");
-  const workload = JSON.parse(readFileSync(args.workload, "utf8"));
+  const current = args["current-workload-manifest"] ? currentTooling.selectCurrentManagerWorkload({ manifestPath: args["current-workload-manifest"],
+    manifestSha256: args["current-workload-manifest-sha256"], root: repoRoot, measurement: "M-5", stage: args.stage,
+    durationMs: duration, window: w, repin, repinMaxAgeMs: args["repin-max-age-ms"], nowMs: now }) : null;
+  const workload = current?.workload ?? JSON.parse(readFileSync(args.workload, "utf8"));
+  if (current && plan.portal_workload_sha256 !== workload.digest_input) throw new Error("REFUSED:CURRENT_WORKLOAD_PLAN_PIN_REQUIRED");
   if (plan.portal_workload_sha256 && plan.portal_workload_sha256 !== workload.digest_input) throw new Error("REFUSED:PORTAL_WORKLOAD_DIGEST_NOT_THE_ONE_PINNED_BY_THE_PLAN");
+  if (current) currentTooling.assertCurrentWorkloadDrain(w, duration, Date.now());
   const { replay } = await runStage({ window: w, measurement: "M-5", stage: args.stage, workload, headersPath: args["header-file"], idMapPath: args["id-map"], durationMs: duration, seed: workload.seed, real: true });
   const metrics = mapMetrics(args["metric-map"], replay);
   const complete = replay.ran_to_planned_end;
@@ -124,11 +134,19 @@ async function windowRun() {
       "PASS in the fragment means the stage ran its full planned duration without a safety stop; it is not a capacity verdict (readiness tool + approved R-C bounds decide).",
       ...(replay.skipped_unmapped_fixture_paths && Object.keys(replay.skipped_unmapped_fixture_paths).length ? ["Paths carrying fixture ids with no --id-map entry were skipped (see results.replay.skipped_unmapped_fixture_paths): the offered load is smaller than the workload file declares."] : [])],
     extra: { repin: { observed_at_ms: repin.observed_at_ms, edge_sha: repin.edge_sha, pm_sha: repin.pm_sha, core_image_digest: repin.core_image_digest }, plan: { sha256: args["plan-sha256"], repetition_id: args["repetition-id"], stage_order: order },
-      stage_receipt_fragment: fragment, stage_receipt_fragment_sha256: sha256Text(canonical(fragment)), metric_map_note: metrics.note } });
+      stage_receipt_fragment: fragment, stage_receipt_fragment_sha256: sha256Text(canonical(fragment)), metric_map_note: metrics.note,
+      ...(current ? { current_workload_preparation: current.preparation } : {}) } });
   const out = args.out || join(homedir(), ".local/state/portal-execution-elp210", new Date().toISOString().slice(0, 10).replaceAll("-", ""), `m5-${args["repetition-id"]}-${args.stage}-${now}.json`);
   writeReceipt(out, receipt);
   console.log(JSON.stringify({ out, stop_reason: replay.stop_reason, requests: replay.requests_completed, p95_ms: replay.latency_ms.p95, error_rate: replay.error_rate, fragment_status: fragment.status }));
   process.exit(complete ? 0 : 2);
 }
 
-try { await (args.selftest ? selftest() : windowRun()); } catch (e) { refuse(e); }
+try {
+  if (args["current-workload-manifest"] || args["current-workload-manifest-sha256"] || args["dry-run"]) {
+    currentTooling = await import("./lib/current-workload-selection.mjs");
+    currentTooling.assertCurrentWorkloadFlags(args, join(here, "workloads/read-sets.v1.json"));
+  }
+  if (args["dry-run"]) console.log(JSON.stringify(currentTooling.prepareCurrentManagerDryRun({ args, root: repoRoot, measurement: "M-5" })));
+  else await (args.selftest ? selftest() : windowRun());
+} catch (e) { refuse(e); }

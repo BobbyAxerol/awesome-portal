@@ -15,6 +15,8 @@
  *                mainnet canary, and says so.
  * Same refusal rules as M-5 (authorisation record + sha256, window bounds, origin, explicit repin age). Exit: 0 completed / gate met,
  * 2 stopped early or gate not met, 3 refused.
+ * --dry-run --current-workload-manifest FILE --current-workload-manifest-sha256 sha256:... --duration-ms N
+ * prepares current GET-only load without credentials/network/collectors; missing owner inputs stay BLOCKED.
  */
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -30,8 +32,18 @@ const args = parseArgs(process.argv.slice(2), {
   authorization: { default: "" }, "authorization-sha256": { default: "" }, repin: { default: "" }, "repin-max-age-ms": { number: true, default: 0 },
   "hold-load": { flag: true }, stage: { default: "B1" }, "header-file": { default: "" }, "id-map": { default: "" }, workload: { default: join(repoRoot, "scripts/measure/workloads/read-sets.v1.json") },
   "duration-ms": { number: true, default: 0 }, ingest: { default: "" }, "ingest-sha256": { default: "" }, census: { default: "" }, "census-sha256": { default: "" }, out: { default: "" },
+  "current-workload-manifest": { default: "" }, "current-workload-manifest-sha256": { default: "" }, "dry-run": { flag: true },
 });
-try {
+async function main() {
+  let currentTooling = null; // Do not load AJV for the existing legacy/ingest path.
+  if (args["current-workload-manifest"] || args["current-workload-manifest-sha256"] || args["dry-run"]) {
+    currentTooling = await import("./lib/current-workload-selection.mjs");
+    currentTooling.assertCurrentWorkloadFlags(args, join(repoRoot, "scripts/measure/workloads/read-sets.v1.json"));
+  }
+  if (args["dry-run"]) {
+    console.log(JSON.stringify(currentTooling.prepareCurrentManagerDryRun({ args, root: repoRoot, measurement: "M-7" })));
+    return;
+  }
   if (!args["hold-load"] === !args.ingest) throw new Error("REFUSED:choose exactly one of --hold-load or --ingest");
   if (!args.authorization || !args["authorization-sha256"]) throw new Error("REFUSED:MISSING_AUTHORISATION");
   if (!(args["repin-max-age-ms"] > 0)) throw new Error("REFUSED:--repin-max-age-ms must be set explicitly (> 0)");
@@ -46,11 +58,16 @@ try {
 
   if (args["hold-load"]) {
     if (!args["header-file"] || !args["duration-ms"]) throw new Error("REFUSED:--header-file and --duration-ms are required for --hold-load");
-    const workload = JSON.parse(readFileSync(args.workload, "utf8"));
+    const current = args["current-workload-manifest"] ? currentTooling.selectCurrentManagerWorkload({ manifestPath: args["current-workload-manifest"],
+      manifestSha256: args["current-workload-manifest-sha256"], root: repoRoot, measurement: "M-7", stage: args.stage,
+      durationMs: args["duration-ms"], window: w, repin, repinMaxAgeMs: args["repin-max-age-ms"], nowMs: now }) : null;
+    const workload = current?.workload ?? JSON.parse(readFileSync(args.workload, "utf8"));
+    if (current) currentTooling.assertCurrentWorkloadDrain(w, args["duration-ms"], Date.now());
     const { replay } = await runStage({ window: w, measurement: "M-7", stage: args.stage, workload, headersPath: args["header-file"], idMapPath: args["id-map"], durationMs: args["duration-ms"], seed: workload.seed, real: true });
     const receipt = stageReceipt({ measurement: "M-7", window: w, stage: `${args.stage}-load-holder`, replay, title: `Portal load held at ${args.stage} level during Edge's P184 G2 run`,
       limitations: ["This receipt records the load the Portal held; it contains NO G2 verdict. The G2 population comes from Edge's apparatus (--ingest).", "Not merged with any B0 / B1 / B2 receipt; the optional mainnet canary is a different decision and does not replace G2."],
-      extra: { repin: { observed_at_ms: repin.observed_at_ms, edge_sha: repin.edge_sha, pm_sha: repin.pm_sha } } });
+      extra: { repin: { observed_at_ms: repin.observed_at_ms, edge_sha: repin.edge_sha, pm_sha: repin.pm_sha },
+        ...(current ? { current_workload_preparation: current.preparation } : {}) } });
     writeReceipt(out("m7-load"), receipt);
     process.exitCode = replay.ran_to_planned_end ? 0 : 2;
   } else {
@@ -74,7 +91,8 @@ try {
     console.log(JSON.stringify({ result: verdict.original_gate_result, failing: verdict.failing }));
     process.exitCode = verdict.failing.length === 0 ? 0 : 2;
   }
-} catch (e) {
+}
+try { await main(); } catch (e) {
   console.error(String(e.message ?? e));
   process.exitCode = e instanceof WindowRefused || String(e.message).startsWith("REFUSED") ? 3 : 1;
 }
