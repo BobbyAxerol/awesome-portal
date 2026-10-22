@@ -14928,6 +14928,28 @@ Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_STREAM_ACTUAL_READY
 
 Edge commits2a87d405b4942d7a1c08c0080193bb1b84a1b057 and5b1016e0436417b2788bdb7c5b9196bc70fd6938 on feat/execution-edge-upgrade-v1_2,6uniqueMarkdown/373added,no push/merge/CI. Actual EdgeACK/install/native7SDK_READY→Core independent fixed60sSTREAM/SSE1→graceful originalcustodydrain/restart/SSE2→real active revoke exit75DRAIN_PENDING thensameintentNOOP_EXPIRED→exact Core grants/session cleanup→Edge physicalsourceEXIT0/pools0/die0/destroy/officialnative8revoke+STATUS fully recorded. Active revoke remains NOT_PROVEN, no full08/read09 PASS. Final cumulative28bdcaca3b450abc34dcdb0a064e51d072c0c7da6be926d1bfcca8a5f9ad9e0c already here with historicalREADYprefixpreserved. R0 first4path/5links and final5path/7links/scope/diff/secrets/tracking PASS, peerWIPintact. Own containers/socket/observer gone, no own image/cachecreated or sharedprune; protected native/threeEdge restart0. Core owner now handles exact documented writer/drain correlation and before-expiry same-intent recovery repair with Claude, then returns a NEW pinned finite missing-case window. General08 approval remains valid; never replay/renew retired source8/oldgrant. Manager/P22/G2 separate, no stable/dev/provider28445/commands/Live change.
 
+### Core fresh Edge preparation ACK and runnable support —22Oct2026,12:10UTC
+
+[Cumulative return§8](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#8-fresh-edge-review-ack-22oct20261210utc-1910vn)
+ACKs reviewd8bc917b and exact12:00–12:30UTC /19:00–19:30VN pins, mirrored
+12:10:25UTC asbacad6f9; backup/capacity append mirrored12:14:27UTC as
+bf623144. Actual Research backup31,217,766bytes/SHAabf58727,EXIT0,not restored;
+fresh H16/unresolved0/unreconciled0/pending0 means282≤288. Runtime remains
+a96/schema149/PID2587313, no new config/grant/session/install. Actual Edge
+authorized READY is required, >6minutes original-window reserve; UNARMED is
+not activation. Full08/read09 remains NOT_MET; ELP2-11 not opened.
+
+Core accepts all row-wise CHANGE actions, not general external debt. Disjoint
+source-only command adapter and current workload preflight support are reserved
+in [sync](execution_loop/FRONTEND_BACKEND_SYNC.md); financial builder review
+preserves Claude's existing implementation/UI ownership. PM two-POST wire is
+Edge→PM, never a direct Core bypass. Existing Manager leaf issuance, actual
+financial mapping, command commissioning, independent-domain authority and
+approved G2 target/numeric inputs remain explicitly owner-bound through Edge.
+No heavy hook/build in native slot, push or stable/dev/main/provider28445/
+command/Live change. Verification:R0 for this journal; focused code tests have
+their own subsequent evidence, not manufactured connected coverage.
+
 ### Core008/009 — same-intent operator recovery repaired,22Oct2026
 
 [Core/Edge repair return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_RECOVERY_REPAIR_2026-10-22.md): exact original mutation correlated; v1 scheduling defect retained as failure, v2 handles known physical exit75 and bounded stderr framing, then one same-artifact continuation before original expiry.34/34 focused offline tests PASS; no new connected PASS. Source7 retired to8, Core custody0/0/pending0 and exact cleanup verified. Edge next proposes new pinned missing-case window; Core ACKs only after current one-shot integration hook. Claude source3aaf24f4 + private P22/G2 preserved in isolated integration cut; positive roster fixture004/008/012 corrected there, normal R2/R3 running once on tree4309b7907b508d7d726913201f4161d1c48402ef. No remote push, runtime image installation, ELP2-11 or stable/dev/main action.

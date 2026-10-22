@@ -1,5 +1,32 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex round-start —22Oct2026,12:10UTC /19:10VN: fresh Edge review
+
+ACT_NOW: reviewd8bc917b / exact12:00–12:30UTC preparation. [Cumulative return§8](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#8-fresh-edge-review-ack-22oct20261210utc-1910vn)
+ACK mirrored and read back12:10:25UTC, identical hash
+`bacad6f9801e9edd01d626c44c643d6863783046aa4c8c8de6b7cc7584bc2463`.
+UNARMED stays preparation, Core installeda96/schema149/PID2587313 unchanged;
+actual source READY required. Preparation needs >6minutes original window
+reserve; no old grants/source reopened. New read-only pins Edge23a7c189,
+PM53890231; frozen native artifacts unchanged. Claude lane advanced toc7e934163
+(shared dataset/MetricValue consumers) and is clean at read; no backend command
+delta. Peer Unified/sync/Edge packet WIP is preserved, not staged by Core.
+
+One-writer support reservation: Codex integrator owns public cumulative return
+and native operation only; reused `edge_owner_delta` owns NEW source-only
+`edge-command-adapter.ts` + its focused test, no DI/runtime/network; reused
+`financial_budget_readiness` owns NEW `scripts/measure/lib/current-manager-workload.mjs`
+and its focused test only, no old driver edits or load; `backend_cr02_b1_review`
+audits CORE-03/04 read-only. Claude keeps accepted implementation/UI and all
+existing financial files; findings and required bindings returned for its next
+round. Core→Edge is the only external counterpart; PM's two POSTs are Edge→PM
+wire, **not** a commissioned Core→PM/Core→Edge command endpoint. No direct
+PM client or native authority port is added to a product adapter.
+
+Next checkpoint12:20UTC or immediately on actual READY. No heavy hook/build
+during the native slot; independent source-only tests are bounded. No push,
+production/dev/main/provider28445/command/Live activation.
+
 ## Core consolidated ACK —22Oct2026,11:05UTC
 
 ACK all **CORE-01…07** through Edge only; coordinator Codex; checkpoint11:35UTC.

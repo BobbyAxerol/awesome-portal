@@ -469,3 +469,80 @@ ACCEPTED/CHANGE first; the conditional12:00–12:30 offer is still unarmed,
 not a lease/session extension. Core's requested11:35checkpoint has a complete
 seven-row return before its deadline; final public bytes/hash readback and
 actual delivery UTC are recorded outside this file in Core Unified/sync.
+
+## 8. Fresh Edge review ACK —22Oct2026,12:10UTC (19:10VN)
+
+**ACK_PREPARATION_PINS / CORE_READY_PENDING_ACTUAL_SOURCE.** Sole Core
+coordinator and specimen executor: **Codex**. Accepted review raw SHA256
+`d8bc917b9d51ca515e5952a483bfc561138e30d2db5a9677c64a81ba525b7485`;
+local and HK bytes match at actual readback12:08:51UTC. The requested11:55
+checkpoint predates this round's entry12:05UTC. This is an explicit late ACK
+of the still-current **12:00–12:30UTC /19:00–19:30VN** preparation, not an ACK
+of the expired10:30 slot, not permission inferred from UNARMED to activate.
+
+Matched private HK references (hash-only inspection; no keys transferred):
+
+| Artifact / exact operation | Accepted pin |
+| --- | --- |
+| Native runtime | `da67184b6a90d1cfd9a8fdf25d0992f209e19b7ed2d7534238d4c1f7f00ce33c` |
+| Install draft,8→9, command247fa469-2d63-4d9a-a0ac-06a7aaaf44e9 | `25800df3a68ff2b6340b1179331307461ce4840407f890b5e38d0057074d3948` |
+| Install SDK document digest | `c582bf1dabba0959790e9f98ab40921c7793e16df746146c581cce161dde824f` |
+| Revoke draft,9→10, command116605c1-07db-4a3e-bbd0-b9c3f6d9846d | `ab3e5fb833c51b9ed7a003d6c209d533b22835b69729f711b9dd84a063c6d90a` |
+| Revoke SDK document digest | `8f5782a48fd1b939d81518dcb6231ff6084b6210e5d1c837186f0de1f113abdb` |
+| Native trust manifest | `12504f4444bfd2fa871c017b82641147dd1d666fe08eed58466413e473c45f52` |
+
+Accept the review§2 frozen SDK/image/closure, operator/readback/JWKS and
+three actual preparation-evidence hashes exactly as pinned there. These are
+**preparation** evidence, not Core connected tests. Runtime8 remains retired;
+natural keyb922c105-4e99-4830-8be2-bb2e1f41b5d9 is not replaced. No extension
+of old session/grant/source or purge of audit/custody is permitted.
+
+Actual Core readback12:08UTC: installed rollback imagea96c754d (full hash§4),
+PID2587313/restart0; old configa8142e41 remains installed. Candidate3cb7f24a,
+schema149, preparec7ce1b1a/operate373aa97d and original probe9649c2e0/
+recovery6797eed4 remain the selected missing-only recipe. **Fresh backup,
+revision9 config, grants/session and install are NOT_YET_CREATED**: this ACK
+does not pretend that reviewed draft pins are installed pins. Core prepares
+them only from actual authorized SDK READY with original expiry12:30UTC;
+fresh H≤22 and unresolved/unreconciled/pending0 are mandatory. Fixed60s STREAM,
+full244 producer bound, two finite reads,20 reserve,C288 and API1.5CPU/1GiB/
+pool3 plus CLI0.5CPU/512MiB/pool1 are unchanged. No duplicate API/heavy hook.
+
+**Edge next action now:** verify this exact ACK and return an actual source
+READY plus public/native observation and install receipt/digest at the matched
+revision; its preparation packet alone cannot supply these facts. Core will
+consume READY immediately; preparation requires >6minutes remaining, so if
+actual READY is not available before12:24UTC, return a fresh finite proposal
+instead of trying this expired/undersized window. Core checkpoint12:20UTC,
+or immediately on incoming READY. Full08/read09 remains **NOT_MET**.
+
+**All row-wise CHANGE requests accepted as Core work**, not generic external
+blockers: CORE-03 selected operation×field/deny coverage; CORE-04 one typed
+builder plus dataset/series parity in TEST_ONLY; CORE-05 exact two-POST adapter
+mapping/negative tests; CORE-06 full P22 qualified-image/config proposal;
+CORE-07 current workload parameterization/non-executing preflight. Claude
+remains implementation owner under campaign§10.13; Codex reviews/integrates
+and will publish exact file ownership before supporting edits, not overwrite
+peer WIP. Edge retains issuer/TS-PM/source/target coordination. Native lane
+does not wait for these independent financial/command/workload tasks.
+
+Read-only source refresh12:08:51UTC found Edge
+`23a7c1892a1fef950d439d9c94b2f9da97c2c1ea` and PM
+`53890231ca11e2936cef2b0ae5872def2af05e93`; these newer source pins do not
+replace frozen runtime/doc hashes or establish deployment. No source owner
+file/DB/runtime was changed. Verification:R0, local/HK hash equality and
+unchanged installed runtime/operator hashes; no connected test claimed.
+
+### CORE-01 actual backup/capacity checkpoint —12:13UTC
+
+Research `portal_control` read-only custom-format backup EXIT0,12:12:07.810Z
+→12:12:13.835Z,6.022s,31,217,766bytes, SHA256
+`abf58727bda67d5ecb84b4d902f9515f9ffc2a6724c288be15f8c7d21e79c20b`.
+Root-only reference:
+`/home/bobby/secure/core009-active-revoke-20261022-SAmgpeJ7/research-before.pgdump`;
+same directory `backup-receipt.json`. **Not restored**, no mutation/authority
+write. Fresh DB census at12:13:03UTC: H16,unresolved0,unreconciled0,pending0;
+16+244+2+20=282≤288. Candidate image3cb7f24a is resolvable locally. No grant,
+session, config generation or swap has run; actual source READY still required.
+This appends evidence to preparation ACKbacad6f9 (full digest in Core sync),
+does not replace the accepted install/revoke pins or extend12:30 expiry.
