@@ -86,8 +86,10 @@ export function ExitGatePanel({ gate, exitReviewsHref, request }: ExitGatePanelP
             <tr>
               <th scope="row">Observation window</th>
               <td>
-                {gate.windowBounded ? <Flag kind="partial" label="Bounded by the source" size="sm" /> : <span>Not bounded</span>}
-                {gate.reasonCode ? <GapWhy name="Observation window, reason" rows={[gate.reasonCode]} /> : null}
+                <span className="exec-wb-inline">
+                  {gate.windowBounded ? <Flag kind="partial" label="Bounded by the source" size="sm" /> : <span>Not bounded</span>}
+                  {gate.reasonCode ? <GapWhy name="Observation window, reason" rows={[gate.reasonCode]} /> : null}
+                </span>
               </td>
             </tr>
           )}
