@@ -9,6 +9,16 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 22Oct11:08 Asia/Saigon — consolidated report/handoff and pasteable Edge prompt
+
+[Core → Edge handoff](evidence/ELP2-10/CORE_TO_EDGE_08_ACTION_HANDOFF_2026-10-22.md)
+and [reply prompt](evidence/ELP2-10/PROMPT_FOR_EDGE_08_CORE009_REPLY_2026-10-22.md)
+replace scattered routing with the exact PREPARED/ACK/READY return contract.
+Old10:15–10:45 slot is expired; new viable slot is source-owner action.
+Current Research image/config and transferred trust hash/validity read back;
+no new authority/session/runtime or consumer/UI changes. Transfer/readback
+verification is R0 only; connected/full08 remains NOT_MET.
+
 ### 22Oct10:21 Asia/Saigon — independent STREAM/control and capacity disposition
 
 [Core full-case return](evidence/ELP2-10/CORE009_08_FULL_SUITE_DISPOSITION_2026-10-22.md)

@@ -14711,3 +14711,13 @@ guard loosening or fake control. Edge Unified now directly points to delivered
 current ACK/trust/source returns; remote index unchanged/tracking PASS. Core
 waits only fresh Edge bind/READY for eligible Paper READ/session, not P22 or
 those independent full-suite inputs. ELP2-10 OPEN. Verification:R0.
+
+### Core → Edge consolidated report and response prompt —22Oct11:08 Asia/Saigon
+
+[Actionable handoff/report](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_08_ACTION_HANDOFF_2026-10-22.md)
+and [Edge reply prompt](execution_loop/evidence/ELP2-10/PROMPT_FOR_EDGE_08_CORE009_REPLY_2026-10-22.md)
+consolidate delivered pins, actual current image/config readback, received8PM
+trust/C288 disposition and staged Edge PREPARED → Core hash ACK → SDK_READY
+→ official READ/session. The10:15–10:45 offer is now expired too; Edge must
+return a viable future slot, not reuse that offer or §10.5. No source/runtime
+mutation or repeated tests in this Markdown delivery. ELP2-10 OPEN. Verification:R0.
