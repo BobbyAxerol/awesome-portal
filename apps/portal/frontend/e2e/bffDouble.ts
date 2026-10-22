@@ -1381,7 +1381,25 @@ function answerReviewDataset(method: string, path: string, search: URLSearchPara
   const resource = match[2] as "portfolios" | "alphas" | "accounts" | "deployments" | undefined;
   const id = match[3] === undefined ? null : decodeURIComponent(match[3]);
   const asked = new URLSearchParams(search);
-  const reply = answerReviewManager("GET", resource === undefined ? path : "/manager/fleet", asked, "populated");
+  const environment = asked.get("environment") ?? "paper";
+  let reply = answerReviewManager("GET", resource === undefined ? path : "/manager/fleet", asked, "populated");
+  // The small template only has Paper rows; a Real-funded (live) or Sandbox question gets the same rows relabelled to the asked book,
+  // so the lane shows data in every environment instead of an empty live dataset.
+  const hollow = environment !== "paper" && reply !== null && reply.status === 200 && ((reply.body as { items?: unknown[] }).items ?? []).length === 0;
+  const relabel = (body: any): void => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const domain = environment === "live" ? "ACTUAL" : "SANDBOX";
+    const stage = environment === "live" ? "LIVE" : "SANDBOX";
+    body.environment = environment;
+    for (const row of body.items) { row.stage_presence = [stage]; row.current_stage = stage; for (const child of row.children) child.stage = stage; for (const part of row.economic_partitions) part.partition.economic_domain = domain; }
+    for (const part of body.capital_statements) part.partition.economic_domain = domain;
+    for (const group of body.groups) for (const part of group.economic_partitions) part.partition.economic_domain = domain;
+  };
+  if (hollow) {
+    const paper = new URLSearchParams(asked);
+    paper.set("environment", "paper");
+    reply = answerReviewManager("GET", resource === undefined ? path : "/manager/fleet", paper, "populated");
+    if (reply !== null && reply.status === 200) { const copy = structuredClone(reply.body); relabel(copy); reply = { status: 200, body: copy }; }
+  }
   if (reply === null || reply.status !== 200 || resource === undefined || id === null) return reply;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const body = structuredClone(reply.body) as any;
