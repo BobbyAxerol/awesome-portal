@@ -1036,6 +1036,14 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Current owner action22Oct09:47 Asia/Saigon:**
+[handoff §11](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#11-current-owner-action--22-october-2026)
+supersedes the expired §10.5 action window. Successor is installed; require
+current commissioning ACK/config, a viable new native trust/window and genuine
+session after actual Edge READY, not another image build. Full08 NOT_MET;
+no09connected claim. This round is public documentation/delivery only; see
+[journal/receipt](../EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md#original08-core-current-return-request-20261022).
+
 **Installed successor21Oct19:19UTC:** Core now actually serves a96c754d,
 schema149/container593acd09/restart0; prior built-only status below is history.
 Fresh Edge acceptance6f082bf9/runtime81cfa9a2/window19:15–19:45UTC prepared

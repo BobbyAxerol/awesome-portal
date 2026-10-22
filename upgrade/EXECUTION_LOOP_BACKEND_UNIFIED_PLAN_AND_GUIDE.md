@@ -29897,6 +29897,77 @@ are recorded inputs, not new phases or replacement of the full goal by READ.
 Verification:R0 execution-tracking EXIT0 for this refinement, staged scoped
 diff/anchor/link check required before commit; no further heavy tests or CI.
 
+<a id="original08-core-current-return-request-20261022"></a>
+
+### Original08 — current Core handoff and actual delivery, 22 October 2026
+
+**Task OPEN / full08 NOT_MET; documentation and delivery only.** Owner asks
+Edge to name Core's remaining work, deliver it to the actual Core owner lane
+and return a prompt. At 09:47 Asia/Saigon, reviewed Edge146d63dc, Core canonical
+3ddafc24 and Claude implementation lane claude/post-freeze-20261021@bcdbd44e.
+Core successor is already installed: Research container593acd09, imagea96c754d,
+running/restart0 on direct readback; schema149 is the installed owner return.
+No newer filled commissioning ACK/config/session was found. Do not request
+another successor build or mistake delivery for ACK.
+
+**Guide / scope / decision boundary:** existing
+[handoff §11](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md#11-current-owner-action--22-october-2026)
+supersedes the expired §10.5 window as an action request. The old slot ended
+22Oct02:45 Asia/Saigon; both observed native TLS leaves expire22Oct09:48:30.
+Old6f082bf9 remains UNARMED. Require a new coordinated viable window/trust
+return; do not re-date or arm old bytes. Core owns commissioning/current
+policy/session and its official successor/revoke writers; Claude owns backend
+implementation, Codex reviews/integrates. Edge owns fresh HK composition,
+actual source READY, connected acceptance and terminal/drain/retire proof.
+Preserve all-mode product scope; initial Paper evidence is not an all-mode
+qualification. Wider Manager PKI remains a separate input.
+
+**Approved execution now:** update only existing handoff/guide/this journal;
+append exact public owner-action and locators to SGP canonical Core handoff,
+task, Unified/sync and the active Claude lane. Preserve peer bytes and indexes.
+Test gates: R0 tracking, owned diff/link checks, exact payload SHA/readback,
+append-prefix preservation and remote index unchanged. No runtime, DB, role,
+grant, session, certificate, SDK listener, stable/dev, build or CI mutation.
+Rollback: if a docs delivery fails, stop and report its exact missing target;
+never overwrite peer edits or change runtime to compensate.
+
+**Remaining work partition:** docs delivery/publication runnable now. Actual
+connected08 depends on Core's current return, then Edge READY, then genuine
+READ/session. Full suite additionally needs actual P22 observer installation,
+numeric-bound disposition, independent STREAM/revoke and a real unaffected
+control; keep these explicit, not a reason to defer an eligible bounded READ.
+This task does not close08 or qualify09. Delivery receipt and verification
+will be recorded below after the actual checks.
+
+**Actual delivery22Oct09:51:09 Asia/Saigon / verification:R0:** seven append
+and readback checks PASS, all original prefixes preserved; both remote Git
+indexes unchanged. Public §11 is7811bytes/SHA256
+`6849a1e3a37cffc5bdfb67a47a79711e2358388513cf1bb655ec615c2088699e`;
+locator1330bytes/SHA256
+`e9aafcef5efa3bcd645e19203c962f5ef8c6dc37b1100f7a473deed9bae41a4a`.
+Canonical handoff now exists at SGP
+`/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md` §11.
+Core task/Unified/sync and Claude Unified/sync/existing BE-P22 factory packet
+point there. No new request ledger or overwriting remote peer additions.
+
+`nice -n 15 bash scripts/execution-tracking-test.sh` EXIT0 in all three
+checkouts: HK Edge, SGP canonical Core and SGP Claude; stderr0. These are R0
+document checks, not connected/runtime qualification. Local diff check and
+three original peer hashes PASS; peer main10line and binding56line hunks and
+untracked source remain outside this commit. Task handoff DELIVERED /
+ACK_PENDING, full08 NOT_MET. No need for phase reapproval; Core's exact current
+owner-return is the unblock action, then Edge source binding and08 acceptance.
+
+**Runtime/release/cleanup:** no runtime/DB/secret/session/grant/TLS mutation,
+build, hosted CI or test resource creation. Cleanup NO_ACTION_NEEDED; no new
+image/cache to remove. Source canonical HK manager-v2/feat/manager-v2-paper-read
+54c6f5f3, active feature upgrade-v1_2/feat/execution-edge-upgrade-v1_2; six
+operational Edge/projection services retain d6aa7a51 (last verified previous
+slice, not remeasured here). Core a96/restart0 read this round, prior9cf5 and
+private rollout backup remain retained rollback. Stable a9b10385 release path
+unchanged. This docs slice is committed locally only, no push/merge; final
+commit SHA is reported from Git after scoped R0 checks.
+
 
 
 
