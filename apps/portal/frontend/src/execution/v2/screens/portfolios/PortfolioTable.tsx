@@ -13,7 +13,9 @@ import { Link } from "react-router-dom";
 import { CardsTable, type CardsColumn, type CardsSort } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
+import type { ManagerPartitionedMetrics } from "../../readers/managerMetric";
 import { PF_FE, npText, type Unpublished } from "./fe";
+import { PartitionFigures } from "./PartitionFigures";
 import { Absent, MoneyList } from "./format";
 import type { PortfolioRow, SortKey } from "./listModel";
 import type { PortfolioRoutes } from "./routes";
@@ -54,7 +56,7 @@ export const OPTIONAL_COLUMNS: readonly ColumnSpec[] = [
  */
 export const UNPUBLISHED: Readonly<Partial<Record<ColumnId, Unpublished>>> = {
   nav: PF_FE.nav,
-  pnl: PF_FE.netPnl,
+  pnl: PF_FE.netPnl, // kept only while the Manager dataset (FLEET, group_by portfolio_id) is not served; see `figures`
   ret: PF_FE.ret,
   dd: PF_FE.drawdown,
   hhi: PF_FE.concentration,
@@ -110,9 +112,19 @@ export interface PortfolioTableProps {
   sort?: CardsSort | null;
   onSort?(key: SortKey): void;
   currency?: string | null;
+  /**
+   * The Manager dataset's portfolio groups (FLEET, `group_by=portfolio_id`) for the page's environment, or `null` when the dataset
+   * is not served. Feeds Net PnL, one line per economic partition; a column the groups do not carry keeps its `Not published`.
+   */
+  figures?: PortfolioFigures | null;
 }
 
-export function PortfolioTable({ rows, hidden, routes, search, selected, onToggle, empty, sort, onSort, currency = null }: PortfolioTableProps) {
+export interface PortfolioFigures {
+  environment: string;
+  groups: ReadonlyMap<string, readonly ManagerPartitionedMetrics[]>;
+}
+
+export function PortfolioTable({ rows, hidden, routes, search, selected, onToggle, empty, sort, onSort, currency = null, figures = null }: PortfolioTableProps) {
   const full = selected.size >= COMPARE_MAX;
   const columns: CardsColumn<PortfolioRow>[] = [
     {
@@ -157,7 +169,7 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
       numeric: c.numeric,
       sortKey: c.id === "allocated" && currency === null ? undefined : SORT_OF[c.id],
       sortOffReason: c.id === "allocated" && currency === null ? "Money sorts inside one currency; pick the currency first" : undefined,
-      render: (row) => cell(c.id, row),
+      render: (row) => cell(c.id, row, figures),
     })),
   ];
   return (
@@ -173,7 +185,13 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
   );
 }
 
-function cell(id: ColumnId, row: PortfolioRow) {
+function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null) {
+  if (id === "pnl" && figures !== null) {
+    if (row.unallocated) return <Absent reason="The source publishes no figure for capital that no portfolio holds" />;
+    const group = figures.groups.get(row.portfolioId);
+    if (group === undefined) return <Absent reason={`No ${figures.environment} figures are published for this portfolio`} />;
+    return <PartitionFigures list={group} metricKey="net_pnl" signed />;
+  }
   const fact = UNPUBLISHED[id];
   if (fact) return <Absent reason={`${npText(fact)}: ${fact.what}`} />;
   switch (id) {

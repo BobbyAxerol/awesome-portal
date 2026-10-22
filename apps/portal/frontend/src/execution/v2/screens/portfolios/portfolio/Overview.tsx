@@ -18,6 +18,7 @@ import { Flag } from "../../../Flag";
 import { formatAsOf, formatInstant } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
 import { PF_FE, npText } from "../fe";
+import { PartitionFigures, figureSource, publishes } from "../PartitionFigures";
 import { ManagerSeriesPanel } from "../../series/ManagerSeriesPanel";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../../series/seriesModel";
 import { Absent, MoneyList, Np } from "../format";
@@ -136,11 +137,27 @@ const UNPUBLISHED_OVERVIEW: readonly UnavailableFact[] = [
 
 /** Capital statements (hi-fi right column): every row stays; none is published (FE-017), so each says so. Nothing is summed from the allocation. */
 const CAPITAL_ROWS = ["Initial funds", "Added funds", "Returned", "Net external flows", "Approved budget", "Recalling", "Headroom"] as const;
-function CapitalCard() {
+/** Capital-statement keys the dataset publishes, each with a row of its own (one line per economic partition, never totalled). */
+const STATEMENT_ROWS: readonly { key: string; label: string }[] = [
+  { key: "balance_total", label: "Balance total" },
+  { key: "allocation", label: "Allocated" },
+];
+
+/** The portfolio's dataset: the last good read while a refresh runs; `null` until one answered (or when the surface is not served). */
+const datasetOf = (ctx: TabCtx) => {
+  const read = ctx.reads.dataset;
+  return read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+};
+
+function CapitalCard({ ctx }: { ctx: TabCtx }) {
+  const statements = datasetOf(ctx)?.capitalStatements ?? [];
   return (
     <SectionPanel title="Capital" aside="Statements">
       <table className="exec-pf-captable" aria-label="Capital statements">
         <tbody>
+          {STATEMENT_ROWS.filter((row) => publishes(statements, row.key)).map((row) => (
+            <tr key={row.key}><th scope="row">{row.label}</th><td><PartitionFigures list={statements} metricKey={row.key} /></td></tr>
+          ))}
           {CAPITAL_ROWS.map((row) => (
             <tr key={row}><th scope="row">{row}</th><td><Np fact={PF_FE.statements} /></td></tr>
           ))}
@@ -197,12 +214,15 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
   const { identity, deployments, accounts, environments } = ctx;
   const alphaCount = new Set(deployments.map((d) => d.strategyId ?? d.alphaLabel)).size;
   const simulated = environments.some((env) => env !== "live");
+  const netPnlList = figureSource(datasetOf(ctx), "net_pnl", identity.portfolioId);
   return (
     <div className="exec-pf-stack">
       {simulated ? <p className="exec-pf-banner" data-tone="info">Simulated capital. It is never added to Real-funded figures.</p> : null}
       <PfKpiStrip label="Portfolio identity">
         <PfKpi label="NAV"><NavFigure ctx={ctx} /></PfKpi>
-        <PfKpi label="Net PnL" note="Windowed; needs the window"><Np fact={PF_FE.netPnl} /></PfKpi>
+        <PfKpi label="Net PnL" note={netPnlList !== null ? `Window ${ctx.window}` : "Windowed; needs the window"}>
+          {netPnlList !== null ? <PartitionFigures list={netPnlList} metricKey="net_pnl" signed /> : <Np fact={PF_FE.netPnl} />}
+        </PfKpi>
         <PfKpi label="Return" note="Windowed; methodology per source"><Np fact={PF_FE.ret} /></PfKpi>
         <PfKpi label="Drawdown" note="Needs the NAV series"><Np fact={PF_FE.drawdown} /></PfKpi>
         <PfKpi label="Allocated (current)">
@@ -213,7 +233,7 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
       <NotAvailableLine facts={UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />
       <div className="exec-pf-grid2">
         <NavCard ctx={ctx} />
-        <CapitalCard />
+        <CapitalCard ctx={ctx} />
       </div>
       <EquityCard ctx={ctx} />
       <div className="exec-pf-grid2">

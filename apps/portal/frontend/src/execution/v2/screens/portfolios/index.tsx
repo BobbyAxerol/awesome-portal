@@ -40,7 +40,10 @@ import {
   ROW_CAP, SORT_KEYS, branchReasonText, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
   type DomainFilter, type SortKey,
 } from "./listModel";
-import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
+import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
+import { useManagerDataset } from "../manager/useManagerDataset";
+import { groupsByPortfolio, servesDataset } from "./PartitionFigures";
+import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId, type PortfolioFigures } from "./PortfolioTable";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
 import { useRead } from "./useRead";
@@ -106,6 +109,18 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
 
   const read = useRead(api, permitted, "list", (scoped) => scoped.listPortfolios());
   const envelope = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+
+  // The Manager dataset grouped by portfolio (FLEET, group_by=portfolio_id) for the page's environment and window: Net PnL per
+  // economic partition. Groups cover the whole query, so one row is enough to ask. Not served = the column keeps its `Not published`.
+  const datasetQuery = useMemo<ManagerDatasetQuery>(
+    () => ({ surface: "FLEET", environment: url.value.env, window: url.value.window, groupBy: ["portfolio_id"], limit: 1 }),
+    [url.value.env, url.value.window],
+  );
+  const dataset = useManagerDataset(api, permitted && servesDataset(api), datasetQuery);
+  const figures = useMemo<PortfolioFigures | null>(
+    () => (dataset.phase === "ready" ? { environment: url.value.env, groups: groupsByPortfolio(dataset.value) } : null),
+    [dataset, url.value.env],
+  );
 
   const { q, sort: sortRaw, ccy } = url.value;
   const domain: DomainFilter | null = readDomainFilter(params.get("domain"));
@@ -341,6 +356,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             sort={sort}
             onSort={headerSort}
             currency={ccy}
+            figures={figures}
           />
 
           <div className="exec-pf-foot">

@@ -11,8 +11,10 @@
  * - NAV (FE-013): the fund's published NAV series through `getManagerSeries` (BE-P4). AVAILABLE draws the line and the KPI is
  *   its latest point, exact, with the methodology and window; EMPTY says "No points in this window"; UNAVAILABLE prints the
  *   typed reason (a source that is not published keeps `Not published (FE-005/006/013/025)`). Nothing is computed here;
- * - windowed Net PnL, Return and Drawdown: Not published (FE-005/006/013/025);
- * - the capital block (Initial, Added, Returned, NAV, budget): Not published (FE-017);
+ * - windowed Net PnL: the fund dataset's `net_pnl` per economic partition (`getManagerDataset`, FUND) where a partition publishes
+ *   it, else Not published (FE-005/025); Return and Drawdown: Not published (FE-006/013/025);
+ * - the capital block: Balance total and Allocated per economic partition from the dataset's `capital_statements` (one line each,
+ *   never totalled); Initial, Added, Returned and Budget used: Not published (FE-017);
  * - "Since your last visit": Not published (FE-024);
  * - Contributors: Not published (FE-025).
  *
@@ -57,6 +59,9 @@ import { ManagerSeriesPanel } from "../series/ManagerSeriesPanel";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../series/seriesModel";
 import { useManagerSeries, type SeriesReadState } from "../series/useManagerSeries";
 import { MeasureSeg, type FundMeasure } from "./MeasureSeg";
+import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
+import { useManagerDataset } from "../manager/useManagerDataset";
+import { PartitionFigures, figureSource, publishes, servesDataset } from "../portfolios/PartitionFigures";
 import { useOverviewReads } from "./useOverviewReads";
 
 import "../../css/blocks.css";
@@ -84,6 +89,12 @@ function Gap({ ids, children }: { ids: string; children?: string }) {
     </span>
   );
 }
+
+/** Capital-statement keys the dataset publishes and the Capital panel has a row for (one line per economic partition, never totalled). */
+const STATEMENT_ROWS: readonly { key: string; label: string }[] = [
+  { key: "balance_total", label: "Balance total" },
+  { key: "allocation", label: "Allocated" },
+];
 
 /** The capital block (hi-fi): every row stays, each says it is not published (FE-017). */
 const CAPITAL_ROWS: readonly { label: string; ids: string }[] = [
@@ -196,6 +207,16 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   const returnQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: "RETURN" }), [navQuery]);
   const pnlRead = useManagerSeries(api, serves, pnlQuery, seriesNonce);
   const returnRead = useManagerSeries(api, serves, returnQuery, seriesNonce);
+  // The fund's Manager dataset for the same environment and window: capital statements per economic partition (and Net PnL where a
+  // partition publishes it). A refusal or a missing surface leaves every cell on its own `Not published`.
+  const fundQuery = useMemo<ManagerDatasetQuery>(
+    () => ({ surface: "FUND", environment: url.value.env, window: url.value.window, ...(workspaceId ? { workspaceId } : {}) }),
+    [url.value.env, url.value.window, workspaceId],
+  );
+  const fundRead = useManagerDataset(api, servesDataset(api), fundQuery, seriesNonce);
+  const fund = fundRead.phase === "ready" ? fundRead.value : fundRead.phase === "loading" || fundRead.phase === "error" ? fundRead.last : null;
+  const statements = fund?.capitalStatements ?? [];
+  const netPnlList = figureSource(fund, "net_pnl");
   const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
 
   const { snapshot } = reads;
@@ -335,7 +356,11 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
 
       <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 6 } as CSSProperties}>
         <SeriesCell label="NAV" read={nav} window={url.value.window} gapIds={FE_MONEY} />
-        <SeriesCell label="Net PnL" read={pnlRead} window={url.value.window} gapIds="FE-005, FE-025" />
+        {netPnlList !== null ? (
+          <Cell label="Net PnL" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={netPnlList} metricKey="net_pnl" signed /></Cell>
+        ) : (
+          <SeriesCell label="Net PnL" read={pnlRead} window={url.value.window} gapIds="FE-005, FE-025" />
+        )}
         <SeriesCell label="Return" read={returnRead} window={url.value.window} gapIds="FE-006, FE-025" />
         <Cell label="Drawdown" note="Needs a NAV series"><Gap ids="FE-013, FE-025" /></Cell>
         <Cell label="Open incidents" note={<Link className="exec-ov-link" to={ctx("/execution/operations")} title="Incidents in the ranked list">Operations</Link>}>
@@ -360,6 +385,12 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
                 <tr key={row.label}>
                   <th scope="row">{row.label}</th>
                   <td>{row.label === "NAV" ? <CapitalNav read={nav} /> : <Gap ids={row.ids} />}</td>
+                </tr>
+              ))}
+              {STATEMENT_ROWS.filter((row) => publishes(statements, row.key)).map((row) => (
+                <tr key={row.key}>
+                  <th scope="row">{row.label}</th>
+                  <td><PartitionFigures list={statements} metricKey={row.key} /></td>
                 </tr>
               ))}
             </tbody>
