@@ -140,19 +140,90 @@ function metric(template: Draft, value: string | null, currency: string): Draft 
   return out;
 }
 const sum = (values: string[]): string => values.reduce(addDecimal, "0");
+/* SIMULATED derived keys (README "Explicit populated/layout review"): bigint only, never a float, never across partitions. */
+const SCALE = 18;
+const toScaled = (value: string): bigint => {
+  const negative = value.startsWith("-");
+  const [whole, fraction = ""] = value.replace("-", "").split(".");
+  const n = BigInt(whole + fraction.padEnd(SCALE, "0").slice(0, SCALE));
+  return negative ? -n : n;
+};
+const trimmed = (value: bigint, places: number): string => decimal(value, places).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+/** A percent with 6 places, truncated toward zero: numerator * 100 / denominator. `null` when the denominator is not positive. */
+const pct = (numerator: bigint, denominator: bigint): string | null => denominator <= 0n ? null : trimmed(numerator * 100n * 1_000_000n / denominator, 6);
+/** Sum of squared shares, 6 places, in [0, 1]. `null` unless every allocation is known and the total is positive. */
+const hhi = (allocations: (string | null)[]): string | null => {
+  if (allocations.length === 0 || allocations.some((value) => value === null)) return null;
+  const parts = allocations.map((value) => toScaled(value!));
+  const total = parts.reduce((a, b) => a + b, 0n);
+  if (total <= 0n || parts.some((part) => part < 0n)) return null;
+  return trimmed(parts.reduce((a, b) => a + b * b, 0n) * 1_000_000n / (total * total), 6);
+};
+const seedOf = (...parts: unknown[]): number => parseInt(digest(parts).slice(7, 15), 16);
+/** A deterministic negative percent between -2.00 and -19.99. */
+const drawdownOf = (...parts: unknown[]): string => trimmed(-(200n + BigInt(seedOf(...parts) % 1800)), 2);
+const pctMetric = (template: Draft, value: string | null): Draft => {
+  const out = metric(template, value, "X");
+  out.currency = null;
+  out.unit = "PERCENT";
+  return out;
+};
+/** A present metric becomes a typed absence in its own unit. */
+const nulled = (key: string, template: Draft, currency: string): Draft =>
+  (key === "return_30d_pct" || key === "max_drawdown_pct") ? pctMetric(template, null) : metric(template, null, currency);
+
+const NEW_ROW_KEYS = ["balance_total", "equity_30d_end_value", "return_30d_pct"] as const;
+/**
+ * SIMULATED row keys, per economic partition, from that partition's own allocation (A), net PnL (N) and unrealized PnL (U):
+ * balance_total = A + N, equity_30d_end_value = A + N + U, return_30d_pct = N * 100 / A. A missing input is a typed absence.
+ */
+function enrichRow(row: Draft): Draft {
+  const template = row.metrics.net_pnl;
+  for (const entry of row.economic_partitions) {
+    const m = entry.metrics;
+    const known = (key: string): string | null => m[key]?.availability === "AVAILABLE" ? m[key].value : null;
+    const [A, N, U] = [known("allocation"), known("net_pnl"), known("unrealized_pnl")];
+    const balance = A !== null && N !== null ? trimmed(toScaled(A) + toScaled(N), SCALE) : null;
+    const equity = balance !== null && U !== null ? trimmed(toScaled(balance) + toScaled(U), SCALE) : null;
+    const ret = A !== null && N !== null ? pct(toScaled(N), toScaled(A)) : null;
+    m.balance_total = metric(template, balance, entry.partition.currency);
+    m.equity_30d_end_value = metric(template, equity, entry.partition.currency);
+    m.return_30d_pct = pctMetric(template, ret);
+  }
+  for (const key of NEW_ROW_KEYS) {
+    // One partition: the headline IS that partition's figure. Several: the row headline names no currency (mixed), as net_pnl does.
+    row.metrics[key] = row.economic_partitions.length === 1 ? copy(row.economic_partitions[0].metrics[key]) : copy(template);
+  }
+  return row;
+}
+
 function aggregate(rows: Draft[]): Draft[] {
-  const byPartition = new Map<string, Draft>();
+  const byPartition = new Map<string, { item: Draft; members: Draft[] }>();
   for (const row of rows) for (const item of row.economic_partitions) {
     const key = JSON.stringify(item.partition);
     const found = byPartition.get(key);
-    if (!found) { byPartition.set(key, copy(item)); continue; }
+    if (!found) { byPartition.set(key, { item: copy(item), members: [item.metrics] }); continue; }
+    found.members.push(item.metrics);
     for (const name of Object.keys(item.metrics)) {
-      const a = found.metrics[name];
+      if (name === "return_30d_pct") continue;
+      const a = found.item.metrics[name];
       const b = item.metrics[name];
-      found.metrics[name] = metric(a, a.value === null || b.value === null ? null : addDecimal(a.value, b.value), item.partition.currency);
+      found.item.metrics[name] = metric(a, a.value === null || b.value === null ? null : addDecimal(a.value, b.value), item.partition.currency);
     }
   }
-  return [...byPartition.values()];
+  return [...byPartition.entries()].map(([key, { item, members }]) => {
+    const currency = item.partition.currency;
+    const template = item.metrics.net_pnl;
+    const total = (name: string): string | null => item.metrics[name]?.availability === "AVAILABLE" ? item.metrics[name].value : null;
+    const [A, N, B] = [total("allocation"), total("net_pnl"), total("balance_total")];
+    // SIMULATED group keys, inside this ONE partition only: NAV, return on allocation, drawdown, concentration of allocation.
+    item.metrics.current_nav = metric(template, B, currency);
+    item.metrics.return_30d_pct = pctMetric(template, A !== null && N !== null ? pct(toScaled(N), toScaled(A)) : null);
+    item.metrics.max_drawdown_pct = pctMetric(template, seedOf(key, "group-drawdown") % 6 === 0 ? null : drawdownOf(key, members.length));
+    item.metrics.concentration_hhi = pctMetric(template, hhi(members.map((metrics) => metrics.allocation?.availability === "AVAILABLE" ? metrics.allocation.value : null)));
+    item.metrics.concentration_hhi.unit = "RATIO";
+    return item;
+  });
 }
 
 /** Separate synthetic capital receipts, NOT aliases for the table's allocation/PnL.
@@ -162,14 +233,16 @@ function aggregate(rows: Draft[]): Draft[] {
  * deployments of that account do not invent another NAV/budget snapshot.
  */
 function capitalStatements(rows: Draft[]): Draft[] {
-  const partitions = new Map<string, { partition: Draft; accounts: Set<string>; template: Draft }>();
+  const partitions = new Map<string, { partition: Draft; accounts: Set<string>; template: Draft; pnl: (string | null)[] }>();
   for (const row of rows) for (const entry of row.economic_partitions) {
     const key = JSON.stringify(entry.partition);
-    const found = partitions.get(key) ?? { partition: entry.partition, accounts: new Set<string>(), template: row.metrics.net_pnl };
+    const found = partitions.get(key) ?? { partition: entry.partition, accounts: new Set<string>(), template: row.metrics.net_pnl, pnl: [] };
+    // This partition's own rows only; a row's figure is never moved to another partition.
+    found.pnl.push(entry.metrics.net_pnl?.availability === "AVAILABLE" ? entry.metrics.net_pnl.value : null);
     for (const child of row.children) found.accounts.add(child.account_id);
     partitions.set(key, found);
   }
-  return [...partitions.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, entry], index) => {
+  return [...partitions.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, entry], index, all) => {
     const accounts = [...entry.accounts].sort();
     const count = BigInt(accounts.length);
     const scale = 1_000_000_000_000_000_000n;
@@ -183,7 +256,7 @@ function capitalStatements(rows: Draft[]): Draft[] {
       current_budget: decimal(count * 9_000n * scale, 18),
       pending_amount: index === 0 ? null : "0",
     };
-    return { partition: copy(entry.partition), metrics: Object.fromEntries(Object.entries(values).map(([kind, value]) => {
+    const money = Object.fromEntries(Object.entries(values).map(([kind, value]) => {
       const out = metric(entry.template, value, entry.partition.currency);
       // Current/cumulative capital receipts have no performance-window claim.
       out.window = null;
@@ -192,13 +265,33 @@ function capitalStatements(rows: Draft[]): Draft[] {
       out.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC_CAPITAL", key, accounts, kind])];
       out.calculation_revision = "FIXTURE_LAB:capital-review.v1";
       return [kind, out];
-    })) };
+    }));
+    // SIMULATED performance keys of the same partition: net_pnl = sum of THIS partition's rows; return = net_pnl * 100 / initial_funds;
+    // drawdown is a deterministic negative percent (an exact "0" for the first partition, so a true zero stays testable).
+    const pnl = entry.pnl.every((value) => value !== null) ? sum(entry.pnl as string[]) : null;
+    const perf = (kind: string, built: Draft): Draft => {
+      built.window = null;
+      built.denominator = null;
+      built.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC_CAPITAL", key, accounts, kind])];
+      built.calculation_revision = "FIXTURE_LAB:capital-review.v1";
+      built.methodology_ref = built.availability === "AVAILABLE" ? "FIXTURE_LAB:synthetic-capital-performance-v1" : null;
+      return built;
+    };
+    const ret = pnl === null ? null : pct(toScaled(pnl), toScaled(values.initial_funds!));
+    const returnMetric = perf("return_30d_pct", pctMetric(entry.template, index === 1 && all.length > 1 ? null : ret));
+    returnMetric.denominator = returnMetric.availability === "AVAILABLE" ? values.initial_funds : null;
+    const extra = {
+      net_pnl: perf("net_pnl", metric(entry.template, pnl, entry.partition.currency)),
+      return_30d_pct: returnMetric,
+      max_drawdown_pct: perf("max_drawdown_pct", pctMetric(entry.template, index === 0 ? "0" : drawdownOf(key, "capital"))),
+    };
+    return { partition: copy(entry.partition), metrics: { ...money, ...extra } };
   });
 }
 
 function rowsFor(environment: string, template: Draft): Draft[] {
   const universe = scaled();
-  if (universe.alphas.length === 0) return copy(template.items);
+  if (universe.alphas.length === 0) return copy(template.items).map(enrichRow);
   const rows: Draft[] = [];
   const make = (alpha: AlphaSpec, deployments: DeploymentSpec[]): void => {
     const first = deployments[0]!;
@@ -238,7 +331,7 @@ function rowsFor(environment: string, template: Draft): Draft[] {
     }
     for (const deployments of books.values()) make(alpha, deployments);
   }
-  return rows;
+  return rows.map(enrichRow);
 }
 
 function datasetAnswer(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
@@ -278,7 +371,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
       for (const row of rows) {
         const children = row.children.filter((child: Draft) => child[surface === "ACCOUNT" ? "account_id" : "deployment_id"] === id);
         if (children.length !== row.children.length) {
-          for (const key of Object.keys(row.metrics)) row.metrics[key] = metric(row.metrics[key], null, row.economic_partitions[0].partition.currency);
+          for (const key of Object.keys(row.metrics)) row.metrics[key] = nulled(key, row.metrics[key], row.economic_partitions[0].partition.currency);
           row.economic_partitions[0].metrics = copy(row.metrics);
         }
         row.children = children;
@@ -290,7 +383,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
     const children = row.children.filter((child: Draft) => stages.includes(child.stage));
     if (!children.length) return [];
     if (children.length !== row.children.length) {
-      for (const key of Object.keys(row.metrics)) row.metrics[key] = metric(row.metrics[key], null, row.economic_partitions[0].partition.currency);
+      for (const key of Object.keys(row.metrics)) row.metrics[key] = nulled(key, row.metrics[key], row.economic_partitions[0].partition.currency);
       row.economic_partitions[0].metrics = copy(row.metrics);
     }
     row.children = children;
@@ -353,6 +446,13 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   // Keep the published descriptor; numeric requests receive the original explicit 400 above,
   // never a body that silently ignores them. This review module is not the production query engine.
   body.query_options = copy(template.query_options);
+  // SIMULATED metric keys (README): rows carry exactly the keys the dataset names; each is also offered as a sort field.
+  for (const key of NEW_ROW_KEYS) {
+    body.query_options.metric_keys.push(key);
+    if (!body.query_options.sort_fields.includes(key)) body.query_options.sort_fields.push(key);
+  }
+  body.query_options.economic_partition_required_for.push("balance_total", "equity_30d_end_value");
+  if (!body.query_options.window.independent_metrics.includes("balance_total")) body.query_options.window.independent_metrics.push("balance_total");
   if (Buffer.byteLength(JSON.stringify(body)) > body.query_policy.maximum_response_bytes) return problem(400, "MANAGER_REVIEW_RESPONSE_TOO_LARGE", "Reduce limit/grouping for this bounded review response.");
   return { status: 200, body };
 }

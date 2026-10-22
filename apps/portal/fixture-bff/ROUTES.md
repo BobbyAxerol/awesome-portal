@@ -70,6 +70,11 @@ using `review-manager.ts` and the existing Manager schemas/readers:
 | `/api/v1/execution/manager/deployments/{id}/overview` | Known selected deployment only |
 | `/api/v1/execution/manager/series` | NAV / RETURN / NET_PNL, 240 or 1440 exact-string samples, explicit gap |
 
+The dataset bodies of these routes also carry SIMULATED derived metric keys (rows: `balance_total`,
+`equity_30d_end_value`, `return_30d_pct`; capital statements: `net_pnl`, `return_30d_pct`, `max_drawdown_pct`; portfolio
+groups: `current_nav`, `return_30d_pct`, `max_drawdown_pct`, `concentration_hhi`). Rules and the expected real source are
+in the README table; none of them is a source fact.
+
 Unknown resources remain typed refusals; unsupported dataset window/economic/numeric
 queries remain explicit 400s. Negative workspace cases and `ALL` history gaps remain.
 These are synthetic routes, not new real endpoints or source qualification. See
