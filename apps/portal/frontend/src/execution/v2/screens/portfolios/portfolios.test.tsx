@@ -178,11 +178,11 @@ describe("header, banners and footer", () => {
     // UXM07-048/10: one banner. The branch that is not whole names what is missing; the partial read's sentence is its disclosure
     expect(screen.queryByText("Some portfolios or figures may be missing")).toBeNull();
     expect(document.querySelectorAll(".exec-pf-banner-line")).toHaveLength(1);
-    expect(whyText(screen.getByRole("button", { name: "Why the read is partial" }).parentElement)).toBe("The read is partial");
+    expect(document.querySelectorAll(".exec-pf-banner .exec-blk-why-btn")).toHaveLength(1);
     const branch = screen.getByText(/Paper: Partial \(the data feed is running behind\)/);
     expect(branch).toBeTruthy();
     expect(branch.textContent).not.toMatch(/N31_|_LAGGING/);
-    expect(whyText(branch)).toBe("Reason code: N31_PROJECTION_LAGGING");
+    expect(whyText(branch.closest(".exec-pf-banner-line")!)).toBe("Reason code: N31_PROJECTION_LAGGING\nThe read is partial");
     expect(screen.queryByText(/Names and allocation only/)).toBeNull();
   });
 

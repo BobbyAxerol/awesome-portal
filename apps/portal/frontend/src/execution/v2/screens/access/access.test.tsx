@@ -119,7 +119,10 @@ describe("POLICY_PENDING", () => {
     expect(screen.getByText("Access policy").nextElementSibling?.textContent).toBe("Pending");
     expect(screen.getByText("No revision published")).toBeTruthy();
     const facts = screen.getByText("Researcher field policy").closest("dl") as HTMLElement;
-    expect(within(facts).getByText(/Not published/).closest("dd")?.textContent).toContain("(FE-026)");
+    // UXM07-048: the undecided policy is the plain words "Not decided"; its request id is in the disclosure, not on the line
+    const policy = within(facts).getByText(/Not decided/).closest("dd") as HTMLElement;
+    expect(policy.textContent).not.toContain("FE-026");
+    expect(whyText(policy)).toContain("Not published (FE-026)");
     expect(within(facts).getByText("OWNER_RECOVERY_NOT_APPROVED")).toBeTruthy();
     expect(within(facts).getByText("Off")).toBeTruthy();
   });

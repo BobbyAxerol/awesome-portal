@@ -20,7 +20,7 @@ import { useSession } from "../../../../auth/session";
 import { SELF_ENTRY_PATH } from "../../../../app/selfNavView";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
-import { CodeName, GapWhy, NotAvailableLine, PanelHead } from "../../blocks";
+import { CodeName, GapWhy, NotAvailableLine, PanelHead, gapTitle } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ExecutionSurface } from "../../../ExecutionSurface";
 import { Flag } from "../../Flag";
@@ -83,14 +83,6 @@ const KPI_VALUE_MAX_CHARS = 12;
 function KpiValue({ text, absent }: { text: string; absent?: boolean }) {
   const form = absent ? "absent" : text.length > KPI_VALUE_MAX_CHARS ? "id" : "kpi";
   return <dd className="exec-acc-kpi-value" data-form={form}>{text}</dd>;
-}
-
-function NotPublished({ id, children }: { id: string; children?: ReactNode }) {
-  return (
-    <span>
-      <span className="exec-acc-np-word">Not published</span> ({id}){children ? <> {children}</> : null}
-    </span>
-  );
 }
 
 type GrantsView =
@@ -363,7 +355,10 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
             <dt>Researcher field policy</dt>
             <dd>
               {effective.researcherFieldPolicy.state === "PENDING" ? (
-                <NotPublished id={ACCESS_FE.researcher}>Not decided</NotPublished>
+                <>
+                  Not decided
+                  <GapWhy name="Why the researcher field policy is not decided" rows={[gapTitle(ACCESS_FE.researcher, "Researcher field policy")]} />
+                </>
               ) : (
                 <>
                   <Flag kind="ok" size="sm" label="Qualified" />{" "}

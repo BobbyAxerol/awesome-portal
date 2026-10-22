@@ -561,7 +561,7 @@ describe("JourneySpine", () => {
     expect(now.textContent).not.toContain("Gate criteria");
     expect(now.textContent).not.toContain("Decider");
     expect(now.textContent).not.toContain("Not published");
-    expect(document.body.textContent).toContain("Days in stage, gate criteria and decider are not published");
+    expect(document.body.textContent).toContain("Days in stage, gate criteria and decider");
   });
 
   it("renders published facts and a done stage only when the source says done", () => {

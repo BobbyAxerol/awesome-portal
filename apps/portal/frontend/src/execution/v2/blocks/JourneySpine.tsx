@@ -231,7 +231,7 @@ export function JourneySpine({
   const gapNote =
     variant === "full" && SPINE_STAGE_IDS.some((id, i) => cardHasGap(states[i], id, stages?.[id])) ? (
       <p className="exec-blk-spine-note">
-        <NotPublished id="FE-027/028">Days in stage, gate criteria and decider are not published</NotPublished>
+        <NotPublished id="FE-027/028">Days in stage, gate criteria and decider</NotPublished>
       </p>
     ) : null;
 

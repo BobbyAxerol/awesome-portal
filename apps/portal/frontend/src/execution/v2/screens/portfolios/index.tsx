@@ -250,10 +250,15 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             <p className="exec-pf-banner-line">
               <Flag kind="partial" label="Branch not whole" size="sm" /> {degraded.map((d, i) => (
                 <span key={d.environment} className="exec-pf-branch">
-                  {i > 0 ? " · " : ""}{humanize(d.environment)}: {humanize(d.state)}{d.reasonCode ? ` (${branchReasonText(d.reasonCode).text})` : ""}{d.reasonCode ? <GapWhy name={`Reason code for ${humanize(d.environment)}`} rows={[`Reason code: ${d.reasonCode}`]} next={null} /> : null}
+                  {i > 0 ? " · " : ""}{humanize(d.environment)}: {humanize(d.state)}{d.reasonCode ? ` (${branchReasonText(d.reasonCode).text})` : ""}
                 </span>
               ))}
-              {incomplete && envelope ? <GapWhy name="Why the read is partial" rows={[`The read is ${humanize(envelope.completeness).toLowerCase()}`]} next={null} /> : null}
+              {/* One disclosure for the whole banner: each branch's reason code, then the partial read's sentence. */}
+              <GapWhy
+                name="Why the branch is not whole"
+                rows={[...degraded.flatMap((d) => (d.reasonCode ? [`Reason code: ${d.reasonCode}`] : [])), ...(incomplete && envelope ? [`The read is ${humanize(envelope.completeness).toLowerCase()}`] : [])]}
+                next={null}
+              />
             </p>
           ) : null}
         </div>
