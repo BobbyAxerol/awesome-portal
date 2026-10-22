@@ -99,7 +99,12 @@ describe("identity table", () => {
     expect(tile("Need attention")).toContain("1");
     expect(tile("Research only")).toContain("1");
     expect(container.textContent).not.toMatch(/USDT/);
-    expect([...container.querySelectorAll("th")].map((th) => th.textContent)).not.toEqual(expect.arrayContaining(["Allocation"]));
+    // The hi-fi money columns are kept, and every cell in them is Not available: no figure is drawn.
+    for (const label of ["Allocation", "Net PnL", "Equity"]) {
+      const cells = [...container.querySelectorAll(`td[data-l="${label}"]`)];
+      expect(cells.length, label).toBeGreaterThan(0);
+      for (const td of cells) expect(td.textContent, label).toMatch(/^Not available/);
+    }
     expect(container.querySelector("svg, canvas")).toBeNull();
   });
 
@@ -118,7 +123,7 @@ describe("identity table", () => {
     await loaded();
     for (const row of within(table()).getAllByRole("row").slice(1)) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Alpha", "Owner", "Portfolios", "Stage", "Health", "Deployments",
+        "Alpha", "Owner", "Portfolios", "Stage", "Allocation", "Net PnL", "Equity", "Health", "Deployments",
       ]);
     }
     expect(table().className).toBe("exec-cards");
@@ -443,10 +448,10 @@ describe("Columns menu (FL-7)", () => {
     await loaded();
     fireEvent.click(screen.getByRole("button", { name: /Columns/ }));
     const menu = screen.getByRole("group", { name: "Columns" });
-    for (const name of ["Owner", "Portfolios", "Stage", "Health", "Deployments"]) {
+    for (const name of ["Owner", "Portfolios", "Stage", "Allocation", "Net PnL", "Equity", "Health", "Deployments"]) {
       expect((within(menu).getByRole("checkbox", { name: new RegExp(`^${name}`) }) as HTMLInputElement).checked, name).toBe(true);
     }
-    for (const [name, fe] of [["Net PnL", "FE-025"], ["Equity", "FE-013"], ["Readiness", "FE-027, FE-028"]] as const) {
+    for (const [name, fe] of [["Readiness", "FE-027, FE-028"]] as const) {
       const box = within(menu).getByRole("checkbox", { name: new RegExp(`^${name}`) }) as HTMLInputElement;
       expect(box.disabled, name).toBe(true);
       expect(box.closest("label")?.textContent, name).toContain(`Not published (${fe})`);
@@ -457,10 +462,10 @@ describe("Columns menu (FL-7)", () => {
     const { api } = makeApi();
     mount(api);
     await loaded();
-    expect(headers()).toEqual(["Alpha", "Owner", "Portfolios", "Stage", "Health", "Deployments"]);
+    expect(headers()).toEqual(["Alpha", "Owner", "Portfolios", "Stage", "Allocation", "Net PnL", "Equity", "Health", "Deployments"]);
     fireEvent.click(screen.getByRole("button", { name: /Columns/ }));
     fireEvent.click(within(screen.getByRole("group", { name: "Columns" })).getByRole("checkbox", { name: /^Owner/ }));
-    expect(headers()).toEqual(["Alpha", "Portfolios", "Stage", "Health", "Deployments"]);
+    expect(headers()).toEqual(["Alpha", "Portfolios", "Stage", "Allocation", "Net PnL", "Equity", "Health", "Deployments"]);
     expect(search().get("hide")).toBe("owner");
     fireEvent.click(within(screen.getByRole("group", { name: "Columns" })).getByRole("checkbox", { name: /^Owner/ }));
     expect(headers()).toContain("Owner");
@@ -471,7 +476,7 @@ describe("Columns menu (FL-7)", () => {
     const { api } = makeApi();
     mount(api, "/execution/fleet?hide=stage,alpha,bogus");
     await loaded();
-    expect(headers()).toEqual(["Alpha", "Owner", "Portfolios", "Health", "Deployments"]);
+    expect(headers()).toEqual(["Alpha", "Owner", "Portfolios", "Allocation", "Net PnL", "Equity", "Health", "Deployments"]);
   });
 
   it("Esc closes the menu and returns focus to its button", async () => {

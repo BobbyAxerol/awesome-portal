@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { JourneySpine, SPINE_STAGE_IDS, type SpineStageId } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { notPublished, type FleetColumnKey, type FleetRow } from "./fleetModel";
+import { MONEY_COLUMN_WHY, notPublished, type FleetColumnKey, type FleetRow } from "./fleetModel";
 
 import "../../css/fleet.css";
 
@@ -20,6 +20,15 @@ const MAX_REASONS = 2;
 
 export function NotPublishedText({ fact }: { fact: { fe: string; what: string } }) {
   return <span className="exec-fleet-np">{notPublished(fact)}</span>;
+}
+
+/** A money cell the register does not give this table. The visible word is "Not available"; the reason is in hidden text and the title. */
+function MoneyGap({ why }: { why: string }) {
+  return (
+    <span className="exec-fleet-np" title={why}>
+      Not available<span className="exec-fleet-sr"> · {why}</span>
+    </span>
+  );
 }
 
 function AlphaCell({ row }: { row: FleetRow }) {
@@ -99,6 +108,9 @@ export function FleetTable({ rows, selectedKey, onOpen, empty, hidden }: FleetTa
       render: (row) => (row.portfolios.length > 0 ? row.portfolios.join(", ") : <span className="exec-fleet-none">None attached</span>),
     },
     { key: "stage", label: "Stage", render: (row) => <StageCell row={row} /> },
+    { key: "allocation", label: "Allocation", numeric: true, render: () => <MoneyGap why={MONEY_COLUMN_WHY.allocation} /> },
+    { key: "pnl", label: "Net PnL", numeric: true, render: () => <MoneyGap why={MONEY_COLUMN_WHY.pnl} /> },
+    { key: "equity", label: "Equity", render: () => <MoneyGap why={MONEY_COLUMN_WHY.equity} /> },
     { key: "health", label: "Health", render: (row) => <HealthCell row={row} /> },
     { key: "deployments", label: "Deployments", render: (row) => <DeploymentsCell row={row} /> },
   ];

@@ -339,9 +339,22 @@ export const FLEET_COLUMNS = [
   { key: "owner", label: "Owner" },
   { key: "portfolios", label: "Portfolios" },
   { key: "stage", label: "Stage" },
+  { key: "allocation", label: "Allocation" },
+  { key: "pnl", label: "Net PnL" },
+  { key: "equity", label: "Equity" },
   { key: "health", label: "Health" },
   { key: "deployments", label: "Deployments" },
 ] as const;
+
+/**
+ * Why each money column has no value (hi-fi keeps the column and prints "Not available" in each cell).
+ * Allocation is in the register's deployments but this screen reads identity only (fleetModel header), so it has no request id.
+ */
+export const MONEY_COLUMN_WHY = {
+  allocation: "The fleet register carries allocation per deployment; this table does not read it yet, so no per-alpha figure is shown.",
+  pnl: `${NOT_PUBLISHED} (FE-025): windowed Net PnL needs the window.`,
+  equity: `${NOT_PUBLISHED} (FE-013): the equity series is not published.`,
+} as const;
 export type FleetColumnKey = (typeof FLEET_COLUMNS)[number]["key"];
 
 /** The URL names the columns that are switched off, so the default (all on) leaves the URL clean. */
@@ -359,8 +372,5 @@ export function serializeHiddenColumns(hidden: ReadonlySet<FleetColumnKey>): str
 
 /** Columns the HIFI menu lists that need data the backend has not published: shown disabled, with the request id. */
 export const UNPUBLISHED_COLUMNS: readonly { label: string; fact: UnpublishedFact }[] = [
-  { label: "Net PnL", fact: FE.window },
-  // FE-013 is not in `FE`: the shared blocks table mirrors that object one for one.
-  { label: "Equity", fact: { fe: "FE-013", what: "Equity series" } },
   { label: "Readiness", fact: FE.readiness },
 ];
