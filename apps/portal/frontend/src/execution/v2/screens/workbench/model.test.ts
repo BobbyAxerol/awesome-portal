@@ -222,7 +222,7 @@ describe("the observation gate: the verdict is the server's", () => {
 
   it("is `none` with no gate, and the counts are the published ones, not re-judged", () => {
     const wire = paperWire();
-    expect(readGate(envelopeOf(wire))).toMatchObject({ verdict: "partial", observedDays: 3, minimumDays: 14, trades: 2, minimumTrades: 20, sessions: 1, windowBounded: true, policy: "PAPER_OBSERVATION · paper.v1" });
+    expect(readGate(envelopeOf(wire))).toMatchObject({ verdict: "partial", observedDays: 3, minimumDays: 14, trades: 2, minimumTrades: 20, sessions: 1, windowBounded: true, policyStage: "PAPER_OBSERVATION", policyVersion: "paper.v1" });
     // Counts that look sufficient do not turn a PARTIAL gate into a MET one.
     setPath(wire, ["data", "observation_gate", "observed_days"], 99);
     setPath(wire, ["data", "observation_gate", "trade_count"], 99);

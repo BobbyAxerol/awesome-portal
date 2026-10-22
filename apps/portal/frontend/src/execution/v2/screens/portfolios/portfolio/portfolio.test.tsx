@@ -131,7 +131,7 @@ describe("Overview", () => {
     expect(screen.getByText("Account equity, not NAV")).toBeTruthy();
     expect(whyText(screen.getByText("Account equity, not NAV").parentElement)).toBe("Benchmark: not available");
     expect(document.body.textContent).toContain("Retained snapshot gap");
-    expect(document.body.textContent).toContain("Server: 40 of 4,592 points, MIN_MAX_LAST_BUCKET_V1");
+    expect(document.body.textContent).toContain("Server: 40 of 4,592 points, min, max and last value kept per bucket");
     expect(document.body.textContent).toContain("1 gap drawn as a gap, not joined");
     // No drawdown pane: Drawdown is on the one 'Not available' line instead.
     expect(screen.getByTestId("not-available-line").textContent).toContain("Drawdown");

@@ -23,7 +23,7 @@ import { planOutcomeText, planApplicable, PLAN_ENVIRONMENTS, type CommandPlan } 
 import type { PanelStatus } from "../../../contracts";
 import { PanelState } from "../../../components/states";
 import type { StagedActivation } from "../../../stagedActivation";
-import { NotPublished } from "../../blocks";
+import { CodeName, NotPublished } from "../../blocks";
 import { DockAction, Drawer, type DockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
@@ -208,7 +208,7 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
         <Fact term="Not live because">
           {first.code ?? first.sentence ? (
             <>
-              {first.code ? <span className="exec-adm-mono">{first.code}</span> : null}
+              {first.code ? <CodeName code={first.code} /> : null}
               {first.code && first.sentence ? " " : null}
               {first.sentence ?? null}
             </>

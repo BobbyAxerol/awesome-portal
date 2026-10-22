@@ -28,7 +28,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { activationSentence } from "../../../stagedActivation";
-import { GapWhy, PanelGate, SectionPanel } from "../../blocks";
+import { CodeName, GapWhy, PanelGate, SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
@@ -426,7 +426,7 @@ export default function AdminScreen({
               label: "First reason it is not live",
               render: (r) => {
                 const first = firstReasonFor(r.task, activation);
-                return first.code ?? first.sentence ?? (r.state === "ready" ? "Live" : "No reason was published");
+                return first.code ? <CodeName code={first.code} /> : first.sentence ?? (r.state === "ready" ? "Live" : "No reason was published");
               },
             },
           ]}

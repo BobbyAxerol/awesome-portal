@@ -20,7 +20,7 @@ import { useSession } from "../../../../auth/session";
 import { SELF_ENTRY_PATH } from "../../../../app/selfNavView";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf } from "../../boundary";
-import { GapWhy, NotAvailableLine, PanelHead } from "../../blocks";
+import { CodeName, GapWhy, NotAvailableLine, PanelHead } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ExecutionSurface } from "../../../ExecutionSurface";
 import { Flag } from "../../Flag";
@@ -257,7 +257,11 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
       {effective?.availability === "POLICY_PENDING" ? (
         <p className="exec-acc-banner" role="status">
           <strong>Access policy pending.</strong> {reasonText(effective.reasonCode ?? "").text}{" "}
-          <span className="exec-acc-code">{effective.reasonCode}</span>
+          {reasonText(effective.reasonCode ?? "").known ? (
+            <span className="exec-blk-sr">({effective.reasonCode})</span>
+          ) : (
+            <span className="exec-acc-code">{effective.reasonCode}</span>
+          )}
         </p>
       ) : null}
 
@@ -382,7 +386,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
         <summary>Reasons this screen can show</summary>
         <CardsTable
           columns={[
-            { key: "code", label: "Reason", render: (r: [string, string]) => <span className="exec-acc-id">{r[0]}</span> },
+            { key: "code", label: "Reason", render: (r: [string, string]) => <CodeName code={r[0]} /> },
             { key: "text", label: "Shown as", render: (r: [string, string]) => r[1] },
           ]}
           rows={Object.entries(REASON_DICTIONARY)}

@@ -15,6 +15,7 @@ import type { CaptureContext, ContextRead } from "../../../api/governanceContext
 import type { ExecutionApi } from "../../../api/ports";
 import { formatExact } from "../../../formatExact";
 import { Flag } from "../../Flag";
+import { codeName } from "../../displayNames";
 import { GapLine, GapWhy, SectionPanel } from "../../blocks";
 import { Na } from "./cells";
 import { ExitReviewRequest } from "./ExitReviewRequest";
@@ -99,7 +100,16 @@ export function ExitGatePanel({ gate, exitReviewsHref, request }: ExitGatePanelP
           { label: "Cost drift", id: "FE-028" },
         ]}
       />
-      {gate.policy ? <p className="exec-wb-cap">Policy {gate.policy}</p> : null}
+      {gate.policyStage || gate.policyVersion ? (
+        <p className="exec-wb-cap">
+          Policy {gate.policyStage ? codeName(gate.policyStage).name : null}
+          <GapWhy
+            name="Policy version"
+            rows={[gate.policyStage, gate.policyVersion ? `Version ${gate.policyVersion}` : null].filter((row): row is string => row !== null)}
+            next={null}
+          />
+        </p>
+      ) : null}
       {request !== undefined && bind !== null ? <ExitReviewRequest api={request.api} deploymentId={request.deploymentId} workspaceId={request.workspaceId} bind={bind} /> : null}
       <p className="exec-wb-link">
         <Link className="exec-blk-link" to={exitReviewsHref}>Open exit review</Link>

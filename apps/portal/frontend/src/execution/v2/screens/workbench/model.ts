@@ -272,13 +272,16 @@ export interface GateFacts {
   /** The source holds less history than the policy asks about. null = not published. */
   windowBounded: boolean | null;
   reasonCode: string | null;
-  policy: string | null;
+  /** The policy stage as the source named it (`PAPER_OBSERVATION`); the screen shows its display name. */
+  policyStage: string | null;
+  /** The policy version as published (`paper.v1`); disclosure only. */
+  policyVersion: string | null;
 }
 
 export function readGate(envelope: ProfileEnvelope): GateFacts {
   const raw: unknown = envelope.objects.observation_gate ?? null;
   if (!isRow(raw)) {
-    return { verdict: "none", observedDays: null, minimumDays: null, trades: null, minimumTrades: null, sessions: null, windowBounded: null, reasonCode: null, policy: null };
+    return { verdict: "none", observedDays: null, minimumDays: null, trades: null, minimumTrades: null, sessions: null, windowBounded: null, reasonCode: null, policyStage: null, policyVersion: null };
   }
   const state = typeof raw.state === "string" ? raw.state : "";
   // The server's enum is MET | NOT_MET | PARTIAL (| BLOCKED). AVAILABLE is not a verdict the gate publishes: it is shown, neutral, as what it says.
@@ -289,7 +292,6 @@ export function readGate(envelope: ProfileEnvelope): GateFacts {
         : state === "NOT_MET" ? "not-met"
           : "unknown";
   const bounded = raw.window_bounded;
-  const policy = [text(raw.policy_stage), text(raw.policy_version)].filter((part): part is string => part !== null).join(" · ");
   return {
     verdict,
     observedDays: count(raw.observed_days),
@@ -299,7 +301,8 @@ export function readGate(envelope: ProfileEnvelope): GateFacts {
     sessions: count(raw.session_count),
     windowBounded: typeof bounded === "boolean" ? bounded : null,
     reasonCode: code(raw.reason_code),
-    policy: policy === "" ? null : policy,
+    policyStage: text(raw.policy_stage),
+    policyVersion: text(raw.policy_version),
   };
 }
 

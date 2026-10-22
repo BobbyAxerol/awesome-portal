@@ -113,7 +113,8 @@ describe("POLICY_PENDING", () => {
     await granted();
     const banner = screen.getByText("Access policy pending.").closest("p") as HTMLElement;
     expect(banner.textContent).toContain("No access policy has been published as effective for this workspace yet.");
-    expect(within(banner).getByText("POLICY_PENDING")).toBeTruthy();
+    // UXM07-048/4: the code is hidden text on the banner, not a visible token
+    expect(within(banner).getByText("(POLICY_PENDING)").className).toContain("exec-blk-sr");
     expect(screen.getByText("No grants are listed while the access policy is pending.")).toBeTruthy();
     expect(screen.getByText("Access policy").nextElementSibling?.textContent).toBe("Pending");
     expect(screen.getByText("No revision published")).toBeTruthy();
@@ -506,11 +507,11 @@ describe("structure and absences", () => {
     }
   });
 
-  it("the reason dictionary lists only the reasons the contract names", async () => {
+  it("the reason dictionary lists only the reasons the contract names, by display name with the code in hidden text", async () => {
     mount();
     await granted();
     const dict = screen.getByRole("table", { name: "Reasons this screen can show", hidden: true });
-    expect(rowsOf(dict).map((r) => r.querySelector("td")?.textContent)).toEqual(["POLICY_PENDING", "OWNER_RECOVERY_NOT_APPROVED"]);
+    expect(rowsOf(dict).map((r) => r.querySelector("td")?.textContent)).toEqual(["Access policy pending (POLICY_PENDING)", "Owner recovery not approved (OWNER_RECOVERY_NOT_APPROVED)"]);
   });
 
   it("an unknown reason code is printed as sent with a line saying it is unknown", async () => {

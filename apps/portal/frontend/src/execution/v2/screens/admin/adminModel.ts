@@ -27,6 +27,7 @@ import { BLOCKED_REASON_TEXT } from "../../../adminCatalog";
 import type { OperatorTask } from "../../../api/profileRead";
 import { PLAN_ENVIRONMENTS, planApplicable, type CommandPlan, type CommandPlanRequestInput, type PlanEnvironment } from "../../../commandPlan";
 import { activationSentence, type ActivationCapability, type StagedActivation } from "../../../stagedActivation";
+import { codeName } from "../../displayNames";
 import type { FlagKind } from "../../flagKinds";
 
 export const NOTE_MIN = 12;
@@ -217,7 +218,7 @@ export function planGate(row: ActionRow, workspaceId: string | null): Gate {
   if (row.kind === "danger") return { allowed: false, reason: "Needs a second approver and a security key. Not offered here." };
   if (task.twoManRule || task.typedConfirmWord) return { allowed: false, reason: "Needs a second approver. Not offered here." };
   if (row.state === "not-offered") {
-    return { allowed: false, reason: `Not offered in the portal${task.reasonCode ? ` (${task.reasonCode})` : ""}.` };
+    return { allowed: false, reason: `Not offered in the portal${task.reasonCode ? ` (${codeName(task.reasonCode).name})` : ""}.` };
   }
   if (!task.catalogKey) return { allowed: false, reason: "No catalogue key is published for this action, so there is nothing to plan." };
   if (!entry) return { allowed: false, reason: `The command catalogue does not carry ${task.catalogKey}.` };

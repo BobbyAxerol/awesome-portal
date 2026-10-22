@@ -21,6 +21,7 @@ import { PanelSkeleton, PanelState } from "../../../components/states";
 import { reviewRouteFor, type ApprovalGate } from "../../../screens/ApprovalInbox";
 import { QuietIdsWhy } from "../../blocks";
 import { formatAsOf } from "../../boundary";
+import { codeName } from "../../displayNames";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { unsupportedText, type GovernanceParentRead } from "../../readers/dispatch";
@@ -821,7 +822,7 @@ function verdictOf(data: EvidenceData): Verdict {
       return { tone: d.gateMet ? "ok" : "warn", headline: d.gateMet ? "Gate met" : "Gate not met", facts: [d.gateSummary ?? "Gate summary not published", `Promotes to ${d.promoteTo}`] };
     }
     case "r2":
-      return { tone: "mute", headline: `R1 ${data.detail.r1State.toLowerCase().replace(/_/g, " ")}`, facts: data.detail.grantName ? [`Grant ${data.detail.grantName}`] : [] };
+      return { tone: "mute", headline: `R1 ${data.detail.r1State.toLowerCase().replace(/_/g, " ")}`, facts: data.detail.grantName ? [`Grant ${codeName(data.detail.grantName).name}`] : [] };
     case "live":
       return { tone: "mute", headline: "Evidence ready · Live decisions are closed", facts: data.payload.readAt ? [`Read ${instantText(data.payload.readAt) ?? data.payload.readAt}`] : [] };
     case "r2v2": {
@@ -830,7 +831,7 @@ function verdictOf(data: EvidenceData): Verdict {
       return {
         tone: "mute",
         headline: lineage.availability === "AVAILABLE" ? "R1 lineage published" : "R1 lineage not published",
-        facts: [lineage.availability === "AVAILABLE" ? `R1 ${lineage.r1ApprovalId}` : lineage.reasonCode, `Approval ${STATUS_WORD[data.parent.approval.status].toLowerCase()}`],
+        facts: [lineage.availability === "AVAILABLE" ? `R1 ${lineage.r1ApprovalId}` : codeName(lineage.reasonCode).name, `Approval ${STATUS_WORD[data.parent.approval.status].toLowerCase()}`],
       };
     }
     case "exitv2": {
@@ -840,7 +841,7 @@ function verdictOf(data: EvidenceData): Verdict {
         ? evaluation.findings
         : criteria.availability === "AVAILABLE" ? criteria.items.map((item) => item.finding) : null;
       if (findings === null) {
-        return { tone: "mute", headline: "Evaluation not published", facts: evaluation.availability === "AVAILABLE" ? [] : [evaluation.reasonCode] };
+        return { tone: "mute", headline: "Evaluation not published", facts: evaluation.availability === "AVAILABLE" ? [] : [codeName(evaluation.reasonCode).name] };
       }
       const pass = findings.filter((finding) => finding.outcome === "PASS").length;
       const blocking = findings.filter((finding) => finding.blocking && finding.outcome !== "PASS").length;

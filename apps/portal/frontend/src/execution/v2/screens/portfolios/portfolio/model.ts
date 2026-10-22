@@ -540,7 +540,7 @@ export function serverEnvelope(payload: FinancialChartPayload): ServerEnvelope |
   return {
     sourceCount: source,
     shownCount: sampling.returnedRows,
-    method: sampling.algorithm ?? "unnamed method",
+    method: sampling.algorithm ?? "",
     // Absent or unreadable is the cautious answer: the chart then says extrema are not promised.
     keepsExtrema: sampling.preservesExtrema === true,
   };

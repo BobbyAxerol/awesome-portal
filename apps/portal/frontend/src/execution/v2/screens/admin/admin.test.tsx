@@ -111,15 +111,15 @@ describe("why nothing is live", () => {
     expect(banner.textContent).toContain("PROJECTION, kill switch engaged");
   });
 
-  it("each action's provenance row gives its code, else the activation's sentence", async () => {
+  it("each action's provenance row gives its code as a display name (the code behind a disclosure), else the activation's sentence", async () => {
     mount();
     await loaded();
     const details = document.querySelector("details.exec-adm-prov")!;
     fireEvent.click(details.querySelector("summary")!);
     const table = within(details as HTMLElement).getByRole("table", { name: "Action provenance" });
     const reasons = new Map(within(table).getAllByRole("row").slice(1).map((r) => [r.querySelector("td[data-l='Action']")!.textContent, r.querySelector("td[data-l='First reason it is not live']")!.textContent] as const));
-    expect(reasons.get("System health")).toBe("TYPED_SOURCE_OPERATION_NOT_PUBLISHED");
-    expect(reasons.get("Emergency close")).toBe("N16B_COMPATIBLE_COMMAND_IDENTITY_NOT_ACTIVATED");
+    expect(reasons.get("System health")).toBe("Typed source operation not published");
+    expect(reasons.get("Emergency close")).toBe("N16b compatible command identity not activated");
     expect(reasons.size).toBe(24);
   });
 });
@@ -130,7 +130,9 @@ describe("the detail pane", () => {
     expect(within(pane).getByRole("heading", { name: "Change allocation" })).toBeTruthy();
     expect(pane.textContent).toContain("Start in Portfolios");
     expect(within(pane).getByRole("link", { name: "Open Portfolios" }).getAttribute("href")).toBe("/deployments/portfolios");
-    expect(pane.textContent).toContain("N27_COMMAND_TRANSPORT_NOT_ACTIVATED");
+    // UXM07-048/4: the reason reads as its display name; the code stays in hidden text
+    expect(pane.textContent).toContain("Command transport not active");
+    expect(pane.textContent).toContain("(N27_COMMAND_TRANSPORT_NOT_ACTIVATED)");
     expect(within(pane).queryByRole("button", { name: "Make plan" })).toBeNull();
   });
 
@@ -142,10 +144,10 @@ describe("the detail pane", () => {
     expect(button.getAttribute("aria-describedby")).toBeTruthy();
   });
 
-  it("an incompatible command is not offered, with the server's reason code", async () => {
+  it("an incompatible command is not offered, with the reason's display name", async () => {
     const pane = await open("/administration/actions?sel=risk-profile");
     expect((within(pane).getByRole("button", { name: "Make plan" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(pane.textContent).toContain("Not offered in the portal (SOURCE_ROUTE_MAPPING_AMBIGUOUS)");
+    expect(pane.textContent).toContain("Not offered in the portal (Route not established)");
   });
 
   it("provenance joins the catalogue: route, tier and why it is blocked", async () => {

@@ -15,7 +15,7 @@ import type { ReviewCaptureCapabilities } from "../../../api/reviewCapture";
 import type { DecidedRow } from "../../../screens/ApprovalInbox";
 import { formatAsOf } from "../../boundary";
 import { DockAction } from "../../Drawer";
-import { NotAvailableLine, QuietIdsWhy } from "../../blocks";
+import { CodeName, NotAvailableLine, QuietIdsWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { ActorsV2, LatestOperationV2, SectionV2 } from "../../readers/governanceParents";
 import type { InboxRowV2 } from "./inboxRowV2";
@@ -249,7 +249,7 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
           {spec.note ? <p className="exec-ck-note">{spec.note}</p> : null}
 
           <div className="exec-ck-actions">
-            <DockAction label={spec.primary} variant="primary" reason={PREVIEW_REASON} reasonLabel="" />
+            <DockAction label={spec.primary} variant="primary" reason={PREVIEW_REASON} quietReason />
             {spec.others.length > 0 ? (
               <>
                 <DockAction label="Other decisions" reason={PREVIEW_REASON} quietReason />
@@ -294,12 +294,22 @@ export function Rail({ api, target, evidence, principal, workspaceId, stepUp }: 
               <ReceiptRows
                 rows={capabilities.actions.map((action) => ({
                   label: ACTION_LABEL[action.id] ?? action.id,
-                  // A code the stage dictionary knows (BE-P7: the same classes as the eligibility) reads in words, then the code as sent.
-                  value: action.state === "AVAILABLE"
-                    ? "Available"
-                    : captureReasonText(action.reason_code) !== null
-                      ? `Unavailable · ${captureReasonText(action.reason_code)} · ${action.reason_code}`
-                      : `Unavailable · ${action.reason_code ?? "no reason given"}`,
+                  // A code the stage dictionary knows (BE-P7: the same classes as the eligibility) reads in words; the code as sent
+                  // stays in hidden text (known) or behind a disclosure (any other), never beside the words.
+                  value: action.state === "AVAILABLE" ? (
+                    "Available"
+                  ) : action.reason_code === null || action.reason_code === undefined ? (
+                    "Unavailable · no reason given"
+                  ) : captureReasonText(action.reason_code) !== null ? (
+                    <>
+                      Unavailable · {captureReasonText(action.reason_code)}
+                      <span className="exec-blk-sr"> ({action.reason_code})</span>
+                    </>
+                  ) : (
+                    <>
+                      Unavailable · <CodeName code={action.reason_code} />
+                    </>
+                  ),
                 }))}
               />
             ) : capabilities.status === "failed" ? (
