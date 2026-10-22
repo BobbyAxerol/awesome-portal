@@ -50,14 +50,14 @@ import type { ManagerSeriesMetric, ManagerSeriesQuery } from "../../readers/mana
 import { METRIC_WORD, MISMATCH_SENTENCE, UNAVAILABLE_SENTENCE, chartPointsOf, chartStateOf, chartUnit, commonCaption, isSigned, sourceNotPublished } from "../series/seriesModel";
 import { useManagerSeries } from "../series/useManagerSeries";
 import { useExecUrlState, withContext } from "../../urlState";
-import { PF_FE, npText, type Unpublished } from "../portfolios/fe";
+import { PF_FE, npText } from "../portfolios/fe";
 import { Absent, MoneyList, freshnessFlag } from "../portfolios/format";
 import { toRows, type PortfolioRow } from "../portfolios/listModel";
 import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
 import { COMPARE_MAX, selectionFrom, withSelection } from "../portfolios/selection";
 import { useRead } from "../portfolios/useRead";
 import { backTarget, basisOf, resolveSelection, selectionHint, selectionState } from "./model";
-import { NavCell, NetPnlCell, ScoreCell, type DatasetCellContext } from "./DatasetCells";
+import { DrawdownCell, NavCell, NetPnlCell, ReturnCell, ScoreCell, type DatasetCellContext } from "./DatasetCells";
 import { useCompareDatasets } from "./useCompareDatasets";
 
 import "../../css/portfolios.css";
@@ -89,16 +89,15 @@ interface MetricRow { id: string; label: string; cell(row: PortfolioRow, ctx: Da
 /**
  * The hi-fi order: the measures first, then what the list read does publish. The five measures keep their rows (hi-fi and the "Source
  * not qualified" frame). NAV and Net PnL are the Manager dataset's exact figures per economic partition; Score is the policy words of
- * `scores.*` (never a number). Return and Max drawdown have no portfolio-level key in the dataset: each cell says Not available, and
- * the request that will publish it is behind the cell's disclosure.
+ * `scores.*` (never a number). Return and Max drawdown read the portfolio's own dataset group (`return_30d_pct`, `max_drawdown_pct`); a
+ * group that does not carry the key says Not available with the request that will publish it behind the cell's disclosure.
  */
-const unpublished = (fact: Unpublished) => (): ReactNode => <Absent reason={`${npText(fact)}: ${fact.what}`} />;
 
 const METRICS: readonly MetricRow[] = [
   { id: "nav", label: "NAV", cell: (r, ctx) => <NavCell id={r.portfolioId} ctx={ctx} /> },
   { id: "netpnl", label: "Net PnL", cell: (r, ctx) => <NetPnlCell id={r.portfolioId} ctx={ctx} /> },
-  { id: "return", label: "Return", cell: unpublished(PF_FE.ret) },
-  { id: "drawdown", label: "Max drawdown", cell: unpublished(PF_FE.drawdown) },
+  { id: "return", label: "Return", cell: (r, ctx) => <ReturnCell id={r.portfolioId} ctx={ctx} /> },
+  { id: "drawdown", label: "Max drawdown", cell: (r, ctx) => <DrawdownCell id={r.portfolioId} ctx={ctx} /> },
   { id: "score", label: "Score", cell: (r, ctx) => <ScoreCell id={r.portfolioId} ctx={ctx} /> },
   { id: "currency", label: "Base currency", cell: (r) => r.baseCurrency },
   { id: "owner", label: "Owner", cell: (r) => r.owner ?? <Absent reason="owner not published" /> },

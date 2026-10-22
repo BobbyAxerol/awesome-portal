@@ -68,16 +68,22 @@ export function NavCell({ id, ctx }: { id: string; ctx: DatasetCellContext }): R
   return <Figures list={state.value.capitalStatements} currency={ctx.currency} metricKey="current_nav" gap={PF_FE.nav} />;
 }
 
-export function NetPnlCell({ id, ctx }: { id: string; ctx: DatasetCellContext }): ReactNode {
+/** One metric of the portfolio's own dataset group (asked `group_by=portfolio_id`); a group that does not publish the key keeps the gap. */
+function GroupMetricCell({ id, ctx, metricKey, gap, signed = false }: { id: string; ctx: DatasetCellContext; metricKey: string; gap: Unpublished; signed?: boolean }): ReactNode {
   const state = ctx.reads.get(id);
-  const wait = pending(state, PF_FE.netPnl);
+  const wait = pending(state, gap);
   if (wait !== null || state === undefined || state.phase !== "ready") return wait;
   const dataset: ManagerDataset = state.value;
-  // The portfolio's own group (the dataset was asked to group by portfolio_id); no group means no total was published.
+  // The portfolio's own group; no group means no total was published.
   const group = dataset.groups.find((entry) => entry.key.length === 1 && entry.key[0]!.field === "portfolio_id" && entry.key[0]!.value === id);
-  if (group === undefined) return <Absent reason={`${npText(PF_FE.netPnl)}: the dataset published no total for this portfolio.`} />;
-  return <Figures list={group.economicPartitions} currency={ctx.currency} metricKey="net_pnl" gap={PF_FE.netPnl} signed />;
+  if (group === undefined) return <Absent reason={`${npText(gap)}: the dataset published no total for this portfolio.`} />;
+  if (!group.economicPartitions.some((entry) => entry.metrics.has(metricKey))) return <Absent reason={`${npText(gap)}: the dataset's group for this portfolio does not carry ${metricKey}.`} />;
+  return <Figures list={group.economicPartitions} currency={ctx.currency} metricKey={metricKey} gap={gap} signed={signed} />;
 }
+
+export const NetPnlCell = ({ id, ctx }: { id: string; ctx: DatasetCellContext }): ReactNode => <GroupMetricCell id={id} ctx={ctx} metricKey="net_pnl" gap={PF_FE.netPnl} signed />;
+export const ReturnCell = ({ id, ctx }: { id: string; ctx: DatasetCellContext }): ReactNode => <GroupMetricCell id={id} ctx={ctx} metricKey="return_30d_pct" gap={PF_FE.ret} signed />;
+export const DrawdownCell = ({ id, ctx }: { id: string; ctx: DatasetCellContext }): ReactNode => <GroupMetricCell id={id} ctx={ctx} metricKey="max_drawdown_pct" gap={PF_FE.drawdown} signed />;
 
 const SCORE_SLOTS = [["Raw", "raw"], ["Composition", "composition"], ["Direct NAV", "directNav"]] as const;
 const slotWord = (slot: ManagerScoreSlot): string => humanize(slot.status);
