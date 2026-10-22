@@ -519,6 +519,43 @@ describe("column chooser", () => {
   });
 });
 
+describe("Export (the HiFi control, on served data)", () => {
+  /** Captures the one file the click saves: its name and its text. No server call is made. */
+  function captureDownload() {
+    const blobs: Blob[] = [];
+    const names: string[] = [];
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: (b: Blob) => (blobs.push(b), "blob:test"), revokeObjectURL: () => undefined }));
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) { names.push(this.download); });
+    return { names, text: () => new Promise<string>((resolve) => { const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.readAsText(blobs[0]!); }), restore: () => click.mockRestore() };
+  }
+
+  it("saves the loaded rows as CSV: visible column labels, exact strings, UTC as shown, environment and as-of in the name, no request", async () => {
+    mount();
+    await loaded();
+    const before = calls.length;
+    const saved = captureDownload();
+    const button = screen.getByRole("button", { name: "Export" });
+    expect(button.hasAttribute("disabled")).toBe(false);
+    expect(document.getElementById(button.getAttribute("aria-describedby")!)!.textContent).toBe("Exports the 50 loaded rows");
+    fireEvent.click(button);
+    const lines = (await saved.text()).split("\r\n");
+    saved.restore();
+    expect(lines[0]).toBe("Time (UTC),Order,Symbol,Side and type,Price,Quantity,Status");
+    expect(lines).toHaveLength(52);
+    const btc = lines.find((l) => l.includes(",BTCUSDT,"))!;
+    expect(btc).toMatch(/^\d{2} [A-Z][a-z]{2} \d{2}:\d{2}:\d{2}Z,ord_\d+,BTCUSDT,[A-Za-z]+ [A-Za-z ]+,6\d{4}\.\d{2},0\.0400,/);
+    expect(saved.names[0]).toMatch(/^blotter-paper-\d{8}T\d{6}Z\.csv$/);
+    expect(calls.length).toBe(before);
+  });
+
+  it("is not drawn when there is nothing to export", async () => {
+    setOverviewDoubleVariants({ blotter: "empty" });
+    mount();
+    await screen.findByText(/No orders in this scope and window/);
+    expect(screen.queryByRole("button", { name: "Export" })).toBeNull();
+  });
+});
+
 describe("funnel and groups panels", () => {
   it("the funnel panel follows the last opened order", async () => {
     mount();
