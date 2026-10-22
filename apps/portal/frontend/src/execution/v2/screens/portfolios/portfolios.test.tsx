@@ -186,14 +186,12 @@ describe("header, banners and footer", () => {
     expect(screen.queryByText(/Names and allocation only/)).toBeNull();
   });
 
-  it("says top N / total when the read is truncated and turns Load more off with the reason", async () => {
+  it("says top N / total when the read is truncated; there is no Load more to press, the one line says why", async () => {
     mount(makeApi().api);
     await loaded();
     expect(screen.getAllByText("Top 6 / 9 portfolios").length).toBeGreaterThan(0);
-    const more = screen.getByRole("button", { name: "Load more" }) as HTMLButtonElement;
-    expect(more.disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(screen.getByText(/no cursor/)).toBeTruthy();
-    expect(more.getAttribute("aria-describedby")).toBeTruthy();
   });
 
   it("has no Load more when the read is whole", async () => {
@@ -396,14 +394,12 @@ describe("Compare is off (M2)", () => {
       </MemoryRouter>,
     );
 
-  it("draws no link to Compare, even with two picks in the address, and the control says why it is off", async () => {
+  it("draws no link and no button for Compare, even with two picks in the address; the selection bar says why it is off", async () => {
     mountOff(makeApi().api, `/deployments/portfolios?in=${PF.core},${PF.satellite}`);
     await loaded();
     expect(screen.queryByRole("link", { name: /^Compare/ })).toBeNull();
-    const button = screen.getByRole("button", { name: "Compare" }) as HTMLButtonElement;
-    expect(button.disabled).toBe(true);
-    expect(whyText(button.nextElementSibling)).toBe(COMPARE_OFF_REASON);
-    expect(document.getElementById(button.getAttribute("aria-describedby") ?? "")?.textContent).toContain(`Compare: ${COMPARE_OFF_REASON}`);
+    expect(screen.queryByRole("button", { name: "Compare" })).toBeNull();
+    expect(screen.getByText(new RegExp(COMPARE_OFF_REASON), { selector: ".exec-pf-selbar span" })).toBeTruthy();
     expect(document.querySelector("a[href*='/deployments/compare']")).toBeNull();
   });
 
@@ -434,7 +430,9 @@ describe("Compare selection", () => {
     const box = (name: string) => screen.getByRole("checkbox", { name: `Select ${name} to compare` }) as HTMLInputElement;
     fireEvent.click(box("Core"));
     expect(search().get("in")).toBe(PF.core);
-    expect((screen.getByRole("button", { name: "Compare" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole("button", { name: "Compare" })).toBeNull();
+    expect(screen.queryByRole("link", { name: /^Compare/ })).toBeNull();
+    expect(screen.getByText("1 selected. Select 2 to 4 portfolios to compare")).toBeTruthy();
     fireEvent.click(box("Satellite"));
     const link = screen.getByRole("link", { name: "Compare 2" });
     const href = new URL(link.getAttribute("href")!, "http://x");
