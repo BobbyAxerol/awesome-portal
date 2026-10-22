@@ -48,7 +48,7 @@ import type { ManagerSeriesMetric, ManagerSeriesQuery } from "../../readers/mana
 import { METRIC_WORD, MISMATCH_SENTENCE, UNAVAILABLE_SENTENCE, chartPointsOf, chartStateOf, chartUnit, commonCaption, isSigned, sourceNotPublished } from "../series/seriesModel";
 import { useManagerSeries } from "../series/useManagerSeries";
 import { useExecUrlState, withContext } from "../../urlState";
-import { PF_FE, npReason, npText } from "../portfolios/fe";
+import { PF_FE, npText } from "../portfolios/fe";
 import { Absent, MoneyList, freshnessFlag } from "../portfolios/format";
 import { toRows, type PortfolioRow } from "../portfolios/listModel";
 import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
@@ -105,7 +105,6 @@ const METRICS: readonly MetricRow[] = [
 export default function CompareScreen({ api, portfolioId, capabilities, routes = DEFAULT_ROUTES }: CompareScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
-  const reasonId = useId();
   const partsId = useId();
   const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_NAV_TOKEN.portfolios] });
   const read = useRead(api, permitted, "list", (scoped) => scoped.listPortfolios());
@@ -257,18 +256,12 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
         <>
           <section className="exec-pf-panel" aria-label="Choose portfolios">
             <div className="exec-pf-tool">
-              <span className="exec-pf-seg" role="group" aria-label="Compare">
-                <button type="button" className="exec-pf-segbtn" aria-pressed="true">Portfolios</button>
-                <button type="button" className="exec-pf-segbtn" aria-pressed="false" disabled aria-describedby={reasonId}>Alphas</button>
-                <GapWhy name="Why comparing alphas is not available" gap={PF_FE.compareSeries.fe} rows={[npReason(PF_FE.compareSeries, "Comparing alphas needs the multi-subject read.")]} next={null} />
-              </span>
               <label className="exec-pf-field">
                 <span className="exec-pf-sr">Filter portfolios</span>
                 <input className="exec-pf-input" type="search" placeholder="Filter portfolios" value={text} onChange={(event) => setText(event.target.value)} />
               </label>
               <span className="exec-pf-dim">Window {windowLabel}</span>
             </div>
-            <p id={reasonId} className="exec-pf-sr">Alphas: {npText(PF_FE.compareSeries)}</p>
             {kindWanted !== null && kindWanted !== "portfolio" && kindWanted !== "pf" ? (
               <p className="exec-pf-banner" role="status">Comparing alphas is not available. Showing portfolios.<GapWhy name="Why comparing alphas is not available" gap={PF_FE.compareSeries.fe} rows={[npText(PF_FE.compareSeries)]} next={null} /></p>
             ) : null}

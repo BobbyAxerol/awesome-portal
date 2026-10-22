@@ -61,14 +61,12 @@ describe("page", () => {
     expect(screen.queryByText("Fresh")).toBeNull();
   });
 
-  it("offers Portfolios, and Alphas only as a choice that says why it is off", async () => {
+  it("has no Alphas control: the gap is said once, and only when the address asks for alphas", async () => {
     mount(makeApi().api);
     await loaded();
-    expect(screen.getByRole("button", { name: "Portfolios" }).getAttribute("aria-pressed")).toBe("true");
-    const alphas = screen.getByRole("button", { name: "Alphas" }) as HTMLButtonElement;
-    expect(alphas.disabled).toBe(true);
-    expect(whyText(alphas.parentElement)).toContain("Not published (FE-033)");
-    expect(alphas.getAttribute("aria-describedby")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Alphas" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Compare" })).toBeNull();
+    expect(screen.queryByText("Comparing alphas is not available. Showing portfolios.")).toBeNull();
   });
 
   it("says alphas are not comparable when the address asks for them, and shows portfolios", async () => {
@@ -618,7 +616,7 @@ describe("states and capability", () => {
   it("shows the page to a caller whose navigation read lists Portfolios", async () => {
     mount(makeApi().api, "", { capabilities: new Set([V2_NAV_TOKEN.portfolios]) });
     await loaded();
-    expect(screen.getByRole("button", { name: "Portfolios" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Choose portfolios" })).toBeTruthy();
   });
 
   it("caps the candidate chips at 100 and says how many are left out", async () => {
