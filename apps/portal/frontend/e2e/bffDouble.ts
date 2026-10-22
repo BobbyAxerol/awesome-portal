@@ -1376,12 +1376,12 @@ function bodyOf(request: { method(): string; url(): string; postDataJSON?: () =>
  * written into the rows, the group key and the surface, so the reader's scope/group checks hold and the simulated keys show.
  */
 function answerReviewDataset(method: string, path: string, search: URLSearchParams): { status: number; body: unknown } | null {
-  const match = /^\/api\/v1\/execution\/manager\/(fund-overview|fleet|(portfolios|alphas|accounts|deployments)\/([^/]+)\/overview)$/.exec(path);
+  const match = /^(?:\/api\/v1\/execution)?\/manager\/(fund-overview|fleet|(portfolios|alphas|accounts|deployments)\/([^/]+)\/overview)$/.exec(path);
   if (match === null || method !== "GET") return null;
   const resource = match[2] as "portfolios" | "alphas" | "accounts" | "deployments" | undefined;
   const id = match[3] === undefined ? null : decodeURIComponent(match[3]);
   const asked = new URLSearchParams(search);
-  const reply = answerReviewManager("GET", resource === undefined ? path : "/api/v1/execution/manager/fleet", asked, "populated");
+  const reply = answerReviewManager("GET", resource === undefined ? path : "/manager/fleet", asked, "populated");
   if (reply === null || reply.status !== 200 || resource === undefined || id === null) return reply;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const body = structuredClone(reply.body) as any;
