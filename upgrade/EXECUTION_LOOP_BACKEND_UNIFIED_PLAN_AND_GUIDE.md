@@ -31125,3 +31125,109 @@ source pins remain equal. Latest Dockerfile49cfc96d differs from frozen merge
 42aded57; both are explicit source pins, neither a deployed image. Delivered
 review823aecfd stays immutable; this addendum/current HEAD also goes to the
 same Core mailbox, without silently repinning any accepted runtime artifact.
+
+### Original08 — consume Core107-test return and execute eligible missing-only binding
+
+**OWNER_APPROVED / IN_PROGRESS,22Oct12:48UTC.** Bobby directs continuation
+after Coread4d97444/6db3db8be and complete return36f08a4d. Read actual new
+§§9–11: eight source/test files,107 focused PASS are credited as Core-owned
+SOURCE_ONLY, not installed financial/command/P22 acceptance. Current Core
+HEAD3c83bd9e, public HK/SGP return hashes equal. No active goal object exists;
+continue this explicit task without inventing a new goal/phase.
+
+Scope now: reuse existing frozen operator/SDK/closure to prepare fresh exact
+install8→9/revoke9→10 for Core's13:00–13:30UTC offer, validate modeled glue,
+SDKdb0 and current RR READ ONLY predecessor/trust, send exact public pins/ACK
+request immediately. On exact Core ACK and verified approved finite execution
+boundary, install only that original source acceptance and temporary28446,
+return actual READY; Core alone grants/session/HTTP/SSE missing active-revoke.
+Keep24:00/recovery maintenance distinct from read expiry; preserve UNKNOWN
+and original bytes/status, physicaldrain/pools0 before exact revoke+STATUS.
+Do not touch stable/dev/provider28445, broker/Live/commands/shared trust or
+reuse an expired window. Actual READY must precede13:24 by Core's reserve.
+
+Parallel input review: verify new Core source pins and row dispositions;
+correlate current TS/PM authority/operation fields, economics and existing
+Core-facing Rust command contracts without changing peer source. Issuer lookup
+is resolved; no new CA/key or active certificate replacement. Core owns its
+full-P22 two-build OOM failure/build budget, not a reason to stop eligible
+native work or retry unchanged builds here. Guide: existing EPG10-08 and
+consolidated request/review/source-trust packet; no new framework or phase.
+
+Gates/rollback: exact current DB/system/head8revoked/natural tuple, fresh trust
+covers window, original image28ea/lifecycle/closure unchanged; preflight must
+make0writes/issue0. Correctness is capped/nonexclusive under34b, no absolute
+measurement. An unacknowledged/undersized slot never activates; runtime failure
+retains original custody and resolves via exact STATUS/recovery, never fake
+rollback. Record evidence/cleanup/actual pins incrementally, then coherent
+R0 publication for docs-only changes; no push/merge or full08/read09 claim.
+
+**12:53:51UTC actual fresh preparation delivered:**
+[Exact13:00 packet](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_1300_PREPARED_2026-10-22.md),
+rawc76968cec22f6001d8f57a19248b7c43e91fb8d09a1e4083f059ce37e1cfdf9d,
+HK/SGP identical; Core Unified/sync/original mailbox appended with immediate
+exact ACK action. New privatewyDKXL directory14files0700/0600/Bobby/nlink1.
+Install03033ad5/CAS8→9/raw62940d5e/SDK73017a9a and revoke1898f25b/CAS9→10/
+raw198c01f9/SDKcfb6144a; preparedhelper84b2eb2e/ACKnull, runtime/closure/
+lifecycle/trust frozen.12modeled PASS after correcting first runner default
+UID permission failure to explicit1001, without permission widening. SDK
+validateEXIT0/stderr0/db0/listenerfalse, actual RR READ ONLY native8revoked/
+natural key/DB/system/fingerprint/control/catalogue/mapping1/policy1 PASS,
+issued0/pools[0,0]. Three capped --rm verification names absent; no install,
+source listener, new credential or key, no real specimen yet. Diskbefore
+used334472708096B/free184444194816B; no deletion/reclaimed-space claim.
+
+**Parallel producer/consumer source review:** all8new Core source/test SHA256
+match returned pins, actual committed Core3c83bd9e. Read new financial factory:
+its two consistent snapshots are correctly PREPARED_UNBOUND, not a held lease;
+existing PM AcceptedCurrentAccess/CurrentReadAuthority bind actual principal,
+task/context/owning connection and transaction, require original source fences.
+No mapping from pma.identity.v1 or pma.management.v1 name alone supplies the
+missing accepted financial operation/field/source/census/window.
+
+Exact command compatibility finding: Core new gateway is an injected local
+seam, **not** a mounted Core→Edge wire. Rust has source-facing PM HTTP+durable
+original/fullOutcome store, but actual command_relay_runtime_gate still refuses
+activation. Also Core adapter STATUS requires EXPLICIT_SERVICE_RECOVERY/actornull,
+whereas currently published PM STATUS and Rust issuer require fresh current
+human authority. These are distinct paths, not compatible merely because both
+say STATUS; do not bind old human token to a service-only call. Original07
+remaining Edge-owned Core-facing ingress/current requester/original-custody
+composition is owned implementation, separate from genuinely source-owned
+service recovery/target/retention. No URL/assertion contract invented or command
+route mounted during this08 source review. Send precise disposition to Core.
+
+PM progressed to4cd94fbb: new committed source-integration evidence records
+actual candidate21b3873b/native6e9cc0dd/v2-v3/sealed128 and222distinct actual-image
+affectedPASS, followed by scoped candidate/cache cleanup. These are owning PM
+packaging/TEST_ONLY qualification, not connected financial history or native
+read authority. Existing temporary source continues frozenSDK28ea; no ambient
+new binary/release evidence silently repins it. Shared runtime remains unchanged.
+
+**13:05:33UTC independent source-input handoff delivered:**
+[Current input disposition](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CURRENT_INPUT_DISPOSITION_2026-10-22.md),
+raw6f4fdfc0b7a375c9181496606c16e2d3c63d4b97ac3520e27395f0f0199f7059,
+exact Core mirror/three existing mailbox prefixes/index preserved. Also placed
+same public disposition and exact Core36f08a4d return in PM's existing upgrade
+mailbox, recorded receipt/scope in owning PM Unified; no peer source, index or
+business configuration changed. Command human/service recovery mismatch and
+owned Edge ingress are explicitly separated, not another broad owner request.
+
+**Resource observation after13:05 delivery:** all four original --rm verification attempts
+(including permission-denied first glue) are finished; temporary28446 absent.
+No image/build created here. Docker112images/43active,589BuildKit/68.29GB
+are shared inventory, not an authorization to prune. Prior active/explicit
+rollback images and all private bounded custody/preparation retained for the
+matched finite slot. Disknowused334107262976/free184809639936B, no reclaimed
+space claim. Ordinary sandbox sudo inventory was denied before Docker; rerun
+same read-only inventory under permitted escalation succeeded. No cleanup of
+other owners' images/cache/volumes/containers or runtime restart occurred.
+
+**Verification R0 for this preparation/input-publication slice:** exact4staged
+Markdown paths/8indexed links+anchors/secret scan/diffcheck PASS; execution
+tracking reconciliation PASS. Three original peer WIP source hashes unchanged,
+peer C5/main hunk and two other tracked evidence edits remain unstaged.
+No normal product hook repeated for documentation-only publication under
+owner-approved Core campaign§10.10d;12modeled/frozenSDK/RR results above are
+actual private preparation evidence, not connected activation. Bobby identity
+verified; coherent local commit only, no push/merge/CI minutes consumed.

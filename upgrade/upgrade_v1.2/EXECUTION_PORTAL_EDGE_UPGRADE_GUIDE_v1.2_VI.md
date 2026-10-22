@@ -1036,6 +1036,20 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Current continuation22Oct13:05UTC:** Bobby directs the finite execution after
+Core's107-test source return. [Fresh13:00 packet](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACTIVE_REVOKE_1300_PREPARED_2026-10-22.md)
+rawc76968ce was delivered12:53:51UTC: NEW13:00–13:30UTC/install03033ad5/
+revoke1898f25b,12modeled PASS/SDKdb0/actual RR READ ONLY8revoked/pools0.
+It supersedes expired proposals below, not their original custody. Exact new
+Core ACK still required before arm/install; actual READY must precede13:24.
+No new install/listener/grant/session yet. Core alone runs missing active-revoke,
+not completed READ/restart. [Current input disposition](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CURRENT_INPUT_DISPOSITION_2026-10-22.md)
+credits verified8Core files/107focusedPASS and PM integrated222-case candidate
+as SOURCE_ONLY/TEST_ONLY, not runtime. Core service-only command STATUS differs
+from current PM/Rust human STATUS; Edge-owned ingress and source commissioning
+remain original07 work, not all external debt. Full-P22 build OOM is Core-owned
+and does not hold native. Full08/read09 NOT_MET; shared runtime/trust unchanged.
+
 **Return review22Oct11:50UTC:** [Seven-row review + NEW native preparation](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REVIEW_2026-10-22.md)
 raw d8bc917b delivered/hash-verified at Core. New12:00–12:30UTC preparation
 has fresh install247fa469/revoke116605c1,12modeled PASS + SDKdb0 validation +
