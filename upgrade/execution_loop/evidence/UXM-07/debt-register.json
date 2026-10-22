@@ -217,7 +217,7 @@
       "proposed": "Restore the columns/rows with per-cell 'Not available · reason' and 'Pending · policy not set' for score; window selectors; Fleet tabs All/Live/Canary/Sandbox/Paper. Fixture-only, no invented figures.",
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go)",
-      "status": "IN PROGRESS 2026-10-22 (later): Overview (6 KPI tiles, Net PnL/Return read from the series port, Capital with the published NAV row, Since-last-visit, Contributors, environment + window controls that the series follow), Portfolios (5 measure columns) and Fleet (Allocation/Net PnL/Equity) restored on fixture; Fleet/Overview/Portfolios baselines re-recorded, two consecutive compares green (commits d180d63f and earlier). Not done: Fleet Map/Group/Then, Overview basis/scope selectors, Allocation held back (BQ-FLEET-ALLOC), uncovered Board/Map/drawer/form visual states (DEBT-016/018), DEBT-030 pagination wiring."
+      "status": "IN PROGRESS 2026-10-22 (late): Overview, Portfolios, Fleet restored and now read the Manager dataset (per-partition, simulated keys in the populated lane: see SIMULATED_DATA_REGISTER_2026-10-22.md). Fleet Map built. Not done: Overview basis/scope selectors, Fleet Group/Then, Allocation domain (BQ-FLEET-ALLOC), real Edge keys."
     },
     {
       "id": "DEBT-UXM07-050",
@@ -237,7 +237,7 @@
       "proposed": "One pass per screen: restore the element with 'Not available' and its reason, update tests and baseline. Order by manager value: Portfolio 360, Alpha 360, Compare, Operations, Blotter, Account 360, Incident, Access, Users, Admin. Trade replay and Accounts list need a design decision and a baseline first.",
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go, order)",
-      "status": "OPEN"
+      "status": "IN PROGRESS 2026-10-22 (late): Portfolio 360, Alpha 360, Compare, Operations (health strip, Intent/Display columns), Incident (sections), Account 360 (tiles, drawdown panel), Blotter (columns), Access (13 actions, Role preset), Users (columns, actions), Admin (detail panel) restored by subagents and merged; baselines re-recording. Not done: Trade replay as a standalone screen (feasible, design decision), Accounts list baseline, ops-drawer design frame is mis-exported."
     }
   ],
   "closed": [
