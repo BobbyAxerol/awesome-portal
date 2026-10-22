@@ -208,6 +208,26 @@
       "status": "STILL_OPEN (narrowed 2026-10-22: items 1-8 and 10 applied; item 9 decimal alignment verified; only the pending-control preview mount remains, Bobby's call)",
       "opened": "2026-10-21",
       "closed_part": "Items 1-2 closed 2026-10-22 as DEBT-UXM07-048A (Blotter CSV Export, Fleet/Compare/Portfolios controls, Alpha 360 shared reason line, Portfolio 360 Flow lane only). Applied on claude/post-freeze-20261021 (2026-10-22), tests updated with a one-line reason each, no image baseline recorded. 3) fe7155b4: JourneySpine cards print only published facts; the note under the spine says the gap once. 4) 0582049a, 0af823ff: ONE display-name dictionary v2/displayNames.ts (+ blocks/CodeName: known code = name + hidden code text, unknown code = humanized name + GapWhy with the code): chart envelope caption 'Server: N of M points, min and max kept per bucket' (PER_SERIES_BUCKET_EXTREMA), 'min, max and last value kept per bucket' (MIN_MAX_LAST_BUCKET_V1), any other method 'method not stated' with the code in a disclosure (Workbench, Portfolio 360, Account 360); Workbench exit-gate policy 'Policy Paper observation' with stage code and version in a disclosure; Cockpit R2 grant 'Paper activation authorization', R1 lineage and evaluation reasons, 'What the server offers'; Access banner and reason dictionary (Access policy pending, Owner recovery not approved); Admin 'Not live because', provenance reason column and the plan gate reason; Operations not-allowed pending-control preview. 5) 8498765e: Live V1 body states its gaps once, in the line under the strip (strip figures, Live net PnL series, reconciliation figures, position rows, order rows); the header chip line and the alpha name line stay (shared stage chrome). 6) 0582049a: the Approvals primary decision no longer prints 'Preview - not recorded'; the page banner says it once and it stays each button's description. 7) 2e36f3b8: Compare reads '<- Portfolio / Alpha Fleet / Portfolios'. 8) 2e36f3b8: Blotter, Accounts (list and 360) and Admin headers align to the first line like the rest. 10) 2e36f3b8, 0af823ff: Portfolios shows one banner (a degraded branch names what is missing; the partial-read sentence is its disclosure); the Alpha 360 Orders strip stays 2x2 at 660 px and below (KpiStrip phoneColumns)."
+    },
+    {
+      "id": "DEBT-UXM07-049",
+      "title": "Manager columns and rows of HIFI M01/M02/M03 are collapsed into one 'Not available' line instead of per-cell unavailable states",
+      "where": "V2 Overview, Portfolios, Alpha Fleet vs design/hifi m01-m03 and Guide v1.1 §6.2/§8.1; see HIFI_LOWFI_GAP_AUDIT_2026-10-22.md",
+      "consequence": "The layout Bobby drew (KPI row, window/domain selectors, Capital panel, Contributors, Portfolios table; Fleet Alloc/PnL/Unrealized/Balance/Equity30D/QBTS) is not on screen. No data effect: those values are not served by any qualified contract.",
+      "proposed": "Restore the columns/rows with per-cell 'Not available · reason' and 'Pending · policy not set' for score; window selectors; Fleet tabs All/Live/Canary/Sandbox/Paper. Fixture-only, no invented figures.",
+      "opened": "2026-10-22",
+      "owner": "Claude (build, fixture-only); Bobby (go)",
+      "status": "OPEN (found 2026-10-22; not previously tracked)"
+    },
+    {
+      "id": "DEBT-UXM07-050",
+      "title": "M08 Archived Alphas screen and the HIFI sidebar entries (Archived Alphas, Waivers, Exit Reviews) are not built",
+      "where": "design/hifi/m08-archived-alphas.html; sidebar; Fleet 'Archived list: Not available'",
+      "consequence": "No lifecycle watchlist / paper-monitor view; Waivers and Exit Reviews live inside Approvals only.",
+      "proposed": "Build M08 on fixture with the HIFI states; add the three sidebar entries; real data waits on the archive/monitor contracts.",
+      "opened": "2026-10-22",
+      "owner": "Claude (build, fixture-only); Bobby (go)",
+      "status": "OPEN (found 2026-10-22; not previously tracked)"
     }
   ],
   "closed": [
