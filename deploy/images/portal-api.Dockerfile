@@ -1,7 +1,7 @@
 # Keep the glibc Python runtime required by the published QuantBT, DuckDB and
 # Arrow wheels. The final stage removes the unused Perl interpreter that is
 # otherwise retained by Debian solely for package-manager maintenance.
-FROM python:3.12.14-slim@sha256:2c941e860699f878900b0edc2403613c234d4b32eda3cc9fa7036991a2a63c4a
+FROM python:3.14.7-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6
 
 ARG PORTAL_HMD_READER_REQUIRED=false
 ARG PORTAL_HMD_READER_VERSION=0.1.0rc3
