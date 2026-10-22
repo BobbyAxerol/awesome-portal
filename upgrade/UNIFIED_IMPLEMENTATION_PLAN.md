@@ -14721,3 +14721,39 @@ trust/C288 disposition and staged Edge PREPARED → Core hash ACK → SDK_READY
 → official READ/session. The10:15–10:45 offer is now expired too; Edge must
 return a viable future slot, not reuse that offer or §10.5. No source/runtime
 mutation or repeated tests in this Markdown delivery. ELP2-10 OPEN. Verification:R0.
+
+
+### Edge PREPARED actual reply —22Oct2026
+
+Delivered 2026-10-22T12:06:57.913342+07:00 Asia/Saigon. Existing C7/EPG10-08, not new phase.
+[Exact Edge reply](execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md) SHA256 b92e487466fc46848d19dd2452c05ffdadb14ba077881c8fe943b90a3258f229.
+Fresh acceptancebc432e2e/install1de53174/revoke211c3ab5; proposed22Oct13:00–13:30 Asia/Saigon (06:00–06:30UTC), ACK requested by12:50. Native runtime940a3a71/install7daffe5f/revoke8fdf944a, new12504f44 trust, unchanged protected owner distinct from human.31trust checks/8modeled PASS; actual frozenSDK db0 validation and RR READ ONLY preflight EXIT0/stderr0/pools[0,0]/fresh head absent/issued0/listenerfalse.
+Core ACT_NOW: ACK exact runtime/manifest/document/trust/window/config pins; Edge is UNARMED and will install/return actual READY only after hash ACK. Then Core official READ/current-source-set/session. No P22/STREAM/Manager/calibration prerequisite, no source-ready/session/connected PASS claimed. Full08/09NOT_MET. C288 approved Research-only, not applied by Edge. Preserve WIP/index/source/runtime; this delivery changes public docs only.
+
+
+**Edge PREPARED publication / verification:R0:** HK local commit b12057f9 on feat/execution-edge-upgrade-v1_2,3Markdown/+339, no push/merge/CI; public reply remains b92e487466fc46848d19dd2452c05ffdadb14ba077881c8fe943b90a3258f229, actual repeated SGP readback matches. Edge and Core tracking EXIT0; staged3path/7local-link/diff checks PASS. Both capped SDK verification workers removed, private draft/trust retained inactive. Core exact13:00–13:30 Asia/Saigon slot/hash/config ACK is still required before Edge arm/install/SDK_READY; stage1 historical ACK is not that match. Official READ/source-set/session follows actual READY; bounded READ waits on no P22/STREAM/Manager/calibration. Full08/09NOT_MET, no runtime/DB mutation by this docs receipt.
+
+
+### Edge consumed Core exact ACK —22Oct2026
+
+Edge received d920c717 exact ACK; all four prepared files unchanged. Public reply section7 is now ACK_MATCHED / ARMED_WAIT_WINDOW, SHA256 efce83f7c97880d34a894122c15e65a88d254792b1cf326d4b8527173aa35704. Original PREPARED b92e4874 remains its immutable acknowledged prefix; no new ACK requested. Armed helper08580223 differs only at CORE_WINDOW_ACK_SHA256, prepared56b2406e retained; actual frozenSDK validation EXIT0/stderr0/db0/listenerfalse/MATCHED_CORE_OPERATOR_ACK. Third capped --rm verifier removed; no source install/listener/role/grant/session yet. Edge owns exact installation and SDK_READY only during accepted22Oct13:00–13:30 Asia/Saigon (06:00–06:30UTC), then Core official READ/source-set/session. Full08/09NOT_MET. No background source scheduled or started before the window, no P22/STREAM/Manager/calibration prerequisite.
+
+### Core support follow-through —22Oct, before connected slot
+
+[Support/review and actual results](execution_loop/evidence/ELP2-10/CORE009_CLAUDE_SUPPORT_FOLLOWTHROUGH_2026-10-22.md#5-actual-independent-results-22oct0526utc-cut)
+records ACK consumed/armed, actual Research backup31,207,400B/6.671s/d21d5bad,
+unbridged G2 harness34/34PASS with the unchanged Claude helper and no bridge,
+inactive Manager positive/active-leaf negative, and conditional settled-only
+workload transition preserving all history. Code helper commit/landing is
+pending the normal gate; infrastructure rejected intermediate bypass, no
+workaround. [Manager/financial/measurement owner actions](execution_loop/evidence/ELP2-10/CORE009_MANAGER_FINANCIAL_BUDGET_ACTIONS_2026-10-22.md)
+were sent independently to existing HK08/PM mailboxes. Actual image remains
+a96/source8ac/schema149, not new P22. SDK_READY/READ/session/STREAM, Manager
+issuance, financial mount, numeric calibration and coexistence/G2 remain
+unclaimed; eligible READ proceeds independently during06:00–06:30UTC. Claude
+UI untouched; ELP2-10 OPEN, no ELP2-11, production/dev/main or push. Verification:R0.
+
+
+### Edge08 slot execution continuation —22Oct12:30 Asia/Saigon
+
+Bobby asks actual Edge install/READY -> Core current READ/source-set/session -> bounded READ. Exact ACKd920/helper0858 and four files unchanged; slot13:00–13:30 Asia/Saigon (06:00–06:30UTC), no pre-slot source. Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section8, current raw SHA256 5fd27e1b2aa3b006d0c8606b1e63dfaf8ef4fa55a5dfce45228ddcd5f42f254a. Core operator: prepare reviewed existing Research composition now, consume real READY promptly in slot and return official current READ/session refs/hash; no P22/STREAM/Manager/calibration hold. C32/R20 fresh census, <=3 new admissions atH9, one eligible native snapshot READ rather than full suite. This delivery is docs-only: actual install/READY/session/READ NOT_RUN, full08/09NOT_MET; preserve WIP/index/stable/dev/provider28445.

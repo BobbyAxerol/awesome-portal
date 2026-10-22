@@ -9,6 +9,30 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 22Oct — Core support actual results before06:00UTC slot
+
+[Support packet](evidence/ELP2-10/CORE009_CLAUDE_SUPPORT_FOLLOWTHROUGH_2026-10-22.md#5-actual-independent-results-22oct0526utc-cut)
+records Edge ACK consumed/armed, immutable historical rows preserved, actual
+Research backup, unbridged G2 harness34/34PASS and inactive Manager validation.
+[Concrete owner actions](evidence/ELP2-10/CORE009_MANAGER_FINANCIAL_BUDGET_ACTIONS_2026-10-22.md)
+are delivered independently to HK08/PM. No new public DTO/UI changes. Root
+carried only the byte-identical Claude quiet helper as a measurement dependency;
+normal-gate commit/landing is pending, not installed. Claude may continue UI
+fixtures without waiting; connected/browser claims await real SDK READY and
+Core official READ/session in the matched slot. No fixture financial mapping,
+budget/calibration default, STREAM grant or connected PASS was manufactured.
+
+### 22Oct12:04 Asia/Saigon — Bobby assigns Core/source support for Claude
+
+[Current support scope](evidence/ELP2-10/CORE009_CLAUDE_SUPPORT_FOLLOWTHROUGH_2026-10-22.md)
+pins canonical bce2fd1e, Claude2465c350 and private Core3d4164bd. Root takes
+current native binding/commissioning and source-owner coordination; three
+existing reviewers inspect Manager issuance, financial/budget/G2 and P22/G2
+carry readiness read-only. Claude UI/source WIP and existing delivered packets
+are preserved. Repin HK before action; no stale window, fake authority,
+production calibration or connected PASS from fixture/source-only evidence.
+No new code/DTO/runtime/test action at entry; results follow in the packet.
+
 ### 22Oct11:08 Asia/Saigon — consolidated report/handoff and pasteable Edge prompt
 
 [Core → Edge handoff](evidence/ELP2-10/CORE_TO_EDGE_08_ACTION_HANDOFF_2026-10-22.md)
@@ -1932,3 +1956,21 @@ Bobby requests immediate Core ACK/config and genuine session return. Read canoni
 Core owns current commissioning/trust/window and official authority/session; Edge owns fresh matched HK source READY and connected08. Claude implements backend under canonical rules§10.13; Codex reviews/integrates. Existing P22 factory task remains independently runnable, not a reason to withhold eligible finite READ inputs. No automatic C288 approval, source activation or fabricated session/control/ACK.
 Return CORE009_CURRENT_08_BINDING_RETURN_2026-10-22.md in canonical ELP2-10 with staged ACK/actual config/source/READ+STREAM/private session references, trust validity, pending full-suite inputs and cleanup; copy public return to HK EPG10-08. Full08/09 remains NOT_MET until real evidence.
 This append is documentation-only. Preserve WIP/index; no code, DB, grant, credential, runtime, stable/dev or provider28445 change. Delivery is ACK_PENDING.
+
+
+### Edge PREPARED actual reply —22Oct2026
+
+Delivered 2026-10-22T12:06:57.913342+07:00 Asia/Saigon. Existing C7/EPG10-08, not new phase.
+[Exact Edge reply](evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md) SHA256 b92e487466fc46848d19dd2452c05ffdadb14ba077881c8fe943b90a3258f229.
+Fresh acceptancebc432e2e/install1de53174/revoke211c3ab5; proposed22Oct13:00–13:30 Asia/Saigon (06:00–06:30UTC), ACK requested by12:50. Native runtime940a3a71/install7daffe5f/revoke8fdf944a, new12504f44 trust, unchanged protected owner distinct from human.31trust checks/8modeled PASS; actual frozenSDK db0 validation and RR READ ONLY preflight EXIT0/stderr0/pools[0,0]/fresh head absent/issued0/listenerfalse.
+Core ACT_NOW: ACK exact runtime/manifest/document/trust/window/config pins; Edge is UNARMED and will install/return actual READY only after hash ACK. Then Core official READ/current-source-set/session. No P22/STREAM/Manager/calibration prerequisite, no source-ready/session/connected PASS claimed. Full08/09NOT_MET. C288 approved Research-only, not applied by Edge. Preserve WIP/index/source/runtime; this delivery changes public docs only.
+
+
+### Edge consumed Core exact ACK —22Oct2026
+
+Edge received d920c717 exact ACK; all four prepared files unchanged. Public reply section7 is now ACK_MATCHED / ARMED_WAIT_WINDOW, SHA256 efce83f7c97880d34a894122c15e65a88d254792b1cf326d4b8527173aa35704. Original PREPARED b92e4874 remains its immutable acknowledged prefix; no new ACK requested. Armed helper08580223 differs only at CORE_WINDOW_ACK_SHA256, prepared56b2406e retained; actual frozenSDK validation EXIT0/stderr0/db0/listenerfalse/MATCHED_CORE_OPERATOR_ACK. Third capped --rm verifier removed; no source install/listener/role/grant/session yet. Edge owns exact installation and SDK_READY only during accepted22Oct13:00–13:30 Asia/Saigon (06:00–06:30UTC), then Core official READ/source-set/session. Full08/09NOT_MET. No background source scheduled or started before the window, no P22/STREAM/Manager/calibration prerequisite.
+
+
+### Edge08 slot execution continuation —22Oct12:30 Asia/Saigon
+
+Bobby asks actual Edge install/READY -> Core current READ/source-set/session -> bounded READ. Exact ACKd920/helper0858 and four files unchanged; slot13:00–13:30 Asia/Saigon (06:00–06:30UTC), no pre-slot source. Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section8, current raw SHA256 5fd27e1b2aa3b006d0c8606b1e63dfaf8ef4fa55a5dfce45228ddcd5f42f254a. Core operator: prepare reviewed existing Research composition now, consume real READY promptly in slot and return official current READ/session refs/hash; no P22/STREAM/Manager/calibration hold. C32/R20 fresh census, <=3 new admissions atH9, one eligible native snapshot READ rather than full suite. This delivery is docs-only: actual install/READY/session/READ NOT_RUN, full08/09NOT_MET; preserve WIP/index/stable/dev/provider28445.
