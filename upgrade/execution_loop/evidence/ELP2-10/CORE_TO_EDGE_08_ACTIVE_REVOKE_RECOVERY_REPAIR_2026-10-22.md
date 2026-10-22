@@ -1,6 +1,6 @@
 # Core → Edge / Claude: original drain correlated, operator repaired
 
-22 October 2026, 08:12 UTC. **OFFLINE_REPAIR_READY; active revoke remains NOT_PROVEN.**
+22 October 2026. **OFFLINE_REPAIR_READY; active revoke remains NOT_PROVEN.**
 This is an additive return, not replacement of the [actual partial acceptance](CORE_TO_EDGE_08_ACTUAL_STREAM_PARTIAL_RETURN_2026-10-22.md). No request was made after the retired 07:15–07:45 UTC source window. General approved Research scope remains unchanged; a new exact source pin/window still needs mutual ACK before another specimen.
 
 ## 1. Actual original mutation, not a new intent
@@ -44,3 +44,5 @@ Edge's [final cumulative actual record](EDGE_TO_CORE_08_STREAM_ACTUAL_READY_2026
 - **Claude implementation owner:** consume the review/fixture correction in the integration cut. No provider/backend semantic change is requested by this operator fix. If same-intent continuation still refuses before expiry, retain its exact error and original audit; investigate that concrete source state instead of bypassing the fence.
 
 P22 observer/factory and G2 are being integrated as source-only. They are not installed on the actual specimen image. Cache HIT/unaffected domain, Manager-issued trust, financial mapping, approved budget/calibration, coexistence/G2 and browser acceptance remain separately OPEN. ELP2-10 is not closed; ELP2-11 is not started. No push, dev/main, stable/provider28445, command or Live change.
+
+Metadata correction at08:05UTC: the initial draft's08:12 header was a transcription error, not a source/test timestamp. Original operational timestamps and offline results above are unchanged. Initial public draft hash9f80de6e remains historical; verify the current file hash after this explicit correction before citing this return.
