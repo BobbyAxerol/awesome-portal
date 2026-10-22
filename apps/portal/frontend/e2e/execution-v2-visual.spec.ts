@@ -66,6 +66,8 @@ const WS = `workspace_id=${V2_WORKSPACE}`;
 
 const CELLS: readonly Cell[] = [
   { slug: "fleet", group: "Fleet", route: "/deployments/alphas", root: ".exec-fleet-v2", widths: THREE },
+  // One environment: the Fleet reads the manager dataset, so Allocation, Net PnL and Equity print per partition.
+  { slug: "fleet-paper", group: "Fleet (Paper lens)", route: "/deployments/alphas?stage=paper", root: ".exec-fleet-v2", widths: TWO },
   { slug: "overview", group: "Overview", route: "/execution", root: '[data-screen="overview-v2"]', widths: TWO },
   { slug: "portfolios", group: "Portfolios", route: "/deployments/portfolios", root: '[data-screen="portfolios-v2"]', widths: TWO },
   { slug: "portfolio-360", group: "Portfolio 360", route: "/deployments/portfolios/pf_TEST_ONLY_core", root: '[data-screen="portfolio-360-v2"]', widths: TWO },
