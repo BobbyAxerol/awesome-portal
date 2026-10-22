@@ -5,6 +5,8 @@
  * Two to four portfolios from the URL param `in` (`ids` is read as an alias).
  * Identity and scalars come from the portfolio list read: name, owner, state,
  * domain, counts and `allocatedByCurrency`, each portfolio in its own currency.
+ * The metric rows NAV and Net PnL are the Manager dataset of each comparable portfolio (`getManagerDataset`, PORTFOLIO surface):
+ * exact, one cell per economic partition, only the basis currency drawn (`DatasetCells.tsx`). Score is policy words, never a number.
  *
  * What it refuses, and says so:
  * - the overlay (FE-013/033, BE-P4 manager series): the comparable picks (two to four, one basis) are asked for as ONE series
@@ -55,6 +57,8 @@ import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
 import { COMPARE_MAX, selectionFrom, withSelection } from "../portfolios/selection";
 import { useRead } from "../portfolios/useRead";
 import { backTarget, basisOf, resolveSelection, selectionHint, selectionState } from "./model";
+import { NavCell, NetPnlCell, ScoreCell, type DatasetCellContext } from "./DatasetCells";
+import { useCompareDatasets } from "./useCompareDatasets";
 
 import "../../css/portfolios.css";
 import "../../css/compare.css";
@@ -80,20 +84,22 @@ const SEARCH_DEBOUNCE_MS = 300;
 const domainWord = (domain: PortfolioRow["domain"] | null): string =>
   domain === "simulated" ? "Simulated" : domain === "mixed" ? "Real-funded and Simulated" : "Real-funded";
 
-interface MetricRow { id: string; label: string; cell(row: PortfolioRow): ReactNode }
+interface MetricRow { id: string; label: string; cell(row: PortfolioRow, ctx: DatasetCellContext): ReactNode }
 
 /**
  * The hi-fi order: the measures first, then what the list read does publish. The five measures keep their rows (hi-fi and the "Source
- * not qualified" frame): each cell says Not available, and the request that will publish it is behind the cell's disclosure.
+ * not qualified" frame). NAV and Net PnL are the Manager dataset's exact figures per economic partition; Score is the policy words of
+ * `scores.*` (never a number). Return and Max drawdown have no portfolio-level key in the dataset: each cell says Not available, and
+ * the request that will publish it is behind the cell's disclosure.
  */
 const unpublished = (fact: Unpublished) => (): ReactNode => <Absent reason={`${npText(fact)}: ${fact.what}`} />;
 
 const METRICS: readonly MetricRow[] = [
-  { id: "nav", label: "NAV", cell: unpublished(PF_FE.nav) },
-  { id: "netpnl", label: "Net PnL", cell: unpublished(PF_FE.netPnl) },
+  { id: "nav", label: "NAV", cell: (r, ctx) => <NavCell id={r.portfolioId} ctx={ctx} /> },
+  { id: "netpnl", label: "Net PnL", cell: (r, ctx) => <NetPnlCell id={r.portfolioId} ctx={ctx} /> },
   { id: "return", label: "Return", cell: unpublished(PF_FE.ret) },
   { id: "drawdown", label: "Max drawdown", cell: unpublished(PF_FE.drawdown) },
-  { id: "score", label: "Score", cell: unpublished(PF_FE.score) },
+  { id: "score", label: "Score", cell: (r, ctx) => <ScoreCell id={r.portfolioId} ctx={ctx} /> },
   { id: "currency", label: "Base currency", cell: (r) => r.baseCurrency },
   { id: "owner", label: "Owner", cell: (r) => r.owner ?? <Absent reason="owner not published" /> },
   { id: "state", label: "State", cell: (r) => <Flag kind={r.stateKind} label={r.stateLabel} size="sm" /> },
@@ -128,6 +134,9 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     [comparableIds, measure, url.value.env, url.value.window],
   );
   const seriesRead = useManagerSeries(api, permitted && seriesQuery !== null, seriesQuery);
+  // The metric rows (NAV, Net PnL, Score) are the Manager dataset of each portfolio on the basis: one read per pick, exact and per partition.
+  const datasetReads = useCompareDatasets(api, permitted, comparableIds, url.value.env);
+  const datasetCtx = useMemo<DatasetCellContext>(() => ({ reads: datasetReads, currency: basis.currency }), [datasetReads, basis.currency]);
 
   // The 360 hands over one id. It becomes the first pick once, as a replace.
   const seeded = useRef(false);
@@ -233,7 +242,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     ...chosen.map<CardsColumn<MetricRow>>((row) => {
       const tone = Math.max(0, toneOf(row.portfolioId));
       // K-B5: the column head wears the series swatch of its chip (shape as well as colour), and the figures sit right.
-      return { key: row.portfolioId, label: row.label, numeric: true, head: <i className="exec-cmpr-sw" data-tone={TONES[tone]} data-glyph={GLYPHS[tone]} />, render: (m) => m.cell(row) };
+      return { key: row.portfolioId, label: row.label, numeric: true, head: <i className="exec-cmpr-sw" data-tone={TONES[tone]} data-glyph={GLYPHS[tone]} />, render: (m) => m.cell(row, datasetCtx) };
     }),
   ];
 
