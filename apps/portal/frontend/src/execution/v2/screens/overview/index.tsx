@@ -119,6 +119,16 @@ function SeriesCell({ label, read, window, gapIds }: { label: string; read: Seri
   );
 }
 
+/** The Capital panel's NAV row: the same latest published NAV point as the NAV tile, or the same gap. Nothing is computed. */
+function CapitalNav({ read }: { read: SeriesReadState }) {
+  const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+  const entry = series?.series[0];
+  if (entry === undefined || entry.state === "UNAVAILABLE" || !isDescribed(entry)) return <Gap ids="FE-013" />;
+  const last = latestPoint(entry);
+  if (last === null) return <span className="exec-ov-na">No points in this window</span>;
+  return <span className="exec-ov-num" title={last.exact}>{seriesValueText(entry, last.exact)}</span>;
+}
+
 function Cell({ label, children, note }: { label: string; children: ReactNode; note?: ReactNode }) {
   return (
     <div className="exec-blk-kpi">
@@ -348,7 +358,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
               {CAPITAL_ROWS.map((row) => (
                 <tr key={row.label}>
                   <th scope="row">{row.label}</th>
-                  <td><Gap ids={row.ids} /></td>
+                  <td>{row.label === "NAV" ? <CapitalNav read={nav} /> : <Gap ids={row.ids} />}</td>
                 </tr>
               ))}
             </tbody>

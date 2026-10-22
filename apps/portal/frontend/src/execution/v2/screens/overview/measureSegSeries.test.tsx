@@ -39,7 +39,7 @@ const button = (group: HTMLElement, name: string) => within(group).getByRole("bu
 const performance = () => screen.getByRole("region", { name: "Performance" });
 const metricsAsked = () => series.calls.map((call) => call.metric);
 /** The distinct metrics asked: the Net PnL and Return tiles ask once the fund series is served, besides the chart. */
-const askedOnce = () => [...new Set(metricsAsked())].sort((a, b) => ["NAV", "NET_PNL", "RETURN"].indexOf(a) - ["NAV", "NET_PNL", "RETURN"].indexOf(b));
+const askedOnce = () => [...new Set(metricsAsked().map((m) => m ?? ""))].sort((a, b) => ["NAV", "NET_PNL", "RETURN"].indexOf(a) - ["NAV", "NET_PNL", "RETURN"].indexOf(b));
 
 describe("the fund series is not served: the switch is off, with its reason, and asks for nothing", () => {
   it("source NOT_PUBLISHED: Net PnL and Return are disabled 'Not published (FE-025)' and only the NAV is asked", async () => {

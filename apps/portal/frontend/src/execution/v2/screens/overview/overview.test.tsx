@@ -571,6 +571,10 @@ describe("the fund NAV series (FE-013, BE-P4 manager series)", () => {
     expect(kpi("NAV").textContent).toMatch(/^NAV.*As of \d/);
     expect(kpi("NAV").querySelector(".exec-blk-kpi-note span")!.getAttribute("title")).toContain("Latest published point");
     expect(kpi("NAV").querySelector(".exec-blk-kpi-note span")!.getAttribute("title")).toContain("methodology TEST_ONLY:nav-twr.v1");
+    // The Capital panel's NAV row is the same published point as the NAV tile, not a second gap.
+    const capitalNav = within(screen.getByRole("table", { name: "Capital" })).getByText("NAV").closest("tr")!;
+    expect(capitalNav.textContent).not.toContain("Not published");
+    expect(capitalNav.querySelector(".exec-ov-num")?.getAttribute("title")).toBe(last!.getAttribute("title"));
     // Net PnL and Return ask the same port (their tiles read the published series); Drawdown has no series metric and stays unpublished.
     expect(kpi("Drawdown")!.querySelector(".exec-blk-kpi-value")?.textContent).toMatch(/^Not published/);
     for (const label of ["Net PnL", "Return"]) expect(kpi(label), label).toBeDefined();
