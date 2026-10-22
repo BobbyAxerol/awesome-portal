@@ -430,6 +430,22 @@ describe("dataset mode: sort and group by current stage (FE-012)", () => {
     expect(document.querySelector(".exec-fleet-count-line")?.textContent).toBe("Showing 50 of 130 rows. Load more for the rest.");
   });
 
+  it("'Then' is a second grouping level: absent without a first level, never the first field, sent as a two-field group_by, dropped with the first", async () => {
+    const { api, state } = harness({ live: alphasOf(130, [["LIVE"], ["CANARY"], ["CANARY", "LIVE"]]) });
+    mount(api, LIVE_URL);
+    await loaded();
+    expect(screen.queryByRole("combobox", { name: "Then group by" })).toBeNull();
+    fireEvent.change(screen.getByRole("combobox", { name: "Group by" }), { target: { value: "current_stage" } });
+    const then = (await screen.findByRole("combobox", { name: "Then group by" })) as HTMLSelectElement;
+    expect([...then.options].map((option) => option.textContent)).toEqual(["Then: none", "Then: Portfolio", "Then: Owner", "Then: Health"]);
+    fireEvent.change(then, { target: { value: "owner_user_id" } });
+    await waitFor(() => expect(search().get("then")).toBe("owner_user_id"), SLOW);
+    await waitFor(() => expect(datasetCalls(state).at(-1)!.query.get("group_by")).toBe("current_stage,owner_user_id"), SLOW);
+    fireEvent.change(screen.getByRole("combobox", { name: "Group by" }), { target: { value: "" } });
+    await waitFor(() => expect(search().get("then")).toBeNull(), SLOW);
+    expect(screen.queryByRole("combobox", { name: "Then group by" })).toBeNull();
+  });
+
   it("'Use the fleet read' (after a failed dataset read) drops what only the dataset understands, and the chip offers the way back", async () => {
     const { api, state } = harness({ live: MIXED });
     state.variantFor = (call) => (call.query.get("limit") === "1" ? "ok" : "status:503");

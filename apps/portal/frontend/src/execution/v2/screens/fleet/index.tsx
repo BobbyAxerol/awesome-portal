@@ -159,9 +159,12 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const datasetFilters = useMemo<DatasetFilters | null>(() => {
     if (scope === null) return null;
     const field = groupFieldOf(params.get("group"));
+    const group = field !== null && groupOptions.some((option) => option.field === field) ? field : null;
+    const second = groupFieldOf(params.get("then"));
     return {
       scope, q, owner, healths, sort: sort,
-      group: field !== null && groupOptions.some((option) => option.field === field) ? field : null,
+      group,
+      then: group !== null && second !== null && second !== group && groupOptions.some((option) => option.field === second) ? second : null,
       ...(workspaceId ? { workspaceId } : {}),
     };
   }, [scope, q, owner, healths, sort, params, groupOptions, workspaceId]);
@@ -251,10 +254,12 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     else params2.set(HIDDEN_COLUMNS_PARAM, value);
     setParams(params2, { replace: true });
   };
-  const setLocal = (name: "owner" | "health" | "group", value: string) => {
+  const setLocal = (name: "owner" | "health" | "group" | "then", value: string) => {
     const next = new URLSearchParams(params);
     if (value === "") next.delete(name);
     else next.set(name, value);
+    // The second level follows the first: no first level, or the same field, leaves no second.
+    if (name === "group" && (value === "" || value === next.get("then"))) next.delete("then");
     next.delete("sel");
     setParams(next, { replace: true });
   };
@@ -267,6 +272,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     else {
       params2.set("src", "fleet");
       params2.delete("group");
+      params2.delete("then");
       // The fleet read filters one health at a time: one word stays, a list (the dataset's IN) is dropped, not cut to its first word.
       const words = parseHealths(params.get("health"));
       if (words.length === 1) params2.set("health", words[0]!);
@@ -603,6 +609,20 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                   onChange={(event) => setLocal("group", event.target.value)}
                 >
                   {groupOptions.map((option) => <option key={option.id} value={option.field ?? ""}>{option.label}</option>)}
+                </select>
+              </label>
+            ) : null}
+            {canGroup && datasetFilters?.group != null ? (
+              <label className="exec-fleet-field">
+                <span className="exec-fleet-sr">Then group by</span>
+                <select
+                  className="exec-fleet-select"
+                  value={datasetFilters.then ?? ""}
+                  title="A second level inside each group"
+                  onChange={(event) => setLocal("then", event.target.value)}
+                >
+                  <option value="">Then: none</option>
+                  {groupOptions.filter((option) => option.field !== null && option.field !== datasetFilters.group).map((option) => <option key={option.id} value={option.field ?? ""}>{option.label.replace("Group:", "Then:")}</option>)}
                 </select>
               </label>
             ) : null}

@@ -95,6 +95,8 @@ export interface DatasetFilters {
   healths: readonly string[];
   sort: string | null;
   group: ManagerGroupField | null;
+  /** The second grouping level (`then=` in the URL); only meaningful with a `group` and never the same field. */
+  then?: ManagerGroupField | null;
   workspaceId?: string;
 }
 
@@ -115,7 +117,7 @@ export function datasetQuery(filters: DatasetFilters, offered: readonly ManagerS
   if (list.length > 0) query.filters = list;
   const sort = datasetSortOf(filters.sort, datasetSortOptions(offered));
   if (sort.keys.length > 0) query.sort = sort.keys;
-  if (filters.group !== null) query.groupBy = [filters.group];
+  if (filters.group !== null) query.groupBy = filters.then != null && filters.then !== filters.group ? [filters.group, filters.then] : [filters.group];
   if (after) query.after = after;
   return query;
 }
