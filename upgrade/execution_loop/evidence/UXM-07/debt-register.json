@@ -217,7 +217,7 @@
       "proposed": "Restore the columns/rows with per-cell 'Not available · reason' and 'Pending · policy not set' for score; window selectors; Fleet tabs All/Live/Canary/Sandbox/Paper. Fixture-only, no invented figures.",
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go)",
-      "status": "OPEN (found 2026-10-22; not previously tracked)"
+      "status": "IN PROGRESS 2026-10-22: Overview, Portfolios, Fleet columns/panels restored on fixture (commits 3d2fb063, eb553985, Fleet commit); visual baselines not yet re-recorded; Allocation held back pending BQ-FLEET-ALLOC; Overview window/domain selectors and Fleet Map/Group/Then not done"
     },
     {
       "id": "DEBT-UXM07-050",

@@ -130,6 +130,8 @@ export interface FleetRow {
   otherStages: readonly string[];
   health: HealthView;
   healthCode: string;
+  /** Why the 30-day equity series is not available, as the register states it (`metrics_availability.equity_series_30d`). */
+  equityReason: string | null;
   attention: readonly { code: string; label: string }[];
   deployments: { count: number; worst: HealthView | null; items: readonly FleetDeploymentView[] };
   updatedAt: string;
@@ -156,6 +158,7 @@ export function toFleetRow(item: AlphaFleetItem): FleetRow {
     otherStages: stageCodes.filter((s) => s !== stageCode).map(stageLabel),
     health: healthView(item.health),
     healthCode: item.health,
+    equityReason: item.metricsAvailability.equity_series_30d?.reasonCode ?? null,
     attention: item.attentionReasons.map((code) => ({ code, label: humanize(code) })),
     deployments: {
       count: item.deployments.length,
@@ -348,10 +351,10 @@ export const FLEET_COLUMNS = [
 
 /**
  * Why each money column has no value (hi-fi keeps the column and prints "Not available" in each cell).
- * Allocation is in the register's deployments but this screen reads identity only (fleetModel header), so it has no request id.
+ * Allocation is published but its domain is not stated, so it is held back (never mix Real-funded and Simulated), and it has no FE request id.
  */
 export const MONEY_COLUMN_WHY = {
-  allocation: "The fleet register carries allocation per deployment; this table does not read it yet, so no per-alpha figure is shown.",
+  allocation: "The register publishes allocation per alpha as one list per currency but does not say whether that list spans Real-funded and Simulated books, so no figure is printed until the contract says (backend question BQ-FLEET-ALLOC).",
   pnl: `${NOT_PUBLISHED} (FE-025): windowed Net PnL needs the window.`,
   equity: `${NOT_PUBLISHED} (FE-013): the equity series is not published.`,
 } as const;

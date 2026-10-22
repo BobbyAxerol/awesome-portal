@@ -135,7 +135,8 @@ describe("identity table", () => {
     await loaded();
     for (const row of within(table()).getAllByRole("row").slice(1)) {
       expect(row.querySelector("td[data-l='Readiness']")).toBeNull();
-      expect(row.querySelector("button")).toBeNull();
+      // The only buttons in a row are the reason disclosures of the three kept money columns.
+      expect(row.querySelector("td:not([data-l='Allocation']):not([data-l='Net PnL']):not([data-l='Equity']) button")).toBeNull();
     }
     expect(document.body.textContent).toContain("Readiness (FE-027, FE-028)");
     // One line names Compare and Window; the toolbar draws no dead button for them (UX audit A).
