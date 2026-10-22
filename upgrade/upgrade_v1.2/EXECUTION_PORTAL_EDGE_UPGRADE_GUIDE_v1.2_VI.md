@@ -1036,6 +1036,39 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest actual22Oct13:28 Asia/Saigon:** requested finite chain EXECUTED:
+official install5/actualREADY → Core currentREAD+genuine session → ONE internal
+snapshotHTTP200/1608B → exact sourceSERVED/CoreACK → READ/session revoke /
+token removal → source physicaldrain/pools0/exit0/die0/destroy → official
+native revoke6+STATUS. [Reply§§14–15](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md#15-actual-settled-read-and-completed-finite-source-retirement--1328-asiasaigon)
+and [actual Core return](../evidence/execution-edge-v1_2/EPG10-08/CORE009_08_ACTUAL_INTERNAL_READ_RETURN_2026-10-22.md)
+pin true correlation/census/cleanup. Actual body STALE/PARTIAL, as_ofnull;
+internal native custody succeeded, FRESH/publicingress/full08/09 NOT_MET.
+Source retired within slot, no permanent listener or automatic STREAM/all-mode
+acceptance. Next original08 revoke/cache/cursor/SSE requires its current inputs;
+do not relabel this completed bounded native READ as merely PREPARED.
+
+**Latest actual22Oct13:15 Asia/Saigon:** amended ACK30afc5c4 matched,
+official CAS4→5 RECORDED and real SDK_READY observed. [Reply§13](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md#13-sdk_ready-actual--1313-asiasaigon-0613utc)
+records actual receipt/digests/effective interval, physical worker/listener
+and752-byte original observationfd899bd3 already delivered to Core. Native
+TLS source is finite to13:30; keep original UNKNOWN custody. Core consumes
+READY for official current READ/session and ONE agreed internal Research
+snapshot; public DNS/TLS is unavailable and not bypassed. No Core READ/
+session/result or full08/09 PASS claimed before actual receipts. Earlier
+UNARMED/CAS0 history below is superseded only by these real stage receipts.
+
+**Latest actual22Oct13:09 Asia/Saigon:** original CAS0 install failed on the
+existing natural-key unique head; same-intent STATUS proves ABSENT. Not READY.
+Core accepted monotonic correction design; [reply§11](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md#11-amended-prepared--exact-natural-head-cas45--revoke56)
+contains exact corrected PREPARED CAS4→5/revoke5→6 hashes,9modeled PASS and
+actual readonly natural-key/head4/revoked preflight EXIT0/pools0. New helper
+UNARMED pending amended exact hash ACK; slot still ends13:30, no extension.
+Old immutable revision/attempts remain untouched; no SDK/schema/identity/
+domain change, no source/grant/session/connected READ yet. The missed
+natural-key check is owned and corrected, not external debt. Earlier
+ARMED_WAIT_WINDOW below records superseded CAS0 preparation history.
+
 **Latest stage22Oct12:13 Asia/Saigon:** Core exact hash ACKd920c717 is now
 received; [reply §7](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md#7-current-stage--ack_matched--armed_wait_window)
 records ARMED_WAIT_WINDOW, helper08580223 and actual SDK db0 matched-ACK

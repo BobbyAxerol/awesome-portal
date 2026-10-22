@@ -30152,6 +30152,297 @@ exists before the agreed13:00 start; no before-window source job/listener is
 started or scheduled. Bounded READ independent inputs remain satisfied for
 the later source-install stage; actual receipts/session remain stage-dependent.
 
+**Approved execution resumed22Oct12:28 Asia/Saigon (05:28UTC):** Bobby asks
+to complete Edge install → actual READY → Core current READ/source-set/session
+→ bounded READ in the accepted slot, not another PREPARED-only handoff.
+Scope/guide: original EPG10-08 above, detailed guide EPG10-08, exact Core ACK
+d920c717 and reply§§2–7. Preserve SDK28ea3958/lifecycle1ee3a15d, helper08580223,
+all four accepted files, owner/human separation and13:00–13:30 finite slot.
+No pre-slot install/listener; no stable/dev/provider28445, command/capital,
+STREAM, cap expansion or unrelated peer changes. First READ uses existing
+C32/R20 headroom with fresh Core census, not the full multi-request driver.
+
+Runnable preparation: confirm existing lifecycle/process-exit witness,
+exact hashes/window/source port and Core return availability; retain bounded
+private actual output before activation, without credential values. At slot,
+official install CAS0→1 and SAME-manifest status for ambiguity; start one
+capped frozen --rm source, observe actual READY, deliver its raw proof hash
+and actual native pins immediately. Core owns reviewed runtime/current READ
+and genuine application session; then reuse qualified finite HTTP transport
+for the eligible bounded specimen and correlate source terminal/Core ACK.
+Exit gates: actual install/status, SDK READY, genuine Core inputs, bounded
+READ outcome and original-custody terminal/recovery evidence—not health-only.
+Rollback: stop new admission, keep original UNKNOWN custody/recovery alive,
+drain only after terminal/Core ACK, exact revoke CAS1→2 and official session
+logout; never kill uncertain work or fabricate terminal/finished evidence.
+Full08/09 remains NOT_MET until its separate connected gates actually pass.
+
+**Pre-slot preparation/delivery:** helper and four accepted file rehashes
+match; actual socket28446 absent. Disk used325633585152/free193283317760B;
+shared TS correctness workers observed, not interrupted or counted as clean
+capacity conditions. Reply§8 now15021bytes/SHA256
+5fd27e1b2aa3b006d0c8606b1e63dfaf8ef4fa55a5dfce45228ddcd5f42f254a
+delivered by exact append to Core canonical plus three locator journals;
+all prefix/readbacks and unchanged Core index checks PASS. Core has exact
+slot/action; delivery is not a session or new installed receipt.
+
+One read-only independent reviewer (`bounded_read_review`, new because the
+old runner-review agent was unavailable) checked current finite transport:
+reuse prepare→Transport.request(snapshot)→finite(snapshot), one HTTP, never
+CLI/run() baseline's3–4requests. Actual Core census before/after still owns
+producer admission count; require real SDK receipt/terminal/Core ACK, not
+HTTP200 alone. No agent tests/SSH/file writes; primary retains one-writer
+runtime/journal ownership. This is scoped READ preparation, not full08/SSE.
+
+**Core READY-consumption update received12:38 Asia/Saigon:** actual HK copy
+`CORE009_READY_CONSUMPTION_PLAN_2026-10-22.md` SHA256
+f8b3ee51e38ea58505eb7bd19fadb328215bea425c84d9ae5af5f5bff7f5988e
+matches Core. Same slot/ACK; request is verbatim original SDK observation
+JSON/hash, not a new SDK method or approval. Existing source-ready observer
+already persists those exact facts privately. Core prepared official
+config-only/successor/session path and actual Research-only backup; not yet
+applied. Fresh-workload-only swap requires graceful quiesce and settled global
+custody; no mixed workloads or history deletion. Its documentation/backup
+does not prove current READ. Claude advanced to219fbdc7, documentation/review
+only; no changed frozen SDK pin or additional dependency for this READ.
+
+Passive exact-name Docker lifecycle witness session35789 writes only
+id/action/time/exit-code into owned0600 source-container-events.actual.jsonl,
+finite until06:35UTC; it starts no source. Actual create event will bind its
+new physical ID before any exit claim. Baseline12operational image/config
+tuples unchanged, all restart0 except pre-existing independently restarting
+Paper projection worker6785. Shared image-ID hashfefdd2cf/cache572records;
+no image/cache built or broad cleanup. Verification:R0 diff/check and
+execution-tracking-test EXIT0; three peer WIP hashes unchanged/index empty.
+
+**Bounded READ custody preparation12:49 Asia/Saigon:** Core canonical has
+neither qualified connected_read.py nor its identity_operator.py reference
+helper. Prepare only those two unchanged public files in one owned0700
+SGP /tmp/edge-core009-single-read-20261022-* layout; raw pinscad1eeb6 and
+e108a0a7 respectively, matching feature HEAD. No secret/data transfer,
+checkout modification, dependency install, execution/build or service change.
+This allows the single snapshot HTTP to use Core's protected session in
+place; no token needs to cross to HK. Full path/hash readback precedes use;
+Core must return config/receipt/session refs with the same intended reader
+UID and private protections. Primary owns exact two-file/directory teardown
+after terminal/recovery outcome, retaining only bounded receipt provenance.
+
+**Actual pre-slot retake12:53 Asia/Saigon:** existing invoke_readback.py
+EXIT0/stderr0; actual source DB live_data_executor/system7674585245102796834,
+source login/role and control target verified. Fingerprint5a67e653,
+admission25d2b3ef/4096/8 unchanged; fresh head absent and expected
+BUSINESS_READ_ACCEPTANCE_MISSING, issued0/listenerfalse/authority_changedfalse;
+original retired acceptance still version4/revoked. Physical pools[0,0];
+capped --rm worker removed. Raw bounded private evidence persists at
+edge-core009-prepared-20261022-JDChXXKN/pre-slot-readback.actual.jsonl.
+No install or authority inferred from this read-only PASS.
+
+Two-file SGP mirror is exactly /tmp/edge-core009-single-read-20261022-WgWvuP,
+40583+58156bytes, both hashes match. Reply§9 delivered16608bytes/SHA256
+386b8bdaa81a0404295430df4935d2684eb5f794292d4da0cc329b33fb111b95;
+three Core journal prefix/index checks PASS. Explicit one-client ownership
+prevents Edge/Core duplicate specimen admissions. Second R0 tracking retake
+EXIT0/diff-check clean; no new application code/test/dependency changed.
+
+**Actual install13:00:14 Asia/Saigon: FAIL, not READY.** Exact acknowledged
+manifest7daffe5f/command1de53174 via official SDK returned
+BUSINESS_READ_STORAGE_UNAVAILABLE/EXIT2/stderr0/pool0. Immediate official
+STATUS of the SAME manifest/command EXIT0 proves ABSENT, not a fabricated
+rollback/terminal. No listener/source/grant/session/READ. Target DB log in
+06:00–06:01UTC identifies SQLSTATE23505 unique tuple
+(user_id,portal_user_id,workspace_id,environment,profile_id) in
+pm_business_read.heads. A different acceptance UUID cannot coexist for the
+same domain even when its earlier revision is revoked. Readiness preparation
+missed this natural-key conflict: owned defect, not external technical debt.
+
+SDK business_root_read.py:_install lines258–300 supports monotonic CAS on
+the existing domain head and preserves all immutable revisions. Do not drop
+the constraint, delete the old head/history, change identities/domain or
+silently reopen old authority. Coordinate Core disposition/new exact hashes
+for a fresh revision/current-window acceptance via existing head, with old
+revoked revision/attempts unchanged; inspect exact tuple/head/custody first.
+Keep failed manifest/status evidence and original intent. Only an explicit
+matching reviewed amendment can change current CAS/config pins within this
+slot; no repeated failed write or self-issued ACK. Next runnable work is
+read-only natural-key/head verification and corrected finite preparation.
+
+**Corrected finite preparation13:07 Asia/Saigon:** Core coordination addendum
+accepts monotonic correction design, not yet the new bytes. Actual readonly
+natural-key query finds exactly b922c105/current4/revoked, prior commanda69bd97b,
+document8b60215f; DB/system/source login exact, pool0, no authority changed.
+Keep original failed JDChXXKN bundle/evidence immutable. Corrected private
+0700 /home/bobby/secure/edge-core009-cas4-20261022-1Mst6EaA contains new
+commande839301e CAS4→5 and revoke5ba1e1c9 CAS5→6, unchanged06:30 expiry.
+Runtime da67184b/install498bfc6e/revoke4270d5df/JWKS36ddec45; exact raw and
+SDK document/helper hashes are in reply§11. Helper UNARMED pending amended
+exact ACK. No SDK/schema/identity/domain/trust/admission/budget change.
+
+New preflight fixes owned defect by checking natural tuple's acceptance/CAS
+as well as exact selected head4/revoked; observer must deny revoked/expired,
+not expect missing.9modeled glue PASS incl exactCAS4/current5 vs stale4;
+actual frozenSDK validate EXIT0/db0/unarmed/document75cc571b/19828000 and
+actual readonly preflight EXIT0/stderr0/pools[0,0]/natural_head_verifiedtrue/
+issued0/authority_changedfalse. Both --rm workers removed. No authority or
+source readiness inferred. Corrected SDK_READY observer pins future native5,
+not a fabricated receipt. Raw configuration-only repins preserve all SDK
+fences and old revoked revision/intent/history.
+
+Reply§11 actual22159bytes/SHA25665e990de273940551ec9cf60e8add8fe1278281ecf37a65516c960ee41ecf6f0
+delivered to Core canonical and three locator journals; all prefix/index
+checks PASS. Core owes exact amended ACK now; no new generic approval.
+Fresh passive witness89785 selects only corrected worker1Mst6EaA, until
+06:35UTC; no container started. Existing slot ends06:30UTC, never extended.
+
+**Actual amended ACK received13:12 Asia/Saigon:** Core public
+CORE_TO_EDGE_08_CAS4_HASH_ACK_2026-10-22.md rawSHA256
+30afc5c4312c47bb62cfb5a50af78d1f90a61414e73d922f8b7bf8c3739d0814
+is delivered byte-exact on HK. Core directly rehashed5/5amended files and
+accepts exactCAS4→5/5→6/unchanged slot; actual Core census06:10:20UTC remains
+H9/unresolved0/unreconciled0/missingACK0/pending0. Arm only that received
+constant; preserve unarmed5a75944b. Then install/real READY immediately.
+
+Core endpoint addendum identifies unavailable public Research DNS/TLS and
+possibly stale retained data. Reply§12 explicitly agrees Core owns ONE
+existing INTERNAL_RESEARCH_API specimen, Edge does not run public driver or
+duplicate request. Genuine session/current READ/native mTLS still required;
+no relaxed public TLS/FRESH assertion or browser acceptance. Raw replyd20fde7d
+delivered with unchanged prefixes/index. Unneeded two-file SGP mirror was
+hash-verified then removed with its exact7empty directories,127411B scoped
+du footprint; recoverable from Git. Diskbefore used516648296448/free149145989120,
+after516646060032/free149148225536B reflects shared-host activity, not a
+reclamation claim. Core imagea96/restart0 unchanged at cleanup. Old passive
+CAS0 witness PID3194125 verified and TERM'd, actual observerexit143/events0;
+not a source-process exit or authority receipt. New witness89785 retained.
+
+**Actual SDK_READY13:13 Asia/Saigon /06:13UTC:** amended ACK arm constant
+only changed; helperd964fa19/unarmed5a75944b preserved. Official install
+e839301e CAS4→5 EXIT0/stderr0/pool0 returns RECORDED/current5/historicalfalse,
+document75cc571b, effective2026-10-22T06:12:38.320050+00:00. Raw install
+evidence9ed4138481fccfd8fa97b27725648fb3312fd1bc3697c2487056c2143ba71357.
+Actual SDK worker0e1430363e8abf857a2d194823bd9ef2ea45f3c4d1d1dbd32c5fcebbe12b3097,
+name edge-core009-native-serve-1Mst6EaA/image28ea3958/hostPID3372987,
+started06:12:53.593202249UTC/1CPU/512MiB/AutoRemovetrue, listens
+10.70.0.2:28446 TLS1.3/mTLS. Actual source transaction READY callback proves
+native5/receipt/document; passive create/start events bind same physical ID.
+No physical exit is asserted while running. Source custody persists through
+Core operation and any UNKNOWN; auto-stop new admission06:30 unchanged.
+
+Independent SDK RR READ ONLY observation EXIT0/stderr0/physical_pool0/issued0
+produces real native5/receipte839/receiptDigestafabc2a2/document75cc571b/
+semanticbbe48445, owner mapping unchanged/distinct from human. Original JSON
+752bytes/rawfd899bd395a46121b522095b75219b67f73505eacb3e5fa3da7ef975309a269b
+copied byte-exact root0600/O_EXCL/readback to Core existing private window
+source-ready.edge.actual.json; no credential transfer. Exact fields/full
+paths are in reply§13. Core may wrap status for operations but original
+SDK bytes/hash stay unchanged. Verifier --rm worker removed.
+
+Actual READY delivery13:15 Asia/Saigon: reply26913bytes/raw
+16e730d696878548f8d4b3b8aca0c8ec2b706d8a07a80bbf7b4c288e82bef51e
+reached Core canonical and three locator journals, prefix/index checks PASS.
+Core now owns config-only/current READ/source-set/session and ONE agreed
+internal Research specimen, its source-terminal/Core ACK/session+grant
+cleanup; Edge does not duplicate HTTP. Those stages remain NOT_RUN until
+real return, not blocked on unrelated P22/STREAM/Manager/calibration.
+
+**Actual bounded READ13:25 Asia/Saigon:** inspected sanitized Core private
+receipts (not token/body data): actual config installed runtime9869c15f /
+compose8b1574d3 / sameimagea96 / newResearchcontainer608da2b4 / restart0 /
+21tables unchanged. Official successorace_bb9d APP_APPLIED and real temporary
+session receipt; one agreed internal snapshot HTTP200/1608B at06:22:14UTC,
+bodye3e8043d. AVAILABLE/PARTIAL/STALE, source_as_ofnull, lastrefresh10Oct:
+native connectivity is not FRESH/publicCloudflare/full08 acceptance.
+Immediate aftercensusH10/unresolved1/unreconciled1 requires final settlement.
+
+Independent existing-admin diagnostic RR READ ONLY on verified TSDB/system
+7674585245102796834, statement2s/lock500ms/LIMIT8, EXIT0/COMMIT, no writes:
+actual singlelease1dcd2deb/attempt697a41b7 shows ISSUED→ENTERED→SERVED,
+event26 at06:22:14.535262UTC, physicalreceipt29bc0a59/digesta2211728.
+Full correlation in reply§14; source terminal is NOT Core ACK. Source stays
+alive for original attempt ACK/recovery and exact cleanup; no duplicate READ,
+no new slot or synthetic finished claim. Core owns final reconciled+ACK /
+grant/session retirement readback; Edge owns finite drain/revoke5→6/evidence.
+
+**Core real settlement return13:27 Asia/Saigon:** fully read current
+CORE009_08_ACTUAL_INTERNAL_READ_RETURN_2026-10-22.md and actual private
+closeout06:26:14UTC. Exact same attempt697a41b7/receipt29bc0a59/digesta2211728
+is SERVED/source_reconciledtrue/source_ack_actionresolve/ACK7aae61ba;
+body/source match independent Edge readback. FreshH10/unresolved0/
+unreconciled0/pending0/missingACK0, exactly1newadmission. Official Core READ
+and exact temporary session REVOKED, token REMOVED/other_sessions_touched0;
+protected10table hashes/migrations unchanged. Source may now graceful SIGTERM,
+await actual pools0/process exit and Docker die/destroy, then official exact
+CAS5→6 revoke/status. No forced shutdown, custody fabrication or second HTTP.
+
+**Actual finite closure13:28 Asia/Saigon:** source SIGTERM only after real
+Core ACK/zero unsettled custody; lifecycle actually closed/pools0/real wrapper
+EXIT0/stderr0, sameID passive die0/destroy, socket28446 absent and --rm worker
+absent. Exact observer3353883 verified before TERM, actual observerEXIT143
+kept distinct from sourceEXIT0. Official revoke5ba1e1c9 CAS5→6 RECORDED at
+06:27:32.384455UTC/runtime_enabledfalse, same-intent official STATUS confirms
+current6; both actual EXIT0/stderr0/maintenance_pool0. Full proof hashes and
+actual Core public return620cf9ef in reply§15. All within06:00–06:30slot.
+
+Requested install→READY→currentREAD/session→boundedREAD is ACTUALLY EXECUTED
+with source-terminal/Core ACK and retirement, not PREPARED-only. Outcome is
+one authenticated internal HTTP200 with STALE/PARTIAL retained projection;
+FRESH/publicCloudflare/full08/09 NOT_MET. No second request or invented grant.
+No owned runnable operation left in this finite scope. Next original08 work
+needs actual independent STREAM/current-policy inputs; stale publication and
+public ingress are separate explicit producer/route-owner actions. No blanket
+new approval or P22/Manager/calibration hold retroactively blocks completed READ.
+
+**Publication/resource closeout13:32 Asia/Saigon:** reply§15 actual32193B/raw
+29d759799c1bea7a152891916879ab8acc5c36db870d97541c640b0514b3d2e0
+delivered to Core canonical and three locator journals, exact prefix/index
+checks PASS. Actual Core return6542B/raw620cf9ef matches both hosts. Core
+canonical docs/research-loop-plan now63ad7a78, Claude parallel lane66db0701;
+source branch commits are not substituted for installed Core8ac/imagea96.
+Serving Research608da2b4/runtime9869c15f/compose8b1574d3/labelbfec439f,
+healthy/restart0; exact retired grant/session/native6 remain retired.
+
+HK twelve operational Edge/Proxy/Projection/PG image/config tuples unchanged:
+Edged6aa7a51/Proxyaa14e21c/PGcf78e766, Paper6180b9bf/21786bb0/95e96a9b,
+Sandboxcd79e9c6/da4b44c0/12294191, Live98a191c7/9bb20c88/1582b40c,
+PG79c88b6a. Eleven restart0; pre-existing Paper projection-worker restart
+loop continued6785→6923 during shared work, not caused/fixed or hidden by
+this finite READ. It needs its own bounded diagnosis/owner action before
+claiming healthy fresh publication; no unrelated operational restart here.
+
+Actual Docker inventory109images/43active/41.06GB, BuildKit572records/64.64GB;
+imageIDsetSHA7d86c05309617aa1dcb4d94d9a574221e871bca292b3e375a0896c22fc847570.
+Other agents changed shared inventory; this operation created zero images/
+buildcache, all own --rm workers/observer removed. Retain operational SDK28ea,
+all active/explicit rollback artifacts, exact private evidence/trust and Core
+backup; no broad prune/volume/network/source/worktree removal. HK beforeused
+325633585152/free193283317760B; afterused318154825728/free200762077184B;
+shared movement is NOT claimed as this operation's reclaimed bytes. SGP exact
+mirror cleanup/disk evidence already above; Core removed exact token+5unused
+private tool copies while preserving active refs/backup/receipts. No own cell
+left on SGP. Cleanup performed; evidence retention intentional, not abandoned.
+
+Canonical Edge checkout portal-execution-manager-v2/feat/manager-v2-paper-read
+54c6f5f3 unchanged. Active feature portal-execution-edge-upgrade-v1_2 /
+feat/execution-edge-upgrade-v1_2; existing other active Portal feature worktrees
+preserved, none merged/abandoned by this task. Stable release remains
+/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/deploy.
+Three peer WIP hashes fe4fcfc7/1cf04b20/109659d2 unchanged; preserve peer
+10line C5 main-plan hunk,56line CONNECTED_READ_BINDING_OWNER_ACTION hunk
+and incoming unrelated owner packets. Commit scope six Markdown paths only
+(owned plan append, guide, cumulative reply, exact amended ACK, actual Core
+return and its linked exact single-read coordination authority packet);
+Verification:R0 per campaign§10.10d, diff/tracking/link/staged-scope
+checks, no product code/hook/build repeat, no push/merge or hosted CI minutes.
+Actual local commit/source pin is reported after Git completes.
+
+Concurrent Core publication appended/updated its live actual-return document
+after initial6542B/620cf9ef delivery. Preserve all those working-tree changes
+and new remaining-owner-action sidecars; stage only the exact initial received
+public receipt blob pinned above, not a moving peer document/link dependency
+chain. No peer bytes reverted. Current new owner requests were read and do not
+authorize reopening this retired slot. Own reply§15 already records actual
+source retirement independently. R0 staged-link check initially caught that
+moving peer sidecar dependency; corrected the index scope, not the peer file.
+
 
 
 
