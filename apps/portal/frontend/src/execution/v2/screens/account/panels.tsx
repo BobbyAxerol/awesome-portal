@@ -20,7 +20,7 @@ import { withoutOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import {
   FE, SYNC_SHOWN, alphaHref, balanceFacts, brokerFacts, coverageFlag, deploymentHref, diffFacts, headroomFacts,
-  ledgerPnl, marginFacts, portfolioHref, positionCount, sleeveRows, stageWord, triadModel,
+  ledgerPnl, marginFacts, portfolioHref, sleeveRows, stageWord, triadModel,
   type AccountView, type AllocationFacts, type PositionFacts, type Population, type SleeveRow, type SyncEntry,
 } from "./model";
 import { Fact, Na, Np, Value, When } from "./parts";
@@ -35,11 +35,15 @@ export interface PanelContext {
 
 /* ── three authorities ──────────────────────────────────────────────────── */
 
+/** Allocation rows the tile lists; the rest are in the Allocations tab. Each is a published row, never added to another. */
+const ALLOCATION_ROWS = 3;
+
 export function AuthorityKpis({ ctx, physicalOnly }: { ctx: PanelContext; physicalOnly: boolean }) {
   const { profile, accountId, currency } = ctx;
   const bal = balanceFacts(profile, accountId, currency);
   const pnl = ledgerPnl(profile, accountId, currency);
   const broker = brokerFacts(profile, currency);
+  const { allocations, names } = ctx.view;
   return (
     <KpiStrip label="Authorities" columns={physicalOnly ? 1 : 3}>
       {physicalOnly ? null : (
@@ -48,18 +52,29 @@ export function AuthorityKpis({ ctx, physicalOnly }: { ctx: PanelContext; physic
           <span className="exec-acct-sub2">Unrealized PnL, current: <Value metric={pnl?.unrealized} signed /></span>
         </Kpi>
       )}
-      <Kpi label="Native custody · whole account" metric={broker?.buyingPower} suffix={currency ?? undefined} basis={broker ? "Buying power reported by the venue" : undefined}>
+      {/* The design's headline is the venue's wallet balance. No contract carries it, so the headline says so and the one native figure
+          that IS published (buying power) rides under it, labelled as what it is. */}
+      <Kpi label="Native custody · whole account" absentReason="Venue field not reported" basis={broker ? "Wallet balance shared by the whole account" : undefined}>
         {broker ? <>Venue report as of <When at={broker.asOf} /></> : undefined}
+        <span className="exec-acct-sub2">Buying power: <Value metric={broker?.buyingPower} suffix={currency ?? undefined} /></span>
         <span className="exec-acct-sub2">Native equity: <Na why="Venue field not reported" /></span>
       </Kpi>
       {physicalOnly ? null : (
         <div className="exec-blk-kpi">
-          <dt className="exec-blk-kpi-label">Budget · this sleeve</dt>
+          <dt className="exec-blk-kpi-label">PM capital · this sleeve</dt>
           <dd className="exec-blk-kpi-body">
             <span className="exec-blk-kpi-value"><Np fact={FE.budget} /></span>
-            <span className="exec-blk-kpi-note">
-              Published position rows: <Value metric={positionCount(profile, accountId)} />
-            </span>
+            <span className="exec-blk-kpi-note">Budget used / approved</span>
+            {allocations.slice(0, ALLOCATION_ROWS).map((row) => (
+              <span key={row.id} className="exec-acct-sub2">
+                Allocated · {(row.deployment !== null ? names.deployments[row.deployment] ?? row.deployment : null) ?? (row.alpha !== null ? names.alphas[row.alpha] ?? row.alpha : null) ?? row.id}:{" "}
+                <Value metric={row.allocation} suffix={row.currency ?? undefined} />
+              </span>
+            ))}
+            {allocations.length > ALLOCATION_ROWS ? <span className="exec-acct-sub2">{allocations.length - ALLOCATION_ROWS} more in Allocations</span> : null}
+            {allocations.length === 0 ? <span className="exec-acct-sub2">Allocated: <Na why="No allocation row is published for this account" /></span> : null}
+            <span className="exec-acct-sub2">Gross exposure: <Np fact={FE.gross} /></span>
+            <span className="exec-acct-sub2">Long / Short: <Np fact={FE.gross} /></span>
           </dd>
         </div>
       )}
@@ -175,18 +190,18 @@ export function AllocationsPanel({ ctx }: { ctx: PanelContext }) {
     {
       key: "alpha",
       label: "Alpha",
-      render: (row) => row.alpha === null ? <Na /> : <Link className="exec-acct-link" to={withContext(alphaHref(row.alpha), withoutOrigin(params))}>{row.alpha}</Link>,
+      render: (row) => row.alpha === null ? <Na /> : <Link className="exec-acct-link" to={withContext(alphaHref(row.alpha), withoutOrigin(params))}>{ctx.view.names.alphas[row.alpha] ?? row.alpha}</Link>,
     },
     {
       key: "deployment",
       label: "Deployment",
-      render: (row) => row.deployment === null ? <Na /> : <Link className="exec-acct-link" to={withContext(deploymentHref(row.deployment, row.mode), withoutOrigin(params))}>{row.deployment}</Link>,
+      render: (row) => row.deployment === null ? <Na /> : <Link className="exec-acct-link" to={withContext(deploymentHref(row.deployment, row.mode), withoutOrigin(params))}>{ctx.view.names.deployments[row.deployment] ?? row.deployment}</Link>,
     },
     { key: "stage", label: "Stage", render: (row) => stageWord(row.mode) },
     {
       key: "portfolio",
       label: "Portfolio",
-      render: (row) => row.portfolio === null ? <Na /> : <Link className="exec-acct-link" to={withContext(portfolioHref(row.portfolio), withoutOrigin(params))}>{row.portfolio}</Link>,
+      render: (row) => row.portfolio === null ? <Na /> : <Link className="exec-acct-link" to={withContext(portfolioHref(row.portfolio), withoutOrigin(params))}>{ctx.view.names.portfolios[row.portfolio] ?? row.portfolio}</Link>,
     },
     { key: "allocation", label: "Allocation", numeric: true, render: (row) => <Value metric={row.allocation} suffix={row.currency ?? undefined} /> },
   ];

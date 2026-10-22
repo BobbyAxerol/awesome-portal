@@ -521,19 +521,78 @@ describe("Account 360: the shared sleeve", () => {
     expect(screen.getByText("Broker sync: Synced")).toBeTruthy();
   });
 
-  it("keeps the three authorities apart, with budget Not published (FE-017) and native equity Not available", async () => {
+  it("keeps the three authorities apart: PM capital lists the published allocation and says budget, gross and long/short are not published; native custody headlines the wallet balance", async () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
     const strip = screen.getByRole("group", { name: "Authorities" });
     const terms = within(strip).getAllByRole("term").map((t) => t.textContent);
-    expect(terms).toEqual(["Internal ledger · this sleeve", "Native custody · whole account", "Budget · this sleeve"]);
+    expect(terms).toEqual(["Internal ledger · this sleeve", "Native custody · whole account", "PM capital · this sleeve"]);
     expect(strip.textContent).toContain("88,200.00");
-    expect(strip.textContent).toContain("301,100.00");
-    expect(strip.textContent).toContain("Not published (FE-017)");
-    expect(strip.textContent).toContain("Native equity: Not available");
+    // Native custody: the headline is the wallet balance (not published); the published buying power sits under it, named as such.
+    const native = within(strip).getByText("Native custody · whole account").nextElementSibling as HTMLElement;
+    expect(native.querySelector(".exec-blk-kpi-value")?.textContent).toContain("Not available");
+    expect(native.querySelector(".exec-blk-kpi-value")?.textContent).not.toContain("301,100.00");
+    expect(native.textContent).toContain("Buying power: 301,100.00");
+    expect(native.textContent).toContain("Native equity: Not available");
+    // PM capital: the allocation row the read publishes (portfolio_allocations.allocated_capital), not summed; the rest typed absences.
+    const pm = within(strip).getByText("PM capital · this sleeve").nextElementSibling as HTMLElement;
+    expect(pm.textContent).toContain("Budget used / approved");
+    expect(pm.querySelector(".exec-blk-kpi-value")?.textContent).toContain("Not published (FE-017)");
+    expect(pm.textContent).toContain("Allocated · dep_btc_live: 80,000.00");
+    expect(pm.textContent).toContain("Gross exposure: Not published (A360-1)");
+    expect(pm.textContent).toContain("Long / Short: Not published (A360-1)");
     // "Shared by 3 sleeves" is the banner's, once; the strip does not repeat it.
     expect(strip.textContent).not.toContain("Shared by 3 sleeves");
+  });
+
+  it("PM capital with no allocation row says so for the allocation only; it does not print a zero", async () => {
+    stubFetch();
+    account("acc_pap_sim");
+    const strip = await screen.findByRole("group", { name: "Authorities" }, SLOW);
+    const pm = within(strip).getByText("PM capital · this sleeve").nextElementSibling as HTMLElement;
+    expect(pm.textContent).toContain("Allocated: Not available");
+    expect(pm.textContent).not.toMatch(/Allocated[^:]*: 0/);
+  });
+
+  it("shows the display names the read publishes instead of raw ids, and the id where it publishes none", async () => {
+    stubFetch({
+      answer: (url) => {
+        const answer = answerAccount("GET", url.pathname, url.searchParams);
+        if (answer === null || !url.pathname.endsWith("/resources/accounts/acc_bnc_core")) return answer;
+        const body = JSON.parse(JSON.stringify(answer.body)) as { data: Record<string, Record<string, unknown>[]> };
+        for (const row of body.data.deployments ?? []) row.portfolio_name = "Core";
+        for (const row of body.data.portfolio_allocations ?? []) { row.deployment_name = "BTC Trend live"; row.portfolio_name = "Core"; }
+        return { status: answer.status, body };
+      },
+    });
+    account("acc_bnc_core");
+    await loaded360();
+    const strip = screen.getByRole("group", { name: "Authorities" });
+    expect(strip.textContent).toContain("Allocated · BTC Trend live: 80,000.00");
+    expect(strip.textContent).not.toContain("dep_btc_live");
+    expect(screen.getByRole("link", { name: "Core" })).toBeTruthy();
+  });
+
+  it("the Drawdown sub-panel reads the route's drawdown metric; a payload that echoes another metric is a typed absence, never the equity series", async () => {
+    const stub = stubFetch();
+    account("acc_bnc_core");
+    await loaded360();
+    await screen.findByRole("img", { name: /Account drawdown/ }, SLOW);
+    expect(stub.paths("/api/v1/execution/views/equity-chart").some((call) => call.includes("metric=drawdown"))).toBe(true);
+    cleanup();
+    stubFetch({
+      answer: (url) => {
+        const answer = answerAccount("GET", url.pathname, url.searchParams);
+        if (answer === null || url.pathname !== "/views/equity-chart" || url.searchParams.get("metric") !== "drawdown") return answer;
+        return { status: answer.status, body: { ...(answer.body as Record<string, unknown>), metric: "equity" } };
+      },
+    });
+    account("acc_bnc_core");
+    await loaded360();
+    const panel = (await screen.findByRole("heading", { name: "Drawdown" }, SLOW)).closest("section") as HTMLElement;
+    await waitFor(() => expect(panel.textContent).toContain("Not available"), SLOW);
+    expect(within(panel).getByRole("img", { name: /Account drawdown/ }).className).toContain("exec-c2-na");
   });
 
   it("the sleeves table never attributes native balance to a sleeve: no attribution column, and not totalled", async () => {

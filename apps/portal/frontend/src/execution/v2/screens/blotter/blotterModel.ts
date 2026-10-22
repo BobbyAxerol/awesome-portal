@@ -569,8 +569,9 @@ export function csvCell(order: BlotterOrder, id: ColumnId): string {
     case "order": return order.orderId;
     case "alpha": return order.alphaId ?? "";
     case "account": return order.accountId ?? "";
-    // Deployment, average price and fee are columns the orders read does not carry: an empty CSV cell, never a stand-in.
-    case "deployment": case "avg": case "fee": return "";
+    // Deployment is the order row's own `deployment_id` when a revision publishes it; average price and fee are not in the orders read: an empty CSV cell, never a stand-in.
+    case "deployment": return order.deploymentId ?? "";
+    case "avg": case "fee": return "";
     case "venue": return order.venue ?? "";
     case "symbol": return order.symbol ?? "";
     case "side": return [order.side ? humanize(order.side) : "", order.orderType ? humanize(order.orderType) : ""].filter((w) => w !== "").join(" ");
