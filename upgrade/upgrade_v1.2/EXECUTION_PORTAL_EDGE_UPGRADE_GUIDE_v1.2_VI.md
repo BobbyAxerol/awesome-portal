@@ -1049,6 +1049,9 @@ as SOURCE_ONLY/TEST_ONLY, not runtime. Core service-only command STATUS differs
 from current PM/Rust human STATUS; Edge-owned ingress and source commissioning
 remain original07 work, not all external debt. Full-P22 build OOM is Core-owned
 and does not hold native. Full08/read09 NOT_MET; shared runtime/trust unchanged.
+At13:13UTC five Core checkouts still had no new ACK; [short corrective action](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACK_ACTION_2026-10-22.md)
+was delivered to Core: ACK PREPARED before requesting SDK_READY; if infeasible,
+return an explicit new slot, never a stale ACK or silent renewal.
 
 **Return review22Oct11:50UTC:** [Seven-row review + NEW native preparation](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REVIEW_2026-10-22.md)
 raw d8bc917b delivered/hash-verified at Core. New12:00–12:30UTC preparation

@@ -31231,3 +31231,31 @@ No normal product hook repeated for documentation-only publication under
 owner-approved Core campaign§10.10d;12modeled/frozenSDK/RR results above are
 actual private preparation evidence, not connected activation. Bobby identity
 verified; coherent local commit only, no push/merge/CI minutes consumed.
+
+**Bobby follow-up22Oct13:11UTC:** self-check fresh Core/Codex/Claude public
+returns; do not ask Bobby to locate an ACK. If missing, deliver one short
+correction through the original Core mailbox: exact hash/window ACK precedes
+Edge install/SDK_READY, so Core must not wait for READY before acknowledging
+PREPARED; expired/undersized offers require explicit replacement, not stale
+ACK or silent renewal. This is coordination in original08, no new phase or
+runtime permission. Publication17144deb contains4Markdown/+306, R0 PASS,
+no push/merge. Current source remains8revoked/28446absent until actual new ACK.
+
+**13:13:23UTC exact corrective delivery completed:** five relevant Core
+checkouts inspected, not chat inference: canonical3c83bd9e return36f08a4d has
+no c76968ce ACK; Claudefe2@94fa6927 retains oldd5f22ff3; CodexBEd5d31cbd,
+Coreintegration9d88e40a and landing4c7f809e have no corresponding new return.
+[Small Core action](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_ACK_ACTION_2026-10-22.md),
+raw6561420e9792381cf591dbc6d92c14b7c902ebb788a1e7f4b592199e68c267eb,
+delivered byte-equal into canonical CoreELP2-10; Unified/sync/original mailbox
+appended, old prefixes/index preserved. Requests next-action ACK or exact
+CHANGE, no circular SDK_READY wait, no old ACK reuse; if infeasible explicit
+new slot/checkpoint. No new source install/session/runtime or acceptance claim.
+This is a real missing producer response, not another generic owner approval.
+
+Correction verification:R0 exact3Markdown staged paths/3indexed links+anchors/
+secret scan/diffcheck and tracking reconciliation PASS; owner-approved§10.10d,
+no repeated product hook. Exact remote action hash read back equal. Core return
+still36f08a4d/no new ACK at final check; install/serve remain UNARMED. No new
+test/build resource or cleanup delta after the recorded inventory; private
+finite preparation/custody retained, shared rollback/cache and peer WIP intact.
