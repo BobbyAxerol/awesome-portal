@@ -139,20 +139,22 @@ export async function readRosterPage(input: {
       throw new RosterQueryError("ROSTER_CURSOR_INVALID", "The roster cursor is not valid.", 400);
     }
   }
+  // One instant for the counts (SQL) and for every printed row: a lock expiring mid-read cannot split them.
+  const now = input.now ?? new Date();
   const read = await store.rosterPage({
     limit: query.limit,
     afterUsername,
     q: searchOf(query),
     role: query.role ?? null,
     state: query.state ?? null,
-    now: input.now ?? new Date(),
+    now,
   });
   // The statement asks for limit + 1 so "is there more" is a fact, not a guess from a full page.
   const more = read.rows.length > query.limit;
   const rows = read.rows.slice(0, query.limit);
   const last = rows[rows.length - 1];
   return {
-    accounts: rows.map(projectAccount),
+    accounts: rows.map((row) => projectAccount(row, now)),
     page: {
       limit: query.limit,
       returned_count: rows.length,

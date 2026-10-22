@@ -218,7 +218,7 @@ export class AccountLifecycleService {
    */
   async roster(): Promise<ReturnType<typeof projectAccount>[]> {
     const users = await this.auth.users.list();
-    return users.map(projectAccount);
+    return users.map((user) => projectAccount(user));
   }
 
   /**

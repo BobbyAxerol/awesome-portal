@@ -238,3 +238,21 @@ describe("a driver failure is not this module's to word", () => {
     await expect(readRosterPage({ store: boom, codec: codec(), ownerUserId: "o", query: parseRosterQuery({ limit: "5" }), now: NOW })).rejects.toThrow("connection string");
   });
 });
+
+describe("BE-P23 · one instant for the counts and the printed rows (Codex review)", () => {
+  it("a lock that is live at the read instant counts as locked AND prints locked, even if the wall clock has moved past it", async () => {
+    // Live at NOW, expired by the real clock (2026-10-22 or later): the old code printed an unlocked row for a counted lock.
+    const lockedUntil = new Date(NOW.getTime() + 1000);
+    const all = [user(1, { lockedUntil }), user(2)];
+    const body = await readRosterPage({ store: fakeStore(all), codec: codec(), ownerUserId: "o", query: parseRosterQuery({ limit: "10" }), now: NOW });
+    expect(body.counts.locked).toBe(1);
+    expect(body.accounts.filter((a) => a.locked).map((a) => a.user_id)).toEqual([all[0].userId]);
+  });
+
+  it("the boundary is exclusive: a lock that ends exactly at the read instant is neither counted nor printed as locked", async () => {
+    const all = [user(1, { lockedUntil: new Date(NOW.getTime()) })];
+    const body = await readRosterPage({ store: fakeStore(all), codec: codec(), ownerUserId: "o", query: parseRosterQuery({ limit: "10" }), now: NOW });
+    expect(body.counts.locked).toBe(0);
+    expect(body.accounts[0].locked).toBe(false);
+  });
+});

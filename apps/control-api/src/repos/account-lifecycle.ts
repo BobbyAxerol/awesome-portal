@@ -59,7 +59,8 @@ export interface AccountProjection {
   locked: boolean;
 }
 
-export function projectAccount(user: PortalUser): AccountProjection {
+/** `now` lets a caller that already counted locks at one instant print its rows at that same instant. */
+export function projectAccount(user: PortalUser, now: Date = new Date()): AccountProjection {
   return {
     user_id: user.userId,
     username: user.username,
@@ -68,7 +69,7 @@ export function projectAccount(user: PortalUser): AccountProjection {
     account_state: accountStateOf(user),
     must_change_password: user.mustChangePassword,
     account_revision: user.accountRevision,
-    locked: user.lockedUntil !== null && user.lockedUntil > new Date(),
+    locked: user.lockedUntil !== null && user.lockedUntil > now,
   };
 }
 

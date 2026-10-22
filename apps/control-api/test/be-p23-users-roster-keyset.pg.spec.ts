@@ -15,6 +15,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AdminService } from "../src/admin/admin.service";
 import { AuthService } from "../src/auth/auth.service";
 import { OwnerAccessRepository } from "../src/repos/owner-access";
+import { ROSTER_PAGE_SQL } from "../src/repos/users";
 import { migrateTestDatabase, setupApp, teardownApp } from "./harness";
 
 const DATABASE_URL = process.env.TEST_DATABASE_URL;
@@ -152,13 +153,24 @@ describe.skipIf(!DATABASE_URL)("BE-P23 owner roster keyset page on real PostgreS
     expect(body.accounts).toHaveLength((await sql("SELECT count(*)::int AS n FROM portal_users"))[0].n);
   });
 
-  it("the page statement is an index range scan on the unique username index, bounded by limit + 1", async () => {
+  it("the PRODUCTION statement reads its page from the unique username index, bounded by limit + 1 (EXPLAIN ANALYZE of ROSTER_PAGE_SQL)", async () => {
+    const nodes = (plan: any): any[] => [plan, ...((plan.Plans ?? []) as any[]).flatMap(nodes)];
+    const run = async (params: unknown[]) => {
+      const rows = await sql(`EXPLAIN (ANALYZE, FORMAT JSON) ${ROSTER_PAGE_SQL}`, params);
+      return nodes(rows[0]["QUERY PLAN"][0].Plan);
+    };
     await ctx.pool.query("SET enable_seqscan = off");
     try {
-      const plan = (await sql("EXPLAIN (FORMAT JSON) SELECT * FROM portal_users WHERE username > $1::text ORDER BY username LIMIT 51", ["user-050"]))[0]["QUERY PLAN"];
-      const text = JSON.stringify(plan);
-      expect(text).toContain("portal_users_username_key");
-      expect(text).not.toContain("Seq Scan");
+      // No filter: the page is an index range of at most limit + 1 rows (the aggregate is a separate full pass).
+      const plain = await run(["user-050", null, null, null, 51, new Date()]);
+      const pageScan = plain.find((n) => n["Index Name"] === "portal_users_username_key" && n["Actual Loops"] === 1 && n["Actual Rows"] <= 51 && n["Node Type"].includes("Index"));
+      expect(pageScan, "no bounded username-index node for the page").toBeDefined();
+      expect(plain.some((n) => n["Node Type"] === "Limit" && n["Actual Rows"] <= 51)).toBe(true);
+      // With a filter the scan walks the same index until 51 rows match: record what it really read, do not claim limit + 1.
+      const filtered = await run([null, "user-0", "USER", null, 51, new Date()]);
+      const scan = filtered.find((n) => n["Index Name"] === "portal_users_username_key");
+      expect(scan, "filtered page lost the username index").toBeDefined();
+      console.info(`BE-P23 page scan, filtered: returned ${scan["Actual Rows"]}, removed by filter ${scan["Rows Removed by Filter"] ?? 0}`);
     } finally { await ctx.pool.query("RESET enable_seqscan"); }
   });
 
