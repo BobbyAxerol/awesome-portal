@@ -175,7 +175,10 @@ describe("header, banners and footer", () => {
     // FRESH prints no chip: the as-of line says it. A tier that is not fresh keeps its chip (conformance matrix).
     expect(screen.queryByText("Fresh")).toBeNull();
     expect(screen.getByText(/As of 17 Oct/)).toBeTruthy();
-    expect(whyText(screen.getByText("Some portfolios or figures may be missing").parentElement)).toBe("The read is partial");
+    // UXM07-048/10: one banner. The branch that is not whole names what is missing; the partial read's sentence is its disclosure
+    expect(screen.queryByText("Some portfolios or figures may be missing")).toBeNull();
+    expect(document.querySelectorAll(".exec-pf-banner-line")).toHaveLength(1);
+    expect(whyText(screen.getByRole("button", { name: "Why the read is partial" }).parentElement)).toBe("The read is partial");
     const branch = screen.getByText(/Paper: Partial \(the data feed is running behind\)/);
     expect(branch).toBeTruthy();
     expect(branch.textContent).not.toMatch(/N31_|_LAGGING/);

@@ -80,15 +80,15 @@ describe("page", () => {
   it("points Back where the link came from", async () => {
     mount(makeApi().api, `?from=portfolio:${PF.core}`);
     await loaded();
-    expect(screen.getByRole("link", { name: "Back to Portfolio" }).getAttribute("href")).toContain(`/deployments/portfolios/${PF.core}`);
+    expect(screen.getByRole("link", { name: "← Portfolio" }).getAttribute("href")).toContain(`/deployments/portfolios/${PF.core}`);
     cleanup();
     mount(makeApi().api, "?from=fleet");
     await loaded();
-    expect(screen.getByRole("link", { name: "Back to Alpha Fleet" }).getAttribute("href")).toContain("/deployments/alphas");
+    expect(screen.getByRole("link", { name: "← Alpha Fleet" }).getAttribute("href")).toContain("/deployments/alphas");
     cleanup();
     mount(makeApi().api, "?from=something-else");
     await loaded();
-    expect(screen.getByRole("link", { name: "Back to Portfolios" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: "← Portfolios" })).toBeTruthy();
   });
 });
 

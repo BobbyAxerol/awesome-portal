@@ -172,7 +172,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
   const repeats = new Set(all.filter((row) => row.key !== row.portfolioId).map((row) => row.key));
   const back = backTarget(from);
   const backHref = back.kind === "portfolio" ? routes.portfolio(back.portfolioId) : back.kind === "fleet" ? routes.fleet : routes.list;
-  const backLabel = back.kind === "portfolio" ? "Back to Portfolio" : back.kind === "fleet" ? "Back to Alpha Fleet" : "Back to Portfolios";
+  const backLabel = back.kind === "portfolio" ? "← Portfolio" : back.kind === "fleet" ? "← Alpha Fleet" : "← Portfolios";
   const fresh = envelope ? freshnessFlag(envelope.freshness) : null;
   const toneOf = (id: string) => picked.ids.indexOf(id);
 

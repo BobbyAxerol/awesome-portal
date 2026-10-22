@@ -240,7 +240,8 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
       <NotAvailableLine facts={UNPUBLISHED_MEASURES} className="exec-pf-na-line" />
       {(incomplete && envelope) || degraded.length > 0 ? (
         <div className="exec-pf-banner" role="status">
-          {incomplete && envelope ? (
+          {/* One banner: a degraded branch already says what is missing, so the generic partial line is only for a partial read with no named branch. */}
+          {incomplete && envelope && degraded.length === 0 ? (
             <p className="exec-pf-banner-line">
               <Flag kind="partial" label="Partial" size="sm" /> <span>Some portfolios or figures may be missing</span><GapWhy name="Why portfolios or figures may be missing" rows={[`The read is ${humanize(envelope.completeness).toLowerCase()}`]} next={null} />
             </p>
@@ -252,6 +253,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
                   {i > 0 ? " · " : ""}{humanize(d.environment)}: {humanize(d.state)}{d.reasonCode ? ` (${branchReasonText(d.reasonCode).text})` : ""}{d.reasonCode ? <GapWhy name={`Reason code for ${humanize(d.environment)}`} rows={[`Reason code: ${d.reasonCode}`]} next={null} /> : null}
                 </span>
               ))}
+              {incomplete && envelope ? <GapWhy name="Why the read is partial" rows={[`The read is ${humanize(envelope.completeness).toLowerCase()}`]} next={null} /> : null}
             </p>
           ) : null}
         </div>
