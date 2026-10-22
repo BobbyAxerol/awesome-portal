@@ -30116,6 +30116,42 @@ Verification:R0 staged Markdown diff/path/link checks precede local commit;
 private source configuration proof and real SDK preflight are recorded above,
 not mislabeled as code-hook or connected PASS. Hosted CI minutes0.
 
+**Current Core hash ACK received22Oct12:13 Asia/Saigon:** canonical Core now
+supplies `CORE_TO_EDGE_08_HASH_CONFIG_ACK_2026-10-22.md`, actual raw SHA256
+`d920c717550c0f556f8a5c7417dd63041bf586658f5a35572e5f4195bc6c39d1`.
+It matches all four prepared files, exact install/revoke IDs/CAS/document
+digests, source/trust/human/owner pins and13:00–13:30 Asia/Saigon slot.
+This supersedes HASH_ACK_PENDING above; SDK_READY/current READ/session remain
+NOT_RUN. New owned step is copy/verify the public ACK, preserve original
+PREPARED helper and arm only CORE_WINDOW_ACK_SHA256 to this received hash;
+SDK db0 validation must report MATCHED without opening a listener. No
+installation before06:00UTC/13:00 Asia/Saigon, no expiry/window change.
+All four prepared artifacts must retain their accepted hashes. Core no
+longer owes a hash ACK; Edge owns WAIT_WINDOW → exact install/real READY,
+then Core owns current READ/source-set/session. No generic approval needed.
+
+**Actual armed validation:** received ACK public copy hashes exactlyd920c717;
+only CORE_WINDOW_ACK_SHA256 changed fromNone to that hash. Original helper
+retained56b2406e as native_operator.PREPARED.py; armed helper085802230d98acebfc848108b963fd1ba2d178665b2e8a41082fb8e544456294.
+All four acknowledged files remain unchanged; private directory now11files.
+Third capped --rm SDK validator EXIT0/stderr0/db0/listenerfalse reports actual
+MATCHED_CORE_OPERATOR_ACK and exact unchanged document digests. Append-only
+reply§7 records ACK_MATCHED / ARMED_WAIT_WINDOW; original b92e prefix remains
+the acknowledged PREPARED record, not a new Core approval request. No install
+before13:00, no background service started or scheduled outside the window.
+Runtime authority/session/READY still NOT_RUN; next actual action is Edge's
+accepted-slot installation/observation, then Core official READ/session.
+
+**Actual ACK-stage delivery:** reply§7 was appended at Core without changing
+the acknowledged original b92e prefix. Current13344-byte reply SHA256
+`efce83f7c97880d34a894122c15e65a88d254792b1cf326d4b8527173aa35704`
+matches HK/SGP; three Core Unified/sync/task locators updated, all original
+prefixes/index preserved. ACK_MATCHED / ARMED_WAIT_WINDOW is the current
+status, not pending Core ACK or SDK_READY. No further runnable activation
+exists before the agreed13:00 start; no before-window source job/listener is
+started or scheduled. Bounded READ independent inputs remain satisfied for
+the later source-install stage; actual receipts/session remain stage-dependent.
+
 
 
 

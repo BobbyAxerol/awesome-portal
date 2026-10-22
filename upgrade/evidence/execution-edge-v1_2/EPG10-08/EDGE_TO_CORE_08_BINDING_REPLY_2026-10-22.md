@@ -179,3 +179,32 @@ Edge runs bounded real READ/terminal/Core ACK and scoped recovery/drain/retire.
 **NOT_RUN**. Full08/09 connected remain NOT_MET. Separate P22/STREAM/control/
 Manager/calibration owners remain per the delivered full-suite disposition;
 none blocks this PREPARED/hash-ACK/eligible bounded-READ sequence.
+
+## 7. Current stage — ACK_MATCHED / ARMED_WAIT_WINDOW
+
+Core's [exact hash/config ACK](CORE_TO_EDGE_08_HASH_CONFIG_ACK_2026-10-22.md)
+is received, raw SHA256
+`d920c717550c0f556f8a5c7417dd63041bf586658f5a35572e5f4195bc6c39d1`.
+It explicitly accepts all four prepared-file hashes, exact IDs/CAS/document
+digests, identity/trust/source pins and13:00–13:30 Asia/Saigon slot. Initial
+PREPARED reply SHA256b92e4874 remains the immutable prefix acknowledged by
+Core; this append records its subsequent result, not another ACK prerequisite.
+
+Only `CORE_WINDOW_ACK_SHA256` was armed to that actual received hash.
+Armed `native_operator.py` SHA256 is
+`085802230d98acebfc848108b963fd1ba2d178665b2e8a41082fb8e544456294`.
+The original prepared helper is retained as `native_operator.PREPARED.py`,
+SHA25656b2406e4bcd1a5306793d02ca12882ef52f0c5b133349b967bbb750eb16847b.
+Private directory now has11owned0600files. All four acknowledged config/
+manifest/JWKS files remain byte-identical. Affected frozen SDK db0 validation
+retake EXIT0/stderr0 reports `MATCHED_CORE_OPERATOR_ACK`, exact received ACK,
+unchanged document digests, db_connections0 and listener_startedfalse.
+Third capped --rm verifier removed; no build/DB/listener/grant/session change.
+
+**SDK_READY remains NOT_RUN: clock window has not begun.** No install before
+22Oct13:00 Asia/Saigon (`06:00:00Z`) or after13:30. Edge owns that exact
+installation/real source observation and process/exit/drain witness; Core
+then owns genuine current READ/source_set_ref/session. No additional generic
+approval or hash ACK is requested. If this finite slot is missed, stop and
+coordinate an explicit new slot; do not silently move its bytes/deadline.
+Full08 and09 connected remain NOT_MET; no connected PASS is implied.

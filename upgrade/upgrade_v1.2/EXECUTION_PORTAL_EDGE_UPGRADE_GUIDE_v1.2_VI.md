@@ -1036,6 +1036,14 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest stage22Oct12:13 Asia/Saigon:** Core exact hash ACKd920c717 is now
+received; [reply §7](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md#7-current-stage--ack_matched--armed_wait_window)
+records ARMED_WAIT_WINDOW, helper08580223 and actual SDK db0 matched-ACK
+validation EXIT0. No additional Core hash ACK is needed. Install/SDK_READY
+must wait for the accepted13:00–13:30 slot; no source/grant/session/connected
+acceptance exists before actual receipts. Original PREPARED details below
+are history, not a new wait on P22/STREAM/Manager or another approval.
+
 **Current PREPARED22Oct12:05 Asia/Saigon:**
 [fresh Edge reply](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md)
 uses new trust12504f44, acceptancebc432e2e/runtime940a3a71 and proposed
