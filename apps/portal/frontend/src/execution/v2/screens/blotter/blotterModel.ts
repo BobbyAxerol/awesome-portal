@@ -495,8 +495,8 @@ export function filtersKey(filters: ServerFilters): string {
 /* ── columns ───────────────────────────────────────────────────────────── */
 
 export type ColumnId =
-  | "time" | "order" | "alpha" | "account" | "venue" | "symbol" | "side" | "tif" | "price" | "trigger" | "qty" | "filled"
-  | "client" | "venueOrder" | "session" | "risk" | "updated" | "status";
+  | "time" | "order" | "alpha" | "account" | "deployment" | "venue" | "symbol" | "side" | "tif" | "price" | "trigger" | "qty" | "filled"
+  | "avg" | "fee" | "client" | "venueOrder" | "session" | "risk" | "updated" | "status";
 
 export interface ColumnSpec {
   id: ColumnId;
@@ -513,6 +513,8 @@ export const COLUMNS: readonly ColumnSpec[] = [
   { id: "order", label: "Order", dflt: true, fixed: true },
   { id: "alpha", label: "Alpha", dflt: false },
   { id: "account", label: "Account", dflt: false },
+  // The hi-fi keeps Deployment, Avg price and Fee as default columns. The orders read carries none of the three, so each cell says Not available.
+  { id: "deployment", label: "Deployment", dflt: true },
   { id: "venue", label: "Venue", dflt: false },
   { id: "symbol", label: "Symbol", dflt: true },
   { id: "side", label: "Side and type", dflt: true },
@@ -520,7 +522,9 @@ export const COLUMNS: readonly ColumnSpec[] = [
   { id: "price", label: "Price", numeric: true, dflt: true },
   { id: "trigger", label: "Trigger", numeric: true, dflt: false },
   { id: "qty", label: "Quantity", numeric: true, dflt: true },
-  { id: "filled", label: "Filled", numeric: true, dflt: false },
+  { id: "filled", label: "Filled", numeric: true, dflt: true },
+  { id: "avg", label: "Avg price", numeric: true, dflt: true },
+  { id: "fee", label: "Fee", numeric: true, dflt: true },
   { id: "client", label: "Client ID", dflt: false },
   { id: "venueOrder", label: "Venue order", dflt: false },
   { id: "session", label: "Session", dflt: false },
@@ -565,6 +569,8 @@ export function csvCell(order: BlotterOrder, id: ColumnId): string {
     case "order": return order.orderId;
     case "alpha": return order.alphaId ?? "";
     case "account": return order.accountId ?? "";
+    // Deployment, average price and fee are columns the orders read does not carry: an empty CSV cell, never a stand-in.
+    case "deployment": case "avg": case "fee": return "";
     case "venue": return order.venue ?? "";
     case "symbol": return order.symbol ?? "";
     case "side": return [order.side ? humanize(order.side) : "", order.orderType ? humanize(order.orderType) : ""].filter((w) => w !== "").join(" ");
