@@ -9,6 +9,36 @@ Trạng thái bản này: Rules §9–§10 **đã được Bobby duyệt 2026-10
 
 ## 0. Nhật ký pin — lần đọc gần nhất
 
+### 22Oct10:15 Asia/Saigon — P22/G2 source review completed; native binding first
+
+[Root implementation return](evidence/ELP2-10/CORE009_P22_FACTORY_G2_INTEGRATION_2026-10-22.md):
+122fc5f1 actual private factory/observer and3d4164bd G2 exact-buffer/census guard
+are source-qualified in the private lane, not landed/installed. Factory
+independent ACCEPT;152unique focused PASS/API build; measurement34/34PASS with
+the explicit unchanged-Claude-helper bridge. **Claude handoff:** return exact
+quietGate.mjs SHA761f8a0a from90f2a2c1 before the frozen normal/landing; Root
+did not edit frontend. No public DTO/consumer change. Current08 ACK/trust are
+already delivered; Edge source READY then official Core READ/session takes
+priority, without waiting for P22 or production budget/calibration.
+
+### 22Oct10:09 Asia/Saigon — private PM trust actually delivered / C288 approved
+
+[Core08 supplement](evidence/ELP2-10/CORE009_CURRENT_08_TRUST_DELIVERY_AND_BOUNDS_2026-10-22.md):
+Bobby approved retained288 only for Research acceptance and exact8PM-file
+transfer. SCP/8hash-pair/0700+0600 checks PASS; Core private keys stay SGP.
+Edge ACT_NOW binds fresh source/window from trust12504f44. Installed a96 still
+unchanged; no official READ/session or connected PASS before actual READY.
+
+### 22Oct10:04 Asia/Saigon — fresh native trust and exact Core08 stage1 ACK
+
+[Current binding return](evidence/ELP2-10/CORE009_CURRENT_08_BINDING_RETURN_2026-10-22.md)
+fills actual installed pins and offered10:15–10:45 slot. Core prepared inactive
+Research-only trust12504f44(valid through23Oct10:00); old CA/leaves are expired.
+13crypto/file checks PASS; no PM private transfer/source READY/session yet.
+Private factory+observer152/152, G2 suite34/34 and API build PASS; Root owns
+that narrow completion, Claude keeps UI. No public DTO/FE binding change.
+Do not reuse fixture/browser receipts as native connected acceptance.
+
 ### 22 October09:45 Asia/Saigon — active commissioning / exact source ownership
 
 [Round scope and partial owner return](evidence/ELP2-10/CORE009_MAINLINE_COMMISSIONING_2026-10-22.md)
@@ -1873,3 +1903,12 @@ Edge has prepared fresh acceptance6f082bf9/window19:15–19:45UTC for installed 
 ### Edge original08 current-epoch specimen —21Oct19:25UTC
 
 Source review refinement in existing08 handoff§10.6: current grant changes alter cache data epoch; prove a post-STREAM-revoke current-epoch HIT before READ revoke, not only the historical pre-STREAM HIT. Existing preserved deployment GET primes; E0/1 repeat as actual P22 requires. Total7+Q+E HTTP/worst8+Q, proposed H9/R20/B244/Q1 Cmin282 still below pending288; no config change. Fresh eligible source6f082bf9/runtime81cfa9a2 is prepared UNARMED for19:15–19:45; exact pins/preflight§10.5 received19:19:17. Edge source publication d3f55951, no push/merge. Return matching commissioning ACK to proceed now; do not wait for cache/budget for eligible READ.
+
+
+### Edge08 current Core return request — 22 October 2026
+
+Delivered 2026-10-22T09:51:09.286795+07:00 (Asia/Saigon).
+Bobby requests immediate Core ACK/config and genuine session return. Read canonical /home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md §11; old §10.5 slot is expired and native leaves expire22Oct09:48:30 Asia/Saigon. Successor a96/schema149 is already installed, not a rebuild request.
+Core owns current commissioning/trust/window and official authority/session; Edge owns fresh matched HK source READY and connected08. Claude implements backend under canonical rules§10.13; Codex reviews/integrates. Existing P22 factory task remains independently runnable, not a reason to withhold eligible finite READ inputs. No automatic C288 approval, source activation or fabricated session/control/ACK.
+Return CORE009_CURRENT_08_BINDING_RETURN_2026-10-22.md in canonical ELP2-10 with staged ACK/actual config/source/READ+STREAM/private session references, trust validity, pending full-suite inputs and cleanup; copy public return to HK EPG10-08. Full08/09 remains NOT_MET until real evidence.
+This append is documentation-only. Preserve WIP/index; no code, DB, grant, credential, runtime, stable/dev or provider28445 change. Delivery is ACK_PENDING.

@@ -14654,3 +14654,48 @@ the eligible READ renewal request independently of Manager, full STREAM and
 load budgets. Existing C32/R20 and candidate resource bounds remain unchanged;
 numeric C288/calibration are not applied. New tests NOT_RUN at round entry.
 ELP2-10 OPEN; ELP2-11 not entered. Verification: R0 for this scope record.
+
+
+### Edge08 current Core return request — 22 October 2026
+
+Delivered 2026-10-22T09:51:09.286795+07:00 (Asia/Saigon).
+Bobby requests immediate Core ACK/config and genuine session return. Read canonical /home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md §11; old §10.5 slot is expired and native leaves expire22Oct09:48:30 Asia/Saigon. Successor a96/schema149 is already installed, not a rebuild request.
+Core owns current commissioning/trust/window and official authority/session; Edge owns fresh matched HK source READY and connected08. Claude implements backend under canonical rules§10.13; Codex reviews/integrates. Existing P22 factory task remains independently runnable, not a reason to withhold eligible finite READ inputs. No automatic C288 approval, source activation or fabricated session/control/ACK.
+Return CORE009_CURRENT_08_BINDING_RETURN_2026-10-22.md in canonical ELP2-10 with staged ACK/actual config/source/READ+STREAM/private session references, trust validity, pending full-suite inputs and cleanup; copy public return to HK EPG10-08. Full08/09 remains NOT_MET until real evidence.
+This append is documentation-only. Preserve WIP/index; no code, DB, grant, credential, runtime, stable/dev or provider28445 change. Delivery is ACK_PENDING.
+
+
+**Edge08 docs-delivery R0 verification, 22Oct09:53 Asia/Saigon:** actual seven append/readbacks PASS, prefixes and both indexes preserved. Public section11 SHA2566849a1e3a37cffc5bdfb67a47a79711e2358388513cf1bb655ec615c2088699e; locator e9aafcef5efa3bcd645e19203c962f5ef8c6dc37b1100f7a473deed9bae41a4a. `nice -n 15 bash scripts/execution-tracking-test.sh` EXIT0/stderr0 in HK Edge, canonical Core and Claude checkout (3/3). Verification is documentation-only, not runtime/connected acceptance. No test resources/images/cache created; cleanup NO_ACTION_NEEDED. Existing source/runtime/rollback and peer WIP unchanged; no commit/push on either SGP branch. Delivered/ACK_PENDING; Core exact current return remains required per canonical handoff section11.
+
+### Core08 stage1 ACK / actual fresh trust —22Oct10:04 Asia/Saigon
+
+[Requested current binding return](execution_loop/evidence/ELP2-10/CORE009_CURRENT_08_BINDING_RETURN_2026-10-22.md)
+names actual running a96/runtimef3fe/Compose7be/schema149 and current8retained,
+0unreconciled native rows. Fresh inactive native trust12504f44 covers the
+offered10:15–10:45 slot;13crypto/file checks PASS. Old CA/leaves are expired.
+PM-only private transfer and numeric C288 have separate pending dispositions;
+no new authority/session/source READY claimed. Private factory+observer152/152,
+G2 suite34/34 and API build PASS, source-only until frozen landing/install.
+ELP2-10 remains OPEN. Verification: R0 for this owner-return record.
+
+### Core08 exact trust delivered / capacity decision —22Oct10:09 Asia/Saigon
+
+[Additive return](execution_loop/evidence/ELP2-10/CORE009_CURRENT_08_TRUST_DELIVERY_AND_BOUNDS_2026-10-22.md)
+records Bobby's C288 Research-only approval and actual exact8PM-file transfer
+to the newly approved HK private directory;8/8hash pairs and permissions match.
+No Core key, source activation or authority/session issued. Edge can bind fresh
+source now against trust12504f44;10:15–10:45 offered slot still needs real
+owner ACK/READY. Independent P22/control/STREAM work does not hold eligible
+READ. ELP2-10 OPEN; no dev/main/stable/provider28445 change. Verification:R0.
+
+### Core P22/G2 source integration —22Oct10:15 Asia/Saigon
+
+[Implementation/review return](execution_loop/evidence/ELP2-10/CORE009_P22_FACTORY_G2_INTEGRATION_2026-10-22.md)
+records private commits122fc5f1(13files,+1774/-24) and3d4164bd(5files,+553/-58),
+independent factory ACCEPT,152unique focused PASS/API build and34measurement
+tests PASS with an explicitly pinned real-Claude-helper bridge. Not canonical
+landing/full normal/install or G2 population proof. Claude owns delivery of
+the missing exact quietGate helper; no frontend path edited by Root. Edge
+already has current ACK/fresh8PM trust/C288 disposition; fresh source READY
+and official current READ/session remain the immediate operational priority,
+independent of P22/financial/load work. ELP2-10 OPEN. Verification:R0.

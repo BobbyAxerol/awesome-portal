@@ -754,3 +754,120 @@ worst-case Cmin=H+20+8+1+244; at H9 it is282, still within proposed288 (spare6),
 subject to the same pending numeric approval and post-setup census. Current
 C32 eligible READ is unaffected. Correlate actual epoch/operation/body/terminal/
 sourceACK; repeated200 or a prior epoch is not a cache HIT. No runtime change.
+
+
+## 11. Current owner action — 22 October 2026
+
+**Priority ACT_NOW; CORE_RETURN_PENDING / FULL08_NOT_MET.** This is the current
+request within approved08, not a new phase or permission to change stable/dev.
+Read workspace rules, Core Unified current ELP2-10 and
+`upgrade/execution_loop/AGENT_WORKING_RULES.md` first. Ownership follows its
+§10.13: Claude implements Core/backend; Codex reviews/integrates and coordinates
+release. Preserve each writer's WIP/index; no duplicate patch or normal run.
+
+### 11.1 Observed truth; do not repeat completed or expired work
+
+- Source: HK Edge `feat/execution-edge-upgrade-v1_2@146d63dc`; canonical SGP
+  `/home/bobby/portal-research`, `docs/research-loop-plan@3ddafc24`; actual Claude
+  lane `/home/bobby/portal-research-fe`, `claude/post-freeze-20261021@bcdbd44e`.
+  Recheck moving heads before implementation. These are source, not runtime.
+- Direct runtime readback this round (22Oct, Asia/Saigon): Research Core container
+  `593acd09aa85ffbb21cd0f599db65276ca2ef858485da21716198344f6541ee4`, service
+  `portal-research-preview-control-api-1`, running/restart0, image
+  `sha256:a96c754dfbd52801f6d451dfa329eeeb3ab37fe9e467db145e201c9fa9acf121`.
+  Installed schema149/configf251d677 are the prior installed owner-return pins;
+  return a current config/schema observation, not an inferred source pin.
+  Successor writer is already installed; no rebuild/reinstall requested.
+- §10.5's offered window ended **22Oct02:45 Asia/Saigon**
+  (`2026-10-21T19:45:00Z`). Draft6f082bf9 remains UNARMED; old runtime81cfa9a2
+  and manifests are historical, not newly authorized installation bytes.
+  Native server59d44f22/clientb7ad92aa leaves expire **22Oct09:48:30 Asia/Saigon**
+  (`2026-10-22T02:48:30Z`). They cannot cover a new acceptance window. Return
+  controlled valid trust/issuer references and coordinate fresh leaves with
+  the owning HK side; never copy a CA private key or re-date the old manifest.
+- No newer filled Core commissioning/config/session return was found at this
+  read cut. Delivered requests are not an ACK, source READY or connected PASS.
+  Old custodyb922 is recovered/retired; never reopen it as a new acceptance.
+
+### 11.2 Core actions and Edge continuation, in execution order
+
+1. **Core commissioning ACK/config first:** name one reviewed Research runtime,
+   current image/config/schema, actual native source/domain and a viable finite
+   coordinated window with valid native trust references. Confirm how the
+   installed official successor writer will bind fresh HK source receipt,
+   revision, digest, source fingerprint and effective interval. Return an
+   explicit ACK/CHANGES_REQUESTED with filled inputs, not a readiness slogan.
+   Do not wait for Edge READY to acknowledge the plan, or claim READY early.
+2. **Edge owns fresh source binding:** on that return, Edge prepares new exact
+   private bytes/IDs/window, obtains the hash-matched ACK, runs actual readonly
+   preflight and installs/observes SDK READY. Preserve frozen SDK28ea3958,
+   lifecycle1ee3a15d, DB `live_data_executor`/system7674585245102796834 and
+   admission configuration25d2b3ef unless an explicit reviewed delta says why.
+   No automatic role/listener/grant activation is authorized by this MD task.
+3. **Core current authority and real session after READY:** official writer
+   binds the real installation, publishes finite current READ, and provides a
+   genuine application session for the mapped actor/workspace. Return private
+   session/config references, SHA256, expiry, source_set_ref, policy/grant and
+   installation revision/receipt. No cookies/JWT/keys/credentials in Markdown
+   or chat. READ is not STREAM; do not create a substitute human identity or
+   weaken Cloudflare/password/current-human. Native backend and public
+   Cloudflare/security acceptance must be identified separately; fixture200
+   is neither. Edge then runs the bounded READ and correlated lifecycle proof.
+4. **Full-suite inputs, parallel but not hidden:** Claude completes actual P22
+   app/runtime observer construction and focused factory tests in the existing
+   BE-CLAUDE P22 lane; Core reviews/qualifies and returns installed opt-in pins.
+   Reuse bounded private sink/key, default OFF/no-I/O; no authority/DTO change.
+   Core also returns independent STREAM/revoke operations, exact current-policy
+   transitions and a genuine unaffected control. If no existing eligible
+   control exists, name the smallest real composition delta and its decision
+   owner; no fake identity or unrelated non-native control. Provide actual
+   capacity census and bound disposition: C288/R20/B244/60s/K1 is only a
+   proposal pending Bobby's numeric decision, not approval to apply it. Current
+   C32/R20/historicH9 leaves three positive admissions, not full-suite capacity.
+5. **Connected acceptance and cleanup:** Edge checks real revoke/cache/cursor/
+   reconnect/SSE against current authority, including per-frame STREAM checks,
+   unaffected control and a genuine current-epoch HIT immediately before READ
+   revoke (§10.6). Correlate served bytes/epoch/attempt/physical receipt/durable
+   terminal/Core ACK; no repeated200 or local fixture substitution. Core revokes
+   through official writers; Edge drains handlers/pools, observes actual SDK
+   process exit and retires only the exact scope after terminal/Core ACK.
+   UNKNOWN retains original custody/capacity; never fabricate ACK/terminal,
+   purge historic attempts or widen cleanup. Return cleanup/rollback receipts.
+
+Preserve actor `usr_5a38d5dfb08b44748f5776fbe04a1434`, workspace
+`ws_06G19F61YB8CFR7TEWMS7HQ660`, TS mapping
+`608dcbd6-e8df-4aa4-b0fc-bc0881d0aafd`/revision1 and approved domain/field
+policy unless the owner explicitly returns a reviewed delta. Paper is the
+first measured slice, **not the product's mode limit**: list per-mode native
+READ/STREAM availability honestly. Wider Manager mTLS all-mode issuance is a
+separate owner request, not interchangeable with this native trust or proof.
+No financial/command/live-traffic enablement, stable/dev deployment or change
+to provider28445 is requested here. No eligible bounded READ waits on P22,
+full-suite bounds or unrelated product work; those still prevent full08 PASS.
+
+### 11.3 Exact requested owner-return and delivery
+
+Return `CORE009_CURRENT_08_BINDING_RETURN_2026-10-22.md` in canonical Core
+`upgrade/execution_loop/evidence/ELP2-10/`, linked from its Unified and sync.
+It must contain:
+
+- explicit ACK/CHANGES_REQUESTED and owning operator; reviewed source/image/
+  config/schema/helper pins and finite window (Asia/Saigon plus ISO UTC);
+- controlled native trust references, public fingerprints/validity and exact
+  private config/session references (no values); stage1 plan then stage2 actual
+  installation/READ/session receipts after Edge READY, not invented evidence;
+- actual identity/workspace/domain/field-policy/source-set, independent READ/
+  STREAM policy revisions/expiries, revoke owner and official operation refs;
+- P22 source/factory-test/installed-opt-in pins, fresh capacity census and
+  numeric disposition, unaffected-control availability or exact owner action;
+- activation/recovery/retirement/logout/cleanup and rollback evidence, all
+  remaining unavailable cases with owner and unblock action.
+
+Copy the public return to HK's same EPG10-08 evidence directory and notify Edge
+with its path/hash. Private references stay private; any credential transfer
+requires its exact approved scope. ACK stage1 promptly rather than waiting
+for all independent full-suite inputs. Edge then owns binding and runs08;
+only actual connected evidence can close08 or admit09 connected acceptance.
+
+This handoff publication itself only changes docs. No runtime, database,
+credential, trust, numeric cap, grant or session is changed by its delivery.

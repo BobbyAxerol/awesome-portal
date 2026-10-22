@@ -1937,3 +1937,12 @@ Edge has prepared fresh acceptance6f082bf9/window19:15–19:45UTC for installed 
 ### Edge original08 current-epoch specimen —21Oct19:25UTC
 
 Source review refinement in existing08 handoff§10.6: current grant changes alter cache data epoch; prove a post-STREAM-revoke current-epoch HIT before READ revoke, not only the historical pre-STREAM HIT. Existing preserved deployment GET primes; E0/1 repeat as actual P22 requires. Total7+Q+E HTTP/worst8+Q, proposed H9/R20/B244/Q1 Cmin282 still below pending288; no config change. Fresh eligible source6f082bf9/runtime81cfa9a2 is prepared UNARMED for19:15–19:45; exact pins/preflight§10.5 received19:19:17. Edge source publication d3f55951, no push/merge. Return matching commissioning ACK to proceed now; do not wait for cache/budget for eligible READ.
+
+
+### Edge08 current Core return request — 22 October 2026
+
+Delivered 2026-10-22T09:51:09.286795+07:00 (Asia/Saigon).
+Bobby requests immediate Core ACK/config and genuine session return. Read canonical /home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACCEPTANCE_HANDOFF_2026-10-21.md §11; old §10.5 slot is expired and native leaves expire22Oct09:48:30 Asia/Saigon. Successor a96/schema149 is already installed, not a rebuild request.
+Core owns current commissioning/trust/window and official authority/session; Edge owns fresh matched HK source READY and connected08. Claude implements backend under canonical rules§10.13; Codex reviews/integrates. Existing P22 factory task remains independently runnable, not a reason to withhold eligible finite READ inputs. No automatic C288 approval, source activation or fabricated session/control/ACK.
+Return CORE009_CURRENT_08_BINDING_RETURN_2026-10-22.md in canonical ELP2-10 with staged ACK/actual config/source/READ+STREAM/private session references, trust validity, pending full-suite inputs and cleanup; copy public return to HK EPG10-08. Full08/09 remains NOT_MET until real evidence.
+This append is documentation-only. Preserve WIP/index; no code, DB, grant, credential, runtime, stable/dev or provider28445 change. Delivery is ACK_PENDING.
