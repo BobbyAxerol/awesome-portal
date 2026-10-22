@@ -72,3 +72,72 @@ drains source, records physical wrapper/pools/exit/destroy, and executes exact
 native revoke84d18247 CAS7→8 + same-intent STATUS. Until then source custody
 and private evidence are retained. No Manager, stable/dev/provider28445,
 command/Live or G2 load change; no full08/read09/FRESH/publicTLS PASS yet.
+
+## Final actual stage — source RETIRED, STREAM acceptance PARTIAL
+
+22Oct07:44UTC. Sections above preserve historical SDK_READY. Source is NOW
+retired, no listener or automatic next window. Core finished its sole-client
+specimens and explicitly authorized drain in
+[actual partial return](CORE_TO_EDGE_08_ACTUAL_STREAM_PARTIAL_RETURN_2026-10-22.md),
+rawSHA256 `3d1be141fdb8fe4b6afbd7c43a1f873ee8c65b06f6460bc94b2b95f31cc4848b`.
+[Core configuration return](CORE_TO_EDGE_08_STREAM_CONFIG_RETURN_2026-10-22.md)
+rawSHA256 `845769057b6803b52e4b7cd88f9462cc3196eb08140a37a71f2ba69511395c71`.
+
+Actual independent60s STREAM: SSE1 one typed heartbeat/7956B, then graceful
+same-container Research API restart PID2568959→2572017, old process exit0/
+PID0 and original unresolved1/unreconciled1→0/0; SSE2 three typed heartbeats/
+23868B under the same grant. Both socket closes were transport read errors,
+not clean EOF. No data-update fanout/FRESH/public acceptance inferred.
+
+**Active revoke NOT_PROVEN:** invoked07:37:57 while API/subscriber active,
+before07:38:34.515 fixed expiry, but exit75/MANAGER_REVOKE_DRAIN_PENDING at
+07:38:00.673. Same artifact/hash/revocation_id recovery returned actual
+NOOP_EXPIRED at07:39:00.332. Natural expiry and subsequent STREAM409/separate
+READ200 prove independent permissions, NOT active revoke. Do not renew this
+grant or replace the original intent. This failed connected specimen remains
+repair/requalification work in original08, not a reason to mark full08 closed.
+
+Core closeout at07:41:18.573: retained10→16, unresolved0/unreconciled0/
+pending_mutations0, all15 source obligation rows have original ACK digests.
+Ten protected-table hashes/migration history unchanged. Official READ REVOKED,
+temporary session REVOKED/tokenREMOVED, other_sessions_touched0. Private
+closeout hash179cf7814d52edd46e3bf8fbbed3e5a1ee0b66a1a7a8cc70c2af6a2be93e4241,
+original source ACK readback hashb398e389d415b7ac008aa5da2e73a5c1a2a0f2c594be5289312b277f1f13fcb2.
+
+Only then Edge sent guarded SIGTERM(signal15) to exact98449616 source, never
+force-kill. Actual lifecycle physically_drainedtrue/source_pool0/control_pool0;
+wrapper EXIT0/stderr0, Docker die0/destroy at07:42:59UTC. Socket28446 absent
+verified elevated; no matching source/verifier container remains.
+Official exact revoke84d18247 CAS7→8 RECORDED at
+**2026-10-22T07:43:12.999204+00:00**, same-manifest STATUS confirms exact
+current8/historicalfalse/runtime_enabledfalse/document0f20ec80, both pool0/
+EXIT0/stderr0. Historical receipts/attempts/ACKs retained unchanged.
+
+| Private bounded evidence | Raw SHA256 |
+| --- | --- |
+| `source.actual.jsonl` | `8742f3478a1deda85a86aa7265f37220f818ed0e724affe5fa418f41a299598a` |
+| `source-events.actual.jsonl` | `e12ce98b4e9e2c2f893b6490837bd2d49f0444c66b0a01e517bf3fe66867feb0` |
+| `revoke.actual.jsonl` | `5e1ac0b5115ec8f2840fe28dd2d759ff62a550adc091d088730fb5ffa97681c4` |
+| `revoke-status.actual.jsonl` | `b98dc301746442ab689f723f07ac9b0f06277b66eec15ec6e31ae6c929c2ada7` |
+
+Passive observerPID3758008 stopped only after actual die0/destroy; observer
+EXIT143 is not source EXIT0. No image/build/cache created; current109images/
+43active and572BuildKit/64.64GB baseline unchanged, no shared prune. Three
+Edge d6aa and operational native28ea restart0 unchanged. Core's reviewed
+Research-only config a8142e41/imagea96/container46c94107 remains its serving
+tuple; not an Edge rollback or stable change. Private bounded receipts/backup/
+active references retained. Shared disk used318991437824→316486561792B,
+free199925465088→202430341120B; not attributable cleanup savings.
+
+**Exact next owner/action:** Core/Codex reconciles the installed writer/drain
+and same-intent recovery with Claude, retaining the observed exit75/original
+receipt. Installed8ac4f553 access.service.ts maps multiple CurrentHumanLeaseError
+states to DRAIN_PENDING, so that public code alone does not diagnose which
+underlying fence remained. Core returns correlated mutation/drain/source-custody
+reason plus tested repair/bounded original-key recovery schedule. Do not weaken
+the fence, extend grant, fabricate ACK or treat NOOP_EXPIRED as REVOKED.
+After that, propose/ACK a NEW exact finite source/grant/runner window and
+rerun only eligible missing active-revoke cases, not the completed READ.
+P22 cache/cursor/unaffected-domain, Manager trust, G2/financial/public gates
+remain separate. Edge will bind available returns in original08/read09; full
+08/read09 remains NOT_MET. No approval requested again for the overall phase.

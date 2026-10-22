@@ -30607,6 +30607,73 @@ code/test/source/config unchanged apart from approved private ACK arm and
 official source revision7. Full08/read09 NOT_MET; do not conflate current
 actual SDK_READY with historical UNARMED preparation or Core READY.
 
+**Core config return14:37 Asia/Saigon received/read:** canonical
+CORE_TO_EDGE_08_STREAM_CONFIG_RETURN_2026-10-22.md raw845769057b6803b52e4b7cd88f9462cc3196eb08140a37a71f2ba69511395c71
+consumes exact actual READY230aaa74/native7 and ACKc5f73cde. Prepared runtime
+a8142e41/composece339063, toolruntimec10c854c/compose04f535fb, installed image
+a96c754d/source8ac4f553/schema149 unchanged. C288/reserve20/freshH10/min283,
+API1.5CPU1024MiB/pool3+oneCLI0.5CPU512MiB/pool1/no API overlap, unresolved1/
+TTL30s, three actual offline validations PASS. Backup31210431B/c492c21c;
+restore not claimed. Soleclientprobe40532b96/prepare07d962ed/operator8188d775
+pins returned. Core executes its exact baseline→SSE1→settled graceful API
+restart/original recovery→SSE2/resume→activeSTREAMrevoke→deniedSTREAM+
+independentREAD→exactcleanup. It is new successor qualification, not replay
+of the completed earlier request. Source finite07:45 remains unchanged;
+actual connected result/terminalACK/cleanup still required, not inferred.
+Parallel read-only source check: TS canonical668e1032, PM0474f527, DL canonical
+c578cba1/data-layer-dev098c94b4. Old quant-data-layer-v2-authority path is gone,
+resolved by canonical git worktree list, no checkout/branch edits. Three peer
+WIP hashes fe4fcfc7/1cf04b20/109659d2 unchanged. Exact ACK arm-only diff PASS.
+
+**Actual14:44 Asia/Saigon closure:** Core actual partial return3d1be141 and
+config84576905 copied exactly into phase evidence. Real independent fixed60s
+STREAM SSE1/7956B then graceful settled Research restart oldPIDexit0/SSE2
+23868B under same grant. Active revoke FAILED qualification:07:37:57 invoke
+→exit75 DRAIN_PENDING07:38:00.673→same-intent recovery NOOP_EXPIRED07:39:00.332;
+not active revoke PASS. Post-expiry STREAM409/independentREAD200, STALE/PARTIAL
+remain honest. Core finalH16/zero unresolved/unreconciled/pending/all15ACKs,
+10protected hashes/history unchanged, exact READ/sessionREVOKED/tokenREMOVED/
+other_sessions0. Core authorized source drain; no duplicate Edge client.
+
+Edge exact guardedSIGTERM98449616 aftersettlement→actual physicaldrain/pools0/
+wrapperEXIT0/stderr0/Docker die0+destroy07:42:59UTC; elevatedsocket28446absent.
+Officialrevoke84d18247 CAS7→8 RECORDED07:43:12.999204UTC, exactsameSTATUS
+current8/runtimefalse/historicalfalse, bothEXIT0/pool0. Eventobserver3758008
+stopped onlyafterdestroy/observerEXIT143, no original custody deleted. Source
+retired BEFORE07:45; no automatic new window. Frozen source/trust/helper/
+evidence retained private, no own worker/listener/image/cacheleft. Three Edge
+d6aa/operationalnative28ea restart0 unchanged. Inventory109images43active/
+572BuildKit64.64GB unchanged, no broadcleanup; volume99 is shared-host state,
+not an own created resource. Sharedused318991437824→316486561792B/free
+199925465088→202430341120B not claimed as owncleanup savings. Initial default
+ss lacked netlinkpermission and Docker formatter used.Id: both read-only
+checks corrected/escalated, actual absence verified; no false PASS from them.
+
+[Cumulative source/retirement and owner return](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_STREAM_ACTUAL_READY_2026-10-22.md)
+records receipt/evidence hashes, exact partial results and next Core action.
+Read-only installed8ac source review confirms DRAIN_PENDING groups multiple
+CurrentHumanLeaseError states, so underlying mutation/drain correlation still
+belongs to Core; no unverified rootcause or peer code patch. Core/Codex+Claude
+reconcile/test same-intent recovery before expiry and return exact repair/
+runner/current source window for missing active-revoke qualification. This
+failed specimen is real original08 repair/requalification, not disguised debt
+or source SDK_READY blocker. Other gates stay dependency-specific. Full08/
+read09 NOT_MET; no cutover/release/command/Live or09fullconnected promotion.
+
+Final cumulative return9228B/raw28bdcaca3b450abc34dcdb0a064e51d072c0c7da6be926d1bfcca8a5f9ad9e0c
+actually delivered to Core canonical ELP2-10+3existinglocators, old4cb8964b
+READY prefix preserved byte-for-byte, append/readback/index PASS. Core now has
+exact source retirement and remaining failure/repair action, no new general
+phase approval requested. Final tracking PASS, R0 explicit5Markdown staged
+scope/diff/link/secret tests before publication; no GitHub CI/minutes/push/merge.
+Owned runnable source execution/correlation/retirement/handoff complete;
+remaining active-revoke source/runner review belongs to Core writer owner,
+with exact return/new finite missing-case window above, not an Edge code task
+silently deferred. User/unrelated worktree/index preserved. Current feature
+2a87d405 before final docs commit; canonical54c6f5f3 and stablea9b10385 paths
+unchanged as preceding journal. No source/worktree/branch cleanup warranted
+for this still-active feature; shared operational/retained rollback untouched.
+
 
 
 

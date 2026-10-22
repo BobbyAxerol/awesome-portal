@@ -1036,6 +1036,17 @@ uncommissioned; no flag, route or financial effect is enabled by this work.
 
 ### EPG10-08 Hoàn thiện revocation scope và TLS
 
+**Latest actual22Oct14:44 Asia/Saigon:** finite source now RETIRED, official
+native8/revoke+STATUS and physicalpools0/exit0/die0/destroy/socketabsent proved.
+[Cumulative actual return](../evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_08_STREAM_ACTUAL_READY_2026-10-22.md#final-actual-stage--source-retired-stream-acceptance-partial)
+and [Core partial receipt](../evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_08_ACTUAL_STREAM_PARTIAL_RETURN_2026-10-22.md)
+record real independentSTREAM/SSE before-after graceful restart and zero
+remaining custody/all15ACKs. Active revoke NOT_PROVEN: DRAIN_PENDING then
+same-intent NOOP_EXPIRED, not REVOKED. Exact READ/session revoked, no silent
+window/grant renewal. Core owns correlated writer/drain/recovery repair and
+new bounded missing-case qualification; Edge binds exact returns, not fake
+ACKs or expired slots. Full08/read09 remains NOT_MET, no phase promotion.
+
 **Latest actual22Oct14:33 Asia/Saigon:** Core exactACKc5f73cde accepted
 the NEW slot/source/sole-client ownership. Official CAS6→7 RECORDED at
 07:30:43.989302UTC and actual finite source SDK_READY/listener28446 proved;
