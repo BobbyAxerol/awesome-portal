@@ -72,3 +72,48 @@ Active-only takes exactly one positive typed-heartbeat subscription, never quies
 **Status after this addendum: runner READY_OFFLINE; binding NOT_READY** pending the already-running single combined normal gate and Edge's new exact PREPARED manifest/window/trust hashes. Proposed08:50–09:20UTC remains conditional, not an installed window. Edge can return preparation pins immediately; do not reopen native8 or infer a source listener/grant/session from this return.
 
 Verification: R0 Markdown-only; `git diff --check` and `scripts/execution-tracking-test.sh` PASS; local linked targets/hash pins reviewed. Public copy contains no credential values. Hook/build/DB/native calls are deliberately not repeated for this documentation delivery; the independent frozen integration gate remains running. Sanitized delivery is checked by SHA256 on both hosts. Source fences, custody and cleanup remain unchanged.
+
+## 6. Superseding repair review and NEW availability —22Oct08:54UTC
+
+**SOURCE_REPAIR_TESTED / RUNNER_READY_OFFLINE / BINDING_NOT_READY.** The08:50–09:20UTC offer above is withdrawn: no matching Edge PREPARED/ACK was received and the additional typed-denial defect below needs its qualified image. **NEW proposed availability:22Oct09:30–10:00UTC (16:30–17:00Asia/Saigon)**. This is preparation availability only, not an armed source, approved config or silent extension. Return exact fresh PREPARED pins; Core will ACK their actual hashes before any source activation. If either owner misses this offer, propose another window explicitly.
+
+### Actual full integration gate, not runtime deployment
+
+The single normal hook completed EXIT0 at08:45:22.508UTC, merge commit`de8f63824fbe89d20f6cfe601a436c8c69f21294`, frozen tree`4309b7907b508d7d726913201f4161d1c48402ef`. Contracts91files/1,633tests PASS; Control API488files/10,015tests PASS,4files/7tests explicit skips; corrected BE-P23 genuine disabled/locked PostgreSQL positives10/10 PASS. Migration/restore/security/query/governance and tracking checks PASS. Private497,079byte log SHA256`6af9d652ad5c29675728bd9431a5a5011035a9b11bf174544316360b25364b4f`. This qualifies the recorded source tree, **not** a new connected specimen or installed image. Private P22/G2 ancestry and newer canonical operational Markdown are preserved without another full hook; Claude WIP stays untouched.
+
+### Two additional false-positive paths removed
+
+1. The actual scope issuer omitted`AccessPolicyError("ACCESS_DENIED")`; revoked/missing STREAM became sanitized503`EXECUTION_READ_AUTHORITY_UNAVAILABLE`. Narrow source repair maps it to existing403`EXECUTION_READ_SCOPE_REQUIRED`; genuine DB/provider failures stay503. No grant, authority rule, API field or source fence is relaxed. Focused real-module/mocked-effect tests56PASS; the separately PG-gated read-scope file is explicitly117SKIPPED in this host run, not claimed as new PostgreSQL coverage. Build/typecheck and exact repair commit/image pins follow in the next addendum.
+2. The original post-expiry409 body was`SNAPSHOT_REQUIRED`: its private follow-up omitted`Last-Event-ID`. It is **not** an authority-denial proof. Original partial/failure receipts remain immutable. The repaired probe uses the actual signed cursor and accepts only the matching existing typed403/404/409 authority codes, with unchanged retained census and0unresolved/unreconciled/pending; cursor/generation/capacity errors do not pass.
+
+### Current private operator pins (supersede §5 versions)
+
+| Artifact | SHA256 / actual validation |
+| --- | --- |
+|`stream-probe.mjs`|`9649c2e0cda16c3c50f9ca9cab9e9a708b7f8a62027f9ea4c014f5f2f3c384d0`|
+|`stream-probe-recovery.mjs`|`6797eed448eb473f8fc8d429671acbc756cc350b2324a3a2e18f62e45fa6d3f5`|
+|Offline recovery tests|`c083db6cebe05996a42a23b315980b90a17557acfaa2b04af4b943333e933fd4`;103/103PASS,0fail, syntaxPASS|
+|Fresh draft`prepare.mjs`|`c7ce1b1a684e431dd062610421ca6782da1404786c670881f05d69d7fa9d8bc8`|
+|Fresh draft`operate.mjs`|`373aa97db5c3d2fd29b029851ace05449c249204eff49161e7f0289f8065fd28`|
+
+Private fresh draft directory`/home/bobby/secure/core009-active-revoke-20261022-SAmgpeJ7/` contains **no issued expectation, grants/session or installed config**. Schema/pin guards and capacity boundary extraction9/9offlinePASS, syntaxPASS. It requires present, well-typed values on both expected/actual READY; exact future qualified image/source; separate rollback image; fresh capacity check after quiesce and immediately before live STREAM apply. These private operator checks are not new Portal/Edge authority or source acceptance.
+
+One subscriber, no restart/resubscribe; keep the conservative **entire fixed60sSTREAM producer bound244**, not the55s client hard-stop. Source Manager cadence is250ms, not the unrelated Fleet5000ms. Missing-only capacity minimum is **H+20reserve+244STREAM+2finite reads = H+266≤288**; last observedH16 gives282 and6headroom. Recheck fresh H/custody before applying; H>22 refuses, never prune audit or enlargeC. Denied reconnect must be rejected before admission. Positive bootstrap/control reads are not READ requalification. API1.5CPU/1GiB/pool3 plus one CLI0.5CPU/512MiB/pool1 remain unchanged.
+
+Only an actual non-client-induced subscriber closure can accompany success/recovery. Native writer deliberately destroys the socket, so a transport read error is recorded as such, not falsely relabelled clean EOF; local abort/parse/size failures are not a physical revoke witness. Neither closure alone nor`NOOP_EXPIRED` passes. Official`REVOKED` must precede the original fixed expiry, preserve exact artifact/hash/revocation id, keep API PID unchanged, and satisfy typed denial/independent READ/custody checks.
+
+**Edge next action:** return fresh native revision>8/current predecessor CAS, source image/config/install/revoke/runner hashes and actual trust coverage for the NEW offer; do not arm until exact Core hash ACK. Old native8/listener/grant/session stay retired. Installed Core remains the old a96/image/schema149 and expired runtime pins in §3 until an explicit actual installation addendum. No current READY or connected PASS is inferred. Full08/read09NOT_MET; Manager/financial/budget/calibration/G2/browser remain independent.
+
+## 7. Actual repair source and minimal candidate image —22Oct08:59UTC
+
+Source repair commit`3265ce18745560cfad391e81054b7aa46eac9097`, source tree`d5079012f0ee3257ad7029ebe544387ea02ca3c5`,2backend paths/+47/−1. Production API build EXIT0; target real-module/mocked-effect56PASS/117PG-onlySKIPPED as §6. Ledger refresh reports unchanged/current,`runtime_effect:NONE`. No frontend, generated contract or policy/permission change.
+
+Actual **uninstalled minimal image**:
+`sha256:3cb7f24af12d8228406eca9f2b800b458067bbcd1616995f51438cfa9d58d069`, local tag`local/elp210-core009-active-revoke:3265ce187455`.
+To avoid repeating the expensive compile or deploying unrelated source, this image derives from the exact installed a96 base/source8ac, replacing **only**`/opt/control-api/dist/execution-v2/read-scope.js` compiled by the passed build from the one-line mapper repair. It is **not the entire integrated Claude/P22/G2 tree deployed**. Source TS SHA256`136b2e92a9668e5340e5e1b60c0ee9c910d4b171dc6fd41386256a448b001056`; compiled module SHA256`3904bf5f68c2f67fd03357be67850c6e056bd3d1d8a349ab576566d60c1bd3aa`; Dockerfile SHA256`8dc21af7288a7de24f8be30efc4485bd080278314ea18c82b2eaaeb417693ce6`; build-log SHA256`c83f3cfc791ba64c78bd1d7ee0f192acb79e13c737535c6378a4fc84247dca19`. Offline no-network/read-only image probe confirms exact module and UID1000; it is image-content evidence, not an API/connected permission proof. The1.54s build used the existing heavy lock; first root O_CREAT lock-open failed before build and was corrected by read-only opening the same inode, with no lock permission change.
+
+Private image receipt`/home/bobby/secure/core009-revoke-image-20261022-NihgQcOt/image-receipt.json`; no credentials in build context or image. The no-network probe used0.5CPU/128MiB/cap-drop-ALL/no-new-privileges/--rm; no API/source/DB/config was changed. Keep both a96 rollback and new image; no shared image/cache/volume prune.
+
+The fresh preparation and operator pins in §6 now explicitly require this qualified candidate image/source provenance and a new actual Edge READY before creating any private expectation/config. They retain the separate original a96 rollback image. Current installed image/config/schema remain §3, **no fresh config/schema receipt exists yet**. Broad all-test-fixture typecheck EXIT2 is separately disclosed in the [integration packet](CORE009_INTEGRATION_CUT_2026-10-22.md#actual-final-gate-and-additive-repair-22oct2026), not claimed PASS. It does not alter the production-build and focused-test results above.
+
+**Current disposition: SOURCE_READY / IMAGE_CONTENT_READY / RUNNER_READY_OFFLINE; CONNECTED_BINDING_NOT_READY.** Edge can prepare the NEW09:30–10:00UTC offer immediately and return exact manifest/window/trust/CAS pins. Core then validates and ACKs those actual pins; only real fresh READY permits the approved backup/config/image swap, official separate READ+fixed STREAM, and missing active-revoke specimen. No old source/grant/slot is reused. Full08/read09 staysNOT_MET until the genuine before-expiry receipt, not merely this handback.
