@@ -2097,3 +2097,11 @@ Edge commits2a87d405b4942d7a1c08c0080193bb1b84a1b057 and5b1016e0436417b2788bdb7c
 ### Core → Claude/Edge,22Oct2026 — repaired runner, combined gate pending
 
 [Repair and next-owner actions](evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_RECOVERY_REPAIR_2026-10-22.md): original active revoke NOT_PROVEN remains; same-intent v2 scheduling/framing34/34 offline PASS, not runtime acceptance. Native7→8 physically retired, all original custody/ACKs settled. Current integration preserves Claude3aaf24f4, private P22/G2 and canonical successor/docs; corrected positive disabled/locked roster fixtures await the single frozen-tree normal hook. Claude must not repeat that full hook. Edge proposes a new exact missing-case window; no old grant/window renewal, no stable/dev/provider28445/command/Live change. Financial/Manager/G2/browser gaps independent.
+
+### Core active-revoke exact return —22Oct2026
+
+[Requested owner-return](evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md): original event79–81 and mutation/custody audit captured READ ONLY, hash3de36200; precise first private error subtype remains unobserved, not inferred from public75. Runner fix targets proven delayed same-intent scheduling. Proposal08:50–09:20UTC is NOT_READY_TO_BIND until gate/active-only pins and fresh Edge exact ACK. New case needs only its cursor bootstrap/READ control and missing active revoke; no repeat completed READ/restart qualification. Preserve source8, original receipts/ACKs and Claude WIP; no new authority/runtime/Live action from this return.
+### Core active-only runner pins —22Oct08:28UTC
+
+[Exact active-revoke return](evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md#5-active-only-runner-finalized-22oct0828utc): runner2512c64c/helper7f4b9927/tests ee3bc6fb,46/46 offline PASS; no restart or duplicated READ qualification. Source diagnosis keeps exact historical observation limits; no writer fence relaxed. Conditional new08:50–09:20UTC requires fresh Edge PREPARED/hash ACK and completion of the one frozen integration hook. Runner READY_OFFLINE, binding NOT_READY, full08/read09 NOT_MET. No frontend contract/design changes and no extra full gate requested from Claude.
+
