@@ -226,6 +226,63 @@ function aggregate(rows: Draft[]): Draft[] {
   });
 }
 
+/* SIMULATED window presets. The base data is the 30D answer; 7D and 90D scale net PnL (and so balance, equity, return) by an exact
+ * fraction, with bigint math. `ALL` is a typed gap (ALL_HISTORY_WINDOW_NOT_PUBLISHED), never a 400 and never a number. */
+interface WindowPreset { days: number; num: bigint; den: bigint }
+const WINDOW_PRESETS: Record<"7D" | "30D" | "90D", WindowPreset> = {
+  "7D": { days: 7, num: 1n, den: 4n }, "30D": { days: 30, num: 1n, den: 1n }, "90D": { days: 90, num: 5n, den: 2n },
+};
+const WINDOWED_KEYS = ["net_pnl", "return_30d_pct", "max_drawdown_pct", "equity_30d_end_value"];
+const ALL_GAP = "ALL_HISTORY_WINDOW_NOT_PUBLISHED";
+const scaleBy = (value: string, preset: WindowPreset): string => trimmed(toScaled(value) * preset.num / preset.den, SCALE);
+
+/** Net PnL of a row for the preset, before the derived keys are computed from it. A true zero stays "0"; an absence stays one. */
+function windowedRow(row: Draft, preset: WindowPreset): Draft {
+  if (preset.num === preset.den) return row;
+  for (const entry of row.economic_partitions) {
+    const m = entry.metrics.net_pnl;
+    if (m?.availability === "AVAILABLE" && toScaled(m.value) !== 0n) m.value = scaleBy(m.value, preset);
+  }
+  if (row.economic_partitions.length === 1) row.metrics.net_pnl = copy(row.economic_partitions[0].metrics.net_pnl);
+  return row;
+}
+
+/** Stamps the selected window on the body: every AVAILABLE windowed metric carries it; for `ALL` they become the window gap. */
+function applyWindow(body: Draft, name: "7D" | "30D" | "90D" | "ALL", preset: WindowPreset): void {
+  const now = fixtureNowMs();
+  const resolved = { from_ms: now - preset.days * 86_400_000, to_ms: now };
+  const all = name === "ALL";
+  body.selected_window = all
+    ? { requested: "ALL", resolved: null, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: ALL_GAP }
+    : { requested: name, resolved, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: null };
+  if (all) {
+    const slot = { value: null, status: "window_not_published", reason_code: ALL_GAP };
+    body.scores = { ...body.scores, raw: { ...slot }, composition: { ...slot }, direct_nav: { ...slot }, reason_code: ALL_GAP };
+  }
+  const days: Record<string, number> = { "7D": 7, "30D": 30, "90D": 90 };
+  for (const entry of body.query_options.window.presets as Draft[]) {
+    if (entry.value !== "ALL") Object.assign(entry, { resolved: { from_ms: now - days[entry.value]! * 86_400_000, to_ms: now }, data_state: "METRIC_SPECIFIC", reason_code: null });
+  }
+  const stamp = (bag: Draft): void => {
+    for (const key of WINDOWED_KEYS) {
+      const m = bag[key];
+      if (!m || m.availability !== "AVAILABLE") continue;
+      if (all) {
+        bag[key] = nulled(key, m, m.currency ?? "X");
+        bag[key].reason_code = ALL_GAP;
+        bag[key].window = null;
+      } else {
+        if (key === "max_drawdown_pct" && toScaled(m.value) !== 0n) m.value = scaleBy(m.value, preset);
+        m.window = copy(resolved);
+      }
+    }
+  };
+  const visit = (list: Draft[]): void => { for (const entry of list) stamp(entry.metrics); };
+  for (const row of body.items) { stamp(row.metrics); visit(row.economic_partitions); }
+  visit(body.capital_statements);
+  for (const group of body.groups) visit(group.economic_partitions);
+}
+
 /** Separate synthetic capital receipts, NOT aliases for the table's allocation/PnL.
  * Like the real statement projection, scope and selected stages are applied first,
  * table filters/page limits never change the statement, and currencies stay apart.
@@ -289,9 +346,9 @@ function capitalStatements(rows: Draft[]): Draft[] {
   });
 }
 
-function rowsFor(environment: string, template: Draft): Draft[] {
+function rowsFor(environment: string, template: Draft, preset: WindowPreset): Draft[] {
   const universe = scaled();
-  if (universe.alphas.length === 0) return copy(template.items).map(enrichRow);
+  if (universe.alphas.length === 0) return copy(template.items).map((row: Draft) => enrichRow(windowedRow(row, preset)));
   const rows: Draft[] = [];
   const make = (alpha: AlphaSpec, deployments: DeploymentSpec[]): void => {
     const first = deployments[0]!;
@@ -331,7 +388,7 @@ function rowsFor(environment: string, template: Draft): Draft[] {
     }
     for (const deployments of books.values()) make(alpha, deployments);
   }
-  return rows.map(enrichRow);
+  return rows.map((row) => enrichRow(windowedRow(row, preset)));
 }
 
 function datasetAnswer(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
@@ -341,6 +398,11 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   checkedQuery.delete("after");
   checkedQuery.delete("before");
   checkedQuery.delete("lifecycle_filter");
+  // SIMULATED window presets: bare (`30D`) or JSON-quoted (`"30D"`, as httpApi encodes it). Any other window shape stays the double's 400.
+  const rawWindow = search.get("window");
+  const windowName = rawWindow === null ? null : (["7D", "30D", "90D", "ALL"] as const).find((name) => rawWindow === name || rawWindow === JSON.stringify(name)) ?? null;
+  if (windowName !== null) checkedQuery.delete("window");
+  const windowPreset: WindowPreset = windowName === null || windowName === "ALL" ? WINDOW_PRESETS["30D"] : WINDOW_PRESETS[windowName];
   const checked = answerManagerFleet("GET", "/manager/fleet", checkedQuery)!;
   if (checked.status !== 200) return checked;
   const filters = JSON.parse(search.get("filters") ?? "[]") as Draft[];
@@ -358,7 +420,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   const surface = match[1] === "fleet" ? "FLEET" : match[1] === "fund-overview" ? "FUND" : ({ portfolios: "PORTFOLIO", alphas: "ALPHA", accounts: "ACCOUNT", deployments: "DEPLOYMENT" } as Record<string, string>)[match[1]!.split("/")[0]!]!;
   let id: string | undefined;
   try { id = match[2] === undefined ? undefined : decodeURIComponent(match[2]); } catch { return problem(400, "EXECUTION_READ_QUERY_INVALID", "The resource id is not URI text."); }
-  let rows = rowsFor(environment, template);
+  let rows = rowsFor(environment, template, windowPreset);
   const universe = scaled();
   if (id !== undefined) {
     const known = surface === "PORTFOLIO" ? universe.portfolios.some((entry) => entry.id === id) : surface === "ALPHA" ? universe.alphas.some((entry) => entry.id === id)
@@ -453,6 +515,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   }
   body.query_options.economic_partition_required_for.push("balance_total", "equity_30d_end_value");
   if (!body.query_options.window.independent_metrics.includes("balance_total")) body.query_options.window.independent_metrics.push("balance_total");
+  if (windowName !== null) applyWindow(body, windowName, windowPreset);
   if (Buffer.byteLength(JSON.stringify(body)) > body.query_policy.maximum_response_bytes) return problem(400, "MANAGER_REVIEW_RESPONSE_TOO_LARGE", "Reduce limit/grouping for this bounded review response.");
   return { status: 200, body };
 }

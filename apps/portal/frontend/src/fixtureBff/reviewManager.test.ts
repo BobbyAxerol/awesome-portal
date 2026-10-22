@@ -258,7 +258,7 @@ describe("six opt-in review Manager datasets", () => {
     const old = answerManagerFleet("GET", "/manager/fleet", query);
     ask("/manager/fleet");
     expect(answerManagerFleet("GET", "/manager/fleet", query)).toEqual(old);
-    const unsupported: Record<string, string>[] = [{ window: JSON.stringify("30D") }, { sort: JSON.stringify([{ field: "net_pnl", direction: "asc" }]) },
+    const unsupported: Record<string, string>[] = [{ window: JSON.stringify({ from_ms: 1, to_ms: 2 }) }, { sort: JSON.stringify([{ field: "net_pnl", direction: "asc" }]) },
       { filters: JSON.stringify([{ field: "allocation", op: "GTE", value: "0" }]) },
       { filters: JSON.stringify([{ field: "name", op: "EQ", value: "x", ignored: true }]) },
       { sort: JSON.stringify([{ field: "name", direction: "asc", ignored: true }]) },
@@ -353,7 +353,7 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
       expect(big(metrics.net_pnl.value)).toBe(sums.get(ID(partition)));
       expect(metrics.max_drawdown_pct).toMatchObject({ unit: "PERCENT", currency: null });
       if (index === 0) expect(metrics.max_drawdown_pct).toMatchObject({ value: "0", availability: "AVAILABLE" });
-      else expect(metrics.max_drawdown_pct.value).toMatch(/^-\d+\.\d\d?$/);
+      else expect(metrics.max_drawdown_pct.value).toMatch(/^-\d+(\.\d\d?)?$/);
       if (index === 1) expect(metrics.return_30d_pct).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "SOURCE_FACTS_NOT_PUBLISHED", denominator: null });
       else {
         expect(metrics.return_30d_pct.denominator).toBe(metrics.initial_funds.value);
@@ -391,7 +391,7 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
           expect(expected).toBeLessThanOrEqual(1_000_000n);
           if (members.length === 1) expect(m.concentration_hhi.value).toBe("1");
         } else expect(members.some((part) => part.metrics.allocation.availability !== "AVAILABLE")).toBe(true);
-        if (m.max_drawdown_pct.availability === "AVAILABLE") expect(m.max_drawdown_pct.value).toMatch(/^-\d+\.\d\d?$/);
+        if (m.max_drawdown_pct.availability === "AVAILABLE") expect(m.max_drawdown_pct.value).toMatch(/^-\d+(\.\d\d?)?$/);
         else { expect(m.max_drawdown_pct.reason_code).toBe("SOURCE_FACTS_NOT_PUBLISHED"); absentDrawdown += 1; }
       }
       // One partition per (domain, currency, basis, profile): never merged.
@@ -409,5 +409,107 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
     const metric = parsed.value.items[0]!.economicPartitions[0]!.metrics.get("return_30d_pct")!;
     expect(metric.unit).toBe("PERCENT");
     expect(text(5n, 2)).toBe("0.05");
+  });
+});
+
+/** SIMULATED window presets on every dataset surface: bare and JSON-quoted, answered per contract and accepted by the unchanged port. */
+describe("simulated Manager window presets", () => {
+  const DAY = 86_400_000;
+  const SURFACES: readonly [string, string][] = [
+    ["FUND", "/manager/fund-overview"], ["FLEET", "/manager/fleet"],
+  ];
+  const get = (path: string, window: string | null, extra: Record<string, string> = {}): Body => {
+    prepare("populated");
+    return ask(path, { environment: "live", limit: "50", ...(window === null ? {} : { window }), ...extra });
+  };
+  const firstNet = (body: Body): Body => (body.items as Body[]).map((row) => row.economic_partitions[0].metrics.net_pnl).find((m) => m.availability === "AVAILABLE" && m.value !== "0");
+
+  it.each(SURFACES)("%s: 7D, 30D, 90D in bare and JSON-quoted form resolve to a window ending at FIXTURE_NOW, stamped on windowed metrics", (_surface, path) => {
+    for (const [name, days] of [["7D", 7], ["30D", 30], ["90D", 90]] as const) {
+      for (const form of [name, JSON.stringify(name)]) {
+        const result = get(path, form);
+        expect(result.status, `${name} ${form}`).toBe(200);
+        schema(result.body, "execution-manager-dataset.v1");
+        expect(result.body.selected_window).toEqual({ requested: name, resolved: { from_ms: fixtureNowMs() - days * DAY, to_ms: fixtureNowMs() }, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: null });
+        const net = firstNet(result.body);
+        expect(net.window).toEqual(result.body.selected_window.resolved);
+        const allocation = result.body.items[0].economic_partitions[0].metrics.allocation;
+        expect(allocation.window).toBeNull();
+        for (const statement of result.body.capital_statements as Body[]) {
+          expect(statement.metrics.net_pnl.window).toEqual(result.body.selected_window.resolved);
+          expect(statement.metrics.current_nav.window).toBeNull();
+        }
+      }
+    }
+  });
+
+  it("scales net PnL deterministically with the preset (7D = 1/4 and 90D = 5/2 of 30D), keeping a true zero and the typed absences", () => {
+    const base = get("/manager/fleet", JSON.stringify("30D"));
+    const short = get("/manager/fleet", JSON.stringify("7D"));
+    const long = get("/manager/fleet", JSON.stringify("90D"));
+    const big18 = (value: string): bigint => { const neg = value.startsWith("-"); const [w, f = ""] = value.replace("-", "").split("."); const n = BigInt(w + f.padEnd(18, "0")); return neg ? -n : n; };
+    let compared = 0;
+    for (const [index, row] of (base.body.items as Body[]).entries()) {
+      const b = row.economic_partitions[0].metrics;
+      const s = short.body.items[index].economic_partitions[0].metrics;
+      const l = long.body.items[index].economic_partitions[0].metrics;
+      if (b.net_pnl.availability !== "AVAILABLE") { expect(s.net_pnl.availability).toBe(b.net_pnl.availability); continue; }
+      if (b.net_pnl.value === "0") { expect(s.net_pnl.value).toBe("0"); expect(l.net_pnl.value).toBe("0"); expect(s.return_30d_pct.value).toBe("0"); continue; }
+      expect(big18(s.net_pnl.value)).toBe(big18(b.net_pnl.value) / 4n);
+      expect(big18(l.net_pnl.value)).toBe(big18(b.net_pnl.value) * 5n / 2n);
+      expect(big18(s.net_pnl.value) * big18(l.net_pnl.value) >= 0n).toBe(true);
+      // The derived keys follow the scaled figure, not the base one.
+      if (b.balance_total.availability === "AVAILABLE") expect(big18(s.balance_total.value)).toBe(big18(b.allocation.value) + big18(s.net_pnl.value));
+      if (b.equity_30d_end_value.availability !== "AVAILABLE" && b.net_pnl.availability === "AVAILABLE" && b.balance_total.availability === "AVAILABLE") expect(s.equity_30d_end_value.availability).toBe("UNAVAILABLE");
+      compared += 1;
+    }
+    expect(compared).toBeGreaterThan(0);
+    // Capital statement drawdown keeps its true zero; the others scale by the same fraction.
+    const dd = (body: Body, i: number): string => body.body.capital_statements[i].metrics.max_drawdown_pct.value;
+    expect(dd(short, 0)).toBe("0");
+    expect(dd(long, 0)).toBe("0");
+    expect(big18(dd(short, 2)) * 4n).toBeLessThanOrEqual(0n);
+    expect(big18(dd(long, 2)) * 2n).toBe(big18(dd(base, 2)) * 5n);
+  });
+
+  it.each(SURFACES)("%s: ALL is the typed window gap, not a 400 and not a number", (_surface, path) => {
+    const result = get(path, JSON.stringify("ALL"));
+    expect(result.status).toBe(200);
+    schema(result.body, "execution-manager-dataset.v1");
+    expect(result.body.selected_window).toEqual({ requested: "ALL", resolved: null, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: "ALL_HISTORY_WINDOW_NOT_PUBLISHED" });
+    expect(result.body.scores.reason_code).toBe("ALL_HISTORY_WINDOW_NOT_PUBLISHED");
+    for (const row of result.body.items as Body[]) for (const entry of row.economic_partitions as Body[]) {
+      for (const key of ["net_pnl", "return_30d_pct", "max_drawdown_pct", "equity_30d_end_value"]) {
+        const m = entry.metrics[key];
+        if (!m) continue;
+        expect(m.value, key).toBeNull();
+        expect(m.availability).toBe("UNAVAILABLE");
+        expect([ "ALL_HISTORY_WINDOW_NOT_PUBLISHED", "SOURCE_FACTS_NOT_PUBLISHED" ]).toContain(m.reason_code);
+      }
+      expect(entry.metrics.allocation.window).toBeNull();
+    }
+  });
+
+  it("every other unsupported option is still the explicit 400, with or without a window", () => {
+    prepare("populated");
+    const cases: Record<string, string>[] = [{ lifecycle_filter: "" }, { filters: JSON.stringify([{ field: "net_pnl", op: "GTE", value: "1" }]) }, { sort: JSON.stringify([{ field: "net_pnl", direction: "asc" }]) }, { window: JSON.stringify({ from_ms: 1, to_ms: 2 }) }, { window: "1W" }];
+    for (const extra of cases) {
+      const result = ask("/manager/fleet", { environment: "live", ...(extra.window === undefined ? { window: JSON.stringify("30D") } : {}), ...extra });
+      expect(result.status, JSON.stringify(extra)).toBe(400);
+    }
+  });
+
+  it("the unchanged port accepts the answer to the window it asked (every surface, each preset and ALL)", async () => {
+    const api = client("populated");
+    for (const window of ["7D", "30D", "90D", "ALL"] as const) {
+      for (const query of [
+        { surface: "FUND" as const }, { surface: "FLEET" as const },
+        { surface: "PORTFOLIO" as const, id: scaled().portfolios[0]!.id }, { surface: "ALPHA" as const, id: scaled().alphas[0]!.id },
+      ]) {
+        const parsed = await api.getManagerDataset({ ...query, environment: "paper", window, limit: 5 });
+        expect(parsed.ok, `${query.surface} ${window} ${JSON.stringify(parsed)}`).toBe(true);
+        if (parsed.ok) expect(parsed.value.selectedWindow?.requested).toBe(window);
+      }
+    }
   });
 });

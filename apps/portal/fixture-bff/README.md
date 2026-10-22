@@ -134,6 +134,7 @@ new product screen.
 | `current_nav` | group by `portfolio_id` (per partition) | sum of the members' balance_total in that partition | portfolio NAV statement |
 | `return_30d_pct` | group | group net_pnl * 100 / group allocation | portfolio return |
 | `max_drawdown_pct` | group | deterministic negative; typed absence for about 1 group in 6 | portfolio NAV drawdown |
+| window presets | all six surfaces | `window` 7D / 30D / 90D, bare or JSON-quoted: `selected_window.resolved` = [FIXTURE_NOW - N days, FIXTURE_NOW]; AVAILABLE `net_pnl`, `return_30d_pct`, `max_drawdown_pct`, `equity_30d_end_value` (rows, capital, groups) carry that window; allocation, balance and NAV keep window null. net_pnl is the 30D base times 1/4 (7D), 1 (30D), 5/2 (90D), bigint; derived keys follow; a true zero stays `0`. `ALL` is the typed gap (`ALL_HISTORY_WINDOW_NOT_PUBLISHED`) with the windowed metrics as typed absences. Custom ranges stay 400 | a windowed metric published per preset by the source |
 | `concentration_hhi` | group | sum of squared allocation shares of the members in that partition, unit RATIO, 0..1; typed absence when any allocation is unpublished | portfolio concentration (HHI) publication |
 
 - This does not fill a missing contract or a hard-coded UI placeholder. Consumer gaps belong in
