@@ -542,14 +542,22 @@ describe("metric table", () => {
     expect(cell(row("Allocated capital"), "Yen-Carry")).toContain("JPY");
   });
 
-  it("names NAV, Net PnL, Return, Max drawdown and Score once, not as a 'Not published' row under every pick", async () => {
+  it("keeps NAV, Net PnL, Return, Max drawdown and Score as rows (hi-fi), each cell Not available with its request id", async () => {
     mount(makeApi().api, pick(PF.satellite, PF.canary));
     await loaded();
-    for (const label of ["NAV", "Net PnL", "Return", "Max drawdown", "Score"]) expect(screen.queryByRole("rowheader", { name: label }), label).toBeNull();
-    expect(document.querySelector("td[data-l='Metric']")!.textContent).not.toMatch(/NAV|Net PnL|Return|drawdown|Score/);
-    const line = screen.getByTestId("not-available-line");
-    expect(line.textContent).toContain("Not available: NAV, Net PnL, Return, Max drawdown, Score");
-    for (const id of ["FE-013", "FE-005", "FE-006", "FE-011"]) expect(whyText(line), id).toContain(`Not published (${id})`);
+    const ids: Record<string, string> = { NAV: "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", "Max drawdown": "FE-013, FE-025", Score: "FE-011" };
+    const table = screen.getByRole("table", { name: "Metrics" });
+    for (const [label, id] of Object.entries(ids)) {
+      const row = [...table.querySelectorAll("tr")].find((tr) => tr.querySelector("td[data-l='Metric']")?.textContent === label);
+      expect(row, label).toBeDefined();
+      const cells = [...row!.querySelectorAll("td")].slice(1);
+      expect(cells.length, label).toBeGreaterThanOrEqual(2);
+      for (const td of cells) {
+        expect(td.textContent, label).toContain("Not available");
+        expect(td.textContent, label).toContain(`Not published (${id})`);
+      }
+    }
+    expect(screen.queryByTestId("not-available-line")).toBeNull();
   });
 
   it("marks no best in a row: a mark would need a value it does not have", async () => {

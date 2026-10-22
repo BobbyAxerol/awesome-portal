@@ -38,7 +38,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
-import { GapWhy, NotAvailableLine, SectionPanel, type UnavailableFact } from "../../blocks";
+import { GapWhy, SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ChartTools, CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
 import { Flag } from "../../Flag";
@@ -48,7 +48,7 @@ import type { ManagerSeriesMetric, ManagerSeriesQuery } from "../../readers/mana
 import { METRIC_WORD, MISMATCH_SENTENCE, UNAVAILABLE_SENTENCE, chartPointsOf, chartStateOf, chartUnit, commonCaption, isSigned, sourceNotPublished } from "../series/seriesModel";
 import { useManagerSeries } from "../series/useManagerSeries";
 import { useExecUrlState, withContext } from "../../urlState";
-import { PF_FE, npText } from "../portfolios/fe";
+import { PF_FE, npText, type Unpublished } from "../portfolios/fe";
 import { Absent, MoneyList, freshnessFlag } from "../portfolios/format";
 import { toRows, type PortfolioRow } from "../portfolios/listModel";
 import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
@@ -82,17 +82,18 @@ const domainWord = (domain: PortfolioRow["domain"] | null): string =>
 
 interface MetricRow { id: string; label: string; cell(row: PortfolioRow): ReactNode }
 
-/** The hi-fi order: the measures first (each says which request publishes it), then what the list read does publish. */
-/** The scalars the read does not publish: not rows of "Not published" under every pick, but one line (ids in its title). */
-const UNPUBLISHED_METRICS: readonly UnavailableFact[] = [
-  { label: "NAV", id: "FE-013" },
-  { label: "Net PnL", id: "FE-005", why: "Windowed; needs FE-025" },
-  { label: "Return", id: "FE-006", why: "Windowed; methodology per source" },
-  { label: "Max drawdown", id: "FE-013", why: "Needs the NAV series; windowed (FE-025)" },
-  { label: "Score", id: "FE-011" },
-];
+/**
+ * The hi-fi order: the measures first, then what the list read does publish. The five measures keep their rows (hi-fi and the "Source
+ * not qualified" frame): each cell says Not available, and the request that will publish it is behind the cell's disclosure.
+ */
+const unpublished = (fact: Unpublished) => (): ReactNode => <Absent reason={`${npText(fact)}: ${fact.what}`} />;
 
 const METRICS: readonly MetricRow[] = [
+  { id: "nav", label: "NAV", cell: unpublished(PF_FE.nav) },
+  { id: "netpnl", label: "Net PnL", cell: unpublished(PF_FE.netPnl) },
+  { id: "return", label: "Return", cell: unpublished(PF_FE.ret) },
+  { id: "drawdown", label: "Max drawdown", cell: unpublished(PF_FE.drawdown) },
+  { id: "score", label: "Score", cell: unpublished(PF_FE.score) },
   { id: "currency", label: "Base currency", cell: (r) => r.baseCurrency },
   { id: "owner", label: "Owner", cell: (r) => r.owner ?? <Absent reason="owner not published" /> },
   { id: "state", label: "State", cell: (r) => <Flag kind={r.stateKind} label={r.stateLabel} size="sm" /> },
@@ -377,10 +378,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
             {chosen.length === 0 ? (
               <p className="exec-pf-note">Pick portfolios above to see their identity and allocation side by side.</p>
             ) : (
-              <>
-                <CardsTable label="Metrics" columns={tableColumns} rows={METRICS} rowKey={(m) => m.id} />
-                <NotAvailableLine facts={UNPUBLISHED_METRICS} className="exec-pf-na-line" />
-              </>
+              <CardsTable label="Metrics" columns={tableColumns} rows={METRICS} rowKey={(m) => m.id} />
             )}
           </SectionPanel>
         </>
