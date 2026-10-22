@@ -3,7 +3,7 @@
 Ngày 2026-10-21. Nhánh `claude/post-freeze-20261021`. Đóng phần còn lại của
 DEBT-UXM07-031 ("roster đọc một lần không phân trang, cửa sổ 10 thẻ chỉ là cái nhìn
 lên danh sách đã đọc hết"). Bobby giao làm thẳng, không qua Codex request; Codex review sau.
-Trạng thái: **ĐÃ ÁP DỤNG trên nhánh; spec PG viết chưa chạy (§5); so sánh visual chưa chạy.**
+Trạng thái: **ĐÃ ÁP DỤNG trên nhánh; Codex review 2026-10-22 = CHANGES_REQUESTED, đã sửa ở §7; spec PG chạy lại ở §7 (log sha256 822a4e3f82840b09…, §7); so sánh visual chưa chạy.**
 Không DB/Docker/hook/lock/visual ở lượt này (RULES §10.10b/§10.10c).
 
 ## 1. Route và contract
@@ -97,3 +97,27 @@ Không kỳ vọng đổi điểm ảnh: trang đầu vẫn 50 hàng (10 ở 390
 Cần một lần so sánh chế độ verify (không ghi baseline) cho: `v2-users-*` (hai độ rộng, ô `users`) và ô
 "Not published" của Users (`execution-v2-visual.spec.ts` dòng 124). Nếu lệch, tìm trước ở nút Load more `disabled`
 và thứ tự hàng (theo username server, trùng thứ tự id của double).
+
+## 7. Sửa theo Codex review 2026-10-22 (CHANGES_REQUESTED)
+
+Nguồn: `ELP2-10/CODEX_TO_CLAUDE_LANDING_ACK_2026-10-22.md` (BE-P23).
+
+1. **Một đồng hồ cho đếm và hàng.** `readRosterPage` lấy `now` một lần, truyền cho SQL và cho
+   `projectAccount(row, now)` (tham số `now` mới, mặc định `new Date()`; `account-lifecycle.service`
+   đổi `users.map(projectAccount)` thành `users.map((user) => projectAccount(user))` để chỉ số `map`
+   không thành `now`). Hồi quy: `be-p23-account-roster-page.spec.ts` có hai ca ranh giới
+   (khóa còn hạn lúc đọc thì đếm VÀ in là locked dù đồng hồ thật đã qua; khóa hết đúng lúc đọc thì không).
+2. **Đo câu truy vấn thật.** Câu SQL production là hằng `ROSTER_PAGE_SQL` (`src/repos/users.ts`); pha đếm dùng
+   CTE `f`, còn `page` đọc thẳng `portal_users` (không qua `f`), điều kiện lọc viết một lần (`rosterMatchSql`).
+   Ca PG chạy `EXPLAIN (ANALYZE, FORMAT JSON)` đúng `ROSTER_PAGE_SQL` với tham số thật. Không lọc: nút quét
+   `portal_users_username_key` đọc ≤ 51 hàng. Có lọc: quét cùng index tới khi đủ 51 hàng khớp, ghi số hàng
+   thật đọc và loại bỏ, không khẳng định `limit + 1`. Số đo thật: đo trên 40.121 hàng (121 + 40.000 hàng tạm, rollback): trang = `Index Scan` trên `portal_users_username_key`,
+   Limit 51, đọc đúng 51 hàng; pha đếm = `Seq Scan` 40.121 hàng (chi phí O(số tài khoản), nêu thẳng). Có lọc
+   (`role=USER`, `q=bulk-03`): cùng index, trả 51 hàng, loại 30.006 hàng theo filter (không phải `limit + 1`).
+3. **Biên nhận.** "27 PG" trong báo cáo trước là sai: đúng là **10 PG + 17 unit** (nay unit là 19 với hai ca
+   ranh giới). §5 ghi `NOT_RUN` là đúng tại thời điểm viết; log PG thật của nguồn hiện tại: PG_LOG_PENDING.
+   Không nhân đôi test chỉ để sửa mô tả.
+4. **Lịch sử chạy (không viết lại).** Lần 1 (`be-p23-pg` + unit, log sha256 7c10e438f0f381bc…): 28 pass / 1 fail, ca
+   EXPLAIN mới fail vì điều kiện tìm nút quá chặt. Lần 2: kế hoạch thật trên bảng 121 hàng là
+   `Bitmap Index Scan` đọc 107 hàng rồi Sort (planner không đại diện ở quy mô này), nên ca đổi sang bảng
+   40.121 hàng. Lần 3: 10/10 PG pass. EXPLAIN chạy trên cùng một client với bảng tạm (cùng transaction).

@@ -153,25 +153,36 @@ describe.skipIf(!DATABASE_URL)("BE-P23 owner roster keyset page on real PostgreS
     expect(body.accounts).toHaveLength((await sql("SELECT count(*)::int AS n FROM portal_users"))[0].n);
   });
 
-  it("the PRODUCTION statement reads its page from the unique username index, bounded by limit + 1 (EXPLAIN ANALYZE of ROSTER_PAGE_SQL)", async () => {
+  it("the PRODUCTION statement reads its page from the unique username index on a table big enough for the planner to choose (EXPLAIN ANALYZE of ROSTER_PAGE_SQL)", async () => {
     const nodes = (plan: any): any[] => [plan, ...((plan.Plans ?? []) as any[]).flatMap(nodes)];
-    const run = async (params: unknown[]) => {
-      const rows = await sql(`EXPLAIN (ANALYZE, FORMAT JSON) ${ROSTER_PAGE_SQL}`, params);
-      return nodes(rows[0]["QUERY PLAN"][0].Plan);
-    };
-    await ctx.pool.query("SET enable_seqscan = off");
+    const client = await ctx.pool.connect();
     try {
-      // No filter: the page is an index range of at most limit + 1 rows (the aggregate is a separate full pass).
-      const plain = await run(["user-050", null, null, null, 51, new Date()]);
-      const pageScan = plain.find((n) => n["Index Name"] === "portal_users_username_key" && n["Actual Loops"] === 1 && n["Actual Rows"] <= 51 && n["Node Type"].includes("Index"));
-      expect(pageScan, "no bounded username-index node for the page").toBeDefined();
-      expect(plain.some((n) => n["Node Type"] === "Limit" && n["Actual Rows"] <= 51)).toBe(true);
+      await client.query("BEGIN");
+      // 40,000 throw-away rows (rolled back): the 121-row fixture is too small for a plan to say anything about cost.
+      await client.query(
+        `INSERT INTO portal_users (user_id, username, display_name, role, status)
+         SELECT 'usr_bulk_' || g, 'bulk-' || lpad(g::text, 6, '0'), 'Bulk ' || g, CASE WHEN g % 10 = 0 THEN 'ADMIN' ELSE 'USER' END, 'ACTIVE'
+           FROM generate_series(1, 40000) g`);
+      await client.query("ANALYZE portal_users");
+      const run = async (params: unknown[]) => {
+        const result = await client.query(`EXPLAIN (ANALYZE, FORMAT JSON) ${ROSTER_PAGE_SQL}`, params);
+        return nodes(result.rows[0]["QUERY PLAN"][0].Plan);
+      };
+      const summary = (plan: any[]) => JSON.stringify(plan.map((n) => ({ t: n["Node Type"], i: n["Index Name"], rows: n["Actual Rows"], loops: n["Actual Loops"], removed: n["Rows Removed by Filter"] })));
+      // No filter, mid-table cursor: the page must be an ordered index range that stops after limit + 1 rows.
+      const plain = await run(["bulk-020000", null, null, null, 51, new Date()]);
+      console.info("BE-P23 plan, no filter: " + summary(plain));
+      const indexed = plain.find((n) => n["Index Name"] === "portal_users_username_key" && /Index/.test(n["Node Type"]) && !/Bitmap/.test(n["Node Type"]));
+      expect(indexed, `page is not an ordered username-index scan: ${summary(plain)}`).toBeDefined();
+      expect(indexed["Actual Rows"]).toBeLessThanOrEqual(51);
       // With a filter the scan walks the same index until 51 rows match: record what it really read, do not claim limit + 1.
-      const filtered = await run([null, "user-0", "USER", null, 51, new Date()]);
-      const scan = filtered.find((n) => n["Index Name"] === "portal_users_username_key");
-      expect(scan, "filtered page lost the username index").toBeDefined();
-      console.info(`BE-P23 page scan, filtered: returned ${scan["Actual Rows"]}, removed by filter ${scan["Rows Removed by Filter"] ?? 0}`);
-    } finally { await ctx.pool.query("RESET enable_seqscan"); }
+      const filtered = await run([null, "bulk-03", "USER", null, 51, new Date()]);
+      console.info("BE-P23 plan, filtered: " + summary(filtered));
+      expect(filtered.some((n) => n["Index Name"] === "portal_users_username_key"), `filtered page lost the username index: ${summary(filtered)}`).toBe(true);
+    } finally {
+      await client.query("ROLLBACK");
+      client.release();
+    }
   });
 
   it("bad limits and keys are fixed 400s that never echo the input", async () => {
