@@ -15113,3 +15113,39 @@ No duplicate completed READ/restart, expiry renewal, fake ACK, UI or stable/dev/
 main/provider28445/Manager/command/Live change. Full08/read09 remains NOT_MET
 until real reconciliation. R0 Markdown; existing peer WIP preserved.
 <!-- CODEX_NATIVE08_PREPARED99_ACK_END -->
+
+<!-- CODEX_APPROVED_CLOSEOUT_20261023_BEGIN -->
+### ELP2-10 — actual active-revoke delivery and approved Claude closeout /23OctVN
+
+[Actual Core→Edge return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_08_CORE_FIRST_ACTUAL_RETURN_2026-10-23.md)
+raw`12e9efc1595f8fafca2fe713eb435221e0e950018a300ee7331fc85b84fe048a`
+actually mirrored/read back on HK at01:45:13VN. Source9/READY59bc4568,
+Core3cb/schema149: one fixed60s STREAM, original typed75 physically closed,
+samehash/sameID recovery `REVOKED`50.112s before expiry, current-cursor retry403
+with retained20→20/no admission, separate READ200 and unchanged API PID.
+Remote termination was a read error, **not clean EOF**; Edge correlates source
+terminal/custody and owns exact drain/native revoke9→10. Core settled01:42:41VN:
+retained21, pending/unresolved/unreconciled0, exact session/grants retired,
+inactivea814/healthy mapper3cb restored. Full08/read09 and ELP2-10 remain open.
+
+[Approved Claude assignment and catalogue dispositions](execution_loop/evidence/ELP2-10/CODEX_TO_CLAUDE_APPROVED_CLOSEOUT_2026-10-23.md):
+F8 technical review already ACCEPT/notes; C288/P22 take-over/Manager issuer
+are not duplicate Bobby decisions. F5 fixture/conformance/history and F9
+per-qualified-source consumers/ELP2-07 wiring proceed independently. DEBT-048
+item9 pending-control is **approved fixture-only**, command/Live remain off.
+FE-CAT-1…9 ACK with exact semantics/owner/exit; Fleet Then already implemented.
+Claude must first fix Accounts wallet-vs-native-equity and authority-scoped
+cache reuse, then reconcile simulated/debt/conformance records. Numeric
+budget/calibration or independent economic control requires a concrete scoped
+artifact/input; no blanket waiting label and no invented approval.
+
+Integration candidate `/home/bobby/portal-research-closeout`,
+`chore/core009-approved-closeout-20261023`: fullClaudeFE2`500df58e9` includes
+FE3`3add6058`;149paths/+5806−409 merged without conflict, tests/docs/evidence
+retained, **not yet committed/landed**. Canonical/Claude16/80 ancestry divergence
+requires a reconcile commit before ff-only. Two own runner safety paths are
+tested84/84 in the candidate; original private runner/log defect fixed by an
+additive continuation32/32, no original manifest/intent rewrite. One final normal
+gate follows Claude's concrete review fixes, not an expensive hook on the known
+bad cache cut. Peer inbound Markdown remains preserved; no push/dev/main/Live.
+<!-- CODEX_APPROVED_CLOSEOUT_20261023_END -->

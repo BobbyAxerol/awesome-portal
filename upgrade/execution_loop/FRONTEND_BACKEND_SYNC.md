@@ -2403,3 +2403,40 @@ no old-slot/READ/restart replay, no UI or peer-WIP change. Claude fixture/visual
 work remains independent; do not run broad conformance against this specimen.
 R0 Markdown; no push/dev/main/stable/provider28445/command/Live activation.
 <!-- CODEX_NATIVE08_PREPARED99_ACK_END -->
+
+<!-- CODEX_APPROVED_CLOSEOUT_20261023_BEGIN -->
+### Round23Oct — F5/F8/F9 approved followthrough and real native revoke
+
+Read canonical454323456 and cleanClaudeFE2`500df58e9` (containsFE3`3add6058`).
+Two reused read-only agents: `core_first_runtime_review` latest23commit/UI
+contract delta; `core_first_runner_review` no-loss ancestry audit + independently
+tested private continuation and two public safety paths in the isolated candidate.
+No new agent or broad fixture/native/source test overlap was introduced.
+
+ACT_NOW Core completed: original prepared99→ACK06ead936→actualREADY59bc4568;
+one fixed60s STREAM, exact75/hash/ID recoveryREVOKED beforeexpiry, samePID,
+retry403/noadmission, separateREAD200. Exact Core settlement01:42:41VN returns
+21retained/zero unresolved/unreconciled/pending, retired session and grants,
+inactivea814/healthy3cb. [Public return](evidence/ELP2-10/CORE_TO_EDGE_08_CORE_FIRST_ACTUAL_RETURN_2026-10-23.md)
+actually HK-delivered/read back01:45:13VN, raw12e9efc1. Edge owns remote-read-
+error correlation (notEOF), physical source drain and original native9→10.
+No full08/read09/ELP2-10 or consumer/browser PASS inferred.
+
+ACT_NOW Claude: [approved actionable handoff](evidence/ELP2-10/CODEX_TO_CLAUDE_APPROVED_CLOSEOUT_2026-10-23.md)
+assigns Accounts nativeequity-vs-wallet/cache-scope fixes, nine fixture schema
+violations + probe hardening, F5 history/scale/real consumer, F8 stale label
+reconciliation, F9 per-family/command-status wiring, FE-CAT-1…9 bounded backend
+dispositions, and DEBT-048item9 **fixture-only pending-control approved now**.
+No repeated Bobby approval request for fixture/C288/takeover/issuedPKI; no
+permission from this to enable real command, FX policy or Live. Genuine numeric/
+source inputs need named artifact/owner/action, not an umbrella blocking label.
+
+Candidate `chore/core009-approved-closeout-20261023` at
+`/home/bobby/portal-research-closeout` preserves complete149pathClaude delta
++5806−409, conflict-free merge staged; no cherry-pick or test/doc omission.
+Public safe-step-label helper+tests own2paths/+50−1 focused84/84PASS. Canonical
+two code paths clean; all peer Markdown/inbound receipts retained. Final cut
+waits on identified Claude corrections and one normal gate; not ff-landed yet.
+Review/handoff written is not Claude acknowledgement. Consumer must return SHA,
+per-ID outcome, exact fixture/source receipts and remaining Edge inputs.
+<!-- CODEX_APPROVED_CLOSEOUT_20261023_END -->
