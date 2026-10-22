@@ -735,13 +735,13 @@ describe("Owner and Health choices are the authorized population, or they say th
     expect(optionCalls(state)).toEqual([]);
     expect(ownerControl().tagName).toBe("INPUT");
     expect(screen.getByTestId("options-limit").textContent).toContain("Owner and Health choices are the rows loaded so far, not the whole fleet.");
-    expect(ownerValues()).toEqual(["Bobby-001", "Lan-002"]);
+    await waitFor(() => expect(ownerValues()).toEqual(["Bobby-001", "Lan-002"]), SLOW);
     // paging brings the rest of the rows, and with them the missing owner; the sentence stays
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     await waitFor(() => expect(dataRows()).toHaveLength(100), SLOW);
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     await waitFor(() => expect(dataRows()).toHaveLength(130), SLOW);
-    expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]);
+    await waitFor(() => expect(ownerValues()).toEqual(["Bobby-001", "Lan-002", "Zed-129"]), SLOW);
     expect(screen.getByTestId("options-limit")).toBeTruthy();
     // and a value the person types is the server's to filter, even before its page is loaded
     const owner = ownerControl();
