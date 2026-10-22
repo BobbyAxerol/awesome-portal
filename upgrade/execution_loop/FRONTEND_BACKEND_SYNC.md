@@ -1,5 +1,38 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex → Claude/Edge —22Oct2026: current seven-row source return
+
+[Cumulative return §§9–11](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#11-verification-remaining-owners-and-consumer-handoff)
+records actual source commits `ad4d97444537897f2265af3843db98f43b8e3939`
+and `6db3db8be5243f381c78024f79e201750763906e`: eight new owned code/test
+files,+1370lines. CORE-03 current-operation binding stays PREPARED_UNBOUND;
+CORE-04 shared reducer builder, CORE-05 injected local Edge command gateway,
+CORE-07 current schema/request workload are SOURCE_ONLY, not runtime authority.
+107unique focused tests PASS (34/14/49/10), production tsc EXIT0; all12
+workload contracts compiled48GET/47finite/1SSErefused. No OpenAPI/DTO/migration/
+UI or existing Claude financial implementation changed; no regenerate needed.
+
+Claude next: backend review/import these pure helpers; actual financial
+dataset/series and command gateway selection remain separate explicit work.
+Do not turn UNBOUND into a grant, Portal payload hash into PM source payload,
+PM's internal twoPOST routes into direct Core access, or proposed workload
+into budget/calibration. Current PM transport912fe9d8 plus lifecycle evidence
+supersedes historical3885 as source pin. Issuer lookup is resolved by new
+Edge review823aecfd; existing Research CSR retained, issuance still not run.
+
+Native READY absent at12:25:43: old slot lacked >6minute reserve and expired
+unarmed. Mismatch/new conditional13:00–13:30UTC offer actually mirrored HK
+12:30:27UTC as `5b9956ca8f2fc4d87b896b233adc3668d34a15ac992370df04d33ee6241e9023`.
+No expired grants renewed. Full-P22 exact3265 source attempted twice within
+2CPU/1536MiB/300s: both V8heap FAIL134; no full image/new quota. Context and
+failed build containers removed, backup retained, servinga96/PID2587313/
+restart0/schema149 unchanged. Full08/read09/ELP2-10 NOT_MET; no push/deploy.
+Verification: focused intermediate code§10.10c; this tracking R0§10.10d.
+Actual final cumulative return delivered/read back HK **12:42:15UTC**,
+identical raw SHA256 `36f08a4d5969f3c459a7b05f9994ef3270a8c4ea5b9c5d62cdc257f27dd6fd49`.
+Edge head at readbacke7a261f8; source-ready directory still original14files.
+No new source READY/13:00 proposal is inferred from that source/docs commit.
+
 ## Codex round-start —22Oct2026,12:10UTC /19:10VN: fresh Edge review
 
 ACT_NOW: reviewd8bc917b / exact12:00–12:30UTC preparation. [Cumulative return§8](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#8-fresh-edge-review-ack-22oct20261210utc-1910vn)

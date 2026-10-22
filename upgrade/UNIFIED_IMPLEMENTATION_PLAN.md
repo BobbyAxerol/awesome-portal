@@ -14928,6 +14928,35 @@ Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_STREAM_ACTUAL_READY
 
 Edge commits2a87d405b4942d7a1c08c0080193bb1b84a1b057 and5b1016e0436417b2788bdb7c5b9196bc70fd6938 on feat/execution-edge-upgrade-v1_2,6uniqueMarkdown/373added,no push/merge/CI. Actual EdgeACK/install/native7SDK_READY→Core independent fixed60sSTREAM/SSE1→graceful originalcustodydrain/restart/SSE2→real active revoke exit75DRAIN_PENDING thensameintentNOOP_EXPIRED→exact Core grants/session cleanup→Edge physicalsourceEXIT0/pools0/die0/destroy/officialnative8revoke+STATUS fully recorded. Active revoke remains NOT_PROVEN, no full08/read09 PASS. Final cumulative28bdcaca3b450abc34dcdb0a064e51d072c0c7da6be926d1bfcca8a5f9ad9e0c already here with historicalREADYprefixpreserved. R0 first4path/5links and final5path/7links/scope/diff/secrets/tracking PASS, peerWIPintact. Own containers/socket/observer gone, no own image/cachecreated or sharedprune; protected native/threeEdge restart0. Core owner now handles exact documented writer/drain correlation and before-expiry same-intent recovery repair with Claude, then returns a NEW pinned finite missing-case window. General08 approval remains valid; never replay/renew retired source8/oldgrant. Manager/P22/G2 separate, no stable/dev/provider28445/commands/Live change.
 
+### Core seven-row runnable support and exact remaining qualification —22Oct2026
+
+[Consolidated current disposition §§9–11](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#11-verification-remaining-owners-and-consumer-handoff):
+commitsad4d9744 +6db3db8b add eight new files/+1370lines, no peer code/UI/
+OpenAPI/SQL changes. Local financial operation factory stays PREPARED_UNBOUND;
+one economic input/reducer factory, injected Edge command adapter and pinned
+current-workload preflight prepared. 107unique focused tests PASS; production
+tsc EXIT0, all12allowlisted contracts compile48GET/47finite/1SSErefused.
+Existing full gate is not reused to claim these source-only helpers installed.
+
+Actual native READY absent at12:25:43; >6minute reserve unavailable, no late
+activation/renewal. Mismatch and conditional13:00–13:30UTC offer delivered HK
+12:30:27UTC/raw5b9956ca, not a new source/grant expiry. Issuer lookup resolved
+by Edge823aecfd, existing Research CSR preserved; actual controlled issuance
+and Manager reconcile remain separate. Current PM transport912fe9d8 is the
+additive source pin, not historical3885. CORE-06 exact full-P22 source3265
+build attempted twice at2CPU/1536MiB/300s: V8heap FAIL134; no full image,
+quota increase or install. Temporary context/failed containers removed; serving
+a96/schema149/PID2587313/restart0, original custody and backup retained.
+
+Next: Edge fresh source-window/accepted mappings; Core scoped full-image build
+resource/method and qualification; Claude backend selection/review and UI
+consumer continue independently. Numeric/calibration/independent-domain inputs
+remain owner-bound. Full08/read09/ELP2-10 NOT_MET, no ELP2-11/push/dev/main/
+stable/provider28445/command/Live. Focused intermediate§10.10c; journalR0.
+Final complete return mirrored HK12:42:15UTC/raw
+`36f08a4d5969f3c459a7b05f9994ef3270a8c4ea5b9c5d62cdc257f27dd6fd49`,
+identical local/HK bytes; Edge e7a261f8 is source/docs, no native READY observed.
+
 ### Core fresh Edge preparation ACK and runnable support —22Oct2026,12:10UTC
 
 [Cumulative return§8](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#8-fresh-edge-review-ack-22oct20261210utc-1910vn)

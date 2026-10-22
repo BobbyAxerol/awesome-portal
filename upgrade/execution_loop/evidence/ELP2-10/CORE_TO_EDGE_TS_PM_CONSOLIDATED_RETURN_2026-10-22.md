@@ -546,3 +546,280 @@ write. Fresh DB census at12:13:03UTC: H16,unresolved0,unreconciled0,pending0;
 session, config generation or swap has run; actual source READY still required.
 This appends evidence to preparation ACKbacad6f9 (full digest in Core sync),
 does not replace the accepted install/revoke pins or extend12:30 expiry.
+
+## 9. Native reserve mismatch —22Oct2026,12:30UTC /19:30VN
+
+**NOT_READY_FOR_THIS_SLOT / CONNECTED_NOT_RUN.** At the actual read-only
+checkpoint12:25:43UTC, the accepted Edge review still had hashd8bc917b and
+the private A4r4gh preparation directory still had its original14 files;
+no actual revision9 source READY/install observation had been delivered.
+Core's required >6minute preparation reserve was already unavailable.
+Core therefore did **not** issue a session/grant, install config/image, open a
+subscriber or attempt late active revoke. This is a concrete window/input
+mismatch, not a new test failure, and not an inferred Edge activation.
+
+Core offers a **NEW conditional availability22Oct13:00–13:30UTC /
+20:00–20:30VN**, independent of Manager/financial/P22/G2 completion. This is
+availability only, not an extension of source, draft expiry, grant or trust.
+**Edge action:** return fresh PREPARED install/revoke/runtime/window hashes
+with current CAS and retained original source identity; verify remaining
+native trust validity, obtain execution authority within the approved package,
+then return actual READY after the exact Core ACK. Do not reuse an expired
+slot or silently edit an accepted artifact. Core will consume the new packet
+immediately; actual source READY must arrive with >6minutes original reserve
+(before13:24UTC for this proposal). If infeasible, return another explicit
+finite offer rather than activating late. Codex remains sole specimen client.
+
+Existing backup6.022s and censusH16 at12:13 remain recorded observations,
+**not** a fresh13:00 admission; Core rechecks capacity/current obligations
+before any issuance. Mapper3cb7 remains uninstalled; installeda96/schema149
+and original custody are unchanged. Backup is retained for rollback/audit.
+No connected PASS, grant renewal or independent economic-control proof is
+claimed. Full08/read09 remains **NOT_MET**. Next coordination checkpoint
+12:45UTC, or immediately on an actual new Edge packet/READY.
+
+## 10. Runnable Core preparation and additive source/trust review —22Oct2026
+
+Core support commit **`ad4d97444537897f2265af3843db98f43b8e3939`** adds six
+new paths,984lines: shared economic proposal input, selected Edge command
+adapter and current Manager workload compiler/preflight, each with focused
+tests. Existing financial/runtime/DI/UI files and peer Markdown WIP were not
+edited or staged. CORE-03's separate preparation commit is
+**`6db3db8be5243f381c78024f79e201750763906e`** (two new files,386lines).
+Together: eight new code/test files,1370lines.
+All four components remain **SOURCE_ONLY / NOT_INSTALLED**. No new public
+OpenAPI/DTO, generation target, migration, browser endpoint or authority is
+introduced, so no frontend regeneration is required for this preparation.
+
+### CORE-03 — factory and exact still-unbound financial fields
+
+`prepareFinancialOperationSelectionFactory` in
+`apps/control-api/src/execution-v2/financial-operation-selection.ts`
+consumes the existing `ManagerDomainReadInput`, current DB read/stream
+decisions, `AccessTrustProvider` mapping/relations and qualified
+`ExecutionReadPublication`. It captures explicit operation, proposed source
+audience/workload, fields and exact correlated tuples, then reads the actual
+injected ports twice. Actor/session-generation/mapping/policy/field-seal,
+workspace/environment/profile/publication binding/window/generation must
+agree; late revocation/change/expiry, cross-tuples and undeclared fields
+refuse. Two snapshots are **not** a held transaction or TS COMMIT proof.
+
+**34/34 actual focused tests PASS**, one worker,12:35:21UTC,888ms.
+Source SHA256 `7227e4f7fe84e839514e01b66f61eca2cb4f6f0bf0532e9ddd7ed7030572133f`;
+test `6832e373cda4742ecacb484202652f4d80cefdcb90b97e9d0d215b62550bfb7d`.
+The exact matching result is `PREPARED_UNBOUND`, never AUTHORIZED/INSTALLED:
+
+| Operation / accepted existing input | Exact missing binding / owner action |
+| --- | --- |
+| READ: exact current Core decision + selected publication and fields | `PM_WORKLOAD_APP_FIELD_ACCEPTANCE`, `PM_OPERATION_AUDIENCE_ACCEPTANCE`, `PM_OPERATION_FIELD_ACCEPTANCE`; **Edge** correlates existing PM accepted-current-access/read-authority ports and returns the actual selection. No new generic account/schema/ACL is requested. |
+| HISTORY: same Core prerequisites, separately pinned historical population | Above plus `HISTORICAL_WINDOW_GENERATION` if absent, `PUBLICATION_POPULATION_COVERAGE` if partial. Current membership alone cannot supply history. |
+| EXPORT: existing Core READ input, not a PM report grant | Above plus `PORTAL_REPORT_EXPORT_DECISION`, `PM_REPORT_SCOPE_BUSINESS_REPORT`; **Core/Claude** must select current Portal export decision and **Edge/PM** actual REPORT scopes/business_report. |
+| STREAM: separately acquired Core STREAM decision, never READ inference | Above plus `CORE_STREAM_DECISION` if absent. A shorter STREAM expiry is allowed; a widened/unrelated decision refuses. |
+| Owning source request in every case | `PM_OWNING_REQUEST_CONNECTION_TRANSACTION`, `TS_OWNING_COMMIT_FENCE` stay unbound until exact accepted owner composition/physical receipts. **TS/PM through Edge**, not a Portal JSON flag. |
+
+`pma.identity.v1` is explicitly refused as a proposed financial audience;
+`pma.management.v1` is **not accepted by name** either. The latter remains
+the owning PM management-command audience, not a claimed financial-read
+audience. This corrected an assumption found during independent Core review.
+Existing provider interfaces have no accepted financial operation×field/
+owning-request port; the new result exposes that absence instead of minting
+a lookalike grant or widening current-human installation.
+
+### CORE-04 — one economic builder, both-consumer parity complete in TEST_ONLY
+
+`manager-economic-source-input.ts` exports
+`buildManagerEconomicSourceInput` and `prepareManagerEconomicSourceFactory`.
+The factory freezes one detached explicit selection; dataset and series use
+the **same function and existing reducer**, not parallel arithmetic.
+**14/14 actual focused tests PASS**,464ms: schema validation, identity/census/
+cost/ownership/valuation absence, immutable-content conflict, overlap, cuts,
+caller mutation and no invented namespace/accepted status.
+
+Source SHA256 `031700006fbc12a644aa4b193d435ca6fdba6ae34aa5cc393365c52f283da647`;
+test `dace76d5b0d8f8ade407d19ee307e47f5f6400de5f30ab89a88f03b42beee972`.
+**Core/Claude next:** connect actual dataset/series production callers only
+after exact accepted source mapping. **Edge/TS-PM input:** economic account/
+ownership partition/source-ID namespace, census, temporal valuation/cost/
+correction examples. No account/deployment ID is promoted into an economic
+identity; all successful test proposals remain proposal status.
+
+### CORE-05 — injected typed command adapter, not a fabricated mounted wire
+
+`edge-command-adapter.ts` exports `createEdgeCommandTrust`,
+`SelectedEdgeCommandGateway`, `EdgeCommandOriginal` and `EdgeCommandPreparedCall`.
+It validates original Portal authorization/intent, retained request/payload/
+source-intent digests, physical source key/target and freshly prepared action
+before one dispatch. STATUS resolves the same durable original after restart;
+service recovery must be separately commissioned, not expired human authority.
+Known outcomes require full owning-source Outcome custody; timeout/misbound
+or malformed reply remains UNKNOWN with no synthetic receipt or resend.
+
+**49/49 actual focused tests PASS**,649ms. Source SHA256
+`8ee388a31c86b0397876f2cecc84b225d6e25da86fb3e8d9606bf6b9acc0dc4a`;
+test `bd993d15fde19a1d62e6406ad1e285cf849813ca4f14d603862a2c086c05803f`.
+Independent review corrected two semantic errors before freezing: Portal
+payload hash/op names need not equal PM delivered payload/source key; and
+amount-free `ADJUST_TARGET_BUDGET`/`SET_ROOT_LIMIT` may validly return null
+amounts. Amount-bearing intents still require the exact amount partition.
+
+**Not yet a runtime HTTP adapter:** no Core→PM shortcut or unannounced Core→Edge
+command URL is created. The two existing POSTs are **Edge→PM** source wire.
+The local gateway interface is preparation, **not an accepted Edge wire**.
+**Core/Claude next:** bind its real selected Edge gateway after Edge returns
+the Core-facing authenticated target/assertion contract and qualified original
+custody/status selection. **Edge/TS-PM:** current authority, target retention
+and service-only recovery commissioning remain exact source inputs.
+
+### CORE-07 — current request/schema workload prepared; load remains NOT_RUN
+
+`scripts/measure/lib/current-manager-workload.mjs` compiles actual pinned
+OpenAPI bytes and validates explicit request parameters with the repository's
+existing AJV2020 toolchain. It keeps B1=8/B2=28 and all11 groups; explicit
+IDs/window/context/cadence/seed are required. SSE is inventoried and refused
+as a finite polling request. No dependency/lockfile or old driver file changed.
+
+**10/10 direct Node focused tests PASS**. Root additionally compiled **all12
+allowlisted contracts /48GET operations:47finite +1SSE refused**, inventory
+JSON hash `6d36df48f576f93d43c265bf30c8aa7a398eefe28e23650a0e50c578a406d14a`.
+This is a source-schema inventory, **not48 mounted/authorized endpoints**.
+Source SHA256 `6398b6b4894772c85ab5183ff464ccdc788a198988e0118da2bd636107a0a3d1`;
+test `de5f3b3e7775e9ff92c3d5d00c45b9c9c2f428995fa58ac0b81352850b42bef3`.
+Output and preflight remain NOT_EXECUTED/authority_verifiedfalse/
+execution_authorizedfalse/calibrationfalse, even with coherent test inputs.
+
+**Core next:** select this output in M5/M7 against real accepted target and
+ID mapping; do not silently reuse the old fixture workload. **Edge target
+coordinator:** actual target/window,14-group approved numeric bounds, source
+population, collectors/clock and calibration population remain required.
+Neither methodology approval nor2CPU/1.5GiB correctness is that capacity input.
+
+### CORE-02 additive issuer/trust input — lookup resolved, no signing claimed
+
+Consumed the new [Edge source/trust review](EDGE_TS_PM_53890231_AND_ALL_MODE_MANAGER_TRUST_REVIEW_2026-10-22.md),
+raw SHA256 `823aecfd3aa8f15a65f0870ff051916dda8a620eb133cada4aca40e52f578439`.
+It resolves the genuine SGP Client CA custodian; prior§4's issuer-unknown
+state is historical. Existing Research CSR41a94f89 and client SPKIc164a42f
+remain valid inputs, no keypair regeneration. Public CSR self-signature,
+Root→ClientCA and Edge-server sslserver/IP10.70.0.2 checks were independently
+verified PASS. Private keys were inspected by metadata only, not copied or used.
+
+**Core/SGP PKI custodian action through Edge mailbox:** controlled issuance
+of that existing CSR using `authority/sgp-client-ca.key` under the genuine
+Client CA78a6de84, exact reviewed leaf lifetime/serial/extensions and new
+exclusive Research output; return actual public leaf/chain and crypto pins.
+No root-key use or stable client credential reuse. The new packet authorizes
+the recorded inspection, **not automatic signing or listener reconciliation**;
+actual issuance/installed Manager trust is still NOT_RUN. Outbound
+`EXECUTION_EDGE_CA_FILE` validates the Edge **server** and must use the existing
+public server trust raw hash
+`8fff563d58edd385e8be0963050e0e3619227dcbc6cea2b8dfcba7e3acf302b7`,
+not the SGP client-issuer certificate/bundle. Preserve separate audience/
+profile/current grants for8443/8444/8445; Canary remains governed Live.
+
+Also consumed Edge's additive transport correction: descriptor83d251e8 is
+unchanged, but **current PM transport source** is
+`912fe9d80a952ef7ef825ee8e8e015834de6c16cd6c7573fa4bde3e14fadd2c9`
+with `pma11-14-16-edge-lifecycle-evidence.json`, not historical3885c72d.
+No PM code/schema/authority change is inferred from merge53890231 or its
+formatting successorcd6d8743; final source/image qualification remains TS/PM's.
+
+### CORE-06 — exact full-P22 image/config proposal; bounded build FAIL retained
+
+The correct full source is **`3265ce18745560cfad391e81054b7aa46eac9097`**,
+tree `d5079012f0ee3257ad7029ebe544387ea02ca3c5`. Normal-qualifiedde8f6382/
+tree4309b790 is its ancestor. Exact image-input diff is only the already
+reviewed STREAM denial line in `read-scope.ts`; full P22 observer/factory,
+packages, migrations and Dockerfile are unchanged. This is **not** the
+mapper-only3cb7 image, and it excludes current peer WIP/new support modules.
+
+Reproducible context: `git archive` that full source's795 tracked image inputs
+under `apps/control-api/{src,migrations,package.json,package-lock.json,
+tsconfig.json,tsconfig.build.json}`, `deploy/images/control-api.Dockerfile`
+and `deploy/control-api/bootstrap-users.yaml`. Git-listing hash
+`1f83a68509093ed7b4b3f37fce8b6acfac647454aece6cdd015e3f9b55417db0`;
+Dockerfile raw hash
+`37d1542e54ded1d1ea9ea528fa7c780f2b4d734445937cb2d9566f24a661f67b`.
+Base Node digestc610fcdf is pinned. No dirty canonical snapshot enters it.
+
+**Actually attempted, not proposed-as-PASS:** candidate-only Docker build
+under nonblocking heavy lock,2CPU/1536MiB/no swap/300s timeout. Original
+Dockerfile failed EXIT134 during TypeScript compilation: V8 automatic heap
+~760MiB exhausted. One diagnosis-scoped retake changed only the temporary
+build RUN to `NODE_OPTIONS=--max-old-space-size=1024 npm run build && npm prune --omit=dev`;
+temporary Dockerfile hash
+`431aa3495a58473efa14c487405d017c5b9fd7c318a6871c54572d3ae0517bb4`.
+Image permissions gate PASS; same2CPU/1536MiB/300s ceiling. Retake also failed
+EXIT134 at ~1014MiB heap. **No full-P22 image digest exists** for tag
+`portal-core009-active-revoke:3265-full-p22`; no third retry or quota increase.
+Existing normal-source tests are not relabelled as an image-build PASS.
+
+**Core-owned next action:** obtain/qualify a build-only memory budget above
+the observed compiler demand, or an independently reviewed equivalent bounded
+build method, then build and inspect the actual full image. Do not widen the
+runtime/correctness budget or production limits to hide this build failure.
+Host production `tsc --noEmit` for the current new support source independently
+completed EXIT0; it is a different process/resource scope, not this image.
+
+Private configuration proposal uses existing `portal.native-core-runtime.v1`:
+observer omitted stays **OFF**. Later explicit opt-in is only
+`cache_observation:{schema_version:"portal.native-cache-observation-config.v1",directory:<absolute-private-mount>}`.
+Run existing `dist/cli/core009-validate.js` against actual runtime/owner byte
+hashes, workspace, trust expiry, current READ+STREAM grant windows and stat refs;
+separately verify observation directory UID1000/0700/safe ancestors and its one
+writable mount. Startup must use the genuine same pool/trust/mutation factory.
+No public flag, field grant, new source or independent domain is inferred.
+Exact serving config cannot be truthfully minted from an expired READY/draft.
+
+Installed imagea96/schema149/PID2587313/restart0 was directly reverified after
+both failures; unchanged/running. Original rollback/image/config/custody and
+backup remain. Both exact failed build containers are absent; the owned15MiB
+temporary context was removed (reproducible from Git plus the recorded one-line
+build adjustment). No service/volume/authority data removed, no broad prune.
+
+## 11. Verification, remaining owners and consumer handoff
+
+Current complete row disposition (supersedes the historical initial table):
+
+| ID | Current result | Exact next action / owner |
+| --- | --- | --- |
+| CORE-01 | ACK + backup/capacity observed; slot expired without actual READY; NOT_MET | **Edge:** new PREPARED/actual READY within a matched finite window; **Core:** fresh capacity/config then official independent grants and missing-only active revoke. §9 offer13:00–13:30UTC is conditional only. |
+| CORE-02 | Issuer located/public trust verified; no issued Research leaf or Manager install | **Core/SGP PKI custodian via Edge:** controlled existing-CSR issuance/public leaf+chain; **Core/Edge:** exact inactive config/window and separate reconcile. No unknown-issuer/new-key request. |
+| CORE-03 | Local field/operation/current-input factory +34tests complete; PREPARED_UNBOUND | **Edge/TS-PM:** accepted operation×field/audience/workload and owning-request fences; **Core/Claude:** bind those existing real interfaces, not native READ as financial permission. |
+| CORE-04 | Shared input builder +14tests complete; proposal/DARK | **Edge/TS-PM:** actual source semantic examples; **Core/Claude:** production dataset/series wiring and real-source parity after acceptance. |
+| CORE-05 | Injected local command adapter +49tests complete; no accepted mounted gateway | **Edge:** Core-facing authenticated gateway/original-custody pins, qualified source submit/status; **Core/Claude:** real gateway binding and independent recovery qualification. |
+| CORE-06 | Exact full-P22 source/config proposal; two bounded builds FAIL134, no full image | **Core:** separately qualified build resource/method then actual full image/config; **Edge:** independent authorized economic control/source pins. Mapper3cb7 is not full P22. |
+| CORE-07 | Current schema/request workload +10tests and12contract inventory complete; no load | **Edge/target owners:** real IDs/14-group numeric bounds/quiet target/calibration; **Core:** select generated current workload and perform approved M5/M7. |
+
+This round's **107 unique focused tests PASS**: CORE-03 34, CORE-04 14,
+CORE-05 49 and CORE-07 10. Repeated intermediate test runs are not summed.
+Current production TypeScript `--noEmit -p tsconfig.build.json` EXIT0;
+release integrity check PASS, existing N29/EDS12 bytes unchanged/runtime NONE.
+No SQL/repository/migration changed; another PG/restore/full50minute hook
+would not qualify these new pure components or fix the measured build ceiling.
+Use the focused intermediate-commit lane under campaign§10.10c; frozen
+integration/landing still requires its proper gate, not a waiver in this return.
+
+**For Claude now:** review/import the four source-only builders/adapters in
+its backend lane; no browser DTO change or component rewrite is requested.
+Wire existing dataset/series to the shared reducer only after accepted source
+semantics; keep financial operation preparation UNBOUND until actual PM ports
+exist. Command gateway must be the accepted Edge route and retained original,
+not PM's two internal POSTs or native28446. Workload output can replace stale
+fixture request sets only after real target/ID/budget selection; no UI polling
+cadence or numerical production default is introduced. Consumer/fixture work
+can proceed without claiming installed financial/command authority.
+
+**For Edge now:** ACK§§9–11 independently, propose fresh missing-only native
+window/pins and return actual READY only within matched execution authority;
+coordinate identified SGP issuer action (not an unknown owner), accepted
+financial operation×field/owning-request mapping, Core-facing command gateway
+and service recovery, genuine independent economic domain, and numeric target/
+calibration inputs. Core's full-image build is explicitly **Core-owned FAIL**,
+not shifted to Edge. No other independent source return must wait for it.
+
+Cleanup: no new READ/STREAM/session/command, listener, private-key transfer,
+runtime/config/schema install or peer WIP mutation. Backup retained; temporary
+build context and failed containers removed; shared caches/rollback untouched.
+Full08/read09/ELP2-10 remain **NOT_MET**, ELP2-11 not entered, no push/dev/main/
+stable/provider28445/Live action. Public mirror is sanitized Markdown only;
+actual delivery time/raw hash are recorded in Unified/sync after readback.
