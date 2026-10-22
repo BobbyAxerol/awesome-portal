@@ -157,40 +157,25 @@ describe("EventKindChips", () => {
   });
 });
 
-describe("EventRibbon unpublished lanes", () => {
-  const NP = "Not published (FE-031, FE-032)";
-  const unpublished = { stage: NP, decision: NP, incident: NP, recall: NP } as const;
-
-  it("keeps the lane, prints the sentence on it instead of an axis, and draws nothing there", () => {
-    render(<EventRibbon label="Events" events={EVENTS} domain={domain} unpublished={unpublished} />);
-    for (const kind of ["stage", "decision", "incident", "recall"]) {
-      const lane = document.querySelector(`.exec-ribbon-lane[data-kind='${kind}']`)!;
-      expect(lane.getAttribute("data-unpublished")).toBe("true");
-      expect(lane.textContent).toContain(NP);
-      expect(lane.querySelector(".exec-ribbon-lane-axis")).toBeNull();
-    }
-    const flow = document.querySelector(".exec-ribbon-lane[data-kind='flow']")!;
-    expect(flow.getAttribute("data-unpublished")).toBeNull();
-    expect(flow.querySelector(".exec-ribbon-lane-axis")).not.toBeNull();
-    // Only the flow event is drawn; events handed in for an unpublished lane are neither drawn nor counted as outside.
+describe("EventRibbon kinds (only the lanes a screen has a source for)", () => {
+  it("draws just the lanes asked for, and an event of another kind is neither drawn nor counted as outside", () => {
+    render(<EventRibbon label="Events" events={EVENTS} domain={domain} kinds={["flow"]} />);
+    expect([...document.querySelectorAll(".exec-ribbon-lane")].map((l) => (l as HTMLElement).dataset.kind)).toEqual(["flow"]);
     expect(screen.getAllByTestId("ribbon-event")).toHaveLength(1);
     expect(screen.queryByTestId("ribbon-outside")).toBeNull();
+    expect(document.querySelector(".exec-ribbon-lanes")!.getAttribute("style")).toContain("height: 26px");
   });
 
-  it("is not the empty state when every lane is unpublished and there are no events", () => {
-    render(<EventRibbon label="Events" events={[]} domain={domain} unpublished={unpublished} />);
-    expect(screen.queryByTestId("ribbon-empty")).toBeNull();
-    expect(screen.getAllByTestId("ribbon-lane-np")).toHaveLength(4);
+  it("is the empty state when none of its kinds has an event", () => {
+    render(<EventRibbon label="Events" events={EVENTS.filter((e) => e.kind !== "flow")} domain={domain} kinds={["flow"]} />);
+    expect(screen.getByTestId("ribbon-empty")).toBeTruthy();
   });
 
-  it("chips of an unpublished kind are off and print the sentence, never a count of 0", () => {
-    render(<EventKindChips events={EVENTS} enabled={{}} onToggle={() => {}} unpublished={unpublished} />);
-    const stage = screen.getByRole("button", { name: /Stage/ }) as HTMLButtonElement;
-    expect(stage.disabled).toBe(true);
-    expect(stage.textContent).toContain(NP);
-    expect(stage.textContent).not.toMatch(/\b0\b/);
-    const flow = screen.getByRole("button", { name: /Flow/ }) as HTMLButtonElement;
-    expect(flow.disabled).toBe(false);
-    expect(flow.textContent).toContain("1");
+  it("chips offer just those kinds", () => {
+    render(<EventKindChips events={EVENTS} enabled={{}} onToggle={() => {}} kinds={["flow"]} />);
+    const buttons = screen.getAllByRole("button");
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]!.textContent).toContain("Flow");
+    expect(buttons[0]!.textContent).toContain("1");
   });
 });

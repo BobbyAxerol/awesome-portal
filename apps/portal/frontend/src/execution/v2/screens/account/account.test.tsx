@@ -10,6 +10,7 @@ import { resolve } from "node:path";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { SLOW, SLOW_TEST } from "../../waitsTestUtil";
 
 import { answerAccount } from "../../../../../e2e/bffDoubleAccount";
 import { createHttpApi } from "../../../api/httpApi";
@@ -97,7 +98,7 @@ afterEach(() => {
 const bindingsTable = () => screen.getByRole("table", { name: "Bindings" });
 const bodyRows = (table: HTMLElement) => within(table).getAllByRole("row").slice(1);
 const cell = (row: HTMLElement, label: string) => row.querySelector(`td[data-l='${label}']`)?.textContent ?? "";
-const loadedList = async () => screen.findByRole("table", { name: "Bindings" });
+const loadedList = async () => screen.findByRole("table", { name: "Bindings" }, SLOW);
 
 /* ═══ Accounts list ═══════════════════════════════════════════════════════ */
 
@@ -147,12 +148,12 @@ describe("Accounts list", () => {
     mount("/deployments/accounts");
     await loadedList();
     expect(stub.paths("/api/v1/execution/broker-bindings")[0]).toContain("environment=live");
-    const all = screen.getByRole("tab", { name: "All environments" });
-    expect(all.getAttribute("aria-disabled")).toBe("true");
-    expect(all.getAttribute("title")).toContain("Not published (ELP2-REQ-FE-014)");
+    // The three environments are the whole strip: no disabled "All environments" tab (a dead control).
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent?.replace(/\d+$/, ""))).toEqual(["Real-funded", "Paper", "Sandbox"]);
+    expect(screen.queryByRole("tab", { name: "All environments" })).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: /^Paper/ }));
-    await waitFor(() => expect(search().get("env")).toBe("paper"));
-    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(1));
+    await waitFor(() => expect(search().get("env")).toBe("paper"), SLOW);
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(1), SLOW);
     expect(cell(bodyRows(bindingsTable())[0]!, "Binding · Venue")).toContain("pap_sim@BINANCE");
     expect(stub.paths("/api/v1/execution/broker-bindings").some((c) => c.includes("environment=paper"))).toBe(true);
     expect(screen.getByRole("tab", { name: /^Paper/ }).getAttribute("aria-selected")).toBe("true");
@@ -174,7 +175,7 @@ describe("Accounts list", () => {
     expect(bodyRows(table)).toHaveLength(2);
     const more = screen.getByRole("button", { name: "Load more" });
     fireEvent.click(more);
-    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(3));
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(3), SLOW);
     expect(bodyRows(bindingsTable()).map((r) => r.querySelector("td[data-l='Binding · Venue'] .exec-acct-name")?.textContent)).toEqual(["bnc_main@BINANCE", "bnc_sub@BINANCE", "okx_main@OKX"]);
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
@@ -205,7 +206,7 @@ describe("Accounts list", () => {
     mount("/deployments/accounts");
     await loadedList();
     fireEvent.click(screen.getByRole("button", { name: /^Issues only/ }));
-    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(2));
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(2), SLOW);
     expect(search().get("issues")).toBe("1");
     expect(screen.getByText(/2 with issues in the 3 loaded rows, 3 on the server/)).toBeTruthy();
     const credentials = bodyRows(bindingsTable()).map((r) => cell(r, "Credential"));
@@ -219,28 +220,29 @@ describe("Accounts list", () => {
     mount("/deployments/accounts");
     await loadedList();
     fireEvent.change(screen.getByLabelText("Credential"), { target: { value: "attention" } });
-    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(2));
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(2), SLOW);
     fireEvent.change(screen.getByLabelText("Credential"), { target: { value: "ok" } });
-    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(1));
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(1), SLOW);
     expect(search().get("credential")).toBe("ok");
   });
 
+  // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
   it("search and venue go to the server; a miss is empty, with a way back", async () => {
     const stub = stubFetch();
     mount("/deployments/accounts");
     await loadedList();
     fireEvent.change(screen.getByLabelText("Venue"), { target: { value: "OKX" } });
-    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(1));
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(1), SLOW);
     expect(stub.paths("/api/v1/execution/broker-bindings").some((c) => c.includes("venue=OKX"))).toBe(true);
     fireEvent.change(screen.getByLabelText("Search binding or account"), { target: { value: "zzz" } });
-    await waitFor(() => expect(search().get("q")).toBe("zzz"), { timeout: 2000 });
-    await screen.findByText("No bindings match these filters.");
+    await waitFor(() => expect(search().get("q")).toBe("zzz"), SLOW);
+    await screen.findByText("No bindings match these filters.", {}, SLOW);
     expect(screen.getAllByRole("button", { name: "Clear filters" }).length).toBeGreaterThan(0);
     fireEvent.click(screen.getAllByRole("button", { name: "Clear all" })[0]!);
-    await waitFor(() => expect(search().get("q")).toBeNull());
-    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(3));
+    await waitFor(() => expect(search().get("q")).toBeNull(), SLOW);
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(3), SLOW);
     expect(search().get("venue")).toBeNull();
-  });
+  }, SLOW_TEST);
 
   it("an empty source is an empty set, said as a fact", async () => {
     stubFetch({
@@ -358,7 +360,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     await screen.findByRole("complementary");
     expect(search().get("sel")).toBe("bnc_sub@BINANCE");
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
-    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull(), SLOW);
     expect(search().get("sel")).toBeNull();
   });
 
@@ -397,7 +399,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     mount("/deployments/accounts?sel=bnc_main%40BINANCE", { capabilities: new Set([...MANAGER, "execution.accounts.manage", "governance.r2.decide"]) });
     const drawer = await screen.findByRole("complementary");
     await within(drawer).findByRole("link", { name: "Open account" });
-    await waitFor(() => expect(drawer.textContent).toContain("Not offered in the portal yet"));
+    await waitFor(() => expect(drawer.textContent).toContain("Not offered in the portal yet"), SLOW);
     const rotate = within(drawer).getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement;
     expect(rotate.disabled).toBe(true);
     expect(document.getElementById(rotate.getAttribute("aria-describedby")!)?.textContent).toContain("Not offered in the portal yet");
@@ -426,7 +428,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     const stub = stubFetch({ answer: contextAnswer() });
     mount("/deployments/accounts?sel=bnc_main%40BINANCE");
     const drawer = await screen.findByRole("complementary");
-    await waitFor(() => expect(drawer.textContent).toContain("Not offered in the portal yet"));
+    await waitFor(() => expect(drawer.textContent).toContain("Not offered in the portal yet"), SLOW);
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(stub.paths(CONTEXT_PATH)).toEqual([CONTEXT_PATH]);
   });
@@ -440,7 +442,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     await screen.findByRole("complementary");
     expect(search().get("sel")).toBe("bnc_sub@BINANCE");
     fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull(), SLOW);
   });
 });
 
@@ -498,7 +500,7 @@ describe("roles through holds()", () => {
 /* ═══ Account 360 ═════════════════════════════════════════════════════════ */
 
 const account = (id: string, query = "") => mount(`/deployments/accounts/${id}${query}`, { accountId: id });
-const loaded360 = async (title: string | RegExp = "Binance-02 sleeve") => screen.findByRole("heading", { level: 1, name: title });
+const loaded360 = async (title: string | RegExp = "Binance-02 sleeve") => screen.findByRole("heading", { level: 1, name: title }, SLOW);
 
 describe("Account 360: the shared sleeve", () => {
   it("names the sleeve, the portfolio and the domain", async () => {
@@ -568,7 +570,7 @@ describe("Account 360: the shared sleeve", () => {
     expect(screen.getByRole("button", { name: "Expand Account equity" })).toBeTruthy();
     expect(stub.paths("/api/v1/execution/views/equity-chart")[0]).toContain("subject_id=acc_bnc_core");
     fireEvent.change(screen.getByLabelText("Currency"), { target: { value: "USDC" } });
-    await waitFor(() => expect(search().get("ccy")).toBe("USDC"));
+    await waitFor(() => expect(search().get("ccy")).toBe("USDC"), SLOW);
     await screen.findByText(/No series is published for this currency/);
   });
 
@@ -589,12 +591,12 @@ describe("Account 360: the shared sleeve", () => {
     await loaded360();
     expect(screen.getByRole("heading", { level: 3, name: "Logical sleeve" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Physical binding" }));
-    await waitFor(() => expect(search().get("view")).toBe("physical"));
+    await waitFor(() => expect(search().get("view")).toBe("physical"), SLOW);
     await screen.findByRole("heading", { level: 1, name: "Binance account" });
     expect(screen.getByText("3 sleeves · 1 physical binding")).toBeTruthy();
     expect(screen.queryByRole("heading", { level: 3, name: "Logical sleeve" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Sleeve" }));
-    await waitFor(() => expect(search().get("view")).toBeNull());
+    await waitFor(() => expect(search().get("view")).toBeNull(), SLOW);
   });
 });
 
@@ -671,7 +673,7 @@ describe("Account 360: the physical binding view", () => {
     stubFetch();
     account("acc_pap_sim");
     await loaded360("Paper simulator");
-    await waitFor(() => expect(screen.getByText("Paper")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Paper")).toBeTruthy(), SLOW);
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
@@ -771,7 +773,7 @@ describe("Account 360: tabs", () => {
     const first = screen.getByRole("tab", { name: "Overview" });
     first.focus();
     fireEvent.keyDown(screen.getByRole("tablist", { name: "Account sections" }), { key: "ArrowRight" });
-    await waitFor(() => expect(search().get("tab")).toBe("pos"));
+    await waitFor(() => expect(search().get("tab")).toBe("pos"), SLOW);
     expect(screen.getByRole("tab", { name: "Positions" }).getAttribute("aria-selected")).toBe("true");
   });
 
@@ -780,13 +782,13 @@ describe("Account 360: tabs", () => {
     account("acc_bnc_core", "?tab=risk");
     await loaded360();
     await screen.findByText('Tab "risk" is not available. Showing Overview.');
-    await waitFor(() => expect(search().get("tab")).toBeNull());
+    await waitFor(() => expect(search().get("tab")).toBeNull(), SLOW);
     // after the rewrite, and after further renders, the notice is still there
     await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
     expect(screen.getByText('Tab "risk" is not available. Showing Overview.')).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Overview" }).getAttribute("aria-selected")).toBe("true");
     fireEvent.click(screen.getByRole("button", { name: "Physical binding" }));
-    await waitFor(() => expect(search().get("view")).toBe("physical"));
+    await waitFor(() => expect(search().get("view")).toBe("physical"), SLOW);
     expect(screen.getByText('Tab "risk" is not available. Showing Overview.')).toBeTruthy();
   });
 
@@ -795,9 +797,9 @@ describe("Account 360: tabs", () => {
     account("acc_bnc_core", "?tab=risk");
     await loaded360();
     await screen.findByText('Tab "risk" is not available. Showing Overview.');
-    await waitFor(() => expect(search().has("tab")).toBe(false));
+    await waitFor(() => expect(search().has("tab")).toBe(false), SLOW);
     fireEvent.click(screen.getByRole("tab", { name: "Positions" }));
-    await waitFor(() => expect(search().get("tab")).toBe("pos"));
+    await waitFor(() => expect(search().get("tab")).toBe("pos"), SLOW);
     expect(screen.queryByText('Tab "risk" is not available. Showing Overview.')).toBeNull();
   });
 
@@ -911,8 +913,8 @@ describe("Account 360: tabs", () => {
     expect(panel.textContent).toContain("Retained current window, not an audit trail");
     expect(stub.paths("/api/v1/execution/resources/accounts/acc_bnc_core/orders")[0]).toContain("environment=live");
     fireEvent.click(within(panel).getByRole("button", { name: "Fills" }));
-    await waitFor(() => expect(within(panel).getByRole("table", { name: "Events for acc_bnc_core" })).toBeTruthy());
-    await waitFor(() => expect(bodyRows(within(panel).getByRole("table", { name: "Events for acc_bnc_core" }))).toHaveLength(1));
+    await waitFor(() => expect(within(panel).getByRole("table", { name: "Events for acc_bnc_core" })).toBeTruthy(), SLOW);
+    await waitFor(() => expect(bodyRows(within(panel).getByRole("table", { name: "Events for acc_bnc_core" }))).toHaveLength(1), SLOW);
     expect(stub.paths("/api/v1/execution/resources/accounts/acc_bnc_core/fills")).toHaveLength(1);
   });
 
@@ -924,7 +926,7 @@ describe("Account 360: tabs", () => {
     const table = await within(panel).findByRole("table", { name: "Events for acc_bnc_core" });
     expect(bodyRows(table)).toHaveLength(2);
     fireEvent.click(within(panel).getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(bodyRows(within(panel).getByRole("table", { name: "Events for acc_bnc_core" }))).toHaveLength(3));
+    await waitFor(() => expect(bodyRows(within(panel).getByRole("table", { name: "Events for acc_bnc_core" }))).toHaveLength(3), SLOW);
     expect(within(panel).queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
@@ -1023,7 +1025,7 @@ describe("Accounts list: the Issues only count", () => {
     expect(button.getAttribute("aria-label")).toBe("Issues only, 1+ in the 2 loaded rows");
     expect(button.getAttribute("title")).toContain("The server does not filter on this");
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(3));
+    await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(3), SLOW);
     expect(issuesButton().querySelector(".exec-acct-tab-count")?.textContent).toBe("2");
     expect(issuesButton().getAttribute("aria-label")).toBe("Issues only, 2 in the 3 loaded rows");
   });
@@ -1081,26 +1083,26 @@ describe("Accounts list: the environment tablist is keyboard-operable", () => {
     await loadedList();
     const list = screen.getByRole("tablist", { name: "Environment" });
     const tabs = within(list).getAllByRole("tab");
-    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["0", "-1", "-1", "-1"]);
+    expect(tabs.map((t) => t.getAttribute("tabindex"))).toEqual(["0", "-1", "-1"]);
     expect(tabs[0]!.getAttribute("aria-selected")).toBe("true");
   });
 
-  it("ArrowRight selects and focuses the next environment, ArrowLeft wraps; the disabled tab is skipped", async () => {
+  it("ArrowRight selects and focuses the next environment, ArrowLeft wraps", async () => {
     stubFetch();
     mount("/deployments/accounts");
     await loadedList();
     const list = screen.getByRole("tablist", { name: "Environment" });
     fireEvent.keyDown(list, { key: "ArrowRight" });
-    await waitFor(() => expect(search().get("env")).toBe("paper"));
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("tab", { name: /^Paper/ })));
+    await waitFor(() => expect(search().get("env")).toBe("paper"), SLOW);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("tab", { name: /^Paper/ })), SLOW);
     expect(screen.getByRole("tab", { name: /^Paper/ }).getAttribute("tabindex")).toBe("0");
     fireEvent.keyDown(list, { key: "ArrowRight" });
-    await waitFor(() => expect(search().get("env")).toBe("sandbox"));
+    await waitFor(() => expect(search().get("env")).toBe("sandbox"), SLOW);
     fireEvent.keyDown(list, { key: "ArrowRight" });
-    await waitFor(() => expect(search().get("env")).toBeNull());
-    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("tab", { name: /^Real-funded/ })));
+    await waitFor(() => expect(search().get("env")).toBeNull(), SLOW);
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("tab", { name: /^Real-funded/ })), SLOW);
     fireEvent.keyDown(list, { key: "ArrowLeft" });
-    await waitFor(() => expect(search().get("env")).toBe("sandbox"));
+    await waitFor(() => expect(search().get("env")).toBe("sandbox"), SLOW);
   });
 });
 

@@ -13,6 +13,13 @@
  *
  * - the body must be an object whose `accounts` is an array; anything else is
  *   `ROSTER_MALFORMED` (unavailable), never an empty roster;
+ * - the roster is read one keyset page at a time (`readRosterPage`, BE-P23): the body also
+ *   carries `page` (`limit` 1..200, `returned_count` equal to the rows and within the limit,
+ *   `has_more` exactly when `next_cursor` is a bounded string, and at least one row when
+ *   there is more) and `counts` (non-negative integers whose states and roles each add up
+ *   to `total`, `matching` within `total` and holding the rows). A body without them is
+ *   `ROSTER_MALFORMED`: the old unpaged answer is not read as a page. A user id repeated on
+ *   a later page is refused by the screen with the same code;
  * - ONE malformed row refuses the WHOLE body. A partial roster that looks real
  *   (counts, filters and the "N in the roster read" line would all be wrong) is
  *   worse than none. The refusal names the row's position and the field, never
@@ -102,37 +109,143 @@ function text(raw: Obj, key: string, fail: (field: string) => never, options: { 
   return value;
 }
 
+/** One account row, strict. `at` names the position in a refusal (never the value). */
+function readAccountRow(row: unknown, at: string, code: "ROSTER_MALFORMED" | "HISTORY_MALFORMED", seen: Set<string> | null): AccountSummary {
+  const fail = (field: string): never => {
+    throw new RosterMalformed(code, `${at}, ${field}`);
+  };
+  if (!isObj(row)) return fail("row");
+  const userId = text(row, "user_id", fail, { required: true });
+  if (seen !== null) {
+    if (seen.has(userId)) return fail("user_id (repeated)");
+    seen.add(userId);
+  }
+  const username = text(row, "username", fail, { required: true });
+  const displayName = text(row, "display_name", fail, { required: false, display: true });
+  if (typeof row.role !== "string" || !ROLES.includes(row.role)) return fail("role");
+  if (typeof row.account_state !== "string" || !STATES.includes(row.account_state)) return fail("account_state");
+  if (typeof row.must_change_password !== "boolean") return fail("must_change_password");
+  if (typeof row.locked !== "boolean") return fail("locked");
+  const revision = row.account_revision;
+  if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0) return fail("account_revision");
+  return {
+    userId,
+    username,
+    displayName,
+    role: row.role as AccountRole,
+    accountState: row.account_state as AccountState,
+    mustChangePassword: row.must_change_password,
+    accountRevision: revision,
+    locked: row.locked,
+  };
+}
+
+/** The rows of a body, strict. The page reader reads its rows only through this. */
 export function readRoster(body: unknown): AccountSummary[] {
   if (!isObj(body) || !Array.isArray(body.accounts)) throw new RosterMalformed("ROSTER_MALFORMED", "the body");
   const seen = new Set<string>();
-  return body.accounts.map((row: unknown, index): AccountSummary => {
-    const at = `row ${index + 1}`;
-    const fail = (field: string): never => {
-      throw new RosterMalformed("ROSTER_MALFORMED", `${at}, ${field}`);
-    };
-    if (!isObj(row)) return fail("row");
-    const userId = text(row, "user_id", fail, { required: true });
-    if (seen.has(userId)) return fail("user_id (repeated)");
-    seen.add(userId);
-    const username = text(row, "username", fail, { required: true });
-    const displayName = text(row, "display_name", fail, { required: false, display: true });
-    if (typeof row.role !== "string" || !ROLES.includes(row.role)) return fail("role");
-    if (typeof row.account_state !== "string" || !STATES.includes(row.account_state)) return fail("account_state");
-    if (typeof row.must_change_password !== "boolean") return fail("must_change_password");
-    if (typeof row.locked !== "boolean") return fail("locked");
-    const revision = row.account_revision;
-    if (typeof revision !== "number" || !Number.isSafeInteger(revision) || revision < 0) return fail("account_revision");
-    return {
-      userId,
-      username,
-      displayName,
-      role: row.role as AccountRole,
-      accountState: row.account_state as AccountState,
-      mustChangePassword: row.must_change_password,
-      accountRevision: revision,
-      locked: row.locked,
-    };
-  });
+  return body.accounts.map((row: unknown, index): AccountSummary => readAccountRow(row, `row ${index + 1}`, "ROSTER_MALFORMED", seen));
+}
+
+/** The most rows one page may hold, as the contract publishes it. */
+export const ROSTER_PAGE_MAX = 200;
+const CURSOR_MAX = 4096;
+
+export interface RosterPageInfo {
+  limit: number;
+  returnedCount: number;
+  hasMore: boolean;
+  /** Opaque. Sent back unchanged, never shown, never parsed. */
+  nextCursor: string | null;
+}
+
+export interface RosterCounts {
+  total: number;
+  /** Accounts the filters select. */
+  matching: number;
+  byState: Readonly<Record<AccountState, number>>;
+  byRole: Readonly<Record<AccountRole, number>>;
+  locked: number;
+  awaitingFirstPassword: number;
+}
+
+export interface RosterPage {
+  accounts: AccountSummary[];
+  page: RosterPageInfo;
+  counts: RosterCounts;
+}
+
+function count(raw: Obj, key: string, at: string): number {
+  const value = raw[key];
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) throw new RosterMalformed("ROSTER_MALFORMED", `${at}, ${key}`);
+  return value;
+}
+
+function section(body: Obj, key: string, at = "the body"): Obj {
+  const value = body[key];
+  if (!isObj(value)) throw new RosterMalformed("ROSTER_MALFORMED", `${at}, ${key}`);
+  return value;
+}
+
+/**
+ * One keyset page of the roster (BE-P23), refused whole when anything in it is untrue.
+ *
+ * Beyond every row rule above, the page must be coherent: `returned_count` is the rows, within `limit` (1..200);
+ * `has_more` is exactly "there is a cursor" and needs at least one row; the cursor is a bounded string without control
+ * characters; every count is a non-negative safe integer, the states and the roles each add up to `total`, and
+ * `matching` is within `total` and holds the rows. A body without `page` or `counts` (the old unpaged answer) is
+ * refused here, not read as one page: on this screen it would show a roster as complete that was never paged.
+ */
+export function readRosterPage(body: unknown): RosterPage {
+  if (!isObj(body)) throw new RosterMalformed("ROSTER_MALFORMED", "the body");
+  const accounts = readRoster(body);
+  const raw = section(body, "page");
+  const limit = count(raw, "limit", "page");
+  if (limit < 1 || limit > ROSTER_PAGE_MAX) throw new RosterMalformed("ROSTER_MALFORMED", "page, limit");
+  const returned = count(raw, "returned_count", "page");
+  if (returned !== accounts.length || returned > limit) throw new RosterMalformed("ROSTER_MALFORMED", "page, returned_count");
+  const hasMore = raw.has_more;
+  if (typeof hasMore !== "boolean") throw new RosterMalformed("ROSTER_MALFORMED", "page, has_more");
+  const cursor = raw.next_cursor;
+  if (cursor !== null && (typeof cursor !== "string" || cursor === "" || cursor.length > CURSOR_MAX || UNSAFE.test(cursor))) {
+    throw new RosterMalformed("ROSTER_MALFORMED", "page, next_cursor");
+  }
+  if (hasMore !== (cursor !== null) || (hasMore && returned === 0)) throw new RosterMalformed("ROSTER_MALFORMED", "page, has_more");
+
+  const c = section(body, "counts");
+  const states = section(c, "by_state", "counts");
+  const roles = section(c, "by_role", "counts");
+  const total = count(c, "total", "counts");
+  const matching = count(c, "matching", "counts");
+  const byState: Record<AccountState, number> = {
+    INVITED: count(states, "INVITED", "counts, by_state"),
+    ACTIVE: count(states, "ACTIVE", "counts, by_state"),
+    DISABLED: count(states, "DISABLED", "counts, by_state"),
+    ARCHIVED: count(states, "ARCHIVED", "counts, by_state"),
+  };
+  const byRole: Record<AccountRole, number> = { ADMIN: count(roles, "ADMIN", "counts, by_role"), USER: count(roles, "USER", "counts, by_role") };
+  const locked = count(c, "locked", "counts");
+  const awaiting = count(c, "awaiting_first_password", "counts");
+  if (byState.INVITED + byState.ACTIVE + byState.DISABLED + byState.ARCHIVED !== total) throw new RosterMalformed("ROSTER_MALFORMED", "counts, by_state");
+  if (byRole.ADMIN + byRole.USER !== total) throw new RosterMalformed("ROSTER_MALFORMED", "counts, by_role");
+  if (matching > total || accounts.length > matching) throw new RosterMalformed("ROSTER_MALFORMED", "counts, matching");
+  if (locked > total) throw new RosterMalformed("ROSTER_MALFORMED", "counts, locked");
+  if (awaiting > total) throw new RosterMalformed("ROSTER_MALFORMED", "counts, awaiting_first_password");
+  return {
+    accounts,
+    page: { limit, returnedCount: returned, hasMore, nextCursor: cursor },
+    counts: { total, matching, byState, byRole, locked, awaitingFirstPassword: awaiting },
+  };
+}
+
+/**
+ * The account a detail body names, read with the same row rules. It is shown only for a selection no loaded page
+ * holds (a link to an account further down the roster). An absent or null `account` is `null`; a malformed one
+ * refuses the detail as `HISTORY_MALFORMED`.
+ */
+export function readDetailAccount(body: unknown): AccountSummary | null {
+  if (!isObj(body) || body.account === undefined || body.account === null) return null;
+  return readAccountRow(body.account, "account", "HISTORY_MALFORMED", null);
 }
 
 export function readHistory(body: unknown): HistoryEntry[] {
@@ -194,11 +307,31 @@ async function getJson(path: string, code: "ROSTER_MALFORMED" | "HISTORY_MALFORM
   }
 }
 
-export async function readRosterFromServer(): Promise<AccountSummary[]> {
-  return readRoster(await getJson(BASE, "ROSTER_MALFORMED"));
+export interface RosterQuery {
+  limit: number;
+  cursor?: string | null;
+  q?: string;
+  role?: AccountRole | null;
+  state?: AccountState | null;
 }
 
-/** The drawer reads the history only: the account's facts come from the roster, so a detail body's `account` is never shown. */
-export async function readDetailFromServer(userId: string): Promise<{ history: HistoryEntry[] }> {
-  return { history: readHistory(await getJson(`${BASE}/${encodeURIComponent(userId)}`, "HISTORY_MALFORMED")) };
+/** The request path for one page. Only what was asked for is sent; the cursor is sent as given. */
+export function rosterPath(query: RosterQuery): string {
+  const params = new URLSearchParams();
+  params.set("limit", String(query.limit));
+  if (query.q !== undefined && query.q.trim() !== "") params.set("q", query.q.trim());
+  if (query.role) params.set("role", query.role);
+  if (query.state) params.set("state", query.state);
+  if (query.cursor) params.set("cursor", query.cursor);
+  return `${BASE}?${params.toString()}`;
+}
+
+export async function readRosterPageFromServer(query: RosterQuery): Promise<RosterPage> {
+  return readRosterPage(await getJson(rosterPath(query), "ROSTER_MALFORMED"));
+}
+
+/** The drawer reads the history, and the account only to show a selection no loaded page holds. */
+export async function readDetailFromServer(userId: string): Promise<{ account: AccountSummary | null; history: HistoryEntry[] }> {
+  const body = await getJson(`${BASE}/${encodeURIComponent(userId)}`, "HISTORY_MALFORMED");
+  return { account: readDetailAccount(body), history: readHistory(body) };
 }

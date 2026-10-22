@@ -52,7 +52,7 @@ export function EquityBlock({ api, accountId, environment, workspaceId, currency
   const sourceCount = cover.filteredTotal !== null ? Number(cover.filteredTotal) : NaN;
   // Only a reduction the server declared is repeated; its extrema promise is the server's word.
   const serverEnvelope = cover.downsampled && cover.returnedCount !== null && Number.isSafeInteger(sourceCount) && sampled !== null
-    ? { sourceCount, shownCount: cover.returnedCount, method: sampled.algorithm ?? "downsampled (method not stated)", keepsExtrema: typeof sampled.preservesExtrema === "boolean" ? sampled.preservesExtrema : false }
+    ? { sourceCount, shownCount: cover.returnedCount, method: sampled.algorithm ?? "", keepsExtrema: typeof sampled.preservesExtrema === "boolean" ? sampled.preservesExtrema : false }
     : undefined;
   return (
     <SectionPanel title="Account equity" aside="Internal ledger · this sleeve">

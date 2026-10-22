@@ -22,7 +22,7 @@ export default defineConfig({
   reporter: [["list"], ["json", { outputFile: process.env.MEASURE_PW_JSON ?? "/tmp/measure-playwright.json" }]],
   outputDir: process.env.MEASURE_PW_OUT ?? "/tmp/measure-playwright-results",
   expect: { timeout: 45_000 },
-  use: { trace: "off" },
+  use: { trace: "retain-on-failure" },
   webServer: {
     command: `${BUILD}npx vite preview --outDir dist-v2 --host 127.0.0.1 --port ${PORT}`,
     url: ORIGIN,

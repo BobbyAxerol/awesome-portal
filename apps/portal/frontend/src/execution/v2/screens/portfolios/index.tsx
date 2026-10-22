@@ -107,7 +107,6 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
   const searchId = useId();
-  const reasonId = useId();
   const permitted = capabilities === undefined || holds(capabilities, { allOf: [V2_NAV_TOKEN.portfolios] });
 
   const read = useRead(api, permitted, "list", (scoped) => scoped.listPortfolios());
@@ -203,13 +202,13 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
     if (!compareOn) return picked.ids.length === 0 ? COMPARE_OFF_REASON : `${picked.ids.length} selected. ${COMPARE_OFF_REASON}.`;
     if (picked.ids.length === 0) return `Select ${COMPARE_MIN} to ${COMPARE_MAX} portfolios to compare`;
     const head = `${picked.ids.length} selected`;
+    if (picked.ids.length < COMPARE_MIN) return `${head}. Select ${COMPARE_MIN} to ${COMPARE_MAX} portfolios to compare`;
     if (unknownChosen.length > 0) return `${head}. ${unknownChosen.length === 1 ? "One is" : `${unknownChosen.length} are`} not in the loaded portfolios.`;
     if (partitions.length > 1) {
       return `${head}. Base currencies differ (${partitions.map((p) => p.currency).join(", ")}): Compare lists them apart and never combines them.`;
     }
     return head;
   })();
-  const compareWhy = !compareOn ? COMPARE_OFF_REASON : picked.ids.length < COMPARE_MIN ? `Select at least ${COMPARE_MIN} portfolios` : unknownChosen.length > 0 ? "Some selected portfolios are not loaded" : "";
 
   const empty = (() => {
     if (!envelope) return undefined;
@@ -240,7 +239,8 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
       <NotAvailableLine facts={UNPUBLISHED_MEASURES} className="exec-pf-na-line" />
       {(incomplete && envelope) || degraded.length > 0 ? (
         <div className="exec-pf-banner" role="status">
-          {incomplete && envelope ? (
+          {/* One banner: a degraded branch already says what is missing, so the generic partial line is only for a partial read with no named branch. */}
+          {incomplete && envelope && degraded.length === 0 ? (
             <p className="exec-pf-banner-line">
               <Flag kind="partial" label="Partial" size="sm" /> <span>Some portfolios or figures may be missing</span><GapWhy name="Why portfolios or figures may be missing" rows={[`The read is ${humanize(envelope.completeness).toLowerCase()}`]} next={null} />
             </p>
@@ -249,9 +249,15 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             <p className="exec-pf-banner-line">
               <Flag kind="partial" label="Branch not whole" size="sm" /> {degraded.map((d, i) => (
                 <span key={d.environment} className="exec-pf-branch">
-                  {i > 0 ? " · " : ""}{humanize(d.environment)}: {humanize(d.state)}{d.reasonCode ? ` (${branchReasonText(d.reasonCode).text})` : ""}{d.reasonCode ? <GapWhy name={`Reason code for ${humanize(d.environment)}`} rows={[`Reason code: ${d.reasonCode}`]} next={null} /> : null}
+                  {i > 0 ? " · " : ""}{humanize(d.environment)}: {humanize(d.state)}{d.reasonCode ? ` (${branchReasonText(d.reasonCode).text})` : ""}
                 </span>
               ))}
+              {/* One disclosure for the whole banner: each branch's reason code, then the partial read's sentence. */}
+              <GapWhy
+                name="Why the branch is not whole"
+                rows={[...degraded.flatMap((d) => (d.reasonCode ? [`Reason code: ${d.reasonCode}`] : [])), ...(incomplete && envelope ? [`The read is ${humanize(envelope.completeness).toLowerCase()}`] : [])]}
+                next={null}
+              />
             </p>
           ) : null}
         </div>
@@ -326,18 +332,8 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             <span>{selectionMessage}</span>
             <span className="exec-pf-spacer" />
             {picked.ids.length > 0 ? <button type="button" className="exec-pf-btn" onClick={clearSelection}>Clear selection</button> : null}
-            {comparable && compareHref !== null ? (
-              <Link className="exec-pf-link-btn" data-variant="primary" to={compareHref}>Compare {chosen.length}</Link>
-            ) : (
-              <>
-                <button type="button" className="exec-pf-btn" disabled aria-describedby={reasonId}>Compare</button>
-                <GapWhy name="Why Compare is off" rows={[compareWhy]} next={null} />
-              </>
-            )}
+            {comparable && compareHref !== null ? <Link className="exec-pf-link-btn" data-variant="primary" to={compareHref}>Compare {chosen.length}</Link> : null}
           </div>
-          <p id={reasonId} className="exec-pf-sr">
-            Compare: {compareWhy || "ready"}
-          </p>
 
           <PortfolioTable
             rows={visible}
@@ -354,9 +350,6 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
 
           <div className="exec-pf-foot">
             <span className="exec-pf-count-line" role="status" aria-live="polite">{line ? line.text : null}</span>
-            {envelope.truncated ? (
-              <button type="button" className="exec-pf-btn" disabled aria-describedby={reasonId}>Load more</button>
-            ) : null}
             {envelope.truncated ? <span className="exec-pf-note">{LOAD_MORE_REASON}</span> : null}
             {capped ? <span className="exec-pf-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
           </div>

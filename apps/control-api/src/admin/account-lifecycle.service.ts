@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 import { Pool, type PoolClient } from "pg";
 
-import { ControlApiConfig } from "../config";
+import { ControlApiConfig, querySigningKeys } from "../config";
+import { KeysetCursorCodec } from "../query/cursor";
+import { readRosterPage, parseRosterQuery, type RosterPageBody } from "./account-roster-page";
 import { AuthService } from "../auth/auth.service";
 import { randomToken, sha256 } from "../auth/argon";
 import { hintUserAuthorityChanged } from "../auth/stream-revocation-hints";
@@ -124,6 +126,7 @@ const ROLLBACK: Record<LifecycleAction, string> = {
 export class AccountLifecycleService {
   private readonly lifecycle: AccountLifecycleRepository;
   private readonly ownerAccess: OwnerAccessRepository;
+  private rosterCodec: KeysetCursorCodec | null = null;
 
   constructor(
     private readonly pool: Pool,
@@ -215,7 +218,26 @@ export class AccountLifecycleService {
    */
   async roster(): Promise<ReturnType<typeof projectAccount>[]> {
     const users = await this.auth.users.list();
-    return users.map(projectAccount);
+    return users.map((user) => projectAccount(user));
+  }
+
+  /**
+   * BE-P23 · the roster as one keyset page with exact counts (see `account-roster-page.ts`).
+   * `ownerUserId` binds the cursor to the owner it was given to.
+   */
+  async rosterPage(ownerUserId: string, rawQuery: unknown): Promise<RosterPageBody> {
+    const query = parseRosterQuery(rawQuery);
+    this.rosterCodec ??= new KeysetCursorCodec({
+      activeKeyId: this.config.QUERY_CURSOR_ACTIVE_KEY_ID,
+      keys: querySigningKeys(this.config),
+      ttlSeconds: this.config.QUERY_CURSOR_TTL_SECONDS,
+    });
+    return readRosterPage({
+      store: new UsersRepository(this.pool),
+      codec: this.rosterCodec,
+      ownerUserId,
+      query,
+    });
   }
 
   async detail(userId: string) {

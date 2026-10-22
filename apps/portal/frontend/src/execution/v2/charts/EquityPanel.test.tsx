@@ -357,8 +357,22 @@ describe("EquityPanel · scale", () => {
     const { container } = render(
       <EquityPanel label="Equity" points={BASIC} serverEnvelope={{ sourceCount: 90_000, shownCount: 4, method: "LTTB", keepsExtrema: false }} />,
     );
-    expect(screen.getByTestId("envelope").textContent).toContain("Server: 4 of 90,000 points, LTTB");
+    // UXM07-048/4: a method the dictionary does not name reads "method not stated"; its code sits behind a disclosure, not on the line
+    expect(screen.getByTestId("envelope").textContent).toContain("Server: 4 of 90,000 points, method not stated");
+    expect(screen.getByTestId("envelope").textContent).not.toContain("LTTB");
+    fireEvent.click(screen.getByRole("button", { name: "Reduction method" }));
+    expect(screen.getByTestId("envelope").textContent).toContain("LTTB");
     expect(container.querySelector('.exec-flag[data-k="partial"]')!.textContent).toContain("server reduction does not guarantee extrema");
+  });
+
+  it("names a published reduction method in words and keeps its code in hidden text only", () => {
+    const { container } = render(
+      <EquityPanel label="Equity" points={BASIC} serverEnvelope={{ sourceCount: 1438, shownCount: 4, method: "PER_SERIES_BUCKET_EXTREMA", keepsExtrema: true }} />,
+    );
+    const line = screen.getByTestId("envelope");
+    expect(line.textContent).toContain("Server: 4 of 1,438 points, min and max kept per bucket");
+    expect(container.querySelector("[data-testid=envelope] .exec-c2-sr")!.textContent).toContain("PER_SERIES_BUCKET_EXTREMA");
+    expect(container.querySelector(".exec-blk-why-btn")).toBeNull();
   });
 });
 

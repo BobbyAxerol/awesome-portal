@@ -7,9 +7,17 @@
  * through `features/admin/accountApi.ts`, the same client the V1 screen uses.
  *
  * The roster and the history are read by `./rosterReader`, which refuses a
- * malformed body instead of repairing it (one bad row refuses the whole roster,
- * as "unavailable", naming the row and the field); the V1 reader's repairs
- * (a non-list as an empty roster, a bad revision as 0) would be lies here.
+ * malformed body instead of repairing it (one bad row, or a page whose counts do
+ * not add up, refuses the whole roster as "unavailable", naming the row and the
+ * field); the V1 reader's repairs (a non-list as an empty roster, a bad revision
+ * as 0) would be lies here.
+ *
+ * The roster is read one keyset page at a time (BE-P23, DEBT-UXM07-031): 50 rows
+ * (ten at 660px and narrower), and `Load more` asks the server for the next page
+ * with the cursor it gave. Search, role and state are the SERVER's filters (a
+ * filter over loaded rows would say "no match" for accounts that exist on a page
+ * not yet read), and the counts on the cards and in the pickers are the server's
+ * exact roster-wide counts.
  *
  * What the account read publishes is what is shown: the V1 roles `ADMIN` and
  * `USER`, the four lifecycle states, `locked` and `mustChangePassword`, the
@@ -23,7 +31,7 @@
  *
  * | cardinality | break point | degradation | server contract | invariant | perf budget |
  * |---|---|---|---|---|---|
- * | roster of tens, p95 a few hundred, max thousands (one unpaged read) | 200 rows in the DOM | 50 rows, `Load more` to 200, then "narrow the search" | none yet: the roster is a single list, so a keyset page would replace this | counts are over the roster read and say so; no row is dropped by the cap without a count | one read; filtering is in memory; at most 200 table rows |
+ * | roster of tens, p95 a few hundred, max thousands | 200 rows in the DOM; at 660px and narrower a card list of 123 rows is 7,673 px | 50 rows per page (ten at 660px and narrower), `Load more` to 200, then "narrow the search" | `GET /api/admin/accounts?limit&cursor&q&role&state`: keyset on the unique username, signed cursor bound to the filters and limit, exact `counts` from the same statement | counts are the server's exact roster-wide counts; no row is dropped by the cap without the matching count beside it | one request per page (at most 4 at 50, 20 at ten); at most 200 table rows |
  *
  * URL: `q`, `sel` (the account's user id), and the screen-local `role` and `state`.
  */
@@ -35,14 +43,16 @@ import { useSession } from "../../../../auth/session";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { ExecutionSurface } from "../../../ExecutionSurface";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
-import { GapWhy, SectionPanel, gapTitle } from "../../blocks";
+import { NotAvailableLine, SectionPanel, gapTitle } from "../../blocks";
 import { Drawer, DockAction, useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { useExecUrlState, withContext } from "../../urlState";
-import { readDetailFromServer, readRosterFromServer } from "./rosterReader";
+import { useMediaQuery } from "../../useMediaQuery";
+import { PHONE_QUERY } from "../../usePhoneRows";
+import { readDetailFromServer, readRosterPageFromServer, RosterMalformed, type RosterCounts, type RosterPage, type RosterQuery } from "./rosterReader";
 import {
   ACCOUNT_ROLES, ACCOUNT_STATES, PAGE_SIZE, PRESET_REQUESTS, ROLE_LABEL, ROW_CAP, STATE_VIEW,
-  failureOf, filterAccounts, isRole, isState, rosterCounts, stepUpView, type UsersFilters,
+  PHONE_PAGE_SIZE, failureOf, isRole, isState, stepUpView, type UsersFilters,
 } from "./usersModel";
 
 import "../../css/users.css";
@@ -50,14 +60,14 @@ import { formatInstant } from "../../boundary";
 
 export const USERS_SCREEN_KEY = "users" as const;
 
-/** The three reads, injectable so a test or a lab can stand in for the network. */
+/** The three reads, injectable so a test or a lab can stand in for the network. `roster` is one keyset page. */
 export interface UsersClient {
-  roster(): Promise<AccountSummary[]>;
-  detail(userId: string): Promise<{ history: HistoryEntry[] }>;
+  roster(query: RosterQuery): Promise<RosterPage>;
+  detail(userId: string): Promise<{ account?: AccountSummary | null; history: HistoryEntry[] }>;
   stepUp(): Promise<StepUpState>;
 }
 
-const DEFAULT_CLIENT: UsersClient = { roster: readRosterFromServer, detail: readDetailFromServer, stepUp: stepUp.state };
+const DEFAULT_CLIENT: UsersClient = { roster: readRosterPageFromServer, detail: readDetailFromServer, stepUp: stepUp.state };
 
 export interface UsersScreenProps {
   client?: UsersClient;
@@ -70,31 +80,37 @@ export interface UsersScreenProps {
 type RosterState =
   | { phase: "loading" }
   | { phase: "error"; status: "denied" | "unavailable"; reason: string }
-  | { phase: "ready"; accounts: readonly AccountSummary[] };
+  | {
+      phase: "ready";
+      /** Every page read so far, in the server's order. */
+      accounts: readonly AccountSummary[];
+      counts: RosterCounts;
+      /** The page size this walk started with: a cursor is only valid for the limit it was issued for. */
+      limit: number;
+      nextCursor: string | null;
+      loadingMore: boolean;
+    };
 
 type DetailState =
   | { phase: "idle" }
   | { phase: "loading"; userId: string }
   | { phase: "error"; userId: string; status: "denied" | "unavailable"; reason: string }
-  | { phase: "ready"; userId: string; history: readonly HistoryEntry[] };
+  | { phase: "ready"; userId: string; account: AccountSummary | null; history: readonly HistoryEntry[] };
 
 const SEARCH_DEBOUNCE_MS = 300;
+
+const EMPTY_COUNTS: RosterCounts = {
+  total: 0,
+  matching: 0,
+  byState: { ACTIVE: 0, INVITED: 0, DISABLED: 0, ARCHIVED: 0 },
+  byRole: { ADMIN: 0, USER: 0 },
+  locked: 0,
+  awaitingFirstPassword: 0,
+};
 
 const LAST_SIGN_IN_REQUEST = "FE-053";
 
 const CHANGES_ELSEWHERE = "Account changes are made on the current Users screen.";
-
-/** `Not published (FE-015, FE-026, FE-037, FE-038)`: the word, then the request ids. */
-/** `Not published` on screen; the request ids stay in the title and in hidden text. */
-function Unpublished({ ids, what }: { ids: string; what?: string }) {
-  return (
-    <span className="exec-blk-np">
-      <GapWhy className="exec-blk-np-word" gap={ids} text="Not published" name="Not published, reason" rows={[gapTitle(ids)]} />
-      <span className="exec-blk-sr"> ({ids})</span>
-      {what ? <> {what}</> : null}
-    </span>
-  );
-}
 
 function flagsOf(account: AccountSummary) {
   return (
@@ -136,7 +152,6 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
   const columns = useMemo(() => columnsFor(me), [me]);
   const { selection, select, close } = useDockSelection();
   const mode = useDockMode();
-  const reasonId = useId();
   const searchId = useId();
 
   const [roster, setRoster] = useState<RosterState>({ phase: "loading" });
@@ -144,7 +159,12 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
   const [stepRead, setStepRead] = useState<"loading" | "ready" | "failed">("loading");
   const [detail, setDetail] = useState<DetailState>({ phase: "idle" });
   const [reload, setReload] = useState(0);
-  const [shown, setShown] = useState(PAGE_SIZE);
+  // At 660px and narrower the rows are cards: the server is asked for ten, and Load more asks for the next ten.
+  const phone = useMediaQuery(PHONE_QUERY);
+  const pageSize = useRef(PAGE_SIZE);
+  pageSize.current = phone ? PHONE_PAGE_SIZE : PAGE_SIZE;
+  // A walk that a filter or a retry replaced must not append its late pages.
+  const walk = useRef(0);
 
   const roleParam = params.get("role");
   const stateParam = params.get("state");
@@ -152,15 +172,18 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
     () => ({ q: url.value.q ?? "", role: isRole(roleParam) ? roleParam : null, state: isState(stateParam) ? stateParam : null }),
     [url.value.q, roleParam, stateParam],
   );
-  const filterKey = `${filters.q}|${filters.role ?? ""}|${filters.state ?? ""}`;
 
   /* ── reads ────────────────────────────────────────────────────────── */
+  // The first page. The filters in the URL are the server's filters, so a change starts a new walk.
   useEffect(() => {
     let cancelled = false;
+    walk.current += 1;
     setRoster((prev) => (prev.phase === "ready" ? prev : { phase: "loading" }));
-    client.roster().then(
-      (rows) => {
-        if (!cancelled) setRoster({ phase: "ready", accounts: rows });
+    client.roster({ limit: pageSize.current, q: filters.q, role: filters.role, state: filters.state }).then(
+      (read) => {
+        if (!cancelled) {
+          setRoster({ phase: "ready", accounts: read.accounts, counts: read.counts, limit: read.page.limit, nextCursor: read.page.nextCursor, loadingMore: false });
+        }
       },
       (error: unknown) => {
         if (!cancelled) setRoster({ phase: "error", ...failureOf(error) });
@@ -169,7 +192,30 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
     return () => {
       cancelled = true;
     };
-  }, [client, reload]);
+  }, [client, reload, filters.q, filters.role, filters.state]);
+
+  /** The next page, with the cursor the server gave and the limit it was issued for. */
+  const loadMore = () => {
+    if (roster.phase !== "ready" || roster.nextCursor === null || roster.loadingMore) return;
+    const ticket = walk.current;
+    const { limit, nextCursor, accounts: held } = roster;
+    setRoster({ ...roster, loadingMore: true });
+    client.roster({ limit, cursor: nextCursor, q: filters.q, role: filters.role, state: filters.state }).then(
+      (read) => {
+        if (walk.current !== ticket) return;
+        const known = new Set(held.map((a) => a.userId));
+        const again = read.accounts.findIndex((a) => known.has(a.userId));
+        if (again >= 0) {
+          setRoster({ phase: "error", ...failureOf(new RosterMalformed("ROSTER_MALFORMED", `row ${held.length + again + 1}, user_id (repeated)`)) });
+          return;
+        }
+        setRoster({ phase: "ready", accounts: [...held, ...read.accounts], counts: read.counts, limit, nextCursor: read.page.nextCursor, loadingMore: false });
+      },
+      (error: unknown) => {
+        if (walk.current === ticket) setRoster({ phase: "error", ...failureOf(error) });
+      },
+    );
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -200,7 +246,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
     setDetail({ phase: "loading", userId: selection });
     client.detail(selection).then(
       (read) => {
-        if (!cancelled) setDetail({ phase: "ready", userId: selection, history: read.history });
+        if (!cancelled) setDetail({ phase: "ready", userId: selection, account: read.account ?? null, history: read.history });
       },
       (error: unknown) => {
         if (!cancelled) setDetail({ phase: "error", userId: selection, ...failureOf(error) });
@@ -210,8 +256,6 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
       cancelled = true;
     };
   }, [client, selection, reload]);
-
-  useEffect(() => setShown(PAGE_SIZE), [filterKey]);
 
   /* ── search box: the URL is the state, written after a pause ───────── */
   const [text, setText] = useState(url.value.q ?? "");
@@ -244,14 +288,15 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
 
   /* ── derived ─────────────────────────────────────────────────────── */
   const all = roster.phase === "ready" ? roster.accounts : [];
-  const counts = useMemo(() => rosterCounts(all), [all]);
-  // Filtering follows the text box at once; the URL catches up after the pause.
-  const live: UsersFilters = useMemo(() => ({ ...filters, q: text }), [filters, text]);
-  const matching = useMemo(() => filterAccounts(all, live), [all, live]);
-  const visible = matching.slice(0, Math.min(shown, ROW_CAP));
-  const capped = matching.length > ROW_CAP && visible.length >= ROW_CAP;
-  const filtered = live.q.trim() !== "" || live.role !== null || live.state !== null;
-  const selected = selection === null ? null : all.find((a) => a.userId === selection) ?? null;
+  // Exact and roster-wide, from the server; `matching` is what the filters select.
+  const counts: RosterCounts = roster.phase === "ready" ? roster.counts : EMPTY_COUNTS;
+  const visible = all.slice(0, ROW_CAP);
+  const capped = counts.matching > ROW_CAP && visible.length >= ROW_CAP;
+  const moreToRead = roster.phase === "ready" && roster.nextCursor !== null && all.length < ROW_CAP;
+  const filtered = filters.q.trim() !== "" || filters.role !== null || filters.state !== null || text.trim() !== "";
+  // A selection no loaded page holds (a deep link) is shown from its own detail read.
+  const fromDetail = detail.phase === "ready" && detail.userId === selection ? detail.account : null;
+  const selected = selection === null ? null : all.find((a) => a.userId === selection) ?? fromDetail;
   const stepView = stepUpView(stepRead === "ready" ? step : null);
   // A read that belongs to the previously selected account is not this one's history.
   const history: DetailState = detail.phase !== "idle" && detail.userId === selection ? detail : { phase: "loading", userId: selection ?? "" };
@@ -339,20 +384,23 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                     ))}
                   </select>
                 </label>
-                <button type="button" className="exec-usr-btn" disabled aria-describedby={reasonId}>Invite account</button>
                 {filtered ? <button type="button" className="exec-usr-btn" onClick={clearFilters}>Clear filters</button> : null}
               </div>
-              <ul id={reasonId} className="exec-usr-unpub">
-                <li><Unpublished ids={PRESET_REQUESTS} what="Role presets" /></li>
-                <li><Unpublished ids={LAST_SIGN_IN_REQUEST} what="Last sign-in" /></li>
-                <li>{CHANGES_ELSEWHERE}</li>
-              </ul>
+              <div className="exec-usr-unpub">
+                <NotAvailableLine
+                  facts={[
+                    { label: "Role presets", why: gapTitle(PRESET_REQUESTS) },
+                    { label: "Last sign-in", id: LAST_SIGN_IN_REQUEST },
+                  ]}
+                />
+                <p>{CHANGES_ELSEWHERE}</p>
+              </div>
 
               {counts.awaitingFirstPassword > 0 ? (
                 <p className="exec-usr-note">{counts.awaitingFirstPassword} {counts.awaitingFirstPassword === 1 ? "account is" : "accounts are"} awaiting a first password.</p>
               ) : null}
 
-              <SectionPanel title="Accounts" aside={matching.length === counts.total ? `${matching.length} of ${counts.total}` : `${matching.length} matching of ${counts.total}`} flush>
+              <SectionPanel title="Accounts" aside={counts.matching === counts.total ? `${counts.matching} of ${counts.total}` : `${counts.matching} matching of ${counts.total}`} flush>
                 <CardsTable
                   columns={columns}
                   rows={visible}
@@ -361,7 +409,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                   selectedKey={selection}
                   onRowOpen={(a) => select(a.userId)}
                   empty={
-                    all.length === 0 ? (
+                    counts.total === 0 ? (
                       <PanelState status="empty" reason="The roster is empty. No account has been created." />
                     ) : (
                       <div className="exec-usr-empty">
@@ -374,12 +422,12 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
               </SectionPanel>
               <div className="exec-usr-foot">
                 <span className="exec-usr-count" role="status" aria-live="polite">
-                  {matching.length === 0
+                  {counts.matching === 0
                     ? `0 of ${counts.total} accounts in the roster read`
-                    : `Showing ${visible.length} of ${matching.length}${filtered ? " matching" : ""} accounts, ${counts.total} in the roster read`}
+                    : `Showing ${visible.length} of ${counts.matching}${filtered ? " matching" : ""} accounts, ${counts.total} in the roster read`}
                 </span>
-                {visible.length < matching.length && visible.length < ROW_CAP ? (
-                  <button type="button" className="exec-usr-btn" onClick={() => setShown((n) => n + PAGE_SIZE)}>Load more</button>
+                {moreToRead ? (
+                  <button type="button" className="exec-usr-btn" aria-busy={roster.phase === "ready" && roster.loadingMore} onClick={() => { if (!(roster.phase === "ready" && roster.loadingMore)) loadMore(); }}>Load more</button>
                 ) : null}
                 {capped ? <span className="exec-usr-note">Showing the first {ROW_CAP} rows. Narrow the search to see the rest.</span> : null}
               </div>
@@ -387,7 +435,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
 
             {selection !== null ? (
               <Drawer
-                title={selected ? selected.displayName || selected.username : "Account not in the roster read"}
+                title={selected ? selected.displayName || selected.username : history.phase === "loading" ? selection : "Account not in the roster read"}
                 subtitle={selected ? selected.username : selection}
                 mode={mode}
                 onClose={close}
@@ -407,7 +455,7 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                     <dt>Revision</dt>
                     <dd className="exec-usr-num">{selected.accountRevision}</dd>
                   </dl>
-                ) : (
+                ) : history.phase === "loading" ? null : (
                   <p className="exec-usr-note">This account is not in the roster that was read. It may have been removed or the link is wrong.</p>
                 )}
                 <h3 className="exec-usr-h3">History</h3>

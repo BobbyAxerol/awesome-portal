@@ -37,7 +37,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import type { ConditionalGroupRead } from "../../../derivedReads";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { useProfileRealtime } from "../../../profileRealtime";
-import { GapWhy, QuietIds } from "../../blocks";
+import { GapWhy } from "../../blocks";
 import { CardsTable } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { useMediaQuery } from "../../useMediaQuery";
@@ -45,7 +45,7 @@ import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
   fillsFor, groupExact, humanize, isBucket, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
@@ -80,6 +80,18 @@ function FoldPanel({ title, aside, defaultOpen = false, children }: { title: str
       <div className="exec-blk-panel-body">{children}</div>
     </details>
   );
+}
+
+/** Saves text as a file from the browser; nothing is sent anywhere. */
+function downloadCsv(name: string, csv: string): void {
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 /** The `from` value a link out of the Blotter carries; the destination owns what Back does with it. */
@@ -471,8 +483,12 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
                 </div>
               ) : null}
             </span>
-            <button type="button" className="exec-blt2-btn" disabled aria-describedby={`${colMenuId}-export`}>Export</button>
-            <span id={`${colMenuId}-export`} className="exec-blt2-note"><QuietIds text="Not published (FE-016)" /></span>
+            {rows.length > 0 ? (
+              <>
+                <button type="button" className="exec-blt2-btn" aria-describedby={`${colMenuId}-export`} onClick={() => downloadCsv(blotterCsvName("Paper", page.asOf), blotterCsv(rows, visibleColumns))}>Export</button>
+                <span id={`${colMenuId}-export`} className="exec-blt2-note">Exports the {rows.length} loaded {rows.length === 1 ? "row" : "rows"}</span>
+              </>
+            ) : null}
           </div>
         </div>
 

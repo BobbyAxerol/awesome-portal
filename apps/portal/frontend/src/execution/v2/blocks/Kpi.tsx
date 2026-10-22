@@ -64,16 +64,18 @@ export interface KpiStripProps {
   label: string;
   /** Columns on a wide screen; narrower screens collapse to 2 and 1. Defaults to the cell count, at most 5. */
   columns?: number;
+  /** Set to 2 for a strip of short figures (counts) that stays two across at phone width instead of one tile per row. */
+  phoneColumns?: 2;
   /** `Kpi` cells. */
   children: ReactNode;
 }
 
 /** The strip: a described group of definition pairs. */
-export function KpiStrip({ label, columns, children }: KpiStripProps) {
+export function KpiStrip({ label, columns, phoneColumns, children }: KpiStripProps) {
   const style = columns === undefined ? undefined : ({ "--exec-kpi-n": columns } as CSSProperties);
   return (
     <div role="group" aria-label={label}>
-      <dl className="exec-blk-kpis" style={style}>
+      <dl className="exec-blk-kpis" style={style} data-phone={phoneColumns}>
         <NotPublishedScope>{children}</NotPublishedScope>
       </dl>
     </div>

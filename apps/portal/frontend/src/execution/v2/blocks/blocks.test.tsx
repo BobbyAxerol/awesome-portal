@@ -556,11 +556,12 @@ describe("JourneySpine", () => {
     expect(screen.getAllByText("Not reached")).toHaveLength(2);
     const now = screen.getAllByRole("listitem")[3];
     expect(now.getAttribute("aria-current")).toBe("step");
-    // days, criteria and decider are absent on the current stage
-    expect(now.textContent).toContain("Days in stage");
-    expect(now.textContent).toContain("Gate criteria");
-    expect(now.textContent).toContain("Decider");
-    expect(now.textContent).toContain("(FE-027/028)");
+    // UXM07-048/3: the card prints only published facts; the one note under the list names the gap
+    expect(now.textContent).not.toContain("Days in stage");
+    expect(now.textContent).not.toContain("Gate criteria");
+    expect(now.textContent).not.toContain("Decider");
+    expect(now.textContent).not.toContain("Not published");
+    expect(document.body.textContent).toContain("Days in stage, gate criteria and decider");
   });
 
   it("renders published facts and a done stage only when the source says done", () => {
@@ -607,7 +608,8 @@ describe("JourneySpine", () => {
   it("rejects non-integer day counts instead of printing them", () => {
     render(<JourneySpine current="paper" stages={{ paper: { daysInStage: 1.5 } }} />);
     expect(screen.getAllByRole("listitem")[2].textContent).not.toContain("1.5");
-    expect(screen.getAllByRole("listitem")[2].textContent).toContain("Days in stage");
+    // UXM07-048/3: an unusable day count is not drawn, and no gap word takes its place on the card
+    expect(screen.getAllByRole("listitem")[2].textContent).not.toContain("Days in stage");
   });
 
   it("compact is a labelled stepper whose nodes are buttons only when selectable", () => {
@@ -802,7 +804,7 @@ describe("hygiene of the block sources", () => {
 });
 
 describe("JourneySpine gap note (L-B2)", () => {
-  it("prints the gap once, under the list, and every card keeps the full text for assistive tech", () => {
+  it("prints the gap once, under the list, and no card repeats it", () => {
     const { container } = render(<JourneySpine current="sandbox" />);
     const list = screen.getByRole("list", { name: "Lifecycle" });
     const visible = [...container.querySelectorAll(".exec-blk-np")].filter((n) => !n.hasAttribute("data-compact") && !list.contains(n));
@@ -813,14 +815,10 @@ describe("JourneySpine gap note (L-B2)", () => {
     expect(notes[0].textContent).toContain("Not published (FE-027/028)");
     expect(notes[0].nextElementSibling).toBeNull();
     expect(list.nextElementSibling).toBe(notes[0]);
-    const compact = list.querySelectorAll("[data-compact]");
-    expect(compact.length).toBeGreaterThan(0);
-    for (const item of within(list).getAllByRole("listitem")) {
-      // An unknown stage says nothing of its own (the note under the list does); the current one keeps the full text for assistive tech.
-      if (item.getAttribute("data-s") !== "cur") continue;
-      expect(item.textContent).toContain("Not published (FE-027/028)");
-      expect(item.querySelector(".exec-blk-sr")?.textContent).toContain("Not published (FE-027/028)");
-    }
+    // UXM07-048/3: no card carries a gap word of its own (compact or hidden); the note under the list is the one statement
+    expect(list.querySelectorAll("[data-compact]")).toHaveLength(0);
+    expect(list.querySelectorAll(".exec-blk-np")).toHaveLength(0);
+    expect(list.textContent).not.toContain("Not published");
     // the visible short labels carry no id of their own
     for (const short of container.querySelectorAll(".exec-blk-np-short")) expect(short.textContent).not.toContain("FE-");
   });

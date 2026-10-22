@@ -85,3 +85,64 @@ describe("ELP2-10 account/grant coordinated refusal descriptor", () => {
     expect(error({ ...pending, error: { ...pending.error, request_id: "TEST_ONLY-historical-nested" } })).toBe(true);
   });
 });
+
+describe("BE-P23 owner roster keyset page", () => {
+  const rosterPage = load("fixtures/portal-account-lifecycle.roster-page.synthetic.valid.json");
+  const operation = spec.paths["/api/admin/accounts"].get;
+  const resolve$ = (ref: string) => ref.split("/").slice(1).reduce((node: any, key: string) => node[key], spec);
+  const response = operation.responses["200"].content["application/json"].schema;
+  const body = resolve$(response.$ref);
+  const schemaFor = (name: string) => ajv.compile(spec.components.schemas[name]);
+
+  it("publishes the five optional query parameters with the bounded limit", () => {
+    const params = Object.fromEntries(operation.parameters.map((p: any) => [p.name, p]));
+    expect(Object.keys(params).sort()).toEqual(["cursor", "limit", "q", "role", "state"]);
+    expect(Object.values(params).every((p: any) => p.in === "query" && p.required === false)).toBe(true);
+    expect(params.limit.schema).toEqual({ type: "integer", minimum: 1, maximum: 200, default: 50 });
+    expect(params.role.schema.enum).toEqual(["ADMIN", "USER"]);
+    expect(params.state.schema.enum).toEqual(["INVITED", "ACTIVE", "DISABLED", "ARCHIVED"]);
+  });
+
+  it("adds page and counts without changing the old required keys, so the unpaged shape still validates", () => {
+    expect(response).toEqual({ $ref: "#/components/schemas/AccountRoster" });
+    expect(body.required).toEqual(["schema_version", "accounts"]);
+    expect(body.properties.page).toEqual({ $ref: "#/components/schemas/RosterPage" });
+    expect(body.properties.counts).toEqual({ $ref: "#/components/schemas/RosterCounts" });
+    expect(resolve$("#/components/schemas/RosterPage").additionalProperties).toBe(false);
+    expect(resolve$("#/components/schemas/RosterCounts").additionalProperties).toBe(false);
+    for (const code of ["400", "409"])
+      expect(operation.responses[code].content["application/json"].schema).toEqual({ $ref: "#/components/schemas/Error" });
+  });
+
+  it("the synthetic page validates against its page and counts schemas and states its own invariants", () => {
+    const page = schemaFor("RosterPage");
+    const counts = schemaFor("RosterCounts");
+    const account = schemaFor("AccountSummary");
+    expect(page(rosterPage.page), ajv.errorsText(page.errors)).toBe(true);
+    expect(counts(rosterPage.counts), ajv.errorsText(counts.errors)).toBe(true);
+    for (const row of rosterPage.accounts) expect(account(row), ajv.errorsText(account.errors)).toBe(true);
+    expect(rosterPage.page.returned_count).toBe(rosterPage.accounts.length);
+    expect(rosterPage.page.returned_count).toBeLessThanOrEqual(rosterPage.page.limit);
+    expect(rosterPage.page.has_more).toBe(rosterPage.page.next_cursor !== null);
+    const states = Object.values(rosterPage.counts.by_state) as number[];
+    const roles = Object.values(rosterPage.counts.by_role) as number[];
+    expect(states.reduce((a, b) => a + b, 0)).toBe(rosterPage.counts.total);
+    expect(roles.reduce((a, b) => a + b, 0)).toBe(rosterPage.counts.total);
+    expect(JSON.stringify(rosterPage)).not.toMatch(/password_hash|activation_token|csrf_secret|session_token|cloudflare|email/i);
+  });
+
+  it("refuses a page that is unbounded, open, or carries an extra key", () => {
+    const page = schemaFor("RosterPage");
+    const counts = schemaFor("RosterCounts");
+    for (const bad of [
+      { ...rosterPage.page, limit: 201 }, { ...rosterPage.page, limit: 0 }, { ...rosterPage.page, returned_count: 201 },
+      { ...rosterPage.page, next_cursor: "" }, { ...rosterPage.page, extra: 1 }, { ...rosterPage.page, has_more: "yes" },
+      { limit: 2, returned_count: 2, has_more: false },
+    ]) expect(page(bad), JSON.stringify(bad)).toBe(false);
+    expect(page({ ...rosterPage.page, has_more: false, next_cursor: null })).toBe(true);
+    for (const bad of [
+      { ...rosterPage.counts, total: -1 }, { ...rosterPage.counts, extra: 1 }, { ...rosterPage.counts, by_role: { ADMIN: 1 } },
+      { ...rosterPage.counts, by_state: { ...rosterPage.counts.by_state, GONE: 1 } },
+    ]) expect(counts(bad), JSON.stringify(bad)).toBe(false);
+  });
+});

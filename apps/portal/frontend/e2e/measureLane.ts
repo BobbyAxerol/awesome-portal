@@ -13,6 +13,7 @@ import { gzipSync } from "node:zlib";
 import { stubExecutionBff } from "./bffDouble";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 import { stubPortalApi, usePreferences } from "./fixtures";
+import { waitForQuiet } from "./quietGate.mjs";
 import { stubAdminRoutes, stubQuantbtRuns } from "./v2Lane";
 
 export const NOW_ISO = OPERATIONS_V2_DOUBLE_NOW_ISO;
@@ -65,16 +66,29 @@ export interface Snap {
 export interface Meter {
   reset(): void;
   snap(): Promise<Snap>;
+  /** Nothing in flight and nothing started or finished for `quietMs` counted from this call, so the effects of a body that has just mounted are inside the window (`networkidle` resolves at once when the page was idle earlier; DEBT-UXM07-044). Throws MEASUREMENT_QUIET_TIMEOUT (an invalid measurement, never a PASS) when the 15 s cap ends without quiet. */
+  quiet(quietMs?: number): Promise<void>;
 }
 
-export function meter(page: Page, baseURL: string | undefined): Meter {
+/** `quietCapMs` exists only so the harness check can use a short cap; every measurement uses the default and the deadline is never extended. */
+export function meter(page: Page, baseURL: string | undefined, { quietCapMs = 15_000 }: { quietCapMs?: number } = {}): Meter {
   const origin = new URL(baseURL ?? "http://127.0.0.1:4376").origin;
   let state = fresh();
   let bodies: Promise<void>[] = [];
+  let inFlight = 0;
+  let lastActivity = Date.now();
+  const settleOne = () => {
+    inFlight = Math.max(0, inFlight - 1);
+    lastActivity = Date.now();
+  };
+  page.on("requestfinished", settleOne);
+  page.on("requestfailed", settleOne);
   function fresh() {
     return { api: 0, unique: new Set<string>(), apiBytes: 0, assets: 0, assetBytes: 0, foreign: 0, wireAsset: 0, wireApi: 0, apiGzip: 0, assetUrls: [] as string[] };
   }
   page.on("request", (request) => {
+    inFlight += 1;
+    lastActivity = Date.now();
     const url = new URL(request.url());
     if (url.origin !== origin) {
       state.foreign += 1;
@@ -137,6 +151,9 @@ export function meter(page: Page, baseURL: string | undefined): Meter {
         foreign: state.foreign, apiPaths: [...state.unique].sort(), wireAssetBytes: state.wireAsset, wireApiBytes: state.wireApi, apiGzipBytes: state.apiGzip,
         assetUrls: [...state.assetUrls].sort(),
       };
+    },
+    async quiet(quietMs = 400) {
+      await waitForQuiet({ quietMs, capMs: quietCapMs, now: Date.now, sleep: (ms) => page.waitForTimeout(ms), state: () => ({ inFlight, lastActivity }) });
     },
   };
 }

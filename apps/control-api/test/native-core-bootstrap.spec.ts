@@ -6,7 +6,7 @@
  */
 import "reflect-metadata";
 import { createHash } from "node:crypto";
-import { mkdtemp, writeFile, chmod, symlink, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, chmod, symlink, rm, readFile, readdir, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { generateKeyPair, exportPKCS8 } from "jose";
@@ -30,6 +30,7 @@ import type { WorkspacesRepository } from "../src/repos/workspaces";
 import { MAXIMUM_DATA_DEPLOYMENT_OPERATION } from "../src/execution/maximum-data-operation.registry";
 import { loadConfig } from "../src/config";
 import {ExecutionProfileProjectionWorker} from "../src/execution/profile-projection.worker";
+import * as cacheObservation from "../src/execution-v2/native-cache-observation";
 
 const raw = (s: string) => s.repeat(64);
 const digest = (s: string) => createHash("sha256").update(s).digest("hex");
@@ -93,14 +94,14 @@ function poolFixture(target: { database_name: string; role_name: string; databas
   return { pool, query, end, connect };
 }
 const safe = { code: "CURRENT_HUMAN_NATIVE_RUNTIME_CONFIG_INVALID", message: "The private native Core configuration is not available." };
-function consumerProvider(pool: Pool, deps: ControlApiDependencies): FactoryProvider {
-  const registration = AppModule.register({ NODE_ENV: "test" } as ControlApiConfig, pool, undefined, deps);
+function consumerProvider(pool: Pool, deps: ControlApiDependencies, config = { NODE_ENV: "test" } as ControlApiConfig): FactoryProvider {
+  const registration = AppModule.register(config, pool, undefined, deps);
   const provider = registration.providers?.find((p): p is FactoryProvider =>
     !!p && typeof p === "object" && "provide" in p && p.provide === NativeManagerReadConsumer && "useFactory" in p);
   if (!provider) throw Error("TEST_ONLY-missing-native-provider");
   return provider;
 }
-function instantiate(provider: FactoryProvider, operations: MaximumDataOperationService) {
+function instantiate(provider: FactoryProvider, operations: MaximumDataOperationService, config = {} as ControlApiConfig) {
   // This narrow genuine-factory harness covers only the no-RT branch. Nest
   // must still resolve all declared factory tokens; none supplies authority.
   const forbidden = () => { throw Error("TEST_ONLY-no-RT-dependency-used"); };
@@ -111,7 +112,7 @@ function instantiate(provider: FactoryProvider, operations: MaximumDataOperation
     providers: [{ provide: MaximumDataOperationService, useValue: operations },
       { provide: ExecutionReadScopes, useValue: scopes },
       { provide: ExecutionProfileProjectionRepository, useValue: repository },
-      { provide: CONTROL_API_CONFIG, useValue: {} as ControlApiConfig }, provider],
+      { provide: CONTROL_API_CONFIG, useValue: config }, provider],
     exports: [NativeManagerReadConsumer] },
   { logger: false, abortOnError: false });
 }
@@ -256,6 +257,80 @@ describe("TEST_ONLY compose failure disposal, no app or active native custody", 
 });
 
 describe("TEST_ONLY actual Nest DI of exact AppModule native provider, not full app init", () => {
+  const realtimeLimits={maximumClients:2,maximumEntriesPerClient:8,maximumFrameBytes:65536,
+    maximumClientBytes:131072,maximumTotalBytes:262144,maximumNoticesPerRead:20,readTimeoutMs:1000};
+  const observationConfig=(directory:string)=>({schema_version:"portal.native-cache-observation-config.v1",directory});
+  const reviewConfig=()=>({...loadConfig({PORTAL_ENV:"local",AUTH_MODE:"dev",DATABASE_URL:"postgres://TEST_ONLY/TEST_ONLY_core"}),
+    EXECUTION_READ_PROFILE:"native_manager_review_v1"} as ControlApiConfig);
+  it("keeps default factory free of observation construction and extra private files",async()=>{
+    const f=await fixture(),db=poolFixture(f.target),prepared=await prepareNativeCoreRuntime(await f.manifest());
+    const before=await readdir(f.root),create=vi.spyOn(cacheObservation,"createNativeCacheObserver");
+    const deps=await prepared.compose(db.pool),operations={} as MaximumDataOperationService;
+    const context=await instantiate(consumerProvider(db.pool,deps),operations);
+    try{expect(create).not.toHaveBeenCalled();expect(await readdir(f.root)).toEqual(before);
+      expect(deps).not.toHaveProperty("nativeManagerCacheObservation");}
+    finally{await context.close();}
+  });
+  it("passes an actual private observer from hash-pinned loader through real AppModule Nest DI",async()=>{
+    const f=await fixture(),directory=join(f.root,"observations"),db=poolFixture(f.target),cfg=reviewConfig();
+    const value={...f.value,realtime_limits:realtimeLimits,cache_observation:observationConfig(directory)};
+    const prepared=await prepareNativeCoreRuntime(await f.leaf("observed-runtime.json",JSON.stringify(value)));
+    const deps=await prepared.compose(db.pool),create=vi.spyOn(cacheObservation,"createNativeCacheObserver");
+    expect(deps.nativeManagerCacheObservation).toEqual({directory});
+    expect(Object.isFrozen(deps.nativeManagerCacheObservation)).toBe(true);
+    const context=await instantiate(consumerProvider(db.pool,deps,cfg),{} as MaximumDataOperationService,cfg);
+    try{
+      expect(create).toHaveBeenCalledExactlyOnceWith(directory);
+      const observer=create.mock.results[0]!.value;
+      expect(observer).toBeInstanceOf(cacheObservation.NativeCacheObserver);
+      expect(Reflect.get(context.get(NativeManagerReadConsumer),"cacheObserver")).toBe(observer);
+      expect((await stat(directory)).mode&0o777).toBe(0o700);
+      const key=await readFile(join(directory,"observation.key"));
+      expect(key.length).toBe(32);expect((await stat(join(directory,"observation.key"))).mode&0o777).toBe(0o600);
+      expect(await readdir(directory)).toEqual(["observation.key"]);
+      expect(db.connect).not.toHaveBeenCalled(); // no grant, source or custody write
+    }finally{await context.close();}
+  });
+  it("rejects observation outside Research before constructing the provider or touching files",async()=>{
+    const f=await fixture(),db=poolFixture(f.target),deps=await(await prepareNativeCoreRuntime(await f.manifest())).compose(db.pool);
+    const create=vi.spyOn(cacheObservation,"createNativeCacheObserver"),directory=join(f.root,"must-not-exist");
+    expect(()=>consumerProvider(db.pool,{...deps,nativeManagerCacheObservation:{directory}}))
+      .toThrow("NATIVE_CACHE_OBSERVATION_RESEARCH_COMPOSITION_REQUIRED");
+    expect(create).not.toHaveBeenCalled();expect(await readdir(f.root)).not.toContain("must-not-exist");
+  });
+  it("validates genuine composition, same pool, trust and mutations before any observer construction",async()=>{
+    const f=await fixture(),db=poolFixture(f.target),cfg=reviewConfig(),directory=join(f.root,"must-not-exist");
+    const prepared=await prepareNativeCoreRuntime(await f.leaf("observer-negative.json",JSON.stringify({
+      ...f.value,realtime_limits:realtimeLimits,cache_observation:observationConfig(directory)})));
+    const deps=await prepared.compose(db.pool),create=vi.spyOn(cacheObservation,"createNativeCacheObserver");
+    const other=await prepared.compose(db.pool); // genuine, SAME pool, different coordinator
+    for(const [pool,supplied] of [
+      [db.pool,{...deps,nativeManagerRead:{...deps.nativeManagerRead!}}],
+      [poolFixture(f.target).pool,deps],
+      [db.pool,{...deps,executionAccessTrust:{...deps.executionAccessTrust!}}],
+      [db.pool,{...deps,currentHumanMutations:undefined}],
+      [db.pool,{...deps,currentHumanMutations:other.currentHumanMutations}],
+    ] as const){
+      await expect((async()=>{const context=await instantiate(consumerProvider(pool,supplied,cfg),{} as MaximumDataOperationService,cfg);
+        await context.close();})()).rejects.toBeDefined();
+      expect(create).not.toHaveBeenCalled();expect(await readdir(f.root)).not.toContain("must-not-exist");
+    }
+  });
+  it("refuses symlink ancestors and unsafe existing keys through the actual enabled factory",async()=>{
+    const f=await fixture(),db=poolFixture(f.target),cfg=reviewConfig(),target=join(f.root,"ancestor-link");
+    await symlink(f.root,target);
+    const directory=join(target,"redirected"),prepared=await prepareNativeCoreRuntime(await f.leaf("observer-link.json",JSON.stringify({
+      ...f.value,realtime_limits:realtimeLimits,cache_observation:observationConfig(directory)})));
+    const deps=await prepared.compose(db.pool);
+    await expect(instantiate(consumerProvider(db.pool,deps,cfg),{} as MaximumDataOperationService,cfg))
+      .rejects.toMatchObject({code:"NATIVE_CACHE_OBSERVATION_DIRECTORY_REFUSED"});
+    expect(await readdir(f.root)).not.toContain("redirected");
+    const badKey=await f.leaf("observation.key","TEST_ONLY-existing-key-never-replaced");
+    const bad={...deps,nativeManagerCacheObservation:{directory:f.root}};
+    await expect(instantiate(consumerProvider(db.pool,bad,cfg),{} as MaximumDataOperationService,cfg))
+      .rejects.toMatchObject({code:"NATIVE_CACHE_OBSERVATION_KEY_REFUSED"});
+    expect(await readFile(badKey.path,"utf8")).toBe("TEST_ONLY-existing-key-never-replaced");
+  });
   it("never starts the legacy ingestion worker in native-only Research",async()=>{
     const cfg={EXECUTION_READ_PROFILE:"native_manager_review_v1",FEATURE_EXECUTION_LOCAL_PROJECTION:"true"} as ControlApiConfig;
     const worker=new ExecutionProfileProjectionWorker(cfg,{} as never,{} as never);

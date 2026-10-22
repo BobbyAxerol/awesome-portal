@@ -157,13 +157,17 @@ describe("sending", () => {
     expect(screen.getAllByRole("button").map((b) => b.textContent)).toEqual(["Preview control"]);
   });
 
-  it("a preview that is not allowed shows its closed code and the Portal's words", async () => {
+  it("a preview that is not allowed shows the code's display name, the code in a disclosure, and the Portal's words", async () => {
     const { api } = port(() => preview(CONTROL.preview_blocked));
     mount(api);
     type("Release the remainder");
     await press();
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Preview not allowed");
+    // UXM07-048/4: humanized name on the line; the closed code only behind its disclosure
+    expect(alert.textContent).toContain("Pending control not qualified");
+    expect(alert.textContent).not.toContain("PENDING_CONTROL_NOT_QUALIFIED");
+    fireEvent.click(within(alert).getByRole("button", { name: "Pending control not qualified, code" }));
     expect(alert.textContent).toContain("PENDING_CONTROL_NOT_QUALIFIED");
     expect(alert.textContent).toContain("not qualified");
     expect(alert.textContent).toContain(PREVIEW_ONLY_COPY);

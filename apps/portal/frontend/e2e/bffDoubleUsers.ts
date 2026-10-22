@@ -23,8 +23,12 @@
  * | `denied` | 403 `OWNER_ACCESS_REQUIRED` on the roster and the detail | 403 |
  * | `broken` | 503 `ACCOUNT_STORE_UNAVAILABLE` | 503 |
  *
- * The roster is one unpaged list (that is the real contract); the screen pages it
- * in memory. Switch with `setUsersDoubleVariant` (module state, per test file).
+ * The roster read is the real contract's two answers (BE-P23): with NO query it is the
+ * whole unpaged list (the V1 screen's transition), and with any of `limit`, `cursor`,
+ * `q`, `role`, `state` it is one keyset page ordered by username, with `page` and the
+ * exact roster-wide `counts`. The cursor is a stand-in token bound to the limit and the
+ * filters, so a cursor replayed under another filter or limit is a 409 and a mangled one
+ * a 400, as the server answers. Switch with `setUsersDoubleVariant` (module state, per test file).
  * Account `usr_0001` carries a three-entry history; every other account has one
  * entry; `usr_NOT_FOUND` is a 404.
  */
@@ -106,8 +110,74 @@ function history(userId: string): unknown[] {
   ];
 }
 
+const QUERY_KEYS: readonly string[] = ["limit", "cursor", "q", "role", "state"];
+const CURSOR_SIGNATURE = "RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF";
+
+const cursorFor = (after: string, binding: unknown): string =>
+  `kc1.double-k1.${Buffer.from(JSON.stringify({ after, binding }), "utf8").toString("base64url")}.${CURSOR_SIGNATURE}`;
+
+function rosterPage(search: URLSearchParams): UsersAnswer {
+  const bad = (code: string, message: string, status = 400) => problem(status, code, message);
+  const keys = [...new Set([...search.keys()])];
+  if (keys.some((key) => !QUERY_KEYS.includes(key)) || QUERY_KEYS.some((key) => search.getAll(key).length > 1)) {
+    return bad("ROSTER_QUERY_INVALID", "The roster query is not valid.");
+  }
+  const rawLimit = search.get("limit");
+  const limit = rawLimit === null ? 50 : /^\d+$/.test(rawLimit) ? Number(rawLimit) : Number.NaN;
+  const q = (search.get("q") ?? "").trim();
+  const role = search.get("role");
+  const state = search.get("state");
+  if (!Number.isInteger(limit) || limit < 1 || limit > 200 || q.length > 64
+    || (role !== null && role !== "ADMIN" && role !== "USER")
+    || (state !== null && !["INVITED", "ACTIVE", "DISABLED", "ARCHIVED"].includes(state))) {
+    return bad("ROSTER_QUERY_INVALID", "The roster query is not valid.");
+  }
+  const binding = { limit, q: q.toLowerCase(), role, state };
+  let after: string | null = null;
+  const cursor = search.get("cursor");
+  if (cursor !== null) {
+    const parts = cursor.split(".");
+    try {
+      if (parts.length !== 4 || parts[0] !== "kc1" || parts[3] !== CURSOR_SIGNATURE) throw new Error("shape");
+      const payload = JSON.parse(Buffer.from(parts[2]!, "base64url").toString("utf8")) as { after?: unknown; binding?: unknown };
+      if (typeof payload.after !== "string") throw new Error("boundary");
+      if (JSON.stringify(payload.binding) !== JSON.stringify(binding)) {
+        return bad("ROSTER_CURSOR_CHANGED", "The roster cursor belongs to a different query. Reload the roster.", 409);
+      }
+      after = payload.after;
+    } catch {
+      return bad("ROSTER_CURSOR_INVALID", "The roster cursor is not valid.");
+    }
+  }
+  const all = variant === "empty" ? [] : [...ROWS].sort((a, b) => (a.username < b.username ? -1 : a.username > b.username ? 1 : 0));
+  const matches = (row: Wire) => (q === "" || row.username.toLowerCase().includes(q.toLowerCase()) || row.display_name.toLowerCase().includes(q.toLowerCase()))
+    && (role === null || row.role === role) && (state === null || row.account_state === state);
+  const matching = all.filter(matches);
+  const rest = matching.filter((row) => after === null || row.username > after);
+  const rows = rest.slice(0, limit);
+  const more = rest.length > rows.length;
+  const count = (test: (row: Wire) => boolean) => all.filter(test).length;
+  return {
+    status: 200,
+    body: {
+      schema_version: "portal.account-roster.v1",
+      record_authority: "PORTAL_CONTROL",
+      accounts: rows,
+      page: { limit, returned_count: rows.length, has_more: more, next_cursor: more ? cursorFor(rows[rows.length - 1]!.username, binding) : null },
+      counts: {
+        total: all.length,
+        matching: matching.length,
+        by_state: { INVITED: count((r) => r.account_state === "INVITED"), ACTIVE: count((r) => r.account_state === "ACTIVE"), DISABLED: count((r) => r.account_state === "DISABLED"), ARCHIVED: count((r) => r.account_state === "ARCHIVED") },
+        by_role: { ADMIN: count((r) => r.role === "ADMIN"), USER: count((r) => r.role === "USER") },
+        locked: count((r) => r.locked),
+        awaiting_first_password: count((r) => r.must_change_password && r.account_state !== "ARCHIVED"),
+      },
+    },
+  };
+}
+
 /** `pathname` is the full request path. Answers `null` for anything that is not a Users read. */
-export function answerUsers(method: string, pathname: string, _search: URLSearchParams): UsersAnswer | null {
+export function answerUsers(method: string, pathname: string, search: URLSearchParams): UsersAnswer | null {
   const seg = pathname.split("/").filter(Boolean);
   const isAccounts = seg[0] === "api" && seg[1] === "admin" && seg[2] === "accounts";
   const isStepUp = seg[0] === "api" && seg[1] === "admin" && seg[2] === "step-up" && seg.length === 3;
@@ -128,7 +198,10 @@ export function answerUsers(method: string, pathname: string, _search: URLSearch
   if (variant === "denied") return problem(403, "OWNER_ACCESS_REQUIRED", "Owner access is required.");
   if (variant === "broken") return problem(503, "ACCOUNT_STORE_UNAVAILABLE", "The account store is unavailable.");
 
-  if (seg.length === 3) return { status: 200, body: { accounts: variant === "empty" ? [] : ROWS } };
+  if (seg.length === 3) {
+    if ([...search.keys()].length > 0) return rosterPage(search);
+    return { status: 200, body: { accounts: variant === "empty" ? [] : ROWS } };
+  }
 
   const id = decodeURIComponent(seg[3]!);
   if (seg.length !== 4) return null;

@@ -78,7 +78,7 @@ export function ContextLink({ to, children }: { to: string | null; children: str
  * wrong thing to show. With neither, the series is not published (the schema carries no points), so the
  * slot says that and names the request.
  */
-export function ChartSlot({ slot }: { slot: ChartSlotModel }) {
+export function ChartSlot({ slot, gapAbove = false }: { slot: ChartSlotModel; gapAbove?: boolean }) {
   switch (slot.kind) {
     case "mismatch":
       return (
@@ -121,6 +121,8 @@ export function ChartSlot({ slot }: { slot: ChartSlotModel }) {
       );
     }
     case "unavailable":
+      // `gapAbove`: the screen already lists "Live net PnL series" in its one gap line (V1 body), so no panel repeats it.
+      if (gapAbove) return null;
       return (
         <SectionPanel level={2} title="Live net PnL" aside="Since activation">
           <GapLine items={[{ label: "Live net PnL series", id: "FE-013" }]} />

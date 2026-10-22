@@ -9,7 +9,9 @@ import { useContext, useMemo, useRef, useState, type KeyboardEvent, type MouseEv
 
 import "../css/charts.css";
 import type { ExactUnit } from "../../formatExact";
+import { GapWhy } from "../blocks/notPublished";
 import { formatAsOf } from "../boundary";
+import { samplingWords } from "../displayNames";
 import { ChartStateFlags, ChartUnavailable } from "./ChartStateView";
 import { ChartExpandedContext } from "./ChartTools";
 import { compareDecimal, readChartDecimal, showDecimal, subtractDecimal, toGeometry } from "./decimal";
@@ -73,6 +75,20 @@ const DD_LINE = 14;
 const MAX_PINS = 24;
 const MAX_MARKS = 40;
 const charW = 6.6;
+
+/**
+ * What the server already reduced, in words of what it kept. A method the dictionary names keeps its code in hidden text; any other
+ * reads `method not stated` with the code behind a disclosure (UXM-07 DEBT-048/4).
+ */
+function ServerReduction({ envelope }: { envelope: ServerEnvelope }) {
+  const { words, known } = samplingWords(envelope.method);
+  return (
+    <>
+      {` · Server: ${envelope.shownCount.toLocaleString("en-US")} of ${envelope.sourceCount.toLocaleString("en-US")} points, ${words}`}
+      {envelope.method === "" ? null : known ? <span className="exec-c2-sr"> ({envelope.method})</span> : <GapWhy name="Reduction method" rows={[envelope.method]} next={null} />}
+    </>
+  );
+}
 
 /**
  * Break copy into lines of at most `maxChars`: first on ' · ' separators, then on spaces. A word longer
@@ -478,9 +494,7 @@ export function EquityPanel(props: EquityPanelProps) {
 
       <p className="exec-c2-envelope" data-testid="envelope">
         {caption}
-        {serverEnvelope
-          ? ` · Server: ${serverEnvelope.shownCount.toLocaleString("en-US")} of ${serverEnvelope.sourceCount.toLocaleString("en-US")} points, ${serverEnvelope.method}`
-          : ""}
+        {serverEnvelope ? <ServerReduction envelope={serverEnvelope} /> : null}
         {band && !bandOk ? " · Band not drawn: its bounds are unreadable" : ""}
         {hiddenPins > 0 ? ` · ${hiddenPins} more flow ${hiddenPins === 1 ? "pin" : "pins"} not drawn here` : ""}
         {hiddenEvs > 0 ? ` · ${hiddenEvs} more ${hiddenEvs === 1 ? "event" : "events"} not drawn here` : ""}

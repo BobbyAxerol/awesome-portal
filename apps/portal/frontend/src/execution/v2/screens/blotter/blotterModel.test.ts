@@ -15,7 +15,7 @@ import { ABSENT, cartesian, coverage, describeCoverage, dimension, pairwise, typ
 import { decimalCases, leaked, pollutionCases, prototypeIsClean, requiredCases, rootCases, stringCases, type NegativeCase } from "../../testkit/negative";
 import { cloneRows, pad, timed } from "../../testkit/scale";
 import {
-  COLUMNS, DEFAULT_COLUMNS, NO_FILTERS, NO_SCOPE, ROW_CAP, applyScope, blotterQuery, chipCounts, unchippedStatusCounts, fillsFor, filtersKey, groupExact, humanize,
+  COLUMNS, DEFAULT_COLUMNS, NO_FILTERS, NO_SCOPE, ROW_CAP, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, unchippedStatusCounts, fillsFor, filtersKey, groupExact, humanize,
   isBucket, legsFor, readBlotter, readExact, scopeActive, shortUtc, statusView, type BlotterFill, type BlotterLeg, type BlotterOrder,
 } from "./blotterModel";
 
@@ -306,5 +306,29 @@ describe("blotter default columns and time (BLT-B1)", () => {
     expect(shortUtc("2026-10-17T09:58:00+07:00")).toBe("2026-10-17T09:58:00+07:00");
     expect(shortUtc("2026-13-17T09:58:00Z")).toBe("2026-13-17T09:58:00Z");
     expect(shortUtc("yesterday")).toBe("yesterday");
+  });
+});
+
+describe("CSV export of the loaded rows", () => {
+  const base = read(canonical)!.orders[0]!;
+  const order = (over: Partial<BlotterOrder>): BlotterOrder => ({ ...base, ...over });
+  const cols = (...ids: string[]) => COLUMNS.filter((c) => ids.includes(c.id));
+
+  it("prints the visible labels once, then each row as shown: exact decimals ungrouped, UTC short form, absent as an empty cell", () => {
+    const csv = blotterCsv(
+      [order({ orderId: "o1", submittedAt: "2026-10-17T09:58:00Z", quantity: { kind: "value", text: "1250.0400" }, price: { kind: "absent" }, side: "BUY", orderType: "MARKET", status: "FILLED" })],
+      cols("time", "order", "price", "qty", "side", "status"),
+    );
+    expect(csv).toBe("Time (UTC),Order,Side and type,Price,Quantity,Status\r\n17 Oct 09:58:00Z,o1,Buy Market,,1250.0400,Filled\r\n");
+  });
+
+  it("quotes commas and quotes, and defuses a text cell that a spreadsheet would run as a formula", () => {
+    const csv = blotterCsv([order({ orderId: "o,1", symbol: '=HYPERLINK("x")', alphaId: "-cmd", quantity: { kind: "value", text: "-5" } })], cols("order", "symbol", "alpha", "qty"));
+    expect(csv.split("\r\n")[1]).toBe('"o,1",\'-cmd,"\'=HYPERLINK(""x"")",-5');
+  });
+
+  it("names the file for the environment and the read's as-of", () => {
+    expect(blotterCsvName("Paper", "2026-10-21T10:42:01Z")).toBe("blotter-paper-20261021T104201Z.csv");
+    expect(blotterCsvName("Paper", null)).toBe("blotter-paper-asof-not-published.csv");
   });
 });

@@ -22,6 +22,7 @@ import type { AccessTrustProvider } from "./execution-v2/access-trust";
 import { ExecutionManagerRuntime, type ManagerRuntimeInstallation } from "./execution-v2/manager-runtime";
 import type { CurrentHumanMutations } from "./execution-v2/current-human-mutations";
 import { composeNativeCore,nativeCoreManagerReadConsumer } from "./execution-v2/native-core-composition";
+import { createNativeCacheObserver } from "./execution-v2/native-cache-observation";
 import { NativeManagerReadConsumer } from "./execution-v2/native-manager-consumer";
 import { nativeResearchReview } from "./execution/native-review-profile";
 import { ScopedReplayCursorCodec } from "./execution-v2/scoped-replay-cursor";
@@ -260,6 +261,9 @@ export interface ControlApiDependencies {
   nativeManagerRead?: Awaited<ReturnType<typeof composeNativeCore>>;
   /** Private explicit connected budget only; no automatic runtime/source commissioning. */
   nativeManagerRealtimeLimits?: ScopedReplayLimits;
+  /** Operator-only observation, selected by a hash-pinned private Research
+   * manifest. No public flags, route or authority; absent means no file I/O. */
+  nativeManagerCacheObservation?: Readonly<{ directory: string }>;
 }
 
 @Module({})
@@ -279,6 +283,9 @@ export class AppModule implements OnApplicationShutdown {
       throw new Error("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
     if (dependencies.nativeManagerRealtimeLimits !== undefined && dependencies.nativeManagerRead === undefined)
       throw new Error("NATIVE_MANAGER_REALTIME_COMPOSITION_REQUIRED");
+    if (dependencies.nativeManagerCacheObservation !== undefined &&
+      (!nativeResearchReview(config) || !dependencies.nativeManagerRead))
+      throw new Error("NATIVE_CACHE_OBSERVATION_RESEARCH_COMPOSITION_REQUIRED");
     const nativeRealtimeLimits = dependencies.nativeManagerRealtimeLimits === undefined
       ? undefined : Object.freeze({...dependencies.nativeManagerRealtimeLimits});
     if (dependencies.allowTestOnlyExecutionAccess && config.NODE_ENV !== "test")
@@ -625,7 +632,8 @@ export class AppModule implements OnApplicationShutdown {
               scopes,repository,limits:nativeRealtimeLimits,
               codec:new ScopedReplayCursorCodec(cfg.QUERY_CURSOR_ACTIVE_KEY_ID,querySigningKeys(cfg),
                 Math.min(300_000,cfg.QUERY_CURSOR_TTL_SECONDS*1000)),
-            }),
+            },dependencies.nativeManagerCacheObservation === undefined ? undefined :
+              () => createNativeCacheObserver(dependencies.nativeManagerCacheObservation!.directory)),
           inject: [MaximumDataOperationService,ExecutionReadScopes,ExecutionProfileProjectionRepository,CONTROL_API_CONFIG],
         },{provide:NATIVE_MANAGER_REALTIME_COORDINATOR,useExisting:NativeManagerReadConsumer}] : []),
         ExecutionProfileRealtimeService,

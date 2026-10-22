@@ -9,9 +9,9 @@
  * What the spine will not do: infer. The hi-fi sample derived "done" for every
  * stage before the current one and invented who approved it. Here the current
  * stage is only what the caller passes, a stage is `done` only when the source
- * says so, and days, criteria and decider render
- * `Not published (FE-027/028)` until the lifecycle read (FE-027) and the
- * criteria shape (FE-028) exist. With no current stage at all, every stage is
+ * says so, and days, criteria and decider are printed only when the lifecycle
+ * read (FE-027) and the criteria shape (FE-028) published them; when any card
+ * lacks them the one note under the list says so. With no current stage at all, every stage is
  * Unknown and the spine says the lifecycle is not published.
  */
 import type { ReactNode } from "react";
@@ -99,7 +99,7 @@ export interface JourneySpineProps {
   current?: SpineStageId | null;
   /** The current stage is blocked. */
   blocked?: boolean;
-  /** Per-stage facts. Missing facts render `Not published (FE-027/028)`. */
+  /** Per-stage facts. A missing fact is not drawn; the note under the list names the gap once. */
   stages?: Partial<Record<SpineStageId, SpineStageFacts>>;
   /** Selected stage (full and compact). */
   selected?: SpineStageId | null;
@@ -154,35 +154,29 @@ function Facts({ id, state, facts }: { id: SpineStageId; state: SpineNodeState; 
   const days = isCount(facts?.daysInStage) ? facts.daysInStage : null;
   const criteria = facts?.criteria && isCount(facts.criteria.met) && isCount(facts.criteria.total) ? facts.criteria : null;
   const who = facts?.decider ?? null;
+  // The card prints only what the lifecycle read published; the one note under the list says what it did not.
   if (state === "done") {
     const by = facts?.decidedBy ?? null;
     return (
       <>
         {spec.gate ? <span className="exec-blk-spine-big">Approved</span> : null}
         {facts?.line ? <span className="exec-blk-spine-line">{facts.line}</span> : null}
-        <span className="exec-blk-spine-line">
-          {by ? `By ${by}` : <NotPublished id="FE-027/028" compact>Decided by</NotPublished>}
-        </span>
+        {by ? <span className="exec-blk-spine-line">By {by}</span> : null}
       </>
     );
   }
   return (
     <>
-      <span className="exec-blk-spine-big">
-        {days === null ? <NotPublished id="FE-027/028" compact>Days in stage</NotPublished> : <>{count(days)}<small> days in stage</small></>}
-      </span>
-      {spec.gate || id === "live" ? null : criteria ? (
-        <Meter {...criteria} />
-      ) : (
-        <span className="exec-blk-spine-line">
-          <NotPublished id="FE-027/028" compact>Gate criteria</NotPublished>
+      {days === null ? null : (
+        <span className="exec-blk-spine-big">
+          {count(days)}
+          <small> days in stage</small>
         </span>
       )}
+      {spec.gate || id === "live" || !criteria ? null : <Meter {...criteria} />}
       {id === "live" ? <span className="exec-blk-spine-line">No exit gate</span> : null}
       {state === "blk" && facts?.blockedReason ? <span className="exec-blk-spine-line">{facts.blockedReason}</span> : null}
-      <span className="exec-blk-spine-line">
-        {who ? `Decides: ${who}` : <NotPublished id="FE-027/028" compact>Decider</NotPublished>}
-      </span>
+      {who ? <span className="exec-blk-spine-line">Decides: {who}</span> : null}
     </>
   );
 }
@@ -237,7 +231,7 @@ export function JourneySpine({
   const gapNote =
     variant === "full" && SPINE_STAGE_IDS.some((id, i) => cardHasGap(states[i], id, stages?.[id])) ? (
       <p className="exec-blk-spine-note">
-        <NotPublished id="FE-027/028">Days in stage, gate criteria and decider are not published</NotPublished>
+        <NotPublished id="FE-027/028">Days in stage, gate criteria and decider</NotPublished>
       </p>
     ) : null;
 

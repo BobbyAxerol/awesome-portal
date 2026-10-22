@@ -29,8 +29,12 @@
   font: var(--exec-font-meta);
   color: var(--ink-soft);
 }
+/* The back link reads as on Account 360 and Alpha 360: accent ink, an arrow, one word. */
 .exec-pf-crumb a {
-  color: var(--ink-soft);
+  color: var(--accent);
+}
+.exec-pf-crumb a::before {
+  content: "\2190\00a0";
 }
 .exec-pf-fresh,
 .exec-pf-ctrls {

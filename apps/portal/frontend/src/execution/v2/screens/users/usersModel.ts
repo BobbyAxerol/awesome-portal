@@ -7,17 +7,19 @@
  * sign-in time are not on that read, so this file never invents them: the
  * screen names them as not published.
  *
- * Counts are taken over the roster the server returned. The roster is one
- * unpaged read, so a count over it is the whole population, and the screen
- * says "from the roster read" rather than "total".
+ * Counts are the server's: exact, roster-wide and taken in the same statement
+ * as the page (`rosterReader.ts`, BE-P23). The screen holds one keyset page at a
+ * time, so it never counts or filters the rows it happens to have loaded.
  */
-import type { AccountRole, AccountState, AccountSummary, StepUpState } from "../../../../features/admin/accountApi";
+import type { AccountRole, AccountState, StepUpState } from "../../../../features/admin/accountApi";
 import type { FlagKind } from "../../flagKinds";
 
-/** DOM budget: more rows than this and the reader narrows the search instead. */
+/** DOM budget: more rows than this and the reader narrows the search instead (4 pages of 50, 20 of ten). */
 export const ROW_CAP = 200;
-/** Rows added by one `Load more`. */
+/** Rows one request asks for, and so rows added by one `Load more`. */
 export const PAGE_SIZE = 50;
+/** Rows one request asks for at 660px and narrower, where a row is a card (DEBT-UXM07-031). */
+export const PHONE_PAGE_SIZE = 10;
 
 export const ACCOUNT_STATES: readonly AccountState[] = ["ACTIVE", "INVITED", "DISABLED", "ARCHIVED"];
 export const ACCOUNT_ROLES: readonly AccountRole[] = ["ADMIN", "USER"];
@@ -57,45 +59,6 @@ export function isRole(value: string | null): value is AccountRole {
 
 export function isState(value: string | null): value is AccountState {
   return value === "ACTIVE" || value === "INVITED" || value === "DISABLED" || value === "ARCHIVED";
-}
-
-/** Name or username contains the text, case-insensitive. An empty query matches all. */
-export function matchesQuery(account: AccountSummary, query: string): boolean {
-  const needle = query.trim().toLowerCase();
-  if (needle === "") return true;
-  return account.displayName.toLowerCase().includes(needle) || account.username.toLowerCase().includes(needle);
-}
-
-export function filterAccounts(accounts: readonly AccountSummary[], filters: UsersFilters): AccountSummary[] {
-  return accounts.filter(
-    (account) =>
-      matchesQuery(account, filters.q) &&
-      (filters.role === null || account.role === filters.role) &&
-      (filters.state === null || account.accountState === filters.state),
-  );
-}
-
-export interface RosterCounts {
-  total: number;
-  byState: Readonly<Record<AccountState, number>>;
-  byRole: Readonly<Record<AccountRole, number>>;
-  locked: number;
-  awaitingFirstPassword: number;
-}
-
-/** Counts over the roster as read. An archived account does not "await" a first password. */
-export function rosterCounts(accounts: readonly AccountSummary[]): RosterCounts {
-  const byState: Record<AccountState, number> = { ACTIVE: 0, INVITED: 0, DISABLED: 0, ARCHIVED: 0 };
-  const byRole: Record<AccountRole, number> = { ADMIN: 0, USER: 0 };
-  let locked = 0;
-  let awaitingFirstPassword = 0;
-  for (const account of accounts) {
-    byState[account.accountState] += 1;
-    byRole[account.role] += 1;
-    if (account.locked) locked += 1;
-    if (account.mustChangePassword && account.accountState !== "ARCHIVED") awaitingFirstPassword += 1;
-  }
-  return { total: accounts.length, byState, byRole, locked, awaitingFirstPassword };
 }
 
 export interface StepUpView {

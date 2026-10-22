@@ -153,7 +153,8 @@ rows keep their dates).
 | GET | `/api/v1/portal/summary` | 200 | bffDoubleShell (summary.healthy.json) | control-api | none | the healthy summary fixture stubPortalApi serves |
 | GET | `/api/admin/access/self` | 200 | bffAnswerer (the manager session the V2 spec inlines) | control-api | none | portal.owner-access.v1; no published schema |
 | GET | `/api/admin/profile-access/v2/effective` | 200 | bffDoubleAccess | none yet | `execution-access.openapi.json#/components/schemas/AccessEffective` | no controller in apps/control-api/src at this commit; state chosen by workspace_id |
-| GET | `/api/admin/accounts` | 200 | bffDoubleUsers | control-api | none | 123 accounts, one unpaged list; portal-account-lifecycle.openapi.json |
+| GET | `/api/admin/accounts` | 200 | bffDoubleUsers | control-api | none | 123 accounts, the whole list when no query is sent (the V1 screen's transition); portal-account-lifecycle.openapi.json |
+| GET | `/api/admin/accounts [paged]` | 200 | bffDoubleUsers | control-api | `portal-account-lifecycle.openapi.json#/components/schemas/AccountRoster` | BE-P23: any of limit, cursor, q, role, state is one keyset page by username, with page and exact roster-wide counts |
 | GET | `/api/admin/accounts/{user_id}` | 200 | bffDoubleUsers | control-api | none |  |
 | GET | `/api/admin/step-up` | 200 | bffDoubleUsers | control-api | none |  |
 | GET | `/api/admin/profile-access/v2/self-navigation` | 200 | bffDoubleSelfAccess | control-api | `execution-access.openapi.json#/components/schemas/AccessSelfNavigation` | portal.self-navigation.v1, the canonical access fixture re-stamped from the fixture clock (ceiling a year later); workspace_id picks the case (ws_TEST_NONE all HIDDEN, ws_TEST_LEGACY, ws_TEST_DENIED 403, ws_TEST_UNAVAILABLE 503, ws_TEST_MALFORMED a key the closed contract lacks); the query is exactly workspace_id and environment |

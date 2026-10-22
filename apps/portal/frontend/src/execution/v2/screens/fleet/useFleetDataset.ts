@@ -85,6 +85,13 @@ export interface FleetDatasetRead {
   loadingMore: boolean;
   moreError: string | null;
   loadMore(): void;
+  /**
+   * Read the first page again IN PLACE (the Fleet STREAM, flag `fleet-stream`): the rows on screen stay until the new page arrives, then
+   * all of them are replaced by it (a page-2 row is not carried over from another snapshot). Resolves with the new first dataset, or
+   * `null` when the read did not succeed or the query changed meanwhile; a failed refresh leaves everything as it was, except a
+   * `denied` answer, which drops the rows exactly as an eviction does. Nothing calls it unless a stream is attached.
+   */
+  refresh(signal?: AbortSignal): Promise<ManagerDataset | null>;
 }
 
 export const SNAPSHOT_CHANGED = "SNAPSHOT_CHANGED";
@@ -119,6 +126,8 @@ export function useFleetDataset(
     firstFlight.current?.();
     firstFlight.current = null;
     more.current?.abort();
+    refreshFlight.current?.controller.abort();
+    refreshFlight.current = null;
     setLoadingMore(false);
     setMoreError(null);
     setRows([]);
@@ -130,6 +139,9 @@ export function useFleetDataset(
   useEffect(() => {
     generation.current += 1;
     more.current?.abort();
+    // A refresh asks the OLD query: cancelled with the rest, and its answer is refused by the generation.
+    refreshFlight.current?.controller.abort();
+    refreshFlight.current = null;
     setLoadingMore(false);
     setMoreError(null);
     if (!enabled) {
@@ -196,7 +208,107 @@ export function useFleetDataset(
     });
   }, [api]);
 
-  return { state, rows, first, last, total: last === null ? null : last.page.authorizedFilteredCount, nextCursor, loadingMore, moreError, loadMore };
+  // At most ONE physical refresh request is out at a time. Callers that arrive while a LIVE one is out share it (two refreshes never
+  // stack and never cancel each other). The request is cancelled when every caller that passed a signal has left, when the query
+  // changes, and when the screen unmounts. Three rules keep that honest (FLEET-1):
+  // - a cancelled flight is no answer for a NEW caller: it waits for the cancelled request to settle, then makes ONE fresh read
+  //   (callers that arrive meanwhile share that one), never a second request beside the cancelled one;
+  // - cancellation is per waiter: a caller that left resolves `null` even when the request lives on for another waiter;
+  // - the independent read after an access end therefore really runs, and a `denied` answer drops rows, head and cursor.
+  const refreshFlight = useRef<RefreshFlight | null>(null);
+  /** Settles when the newest physical refresh request has settled (`null` when none is out). */
+  const refreshSettled = useRef<Promise<void> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      // Unmount: nothing in flight may answer into a screen that is gone.
+      generation.current += 1;
+      more.current?.abort();
+      refreshFlight.current?.controller.abort();
+      refreshFlight.current = null;
+    };
+  }, []);
+
+  const refresh = useCallback((signal?: AbortSignal): Promise<ManagerDataset | null> => {
+    let flight = refreshFlight.current;
+    if (flight === null || flight.controller.signal.aborted) {
+      const controller = new AbortController();
+      const created: RefreshFlight = { controller, waiters: 0, promise: Promise.resolve<ManagerDataset | null>(null) };
+      const clear = () => {
+        if (refreshFlight.current === created) refreshFlight.current = null;
+      };
+      const read = (): Promise<ManagerDataset | null> => {
+        const mine = generation.current;
+        return ask(scoped(api, controller.signal), build.current(null)).then((result) => {
+          clear();
+          // A superseded answer (the query changed, the screen left, every caller cancelled) is never applied.
+          if (mine !== generation.current || controller.signal.aborted) return null;
+          if (!result.ok) {
+            if (result.status === "denied") {
+              generation.current += 1;
+              more.current?.abort();
+              setLoadingMore(false);
+              setMoreError(null);
+              setRows([]);
+              setFirst(null);
+              setLast(null);
+              setState({ phase: "error", status: "denied", reason: result.reason });
+            }
+            return null;
+          }
+          generation.current += 1;
+          more.current?.abort();
+          setLoadingMore(false);
+          setMoreError(null);
+          setRows(dedupe(result.value.items));
+          setFirst(result.value);
+          setLast(result.value);
+          setState({ phase: "ready" });
+          return result.value;
+        }).catch(() => {
+          clear();
+          return null;
+        });
+      };
+      // The previous physical request (possibly cancelled, not yet settled) finishes first; if every caller left meanwhile, no request.
+      const previous = refreshSettled.current;
+      created.promise = previous === null ? read() : previous.then(() => (controller.signal.aborted ? null : read()));
+      const settled: Promise<void> = created.promise.then(() => undefined, () => undefined).then(() => {
+        if (refreshSettled.current === settled) refreshSettled.current = null;
+      });
+      refreshSettled.current = settled;
+      refreshFlight.current = created;
+      flight = created;
+    }
+    const shared = flight;
+    shared.waiters += 1;
+    if (signal === undefined) return shared.promise;
+    return new Promise<ManagerDataset | null>((resolve) => {
+      const leave = () => {
+        shared.waiters -= 1;
+        if (shared.waiters <= 0) shared.controller.abort();
+        resolve(null);
+      };
+      if (signal.aborted) {
+        leave();
+        return;
+      }
+      signal.addEventListener("abort", leave, { once: true });
+      void shared.promise.then((value) => {
+        signal.removeEventListener("abort", leave);
+        resolve(signal.aborted ? null : value);
+      });
+    });
+  }, [api]);
+
+  return { state, rows, first, last, total: last === null ? null : last.page.authorizedFilteredCount, nextCursor, loadingMore, moreError, loadMore, refresh };
+}
+
+interface RefreshFlight {
+  promise: Promise<ManagerDataset | null>;
+  controller: AbortController;
+  /** Callers still waiting on this request (one that passed no signal never leaves). */
+  waiters: number;
 }
 
 function dedupe(rows: readonly ManagerRow[]): readonly ManagerRow[] {

@@ -132,13 +132,14 @@ describe("V1 body, matched", () => {
     expect(chip("gaps")).not.toContain("Running");
   });
 
-  it("the chart slot says the series is `Not available` (FE-013 in its title); no chart is drawn", async () => {
+  it("the chart slot's gap is in the screen's ONE `Not available` line (FE-013 in its disclosure); no panel and no chart is drawn (UXM07-048/5)", async () => {
     mount(() => ok(v1Read(populatedV1())));
     await loaded();
-    const panel = screen.getByRole("region", { name: "Live net PnL" });
-    expect(panel.querySelector(".exec-blk-gaps")!.textContent).toBe("Not available: Live net PnL series");
-    expect(whyText(panel.querySelector(".exec-blk-gaps")!)).toContain("Not published (FE-013)");
-    expect(panel.textContent).not.toContain("(FE-013)");
+    expect(screen.queryByRole("region", { name: "Live net PnL" })).toBeNull();
+    const gap = document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!;
+    expect(gap.textContent).toContain("Live net PnL series");
+    expect(whyText(gap)).toContain("Not published (FE-013)");
+    expect(gap.textContent).not.toContain("(FE-013)");
     expect(document.querySelector("svg[role='img']")).toBeNull();
   });
 
@@ -151,9 +152,11 @@ describe("V1 body, matched", () => {
     expect(screen.queryByRole("region", { name: "Reconciliation" })).toBeNull();
     for (const name of ["Positions", "Orders"]) expect(screen.queryByRole("region", { name })).toBeNull();
     const tab = screen.getByRole("link", { name: "Open the full blotter for this deployment" }).closest(".exec-liv-stack")!;
-    const lines = tab.querySelectorAll(".exec-blk-gaps");
+    // UXM07-048/5: the tab states no gap of its own; the one line under the strip names the chart, the figures and the rows together
+    expect(tab.querySelectorAll(".exec-blk-gaps")).toHaveLength(0);
+    const lines = document.querySelectorAll(".exec-liv-v2 .exec-blk-gaps");
     expect(lines).toHaveLength(1);
-    expect(lines[0]!.textContent).toBe("Not available: Internal, Broker and Difference figures, Position rows, Open order rows");
+    expect(lines[0]!.textContent).toBe("Not available: Live net PnL series, Internal, Broker and Difference figures, Position rows, Open order rows");
     expect(whyText(lines[0]!)).toContain("Not published (FE-072)");
     expect(tab.textContent).not.toMatch(/\b0\.00\b/);
     expect(screen.getByRole("link", { name: "Open the full blotter for this deployment" }).getAttribute("href")).toBe(`/deployments/blotter?deployment=${DEPLOYMENT_ID}`);
@@ -165,8 +168,8 @@ describe("V1 body, matched", () => {
     // Every cell of the published figures is the server's NOT_PUBLISHED: ONE line instead of fifteen cells, every reason in its title.
     expect(screen.queryByRole("group", { name: "Reconciliation" })).toBeNull();
     const stack = screen.getByRole("link", { name: "Open the full blotter for this deployment" }).closest(".exec-liv-stack")!;
-    const gap = stack.querySelector(".exec-blk-gaps")!;
-    expect(gap.textContent).toBe("Not available: Internal, Broker and Difference figures, Position rows, Open order rows");
+    const gap = document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!;
+    expect(gap.textContent).toBe("Not available: Live net PnL series, Internal, Broker and Difference figures, Position rows, Open order rows");
     expect(whyText(gap)).toContain("Not published (FE-072)");
     expect(whyText(gap)).toContain("DIFFERENCE_REQUIRES_BOTH_SIDES");
     expect(whyText(gap)).toContain("BROKER_EQUITY_FIELD_NOT_PUBLISHED");
@@ -315,10 +318,10 @@ describe("V1 body, broker not verified (UNAVAILABLE) is not a mismatch", () => {
     expect(whyText(document.querySelector('[data-chip="gaps"]')!)).toContain("LIVE_SOURCE_UNAVAILABLE");
     expect(chip("freshness")).toContain("Not available");
     expect(screen.getByText("Source not qualified.")).toBeTruthy();
-    // No tile holds a "Not available": one line names the five, FE-072 and the broker's reason in its title.
+    // No tile holds a "Not available": one line names the five figures and the chart, reconciliation and rows (UXM07-048/5), FE-072 and the broker's reason in its disclosure.
     expect(screen.queryByRole("group", { name: "Live figures" })).toBeNull();
     const gap = document.querySelector(".exec-liv-v2 > .exec-blk-gaps")!;
-    expect(gap.textContent).toBe("Not available: Capital, Gross notional, Daily P&L, Open orders, Broker equity");
+    expect(gap.textContent).toBe("Not available: Capital, Gross notional, Daily P&L, Open orders, Broker equity, Live net PnL series, Internal, Broker and Difference figures, Position rows, Open order rows");
     expect(whyText(gap)).toContain("Capital: Not published (FE-072)");
     expect(whyText(gap)).toContain("Broker equity: Not published · Broker state not available");
     const strip = document.body;

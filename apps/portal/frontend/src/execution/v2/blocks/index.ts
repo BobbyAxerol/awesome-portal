@@ -35,6 +35,7 @@ export {
 export type { FeId, GapItem, GapWhyProps, NaWhyProps, NotPublishedId, NotPublishedProps, UnpublishedFact } from "./notPublished";
 export { NotAvailableLine, unavailableTitle } from "./NotAvailableLine";
 export type { NotAvailableLineProps, UnavailableFact } from "./NotAvailableLine";
+export { CodeName } from "./CodeName";
 export { QuietIds, QuietIdsWhy } from "./QuietIds";
 export { EventFeed } from "./EventFeed";
 export type { EventFeedCursor, EventFeedProps, EventFeedRow } from "./EventFeed";

@@ -89,7 +89,7 @@ export interface ServerEnvelope {
   readonly sourceCount: number;
   /** Points the server sent. */
   readonly shownCount: number;
-  /** The server's own name for its reduction. */
+  /** The server's own name for its reduction; empty when it named none (the caption reads method not stated). */
   readonly method: string;
   /** False means the server does not promise extrema survived; the chart says so. */
   readonly keepsExtrema: boolean;

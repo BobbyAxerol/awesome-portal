@@ -134,7 +134,7 @@ describe("plan gate", () => {
     ["health", /runs here/],
     ["allocation-change", /begin in Portfolios/],
     ["emergency-close", /second approver and a security key/],
-    ["risk-profile", /Not offered in the portal \(SOURCE_ROUTE_MAPPING_AMBIGUOUS\)/],
+    ["risk-profile", /Not offered in the portal \(Route not established\)/],
   ])("refuses %s with its reason", (id, reason) => {
     const gate = planGate(row(id), ws);
     expect(gate.allowed).toBe(false);

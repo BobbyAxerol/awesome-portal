@@ -550,3 +550,53 @@ export function shortUtc(iso: string): string {
   if (!m || month === undefined) return iso;
   return `${m[3]} ${month} ${m[4]}:${m[5]}:${m[6] ?? "00"}Z`;
 }
+
+/* ── export ────────────────────────────────────────────────────────────── */
+
+/** The exact decimal as published (no thousands grouping, which would split a CSV cell); an unreadable one says so. */
+function exactCsv(value: Exact): string {
+  return value.kind === "value" ? value.text : value.kind === "unreadable" ? "unreadable" : "";
+}
+
+/** A cell the way the table prints it, as plain text; a fact the row does not carry is an empty cell, never a stand-in. */
+export function csvCell(order: BlotterOrder, id: ColumnId): string {
+  switch (id) {
+    case "time": return order.submittedAt ? shortUtc(order.submittedAt) : "";
+    case "order": return order.orderId;
+    case "alpha": return order.alphaId ?? "";
+    case "account": return order.accountId ?? "";
+    case "venue": return order.venue ?? "";
+    case "symbol": return order.symbol ?? "";
+    case "side": return [order.side ? humanize(order.side) : "", order.orderType ? humanize(order.orderType) : ""].filter((w) => w !== "").join(" ");
+    case "tif": return order.timeInForce ?? "";
+    case "price": return exactCsv(order.price);
+    case "trigger": return exactCsv(order.triggerPrice);
+    case "qty": return exactCsv(order.quantity);
+    case "filled": return exactCsv(order.filledQuantity);
+    case "client": return order.clientOrderId ?? "";
+    case "venueOrder": return order.venueOrderId ?? "";
+    case "session": return order.sessionId ?? "";
+    case "risk": return order.riskGrantId ?? "";
+    case "updated": return order.updatedAt ? shortUtc(order.updatedAt) : "";
+    case "status": return statusView(order.status).label;
+  }
+}
+
+/** RFC 4180 quoting; a text cell that a spreadsheet would read as a formula gets a leading apostrophe. */
+function csvField(text: string, numeric: boolean): string {
+  const safe = !numeric && /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+  return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+}
+
+/** The rows as the table shows them: one header row with the visible column labels, then one line per row. */
+export function blotterCsv(rows: readonly BlotterOrder[], columns: readonly ColumnSpec[]): string {
+  const lines = [columns.map((c) => csvField(c.label, true))];
+  for (const order of rows) lines.push(columns.map((c) => csvField(csvCell(order, c.id), c.numeric === true)));
+  return `${lines.map((line) => line.join(",")).join("\r\n")}\r\n`;
+}
+
+/** `blotter-paper-20261021T104201Z.csv`: the environment, then the read's as-of (digits and letters only). */
+export function blotterCsvName(environment: string, asOf: string | null): string {
+  const stamp = asOf ? asOf.replace(/[^0-9A-Za-z]/g, "") : "";
+  return `blotter-${environment.toLowerCase()}-${stamp === "" ? "asof-not-published" : stamp}.csv`;
+}

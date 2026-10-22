@@ -85,15 +85,15 @@
   font: var(--exec-font-meta);
   color: var(--ink-soft);
 }
-/* Request archive / Request gate review: disabled DockActions (the buttons and their reasons come from dock.css). */
+/* Request archive / Request gate review: two disabled buttons and their one shared reason (DecisionGroup). */
 .exec-alp2-requests {
-  display: flex;
   flex: 1 1 100%;
-  flex-wrap: wrap;
   min-width: 0;
   max-width: 100%;
-  align-items: flex-start;
-  gap: var(--space-2);
+}
+/* The My access link sits next to the reason, not at the far edge of the header. */
+.exec-alp2-requests .exec-dock-reason {
+  flex: 0 1 auto;
 }
 /* The button already says what it is: the reason is not prefixed with the action's name, and it wraps instead of ending in an ellipsis (it was cut at phone width). */
 .exec-alp2-requests .exec-dock-why[data-l]::before {
@@ -473,6 +473,34 @@
 }
 
 @media (max-width: 660px) {
+  /* Orders and fills at phone width: the Blotter's card (a two-column grid, label above value) instead of one line per field, so
+   * an order is about half the height. The id cell takes the full width and no label (DEBT-UXM07-031). Nothing sticks. */
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2px var(--space-3);
+    padding: 8px 12px;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l] {
+    display: block;
+    padding: 4px 0;
+    min-width: 0;
+    text-align: left;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l]::before {
+    display: block;
+    margin-right: 0;
+    padding-right: 0;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Order"],
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Fill"] {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Order"]::before,
+  .exec-alp2-cardgrid tbody tr:not(.exec-cards-empty) td[data-l="Fill"]::before {
+    display: none;
+  }
   /* The trade log becomes cards, the same rule as cards.css: the header row goes, each cell prints its label. */
   .exec-alp2-replay table[data-plain] {
     display: block;

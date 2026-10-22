@@ -16,7 +16,7 @@
  */
 import { Link } from "react-router-dom";
 
-import { GapWhy, JourneySpine, SectionPanel, gapTitle, StageChipRow, type StageChips, type StageChipValue } from "../../blocks";
+import { GapWhy, JourneySpine, NotPublished, SectionPanel, StageChipRow, type StageChips, type StageChipValue } from "../../blocks";
 import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import { reconciliationFactOf, runtimeFactOf } from "../../readers/stageFactViews";
@@ -147,7 +147,7 @@ export function LifecyclePanel({ gate }: LifecycleProps) {
       <div className="exec-wb-life">
         <div className="exec-wb-spine">
           <JourneySpine variant="compact" current="paper" blocked={gate.verdict === "blocked"} label="Deployment lifecycle" />
-          <GapWhy name="Stage history, gate criteria and decider, reason" gap="FE-027/028" rows={[gapTitle("FE-027/028", "Stage history, gate criteria and decider")]} />
+          <p className="exec-wb-cap"><NotPublished id="FE-027/028">Stage history, gate criteria and decider</NotPublished></p>
         </div>
       </div>
     </SectionPanel>

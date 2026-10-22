@@ -126,8 +126,8 @@ const CELLS: readonly Cell[] = [
     widths: TWO,
     shot: "viewport",
     act: async (page) => {
-      // The first "Not published" with a reason: the NaWhy button, not the plain word.
-      const button = page.locator('[data-screen="users-v2"] button[aria-label="Not published, reason"]').first();
+      // The gap line's reason disclosure (one "Not available: ..." line per panel): the button, not the plain words.
+      const button = page.locator('[data-screen="users-v2"] button[aria-label^="Why not available"]').first();
       await button.click();
       await expect(button).toHaveAttribute("aria-expanded", "true");
       await expect(page.locator('[data-screen="users-v2"] .exec-blk-why-body').first()).toBeVisible();

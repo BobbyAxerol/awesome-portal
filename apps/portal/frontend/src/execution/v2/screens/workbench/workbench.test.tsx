@@ -360,6 +360,12 @@ describe("Overview", () => {
     const gaps = panel.querySelector(".exec-blk-gaps")!;
     expect(gaps.textContent).toBe("Not available: Drift vs approved band, Fills reconcile, Cost drift");
     expect(panel.textContent).not.toContain("FE-0");
+    // UXM07-048/4: the policy reads as a display name; stage code and version sit behind the disclosure
+    expect(panel.textContent).toContain("Policy Paper observation");
+    expect(panel.textContent).not.toContain("PAPER_OBSERVATION");
+    expect(panel.textContent).not.toContain("paper.v1");
+    fireEvent.click(within(panel).getByRole("button", { name: "Policy version" }));
+    expect(panel.textContent).toContain("Version paper.v1");
     expect(whyText(gaps)).toContain("Not published (FE-029)");
     expect(whyText(gaps)).toContain("Not published (FE-028)");
     expect(within(panel).getByRole("link", { name: "Open exit review" }).getAttribute("href")).toBe("/governance/exit-reviews");

@@ -58,6 +58,8 @@ export interface CardsTableProps<Row> {
   sort?: CardsSort | null;
   /** A sortable header was activated. The caller decides direction. */
   onSort?(key: string): void;
+  /** A screen's own class on the table, for a card layout of its own (the Alpha 360 orders and fills). */
+  className?: string;
 }
 
 /** A cell that rendered nothing says so; it is never a dash and never 0. */
@@ -65,7 +67,7 @@ function present(content: ReactNode): boolean {
   return content !== null && content !== undefined && content !== false && content !== "";
 }
 
-export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, onSort }: CardsTableProps<Row>) {
+export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onRowOpen, empty, sort, onSort, className }: CardsTableProps<Row>) {
   const open = (row: Row) => (event: KeyboardEvent) => {
     // Space is prevented so the page does not scroll from under the row.
     if (event.key === "Enter" || event.key === " ") {
@@ -76,7 +78,7 @@ export function CardsTable<Row>({ columns, rows, rowKey, label, selectedKey, onR
   const { ref: wrapRef, props: scrollProps } = useKeyboardScroll<HTMLDivElement>(label, [rows, columns]);
   return (
     <div ref={wrapRef} className="exec-cards-wrap" {...scrollProps}>
-      <table className="exec-cards" aria-label={label}>
+      <table className={className ? `exec-cards ${className}` : "exec-cards"} aria-label={label}>
         <thead>
           <tr>
             {columns.map((c) => {

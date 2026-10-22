@@ -29,7 +29,7 @@
  * Owner and Health choices: the whole authorized population when the dataset published it (a group list over the whole filtered
  * query), otherwise the rows loaded so far, worded as such, with a typed value that the server filters on (`useFleetOptions`).
  */
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -38,6 +38,9 @@ import { useDockMode, useDockSelection } from "../../Drawer";
 import { GapWhy, Kpi, KpiStrip } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
+import { isV2Screen } from "../../flags";
+import { FleetStreamChip } from "../../fleetStream/FleetStreamChip";
+import type { FleetSessionDeps } from "../../fleetStream/fleetStreamSession";
 import { withOrigin } from "../../backTo";
 import { serializeUrlParams, useExecUrlState, withContext } from "../../urlState";
 import { MANAGER_STATEMENT_SCOPE } from "../../readers/managerDataset";
@@ -67,10 +70,21 @@ import { formatInstant } from "../../boundary";
 
 export const FLEET_SCREEN_KEY = "fleet" as const;
 
+/**
+ * The dark flag key of the Fleet realtime STREAM (ELP2-09, FIXTURE_LAB evidence only). OFF unless the manifest names `fleet-stream`
+ * (and, as for every key, the umbrella is on). With it off nothing below mounts and no request is made: the DOM is the one the screen
+ * had before the key existed.
+ */
+const FLEET_STREAM_FLAG = isV2Screen("fleet-stream");
+
 export interface FleetScreenProps {
   api: ExecutionApi;
   /** Accepted for the mount contract; `GET /alphas` takes no workspace parameter and the server scopes it. */
   workspaceId?: string;
+  /** Tests only: override the build-time `fleet-stream` key. */
+  streamFlag?: boolean;
+  /** Tests only: the fetch, timers and clock the stream uses. Stable identity. */
+  streamDeps?: FleetSessionDeps;
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -100,7 +114,7 @@ function mergeSeen(current: readonly string[], next: readonly string[]): readonl
 /** Why a dataset-only note exists: the contract's own constants, in words (never re-derived). */
 const STAGE_RULE_SENTENCE = "Current stage is the single active stage of the alpha version in this environment; a row with several active stages has none, and the stage entry time is not published";
 
-export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
+export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREAM_FLAG, streamDeps }: FleetScreenProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
   const { selection, select, close } = useDockSelection();
@@ -158,6 +172,12 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
     // Only called while enabled, and enabled needs the filters.
     (after) => datasetQuery(datasetFilters as DatasetFilters, offeredSorts, after),
   );
+
+  // The stream's way to re-read the table: first page, in place, and the lineage it carries (`null`: it did not succeed).
+  const refreshDataset = dataset.refresh;
+  const refreshLineage = useCallback((signal: AbortSignal) => refreshDataset(signal).then((next) => (next === null ? null : next.lineage.revision)), [refreshDataset]);
+  const afterAccessEnded = useCallback(() => void refreshDataset(), [refreshDataset]);
+  const streamOn = streamFlag && datasetMode && scope !== null;
 
   const read = useFleetRead(api, !archived && (tableView || boardView) && !datasetMode && !waitingForDataset, key, (after) => fleetQuery(filters, after));
   // The counts' own read: one row, no filter, only while the dataset is the table's source (the fleet read above is then not made). Its
@@ -377,7 +397,9 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
     );
   })();
 
-  const unpublishedList = datasetMode ? [FE.map, FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST;
+  // Group by is a control only when the dataset can group; otherwise the gap is one word on this line, not a disabled select.
+  const canGroup = datasetMode && groupOptions.some((option) => option.field !== null);
+  const unpublishedList = datasetMode ? [...(canGroup ? [] : [FE.group]), FE.map, FE.window, FE.readiness, FE_STAGE_ENTRY, FE.compare, FE.archived] : NOT_PUBLISHED_LIST;
   const unpublishedView = (fact: { fe: string; what: string }) => (
     <div className="exec-fleet-nppanel" role="status">
       <strong>{fact.what}</strong>
@@ -395,10 +417,18 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
           <span className="exec-fleet-seg" role="group" aria-label="View">
             <button type="button" className="exec-fleet-segbtn" aria-pressed={tableView} onClick={() => url.set({ view: null })}>Table</button>
             <button type="button" className="exec-fleet-segbtn" aria-pressed={boardView} onClick={() => url.set({ view: "board" })}>Board</button>
-            <button type="button" className="exec-fleet-segbtn" aria-pressed={mapView} disabled aria-describedby={reasonId}>Map</button>
-            <GapWhy name="Why Map is off" gap={FE.map.fe} rows={[notPublished(FE.map)]} next={null} />
           </span>
           {sourceChip}
+          {streamOn && scope !== null ? (
+            <FleetStreamChip
+              key={`${scope.environment}|${workspaceId ?? "-"}`}
+              scope={{ environment: scope.environment, workspaceId: workspaceId ?? null }}
+              lineage={dataset.first === null ? null : dataset.first.lineage.revision}
+              refresh={refreshLineage}
+              onAccessEnded={afterAccessEnded}
+              deps={streamDeps}
+            />
+          ) : null}
           {datasetMode ? (
             <>
               {dataset.first && dataset.first.quality.freshness !== "FRESH" ? <Flag kind={dataset.first.quality.freshness === "STALE" ? "stale" : "unknown"} label={humanize(dataset.first.quality.freshness)} size="sm" /> : null}
@@ -559,9 +589,9 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
                 </select>
               )}
             </label>
-            <label className="exec-fleet-field">
-              <span className="exec-fleet-sr">Group by</span>
-              {datasetMode && groupOptions.some((option) => option.field !== null) ? (
+            {canGroup ? (
+              <label className="exec-fleet-field">
+                <span className="exec-fleet-sr">Group by</span>
                 <select
                   className="exec-fleet-select"
                   value={datasetFilters?.group ?? ""}
@@ -570,12 +600,8 @@ export default function FleetScreen({ api, workspaceId }: FleetScreenProps) {
                 >
                   {groupOptions.map((option) => <option key={option.id} value={option.field ?? ""}>{option.label}</option>)}
                 </select>
-              ) : (
-                <select className="exec-fleet-select" disabled aria-describedby={reasonId} value="">
-                  <option value="">Group: none</option>
-                </select>
-              )}
-            </label>
+              </label>
+            ) : null}
             <span className="exec-fleet-grow" />
             <ColumnsMenu hidden={hiddenColumns} onToggle={setColumn} />
           </div>}

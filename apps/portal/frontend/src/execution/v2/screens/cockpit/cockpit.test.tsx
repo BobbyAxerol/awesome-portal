@@ -759,6 +759,8 @@ describe("decision rail", () => {
   it("R1: Approve and Other decisions are disabled with the exact reason, and the note is disabled too", async () => {
     await mount(standardPort(), "/execution/approvals?sel=apr_a");
     expectEveryButtonDisabledWithPreviewReason(["Approve", "Other decisions"]);
+    // UXM07-048/6: the page banner says "not recorded" once; no decision repeats it as visible text (it stays each button's description)
+    expect(rail().querySelectorAll(".exec-dock-reason")).toHaveLength(0);
     expect(within(rail()).getByText("Would offer: Approve with a condition, Request changes, Deny")).toBeTruthy();
     expect((within(rail()).getByLabelText("Note") as HTMLTextAreaElement).disabled).toBe(true);
   });
@@ -819,8 +821,8 @@ describe("decision rail", () => {
     expect(line.hasAttribute("title")).toBe(false);
     expect(whyText(line)).toContain("Receipt ref: Not published (FE-030)");
     expect(within(receipt).getByRole("rowheader", { name: "Decision" }).nextElementSibling?.textContent).toBe("None recorded");
-    // The decision controls say PREVIEW beside each disabled control; the receipt head does not repeat it.
-    expect(rail().querySelectorAll(".exec-dock-reason")).toHaveLength(1);
+    // UXM07-048/6: the preview reason is each control's description (hidden text) and the page banner says it once; the rail draws none
+    expect(rail().querySelectorAll(".exec-dock-reason")).toHaveLength(0);
     expect(within(rail()).getAllByText(PREVIEW).length).toBeGreaterThan(0);
   });
 
@@ -850,9 +852,12 @@ describe("decision rail", () => {
     await mount(p, "/execution/approvals?sel=apr_a", { workspaceId: "ws_x" });
     expect(p.called("getReviewCaptureCapabilities")).toEqual([["ws_x"]]);
     expect(within(rail()).getByText("R2 execution grant")).toBeTruthy();
-    expect(within(rail()).getByText("Unavailable · GRANT_NOT_PUBLISHED")).toBeTruthy();
-    // A code the stage dictionary knows (BE-P7) reads in words first, then the code as the server sent it.
-    expect(within(rail()).getByText("Unavailable · Read-only on this build · RETAINED_REVIEW_READ_ONLY")).toBeTruthy();
+    // UXM07-048/4: a code is read as words; an unknown one is humanized with its code behind a disclosure, a known one keeps it in hidden text
+    expect(rail().textContent).toContain("Unavailable · Grant not published");
+    expect(rail().textContent).not.toContain("Grant not published · GRANT_NOT_PUBLISHED");
+    expect(within(rail()).getByRole("button", { name: "Grant not published, code" })).toBeTruthy();
+    expect(within(rail()).getByText("Unavailable · Read-only on this build")).toBeTruthy();
+    expect(rail().textContent).toContain("(RETAINED_REVIEW_READ_ONLY)");
     cleanup();
     const q = standardPort();
     await mount(q, "/execution/approvals?sel=apr_a");

@@ -202,7 +202,7 @@ describe("L1 · matrix A · envelope states", () => {
         expect(container.querySelectorAll("tbody tr[tabindex]")).toHaveLength(0);
       } else {
         await loaded();
-        expect(screen.queryByRole("button", { name: "Load more" }) !== null).toBe(d.truncated);
+        expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
         expect(container.querySelector(".exec-pf-count-line")!.textContent).toBe(d.truncated ? `Top ${d.items.length} / ${d.total_portfolios} portfolios` : `${d.items.length} portfolios`);
       }
     });

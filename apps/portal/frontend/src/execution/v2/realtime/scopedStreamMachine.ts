@@ -145,7 +145,18 @@ export type StreamEvent<T> =
   | { type: "tick"; now: number }
   | { type: "visibility"; hidden: boolean; now: number }
   | { type: "retry"; now: number }
-  | { type: "reset"; now: number };
+  | { type: "reset"; now: number }
+  /** A TRANSPORT adapter ended the stream without a terminal frame (see `TransportOutcome`). Only a live stream can end this way. */
+  | { type: "transport_ended"; outcome: TransportOutcome; now: number };
+
+/**
+ * Why a transport adapter stopped a stream that had not been ended by a frame:
+ * - `denied`: the stream request was refused 401/403, so the session may not read it;
+ * - `refused`: a typed refusal (a problem body) or a response that is not an event stream; never retried;
+ * - `gave_up`: its bounded reconnects ran out (named by the published `RECONNECT_LIMIT` words);
+ * - `capped`: its own frame or byte cap for the session was reached (the published `STOPPED` words).
+ */
+export type TransportOutcome = "denied" | "refused" | "gave_up" | "capped";
 
 export type StreamEffect =
   | { type: "read_snapshot"; token: number; epoch: number; purpose: ReadPurpose }
@@ -472,6 +483,26 @@ export function stepStream<T>(state: StreamState<T>, event: StreamEvent<T>, conf
         next.phase = "unavailable";
         next.cause = { origin: "local", code: "STREAM_NOT_OFFERED" };
         next.nextAction = "WAIT";
+      }
+      break;
+    }
+
+    case "transport_ended": {
+      // A stream that is not live has nothing a transport could end; the late call of a closed adapter is ignored.
+      if (next.phase !== "live" && next.phase !== "revalidating") break;
+      switch (event.outcome) {
+        case "denied":
+          toAccessRevoked(next, { origin: "local", code: "SNAPSHOT_DENIED" }, effects);
+          break;
+        case "refused":
+          toUnavailable(next, { origin: "local", code: "SNAPSHOT_FAILED" }, effects);
+          break;
+        case "gave_up":
+          toUnavailable(next, { origin: "frame", code: "RECONNECT_LIMIT" }, effects);
+          break;
+        case "capped":
+          toUnavailable(next, { origin: "frame", code: "STOPPED" }, effects);
+          break;
       }
       break;
     }

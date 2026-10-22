@@ -89,3 +89,19 @@
   color: var(--ink-faint);
   cursor: not-allowed;
 }
+/* A shut control keeps its "?" on the button's line, not under it. */
+.exec-wb-xr[data-state="shut"] {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+.exec-wb-xr[data-state="shut"] > :first-child .exec-dock-btn {
+  width: 100%;
+}
+.exec-wb-xr[data-state="shut"] > :nth-child(2) {
+  margin-top: var(--space-2);
+}
+.exec-wb-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}

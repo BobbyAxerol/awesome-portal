@@ -9,6 +9,7 @@ import { resolve } from "node:path";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SLOW, SLOW_TEST } from "../../waitsTestUtil";
 
 import { alphaFleet } from "../../../../../e2e/bffDouble";
 import type { AlphaFleetQuery, ExecutionApi } from "../../../api/ports";
@@ -57,7 +58,7 @@ const where = () => screen.getByTestId("where").textContent ?? "";
 const search = () => new URLSearchParams(where().split("?")[1] ?? "");
 const table = () => screen.getByRole("table", { name: "Alpha fleet" });
 const names = () => within(table()).getAllByRole("row").slice(1).map((r) => r.querySelector("td[data-l='Alpha'] .exec-fleet-name")?.textContent ?? "");
-const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" });
+const loaded = async () => screen.findByRole("table", { name: "Alpha fleet" }, SLOW);
 
 describe("identity table", () => {
   it("is the fleet flag's screen", () => {
@@ -155,10 +156,11 @@ describe("identity table", () => {
   it("a deep link to Map explains itself and offers the Table; it asks nothing", async () => {
     const { api, getAlphaFleet } = makeApi();
     mount(api, "/execution/fleet?view=map");
-    expect(screen.getAllByText("Map").length).toBeGreaterThan(1);
+    // The Map segment is gone (the gap is one word on the "Not available:" line); the deep link still names itself once.
+    expect(screen.getAllByText("Map")).toHaveLength(1);
     expect(screen.getAllByText("Not published (FE-035)").length).toBeGreaterThan(0);
     expect(getAlphaFleet).not.toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "Map" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Back to Table" }));
     await loaded();
     expect(where()).toBe("/execution/fleet");
@@ -180,7 +182,7 @@ describe("lens tabs", () => {
     mount(api);
     await loaded();
     fireEvent.click(screen.getByRole("tab", { name: /^Paper/ }));
-    await waitFor(() => expect(names()).toEqual(["Carry A", "Grid D"]));
+    await waitFor(() => expect(names()).toEqual(["Carry A", "Grid D"]), SLOW);
     expect(search().get("stage")).toBe("paper");
     expect(calls.at(-1)).toMatchObject({ stage: "PAPER" });
     expect(screen.getByRole("tab", { name: /^Paper/ }).getAttribute("aria-selected")).toBe("true");
@@ -192,7 +194,7 @@ describe("lens tabs", () => {
     mount(api);
     await loaded();
     fireEvent.click(screen.getByRole("tab", { name: /^Sandbox/ }));
-    await waitFor(() => expect(names()).toEqual(["Grid D"]));
+    await waitFor(() => expect(names()).toEqual(["Grid D"]), SLOW);
     expect(search().get("stage")).toBe("sandbox");
   });
 
@@ -201,7 +203,7 @@ describe("lens tabs", () => {
     mount(api);
     await loaded();
     fireEvent.click(screen.getByRole("tab", { name: /^Real-funded/ }));
-    await waitFor(() => expect(names()).toEqual(["Basis B", "Momentum C"]));
+    await waitFor(() => expect(names()).toEqual(["Basis B", "Momentum C"]), SLOW);
     expect(search().get("stage")).toBe("canary,live");
     expect(calls.at(-1)!.stage).toBeUndefined();
     expect(document.body.textContent).toContain("2 Real-funded of 5 loaded, 5 on the server. The server filters one stage at a time");
@@ -210,9 +212,9 @@ describe("lens tabs", () => {
   it("All drops the stage and the lens words from the URL", async () => {
     const { api } = makeApi();
     mount(api, "/execution/fleet?stage=paper&sel=alpha_a");
-    await waitFor(() => expect(names()).toEqual(["Carry A", "Grid D"]));
+    await waitFor(() => expect(names()).toEqual(["Carry A", "Grid D"]), SLOW);
     fireEvent.click(screen.getByRole("tab", { name: /^All/ }));
-    await waitFor(() => expect(names()).toHaveLength(5));
+    await waitFor(() => expect(names()).toHaveLength(5), SLOW);
     expect(where()).toBe("/execution/fleet");
   });
 
@@ -243,7 +245,7 @@ describe("lens tabs", () => {
   it("a stage set that is no lens still filters, and shows no selected tab", async () => {
     const { api } = makeApi();
     mount(api, "/execution/fleet?stage=live");
-    await waitFor(() => expect(names()).toEqual(["Basis B"]));
+    await waitFor(() => expect(names()).toEqual(["Basis B"]), SLOW);
     expect(screen.getAllByRole("tab").every((t) => t.getAttribute("aria-selected") === "false")).toBe(true);
   });
 });
@@ -256,7 +258,7 @@ describe("search, owner, health, sort", () => {
     const box = screen.getByRole("searchbox", { name: "Search alpha" });
     fireEvent.change(box, { target: { value: "grid" } });
     fireEvent.keyDown(box, { key: "Enter" });
-    await waitFor(() => expect(names()).toEqual(["Grid D"]));
+    await waitFor(() => expect(names()).toEqual(["Grid D"]), SLOW);
     expect(search().get("q")).toBe("grid");
     expect(calls.at(-1)!.search).toBe("grid");
   });
@@ -266,14 +268,14 @@ describe("search, owner, health, sort", () => {
     mount(api);
     await loaded();
     fireEvent.change(screen.getByRole("searchbox", { name: "Search alpha" }), { target: { value: "idea" } });
-    await waitFor(() => expect(names()).toEqual(["Idea E"]), { timeout: 2000 });
+    await waitFor(() => expect(names()).toEqual(["Idea E"]), SLOW);
     expect(search().get("q")).toBe("idea");
   });
 
   it("a q in the URL fills the box and filters on arrival", async () => {
     const { api } = makeApi();
     mount(api, "/execution/fleet?q=momentum");
-    await waitFor(() => expect(names()).toEqual(["Momentum C"]));
+    await waitFor(() => expect(names()).toEqual(["Momentum C"]), SLOW);
     expect((screen.getByRole("searchbox", { name: "Search alpha" }) as HTMLInputElement).value).toBe("momentum");
   });
 
@@ -289,7 +291,7 @@ describe("search, owner, health, sort", () => {
     const suggestions = () => [...(document.getElementById(owner.getAttribute("list") ?? "") as HTMLDataListElement).options].map((o) => o.value);
     expect(suggestions()).toEqual(["Bobby-001", "Lan-002", "Minh-003"]);
     fireEvent.change(owner, { target: { value: "Lan-002" } });
-    await waitFor(() => expect(names()).toEqual(["Basis B"]));
+    await waitFor(() => expect(names()).toEqual(["Basis B"]), SLOW);
     expect(search().get("owner")).toBe("Lan-002");
     expect(calls.at(-1)!.owner).toBe("Lan-002");
     // The other owners stay suggested while one is applied.
@@ -305,7 +307,7 @@ describe("search, owner, health, sort", () => {
     // typing alone sends nothing: Enter (or leaving the field) is the commit
     expect(calls.at(-1)!.owner).toBeUndefined();
     fireEvent.keyDown(owner, { key: "Enter" });
-    await waitFor(() => expect(calls.at(-1)!.owner).toBe("Zed-999"));
+    await waitFor(() => expect(calls.at(-1)!.owner).toBe("Zed-999"), SLOW);
     expect(search().get("owner")).toBe("Zed-999");
     expect(await screen.findByText("No alphas match these filters.")).toBeTruthy();
     expect(screen.getByText("owner: Zed-999")).toBeTruthy();
@@ -314,7 +316,7 @@ describe("search, owner, health, sort", () => {
   it("Escape puts back the committed owner and an empty field clears the filter (keyboard)", async () => {
     const { api, calls } = makeApi();
     mount(api, "/execution/fleet?owner=Lan-002");
-    await waitFor(() => expect(names()).toEqual(["Basis B"]));
+    await waitFor(() => expect(names()).toEqual(["Basis B"]), SLOW);
     const owner = screen.getByRole("combobox", { name: "Owner" }) as HTMLInputElement;
     expect(owner.value).toBe("Lan-002");
     fireEvent.change(owner, { target: { value: "half-typ" } });
@@ -323,8 +325,8 @@ describe("search, owner, health, sort", () => {
     expect(search().get("owner")).toBe("Lan-002");
     fireEvent.change(owner, { target: { value: "" } });
     fireEvent.keyDown(owner, { key: "Enter" });
-    await waitFor(() => expect(search().get("owner")).toBeNull());
-    await waitFor(() => expect(calls.at(-1)!.owner).toBeUndefined());
+    await waitFor(() => expect(search().get("owner")).toBeNull(), SLOW);
+    await waitFor(() => expect(calls.at(-1)!.owner).toBeUndefined(), SLOW);
   });
 
   it("Health filters by the published word and shows its label", async () => {
@@ -336,7 +338,7 @@ describe("search, owner, health, sort", () => {
     expect(suggestions()).toEqual(["Needs attention", "Ready", "Research only"]);
     // a label is a choice: it is sent as the published word
     fireEvent.change(health, { target: { value: "Needs attention" } });
-    await waitFor(() => expect(names()).toEqual(["Momentum C"]));
+    await waitFor(() => expect(names()).toEqual(["Momentum C"]), SLOW);
     expect(calls.at(-1)!.health).toBe("ATTENTION");
     expect(search().get("health")).toBe("ATTENTION");
     expect(health.value).toBe("Needs attention");
@@ -369,6 +371,7 @@ describe("search, owner, health, sort", () => {
       return [...(document.getElementById(input.getAttribute("list") ?? "") as HTMLDataListElement).options].map((o) => o.value);
     };
 
+    // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
     it("page 1 offers only the owners it shows and says so; page 3 adds the last one; the missing one can still be typed on page 1", async () => {
       const { api, calls } = makeApi(wide);
       mount(api);
@@ -379,24 +382,25 @@ describe("search, owner, health, sort", () => {
       const owner = screen.getByRole("combobox", { name: "Owner" });
       fireEvent.change(owner, { target: { value: "Zed-129" } });
       fireEvent.keyDown(owner, { key: "Enter" });
-      await waitFor(() => expect(calls.at(-1)!.owner).toBe("Zed-129"));
-      await waitFor(() => expect(names()).toEqual(["Alpha 129"]));
+      await waitFor(() => expect(calls.at(-1)!.owner).toBe("Zed-129"), SLOW);
+      await waitFor(() => expect(names()).toEqual(["Alpha 129"]), SLOW);
       expect(screen.getByText("1 of 1 alpha, 130 in your scope")).toBeTruthy();
-    });
+    }, SLOW_TEST);
 
+    // Whole-suite flake 2026-10-21 (DEBT-UXM07-032): a multi-step flow of SLOW waits; explicit per-test budget.
     it("loading the pages grows the suggestions and the screen still does not call them complete", async () => {
       const { api } = makeApi(wide);
       mount(api);
       await loaded();
       for (let step = 0; step < 2; step += 1) {
         fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-        await waitFor(() => expect(names()).toHaveLength(PAGE_LIMIT * (step + 2) > 130 ? 130 : PAGE_LIMIT * (step + 2)));
+        await waitFor(() => expect(names()).toHaveLength(PAGE_LIMIT * (step + 2) > 130 ? 130 : PAGE_LIMIT * (step + 2)), SLOW);
       }
       expect(names()).toHaveLength(130);
       expect(suggestionsOf("Owner")).toEqual(["Owner-0", "Owner-1", "Owner-2", "Zed-129"]);
       expect(suggestionsOf("Health")).toEqual(["Finding open", "Ready"]);
       expect(screen.getByTestId("options-limit")).toBeTruthy();
-    });
+    }, SLOW_TEST);
   });
 
   it("Sort writes the published sort token and defaults stay out of the URL", async () => {
@@ -405,11 +409,11 @@ describe("search, owner, health, sort", () => {
     await loaded();
     const sort = screen.getByRole("combobox", { name: "Sort" }) as HTMLSelectElement;
     fireEvent.change(sort, { target: { value: "alpha_label:asc" } });
-    await waitFor(() => expect(names()).toEqual(["Basis B", "Carry A", "Grid D", "Idea E", "Momentum C"]));
+    await waitFor(() => expect(names()).toEqual(["Basis B", "Carry A", "Grid D", "Idea E", "Momentum C"]), SLOW);
     expect(search().get("sort")).toBe("alpha_label:asc");
     expect(calls.at(-1)!.sort).toBe("alpha_label:asc");
     fireEvent.change(sort, { target: { value: "" } });
-    await waitFor(() => expect(names()[0]).toBe("Carry A"));
+    await waitFor(() => expect(names()[0]).toBe("Carry A"), SLOW);
     expect(where()).toBe("/execution/fleet");
   });
 
@@ -425,7 +429,7 @@ describe("search, owner, health, sort", () => {
     mount(api, "/execution/fleet?q=zzz&owner=Lan-002&stage=paper");
     expect(await screen.findByText("No alphas match these filters.")).toBeTruthy();
     fireEvent.click(within(table()).getByRole("button", { name: "Clear filters" }));
-    await waitFor(() => expect(names()).toHaveLength(5));
+    await waitFor(() => expect(names()).toHaveLength(5), SLOW);
     expect(where()).toBe("/execution/fleet");
   });
 });
@@ -513,15 +517,15 @@ describe("Columns popup and chip focus (a11y)", () => {
     const cross = (name: string) => screen.getByRole("button", { name: `Clear ${name}` });
     // middle chip: the next one takes focus
     fireEvent.click(cross("owner"));
-    await waitFor(() => expect(search().get("owner")).toBeNull());
+    await waitFor(() => expect(search().get("owner")).toBeNull(), SLOW);
     expect(document.activeElement).toBe(cross("health"));
     // last chip: the previous one
     fireEvent.click(cross("health"));
-    await waitFor(() => expect(search().get("health")).toBeNull());
+    await waitFor(() => expect(search().get("health")).toBeNull(), SLOW);
     expect(document.activeElement).toBe(cross("lens"));
     // no chip left: the search box, never body
     fireEvent.click(cross("lens"));
-    await waitFor(() => expect(search().get("stage")).toBeNull());
+    await waitFor(() => expect(search().get("stage")).toBeNull(), SLOW);
     expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: "Search alpha" }));
   });
 
@@ -530,7 +534,7 @@ describe("Columns popup and chip focus (a11y)", () => {
     mount(api, "/execution/fleet?stage=paper&owner=Bobby-001");
     await loaded();
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
-    await waitFor(() => expect(search().get("owner")).toBeNull());
+    await waitFor(() => expect(search().get("owner")).toBeNull(), SLOW);
     expect(document.activeElement).toBe(screen.getByRole("searchbox", { name: "Search alpha" }));
   });
 
@@ -580,14 +584,14 @@ describe("active filter chips (FL-8)", () => {
     mount(api, "/execution/fleet?stage=paper&owner=Bobby-001&health=READY");
     await loaded();
     fireEvent.click(screen.getByRole("button", { name: "Clear owner" }));
-    await waitFor(() => expect(search().get("owner")).toBeNull());
+    await waitFor(() => expect(search().get("owner")).toBeNull(), SLOW);
     expect(search().get("stage")).toBe("paper");
     expect(search().get("health")).toBe("READY");
     fireEvent.click(screen.getByRole("button", { name: "Clear lens" }));
-    await waitFor(() => expect(search().get("stage")).toBeNull());
+    await waitFor(() => expect(search().get("stage")).toBeNull(), SLOW);
     expect(search().get("health")).toBe("READY");
     fireEvent.click(screen.getByRole("button", { name: "Clear health" }));
-    await waitFor(() => expect(where()).toBe("/execution/fleet"));
+    await waitFor(() => expect(where()).toBe("/execution/fleet"), SLOW);
   });
 
   it("Clear all resets every filter and keeps the column choice", async () => {
@@ -595,7 +599,7 @@ describe("active filter chips (FL-8)", () => {
     mount(api, "/execution/fleet?stage=paper&owner=Bobby-001&hide=owner");
     await loaded();
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
-    await waitFor(() => expect(search().get("stage")).toBeNull());
+    await waitFor(() => expect(search().get("stage")).toBeNull(), SLOW);
     expect(search().get("owner")).toBeNull();
     expect(search().get("hide")).toBe("owner");
   });
@@ -621,11 +625,11 @@ describe("paging", () => {
     expect(names()).toEqual(["Carry A", "Basis B"]);
     expect(screen.getByText("2 of 5 alphas")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(names()).toHaveLength(4));
+    await waitFor(() => expect(names()).toHaveLength(4), SLOW);
     expect(calls.at(-1)!.after).toBe("alpha_b");
     expect(screen.getByText("4 of 5 alphas")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(names()).toHaveLength(5));
+    await waitFor(() => expect(names()).toHaveLength(5), SLOW);
     expect(names()).toEqual(["Carry A", "Basis B", "Momentum C", "Grid D", "Idea E"]);
     expect(screen.getByText("5 of 5 alphas")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
@@ -646,9 +650,9 @@ describe("paging", () => {
     mount(api);
     await loaded();
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(names()).toHaveLength(4));
+    await waitFor(() => expect(names()).toHaveLength(4), SLOW);
     fireEvent.click(screen.getByRole("tab", { name: /^Paper/ }));
-    await waitFor(() => expect(names()).toEqual(["Carry A", "Grid D"]));
+    await waitFor(() => expect(names()).toEqual(["Carry A", "Grid D"]), SLOW);
     expect(calls.at(-1)!.after).toBeUndefined();
   });
 
@@ -660,7 +664,7 @@ describe("paging", () => {
     mount(api, "/execution/fleet?stage=canary,live");
     expect(await screen.findByText("None of the 1 loaded rows is in this lens. Load more to keep looking.")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(names()).toEqual(["Basis B"]));
+    await waitFor(() => expect(names()).toEqual(["Basis B"]), SLOW);
   });
 });
 
@@ -687,7 +691,7 @@ describe("drawer", () => {
     const { api } = makeApi();
     mount(api, "/execution/fleet?sel=alpha_c");
     const drawer = await screen.findByRole("complementary", { name: "Momentum C" });
-    await waitFor(() => expect(within(drawer).getByText("Reconciliation open")).toBeTruthy());
+    await waitFor(() => expect(within(drawer).getByText("Reconciliation open")).toBeTruthy(), SLOW);
     expect(within(drawer).getByText("Deployment attention")).toBeTruthy();
   });
 
@@ -710,7 +714,7 @@ describe("drawer", () => {
     mount(api, "/execution/fleet?q=a&sel=alpha_a");
     const drawer = await screen.findByRole("complementary", { name: "Carry A" });
     fireEvent.click(within(drawer).getByRole("button", { name: "Close" }));
-    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull(), SLOW);
     expect(where()).toBe("/execution/fleet?q=a");
   });
 
@@ -719,7 +723,7 @@ describe("drawer", () => {
     mount(api, "/execution/fleet?sel=alpha_a");
     await screen.findByRole("complementary", { name: "Carry A" });
     fireEvent.keyDown(document, { key: "Escape" });
-    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull());
+    await waitFor(() => expect(screen.queryByRole("complementary")).toBeNull(), SLOW);
     expect(where()).toBe("/execution/fleet");
   });
 
@@ -736,7 +740,7 @@ describe("drawer", () => {
     const { api } = makeApi();
     mount(api, "/execution/fleet?sel=alpha_zzz");
     const drawer = await screen.findByRole("complementary", { name: "alpha_zzz" });
-    await waitFor(() => expect(within(drawer).getByText("Not in the loaded page")).toBeTruthy());
+    await waitFor(() => expect(within(drawer).getByText("Not in the loaded page")).toBeTruthy(), SLOW);
     expect(within(drawer).getByRole("link", { name: "Open Alpha 360" }).getAttribute("href")).toBe("/deployments/alphas/alpha_zzz?from=fleet");
   });
 
@@ -744,7 +748,7 @@ describe("drawer", () => {
     const { api } = makeApi();
     mount(api, "/execution/fleet?sel=alpha_e");
     const drawer = await screen.findByRole("complementary", { name: "Idea E" });
-    await waitFor(() => expect(within(drawer).getByText("Not available")).toBeTruthy());
+    await waitFor(() => expect(within(drawer).getByText("Not available")).toBeTruthy(), SLOW);
     expect(within(drawer).getByText("No deployment. This alpha is in research.")).toBeTruthy();
     expect(within(drawer).getByText("Not published (FE-027, FE-028)")).toBeTruthy();
   });
@@ -865,14 +869,14 @@ describe("board view", () => {
     };
   };
 
-  it("the Board button is a real toggle that writes view=board, and Table clears it; Map stays disabled", async () => {
+  it("the Board button is a real toggle that writes view=board, and Table clears it; there is no Map segment", async () => {
     const { api } = makeApi();
     mount(api);
     await loaded();
     const boardBtn = screen.getByRole("button", { name: "Board" });
     expect(boardBtn.getAttribute("aria-pressed")).toBe("false");
     expect(boardBtn.hasAttribute("disabled")).toBe(false);
-    expect(screen.getByRole("button", { name: "Map" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("button", { name: "Map" })).toBeNull();
     fireEvent.click(boardBtn);
     await board();
     expect(search().get("view")).toBe("board");
@@ -1046,7 +1050,7 @@ describe("board view", () => {
     await board();
     for (let step = 0; step < 3; step += 1) {
       fireEvent.click(await screen.findByRole("button", { name: "Load more" }));
-      await waitFor(() => expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(PAGE_LIMIT * (step + 2)));
+      await waitFor(() => expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(PAGE_LIMIT * (step + 2)), SLOW);
     }
     expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(200);
     expect(screen.getByText("Top 200 of 201 alphas")).toBeTruthy();
@@ -1063,7 +1067,7 @@ describe("board view", () => {
     expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(50);
     expect(screen.getByText("50 of 120 alphas")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
-    await waitFor(() => expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(100));
+    await waitFor(() => expect(document.querySelectorAll(".exec-fleet-card")).toHaveLength(100), SLOW);
     expect(screen.getByText("100 of 120 alphas")).toBeTruthy();
     expect(calls.at(-1)!.after).toBe("alpha_0049");
     expect(search().get("view")).toBe("board");

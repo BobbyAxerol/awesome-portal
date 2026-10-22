@@ -1,7 +1,7 @@
 /**
  * Portfolio 360 event ribbon (concept C3), against the Playwright double through
  * the real readers. The ribbon draws only what the published capital ledger can
- * place (flow); every other lane says it has no source. Per currency, bounded,
+ * place (flow); the other lanes are not drawn. Per currency, bounded,
  * with a table for whoever cannot use the picture.
  */
 import { instantKey } from "../../../gapWhyTestUtil";
@@ -12,7 +12,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { PF, answerPortfolios } from "../../../../../../e2e/bffDoublePortfolios";
 import { makeApi, type Override } from "../harness.fixtures";
 import PortfolioScreen from "./index";
-import { RIBBON_LANE_NP, ledgerFlow } from "./model";
+import { ledgerFlow } from "./model";
 import { readCapitalLedger } from "../../../../analytics";
 import { whyText } from "../../../gapWhyTestUtil";
 
@@ -66,22 +66,17 @@ describe("ribbon under the equity", () => {
     expect(marks(group).every((m) => lane(group, "flow").dataset.kind === "flow" && m.dataset.kind === "flow")).toBe(true);
   });
 
-  it("keeps stage, decision, incident and recall as lanes that say Not published, not as empty lanes", async () => {
+  it("draws only the Flow lane and chip; stage, decision, incident and recall are said once, on the Not available line", async () => {
     mount(makeApi().api);
     const group = await ribbon();
-    for (const kind of ["stage", "decision", "incident", "recall"]) {
-      const l = lane(group, kind);
-      expect(l.dataset.unpublished).toBe("true");
-      expect(l.textContent).toContain(RIBBON_LANE_NP);
-      expect(l.querySelector(".exec-ribbon-lane-axis")).toBeNull();
-    }
-    expect(RIBBON_LANE_NP).toBe("Not published");
+    expect([...group.querySelectorAll(".exec-ribbon-lane")].map((l) => (l as HTMLElement).dataset.kind)).toEqual(["flow"]);
+    expect(group.textContent).not.toContain("Not published");
+    const chips = screen.getByRole("group", { name: "Event kinds" });
+    expect(within(chips).getAllByRole("button").map((b) => b.textContent)).toHaveLength(1);
+    expect(within(chips).getByRole("button", { name: /Flow/ })).toBeTruthy();
     // The ids are on the one line under the chart, in its title.
     expect(whyText(screen.getByTestId("not-available-line"))).toContain("Not published (FE-031)");
-    expect(lane(group, "flow").dataset.unpublished).toBeUndefined();
     expect(lane(group, "flow").querySelector(".exec-ribbon-lane-axis")).not.toBeNull();
-    // No mark can sit on a lane with no source.
-    expect(marks(group).some((m) => ["stage", "decision", "incident", "recall"].includes(m.dataset.kind ?? ""))).toBe(false);
   });
 
   it("says the read is bounded, with the exact numbers, and that no older page exists", async () => {
@@ -163,12 +158,11 @@ describe("currencies are never mixed", () => {
 });
 
 describe("absences stay absences", () => {
-  it("an empty ledger is a fact: no marks, the lanes still say Not published, and the page says so", async () => {
+  it("an empty ledger is a fact: no lane and no chip to draw, and the page says so once", async () => {
     mount(makeApi(withLedger([], { total: 0, returned: 0, hasMore: false })).api);
-    const group = await ribbon();
     await waitFor(() => expect(document.body.textContent).toContain("published no entry in Live"));
-    expect(marks(group)).toHaveLength(0);
-    expect(lane(group, "recall").textContent).toContain(RIBBON_LANE_NP);
+    expect(screen.queryByRole("group", { name: "Capital flow events, Live" })).toBeNull();
+    expect(screen.queryByRole("group", { name: "Event kinds" })).toBeNull();
     expect(document.body.textContent).toContain("not a zero balance");
   });
 

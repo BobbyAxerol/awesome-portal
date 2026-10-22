@@ -21,6 +21,7 @@ import {
   type StreamEffect,
   type StreamEvent,
   type StreamState,
+  type TransportOutcome,
 } from "./scopedStreamMachine";
 
 export interface SnapshotPort<T> {
@@ -48,6 +49,8 @@ export interface StreamController<T> {
   receive(raw: unknown, arrivedOn: string): void;
   setHidden(hidden: boolean): void;
   retry(): void;
+  /** A transport adapter ended the stream without a frame (a refusal, or its own bounded reconnects ran out). */
+  transportEnded(outcome: TransportOutcome): void;
   /** Leave the stream: scoped data is cleared and every owned read and timer is cancelled. */
   stop(): void;
   /** Called when the machine says the view no longer shows scoped data (revoked access, a new scope). */
@@ -141,6 +144,7 @@ export function createStreamController<T>(options: ControllerOptions<T>): Stream
     receive: (raw, arrivedOn) => dispatch({ type: "frame", raw, arrivedOn, now: options.clock.now() }),
     setHidden: (hidden) => dispatch({ type: "visibility", hidden, now: options.clock.now() }),
     retry: () => dispatch({ type: "retry", now: options.clock.now() }),
+    transportEnded: (outcome) => dispatch({ type: "transport_ended", outcome, now: options.clock.now() }),
     stop: () => dispatch({ type: "reset", now: options.clock.now() }),
     onClear(listener) {
       clearListeners.add(listener);

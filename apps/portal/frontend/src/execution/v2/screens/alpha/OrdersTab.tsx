@@ -17,6 +17,7 @@ import { readMetric } from "../../boundary";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { GapWhy, Kpi, KpiStrip, NaWhy, SectionPanel } from "../../blocks";
+import { usePhoneRows } from "../../usePhoneRows";
 import { At, Dec, Na } from "./cells";
 import { ROW_CAP, humanize, orderFlag, replayHref } from "./model";
 import { BASIS_TEXT, NOT_IN_RECORD, timeReasonText } from "./recordReasons";
@@ -30,15 +31,36 @@ function newestFirst<T>(rows: readonly T[], at: (row: T) => string | null): read
   return [...rows].sort((a, b) => (at(b) ?? "").localeCompare(at(a) ?? ""));
 }
 
-function MoreRow({ page, noun, loaded, shown }: { page: PagedRead<SubjectActivityPage>; noun: string; loaded: number; shown: number }) {
+/** Cards a phone page holds, and what one Load more adds: an order card has up to eleven fields (about 250 px at 390), so three is about one screen. */
+const PHONE_ROWS = 3;
+
+/**
+ * At 660px and narrower a table is cards: `rows` shows the first `phone.rows` (never fewer than reach the focused row),
+ * and Load more first draws three more of the rows already loaded, then asks the server for its next page.
+ */
+function windowed<T>(rows: readonly T[], phone: { phone: boolean; rows: number }, must: number): readonly T[] {
+  const capped = rows.slice(0, ROW_CAP);
+  return phone.phone ? capped.slice(0, Math.max(phone.rows, must + 1)) : capped;
+}
+
+function MoreRow({ page, noun, loaded, shown, undrawn, onDraw }: { page: PagedRead<SubjectActivityPage>; noun: string; loaded: number; shown: number; undrawn: boolean; onDraw: () => void }) {
   return (
     <div className="exec-alp2-more">
       <span className="exec-alp2-cap">
         {shown < loaded ? `Top ${shown} of ${loaded} ${noun} loaded` : `${loaded} ${noun} loaded`}
         {page.hasMore ? ", more in the retained window" : ", the whole retained window"}
       </span>
-      {page.hasMore ? (
-        <button type="button" className="exec-blk-btn" aria-busy={page.loadingMore ? "true" : undefined} onClick={() => { if (!page.loadingMore) page.loadMore(); }}>
+      {undrawn || page.hasMore ? (
+        <button
+          type="button"
+          className="exec-blk-btn"
+          aria-busy={page.loadingMore ? "true" : undefined}
+          onClick={() => {
+            if (page.loadingMore) return;
+            onDraw();
+            if (!undrawn) page.loadMore();
+          }}
+        >
           {page.loadingMore ? "Loading more" : page.moreError ? "Try again" : "Load more"}
         </button>
       ) : null}
@@ -135,6 +157,10 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
     : fillColumns;
   const orders = newestFirst(book.orders, (o) => o.submittedAt);
   const fills = newestFirst(book.fills, (f) => f.tradeTime);
+  const orderPhone = usePhoneRows(PHONE_ROWS);
+  const fillPhone = usePhoneRows(PHONE_ROWS);
+  const orderRows = windowed(orders, orderPhone, focusOrder === null ? -1 : orders.findIndex((o) => o.orderId === focusOrder));
+  const fillRows = windowed(fills, fillPhone, -1);
   // Records the page declared that did not become a row (no id, no price or no time), so "empty" is not read as "none".
   const declared = (state: Read<readonly SubjectActivityPage[]>) => (state.phase === "ready" ? state.value.reduce((n, p) => n + (p.page.returnedCount ?? p.records.length), 0) : 0);
   const orderGap = scoped ? Math.max(0, declared(book.ordersState) - orders.length) : 0;
@@ -152,7 +178,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
           <span>Scoped read: authorized rows of a retained window, not total history.{basis ? ` Paged by ${basis}.` : ""}</span>
         </p>
       ) : null}
-      <KpiStrip label="Orders and fills" columns={4}>
+      <KpiStrip label="Orders and fills" columns={4} phoneColumns={2}>
         <Kpi label="Orders" metric={count(data?.orderPopulation ?? undefined)} absentReason={absent} basis="Retained window" />
         <Kpi label="Fills" metric={count(data?.fillPopulation ?? undefined)} absentReason={absent} basis="Retained window" />
         <Kpi
@@ -177,13 +203,14 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
           <>
             <CardsTable
               columns={orderCols}
-              rows={orders.slice(0, ROW_CAP)}
+              rows={orderRows}
               rowKey={(o) => o.orderId}
               selectedKey={focusOrder}
               label="Orders of this alpha"
+              className="exec-alp2-cardgrid"
               empty={<PanelState status="empty" reason="No order is present for this alpha in the retained projection window." />}
             />
-            <MoreRow page={book.ordersMore} noun="orders" loaded={orders.length} shown={Math.min(orders.length, ROW_CAP)} />
+            <MoreRow page={book.ordersMore} noun="orders" loaded={orders.length} shown={orderRows.length} undrawn={orderRows.length < Math.min(orders.length, ROW_CAP)} onDraw={orderPhone.grow} />
             {orderGap > 0 ? <p className="exec-alp2-cap" role="note"><span>{orderGap} {orderGap === 1 ? "record was" : "records were"} returned and not shown: no order id.</span></p> : null}
           </>
         ) : null}
@@ -196,12 +223,13 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
           <>
             <CardsTable
               columns={fillCols}
-              rows={fills.slice(0, ROW_CAP)}
+              rows={fillRows}
               rowKey={(f) => f.fillId}
               label="Fills of this alpha"
+              className="exec-alp2-cardgrid"
               empty={<PanelState status="empty" reason="No fill is present for this alpha in the retained projection window." />}
             />
-            <MoreRow page={book.fillsMore} noun="fills" loaded={fills.length} shown={Math.min(fills.length, ROW_CAP)} />
+            <MoreRow page={book.fillsMore} noun="fills" loaded={fills.length} shown={fillRows.length} undrawn={fillRows.length < Math.min(fills.length, ROW_CAP)} onDraw={fillPhone.grow} />
             {fillGap > 0 ? (
               <p className="exec-alp2-cap" role="note">
                 <span>{fillGap} {fillGap === 1 ? "record was" : "records were"} returned and not shown: no fill id, price or trade time.</span>

@@ -17,10 +17,13 @@ import { appendFileSync } from "node:fs";
 import { stubExecutionBff } from "./bffDouble";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "./bffDoubleV2";
 import { usePreferences, stubPortalApi } from "./fixtures";
+import { waitForQuiet } from "./quietGate.mjs";
 import { SCREENS, stubAdminRoutes, stubQuantbtRuns, watchPage } from "./v2Lane";
 
 const MEASURE_OUT = process.env.UXM10_MEASURE_OUT;
 const HEADROOM = 1.25;
+const QUIET_MS = 400;
+const QUIET_CAP_MS = 15_000;
 const NOW = Date.parse(OPERATIONS_V2_DOUBLE_NOW_ISO);
 
 function record(row: Record<string, unknown>): void {
@@ -67,16 +70,33 @@ interface Meter {
   reset(): void;
   /** Waits for in-flight body reads, then returns the counters since the last reset. */
   snap(): Promise<Snap>;
+  /**
+   * Resolves once nothing is in flight and nothing started or finished for `quietMs`. `networkidle` is not that: Playwright resolves it
+   * at once when the document has been idle at any earlier moment, so a read that a heavy render starts later (an effect of the body
+   * that the first answer mounts) lands after it on a slow worker and in the next window (DEBT-UXM07-044).
+   * Throws MEASUREMENT_QUIET_TIMEOUT (an invalid measurement, never a PASS) when the cap ends without quiet.
+   */
+  quiet(quietMs?: number): Promise<void>;
 }
 
 function meter(page: Page, baseURL: string | undefined): Meter {
   const origin = new URL(baseURL ?? "http://127.0.0.1:4176").origin;
   let state = fresh();
   let bodies: Promise<void>[] = [];
+  let inFlight = 0;
+  let lastActivity = Date.now();
   function fresh() {
     return { api: 0, unique: new Set<string>(), apiBytes: 0, assets: 0, assetBytes: 0, foreign: 0 };
   }
+  const settleOne = () => {
+    inFlight = Math.max(0, inFlight - 1);
+    lastActivity = Date.now();
+  };
+  page.on("requestfinished", settleOne);
+  page.on("requestfailed", settleOne);
   page.on("request", (request) => {
+    inFlight += 1;
+    lastActivity = Date.now();
     const url = new URL(request.url());
     if (url.origin !== origin) {
       state.foreign += 1;
@@ -117,6 +137,9 @@ function meter(page: Page, baseURL: string | undefined): Meter {
     async snap() {
       await Promise.all(bodies);
       return { api: state.api, apiUnique: state.unique.size, apiBytes: state.apiBytes, assets: state.assets, assetBytes: state.assetBytes, foreign: state.foreign };
+    },
+    async quiet(quietMs = QUIET_MS) {
+      await waitForQuiet({ quietMs, capMs: QUIET_CAP_MS, now: Date.now, sleep: (ms) => page.waitForTimeout(ms), state: () => ({ inFlight, lastActivity }) });
     },
   };
 }
@@ -295,6 +318,7 @@ for (const [name, route, root] of SCREENS) {
     await page.goto(route);
     await ready(page, root);
     await page.waitForLoadState("networkidle");
+    await net.quiet();
     const first = await net.snap();
     expect(first.foreign, "no request leaves the app's own origin").toBe(0);
 
@@ -312,6 +336,7 @@ for (const [name, route, root] of SCREENS) {
       // Let a panel that reads on activation start its read before the network is judged idle.
       await page.waitForTimeout(250);
       await page.waitForLoadState("networkidle");
+      await net.quiet();
       const after = await net.snap();
       tab = { api: after.api, apiBytes: after.apiBytes };
     }

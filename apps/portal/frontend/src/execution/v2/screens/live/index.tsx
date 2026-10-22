@@ -30,13 +30,13 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
-import { BlockerList, CompactGaps, GapLine, Kpi, KpiStrip, StageHeader, UrlTabs, type StageCrumb, type StageTab } from "../../blocks";
+import { BlockerList, CompactGaps, GapLine, Kpi, KpiStrip, StageHeader, UrlTabs, type GapItem, type StageCrumb, type StageTab } from "../../blocks";
 import { AlphaNameLine } from "../stage/AlphaNameLine";
 import { alphaCrumb, portfolioLabel } from "../stage/identity";
 import { unsupportedText, type LiveFullVersionRead } from "../../readers/dispatch";
 import { useExecUrlState, withContext } from "../../urlState";
 import { ChartSlot } from "./parts";
-import { ContinuityTab, ExposureTab, GuardRulesTab, PredecessorTab, ProtectiveLadder } from "./tabs";
+import { ContinuityTab, ExposureTab, GuardRulesTab, PredecessorTab, ProtectiveLadder, v1ExposureGaps } from "./tabs";
 import { ACCESS_PATH, FLEET_PATH, LIVE_TABS, canaryHref, liveModelOf, type KpiCell, type LiveModel } from "./model";
 import { useLiveRead, usePanelPaging } from "./useLiveReads";
 
@@ -103,6 +103,13 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
   const id = model.deploymentId ?? deploymentId;
   const shown = model.kpis.filter(printable);
   const missing = model.kpis.filter((cell) => !printable(cell));
+  // ONE gap line for the screen. A V1 body also lists here what its chart and its Exposure tab have no value for (UXM07-048/5), so no panel repeats it.
+  const chartGap: GapItem[] = v2 === null && model.chart.kind === "unavailable" ? [{ label: "Live net PnL series", id: "FE-013" }] : [];
+  const gapItems: GapItem[] = [
+    ...missing.map((cell): GapItem => ({ label: cell.label, id: cell.kind === "not-published" ? "FE-072" : undefined, reason: cell.kind === "absent" ? cell.absentReason : undefined })),
+    ...chartGap,
+    ...(v2 === null ? v1ExposureGaps(model).items : []),
+  ];
 
   // The Alpha is linked only when the body published `alpha_id` (FE-066); the portfolio shows its published name, else its id.
   const alpha = alphaCrumb(model.identity);
@@ -175,10 +182,10 @@ function LiveBody({ model, api, deploymentId, workspaceId, v2, reload }: { model
           {shown.map(kpiView)}
         </KpiStrip>
       ) : null}
-      <GapLine items={missing.map((cell) => ({ label: cell.label, id: cell.kind === "not-published" ? "FE-072" : undefined, reason: cell.kind === "absent" ? cell.absentReason : undefined }))} />
+      <GapLine items={gapItems} />
       <div className="exec-liv-grid">
         <div className="exec-liv-main">
-          <ChartSlot slot={model.chart} />
+          <ChartSlot slot={model.chart} gapAbove={v2 === null} />
           <UrlTabs surface="live" tabs={TAB_LIST} label="Live sections">
             {(active) => {
               switch (active) {

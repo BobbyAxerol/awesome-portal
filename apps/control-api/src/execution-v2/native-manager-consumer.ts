@@ -31,6 +31,7 @@ import { decodeManagerObservationCoordinate } from "./manager-observation-coordi
 import { nativeProfileRealtimeHeaders,type ScopedReplayBinding,type NativeProfileRealtimeHeaders } from "./realtime.contract";
 import type { ExecutionProfileProjectionRepository } from "../execution/profile-projection.repository";
 import type { ExecutionProfileRealtimeService } from "../execution/profile-realtime.service";
+import { egressPhaseOfRecovery, type NativeCacheBranchCapture, type NativeCacheObserver } from "./native-cache-observation";
 
 type Composition = Pick<Awaited<ReturnType<typeof composeNativeCore>>, "selectedCandidate">;
 type Selection = ReturnType<typeof selectedNativeBusinessReadSelection>;
@@ -66,7 +67,9 @@ export class NativeManagerReadConsumer {
   private realtimePreparationIdle=Promise.resolve();
   private resolveRealtimePreparationIdle?:()=>void;
   constructor(private readonly pool:Pool, private readonly operations:MaximumDataOperationService,
-    private readonly composition:Composition, selections:readonly NativeCoreSelection[], realtime?:NativeManagerRealtimeOptions) {
+    private readonly composition:Composition, selections:readonly NativeCoreSelection[], realtime?:NativeManagerRealtimeOptions,
+    /** Opt-in, operator-only cache observation. Absent by default = byte-for-byte the previous behavior. */
+    private readonly cacheObserver?:NativeCacheObserver) {
     if(selections.length<1||selections.length>64)throw unavailable();
     const entries:Entry[]=[],keys=new Set<string>();
     for(const entry of selections){
@@ -143,12 +146,12 @@ export class NativeManagerReadConsumer {
     const actor:AccessActor={user_id:principal.user.userId,session_id:principal.session.sessionId,
       session_generation:principal.session.sessionVersion};
     // Genuine DB authority, not a DTO/config/nativeEpochDigest authorization.
-    const {decision,dto,nativeEpochDigest}=await this.operations.prepareNativeManagerPage(
+    const {decision,dto,nativeEpochDigest,cacheBranch}=await this.operations.prepareNativeManagerPage(
       this.pool,principal,operation,query,entry.selectedSource);
     if(decision.actor.user_id!==actor.user_id||decision.actor.session_id!==actor.session_id||
       decision.actor.session_generation!==actor.session_generation||
       decision.field_policy_sha256!==entry.source.domain.field_policy_sha256)throw denied();
-    return this.deliver(entry,candidate,principal,query,decision,nativeEpochDigest,selected.operation_id,dto,reply);
+    return this.deliver(entry,candidate,principal,query,decision,nativeEpochDigest,selected.operation_id,dto,reply,cacheBranch);
   }
 
   /** Same captured snapshot -> READ-baseline token, not an app STREAM grant.
@@ -302,7 +305,7 @@ export class NativeManagerReadConsumer {
   }
   private async deliver(entry:Entry,candidate:ReturnType<Composition["selectedCandidate"]>,principal:MaximumDataOperationPrincipal,
     query:MaximumDataDeploymentQuery,decision:ManagerDomainReadDecision,nativeEpochDigest:string,
-    operationId:string,dto:unknown,reply:FastifyReply):Promise<boolean>{
+    operationId:string,dto:unknown,reply:FastifyReply,cacheBranch?:NativeCacheBranchCapture):Promise<boolean>{
     const actor:AccessActor={user_id:principal.user.userId,session_id:principal.session.sessionId,
       session_generation:principal.session.sessionVersion};
     if(decision.actor.user_id!==actor.user_id||decision.actor.session_id!==actor.session_id||
@@ -337,15 +340,21 @@ export class NativeManagerReadConsumer {
     // No Nest/Fastify automatic writer can reply after uncertain admission.
     // hijack itself emits zero HTTP bytes. Candidate owns final physical send.
     reply.hijack();
+    let settled:unknown;
     try{
       const handle=await candidate.acquireNativeRead(actor,base,decision.scope_digest);
-      await candidate.sendNativeRead(handle,reply.raw,body);
+      settled=await candidate.sendNativeRead(handle,reply.raw,body);
     }catch{
       // Same durable key/recovery owner. Never ordinary error JSON, response
       // replay, fake terminal, TTL-as-closure or a fallback after admission.
       reply.raw.destroy();
-      await candidate.reconcileNativeRead(base.binding.lease_id).catch(()=>undefined);
+      settled=await candidate.reconcileNativeRead(base.binding.lease_id).catch(()=>undefined);
     }
+    // Private observation strictly AFTER delivery/recovery. Best effort: it
+    // cannot throw, change the response, or touch any custody state.
+    if(this.cacheObserver&&cacheBranch)await this.cacheObserver.record({lease_id:binding.lease_id,
+      attempt_id:binding.attempt_id,operation_id:operationId,capture:cacheBranch,native_epoch_digest:nativeEpochDigest,
+      body_digest:bodyDigest(body),egress_phase:egressPhaseOfRecovery(settled)}).catch(()=>undefined);
     return true;
   }
   private operation(operation:NativeManagerOperation,environment:"paper"|"sandbox"|"live"){

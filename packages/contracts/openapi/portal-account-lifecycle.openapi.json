@@ -9,39 +9,100 @@
     "/api/admin/accounts": {
       "get": {
         "operationId": "listAccounts",
-        "summary": "The owner account roster.",
+        "summary": "The owner account roster, whole or one keyset page.",
         "responses": {
           "200": {
-            "description": "Every account, sanitized.",
+            "description": "Sanitized accounts: all of them without a query, one page with one.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "required": [
-                    "schema_version",
-                    "accounts"
-                  ],
-                  "properties": {
-                    "schema_version": {
-                      "type": "string",
-                      "const": "portal.account-roster.v1"
-                    },
-                    "record_authority": {
-                      "type": "string",
-                      "const": "PORTAL_CONTROL"
-                    },
-                    "accounts": {
-                      "type": "array",
-                      "items": {
-                        "$ref": "#/components/schemas/AccountSummary"
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/AccountRoster"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ROSTER_QUERY_INVALID (a limit outside 1..200, an unknown key, role or state) or ROSTER_CURSOR_INVALID (a forged or malformed cursor).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ROSTER_CURSOR_CHANGED (the cursor was issued for another owner, filter or limit) or ROSTER_CURSOR_EXPIRED. Reload the roster from its first page.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
                 }
               }
             }
           }
-        }
+        },
+        "description": "With no query the whole roster is returned as before (the transition for the V1 Users screen: no `page`, no `counts`). Sending any of `limit`, `cursor`, `q`, `role` or `state` makes the read a keyset page: ordered by `username` (unique), at most `limit` accounts (default 50, maximum 200), `page` states the limit, the returned count and the next opaque cursor, and `counts` are exact and taken in the same statement as the rows. A cursor is signed, expires, and is bound to the owner it was given to and to the exact filters and limit it was issued for.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "description": "The `page.next_cursor` of the previous page, unchanged. Opaque."
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "description": "Case-insensitive contains over username and display name."
+          },
+          {
+            "name": "role",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ADMIN",
+                "USER"
+              ]
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "INVITED",
+                "ACTIVE",
+                "DISABLED",
+                "ARCHIVED"
+              ]
+            }
+          }
+        ]
       },
       "post": {
         "operationId": "createInvitedAccount",
@@ -1546,6 +1607,147 @@
             "description": "§20.2 rule 5: delegating a Governance capability creates no Trading System command, promotes no capital and changes no source data."
           }
         }
+      },
+      "RosterPage": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "limit",
+          "returned_count",
+          "has_more",
+          "next_cursor"
+        ],
+        "description": "has_more is true exactly when next_cursor is a string; returned_count equals the accounts returned and never exceeds limit.",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 200
+          },
+          "returned_count": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 200
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        }
+      },
+      "RosterCounts": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "total",
+          "matching",
+          "by_state",
+          "by_role",
+          "locked",
+          "awaiting_first_password"
+        ],
+        "description": "Exact, from the same statement as the page. total, by_state, by_role, locked and awaiting_first_password count the whole roster; matching counts the accounts the filters select.",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "matching": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "by_state": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "INVITED",
+              "ACTIVE",
+              "DISABLED",
+              "ARCHIVED"
+            ],
+            "properties": {
+              "INVITED": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ACTIVE": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "DISABLED": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "ARCHIVED": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "by_role": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ADMIN",
+              "USER"
+            ],
+            "properties": {
+              "ADMIN": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "USER": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "locked": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "awaiting_first_password": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      },
+      "AccountRoster": {
+        "type": "object",
+        "required": [
+          "schema_version",
+          "accounts"
+        ],
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "portal.account-roster.v1"
+          },
+          "record_authority": {
+            "type": "string",
+            "const": "PORTAL_CONTROL"
+          },
+          "accounts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AccountSummary"
+            }
+          },
+          "page": {
+            "$ref": "#/components/schemas/RosterPage"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/RosterCounts"
+          }
+        },
+        "description": "`page` and `counts` are present together, and only on a paged read."
       }
     }
   }

@@ -83,10 +83,9 @@ export interface TabProps {
   paging: PanelPaging;
 }
 
-export function ExposureTab({ model, v2, paging }: TabProps) {
-  const [params] = useSearchParams();
-  const blotter = model.deploymentId === null ? null : withContext(`/deployments/blotter?deployment=${encodeURIComponent(model.deploymentId)}`, params);
-  // No figure in the triad (none published, or every cell the server's NOT_PUBLISHED): ONE line instead of three columns of the same words.
+/** The V1 exposure gaps (reconciliation figures, position rows, order rows): the screen states them ONCE, in the line under its strip. */
+export function v1ExposureGaps(model: LiveModel) {
+  // No figure in the triad (none published, or every cell the server's NOT_PUBLISHED): ONE item instead of three columns of the same words.
   const cells = model.triad === null ? [] : model.triad.rows.flatMap((row) => [row.internal, row.broker, row.difference]);
   const triadGap =
     model.triad === null ||
@@ -94,17 +93,23 @@ export function ExposureTab({ model, v2, paging }: TabProps) {
       cells.every((cell) => cell === undefined || (typeof cell === "object" && cell !== null && cell.kind === "not-published")));
   const triadReason =
     [...new Set(cells.flatMap((cell) => (typeof cell === "object" && cell !== null && cell.kind === "not-published" && cell.reasonCode ? [cell.reasonCode] : [])))].join(" · ") || null;
-  const unpublishedPanels = v2 === null ? [] : EXPOSURE_PANELS.filter((name) => v2.panels[name].state === "NOT_PUBLISHED");
   const triadItem: GapItem = { label: "Internal, Broker and Difference figures", id: "FE-072", reason: triadReason };
-  // A V1 body that publishes no rows says so ONCE: the reconciliation, position and order gaps are one line, not three panels of the same words.
-  const positionsGap = v2 === null ? v1RowsGap(model.v1Rows?.positions ?? { kind: "none" }, "Position rows") : null;
-  const ordersGap = v2 === null ? v1RowsGap(model.v1Rows?.orders ?? { kind: "none" }, "Open order rows") : null;
-  const v1Gaps = [...(triadGap ? [triadItem] : []), ...(positionsGap ? [positionsGap] : []), ...(ordersGap ? [ordersGap] : [])];
+  const positionsGap = v1RowsGap(model.v1Rows?.positions ?? { kind: "none" }, "Position rows");
+  const ordersGap = v1RowsGap(model.v1Rows?.orders ?? { kind: "none" }, "Open order rows");
+  return { triadGap, triadItem, positionsGap, ordersGap, items: [...(triadGap ? [triadItem] : []), ...(positionsGap ? [positionsGap] : []), ...(ordersGap ? [ordersGap] : [])] };
+}
+
+export function ExposureTab({ model, v2, paging }: TabProps) {
+  const [params] = useSearchParams();
+  const blotter = model.deploymentId === null ? null : withContext(`/deployments/blotter?deployment=${encodeURIComponent(model.deploymentId)}`, params);
+  const v1 = v1ExposureGaps(model);
+  const triadGap = v1.triadGap;
+  const triadItem = v1.triadItem;
+  const unpublishedPanels = v2 === null ? [] : EXPOSURE_PANELS.filter((name) => v2.panels[name].state === "NOT_PUBLISHED");
   return (
     <div className="exec-liv-stack">
-      {v2 === null && v1Gaps.length > 1 ? (
-        <GapLine items={v1Gaps} />
-      ) : triadGap ? (
+      {/* V1: every gap of this tab is in the screen's one line under the strip, so the tab draws only what is published. */}
+      {v2 !== null && triadGap ? (
         <SectionPanel level={2} title="Reconciliation">
           <GapLine items={[triadItem]} />
         </SectionPanel>
@@ -121,8 +126,8 @@ export function ExposureTab({ model, v2, paging }: TabProps) {
         </>
       ) : (
         <>
-          {v1Gaps.length > 1 && positionsGap ? null : <V1RowsSection title="Positions" aside="Internal figures" rows={model.v1Rows?.positions ?? { kind: "none" }} what="Position rows" />}
-          {v1Gaps.length > 1 && ordersGap ? null : <V1RowsSection title="Orders" rows={model.v1Rows?.orders ?? { kind: "none" }} what="Open order rows" />}
+          {v1.positionsGap ? null : <V1RowsSection title="Positions" aside="Internal figures" rows={model.v1Rows?.positions ?? { kind: "none" }} what="Position rows" />}
+          {v1.ordersGap ? null : <V1RowsSection title="Orders" rows={model.v1Rows?.orders ?? { kind: "none" }} what="Open order rows" />}
         </>
       )}
       {blotter === null ? null : (

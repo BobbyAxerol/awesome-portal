@@ -21,7 +21,7 @@ afterEach(() => {
 });
 
 describe("MeasureSeg", () => {
-  it("offers Net PnL, Return and Equity as disabled buttons, each described by 'Not published (FE-025)'", () => {
+  it("offers Net PnL and Return as disabled buttons, each described by 'Not published (FE-025)'", () => {
     render(
       <SectionPanel title="Performance" lead={<MeasureSeg />}>
         <p>body</p>
@@ -29,7 +29,7 @@ describe("MeasureSeg", () => {
     );
     const group = screen.getByRole("group", { name: "Performance measure" });
     const buttons = within(group).getAllByRole("button") as HTMLButtonElement[];
-    expect(buttons.map((b) => b.textContent)).toEqual(["Net PnL", "Return", "Equity"]);
+    expect(buttons.map((b) => b.textContent)).toEqual(["Net PnL", "Return"]);
     for (const b of buttons) {
       expect(b.disabled).toBe(true);
       expect(b.title).toContain("Not published (FE-025)");
@@ -48,7 +48,7 @@ describe("MeasureSeg", () => {
     const heading = screen.getByRole("heading", { name: "Performance" });
     expect(heading.parentElement?.contains(group)).toBe(true);
     const buttons = within(group).getAllByRole("button") as HTMLButtonElement[];
-    expect(buttons).toHaveLength(3);
+    expect(buttons).toHaveLength(2);
     expect(buttons.every((b) => b.disabled && document.getElementById(b.getAttribute("aria-describedby") ?? "")?.textContent === "Not published (FE-025)")).toBe(true);
   });
 });
