@@ -85,24 +85,11 @@
   font: var(--exec-font-meta);
   color: var(--ink-soft);
 }
-/* Request archive / Request gate review: disabled DockActions (the buttons and their reasons come from dock.css). */
+/* Request archive / Request gate review: two disabled buttons and their one shared reason (DecisionGroup). */
 .exec-alp2-requests {
-  display: flex;
   flex: 1 1 100%;
-  flex-wrap: wrap;
   min-width: 0;
   max-width: 100%;
-  align-items: flex-start;
-  gap: var(--space-2);
-}
-/* The button already says what it is: the reason is not prefixed with the action's name, and it wraps instead of ending in an ellipsis (it was cut at phone width). */
-.exec-alp2-requests .exec-dock-why[data-l]::before {
-  content: none;
-}
-.exec-alp2-requests .exec-dock-reason {
-  overflow: visible;
-  white-space: normal;
-  text-overflow: clip;
 }
 .exec-alp2-chip {
   padding: 2px var(--space-2);

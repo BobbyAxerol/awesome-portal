@@ -56,17 +56,22 @@ const back = () => screen.getByRole("link", { name: /^←/ });
 const hrefs = () => [...document.querySelectorAll("a")].map((a) => a.getAttribute("href") ?? "");
 
 describe("Request archive and Request gate review (flow audit #7)", () => {
-  it("are two disabled controls, each with its reason and a My access link", async () => {
+  it("are two disabled controls that share ONE reason line and ONE My access link", async () => {
     const { calls } = mount(BASE);
     await ready();
-    for (const [label, fe] of [["Request archive", "FE-034"], ["Request gate review", "FE-020"]] as const) {
+    const reasons = new Set<string>();
+    for (const label of ["Request archive", "Request gate review"]) {
       const button = screen.getByRole("button", { name: label }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
       const reason = document.getElementById(button.getAttribute("aria-describedby") ?? "");
-      expect(reason?.textContent).toContain(`Not published (${fe})`);
-      const access = screen.getByRole("link", { name: `My access: ${label}` });
-      expect(access.getAttribute("href")).toBe("/administration/profile-access");
+      expect(reason?.textContent).toContain("Not published (FE-034, FE-020)");
+      reasons.add(reason!.id);
     }
+    expect(reasons.size).toBe(1);
+    expect(screen.getAllByText(/Requests cannot be recorded yet/)).toHaveLength(1);
+    const access = screen.getAllByRole("link", { name: /^My access/ }).filter((a) => a.closest(".exec-alp2-requests"));
+    expect(access).toHaveLength(1);
+    expect(access[0]!.getAttribute("href")).toBe("/administration/profile-access");
     // pressing a disabled control sends nothing
     const before = calls.length;
     fireEvent.click(screen.getByRole("button", { name: "Request archive" }));
@@ -78,7 +83,7 @@ describe("Request archive and Request gate review (flow audit #7)", () => {
   it("the My access link keeps the URL context", async () => {
     mount(`${BASE}?workspace_id=ws_1&env=live`);
     await ready();
-    const href = screen.getByRole("link", { name: "My access: Request archive" }).getAttribute("href")!;
+    const href = screen.getByRole("link", { name: "My access: Request archive, Request gate review" }).getAttribute("href")!;
     expect(href).toContain("/administration/profile-access");
     expect(href).toContain("workspace_id=ws_1");
   });

@@ -35,9 +35,10 @@ import { Link, useLocation, useNavigate, useSearchParams } from "react-router-do
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
-import { DockAction, useDockMode, useDockSelection } from "../../Drawer";
+import { useDockMode, useDockSelection } from "../../Drawer";
 import { withoutOrigin } from "../../backTo";
-import { NotAvailableLine, notPublishedReason } from "../../blocks";
+import { NOT_PUBLISHED, NotAvailableLine } from "../../blocks";
+import { DecisionGroup } from "../stage/DecisionGroup";
 import { Flag } from "../../Flag";
 import { applyTab, resolveTab } from "../../tabAliases";
 import { useMediaQuery } from "../../useMediaQuery";
@@ -93,6 +94,8 @@ const NO_VENUE = (): null => null;
 
 /** D9: where a reader sees which grant a disabled action lacks. */
 const ACCESS_PATH = "/administration/profile-access";
+/** Both requests are off for one reason (neither is recorded yet): it is printed once, with one My access link. */
+const REQUESTS_OFF = `${NOT_PUBLISHED} (FE-034, FE-020). Requests cannot be recorded yet.`;
 
 export interface AlphaScreenProps {
   api: ExecutionApi;
@@ -258,9 +261,15 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
         </div>
         <div className="exec-alp2-fresh">
           {present ? (
-            <div className="exec-alp2-requests" role="group" aria-label="Requests">
-              <DockAction label="Request archive" reason={notPublishedReason("FE-034", "Archive requests cannot be recorded yet.")} accessHref={ACCESS_PATH} />
-              <DockAction label="Request gate review" reason={notPublishedReason("FE-020", "Gate-review requests cannot be recorded yet.")} accessHref={ACCESS_PATH} />
+            <div className="exec-alp2-requests">
+              <DecisionGroup
+                label="Requests"
+                accessHref={ACCESS_PATH}
+                items={[
+                  { key: "archive", label: "Request archive", reason: REQUESTS_OFF },
+                  { key: "gate", label: "Request gate review", reason: REQUESTS_OFF },
+                ]}
+              />
             </div>
           ) : null}
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}

@@ -11,6 +11,7 @@ import { useId } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import { withoutOrigin } from "../../backTo";
+import { QuietIds } from "../../blocks";
 import { DockAction } from "../../Drawer";
 import { withContext } from "../../urlState";
 
@@ -51,7 +52,7 @@ export function DecisionGroup({ items, accessHref, label }: { items: readonly De
         ))}
       </div>
       <div className="exec-stage-dec-why">
-        <p id={reasonId} className="exec-dock-reason">{reason}</p>
+        <p id={reasonId} className="exec-dock-reason"><QuietIds text={reason} /></p>
         <Link className="exec-dock-access" to={withContext(accessHref, withoutOrigin(params))} aria-label={`My access: ${items.map((item) => item.label).join(", ")}`}>My access</Link>
       </div>
     </div>
