@@ -91,6 +91,10 @@
   min-width: 0;
   max-width: 100%;
 }
+/* The My access link sits next to the reason, not at the far edge of the header. */
+.exec-alp2-requests .exec-dock-reason {
+  flex: 0 1 auto;
+}
 .exec-alp2-chip {
   padding: 2px var(--space-2);
   font: var(--exec-font-control);
