@@ -91,7 +91,7 @@ export function ScoreCell({ id, ctx }: { id: string; ctx: DatasetCellContext }):
   const words = SCORE_SLOTS.map(([label, key]) => ({ label, word: slotWord(scores[key]) }));
   const same = words.every((entry) => entry.word === words[0]!.word);
   const text = same ? words[0]!.word : words.map((entry) => `${entry.label}: ${entry.word}`).join(" · ");
-  return <span className="exec-pf-dim" title={`${npText(PF_FE.score)} · ${scores.reasonCode}`}>{text}</span>;
+  return <NaWhy reason={`${npText(PF_FE.score)} · ${scores.reasonCode}`} text={text} className="exec-pf-dim" />;
 }
 
 export function GapCell({ fact, why }: { fact: Unpublished; why: string }): ReactNode {

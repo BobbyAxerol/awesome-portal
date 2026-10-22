@@ -136,11 +136,15 @@ function rowActionOf(account: AccountSummary, me: string | null): ReactNode {
   if (account.accountState === "ARCHIVED") return <span className="exec-usr-meta">Archived accounts stay as they are</span>;
   const label = account.accountState === "DISABLED" ? "Enable" : "Disable";
   const self = me !== null && account.userId === me;
+  // Not a component, so no hook: the id is stable per account.
+  const reasonId = `exec-usr-why-${account.userId}`;
+  const reason = self ? "You cannot disable yourself" : gapTitle(ROW_ACTION_FE, "Per-row action", CHANGES_ELSEWHERE);
   // The click must not open the row's drawer: the control is off, and its reason is a disclosure of its own.
   return (
     <Inert className="exec-usr-rowact">
-      <button type="button" className="exec-usr-btn" disabled aria-label={`${label} ${account.username}`}>{label}</button>
-      <GapWhy name={`Why ${label} is off for ${account.username}`} rows={[self ? "You cannot disable yourself" : gapTitle(ROW_ACTION_FE, "Per-row action", CHANGES_ELSEWHERE)]} next={null} />
+      <button type="button" className="exec-usr-btn" disabled aria-label={`${label} ${account.username}`} aria-describedby={reasonId}>{label}</button>
+      <span id={reasonId} className="exec-blk-sr">{reason}</span>
+      <GapWhy name={`Why ${label} is off for ${account.username}`} rows={[reason]} next={null} />
     </Inert>
   );
 }
@@ -420,7 +424,8 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
                 </label>
                 {filtered ? <button type="button" className="exec-usr-btn" onClick={clearFilters}>Clear filters</button> : null}
                 <span className="exec-usr-invite">
-                  <button type="button" className="exec-usr-btn" disabled aria-label="Invite account">Invite account</button>
+                  <button type="button" className="exec-usr-btn" disabled aria-label="Invite account" aria-describedby="exec-usr-invite-why">Invite account</button>
+                  <span id="exec-usr-invite-why" className="exec-blk-sr">{gapTitle(ROW_ACTION_FE, "Invite", CHANGES_ELSEWHERE)}</span>
                   <GapWhy name="Why Invite account is off" rows={[gapTitle(ROW_ACTION_FE, "Invite", CHANGES_ELSEWHERE)]} next={null} />
                 </span>
               </div>
