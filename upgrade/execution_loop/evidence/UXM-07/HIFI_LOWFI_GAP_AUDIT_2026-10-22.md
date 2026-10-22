@@ -33,3 +33,24 @@ Inputs read: Bobby's two lowfi sheets (`ChatGPT Image Oct 15 …37 PM` = Portfol
 2. Portfolios and Fleet: restore all HIFI columns as columns with per-cell unavailable reasons; window selector; Fleet tabs All/Live/Canary/Sandbox/Paper.
 3. Build M08 Archived Alphas and add Archived Alphas / Waivers / Exit Reviews to the sidebar.
 4. Keep it fixture-only; values appear only when a contract serves them.
+
+## 5. Correction and comparison with Bobby's two artifacts (added 2026-10-22, later read)
+
+Read in full: claude.ai/artifact/X7Aqzz9rEA4Q51C7ifnKAQ ("Execution V2 Screens", 20 screens x wireframe/Manager/Researcher/Source-not-qualified/V1) and claude.ai/artifact/Ley56v4q8dF1P8C7uPvMrQ ("Execution V2 Concepts", C1-C4, marked "nothing here is approved"). Compared with the V2 baselines of Overview, Fleet and Portfolios at 1440.
+
+**Corrections to sections 1-2 above (they used the older HIFI M01-M10 set):**
+- M08 Archived Alphas is not a separate screen in the V2 Screens artifact: "Archived Alphas -> Fleet Archived lens (Folded)". DEBT-UXM07-050 was wrong to call it missing. What is missing is the Archived tab content ("Archived list: Not available").
+- Waivers and Exit Reviews are "Merged" into Approvals lanes. The sidebar (Overview, Portfolios, Alpha Fleet, Accounts, Operations, Approvals, then Administration: Profile & Access) matches the artifact. Not a deviation.
+
+**What the artifact draws and V2 does not (confirmed on images):**
+| Screen | Artifact | V2 today |
+|---|---|---|
+| Shell | Top bar with Search or jump (Cmd K) and user chip; persistent context bar: Real-funded/Paper/Sandbox, 7D/30D/90D/ALL, "USDT one basis", "Scope: All portfolios" | Context bar folds to "Not applied: Environment, Window" on Overview and Fleet; Portfolios shows the environment chips only. Window, basis and scope selectors are absent |
+| Overview | 5 KPI tiles (NAV, Net PnL 90D, Return 90D, Drawdown, Open incidents); chart with Net PnL/Return/Equity tabs and drawdown strip; Capital panel (Initial, Added, Returned, NAV, Budget used); Needs attention; Since your last visit; Contributors | 3 tiles; one "Not available: ..." line; NAV chart; Needs attention; Current by currency; Fleet by stage; Today; Source health. No Capital panel, no Since your last visit, no Contributors |
+| Source not qualified variant (overview-nq, fleet-nq) | Same layout kept; every KPI, Capital row, Contributors and Fleet cell reads "Not available" with a one-line reason ("Source not qualified", "Fees incomplete", "Method not certified", "Needs a NAV series") | Layout dropped instead of kept |
+| Portfolios | Search, All/Needs attention/Stale filters, Export, Columns, Compact; columns Portfolio, Manager, Alphas/Deploy., Allocations, NAV, Allocated capital, Net PnL 90D, Return 90D, Drawdown 90D, Concentration, Health; totals row | Compare, Portfolio, Owner, State, Allocations, Deployments, Allocated capital; one "Not available: NAV, Net PnL, ..." line |
+| Alpha Fleet | Table/Board/Map; 4 KPI tiles; tabs All/Real-funded/Sandbox/Paper/Archived; filters Portfolio, Owner, Health, Group, Then; columns Alpha, Owner, Portfolio, Stage with 6-step meter, Allocation, Net PnL 90D, Equity sparkline, Health | Table/Board; 5 KPI tiles; filters Owner, Health, Sort; columns Alpha, Owner, Portfolios, Stage, Health, Deployments; "Not available: Group by, Map, Window, Readiness, Compare, Archived list" |
+
+**Honest cause.** Reusable parts exist in the code (CommandBar, ContextBar, CapitalFlow, JourneySpine, DivBars, a Contributors model) but the three screens render them only when a read carries the data, and DEBT-048 removed controls that did nothing. The artifact's own "Source not qualified" variant shows the intended answer: keep the control or cell, mark it unavailable with the reason. So the layout gap is a build decision of mine, not a data limit and not a permission limit on bobby. The Concepts artifact is explicitly "not approved"; the Screens artifact adopts Cmd K, fleet board/map, capital flow, spine, ribbon and cockpit as highlights, so the adopted scope needs Bobby's confirmation per item.
+
+DEBT-UXM07-049 stands. DEBT-UXM07-050 is narrowed to: Fleet Archived tab content, Fleet Map view, Since your last visit digest.

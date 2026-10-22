@@ -221,10 +221,10 @@
     },
     {
       "id": "DEBT-UXM07-050",
-      "title": "M08 Archived Alphas screen and the HIFI sidebar entries (Archived Alphas, Waivers, Exit Reviews) are not built",
-      "where": "design/hifi/m08-archived-alphas.html; sidebar; Fleet 'Archived list: Not available'",
-      "consequence": "No lifecycle watchlist / paper-monitor view; Waivers and Exit Reviews live inside Approvals only.",
-      "proposed": "Build M08 on fixture with the HIFI states; add the three sidebar entries; real data waits on the archive/monitor contracts.",
+      "title": "Fleet Archived tab content, Fleet Map view and the Since-your-last-visit digest are not built (Archived Alphas is a Fleet lens in the V2 Screens artifact, not a screen)",
+      "where": "V2 Screens artifact X7Aqzz9rEA4Q51C7ifnKAQ; Fleet \"Archived list: Not available\"; see HIFI_LOWFI_GAP_AUDIT_2026-10-22.md section 5",
+      "consequence": "The Archived lens, heat map and digest drawn in the artifact are absent. Sidebar and Waivers/Exit Reviews placement already match the artifact.",
+      "proposed": "Build the Archived lens, Map view and digest on fixture with per-cell unavailable states; real data waits on the archive and feed contracts.",
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go)",
       "status": "OPEN (found 2026-10-22; not previously tracked)"
