@@ -227,6 +227,10 @@
   .exec-blk-kpis {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* A strip of short counts (Alpha 360 Orders) stays two across: four full-width tiles at 390 px were about 350 px of scrolling for four numbers. */
+  .exec-blk-kpis[data-phone="2"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 /* ---- panel -------------------------------------------------------------- */

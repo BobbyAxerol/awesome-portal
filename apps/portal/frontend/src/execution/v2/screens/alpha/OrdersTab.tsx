@@ -178,7 +178,7 @@ export function OrdersTab({ alphaId, book, activity, focusOrder, linkTo }: Order
           <span>Scoped read: authorized rows of a retained window, not total history.{basis ? ` Paged by ${basis}.` : ""}</span>
         </p>
       ) : null}
-      <KpiStrip label="Orders and fills" columns={4}>
+      <KpiStrip label="Orders and fills" columns={4} phoneColumns={2}>
         <Kpi label="Orders" metric={count(data?.orderPopulation ?? undefined)} absentReason={absent} basis="Retained window" />
         <Kpi label="Fills" metric={count(data?.fillPopulation ?? undefined)} absentReason={absent} basis="Retained window" />
         <Kpi

@@ -21,7 +21,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { formatAsOf } from "../../boundary";
-import { GapWhy } from "../../blocks";
+import { CodeName, GapWhy } from "../../blocks";
 import { DockAction } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { AMOUNT_KEYS, PENDING_OPERATIONS, PENDING_VERSION_KEYS, type PendingOperation } from "../../readers/commandCurrency";
@@ -204,7 +204,7 @@ function PreviewResult({ preview }: { preview: Preview }) {
     return (
       <div className="exec-pc-result" role="alert" data-outcome="not-allowed">
         <p><Flag kind="rejected" label="Preview not allowed" size="sm" /></p>
-        <p><span className="exec-ops-mono">{preview.reasonCode}</span> {pendingControlWords(preview.reasonCode)}</p>
+        <p><CodeName code={preview.reasonCode} /> {pendingControlWords(preview.reasonCode)}</p>
         <p className="exec-pc-note">{PREVIEW_ONLY_COPY}</p>
       </div>
     );
