@@ -79,6 +79,12 @@ export function issueExistingManagerCsr(input) {
   output('research-client.chain.pem', Buffer.concat([leafBytes, issuerBytes]));
   openssl(['verify', '-purpose', 'sslclient', '-CAfile', rootCert, '-untrusted', issuerCert,
     join(outputDir, 'research-client.crt.pem')]);
+  // A failed final custody check must never leave a success-looking receipt.
+  // Keep partial public outputs for diagnosis; none is an issuance receipt.
+  for (const [path, bytes] of [[csr, csrBytes], [issuerCert, issuerBytes], [rootCert, rootBytes],
+    [serverCa, serverBytes], [extensions, extBytes]]) {
+    if (digest(publicFile(path)) !== digest(bytes)) fail('CUSTODY_CHANGED_DURING_ISSUANCE');
+  }
   const receipt = {
     schema_version: 'portal.research-manager-client-issuance.v1', issued_at: new Date().toISOString(),
     state: 'ISSUED_VERIFIED_NOT_INSTALLED', validity_days: days, serial: leaf.serialNumber,
@@ -93,9 +99,6 @@ export function issueExistingManagerCsr(input) {
     grants_issued: 0, connected_qualification: 'NOT_RUN',
   };
   output('issuance-receipt.json', JSON.stringify(receipt));
-  // Recheck public inputs to catch accidental concurrent custody replacement.
-  if (digest(publicFile(csr)) !== expected.csr || digest(publicFile(issuerCert)) !== digest(issuerBytes))
-    fail('CUSTODY_CHANGED_DURING_ISSUANCE');
   return receipt;
 }
 

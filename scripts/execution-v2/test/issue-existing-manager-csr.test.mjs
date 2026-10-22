@@ -1,8 +1,9 @@
-import { test, before, after } from 'node:test';
+import { test, before, after, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import childProcess, { execFileSync } from 'node:child_process';
+import { syncBuiltinESMExports } from 'node:module';
 import { createHash, X509Certificate } from 'node:crypto';
-import { mkdtempSync, readFileSync, writeFileSync, chmodSync, statSync, readdirSync, rmSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, chmodSync, statSync, readdirSync, rmSync, symlinkSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { issueExistingManagerCsr, CLIENT_URI } from '../issue-existing-manager-csr.mjs';
@@ -93,4 +94,23 @@ test('refuses a nonprivate output parent before signing', () => {
   const publicParent = file('public-parent');
   execFileSync('mkdir', [publicParent]); chmodSync(publicParent, 0o755);
   assert.throws(() => issueExistingManagerCsr(input({ outputDir: join(publicParent, 'leaf') })), /OUTPUT_PARENT_NOT_PRIVATE/);
+});
+test('a late custody change fails before publishing a successful issuance receipt', () => {
+  const originalCsr = readFileSync(file('client.csr'));
+  const actualExec = childProcess.execFileSync, options = input();
+  const patch = mock.method(childProcess, 'execFileSync', (command, args, ...rest) => {
+    const result = actualExec(command, args, ...rest);
+    if (command === 'openssl' && args[0] === 'verify' && args.includes('sslclient'))
+      writeFileSync(file('client.csr'), Buffer.concat([originalCsr, Buffer.from('\n')]));
+    return result;
+  });
+  syncBuiltinESMExports();
+  try {
+    assert.throws(() => issueExistingManagerCsr(options), /CUSTODY_CHANGED_DURING_ISSUANCE/);
+    assert.equal(existsSync(join(options.outputDir, 'issuance-receipt.json')), false);
+    assert.deepEqual(readdirSync(options.outputDir).sort(), ['research-client.chain.pem', 'research-client.crt.pem']);
+  } finally {
+    patch.mock.restore(); syncBuiltinESMExports();
+    writeFileSync(file('client.csr'), originalCsr);
+  }
 });
