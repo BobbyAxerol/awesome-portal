@@ -14757,3 +14757,27 @@ UI untouched; ELP2-10 OPEN, no ELP2-11, production/dev/main or push. Verificatio
 ### Edge08 slot execution continuation —22Oct12:30 Asia/Saigon
 
 Bobby asks actual Edge install/READY -> Core current READ/source-set/session -> bounded READ. Exact ACKd920/helper0858 and four files unchanged; slot13:00–13:30 Asia/Saigon (06:00–06:30UTC), no pre-slot source. Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section8, current raw SHA256 5fd27e1b2aa3b006d0c8606b1e63dfaf8ef4fa55a5dfce45228ddcd5f42f254a. Core operator: prepare reviewed existing Research composition now, consume real READY promptly in slot and return official current READ/session refs/hash; no P22/STREAM/Manager/calibration hold. C32/R20 fresh census, <=3 new admissions atH9, one eligible native snapshot READ rather than full suite. This delivery is docs-only: actual install/READY/session/READ NOT_RUN, full08/09NOT_MET; preserve WIP/index/stable/dev/provider28445.
+
+
+### Edge08 single READ ownership —22Oct12:50 Asia/Saigon
+
+Reply upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_BINDING_REPLY_2026-10-22.md section9 raw SHA256 386b8bdaa81a0404295430df4935d2684eb5f794292d4da0cc329b33fb111b95. Two unchanged qualified source files cad1eeb6/e108a0a7 now in /tmp/edge-core009-single-read-20261022-WgWvuP on SGP, 2/2hashes match. No execution/secret/data/dependency/runtime change. After actual source READY Core returns private current config/ready/session refs with matching reader UID; Edge runs exactly one snapshot GET via prepare/Transport/finite, NOT full baseline. One client owner: if Core runs it instead, return real result first; never duplicate uncounted admissions. Recheck C32/R20 census. SDK terminal/Core ACK and official grant/session cleanup remain required; full08/09NOT_MET. Exact mirror cleanup owned by Edge.
+
+### Core009 single client coordination —22Oct05:54UTC
+
+[Operational owner return](execution_loop/evidence/ELP2-10/CORE009_SINGLE_READ_COORDINATION_2026-10-22.md):
+Edge owns the one qualified snapshot specimen; Core will not run its separate
+probe. Independent operations review ACCEPT and syntax checks EXIT0; backup
+completed, READY-dependent config/grant/session NOT_RUN. Source window06:00–06:30
+unchanged; preserve C32/R20 and original custody/UNKNOWN. No other lane holds
+this bounded READ; ELP2-10 OPEN. Verification:R0.
+
+### Claude landing review returned —22Oct05:57UTC
+
+[C-1…C-8 handback](execution_loop/evidence/ELP2-10/CODEX_TO_CLAUDE_LANDING_ACK_2026-10-22.md)
+reads Claude219fbdc7/99ff5990. B1/CR02/P20/P21/P22 source dispositions are
+separate from runtime qualification. BE-P23 CHANGE: use one lock-state clock
+for SQL counts and rows; EXPLAIN the actual product page query, not another
+SELECT; correct27PG to10PG+17unit with actual log locator. Claude owns fixes.
+No full hook or destructive integration during accepted Edge window. Current
+branches require reconciliation before ff-only landing; no source loss claim.

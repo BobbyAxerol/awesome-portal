@@ -234,3 +234,29 @@ events, real installed native observation, physical drain/pool-zero/exit and
 same-intent recovery if uncertain. No actual install/SDK_READY/current grant/
 session/connected READ is asserted by this preparation update. Receipt and
 custody must come from the real run, not a timer, running ExitCode0 or health.
+
+## 9. Single READ client prepared on SGP — no session transfer
+
+22Oct12:50 Asia/Saigon (05:50UTC). Exactly two unchanged public source files
+are mirrored into owned0700 `/tmp/edge-core009-single-read-20261022-WgWvuP/`:
+
+- `scripts/epg10-08/connected_read.py`,40583bytes,
+  SHA256cad1eeb6b8f3cd8244cdf7e3f3dd0001a7fefb32a105bdbfab60d7ecc519debf.
+- `upgrade/integration/execution-native-read-v1/research-identity-intake/identity_operator.py`,
+  58156bytes,SHA256e108a0a740831a3905c6174597420888160097de7ff4edd682bf276965f42424.
+
+Both remote hashes match. No code changed/executed, dependency install,
+secret/data/ENV copied, checkout or runtime changed by this preparation.
+Reuse `prepare → Transport.request("snapshot") → finite("snapshot")` only:
+one HTTPS request, no CLI/run baseline (3–4requests), no STREAM. Core returns
+the existing connected-read-config/ready receipt and genuine session private
+refs/hash on SGP with matching reader UID, limit≤200/bytes≤1MiB/deadline≤60s,
+probe_stream=false. Snapshot-only evidence does not claim full08/09.
+
+**One client owner:** Edge will invoke the single qualified specimen after
+Core returns READY-dependent inputs/census. If Core instead runs this exact
+specimen itself, return that real result/receipt first; do not both run it or
+consume uncounted admissions. Session values remain on SGP. Core separately
+returns actual source-terminal/Core ACK and exact official session/grant
+cleanup. Edge owns removing only this two-file mirror after settled outcome;
+SDK UNKNOWN custody is never treated as disposable client cleanup.
