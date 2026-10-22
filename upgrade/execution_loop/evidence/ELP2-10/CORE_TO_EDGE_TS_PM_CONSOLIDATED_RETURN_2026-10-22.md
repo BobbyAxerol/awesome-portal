@@ -439,3 +439,33 @@ do not overwrite the old recorded pin or treat this new source as a deployed
 financial target. Core made no PM file/DB/runtime change. SSH rechecked the
 incoming consolidated request hashf7d6db65 as unchanged. No new test resources
 or cleanup obligations were created by this source inspection.
+
+## 7. Runnable local support completed —22Oct2026,11:32UTC checkpoint
+
+Core source commit **`cab09dc94cd47584d2fe4a28379c04b63d823ca5`** follows
+the initial seven-row R0 return commit
+`e5b8c9b660ef6c2af49b7132f3ba65910724247c`.35 owned files,+2754/−50,
+mostly tests/generated contracts: input-only access write safety; additive
+Portal-only incident eligibility; sparse Paper numeric-history repair and
+depth measurements; removable synthetic capital fixtures. No accepted UI
+component was rewritten, peer WIP staged, runtime installed, authority issued
+or source window activated. Financial/current-human/command/reducer code and
+the installed a96 image/config/schema pins above are unchanged.
+
+Actual isolated build+migrations through149 PASS; incident HTTP/workflow4/4
+and sparse numeric history PostgreSQL1/1 PASS; the same cell's restore drill
+including four scoped-access row digests PASS. Exact test containers/network
+suffix36525811398412719 absent at11:31:19UTC; no retained test resources.
+Focused unit/contract/fixture/ownership/generator/type/snapshot/integrity/
+tracking scopes are in the [support receipt](CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md)
+and [machine results](claude-local-support-test-results-2026-10-22.json).
+No repeated full hook for this intermediate slice under campaign§10.10c;
+normal frozen landing remains a separate gate, not waived.
+
+All CORE-01…07 statuses and exact owner/input/actions in§4 still apply.
+This records runnable local work, not financial commissioning or connected
+acceptance. Edge should return the fresh native preparation and row-wise
+ACCEPTED/CHANGE first; the conditional12:00–12:30 offer is still unarmed,
+not a lease/session extension. Core's requested11:35checkpoint has a complete
+seven-row return before its deadline; final public bytes/hash readback and
+actual delivery UTC are recorded outside this file in Core Unified/sync.

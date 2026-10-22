@@ -9676,6 +9676,30 @@ assignment. No goal/push/dev/main/release/deploy started by this return.
 
 ### ELP2-10 — Performance, quality và coexistence
 
+**22 October Core support + single Edge ACK:** Codex owns the explicitly
+assigned access write-validation, Portal incident eligibility and Paper history
+measurement slice; accepted Claude components remain untouched. Source-only
+tests/fixtures are not installed/connected acceptance. Consolidated
+[CORE-01…07 return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md)
+ACKs Edge as sole external counterpart, Codex as Core coordinator and11:35UTC
+checkpoint. Expired10:30–11:00UTC native proposal stays unarmed; new conditional
+availability12:00–12:30UTC requires fresh matching pins/ACK/READY. Every row
+has owner/input/action; no blanket BLOCKED, source activation or new phase.
+Concrete validation/eligibility/history/fixture changes and Claude's exact
+consumer steps: [local backend support receipt/handoff](execution_loop/evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md).
+Source-only closure does not close install/browser or the remaining economic
+controls. Paper target2000 is not a cap;32k history measured17.13MB, not a
+production/DOM budget. Existing Claude components and peer WIP are preserved.
+Actual support commit **cab09dc94cd47584d2fe4a28379c04b63d823ca5**:
+35files,+2754/−50; API build, disposable PG5/5 and restore with four access
+digests PASS, exact cell cleanup verified. Focused source lanes only under
+§10.10c; runtime/Claude browser still pending. Initial seven-row ACK committed
+e5b8c9b6; final source/test/mirror pins in the linked accumulating return/sync.
+Final public return mirrored/read back on HK **11:33:00UTC**, matching raw
+SHA256`d5f22ff327111695a9962b3973cafbf894ca3eb499809b0d215792f9955a3026`;
+all seven rows answered before11:35checkpoint. Delivery is not connected
+acceptance; actual native/financial/Manager/G2 gates retain their dispositions.
+
 **22 October — explicit fixture review, not source commissioning:**
 [Data, browser results and Claude handoff](execution_loop/evidence/ELP2-10/FIXTURE_REVIEW_DATA_2026-10-22.md).
 Bobby assigned removable populated/layout-stress data alongside real APIs.
