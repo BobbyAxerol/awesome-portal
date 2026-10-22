@@ -135,7 +135,7 @@ const UNPUBLISHED_OVERVIEW: readonly UnavailableFact[] = [
   { label: "Concentration", id: "FE-005", why: "Shares need the Manager grouping, so none is drawn or worked out here" },
   { label: "Capital statements", id: "FE-017", why: "Initial, added and returned funds, net external flows, approved budget, recalling, headroom" },
   { label: "Funding source", id: "FE-032", why: "No per-source attribution" },
-  { label: "Stage, decision, incident and recall lanes", id: "FE-031", why: "No source is published (FE-032 as well); the lanes are not empty" },
+  { label: "Stage, decision, incident and recall lanes", id: "FE-031", why: "No source is published (FE-032 as well); the chart draws the Flow lane only" },
   { label: "Score", id: "FE-011" },
 ];
 

@@ -7,7 +7,7 @@
  *   the published movement word and the exact amount in its own currency. No
  *   amount is added to another, within a currency or across currencies;
  * - `stage`, `decision`, `incident`, `recall`: no source is published (FE-031,
- *   FE-032). The lanes stay on the ribbon and say so; they are not empty lanes.
+ *   FE-032), so they are not drawn; the screen's "Not available" line says so once.
  *   The ledger carries no movement word for a recall, so recall is among them.
  *
  * The ledger read is bounded to the latest entries and has no older page, so
@@ -22,7 +22,7 @@ import { EventKindChips, EventRibbon, type ChartDomain, type EventKind } from ".
 import { CardsTable, type CardsColumn } from "../../../cardsTable";
 import { Money, envWord } from "../format";
 import type { TabCtx } from "./ctx";
-import { RIBBON_UNPUBLISHED, ledgerFlow, unreadEntries, type LedgerRowView } from "./model";
+import { RIBBON_KINDS, ledgerFlow, unreadEntries, type LedgerRowView } from "./model";
 import { ReadGate } from "./parts";
 
 import "../../../css/portfolios.css";
@@ -68,13 +68,14 @@ export function FlowRibbonLanes({ ctx, domain, lanes }: FlowRibbonProps) {
           The ribbon needs the equity time axis, and the chart read published none. The {ledgerFlow(value.ledger).rows.length} flow
           entries read are in the table below.
         </p>
-      ) : (
+      ) : ledgerFlow(value.ledger).events.length === 0 ? null : (
+        // With nothing to place there is no lane to draw: the notes under the chart say why (empty ledger, undated, unchanged).
         <EventRibbon
           label={`Capital flow events, ${envWord(env)}`}
           events={ledgerFlow(value.ledger).events}
           domain={domain}
           enabled={lanes}
-          unpublished={RIBBON_UNPUBLISHED}
+          kinds={RIBBON_KINDS}
         />
       ))}
     </ReadGate>
@@ -85,8 +86,8 @@ export function FlowRibbonLanes({ ctx, domain, lanes }: FlowRibbonProps) {
 export function FlowRibbonChips({ ctx, domain, lanes, onToggle }: FlowRibbonProps & { onToggle(kind: EventKind): void }) {
   const read = ctx.reads.ledgers[ctx.reads.selected];
   const ledger = read.phase === "ready" ? read.value.ledger : read.phase === "loading" || read.phase === "error" ? read.last?.ledger ?? null : null;
-  if (ledger === null || domain === null) return null;
-  return <EventKindChips events={ledgerFlow(ledger).events} domain={domain} enabled={lanes} onToggle={onToggle} unpublished={RIBBON_UNPUBLISHED} />;
+  if (ledger === null || domain === null || ledgerFlow(ledger).events.length === 0) return null;
+  return <EventKindChips events={ledgerFlow(ledger).events} domain={domain} enabled={lanes} onToggle={onToggle} kinds={RIBBON_KINDS} />;
 }
 
 function Notes({ ledger, env }: { ledger: CapitalLedger; env: string }) {

@@ -26,7 +26,7 @@ import type { CurrencyBucket, DerivationEnvelope, PortfolioCapitalData } from ".
 import type { FinancialChartPayload } from "../../../../api/financialChart";
 import { readUtcEpochMs, type UtcEpochMs } from "../../../../screenDataContract";
 import { readDecimal } from "../../../boundary";
-import type { ChartEvent, ChartState, SeriesPoint, ServerEnvelope } from "../../../charts";
+import type { ChartEvent, ChartState, EventKind, SeriesPoint, ServerEnvelope } from "../../../charts";
 import type { FlagKind } from "../../../flagKinds";
 import { domainOf, humanize, type Domain } from "../format";
 
@@ -402,12 +402,12 @@ export function ledgerIsEmpty(ledger: CapitalLedger): boolean {
 
 /* ── capital flow ribbon (concept C3): the ledger on the equity's time axis ── */
 
-/** The ribbon's own words for a lane with no published source: one sentence, said on the lane. */
-/** The lane word; the request ids (FE-031, FE-032) are said once, in the title of the "Not available" line under the chart. */
-export const RIBBON_LANE_NP = "Not published";
-
-/** Lanes the capital ledger cannot place anything on. Recall is here too: no ledger movement word says an entry is a recall. */
-export const RIBBON_UNPUBLISHED = { stage: RIBBON_LANE_NP, decision: RIBBON_LANE_NP, incident: RIBBON_LANE_NP, recall: RIBBON_LANE_NP } as const;
+/**
+ * The one lane the capital ledger can place anything on. Stage, decision, incident and recall have no published source
+ * (FE-031, FE-032; no ledger movement word says an entry is a recall): they are not drawn, and the "Not available" line
+ * under the chart says so once.
+ */
+export const RIBBON_KINDS: readonly EventKind[] = ["flow"];
 
 export interface LedgerFlowModel {
   /** Flow-lane events, newest first; one per ledger entry that moved allocated capital and has a readable instant. */
