@@ -44,6 +44,9 @@ export function AuthorityKpis({ ctx, physicalOnly }: { ctx: PanelContext; physic
   const pnl = ledgerPnl(profile, accountId, currency);
   const broker = brokerFacts(profile, currency);
   const { allocations, names } = ctx.view;
+  // Budget and exposure are one row's own figures: with one allocation row they headline the tile; with several they are not added
+  // together (different deployments, stages and currencies) and stay "Not published" here.
+  const sole = allocations.length === 1 ? allocations[0]! : null;
   return (
     <KpiStrip label="Authorities" columns={physicalOnly ? 1 : 3}>
       {physicalOnly ? null : (
@@ -54,16 +57,20 @@ export function AuthorityKpis({ ctx, physicalOnly }: { ctx: PanelContext; physic
       )}
       {/* The design's headline is the venue's wallet balance. No contract carries it, so the headline says so and the one native figure
           that IS published (buying power) rides under it, labelled as what it is. */}
-      <Kpi label="Native custody · whole account" absentReason="Venue field not reported" basis={broker ? "Wallet balance shared by the whole account" : undefined}>
+      <Kpi label="Native custody · whole account" metric={broker?.walletBalance} suffix={currency ?? undefined} absentReason="Venue field not reported" basis={broker ? "Wallet balance shared by the whole account" : undefined}>
         {broker ? <>Venue report as of <When at={broker.asOf} /></> : undefined}
         <span className="exec-acct-sub2">Buying power: <Value metric={broker?.buyingPower} suffix={currency ?? undefined} /></span>
-        <span className="exec-acct-sub2">Native equity: <Na why="Venue field not reported" /></span>
+        <span className="exec-acct-sub2">Native equity: <Value metric={broker?.nativeEquity} suffix={currency ?? undefined} /></span>
       </Kpi>
       {physicalOnly ? null : (
         <div className="exec-blk-kpi">
           <dt className="exec-blk-kpi-label">PM capital · this sleeve</dt>
           <dd className="exec-blk-kpi-body">
-            <span className="exec-blk-kpi-value"><Np fact={FE.budget} /></span>
+            <span className="exec-blk-kpi-value">
+              {sole !== null && sole.budgetUsed !== undefined && sole.budgetApproved !== undefined
+                ? <><Value metric={sole.budgetUsed} /> / <Value metric={sole.budgetApproved} suffix={sole.currency ?? undefined} /></>
+                : <Np fact={FE.budget} />}
+            </span>
             <span className="exec-blk-kpi-note">Budget used / approved</span>
             {allocations.slice(0, ALLOCATION_ROWS).map((row) => (
               <span key={row.id} className="exec-acct-sub2">
@@ -73,8 +80,12 @@ export function AuthorityKpis({ ctx, physicalOnly }: { ctx: PanelContext; physic
             ))}
             {allocations.length > ALLOCATION_ROWS ? <span className="exec-acct-sub2">{allocations.length - ALLOCATION_ROWS} more in Allocations</span> : null}
             {allocations.length === 0 ? <span className="exec-acct-sub2">Allocated: <Na why="No allocation row is published for this account" /></span> : null}
-            <span className="exec-acct-sub2">Gross exposure: <Np fact={FE.gross} /></span>
-            <span className="exec-acct-sub2">Long / Short: <Np fact={FE.gross} /></span>
+            <span className="exec-acct-sub2">Gross exposure: {sole !== null && sole.exposureGross !== undefined ? <Value metric={sole.exposureGross} suffix={sole.currency ?? undefined} /> : <Np fact={FE.gross} />}</span>
+            <span className="exec-acct-sub2">
+              Long / Short: {sole !== null && sole.exposureLong !== undefined && sole.exposureShort !== undefined
+                ? <><Value metric={sole.exposureLong} /> / <Value metric={sole.exposureShort} suffix={sole.currency ?? undefined} /></>
+                : <Np fact={FE.gross} />}
+            </span>
           </dd>
         </div>
       )}

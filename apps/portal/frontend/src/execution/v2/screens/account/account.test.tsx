@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SLOW, SLOW_TEST } from "../../waitsTestUtil";
 
 import { answerAccount } from "../../../../../e2e/bffDoubleAccount";
+import { simulate } from "../../../../../e2e/bffSimulated";
 import { createHttpApi } from "../../../api/httpApi";
 import type { ExecutionApi } from "../../../api/ports";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
@@ -544,6 +545,31 @@ describe("Account 360: the shared sleeve", () => {
     expect(pm.textContent).toContain("Long / Short: Not published (A360-1)");
     // "Shared by 3 sleeves" is the banner's, once; the strip does not repeat it.
     expect(strip.textContent).not.toContain("Shared by 3 sleeves");
+  });
+
+  it("SIMULATED lane (FIXTURE_LAB): wallet balance, native equity, budget, exposure, names and a drawdown series fill the tiles through the same readers", async () => {
+    stubFetch({
+      answer: (url) => {
+        const answer = answerAccount("GET", url.pathname, url.searchParams);
+        return answer === null ? null : simulate("GET", url.pathname.replace(/^\/api\/v1\/execution/, ""), url.searchParams, answer);
+      },
+    });
+    account("acc_bnc_core");
+    await loaded360();
+    const strip = screen.getByRole("group", { name: "Authorities" });
+    const native = within(strip).getByText("Native custody · whole account").nextElementSibling as HTMLElement;
+    expect(native.querySelector(".exec-blk-kpi-value")?.textContent).toContain("412,880.25");
+    expect(native.textContent).toContain("Native equity: 414,010.40");
+    expect(native.textContent).toContain("Buying power: 301,100.00");
+    const pm = within(strip).getByText("PM capital · this sleeve").nextElementSibling as HTMLElement;
+    expect(pm.querySelector(".exec-blk-kpi-value")?.textContent).toContain("80,000.00 / 100,000.00");
+    expect(pm.textContent).toContain("Gross exposure: 96,400.00");
+    expect(pm.textContent).toContain("Long / Short: 61,300.00 / 35,100.00");
+    expect(pm.textContent).toContain("Allocated · BTC Trend live: 80,000.00");
+    expect(pm.textContent).not.toContain("Not published (FE-017)");
+    expect(screen.getByRole("link", { name: "Core" })).toBeTruthy();
+    const panel = (await screen.findByRole("heading", { name: "Drawdown" }, SLOW)).closest("section") as HTMLElement;
+    await waitFor(() => expect(within(panel).getByRole("img", { name: /Account drawdown/ }).className).not.toContain("exec-c2-na"), SLOW);
   });
 
   it("PM capital with no allocation row says so for the allocation only; it does not print a zero", async () => {

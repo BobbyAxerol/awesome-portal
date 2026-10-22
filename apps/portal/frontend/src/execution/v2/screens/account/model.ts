@@ -438,6 +438,10 @@ export interface DiffFacts {
 
 export interface BrokerFacts {
   buyingPower: Metric | null | undefined;
+  /** The venue's wallet balance of the whole account (`broker_sync.wallet_balance`); `undefined` = not published. */
+  walletBalance: Metric | null | undefined;
+  /** The venue's native equity (`broker_sync.native_equity`); `undefined` = not published. */
+  nativeEquity: Metric | null | undefined;
   status: string | null;
   asOf: UtcEpochMs | null;
 }
@@ -459,6 +463,12 @@ export interface AllocationFacts {
   portfolio: string | null;
   mode: string | null;
   allocation: Metric | null | undefined;
+  /** The allocation row's own PM budget (`budget_used` / `budget_approved`) and exposure (`exposure_gross` / `_long` / `_short`). */
+  budgetUsed: Metric | null | undefined;
+  budgetApproved: Metric | null | undefined;
+  exposureGross: Metric | null | undefined;
+  exposureLong: Metric | null | undefined;
+  exposureShort: Metric | null | undefined;
   currency: string | null;
 }
 
@@ -594,6 +604,11 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
       portfolio: text(row.portfolio_id),
       mode: text(row.mode),
       allocation: metricOf(row.allocated_capital, "money"),
+      budgetUsed: metricOf(row.budget_used, "money"),
+      budgetApproved: metricOf(row.budget_approved, "money"),
+      exposureGross: metricOf(row.exposure_gross, "money"),
+      exposureLong: metricOf(row.exposure_long, "money"),
+      exposureShort: metricOf(row.exposure_short, "money"),
       currency: text(row.currency),
     }));
 
@@ -724,6 +739,8 @@ export function brokerFacts(profile: ProfileEnvelope, currency: string | null): 
   if (row === null) return null;
   return {
     buyingPower: metricOf(row.buying_power, "money"),
+    walletBalance: metricOf(row.wallet_balance, "money"),
+    nativeEquity: metricOf(row.native_equity, "money"),
     status: text(row.status),
     asOf: timeOf(row, "synced_at"),
   };

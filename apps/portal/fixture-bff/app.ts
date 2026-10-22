@@ -199,7 +199,8 @@ function laneBody(config: FixtureConfig): Record<string, unknown> {
 }
 
 function answererOptions(config: FixtureConfig): FixtureAnswererOptions {
-  return { ...V2_OPTIONS, userId: config.userId };
+  // SIMULATED facts (e2e/bffSimulated.ts) only on the populated and layout-stress profiles; the sparse default is unchanged.
+  return { ...V2_OPTIONS, userId: config.userId, simulated: config.reviewProfile !== "sparse-realistic" };
 }
 
 function answerFor(config: FixtureConfig, request: BffRequest): BffResponse | null {

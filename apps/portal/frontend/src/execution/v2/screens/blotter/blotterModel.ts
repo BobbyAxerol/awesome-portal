@@ -90,6 +90,11 @@ export interface BlotterOrder {
   /** Published by the row only; never summed from fills. */
   filledQuantity: Exact;
   status: string | null;
+  /** The order row's own `average_fill_price` when the read publishes one; never computed from fills. */
+  averageFillPrice: Exact;
+  /** The order row's own `fee`, in `feeCurrency`; never summed from fills. */
+  fee: Exact;
+  feeCurrency: string | null;
   submittedAt: string | null;
   updatedAt: string | null;
   errorCode: string | null;
@@ -167,6 +172,9 @@ function orderOf(row: Record<string, unknown>): BlotterOrder | null {
     triggerPrice: readExact(row.trigger_price),
     filledQuantity: readExact(row.filled_quantity),
     status: text(row.status),
+    averageFillPrice: readExact(row.average_fill_price),
+    fee: readExact(row.fee),
+    feeCurrency: text(row.fee_currency),
     submittedAt: text(row.submitted_at),
     updatedAt: text(row.updated_at),
     errorCode: text(row.error_code),
@@ -569,9 +577,10 @@ export function csvCell(order: BlotterOrder, id: ColumnId): string {
     case "order": return order.orderId;
     case "alpha": return order.alphaId ?? "";
     case "account": return order.accountId ?? "";
-    // Deployment is the order row's own `deployment_id` when a revision publishes it; average price and fee are not in the orders read: an empty CSV cell, never a stand-in.
+    // Deployment is the order row's own `deployment_id` when a revision publishes it; average price and fee are the row's own `average_fill_price` / `fee` when published, else an empty CSV cell, never a stand-in.
     case "deployment": return order.deploymentId ?? "";
-    case "avg": case "fee": return "";
+    case "avg": return exactCsv(order.averageFillPrice);
+    case "fee": return order.fee.kind === "value" ? `${order.fee.text}${order.feeCurrency ? ` ${order.feeCurrency}` : ""}` : exactCsv(order.fee);
     case "venue": return order.venue ?? "";
     case "symbol": return order.symbol ?? "";
     case "side": return [order.side ? humanize(order.side) : "", order.orderType ? humanize(order.orderType) : ""].filter((w) => w !== "").join(" ");

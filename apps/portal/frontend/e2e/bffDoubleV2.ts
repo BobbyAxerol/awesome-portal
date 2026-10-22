@@ -158,7 +158,34 @@ function decodeCursor(raw: string): { k: string; s: string } | null {
   }
 }
 
-function queue(search: URLSearchParams): BffAnswerV2 {
+/**
+ * SIMULATED (FIXTURE_LAB, opt-in): the server-side counts FE-043 publishes, counted by integer tallies over the same rows the
+ * page was cut from. Each dimension ignores its own filter; every bucket of the closed domain is present (a true zero stays 0).
+ */
+function simulatedStatusCounts(all: readonly Row[], applied: readonly { field: string; value: string }[]): Record<string, unknown> {
+  const dimension = (param: string, domain: readonly string[]) => {
+    const others = applied.filter((a) => a.field !== param);
+    const rows = all.filter((row) => others.every((a) => FILTERS.find((f) => f.param === a.field)!.field(row) === a.value));
+    const counts: Record<string, number> = Object.fromEntries(domain.map((key) => [key, 0]));
+    for (const row of rows) {
+      const key = String(row[param]);
+      if (key in counts) counts[key] += 1;
+    }
+    return { own_filter_applied: applied.some((a) => a.field === param), total: rows.length, counts };
+  };
+  return {
+    basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS_EXCLUDING_OWN_DIMENSION",
+    succeeded_means: "PORTAL_QUEUE_RECORD_STATE_ONLY",
+    dimensions: {
+      triage_state: dimension("triage_state", TRIAGE),
+      verification_result: dimension("verification_result", VERIFY),
+      source_status: dimension("source_status", SOURCE),
+      severity: dimension("severity", SEVERITY),
+    },
+  };
+}
+
+function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
   if (search.has("assigned_to")) {
     return problem(400, "OPERATIONAL_READ_FILTER_NOT_SUPPORTED", "assigned_to is not supported by the current operational queue.");
   }
@@ -223,6 +250,7 @@ function queue(search: URLSearchParams): BffAnswerV2 {
         { field: "created_at", direction },
         { field: "operation_id", direction },
       ],
+      ...(simulate ? { status_counts: simulatedStatusCounts(all, applied) } : {}),
     },
   };
   return { status: 200, body };
@@ -247,9 +275,9 @@ function incident(id: string): BffAnswerV2 {
  * `path` is the request path with `/api/v1/execution` removed. Answers `null`
  * for anything that is not a V2 operations read, so the caller falls through.
  */
-export function answerOperationsV2(method: string, path: string, search: URLSearchParams): BffAnswerV2 | null {
+export function answerOperationsV2(method: string, path: string, search: URLSearchParams, simulate = false): BffAnswerV2 | null {
   if (method !== "GET") return null;
-  if (path === "/operations") return queue(search);
+  if (path === "/operations") return queue(search, simulate);
   const seg = path.split("/").filter(Boolean);
   if (seg[0] === "operations" && seg[1] === "incidents" && seg.length === 3) return incident(decodeURIComponent(seg[2]));
   return null;

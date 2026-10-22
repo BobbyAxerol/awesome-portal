@@ -19,6 +19,7 @@ import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { answerAccount } from "./bffDoubleAccount";
+import { simulate } from "./bffSimulated";
 import { answerAlpha } from "./bffDoubleAlpha";
 import { answerGovernance } from "./bffDoubleGovernance";
 import { answerManager } from "./bffDoubleManager";
@@ -1108,6 +1109,12 @@ export interface BffDoubleOptions {
   screensV2?: boolean;
   /** The other five Manager dataset surfaces from the fixture-bff review answerer (populated profile). Off by default: the sparse default is unchanged. */
   reviewManager?: boolean;
+  /**
+   * SIMULATED fixture facts (FIXTURE_LAB, `bffSimulated.ts`) through the same routes and readers: queue status counts, account native
+   * custody, budget, exposure, names and drawdown, blotter deployment, average price and fee. Implied by `reviewManager`; the fixture
+   * BFF turns it on for its populated and layout-stress profiles. Off keeps the sparse default unchanged.
+   */
+  simulated?: boolean;
 }
 
 /**
@@ -1116,6 +1123,17 @@ export interface BffDoubleOptions {
  * passes none, which is how its answers have always been; the standalone server does.
  */
 export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams, options: BffDoubleOptions = {}, requestBody?: unknown): Answer {
+  const answer = answerExecutionBffBase(method, pathname, search, options, requestBody);
+  if (options.screensV2 !== true || (options.simulated !== true && options.reviewManager !== true)) return answer;
+  const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
+  // The overview double answers the V2 queue too; the same V2 function answers it again with the counts the server would publish.
+  if (method === "GET" && path === "/operations" && answer.status === 200 && (answer.body as { schema_version?: unknown } | null)?.schema_version === "portal.execution.operational-queue.v2") {
+    return answerOperationsV2(method, path, search, true) ?? answer;
+  }
+  return simulate(method, path, search, answer as { status: number; body: unknown }) as Answer;
+}
+
+function answerExecutionBffBase(method: string, pathname: string, search: URLSearchParams, options: BffDoubleOptions = {}, requestBody?: unknown): Answer {
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
   const seg = path.split("/").filter(Boolean);
 
@@ -1149,7 +1167,7 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
   }
 
   if (options.operationsV2 && method === "GET") {
-    const v2 = answerOperationsV2(method, path, search);
+    const v2 = answerOperationsV2(method, path, search, options.simulated === true || options.reviewManager === true);
     if (v2 !== null) return v2;
   }
 

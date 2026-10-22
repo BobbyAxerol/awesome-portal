@@ -137,6 +137,23 @@ new product screen.
 | window presets | all six surfaces | `window` 7D / 30D / 90D, bare or JSON-quoted: `selected_window.resolved` = [FIXTURE_NOW - N days, FIXTURE_NOW]; AVAILABLE `net_pnl`, `return_30d_pct`, `max_drawdown_pct`, `equity_30d_end_value` (rows, capital, groups) carry that window; allocation, balance and NAV keep window null. net_pnl is the 30D base times 1/4 (7D), 1 (30D), 5/2 (90D), bigint; derived keys follow; a true zero stays `0`. `ALL` is the typed gap (`ALL_HISTORY_WINDOW_NOT_PUBLISHED`) with the windowed metrics as typed absences. Custom ranges stay 400 | a windowed metric published per preset by the source |
 | `concentration_hhi` | group | sum of squared allocation shares of the members in that partition, unit RATIO, 0..1; typed absence when any allocation is unpublished | portfolio concentration (HHI) publication |
 
+- **SIMULATED screen facts** (added 22 October 2026, `e2e/bffSimulated.ts`; opt-in: `simulated`, implied by `reviewManager`, on for the
+  populated and layout-stress profiles, off for sparse-realistic). Same routes and readers as the real Edge; each key is an optional scalar on
+  an open row or a published optional block, so the published schemas still validate. Exact decimals, bigint arithmetic, one currency per figure.
+
+| key | route | rule (SIMULATED) | real Edge source expected |
+|---|---|---|---|
+| `page.status_counts` (FE-043) | `GET /operations` | integer tally of the same rows, each dimension ignoring its own filter, closed domain zero-filled (a bucket with no rows is a true `0`) | the server's own counts over the filtered query |
+| `broker_sync.wallet_balance`, `.native_equity` | `GET /resources/accounts/{id}` | newest broker report of `acc_bnc_core`: 412880.25 / 414010.40 USDT; `acc_bnc_sub` has the wallet balance (118050.00) and no native equity (typed absence) | venue wallet balance and native equity from the broker report |
+| `portfolio_allocations.budget_used`, `.budget_approved` | `GET /resources/accounts/{id}` | `acc_bnc_core` / `dep_btc_live`: used = `allocated_capital` 80000.00, approved 100000.00 USDT | PM budget statement (FE-017) |
+| `portfolio_allocations.exposure_long`, `_short`, `_gross` | `GET /resources/accounts/{id}` | 61300.00 / 35100.00 (the published position notionals); gross = long + short by integer addition in USDT | PM exposure by side (A360-1) |
+| `portfolio_name`, `strategy_name`, `deployment_name` | `GET /resources/accounts/{id}` (deployment and allocation rows) | Core, BTC Trend, BTC Trend live for `pf_core`, `btc_trend`, `dep_btc_live`; other ids stay ids | names on a deployment (FE-066) |
+| `drawdown` series | `GET /views/equity-chart?metric=drawdown` (account) | running-peak ratio of the published equity points, six places truncated, currency null; a gap stays a gap; the equity series carries one dip (87400.00) so it is not flat | the financial drawdown series |
+| `deployment_id`, `average_fill_price`, `fee`, `fee_currency` | `GET /screens/blotter` (FILLED order rows) | `dep_btc_live`, 61250.40, 12.35 USDT | order row publication (FE-052) |
+
+  Not simulated, because the published shape forbids it: the queue `health.*` block (pending receipts, display lag, open exceptions: `OperationalQueueV2.page` is closed), queue-row Intent and Display (`OperationalQueueRowV2` is closed), and the incident children
+  (evidence, operations taken, resolution gate, timeline: the incident path answers the strict V2 root, and `execution.incident-detail.v1` cannot share its path). Those stay typed absences.
+
 - This does not fill a missing contract or a hard-coded UI placeholder. Consumer gaps belong in
   the Claude handoff; they must not be hidden by relabelling synthetic source facts as qualified.
 
