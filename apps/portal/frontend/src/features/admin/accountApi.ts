@@ -161,11 +161,11 @@ async function send(
 
 export const accounts = {
   roster: () =>
-    get(BASE, (body) =>
-      Array.isArray(body.accounts)
-        ? body.accounts.map((row) => readAccount(row as Record<string, unknown>))
-        : [],
-    ),
+    get(BASE, (body) => {
+      // A roster that is not a list is an unreadable answer, not an empty roster (DEBT-UXM07-013).
+      if (!Array.isArray(body.accounts)) throw new Error("The account roster answer was not a list.");
+      return body.accounts.map((row) => readAccount(row as Record<string, unknown>));
+    }),
 
   detail: (userId: string) =>
     get(`${BASE}/${encodeURIComponent(userId)}`, (body) => ({

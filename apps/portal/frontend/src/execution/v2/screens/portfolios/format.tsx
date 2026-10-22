@@ -82,8 +82,9 @@ export function MoneyList({ entries, empty, signed = false }: { entries: readonl
   if (entries.length === 0) return <>{empty ?? <Absent />}</>;
   return (
     <span className="exec-pf-ccylist">
-      {entries.map((entry) => (
-        <Fragment key={entry.currency}>
+      {entries.map((entry, index) => (
+        // Two lines for one currency are both shown, as published; the index keeps their keys apart (DEBT-UXM07-013).
+        <Fragment key={`${entry.currency}#${index}`}>
           <Money value={entry.value} currency={entry.currency} signed={signed} />
         </Fragment>
       ))}

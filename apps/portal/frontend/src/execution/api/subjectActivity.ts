@@ -66,16 +66,21 @@ export function readSubjectActivity(raw: unknown): SubjectActivityPage | null {
   const projection = obj(root.projection);
   const timeframeValue = interval(timeframe.value);
   const provenance = str(timeframe.provenance);
-  const records = (Array.isArray(root.records) ? root.records : []).flatMap((candidate) => {
+  // A records list that is not a list, or a row with no id, is a payload we cannot read. It must not turn into an empty
+  // history that looks like "nothing happened" (DEBT-UXM07-013): the whole page is unreadable and the caller says so.
+  if (!Array.isArray(root.records)) return null;
+  let malformed = false;
+  const records = root.records.flatMap((candidate) => {
     const row = obj(candidate);
     const recordId = str(row.record_id);
-    if (!recordId) return [];
+    if (!recordId) { malformed = true; return []; }
     const values: Record<string, RelationScalar> = {};
     for (const [key, value] of Object.entries(obj(row.values))) {
       if (value === null || typeof value === "string" || typeof value === "boolean" || (typeof value === "number" && Number.isFinite(value))) values[key] = value;
     }
     return [{ recordId, values }];
   });
+  if (malformed) return null;
   return {
     schemaVersion,
     operationId: str(root.logical_operation_id),
