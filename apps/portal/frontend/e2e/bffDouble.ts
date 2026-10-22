@@ -1390,6 +1390,11 @@ function answerReviewDataset(method: string, path: string, search: URLSearchPara
     const domain = environment === "live" ? "ACTUAL" : "SANDBOX";
     const stage = environment === "live" ? "LIVE" : "SANDBOX";
     body.environment = environment;
+    // Only the template's Paper partitions are relabelled: a Sandbox partition renamed Real-funded would repeat a currency under one book.
+    const paperOnly = (list: any[]): any[] => list.filter((entry) => entry.partition.economic_domain === "PAPER"); // eslint-disable-line @typescript-eslint/no-explicit-any
+    for (const row of body.items) row.economic_partitions = paperOnly(row.economic_partitions);
+    body.capital_statements = paperOnly(body.capital_statements);
+    for (const group of body.groups) group.economic_partitions = paperOnly(group.economic_partitions);
     for (const row of body.items) { row.stage_presence = [stage]; row.current_stage = stage; for (const child of row.children) child.stage = stage; for (const part of row.economic_partitions) part.partition.economic_domain = domain; }
     for (const part of body.capital_statements) part.partition.economic_domain = domain;
     for (const group of body.groups) for (const part of group.economic_partitions) part.partition.economic_domain = domain;
@@ -1399,6 +1404,20 @@ function answerReviewDataset(method: string, path: string, search: URLSearchPara
     paper.set("environment", "paper");
     reply = answerReviewManager("GET", resource === undefined ? path : "/manager/fleet", paper, "populated");
     if (reply !== null && reply.status === 200) { const copy = structuredClone(reply.body); relabel(copy); reply = { status: 200, body: copy }; }
+  }
+  // The portfolio list asks the FLEET dataset grouped by portfolio: one group per portfolio id of this suite (the template has its own ids).
+  if (resource === undefined && reply !== null && reply.status === 200 && asked.get("group_by") === "portfolio_id") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const grouped = structuredClone(reply.body) as any;
+    if (grouped.groups.length > 0) {
+      const first = grouped.groups[0];
+      grouped.groups = ["pf_TEST_ONLY_core", "pf_TEST_ONLY_satellite", "pf_TEST_ONLY_canary", "pf_TEST_ONLY_yen"].map((pid) => {
+        const group = structuredClone(first);
+        for (const part of group.key) if (part.field === "portfolio_id") part.value = pid;
+        return group;
+      });
+      reply = { status: 200, body: grouped };
+    }
   }
   if (reply === null || reply.status !== 200 || resource === undefined || id === null) return reply;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

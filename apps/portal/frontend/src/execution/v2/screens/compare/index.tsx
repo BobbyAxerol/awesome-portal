@@ -379,7 +379,8 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
                 />
               </ChartTools>
             )}
-            <p className="exec-pf-note" data-testid="basis-caption">Basis: {basisText}</p>
+            {/* The overlay prints its own "Basis:" line under the chart; this one is visible only when no chart is drawn (it stays for assistive tech either way). */}
+            <p className={overlay.series.length > 0 && overlay.state?.kind !== "unavailable" ? "exec-blk-sr" : "exec-pf-note"} data-testid="basis-caption">Basis: {basisText}</p>
           </SectionPanel>
 
           <SectionPanel title="Metrics">

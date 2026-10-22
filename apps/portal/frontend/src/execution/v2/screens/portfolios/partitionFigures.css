@@ -1,3 +1,13 @@
 .exec-part { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .exec-part-line { display: flex; gap: 8px; align-items: baseline; justify-content: space-between; }
 .exec-part-label { font-size: 11px; opacity: 0.7; white-space: nowrap; }
+/* In a narrow tile the label goes on its own line and the figure keeps its unit: a value never splits across lines. */
+.exec-part-line { flex-wrap: wrap; }
+.exec-part-line .exec-mgr-num,
+.exec-part-line .exec-mgr-na,
+.exec-part-line .exec-blk-na { white-space: nowrap; margin-left: auto; }
+/* Inside a KPI tile the lines use the data size, not the tile's large figure size. */
+.exec-pf-kpi-value .exec-part,
+.exec-blk-kpi-value .exec-part,
+.exec-pf-kpi-value .exec-part .exec-mgr-num,
+.exec-blk-kpi-value .exec-part .exec-mgr-num { font: var(--exec-font-data); }
