@@ -11,6 +11,7 @@ import { ALPHA_DOUBLE_ID } from "../../../../../e2e/bffDoubleAlpha";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
 import { fixtureValue, FIXTURE_LIFECYCLE_LIVE, type Draft } from "../../readers/managerDataset.testbase";
 import { whyText } from "../../gapWhyTestUtil";
+import { answerReviewManager } from "../../../../../../fixture-bff/review-manager";
 import AlphaScreen from "./index";
 import { alphaHttpApi, serveAlphaDouble, sessionOf, type Override } from "./testApi";
 
@@ -111,5 +112,36 @@ describe("Performance: windowed figures", () => {
     const section = panel.closest("section")!;
     await waitFor(() => expect(section.textContent).toContain("Not available"));
     expect(section.querySelector("table")).toBeNull();
+  });
+});
+
+describe("review lane rows for the suite's alpha (simulated keys through the port)", () => {
+  it("prints Core by name, the Max drawdown tile, Cost drag and Forward days from the dataset; the other forward rows stay Not published", async () => {
+    mount((path, search) => (path === PATH ? (answerReviewManager("GET", path, search, "populated") as ReturnType<Override>) : undefined));
+    const facts = await screen.findByLabelText("Current facts");
+    await waitFor(() => expect(facts.textContent).toMatch(/\d%/));
+    // Max drawdown: a published negative percent of the same partition, not Not published.
+    const drawdown = (await tile("Max drawdown")).querySelector(".exec-mgr-num")!;
+    expect(drawdown.textContent).toMatch(/^-\d+(\.\d\d?)?%$/);
+    expect(drawdown.getAttribute("title")).toMatch(/^-\d+(\.\d\d?)? · /);
+    const table = await screen.findByRole("table", { name: "Windowed figures by portfolio" });
+    const row = within(table).getAllByRole("row")[1]!;
+    // The id pf_core is printed by the name the alpha body states for it.
+    expect(row.querySelector("td[data-l='Portfolio']")?.textContent).toBe("Core");
+    expect(row.querySelector("td[data-l='Allocation']")?.textContent).toBe("Real-funded · USDT80,000.00 USDT");
+    expect(row.querySelector("td[data-l='Net PnL']")?.textContent).toBe("Real-funded · USDT+1,120.80 USDT");
+    expect(row.querySelector("td[data-l='Equity, 30D end']")?.textContent).toBe("Real-funded · USDT81,176.20 USDT");
+    const cost = screen.getByRole("table", { name: "Cost drag" });
+    const cell = (label: string) => [...cost.querySelectorAll("tr")].find((tr) => tr.querySelector("th")?.textContent === label)!.querySelector("td")!;
+    expect(cell("Fees").textContent).toBe("Real-funded · USDT40.00 USDT");
+    expect(cell("Funding").textContent).toBe("Real-funded · USDT16.00 USDT");
+    expect(cell("Slippage").textContent).toMatch(/USDT|Not available/);
+    const forward = screen.getByRole("table", { name: "Forward observation" });
+    const days = [...forward.querySelectorAll("tr")].find((tr) => tr.querySelector("th")?.textContent === "Forward days")!.querySelector("td")!;
+    expect(days.textContent).toMatch(/^Real-funded · USDT\d+ days?$/);
+    for (const label of ["Actual days", "Mixed return", "Mixed score"]) {
+      const td = [...forward.querySelectorAll("tr")].find((tr) => tr.querySelector("th")?.textContent === label)!.querySelector("td")!;
+      expect(td.textContent, label).toContain("Not published");
+    }
   });
 });

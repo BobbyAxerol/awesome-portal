@@ -43,7 +43,7 @@ From the subagent reports of 2026-10-22; each is a field to ask Codex for, with 
 | Blotter | Avg price, Fee | `average_fill_price`, `fee`+`fee_currency` | 61250.4; 12.35 USDT |
 | Users | Role preset, last sign-in | `AccountSummary.role_preset`, `.last_sign_in_at_ms` | Reviewer; 17 Oct 09:14Z |
 | Access | per-action eligibility (archive, operations, export, own admin rights) | eligibility vocabulary actions | request ALLOWED, approve UNAVAILABLE NO_CURRENT_PERMISSION |
-| Alpha 360 | Cost drag, Forward observation | `cost_drag_fees/_funding/_slippage`, `forward_observation_days` | 14 days |
+| Alpha 360 | Max drawdown tile; Cost drag (fees, funding, slippage); Forward days | partition-level keys `max_drawdown_pct`, `cost_drag_fees`, `cost_drag_funding`, `cost_drag_slippage` (MONEY), `forward_observation_days` (unit DAYS) in `economic_partitions[].metrics` of each ALPHA row; wired in `alpha/DatasetFigures.tsx` (`RowFigure`), `Not published` stays when absent | drawdown -7.35%; fees 40.00 USDT; 14 days |
 | Fleet | Equity 30D series per alpha | `getManagerSeries` subject ALPHA | 30 NAV points |
 | Fleet | Allocation domain | question BQ-FLEET-ALLOC to Codex | domain of `allocations[]` |
 

@@ -1400,6 +1400,12 @@ function answerReviewDataset(method: string, path: string, search: URLSearchPara
   const id = match[3] === undefined ? null : decodeURIComponent(match[3]);
   const asked = new URLSearchParams(search);
   const environment = asked.get("environment") ?? "paper";
+  // A resource the review universe itself knows (this suite's alpha ids, portfolios Main/Satellite/Core, deployments) is answered by the
+  // review answerer as it is: its own rows, ids and names, one single-book partition per row. Only an unknown id falls through to the relabel below.
+  if (resource !== undefined && id !== null) {
+    const direct = answerReviewManager("GET", path, asked, "populated");
+    if (direct !== null && direct.status === 200) return direct;
+  }
   let reply = answerReviewManager("GET", resource === undefined ? path : "/manager/fleet", asked, "populated");
   // The small template only has Paper rows; a Real-funded (live) or Sandbox question gets the same rows relabelled to the asked book,
   // so the lane shows data in every environment instead of an empty live dataset.

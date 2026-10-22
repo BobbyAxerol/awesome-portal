@@ -162,12 +162,13 @@ const hhi = (allocations: (string | null)[]): string | null => {
 const seedOf = (...parts: unknown[]): number => parseInt(digest(parts).slice(7, 15), 16);
 /** A deterministic negative percent between -2.00 and -19.99. */
 const drawdownOf = (...parts: unknown[]): string => trimmed(-(200n + BigInt(seedOf(...parts) % 1800)), 2);
-const pctMetric = (template: Draft, value: string | null): Draft => {
+const plainMetric = (template: Draft, value: string | null, unit: string): Draft => {
   const out = metric(template, value, "X");
   out.currency = null;
-  out.unit = "PERCENT";
+  out.unit = unit;
   return out;
 };
+const pctMetric = (template: Draft, value: string | null): Draft => plainMetric(template, value, "PERCENT");
 /** A present metric becomes a typed absence in its own unit. */
 const nulled = (key: string, template: Draft, currency: string): Draft =>
   (key === "return_30d_pct" || key === "max_drawdown_pct") ? pctMetric(template, null) : metric(template, null, currency);
@@ -177,7 +178,7 @@ const NEW_ROW_KEYS = ["balance_total", "equity_30d_end_value", "return_30d_pct"]
  * SIMULATED row keys, per economic partition, from that partition's own allocation (A), net PnL (N) and unrealized PnL (U):
  * balance_total = A + N, equity_30d_end_value = A + N + U, return_30d_pct = N * 100 / A. A missing input is a typed absence.
  */
-function enrichRow(row: Draft): Draft {
+function enrichRow(row: Draft, preset: WindowPreset): Draft {
   const template = row.metrics.net_pnl;
   for (const entry of row.economic_partitions) {
     const m = entry.metrics;
@@ -189,6 +190,15 @@ function enrichRow(row: Draft): Draft {
     m.balance_total = metric(template, balance, entry.partition.currency);
     m.equity_30d_end_value = metric(template, equity, entry.partition.currency);
     m.return_30d_pct = pctMetric(template, ret);
+    // SIMULATED partition-level keys (open key names inside `economic_partitions[].metrics`): max drawdown, cost drag, forward days.
+    // Cost drag = allocation * basis points * window days / 30 (fees 5, funding 2, slippage 1); slippage is a typed absence for
+    // about 1 row in 4; forward days is 5..40; a true zero net PnL has a true zero drawdown.
+    const cost = (bp: bigint): string | null => A === null ? null : trimmed(toScaled(A) * bp * BigInt(preset.days) / (10_000n * 30n), SCALE);
+    m.max_drawdown_pct = pctMetric(template, A === null ? null : N !== null && toScaled(N) === 0n ? "0" : drawdownOf(row.row_key, "row"));
+    m.cost_drag_fees = metric(template, cost(5n), entry.partition.currency);
+    m.cost_drag_funding = metric(template, cost(2n), entry.partition.currency);
+    m.cost_drag_slippage = metric(template, seedOf(row.row_key, "slippage") % 4 === 0 ? null : cost(1n), entry.partition.currency);
+    m.forward_observation_days = plainMetric(template, A === null ? null : String(5 + seedOf(row.row_key, "forward") % 36), "DAYS");
   }
   for (const key of NEW_ROW_KEYS) {
     // One partition: the headline IS that partition's figure. Several: the row headline names no currency (mixed), as net_pnl does.
@@ -205,7 +215,7 @@ function aggregate(rows: Draft[]): Draft[] {
     if (!found) { byPartition.set(key, { item: copy(item), members: [item.metrics] }); continue; }
     found.members.push(item.metrics);
     for (const name of Object.keys(item.metrics)) {
-      if (name === "return_30d_pct") continue;
+      if (name === "return_30d_pct" || name === "max_drawdown_pct" || name === "forward_observation_days") continue;
       const a = found.item.metrics[name];
       const b = item.metrics[name];
       found.item.metrics[name] = metric(a, a.value === null || b.value === null ? null : addDecimal(a.value, b.value), item.partition.currency);
@@ -222,6 +232,8 @@ function aggregate(rows: Draft[]): Draft[] {
     item.metrics.max_drawdown_pct = pctMetric(template, seedOf(key, "group-drawdown") % 6 === 0 ? null : drawdownOf(key, members.length));
     item.metrics.concentration_hhi = pctMetric(template, hhi(members.map((metrics) => metrics.allocation?.availability === "AVAILABLE" ? metrics.allocation.value : null)));
     item.metrics.concentration_hhi.unit = "RATIO";
+    // Row-only keys (days observed, cost drag) are not portfolio totals here and would only grow the response.
+    for (const rowOnly of ["forward_observation_days", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage"]) delete item.metrics[rowOnly];
     return item;
   });
 }
@@ -232,7 +244,7 @@ interface WindowPreset { days: number; num: bigint; den: bigint }
 const WINDOW_PRESETS: Record<"7D" | "30D" | "90D", WindowPreset> = {
   "7D": { days: 7, num: 1n, den: 4n }, "30D": { days: 30, num: 1n, den: 1n }, "90D": { days: 90, num: 5n, den: 2n },
 };
-const WINDOWED_KEYS = ["net_pnl", "return_30d_pct", "max_drawdown_pct", "equity_30d_end_value"];
+const WINDOWED_KEYS = ["net_pnl", "return_30d_pct", "max_drawdown_pct", "equity_30d_end_value", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage"];
 const ALL_GAP = "ALL_HISTORY_WINDOW_NOT_PUBLISHED";
 const scaleBy = (value: string, preset: WindowPreset): string => trimmed(toScaled(value) * preset.num / preset.den, SCALE);
 
@@ -346,9 +358,40 @@ function capitalStatements(rows: Draft[]): Draft[] {
   });
 }
 
+/** SIMULATED suite universe for the small scale: the ids the Playwright doubles use (alpha_a..d, alpha_btc_trend; Main, Satellite, Core). */
+type Env = "paper" | "sandbox" | "live";
+const suiteDeployment = (id: string, alphaId: string, stage: DeploymentSpec["stage"], environment: Env, portfolio: [string, string], allocation: string, realized: string, unrealized: string, state: "ACTIVE" | "HALTED" = "ACTIVE"): DeploymentSpec => ({
+  id, alphaId, stage, environment, venue: "BINANCE", accountId: `acct_${id}`, portfolioId: portfolio[0], portfolioName: portfolio[1], currency: "USDT",
+  allocation, exposure: "0", realized, unrealized, health: "READY", state, active: state === "ACTIVE", updatedAt: "2026-10-22T11:00:00Z",
+});
+const MAIN: [string, string] = ["pf_main", "Main"];
+const SAT: [string, string] = ["pf_sat", "Satellite"];
+const CORE: [string, string] = ["pf_core", "Core"];
+const suiteAlpha = (id: string, label: string, version: string, owner: string | null, health: AlphaSpec["health"], deployments: DeploymentSpec[]): AlphaSpec =>
+  ({ id, label, version, owner, stages: [...new Set(deployments.map((entry) => entry.stage))], health, attention: [], deployments, updatedAt: "2026-10-22T11:00:00Z" });
+const SUITE_ALPHAS: AlphaSpec[] = [
+  suiteAlpha("alpha_a", "Carry A", "1.0", "Bobby-001", "READY", [suiteDeployment("dep_a1", "alpha_a", "PAPER", "paper", MAIN, "25000", "484.31", "12.5")]),
+  suiteAlpha("alpha_b", "Basis B", "1.4", "Lan-002", "READY", [
+    suiteDeployment("dep_b1", "alpha_b", "LIVE", "live", MAIN, "120000", "2150.75", "310.2"),
+    suiteDeployment("dep_b2", "alpha_b", "LIVE", "live", SAT, "60000", "-98.4", "21.05"),
+    suiteDeployment("dep_b3", "alpha_b", "CANARY", "live", MAIN, "30000", "410.1", "-5.5"),
+  ]),
+  suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [suiteDeployment("dep_c1", "alpha_c", "CANARY", "live", SAT, "15000", "0", "0", "HALTED")]),
+  suiteAlpha("alpha_d", "Grid D", "0.9", "Bobby-001", "READY", [
+    suiteDeployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", SAT, "8000", "61.2", "3"),
+    suiteDeployment("dep_d2", "alpha_d", "PAPER", "paper", SAT, "10000", "-30.75", "8.4"),
+  ]),
+  suiteAlpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan-002", "READY", [
+    suiteDeployment("dep_live_01", "alpha_btc_trend", "LIVE", "live", CORE, "80000", "1120.8", "55.4"),
+    suiteDeployment("dep_paper_01", "alpha_btc_trend", "PAPER", "paper", CORE, "50000.5", "-125.25", "40.1"),
+  ]),
+];
+
 function rowsFor(environment: string, template: Draft, preset: WindowPreset): Draft[] {
   const universe = scaled();
-  if (universe.alphas.length === 0) return copy(template.items).map((row: Draft) => enrichRow(windowedRow(row, preset)));
+  // The small universe has no generated alphas: the review lane then answers with the e2e suite's own alpha ids and portfolio ids
+  // (SUITE_ALPHAS), one single-book partition per row, so every screen shows real simulated figures instead of the canonical test row.
+  const alphas = universe.alphas.length === 0 ? SUITE_ALPHAS : universe.alphas;
   const rows: Draft[] = [];
   const make = (alpha: AlphaSpec, deployments: DeploymentSpec[]): void => {
     const first = deployments[0]!;
@@ -380,7 +423,7 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset): Dr
       native_profile_ref: `FIXTURE_LAB:${environment}:synthetic`, domain_proof_ref: "FIXTURE_LAB:NOT_PRODUCT_AUTHORITY" }, metrics: copy(row.metrics) }];
     rows.push(row);
   };
-  for (const alpha of universe.alphas) {
+  for (const alpha of alphas) {
     const books = new Map<string, DeploymentSpec[]>();
     for (const deployment of alpha.deployments.filter((entry) => entry.environment === environment)) {
       const key = deployment.portfolioId;
@@ -388,7 +431,7 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset): Dr
     }
     for (const deployments of books.values()) make(alpha, deployments);
   }
-  return rows.map((row) => enrichRow(windowedRow(row, preset)));
+  return rows.map((row) => enrichRow(windowedRow(row, preset), preset));
 }
 
 function datasetAnswer(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
