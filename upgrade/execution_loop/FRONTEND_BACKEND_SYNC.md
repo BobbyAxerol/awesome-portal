@@ -2111,3 +2111,5 @@ Edge commits2a87d405b4942d7a1c08c0080193bb1b84a1b057 and5b1016e0436417b2788bdb7c
 
 Agent coordination: reused backend_cr02_b1_review for private operator review/guard repair (no Docker/DB); reused financial_budget_readiness for narrow source review/2path implementation. Root alone integrates, runs source gates, builds one-module candidate and transfers public return. No new agent spawned in this continuation.
 
+Landing actual: canonical docs/research-loop-plan ff-only29f57e36→4c7f809e, clean. Claude3aaf/private3d/normal-hookde8/scopedfix326 are preserved ancestors; no Research backend change or peer-WIP rewrite. [Return §8](evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md#8-canonical-ff-only-landing-completed-22oct2026). Edge owns new PREPARED/CAS/trust pins; Core ACK/config/image/official grants follow actual READY. No new authority or connected PASS from landing.
+
