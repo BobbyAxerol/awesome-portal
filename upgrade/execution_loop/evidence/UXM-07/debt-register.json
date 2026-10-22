@@ -217,7 +217,7 @@
       "proposed": "Restore the columns/rows with per-cell 'Not available · reason' and 'Pending · policy not set' for score; window selectors; Fleet tabs All/Live/Canary/Sandbox/Paper. Fixture-only, no invented figures.",
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go)",
-      "status": "IN PROGRESS 2026-10-22: Overview (6 KPI tiles incl. Net PnL/Return read from the series port, Capital, Since-last-visit, Contributors), Portfolios (5 measure columns) and Fleet (Allocation/Net PnL/Equity) restored on fixture; Fleet/Overview/Portfolios baselines re-recorded (two compares green) except Overview after the series wiring (re-record pending). Not done: Overview window/domain selectors, Fleet Map/Group/Then, Allocation held back (BQ-FLEET-ALLOC)."
+      "status": "IN PROGRESS 2026-10-22 (later): Overview (6 KPI tiles, Net PnL/Return read from the series port, Capital with the published NAV row, Since-last-visit, Contributors, environment + window controls that the series follow), Portfolios (5 measure columns) and Fleet (Allocation/Net PnL/Equity) restored on fixture; Fleet/Overview/Portfolios baselines re-recorded, two consecutive compares green (commits d180d63f and earlier). Not done: Fleet Map/Group/Then, Overview basis/scope selectors, Allocation held back (BQ-FLEET-ALLOC), uncovered Board/Map/drawer/form visual states (DEBT-016/018), DEBT-030 pagination wiring."
     },
     {
       "id": "DEBT-UXM07-050",
