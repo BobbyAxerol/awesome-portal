@@ -67,8 +67,13 @@ export const operationalIncidentLinks = z.object({
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "OPERATIONAL_INCIDENT_LINKS_INVALID" });
 });
 export type OperationalIncidentLinks = z.infer<typeof operationalIncidentLinks>;
-/** Queue page row: the immutable item plus the optional FE-042 link set. */
-export const operationalQueueRow = itemShape.extend({ incident_links: operationalIncidentLinks.optional() })
+/** FE-CAT-2. Per-row axes, each nullable (null = the owning source did not report it) and optional (omitted = this producer
+ * has no owning source). The vocabularies are Portal proposals pending Codex/Edge confirmation. */
+export const operationalDeliveryStates = ["NOT_APPLICABLE", "AWAITING_RECEIPT", "RECEIPT_CONFIRMED", "RECEIPT_FAILED"] as const;
+export const operationalDisplayStates = ["CURRENT", "CATCHING_UP", "STALE"] as const;
+/** Queue page row: the immutable item plus the optional FE-042 link set and the optional FE-CAT-2 axes. */
+export const operationalQueueRow = itemShape.extend({ incident_links: operationalIncidentLinks.optional(),
+  delivery_state: z.enum(operationalDeliveryStates).nullable().optional(), display_state: z.enum(operationalDisplayStates).nullable().optional() })
   .strict().refine(itemShapeValid);
 export type OperationalQueueRow = z.infer<typeof operationalQueueRow>;
 
@@ -93,6 +98,16 @@ export const operationalStatusCounts = z.object({
   }).strict(),
 }).strict();
 export type OperationalStatusCounts = z.infer<typeof operationalStatusCounts>;
+/** FE-CAT-2. One count with its own observation time and coverage. `count` null = not computable (observed_at null,
+ * coverage UNKNOWN); a number carries both. PARTIAL = some filtered rows did not report the axis, so it is a floor. */
+export const operationalHealthCount = z.object({ count: count.nullable(), observed_at: time.nullable(),
+  coverage: z.enum(["COMPLETE", "PARTIAL", "UNKNOWN"]) }).strict().refine(value => value.count === null ?
+  value.observed_at === null && value.coverage === "UNKNOWN" : value.observed_at !== null && value.coverage !== "UNKNOWN");
+export type OperationalHealthCount = z.infer<typeof operationalHealthCount>;
+export const operationalQueueHealth = z.object({ basis: z.literal("SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS"),
+  pending_receipt_count: operationalHealthCount.optional(), display_lag_count: operationalHealthCount.optional(),
+  open_exception_count: operationalHealthCount.optional() }).strict();
+export type OperationalQueueHealth = z.infer<typeof operationalQueueHealth>;
 export const operationalQueue = z.object({
   schema_version: z.literal("portal.execution.operational-queue.v2"), workspace_id: z.string().min(3).max(96),
   record_authority: z.literal("PORTAL"), record_basis: z.literal("PORTAL_CURRENT_OPERATIONAL_WORKFLOW"),
@@ -107,12 +122,22 @@ export const operationalQueue = z.object({
     applied_filters: z.array(z.object({ field: z.string().max(64), op: z.literal("eq"), value: z.string().max(256) }).strict()).max(10),
     applied_sort: z.array(z.object({ field: z.enum(["created_at", "operation_id"]), direction: z.enum(["asc", "desc"]) }).strict()).max(2),
     status_counts: operationalStatusCounts.optional(),
+    health: operationalQueueHealth.optional(),
   }).strict(),
 }).strict().superRefine((value, ctx) => {
   if (value.page.total_count < value.page.filtered_count || value.page.filtered_count < value.page.rows.length ||
     value.read_truth.state !== (value.page.filtered_count ? "AVAILABLE" : "EMPTY") ||
     value.page.has_more !== (value.page.next_cursor !== null) || value.page.has_previous !== (value.page.prev_cursor !== null))
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: "OPERATIONAL_PAGE_INVALID" });
+  const health = value.page.health;
+  if (health) for (const [key, axis, wanted] of [["pending_receipt_count", "delivery_state", "AWAITING_RECEIPT"],
+    ["display_lag_count", "display_state", "CATCHING_UP"]] as const) {
+    const entry = health[key];
+    // Row-derived counts are over the authorized filtered set, so they bound the loaded rows from above and are bounded by it.
+    const onPage = value.page.rows.filter(row => row[axis] === wanted).length;
+    if (entry && entry.count !== null && (entry.count > value.page.filtered_count || entry.count < onPage))
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "OPERATIONAL_HEALTH_COUNTS_INVALID" });
+  }
   const counts = value.page.status_counts;
   if (counts) for (const field of Object.keys(operationalStatusCountDimensions) as OperationalStatusCountDimension[]) {
     const dimension = counts.dimensions[field], own = value.page.applied_filters.find(filter => filter.field === field);

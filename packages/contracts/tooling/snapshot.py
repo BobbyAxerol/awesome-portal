@@ -81,6 +81,7 @@ TRACKED = (
     "tooling/execution-operational-current-reader.mjs",
     "fixtures/execution-operational-current.synthetic.valid.json",
     "fixtures/execution-operational-queue-links-counts.synthetic.valid.json",
+    "fixtures/execution-operational-queue-health.synthetic.valid.json",
     "tooling/generate-execution-resource-scoped.mjs",
     "tooling/generate-execution-retained-scoped.mjs",
     "tooling/generate-execution-analytics-scoped.mjs",

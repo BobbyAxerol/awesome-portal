@@ -45,14 +45,25 @@ export function operationalCurrentSchemas(){
   succeeded_means:{const:"PORTAL_QUEUE_RECORD_STATE_ONLY"},dimensions:object({triage_state:statusDimension(triageStates),
    verification_result:statusDimension(verificationResults),source_status:statusDimension(sourceStatuses),severity:statusDimension(severities)})});
  OperationalStatusCountsV2.description="FE-043. Server-counted status distribution over the SAME repeatable-read snapshot, minted audit scope and applied filters as total_count, filtered_count and the page rows; not page rows and not separate status calls. Supported dimensions are exactly triage_state, verification_result, source_status and severity, each zero-filled over its closed domain. Each dimension counts the authorized set under every applied filter EXCEPT its own (own filter ignored so a selected KPI tile still shows its siblings); own_filter_applied says whether such a filter was dropped. Therefore: with no own filter, total equals filtered_count; with one, counts[selected value] (zero for a value outside the closed domain) equals filtered_count and total>=filtered_count; always total<=total_count and sum(counts)==total. Counts ignore cursor, limit and sort. 'SUCCEEDED' (source_status or verification_result) is the Portal queue record's state only (succeeded_means): it is NOT financial APPLIED, NOT projection convergence and NOT venue success; no source, projection or venue claim is made. environment, target_type, target_id and command_key are filters but not count dimensions. Runtime additionally enforces these arithmetic invariants.";
- const rowProperties={...OperationalQueueItemV2.properties,incident_links:ref("OperationalIncidentLinksV2")};
+ const deliveryStates=["NOT_APPLICABLE","AWAITING_RECEIPT","RECEIPT_CONFIRMED","RECEIPT_FAILED"],displayStates=["CURRENT","CATCHING_UP","STALE"];
+ const OperationalHealthCountV2=object({count:nullable(count),observed_at:nullable(time),coverage:enumeration(["COMPLETE","PARTIAL","UNKNOWN"])});
+ OperationalHealthCountV2.description="FE-CAT-2. One health count with its own observation time and coverage. count is an integer or null: null means the owning source did not report it (not computable), 0 is a counted zero. count null requires observed_at null and coverage UNKNOWN; a number requires observed_at and coverage COMPLETE or PARTIAL. PARTIAL means some authorized filtered rows did not report the axis, so the number is a floor, never a total. observed_at is when the Portal counted it inside the page snapshot, not a source clock. Runtime additionally enforces that the two row-derived counts are <= page.filtered_count.";
+ const OperationalQueueHealthV2=object({basis:{const:"SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS"}});
+ OperationalQueueHealthV2.required=["basis"];
+ OperationalQueueHealthV2.properties.pending_receipt_count=ref("OperationalHealthCountV2");
+ OperationalQueueHealthV2.properties.display_lag_count=ref("OperationalHealthCountV2");
+ OperationalQueueHealthV2.properties.open_exception_count=ref("OperationalHealthCountV2");
+ OperationalQueueHealthV2.description="FE-CAT-2. OPTIONAL additive queue health, counted inside the SAME repeatable-read snapshot, minted audit scope and applied filters as total_count, filtered_count and the page rows (the whole authorized filtered set, never the loaded rows; rows the caller may not see are never counted). A key that is OMITTED means this producer has no owning source for it (the reader prints 'Not published', never 0). pending_receipt_count = rows whose delivery_state is AWAITING_RECEIPT; display_lag_count = rows whose display_state is CATCHING_UP; open_exception_count = open exceptions the owning source counts for the same authorized scope. Absent on a server that predates it.";
+ const rowProperties={...OperationalQueueItemV2.properties,incident_links:ref("OperationalIncidentLinksV2"),
+  delivery_state:nullable(enumeration(deliveryStates)),display_state:nullable(enumeration(displayStates))};
  const OperationalQueueRowV2={type:"object",additionalProperties:false,required:OperationalQueueItemV2.required,properties:rowProperties,
-  description:"OperationalQueueItemV2 plus the OPTIONAL additive FE-042 incident_links; absent on a server that predates it. A current server always sends it (possibly with zero authorized links). The workflow detail keeps the unextended item."};
+  description:"OperationalQueueItemV2 plus the OPTIONAL additive FE-042 incident_links and FE-CAT-2 delivery_state / display_state axes (each nullable: null = the owning source did not report it; omitted = this producer has no owning source); absent on a server that predates them. A current server always sends it (possibly with zero authorized links). The workflow detail keeps the unextended item."};
  const page=object({rows:{type:"array",maxItems:250,items:ref("OperationalQueueRowV2")},total_count:count,filtered_count:count,
   next_cursor:nullable(str(4096)),prev_cursor:nullable(str(4096)),has_more:{type:"boolean"},has_previous:{type:"boolean"},
   applied_filters:{type:"array",maxItems:10,items:object({field:{type:"string",maxLength:64},op:{const:"eq"},value:{type:"string",maxLength:256}})},
   applied_sort:{type:"array",maxItems:2,items:object({field:enumeration(["created_at","operation_id"]),direction:enumeration(["asc","desc"])})}});
  page.properties.status_counts=ref("OperationalStatusCountsV2");
+ page.properties.health=ref("OperationalQueueHealthV2");
  const OperationalQueueV2=object({schema_version:{const:"portal.execution.operational-queue.v2"},workspace_id:{type:"string",minLength:3,maxLength:96},
   record_authority:{const:"PORTAL"},record_basis:{const:"PORTAL_CURRENT_OPERATIONAL_WORKFLOW"},coverage:{const:"AUTHORIZED_SUPPORTED_TARGETS_ONLY"},
   supported_target_types:{type:"array",prefixItems:[{const:"ACCOUNT"},{const:"PORTFOLIO"},{const:"DEPLOYMENT"}],items:false,minItems:3,maxItems:3},
@@ -82,7 +93,7 @@ export function operationalCurrentSchemas(){
   command_authority:object({state:{const:"UNCHANGED_FAIL_CLOSED"},source_side_effect_requested:{const:false}}),
   lineage:object({source_health_input_digest:digest,command_journal_digest:digest,workflow_digest:digest,formula_version:{const:"execution.operational-composition.v1"}}),
   data:object({[field]:ref(body)})});
- return {OperationalQueueItemV2,OperationalIncidentLinkV2,OperationalIncidentLinksV2,OperationalStatusCountsV2,OperationalQueueRowV2,OperationalQueueV2,OperationalWorkflowV2,OperationalIncidentCurrentV2,
+ return {OperationalQueueItemV2,OperationalIncidentLinkV2,OperationalIncidentLinksV2,OperationalStatusCountsV2,OperationalHealthCountV2,OperationalQueueHealthV2,OperationalQueueRowV2,OperationalQueueV2,OperationalWorkflowV2,OperationalIncidentCurrentV2,
   OperationalQueueCompositionV2:composition("operations_queue","OperationalQueueV2","OperationsQueue"),
   OperationalIncidentCompositionV2:composition("incident","OperationalIncidentCurrentV2","IncidentDetail")};
 }
@@ -133,6 +144,7 @@ export function synchronizeOperationalFixture(check){
  const path=resolve(root,"fixtures/execution-operational-current.synthetic.valid.json"),bytes=JSON.stringify(operationalCurrentFixture(),null,2)+"\n";
  if(check){if(readFileSync(path,"utf8")!==bytes)throw new Error("Current operational fixture drift");}else writeFileSync(path,bytes);
  synchronizeOperationalLinksCountsFixture(check);
+ synchronizeOperationalHealthFixture(check);
 }
 export const operationalLinksCountsFixtureName="execution-operational-queue-links-counts.synthetic.valid.json";
 /** Additive FE-042/FE-043 example. Separate from the L0 fixture, whose meaning is unchanged. Row states
@@ -167,4 +179,26 @@ export function operationalLinksCountsFixture(){
 export function synchronizeOperationalLinksCountsFixture(check){
  const path=resolve(root,"fixtures/"+operationalLinksCountsFixtureName),bytes=JSON.stringify(operationalLinksCountsFixture(),null,2)+"\n";
  if(check){if(readFileSync(path,"utf8")!==bytes)throw new Error("Operational links/counts fixture drift");}else writeFileSync(path,bytes);
+}
+export const operationalHealthFixtureName="execution-operational-queue-health.synthetic.valid.json";
+/** Additive FE-CAT-2 example, separate from the L0 fixture. Three authorized filtered rows, each reporting both axes:
+ * one awaiting a receipt (pending 1, COMPLETE), none catching up (display lag a counted ZERO, COMPLETE), and an
+ * open-exception count the owning source did not report (null, UNKNOWN). */
+export function operationalHealthFixture(){
+ const base=operationalCurrentFixture().queue,item=base.page.rows[0];
+ const row=(suffix,delivery,display,source,verification)=>({...item,operation_id:"op_TEST_ONLY_health_"+suffix,
+  source_status:source,verification_result:verification,delivery_state:delivery,display_state:display});
+ const rows=[row("a","RECEIPT_CONFIRMED","CURRENT","SUCCEEDED","SUCCEEDED"),row("b","AWAITING_RECEIPT","CURRENT","PENDING","PENDING"),
+  row("c","NOT_APPLICABLE","CURRENT","BLOCKED","NOT_STARTED")];
+ const at="2026-08-22T12:00:00Z";
+ const queue={...base,page:{...base.page,rows,total_count:5,filtered_count:3,
+  health:{basis:"SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS",
+   pending_receipt_count:{count:1,observed_at:at,coverage:"COMPLETE"},
+   display_lag_count:{count:0,observed_at:at,coverage:"COMPLETE"},
+   open_exception_count:{count:null,observed_at:null,coverage:"UNKNOWN"}}}};
+ return {lane:"TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",runtime_qualified:false,queue};
+}
+export function synchronizeOperationalHealthFixture(check){
+ const path=resolve(root,"fixtures/"+operationalHealthFixtureName),bytes=JSON.stringify(operationalHealthFixture(),null,2)+"\n";
+ if(check){if(readFileSync(path,"utf8")!==bytes)throw new Error("Operational health fixture drift");}else writeFileSync(path,bytes);
 }

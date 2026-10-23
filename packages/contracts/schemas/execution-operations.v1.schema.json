@@ -3,6 +3,72 @@
   "$id": "https://schemas.primusspark.com/portal/execution-operations.v1.schema.json",
   "title": "Portal execution operations contracts v1",
   "$defs": {
+    "OperationalQueueHealthV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basis"
+      ],
+      "properties": {
+        "basis": {
+          "const": "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS"
+        },
+        "pending_receipt_count": {
+          "$ref": "#/$defs/OperationalHealthCountV2"
+        },
+        "display_lag_count": {
+          "$ref": "#/$defs/OperationalHealthCountV2"
+        },
+        "open_exception_count": {
+          "$ref": "#/$defs/OperationalHealthCountV2"
+        }
+      },
+      "description": "FE-CAT-2. OPTIONAL additive queue health, counted inside the SAME repeatable-read snapshot, minted audit scope and applied filters as total_count, filtered_count and the page rows (the whole authorized filtered set, never the loaded rows; rows the caller may not see are never counted). A key that is OMITTED means this producer has no owning source for it (the reader prints 'Not published', never 0). pending_receipt_count = rows whose delivery_state is AWAITING_RECEIPT; display_lag_count = rows whose display_state is CATCHING_UP; open_exception_count = open exceptions the owning source counts for the same authorized scope. Absent on a server that predates it."
+    },
+    "OperationalHealthCountV2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "observed_at",
+        "coverage"
+      ],
+      "properties": {
+        "count": {
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "date-time",
+              "pattern": "Z$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "coverage": {
+          "type": "string",
+          "enum": [
+            "COMPLETE",
+            "PARTIAL",
+            "UNKNOWN"
+          ]
+        }
+      },
+      "description": "FE-CAT-2. One health count with its own observation time and coverage. count is an integer or null: null means the owning source did not report it (not computable), 0 is a counted zero. count null requires observed_at null and coverage UNKNOWN; a number requires observed_at and coverage COMPLETE or PARTIAL. PARTIAL means some authorized filtered rows did not report the axis, so the number is a floor, never a total. observed_at is when the Portal counted it inside the page snapshot, not a source clock. Runtime additionally enforces that the two row-derived counts are <= page.filtered_count."
+    },
     "OperationalQueueRowV2": {
       "type": "object",
       "additionalProperties": false,
@@ -171,9 +237,40 @@
         },
         "incident_links": {
           "$ref": "#/$defs/OperationalIncidentLinksV2"
+        },
+        "delivery_state": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "NOT_APPLICABLE",
+                "AWAITING_RECEIPT",
+                "RECEIPT_CONFIRMED",
+                "RECEIPT_FAILED"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "display_state": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "CURRENT",
+                "CATCHING_UP",
+                "STALE"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
-      "description": "OperationalQueueItemV2 plus the OPTIONAL additive FE-042 incident_links; absent on a server that predates it. A current server always sends it (possibly with zero authorized links). The workflow detail keeps the unextended item."
+      "description": "OperationalQueueItemV2 plus the OPTIONAL additive FE-042 incident_links and FE-CAT-2 delivery_state / display_state axes (each nullable: null = the owning source did not report it; omitted = this producer has no owning source); absent on a server that predates them. A current server always sends it (possibly with zero authorized links). The workflow detail keeps the unextended item."
     },
     "OperationalStatusCountsV2": {
       "type": "object",
@@ -16750,6 +16847,9 @@
             },
             "status_counts": {
               "$ref": "#/$defs/OperationalStatusCountsV2"
+            },
+            "health": {
+              "$ref": "#/$defs/OperationalQueueHealthV2"
             }
           }
         }

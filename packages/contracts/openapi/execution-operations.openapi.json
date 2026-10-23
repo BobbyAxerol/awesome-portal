@@ -1268,6 +1268,12 @@
       },
       "OperationalQueueRowV2": {
         "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalQueueRowV2"
+      },
+      "OperationalHealthCountV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalHealthCountV2"
+      },
+      "OperationalQueueHealthV2": {
+        "$ref": "../schemas/execution-operations.v1.schema.json#/$defs/OperationalQueueHealthV2"
       }
     }
   }

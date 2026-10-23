@@ -110,8 +110,8 @@ describe("ELP2-04 finite current operational variants and canonical runtime pari
     ["workflow","OperationalWorkflowV2",operationalWorkflow],
     ["incident","OperationalIncidentCurrentV2",operationalIncident],
   ] as const;
-  it("publishes ten finite additive component types without replacing legacy bodies",()=>{
-    expect(Object.keys(definitions)).toHaveLength(10);
+  it("publishes twelve finite additive component types without replacing legacy bodies",()=>{
+    expect(Object.keys(definitions)).toHaveLength(12);
     for(const [name,schema] of Object.entries(definitions)){
       expect(load("schemas/execution-operations.v1.schema.json").$defs[name]).toEqual(schema);
       expect(documents[0].components.schemas[name]).toEqual({$ref:"../schemas/execution-operations.v1.schema.json#/$defs/"+name});
