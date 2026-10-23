@@ -18,6 +18,7 @@ use serde_json::Value;
 use thiserror::Error;
 
 pub mod bootstrap;
+pub mod p16;
 
 pub const EDS09_SCHEMA_VERSION: &str = "portal.execution.eds09.snapshot-tail.v1";
 pub const EDS09_ADMISSION_SCHEMA_VERSION: &str = "portal.execution.eds09.source-admission.v1";

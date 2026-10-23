@@ -95,10 +95,12 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 name = "authoritative-event-core"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "execution-contracts",
  "projection-core",
  "serde",
  "serde_json",
+ "sha2",
  "thiserror",
  "uuid",
 ]

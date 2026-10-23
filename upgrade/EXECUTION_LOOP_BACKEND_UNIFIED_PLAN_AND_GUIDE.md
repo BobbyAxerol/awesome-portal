@@ -31949,3 +31949,31 @@ derived or falsely complete value. Original header quality is component quality,
 not aggregate completeness. `AS_PUBLISHED_NOT_CURRENT` and selected-history
 coverage do not imply current native financial authority. Fourteen new financial
 tests plus six existing maximum-data tests passed in the shared unit gate.
+
+**Event/history source adaptation (03/04/05):** added
+`authoritative-event-core::p16::ValidatedPage::decode/authenticate` for the actual
+39-column `ConsumerJournalReadSource.read` response. It pins source cell/DB/
+epoch, consumer/manifest/catalogue/filter/access revision, retention and exact
+scan interval, writer/profile coverage and complete visible groups. Preserve
+sparse published positions and hidden-only scans; no synthetic event for an
+empty scan. Keep SEMANTIC_FACT/correction/tombstone distinct, retain commit-LSN/
+group ordering and exact integers above JS safe range, and verify TS's native
+Python ensure_ascii payload hash including Unicode surrogate pairs. Reject
+recursive duplicate JSON keys before normalization. Reuse the existing proof
+boundary; decoded hashes are NOT an authenticated permit, bootstrap manifest,
+opaque cursor, current timestamp, source ACK or full-transaction claim.
+
+Producer recheck: native TS checkout
+`/home/bobby/.worktrees/trading-system-next-upgrade`,
+`docs/ts-option-a-release-record@0cd356da`; canonical TS remains668e1032.
+PM worktree advanced b6badae4→ec9f4f18 during read-only review. Exact native P16
+reader shared by both has SHA256
+258746849106db79d57990efe6fb2337ef4a628bd8c3bbf0e72e7f0eb8087a2d.
+PM publisher-fence successor SHA256
+ee60ddcf0a24b91d6507cb21ceb38ed09920e2bccb4a330da21af426789934f6
+already exists as SOURCE_CANDIDATE_QUALIFIED_NOT_INSTALLED; do NOT request its
+implementation again. Remaining producer evidence is installed generation/
+drain/paused-old-writer, selected writer/export/retention/permit acceptance.
+P16 presently publishes a capture-certified Paper view, not a Sandbox/Live
+journal. Do not widen source coverage merely because Manager reads all modes.
+Sixteen new P16 tests plus31 existing event/bootstrap tests passed.
