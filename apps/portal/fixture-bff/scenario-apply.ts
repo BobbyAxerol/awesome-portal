@@ -12,7 +12,7 @@ import type { UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import type { BffRequest } from "../frontend/e2e/bffAnswerer";
 import { resetCommandStory, storyRecords } from "./command-story";
 import { transformReviewBody } from "./review-relations";
-import { healsDoubles, type FixtureScenario } from "./scenario";
+import { healsDoubles, SCENARIO_TRAITS, type FixtureScenario } from "./scenario";
 
 export interface ScenarioVariants {
   overview: Partial<OverviewDoubleVariants>;
@@ -44,7 +44,7 @@ export function resetFixtureTransitions(): void {
 
 /** Shapes a served JSON body for the value-rewrite scenarios. Identity for the others. */
 export function applyScenarioBody(scenario: FixtureScenario, path: string, body: unknown): unknown {
-  const healed = healsDoubles(scenario) ? withStoryAudit(path, aliasIds(healBody(body))) : body;
+  const healed = healsDoubles(scenario) ? withStoryAudit(path, aliasIds(healBody(body))) : SCENARIO_TRAITS[scenario].legacy ? body : aliasIds(body); // WP-P: stale keeps its own source health but shares the id space
   if (scenario === "zero") return path.includes("/manager/") ? zeroBody(healed) : healed;
   if (scenario === "dense") return transformReviewBody(path, healed, "layout-stress");
   return healed;

@@ -1857,7 +1857,7 @@ function wpkStageEntry(body: Draft): void {
     const reasons = row.stage_lifecycle_reasons ?? {};
     if (row.current_stage === null || row.current_stage === undefined) { row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
     const seed = seedOf(row.row_key, "wpk-stage-entry");
-    if (seed % 9 === 0) { row.entered_at_ms = null; row.days_in_stage = null; row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
+    if (legacy() && seed % 9 === 0) { row.entered_at_ms = null; row.days_in_stage = null; row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
     const days = 1 + (seed % 45);
     row.entered_at_ms = body.as_of_ms - days * day - ((seed >>> 8) % day);
     row.days_in_stage = days;
