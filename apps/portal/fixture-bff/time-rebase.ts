@@ -12,6 +12,8 @@
  * Anything else (durations, counters, ids, free text) is left alone.
  */
 
+import { WORLD_NOW_MS } from "../frontend/e2e/bffWorld";
+
 const INSTANT = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d{1,9})?Z$/;
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 const MS_DAY = 86_400_000;
@@ -104,8 +106,16 @@ export function latestContentInstant(value: unknown, after: number, key = ""): n
  * a body reaches past its stated read time (a series or an activity list written against a later clock than its envelope), the latest content
  * instant is the anchor, so no content lands after "now" (only deadline keys may). One constant shift per body, so distances are preserved.
  */
+/**
+ * The ONE clock of the preview (WORLD): the world's anchor moved forward by whole days, never past the real clock. Within a day every load states the same
+ * "now" (12:04Z of the current world day), so two reviewers and two reloads see the same dates; at midnight UTC the whole world moves by exactly a day.
+ */
+export function worldClockNow(realNowMs: number): number {
+  return WORLD_NOW_MS + Math.max(0, Math.floor((realNowMs - WORLD_NOW_MS) / 86_400_000)) * 86_400_000;
+}
+
 export function rebaseBody(body: unknown, doubleNowIso: string, realNowMs: number): unknown {
-  const now = Math.floor(realNowMs / 60_000) * 60_000;
+  const now = worldClockNow(realNowMs);
   const read = bodyAnchor(body);
   if (read === null) return rebaseTimes(body, now - latestContentInstant(body, Date.parse(doubleNowIso))); // no stated read time: the doubles' common instant, or later content
   return rebaseTimes(body, now - latestContentInstant(body, read));

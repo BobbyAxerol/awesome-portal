@@ -5,7 +5,7 @@ import type { AddressInfo } from "node:net";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createFixtureServer, loadConfig, resetFixtureGlobals } from "../../../fixture-bff/app";
 import { resetScenario } from "../../../fixture-bff/scenario";
-import { futureInstants, latestContentInstant, rebaseBody } from "../../../fixture-bff/time-rebase";
+import { futureInstants, latestContentInstant, rebaseBody, worldClockNow } from "../../../fixture-bff/time-rebase";
 
 const NOW = Date.parse("2026-10-23T12:00:00Z");
 
@@ -23,11 +23,29 @@ describe("rebaseBody anchors on the latest content instant, not only on read_at"
     const body = { read_at: "2026-10-17T12:00:00.000Z", points: [{ ts_ms: Date.parse("2026-10-16T00:00:00Z") }] };
     expect(latestContentInstant(body, Date.parse(body.read_at))).toBe(Date.parse(body.read_at));
     const shifted = rebaseBody(body, "2026-08-22T13:00:00Z", NOW) as typeof body;
-    expect(shifted.read_at).toBe("2026-10-23T12:00:00.000Z");
+    expect(shifted.read_at).toBe("2026-10-22T12:04:00.000Z");
   });
   it("content far beyond the window (a ceiling that is not named like one) is not taken for the present", () => {
     const body = { read_at: "2026-10-17T12:00:00.000Z", note_at: "2028-01-01T00:00:00Z" };
     expect(latestContentInstant(body, Date.parse(body.read_at))).toBe(Date.parse(body.read_at));
+  });
+});
+
+describe("the preview clock moves by whole days only", () => {
+  it("two loads minutes apart in one world day are byte-identical; the next day shifts every instant by exactly one day", () => {
+    const body = { read_at: "2026-10-17T12:04:00.000Z", items: [{ at: "2026-10-16T08:00:00Z" }, { ts_ms: Date.parse("2026-10-17T12:03:00Z") }] };
+    const a = JSON.stringify(rebaseBody(body, "2026-08-22T13:00:00Z", Date.parse("2026-10-23T08:01:00Z")));
+    const b = JSON.stringify(rebaseBody(body, "2026-08-22T13:00:00Z", Date.parse("2026-10-23T11:58:00Z")));
+    expect(a).toBe(b);
+    const next = rebaseBody(body, "2026-08-22T13:00:00Z", Date.parse("2026-10-24T08:00:00Z")) as typeof body;
+    const prev = JSON.parse(a) as typeof body;
+    expect(Date.parse(next.read_at) - Date.parse(prev.read_at)).toBe(86_400_000);
+    expect(Date.parse(next.items[0]!.at) - Date.parse(prev.items[0]!.at)).toBe(86_400_000);
+  });
+  it("never states a now later than the real clock", () => {
+    for (const real of ["2026-10-17T12:04:00Z", "2026-10-18T03:00:00Z", "2026-12-31T23:59:00Z"]) {
+      expect(worldClockNow(Date.parse(real))).toBeLessThanOrEqual(Date.parse(real));
+    }
   });
 });
 
