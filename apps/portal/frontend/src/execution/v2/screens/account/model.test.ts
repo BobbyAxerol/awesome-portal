@@ -400,10 +400,13 @@ describe("tabs, views, links, copy", () => {
     expect(deploymentHref("d1", "paper", "PAPER")).toBe("/deployments/paper/d1");
   });
 
-  it("every Not published sentence carries its request id", () => {
-    expect(notPublished(FE.budget)).toBe("Not published (FE-017)");
-    expect(notPublishedReason(FE.command, "None.")).toBe("Not published (FE-020). None.");
-    for (const fact of Object.values(FE)) expect(notPublished(fact)).toMatch(/^Not published \((FE|A360|ELP2-REQ-FE)-[\w-]+\)$/);
+  it("every Not published sentence is plain words; the request id stays on the fact, never in the sentence", () => {
+    expect(notPublished(FE.budget)).toBe("Not published");
+    expect(notPublishedReason(FE.command, "None.")).toBe("Not published. None.");
+    for (const fact of Object.values(FE)) {
+      expect(notPublished(fact)).toBe("Not published");
+      expect(fact.fe).toMatch(/^(FE|A360|ELP2-REQ-FE)-[\w-]+$/); // the id is still named for the team
+    }
   });
 
   it("ages come from two published instants, not from a clock", () => {

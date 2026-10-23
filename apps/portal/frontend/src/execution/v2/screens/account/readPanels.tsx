@@ -7,7 +7,7 @@ import { useState } from "react";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
-import { EventFeed, NotPublished, SectionPanel } from "../../blocks";
+import { EventFeed, SectionPanel } from "../../blocks";
 import { ChartTools, EquityPanel } from "../../charts";
 import { useAccountEquity, useSubjectPages } from "./reads";
 import { FE, activityRows, equityModel, type BindingEnv } from "./model";
@@ -188,7 +188,7 @@ export function ActivityPanel({ api, accountId, environment }: ActivityPanelProp
         {unread > 0 ? <span className="exec-acct-note">{unread} {unread === 1 ? "row has" : "rows have"} no readable time and {unread === 1 ? "is" : "are"} not listed.</span> : null}
         {merged.length > rows.length ? <span className="exec-acct-note">Showing the first {rows.length} rows. Narrow the window to see the rest.</span> : null}
         <span className="exec-acct-note">
-          Retained current window, not an audit trail. Actor and receipt: <Np fact={FE.audit} />. Audit events: <NotPublished id="FE-031" />.
+          Retained current window, not an audit trail. Actor and receipt: <Np fact={FE.audit} />. Audit events: Not published.
         </span>
       </div>
     </>

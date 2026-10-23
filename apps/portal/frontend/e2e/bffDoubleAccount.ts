@@ -289,6 +289,15 @@ const margin = (accountId: string, currency: string, initial: string, maintenanc
   account_id: accountId, currency, initial, maintenance, updated_at: ACCOUNT_DOUBLE_AS_OF, updated_at_ms: AS_OF_MS,
 });
 
+/** A sleeve's display label. The two named Binance sleeves keep the design's names; any other owner is named from its own id, never from a position (QA2 R4-03: a missing letter printed "undefined"). */
+function sleeveLabel(owner: string, position: number): string {
+  if (owner === "acc_bnc_core") return "Binance-02 sleeve";
+  const letter = "bc"[position - 1];
+  if (/^acc_bnc_/.test(owner) && letter !== undefined) return `Binance-02${letter} sleeve`;
+  const words = owner.replace(/^acc_/, "").split("_").filter((w) => w !== "").map((w) => w.charAt(0).toUpperCase() + w.slice(1));
+  return `${words.join(" ") || owner} sleeve`;
+}
+
 function sleeveRows(accountId: string, label: string, portfolio: string, deployment: string, bindingId: string): Record<string, Row[]> {
   return {
     accounts: [{ account_id: accountId, label, strategy_id: "btc_trend", mode: "live", venue: "BINANCE", base_currency: "USDT", account_type: "CROSS", state: "ACTIVE", external_account_ref: "external_1" }],
@@ -510,7 +519,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
   const own = money(primary);
   const currency = own?.currency ?? (rows.account_balances?.[0]?.currency as string | undefined) ?? "USDT";
   if (shared || own) {
-    rows.accounts = owners.map((owner, n) => ({ account_id: owner, label: owner === "acc_bnc_core" ? "Binance-02 sleeve" : `Binance-02${"bc"[n - 1]} sleeve`, strategy_id: books.find((b) => b.owner === owner)?.book?.deployments[0]?.alpha_id ?? null,
+    rows.accounts = owners.map((owner, n) => ({ account_id: owner, label: sleeveLabel(owner, n), strategy_id: books.find((b) => b.owner === owner)?.book?.deployments[0]?.alpha_id ?? null,
       mode: spec.environment, venue: "BINANCE", base_currency: currency, account_type: "CROSS", state: "ACTIVE" }));
     rows.deployments = books.flatMap(({ owner, book }) => (book?.deployments ?? []).map((d) => ({ deployment_id: d.deployment_id, account_id: owner, strategy_id: d.alpha_id, portfolio_id: d.portfolio_id, mode: d.environment, stage: d.stage.toLowerCase(), venue: "BINANCE", state: "RUNNING" })));
     rows.venue_accounts = owners.map((owner) => ({ binding_id: spec.bindingId, account_id: owner, mode: spec.environment, venue: "BINANCE", state: "ACTIVE" }));

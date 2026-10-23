@@ -283,8 +283,7 @@
   vertical-align: top;
 }
 /* Side and type: the header and the cell may take two lines, so the column is as wide as its words, not its label. */
-.exec-blt2-table thead th[data-col="side"],
-.exec-blt2-table tbody td[data-col="side"] {
+.exec-blt2-table thead th[data-col="side"] {
   white-space: normal;
   min-width: 0;
 }
@@ -516,5 +515,14 @@
 @media (max-width: 660px) {
   .exec-blt2-funnel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.exec-blt2-scrollhint {
+  display: none;
+}
+@media (max-width: 1300px) and (min-width: 661px) {
+  .exec-blt2-scrollhint {
+    display: block;
   }
 }

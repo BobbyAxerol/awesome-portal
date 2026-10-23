@@ -249,7 +249,7 @@ export function FeesPanel({ ctx }: { ctx: PanelContext }) {
   const pnl = ledgerPnl(ctx.profile, ctx.accountId, ctx.currency);
   return (
     <SectionPanel title="Fees & funding" aside="This sleeve">
-      <NotAvailableLine className="exec-acct-cap" facts={[{ label: "Fees, funding and borrow over a window", id: "FE-025" }]} />
+      <NotAvailableLine className="exec-acct-cap" facts={[{ label: "Fees, funding and borrow over a window", id: null, why: "The source publishes no window total yet." }]} />
       <h3 className="exec-acct-h" title="What the latest ledger row states. Not a window, and not summed.">Current</h3>
       <dl className="exec-acct-facts">
         <Fact label="Fees, current"><Value metric={pnl?.fees} suffix={ctx.currency ?? undefined} /></Fact>

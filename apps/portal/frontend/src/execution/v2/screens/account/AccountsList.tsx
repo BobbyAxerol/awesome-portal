@@ -32,7 +32,7 @@ import { StateFlag, CredentialFlag, Na, Updated, Value } from "./parts";
 import { factKey, useBindingPages, useRowFacts } from "./reads";
 import {
   ACCESS_PATH, CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, ROW_FACTS_CAP, accountHref, checkOf, freshnessFlag, humanize, inScope, matchesCredential,
-  readCredentialFilter, timeOf, toBindingRow, type BindingEnv, type BindingRow, type ListRowFacts,
+  readCredentialFilter, timeOf, toBindingRow, updatedAgo, type BindingEnv, type BindingRow, type ListRowFacts,
 } from "./model";
 import { GapWhy } from "../../blocks";
 
@@ -176,6 +176,10 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
       : <span className="exec-acct-tab-count" data-state="absent" aria-label="Count not published">n/a</span>);
   const someAbsent = [...ENV_TABS.map((id) => tabCount(id)), issuesCount].some((count) => count?.kind === "absent");
 
+  // The freshness chip speaks for the read; a binding the source last updated long before that read is not fresh because the read was.
+  // Counted over the loaded rows, with the same age rule the Updated column uses.
+  const staleLoaded = readAtMs === null ? 0 : all.filter((row) => updatedAgo(row.updatedAt, readAtMs)?.stale === true).length;
+
   const columns: CardsColumn<BindingRow>[] = [
     {
       key: "binding",
@@ -219,6 +223,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
               <Value metric={line.physical} suffix={line.currency ?? undefined} />
             )}
             {line.physical === undefined && line.physicalWhy === undefined ? <span className="exec-acct-sub">{state.accountFailed ? "Account read failed" : "Venue report not published"}</span> : null}
+            {line.physical != null && line.physical.kind === "absent" ? <span className="exec-acct-sub">Venue report not published</span> : null}
             {line.partial === true ? <span className="exec-acct-sub">Partial coverage</span> : null}
           </>
         ));
@@ -318,6 +323,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
         </div>
         <div className="exec-acct-fresh">
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
+          {staleLoaded > 0 ? <Flag kind="stale" label={`${staleLoaded} of ${all.length} loaded bindings stale`} size="sm" /> : null}
           {envelope ? (
             <span>
               {sourceAsOf !== null ? `As of ${formatAsOf(sourceAsOf)}` : "Source time not published"}

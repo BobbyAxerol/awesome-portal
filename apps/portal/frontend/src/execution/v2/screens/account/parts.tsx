@@ -8,7 +8,7 @@ import { Link } from "react-router-dom";
 
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf, type Metric } from "../../boundary";
-import { GapWhy, MetricText, NaWhy, QuietIdsWhy, gapTitle } from "../../blocks";
+import { GapWhy, MetricText, NaWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import { FE, credentialView, humanize, notPublished, portfolioReasonText, stateView, updatedAgo, type UnpublishedFact } from "./model";
 
@@ -25,7 +25,8 @@ export function Na({ why }: { why?: string }) {
 export function Np({ fact, children }: { fact: UnpublishedFact; children?: ReactNode }) {
   return (
     <span className="exec-acct-np">
-      <QuietIdsWhy text={notPublished(fact)} gap={fact.fe} rows={[gapTitle(fact.fe, fact.what)]} />
+      {notPublished(fact)}
+      <GapWhy name={`Why: ${fact.what}`} gap={fact.fe} rows={[`${fact.what} is not published by the source yet.`]} />
       {children ? <span className="exec-acct-why">{children}</span> : null}
     </span>
   );

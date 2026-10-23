@@ -264,6 +264,8 @@ describe("Accounts list", () => {
     const stub = stubFetch();
     mount("/deployments/accounts");
     await loadedList();
+    // The venue options are collected from the rows after they render; choosing before OKX is an option selects nothing.
+    await waitFor(() => expect(within(screen.getByLabelText("Venue")).getByRole("option", { name: "OKX" })).toBeTruthy(), SLOW);
     fireEvent.change(screen.getByLabelText("Venue"), { target: { value: "OKX" } });
     await waitFor(() => expect(bodyRows(bindingsTable())).toHaveLength(1), SLOW);
     expect(stub.paths("/api/v1/execution/broker-bindings").some((c) => c.includes("venue=OKX"))).toBe(true);
@@ -424,7 +426,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     await within(drawer).findByRole("link", { name: "Open account" });
     expect((within(drawer).getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement).disabled).toBe(true);
     expect(drawer.textContent).toContain("Not allowed. Your access does not include managing accounts.");
-    expect(drawer.textContent).not.toContain("Not published (FE-015)");
+    expect(drawer.textContent).not.toContain("Not published");
   });
 
   it("when the Portal published the typed absence, the reason is 'Not offered in the portal yet', for a holder of every read too", async () => {
@@ -571,10 +573,10 @@ describe("Account 360: the shared sleeve", () => {
     // PM capital: the allocation row the read publishes (portfolio_allocations.allocated_capital), not summed; the rest typed absences.
     const pm = within(strip).getByText("PM capital · this sleeve").nextElementSibling as HTMLElement;
     expect(pm.textContent).toContain("Budget used / approved");
-    expect(pm.querySelector(".exec-blk-kpi-value")?.textContent).toContain("Not published (FE-017)");
+    expect(pm.querySelector(".exec-blk-kpi-value")?.textContent).toContain("Not published");
     expect(pm.textContent).toContain("Allocated · dep_btc_live: 80,000.00");
-    expect(pm.textContent).toContain("Gross exposure: Not published (A360-1)");
-    expect(pm.textContent).toContain("Long / Short: Not published (A360-1)");
+    expect(pm.textContent).toContain("Gross exposure: Not published");
+    expect(pm.textContent).toContain("Long / Short: Not published");
     // "Shared by 3 sleeves" is the banner's, once; the strip does not repeat it.
     expect(strip.textContent).not.toContain("Shared by 3 sleeves");
   });
@@ -598,7 +600,7 @@ describe("Account 360: the shared sleeve", () => {
     expect(pm.textContent).toContain("Gross exposure: 96,400.00");
     expect(pm.textContent).toContain("Long / Short: 61,300.00 / 35,100.00");
     expect(pm.textContent).toContain("Allocated · BTC Trend live: 80,000.00");
-    expect(pm.textContent).not.toContain("Not published (FE-017)");
+    expect(pm.textContent).not.toContain("Not published");
     expect(screen.getByRole("link", { name: "Core" })).toBeTruthy();
     const panel = (await screen.findByRole("heading", { name: "Drawdown" }, SLOW)).closest("section") as HTMLElement;
     await waitFor(() => expect(within(panel).getByRole("img", { name: /Account drawdown/ }).className).not.toContain("exec-c2-na"), SLOW);
@@ -667,14 +669,14 @@ describe("Account 360: the shared sleeve", () => {
     expect(within(rows[0]!).queryByRole("link")).toBeNull();
   });
 
-  it("margin is exact; margin ratio is Not published (A360-2); coverage is the source's verdict", async () => {
+  it("margin is exact; margin ratio is Not published; coverage is the source's verdict", async () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
     const margin = screen.getByRole("region", { name: "Margin" });
     expect(margin.textContent).toContain("4,100.00");
     expect(margin.textContent).toContain("2,050.00");
-    expect(margin.textContent).toContain("Not published (A360-2)");
+    expect(margin.textContent).toContain("Not published");
     expect(margin.textContent).toContain("Covered");
     expect(margin.textContent).toContain("Cross margin");
   });
@@ -727,8 +729,8 @@ describe("Account 360: the physical binding view", () => {
     expect(panel.textContent).toContain("bnc_main@BINANCE");
     expect(panel.textContent).toContain("Withheld");
     expect(whyText(within(panel).getByText("Withheld"))).toBe("Withheld. The portal never shows the broker account reference.");
-    expect(panel.textContent).toContain("Not published (A360-4)");
-    expect(panel.textContent).toContain("Not published (A360-3)");
+    expect(panel.textContent).toContain("Not published");
+    expect(panel.textContent).toContain("Not published");
     expect(panel.textContent).toContain("Real-funded");
     expect(within(panel).getAllByText("Synced").length).toBeGreaterThan(0);
     const invariant = await screen.findByRole("region", { name: "Capital invariant: Σ virtual ≤ physical" });
@@ -746,8 +748,8 @@ describe("Account 360: the physical binding view", () => {
     expect(within(strip).getAllByRole("term").map((t) => t.textContent)).toEqual(["Native custody · whole account"]);
     for (const [name, reason] of [
       ["Rotate credential", "Not allowed. Your access does not include managing accounts."],
-      ["Sync now", "Not published (FE-020)"],
-      ["Dry-run reconcile", "Not published (FE-020)"],
+      ["Sync now", "Not published"],
+      ["Dry-run reconcile", "Not published"],
     ] as const) {
       const button = screen.getByRole("button", { name }) as HTMLButtonElement;
       expect(button.disabled).toBe(true);
@@ -765,7 +767,7 @@ describe("Account 360: the physical binding view", () => {
     });
     expect((screen.getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement).disabled).toBe(true);
     const sync = screen.getByRole("button", { name: "Sync now" }) as HTMLButtonElement;
-    expect(document.getElementById(sync.getAttribute("aria-describedby")!)?.textContent).toContain("Not published (FE-020)");
+    expect(document.getElementById(sync.getAttribute("aria-describedby")!)?.textContent).toContain("Not published");
   });
 
   it("a bad credential is its own alarm, an expired word on the physical panel and a banner above everything", async () => {
@@ -962,7 +964,7 @@ describe("Account 360: tabs", () => {
     const panel = await openTab("Fees & funding");
     const gap = within(panel).getByTestId("not-available-line");
     expect(gap.textContent).toContain("Not available: Fees, funding and borrow over a window");
-    expect(whyText(gap)).toContain("Not published (FE-025)");
+    expect(whyText(gap)).toContain("publishes no window total");
     expect(panel.textContent).toContain("Fees, current");
     expect(panel.textContent).toContain("388.20");
     expect(panel.textContent).toContain("224.20");
@@ -1017,7 +1019,7 @@ describe("Account 360: tabs", () => {
     expect(results).toContain("pending");
   });
 
-  it("Activity: orders in the source's order, then fills; actor and receipt are Not published (FE-021)", async () => {
+  it("Activity: orders in the source's order, then fills; actor and receipt are Not published", async () => {
     const stub = stubFetch();
     account("acc_bnc_core");
     await loaded360();
@@ -1025,8 +1027,8 @@ describe("Account 360: tabs", () => {
     const table = await within(panel).findByRole("table", { name: "Events for acc_bnc_core" });
     expect(bodyRows(table).map((r) => cell(r, "Target"))).toEqual(["BTCUSDT", "ETHUSDT", "BTCUSDT"]);
     expect(bodyRows(table).map((r) => r.querySelector("td[data-l='Kind'] .exec-flag")?.getAttribute("data-k"))).toEqual(["applied", "pending", "rejected"]);
-    expect(panel.textContent).toContain("Not published (FE-021)");
-    expect(panel.textContent).toContain("Not published (FE-031)");
+    expect(panel.textContent).toContain("Not published");
+    expect(panel.textContent).toContain("Not published");
     expect(panel.textContent).toContain("Retained current window, not an audit trail");
     expect(stub.paths("/api/v1/execution/resources/accounts/acc_bnc_core/orders")[0]).toContain("environment=live");
     fireEvent.click(within(panel).getByRole("button", { name: "Fills" }));
@@ -1366,5 +1368,49 @@ describe("Account 360: WP-F2 simulated identity and margin (FIXTURE_LAB)", () =>
     const physical = screen.getByText("Physical binding", { selector: "h2, h3, .exec-blk-ph-title" }).closest("section")!;
     expect(physical.textContent).toContain("Not published");
     expect(screen.getByText("Margin", { selector: "h2, h3, .exec-blk-ph-title" }).closest("section")!.textContent).toContain("Not published");
+  });
+});
+
+/* ═══ WP-F2 (QA2 R4-03, R4-11): no "undefined" in a title, no ticket id in rendered text ═══ */
+
+const TICKET = /\b(?:FE|A360|BR-EX|ELP2-REQ-FE)-?\d+\b/;
+
+describe("Account 360 and Accounts: rendered text hygiene", () => {
+  const simulated = () => stubFetch({
+    answer: (url) => {
+      const answer = answerAccount("GET", url.pathname, url.searchParams);
+      return answer === null ? null : simulate("GET", url.pathname.replace(/^\/api\/v1\/execution/, ""), url.searchParams, answer);
+    },
+  });
+
+  it.each(["acc_bnc_core", "acc_bnc_sat", "acc_pap_sim", "acc_tn_bnc"])("%s: the title and the Name fact never contain the word undefined", async (id) => {
+    simulated();
+    account(id);
+    const heading = await screen.findByRole("heading", { level: 1 }, SLOW);
+    await waitFor(() => expect(heading.textContent ?? "").not.toBe(""), SLOW);
+    expect(heading.textContent).not.toMatch(/undefined/i);
+    expect(document.body.textContent).not.toMatch(/\bundefined\b/i);
+  });
+
+  it.each(["", "?tab=pos", "?tab=all", "?tab=fee", "?tab=rec", "?tab=act", "?view=physical"])("Account 360 %s prints no request or ticket id", async (query) => {
+    stubFetch();
+    account("acc_bnc_core", query);
+    await loaded360(query === "?view=physical" ? /account$/ : undefined);
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 200)); });
+    expect(document.body.textContent).not.toMatch(TICKET);
+  });
+
+  it("the freshness area says how many loaded bindings are stale, so a fresh read never hides old bindings (QA2 R4-10)", async () => {
+    stubFetch();
+    mount("/deployments/accounts");
+    await loadedList();
+    expect(document.querySelector(".exec-acct-fresh")?.textContent).toMatch(/\d+ of 3 loaded bindings stale/);
+  });
+
+  it("the Accounts list prints no request or ticket id", async () => {
+    stubFetch();
+    mount("/deployments/accounts");
+    await loadedList();
+    expect(document.body.textContent).not.toMatch(TICKET);
   });
 });

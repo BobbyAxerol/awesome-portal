@@ -495,12 +495,13 @@ describe("column chooser", () => {
     expect(cellOf(bodyRows()[0]!, "Time (UTC)")).toMatch(/^\d{2} [A-Z][a-z]{2} \d{2}:\d{2}:\d{2}Z$/);
   });
 
-  it("states that environment and window come from this read, and cites FE-052 for what the read lacks (BLT-A5, BLT-B5)", async () => {
+  it("states that environment and window come from this read, and says in words what the read lacks, with no ticket id (BLT-A5, BLT-B5)", async () => {
     mount();
     await loaded();
     expect(screen.getByText(/Environment and window come from this read, not from the context bar/)).toBeTruthy();
     const body = document.body.textContent ?? "";
-    expect(body).toContain("(Not published, FE-052)");
+    expect(body).toContain("(the source does not publish them yet)");
+    expect(body).not.toMatch(/FE-0\d+/);
     expect(body).not.toMatch(/no request id/i);
   });
 

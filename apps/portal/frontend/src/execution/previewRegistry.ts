@@ -61,6 +61,8 @@ export const EXECUTION_PREVIEW_FEATURE_DEFAULTS: Readonly<Record<string, string>
   EXECUTION_PORTFOLIOS: "EXECUTION_PORTFOLIO_360_SCREEN",
   EXECUTION_ALPHA_FLEET: "EXECUTION_ALPHA_FLEET_LIST_SCREEN",
   EXECUTION_ACCOUNTS_BINDINGS: "EXECUTION_ACCOUNTS_BINDINGS_LIST_SCREEN",
+  // The canonical route /deployments/blotter renders the Blotter even where no screen row of the registry matched it exactly (QA2 R4-01).
+  EXECUTION_BLOTTER: "EXECUTION_FULL_BLOTTER_SCREEN",
 };
 
 export function hasExecutionPreview(screenId: string): boolean {

@@ -113,6 +113,24 @@ describe("the screen", () => {
     expect(table.textContent).not.toMatch(/…|\.\.\./);
   });
 
+  it("prints no request or ticket id and no word undefined anywhere on the page (QA2 R4-11)", async () => {
+    render(<MemoryRouter initialEntries={["/execution/blotter"]}><BlotterScreen api={httpApi()} /></MemoryRouter>);
+    await screen.findByRole("table", { name: "Orders" });
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/\b(?:FE|A360|BR-EX|ELP2-REQ-FE)-?\d+\b/);
+    expect(text).not.toMatch(/\bundefined\b/i);
+  });
+
+  it("every row has the same two-line shape: side over type, deployment over venue, fee over its currency", async () => {
+    render(<MemoryRouter initialEntries={["/execution/blotter"]}><BlotterScreen api={httpApi()} /></MemoryRouter>);
+    const table = await screen.findByRole("table", { name: "Orders" });
+    const rows = within(table).getAllByRole("row").slice(1).filter((r) => !r.classList.contains("exec-blt2-kid"));
+    for (const row of rows) {
+      expect(row.querySelector("td[data-col='side'] .exec-blt2-two")).not.toBeNull();
+      expect(row.querySelector("td[data-col='deployment'] .exec-blt2-two")).not.toBeNull();
+    }
+  });
+
   it("states the subtitle and a Fresh chip with the read's as-of", async () => {
     render(<MemoryRouter initialEntries={["/execution/blotter"]}><BlotterScreen api={httpApi()} /></MemoryRouter>);
     await screen.findByRole("table", { name: "Orders" });

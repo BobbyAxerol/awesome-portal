@@ -45,7 +45,7 @@ import { withOrigin } from "../../backTo";
 import { withContext } from "../../urlState";
 import { ExactText, OrderDetail, type FunnelRead } from "./OrderDetail";
 import {
-  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NOT_IN_READ_REQUEST, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
+  CHIPS, COLUMNS, DEFAULT_COLUMNS, GROUP_CAP, NOT_IN_READ, NARROW_PAGE_LIMIT, NO_SCOPE, PAGE_LIMIT, applyScope, blotterCsv, blotterCsvName, blotterQuery, chipCounts, filtersKey, unchippedStatusCounts,
   fillsFor, groupExact, humanize, isBucket, pageFunnel, legsFor, scopeActive, shortUtc, statusView, type BlotterOrder, type ColumnId, type Scope, type ServerFilters,
 } from "./blotterModel";
 import { useBlotterRead } from "./useBlotterRead";
@@ -318,7 +318,8 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         : <span className="exec-blt2-two exec-blt2-fee"><ExactText value={order.fee} />{order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}</span>;
       case "venue": return order.venue ?? <span className="exec-blt2-na">Not available</span>;
       case "symbol": return order.symbol ?? <span className="exec-blt2-na">Not available</span>;
-      case "side": return <>{order.side ? humanize(order.side) : "Side not stated"} <span className="exec-blt2-na">{order.orderType ? humanize(order.orderType) : ""}</span></>;
+      // Side over type on every row, so every row is two lines tall like the deployment and fee cells (QA2 R4-12: no alternating heights).
+      case "side": return <span className="exec-blt2-two"><span>{order.side ? humanize(order.side) : "Side not stated"}</span> <span className="exec-blt2-na">{order.orderType ? humanize(order.orderType) : ""}</span></span>;
       case "tif": return order.timeInForce ?? <span className="exec-blt2-na">Not available</span>;
       case "price": return <ExactText value={order.price} absent="At market" />;
       case "trigger": return <ExactText value={order.triggerPrice} absent="No trigger" />;
@@ -448,7 +449,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
 
         {/* The chips above carry the short form; the full sentence stays for assistive tech (and in the chips' titles). */}
         <p className="exec-blt2-sr" id={`${noteId}-ctx`}>
-          Environment and window come from this read, not from the context bar: the orders read has no environment or window filter yet (Not published, FE-052, FE-025, FE-041). The environment highlighted in the context bar does not change these rows.
+          Environment and window come from this read, not from the context bar: the orders read has no environment or window filter yet. The environment highlighted in the context bar does not change these rows.
         </p>
 
         <div className="exec-blt2-tool">
@@ -601,11 +602,12 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
           </div>
         )}
 
+        {emptyPage ? null : <p className="exec-blt2-note exec-blt2-scrollhint">Scroll sideways for the other columns. The order and the status stay in view.</p>}
         {narrow ? null : pager}
         <details className="exec-blt2-how">
           <summary>How to read</summary>
           <p className="exec-blt2-note">
-            Rows are newest first. Numbers are exact and never shortened. A fee is in its venue currency. Orders with bracket legs, fills and an order path expand in place. Not in this read: {notInRead.join(", ").toLowerCase()} (Not published, {NOT_IN_READ_REQUEST}).
+            Rows are newest first. Numbers are exact and never shortened. A fee is in its venue currency. Orders with bracket legs, fills and an order path expand in place. Not in this read: {notInRead.join(", ").toLowerCase()} (the source does not publish them yet).
           </p>
         </details>
       </section>

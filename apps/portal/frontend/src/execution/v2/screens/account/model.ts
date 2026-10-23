@@ -64,7 +64,8 @@ export const FE = {
   export: { fe: "FE-016", what: "Export" },
 } as const satisfies Record<string, UnpublishedFact>;
 
-export const notPublished = (fact: UnpublishedFact): string => `Not published (${fact.fe})`;
+/** The words, never a ticket id: the id stays in the fact (and the gap attribute) for the team, not in what a manager reads. */
+export const notPublished = (_fact: UnpublishedFact): string => "Not published";
 
 /** The sentence a disabled control carries. */
 export const notPublishedReason = (fact: UnpublishedFact, because: string): string => `${notPublished(fact)}. ${because}`;
