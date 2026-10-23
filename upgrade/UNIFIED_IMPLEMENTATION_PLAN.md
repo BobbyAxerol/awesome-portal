@@ -9366,7 +9366,11 @@ contract/HTTP7/7, ledger22/22 PASS (overlapping counts, see packet).
 Consumer timing/digest/browser review remains separate; package4 Accounts source
 0f0d5cc85 delivers same-request snapshot counts, optional figures persistence and
 linked fixture (29 focused tests across retakes, contracts8/8, ledger22/22 PASS).
-Real-source batch carrier/wiring remains OPEN; not installed/landed. Packages5–6
+Real-source batch carrier/wiring remains OPEN; not installed/landed. Package5
+Contributors source/fixture delivered ace3547ca: authorized attribution + independent group
+continuation; backend108/108, controller14/14, contract72/72, linked fixture4/4,
+regressions27/27 and builds PASS. Claude must update closed grouped reader before
+rollout; real consolidated Return/Score source remains OPEN. Package6
 QUEUED. See packet for exact verification and Claude/Edge handoff.
 No production change, push or new release gate follows this assignment.
 

@@ -2,6 +2,26 @@
 
 ## Codex ownership — six approved backend packages, 23 October
 
+Package5 Contributors source/fixture delivered `ace3547ca` on the support lane.
+New optional Manager query group_limit/group_after/group_before and group_page
+separate group continuation from row pagination. Alpha attribution comes from the
+full authorized group, not page items. Claude should consume attribution and
+group_page rather than treating groups.length>=200 as truncation; preserve the
+existing component. Large rich fixture pages can hit the unchanged1MiB budget:
+request a smaller group_limit, not drop groups or loosen the budget. No source
+Return/Score aggregate was invented; consolidated method/publication remains an
+Edge source input. Exact consumer contract, fixtures/tests and code pin go into
+the sequential packet. FE2 inspected beed0225ebe141157b81cb1e3c14a04c9c9a08b0;
+FE-CAT-5 §4 accepted for implementation. Consumer/browser not claimed.
+Before grouped producer/BFF rollout, Claude must extend its closed reader
+allowlists and validate group_page/attribution. Old grouped reader currently
+rejects these fields; generated types do not fix it. Ungrouped responses retain
+their old shape. This is consumer wiring, not a component/design change.
+Gates: backend108/108 + controller14/14; contract72/72; fixture4/4;
+regressions27/27; Visit Digest7/7; Control API/BFF build and snapshot610 PASS.
+Final bare-read compatibility retake2/2 overlaps backend suite, not extra coverage.
+19source/generated/test files,+1401/-24; no install/push/landing/browser claim.
+
 Package4 Accounts projection/fixture delivered0f0d5cc85, base b6c90263b.
 One writer for manager-lists/projection, one for opt-in fixture BFF; Codex reviews
 and owns tracking/integration. Existing FE-CAT-4 DTO is reused; no component edit.

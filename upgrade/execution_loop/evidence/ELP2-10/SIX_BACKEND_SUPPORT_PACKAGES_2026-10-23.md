@@ -12,13 +12,131 @@ The existing frozen integration gate is not restarted for this work.
 | 2 Fleet timing | Exact lifecycle fact binding; entered-at/days agree with as-of; ambiguous/missing transitions remain explicit; schema/producer tests | BACKEND_SOURCE_DELIVERED 40d3540c7; consumer and real transition-source acceptance pending |
 | 3 Visit digest | User/workspace baseline, snapshot revision, explicit seen transition, typed changes and safe links; authorization/isolation/replay tests plus populated fixture | BACKEND_SOURCE_DELIVERED 8822d58f2; PG/contract/fixture gates PASS; not installed/consumer accepted |
 | 4 Accounts | Authorized same-snapshot counts and list figures projection; reuse published DTO; no per-row read amplification; query/permission tests | PROJECTION_AND_FIXTURE_DELIVERED 0f0d5cc85; real-source batch carrier/wiring OPEN, browser/installation pending |
-| 5 Contributors | Authorized alpha attribution and bounded group continuation beyond 200; full-population aggregate semantics; no sum of returns/scores; pagination/security tests | QUEUED |
+| 5 Contributors | Authorized alpha attribution and bounded group continuation beyond 200; full-population aggregate semantics; no sum of returns/scores; pagination/security tests | SOURCE_AND_FIXTURE_DELIVERED ace3547ca; grouped reader integration and real Return/Score publication OPEN |
 | 6 Names/finance | Authorized portfolio label joins; exact grain/unit/source binding for financial DTO/fixtures; no wallet-equity substitution or cross-currency sums | QUEUED |
 
 Each closeout must name code SHA, changed paths, tests actually run, contract
 generation impact, remaining real-source inputs and Claude consumer action.
 Helpers alone do not close a served route; a fixture test is not a browser receipt.
 Conversely, real Edge readiness does not block rich positive fixture acceptance.
+
+## Package5 entry and contract handoff — Contributors, 23 October
+
+Base `b29145100`, clean isolated support lane on entry. Claude source inspected
+`beed0225ebe141157b81cb1e3c14a04c9c9a08b0`, including
+[FE-CAT-5 corrective request](FE_CAT_5_CONTRIBUTORS_DIGEST_2026-10-23.md).
+No frontend components, source runtime, DB/migration, deployment or remote push.
+Backend agent owns model/schema/invariants; fixture agent owns BFF; independent
+reviewer owns only new controller tests; primary owns generator/docs/integration.
+
+Existing `groups` rejected populations above200. New optional query fields
+`group_limit` (effective default200, range1–200), `group_after`, `group_before`
+provide independent signed group continuation. They require nonempty `group_by`;
+the two directions are mutually exclusive. Row `limit/after/before` are unchanged.
+`group_page` is additive for old payload compatibility and emitted for grouped
+queries only: limit, returned_count, authorized_filtered_count, next_cursor,
+previous_cursor. Group counts describe the FULL authorized filtered query;
+stage membership groups may overlap, so never sum groups into one book.
+
+Each alpha group may publish `attribution {alpha_id,name,owner_user_id,
+name_reason_code,owner_reason_code}`. Consensus is over its full authorized
+membership, not `items` on the current page, and never an unrestricted identity
+lookup. Names/owners absent or conflicting stay null with GROUP_NAME/OWNER_
+NOT_PUBLISHED/AMBIGUOUS. Existing member semantics are `alpha_fleet_overview`;
+this is not a portfolio label renamed as alpha. Field masking still applies.
+
+Cursor namespace separates rows/groups and binds workspace/current authority,
+source revision/generation, surface, filters, window, sort and limits. Changing
+those restarts pagination, not reuse of a stale token. Each response keeps200
+group and1MiB bounds; reductions run only for returned groups over full group
+membership. No silent truncation or reduced denominator/share on a later page.
+
+### Claude consumer action
+
+Generated `execution-manager-models.d.ts`: `ManagerDatasetQuery` and
+`ManagerDataset`. Existing Fund operation `executionManagerFundOverviewGetV1`
+continues to serve Contributors. Add groupLimit/groupAfter/groupBefore in its
+reader; keep row limit1 if desired. **The current reader has closed `hasOnly`
+allowlists**: update envelope/group allowlists AND validate the new optional
+shapes before deploying this grouped producer. Generated types alone do not
+change runtime validation. Bare/non-grouped reads preserve the old envelope.
+Read attribution directly; do not page-join
+names. Read `group_page` to determine completeness instead of guessing from
+groups.length>=200. Exactly200 can be complete. Reset both page cursors when
+query/context changes; preserve workspace/environment/window through links.
+
+Canonical static fixture:
+`packages/contracts/fixtures/execution-manager-contributors.synthetic.valid.json`.
+Opt-in review BFF supplies populated linked/scaled scenarios using this contract;
+Claude tests long labels, narrow view, forward/back navigation and filters without
+rewriting the accepted component. Fixture acceptance remains independent of
+real-source commissioning. Browser/visual receipt is AWAITING_CONSUMER_REVIEW.
+
+### Financial scope, source request and rollback
+
+No Return or Score summation was added. Existing partitioned nonadditive return
+still returns CONSOLIDATED_PATH_REQUIRED where a consolidated source path is
+needed. Real group Score requires qualified precomputed alpha/version/population/
+window semantics; identical numeric child scores are not such proof. Complete
+fixture methodology is synthetic only. Remaining source owner is Edge coordinator
+with TS/PM behind it: supply consolidated return and qualified exact-population
+score publication/provenance before claiming complete real Contributors metrics.
+This input does not block group navigation/name UI acceptance. Package4 batch
+financial request stays OPEN. Rollback is source revert before install; no DB
+or custody data touched. Next approved backend package6 remains queued until this
+package's source/tests/handoff are committed.
+
+### Package5 verification and limitations
+
+- Backend model/ALL focused suites **108/108 PASS**; controller numeric parsing,
+  cursor forwarding and workspace denial **14/14 PASS**. Covers207groups200+7,
+  backwards paging, unchanged row page, source/scope/filter/limit-bound cursors,
+  masked/ambiguous attribution and response invariants. Independent reviewer
+  ACCEPT for this implementation scope; real-source metrics are not included.
+- Manager generated contract suites **72/72 PASS** after fixes; Visit Digest
+  **7/7 PASS** on ephemeral loopback. Initial contract run found strict AJV query
+  refinement declarations and an existing anonymous-schema collision: fixed
+  generator declarations and gave our package3 Visit Digest its canonical `$id`.
+  No response shape/route behavior changed by the `$id` repair. Research analytics
+  schema was not edited. Initial loopback sandbox EPERM retaken with bounded
+  localhost permission; not treated as an application failure.
+- Linked Contributors fixture final **4/4 PASS** and fixture BFF build PASS. Test-only
+  expansion of the same linked graph exercises291groups using17/34 pages,
+  full-population shares, query/workspace/direction/row-cursor refusal and ALL.
+  Existing default large fixture has97groups;291 is a test scenario, not a claim
+  about deployed data. Rich200group response exceeds1MiB and is explicitly
+  refused; smaller group_limit traverses all groups without loosening the budget.
+- ALL fixture now gathers bounded20-row source pages rather than treating the
+  first200 rows (or an oversized response) as the full environment. Max10k rows,
+  500pages and repeated-cursor detection; incomplete traversal stays unavailable.
+- Generator drift checks, snapshot610files and tracking/diff checks PASS.
+  Control API `npm run build` PASS; existing positive-BFF/ALL/lifecycle contract
+  regressions **27/27 PASS**. No PostgreSQL changes warrant a new DB/restore test. No UI edit,
+  preview rebuild or real-source test is claimed. Normal landing hook remains at
+  frozen integration, per §10.10c; intermediate commit uses focused gates.
+- Cleanup: no DB/container/network/test credentials created; ephemeral HTTP
+  server closed by test teardown. Capacity217GiB free,66% used. Keep reusable
+  dependency/build outputs; NO_ACTION_NEEDED, no broad cleanup.
+
+### Package5 final source pin and next work
+
+Code `ace3547ca`:19files,+1401/-24 including generated contract/fixture bytes,
+not1401 hand-written backend lines. Build PASS before the final conditional
+omission of group_page on bare reads; affected default-shape tests retaken2/2PASS
+(106 deliberately not rerun). Fixture final4/4 validates every200response with
+the backend schema and ungrouped response with the actual frontend reader.
+Old grouped reader refusal was observed, so **do not deploy this grouped BFF
+before Claude's reader patch**. No unsupported claim of zero consumer work.
+Verification §10.10c focused lanes; normal integration hook belongs to later
+frozen landing. Docs R0 §10.10d; diff/tracking/snapshot checks pass.
+
+Producer source/fixtures delivered, not landed, installed or browser accepted.
+Claude action: typed query + closed-reader mapping + Contributors continuation/
+attribution, tests and browser1280/660; leave approved layout unchanged unless
+separately reviewed. Source-input requests remain with Edge coordinator for
+consolidated Return/Score and package4 batch figures. No new Bobby decision is
+needed for those existing semantics. Backend next: approved package6 Names/finance;
+do not redo delivered group paging or package4 projection while waiting for source.
 
 ## Package4 entry — Accounts list, 23 October
 
