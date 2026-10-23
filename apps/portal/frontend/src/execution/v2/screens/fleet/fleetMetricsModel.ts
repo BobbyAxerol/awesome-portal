@@ -202,16 +202,40 @@ export interface BasisOption { id: string; label: string; query: ManagerDatasetP
 export const BASIS_PARAM = "basis";
 const DOMAIN_WORD = { ACTUAL: "Real-funded", PAPER: "Paper", SANDBOX: "Sandbox" } as const;
 
-/** The partitions the loaded rows publish, once each in first-seen order: `ACTUAL|USDT` is the id (domain and currency). */
+/** The complete identity of an economic partition as the contract carries it: domain, currency, basis, native profile, domain proof. */
+export const partitionIdentity = (p: { economicDomain: string; currency: string; basis: string; nativeProfileRef: string; domainProofRef: string }): string =>
+  JSON.stringify([p.economicDomain, p.currency, p.basis, p.nativeProfileRef, p.domainProofRef]);
+
+/**
+ * The partitions the loaded rows publish, once each in first-seen order. The id is the FIVE-field identity (two Paper / USDT books with different
+ * owning profiles are two choices, never one: the first is not silently kept). A label is `Paper · USDT`; where two choices would read alike the
+ * profile (then the basis, then the proof) is added until they differ.
+ */
 export function basisOptions(rows: readonly ManagerRow[]): readonly BasisOption[] {
   const seen = new Map<string, BasisOption>();
   for (const row of rows) for (const entry of row.economicPartitions) {
     const p = entry.partition;
-    const id = `${p.economicDomain}|${p.currency}`;
-    if (!seen.has(id)) seen.set(id, { id, label: `${DOMAIN_WORD[p.economicDomain]} · ${p.currency}`, query: {
+    const id = partitionIdentity(p);
+    if (!seen.has(id)) seen.set(id, { id, label: "", query: {
       economicDomain: p.economicDomain, currency: p.currency, basis: p.basis, nativeProfileRef: p.nativeProfileRef, domainProofRef: p.domainProofRef } });
   }
-  return [...seen.values()];
+  return relabelBasis([...seen.values()]);
+}
+
+/** Labels by identity: `Paper · USDT`, plus the profile, then the basis, then the proof, only as far as needed to tell two choices apart. */
+export function relabelBasis(options: readonly BasisOption[]): readonly BasisOption[] {
+  const parts = (o: BasisOption) => [o.query.nativeProfileRef, o.query.basis, o.query.domainProofRef];
+  const base = (o: BasisOption) => `${DOMAIN_WORD[o.query.economicDomain]} · ${o.query.currency}`;
+  const labelAt = (o: BasisOption, depth: number) => `${base(o)}${parts(o).slice(0, depth).map((part) => ` · ${part}`).join("")}`;
+  const depth = new Map<string, number>(options.map((o) => [o.id, 0]));
+  for (let level = 1; level <= 3; level += 1) {
+    const counts = new Map<string, number>();
+    for (const o of options) { const label = labelAt(o, depth.get(o.id)!); counts.set(label, (counts.get(label) ?? 0) + 1); }
+    let clash = false;
+    for (const o of options) if ((counts.get(labelAt(o, depth.get(o.id)!)) ?? 0) > 1) { depth.set(o.id, level); clash = true; }
+    if (!clash) break;
+  }
+  return options.map((o) => ({ ...o, label: labelAt(o, depth.get(o.id)!) }));
 }
 export const basisOf = (id: string | null, options: readonly BasisOption[]): BasisOption | null => options.find((option) => option.id === id) ?? null;
 
@@ -268,7 +292,7 @@ export function qbtsOf(row: ManagerRow): QbtsView | null {
   const provisional = (flag !== undefined && flag.kind === "value" && flag.exact === "1") || evidence === "provisional";
   const band = code === null ? null : { code, ...(BAND_LABEL[code] ?? { label: humanize(code), kind: "neutral" as FlagKind }) };
   if (headline.kind === "absent") {
-    return { kind: "absent", exact: null, band: null, evidence: evidence ?? "insufficient", provisional: false, p: null, r: null, b: null, policy: headline.policyRevision, reason: headline.reasonCode, partition };
+    return { kind: "absent", exact: null, band: null, evidence, provisional: false, p: null, r: null, b: null, policy: headline.policyRevision, reason: headline.reasonCode, partition };
   }
   return { kind: "value", exact: headline.exact, band, evidence, provisional, p: exactOf(map?.get("qbts_p")), r: exactOf(map?.get("qbts_r")), b: exactOf(map?.get("qbts_b")),
     policy: headline.policyRevision, reason: null, partition };

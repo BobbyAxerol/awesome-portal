@@ -57,7 +57,7 @@ import { FleetDatasetTable } from "./FleetDatasetTable";
 import { FleetEnvironmentCoverage } from "./FleetEnvironmentCoverage";
 import { BasisSelect, DatasetColumnsMenu, DensityToggle, EquityScalarSelect, EvidenceSelect, RangeFilter, rangeText } from "./FleetMetricControls";
 import {
-  BASIS_PARAM, DATASET_COLUMNS, OPTIONAL_SHOWN_PARAM, askableSorts, basisOf, basisOptions, cycleSort, equityScalarOf, evidenceOf, parseRanges, parseShownOptional, parseSorts,
+  BASIS_PARAM, DATASET_COLUMNS, OPTIONAL_SHOWN_PARAM, askableSorts, basisOf, basisOptions, relabelBasis, cycleSort, equityScalarOf, evidenceOf, parseRanges, parseShownOptional, parseSorts,
   serializeRanges, serializeShownOptional, serializeSorts, EVIDENCE_FILTERS, type BasisOption,
 } from "./fleetMetricsModel";
 import { useFleetSparks } from "./useFleetSparks";
@@ -257,7 +257,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     const options = basisOptions([...dataset.rows, ...(probed === null ? [] : probed.items)]);
     setSeenBasis((current) => {
       const merged = [...current, ...options.filter((option) => !current.some((entry) => entry.id === option.id))];
-      return merged.length === current.length ? current : merged;
+      return merged.length === current.length ? current : relabelBasis(merged);
     });
   }, [dataset.rows, probed]);
   // The loaded rows' portfolios, venues and source states: honest "loaded so far" choices (the server filters on the typed value either way).
@@ -276,7 +276,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   }, [dataset.rows]);
   const offeredFields = offered === null ? null : offered.sortFields;
   const askable = useMemo(() => askableSorts(sorts, offeredFields, basis !== null), [sorts, offeredFields, basis]);
-  const sparks = useFleetSparks(api, datasetMode && tableView, datasetRows, scope === null ? "ALL" : scope.environment, workspaceId);
+  const sparks = useFleetSparks(api, datasetMode && tableView, datasetRows, scope === null ? "ALL" : scope.environment, workspaceId, dataset.first === null ? null : dataset.first.lineage.revision);
   const selectionReasonId = useId();
   const mapReasonId = useId();
   const exportReasonId = useId();

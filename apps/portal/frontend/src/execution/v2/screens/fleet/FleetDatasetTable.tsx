@@ -147,7 +147,7 @@ export function FleetDatasetTable({
   const scalar = equityScalarOf(equityScalar);
   const carried = metricKeys === null || metricKeys.includes("score");
   const money = (key: string, gap: UnpublishedFact, signed = false, keys: readonly string[] | null = metricKeys) =>
-    (row: ManagerRow) => <PartitionFigures partitions={row.economicPartitions} metricKey={key} metricKeys={keys} gap={gap} signed={signed} quietTag />;
+    (row: ManagerRow) => <PartitionFigures partitions={row.economicPartitions} metricKey={key} metricKeys={keys} gap={gap} signed={signed} />;
 
   const render: Readonly<Record<string, CardsColumn<ManagerRow>["render"]>> = {
     alpha: (row) => (
@@ -172,7 +172,7 @@ export function FleetDatasetTable({
       const spark = environment === null || sparks === undefined ? undefined : sparks.get(sparkKey(environment as "paper" | "sandbox" | "live", row.portfolioId));
       return (
         <span className="exec-fleet-equity">
-          <PartitionFigures partitions={row.economicPartitions} metricKey={scalar.key} metricKeys={scalar.id === "drawdown" ? null : metricKeys} gap={scalar.id === "value" ? EQUITY_GAP : { fe: "FE-013", what: scalar.label }} quietTag />
+          <PartitionFigures partitions={row.economicPartitions} metricKey={scalar.key} metricKeys={scalar.id === "drawdown" ? null : metricKeys} gap={scalar.id === "value" ? EQUITY_GAP : { fe: "FE-013", what: scalar.label }} />
           {spark !== undefined && spark.kind === "series" ? (
             <span className="exec-fleet-spark" title={`Portfolio ${row.portfolioId} NAV, 30 days (${spark.basis}); the series port has portfolio and fund subjects only, not the alpha version`}>
               <Spark values={spark.values} unit="money" label={`Portfolio ${row.portfolioId} NAV, 30 days`} width={64} height={16} />

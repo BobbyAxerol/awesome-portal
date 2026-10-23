@@ -27,7 +27,7 @@ export interface DoubleAlpha {
   /** ALL reads only: the money this alpha holds in ITS environment, one partition (USDT in every environment: the trap a sum would fall into). */
   money?: { allocation?: string | null; netPnl?: string | null; unrealized?: string | null; balance?: string | null; equity?: string | null; returnPct?: string | null; currency?: string };
   /** `rich` reads only: the QBTS as published (value, the band code, evidence word, components). `value: null` is a typed absence (reason). */
-  qbts?: { value: string | null; band?: string; evidence?: "eligible" | "provisional" | "insufficient"; p?: string; r?: string; b?: string; reason?: string };
+  qbts?: { value: string | null; band?: string; evidence?: "eligible" | "provisional" | "insufficient"; p?: string; r?: string; b?: string; reason?: string; noEvidence?: boolean };
 }
 
 export type DatasetVariant =
@@ -187,7 +187,7 @@ function rowOf(template: Draft, c: Computed, environment: string, rich = false):
           if (q.band) metrics.qbts_band = plain("2", "BAND_ORDINAL", { reason_code: q.band });
           metrics.qbts_evidence = plain(q.evidence === "provisional" ? "1" : "2", "EVIDENCE_STATE", { reason_code: q.evidence ?? "eligible" });
           metrics.qbts_provisional = plain(q.evidence === "provisional" ? "1" : "0", "FLAG");
-        } else metrics.qbts_evidence = plain("0", "EVIDENCE_STATE", { reason_code: "insufficient" });
+        } else if (q.noEvidence !== true) metrics.qbts_evidence = plain("0", "EVIDENCE_STATE", { reason_code: "insufficient" });
       }
     }
     row.economic_partitions = Object.keys(metrics).length === 0 ? [] : [{ partition, metrics }];

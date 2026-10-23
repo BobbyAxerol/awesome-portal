@@ -83,6 +83,7 @@ const metrics = () => screen.getByRole("group", { name: "Metric filters" });
 const header = (label: string) => [...table().querySelectorAll("th")].find((th) => (th.textContent ?? "").startsWith(label))!;
 const sortButton = (label: string) => within(header(label)).getByRole("button");
 const click = async (label: string) => { await loaded(); fireEvent.click(sortButton(label)); await Promise.resolve(); };
+const BASIS_ID = JSON.stringify(["PAPER", "USDT", "TEST_ONLY:net-ledger", "TEST_ONLY:paper-ledger", "TEST_ONLY:not-economic-authority"]);
 const PAPER_BASIS = { economic_domain: "PAPER", currency: "USDT", basis: "TEST_ONLY:net-ledger", native_profile_ref: "TEST_ONLY:paper-ledger", domain_proof_ref: "TEST_ONLY:not-economic-authority" };
 
 describe("guide 8.1 · the columns", () => {
@@ -92,9 +93,9 @@ describe("guide 8.1 · the columns", () => {
     await loaded();
     expect(headers()).toEqual(["Alpha", "Portfolio", "Current stage", "Alloc", "PNL Amount", "Health", "QBTS"]);
     expect(within(table()).queryAllByRole("checkbox")).toHaveLength(0);
-    // a money cell of a one-partition row prints no visible tag (the figure carries its currency); the tag is kept for assistive technology
+    // the economic-domain tag is visible on every money figure (environment does not imply economic domain)
     const tag = rowOf("a-1").querySelector("td[data-l='Alloc'] .exec-fleet-part-tag") as HTMLElement;
-    expect(tag.className).toContain("exec-fleet-sr");
+    expect(tag.className).not.toContain("exec-fleet-sr");
     expect(tag.textContent).toBe("Paper · USDT");
   });
 
@@ -241,8 +242,8 @@ describe("guide 8.2 · sorting is the server's", () => {
       expect(header(label).getAttribute("title"), label).toContain("Basis");
     }
     expect(within(header("QBTS")).getByRole("button")).toBeTruthy();
-    fireEvent.change(within(metrics()).getByRole("combobox", { name: "Basis" }), { target: { value: "PAPER|USDT" } });
-    await waitFor(() => expect(search().get("basis")).toBe("PAPER|USDT"));
+    fireEvent.change(within(metrics()).getByRole("combobox", { name: "Basis" }), { target: { value: BASIS_ID } });
+    await waitFor(() => expect(search().get("basis")).toBe(BASIS_ID));
     await click("PNL Amount");
     await waitFor(() => expect(last(state).sort).toEqual([{ field: "net_pnl", direction: "asc" }]));
     expect(JSON.parse(last(state).query.get("economic_partition")!)).toEqual(PAPER_BASIS);
@@ -306,7 +307,7 @@ describe("guide 8.2 · filters are the server's", () => {
 
   it("a money range with a Basis pins the partition and says which currency it is in", async () => {
     const { api, state } = harness();
-    mount(api, "/execution/fleet?stage=paper&basis=PAPER|USDT");
+    mount(api, `/execution/fleet?stage=paper&basis=${encodeURIComponent(BASIS_ID)}`);
     await loaded();
     fireEvent.click(within(metrics()).getByRole("button", { name: /^Ranges/ }));
     const menu = screen.getByRole("group", { name: "Numeric ranges" });
@@ -439,5 +440,58 @@ describe("the Equity 30D sparkline comes from the series port", () => {
     expect(rowOf("s-1").querySelector(".exec-fleet-spark")?.getAttribute("title")).toContain("Portfolio pf-1 NAV, 30 days");
     expect(rowOf("s-1").querySelector(".exec-fleet-spark")?.getAttribute("title")).toContain("not the alpha version");
     expect(rowOf("s-2").querySelector(".exec-fleet-spark")).toBeNull();
+  });
+});
+
+describe("Codex review: honest partitions, evidence and sparklines", () => {
+  it("a single-environment Live view whose only partition is PAPER prints the Paper label (the environment does not imply the economic domain)", async () => {
+    const { api } = harness([alpha("l-1", { stages: ["LIVE"], money: { allocation: "100", netPnl: "5" } })], (state) => {
+      state.population.live = state.population.paper;
+      state.population.paper = [];
+      state.mutate = (body) => { for (const row of body.items) for (const entry of row.economic_partitions) entry.partition.economic_domain = "PAPER"; };
+    });
+    mount(api, "/execution/fleet?stage=live", true);
+    await loaded();
+    for (const label of ["Alloc", "PNL Amount"]) {
+      const part = rowOf("l-1").querySelector(`td[data-l='${label}'] .exec-fleet-part-tag`) as HTMLElement;
+      expect(part.textContent, label).toBe("Paper · USDT");
+      expect(part.className, label).not.toContain("exec-fleet-sr");
+    }
+    expect(rowOf("l-1").textContent).not.toContain("Real-funded");
+  });
+
+  it("two Paper / USDT partitions of different owning books are two Basis choices, labelled apart; the second is pinned whole", async () => {
+    const { api, state } = harness([alpha("t-1", { money: { allocation: "1", netPnl: "2" } }), alpha("t-2", { money: { allocation: "3", netPnl: "4" } })], (double) => {
+      double.mutate = (body) => {
+        body.items.forEach((row: { economic_partitions: { partition: Record<string, string> }[] }, index: number) => {
+          if (index === 1) row.economic_partitions[0]!.partition.native_profile_ref = "TEST_ONLY:paper-ledger-b";
+        });
+      };
+    });
+    mount(api);
+    await loaded();
+    const select = within(metrics()).getByRole("combobox", { name: "Basis" }) as HTMLSelectElement;
+    await waitFor(() => expect(select.options.length).toBe(3), SLOW);
+    const options = [...select.options].map((option) => option.textContent);
+    expect(options).toEqual(["Basis: none", "Basis: Paper · USDT · TEST_ONLY:paper-ledger", "Basis: Paper · USDT · TEST_ONLY:paper-ledger-b"]);
+    const second = JSON.stringify(["PAPER", "USDT", "TEST_ONLY:net-ledger", "TEST_ONLY:paper-ledger-b", "TEST_ONLY:not-economic-authority"]);
+    fireEvent.change(select, { target: { value: second } });
+    await waitFor(() => expect(search().get("basis")).toBe(second), SLOW);
+    await click("PNL Amount");
+    await waitFor(() => expect(JSON.parse(last(state).query.get("economic_partition")!).native_profile_ref).toBe("TEST_ONLY:paper-ledger-b"), SLOW);
+  });
+
+  it("an absence prints the reason the metric carries: insufficient only when the evidence says so, MIXED_ECONOMIC_DOMAINS stays itself", async () => {
+    const { api } = harness([
+      alpha("e-1", { qbts: { value: null, reason: "INSUFFICIENT_EVIDENCE" } }),
+      alpha("e-2", { qbts: { value: null, reason: "MIXED_ECONOMIC_DOMAINS", noEvidence: true } }),
+    ]);
+    mount(api, "/execution/fleet?stage=paper&cols=coverage,owner,in-stage,unrealized,balance,equity,source,select");
+    await loaded();
+    expect(cell(rowOf("e-1"), "Score coverage")).toBe("Insufficient");
+    expect(cell(rowOf("e-2"), "Score coverage")).toBe("Evidence not published");
+    fireEvent.click(within(rowOf("e-2").querySelector("td[data-l='QBTS']") as HTMLElement).getByRole("button", { name: "Not available, reason" }));
+    expect(rowOf("e-2").textContent).toContain("MIXED_ECONOMIC_DOMAINS");
+    expect(rowOf("e-2").textContent).not.toMatch(/insufficient/i);
   });
 });

@@ -29,7 +29,7 @@ const SIZE_KEY = "allocation";
 const ALLOCATION_GAP: UnpublishedFact = { fe: "BQ-FLEET-ALLOC", what: "Allocation" };
 
 const identityOf = (partition: ManagerPartition): string =>
-  JSON.stringify([partition.economicDomain, partition.currency, partition.basis, partition.nativeProfileRef]);
+  JSON.stringify([partition.economicDomain, partition.currency, partition.basis, partition.nativeProfileRef, partition.domainProofRef]);
 const tagOf = (partition: ManagerPartition): string => `${DOMAIN_LABEL[partition.economicDomain]} · ${partition.currency}`;
 const inPartition = (row: ManagerRow, identity: string): ManagerPartitionedMetrics | null =>
   row.economicPartitions.find((entry) => identityOf(entry.partition) === identity) ?? null;

@@ -77,3 +77,8 @@
 .exec-fleet-range-unit { grid-column: 1 / -1; font: var(--exec-font-meta); color: var(--ink-faint); }
 .exec-fleet-range input { width: 100%; box-sizing: border-box; }
 .exec-fleet-sortbar { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); font: var(--exec-font-meta); color: var(--ink-faint); }
+
+/* The economic-domain tag is ALWAYS visible (environment does not imply economic domain). In this table it sits in the label voice above its
+ * figure, so it costs no width (the default columns still fit 1440) and no row height (the stage cell beside it is two lines tall). */
+.exec-fleet-dataset .exec-fleet-part { flex-direction: column; align-items: flex-end; gap: 0; }
+.exec-fleet-dataset .exec-fleet-part-tag { font: var(--exec-font-meta); }

@@ -26,11 +26,6 @@ export interface PartitionFiguresProps {
   /** The request that publishes the figure when the dataset does not carry the key. */
   gap: UnpublishedFact;
   signed?: boolean;
-  /**
-   * A row with ONE partition prints no visible tag: the figure carries its currency, and the row's lens or Environment column says the domain.
-   * The tag stays in the DOM for assistive technology and on its title. A row with several partitions always shows every tag.
-   */
-  quietTag?: boolean;
   /** How a figure of another unit prints (a percent, a count of days). Default: the money / exact renderer. */
   cell?: (metric: ManagerMetricRead | null) => ReactNode;
 }
@@ -44,7 +39,7 @@ export const partitionTag = (entry: ManagerPartitionedMetrics): string => `${DOM
 export const partitionTitle = (entry: ManagerPartitionedMetrics): string =>
   `${DOMAIN_LABEL[entry.partition.economicDomain]} (${entry.partition.economicDomain}) · ${entry.partition.currency} · basis ${entry.partition.basis} · profile ${entry.partition.nativeProfileRef}`;
 
-export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signed = false, cell, quietTag = false }: PartitionFiguresProps) {
+export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signed = false, cell }: PartitionFiguresProps) {
   if (metricKeys !== null && !metricKeys.includes(metricKey)) {
     return <NaWhy className="exec-fleet-np" text={notPublished(gap)} reason={`The Manager dataset does not carry ${metricKey} in its published metric set.`} />;
   }
@@ -58,7 +53,11 @@ export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signe
         return (
           <span key={`${entry.partition.economicDomain}|${entry.partition.currency}|${entry.partition.basis}|${entry.partition.nativeProfileRef}`}
             className="exec-fleet-part" data-domain={entry.partition.economicDomain} data-testid={`part-${metricKey}`}>
-            <span className={quietTag && partitions.length === 1 ? "exec-fleet-part-tag exec-fleet-sr" : "exec-fleet-part-tag"} title={partitionTitle(entry)}>{partitionTag(entry)}</span>
+            <span className="exec-fleet-part-tag" title={partitionTitle(entry)}>
+              {DOMAIN_LABEL[entry.partition.economicDomain]}
+              {/* The currency is the figure's own suffix; it stays in the tag for assistive technology and in the text, not on screen twice. */}
+              <span className="exec-fleet-sr"> · {entry.partition.currency}</span>
+            </span>
             {cell ? cell(metric) : <MetricValue metric={metric} signed={signed} />}
           </span>
         );
