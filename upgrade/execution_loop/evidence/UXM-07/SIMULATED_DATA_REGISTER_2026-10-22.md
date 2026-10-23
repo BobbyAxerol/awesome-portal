@@ -9,7 +9,7 @@ Level: FIXTURE_LAB. Nothing here is source acceptance, a financial statement or 
 2. Exact decimal strings, integer (bigint) arithmetic, no float, no cross-currency or cross-domain sums. Real-funded (ACTUAL), Paper and Sandbox are separate partitions; one currency per figure.
 3. True zero stays a value; one typed absence per level stays testable (a figure the source "did not publish").
 4. Every simulated metric carries `FIXTURE_LAB` in its methodology/provenance and the fixture banner stays on the preview.
-5. Metric keys are open in `execution-manager-dataset.v1` (`propertyNames: string`), so adding a key is a data change, not a contract change. A key the screen finds is drawn; a key it does not find keeps the screen's `Not published (FE-xxx)`.
+5. Metric keys are open only in three maps of `execution-manager-dataset.v1`: `economic_partitions[].metrics` of a row, `economic_partitions[].metrics` of a group, and `capital_statements[].metrics` (`propertyNames: string`). The row-level `metrics` map is a CLOSED enum of seven keys (`allocation, net_pnl, unrealized_pnl, balance_total, equity_30d_end_value, return_30d_pct, score`), and the real control-api emits closed sets in all of them (`manager-model.contract.ts`). So a key outside those sets passes the schema in a partition/group/statement map and the fixture lane serves it, but that is fixture support, not evidence the Edge can publish it; no schema is widened to legalize it (closeout 2026-10-23 §2). A key the screen finds is drawn; a key it does not find keeps the screen's `Not published (FE-xxx)`.
 6. Switch off: stop serving the key (or the profile), the screen falls back by itself. Nothing in a component names the fixture.
 
 ## 2. Simulated metric keys (Manager dataset, populated and layout-stress profiles)
@@ -30,11 +30,11 @@ Source: `apps/portal/fixture-bff/review-manager.ts`, README section "Explicit po
 | group by portfolio_id | concentration_hhi | RATIO | sum of squared allocation shares, 0..1, one partition | Portfolios, Portfolio 360 | FE-005 |
 
 ## 2b. Accounts list columns (22 October 2026, `e2e/bffSimulated.ts`; opt-in, same routes and readers)
-`execution.bindings-list.v1` rows are closed (`binding_id`, `account_id`, `venue`, `state`, `credential_state`, `updated_at`), so Physical equity, Σ Virtual · Headroom, Check and the sleeves count come from two published carriers read per row (first 50 rows, four at a time, later rows say so): the account resource's `broker_sync.wallet_balance` and the binding exposure's bucket `used` / `headroom` / `expected_account_count`.
+`execution.bindings-list.v1` rows are closed (`binding_id`, `account_id`, `venue`, `state`, `credential_state`, `updated_at`), so Physical equity, Σ Virtual · Headroom, Check and the sleeves count come from two published carriers read per row (first 20 rows (`ROW_FACTS_CAP`), four at a time, later rows say so; a capped fallback until the bindings list publishes the figures, DEBT-UXM07-052): the account resource's `broker_sync.wallet_balance` and the binding exposure's bucket `used` / `headroom` / `expected_account_count`.
 
 | Column | Source | Rule | Expected real source |
 |---|---|---|---|
-| Physical equity | `GET /resources/accounts/{id}` `broker_sync.wallet_balance` | published string, currency of the broker row; typed absence when the venue report is not published | bindings list native equity |
+| Physical equity | `GET /resources/accounts/{id}` `broker_sync.native_equity` (the wallet balance is a different figure, printed in Account 360, never a fallback; corrected 2026-10-23, `ea537a9ba`) | published string, currency of the broker row; typed absence when the venue did not report native equity | bindings list native equity |
 | Σ Virtual | `GET /broker-bindings/{id}/exposure` bucket `used` in the same currency | published string, no summing; typed absence when no bucket in that currency | bindings list virtual sum |
 | Headroom | same bucket `headroom` | simulated for `bnc_main@BINANCE` as 412880.25 - 197500.00 = 215380.25 (integer arithmetic) | bindings list headroom |
 | Check | exact decimal comparison, virtual vs physical, same currency | within / exceeded; "Not available" when either is absent | server verdict (BR-EX-26 aggregate) |

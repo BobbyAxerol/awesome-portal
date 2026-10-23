@@ -1,6 +1,6 @@
 {
   "phase": "UXM-07",
-  "updated": "2026-10-21",
+  "updated": "2026-10-23",
   "reconciled_at_head": "799effc8",
   "open": [
     {
@@ -217,7 +217,7 @@
       "proposed": "Restore the columns/rows with per-cell 'Not available · reason' and 'Pending · policy not set' for score; window selectors; Fleet tabs All/Live/Canary/Sandbox/Paper. Fixture-only, no invented figures.",
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go)",
-      "status": "IN PROGRESS 2026-10-22 (late): Overview, Portfolios, Fleet restored and now read the Manager dataset (per-partition, simulated keys in the populated lane: see SIMULATED_DATA_REGISTER_2026-10-22.md). Fleet Map built. Not done: Overview basis/scope selectors, Fleet Group/Then, Allocation domain (BQ-FLEET-ALLOC), real Edge keys."
+      "status": "IN PROGRESS 2026-10-22 (late): Overview, Portfolios, Fleet restored and now read the Manager dataset (per-partition, simulated keys in the populated lane: see SIMULATED_DATA_REGISTER_2026-10-22.md). Fleet Map built. Not done: Overview basis/scope selectors, Fleet Group/Then, Allocation domain (BQ-FLEET-ALLOC), real Edge keys. || UPDATE 2026-10-23 (closeout §7): Fleet Group/Then is implemented (59462c672, `then=` in the URL, two-field group_by) and the Accounts baselines are recorded (v2-accounts-list cells). Overview basis/scope selectors are NOT built by decision: the closeout accepts the current semantics (every authorized portfolio, each currency separately, no conversion, FE-CAT-6). Still open: Allocation domain (FE-CAT-7), real Edge keys."
     },
     {
       "id": "DEBT-UXM07-050",
@@ -227,7 +227,7 @@
       "proposed": "Build the Archived lens, Map view and digest on fixture with per-cell unavailable states; real data waits on the archive and feed contracts.",
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go)",
-      "status": "OPEN (found 2026-10-22; not previously tracked)"
+      "status": "OPEN (found 2026-10-22; not previously tracked) || UPDATE 2026-10-23 (closeout §7): the Fleet Map is implemented independently of the still-open Archived lens and the since-last-visit digest (digest needs a persisted user-scoped baseline, FE-CAT-5; absence is typed until it exists)."
     },
     {
       "id": "DEBT-UXM07-051",
@@ -237,7 +237,7 @@
       "proposed": "One pass per screen: restore the element with 'Not available' and its reason, update tests and baseline. Order by manager value: Portfolio 360, Alpha 360, Compare, Operations, Blotter, Account 360, Incident, Access, Users, Admin. Trade replay and Accounts list need a design decision and a baseline first.",
       "opened": "2026-10-22",
       "owner": "Claude (build, fixture-only); Bobby (go, order)",
-      "status": "IN PROGRESS 2026-10-22 (late): Portfolio 360, Alpha 360, Compare, Operations (health strip, Intent/Display columns), Incident (sections), Account 360 (tiles, drawdown panel), Blotter (columns), Access (13 actions, Role preset), Users (columns, actions), Admin (detail panel) restored by subagents and merged; baselines re-recording. Not done: Trade replay as a standalone screen (feasible, design decision), Accounts list baseline, ops-drawer design frame is mis-exported."
+      "status": "IN PROGRESS 2026-10-22 (late): Portfolio 360, Alpha 360, Compare, Operations (health strip, Intent/Display columns), Incident (sections), Account 360 (tiles, drawdown panel), Blotter (columns), Access (13 actions, Role preset), Users (columns, actions), Admin (detail panel) restored by subagents and merged; baselines re-recording. Not done: Trade replay as a standalone screen (feasible, design decision), Accounts list baseline, ops-drawer design frame is mis-exported. || UPDATE 2026-10-23 (closeout §7): the Accounts list baseline is recorded and the two Accounts defects (native equity vs wallet, scoped row-facts cache) are fixed in ea537a9ba. Trade replay stays a design decision."
     },
     {
       "id": "DEBT-UXM07-052",
@@ -257,7 +257,7 @@
       "proposed": "Review expects placed straight after loaded() in Fleet and research tests; prefer waitFor with the shared SLOW budget.",
       "opened": "2026-10-22",
       "owner": "Claude",
-      "status": "OPEN"
+      "status": "OPEN || UPDATE 2026-10-23 (closeout §7): the fixes cfed8fe61, d5cadc1b3 and 500df58e9 are present on the lane; the full suite passed once at 500df58e9 (85,683 passed, 0 failed, 854 s). That is one run, not a final-cut gate: the single final gate on the frozen reconciled candidate is Codex's and is pending. Earlier failures and receipts are preserved above."
     }
   ],
   "closed": [
