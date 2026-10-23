@@ -6,19 +6,25 @@ import { nativeCoreRuntimeReference, prepareNativeCoreRuntime } from "./executio
 import { composeOwnedNativeCoreRuntime, NativeCoreApplicationOwner } from "./execution-v2/native-core-bootstrap";
 import { nativeResearchReview } from "./execution/native-review-profile";
 import { assertRegisteredResearchCurrentHumanSchema } from "./execution-v2/current-human-schema";
+import { currentViewRuntimeReference, prepareCurrentViewRuntime } from "./execution-v2/current-view-runtime";
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
   const reference = nativeCoreRuntimeReference();
   const native = reference ? await prepareNativeCoreRuntime(reference) : undefined;
+  const currentViewReference = currentViewRuntimeReference();
+  const currentViewRuntime = currentViewReference ? await prepareCurrentViewRuntime(currentViewReference) : undefined;
   const reviewTarget=nativeResearchReview(config)
     ? native?.researchReviewTarget(config.EXECUTION_LOCAL_PROJECTION_WORKSPACE_ID!) : undefined;
   if(nativeResearchReview(config)&&!reviewTarget)throw new Error("NATIVE_RESEARCH_REVIEW_COMPOSITION_REQUIRED");
-  const pool = buildPool(config.DATABASE_URL, native?.poolProfile);
-  const dependencies = native ? await composeOwnedNativeCoreRuntime({compose:async ownedPool=>{
+  if (native && currentViewRuntime && JSON.stringify(native.poolProfile) !== JSON.stringify(currentViewRuntime.poolProfile))
+    throw new Error("CURRENT_VIEW_CORE_POOL_PROFILE_MISMATCH");
+  const pool = buildPool(config.DATABASE_URL, native?.poolProfile ?? currentViewRuntime?.poolProfile);
+  const nativeDependencies = native ? await composeOwnedNativeCoreRuntime({compose:async ownedPool=>{
     if(reviewTarget)await assertRegisteredResearchCurrentHumanSchema(ownedPool,reviewTarget);
     return native.compose(ownedPool);
   }}, pool) : undefined;
+  const dependencies = currentViewRuntime ? { ...nativeDependencies, currentViewRuntime } : nativeDependencies;
   const owner = native ? new NativeCoreApplicationOwner(pool) : undefined;
   try {
     const app = await createControlApiApp(config, pool, undefined, dependencies, owner);

@@ -1,0 +1,144 @@
+import { isIP, type AddressInfo } from "node:net";
+import type { Duplex } from "node:stream";
+import { performance } from "node:perf_hooks";
+import type { AuthService } from "../auth/auth.service";
+import { CurrentViewAuthority, type CurrentViewOperation } from "./current-view-authority";
+import { CurrentViewEdgeClient, type CurrentViewEdgeClientConfig, type SelectedCurrentViewEdgeRead } from "./current-view-edge-client";
+import { createCurrentViewTransport, type CurrentViewTransportConfig } from "./current-view-transport";
+import type { ExecutionReadScopes, ReadScopePrincipal } from "./read-scope";
+
+export interface CurrentViewCompositionConfig {
+  authority: { ttl_ms: number; maximum_contexts: number };
+  transport: Omit<CurrentViewTransportConfig, "tls"> & { tls: CurrentViewEdgeClientConfig["tls"] };
+  edge: CurrentViewEdgeClientConfig;
+  shutdown_deadline_ms: number;
+}
+type State = "CREATED" | "STARTING" | "RUNNING" | "STOPPING" | "STOPPED" | "FAILED";
+export class CurrentViewCompositionError extends Error {
+  constructor(readonly code: "CURRENT_VIEW_COMPOSITION_CONFIG_INVALID" | "CURRENT_VIEW_COMPOSITION_NOT_RUNNING" |
+    "CURRENT_VIEW_COMPOSITION_START_FAILED" | "CURRENT_VIEW_COMPOSITION_SHUTDOWN_PENDING", readonly status = 503) {
+    super("The private current-view composition is not available.");
+  }
+}
+const failure = (code: CurrentViewCompositionError["code"]) => new CurrentViewCompositionError(code);
+const copy = (value: string | Buffer) => typeof value === "string" ? Buffer.from(value) : Buffer.from(value);
+const privateHost = (host: string) => isIP(host) === 4
+  ? /^(?:127\.|10\.|192\.168\.|172\.(?:1[6-9]|2[0-9]|3[01])\.)/u.test(host)
+  : isIP(host) === 6 && (host === "::1" || /^(?:fc|fd)/iu.test(host));
+
+/** No duplicate authority evaluator: this only records contexts owned by this
+ * composition, so shutdown and a late register result release EXACT custody.
+ * It never mutates user/session/grant/source/audit rows or closes shared pools. */
+class OwnedAuthority extends CurrentViewAuthority {
+  constructor(auth: AuthService, scopes: ExecutionReadScopes, options: CurrentViewCompositionConfig["authority"],
+    private readonly active: () => boolean, private readonly owned: Set<string>) { super(auth, scopes, options); }
+  override async register(...args: Parameters<CurrentViewAuthority["register"]>) {
+    if (!this.active()) throw failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING");
+    const registered = await super.register(...args);
+    if (!this.active()) { super.release(registered.original_context); throw failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING"); }
+    this.owned.add(registered.original_context);
+    return registered;
+  }
+  override release(token: string): void { this.owned.delete(token); super.release(token); }
+}
+
+/** Actual Core factory over its existing AuthService + ExecutionReadScopes.
+ * Import/construction never bind a port. start needs an explicit private IP;
+ * no AppModule mounting, trust generation, accounts/grants or source selection
+ * is implicit. Only authenticated SERVER callers pass principals/selections.
+ * HISTORY still needs an explicitly commissioned independent-purpose mapping;
+ * neither this lifecycle nor CURRENT/STREAM substitutes for it. REPLAY is not
+ * a finite read and its additional per-frame purpose fence remains closed. */
+export class CurrentViewCoreComposition {
+  private state: State = "CREATED";
+  private readonly contexts = new Set<string>();
+  private readonly reads = new Set<Promise<unknown>>();
+  private readonly aborts = new Set<AbortController>();
+  private readonly sockets = new Set<Duplex>();
+  private readonly authority: OwnedAuthority;
+  private readonly client: CurrentViewEdgeClient;
+  private readonly transport: ReturnType<typeof createCurrentViewTransport>;
+  private readonly workload: string;
+  private readonly shutdownMs: number;
+  private starting?: Promise<AddressInfo>;
+  private startingPending = false;
+  private stopping?: Promise<void>;
+  constructor(auth: AuthService, scopes: ExecutionReadScopes, config: CurrentViewCompositionConfig) {
+    if (!Number.isSafeInteger(config.shutdown_deadline_ms) || config.shutdown_deadline_ms < 1 || config.shutdown_deadline_ms > 5000)
+      throw failure("CURRENT_VIEW_COMPOSITION_CONFIG_INVALID");
+    this.shutdownMs = config.shutdown_deadline_ms;
+    this.workload = config.transport.peer.workload_id;
+    this.authority = new OwnedAuthority(auth, scopes, { ...config.authority }, () => this.state === "RUNNING", this.contexts);
+    this.client = new CurrentViewEdgeClient(this.authority, config.edge);
+    this.transport = createCurrentViewTransport(this.authority, { ...config.transport,
+      tls: { key: copy(config.transport.tls.key), cert: copy(config.transport.tls.cert), ca: copy(config.transport.tls.ca) } });
+    this.transport.server.on("connection", socket => { this.sockets.add(socket); socket.once("close", () => this.sockets.delete(socket)); });
+    this.transport.server.on("secureConnection", socket => { this.sockets.add(socket); socket.once("close", () => this.sockets.delete(socket)); });
+    this.transport.server.on("error", () => { if (this.state === "RUNNING") { this.state = "FAILED"; this.stopAdmission(); } });
+  }
+  start(target: { host: string; port: number }): Promise<AddressInfo> {
+    if (this.state !== "CREATED" || !privateHost(target.host) || !Number.isSafeInteger(target.port) || target.port < 0 || target.port > 65535)
+      return Promise.reject(failure("CURRENT_VIEW_COMPOSITION_CONFIG_INVALID"));
+    // Port zero is explicit ephemeral selection, useful only for local cells;
+    // the returned actual address must be pinned before a peer can use it.
+    this.state = "STARTING"; this.startingPending = true;
+    this.starting = new Promise<AddressInfo>((resolve, reject) => {
+      const server = this.transport.server;
+      const settled = () => { this.startingPending = false; server.off("error", onError); server.off("close", onClose); };
+      const onError = () => { settled(); if (this.state === "STARTING") this.state = "FAILED"; reject(failure("CURRENT_VIEW_COMPOSITION_START_FAILED")); };
+      const onClose = () => { settled(); reject(failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING")); };
+      server.once("error", onError);
+      server.once("close", onClose);
+      server.listen(target.port, target.host, () => {
+        settled();
+        const address = server.address();
+        if (this.state !== "STARTING" || !address || typeof address === "string") {
+          server.close(); reject(failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING")); return;
+        }
+        this.state = "RUNNING"; resolve({ ...address });
+      });
+    });
+    return this.starting;
+  }
+  read(principal: ReadScopePrincipal, selection: SelectedCurrentViewEdgeRead, operation: CurrentViewOperation,
+    signal?: AbortSignal): Promise<{ status: 200; body: Buffer }> {
+    if (this.state !== "RUNNING") return Promise.reject(failure("CURRENT_VIEW_COMPOSITION_NOT_RUNNING"));
+    const abort = new AbortController(), cancel = () => abort.abort();
+    this.aborts.add(abort); signal?.addEventListener("abort", cancel, { once: true });
+    if (signal?.aborted) cancel();
+    const pending = this.client.read(principal, this.workload, selection, operation, abort.signal).finally(() => {
+      this.reads.delete(pending); this.aborts.delete(abort); signal?.removeEventListener("abort", cancel);
+    });
+    this.reads.add(pending);
+    return pending;
+  }
+  snapshot() {
+    const address = this.transport.server.address();
+    return Object.freeze({ state: this.state, owned_contexts: this.contexts.size, pending_reads: this.reads.size,
+      edge_in_flight: this.client.snapshot().in_flight, policy_in_flight: this.transport.snapshot().in_flight,
+      listener: address && typeof address !== "string" ? { address: address.address, port: address.port } : null });
+  }
+  private stopAdmission(): void {
+    for (const token of this.contexts) this.authority.release(token);
+    for (const abort of this.aborts) abort.abort();
+    for (const socket of this.sockets) socket.destroy();
+  }
+  shutdown(): Promise<void> {
+    if (this.state === "STOPPED") return Promise.resolve();
+    if (this.stopping) return this.stopping;
+    this.state = "STOPPING"; this.stopAdmission();
+    this.stopping = this.drain().finally(() => { this.stopping = undefined; });
+    return this.stopping;
+  }
+  private async drain(): Promise<void> {
+    const until = performance.now() + this.shutdownMs;
+    let listenerClosed = false;
+    this.transport.server.close(() => { listenerClosed = true; });
+    while (true) {
+      if (!this.reads.size && !this.transport.snapshot().in_flight && !this.sockets.size && listenerClosed && !this.startingPending && !this.transport.server.listening) break;
+      if (performance.now() >= until) throw failure("CURRENT_VIEW_COMPOSITION_SHUTDOWN_PENDING");
+      await new Promise<void>(resolve => setTimeout(resolve, 5));
+    }
+    this.stopAdmission(); this.state = "STOPPED";
+  }
+}

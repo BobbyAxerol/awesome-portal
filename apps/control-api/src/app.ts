@@ -21,8 +21,9 @@ export async function createControlApiApp(
   if (nativeOwner && (!nativeOwner.usesPool(pool) || !dependencies?.nativeManagerRead))
     throw new Error("NATIVE_BOOTSTRAP_OWNER_COMPOSITION_REQUIRED");
   nativeOwner?.beginApplicationConstruction();
+  let app: NestFastifyApplication | undefined;
   try {
-    const app = await NestFactory.create<NestFastifyApplication>(
+    app = await NestFactory.create<NestFastifyApplication>(
       AppModule.register(config, pool, executionPool, dependencies),
       new FastifyAdapter({ trustProxy: true, routerOptions: { maxParamLength: 256 } }),   // request_key may be 192 chars (BE-P13 lookup)
       // Route-discovery logs drown the actual Vitest result in CI. Legacy
@@ -59,6 +60,10 @@ export async function createControlApiApp(
     return app;
   } catch (error) {
     if (nativeOwner) return nativeOwner.failStartup(error);
+    // A private listener may initialize before a different provider fails.
+    // Dispose through the same lifecycle, never leave a listening orphan or
+    // report pending work as drained. The unconfigured default is unchanged.
+    if (dependencies?.currentViewRuntime && app) await app.close();
     throw error;
   }
 }

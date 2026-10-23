@@ -29,6 +29,12 @@ export function createCurrentViewTransport(authority: Pick<CurrentViewAuthority,
     !bounded(limits.response_bytes, 256, 65536) || !bounded(limits.deadline_ms, 1, 5000))
     throw new Error("CURRENT_VIEW_TRANSPORT_CONFIG_INVALID");
   const state = { in_flight: 0, accepted: 0, denied: 0, timed_out: 0 };
+  const headerDeadlines = new WeakMap<IncomingMessage["socket"], { until: number; timer: ReturnType<typeof setTimeout> }>();
+  const takeHeaderDeadline = (socket: IncomingMessage["socket"]) => {
+    const deadline = headerDeadlines.get(socket);
+    if (deadline) { clearTimeout(deadline.timer); headerDeadlines.delete(socket); }
+    return deadline;
+  };
   const reply = (res: ServerResponse, status: number, json: string) => {
     if (res.destroyed || res.writableEnded) return;
     res.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(json),
@@ -47,6 +53,11 @@ export function createCurrentViewTransport(authority: Pick<CurrentViewAuthority,
   const server = createServer({ ...input.tls, requestCert: true, rejectUnauthorized: true,
     minVersion: "TLSv1.3", maxVersion: "TLSv1.3", ALPNProtocols: ["http/1.1"], handshakeTimeout: limits.deadline_ms,
   }, (req, res) => {
+    const headerDeadline = takeHeaderDeadline(req.socket);
+    // A late event-loop continuation must not beat its absolute socket timer.
+    if (headerDeadline && performance.now() >= headerDeadline.until) {
+      state.timed_out++; req.socket.destroy(); return;
+    }
     if (!permitted(req.socket)) { state.denied++; problem(res, 403, "CURRENT_VIEW_WORKLOAD_NOT_AUTHENTICATED"); return; }
     const kind = req.url === "/internal/elp210/current-view/resolve" ? "RESOLVE"
       : req.url === "/internal/elp210/current-view/recheck" ? "RECHECK" : null;
@@ -114,7 +125,19 @@ export function createCurrentViewTransport(authority: Pick<CurrentViewAuthority,
       } finally { chunks.length = 0; finish(); }
     });
   });
-  server.prependListener("secureConnection", socket => { if (!permitted(socket)) { state.denied++; socket.destroy(); } });
+  server.prependListener("secureConnection", socket => {
+    if (!permitted(socket)) { state.denied++; socket.destroy(); return; }
+    // Node's headersTimeout is checked periodically (30 seconds by default),
+    // not at this protocol's <=5-second bound. Own the absolute pre-header
+    // deadline without touching a request's pending DB/capacity custody.
+    const until = performance.now() + limits.deadline_ms;
+    const timer = setTimeout(() => {
+      headerDeadlines.delete(socket); state.timed_out++; socket.destroy();
+    }, limits.deadline_ms);
+    timer.unref();
+    headerDeadlines.set(socket, { until, timer });
+    socket.once("close", () => { takeHeaderDeadline(socket); });
+  });
   server.requestTimeout = limits.deadline_ms;
   server.headersTimeout = limits.deadline_ms;
   server.keepAliveTimeout = 1;

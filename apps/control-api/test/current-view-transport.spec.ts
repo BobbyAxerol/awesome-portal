@@ -3,6 +3,7 @@
 import { createHash, generateKeyPairSync, X509Certificate } from "node:crypto";
 import { request, type Server } from "node:https";
 import type { Duplex } from "node:stream";
+import { connect as connectTls } from "node:tls";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CurrentViewAuthorityError, type CurrentViewDecision } from "../src/execution-v2/current-view-authority";
 import { createCurrentViewTransport } from "../src/execution-v2/current-view-transport";
@@ -121,6 +122,34 @@ describe("current-view private transport (TEST_ONLY)", () => {
     const t = await start(); t.resolve.mockRejectedValueOnce(new CurrentViewAuthorityError("CURRENT_VIEW_CONTEXT_EXPIRED", 409));
     const response = await post(t.origin); expect(response.status).toBe(409);
     expect(JSON.parse(response.body).code).toBe("CURRENT_VIEW_CONTEXT_EXPIRED");
+  });
+  it.each(["idle", "partial headers"] as const)("closes an authenticated TLS peer with %s at the pre-header deadline", async mode => {
+    const t = await start({ deadline_ms: 100 });
+    const address = new URL(t.origin);
+    let secured = false, securedAt = 0, elapsed = 0;
+    await new Promise<void>((resolve, reject) => {
+      const socket = connectTls({ host: address.hostname, port: Number(address.port),
+        key: edge.key, cert: edge.cert, ca: core.ca, rejectUnauthorized: true,
+        minVersion: "TLSv1.3", maxVersion: "TLSv1.3" }, () => {
+        secured = true; securedAt = performance.now();
+        if (mode === "partial headers") {
+          socket.write("POST /internal/elp210/current-view/resolve HTTP/1.1\r\nHost: localhost\r\nContent-Type: application/json\r\n");
+        }
+      });
+      const guard = setTimeout(() => {
+        socket.destroy(); reject(new Error("TEST_ONLY_PREHEADER_DEADLINE_NOT_ENFORCED"));
+      }, 2000);
+      socket.once("error", reject);
+      socket.once("close", () => {
+        clearTimeout(guard); elapsed = performance.now() - securedAt; resolve();
+      });
+    });
+    expect(secured).toBe(true);
+    expect(elapsed).toBeLessThan(1500);
+    expect(t.resolve).not.toHaveBeenCalled(); expect(t.recheck).not.toHaveBeenCalled();
+    expect(t.snapshot()).toMatchObject({ timed_out: 1, accepted: 0, in_flight: 0 });
+    // Expired pre-header sockets do not consume/release any DB request slot.
+    expect((await post(t.origin)).status).toBe(200);
   });
   it("does not release quota on timeout while underlying operation is running", async () => {
     const t = await start({ deadline_ms: 80, maximum_in_flight: 1 });
