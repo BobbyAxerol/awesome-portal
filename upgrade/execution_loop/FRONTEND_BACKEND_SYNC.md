@@ -1,5 +1,15 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## 24October — outstanding handoffs consolidated before new backend
+
+[Claude integration handoff](evidence/ELP2-10/CLAUDE_SIX_PACKAGES_INTEGRATION_HANDOFF_2026-10-24.md).
+Inspected Claude beed0225e: packages1–4 have implementation progress (especially
+timing reader,83667ac73 digest,7bdbbf07e counts), do not assign them from scratch.
+Packages5/6 require new reader/fixture integration; all browser acceptance must
+be individually evidenced. Diverged lanes require semantic reconciliation, no
+wholesale overwrite. Packet written, no new Claude ACK claimed; no new backend
+package or runtime action in this docs-only round.
+
 ## Codex ownership — six approved backend packages, 23 October
 
 Package6 Names/finance (24October Asia/Saigon) delivered `37bbecf92`. Scoped

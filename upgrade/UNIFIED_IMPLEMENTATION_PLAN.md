@@ -9355,6 +9355,10 @@ No remote push, dev/main merge, signed release or production/source activation.
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
 **Approved 23 October: six backend support packages, sequential acceptance.**
+[24October consolidated Claude handoff](./execution_loop/evidence/ELP2-10/CLAUDE_SIX_PACKAGES_INTEGRATION_HANDOFF_2026-10-24.md):
+integrate packages5/6 first, verify existing1–4 consumer progress without redoing
+it; exact lanes/pins/conflict and acceptance instructions included. No new backend
+package starts before this integration review; Claude ACK/browser still distinct.
 [Live package status and ownership](./execution_loop/evidence/ELP2-10/SIX_BACKEND_SUPPORT_PACKAGES_2026-10-23.md):
 linked fixtures → Fleet timing → user/workspace visit digest → Accounts list →
 Contributors → authorized names/financial fields. Codex implementation in isolated
