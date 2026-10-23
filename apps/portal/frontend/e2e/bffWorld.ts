@@ -21,6 +21,22 @@ export const WORLD_NOW_MS = Date.UTC(2026, 9, 17, 12, 4, 0);
 export const WORLD_NOW_ISO = new Date(WORLD_NOW_MS).toISOString();
 export const DAY_MS = 86_400_000;
 
+/* ── people: ONE roster ─────────────────────────────────────────────────── */
+
+export interface WorldPerson { id: string; username: string; name: string; role: "ADMIN" | "USER" }
+/** The people of the world. The Users roster, the Access grants, approval requesters and deciders, audit actors, incident assignees and the owners of alphas and portfolios are these people. */
+export const PEOPLE: readonly WorldPerson[] = Object.freeze([
+  { id: "usr_0001", username: "bobby", name: "Bobby Vu", role: "ADMIN" },
+  { id: "usr_0002", username: "lan", name: "Lan Tran", role: "ADMIN" },
+  { id: "usr_0003", username: "minh", name: "Minh Pham", role: "ADMIN" },
+  { id: "usr_0004", username: "stan", name: "Stan Le", role: "USER" },
+  { id: "usr_0005", username: "hoa", name: "Hoa Nguyen", role: "USER" },
+  { id: "usr_0006", username: "tuan", name: "Tuan Do", role: "USER" },
+]);
+/** The three people who act in the audit feed, the lifecycle events and the incident timelines. */
+export const WORLD_ACTORS: readonly string[] = ["bobby", "lan", "minh"];
+export const personByUsername = (username: string): WorldPerson | undefined => PEOPLE.find((p) => p.username === username);
+
 /* ── prices: one mark per symbol ────────────────────────────────────────── */
 
 export const MARKS: Readonly<Record<string, string>> = Object.freeze({
@@ -61,22 +77,22 @@ const alpha = (id: string, label: string, version: string, owner: string | null,
 
 /** The native alphas of the e2e suite (the ids the doubles and the audit open), booked into the TEST_ONLY portfolios. */
 export const NATIVE_ALPHAS: AlphaSpec[] = [
-  alpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [deployment("dep_c1", "alpha_c", "CANARY", "live", SAT, "15000", "-125.4", "-18.2", "HALTED")]),
-  alpha("alpha_d", "Grid D", "0.9", "Bobby-001", "READY", [
+  alpha("alpha_c", "Momentum C", "2.0", "Minh Pham", "ATTENTION", [deployment("dep_c1", "alpha_c", "CANARY", "live", SAT, "15000", "-125.4", "-18.2", "HALTED")]),
+  alpha("alpha_d", "Grid D", "0.9", "Bobby Vu", "READY", [
     deployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", CAN, "8000", "61.2", "3"),
     deployment("dep_d2", "alpha_d", "PAPER", "paper", SAT, "10000", "-30.75", "8.4"),
   ]),
-  alpha("alpha_a", "Carry A", "1.0", "Bobby-001", "READY", [
+  alpha("alpha_a", "Carry A", "1.0", "Bobby Vu", "READY", [
     deployment("dep_live_01", "alpha_a", "LIVE", "live", CORE, "40000.00", "980.40", "140.40"),
     deployment("dep_paper_01", "alpha_a", "PAPER", "paper", CORE, "20000.00", "-84.20", "6.40"),
     deployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", CORE, "10000.00", "-41.6", "12.3", "HALTED"),
   ]),
-  alpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan-002", "READY", [
+  alpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan Tran", "READY", [
     deployment("dep_btc_live", "alpha_btc_trend", "LIVE", "live", CORE, "80000", "1120.8", "55.4"),
     deployment("dep_btc_paper", "alpha_btc_trend", "PAPER", "paper", CORE, "50000.5", "-125.25", "40.1"),
     deployment("dep_btc_sandbox", "alpha_btc_trend", "SANDBOX", "sandbox", CAN, "12000", "61.2", "3"),
   ]),
-  alpha("alpha_b", "Basis B", "1.4", "Lan-002", "READY", [
+  alpha("alpha_b", "Basis B", "1.4", "Lan Tran", "READY", [
     deployment("dep_b1", "alpha_b", "LIVE", "live", CORE, "120000", "2150.75", "310.2"),
     deployment("dep_b2", "alpha_b", "LIVE", "live", SAT, "60000", "-98.4", "21.05"),
     deployment("dep_b3", "alpha_b", "CANARY", "live", CORE, "30000", "410.1", "-5.5"),

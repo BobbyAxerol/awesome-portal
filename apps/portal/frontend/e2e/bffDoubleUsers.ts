@@ -33,6 +33,9 @@
  * entry; `usr_NOT_FOUND` is a 404.
  */
 
+import { isPositiveMode } from "./bffPositiveMode";
+import { PEOPLE } from "./bffWorld";
+
 export interface UsersAnswer {
   status: number;
   body: unknown;
@@ -84,7 +87,10 @@ function build(): Wire[] {
   return rows;
 }
 
-const ROWS = build();
+const ROWS_DOUBLES = build();
+const ROWS_WORLD = ROWS_DOUBLES.map((row, i) => (i < PEOPLE.length ? { ...row, username: PEOPLE[i]!.username, display_name: PEOPLE[i]!.name, role: PEOPLE[i]!.role, account_state: "ACTIVE" as State, must_change_password: false, locked: false } : row));
+/** WORLD: in the positive scenarios the first accounts of the roster are the people of the world. */
+const rowsNow = (): Wire[] => (isPositiveMode() ? ROWS_WORLD : ROWS_DOUBLES);
 
 function problem(status: number, code: string, message: string): UsersAnswer {
   return { status, body: { error: { code, message, request_id: "req_double_users" } } };
@@ -149,7 +155,7 @@ function rosterPage(search: URLSearchParams): UsersAnswer {
       return bad("ROSTER_CURSOR_INVALID", "The roster cursor is not valid.");
     }
   }
-  const all = variant === "empty" ? [] : [...ROWS].sort((a, b) => (a.username < b.username ? -1 : a.username > b.username ? 1 : 0));
+  const all = variant === "empty" ? [] : [...rowsNow()].sort((a, b) => (a.username < b.username ? -1 : a.username > b.username ? 1 : 0));
   const matches = (row: Wire) => (q === "" || row.username.toLowerCase().includes(q.toLowerCase()) || row.display_name.toLowerCase().includes(q.toLowerCase()))
     && (role === null || row.role === role) && (state === null || row.account_state === state);
   const matching = all.filter(matches);
@@ -251,12 +257,12 @@ function answerUsersBase(method: string, pathname: string, search: URLSearchPara
 
   if (seg.length === 3) {
     if ([...search.keys()].length > 0) return rosterPage(search);
-    return { status: 200, body: { accounts: variant === "empty" ? [] : ROWS } };
+    return { status: 200, body: { accounts: variant === "empty" ? [] : rowsNow() } };
   }
 
   const id = decodeURIComponent(seg[3]!);
   if (seg.length !== 4) return null;
-  const row = variant === "empty" ? undefined : ROWS.find((r) => r.user_id === id);
+  const row = variant === "empty" ? undefined : rowsNow().find((r) => r.user_id === id);
   if (!row) return problem(404, "ACCOUNT_NOT_FOUND", "The account was not found.");
   return { status: 200, body: { account: row, history: history(id) } };
 }

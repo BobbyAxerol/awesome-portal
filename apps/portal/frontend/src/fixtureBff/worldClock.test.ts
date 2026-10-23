@@ -40,7 +40,7 @@ describe("the preview clock moves by whole days only", () => {
     const next = rebaseBody(body, "2026-08-22T13:00:00Z", Date.parse("2026-10-24T08:00:00Z")) as typeof body;
     const prev = JSON.parse(a) as typeof body;
     expect(Date.parse(next.read_at) - Date.parse(prev.read_at)).toBe(86_400_000);
-    expect(Date.parse(next.items[0]!.at) - Date.parse(prev.items[0]!.at)).toBe(86_400_000);
+    expect(Date.parse(String(next.items[0]!.at)) - Date.parse(String(prev.items[0]!.at))).toBe(86_400_000);
   });
   it("never states a now later than the real clock", () => {
     for (const real of ["2026-10-17T12:04:00Z", "2026-10-18T03:00:00Z", "2026-12-31T23:59:00Z"]) {

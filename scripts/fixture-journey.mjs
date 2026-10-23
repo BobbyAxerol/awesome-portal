@@ -110,6 +110,8 @@ function inPage() {
     screen: screenRoot?.getAttribute?.("data-screen") ?? screenRoot?.className?.toString().split(" ")[0] ?? null,
     heading: (document.querySelector("h1,h2")?.textContent ?? "").trim().slice(0, 80),
     notFound: /not found|FIXTURE_ROUTE_NOT_SERVED|could not be loaded/i.test(root.innerText.slice(0, 4000)) && !root.querySelector("table tbody tr"),
+    // text that says a link target does not exist, a scoped list is empty by construction, or a value was never filled in
+    badText: [...new Set((root.innerText.match(/ACCOUNT_NOT_FOUND|not in the projected population|No loaded order matches|\bundefined\b|\bNaN\b|\[object Object\]|PORTFOLIO_NOT_FOUND|ALPHA_NOT_FOUND|DEPLOYMENT_NOT_FOUND|EXECUTION_READ_NOT_AVAILABLE/g)) ?? [])],
     textLength: root.innerText.length,
   };
 }
@@ -276,7 +278,7 @@ async function walk(browser, scenario) {
     // a denied scenario answers 403 on purpose for administration / blotter / users reads
     const unexpected = bad.filter((r) => !(scenario === "denied" && r.status === 403));
     const rec = { id, url: stripOrigin(page.url()), ...extra, screen: m.screen, heading: m.heading, absences: m.absences, absenceTexts: m.absenceTexts,
-      overflow1280: m.overflow1280, overflow660: m.overflow660, notFound: m.notFound,
+      overflow1280: m.overflow1280, overflow660: m.overflow660, notFound: m.notFound, badText: m.badText,
       apiBad: unexpected.map((r) => `${r.status} ${r.method} ${r.path}`), apiDenied: bad.length - unexpected.length,
       consoleErrors: d.consoleErrors, pageErrors: d.pageErrors,
       future: d.future.slice(0, 6),
@@ -295,6 +297,7 @@ async function walk(browser, scenario) {
     const res = await findAndFollow(page, step);
     if (!res.found) { problems.push(`${step.id}: NO_LINK_FOUND (after ${previous})`); screens.push({ id: step.id, missing: true }); continue; }
     const rec = await record(step.id, res.href, { via: res.via, from: previous });
+    if (rec.badText?.length) problems.push(`${step.id}: page text says ${rec.badText.join(", ")}`);
     // the back-link: history back must land on a rendering screen (the page we came from when we clicked on it)
     if (res.via === "page" && !res.href.startsWith("(tab")) {
       await page.goBack({ waitUntil: "domcontentloaded" }).catch(() => {});
@@ -328,7 +331,7 @@ async function walk(browser, scenario) {
     let r = await visit(href);
     // a lazy chunk aborted by the previous navigation is a harness race, not a broken link: look again once
     if (!r.ok && r.bad.length === 0 && /dynamically imported|preload CSS/.test(r.firstError ?? "")) r = await visit(href);
-    sweep.push({ href, from: seenHrefs.get(href), ok: r.ok, bad: r.bad.map((x) => `${x.status} ${x.path}`).slice(0, 3), notFound: r.m.notFound, errors: r.d.consoleErrors.length + r.d.pageErrors.length, firstError: r.firstError });
+    sweep.push({ href, from: seenHrefs.get(href), ok: r.ok && r.m.badText.length === 0, badText: r.m.badText, bad: r.bad.map((x) => `${x.status} ${x.path}`).slice(0, 3), notFound: r.m.notFound, errors: r.d.consoleErrors.length + r.d.pageErrors.length, firstError: r.firstError });
   }
   await ctx.close();
   return { scenario, screens, problems, sweep, sweepTotal: detail.length };
@@ -370,7 +373,7 @@ for (const r of results) {
   }
   console.log(`total absences: ${r.screens.reduce((n, s) => n + (s.absences ?? 0), 0)}; problems: ${r.problems.length ? r.problems.join("; ") : "none"}`);
   const failed = r.sweep.filter((x) => !x.ok);
-  console.log(`link sweep: ${r.sweep.length}/${r.sweepTotal} detail links followed, ${failed.length} failed${failed.length ? ": " + failed.slice(0, 12).map((x) => `${x.href} [${x.bad.join(",") || (x.notFound ? "not-found text" : "no render")}${x.firstError ? " err: " + x.firstError.slice(0, 100) : ""}] from ${x.from}`).join("; ") : ""}`);
+  console.log(`link sweep: ${r.sweep.length}/${r.sweepTotal} detail links followed, ${failed.length} failed${failed.length ? ": " + failed.slice(0, 12).map((x) => `${x.href} [${x.bad.join(",") || (x.badText?.length ? "text: " + x.badText.join("|") : x.notFound ? "not-found text" : "no render")}${x.firstError ? " err: " + x.firstError.slice(0, 100) : ""}] from ${x.from}`).join("; ") : ""}`);
 }
 if (ties) {
   console.log(`\n## ties (positive): ${ties.checked} checked, ${ties.mismatches.length} mismatches, ${ties.skipped.length} skipped`);
