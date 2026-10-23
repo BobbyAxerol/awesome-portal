@@ -153,6 +153,8 @@ cd apps/control-api && npx tsc --noEmit -p .
 cd apps/portal/frontend && npx tsc --noEmit -p .
 ```
 
+Typecheck result (NOT clean, and not claimed clean): `apps/control-api` `tsc --noEmit -p .` exit 2 with 375 errors and `apps/portal/frontend` exit 2 with 96 errors, in a worktree whose `node_modules` are symlinks to another checkout (Planning sources cannot resolve `react` types; many unrelated control-api test files). In the files this slice adds or changes the only diagnostic is `test/paper-history-http.fixture.ts(26,14) TS2739` (the `PortalUser` literal lacks fields), the same error the existing `paper-history-depth.spec.ts(46,7)` and `paper-history-population.spec.ts(74,9)` already carry; vitest does not typecheck and passes. No diagnostic in `paper-read.controller.ts`, the FE test, harness, vite or playwright config.
+
 `<dir>`/`<file>` were under the session scratchpad. The default (non-opt-in) run of `paper-history-http.spec.ts` is the
 regression that pins the bound; the FE jsdom test and the browser spec skip themselves without `PAPER_HISTORY_BODY_DIR`.
 
