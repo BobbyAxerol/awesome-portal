@@ -49,6 +49,8 @@ services:
       FIXTURE_WRITES: ${FIXTURE_WRITES:-refuse}
       FIXTURE_USER_ID: ${FIXTURE_USER_ID:-}
       FIXTURE_NOW_ISO: ${FIXTURE_NOW_ISO:-}
+      # Preview clock anchor: 1 shifts the time-valued fields of every served body to the real clock (fixture-bff/time-rebase.ts).
+      FIXTURE_REBASE_TIME: ${FIXTURE_REBASE_TIME:-0}
       FIXTURE_VARIANTS: ${FIXTURE_VARIANTS:-}
     networks:
       - portal
