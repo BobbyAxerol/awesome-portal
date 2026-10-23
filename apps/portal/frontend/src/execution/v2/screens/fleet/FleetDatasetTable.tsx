@@ -79,7 +79,7 @@ function PortfolioCell({ row }: { row: ManagerRow }) {
 }
 
 /** QBTS exactly as published (spec 5.8): the value, the band the dataset names, an evidence/provisional flag; the components and policy behind a disclosure. */
-function QbtsCell({ row, carried }: { row: ManagerRow; carried: boolean }) {
+export function QbtsCell({ row, carried }: { row: ManagerRow; carried: boolean }) {
   if (!carried) return <NaWhy className="exec-fleet-np" reason="The Manager dataset does not carry score in its published metric set." />;
   const view = qbtsOf(row);
   if (view === null) return <NaWhy className="exec-fleet-np" reason="This row publishes no score." />;

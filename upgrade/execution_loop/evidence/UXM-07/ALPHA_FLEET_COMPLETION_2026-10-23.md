@@ -65,10 +65,26 @@ Alpha Fleet reads the Manager dataset (one environment, or `ALL`, FE-CAT-3). Whe
 `apps/portal/fixture-bff/review-manager.ts`, additive: `NEW_ROW_KEYS` gains `score`; new `qbtsMetric`, `addQbts` (called at the end of the per-partition loop of `enrichRow`); `nulled`, `aggregate` (a score is never summed and a group deletes it), `rowsFor` / `enrichRow` (a `components` parameter, populated only) and the options push in `datasetAnswer` were touched; `balance_total` basis is now `FIXTURE_LAB:INTERNAL_ACCOUNT_BALANCE`. The layout-stress profile serves no score (its responses sit at the size bound).
 
 ## 7. Layout and typography
-LAYOUT_PLACEHOLDER
+Measured with `scripts/layout-audit.mjs` (local vite build + fixture BFF, populated profile, `--only` the three Fleet routes, widths 1440/1280/1024/660/390; metrics are overflowPx / clipped / wrapped figures / font outliers).
+
+| Route | Before (audit 2026-10-23) | After |
+|---|---|---|
+| fleet-table | 1440: 0/0/0/20, 1280: 0/0/0/20, 1024: 0/0/13/20, 660: 0/0/0/20, 390: 0/0/0/20 | 0/23/0/0 at every width |
+| fleet-board | 1024: page overflow 86 px (others 0/0/0/0) | 0/0/0/0 at every width |
+| fleet-map | 0/0/0/0 | 0/0/0/0 |
+
+- The 23 "clipped" are all `ellipsis-with-title` (a long alpha name truncates with its full text on the title; intended); none spills without a title.
+- Font outliers 20 -> 0 on the table (the cards.css 13px table-body rule now covers every role; no size is named in the Fleet CSS).
+- Wrapped figures at 1024 (13, "Gamma Book 03") -> 0: the All lens is now the dataset table, whose portfolio cell is one truncating line. The legacy table keeps its rule.
+- Board 1024 overflow: the lane's absolutely positioned screen-reader text escaped the board's own scroller (same cause as the cards wrap, UXM-10 F-3); `.exec-fleet-board { position: relative }` fixes it (86 -> 0).
+- KPI notes wrapped at 1280 with seven tiles in a row; the strip is four across (`columns={4}`), 0 wrapped.
+- Not measured: the dataset table under real data volume beyond the 50-row page (ROW_CAP 200 unchanged).
 
 ## 8. Baselines that will differ (not recorded)
 Fleet table, board and map at every width (new columns, toolbar rows, sort line, KPI tiles, lane tags, disabled Map toggle), the Fleet drawer is unchanged. No baseline was recorded and no visual suite was run.
 
 ## 9. Tests (focused, `--maxWorkers=2`)
-TESTS_PLACEHOLDER
+- frontend `npx vitest run src/execution/v2/screens/fleet src/execution/v2/v2Hygiene.test.ts src/execution/v2/uxm10Css.test.ts src/execution/v2/cardsTable.test.tsx src/fixtureBff src/execution/api src/execution/v2/readers --maxWorkers=2`: 83 files passed, 68738 tests passed, 5 expected fail, 1 skipped (before the two last edits: Export button and the drawer figures); `.../screens/fleet` alone after them: 12 files, 1403 passed.
+- New: `fleetMetrics.test.tsx` (22: columns, QBTS states, disclosure, optional columns, header sort wire, multi-sort priority, Sort select, money sort needs a Basis, equity scalar, ranges, filters, groups, density, selection reason, KPI tiles, sparkline from the series port), `fleetMetricsModel.test.ts` (pure rules), `fixtureBff/reviewManagerQbts.test.ts` (5: exact q, bands, variety, no score in groups, layout-stress has none). Updated: the fleet tests for column labels, group lists, the Map toggle, KPI count.
+- `npx tsc --noEmit -p .` (frontend): no errors in `src/` or `e2e/`.
+- Not run: Playwright, visual recording, docker, full suite, the hook.

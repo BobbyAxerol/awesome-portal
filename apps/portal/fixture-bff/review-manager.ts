@@ -176,6 +176,7 @@ const nulled = (key: string, template: Draft, currency: string): Draft =>
 
 const NEW_ROW_KEYS = ["balance_total", "equity_30d_end_value", "return_30d_pct", "score"] as const;
 
+// ===== WP-A begin (Alpha Fleet QBTS: qbtsMetric, addQbts; also touched: nulled, aggregate, enrichRow, rowsFor, datasetAnswer options push, balance_total basis)
 /**
  * SIMULATED QBTS (FIXTURE_LAB, quality_bands_v1_1 shape). Per row, from a deterministic seed: raw q = 0.45 P + 0.30 R + 0.25 B with P, R, B in tenths
  * (integer arithmetic, exact to 3 places), the band looked up on the unrounded value, an evidence state (eligible / provisional / insufficient),
@@ -240,6 +241,7 @@ function addQbts(m: Draft, template: Draft, rowKey: string, components: boolean)
   m.qbts_evidence = qbtsMetric(template, evidence === "eligible" ? "2" : "1", "EVIDENCE_STATE", null, { evidence, reasonCode: evidence });
   m.qbts_provisional = qbtsMetric(template, evidence === "provisional" ? "1" : "0", "FLAG", null, { evidence });
 }
+// ===== WP-A end
 /**
  * SIMULATED row keys, per economic partition, from that partition's own allocation (A), net PnL (N) and unrealized PnL (U):
  * balance_total = A + N, equity_30d_end_value = A + N + U, return_30d_pct = N * 100 / A. A missing input is a typed absence.

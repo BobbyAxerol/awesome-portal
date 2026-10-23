@@ -279,6 +279,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const sparks = useFleetSparks(api, datasetMode && tableView, datasetRows, scope === null ? "ALL" : scope.environment, workspaceId);
   const selectionReasonId = useId();
   const mapReasonId = useId();
+  const exportReasonId = useId();
   // RV-09: the whole authorized population when the dataset published it (a group list over the whole filtered query); otherwise only
   // the rows loaded so far, which is worded as such and never offered as complete.
   const published_ = useDatasetOptions(api, datasetMode, scope, workspaceId, offered === null ? null : offered.groupFields);
@@ -588,7 +589,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
       ) : null}
 
       {!archived ? (
-        <KpiStrip label="Fleet counts">
+        <KpiStrip label="Fleet counts" columns={4}>
           {kpis.map((kpi) => (
             <Kpi
               key={kpi.id}
@@ -791,6 +792,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 )}
               {askable.unaskable.map(({ key, why }) => <span key={key.field} className="exec-fleet-np">{sortLabel(key.field)} is not applied: {why}</span>)}
               <button type="button" className="exec-fleet-btn" disabled aria-describedby={selectionReasonId}>Compare selected</button>
+              <button type="button" className="exec-fleet-btn" disabled aria-describedby={exportReasonId}>Export</button>
+              <span id={exportReasonId} className="exec-fleet-note">Export reflects the filter, snapshot, fields, basis and as-of, and is reauthorized when made: Not published (export action).</span>
               <span id={selectionReasonId} className="exec-fleet-note">Select 2 to 4 alphas to compare: {notPublished(FE.compare)}.</span>
             </div>
           )}

@@ -200,7 +200,7 @@ describe("guide 8.2 · sorting is the server's", () => {
     expect(screen.getByTestId("sortbar").textContent).toContain("Sorted by Alpha ascending (1), then QBTS descending (2). Empty values go last in both directions.");
     await click("Owner");
     await click("Health");
-    await waitFor(() => expect(last(state).sort!.map((key: { field: string }) => key.field)).toEqual(["score", "owner_user_id", "health"]));
+    await waitFor(() => expect((last(state).sort as { field: string }[]).map((key) => key.field)).toEqual(["score", "owner_user_id", "health"]));
     fireEvent.click(screen.getByRole("button", { name: "Clear sort" }));
     await waitFor(() => expect(last(state).sort).toBeNull());
   });
@@ -320,7 +320,7 @@ describe("guide 8.2 · filters are the server's", () => {
     const chips = screen.getByRole("list", { name: "Active filters" }).textContent ?? "";
     for (const part of ["portfolio: pf-1", "venue: BINANCE, KRAKEN", "version: av-1", "lifecycle: Active", "evidence: Missing score (no QBTS published)"]) expect(chips).toContain(part);
     fireEvent.change(within(metrics()).getByRole("combobox", { name: "Evidence" }), { target: { value: "stale" } });
-    await waitFor(() => expect(last(state).filters!.at(-1)).toEqual({ field: "source_state", op: "EQ", value: "STALE" }));
+    await waitFor(() => expect((last(state).filters as unknown[]).at(-1)).toEqual({ field: "source_state", op: "EQ", value: "STALE" }));
     fireEvent.click(screen.getByRole("button", { name: "Clear all" }));
     // Clear all also clears the lens (here: Paper), so the All lens asks ALL, which this double does not offer: the fleet read, no filter left.
     await waitFor(() => expect(search().get("portfolio")).toBeNull());
