@@ -24,6 +24,7 @@ import { authorizeRetainedRelation, scopedRetainedRows, retainedFieldAllowed, re
 import { epochMsFrom, recordDetailValue } from "../execution-v2/record-detail";
 import { deploymentFinancials, identityAbsences } from "./scoped-summary-facts";
 import { scopedResourceResponseSchemas } from "./scoped-resource.contract";
+import { scopedPortfolioNames } from "./scoped-portfolio-names";
 
 export const RESOURCE_KINDS = ["ALPHA", "PORTFOLIO", "ACCOUNT", "BINDING"] as const;
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
@@ -908,12 +909,17 @@ function scopedRelation(
   const scoped = rowsForScope(alias, rows, scope, environment);
   const relationPartial = source.completeness !== "COMPLETE";
   const truncated = scoped.rows.length > RESOURCE_RELATION_ROW_LIMIT;
+  // This snapshot is already detached and authorized by scopedResourceProfile;
+  // use its entire visible identity relation, never a page/global name lookup.
+  const portfolioName = readScope?.mode === "SCOPED_V2" &&
+    (alias === "deployments" || alias === "portfolio_allocations")
+    ? scopedPortfolioNames(relation(snapshot, "portfolios"), retainedFieldAllowed(readScope, "name")) : null;
   // Scope ALL rows first so identity/ambiguity/counts stay exact. Only copy
   // the bounded public prefix: previously thousands of discarded rows were
   // allowlisted/cloned per viewer before slicing them down to200.
   const items = scoped.rows.slice(0, RESOURCE_RELATION_ROW_LIMIT).map((row) => {
     const fact = copyFact(alias, row, environment);
-    return readScope?.mode === "SCOPED_V2" ? withClockMs(fact) : fact;
+    return readScope?.mode === "SCOPED_V2" ? withClockMs({ ...fact, ...(portfolioName ? portfolioName(row) : {}) }) : fact;
   });
   const boundReason = truncated ? "EDS04_RESOURCE_RELATION_ROW_BOUND" : null;
   const state: CapabilityState = scoped.reasonCode || relationPartial || truncated

@@ -12,6 +12,7 @@
 export type ReviewProfile = "populated" | "layout-stress";
 import { scaled, addDecimal } from "../frontend/e2e/bffScale";
 import { linkedAccountFigures } from "./review-accounts";
+import { linkedReviewFinance } from "./review-finance";
 
 /** Review-only internal balance projection from the same deployment graph as
  * Manager. Physical broker equity/wallet and native sparse fixtures are untouched. */
@@ -89,5 +90,5 @@ export function transformReviewBody(path: string, body: unknown, profile: Review
   const pathname = path.split("?", 1)[0]!;
   if (!pathname.startsWith("/api/v1/execution/") && pathname !== "/api/admin/accounts") return body;
   if (!record(body) || Object.prototype.hasOwnProperty.call(body, "error")) return body;
-  return walk(linkedAccountFigures(pathname, body), profile === "layout-stress");
+  return walk(linkedReviewFinance(pathname, linkedAccountFigures(pathname, body)), profile === "layout-stress");
 }

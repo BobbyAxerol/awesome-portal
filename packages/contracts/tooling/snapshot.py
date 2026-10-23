@@ -108,6 +108,7 @@ TRACKED = (
     "fixtures/execution-manager-scoped.bounded.synthetic.valid.json",
     "fixtures/execution-manager-scoped.refusals.synthetic.negative.json",
     "fixtures/execution-resource-scoped.synthetic.valid.json",
+    "fixtures/execution-resource-portfolio-names.synthetic.valid.json",
     "fixtures/execution-retained-scoped.synthetic.valid.json",
     "fixtures/execution-scoped-records.synthetic.valid.json",
     "fixtures/execution-query-analytics.scoped.v2.json",

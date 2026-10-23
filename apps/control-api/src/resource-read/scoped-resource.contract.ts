@@ -26,7 +26,9 @@ definitions["DeploymentsScopedRow"] = z.object({"profile_environment": z.enum(["
 "created_at": z.union([z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.number().int().min(0).max(9007199254740991)]), z.null()]).optional(),
 "created_at_ms": z.number().int().min(0).max(9007199254740991).optional(),
 "updated_at": z.union([z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.number().int().min(0).max(9007199254740991)]), z.null()]).optional(),
-"updated_at_ms": z.number().int().min(0).max(9007199254740991).optional()}).strict();
+"updated_at_ms": z.number().int().min(0).max(9007199254740991).optional(),
+"portfolio_name": z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.null()]).optional(),
+"portfolio_name_reason_code": z.union([z.enum(["PORTFOLIO_NAME_NOT_READ","PORTFOLIO_NAME_NOT_PUBLISHED","PORTFOLIO_NAME_NOT_AUTHORIZED","PORTFOLIO_NAME_AMBIGUOUS"] as [string, ...string[]]), z.null()]).optional()}).strict();
 definitions["AccountsScopedRow"] = z.object({"profile_environment": z.enum(["paper","sandbox","live"] as [string, ...string[]]),
 "account_id": z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.null()]).optional(),
 "strategy_id": z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.null()]).optional(),
@@ -101,7 +103,9 @@ definitions["PortfolioAllocationsScopedRow"] = z.object({"profile_environment": 
 "created_at": z.union([z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.number().int().min(0).max(9007199254740991)]), z.null()]).optional(),
 "created_at_ms": z.number().int().min(0).max(9007199254740991).optional(),
 "updated_at": z.union([z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.number().int().min(0).max(9007199254740991)]), z.null()]).optional(),
-"updated_at_ms": z.number().int().min(0).max(9007199254740991).optional()}).strict();
+"updated_at_ms": z.number().int().min(0).max(9007199254740991).optional(),
+"portfolio_name": z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.null()]).optional(),
+"portfolio_name_reason_code": z.union([z.enum(["PORTFOLIO_NAME_NOT_READ","PORTFOLIO_NAME_NOT_PUBLISHED","PORTFOLIO_NAME_NOT_AUTHORIZED","PORTFOLIO_NAME_AMBIGUOUS"] as [string, ...string[]]), z.null()]).optional()}).strict();
 definitions["PositionsScopedRow"] = z.object({"profile_environment": z.enum(["paper","sandbox","live"] as [string, ...string[]]),
 "position_id": z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.null()]).optional(),
 "strategy_id": z.union([z.string().refine(v => [...v].length >= 1 && [...v].length <= 512).refine(v => new RegExp("^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])", "u").test(v)), z.null()]).optional(),
