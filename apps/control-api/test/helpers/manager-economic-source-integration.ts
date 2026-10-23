@@ -105,8 +105,9 @@ export async function financialIntegrationFixture(options: { full?: boolean; fie
   const codec = new KeysetCursorCodec({ activeKeyId: "TEST_ONLY", keys: { TEST_ONLY: "TEST_ONLY-32-byte-financial-cursor-key" }, now: () => T / 1_000 });
   const dataset = (input: ManagerModelDocument = doc) => queryManagerModel(scope, input,
     { environment: "paper", group_by: ["venue"] }, codec, "FLEET");
-  const publication = JSON.parse(readFileSync(resolve(__dirname,
-    "../../../../packages/contracts/fixtures/execution-dataset-publication.synthetic.valid.json"), "utf8")).value as DatasetPublication;
+  const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../../packages/contracts");
+  const publication = JSON.parse(readFileSync(resolve(contractsRoot,
+    "fixtures/execution-dataset-publication.synthetic.valid.json"), "utf8")).value as DatasetPublication;
   const publicationShape = await authority.access.readPublication({ workspace_id: doc.workspace_id, environment: doc.environment, profile_id: doc.profile_id, binding });
   const prepare = (input: ManagerModelDocument = doc) => prepareManagerProjection(input, { ...publication,
     family_id: doc.family_id, catalogue_digest: doc.catalogue_digest, environment: doc.environment, profile_id: doc.profile_id,

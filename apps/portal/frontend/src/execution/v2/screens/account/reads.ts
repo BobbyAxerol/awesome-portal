@@ -8,15 +8,15 @@
  * different account never inherits the previous account's body; a refresh
  * keeps the last good value and reports why it could not renew.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { BindingExposure } from "../../../analytics";
 import type { ExecutionApi, Result } from "../../../api/ports";
 import type { BindingDetailRead, BindingItem, ManagerListEnvelope, ProfileEnvelope } from "../../../api/profileRead";
-import type { FinancialChartPayload } from "../../../api/financialChart";
+import type { FinancialChartPayload, FinancialMetric } from "../../../api/financialChart";
 import type { SubjectActivityPage } from "../../../api/subjectActivity";
 import type { PanelStatus } from "../../../contracts";
-import { bindingQuery, mergeBindings, type BindingEnv } from "./model";
+import { ROW_FACTS_CAP, bindingQuery, listRowFacts, mergeBindings, type BindingEnv, type ListRowFacts } from "./model";
 
 export type ReadState<T> =
   | { phase: "idle" }
@@ -111,9 +111,16 @@ export const useBindingDetail = (api: ExecutionApi, bindingId: string | null, en
     return first ?? { ok: false as const, status: "unavailable" as const, reason: "NO_ENVIRONMENT_TO_ASK" };
   });
 
-export const useAccountEquity = (api: ExecutionApi, accountId: string, environment: "paper" | "sandbox" | "live" | null, workspaceId: string | null, enabled: boolean) =>
-  useRead<FinancialChartPayload>(api, `equity:${accountId}:${environment ?? ""}:${workspaceId ?? ""}`, enabled && environment !== null, (scopedApi) =>
-    scopedApi.getFinancialChart({ environment: environment ?? "live", subjectKind: "account", subjectId: accountId, metric: "equity", workspaceId }));
+export const useAccountEquity = (
+  api: ExecutionApi,
+  accountId: string,
+  environment: "paper" | "sandbox" | "live" | null,
+  workspaceId: string | null,
+  enabled: boolean,
+  metric: FinancialMetric = "equity",
+) =>
+  useRead<FinancialChartPayload>(api, `${metric}:${accountId}:${environment ?? ""}:${workspaceId ?? ""}`, enabled && environment !== null, (scopedApi) =>
+    scopedApi.getFinancialChart({ environment: environment ?? "live", subjectKind: "account", subjectId: accountId, metric, workspaceId }));
 
 /* ── keyset-paged subject activity (one relation at a time) ──────────────── */
 
@@ -261,3 +268,72 @@ export function useBindingPages(
 
   return { state, items, envelope, nextCursor, loadingMore, moreError, loadMore };
 }
+
+/* ── the Accounts list: physical and virtual figures, per row ────────────── */
+
+export type RowFactsState = { phase: "loading" } | { phase: "ready"; facts: ListRowFacts; exposureFailed: boolean; accountFailed: boolean };
+
+const ROW_FACT_CONCURRENCY = 4;
+
+/**
+ * Physical equity (the account's native custody) and the binding's virtual figures are not on every bindings projection: a row the
+ * list publishes `figures` for (FE-CAT-4) never comes here, the caller passes only the rows without them. Those are
+ * read per row through the same port, for the first `ROW_FACTS_CAP` rows only, four at a time. A row beyond the cap is never
+ * read and the list says so; a failed read leaves that figure absent, never zero.
+ */
+export function useRowFacts(
+  api: ExecutionApi,
+  rows: readonly { bindingId: string; accountId: string }[],
+  /** The caller's identity context beyond `api`: workspace, environment, authority. A change drops every cached row. */
+  scope = "",
+): ReadonlyMap<string, RowFactsState> {
+  // One context object per (api, scope): entries belong to it and are never read under another one.
+  const context = useMemo(() => ({}), [api, scope]); // eslint-disable-line react-hooks/exhaustive-deps
+  const [held, setHeld] = useState<{ context: object; facts: ReadonlyMap<string, RowFactsState> }>({ context, facts: new Map() });
+  const facts = held.context === context ? held.facts : EMPTY_FACTS;
+  const wanted = rows.slice(0, ROW_FACTS_CAP);
+  const key = wanted.map((row) => `${row.bindingId}|${row.accountId}`).join(",");
+  const factsRef = useRef(facts);
+  factsRef.current = facts;
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+    const scopedApi = scoped(api, controller.signal);
+    // An entry is keyed by binding AND account: the same binding id backing another account is a new read.
+    const queue = wanted.filter((row) => factsRef.current.get(factKey(row))?.phase !== "ready");
+    let next = 0;
+    const worker = async () => {
+      while (!cancelled && next < queue.length) {
+        const row = queue[next++]!;
+        const [exposure, account] = await Promise.all([
+          scopedApi.getBindingExposure(row.bindingId).catch(() => null),
+          scopedApi.getAccount360Resource(row.accountId).catch(() => null),
+        ]);
+        // A late answer for a scope that has since changed (or an unmounted list) is dropped here, not cached.
+        if (cancelled) return;
+        const state: RowFactsState = {
+          phase: "ready",
+          facts: listRowFacts(account !== null && account.ok ? account.value : null, exposure !== null && exposure.ok ? exposure.value.exposure : null),
+          exposureFailed: exposure === null || !exposure.ok,
+          accountFailed: account === null || !account.ok,
+        };
+        setHeld((prev) => ({ context, facts: new Map(prev.context === context ? prev.facts : EMPTY_FACTS).set(factKey(row), state) }));
+      }
+    };
+    void Promise.all(Array.from({ length: Math.min(ROW_FACT_CONCURRENCY, queue.length) }, worker));
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+    // `key` stands for `wanted`; the cache is read through a ref so a finished row does not restart the run.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [context, key]);
+
+  return facts;
+}
+
+const EMPTY_FACTS: ReadonlyMap<string, RowFactsState> = new Map();
+
+/** The key of a row's facts in the map `useRowFacts` returns. */
+export const factKey = (row: { bindingId: string; accountId: string }): string => `${row.bindingId}|${row.accountId}`;

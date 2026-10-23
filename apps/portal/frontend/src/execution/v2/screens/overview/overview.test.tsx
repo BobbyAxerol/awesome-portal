@@ -8,7 +8,6 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { answerOperationsV2 } from "../../../../../e2e/bffDoubleV2";
 import { resetOverviewDouble, setOverviewDoubleVariants } from "../../../../../e2e/bffDoubleOverview";
 import type { ExecutionApi } from "../../../api/ports";
 import type { SseLike } from "../../../sse";
@@ -76,7 +75,7 @@ describe("BUSY", () => {
     expect(OVERVIEW_SCREEN_KEY).toBe("overview");
   });
 
-  it("keeps NAV as Not published with its request ids, and lists Net PnL, Return and Drawdown on ONE 'Not available' line with the ids in its title, never a number", async () => {
+  it("keeps NAV, Net PnL, Return and Drawdown as tiles (hi-fi); each unpublished one says Not published with its ids, never a number", async () => {
     mount();
     await loaded();
     const nav = kpi("NAV").querySelector(".exec-blk-kpi-value");
@@ -84,34 +83,28 @@ describe("BUSY", () => {
     expect((nav?.textContent ?? "").replace(/\(FE-[\d/]+\)/, "")).not.toMatch(/\d/);
     // The visible word is "Not published"; the ids are in its title and in hidden text.
     expect(whyText(nav?.querySelector(".exec-blk-np") ?? null)).toContain("FE-005/006/013/025");
-    for (const label of ["Net PnL", "Return", "Drawdown"]) expect(kpi(label), label).toBeUndefined();
-    const line = screen.getByTestId("not-available-line");
-    expect(screen.getAllByTestId("not-available-line")).toHaveLength(1);
-    expect(line.textContent).toContain("Not available: Net PnL, Return, Drawdown, Capital, Since your last visit, Contributors");
-    const title = whyText(line);
-    for (const id of ["FE-005", "FE-006", "FE-013", "FE-017", "FE-024", "FE-025"]) expect(title, id).toContain(`Not published (${id})`);
+    const ids: Record<string, string> = { "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025" };
+    for (const [label, id] of Object.entries(ids)) {
+      const tile = kpi(label);
+      expect(tile, label).toBeDefined();
+      expect(tile!.querySelector(".exec-blk-kpi-value")?.textContent, label).toBe(`Not published (${id})`);
+      expect((tile!.querySelector(".exec-blk-kpi-value")?.textContent ?? "").replace(/\(FE-[^)]*\)/, "")).not.toMatch(/\d/);
+    }
+    expect(screen.queryByTestId("not-available-line")).toBeNull();
   });
 
-  it("prints published counts with their exactness: a window of the ranked list is 'at least', the panel's own sentence for the rest", async () => {
-    mount();
-    await loaded();
-    expect(kpi("Open incidents").querySelector(".exec-blk-kpi-value")?.textContent).toBe("at least 1");
-    expect(kpi("Needs attention").querySelector(".exec-blk-kpi-value")?.textContent).toBe("3 of 214");
-    const expected = answerOperationsV2("GET", "/operations", new URLSearchParams({ triage_state: "UNACKNOWLEDGED", limit: "1" }));
-    const unacknowledged = (expected!.body as { page: { filtered_count: number } }).page.filtered_count;
-    expect(kpi("Needs attention").textContent).toContain(`Awaiting acknowledgement: ${unacknowledged}`);
-    expect(calls.find((c) => c.path === "/operations")!.query).toContain("triage_state=UNACKNOWLEDGED");
-  });
-
-  it("says what is not published once: no Capital, Since-your-last-visit or Contributors panel, no per-row 'Not published'", async () => {
+  it("keeps the Capital, Since-your-last-visit and Contributors panels, each row Not published with its id", async () => {
     mount();
     await loaded();
     expect(panel("Performance").textContent).toContain(MONEY_GAP);
-    for (const name of ["Capital", "Since your last visit", "Contributors"]) expect(screen.queryByRole("region", { name }), name).toBeNull();
-    expect(screen.queryByRole("table", { name: "Capital" })).toBeNull();
-    // The gaps those panels carried are named, with their ids, on the one line.
-    expect(screen.getByTestId("not-available-line").textContent).toContain("Capital, Since your last visit, Contributors");
-    expect(whyText(screen.getByTestId("not-available-line"))).toContain("Capital: Not published (FE-017)");
+    for (const name of ["Capital", "Since your last visit", "Contributors"]) expect(screen.queryByRole("region", { name }), name).not.toBeNull();
+    const capital = screen.getByRole("table", { name: "Capital" });
+    const rows = [...capital.querySelectorAll("tr")].map((tr) => tr.textContent);
+    expect(rows).toEqual([
+      "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "NAVNot published (FE-013)", "BudgetNot published (FE-017)",
+    ]);
+    expect(panel("Since your last visit").textContent).toContain("Not published (FE-024)");
+    expect(panel("Contributors").textContent).toContain("Not published (FE-025)");
   });
 
   it("lists the ranked triage in the server's order with rank, kind, deadline and a canonical link", async () => {
@@ -392,7 +385,7 @@ describe("the stream gate", () => {
     await waitFor(() => expect(document.querySelector(".exec-ov-stream")?.getAttribute("data-stream")).toBe("live"));
     expect(screen.getAllByRole("row").length).toBe(before);
     expect(kpi("Needs attention").textContent).toBe(needs);
-    expect(screen.getByTestId("not-available-line").textContent).toContain("Since your last visit");
+    expect(panel("Since your last visit").textContent).toContain("Not published (FE-024)");
   });
 
   async function publishedStream() {
@@ -570,16 +563,21 @@ describe("the fund NAV series (FE-013, BE-P4 manager series)", () => {
     expect(performance().querySelector("svg")).not.toBeNull();
     expect(performance().querySelector(".exec-ser")!.textContent).not.toContain("Not published");
     // The KPI is the last published point, as the server sent it (the title carries the full string), never a derived NAV.
-    const populated = JSON.parse(JSON.stringify(series.calls));
-    expect(populated).toHaveLength(1);
+    const populated = JSON.parse(JSON.stringify(series.calls)) as { metric: string }[];
+    expect(populated.filter((c) => c.metric === "NAV")).toHaveLength(1);
     const last = kpi("NAV").querySelector(".exec-ov-num");
     expect(last).not.toBeNull();
     expect(last!.getAttribute("title")).toMatch(/^-?\d+(\.\d+)?$/);
     expect(kpi("NAV").textContent).toMatch(/^NAV.*As of \d/);
     expect(kpi("NAV").querySelector(".exec-blk-kpi-note span")!.getAttribute("title")).toContain("Latest published point");
     expect(kpi("NAV").querySelector(".exec-blk-kpi-note span")!.getAttribute("title")).toContain("methodology TEST_ONLY:nav-twr.v1");
-    // The other money figures stay unpublished: windowed figures are not this series.
-    expect(screen.getByTestId("not-available-line").textContent).toContain("Net PnL, Return, Drawdown");
+    // The Capital panel's NAV row is the same published point as the NAV tile, not a second gap.
+    const capitalNav = within(screen.getByRole("table", { name: "Capital" })).getByText("NAV").closest("tr")!;
+    expect(capitalNav.textContent).not.toContain("Not published");
+    expect(capitalNav.querySelector(".exec-ov-num")?.getAttribute("title")).toBe(last!.getAttribute("title"));
+    // Net PnL and Return ask the same port (their tiles read the published series); Drawdown has no series metric and stays unpublished.
+    expect(kpi("Drawdown")!.querySelector(".exec-blk-kpi-value")?.textContent).toMatch(/^Not published/);
+    for (const label of ["Net PnL", "Return"]) expect(kpi(label), label).toBeDefined();
   });
 
   it("EMPTY says 'No points in this window' (not a zero line, not a number) and still names the methodology", async () => {

@@ -18,6 +18,8 @@ import { Flag } from "../../../Flag";
 import { formatAsOf, formatInstant } from "../../../boundary";
 import { readUtcEpochMs } from "../../../../screenDataContract";
 import { PF_FE, npText } from "../fe";
+import type { ManagerPartitionedMetrics } from "../../../readers/managerMetric";
+import { PartitionFigures, figureSource, publishes } from "../PartitionFigures";
 import { ManagerSeriesPanel } from "../../series/ManagerSeriesPanel";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../../series/seriesModel";
 import { Absent, MoneyList, Np } from "../format";
@@ -127,17 +129,71 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
   );
 }
 
-/** What the Overview does not carry, said once (ids and reasons in the line's title). */
+/** What the Overview does not carry and has no tile or panel for, said once (ids and reasons in the line's title). */
 const UNPUBLISHED_OVERVIEW: readonly UnavailableFact[] = [
-  { label: "Net PnL", id: "FE-005", why: "Windowed; needs FE-025" },
-  { label: "Return", id: "FE-006", why: "Windowed; methodology per source" },
-  { label: "Drawdown", id: "FE-013", why: "Needs the NAV series" },
-  { label: "Concentration", id: "FE-005", why: "Shares need the Manager grouping, so none is drawn or worked out here" },
-  { label: "Capital statements", id: "FE-017", why: "Initial, added and returned funds, net external flows, approved budget, recalling, headroom" },
   { label: "Funding source", id: "FE-032", why: "No per-source attribution" },
   { label: "Stage, decision, incident and recall lanes", id: "FE-031", why: "No source is published (FE-032 as well); the chart draws the Flow lane only" },
-  { label: "Score", id: "FE-011" },
+  { label: "Score", id: "FE-011", why: "Policy not set" },
 ];
+
+/** Capital statements (hi-fi right column): every row stays; none is published (FE-017), so each says so. Nothing is summed from the allocation. */
+const CAPITAL_ROWS: readonly { label: string; key?: string }[] = [
+  { label: "Initial funds", key: "initial_funds" },
+  { label: "Added funds", key: "added_funds" },
+  { label: "Returned", key: "returned_capital" },
+  { label: "Net external flows" },
+  { label: "Approved budget", key: "current_budget" },
+  { label: "Recalling" },
+  { label: "Headroom" },
+];
+/** Capital-statement keys the dataset publishes, each with a row of its own (one line per economic partition, never totalled). */
+const STATEMENT_ROWS: readonly { key: string; label: string }[] = [
+  { key: "balance_total", label: "Balance total" },
+  { key: "allocation", label: "Allocated" },
+];
+
+/** The portfolio's dataset: the last good read while a refresh runs; `null` until one answered (or when the surface is not served). */
+const datasetOf = (ctx: TabCtx) => {
+  const read = ctx.reads.dataset;
+  return read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+};
+
+function CapitalCard({ ctx }: { ctx: TabCtx }) {
+  const statements = datasetOf(ctx)?.capitalStatements ?? [];
+  return (
+    <SectionPanel title="Capital" aside="Statements">
+      <table className="exec-pf-captable" aria-label="Capital statements">
+        <tbody>
+          {STATEMENT_ROWS.filter((row) => publishes(statements, row.key)).map((row) => (
+            <tr key={row.key}><th scope="row">{row.label}</th><td><PartitionFigures list={statements} metricKey={row.key} /></td></tr>
+          ))}
+          {CAPITAL_ROWS.map((row) => (
+            <tr key={row.label}>
+              <th scope="row">{row.label}</th>
+              <td>{row.key !== undefined && publishes(statements, row.key) ? <PartitionFigures list={statements} metricKey={row.key} /> : <Np fact={PF_FE.statements} />}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </SectionPanel>
+  );
+}
+
+/** Concentration (HHI) keeps its panel; shares need the Manager grouping, so no share is drawn or worked out here. */
+function ConcentrationCard({ list }: { list: readonly ManagerPartitionedMetrics[] | null }) {
+  return (
+    <SectionPanel title="Concentration" aside="HHI">
+      {list !== null ? (
+        <PartitionFigures list={list} metricKey="concentration_hhi" />
+      ) : (
+        <>
+          <p className="exec-pf-note"><Np fact={PF_FE.concentration} /></p>
+          <p className="exec-pf-note">Shares need the Manager grouping, so none is drawn or worked out here.</p>
+        </>
+      )}
+    </SectionPanel>
+  );
+}
 
 function Attention({ ctx }: { ctx: TabCtx }) {
   const deployments = ctx.deployments.filter((d) => d.healthKind !== "ok");
@@ -176,22 +232,39 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
   const { identity, deployments, accounts, environments } = ctx;
   const alphaCount = new Set(deployments.map((d) => d.strategyId ?? d.alphaLabel)).size;
   const simulated = environments.some((env) => env !== "live");
+  const netPnlList = figureSource(datasetOf(ctx), "net_pnl", identity.portfolioId);
+  const returnList = figureSource(datasetOf(ctx), "return_30d_pct", identity.portfolioId);
+  const drawdownList = figureSource(datasetOf(ctx), "max_drawdown_pct", identity.portfolioId);
+  const hhiList = figureSource(datasetOf(ctx), "concentration_hhi", identity.portfolioId);
   return (
     <div className="exec-pf-stack">
       {simulated ? <p className="exec-pf-banner" data-tone="info">Simulated capital. It is never added to Real-funded figures.</p> : null}
       <PfKpiStrip label="Portfolio identity">
-        <PfKpi label="Alphas">{alphaCount}</PfKpi>
-        <PfKpi label="Deployments" note={identity.holdingsCount !== null ? `${identity.holdingsCount} holdings` : undefined}>{deployments.length}</PfKpi>
-        <PfKpi label="Accounts">{accounts.length}</PfKpi>
+        <PfKpi label="NAV"><NavFigure ctx={ctx} /></PfKpi>
+        <PfKpi label="Net PnL" note={netPnlList !== null ? `Window ${ctx.window}` : "Windowed; needs the window"}>
+          {netPnlList !== null ? <PartitionFigures list={netPnlList} metricKey="net_pnl" signed /> : <Np fact={PF_FE.netPnl} />}
+        </PfKpi>
+        <PfKpi label="Return" note={returnList !== null ? `Window ${ctx.window}` : "Windowed; methodology per source"}>
+          {returnList !== null ? <PartitionFigures list={returnList} metricKey="return_30d_pct" signed /> : <Np fact={PF_FE.ret} />}
+        </PfKpi>
+        <PfKpi label="Drawdown" note={drawdownList !== null ? `Max, window ${ctx.window}` : "Needs the NAV series"}>
+          {drawdownList !== null ? <PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed /> : <Np fact={PF_FE.drawdown} />}
+        </PfKpi>
         <PfKpi label="Allocated (current)">
           <MoneyList entries={identity.allocationByCurrency} empty={<Absent reason="no allocation published" />} />
         </PfKpi>
-        <PfKpi label="NAV"><NavFigure ctx={ctx} /></PfKpi>
+        <PfKpi label="Deployments" note={`${alphaCount} ${alphaCount === 1 ? "alpha" : "alphas"} · ${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}${identity.holdingsCount !== null ? ` · ${identity.holdingsCount} holdings` : ""}`}>{deployments.length}</PfKpi>
       </PfKpiStrip>
       <NotAvailableLine facts={UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />
-      <NavCard ctx={ctx} />
+      <div className="exec-pf-grid2">
+        <NavCard ctx={ctx} />
+        <CapitalCard ctx={ctx} />
+      </div>
       <EquityCard ctx={ctx} />
-      <Attention ctx={ctx} />
+      <div className="exec-pf-grid2">
+        <Attention ctx={ctx} />
+        <ConcentrationCard list={hhiList} />
+      </div>
     </div>
   );
 }

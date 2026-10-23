@@ -23,6 +23,17 @@ export const RECALL_UNKNOWN_GAP = "RECALL_OUTCOME_UNKNOWN";
 export const WORKSPACE_GAP = "WORKSPACE_NOT_PUBLISHED";
 
 export const REASON_MAX = 512;
+
+/** The visible label of the fixture-lab mount (DEBT-048 item 9): the preview is a rollback simulation, never a send. */
+export const SIMULATION_COPY = "Simulation \u00b7 fixture lab, nothing is applied";
+
+/**
+ * The fixture-lab mount runs only in an explicit TEST_ONLY workspace (`ws_TEST_ONLY...`). Any other workspace, a missing one included,
+ * is not a lab workspace, so the mount draws nothing there.
+ */
+export function isLabWorkspace(workspaceId: string | null | undefined): boolean {
+  return typeof workspaceId === "string" && /^ws_TEST_ONLY(?:_[A-Za-z0-9._:-]*)?$/.test(workspaceId);
+}
 export const OPERATION_LABEL: Readonly<Record<PendingOperation, string>> = { APPLY_PENDING: "Apply pending", CANCEL_REMAINING: "Cancel remaining" };
 
 /** The wire body of `PendingControlIntent`; every member is the schema's, in the schema's casing. */

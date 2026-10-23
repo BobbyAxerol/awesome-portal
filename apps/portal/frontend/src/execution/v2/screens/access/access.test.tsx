@@ -85,8 +85,8 @@ describe("identity strip", () => {
     expect(within(strip).getByText("usr_me")).toBeTruthy();
     expect(within(strip).getByText("Owner").nextElementSibling?.textContent).toBe("Not an owner");
     expect(within(strip).getByText("Capabilities held").nextElementSibling?.textContent).toBe("1");
-    // Role preset is not a KPI cell: it is on the one "Not available" line.
-    expect(within(strip).queryByText("Role preset")).toBeNull();
+    // Role preset keeps its tile (hi-fi) and says Not available: no preset name is invented from the capabilities.
+    expect(within(strip).getByText("Role preset").nextElementSibling?.textContent).toBe("Not available");
     // "Researcher field policy" is a published policy field, not a preset name.
     const text = (document.body.textContent ?? "").replace("Researcher field policy", "");
     for (const preset of ["Manager", "Researcher", "Operator", "Reviewer", "Viewer"]) {
@@ -600,5 +600,108 @@ describe("L2 · grants over the DOM cap", () => {
     // Measured 6,323 with 200 drawn rows (8 cells, flags, mobile labels); 500 uncapped rows would be about 15,000.
     expect(nodes).toBeLessThan(7000);
     expect(container.querySelectorAll('table[aria-label="Granted to you"] tbody tr, table[aria-label="Granted to you"] tr').length).toBeLessThanOrEqual(ROW_CAP + 1);
+  });
+});
+
+/* ── "Send capital commands": the one eligibility question this page can ask (DEBT-UXM07-051) ───────────────────────────── */
+
+describe("send capital commands comes from the self-eligibility batch asked about the caller's root", () => {
+  /** The available workspace, with one more current ALLOW grant on a root. */
+  function fetchWithRootAllow(): typeof fetch {
+    const base = doubleFetch();
+    return vi.fn(async (input: RequestInfo | URL) => {
+      const response = await base(input);
+      const body = (await response.json()) as { grants?: Record<string, unknown>[] };
+      if (Array.isArray(body.grants)) {
+        const template = body.grants.find((g) => (g.selector as { kind?: string }).kind === "ROOT_SCOPE")!;
+        body.grants = [...body.grants, { ...template, grant_id: "acg_TEST_ONLY_root_allow", action: "capital.fund", effect: "ALLOW" }];
+      }
+      return json(body);
+    }) as unknown as typeof fetch;
+  }
+
+  const challenges = [
+    { family: "CAPITAL_COMMAND", mechanism: "PASSWORD_REAUTH", route: "/api/admin/profile-access/v2/step-up", precondition: "CURRENT_OWN_STEP_UP_ACTION_ALLOW", preconditionMet: true },
+    { family: "ACCESS_ADMIN", mechanism: "PASSWORD_REAUTH", route: "/api/admin/profile-access/v2/step-up", precondition: "CURRENT_OWN_ACCESS_GRANT_OR_REVOKE_ALLOW", preconditionMet: false },
+  ] as const;
+
+  function batchApi(rowFor: (action: string) => Record<string, unknown>) {
+    return {
+      getSelfEligibilityBatch: vi.fn(async (request: { workspaceId: string; environment: string; resources: readonly { kind: string; id: string }[]; actions: readonly string[] }) => ({
+        ok: true as const,
+        value: {
+          kind: "eligibility_batch" as const,
+          batch: {
+            workspaceId: request.workspaceId, environment: request.environment, currentOnly: true as const, advisoryOnly: true as const,
+            observedAtMs: NOW, validUntilMs: NOW + 3_600_000,
+            sessionStepUp: { state: "NOT_ACTIVE" as const, validUntilMs: null, challenges },
+            results: [{ resource: request.resources[0]!, actions: request.actions.map(rowFor) }],
+          },
+        },
+      })),
+    };
+  }
+  const allowed = (action: string) => ({ action, permission: "ALLOWED", reasonClass: "FAMILY_CHECK_REQUIRED", stepUpState: "REQUIRED" });
+  const refused = (action: string) => ({ action, permission: "UNAVAILABLE", reasonClass: "NO_CURRENT_PERMISSION", stepUpState: "REQUIRED" });
+
+  const capitalRowIn = async () => {
+    const table = await screen.findByRole("table", { name: "What you can do" });
+    return rowsOf(table).find((r) => cell(r, "Action").textContent?.startsWith("Send capital commands")) as HTMLElement;
+  };
+
+  it("without the port the row says it was not asked, and every other unpublished row says Not available yet", async () => {
+    mount({ fetchImpl: fetchWithRootAllow() }, workspace("available"));
+    await granted();
+    const row = await capitalRowIn();
+    expect(cell(row, "Status").textContent).toContain("Not available yet");
+    expect(cell(row, "Why").textContent).toContain("opened without the eligibility read");
+    const table = await screen.findByRole("table", { name: "What you can do" });
+    for (const label of ["Approve archive and reactivation", "Request an archive", "Start a reactivation review", "Acknowledge and resolve operations", "Change your own admin rights", "Export tables"]) {
+      const r = rowsOf(table).find((x) => cell(x, "Action").textContent?.startsWith(label)) as HTMLElement;
+      expect(cell(r, "Status").textContent, label).toContain("Not available yet");
+      expect(within(cell(r, "Why")).queryByRole("link", { name: "My access" }), label).toBeNull();
+    }
+    const exportRow = rowsOf(table).find((x) => cell(x, "Action").textContent?.startsWith("Export tables")) as HTMLElement;
+    fireEvent.click(within(cell(exportRow, "Why")).getByRole("button"));
+    expect(whyText(cell(exportRow, "Why"))).toContain("FE-016");
+  });
+
+  it("asks once, about ROOT and the eight root capital actions, and prints Allowed with the step-up fact", async () => {
+    const api = batchApi(allowed);
+    mount({ fetchImpl: fetchWithRootAllow(), api: api as never }, workspace("available"));
+    await granted();
+    await waitFor(async () => expect(cell(await capitalRowIn(), "Status").textContent).toContain("Allowed"));
+    expect(api.getSelfEligibilityBatch).toHaveBeenCalledTimes(1);
+    const request = api.getSelfEligibilityBatch.mock.calls[0]![0];
+    expect(request.workspaceId).toBe(ACCESS_DOUBLE_WORKSPACES.available);
+    expect(request.resources).toEqual([{ kind: "ROOT", id: "root_TEST_ONLY" }]);
+    expect(request.actions).toHaveLength(8);
+    const row = await capitalRowIn();
+    expect(cell(row, "Status").textContent).toContain("Step-up required");
+    expect(cell(row, "Why").textContent).toContain("8 of 8 capital commands");
+    expect(cell(row, "Why").textContent).toContain("checked again when it is sent");
+  });
+
+  it("only unavailable rows read Not allowed with the server's reason in words", async () => {
+    mount({ fetchImpl: fetchWithRootAllow(), api: batchApi(refused) as never }, workspace("available"));
+    await granted();
+    await waitFor(async () => expect(cell(await capitalRowIn(), "Status").textContent).toContain("Not allowed"));
+    expect(cell(await capitalRowIn(), "Why").textContent).toContain("No current root-level grant for capital commands");
+  });
+
+  it("a failed read is Not available yet with the port's reason, never Not allowed", async () => {
+    const api = { getSelfEligibilityBatch: vi.fn(async () => ({ ok: false as const, status: "unavailable" as const, reason: "The eligibility batch is not served." })) };
+    mount({ fetchImpl: fetchWithRootAllow(), api: api as never }, workspace("available"));
+    await granted();
+    await waitFor(async () => expect(cell(await capitalRowIn(), "Why").textContent).toContain("The eligibility batch is not served."));
+    expect(cell(await capitalRowIn(), "Status").textContent).toContain("Not available yet");
+  });
+
+  it("no ALLOW grant on a root: nothing is asked, and the row says why", async () => {
+    const api = batchApi(allowed);
+    mount({ api: api as never }, workspace("available"));
+    await granted();
+    expect(cell(await capitalRowIn(), "Why").textContent).toContain("None of your grants names a root");
+    expect(api.getSelfEligibilityBatch).not.toHaveBeenCalled();
   });
 });

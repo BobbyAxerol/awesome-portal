@@ -68,9 +68,9 @@ export class PaperReadController {
    * V2 media type gets V1 rebuilt from it, so the duplicate branch exists only
    * in the legacy response and never alongside V2.
    */
-  private negotiate(request: FastifyRequest, envelope: unknown): unknown {
+  private negotiate(request: FastifyRequest, envelope: unknown, projectV2 = true): unknown {
     const v1 = envelope as Record<string, unknown>;
-    const wantsV2 = wantsScreenV2(request.headers.accept);
+    const wantsV2 = projectV2 && wantsScreenV2(request.headers.accept);
     const body = wantsV2 ? screenEnvelopeV2From(v1) : v1;
     const operation = String(v1.schema_version ?? "unknown").replace(/\.v[12]$/, "");
     // Per named operation, so the label set stays bounded no matter how many
@@ -92,7 +92,12 @@ export class PaperReadController {
     const deploymentId = PaperDeploymentIdSchema.safeParse(rawDeploymentId);
     if (!query.success || !deploymentId.success) throw invalidQuery();
     const workspaceId = await this.workspace(request, query.data.workspace_id);
-    return this.negotiate(request, await this.paper.workbench(this.principal(request, workspaceId), deploymentId.data, vnm));
+    // Always the published V1 shape, whatever the Accept header says. The V2 projection keeps only panel rows plus a flat
+    // `screen_context`: for this screen it drops the retained-history rows (`data.account_equity` shares a name with the
+    // one-row snapshot panel, so the reader sees 1 point while `history_windows` claims thousands) and lifts `deployment`,
+    // `history_windows`, `stage_facts`... out of `data`, which the strict published reader rejects ("... not allowed").
+    // Proved in test/paper-history-http.spec.ts. The V1 body adds only the bounded snapshot panel rows, never history rows.
+    return this.negotiate(request, await this.paper.workbench(this.principal(request, workspaceId), deploymentId.data, vnm), false);
   }
 
   private async workspace(request: PaperReadRequest, requested?: string): Promise<string> {

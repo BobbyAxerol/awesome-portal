@@ -11,7 +11,8 @@ import { createEdgeCommandTrust, type EdgeCommandOriginal, type SelectedEdgeComm
 import { bindEdgeCurrentRequesterStatus, inspectEdgeCommandGatewayBinding, inspectEdgeCommandOriginalRecovery,
   type EdgeCommandGatewayBinding, type EdgeCurrentRequesterStatusPort } from "../src/execution-v2/edge-command-gateway-binding";
 
-const fixture = JSON.parse(readFileSync(resolve(__dirname, "../../../packages/contracts/fixtures/execution-trusted-commands.synthetic.valid.json"), "utf8"));
+const contractsDir = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+const fixture = JSON.parse(readFileSync(resolve(contractsDir, "fixtures/execution-trusted-commands.synthetic.valid.json"), "utf8"));
 const now = 1_792_100_000_000, intent = commandIntent.parse(fixture.intent), signal = new AbortController().signal;
 const originalActor = { user_id: "TEST_ONLY:original-author", session_id: "TEST_ONLY:original-session", session_generation: 1 };
 const requester = { user_id: "TEST_ONLY:current-reviewer", session_id: "TEST_ONLY:current-session", session_generation: 3 };

@@ -102,6 +102,41 @@ describe("tiers", () => {
   });
 });
 
+describe("manager language and the detail panel (DEBT-UXM07-051)", () => {
+  it("a row's subtext is the catalogue's description, never the route slug, and a row without one says so", async () => {
+    const base = await baseTasks();
+    const tasks = base.tasks.map((t, i) => (i === 0 ? { ...t, description: null, catalogKey: "raw/slug_key" } : t));
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks({ ...base, tasks }) }));
+    await loaded();
+    const first = within(tierTable("Read")).getAllByRole("row")[1]!;
+    expect(first.textContent).not.toContain("raw/slug_key");
+    expect(first.textContent).toContain("No description published");
+    const second = within(tierTable("Read")).getAllByRole("row")[2]!;
+    expect(second.querySelector(".exec-adm-sub")?.textContent).toBe(base.tasks[1]!.description);
+  });
+
+  it("the scope column uses the catalogue's scope label when it publishes one", async () => {
+    const base = await baseTasks();
+    const tasks = base.tasks.map((t, i) => (i === 0 ? { ...t, scopeLabel: "Whole system" } : t));
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks({ ...base, tasks }) }));
+    await loaded();
+    expect(within(tierTable("Read")).getAllByRole("row")[1]!.querySelector("td[data-l='Scope']")?.textContent).toBe("Whole system");
+  });
+
+  it("with nothing selected in the docked layout the right-hand panel stands with its prompt", async () => {
+    mount("/administration/actions", {}, override({ getOperatorTasks: asTasks({ ...(await baseTasks()), tasks: [] }) }));
+    await screen.findByText(/No actions are published|none could be read/, {}, SLOW);
+    expect(screen.getByTestId("admin-detail-empty").textContent).toContain("Pick an action to see what it does and how it runs.");
+  });
+
+  it("an open action shows What, Scope, Who, How and State, and its subtitle is the tier, not a slug", async () => {
+    mount("/administration/actions?sel=" + encodeURIComponent((await baseTasks()).tasks[0]!.taskId));
+    const pane = await dock();
+    for (const term of ["What", "Scope", "Who", "How", "State"]) expect(within(pane).getByText(term, { selector: "dt" })).toBeTruthy();
+    expect(pane.textContent).toContain("Read");
+  });
+});
+
 describe("why nothing is live", () => {
   it("names the command authority and the first capability that is not live", async () => {
     mount();
@@ -772,7 +807,7 @@ describe("row cap: 200 rows drawn, the label names the rest", () => {
   async function many(count: number, reported: number | null = count) {
     const base = await baseTasks();
     const template = base.tasks.find((t) => t.taskGroup === "READ_INSPECT")!;
-    const tasks = Array.from({ length: count }, (_, i) => ({ ...template, taskId: `bulk-${i}`, title: `Bulk ${i}`, catalogKey: null }));
+    const tasks = Array.from({ length: count }, (_, i) => ({ ...template, taskId: `bulk-${i}`, title: `Bulk ${i}`, displayName: null, catalogKey: null }));
     return { ...base, tasks, totalTasks: reported, taskGroups: ["READ_INSPECT"] };
   }
   const drawn = () => within(tierTable("Read")).getAllByRole("row").length - 1;

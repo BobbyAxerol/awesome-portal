@@ -193,6 +193,30 @@ describe.skipIf(!DATABASE_URL)("BE-P23 owner roster keyset page on real PostgreS
     }
   });
 
+  it("publishes only retained interactive success, never commissioning/auto/failure or another actor", async () => {
+    const [{ user_id: userId }] = await sql("SELECT user_id FROM portal_users WHERE username='user-004'");
+    const [{ user_id: ownerId }] = await sql("SELECT user_id FROM portal_users WHERE username='bobby'");
+    const instant = "2026-10-21T08:17:00.000Z";
+    const insert = async (suffix: string, event: string, result: string, reason: string | null, actor: string, at: string) =>
+      ctx.pool.query(`INSERT INTO auth_audit_events
+        (event_id,event_type,actor_user_id,target_user_id,result,reason_code,occurred_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)`, [`evt_roster_${suffix}`, event, actor, userId, result, reason, at]);
+    await insert("human", "login_succeeded", "SUCCESS", null, userId, instant);
+    for (const [suffix, event, result, reason, actor] of [
+      ["acceptance", "research_acceptance_session_issued", "SUCCESS", null, userId],
+      ["auto", "login_succeeded", "SUCCESS", "PREVIEW_AUTO_LOGIN", userId],
+      ["failed", "login_succeeded", "FAILURE", null, userId],
+      ["other_actor", "login_succeeded", "SUCCESS", null, ownerId],
+    ] as const) await insert(suffix, event, result, reason, actor, "2026-10-22T12:00:00Z");
+    const paged = (await roster("?q=user-004&limit=5")).json();
+    expect(paged.accounts).toHaveLength(1);
+    expect(paged.accounts[0].last_sign_in_at).toBe(instant);
+    const unpaged = (await roster("")).json().accounts.find((account: { user_id: string }) => account.user_id === userId);
+    expect(unpaged.last_sign_in_at).toBe(instant);
+    const unknown = (await roster("?q=user-008&limit=5")).json().accounts[0];
+    expect(unknown).not.toHaveProperty("last_sign_in_at");
+  });
+
   it("bad limits and keys are fixed 400s that never echo the input", async () => {
     for (const query of ["?limit=0", "?limit=201", "?limit=abc", "?role=SUPER", "?state=GONE", `?q=${"x".repeat(65)}`, "?sort=role", "?limit=5&limit=6"]) {
       const response = await roster(query);

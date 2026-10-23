@@ -211,8 +211,9 @@ describe("six opt-in review Manager datasets", () => {
     const statements = raw.body.capital_statements as Body[];
     expect(statements.length).toBeGreaterThan(1);
     for (const { partition, metrics } of statements) {
-      expect(Object.keys(metrics).sort()).toEqual(["added_funds", "current_budget", "current_nav", "initial_funds", "pending_amount", "returned_capital"]);
-      for (const [kind, entry] of Object.entries<Body>(metrics)) {
+      const original = Object.fromEntries(Object.entries<Body>(metrics).filter(([kind]) => !["net_pnl", "return_30d_pct", "max_drawdown_pct"].includes(kind)));
+      expect(Object.keys(original).sort()).toEqual(["added_funds", "current_budget", "current_nav", "initial_funds", "pending_amount", "returned_capital"]);
+      for (const [kind, entry] of Object.entries<Body>(original)) {
         expect(entry).toMatchObject({ currency: partition.currency, unit: "MONEY", window: null,
           denominator: null, source_confidence: "PROVISIONAL", calculation_revision: "FIXTURE_LAB:capital-review.v1" });
         expect(entry.quality.reasons).toContain("FIXTURE_LAB_SYNTHETIC");
@@ -246,7 +247,7 @@ describe("six opt-in review Manager datasets", () => {
     setFixtureNow(NOW);
     const query = new URLSearchParams({ environment: "paper" });
     const before = structuredClone(answerManagerFleet("GET", "/manager/fleet", query));
-    expect(before?.body.capital_statements).toBeDefined();
+    expect((before?.body as { capital_statements?: unknown } | undefined)?.capital_statements).toBeDefined();
     ask("/manager/fund-overview");
     expect(answerManagerFleet("GET", "/manager/fleet", query)).toEqual(before);
   });
@@ -257,7 +258,7 @@ describe("six opt-in review Manager datasets", () => {
     const old = answerManagerFleet("GET", "/manager/fleet", query);
     ask("/manager/fleet");
     expect(answerManagerFleet("GET", "/manager/fleet", query)).toEqual(old);
-    const unsupported: Record<string, string>[] = [{ window: JSON.stringify("30D") }, { sort: JSON.stringify([{ field: "net_pnl", direction: "asc" }]) },
+    const unsupported: Record<string, string>[] = [{ window: JSON.stringify({ from_ms: 1, to_ms: 2 }) }, { sort: JSON.stringify([{ field: "net_pnl", direction: "asc" }]) },
       { filters: JSON.stringify([{ field: "allocation", op: "GTE", value: "0" }]) },
       { filters: JSON.stringify([{ field: "name", op: "EQ", value: "x", ignored: true }]) },
       { sort: JSON.stringify([{ field: "name", direction: "asc", ignored: true }]) },
@@ -270,5 +271,307 @@ describe("six opt-in review Manager datasets", () => {
     expect(ask("/manager/fleet", { after: "not-a-cursor" }).status).toBe(400);
     expect(answerReviewManager("POST", "/manager/fleet", query, "populated")).toBeNull();
     expect(answerReviewManager("GET", "/not-manager", query, "populated")).toBeNull();
+  });
+});
+
+/** SIMULATED derived keys (fixture-bff README): exact strings, bigint rules, one partition at a time. */
+describe("simulated Manager metrics (row, capital statement, group)", () => {
+  const SCALE = 18;
+  const big = (value: string): bigint => {
+    const negative = value.startsWith("-");
+    const [whole, fraction = ""] = value.replace("-", "").split(".");
+    const n = BigInt(whole + fraction.padEnd(SCALE, "0"));
+    return negative ? -n : n;
+  };
+  const text = (value: bigint, places: number): string => {
+    const negative = value < 0n;
+    const raw = (negative ? -value : value).toString().padStart(places + 1, "0");
+    return `${negative ? "-" : ""}${raw.slice(0, -places)}.${raw.slice(-places)}`;
+  };
+  const same = (a: string, b: bigint): boolean => big(a) === b;
+  const ID = (partition: Body): string => JSON.stringify([partition.economic_domain, partition.currency, partition.basis, partition.native_profile_ref]);
+  const read = (extra: Record<string, string>, profile: ReviewManagerProfile, environment = "live"): Body => {
+    prepare(profile);
+    const result = ask("/manager/fleet", { environment, limit: "100", ...extra }, profile);
+    expect(result.status).toBe(200);
+    schema(result.body, "execution-manager-dataset.v1");
+    return result.body;
+  };
+  const NEW = ["balance_total", "equity_30d_end_value", "return_30d_pct"];
+
+  it.each(["populated", "layout-stress"] as const)("%s: row keys are offered, exact and consistent with allocation and net PnL of the SAME partition", (profile) => {
+    for (const environment of ["paper", "live"]) {
+      const body = read({}, profile, environment);
+      for (const key of NEW) {
+        expect(body.query_options.metric_keys).toContain(key);
+        expect(body.query_options.sort_fields).toContain(key);
+      }
+      expect(body.page.next_cursor).toBeNull();
+      let zeroReturn = 0;
+      let absentEquity = 0;
+      for (const row of body.items as Body[]) {
+        expect(Object.keys(row.metrics).sort()).toEqual([...body.query_options.metric_keys].sort());
+        for (const entry of row.economic_partitions as Body[]) {
+          const m = entry.metrics;
+          for (const key of ["balance_total", "equity_30d_end_value"]) expect(m[key]).toMatchObject({ unit: "MONEY", currency: entry.partition.currency });
+          expect(m.return_30d_pct).toMatchObject({ unit: "PERCENT", currency: null });
+          for (const key of NEW) expect(m[key].provenance_refs[0]).toContain("FIXTURE_LAB");
+          const [A, N, U] = ["allocation", "net_pnl", "unrealized_pnl"].map((key) => (m[key].availability === "AVAILABLE" ? m[key].value : null));
+          if (A !== null && N !== null) {
+            expect(same(m.balance_total.value, big(A) + big(N))).toBe(true);
+            expect(m.balance_total.methodology_ref).toContain("FIXTURE_LAB");
+            if (big(N) === 0n) { expect(m.return_30d_pct.value).toBe("0"); zeroReturn += 1; }
+          } else {
+            expect(m.balance_total).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "SOURCE_FACTS_NOT_PUBLISHED" });
+            expect(m.return_30d_pct).toMatchObject({ value: null, availability: "UNAVAILABLE" });
+          }
+          if (A !== null && N !== null && U === null) { expect(m.equity_30d_end_value).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "SOURCE_FACTS_NOT_PUBLISHED" }); absentEquity += 1; }
+          if (A !== null && N !== null && U !== null) expect(same(m.equity_30d_end_value.value, big(A) + big(N) + big(U))).toBe(true);
+        }
+        // A single-partition headline IS the partition's figure; several partitions leave no single headline.
+        for (const key of NEW) {
+          if (row.economic_partitions.length === 1) expect(row.metrics[key]).toEqual(row.economic_partitions[0].metrics[key]);
+          else expect(row.metrics[key]).toMatchObject({ value: null, availability: "UNAVAILABLE" });
+        }
+      }
+      expect(zeroReturn).toBeGreaterThan(0);
+      if (profile === "populated" && environment === "live") expect(absentEquity).toBeGreaterThan(0);
+    }
+  });
+
+  it.each(["populated", "layout-stress"] as const)("%s: capital statements add net_pnl, return_30d_pct and max_drawdown_pct inside each partition", (profile) => {
+    const body = read({}, profile);
+    const statements = body.capital_statements as Body[];
+    expect(statements.length).toBeGreaterThan(1);
+    // net_pnl of a partition = the sum of THIS partition's rows' net_pnl; nothing crosses a currency or domain.
+    const sums = new Map<string, bigint>();
+    for (const row of body.items as Body[]) for (const entry of row.economic_partitions as Body[]) {
+      sums.set(ID(entry.partition), (sums.get(ID(entry.partition)) ?? 0n) + big(entry.metrics.net_pnl.value));
+    }
+    for (const [index, { partition, metrics }] of statements.entries()) {
+      expect(metrics.net_pnl).toMatchObject({ unit: "MONEY", currency: partition.currency, window: null, availability: "AVAILABLE" });
+      expect(big(metrics.net_pnl.value)).toBe(sums.get(ID(partition)));
+      expect(metrics.max_drawdown_pct).toMatchObject({ unit: "PERCENT", currency: null });
+      if (index === 0) expect(metrics.max_drawdown_pct).toMatchObject({ value: "0", availability: "AVAILABLE" });
+      else expect(metrics.max_drawdown_pct.value).toMatch(/^-\d+(\.\d\d?)?$/);
+      if (index === 1) expect(metrics.return_30d_pct).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "SOURCE_FACTS_NOT_PUBLISHED", denominator: null });
+      else {
+        expect(metrics.return_30d_pct.denominator).toBe(metrics.initial_funds.value);
+        const expected = big(metrics.net_pnl.value) * 100n * 1_000_000n / big(metrics.initial_funds.value);
+        expect(big(metrics.return_30d_pct.value)).toBe(expected * 10n ** 12n);
+      }
+    }
+    expect(new Set(statements.map(({ partition }) => ID(partition))).size).toBe(statements.length);
+  });
+
+  it.each(["populated", "layout-stress"] as const)("%s: portfolio groups add current_nav, return_30d_pct, max_drawdown_pct and concentration_hhi per partition", (profile) => {
+    // The layout profile is bounded (1 MiB): a smaller page keeps the body valid; totals still cover the whole query, so the row cross-checks need the whole population.
+    const body = read(profile === "layout-stress" ? { group_by: "portfolio_id", limit: "30" } : { group_by: "portfolio_id" }, profile);
+    const complete = body.page.next_cursor === null;
+    const groups = body.groups as Body[];
+    expect(groups.length).toBeGreaterThan(1);
+    const rows = body.items as Body[];
+    let absentDrawdown = 0;
+    for (const group of groups) {
+      const id = group.key[0].value;
+      for (const entry of group.economic_partitions as Body[]) {
+        const m = entry.metrics;
+        const members = rows.filter((row) => row.portfolio_id === id).flatMap((row) => row.economic_partitions as Body[]).filter((part) => ID(part.partition) === ID(entry.partition));
+        if (complete) expect(members.length).toBeGreaterThan(0);
+        for (const key of ["current_nav", "return_30d_pct", "max_drawdown_pct", "concentration_hhi"]) expect(m[key].provenance_refs[0]).toContain("FIXTURE_LAB");
+        expect(m.current_nav).toMatchObject({ unit: "MONEY", currency: entry.partition.currency });
+        expect(m.concentration_hhi).toMatchObject({ unit: "RATIO", currency: null });
+        // NAV = the partition's own balances added; allocation shares are of this partition only.
+        const known = members.every((part) => part.metrics.balance_total.availability === "AVAILABLE");
+        if (!complete) { if (m.max_drawdown_pct.availability !== "AVAILABLE") absentDrawdown += 1; continue; }
+        if (known) expect(big(m.current_nav.value)).toBe(members.reduce((total, part) => total + big(part.metrics.balance_total.value), 0n));
+        else expect(m.current_nav).toMatchObject({ value: null, availability: "UNAVAILABLE" });
+        if (m.concentration_hhi.availability === "AVAILABLE") {
+          const shares = members.map((part) => big(part.metrics.allocation.value));
+          const total = shares.reduce((a, b) => a + b, 0n);
+          const expected = shares.reduce((a, b) => a + b * b, 0n) * 1_000_000n / (total * total);
+          expect(big(m.concentration_hhi.value)).toBe(expected * 10n ** 12n);
+          expect(expected).toBeLessThanOrEqual(1_000_000n);
+          if (members.length === 1) expect(m.concentration_hhi.value).toBe("1");
+        } else expect(members.some((part) => part.metrics.allocation.availability !== "AVAILABLE")).toBe(true);
+        if (m.max_drawdown_pct.availability === "AVAILABLE") expect(m.max_drawdown_pct.value).toMatch(/^-\d+(\.\d\d?)?$/);
+        else { expect(m.max_drawdown_pct.reason_code).toBe("SOURCE_FACTS_NOT_PUBLISHED"); absentDrawdown += 1; }
+      }
+      // One partition per (domain, currency, basis, profile): never merged.
+      expect(new Set(group.economic_partitions.map((entry: Body) => ID(entry.partition))).size).toBe(group.economic_partitions.length);
+    }
+    expect(absentDrawdown).toBeGreaterThan(0);
+  });
+
+  it("the unchanged production reader and port accept the new keys", async () => {
+    const api = client("populated");
+    const parsed = await api.getManagerDataset({ surface: "FLEET", environment: "live", limit: 200, groupBy: ["portfolio_id"] });
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.value.queryOptions.metricKeys).toEqual(expect.arrayContaining(NEW));
+    const metric = parsed.value.items[0]!.economicPartitions[0]!.metrics.get("return_30d_pct")!;
+    expect(metric.unit).toBe("PERCENT");
+    expect(text(5n, 2)).toBe("0.05");
+  });
+});
+
+/** SIMULATED window presets on every dataset surface: bare and JSON-quoted, answered per contract and accepted by the unchanged port. */
+describe("simulated Manager window presets", () => {
+  const DAY = 86_400_000;
+  const SURFACES: readonly [string, string][] = [
+    ["FUND", "/manager/fund-overview"], ["FLEET", "/manager/fleet"],
+  ];
+  const get = (path: string, window: string | null, extra: Record<string, string> = {}): Body => {
+    prepare("populated");
+    return ask(path, { environment: "live", limit: "50", ...(window === null ? {} : { window }), ...extra });
+  };
+  const firstNet = (body: Body): Body => (body.items as Body[]).map((row) => row.economic_partitions[0].metrics.net_pnl).find((m) => m.availability === "AVAILABLE" && m.value !== "0");
+
+  it.each(SURFACES)("%s: 7D, 30D, 90D in bare and JSON-quoted form resolve to a window ending at FIXTURE_NOW, stamped on windowed metrics", (_surface, path) => {
+    for (const [name, days] of [["7D", 7], ["30D", 30], ["90D", 90]] as const) {
+      for (const form of [name, JSON.stringify(name)]) {
+        const result = get(path, form);
+        expect(result.status, `${name} ${form}`).toBe(200);
+        schema(result.body, "execution-manager-dataset.v1");
+        expect(result.body.selected_window).toEqual({ requested: name, resolved: { from_ms: fixtureNowMs() - days * DAY, to_ms: fixtureNowMs() }, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: null });
+        const net = firstNet(result.body);
+        expect(net.window).toEqual(result.body.selected_window.resolved);
+        const allocation = result.body.items[0].economic_partitions[0].metrics.allocation;
+        expect(allocation.window).toBeNull();
+        for (const statement of result.body.capital_statements as Body[]) {
+          expect(statement.metrics.net_pnl.window).toEqual(result.body.selected_window.resolved);
+          expect(statement.metrics.current_nav.window).toBeNull();
+        }
+      }
+    }
+  });
+
+  it("scales net PnL deterministically with the preset (7D = 1/4 and 90D = 5/2 of 30D), keeping a true zero and the typed absences", () => {
+    const base = get("/manager/fleet", JSON.stringify("30D"));
+    const short = get("/manager/fleet", JSON.stringify("7D"));
+    const long = get("/manager/fleet", JSON.stringify("90D"));
+    const big18 = (value: string): bigint => { const neg = value.startsWith("-"); const [w, f = ""] = value.replace("-", "").split("."); const n = BigInt(w + f.padEnd(18, "0")); return neg ? -n : n; };
+    let compared = 0;
+    for (const [index, row] of (base.body.items as Body[]).entries()) {
+      const b = row.economic_partitions[0].metrics;
+      const s = short.body.items[index].economic_partitions[0].metrics;
+      const l = long.body.items[index].economic_partitions[0].metrics;
+      if (b.net_pnl.availability !== "AVAILABLE") { expect(s.net_pnl.availability).toBe(b.net_pnl.availability); continue; }
+      if (b.net_pnl.value === "0") { expect(s.net_pnl.value).toBe("0"); expect(l.net_pnl.value).toBe("0"); expect(s.return_30d_pct.value).toBe("0"); continue; }
+      expect(big18(s.net_pnl.value)).toBe(big18(b.net_pnl.value) / 4n);
+      expect(big18(l.net_pnl.value)).toBe(big18(b.net_pnl.value) * 5n / 2n);
+      expect(big18(s.net_pnl.value) * big18(l.net_pnl.value) >= 0n).toBe(true);
+      // The derived keys follow the scaled figure, not the base one.
+      if (b.balance_total.availability === "AVAILABLE") expect(big18(s.balance_total.value)).toBe(big18(b.allocation.value) + big18(s.net_pnl.value));
+      if (b.equity_30d_end_value.availability !== "AVAILABLE" && b.net_pnl.availability === "AVAILABLE" && b.balance_total.availability === "AVAILABLE") expect(s.equity_30d_end_value.availability).toBe("UNAVAILABLE");
+      compared += 1;
+    }
+    expect(compared).toBeGreaterThan(0);
+    // Capital statement drawdown keeps its true zero; the others scale by the same fraction.
+    const dd = (body: Body, i: number): string => body.body.capital_statements[i].metrics.max_drawdown_pct.value;
+    expect(dd(short, 0)).toBe("0");
+    expect(dd(long, 0)).toBe("0");
+    expect(big18(dd(short, 2)) * 4n).toBeLessThanOrEqual(0n);
+    expect(big18(dd(long, 2)) * 2n).toBe(big18(dd(base, 2)) * 5n);
+  });
+
+  it.each(SURFACES)("%s: ALL is the typed window gap, not a 400 and not a number", (_surface, path) => {
+    const result = get(path, JSON.stringify("ALL"));
+    expect(result.status).toBe(200);
+    schema(result.body, "execution-manager-dataset.v1");
+    expect(result.body.selected_window).toEqual({ requested: "ALL", resolved: null, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: "ALL_HISTORY_WINDOW_NOT_PUBLISHED" });
+    expect(result.body.scores.reason_code).toBe("ALL_HISTORY_WINDOW_NOT_PUBLISHED");
+    for (const row of result.body.items as Body[]) for (const entry of row.economic_partitions as Body[]) {
+      for (const key of ["net_pnl", "return_30d_pct", "max_drawdown_pct", "equity_30d_end_value"]) {
+        const m = entry.metrics[key];
+        if (!m) continue;
+        expect(m.value, key).toBeNull();
+        expect(m.availability).toBe("UNAVAILABLE");
+        expect([ "ALL_HISTORY_WINDOW_NOT_PUBLISHED", "SOURCE_FACTS_NOT_PUBLISHED" ]).toContain(m.reason_code);
+      }
+      expect(entry.metrics.allocation.window).toBeNull();
+    }
+  });
+
+  it("every other unsupported option is still the explicit 400, with or without a window", () => {
+    prepare("populated");
+    const cases: Record<string, string>[] = [{ lifecycle_filter: "" }, { filters: JSON.stringify([{ field: "net_pnl", op: "GTE", value: "1" }]) }, { sort: JSON.stringify([{ field: "net_pnl", direction: "asc" }]) }, { window: JSON.stringify({ from_ms: 1, to_ms: 2 }) }, { window: "1W" }];
+    for (const extra of cases) {
+      const result = ask("/manager/fleet", { environment: "live", ...(extra.window === undefined ? { window: JSON.stringify("30D") } : {}), ...extra });
+      expect(result.status, JSON.stringify(extra)).toBe(400);
+    }
+  });
+
+  it("the unchanged port accepts the answer to the window it asked (every surface, each preset and ALL)", async () => {
+    const api = client("populated");
+    for (const window of ["7D", "30D", "90D", "ALL"] as const) {
+      for (const query of [
+        { surface: "FUND" as const }, { surface: "FLEET" as const },
+        { surface: "PORTFOLIO" as const, id: scaled().portfolios[0]!.id }, { surface: "ALPHA" as const, id: scaled().alphas[0]!.id },
+      ]) {
+        const parsed = await api.getManagerDataset({ ...query, environment: "paper", window, limit: 5 });
+        expect(parsed.ok, `${query.surface} ${window} ${JSON.stringify(parsed)}`).toBe(true);
+        if (parsed.ok) expect(parsed.value.selectedWindow?.requested).toBe(window);
+      }
+    }
+  });
+});
+
+/** The small-scale review universe is the e2e suite's own ids (alpha_a..d, alpha_btc_trend; Main, Satellite, Core), one single-book partition per row. */
+describe("simulated suite universe (small scale)", () => {
+  const small = (path: string, extra: Record<string, string> = {}): Body => {
+    setFixtureScale("small");
+    setFixtureNow(NOW);
+    const result = ask(path, { limit: "50", ...extra });
+    expect(result.status, JSON.stringify(result.body)).toBe(200);
+    schema(result.body, "execution-manager-dataset.v1");
+    return result.body;
+  };
+
+  it("answers the ALPHA surface of alpha_btc_trend with its own portfolio id and exact figures, one USDT partition of the asked book", () => {
+    const body = small("/manager/alphas/alpha_btc_trend/overview", { environment: "live" });
+    expect(body.surface).toBe("ALPHA");
+    expect(body.items).toHaveLength(1);
+    const row = body.items[0];
+    expect([row.alpha_id, row.portfolio_id]).toEqual(["alpha_btc_trend", "pf_core"]);
+    expect(row.economic_partitions).toHaveLength(1);
+    expect(row.economic_partitions[0].partition).toMatchObject({ economic_domain: "ACTUAL", currency: "USDT" });
+    const m = row.economic_partitions[0].metrics;
+    expect(m.allocation.value).toBe("80000");
+    expect(m.net_pnl.value).toBe("1120.8");
+    expect(m.balance_total.value).toBe("81120.8");
+    expect(m.equity_30d_end_value.value).toBe("81176.2");
+    expect(m.return_30d_pct.value).toBe("1.401");
+    expect(m.cost_drag_fees).toMatchObject({ value: "40", unit: "MONEY", currency: "USDT" });
+    expect(m.cost_drag_funding.value).toBe("16");
+    expect(m.max_drawdown_pct).toMatchObject({ unit: "PERCENT", currency: null });
+    expect(m.max_drawdown_pct.value).toMatch(/^-\d+(\.\d\d?)?$/);
+    expect(m.forward_observation_days).toMatchObject({ unit: "DAYS", currency: null });
+    expect(m.forward_observation_days.value).toMatch(/^\d+$/);
+  });
+
+  it("scales the cost drag with the window (fees 5 bp of allocation per 30 days, bigint) and gives the other alpha ids their own rows", () => {
+    const week = small("/manager/alphas/alpha_btc_trend/overview", { environment: "live", window: JSON.stringify("7D") });
+    expect(week.items[0].economic_partitions[0].metrics.cost_drag_fees.value).toBe("9.333333333333333333");
+    expect(week.items[0].economic_partitions[0].metrics.cost_drag_fees.window).toEqual(week.selected_window.resolved);
+    expect(week.items[0].economic_partitions[0].metrics.forward_observation_days.window).toBeNull();
+    const live = small("/manager/fleet", { environment: "live" });
+    expect((live.items as Body[]).map((row) => [row.alpha_id, row.portfolio_id])).toEqual([
+      ["alpha_b", "pf_main"], ["alpha_b", "pf_sat"], ["alpha_btc_trend", "pf_core"], ["alpha_c", "pf_sat"],
+    ]);
+    const unknown = ask("/manager/alphas/alpha_nobody/overview", { environment: "live" });
+    expect(unknown.status).toBe(404);
+  });
+
+  it("keeps one true zero and one typed absence at row level (paper), partitions of the same book only", () => {
+    const body = small("/manager/fleet", { environment: "paper" });
+    const parts = (body.items as Body[]).flatMap((row) => row.economic_partitions as Body[]);
+    expect(new Set(parts.map((entry) => `${entry.partition.economic_domain}|${entry.partition.currency}`))).toEqual(new Set(["PAPER|USDT"]));
+    for (const row of body.items as Body[]) expect(row.economic_partitions).toHaveLength(1);
+    const zero = parts.find((entry) => entry.metrics.net_pnl.value === "0")!;
+    expect(zero.metrics.return_30d_pct.value).toBe("0");
+    expect(zero.metrics.max_drawdown_pct).toMatchObject({ value: "0", availability: "AVAILABLE" });
+    expect(zero.metrics.equity_30d_end_value).toMatchObject({ value: null, availability: "UNAVAILABLE", reason_code: "SOURCE_FACTS_NOT_PUBLISHED" });
+    expect(parts.some((entry) => entry.metrics.cost_drag_slippage.availability === "UNAVAILABLE") || parts.length < 4).toBe(true);
   });
 });

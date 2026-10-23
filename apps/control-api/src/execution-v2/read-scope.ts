@@ -1124,11 +1124,43 @@ export class ExecutionReadScopes {
   async deliverScopedTogether<T>(initial:readonly AuthorizedExecutionReadScope[],
     read:(retain:(scope:AuthorizedExecutionReadScope)=>void)=>Promise<T>,
     validateBeforeRelease?:()=>void):Promise<T>{
+    return this.deliverReadComposition(initial,read,validateBeforeRelease,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId,state.binding]));
+  }
+
+  /** Fleet ALL is a bounded composition of independently minted environment
+   * reads, never a merged entitlement. Only this exact dataset/action may span
+   * bindings; ordinary deliverScopedTogether retains its same-binding fence.
+   * All contributing scopes are renewed and compared against the last shared
+   * authority context before the one final Core confirmation. */
+  async deliverFleetEnvironments<T>(initial:readonly AuthorizedExecutionReadScope[],
+    read:()=>Promise<T>,validateBeforeRelease?:()=>void):Promise<T>{
+    if(!Array.isArray(initial)||!initial.length||initial.length>3)fail("EXECUTION_READ_SCOPE_REQUIRED");
+    const environments=new Set<ReadEnvironment>();
+    for(const scope of initial){
+      assertExecutionReadScope(scope);
+      const state=minted.get(scope)!;
+      if(state.issuer!==this||scope.mode!=="SCOPED_V2"||!state.context||
+        state.requirement.action!=="alpha.read"||state.requirement.resource!==undefined||
+        state.requirement.requireWholePopulation===true||
+        state.requirement.dataset?.dataset_id!=="alpha_fleet_overview"||
+        state.requirement.dataset.window!==null||environments.has(state.binding.environment))
+        fail("EXECUTION_READ_SCOPE_REQUIRED");
+      environments.add(state.binding.environment);
+    }
+    return this.deliverReadComposition(initial,()=>read(),validateBeforeRelease,state=>JSON.stringify([
+      state.principal.user.userId,state.principal.user.role,state.principal.session.userId,
+      state.principal.session.sessionId,state.principal.session.sessionVersion,
+      state.principal.workspaceId,state.principal.viewerWorkspaceId]));
+  }
+
+  private async deliverReadComposition<T>(initial:readonly AuthorizedExecutionReadScope[],
+    read:(retain:(scope:AuthorizedExecutionReadScope)=>void)=>Promise<T>,
+    validateBeforeRelease:(()=>void)|undefined,actorKey:(state:ScopeState)=>string):Promise<T>{
     if(!Array.isArray(initial)||!initial.length||initial.length>16)fail("EXECUTION_READ_SCOPE_REQUIRED");
     const original:AuthorizedExecutionReadScope[]=[],states:ScopeState[]=[];
-    const actorKey=(s:ScopeState)=>JSON.stringify([s.principal.user.userId,s.principal.user.role,
-      s.principal.session.userId,s.principal.session.sessionId,s.principal.session.sessionVersion,
-      s.principal.workspaceId,s.principal.viewerWorkspaceId,s.binding]);
     let expected:string|undefined;
     const retain=(scope:AuthorizedExecutionReadScope)=>{
       assertExecutionReadScope(scope);const state=minted.get(scope)!;

@@ -290,8 +290,8 @@ describe("L3 negative", () => {
 });
 
 describe("blotter default columns and time (BLT-B1)", () => {
-  it("opens with the hi-fi's ten columns: Alpha, Account and Venue are off until chosen", () => {
-    expect([...DEFAULT_COLUMNS].sort()).toEqual(["order", "price", "qty", "side", "status", "symbol", "time"].sort());
+  it("opens with the hi-fi's columns (Deployment, Filled, Avg price and Fee are kept, Not available where the read has none): Alpha, Account and Venue are off until chosen", () => {
+    expect([...DEFAULT_COLUMNS].sort()).toEqual(["avg", "deployment", "fee", "filled", "order", "price", "qty", "side", "status", "symbol", "time"].sort());
     for (const id of ["alpha", "account", "venue"] as const) {
       expect(COLUMNS.find((c) => c.id === id)?.dflt, id).toBe(false);
     }
@@ -313,6 +313,15 @@ describe("CSV export of the loaded rows", () => {
   const base = read(canonical)!.orders[0]!;
   const order = (over: Partial<BlotterOrder>): BlotterOrder => ({ ...base, ...over });
   const cols = (...ids: string[]) => COLUMNS.filter((c) => ids.includes(c.id));
+
+  it("the Deployment cell is the row's own deployment_id when the read publishes one, an empty cell when it does not; Avg price and Fee stay empty", () => {
+    const csv = blotterCsv(
+      [order({ orderId: "o1", deploymentId: "dep_btc_live" }), order({ orderId: "o2", deploymentId: null })],
+      cols("order", "deployment", "avg", "fee"),
+    );
+    const lines = csv.trim().split(/\r?\n/);
+    expect(lines.slice(1)).toEqual(["o1,dep_btc_live,,", "o2,,,"]);
+  });
 
   it("prints the visible labels once, then each row as shown: exact decimals ungrouped, UTC short form, absent as an empty cell", () => {
     const csv = blotterCsv(

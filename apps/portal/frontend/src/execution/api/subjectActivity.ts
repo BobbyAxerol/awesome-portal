@@ -66,6 +66,11 @@ export function readSubjectActivity(raw: unknown): SubjectActivityPage | null {
   const projection = obj(root.projection);
   const timeframeValue = interval(timeframe.value);
   const provenance = str(timeframe.provenance);
+  // A records container that is not a list while the page claims AVAILABLE and publishes no positive returned_count would read as an
+  // empty history ("nothing happened"). It is unreadable instead (DEBT-UXM07-013). With a positive returned_count the screen already
+  // says how many records could not be read, so that case keeps its page.
+  const returned = int(page.returned_count);
+  if (!Array.isArray(root.records) && str(root.state) === "AVAILABLE" && !(returned !== null && returned > 0)) return null;
   const records = (Array.isArray(root.records) ? root.records : []).flatMap((candidate) => {
     const row = obj(candidate);
     const recordId = str(row.record_id);

@@ -1,28 +1,40 @@
 /**
- * The commands table, in the kit's column order: Time, Target and operation,
- * Receipt, Next. Intent (FE-020) and Display (FE-032) have no source, so they are not columns of "Not published":
- * the screen names them once ("Not available: Intent, Display").
+ * The commands table, in the hi-fi column order: Time, Target and operation, Intent, Receipt, Display, Next.
+ * Intent (FE-020) and Display (FE-032) have no source, so each cell says "Not available" and the request id is behind its disclosure.
  *
  * Time is `created_at`; Target + operation is the target and `command_key`;
  * Receipt is `source_status` with `verification_result`; Next is
  * `triage_state`. The incidents an operation is linked to (FE-042) sit under the
- * target, so the six kit columns stay six. Intent (FE-020) and Display (FE-032) have no source yet, so
- * they stay columns, as in the kit, and each cell says "Not published" with its
- * request id instead of the table silently losing two of its six columns.
+ * target, so the six kit columns stay six.
  */
 import { useMemo, type MouseEvent, type ReactNode } from "react";
 import type { To } from "react-router-dom";
 
 import { CardsTable, type CardsColumn } from "../../cardsTable";
+import { NaWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import { formatAsOf } from "../../boundary";
-import type { OperationV2 } from "../../readers/operationalQueue";
+import type { FlagKind } from "../../flagKinds";
+import type { DeliveryStateV2, DisplayStateV2, OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { IncidentLinks } from "./IncidentLinks";
 import { axesText, commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
+
+/** FE-CAT-2 axis words. A word is a published value restated; nothing here is derived from other fields. */
+const DELIVERY_WORD: Readonly<Record<DeliveryStateV2, string>> = {
+  NOT_APPLICABLE: "Delivery: no receipt expected",
+  AWAITING_RECEIPT: "Delivery: awaiting receipt",
+  RECEIPT_CONFIRMED: "Delivery: receipt confirmed",
+  RECEIPT_FAILED: "Delivery: receipt failed",
+};
+const DISPLAY_WORD: Readonly<Record<DisplayStateV2, { kind: FlagKind; label: string }>> = {
+  CURRENT: { kind: "ok", label: "Current" },
+  CATCHING_UP: { kind: "pending", label: "Catching up" },
+  STALE: { kind: "stale", label: "Stale" },
+};
 
 function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId: string) => To): readonly CardsColumn<OperationV2>[] {
   return [
@@ -45,6 +57,11 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       ),
     },
     {
+      key: "intent",
+      label: "Intent",
+      render: () => <NaWhy reason="Not published (FE-020): whether the command was only previewed." />,
+    },
+    {
       key: "receipt",
       label: "Receipt",
       render: (row) => {
@@ -53,8 +70,20 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
           <span className="exec-ops-cell">
             <Flag kind={outcome.kind} label={outcome.label} size="sm" />
             <span className="exec-ops-meta">{axesText(row.sourceStatus, row.verificationResult)}</span>
+            {row.deliveryState ? <span className="exec-ops-meta">{DELIVERY_WORD[row.deliveryState]}</span> : null}
           </span>
         );
+      },
+    },
+    {
+      key: "display",
+      label: "Display",
+      render: (row) => {
+        // FE-CAT-2: the row's display axis. Omitted (no owning source) and null (the source did not report it) stay typed gaps.
+        if (row.displayState === undefined) return <NaWhy reason="Not published (FE-032): whether the figures shown have caught up." />;
+        if (row.displayState === null) return <NaWhy reason="Not published (FE-032): the source did not report whether the figures shown have caught up for this row." />;
+        const word = DISPLAY_WORD[row.displayState];
+        return <Flag kind={word.kind} label={word.label} size="sm" />;
       },
     },
     {

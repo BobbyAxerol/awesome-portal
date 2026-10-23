@@ -14,7 +14,8 @@ import { ExecutionCommandService, intentHash } from "../src/execution-v2/command
 import type { CommandRecord, CommandStore } from "../src/execution-v2/command.store";
 import { commandAuthorization, type CommandTrust, type SourceCommandResult } from "../src/execution-v2/command-trust";
 
-const fixture = JSON.parse(readFileSync(resolve(__dirname, "../../../packages/contracts/fixtures/execution-trusted-commands.synthetic.valid.json"), "utf8"));
+const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+const fixture = JSON.parse(readFileSync(resolve(contractsRoot, "fixtures/execution-trusted-commands.synthetic.valid.json"), "utf8"));
 const NOW = 1_792_100_000_000, OWNER = "TEST_ONLY:owner";
 const author: AccessActor = { user_id: "TEST_ONLY:original-author", session_id: "TEST_ONLY:old-session", session_generation: 1 };
 const requester: AccessActor = { user_id: "TEST_ONLY:reviewer", session_id: "TEST_ONLY:current-session", session_generation: 4 };

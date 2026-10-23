@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import type { PortalUser, Role } from "../domain";
+import type { Role } from "../domain";
 import { KeysetCursorCodec, queryFingerprint } from "../query/cursor";
 import { QueryContractError, type NormalizedFilter } from "../query/contracts";
-import { projectAccount } from "../repos/account-lifecycle";
-import type { RosterCountsRow } from "../repos/users";
+import { projectAccount, withLastSignIn } from "../repos/account-lifecycle";
+import type { RosterCountsRow, RosterUser } from "../repos/users";
 
 /**
  * BE-P23 · the owner roster as a keyset page.
@@ -53,7 +53,7 @@ export interface RosterStore {
     role: Role | null;
     state: RosterState | null;
     now: Date;
-  }): Promise<{ counts: RosterCountsRow; rows: PortalUser[] }>;
+  }): Promise<{ counts: RosterCountsRow; rows: RosterUser[] }>;
 }
 
 /** A refusal with a fixed sentence: never the offending cursor, filter or driver text. */
@@ -154,7 +154,7 @@ export async function readRosterPage(input: {
   const rows = read.rows.slice(0, query.limit);
   const last = rows[rows.length - 1];
   return {
-    accounts: rows.map((row) => projectAccount(row, now)),
+    accounts: rows.map((row) => withLastSignIn(projectAccount(row, now), row.lastSignInAt)),
     page: {
       limit: query.limit,
       returned_count: rows.length,

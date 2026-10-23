@@ -27,6 +27,7 @@ import { Flag } from "../../Flag";
 import type { AccessEffective, AccessGrant } from "../../readers/accessEffective";
 import { useExecUrlState, withContext } from "../../urlState";
 import { holds } from "../../shell/roleNav";
+import type { ExecutionApi } from "../../../api/ports";
 import {
   ACCESS_FE,
   ADMIN_CAPABILITY,
@@ -46,6 +47,7 @@ import {
   type CapabilityRow,
 } from "./model";
 import { useAccessEffective } from "./useAccessEffective";
+import { useRootCapitalEligibility } from "./useRootCapitalEligibility";
 
 import "../../css/access.css";
 
@@ -70,6 +72,11 @@ export interface AccessSelfViewProps {
   now?: () => number;
   /** Test seam for the one HTTP read. */
   fetchImpl?: typeof fetch;
+  /**
+   * The execution port, for the one advisory eligibility question this page can ask (capital commands at the caller's root,
+   * `portal.self-eligibility-batch.v2`). Without it the row says it was not asked; nothing is guessed.
+   */
+  api?: Pick<ExecutionApi, "getSelfEligibilityBatch">;
 }
 
 /** Longest value that still reads at the 24/32 mono kpi size; a longer one (a long username) takes the 12/16 mono id role. */
@@ -92,7 +99,7 @@ type GrantsView =
   | { phase: "unavailable"; reason: string; code: string | null; requestId: string | null }
   | { phase: "ready"; effective: AccessEffective; readAt: UtcEpochMs | null; stale: { reason: string; requestId: string | null } | null };
 
-export default function AccessSelfView({ manage, sessionWorkspaceId = null, now, fetchImpl }: AccessSelfViewProps) {
+export default function AccessSelfView({ manage, sessionWorkspaceId = null, now, fetchImpl, api }: AccessSelfViewProps) {
   const { principal, access } = useSession();
   const url = useExecUrlState();
   const location = useLocation();
@@ -149,7 +156,16 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
     {
       key: "status",
       label: "Status",
-      render: (r) => r.allowed ? <Flag kind="ok" size="sm" label={allowedWord} /> : <Flag kind="na" size="sm" label={deniedWord} />,
+      render: (r) => r.absent
+        ? <Flag kind="stale" size="sm" label="Not available yet" />
+        : r.allowed
+          ? (
+            <>
+              <Flag kind="ok" size="sm" label={allowedWord} />
+              {r.stepUp ? <> <Flag kind="approval" size="sm" label={r.stepUp === "ACTIVE" ? "Step-up active" : "Step-up required"} /></> : null}
+            </>
+          )
+          : <Flag kind="na" size="sm" label={deniedWord} />,
     },
     {
       key: "reason",
@@ -157,7 +173,8 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
       render: (r) => (
         <span className="exec-acc-why">
           {r.reason}
-          {withLink && !r.allowed ? <> · <Link className="exec-acc-link" to={myAccessHref}>My access</Link></> : null}
+          {r.absent ? <GapWhy name={`Why ${r.label} is not available yet`} rows={[gapTitle(r.absent.fe, r.absent.what)]} /> : null}
+          {withLink && !r.allowed && !r.absent ? <> · <Link className="exec-acc-link" to={myAccessHref}>My access</Link></> : null}
         </span>
       ),
     },
@@ -220,6 +237,14 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
   const others = otherCapabilities(capabilities);
   // At most ROW_CAP grants are drawn; the label states the exact count (the read itself is bounded at 500 by the reader).
   const grantView = useMemo(() => grantWindow(effective?.grants ?? []), [effective]);
+  // The root the caller's own current ALLOW grants name; the capital question is asked about it and about nothing else.
+  const rootId = useMemo(() => {
+    for (const grant of effective?.grants ?? []) {
+      if (grant.current && grant.effect === "ALLOW" && grant.selector.kind === "ROOT_SCOPE") return grant.selector.rootId;
+    }
+    return null;
+  }, [effective]);
+  const capital = useRootCapitalEligibility({ api, workspaceId, environment: url.value.env, rootId, now });
 
   const body = (
     <>
@@ -232,6 +257,11 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
         <div className="exec-acc-kpi">
           <dt>Owner</dt>
           <KpiValue text={ownerWord ?? (access.kind === "loading" ? "Loading" : "Not available")} absent={!ownerWord} />
+        </div>
+        <div className="exec-acc-kpi">
+          <dt>Role preset</dt>
+          <KpiValue text="Not available" absent />
+          <dd className="exec-acc-kpi-note">Access is shown by capability (FE-015)</dd>
         </div>
         <div className="exec-acc-kpi">
           <dt>Capabilities held</dt>
@@ -275,15 +305,12 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
           <PanelHead level={2} id={`${headingId}-do`} title="What you can do" />
           {sessionState ?? (
             <>
-              <CardsTable columns={doColumns} rows={doRows(capabilities)} rowKey={(r) => r.id} label="What you can do" />
+              <CardsTable columns={doColumns} rows={doRows(capabilities, capital.view)} rowKey={(r) => r.id} label="What you can do" />
               {/*
-                FE-015 WORDING: "Not published" is no longer exact for per-action eligibility. A published body
-                (portal.self-eligibility.v1 and the batch v2) and strict readers (readers/accessSelf.ts, accessSelfBatch.ts) exist.
-                They are wired where a screen carries a capital action: the Portfolio 360 Actions rail (DEBT-UXM07-011,
-                portfolio/useRailEligibility.ts). They are deliberately NOT read by this screen: eligibility is asked per resource and
-                action, and this page has neither. The cell therefore means "not read by this screen". The copy that says so
-                ("Not read yet by this screen", recommended) is Bobby's to approve; it is left unchanged here so no unapproved
-                words reach the screen (and the Access baselines stay as recorded for it).
+                Per-action eligibility (FE-015/068): asked per resource (readers/accessSelf.ts, accessSelfBatch.ts). This page has no
+                resource id, so it asks the one question that needs none: capital commands at the ROOT the caller's own grants name
+                (useRootCapitalEligibility). Gate decisions, Manage grants and Manage users come from the session's capabilities.
+                Every other design row says "Not available yet" with its request id; nothing is inferred.
               */}
             </>
           )}
@@ -293,8 +320,7 @@ export default function AccessSelfView({ manage, sessionWorkspaceId = null, now,
       <NotAvailableLine
         className="exec-acc-caption"
         facts={[
-          { label: "Role preset", id: "FE-015", why: "Access is shown by capability" },
-          { label: "Per-action eligibility", id: "FE-015", why: "The reason a control is off is not published for commands, archive and export" },
+          { label: "Per-action eligibility", id: "FE-015", why: "Asked per resource: this page reads only capital commands at your root. Archive, operations and export have no published read" },
           { label: "Who granted each item", id: "FE-015" },
         ]}
       />

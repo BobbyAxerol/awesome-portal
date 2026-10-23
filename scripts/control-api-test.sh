@@ -13,6 +13,17 @@ for test_file in "$@"; do
     exit 2
   fi
 done
+# Optional export of this exact, fully compiled/tested disposable cell. This
+# does not bypass a gate: capture is reached only AFTER both restore checks.
+# The offline exporter compares source bytes against the frozen index tree.
+QUALIFIED_OUTPUT_DIR="${CONTROL_API_QUALIFIED_OUTPUT_DIR:-}"
+QUALIFIED_SOURCE_TREE="${CONTROL_API_QUALIFIED_SOURCE_TREE:-}"
+if [[ -n "${QUALIFIED_OUTPUT_DIR}" || -n "${QUALIFIED_SOURCE_TREE}" ]]; then
+  [[ -n "${QUALIFIED_OUTPUT_DIR}" && "${QUALIFIED_SOURCE_TREE}" =~ ^[a-f0-9]{40}$ ]] || {
+    printf 'Qualified export requires an output directory and frozen tree.\n' >&2; exit 2;
+  }
+  [[ "$(git -C "${ROOT_DIR}" cat-file -t "${QUALIFIED_SOURCE_TREE}")" == tree ]] || exit 2
+fi
 MAXIMUM_DATA_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/maximum-data-return-v1"
 EDS08_SOURCE_CONTINUITY_PACK="${ROOT_DIR}/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1"
 # EDS-11R's checked-in named-operation compiler consumes this immutable
@@ -131,6 +142,22 @@ cp -a \
 mkdir -p "${WORK_DIR}/deploy/control-api"
 cp -a "${ROOT_DIR}/deploy/control-api/bootstrap-users.yaml" "${WORK_DIR}/deploy/control-api/"
 
+# Paper-history qualification deliberately exercises the real pure browser
+# reader/model after the HTTP producer; do not replace that boundary with a
+# hand-written test DTO. Its relative imports resolve next to /cell/work.
+# Copy only this explicit non-secret, framework-free dependency closure after
+# npm preparation, not the frontend workspace, env files or node_modules.
+PAPER_READER_SOURCE="${DEPS_DIR}/portal/frontend/src/execution"
+for paper_reader_file in \
+  api/profileRead.ts api/schemaGuard.ts api/screenV2.ts \
+  screenDataContract.ts unsafeText.ts formatExact.ts stageFacts.ts \
+  v2/boundary.ts v2/charts/decimal.ts v2/charts/model.ts v2/charts/downsample.ts \
+  v2/readers/paperRead.ts v2/screens/stage/identity.ts v2/screens/workbench/model.ts; do
+  mkdir -p "$(dirname "${PAPER_READER_SOURCE}/${paper_reader_file}")"
+  cp -a "${ROOT_DIR}/apps/portal/frontend/src/execution/${paper_reader_file}" \
+    "${PAPER_READER_SOURCE}/${paper_reader_file}"
+done
+
 ln -s ../node_modules "${WORK_DIR}/node_modules"
 
 # The test cell can reach only its temporary PostgreSQL container. Source is
@@ -179,6 +206,7 @@ fi
   -e EDS08_SOURCE_CONTINUITY_PACK="/services/portal-execution-edge-rs/contracts/eds08-source-continuity-v1" \
   -e EDS11R_SOURCE_PACK="/services/portal-execution-edge-rs/contracts/maximum-data-return-v1" \
   -e EDS11R_CENSUS_PACK="/services/portal-execution-edge-rs/contracts/manager-surface-census-v1" \
+  -e CONTROL_API_CAPTURE_QUALIFIED="$([[ -n "${QUALIFIED_OUTPUT_DIR}" ]] && printf 1 || printf 0)" \
   "${NODE_IMAGE}" sh -c '
     set -e
     npm run build
@@ -189,6 +217,15 @@ fi
       DATABASE_URL="${TEST_DATABASE_URL:?Disposable test database URL is required}" node dist/cli/migrate.js
     fi
     npm test -- "$@"
+    if [ "${CONTROL_API_CAPTURE_QUALIFIED}" = 1 ]; then
+      node -e '\''const fs=require("node:fs"),crypto=require("node:crypto");
+        const hash=p=>crypto.createHash("sha256").update(fs.readFileSync(p)).digest("hex");
+        fs.writeFileSync(".qualified-control-api-toolchain.json",JSON.stringify({
+          node_version:process.version,typescript_version:require("typescript/package.json").version,
+          typescript_js_sha256:hash("node_modules/typescript/lib/typescript.js"),
+          typescript_tsc_sha256:hash("node_modules/typescript/lib/tsc.js")
+        }),{flag:"wx",mode:0o600});'\''
+    fi
   ' sh "$@"
 
 CONTROL_SIGNATURE_SQL="SELECT string_agg(value, ':' ORDER BY ordinal) FROM (VALUES (1, (SELECT count(*)::text FROM pgmigrations)), (2, (SELECT count(*)::text FROM portal_users)), (3, (SELECT count(*)::text FROM governance_approval_requests)), (4, (SELECT count(*)::text FROM governance_approval_known_limitations)), (5, (SELECT count(*)::text FROM governance_r2_lineage)), (6, (SELECT count(*)::text FROM governance_approval_history)), (7, (SELECT count(*)::text FROM governance_paper_exit_reviews)), (8, (SELECT count(*)::text FROM execution_command_plans_f0)), (9, (SELECT count(*)::text FROM execution_command_plans_f0 WHERE payload_json <> '{}'::jsonb)), (10, (SELECT count(*)::text FROM execution_operation_queue_items)), (11, (SELECT count(*)::text FROM execution_operation_queue_items WHERE assigned_to_user_id IS NOT NULL)), (12, (SELECT count(*)::text FROM execution_operation_queue_read WHERE incident_id IS NOT NULL)), (13, (SELECT count(*)::text FROM execution_operation_workflow_events)), (14, (SELECT count(*)::text FROM execution_incidents)), (15, (SELECT count(*)::text FROM execution_incident_operation_links)), (16, (SELECT count(*)::text FROM execution_incident_annotations)), (17, (SELECT count(*)::text FROM execution_incident_evidence)), (18, (SELECT count(*)::text FROM execution_incident_events)), (19, (SELECT count(*)::text FROM governance_sandbox_certifications)), (20, (SELECT count(*)::text FROM governance_sandbox_smoke_plans)), (21, (SELECT count(*)::text FROM governance_sandbox_step_evidence)), (22, (SELECT count(*)::text FROM governance_sandbox_findings)), (23, (SELECT count(*)::text FROM governance_sandbox_certification_events)), (24, (SELECT count(*)::text FROM governance_sandbox_promotion_plans)), (25, (SELECT count(*)::text FROM governance_canary_envelopes)), (26, (SELECT count(*)::text FROM execution_activation_capabilities)), (27, (SELECT count(*)::text FROM execution_activation_capabilities WHERE effective_profile <> 'fixture' OR source_enabled OR runtime_enabled OR NOT kill_switch_engaged)), (28, (SELECT count(*)::text FROM execution_activation_plans)), (29, (SELECT count(*)::text FROM execution_activation_evidence_refs)), (30, (SELECT count(*)::text FROM execution_activation_compatibility_requirements)), (31, (SELECT count(*)::text FROM execution_activation_events)), (32, (SELECT count(*)::text FROM execution_shared_admission_state)), (33, (SELECT count(*)::text FROM execution_shared_admission_leases)), (34, (SELECT count(*)::text FROM execution_shared_read_flights)), (35, (SELECT count(*)::text FROM execution_shared_read_cache)), (36, (SELECT count(*)::text FROM execution_manager_operation_continuations)), (37, (SELECT count(*)::text FROM execution_manager_projection_snapshots)), (38, (SELECT count(*)::text FROM execution_alpha_fleet_projection)), (39, (SELECT count(*)::text FROM execution_binding_projection)), (40, (SELECT count(*)::text FROM execution_profile_projection_leases)), (41, (SELECT count(*)::text FROM execution_profile_projection_snapshots)), (42, (SELECT count(*)::text FROM execution_profile_projection_journal)), (43, (SELECT count(*)::text FROM execution_durable_mirror_batches)), (44, (SELECT count(*)::text FROM execution_durable_mirror_revisions)), (45, (SELECT count(*)::text FROM execution_durable_mirror_observations)), (46, (SELECT count(*)::text FROM execution_durable_mirror_current_entities)), (47, (SELECT count(*)::text FROM execution_durable_mirror_range_rows)), (48, (SELECT count(*)::text FROM execution_durable_mirror_continuations)), (49, (SELECT count(*)::text FROM execution_durable_mirror_gaps)), (50, (SELECT count(*)::text FROM execution_durable_mirror_conflicts)), (51, (SELECT count(*)::text FROM execution_financial_query_cursors)), (52, (SELECT count(*)::text FROM execution_authoritative_event_streams)), (53, (SELECT count(*)::text FROM execution_authoritative_event_entries)), (54, (SELECT count(*)::text FROM execution_authoritative_event_entities)), (55, (SELECT count(*)::text FROM execution_profile_projection_refresh_health)), (56, (SELECT count(*)::text FROM governance_review_captures))) AS signature(ordinal, value);"
@@ -222,5 +259,15 @@ restore_access_signature="$(${DOCKER[@]} exec "${PG_CONTAINER}" psql -U portal -
     "${source_access_signature}" "${restore_access_signature}" >&2
   exit 1
 }
+
+if [[ -n "${QUALIFIED_OUTPUT_DIR}" ]]; then
+  qualified_test_command='npm test --'
+  for test_file in "$@"; do qualified_test_command+=" ${test_file}"; done
+  qualified_script_sha="$(sha256sum "${BASH_SOURCE[0]}" | cut -d ' ' -f 1)"
+  node "${ROOT_DIR}/scripts/execution-v2/qualified-control-api-image.mjs" capture \
+    --source-root "${ROOT_DIR}" --source-tree "${QUALIFIED_SOURCE_TREE}" \
+    --work-dir "${WORK_DIR}" --output-dir "${QUALIFIED_OUTPUT_DIR}" \
+    --gate-script-sha256 "${qualified_script_sha}" --test-command "${qualified_test_command}"
+fi
 
 printf 'Control API security/query/governance tests and PostgreSQL restore drill (including four scoped-access row digests) passed.\n'

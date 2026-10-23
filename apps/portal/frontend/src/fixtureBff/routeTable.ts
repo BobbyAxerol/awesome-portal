@@ -111,6 +111,7 @@ export const ROUTES: RouteEntry[] = [
   { method: "GET", pattern: `${EX}/alphas`, url: `${EX}/alphas?limit=50`, status: 200, source: "bffDouble (alphaFleet)", real: "control-api", note: "filters search, stage, owner, health; sort; keyset after/before" },
   { method: "GET", pattern: `${EX}/alphas/equity-sparklines`, url: `${EX}/alphas/equity-sparklines?environment=paper`, status: 200, source: "bffDouble", real: "control-api" },
   { method: "GET", pattern: `${EX}/alphas/{alpha_id}/stage-drift`, url: `${EX}/alphas/alpha_btc_trend/stage-drift`, status: 200, source: "bffDoubleAlpha", real: "control-api" },
+  { method: "GET", pattern: `${EX}/alphas/{alpha_id}/stage-drift [exact decimals]`, url: `${EX}/alphas/alpha_btc_trend/stage-drift?numeric_format=DECIMAL_STRING`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "portal.execution.alpha-stage-drift.v2, served only with numeric_format=DECIMAL_STRING (exact decimal strings, a currency and a reason per gap); without it the route keeps the number-valued body" },
   { method: "GET", pattern: `${EX}/alphas/{alpha_id}/query-analytics`, url: `${EX}/alphas/alpha_btc_trend/query-analytics`, status: 200, source: "bffDouble", real: "control-api" },
   { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id}`, url: `${EX}/resources/alphas/alpha_btc_trend`, status: 200, source: "bffDoubleAlpha", real: "control-api", note: "any other id answers the same template; alpha_denied 403, alpha_down 503, alpha_empty empty" },
   { method: "GET", pattern: `${EX}/resources/alphas/{alpha_id}/orders`, url: `${EX}/resources/alphas/alpha_btc_trend/orders?environment=paper&limit=3`, status: 200, source: "bffDoubleAlpha", real: "control-api" },
@@ -155,6 +156,7 @@ export const ROUTES: RouteEntry[] = [
   /* portfolios */
   { method: "GET", pattern: `${EX}/portfolios`, url: `${EX}/portfolios`, status: 200, source: "bffDoublePortfolios", real: "control-api" },
   { method: "GET", pattern: `${EX}/resources/portfolios/{portfolio_id}`, url: `${EX}/resources/portfolios/pf_TEST_ONLY_core`, status: 200, source: "bffDoublePortfolios", real: "control-api" },
+  { method: "GET", pattern: `${EX}/resources/portfolios/{portfolio_id} [V2 workspace]`, url: `${EX}/resources/portfolios/pf_TEST_ONLY_core?workspace_id=${V2_WS}`, status: 200, source: "bffDoubleScopedResource", real: "control-api", note: "execution.portfolio-resource.v2 (SCOPED_V2): the canonical case with the requested id; served only for workspace_id=ws_TEST_SCOPED_V2" },
   { method: "GET", pattern: `${EX}/derivations/portfolios/{portfolio_id}/capital`, url: `${EX}/derivations/portfolios/pf_TEST_ONLY_core/capital?environment=live`, status: 200, source: "bffDoublePortfolios", real: "control-api" },
   { method: "GET", pattern: `${EX}/portfolios/{portfolio_id}/capital-ledger`, url: `${EX}/portfolios/pf_TEST_ONLY_core/capital-ledger?environment=live`, status: 200, source: "bffDoublePortfolios", real: "control-api" },
   { method: "GET", pattern: `${EX}/portfolios/{portfolio_id}/correlation`, url: `${EX}/portfolios/pf_TEST_ONLY_satellite/correlation`, status: 200, source: "bffDoublePortfolios", real: "control-api", note: "every other portfolio: 503 ANALYTICS_UPSTREAM_ROUTE_ABSENT" },
@@ -167,9 +169,11 @@ export const ROUTES: RouteEntry[] = [
   { method: "GET", pattern: `${EX}/broker-bindings/{binding_id}`, url: `${EX}/broker-bindings/bnc_main@BINANCE?environment=live`, status: 200, source: "bffDoubleAccount", real: "control-api" },
   { method: "GET", pattern: `${EX}/broker-bindings/{binding_id}/exposure`, url: `${EX}/broker-bindings/bnc_main@BINANCE/exposure`, status: 200, source: "bffDoubleAccount", real: "control-api" },
   { method: "GET", pattern: `${EX}/resources/accounts/{account_id}`, url: `${EX}/resources/accounts/acc_bnc_core`, status: 200, source: "bffDoubleAccount", real: "control-api" },
+  { method: "GET", pattern: `${EX}/resources/accounts/{account_id} [V2 workspace]`, url: `${EX}/resources/accounts/acc_bnc_core?workspace_id=${V2_WS}`, status: 200, source: "bffDoubleScopedResource", real: "control-api", note: "execution.account-resource.v2 (SCOPED_V2): the canonical case with the requested id; served only for workspace_id=ws_TEST_SCOPED_V2" },
   { method: "GET", pattern: `${EX}/resources/accounts/{account_id}/orders`, url: `${EX}/resources/accounts/acc_bnc_core/orders?environment=live&limit=2`, status: 200, source: "bffDoubleAccount", real: "control-api" },
   { method: "GET", pattern: `${EX}/resources/accounts/{account_id}/fills`, url: `${EX}/resources/accounts/acc_bnc_core/fills?environment=live`, status: 200, source: "bffDoubleAccount", real: "control-api" },
   { method: "GET", pattern: `${EX}/resources/bindings/{binding_id}`, url: `${EX}/resources/bindings/bnc_main@BINANCE`, status: 200, source: "bffDouble", real: "control-api" },
+  { method: "GET", pattern: `${EX}/resources/bindings/{binding_id} [V2 workspace]`, url: `${EX}/resources/bindings/bnc_main@BINANCE?workspace_id=${V2_WS}`, status: 200, source: "bffDoubleScopedResource", real: "control-api", note: "execution.binding-resource.v2 (SCOPED_V2): the canonical case with the requested id; served only for workspace_id=ws_TEST_SCOPED_V2" },
 
   /* governance */
   { method: "GET", pattern: `${EX}/governance/approvals`, url: `${EX}/governance/approvals?limit=50`, status: 200, source: "bffDouble", real: "control-api", note: "rows, counts, keyset after" },
@@ -244,7 +248,6 @@ export const ROUTES: RouteEntry[] = [
   { method: "POST", pattern: `${EX}/operations/{operation_id}/apply`, url: `${EX}/operations/op_1/apply`, body: {}, status: 202, source: "bffDouble", real: "control-api", note: "canned 202 operation; nothing is applied. The published route answers 409 COMMAND_RELAY_DISABLED while the relay is off" },
 ];
 
-const NOT_V2 = "the double serves the V1-era envelope the readers read";
 
 /**
  * Found by trying every execution schema against every body (a body that conforms to a schema it was
@@ -306,8 +309,8 @@ export const SCHEMAS: Record<string, SchemaVerdict> = {
   "POST /api/v1/execution/operations/{operation_id}/resolve": { ref: { file: OPS, ptr: "/$defs/OperationWorkflowResponse" } },
 
   /* a published schema exists and the double does not conform to it: reported, not hidden */
-  "GET /api/v1/execution/screen-contracts": { ref: { file: "execution-screen-bff.v1", ptr: "/$defs/CatalogueResponse" }, drift: "the unit fixture lacks read_at, actor, exact_total and has more than the 23 screens the schema allows" },
-  "GET /api/v1/execution/alphas/{alpha_id}/stage-drift": { ref: { file: "execution-alpha-stage-drift.v2", ptr: "" }, drift: "the double serves the pre-v2 stage-drift body (no schema_version, alpha_id, qualification)" },
+  "GET /api/v1/execution/screen-contracts": { ref: { file: "execution-screen-bff.v1", ptr: "/$defs/CatalogueResponse" } },
+  "GET /api/v1/execution/alphas/{alpha_id}/stage-drift [exact decimals]": { ref: { file: "execution-alpha-stage-drift.v2", ptr: "" } },
   "GET /api/admin/accounts [paged]": { ref: { file: "../openapi/portal-account-lifecycle.openapi.json", ptr: "/components/schemas/AccountRoster" } },
   "GET /api/v1/execution/resources/alphas/{alpha_id}": { ref: { file: "execution-alpha-resource.v1", ptr: "" } },
   "GET /api/v1/execution/resources/alphas/{alpha_id}/orders": { ref: { file: "execution-subject-records.v1", ptr: "" } },
@@ -328,13 +331,13 @@ export const SCHEMAS: Record<string, SchemaVerdict> = {
     `GET /api/v1/execution/resources/alphas/{alpha_id}/${variant}`,
     { ref: { file: "../openapi/execution-scoped-records.openapi.json", ptr: "/components/schemas/ScopedSubjectRecordsResponse" } },
   ] as const)),
-  "GET /api/v1/execution/resources/portfolios/{portfolio_id}": { ref: { file: RES, ptr: "/$defs/PortfolioScopedResourceWireResponse" }, drift: NOT_V2 },
-  "GET /api/v1/execution/resources/accounts/{account_id}": { ref: { file: RES, ptr: "/$defs/AccountScopedResourceWireResponse" }, drift: NOT_V2 },
-  "GET /api/v1/execution/resources/bindings/{binding_id}": { ref: { file: RES, ptr: "/$defs/BindingScopedResourceWireResponse" }, drift: NOT_V2 },
-  "GET /api/v1/execution/governance/approvals": { ref: { file: "execution-governance-product.v1", ptr: "/$defs/ApprovalInboxResponse" }, drift: "the double serves the raw inbox page (rows, counts) the V1 reader reads, not the published envelope" },
-  "GET /api/v1/execution/governance/approvals/history": { ref: { file: "execution-governance-approval-workflow.v1", ptr: "/$defs/ApprovalHistoryResponse" }, drift: "no actor, read_truth, applied_filters or applied_sort" },
-  "GET /api/v1/execution/governance/approvals/{approval_id}/r1": { ref: { file: "execution-governance-approval-workflow.v1", ptr: "/$defs/R1ReviewResponse" }, drift: "the unit fixture carries no schema_version, record_authority, delivery_profile, read_at or data" },
-  "GET /api/v1/execution/governance/waivers": { ref: { file: "execution-governance-product.v1", ptr: "/$defs/ConditionsRegisterResponse" }, drift: "no read_truth, empty applied_sort" },
+  "GET /api/v1/execution/resources/portfolios/{portfolio_id} [V2 workspace]": { ref: { file: RES, ptr: "/$defs/PortfolioScopedResourceWireResponse" } },
+  "GET /api/v1/execution/resources/accounts/{account_id} [V2 workspace]": { ref: { file: RES, ptr: "/$defs/AccountScopedResourceWireResponse" } },
+  "GET /api/v1/execution/resources/bindings/{binding_id} [V2 workspace]": { ref: { file: RES, ptr: "/$defs/BindingScopedResourceWireResponse" } },
+  "GET /api/v1/execution/governance/approvals": { ref: { file: "execution-governance-product.v1", ptr: "/$defs/ApprovalInboxResponse" } },
+  "GET /api/v1/execution/governance/approvals/history": { ref: { file: "execution-governance-approval-workflow.v1", ptr: "/$defs/ApprovalHistoryResponse" } },
+  "GET /api/v1/execution/governance/approvals/{approval_id}/r1": { ref: { file: "execution-governance-approval-workflow.v1", ptr: "/$defs/R1ReviewResponse" } },
+  "GET /api/v1/execution/governance/waivers": { ref: { file: "execution-governance-product.v1", ptr: "/$defs/ConditionsRegisterResponse" } },
 };
 
 export const ROUTES_BEGIN = "<!-- routes:begin (generated from apps/portal/frontend/src/fixtureBff/routeTable.ts) -->";

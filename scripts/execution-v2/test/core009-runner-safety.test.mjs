@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { parseMissingOnlyMode, parseOfficialRetry75Stderr, assertKnownClosedRetry75,
+import { createOperatorStepLabel, parseMissingOnlyMode, parseOfficialRetry75Stderr, assertKnownClosedRetry75,
   assertAdmissionWindow, assertRemoveOnlySettlement, assertSpecimenBudget,
   observeBounded, createBoundedTextCapture, captureFailureAndObserve } from '../core009-runner-safety.mjs';
 
@@ -12,6 +12,43 @@ const pending = '{"code":"MANAGER_REVOKE_DRAIN_PENDING"}';
 const retry = () => ({ result: { status: 75, signal: null, closed: true, unknown: false },
   dispatch: { sha256: expectedSha256 }, expectedSha256, artifactSha256: expectedSha256,
   stderr: ' Container TEST_ONLY Creating\n' + pending + '\n' });
+
+test('operator labels stay one filename even when a child argument is an absolute path', () => {
+  assert.equal(createOperatorStepLabel(1, 'prepare.mjs', '/home/TEST_ONLY/expectation.json'),
+    '01-prepare-_home_TEST_ONLY_expectation.json');
+  assert.equal(createOperatorStepLabel(2, 'operate.mjs', 'C:\\TEST_ONLY\\input.json'),
+    '02-operate-C__TEST_ONLY_input.json');
+});
+test('operator labels normalize switches, newlines and control characters without paths', () => {
+  assert.equal(createOperatorStepLabel(3, 'stream-probe.mjs', '--active-revoke-only'),
+    '03-stream-probe-active-revoke-only');
+  const label = createOperatorStepLabel(4, 'operate.mjs', '../a\nb\rc\td\0e\x1bf\x7f');
+  assert.equal(label, '04-operate-.._a_b_c_d_e_f_');
+  assert.match(label, /^[A-Za-z0-9._-]+$/);
+});
+test('operator label tags and script names have a bounded portable filename length', () => {
+  const file = 's'.repeat(92) + '.mjs';
+  const label = createOperatorStepLabel(Number.MAX_SAFE_INTEGER, file, 'x'.repeat(10000));
+  assert.equal(label, `${Number.MAX_SAFE_INTEGER}-${'s'.repeat(92)}-${'x'.repeat(64)}`);
+  assert.ok(Buffer.byteLength(label) < 255);
+  assert.equal(createOperatorStepLabel(9, 'operate.mjs'), '09-operate-run');
+  assert.equal(createOperatorStepLabel(10, 'operate.mjs', ''), '10-operate-run');
+  assert.equal(createOperatorStepLabel(11, 'operate.mjs', '--'), '11-operate-run');
+});
+for (const step of [0, -1, 1.5, NaN, Infinity, Number.MAX_SAFE_INTEGER + 1, '1', null])
+  test('operator label rejects invalid step ' + String(step), () => {
+    assert.throws(() => createOperatorStepLabel(step, 'operate.mjs'), /POSITIVE_OPERATOR_STEP_REQUIRED/);
+  });
+for (const file of ['../operate.mjs', '/tmp/operate.mjs', 'C:\\operate.mjs', 'operate.js',
+  'operate.mjs/child', 'operate\n.mjs', 'operate.mjs\n', 'operate.mjs\r\n', 'operate\0.mjs',
+  '.mjs', '', 's'.repeat(93) + '.mjs', null, undefined, 12])
+  test('operator label rejects invalid script ' + JSON.stringify(file), () => {
+    assert.throws(() => createOperatorStepLabel(1, file), /OPERATOR_SCRIPT_BASENAME_REQUIRED/);
+  });
+for (const arg of [null, 0, false, [], {}, Buffer.from('TEST_ONLY')])
+  test('operator label refuses non-string arguments ' + JSON.stringify(arg), () => {
+    assert.throws(() => createOperatorStepLabel(1, 'operate.mjs', arg), /OPERATOR_ARGUMENT_TEXT_REQUIRED/);
+  });
 
 test('missing-only must be explicit; no implicit restart or extra arguments', () => {
   assert.equal(parseMissingOnlyMode(['--active-revoke-only']), 'ACTIVE_REVOKE_ONLY');

@@ -35,6 +35,9 @@ export const EXEC_V2_SCREEN_KEYS = [
   "scoped",
   // ELP2-09: the Fleet realtime STREAM chip (v2/fleetStream), mounted inside the Fleet. Needs the `fleet` key too. OFF unless the manifest names it.
   "fleet-stream",
+  // DEBT-048 item 9: the pending-control PREVIEW form in the Operations dock (v2/screens/operations). FIXTURE_LAB only: OFF unless the
+  // manifest names it, and then only for a TEST_ONLY workspace. It is not the `command` key; neither enables a send.
+  "pending-preview",
 ] as const;
 export type ExecV2ScreenKey = (typeof EXEC_V2_SCREEN_KEYS)[number];
 

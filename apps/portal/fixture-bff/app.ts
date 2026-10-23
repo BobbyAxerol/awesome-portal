@@ -16,11 +16,12 @@ import { answerFixtureRequest, type BffRequest, type BffResponse, type FixtureAn
 import { setOverviewDoubleVariants, setOverviewPlanMode, resetOverviewDouble, type OverviewDoubleVariants } from "../frontend/e2e/bffDoubleOverview";
 import { OPERATIONS_V2_DOUBLE_NOW_ISO } from "../frontend/e2e/bffDoubleV2";
 import { ACCESS_DOUBLE_DEFAULT_USER } from "../frontend/e2e/bffDoubleAccess";
-import { setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
+import { setUsersDoubleLastSignIn, setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../frontend/e2e/bffScale";
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
 import { answerReviewManager } from "./review-manager";
 import { transformReviewBody } from "./review-relations";
+import { rebaseDelta, rebaseTimes } from "./time-rebase";
 
 export const LANE_HEADER = "x-fixture-lane";
 export const DEFAULT_LANE = "FIXTURE_LAB";
@@ -40,6 +41,8 @@ export interface FixtureConfig {
   users: UsersDoubleVariant | null;
   /** Opt-in server-only data. Never a browser/real-API fallback. */
   reviewProfile: ReviewProfile;
+  /** Preview only (FIXTURE_REBASE_TIME=1): shift the time-valued fields of a served body to the real clock (see time-rebase.ts). */
+  rebaseTime: boolean;
 }
 
 /* ── configuration ──────────────────────────────────────────────────────── */
@@ -76,6 +79,9 @@ export function loadConfig(env: Record<string, string | undefined>): FixtureConf
   const nowIso = text("FIXTURE_NOW_ISO") ?? OPERATIONS_V2_DOUBLE_NOW_ISO;
   if (!Number.isFinite(Date.parse(nowIso))) throw new ConfigError("FIXTURE_NOW_ISO must be an ISO-8601 instant");
 
+  const rebaseRaw = text("FIXTURE_REBASE_TIME");
+  if (rebaseRaw !== undefined && rebaseRaw !== "0" && rebaseRaw !== "1") throw new ConfigError("FIXTURE_REBASE_TIME must be 0 or 1");
+
   const writes = text("FIXTURE_WRITES") ?? "doubles";
   if (writes !== "doubles" && writes !== "refuse") throw new ConfigError("FIXTURE_WRITES must be doubles or refuse");
   const reviewProfile = text("FIXTURE_REVIEW_PROFILE") ?? "sparse-realistic";
@@ -109,6 +115,7 @@ export function loadConfig(env: Record<string, string | undefined>): FixtureConf
     laneLabel,
     scale,
     nowIso,
+    rebaseTime: rebaseRaw === "1",
     userId: text("FIXTURE_USER_ID") ?? ACCESS_DOUBLE_DEFAULT_USER,
     writes,
     overview,
@@ -123,6 +130,7 @@ export function resetFixtureGlobals(): void {
   setOverviewPlanMode("sequence");
   resetOverviewDouble();
   setUsersDoubleVariant("paged");
+  setUsersDoubleLastSignIn(false);
 }
 
 function applyConfig(config: FixtureConfig): void {
@@ -133,6 +141,8 @@ function applyConfig(config: FixtureConfig): void {
   setOverviewPlanMode("blocked");
   setOverviewDoubleVariants(config.overview);
   if (config.users !== null) setUsersDoubleVariant(config.users);
+  // SIMULATED (FE-CAT-8): the roster's last sign-in, only on the populated and layout-stress profiles like the other overlays.
+  setUsersDoubleLastSignIn(config.reviewProfile !== "sparse-realistic");
 }
 
 /* ── the request ────────────────────────────────────────────────────────── */
@@ -199,7 +209,8 @@ function laneBody(config: FixtureConfig): Record<string, unknown> {
 }
 
 function answererOptions(config: FixtureConfig): FixtureAnswererOptions {
-  return { ...V2_OPTIONS, userId: config.userId };
+  // SIMULATED facts (e2e/bffSimulated.ts) only on the populated and layout-stress profiles; the sparse default is unchanged.
+  return { ...V2_OPTIONS, userId: config.userId, simulated: config.reviewProfile !== "sparse-realistic" };
 }
 
 function answerFor(config: FixtureConfig, request: BffRequest): BffResponse | null {
@@ -315,7 +326,8 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
 
   const answered = answerFor(config, request);
   if (answered !== null) {
-    send(response, config, answered.status, answered.body, { ...answered.headers });
+    const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseTimes(answered.body, rebaseDelta(OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now())) : answered.body;
+    send(response, config, answered.status, served, { ...answered.headers });
     return;
   }
   // Not modelled for this method. If the path IS served for GET, the method is the problem (405); otherwise nothing here answers it (404).

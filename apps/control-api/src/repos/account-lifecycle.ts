@@ -73,6 +73,20 @@ export function projectAccount(user: PortalUser, now: Date = new Date()): Accoun
   };
 }
 
+/**
+ * FE-CAT-8. The roster-only, optional `last_sign_in_at`: the instant of the account's newest successful sign-in,
+ * or `null` ONLY when lifetime coverage proves it never signed in. A session's creation alone is not this fact.
+ * `undefined` means the roster source did not supply the fact,
+ * and the key is then OMITTED (never a guessed `null`, never a last-request time). It is a published timestamp and authorizes
+ * nothing. Deliberately NOT part of `projectAccount`, which also builds the immutable lifecycle audit states.
+ */
+export function withLastSignIn<T extends AccountProjection>(account: T, lastSignIn: Date | null | undefined): T & { last_sign_in_at?: string | null } {
+  if (lastSignIn === undefined) return account;
+  if (lastSignIn !== null && !(lastSignIn instanceof Date && Number.isFinite(lastSignIn.getTime()) && lastSignIn.getTime() >= 0))
+    return account; // an unreadable instant is not published as a time or as "never"
+  return { ...account, last_sign_in_at: lastSignIn === null ? null : lastSignIn.toISOString() };
+}
+
 export interface LifecycleOperationRecord {
   operationId: string;
   idempotencyKey: string;

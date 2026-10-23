@@ -9,7 +9,8 @@ import { commandAuthorization, type CommandAuthorization, type SourceCommandResu
 import { createEdgeCommandTrust, edgeCommandUnavailable, type EdgeCommandExchange, type EdgeCommandOriginal,
   type EdgeCommandPreparedCall, type EdgeCommandSelection, type SelectedEdgeCommandGateway } from "../src/execution-v2/edge-command-adapter";
 
-const fixture = JSON.parse(readFileSync(resolve(__dirname, "../../../packages/contracts/fixtures/execution-trusted-commands.synthetic.valid.json"), "utf8"));
+const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
+const fixture = JSON.parse(readFileSync(resolve(contractsRoot, "fixtures/execution-trusted-commands.synthetic.valid.json"), "utf8"));
 const intent = commandIntent.parse(fixture.intent), now = 1_792_100_000_000;
 const actor = { user_id: "TEST_ONLY:user", session_id: "TEST_ONLY:session", session_generation: 1 };
 const signal = new AbortController().signal, hash = accessDigest({ actor_user_id: actor.user_id, intent });

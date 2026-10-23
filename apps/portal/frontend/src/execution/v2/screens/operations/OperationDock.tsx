@@ -18,6 +18,7 @@ import {
   CHECK_ORIGINAL_COPY, commandLabel, humanize, receiptOutcome, severityWord, triageOutcome,
 } from "./outcome";
 import { PendingRecallsSection, discoverable } from "./PendingRecalls";
+import { isLabWorkspace } from "./pendingControlIntent";
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
@@ -56,6 +57,9 @@ export interface OperationDockProps {
 export const SEND_AGAIN_REASON = "Blocked until the outcome is known.";
 
 export function OperationDock({ operationId, row, loading, mode, onClose, api, workspaceId }: OperationDockProps) {
+  // DEBT-048 item 9: the preview form is a FIXTURE LAB mount. It needs the `pending-preview` key (never named by a product build) AND an
+  // explicit TEST_ONLY workspace; neither the `command` key nor a real workspace turns it on.
+  const labPreview = isV2Screen("pending-preview") && isLabWorkspace(workspaceId);
   const outcomeUnknown = row !== null && receiptOutcome(row.sourceStatus, row.verificationResult).checkOriginal;
   const actions = (
     <>
@@ -117,7 +121,7 @@ export function OperationDock({ operationId, row, loading, mode, onClose, api, w
         <dd><span className="exec-ops-mono">{row.workflowVersion}</span></dd>
       </dl>
       {api !== undefined && discoverable(row.targetType) ? (
-        <PendingRecallsSection api={api} workspaceId={workspaceId} targetType={row.targetType} targetId={row.targetId} environment={row.environment} previewEnabled={isV2Screen("command")} />
+        <PendingRecallsSection api={api} workspaceId={workspaceId} targetType={row.targetType} targetId={row.targetId} environment={row.environment} previewEnabled={labPreview} previewSimulation />
       ) : null}
       <NotAvailableLine
         className="exec-ops-na-line"

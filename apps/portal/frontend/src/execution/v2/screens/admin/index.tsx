@@ -28,7 +28,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { activationSentence } from "../../../stagedActivation";
-import { CodeName, GapWhy, PanelGate, SectionPanel } from "../../blocks";
+import { CodeName, GapWhy, NaWhy, PanelGate, SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
@@ -266,7 +266,11 @@ export default function AdminScreen({
       render: (r) => (
         <span className="exec-adm-name">
           <span className="exec-adm-title-cell">{r.title}</span>
-          {r.task.catalogKey !== null ? <span className="exec-adm-sub">{r.task.catalogKey}</span> : null}
+          {r.summary !== null ? (
+            <span className="exec-adm-sub">{r.summary}</span>
+          ) : (
+            <NaWhy text="No description published" reason="The task catalogue carries no description for this action, so none is drawn." className="exec-adm-sub" />
+          )}
         </span>
       ),
     },
@@ -361,7 +365,7 @@ export default function AdminScreen({
         <span id={summaryId} className="exec-adm-meta" role="status">{counts.ready} of {counts.all} can run now</span>
       </div>
 
-      <div className="exec-adm-main" data-docked={selection !== null && mode === "dock" ? "true" : undefined}>
+      <div className="exec-adm-main" data-docked={mode === "dock" ? "true" : undefined}>
         <div className="exec-adm-tiers" data-stale={reads.tasks.phase === "ready" && reads.tasks.stale ? "true" : undefined}>
           {rows.length === 0 && asked !== null && asked > 0 ? (
             <PanelState status="partial" reason={`The server reports ${asked} actions but none could be read. This is not an empty catalogue.`} />
@@ -398,6 +402,11 @@ export default function AdminScreen({
               <button type="button" className="exec-adm-btn" onClick={closePane}>Close</button>
             </aside>
           )
+        ) : mode === "dock" ? (
+          <div className="exec-adm-gone" data-testid="admin-detail-empty">
+            <h2 className="exec-adm-h4">Action detail</h2>
+            <p className="exec-adm-note">Pick an action to see what it does and how it runs.</p>
+          </div>
         ) : null}
       </div>
 

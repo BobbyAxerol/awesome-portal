@@ -81,6 +81,7 @@ TRACKED = (
     "tooling/execution-operational-current-reader.mjs",
     "fixtures/execution-operational-current.synthetic.valid.json",
     "fixtures/execution-operational-queue-links-counts.synthetic.valid.json",
+    "fixtures/execution-operational-queue-health.synthetic.valid.json",
     "tooling/generate-execution-resource-scoped.mjs",
     "tooling/generate-execution-retained-scoped.mjs",
     "tooling/generate-execution-analytics-scoped.mjs",
@@ -402,6 +403,8 @@ TRACKED = (
     "fixtures/execution-alpha-fleet-list.valid.json",
     "fixtures/execution-alpha-fleet-list.v2.valid.json",
     "fixtures/execution-bindings-list.valid.json",
+    "fixtures/portal-account-roster.last-sign-in.synthetic.valid.json",
+    "fixtures/execution-bindings-list.figures.synthetic.valid.json",
     "fixtures/execution-binding-detail.valid.json",
     "fixtures/governance-live-review.valid.json",
     "fixtures/execution-contract-authority.valid.json",
@@ -578,6 +581,10 @@ TRACKED = (
     "fixtures/execution-command-apply-attempt.none.valid.json",
     "fixtures/execution-command-apply-attempt.found.valid.json",
     "fixtures/execution-command-apply-attempt.conflict.valid.json",
+    # FE-CAT-3 (2026-10-23): the Fleet ALL lens, `environment: ALL` (navigation across environments, no cross-environment sum).
+    "tooling/execution-manager-all-fixtures.mjs",
+    "fixtures/execution-manager-dataset.all-environments.synthetic.valid.json",
+    "fixtures/execution-manager-dataset.all-environments.synthetic.negative.json",
     "package.json",
 )
 

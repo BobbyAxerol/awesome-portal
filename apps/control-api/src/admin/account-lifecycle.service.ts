@@ -23,6 +23,7 @@ import {
   LifecycleOperationRecord,
   STEP_UP_ACTIONS,
   projectAccount,
+  withLastSignIn,
 } from "../repos/account-lifecycle";
 
 /**
@@ -217,8 +218,8 @@ export class AccountLifecycleService {
    * become a field the browser receives.
    */
   async roster(): Promise<ReturnType<typeof projectAccount>[]> {
-    const users = await this.auth.users.list();
-    return users.map((user) => projectAccount(user));
+    const users = await this.auth.users.listRoster();
+    return users.map((user) => withLastSignIn(projectAccount(user), user.lastSignInAt));
   }
 
   /**

@@ -1,6 +1,6 @@
 {
   "phase": "UXM-07",
-  "updated": "2026-10-21",
+  "updated": "2026-10-23",
   "reconciled_at_head": "799effc8",
   "open": [
     {
@@ -27,7 +27,7 @@
       "where": "Closed: testkit/schema.ts IGNORED now holds 'discriminator' (ad118f15) and the AccessEffective test no longer writes a temp schema copy. Remaining and verified at HEAD: components/tradeReplayModel.ts:55 str() stringifies a JSON number (pinned KNOWN GAP in v2/screens/alpha/replay/replay.l2l3.test.tsx:211); api/subjectActivity.ts:69 treats a non-array records as []; v2/screens/portfolios/format.tsx:86 MoneyList keys by currency (duplicate-key warning when a currency repeats); V1 features/admin/accountApi.ts:163 roster returns [] for a malformed body (Users V2 uses rosterReader.ts)",
       "consequence": "Replay/Users/Portfolios edge cases only; no secret or authority effect",
       "owner": "Claude (FE files); testkit owner for IGNORED",
-      "status": "STILL_OPEN (4 of 5 items remain)",
+      "status": "FOUR CASES FIXED 2026-10-22 (Codex FIXTURE_REVIEW_DATA handoff): decimalText for replay prices (a JSON number is refused, KNOWN GAP test flipped), subject-activity records container, duplicate-currency keys, V1 roster malformed answer; regressions in src/execution/debt013.test.tsx. Remaining part of this debt, if any, is not changed here.",
       "next_action": "Claude, next time those files are touched: refuse a numeric price, make a non-array records a typed unavailable, key MoneyList by index and currency, give the V1 roster a typed error. tradeReplayModel and accountApi are V1-shared: same deliberate-exception question as DEBT-UXM07-025 if V1 pixels or copy change."
     },
     {
@@ -195,7 +195,7 @@
       "owner": "Codex (bound) then Claude (scale cell)",
       "origin": "FE-073 consumption 2026-10-21 (served-contract return, c02f63d8)",
       "pre_commit_hook_blocks": false,
-      "status": "MEASURED_SUPPORT_POINTS / NO_HARD_CEILING / FE_DOM_BUDGET_OPEN (2026-10-22)",
+      "status": "MEASURED_SUPPORT_POINTS / NO_HARD_CEILING / FE_DOM_BUDGET_OPEN (2026-10-22) || UPDATE 2026-10-23 (closeout §3.2; receipt PAPER_HISTORY_QUALIFICATION_2026-10-23.md, commits 9d0d92f99 / a92469bd9 integrated as 3ed9a2f71): REAL_CODE downsample + real controller (Nest/Fastify inject) show the Paper workbench response is bounded at roughly 2,000 rows for one series (0.39-1.07 MB, at most 6.41% of 16 MiB at N = 720 to 100,000 source rows); the workbench response is not stored in the 16 MiB retained cache at all (cached bytes 0). The 17.13 MB synthetic figure was the synthetic adapter bypassing the downsample, not the real path. The 2,000 target is not a hard ceiling: at N=32,000 with 50 / 1,000 series the repository returned 2,011 / 5,068 rows, and the producer enforces no per-row byte ceiling (residual). jsdom and a real headless Chromium (7 samples, 1 warm-up) show flat FE cost: 63-78 Equity SVG nodes, 3.45-4.12 MiB heap, p50 time to chart 230-325 ms. A DEFECT was found and fixed: the browser asks for the V2 screen envelope on /screens/*, which dropped the retained-history rows (the chart saw one point while history_windows claimed 1,799) and moved fields out of `data` so the strict reader rejected the body; PaperReadController.deploymentScreen now always answers the published V1 body (one-argument change, production, needs Codex review; V1 repeats up to 200 panel rows that V2 would send once, cost not measured). NOT measured: real Postgres plan/time, network/TLS/gzip, slow devices, /vn-market on its own. Not a production SLO.",
       "next_action": "Actual synthetic retained-adapter producer→JSON→existing FE reader/model→chart-reducer measured at 720/2000/8000/32000 rows, 0.39/1.07/4.28/17.13 MB JSON; table and scope in evidence/ELP2-10/CLAUDE_LOCAL_BACKEND_SUPPORT_2026-10-22.md. target2000 is not a SQL LIMIT/global ceiling; no cap invented. Sparse numeric-population mismatch fixed without changing ordinary reader; population+depth12/12 and actual sparse PostgreSQL1/1, TypeScript build, isolated migrations/restore/cleanup PASS. Claude adds measured corpus L2 and browser DOM/overflow disposition, uses history_windows not snapshot cap200. The32k synthetic envelope exceeds16MiB; not qualified cached HTTP/DOM capacity or approved G2 budget. Pagination/byte policy remains separate contract work if required; runtime/consumer/browser pending."
     },
     {
@@ -205,9 +205,59 @@
       "consequence": "Visual and wording only; no data, authority or flag effect. Each row says what the screen does now and the recommended call.",
       "proposed": "9) Workbench Orders quantity decimals: point-aligned by CSS with the exact strings as served (checked in the browser on the rebuilt preview 2026-10-22, 0.12 / 0.1 / 0.08 share one point column); the Workbench exit request is reachable on the preview (FIXTURE_WRITES=doubles) but the Operations pending-control preview (RECALL_REMAINDER_SOURCE_READ_NOT_QUALIFIED) needs the command flag and a workspace, both off by design (B27). Remaining: only the pending-control preview mount (Bobby; command flag stays dark).",
       "owner": "Claude (apply); Bobby only for the pending-control preview mount (command flag stays dark)",
-      "status": "STILL_OPEN (narrowed 2026-10-22: items 1-8 and 10 applied; item 9 decimal alignment verified; only the pending-control preview mount remains, Bobby's call)",
+      "status": "STILL_OPEN (narrowed 2026-10-22: items 1-8 and 10 applied; item 9 decimal alignment verified; only the pending-control preview mount remains, Bobby's call) || UPDATE 2026-10-23 (closeout §6): item 9, the pending-control preview mount, is implemented fixture-only (flag key `pending-preview`, workspace ws_TEST_ONLY[_*], visible simulation label, the only port call is previewPendingControl, no apply/reserve/submit) in 2fb79e863 + 1e319ae9a; vitest 248 passed in operations and related files; the Playwright spec (own config, 1280 / 660 / a 404 branch) passes 3/3 in Chromium. Pixel baseline for this cell is NOT recorded yet. The product route never draws it.",
       "opened": "2026-10-21",
       "closed_part": "Items 1-2 closed 2026-10-22 as DEBT-UXM07-048A (Blotter CSV Export, Fleet/Compare/Portfolios controls, Alpha 360 shared reason line, Portfolio 360 Flow lane only). Applied on claude/post-freeze-20261021 (2026-10-22), tests updated with a one-line reason each, no image baseline recorded. 3) fe7155b4: JourneySpine cards print only published facts; the note under the spine says the gap once. 4) 0582049a, 0af823ff: ONE display-name dictionary v2/displayNames.ts (+ blocks/CodeName: known code = name + hidden code text, unknown code = humanized name + GapWhy with the code): chart envelope caption 'Server: N of M points, min and max kept per bucket' (PER_SERIES_BUCKET_EXTREMA), 'min, max and last value kept per bucket' (MIN_MAX_LAST_BUCKET_V1), any other method 'method not stated' with the code in a disclosure (Workbench, Portfolio 360, Account 360); Workbench exit-gate policy 'Policy Paper observation' with stage code and version in a disclosure; Cockpit R2 grant 'Paper activation authorization', R1 lineage and evaluation reasons, 'What the server offers'; Access banner and reason dictionary (Access policy pending, Owner recovery not approved); Admin 'Not live because', provenance reason column and the plan gate reason; Operations not-allowed pending-control preview. 5) 8498765e: Live V1 body states its gaps once, in the line under the strip (strip figures, Live net PnL series, reconciliation figures, position rows, order rows); the header chip line and the alpha name line stay (shared stage chrome). 6) 0582049a: the Approvals primary decision no longer prints 'Preview - not recorded'; the page banner says it once and it stays each button's description. 7) 2e36f3b8: Compare reads '<- Portfolio / Alpha Fleet / Portfolios'. 8) 2e36f3b8: Blotter, Accounts (list and 360) and Admin headers align to the first line like the rest. 10) 2e36f3b8, 0af823ff: Portfolios shows one banner (a degraded branch names what is missing; the partial-read sentence is its disclosure); the Alpha 360 Orders strip stays 2x2 at 660 px and below (KpiStrip phoneColumns)."
+    },
+    {
+      "id": "DEBT-UXM07-049",
+      "title": "Manager columns and rows of HIFI M01/M02/M03 are collapsed into one 'Not available' line instead of per-cell unavailable states",
+      "where": "V2 Overview, Portfolios, Alpha Fleet vs design/hifi m01-m03 and Guide v1.1 §6.2/§8.1; see HIFI_LOWFI_GAP_AUDIT_2026-10-22.md",
+      "consequence": "The layout Bobby drew (KPI row, window/domain selectors, Capital panel, Contributors, Portfolios table; Fleet Alloc/PnL/Unrealized/Balance/Equity30D/QBTS) is not on screen. No data effect: those values are not served by any qualified contract.",
+      "proposed": "Restore the columns/rows with per-cell 'Not available · reason' and 'Pending · policy not set' for score; window selectors; Fleet tabs All/Live/Canary/Sandbox/Paper. Fixture-only, no invented figures.",
+      "opened": "2026-10-22",
+      "owner": "Claude (build, fixture-only); Bobby (go)",
+      "status": "IN PROGRESS 2026-10-22 (late): Overview, Portfolios, Fleet restored and now read the Manager dataset (per-partition, simulated keys in the populated lane: see SIMULATED_DATA_REGISTER_2026-10-22.md). Fleet Map built. Not done: Overview basis/scope selectors, Fleet Group/Then, Allocation domain (BQ-FLEET-ALLOC), real Edge keys. || UPDATE 2026-10-23 (closeout §7): Fleet Group/Then is implemented (59462c672, `then=` in the URL, two-field group_by) and the Accounts baselines are recorded (v2-accounts-list cells). Overview basis/scope selectors are NOT built by decision: the closeout accepts the current semantics (every authorized portfolio, each currency separately, no conversion, FE-CAT-6). Still open: Allocation domain (FE-CAT-7), real Edge keys."
+    },
+    {
+      "id": "DEBT-UXM07-050",
+      "title": "Fleet Archived tab content, Fleet Map view and the Since-your-last-visit digest are not built (Archived Alphas is a Fleet lens in the V2 Screens artifact, not a screen)",
+      "where": "V2 Screens artifact X7Aqzz9rEA4Q51C7ifnKAQ; Fleet \"Archived list: Not available\"; see HIFI_LOWFI_GAP_AUDIT_2026-10-22.md section 5",
+      "consequence": "The Archived lens, heat map and digest drawn in the artifact are absent. Sidebar and Waivers/Exit Reviews placement already match the artifact.",
+      "proposed": "Build the Archived lens, Map view and digest on fixture with per-cell unavailable states; real data waits on the archive and feed contracts.",
+      "opened": "2026-10-22",
+      "owner": "Claude (build, fixture-only); Bobby (go)",
+      "status": "OPEN (found 2026-10-22; not previously tracked) || UPDATE 2026-10-23 (closeout §7): the Fleet Map is implemented independently of the still-open Archived lens and the since-last-visit digest (digest needs a persisted user-scoped baseline, FE-CAT-5; absence is typed until it exists)."
+    },
+    {
+      "id": "DEBT-UXM07-051",
+      "title": "The remaining V2 screens collapse unpublished tiles, panels, columns and actions into one 'Not available' line instead of keeping them with per-cell reasons",
+      "where": "Alpha 360, Portfolio 360, Account 360, Compare, Blotter, Operations, Incident, Users, Access, Admin vs V2 Screens artifact; see HIFI_LOWFI_GAP_AUDIT_2026-10-22.md section 6",
+      "consequence": "Same as DEBT-049: the manager layout in the design changes with data. No data effect. Findings are subagent reports, partly unverified by Claude.",
+      "proposed": "One pass per screen: restore the element with 'Not available' and its reason, update tests and baseline. Order by manager value: Portfolio 360, Alpha 360, Compare, Operations, Blotter, Account 360, Incident, Access, Users, Admin. Trade replay and Accounts list need a design decision and a baseline first.",
+      "opened": "2026-10-22",
+      "owner": "Claude (build, fixture-only); Bobby (go, order)",
+      "status": "IN PROGRESS 2026-10-22 (late): Portfolio 360, Alpha 360, Compare, Operations (health strip, Intent/Display columns), Incident (sections), Account 360 (tiles, drawdown panel), Blotter (columns), Access (13 actions, Role preset), Users (columns, actions), Admin (detail panel) restored by subagents and merged; baselines re-recording. Not done: Trade replay as a standalone screen (feasible, design decision), Accounts list baseline, ops-drawer design frame is mis-exported. || UPDATE 2026-10-23 (closeout §7): the Accounts list baseline is recorded and the two Accounts defects (native equity vs wallet, scoped row-facts cache) are fixed in ea537a9ba. Trade replay stays a design decision."
+    },
+    {
+      "id": "DEBT-UXM07-052",
+      "title": "Accounts list reads two resources per row (N+1) for Physical equity, Virtual headroom and Check",
+      "where": "src/execution/v2/screens/account/reads.ts (listRowFacts), ROW_FACTS_CAP=20, concurrency 4",
+      "consequence": "Up to 40 extra reads per list view; rows beyond 20 show a typed absence and the footer says so. Acceptable on the fixture lane, not at real scale.",
+      "proposed": "Backend request: add physical_equity, virtual_used, headroom and check (or an aggregate per binding) to the bindings list row, and per-environment counts for the ALL/ISSUES/REAL-FUNDED/PAPER/TESTNET tabs. Then delete listRowFacts.",
+      "opened": "2026-10-22",
+      "owner": "Codex (contract); Claude (consumer)",
+      "status": "OPEN"
+    },
+    {
+      "id": "DEBT-UXM07-053",
+      "title": "Whole-suite flakes under load: synchronous reads right after loaded() in Fleet tests, and the seq hash write in the research execute test",
+      "where": "fleet/fleetDataset.test.tsx (owner list after load), fleet/index.test.tsx (owner suggestions), research/executeRoute.seq.test.tsx (c)",
+      "consequence": "Two full runs at 2026-10-22 (884 s, 864 s, --maxWorkers=2): 1 and 2 failures, each passing alone and on rerun (6/6, 3/3). Same pattern as DEBT-UXM07-032: an assertion made before the render or the hash write lands. Fixed per test (cfed8fe61, d5cadc1b3, the seq test budget); other tests with the same read pattern may remain.",
+      "proposed": "Review expects placed straight after loaded() in Fleet and research tests; prefer waitFor with the shared SLOW budget.",
+      "opened": "2026-10-22",
+      "owner": "Claude",
+      "status": "OPEN || UPDATE 2026-10-23 (closeout §7): the fixes cfed8fe61, d5cadc1b3 and 500df58e9 are present on the lane; the full suite passed once at 500df58e9 (85,683 passed, 0 failed, 854 s). That is one run, not a final-cut gate: the single final gate on the frozen reconciled candidate is Codex's and is pending. Earlier failures and receipts are preserved above."
     }
   ],
   "closed": [

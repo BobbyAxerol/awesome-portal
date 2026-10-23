@@ -1,0 +1,64 @@
+{
+  "schema_version": "execution.bindings-list.v1",
+  "record_authority": "PORTAL_PROJECTION",
+  "source_authority": "TRADING_SYSTEM",
+  "delivery_profile": "PAPER_BINANCE_USDM",
+  "workspace_id": "ws_primary",
+  "environment": "paper",
+  "read_at": "2026-10-23T10:00:01Z",
+  "source_as_of": "2026-10-23T10:00:00Z",
+  "freshness": "FRESH",
+  "completeness": "COMPLETE",
+  "page": {
+    "rows": [
+      {
+        "binding_id": "bnc_main@BINANCE", "account_id": "bnc_main", "venue": "BINANCE",
+        "state": "ACTIVE", "credential_state": "SYNC_SYNCED", "updated_at": "2026-10-23T10:00:00Z",
+        "figures": {
+          "native_equity": [{ "currency": "USDT", "value": "412880.25", "observed_at": "2026-10-23T09:59:58Z", "coverage": "COMPLETE" }],
+          "virtual_used": [{ "currency": "USDT", "value": "197500.00", "observed_at": "2026-10-23T09:59:59Z", "coverage": "COMPLETE" }],
+          "virtual_headroom": [{ "currency": "USDT", "value": "215380.25", "observed_at": "2026-10-23T09:59:59Z", "coverage": "COMPLETE" }],
+          "sleeve_count": { "count": 3, "observed_at": "2026-10-23T09:59:59Z", "coverage": "COMPLETE" }
+        }
+      },
+      {
+        "binding_id": "byb_noeq@BYBIT", "account_id": "byb_noeq", "venue": "BYBIT",
+        "state": "ACTIVE", "credential_state": "SYNC_SYNCED", "updated_at": "2026-10-23T09:50:00Z",
+        "figures": {
+          "native_equity": null,
+          "virtual_used": [{ "currency": "USDT", "value": "1200.50", "observed_at": "2026-10-23T09:59:59Z", "coverage": "COMPLETE" }],
+          "virtual_headroom": null,
+          "sleeve_count": { "count": 0, "observed_at": "2026-10-23T09:59:59Z", "coverage": "COMPLETE" }
+        }
+      },
+      {
+        "binding_id": "okx_mixed@OKX", "account_id": "okx_mixed", "venue": "OKX",
+        "state": "ACTIVE", "credential_state": "SYNC_STALE", "updated_at": "2026-10-23T09:40:00Z",
+        "figures": {
+          "native_equity": [
+            { "currency": "USDC", "value": "5000.10", "observed_at": "2026-10-23T09:59:00Z", "coverage": "COMPLETE" },
+            { "currency": "USDT", "value": "7000.00", "observed_at": "2026-10-23T09:59:00Z", "coverage": "COMPLETE" }
+          ],
+          "virtual_used": [{ "currency": "USDT", "value": "2500.00", "observed_at": "2026-10-23T09:59:30Z", "coverage": "PARTIAL" }],
+          "virtual_headroom": [{ "currency": "USDT", "value": "4500.00", "observed_at": "2026-10-23T09:59:30Z", "coverage": "PARTIAL" }],
+          "sleeve_count": { "count": 2, "observed_at": "2026-10-23T09:59:30Z", "coverage": "COMPLETE" }
+        }
+      },
+      {
+        "binding_id": "gate_legacy@GATE", "account_id": "gate_legacy", "venue": "GATE",
+        "state": "SUSPENDED", "credential_state": "SYNC_SYNCED", "updated_at": "2026-10-23T08:00:00Z"
+      }
+    ],
+    "total_count": 4, "filtered_count": 4, "next_cursor": null, "prev_cursor": null,
+    "has_more": false, "has_previous": false, "applied_filters": [],
+    "applied_sort": [{ "field": "updated_at", "direction": "desc" }, { "field": "binding_id", "direction": "desc" }]
+  },
+  "counts": {
+    "basis": "AUTHORIZED_SNAPSHOT",
+    "observed_at": "2026-10-23T10:00:00Z",
+    "coverage": "COMPLETE",
+    "all": 7,
+    "issues": 3,
+    "by_environment": { "paper": 4, "sandbox": 2, "live": 1 }
+  }
+}

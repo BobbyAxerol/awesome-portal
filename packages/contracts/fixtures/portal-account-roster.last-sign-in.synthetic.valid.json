@@ -1,0 +1,20 @@
+{
+  "schema_version": "portal.account-roster.v1",
+  "record_authority": "PORTAL_CONTROL",
+  "accounts": [
+    {
+      "user_id": "usr_TEST_ONLY_signed_in", "username": "signed.in", "display_name": "Signed In",
+      "role": "USER", "account_state": "ACTIVE", "must_change_password": false, "account_revision": 3, "locked": false,
+      "last_sign_in_at": "2026-10-17T09:14:00Z"
+    },
+    {
+      "user_id": "usr_TEST_ONLY_never", "username": "never.in", "display_name": "Never Signed In",
+      "role": "USER", "account_state": "INVITED", "must_change_password": true, "account_revision": 1, "locked": false,
+      "last_sign_in_at": null
+    },
+    {
+      "user_id": "usr_TEST_ONLY_unpublished", "username": "unpublished", "display_name": "Producer Without The Fact",
+      "role": "ADMIN", "account_state": "ACTIVE", "must_change_password": false, "account_revision": 2, "locked": false
+    }
+  ]
+}

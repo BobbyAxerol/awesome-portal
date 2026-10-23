@@ -2,6 +2,7 @@ import { QueryResultRow } from "pg";
 import { z } from "zod";
 import { PostgresListResource, RawKeysetQuery } from "../query";
 import { managerSearchText } from "../execution-v2/manager-query-p1.contract";
+import { mapBindingFigures, type BindingFigures } from "./binding-figures";
 
 export const MANAGER_LIST_ENVIRONMENTS = ["paper", "sandbox", "live"] as const;
 export type ManagerListEnvironment = (typeof MANAGER_LIST_ENVIRONMENTS)[number];
@@ -103,6 +104,11 @@ export interface BindingRow extends QueryResultRow {
   state: string;
   credential_state: string;
   updated_at: Date;
+  /**
+   * FE-CAT-4. Edge/Core-owned jsonb of per-row list figures. NOT in `selectColumns` and no migration adds it yet, so on
+   * today's table it is never present; `mapRow` publishes `figures` only when a row carries it.
+   */
+  list_figures?: unknown;
 }
 
 export interface AlphaFleetItem {
@@ -131,6 +137,8 @@ export interface BindingItem {
   state: string;
   credential_state: string;
   updated_at: string;
+  /** Optional, additive (FE-CAT-4). Omitted when the projection row carries no figures. */
+  figures?: BindingFigures;
 }
 
 export function alphaFleetResource(): PostgresListResource<AlphaFleetRow, AlphaFleetItem> {
@@ -182,6 +190,19 @@ export function alphaFleetResource(): PostgresListResource<AlphaFleetRow, AlphaF
   };
 }
 
+export function mapBindingRow(row: BindingRow): BindingItem {
+  const figures = mapBindingFigures(row.list_figures);
+  return {
+    binding_id: row.binding_id,
+    account_id: row.account_id,
+    venue: row.venue,
+    state: row.state,
+    credential_state: row.credential_state,
+    updated_at: row.updated_at.toISOString(),
+    ...(figures ? { figures } : {}),
+  };
+}
+
 export function bindingsResource(): PostgresListResource<BindingRow, BindingItem> {
   return {
     resourceId: "execution.bindings-list.v1",
@@ -203,14 +224,7 @@ export function bindingsResource(): PostgresListResource<BindingRow, BindingItem
     defaultSort: [{ field: "updated_at", direction: "desc" }],
     allowedRoles: ["ADMIN", "USER"],
     statementTimeoutMs: 2_000,
-    mapRow: (row) => ({
-      binding_id: row.binding_id,
-      account_id: row.account_id,
-      venue: row.venue,
-      state: row.state,
-      credential_state: row.credential_state,
-      updated_at: row.updated_at.toISOString(),
-    }),
+    mapRow: mapBindingRow,
   };
 }
 

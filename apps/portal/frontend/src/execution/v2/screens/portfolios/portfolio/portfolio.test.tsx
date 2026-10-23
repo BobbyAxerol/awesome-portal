@@ -101,26 +101,30 @@ describe("Overview", () => {
     await ready();
     const strip = screen.getByRole("group", { name: "Portfolio identity" });
     const tile = (label: string) => within(strip).getByText(label).closest("div")!.textContent ?? "";
-    expect(tile("Alphas")).toContain("4");
     expect(tile("Deployments")).toContain("5");
+    expect(tile("Deployments")).toContain("4 alphas");
+    expect(tile("Deployments")).toContain("4 accounts");
     expect(tile("Deployments")).toContain("5 holdings");
-    expect(tile("Accounts")).toContain("4");
     expect(tile("Allocated (current)")).toContain("540,000.00");
     expect(tile("Allocated (current)")).toContain("USDT");
     expect(tile("Allocated (current)")).not.toContain("not a window");
   });
 
-  it("names Net PnL, Return, Drawdown, Concentration, the capital statements, the funding source and Score ONCE, ids in the title; NAV keeps its own cell", async () => {
+  it("keeps NAV, Net PnL, Return and Drawdown as tiles and Capital and Concentration as panels, each Not published with its id; one line names Funding source, lanes and Score", async () => {
     mount(makeApi().api);
     await ready();
     const strip = screen.getByRole("group", { name: "Portfolio identity" });
-    expect(within(strip).getByText("NAV").closest("div")!.textContent).toContain("Not published (FE-013)");
-    for (const label of ["Net PnL · 90D", "Return · 90D", "Drawdown"]) expect(within(strip).queryByText(label), label).toBeNull();
+    const text = (label: string) => within(strip).getByText(label).closest("div")!.textContent ?? "";
+    expect(text("NAV")).toContain("Not published (FE-013)");
+    expect(text("Net PnL")).toContain("Not published (FE-005, FE-025)");
+    expect(text("Return")).toContain("Not published (FE-006, FE-025)");
+    expect(text("Drawdown")).toContain("Not published (FE-013, FE-025)");
+    expect(screen.getByRole("region", { name: "Concentration" }).textContent).toContain("Not published (FE-005)");
     expect(screen.getAllByTestId("not-available-line")).toHaveLength(1);
     const line = screen.getByTestId("not-available-line");
-    expect(line.textContent).toContain("Not available: Net PnL, Return, Drawdown, Concentration, Capital statements, Funding source, Stage, decision, incident and recall lanes, Score");
+    expect(line.textContent).toContain("Not available: Funding source, Stage, decision, incident and recall lanes, Score");
     const title = whyText(line);
-    for (const id of ["FE-005", "FE-006", "FE-013", "FE-017", "FE-032", "FE-011"]) expect(title, id).toContain(`Not published (${id})`);
+    for (const id of ["FE-032", "FE-031", "FE-011"]) expect(title, id).toContain(`Not published (${id})`);
   });
 
   it("draws the retained equity series with its gap, its envelope, a retained-snapshot pill and no drawdown", async () => {
@@ -133,8 +137,8 @@ describe("Overview", () => {
     expect(document.body.textContent).toContain("Retained snapshot gap");
     expect(document.body.textContent).toContain("Server: 40 of 4,592 points, min, max and last value kept per bucket");
     expect(document.body.textContent).toContain("1 gap drawn as a gap, not joined");
-    // No drawdown pane: Drawdown is on the one 'Not available' line instead.
-    expect(screen.getByTestId("not-available-line").textContent).toContain("Drawdown");
+    // No drawdown pane: the Drawdown tile says Not published (FE-013, FE-025) instead.
+    expect(within(screen.getByRole("group", { name: "Portfolio identity" })).getByText("Drawdown").closest("div")!.textContent).toContain("Not published (FE-013, FE-025)");
     expect(document.querySelectorAll(".exec-c2-svg").length).toBeGreaterThan(0);
   });
 
@@ -170,15 +174,16 @@ describe("Overview", () => {
     expect(all.queriesOf("/views/equity-chart")[0].has("from_ms")).toBe(false);
   });
 
-  it("says the capital statements are not available once, and the per-currency capital is only on Allocations, never twice", async () => {
+  it("keeps every capital statement as a row, each Not published (FE-017), and the per-currency capital only on Allocations, never twice", async () => {
     mount(makeApi().api);
     await ready();
     expect(screen.queryByRole("region", { name: "Capital in Live" })).toBeNull();
-    expect(screen.queryByRole("table", { name: "Capital statements" })).toBeNull();
-    const line = screen.getByTestId("not-available-line");
-    expect(line.textContent).toContain("Capital statements");
-    expect(whyText(line)).toContain("Capital statements: Not published (FE-017)");
-    expect(whyText(line)).toContain("recalling");
+    const statements = screen.getByRole("table", { name: "Capital statements" });
+    const rows = [...statements.querySelectorAll("tr")].map((tr) => tr.textContent);
+    expect(rows).toEqual([
+      "Initial fundsNot published (FE-017)", "Added fundsNot published (FE-017)", "ReturnedNot published (FE-017)", "Net external flowsNot published (FE-017)",
+      "Approved budgetNot published (FE-017)", "RecallingNot published (FE-017)", "HeadroomNot published (FE-017)",
+    ]);
     await goto("Allocations");
     const live = screen.getByRole("region", { name: "Capital in Live" });
     expect(within(live).getByText("460,000.00")).toBeTruthy();
@@ -250,8 +255,9 @@ describe("NAV (FE-013, BE-P4 manager series)", () => {
       expect(figure!.getAttribute("title")).toMatch(/^-?\d+(\.\d+)?$/);
       expect(node.textContent).not.toContain("Not published");
     }
-    // Net PnL, Return and Drawdown are not this series: they stay on the one 'Not available' line with their ids.
-    expect(screen.getByTestId("not-available-line").textContent).toContain("Net PnL, Return, Drawdown");
+    // Net PnL, Return and Drawdown are not this series: their tiles stay Not published with their ids.
+    const strip = screen.getByRole("group", { name: "Portfolio identity" });
+    for (const label of ["Net PnL", "Return", "Drawdown"]) expect(within(strip).getByText(label).closest("div")!.textContent, label).toContain("Not published");
   });
 
   it("EMPTY says 'No points in this window' in the card and the KPI: no zero, no line", async () => {

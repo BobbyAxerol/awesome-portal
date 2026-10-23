@@ -23,13 +23,13 @@ import { planOutcomeText, planApplicable, PLAN_ENVIRONMENTS, type CommandPlan } 
 import type { PanelStatus } from "../../../contracts";
 import { PanelState } from "../../../components/states";
 import type { StagedActivation } from "../../../stagedActivation";
-import { CodeName, NotPublished } from "../../blocks";
+import { CodeName, NaWhy, NotPublished } from "../../blocks";
 import { DockAction, Drawer, type DockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
 import {
   COMMAND_STATES, COMMAND_STATE_VIEW, KIND_VIEW, NOTE_MIN, ROW_STATE_VIEW, applyReason, commandStateOf, defaultEnvironment,
-  firstReasonFor, formProblem, humanize, planGate, planRequest, type ActionRow, type PlanForm,
+  firstReasonFor, formProblem, humanize, planGate, planRequest, tierCopy, type ActionRow, type PlanForm,
 } from "./adminModel";
 import { formatInstant } from "../../boundary";
 
@@ -188,7 +188,7 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
   return (
     <Drawer
       title={row.title}
-      subtitle={task.catalogKey ?? task.taskId}
+      subtitle={tierCopy(row.group).label}
       mode={mode}
       focusOnOpen={focusOnOpen}
       onClose={onClose}
@@ -199,8 +199,11 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
       }
     >
       <dl className="exec-adm-facts">
+        <Fact term="What">
+          {row.summary ?? <NaWhy text="Not published" reason="The task catalogue carries no description for this action." className="exec-adm-note" />}
+        </Fact>
         <Fact term="Kind"><Flag kind={KIND_VIEW[row.kind].kind} label={KIND_VIEW[row.kind].label} size="sm" /></Fact>
-        <Fact term="Scope">{task.scope === "" ? "Not stated" : task.scope}</Fact>
+        <Fact term="Scope">{row.scope === "" ? "Not stated" : row.scope}</Fact>
         <Fact term="Who">{task.requiredRole ?? "Role not stated"}</Fact>
         <Fact term="Risk tier">{task.riskTier ? (RISK_TIER_LABEL as Record<string, string>)[task.riskTier] ?? humanize(task.riskTier) : "Not stated"}</Fact>
         <Fact term="How">{row.kind === "read" ? "Runs here as a local read. Nothing is sent to the trading system." : stepsOf(row)}</Fact>

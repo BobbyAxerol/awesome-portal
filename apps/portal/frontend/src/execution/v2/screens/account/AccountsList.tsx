@@ -4,16 +4,19 @@
  * One row is one binding (`GET /broker-bindings`): its venue, the account it
  * backs, the state and credential words the source published, and when it was
  * last updated. Physical equity, the sum of virtual allocations and the
- * check between them are NOT on this projection, so they print
- * `Not available` with the reason, never a dash and never 0; the binding peek
- * (the Drawer) reads the exposure per binding instead of fanning out one
- * request per row.
+ * check between them come from the figures the bindings list publishes per row
+ * (FE-CAT-4, `figures`) when a row carries them: no further read for that row. A row
+ * without them (a producer with no owning source) takes the capped fallback: two
+ * published carriers (the account resource and the binding exposure) for the first
+ * ROW_FACTS_CAP such rows, four at a time (DEBT-UXM07-052); a row beyond the cap, or a
+ * failed read, prints `Not available` with the reason, never a dash and never 0. The
+ * binding peek (the Drawer) reads the exposure for the one selected binding.
  *
  * Filters that the server can apply (environment lens, search, venue) are sent
  * with the read; the Issues lens and the credential filter narrow only the
  * rows already loaded, and the count line says so.
  */
-import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -25,11 +28,11 @@ import { Flag } from "../../Flag";
 import { withOrigin } from "../../backTo";
 import { ENV_LABEL, serializeUrlParams, useExecUrlState, withContext, type ExecEnv } from "../../urlState";
 import { BindingDrawer } from "./BindingDrawer";
-import { StateFlag, CredentialFlag, Updated } from "./parts";
-import { useBindingPages } from "./reads";
+import { StateFlag, CredentialFlag, Na, Updated, Value } from "./parts";
+import { factKey, useBindingPages, useRowFacts } from "./reads";
 import {
-  CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, accountHref, freshnessFlag, humanize, inScope, matchesCredential,
-  readCredentialFilter, timeOf, toBindingRow, type BindingEnv, type BindingRow,
+  ACCESS_PATH, CREDENTIAL_FILTERS, ENV_TABS, ROW_CAP, ROW_FACTS_CAP, accountHref, checkOf, freshnessFlag, humanize, inScope, matchesCredential,
+  readCredentialFilter, timeOf, toBindingRow, type BindingEnv, type BindingRow, type ListRowFacts,
 } from "./model";
 import { GapWhy } from "../../blocks";
 
@@ -46,6 +49,10 @@ function mergeSeen(current: readonly string[], next: readonly string[]): readonl
   const merged = [...new Set([...current, ...next])].sort((a, b) => a.localeCompare(b));
   return merged.length === current.length ? current : merged;
 }
+
+const BEYOND = `Physical and virtual figures are read one row at a time for the first ${ROW_FACTS_CAP} rows only.`;
+// Once some rows carry published figures the sentence is about the other rows alone.
+const BEYOND_REST = `Physical and virtual figures the list does not publish are read one row at a time for the first ${ROW_FACTS_CAP} such rows only.`;
 
 export function AccountsList({ api, binding = null, capabilities }: AccountsListProps) {
   const url = useExecUrlState();
@@ -75,6 +82,20 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     () => all.filter((row) => inScope(row, issuesOnly) && matchesCredential(row, credentialFilter)).slice(0, ROW_CAP),
     [all, issuesOnly, credentialFilter],
   );
+  // Cached row figures belong to the identity that read them: another workspace, environment or authority starts from nothing.
+  const factsScope = `${params.get("workspace_id") ?? ""}|${env}|${[...capabilities].sort().join(",")}`;
+  // A row whose figures the bindings list published (FE-CAT-4) is never read again. Only the rows without them take the
+  // capped two-read fallback, and the cap counts those rows alone.
+  const unpublished = useMemo(() => visible.filter((row) => row.listFacts === null), [visible]);
+  const rowFacts = useRowFacts(api, unpublished, factsScope);
+  const factsCapped = unpublished.length > ROW_FACTS_CAP;
+  const beyond = unpublished.length === visible.length ? BEYOND : BEYOND_REST;
+  const factsOf = (row: BindingRow) => {
+    if (row.listFacts !== null) return { phase: "ready", facts: row.listFacts, exposureFailed: false, accountFailed: false } as const;
+    const index = unpublished.indexOf(row);
+    if (index >= ROW_FACTS_CAP) return "beyond" as const;
+    return rowFacts.get(factKey(row)) ?? ({ phase: "loading" } as const);
+  };
   const selected = selection === null ? null : all.find((row) => row.bindingId === selection) ?? null;
 
   // Venue options come from rows the page has shown and survive filtering.
@@ -134,6 +155,16 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
   // behind the cursor mean the count is a floor, so it carries a plus.
   const issueCountText = pages.state.phase === "ready" ? `${issueCount}${pages.nextCursor !== null ? "+" : ""}` : null;
 
+  // The selected tab counts what this read returned. The others show the count the server published for that environment from
+  // the same authorized snapshot (FE-CAT-4); without one, or when the server could not compute it (`null`), nothing is shown, never 0.
+  const published = envelope?.counts?.byEnvironment ?? null;
+  const tabCount = (id: BindingEnv): number | null => {
+    if (env === id) return envelope !== null ? envelope.page.filteredCount : null;
+    const count = published === null ? undefined : published[id];
+    return typeof count === "number" ? count : null;
+  };
+  const issuesEverywhere = envelope?.counts?.issues;
+
   const columns: CardsColumn<BindingRow>[] = [
     {
       key: "binding",
@@ -148,12 +179,84 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
     {
       key: "account",
       label: "Account",
-      render: (row) => (
-        <Link className="exec-acct-link" to={withContext(withOrigin(accountHref(row.accountId), { kind: "accounts" }, params), params)} onClick={(event) => event.stopPropagation()}>{row.accountId}</Link>
-      ),
+      render: (row) => {
+        const state = factsOf(row);
+        const sleeves = state !== "beyond" && state.phase === "ready" ? state.facts.sleeves : null;
+        return (
+          <span className="exec-acct-cell">
+            <Link className="exec-acct-link" to={withContext(withOrigin(accountHref(row.accountId), { kind: "accounts" }, params), params)} onClick={(event) => event.stopPropagation()}>{row.accountId}</Link>
+            {sleeves !== null ? <span className="exec-acct-sub">{sleeves} {sleeves === 1 ? "sleeve" : "sleeves"}</span> : null}
+          </span>
+        );
+      },
     },
     { key: "state", label: "State", render: (row) => <StateFlag word={row.stateWord} /> },
     { key: "credential", label: "Credential", render: (row) => <CredentialFlag word={row.credentialWord} /> },
+    {
+      key: "physical",
+      label: "Physical equity",
+      numeric: true,
+      render: (row) => {
+        const state = factsOf(row);
+        if (state === "beyond") return <Na why={beyond} />;
+        if (state.phase === "loading") return <span className="exec-acct-sub">Loading</span>;
+        return linesOf(state.facts, (line) => (
+          <>
+            {line.physical === undefined && line.physicalWhy !== undefined ? (
+              <span className="exec-acct-sub">{line.currency}: {line.physicalWhy}</span>
+            ) : (
+              <Value metric={line.physical} suffix={line.currency ?? undefined} />
+            )}
+            {line.physical === undefined && line.physicalWhy === undefined ? <span className="exec-acct-sub">{state.accountFailed ? "Account read failed" : "Venue report not published"}</span> : null}
+            {line.partial === true ? <span className="exec-acct-sub">Partial coverage</span> : null}
+          </>
+        ));
+      },
+    },
+    {
+      key: "virtual",
+      label: "Σ Virtual · Headroom",
+      numeric: true,
+      render: (row) => {
+        const state = factsOf(row);
+        if (state === "beyond") return <Na why={beyond} />;
+        if (state.phase === "loading") return <span className="exec-acct-sub">Loading</span>;
+        return linesOf(state.facts, ({ virtual, headroom, currency, partial }) => (
+          <>
+            <Value metric={virtual} suffix={currency ?? undefined} />
+            {virtual === undefined ? (
+              <span className="exec-acct-sub">{state.exposureFailed ? "Exposure read failed" : currency === null ? "No physical currency to match" : "No virtual sum in this currency"}</span>
+            ) : (
+              <span className="exec-acct-sub">Headroom <Value metric={headroom} /></span>
+            )}
+            {partial === true ? <span className="exec-acct-sub">Partial coverage</span> : null}
+          </>
+        ));
+      },
+    },
+    {
+      key: "check",
+      label: "Check",
+      render: (row) => {
+        const state = factsOf(row);
+        if (state === "beyond") return <Flag kind="na" label="Not available" size="sm" />;
+        if (state.phase === "loading") return <span className="exec-acct-sub">Loading</span>;
+        const flagOf = (line: ListRowFacts) => {
+          const word = checkOf(line.physical, line.virtual);
+          if (word.kind === "within") return <Flag kind="ok" label="Within physical" size="sm" />;
+          if (word.kind === "exceeded") return <Flag kind="attention" label="Exceeded" size="sm" />;
+          return (
+            <span className="exec-acct-cell">
+              <Flag kind="na" label="Not available" size="sm" />
+              <GapWhy name="Why the check is not available" rows={[line.physical === undefined && line.physicalWhy !== undefined ? line.physicalWhy : word.reason]} next={null} />
+            </span>
+          );
+        };
+        // One currency: the flag as before. Several: each line names its currency, and no line speaks for another.
+        if (state.facts.more === undefined) return flagOf(state.facts);
+        return linesOf(state.facts, (line) => <><span className="exec-acct-sub">{line.currency}</span>{flagOf(line)}</>);
+      },
+    },
     {
       key: "updated",
       label: "Updated",
@@ -200,6 +303,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
       <header className="exec-acct-head">
         <div>
           <h1 className="exec-acct-title">Accounts</h1>
+          <p className="exec-acct-subtitle">Venue bindings and the sleeves on them</p>
         </div>
         <div className="exec-acct-fresh">
           {fresh ? <Flag kind={fresh.kind} label={fresh.label} size="sm" /> : null}
@@ -235,7 +339,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 onClick={() => pickEnv(id)}
               >
                 {ENV_LABEL[id]}
-                {env === id && envelope !== null ? <span className="exec-acct-tab-count">{envelope.page.filteredCount}</span> : null}
+                {tabCount(id) !== null ? <span className="exec-acct-tab-count">{tabCount(id)}</span> : null}
               </button>
             ))}
           </div>
@@ -272,12 +376,16 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
               aria-label={issueCountText === null ? "Issues only, count shown once the rows are read" : `Issues only, ${issueCountText} in the ${all.length} loaded rows`}
               title={issueCountText === null
                 ? "The count appears once the rows are read. The server does not filter on this."
-                : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.`}
+                : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.${typeof issuesEverywhere === "number" ? ` ${issuesEverywhere} across all environments.` : ""}`}
               onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
             >
               Issues only{issueCountText !== null ? <span className="exec-acct-tab-count">{issueCountText}</span> : null}
             </button>
             {filtered ? <button type="button" className="exec-acct-btn" onClick={clearFilters}>Clear all</button> : null}
+            <span className="exec-acct-export">
+              <button type="button" className="exec-acct-btn" disabled aria-describedby={`${panelId}-export`}>Export</button>
+              <span id={`${panelId}-export`} className="exec-acct-note">Export is not available yet · <Link className="exec-acct-link" to={withContext(ACCESS_PATH, params)}>My access</Link></span>
+            </span>
           </div>
 
           {chips.length > 0 ? (
@@ -315,6 +423,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                       {pages.loadingMore ? "Loading" : "Load more"}
                     </button>
                   ) : null}
+                  {factsCapped ? <span className="exec-acct-note">{beyond}</span> : null}
                   {pages.nextCursor && capped ? <span className="exec-acct-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
                 </div>
                 {pages.moreError ? (
@@ -338,6 +447,16 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** One currency is one cell as before; a mixed-currency row stacks one line per currency (FE-CAT-4), never a sum. */
+function linesOf(facts: ListRowFacts, render: (line: ListRowFacts) => ReactNode): ReactNode {
+  if (facts.more === undefined) return <span className="exec-acct-cell">{render(facts)}</span>;
+  return (
+    <span className="exec-acct-cell">
+      {[facts, ...facts.more].map((line) => <span key={line.currency ?? "none"} className="exec-acct-cell">{render(line)}</span>)}
+    </span>
   );
 }
 

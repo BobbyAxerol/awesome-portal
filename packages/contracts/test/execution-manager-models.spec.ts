@@ -197,7 +197,7 @@ describe("ELP2-06 generated named Manager BFF contract",()=>{
     expect(rows.value.scores.direct_nav).toEqual({value:null,status:"policy_pending"});
   });
   it("pins a single economic environment and bounds page/query size",()=>{
-    expect(managerModelQuery.safeParse({environment:"ALL"}).success).toBe(false);
+    expect(managerModelQuery.safeParse({environment:"EVERYWHERE"}).success).toBe(false);
     expect(managerModelQuery.safeParse({environment:"paper",limit:201}).success).toBe(false);
     expect(managerModelQuery.safeParse({environment:"paper",sort:[{field:"broker_secret",direction:"asc"}]}).success).toBe(false);
     expect(managerModelQuery.safeParse({environment:"paper",filters:[{field:"net_pnl",op:"GTE",value:"1e9"}]}).success).toBe(false);

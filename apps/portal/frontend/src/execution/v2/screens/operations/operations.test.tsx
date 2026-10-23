@@ -88,7 +88,7 @@ describe("loaded queue", () => {
     const { api } = fakeApi();
     mount(api);
     await table();
-    const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
+    const kpis = screen.getByRole("group", { name: "Queue counts" });
     expect(within(kpis).getByText("In scope").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("12");
     expect(within(kpis).getByText("Matching").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
     expect(within(kpis).getByText("Loaded").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("8");
@@ -106,11 +106,11 @@ describe("loaded queue", () => {
     expect(screen.getByRole("button", { name: "Needs attention" }).getAttribute("aria-pressed")).toBe("true");
   });
 
-  it("renders four columns: Time, Target and operation, Receipt, Next; Intent and Display are named once as not available (OP-6)", async () => {
+  it("renders the six hi-fi columns: Time, Target and operation, Intent, Receipt, Display, Next; Intent and Display are Not available per row (OP-6)", async () => {
     const { api } = fakeApi();
     mount(api);
     const t = await table();
-    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Receipt", "Next"]);
+    expect(within(t).getAllByRole("columnheader").map((h) => h.textContent)).toEqual(["Time", "Target and operation", "Intent", "Receipt", "Display", "Next"]);
     const row = within(t).getByText(/Account acc_TEST_ONLY_operational/).closest("tr") as HTMLElement;
     expect(within(row).getByText("22 Aug 12:00Z")).toBeTruthy();
     expect(within(row).getByText(/Sync · Paper · Warning/)).toBeTruthy();
@@ -118,12 +118,14 @@ describe("loaded queue", () => {
     // Next is an action, not a repeat of the lens: the default lens is all UNACKNOWLEDGED.
     expect(within(row).queryByText("Unacknowledged")).toBeNull();
     expect(within(row).getByRole("button", { name: "Review" })).toBeTruthy();
-    // Intent and Display have no source yet: not an empty or "Not published" cell per row, one line with the ids in its title.
-    expect(within(row).queryByText("(FE-020)", { exact: false })).toBeNull();
-    const line = screen.getAllByTestId("not-available-line").find((node) => node.textContent?.includes("Intent"))!;
-    expect(line.textContent).toContain("Not available: Intent, Display");
-    expect(whyText(line)).toContain("Intent: Not published (FE-020)");
-    expect(whyText(line)).toContain("Display: Not published (FE-032)");
+    // Intent and Display have no source yet: each cell says Not available and the request id is behind its disclosure.
+    for (const [label, fe] of [["Intent", "FE-020"], ["Display", "FE-032"]] as const) {
+      const cell = row.querySelector(`td[data-l='${label}']`);
+      expect(cell?.textContent, label).toContain("Not available");
+      expect(whyText(cell ?? null), label).toContain(`Not published (${fe})`);
+    }
+    // The queue no longer carries a one-line "Not available: Intent, Display" under its filters.
+    expect(document.querySelector(".exec-ops-na-line")?.textContent ?? "").not.toContain("Intent");
   });
 
   it("prints no dash, no N/A, and says Not published with the request ids", async () => {
@@ -133,9 +135,9 @@ describe("loaded queue", () => {
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/[—–]/);
     expect(text).not.toContain("N/A");
-    const titles = screen.getAllByTestId("not-available-line").map((node) => whyText(node)).join("\n");
-    expect(titles).toContain("Not published (FE-020)");
-    expect(titles).toContain("Not published (FE-032)");
+    const reasons = [...document.querySelectorAll("td[data-l='Intent'], td[data-l='Display']")].map((cell) => whyText(cell)).join("\n");
+    expect(reasons).toContain("Not published (FE-020)");
+    expect(reasons).toContain("Not published (FE-032)");
     fireEvent.click(screen.getByRole("tab", { name: "Audit" }));
     expect(document.body.textContent).toContain("Not published (FE-021)");
     fireEvent.click(screen.getByRole("tab", { name: "Exceptions" }));
@@ -221,7 +223,7 @@ describe("a state word is not drawn as a number (OP-9)", () => {
     const { api } = fakeApi();
     mount(api);
     await table();
-    const read = within(document.querySelector(".exec-blk-kpis") as HTMLElement).getByText("Read").nextElementSibling as HTMLElement;
+    const read = within(screen.getByRole("group", { name: "Queue counts" })).getByText("Read").nextElementSibling as HTMLElement;
     expect(read.querySelector(".exec-ops-kpi-word")?.textContent).toBe("Available");
     expect(read.querySelector(".exec-blk-num")).toBeNull();
   });
@@ -526,7 +528,7 @@ describe("states", () => {
     fireEvent.change(screen.getByLabelText("Environment"), { target: { value: "sandbox" } });
     expect(await screen.findByText("Nothing matched these filters.")).toBeTruthy();
     expect(screen.getByText(/0 of 0 matching · 12 in scope/)).toBeTruthy();
-    const kpis = document.querySelector(".exec-blk-kpis") as HTMLElement;
+    const kpis = screen.getByRole("group", { name: "Queue counts" });
     expect(within(kpis).getByText("Read").nextElementSibling?.querySelector(".exec-blk-kpi-value")?.textContent).toBe("Empty");
   });
 

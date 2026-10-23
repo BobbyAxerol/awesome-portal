@@ -11,10 +11,13 @@
  * - NAV (FE-013): the fund's published NAV series through `getManagerSeries` (BE-P4). AVAILABLE draws the line and the KPI is
  *   its latest point, exact, with the methodology and window; EMPTY says "No points in this window"; UNAVAILABLE prints the
  *   typed reason (a source that is not published keeps `Not published (FE-005/006/013/025)`). Nothing is computed here;
- * - windowed Net PnL, Return and Drawdown: Not published (FE-005/006/013/025);
- * - the capital block (Initial, Added, Returned, NAV, budget): Not published (FE-017);
- * - "Since your last visit": Not published (FE-024);
- * - Contributors: Not published (FE-025).
+ * - windowed Net PnL: the fund dataset's `net_pnl` per economic partition (`getManagerDataset`, FUND) where a partition publishes
+ *   it, else Not published (FE-005/025); Return and Drawdown: Not published (FE-006/013/025);
+ * - the capital block: Balance total and Allocated per economic partition from the dataset's `capital_statements` (one line each,
+ *   never totalled); Initial, Added, Returned and Budget used: Not published (FE-017);
+ * - "Since your last visit": no comparison baseline is published, so a typed absence (FE-024); never computed from dates;
+ * - Contributors (FE-CAT-5): a second read of the same FUND dataset grouped by `alpha_id` (same environment and window), the
+ *   server's groups with `net_pnl` per economic partition; no sum, no join, no re-sort; typed absence (FE-025) when not offered.
  *
  * Published here: the ranked triage list, its counts with their exactness,
  * operations awaiting acknowledgement, stage counts, the Command Centre fleet
@@ -42,14 +45,14 @@ import { streamGate } from "../../../commandCenter";
 import { canonicalHref } from "../../../links";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import type { SseFactory } from "../../../sse";
-import { NaWhy, GapWhy, NotAvailableLine, SectionPanel, gapTitle, type UnavailableFact } from "../../blocks";
+import { NaWhy, GapWhy, SectionPanel, gapTitle } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { profileLabel } from "../../profileLabel";
 import { isInternalPath, useExecUrlState, withContext } from "../../urlState";
 import {
-  FE_MONEY, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
+  FE_DIGEST, FE_MONEY, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
   needsAttention, openIncidents, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact,
 } from "./overviewModel";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
@@ -57,7 +60,12 @@ import { ManagerSeriesPanel } from "../series/ManagerSeriesPanel";
 import { isDescribed, latestPoint, seriesValueText, UNAVAILABLE_SENTENCE } from "../series/seriesModel";
 import { useManagerSeries, type SeriesReadState } from "../series/useManagerSeries";
 import { MeasureSeg, type FundMeasure } from "./MeasureSeg";
+import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
+import { useManagerDataset } from "../manager/useManagerDataset";
+import { PartitionFigures, figureSource, publishes, servesDataset } from "../portfolios/PartitionFigures";
 import { useOverviewReads } from "./useOverviewReads";
+import { ContributorsBody } from "./Contributors";
+import { CONTRIBUTORS_GROUP_FIELD, alphaGroupOffered, contributorsView } from "./contributorsModel";
 
 import "../../css/blocks.css";
 import "../../css/overview.css";
@@ -85,15 +93,23 @@ function Gap({ ids, children }: { ids: string; children?: string }) {
   );
 }
 
-/** Facts the Manager has not published, said once on one line (the ids stay in its title). */
-const NO_WINDOW = "Windowed; needs the window (FE-025)";
-const UNPUBLISHED_FUND: readonly UnavailableFact[] = [
-  { label: "Net PnL", id: "FE-005", why: NO_WINDOW },
-  { label: "Return", id: "FE-006", why: NO_WINDOW },
-  { label: "Drawdown", id: "FE-013", why: "Needs a NAV series (FE-025)" },
-  { label: "Capital", id: "FE-017", why: "Initial, added, returned funds, NAV and budget used" },
-  { label: "Since your last visit", id: "FE-024" },
-  { label: "Contributors", id: "FE-025", why: "Per-alpha contribution over a window" },
+/** Capital-statement keys the dataset publishes and the Capital panel has a row for (one line per economic partition, never totalled). */
+const STATEMENT_ROWS: readonly { key: string; label: string }[] = [
+  { key: "balance_total", label: "Balance total" },
+  { key: "allocation", label: "Allocated" },
+];
+
+/**
+ * The capital block (hi-fi): every row stays. A row with a `key` reads that metric of the dataset's `capital_statements`, one line
+ * per economic partition (the populated fixture lane publishes initial_funds, added_funds, returned_capital, current_budget);
+ * where no partition publishes it the row says Not published with its id.
+ */
+const CAPITAL_ROWS: readonly { label: string; ids: string; key?: string }[] = [
+  { label: "Initial funds", ids: "FE-017", key: "initial_funds" },
+  { label: "Added funds", ids: "FE-017", key: "added_funds" },
+  { label: "Returned", ids: "FE-017", key: "returned_capital" },
+  { label: "NAV", ids: "FE-013" },
+  { label: "Budget", ids: "FE-017", key: "current_budget" },
 ];
 
 /**
@@ -101,24 +117,34 @@ const UNPUBLISHED_FUND: readonly UnavailableFact[] = [
  * methodology. No point is `No points in this window`; a series that is not published (or a read that has not answered) keeps
  * the request ids; any other typed reason is printed with its code. Never a derived or defaulted number.
  */
-function NavCell({ read, window }: { read: SeriesReadState; window: string }) {
+function SeriesCell({ label, read, window, gapIds }: { label: string; read: SeriesReadState; window: string; gapIds: string }) {
   const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
   const entry = series?.series[0];
   if (series === null || entry === undefined || (entry.state === "UNAVAILABLE" && entry.reasonCode === "SERIES_SOURCE_NOT_PUBLISHED")) {
-    return <Cell label="NAV"><Gap ids={FE_MONEY} /></Cell>;
+    return <Cell label={label}><Gap ids={gapIds} /></Cell>;
   }
   if (entry.state === "UNAVAILABLE") {
-    return <Cell label="NAV" note={<><span>Series unavailable</span><GapWhy name="Why the series is unavailable" rows={[`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`]} next={null} /></>}><span className="exec-ov-na">Not available</span></Cell>;
+    return <Cell label={label} note={<><span>Series unavailable</span><GapWhy name="Why the series is unavailable" rows={[`${UNAVAILABLE_SENTENCE[entry.reasonCode]} (${entry.reasonCode})`]} next={null} /></>}><span className="exec-ov-na">Not available</span></Cell>;
   }
   if (!isDescribed(entry)) return null;
   const last = latestPoint(entry);
-  if (last === null) return <Cell label="NAV" note={<span title={`Methodology ${entry.methodologyRef}, window ${window}`}>Window {window}</span>}><span className="exec-ov-na">No points in this window</span></Cell>;
+  if (last === null) return <Cell label={label} note={<span title={`Methodology ${entry.methodologyRef}, window ${window}`}>Window {window}</span>}><span className="exec-ov-na">No points in this window</span></Cell>;
   const shown = seriesValueText(entry, last.exact);
   return (
-    <Cell label="NAV" note={<span title={`Latest published point, ${formatInstant(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>As of {formatInstant(last.tsMs)}</span>}>
+    <Cell label={label} note={<span title={`Latest published point, ${formatInstant(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>As of {formatInstant(last.tsMs)}</span>}>
       <span className="exec-ov-num" title={last.exact}>{shown}</span>
     </Cell>
   );
+}
+
+/** The Capital panel's NAV row: the same latest published NAV point as the NAV tile, or the same gap. Nothing is computed. */
+function CapitalNav({ read }: { read: SeriesReadState }) {
+  const series = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+  const entry = series?.series[0];
+  if (entry === undefined || entry.state === "UNAVAILABLE" || !isDescribed(entry)) return <Gap ids="FE-013" />;
+  const last = latestPoint(entry);
+  if (last === null) return <span className="exec-ov-na">No points in this window</span>;
+  return <span className="exec-ov-num" title={last.exact}>{seriesValueText(entry, last.exact)}</span>;
 }
 
 function Cell({ label, children, note }: { label: string; children: ReactNode; note?: ReactNode }) {
@@ -183,6 +209,28 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   const metric = serves ? measure : "NAV";
   const measureQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: metric === "NAV" ? "NET_PNL" : metric }), [navQuery, metric]);
   const measureRead = useManagerSeries(api, metric !== "NAV", measureQuery, seriesNonce);
+  // The Net PnL and Return tiles ask the same port for the same fund once the NAV read says the series is served; a typed refusal keeps its ids.
+  const pnlQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: "NET_PNL" }), [navQuery]);
+  const returnQuery = useMemo<ManagerSeriesQuery>(() => ({ ...navQuery, metric: "RETURN" }), [navQuery]);
+  const pnlRead = useManagerSeries(api, serves, pnlQuery, seriesNonce);
+  const returnRead = useManagerSeries(api, serves, returnQuery, seriesNonce);
+  // The fund's Manager dataset for the same environment and window: capital statements per economic partition (and Net PnL where a
+  // partition publishes it). A refusal or a missing surface leaves every cell on its own `Not published`.
+  const fundQuery = useMemo<ManagerDatasetQuery>(
+    () => ({ surface: "FUND", environment: url.value.env, window: url.value.window, ...(workspaceId ? { workspaceId } : {}) }),
+    [url.value.env, url.value.window, workspaceId],
+  );
+  const fundRead = useManagerDataset(api, servesDataset(api), fundQuery, seriesNonce);
+  const fund = fundRead.phase === "ready" ? fundRead.value : fundRead.phase === "loading" || fundRead.phase === "error" ? fundRead.last : null;
+  const statements = fund?.capitalStatements ?? [];
+  const netPnlList = figureSource(fund, "net_pnl");
+  const returnList = figureSource(fund, "return_30d_pct");
+  const drawdownList = figureSource(fund, "max_drawdown_pct");
+  // Contributors: the same fund, environment and window, grouped by alpha by the server. Asked once the fund read has said it
+  // offers `alpha_id`; limit 1 because only `groups` (the whole filtered query) is read, never the page of rows.
+  const contributorsQuery = useMemo<ManagerDatasetQuery>(() => ({ ...fundQuery, groupBy: [CONTRIBUTORS_GROUP_FIELD], limit: 1 }), [fundQuery]);
+  const contributorsRead = useManagerDataset(api, servesDataset(api) && fund !== null && alphaGroupOffered(fund) === true, contributorsQuery, seriesNonce);
+  const contributors = contributorsView({ served: servesDataset(api), fundRead, fund, grouped: contributorsRead });
   const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
 
   const { snapshot } = reads;
@@ -294,6 +342,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
       <header className="exec-ov-head">
         <div>
           <h1 className="exec-ov-title">{snapshot?.actorName ? `Overview, ${snapshot.actorName}` : heading}</h1>
+          <p className="exec-ov-scope" data-testid="overview-scope">Environment and window apply to NAV, Net PnL, Return and the chart. Lists and counts are current. Scope: every portfolio you may see. Basis: each currency on its own, never converted or summed.</p>
         </div>
         <div className="exec-ov-chips">
           <Flag kind={flag.kind} label={mode === "busy" ? `Busy, ${needs?.items.length ?? 0} ranked` : flag.label} size="sm" />
@@ -319,8 +368,23 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
         </ul>
       ) : null}
 
-      <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 3 } as CSSProperties}>
-        <NavCell read={nav} window={url.value.window} />
+      <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 6 } as CSSProperties}>
+        <SeriesCell label="NAV" read={nav} window={url.value.window} gapIds={FE_MONEY} />
+        {netPnlList !== null ? (
+          <Cell label="Net PnL" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={netPnlList} metricKey="net_pnl" signed /></Cell>
+        ) : (
+          <SeriesCell label="Net PnL" read={pnlRead} window={url.value.window} gapIds="FE-005, FE-025" />
+        )}
+        {returnList !== null ? (
+          <Cell label="Return" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={returnList} metricKey="return_30d_pct" signed /></Cell>
+        ) : (
+          <SeriesCell label="Return" read={returnRead} window={url.value.window} gapIds="FE-006, FE-025" />
+        )}
+        {drawdownList !== null ? (
+          <Cell label="Drawdown" note={<span title={`Fund dataset, window ${url.value.window}`}>Max, window {url.value.window}</span>}><PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed /></Cell>
+        ) : (
+          <Cell label="Drawdown" note="Needs a NAV series"><Gap ids="FE-013, FE-025" /></Cell>
+        )}
         <Cell label="Open incidents" note={<Link className="exec-ov-link" to={ctx("/execution/operations")} title="Incidents in the ranked list">Operations</Link>}>
           {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : incidents.value}</span>}
         </Cell>
@@ -332,13 +396,49 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
         </Cell>
       </dl>
 
-      <NotAvailableLine facts={UNPUBLISHED_FUND} className="exec-ov-na-line" />
-
       <div className="exec-ov-grid2 exec-ov-top">
         <SectionPanel title="Performance" lead={<MeasureSeg serves={serves} selected={metric} onSelect={setMeasure} />}>
           <ManagerSeriesPanel label={metric === "NAV" ? "Fund performance" : `Fund ${metric === "NET_PNL" ? "Net PnL" : "Return"}`} read={metric === "NAV" ? nav : measureRead} gapCopy={`Not published (${FE_MONEY})`} tools />
         </SectionPanel>
+        <SectionPanel title="Capital" aside="Real-funded">
+          <table className="exec-ov-cap" aria-label="Capital">
+            <tbody>
+              {CAPITAL_ROWS.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row">{row.label}</th>
+                  <td>{row.label === "NAV" ? <CapitalNav read={nav} /> : row.key !== undefined && publishes(statements, row.key) ? <PartitionFigures list={statements} metricKey={row.key} /> : <Gap ids={row.ids} />}</td>
+                </tr>
+              ))}
+              {STATEMENT_ROWS.filter((row) => publishes(statements, row.key)).map((row) => (
+                <tr key={row.key}>
+                  <th scope="row">{row.label}</th>
+                  <td><PartitionFigures list={statements} metricKey={row.key} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </SectionPanel>
+      </div>
+
+      <div className="exec-ov-grid3">
         {needsPanel}
+        <SectionPanel title="Since your last visit">
+          <p className="exec-ov-na"><Gap ids={FE_DIGEST} /></p>
+          <p className="exec-ov-note" data-digest-absence="NO_COMPARISON_BASELINE">
+            No comparison baseline is published yet.
+            <GapWhy
+              name="Why there is no comparison baseline"
+              rows={[
+                gapTitle(FE_DIGEST, null, "NO_COMPARISON_BASELINE"),
+                "It needs a persisted, user-scoped baseline (what this user last saw) and the current source facts to compare it with.",
+                "Nothing is estimated from fixture dates or from this browser's clock.",
+              ]}
+            />
+          </p>
+        </SectionPanel>
+        <SectionPanel title="Contributors" aside={contributors.kind === "ready" ? `Net PnL by alpha · window ${url.value.window}` : "Amount · Return · Score"}>
+          <ContributorsBody view={contributors} />
+        </SectionPanel>
       </div>
 
       <SectionPanel title="Current by currency" flush>

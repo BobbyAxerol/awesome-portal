@@ -177,7 +177,28 @@ function rosterPage(search: URLSearchParams): UsersAnswer {
 }
 
 /** `pathname` is the full request path. Answers `null` for anything that is not a Users read. */
+/** SIMULATED (FIXTURE_LAB, opt-in, FE-CAT-8): the roster publishes `last_sign_in_at`. Off by default: the double is unchanged. */
+let lastSignIn = false;
+export function setUsersDoubleLastSignIn(on: boolean): void {
+  lastSignIn = on;
+}
+/** A fixed rule over the account's own state: an INVITED account never signed in (null); the others carry a fixed past instant. */
+function simulatedLastSignIn(row: Wire): string | null {
+  if (row.account_state === "INVITED") return null;
+  const day = 1 + (Number(row.user_id.slice(-4)) % 20);
+  return `2026-10-${String(day).padStart(2, "0")}T09:14:00Z`;
+}
+
 export function answerUsers(method: string, pathname: string, search: URLSearchParams): UsersAnswer | null {
+  const answer = answerUsersBase(method, pathname, search);
+  if (!lastSignIn || answer === null || answer.status !== 200) return answer;
+  const body = answer.body as { accounts?: Wire[] } | null;
+  if (body === null || !Array.isArray(body.accounts)) return answer;
+  // Roster reads only; the detail read and the lifecycle history keep the unextended summary.
+  return { ...answer, body: { ...body, accounts: body.accounts.map((row) => ({ ...row, last_sign_in_at: simulatedLastSignIn(row) })) } };
+}
+
+function answerUsersBase(method: string, pathname: string, search: URLSearchParams): UsersAnswer | null {
   const seg = pathname.split("/").filter(Boolean);
   const isAccounts = seg[0] === "api" && seg[1] === "admin" && seg[2] === "accounts";
   const isStepUp = seg[0] === "api" && seg[1] === "admin" && seg[2] === "step-up" && seg.length === 3;

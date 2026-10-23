@@ -106,6 +106,7 @@ cp -a \
   "${ROOT_DIR}/apps/control-api/src/operations/contracts.ts" \
   "${ROOT_DIR}/apps/control-api/src/operations/f0-read.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/operations/f0-apply.contract.ts" \
+  "${ROOT_DIR}/apps/control-api/src/operations/incident-eligibility.ts" \
   "${WORKSPACE_DIR}/apps/control-api/src/operations/"
 # ELP2-01 validates its runtime parser against the identical published fixtures.
 cp -a "${ROOT_DIR}/apps/control-api/src/execution/stage-drift.contract.ts" \
@@ -148,6 +149,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-series-publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-series.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-lifecycle.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-all-scope.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-catalogue.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-source.generated.ts" \

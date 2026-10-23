@@ -12,15 +12,21 @@
  *    each, "never stitched into actual". Returns per stage are FE-006.
  *  - Research OOS: the bound run is not published (FE-029).
  */
+import type { ReactNode } from "react";
+
 import { PanelState } from "../../../components/states";
+import type { ManagerMetricRead } from "../../readers/managerMetric";
 import type { FinancialChartPayload } from "../../../api/financialChart";
 import type { StageDrift } from "../../../hifiInsight";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { Flag } from "../../Flag";
-import { NotAvailableLine, SectionPanel } from "../../blocks";
+import { NaWhy, NotAvailableLine, SectionPanel } from "../../blocks";
 import { ChartTools, DivBars, EquityPanel, Spark, type DivBarRow } from "../../charts";
 import { ENV_LABEL, type ExecEnv } from "../../urlState";
 import { Na } from "./cells";
+import { DaysValue, RowFigure, WindowedFigures, type DatasetReadState } from "./DatasetFigures";
+
+const NO_NAMES: ReadonlyMap<string, string> = new Map();
 import { ROW_CAP, stageWord, type DeploymentRow, type EquityPanelInput, type StagePath } from "./model";
 import { Np } from "./np";
 import type { Read } from "./useAlphaReads";
@@ -37,6 +43,10 @@ export interface PerformanceTabProps {
   rows: readonly DeploymentRow[];
   /** Set on a SCOPED_V2 read: the body's reason for stating no money total (then no bar is drawn from a row). */
   noTotals?: string | null;
+  /** The Manager dataset read for this alpha and Book (windowed figures); absent when the caller does not read it. */
+  dataset?: DatasetReadState;
+  /** Portfolio display names by id (from the alpha body); an id with no stated name prints as the id. */
+  names?: ReadonlyMap<string, string>;
   env: ExecEnv;
   equity: Read<FinancialChartPayload>;
   drift: Read<StageDrift>;
@@ -146,6 +156,9 @@ function Contribution({ rows, noTotals }: { rows: readonly DeploymentRow[]; noTo
 
 export function PerformanceTab(props: PerformanceTabProps) {
   const { rows, env, view, onView } = props;
+  // Cost drag and forward days are keys the Manager dataset may carry per row; without them the cell keeps its Not published request id.
+  const fig = (metricKey: string, fallback: ReactNode, cell?: (metric: ManagerMetricRead | null) => ReactNode): ReactNode =>
+    props.dataset ? <RowFigure read={props.dataset} names={props.names ?? NO_NAMES} metricKey={metricKey} fallback={fallback} cell={cell} /> : fallback;
   return (
     <div className="exec-alp2-stack">
       <SectionPanel
@@ -169,14 +182,32 @@ export function PerformanceTab(props: PerformanceTabProps) {
         <Contribution rows={rows} noTotals={props.noTotals ?? null} />
       </SectionPanel>
 
-      {/* Cost drag, forward observation and four charts had no published value: one line instead of two panels, a caption and a dozen "Not published". */}
+      {props.dataset ? <WindowedFigures read={props.dataset} names={props.names ?? NO_NAMES} /> : null}
+
+      {/* Hi-fi keeps Cost drag and Forward observation as panels; every row says Not published. The four charts with no source stay on one line. */}
+      <div className="exec-alp2-pair">
+        <SectionPanel title="Cost drag" aside="Window">
+          <table className="exec-alp2-gaptable" aria-label="Cost drag">
+            <tbody>
+              <tr><th scope="row">Fees</th><td>{fig("cost_drag_fees", <Np id="FE-025" />)}</td></tr>
+              <tr><th scope="row">Funding</th><td>{fig("cost_drag_funding", <Np id="FE-025" />)}</td></tr>
+              <tr><th scope="row">Slippage</th><td>{fig("cost_drag_slippage", <NaWhy reason="Fill benchmark not published" />)}</td></tr>
+            </tbody>
+          </table>
+        </SectionPanel>
+        <SectionPanel title="Forward observation" aside="Not an actual track record">
+          <table className="exec-alp2-gaptable" aria-label="Forward observation">
+            <tbody>
+              <tr><th scope="row">Forward days</th><td>{fig("forward_observation_days", <Np id="FE-029" />, (metric) => <DaysValue metric={metric} />)}</td></tr>
+              <tr><th scope="row">Actual days</th><td><Np id="FE-029" /></td></tr>
+              <tr><th scope="row">Mixed return</th><td><Np id="FE-029" /></td></tr>
+              <tr><th scope="row">Mixed score</th><td><Np id="FE-011" /></td></tr>
+            </tbody>
+          </table>
+        </SectionPanel>
+      </div>
       <NotAvailableLine
         facts={[
-          { label: "Fees and funding", id: "FE-025" },
-          { label: "Slippage", why: "Fill benchmark not published" },
-          { label: "Forward and actual days", id: "FE-029" },
-          { label: "Mixed return", id: "FE-029" },
-          { label: "Mixed score", id: "FE-011" },
           { label: "Rolling correlation", id: "FE-029" },
           { label: "Return histogram", id: "FE-029" },
           { label: "Risk utilization", id: "FE-029" },

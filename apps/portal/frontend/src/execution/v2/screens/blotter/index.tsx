@@ -37,7 +37,7 @@ import type { ExecutionApi } from "../../../api/ports";
 import type { ConditionalGroupRead } from "../../../derivedReads";
 import { PanelSkeleton, PanelState } from "../../../components/states";
 import { useProfileRealtime } from "../../../profileRealtime";
-import { GapWhy } from "../../blocks";
+import { GapWhy, NaWhy } from "../../blocks";
 import { CardsTable } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { useMediaQuery } from "../../useMediaQuery";
@@ -296,6 +296,11 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       case "time": return order.submittedAt ? <span className="exec-blt2-num" title={order.submittedAt}>{shortUtc(order.submittedAt)}</span> : <span className="exec-blt2-na">Not available</span>;
       case "alpha": return order.alphaId ?? <span className="exec-blt2-na">Not available</span>;
       case "account": return order.accountId ?? <span className="exec-blt2-na">Not available</span>;
+      case "deployment": return order.deploymentId ?? <NaWhy reason="The orders read carries no deployment id." className="exec-blt2-na" />;
+      case "avg": return order.averageFillPrice.kind === "absent" ? <NaWhy reason="The orders read publishes no average fill price." className="exec-blt2-na" /> : <ExactText value={order.averageFillPrice} />;
+      case "fee": return order.fee.kind === "absent"
+        ? <NaWhy reason="The orders read publishes no fee." className="exec-blt2-na" />
+        : <><ExactText value={order.fee} />{order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}</>;
       case "venue": return order.venue ?? <span className="exec-blt2-na">Not available</span>;
       case "symbol": return order.symbol ?? <span className="exec-blt2-na">Not available</span>;
       case "side": return <>{order.side ? humanize(order.side) : "Side not stated"} <span className="exec-blt2-na">{order.orderType ? humanize(order.orderType) : ""}</span></>;
@@ -346,6 +351,11 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   const page = state.read;
   const fresh = (page.freshness ?? "").toUpperCase();
   const emptyPage = page.orders.length === 0;
+  // A fact the read does publish on some order is no longer "not in this read".
+  const notInRead = NOT_IN_READ.filter((name) => !(
+    (name === "Average price" && page.orders.some((o) => o.averageFillPrice.kind !== "absent"))
+    || (name === "Fee per order" && page.orders.some((o) => o.fee.kind !== "absent"))
+  ));
   const pager = (
     <div className="exec-blt2-pager">
       <span className="exec-blt2-pagerbtns">
@@ -562,7 +572,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         <details className="exec-blt2-how">
           <summary>How to read</summary>
           <p className="exec-blt2-note">
-            Rows are newest first. Numbers are exact and never shortened. A fee is in its venue currency. Orders with bracket legs, fills and an order path expand in place. Not in this read: {NOT_IN_READ.join(", ").toLowerCase()} (Not published, {NOT_IN_READ_REQUEST}).
+            Rows are newest first. Numbers are exact and never shortened. A fee is in its venue currency. Orders with bracket legs, fills and an order path expand in place. Not in this read: {notInRead.join(", ").toLowerCase()} (Not published, {NOT_IN_READ_REQUEST}).
           </p>
         </details>
       </section>

@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SLOW, SLOW_TEST } from "../../waitsTestUtil";
 
 import { answerAccount } from "../../../../../e2e/bffDoubleAccount";
+import { simulate } from "../../../../../e2e/bffSimulated";
 import { createHttpApi } from "../../../api/httpApi";
 import type { ExecutionApi } from "../../../api/ports";
 import { V2_ROLE_PRESETS } from "../../shell/roleNav";
@@ -122,15 +123,47 @@ describe("Accounts list", () => {
     expect(flags).toEqual(["ok", "stale", "attention"]);
   });
 
-  it("does not draw three columns of 'Not available' for equity, headroom and check; never a dash or a zero", async () => {
+  it("keeps the design's Physical equity, Σ Virtual · Headroom and Check columns, the subtitle, the sleeves count and the Export note; each figure is published or a typed absence, never a dash or a zero", async () => {
     stubFetch();
     const { container } = mount("/deployments/accounts");
     const rows = bodyRows(await loadedList());
-    for (const row of rows) {
-      for (const label of ["Physical equity", "Σ Virtual · Headroom", "Check"]) expect(row.querySelector(`td[data-l="${label}"]`), label).toBeNull();
-    }
-    expect(container.textContent).not.toMatch(/—|N\/A/);
-    for (const td of Array.from(container.querySelectorAll("td"))) expect(td.textContent?.trim()).not.toMatch(/^(-|–|0)$/);
+    expect(screen.getByText("Venue bindings and the sleeves on them")).toBeTruthy();
+    const note = screen.getByText(/Export is not available yet/);
+    expect(within(note).getByRole("link", { name: "My access" }).getAttribute("href")).toContain("/administration/profile-access");
+    expect((screen.getByRole("button", { name: "Export" }) as HTMLButtonElement).disabled).toBe(true);
+    // The sparse default publishes no wallet balance: physical equity and the check are typed absences with their reason.
+    await waitFor(() => expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("197,500.00"), SLOW);
+    expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("Headroom 13,880.25");
+    expect(cell(rows[0]!, "Physical equity")).toContain("Not available");
+    expect(cell(rows[0]!, "Physical equity")).toContain("Venue report not published");
+    expect(cell(rows[0]!, "Check")).toContain("Not available");
+    expect(cell(rows[0]!, "Account")).toContain("3 sleeves");
+    expect(container.textContent).not.toMatch(/\u2014|\u2013|N\/A/);
+    for (const td of Array.from(container.querySelectorAll("td"))) expect(td.textContent?.trim()).not.toMatch(/^(-|\u2013|0)$/);
+  });
+
+  it("SIMULATED lane: physical equity from the account's native custody, the exposure's virtual sum and headroom, and the check from an exact comparison", async () => {
+    stubFetch({
+      answer: (url) => {
+        const answer = answerAccount("GET", url.pathname, url.searchParams);
+        return answer === null ? null : simulate("GET", url.pathname.replace(/^\/api\/v1\/execution/, ""), url.searchParams, answer);
+      },
+    });
+    mount("/deployments/accounts");
+    const rows = bodyRows(await loadedList());
+    await waitFor(() => expect(cell(rows[0]!, "Check")).toContain("Within physical"), SLOW);
+    // Physical equity is the venue's native equity (414,010.40); the wallet balance (412,880.25) is a different figure and never stands in.
+    expect(cell(rows[0]!, "Physical equity")).toContain("414,010.40");
+    expect(cell(rows[0]!, "Physical equity")).not.toContain("412,880.25");
+    // The sub account publishes a wallet balance (118,050.00) but no native equity: a typed absence, not the wallet figure.
+    expect(cell(rows[1]!, "Binding · Venue")).toContain("bnc_sub");
+    await waitFor(() => expect(cell(rows[1]!, "Physical equity")).toContain("Not available"), SLOW);
+    expect(cell(rows[1]!, "Physical equity")).not.toContain("118,050.00");
+    expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("197,500.00");
+    expect(cell(rows[0]!, "Σ Virtual · Headroom")).toContain("Headroom 216,510.40");
+    // The expired-credential binding has no broker report: its check stays a typed absence.
+    await waitFor(() => expect(cell(rows[2]!, "Check")).toContain("Not available"), SLOW);
+    expect(cell(rows[2]!, "Physical equity")).toContain("Venue report not published");
   });
 
   it("shows the server's counts and the environment it answered", async () => {
@@ -285,7 +318,7 @@ describe("Accounts list", () => {
     const { container } = mount("/deployments/accounts");
     await loadedList();
     const labels = Array.from(container.querySelectorAll("tbody tr:first-child td")).map((td) => td.getAttribute("data-l"));
-    expect(labels).toEqual(["Binding · Venue", "Account", "State", "Credential", "Updated"]);
+    expect(labels).toEqual(["Binding · Venue", "Account", "State", "Credential", "Physical equity", "Σ Virtual · Headroom", "Check", "Updated"]);
     expect(container.querySelector("table.exec-cards")).not.toBeNull();
   });
 
@@ -419,7 +452,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     mount("/deployments/accounts?sel=bnc_main%40BINANCE");
     const later = await screen.findByRole("complementary");
     await within(later).findByRole("link", { name: "Open account" });
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)); });
     expect(later.textContent).toContain("Not allowed. Your access does not include managing accounts.");
     expect((within(later).getByRole("button", { name: "Rotate credential" }) as HTMLButtonElement).disabled).toBe(true);
   });
@@ -429,7 +462,7 @@ describe("binding peek (Binding Detail, merged)", () => {
     mount("/deployments/accounts?sel=bnc_main%40BINANCE");
     const drawer = await screen.findByRole("complementary");
     await waitFor(() => expect(drawer.textContent).toContain("Not offered in the portal yet"), SLOW);
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
     expect(stub.paths(CONTEXT_PATH)).toEqual([CONTEXT_PATH]);
   });
 
@@ -521,19 +554,103 @@ describe("Account 360: the shared sleeve", () => {
     expect(screen.getByText("Broker sync: Synced")).toBeTruthy();
   });
 
-  it("keeps the three authorities apart, with budget Not published (FE-017) and native equity Not available", async () => {
+  it("keeps the three authorities apart: PM capital lists the published allocation and says budget, gross and long/short are not published; native custody headlines the wallet balance", async () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
     const strip = screen.getByRole("group", { name: "Authorities" });
     const terms = within(strip).getAllByRole("term").map((t) => t.textContent);
-    expect(terms).toEqual(["Internal ledger · this sleeve", "Native custody · whole account", "Budget · this sleeve"]);
+    expect(terms).toEqual(["Internal ledger · this sleeve", "Native custody · whole account", "PM capital · this sleeve"]);
     expect(strip.textContent).toContain("88,200.00");
-    expect(strip.textContent).toContain("301,100.00");
-    expect(strip.textContent).toContain("Not published (FE-017)");
-    expect(strip.textContent).toContain("Native equity: Not available");
+    // Native custody: the headline is the wallet balance (not published); the published buying power sits under it, named as such.
+    const native = within(strip).getByText("Native custody · whole account").nextElementSibling as HTMLElement;
+    expect(native.querySelector(".exec-blk-kpi-value")?.textContent).toContain("Not available");
+    expect(native.querySelector(".exec-blk-kpi-value")?.textContent).not.toContain("301,100.00");
+    expect(native.textContent).toContain("Buying power: 301,100.00");
+    expect(native.textContent).toContain("Native equity: Not available");
+    // PM capital: the allocation row the read publishes (portfolio_allocations.allocated_capital), not summed; the rest typed absences.
+    const pm = within(strip).getByText("PM capital · this sleeve").nextElementSibling as HTMLElement;
+    expect(pm.textContent).toContain("Budget used / approved");
+    expect(pm.querySelector(".exec-blk-kpi-value")?.textContent).toContain("Not published (FE-017)");
+    expect(pm.textContent).toContain("Allocated · dep_btc_live: 80,000.00");
+    expect(pm.textContent).toContain("Gross exposure: Not published (A360-1)");
+    expect(pm.textContent).toContain("Long / Short: Not published (A360-1)");
     // "Shared by 3 sleeves" is the banner's, once; the strip does not repeat it.
     expect(strip.textContent).not.toContain("Shared by 3 sleeves");
+  });
+
+  it("SIMULATED lane (FIXTURE_LAB): wallet balance, native equity, budget, exposure, names and a drawdown series fill the tiles through the same readers", async () => {
+    stubFetch({
+      answer: (url) => {
+        const answer = answerAccount("GET", url.pathname, url.searchParams);
+        return answer === null ? null : simulate("GET", url.pathname.replace(/^\/api\/v1\/execution/, ""), url.searchParams, answer);
+      },
+    });
+    account("acc_bnc_core");
+    await loaded360();
+    const strip = screen.getByRole("group", { name: "Authorities" });
+    const native = within(strip).getByText("Native custody · whole account").nextElementSibling as HTMLElement;
+    expect(native.querySelector(".exec-blk-kpi-value")?.textContent).toContain("412,880.25");
+    expect(native.textContent).toContain("Native equity: 414,010.40");
+    expect(native.textContent).toContain("Buying power: 301,100.00");
+    const pm = within(strip).getByText("PM capital · this sleeve").nextElementSibling as HTMLElement;
+    expect(pm.querySelector(".exec-blk-kpi-value")?.textContent).toContain("80,000.00 / 100,000.00");
+    expect(pm.textContent).toContain("Gross exposure: 96,400.00");
+    expect(pm.textContent).toContain("Long / Short: 61,300.00 / 35,100.00");
+    expect(pm.textContent).toContain("Allocated · BTC Trend live: 80,000.00");
+    expect(pm.textContent).not.toContain("Not published (FE-017)");
+    expect(screen.getByRole("link", { name: "Core" })).toBeTruthy();
+    const panel = (await screen.findByRole("heading", { name: "Drawdown" }, SLOW)).closest("section") as HTMLElement;
+    await waitFor(() => expect(within(panel).getByRole("img", { name: /Account drawdown/ }).className).not.toContain("exec-c2-na"), SLOW);
+  });
+
+  it("PM capital with no allocation row says so for the allocation only; it does not print a zero", async () => {
+    stubFetch();
+    account("acc_pap_sim");
+    const strip = await screen.findByRole("group", { name: "Authorities" }, SLOW);
+    const pm = within(strip).getByText("PM capital · this sleeve").nextElementSibling as HTMLElement;
+    expect(pm.textContent).toContain("Allocated: Not available");
+    expect(pm.textContent).not.toMatch(/Allocated[^:]*: 0/);
+  });
+
+  it("shows the display names the read publishes instead of raw ids, and the id where it publishes none", async () => {
+    stubFetch({
+      answer: (url) => {
+        const answer = answerAccount("GET", url.pathname, url.searchParams);
+        if (answer === null || !url.pathname.endsWith("/resources/accounts/acc_bnc_core")) return answer;
+        const body = JSON.parse(JSON.stringify(answer.body)) as { data: Record<string, Record<string, unknown>[]> };
+        for (const row of body.data.deployments ?? []) row.portfolio_name = "Core";
+        for (const row of body.data.portfolio_allocations ?? []) { row.deployment_name = "BTC Trend live"; row.portfolio_name = "Core"; }
+        return { status: answer.status, body };
+      },
+    });
+    account("acc_bnc_core");
+    await loaded360();
+    const strip = screen.getByRole("group", { name: "Authorities" });
+    expect(strip.textContent).toContain("Allocated · BTC Trend live: 80,000.00");
+    expect(strip.textContent).not.toContain("dep_btc_live");
+    expect(screen.getByRole("link", { name: "Core" })).toBeTruthy();
+  });
+
+  it("the Drawdown sub-panel reads the route's drawdown metric; a payload that echoes another metric is a typed absence, never the equity series", async () => {
+    const stub = stubFetch();
+    account("acc_bnc_core");
+    await loaded360();
+    await screen.findByRole("img", { name: /Account drawdown/ }, SLOW);
+    expect(stub.paths("/api/v1/execution/views/equity-chart").some((call) => call.includes("metric=drawdown"))).toBe(true);
+    cleanup();
+    stubFetch({
+      answer: (url) => {
+        const answer = answerAccount("GET", url.pathname, url.searchParams);
+        if (answer === null || url.pathname !== "/views/equity-chart" || url.searchParams.get("metric") !== "drawdown") return answer;
+        return { status: answer.status, body: { ...(answer.body as Record<string, unknown>), metric: "equity" } };
+      },
+    });
+    account("acc_bnc_core");
+    await loaded360();
+    const panel = (await screen.findByRole("heading", { name: "Drawdown" }, SLOW)).closest("section") as HTMLElement;
+    await waitFor(() => expect(panel.textContent).toContain("Not available"), SLOW);
+    expect(within(panel).getByRole("img", { name: /Account drawdown/ }).className).toContain("exec-c2-na");
   });
 
   it("the sleeves table never attributes native balance to a sleeve: no attribution column, and not totalled", async () => {

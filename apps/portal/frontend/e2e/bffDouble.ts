@@ -19,9 +19,11 @@ import { fileURLToPath } from "node:url";
 import type { Page } from "@playwright/test";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { answerAccount } from "./bffDoubleAccount";
+import { simulate } from "./bffSimulated";
 import { answerAlpha } from "./bffDoubleAlpha";
 import { answerGovernance } from "./bffDoubleGovernance";
 import { answerManager } from "./bffDoubleManager";
+import { answerReviewManager } from "../../fixture-bff/review-manager";
 import { answerOverview } from "./bffDoubleOverview";
 import { answerPortfolios } from "./bffDoublePortfolios";
 import { answerStage, isStageDeployment, withStageQuality } from "./bffDoubleStage";
@@ -58,7 +60,6 @@ import {
   APPROVAL_ROWS,
   CONDITION_FIXTURES,
   EXIT_DETAIL,
-  R1_DETAIL,
   R2_DETAIL,
   matchesView,
 } from "../src/execution/api/fixtureData";
@@ -79,7 +80,9 @@ import {
   SOURCE_HEALTH_READ,
 } from "../src/execution/derivedReads.fixtures";
 import { CROSS_EQUITY, RUNTIME_MANIFEST } from "../src/execution/analytics.presentation.fixtures";
-import { SCREEN_CONTRACTS } from "../src/execution/screenContracts.fixtures";
+import { SCREEN_CONTRACTS_PUBLISHED } from "./bffDoubleCatalogue";
+import { approvalHistoryEnvelope, approvalInboxEnvelope, conditionsRegisterEnvelope, r1ReviewEnvelope } from "./bffDoubleApprovalEnvelopes";
+import { scopedResourceV2 } from "./bffDoubleScopedResource";
 
 interface Answer {
   status: number;
@@ -112,15 +115,15 @@ function approvalsPage(search: URLSearchParams): Answer {
   const overdue = rows.filter(
     (r) => typeof sla(r).age_minutes === "number" && typeof sla(r).budget_minutes === "number" && (sla(r).age_minutes as number) > (sla(r).budget_minutes as number),
   ).length;
-  return ok({
+  return ok(approvalInboxEnvelope({
     rows: slice,
     total_count: rows.length,
     filtered_count: inView.length,
     next_cursor: start + limit < inView.length && slice.length > 0 ? String(slice[slice.length - 1].approval_id) : null,
     prev_cursor: start > 0 && slice.length > 0 ? String(slice[0].approval_id) : null,
     has_more: start + limit < inView.length,
-    counts: { pending: rows.length, overdue, due_soon: 1 },
-  });
+    has_previous: start > 0,
+  }, { pending: rows.length, overdue, due_soon: 1 }, search.get("workspace_id") ?? "ws_fixture_governance"));
 }
 
 function waiversPage(search: URLSearchParams): Answer {
@@ -138,7 +141,7 @@ function waiversPage(search: URLSearchParams): Answer {
     start = Math.max(0, end - limit);
   }
   const window = filtered.slice(start, Math.min(end, start + limit));
-  return ok({
+  return ok(conditionsRegisterEnvelope({
     schema_version: "governance.conditions-register.v1",
     record_authority: "PORTAL_CONTROL",
     delivery_profile: "portal",
@@ -152,10 +155,8 @@ function waiversPage(search: URLSearchParams): Answer {
       prev_cursor: start > 0 ? String(window[0]?.condition_id ?? "") || null : null,
       has_more: start + window.length < filtered.length,
       has_previous: start > 0,
-      applied_filters: [],
-      applied_sort: [],
     },
-  });
+  }, state));
 }
 
 function liveReview(approvalId: string): Answer {
@@ -1105,6 +1106,14 @@ export interface BffDoubleOptions {
   operationsV2?: boolean;
   /** UXM-07 S2: sparse-realistic answers for the V2 overview/blotter/admin/alpha/account/portfolio screens (they override the canonical ones the V1 journeys read). */
   screensV2?: boolean;
+  /** The other five Manager dataset surfaces from the fixture-bff review answerer (populated profile). Off by default: the sparse default is unchanged. */
+  reviewManager?: boolean;
+  /**
+   * SIMULATED fixture facts (FIXTURE_LAB, `bffSimulated.ts`) through the same routes and readers: queue status counts, account native
+   * custody, budget, exposure, names and drawdown, blotter deployment, average price and fee. Implied by `reviewManager`; the fixture
+   * BFF turns it on for its populated and layout-stress profiles. Off keeps the sparse default unchanged.
+   */
+  simulated?: boolean;
 }
 
 /**
@@ -1113,6 +1122,17 @@ export interface BffDoubleOptions {
  * passes none, which is how its answers have always been; the standalone server does.
  */
 export function answerExecutionBff(method: string, pathname: string, search: URLSearchParams, options: BffDoubleOptions = {}, requestBody?: unknown): Answer {
+  const answer = answerExecutionBffBase(method, pathname, search, options, requestBody);
+  if (options.screensV2 !== true || (options.simulated !== true && options.reviewManager !== true)) return answer;
+  const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
+  // The overview double answers the V2 queue too; the same V2 function answers it again with the counts the server would publish.
+  if (method === "GET" && path === "/operations" && answer.status === 200 && (answer.body as { schema_version?: unknown } | null)?.schema_version === "portal.execution.operational-queue.v2") {
+    return answerOperationsV2(method, path, search, true) ?? answer;
+  }
+  return simulate(method, path, search, answer as { status: number; body: unknown }) as Answer;
+}
+
+function answerExecutionBffBase(method: string, pathname: string, search: URLSearchParams, options: BffDoubleOptions = {}, requestBody?: unknown): Answer {
   const path = pathname.replace(/^\/api\/v1\/execution/, "") || "/";
   const seg = path.split("/").filter(Boolean);
 
@@ -1124,6 +1144,13 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
 
   if (options.screensV2) {
     // The Manager series and Fleet dataset, and the three advisory governance reads: opt-in for the V2 lane, so the V1 stubs keep their 501.
+    // Opt-in (`reviewManager`): the Manager dataset routes (fleet dataset and the five overview surfaces) come from the fixture-bff
+    // review answerer (populated profile, small scale), so a visual cell that reads them is stubbed instead of 501/400. The sparse
+    // default of the fixture BFF is unchanged. The series and realtime routes stay the sparse doubles.
+    if (options.reviewManager === true) {
+      const dataset = answerReviewDataset(method, path, search);
+      if (dataset !== null) return dataset as Answer;
+    }
     const published = answerManager(method, path, search) ?? answerGovernance(method, path, search, requestBody);
     if (published !== null) return published as Answer;
   }
@@ -1139,7 +1166,7 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
   }
 
   if (options.operationsV2 && method === "GET") {
-    const v2 = answerOperationsV2(method, path, search);
+    const v2 = answerOperationsV2(method, path, search, options.simulated === true || options.reviewManager === true);
     if (v2 !== null) return v2;
   }
 
@@ -1177,9 +1204,9 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
       });
     }
     if (path === "/runtime-manifest") return ok(RUNTIME_MANIFEST);
-    if (path === "/screen-contracts") return ok(SCREEN_CONTRACTS);
+    if (path === "/screen-contracts") return ok(SCREEN_CONTRACTS_PUBLISHED);
     if (path === "/activation/capabilities") return ok(ACTIVATION_CAPABILITIES);
-    if (path === "/governance/approvals/history") return ok(APPROVAL_HISTORY);
+    if (path === "/governance/approvals/history") return ok(approvalHistoryEnvelope(APPROVAL_HISTORY));
     if (seg[0] === "durable-mirror" && seg[1] === "integrity" && seg.length === 2) {
       const environment = search.get("environment");
       if (!validEnvironment(environment)) return problem(400, "invalid_environment", "A profile environment is required.");
@@ -1243,7 +1270,7 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
       if (kind === "alphas") return ok(resourceEnvelope("alpha", id));
       if (kind === "portfolios") return ok(resourceEnvelope("portfolio", id));
       if (kind === "accounts") return ok(resourceEnvelope("account", id));
-      if (kind === "bindings") return ok(resourceEnvelope("binding", id));
+      if (kind === "bindings") return ok(scopedResourceV2("BINDING", id, search) ?? resourceEnvelope("binding", id));
     }
     if (seg[0] === "profiles" && seg[2] === "realtime-snapshot") return realtimeSnapshot(seg[1]);
     if (seg[0] === "profiles" && seg[2] === "stream") {
@@ -1308,7 +1335,7 @@ export function answerExecutionBff(method: string, pathname: string, search: URL
     }
     if (path === "/governance/approvals") return approvalsPage(search);
     if (seg[0] === "governance" && seg[1] === "approvals" && seg[3] === "r1")
-      return ok({ ...R1_DETAIL, approval: { ...(R1_DETAIL.approval as object), approval_id: seg[2] } });
+      return ok(r1ReviewEnvelope(seg[2]));
     if (seg[0] === "governance" && seg[1] === "approvals" && seg[3] === "r2")
       return ok({ ...R2_DETAIL, approval: { ...(R2_DETAIL.approval as object), approval_id: seg[2] } });
     if (seg[0] === "governance" && seg[1] === "approvals" && seg[3] === "live") return liveReview(seg[2]);
@@ -1360,6 +1387,79 @@ function bodyOf(request: { method(): string; url(): string; postDataJSON?: () =>
 }
 
 /** Register the double on a page. Same-origin only — nothing else is stubbed here. */
+/**
+ * The review answerer for the Manager dataset routes, for the visual lane only. The small-scale universe has the canonical template
+ * rows, not this suite's ids (`pf_TEST_ONLY_core`, ...): a resource surface is answered from the FLEET dataset with the asked id
+ * written into the rows, the group key and the surface, so the reader's scope/group checks hold and the simulated keys show.
+ */
+function answerReviewDataset(method: string, path: string, search: URLSearchParams): { status: number; body: unknown } | null {
+  const match = /^(?:\/api\/v1\/execution)?\/manager\/(fund-overview|fleet|(portfolios|alphas|accounts|deployments)\/([^/]+)\/overview)$/.exec(path);
+  if (match === null || method !== "GET") return null;
+  const resource = match[2] as "portfolios" | "alphas" | "accounts" | "deployments" | undefined;
+  const id = match[3] === undefined ? null : decodeURIComponent(match[3]);
+  const asked = new URLSearchParams(search);
+  const environment = asked.get("environment") ?? "paper";
+  // A resource the review universe itself knows (this suite's alpha ids, portfolios Main/Satellite/Core, deployments) is answered by the
+  // review answerer as it is: its own rows, ids and names, one single-book partition per row. Only an unknown id falls through to the relabel below.
+  if (resource !== undefined && id !== null) {
+    const direct = answerReviewManager("GET", path, asked, "populated");
+    if (direct !== null && direct.status === 200) return direct;
+  }
+  let reply = answerReviewManager("GET", resource === undefined ? path : "/manager/fleet", asked, "populated");
+  // The small template only has Paper rows; a Real-funded (live) or Sandbox question gets the same rows relabelled to the asked book,
+  // so the lane shows data in every environment instead of an empty live dataset.
+  const hollow = environment !== "paper" && reply !== null && reply.status === 200 && ((reply.body as { items?: unknown[] }).items ?? []).length === 0;
+  const relabel = (body: any): void => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const domain = environment === "live" ? "ACTUAL" : "SANDBOX";
+    const stage = environment === "live" ? "LIVE" : "SANDBOX";
+    body.environment = environment;
+    // Only the template's Paper partitions are relabelled: a Sandbox partition renamed Real-funded would repeat a currency under one book.
+    const paperOnly = (list: any[]): any[] => list.filter((entry) => entry.partition.economic_domain === "PAPER"); // eslint-disable-line @typescript-eslint/no-explicit-any
+    for (const row of body.items) row.economic_partitions = paperOnly(row.economic_partitions);
+    body.capital_statements = paperOnly(body.capital_statements);
+    for (const group of body.groups) group.economic_partitions = paperOnly(group.economic_partitions);
+    for (const row of body.items) { row.stage_presence = [stage]; row.current_stage = stage; for (const child of row.children) child.stage = stage; for (const part of row.economic_partitions) part.partition.economic_domain = domain; }
+    for (const part of body.capital_statements) part.partition.economic_domain = domain;
+    for (const group of body.groups) for (const part of group.economic_partitions) part.partition.economic_domain = domain;
+  };
+  if (hollow) {
+    const paper = new URLSearchParams(asked);
+    paper.set("environment", "paper");
+    reply = answerReviewManager("GET", resource === undefined ? path : "/manager/fleet", paper, "populated");
+    if (reply !== null && reply.status === 200) { const copy = structuredClone(reply.body); relabel(copy); reply = { status: 200, body: copy }; }
+  }
+  // The portfolio list asks the FLEET dataset grouped by portfolio: one group per portfolio id of this suite (the template has its own ids).
+  if (resource === undefined && reply !== null && reply.status === 200 && asked.get("group_by") === "portfolio_id") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const grouped = structuredClone(reply.body) as any;
+    if (grouped.groups.length > 0) {
+      const first = grouped.groups[0];
+      grouped.groups = ["pf_TEST_ONLY_core", "pf_TEST_ONLY_satellite", "pf_TEST_ONLY_canary", "pf_TEST_ONLY_yen"].map((pid) => {
+        const group = structuredClone(first);
+        for (const part of group.key) if (part.field === "portfolio_id") part.value = pid;
+        return group;
+      });
+      reply = { status: 200, body: grouped };
+    }
+  }
+  if (reply === null || reply.status !== 200 || resource === undefined || id === null) return reply;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const body = structuredClone(reply.body) as any;
+  body.surface = { portfolios: "PORTFOLIO", alphas: "ALPHA", accounts: "ACCOUNT", deployments: "DEPLOYMENT" }[resource];
+  for (const row of body.items as any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (resource === "portfolios") row.portfolio_id = id;
+    if (resource === "alphas") row.alpha_id = id;
+    if (resource === "accounts") for (const child of row.children) child.account_id = id;
+    if (resource === "deployments") for (const child of row.children) child.deployment_id = id;
+    row.row_key = JSON.stringify([row.alpha_id, row.alpha_version_id, row.portfolio_id]);
+  }
+  for (const group of body.groups as any[]) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (resource === "portfolios") for (const part of group.key) if (part.field === "portfolio_id") part.value = id;
+    if (resource === "alphas") for (const part of group.key) if (part.field === "alpha_id") part.value = id;
+  }
+  return { status: 200, body };
+}
+
 export async function stubExecutionBff(page: Page, options: BffDoubleOptions = {}): Promise<void> {
   await page.route("**/api/v1/execution/**", (route) => {
     const request = route.request();

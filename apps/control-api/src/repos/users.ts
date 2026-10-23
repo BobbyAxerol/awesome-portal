@@ -18,6 +18,30 @@ interface UserRow {
   archived_at: Date | null;
 }
 
+/** Roster-only display fact, never part of identity/session authorization. */
+export interface RosterUser extends PortalUser {
+  lastSignInAt?: Date;
+}
+
+type RosterUserRow = UserRow & { last_sign_in_at?: Date | null };
+
+function toRosterUser(row: RosterUserRow): RosterUser {
+  const user: RosterUser = toUser(row);
+  // Audit retention does not prove an account never signed in. No retained
+  // successful interactive event means unavailable, not a published null.
+  if (row.last_sign_in_at instanceof Date && Number.isFinite(row.last_sign_in_at.getTime())
+      && row.last_sign_in_at.getTime() >= 0) user.lastSignInAt = row.last_sign_in_at;
+  return user;
+}
+
+/** Only a successful interactive login is a sign-in. Research commissioning
+ * and preview auto-sessions must not overwrite a human's sign-in timestamp. */
+export const ROSTER_LAST_SIGN_IN_SQL = `(SELECT max(a.occurred_at)
+  FROM auth_audit_events a
+  WHERE a.event_type = 'login_succeeded' AND a.result = 'SUCCESS'
+    AND a.actor_user_id = page.user_id AND a.target_user_id = page.user_id
+    AND a.reason_code IS DISTINCT FROM 'PREVIEW_AUTO_LOGIN')`;
+
 interface RosterCountsSql {
   total_count: number; matching_count: number;
   n_invited: number; n_active: number; n_disabled: number; n_archived: number;
@@ -90,7 +114,8 @@ export const ROSTER_PAGE_SQL = `WITH f AS (
        )
        SELECT agg.*, page.user_id, page.username, page.display_name, page.role, page.status,
               page.must_change_password, page.failed_login_count, page.locked_until, page.session_version,
-              page.created_at, page.updated_at, page.disabled_at, page.account_revision, page.archived_at
+              page.created_at, page.updated_at, page.disabled_at, page.account_revision, page.archived_at,
+              ${ROSTER_LAST_SIGN_IN_SQL} AS last_sign_in_at
          FROM agg LEFT JOIN page ON true
         ORDER BY page.username`;
 
@@ -145,6 +170,16 @@ export class UsersRepository {
     return result.rows.map(toUser);
   }
 
+  /** Owner roster only. Keep lifecycle audit projections and generic identity
+   * reads unchanged; the timestamp comes from the same statement snapshot. */
+  async listRoster(): Promise<RosterUser[]> {
+    const result = await this.pool.query<RosterUserRow>(
+      `SELECT page.*, ${ROSTER_LAST_SIGN_IN_SQL} AS last_sign_in_at
+       FROM portal_users page ORDER BY page.username`,
+    );
+    return result.rows.map(toRosterUser);
+  }
+
   /**
    * BE-P23 · one keyset page of the roster plus its exact counts, from ONE statement.
    *
@@ -169,8 +204,8 @@ export class UsersRepository {
     role: Role | null;
     state: "INVITED" | "ACTIVE" | "DISABLED" | "ARCHIVED" | null;
     now: Date;
-  }): Promise<{ counts: RosterCountsRow; rows: PortalUser[] }> {
-    const result = await this.pool.query<UserRow & RosterCountsSql>(
+  }): Promise<{ counts: RosterCountsRow; rows: RosterUser[] }> {
+    const result = await this.pool.query<RosterUserRow & RosterCountsSql>(
       ROSTER_PAGE_SQL,
       [input.afterUsername, input.q, input.role, input.state, input.limit + 1, input.now],
     );
@@ -184,7 +219,7 @@ export class UsersRepository {
       locked: first.n_locked,
       awaitingFirstPassword: first.n_awaiting,
     };
-    return { counts, rows: result.rows.filter((row) => row.user_id !== null).map(toUser) };
+    return { counts, rows: result.rows.filter((row) => row.user_id !== null).map(toRosterUser) };
   }
 
   /**

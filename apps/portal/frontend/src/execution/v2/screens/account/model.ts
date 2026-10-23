@@ -18,7 +18,7 @@
  *   not part of any view).
  */
 import type { BindingExposure } from "../../../analytics";
-import type { BindingItem, ProfileEnvelope } from "../../../api/profileRead";
+import type { BindingFigures, BindingItem, ProfileEnvelope } from "../../../api/profileRead";
 import type { SubjectActivityPage } from "../../../api/subjectActivity";
 import type { FinancialChartPayload } from "../../../api/financialChart";
 import type { ExactUnit } from "../../../formatExact";
@@ -294,6 +294,8 @@ export interface BindingRow {
   updatedAt: UtcEpochMs | null;
   /** Needs a person: credential or state the source calls wrong. */
   issue: boolean;
+  /** Figures the bindings list published for this row (FE-CAT-4); `null` when it did not, and the row's two carriers are read instead. */
+  listFacts: ListRowFacts | null;
 }
 
 export function toBindingRow(item: BindingItem): BindingRow {
@@ -309,6 +311,7 @@ export function toBindingRow(item: BindingItem): BindingRow {
     credentialWord: item.credentialState,
     updatedAt: timeOf({ updated_at: item.updatedAt }, "updated_at"),
     issue: credential.issue || state.issue,
+    listFacts: item.figures === undefined ? null : listFactsFromFigures(item.figures),
   };
 }
 
@@ -438,6 +441,12 @@ export interface DiffFacts {
 
 export interface BrokerFacts {
   buyingPower: Metric | null | undefined;
+  /** The venue's wallet balance of the whole account (`broker_sync.wallet_balance`); `undefined` = not published. */
+  walletBalance: Metric | null | undefined;
+  /** The venue's native equity (`broker_sync.native_equity`); `undefined` = not published. */
+  nativeEquity: Metric | null | undefined;
+  /** The currency of the broker report row (`broker_sync.currency`); `null` when the row names none. */
+  currency: string | null;
   status: string | null;
   asOf: UtcEpochMs | null;
 }
@@ -459,6 +468,12 @@ export interface AllocationFacts {
   portfolio: string | null;
   mode: string | null;
   allocation: Metric | null | undefined;
+  /** The allocation row's own PM budget (`budget_used` / `budget_approved`) and exposure (`exposure_gross` / `_long` / `_short`). */
+  budgetUsed: Metric | null | undefined;
+  budgetApproved: Metric | null | undefined;
+  exposureGross: Metric | null | undefined;
+  exposureLong: Metric | null | undefined;
+  exposureShort: Metric | null | undefined;
   currency: string | null;
 }
 
@@ -483,8 +498,20 @@ export interface AccountIdentity {
   bindingId: string | null;
 }
 
+/**
+ * Display names the read itself carries, by id. A row may name its portfolio (`portfolio_name`), its alpha
+ * (`strategy_name`) or itself (`display_name` / `label` / `name`); the first one found per id wins. An id with no
+ * published name is absent here and the screen prints the id, which is the identity, not a stand-in (FE-066).
+ */
+export interface DisplayNames {
+  portfolios: Readonly<Record<string, string>>;
+  deployments: Readonly<Record<string, string>>;
+  alphas: Readonly<Record<string, string>>;
+}
+
 export interface AccountView {
   identity: AccountIdentity;
+  names: DisplayNames;
   /** Distinct currencies the account's own ledger rows name, sorted. */
   currencies: readonly string[];
   sleeves: readonly Sleeve[];
@@ -494,6 +521,21 @@ export interface AccountView {
   sync: readonly SyncEntry[];
   /** Every relation the source reported unavailable or empty, for the header note. */
   gaps: readonly { relation: string; code: string }[];
+}
+
+function displayNames(deployments: readonly Row[], allocations: readonly Row[]): DisplayNames {
+  const portfolios: Record<string, string> = {};
+  const deploymentNames: Record<string, string> = {};
+  const alphas: Record<string, string> = {};
+  const put = (into: Record<string, string>, id: string | null, name: string | null) => {
+    if (id !== null && name !== null && name !== id && into[id] === undefined) into[id] = name;
+  };
+  for (const row of [...deployments, ...allocations]) {
+    put(portfolios, text(row.portfolio_id), text(row.portfolio_name));
+    put(alphas, text(row.strategy_id), text(row.strategy_name) ?? text(row.alpha_name));
+    put(deploymentNames, text(row.deployment_id), text(row.deployment_name) ?? text(row.display_name) ?? text(row.label) ?? text(row.name));
+  }
+  return { portfolios, deployments: deploymentNames, alphas };
 }
 
 const SENSITIVE = /(^|_)(secret|credential|password|token|dsn|external_account_ref|raw)(_|$)/;
@@ -507,12 +549,13 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
   const venueRow = venueRows.find((row) => text(row.account_id) === accountId) ?? null;
   const bindingId = venueRow ? text(venueRow.binding_id) : null;
 
+  const names = displayNames(rowsOf(profile, "deployments"), rowsOf(profile, "portfolio_allocations"));
   const portfolioOf = (id: string): string | null => {
-    const names = [...new Set(rowsOf(profile, "deployments").filter((row) => text(row.account_id) === id).flatMap((row) => {
+    const shown = [...new Set(rowsOf(profile, "deployments").filter((row) => text(row.account_id) === id).flatMap((row) => {
       const pf = text(row.portfolio_id);
-      return pf ? [pf] : [];
+      return pf ? [names.portfolios[pf] ?? pf] : [];
     }))];
-    return names.length > 0 ? names.join(", ") : null;
+    return shown.length > 0 ? shown.join(", ") : null;
   };
 
   const labelOf = (row: Row | null, id: string): string => (row ? text(row.label) ?? text(row.display_name) ?? text(row.name) : null) ?? id;
@@ -566,6 +609,11 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
       portfolio: text(row.portfolio_id),
       mode: text(row.mode),
       allocation: metricOf(row.allocated_capital, "money"),
+      budgetUsed: metricOf(row.budget_used, "money"),
+      budgetApproved: metricOf(row.budget_approved, "money"),
+      exposureGross: metricOf(row.exposure_gross, "money"),
+      exposureLong: metricOf(row.exposure_long, "money"),
+      exposureShort: metricOf(row.exposure_short, "money"),
       currency: text(row.currency),
     }));
 
@@ -593,6 +641,7 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
 
   const typeWord = account ? text(account.account_type) : null;
   return {
+    names,
     identity: {
       accountId,
       label: labelOf(account, accountId),
@@ -695,6 +744,9 @@ export function brokerFacts(profile: ProfileEnvelope, currency: string | null): 
   if (row === null) return null;
   return {
     buyingPower: metricOf(row.buying_power, "money"),
+    walletBalance: metricOf(row.wallet_balance, "money"),
+    nativeEquity: metricOf(row.native_equity, "money"),
+    currency: text(row.currency),
     status: text(row.status),
     asOf: timeOf(row, "synced_at"),
   };
@@ -1023,3 +1075,117 @@ export const RELATION_LABEL: Readonly<Record<string, string>> = {
   exposure_headroom: "Headroom",
   positions: "Positions",
 };
+
+/* ── Accounts list: physical equity, virtual sum and the check between them ─ */
+
+/** The list reads these per row, for the first rows only (one exposure read and one account read each). */
+export const ROW_FACTS_CAP = 20;
+
+/**
+ * Exact comparison of two decimal strings (`-12.5`, `0.20`, `197500.00`): -1, 0 or 1; `null` when either is not a plain decimal.
+ * Integer arithmetic on the digits; no float, no rounding. This is the only arithmetic the list does.
+ */
+export function compareDecimals(a: string, b: string): -1 | 0 | 1 | null {
+  const parse = (text: string): { neg: boolean; int: string; frac: string } | null => {
+    const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(text);
+    return m === null ? null : { neg: m[1] === "-", int: m[2]!, frac: m[3] ?? "" };
+  };
+  const x = parse(a);
+  const y = parse(b);
+  if (x === null || y === null) return null;
+  const width = Math.max(x.frac.length, y.frac.length);
+  const scaled = (v: { neg: boolean; int: string; frac: string }): bigint => {
+    const n = BigInt(`${v.int}${v.frac.padEnd(width, "0")}`);
+    return v.neg ? -n : n;
+  };
+  const p = scaled(x);
+  const q = scaled(y);
+  return p < q ? -1 : p > q ? 1 : 0;
+}
+
+export interface ListRowFacts {
+  /** The venue's wallet balance of the whole account (native custody) and its currency. */
+  physical: Metric | null | undefined;
+  currency: string | null;
+  /** The binding's virtual figures for the SAME currency: the sum of allocations (`used`) and the published headroom. */
+  virtual: Metric | null | undefined;
+  headroom: Metric | null | undefined;
+  /** Sleeves on the binding: the expected count the exposure read publishes, else the count it covered. */
+  sleeves: number | null;
+  /** List figures only: why `physical` is absent when the venue reported equity, but not in this currency. */
+  physicalWhy?: string;
+  /** List figures only: a source covers only part of its population for this line. */
+  partial?: boolean;
+  /** List figures only: the other currencies of a mixed-currency binding, each its own line, never summed into this one. */
+  more?: readonly ListRowFacts[];
+}
+
+export type CheckWord = { kind: "within" } | { kind: "exceeded" } | { kind: "unavailable"; reason: string };
+
+const exactOf = (metric: Metric | null | undefined): string | null => (metric && metric.kind === "value" ? metric.decimal.full : null);
+
+/** Virtual against physical, same currency, both published; anything else is not available and says why. */
+export function checkOf(physical: Metric | null | undefined, virtual: Metric | null | undefined): CheckWord {
+  const phys = exactOf(physical);
+  const virt = exactOf(virtual);
+  if (phys === null) return { kind: "unavailable", reason: "The venue report is not published, so there is no physical figure to compare." };
+  if (virt === null) return { kind: "unavailable", reason: "No virtual sum is published in the physical figure's currency." };
+  const order = compareDecimals(virt, phys);
+  if (order === null) return { kind: "unavailable", reason: "A figure could not be read as an exact decimal." };
+  return { kind: order <= 0 ? "within" : "exceeded" };
+}
+
+/** One row's facts from the two reads. A read that is missing contributes nothing (the cell says so). */
+export function listRowFacts(profile: ProfileEnvelope | null, exposure: BindingExposure | null): ListRowFacts {
+  const broker = profile === null ? null : brokerFacts(profile, null);
+  const currency = broker?.currency ?? null;
+  const bucket = exposure === null || currency === null ? null : exposure.buckets.find((entry) => entry.currency === currency) ?? null;
+  const money = (value: unknown) => (typeof value === "string" ? metricOf(value, "money") : value === null ? metricOf(null, "money") : undefined);
+  return {
+    // Physical equity is the venue's native equity; the wallet balance is a different figure (Account 360 prints both) and is never a fallback.
+    physical: broker === null ? undefined : broker.nativeEquity,
+    currency,
+    virtual: bucket === null ? undefined : money(bucket.used),
+    headroom: bucket === null ? undefined : money(bucket.headroom),
+    sleeves: exposure === null ? null : exposure.expectedAccountCount ?? exposure.accountCount,
+  };
+}
+
+/**
+ * FE-CAT-4 · a row's facts from the figures the bindings list published, or `null` when the list left any of the four keys out
+ * (this producer has no owning source for it: the row's two carriers are read instead, never a half-and-half row).
+ *
+ * One line per currency: the currencies that have native equity first, then the others alphabetically. A line never mixes
+ * currencies; its physical, virtual and headroom are that currency's entries. A typed `null` from the source is a typed
+ * absence; an entry missing from one currency while others are published is `undefined` (the cell says "in this currency").
+ * Nothing is added, converted or defaulted.
+ */
+export function listFactsFromFigures(figures: BindingFigures): ListRowFacts | null {
+  const { nativeEquity, virtualUsed, virtualHeadroom, sleeveCount } = figures;
+  if (nativeEquity === undefined || virtualUsed === undefined || virtualHeadroom === undefined || sleeveCount === undefined) return null;
+  const by = (list: BindingFigures["nativeEquity"]) => new Map((list ?? []).map((entry) => [entry.currency, entry] as const));
+  const native = by(nativeEquity);
+  const used = by(virtualUsed);
+  const headroom = by(virtualHeadroom);
+  const currencies = [...new Set([...native.keys(), ...used.keys(), ...headroom.keys()])]
+    .sort((a, b) => Number(native.has(b)) - Number(native.has(a)) || a.localeCompare(b));
+  const pick = (entry: { value: string } | undefined, whole: BindingFigures["nativeEquity"]): Metric | null | undefined =>
+    entry !== undefined ? metricOf(entry.value, "money") : whole === null ? metricOf(null, "money") : undefined;
+  const line = (currency: string | null): ListRowFacts => {
+    const n = currency === null ? undefined : native.get(currency);
+    const u = currency === null ? undefined : used.get(currency);
+    const h = currency === null ? undefined : headroom.get(currency);
+    return {
+      physical: pick(n, nativeEquity),
+      currency,
+      virtual: pick(u, virtualUsed),
+      headroom: pick(h, virtualHeadroom),
+      sleeves: sleeveCount === null ? null : sleeveCount.count,
+      ...(n === undefined && nativeEquity !== null ? { physicalWhy: "No native equity in this currency" } : {}),
+      ...([n, u, h].some((entry) => entry !== undefined && entry.coverage !== "COMPLETE") ? { partial: true } : {}),
+    };
+  };
+  const [first, ...rest] = currencies.length === 0 ? [line(null)] : currencies.map(line);
+  const sleevesPartial = sleeveCount !== null && sleeveCount.coverage !== "COMPLETE";
+  return { ...first!, ...(sleevesPartial ? { partial: true } : {}), ...(rest.length > 0 ? { more: rest } : {}) };
+}

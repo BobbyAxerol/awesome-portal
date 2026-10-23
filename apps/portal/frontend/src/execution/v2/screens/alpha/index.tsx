@@ -68,6 +68,7 @@ import {
   type ReconRow,
 } from "./model";
 import { Np, WhyMark } from "./np";
+import { PercentValue, ReturnFig, RowFigure, useAlphaDataset } from "./DatasetFigures";
 import { alphaViewOf } from "./view";
 import { ReplayView } from "./replay/ReplayView";
 import {
@@ -91,6 +92,7 @@ const NO_ROWS: readonly DeploymentRow[] = [];
 const NO_POSITIONS: readonly PositionRow[] = [];
 const NO_RECON: readonly ReconRow[] = [];
 const NO_VENUE = (): null => null;
+const NO_NAMES: ReadonlyMap<string, string> = new Map();
 
 /** D9: where a reader sees which grant a disabled action lacks. */
 const ACCESS_PATH = "/administration/profile-access";
@@ -221,6 +223,9 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
     return null;
   })();
   const present = view !== null && view.present;
+  // The Manager dataset for this alpha in the chosen Book: the Return tile and the windowed figures. Asked once the alpha is known; only a workspace the caller named is sent (never the body's own).
+  const dataset = useAlphaDataset(api, present, alphaId, env, explicitWs);
+  const names = view?.portfolioNameById ?? NO_NAMES;
 
   const panelId = `${uid}-panel`;
   const tabId = (key: string) => `${uid}-tab-${key}`;
@@ -305,9 +310,11 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
                     ? view.money.exposure.map((e) => <span key={e.currency} className="exec-alp2-fig"><Dec value={e.value} currency={e.currency} /></span>)
                     : <Na />}
               </Fig>
+              <Fig label="Return" basis="30D; methodology per source"><ReturnFig read={dataset} names={names} /></Fig>
+              <Fig label="Max drawdown" basis="Window per source"><RowFigure read={dataset} names={names} metricKey="max_drawdown_pct" fallback={<Np id="FE-025" />} cell={(metric) => <PercentValue metric={metric} signed={false} />} /></Fig>
+              <Fig label="Regime fit" basis="Policy not set"><Np id="FE-011" /></Fig>
             </dl>
             )}
-            {tab === "replay" ? null : <NotAvailableLine facts={[{ label: "Return", id: "FE-006" }, { label: "Max drawdown", id: "FE-025" }, { label: "Regime fit", id: "FE-011" }]} />}
 
             <div className="exec-alp2-tabbar">
               <div ref={stripRef} className="exec-alp2-tabs" role="tablist" aria-label="Alpha detail">
@@ -367,7 +374,7 @@ export default function AlphaScreen({ api, alphaId, workspaceId }: AlphaScreenPr
 
             <div role="tabpanel" id={panelId} aria-labelledby={inMore ? undefined : tabId(tab)} aria-label={inMore ? ALPHA_MORE_TABS.find((t) => t.key === tab)?.label : undefined} className="exec-alp2-panel">
               {tab === "performance" ? (
-                <PerformanceTab rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
+                <PerformanceTab rows={rows} noTotals={view?.money.published === false ? view.money.reason : null} dataset={dataset} names={names} env={env} equity={equity} drift={drift} inputs={inputs} paths={paths} view={perfView} onView={(next) => url.set({ view: next === "act" ? null : next })} />
               ) : null}
               {tab === "deployments" ? (
                 <DeploymentsTab

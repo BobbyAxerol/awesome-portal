@@ -1089,10 +1089,13 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
       expect(f.sql.join("\n")).not.toMatch(/(?:FROM|JOIN)\s+(?:portal_users|auth_users|auth_sessions)\b/i);
       expect(f.forbidden).not.toHaveBeenCalled();expect(f.held()).toBe(0);
     });
-  it("C5 each optional purpose needs its own current field leaf on BOTH anchors despite other accepted audit leaves",async()=>{
+  // Each purpose/anchor is an independent authorization case. Keeping six
+  // complete HTTP reads in one test incorrectly pooled their wall-clock
+  // allowance; retain the same default timeout and every negative assertion.
+  it.each((["DECISION_ACTORS","DECISION_LATEST_OPERATION","R2_DECISION_CONTEXT"] as const)
+    .flatMap(purpose=>(["DEPLOYMENT","PORTFOLIO"] as const).map(anchor=>({purpose,anchor}))))(
+    "C5 $purpose needs its own current field leaf on $anchor despite other accepted audit leaves",async({purpose,anchor})=>{
     const f=await fixture({purposes:followPurposes});
-    for(const purpose of ["DECISION_ACTORS","DECISION_LATEST_OPERATION","R2_DECISION_CONTEXT"] as const){
-      for(const anchor of ["DEPLOYMENT","PORTFOLIO"] as const){
         const leaf=f.accepted.find(g=>g.field_policy_ref===`TEST_ONLY:${purpose}`&&g.selector.kind==="EXPLICIT_RESOURCE_SET"&&g.selector.resource_kind===anchor)!;
         expect(leaf).toBeDefined();const entry=f.source.grants.find(g=>g.grant_id===leaf.grant_id)!,original=entry.targets,sqlStart=f.sql.length;
         entry.targets=[];
@@ -1105,8 +1108,6 @@ describe.skipIf(!DATABASE_URL)("ELP2-04 finite positive parents / actual PG+HTTP
           if(purpose!=="R2_DECISION_CONTEXT")expect(body.decision_context.availability).toBe("AVAILABLE");
           followPrivacy(body);
         }finally{entry.targets=original;}
-      }
-    }
   });
   it.each(["DECISION_OPERATION","DECISION_LATEST_OPERATION"] as const)(
     "C5 missing %s cannot borrow the other latest/detail purpose or query a plan ID",async missing=>{

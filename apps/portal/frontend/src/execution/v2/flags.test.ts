@@ -26,7 +26,7 @@ describe("parseV2Manifest", () => {
 
   it("knows every screen of review2/07 s5 plus the shell", () => {
     expect([...parseV2Manifest(EXEC_V2_SCREEN_KEYS.join(","))].sort()).toEqual(
-      ["account", "admin", "alpha", "archived", "blotter", "canary", "cockpit", "command", "compare", "fleet", "fleet-stream", "live", "ops", "overview", "portfolios", "profile", "replay", "request", "sandbox", "scoped", "shell", "users", "workbench"],
+      ["account", "admin", "alpha", "archived", "blotter", "canary", "cockpit", "command", "compare", "fleet", "fleet-stream", "live", "ops", "overview", "pending-preview", "portfolios", "profile", "replay", "request", "sandbox", "scoped", "shell", "users", "workbench"],
     );
   });
 
@@ -71,6 +71,14 @@ describe("reserved keys", () => {
     expect(isV2Screen("fleet-stream", parseV2Manifest("fleet,fleet-stream"), false)).toBe(false);
     expect(parseV2Manifest(" Fleet-Stream ").has("fleet-stream")).toBe(true);
     expect(parseV2Manifest("fleetstream,fleet_stream,stream").size).toBe(0);
+  });
+
+  it("`pending-preview` (DEBT-048 item 9, fixture lab) is a known key, off unless named, never on without the umbrella, and is not `command`", () => {
+    expect(isV2Screen("pending-preview", parseV2Manifest("ops,command"), true)).toBe(false);
+    expect(isV2Screen("pending-preview", parseV2Manifest("ops,pending-preview"), true)).toBe(true);
+    expect(isV2Screen("pending-preview", parseV2Manifest("ops,pending-preview"), false)).toBe(false);
+    expect(isV2Screen("command", parseV2Manifest("ops,pending-preview"), true)).toBe(false);
+    expect(parseV2Manifest("pendingpreview,preview,pending").size).toBe(0);
   });
 
   it("D2: every S3 stage screen has its own key (no shared `stages` key), the Paper key stays `workbench`, and each one mounts", () => {

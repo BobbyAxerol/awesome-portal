@@ -1,0 +1,79 @@
+/* One cell per economic partition: a tag (domain and currency) and the exact figure, stacked; never summed. */
+.exec-fleet-parts {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-end;
+}
+.exec-fleet-part {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  justify-content: flex-end;
+}
+.exec-fleet-part-tag {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+.exec-mgr-num {
+  font-variant-numeric: tabular-nums;
+}
+.exec-mgr-na {
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+}
+
+/* Fleet Map: tiles grow by a geometry weight; colour is the health kind (tokens only), with the health flag as the second cue. */
+.exec-fleet-map { display: flex; flex-direction: column; gap: var(--space-3); }
+.exec-fleet-map-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); }
+.exec-fleet-tiles { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0; padding: 0; list-style: none; }
+.exec-fleet-tile {
+  display: flex;
+  flex: 1 1 160px;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 160px;
+  padding: var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-left-width: 4px;
+}
+.exec-fleet-tile[data-selected="true"] { outline: 2px solid var(--ink); }
+.exec-fleet-tile[data-health="ok"] { background: var(--f-ok-bg); border-left-color: var(--f-ok); }
+.exec-fleet-tile[data-health="attention"] { background: var(--f-attention-bg); border-left-color: var(--f-attention); }
+.exec-fleet-tile[data-health="neutral"] { background: var(--f-neutral-bg); border-left-color: var(--f-neutral); }
+.exec-fleet-tile[data-health="unknown"] { background: var(--f-unknown-bg); border-left-color: var(--f-unknown); }
+.exec-fleet-map-rest { display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-fleet-map-rest ul { margin: 0; padding: 0; list-style: none; }
+
+/* FE-CAT-3 · the environments of an ALL read: three separate entries side by side, never one total. */
+.exec-fleet-envs { display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-fleet-envlist { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); margin: 0; padding: 0; list-style: none; }
+.exec-fleet-envitem {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-left-width: 4px;
+}
+.exec-fleet-envitem[data-availability="UNAVAILABLE"] { border-style: dashed; border-left-style: dashed; }
+.exec-fleet-env-name { font: var(--exec-font-label); color: var(--ink); }
+.exec-fleet-env-count { font: var(--exec-font-meta); font-variant-numeric: tabular-nums; color: var(--ink); }
+.exec-fleet-env-asof, .exec-fleet-env-note { font: var(--exec-font-meta); color: var(--ink-faint); margin: 0; }
+/* The Environment column / drawer fact: the label is text; the square is a second cue, never the only one. */
+.exec-fleet-env-tag { display: inline-flex; align-items: center; gap: 6px; font: var(--exec-font-label); color: var(--ink); }
+.exec-fleet-env-tag::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-env-tag[data-environment="paper"]::before,
+.exec-fleet-env-tag[data-environment="sandbox"]::before { background: var(--ink-faint); }
+.exec-fleet-env-tag[data-environment="live"]::before { background: var(--ink); }

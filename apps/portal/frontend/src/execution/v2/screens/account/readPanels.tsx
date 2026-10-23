@@ -70,6 +70,39 @@ export function EquityBlock({ api, accountId, environment, workspaceId, currency
   );
 }
 
+/* ── account drawdown (internal ledger, this sleeve) ─────────────────────── */
+
+/**
+ * The published `drawdown` series of the same route, drawn as it came. A series is chosen by the currency the page speaks in,
+ * else the one that names no currency (a ratio); a payload that echoes another metric is not a drawdown and says so. Nothing
+ * is derived from the equity series here.
+ */
+export function DrawdownBlock({ api, accountId, environment, workspaceId, currency }: EquityBlockProps) {
+  const read = useAccountEquity(api, accountId, environment, workspaceId, true, "drawdown").state;
+  const aside = "Internal ledger · this sleeve";
+  if (environment === null) {
+    return <SectionPanel title="Drawdown" aside={aside}><PanelState status="unavailable" reason="The account resource did not say which environment it is in, so no series was asked for." /></SectionPanel>;
+  }
+  if (read.phase === "loading" || read.phase === "idle") return <SectionPanel title="Drawdown" aside={aside}><PanelState status="loading" /></SectionPanel>;
+  if (read.phase === "error") return <SectionPanel title="Drawdown" aside={aside}><PanelState status={read.status} reason={read.reason} /></SectionPanel>;
+  const chart = read.value;
+  const series = chart.metric !== null && chart.metric !== "drawdown"
+    ? null
+    : chart.series.find((entry) => currency !== null && entry.currency === currency) ?? chart.series.find((entry) => entry.currency === null) ?? null;
+  const model = equityModel(series === null ? { ...chart, series: [] } : { ...chart, series: [series] }, series?.currency ?? null);
+  return (
+    <SectionPanel title="Drawdown" aside={aside}>
+      <EquityPanel
+        label="Account drawdown"
+        points={model.points}
+        currency={model.currency ?? undefined}
+        state={model.state.kind === "unavailable" ? { ...model.state, reason: series === null && chart.series.length > 0 ? "No drawdown series is published for this currency." : model.state.reason } : model.state}
+        height={140}
+      />
+    </SectionPanel>
+  );
+}
+
 /* ── activity ───────────────────────────────────────────────────────────── */
 
 export interface ActivityPanelProps {

@@ -87,6 +87,12 @@ export type IncidentLinkRelationshipV2 = (typeof INCIDENT_LINK_RELATIONSHIPS_V2)
 /** Most links the server returns per operation (FE-042). */
 export const INCIDENT_LINK_BOUND_V2 = 3;
 
+/** FE-CAT-2. Per-row axes; each is optional (omitted: no owning source) and nullable (null: the source did not report it). */
+export const DELIVERY_STATES_V2 = ["NOT_APPLICABLE", "AWAITING_RECEIPT", "RECEIPT_CONFIRMED", "RECEIPT_FAILED"] as const;
+export type DeliveryStateV2 = (typeof DELIVERY_STATES_V2)[number];
+export const DISPLAY_STATES_V2 = ["CURRENT", "CATCHING_UP", "STALE"] as const;
+export type DisplayStateV2 = (typeof DISPLAY_STATES_V2)[number];
+
 /** An ISO instant: sortable `ms` for display and ordering, the original text kept for the record. */
 export interface InstantV2 {
   iso: string;
@@ -147,6 +153,23 @@ export interface StatusCountsV2 {
   severity: StatusCountDimensionV2<SeverityV2>;
 }
 
+/**
+ * FE-CAT-2. One health count over the authorized filtered set. `count === null` = the owning source did not report it (never 0);
+ * `coverage` PARTIAL = some rows did not report the axis, so the number is a floor. `observedAt` is when the Portal counted it.
+ */
+export interface HealthCountV2 {
+  count: number | null;
+  observedAt: InstantV2 | null;
+  coverage: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+}
+
+/** Each key is `undefined` when the producer has no owning source for it. */
+export interface QueueHealthV2 {
+  pendingReceipt?: HealthCountV2;
+  displayLag?: HealthCountV2;
+  openException?: HealthCountV2;
+}
+
 export interface OperationV2 {
   operationId: string;
   commandKey: string;
@@ -169,6 +192,9 @@ export interface OperationV2 {
   updatedAt: InstantV2;
   /** FE-042. `undefined` = the server did not publish links (render "Not published (FE-042)"). */
   incidentLinks?: IncidentLinksV2;
+  /** FE-CAT-2. `undefined` = not published for this row; `null` = the source did not report it. */
+  deliveryState?: DeliveryStateV2 | null;
+  displayState?: DisplayStateV2 | null;
 }
 
 export interface QueuePageV2 {
@@ -186,6 +212,8 @@ export interface QueuePageV2 {
   appliedSort: readonly { field: "created_at" | "operation_id"; direction: "asc" | "desc" }[];
   /** FE-043. `undefined` = the server did not publish counts (render "Not published (FE-043)"); never derive them from `rows`. */
   statusCounts?: StatusCountsV2;
+  /** FE-CAT-2. `undefined` = the server published no health (render "Not published"); never derive it from `rows`. */
+  health?: QueueHealthV2;
 }
 
 export interface OperationalQueueV2 {
@@ -435,13 +463,64 @@ function readOperation(raw: unknown): OperationV2 | null {
     if (links === null) return null;
     incidentLinks = links;
   }
+  // Optional additive FE-CAT-2 axes. Absent -> undefined, null -> null; any other value voids the page.
+  const axes: { deliveryState?: DeliveryStateV2 | null; displayState?: DisplayStateV2 | null } = {};
+  if (row.delivery_state !== undefined) {
+    const value = row.delivery_state === null ? null : oneOf(row.delivery_state, DELIVERY_STATES_V2);
+    if (value === null && row.delivery_state !== null) return null;
+    axes.deliveryState = value;
+  }
+  if (row.display_state !== undefined) {
+    const value = row.display_state === null ? null : oneOf(row.display_state, DISPLAY_STATES_V2);
+    if (value === null && row.display_state !== null) return null;
+    axes.displayState = value;
+  }
   return {
     operationId, commandKey, targetType: target.type, targetId: target.id,
     environment: env.env, environmentWire: env.wire,
     riskTier, severity, sourceAuthority, sourceStatus, verificationResult, triageState, workflowVersion,
     acknowledgedAt, resolvedAt, createdAt, updatedAt,
     ...(incidentLinks === undefined ? {} : { incidentLinks }),
+    ...axes,
   };
+}
+
+function readHealthCount(raw: unknown): HealthCountV2 | null {
+  const entry = record(raw);
+  if (entry === null || Object.keys(entry).length !== 3) return null;
+  const coverage = oneOf(entry.coverage, ["COMPLETE", "PARTIAL", "UNKNOWN"] as const);
+  if (coverage === null) return null;
+  if (entry.count === null) {
+    // Not computable: no instant and no claim of coverage.
+    return entry.observed_at === null && coverage === "UNKNOWN" ? { count: null, observedAt: null, coverage } : null;
+  }
+  const n = count(entry.count);
+  const observedAt = readInstant(entry.observed_at);
+  return n === null || observedAt === null || coverage === "UNKNOWN" ? null : { count: n, observedAt, coverage };
+}
+
+function readQueueHealth(raw: unknown, filteredCount: number, rows: readonly OperationV2[]): QueueHealthV2 | null {
+  const health = record(raw);
+  if (health === null || health.basis !== "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS") return null;
+  if (Object.keys(health).some((key) => !["basis", "pending_receipt_count", "display_lag_count", "open_exception_count"].includes(key))) return null;
+  const out: { pendingReceipt?: HealthCountV2; displayLag?: HealthCountV2; openException?: HealthCountV2 } = {};
+  for (const [wire, key, axis, wanted] of [
+    ["pending_receipt_count", "pendingReceipt", "deliveryState", "AWAITING_RECEIPT"],
+    ["display_lag_count", "displayLag", "displayState", "CATCHING_UP"],
+  ] as const) {
+    if (health[wire] === undefined) continue;
+    const entry = readHealthCount(health[wire]);
+    if (entry === null) return null;
+    // Counted over the authorized filtered set: never above it, and never below the rows already on this page.
+    if (entry.count !== null && (entry.count > filteredCount || entry.count < rows.filter((r) => r[axis] === wanted).length)) return null;
+    out[key] = entry;
+  }
+  if (health.open_exception_count !== undefined) {
+    const entry = readHealthCount(health.open_exception_count);
+    if (entry === null) return null;
+    out.openException = entry;
+  }
+  return out;
 }
 
 function readDimension<K extends string>(
@@ -566,10 +645,18 @@ function readPage(raw: unknown): QueuePageV2 | null {
     if (counts === null) return null;
     statusCounts = counts;
   }
+  // Optional additive FE-CAT-2. Absent -> undefined; present-but-bad voids the page.
+  let health: QueueHealthV2 | undefined;
+  if (page.health !== undefined) {
+    const read = readQueueHealth(page.health, filteredCount, rows);
+    if (read === null) return null;
+    health = read;
+  }
   return {
     rows, totalCount, filteredCount, nextCursor, prevCursor,
     hasMore: page.has_more, hasPrevious: page.has_previous, droppedDuplicateRows, appliedFilters, appliedSort,
     ...(statusCounts === undefined ? {} : { statusCounts }),
+    ...(health === undefined ? {} : { health }),
   };
 }
 

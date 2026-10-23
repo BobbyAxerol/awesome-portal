@@ -13,8 +13,10 @@ import { Link } from "react-router-dom";
 import { CardsTable, type CardsColumn, type CardsSort } from "../../cardsTable";
 import { Flag } from "../../Flag";
 import { withContext } from "../../urlState";
-import { PF_FE, type Unpublished } from "./fe";
-import { Absent, MoneyList, Np } from "./format";
+import type { ManagerPartitionedMetrics } from "../../readers/managerMetric";
+import { PF_FE, npText, type Unpublished } from "./fe";
+import { PartitionFigures, publishes } from "./PartitionFigures";
+import { Absent, MoneyList } from "./format";
 import type { PortfolioRow, SortKey } from "./listModel";
 import type { PortfolioRoutes } from "./routes";
 import { COMPARE_OFF_REASON } from "./routes";
@@ -48,12 +50,13 @@ export const OPTIONAL_COLUMNS: readonly ColumnSpec[] = [
 ];
 
 /**
- * Measures the read does not publish. They are not drawn as five columns of "Not published": the screen names them once
- * ("Not available: NAV, Net PnL, ..."). The day a fact is published, delete it from this table and add its `cell` case.
+ * Measures the read does not publish. They stay as columns (hi-fi and the "Source not qualified" frame keep every column
+ * and print "Not available" in each cell, the request id behind the cell's disclosure). The day a fact is published,
+ * delete it from this table and add its `cell` case.
  */
 export const UNPUBLISHED: Readonly<Partial<Record<ColumnId, Unpublished>>> = {
   nav: PF_FE.nav,
-  pnl: PF_FE.netPnl,
+  pnl: PF_FE.netPnl, // kept only while the Manager dataset (FLEET, group_by portfolio_id) is not served; see `figures`
   ret: PF_FE.ret,
   dd: PF_FE.drawdown,
   hhi: PF_FE.concentration,
@@ -109,9 +112,19 @@ export interface PortfolioTableProps {
   sort?: CardsSort | null;
   onSort?(key: SortKey): void;
   currency?: string | null;
+  /**
+   * The Manager dataset's portfolio groups (FLEET, `group_by=portfolio_id`) for the page's environment, or `null` when the dataset
+   * is not served. Feeds Net PnL, one line per economic partition; a column the groups do not carry keeps its `Not published`.
+   */
+  figures?: PortfolioFigures | null;
 }
 
-export function PortfolioTable({ rows, hidden, routes, search, selected, onToggle, empty, sort, onSort, currency = null }: PortfolioTableProps) {
+export interface PortfolioFigures {
+  environment: string;
+  groups: ReadonlyMap<string, readonly ManagerPartitionedMetrics[]>;
+}
+
+export function PortfolioTable({ rows, hidden, routes, search, selected, onToggle, empty, sort, onSort, currency = null, figures = null }: PortfolioTableProps) {
   const full = selected.size >= COMPARE_MAX;
   const columns: CardsColumn<PortfolioRow>[] = [
     {
@@ -150,13 +163,13 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
         </span>
       ),
     },
-    ...OPTIONAL_COLUMNS.filter((c) => !hidden.has(c.id) && UNPUBLISHED[c.id] === undefined).map<CardsColumn<PortfolioRow>>((c) => ({
+    ...OPTIONAL_COLUMNS.filter((c) => !hidden.has(c.id)).map<CardsColumn<PortfolioRow>>((c) => ({
       key: c.id,
       label: c.label,
       numeric: c.numeric,
       sortKey: c.id === "allocated" && currency === null ? undefined : SORT_OF[c.id],
       sortOffReason: c.id === "allocated" && currency === null ? "Money sorts inside one currency; pick the currency first" : undefined,
-      render: (row) => cell(c.id, row),
+      render: (row) => cell(c.id, row, figures),
     })),
   ];
   return (
@@ -172,9 +185,26 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
   );
 }
 
-function cell(id: ColumnId, row: PortfolioRow) {
+/** The dataset group metric each measure column reads (one line per economic partition; never totalled). */
+const GROUP_KEY: Readonly<Partial<Record<ColumnId, { key: string; signed: boolean }>>> = {
+  nav: { key: "current_nav", signed: false },
+  pnl: { key: "net_pnl", signed: true },
+  ret: { key: "return_30d_pct", signed: true },
+  dd: { key: "max_drawdown_pct", signed: true },
+  hhi: { key: "concentration_hhi", signed: false },
+};
+
+function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null) {
+  const source = GROUP_KEY[id];
+  if (source !== undefined && figures !== null) {
+    if (row.unallocated) return <Absent reason="The source publishes no figure for capital that no portfolio holds" />;
+    const group = figures.groups.get(row.portfolioId);
+    if (group === undefined) return <Absent reason={`No ${figures.environment} figures are published for this portfolio`} />;
+    // A group that does not publish this key keeps the column's own Not published (the contract has not spoken for it).
+    if (publishes(group, source.key)) return <PartitionFigures list={group} metricKey={source.key} signed={source.signed} />;
+  }
   const fact = UNPUBLISHED[id];
-  if (fact) return <Np fact={fact} />;
+  if (fact) return <Absent reason={`${npText(fact)}: ${fact.what}`} />;
   switch (id) {
     case "owner":
       return row.owner ?? <Absent reason="owner not published" />;

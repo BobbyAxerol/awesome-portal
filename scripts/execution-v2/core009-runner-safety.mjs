@@ -15,6 +15,18 @@ const exactHash = value => {
   return value;
 };
 
+/** A single bounded filename stem, not a path. An absolute first argument must
+ * never turn a completed child's receipt into a write to a missing directory.
+ * The step makes labels distinct; sanitization is not an artifact identity. */
+export function createOperatorStepLabel(step, file, arg = 'run') {
+  integer(step, 'POSITIVE_OPERATOR_STEP_REQUIRED', 1);
+  assert.ok(typeof file === 'string' && file.length <= 96 && file.endsWith('.mjs')
+    && /^[A-Za-z0-9][A-Za-z0-9._-]*\.mjs$/.test(file), 'OPERATOR_SCRIPT_BASENAME_REQUIRED');
+  assert.equal(typeof arg, 'string', 'OPERATOR_ARGUMENT_TEXT_REQUIRED');
+  const tag = arg.replace(/^--/, '').replace(/[^A-Za-z0-9._-]/g, '_').slice(-64) || 'run';
+  return `${String(step).padStart(2, '0')}-${file.slice(0, -4)}-${tag}`;
+}
+
 export function parseMissingOnlyMode(args) {
   assert.deepEqual(args, ['--active-revoke-only'], 'EXPLICIT_MISSING_ONLY_MODE_REQUIRED');
   return 'ACTIVE_REVOKE_ONLY';

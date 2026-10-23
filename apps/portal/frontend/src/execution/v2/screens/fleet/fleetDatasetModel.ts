@@ -2,8 +2,10 @@
  * Fleet over the Manager DATASET (FE-012 sort/group by current stage, FE-027 current stage and days in stage): the pure
  * model. No React. It decides three things and nothing else:
  *
- * 1. WHEN the dataset can be the source: only for one environment (`datasetScopeOf`): the dataset pins one economic profile and
- *    the All lens spans several. Never a guessed environment.
+ * 1. WHEN the dataset can be the source: for one environment, or (FE-CAT-3) for `ALL` when the lens spans several: the All lens and a
+ *    mixed stage selection ask the dataset in ALL mode, which returns the authorized rows of every environment, each labelled, with
+ *    per-environment coverage and NO combined money. The screen uses it only when the dataset answers ALL-shaped (the reader and
+ *    `datasetQueryMismatch` refuse anything else); otherwise today's fleet read stays. Never a guessed environment.
  * 2. WHAT is asked: filters are the server's (`datasetQuery`): health is `EQ` for one word and `IN` for several, the owner is
  *    `EQ`, the lens narrows the stages with `stage_filter`, the search is `q`. Nothing is narrowed client-side over a partial
  *    page.
@@ -12,7 +14,11 @@
  *    publishes them; a row with no single stage says why.
  */
 import type { ManagerDatasetFilter, ManagerDatasetQuery, ManagerDatasetSort } from "../../../api/managerDatasetQuery";
-import type { ManagerDataset, ManagerEnvironment, ManagerGroup, ManagerGroupField, ManagerRow, ManagerSortField, ManagerStage } from "../../readers/managerDataset";
+import {
+  MANAGER_ALL, type ManagerCoverageReason, type ManagerDataset, type ManagerEnvironment, type ManagerEnvironmentCoverage, type ManagerEnvironmentScope,
+  type ManagerGroup, type ManagerGroupField, type ManagerRow, type ManagerSortField, type ManagerStage,
+} from "../../readers/managerDataset";
+import type { ManagerEconomicDomain, ManagerMetricRead } from "../../readers/managerMetric";
 import type { ExecStage } from "../../urlState";
 import type { FlagKind } from "../../flagKinds";
 import { PAGE_LIMIT, healthView, humanize, stageLabel, type UnpublishedFact } from "./fleetModel";
@@ -23,7 +29,8 @@ export const FE_STAGE_ENTRY: UnpublishedFact = { fe: "FE-027", what: "Days in st
 /* ── when ──────────────────────────────────────────────────────────────── */
 
 export interface DatasetScope {
-  environment: ManagerEnvironment;
+  /** One environment, or `ALL`: the authorized rows of every environment, each labelled (FE-CAT-3). */
+  environment: ManagerEnvironmentScope;
   /** Empty: every stage of the environment (so a lens that is the whole environment sends none). */
   stageFilter: readonly ManagerStage[];
 }
@@ -32,13 +39,15 @@ const ENVIRONMENT_OF: Readonly<Record<ExecStage, ManagerEnvironment>> = { paper:
 const STAGES_OF: Readonly<Record<ManagerEnvironment, number>> = { paper: 1, sandbox: 1, live: 2 };
 
 /**
- * The environment a lens/stage selection lives in, or `null` when it spans more than one (or none is chosen): the dataset serves
- * one environment at a time, so the All lens and a mixed selection stay on the fleet read.
+ * The environment a lens/stage selection lives in; `ALL` when it spans more than one or none is chosen (the All lens, a mixed
+ * selection): navigation across separately labelled environments, never one consolidated book. `null` only for the Archived lens,
+ * which asks for nothing.
  */
 export function datasetScopeOf(stages: readonly ExecStage[], archived: boolean): DatasetScope | null {
-  if (archived || stages.length === 0) return null;
+  if (archived) return null;
+  if (stages.length === 0) return { environment: MANAGER_ALL, stageFilter: [] };
   const environments = new Set(stages.map((stage) => ENVIRONMENT_OF[stage]));
-  if (environments.size !== 1) return null;
+  if (environments.size !== 1) return { environment: MANAGER_ALL, stageFilter: [...new Set(stages)].map((stage) => stage.toUpperCase() as ManagerStage).sort() };
   const environment = [...environments][0]!;
   const words = [...new Set(stages)].map((stage) => stage.toUpperCase() as ManagerStage).sort();
   return { environment, stageFilter: words.length === STAGES_OF[environment] ? [] : words };
@@ -95,6 +104,8 @@ export interface DatasetFilters {
   healths: readonly string[];
   sort: string | null;
   group: ManagerGroupField | null;
+  /** The second grouping level (`then=` in the URL); only meaningful with a `group` and never the same field. */
+  then?: ManagerGroupField | null;
   workspaceId?: string;
 }
 
@@ -115,7 +126,7 @@ export function datasetQuery(filters: DatasetFilters, offered: readonly ManagerS
   if (list.length > 0) query.filters = list;
   const sort = datasetSortOf(filters.sort, datasetSortOptions(offered));
   if (sort.keys.length > 0) query.sort = sort.keys;
-  if (filters.group !== null) query.groupBy = [filters.group];
+  if (filters.group !== null) query.groupBy = filters.then != null && filters.then !== filters.group ? [filters.group, filters.then] : [filters.group];
   if (after) query.after = after;
   return query;
 }
@@ -205,3 +216,98 @@ export function datasetCountLine(shown: number, loaded: number, total: number | 
 }
 
 export type { ManagerDataset };
+
+/* ── FE-CAT-3: environments in an ALL read ─────────────────────────────── */
+
+/** What each environment is called on the Fleet (the lens names): Live and Canary are the Real-funded domain. */
+export const ENVIRONMENT_LABEL: Readonly<Record<ManagerEnvironment, string>> = { paper: "Paper", sandbox: "Sandbox", live: "Real-funded" };
+export const environmentLabelOf = (environment: ManagerEnvironment | undefined): string | null => (environment === undefined ? null : ENVIRONMENT_LABEL[environment]);
+
+/** Why an environment is missing from an ALL read, in words (the closed reason code of the contract stays in the disclosure). */
+export const COVERAGE_REASON_TEXT: Readonly<Record<ManagerCoverageReason, string>> = {
+  NOT_AVAILABLE_TO_VIEWER: "Nothing in this environment is available to you.",
+  NOT_CONFIGURED: "This server has no source configured for this environment.",
+  POLICY_PENDING: "The access policy for this environment is not in force yet.",
+  PUBLICATION_NOT_QUALIFIED: "The source publication for this environment is not qualified yet.",
+  SOURCE_UNAVAILABLE: "The source for this environment could not be read.",
+  CHANGED_DURING_READ: "This environment changed while it was being read.",
+  SCOPE_LIMIT_EXCEEDED: "This environment holds more rows than one read may carry.",
+};
+
+export interface CoverageView {
+  environment: ManagerEnvironment;
+  label: string;
+  availability: "INCLUDED" | "UNAVAILABLE";
+  /** `3 rows`, `1 row` or `0 rows`: the count of authorized rows after the filters (a counted zero is not an absence). `null` when unavailable. */
+  countText: string | null;
+  /** Freshness / completeness when they are less than clean; the environment's own, never the combined body's. */
+  state: { kind: FlagKind; label: string } | null;
+  /** The typed reason when unavailable, and the environment's own quality reasons otherwise. */
+  reasons: readonly string[];
+  reasonCode: ManagerCoverageReason | null;
+  asOfMs: number | null;
+}
+
+export function coverageViewOf(entry: ManagerEnvironmentCoverage): CoverageView {
+  const label = ENVIRONMENT_LABEL[entry.environment];
+  if (entry.availability === "UNAVAILABLE") {
+    return { environment: entry.environment, label, availability: "UNAVAILABLE", countText: null, state: { kind: "unknown", label: "Not available" },
+      reasons: [COVERAGE_REASON_TEXT[entry.reasonCode], entry.reasonCode], reasonCode: entry.reasonCode, asOfMs: null };
+  }
+  const { completeness, freshness } = entry.quality;
+  const words = [completeness !== "COMPLETE" ? humanize(completeness) : null, freshness !== "FRESH" ? humanize(freshness) : null].filter((word): word is string => word !== null);
+  const kind: FlagKind = freshness === "STALE" ? "stale" : words.length > 0 ? "partial" : "ok";
+  return {
+    environment: entry.environment, label, availability: "INCLUDED", countText: `${entry.authorizedFilteredCount} ${entry.authorizedFilteredCount === 1 ? "row" : "rows"}`,
+    state: words.length === 0 ? null : { kind, label: words.join(", ") }, reasons: entry.quality.reasons, reasonCode: null, asOfMs: entry.asOfMs,
+  };
+}
+
+/* ── FE-CAT-7: where a money cell comes from ───────────────────────────── */
+
+const DOMAIN_WORD: Readonly<Record<ManagerEconomicDomain, string>> = { ACTUAL: "Real-funded", PAPER: "Paper", SANDBOX: "Sandbox" };
+const MONEY_COLUMNS: readonly { key: string; what: string }[] = [
+  { key: "allocation", what: "Allocation" }, { key: "net_pnl", what: "Net PnL" }, { key: "equity_30d_end_value", what: "Equity" },
+];
+
+/**
+ * The provenance disclosure of the money columns, one line per fact, from the loaded rows' own partitions and metrics: the economic
+ * domain, currency, basis and profile of each partition; per column how many of this partition's loaded rows publish a figure and how
+ * complete / fresh / verified those figures say they are. Ownership is named as NOT published (FE-CAT-7): no field of the dataset says
+ * whether a balance is alpha-owned or a shared account's, so the cell is the figure of the named partition and nothing more. Nothing is
+ * summed or inferred; every count is a count of loaded rows.
+ */
+export function moneyProvenanceRows(rows: readonly ManagerRow[], metricKeys: readonly string[] | null): readonly string[] {
+  const partitions = new Map<string, { domain: ManagerEconomicDomain; currency: string; basis: string; profile: string; proof: string; metrics: ManagerMetricRead[][]; rows: number }>();
+  for (const row of rows) {
+    for (const entry of row.economicPartitions) {
+      const p = entry.partition;
+      const key = JSON.stringify([p.economicDomain, p.currency, p.basis, p.nativeProfileRef]);
+      const seen = partitions.get(key) ?? { domain: p.economicDomain, currency: p.currency, basis: p.basis, profile: p.nativeProfileRef, proof: p.domainProofRef,
+        metrics: MONEY_COLUMNS.map(() => []), rows: 0 };
+      seen.rows += 1;
+      MONEY_COLUMNS.forEach((column, index) => {
+        const metric = entry.metrics.get(column.key);
+        if (metric !== undefined) seen.metrics[index]!.push(metric);
+      });
+      partitions.set(key, seen);
+    }
+  }
+  const lines: string[] = [];
+  for (const seen of partitions.values()) {
+    lines.push(`${DOMAIN_WORD[seen.domain]} · ${seen.currency}: basis ${seen.basis}; profile ${seen.profile}; domain proof ${seen.proof}; ${seen.rows} loaded ${seen.rows === 1 ? "row" : "rows"}.`);
+    MONEY_COLUMNS.forEach((column, index) => {
+      if (metricKeys !== null && !metricKeys.includes(column.key)) return;
+      const metrics = seen.metrics[index]!;
+      const values = metrics.filter((metric) => metric.kind === "value");
+      if (metrics.length === 0) { lines.push(`${column.what}: no loaded row publishes it in this partition.`); return; }
+      const clean = values.filter((metric) => metric.quality.completeness === "COMPLETE" && metric.quality.freshness === "FRESH" && metric.sourceConfidence === "VERIFIED").length;
+      lines.push(`${column.what}: ${values.length} of ${metrics.length} loaded rows publish a figure; ${clean} of them are complete, fresh and verified${metrics.length > values.length ? "; the rest are typed absences with a reason on the cell" : ""}.`);
+    });
+  }
+  if (lines.length > 0) {
+    lines.push("Ownership: not published (FE-CAT-7). Nothing in the dataset says whether a balance is alpha-owned or a shared account's, so a cell is the figure of its named partition only.");
+    lines.push("Partitions are never added together: a Real-funded, a Paper and a Sandbox figure in the same currency are three figures.");
+  }
+  return lines;
+}

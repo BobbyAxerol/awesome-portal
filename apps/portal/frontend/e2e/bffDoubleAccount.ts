@@ -50,6 +50,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 
 export interface BffAnswerAccount {
@@ -659,7 +660,10 @@ export function answerAccount(method: string, pathname: string, search: URLSearc
   if (path === "/broker-bindings") return bindingsList(params);
   if (seg[0] === "broker-bindings" && seg.length === 2) return bindingDetail(seg[1]!, params);
   if (seg[0] === "broker-bindings" && seg.length === 3 && seg[2] === "exposure") return bindingExposure(seg[1]!);
-  if (seg[0] === "resources" && seg[1] === "accounts" && seg.length === 3) return accountResource(seg[2]!, params);
+  if (seg[0] === "resources" && seg[1] === "accounts" && seg.length === 3) {
+    const scoped = scopedResourceV2("ACCOUNT", seg[2]!, params);
+    return scoped ? { status: 200, body: scoped } : accountResource(seg[2]!, params);
+  }
   if (seg[0] === "resources" && seg[1] === "accounts" && seg.length === 4 && (seg[3] === "orders" || seg[3] === "fills")) {
     return subjectRecords(seg[2]!, seg[3], params);
   }

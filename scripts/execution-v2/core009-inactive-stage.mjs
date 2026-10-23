@@ -25,6 +25,26 @@ export class InactiveStageError extends Error {
 }
 const refuse = code => { throw new InactiveStageError(code); };
 
+/** Explicit operator-only image rollout pins. Nothing here can widen the
+ * immutable Research/config/schema/resource/authority envelope below. Defaults
+ * retain the historical mapper rollout; another qualified image needs its own
+ * exact old/new image and original raw-Compose hash, never an ENV/request flag. */
+function installPins(input) {
+  if (input === undefined) return P;
+  const keys = ['old_image', 'new_image', 'old_compose_sha256'];
+  if (!input || typeof input !== 'object' || Array.isArray(input) ||
+      ![Object.prototype, null].includes(Object.getPrototypeOf(input)) ||
+      Reflect.ownKeys(input).length !== keys.length ||
+      Reflect.ownKeys(input).some(key => !keys.includes(key)) ||
+      keys.some(key => !Object.hasOwn(Object.getOwnPropertyDescriptor(input, key) ?? {}, 'value')))
+    refuse('INACTIVE_STAGE_INSTALL_PINS_INVALID');
+  const {old_image, new_image, old_compose_sha256} = input;
+  if (![old_image, new_image].every(image => typeof image === 'string' && /^sha256:[a-f0-9]{64}$(?![\s\S])/.test(image)) ||
+      old_image === new_image || typeof old_compose_sha256 !== 'string' || !hex.test(old_compose_sha256) || old_compose_sha256.length !== 64)
+    refuse('INACTIVE_STAGE_INSTALL_PINS_INVALID');
+  return Object.freeze({...P, old_image, new_image, old_compose_sha256});
+}
+
 /** Only public observations belong here. Never pass config content, credentials,
  * rows, session identifiers, raw errors or command output to this function. */
 export function captureInactiveState(observation, {
@@ -59,11 +79,12 @@ export function captureInactiveState(observation, {
 /** The adapter verifies the original raw compose hash before parsing. The new
  * artifact is exactly JSON.stringify(result). On rollback restore the preserved
  * original bytes, not a newly interpreted target or reconstructed environment. */
-export function imageOnlyCompose(compose) {
+export function imageOnlyCompose(compose, {pins} = {}) {
+  const selected = installPins(pins);
   const next = clone(compose);
-  if (!next?.services?.['control-api'] || typeof next.services['control-api'].image !== 'string')
+  if (!next?.services?.['control-api'] || next.services['control-api'].image !== selected.old_image)
     refuse('INACTIVE_STAGE_COMPOSE_INVALID');
-  next.services['control-api'].image = P.new_image;
+  next.services['control-api'].image = selected.new_image;
   return next;
 }
 const sorted = value => JSON.stringify(Object.fromEntries(Object.keys(value).sort().map(k => [k, value[k]])));
@@ -83,11 +104,14 @@ function runningHealthy(state) {
  * before a destructive effect. No new attempt or recovery intent is created.
  * Failure is thrown WITH its public receipt even after a verified rollback.
  */
-export async function stageInactiveMapper({ effects, nowMs = Date.now }) {
+export async function stageInactiveMapper({ effects, nowMs = Date.now, pins }) {
+  const selected = installPins(pins);
+  const capturedImagePins = Object.freeze({old_image:selected.old_image,new_image:selected.new_image,
+    old_compose_sha256:selected.old_compose_sha256});
   for (const key of ['readState', 'readCompose', 'preserveReceipt', 'gracefulStop', 'install', 'waitHealthy'])
     if (typeof effects?.[key] !== 'function') refuse('INACTIVE_STAGE_EFFECTS_REQUIRED');
   const receipt = { schema_version: 'portal.core009-inactive-stage.v1', state: 'PREFLIGHT',
-    pins: P, steps: [], connected_acceptance: 'NOT_RUN', grants_created: false, sessions_created: false };
+    pins: selected, steps: [], connected_acceptance: 'NOT_RUN', grants_created: false, sessions_created: false };
   const record = async (state, facts = {}) => {
     receipt.state = state;
     receipt.steps.push({ state, observed_at_ms: nowMs(), ...facts });
@@ -98,10 +122,10 @@ export async function stageInactiveMapper({ effects, nowMs = Date.now }) {
     nowMs: nowMs(), expectedImage: image, expectedComposeSha256: composeHash,
   });
   try {
-    baseline = await read(P.old_image, P.old_compose_sha256);
+    baseline = await read(selected.old_image, selected.old_compose_sha256);
     runningHealthy(baseline);
     originalCompose = clone(await effects.readCompose());
-    nextCompose = imageOnlyCompose(originalCompose);
+    nextCompose = imageOnlyCompose(originalCompose, {pins:capturedImagePins});
     nextHash = sha(JSON.stringify(nextCompose));
     await record('PREINSTALL_VERIFIED', { candidate_compose_sha256: nextHash,
       tables_sha256: sha(sorted(baseline.tables)) });
@@ -109,14 +133,14 @@ export async function stageInactiveMapper({ effects, nowMs = Date.now }) {
     mutationStarted = true;
     graceful(await effects.gracefulStop());
     gracefulEstablished = true;
-    const stopped = await read(P.old_image, P.old_compose_sha256);
+    const stopped = await read(selected.old_image, selected.old_compose_sha256);
     sameImmutable(baseline, stopped);
     if (stopped.running) refuse('INACTIVE_STAGE_PROCESS_NOT_STOPPED');
     await record('STOPPED_VERIFIED');
     await record('CANDIDATE_INSTALL_REQUESTED');
     await effects.install(clone(nextCompose));
-    await effects.waitHealthy(P.new_image);
-    const installed = await read(P.new_image, nextHash);
+    await effects.waitHealthy(selected.new_image);
+    const installed = await read(selected.new_image, nextHash);
     sameImmutable(baseline, installed); runningHealthy(installed);
     await record('INACTIVE_MAPPER_INSTALLED_HEALTHY');
     return clone(receipt);
@@ -130,8 +154,8 @@ export async function stageInactiveMapper({ effects, nowMs = Date.now }) {
       // Unknown/modified state never authorizes rollback. Both approved images
       // are permitted only with either exact approved compose artifact.
       const actual = await effects.readState();
-      if (![P.old_image, P.new_image].includes(actual?.image) ||
-          ![P.old_compose_sha256, nextHash].includes(actual?.compose_sha256))
+      if (![selected.old_image, selected.new_image].includes(actual?.image) ||
+          ![selected.old_compose_sha256, nextHash].includes(actual?.compose_sha256))
         refuse('INACTIVE_STAGE_ROLLBACK_TARGET_UNKNOWN');
       const current = captureInactiveState(actual, { nowMs: nowMs(),
         expectedImage: actual.image, expectedComposeSha256: actual.compose_sha256 });
@@ -147,8 +171,8 @@ export async function stageInactiveMapper({ effects, nowMs = Date.now }) {
       }
       await record('ROLLBACK_INSTALL_REQUESTED');
       await effects.install(clone(originalCompose));
-      await effects.waitHealthy(P.old_image);
-      const restored = await read(P.old_image, P.old_compose_sha256);
+      await effects.waitHealthy(selected.old_image);
+      const restored = await read(selected.old_image, selected.old_compose_sha256);
       sameImmutable(baseline, restored); runningHealthy(restored);
       await record('ROLLBACK_HEALTHY');
     } catch (rollbackError) {

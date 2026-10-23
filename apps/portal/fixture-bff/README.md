@@ -118,6 +118,47 @@ new product screen.
   are explicit 400s, not silently ignored. `ALL` and special negative workspaces keep their gaps.
 - Three known Portfolio account aliases resolve to existing Account fixtures. This fixes links,
   **not** an economic tie-out across the historical fixture books. Unmatched IDs stay refused.
+- **SIMULATED derived metrics** (added 22 October 2026; every metric keeps `methodology_ref` / provenance `FIXTURE_LAB`,
+  availability AVAILABLE unless stated). Exact decimals by integer arithmetic only; every sum, ratio and share stays inside
+  ONE economic partition (domain, currency, basis, profile). `query_options.metric_keys` and `sort_fields` list the three
+  row keys; `economic_partition_required_for` adds the two money ones.
+
+| key | level | rule (SIMULATED) | real Edge source expected |
+|---|---|---|---|
+| `balance_total` | row (per partition) | allocation + net_pnl of that partition; typed absence when either is unpublished | account/ledger balance snapshot |
+| `equity_30d_end_value` | row (per partition) | balance_total + unrealized_pnl; typed absence when unrealized PnL is unpublished (about 1 row in 7) | last point of the 30-day equity series |
+| `return_30d_pct` | row | net_pnl * 100 / allocation, 6 places truncated, unit PERCENT, currency null; exact `0` when net_pnl is a true zero | certified 30D return with methodology |
+| `net_pnl` | capital statement (per partition) | sum of that partition's rows' net_pnl, window null | fund/portfolio ledger PnL for the selected window |
+| `return_30d_pct` | capital statement | net_pnl * 100 / initial_funds (denominator = initial_funds); typed absence for the second partition | TWR or money-weighted return on contributed capital |
+| `max_drawdown_pct` | capital statement | first partition exact `0` (true zero), others a deterministic value -2.00 to -19.99 | peak-to-trough on the NAV series |
+| `current_nav` | group by `portfolio_id` (per partition) | sum of the members' balance_total in that partition | portfolio NAV statement |
+| `return_30d_pct` | group | group net_pnl * 100 / group allocation | portfolio return |
+| `max_drawdown_pct` | group | deterministic negative; typed absence for about 1 group in 6 | portfolio NAV drawdown |
+| `max_drawdown_pct` | row (per partition) | exact `0` when net_pnl is a true zero, else deterministic -2.00 to -19.99 (scaled by window); typed absence when allocation is unpublished | NAV-series drawdown of the book |
+| `cost_drag_fees` / `_funding` / `_slippage` | row (per partition) | allocation * 5 / 2 / 1 bp * window days / 30, bigint, USDT of the partition; slippage a typed absence for about 1 row in 4 | fee, funding and fill-benchmark ledgers |
+| `forward_observation_days` | row (per partition) | 5..40 whole days, unit DAYS, currency null, no window | forward-observation day count |
+| small-scale rows | rows | with no generated universe the lane answers the e2e suite ids: alpha_a, alpha_b, alpha_c, alpha_d, alpha_btc_trend in portfolios pf_main (Main), pf_sat (Satellite), pf_core (Core); one single-book partition per row | real fleet / alpha rows |
+| window presets | all six surfaces | `window` 7D / 30D / 90D, bare or JSON-quoted: `selected_window.resolved` = [FIXTURE_NOW - N days, FIXTURE_NOW]; AVAILABLE `net_pnl`, `return_30d_pct`, `max_drawdown_pct`, `equity_30d_end_value` (rows, capital, groups) carry that window; allocation, balance and NAV keep window null. net_pnl is the 30D base times 1/4 (7D), 1 (30D), 5/2 (90D), bigint; derived keys follow; a true zero stays `0`. `ALL` is the typed gap (`ALL_HISTORY_WINDOW_NOT_PUBLISHED`) with the windowed metrics as typed absences. Custom ranges stay 400 | a windowed metric published per preset by the source |
+| `concentration_hhi` | group | sum of squared allocation shares of the members in that partition, unit RATIO, 0..1; typed absence when any allocation is unpublished | portfolio concentration (HHI) publication |
+
+- **SIMULATED screen facts** (added 22 October 2026, `e2e/bffSimulated.ts`; opt-in: `simulated`, implied by `reviewManager`, on for the
+  populated and layout-stress profiles, off for sparse-realistic). Same routes and readers as the real Edge; each key is an optional scalar on
+  an open row or a published optional block, so the published schemas still validate. Exact decimals, bigint arithmetic, one currency per figure.
+
+| key | route | rule (SIMULATED) | real Edge source expected |
+|---|---|---|---|
+| `page.status_counts` (FE-043) | `GET /operations` | integer tally of the same rows, each dimension ignoring its own filter, closed domain zero-filled (a bucket with no rows is a true `0`) | the server's own counts over the filtered query |
+| `broker_sync.wallet_balance`, `.native_equity` | `GET /resources/accounts/{id}` | newest broker report of `acc_bnc_core`: 412880.25 / 414010.40 USDT; `acc_bnc_sub` has the wallet balance (118050.00) and no native equity (typed absence) | venue wallet balance and native equity from the broker report |
+| `portfolio_allocations.budget_used`, `.budget_approved` | `GET /resources/accounts/{id}` | `acc_bnc_core` / `dep_btc_live`: used = `allocated_capital` 80000.00, approved 100000.00 USDT | PM budget statement (FE-017) |
+| `portfolio_allocations.exposure_long`, `_short`, `_gross` | `GET /resources/accounts/{id}` | 61300.00 / 35100.00 (the published position notionals); gross = long + short by integer addition in USDT | PM exposure by side (A360-1) |
+| `portfolio_name`, `strategy_name`, `deployment_name` | `GET /resources/accounts/{id}` (deployment and allocation rows) | Core, BTC Trend, BTC Trend live for `pf_core`, `btc_trend`, `dep_btc_live`; other ids stay ids | names on a deployment (FE-066) |
+| `drawdown` series | `GET /views/equity-chart?metric=drawdown` (account) | running-peak ratio of the published equity points, six places truncated, currency null; a gap stays a gap; the equity series carries one dip (87400.00) so it is not flat | the financial drawdown series |
+| `broker_sync.wallet_balance` + `GET /broker-bindings/{id}/exposure` (Accounts list) | `GET /resources/accounts/{id}`, `GET /broker-bindings/{id}/exposure` | Accounts list Physical equity = the account's `broker_sync.native_equity` (the wallet balance is a different figure and never a fallback); Σ Virtual = the exposure bucket `used` in the SAME currency, Headroom = the published bucket `headroom` (simulated for `bnc_main@BINANCE` as native equity less used, 216510.40 USDT, by integer arithmetic); Check = exact decimal comparison of virtual against physical, "Not available" when either is absent; Sleeves = `expected_account_count` else `account_count`. One account read and one exposure read per row for the first 50 rows, four at a time; later rows say so (the bindings row schema is closed) | bindings list carrying native equity, virtual sum, headroom and sleeve count per binding |
+| `deployment_id`, `average_fill_price`, `fee`, `fee_currency` | `GET /screens/blotter` (FILLED order rows) | `dep_btc_live`, 61250.40, 12.35 USDT | order row publication (FE-052) |
+
+  Not simulated, because the published shape forbids it: the queue `health.*` block (pending receipts, display lag, open exceptions: `OperationalQueueV2.page` is closed), queue-row Intent and Display (`OperationalQueueRowV2` is closed), and the incident children
+  (evidence, operations taken, resolution gate, timeline: the incident path answers the strict V2 root, and `execution.incident-detail.v1` cannot share its path). Those stay typed absences.
+
 - This does not fill a missing contract or a hard-coded UI placeholder. Consumer gaps belong in
   the Claude handoff; they must not be hidden by relabelling synthetic source facts as qualified.
 

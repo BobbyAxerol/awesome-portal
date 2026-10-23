@@ -148,7 +148,8 @@ describe("the same sections, from the scoped facts", () => {
     mount();
     await ready();
     const facts = screen.getByLabelText("Current facts");
-    const whys = Array.from(facts.querySelectorAll(".exec-blk-why"));
+    // The Return, Max drawdown and Regime fit tiles carry their own disclosures; only the two money tiles carry the body's reason.
+    const whys = Array.from(facts.querySelectorAll(".exec-blk-why")).filter((node) => (node.previousElementSibling?.textContent ?? "").includes("(FE-005)"));
     expect(whys.length).toBe(2);
     for (const node of whys) {
       expect(node.previousElementSibling?.textContent).toContain("Not published (FE-005)");

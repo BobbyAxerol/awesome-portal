@@ -10,7 +10,7 @@
  * The variants break one thing on purpose (a wrong environment, a wrong window, a filter the server ignored, another schema, a
  * malformed body, a refusal status) so a test can prove the fail-closed mapping end to end.
  */
-import { clone, fixtureValue, FIXTURE_LIFECYCLE_LIVE, FIXTURE_ALL, type Draft } from "../../readers/managerDataset.testbase";
+import { clone, fixtureValue, moneyMetric, absentMetric, FIXTURE_LIFECYCLE_LIVE, FIXTURE_ALL, type Draft } from "../../readers/managerDataset.testbase";
 
 export interface DoubleAlpha {
   id: string;
@@ -24,6 +24,8 @@ export interface DoubleAlpha {
   lifecycle?: string | null;
   venue?: string | null;
   sourceState?: string | null;
+  /** ALL reads only: the money this alpha holds in ITS environment, one partition (USDT in every environment: the trap a sum would fall into). */
+  money?: { allocation?: string | null; netPnl?: string | null; currency?: string };
 }
 
 export type DatasetVariant =
@@ -67,6 +69,12 @@ export interface DatasetDoubleState {
   mutate?: (body: Draft, call: DatasetCall) => void;
   /** Overrides what the body states as `quality` / the total the page publishes (a snapshot that moves between pages). */
   total?: (honest: number) => number;
+  /** FE-CAT-3: answer `environment=ALL` (the authorized rows of every environment, each labelled, with coverage). Off: ALL is refused (400). */
+  offersAll?: boolean;
+  /** ALL only: an environment that contributes nothing, with the closed reason of the contract. */
+  unavailable?: Partial<Record<"paper" | "sandbox" | "live", string>>;
+  /** ALL only: an included environment that is degraded (its own quality). */
+  degraded?: Partial<Record<"paper" | "sandbox" | "live", { completeness: string; freshness: string; reasons: string[] }>>;
 }
 
 const SNAPSHOT = (digit: string) => `sha256:${digit.repeat(64)}`;
@@ -95,7 +103,9 @@ export function alphasOf(count: number, stageSets: readonly (readonly string[])[
 
 const lexical = (stages: readonly string[]) => [...stages].sort();
 
-interface Computed { alpha: DoubleAlpha; visible: string[]; currentStage: string | null }
+interface Computed { alpha: DoubleAlpha; visible: string[]; currentStage: string | null; environment?: "paper" | "sandbox" | "live" }
+const ENVIRONMENT_ORDER = ["paper", "sandbox", "live"] as const;
+const DOMAIN_OF = { paper: "PAPER", sandbox: "SANDBOX", live: "ACTUAL" } as const;
 
 function textOf(c: Computed, field: string): string | null {
   const a = c.alpha;
@@ -119,7 +129,8 @@ function rowOf(template: Draft, c: Computed, environment: string): Draft {
   const row = clone(template);
   const version = a.version ?? "av-1";
   const portfolio = a.portfolio ?? "pf-1";
-  row.row_key = JSON.stringify([a.id, version, portfolio]);
+  row.row_key = c.environment === undefined ? JSON.stringify([a.id, version, portfolio]) : JSON.stringify([c.environment, a.id, version, portfolio]);
+  if (c.environment !== undefined) row.environment = c.environment;
   row.alpha_id = a.id;
   row.alpha_version_id = version;
   row.portfolio_id = portfolio;
@@ -142,6 +153,18 @@ function rowOf(template: Draft, c: Computed, environment: string): Draft {
   row.children = lexical(c.visible).map((stage, index) => ({
     ...clone(child), alpha_id: a.id, alpha_version_id: version, portfolio_id: portfolio, deployment_id: `${a.id}-${environment}-d${index}`, account_id: `${a.id}-${environment}-acct${index}`, stage,
   }));
+  if (c.environment !== undefined) {
+    // An ALL row holds the money of its own environment: one partition of its own economic domain, USDT in every environment.
+    const money = a.money ?? {};
+    const partition = { economic_domain: DOMAIN_OF[c.environment], currency: money.currency ?? "USDT", basis: "TEST_ONLY:net-ledger",
+      native_profile_ref: `TEST_ONLY:${c.environment}-ledger`, domain_proof_ref: "TEST_ONLY:not-economic-authority" };
+    const figure = (value: string | null | undefined) => (value === undefined || value === null ? absentMetric() : moneyMetric({ value, currency: partition.currency }));
+    const metrics: Draft = {};
+    if (money.netPnl !== undefined && money.netPnl !== null) metrics.net_pnl = figure(money.netPnl);
+    if (money.allocation !== undefined && money.allocation !== null) metrics.allocation = figure(money.allocation);
+    row.economic_partitions = Object.keys(metrics).length === 0 ? [] : [{ partition, metrics }];
+    for (const key of Object.keys(row.metrics)) row.metrics[key] = metrics[key] !== undefined ? clone(metrics[key]) : absentMetric();
+  }
   return row;
 }
 
@@ -178,8 +201,10 @@ export function datasetAnswer(path: string, params: URLSearchParams, state: Data
   if (state.variant === "garbage") return { status: 200, body: "<html>nope</html>" };
 
   const surface = surfaceOfPath(path);
-  const environment = params.get("environment") as "paper" | "sandbox" | "live" | null;
-  if (surface === null || environment === null || !(environment in state.population)) return problem(400, "MANAGER_QUERY_INVALID");
+  const environment = params.get("environment") as "paper" | "sandbox" | "live" | "ALL" | null;
+  const all = environment === "ALL";
+  if (all && (!state.offersAll || surface !== "FLEET" || params.has("window"))) return problem(400, "MANAGER_QUERY_INVALID");
+  if (surface === null || environment === null || (!all && !(environment in state.population))) return problem(400, "MANAGER_QUERY_INVALID");
 
   const filters = (call.filters ?? []) as Filter[];
   const stageFilter = params.get("stage_filter")?.split(",") ?? [];
@@ -190,10 +215,13 @@ export function datasetAnswer(path: string, params: URLSearchParams, state: Data
   const limit = params.has("limit") ? Number(params.get("limit")) : 100;
 
   const computed: Computed[] = [];
-  for (const alpha of state.population[environment]) {
-    const visible = stageFilter.length === 0 ? [...alpha.stages] : alpha.stages.filter((stage) => stageFilter.includes(stage));
-    if (stageFilter.length > 0 && visible.length === 0) continue;
-    computed.push({ alpha, visible, currentStage: alpha.stages.length === 1 ? alpha.stages[0]! : null });
+  for (const scope of all ? ENVIRONMENT_ORDER : [environment]) {
+    if (all && state.unavailable?.[scope] !== undefined) continue;
+    for (const alpha of state.population[scope]) {
+      const visible = stageFilter.length === 0 ? [...alpha.stages] : alpha.stages.filter((stage) => stageFilter.includes(stage));
+      if (stageFilter.length > 0 && visible.length === 0) continue;
+      computed.push({ alpha, visible, currentStage: alpha.stages.length === 1 ? alpha.stages[0]! : null, ...(all ? { environment: scope } : {}) });
+    }
   }
   const matches = (c: Computed) => {
     if (q !== null) {
@@ -220,7 +248,8 @@ export function datasetAnswer(path: string, params: URLSearchParams, state: Data
       if (b === null) return -1;
       return (a < b ? -1 : 1) * (key.direction === "asc" ? 1 : -1);
     }
-    return x.alpha.id < y.alpha.id ? -1 : 1;
+    if (x.alpha.id !== y.alpha.id) return x.alpha.id < y.alpha.id ? -1 : 1;
+    return ENVIRONMENT_ORDER.indexOf(x.environment ?? "paper") - ENVIRONMENT_ORDER.indexOf(y.environment ?? "paper");
   });
   if (state.variant === "wrong:sort" && sort.length > 0) sorted.reverse();
 
@@ -239,9 +268,10 @@ export function datasetAnswer(path: string, params: URLSearchParams, state: Data
   body.environment = environment;
   body.workspace_id = params.get("workspace_id") ?? body.workspace_id;
   body.snapshot_id = state.snapshot;
-  body.items = page.map((c) => rowOf(template, c, environment));
+  body.items = page.map((c) => rowOf(template, c, c.environment ?? environment));
   const honestTotal = sorted.length;
   const total = state.total ? state.total(honestTotal) : honestTotal;
+  if (all) body.environment = "ALL";
   body.page = {
     limit,
     returned_count: page.length,
@@ -249,6 +279,25 @@ export function datasetAnswer(path: string, params: URLSearchParams, state: Data
     next_cursor: offset + page.length < honestTotal ? encodeCursor(offset + page.length, state.snapshot, bound) : null,
     previous_cursor: offset > 0 ? encodeCursor(Math.max(0, offset - limit), state.snapshot, bound) : null,
   };
+  if (all) {
+    // The ALL envelope: one typed entry per environment, counts of rows only, a body that lost an environment is never COMPLETE.
+    const statuses = ENVIRONMENT_ORDER.map((scope) => {
+      const reason = state.unavailable?.[scope];
+      if (reason !== undefined) return { environment: scope, availability: "UNAVAILABLE", reason_code: reason, snapshot_id: null, as_of_ms: null, recorded_through_ms: null, facts_through_ms: null, quality: null, authorized_filtered_count: null, returned_count: null };
+      return {
+        environment: scope, availability: "INCLUDED", reason_code: null, snapshot_id: SNAPSHOT(scope === "paper" ? "3" : scope === "sandbox" ? "4" : "5"),
+        as_of_ms: body.as_of_ms, recorded_through_ms: body.recorded_through_ms, facts_through_ms: body.facts_through_ms,
+        quality: state.degraded?.[scope] ?? { completeness: "COMPLETE", freshness: "FRESH", reasons: [] },
+        authorized_filtered_count: sorted.filter((c) => c.environment === scope).length, returned_count: page.filter((c) => c.environment === scope).length,
+      };
+    });
+    body.environment_coverage = statuses;
+    const lost = statuses.filter((entry) => entry.availability === "UNAVAILABLE").length;
+    const worst = Object.values(state.degraded ?? {}).some((q) => q?.completeness !== "COMPLETE");
+    body.quality = { completeness: lost > 0 || worst ? "PARTIAL" : "COMPLETE", freshness: lost > 0 ? "UNKNOWN" : "FRESH", reasons: [] };
+    body.capital_statements = [];
+    body.selected_window = null;
+  }
   // Groups total the whole filtered query, not the page.
   if (groupBy.length > 0) {
     const tally = new Map<string, { key: { field: string; value: string | null }[]; count: number }>();

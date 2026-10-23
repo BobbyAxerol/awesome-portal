@@ -5,6 +5,8 @@
  * Two to four portfolios from the URL param `in` (`ids` is read as an alias).
  * Identity and scalars come from the portfolio list read: name, owner, state,
  * domain, counts and `allocatedByCurrency`, each portfolio in its own currency.
+ * The metric rows NAV and Net PnL are the Manager dataset of each comparable portfolio (`getManagerDataset`, PORTFOLIO surface):
+ * exact, one cell per economic partition, only the basis currency drawn (`DatasetCells.tsx`). Score is policy words, never a number.
  *
  * What it refuses, and says so:
  * - the overlay (FE-013/033, BE-P4 manager series): the comparable picks (two to four, one basis) are asked for as ONE series
@@ -38,7 +40,7 @@ import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelSkeleton, PanelState } from "../../../components/states";
-import { GapWhy, NotAvailableLine, SectionPanel, type UnavailableFact } from "../../blocks";
+import { GapWhy, SectionPanel } from "../../blocks";
 import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { ChartTools, CompareOverlay, type CompareSeries, type NotComparable } from "../../charts";
 import { Flag } from "../../Flag";
@@ -55,6 +57,8 @@ import { DEFAULT_ROUTES, type PortfolioRoutes } from "../portfolios/routes";
 import { COMPARE_MAX, selectionFrom, withSelection } from "../portfolios/selection";
 import { useRead } from "../portfolios/useRead";
 import { backTarget, basisOf, resolveSelection, selectionHint, selectionState } from "./model";
+import { DrawdownCell, NavCell, NetPnlCell, ReturnCell, ScoreCell, type DatasetCellContext } from "./DatasetCells";
+import { useCompareDatasets } from "./useCompareDatasets";
 
 import "../../css/portfolios.css";
 import "../../css/compare.css";
@@ -80,19 +84,21 @@ const SEARCH_DEBOUNCE_MS = 300;
 const domainWord = (domain: PortfolioRow["domain"] | null): string =>
   domain === "simulated" ? "Simulated" : domain === "mixed" ? "Real-funded and Simulated" : "Real-funded";
 
-interface MetricRow { id: string; label: string; cell(row: PortfolioRow): ReactNode }
+interface MetricRow { id: string; label: string; cell(row: PortfolioRow, ctx: DatasetCellContext): ReactNode }
 
-/** The hi-fi order: the measures first (each says which request publishes it), then what the list read does publish. */
-/** The scalars the read does not publish: not rows of "Not published" under every pick, but one line (ids in its title). */
-const UNPUBLISHED_METRICS: readonly UnavailableFact[] = [
-  { label: "NAV", id: "FE-013" },
-  { label: "Net PnL", id: "FE-005", why: "Windowed; needs FE-025" },
-  { label: "Return", id: "FE-006", why: "Windowed; methodology per source" },
-  { label: "Max drawdown", id: "FE-013", why: "Needs the NAV series; windowed (FE-025)" },
-  { label: "Score", id: "FE-011" },
-];
+/**
+ * The hi-fi order: the measures first, then what the list read does publish. The five measures keep their rows (hi-fi and the "Source
+ * not qualified" frame). NAV and Net PnL are the Manager dataset's exact figures per economic partition; Score is the policy words of
+ * `scores.*` (never a number). Return and Max drawdown read the portfolio's own dataset group (`return_30d_pct`, `max_drawdown_pct`); a
+ * group that does not carry the key says Not available with the request that will publish it behind the cell's disclosure.
+ */
 
 const METRICS: readonly MetricRow[] = [
+  { id: "nav", label: "NAV", cell: (r, ctx) => <NavCell id={r.portfolioId} ctx={ctx} /> },
+  { id: "netpnl", label: "Net PnL", cell: (r, ctx) => <NetPnlCell id={r.portfolioId} ctx={ctx} /> },
+  { id: "return", label: "Return", cell: (r, ctx) => <ReturnCell id={r.portfolioId} ctx={ctx} /> },
+  { id: "drawdown", label: "Max drawdown", cell: (r, ctx) => <DrawdownCell id={r.portfolioId} ctx={ctx} /> },
+  { id: "score", label: "Score", cell: (r, ctx) => <ScoreCell id={r.portfolioId} ctx={ctx} /> },
   { id: "currency", label: "Base currency", cell: (r) => r.baseCurrency },
   { id: "owner", label: "Owner", cell: (r) => r.owner ?? <Absent reason="owner not published" /> },
   { id: "state", label: "State", cell: (r) => <Flag kind={r.stateKind} label={r.stateLabel} size="sm" /> },
@@ -127,6 +133,9 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     [comparableIds, measure, url.value.env, url.value.window],
   );
   const seriesRead = useManagerSeries(api, permitted && seriesQuery !== null, seriesQuery);
+  // The metric rows (NAV, Net PnL, Score) are the Manager dataset of each portfolio on the basis: one read per pick, exact and per partition.
+  const datasetReads = useCompareDatasets(api, permitted, comparableIds, url.value.env);
+  const datasetCtx = useMemo<DatasetCellContext>(() => ({ reads: datasetReads, currency: basis.currency }), [datasetReads, basis.currency]);
 
   // The 360 hands over one id. It becomes the first pick once, as a replace.
   const seeded = useRef(false);
@@ -232,7 +241,7 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
     ...chosen.map<CardsColumn<MetricRow>>((row) => {
       const tone = Math.max(0, toneOf(row.portfolioId));
       // K-B5: the column head wears the series swatch of its chip (shape as well as colour), and the figures sit right.
-      return { key: row.portfolioId, label: row.label, numeric: true, head: <i className="exec-cmpr-sw" data-tone={TONES[tone]} data-glyph={GLYPHS[tone]} />, render: (m) => m.cell(row) };
+      return { key: row.portfolioId, label: row.label, numeric: true, head: <i className="exec-cmpr-sw" data-tone={TONES[tone]} data-glyph={GLYPHS[tone]} />, render: (m) => m.cell(row, datasetCtx) };
     }),
   ];
 
@@ -370,17 +379,15 @@ export default function CompareScreen({ api, portfolioId, capabilities, routes =
                 />
               </ChartTools>
             )}
-            <p className="exec-pf-note" data-testid="basis-caption">Basis: {basisText}</p>
+            {/* The overlay prints its own "Basis:" line under the chart; this one is visible only when no chart is drawn (it stays for assistive tech either way). */}
+            <p className={overlay.series.length > 0 && overlay.state?.kind !== "unavailable" ? "exec-blk-sr" : "exec-pf-note"} data-testid="basis-caption">Basis: {basisText}</p>
           </SectionPanel>
 
           <SectionPanel title="Metrics">
             {chosen.length === 0 ? (
               <p className="exec-pf-note">Pick portfolios above to see their identity and allocation side by side.</p>
             ) : (
-              <>
-                <CardsTable label="Metrics" columns={tableColumns} rows={METRICS} rowKey={(m) => m.id} />
-                <NotAvailableLine facts={UNPUBLISHED_METRICS} className="exec-pf-na-line" />
-              </>
+              <CardsTable label="Metrics" columns={tableColumns} rows={METRICS} rowKey={(m) => m.id} />
             )}
           </SectionPanel>
         </>

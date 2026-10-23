@@ -1,0 +1,215 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "base": "execution-manager-dataset.all-environments.synthetic.valid.json",
+  "note": "Each case mutates the base example. ALL is navigation across separately labelled environments: no case here creates, and no rule here permits, a total over partitions.",
+  "cases": [
+    {
+      "id": "FE-CAT-3/coverage-list-missing",
+      "rule": "an ALL body carries one coverage entry per environment",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_ALL_COVERAGE_REQUIRED",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "environment_coverage"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/row-without-its-environment",
+      "rule": "every row of an ALL body names its own environment",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_ALL_ROW_ENVIRONMENT_REQUIRED",
+      "ops": [
+        {
+          "op": "delete",
+          "path": [
+            "items",
+            0,
+            "environment"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/single-environment-body-with-a-coverage-list",
+      "rule": "only an ALL body is ALL-shaped",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_ALL_COVERAGE_FORBIDDEN",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "environment"
+          ],
+          "value": "paper"
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/row-key-without-the-environment-first",
+      "rule": "the row key is [environment, alpha, version, portfolio]",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_ALL_ROW_KEY_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "row_key"
+          ],
+          "value": "[\"TEST_ONLY:alpha\",\"TEST_ONLY:av\",\"TEST_ONLY:portfolio\"]"
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/page-count-is-not-the-sum-of-the-environments",
+      "rule": "page.authorized_filtered_count is the sum of the included environments' counts",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_ALL_COUNT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "environment_coverage",
+            0,
+            "authorized_filtered_count"
+          ],
+          "value": 5
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/unavailable-environment-with-a-count",
+      "rule": "an unavailable environment carries a reason and nothing else",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_ALL_COVERAGE_INCONSISTENT",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "environment_coverage",
+            1,
+            "authorized_filtered_count"
+          ],
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/included-environment-without-a-snapshot",
+      "rule": "an included environment carries its snapshot, clocks, quality and counts",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_ALL_COVERAGE_INCONSISTENT",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "environment_coverage",
+            0,
+            "snapshot_id"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/unavailable-environment-reads-complete",
+      "rule": "a body that lost an environment is never COMPLETE",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_ALL_UNAVAILABLE_READS_COMPLETE",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "quality",
+            "completeness"
+          ],
+          "value": "COMPLETE"
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/live-row-with-a-paper-partition",
+      "rule": "a row's figures live in its own environment's economic domain",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_ALL_ROW_DOMAIN_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            1,
+            "economic_partitions",
+            0,
+            "partition",
+            "economic_domain"
+          ],
+          "value": "PAPER"
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/coverage-order-changed",
+      "rule": "coverage is paper, sandbox, live",
+      "refused_by": "PRODUCER_ONLY",
+      "code": "MANAGER_ALL_COVERAGE_ORDER",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "environment_coverage",
+            0,
+            "environment"
+          ],
+          "value": "live"
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/all-with-a-window",
+      "rule": "a window resolves against one environment's cutoff; ALL carries none",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_ALL_WINDOW_FORBIDDEN",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "selected_window"
+          ],
+          "value": {
+            "requested": "7D",
+            "resolved": {
+              "from_ms": 1,
+              "to_ms": 2
+            },
+            "selection_basis": "EXACT_PUBLISHED_METRIC_WINDOW_ONLY",
+            "reason_code": null
+          }
+        }
+      ]
+    },
+    {
+      "id": "FE-CAT-3/live-row-in-a-paper-stage",
+      "rule": "a row is judged against its own environment's stages",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_ENVIRONMENT_STAGE_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            1,
+            "stage_presence"
+          ],
+          "value": [
+            "PAPER"
+          ]
+        }
+      ]
+    }
+  ]
+}

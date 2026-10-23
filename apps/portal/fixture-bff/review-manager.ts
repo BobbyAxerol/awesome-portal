@@ -140,19 +140,159 @@ function metric(template: Draft, value: string | null, currency: string): Draft 
   return out;
 }
 const sum = (values: string[]): string => values.reduce(addDecimal, "0");
+/* SIMULATED derived keys (README "Explicit populated/layout review"): bigint only, never a float, never across partitions. */
+const SCALE = 18;
+const toScaled = (value: string): bigint => {
+  const negative = value.startsWith("-");
+  const [whole, fraction = ""] = value.replace("-", "").split(".");
+  const n = BigInt(whole + fraction.padEnd(SCALE, "0").slice(0, SCALE));
+  return negative ? -n : n;
+};
+const trimmed = (value: bigint, places: number): string => decimal(value, places).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+/** A percent with 6 places, truncated toward zero: numerator * 100 / denominator. `null` when the denominator is not positive. */
+const pct = (numerator: bigint, denominator: bigint): string | null => denominator <= 0n ? null : trimmed(numerator * 100n * 1_000_000n / denominator, 6);
+/** Sum of squared shares, 6 places, in [0, 1]. `null` unless every allocation is known and the total is positive. */
+const hhi = (allocations: (string | null)[]): string | null => {
+  if (allocations.length === 0 || allocations.some((value) => value === null)) return null;
+  const parts = allocations.map((value) => toScaled(value!));
+  const total = parts.reduce((a, b) => a + b, 0n);
+  if (total <= 0n || parts.some((part) => part < 0n)) return null;
+  return trimmed(parts.reduce((a, b) => a + b * b, 0n) * 1_000_000n / (total * total), 6);
+};
+const seedOf = (...parts: unknown[]): number => parseInt(digest(parts).slice(7, 15), 16);
+/** A deterministic negative percent between -2.00 and -19.99. */
+const drawdownOf = (...parts: unknown[]): string => trimmed(-(200n + BigInt(seedOf(...parts) % 1800)), 2);
+const plainMetric = (template: Draft, value: string | null, unit: string): Draft => {
+  const out = metric(template, value, "X");
+  out.currency = null;
+  out.unit = unit;
+  return out;
+};
+const pctMetric = (template: Draft, value: string | null): Draft => plainMetric(template, value, "PERCENT");
+/** A present metric becomes a typed absence in its own unit. */
+const nulled = (key: string, template: Draft, currency: string): Draft =>
+  (key === "return_30d_pct" || key === "max_drawdown_pct") ? pctMetric(template, null) : metric(template, null, currency);
+
+const NEW_ROW_KEYS = ["balance_total", "equity_30d_end_value", "return_30d_pct"] as const;
+/**
+ * SIMULATED row keys, per economic partition, from that partition's own allocation (A), net PnL (N) and unrealized PnL (U):
+ * balance_total = A + N, equity_30d_end_value = A + N + U, return_30d_pct = N * 100 / A. A missing input is a typed absence.
+ */
+function enrichRow(row: Draft, preset: WindowPreset): Draft {
+  const template = row.metrics.net_pnl;
+  for (const entry of row.economic_partitions) {
+    const m = entry.metrics;
+    const known = (key: string): string | null => m[key]?.availability === "AVAILABLE" ? m[key].value : null;
+    const [A, N, U] = [known("allocation"), known("net_pnl"), known("unrealized_pnl")];
+    const balance = A !== null && N !== null ? trimmed(toScaled(A) + toScaled(N), SCALE) : null;
+    const equity = balance !== null && U !== null ? trimmed(toScaled(balance) + toScaled(U), SCALE) : null;
+    const ret = A !== null && N !== null ? pct(toScaled(N), toScaled(A)) : null;
+    m.balance_total = metric(template, balance, entry.partition.currency);
+    m.equity_30d_end_value = metric(template, equity, entry.partition.currency);
+    m.return_30d_pct = pctMetric(template, ret);
+    // SIMULATED partition-level keys (open key names inside `economic_partitions[].metrics`): max drawdown, cost drag, forward days.
+    // Cost drag = allocation * basis points * window days / 30 (fees 5, funding 2, slippage 1); slippage is a typed absence for
+    // about 1 row in 4; forward days is 5..40; a true zero net PnL has a true zero drawdown.
+    const cost = (bp: bigint): string | null => A === null ? null : trimmed(toScaled(A) * bp * BigInt(preset.days) / (10_000n * 30n), SCALE);
+    m.max_drawdown_pct = pctMetric(template, A === null ? null : N !== null && toScaled(N) === 0n ? "0" : drawdownOf(row.row_key, "row"));
+    m.cost_drag_fees = metric(template, cost(5n), entry.partition.currency);
+    m.cost_drag_funding = metric(template, cost(2n), entry.partition.currency);
+    m.cost_drag_slippage = metric(template, seedOf(row.row_key, "slippage") % 4 === 0 ? null : cost(1n), entry.partition.currency);
+    m.forward_observation_days = plainMetric(template, A === null ? null : String(5 + seedOf(row.row_key, "forward") % 36), "DAYS");
+  }
+  for (const key of NEW_ROW_KEYS) {
+    // One partition: the headline IS that partition's figure. Several: the row headline names no currency (mixed), as net_pnl does.
+    row.metrics[key] = row.economic_partitions.length === 1 ? copy(row.economic_partitions[0].metrics[key]) : copy(template);
+  }
+  return row;
+}
+
 function aggregate(rows: Draft[]): Draft[] {
-  const byPartition = new Map<string, Draft>();
+  const byPartition = new Map<string, { item: Draft; members: Draft[] }>();
   for (const row of rows) for (const item of row.economic_partitions) {
     const key = JSON.stringify(item.partition);
     const found = byPartition.get(key);
-    if (!found) { byPartition.set(key, copy(item)); continue; }
+    if (!found) { byPartition.set(key, { item: copy(item), members: [item.metrics] }); continue; }
+    found.members.push(item.metrics);
     for (const name of Object.keys(item.metrics)) {
-      const a = found.metrics[name];
+      if (name === "return_30d_pct" || name === "max_drawdown_pct" || name === "forward_observation_days") continue;
+      const a = found.item.metrics[name];
       const b = item.metrics[name];
-      found.metrics[name] = metric(a, a.value === null || b.value === null ? null : addDecimal(a.value, b.value), item.partition.currency);
+      found.item.metrics[name] = metric(a, a.value === null || b.value === null ? null : addDecimal(a.value, b.value), item.partition.currency);
     }
   }
-  return [...byPartition.values()];
+  return [...byPartition.entries()].map(([key, { item, members }]) => {
+    const currency = item.partition.currency;
+    const template = item.metrics.net_pnl;
+    const total = (name: string): string | null => item.metrics[name]?.availability === "AVAILABLE" ? item.metrics[name].value : null;
+    const [A, N, B] = [total("allocation"), total("net_pnl"), total("balance_total")];
+    // SIMULATED group keys, inside this ONE partition only: NAV, return on allocation, drawdown, concentration of allocation.
+    item.metrics.current_nav = metric(template, B, currency);
+    item.metrics.return_30d_pct = pctMetric(template, A !== null && N !== null ? pct(toScaled(N), toScaled(A)) : null);
+    item.metrics.max_drawdown_pct = pctMetric(template, seedOf(key, "group-drawdown") % 6 === 0 ? null : drawdownOf(key, members.length));
+    item.metrics.concentration_hhi = pctMetric(template, hhi(members.map((metrics) => metrics.allocation?.availability === "AVAILABLE" ? metrics.allocation.value : null)));
+    item.metrics.concentration_hhi.unit = "RATIO";
+    // Row-only keys (days observed, cost drag) are not portfolio totals here and would only grow the response.
+    for (const rowOnly of ["forward_observation_days", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage"]) delete item.metrics[rowOnly];
+    return item;
+  });
+}
+
+/* SIMULATED window presets. The base data is the 30D answer; 7D and 90D scale net PnL (and so balance, equity, return) by an exact
+ * fraction, with bigint math. `ALL` is a typed gap (ALL_HISTORY_WINDOW_NOT_PUBLISHED), never a 400 and never a number. */
+interface WindowPreset { days: number; num: bigint; den: bigint }
+const WINDOW_PRESETS: Record<"7D" | "30D" | "90D", WindowPreset> = {
+  "7D": { days: 7, num: 1n, den: 4n }, "30D": { days: 30, num: 1n, den: 1n }, "90D": { days: 90, num: 5n, den: 2n },
+};
+const WINDOWED_KEYS = ["net_pnl", "return_30d_pct", "max_drawdown_pct", "equity_30d_end_value", "cost_drag_fees", "cost_drag_funding", "cost_drag_slippage"];
+const ALL_GAP = "ALL_HISTORY_WINDOW_NOT_PUBLISHED";
+const scaleBy = (value: string, preset: WindowPreset): string => trimmed(toScaled(value) * preset.num / preset.den, SCALE);
+
+/** Net PnL of a row for the preset, before the derived keys are computed from it. A true zero stays "0"; an absence stays one. */
+function windowedRow(row: Draft, preset: WindowPreset): Draft {
+  if (preset.num === preset.den) return row;
+  for (const entry of row.economic_partitions) {
+    const m = entry.metrics.net_pnl;
+    if (m?.availability === "AVAILABLE" && toScaled(m.value) !== 0n) m.value = scaleBy(m.value, preset);
+  }
+  if (row.economic_partitions.length === 1) row.metrics.net_pnl = copy(row.economic_partitions[0].metrics.net_pnl);
+  return row;
+}
+
+/** Stamps the selected window on the body: every AVAILABLE windowed metric carries it; for `ALL` they become the window gap. */
+function applyWindow(body: Draft, name: "7D" | "30D" | "90D" | "ALL", preset: WindowPreset): void {
+  const now = fixtureNowMs();
+  const resolved = { from_ms: now - preset.days * 86_400_000, to_ms: now };
+  const all = name === "ALL";
+  body.selected_window = all
+    ? { requested: "ALL", resolved: null, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: ALL_GAP }
+    : { requested: name, resolved, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: null };
+  if (all) {
+    const slot = { value: null, status: "window_not_published", reason_code: ALL_GAP };
+    body.scores = { ...body.scores, raw: { ...slot }, composition: { ...slot }, direct_nav: { ...slot }, reason_code: ALL_GAP };
+  }
+  const days: Record<string, number> = { "7D": 7, "30D": 30, "90D": 90 };
+  for (const entry of body.query_options.window.presets as Draft[]) {
+    if (entry.value !== "ALL") Object.assign(entry, { resolved: { from_ms: now - days[entry.value]! * 86_400_000, to_ms: now }, data_state: "METRIC_SPECIFIC", reason_code: null });
+  }
+  const stamp = (bag: Draft): void => {
+    for (const key of WINDOWED_KEYS) {
+      const m = bag[key];
+      if (!m || m.availability !== "AVAILABLE") continue;
+      if (all) {
+        bag[key] = nulled(key, m, m.currency ?? "X");
+        bag[key].reason_code = ALL_GAP;
+        bag[key].window = null;
+      } else {
+        if (key === "max_drawdown_pct" && toScaled(m.value) !== 0n) m.value = scaleBy(m.value, preset);
+        m.window = copy(resolved);
+      }
+    }
+  };
+  const visit = (list: Draft[]): void => { for (const entry of list) stamp(entry.metrics); };
+  for (const row of body.items) { stamp(row.metrics); visit(row.economic_partitions); }
+  visit(body.capital_statements);
+  for (const group of body.groups) visit(group.economic_partitions);
 }
 
 /** Separate synthetic capital receipts, NOT aliases for the table's allocation/PnL.
@@ -162,14 +302,16 @@ function aggregate(rows: Draft[]): Draft[] {
  * deployments of that account do not invent another NAV/budget snapshot.
  */
 function capitalStatements(rows: Draft[]): Draft[] {
-  const partitions = new Map<string, { partition: Draft; accounts: Set<string>; template: Draft }>();
+  const partitions = new Map<string, { partition: Draft; accounts: Set<string>; template: Draft; pnl: (string | null)[] }>();
   for (const row of rows) for (const entry of row.economic_partitions) {
     const key = JSON.stringify(entry.partition);
-    const found = partitions.get(key) ?? { partition: entry.partition, accounts: new Set<string>(), template: row.metrics.net_pnl };
+    const found = partitions.get(key) ?? { partition: entry.partition, accounts: new Set<string>(), template: row.metrics.net_pnl, pnl: [] };
+    // This partition's own rows only; a row's figure is never moved to another partition.
+    found.pnl.push(entry.metrics.net_pnl?.availability === "AVAILABLE" ? entry.metrics.net_pnl.value : null);
     for (const child of row.children) found.accounts.add(child.account_id);
     partitions.set(key, found);
   }
-  return [...partitions.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, entry], index) => {
+  return [...partitions.entries()].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([key, entry], index, all) => {
     const accounts = [...entry.accounts].sort();
     const count = BigInt(accounts.length);
     const scale = 1_000_000_000_000_000_000n;
@@ -183,7 +325,7 @@ function capitalStatements(rows: Draft[]): Draft[] {
       current_budget: decimal(count * 9_000n * scale, 18),
       pending_amount: index === 0 ? null : "0",
     };
-    return { partition: copy(entry.partition), metrics: Object.fromEntries(Object.entries(values).map(([kind, value]) => {
+    const money = Object.fromEntries(Object.entries(values).map(([kind, value]) => {
       const out = metric(entry.template, value, entry.partition.currency);
       // Current/cumulative capital receipts have no performance-window claim.
       out.window = null;
@@ -192,13 +334,64 @@ function capitalStatements(rows: Draft[]): Draft[] {
       out.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC_CAPITAL", key, accounts, kind])];
       out.calculation_revision = "FIXTURE_LAB:capital-review.v1";
       return [kind, out];
-    })) };
+    }));
+    // SIMULATED performance keys of the same partition: net_pnl = sum of THIS partition's rows; return = net_pnl * 100 / initial_funds;
+    // drawdown is a deterministic negative percent (an exact "0" for the first partition, so a true zero stays testable).
+    const pnl = entry.pnl.every((value) => value !== null) ? sum(entry.pnl as string[]) : null;
+    const perf = (kind: string, built: Draft): Draft => {
+      built.window = null;
+      built.denominator = null;
+      built.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC_CAPITAL", key, accounts, kind])];
+      built.calculation_revision = "FIXTURE_LAB:capital-review.v1";
+      built.methodology_ref = built.availability === "AVAILABLE" ? "FIXTURE_LAB:synthetic-capital-performance-v1" : null;
+      return built;
+    };
+    const ret = pnl === null ? null : pct(toScaled(pnl), toScaled(values.initial_funds!));
+    const returnMetric = perf("return_30d_pct", pctMetric(entry.template, index === 1 && all.length > 1 ? null : ret));
+    returnMetric.denominator = returnMetric.availability === "AVAILABLE" ? values.initial_funds : null;
+    const extra = {
+      net_pnl: perf("net_pnl", metric(entry.template, pnl, entry.partition.currency)),
+      return_30d_pct: returnMetric,
+      max_drawdown_pct: perf("max_drawdown_pct", pctMetric(entry.template, index === 0 ? "0" : drawdownOf(key, "capital"))),
+    };
+    return { partition: copy(entry.partition), metrics: { ...money, ...extra } };
   });
 }
 
-function rowsFor(environment: string, template: Draft): Draft[] {
+/** SIMULATED suite universe for the small scale: the ids the Playwright doubles use (alpha_a..d, alpha_btc_trend; Main, Satellite, Core). */
+type Env = "paper" | "sandbox" | "live";
+const suiteDeployment = (id: string, alphaId: string, stage: DeploymentSpec["stage"], environment: Env, portfolio: [string, string], allocation: string, realized: string, unrealized: string, state: "ACTIVE" | "HALTED" = "ACTIVE"): DeploymentSpec => ({
+  id, alphaId, stage, environment, venue: "BINANCE", accountId: `acct_${id}`, portfolioId: portfolio[0], portfolioName: portfolio[1], currency: "USDT",
+  allocation, exposure: "0", realized, unrealized, health: "READY", state, active: state === "ACTIVE", updatedAt: "2026-10-22T11:00:00Z",
+});
+const MAIN: [string, string] = ["pf_main", "Main"];
+const SAT: [string, string] = ["pf_sat", "Satellite"];
+const CORE: [string, string] = ["pf_core", "Core"];
+const suiteAlpha = (id: string, label: string, version: string, owner: string | null, health: AlphaSpec["health"], deployments: DeploymentSpec[]): AlphaSpec =>
+  ({ id, label, version, owner, stages: [...new Set(deployments.map((entry) => entry.stage))], health, attention: [], deployments, updatedAt: "2026-10-22T11:00:00Z" });
+const SUITE_ALPHAS: AlphaSpec[] = [
+  suiteAlpha("alpha_a", "Carry A", "1.0", "Bobby-001", "READY", [suiteDeployment("dep_a1", "alpha_a", "PAPER", "paper", MAIN, "25000", "484.31", "12.5")]),
+  suiteAlpha("alpha_b", "Basis B", "1.4", "Lan-002", "READY", [
+    suiteDeployment("dep_b1", "alpha_b", "LIVE", "live", MAIN, "120000", "2150.75", "310.2"),
+    suiteDeployment("dep_b2", "alpha_b", "LIVE", "live", SAT, "60000", "-98.4", "21.05"),
+    suiteDeployment("dep_b3", "alpha_b", "CANARY", "live", MAIN, "30000", "410.1", "-5.5"),
+  ]),
+  suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [suiteDeployment("dep_c1", "alpha_c", "CANARY", "live", SAT, "15000", "0", "0", "HALTED")]),
+  suiteAlpha("alpha_d", "Grid D", "0.9", "Bobby-001", "READY", [
+    suiteDeployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", SAT, "8000", "61.2", "3"),
+    suiteDeployment("dep_d2", "alpha_d", "PAPER", "paper", SAT, "10000", "-30.75", "8.4"),
+  ]),
+  suiteAlpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan-002", "READY", [
+    suiteDeployment("dep_live_01", "alpha_btc_trend", "LIVE", "live", CORE, "80000", "1120.8", "55.4"),
+    suiteDeployment("dep_paper_01", "alpha_btc_trend", "PAPER", "paper", CORE, "50000.5", "-125.25", "40.1"),
+  ]),
+];
+
+function rowsFor(environment: string, template: Draft, preset: WindowPreset): Draft[] {
   const universe = scaled();
-  if (universe.alphas.length === 0) return copy(template.items);
+  // The small universe has no generated alphas: the review lane then answers with the e2e suite's own alpha ids and portfolio ids
+  // (SUITE_ALPHAS), one single-book partition per row, so every screen shows real simulated figures instead of the canonical test row.
+  const alphas = universe.alphas.length === 0 ? SUITE_ALPHAS : universe.alphas;
   const rows: Draft[] = [];
   const make = (alpha: AlphaSpec, deployments: DeploymentSpec[]): void => {
     const first = deployments[0]!;
@@ -230,7 +423,7 @@ function rowsFor(environment: string, template: Draft): Draft[] {
       native_profile_ref: `FIXTURE_LAB:${environment}:synthetic`, domain_proof_ref: "FIXTURE_LAB:NOT_PRODUCT_AUTHORITY" }, metrics: copy(row.metrics) }];
     rows.push(row);
   };
-  for (const alpha of universe.alphas) {
+  for (const alpha of alphas) {
     const books = new Map<string, DeploymentSpec[]>();
     for (const deployment of alpha.deployments.filter((entry) => entry.environment === environment)) {
       const key = deployment.portfolioId;
@@ -238,16 +431,107 @@ function rowsFor(environment: string, template: Draft): Draft[] {
     }
     for (const deployments of books.values()) make(alpha, deployments);
   }
-  return rows;
+  return rows.map((row) => enrichRow(windowedRow(row, preset), preset));
+}
+
+/**
+ * FE-CAT-3 (FIXTURE_LAB, populated profile only): `environment=ALL` on the Fleet. Each environment is answered by the SAME single-environment
+ * path above, then merged: rows relabelled with their environment, partitions side by side, per-environment coverage, no total. Simulated
+ * states: Paper is degraded (its own quality), Sandbox is a typed absence (NOT_CONFIGURED), a stage filter that excludes an environment
+ * leaves it a counted zero. The layout-stress profile does not offer ALL (400), so the Portal keeps the fleet read there.
+ */
+const ALL_ORDER = ["paper", "sandbox", "live"] as const;
+function allAnswer(path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse {
+  if (profile !== "populated" || path !== "/manager/fleet" || search.has("window") || search.has("before")) return problem(400, "EXECUTION_READ_QUERY_INVALID", "ALL is the Fleet read of the populated review profile, without a window.");
+  const subs = ALL_ORDER.map((env) => {
+    if (env === "sandbox") return { env, body: null as Draft | null, reason: "NOT_CONFIGURED" as string | null };
+    const params = new URLSearchParams(search);
+    params.set("environment", env); params.set("limit", "200"); params.delete("after"); params.delete("group_by");
+    const stages = params.get("stage_filter")?.split(",").filter((stage) => STAGES[env]!.includes(stage));
+    if (params.has("stage_filter")) { if (stages!.length === 0) params.delete("stage_filter"); else params.set("stage_filter", stages!.join(",")); }
+    const excluded = search.has("stage_filter") && stages!.length === 0;
+    const answer = excluded ? null : datasetAnswer("GET", path, params, profile);
+    if (!excluded && (answer === null || answer.status !== 200)) return { env, body: null, reason: "SOURCE_UNAVAILABLE" };
+    return { env, body: excluded ? { items: [], groups: [], capital_statements: [], quality: { completeness: "COMPLETE", freshness: "FRESH", reasons: [] } } as Draft : copy(answer!.body) as Draft, reason: null };
+  });
+  const first = subs.find((entry) => entry.body !== null && entry.body.snapshot_id !== undefined)?.body;
+  if (!first) return problem(503, "EXECUTION_READ_AUTHORITY_UNAVAILABLE", "No environment answered.");
+  const body = copy(first) as Draft;
+  const merged: Draft[] = [];
+  for (const entry of subs) for (const row of entry.body?.items ?? []) {
+    row.environment = entry.env;
+    row.row_key = JSON.stringify([entry.env, row.alpha_id, row.alpha_version_id, row.portfolio_id]);
+    merged.push(row);
+  }
+  const sort = JSON.parse(search.get("sort") ?? "[]") as Draft[];
+  const textOf = (row: Draft, field: string): string | null => field === "stage_presence" ? row.stage_presence.join(",") : typeof row[field] === "string" ? row[field] : null;
+  merged.sort((a, b) => {
+    for (const key of sort) {
+      const x = textOf(a, key.field); const y = textOf(b, key.field);
+      if (x === y) continue;
+      if (x === null) return 1;
+      if (y === null) return -1;
+      return (x < y ? -1 : 1) * (key.direction === "asc" ? 1 : -1);
+    }
+    return a.row_key < b.row_key ? -1 : a.row_key > b.row_key ? 1 : 0;
+  });
+  const groups = search.has("group_by") ? search.get("group_by")!.split(",") : [];
+  const grouped = new Map<string, { key: Draft[]; rows: Draft[] }>();
+  for (const row of merged) if (groups.length) {
+    const key = groups.map((field) => ({ field, value: textOf(row, field) }));
+    const group = grouped.get(JSON.stringify(key)) ?? { key, rows: [] };
+    group.rows.push(row); grouped.set(JSON.stringify(key), group);
+  }
+  body.groups = [...grouped.values()].map((group) => ({ key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY",
+    economic_partitions: ALL_ORDER.flatMap((env) => aggregate(group.rows.filter((row) => row.environment === env))) }));
+  body.capital_statements = subs.flatMap((entry) => entry.body?.capital_statements ?? []);
+  const limit = Number(search.get("limit") ?? 100);
+  const bound = digest([profile, path, [...search.entries()].filter(([key]) => !["after", "before", "limit"].includes(key)).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)]);
+  const snapshot = digest(["FIXTURE_LAB_SYNTHETIC", profile, "ALL", fixtureNowMs(), merged]);
+  let offset = 0;
+  const cursorText = search.get("after");
+  if (cursorText !== null) {
+    let cursor: Draft;
+    try { cursor = JSON.parse(Buffer.from(cursorText, "base64url").toString("utf8")); } catch { return problem(400, "EXECUTION_READ_QUERY_INVALID", "The cursor was not issued by this review profile."); }
+    if (!cursor || typeof cursor !== "object" || Object.keys(cursor).sort().join(",") !== "b,o,s" || !Number.isSafeInteger(cursor.o) || cursor.o < 0) return problem(400, "EXECUTION_READ_QUERY_INVALID", "The cursor shape is invalid.");
+    if (cursor.b !== bound || cursor.s !== snapshot) return problem(409, "MANAGER_CURSOR_CHANGED", "The cursor belongs to another query, profile or snapshot.");
+    offset = cursor.o;
+    if (offset >= merged.length) return problem(400, "EXECUTION_READ_QUERY_INVALID", "The cursor is outside this result.");
+  }
+  const encode = (at: number): string => Buffer.from(JSON.stringify({ o: at, b: bound, s: snapshot })).toString("base64url");
+  body.items = merged.slice(offset, offset + limit);
+  body.page = { limit, returned_count: body.items.length, authorized_filtered_count: merged.length,
+    next_cursor: offset + limit < merged.length ? encode(offset + limit) : null, previous_cursor: offset > 0 ? encode(Math.max(0, offset - limit)) : null };
+  body.environment = "ALL";
+  body.selected_window = null;
+  body.environment_coverage = subs.map((entry) => {
+    if (entry.body === null) return { environment: entry.env, availability: "UNAVAILABLE", reason_code: entry.reason, snapshot_id: null, as_of_ms: null, recorded_through_ms: null, facts_through_ms: null, quality: null, authorized_filtered_count: null, returned_count: null };
+    const own = merged.filter((row) => row.environment === entry.env).length;
+    const degraded = entry.env === "paper" ? { completeness: "PARTIAL", freshness: "STALE", reasons: ["FIXTURE_LAB_SIMULATED_SOURCE_LAG"] } : { completeness: "COMPLETE", freshness: "FRESH", reasons: [] };
+    return { environment: entry.env, availability: "INCLUDED", reason_code: null, snapshot_id: digest([snapshot, entry.env]), as_of_ms: body.as_of_ms, recorded_through_ms: body.recorded_through_ms,
+      facts_through_ms: body.facts_through_ms, quality: degraded, authorized_filtered_count: own, returned_count: body.items.filter((row: Draft) => row.environment === entry.env).length };
+  });
+  body.quality = { completeness: "PARTIAL", freshness: "STALE", reasons: ["paper:FIXTURE_LAB_SIMULATED_SOURCE_LAG", "sandbox:ENVIRONMENT_UNAVAILABLE:NOT_CONFIGURED"] };
+  body.snapshot_id = snapshot;
+  body.lineage.source_set_ref = digest(["FIXTURE_LAB_SYNTHETIC", profile, "ALL", fixtureNowMs()]);
+  body.lineage.revision = snapshot;
+  body.query_options.sort_fields = body.query_options.sort_fields.slice();
+  return { status: 200, body };
 }
 
 function datasetAnswer(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
+  if (method === "GET" && search.get("environment") === "ALL") return allAnswer(path, search, profile);
   const match = /^\/manager\/(fund-overview|fleet|(?:portfolios|alphas|accounts|deployments)\/([^/]+)\/overview)$/.exec(path);
   if (method !== "GET" || !match) return null;
   const checkedQuery = new URLSearchParams(search);
   checkedQuery.delete("after");
   checkedQuery.delete("before");
   checkedQuery.delete("lifecycle_filter");
+  // SIMULATED window presets: bare (`30D`) or JSON-quoted (`"30D"`, as httpApi encodes it). Any other window shape stays the double's 400.
+  const rawWindow = search.get("window");
+  const windowName = rawWindow === null ? null : (["7D", "30D", "90D", "ALL"] as const).find((name) => rawWindow === name || rawWindow === JSON.stringify(name)) ?? null;
+  if (windowName !== null) checkedQuery.delete("window");
+  const windowPreset: WindowPreset = windowName === null || windowName === "ALL" ? WINDOW_PRESETS["30D"] : WINDOW_PRESETS[windowName];
   const checked = answerManagerFleet("GET", "/manager/fleet", checkedQuery)!;
   if (checked.status !== 200) return checked;
   const filters = JSON.parse(search.get("filters") ?? "[]") as Draft[];
@@ -265,7 +549,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   const surface = match[1] === "fleet" ? "FLEET" : match[1] === "fund-overview" ? "FUND" : ({ portfolios: "PORTFOLIO", alphas: "ALPHA", accounts: "ACCOUNT", deployments: "DEPLOYMENT" } as Record<string, string>)[match[1]!.split("/")[0]!]!;
   let id: string | undefined;
   try { id = match[2] === undefined ? undefined : decodeURIComponent(match[2]); } catch { return problem(400, "EXECUTION_READ_QUERY_INVALID", "The resource id is not URI text."); }
-  let rows = rowsFor(environment, template);
+  let rows = rowsFor(environment, template, windowPreset);
   const universe = scaled();
   if (id !== undefined) {
     const known = surface === "PORTFOLIO" ? universe.portfolios.some((entry) => entry.id === id) : surface === "ALPHA" ? universe.alphas.some((entry) => entry.id === id)
@@ -278,7 +562,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
       for (const row of rows) {
         const children = row.children.filter((child: Draft) => child[surface === "ACCOUNT" ? "account_id" : "deployment_id"] === id);
         if (children.length !== row.children.length) {
-          for (const key of Object.keys(row.metrics)) row.metrics[key] = metric(row.metrics[key], null, row.economic_partitions[0].partition.currency);
+          for (const key of Object.keys(row.metrics)) row.metrics[key] = nulled(key, row.metrics[key], row.economic_partitions[0].partition.currency);
           row.economic_partitions[0].metrics = copy(row.metrics);
         }
         row.children = children;
@@ -290,7 +574,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
     const children = row.children.filter((child: Draft) => stages.includes(child.stage));
     if (!children.length) return [];
     if (children.length !== row.children.length) {
-      for (const key of Object.keys(row.metrics)) row.metrics[key] = metric(row.metrics[key], null, row.economic_partitions[0].partition.currency);
+      for (const key of Object.keys(row.metrics)) row.metrics[key] = nulled(key, row.metrics[key], row.economic_partitions[0].partition.currency);
       row.economic_partitions[0].metrics = copy(row.metrics);
     }
     row.children = children;
@@ -330,6 +614,14 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
     grouped.set(encoded, group);
   }
   body.groups = [...grouped.values()].map((group) => ({ key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY", economic_partitions: aggregate(group.rows) }));
+  // SIMULATED (FE-CAT-5): in a read grouped by alpha_id alone, the first group's first partition publishes a true zero net_pnl
+  // and the second group's first partition publishes none (a typed absence, SOURCE_FACTS_NOT_PUBLISHED).
+  if (groups.length === 1 && groups[0] === "alpha_id") {
+    body.groups.slice(0, 2).forEach((group: Draft, index: number) => {
+      const entry = group.economic_partitions[0];
+      if (entry?.metrics.net_pnl) entry.metrics.net_pnl = metric(entry.metrics.net_pnl, index === 0 ? "0" : null, entry.partition.currency);
+    });
+  }
   const bound = digest([profile, path, [...search.entries()].filter(([key]) => !["after", "before", "limit"].includes(key)).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)]);
   const snapshot = digest(["FIXTURE_LAB_SYNTHETIC", profile, environment, body.workspace_id, fixtureNowMs(), rows]);
   const limit = Number(search.get("limit") ?? 100);
@@ -353,6 +645,14 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   // Keep the published descriptor; numeric requests receive the original explicit 400 above,
   // never a body that silently ignores them. This review module is not the production query engine.
   body.query_options = copy(template.query_options);
+  // SIMULATED metric keys (README): rows carry exactly the keys the dataset names; each is also offered as a sort field.
+  for (const key of NEW_ROW_KEYS) {
+    body.query_options.metric_keys.push(key);
+    if (!body.query_options.sort_fields.includes(key)) body.query_options.sort_fields.push(key);
+  }
+  body.query_options.economic_partition_required_for.push("balance_total", "equity_30d_end_value");
+  if (!body.query_options.window.independent_metrics.includes("balance_total")) body.query_options.window.independent_metrics.push("balance_total");
+  if (windowName !== null) applyWindow(body, windowName, windowPreset);
   if (Buffer.byteLength(JSON.stringify(body)) > body.query_policy.maximum_response_bytes) return problem(400, "MANAGER_REVIEW_RESPONSE_TOO_LARGE", "Reduce limit/grouping for this bounded review response.");
   return { status: 200, body };
 }

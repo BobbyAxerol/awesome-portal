@@ -30,12 +30,12 @@ import { formatAsOf } from "../../boundary";
 import { Flag } from "../../Flag";
 import {
   SEVERITIES_V2, TARGET_TYPES_V2, TRIAGE_STATES_V2, VERIFICATION_RESULTS_V2,
-  type OperationalQueueQueryV2, type OperationalQueueV2, type OperationV2, type SeverityV2,
+  type HealthCountV2, type OperationalQueueQueryV2, type OperationalQueueV2, type OperationV2, type SeverityV2,
   type TargetTypeV2, type TriageStateV2, type VerificationResultV2,
 } from "../../readers/operationalQueue";
 import { ENV_LABEL, EXEC_ENVS, serializeUrlParams, useExecUrlState, type ExecEnv } from "../../urlState";
 import { IncidentRootDrawer } from "./IncidentRootDrawer";
-import { ACCESS_PATH, AccessLink, FE, NotPublished, notPublishedReason } from "./notPublished";
+import { ACCESS_PATH, AccessLink, FE, FE_B1, NotPublished, notPublishedReason, type FeId } from "./notPublished";
 import { OperationDock } from "./OperationDock";
 import {
   invalidNotice, legacyFilterNotice, OPS_WINDOWS, readOpsUrl, writeOpsUrl, type Filters, type OpsWindow,
@@ -104,6 +104,15 @@ type Load =
     };
 
 const CURSOR_GONE = /OPERATIONAL_READ_(CHANGED|CURSOR_INVALID)/;
+
+/**
+ * One published health count (FE-CAT-2) as a KPI. A number is printed exactly as received (a counted 0 is 0); a PARTIAL one says it
+ * is a floor. `null` (the owning source did not report it) is "Not published", never 0; an omitted key never reaches here.
+ */
+function HealthKpi({ label, entry, id, basis }: { label: string; entry: HealthCountV2; id: FeId; basis: string }) {
+  if (entry.count === null) return <Kpi label={label} absentReason={`Not published (${id}): the source did not report it.`} />;
+  return <Kpi label={label} value={entry.count.toLocaleString("en-US")} basis={entry.coverage === "PARTIAL" ? `${basis} · at least: some rows did not report` : basis} />;
+}
 
 function number(n: number): string {
   return n.toLocaleString("en-US");
@@ -344,6 +353,25 @@ export default function OperationsV2({
       </div>
 
       {ready ? (
+        <KpiStrip label="Operations health" columns={4}>
+          {/* Unknown outcomes: the server's UNCERTAIN verification bucket, printed as received (FE-043). */}
+          {ready.queue.page.statusCounts
+            ? <Kpi label="Unknown outcomes" value={number(ready.queue.page.statusCounts.verificationResult.counts.UNCERTAIN)} basis="Verification uncertain" />
+            : <Kpi label="Unknown outcomes" absentReason={`Not published (${FE_B1.counts}): the server sent no status counts.`} />}
+          {/* FE-CAT-2: counted by the server over the whole filtered set, never from the loaded rows. Without them the old gaps stay. */}
+          {ready.queue.page.health?.pendingReceipt
+            ? <HealthKpi label="Pending receipts" entry={ready.queue.page.health.pendingReceipt} id={FE.receipts} basis="Awaiting a receipt" />
+            : <Kpi label="Pending receipts" notPublished={FE.receipts} />}
+          {ready.queue.page.health?.displayLag
+            ? <HealthKpi label="Display catching up" entry={ready.queue.page.health.displayLag} id={FE.receipts} basis="Display behind the queue" />
+            : <Kpi label="Display catching up" absentReason="The queue read publishes no projection display state." />}
+          {ready.queue.page.health?.openException
+            ? <HealthKpi label="Open exceptions" entry={ready.queue.page.health.openException} id={FE.events} basis="Open in this scope" />
+            : <Kpi label="Open exceptions" notPublished={FE.events} />}
+        </KpiStrip>
+      ) : null}
+
+      {ready ? (
         <KpiStrip label="Queue counts" columns={4}>
           <Kpi label="In scope" value={number(ready.queue.page.totalCount)} />
           <Kpi label="Matching" value={number(ready.queue.page.filteredCount)} />
@@ -540,8 +568,6 @@ export default function OperationsV2({
                 <NotAvailableLine
                   className="exec-ops-na-line"
                   facts={[
-                    { label: "Intent", id: "FE-020", why: "Whether the command was only previewed" },
-                    { label: "Display", id: "FE-032", why: "Whether the figures shown have caught up" },
                     ...(ready?.rows.some((row) => row.incidentLinks === undefined) ? [{ label: "Linked incidents", id: "FE-042" as const, why: "An older server body omits the field" }] : []),
                   ]}
                 />

@@ -15,10 +15,12 @@ import { DockAction, Drawer, type DockMode } from "../../Drawer";
 import { Flag } from "../../Flag";
 import type { ManagerRow } from "../../readers/managerDataset";
 import { withContext } from "../../urlState";
-import { inStageOf, lifecycleFlagOf, stageViewOf } from "./fleetDatasetModel";
+import { ENVIRONMENT_LABEL, inStageOf, lifecycleFlagOf, stageViewOf } from "./fleetDatasetModel";
 import { alphaHref, FE, healthView, humanize, notPublished } from "./fleetModel";
 import { spineStage } from "./FleetTable";
 import { formatInstant } from "../../boundary";
+
+import "./partitionFigures.css";
 
 export interface FleetDatasetDrawerProps {
   /** The `sel` value (a row key). */
@@ -97,6 +99,7 @@ export function FleetDatasetDrawer({ rowKey, row, loading, mode, onClose }: Flee
         <section aria-label="Identity">
           <h3 className="exec-fleet-h">Identity</h3>
           <dl className="exec-fleet-facts">
+            {row.environment !== undefined ? <Fact label="Environment"><span className="exec-fleet-env-tag" data-environment={row.environment}>{ENVIRONMENT_LABEL[row.environment]}</span></Fact> : null}
             <Fact label="Alpha id"><span className="exec-fleet-mono">{row.alphaId}</span></Fact>
             <Fact label="Owner">{row.ownerUserId ?? <span className="exec-fleet-na">Not available</span>}</Fact>
             <Fact label="Portfolio">{row.portfolioId}</Fact>

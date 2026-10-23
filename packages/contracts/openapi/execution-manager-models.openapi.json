@@ -13,7 +13,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile.",
+        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile.",
         "parameters": [
           {
             "name": "workspace_id",
@@ -35,7 +35,8 @@
               "enum": [
                 "paper",
                 "sandbox",
-                "live"
+                "live",
+                "ALL"
               ]
             }
           },
@@ -977,7 +978,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile.",
+        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile.",
         "parameters": [
           {
             "name": "workspace_id",
@@ -999,7 +1000,8 @@
               "enum": [
                 "paper",
                 "sandbox",
-                "live"
+                "live",
+                "ALL"
               ]
             }
           },
@@ -1941,7 +1943,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile.",
+        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile.",
         "parameters": [
           {
             "name": "id",
@@ -1973,7 +1975,8 @@
               "enum": [
                 "paper",
                 "sandbox",
-                "live"
+                "live",
+                "ALL"
               ]
             }
           },
@@ -2915,7 +2918,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile.",
+        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile.",
         "parameters": [
           {
             "name": "id",
@@ -2947,7 +2950,8 @@
               "enum": [
                 "paper",
                 "sandbox",
-                "live"
+                "live",
+                "ALL"
               ]
             }
           },
@@ -3889,7 +3893,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile.",
+        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile.",
         "parameters": [
           {
             "name": "id",
@@ -3921,7 +3925,8 @@
               "enum": [
                 "paper",
                 "sandbox",
-                "live"
+                "live",
+                "ALL"
               ]
             }
           },
@@ -4863,7 +4868,7 @@
             "PortalSession": []
           }
         ],
-        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile.",
+        "description": "Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile.",
         "parameters": [
           {
             "name": "id",
@@ -4895,7 +4900,8 @@
               "enum": [
                 "paper",
                 "sandbox",
-                "live"
+                "live",
+                "ALL"
               ]
             }
           },
@@ -8085,8 +8091,250 @@
             "enum": [
               "paper",
               "sandbox",
-              "live"
-            ]
+              "live",
+              "ALL"
+            ],
+            "description": "A single environment, or ALL (Fleet only): navigation across separately authorized environments. An ALL body lists the authorized rows of every environment that answered, each row with its own environment and economic partitions, plus environment_coverage. It never carries a total over environments or partitions."
+          },
+          "environment_coverage": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "environment": {
+                  "type": "string",
+                  "enum": [
+                    "paper",
+                    "sandbox",
+                    "live"
+                  ]
+                },
+                "availability": {
+                  "type": "string",
+                  "enum": [
+                    "INCLUDED",
+                    "UNAVAILABLE"
+                  ]
+                },
+                "reason_code": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "NOT_AVAILABLE_TO_VIEWER",
+                        "NOT_CONFIGURED",
+                        "POLICY_PENDING",
+                        "PUBLICATION_NOT_QUALIFIED",
+                        "SOURCE_UNAVAILABLE",
+                        "CHANGED_DURING_READ",
+                        "SCOPE_LIMIT_EXCEEDED"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "snapshot_id": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "as_of_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "recorded_through_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "facts_through_ms": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "quality": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "completeness": {
+                          "type": "string",
+                          "enum": [
+                            "COMPLETE",
+                            "PARTIAL",
+                            "UNRESOLVED"
+                          ]
+                        },
+                        "freshness": {
+                          "type": "string",
+                          "enum": [
+                            "FRESH",
+                            "STALE",
+                            "UNKNOWN"
+                          ]
+                        },
+                        "reasons": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256,
+                            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                          },
+                          "maxItems": 32
+                        }
+                      },
+                      "required": [
+                        "completeness",
+                        "freshness",
+                        "reasons"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "authorized_filtered_count": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "returned_count": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 200
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "environment",
+                "availability",
+                "reason_code",
+                "snapshot_id",
+                "as_of_ms",
+                "recorded_through_ms",
+                "facts_through_ms",
+                "quality",
+                "authorized_filtered_count",
+                "returned_count"
+              ],
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "availability": {
+                        "const": "INCLUDED"
+                      }
+                    },
+                    "required": [
+                      "availability"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "null"
+                      },
+                      "snapshot_id": {
+                        "type": "string"
+                      },
+                      "as_of_ms": {
+                        "type": "integer"
+                      },
+                      "recorded_through_ms": {
+                        "type": "integer"
+                      },
+                      "quality": {
+                        "type": "object"
+                      },
+                      "authorized_filtered_count": {
+                        "type": "integer"
+                      },
+                      "returned_count": {
+                        "type": "integer"
+                      }
+                    }
+                  },
+                  "else": {
+                    "properties": {
+                      "reason_code": {
+                        "type": "string"
+                      },
+                      "snapshot_id": {
+                        "type": "null"
+                      },
+                      "as_of_ms": {
+                        "type": "null"
+                      },
+                      "recorded_through_ms": {
+                        "type": "null"
+                      },
+                      "facts_through_ms": {
+                        "type": "null"
+                      },
+                      "quality": {
+                        "type": "null"
+                      },
+                      "authorized_filtered_count": {
+                        "type": "null"
+                      },
+                      "returned_count": {
+                        "type": "null"
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            "minItems": 3,
+            "maxItems": 3,
+            "description": "ALL only: exactly one entry per environment, in the order paper, sandbox, live. INCLUDED carries that environment's own snapshot, clocks, quality and counts (a counted zero is INCLUDED with 0). UNAVAILABLE carries a closed reason and nothing else: a missing environment is typed, never absent and never zero. page.authorized_filtered_count and page.returned_count are the sums of the INCLUDED entries (rows, never money); quality is never COMPLETE while an environment is UNAVAILABLE (MANAGER_ALL_*)."
           },
           "record_authority": {
             "const": "PORTAL_PROJECTION"
@@ -9113,6 +9361,15 @@
                   "maxItems": 200,
                   "uniqueItems": true,
                   "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items."
+                },
+                "environment": {
+                  "type": "string",
+                  "enum": [
+                    "paper",
+                    "sandbox",
+                    "live"
+                  ],
+                  "description": "ALL only: the environment this row belongs to. row_key is [environment, alpha_id, alpha_version_id, portfolio_id] and every economic partition of the row is of that environment's economic domain (live: ACTUAL)."
                 }
               },
               "required": [
@@ -14767,6 +15024,70 @@
                 }
               }
             }
+          },
+          {
+            "if": {
+              "properties": {
+                "environment": {
+                  "const": "ALL"
+                }
+              },
+              "required": [
+                "environment"
+              ]
+            },
+            "then": {
+              "type": "object",
+              "required": [
+                "environment_coverage"
+              ],
+              "properties": {
+                "environment_coverage": {},
+                "selected_window": {
+                  "type": "null"
+                },
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": [
+                      "environment"
+                    ],
+                    "properties": {
+                      "environment": {}
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "not": {
+                "type": "object",
+                "required": [
+                  "environment_coverage"
+                ],
+                "properties": {
+                  "environment_coverage": {}
+                }
+              },
+              "type": "object",
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "not": {
+                      "type": "object",
+                      "required": [
+                        "environment"
+                      ],
+                      "properties": {
+                        "environment": {}
+                      }
+                    }
+                  }
+                }
+              }
+            }
           }
         ]
       },
@@ -14785,7 +15106,8 @@
             "enum": [
               "paper",
               "sandbox",
-              "live"
+              "live",
+              "ALL"
             ]
           },
           "q": {
@@ -15645,6 +15967,29 @@
                       "LIVE"
                     ]
                   }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "environment": {
+                  "const": "ALL"
+                }
+              },
+              "required": [
+                "environment"
+              ]
+            },
+            "then": {
+              "not": {
+                "type": "object",
+                "required": [
+                  "window"
+                ],
+                "properties": {
+                  "window": {}
                 }
               }
             }
@@ -16786,6 +17131,14 @@
             "maxItems": 200,
             "uniqueItems": true,
             "description": "A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items."
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
           }
         },
         "required": [

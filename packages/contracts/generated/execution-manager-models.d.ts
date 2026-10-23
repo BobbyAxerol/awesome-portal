@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile. */
+        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile. */
         get: operations["executionManagerFundOverviewGetV1"];
         put?: never;
         post?: never;
@@ -28,7 +28,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile. */
+        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile. */
         get: operations["executionManagerFleetGetV1"];
         put?: never;
         post?: never;
@@ -45,7 +45,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile. */
+        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile. */
         get: operations["executionManagerPortfolio360GetV1"];
         put?: never;
         post?: never;
@@ -62,7 +62,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile. */
+        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile. */
         get: operations["executionManagerAlpha360GetV1"];
         put?: never;
         post?: never;
@@ -79,7 +79,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile. */
+        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile. */
         get: operations["executionManagerAccount360GetV1"];
         put?: never;
         post?: never;
@@ -96,7 +96,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile. */
+        /** @description Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile. */
         get: operations["executionManagerDeployment360GetV1"];
         put?: never;
         post?: never;
@@ -261,8 +261,32 @@ export interface components {
                 /** @constant */
                 entry_time: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
             };
-            /** @enum {string} */
-            environment: "paper" | "sandbox" | "live";
+            /**
+             * @description A single environment, or ALL (Fleet only): navigation across separately authorized environments. An ALL body lists the authorized rows of every environment that answered, each row with its own environment and economic partitions, plus environment_coverage. It never carries a total over environments or partitions.
+             * @enum {string}
+             */
+            environment: "paper" | "sandbox" | "live" | "ALL";
+            /** @description ALL only: exactly one entry per environment, in the order paper, sandbox, live. INCLUDED carries that environment's own snapshot, clocks, quality and counts (a counted zero is INCLUDED with 0). UNAVAILABLE carries a closed reason and nothing else: a missing environment is typed, never absent and never zero. page.authorized_filtered_count and page.returned_count are the sums of the INCLUDED entries (rows, never money); quality is never COMPLETE while an environment is UNAVAILABLE (MANAGER_ALL_*). */
+            environment_coverage?: ({
+                /** @enum {string} */
+                environment: "paper" | "sandbox" | "live";
+                /** @enum {string} */
+                availability: "INCLUDED" | "UNAVAILABLE";
+                reason_code: ("NOT_AVAILABLE_TO_VIEWER" | "NOT_CONFIGURED" | "POLICY_PENDING" | "PUBLICATION_NOT_QUALIFIED" | "SOURCE_UNAVAILABLE" | "CHANGED_DURING_READ" | "SCOPE_LIMIT_EXCEEDED") | null;
+                snapshot_id: string | null;
+                as_of_ms: number | null;
+                recorded_through_ms: number | null;
+                facts_through_ms: number | null;
+                quality: {
+                    /** @enum {string} */
+                    completeness: "COMPLETE" | "PARTIAL" | "UNRESOLVED";
+                    /** @enum {string} */
+                    freshness: "FRESH" | "STALE" | "UNKNOWN";
+                    reasons: string[];
+                } | null;
+                authorized_filtered_count: number | null;
+                returned_count: number | null;
+            } & unknown)[];
             /** @constant */
             record_authority: "PORTAL_PROJECTION";
             /** @constant */
@@ -400,6 +424,11 @@ export interface components {
                         } & (unknown & unknown);
                     };
                 }[];
+                /**
+                 * @description ALL only: the environment this row belongs to. row_key is [environment, alpha_id, alpha_version_id, portfolio_id] and every economic partition of the row is of that environment's economic domain (live: ACTUAL).
+                 * @enum {string}
+                 */
+                environment?: "paper" | "sandbox" | "live";
             } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown))[];
             /** @description A group appears once (identity: key) and holds no more unique rows than page.authorized_filtered_count (MANAGER_GROUP_DUPLICATE, MANAGER_GROUP_COUNT_OVER_FILTERED). Its key names a field of query_options.group_fields once (MANAGER_GROUP_FIELD_NOT_OFFERED). */
             groups: {
@@ -853,11 +882,11 @@ export interface components {
                 revision: string;
                 supersedes_revision: string | null;
             };
-        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerDatasetQuery: {
             workspace_id?: string;
             /** @enum {string} */
-            environment: "paper" | "sandbox" | "live";
+            environment: "paper" | "sandbox" | "live" | "ALL";
             q?: string;
             /** @enum {string} */
             q_mode?: "PREFIX" | "CONTAINS";
@@ -904,7 +933,7 @@ export interface components {
             limit?: number;
             after?: string;
             before?: string;
-        } & (unknown & unknown & unknown & unknown & unknown);
+        } & (unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerMetric: {
             value: string | null;
             unit: string;
@@ -1031,6 +1060,8 @@ export interface components {
                     } & (unknown & unknown);
                 };
             }[];
+            /** @enum {string} */
+            environment?: "paper" | "sandbox" | "live";
         } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerScorePublication: {
             /** @enum {string} */
@@ -2925,7 +2956,7 @@ export interface operations {
         parameters: {
             query: {
                 workspace_id?: string;
-                environment: "paper" | "sandbox" | "live";
+                environment: "paper" | "sandbox" | "live" | "ALL";
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3003,7 +3034,7 @@ export interface operations {
         parameters: {
             query: {
                 workspace_id?: string;
-                environment: "paper" | "sandbox" | "live";
+                environment: "paper" | "sandbox" | "live" | "ALL";
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3081,7 +3112,7 @@ export interface operations {
         parameters: {
             query: {
                 workspace_id?: string;
-                environment: "paper" | "sandbox" | "live";
+                environment: "paper" | "sandbox" | "live" | "ALL";
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3161,7 +3192,7 @@ export interface operations {
         parameters: {
             query: {
                 workspace_id?: string;
-                environment: "paper" | "sandbox" | "live";
+                environment: "paper" | "sandbox" | "live" | "ALL";
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3241,7 +3272,7 @@ export interface operations {
         parameters: {
             query: {
                 workspace_id?: string;
-                environment: "paper" | "sandbox" | "live";
+                environment: "paper" | "sandbox" | "live" | "ALL";
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;
@@ -3321,7 +3352,7 @@ export interface operations {
         parameters: {
             query: {
                 workspace_id?: string;
-                environment: "paper" | "sandbox" | "live";
+                environment: "paper" | "sandbox" | "live" | "ALL";
                 q?: string;
                 q_mode?: "PREFIX" | "CONTAINS";
                 window?: string;

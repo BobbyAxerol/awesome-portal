@@ -10,10 +10,10 @@ import { CONTROL_API_CONFIG } from "../tokens";
 import { f0ReadRecord } from "./f0-read.contract";
 import { IdentifierSchema } from "./contracts";
 import { CurrentOperationalReads, OperationalReadError, operationalHttpCall, type PreparedOperationalRead } from "./current-operational-read";
-import { OPERATIONAL_INCIDENT_LINK_BOUND, operationalQueue, operationalQueueItem, operationalQueueQuery, operationalStatusCountDimensions,
+import { OPERATIONAL_INCIDENT_LINK_BOUND, operationalDeliveryStates, operationalDisplayStates, operationalQueue, operationalQueueItem, operationalQueueQuery, operationalStatusCountDimensions,
   operationalWorkflow, operationalIncident, type OperationalIncidentLink, type OperationalIncidentLinks, type OperationalQueue,
   type OperationalQueueItem, type OperationalStatusCountDimension, type OperationalStatusCounts, type OperationalWorkflow,
-  type OperationalIncident } from "./operational-read.contract";
+  type OperationalIncident, type OperationalQueueHealth } from "./operational-read.contract";
 import { OperationalReadRepository } from "./operational-read.repository";
 
 const columns = ["operation_id", "operation_kind", "command_key", "target_type", "target_id", "environment",
@@ -47,7 +47,58 @@ export const operationalQueueResource: PostgresListResource<QueryResultRow, Oper
 };
 const resource = operationalQueueResource;
 type LinkRow = QueryResultRow & { operation_id: string };
-export type QueueSnapshot = { links: ReadonlyMap<string, OperationalIncidentLinks>; counts: OperationalStatusCounts };
+export type QueueAxes = { delivery_state: string | null; display_state: string | null };
+export type QueueHealthGroups = { delivery?: ReadonlyMap<string, number>; display?: ReadonlyMap<string, number>;
+  exceptions?: { count: number | null } };
+export type QueueSnapshot = { links: ReadonlyMap<string, OperationalIncidentLinks>; counts: OperationalStatusCounts;
+  /** FE-CAT-2. Present only when the plan named a source; otherwise the health and the row axes are omitted. */
+  axes?: ReadonlyMap<string, Partial<QueueAxes>>; health?: QueueHealthGroups };
+
+/**
+ * FE-CAT-2. What the projection view carries for the queue health. The production view has NONE of these columns today (no
+ * migration), so the service passes no plan and publishes no health and no axes. A plan is the day Edge/Core add them:
+ * `delivery_state` / `display_state` are NON-NULL closed-domain view columns whose extra value `NOT_REPORTED` (the source did
+ * not report the axis for that row) is published as JSON null; `exceptions` counts the owning source's open exceptions under
+ * the same scope inside the same snapshot.
+ */
+export interface QueueHealthPlan {
+  delivery?: boolean; display?: boolean;
+  exceptions?: (lent: PostgresSnapshotReader<QueryResultRow>) => Promise<{ count: number | null }>;
+}
+export const QUEUE_NOT_REPORTED = "NOT_REPORTED";
+/** The resource with the plan's columns selected and countable; only used when a plan exists. */
+export function queueHealthResource(plan: QueueHealthPlan): Partial<typeof operationalQueueResource> {
+  const extra = [...(plan.delivery ? ["delivery_state"] : []), ...(plan.display ? ["display_state"] : [])];
+  return { selectColumns: [...columns, ...extra], filters: { ...operationalQueueResource.filters,
+    ...Object.fromEntries(extra.map(column => [column, { column, kind: "text" as const, operators: ["eq" as const], maxLength: 64 }])) } };
+}
+const axisDomain = { delivery_state: operationalDeliveryStates, display_state: operationalDisplayStates } as const;
+function axisValue(field: keyof typeof axisDomain, raw: unknown): string | null {
+  if (raw === QUEUE_NOT_REPORTED) return null;
+  if (typeof raw !== "string" || !(axisDomain[field] as readonly string[]).includes(raw)) throw new OperationalReadError("OPERATIONAL_READ_UNAVAILABLE");
+  return raw;
+}
+/** One axis, counted over the WHOLE authorized filtered set by the engine (never the loaded rows): its groups must add up to
+ * exactly `filteredCount`, so a count taken over any other set fails closed. PARTIAL = some rows did not report the axis. */
+function axisCount(field: keyof typeof axisDomain, wanted: string, groups: ReadonlyMap<string, number>, filteredCount: number, observedAt: string) {
+  let sum = 0;
+  for (const [value, n] of groups) {
+    if (value !== QUEUE_NOT_REPORTED) axisValue(field, value);
+    sum += n;
+  }
+  if (sum !== filteredCount) throw new OperationalReadError("OPERATIONAL_READ_UNAVAILABLE");
+  return { count: groups.get(wanted) ?? 0, observed_at: observedAt,
+    coverage: (groups.get(QUEUE_NOT_REPORTED) ?? 0) === 0 ? "COMPLETE" as const : "PARTIAL" as const };
+}
+/** Health from the counts the same snapshot produced; `undefined` when no source was named (publish nothing, never 0). */
+export function queueHealth(groups: QueueHealthGroups | undefined, filteredCount: number, observedAt: string): OperationalQueueHealth | undefined {
+  if (!groups || (!groups.delivery && !groups.display && !groups.exceptions)) return undefined;
+  return { basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS",
+    ...(groups.delivery ? { pending_receipt_count: axisCount("delivery_state", "AWAITING_RECEIPT", groups.delivery, filteredCount, observedAt) } : {}),
+    ...(groups.display ? { display_lag_count: axisCount("display_state", "CATCHING_UP", groups.display, filteredCount, observedAt) } : {}),
+    ...(groups.exceptions ? { open_exception_count: groups.exceptions.count === null ?
+      { count: null, observed_at: null, coverage: "UNKNOWN" as const } : { count: groups.exceptions.count, observed_at: observedAt, coverage: "COMPLETE" as const } } : {}) };
+}
 const noLinks = (): OperationalIncidentLinks => ({ basis: "CURRENT_LINK_ROWS_AUTHORIZED_INCIDENTS_ONLY",
   bound: OPERATIONAL_INCIDENT_LINK_BOUND, authorized_link_count: 0, truncated: false, items: [] });
 /** A link whose incident identity or time cannot be represented exactly is a typed NOT_ATTESTED item that
@@ -73,7 +124,8 @@ function groupLinks(rows: readonly QueryResultRow[]): Map<string, OperationalInc
 /** The extra reads of the queue page, run INSIDE the page's own snapshot: incident links and the four
  * group-counts. Exported so the large-scale EXPLAIN gate runs exactly this code, not a copy. */
 export async function readQueueSnapshot(repository: Pick<OperationalReadRepository, "incidentLinks">, workspaceId: string,
-  scope: PostgresRowScope, selected: readonly RawFilterInput[], lent: PostgresSnapshotReader<QueryResultRow>): Promise<QueueSnapshot> {
+  scope: PostgresRowScope, selected: readonly RawFilterInput[], lent: PostgresSnapshotReader<QueryResultRow>,
+  plan?: QueueHealthPlan): Promise<QueueSnapshot> {
   const ids = lent.rows.map(row => row.operation_id).filter((id): id is string => typeof id === "string");
   const links = groupLinks(await repository.incidentLinks(lent, workspaceId, ids, scope));
   const dimensions: Record<string, unknown> = {};
@@ -85,20 +137,35 @@ export async function readQueueSnapshot(repository: Pick<OperationalReadReposito
     dimensions[field] = { own_filter_applied: selected.some(filter => filter.field === field),
       total: Object.values(counts).reduce((sum, value) => sum + value, 0), counts };
   }
-  return { links, counts: { basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS_EXCLUDING_OWN_DIMENSION",
-    succeeded_means: "PORTAL_QUEUE_RECORD_STATE_ONLY", dimensions } as OperationalStatusCounts };
+  const counts = { basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS_EXCLUDING_OWN_DIMENSION",
+    succeeded_means: "PORTAL_QUEUE_RECORD_STATE_ONLY", dimensions } as OperationalStatusCounts;
+  if (!plan || (!plan.delivery && !plan.display && !plan.exceptions)) return { links, counts };
+  // FE-CAT-2: every figure below is the engine's count under the minted scope and ALL applied filters (none excluded), in this
+  // transaction. The loaded rows are used only for their own per-row axes, never to count.
+  const health: { -readonly [K in keyof QueueHealthGroups]: QueueHealthGroups[K] } = {};
+  const axes = new Map<string, Partial<QueueAxes>>();
+  for (const [flag, field, key] of [[plan.delivery, "delivery_state", "delivery"], [plan.display, "display_state", "display"]] as const) {
+    if (!flag) continue;
+    health[key] = await lent.groupedCounts({ column: field, excludeFilterFields: [], maxGroups: axisDomain[field].length + 1 });
+    for (const row of lent.rows) {
+      if (typeof row.operation_id !== "string") continue;
+      axes.set(row.operation_id, { ...axes.get(row.operation_id), [field]: axisValue(field, row[field]) });
+    }
+  }
+  if (plan.exceptions) health.exceptions = await plan.exceptions(lent);
+  return { links, counts, axes, health };
 }
 /** The whole database part of the queue V2 request: ONE transaction, run by the real engine and the real
  * repository. Exported so the large-scale EXPLAIN gate runs exactly this path, not a copy of its SQL. */
 export function queueSnapshotPage(engine: ControlPlaneQueryService, repository: Pick<OperationalReadRepository, "incidentLinks">,
   actor: QueryActorContext, scope: PostgresRowScope, query: z.infer<typeof operationalQueueQuery>, defaultLimit: number,
-  resourceOverride: Partial<typeof operationalQueueResource> = {}) {
+  resourceOverride: Partial<typeof operationalQueueResource> = {}, plan?: QueueHealthPlan) {
   const selected: RawFilterInput[] = operationalQueueFilters.filter(field => query[field] !== undefined)
     .map(field => ({ field, op: "eq", value: query[field] }));
   return engine.listWithSnapshot<QueryResultRow, OperationalQueueItem, QueueSnapshot>(
     { ...operationalQueueResource, ...resourceOverride, rowScope: scope }, actor,
     { after: query.after, before: query.before, limit: query.limit ?? defaultLimit, sort: query.sort, filters: selected },
-    lent => readQueueSnapshot(repository, actor.workspaceId, scope, selected, lent));
+    lent => readQueueSnapshot(repository, actor.workspaceId, scope, selected, lent, plan));
 }
 function bounded<T>(body: T): T {
   if (Buffer.byteLength(JSON.stringify(body), "utf8") > 1_048_576) throw new OperationalReadError("OPERATIONAL_READ_RESPONSE_BOUND");
@@ -116,6 +183,8 @@ const iso = (value: unknown): string | null => {
 @Injectable()
 export class OperationalReadService {
   private readonly flights: CurrentOperationalReads;
+  /** FE-CAT-2. Empty until the projection view carries the health sources; see `QueueHealthPlan`. */
+  protected readonly healthPlan: QueueHealthPlan | undefined = undefined;
   constructor(@Inject(OperationalReadRepository) private readonly repository: OperationalReadRepository,
     @Inject(ExecutionAccessService) access: ExecutionAccessService,
     @Inject(ExecutionReadScopes) private readonly readScopes: ExecutionReadScopes,
@@ -141,15 +210,18 @@ export class OperationalReadService {
       // are read in the SAME transaction under the SAME minted scope, never page rows or extra calls.
       const { page, snapshot } = await queueSnapshotPage(engine, this.repository,
         { actorId: principal.user.userId, workspaceId: principal.workspaceId, role: principal.user.role },
-        cohort.scope, query, defaultLimit);
-      const rows = page.rows.map(row => ({ ...row, incident_links: snapshot.links.get(row.operation_id) ?? noLinks() }));
+        cohort.scope, query, defaultLimit, this.healthPlan ? queueHealthResource(this.healthPlan) : {}, this.healthPlan);
+      const rows = page.rows.map(row => ({ ...row, incident_links: snapshot.links.get(row.operation_id) ?? noLinks(),
+        ...snapshot.axes?.get(row.operation_id) }));
+      const observedAtMs = Math.max(cohort.context.now_ms, Date.now());
+      const health = queueHealth(snapshot.health, page.filtered_count, new Date(observedAtMs).toISOString());
       const result = bounded(operationalQueue.parse({ schema_version: "portal.execution.operational-queue.v2",
         workspace_id: principal.workspaceId, record_authority: "PORTAL", record_basis: "PORTAL_CURRENT_OPERATIONAL_WORKFLOW",
         coverage: "AUTHORIZED_SUPPORTED_TARGETS_ONLY", supported_target_types: ["ACCOUNT", "PORTFOLIO", "DEPLOYMENT"],
         source_integration_state: "UNAVAILABLE", source_side_effect_requested: false, source_as_of_ms: null,
-        observed_at_ms: Math.max(cohort.context.now_ms, Date.now()),
+        observed_at_ms: observedAtMs,
         read_truth: exactPageReadTruth(page, "NO_MATCHING_AUTHORIZED_PORTAL_OPERATIONS"),
-        page: { ...page, rows, status_counts: snapshot.counts } }));
+        page: { ...page, rows, status_counts: snapshot.counts, ...(health ? { health } : {}) } }));
       return { result };
     }));
   }

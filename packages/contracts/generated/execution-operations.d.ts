@@ -549,6 +549,7 @@ export interface components {
                     direction: "asc" | "desc";
                 }[];
                 status_counts?: components["schemas"]["OperationalStatusCountsV2"];
+                health?: components["schemas"]["OperationalQueueHealthV2"];
             };
         };
         /** @description Actual immutable workspace/id/key/target/environment/source queue-F0 join, not inferred family. provenance_basis distinguishes exact SQL timestamp copy from the existing writer's historical JS Date millisecond truncation (not arbitrary tolerance); historical bytes are not rewritten. Different author with full exact current audit is allowed; explicit F0 routes retain their own-author ceiling. Runtime additionally enforces operation ids equal; original planning expiry is not read expiry. */
@@ -829,7 +830,7 @@ export interface components {
                 };
             };
         };
-        /** @description OperationalQueueItemV2 plus the OPTIONAL additive FE-042 incident_links; absent on a server that predates it. A current server always sends it (possibly with zero authorized links). The workflow detail keeps the unextended item. */
+        /** @description OperationalQueueItemV2 plus the OPTIONAL additive FE-042 incident_links and FE-CAT-2 delivery_state / display_state axes (each nullable: null = the owning source did not report it; omitted = this producer has no owning source); absent on a server that predates them. A current server always sends it (possibly with zero authorized links). The workflow detail keeps the unextended item. */
         OperationalQueueRowV2: {
             operation_id: string;
             /** @constant */
@@ -862,6 +863,23 @@ export interface components {
             /** Format: date-time */
             updated_at: string;
             incident_links?: components["schemas"]["OperationalIncidentLinksV2"];
+            delivery_state?: ("NOT_APPLICABLE" | "AWAITING_RECEIPT" | "RECEIPT_CONFIRMED" | "RECEIPT_FAILED") | null;
+            display_state?: ("CURRENT" | "CATCHING_UP" | "STALE") | null;
+        };
+        /** @description FE-CAT-2. One health count with its own observation time and coverage. count is an integer or null: null means the owning source did not report it (not computable), 0 is a counted zero. count null requires observed_at null and coverage UNKNOWN; a number requires observed_at and coverage COMPLETE or PARTIAL. PARTIAL means some authorized filtered rows did not report the axis, so the number is a floor, never a total. observed_at is when the Portal counted it inside the page snapshot, not a source clock. Runtime additionally enforces that the two row-derived counts are <= page.filtered_count. */
+        OperationalHealthCountV2: {
+            count: number | null;
+            observed_at: string | null;
+            /** @enum {string} */
+            coverage: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+        };
+        /** @description FE-CAT-2. OPTIONAL additive queue health, counted inside the SAME repeatable-read snapshot, minted audit scope and applied filters as total_count, filtered_count and the page rows (the whole authorized filtered set, never the loaded rows; rows the caller may not see are never counted). A key that is OMITTED means this producer has no owning source for it (the reader prints 'Not published', never 0). pending_receipt_count = rows whose delivery_state is AWAITING_RECEIPT; display_lag_count = rows whose display_state is CATCHING_UP; open_exception_count = open exceptions the owning source counts for the same authorized scope. Absent on a server that predates it. */
+        OperationalQueueHealthV2: {
+            /** @constant */
+            basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS";
+            pending_receipt_count?: components["schemas"]["OperationalHealthCountV2"];
+            display_lag_count?: components["schemas"]["OperationalHealthCountV2"];
+            open_exception_count?: components["schemas"]["OperationalHealthCountV2"];
         };
         Identifier: string;
         /** Format: date-time */

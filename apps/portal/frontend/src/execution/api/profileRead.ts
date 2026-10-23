@@ -545,6 +545,43 @@ export interface BindingItem {
   state: string;
   credentialState: string;
   updatedAt: string;
+  /** FE-CAT-4. Present only when the producer published list figures for this row; absent means "read the row's two carriers". */
+  figures?: BindingFigures;
+}
+
+/** One exact amount in one currency, as the owning source observed it. Never converted, never summed across currencies. */
+export interface BindingAmountFigure {
+  currency: string;
+  /** The published decimal string, unchanged. */
+  value: string;
+  observedAt: string;
+  coverage: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+}
+
+export interface BindingSleeveFigure {
+  count: number;
+  observedAt: string;
+  coverage: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+}
+
+/**
+ * A key that is absent was not published (this producer has no owning source for it); `null` is the owning source's typed
+ * "not reported". A zero is only a published zero. `nativeEquity` is the venue's native equity, never the wallet balance.
+ */
+export interface BindingFigures {
+  nativeEquity?: readonly BindingAmountFigure[] | null;
+  virtualUsed?: readonly BindingAmountFigure[] | null;
+  virtualHeadroom?: readonly BindingAmountFigure[] | null;
+  sleeveCount?: BindingSleeveFigure | null;
+}
+
+/** FE-CAT-4. Counts over the same authorized snapshot as the page; `null` is "not computable", `0` is a counted zero. */
+export interface BindingCounts {
+  observedAt: string;
+  coverage: "COMPLETE" | "PARTIAL" | "UNKNOWN";
+  all?: number | null;
+  issues?: number | null;
+  byEnvironment: Readonly<Partial<Record<"paper" | "sandbox" | "live", number | null>>>;
 }
 
 /** Both thresholds, because AGING is the gap between them. */
@@ -600,6 +637,8 @@ export interface ManagerListEnvelope<T> {
   readAt: string;
   page: ManagerListPage<T>;
   summary?: AlphaFleetSummary;
+  /** Bindings list only (FE-CAT-4): published only when the producer could compute them from owning facts. */
+  counts?: BindingCounts;
 }
 
 function readManagerPage<T>(
@@ -763,8 +802,79 @@ export function readBindingItem(raw: unknown): BindingItem | null {
   const bindingId = str(root?.binding_id); const accountId = str(root?.account_id);
   const venue = str(root?.venue); const state = str(root?.state);
   const credentialState = str(root?.credential_state); const updatedAt = str(root?.updated_at);
-  return root && bindingId && accountId && venue && state && credentialState && updatedAt
-    ? { bindingId, accountId, venue, state, credentialState, updatedAt } : null;
+  if (!(root && bindingId && accountId && venue && state && credentialState && updatedAt)) return null;
+  // `figures` is optional; present but malformed rejects the row (the page then fails closed), never a partial figure.
+  if (root.figures === undefined) return { bindingId, accountId, venue, state, credentialState, updatedAt };
+  const figures = readBindingFigures(root.figures);
+  return figures ? { bindingId, accountId, venue, state, credentialState, updatedAt, figures } : null;
+}
+
+const COVERAGES = ["COMPLETE", "PARTIAL", "UNKNOWN"] as const;
+const coverageOf = (v: unknown) => (COVERAGES as readonly unknown[]).includes(v) ? (v as (typeof COVERAGES)[number]) : null;
+const instantOf = (v: unknown) => { const s = str(v); return s !== null && Number.isFinite(Date.parse(s)) ? s : null; };
+
+function readAmountFigure(raw: unknown): BindingAmountFigure | null {
+  const item = obj(raw); const currency = str(item?.currency); const value = money(item?.value);
+  const observedAt = instantOf(item?.observed_at); const coverage = coverageOf(item?.coverage);
+  return item && currency && value !== null && observedAt && coverage ? { currency, value, observedAt, coverage } : null;
+}
+
+/** One entry per currency, 1 to 8 entries: two entries for one currency are ambiguous and rejected, never merged. */
+function readAmountFigures(raw: unknown): readonly BindingAmountFigure[] | null {
+  if (!Array.isArray(raw) || raw.length < 1 || raw.length > 8) return null;
+  const entries = exactArray(raw, readAmountFigure);
+  return entries && new Set(entries.map((entry) => entry.currency)).size === entries.length ? entries : null;
+}
+
+function readSleeveFigure(raw: unknown): BindingSleeveFigure | null {
+  const item = obj(raw); const observedAt = instantOf(item?.observed_at); const coverage = coverageOf(item?.coverage);
+  return item && typeof item.count === "number" && Number.isSafeInteger(item.count) && item.count >= 0 && observedAt && coverage
+    ? { count: item.count, observedAt, coverage } : null;
+}
+
+function readBindingFigures(raw: unknown): BindingFigures | null {
+  const root = obj(raw);
+  if (!root) return null;
+  const out: { -readonly [K in keyof BindingFigures]: BindingFigures[K] } = {};
+  // Only the four published keys are read; any other key (a wallet balance, say) is ignored, never promoted.
+  for (const [wire, key] of [["native_equity", "nativeEquity"], ["virtual_used", "virtualUsed"], ["virtual_headroom", "virtualHeadroom"]] as const) {
+    if (root[wire] === undefined) continue;
+    if (root[wire] === null) { out[key] = null; continue; }
+    const value = readAmountFigures(root[wire]);
+    if (!value) return null;
+    out[key] = value;
+  }
+  if (root.sleeve_count !== undefined) {
+    if (root.sleeve_count === null) out.sleeveCount = null;
+    else {
+      const sleeves = readSleeveFigure(root.sleeve_count);
+      if (!sleeves) return null;
+      out.sleeveCount = sleeves;
+    }
+  }
+  return out;
+}
+
+/** `undefined` = not published, `null` = typed "not computable", an integer = a counted value (0 included). */
+function countOf(v: unknown): { ok: true; value: number | null | undefined } | { ok: false } {
+  if (v === undefined || v === null) return { ok: true, value: v };
+  return typeof v === "number" && Number.isSafeInteger(v) && v >= 0 ? { ok: true, value: v } : { ok: false };
+}
+
+function readBindingCounts(raw: unknown): BindingCounts | null {
+  const root = obj(raw); const byRaw = root?.by_environment === undefined ? {} : obj(root.by_environment);
+  const observedAt = instantOf(root?.observed_at); const coverage = coverageOf(root?.coverage);
+  if (!root || !byRaw || root.basis !== "AUTHORIZED_SNAPSHOT" || !observedAt || !coverage) return null;
+  const all = countOf(root.all); const issues = countOf(root.issues);
+  const envs = (["paper", "sandbox", "live"] as const).map((env) => [env, countOf(byRaw[env])] as const);
+  if (!all.ok || !issues.ok || envs.some(([, c]) => !c.ok)) return null;
+  const byEnvironment: { paper?: number | null; sandbox?: number | null; live?: number | null } = {};
+  for (const [env, c] of envs) if (c.ok && c.value !== undefined) byEnvironment[env] = c.value;
+  return {
+    observedAt, coverage, byEnvironment,
+    ...(all.value !== undefined ? { all: all.value } : {}),
+    ...(issues.value !== undefined ? { issues: issues.value } : {}),
+  };
 }
 
 /* ── BR-EX-76 portfolio identity list (P4-A) ───────────────────────────── */
@@ -849,8 +959,14 @@ export function readPortfolioList(raw: unknown): PortfolioListEnvelope | null {
 export const readAlphaFleet = (raw: unknown) =>
   readManagerEnvelope(raw, "execution.alpha-fleet-list.v2", readAlphaFleetItem, (item) => item.alphaId, readFleetSummary);
 
-export const readBindings = (raw: unknown) =>
-  readManagerEnvelope(raw, "execution.bindings-list.v1", readBindingItem, (item) => item.bindingId);
+export function readBindings(raw: unknown): ManagerListEnvelope<BindingItem> | null {
+  const envelope = readManagerEnvelope(raw, "execution.bindings-list.v1", readBindingItem, (item) => item.bindingId);
+  const counts = obj(raw)?.counts;
+  if (!envelope || counts === undefined) return envelope;
+  // Present but malformed counts reject the read: a count the reader cannot vouch for is not shown as 0 or dropped silently.
+  const read = readBindingCounts(counts);
+  return read ? { ...envelope, counts: read } : null;
+}
 
 /**
  * R3-3 · `execution.binding-detail.v1` is nine required fields, not one.

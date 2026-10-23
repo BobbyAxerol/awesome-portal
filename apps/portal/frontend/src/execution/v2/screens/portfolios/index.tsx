@@ -40,7 +40,10 @@ import {
   ROW_CAP, SORT_KEYS, branchReasonText, countLine, currenciesOf, degradedBranches, filterRows, parseSort, readDomainFilter, sortRows, toRows, writeSort,
   type DomainFilter, type SortKey,
 } from "./listModel";
-import { OPTIONAL_COLUMNS, PortfolioTable, UNPUBLISHED, readHidden, writeHidden, type ColumnId } from "./PortfolioTable";
+import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
+import { useManagerDataset } from "../manager/useManagerDataset";
+import { groupsByPortfolio, servesDataset } from "./PartitionFigures";
+import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId, type PortfolioFigures } from "./PortfolioTable";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
 import { COMPARE_MAX, COMPARE_MIN, IN_PARAM, partitionByCurrency, selectionFrom, withSelection } from "./selection";
 import { useRead } from "./useRead";
@@ -74,14 +77,9 @@ const SORT_LABEL: Readonly<Record<SortKey, string>> = {
 };
 
 const LOAD_MORE_REASON = "The read publishes no cursor.";
-/** What the register does not carry, said once (the ids and reasons are in the line's title). */
+/** What the register does not carry and has no column for, said once (the five measures are columns). */
 const UNPUBLISHED_MEASURES: readonly UnavailableFact[] = [
-  { label: "NAV", id: "FE-013" },
-  { label: "Net PnL", id: "FE-005", why: "Windowed; needs FE-025" },
-  { label: "Return", id: "FE-006", why: "Windowed; methodology is per source" },
-  { label: "Drawdown", id: "FE-013", why: "Needs the NAV series" },
-  { label: "Concentration", id: "FE-005" },
-  { label: "Score", id: "FE-011" },
+  { label: "Score", id: "FE-011", why: "Policy not set" },
 ];
 const SORT_RULES: readonly (readonly [string, string])[] = [
   ["Money", "Sorts inside one currency; pick the currency first"],
@@ -111,6 +109,18 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
 
   const read = useRead(api, permitted, "list", (scoped) => scoped.listPortfolios());
   const envelope = read.phase === "ready" ? read.value : read.phase === "loading" || read.phase === "error" ? read.last : null;
+
+  // The Manager dataset grouped by portfolio (FLEET, group_by=portfolio_id) for the page's environment and window: Net PnL per
+  // economic partition. Groups cover the whole query, so one row is enough to ask. Not served = the column keeps its `Not published`.
+  const datasetQuery = useMemo<ManagerDatasetQuery>(
+    () => ({ surface: "FLEET", environment: url.value.env, window: url.value.window, groupBy: ["portfolio_id"], limit: 1 }),
+    [url.value.env, url.value.window],
+  );
+  const dataset = useManagerDataset(api, permitted && servesDataset(api), datasetQuery);
+  const figures = useMemo<PortfolioFigures | null>(
+    () => (dataset.phase === "ready" ? { environment: url.value.env, groups: groupsByPortfolio(dataset.value) } : null),
+    [dataset, url.value.env],
+  );
 
   const { q, sort: sortRaw, ccy } = url.value;
   const domain: DomainFilter | null = readDomainFilter(params.get("domain"));
@@ -313,7 +323,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
               <summary className="exec-pf-btn">Columns</summary>
               <div className="exec-pf-menu" role="group" aria-label="Columns">
                 <label className="exec-pf-menuitem"><input type="checkbox" checked disabled title="Portfolio is always shown" /> Portfolio</label>
-                {OPTIONAL_COLUMNS.filter((c) => UNPUBLISHED[c.id] === undefined).map((c) => (
+                {OPTIONAL_COLUMNS.map((c) => (
                   <label key={c.id} className="exec-pf-menuitem">
                     <input type="checkbox" checked={!hidden.has(c.id)} onChange={(event) => toggleColumn(c.id, event.target.checked)} /> {c.label}
                   </label>
@@ -346,6 +356,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             sort={sort}
             onSort={headerSort}
             currency={ccy}
+            figures={figures}
           />
 
           <div className="exec-pf-foot">

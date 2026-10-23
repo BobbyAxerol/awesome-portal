@@ -31,6 +31,11 @@ export interface AccountSummary {
   mustChangePassword: boolean;
   accountRevision: number;
   locked: boolean;
+  /**
+   * FE-CAT-8, V2 roster only. The published instant of the newest sign-in (ISO), `null` = the account never signed in,
+   * `undefined` = this producer does not publish it. A label, not an authorization fact.
+   */
+  lastSignInAt?: string | null;
 }
 
 export interface HistoryEntry {
@@ -161,11 +166,11 @@ async function send(
 
 export const accounts = {
   roster: () =>
-    get(BASE, (body) =>
-      Array.isArray(body.accounts)
-        ? body.accounts.map((row) => readAccount(row as Record<string, unknown>))
-        : [],
-    ),
+    get(BASE, (body) => {
+      // A roster that is not a list is an unreadable answer, not an empty roster (DEBT-UXM07-013).
+      if (!Array.isArray(body.accounts)) throw new Error("The account roster answer was not a list.");
+      return body.accounts.map((row) => readAccount(row as Record<string, unknown>));
+    }),
 
   detail: (userId: string) =>
     get(`${BASE}/${encodeURIComponent(userId)}`, (body) => ({

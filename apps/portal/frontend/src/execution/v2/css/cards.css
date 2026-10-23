@@ -37,6 +37,19 @@
   border-collapse: collapse;
   font: var(--exec-font-data);
 }
+/* One body size per table. The role tokens differ on purpose elsewhere (num 14px mono, data/meta/id 12px), but side by side inside one
+ * table that read as unbalanced: a 14px figure next to a 12px name and a 12px "Not available". Inside a table body every text role
+ * resolves to the same 13px (the `body` size), keeping its face (mono for figures and ids, sans for words) and its colour, so a
+ * placeholder is the same size as the figure it stands in for. The head (`label`, 11px caps) is untouched. Set once here through the
+ * role tokens, so every rule that says `font: var(--exec-font-<role>)` follows without naming a size. */
+.exec-cards tbody td {
+  --exec-font-data: 400 13px/18px var(--font-body);
+  --exec-font-meta: 400 13px/18px var(--font-body);
+  --exec-font-body: 400 13px/18px var(--font-body);
+  --exec-font-num: 400 13px/18px var(--font-mono);
+  --exec-font-id: 400 13px/18px var(--font-mono);
+  --exec-font-term: 400 13px/18px var(--font-mono);
+}
 .exec-cards thead th {
   padding: 6px var(--space-3);
   font: var(--exec-font-label);
