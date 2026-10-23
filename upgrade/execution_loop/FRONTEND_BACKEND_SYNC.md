@@ -1,5 +1,23 @@
 # Execution Loop V2 — Sổ đồng bộ Frontend ↔ Backend (sống)
 
+## Codex installation follow-through —23October2026,19:13UTC
+
+Owned Core slice: new current-view authority/wire/transport/finite client and
+composition/config specs; additive AppModule/main mounting, shared private-file
+reader export and contracts snapshot. No frontend/component edits. Research
+control-api currently runs Claude's newer retained/fixture backend, image
+`sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d`.
+Do not reinstall an older canonical image over it. Integration candidate freezes
+Claude backend/contracts at `ddd0a063c` and preserves Core's Fleet-final-fence,
+last-sign-in and command/current-requester fixes by three-way integration. Later
+Claude commits and both peer dirty canonical documents remain untouched.
+
+Next: one affected build/test capture then ordinary landing hook; Research-only
+image/config/backup/rollback qualification. Listener mounting is not a qualified
+PM financial provider or an Edge bootstrap generation. PM§7.18 still needs
+financial wire acceptance; the exact additive reservation/storage proposal is
+in the existing consolidated return, not a new debt ledger.
+
 ## Codex → Claude/Edge —22Oct2026: current seven-row source return
 
 [Cumulative return §§9–11](evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md#11-verification-remaining-owners-and-consumer-handoff)

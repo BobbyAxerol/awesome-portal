@@ -1405,3 +1405,75 @@ coordination artifacts only, no private credential/custody, and are not runtime
 dependencies. Rollback of this SOURCE_ONLY slice is simply not selecting the
 new library/server composition; existing runtime has not changed. Do not revert
 8727's OOM work, erase UNKNOWN custody, delete peer WIP or reopen old originals.
+
+## 18. Installation follow-through and exact PM reservation —23Oct2026,19:13UTC
+
+Coordinator Codex; current checkpoint19:35UTC, not a source/grant availability
+window. Bobby explicitly requests landing/install rather than SOURCE_ONLY
+closeout. Core owns additive AppModule/main lifecycle and owner-only/hash-pinned
+private current-view configuration; same AuthService/ExecutionReadScopes/pool,
+no new account, permission evaluator, browser-provided selection or public route.
+New real TLS lifecycle tests7/7PASS. Independent review found the pre-header
+socket timeout used Node's30s checking interval; repaired with an absolute
+authenticated-socket deadline and two real TLS regression cases, awaiting the
+one combined retake. Pending DB work still holds quota after HTTP timeout.
+
+### 18.1 Preserve the actually running Claude backend
+
+Research control-api now runs image
+`sha256:d13cef069471be8b34c7d6f0cda4b6df55e892812c7ea8bf0f17846256e76e6d`,
+Compose owned from `/home/bobby/portal-research-fe2`, retained+fixture overlays,
+not the earlier native-review installation. No native config mount is present.
+Do not overwrite this with an older canonical build or restore retired grants.
+The private integration candidate preserves Claude backend/contracts frozen at
+`ddd0a063c` and Core fixes by three-way patch; it does not edit frontend or
+commit either peer dirty canonical document. Newer Claude work remains separate.
+Image/config/backup/install/cleanup receipts will follow here after actual gates;
+no INSTALLED or connected PASS is inferred now.
+
+### 18.2 PM owner: explicit additive file reservation / acceptance needed
+
+Fresh PM source `39faba093dfc62c7d58c688ed543d5be6a32f34d`, owner-return
+SHA256 `a1820060262720a94048c51b05eea44a5d84936c7272d97afded6a0e5120529a`.
+§7.21 finite command composition is not financial publication authority;
+§7.18 remains MINIMAL_CHANGE_REQUIRED. Please ACK/CHANGE this new-file-only
+reservation in your existing owner-return, independently of FIX-01/FIX-02:
+
+- `services/portfolio_management/report_publication_proof_contract.py`
+- `services/portfolio_management/report_publication_authority.py`
+- `services/portfolio_management/report_publication_applied.py`
+- matching new unit tests and
+  `contracts/baseline/portfolio-account-v1_1/publication-authority-v1/`.
+
+No existing source, route/body, migration, runtime, signing key or default
+factory is reserved. Contract/test work can remain off-path; PM still accepts
+financial purpose/audience/signing bytes and business ownership. Core does not
+sign financial truth or assert source-owner acceptance.
+
+Storage decision must explicitly map original source groups: Edge `group_id`
+is `commit:<digest>`, while `source_change_receipts.transaction_group_id` is an
+actual source UUID and one source commit may include multiple UUID groups
+(`report_publication_bootstrap.py:227–313`). Do not choose an arbitrary group,
+use receiver-generation UUID as source UUID, or mutate business state just to
+ACK. Please publish deterministic source-group association/receipt namespace or
+a compatible metadata adapter. Lost ACK recovers the same original receipt.
+
+Revalidation must reuse original manifest/cursor through current `delta()`;
+`snapshot()` issues a new UUID, and empty manifests have zero pages, so
+`page(0)` is not a valid universal recheck. Preserve original worker authority,
+exact MANIFEST/PAGE/CHUNK/GROUP/CONTROL kind/binding/digests and authenticated
+post-COMMIT receiver APPLIED. PM source remains untouched pending its ACK.
+
+### 18.3 Edge: actual source selection is a separate, concrete factory input
+
+Current Manager data and the new scoped bootstrap DB are different stores.
+`main.rs:1384–1524` has authenticated Manager CURRENT-page reads, whereas
+`projection-store-pg/src/scoped_read.rs:248` requires matching READY/RETAINED
+bootstrap generations/manifest/rows/facts. The legacy catalogue alone cannot
+create a qualified bootstrap provider or complete five-tuple lineage. Please
+return an actual qualified bootstrap source, or an exact CURRENT-only Manager
+resource/dataset/field/complete-row-lineage mapping for a separate narrow route.
+HISTORY/REPLAY purpose mapping remains independent; CURRENT does not grant it.
+Core continues listener/identity/build work without waiting for this source;
+no placeholder provider, default503 bypass, retired original rerun or falsely
+labelled connected PASS. Full08/read09 and ELP2-10 remain NOT_MET.
