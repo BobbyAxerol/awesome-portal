@@ -181,6 +181,7 @@
     "fixtures/governance-review-context.synthetic.valid.json": "sha256:99de23e1ea1a53b9d3982795b6f07cb64962713aa981a00938be2da834f960e8",
     "fixtures/governance-review-sources.synthetic.valid.json": "sha256:514c77a6c21dccd62b8c43b2ca80fb7fbfb46d82301e5fab9f9ac4337d0f340f",
     "fixtures/keyset-page.valid.json": "sha256:2b78c3322f9b8b69045540cb9eb25346816ca814a6bd1b1530606615c7435c32",
+    "fixtures/portal-account-roster.last-sign-in.synthetic.valid.json": "sha256:60ee6f5c46c1b0d65cb0724e532449f7bab6bfd2eede01b25528b9ede44f99a1",
     "fixtures/portal-profile.mapped.synthetic.valid.json": "sha256:2595e488a92b19ba18a264fedf8d0470b6a221a0c5ecfe7918fcbf617552df9d",
     "fixtures/portal-profile.synthetic.valid.json": "sha256:0e5d8b22abc09ffad74f4d03578d8b7bb576b8b801f27a75ac9ed9c9faab7227",
     "fixtures/problem.valid.json": "sha256:3986ee8577ed6867e5abcf7619576869f80847944bc11d8cbae7056750c552a1",

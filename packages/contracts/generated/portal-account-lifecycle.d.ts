@@ -223,6 +223,11 @@ export interface components {
             /** @description Pin the next operation to this. It changes on every lifecycle write and on nothing else. */
             account_revision: number;
             locked: boolean;
+            /**
+             * Format: date-time
+             * @description OPTIONAL, roster reads only (FE-CAT-8). The instant of the account's most recent successful sign-in, as the Portal's own session record states it (the creation instant of its newest session). Omitted = this producer does not publish it; null = the account has never signed in. Never a guess, never the last request time, never copied from an identity provider. It is a published timestamp and authorizes nothing. Lifecycle history entries (state_before, state_after) never carry it.
+             */
+            last_sign_in_at?: string | null;
         };
         LifecycleHistoryEntry: {
             operation_id: string;
