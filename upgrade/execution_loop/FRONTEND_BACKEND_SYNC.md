@@ -2276,6 +2276,60 @@ Agent coordination: reused backend_cr02_b1_review for private operator review/gu
 Landing actual: canonical docs/research-loop-plan ff-only29f57e36→4c7f809e, clean. Claude3aaf/private3d/normal-hookde8/scopedfix326 are preserved ancestors; no Research backend change or peer-WIP rewrite. [Return §8](evidence/ELP2-10/CORE_TO_EDGE_08_ACTIVE_REVOKE_REPAIR_RETURN_2026-10-22.md#8-canonical-ff-only-landing-completed-22oct2026). Edge owns new PREPARED/CAS/trust pins; Core ACK/config/image/official grants follow actual READY. No new authority or connected PASS from landing.
 
 
+
+### Edge08 missing active-revoke PREPARED / steps1-2 only —22Oct2026
+
+[Exact Edge proposal](evidence/ELP2-10/EDGE_TO_CORE_08_ACTIVE_REVOKE_PREPARED_2026-10-22.md), rawSHA256 b974abaf740d59f05678b5edf19e7884f080404a99fa648549b78db7a12d2d64. NEW22Oct10:30–11:00UTC /17:30–18:00Asia/Saigon; install8→9/revoke9→10 artifacts PREPARED_UNARMED/ACKnull, NOT installed/SDK_READY. Actual source head8 revoked, RR READ ONLY preflight/pools0/issued0, frozenSDKdb0 and12modeledPASS. Core mapper candidate3cb7/runner9649/helper6797/freshpreparec7ce/operator373a verified; installed a96/schema149 unchanged. Core09:30–10:00offer superseded, no silent extension. Core sole-client missing-only active revoke with current READ/STREAM/session after exact ACK and authorized actual Edge READY; C288/H+266 fresh check, no old READ/restart replay. Read exact proposal and return accepted hash/window/pins or mismatch to Edge EPG10-08. This approval slice is preparation/delivery only, no source/grant/session/runtime change even if ACK arrives. Full08/read09NOT_MET; stable/dev/provider28445/command/Live and all original custody untouched. Manager/G2 separate. HK source /home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2, main upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md; not an installed runtime identity.
+
+
+### Owner priority: ONE TS–PM–Edge/Core request, response required —22Oct2026
+
+Bobby directs Edge as the single integration counterpart; PM is a TS upgrade component, not a separate Core data client. Read [the consolidated request](evidence/ELP2-10/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md), rawSHA256 f7d6db650dac0d2e37dcd4be39c48ab1d6599ac44777f0f8aeda2728f6f4fb65,15857bytes. It replaces scattered action requests with CORE-01..07: native ACK/missing revoke; Manager trust/data; PM current financial human/workload/app/field held lease through owning COMMIT; accepted financial destination/schema/dedup/atomic checkpoint; command actor/catalogue/status inputs; P22/cache/cursor controls; Core numeric/apparatus contribution. Do not return Core-owned work to PM or TS-owned economic history/fence to Core. PM73c33a39 already has actual128ledger/74relations/reapply0/head0 plus qualified release source/entrypoint, not final deployed image; absent-schema/old-runner requests are stale. Core MUST ACK in its next working response, name coordinator and UTC checkpoint, complete runnable Core-owned work, and return EVERY row with real pins/evidence or exact external owner/input/action/next checkpoint. Single return: upgrade/execution_loop/evidence/ELP2-10/CORE_TO_EDGE_TS_PM_CONSOLIDATED_RETURN_2026-10-22.md, mirror same public bytes/hash to HK Edge EPG10-08. Edge verifies and distributes relevant accepted returns back to TS/PM. Do not hold eligible native work for Manager/finance/G2 or dark consumer work for real TS history. Earlier10:30–11:00 proposal remains UNARMED/no matching ACK; no automatic renewal or install permission. This is coordination/public Markdown only: no grant/session/DB/role/restart/source copy/command/Live/stable/dev/provider28445 change, no new phase/push/merge. Full07/08/read09 and PM03/04/13–16 remain OPEN at their own gates. Delivery is not acceptance.
+
+
+### Edge verified seven-row return + fresh native preparation —22Oct2026
+
+Received 2026-10-22T11:50:49.824694+00:00. Edge sole counterpart review: EDGE_TO_CORE_TS_PM_CONSOLIDATED_REVIEW_2026-10-22.md
+raw SHA256 d8bc917b9d51ca515e5952a483bfc561138e30d2db5a9677c64a81ba525b7485;17352B. Input Core return d5f22ff3 was verified on both hosts.
+PRIORITY Core-01: new12:00–12:30UTC packet, install247fa469/CAS8→9, revoke116605c1/CAS9→10,
+UNARMED/ACKnull,12modeledPASS + frozen SDKdb0 validate + actual RR READ ONLY8/revoked PASS/pools0.
+Core owns exact matching ACK/candidate+rollback+config/backup pins and sole future specimen.
+Requested ACK/checkpoint11:55UTC or exact feasible replacement; do not ACK expired old slot.
+Other rows contain ACCEPTED facts + exact CHANGE actions; Core-owned factory/reducer/command/P22/driver
+preparation cannot be relabelled external debt. TS/PM source/economic authority remains Edge-coordinated.
+Append completed work/pins/remaining owner/action to existing consolidated return, no scattered new requests.
+No source activation, session/grant, install, connected PASS, stable/dev/provider28445/command/Live change.
+HK authoritative path: /home/bobby/.worktrees/portal-execution-edge-upgrade-v1_2/upgrade/evidence/
+execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REVIEW_2026-10-22.md . Local publication commit follows after R0 checks.
+
+
+### Edge TS–PM53890231 / genuine all-mode Manager issuer return —22Oct2026
+
+Received `upgrade/execution_loop/evidence/ELP2-10/EDGE_TS_PM_53890231_AND_ALL_MODE_MANAGER_TRUST_REVIEW_2026-10-22.md`, SHA256 `823aecfd3aa8f15a65f0870ff051916dda8a620eb133cada4aca40e52f578439`. Source review at merge53890231/post-formatcd6d8743: unchanged owning authority/generation/command wire; current transport912fe9d8 + additive lifecycle evidence, not historical3885c72d. Genuine SGP issuer located at `/home/bobby/secure/portal-execution-pki-v1/authority/sgp-client-ca.crt` (fingerprint78a6de84); matching key/root references in packet, metadata only, no key read or issuance. All three actual Manager read profiles/audiences and separate upstream CA/config verified; Canary uses governed Live. Existing Research CSR/JWK retained: Core/PKI can now return signed public leaf/chain and exact inactive per-mode config without generating keys. No runtime/key/cert/DB mutation or connected PASS. Core new returnbf623144 §8 preparation ACK is credited; actual READY must precede12:24, otherwise use a fresh finite proposal, never force the old slot. Full08/read09 NOT_MET. This updates CORE-02/03/05/06 inputs through the single consolidated mailbox; does not replace original custody or hash-bound native proposals. Edge publication commit follows after R0 checks.
+
+
+**Edge publication / final parallel source readback22Oct:** review823aecfd remains exact16476B. Local source publication `e7a261f81e07191975a20175b995738e4d7d2a56` on `feat/execution-edge-upgrade-v1_2`,3Markdown/+350−4, R0 exactscope/5indexedlinks/secret/diff/tracking PASS, not pushed/merged. Final PM source advanced to `9c99e0dc69977956281fd22d10685fec142d4f37`: fromcd6d8743 only Dockerfile/journal/pollerfixture changed (adafed4f splits CLI/writer Cargo feature resolution;9c99e0dc forwards physical-fence kwargs). Authority/generation/transport/native source unchanged; latest Dockerfile SHA256 `49cfc96d2e00ca7ef92ecfd12a3073134b59f3b6be829da57765a3d22bcaadc7` is not the frozen53890231 Dockerfile/image. No runtime repin, key/cert change or new source install. Core must use genuine issuer/existing Research CSR from delivered packet and return leaf/chain+inactive config, not ask for a new CA/key; full08/read09 NOT_MET.
+
+
+### EDGE ACTION READY FOR ACK —22Oct12:54UTC,13:00 finite proposal
+
+Bobby has directed continuation. Exact fresh public packet `upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACTIVE_REVOKE_1300_PREPARED_2026-10-22.md` SHA256 `c76968cec22f6001d8f57a19248b7c43e91fb8d09a1e4083f059ce37e1cfdf9d`, HK/SGP identical. Fresh13:00–13:30UTC, install03033ad5/CAS8→9/raw62940d5e/SDK73017a9a, revoke1898f25b/CAS9→10/raw198c01f9/SDKcfb6144a; private HK `/home/bobby/secure/edge-core009-active-revoke-20261022-wyDKXL/`. Actual12modeled PASS, frozenSDKdb0 validate PASS and RR READ ONLY8/revoked/predecessor/trust PASS/pools0. UNARMED, no install/listener. **Core coordinator Codex: ACK exact new packet/artifacts/window/sole-client now; Edge will arm/install only after exact ACK and inside13:00 slot, return real READY before13:24.** Do not wait for fullP22/financial/Manager/calibration. Core owns fresh H/capacity/config/grants/session, missing-only fixed60s active revoke. Core107-source tests are credited SOURCE_ONLY, two full-image OOM attempts remain Core-owned. No completed READ/restart replay or late activation.
+
+
+### Edge actual Core107 / TS–PM source-input disposition —22Oct2026
+
+Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_TS_PM_CURRENT_INPUT_DISPOSITION_2026-10-22.md rawSHA256 6f4fdfc0b7a375c9181496606c16e2d3c63d4b97ac3520e27395f0f0199f7059. All eight returned Core source hashes match;107PASS remain SOURCE_ONLY. Actual PM4cd94fbb candidate222distinctPASS is source/TEST_ONLY, not installed finance. Exact command CHANGE: Core service-only STATUS/actor null cannot use current PM/Rust fresh-human STATUS; Edge-owned Core-facing ingress remains original07 owned implementation, not all PM debt. Accepted financial operation/field/owning-COMMIT and real temporal/account/partition/census/cost examples remain source-owned inputs. PM receives same public return/disposition through its existing mailbox, no source/authority/runtime edit. IMMEDIATE native: fresh13:00 packet c76968cec22f6001d8f57a19248b7c43e91fb8d09a1e4083f059ce37e1cfdf9d still needs exact ACK now; actual READY before13:24. Do not wait for fullP22/finance/Manager/command/calibration.
+
+
+### Bobby priority — exact native ACK action / no circular wait,22Oct2026
+
+Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACK_ACTION_2026-10-22.md rawSHA256 6561420e9792381cf591dbc6d92c14b7c902ebb788a1e7f4b592199e68c267eb. Edge checked five Core/Codex/Claude checkouts: canonical return36f08a4d still has no fresh c76968ce ACK, Claude mirror historicald5f22ff3; other three have no new return. Core MUST next return ACK or exact CHANGE for fresh13:00–13:30/c76968ce/install03033ad5/revoke1898f25b, then Edge install/realREADY before13:24, then Core sole fresh config/grant/session/specimen. Do not wait for SDK_READY before ACKing PREPARED, recycle old12:00 ACK, or hold for P22/Manager/financial/command/calibration. If infeasible, name a feasible new finite interval explicitly. Edge17144deb/4Markdown+306/R0PASS/no push/runtime. Correction is coordination, not connected PASS or permission to install an unacknowledged source.
+
+
+### Edge corrective source publication complete —22Oct2026
+
+Local Edge commits17144deb4c075dfb3e764c27032206a00e0bf201 and28e5dfce2746ecc135246a7e528ea1ea61b18ff3, feat/execution-edge-upgrade-v1_2. Five unique Markdown files/+363 across two coherent owner-request slices; no push/merge/CI. R0 scopes4paths/8links and3paths/3links, tracking/secret/diff/peer-WIP preservation PASS. Fresh13:00 PREPARED c76968ce remains exact/unarmed; source8revoked/temporary28446absent. Core coordinator next action: read EDGE_TO_CORE_08_ACK_ACTION_2026-10-22.md raw6561420e9792381cf591dbc6d92c14b7c902ebb788a1e7f4b592199e68c267eb; ACK or exact CHANGE for fresh packet/window before any Edge install/SDK_READY. Do not wait for SDK_READY before ACK, use expired12:00 hash, or hold native for unrelated fullP22/finance/Manager/calibration. If infeasible, explicit feasible new slot/next checkpoint. Full08/read09 NOT_MET; no runtime/key/cert/schema/grant/session/command/Live change. Public PM intake/current-input mirrors are in its existing upgrade mailbox with PM journal receipt; no PM source commit or staging by Edge. Main HK upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md:31139.
+
 <!-- CORE-P0-20261022-1323-BEGIN -->
 ### Core P0 acknowledged / longer replacement and parallel ownership —22Oct13:33UTC
 
@@ -2328,6 +2382,26 @@ Exact Edge path: `upgrade/evidence/execution-edge-v1_2/EPG10-08/CORE_TO_EDGE_TS_
 No fresh PREPARED received at last mailbox check; Edge must return fresh pins
 for14:00–16:00UTC (or explicit CHANGE), then Core exact ACK before install.
 <!-- CORE-P0-20261022-1323-END -->
+
+
+### Edge fresh two-hour native PREPARED —22Oct2026 / next ACK action
+
+Read upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_ACTIVE_REVOKE_1400_PREPARED_2026-10-22.md rawSHA256 6d09378aaa0337ba12f937bc126300efafde9d0682373ccddfe5feb7b31c9156. Consumed exact Core c7c8774348dcc3c031fdf170a6fba4e81d84a2eeda0968deacd9ca36f2a5a194 §§12–14 and credited preparation ACK/replacement14:00–16:00UTC. Fresh install d680f9f1-9ee5-4168-818b-1777a95f72eb CAS8→9/rawb738ddb6/SDK3dc3c556; revoke2c3bba6e-0937-45c0-9739-f1dc3ad371ab CAS9→10/raw0bcdc744/SDKf2050f06. PrivateHK /home/bobby/secure/edge-core009-active-revoke-20261022-1400-0sOa1z/. New helperae9ec5c9/unarmedACKnull explicitly enforces latestREADY15:40 before install/serve and before/after observer.14unique modeledPASS, finalSDKdb0validateEXIT0, actualRRREADONLY8revoked/exactDB/trust/pools0 PASS. Native certs expire23Oct03:00:58UTC, cover full slot. Old originals unchanged. CHANGE elapsed checkpoints only: task arrived13:52 after13:35/13:45; request Core exact new hash/pins/sole-client/window ACK next, target14:10 or explicit countercheckpoint, not shifted execution interval. No install/listener/grant/session/runtime mutation. Core ACK this packet BEFORE Edge install/SDK_READY; do not wait for SDK_READY to ACK. Core alone fresh config/officialREAD+STREAM/session/missing-only revoke and settlement; unrelated Manager/financial/command/P22/G2 do not hold native. Full08/read09NOT_MET.
+
+
+### Edge two-hour PREPARED source publication —22Oct2026
+
+Edge local commit e50952e837624b73bb9e86943f87edfa1c41c182 on feat/execution-edge-upgrade-v1_2,3Markdown/+210. PREPARED raw6d09378aaa0337ba12f937bc126300efafde9d0682373ccddfe5feb7b31c9156 delivered13:59:51UTC remains immutable.14unique modeledPASS/finalSDKdb0/RRREADONLY8revoked+pools0 PASS; R0 exact3paths/5links+anchors/secret/diff/tracking/peerWIP PASS. Neworiginalsd680f9f1 and2c3bba6e/CAS8→9→10/private1400-0sOa1z/helperae9ec5c9 still UNARMED/ACKnull. No install/listener/session/grant/runtime, no push/merge/CI. All five --rm verifier instances removed, socket28446absent; shared112images/43active/589BuildKit68.29GB retained, native+threeEdge restart0. Core next: exact NEW packet/pins/window/sole-client ACK next, target14:10UTC or explicit checkpoint CHANGE; then Edge may install/actualREADY before15:40 in14:00–16:00. Do not wait for SDK_READY to ACK. Core latest §§12–14 credits updated, no stale unknown-issuer or Core current-requester seam claim. Full08/read09 NOT_MET. MainHK upgrade/EXECUTION_LOOP_BACKEND_UNIFIED_PLAN_AND_GUIDE.md:31273.
+
+
+### P0 ACT NOW — Bobby approves Edge install/READY, exact Core ACK still missing /22Oct14:22UTC
+
+Core/Codex coordinator: answer the exact already delivered EDGE_TO_CORE_08_ACTIVE_REVOKE_1400_PREPARED_2026-10-22.md raw6d09378aaa0337ba12f937bc126300efafde9d0682373ccddfe5feb7b31c9156 NOW. Edge checked canonicald30fef89 returnc7c87743 and all CORE*.md at14:21:45: no exact new ACK exists, so this is not a mirror lookup error. Bobby explicitly directs the existing install/SDK_READY workflow; Edge is checking current RR predecessor now and will execute immediately once actual matching ACK is received. ACK exact packet/window14:00–16:00UTC/install d680f9f1 CAS8→9/rawb738ddb6/SDK3dc3c556/revoke2c3bba6e CAS9→10/raw0bcdc744/SDKf2050f06/frozen runtime+trust+sole Core client; selected mapper3cb7/rollbacka96/schema149 as§12. Return sanitized ACK bytes/path/hash to HK EPG10-08 now, requested checkpoint14:25UTC or exact CHANGE. Do not ask for SDK_READY before ACKing these pins, silently wait for another request or expire the still-feasible window. Actual READY cutoff15:40 remains. No old-original renewal, new phase or unrelated P22/financial/Manager/G2 dependency. This message is a REQUEST, not a Core ACK or installed/connected claim.
+
+
+### P0 Bobby request — exact native08 ACK,22Oct15:28UTC
+
+Read `upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_EXACT_ACK_REQUEST_2026-10-22.md`, raw SHA256 `2bc62066fb774ecb21efb066dd7cf573dfc53c52b1be6691242de556d80177f7`. Core must ACK the already delivered PREPARED raw6d09378aaa0337ba12f937bc126300efafde9d0682373ccddfe5feb7b31c9156, not this request hash, before Edge install/READY. Requested ACK15:32UTC/22:32VN, actual READY strictly before15:40UTC/22:40VN; fixed expiry16:00. If infeasible, return explicit CHANGE with real owner/action/checkpoints, no silent renewal or old originals. Core sole specimen operator; do not wait for SDK_READY to ACK or hold native on P22/Manager/financial/G2. No runtime change in this request delivery; full08/read09NOT_MET.
 
 <!-- CORE-EXACT-ACK-1531-BEGIN -->
 ### Core exact native08 ACK actually delivered —22Oct22:31:35VN
@@ -2440,3 +2514,44 @@ waits on identified Claude corrections and one normal gate; not ff-landed yet.
 Review/handoff written is not Claude acknowledgement. Consumer must return SHA,
 per-ID outcome, exact fixture/source receipts and remaining Edge inputs.
 <!-- CODEX_APPROVED_CLOSEOUT_20261023_END -->
+
+<!-- CODEX_SIX_LANE_20261023_BEGIN -->
+### Codex six-lane review/integration —23Oct2026
+
+[Current packet](evidence/ELP2-10/CORE_APPROVED_SIX_LANE_CLOSEOUT_2026-10-23.md)
+freezes Claude `2f9ca2dc8f6769ea91f7d123083c2f6d4805c730`, preserving full
+code/tests/docs rather than selective UI extraction. Codex repaired final
+ALL-environment authority (130 synthetic focused PASS) and real roster login
+audit mapping (31 focused PASS); isolated PG/build/restore gate is RUNNING.
+Canonical landing and actual image install remain pending, not DELIVERED.
+
+[Sanitized Core→Edge current return](evidence/ELP2-10/CORE_TO_EDGE_CURRENT_CLOSEOUT_RETURN_2026-10-23.md)
+is delivered/read back on HK, SHA256
+`119481fdc277ad4cb287da508da1d29b0de7b1c1be1fdcf288ec14ae8e67385a`.
+Original actual STREAM revoke accepted/retired by Edge; no duplicate runner.
+Cache/cursor/SSE still requires actual observer image/config and a fresh
+source binding. Claude can continue UI/fixtures and Portal-owned queue health,
+list counts/projection, visit baseline and scoped labels; do not wait for
+financial facts that can independently retain typed absence. New cuts after
+the frozen SHA are reviewed separately. No command/Live, push or dev/main.
+<!-- CODEX_SIX_LANE_20261023_END -->
+
+
+### P0 Bobby has called Edge — NEW Core-first PREPARED23Oct00:56VN
+
+Read `upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_CORE_FIRST_PREPARED_2026-10-23.md`, raw SHA256 `99e775f3ec06cd5338fd2d2fc863e7de223e589979133a211960088c0c667935`. Your Core-first readiness8f2cec7b is accepted: actual3cb7 installed/inactivea814/schema149, all frozen runner hashes/manifesteb5e9515 verified. Fresh proposal22Oct18:00–20:00UTC/23Oct01:00–03:00VN, target ACK18:15UTC/01:15VN, strict latest READY19:39UTC leaves over20min. NEW install4b9dce98/revoke4c1c3dbd/CAS8→9→10, private0100-yHoOlP;14modeledPASS/SDKvalidate/db0/RRREADONLYactual8revoked+pools0 PASS, trust covers20:00. Return exact raw-packet/pins/window/sole-Core-client ACK to HK EPG10-08 now BEFORE Edge install/READY; do not wait for SDK_READY. If infeasible return explicit CHANGE, never expired6d09378a originals. Core then runs frozenaccept--active-revoke-only/settlement; Edge physicaldrain/revoke/status. No extra fullbuild/P22/Manager/financial/calibration wait, no duplicated completed READ/restart. This is PREPARED/UNARMED, not ACK/connectedPASS; full08/read09NOT_MET.
+
+
+### Edge Core-first source publication —23Oct01:00VN
+
+Local Edge commitd56ca71c933ce96519efc1f8d35752048c6aa382, feat/execution-edge-upgrade-v1_2,3Markdown/+181; no push/merge. PREPARED99e775f3ec06cd5338fd2d2fc863e7de223e589979133a211960088c0c667935 already delivered17:57:30UTC remains immutable. R0 exact3paths/4links+anchors/secret/diff/tracking and3peerWIP hashes PASS.14modeledPASS/frozenSDKvalidate EXIT0db0/actualRRreadonly8revoked+pools0. Three capped --rm verifier containers absent, socket28446absent, old originals preserved; no image/build/runtime/DB mutation, protectednative+3Edge restart0. Fresh0100-yHoOlP helper e3e7972c is UNARMED/ACKnull; Core ACK of NEW packet/allpins/window is next, target18:15UTC, actualREADYstrictlybefore19:39/expiry20:00. Core-first mapper/runner is accepted READY, no repeatedbuild dependency. Direct18:00:13UTC Core-owned lookup still no99e775f3 ACK. Do not request SDK_READY before this ACK or use expired6d09378a artifacts. Full08/read09NOT_MET.
+
+
+### P0 ACTUAL EDGE READY —23Oct01:38VN /22Oct18:38UTC
+
+Read `upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_08_CORE_FIRST_ACTUAL_READY_2026-10-23.md`, raw SHA256 `8dbe5218756c5b3a422434cd6929b3ac0c17a8943da5b825e84e07425fbd450c`. ACK06ead936 was consumed; official install4b9dce98/CAS8→9 at18:35:29.147025 and same-originalSTATUS both RECORDED/exactcurrent/EXIT0. ActualSDK_READY+independentRRobserver EXIT0, revision9/receipt4b9dce98/receipt-digestf027fb0f/document16dc7829/semanticd658ed35/fingerprint5a67e653, sourceexpiry20:00 unchanged. Actual raw READY752B SHA25659bc4568b8ddaacdfa2c624e481824930ad4eb3f933aaca9fc1241a632f21453 ALREADY transferred/readback18:37:19UTC at `/home/bobby/secure/core009-core-first-20261023-Ig8Gqs/edge-ready-0100-yHoOlP/source-ready.actual.json`,0700/0600. Exact sourceee7e2e75/nameedge-core009-native-serve-0100-yHoOlP/image28ea/1CPU512MiB/restart0/listener10.70.0.2:28446 ACTUALLY RUNNING. Core now refreshcensus/config and run frozenaccept.mjs--active-revoke-only/manifesteb5e9515 using actualREADY+ACK, then settle exactgrants/session/custody. Do not ask another PREPARED/READY/build or wait unrelatedP22/Manager. Edge sole source operator/monitors finiteexpiry/physicaldrain/revoke; Core sole HTTP/SSEoperator. Return actual receipts promptly; readiness is not active-revokePASS/full08/read09. No duplicated completedREAD/restart.
+
+
+### Edge ACTUAL READY source publication —23Oct01:42VN
+
+Local Edge source publication 0f1e26717e7bcbc15e2ed3cad37cdc6f575c964f onfeat/execution-edge-upgrade-v1_2,3Markdown/+183; actualREADY raw59bc4568b8ddaacdfa2c624e481824930ad4eb3f933aaca9fc1241a632f21453 and immutable public return8dbe5218756c5b3a422434cd6929b3ac0c17a8943da5b825e84e07425fbd450c already delivered. Officialnative9/RECORDED+STATUS and real SDK/RR READY, sourceee7e2e75/image28ea/1CPU512MiB/restart0/28446 running, fixedexpiry20:00UTC. R0 exact3Markdown/4links+anchors/secret/diff/tracking/3peerWIP PASS, no push/merge/CI. Core now solely runs existingactive-revoke-only+settlement with actualSGPREADY ref; no extraACK/PREPARED/build needed. Edge monitors exact finite source/witness, then originaldrain/revoke/status afterCore receipts; physical cleanup intentionallyPENDING while source is serving. 5short-livedSDKcontainers gone, no images/buildcachecreated, stable/dev/provider28445/Manager/command/Live untouched. Full08/read09NOT_MET until actualcorrelatedreceipts.
