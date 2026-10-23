@@ -138,9 +138,16 @@ function SeriesCell({ label, read, window, gapIds }: { label: string; read: Seri
   const shown = seriesValueText(entry, last.exact);
   return (
     <Cell label={label} note={<span title={`Latest published point, ${formatInstant(last.tsMs)} · methodology ${entry.methodologyRef} · window ${window}`}>As of {formatInstant(last.tsMs)}</span>}>
-      <span className="exec-ov-num" title={last.exact}>{shown}</span>
+      <span className="exec-ov-num" title={last.exact}><FigureUnit text={shown} /></span>
     </Cell>
   );
+}
+
+/** A figure with its unit as a small suffix; the figure never breaks across lines (QA2 R1-04). A text without a trailing unit word is printed whole. */
+function FigureUnit({ text }: { text: string }) {
+  const match = /^(.*\S) ([A-Z][A-Z0-9]{1,5})$/.exec(text);
+  if (match === null) return <span className="exec-ov-fig">{text}</span>;
+  return <><span className="exec-ov-fig">{match[1]}</span><span className="exec-ov-unit">{match[2]}</span></>;
 }
 
 /** The Capital panel's NAV row: the same latest published NAV point as the NAV tile, or the same gap. Nothing is computed. */
@@ -406,7 +413,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
       <header className="exec-ov-head">
         <div>
           <h1 className="exec-ov-title">{heading}</h1>
-          <p className="exec-ov-scope" data-testid="overview-scope">Environment and window apply to NAV, Net PnL, Return and the chart. Lists and counts are current. Scope: every portfolio you may see. Basis: each currency on its own, never converted or summed.</p>
+          <p className="exec-ov-scope" data-testid="overview-scope">Environment and window apply to NAV, Net PnL, Return and the chart. Lists and counts are current. Scope: every portfolio you may see. Basis: each currency on its own, never converted or summed. NAV is the fund series the server publishes for one currency; it is not a sum of the Portfolios rows.</p>
         </div>
         <div className="exec-ov-chips">
           <Flag kind={flag.kind} label={mode === "busy" ? `Busy, ${needs?.items.length ?? 0} ranked` : flag.label} size="sm" />

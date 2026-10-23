@@ -75,7 +75,12 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
           const state = chartState(payload);
           const label = shown ? `${shown.label}${shown.currency ? ` · ${shown.currency}` : ""}` : "Portfolio equity";
           // One window for the equity and the ribbon: the chart's own coverage, else the drawn series' extent.
-          const axis: ChartDomain | null = from !== null && to !== null ? { from, to } : shown ? domainOfSeries(shown.points) : null;
+          const stated: ChartDomain | null = from !== null && to !== null ? { from, to } : null;
+          // QA2 R1-11: points that all lie outside the stated coverage would draw no line under an axis that does not hold them, while the readout names
+          // their own dates. The axis then follows the points that were published, and the page says the coverage does not hold them.
+          const own = shown ? domainOfSeries(shown.points) : null;
+          const outside = stated !== null && own !== null && shown !== undefined && shown.points.length > 0 && shown.points.every((point) => point.t < stated.from || point.t > stated.to);
+          const axis: ChartDomain | null = outside ? own : stated ?? own;
           const ribbon = <FlowRibbonLanes ctx={ctx} domain={axis} lanes={lanes} />;
           return (
             <div className="exec-pf-chart" data-stale={stale ? "true" : undefined}>
@@ -114,6 +119,7 @@ function EquityCard({ ctx }: { ctx: TabCtx }) {
                   />
                 </ChartTools>
               )}
+              {outside ? <p className="exec-pf-note" data-testid="equity-outside-coverage">The published points lie outside the coverage window the read states, so the axis follows the points.</p> : null}
               {shown && shown.unreadable > 0 ? <p className="exec-pf-note">{shown.unreadable} points could not be read and were not drawn.</p> : null}
               <FlowRibbonNotes ctx={ctx} />
               <div className="exec-pf-caption">
@@ -259,7 +265,7 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
   });
   return (
     <div className="exec-pf-stack">
-      {simulated ? <p className="exec-pf-banner" data-tone="info">Simulated capital. It is never added to Real-funded figures.</p> : null}
+      {simulated ? <p className="exec-pf-banner" data-tone="info">Part of this portfolio is simulated capital (Paper and Sandbox). That part is never added to the Real-funded figures.</p> : null}
       <PfKpiStrip label="Portfolio identity">
         <PfKpi label="NAV"><NavFigure ctx={ctx} /></PfKpi>
         <PfKpi label="Net PnL" note={netPnlList !== null ? `Window ${ctx.window}` : "Windowed; needs the window"}>

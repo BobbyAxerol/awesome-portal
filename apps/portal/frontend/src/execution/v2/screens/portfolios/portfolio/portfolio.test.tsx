@@ -209,7 +209,7 @@ describe("Overview", () => {
   it("says on the Overview that Simulated capital is never added to Real-funded figures", async () => {
     mount(makeApi().api);
     await ready();
-    expect(screen.getByText("Simulated capital. It is never added to Real-funded figures.")).toBeTruthy();
+    expect(screen.getByText("Part of this portfolio is simulated capital (Paper and Sandbox). That part is never added to the Real-funded figures.")).toBeTruthy();
   });
 
   it("lists what the projection reports as not ready: deployments and accounts", async () => {

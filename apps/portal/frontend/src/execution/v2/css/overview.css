@@ -402,3 +402,8 @@ a.exec-ov-what-title {
 
 .exec-ov-contrib-who, .exec-ov-contrib-id { display: block; font-weight: 400; }
 .exec-ov-pager { display: flex; gap: var(--space-2); }
+
+/* A figure is never broken across lines; its unit is a small suffix (QA2 R1-04). */
+.exec-ov-fig { white-space: nowrap; overflow-wrap: normal; }
+.exec-ov-unit { margin-left: var(--space-1); font: var(--exec-font-caption); color: var(--ink-faint); white-space: nowrap; }
+.exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { overflow-wrap: normal; }

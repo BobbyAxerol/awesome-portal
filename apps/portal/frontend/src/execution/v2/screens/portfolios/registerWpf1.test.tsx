@@ -99,7 +99,7 @@ describe("scope statement", () => {
     const total = screen.getByTestId("scope-total");
     const lines = [...total.querySelectorAll(".exec-part-line")].map((li) => li.textContent);
     expect(lines).toEqual(["Real-funded · USDT230,000.00 USDT", "Real-funded · JPY23,000.00 JPY"]);
-    expect(total.textContent).toContain("Scope statement · Economic capital");
+    expect(total.textContent).toContain("Scope statement, not a sum of the rows above · Economic capital");
     expect(total.textContent).not.toMatch(/Total/);
     expect(total.querySelector("[title]")!.getAttribute("title")).toContain("partitions stay apart. The rows above are separate figures.");
   });

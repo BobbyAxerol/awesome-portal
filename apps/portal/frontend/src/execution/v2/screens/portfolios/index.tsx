@@ -365,7 +365,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
               <span className="exec-pf-sr">Search portfolio or owner</span>
               <input className="exec-pf-input" type="search" placeholder="Search portfolio or owner" value={text} onChange={(event) => setText(event.target.value)} />
             </label>
-            <span className="exec-pf-seg" role="group" aria-label="Domain">
+            <span className="exec-pf-seg" role="group" aria-label="Domain" title="A portfolio that holds both Real-funded and Simulated capital is counted in both segments, so the two counts can add up to more than All.">
               {([["all", "All", null], ["real", "Real-funded", "real"], ["simulated", "Simulated", "simulated"]] as const).map(([id, label, value]) => (
                 <button key={id} type="button" className="exec-pf-segbtn" aria-pressed={domain === value} onClick={() => setLocal("domain", value)}>
                   {label}<span className="exec-pf-count">{domainCounts[id]}</span>
@@ -465,7 +465,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
 
           {scopeNav !== null ? (
             <div className="exec-pf-total" role="group" aria-label="Scope statement" data-testid="scope-total">
-              <span className="exec-pf-dim" title="The Manager's own statement for this environment, before the table filters: one line per economic partition, partitions stay apart. The rows above are separate figures.">Scope statement · Economic capital · {url.value.env === "live" ? "Real-funded" : url.value.env === "paper" ? "Paper" : "Sandbox"}</span>
+              <span className="exec-pf-dim" title="The Manager's own statement for this environment, before the table filters: one line per economic partition, partitions stay apart. The rows above are separate figures.">Scope statement, not a sum of the rows above · Economic capital · {url.value.env === "live" ? "Real-funded" : url.value.env === "paper" ? "Paper" : "Sandbox"}</span>
               <PartitionFigures list={scopeNav} metricKey="current_nav" />
             </div>
           ) : null}

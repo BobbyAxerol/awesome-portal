@@ -166,3 +166,12 @@ NOT FIXED, with the owner: OV-02 and P3-02 (dates in the future, the world clock
 - Completeness comes from `group_page` only ("Top N of M alpha groups" printed once; exactly 200 with no cursors is "all shown"). Without `group_page` the line states the count shown and claims nothing about the rest. `atGroupCap` is removed. Fleet options and the Portfolios server order use `group_page` the same way (a partial page is not an order or a complete option list).
 - Name and owner come from each group's `attribution`; GROUP_NAME_/GROUP_OWNER_ NOT_PUBLISHED/AMBIGUOUS are typed absences in words (code in `data-reason`). Nothing is joined from rows. Full-group totals are rendered as published on every page.
 - Tests: `screens/overview/contributorsPaging.test.tsx` (8), `contributors.test.tsx` updated. Return/Score source gap unchanged.
+
+## 13. Round 3 (QA2 R1, presentation items)
+
+- R1-04: Overview NAV is a nowrap figure with the unit as a small caption suffix (`FigureUnit`).
+- R1-05: a deadline is related to the server's read time (`deadlineRelation`); a state word the date contradicts is replaced by "Deadline <date>, before/after the read time". Wall clock is never used.
+- R1-06: the Portfolios scope line is labelled "Scope statement, not a sum of the rows above"; the Overview scope line says NAV is the published fund series, not a sum of rows. Nothing is summed client-side.
+- R1-11: when every equity point lies outside the stated coverage the axis follows the points and a note says so (the line and the caption dates then share one axis). Fixture coverage vs points is WP-P data.
+- R1-19 (segment chips hint), R1-20 (banner names the simulated part).
+- Not done in this round: R1-07, R1-08, R1-12 to R1-18, R1-23, R1-25, R1-26; world items (R1-01, 02, 03, 09, 10) wait for WORLD-V1.
