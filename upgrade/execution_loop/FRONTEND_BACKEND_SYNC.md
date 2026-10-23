@@ -2572,6 +2572,12 @@ not a complete gate. The subsequent fixed-runner Paper retake passed 37/37
 plus actual restore/four scoped-access digests. Final normal hook/landing pending.
 Offline planner now 12/12, still `execution_authorized=false`.
 
+Later `a71325eab` Fleet presentation review: retain visible economic-domain
+labels unless equivalence is explicitly proven. The single-env Live + PAPER
+partition case is accepted by the existing reader and needs a rendering test;
+environment alone cannot replace its domain label. Details in the same packet;
+no later source was added to the frozen integration and no test was claimed.
+
 
 ### P0 Bobby has called Edge — NEW Core-first PREPARED23Oct00:56VN
 

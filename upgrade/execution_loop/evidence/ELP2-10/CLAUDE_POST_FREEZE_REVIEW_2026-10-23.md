@@ -132,3 +132,25 @@ passed both Paper-reader suites (37/37) and the actual PostgreSQL restore/four
 scoped-access digest drill, exit 0. Final normal hook and landing stay
 pending. Offline proposal validation is now 12/12 after an independently found
 inherited-workload-key error was demonstrated then fixed. No load authorized.
+
+## Addendum — Fleet presentation `a71325eab`, do not hide economic domain
+
+Read-only range `766615d12..a71325eabe5b5724d27171dc8a89451fdd95c4ba`:
+one presentation commit, 11 files, +95/−32; no backend/contract/runtime change.
+The previous Portfolio/Fleet/shell findings remain open at this cut.
+
+CHANGE: `screens/fleet/PartitionFigures.tsx:61` visually hides the economic
+domain tag whenever there is one partition. `FleetDatasetTable.tsx:149–150`
+enables this for every lens. Environment does not universally imply economic
+domain: `readers/managerDataset.ts:677–681` enforces equivalence only for ALL,
+and `managerDataset.test.ts:475–482` explicitly accepts Live stages with
+unchanged Paper partitions. A single-environment Live view can therefore show
+Paper money without a visible Paper label. Retain the compact domain label
+unless equivalence is explicitly established; do not tighten backend semantics
+to justify a presentation assumption. Add a single-env Live/single-PAPER
+partition rendering test, preserving the accepted component/design.
+
+ACCEPT optional columns, environment badge placement and disabled selection
+as presentation-only. Stage-entry source absence remains explicit, not invented.
+No tests or runtime actions were performed for this independent review; none
+of these later commits was silently added to the frozen `2f9ca2dc` integration.
