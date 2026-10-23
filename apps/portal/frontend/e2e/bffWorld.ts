@@ -201,15 +201,17 @@ const ACCOUNT_NAMES: Readonly<Record<string, { name: string; binding: string }>>
 export const SLEEVES: readonly string[] = ["acc_bnc_core", "acc_bnc_sat", "acc_bnc_can"];
 export const nativeAccountIds = (): string[] => Object.keys(ACCOUNT_NAMES);
 export function accountFact(accountId: string): AccountFact | null {
-  const meta = ACCOUNT_NAMES[accountId];
-  const booked = NATIVE_ALPHAS.flatMap((a) => a.deployments).filter((d) => d.accountId === accountId);
+  const native = ACCOUNT_NAMES[accountId];
+  const binding = native === undefined ? scaled().bindings.find((b) => b.accountId === accountId) : undefined;
+  const meta = native ?? (binding === undefined ? undefined : { name: `${binding.venue} ${accountId.slice(-3)}`, binding: binding.bindingId });
+  const booked = worldAlphas().flatMap((a) => a.deployments).filter((d) => d.accountId === accountId);
   if (meta === undefined || booked.length === 0) return null;
   const allocation = booked.reduce((n, d) => n + toCents(d.allocation), 0n);
   const realized = booked.reduce((n, d) => n + toCents(d.realized), 0n);
   const unrealized = booked.reduce((n, d) => n + toCents(d.unrealized), 0n);
   const total = allocation + realized;
   const locked = allocation / 10n;
-  return { id: accountId, name: meta.name, venue: "BINANCE", environment: booked[0]!.environment, bindingId: meta.binding, currency: booked[0]!.currency, deployments: booked, allocation, realized, unrealized, total, locked, free: total - locked };
+  return { id: accountId, name: meta.name, venue: binding?.venue ?? "BINANCE", environment: booked[0]!.environment, bindingId: meta.binding, currency: booked[0]!.currency, deployments: booked, allocation, realized, unrealized, total, locked, free: total - locked };
 }
 
 /** The ledger of an account over time: for each booked deployment its allocation plus a cumulative realized PnL that ends on its realized, summed. The last point IS `AccountFact.total`. */

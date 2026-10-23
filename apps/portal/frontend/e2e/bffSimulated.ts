@@ -20,6 +20,8 @@ import { credentialView, stateView } from "../src/execution/v2/screens/account/m
 import { fixtureNowMs, scaled } from "./bffScale";
 // ===== WP-F3 begin: lit stage bodies (register 2f3) =====
 import { simulateStage } from "./bffSimulatedStage";
+import { isPositiveMode } from "./bffPositiveMode";
+import { accountFact, ledgerSeries } from "./bffWorld";
 // ===== WP-F3 end =====
 
 type Obj = Record<string, unknown>;
@@ -194,7 +196,10 @@ function overlayChart(body: Obj, metric: string): Obj {
   if (!isObj(series) || !Array.isArray(series.points)) return out;
   let points = series.points as [number, string | null][];
   if (points.length >= 5) {
-    points = accountEquityPoints(points[points.length - 1]![0]); // WP-F2: a 90-day daily series ending on the double's own last instant
+    const lastT = points[points.length - 1]![0];
+    const subject = isObj(out.subject) ? String(out.subject.id) : "";
+    // WORLD: the equity line of an account of the world ends on that account's ledger; any other account keeps the F2 walk
+    points = isPositiveMode() && accountFact(subject) !== null ? ledgerSeries(subject, lastT - 89 * 86_400_000, lastT, 90).map((p): [number, string | null] => [p.t, p.value]) : accountEquityPoints(lastT); // WP-F2: a 90-day daily series ending on the double's own last instant
     series.points = points;
   }
   if (metric !== "drawdown") return out;

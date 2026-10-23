@@ -104,6 +104,26 @@ describe("a deployment is ONE thing on every screen", () => {
     for (const p of paper.data.positions) expect(p.mark_price).toBe(MARKS[p.instrument_id]);
   });
 
+  it("Alpha 360's orders, fills, positions and equity are the alpha's own deployments' (no clones), and the equity line ends on the account ledger", async () => {
+    const orders = await get(`${E}/resources/alphas/alpha_a/orders?environment=live&limit=200`);
+    const other = await get(`${E}/resources/alphas/alpha_btc_trend/orders?environment=live&limit=200`);
+    const mine = orders.records.map((r: Body) => r.values);
+    expect(mine.length).toBeGreaterThan(0);
+    for (const o of mine) { expect(o.strategy_id).toBe("alpha_a"); expect(o.deployment_id).toBe("dep_live_01"); expect(o.account_id).toBe("acc_bnc_core"); }
+    expect(other.records.map((r: Body) => r.record_id).filter((id: string) => mine.some((o: Body) => o.order_id === id))).toEqual([]);
+    const alpha = await get(`${E}/resources/alphas/alpha_a`);
+    const live = await get(`${E}/deployments/dep_live_01/live`);
+    expect(alpha.data.positions.filter((p: Body) => p.deployment_id === "dep_live_01").map((p: Body) => p.position_id)).toEqual(live.positions.typed.rows.map((r: Body) => r.id));
+    const chart = await get(`${E}/views/equity-chart?subject_kind=alpha&subject_id=alpha_a&environment=live`);
+    // the alpha's equity (WP-C's line) is the equity of ITS deployments in this environment: allocation + realized + unrealized
+    const equity = deploymentOf("dep_live_01")!.deployment;
+    expect(toCents(chart.panel.data.series[0].points.at(-1)[1])).toBe(toCents(equity.allocation) + netPnlOf(equity));
+    const account = await get(`${E}/resources/accounts/acc_bnc_core`);
+    const ledger = account.data.account_balances.find((b: Body) => b.account_id === "acc_bnc_core").total;
+    const accountChart = await get(`${E}/views/equity-chart?subject_kind=account&subject_id=acc_bnc_core`);
+    expect(toCents(accountChart.panel.data.series[0].points.at(-1)[1])).toBe(toCents(ledger));
+  });
+
   it("days in stage on the Fleet are the alpha's stage history, as the stage screens date it", async () => {
     const fleet = await get(`${E}/manager/fleet?environment=live&limit=200`);
     const rows = fleet.items.filter((r: Body) => r.current_stage === "LIVE" && r.days_in_stage !== null);

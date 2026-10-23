@@ -14,7 +14,7 @@ import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoub
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
-import { lifecycleOf, NATIVE_ALPHAS, stageDays } from "../frontend/e2e/bffWorld";
+import { lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays } from "../frontend/e2e/bffWorld";
 import { legacy, traits } from "./scenario";
 
 // Mutable copies of published JSON templates, confined to this server-only fixture module.
@@ -1352,8 +1352,8 @@ function wpcCandles(method: string, path: string, search: URLSearchParams): Revi
   const base = answerAlpha(method, path, search);
   const body = base?.body as Draft;
   if (base === null || base.status !== 200 || body?.state !== "READY" || !Array.isArray(body.candles) || body.candles.length === 0) return base;
-  const CENTRE = 6_730_000;
-  let close = 6_722_000;
+  const CENTRE = legacy() ? 6_730_000 : Math.round(Number(MARKS.BTCUSDT) * 100); // WORLD: the candles wander around the one mark of the symbol
+  let close = CENTRE - 8_000;
   body.candles = body.candles.map((candle: Draft, i: number) => {
     const drift = ((i * 37) % 23) - 11;
     const open = close;
@@ -2013,12 +2013,12 @@ export function wpAlphaResource(body: unknown, alphaId: string): unknown {
   out.data.portfolio_allocations = own.map((deployment) => ({ ...first(data.portfolio_allocations), portfolio_id: deployment.portfolioId, strategy_id: alphaId, deployment_id: deployment.id,
     account_id: deployment.accountId, allocated_capital: deployment.allocation, currency: deployment.currency, ...profile }));
   const allocation = own.reduce((sum, deployment) => sum + cents(deployment.allocation), 0n);
-  const unrealized = own.reduce((sum, deployment) => sum + cents(deployment.unrealized), 0n);
-  const long = unrealized * 7n / 10n;
+  void allocation;
   const lead = own[0]!;
-  const position = (id: string, instrument: string, side: string, quantity: string, notional: bigint, pnl: bigint): Draft => ({ ...first(data.positions), position_id: id, strategy_id: alphaId, deployment_id: lead.id,
-    account_id: lead.accountId, mode: environment, venue: lead.venue, instrument_id: instrument, side, quantity, signed_qty: side === "SHORT" ? `-${quantity}` : quantity, notional: text(notional), unrealized_pnl: text(pnl), currency: lead.currency, ...profile });
-  out.data.positions = [position(`pos_${alphaId}_btc`, "BTCUSDT", "LONG", "0.91", allocation * 55n / 100n, long), position(`pos_${alphaId}_eth`, "ETHUSDT", "SHORT", "12.5", allocation * 30n / 100n, unrealized - long)];
+  // WORLD: the positions are the deployments' own, at the one mark per symbol, adding up to each deployment's unrealized PnL
+  out.data.positions = own.flatMap((deployment) => positionsOf(deployment.id).map((p): Draft => ({ ...first(data.positions), position_id: p.id, strategy_id: alphaId, deployment_id: deployment.id,
+    account_id: deployment.accountId, mode: environment, venue: deployment.venue, instrument_id: p.symbol, side: p.side.toUpperCase(), quantity: p.quantity, signed_qty: p.side === "short" ? `-${p.quantity}` : p.quantity,
+    avg_px_open: p.entry, mark_price: p.mark, notional: p.notional, unrealized_pnl: p.unrealised, currency: deployment.currency, ...profile })));
   out.data.reconciliation = (Array.isArray(data.reconciliation) ? data.reconciliation : []).map((row: Draft) => ({ ...row, deployment_id: lead.id, account_id: lead.accountId }));
   if (out.data.alpha && typeof out.data.alpha === "object") {
     Object.assign(out.data.alpha, { alpha_id: alphaId, alpha_label: spec.label, version: spec.version, owner: spec.owner, portfolios: portfolios.map(([id, name]) => ({ portfolio_id: id, name, base_currency: own[0]!.currency })) });
