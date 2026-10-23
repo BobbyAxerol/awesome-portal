@@ -512,7 +512,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
   if (shared || own) {
     rows.accounts = owners.map((owner, n) => ({ account_id: owner, label: owner === "acc_bnc_core" ? "Binance-02 sleeve" : `Binance-02${"bc"[n - 1]} sleeve`, strategy_id: books.find((b) => b.owner === owner)?.book?.deployments[0]?.alpha_id ?? null,
       mode: spec.environment, venue: "BINANCE", base_currency: currency, account_type: "CROSS", state: "ACTIVE" }));
-    rows.deployments = books.flatMap(({ owner, book }) => (book?.deployments ?? []).map((d) => ({ deployment_id: d.deployment_id, account_id: owner, strategy_id: d.alpha_id, portfolio_id: d.portfolio_id, mode: d.environment, venue: "BINANCE", state: "RUNNING" })));
+    rows.deployments = books.flatMap(({ owner, book }) => (book?.deployments ?? []).map((d) => ({ deployment_id: d.deployment_id, account_id: owner, strategy_id: d.alpha_id, portfolio_id: d.portfolio_id, mode: d.environment, stage: d.stage.toLowerCase(), venue: "BINANCE", state: "RUNNING" })));
     rows.venue_accounts = owners.map((owner) => ({ binding_id: spec.bindingId, account_id: owner, mode: spec.environment, venue: "BINANCE", state: "ACTIVE" }));
     rows.account_balances = books.flatMap(({ owner }) => {
       const m = money(owner);
@@ -521,7 +521,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
   }
   if (own) {
     const book = books.find((entry) => entry.owner === primary)!.book!;
-    rows.portfolio_allocations = book.deployments.map((d) => ({ portfolio_id: d.portfolio_id, strategy_id: d.alpha_id, deployment_id: d.deployment_id, account_id: primary, mode: d.environment, currency: d.currency, allocated_capital: d.allocation }));
+    rows.portfolio_allocations = book.deployments.map((d) => ({ portfolio_id: d.portfolio_id, strategy_id: d.alpha_id, deployment_id: d.deployment_id, account_id: primary, mode: d.environment, stage: d.stage.toLowerCase(), currency: d.currency, allocated_capital: d.allocation }));
     const free = own.total - own.locked;
     rows.margin_balances = [margin(primary, currency, fromCents(own.locked), fromCents(own.locked / 2n))];
     rows.exposure_headroom = [{ currency, free: fromCents(free), maintenance: fromCents(own.locked / 2n), headroom: fromCents(free - own.locked / 2n), verdict: "AVAILABLE" }];
@@ -536,6 +536,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
     else delete rows.differences;
   } else {
     // An account no deployment is booked on (the idle sub account, the OKX main): healthy, with the rows its capabilities name.
+    rows.deployments = []; // no deployment of the world is booked here, so none is named (a deployment id must have a lifecycle record)
     const have = rows.account_balances?.[0];
     const free = have ? toCents(String(have.free)) : 10_000_000n;
     rows.account_balances = (rows.account_balances ?? []).map((row) => ({ ...row, updated_at: ACCOUNT_DOUBLE_AS_OF, updated_at_ms: AS_OF_MS }));

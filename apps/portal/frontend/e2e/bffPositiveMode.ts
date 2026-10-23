@@ -33,13 +33,26 @@ export interface PositivePortfolioBook {
   deployments: PositiveDeploymentBook[];
 }
 
+/** What the world knows about one deployment id: the stage it is in and whose it is (the stage screens' lifecycle record and identity keys). */
+export interface PositiveDeploymentFact {
+  stage: "paper" | "sandbox" | "canary" | "live";
+  alphaId: string;
+  alphaName: string;
+  portfolioId: string;
+  portfolioName: string;
+}
+let deploymentFacts: ((deploymentId: string) => PositiveDeploymentFact | null) | null = null;
+export const positiveDeploymentFact = (deploymentId: string): PositiveDeploymentFact | null => (positive && deploymentFacts !== null ? deploymentFacts(deploymentId) : null);
+
 let positive = false;
 let books: ((accountId: string) => PositiveAccountBook | null) | null = null;
 let portfolioBooks: ((portfolioId: string) => PositivePortfolioBook | null) | null = null;
 
 export const setPositiveMode = (on: boolean, provider: ((accountId: string) => PositiveAccountBook | null) | null = null,
-  portfolioProvider: ((portfolioId: string) => PositivePortfolioBook | null) | null = null): void => {
+  portfolioProvider: ((portfolioId: string) => PositivePortfolioBook | null) | null = null,
+  facts: ((deploymentId: string) => PositiveDeploymentFact | null) | null = null): void => {
   positive = on;
+  deploymentFacts = on ? facts : null;
   books = on ? provider : null;
   portfolioBooks = on ? portfolioProvider : null;
 };

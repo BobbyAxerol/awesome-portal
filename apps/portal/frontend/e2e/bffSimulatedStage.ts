@@ -26,6 +26,8 @@
  * asserted by the suite, absence is a typed `NOT_PUBLISHED` fact with a reason code, never a zero.
  */
 
+import { positiveDeploymentFact } from "./bffPositiveMode";
+
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -85,7 +87,7 @@ const STAGE_OF: Readonly<Record<string, DeploymentStage>> = {
 };
 /** The stage of a deployment id; an id the universe does not know is taken to be in the stage of the screen that asked. */
 export function stageOf(deploymentId: string, asked: DeploymentStage): DeploymentStage {
-  return STAGE_OF[baseDeploymentId(deploymentId)] ?? asked;
+  return STAGE_OF[baseDeploymentId(deploymentId)] ?? positiveDeploymentFact(baseDeploymentId(deploymentId))?.stage ?? asked; // WP-P: every id the world emits has a lifecycle record
 }
 /** A stage page exists (lit) only for a stage the deployment has reached. */
 export const reached = (stage: DeploymentStage, asked: DeploymentStage): boolean => STAGE_ORDER.indexOf(asked) <= STAGE_ORDER.indexOf(stage);
@@ -99,7 +101,8 @@ export function baseDeploymentId(deploymentId: string): string {
 }
 
 function identityOf(deploymentId: string): Identity | null {
-  return IDENTITY[baseDeploymentId(deploymentId)] ?? null;
+  const fact = positiveDeploymentFact(baseDeploymentId(deploymentId));
+  return IDENTITY[baseDeploymentId(deploymentId)] ?? (fact === null ? null : { alphaId: fact.alphaId, alphaName: fact.alphaName, portfolioId: fact.portfolioId, portfolioName: fact.portfolioName }); // WP-P
 }
 
 function withIdentity(deployment: Obj, deploymentId: string): void {

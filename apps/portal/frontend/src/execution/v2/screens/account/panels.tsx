@@ -219,7 +219,7 @@ export function AllocationsPanel({ ctx }: { ctx: PanelContext }) {
     {
       key: "deployment",
       label: "Deployment",
-      render: (row) => row.deployment === null ? <Na /> : <Link className="exec-acct-link" to={withContext(deploymentHref(row.deployment, row.mode), withoutOrigin(params))}>{ctx.view.names.deployments[row.deployment] ?? row.deployment}</Link>,
+      render: (row) => row.deployment === null ? <Na /> : <Link className="exec-acct-link" to={withContext(deploymentHref(row.deployment, row.mode, row.stage), withoutOrigin(params))}>{ctx.view.names.deployments[row.deployment] ?? row.deployment}</Link>,
     },
     { key: "stage", label: "Stage", render: (row) => stageWord(row.mode) },
     {

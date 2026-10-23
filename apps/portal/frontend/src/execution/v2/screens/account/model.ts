@@ -469,6 +469,8 @@ export interface AllocationFacts {
   deployment: string | null;
   portfolio: string | null;
   mode: string | null;
+  /** The stage the source publishes for the allocation (a canary trial is stage canary under mode live); the link goes to its own control room. */
+  stage: string | null;
   allocation: Metric | null | undefined;
   /** The allocation row's own PM budget (`budget_used` / `budget_approved`) and exposure (`exposure_gross` / `_long` / `_short`). */
   budgetUsed: Metric | null | undefined;
@@ -623,6 +625,7 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
       deployment: text(row.deployment_id),
       portfolio: text(row.portfolio_id),
       mode: text(row.mode),
+      stage: text(row.stage),
       allocation: metricOf(row.allocated_capital, "money"),
       budgetUsed: metricOf(row.budget_used, "money"),
       budgetApproved: metricOf(row.budget_approved, "money"),

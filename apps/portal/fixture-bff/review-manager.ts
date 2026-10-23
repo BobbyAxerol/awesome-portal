@@ -12,7 +12,7 @@ import { buildPositiveManagerSeries } from "../../../packages/contracts/tooling/
 import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
-import type { PositiveAccountBook, PositivePortfolioBook } from "../frontend/e2e/bffPositiveMode";
+import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 import { legacy, traits } from "./scenario";
 
@@ -1969,6 +1969,15 @@ export function wpPortfolioBook(portfolioId: string): PositivePortfolioBook | nu
   return { portfolio_id: portfolioId, deployments: booked.map(({ alpha, deployment }) => ({ deployment_id: deployment.id, alpha_id: alpha.id, alpha_label: alpha.label,
     portfolio_id: deployment.portfolioId, portfolio_name: deployment.portfolioName, environment: deployment.environment, stage: deployment.stage, currency: deployment.currency,
     allocation: deployment.allocation, realized: deployment.realized, unrealized: deployment.unrealized })) };
+}
+
+/** The stage and the owners of one deployment id of the world (generated, native or suite): the stage screens' lifecycle record for an id their own table does not list. */
+export function wpDeploymentFact(deploymentId: string): PositiveDeploymentFact | null {
+  for (const alpha of [...scaled().alphas, ...WPC_ALPHAS, ...SUITE_ALPHAS]) {
+    const deployment = alpha.deployments.find((entry) => entry.id === deploymentId);
+    if (deployment !== undefined) return { stage: deployment.stage.toLowerCase() as PositiveDeploymentFact["stage"], alphaId: alpha.id, alphaName: alpha.label, portfolioId: deployment.portfolioId, portfolioName: deployment.portfolioName };
+  }
+  return null;
 }
 
 export function wpAccountBook(accountId: string): PositiveAccountBook | null {
