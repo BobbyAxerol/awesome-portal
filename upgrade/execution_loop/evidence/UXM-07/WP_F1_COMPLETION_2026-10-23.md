@@ -159,3 +159,10 @@ NOT FIXED, with the owner: OV-02 and P3-02 (dates in the future, the world clock
 - UI `screens/overview/useVisitDigest.ts` + `VisitDigestPanel.tsx`: one read on open and on Refresh (no polling); GET never writes; Mark as seen is an explicit button, only when `may_mark_seen` (READ_ONLY_PROFILE: disabled with its reason), one in flight; 409 reads again and the user may act again; 503 keeps the prior digest with the sentence; failed read keeps the typed-absence frame. NO_BASELINE = first visit; EMPTY = "nothing changed", no history claim; the BOUNDED_OBSERVATIONS sentence is printed once. Shows label, value, as-of, and the server href with context retained.
 - Nothing shown beyond what the contract publishes, so no simulated-register row. Field-coverage baseline unchanged (test passes without `UPDATE_COVERAGE`).
 - Tests: `screens/overview/visitDigest.test.tsx` (reader rules, populated, first visit, empty, mark once, read-only, 409, 503, no polling and stale, absent frame, reload).
+
+## 12. Follow-up 5: Contributors over package 5 (group page and attribution)
+
+- Overview asks a bounded group page (`group_limit` 34; never the default 200, the 1 MiB budget untouched) and pages with the opaque `group_page` cursors: Next sends only `group_after`, Previous only `group_before`. The cursor is dropped when workspace, environment, window, grouping or limit changes (question key) and on Refresh.
+- Completeness comes from `group_page` only ("Top N of M alpha groups" printed once; exactly 200 with no cursors is "all shown"). Without `group_page` the line states the count shown and claims nothing about the rest. `atGroupCap` is removed. Fleet options and the Portfolios server order use `group_page` the same way (a partial page is not an order or a complete option list).
+- Name and owner come from each group's `attribution`; GROUP_NAME_/GROUP_OWNER_ NOT_PUBLISHED/AMBIGUOUS are typed absences in words (code in `data-reason`). Nothing is joined from rows. Full-group totals are rendered as published on every page.
+- Tests: `screens/overview/contributorsPaging.test.tsx` (8), `contributors.test.tsx` updated. Return/Score source gap unchanged.

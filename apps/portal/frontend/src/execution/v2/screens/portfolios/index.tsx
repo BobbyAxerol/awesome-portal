@@ -175,7 +175,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   const serverRead = useManagerDataset(api, permitted && servesDataset(api) && serverQuery !== null, serverQuery);
   const serverIds = useMemo(
     // A body that does not say it applied the group query (a server that predates it) is not used as an order.
-    () => (serverRead.phase === "ready" && serverQuery !== null && serverRead.value.groupQuery !== undefined && serverRead.value.groupQuery.groupsReturned === serverRead.value.groups.length ? serverRead.value.groups.flatMap((group) => (group.key[0]?.value ? [group.key[0].value] : [])) : null),
+    () => (serverRead.phase === "ready" && serverQuery !== null && serverRead.value.groupQuery !== undefined && serverRead.value.groupQuery.groupsReturned === serverRead.value.groups.length && (serverRead.value.groupPage === undefined || (serverRead.value.groupPage.nextCursor === null && serverRead.value.groupPage.authorizedFilteredCount === serverRead.value.groups.length)) ? serverRead.value.groups.flatMap((group) => (group.key[0]?.value ? [group.key[0].value] : [])) : null),
     [serverRead, serverQuery],
   );
   const serverApplied = serverIds !== null && ask !== null;

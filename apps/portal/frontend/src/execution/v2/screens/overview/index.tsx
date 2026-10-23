@@ -37,7 +37,7 @@
  *
  * No URL state beyond the shared context params. Links carry them (`withContext`).
  */
-import { useMemo, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
@@ -68,7 +68,7 @@ import { useOverviewReads } from "./useOverviewReads";
 import { useVisitDigest } from "./useVisitDigest";
 import { VisitDigestPanel } from "./VisitDigestPanel";
 import { ContributorsBody } from "./Contributors";
-import { CONTRIBUTORS_GROUP_FIELD, CONTRIBUTORS_PORTFOLIO_FIELD, alphaGroupOffered, contributorsView, type ContributorsField } from "./contributorsModel";
+import { CONTRIBUTORS_GROUP_LIMIT, CONTRIBUTORS_GROUP_FIELD, CONTRIBUTORS_PORTFOLIO_FIELD, alphaGroupOffered, contributorsView, type ContributorsField } from "./contributorsModel";
 import { BudgetBar } from "../portfolios/CapitalBlocks";
 
 import "../../css/blocks.css";
@@ -265,17 +265,34 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   const drawdownList = figureSource(fund, "max_drawdown_pct");
   // Contributors: the same fund, environment and window, grouped by alpha by the server. Asked once the fund read has said it
   // offers `alpha_id`; limit 1 because only `groups` (the whole filtered query) is read, never the page of rows.
-  const contributorsQuery = useMemo<ManagerDatasetQuery>(() => ({ ...fundQuery, groupBy: [CONTRIBUTORS_GROUP_FIELD], limit: 1 }), [fundQuery]);
+  // Package 5: a bounded group page (never the 1 MiB budget raised, never a silent cut); the cursors are the opaque ones of the answer on screen and
+  // are dropped the moment the workspace, environment, window, grouping, filter, sort or limit changes (the question key below).
+  const [contribBy, setContribBy] = useState<ContributorsField>(CONTRIBUTORS_GROUP_FIELD);
+  const pageKey = JSON.stringify([workspaceId ?? null, url.value.env, url.value.window, contribBy, CONTRIBUTORS_GROUP_LIMIT]);
+  const [groupCursor, setGroupCursor] = useState<{ key: string; direction: "after" | "before"; cursor: string } | null>(null);
+  // A cursor never outlives its question: leaving it (and coming back) starts at the first page.
+  useEffect(() => { setGroupCursor(null); }, [pageKey]);
+  const activeCursor = groupCursor !== null && groupCursor.key === pageKey ? groupCursor : null;
+  const pagedAsk = { groupLimit: CONTRIBUTORS_GROUP_LIMIT, ...(activeCursor === null ? {} : activeCursor.direction === "after" ? { groupAfter: activeCursor.cursor } : { groupBefore: activeCursor.cursor }) };
+  const contributorsQuery = useMemo<ManagerDatasetQuery>(() => ({ ...fundQuery, groupBy: [CONTRIBUTORS_GROUP_FIELD], limit: 1, ...pagedAsk }), [fundQuery, activeCursor?.direction, activeCursor?.cursor]); // eslint-disable-line react-hooks/exhaustive-deps
   const contributorsRead = useManagerDataset(api, servesDataset(api) && fund !== null && alphaGroupOffered(fund) === true, contributorsQuery, seriesNonce);
   // The hi-fi's second tab: the same read grouped by portfolio, asked only once the fund says it offers `portfolio_id` and the tab is open.
-  const [contribBy, setContribBy] = useState<ContributorsField>(CONTRIBUTORS_GROUP_FIELD);
   const portfolioOffered = fund !== null && alphaGroupOffered(fund, CONTRIBUTORS_PORTFOLIO_FIELD) === true;
-  const portfolioQuery = useMemo<ManagerDatasetQuery>(() => ({ ...fundQuery, groupBy: [CONTRIBUTORS_PORTFOLIO_FIELD], limit: 1 }), [fundQuery]);
+  const portfolioQuery = useMemo<ManagerDatasetQuery>(() => ({ ...fundQuery, groupBy: [CONTRIBUTORS_PORTFOLIO_FIELD], limit: 1, ...pagedAsk }), [fundQuery, activeCursor?.direction, activeCursor?.cursor]); // eslint-disable-line react-hooks/exhaustive-deps
   const portfolioRead = useManagerDataset(api, servesDataset(api) && portfolioOffered && contribBy === CONTRIBUTORS_PORTFOLIO_FIELD, portfolioQuery, seriesNonce);
   const contributors = contribBy === CONTRIBUTORS_PORTFOLIO_FIELD && portfolioOffered
     ? contributorsView({ served: servesDataset(api), fundRead, fund, grouped: portfolioRead, field: CONTRIBUTORS_PORTFOLIO_FIELD })
     : contributorsView({ served: servesDataset(api), fundRead, fund, grouped: contributorsRead });
-  const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
+  const shownGroups = contribBy === CONTRIBUTORS_PORTFOLIO_FIELD && portfolioOffered ? portfolioRead : contributorsRead;
+  const shownDataset = shownGroups.phase === "ready" ? shownGroups.value : null;
+  const contributorsPager = shownDataset?.groupPage === undefined || shownDataset === null ? undefined : {
+    hasPrevious: shownDataset.groupPage.previousCursor !== null,
+    hasNext: shownDataset.groupPage.nextCursor !== null,
+    busy: shownGroups.phase !== "ready",
+    onPrevious: () => { const c = shownDataset.groupPage?.previousCursor; if (c) setGroupCursor({ key: pageKey, direction: "before", cursor: c }); },
+    onNext: () => { const c = shownDataset.groupPage?.nextCursor; if (c) setGroupCursor({ key: pageKey, direction: "after", cursor: c }); },
+  };
+  const refresh = () => { setGroupCursor(null); reads.reload(); setSeriesNonce((n) => n + 1); };
   // The visit digest: one read on open and on Refresh (the same nonce), never polled; it is written only by its own button.
   const visit = useVisitDigest(api, workspaceId, seriesNonce);
 
@@ -512,7 +529,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
           ) : undefined}
           aside={contributors.kind === "ready" ? `Net PnL by ${contribBy === CONTRIBUTORS_PORTFOLIO_FIELD && portfolioOffered ? "portfolio" : "alpha"} · window ${url.value.window}` : "Amount · Return · Score"}
         >
-          <ContributorsBody view={contributors} linkOf={(field, id) => ctx(field === "portfolio_id" ? `/deployments/portfolios/${encodeURIComponent(id)}` : `/deployments/alphas/${encodeURIComponent(id)}`)} />
+          <ContributorsBody view={contributors} pager={contributorsPager} linkOf={(field, id) => ctx(field === "portfolio_id" ? `/deployments/portfolios/${encodeURIComponent(id)}` : `/deployments/alphas/${encodeURIComponent(id)}`)} />
         </SectionPanel>
       </div>
 

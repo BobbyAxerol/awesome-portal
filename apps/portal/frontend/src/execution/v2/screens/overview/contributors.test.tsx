@@ -122,11 +122,12 @@ describe("Contributors: the server's alpha groups", () => {
   it("states the population: groups listed, the authorized filtered count, the scope, the environment and the window", async () => {
     mount(withDataset(httpApi(), grouped()), "/execution?env=paper&window=7D");
     const note = await screen.findByTestId("contributors-population");
-    expect(note.textContent).toBe("3 alpha groups over 6 authorized rows (full authorized filtered query), paper, window 7D.");
-    expect(note.getAttribute("data-capped")).toBeNull();
+    // The double sends no group_page, so the line states only what is on screen and claims nothing about the rest.
+    expect(note.textContent).toBe("3 alpha groups over 6 authorized rows (full authorized filtered query), paper, window 7D. The server did not state how many groups exist.");
+    expect(note.getAttribute("data-partial")).toBeNull();
   });
 
-  it("a list at the server's group cap says it is not the whole population", () => {
+  it("200 groups without a group_page claim nothing about completeness (no guess from the count)", () => {
     const view = contributorsView({
       served: true, fundRead: { phase: "idle" }, fund: datasetFor("FUND", "u"),
       grouped: { phase: "ready", warnings: [], value: datasetFor("FUND", "u", (body: Body) => {
@@ -136,8 +137,10 @@ describe("Contributors: the server's alpha groups", () => {
     });
     expect(view.kind).toBe("ready");
     if (view.kind !== "ready") return;
-    expect(view.population.atGroupCap).toBe(true);
-    expect(view.population.statement).toContain("not the whole population of 900 authorized rows");
+    expect(view.population.groupPage).toBeNull();
+    expect(view.population.partial).toBe(false);
+    expect(view.population.statement).toContain("The server did not state how many groups exist.");
+    expect(view.population.statement).not.toMatch(/whole population|complete|all shown/);
   });
 
   it("Return and Score are columns only when a group publishes the key; the cell of a partition that does not is a typed absence", async () => {

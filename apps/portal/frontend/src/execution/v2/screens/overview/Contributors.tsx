@@ -11,7 +11,32 @@ import { partitionLabel } from "../portfolios/PartitionFigures";
 import { scaledOf } from "../portfolios/capitalModel";
 import { truncateDecimal } from "../portfolios/registerMetrics";
 import { FE_CONTRIBUTORS } from "./overviewModel";
-import type { ContributorGroup, ContributorLine, ContributorsPopulation, ContributorsView } from "./contributorsModel";
+import type { ContributorAttribution, ContributorGroup, ContributorLine, ContributorsPopulation, ContributorsView } from "./contributorsModel";
+
+const NAME_ABSENCE = { GROUP_NAME_NOT_PUBLISHED: "Name not published", GROUP_NAME_AMBIGUOUS: "Name ambiguous" } as const;
+const OWNER_ABSENCE = { GROUP_OWNER_NOT_PUBLISHED: "Owner not published", GROUP_OWNER_AMBIGUOUS: "Owner ambiguous" } as const;
+
+/** Name and owner of an alpha group from its own attribution: a value, or the typed reason in words (the code rides data-reason). */
+function Attribution({ attribution }: { attribution: ContributorAttribution }) {
+  const nameWord = attribution.name === null && attribution.nameReasonCode !== null ? NAME_ABSENCE[attribution.nameReasonCode] : null;
+  const ownerWord = attribution.ownerUserId === null ? (attribution.ownerReasonCode !== null ? OWNER_ABSENCE[attribution.ownerReasonCode] : "Owner not stated") : null;
+  return (
+    <span className="exec-ov-sub exec-ov-contrib-who" data-testid="contributor-attribution">
+      {nameWord !== null ? <span className="exec-ov-na" data-reason={attribution.nameReasonCode ?? undefined}>{nameWord}</span> : null}
+      {nameWord !== null ? " · " : null}
+      {ownerWord === null ? <span title="owner_user_id">Owner {attribution.ownerUserId}</span> : <span className="exec-ov-na" data-reason={attribution.ownerReasonCode ?? undefined}>{ownerWord}</span>}
+    </span>
+  );
+}
+
+/** Opaque-cursor paging of the groups: one direction at a time; the cursors come from the answer on screen and nowhere else. */
+export interface ContributorsPager {
+  hasPrevious: boolean;
+  hasNext: boolean;
+  busy: boolean;
+  onPrevious(): void;
+  onNext(): void;
+}
 
 /** `Not published (FE-025)` with the typed code behind a disclosure, and the reason in words. */
 function Absence({ code, reason }: { code: string; reason: string }) {
@@ -50,7 +75,7 @@ function barWidths(groups: readonly ContributorGroup[]): ReadonlyMap<string, num
 
 function Population({ population }: { population: ContributorsPopulation }) {
   return (
-    <p className="exec-ov-note" data-testid="contributors-population" data-capped={population.atGroupCap ? "true" : undefined}>
+    <p className="exec-ov-note" data-testid="contributors-population" data-partial={population.partial ? "true" : undefined}>
       {population.statement}
     </p>
   );
@@ -59,7 +84,7 @@ function Population({ population }: { population: ContributorsPopulation }) {
 /** Groups drawn before "Show all": the hi-fi lists a handful of bars; the server's order is kept, and the cut is said. */
 export const CONTRIBUTORS_SHOWN = 8;
 
-export function ContributorsBody({ view, linkOf }: { view: ContributorsView; /** Where an alpha or portfolio id leads (QA1 OV-08); `null` keeps plain text. */ linkOf?: (field: "alpha_id" | "portfolio_id", id: string) => string | null }) {
+export function ContributorsBody({ view, linkOf, pager }: { view: ContributorsView; pager?: ContributorsPager; /** Where an alpha or portfolio id leads (QA1 OV-08); `null` keeps plain text. */ linkOf?: (field: "alpha_id" | "portfolio_id", id: string) => string | null }) {
   const [showAll, setShowAll] = useState(false);
   if (view.kind === "loading") return <p className="exec-ov-note" role="status">Reading contributors</p>;
   if (view.kind === "absent") return <Absence code={view.code} reason={view.reason} />;
@@ -99,7 +124,7 @@ export function ContributorsBody({ view, linkOf }: { view: ContributorsView; /**
             const lines = group.lines.length === 0 ? [null] : group.lines;
             return lines.map((line, lineIndex) => (
               <tr key={`${groupIndex}|${lineIndex}`} data-group={groupIndex} data-first={lineIndex === 0 ? "true" : undefined}>
-                {lineIndex === 0 ? <th scope="row" rowSpan={lines.length} title={group.alphaId ?? undefined}>{group.alphaId === null ? <span className="exec-ov-na">{word} not stated</span> : linkOf?.(field, group.alphaId) ? <Link className="exec-ov-link" to={linkOf(field, group.alphaId)!}>{group.alphaId}</Link> : group.alphaId}</th> : null}
+                {lineIndex === 0 ? <th scope="row" rowSpan={lines.length} title={group.alphaId ?? undefined}>{group.alphaId === null ? <span className="exec-ov-na">{word} not stated</span> : linkOf?.(field, group.alphaId) ? <Link className="exec-ov-link" to={linkOf(field, group.alphaId)!}>{group.attribution?.name ?? group.alphaId}</Link> : (group.attribution?.name ?? group.alphaId)}{group.attribution?.name != null && group.alphaId !== null ? <span className="exec-ov-sub exec-ov-contrib-id">{group.alphaId}</span> : null}{group.attribution !== undefined ? <Attribution attribution={group.attribution} /> : null}</th> : null}
                 {line === null ? (
                   <td colSpan={3 + (view.showReturn ? 1 : 0) + (view.showScore ? 1 : 0)}><span className="exec-ov-na">No economic partition published</span></td>
                 ) : (
@@ -128,6 +153,12 @@ export function ContributorsBody({ view, linkOf }: { view: ContributorsView; /**
         </p>
       ) : null}
       <Population population={view.population} />
+      {pager !== undefined && (pager.hasPrevious || pager.hasNext) ? (
+        <p className="exec-ov-note exec-ov-pager" data-testid="contributors-pager">
+          <button type="button" className="exec-ov-btn" disabled={!pager.hasPrevious || pager.busy} onClick={pager.onPrevious}>Previous page</button>{" "}
+          <button type="button" className="exec-ov-btn" disabled={!pager.hasNext || pager.busy} onClick={pager.onNext}>Next page</button>
+        </p>
+      ) : null}
       {!view.showReturn || !view.showScore ? (
         <p className="exec-ov-note">
           Not published by the groups: {[view.showReturn ? null : "Return", view.showScore ? null : "Score"].filter(Boolean).join(", ")}
