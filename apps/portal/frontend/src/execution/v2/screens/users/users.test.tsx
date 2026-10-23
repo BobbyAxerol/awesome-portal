@@ -70,7 +70,7 @@ describe("roster", () => {
     expect(rowsOf()).toHaveLength(50);
     const kpis = screen.getByRole("region", { name: "Account counts" });
     expect(within(kpis).getByText("Accounts").parentElement?.textContent).toContain(String(USERS_DOUBLE_COUNT));
-    expect(screen.getByText(/Showing 50 of 123 accounts, 123 in the roster read/)).toBeTruthy();
+    expect(screen.getByText(/^Showing 50 of 123 accounts$/)).toBeTruthy();
   });
 
   it("prints the lifecycle word, locked and awaiting-first-password on the row, never colour alone", async () => {
@@ -189,7 +189,7 @@ describe("paging, search and filters (keyset pages and server-side filters, BE-P
       await loaded();
       expect(rowsOf()).toHaveLength(10);
       expect(new URLSearchParams(rosterGets()[0]!.search).get("limit")).toBe("10");
-      expect(screen.getByText(/Showing 10 of 123 accounts, 123 in the roster read/)).toBeTruthy();
+      expect(screen.getByText(/^Showing 10 of 123 accounts$/)).toBeTruthy();
       fireEvent.click(screen.getByRole("button", { name: "Load more" }));
       await waitFor(() => expect(rowsOf()).toHaveLength(20));
       expect(screen.getByText(/Showing 20 of 123 accounts/)).toBeTruthy();
@@ -229,7 +229,7 @@ describe("paging, search and filters (keyset pages and server-side filters, BE-P
     await waitFor(() => expect(rowsOf()).toHaveLength(1));
     expect(rowsOf()[0]!.textContent).toContain("Lan Tran");
     expect(new URLSearchParams(rosterGets()[rosterGets().length - 1]!.search).get("q")).toBe("lan");
-    expect(screen.getByText(/Showing 1 of 1 matching accounts, 123 in the roster read/)).toBeTruthy();
+    expect(screen.getByText(/^Showing 1 of 1 matching accounts \(123 in all\)$/)).toBeTruthy();
     // The cards and the pickers stay roster-wide: a search does not shrink them.
     const kpis = screen.getByRole("region", { name: "Account counts" });
     expect(within(kpis).getByText("Accounts").parentElement?.textContent).toContain("123");
@@ -266,7 +266,7 @@ describe("paging, search and filters (keyset pages and server-side filters, BE-P
     await loaded();
     fireEvent.change(screen.getByRole("searchbox", { name: "Search accounts" }), { target: { value: "no-such-person" } });
     expect(await screen.findByText("No accounts match these filters.")).toBeTruthy();
-    expect(screen.getByText("0 of 123 accounts in the roster read")).toBeTruthy();
+    expect(screen.getByText("0 of 123 accounts")).toBeTruthy();
     fireEvent.click(screen.getAllByRole("button", { name: "Clear filters" })[0]!);
     await waitFor(() => expect(rowsOf()).toHaveLength(50));
   });
@@ -364,7 +364,7 @@ describe("scale and keyboard", () => {
     expect(spy).toHaveBeenCalledTimes(4);
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
     expect(screen.getByText(/Showing the first 200 rows\. Narrow the search to see the rest\./)).toBeTruthy();
-    expect(screen.getByText(/Showing 200 of 300 accounts, 300 in the roster read/)).toBeTruthy();
+    expect(screen.getByText(/^Showing 200 of 300 accounts$/)).toBeTruthy();
     fireEvent.change(screen.getByRole("searchbox", { name: "Search accounts" }), { target: { value: "user299" } });
     await waitFor(() => expect(rowsOf()).toHaveLength(1));
   });
@@ -1034,7 +1034,7 @@ describe("the screen on a malformed roster: unavailable, never a table that look
       counts: { total: 10_000, matching: 10_000, by_state: { INVITED: 0, ACTIVE: 5_000, DISABLED: 5_000, ARCHIVED: 0 }, by_role: { ADMIN: 0, USER: 10_000 } },
     }));
     expect(rowsOf()).toHaveLength(50);
-    expect(screen.getByText("Showing 50 of 10000 accounts, 10000 in the roster read")).toBeTruthy();
+    expect(screen.getByText("Showing 50 of 10000 accounts")).toBeTruthy();
     const kpis = screen.getByRole("region", { name: "Account counts" });
     expect(within(kpis).getByText("Accounts").parentElement?.textContent).toContain("10000");
     expect(within(kpis).getByText("Active").parentElement?.textContent).toContain("5000");

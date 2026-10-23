@@ -478,8 +478,8 @@ export default function UsersScreen({ client = DEFAULT_CLIENT, legacyHref, acces
               <div className="exec-usr-foot">
                 <span className="exec-usr-count" role="status" aria-live="polite">
                   {counts.matching === 0
-                    ? `0 of ${counts.total} accounts in the roster read`
-                    : `Showing ${visible.length} of ${counts.matching}${filtered ? " matching" : ""} accounts, ${counts.total} in the roster read`}
+                    ? `0 of ${counts.total} accounts`
+                    : `Showing ${visible.length} of ${counts.matching}${filtered ? ` matching accounts (${counts.total} in all)` : " accounts"}`}
                 </span>
                 {moreToRead ? (
                   <button type="button" className="exec-usr-btn" aria-busy={roster.phase === "ready" && roster.loadingMore} onClick={() => { if (!(roster.phase === "ready" && roster.loadingMore)) loadMore(); }}>Load more</button>
