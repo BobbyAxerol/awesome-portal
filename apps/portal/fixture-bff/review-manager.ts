@@ -540,6 +540,73 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset, com
  * states: Paper is degraded (its own quality), Sandbox is a typed absence (NOT_CONFIGURED), a stage filter that excludes an environment
  * leaves it a counted zero. The layout-stress profile does not offer ALL (400), so the Portal keeps the fleet read there.
  */
+// ===== WP-A begin (Fleet numeric sort and range filters: exact decimals, null last in both directions, money only in ONE pinned partition)
+const FLEET_NUMERIC = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value", "return_30d_pct", "score"];
+const FLEET_MONEY = ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value"];
+const PARTITION_FIELDS = ["economic_domain", "currency", "basis", "native_profile_ref", "domain_proof_ref"];
+const DECIMAL_TEXT = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+interface FleetPlan { pin: Draft | null; textFilters: Draft[]; textSort: Draft[] }
+/** Splits a Fleet query into what the shared L0 double can validate (text fields) and what this lane evaluates itself (numeric fields). */
+function fleetPlan(search: URLSearchParams): { plan: FleetPlan } | { refusal: ReviewManagerResponse } {
+  const bad = (message: string) => ({ refusal: problem(400, "EXECUTION_READ_QUERY_INVALID", message) });
+  let pin: Draft | null = null;
+  if (search.has("economic_partition")) {
+    try { pin = JSON.parse(search.get("economic_partition")!); } catch { return bad("economic_partition is JSON."); }
+    if (pin === null || typeof pin !== "object" || Object.keys(pin).sort().join(",") !== [...PARTITION_FIELDS].sort().join(",") || PARTITION_FIELDS.some((key) => typeof pin[key] !== "string")) return bad("economic_partition names all five partition fields.");
+  }
+  let filters: Draft[]; let sort: Draft[];
+  try { filters = JSON.parse(search.get("filters") ?? "[]"); sort = JSON.parse(search.get("sort") ?? "[]"); } catch { return bad("filters and sort are JSON."); }
+  if (!Array.isArray(filters) || !Array.isArray(sort)) return bad("filters and sort are arrays.");
+  for (const filter of filters) {
+    if (!FLEET_NUMERIC.includes(filter?.field)) continue;
+    const operands = filter.op === "IN" ? filter.values : filter.op === "IS_NULL" ? [] : [filter.value];
+    if (!["EQ", "GTE", "LTE", "IN", "IS_NULL"].includes(filter.op) || !Array.isArray(operands) || operands.some((value: unknown) => typeof value !== "string" || !DECIMAL_TEXT.test(value))) return bad("A numeric filter takes exact decimal operands.");
+    if (FLEET_MONEY.includes(filter.field) && filter.op !== "IS_NULL" && pin === null) return bad("A money filter needs economic_partition.");
+  }
+  for (const key of sort) if (FLEET_MONEY.includes(key?.field) && pin === null) return bad("A money sort needs economic_partition.");
+  return { plan: { pin, textFilters: filters.filter((filter) => !FLEET_NUMERIC.includes(filter?.field)), textSort: sort.filter((key) => !FLEET_NUMERIC.includes(key?.field)) } };
+}
+/** The exact published decimal of a numeric field of a row, or `null` (a typed absence or no figure in the pinned partition). */
+function numericOf(row: Draft, field: string, pin: Draft | null): string | null {
+  const figure = (m: Draft | undefined): string | null => (m !== undefined && m.availability === "AVAILABLE" ? m.value : null);
+  if (FLEET_MONEY.includes(field)) {
+    if (pin === null) return null;
+    const entry = (row.economic_partitions as Draft[]).find((candidate) => PARTITION_FIELDS.every((key) => candidate.partition[key] === pin[key]));
+    return entry === undefined ? null : figure(entry.metrics[field]);
+  }
+  return figure(row.metrics[field]);
+}
+const compareExact = (a: string, b: string): number => { const x = toScaled(a), y = toScaled(b); return x < y ? -1 : x > y ? 1 : 0; };
+/** One filter of a row: the numeric ones by exact comparison, the text ones as before. */
+function fleetFilterHolds(row: Draft, filter: Draft, pin: Draft | null, textOf: (row: Draft, field: string) => string | null): boolean {
+  if (FLEET_NUMERIC.includes(filter.field)) {
+    const value = numericOf(row, filter.field, pin);
+    if (filter.op === "IS_NULL") return value === null;
+    if (value === null) return false;
+    if (filter.op === "IN") return (filter.values as string[]).some((candidate) => compareExact(value, candidate) === 0);
+    const c = compareExact(value, filter.value);
+    return filter.op === "EQ" ? c === 0 : filter.op === "GTE" ? c >= 0 : c <= 0;
+  }
+  return filter.op === "EQ" ? textOf(row, filter.field) === filter.value : filter.op === "IN" ? filter.values.includes(textOf(row, filter.field)) : textOf(row, filter.field) === null;
+}
+/** The row order: exact for numbers, a null always last (both directions), the immutable row key last. */
+function fleetOrder(sort: Draft[], pin: Draft | null, textOf: (row: Draft, field: string) => string | null) {
+  return (a: Draft, b: Draft): number => {
+    for (const key of sort) {
+      const numeric = FLEET_NUMERIC.includes(key.field);
+      const x = numeric ? numericOf(a, key.field, pin) : textOf(a, key.field);
+      const y = numeric ? numericOf(b, key.field, pin) : textOf(b, key.field);
+      if (x === y) continue;
+      if (x === null) return 1;
+      if (y === null) return -1;
+      const c = numeric ? compareExact(x, y) : (x < y ? -1 : 1);
+      if (c !== 0) return c * (key.direction === "asc" ? 1 : -1);
+    }
+    return a.row_key < b.row_key ? -1 : a.row_key > b.row_key ? 1 : 0;
+  };
+}
+// ===== WP-A end
+
 const ALL_ORDER = ["paper", "sandbox", "live"] as const;
 function allAnswer(path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse {
   if (profile !== "populated" || path !== "/manager/fleet" || search.has("window") || search.has("before")) return problem(400, "EXECUTION_READ_QUERY_INVALID", "ALL is the Fleet read of the populated review profile, without a window.");
@@ -565,16 +632,8 @@ function allAnswer(path: string, search: URLSearchParams, profile: ReviewManager
   }
   const sort = JSON.parse(search.get("sort") ?? "[]") as Draft[];
   const textOf = (row: Draft, field: string): string | null => field === "stage_presence" ? row.stage_presence.join(",") : typeof row[field] === "string" ? row[field] : null;
-  merged.sort((a, b) => {
-    for (const key of sort) {
-      const x = textOf(a, key.field); const y = textOf(b, key.field);
-      if (x === y) continue;
-      if (x === null) return 1;
-      if (y === null) return -1;
-      return (x < y ? -1 : 1) * (key.direction === "asc" ? 1 : -1);
-    }
-    return a.row_key < b.row_key ? -1 : a.row_key > b.row_key ? 1 : 0;
-  });
+  const planned = fleetPlan(search);
+  merged.sort(fleetOrder(sort, "plan" in planned ? planned.plan.pin : null, textOf));
   const groups = search.has("group_by") ? search.get("group_by")!.split(",") : [];
   const grouped = new Map<string, { key: Draft[]; rows: Draft[] }>();
   for (const row of merged) if (groups.length) {
@@ -880,6 +939,13 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   checkedQuery.delete("after");
   checkedQuery.delete("before");
   checkedQuery.delete("lifecycle_filter");
+  // WP-A: numeric filters and sorts and the pinned partition are evaluated by this lane (below), the L0 double validates the rest.
+  const planned = fleetPlan(search);
+  if ("refusal" in planned) return planned.refusal;
+  const { pin, textFilters, textSort } = planned.plan;
+  checkedQuery.delete("economic_partition");
+  if (textFilters.length > 0) checkedQuery.set("filters", JSON.stringify(textFilters)); else checkedQuery.delete("filters");
+  if (textSort.length > 0) checkedQuery.set("sort", JSON.stringify(textSort)); else checkedQuery.delete("sort");
   checkedQuery.delete("group_sort"); // WP-K: validated and applied below (the L0 double refuses what it cannot apply)
   checkedQuery.delete("group_filters");
   // SIMULATED window presets: bare (`30D`) or JSON-quoted (`"30D"`, as httpApi encodes it). Any other window shape stays the double's 400.
@@ -945,17 +1011,8 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   const q = search.get("q")?.toLowerCase();
   rows = rows.filter((row) => (lifecycle === null || row.lifecycle === lifecycle)
     && (q === undefined || (search.get("q_mode") === "CONTAINS" ? row.name.toLowerCase().includes(q) : row.name.toLowerCase().startsWith(q)))
-    && filters.every((filter) => filter.op === "EQ" ? textOf(row, filter.field) === filter.value : filter.op === "IN" ? filter.values.includes(textOf(row, filter.field)) : textOf(row, filter.field) === null));
-  rows.sort((a, b) => {
-    for (const key of sort) {
-      const x = textOf(a, key.field); const y = textOf(b, key.field);
-      if (x === y) continue;
-      if (x === null) return 1;
-      if (y === null) return -1;
-      return (x < y ? -1 : 1) * (key.direction === "asc" ? 1 : -1);
-    }
-    return a.row_key < b.row_key ? -1 : a.row_key > b.row_key ? 1 : 0;
-  });
+    && filters.every((filter) => fleetFilterHolds(row, filter, pin, textOf)));
+  rows.sort(fleetOrder(sort, pin, textOf));
   const groups = search.has("group_by") ? search.get("group_by")!.split(",") : [];
   const grouped = new Map<string, { key: Draft[]; rows: Draft[] }>();
   for (const row of rows) if (groups.length) {
