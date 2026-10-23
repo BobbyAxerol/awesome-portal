@@ -1,6 +1,7 @@
 /* Admin Actions, plan only (UXM-07 S2). Tokens and type roles only; no
  * uppercase, no raw colour. Text/fill pairs repeat ones proven by fleet.css. */
 .exec-adm-v2 {
+  --exec-topbar-h: 56px;
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
@@ -152,8 +153,8 @@
 /* The pane stays in view while the tiers scroll (QA1 I-35), under the top bar. */
 .exec-adm-main[data-docked="true"] > .exec-dock {
   position: sticky;
-  top: calc(var(--topbar-h, 56px) + var(--space-3));
-  max-height: calc(100vh - var(--topbar-h, 56px) - 2 * var(--space-3));
+  top: calc(var(--exec-topbar-h) + var(--space-3));
+  max-height: calc(100vh - var(--exec-topbar-h) - 2 * var(--space-3));
   overflow-y: auto;
 }
 .exec-adm-tiers {

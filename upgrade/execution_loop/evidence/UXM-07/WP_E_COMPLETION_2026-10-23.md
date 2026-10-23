@@ -72,3 +72,35 @@ Document and main overflow were 0 everywhere. Font roles: no new off-scale size;
 No visual suite and no baseline recording (board rule). No real browser run of the deployed preview; the screens were audited against a local build of the fixture lane. The Playwright specs under `e2e/` were not run. `Granted to you` and the preview's nginx routes depend on the mount and the preview stack (inbox rows). The V1 Manage grants matrix heading (`ProfileAccess.tsx`, 16px) is outside WP-E's files and remains one off-scale outlier on that tab.
 
 ## 7. Tests (exact commands and counts are in the final report)
+
+## 8. QA1 fixes (browser review R3, QA1_REVIEW_R3_2026-10-23.md)
+Method: each issue was reproduced in a Playwright probe against a LOCAL stack (vite dev on 15173 + the fixture BFF on 8000, populated profile, `FIXTURE_REBASE_TIME=1`; never 8095), fixed, then measured at 1440/1024/660 (probe scripts and screenshots in the session scratchpad `qa-e/`). Layout audit on the same stack (`--base-url`): approvals 0/0/3/0 (1440), 0/0/4/0 (1280), 0 (1024, 660), 0/0/3/0 (390); new-approval, profile-access (also with `workspace_id` and on the Manage tab), admin-actions and users 0/0/0/0 at all five widths; the three remaining approvals wraps are the known prose labels ("Capture R2 review", "R2 execution grant") and the receipt's request title.
+
+| Id | State | How, evidence |
+|---|---|---|
+| I-16 | FIXED | A findings column that is the same typed absence on every row is not drawn; one line under the table says "Observed and limit: Not published (FE-028) for every finding" (`ck-observed-absent`). A column with real cells stays. |
+| I-17 | NOT FIXED (part) | The raw enums are in words now (Live "R1 state", the Canary branch state, lock sentences: `stateWords`). The default selection and which kind carries a chart follow the fixture's published data (R2 AP-352 first), which is the fixture world (WP-P/K), not this screen. |
+| I-18 | FIXED | Verdict flags are `white-space: nowrap` and their column is as wide as the flag ("WITHIN", "INSUFFICIENT", "UNAVAILABLE" whole); reason codes get `<wbr>` after every separator (`breakable`, text unchanged), in the not-published cells, ids, the Canary reason column. Probe: the codes wrap as `N23_CANARY_DERIVATION_NOT_` / `PUBLISHED`, never inside a word. |
+| I-19, I-23 | FIXED | Master-detail: the queue is a fixed-height sticky panel whose list scrolls inside it, the rail is sticky; the page is 1,877px at 1440 (was 4,160) and at scroll 700 queue, detail and rail are all in view (probe: queue 68 to 888, rail 68 to 746). Stacked (1100px and below): the queue is capped at 70vh; a tap scrolls the detail to the top once it is rendered (660: main top 109 after the tap, was 3,433 below), and the detail has Back to the queue and Go to the decision. |
+| I-20 | FIXED | "Decided today" and the J/K legend are inside the sticky queue panel, always visible. |
+| I-21 | FIXED | The five counts and the diff before/after are mono, tabular, right-aligned; exact decimals are thousands-grouped with every digit kept (11,000.00 to 16,000.00); nowrap. |
+| I-22, I-26 | INFO | Verified OK by the reviewer. |
+| I-24 | NOT FIXED | Blocker: preview nginx (primary). The fixture BFF answers `GET /api/v1/quantbt/runs` (200 locally with the same build; the alpha picker works), the preview sends it to the real control-api (401). Inbox row E to primary posted. The picker has no other published source (FE-069). |
+| I-25 | NOT FIXED (part) | "Ids edit by hand" opens only when the Run Library is unavailable (I-24); the minimum 8 is the server's (DESIGN_DECISION kept); breadcrumb and the context chips are WP-D. |
+| I-27 | NOT MINE | Dates: WP-P (world clock). |
+| I-28 | CONTRACT | Role preset, business access, granted by: typed, requests (6), (7), (8) posted to K. |
+| I-29 | FIXED | The Why and Granted tables keep to their panel at 1440 (tighter cell padding; capability keys wrap between their parts; Environments and Revision ride under Scope and Access). At 1024 the Granted table still scrolls inside its wrapper: the fade shows it and the grant name stays put (sticky first column). |
+| I-30 | NOT FIXED | The Why text for an allowed row is the published capability that allows it; a plain-language reason needs a published reason (CONTRACT, FE-015). |
+| I-31 | FIXED | The V1 matrix is inside the page's flow (the empty band and the nested H2 are gone, the V1 sentence is in the head), the head says which workspace the page reads and that the grants are portal-wide ("their read takes no workspace, so the address does not change them": the read has no workspace parameter), the duplicate step-up chip is hidden, 660: the grid fits (word labels become icons, columns 54px). |
+| I-32 | FIXED (part) | Toggles carry their word (See / Decide), header cells and toggles share one fixed-layout width (probe: headers sit over their cells), step-up shown once, a missing React key in the V1 header fixed. The role-preset segmented control and preset table stay typed ("Role preset: Not available", request 6): no published source. |
+| I-33 | NOT FIXED | Honest: the relay is off and the catalogue states non-read tasks not enabled; the design's 13 ready would claim a relay that does not exist (EDGE_INPUT, B12). |
+| I-34 | FIXED | Action sub-labels use the sans body role at 13px (they were mono). |
+| I-35 | FIXED | The detail pane is the page's right column from 1101px up by the page's own query (the shared dock mode is an overlay up to 1500px, so at 1440 there was no pane): sticky, open on the first ready read, "Run local read" reachable; a ready read no longer prints the relay's "Not live because" sentence. The "(source: admin)" label is not drawn: the link sends no source parameter, so the label would say something untrue. |
+| I-36 | NOT FIXED | Minor 1024/660 indent of one card label; the scroll at 1024 is 0 now. |
+| I-37 | NOT MINE / NOT FIXED | Dates: WP-P. The roster is 123 generic accounts by design (scale and keyset tests), a renamed first nine broke the username ordering the tests rely on; the design's seven named accounts need a smaller fixture roster (WP-P). |
+| I-38 | FIXED | "Showing 50 of 123 accounts"; filtered "Showing 1 of 1 matching accounts (123 in all)". |
+| I-39 | NOT FIXED (part) | The Disable/Enable buttons are disabled with their reasons (not live); Invite stays a disabled control and so cannot wear the primary style. The 1024 scroll of the roster is a sticky-less cards table (shared). |
+| I-40, I-41 | WP-D | Message sent to WP-D (ab6c0896703e1cf0d) with the evidence. |
+| I-42 to I-45 | WP-D | Shell. |
+
+Tests: cockpit 36 (presentation) and the cockpit suites 691, access 121, admin 113, users 281 (a 200-row scale test is time-bound and fails only when the machine load is above about 30), request 489, fixtureBff 440; hygiene (testHygiene, disabledReason, uxm10Css, titleAbsence, v2Hygiene) green after the V1-matrix stylesheet moved to `screens/access/manageGrid.css` (v2Hygiene allows only `.exec-*` classes in `v2/css`); `tsc --noEmit -p .` clean.

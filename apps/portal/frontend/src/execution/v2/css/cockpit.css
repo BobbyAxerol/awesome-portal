@@ -1,9 +1,11 @@
-/* Approvals cockpit (S1b). Three panes: queue 268px | evidence | rail 316px.
+/* Approvals cockpit (S1b). Three panes: queue 292px | evidence | rail 304px.
  * Below 1100px the panes stack; below 660px the queue rows are full-width
  * cards. Tokens and type roles only. No uppercase here, so this file needs no
  * entry in the v2 hygiene allowlist; every text/background pair sits in one
  * rule so the contrast gate can read it. */
+/* The shell's top bar is 56px (52px compact); the sticky panes sit under it. A local role: the shell's own token is not a V2 stylesheet token. */
 .exec-ck-page {
+  --exec-topbar-h: 56px;
   display: grid;
   gap: var(--space-4);
   min-width: 0;
@@ -73,7 +75,7 @@
 }
 /* Beside a 380px drawer the three panes do not fit: the decision rail drops under the evidence. */
 .exec-ck-dockrow[data-docked="true"] .exec-ck {
-  grid-template-columns: 268px minmax(0, 1fr);
+  grid-template-columns: 292px minmax(0, 1fr);
 }
 .exec-ck-dockrow[data-docked="true"] .exec-ck-rail {
   grid-column: 2;
@@ -81,7 +83,7 @@
 }
 .exec-ck {
   display: grid;
-  grid-template-columns: 268px minmax(0, 1fr) 316px;
+  grid-template-columns: 292px minmax(0, 1fr) 304px;
   gap: var(--space-4);
   align-items: start;
 }
@@ -92,7 +94,7 @@
 }
 .exec-ck-rail {
   position: sticky;
-  top: calc(var(--topbar-h, 56px) + var(--space-3));
+  top: calc(var(--exec-topbar-h) + var(--space-3));
   min-width: 0;
 }
 .exec-ck-railbody {
@@ -309,8 +311,8 @@
   display: flex;
   flex-direction: column;
   position: sticky;
-  top: calc(var(--topbar-h, 56px) + var(--space-3));
-  max-height: calc(100vh - var(--topbar-h, 56px) - 2 * var(--space-3));
+  top: calc(var(--exec-topbar-h) + var(--space-3));
+  max-height: calc(100vh - var(--exec-topbar-h) - 2 * var(--space-3));
   overflow: hidden;
 }
 .exec-ck-q > * {
@@ -844,6 +846,14 @@
 .exec-ck-num {
   font: var(--exec-font-num);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* A panel head whose right-hand words do not fit under the title wraps them whole to the next line (a read time never breaks in two). */
+.exec-ck-ph {
+  flex-wrap: wrap;
+}
+.exec-ck-pr {
+  white-space: nowrap;
 }
 .exec-ck-kv[data-numeric="true"] td {
   text-align: right;

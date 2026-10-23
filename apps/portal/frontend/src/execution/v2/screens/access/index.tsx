@@ -51,6 +51,7 @@ import { useRootCapitalEligibility } from "./useRootCapitalEligibility";
 import { useManageStepUp, type ReadStepUp } from "./useManageStepUp";
 import { breakable } from "../cockpit/breakable";
 import "../../css/access.css";
+import "./manageGrid.css";
 
 /** This screen's own route; the "My access" link of a disabled control lands here. */
 export const ACCESS_PATH = "/administration/profile-access";
