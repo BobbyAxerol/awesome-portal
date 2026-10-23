@@ -112,7 +112,7 @@ describe("Canary (dep_canary_01): the design's elements are data", () => {
     for (const label of ["Capital consumed", "Gross notional", "Daily PnL", "Open orders", "Broker equity"]) expect(strip.getByText(label)).toBeTruthy();
     expect(text()).toContain("3,820.00");
     expect(text()).toContain("76.40% of approved");
-    expect(text()).toContain("61.204% of approved");
+    expect(text()).toContain("61.00% of approved");
     expect(text()).toContain("-38.60");
     expect(text()).toContain("5,112.40");
     // No "Not available" line for the figures: every one is published.
@@ -125,12 +125,12 @@ describe("Canary (dep_canary_01): the design's elements are data", () => {
     const cells = (label: string) => Array.from(table.querySelectorAll("tbody tr")).map((row) => (row.querySelector(`td[data-l="${label}"]`)?.textContent ?? "").replace(/\s+/g, " ").trim());
     expect(cells("Limit").slice(0, 4)).toEqual(["10,000.00", "20,000.00", "500.00", "40"]);
     expect(cells("Approved")).toEqual(["5,000.00", "10,000.00", "250.00", "20", "14"]);
-    expect(cells("Consumed")).toEqual(["3,820.00", "6,120.40", "38.60", "1", "6"]);
-    expect(cells("Used").slice(0, 4)).toEqual(["76.40% used", "61.204% used", "15.44% used", "5.00% used"]);
+    expect(cells("Consumed")).toEqual(["3,820.00", "6,100.00", "38.60", "1", "6"]);
+    expect(cells("Used").slice(0, 4)).toEqual(["76.40% used", "61.00% used", "15.44% used", "5.00% used"]);
     expect(text()).toContain("Within envelope");
-    // Duration: no published limit and no ratio (a request is posted): typed, never a bar from a division of ours.
+    // Duration: no published limit (a request is posted), and no ratio: the published day and duration, never a bar from a division of ours.
     expect(cells("Limit")[4]).toContain("Not available");
-    expect(cells("Used")[4]).toContain("Not available");
+    expect(cells("Used")[4]).toBe("Day 6 of 14");
   });
 
   it("rollback readiness: four checks with dates, the head says Ready, the drill says Passed", async () => {
@@ -146,7 +146,7 @@ describe("Canary (dep_canary_01): the design's elements are data", () => {
 
   it("the series is drawn from the published points and says the Paper and Backtest series are not published", async () => {
     await canary("dep_canary_01");
-    expect(text()).toContain("22 points, none reduced");
+    expect(text()).toContain("32 points, none reduced");
     expect(text()).toContain("+111.50 USDT");
     expect(text()).toMatch(/Not available:\s*Paper and Backtest series/);
   });
@@ -193,7 +193,7 @@ describe("Live (dep_live_01): the design's elements are data", () => {
     expect(chip("runtime")).toContain("Running");
     expect(chip("freshness")).toContain("Fresh");
     expect(chip("reconciliation")).toContain("No open findings");
-    for (const figure of ["60,000.00", "41,080.00", "-240.00", "60,118.40"]) expect(text()).toContain(figure);
+    for (const figure of ["60,000.00", "39,109.95", "-530.25", "60,118.40"]) expect(text()).toContain(figure);
     expect(text()).toContain("Matches internal");
     expect(text()).toContain("31 points, none reduced");
     expect(text()).toContain("High +7,523.04 USDT");
@@ -215,8 +215,10 @@ describe("Live (dep_live_01): the design's elements are data", () => {
 
   it("leverage and ack latency stay typed (no published place for them)", async () => {
     await live("dep_live_01");
-    expect(text()).toMatch(/Not available:\s*Leverage/);
-    expect(text()).toMatch(/Not available:\s*Ack latency/);
+    const positions = screen.getByRole("table", { name: /positions/i });
+    expect(positions.querySelector('td[data-l="Leverage"]')!.textContent).toContain("Not available");
+    const orders = screen.getByRole("table", { name: /orders/i });
+    expect(orders.querySelector('td[data-l="Ack latency"]')!.textContent).toContain("Not available");
   });
 });
 

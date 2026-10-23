@@ -107,6 +107,8 @@ export interface JourneySpineProps {
   onSelect?: (stage: SpineStageId) => void;
   /** Accessible name; default "Lifecycle". */
   label?: string;
+  /** A stage the deployment has not reached is not a link (it would open a page for a stage that has not happened). */
+  lockAhead?: boolean;
 }
 
 /** Resolve a node's state from props only. Exported for tests and for screens that need the same reading. */
@@ -212,6 +214,7 @@ export function JourneySpine({
   selected,
   onSelect,
   label = "Lifecycle",
+  lockAhead = false,
 }: JourneySpineProps) {
   const states = SPINE_STAGE_IDS.map((id) => spineNodeState(id, current, blocked, stages?.[id]));
   // The compact stepper scrolls sideways in a narrow column; with no button in it (no `onSelect`) it needs to be reachable.
@@ -278,7 +281,7 @@ export function JourneySpine({
               data-sel={isSel ? "true" : undefined}
               aria-current={state === "cur" || state === "blk" ? "step" : undefined}
             >
-              {onSelect ? (
+              {onSelect && !(lockAhead && state === "ahead") ? (
                 <button
                   type="button"
                   className="exec-blk-spine-btn"

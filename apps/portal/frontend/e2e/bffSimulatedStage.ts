@@ -71,6 +71,25 @@ const IDENTITY: Readonly<Record<string, Identity>> = {
   dep_a1: { alphaId: "alpha_a", alphaName: "Carry A", portfolioId: "pf_main", portfolioName: "Main" },
 };
 
+/**
+ * ONE lifecycle record: the stage a deployment is in. Every read of it (Paper, Sandbox, Canary, Live) takes its facts from this record, so a
+ * deployment that has not reached Live answers no lit Live page, and a live deployment's Canary is a finished trial dated before its activation.
+ */
+export type DeploymentStage = "paper" | "sandbox" | "canary" | "live";
+const STAGE_ORDER: readonly DeploymentStage[] = ["paper", "sandbox", "canary", "live"];
+const STAGE_OF: Readonly<Record<string, DeploymentStage>> = {
+  dep_live_01: "live", dep_b1: "live", dep_b2: "live", dep_btc_live: "live",
+  dep_canary_01: "canary", dep_b3: "canary", dep_c1: "canary",
+  dep_sandbox_01: "sandbox", dep_d1: "sandbox", dep_btc_sandbox: "sandbox",
+  dep_paper_01: "paper", dep_d2: "paper", dep_a1: "paper", dep_btc_paper: "paper",
+};
+/** The stage of a deployment id; an id the universe does not know is taken to be in the stage of the screen that asked. */
+export function stageOf(deploymentId: string, asked: DeploymentStage): DeploymentStage {
+  return STAGE_OF[baseDeploymentId(deploymentId)] ?? asked;
+}
+/** A stage page exists (lit) only for a stage the deployment has reached. */
+export const reached = (stage: DeploymentStage, asked: DeploymentStage): boolean => STAGE_ORDER.indexOf(asked) <= STAGE_ORDER.indexOf(stage);
+
 /** The universe's own id, with a trailing variant word taken off (`dep_live_01_mismatch` is dep_live_01 in another state). */
 export function baseDeploymentId(deploymentId: string): string {
   for (const word of STAGE_VARIANTS) {
@@ -96,8 +115,16 @@ function withIdentity(deployment: Obj, deploymentId: string): void {
 
 /* ── small builders ────────────────────────────────────────────────────────── */
 
-export const AS_OF = "2026-10-17T12:04:00.000Z";
-const AS_OF_STALE = "2026-10-17T11:52:00.000Z";
+/** The ONE `now` of every lit stage body. Every other instant below is an offset from it (WP-P's single world clock replaces this line). */
+export const STAGE_NOW_ISO = "2026-10-17T12:04:00.000Z";
+const NOW_MS = Date.parse(STAGE_NOW_ISO);
+const MIN = 60_000;
+const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
+/** The ISO instant `offsetMs` after (negative: before) now. */
+export const at = (offsetMs: number): string => new Date(NOW_MS + offsetMs).toISOString();
+export const AS_OF = STAGE_NOW_ISO;
+const AS_OF_STALE = at(-12 * MIN);
 const BROKER_UNVERIFIED = "VERIFIED";
 
 const avail = (value: unknown): Obj => ({ availability: "AVAILABLE", value, reason_code: null });
@@ -272,11 +299,17 @@ function collection(id: string, authority: string, state: string, freshness: str
 
 /* ── CANARY ────────────────────────────────────────────────────────────────── */
 
-const CANARY_STARTED = "2026-10-12T08:00:00.000Z";
-const CANARY_REVIEW = "2026-10-26T08:00:00.000Z";
+const CANARY_STARTED = at(-(5 * DAY_MS + 4 * HOUR_MS + 4 * MIN));
+const CANARY_REVIEW = at(-(5 * DAY_MS + 4 * HOUR_MS + 4 * MIN) + 14 * DAY_MS);
 
-/** Hand-written 6-hour net PnL path (USDT) of the canary since 12 Oct 08:00Z: 22 points, last 17 Oct 12:00Z. */
-const CANARY_PNL = ["0", "4.2", "9.8", "7.1", "15.6", "22.4", "19.3", "28.9", "35.2", "31.6", "44.8", "52.3", "49.7", "61.4", "68.9", "74.2", "70.8", "88.6", "96.1", "104.7", "109.3", "111.5"];
+/**
+ * Net PnL (USDT, tenths) of the canary every 4 hours from the start: 32 points, the last at now - 4 min. It rises to 150.1 and gives back 38.6
+ * over the last 24 h, so the Daily PnL KPI (-38.60) is exactly the series' last point minus the point 24 h earlier (asserted).
+ */
+const WIGGLE = [0, 3, -5, 8, -2, 6, -9, 4, 10, -7, 5, -3, 9, -6, 2, 7, -8, 4, -4, 11, -5, 6, -2, 5, -3, 0];
+const CANARY_TENTHS: readonly number[] = [...WIGGLE.map((w, i) => Math.floor((1501 * i) / 25) + w), 1473, 1420, 1436, 1352, 1288, 1115];
+const tenths = (t: number): string => canonicalDecimal(`${t < 0 ? "-" : ""}${Math.trunc(Math.abs(t) / 10)}.${Math.abs(t) % 10}`);
+export const CANARY_PNL: readonly string[] = CANARY_TENTHS.map(tenths);
 
 interface CapSpec { cap: string; unit: string; limit: string; approved: string; consumed: string; ratio: string }
 /** consumed / approved at six places, ROUND_HALF_UP, canonical: the SERVER's string. */
@@ -302,7 +335,9 @@ const capRow = (spec: Omit<CapSpec, "ratio">, asOf: string): Obj => ({
 
 function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
   const halted = variant === "halted";
-  const stale = variant === "stale" || halted;
+  // A deployment that is already Live ran its Canary BEFORE its activation: a finished 14-day trial, dated by the one lifecycle record.
+  const finished = stageOf(deploymentId, "canary") === "live";
+  const stale = variant === "stale";
   const breach = variant === "breach";
   const freshness = stale ? "STALE" : "FRESH";
   const brokerAsOf = stale ? AS_OF_STALE : AS_OF;
@@ -313,8 +348,8 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   body.delivery_profile = "LIVE_BINANCE_USDM";
   body.lineage = [
     { kind: "ARTIFACT", value: `sha256:${"a".repeat(64)}`, href: null },
-    { kind: "R1_APPROVAL", value: "AP-118", href: "/governance/approvals" },
-    { kind: "R2_APPROVAL", value: "AP-152", href: "/governance/approvals" },
+    { kind: "R1_APPROVAL", value: "AP-118", href: "/governance/approvals?sel=AP-118" },
+    { kind: "R2_APPROVAL", value: "AP-152", href: "/governance/approvals?sel=AP-152" },
     { kind: "SANDBOX_EXIT", value: "SX-14", href: `/deployments/sandbox/${encodeURIComponent(baseDeploymentId(deploymentId))}` },
     { kind: "CANARY_PROMOTION_PLAN", value: "AP-311", href: null },
   ];
@@ -322,7 +357,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   const capital = breach ? "5210.00" : "3820.00";
   const caps: Omit<CapSpec, "ratio">[] = [
     { cap: "capital", unit: "USDT", limit: "10000", approved: "5000", consumed: capital },
-    { cap: "gross_notional", unit: "USDT", limit: "20000", approved: "10000", consumed: "6120.40" },
+    { cap: "gross_notional", unit: "USDT", limit: "20000", approved: "10000", consumed: "6100.00" },
     { cap: "daily_loss", unit: "USDT", limit: "500", approved: "250", consumed: "38.60" },
     { cap: "open_orders", unit: "COUNT", limit: "40", approved: "20", consumed: "1" },
   ];
@@ -334,29 +369,32 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   env.limits = { capital_cap: "5000", gross_notional_cap: "10000", daily_loss_cap: "250", max_open_orders: 20, duration_days: 14 };
 
   const life = body.lifecycle as Obj;
-  life.day_index = 6;
+  const started = finished ? at(-(30 * DAY_MS + 4 * MIN) - 14 * DAY_MS) : CANARY_STARTED;
+  const review = finished ? at(-(30 * DAY_MS + 4 * MIN)) : CANARY_REVIEW;
+  if (finished) life.declared_stage = "LIVE_FULL";
+  life.day_index = finished ? 14 : 6;
   life.duration_days = 14;
   life.blocker_codes = env.blocker_codes;
-  life.trial = { basis: "STARTED_AT_PLUS_DURATION_DAYS", duration_days: 14, started_at: avail(CANARY_STARTED), exit_review_opens_at: avail(CANARY_REVIEW) };
+  life.trial = { basis: "STARTED_AT_PLUS_DURATION_DAYS", duration_days: 14, started_at: avail(started), exit_review_opens_at: avail(review) };
 
   body.stage_facts = stageFacts({
-    runtime: halted ? "HALTED" : "RUNNING",
-    since: CANARY_STARTED,
+    runtime: finished ? "STOPPED" : halted ? "HALTED" : "RUNNING",
+    since: finished ? review : halted ? at(-3 * HOUR_MS) : started,
     verdict: "NO_OPEN_FINDINGS",
     open: 0,
     unknownOrders: 0,
     asOf: brokerAsOf,
-    sessions: [{ id: "session_FIXTURE_LAB_canary_1", started: CANARY_STARTED, ended: null, state: halted ? "HALTED" : "RUNNING" }],
+    sessions: [{ id: "session_FIXTURE_LAB_canary_1", started, ended: finished ? review : null, state: finished ? "COMPLETED" : halted ? "HALTED" : "RUNNING" }],
   });
   body.source_figures = sourceFigures({
     equity: { internal: "5112.40", broker: "5112.40", unit: "USDT" },
-    gross_notional: { internal: "6120.40", broker: "6120.40", unit: "USDT" },
+    gross_notional: { internal: "6100.00", broker: "6100.00", unit: "USDT" },
     positions: { internal: "1", broker: "1", unit: "COUNT" },
     open_orders: { internal: "1", broker: "1", unit: "COUNT" },
     fees: { internal: "4.25", broker: "4.25", unit: "USDT" },
   });
 
-  const values: Record<string, string> = { capital_consumed: capital, gross_notional: "6120.40", daily_pnl: "-38.60", open_orders: "1", broker_equity: "5112.40" };
+  const values: Record<string, string> = { capital_consumed: capital, gross_notional: "6100.00", daily_pnl: "-38.60", open_orders: "1", broker_equity: "5112.40" };
   body.kpis = (body.kpis as Obj[]).map((k) => {
     const auth = String((k.envelope as Obj).source_authority);
     return { ...k, value: values[String(k.key)] ?? null, envelope: panel(`kpi-${String(k.key)}`, auth, "ready", freshness, brokerAsOf) };
@@ -369,7 +407,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
 
   const compliance = body.envelope_compliance as Obj;
   compliance.envelope = panel("envelope-compliance", "DERIVED", "ready", "FRESH", AS_OF);
-  compliance.consumed = { capital_cap: capital, gross_notional_cap: "6120.40", daily_loss_cap: "38.60", max_open_orders: "1" };
+  compliance.consumed = { capital_cap: capital, gross_notional_cap: "6100.00", daily_loss_cap: "38.60", max_open_orders: "1" };
   compliance.rows = caps.map((c) => capRow(c, AS_OF));
   compliance.verdict = breach
     ? { state: "BREACH", basis: "CONSUMED_NOT_ABOVE_APPROVED_PER_CAP", undetermined_caps: [] }
@@ -377,21 +415,32 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   compliance.base_risk_profile_verified = false;
 
   const positions = [
+    // Gross notional 6,100.00 is the sum of these two at their marks: 1.2 x 3,490.5 + 10 x 191.14.
     { id: "pos_FIXTURE_LAB_cny_1", symbol: "ETHUSDT", side: "long", quantity: "1.2", entry: "3410.5", mark: "3490.5", unrealised: "96" },
+    { id: "pos_FIXTURE_LAB_cny_2", symbol: "SOLUSDT", side: "long", quantity: "10", entry: "185.14", mark: "191.14", unrealised: "60" },
   ] as const satisfies readonly PositionSpec[];
   body.positions = collection(
     "positions", "EXECUTION", "ready", freshness, brokerAsOf, typedPositions(positions),
     positions.map((p) => ({ symbol: p.symbol, side: p.side.toUpperCase(), qty: p.quantity, entry_price: p.entry })),
   );
   const orders = [
-    { id: "ord_FIXTURE_LAB_cny_1", symbol: "ETHUSDT", type: "LIMIT", side: "sell", quantity: "0.6", price: "3560", status: "ACCEPTED", since: "2026-10-17T11:41:00.000Z" },
+    { id: "ord_FIXTURE_LAB_cny_1", symbol: "ETHUSDT", type: "LIMIT", side: "sell", quantity: "0.6", price: "3560", status: "ACCEPTED", since: at(-23 * MIN) },
   ] as const satisfies readonly OrderSpec[];
   body.blotter = collection(
     "blotter", "EXECUTION", "ready", freshness, brokerAsOf, typedOrders(orders),
     orders.map((o) => ({ order_id: o.id, price: o.price, type: o.type })),
   );
 
-  body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(CANARY_STARTED, 6 * 3_600_000, "6h", CANARY_PNL) };
+  // A stale screen never shows data newer than its stale stamp: the points after it are not sent.
+  const upTo = stale ? Date.parse(AS_OF_STALE) : Number.POSITIVE_INFINITY;
+  const grid = CANARY_PNL.map((value, i) => ({ t: Date.parse(CANARY_STARTED) + i * 4 * HOUR_MS, value })).filter((point) => point.t <= upTo);
+  const finishedGrid = Array.from({ length: 15 }, (_, d) => CANARY_PNL[Math.round((d * 31) / 14)]!);
+  body.series = {
+    envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF),
+    ...(finished
+      ? seriesMembers(at(-(30 * DAY_MS + 4 * MIN) - 14 * DAY_MS), DAY_MS, "1d", finishedGrid)
+      : seriesMembers(CANARY_STARTED, 4 * HOUR_MS, "4h", grid.map((point) => point.value))),
+  };
 
   const rb = body.rollback_readiness as Obj;
   rb.envelope = panel("rollback-readiness", "EXECUTION", "ready", "FRESH", AS_OF);
@@ -399,10 +448,10 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
   rb.blocker_codes = halted ? ["ROLLBACK_BLOCKED_BY_HALT"] : [];
   rb.evidence_hash = `sha256:${"c".repeat(64)}`;
   rb.items = [
-    { key: "flatten_plan", ready: avail(true), checked_at: avail("2026-10-17T11:30:00.000Z") },
-    { key: "paper_twin", ready: avail(true), checked_at: avail("2026-10-17T11:59:00.000Z") },
+    { key: "flatten_plan", ready: avail(true), checked_at: avail(at(-34 * MIN)) },
+    { key: "paper_twin", ready: avail(true), checked_at: avail(at(-5 * MIN)) },
     { key: "broker_data", ready: avail(!stale), checked_at: avail(brokerAsOf) },
-    { key: "rollback_drill", ready: avail(true), checked_at: avail("2026-10-11T10:00:00.000Z") },
+    { key: "rollback_drill", ready: avail(true), checked_at: avail(at(-(6 * DAY_MS + 2 * HOUR_MS + 4 * MIN))) },
   ];
 
   // The command policy keeps its published flags (no command route exists, every decision is closed; a stale broker blocks scale-up
@@ -415,7 +464,7 @@ function canaryLit(body: Obj, deploymentId: string, variant: StageVariant): Obj 
 
 /* ── LIVE ──────────────────────────────────────────────────────────────────── */
 
-const LIVE_ACTIVATED = "2026-09-17T08:00:00.000Z";
+const LIVE_ACTIVATED = at(-(30 * DAY_MS + 4 * MIN));
 /** Net PnL (USDT) of the live deployment, daily from 17 Sep 08:00Z, 31 points, the last at 17 Oct 12:00Z (low -900.06, high 7523.04). */
 const LIVE_PNL = [
   "0", "-420.5", "-900.06", "-312.4", "240.3", "1850.2", "3720.55", "2790.1", "4270.4", "3010.75", "5520.9", "4410.3", "4750.15", "2890.6", "4630", "3830.25",
@@ -429,13 +478,13 @@ const LIVE_POSITIONS: readonly PositionSpec[] = [
   { id: "pos_FIXTURE_LAB_lv_4", symbol: "BNBUSDT", side: "long", quantity: "3.5", entry: "566.4", mark: "591.7", unrealised: "88.55" },
 ];
 const LIVE_ORDERS: readonly OrderSpec[] = [
-  { id: "ord_FIXTURE_LAB_lv_1", symbol: "BTCUSDT", type: "LIMIT", side: "sell", quantity: "0.1", price: "67200", status: "ACCEPTED", since: "2026-10-17T11:12:00.000Z" },
-  { id: "ord_FIXTURE_LAB_lv_2", symbol: "SOLUSDT", type: "LIMIT", side: "buy", quantity: "4", price: "166.5", status: "ACCEPTED", since: "2026-10-17T11:40:00.000Z" },
+  { id: "ord_FIXTURE_LAB_lv_1", symbol: "BTCUSDT", type: "LIMIT", side: "sell", quantity: "0.1", price: "67200", status: "ACCEPTED", since: at(-52 * MIN) },
+  { id: "ord_FIXTURE_LAB_lv_2", symbol: "SOLUSDT", type: "LIMIT", side: "buy", quantity: "4", price: "166.5", status: "ACCEPTED", since: at(-24 * MIN) },
 ];
 
 function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
   const mismatch = variant === "mismatch";
-  const stale = variant === "stale" || variant === "halted";
+  const stale = variant === "stale";
   const gap = variant === "gap";
   const halted = variant === "halted";
   const freshness = stale ? "STALE" : "FRESH";
@@ -453,8 +502,8 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
 
   body.lineage = [
     { kind: "ARTIFACT", state: "AVAILABLE", value: `sha256:${"a".repeat(64)}`, href: null },
-    { kind: "R1_APPROVAL", state: "AVAILABLE", value: "AP-118", href: "/governance/approvals" },
-    { kind: "R2_APPROVAL", state: "AVAILABLE", value: "AP-152", href: "/governance/approvals" },
+    { kind: "R1_APPROVAL", state: "AVAILABLE", value: "AP-118", href: "/governance/approvals?sel=AP-118" },
+    { kind: "R2_APPROVAL", state: "AVAILABLE", value: "AP-152", href: "/governance/approvals?sel=AP-152" },
     { kind: "SANDBOX_EXIT", state: "AVAILABLE", value: "SX-14", href: `/deployments/sandbox/${encodeURIComponent(baseDeploymentId(deploymentId))}` },
     { kind: "CANARY_ENVELOPE", state: "AVAILABLE", value: "cenv_FIXTURE_LAB_1", href: `/deployments/live/${encodeURIComponent(baseDeploymentId(deploymentId))}/canary` },
     { kind: "CANARY_EXIT", state: "UNAVAILABLE", value: null, href: null },
@@ -474,13 +523,13 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
   const brokerEquity = mismatch ? "60131.12" : "60118.40";
   body.source_figures = sourceFigures({
     equity: { internal: "60118.40", broker: mismatch ? null : "60118.40", unit: "USDT" },
-    gross_notional: { internal: "41080.00", broker: mismatch ? null : "41080.00", unit: "USDT" },
+    gross_notional: { internal: "39109.95", broker: mismatch ? null : "39109.95", unit: "USDT" },
     positions: { internal: "4", broker: mismatch ? null : "4", unit: "COUNT" },
     open_orders: { internal: "2", broker: mismatch ? null : "2", unit: "COUNT" },
     fees: { internal: "412.36", broker: mismatch ? null : "412.36", unit: "USDT" },
   });
 
-  const values: Record<string, string | null> = { capital: "60000.00", gross_notional: "41080.00", daily_pnl: "-240.00", open_orders: "2", broker_equity: mismatch ? null : brokerEquity };
+  const values: Record<string, string | null> = { capital: "60000.00", gross_notional: "39109.95", daily_pnl: "-530.25", open_orders: "2", broker_equity: mismatch ? null : brokerEquity };
   body.kpis = (body.kpis as Obj[]).map((k) => {
     const key = String(k.key);
     const brokerSide = key === "broker_equity";
@@ -503,7 +552,7 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     mismatch_behavior: "SUPPRESS_ALL_BROKER_VALUES",
     broker_values_visible: visible,
     finding_href: mismatch ? "/execution/operations/incidents/inc_TEST_ONLY_fx_mismatch" : null,
-    dry_run_reconcile_href: mismatch ? "/execution/operations" : null,
+    dry_run_reconcile_href: mismatch ? `/execution/operations?target_id=${encodeURIComponent(baseDeploymentId(deploymentId))}` : null,
     blocker_codes: [],
   };
   body.projection_continuity = {
@@ -514,7 +563,7 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     gap_detected: gap,
     affected_authorities: gap ? ["BROKER", "DERIVED"] : [],
     blocker_codes: [],
-    gap_ranges: gap ? avail([{ from: "2026-10-17T11:52:00.000Z", to: "2026-10-17T12:04:00.000Z" }]) : avail([]),
+    gap_ranges: gap ? avail([{ from: AS_OF_STALE, to: AS_OF }]) : avail([]),
   };
 
   body.positions = collection(
@@ -526,6 +575,10 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     LIVE_ORDERS.map((o) => ({ order_id: o.id, instrument: o.symbol, price: o.price, state: o.status })),
   );
   (body.realtime as Obj).blocker_codes = ["REALTIME_INACTIVE"];
+  // The canary envelope that governed the trial before this activation: promoted, so Active for Live.
+  const predecessor = body.predecessor_canary_envelope as Obj;
+  predecessor.status = "ACTIVE";
+  predecessor.active_for_live_full = true;
   body.open_order_footer = { envelope: panel("open-order-footer", "EXECUTION", "ready", "FRESH", AS_OF), exact_open_order_count: 2 };
   body.incidents = {
     envelope: panel("incidents", "EXECUTION", mismatch ? "ready" : "empty", "FRESH", AS_OF),
@@ -535,7 +588,7 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     previous_cursor: null,
     rows: [],
   };
-  body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(LIVE_ACTIVATED, 86_400_000, "1d", LIVE_PNL, "USDT", "2026-10-17T12:00:00.000Z") };
+  body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(LIVE_ACTIVATED, 86_400_000, "1d", LIVE_PNL, "USDT", at(-4 * MIN)) };
 
   const rb = body.rollback_readiness as Obj;
   rb.envelope = panel("rollback-readiness", "EXECUTION", "ready", "FRESH", AS_OF);
@@ -547,14 +600,14 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
 
 /* ── SANDBOX ───────────────────────────────────────────────────────────────── */
 
-const SANDBOX_STARTED = "2026-10-16T17:50:00.000Z";
+const SANDBOX_STARTED = at(-(18 * HOUR_MS + 14 * MIN));
 
 function sandboxLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
   const mismatch = variant === "mismatch";
   const halted = variant === "halted";
   const stale = variant === "stale";
   const freshness = stale ? "STALE" : "FRESH";
-  const sandboxAsOf = stale ? "2026-10-17T11:20:00.000Z" : AS_OF;
+  const sandboxAsOf = stale ? at(-44 * MIN) : AS_OF;
   withIdentity(body.certification as Obj, deploymentId);
   body.source_integration_state = "SOURCE_BACKED";
   body.delivery_profile = "LIVE_BINANCE_USDM";
@@ -563,7 +616,7 @@ function sandboxLit(body: Obj, deploymentId: string, variant: StageVariant): Obj
     runtime: halted ? "HALTED" : "RUNNING",
     since: SANDBOX_STARTED,
     verdict: "OPEN_FINDINGS",
-    open: 2,
+    open: mismatch ? 3 : 2,
     unknownOrders: 0,
     asOf: sandboxAsOf,
     sessions: [{ id: "session_FIXTURE_LAB_sbx_1", started: SANDBOX_STARTED, ended: null, state: halted ? "HALTED" : "RUNNING" }],
@@ -581,13 +634,20 @@ function sandboxLit(body: Obj, deploymentId: string, variant: StageVariant): Obj
     return { ...lit, source_sequence: null, source_completeness: "COMPLETE", poll_interval_ms: 60000, formula_version: id === "difference" ? "sandbox-certification.v1" : null };
   };
   body.source_panels = [panelOf("internal", "EXECUTION"), panelOf("broker", "BROKER"), panelOf("difference", "DERIVED")];
+  if (mismatch) {
+    // The equity gap is explained by a finding of its own (the double's two findings explain 0.01 and 4 s, not 46.87).
+    const findings = body.findings as Obj;
+    (findings.rows as Obj[]).unshift({ finding_id: "fnd_FIXTURE_LAB_equity", severity: "WARNING", source_authority: "DERIVED", finding_code: "EQUITY_DIFF", summary: "Equity differs by 46.87 USDT", blocking: false, evidence_hash: null, as_of: null, resolved_at: null, created_at: at(-3 * HOUR_MS) });
+    findings.total_count = (findings.rows as Obj[]).length;
+    findings.returned_count = (findings.rows as Obj[]).length;
+  }
   return body;
 }
 
 /* ── PAPER (GET /screens/paper/{id}) ───────────────────────────────────────── */
 
-const PAPER_STARTED = "2026-10-12T08:00:00.000Z";
-const PAPER_AS_OF = "2026-10-17T09:14:00.000Z";
+const PAPER_STARTED = at(-(5 * DAY_MS + 4 * HOUR_MS + 4 * MIN));
+const PAPER_AS_OF = at(-(2 * HOUR_MS + 50 * MIN));
 
 /** A published VN equity venue calendar (FE-070): the source states the session, the breaks, the holidays and whether the venue is open. */
 function vnCalendar(): Obj {
@@ -603,7 +663,7 @@ function vnCalendar(): Obj {
       { name: "Closing auction", kind: "CLOSING_AUCTION", open: "14:30", close: "14:45" },
     ]),
     breaks: avail([{ name: "BREAK", from: "11:30", to: "13:00", basis: "GAP_BETWEEN_PUBLISHED_WINDOWS" }]),
-    holidays: avail([{ date: "2026-09-02", name: "National Day" }]),
+    holidays: avail([{ date: at(-45 * DAY_MS).slice(0, 10), name: "National Day" }]),
     is_open: avail(false),
     as_of: avail(PAPER_AS_OF),
   };
@@ -659,6 +719,8 @@ export function simulateStage(path: string, answerBody: unknown): Obj | null {
   if (kind === null || id === undefined || LEGACY_DEPLOYMENT.test(id)) return null;
   const variant = variantOf(id);
   if (variant === "dark") return null;
+  // A stage page the deployment has not reached is not lit: the published dark body stands (typed absence), whatever the URL says.
+  if (!reached(stageOf(id, kind), kind)) return null;
   const schema = answerBody.schema_version;
   const body = clone(answerBody);
   switch (kind) {
