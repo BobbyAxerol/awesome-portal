@@ -31844,3 +31844,77 @@ the first link check caught one new cache-recipe anchor typo, corrected before
 publication. All four exact unit-temporary prefixes have0remaining paths.
 No default pre-commit hook/core.hooksPath is installed in this checkout; focused
 gates were executed explicitly, no full-hook PASS asserted or hook config changed.
+
+<a id="epg10-business-source-20261023"></a>
+### Original03/04/05/07/08/09 — finish business backend before connected acceptance
+
+**BOBBY_APPROVED / EXECUTING,23Oct12:50Asia/Saigon /05:50UTC.** Owner explicitly
+prioritizes four existing business lanes: financial portfolio/account data,
+Core-facing management commands, event/history source binding, and Manager read
+across Paper/Sandbox/Canary/Live. Complete owned source, isolated correctness,
+tracking and publication first; joint Core runtime acceptance comes last. This
+does not reopen accepted active revoke, create new phases, enable Live effects,
+mutate operational databases, deploy services or transfer new source packets.
+
+**Authority/guide:** original phase blocks in§23.5, EDGE guide03/04/05/07/08/09,
+BE guide§§3–9 and12, current PM publication/command/report contracts and TS
+native journal/P16 source. Reuse existing Rust crates, exact PM payload/outcome,
+SQLx projection custody, Manager transport and canonical source semantics.
+No new ledger, arbitrary SQL/URLs, generic CLI execution, fake grant/provider,
+new Python product adapter or replacement Research calculator. Missing source
+publication stays typed absence; independent work does not wait for Core P22.
+
+**Execution/ownership:** root owns command composition, shared build/test
+orchestration and this journal. Separate nonoverlapping Rust lanes examine and
+finish financial source adaptation, native event/history adaptation, and
+Manager client/profile/paging correctness. Read the current source first; if
+the functionality is already implemented, prove it rather than rewrite it.
+No delegate edits peer TS/PM/Core trees, main journal, Cargo manifests/lock or
+shared edge-service entrypoint without coordination. Preserve peer C5hunk,
+two tracked peer returns and untracked source/review files. Core's newly
+received current-closeout return ACKs0452d1cf and owns its P22 image; it does not
+block these lanes or commission their financial/command runtime.
+
+**Invariants/tests:** exact decimals/currencies/units/source IDs and temporal
+ownership, no transfer-as-profit or overlapping-leaf double count; original
+command/idempotency/custody/current requester, no service-recovery impersonation;
+commit-ordered source positions and retention/generation/coverage without
+MAX(id) fiction; all-mode bindings and bounded full pagination without false
+COMPLETE or widening authority. Run impact-selected Rust unit/contract/negative/
+replay tests, fmt and strict Clippy in capped correctness cells, explicit PG
+tests only in disposable namespaces. Do not confuse fixtures with live source
+or product acceptance. Check actual producer branches at each coherent slice.
+
+**Rollback/resources/exit:** source-only rollback, no operational source role,
+grant, listener or schema change. Reuse existing qualification harness; one
+shared capped compiler target, no parallel duplicate builds or load measurement.
+Inventory and clean exact own temporary/toolchain/PG/image/cache resources,
+retain active/rollback and audit custody. Each tested slice records files/tests/
+actual failures/cleanup/pins; commit as Bobby, no push/merge/CI without approval.
+Owned source completion is distinct from genuinely unavailable producer inputs
+and final connected acceptance. Do not call unfinished code external debt.
+
+**23Oct06:15UTC tested slice — Manager business read (05/08/09):** existing
+`manager_request_client`/`manager_extension_request_client` already enforce
+current delegated resource, environment and exact deployment profile; the
+projection command already follows owner continuation, rejects cursor cycles
+and bounds the feed without inventing COMPLETE. Retain that architecture.
+`manager-v2-client` now rejects duplicate revision/adapter/Content-Type headers
+and JSONP/prefix media-type confusion on ordinary, extension and market-context
+responses. Preserve the sealed8MiB extension bound and ordinary200-row/1MiB
+contract; no duplicate paginator or all-relation sync was added. Six new tests
+exercise Paper/Sandbox/Live pages, unchanged owner cursors, STALE/PARTIAL,
+six cross-profile refusals, nine profile-bound typed503/no-retry combinations
+and three row-bound refusals. Canary remains governed Live facts, not an
+invented fourth source environment or permission to trade.
+
+**Evidence so far:** Manager15/15PASS and shared business units161/161PASS;
+disposable-PG command/custody45/45PASS; mTLS/PM transport23/23PASS; Core original
+decoder5/5PASS:234TEST_ONLY total,0FAIL/ignored/skipped. Initial Manager fixture
+used a dot outside the existing OpaqueCursor grammar (14PASS/1FAIL); corrected
+fixture only, no contract relaxation. First compiler mount omitted immutable
+vocabulary evidence; corrected mount layout, no source-fixture fabrication.
+Full workspace fmt PASS. Strict Clippy caught redundant must_use, documentation
+markup and test-literal style; corrected without suppressions. Final six-package
+all-target strict Clippy PASS. These are correctness fixtures/loopback sockets and
+real disposable PG, not commissioned native source or production capacity.

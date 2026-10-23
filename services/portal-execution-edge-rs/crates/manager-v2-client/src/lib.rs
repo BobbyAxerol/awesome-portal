@@ -22,7 +22,7 @@ use manager_v2_contract::{
     MAXIMUM_RESPONSE_BYTES, RUNTIME_CONTRACT_REVISION,
 };
 use reqwest::{
-    header::{HeaderName, HeaderValue, ACCEPT, CONTENT_TYPE},
+    header::{HeaderName, HeaderValue, ACCEPT},
     redirect::Policy,
     Certificate, Client, Identity,
 };
@@ -459,56 +459,55 @@ fn validate_profile_id(profile_id: &str) -> Result<(), ManagerV2ClientError> {
 fn validate_response_headers(
     headers: &reqwest::header::HeaderMap,
 ) -> Result<(), ManagerV2ClientError> {
-    let contract = headers
-        .get(HeaderName::from_static("x-manager-contract"))
-        .and_then(|value| value.to_str().ok());
+    let contract = single_header_value(headers, "x-manager-contract");
     if contract != Some(RUNTIME_CONTRACT_REVISION) {
         return Err(ManagerV2ClientError::ContractHeaderMismatch);
     }
-    let content_type = headers
-        .get(CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_ascii_lowercase);
-    if !content_type.is_some_and(|value| value.starts_with("application/json")) {
-        return Err(ManagerV2ClientError::InvalidContentType);
-    }
-    Ok(())
+    validate_json_content_type(headers)
 }
 
 fn validate_extension_response_headers(
     headers: &reqwest::header::HeaderMap,
     expected_contract: &str,
 ) -> Result<(), ManagerV2ClientError> {
-    let contract = headers
-        .get(HeaderName::from_static("x-manager-contract"))
-        .and_then(|value| value.to_str().ok());
+    let contract = single_header_value(headers, "x-manager-contract");
     if contract != Some(expected_contract) {
         return Err(ManagerV2ClientError::ExtensionContractHeaderMismatch);
     }
-    let content_type = headers
-        .get(CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_ascii_lowercase);
-    if !content_type.is_some_and(|value| value.starts_with("application/json")) {
-        return Err(ManagerV2ClientError::InvalidContentType);
-    }
-    Ok(())
+    validate_json_content_type(headers)
 }
 
 fn validate_market_context_adapter_headers(
     headers: &reqwest::header::HeaderMap,
 ) -> Result<(), ManagerV2ClientError> {
-    let adapter = headers
-        .get(HeaderName::from_static("x-portal-source-adapter"))
-        .and_then(|value| value.to_str().ok());
+    let adapter = single_header_value(headers, "x-portal-source-adapter");
     if adapter != Some(MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION) {
         return Err(ManagerV2ClientError::MarketContextAdapterHeaderMismatch);
     }
-    let content_type = headers
-        .get(CONTENT_TYPE)
-        .and_then(|value| value.to_str().ok())
-        .map(str::to_ascii_lowercase);
-    if !content_type.is_some_and(|value| value.starts_with("application/json")) {
+    validate_json_content_type(headers)
+}
+
+/// A response revision or media type must have one interpretation throughout
+/// the proxy chain, not whichever duplicate field happened to arrive first.
+fn single_header_value<'a>(headers: &'a reqwest::header::HeaderMap, name: &str) -> Option<&'a str> {
+    let all = headers.get_all(name);
+    let mut values = all.iter();
+    let value = values.next()?.to_str().ok()?;
+    if values.next().is_some() {
+        return None;
+    }
+    Some(value)
+}
+
+fn validate_json_content_type(
+    headers: &reqwest::header::HeaderMap,
+) -> Result<(), ManagerV2ClientError> {
+    if !single_header_value(headers, "content-type").is_some_and(|value| {
+        value
+            .split(';')
+            .next()
+            .is_some_and(|media_type| media_type.trim().eq_ignore_ascii_case("application/json"))
+    }) {
         return Err(ManagerV2ClientError::InvalidContentType);
     }
     Ok(())

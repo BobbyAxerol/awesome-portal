@@ -70,6 +70,322 @@ fn market_data_layer_headers() -> &'static str {
     "content-type: application/json\r\nx-portal-source-adapter: portal.execution.market-context-data-layer.v1\r\n"
 }
 
+/// Two owner-issued pages, one fixed origin; no cursor rewriting or hidden
+/// retry. Every listener belongs to the current Tokio test runtime.
+async fn page_sequence_server(captured: Arc<Mutex<Vec<String>>>, bodies: Vec<String>) -> String {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        for body in bodies {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buffer = vec![0_u8; 16 * 1024];
+            let size = socket.read(&mut buffer).await.unwrap();
+            captured
+                .lock()
+                .unwrap()
+                .push(String::from_utf8_lossy(&buffer[..size]).to_string());
+            let response = format!(
+                "HTTP/1.1 200 OK\r\n{}content-length: {}\r\nconnection: close\r\n\r\n{body}",
+                qualified_headers(),
+                body.len()
+            );
+            socket.write_all(response.as_bytes()).await.unwrap();
+        }
+    });
+    format!("http://{address}")
+}
+
+const DEPLOYMENT_PROFILES: [&str; 3] = [
+    "PAPER_BINANCE_USDM",
+    "SANDBOX_BINANCE_USDM",
+    "LIVE_BINANCE_USDM",
+];
+
+#[tokio::test]
+async fn all_mode_pages_preserve_owner_cursor_quality_and_terminal_boundary() {
+    for profile in DEPLOYMENT_PROFILES {
+        let catalogue_wire = catalogue_body().replace(PROFILE_ID, profile);
+        let ManagerPayload::Catalogue(catalogue) = decode_success_for_profile(
+            &ManagerV2Request::catalogue(),
+            catalogue_wire.as_bytes(),
+            profile,
+        )
+        .unwrap() else {
+            panic!("expected catalogue");
+        };
+        let relation = catalogue.data().relation("public", "orders").unwrap();
+        let first_body = relation_page_body()
+            .replace(PROFILE_ID, profile)
+            .replace(
+                "\"completeness\":\"COMPLETE\"",
+                "\"completeness\":\"PARTIAL\"",
+            )
+            .replace("\"freshness\":\"FRESH\"", "\"freshness\":\"STALE\"")
+            .replace("\"next_cursor\":null", "\"next_cursor\":\"opaque_page-2\"");
+        let last_body = relation_page_body().replace(PROFILE_ID, profile);
+        let captured = Arc::new(Mutex::new(Vec::new()));
+        let origin = page_sequence_server(Arc::clone(&captured), vec![first_body, last_body]).await;
+        let client = ManagerV2Client::new_for_test_with_profile(
+            &origin,
+            profile,
+            ManagerV2ClientLimits::default(),
+        )
+        .unwrap();
+        let first_request =
+            ManagerV2Request::relation_records(relation, None, PageLimit::new(1).unwrap()).unwrap();
+        let ManagerRead::Available(ManagerPayload::RelationRecords(first)) =
+            client.execute(&first_request).await.unwrap()
+        else {
+            panic!("expected first page");
+        };
+        assert_eq!(first.meta().profile_id(), profile);
+        assert_eq!(
+            first.meta().completeness(),
+            manager_v2_contract::Completeness::Partial
+        );
+        assert_eq!(
+            first.meta().freshness(),
+            manager_v2_contract::Freshness::Stale
+        );
+        assert_eq!(first.data().items().len(), 1);
+        let cursor = first.data().next_cursor().expect("owner has more rows");
+        assert_eq!(cursor.as_str(), "opaque_page-2");
+        let next_request =
+            ManagerV2Request::relation_records(relation, Some(cursor), PageLimit::new(1).unwrap())
+                .unwrap();
+        let ManagerRead::Available(ManagerPayload::RelationRecords(last)) =
+            client.execute(&next_request).await.unwrap()
+        else {
+            panic!("expected terminal page");
+        };
+        // Terminal metadata is this page's source declaration, not a locally
+        // synthesized whole-history completeness or freshness statement.
+        assert_eq!(last.meta().profile_id(), profile);
+        assert!(last.data().next_cursor().is_none());
+        assert_eq!(last.data().items().len(), 1);
+        let requests = captured.lock().unwrap();
+        assert_eq!(requests.len(), 2);
+        assert!(requests[0].starts_with(
+            "GET /portal/execution/v2/manager/records/public/orders?limit=1 HTTP/1.1"
+        ));
+        assert!(requests[1].starts_with(
+            "GET /portal/execution/v2/manager/records/public/orders?limit=1&cursor=opaque_page-2 HTTP/1.1"
+        ));
+        for request in requests.iter() {
+            let lower = request.to_ascii_lowercase();
+            assert!(!lower.contains("authorization:"));
+            assert!(!lower.contains("profile="));
+            assert!(!lower.contains("x-api-key:"));
+        }
+    }
+}
+
+#[tokio::test]
+async fn all_mode_catalogue_responses_cannot_fall_back_across_profiles() {
+    for deployment in DEPLOYMENT_PROFILES {
+        for response_profile in DEPLOYMENT_PROFILES {
+            if response_profile == deployment {
+                continue;
+            }
+            let captured = Arc::new(Mutex::new(Vec::new()));
+            let origin = one_response_server(
+                Arc::clone(&captured),
+                "200 OK",
+                qualified_headers(),
+                catalogue_body().replace(PROFILE_ID, response_profile),
+                Duration::ZERO,
+            )
+            .await;
+            let client = ManagerV2Client::new_for_test_with_profile(
+                &origin,
+                deployment,
+                ManagerV2ClientLimits::default(),
+            )
+            .unwrap();
+            assert!(matches!(
+                client.execute(&ManagerV2Request::catalogue()).await,
+                Err(ManagerV2ClientError::Contract(
+                    manager_v2_contract::ContractError::EnvelopeIdentityMismatch
+                ))
+            ));
+            assert_eq!(captured.lock().unwrap().len(), 1);
+        }
+    }
+}
+
+#[tokio::test]
+async fn all_mode_unavailability_is_profile_bound_and_never_retried() {
+    for deployment in DEPLOYMENT_PROFILES {
+        for response_profile in DEPLOYMENT_PROFILES {
+            let body = format!(
+                r#"{{"contract_version":"{RUNTIME_CONTRACT_REVISION}","authority":"EXECUTION_CELL","profile_id":"{response_profile}","catalogue_sha256":"{DIGEST}","availability":"UNAVAILABLE","reason_code":"SOURCE_UNAVAILABLE","trace_id":"test-only-profile-unavailable"}}"#
+            );
+            let captured = Arc::new(Mutex::new(Vec::new()));
+            let origin = one_response_server(
+                Arc::clone(&captured),
+                "503 Service Unavailable",
+                qualified_headers(),
+                body,
+                Duration::ZERO,
+            )
+            .await;
+            let client = ManagerV2Client::new_for_test_with_profile(
+                &origin,
+                deployment,
+                ManagerV2ClientLimits::default(),
+            )
+            .unwrap();
+            let outcome = client.execute(&ManagerV2Request::catalogue()).await;
+            if response_profile == deployment {
+                assert!(matches!(outcome, Ok(ManagerRead::Unavailable(_))));
+            } else {
+                assert!(matches!(outcome, Err(ManagerV2ClientError::Contract(_))));
+            }
+            assert_eq!(captured.lock().unwrap().len(), 1);
+        }
+    }
+}
+
+#[tokio::test]
+async fn all_mode_single_page_row_bound_is_enforced_before_exposing_records() {
+    for profile in DEPLOYMENT_PROFILES {
+        let catalogue_wire = catalogue_body().replace(PROFILE_ID, profile);
+        let ManagerPayload::Catalogue(catalogue) = decode_success_for_profile(
+            &ManagerV2Request::catalogue(),
+            catalogue_wire.as_bytes(),
+            profile,
+        )
+        .unwrap() else {
+            panic!("expected catalogue");
+        };
+        let request = ManagerV2Request::relation_records(
+            catalogue.data().relation("public", "orders").unwrap(),
+            None,
+            PageLimit::new(1).unwrap(),
+        )
+        .unwrap();
+        let extra_record = r#"{"relation":{"schema":"public","relation":"orders"},"record_key":"record-key-2","fields":{"id":{"kind":"INTEGER","value":2}}}"#;
+        let body = relation_page_body()
+            .replace(PROFILE_ID, profile)
+            .replace("\"items\":[", &format!("\"items\":[{extra_record},"));
+        let captured = Arc::new(Mutex::new(Vec::new()));
+        let origin = one_response_server(
+            Arc::clone(&captured),
+            "200 OK",
+            qualified_headers(),
+            body,
+            Duration::ZERO,
+        )
+        .await;
+        let client = ManagerV2Client::new_for_test_with_profile(
+            &origin,
+            profile,
+            ManagerV2ClientLimits::default(),
+        )
+        .unwrap();
+        assert!(matches!(
+            client.execute(&request).await,
+            Err(ManagerV2ClientError::Contract(
+                manager_v2_contract::ContractError::RelationBindingDenied
+            ))
+        ));
+        assert_eq!(captured.lock().unwrap().len(), 1);
+    }
+}
+
+#[test]
+fn json_media_type_requires_an_exact_single_value_on_every_source_boundary() {
+    for content_type in [
+        "application/json",
+        "Application/JSON",
+        "application/json; charset=utf-8",
+    ] {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("content-type", HeaderValue::from_str(content_type).unwrap());
+        assert!(validate_json_content_type(&headers).is_ok());
+    }
+    for content_type in [
+        "application/jsonp",
+        "application/json-seq",
+        "application/json, text/html",
+        "text/html",
+        "",
+    ] {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("content-type", HeaderValue::from_str(content_type).unwrap());
+        headers.insert(
+            "x-manager-contract",
+            HeaderValue::from_static(RUNTIME_CONTRACT_REVISION),
+        );
+        headers.insert(
+            "x-portal-source-adapter",
+            HeaderValue::from_static(MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION),
+        );
+        assert!(matches!(
+            validate_response_headers(&headers),
+            Err(ManagerV2ClientError::InvalidContentType)
+        ));
+        assert!(matches!(
+            validate_extension_response_headers(&headers, RUNTIME_CONTRACT_REVISION),
+            Err(ManagerV2ClientError::InvalidContentType)
+        ));
+        assert!(matches!(
+            validate_market_context_adapter_headers(&headers),
+            Err(ManagerV2ClientError::InvalidContentType)
+        ));
+    }
+}
+
+#[test]
+fn duplicate_revision_and_media_type_fields_are_rejected_even_if_first_is_valid() {
+    let mut headers = reqwest::header::HeaderMap::new();
+    headers.insert("content-type", HeaderValue::from_static("application/json"));
+    headers.insert(
+        "x-manager-contract",
+        HeaderValue::from_static(RUNTIME_CONTRACT_REVISION),
+    );
+    headers.insert(
+        "x-portal-source-adapter",
+        HeaderValue::from_static(MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION),
+    );
+    for second in [RUNTIME_CONTRACT_REVISION, "wrong-revision"] {
+        let mut duplicate = headers.clone();
+        duplicate.append("x-manager-contract", HeaderValue::from_static(second));
+        assert!(matches!(
+            validate_response_headers(&duplicate),
+            Err(ManagerV2ClientError::ContractHeaderMismatch)
+        ));
+        assert!(matches!(
+            validate_extension_response_headers(&duplicate, RUNTIME_CONTRACT_REVISION),
+            Err(ManagerV2ClientError::ExtensionContractHeaderMismatch)
+        ));
+    }
+    for second in [MARKET_CONTEXT_DATA_LAYER_ADAPTER_REVISION, "wrong-adapter"] {
+        let mut duplicate = headers.clone();
+        duplicate.append("x-portal-source-adapter", HeaderValue::from_static(second));
+        assert!(matches!(
+            validate_market_context_adapter_headers(&duplicate),
+            Err(ManagerV2ClientError::MarketContextAdapterHeaderMismatch)
+        ));
+    }
+    for second in ["application/json", "text/html"] {
+        let mut duplicate = headers.clone();
+        duplicate.append("content-type", HeaderValue::from_static(second));
+        assert!(matches!(
+            validate_response_headers(&duplicate),
+            Err(ManagerV2ClientError::InvalidContentType)
+        ));
+        assert!(matches!(
+            validate_extension_response_headers(&duplicate, RUNTIME_CONTRACT_REVISION),
+            Err(ManagerV2ClientError::InvalidContentType)
+        ));
+        assert!(matches!(
+            validate_market_context_adapter_headers(&duplicate),
+            Err(ManagerV2ClientError::InvalidContentType)
+        ));
+    }
+}
+
 #[tokio::test]
 async fn sends_only_fixed_manager_get_without_jwt_or_v1_api_key() {
     let captured = Arc::new(Mutex::new(Vec::new()));
