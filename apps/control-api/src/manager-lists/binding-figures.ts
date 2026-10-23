@@ -11,8 +11,8 @@
  *  3. Authorization precedes aggregation. `bindingCounts` filters rows through `authorize` before it classifies or counts
  *     them, so a hidden row never contributes to a count, an issue or a headroom.
  *
- * The projection column that carries the figures (`list_figures`, jsonb) does not exist yet. `bindingsResource` does not
- * select it, so on today's database the key is never present and nothing here is published. Edge/Core own the input; see
+ * The additive projection column (`list_figures`, jsonb) preserves owning input
+ * through replacement and page reads. Historical rows remain absent. Edge/Core own the input; see
  * upgrade/execution_loop/evidence/ELP2-10/FE_CAT_4_BINDINGS_LIST_FIGURES_2026-10-23.md.
  */
 

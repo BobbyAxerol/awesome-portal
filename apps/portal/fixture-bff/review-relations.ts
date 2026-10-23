@@ -3,13 +3,15 @@
  *
  * Three legacy Portfolio double account keys name counterparts the Account double actually holds.
  * Those exact references are unified. Scaled internal account balances also use
- * the shared deployment graph; physical broker balances and native legacy
- * adverse scenarios are not rewritten or relabelled as economic sleeves.
+ * the shared deployment graph; generated bindings share an explicit synthetic
+ * physical book. Native legacy adverse scenarios are not rewritten or
+ * relabelled as economic sleeves.
  * Unknown resources/errors remain unknown; an account alias in the URL is not a fallback lookup.
  * The caller must opt in AFTER selecting the original response and preserve its HTTP status.
  */
 export type ReviewProfile = "populated" | "layout-stress";
 import { scaled, addDecimal } from "../frontend/e2e/bffScale";
+import { linkedAccountFigures } from "./review-accounts";
 
 /** Review-only internal balance projection from the same deployment graph as
  * Manager. Physical broker equity/wallet and native sparse fixtures are untouched. */
@@ -87,5 +89,5 @@ export function transformReviewBody(path: string, body: unknown, profile: Review
   const pathname = path.split("?", 1)[0]!;
   if (!pathname.startsWith("/api/v1/execution/") && pathname !== "/api/admin/accounts") return body;
   if (!record(body) || Object.prototype.hasOwnProperty.call(body, "error")) return body;
-  return walk(body, profile === "layout-stress");
+  return walk(linkedAccountFigures(pathname, body), profile === "layout-stress");
 }

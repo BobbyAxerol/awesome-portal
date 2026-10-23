@@ -6,10 +6,9 @@ import { describe, expect, it, vi } from "vitest";
 import { bindingCounts, mapBindingFigures, type CountSnapshot } from "../src/manager-lists/binding-figures";
 import { bindingsResource, mapBindingRow, type BindingRow } from "../src/manager-lists/contracts";
 
-// FE-CAT-4. In-process only: no database, no source. The projection column `list_figures` does not exist yet, so these
-// tests establish the mapping and the authorization/count rules that apply the day Edge supplies it.
+// FE-CAT-4. In-process mapping/authorization rules; PostgreSQL roundtrip is tested separately.
 
-const contractsRoot = resolve(__dirname, "../../../packages/contracts");
+const contractsRoot = process.env.PORTAL_CONTRACTS_DIR ?? resolve(__dirname, "../../../packages/contracts");
 const schema = JSON.parse(readFileSync(resolve(contractsRoot, "schemas/execution-manager-lists.v1.schema.json"), "utf8"));
 const ajv = new Ajv2020({ strict: true, allErrors: true });
 addFormats(ajv);
@@ -36,10 +35,10 @@ describe("bindings-list figures mapping", () => {
     expect(Object.hasOwn(mapBindingRow(row({ list_figures: {} })), "figures")).toBe(false);
   });
 
-  it("does not select the figures column: no migration, no database change", () => {
-    expect(bindingsResource().selectColumns).not.toContain("list_figures");
+  it("selects figures in the page without per-row follow-up reads", () => {
+    expect(bindingsResource().selectColumns).toContain("list_figures");
     expect(bindingsResource().selectColumns).toEqual(
-      ["scope_id", "binding_id", "account_id", "venue", "state", "credential_state", "updated_at"]);
+      ["scope_id", "binding_id", "account_id", "venue", "state", "credential_state", "updated_at", "list_figures"]);
   });
 
   it("maps native equity, headroom and sleeves; an unrelated wallet balance is never copied", () => {
