@@ -14,13 +14,27 @@ import { CardsTable, type CardsColumn } from "../../cardsTable";
 import { NaWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import { formatAsOf } from "../../boundary";
-import type { OperationV2 } from "../../readers/operationalQueue";
+import type { FlagKind } from "../../flagKinds";
+import type { DeliveryStateV2, DisplayStateV2, OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { IncidentLinks } from "./IncidentLinks";
 import { axesText, commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
 import "../../css/operations.css";
+
+/** FE-CAT-2 axis words. A word is a published value restated; nothing here is derived from other fields. */
+const DELIVERY_WORD: Readonly<Record<DeliveryStateV2, string>> = {
+  NOT_APPLICABLE: "Delivery: no receipt expected",
+  AWAITING_RECEIPT: "Delivery: awaiting receipt",
+  RECEIPT_CONFIRMED: "Delivery: receipt confirmed",
+  RECEIPT_FAILED: "Delivery: receipt failed",
+};
+const DISPLAY_WORD: Readonly<Record<DisplayStateV2, { kind: FlagKind; label: string }>> = {
+  CURRENT: { kind: "ok", label: "Current" },
+  CATCHING_UP: { kind: "pending", label: "Catching up" },
+  STALE: { kind: "stale", label: "Stale" },
+};
 
 function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId: string) => To): readonly CardsColumn<OperationV2>[] {
   return [
@@ -56,6 +70,7 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
           <span className="exec-ops-cell">
             <Flag kind={outcome.kind} label={outcome.label} size="sm" />
             <span className="exec-ops-meta">{axesText(row.sourceStatus, row.verificationResult)}</span>
+            {row.deliveryState ? <span className="exec-ops-meta">{DELIVERY_WORD[row.deliveryState]}</span> : null}
           </span>
         );
       },
@@ -63,7 +78,13 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
     {
       key: "display",
       label: "Display",
-      render: () => <NaWhy reason="Not published (FE-032): whether the figures shown have caught up." />,
+      render: (row) => {
+        // FE-CAT-2: the row's display axis. Omitted (no owning source) and null (the source did not report it) stay typed gaps.
+        if (row.displayState === undefined) return <NaWhy reason="Not published (FE-032): whether the figures shown have caught up." />;
+        if (row.displayState === null) return <NaWhy reason="Not published (FE-032): the source did not report whether the figures shown have caught up for this row." />;
+        const word = DISPLAY_WORD[row.displayState];
+        return <Flag kind={word.kind} label={word.label} size="sm" />;
+      },
     },
     {
       key: "next",

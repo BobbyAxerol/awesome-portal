@@ -185,6 +185,36 @@ function simulatedStatusCounts(all: readonly Row[], applied: readonly { field: s
   };
 }
 
+/**
+ * SIMULATED (FIXTURE_LAB, opt-in, FE-CAT-2): the delivery and display axes of a row, restated from the row's own source status and
+ * verification, and the queue health counted over the SAME filtered set the page was cut from (never over the loaded page).
+ * A BLOCKED row has no display to catch up, so the source "did not report" it (null); every other row reports CURRENT.
+ */
+function simulatedAxes(row: Row): { delivery_state: string; display_state: string | null } {
+  const status = String(row.source_status);
+  const delivery = status === "BLOCKED" ? "NOT_APPLICABLE"
+    : status === "SUCCEEDED" ? "RECEIPT_CONFIRMED"
+    : status === "FAILED" || status === "EXPIRED" ? "RECEIPT_FAILED"
+    : "AWAITING_RECEIPT"; // PENDING, RUNNING, UNCERTAIN: no receipt yet
+  return { delivery_state: delivery, display_state: status === "BLOCKED" ? null : "CURRENT" };
+}
+
+function simulatedHealth(filtered: readonly Row[]): Record<string, unknown> {
+  const at = OPERATIONS_V2_DOUBLE_NOW_ISO;
+  const axes = filtered.map(simulatedAxes);
+  return {
+    basis: "SAME_SNAPSHOT_AUTHORIZED_SCOPE_AND_FILTERS",
+    pending_receipt_count: { count: axes.filter((a) => a.delivery_state === "AWAITING_RECEIPT").length, observed_at: at, coverage: "COMPLETE" },
+    // A counted ZERO that is a floor while any filtered row did not report its display (PARTIAL), exact once none is missing.
+    display_lag_count: {
+      count: axes.filter((a) => a.display_state === "CATCHING_UP").length, observed_at: at,
+      coverage: axes.some((a) => a.display_state === null) ? "PARTIAL" : "COMPLETE",
+    },
+    // The exception source is not published: typed null, not 0.
+    open_exception_count: { count: null, observed_at: null, coverage: "UNKNOWN" },
+  };
+}
+
 function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
   if (search.has("assigned_to")) {
     return problem(400, "OPERATIONAL_READ_FILTER_NOT_SUPPORTED", "assigned_to is not supported by the current operational queue.");
@@ -238,7 +268,7 @@ function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
     observed_at_ms: Date.parse(OPERATIONS_V2_DOUBLE_NOW_ISO),
     read_truth: { state: ordered.length === 0 ? "EMPTY" : "AVAILABLE", reason_code: null, scope: "REQUEST" },
     page: {
-      rows: page,
+      rows: simulate ? page.map((row) => ({ ...row, ...simulatedAxes(row) })) : page,
       total_count: all.length,
       filtered_count: ordered.length,
       next_cursor: end < ordered.length && page.length > 0 ? encodeCursor(page[page.length - 1], signature) : null,
@@ -250,7 +280,7 @@ function queue(search: URLSearchParams, simulate = false): BffAnswerV2 {
         { field: "created_at", direction },
         { field: "operation_id", direction },
       ],
-      ...(simulate ? { status_counts: simulatedStatusCounts(all, applied) } : {}),
+      ...(simulate ? { status_counts: simulatedStatusCounts(all, applied), health: simulatedHealth(ordered) } : {}),
     },
   };
   return { status: 200, body };
