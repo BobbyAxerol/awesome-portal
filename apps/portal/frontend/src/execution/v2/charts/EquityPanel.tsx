@@ -347,8 +347,8 @@ export function EquityPanel(props: EquityPanelProps) {
           // a change across the plotted points, never "in window" (the window is the server's, and may be unpublished).
           <span title={`${timeOf(model.obs[first].t)} to ${timeOf(o.t)}`}>
             <span className="exec-c2-ru">Change across the plotted points</span>
-            <span data-testid="readout-change">{change}</span>{" "}
-            <span className="exec-c2-ru" data-testid="readout-change-span">{timeOf(model.obs[first].t)} to {timeOf(o.t)}</span>
+            <span className="exec-c2-nw" data-testid="readout-change">{change}</span>{" "}
+            <span className="exec-c2-ru exec-c2-nw" data-testid="readout-change-span">{timeOf(model.obs[first].t)} to {timeOf(o.t)}</span>
           </span>
         ) : null}
         {ddText !== null ? <span><span className="exec-c2-ru">Drawdown</span><span data-testid="readout-drawdown">{ddText}</span></span> : null}

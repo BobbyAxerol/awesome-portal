@@ -685,3 +685,8 @@
   .exec-ct[data-expanded="true"] { inset: 0; padding: var(--space-3); }
   .exec-ct-btn { min-height: 36px; }
 }
+
+/* WP-F3: the change figure and its time span in the chart readout are not broken across lines at phone width; the sentence wraps between them. */
+.exec-c2-nw {
+  white-space: nowrap;
+}

@@ -18,6 +18,9 @@ import { createHash } from "node:crypto";
 
 import { credentialView, stateView } from "../src/execution/v2/screens/account/model";
 import { fixtureNowMs, scaled } from "./bffScale";
+// ===== WP-F3 begin: lit stage bodies (register 2f3) =====
+import { simulateStage } from "./bffSimulatedStage";
+// ===== WP-F3 end =====
 
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -467,6 +470,10 @@ export interface SimulatedAnswer {
 export function simulate<T extends SimulatedAnswer>(method: string, path: string, search: URLSearchParams, answer: T): T {
   if (method.toUpperCase() !== "GET" || answer.status !== 200 || !isObj(answer.body)) return answer;
   const seg = path.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
+  // ===== WP-F3 begin: Paper, Sandbox, Canary and Live answer a lit body (bffSimulatedStage.ts) =====
+  const stage = simulateStage(path, answer.body);
+  if (stage !== null) return { ...answer, body: stage };
+  // ===== WP-F3 end =====
   if (seg[0] === "resources" && seg[1] === "accounts" && seg.length === 3) return { ...answer, body: overlayAccountResource(answer.body, seg[2]!) };
   if (path === "/views/equity-chart" && search.get("subject_kind") === "account" && search.get("subject_id") === "acc_bnc_core") {
     return { ...answer, body: overlayChart(answer.body, search.get("metric") ?? "equity") };
