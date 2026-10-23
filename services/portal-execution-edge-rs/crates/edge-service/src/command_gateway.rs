@@ -97,6 +97,8 @@ pub struct GatewayResult {
 /// Callable HTTP composition for a server-authenticated ORIGINAL. The mounting
 /// middleware supplies scope/current provider; read assertions or body fields
 /// cannot call this on their own. This does not install a route or enable sends.
+/// Request-scoped relays must use `DurableCommandRelay::with_control` with one
+/// process-owned admission/send switch, not a fresh control per human request.
 pub async fn handle_human<A: AuthorityProvider, P: CommandPort>(
     scope: CommandScope,
     raw: &[u8],

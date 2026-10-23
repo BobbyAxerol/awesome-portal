@@ -79,6 +79,44 @@ pub enum RelayError {
     Configuration,
 }
 
+/// Process-owned admission and new-send switch for request-scoped relays.
+/// Clone this one handle across the intended server binding; it contains no
+/// human authority, original intent, receipt or source credentials. It is not a
+/// distributed quota, and disabling sends does not cancel an in-flight effect.
+#[derive(Clone)]
+pub struct CommandRelayControl {
+    inner: Arc<CommandRelayControlState>,
+}
+
+struct CommandRelayControlState {
+    sends_enabled: AtomicBool,
+    admission: Semaphore,
+}
+
+impl CommandRelayControl {
+    /// New sends start disabled. Existing authorized status and private service
+    /// recovery share the same bounded admission without requiring send enable.
+    /// # Errors
+    /// Rejects unbounded or empty process-local concurrency.
+    pub fn new(max_active: usize) -> Result<Self, RelayError> {
+        if !(1..=32).contains(&max_active) {
+            return Err(RelayError::Configuration);
+        }
+        Ok(Self {
+            inner: Arc::new(CommandRelayControlState {
+                sends_enabled: AtomicBool::new(false),
+                admission: Semaphore::new(max_active),
+            }),
+        })
+    }
+
+    /// Server-controlled admission only; never grants source/human authority.
+    /// Changes apply to every relay that was given a clone of this handle.
+    pub fn set_sends_enabled(&self, enabled: bool) {
+        self.inner.sends_enabled.store(enabled, Ordering::SeqCst);
+    }
+}
+
 /// Shared bounded composition for submit/status. No browser facts or arbitrary
 /// SQL/CLI/URL enter here. An HTTP adapter must first install a qualified current
 /// authority provider and a separately authenticated TS command/status port.
@@ -87,14 +125,15 @@ pub struct DurableCommandRelay<A, P> {
     ledger: String,
     authority: A,
     port: P,
-    sends_enabled: AtomicBool,
-    admission: Arc<Semaphore>,
+    control: CommandRelayControl,
     deadline: Duration,
 }
 
 impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
     /// This constructor does not configure schemas or activate a route. Quota
     /// must already exist; source publication is checked for every new send.
+    /// It retains a fresh, disabled per-relay control for compatibility. A
+    /// request-scoped server must use `with_control` and one owning handle.
     /// # Errors
     /// Rejects unbounded concurrency/deadline or malformed ledger identity.
     pub fn new(
@@ -105,9 +144,32 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
         max_active: usize,
         deadline: Duration,
     ) -> Result<Self, RelayError> {
+        Self::with_control(
+            store,
+            ledger,
+            authority,
+            port,
+            CommandRelayControl::new(max_active)?,
+            deadline,
+        )
+    }
+
+    /// Assemble a request-scoped authority/port with process-owned admission.
+    /// Reuse one control across sibling relays rather than recreating its
+    /// semaphore or switch for each requester. Original custody stays in the
+    /// ledger, and each call still checks this relay's current authority.
+    /// # Errors
+    /// Rejects malformed ledger identity or unbounded network deadline.
+    pub fn with_control(
+        store: PgProjectionStore,
+        ledger: &str,
+        authority: A,
+        port: P,
+        control: CommandRelayControl,
+        deadline: Duration,
+    ) -> Result<Self, RelayError> {
         if ledger.is_empty()
             || ledger.len() > 128
-            || !(1..=32).contains(&max_active)
             || deadline < Duration::from_millis(50)
             || deadline > Duration::from_secs(30)
         {
@@ -118,8 +180,7 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
             ledger: ledger.to_owned(),
             authority,
             port,
-            sends_enabled: AtomicBool::new(false),
-            admission: Arc::new(Semaphore::new(max_active)),
+            control,
             deadline,
         })
     }
@@ -127,7 +188,7 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
     /// Server-controlled admission only, not a proof or a feature-flag bypass.
     /// Every new send still needs a current published operation authorization.
     pub fn set_sends_enabled(&self, enabled: bool) {
-        self.sends_enabled.store(enabled, Ordering::SeqCst);
+        self.control.set_sends_enabled(enabled);
     }
 
     /// Core-facing PM admission: atomically retain the original source pins
@@ -142,7 +203,12 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
         original: Option<&crate::command_pm::OriginalPmBinding>,
     ) -> Result<CommandRecord, RelayError> {
         {
-            let _permit = self.admission.try_acquire().map_err(|_| RelayError::Busy)?;
+            let _permit = self
+                .control
+                .inner
+                .admission
+                .try_acquire()
+                .map_err(|_| RelayError::Busy)?;
             self.check(intent, Action::Status)?;
             if self
                 .store
@@ -150,7 +216,7 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
                 .await?
                 .is_none()
             {
-                if !self.sends_enabled.load(Ordering::SeqCst) {
+                if !self.control.inner.sends_enabled.load(Ordering::SeqCst) {
                     return Err(RelayError::Disabled);
                 }
                 self.check(intent, Action::Submit)?;
@@ -174,7 +240,12 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
         &self,
         intent: &CommandIntent,
     ) -> Result<Option<command_relay::pm_source::PmOutcome>, RelayError> {
-        let _permit = self.admission.try_acquire().map_err(|_| RelayError::Busy)?;
+        let _permit = self
+            .control
+            .inner
+            .admission
+            .try_acquire()
+            .map_err(|_| RelayError::Busy)?;
         self.check(intent, Action::Status)?;
         let outcome = self.store.read_pm_outcome(&self.ledger, intent).await?;
         self.check(intent, Action::Status)?;
@@ -205,10 +276,15 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
     /// resends uncertain intents. Existing requests are authorized as status so
     /// their original versions can still be recovered after the TS commit.
     pub async fn submit(&self, intent: &CommandIntent) -> Result<CommandRecord, RelayError> {
-        let _permit = self.admission.try_acquire().map_err(|_| RelayError::Busy)?;
+        let _permit = self
+            .control
+            .inner
+            .admission
+            .try_acquire()
+            .map_err(|_| RelayError::Busy)?;
         self.check(intent, Action::Status)?;
         // A rollback cannot create new intents; it must preserve status access.
-        if !self.sends_enabled.load(Ordering::SeqCst) {
+        if !self.control.inner.sends_enabled.load(Ordering::SeqCst) {
             let record = self
                 .store
                 .existing_command(&self.ledger, intent)
@@ -228,7 +304,7 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
             return self.disclose(intent, record);
         }
         self.check(intent, Action::Submit)?;
-        if !self.sends_enabled.load(Ordering::SeqCst) {
+        if !self.control.inner.sends_enabled.load(Ordering::SeqCst) {
             return Err(RelayError::Disabled);
         }
         let Some(claim) = self.store.claim_command(&self.ledger, intent).await? else {
@@ -243,7 +319,7 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
             self.store.command_delivery(&claim, false).await?;
             return Err(error);
         }
-        if !self.sends_enabled.load(Ordering::SeqCst) {
+        if !self.control.inner.sends_enabled.load(Ordering::SeqCst) {
             self.store.command_delivery(&claim, false).await?;
             return Err(RelayError::Disabled);
         }
@@ -274,7 +350,12 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
         intent: &CommandIntent,
         reconcile: bool,
     ) -> Result<CommandRecord, RelayError> {
-        let _permit = self.admission.try_acquire().map_err(|_| RelayError::Busy)?;
+        let _permit = self
+            .control
+            .inner
+            .admission
+            .try_acquire()
+            .map_err(|_| RelayError::Busy)?;
         self.check(intent, Action::Status)?;
         let record = self.store.command_status(&self.ledger, intent).await?;
         if !reconcile
@@ -308,7 +389,12 @@ impl<A: AuthorityProvider, P: CommandPort> DurableCommandRelay<A, P> {
         intent: &CommandIntent,
         service: &impl RecoveryProvider,
     ) -> Result<(), RelayError> {
-        let _permit = self.admission.try_acquire().map_err(|_| RelayError::Busy)?;
+        let _permit = self
+            .control
+            .inner
+            .admission
+            .try_acquire()
+            .map_err(|_| RelayError::Busy)?;
         authorize_recovery(service, intent, chrono::Utc::now().timestamp_millis())?;
         let record = self.store.command_status(&self.ledger, intent).await?;
         if record.delivery == "PREPARED"

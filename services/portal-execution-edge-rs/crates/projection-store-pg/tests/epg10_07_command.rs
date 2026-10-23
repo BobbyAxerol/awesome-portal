@@ -26,7 +26,8 @@ use projection_core::{
 };
 use projection_store_pg::{
     command::{
-        CommandPort, CommandStoreError, DurableCommandRelay, RelayError, SourceFuture, SourceReply,
+        CommandPort, CommandRelayControl, CommandStoreError, DurableCommandRelay, RelayError,
+        SourceFuture, SourceReply,
     },
     PgProjectionStore,
 };
@@ -461,6 +462,7 @@ impl AuthorityProvider for TestAuthority {
 }
 #[derive(Clone, Default)]
 struct TestPort {
+    sends: Arc<AtomicUsize>,
     effects: Arc<AtomicUsize>,
     lookups: Arc<AtomicUsize>,
     recovery_lookups: Arc<AtomicUsize>,
@@ -473,6 +475,7 @@ struct TestPort {
 impl CommandPort for TestPort {
     fn send<'a>(&'a self, intent: &'a CommandIntent) -> SourceFuture<'a> {
         Box::pin(async move {
+            self.sends.fetch_add(1, Ordering::SeqCst);
             // TEST_ONLY commit-side authority fence, not a real TS provider.
             if let Some(revoked) = &self.revoke_before_commit {
                 revoked.store(true, Ordering::SeqCst);
@@ -1036,4 +1039,294 @@ async fn async_source_admission_is_fail_fast_without_waiter_queue() {
         Err(RelayError::Busy)
     ));
     assert_eq!(first.await.unwrap().unwrap().delivery, "DELIVERY_UNKNOWN");
+}
+
+// TEST_ONLY current requesters are separate from the immutable original actor.
+// Status may be granted to the other manager; submit must still match its own
+// original actor. Sharing admission cannot share these current facts.
+struct RequesterAuthority {
+    facts: TestAuthority,
+    actor: &'static str,
+}
+impl AuthorityProvider for RequesterAuthority {
+    fn current(
+        &self,
+        intent: &CommandIntent,
+        action: Action,
+        now: i64,
+    ) -> Result<CurrentAuthority, AuthorityError> {
+        let mut facts = self.facts.current(intent, action, now)?;
+        facts.requester_actor_id = self.actor.into();
+        Ok(facts)
+    }
+}
+
+fn requester_intent(key: &str, actor: &str) -> CommandIntent {
+    let original = intent(key, "5.000");
+    let scope = original.scope();
+    CommandIntent::new(
+        CommandScope::new(
+            scope.workspace_id(),
+            scope.environment(),
+            scope.profile_id(),
+            scope.authority_scope_id(),
+            actor,
+            scope.workload_id(),
+        )
+        .unwrap(),
+        original.key(),
+        original.operation(),
+        original.payload().clone(),
+        original.digest(),
+    )
+    .unwrap()
+}
+
+#[test]
+fn shared_command_control_rejects_unbounded_concurrency() {
+    for max_active in [0, 33, usize::MAX] {
+        assert!(matches!(
+            CommandRelayControl::new(max_active),
+            Err(RelayError::Configuration)
+        ));
+    }
+    assert!(CommandRelayControl::new(1).is_ok());
+    assert!(CommandRelayControl::new(32).is_ok());
+}
+
+#[tokio::test]
+async fn shared_control_bounds_two_requesters_and_cancel_releases_without_resend() {
+    let store = store().await;
+    let ledger = ledger();
+    store.configure_command_ledger(&ledger, 4).await.unwrap();
+    let control = CommandRelayControl::new(1).unwrap();
+    let blocking_port = TestPort {
+        hang: true,
+        ..TestPort::default()
+    };
+    let second_port = TestPort::default();
+    let first = Arc::new(
+        DurableCommandRelay::with_control(
+            store.clone(),
+            &ledger,
+            RequesterAuthority {
+                facts: TestAuthority::default(),
+                actor: "TEST_ONLY.first-manager",
+            },
+            blocking_port.clone(),
+            control.clone(),
+            Duration::from_secs(30),
+        )
+        .unwrap(),
+    );
+    let second = DurableCommandRelay::with_control(
+        store.clone(),
+        &ledger,
+        RequesterAuthority {
+            facts: TestAuthority::default(),
+            actor: "TEST_ONLY.second-manager",
+        },
+        second_port.clone(),
+        control,
+        Duration::from_secs(30),
+    )
+    .unwrap();
+    first.set_sends_enabled(true);
+    second.set_sends_enabled(true);
+    let first_intent = requester_intent("TEST_ONLY.first", "TEST_ONLY.first-manager");
+    let second_intent = requester_intent("TEST_ONLY.second", "TEST_ONLY.second-manager");
+    let task_relay = Arc::clone(&first);
+    let task_intent = first_intent.clone();
+    let task = tokio::spawn(async move { task_relay.submit(&task_intent).await });
+    tokio::time::timeout(Duration::from_secs(3), async {
+        while !blocking_port.started.load(Ordering::SeqCst) {
+            tokio::time::sleep(Duration::from_millis(1)).await;
+        }
+    })
+    .await
+    .expect("TEST_ONLY first sender did not reach its blocked source");
+    assert!(matches!(
+        second.submit(&second_intent).await,
+        Err(RelayError::Busy)
+    ));
+    assert!(matches!(
+        second.status(&first_intent, false).await,
+        Err(RelayError::Busy)
+    ));
+    assert!(matches!(
+        second.recover(&first_intent, &TestRecovery).await,
+        Err(RelayError::Busy)
+    ));
+    assert!(store
+        .existing_command(&ledger, &second_intent)
+        .await
+        .unwrap()
+        .is_none());
+    assert_eq!(second_port.sends.load(Ordering::SeqCst), 0);
+
+    // Wait for the task to actually end: abort alone does not prove permit drop.
+    // The retained dispatch claim remains UNKNOWN, never a proved no-effect.
+    task.abort();
+    assert!(task.await.unwrap_err().is_cancelled());
+    assert_eq!(
+        second.status(&first_intent, false).await.unwrap().delivery,
+        "DELIVERY_UNKNOWN"
+    );
+    assert_eq!(
+        first.submit(&first_intent).await.unwrap().delivery,
+        "DELIVERY_UNKNOWN"
+    );
+    assert_eq!(blocking_port.sends.load(Ordering::SeqCst), 1);
+    assert_eq!(blocking_port.effects.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        second.submit(&second_intent).await.unwrap().delivery,
+        "DELIVERY_UNKNOWN"
+    );
+    assert_eq!(second_port.sends.load(Ordering::SeqCst), 1);
+    assert_eq!(second_port.effects.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn shared_control_sibling_disable_preserves_current_status_and_service_recovery() {
+    let store = store().await;
+    let ledger = ledger();
+    store.configure_command_ledger(&ledger, 4).await.unwrap();
+    let control = CommandRelayControl::new(1).unwrap();
+    let first_authority = TestAuthority::default();
+    let second_authority = TestAuthority::default();
+    let port = TestPort::default();
+    let first = DurableCommandRelay::with_control(
+        store.clone(),
+        &ledger,
+        RequesterAuthority {
+            facts: first_authority.clone(),
+            actor: "TEST_ONLY.first-manager",
+        },
+        port.clone(),
+        control.clone(),
+        Duration::from_secs(2),
+    )
+    .unwrap();
+    let second = DurableCommandRelay::with_control(
+        store.clone(),
+        &ledger,
+        RequesterAuthority {
+            facts: second_authority.clone(),
+            actor: "TEST_ONLY.second-manager",
+        },
+        port.clone(),
+        control,
+        Duration::from_secs(2),
+    )
+    .unwrap();
+    let original = requester_intent("TEST_ONLY.original", "TEST_ONLY.first-manager");
+    let later = requester_intent("TEST_ONLY.later", "TEST_ONLY.first-manager");
+    assert!(matches!(
+        first.submit(&original).await,
+        Err(RelayError::Disabled)
+    ));
+    assert!(store
+        .existing_command(&ledger, &original)
+        .await
+        .unwrap()
+        .is_none());
+    first.set_sends_enabled(true);
+    second.set_sends_enabled(true);
+    assert!(matches!(
+        second.submit(&original).await,
+        Err(RelayError::Authority(AuthorityError::ScopeMismatch))
+    ));
+    assert!(store
+        .existing_command(&ledger, &original)
+        .await
+        .unwrap()
+        .is_none());
+    assert_eq!(
+        first.submit(&original).await.unwrap().delivery,
+        "DELIVERY_UNKNOWN"
+    );
+    second.set_sends_enabled(false);
+    assert!(matches!(
+        first.submit(&later).await,
+        Err(RelayError::Disabled)
+    ));
+    assert!(store
+        .existing_command(&ledger, &later)
+        .await
+        .unwrap()
+        .is_none());
+
+    // The sibling's current report authorization does not rewrite original
+    // actor/digest/custody, and the first requester's revocation stays separate.
+    first_authority.revoked.store(true, Ordering::SeqCst);
+    assert!(matches!(
+        first.status(&original, false).await,
+        Err(RelayError::Authority(AuthorityError::Revoked))
+    ));
+    let disclosed = second.status(&original, false).await.unwrap();
+    assert_eq!(disclosed.intent, original);
+    assert!(disclosed.receipt.is_none());
+    second_authority.revoked.store(true, Ordering::SeqCst);
+    assert!(matches!(
+        second.status(&original, true).await,
+        Err(RelayError::Authority(AuthorityError::Revoked))
+    ));
+    first.recover(&original, &TestRecovery).await.unwrap();
+    assert_eq!(port.lookups.load(Ordering::SeqCst), 0);
+    assert_eq!(port.recovery_lookups.load(Ordering::SeqCst), 1);
+    assert!(first.status(&original, false).await.is_err());
+    assert!(second.status(&original, false).await.is_err());
+    let recovered = store.command_status(&ledger, &original).await.unwrap();
+    assert_eq!(recovered.intent, original);
+    assert_eq!(recovered.receipt.unwrap().state(), BusinessState::Applied);
+    assert_eq!(port.sends.load(Ordering::SeqCst), 1);
+    assert_eq!(port.effects.load(Ordering::SeqCst), 1);
+}
+
+#[tokio::test]
+async fn shared_control_handle_activation_does_not_activate_legacy_constructor() {
+    let store = store().await;
+    let ledger = ledger();
+    store.configure_command_ledger(&ledger, 4).await.unwrap();
+    let control = CommandRelayControl::new(1).unwrap();
+    let port = TestPort::default();
+    let shared = DurableCommandRelay::with_control(
+        store.clone(),
+        &ledger,
+        TestAuthority::default(),
+        port.clone(),
+        control.clone(),
+        Duration::from_secs(2),
+    )
+    .unwrap();
+    let legacy = DurableCommandRelay::new(
+        store.clone(),
+        &ledger,
+        TestAuthority::default(),
+        port.clone(),
+        1,
+        Duration::from_secs(2),
+    )
+    .unwrap();
+    control.set_sends_enabled(true);
+    shared
+        .submit(&intent("TEST_ONLY.shared", "5.000"))
+        .await
+        .unwrap();
+    let unactivated = intent("TEST_ONLY.legacy", "5.000");
+    assert!(matches!(
+        legacy.submit(&unactivated).await,
+        Err(RelayError::Disabled)
+    ));
+    assert!(store
+        .existing_command(&ledger, &unactivated)
+        .await
+        .unwrap()
+        .is_none());
+    control.set_sends_enabled(false);
+    assert!(matches!(
+        shared.submit(&unactivated).await,
+        Err(RelayError::Disabled)
+    ));
+    assert_eq!(port.sends.load(Ordering::SeqCst), 1);
 }

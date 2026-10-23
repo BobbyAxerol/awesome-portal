@@ -358,8 +358,8 @@ pub fn decode_extension_success_for_profile(
     expected_profile_id: &str,
 ) -> Result<ManagerExtensionRead, ExtensionContractError> {
     validate_profile_id(expected_profile_id)?;
-    let value: Value =
-        serde_json::from_slice(body).map_err(|_| ExtensionContractError::InvalidJson)?;
+    let value: Value = execution_contracts::strict_json::from_slice(body)
+        .map_err(|_| ExtensionContractError::InvalidJson)?;
     let object = object(&value)?;
     let contract_revision = text(object, "contract_revision", 160)?;
     if contract_revision != request.expected_contract_revision()
@@ -419,8 +419,8 @@ pub fn decode_extension_unavailable_for_profile(
     expected_profile_id: &str,
 ) -> Result<ManagerExtensionUnavailable, ExtensionContractError> {
     validate_profile_id(expected_profile_id)?;
-    let value: Value =
-        serde_json::from_slice(body).map_err(|_| ExtensionContractError::InvalidJson)?;
+    let value: Value = execution_contracts::strict_json::from_slice(body)
+        .map_err(|_| ExtensionContractError::InvalidJson)?;
     let object = object(&value)?;
     if text(object, "authority", 64)? != "EXECUTION_CELL"
         || text(object, "profile_id", 128)? != expected_profile_id
@@ -452,8 +452,8 @@ pub fn adapt_data_layer_market_response_for_profile(
     received_at: DateTime<Utc>,
 ) -> Result<ManagerExtensionRead, ExtensionContractError> {
     validate_profile_id(expected_profile_id)?;
-    let value: Value =
-        serde_json::from_slice(body).map_err(|_| ExtensionContractError::InvalidJson)?;
+    let value: Value = execution_contracts::strict_json::from_slice(body)
+        .map_err(|_| ExtensionContractError::InvalidJson)?;
     let wire = match request {
         ManagerExtensionRequest::MarketLatest { venue, instrument } => {
             adapt_data_layer_latest(venue, instrument, expected_profile_id, &value, received_at)?

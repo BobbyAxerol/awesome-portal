@@ -1705,7 +1705,7 @@ fn is_exact_decimal(value: &str) -> bool {
 }
 
 fn parse_json<T: DeserializeOwned>(body: &[u8]) -> Result<T, ContractError> {
-    serde_json::from_slice(body).map_err(|_| ContractError::InvalidJsonSchema)
+    execution_contracts::strict_json::from_slice(body).map_err(|_| ContractError::InvalidJsonSchema)
 }
 
 #[derive(Deserialize)]

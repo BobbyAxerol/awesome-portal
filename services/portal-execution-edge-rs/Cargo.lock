@@ -1240,6 +1240,7 @@ name = "manager-extension-contract"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "execution-contracts",
  "serde",
  "serde_json",
  "thiserror",
@@ -1283,6 +1284,7 @@ name = "manager-v2-contract"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "execution-contracts",
  "serde",
  "serde_json",
  "sha2",

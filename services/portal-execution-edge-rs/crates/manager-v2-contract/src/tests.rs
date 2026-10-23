@@ -66,6 +66,69 @@ fn catalogue() -> ManagerCatalogue {
 }
 
 #[test]
+fn duplicate_record_fields_and_nested_values_are_rejected_before_map_decode() {
+    let catalogue = catalogue();
+    let relation = catalogue.relation("public", "orders").unwrap();
+    let request = ManagerV2Request::relation_records(relation, None, PageLimit::default()).unwrap();
+    let mut item = record("public", "orders", "record-key");
+    item["fields"]["amount"] = json!({"kind":"OBJECT","value":{
+        "settled":{"kind":"DECIMAL","value":"12.500000000000000001"}
+    }});
+    let raw = envelope(json!({"relation":{"schema":"public","relation":"orders"},
+        "items":[item],"next_cursor":null}))
+    .to_string();
+    assert!(decode_success(&request, raw.as_bytes()).is_ok());
+    for ambiguous in [
+        raw.replace(
+            "\"fields\":{",
+            "\"fields\":{\"id\":{\"kind\":\"INTEGER\",\"value\":9},",
+        ),
+        raw.replace("\"settled\":", "\"settled\":null,\"settled\":"),
+        raw.replace("\"settled\":", "\"\\u0073ettled\":null,\"settled\":"),
+        raw.replace(
+            "\"value\":\"12.500000000000000001\"",
+            "\"value\":\"1\",\"value\":\"12.500000000000000001\"",
+        ),
+    ] {
+        assert_ne!(ambiguous, raw);
+        assert!(matches!(
+            decode_success(&request, ambiguous.as_bytes()),
+            Err(ContractError::InvalidJsonSchema)
+        ));
+    }
+}
+
+#[test]
+fn strict_manager_decoding_preserves_all_explicit_profile_bindings() {
+    for profile in [
+        "PAPER_BINANCE_USDM",
+        "SANDBOX_BINANCE_USDM",
+        "LIVE_BINANCE_USDM",
+    ] {
+        let mut body = catalogue_response();
+        body["profile_id"] = json!(profile);
+        assert!(decode_success_for_profile(
+            &ManagerV2Request::catalogue(),
+            &serde_json::to_vec(&body).unwrap(),
+            profile
+        )
+        .is_ok());
+        let unavailable = json!({"contract_version":RUNTIME_CONTRACT_REVISION,
+            "authority":"EXECUTION_CELL","profile_id":profile,"catalogue_sha256":DIGEST,
+            "availability":"UNAVAILABLE","reason_code":"SOURCE_UNAVAILABLE","trace_id":"TEST_ONLY-profile"}).to_string();
+        assert!(decode_unavailable_for_profile(unavailable.as_bytes(), profile).is_ok());
+        let ambiguous = unavailable.replace(
+            "\"profile_id\":",
+            "\"profile_id\":\"FOREIGN\",\"profile_id\":",
+        );
+        assert!(matches!(
+            decode_unavailable_for_profile(ambiguous.as_bytes(), profile),
+            Err(ContractError::InvalidJsonSchema)
+        ));
+    }
+}
+
+#[test]
 fn build_lock_exposes_only_the_runtime_paper_identity_and_bounds() {
     assert_eq!(
         RUNTIME_CONTRACT_REVISION,

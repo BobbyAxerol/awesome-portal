@@ -32781,3 +32781,155 @@ Manager/calibration. No generic approval/new phase needed. No runnable owned fix
 from this slice remains; concrete adapters are still NOT_IMPLEMENTED, four new
 binary routes stay503, connected08/09 NOT_MET. Do not advance connected09 or
 re-run retired accepted READ/STREAM-revoke/restart specimens on these unit results.
+
+<a id="epg10-08-manager-wire-integrity-20261023"></a>
+### Original07/08/09 — finish runnable backend,23Oct
+
+**Status before implementation:** IN_PROGRESS_OWNED; Bobby explicitly requests
+all safe independent backend work before external connection. This continues
+original07/08/09, not a new phase, grant, deployment or connected acceptance.
+
+**Goal / audit:** review financial, command, event/history and multi-profile
+Manager boundaries rather than assuming every remainder is external. Read-only
+review found two runnable owned gaps: Manager record maps/nested JSON and
+extension/DL decoders normalize duplicate object members; request-scoped command
+relays each own separate admission/kill-switch despite sharing the same governed
+ledger. Reject ambiguous original JSON before decode and allow the owning
+assembly to share one command admission/kill-switch across current requesters.
+No valid wire, business formula, endpoint or supported profile changes.
+
+**Guide links:** [EDGE §§4.1,5.4,7.2–7.5,8.1 and original07/08/09](upgrade_v1.2/EXECUTION_PORTAL_EDGE_UPGRADE_GUIDE_v1.2_VI.md#epg10-08-hoàn-thiện-revocation-scope-và-tls),
+[BE contract guide](upgrade_v1.2/EXECUTION_LOOP_PORTAL_V2_BACKEND_DATA_CONTRACT_GUIDE_v1.2_VI.md),
+[scoped owner request§7](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md#7-23oct-two-executable-contracts-original0809).
+Reuse existing contracts and durable relay; no alternate transport/framework.
+
+**Approved scope / invariants:** shared strict JSON parsing, Manager contract
+consumers/tests and dependency edges; durable relay reusable admission/control
+and real disposable-PG affected regressions; this journal and bounded evidence.
+Reject repeated decoded keys recursively, including escaped aliases/identical
+duplicates; preserve original numeric precision, valid schemas, array semantics
+and key-order independence. No keys/values in public errors. Shared command
+admission must not merge human authority/custody; disabled new sends still allow
+authorized original STATUS/service recovery. No automatic resend, grant or
+effect. Preserve default-off activation and existing constructor compatibility.
+Do not alter peer WIP, Core/PM sources, roles/schema/auth/certificates,
+stable/dev/provider28445 or command/Live traffic.
+
+**Tests / exit:** meaningful original red for duplicate raw fields/nested JSON
+and two request-scoped relays bypassing a shared one-request ceiling. Regress
+Manager profiles/typed unavailable, escaped distinct keys, exact large integers,
+malformed/trailing/deep JSON; command current requester, cancel/drop admission,
+disable across siblings, status/recovery and at-most-once custody. Run impacted
+Rust contract/client/relay/PG tests, fmt/strict Clippy and tracking reconciliation
+within finite CPU/RAM. Record actual failures/retakes/counts and isolated
+provenance, never connected or production capacity evidence.
+
+**Rollback / cleanup / decision boundary:** source-only revert; no operational
+rollback needed. Inventory images/BuildKit/root disk and remove exact disposable
+source/target/cache/compiler artifacts; retain active/rollback/foreign resources.
+Core latest2a89e6d0/return941be9da still lacks accepted§7.2 current-policy wire.
+PM now27786bd4 adds management-writer composition, not§7.3 financial proof/APPLIED
+wire. Either accepted contract independently opens its concrete adapter; missing
+wire does not block these fixes. Full07/08/09 connected stays NOT_MET; four new
+binary routes remain503. Runtime/source readiness is not changed by this audit.
+
+**Incremental verification23Oct22:34VN:** unchanged decoder behavior fails all
+three new duplicate-member regression identities (expected red, exit101).
+First broad Manager invocation omitted the existing TLS fixture's TEST_ONLY
+input:10guard failures/2PASS; it is not a TLS or production result. Corrected
+cell sets TEST_ONLY and a private16MiB certificate tmpfs; actual final Manager/
+contracts/client/compatibility profile **84PASS/0FAIL/ignored/filtered**, including
+12loopback TLS cases. No check was weakened and no source certificate supplied.
+Command control source/tests now written; affected Edge/PG compilation is still
+in progress, not yet qualified. Bounded resource cell is2CPU/4GiB/1Cargo job;
+no absolute timing/capacity claim, new measurement lock or runtime mutation.
+
+**Incremental verification23Oct22:46VN:** affected command/PG/Edge profile now
+**312PASS/0FAIL/ignored/filtered**: relay79, projection library22, actual disposable
+PG command34 and PM custody15, Edge library66/binary96. Together with the final
+Manager profile this is396distinct PASS (previous slice's295 not added). Three
+shared-control regressions fail as expected when the injection is deliberately
+reconstructed with legacy per-relay controls; this is a negative-control
+reconstruction, not an exact old-source build. Fixed code was restored before
+the complete green run. Strict Clippy is still running; no final qualification
+or source commit claimed before it and cleanup finish. Independent reviewers
+found no additional demonstrated financial/event/history defect; no business
+semantics or source authority replaced by fixtures.
+
+**23Oct22:50VN result — OWNED_INDEPENDENT_SLICE_ISOLATED_QUALIFIED,
+NOT_INSTALLED; full08/read09 NOT_MET.**396Rust PASS is terminal,0failed/ignored/
+filtered; thirteen new test functions are included, not added again. Workspace
+format and strict Clippy for all nine impacted packages/all targets/PG feature
+PASS, tracking reconciliation and diff check PASS. Normal monorepo landing/
+release gate NOT_RUN: focused source intermediate under approved campaign
+§10.10c, no hook configuration changed/bypassed.0push/merge/hostedCI minutes.
+The two reused agents completed disjoint code/review work; parent qualified the
+exact source snapshot (all twelve source/manifest hashes matched after format).
+Commands, expected reds/retakes, source pins and bounded metrics are in
+[backend-independent-closure-qualification.json](evidence/execution-edge-v1_2/EPG10-08/backend-independent-closure-qualification.json).
+
+**Implemented behavior:** shared strict JSON preflight rejects duplicate
+decoded members recursively, including identical/escaped/nested record and DL
+keys, before maps discard ambiguity. Typed decoding still receives original
+numeric tokens; existing schema, fields, error codes and byte/deadline controls
+remain. It retains keys, not a second payload tree. Explicit supported-profile
+fixtures preserve Paper/Sandbox/Live; Canary uses governed Live binding, not a
+fabricated fourth profile or real-mode acceptance.
+
+`CommandRelayControl` now allows request-scoped relay composition to share one
+bounded process admission and default-off new-send switch. Its clones contain
+no user grant/intent/receipt. Actual aborted-and-awaited sender releases the
+permit; durable SENDING/UNKNOWN still prevents resending. Sibling disable does
+not deny separately authorized STATUS or private service recovery, impersonate
+the original actor, cancel an already possible effect or turn the control into
+a distributed quota. Existing constructor remains fresh/default-off; mounting
+code must inject one owning control via`with_control`, not recreate per request.
+
+**Backend inventory after this independent pass (not a connection claim):**
+
+| Original scope | Owned implementation already available and remaining exact boundary |
+| --- | --- |
+| 04/05/09 financial | `financial_projection` plus `scoped_worker` compose bounded snapshot/page/delta, staged atomic COMMIT, same-original proof/ACK/checkpoint recovery. No new demonstrated owned defect from this audit. Concrete proof/revalidation/APPLIED adapter remains NOT_IMPLEMENTED until PM accepts request§7.3; fixtures are not actual PM authority. |
+| 07 commands | Typed Core original codec, HTTP PM port, durable ledger/outcome/custody and separate human STATUS/service recovery exist; shared process control now tested across requesters. Actual command mounting/target and current authority through source COMMIT still require accepted authenticated producer bindings; default-off is retained, no financial effect enabled. |
+| 03/04/05 event/history | Existing bootstrap/delta ordering, correction/tombstone validation, keyset/dedup/checkpoint and durable catch-up retain their tested semantics. No snapshot claimed to be a complete journal; TS writer/export coverage, publisher fence/retention publication remains its exact source gate. |
+| 05/08/09 Manager | Typed catalogue/client, exact profile/audience/bounded page/projection and compatibility paths exist; new ambiguity regressions cover record/extension/DL paths. Actual Research target/issuer/TLS/per-profile commissioning remains distinct from fixture coverage; Live read never enables Live orders. |
+| 04/05/08/09 query assembly | Executable scoped query/history/export/notification router, governed cache/body ownership, fair per-session current-policy polling, source-worker/listener lifecycle are isolated-qualified in the preceding slices. Concrete Core current-policy adapter remains NOT_IMPLEMENTED until request§7.2 is accepted. Four new binary paths remain503, not fake authorization. |
+
+**Cleanup completed:** driver trap removed exact capped disposable PG/Rust
+containers and their tmpfs; no test resource on SGP. Removed the newly pulled,
+unreferenced compiler digest e51d0265 and exact
+`/tmp/epg10-08-backend-final-WFuwIOFt` (1898673066logical bytes); verified absent.
+First non-root removal encountered root-owned container cache files; completed
+only that validated path with sudo, no cleanup container needed. Pre/post root
+free170925752320→176269471744B (initial176444239872), images117→116, containers
+90→89; global deltas include concurrent foreign activity, not exclusively ours.
+Retained borrowed cf78e766 PG, active/explicit rollback images, all607foreign
+BuildKit records70.73GB;0own BuildKit builds, no prune or shared volume/network/
+runtime/source/custody removal. No merged/abandoned worktree inferred or removed.
+
+**Source/release/runtime reconciliation:** canonical Portal remains
+`/home/bobby/.worktrees/portal-execution-manager-v2`,
+`feat/manager-v2-paper-read@54c6f5f3`; feature path/branch at this section's base
+bf8c39ad, TS canonical668e1032. Seven retained feature checkouts/branches are
+listed in the receipt. HK ten-service images/config identities unchanged:
+Edge/worker d6aa7a51, Proxy aa14e21c, native28ea3958;
+release`/srv/primus/portal/releases/a9b10385ab6c16350555f70f4379dfa23ca6b20c/`,
+native configv1.0.0-9e7d3455; rollback refs6180b9bf/cd79e9c6/98a191c7 retained.
+No manual restart/operational DB/auth change. Pre-existing Paper worker continued
+11379→11411autonomous restarts; other nine0. This is a named existing runtime
+fault for its owning operations lane, not a whole-runtime health PASS or an
+excuse to restart it here. SGP stable/dev/provider28445 untouched/not requalified.
+Peer C5hunk, tracked returns and three untracked source/guide hashes preserved.
+
+**Remaining work / next permitted action:** no runnable owned defect identified
+by this pass remains unfinished. This does NOT declare every backend adapter
+implemented. Final read-only Core check still2a89e6d0/return941be9da without
+accepted§7.2 wire; PM27786bd4 is management composition, not financial proof/
+APPLIED wire. Core publishes current-policy resolve/recheck custody; TS/PM
+publishes/accepts§7.3 proof/current revalidation and receiver-APPLIED ACK/status.
+Either accepted source contract immediately makes its own concrete Edge adapter
+and negative tests runnable, independently of the other, before any live
+binding. Reuse the already delivered single request; no guessed URL/grant,
+new phase, generic reapproval or replay of retired accepted specimens. Connected
+08/09 and production capacity stay NOT_MET; independent approved implementation
+may continue whenever that exact input arrives.

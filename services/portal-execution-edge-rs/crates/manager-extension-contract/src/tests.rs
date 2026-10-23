@@ -6,6 +6,69 @@ fn market_body() -> Vec<u8> {
 }
 
 #[test]
+fn duplicate_extension_identity_and_nested_market_fields_are_rejected() {
+    let request = ManagerExtensionRequest::market_latest("BINANCE", "BTCUSDT").unwrap();
+    let raw = String::from_utf8(market_body()).unwrap();
+    for ambiguous in [
+        raw.replace(
+            "\"profile_id\":",
+            "\"profile_id\":\"FOREIGN\",\"profile_id\":",
+        ),
+        raw.replace("\"value\":", "\"value\":\"9\",\"value\":"),
+        raw.replace("\"value\":", "\"\\u0076alue\":\"9\",\"value\":"),
+    ] {
+        assert_ne!(ambiguous, raw);
+        assert!(matches!(
+            decode_extension_success_for_profile(
+                &request,
+                ambiguous.as_bytes(),
+                "PAPER_BINANCE_USDM"
+            ),
+            Err(ExtensionContractError::InvalidJson)
+        ));
+    }
+}
+
+#[test]
+fn duplicate_unavailable_and_data_layer_fields_are_rejected_before_adaptation() {
+    let request = ManagerExtensionRequest::market_latest("BINANCE", "BTCUSDT").unwrap();
+    let unavailable = br#"{"authority":"EXECUTION_CELL","profile_id":"FOREIGN","profile_id":"PAPER_BINANCE_USDM","availability":"UNAVAILABLE","reason_code":"SOURCE_UNAVAILABLE"}"#;
+    assert!(matches!(
+        decode_extension_unavailable_for_profile(unavailable, "PAPER_BINANCE_USDM"),
+        Err(ExtensionContractError::InvalidJson)
+    ));
+    let raw = br#"{"symbol":"BTCUSDT","market":"usdm","snapshot":{"symbol":"BTCUSDT","market":"usdm","price":"9","price":"1","event_time":1788500000000}}"#;
+    assert!(matches!(
+        adapt_data_layer_market_response_for_profile(
+            &request,
+            raw,
+            "PAPER_BINANCE_USDM",
+            Utc::now()
+        ),
+        Err(ExtensionContractError::InvalidJson)
+    ));
+}
+
+#[test]
+fn strict_extension_decoding_preserves_exact_deployment_profile_controls() {
+    let request = ManagerExtensionRequest::market_latest("BINANCE", "BTCUSDT").unwrap();
+    let paper = String::from_utf8(market_body()).unwrap();
+    // Canary uses its commissioned LIVE binding, not an invented native mode.
+    for profile in [
+        "PAPER_BINANCE_USDM",
+        "SANDBOX_BINANCE_USDM",
+        "LIVE_BINANCE_USDM",
+    ] {
+        let raw = paper.replace("PAPER_BINANCE_USDM", profile);
+        assert!(decode_extension_success_for_profile(&request, raw.as_bytes(), profile).is_ok());
+        assert!(
+            decode_extension_success_for_profile(&request, raw.as_bytes(), "OTHER_PROFILE")
+                .is_err()
+        );
+    }
+}
+
+#[test]
 fn latest_is_fixed_and_profile_bound() {
     let request = ManagerExtensionRequest::market_latest("BINANCE", "BTCUSDT").unwrap();
     let blueprint = request.blueprint();
@@ -34,6 +97,29 @@ fn event_tail_requires_safe_contiguous_records() {
     };
     assert_eq!(tail.events.len(), 1);
     assert_eq!(tail.events[0].source_sequence, 1);
+    // Validate ORIGINAL bytes before a Value can erase contradictory sequence
+    // or nested record members. Event data stays distinct from snapshot reads.
+    let raw = std::str::from_utf8(body).unwrap();
+    for ambiguous in [
+        raw.replace(
+            "\"source_sequence\":1",
+            "\"source_sequence\":9,\"source_sequence\":1",
+        ),
+        raw.replace(
+            "\"payload_sha256\":",
+            "\"payload_sha256\":null,\"payload_sha256\":",
+        ),
+    ] {
+        assert_ne!(ambiguous, raw);
+        assert!(matches!(
+            decode_extension_success_for_profile(
+                &request,
+                ambiguous.as_bytes(),
+                "PAPER_BINANCE_USDM"
+            ),
+            Err(ExtensionContractError::InvalidJson)
+        ));
+    }
 }
 
 #[test]
