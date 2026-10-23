@@ -48,7 +48,7 @@ export const OPTIONAL_COLUMNS: readonly ColumnSpec[] = [
   { id: "alphas", label: "Alphas / Dep.", numeric: true, hint: "Alpha rows in the selected environment (published group count) / deployments across all environments" },
   { id: "allocations", label: "Allocations", numeric: true },
   { id: "domain", label: "Domain" },
-  { id: "nav", label: "Economic capital", numeric: true, hint: "Current NAV per economic partition; budget and exposure are other figures" },
+  { id: "nav", label: "NAV", numeric: true, hint: "Economic capital: the current NAV per economic partition; budget and exposure are other figures" },
   { id: "allocated", label: "Allocated capital", numeric: true },
   { id: "pnl", label: "Net PnL", numeric: true, windowed: true },
   { id: "ret", label: "Return", numeric: true, windowed: true },
@@ -184,12 +184,16 @@ export function PortfolioTable({ rows, hidden, routes, search, selected, onToggl
       sortKey: SORT_OF.portfolio,
       render: (row) => (
         <span className="exec-pf-name">
-          {row.unallocated ? (
-            <span className="exec-pf-title">{row.label}</span>
-          ) : (
-            <Link className="exec-pf-title" to={withContext(routes.portfolio(row.portfolioId), search)}>{row.label}</Link>
-          )}
-          <span className="exec-pf-id">{row.portfolioId}{row.unallocated ? "" : ` · base ${row.baseCurrency}`}</span>
+          <span className="exec-pf-nameline">
+            {row.unallocated ? (
+              <span className="exec-pf-title">{row.label}</span>
+            ) : (
+              <Link className="exec-pf-title" to={withContext(routes.portfolio(row.portfolioId), search)}>{row.label}</Link>
+            )}
+            {/* The base currency is its own visible mark (QA1 PF-01): a figure in it prints bare, in any other currency with its unit. */}
+            {row.unallocated ? null : <span className="exec-pf-ccy" title={`Base currency ${row.baseCurrency}`}>{row.baseCurrency}</span>}
+          </span>
+          <span className="exec-pf-id" title={row.portfolioId}>{row.portfolioId}</span>
         </span>
       ),
     },

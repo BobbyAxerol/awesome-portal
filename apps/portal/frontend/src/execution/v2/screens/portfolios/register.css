@@ -197,8 +197,8 @@
 
 /* WP-F1: the register at 1440 without a horizontal scroll: tighter cell padding, headers may take two lines (the hi-fi's "ALPHAS / DEPLOY."),
  * the identity column is capped (its id ends in an ellipsis, the full text is on the title). */
-.exec-cards.exec-pf-reg thead th { padding-inline: var(--space-2); white-space: normal; letter-spacing: 0.06em; vertical-align: bottom; }
-.exec-cards.exec-pf-reg tbody td { padding-inline: var(--space-2); }
+.exec-cards.exec-pf-reg thead th { padding-inline: calc(var(--space-2) - 3px); white-space: normal; letter-spacing: 0.06em; vertical-align: bottom; }
+.exec-cards.exec-pf-reg tbody td { padding-inline: calc(var(--space-2) - 3px); }
 .exec-cards.exec-pf-reg .exec-pf-name { max-width: 150px; }
 .exec-cards.exec-pf-reg .exec-cards-sort { white-space: normal; text-align: left; }
 
@@ -225,3 +225,24 @@
 .exec-pf-exportline .exec-blk-why-btn { font: var(--exec-font-caption); }
 .exec-pf-total { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-2) var(--space-5); margin-top: var(--space-2); padding: var(--space-2) var(--space-3); background: var(--paper-sunken); border: 1px solid var(--line-soft); font: var(--exec-font-body); }
 .exec-pf-total .exec-part { align-items: flex-end; }
+/* WP-F1 (QA1 PF-01/02): the base currency is its own mark beside the name; the id is whole on its own line */
+.exec-pf-nameline { display: inline-flex; align-items: baseline; gap: var(--space-2); min-width: 0; }
+.exec-pf-ccy { padding: 0 var(--space-1); font: var(--exec-font-caption); color: var(--ink-faint); border: 1px solid var(--line-soft); }
+.exec-cards.exec-pf-reg .exec-pf-name { max-width: none; }
+.exec-cards.exec-pf-reg .exec-pf-id { overflow: visible; text-overflow: clip; }
+.exec-pf-captable .exec-pf-unit { margin-left: var(--space-1); }
+/* WP-F1 (QA1 P3-03): a panel head with a lead and an aside wraps instead of colliding at 1024; the side column stacks below 1100px */
+.exec-pf-v2 .exec-blk-ph { flex-wrap: wrap; row-gap: var(--space-1); }
+.exec-pf-v2 .exec-blk-ph-main { flex-wrap: wrap; }
+@media (max-width: 1100px) {
+  .exec-pf-grid2 { grid-template-columns: minmax(0, 1fr); }
+}
+/* WP-F1 (QA1 PF-09): the 660px cards have no scroll to hint at, so no fade mask cuts the last digits of a figure */
+@media (max-width: 660px) {
+  .exec-pf-panel .exec-cards-wrap { overflow-x: visible; -webkit-mask-image: none; mask-image: none; }
+}
+/* WP-F1 (QA1 PF-03 fit): a Health cell that has only the lifecycle state stacks the typed note under the flag instead of beside it */
+.exec-cards.exec-pf-reg td[data-l="Health"] [data-testid="health-absent"] { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+/* WP-F1: the 360 score tile lists the source caveats, evidence and policy: they wrap inside the tile instead of sticking out of it at 1024 */
+.exec-pf-kpi-score .exec-pf-score-sub { flex-wrap: wrap; max-width: 100%; row-gap: 0; }
+.exec-pf-kpi-score { max-width: 100%; }

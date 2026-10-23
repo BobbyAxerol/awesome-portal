@@ -101,7 +101,7 @@ describe("register", () => {
     mount(makeApi().api, "/deployments/portfolios?hide=none");
     await loaded();
     const ids: Record<string, string> = {
-      "Economic capital": "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025", HHI: "FE-005", "Portfolio score": "FE-011",
+      "NAV": "FE-013", "Net PnL": "FE-005, FE-025", Return: "FE-006, FE-025", Drawdown: "FE-013, FE-025", HHI: "FE-005", "Portfolio score": "FE-011",
     };
     for (const row of bodyRows()) {
       for (const [label, id] of Object.entries(ids)) {
@@ -145,7 +145,7 @@ describe("register", () => {
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Compare", "Portfolio", "Manager", "Economic capital", "Allocated capital",
+        "Compare", "Portfolio", "Manager", "NAV", "Allocated capital",
         "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "Portfolio score \u00b7 90D", "Health",
       ]);
     }
@@ -164,7 +164,7 @@ describe("register", () => {
     await loaded();
     for (const row of bodyRows()) {
       expect([...row.querySelectorAll("td")].map((td) => td.getAttribute("data-l"))).toEqual([
-        "Compare", "Portfolio", "Manager", "Alphas / Dep.", "Allocations", "Domain", "Economic capital", "Allocated capital",
+        "Compare", "Portfolio", "Manager", "Alphas / Dep.", "Allocations", "Domain", "NAV", "Allocated capital",
         "Net PnL \u00b7 90D", "Return \u00b7 90D", "Drawdown \u00b7 90D", "HHI", "Portfolio score \u00b7 90D", "Health",
       ]);
     }
@@ -224,7 +224,7 @@ describe("header, banners and footer", () => {
     mount(makeApi().api);
     await loaded();
     expect(screen.queryByText(/Total NAV/)).toBeNull();
-    for (const row of bodyRows()) expect(cell(row, "Economic capital")).toContain("Not available");
+    for (const row of bodyRows()) expect(cell(row, "NAV")).toContain("Not available");
   });
 
   it("switches to a compact table from the toolbar and the URL", async () => {
@@ -303,7 +303,7 @@ describe("search, domain, currency and sort", () => {
     expect(within(head("Allocated capital")).queryByRole("button")).toBeNull();
     expect(head("Allocated capital").getAttribute("title")).toBe("Money sorts inside one currency; pick the currency first");
     // Money measures sort inside one currency too: Economic capital and Net PnL are not controls until a currency is picked.
-    expect(within(head("Economic capital")).queryByRole("button")).toBeNull();
+    expect(within(head("NAV")).queryByRole("button")).toBeNull();
     expect(within(head("Net PnL \u00b7 90D")).queryByRole("button")).toBeNull();
     // Unit-free measures sort from the head, null-last.
     expect(within(head("Portfolio score \u00b7 90D")).getByRole("button")).toBeTruthy();
@@ -382,7 +382,7 @@ describe("columns", () => {
     const menu = screen.getByRole("group", { name: "Columns" });
     expect((within(menu).getByRole("checkbox", { name: "Portfolio" }) as HTMLInputElement).disabled).toBe(true);
     // Every measure is in the chooser like any other column.
-    expect(within(menu).getByRole("checkbox", { name: "Economic capital" })).not.toBeNull();
+    expect(within(menu).getByRole("checkbox", { name: "NAV" })).not.toBeNull();
     expect(within(menu).getByRole("checkbox", { name: "Portfolio score" })).not.toBeNull();
     // HHI, Allocations, Alphas / Dep. and Domain are hidden by default; a click brings one back and the address remembers the rest.
     fireEvent.click(within(menu).getByRole("checkbox", { name: "HHI" }));

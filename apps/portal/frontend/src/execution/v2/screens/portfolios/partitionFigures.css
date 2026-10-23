@@ -18,10 +18,11 @@
 .exec-blk-kpi-value .exec-part-line:only-child .exec-mgr-num { font: var(--exec-font-kpi); }
 /* One secondary size inside figure cells: labels, units and "Not available" all read at the caption size. */
 .exec-cards td[data-numeric="true"] .exec-part-label,
+.exec-cards td[data-numeric="true"] .exec-pf-unit { font: var(--exec-font-caption); }
+/* WP-F1 (QA1 PF-05): a placeholder is the size of the figure it stands in for (the table body role, 13px), not a smaller caption */
 .exec-cards td[data-numeric="true"] .exec-pf-na,
 .exec-cards td[data-numeric="true"] .exec-pf-np,
-.exec-cards td[data-numeric="true"] .exec-pf-unit,
-.exec-cards td[data-numeric="true"] .exec-mgr-na { font: var(--exec-font-caption); }
+.exec-cards td[data-numeric="true"] .exec-mgr-na { font: var(--exec-font-meta); }
 /* A score is a figure: value at the number size, band and notes at the caption size, nothing wraps. */
 .exec-pf-score-list { align-items: flex-end; }
 .exec-pf-score-line { display: flex; flex-direction: column; align-items: flex-end; gap: 0; }
@@ -37,3 +38,7 @@
 .exec-pf-band[data-band="neutral"], .exec-pf-band[data-band="fair"] { color: var(--ink); border-color: var(--line-strong); }
 .exec-pf-band[data-band="weak"] { color: var(--warn); border-color: var(--warn); }
 .exec-pf-score[data-state="absent"] .exec-pf-score-top { color: var(--ink-faint); }
+/* WP-F1 (QA1 OV-01, P3-05): a signed figure is coloured by its published sign (green, red; a true zero stays neutral); the caption unit sits beside the figure */
+.exec-part-line[data-tone="positive"] .exec-mgr-num { color: var(--good); }
+.exec-part-line[data-tone="negative"] .exec-mgr-num { color: var(--bad); }
+.exec-mgr-num .exec-pf-unit { margin-left: var(--space-1); font: var(--exec-font-caption); color: var(--ink-faint); }

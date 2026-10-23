@@ -3,11 +3,13 @@
  * See `contributorsModel.ts` for what is selected and what is refused. Nothing is summed, re-sorted or joined here.
  */
 import { useState } from "react";
+import { Link } from "react-router-dom";
 
 import { GapWhy, gapTitle } from "../../blocks";
 import { MetricValue } from "../manager/MetricValue";
 import { partitionLabel } from "../portfolios/PartitionFigures";
 import { scaledOf } from "../portfolios/capitalModel";
+import { truncateDecimal } from "../portfolios/registerMetrics";
 import { FE_CONTRIBUTORS } from "./overviewModel";
 import type { ContributorGroup, ContributorLine, ContributorsPopulation, ContributorsView } from "./contributorsModel";
 
@@ -57,7 +59,7 @@ function Population({ population }: { population: ContributorsPopulation }) {
 /** Groups drawn before "Show all": the hi-fi lists a handful of bars; the server's order is kept, and the cut is said. */
 export const CONTRIBUTORS_SHOWN = 8;
 
-export function ContributorsBody({ view }: { view: ContributorsView }) {
+export function ContributorsBody({ view, linkOf }: { view: ContributorsView; /** Where an alpha or portfolio id leads (QA1 OV-08); `null` keeps plain text. */ linkOf?: (field: "alpha_id" | "portfolio_id", id: string) => string | null }) {
   const [showAll, setShowAll] = useState(false);
   if (view.kind === "loading") return <p className="exec-ov-note" role="status">Reading contributors</p>;
   if (view.kind === "absent") return <Absence code={view.code} reason={view.reason} />;
@@ -72,9 +74,13 @@ export function ContributorsBody({ view }: { view: ContributorsView }) {
   const shownGroups = showAll ? view.groups : view.groups.slice(0, CONTRIBUTORS_SHOWN);
   const widths = barWidths(shownGroups);
   const word = view.field === "portfolio_id" ? "Portfolio" : "Alpha";
-  const cell = (line: ContributorLine, pick: "amount" | "ret" | "score") => (
-    <MetricValue metric={line[pick]} signed={pick !== "score"} />
-  );
+  const cell = (line: ContributorLine, pick: "amount" | "ret" | "score") => {
+    const metric = line[pick];
+    // A score is a figure of two places, truncated like the register's (the exact string rides the title); never a bare "0".
+    if (pick === "score" && metric !== null && metric.kind === "value") return <span className="exec-mgr-num" title={metric.exact} data-zero={metric.zero ? "true" : undefined}>{truncateDecimal(metric.exact)}</span>;
+    return <MetricValue metric={metric} signed={pick !== "score"} />;
+  };
+  const field = view.field === "portfolio_id" ? "portfolio_id" : "alpha_id";
   return (
     <>
       <div className="exec-ov-contrib-wrap"><table className="exec-ov-contrib" aria-label={`Contributors by ${word.toLowerCase()}`}>
@@ -93,7 +99,7 @@ export function ContributorsBody({ view }: { view: ContributorsView }) {
             const lines = group.lines.length === 0 ? [null] : group.lines;
             return lines.map((line, lineIndex) => (
               <tr key={`${groupIndex}|${lineIndex}`} data-group={groupIndex} data-first={lineIndex === 0 ? "true" : undefined}>
-                {lineIndex === 0 ? <th scope="row" rowSpan={lines.length} title={group.alphaId ?? undefined}>{group.alphaId ?? <span className="exec-ov-na">{word} not stated</span>}</th> : null}
+                {lineIndex === 0 ? <th scope="row" rowSpan={lines.length} title={group.alphaId ?? undefined}>{group.alphaId === null ? <span className="exec-ov-na">{word} not stated</span> : linkOf?.(field, group.alphaId) ? <Link className="exec-ov-link" to={linkOf(field, group.alphaId)!}>{group.alphaId}</Link> : group.alphaId}</th> : null}
                 {line === null ? (
                   <td colSpan={3 + (view.showReturn ? 1 : 0) + (view.showScore ? 1 : 0)}><span className="exec-ov-na">No economic partition published</span></td>
                 ) : (

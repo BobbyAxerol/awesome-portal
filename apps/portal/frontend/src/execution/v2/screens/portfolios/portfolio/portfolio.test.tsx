@@ -105,9 +105,10 @@ describe("Overview", () => {
     expect(tile("Deployments")).toContain("4 alphas");
     expect(tile("Deployments")).toContain("4 accounts");
     expect(tile("Deployments")).toContain("5 holdings");
-    expect(tile("Allocated (current)")).toContain("540,000.00");
-    expect(tile("Allocated (current)")).toContain("USDT");
-    expect(tile("Allocated (current)")).not.toContain("not a window");
+    // Without a published capital statement the KPI is the resource's own all-books figure and says so (QA1 P3-01).
+    expect(tile("Allocated, all books")).toContain("540,000.00");
+    expect(tile("Allocated, all books")).toContain("USDT");
+    expect(tile("Allocated, all books")).not.toContain("not a window");
   });
 
   it("keeps NAV, Net PnL, Return and Drawdown as tiles and Capital and Concentration as panels, each Not published with its id; one line names Funding source, lanes and Score", async () => {
@@ -752,7 +753,7 @@ describe("states", () => {
     await ready();
     expect(whyText(screen.getByText("Some relations may be missing").parentElement)).toBe("The resource is partial");
     const strip = screen.getByRole("group", { name: "Portfolio identity" });
-    expect(within(strip).getByText("Allocated (current)").closest("div")!.textContent).toContain("Not available · no allocation published");
+    expect(within(strip).getByText("Allocated, all books").closest("div")!.textContent).toContain("Not available · no allocation published");
     await goto("Alphas");
     expect(screen.getByText("The resource published no deployment for this portfolio.")).toBeTruthy();
     await goto("Accounts");

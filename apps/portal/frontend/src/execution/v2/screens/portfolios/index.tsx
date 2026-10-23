@@ -79,7 +79,7 @@ const SORT_LABEL: Readonly<Record<SortKey, string>> = {
   deployments: "Deployments",
   allocated: "Allocated capital",
   updated: "Last updated",
-  nav: "Economic capital",
+  nav: "NAV",
   pnl: "Net PnL",
   ret: "Return",
   dd: "Drawdown",

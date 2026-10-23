@@ -83,6 +83,23 @@ describe("Overview: the Capital panel", () => {
   });
 });
 
+describe("QA1 P3-01: the Allocated KPI and the Capital panel read one statement", () => {
+  it("the KPI shows the statement's allocation (the panel row and the bar's figure), not the resource's all-books figure", async () => {
+    mount(served());
+    await ready();
+    const table = await screen.findByRole("table", { name: "Capital statements" });
+    await waitFor(() => expect(table.querySelector(".exec-part")).not.toBeNull());
+    const strip = screen.getByLabelText("Portfolio identity");
+    const tile = within(strip).getByText("Allocated (current)").closest("div")!;
+    expect(tile.textContent).toContain("14,580.00");
+    expect(tile.textContent).toContain("Of the approved budget");
+    const row = [...table.querySelectorAll("tr")].find((tr) => tr.querySelector("th")?.textContent === "Allocated")!;
+    expect(row.textContent).toContain("14,580.00");
+    expect(within(strip).queryByText("Allocated, all books")).toBeNull();
+    expect(screen.getByRole("group", { name: "Allocated of approved budget" }).textContent).toContain("14,580.00");
+  });
+});
+
 describe("Allocations: the capital flow", () => {
   it("draws one Sankey per book with the budget as a dashed limit, the deployment table beside it, and asks both reads per environment once the tab is open", async () => {
     const asked: Query[] = [];

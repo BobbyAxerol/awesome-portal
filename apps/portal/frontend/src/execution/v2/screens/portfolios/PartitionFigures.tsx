@@ -69,7 +69,13 @@ export function figureSource(dataset: ManagerDataset | null, key: string, portfo
  * `labels="several"` (the register table): a partition label is printed only when the list holds more than one partition, because one
  * partition is already named by the page basis line; the label stays on the figure's title either way.
  */
-export function PartitionFigures({ list, metricKey, signed = false, labels = "always", omitUnit = null }: {
+/** The sign of a published exact string, read from the text (no arithmetic): a signed figure is coloured by it, a true zero is neutral. */
+function toneOf(metric: { kind: string; exact?: string } | null): "positive" | "negative" | "neutral" | undefined {
+  if (metric === null || metric.kind !== "value" || metric.exact === undefined) return undefined;
+  return metric.exact.startsWith("-") ? (/[1-9]/.test(metric.exact) ? "negative" : "neutral") : /[1-9]/.test(metric.exact) ? "positive" : "neutral";
+}
+
+export function PartitionFigures({ list, metricKey, signed = false, labels = "always", omitUnit = null, unit = "inline" }: {
   list: readonly ManagerPartitionedMetrics[];
   metricKey: string;
   signed?: boolean;
@@ -79,15 +85,25 @@ export function PartitionFigures({ list, metricKey, signed = false, labels = "al
    * so a figure in THAT currency needs no unit beside it (it stays in the title). A figure in any other currency keeps its unit.
    */
   omitUnit?: string | null;
+  /**
+   * `caption`: a money figure prints as the number at the figure's size with its currency as a small caption beside it (one style for every
+   * tile, QA1 P3-05); the default prints the unit inline as the shared metric cell does.
+   */
+  unit?: "inline" | "caption";
 }) {
   const figures = figuresByPartition(list, metricKey);
   return (
     <ul className="exec-part" aria-label={`${metricKey} by economic partition`}>
       {figures.map(({ partition, metric }) => (
-        <li key={`${partition.economicDomain}|${partition.currency}|${partition.basis}|${partition.nativeProfileRef}`} className="exec-part-line" data-domain={partition.economicDomain} title={`${partitionLabel(partition)} · ${partition.basis}`}>
+        <li key={`${partition.economicDomain}|${partition.currency}|${partition.basis}|${partition.nativeProfileRef}`} className="exec-part-line" data-domain={partition.economicDomain} data-tone={signed ? toneOf(metric) : undefined} title={`${partitionLabel(partition)} · ${partition.basis}`}>
           {labels === "several" && figures.length === 1 ? null : <span className="exec-part-label" title={`${partition.basis} · ${partition.nativeProfileRef}`}>{partitionLabel(partition)}</span>}
-          {omitUnit !== null && metric !== null && metric.kind === "value" && metric.unit === "MONEY" && metric.currency === omitUnit
-            ? <span className="exec-mgr-num" title={`${metric.exact} ${metric.currency} · ${metricTitle(metric)}`} data-zero={metric.zero ? "true" : undefined}>{showDecimal(metric.exact, { unit: "money", signed })}</span>
+          {metric !== null && metric.kind === "value" && metric.unit === "MONEY" && (unit === "caption" || (omitUnit !== null && metric.currency === omitUnit))
+            ? (
+              <span className="exec-mgr-num" title={`${metric.exact}${unit === "caption" ? "" : ` ${metric.currency}`} · ${metricTitle(metric)}`} data-zero={metric.zero ? "true" : undefined}>
+                {showDecimal(metric.exact, { unit: "money", signed })}
+                {unit === "caption" && metric.currency !== omitUnit ? <small className="exec-pf-unit"> {metric.currency}</small> : null}
+              </span>
+            )
             : <MetricValue metric={metric} signed={signed} />}
         </li>
       ))}

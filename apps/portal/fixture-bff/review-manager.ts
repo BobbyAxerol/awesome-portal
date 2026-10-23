@@ -114,7 +114,8 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
     entry.points = Array.from({ length: target }, (_, index) => index)
       .map((index) => ({ ts_ms: at(index), value: sampleValue(metric === "DRAWDOWN" ? "NAV" : metric, index, subjectIndex) })); // WP-K: a drawdown is derived from the NAV walk below
     entry.gaps = [];
-    wpcShapeSeries(entry, metric === "DRAWDOWN" ? "NAV" : metric, identity.subject_id, body.environment, requested, subject.subject_type === "ALPHA" ? "alpha_id" : "portfolio_id"); // WP-C: per-subject shape that ends on the dataset's own figure
+    if (subject.subject_type === "FUND") wpF1ShapeFund(entry, metric === "DRAWDOWN" ? "NAV" : metric, body.environment, requested); // WP-F1: the fund line ends on the fund dataset's own statement figure
+    else wpcShapeSeries(entry, metric === "DRAWDOWN" ? "NAV" : metric, identity.subject_id, body.environment, requested, subject.subject_type === "ALPHA" ? "alpha_id" : "portfolio_id"); // WP-C: per-subject shape that ends on the dataset's own figure
     if (metric === "DRAWDOWN") wpkDrawdownFromNav(entry); // WP-K
     entry.quality = copy(body.quality);
     entry.source_confidence = "VERIFIED";
@@ -844,6 +845,30 @@ function wpF1Answer(method: string, path: string, search: URLSearchParams): Revi
   try { id = decodeURIComponent(match[1]!); } catch { return null; }
   const body = wpF1Ledger(id, search.get("environment") ?? "live");
   return body === null ? null : { status: 200, body };
+}
+
+/* SIMULATED fund series (FIXTURE_LAB, register 2f1, QA1 OV-03). The fund's NAV, Net PnL and Return series end on the figures the FUND dataset's
+ * capital statement publishes for the SAME partition (domain of the environment, currency of the series) and window, so the chart and the KPI
+ * tile of the Overview read one number; the walk between is the deterministic noisy path of `wpcWalk` (no sawtooth). The statement is the one
+ * `datasetAnswer` serves (`capitalStatements` over the same rows and window preset). A partition with no figure keeps the old synthetic values. */
+function wpF1ShapeFund(entry: Draft, metricName: string, environment: string, requested: unknown): void {
+  const days = requested === "7D" ? "7D" : requested === "90D" ? "90D" : "30D";
+  const template = fixture("execution-manager-dataset.partitions.synthetic.valid.json");
+  const rows = rowsFor(environment, template, WINDOW_PRESETS[days], true);
+  const statement = capitalStatements(rows).find((e) => e.partition.currency === entry.partition.currency && e.partition.economic_domain === entry.partition.economic_domain);
+  const figure = (key: string): string | null => (statement?.metrics[key]?.availability === "AVAILABLE" ? (statement.metrics[key].value as string) : null);
+  const [net, nav, ret] = [figure("net_pnl"), figure("current_nav"), figure("return_30d_pct")];
+  // A series needs the figures that frame its walk; the Return of a partition that publishes none is left as it was.
+  if (net === null || nav === null || (metricName === "RETURN" && ret === null)) return;
+  const target = { net: toScaled(net), nav: toScaled(nav), ret: ret === null ? 0n : toScaled(ret) / 100n };
+  const n = entry.points.length;
+  const navPos = target.nav > 0n ? target.nav : 1n;
+  const [start, end, amp] = metricName === "NAV" ? [target.nav - target.net, target.nav, navPos / 120n]
+    : metricName === "NET_PNL" ? [0n, target.net, wpcAbs(target.net) > navPos / 150n ? wpcAbs(target.net) / 2n : navPos / 150n]
+      : [0n, target.ret, wpcAbs(target.ret) > 5n * 10n ** 15n ? wpcAbs(target.ret) / 2n : 10n ** 16n];
+  const values = wpcWalk(seedOf("FUND", environment, metricName, "wpf1-walk"), n - 1, start, end, amp);
+  const text = (value: bigint): string => (metricName === "RETURN" ? trimmed(value / 10n ** 10n, 8) : trimmed(value, 18));
+  entry.points.forEach((point: Draft, k: number) => { point.value = text(values[k]!); });
 }
 // ===== WP-F1 end
 

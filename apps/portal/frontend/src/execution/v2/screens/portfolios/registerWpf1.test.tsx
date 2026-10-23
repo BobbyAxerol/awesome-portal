@@ -57,7 +57,7 @@ describe("the default register fits 1440", () => {
     await ready(makeApi().api);
     const heads = [...table().querySelectorAll("thead th")].map((th) => th.textContent);
     for (const gone of ["Alphas / Dep.", "Allocations", "Domain", "HHI"]) expect(heads, gone).not.toContain(gone);
-    for (const kept of ["Manager", "Economic capital", "Allocated capital", "Health"]) expect(heads.some((h) => h?.startsWith(kept)), kept).toBe(true);
+    for (const kept of ["Manager", "NAV", "Allocated capital", "Health"]) expect(heads.some((h) => h?.startsWith(kept)), kept).toBe(true);
     const menu = screen.getByRole("group", { name: "Columns" });
     for (const column of OPTIONAL_COLUMNS) expect(within(menu).getByRole("checkbox", { name: column.label }), column.label).toBeTruthy();
   });
@@ -82,7 +82,12 @@ describe("a figure in the row's base currency prints as the bare number, its uni
     await ready(makeApi().api);
     for (const row of table().querySelectorAll("tbody tr")) {
       if (row.textContent?.includes("Unallocated")) continue;
-      expect(row.querySelector("td[data-l='Portfolio']")!.textContent).toMatch(/base [A-Z]{3,4}/);
+      const chip = row.querySelector("td[data-l='Portfolio'] .exec-pf-ccy")!;
+      expect(chip.textContent).toMatch(/^[A-Z]{3,4}$/);
+      expect(chip.getAttribute("title")).toBe(`Base currency ${chip.textContent}`);
+      // The id is whole (never an ellipsis in the text) and rides its own title.
+      const id = row.querySelector("td[data-l='Portfolio'] .exec-pf-id")!;
+      expect(id.textContent).toBe(id.getAttribute("title"));
     }
   });
 });

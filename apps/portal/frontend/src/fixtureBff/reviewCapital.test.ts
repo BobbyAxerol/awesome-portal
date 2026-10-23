@@ -176,3 +176,31 @@ describe("advisory self-eligibility for the 360 rail", () => {
     }), "populated")).toBeNull();
   });
 });
+
+describe("fund series end on the fund dataset's own statement figure (QA1 OV-03)", () => {
+  const series = (metric: string, window: string, environment = "live") => ask("/manager/series", {
+    environment, metric, window: JSON.stringify(window), subjects: JSON.stringify([{ subject_type: "FUND" }]),
+  }).body.series[0] as Body;
+  const statement = (window: string, environment = "live") => (ask("/manager/fund-overview", { environment, window: JSON.stringify(window), limit: "1" }).body.capital_statements as Body[])
+    .find((e) => e.partition.currency === "USDT")!.metrics as Body;
+  const last = (entry: Body): string => entry.points[entry.points.length - 1].value as string;
+
+  it.each(["7D", "30D", "90D"])("Net PnL, NAV and Return of the USDT partition end exactly on the statement (%s)", (window) => {
+    const m = statement(window);
+    expect(big(last(series("NET_PNL", window)))).toBe(big(value(m, "net_pnl")));
+    expect(big(last(series("NAV", window)))).toBe(big(value(m, "current_nav")));
+    // Return is a FRACTION with 8 places; the statement's percent has 6, so compare at the fraction's own precision.
+    expect(big(last(series("RETURN", window))) / 10n ** 14n).toBe(big(value(m, "return_30d_pct")) / 100n / 10n ** 14n);
+  });
+
+  it("is a path, not a sawtooth: it starts at a true zero and holds many distinct values", () => {
+    const entry = series("NET_PNL", "90D");
+    expect(entry.points[0].value).toBe("0");
+    expect(new Set(entry.points.map((p: Body) => p.value)).size).toBeGreaterThan(40);
+  });
+
+  it("the drawdown strip derives from the same NAV path and stays at or below zero", () => {
+    const entry = series("DRAWDOWN", "90D");
+    expect(entry.points.every((p: Body) => big(p.value) <= 0n)).toBe(true);
+  });
+});

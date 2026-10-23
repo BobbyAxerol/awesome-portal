@@ -384,3 +384,9 @@ a.exec-ov-what-title {
   --exec-font-id: 400 13px/18px var(--font-mono);
   --exec-font-term: 400 13px/18px var(--font-mono);
 }
+/* WP-F1 (QA1 OV-01): one KPI figure size across the strip. Single figures (NAV, a one-partition tile) are the KPI size; the words around a count are captions. */
+.exec-ov-kpi-count { display: inline-flex; align-items: baseline; gap: var(--space-1); flex-wrap: wrap; }
+.exec-ov-kpi-words { font: var(--exec-font-caption); color: var(--ink-faint); }
+.exec-ov-kpis .exec-blk-kpi-value > .exec-ov-num { font: var(--exec-font-kpi); font-variant-numeric: tabular-nums; }
+/* WP-F1 (QA1 P3-07): an id reads as published in the contributors (no capitals), like the concentration legend beside it */
+.exec-ov-contrib tbody th { text-transform: none; letter-spacing: normal; }

@@ -172,7 +172,7 @@ function CapitalCard({ ctx }: { ctx: TabCtx }) {
   const row = (label: string, key: string | undefined, nav: boolean, total: boolean, signed: boolean) => (
     <tr key={label} data-total={total ? "true" : undefined}>
       <th scope="row">{label}</th>
-      <td>{nav ? <NavFigure ctx={ctx} withNote={false} /> : key !== undefined && publishes(statements, key) ? <PartitionFigures list={statements} metricKey={key} signed={signed} labels="several" /> : <Np fact={PF_FE.statements} />}</td>
+      <td>{nav ? <NavFigure ctx={ctx} withNote={false} /> : key !== undefined && publishes(statements, key) ? <PartitionFigures list={statements} metricKey={key} signed={signed} labels="several" unit="caption" /> : <Np fact={PF_FE.statements} />}</td>
     </tr>
   );
   return (
@@ -263,20 +263,26 @@ export function Overview({ ctx }: { ctx: TabCtx }) {
       <PfKpiStrip label="Portfolio identity">
         <PfKpi label="NAV"><NavFigure ctx={ctx} /></PfKpi>
         <PfKpi label="Net PnL" note={netPnlList !== null ? `Window ${ctx.window}` : "Windowed; needs the window"}>
-          {netPnlList !== null ? <PartitionFigures list={netPnlList} metricKey="net_pnl" signed /> : <Np fact={PF_FE.netPnl} />}
+          {netPnlList !== null ? <PartitionFigures list={netPnlList} metricKey="net_pnl" signed unit="caption" /> : <Np fact={PF_FE.netPnl} />}
         </PfKpi>
         <PfKpi label="Return" note={returnList !== null ? `Window ${ctx.window}` : "Windowed; methodology per source"}>
-          {returnList !== null ? <PartitionFigures list={returnList} metricKey="return_30d_pct" signed /> : <Np fact={PF_FE.ret} />}
+          {returnList !== null ? <PartitionFigures list={returnList} metricKey="return_30d_pct" signed unit="caption" /> : <Np fact={PF_FE.ret} />}
         </PfKpi>
         <PfKpi label="Drawdown" note={drawdownList !== null ? `Max, window ${ctx.window}` : "Needs the NAV series"}>
-          {drawdownList !== null ? <PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed /> : <Np fact={PF_FE.drawdown} />}
+          {drawdownList !== null ? <PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed unit="caption" /> : <Np fact={PF_FE.drawdown} />}
         </PfKpi>
         <PfKpi label="Portfolio score" note={scoreList !== null ? `Direct from NAV, window ${ctx.window}` : "Direct from the portfolio NAV"}>
           {scoreList !== null ? <span className="exec-pf-kpi-score"><ScoreList list={scoreList} full /></span> : <Np fact={PF_FE.score} />}
         </PfKpi>
-        <PfKpi label="Allocated (current)">
-          <MoneyList entries={identity.allocationByCurrency} empty={<Absent reason="no allocation published" />} />
-        </PfKpi>
+        {publishes(datasetOf(ctx)?.capitalStatements ?? [], "allocation") ? (
+          <PfKpi label="Allocated (current)" note="Of the approved budget · same statement as Capital">
+            <PartitionFigures list={datasetOf(ctx)?.capitalStatements ?? []} metricKey="allocation" labels="several" unit="caption" />
+          </PfKpi>
+        ) : (
+          <PfKpi label="Allocated, all books" note="Real-funded and Simulated together: the resource's own figure">
+            <MoneyList entries={identity.allocationByCurrency} empty={<Absent reason="no allocation published" />} />
+          </PfKpi>
+        )}
         <PfKpi label="Deployments" note={`${alphaCount} ${alphaCount === 1 ? "alpha" : "alphas"} · ${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}${identity.holdingsCount !== null ? ` · ${identity.holdingsCount} holdings` : ""}`}>{deployments.length}</PfKpi>
       </PfKpiStrip>
       <NotAvailableLine facts={scoreList !== null ? OTHER_GAPS : UNPUBLISHED_OVERVIEW} className="exec-pf-na-line" />

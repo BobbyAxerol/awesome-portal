@@ -186,3 +186,78 @@ describe("Since your last visit: the frame", () => {
     expect(digest.textContent).not.toMatch(/approved|applied|moved stage|NAV [+-]/i);
   });
 });
+
+describe("QA1 OV-01: one KPI figure size, signed figures coloured by their published sign", () => {
+  const kpi = (label: string) => [...screen.getByLabelText("Fund figures").querySelectorAll(".exec-blk-kpi")].find((n) => n.querySelector("dt")?.textContent === label) as HTMLElement;
+  const withFigures = (body: Body) => {
+    for (const entry of body.capital_statements) {
+      const p = entry.partition;
+      entry.metrics.net_pnl = moneyMetric({ currency: p.currency, value: p.currency === "EUR" ? "-12.5" : p.economic_domain === "ACTUAL" ? "0" : "100.25" });
+      entry.metrics.max_drawdown_pct = { ...moneyMetric({ value: "-3.5" }), unit: "PERCENT", currency: null };
+    }
+  };
+
+  it("a count sentence keeps its words as captions and its number as the KPI figure; the sentence stays whole", async () => {
+    mount(withDataset(httpApi(), null));
+    await loaded();
+    const incidents = kpi("Open incidents").querySelector(".exec-blk-kpi-value")!;
+    expect(incidents.textContent).toMatch(/^at least\s?\d+$/);
+    expect(incidents.querySelector(".exec-ov-kpi")!.textContent).toMatch(/^\d+$/);
+    expect(incidents.querySelector(".exec-ov-kpi-words")!.textContent).toBe("at least ");
+    const attention = kpi("Needs attention").querySelector(".exec-blk-kpi-value")!;
+    expect(attention.querySelector(".exec-ov-kpi")!.textContent).toBe("3");
+    expect(attention.querySelector(".exec-ov-kpi-words")!.textContent).toBe(" of 214");
+    expect(attention.textContent).toBe("3 of 214");
+  });
+
+  it("Net PnL and Drawdown carry data-tone from the published string: green above zero, red below, a true zero neutral; the currency is a caption", async () => {
+    mount(withDataset(httpApi(), () => datasetFor("FUND", "unused", withFigures)));
+    await loaded();
+    await waitFor(() => expect(kpi("Net PnL").querySelector(".exec-part")).not.toBeNull());
+    const tones = [...kpi("Net PnL").querySelectorAll(".exec-part-line")].map((li) => [li.getAttribute("data-tone"), li.querySelector(".exec-pf-unit")?.textContent?.trim()]);
+    expect(tones).toEqual([["neutral", "USDT"], ["positive", "USDT"], ["negative", "EUR"]]);
+    expect([...kpi("Drawdown").querySelectorAll(".exec-part-line")].every((li) => li.getAttribute("data-tone") === "negative")).toBe(true);
+  });
+});
+
+describe("QA1 OV-06: the page is named Overview", () => {
+  it("heading is Overview, with no name appended", async () => {
+    mount(withDataset(httpApi(), null));
+    await loaded();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Overview");
+  });
+});
+
+describe("QA1 OV-05 / OV-08: contributors print the score like the register and lead somewhere", () => {
+  const groupOf = (field: string, id: string, score: string, p = partition("PAPER", "USDT", "usdt")) => ({
+    key: [{ field, value: id }], unique_row_count: 1, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY",
+    economic_partitions: [{ partition: p, metrics: { net_pnl: moneyMetric({ value: "5" }), score: { ...moneyMetric({ value: score }), unit: "SCORE", currency: null } } }],
+  });
+  const answer = (query: Query) => datasetFor("FUND", "unused", (body: Body) => {
+    if (query.groupBy?.length) {
+      body.groups = [groupOf(query.groupBy[0]!, "alpha_one", "48.7365"), groupOf(query.groupBy[0]!, "alpha_zero", "0")];
+      body.items = [body.items[0]];
+      body.page = { limit: 1, returned_count: 1, authorized_filtered_count: 2, next_cursor: "TEST_ONLY:cursor", previous_cursor: null };
+    } else body.groups = [];
+  });
+
+  it("the score is two places, truncated, with the exact string on the title; a true zero reads 0.00", async () => {
+    mount(withDataset(httpApi(), answer));
+    await loaded();
+    await waitFor(() => expect(panel().querySelector("tbody")).not.toBeNull());
+    const cells = [...panel().querySelectorAll("tbody tr")].map((tr) => tr.lastElementChild!);
+    expect(cells.map((c) => c.textContent)).toEqual(["48.73", "0.00"]);
+    expect(cells[0]!.querySelector("[title]")!.getAttribute("title")).toBe("48.7365");
+  });
+
+  it("an alpha id is a link to its 360 and a portfolio id to its own, carrying the page context", async () => {
+    mount(withDataset(httpApi(), answer), "/execution?env=paper&window=30D");
+    await loaded();
+    await waitFor(() => expect(panel().querySelector("tbody a")).not.toBeNull());
+    const link = within(panel()).getByRole("link", { name: "alpha_one" });
+    expect(link.getAttribute("href")).toContain("/deployments/alphas/alpha_one");
+    expect(link.getAttribute("href")).toContain("env=paper");
+    fireEvent.click(within(panel()).getByRole("button", { name: "Portfolios" }));
+    await waitFor(() => expect(within(panel()).getByRole("link", { name: "alpha_one" }).getAttribute("href")).toContain("/deployments/portfolios/alpha_one"));
+  });
+});

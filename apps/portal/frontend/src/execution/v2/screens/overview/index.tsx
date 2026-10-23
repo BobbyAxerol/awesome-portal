@@ -151,6 +151,23 @@ function CapitalNav({ read }: { read: SeriesReadState }) {
   return <span className="exec-ov-num" title={last.exact}>{seriesValueText(entry, last.exact)}</span>;
 }
 
+/**
+ * A count sentence ("at least 1", "3 of 214") with ONE figure size: the number is the KPI figure, the words around it are captions
+ * (QA1 OV-01: a prose phrase was the largest thing in the strip). The text stays whole, so a reader hears the same sentence.
+ */
+function KpiCount({ text }: { text: string }) {
+  const match = /^(\D*?)(\d[\d,.]*)(.*)$/.exec(text);
+  if (match === null) return <span className="exec-ov-kpi-words">{text}</span>;
+  const [, before, number, after] = match;
+  return (
+    <span className="exec-ov-kpi-count">
+      {before ? <span className="exec-ov-kpi-words">{before}</span> : null}
+      <span className="exec-ov-kpi">{number}</span>
+      {after ? <span className="exec-ov-kpi-words">{after}</span> : null}
+    </span>
+  );
+}
+
 function Cell({ label, children, note }: { label: string; children: ReactNode; note?: ReactNode }) {
   return (
     <div className="exec-blk-kpi">
@@ -367,7 +384,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
     <div className="exec-ov-v2" data-screen="overview-v2">
       <header className="exec-ov-head">
         <div>
-          <h1 className="exec-ov-title">{snapshot?.actorName ? `Overview, ${snapshot.actorName}` : heading}</h1>
+          <h1 className="exec-ov-title">{heading}</h1>
           <p className="exec-ov-scope" data-testid="overview-scope">Environment and window apply to NAV, Net PnL, Return and the chart. Lists and counts are current. Scope: every portfolio you may see. Basis: each currency on its own, never converted or summed.</p>
         </div>
         <div className="exec-ov-chips">
@@ -397,28 +414,28 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
       <dl className="exec-blk-kpis exec-ov-kpis" aria-label="Fund figures" style={{ "--exec-kpi-n": 6 } as CSSProperties}>
         <SeriesCell label="NAV" read={nav} window={url.value.window} gapIds={FE_MONEY} />
         {netPnlList !== null ? (
-          <Cell label="Net PnL" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={netPnlList} metricKey="net_pnl" signed /></Cell>
+          <Cell label="Net PnL" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={netPnlList} metricKey="net_pnl" signed unit="caption" /></Cell>
         ) : (
           <SeriesCell label="Net PnL" read={pnlRead} window={url.value.window} gapIds="FE-005, FE-025" />
         )}
         {returnList !== null ? (
-          <Cell label="Return" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={returnList} metricKey="return_30d_pct" signed /></Cell>
+          <Cell label="Return" note={<span title={`Fund dataset, window ${url.value.window}`}>Window {url.value.window}</span>}><PartitionFigures list={returnList} metricKey="return_30d_pct" signed unit="caption" /></Cell>
         ) : (
           <SeriesCell label="Return" read={returnRead} window={url.value.window} gapIds="FE-006, FE-025" />
         )}
         {drawdownList !== null ? (
-          <Cell label="Drawdown" note={<span title={`Fund dataset, window ${url.value.window}`}>Max, window {url.value.window}</span>}><PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed /></Cell>
+          <Cell label="Drawdown" note={<span title={`Fund dataset, window ${url.value.window}`}>Max, window {url.value.window}</span>}><PartitionFigures list={drawdownList} metricKey="max_drawdown_pct" signed unit="caption" /></Cell>
         ) : (
           <Cell label="Drawdown" note="Needs a NAV series"><Gap ids="FE-013, FE-025" /></Cell>
         )}
         <Cell label="Open incidents" note={<Link className="exec-ov-link" to={ctx("/execution/operations")} title="Incidents in the ranked list">Operations</Link>}>
-          {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : incidents.value}</span>}
+          {incidents.value === null ? <span className="exec-ov-na">Not available</span> : <KpiCount text={incidents.atLeast ? (incidents.value === 0 ? "None seen" : `at least ${incidents.value}`) : String(incidents.value)} />}
         </Cell>
         <Cell
           label="Needs attention"
           note={reads.operations.phase === "loading" ? "Awaiting acknowledgement: reading" : unacknowledged === null ? "Awaiting acknowledgement: not available" : <>Awaiting acknowledgement: <b className="exec-ov-num">{unacknowledged}</b></>}
         >
-          {attention.text === null ? <span className="exec-ov-na">Not available</span> : <span className="exec-ov-kpi">{attention.text}</span>}
+          {attention.text === null ? <span className="exec-ov-na">Not available</span> : <KpiCount text={attention.text} />}
         </Cell>
       </dl>
 
@@ -485,7 +502,7 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
           ) : undefined}
           aside={contributors.kind === "ready" ? `Net PnL by ${contribBy === CONTRIBUTORS_PORTFOLIO_FIELD && portfolioOffered ? "portfolio" : "alpha"} · window ${url.value.window}` : "Amount · Return · Score"}
         >
-          <ContributorsBody view={contributors} />
+          <ContributorsBody view={contributors} linkOf={(field, id) => ctx(field === "portfolio_id" ? `/deployments/portfolios/${encodeURIComponent(id)}` : `/deployments/alphas/${encodeURIComponent(id)}`)} />
         </SectionPanel>
       </div>
 
