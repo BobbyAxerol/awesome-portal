@@ -123,6 +123,12 @@
   color: var(--ink);
   border-bottom-color: var(--accent);
 }
+/* The currency that names one line of a mixed-currency Check cell: the flag's own label role, so the line reads as one size. */
+.exec-acct-ccy {
+  font: var(--exec-font-label);
+  letter-spacing: 0.08em;
+  color: var(--ink-faint);
+}
 .exec-acct-url {
   margin-left: auto;
   font: var(--exec-font-meta);

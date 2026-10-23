@@ -255,7 +255,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
         };
         // One currency: the flag as before. Several: each line names its currency, and no line speaks for another.
         if (state.facts.more === undefined) return flagOf(state.facts);
-        return linesOf(state.facts, (line) => <><span className="exec-acct-sub">{line.currency}</span>{flagOf(line)}</>);
+        return linesOf(state.facts, (line) => <><span className="exec-acct-ccy">{line.currency}</span>{flagOf(line)}</>);
       },
     },
     {

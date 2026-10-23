@@ -285,6 +285,10 @@
   align-items: center;
   gap: var(--space-2);
 }
+/* The expander and its id/marker sit on one line of one size: the expander glyph follows the id's role (audit: sublabel-bigger on 50 rows). */
+.exec-blt2-ordercell .exec-blt2-x {
+  font: var(--exec-font-id);
+}
 .exec-blt2-kid > td {
   height: auto;
   white-space: normal;
