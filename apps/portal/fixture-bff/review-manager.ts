@@ -7,6 +7,7 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { buildPositiveManagerSeries } from "../../../packages/contracts/tooling/execution-manager-positive-series-fixtures.mjs";
 
 import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
@@ -87,7 +88,7 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
   body.workspace_id = original.workspace_id;
   body.as_of_ms = now;
   body.recorded_through_ms = now;
-  body.quality = { completeness: "PARTIAL", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC", "SOURCE_GAP"] };
+  body.quality = { completeness: "COMPLETE", freshness: "FRESH", reasons: [] };
   body.selected_window = { requested, resolved: window, selection_basis: "EXACT_PUBLISHED_METRIC_WINDOW_ONLY", reason_code: null };
   const pinned = search.has("economic_partition") ? JSON.parse(search.get("economic_partition")!) : null;
   const knownPortfolios = new Map([...scaled().portfolios, ...wpcPortfolioStubs(body.environment)].map((portfolio) => [portfolio.id, portfolio]));
@@ -108,15 +109,14 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
     entry.basis = entry.partition.basis;
     entry.methodology_ref = `FIXTURE_LAB:${metric}:synthetic-sequence-v1`;
     entry.window = copy(window);
-    const missing = Math.floor(target / 2);
-    const at = (index: number): number => window.from_ms + Math.floor(index * (window.to_ms - window.from_ms - 1) / target);
-    entry.points = Array.from({ length: target + 1 }, (_, index) => index).filter((index) => index !== missing)
+    const at = (index: number): number => window.from_ms + Math.floor(index * (window.to_ms - window.from_ms - 1) / (target - 1));
+    entry.points = Array.from({ length: target }, (_, index) => index)
       .map((index) => ({ ts_ms: at(index), value: sampleValue(metric === "DRAWDOWN" ? "NAV" : metric, index, subjectIndex) })); // WP-K: a drawdown is derived from the NAV walk below
-    entry.gaps = [{ from_ms: at(missing), to_ms: at(missing), reason: "SOURCE_GAP" }];
+    entry.gaps = [];
     wpcShapeSeries(entry, metric === "DRAWDOWN" ? "NAV" : metric, identity.subject_id, body.environment, requested, subject.subject_type === "ALPHA" ? "alpha_id" : "portfolio_id"); // WP-C: per-subject shape that ends on the dataset's own figure
     if (metric === "DRAWDOWN") wpkDrawdownFromNav(entry); // WP-K
     entry.quality = copy(body.quality);
-    entry.source_confidence = "PROVISIONAL";
+    entry.source_confidence = "VERIFIED";
     entry.provenance_refs = [digest(["FIXTURE_LAB_SYNTHETIC", profile, body.environment, identity, metric, window])];
     entry.calculation_revision = "FIXTURE_LAB:review-manager.v1";
     entry.policy_revision = "FIXTURE_LAB:NOT_PRODUCT_POLICY";
@@ -125,6 +125,20 @@ function seriesAnswer(method: string, path: string, search: URLSearchParams, pro
   body.comparison = comparison(body.series);
   body.lineage.source_set_ref = digest(["FIXTURE_LAB_SYNTHETIC", profile, now]);
   body.lineage.revision = digest([body.workspace_id, body.environment, body.metric, body.selected_window, body.series]);
+  // NAV and drawdown use exactly the same complete synthetic walk. PnL and
+  // Return retain their published dataset bases: allocated capital is not the
+  // capital statement NAV, so zero-flow returns must not replace those values.
+  if (metric === "DRAWDOWN") {
+    const navQuery = new URLSearchParams(search);
+    navQuery.set("metric", "NAV");
+    const nav = seriesAnswer(method, path, navQuery, profile);
+    if (nav?.status === 200 && (nav.body as Draft).series.every((entry: Draft) => entry.state === "AVAILABLE")) {
+      return { status: 200, body: buildPositiveManagerSeries({ lane: "FIXTURE_LAB", nav: nav.body, pointCount: target }).DRAWDOWN };
+    }
+  }
+  if (metric === "NAV" && body.series.every((entry: Draft) => entry.state === "AVAILABLE")) {
+    return { status: 200, body: buildPositiveManagerSeries({ lane: "FIXTURE_LAB", nav: body, pointCount: target }).NAV };
+  }
   return { status: 200, body };
 }
 
@@ -1056,14 +1070,13 @@ function wpcShapeSeries(entry: Draft, metricName: string, subjectId: string, env
   const target = wpcTarget(environment, subjectId, WINDOW_PRESETS[days], entry.partition.currency, by);
   if (target === null) return;
   const n = entry.points.length;
-  const missing = Math.floor(n / 2);
   const seed = seedOf(subjectId, environment, metricName, "wpc-walk");
   const nav = target.nav > 0n ? target.nav : 1n;
   const [start, end, amp] = metricName === "NAV" ? [target.nav - target.net, target.nav, nav / 120n]
     : metricName === "NET_PNL" ? [0n, target.net, wpcAbs(target.net) > nav / 150n ? wpcAbs(target.net) / 2n : nav / 150n]
       : [0n, target.ret, wpcAbs(target.ret) > 5n * 10n ** 15n ? wpcAbs(target.ret) / 2n : 10n ** 16n];
-  const values = wpcWalk(seed, n, start, end, amp);
-  const indices = Array.from({ length: n + 1 }, (_, i) => i).filter((i) => i !== missing);
+  const values = wpcWalk(seed, n - 1, start, end, amp);
+  const indices = Array.from({ length: n }, (_, i) => i);
   // Return is a fraction (8 places); money keeps its 18 places. The walk itself is in 18-place integers.
   const text = (value: bigint): string => (metricName === "RETURN" ? trimmed(value / 10n ** 10n, 8) : trimmed(value, 18));
   entry.points.forEach((point: Draft, k: number) => { point.value = text(values[indices[k]!]!); });
