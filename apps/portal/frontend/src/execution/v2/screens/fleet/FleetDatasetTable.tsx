@@ -14,11 +14,12 @@ import { JourneySpine, NaWhy } from "../../blocks";
 import { Flag } from "../../Flag";
 import type { ManagerRow } from "../../readers/managerDataset";
 import { FE, healthView, humanize, type UnpublishedFact } from "./fleetModel";
-import { inStageOf, lifecycleFlagOf, stageViewOf } from "./fleetDatasetModel";
+import { ENVIRONMENT_LABEL, inStageOf, lifecycleFlagOf, stageViewOf } from "./fleetDatasetModel";
 import { PartitionFigures } from "./PartitionFigures";
 import { spineStage } from "./FleetTable";
 
 import "../../css/fleet.css";
+import "./partitionFigures.css";
 import { formatInstant } from "../../boundary";
 
 function StageCell({ row }: { row: ManagerRow }) {
@@ -63,6 +64,8 @@ export interface FleetDatasetTableProps {
   rows: readonly ManagerRow[];
   /** `query_options.metric_keys` of the dataset the rows came from; `null` when unknown. */
   metricKeys?: readonly string[] | null;
+  /** FE-CAT-3: an ALL read. Every row names its environment, and the table says it in its own column (never inferred from a stage). */
+  showEnvironment?: boolean;
   /** The Alpha 360 of the row's alpha, with the context the Fleet carries. */
   hrefFor(row: ManagerRow): string;
   empty?: ReactNode;
@@ -72,7 +75,7 @@ export interface FleetDatasetTableProps {
   onOpen?(row: ManagerRow): void;
 }
 
-export function FleetDatasetTable({ rows, metricKeys = null, hrefFor, empty, selectedKey, onOpen }: FleetDatasetTableProps) {
+export function FleetDatasetTable({ rows, metricKeys = null, showEnvironment = false, hrefFor, empty, selectedKey, onOpen }: FleetDatasetTableProps) {
   const columns: readonly CardsColumn<ManagerRow>[] = [
     {
       key: "alpha",
@@ -84,6 +87,12 @@ export function FleetDatasetTable({ rows, metricKeys = null, hrefFor, empty, sel
         </span>
       ),
     },
+    ...(showEnvironment ? [{
+      key: "environment", label: "Environment",
+      render: (row: ManagerRow) => row.environment === undefined
+        ? <NaWhy className="exec-fleet-np" reason="This row does not name its environment." />
+        : <span className="exec-fleet-env-tag" data-environment={row.environment}>{ENVIRONMENT_LABEL[row.environment]}</span>,
+    } satisfies CardsColumn<ManagerRow>] : []),
     { key: "owner", label: "Owner", render: (row) => row.ownerUserId },
     { key: "portfolio", label: "Portfolio", render: (row) => row.portfolioId },
     { key: "stage", label: "Current stage", render: (row) => <StageCell row={row} /> },

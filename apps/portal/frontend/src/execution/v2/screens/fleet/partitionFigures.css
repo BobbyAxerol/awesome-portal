@@ -45,3 +45,35 @@
 .exec-fleet-tile[data-health="unknown"] { background: var(--f-unknown-bg); border-left-color: var(--f-unknown); }
 .exec-fleet-map-rest { display: flex; flex-direction: column; gap: var(--space-2); }
 .exec-fleet-map-rest ul { margin: 0; padding: 0; list-style: none; }
+
+/* FE-CAT-3 · the environments of an ALL read: three separate entries side by side, never one total. */
+.exec-fleet-envs { display: flex; flex-direction: column; gap: var(--space-2); }
+.exec-fleet-envlist { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); margin: 0; padding: 0; list-style: none; }
+.exec-fleet-envitem {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-left-width: 4px;
+}
+.exec-fleet-envitem[data-availability="UNAVAILABLE"] { border-style: dashed; border-left-style: dashed; }
+.exec-fleet-env-name { font: var(--exec-font-label); color: var(--ink); }
+.exec-fleet-env-count { font: var(--exec-font-meta); font-variant-numeric: tabular-nums; color: var(--ink); }
+.exec-fleet-env-asof, .exec-fleet-env-note { font: var(--exec-font-meta); color: var(--ink-faint); margin: 0; }
+/* The Environment column / drawer fact: the label is text; the square is a second cue, never the only one. */
+.exec-fleet-env-tag { display: inline-flex; align-items: center; gap: 6px; font: var(--exec-font-label); color: var(--ink); }
+.exec-fleet-env-tag::before {
+  content: "";
+  flex: none;
+  box-sizing: border-box;
+  width: 8px;
+  height: 8px;
+  background: transparent;
+  border: 1px solid var(--line-strong);
+}
+.exec-fleet-env-tag[data-environment="paper"]::before,
+.exec-fleet-env-tag[data-environment="sandbox"]::before { background: var(--ink-faint); }
+.exec-fleet-env-tag[data-environment="live"]::before { background: var(--ink); }

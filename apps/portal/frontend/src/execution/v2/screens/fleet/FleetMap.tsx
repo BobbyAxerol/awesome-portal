@@ -7,6 +7,8 @@
  *   The size is geometry only (`toGeometry`, a flex weight): the figure on the tile is the exact published string, nothing
  *   derived is ever printed, and no total over tiles exists.
  * - Tile COLOUR is the published health word (`healthView`), with the health flag printed on the tile: colour is never the only cue.
+ * - ALL reads (FE-CAT-3): the rows of every environment arrive together, and the map is still ONE partition at a time, so a row of another
+ *   environment is not "missing an allocation": it belongs to another partition's map and is counted as such under the map, never drawn here.
  * - Published order is kept (no re-sorting by size), so the picture does not claim a ranking the server did not make.
  */
 import { useMemo, useState } from "react";
@@ -15,7 +17,7 @@ import { Link } from "react-router-dom";
 import { NaWhy } from "../../blocks";
 import { toGeometry } from "../../charts/decimal";
 import { Flag } from "../../Flag";
-import type { ManagerRow } from "../../readers/managerDataset";
+import { ENVIRONMENT_DOMAIN, type ManagerRow } from "../../readers/managerDataset";
 import type { ManagerPartition, ManagerPartitionedMetrics } from "../../readers/managerMetric";
 import { MetricValue } from "../manager/MetricValue";
 import { DOMAIN_LABEL } from "./PartitionFigures";
@@ -70,9 +72,13 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
     );
   }
 
+  const chosenDomain = (JSON.parse(identity) as [string, ...unknown[]])[0];
   const drawn: { row: ManagerRow; exact: string; weight: number }[] = [];
   const undrawn: { row: ManagerRow; entry: ManagerPartitionedMetrics | null }[] = [];
+  let elsewhere = 0;
   for (const row of rows) {
+    // A row that names its environment (an ALL read) and is not of the chosen partition's environment belongs to another map.
+    if (row.environment !== undefined && ENVIRONMENT_DOMAIN[row.environment] !== chosenDomain) { elsewhere += 1; continue; }
     const entry = inPartition(row, identity);
     const metric = entry?.metrics.get(SIZE_KEY);
     if (metric !== undefined && metric.kind === "value") drawn.push({ row, exact: metric.exact, weight: Math.max(toGeometry(metric.exact), 0) });
@@ -110,6 +116,11 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
           );
         })}
       </ul>
+      {elsewhere > 0 ? (
+        <p className="exec-fleet-note" data-testid="map-elsewhere">
+          {elsewhere} loaded {elsewhere === 1 ? "row belongs" : "rows belong"} to other environments. Choose their partition above to see them; environments are never drawn on one map.
+        </p>
+      ) : null}
       {undrawn.length > 0 ? (
         <div className="exec-fleet-map-rest" data-testid="map-undrawn">
           <span className="exec-fleet-note">Not drawn, no allocation figure in {labelOf(partitions.find(([key]) => key === identity)![1])}:</span>

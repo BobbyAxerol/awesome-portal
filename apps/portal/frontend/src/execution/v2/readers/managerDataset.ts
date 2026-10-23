@@ -16,6 +16,11 @@
  * `ManagerScorePublication`, `ManagerCompositionPublication`, `ManagerRegimePublication` and the score-revision
  * bodies are not covered.
  *
+ * FE-CAT-3 (the Fleet ALL lens): `environment: "ALL"` is NAVIGATION across separately authorized environments, never consolidated
+ * money. An ALL body carries `environment_coverage` (one typed entry per environment: INCLUDED with its own snapshot, clocks, quality
+ * and counts, or UNAVAILABLE with a closed reason) and every row names its own environment. The reader refuses an ALL-shaped key on a
+ * single-environment body and a single-environment body that claims ALL; it never sums, joins or re-labels anything across environments.
+ *
  * Boundary rules (consumer-review-2026-10-18, review2/04 and 06):
  * - the body is `unknown` until every check passes. One bad row, metric, partition or group voids the whole read;
  *   a silently dropped row would make a count or a fleet table a lie. There is no partial trust;
@@ -51,6 +56,7 @@ import {
   readManagerMetric,
   readManagerQuality,
   record,
+  type ManagerEconomicDomain,
   type ManagerMetricRead,
   type ManagerPartitionedMetrics,
   type ManagerQuality,
@@ -63,6 +69,16 @@ export const MANAGER_SURFACES = ["FUND", "FLEET", "PORTFOLIO", "ALPHA", "ACCOUNT
 export type ManagerSurface = (typeof MANAGER_SURFACES)[number];
 export const MANAGER_ENVIRONMENTS = ["paper", "sandbox", "live"] as const;
 export type ManagerEnvironment = (typeof MANAGER_ENVIRONMENTS)[number];
+/** `ALL` is the Fleet-only fan-out (FE-CAT-3). Every other read pins one environment. */
+export const MANAGER_ALL = "ALL" as const;
+export type ManagerEnvironmentScope = ManagerEnvironment | typeof MANAGER_ALL;
+/** The economic domain every partition of an environment carries (the store's rule: live is ACTUAL). */
+export const ENVIRONMENT_DOMAIN: Readonly<Record<ManagerEnvironment, ManagerEconomicDomain>> = { paper: "PAPER", sandbox: "SANDBOX", live: "ACTUAL" };
+/** Why an environment contributed nothing to an ALL read (closed; `NOT_AVAILABLE_TO_VIEWER` merges "no grant" with "nothing visible"). */
+export const MANAGER_COVERAGE_REASONS = [
+  "NOT_AVAILABLE_TO_VIEWER", "NOT_CONFIGURED", "POLICY_PENDING", "PUBLICATION_NOT_QUALIFIED", "SOURCE_UNAVAILABLE", "CHANGED_DURING_READ", "SCOPE_LIMIT_EXCEEDED",
+] as const;
+export type ManagerCoverageReason = (typeof MANAGER_COVERAGE_REASONS)[number];
 export const MANAGER_STAGES = ["PAPER", "SANDBOX", "CANARY", "LIVE"] as const;
 export type ManagerStage = (typeof MANAGER_STAGES)[number];
 
@@ -181,8 +197,18 @@ export interface ManagerRowChild {
 
 export type ManagerRowMetrics = Readonly<Partial<Record<ManagerMetricKey, ManagerMetricRead>>>;
 
+/** One environment's part in an ALL read. INCLUDED carries its own facts; UNAVAILABLE carries a reason and nothing else (never a count). */
+export type ManagerEnvironmentCoverage =
+  | {
+    environment: ManagerEnvironment; availability: "INCLUDED"; snapshotId: string; asOfMs: UtcEpochMs; recordedThroughMs: UtcEpochMs;
+    factsThroughMs: UtcEpochMs | null; quality: ManagerQuality; authorizedFilteredCount: number; returnedCount: number;
+  }
+  | { environment: ManagerEnvironment; availability: "UNAVAILABLE"; reasonCode: ManagerCoverageReason };
+
 export interface ManagerRow {
   rowKey: string;
+  /** ALL reads only: the environment this row belongs to (absent on a single-environment read, whose environment is the dataset's). */
+  environment?: ManagerEnvironment;
   alphaId: string;
   alphaVersionId: string;
   portfolioId: string;
@@ -247,7 +273,9 @@ export interface ManagerDataset {
   workspaceId: string;
   /** What `currentStage` means (constants of the response, BE-P4); print them, do not re-derive them. */
   stageLifecycle: typeof MANAGER_STAGE_LIFECYCLE;
-  environment: ManagerEnvironment;
+  environment: ManagerEnvironmentScope;
+  /** ALL reads only (absent otherwise): exactly paper, sandbox, live, in that order. A missing environment is typed here, never absent. */
+  environmentCoverage?: readonly ManagerEnvironmentCoverage[];
   snapshotId: string;
   asOfMs: UtcEpochMs;
   recordedThroughMs: UtcEpochMs;
@@ -287,7 +315,7 @@ const ROOT_REQUIRED = [
   "snapshot_id", "as_of_ms", "recorded_through_ms", "facts_through_ms", "quality", "coverage", "economic_aggregation", "query_policy", "page",
   "items", "groups", "capital_statements", "statement_scope", "scores", "funding_bucket_pnl", "lineage",
 ] as const;
-const ROOT_OPTIONAL = ["score_details", "composition_details", "regime_details"] as const;
+const ROOT_OPTIONAL = ["score_details", "composition_details", "regime_details", "environment_coverage"] as const;
 
 const ENVIRONMENT_STAGES: Readonly<Record<ManagerEnvironment, readonly ManagerStage[]>> = {
   paper: ["PAPER"],
@@ -428,6 +456,50 @@ function readQueryOptions(raw: unknown): ManagerQueryOptions | null {
   };
 }
 
+const COVERAGE_KEYS = [
+  "environment", "availability", "reason_code", "snapshot_id", "as_of_ms", "recorded_through_ms", "facts_through_ms", "quality", "authorized_filtered_count", "returned_count",
+] as const;
+
+/** One `environment_coverage` entry: INCLUDED has every fact and no reason; UNAVAILABLE has a reason and every fact null (schema `if/then/else`). */
+function readCoverageEntry(raw: unknown, expected: ManagerEnvironment): ManagerEnvironmentCoverage | null {
+  const entry = record(raw);
+  if (entry === null || !hasOnly(entry, COVERAGE_KEYS) || !hasAll(entry, COVERAGE_KEYS) || entry.environment !== expected) return null;
+  const availability = oneOf(entry.availability, ["INCLUDED", "UNAVAILABLE"] as const);
+  if (availability === "UNAVAILABLE") {
+    const reasonCode = oneOf(entry.reason_code, MANAGER_COVERAGE_REASONS);
+    const nulls = [entry.snapshot_id, entry.as_of_ms, entry.recorded_through_ms, entry.facts_through_ms, entry.quality, entry.authorized_filtered_count, entry.returned_count];
+    return reasonCode === null || nulls.some((value) => value !== null) ? null : { environment: expected, availability, reasonCode };
+  }
+  if (availability !== "INCLUDED" || entry.reason_code !== null) return null;
+  const snapshotId = digestRef(entry.snapshot_id);
+  const asOfMs = clockMs(entry.as_of_ms);
+  const recordedThroughMs = clockMs(entry.recorded_through_ms);
+  const factsThroughMs = entry.facts_through_ms === null ? null : clockMs(entry.facts_through_ms);
+  const quality = readManagerQuality(entry.quality, MAX_DATASET_REASONS);
+  const authorizedFilteredCount = boundedCount(entry.authorized_filtered_count, MAX_FILTERED_COUNT);
+  const returnedCount = boundedCount(entry.returned_count, MAX_ITEMS);
+  if (
+    snapshotId === null || asOfMs === null || recordedThroughMs === null || (entry.facts_through_ms !== null && factsThroughMs === null) || quality === null
+    || authorizedFilteredCount === null || returnedCount === null || returnedCount > authorizedFilteredCount
+  ) return null;
+  return { environment: expected, availability, snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, authorizedFilteredCount, returnedCount };
+}
+
+function readCoverage(raw: unknown): readonly ManagerEnvironmentCoverage[] | null {
+  if (!Array.isArray(raw) || raw.length !== MANAGER_ENVIRONMENTS.length) return null;
+  const out: ManagerEnvironmentCoverage[] = [];
+  for (const [index, entry] of raw.entries()) {
+    const read = readCoverageEntry(entry, MANAGER_ENVIRONMENTS[index]!);
+    if (read === null) return null;
+    out.push(read);
+  }
+  return out;
+}
+
+/** The ALL key of a row: environment first, then the single-environment key parts. One row of one environment. */
+export const allRowKey = (environment: ManagerEnvironment, row: { alphaId: string; alphaVersionId: string; portfolioId: string }): string =>
+  JSON.stringify([environment, row.alphaId, row.alphaVersionId, row.portfolioId]);
+
 function readCursor(raw: unknown): string | null | undefined {
   return raw === null ? null : managerText(raw, MAX_CURSOR) ?? undefined;
 }
@@ -563,9 +635,14 @@ function stageEntryArithmetic(lifecycle: Pick<ManagerRow, "currentStage" | "ente
   return currentStage !== null && enteredAtMs !== null && enteredAtMs <= asOfMs && daysInStage === Math.floor((asOfMs - enteredAtMs) / MS_PER_DAY);
 }
 
-function readRow(raw: unknown, environment: ManagerEnvironment, metricKeys: readonly ManagerMetricKey[], asOfMs: number): ManagerRow | null {
+function readRow(raw: unknown, scope: ManagerEnvironmentScope, metricKeys: readonly ManagerMetricKey[], asOfMs: number): ManagerRow | null {
   const row = record(raw);
-  if (row === null || !hasOnly(row, ROW_KEYS) || !hasAll(row, ROW_KEYS)) return null;
+  if (row === null || !hasOnly(row, [...ROW_KEYS, "environment"]) || !hasAll(row, ROW_KEYS)) return null;
+  // ALL: every row names its own environment, and is judged against THAT environment. Otherwise no row names one (an ALL key on a
+  // single-environment body is a body of another question).
+  const rowEnvironment = Object.prototype.hasOwnProperty.call(row, "environment") ? oneOf(row.environment, MANAGER_ENVIRONMENTS) : null;
+  if (scope === MANAGER_ALL ? rowEnvironment === null : Object.prototype.hasOwnProperty.call(row, "environment")) return null;
+  const environment: ManagerEnvironment = scope === MANAGER_ALL ? rowEnvironment! : scope;
   const rowKey = managerText(row.row_key, 2048);
   const alphaId = managerText(row.alpha_id);
   const alphaVersionId = managerText(row.alpha_version_id);
@@ -597,7 +674,13 @@ function readRow(raw: unknown, environment: ManagerEnvironment, metricKeys: read
   const metrics = readRowMetrics(row.metrics, metricKeys);
   const economicPartitions = readPartitionedMetricsList(row.economic_partitions);
   if (metrics === null || economicPartitions === null || !headlineIsAPartitionFigure(metrics, economicPartitions)) return null;
-  return { rowKey, alphaId, alphaVersionId, portfolioId, name, ownerUserId, lifecycle, venue, health, sourceState, stagePresence, ...stage, children, metrics, economicPartitions };
+  if (scope === MANAGER_ALL) {
+    // The key is the identity of one row of one environment, and its figures are of that environment's own economic domain: a Live row
+    // never carries a Paper partition (and the reverse), so a cell can never print another environment's money under this row.
+    if (rowKey !== allRowKey(environment, { alphaId, alphaVersionId, portfolioId })) return null;
+    if (economicPartitions.some((entry) => entry.partition.economicDomain !== ENVIRONMENT_DOMAIN[environment])) return null;
+  }
+  return { rowKey, ...(scope === MANAGER_ALL ? { environment } : {}), alphaId, alphaVersionId, portfolioId, name, ownerUserId, lifecycle, venue, health, sourceState, stagePresence, ...stage, children, metrics, economicPartitions };
 }
 
 function readGroup(raw: unknown, groupFields: readonly ManagerGroupField[], filteredCount: number): ManagerGroup | null {
@@ -717,6 +800,29 @@ function readFundingBucket(raw: unknown): ManagerDataset["fundingBucketPnl"] | n
     : null;
 }
 
+/**
+ * The producer's ALL invariants the schema cannot state (MANAGER_ALL_*): the page counts ROWS and its totals are the sums of the INCLUDED
+ * entries (the only sum ALL makes; never money); each entry's returned count is the rows of that environment on this page; an
+ * environment that is UNAVAILABLE holds no row; and a body that lost an environment is never COMPLETE.
+ */
+function coverageAddsUp(coverage: readonly ManagerEnvironmentCoverage[], items: readonly ManagerRow[], page: ManagerPage, quality: ManagerQuality): boolean {
+  let filtered = 0;
+  let returned = 0;
+  let missing = 0;
+  for (const entry of coverage) {
+    const rows = items.filter((row) => row.environment === entry.environment).length;
+    if (entry.availability === "INCLUDED") {
+      filtered += entry.authorizedFilteredCount;
+      returned += entry.returnedCount;
+      if (rows !== entry.returnedCount) return false;
+    } else {
+      missing += 1;
+      if (rows !== 0) return false;
+    }
+  }
+  return filtered === page.authorizedFilteredCount && returned === page.returnedCount && !(missing > 0 && quality.completeness === "COMPLETE");
+}
+
 function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   if (!hasOnly(root, [...ROOT_REQUIRED, ...ROOT_OPTIONAL]) || !hasAll(root, ROOT_REQUIRED)) return null;
   if (
@@ -737,7 +843,7 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   ) return null;
 
   const surface = oneOf(root.surface, MANAGER_SURFACES);
-  const environment = oneOf(root.environment, MANAGER_ENVIRONMENTS);
+  const environment = oneOf(root.environment, [...MANAGER_ENVIRONMENTS, MANAGER_ALL] as const);
   const workspaceId = managerText(root.workspace_id);
   const snapshotId = digestRef(root.snapshot_id);
   const asOfMs = clockMs(root.as_of_ms);
@@ -752,6 +858,11 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   const queryOptions = readQueryOptions(root.query_options);
   const page = readPage(root.page);
   if (quality === null || selectedWindow === undefined || queryOptions === null || page === null) return null;
+  // FE-CAT-3: the coverage list belongs to ALL and only to ALL; an ALL body carries no window (a window resolves against ONE cutoff).
+  const hasCoverage = Object.prototype.hasOwnProperty.call(root, "environment_coverage");
+  if ((environment === MANAGER_ALL) !== hasCoverage || (environment === MANAGER_ALL && selectedWindow !== null)) return null;
+  const environmentCoverage = hasCoverage ? readCoverage(root.environment_coverage) : null;
+  if (hasCoverage && environmentCoverage === null) return null;
 
   if (!Array.isArray(root.items) || root.items.length > MAX_ITEMS || root.items.length !== page.returnedCount) return null;
   const items: ManagerRow[] = [];
@@ -791,8 +902,10 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
     || compositionDetails === null || regimeDetails === null
   ) return null;
 
+  if (environmentCoverage !== null && !coverageAddsUp(environmentCoverage, items, page, quality)) return null;
+
   return {
-    surface, workspaceId, stageLifecycle: MANAGER_STAGE_LIFECYCLE, environment, snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
+    surface, workspaceId, stageLifecycle: MANAGER_STAGE_LIFECYCLE, environment, ...(environmentCoverage === null ? {} : { environmentCoverage }), snapshotId, asOfMs, recordedThroughMs, factsThroughMs, quality, selectedWindow, queryOptions, page, items, groups,
     capitalStatements, statementScope: MANAGER_STATEMENT_SCOPE, scores, fundingBucketPnl, lineage,
     unreadDetails: { scoreDetails, compositionDetails, regimeDetails }, hasMore: page.nextCursor !== null,
   };

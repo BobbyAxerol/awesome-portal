@@ -32,6 +32,13 @@ export interface PartitionFiguresProps {
 
 export const partitionTag = (entry: ManagerPartitionedMetrics): string => `${DOMAIN_LABEL[entry.partition.economicDomain]} · ${entry.partition.currency}`;
 
+/**
+ * Everything the cell's partition says about itself (FE-CAT-7): the economic domain, currency, basis and profile. The cell is that
+ * partition's figure and nothing else; the ownership of a balance is not published and is named so in the Fleet's disclosure.
+ */
+export const partitionTitle = (entry: ManagerPartitionedMetrics): string =>
+  `${DOMAIN_LABEL[entry.partition.economicDomain]} (${entry.partition.economicDomain}) · ${entry.partition.currency} · basis ${entry.partition.basis} · profile ${entry.partition.nativeProfileRef}`;
+
 export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signed = false, cell }: PartitionFiguresProps) {
   if (metricKeys !== null && !metricKeys.includes(metricKey)) {
     return <NaWhy className="exec-fleet-np" text={notPublished(gap)} reason={`The Manager dataset does not carry ${metricKey} in its published metric set.`} />;
@@ -46,7 +53,7 @@ export function PartitionFigures({ partitions, metricKey, metricKeys, gap, signe
         return (
           <span key={`${entry.partition.economicDomain}|${entry.partition.currency}|${entry.partition.basis}|${entry.partition.nativeProfileRef}`}
             className="exec-fleet-part" data-domain={entry.partition.economicDomain} data-testid={`part-${metricKey}`}>
-            <span className="exec-fleet-part-tag" title={`${entry.partition.basis} · ${entry.partition.nativeProfileRef}`}>{partitionTag(entry)}</span>
+            <span className="exec-fleet-part-tag" title={partitionTitle(entry)}>{partitionTag(entry)}</span>
             {cell ? cell(metric) : <MetricValue metric={metric} signed={signed} />}
           </span>
         );

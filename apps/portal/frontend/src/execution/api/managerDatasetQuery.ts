@@ -4,7 +4,8 @@
  * that came back answers THAT question.
  *
  * Encoding is exactly the OpenAPI's, parameter by parameter (it is the published contract, not a convention of ours):
- * - plain: `environment`, `workspace_id`, `q`, `q_mode`, `lifecycle_filter`, `limit`, `after`, `before`;
+ * - plain: `environment` (`ALL` only for the Fleet surface without a window: FE-CAT-3, navigation across separately authorized environments,
+ *   never consolidated money), `workspace_id`, `q`, `q_mode`, `lifecycle_filter`, `limit`, `after`, `before`;
  * - `content: application/json` (JSON text in the query value): `window` (`"30D"` with its quotes, or `{from_ms,to_ms}`),
  *   `filters`, `sort`, `economic_partition`;
  * - `style: form, explode: false` (one comma-separated value): `stage_filter`, `group_by`.
@@ -19,13 +20,14 @@
  * body states about itself or what a row states plainly; it never re-sorts, re-filters or re-counts anything.
  */
 import {
+  MANAGER_ALL,
   MANAGER_ENVIRONMENTS,
   MANAGER_GROUP_FIELDS,
   MANAGER_SORT_FIELDS,
   MANAGER_STAGES,
   MANAGER_WINDOW_PRESETS,
   type ManagerDataset,
-  type ManagerEnvironment,
+  type ManagerEnvironmentScope,
   type ManagerGroupField,
   type ManagerRow,
   type ManagerSortField,
@@ -61,7 +63,8 @@ export interface ManagerDatasetPartitionQuery {
 }
 
 export interface ManagerDatasetQueryBase {
-  environment: ManagerEnvironment;
+  /** One environment, or `ALL` (Fleet only, no window): the server answers with the authorized rows of every environment, each labelled. */
+  environment: ManagerEnvironmentScope;
   workspaceId?: string;
   /** Search over `name`; `qMode` needs `q`. */
   q?: string;
@@ -92,7 +95,9 @@ export const NUMERIC_DATASET_FIELDS: readonly ManagerDatasetField[] = [
   "allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value", "return_30d_pct", "score",
 ];
 const DECIMAL = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
-const STAGES_OF: Readonly<Record<ManagerEnvironment, readonly ManagerStage[]>> = { paper: ["PAPER"], sandbox: ["SANDBOX"], live: ["CANARY", "LIVE"] };
+const STAGES_OF: Readonly<Record<ManagerEnvironmentScope, readonly ManagerStage[]>> = {
+  paper: ["PAPER"], sandbox: ["SANDBOX"], live: ["CANARY", "LIVE"], ALL: ["PAPER", "SANDBOX", "CANARY", "LIVE"],
+};
 
 const ROUTES: Readonly<Record<ManagerDatasetScope["surface"], (id: string) => string>> = {
   FUND: () => "/manager/fund-overview",
@@ -141,8 +146,10 @@ export interface ManagerDatasetRequest {
 
 /** The request for a query, or `null` when the server would refuse it. */
 export function encodeManagerDatasetQuery(query: ManagerDatasetQuery): ManagerDatasetRequest | null {
-  const environment = oneOf(query.environment, MANAGER_ENVIRONMENTS);
+  const environment = oneOf(query.environment, [...MANAGER_ENVIRONMENTS, MANAGER_ALL] as const);
   if (environment === null || oneOf(query.surface, Object.keys(ROUTES) as ManagerDatasetScope["surface"][]) === null) return null;
+  // ALL is the Fleet's fan-out and carries no window (a window resolves against one environment's cutoff): the server refuses both, so no request.
+  if (environment === MANAGER_ALL && (query.surface !== "FLEET" || query.window !== undefined)) return null;
   let id = "";
   if (query.surface !== "FUND" && query.surface !== "FLEET") {
     const text = managerText(query.id, 256);
@@ -283,6 +290,10 @@ function rowFailsFilter(row: ManagerRow, filter: ManagerDatasetFilter): boolean 
 export function datasetQueryMismatch(dataset: ManagerDataset, query: ManagerDatasetQuery): string | null {
   if (dataset.surface !== query.surface) return "surface";
   if (dataset.environment !== query.environment) return "environment";
+  // FE-CAT-3: a read asked for ALL is accepted only as an ALL-shaped body (coverage, rows that name their environment), and a read of one
+  // environment is never accepted as ALL, nor as a body that carries ALL keys.
+  if (query.environment === MANAGER_ALL ? dataset.environmentCoverage === undefined || dataset.items.some((row) => row.environment === undefined)
+    : dataset.environmentCoverage !== undefined || dataset.items.some((row) => row.environment !== undefined)) return "environment";
   if (query.workspaceId !== undefined && dataset.workspaceId !== query.workspaceId) return "workspace";
 
   const selected = dataset.selectedWindow;

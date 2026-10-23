@@ -13,6 +13,11 @@
  * `view`, plus `tab=archived` for the Archived lens and the screen-local
  * `owner` and `health`. Defaults are omitted.
  *
+ * All lens (FE-CAT-3): when the Manager dataset answers `environment=ALL` (the authorized rows of every environment, each labelled, with
+ * per-environment coverage and no combined money) the All lens, and a stage selection across environments, read it like any other
+ * dataset view, with an Environment column and one strip that types every environment (included with its own count, or Not available
+ * with the reason). When the dataset does not answer ALL the All lens is today's fleet read, with its typed absences: never faked.
+ *
  * Manager dataset (FE-012, FE-027, RV-09): the source is chosen by the data, not by a toggle. When the lens is ONE environment
  * (Real-funded, Sandbox, Paper), the view is the table and the Manager dataset is published for the caller there, the table reads
  * the dataset through `getManagerDataset`: one row per alpha version and portfolio, the server's own filters (search, owner,
@@ -49,12 +54,13 @@ import { OptionFilter } from "./OptionFilter";
 import { FleetBoard } from "./FleetBoard";
 import { FleetDatasetDrawer } from "./FleetDatasetDrawer";
 import { FleetDatasetTable } from "./FleetDatasetTable";
+import { FleetEnvironmentCoverage } from "./FleetEnvironmentCoverage";
 import { FleetMap } from "./FleetMap";
 import { FleetDrawer } from "./FleetDrawer";
 import { FleetTable } from "./FleetTable";
 import {
   FE_STAGE_ENTRY, datasetCountLine, datasetGroupOptions, datasetKey, datasetQuery, datasetScopeOf, datasetSortOf, datasetSortOptions, groupFieldOf,
-  groupLabel, healthWord, parseHealths, serializeHealths, type DatasetFilters,
+  groupLabel, healthWord, moneyProvenanceRows, parseHealths, serializeHealths, type DatasetFilters,
 } from "./fleetDatasetModel";
 import { useDatasetPublication, useFleetDataset } from "./useFleetDataset";
 import { useDatasetOptions } from "./useFleetOptions";
@@ -182,7 +188,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const refreshDataset = dataset.refresh;
   const refreshLineage = useCallback((signal: AbortSignal) => refreshDataset(signal).then((next) => (next === null ? null : next.lineage.revision)), [refreshDataset]);
   const afterAccessEnded = useCallback(() => void refreshDataset(), [refreshDataset]);
-  const streamOn = streamFlag && datasetMode && scope !== null;
+  // The Fleet STREAM is one environment's (ELP2-09); the ALL read has no single stream to follow.
+  const allMode = datasetMode && scope !== null && scope.environment === "ALL";
+  const streamOn = streamFlag && datasetMode && scope !== null && scope.environment !== "ALL";
 
   const read = useFleetRead(api, !archived && (tableView || boardView) && !datasetMode && !waitingForDataset, key, (after) => fleetQuery(filters, after));
   // The counts' own read: one row, no filter, only while the dataset is the table's source (the fleet read above is then not made). Its
@@ -323,7 +331,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
   const urlText = params.toString() === "" ? "No parameters" : `?${decodeURIComponent(params.toString().replace(/\+/g, " "))}`;
   const customStage = lens === null;
   // The words that name the table's population in the counts line: the lens, or the stages when the URL names a set that is no lens.
-  const scopeWords = lens !== null && lens !== "all" ? lensLabel(lens) : stage.map((s) => stageLabel(s)).join(", ");
+  const scopeWords = lens !== null && lens !== "all" ? lensLabel(lens) : stage.length === 0 ? "all environments, each separate" : stage.map((s) => stageLabel(s)).join(", ");
   const countTitle = (approximate: boolean): string | undefined => {
     const parts: string[] = [];
     if (approximate) parts.push("Upper bound: an alpha in both Canary and Live is counted in each.");
@@ -338,6 +346,11 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
 
   /* ── pieces ──────────────────────────────────────────────────────── */
   const datasetCapped = datasetMode && dataset.rows.length >= ROW_CAP;
+  // FE-CAT-7: where the money cells come from (partition, basis, profile, coverage), from the loaded rows' own published facts.
+  const moneyLines = useMemo(
+    () => (datasetMode ? moneyProvenanceRows(datasetRows, dataset.first === null ? null : dataset.first.queryOptions.metricKeys) : []),
+    [datasetMode, datasetRows, dataset.first],
+  );
   const datasetCount = datasetMode && dataset.state.phase === "ready"
     ? datasetCountLine(datasetRows.length, dataset.rows.length, dataset.total, dataset.nextCursor !== null, datasetCapped)
     : null;
@@ -347,7 +360,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     const scopeSentence = first.statementScope === MANAGER_STATEMENT_SCOPE
       ? "Counts and groups cover the whole filtered result, not only the loaded rows; capital statements, which this screen does not show, are taken before the table filters."
       : "";
-    return `Source: the Manager dataset, ${first.environment}. One row is an alpha version in a portfolio. ${STAGE_RULE_SENTENCE}. ${scopeSentence}`.trim();
+    const where = first.environment === "ALL" ? "all environments, each row in its own environment and partition, no figure combined across them" : first.environment;
+    return `Source: the Manager dataset, ${where}. One row is an alpha version in a portfolio${first.environment === "ALL" ? " in one environment" : ""}. ${STAGE_RULE_SENTENCE}. ${scopeSentence}`.trim();
   })();
   const countLine = (() => {
     if (datasetMode) return datasetCount;
@@ -367,7 +381,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
     if (datasetMode) {
       return (
         <span className="exec-fleet-source" role="status" data-source="dataset" title={datasetNote ?? "One row per alpha version in a portfolio, filtered and grouped by the server"}>
-          Manager dataset · alpha versions
+          Manager dataset · alpha versions{allMode ? " · all environments" : ""}
         </span>
       );
     }
@@ -432,7 +446,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
           {streamOn && scope !== null ? (
             <FleetStreamChip
               key={`${scope.environment}|${workspaceId ?? "-"}`}
-              scope={{ environment: scope.environment, workspaceId: workspaceId ?? null }}
+              scope={{ environment: scope.environment as "paper" | "sandbox" | "live", workspaceId: workspaceId ?? null }}
               lineage={dataset.first === null ? null : dataset.first.lineage.revision}
               refresh={refreshLineage}
               onAccessEnded={afterAccessEnded}
@@ -669,6 +683,13 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                 />
               ) : (
                 <>
+                  {allMode && dataset.first && dataset.first.environmentCoverage ? <FleetEnvironmentCoverage coverage={dataset.first.environmentCoverage} /> : null}
+                  {moneyLines.length > 0 ? (
+                    <p className="exec-fleet-note" data-testid="money-provenance">
+                      Money columns: one figure per economic partition, never added across partitions or environments
+                      <GapWhy name="Where the money columns come from" rows={moneyLines} next={null} />
+                    </p>
+                  ) : null}
                   {dataset.last && dataset.last.groups.length > 0 ? (
                     <ul className="exec-fleet-chips" role="list" aria-label="Groups" data-testid="dataset-groups">
                       {dataset.last.groups.map((group) => (
@@ -691,6 +712,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                   ) : (
                     <FleetDatasetTable
                       rows={datasetRows}
+                      showEnvironment={allMode}
                       metricKeys={dataset.first === null ? null : dataset.first.queryOptions.metricKeys}
                       hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
                       selectedKey={selection}

@@ -94,12 +94,15 @@ const LIVE_URL = "/execution/fleet?stage=canary,live";
 const MIXED: DoubleAlpha[] = alphasOf(6, [["LIVE"], ["CANARY", "LIVE"], ["CANARY"]], { healths: ["READY", "ATTENTION", "FINDING"], owners: ["Lan-002", "Bobby-001"] });
 
 describe("not published: today's screen, exactly", () => {
-  it("the All lens never asks for the dataset (it spans environments)", async () => {
+  it("the All lens asks the dataset for ALL once; a dataset that does not offer ALL leaves today's fleet read exactly as it was (FE-CAT-3)", async () => {
     const { api, state } = harness({ live: MIXED });
     mount(api, "/execution/fleet");
     await loaded();
-    expect(state.calls).toEqual([]);
+    expect(state.calls.map((call) => Object.fromEntries(call.query))).toEqual([{ environment: "ALL", limit: "1" }]);
+    expect(isLegacyTable()).toBe(true);
+    expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
     expect(screen.queryByRole("group", { name: "Source" })).toBeNull();
+    expect(screen.queryByTestId("env-coverage")).toBeNull();
   });
 
   it.each(["status:404", "status:503", "status:403", "garbage", "other-schema", "malformed", "wrong:environment"] as DatasetVariant[])(
@@ -139,11 +142,11 @@ describe("not published: today's screen, exactly", () => {
     expect(screen.queryByText(/not published for this view/)).toBeNull();
   });
 
-  it("a stage set across environments is not a dataset question: no request, the fleet read", async () => {
+  it("a stage set across environments is an ALL question; refused, it is the fleet read", async () => {
     const { api, state } = harness({ live: MIXED, paper: MIXED });
     mount(api, "/execution/fleet?stage=paper,live");
     await loaded();
-    expect(state.calls).toEqual([]);
+    expect(state.calls.map((call) => Object.fromEntries(call.query))).toEqual([{ environment: "ALL", limit: "1" }]);
     expect(isLegacyTable()).toBe(true);
     expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
   });
@@ -173,7 +176,7 @@ describe("published: the dataset is the source, chosen by the data (no toggle)",
     const view = mount(first.api, "/execution/fleet");
     await loaded();
     expect(document.querySelector("[data-source='fleet']")?.textContent).toBe("Fleet read · alphas");
-    expect(first.state.calls).toEqual([]);
+    expect(first.state.calls.map((call) => Object.fromEntries(call.query))).toEqual([{ environment: "ALL", limit: "1" }]);
     view.unmount();
     const second = harness({ live: MIXED });
     mount(second.api, "/execution/fleet?stage=canary,live&view=board");

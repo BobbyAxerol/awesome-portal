@@ -3,10 +3,11 @@
  * `ExecutionApi.getManagerDataset` port. Two hooks:
  *
  * - `useDatasetPublication(api, environment)`: is the dataset PUBLISHED for this caller in this environment? One tiny read
- *   (`limit` 1, no filter) per environment; the dataset's own `query_options` (the sort and group fields it offers) come back
- *   with it. Anything but a readable dataset (a refusal, a 404, an absence, a port without the method) is "not published", and
- *   the screen keeps exactly the controls it had. No environment (the All lens, a stage set across environments) makes no
- *   request: the dataset serves one environment at a time.
+ *   (`limit` 1, no filter) per environment, or `ALL` (FE-CAT-3: the authorized rows of every environment, each labelled, no combined
+ *   money); the dataset's own `query_options` (the sort and group fields it offers) come back with it. Anything but a readable dataset
+ *   of the environment that was asked (a refusal, a 404, an absence, a body that is not ALL-shaped when ALL was asked, a port without
+ *   the method) is "not published", and the screen keeps exactly the controls it had, i.e. the fleet read. No scope (the Archived
+ *   lens) makes no request.
  * - `useFleetDataset(api, enabled, key, query)`: the first page replaces the loaded rows, `loadMore` appends the page after the
  *   server's own `next_cursor`. Nothing is derived from a count the server did not send, and a filter is the SERVER's: a new
  *   filter is a new query, never a client-side narrowing of a partial page.
@@ -26,7 +27,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ExecutionApi, Result } from "../../../api/ports";
 import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
 import type { PanelStatus } from "../../../contracts";
-import type { ManagerDataset, ManagerEnvironment, ManagerRow } from "../../readers/managerDataset";
+import type { ManagerDataset, ManagerEnvironmentScope, ManagerRow } from "../../readers/managerDataset";
 import { EVICTED_REASON, useScopedCacheEviction } from "../../scopedEviction";
 import { useRead, type ReadState } from "../portfolios/useRead";
 
@@ -50,16 +51,24 @@ export type DatasetPublication =
   | { phase: "published"; dataset: ManagerDataset }
   | { phase: "unpublished"; reason: string };
 
-export function useDatasetPublication(api: ExecutionApi, environment: ManagerEnvironment | null): DatasetPublication {
+export function useDatasetPublication(api: ExecutionApi, environment: ManagerEnvironmentScope | null): DatasetPublication {
+  // A port without the method (a test double, an older shell) cannot publish a dataset: nothing is asked, nothing waits, and the answer is the same as a refusal.
+  const serves = typeof api.getManagerDataset === "function";
   const read: ReadState<ManagerDataset> = useRead(
     api,
-    environment !== null,
+    environment !== null && serves,
     `fleet-dataset-publication|${environment}`,
-    (scopedApi) => ask(scopedApi, { surface: "FLEET", environment: environment as ManagerEnvironment, limit: 1 }),
+    (scopedApi) => ask(scopedApi, { surface: "FLEET", environment: environment as ManagerEnvironmentScope, limit: 1 }),
   );
-  if (environment === null || read.phase === "idle") return { phase: "off" };
+  if (environment === null) return { phase: "off" };
+  if (!serves) return { phase: "unpublished", reason: "The Manager dataset is not part of this port." };
+  if (read.phase === "idle") return { phase: "off" };
   if (read.phase === "loading") return { phase: "checking" };
   if (read.phase === "error") return { phase: "unpublished", reason: read.reason };
+  // FE-CAT-3: a body of another environment (or one that is not ALL-shaped when ALL was asked) is not this scope's dataset.
+  if (read.value.environment !== environment || (environment === "ALL") !== (read.value.environmentCoverage !== undefined)) {
+    return { phase: "unpublished", reason: "The Manager dataset did not answer the environment that was asked." };
+  }
   return { phase: "published", dataset: read.value };
 }
 
