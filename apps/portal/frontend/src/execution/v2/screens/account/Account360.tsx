@@ -25,7 +25,7 @@ import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
 import { PhysicalBinding } from "./PhysicalBinding";
 import { ActivityPanel, DrawdownBlock, EquityBlock } from "./readPanels";
 import { AllocationsPanel, AuthorityKpis, FeesPanel, MarginPanel, PositionsPanel, ReconciliationPanel, SleevesPanel, type PanelContext } from "./panels";
-import { EnvironmentWord, Fact, Na, PhysicalProvenance, ProductWord, StateFlag, WITHHELD } from "./parts";
+import { EnvironmentWord, Fact, Na, PhysicalProvenance, PortfolioName, ProductWord, StateFlag, WITHHELD } from "./parts";
 import { useAccountResource, useBindingDetail, useBindingExposure } from "./reads";
 import {
   RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
@@ -178,7 +178,7 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
               <Fact label="Name">{identity.label}</Fact>
               <Fact label="Portfolio">
                 {identity.portfolios.length === 0 ? <Na /> : identity.portfolios.map((pf, index) => (
-                  <span key={pf}>{index > 0 ? ", " : ""}<Link className="exec-acct-link" to={withContext(portfolioHref(pf), withoutOrigin(params))}>{view.names.portfolios[pf] ?? pf}</Link></span>
+                  <span key={pf}>{index > 0 ? ", " : ""}<PortfolioName id={pf} name={view.names.portfolios[pf] ?? null} reason={view.names.portfolioReasons[pf] ?? null} to={withContext(portfolioHref(pf), withoutOrigin(params))} /></span>
                 ))}
               </Fact>
               <Fact label="Domain">{[environment ? ENV_LABEL[environment] : null, identity.baseCurrency].filter((part): part is string => part !== null).join(" · ") || <Na />}</Fact>

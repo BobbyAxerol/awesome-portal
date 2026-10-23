@@ -517,6 +517,8 @@ export interface AccountIdentity {
  */
 export interface DisplayNames {
   portfolios: Readonly<Record<string, string>>;
+  /** Why a portfolio has no name here (`portfolio_name_reason_code`), by id; only for an id no row names. A reason never implies a right. */
+  portfolioReasons: Readonly<Record<string, string>>;
   deployments: Readonly<Record<string, string>>;
   alphas: Readonly<Record<string, string>>;
 }
@@ -537,6 +539,7 @@ export interface AccountView {
 
 function displayNames(deployments: readonly Row[], allocations: readonly Row[]): DisplayNames {
   const portfolios: Record<string, string> = {};
+  const portfolioReasons: Record<string, string> = {};
   const deploymentNames: Record<string, string> = {};
   const alphas: Record<string, string> = {};
   const put = (into: Record<string, string>, id: string | null, name: string | null) => {
@@ -544,10 +547,26 @@ function displayNames(deployments: readonly Row[], allocations: readonly Row[]):
   };
   for (const row of [...deployments, ...allocations]) {
     put(portfolios, text(row.portfolio_id), text(row.portfolio_name));
+    const reason = text(row.portfolio_name_reason_code);
+    const pf = text(row.portfolio_id);
+    if (pf !== null && reason !== null && text(row.portfolio_name) === null && portfolioReasons[pf] === undefined) portfolioReasons[pf] = reason;
     put(alphas, text(row.strategy_id), text(row.strategy_name) ?? text(row.alpha_name));
     put(deploymentNames, text(row.deployment_id), text(row.deployment_name) ?? text(row.display_name) ?? text(row.label) ?? text(row.name));
   }
-  return { portfolios, deployments: deploymentNames, alphas };
+  // A name published by any row wins over a reason on another row; the reason only explains an id that stays unnamed.
+  for (const id of Object.keys(portfolios)) delete portfolioReasons[id];
+  return { portfolios, portfolioReasons, deployments: deploymentNames, alphas };
+}
+
+/** The sentence for a `portfolio_name_reason_code`; an unknown code is said as published. */
+export function portfolioReasonText(code: string): string {
+  switch (code) {
+    case "PORTFOLIO_NAME_NOT_READ": return "The source did not read the portfolio name for this row.";
+    case "PORTFOLIO_NAME_NOT_PUBLISHED": return "The source publishes no name for this portfolio.";
+    case "PORTFOLIO_NAME_NOT_AUTHORIZED": return "The portfolio name is outside what your access shows. The id is shown; this says nothing about rights.";
+    case "PORTFOLIO_NAME_AMBIGUOUS": return "More than one name matches this portfolio id, so none is shown.";
+    default: return `No portfolio name (${code}).`;
+  }
 }
 
 /** A published word that does not look like a secret; anything that does is not shown. */

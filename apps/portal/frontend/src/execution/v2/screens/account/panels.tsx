@@ -23,7 +23,7 @@ import {
   ledgerPnl, marginFacts, portfolioHref, sleeveRows, stageWord, triadModel,
   type AccountView, type AllocationFacts, type PositionFacts, type Population, type SleeveRow, type SyncEntry,
 } from "./model";
-import { Fact, Na, Np, Value, When } from "./parts";
+import { Fact, Na, Np, PortfolioName, Value, When } from "./parts";
 
 export interface PanelContext {
   profile: ProfileEnvelope;
@@ -225,7 +225,7 @@ export function AllocationsPanel({ ctx }: { ctx: PanelContext }) {
     {
       key: "portfolio",
       label: "Portfolio",
-      render: (row) => row.portfolio === null ? <Na /> : <Link className="exec-acct-link" to={withContext(portfolioHref(row.portfolio), withoutOrigin(params))}>{ctx.view.names.portfolios[row.portfolio] ?? row.portfolio}</Link>,
+      render: (row) => row.portfolio === null ? <Na /> : <PortfolioName id={row.portfolio} name={ctx.view.names.portfolios[row.portfolio] ?? null} reason={ctx.view.names.portfolioReasons[row.portfolio] ?? null} to={withContext(portfolioHref(row.portfolio), withoutOrigin(params))} />,
     },
     { key: "allocation", label: "Allocation", numeric: true, render: (row) => <Value metric={row.allocation} suffix={row.currency ?? undefined} /> },
   ];

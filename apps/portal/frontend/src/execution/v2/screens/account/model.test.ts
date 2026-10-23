@@ -638,7 +638,7 @@ describe("display names the read publishes (FE-066)", () => {
     expect(named.names.alphas).toEqual({ btc_trend: "BTC Trend" });
     expect(named.sleeves[0]!.portfolio).toBe("Core");
     const plain = readAccountView(profile("acc_bnc_core"), "acc_bnc_core");
-    expect(plain.names).toEqual({ portfolios: {}, deployments: {}, alphas: {} });
+    expect(plain.names).toEqual({ portfolios: {}, portfolioReasons: {}, deployments: {}, alphas: {} });
     expect(plain.sleeves[0]!.portfolio).toBe("pf_core");
   });
 

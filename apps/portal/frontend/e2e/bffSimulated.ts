@@ -236,6 +236,18 @@ const unitsOf = (text: string, places: number): bigint => {
   return BigInt(`${whole}${frac.padEnd(places, "0")}`);
 };
 
+/** The legacy double returns at most this many fills beside a page of orders, whatever the page holds. */
+const BLOTTER_FILLS_CAP = 100;
+
+let mixedFeeCurrencies = typeof process !== "undefined" && process.env?.FIXTURE_BLOTTER_MIXED_FEES === "1"; // opt-in: FIXTURE_BLOTTER_MIXED_FEES=1
+/**
+ * Opt-in FIXTURE_LAB variant (default off): fills keep the commission currency the double gave them, so an order whose fills settle in
+ * two currencies (USDT and BNB) is served, and it has NO fee (typed absent, never converted, never summed across currencies).
+ */
+export function setSimulatedMixedFeeCurrencies(on: boolean): void {
+  mixedFeeCurrencies = on;
+}
+
 function overlayBlotter(body: Obj): Obj {
   const out = clone(body);
   const data = out.data;
@@ -244,12 +256,28 @@ function overlayBlotter(body: Obj): Obj {
   // The fills of one order settle their fee in one currency (the first fill's), so the order's fee is one exact sum. A fill whose
   // commission the source did not publish stays null and still leaves the order without a fee.
   const feeCurrencyOf = new Map<unknown, unknown>();
-  for (const fill of fills) {
+  for (const fill of mixedFeeCurrencies ? [] : fills) {
     if (!feeCurrencyOf.has(fill.client_order_id)) feeCurrencyOf.set(fill.client_order_id, fill.commission_currency);
     fill.commission_currency = feeCurrencyOf.get(fill.client_order_id);
   }
-  for (const order of data.orders) {
+  // A page that holds as many fills as the cap may have lost some: the order that owns the last fill, and every traded order after it,
+  // cannot be summed from this page. They get no filled quantity, average price or fee (typed absence), never a total from a partial
+  // fill population and never a false zero.
+  const orders = data.orders as unknown[];
+  const traded = (order: Obj) => order.status === "FILLED" || order.status === "PARTIALLY_FILLED";
+  let unsafeFrom = Infinity;
+  if (fills.length >= BLOTTER_FILLS_CAP) {
+    orders.forEach((order, index) => {
+      if (isObj(order) && fills.some((fill) => fill.client_order_id === order.client_order_id)) unsafeFrom = index;
+    });
+  }
+  for (const [index, order] of orders.entries()) {
     if (!isObj(order)) continue;
+    if (index >= unsafeFrom && traded(order)) {
+      const alphaOf = typeof order.strategy_id === "string" ? order.strategy_id : "";
+      if (alphaOf in DEPLOYMENT_OF_ALPHA) order.deployment_id = DEPLOYMENT_OF_ALPHA[alphaOf];
+      continue;
+    }
     const alpha = typeof order.strategy_id === "string" ? order.strategy_id : "";
     if (alpha in DEPLOYMENT_OF_ALPHA) order.deployment_id = DEPLOYMENT_OF_ALPHA[alpha];
     const mine = fills.filter((fill) => typeof fill.client_order_id === "string" && fill.client_order_id === order.client_order_id);

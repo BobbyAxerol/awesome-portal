@@ -4,12 +4,13 @@
  * and the credential and state flags. Plain props in, markup out.
  */
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf, type Metric } from "../../boundary";
 import { GapWhy, MetricText, NaWhy, QuietIdsWhy, gapTitle } from "../../blocks";
 import { Flag } from "../../Flag";
-import { FE, credentialView, humanize, notPublished, stateView, updatedAgo, type UnpublishedFact } from "./model";
+import { FE, credentialView, humanize, notPublished, portfolioReasonText, stateView, updatedAgo, type UnpublishedFact } from "./model";
 
 import "../../css/account.css";
 
@@ -115,5 +116,23 @@ export function PhysicalProvenance({ lines }: { lines: readonly { label: string;
       </dl>
       <p className="exec-acct-note">Native facts are the venue&apos;s report on the whole account. {WITHHELD}</p>
     </details>
+  );
+}
+
+/**
+ * A portfolio as the read names it: the name with the whole id on its own line; with no name, the id alone and the reason behind a
+ * disclosure. The id is the identity either way. No name is looked up or guessed; a reason never implies a right.
+ */
+export function PortfolioName({ id, name, reason, to }: { id: string; name: string | null; reason: string | null; to?: string }) {
+  const label = name ?? id;
+  const head = to !== undefined ? <Link className="exec-acct-link" to={to}>{label}</Link> : <>{label}</>;
+  if (name !== null) {
+    return <span className="exec-acct-cell">{head}<span className="exec-acct-sub">{id}</span></span>;
+  }
+  return (
+    <span className="exec-acct-cell">
+      {head}
+      {reason !== null ? <GapWhy name="Why the portfolio has no name" rows={[portfolioReasonText(reason)]} next={null} /> : null}
+    </span>
   );
 }

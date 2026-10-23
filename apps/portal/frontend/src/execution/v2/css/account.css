@@ -580,3 +580,8 @@ a.exec-acct-open {
   align-items: flex-end;
   text-align: right;
 }
+
+/* The sleeves table sits in a half-width panel: its column labels may take two lines so the figures keep their width. */
+.exec-acct-v2 table[aria-label="Sleeves on this binding"] thead th {
+  white-space: normal;
+}
