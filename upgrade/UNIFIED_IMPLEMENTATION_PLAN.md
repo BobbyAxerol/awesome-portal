@@ -9354,6 +9354,15 @@ No remote push, dev/main merge, signed release or production/source activation.
 
 # 14. Execution Loop Portal V2 — guide onboarding và authority alignment
 
+**23 October — Bobby: complete linked fixtures for UI review.**
+[Producer delivery + 42-family coverage/handoff](./execution_loop/evidence/ELP2-10/COMPLETE_POSITIVE_FIXTURE_SUPPORT_2026-10-23.md):
+Codex delivered positive financial-series and linked account/portfolio/alpha world
+helpers, focused schema/Zod/arithmetic tests 10/10 PASS. Claude owns BFF integration
+and browser acceptance; neither is claimed complete here. Positive fixture defaults
+must not inherit real-source absence; negative scenarios remain separately selectable.
+Rules §10.14 applies. Existing frozen integration and real Edge commissioning are
+unchanged. This is an isolated support lane, not yet canonical/installed.
+
 Bobby giao ngày2026-10-15: đọc toàn bộ bundle mới, đối chiếu đúng source
 worktrees trên AWS HK và thêm rules cho Claude nâng cấp UI/UX manager-first.
 Prompt B/C/D và bổ sung authority của Bobby được áp dụng trong
