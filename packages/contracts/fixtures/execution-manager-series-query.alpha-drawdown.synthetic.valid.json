@@ -1,0 +1,42 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "cases": [
+    {
+      "environment": "paper",
+      "metric": "NAV",
+      "window": "30D",
+      "subjects": [
+        {
+          "subject_type": "ALPHA",
+          "subject_id": "TEST_ONLY:alpha-a"
+        },
+        {
+          "subject_type": "ALPHA",
+          "subject_id": "TEST_ONLY:alpha-b"
+        }
+      ],
+      "economic_partition": {
+        "economic_domain": "PAPER",
+        "currency": "USDT",
+        "basis": "TEST_ONLY:nav-ledger",
+        "native_profile_ref": "TEST_ONLY:paper-ledger",
+        "domain_proof_ref": "TEST_ONLY:domain-proof"
+      }
+    },
+    {
+      "environment": "paper",
+      "metric": "DRAWDOWN",
+      "window": "30D",
+      "subjects": [
+        {
+          "subject_type": "ALPHA",
+          "subject_id": "TEST_ONLY:alpha-a"
+        },
+        {
+          "subject_type": "PORTFOLIO",
+          "subject_id": "TEST_ONLY:portfolio-a"
+        }
+      ]
+    }
+  ]
+}

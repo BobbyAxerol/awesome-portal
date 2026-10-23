@@ -106,6 +106,9 @@ import { ExecutionProfileReadAdapterController } from "./execution/profile-read-
 import { ExecutionProfileReadAdapterService } from "./execution/profile-read-adapter.service";
 import { LocalQueryAnalyticsService } from "./execution/local-query-analytics.service";
 import { CommandCenterController } from "./command-center/command-center.controller";
+import { VisitDigestController } from "./command-center/visit-digest.controller";
+import { VisitDigestService } from "./command-center/visit-digest.service";
+import { VisitDigestStore } from "./command-center/visit-digest.store";
 import { CommandCenterRepository } from "./command-center/command-center.repository";
 import { CommandCenterService } from "./command-center/command-center.service";
 import { ExecutionOperationsRepository } from "./operations/operations.repository";
@@ -244,10 +247,15 @@ import { ResearchReleaseCandidatePublicationRepository } from "./research/releas
 import { ResearchReleaseCandidatePublicationService } from "./research/release-candidate-publication.service";
 import { P22PublicationBridgeService } from "./research/p22-publication-bridge.service";
 import { CurrentHumanWorkspaceProvisioner } from "./execution-v2/current-human-workspace";
+import { CurrentViewCoreComposition } from "./execution-v2/current-view-composition";
+import type { PreparedCurrentViewRuntime } from "./execution-v2/current-view-runtime";
 
 /** Internal composition seam, never populated from request headers/body or
  * runtime environment flags. TEST_ONLY authority cannot enter a non-test app. */
 export interface ControlApiDependencies {
+  /** Explicit owner-only/hash-pinned private Research listener. Absent keeps
+   * the deployed default unchanged; never populated from a public request. */
+  currentViewRuntime?: PreparedCurrentViewRuntime;
   executionCommandTrust?: CommandTrust;
   executionInstanceRegistrationTrust?: InstanceRegistrationTrust;
   executionPendingControlTrust?: PendingControlTrust;
@@ -347,6 +355,7 @@ export class AppModule implements OnApplicationShutdown {
         ExecutionSubjectActivityController,
         ExecutionProfileReadAdapterController,
         CommandCenterController,
+        VisitDigestController,
         IncidentController,
         SandboxCertificationController,
         CanaryController,
@@ -453,6 +462,27 @@ export class AppModule implements OnApplicationShutdown {
           useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionReadScopes(db,access,cfg),
           inject: [CONTROL_API_POOL,ExecutionAccessService,CONTROL_API_CONFIG],
         },
+        ...(dependencies.currentViewRuntime ? [{
+          provide: CurrentViewCoreComposition,
+          useFactory: (auth: AuthService, scopes: ExecutionReadScopes) => {
+            const runtime = dependencies.currentViewRuntime!;
+            let composition: CurrentViewCoreComposition;
+            try { composition = new CurrentViewCoreComposition(auth, scopes, runtime.config); }
+            finally {
+              // Constructors retain private copies; erase loader-owned PEM
+              // bytes on success AND error, without logging their contents.
+              for (const tls of [runtime.config.transport.tls, runtime.config.edge.tls])
+                for (const bytes of [tls.key, tls.cert, tls.ca]) if (Buffer.isBuffer(bytes)) bytes.fill(0);
+            }
+            // This provider owns only its listener and original contexts. It
+            // must drain BEFORE the module's owned Execution pool finalizer.
+            return Object.assign(composition, {
+              onModuleInit: () => composition.start(runtime.listener),
+              beforeApplicationShutdown: () => composition.shutdown(),
+            });
+          },
+          inject: [AuthService, ExecutionReadScopes],
+        }] : []),
         {
           provide: ExecutionCommandService,
           useFactory: (db:Pool,access:ExecutionAccessService,cfg:ControlApiConfig)=>new ExecutionCommandService(db,access,
@@ -568,6 +598,8 @@ export class AppModule implements OnApplicationShutdown {
         StageActionEligibilityService,
         CommandCenterRepository,
         CommandCenterService,
+        VisitDigestService,
+        VisitDigestStore,
         ExecutionOperationsRepository,
         ExecutionOperationsService,
         {provide:ExecutionF0ReadService,useFactory:(repo:ExecutionOperationsRepository,access:ExecutionAccessService,cfg:ControlApiConfig)=>{

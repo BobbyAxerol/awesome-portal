@@ -65,6 +65,20 @@ export interface PortfolioListItem {
   deployment_count: number;
   allocated_by_currency: readonly { currency: string; value: string }[];
   updated_at: string;
+  /** WP-K slice 6 (N3), OPTIONAL: no owning source exists yet, so the control-api omits it. See `PortfolioHealth` in the published schema. */
+  health?: PortfolioHealth;
+  /** WP-K (GAP-17 / GAP-19), OPTIONAL: no owning source exists yet, so the control-api omits them. */
+  root_id?: string;
+  owner_user_id?: string | null;
+}
+
+export interface PortfolioHealth {
+  state: "PUBLISHED" | "NOT_PUBLISHED";
+  value: "HEALTHY" | "ATTENTION" | "DEGRADED" | "HALTED" | null;
+  basis: "WORST_OF_DEPLOYMENT_HEALTH" | null;
+  deployments_by_health: { HEALTHY: number; ATTENTION: number; DEGRADED: number; HALTED: number } | null;
+  as_of: string | null;
+  reason_code: string | null;
 }
 
 export interface AlphaFleetRow extends QueryResultRow {
@@ -105,8 +119,8 @@ export interface BindingRow extends QueryResultRow {
   credential_state: string;
   updated_at: Date;
   /**
-   * FE-CAT-4. Edge/Core-owned jsonb of per-row list figures. NOT in `selectColumns` and no migration adds it yet, so on
-   * today's table it is never present; `mapRow` publishes `figures` only when a row carries it.
+   * FE-CAT-4. Owning-source figures committed atomically with the binding snapshot.
+   * Legacy snapshots retain SQL NULL and therefore preserve their fallback.
    */
   list_figures?: unknown;
 }
@@ -207,7 +221,7 @@ export function bindingsResource(): PostgresListResource<BindingRow, BindingItem
   return {
     resourceId: "execution.bindings-list.v1",
     table: "execution_binding_projection",
-    selectColumns: ["scope_id", "binding_id", "account_id", "venue", "state", "credential_state", "updated_at"],
+    selectColumns: ["scope_id", "binding_id", "account_id", "venue", "state", "credential_state", "updated_at", "list_figures"],
     workspaceColumn: "scope_id",
     idSortField: "binding_id",
     filters: {

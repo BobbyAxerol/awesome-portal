@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-command-receipt.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "workspace_id",
+    "record_authority",
+    "read_at_ms",
+    "operation_id",
+    "command_key",
+    "request_key",
+    "state",
+    "side_effect"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.command-receipt.v1"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+    },
+    "record_authority": {
+      "const": "PORTAL_PROJECTION"
+    },
+    "read_at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "operation_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+    },
+    "command_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+    },
+    "request_key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "PLANNED",
+        "DENIED",
+        "APPLIED",
+        "VERIFIED",
+        "FAILED",
+        "EXPIRED"
+      ]
+    },
+    "side_effect": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_request_sent",
+        "relay"
+      ],
+      "properties": {
+        "source_request_sent": {
+          "type": "boolean"
+        },
+        "relay": {
+          "type": "string",
+          "enum": [
+            "DISABLED",
+            "NOT_ATTEMPTED",
+            "RELAYED"
+          ]
+        }
+      }
+    },
+    "receipt": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "receipt_ref",
+            "content_hash",
+            "issued_at_ms",
+            "issued_by",
+            "what_changes",
+            "verification"
+          ],
+          "properties": {
+            "receipt_ref": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+            },
+            "content_hash": {
+              "type": "string",
+              "pattern": "^sha256:[a-f0-9]{64}$(?![\\s\\S])"
+            },
+            "issued_at_ms": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "issued_by": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256,
+                  "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "what_changes": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            "verification": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "result",
+                    "verified_at_ms"
+                  ],
+                  "properties": {
+                    "result": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "SUCCEEDED",
+                        "FAILED",
+                        "PARTIAL"
+                      ]
+                    },
+                    "verified_at_ms": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "properties": {
+          "state": {
+            "enum": [
+              "APPLIED",
+              "VERIFIED"
+            ]
+          }
+        }
+      },
+      "then": {
+        "type": "object",
+        "required": [
+          "receipt"
+        ],
+        "properties": {
+          "receipt": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "type": "object",
+        "required": [
+          "state"
+        ],
+        "properties": {
+          "state": {
+            "const": "DENIED"
+          }
+        }
+      },
+      "then": {
+        "type": "object",
+        "properties": {
+          "side_effect": {
+            "type": "object",
+            "properties": {
+              "source_request_sent": {
+                "const": false
+              },
+              "relay": {
+                "enum": [
+                  "DISABLED",
+                  "NOT_ATTEMPTED"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-grants.published.synthetic.valid.json",
+    "none": "execution-grants.none.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "no-amounts",
+      "base": "published",
+      "rule": "a grant states at least one amount",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "amounts"
+          ],
+          "value": []
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "amount-number",
+      "base": "published",
+      "rule": "money is exact decimal text",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "amounts",
+            0,
+            "value"
+          ],
+          "value": 5000
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "state-unknown",
+      "base": "published",
+      "rule": "states are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "items",
+            0,
+            "state"
+          ],
+          "value": "LENT"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

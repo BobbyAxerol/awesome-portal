@@ -164,13 +164,14 @@ export const scopeAllowsQueryField = scopeAllowsField;
  * Evaluate the unfiltered source census; seeing every currently visible row is
  * not proof that hidden peer allocations do not exist. Delivery still rechecks
  * the minted current authority after all asynchronous work. */
-export function scopeAllowsFullAccountingPopulation(scope:AuthorizedExecutionReadScope,portfolioId?:string):boolean {
+export function scopeAllowsFullAccountingPopulation(scope:AuthorizedExecutionReadScope,portfolioId?:string,alphaId?:string):boolean {
   assertExecutionReadScope(scope);const state=minted.get(scope)!;
   if(scope.mode!=="SCOPED_V2"||!state.context||!state.requirement.dataset||!businessReads.has(state.requirement.action))return false;
   const full=(resource:AccessResource)=>!businessReadDenied(state.context!,resource,scope.environment)&&
     evaluateBusinessRead(state.context!,"business.read_all",resource,scope.environment).allowed;
-  const population=state.population.filter(t=>portfolioId===undefined||t.portfolio_id===portfolioId);
-  if(!population.length)return portfolioId===undefined?scope.wholePopulation:
+  const population=state.population.filter(t=>(portfolioId===undefined||t.portfolio_id===portfolioId)&&(alphaId===undefined||t.alpha_id===alphaId));
+  if(!population.length)return alphaId!==undefined?state.resources.some(r=>r.kind==="ALPHA"&&r.id===alphaId)&&full({kind:"ALPHA",id:alphaId}):
+    portfolioId===undefined?scope.wholePopulation:
     state.resources.some(r=>r.kind==="PORTFOLIO"&&r.id===portfolioId)&&full({kind:"PORTFOLIO",id:portfolioId});
   const visible=new Set(state.tuples.map(t=>JSON.stringify(t)));
   return population.every(t=>visible.has(JSON.stringify(t))&&tupleLineage(t).every(full));

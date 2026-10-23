@@ -1,7 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Pool, PoolClient } from "pg";
 import { EXECUTION_DATA_POOL } from "../tokens";
-import { AlphaFleetEnvironment, ManagerListEnvironment } from "./contracts";
+import { AlphaFleetEnvironment, BindingRow, ManagerListEnvironment } from "./contracts";
+import { BindingCounts, BindingFigures, mapBindingFigures } from "./binding-figures";
+import { PostgresSnapshotReader } from "../query";
 
 type ProjectionEnvironment = AlphaFleetEnvironment;
 
@@ -102,11 +104,39 @@ export interface BindingProjectionRecord {
   state: string;
   credentialState: string;
   updatedAt: Date;
+  /** Qualified owning-source facts; never derived from wallet/internal balance. */
+  listFigures?: BindingFigures;
 }
 
 @Injectable()
 export class ManagerListsRepository {
   constructor(@Inject(EXECUTION_DATA_POOL) readonly pool: Pool) {}
+
+  /** Metadata and full authorized-environment count in the list's own RR
+   * transaction. Other profiles have NOT been authorized by this request:
+   * do not read/count them merely because retained rows exist in this DB. */
+  async bindingListSnapshot(reader: PostgresSnapshotReader<BindingRow>, workspaceId: string,
+    environment: ManagerListEnvironment): Promise<{ snapshot: ProjectionSnapshot; counts?: BindingCounts } | null> {
+    const rows = await reader.query<{
+      source_as_of: Date | null; source_completeness: ProjectionSnapshot["sourceCompleteness"];
+      row_count: number; refreshed_at: Date; summary: Record<string, unknown>; visible_count: string;
+    }>(`SELECT s.source_as_of, s.source_completeness, s.row_count, s.refreshed_at, s.summary,
+         (SELECT count(*)::text FROM execution_binding_projection b
+           WHERE b.scope_id = $3 AND b.workspace_id = $1 AND b.environment = $2) AS visible_count
+        FROM execution_manager_projection_snapshots s
+        WHERE s.workspace_id = $1 AND s.environment = $2 AND s.projection_kind = 'BINDINGS'`,
+      [workspaceId, environment, `${workspaceId}:${environment}`]);
+    const row = rows[0]; if (!row) return null;
+    const count = Number(row.visible_count);
+    if (!Number.isSafeInteger(count) || count < 0) throw new Error("BINDING_COUNT_OUT_OF_RANGE");
+    const snapshot: ProjectionSnapshot = { sourceAsOf: row.source_as_of,
+      sourceCompleteness: row.source_completeness, rowCount: row.row_count,
+      refreshedAt: row.refreshed_at, summary: row.summary };
+    return { snapshot, ...(row.source_as_of ? { counts: {
+      basis: "AUTHORIZED_SNAPSHOT", observed_at: row.source_as_of.toISOString(), coverage: "PARTIAL",
+      all: null, issues: null, by_environment: { paper: null, sandbox: null, live: null, [environment]: count },
+    } as BindingCounts } : {}) };
+  }
 
   async snapshot(
     workspaceId: string,
@@ -170,13 +200,15 @@ export class ManagerListsRepository {
       const scope = `${input.workspaceId}:${input.environment}`;
       await client.query(`DELETE FROM execution_binding_projection WHERE scope_id = $1`, [scope]);
       for (const row of input.rows) {
+        const figures = mapBindingFigures(row.listFigures);
         await client.query(
           `INSERT INTO execution_binding_projection
              (scope_id, workspace_id, environment, binding_id, account_id, venue, state,
-              credential_state, updated_at, source_as_of, projection_refreshed_at)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+              credential_state, updated_at, source_as_of, projection_refreshed_at, list_figures)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb)`,
           [scope, input.workspaceId, input.environment, row.bindingId, row.accountId, row.venue,
-            row.state, row.credentialState, row.updatedAt, input.sourceAsOf, refreshedAt],
+            row.state, row.credentialState, row.updatedAt, input.sourceAsOf, refreshedAt,
+            figures ? JSON.stringify(figures) : null],
         );
       }
       await this.upsertSnapshot(client, input.workspaceId, input.environment, "BINDINGS",
@@ -236,9 +268,9 @@ export class ManagerListsRepository {
   async binding(scopeId: string, bindingId: string): Promise<BindingProjectionRecord | null> {
     const result = await this.pool.query<{
       binding_id: string; account_id: string; venue: string; state: string;
-      credential_state: string; updated_at: Date;
+      credential_state: string; updated_at: Date; list_figures: unknown;
     }>(
-      `SELECT binding_id, account_id, venue, state, credential_state, updated_at
+      `SELECT binding_id, account_id, venue, state, credential_state, updated_at, list_figures
          FROM execution_binding_projection WHERE scope_id = $1 AND binding_id = $2`,
       [scopeId, bindingId],
     );
@@ -246,6 +278,7 @@ export class ManagerListsRepository {
     return row ? {
       bindingId: row.binding_id, accountId: row.account_id, venue: row.venue,
       state: row.state, credentialState: row.credential_state, updatedAt: row.updated_at,
+      listFigures: mapBindingFigures(row.list_figures),
     } : null;
   }
 

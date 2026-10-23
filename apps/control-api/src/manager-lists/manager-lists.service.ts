@@ -133,13 +133,16 @@ export class ManagerListsService {
   }
 
   private async legacyBindings(principal: ManagerListPrincipal, query: BindingsQuery) {
-    const snapshot = await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
-    const page = await this.query.list(
+    await this.ensureSnapshot(principal, query.environment, "BINDINGS", !query.after && !query.before);
+    const { page, snapshot: retained } = await this.query.listWithSnapshot(
       bindingsResource(),
       { actorId: principal.user.userId, workspaceId: scope(principal.workspaceId, query.environment), role: principal.user.role },
       bindingsRawQuery(query),
+      reader => this.repository.bindingListSnapshot(reader, principal.workspaceId, query.environment),
     );
-    return envelope("execution.bindings-list.v1", principal, query.environment, snapshot, page, projectionFreshnessBudget(this.config));
+    if (!retained) throw new ManagerListsError("BR72_BINDINGS_SNAPSHOT_NOT_RECORDED", 503);
+    return { ...envelope("execution.bindings-list.v1", principal, query.environment, retained.snapshot, page,
+      projectionFreshnessBudget(this.config)), ...(retained.counts ? { counts: retained.counts } : {}) };
   }
 
   async binding(principal: ManagerListPrincipal, environment: ManagerListEnvironment, bindingId: string) {
@@ -976,6 +979,7 @@ function bindingRows(
   }).sort((a, b) => a.bindingId.localeCompare(b.bindingId));
 }
 
+
 function completeness(...pages: ManagerPage[]): ProjectionSnapshot["sourceCompleteness"] {
   return pages.some((page) => page.completeness === "PARTIAL") ? "PARTIAL"
     : pages.some((page) => page.completeness === "UNKNOWN") ? "UNKNOWN" : "COMPLETE";
@@ -1066,7 +1070,8 @@ function freshness(snapshot: ProjectionSnapshot, budget: FreshnessBudgetMs): "FR
 }
 function bindingItem(item: BindingProjectionRecord): BindingItem {
   return { binding_id: item.bindingId, account_id: item.accountId, venue: item.venue,
-    state: item.state, credential_state: item.credentialState, updated_at: item.updatedAt.toISOString() };
+    state: item.state, credential_state: item.credentialState, updated_at: item.updatedAt.toISOString(),
+    ...(item.listFigures ? { figures: item.listFigures } : {}) };
 }
 function envelope(
   schemaVersion: string, principal: ManagerListPrincipal, environment: AlphaFleetEnvironment,

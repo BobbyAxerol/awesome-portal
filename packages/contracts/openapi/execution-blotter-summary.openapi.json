@@ -1,0 +1,315 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "blotter-summary",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/v1/execution/blotter/summary": {
+      "get": {
+        "operationId": "executionBlotterSummaryGetV1",
+        "security": [
+          {
+            "PortalSession": []
+          }
+        ],
+        "description": "Status buckets (incl. Working, Conditional, Cancelled) and the order funnel of one query scope. The funnel counts are integers (a true 0 is a value) and never grow along the funnel: filled <= venue_acknowledged <= risk_granted <= submitted. CONTRACT ONLY: no producer exists yet (Edge/Core inputs are in WP_K_CONTRACTS_2026-10-23.md), so nothing serves this route and every screen keeps its typed absence.",
+        "parameters": [
+          {
+            "name": "workspace_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          },
+          {
+            "name": "environment",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "paper",
+                "sandbox",
+                "live"
+              ]
+            }
+          },
+          {
+            "name": "deployment_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 256,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authorized current answer; absence stays typed",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlotterSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlotterSummaryProblem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Session required",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlotterSummaryProblem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unavailable or not authorized",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlotterSummaryProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Source unavailable",
+            "headers": {
+              "Cache-Control": {
+                "required": true,
+                "schema": {
+                  "type": "string",
+                  "const": "private, no-store"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BlotterSummaryProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "PortalSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "__Host-portal_session"
+      }
+    },
+    "schemas": {
+      "BlotterSummary": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "workspace_id",
+          "record_authority",
+          "read_at_ms",
+          "environment"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "portal.execution.blotter-summary.v1"
+          },
+          "workspace_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+          },
+          "record_authority": {
+            "const": "PORTAL_PROJECTION"
+          },
+          "read_at_ms": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "environment": {
+            "type": "string",
+            "enum": [
+              "paper",
+              "sandbox",
+              "live"
+            ]
+          },
+          "status_buckets": {
+            "anyOf": [
+              {
+                "type": "array",
+                "maxItems": 7,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "bucket",
+                    "count"
+                  ],
+                  "properties": {
+                    "bucket": {
+                      "type": "string",
+                      "enum": [
+                        "OPEN",
+                        "WORKING",
+                        "CONDITIONAL",
+                        "PARTIAL",
+                        "FILLED",
+                        "CANCELLED",
+                        "REJECTED"
+                      ]
+                    },
+                    "count": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "funnel": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "submitted",
+                  "risk_granted",
+                  "venue_acknowledged",
+                  "filled"
+                ],
+                "properties": {
+                  "submitted": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "risk_granted": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "venue_acknowledged": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "filled": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "BlotterSummaryProblem": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "error",
+          "request_id"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "EXECUTION_READ_NOT_AVAILABLE",
+                  "EXECUTION_READ_QUERY_INVALID"
+                ]
+              },
+              "message": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            }
+          },
+          "request_id": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-blotter-summary.published.synthetic.valid.json",
+    "not-read": "execution-blotter-summary.not-read.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "funnel-grows",
+      "base": "published",
+      "rule": "the funnel never grows along its steps",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "funnel",
+            "filled"
+          ],
+          "value": 49
+        }
+      ],
+      "refused_by": "READER_ONLY"
+    },
+    {
+      "id": "bucket-unknown",
+      "base": "published",
+      "rule": "buckets are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "status_buckets",
+            0,
+            "bucket"
+          ],
+          "value": "LIMBO"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "count-negative",
+      "base": "published",
+      "rule": "a count is not negative",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "funnel",
+            "submitted"
+          ],
+          "value": -1
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

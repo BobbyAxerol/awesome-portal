@@ -84,6 +84,9 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
   source_set_digest: publicationDigest, as_of_ms: utcMilliseconds, recorded_through_ms: utcMilliseconds,
   facts_through_ms: utcMilliseconds.nullable(), observed_at_ms: utcMilliseconds,
   source_quality: managerQuality, members: z.array(managerMember).max(10_000), facts: z.array(managerFact).max(20_000),
+  stage_transitions: z.array(z.object({ alpha_id: text, alpha_version_id: text, portfolio_id: text,
+    environment: executionEnvironment, stage: financialStage, entered_at_ms: utcMilliseconds,
+    exited_at_ms: utcMilliseconds.nullable(), source_revision: opaqueRevision }).strict()).max(10_000).optional(),
   precomputed_scores: z.array(managerScorePublication).max(128).optional(),
   precomputed_compositions: z.array(managerCompositionPublication).max(128).optional(),
   precomputed_regimes: z.array(managerRegimePublication).max(128).optional(),
@@ -95,12 +98,23 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
     d.facts.some(f => f.recorded_at_ms > d.recorded_through_ms || f.effective_at_ms > d.as_of_ms))
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_CUTOFF_INVALID" });
   const allowedStages = d.environment === "paper" ? ["PAPER"] : d.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
+  const stageMembers = new Set(d.members.map(m => JSON.stringify([m.tuple.alpha_id, m.tuple.alpha_version_id, m.tuple.portfolio_id, m.stage])));
+  for (const t of d.stage_transitions ?? []) {
+    if (t.source_revision !== d.revision || t.environment !== d.environment || !allowedStages.includes(t.stage) ||
+      t.entered_at_ms > d.as_of_ms || t.exited_at_ms !== null && (t.exited_at_ms <= t.entered_at_ms || t.exited_at_ms > d.as_of_ms) ||
+      !stageMembers.has(JSON.stringify([t.alpha_id, t.alpha_version_id, t.portfolio_id, t.stage])))
+      c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_STAGE_TRANSITION_BINDING_INVALID" });
+  }
   if (d.members.some(member => !allowedStages.includes(member.stage)))
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ENVIRONMENT_STAGE_MISMATCH" });
   validateManagerSeriesPublications(d, c);
 });
 const filter =z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL", "IN"]),
   value: text.optional(), values: z.array(text).min(1).max(32).optional() }).strict();
+/** WP-K slice 6: portfolio-grain (group) sort and filter on a published group metric. Additive: absent = the lexical group order of before. */
+const groupMetricKey = z.string().regex(/^[a-z][a-z0-9_]{1,63}$/);
+export const managerGroupSort = z.object({ metric_key: groupMetricKey, direction: z.enum(["asc", "desc"]) }).strict();
+export const managerGroupFilter = z.object({ metric_key: groupMetricKey, op: z.enum(["GTE", "LTE", "IS_NULL"]), value: text.optional() }).strict();
 export const managerModelQuery = z.object({ workspace_id: text.optional(), environment: managerEnvironmentScope,
   q: managerSearchText.optional(), q_mode: managerSearchMode.optional(), window: managerWindowQuery.optional(),
   stage_filter: z.array(financialStage).max(4).default([]), lifecycle_filter: text.optional(),
@@ -108,11 +122,16 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
   sort: z.array(z.object({ field: managerScalar, direction: z.enum(["asc", "desc"]) }).strict()).min(1).max(3)
     .default([{ field: "name", direction: "asc" }]),
   group_by: z.array(managerGroupField).max(2).default([]),
+  group_sort: z.array(managerGroupSort).max(1).default([]), group_filters: z.array(managerGroupFilter).max(8).default([]),
   economic_partition: managerPartition.optional(), limit: z.number().int().min(1).max(200).default(100),
   after: z.string().min(1).max(4096).optional(), before: z.string().min(1).max(4096).optional(),
+  group_limit: z.number().int().min(1).max(200).optional(),
+  group_after: z.string().min(1).max(4096).optional(), group_before: z.string().min(1).max(4096).optional(),
 }).strict().superRefine((q, c) => {
   if (q.q_mode !== undefined && q.q === undefined)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_SEARCH_QUERY_REQUIRED" });
+  if (q.group_after && q.group_before || !q.group_by.length && (q.group_limit !== undefined || q.group_after || q.group_before))
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_QUERY_INVALID" });
   // ALL spans every environment: any stage word may narrow it (an environment without that stage then holds no row).
   const allowedStages = q.environment === "ALL" ? ["PAPER", "SANDBOX", "CANARY", "LIVE"] : q.environment === "paper" ? ["PAPER"] :
     q.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
@@ -123,6 +142,15 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ALL_WINDOW_UNSUPPORTED" });
   if (q.after && q.before || new Set(q.sort.map(s => s.field)).size !== q.sort.length || new Set(q.group_by).size !== q.group_by.length)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_QUERY_INVALID" });
+  if ((q.group_sort.length || q.group_filters.length) && !q.group_by.length)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_QUERY_REQUIRES_GROUP_BY" });
+  if ((q.group_sort.length || q.group_filters.length) && q.environment === "ALL")
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_QUERY_ALL_UNSUPPORTED" });
+  for (const f of q.group_filters)
+    if (f.op === "IS_NULL" ? f.value !== undefined : f.value === undefined || !exactDecimal.safeParse(f.value).success)
+      c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_FILTER_INVALID" });
+  if (new Set(q.group_filters.map(f => `${f.metric_key}:${f.op}`)).size !== q.group_filters.length)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_FILTER_DUPLICATE" });
   for (const f of q.filters) {
     if (f.op === "IN" ? f.value !== undefined || f.values === undefined :
       f.values !== undefined || (f.op === "IS_NULL" ? f.value !== undefined : f.value === undefined))
@@ -186,8 +214,17 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   query_policy: z.object({ null_order: z.literal("LAST_BOTH_DIRECTIONS"), stage_order: z.literal("LEXICAL_SET_NOT_RISK_RANK"), maximum_response_bytes: z.literal(1048576) }).strict(),
   page: z.object({ limit: z.number().int().min(1).max(200), returned_count: z.number().int().min(0).max(200),
     authorized_filtered_count: z.number().int().min(0).max(10_000), next_cursor: z.string().max(4096).nullable(), previous_cursor: z.string().max(4096).nullable() }).strict(),
+  group_page: z.object({ limit: z.number().int().min(1).max(200), returned_count: z.number().int().min(0).max(200),
+    authorized_filtered_count: z.number().int().min(0).max(40_000), next_cursor: z.string().max(4096).nullable(), previous_cursor: z.string().max(4096).nullable() }).strict().optional(),
   items: z.array(managerDatasetRow).max(200), groups: z.array(z.object({ key: z.array(z.object({ field: managerGroupField, value: text.nullable() }).strict()).max(2),
+    attribution: z.object({ alpha_id: text, name: text.nullable(), owner_user_id: text.nullable(),
+      name_reason_code: z.enum(["GROUP_NAME_NOT_PUBLISHED", "GROUP_NAME_AMBIGUOUS"]).nullable(),
+      owner_reason_code: z.enum(["GROUP_OWNER_NOT_PUBLISHED", "GROUP_OWNER_AMBIGUOUS"]).nullable() }).strict().optional(),
     unique_row_count: z.number().int().min(0).max(10_000), totals_scope: z.literal("FULL_AUTHORIZED_FILTERED_QUERY"), economic_partitions: z.array(partitionMetrics).max(200) }).strict()).max(200),
+  // WP-K slice 6: present only when the query named a group sort or filter. `partition_basis` says which partition each group's metric was read in.
+  group_query: z.object({ sort: z.array(managerGroupSort).max(1), filters: z.array(managerGroupFilter).max(8),
+    partition_basis: z.enum(["PINNED_PARTITION", "SINGLE_PARTITION_ONLY"]),
+    groups_before_filter: z.number().int().min(0).max(40_000), groups_returned: z.number().int().min(0).max(200) }).strict().optional(),
   capital_statements: z.array(partitionMetrics).max(200),
   statement_scope: z.literal("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS"),
   scores: z.object({ raw: scorePending, composition: compositionSummary, direct_nav: scorePending,

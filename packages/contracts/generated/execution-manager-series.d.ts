@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** @description Exact-decimal NAV / Net PnL / Return series for 1-4 subjects (portfolios or the fund) over one exact window. Each subject is AVAILABLE, EMPTY or typed UNAVAILABLE; nothing is rebased, summed across currencies, interpolated or carried forward. `comparison` is re-derived by the validator and is INCOMPARABLE (CURRENCY_MIXED, ...) when the subjects do not share one partition, basis, unit, methodology and window. The financial normalized source that fills a series is MISSING today: every profile answers SERIES_SOURCE_NOT_PUBLISHED until a producer publishes one. */
+        /** @description Exact-decimal NAV / Net PnL / Return / Drawdown series for 1-4 subjects (alphas, portfolios or the fund) over one exact window. Each subject is AVAILABLE, EMPTY or typed UNAVAILABLE; nothing is rebased, summed across currencies, interpolated or carried forward. `comparison` is re-derived by the validator and is INCOMPARABLE (CURRENCY_MIXED, ...) when the subjects do not share one partition, basis, unit, methodology and window. The financial normalized source that fills a series is MISSING today: every profile answers SERIES_SOURCE_NOT_PUBLISHED until a producer publishes one. */
         get: operations["executionManagerSeriesGetV1"];
         put?: never;
         post?: never;
@@ -36,7 +36,7 @@ export interface components {
             /** @constant */
             source_authority: "TRADING_SYSTEM";
             /** @enum {string} */
-            metric: "NAV" | "NET_PNL" | "RETURN";
+            metric: "NAV" | "NET_PNL" | "RETURN" | "DRAWDOWN";
             selected_window: {
                 requested: ("7D" | "30D" | "90D" | "ALL") | {
                     from_ms: number;
@@ -67,7 +67,7 @@ export interface components {
             series: ({
                 subject: {
                     /** @enum {string} */
-                    subject_type: "FUND" | "PORTFOLIO";
+                    subject_type: "FUND" | "PORTFOLIO" | "ALPHA";
                     subject_id: string;
                 };
                 /** @enum {string} */
@@ -143,16 +143,16 @@ export interface components {
                 source_set_ref: string;
                 revision: string;
             };
-        } & (unknown & unknown);
+        } & (unknown & unknown & unknown);
         ManagerSeriesQuery: {
             workspace_id?: string;
             /** @enum {string} */
             environment: "paper" | "sandbox" | "live";
             /** @enum {string} */
-            metric: "NAV" | "NET_PNL" | "RETURN";
+            metric: "NAV" | "NET_PNL" | "RETURN" | "DRAWDOWN";
             subjects: ({
                 /** @enum {string} */
-                subject_type: "FUND" | "PORTFOLIO";
+                subject_type: "FUND" | "PORTFOLIO" | "ALPHA";
                 subject_id?: string;
             } & unknown)[];
             window: ("7D" | "30D" | "90D" | "ALL") | {
@@ -171,7 +171,7 @@ export interface components {
         ManagerSeriesEntry: {
             subject: {
                 /** @enum {string} */
-                subject_type: "FUND" | "PORTFOLIO";
+                subject_type: "FUND" | "PORTFOLIO" | "ALPHA";
                 subject_id: string;
             };
             /** @enum {string} */
@@ -244,12 +244,12 @@ export interface components {
         ManagerSeriesPublication: {
             binding: {
                 /** @enum {string} */
-                subject_type: "portfolio" | "manager_book";
+                subject_type: "portfolio" | "manager_book" | "alpha";
                 subject_id: string;
                 tuple_population_digest: string;
                 stage_filter: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 /** @enum {string} */
-                metric: "NAV" | "NET_PNL" | "RETURN";
+                metric: "NAV" | "NET_PNL" | "RETURN" | "DRAWDOWN";
                 partition: {
                     /** @enum {string} */
                     economic_domain: "ACTUAL" | "PAPER" | "SANDBOX";
@@ -305,7 +305,7 @@ export interface components {
                 policy_revision: string;
                 source_as_of_ms: number;
             };
-        } & (unknown & unknown);
+        } & (unknown & unknown & unknown);
         ManagerSeriesProblem: {
             error: {
                 /** @enum {string} */
@@ -329,7 +329,7 @@ export interface operations {
             query: {
                 environment: "paper" | "sandbox" | "live";
                 workspace_id?: string;
-                metric: "NAV" | "NET_PNL" | "RETURN";
+                metric: "NAV" | "NET_PNL" | "RETURN" | "DRAWDOWN";
                 subjects: string;
                 window: string;
                 economic_partition?: string;

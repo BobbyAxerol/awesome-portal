@@ -27,10 +27,10 @@ import { publicationDigest } from "./publication.contract";
 const text = z.string().min(1).max(256);
 export const MAX_SERIES_POINTS = 2000;
 export const MAX_SERIES_GAPS = 256;
-export const seriesMetric = z.enum(["NAV", "NET_PNL", "RETURN"]);
+export const seriesMetric = z.enum(["NAV", "NET_PNL", "RETURN", "DRAWDOWN"]);
 export type SeriesMetric = z.infer<typeof seriesMetric>;
 /** Field-policy name each metric is read under (BUSINESS_READ_FIELDS). */
-export const SERIES_METRIC_FIELD: Record<SeriesMetric, string> = { NAV: "current_nav", NET_PNL: "net_pnl", RETURN: "return" };
+export const SERIES_METRIC_FIELD: Record<SeriesMetric, string> = { NAV: "current_nav", NET_PNL: "net_pnl", RETURN: "return", DRAWDOWN: "drawdown" };
 /** Same five keys as `managerPartition`; kept local so this file stays import-cycle free (a test pins equality). */
 export const seriesPartition = z.object({ economic_domain: z.enum(["ACTUAL", "PAPER", "SANDBOX"]), currency: text, basis: text,
   native_profile_ref: text, domain_proof_ref: text }).strict();
@@ -42,8 +42,8 @@ export const seriesUnit = z.enum(["MONEY", "RATIO"]);
  */
 export const seriesRatioScale = z.enum(["FRACTION", "PERCENT"]);
 export type SeriesRatioScale = z.infer<typeof seriesRatioScale>;
-/** The only metric/unit pairing there is: NAV and NET_PNL are money in one currency, RETURN is a ratio with a scale. */
-export const SERIES_METRIC_UNIT: Record<SeriesMetric, z.infer<typeof seriesUnit>> = { NAV: "MONEY", NET_PNL: "MONEY", RETURN: "RATIO" };
+/** The only metric/unit pairing there is: NAV and NET_PNL are money in one currency, RETURN and DRAWDOWN (a peak-to-trough ratio, never above zero) are ratios with a scale. */
+export const SERIES_METRIC_UNIT: Record<SeriesMetric, z.infer<typeof seriesUnit>> = { NAV: "MONEY", NET_PNL: "MONEY", RETURN: "RATIO", DRAWDOWN: "RATIO" };
 export const seriesPoint = z.object({ ts_ms: utcMilliseconds, value: exactDecimal }).strict();
 export const seriesGap = z.object({ from_ms: utcMilliseconds, to_ms: utcMilliseconds,
   reason: z.enum(["SOURCE_GAP", "RETENTION", "SESSION_CLOSED", "PROJECTION_DISCONTINUITY"]) }).strict();
@@ -60,13 +60,15 @@ export interface SeriesBody { unit: z.infer<typeof seriesUnit>; currency: string
 export function seriesBodyIssues(b: SeriesBody, cutoffMs: number | null): string[] {
   const issues: string[] = [];
   if (b.window.from_ms >= b.window.to_ms) issues.push("MANAGER_SERIES_WINDOW_INVALID");
-  if (b.metric === "RETURN" ? b.unit !== "RATIO" || b.currency !== null :
+  if (SERIES_METRIC_UNIT[b.metric] === "RATIO" ? b.unit !== "RATIO" || b.currency !== null :
     b.unit !== "MONEY" || b.currency === null || b.currency !== b.partition.currency)
     issues.push("MANAGER_SERIES_UNIT_CURRENCY_INVALID");
   if (b.unit !== SERIES_METRIC_UNIT[b.metric]) issues.push("MANAGER_SERIES_METRIC_UNIT_MISMATCH");
   // A scale belongs to a ratio and only to a ratio; a ratio with values and no stated scale is not publishable (an EMPTY one may stay null).
   if (b.unit === "MONEY" ? b.ratio_scale !== null : b.ratio_scale === null && b.points.length) issues.push("MANAGER_SERIES_RATIO_SCALE_INVALID");
   if (b.basis !== b.partition.basis) issues.push("MANAGER_SERIES_BASIS_MISMATCH");
+  // WP-K: a drawdown is a peak-to-trough ratio: zero or negative, never above zero (checked on the exact decimal text, no float).
+  if (b.metric === "DRAWDOWN" && b.points.some(p => !p.value.startsWith("-") && /[1-9]/.test(p.value))) issues.push("MANAGER_SERIES_DRAWDOWN_POSITIVE");
   let previous = -1;
   for (const point of b.points) {
     if (point.ts_ms <= previous) { issues.push("MANAGER_SERIES_POINTS_NOT_ASCENDING"); break; }
@@ -85,7 +87,7 @@ export function seriesBodyIssues(b: SeriesBody, cutoffMs: number | null): string
 }
 
 export const managerSeriesBinding = z.object({
-  subject_type: z.enum(["portfolio", "manager_book"]), subject_id: text,
+  subject_type: z.enum(["portfolio", "manager_book", "alpha"]), subject_id: text,
   tuple_population_digest: publicationDigest, stage_filter: z.array(financialStage).min(1).max(4),
   metric: seriesMetric, partition: seriesPartition, window_start_ms: utcMilliseconds, window_end_ms: utcMilliseconds,
 }).strict();

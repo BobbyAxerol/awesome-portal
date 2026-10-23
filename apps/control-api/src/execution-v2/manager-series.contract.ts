@@ -27,7 +27,7 @@ export const MAX_SERIES_SUBJECTS = 4;
 export const MAX_AXIS_POINTS = MAX_SERIES_SUBJECTS * MAX_SERIES_POINTS;
 
 /* ───────────── query ───────────── */
-export const managerSeriesSubjectQuery = z.object({ subject_type: z.enum(["FUND", "PORTFOLIO"]), subject_id: text.optional() }).strict()
+export const managerSeriesSubjectQuery = z.object({ subject_type: z.enum(["FUND", "PORTFOLIO", "ALPHA"]), subject_id: text.optional() }).strict()
   .superRefine((s, c) => {
     if ((s.subject_type === "FUND") !== (s.subject_id === undefined))
       c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_SERIES_SUBJECT_INVALID" });
@@ -51,7 +51,7 @@ export const SERIES_EMPTY_REASON = "NO_POINTS_PUBLISHED_IN_WINDOW" as const;
 /** A point as EMITTED: canonical zero (MD-5). The stored publication's `seriesPoint` still admits a signed zero. */
 export const managerSeriesResponsePoint = z.object({ ts_ms: utcMilliseconds, value: managerResponseDecimal }).strict();
 export const managerSeriesEntry = z.object({
-  subject: z.object({ subject_type: z.enum(["FUND", "PORTFOLIO"]), subject_id: text }).strict(),
+  subject: z.object({ subject_type: z.enum(["FUND", "PORTFOLIO", "ALPHA"]), subject_id: text }).strict(),
   state: z.enum(["AVAILABLE", "EMPTY", "UNAVAILABLE"]),
   reason_code: z.enum([...SERIES_UNAVAILABLE_REASONS, SERIES_EMPTY_REASON]).nullable(),
   partition: seriesPartition.nullable(), unit: seriesUnit.nullable(), currency: text.nullable(),
@@ -149,9 +149,11 @@ export const managerSeriesResponse = z.object({
       "ALL_HISTORY_WINDOW_NOT_PUBLISHED"].includes(e.reason_code ?? ""))) bad("MANAGER_SERIES_SOURCE_NOT_PUBLISHED_CONTRADICTED", ["series"]);
   const resolved = r.selected_window.resolved;
   r.series.forEach((e, i) => {
-    // FE-013: the metric fixes the unit (NAV, NET_PNL: MONEY in the partition currency; RETURN: RATIO with a stated scale).
+    // FE-013: the metric fixes the unit (NAV, NET_PNL: MONEY in the partition currency; RETURN, DRAWDOWN: RATIO with a stated scale).
     if (e.state !== "UNAVAILABLE" && e.unit !== SERIES_METRIC_UNIT[r.metric]) bad("MANAGER_SERIES_METRIC_UNIT_MISMATCH", ["series", i]);
-    if (e.state === "UNAVAILABLE" && e.reason_code === "RATIO_SCALE_NOT_PUBLISHED" && r.metric !== "RETURN") bad("MANAGER_SERIES_REASON_METRIC_INVALID", ["series", i]);
+    // WP-K: a drawdown never rises above zero.
+    if (r.metric === "DRAWDOWN" && e.points.some(p => !p.value.startsWith("-") && /[1-9]/.test(p.value))) bad("MANAGER_SERIES_DRAWDOWN_POSITIVE", ["series", i]);
+    if (e.state === "UNAVAILABLE" && e.reason_code === "RATIO_SCALE_NOT_PUBLISHED" && SERIES_METRIC_UNIT[r.metric] !== "RATIO") bad("MANAGER_SERIES_REASON_METRIC_INVALID", ["series", i]);
     if (e.state === "UNAVAILABLE") {
       // ALL has no resolvable window, so a reason that says "this window is missing" or "pick a partition" can not be true of it;
       // and ALL_HISTORY_WINDOW_NOT_PUBLISHED can not be said of a window that was resolved.

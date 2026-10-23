@@ -65,6 +65,8 @@ const isField = (key, value) => obj({ [key]: { const: value } }, [key]);
 const add = (schema, ...conditions) => { schema.allOf = [...(schema.allOf ?? []), ...conditions]; };
 const nul = { type: 'null' }, nonNull = { not: { type: 'null' } };
 const emptyArray = { type: 'array', maxItems: 0 }, someItem = { type: 'array', minItems: 1 };
+// An exact decimal that is zero or negative (a leading minus on a non-zero magnitude, or an unsigned zero). The signed zero is refused by the MD-5 pattern, not here.
+const NON_POSITIVE = '^(?:0(?:\\.0+)?|-(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?)$(?![\\s\\S])';
 const descriptors = ['partition', 'unit', 'basis', 'methodology_ref', 'window'];
 function entrySemantics(entry) {
   add(entry,
@@ -92,10 +94,13 @@ function responseSemantics(response) {
   p.series.uniqueItems = false; // identity is the (subject_type, subject_id) pair; checked by the server validator
   entrySemantics(p.series.items);
   comparisonSemantics(p.comparison);
-  // FE-013: the metric fixes the unit. NAV / NET_PNL: MONEY; RETURN: RATIO. An UNAVAILABLE entry has no unit (null) and passes.
+  // FE-013: the metric fixes the unit. NAV / NET_PNL: MONEY; RETURN / DRAWDOWN: RATIO (WP-K). An UNAVAILABLE entry has no unit (null) and passes.
   add(response,
-    { if: isField('metric', 'RETURN'), then: obj({ series: { type: 'array', items: obj({ unit: { enum: ['RATIO', null] } }) } }),
+    { if: obj({ metric: { enum: ['RETURN', 'DRAWDOWN'] } }, ['metric']), then: obj({ series: { type: 'array', items: obj({ unit: { enum: ['RATIO', null] } }) } }),
       else: obj({ series: { type: 'array', items: obj({ unit: { enum: ['MONEY', null] }, reason_code: { not: { const: 'RATIO_SCALE_NOT_PUBLISHED' } } }) } }) });
+  // WP-K: a drawdown is zero or negative (peak-to-trough); the exact-decimal text states it, no float.
+  add(response,
+    { if: isField('metric', 'DRAWDOWN'), then: obj({ series: { type: 'array', items: obj({ points: { type: 'array', items: obj({ value: { type: 'string', pattern: NON_POSITIVE } }) } }) } }) });
   add(response,
     { if: obj({ series_source: isField('state', 'NOT_PUBLISHED') }, ['series_source']),
       then: obj({ series_source: obj({ reason_code: { const: 'FINANCIAL_NORMALIZED_SERIES_SOURCE_NOT_PUBLISHED' } }, ['reason_code']),
@@ -105,7 +110,10 @@ function responseSemantics(response) {
 // FE-013 on the stored form: the same metric/unit/scale tie, plus "an unscaled ratio carries no points".
 function publicationSemantics(stored) {
   add(stored,
-    { if: obj({ binding: isField('metric', 'RETURN') }, ['binding']),
+    { if: obj({ binding: isField('metric', 'DRAWDOWN') }, ['binding']),
+      then: obj({ series: obj({ points: { type: 'array', items: obj({ value: { type: 'string', pattern: NON_POSITIVE } }) } }, ['points']) }, ['series']) });
+  add(stored,
+    { if: obj({ binding: obj({ metric: { enum: ['RETURN', 'DRAWDOWN'] } }, ['metric']) }, ['binding']),
       then: obj({ series: obj({ unit: { const: 'RATIO' }, currency: nul }, ['unit', 'currency']) }, ['series']),
       else: obj({ series: obj({ unit: { const: 'MONEY' }, currency: { type: 'string' }, ratio_scale: nul }, ['unit', 'currency', 'ratio_scale']) }, ['series']) },
     { if: obj({ series: obj({ unit: { const: 'RATIO' }, ratio_scale: nul }, ['unit', 'ratio_scale']) }, ['series']),
@@ -134,7 +142,7 @@ const errorResponse = description => ({ description, headers: structuredClone(pr
   content: { 'application/json': { schema: { $ref: '#/components/schemas/ManagerSeriesProblem' } } } });
 const jsonParam = (name, schema, required) => ({ name, in: 'query', required, content: { 'application/json': { schema } } });
 const operation = { get: { operationId: 'executionManagerSeriesGetV1', security: [{ PortalSession: [] }],
-  description: 'Exact-decimal NAV / Net PnL / Return series for 1-4 subjects (portfolios or the fund) over one exact window. ' +
+  description: 'Exact-decimal NAV / Net PnL / Return / Drawdown series for 1-4 subjects (alphas, portfolios or the fund) over one exact window. ' +
     'Each subject is AVAILABLE, EMPTY or typed UNAVAILABLE; nothing is rebased, summed across currencies, interpolated or carried forward. ' +
     '`comparison` is re-derived by the validator and is INCOMPARABLE (CURRENCY_MIXED, ...) when the subjects do not share one partition, basis, unit, methodology and window. ' +
     'The financial normalized source that fills a series is MISSING today: every profile answers SERIES_SOURCE_NOT_PUBLISHED until a producer publishes one.',

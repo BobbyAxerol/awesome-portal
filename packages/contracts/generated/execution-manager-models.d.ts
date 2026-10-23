@@ -235,7 +235,7 @@ export interface components {
                     environment: "paper" | "sandbox" | "live";
                     stages: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
                 }[];
-                unavailable_fields: [
+                unavailable_fields: unknown[] | [
                     {
                         /** @constant */
                         field: "days_in_stage";
@@ -258,8 +258,8 @@ export interface components {
                 current_stage_rule: "SINGLE_ACTIVE_MEMBER_STAGE_IN_SELECTED_ENVIRONMENT";
                 /** @constant */
                 covers: "DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY";
-                /** @constant */
-                entry_time: "STAGE_ENTRY_TIME_NOT_PUBLISHED";
+                /** @enum {string} */
+                entry_time: "STAGE_ENTRY_TIME_NOT_PUBLISHED" | "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED";
             };
             /**
              * @description A single environment, or ALL (Fleet only): navigation across separately authorized environments. An ALL body lists the authorized rows of every environment that answered, each row with its own environment and economic partitions, plus environment_coverage. It never carries a total over environments or partitions.
@@ -316,6 +316,14 @@ export interface components {
             };
             /** @description returned_count is items.length, at most limit and at most authorized_filtered_count; a non-empty page with neither cursor is the whole filtered result (returned_count equals authorized_filtered_count). JSON Schema cannot compare a count with an array length: the producer refuses to emit a body that breaks this (MANAGER_PAGE_*), and the reader refuses it too. The schema states the empty case exactly. */
             page: {
+                limit: number;
+                returned_count: number;
+                authorized_filtered_count: number;
+                next_cursor: string | null;
+                previous_cursor: string | null;
+            };
+            /** @description Pagination over all authorized filtered groups, independent of page/items. A null next_cursor means complete; exactly 200 groups need not be truncated. Group aggregates retain their full group population. */
+            group_page?: {
                 limit: number;
                 returned_count: number;
                 authorized_filtered_count: number;
@@ -437,6 +445,13 @@ export interface components {
                     field: "portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle";
                     value: string | null;
                 }[] & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
+                attribution?: {
+                    alpha_id: string;
+                    name: string | null;
+                    owner_user_id: string | null;
+                    name_reason_code: ("GROUP_NAME_NOT_PUBLISHED" | "GROUP_NAME_AMBIGUOUS") | null;
+                    owner_reason_code: ("GROUP_OWNER_NOT_PUBLISHED" | "GROUP_OWNER_AMBIGUOUS") | null;
+                };
                 unique_row_count: number;
                 /** @constant */
                 totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY";
@@ -481,6 +496,23 @@ export interface components {
                     };
                 }[];
             }[];
+            group_query?: {
+                sort: {
+                    metric_key: string;
+                    /** @enum {string} */
+                    direction: "asc" | "desc";
+                }[];
+                filters: {
+                    metric_key: string;
+                    /** @enum {string} */
+                    op: "GTE" | "LTE" | "IS_NULL";
+                    value?: string;
+                }[];
+                /** @enum {string} */
+                partition_basis: "PINNED_PARTITION" | "SINGLE_PARTITION_ONLY";
+                groups_before_filter: number;
+                groups_returned: number;
+            };
             /** @description A partition appears once per list (identity: economic_domain, currency, basis, native_profile_ref; domain_proof_ref is evidence, not identity). A metric that names a currency names its partition's currency. uniqueItems here catches an exact repeat; a repeat of the identity with different metrics is refused by the producer (MANAGER_PARTITION_DUPLICATE) and by the reader, because JSON Schema cannot compare a property of two items. */
             capital_statements: {
                 partition: {
@@ -922,6 +954,17 @@ export interface components {
                 direction: "asc" | "desc";
             }[] & (unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[] & unknown[]);
             group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+            group_sort?: {
+                metric_key: string;
+                /** @enum {string} */
+                direction: "asc" | "desc";
+            }[];
+            group_filters?: {
+                metric_key: string;
+                /** @enum {string} */
+                op: "GTE" | "LTE" | "IS_NULL";
+                value?: string;
+            }[];
             economic_partition?: {
                 /** @enum {string} */
                 economic_domain: "ACTUAL" | "PAPER" | "SANDBOX";
@@ -933,7 +976,13 @@ export interface components {
             limit?: number;
             after?: string;
             before?: string;
-        } & (unknown & unknown & unknown & unknown & unknown & unknown);
+            /** @description Independent group page size, default 200; row limit does not limit the authorized group population. */
+            group_limit?: number;
+            /** @description Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query. */
+            group_after?: string;
+            /** @description Opaque backward group cursor; mutually exclusive with group_after. */
+            group_before?: string;
+        } & (unknown & unknown & unknown & unknown & unknown & unknown & unknown & unknown);
         ManagerMetric: {
             value: string | null;
             unit: string;
@@ -1452,7 +1501,7 @@ export interface components {
                 environment: "paper" | "sandbox" | "live";
                 stages: ("PAPER" | "SANDBOX" | "CANARY" | "LIVE")[];
             }[];
-            unavailable_fields: [
+            unavailable_fields: unknown[] | [
                 {
                     /** @constant */
                     field: "days_in_stage";
@@ -2965,10 +3014,15 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path?: never;
@@ -3043,10 +3097,15 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path?: never;
@@ -3121,10 +3180,15 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path: {
@@ -3201,10 +3265,15 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path: {
@@ -3281,10 +3350,15 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path: {
@@ -3361,10 +3435,15 @@ export interface operations {
                 filters?: string;
                 sort?: string;
                 group_by?: ("portfolio_id" | "owner_user_id" | "alpha_id" | "stage_presence" | "current_stage" | "venue" | "health" | "source_state" | "lifecycle")[];
+                group_sort?: string;
+                group_filters?: string;
                 economic_partition?: string;
                 limit?: number;
                 after?: string;
                 before?: string;
+                group_limit?: number;
+                group_after?: string;
+                group_before?: string;
             };
             header?: never;
             path: {

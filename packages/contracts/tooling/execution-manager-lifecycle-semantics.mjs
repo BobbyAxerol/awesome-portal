@@ -65,9 +65,10 @@ const retarget = (value, from, to) => {
 /**
  * Live-environment dataset with the two honest shapes: a row in one stage
  * (current_stage published) and a row in Canary AND Live (no single stage, so
- * null with MULTIPLE_ACTIVE_STAGES). Entry time is absent on both.
+ * null with MULTIPLE_ACTIVE_STAGES). The unambiguous row has a synthetic
+ * transition seven complete days before the snapshot; not membership time.
  */
-export function managerLifecycleLiveSyntheticFixture(rows) {
+export function managerLifecycleLiveSyntheticFixture(rows, { withTransitions = false } = {}) {
   if (rows.lane !== lane) throw new Error('TEST_ONLY fixture lane required');
   const sample = retarget(clone(rows), 'PAPER', 'ACTUAL');
   const first = sample.value.items[0];
@@ -82,7 +83,12 @@ export function managerLifecycleLiveSyntheticFixture(rows) {
   };
   sample.value.environment = 'live';
   sample.value.items = [make('single-live', ['LIVE']), make('canary-and-live', ['CANARY', 'LIVE'])];
+  const days = Math.min(7, Math.floor(sample.value.as_of_ms / 86_400_000));
+  if (withTransitions) Object.assign(sample.value.items[0], { entered_at_ms: sample.value.as_of_ms - days * 86_400_000,
+    days_in_stage: days, stage_lifecycle_reasons: { current_stage: null, entered_at_ms: null, days_in_stage: null } });
   sample.value.page = { ...sample.value.page, returned_count: 2, authorized_filtered_count: 2 };
-  sample.value.stage_lifecycle = clone(MANAGER_STAGE_LIFECYCLE_POLICY);
+  sample.value.stage_lifecycle = withTransitions
+    ? { ...clone(MANAGER_STAGE_LIFECYCLE_POLICY), entry_time: 'EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED' }
+    : clone(MANAGER_STAGE_LIFECYCLE_POLICY);
   return sample;
 }

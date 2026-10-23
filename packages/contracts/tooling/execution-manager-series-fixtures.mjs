@@ -128,6 +128,47 @@ export function buildManagerSeriesFixtures(contract) {
   // The stored RETURN form with no scale and no points is the producer's typed way to say "no authoritative scale": it is admitted, and never served.
   if (!contract.managerSeriesPublication.safeParse(apply(structuredClone(returnPublication), [{ op: 'set', path: ['series', 'ratio_scale'], value: null }, { op: 'set', path: ['series', 'points'], value: [] }])).success)
     throw new Error('an unscaled empty RETURN publication must be admitted');
+  // WP-K (slice 1): ALPHA subjects and the DRAWDOWN metric. NEW fixtures; every value is TEST_ONLY, none is a product receipt.
+  const alphaSubject = id => ({ subject_type: 'ALPHA', subject_id: id });
+  const alphaNav = response([
+    served(alphaSubject('TEST_ONLY:alpha-a'), 'USDT', [[0, '100'], [1, '100.8'], [2, '99.9']]),
+    served(alphaSubject('TEST_ONLY:alpha-b'), 'USDT', [[0, '250'], [1, '251.25'], [3, '249.5']], { gaps: [{ from_ms: at(2), to_ms: at(2), reason: 'SOURCE_GAP' }] })]);
+  if (alphaNav.comparison.state !== 'ALIGNED') throw new Error('alpha NAV fixture must be ALIGNED');
+  // A drawdown is a peak-to-trough RATIO, zero or negative, with its scale stated by the source (here FRACTION: -0.0123 is -1.23%).
+  const ddWindow = { methodology: 'TEST_ONLY:drawdown-peak-to-trough.v1', unit: 'RATIO', scale: 'FRACTION' };
+  const drawdownAligned = response([
+    served(alphaSubject('TEST_ONLY:alpha-a'), 'USDT', [[0, '0'], [1, '-0.0123'], [2, '-0.0045']], ddWindow),
+    served(portfolio('TEST_ONLY:portfolio-a'), 'USDT', [[0, '0'], [1, '-0.004']], ddWindow)], { metric: 'DRAWDOWN' });
+  if (drawdownAligned.comparison.state !== 'ALIGNED' || drawdownAligned.comparison.common.unit !== 'RATIO') throw new Error('drawdown fixture must be ALIGNED RATIO');
+  const drawdownPublication = structuredClone(publication);
+  Object.assign(drawdownPublication.binding, { subject_type: 'alpha', subject_id: 'TEST_ONLY:alpha-a', metric: 'DRAWDOWN' });
+  Object.assign(drawdownPublication.series, { unit: 'RATIO', currency: null, ratio_scale: 'FRACTION', methodology_ref: 'TEST_ONLY:drawdown-peak-to-trough.v1',
+    points: [{ ts_ms: at(0), value: '0' }, { ts_ms: at(1), value: '-0.0123' }] });
+  contract.managerSeriesPublication.parse(drawdownPublication);
+  const baseDrawdown = { dd: drawdownAligned, pubDd: drawdownPublication };
+  const drawdownRule = {
+    lane: SERIES_FIXTURE_LANE,
+    bases: { dd: 'execution-manager-series.drawdown.synthetic.valid.json', pubDd: 'execution-manager-series-publication.drawdown.synthetic.valid.json' },
+    note: 'WP-K: DRAWDOWN is a RATIO (never money) whose points are zero or negative; it never rises above zero. The scale is stated by the source.',
+    cases: [
+      { id: 'WP-K/drawdown-above-zero', base: 'dd', rule: 'a drawdown never rises above zero', refused_by: 'SCHEMA_AND_PRODUCER', code: 'MANAGER_SERIES_DRAWDOWN_POSITIVE',
+        ops: [{ op: 'set', path: ['series', 0, 'points', 1, 'value'], value: '0.0123' }] },
+      { id: 'WP-K/drawdown-as-money', base: 'dd', rule: 'DRAWDOWN is a RATIO', refused_by: 'SCHEMA_AND_PRODUCER', code: 'MANAGER_SERIES_METRIC_UNIT_MISMATCH',
+        ops: [...[0, 1].map(i => ({ op: 'set', path: ['series', i, 'unit'], value: 'MONEY' })), ...[0, 1].map(i => ({ op: 'set', path: ['series', i, 'currency'], value: 'USDT' })),
+          ...[0, 1].map(i => ({ op: 'set', path: ['series', i, 'ratio_scale'], value: null }))] },
+      { id: 'WP-K/drawdown-without-a-scale', base: 'dd', rule: 'a RATIO states its scale', refused_by: 'SCHEMA_AND_PRODUCER', code: 'MANAGER_SERIES_RATIO_SCALE_INVALID',
+        ops: [0, 1].map(i => ({ op: 'set', path: ['series', i, 'ratio_scale'], value: null })) }],
+    stored_cases: [
+      { id: 'WP-K/stored-drawdown-above-zero', base: 'pubDd', rule: 'a drawdown never rises above zero', refused_by: 'SCHEMA_AND_PRODUCER', code: 'MANAGER_SERIES_DRAWDOWN_POSITIVE',
+        ops: [{ op: 'set', path: ['series', 'points', 1, 'value'], value: '0.0123' }] },
+      { id: 'WP-K/stored-drawdown-as-money', base: 'pubDd', rule: 'DRAWDOWN is a RATIO', refused_by: 'SCHEMA_AND_PRODUCER', code: 'MANAGER_SERIES_METRIC_UNIT_MISMATCH',
+        ops: [{ op: 'set', path: ['series', 'unit'], value: 'MONEY' }, { op: 'set', path: ['series', 'currency'], value: 'USDT' }, { op: 'set', path: ['series', 'ratio_scale'], value: null }] }],
+  };
+  for (const [list, parser] of [[drawdownRule.cases, managerSeriesResponse], [drawdownRule.stored_cases, contract.managerSeriesPublication]])
+    for (const c of list) {
+      const refused = parser.safeParse(apply(structuredClone(baseDrawdown[c.base]), c.ops));
+      if (refused.success || !refused.error.issues.some(i => i.message === c.code)) throw new Error('WP-K case is not refused with its code: ' + c.id);
+    }
   // MD-5 (owner decision C, 2026-10-20): canonical zero on emit. A response that carries a signed zero point is refused with its
   // stated code (the generator proves each case before writing); the examples state what the emit step does with a SOURCE value.
   const ZERO_CODE = 'MANAGER_DECIMAL_NEGATIVE_ZERO';
@@ -149,6 +190,13 @@ export function buildManagerSeriesFixtures(contract) {
   for (const { source, emitted } of negativeZero.emit_examples)
     if (canonicalManagerZero(source) !== emitted || canonicalManagerZero(emitted) !== emitted) throw new Error('Canonical zero emit example is wrong: ' + source);
   return {
+    'fixtures/execution-manager-series.alpha.synthetic.valid.json': wrap(alphaNav),
+    'fixtures/execution-manager-series.drawdown.synthetic.valid.json': wrap(drawdownAligned),
+    'fixtures/execution-manager-series-publication.drawdown.synthetic.valid.json': wrap(drawdownPublication),
+    'fixtures/execution-manager-series.drawdown.synthetic.negative.json': drawdownRule,
+    'fixtures/execution-manager-series-query.alpha-drawdown.synthetic.valid.json': { lane: SERIES_FIXTURE_LANE, cases: [
+      { environment: 'paper', metric: 'NAV', window: '30D', subjects: [alphaSubject('TEST_ONLY:alpha-a'), alphaSubject('TEST_ONLY:alpha-b')], economic_partition: partition('USDT') },
+      { environment: 'paper', metric: 'DRAWDOWN', window: '30D', subjects: [alphaSubject('TEST_ONLY:alpha-a'), portfolio('TEST_ONLY:portfolio-a')] }] },
     'fixtures/execution-manager-series.negative-zero.synthetic.negative.json': negativeZero,
     'fixtures/execution-manager-series.populated.synthetic.valid.json': wrap(populated),
     'fixtures/execution-manager-series.empty.synthetic.valid.json': wrap(empty),

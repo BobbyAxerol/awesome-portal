@@ -55,7 +55,7 @@ function json(schema) {
       else if (c.kind !== 'int') throw new Error('Unsupported number constraint');
     } return value;
   }
-  if (type === 'ZodTuple') return { type:'array',prefixItems:d.items.map(json),minItems:d.items.length,maxItems:d.items.length,items:false };
+  if (type === 'ZodTuple') return { type:'array',...(d.items.length ? {prefixItems:d.items.map(json)} : {}),minItems:d.items.length,maxItems:d.items.length,items:false };
   if (type === 'ZodArray') return { type: 'array', items: json(d.type), ...(d.minLength ? { minItems: d.minLength.value } : {}), ...(d.maxLength ? { maxItems: d.maxLength.value } : {}), ...(d.exactLength ? {minItems:d.exactLength.value,maxItems:d.exactLength.value} : {}) };
   if (type === 'ZodRecord') return { type: 'object', propertyNames: json(d.keyType), additionalProperties: json(d.valueType) };
   if (type === 'ZodObject') {
@@ -66,6 +66,15 @@ function json(schema) {
   throw new Error('Unsupported Zod node: ' + type);
 }
 const response = json(contract.managerDatasetResponse), query = json(contract.managerModelQuery);
+query.properties.group_limit.description = 'Independent group page size, default 200; row limit does not limit the authorized group population.';
+query.properties.group_after.description = 'Opaque forward group cursor; not interchangeable with the row cursor. Bound to current authority, source and query.';
+query.properties.group_before.description = 'Opaque backward group cursor; mutually exclusive with group_after.';
+query.allOf = [...(query.allOf ?? []),
+  {not:{properties:{group_after:{},group_before:{}},required:['group_after','group_before']}},
+  {if:{anyOf:['group_limit','group_after','group_before'].map(name=>({properties:{[name]:{}},required:[name]}))},
+    then:{required:['group_by'],properties:{group_by:{type:'array',minItems:1}}}},
+];
+response.properties.group_page.description = 'Pagination over all authorized filtered groups, independent of page/items. A null next_cursor means complete; exactly 200 groups need not be truncated. Group aggregates retain their full group population.';
 // Zod refinements do not serialize themselves: retain the operator-specific
 // value shape in the published JSON contract rather than publishing loose IN.
 const scalarFilter=query.properties.filters.items;
@@ -103,7 +112,7 @@ const paths = Object.fromEntries(routes.map(([route,operation]) => ['/api/v1/exe
   description: 'Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile.',
   parameters: [...(route.includes('{id}') ? [{ name:'id', in:'path', required:true, schema:{type:'string',minLength:1,maxLength:256} }] : []),
     ...Object.entries(query.properties).map(([name,schema]) => ({ name, in:'query', required:query.required.includes(name),
-      ...(['filters','sort','economic_partition','window'].includes(name) ? { content: { 'application/json': { schema } } } :
+      ...(['filters','sort','economic_partition','window','group_sort','group_filters'].includes(name) ? { content: { 'application/json': { schema } } } :
         { schema, ...(schema.type === 'array' ? { style:'form',explode:false } : {}) }) }))],
   responses: { 200:{description:'Authorized current snapshot; absence and policy-pending remain typed',content:{'application/json':{schema:{$ref:'#/components/schemas/ManagerDataset'}}}},
     ...Object.fromEntries([400,401,404,409,503].map(code => [code,{description:({400:'Invalid closed query',401:'Session required',404:'Resource or current grant unavailable',409:'Authority, snapshot or cursor changed',503:'Source publication, field policy, projection or bounded capacity unavailable'})[code]}])) },
@@ -166,6 +175,16 @@ for(const [name,context] of [
   contract.managerDatasetResponse.parse(sample.value);
   outputs['fixtures/'+name]=sample;
   if(name==='execution-manager-dataset.rows.synthetic.valid.json'){
+    const contributors=structuredClone(sample);
+    const row=contributors.value.items[0];
+    contributors.value.surface='FUND';
+    contributors.value.groups=[{key:[{field:'alpha_id',value:row.alpha_id}],
+      unique_row_count:1,totals_scope:'FULL_AUTHORIZED_FILTERED_QUERY',economic_partitions:[],
+      attribution:{alpha_id:row.alpha_id,name:row.name,owner_user_id:row.owner_user_id,
+        name_reason_code:null,owner_reason_code:null}}];
+    contributors.value.group_page={limit:200,returned_count:1,authorized_filtered_count:1,next_cursor:null,previous_cursor:null};
+    contract.managerDatasetResponse.parse(contributors.value);
+    outputs['fixtures/execution-manager-contributors.synthetic.valid.json']=contributors;
     const all=managerP1AllWindowSyntheticFixture(sample);
     contract.managerDatasetResponse.parse(all.value);
     outputs['fixtures/execution-manager-dataset.all-window.synthetic.valid.json']=all;
@@ -202,6 +221,9 @@ for(const [name,context] of [
     const lifecycle=managerLifecycleLiveSyntheticFixture(sample);
     contract.managerDatasetResponse.parse(lifecycle.value);
     outputs['fixtures/execution-manager-dataset.lifecycle.live.synthetic.valid.json']=lifecycle;
+    const timedLifecycle=managerLifecycleLiveSyntheticFixture(sample, {withTransitions:true});
+    contract.managerDatasetResponse.parse(timedLifecycle.value);
+    outputs['fixtures/execution-manager-dataset.lifecycle.transitions.synthetic.valid.json']=timedLifecycle;
   }
 }
 for (const [file, value] of Object.entries(outputs)) {

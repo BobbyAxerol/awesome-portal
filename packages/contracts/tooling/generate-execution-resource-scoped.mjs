@@ -55,6 +55,10 @@ for (const [alias, keys] of Object.entries(fields)) {
   // Resource linkage may add deployment_id only after qualified unique tuple
   // resolution; it never creates an account or financial amount.
   if (alias !== 'broker_sync') properties.deployment_id ??= nullable(text);
+  if (alias === 'deployments' || alias === 'portfolio_allocations') {
+    properties.portfolio_name = {...nullable(text), description:'Display-only portfolio name joined from the same authorized profile snapshot; never an access grant.'};
+    properties.portfolio_name_reason_code = nullable({enum:['PORTFOLIO_NAME_NOT_READ','PORTFOLIO_NAME_NOT_PUBLISHED','PORTFOLIO_NAME_NOT_AUTHORIZED','PORTFOLIO_NAME_AMBIGUOUS']});
+  }
   defs[rowName(alias)] = obj(properties, ['profile_environment']);
 }
 defs.ScopedResourceMetricAvailability = obj({ state: states, reason_code: reason });
@@ -228,7 +232,25 @@ rich.data.alpha.name = 'TEST_ONLY Alpha'; rich.data.alpha.version = 'TEST_ONLY-v
 rich.data.alpha.identity_absences = [{ member: 'owner', reason_code: 'ALPHA_OWNER_NOT_MAPPED_TO_PORTAL_USER' }, { member: 'stage', reason_code: 'ALPHA_STAGE_NOT_PUBLISHED_BY_SOURCE' }];
 fixtureCases.push(empty, bounded, rich);
 const fixtures = { lane: 'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT', cases: fixtureCases };
+const named = structuredClone(fixtures.cases[2]);
+named.data.deployments[0].portfolio_id = 'portfolio_TEST_ONLY';
+named.data.deployments[0].portfolio_name = 'TEST_ONLY Multi-currency portfolio';
+named.data.deployments[0].portfolio_name_reason_code = null;
+named.data.portfolio_allocations = [{profile_environment:'paper',portfolio_id:'portfolio_TEST_ONLY',
+  portfolio_name:'TEST_ONLY Multi-currency portfolio',portfolio_name_reason_code:null,
+  account_id:'account_TEST_ONLY',deployment_id:'deployment_TEST_ONLY',currency:'USD',allocated_capital:'0'}];
+for (const alias of ['deployments','portfolio_allocations']) {
+  named.panels[alias].data = {rows:named.data[alias]};
+  named.panels[alias].coverage = {...named.panels[alias].coverage,source_total:'1',filtered_total:'1',returned_count:1};
+}
+const unnamed = structuredClone(named);
+for (const alias of ['deployments','portfolio_allocations']) {
+  unnamed.data[alias][0].portfolio_name=null;
+  unnamed.data[alias][0].portfolio_name_reason_code='PORTFOLIO_NAME_NOT_PUBLISHED';
+  unnamed.panels[alias].data={rows:unnamed.data[alias]};
+}
 for (const [file, value] of Object.entries({ 'schemas/execution-resource-scoped.v2.schema.json': schema,
+  'fixtures/execution-resource-portfolio-names.synthetic.valid.json':{lane:'TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT',cases:[named,unnamed]},
   'openapi/execution-resource-scoped.openapi.json': openapi, 'fixtures/execution-resource-scoped.synthetic.valid.json': fixtures })) {
   const bytes = JSON.stringify(value, null, 2) + '\n', path = resolve(root, file);
   if (process.argv.includes('--check')) { if (readFileSync(path, 'utf8') !== bytes) throw new Error(`Generated drift: ${file}`); }

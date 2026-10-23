@@ -42,8 +42,21 @@ function fact(tuple: ManagerMember["tuple"], id: string, value: string, patch: P
     counterpart_portfolio_id: null, ...patch };
 }
 const codec = () => new KeysetCursorCodec({ activeKeyId: "test", keys: { test: "TEST_ONLY-manager-cursor-key-32bytes-not-prod" }, now: () => NOW / 1000 });
-async function fixture(options: { full?: boolean; fields?: string[]; environment?: "paper" | "live"; secondOwn?: boolean } = {}) {
+async function fixture(options: { full?: boolean; fields?: string[]; environment?: "paper" | "live"; secondOwn?: boolean; many?: number } = {}) {
   const f = productReadFixture({ full: options.full, fields: options.fields ?? [...BUSINESS_READ_FIELDS] });
+  const extra = Array.from({ length: options.many ?? 0 }, (_, i) => ({ ...OWN, alpha_id: `TEST_ONLY:alpha-${String(i).padStart(4, "0")}`,
+    alpha_version_id: `TEST_ONLY:version-${i}`, deployment_id: `TEST_ONLY:deployment-${i}`, account_id: `TEST_ONLY:account-${i}` }));
+  if (extra.length) {
+    const extraResources = extra.flatMap(t => [
+      { kind: "ALPHA" as const, id: t.alpha_id }, { kind: "ALPHA_VERSION" as const, id: t.alpha_version_id },
+      { kind: "DEPLOYMENT" as const, id: t.deployment_id }, { kind: "ACCOUNT" as const, id: t.account_id }]);
+    const original = f.access.readPublication.getMockImplementation()!;
+    f.access.readPublication.mockImplementation(async request => { const p = await original(request); return { ...p,
+      tuples: [...p.tuples, ...extra], resources: [...p.resources, ...extraResources] }; });
+    const relationsFor = f.context.relationsFor;
+    f.context.relationsFor = (...args) => { const r = relationsFor(...args); return { ...r,
+      roots: { ...r.roots, root: [...r.roots.root, ...extraResources] } }; };
+  }
   const second = { ...OWN, deployment_id: "TEST_ONLY:second-deployment", account_id: "TEST_ONLY:second-account" };
   if (options.secondOwn) {
     const readPublication = f.access.readPublication.getMockImplementation()!;
@@ -71,6 +84,8 @@ async function fixture(options: { full?: boolean; fields?: string[]; environment
     doc.facts.forEach(value => { value.partition.economic_domain = "ACTUAL"; });
   }
   if (options.secondOwn) doc.members.push(member(second, "Zulu own"));
+  doc.members.push(...extra.map(t => member(t, `Name ${t.alpha_id}`)));
+  doc.facts.push(...extra.map(t => fact(t, `pnl-${t.alpha_id}`, "1")));
   const binding = { dataset_id: doc.family_id, source_revision: doc.revision,
     projection_generation: doc.projection_generation, catalogue_revision: doc.catalogue_digest, window: null };
   const scope = await f.scopes.authorize(f.principal, { environment, profileId: profile }, { action: options.full ? "business.read_all" : "alpha.read", dataset: binding });
@@ -89,6 +104,112 @@ async function fixture(options: { full?: boolean; fields?: string[]; environment
 }
 
 describe("ELP2-06 Manager exact query, field and economic scope (TEST_ONLY)", () => {
+  it("pages more than 200 contributor groups independently of the row page and preserves full totals", async () => {
+    const f = await fixture({ full: true, many: 205 });
+    const q = { group_by: ["alpha_id"], limit: 1 };
+    const first = f.read(q, "FUND");
+    expect(first.groups).toHaveLength(200);
+    expect(first.group_page).toMatchObject({ authorized_filtered_count: 207, returned_count: 200 });
+    const next = f.read({ ...q, group_after: first.group_page!.next_cursor }, "FUND");
+    expect(next.groups).toHaveLength(7);
+    expect(next.items).toEqual(first.items);
+    expect(next.capital_statements).toEqual(first.capital_statements);
+    expect(next.snapshot_id).toBe(first.snapshot_id);
+    const back = f.read({ ...q, group_before: next.group_page!.previous_cursor }, "FUND");
+    expect(back.groups).toEqual(first.groups);
+    expect(new Set([...first.groups, ...next.groups].map(g => JSON.stringify(g.key))).size).toBe(207);
+    for (const g of [...first.groups, ...next.groups]) {
+      expect(g.attribution?.alpha_id).toBe(g.key[0].value);
+      if (g.attribution?.alpha_id !== OWN.alpha_id) expect(g.attribution?.name).not.toBeNull();
+      expect(g.economic_partitions[0].metrics).not.toHaveProperty("score");
+      expect(g.economic_partitions[0].metrics).not.toHaveProperty("return_30d_pct");
+    }
+  });
+  it("WP-K: group_sort/group_filters order and narrow the WHOLE group population, then package-5 paging walks that order without gap or repeat", async () => {
+    const f = await fixture({ full: true, many: 205 });
+    const base = { group_by: ["alpha_id"], limit: 1 };
+    const plain = f.read(base, "FUND");
+    const metric = Object.keys(plain.groups[0].economic_partitions[0].metrics)[0]!;
+    const q = { ...base, group_limit: 50, group_sort: [{ metric_key: metric, direction: "desc" }] };
+    const seen: string[] = []; let page = f.read(q, "FUND");
+    expect(page.group_query).toMatchObject({ groups_before_filter: 207, groups_returned: 50 });
+    for (let i = 0; i < 6; i++) {
+      seen.push(...page.groups.map(g => JSON.stringify(g.key)));
+      if (!page.group_page!.next_cursor) break;
+      page = f.read({ ...q, group_after: page.group_page!.next_cursor }, "FUND");
+    }
+    expect(seen).toHaveLength(207);
+    expect(new Set(seen).size).toBe(207);
+    // The fixture's groups tie on every measure, so the order is the group-key tiebreak both ways; what this proves is that the query is applied to the
+    // whole population, echoed, and that the cursor walks it. The ordering rules themselves are proven in wpk-group-query.spec.ts.
+    const asc = f.read({ ...q, group_sort: [{ metric_key: metric, direction: "asc" }] }, "FUND");
+    expect(asc.group_query).toMatchObject({ sort: [{ metric_key: metric, direction: "asc" }], groups_before_filter: 207, groups_returned: 50 });
+    const none = f.read({ ...base, group_filters: [{ metric_key: metric, op: "IS_NULL" }] }, "FUND");
+    expect(none.group_query).toMatchObject({ groups_before_filter: 207, groups_returned: none.groups.length });
+  });
+  it("isolates signed group cursors from rows and from changed query or authority", async () => {
+    const f = await fixture({ full: true });
+    const q = { group_by: ["alpha_id"], limit: 1, group_limit: 1 };
+    const first = f.read(q);
+    expect(() => f.read({ ...q, after: first.group_page!.next_cursor })).toThrow();
+    expect(() => f.read({ ...q, group_after: first.page.next_cursor })).toThrow();
+    expect(() => f.read({ ...q, q: "own", group_after: first.group_page!.next_cursor })).toThrow();
+    expect(() => f.read({ ...q, group_limit: 2, group_after: first.group_page!.next_cursor })).toThrow();
+    const restricted = await fixture();
+    expect(() => restricted.read({ ...q, group_after: first.group_page!.next_cursor })).toThrow();
+    expect(() => f.read({ group_after: first.group_page!.next_cursor })).toThrow();
+    expect(() => f.read({ ...q, group_after: first.group_page!.next_cursor, group_before: first.group_page!.next_cursor })).toThrow();
+    f.doc.revision = "TEST_ONLY:source-changed";
+    expect(() => f.read({ ...q, group_after: first.group_page!.next_cursor })).toThrow();
+  });
+  it("uses authorized group attribution even when its row is not on the row page", async () => {
+    const f = await fixture();
+    const r = f.read({ group_by: ["alpha_id"], limit: 1 });
+    expect(r.groups).toHaveLength(1);
+    expect(r.groups.map(g => g.attribution?.alpha_id)).not.toContain(PEER.alpha_id);
+    expect(r.groups[0].attribution).toMatchObject({ name: null, name_reason_code: "GROUP_NAME_AMBIGUOUS" });
+    const old = f.read({ limit: 1 });
+    expect(old).not.toHaveProperty("group_page");
+    expect(r.items).toEqual(old.items);
+    expect(r.capital_statements).toEqual(old.capital_statements);
+  });
+  it("keeps denied group labels absent and rejects inconsistent attribution/page metadata", async () => {
+    const f = await fixture({ fields: BUSINESS_READ_FIELDS.filter(k => k !== "name" && k !== "owner_user_id") });
+    const r = f.read({ group_by: ["alpha_id"], sort: [{ field: "alpha_id", direction: "asc" }] });
+    expect(r.groups.every(g => g.attribution?.name === null && g.attribution.owner_user_id === null &&
+      g.attribution.name_reason_code === "GROUP_NAME_NOT_PUBLISHED" && g.attribution.owner_reason_code === "GROUP_OWNER_NOT_PUBLISHED")).toBe(true);
+    expect(managerDatasetResponse.safeParse({ ...r, group_page: { ...r.group_page!, returned_count: 0 } }).success).toBe(false);
+    const invalid = structuredClone(r);
+    invalid.groups[0].attribution!.alpha_id = "TEST_ONLY:wrong-alpha";
+    expect(managerDatasetResponse.safeParse(invalid).success).toBe(false);
+  });
+  it("serves exact stage transitions from the authorized same revision, not membership time", async () => {
+    const f = await fixture();
+    f.doc.stage_transitions = f.doc.members.map(m => ({ ...m.tuple, environment: f.doc.environment,
+      stage: m.stage, entered_at_ms: f.doc.as_of_ms - 7 * 86_400_000, exited_at_ms: null,
+      source_revision: f.doc.revision })).map(({ deployment_id, account_id, ...t }) => t);
+    const response = f.read();
+    expect(response.items.length).toBeGreaterThan(0);
+    expect(response.items.every(row => row.alpha_id !== PEER.alpha_id)).toBe(true);
+    expect(response.items.every(row => row.days_in_stage === 7 && row.entered_at_ms === f.doc.as_of_ms - 7 * 86_400_000)).toBe(true);
+    expect(response.stage_lifecycle.entry_time).toBe("EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED");
+    expect(managerDatasetResponse.safeParse(response).success).toBe(true);
+    f.doc.stage_transitions[0].source_revision = "wrong-revision";
+    expect(() => f.read()).toThrow("MANAGER_STAGE_TRANSITION_BINDING_INVALID");
+  });
+  it("does not derive timing from member assignment when transitions are absent", async () => {
+    const f = await fixture();
+    expect(f.read().items.every(row => row.entered_at_ms === null && row.days_in_stage === null)).toBe(true);
+  });
+  it("withholds row timing when a current sibling deployment is not authorized", async () => {
+    const f = await fixture();
+    const own = f.doc.members.find(m => m.tuple.alpha_id === OWN.alpha_id)!;
+    f.doc.members.push({ ...own, tuple: { ...own.tuple, deployment_id: "TEST_ONLY:hidden-deployment", account_id: "TEST_ONLY:hidden-account" } });
+    f.doc.stage_transitions = [{ alpha_id: own.tuple.alpha_id, alpha_version_id: own.tuple.alpha_version_id,
+      portfolio_id: own.tuple.portfolio_id, environment: f.doc.environment, stage: own.stage,
+      source_revision: f.doc.revision, entered_at_ms: f.doc.as_of_ms - 86_400_000, exited_at_ms: null }];
+    expect(f.read().items.find(row => row.alpha_id === OWN.alpha_id)?.entered_at_ms).toBeNull();
+  });
   it("does not add account valuation snapshots from different cutoffs",async()=>{
     const f=await fixture({full:true});
     f.doc.facts=f.doc.members.map((m,i)=>fact(m.tuple,"TEST_ONLY:nav-"+i,"100",{kind:"current_nav",effective_at_ms:NOW-100-i}));

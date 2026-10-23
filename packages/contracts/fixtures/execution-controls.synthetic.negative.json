@@ -1,0 +1,79 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "published": "execution-controls.published.synthetic.valid.json",
+    "no-locks": "execution-controls.no-locks.synthetic.valid.json",
+    "not-read": "execution-controls.not-read.synthetic.valid.json",
+    "no-source": "execution-controls.no-source.synthetic.valid.json"
+  },
+  "cases": [
+    {
+      "id": "lock-revision-zero",
+      "base": "published",
+      "rule": "a revision is positive",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "locks",
+            0,
+            "revision"
+          ],
+          "value": 0
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "trading-state-unknown",
+      "base": "published",
+      "rule": "the trading state vocabulary is closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "trading_state",
+            "state"
+          ],
+          "value": "PAUSED"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "lock-scope-unknown",
+      "base": "published",
+      "rule": "lock scope types are closed",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "locks",
+            0,
+            "scope",
+            "type"
+          ],
+          "value": "VENUE"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    },
+    {
+      "id": "reason-lowercase",
+      "base": "published",
+      "rule": "a reason is an upper-case code",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "locks",
+            0,
+            "reason_code"
+          ],
+          "value": "risk review"
+        }
+      ],
+      "refused_by": "SCHEMA_AND_READER"
+    }
+  ]
+}

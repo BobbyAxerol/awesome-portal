@@ -1,0 +1,15 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.alpha-lifecycle.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "alpha_id": "TEST_ONLY:alpha-a",
+    "alpha_version_id": "TEST_ONLY:alpha-a-v2",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "stages": null,
+    "events": null,
+    "regime_fit": null,
+    "venue_net_pnl": null
+  }
+}

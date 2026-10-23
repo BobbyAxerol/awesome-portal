@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.primusspark.com/portal/execution-order-detail.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "workspace_id",
+    "record_authority",
+    "read_at_ms",
+    "order_id"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "portal.execution.order-detail.v1"
+    },
+    "workspace_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+    },
+    "record_authority": {
+      "const": "PORTAL_PROJECTION"
+    },
+    "read_at_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "order_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 191,
+      "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+    },
+    "deployment_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 191,
+          "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "filled_quantity": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 80,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "average_fill_price": {
+      "anyOf": [
+        {
+          "type": "string",
+          "maxLength": 80,
+          "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fee": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "currency",
+            "value"
+          ],
+          "properties": {
+            "currency": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 32,
+              "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+            },
+            "value": {
+              "type": "string",
+              "maxLength": 80,
+              "pattern": "^-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?$(?![\\s\\S])"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "fee_absence": {
+      "anyOf": [
+        {
+          "type": "string",
+          "enum": [
+            "NO_FILLS",
+            "FILL_WITHOUT_COMMISSION",
+            "MIXED_FEE_CURRENCIES"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "ack_latency_ms": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "intent": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "intent_id",
+            "idempotency_scope"
+          ],
+          "properties": {
+            "intent_id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 191,
+              "pattern": "^[A-Za-z0-9._:-]+$(?![\\s\\S])"
+            },
+            "idempotency_scope": {
+              "type": "string",
+              "enum": [
+                "ACTOR_REQUEST_KEY",
+                "WORKSPACE_REQUEST_KEY"
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "not": {
+        "type": "object",
+        "required": [
+          "fee",
+          "fee_absence"
+        ],
+        "properties": {
+          "fee": {
+            "type": "object"
+          },
+          "fee_absence": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}

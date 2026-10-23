@@ -1,0 +1,22 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.account-profile.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "account_id": "TEST_ONLY:account-1",
+    "product": "Perpetual swap · net",
+    "network": {
+      "name": "MAINNET",
+      "proof_at_ms": null
+    },
+    "margin_mode": null,
+    "margin_ratio": null,
+    "wallet_balance": {
+      "currency": "USDT",
+      "value": "0",
+      "as_of_ms": 1800000000000
+    }
+  }
+}

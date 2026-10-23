@@ -23,6 +23,7 @@ export function projectionExpired(config: ControlApiConfig, refreshedAt: Date): 
 
 /** Core workflow scope is NOT the retained source workspace. */
 export function coreExecutionRead(path: string): boolean {
+  if (path === "/api/v1/execution/visit-digest") return true;
   // Additive scoped technical reader keeps Core authority; V1 retains the
   // historical source-workspace compatibility behavior below.
   if (path === "/api/v1/execution/runtime-manifest/v2") return true;

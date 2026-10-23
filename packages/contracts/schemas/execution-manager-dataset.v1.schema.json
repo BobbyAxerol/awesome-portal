@@ -551,44 +551,54 @@
           ]
         },
         "unavailable_fields": {
-          "type": "array",
-          "prefixItems": [
+          "anyOf": [
             {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "field": {
-                  "const": "days_in_stage"
-                },
-                "reason_code": {
-                  "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
-                }
-              },
-              "required": [
-                "field",
-                "reason_code"
-              ]
+              "type": "array",
+              "minItems": 0,
+              "maxItems": 0,
+              "items": false
             },
             {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "field": {
-                  "const": "entered_at_ms"
+              "type": "array",
+              "prefixItems": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "field": {
+                      "const": "days_in_stage"
+                    },
+                    "reason_code": {
+                      "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "reason_code"
+                  ]
                 },
-                "reason_code": {
-                  "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "field": {
+                      "const": "entered_at_ms"
+                    },
+                    "reason_code": {
+                      "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+                    }
+                  },
+                  "required": [
+                    "field",
+                    "reason_code"
+                  ]
                 }
-              },
-              "required": [
-                "field",
-                "reason_code"
-              ]
+              ],
+              "minItems": 2,
+              "maxItems": 2,
+              "items": false
             }
-          ],
-          "minItems": 2,
-          "maxItems": 2,
-          "items": false
+          ]
         }
       },
       "required": [
@@ -1769,7 +1779,11 @@
           "const": "DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY"
         },
         "entry_time": {
-          "const": "STAGE_ENTRY_TIME_NOT_PUBLISHED"
+          "type": "string",
+          "enum": [
+            "STAGE_ENTRY_TIME_NOT_PUBLISHED",
+            "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED"
+          ]
         }
       },
       "required": [
@@ -2173,6 +2187,57 @@
         "previous_cursor"
       ],
       "description": "returned_count is items.length, at most limit and at most authorized_filtered_count; a non-empty page with neither cursor is the whole filtered result (returned_count equals authorized_filtered_count). JSON Schema cannot compare a count with an array length: the producer refuses to emit a body that breaks this (MANAGER_PAGE_*), and the reader refuses it too. The schema states the empty case exactly."
+    },
+    "group_page": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200
+        },
+        "returned_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200
+        },
+        "authorized_filtered_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40000
+        },
+        "next_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 4096
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "previous_cursor": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 4096
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "limit",
+        "returned_count",
+        "authorized_filtered_count",
+        "next_cursor",
+        "previous_cursor"
+      ],
+      "description": "Pagination over all authorized filtered groups, independent of page/items. A null next_cursor means complete; exactly 200 groups need not be truncated. Group aggregates retain their full group population."
     },
     "items": {
       "type": "array",
@@ -3655,6 +3720,79 @@
               }
             ]
           },
+          "attribution": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "alpha_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              },
+              "name": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "owner_user_id": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "name_reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "GROUP_NAME_NOT_PUBLISHED",
+                      "GROUP_NAME_AMBIGUOUS"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "owner_reason_code": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "GROUP_OWNER_NOT_PUBLISHED",
+                      "GROUP_OWNER_AMBIGUOUS"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "alpha_id",
+              "name",
+              "owner_user_id",
+              "name_reason_code",
+              "owner_reason_code"
+            ]
+          },
           "unique_row_count": {
             "type": "integer",
             "minimum": 0,
@@ -4001,6 +4139,93 @@
       "maxItems": 200,
       "uniqueItems": true,
       "description": "A group appears once (identity: key) and holds no more unique rows than page.authorized_filtered_count (MANAGER_GROUP_DUPLICATE, MANAGER_GROUP_COUNT_OVER_FILTERED). Its key names a field of query_options.group_fields once (MANAGER_GROUP_FIELD_NOT_OFFERED)."
+    },
+    "group_query": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "sort": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "metric_key": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{1,63}$"
+              },
+              "direction": {
+                "type": "string",
+                "enum": [
+                  "asc",
+                  "desc"
+                ]
+              }
+            },
+            "required": [
+              "metric_key",
+              "direction"
+            ]
+          },
+          "maxItems": 1
+        },
+        "filters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "metric_key": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_]{1,63}$"
+              },
+              "op": {
+                "type": "string",
+                "enum": [
+                  "GTE",
+                  "LTE",
+                  "IS_NULL"
+                ]
+              },
+              "value": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256,
+                "pattern": "^[^\\u0000-\\u001f\\u007f]+$(?![\\s\\S])"
+              }
+            },
+            "required": [
+              "metric_key",
+              "op"
+            ]
+          },
+          "maxItems": 8
+        },
+        "partition_basis": {
+          "type": "string",
+          "enum": [
+            "PINNED_PARTITION",
+            "SINGLE_PARTITION_ONLY"
+          ]
+        },
+        "groups_before_filter": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 40000
+        },
+        "groups_returned": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 200
+        }
+      },
+      "required": [
+        "sort",
+        "filters",
+        "partition_basis",
+        "groups_before_filter",
+        "groups_returned"
+      ]
     },
     "capital_statements": {
       "type": "array",

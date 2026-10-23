@@ -1,0 +1,174 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "bases": {
+    "dd": "execution-manager-series.drawdown.synthetic.valid.json",
+    "pubDd": "execution-manager-series-publication.drawdown.synthetic.valid.json"
+  },
+  "note": "WP-K: DRAWDOWN is a RATIO (never money) whose points are zero or negative; it never rises above zero. The scale is stated by the source.",
+  "cases": [
+    {
+      "id": "WP-K/drawdown-above-zero",
+      "base": "dd",
+      "rule": "a drawdown never rises above zero",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_DRAWDOWN_POSITIVE",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "points",
+            1,
+            "value"
+          ],
+          "value": "0.0123"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/drawdown-as-money",
+      "base": "dd",
+      "rule": "DRAWDOWN is a RATIO",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_METRIC_UNIT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "unit"
+          ],
+          "value": "MONEY"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "unit"
+          ],
+          "value": "MONEY"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "currency"
+          ],
+          "value": "USDT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "currency"
+          ],
+          "value": "USDT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "ratio_scale"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "ratio_scale"
+          ],
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "WP-K/drawdown-without-a-scale",
+      "base": "dd",
+      "rule": "a RATIO states its scale",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_RATIO_SCALE_INVALID",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            0,
+            "ratio_scale"
+          ],
+          "value": null
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            1,
+            "ratio_scale"
+          ],
+          "value": null
+        }
+      ]
+    }
+  ],
+  "stored_cases": [
+    {
+      "id": "WP-K/stored-drawdown-above-zero",
+      "base": "pubDd",
+      "rule": "a drawdown never rises above zero",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_DRAWDOWN_POSITIVE",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "points",
+            1,
+            "value"
+          ],
+          "value": "0.0123"
+        }
+      ]
+    },
+    {
+      "id": "WP-K/stored-drawdown-as-money",
+      "base": "pubDd",
+      "rule": "DRAWDOWN is a RATIO",
+      "refused_by": "SCHEMA_AND_PRODUCER",
+      "code": "MANAGER_SERIES_METRIC_UNIT_MISMATCH",
+      "ops": [
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "unit"
+          ],
+          "value": "MONEY"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "currency"
+          ],
+          "value": "USDT"
+        },
+        {
+          "op": "set",
+          "path": [
+            "series",
+            "ratio_scale"
+          ],
+          "value": null
+        }
+      ]
+    }
+  ]
+}

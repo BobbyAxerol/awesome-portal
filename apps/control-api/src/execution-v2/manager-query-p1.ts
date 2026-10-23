@@ -70,6 +70,7 @@ export function managerQueryOptions(input: {
   asOf: number; canSearchName: boolean; sortFields: ManagerP1Options["sort_fields"];
   groupFields: ManagerP1Options["group_fields"];
   metricKeys: ManagerP1Options["metric_keys"]; facts: readonly ManagerFact[];
+  stageTimingPublished?: boolean;
 }): ManagerP1Options {
   const presets = PRESETS.map(value => {
     // A pre-epoch preset is not a valid window; do not fabricate a truncated one.
@@ -92,6 +93,6 @@ export function managerQueryOptions(input: {
         ["allocation", "balance_total", "unrealized_pnl"].includes(key)), presets },
     stage_environment: [{ environment: "paper", stages: ["PAPER"] },
       { environment: "sandbox", stages: ["SANDBOX"] }, { environment: "live", stages: ["CANARY", "LIVE"] }],
-    unavailable_fields: [{ field: "days_in_stage", reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED" },
+    unavailable_fields: input.stageTimingPublished ? [] : [{ field: "days_in_stage", reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED" },
       { field: "entered_at_ms", reason_code: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }] });
 }

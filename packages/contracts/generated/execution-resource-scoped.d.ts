@@ -107,6 +107,9 @@ export interface components {
             created_at_ms?: number;
             updated_at?: (string | number) | null;
             updated_at_ms?: number;
+            /** @description Display-only portfolio name joined from the same authorized profile snapshot; never an access grant. */
+            portfolio_name?: string | null;
+            portfolio_name_reason_code?: ("PORTFOLIO_NAME_NOT_READ" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "PORTFOLIO_NAME_AMBIGUOUS") | null;
         };
         DeploymentsScopedRowPanel: {
             /** @enum {unknown} */
@@ -478,6 +481,9 @@ export interface components {
             created_at_ms?: number;
             updated_at?: (string | number) | null;
             updated_at_ms?: number;
+            /** @description Display-only portfolio name joined from the same authorized profile snapshot; never an access grant. */
+            portfolio_name?: string | null;
+            portfolio_name_reason_code?: ("PORTFOLIO_NAME_NOT_READ" | "PORTFOLIO_NAME_NOT_PUBLISHED" | "PORTFOLIO_NAME_NOT_AUTHORIZED" | "PORTFOLIO_NAME_AMBIGUOUS") | null;
         };
         PortfolioAllocationsScopedRowPanel: {
             /** @enum {unknown} */

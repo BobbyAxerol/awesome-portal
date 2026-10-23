@@ -65,10 +65,10 @@ export const managerP1Options = z.object({
   }).strict(),
   stage_environment: z.array(z.object({ environment: z.enum(["paper", "sandbox", "live"]),
     stages: z.array(financialStage).min(1).max(2) }).strict()).length(3),
-  unavailable_fields: z.tuple([
+  unavailable_fields: z.union([z.tuple([]), z.tuple([
     z.object({ field: z.literal("days_in_stage"), reason_code: z.literal("STAGE_ENTRY_TIME_NOT_PUBLISHED") }).strict(),
     z.object({ field: z.literal("entered_at_ms"), reason_code: z.literal("STAGE_ENTRY_TIME_NOT_PUBLISHED") }).strict(),
-  ]),
+  ])]),
 }).strict().superRefine((v, c) => {
   const unique = (items: readonly string[]) => new Set(items).size === items.length;
   for (const [key, items] of Object.entries({ sort_fields: v.sort_fields, group_fields: v.group_fields,

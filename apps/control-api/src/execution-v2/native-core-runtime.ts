@@ -112,7 +112,7 @@ export async function prepareNativeResearchSchemaInstall(input:NativeCoreRuntime
 
 /** Fixed source-boundary caps, not inferred production capacity budgets. */
 const CONFIG_BYTES=131072,TLS_BYTES=32768,KEY_BYTES=16384;
-async function readReference(input:NativeCoreRuntimeReference,maximumBytes:number):Promise<Buffer>{
+export async function readNativeRuntimeReference(input:NativeCoreRuntimeReference,maximumBytes:number):Promise<Buffer>{
   const uid=process.geteuid?.();
   if(uid===undefined)return fail();
   const pin=ref.parse(input),before=await lstat(pin.path);
@@ -136,6 +136,10 @@ async function readReference(input:NativeCoreRuntimeReference,maximumBytes:numbe
     success=true;return buffer.subarray(0,length);
   }finally{await file.close();if(!success)buffer.fill(0);}
 }
+// Keep the existing native runtime call sites unchanged. New explicit private
+// compositions reuse the same owner-only/hash/TOCTOU boundary, not a second
+// file-reader implementation or a public configuration surface.
+const readReference = readNativeRuntimeReference;
 async function signingKey(pin:NativeCoreRuntimeReference):Promise<KeyLike>{
   const bytes=await readReference(pin,KEY_BYTES);
   try{

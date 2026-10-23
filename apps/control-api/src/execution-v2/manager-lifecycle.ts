@@ -17,11 +17,10 @@
  *  - `entered_at_ms` / `days_in_stage` need a stage-transition fact. A member's
  *    `valid_from_ms` is the start of an assignment/owner/binding revision
  *    interval; it moves on an owner change that leaves the stage untouched, so
- *    it is a bound on nothing and is NOT used. The PM stage-timeline source is
- *    still unfinished (source truth §58.154). Both are therefore null with
- *    `STAGE_ENTRY_TIME_NOT_PUBLISHED` until a source states the transition.
- *    The validator below already accepts a populated pair, so the day the
- *    source lands the producer fills it with no schema change.
+ *    it is a bound on nothing and is NOT used. Optional stage_transitions in
+ *    the persisted projection must bind exact row/environment/source revision.
+ *    Missing or ambiguous single-stage context stays explicitly absent; no
+ *    live source is claimed merely because the synthetic fixture supplies it.
  */
 import { z } from "zod";
 import { financialStage } from "./foundation.contract";
@@ -45,7 +44,7 @@ export const managerStageLifecycleReasons = z.object({
 export const managerStageLifecyclePolicy = z.object({
   current_stage_rule: z.literal("SINGLE_ACTIVE_MEMBER_STAGE_IN_SELECTED_ENVIRONMENT"),
   covers: z.literal("DEPLOYED_STAGES_OF_SELECTED_ENVIRONMENT_ONLY"),
-  entry_time: z.literal(STAGE_ENTRY_ABSENCE),
+  entry_time: z.enum([STAGE_ENTRY_ABSENCE, "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED"]),
 }).strict();
 export const MANAGER_STAGE_LIFECYCLE_POLICY = {
   current_stage_rule: "SINGLE_ACTIVE_MEMBER_STAGE_IN_SELECTED_ENVIRONMENT",
@@ -68,11 +67,59 @@ export function deriveManagerRowLifecycle(stages: readonly ManagerStageName[]): 
       entered_at_ms: STAGE_ENTRY_ABSENCE, days_in_stage: STAGE_ENTRY_ABSENCE } };
 }
 
-type RowShape = ManagerRowLifecycle & { stage_presence: string[] };
+/** Already-authorized transition facts from the same source snapshot as the row.
+ * Never substitute membership valid_from, owner change, or observation time. */
+export interface ManagerStageTransitionFact {
+  alpha_id: string;
+  alpha_version_id: string;
+  portfolio_id: string;
+  environment: string;
+  stage: ManagerStageName;
+  entered_at_ms: number;
+  exited_at_ms: number | null;
+  source_revision: string;
+}
+
+export function deriveManagerRowLifecycleFromFacts(input: {
+  stages: readonly ManagerStageName[];
+  alpha_id: string;
+  alpha_version_id: string;
+  portfolio_id: string;
+  environment: string;
+  as_of_ms: number;
+  source_revision: string;
+  facts: readonly ManagerStageTransitionFact[];
+}): ManagerRowLifecycle {
+  const absent = deriveManagerRowLifecycle(input.stages);
+  if (absent.current_stage === null) return absent;
+  if (!Number.isSafeInteger(input.as_of_ms) || input.as_of_ms < 0 || !input.source_revision)
+    throw new Error("MANAGER_STAGE_SNAPSHOT_INVALID");
+  const facts = input.facts.filter(f => f.alpha_id === input.alpha_id &&
+    f.alpha_version_id === input.alpha_version_id && f.portfolio_id === input.portfolio_id &&
+    f.environment === input.environment && f.stage === absent.current_stage &&
+    f.source_revision === input.source_revision);
+  for (const f of facts) {
+    if (!Number.isSafeInteger(f.entered_at_ms) || f.entered_at_ms < 0 ||
+      (f.exited_at_ms !== null && (!Number.isSafeInteger(f.exited_at_ms) || f.exited_at_ms <= f.entered_at_ms)))
+      throw new Error("MANAGER_STAGE_TRANSITION_INVALID");
+  }
+  const current = facts.filter(f => f.entered_at_ms <= input.as_of_ms &&
+    (f.exited_at_ms === null || input.as_of_ms < f.exited_at_ms));
+  const times = [...new Set(current.map(f => f.entered_at_ms))];
+  if (times.length > 1) throw new Error("MANAGER_STAGE_TRANSITION_AMBIGUOUS");
+  if (times.length === 0) return absent;
+  return { current_stage: absent.current_stage, entered_at_ms: times[0],
+    days_in_stage: Math.floor((input.as_of_ms - times[0]) / MS_PER_DAY),
+    stage_lifecycle_reasons: { current_stage: null, entered_at_ms: null, days_in_stage: null } };
+}
+
+type RowShape = ManagerRowLifecycle & { stage_presence: string[]; environment?: string };
 /** Cross-field rules a row-by-row schema cannot say. Run as a response refinement. */
-export function validateManagerLifecycle(v: { as_of_ms: number; items: RowShape[] }, c: z.RefinementCtx): void {
+export function validateManagerLifecycle(v: { as_of_ms: number; items: RowShape[];
+  environment?: string; environment_coverage?: Array<{ environment: string; as_of_ms: number | null }> }, c: z.RefinementCtx): void {
   const bad = (i: number, message: string) => c.addIssue({ code: z.ZodIssueCode.custom, path: ["items", i], message });
   v.items.forEach((row, i) => {
+    const cutoff = v.environment === "ALL" ? v.environment_coverage?.find(entry => entry.environment === row.environment)?.as_of_ms : v.as_of_ms;
     const r = row.stage_lifecycle_reasons;
     if ((row.current_stage === null) !== (r.current_stage !== null)) bad(i, "MANAGER_CURRENT_STAGE_REASON_MISMATCH");
     // The published stage must be the row's own single stage, never a different one.
@@ -87,7 +134,7 @@ export function validateManagerLifecycle(v: { as_of_ms: number; items: RowShape[
     // Days exist only with an entry time, never ahead of the cutoff, and equal the whole elapsed days.
     if (row.days_in_stage !== null) {
       if (row.entered_at_ms === null || row.current_stage === null) bad(i, "MANAGER_DAYS_WITHOUT_ENTRY");
-      else if (row.entered_at_ms > v.as_of_ms || row.days_in_stage !== Math.floor((v.as_of_ms - row.entered_at_ms) / MS_PER_DAY))
+      else if (cutoff == null || row.entered_at_ms > cutoff || row.days_in_stage !== Math.floor((cutoff - row.entered_at_ms) / MS_PER_DAY))
         bad(i, "MANAGER_DAYS_IN_STAGE_INVALID");
     }
     if (row.entered_at_ms !== null && row.current_stage === null) bad(i, "MANAGER_ENTRY_WITHOUT_CURRENT_STAGE");

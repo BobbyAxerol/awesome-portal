@@ -1,0 +1,24 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.operations-audit.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "items": [
+      {
+        "audit_id": "TEST_ONLY:audit-4",
+        "at_ms": 1799985600000,
+        "actor": "TEST_ONLY:actor-1",
+        "action": "ACKNOWLEDGED",
+        "subject": {
+          "type": "OPERATION",
+          "id": "TEST_ONLY:op-3"
+        },
+        "receipt_ref": null
+      }
+    ],
+    "has_more": false,
+    "next_cursor": null
+  }
+}

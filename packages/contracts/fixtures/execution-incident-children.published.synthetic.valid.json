@@ -1,0 +1,78 @@
+{
+  "lane": "TEST_ONLY_SYNTHETIC_NOT_PRODUCT_RECEIPT",
+  "value": {
+    "schema_version": "portal.execution.incident-children.v1",
+    "workspace_id": "TEST_ONLY:workspace",
+    "incident_id": "TEST_ONLY:incident-1",
+    "record_authority": "PORTAL_PROJECTION",
+    "read_at_ms": 1800000000000,
+    "evidence": [
+      {
+        "source": "FINDING",
+        "digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "label": "Position limit finding",
+        "added_at_ms": 1799740800000
+      },
+      {
+        "source": "ALERT",
+        "digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "label": "Feed gap alert",
+        "added_at_ms": 1799827200000
+      },
+      {
+        "source": "DEAD_LETTER",
+        "digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "label": "Dead letter 2",
+        "added_at_ms": 1799913600000
+      },
+      {
+        "source": "ORDER_TRACE",
+        "digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "label": "Order trace",
+        "added_at_ms": 1799956800000
+      }
+    ],
+    "assigned_to": {
+      "actor": "TEST_ONLY:actor-1",
+      "assigned_at_ms": 1799827200000
+    },
+    "resolution_gate": {
+      "eligible": false,
+      "blocker_codes": [
+        "OPEN_DEAD_LETTER",
+        "UNVERIFIED_ORDER_TRACE"
+      ]
+    },
+    "timeline": [
+      {
+        "event_id": "TEST_ONLY:tl-1",
+        "action": "OPENED",
+        "actor": null,
+        "version_before": null,
+        "version_after": 1,
+        "at_ms": 1799740800000
+      },
+      {
+        "event_id": "TEST_ONLY:tl-2",
+        "action": "ASSIGNED",
+        "actor": "TEST_ONLY:actor-2",
+        "version_before": 1,
+        "version_after": 2,
+        "at_ms": 1799827200000
+      }
+    ],
+    "linked_operations": [
+      {
+        "operation_id": "TEST_ONLY:op-1",
+        "original_target": {
+          "type": "DEPLOYMENT",
+          "id": "TEST_ONLY:dep-1"
+        }
+      },
+      {
+        "operation_id": "TEST_ONLY:op-2",
+        "original_target": null
+      }
+    ]
+  }
+}
