@@ -72,7 +72,7 @@ export interface ScenarioTraits {
 }
 
 const OK: Quality = { completeness: "COMPLETE", freshness: "FRESH", reasons: [] };
-const POSITIVE: ScenarioTraits = { legacy: false, seriesGap: false, dataset: OK, series: OK, confidence: "VERIFIED", paper: OK, sandboxDark: false };
+const POSITIVE: ScenarioTraits = { legacy: false, seriesGap: false, dataset: { completeness: "COMPLETE", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC"] }, series: OK, confidence: "VERIFIED", paper: OK, sandboxDark: false };
 const LEGACY_DATASET: Quality = { completeness: "PARTIAL", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC", "RUNTIME_SCORE_POLICY_AND_SOURCE_NOT_QUALIFIED"] };
 const LEGACY_SERIES: Quality = { completeness: "PARTIAL", freshness: "FRESH", reasons: ["FIXTURE_LAB_SYNTHETIC", "SOURCE_GAP"] };
 const LAG: Quality = { completeness: "COMPLETE", freshness: "STALE", reasons: ["FIXTURE_LAB_SIMULATED_SOURCE_LAG"] };

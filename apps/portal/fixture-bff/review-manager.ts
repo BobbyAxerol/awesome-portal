@@ -450,7 +450,8 @@ function capitalStatements(rows: Draft[]): Draft[] {
       built.methodology_ref = built.availability === "AVAILABLE" ? "FIXTURE_LAB:synthetic-capital-performance-v1" : null;
       return built;
     };
-    const ret = pnl === null || opening === null ? null : pct(toScaled(pnl), toScaled(opening));
+    const denominator = legacy() ? values.initial_funds : opening;
+    const ret = pnl === null || denominator === null ? null : pct(toScaled(pnl), toScaled(denominator));
     const returnMetric = perf("return_30d_pct", pctMetric(entry.template, legacy() && index === 1 && all.length > 1 ? null : ret));
     returnMetric.denominator = returnMetric.availability === "AVAILABLE" ? values.initial_funds : null;
     const extra = {

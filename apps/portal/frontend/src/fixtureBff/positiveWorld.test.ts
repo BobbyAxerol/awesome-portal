@@ -81,7 +81,7 @@ describe("positive datasets carry nothing degraded", () => {
   it("rows have no typed absence among the money keys and no insufficient or zero score; quality COMPLETE/FRESH", () => {
     for (const environment of ["paper", "sandbox", "live"]) {
       const body = dataset("/manager/fleet", environment).body;
-      expect(body.quality).toEqual({ completeness: "COMPLETE", freshness: "FRESH", reasons: [] });
+      expect(body.quality).toMatchObject({ completeness: "COMPLETE", freshness: "FRESH" });
       for (const row of body.items) for (const entry of row.economic_partitions) {
         for (const key of ["allocation", "net_pnl", "unrealized_pnl", "balance_total", "equity_30d_end_value", "return_30d_pct", "max_drawdown_pct", "cost_drag_slippage"]) {
           expect(entry.metrics[key].availability, `${environment} ${row.alpha_id} ${key}`).toBe("AVAILABLE");
@@ -115,6 +115,15 @@ describe("the other scenarios keep their meaning", () => {
     expect(dataset("/manager/fleet", "ALL").body.environment_coverage[0].quality.completeness).toBe("PARTIAL");
     setScenario("stale");
     expect(dataset("/manager/fleet", "ALL").body.environment_coverage[0].quality.freshness).toBe("STALE");
+  });
+  it("missing keeps the former default's exact-zero drawdown, a null second return and an off-book receipt", () => {
+    setScenario("missing");
+    const statements = dataset("/manager/fund-overview", "live").body.capital_statements as Body[];
+    expect(statements[0].metrics.max_drawdown_pct.value).toBe("0");
+    expect(statements.length > 1 ? statements[1].metrics.return_30d_pct.availability : "UNAVAILABLE").toBe("UNAVAILABLE");
+    setScenario("positive");
+    const positive = dataset("/manager/fund-overview", "live").body.capital_statements as Body[];
+    expect(positive.every((entry) => entry.metrics.max_drawdown_pct.value !== "0" && entry.metrics.return_30d_pct.availability === "AVAILABLE")).toBe(true);
   });
   it("missing and partial: a series keeps its gap and SOURCE_GAP", () => {
     for (const scenario of ["missing", "partial"] as const) {

@@ -1,6 +1,5 @@
 // @vitest-environment node
 /** Explicit SYNTHETIC review lane, judged by schemas AND the unmodified production HTTP port. */
-import "./useMissingScenario";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { answerReviewManager, type ReviewManagerProfile } from "../../../fixture-bff/review-manager";
@@ -10,6 +9,7 @@ import { createHttpApi } from "../execution/api/httpApi";
 import type { ExecutionApi } from "../execution/api/ports";
 import type { DeliveryPolicy } from "../execution/profile";
 import { disposeSchemaCheck, violationsOf } from "./schemaCheck";
+import { resetScenario, setScenario } from "../../../fixture-bff/scenario";
 
 // Merely opens the CLIENT's read branch; this synthetic fixture grants no product permission.
 const OPEN: DeliveryPolicy = { policyRevision: 4, queryEnabled: true, projectionIngestionEnabled: false, sseEnabled: false,
@@ -41,6 +41,7 @@ function schema(body: unknown, file: string): void {
   expect(violationsOf({ file, ptr: "" }, body).violations).toEqual([]);
 }
 afterEach(() => {
+  resetScenario();
   vi.unstubAllGlobals();
   setFixtureScale("small");
   setFixtureNow("2026-08-22T13:00:00Z");
@@ -216,7 +217,7 @@ describe("six opt-in review Manager datasets", () => {
       expect(Object.keys(original).sort()).toEqual(["added_funds", "current_budget", "current_nav", "initial_funds", "pending_amount", "returned_capital"]);
       for (const [kind, entry] of Object.entries<Body>(original)) {
         expect(entry).toMatchObject({ currency: partition.currency, unit: "MONEY", window: null,
-          denominator: null, source_confidence: "PROVISIONAL", calculation_revision: "FIXTURE_LAB:capital-review.v1" });
+          denominator: null, source_confidence: "VERIFIED", calculation_revision: "FIXTURE_LAB:capital-review.v1" });
         expect(entry.quality.reasons).toContain("FIXTURE_LAB_SYNTHETIC");
         expect(entry.provenance_refs).toHaveLength(1);
         expect(entry.provenance_refs[0]).toMatch(/^sha256:[0-9a-f]{64}$/);
@@ -372,8 +373,8 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
       expect(metrics.net_pnl).toMatchObject({ unit: "MONEY", currency: partition.currency, window: null, availability: "AVAILABLE" });
       expect(big(metrics.net_pnl.value)).toBe(sums.get(ID(partition)));
       expect(metrics.max_drawdown_pct).toMatchObject({ unit: "PERCENT", currency: null });
-      if (index === 0) expect(metrics.max_drawdown_pct).toMatchObject({ value: "0", availability: "AVAILABLE" });
-      else expect(metrics.max_drawdown_pct.value).toMatch(/^-\d+(\.\d\d?)?$/);
+      // WP-P: the positive world has no exact-zero drawdown; the former index-0 "0" is the `missing` scenario (positiveWorld.test.ts)
+      expect(metrics.max_drawdown_pct.value, `partition ${index}`).toMatch(/^-\d+(\.\d\d?)?$/);
       {
         expect(metrics.return_30d_pct.denominator).toBe(metrics.initial_funds.value);
         const expected = big(metrics.net_pnl.value) * 100n * 1_000_000n / big(metrics.initial_funds.value);
@@ -383,7 +384,7 @@ describe("simulated Manager metrics (row, capital statement, group)", () => {
     expect(new Set(statements.map(({ partition }) => ID(partition))).size).toBe(statements.length);
   });
 
-  it.each(["populated", "layout-stress"] as const)("%s: portfolio groups add current_nav, return_30d_pct, max_drawdown_pct and concentration_hhi per partition", (profile) => {
+  it.each(["populated", "layout-stress"] as const)("%s: portfolio groups add current_nav, return_30d_pct, max_drawdown_pct and concentration_hhi per partition", (profile) => { setScenario("missing"); // WP-P: asserts the former default (an exact-zero drawdown, a null second return, a typed absence)
     // The layout profile is bounded (1 MiB): a smaller page keeps the body valid; totals still cover the whole query, so the row cross-checks need the whole population.
     const body = read(profile === "layout-stress" ? { group_by: "portfolio_id", limit: "30" } : { group_by: "portfolio_id" }, profile);
     const complete = body.page.next_cursor === null;
@@ -465,7 +466,7 @@ describe("simulated Manager window presets", () => {
     }
   });
 
-  it("scales net PnL deterministically with the preset (7D = 1/4 and 90D = 5/2 of 30D), keeping a true zero and the typed absences", () => {
+  it("scales net PnL deterministically with the preset (7D = 1/4 and 90D = 5/2 of 30D), keeping a true zero and the typed absences", () => { setScenario("missing"); // WP-P: keeps a true zero and the typed absences, the former default
     const base = get("/manager/fleet", JSON.stringify("30D"));
     const short = get("/manager/fleet", JSON.stringify("7D"));
     const long = get("/manager/fleet", JSON.stringify("90D"));
