@@ -548,6 +548,33 @@ function stageDrift(id: string): BffAnswerAlpha {
   });
 }
 
+/**
+ * `?numeric_format=DECIMAL_STRING` is the opt-in the control-api reads for `portal.execution.alpha-stage-drift.v2`: exact decimal
+ * strings, a currency per stage and a reason per missing day. Built from the canonical case, overlaid with this double's calendar.
+ * Without the opt-in the route keeps serving the number-valued body above, as the control-api does.
+ */
+function stageDriftExact(id: string): BffAnswerAlpha {
+  const body = canonicalCase("execution-alpha-stage-drift.v2.synthetic.json", "exact_above_safe_integer_and_zero");
+  const calendar = Array.from({ length: 10 }, (_, i) => iso(Date.UTC(2026, 9, 8 + i)).slice(0, 10));
+  const stage = (series: (string | null)[]): Json => ({
+    deployed: true,
+    reason_code: null,
+    currency: "USDT",
+    series,
+    series_reason_codes: series.map((value) => (value === null ? "NO_EQUITY_FOR_DAY" : null)),
+  });
+  body.alpha_id = id;
+  body.window = { ...body.window, days: calendar.length, requested_days: null };
+  body.calendar = calendar;
+  body.stages = {
+    // A gap: the 12 Oct close was not published.
+    paper: stage(["20000", "20041.5", "20012.25", "20110", null, "20085.75", "20150.5", "20122", "20190.25", "20180"]),
+    sandbox: stage(["10000", "10020.5", "10018", "10061.25", "10050", "10090.5", null, null, null, null]),
+    live: stage([null, null, null, null, null, "40000", "40210.8", "40390.4", "40880.15", "41120.8"]),
+  };
+  return ok(body);
+}
+
 /* ── observed timeline ────────────────────────────────────────────────────── */
 
 const TIMELINE_CURSOR = "kc1.double-k1.eyJkaXJlY3Rpb24iOiJhZnRlciIsInJlc291cmNlIjoidGltZWxpbmUifQ.RG91YmxlLU5PVC1BLVJFQUwtU0lHTkFUVVJF";
@@ -751,7 +778,7 @@ export function answerAlpha(method: string, pathname: string, search: URLSearchP
     if (scopedRequested(search)) return subjectPageScoped(decodeURIComponent(seg[2]), seg[3], search);
     return subjectPage(decodeURIComponent(seg[2]), seg[3], search);
   }
-  if (seg[0] === "alphas" && seg[2] === "stage-drift" && seg.length === 3) return stageDrift(decodeURIComponent(seg[1]));
+  if (seg[0] === "alphas" && seg[2] === "stage-drift" && seg.length === 3) return search.get("numeric_format") === "DECIMAL_STRING" ? stageDriftExact(decodeURIComponent(seg[1])) : stageDrift(decodeURIComponent(seg[1]));
   if (path === "/views/observed-timeline") return observedTimeline(search.get("subject_id") ?? ALPHA_DOUBLE_ID, search);
   if (path === "/views/equity-chart" && search.get("subject_kind") === "alpha") return equityChart(search.get("subject_id") ?? ALPHA_DOUBLE_ID, search);
   if (seg[0] === "derivations" && seg[1] === "alphas" && seg[3] === "activity" && seg.length === 4) return activity(decodeURIComponent(seg[2]), search);

@@ -257,7 +257,7 @@ describe("medium scale", () => {
     expect(operations.page.total_count).toBe(120);
 
     const approvals = await json(base, "/api/v1/execution/governance/approvals?limit=200");
-    expect(approvals.total_count).toBe(30);
+    expect(approvals.page.total_count).toBe(30);
 
     const users = await json(base, "/api/admin/accounts");
     expect(users.accounts).toHaveLength(123);

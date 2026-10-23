@@ -114,9 +114,9 @@ describe("scale", () => {
     expect(blotter).toHaveLength(counts.blotterOrders);
     expect(new Set(blotter.map((o) => o.order_id)).size).toBe(counts.blotterOrders);
 
-    const approvals = walk(`${EX}/governance/approvals`, "limit=40", (b) => ({ rows: b.rows, next: b.next_cursor }));
+    const approvals = walk(`${EX}/governance/approvals`, "limit=40", (b) => ({ rows: b.page.rows, next: b.page.next_cursor }));
     expect(approvals).toHaveLength(counts.approvals);
-    expect(new Set(approvals.map((r) => r.approval_id)).size).toBe(counts.approvals);
+    expect(new Set(approvals.map((r) => r.id)).size).toBe(counts.approvals);
   });
 
   it("large: a truncated portfolio register says it is truncated", () => {

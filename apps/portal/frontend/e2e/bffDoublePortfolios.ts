@@ -66,6 +66,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { addDecimal as addExact, scaleCounts, scaled, sumByCurrency, type PortfolioSpec } from "./bffScale";
 
@@ -508,7 +509,10 @@ export function answerPortfolios(method: string, pathname: string, search: URLSe
   const seg = path.split("/").filter(Boolean).map((part) => decodeURIComponent(part));
 
   if (path === "/portfolios") return portfolioList();
-  if (seg[0] === "resources" && seg[1] === "portfolios" && seg.length === 3) return portfolioResource(seg[2]);
+  if (seg[0] === "resources" && seg[1] === "portfolios" && seg.length === 3) {
+    const scoped = scopedResourceV2("PORTFOLIO", seg[2], query);
+    return scoped ? { status: 200, body: scoped } : portfolioResource(seg[2]);
+  }
   if (seg[0] === "derivations" && seg[1] === "portfolios" && seg[3] === "capital" && seg.length === 4) {
     const environment = query.get("environment");
     return isEnv(environment) ? portfolioCapital(seg[2], environment) : problem(400, "invalid_environment", "A profile environment is required.");

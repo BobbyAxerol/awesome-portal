@@ -60,7 +60,6 @@ import {
   APPROVAL_ROWS,
   CONDITION_FIXTURES,
   EXIT_DETAIL,
-  R1_DETAIL,
   R2_DETAIL,
   matchesView,
 } from "../src/execution/api/fixtureData";
@@ -81,7 +80,9 @@ import {
   SOURCE_HEALTH_READ,
 } from "../src/execution/derivedReads.fixtures";
 import { CROSS_EQUITY, RUNTIME_MANIFEST } from "../src/execution/analytics.presentation.fixtures";
-import { SCREEN_CONTRACTS } from "../src/execution/screenContracts.fixtures";
+import { SCREEN_CONTRACTS_PUBLISHED } from "./bffDoubleCatalogue";
+import { approvalHistoryEnvelope, approvalInboxEnvelope, conditionsRegisterEnvelope, r1ReviewEnvelope } from "./bffDoubleApprovalEnvelopes";
+import { scopedResourceV2 } from "./bffDoubleScopedResource";
 
 interface Answer {
   status: number;
@@ -114,15 +115,15 @@ function approvalsPage(search: URLSearchParams): Answer {
   const overdue = rows.filter(
     (r) => typeof sla(r).age_minutes === "number" && typeof sla(r).budget_minutes === "number" && (sla(r).age_minutes as number) > (sla(r).budget_minutes as number),
   ).length;
-  return ok({
+  return ok(approvalInboxEnvelope({
     rows: slice,
     total_count: rows.length,
     filtered_count: inView.length,
     next_cursor: start + limit < inView.length && slice.length > 0 ? String(slice[slice.length - 1].approval_id) : null,
     prev_cursor: start > 0 && slice.length > 0 ? String(slice[0].approval_id) : null,
     has_more: start + limit < inView.length,
-    counts: { pending: rows.length, overdue, due_soon: 1 },
-  });
+    has_previous: start > 0,
+  }, { pending: rows.length, overdue, due_soon: 1 }, search.get("workspace_id") ?? "ws_fixture_governance"));
 }
 
 function waiversPage(search: URLSearchParams): Answer {
@@ -140,7 +141,7 @@ function waiversPage(search: URLSearchParams): Answer {
     start = Math.max(0, end - limit);
   }
   const window = filtered.slice(start, Math.min(end, start + limit));
-  return ok({
+  return ok(conditionsRegisterEnvelope({
     schema_version: "governance.conditions-register.v1",
     record_authority: "PORTAL_CONTROL",
     delivery_profile: "portal",
@@ -154,10 +155,8 @@ function waiversPage(search: URLSearchParams): Answer {
       prev_cursor: start > 0 ? String(window[0]?.condition_id ?? "") || null : null,
       has_more: start + window.length < filtered.length,
       has_previous: start > 0,
-      applied_filters: [],
-      applied_sort: [],
     },
-  });
+  }, state));
 }
 
 function liveReview(approvalId: string): Answer {
@@ -1205,9 +1204,9 @@ function answerExecutionBffBase(method: string, pathname: string, search: URLSea
       });
     }
     if (path === "/runtime-manifest") return ok(RUNTIME_MANIFEST);
-    if (path === "/screen-contracts") return ok(SCREEN_CONTRACTS);
+    if (path === "/screen-contracts") return ok(SCREEN_CONTRACTS_PUBLISHED);
     if (path === "/activation/capabilities") return ok(ACTIVATION_CAPABILITIES);
-    if (path === "/governance/approvals/history") return ok(APPROVAL_HISTORY);
+    if (path === "/governance/approvals/history") return ok(approvalHistoryEnvelope(APPROVAL_HISTORY));
     if (seg[0] === "durable-mirror" && seg[1] === "integrity" && seg.length === 2) {
       const environment = search.get("environment");
       if (!validEnvironment(environment)) return problem(400, "invalid_environment", "A profile environment is required.");
@@ -1271,7 +1270,7 @@ function answerExecutionBffBase(method: string, pathname: string, search: URLSea
       if (kind === "alphas") return ok(resourceEnvelope("alpha", id));
       if (kind === "portfolios") return ok(resourceEnvelope("portfolio", id));
       if (kind === "accounts") return ok(resourceEnvelope("account", id));
-      if (kind === "bindings") return ok(resourceEnvelope("binding", id));
+      if (kind === "bindings") return ok(scopedResourceV2("BINDING", id, search) ?? resourceEnvelope("binding", id));
     }
     if (seg[0] === "profiles" && seg[2] === "realtime-snapshot") return realtimeSnapshot(seg[1]);
     if (seg[0] === "profiles" && seg[2] === "stream") {
@@ -1336,7 +1335,7 @@ function answerExecutionBffBase(method: string, pathname: string, search: URLSea
     }
     if (path === "/governance/approvals") return approvalsPage(search);
     if (seg[0] === "governance" && seg[1] === "approvals" && seg[3] === "r1")
-      return ok({ ...R1_DETAIL, approval: { ...(R1_DETAIL.approval as object), approval_id: seg[2] } });
+      return ok(r1ReviewEnvelope(seg[2]));
     if (seg[0] === "governance" && seg[1] === "approvals" && seg[3] === "r2")
       return ok({ ...R2_DETAIL, approval: { ...(R2_DETAIL.approval as object), approval_id: seg[2] } });
     if (seg[0] === "governance" && seg[1] === "approvals" && seg[3] === "live") return liveReview(seg[2]);

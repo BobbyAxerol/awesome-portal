@@ -190,7 +190,7 @@ rows keep their dates).
 | GET | `/api/admin/profile-access/v2/self-context` | 200 | bffDoubleSelfAccess | control-api | `execution-access.openapi.json#/components/schemas/AccessSelfContext` | portal.self-context.v1, the first canonical case (a sole workspace with a current grant record); the read takes no query, so no query picks a case. No FE reader exists yet |
 | GET | `/api/v1/execution/retained-review` | 404 | bffDouble | control-api (typed refusal) | none | UDB_RETAINED_REVIEW_NOT_CONFIGURED: a normal stack has no retained review |
 | GET | `/api/v1/execution/runtime-manifest` | 200 | bffDouble | control-api | none |  |
-| GET | `/api/v1/execution/screen-contracts` | 200 | bffDouble | control-api | DRIFT `execution-screen-bff.v1#/$defs/CatalogueResponse` |  |
+| GET | `/api/v1/execution/screen-contracts` | 200 | bffDouble | control-api | `execution-screen-bff.v1#/$defs/CatalogueResponse` |  |
 | GET | `/api/v1/execution/activation/capabilities` | 200 | bffDoubleOverview | control-api | `execution-staged-activation.v1#/$defs/CapabilitiesResponse` |  |
 | GET | `/api/v1/execution/durable-mirror/integrity` | 200 | bffDouble | control-api | none |  |
 | GET | `/api/v1/execution/derivations/source-health` | 200 | bffDouble | control-api | none |  |
@@ -209,7 +209,8 @@ rows keep their dates).
 | GET | `/api/v1/execution/derivations/conditional-groups/{group_id}` | 200 | bffDoubleOverview | control-api | none |  |
 | GET | `/api/v1/execution/alphas` | 200 | bffDouble (alphaFleet) | control-api | `execution-alpha-fleet-list.v2#/$defs/AlphaFleetResponse` | filters search, stage, owner, health; sort; keyset after/before |
 | GET | `/api/v1/execution/alphas/equity-sparklines` | 200 | bffDouble | control-api | none |  |
-| GET | `/api/v1/execution/alphas/{alpha_id}/stage-drift` | 200 | bffDoubleAlpha | control-api | DRIFT `execution-alpha-stage-drift.v2#/` |  |
+| GET | `/api/v1/execution/alphas/{alpha_id}/stage-drift` | 200 | bffDoubleAlpha | control-api | none |  |
+| GET | `/api/v1/execution/alphas/{alpha_id}/stage-drift [exact decimals]` | 200 | bffDoubleAlpha | control-api | `execution-alpha-stage-drift.v2#/` | portal.execution.alpha-stage-drift.v2, served only with numeric_format=DECIMAL_STRING (exact decimal strings, a currency and a reason per gap); without it the route keeps the number-valued body |
 | GET | `/api/v1/execution/alphas/{alpha_id}/query-analytics` | 200 | bffDouble | control-api | `execution-query-analytics.v1#/` |  |
 | GET | `/api/v1/execution/resources/alphas/{alpha_id}` | 200 | bffDoubleAlpha | control-api | `execution-alpha-resource.v1#/` | any other id answers the same template; alpha_denied 403, alpha_down 503, alpha_empty empty |
 | GET | `/api/v1/execution/resources/alphas/{alpha_id}/orders` | 200 | bffDoubleAlpha | control-api | `execution-subject-records.v1#/` |  |
@@ -249,7 +250,8 @@ rows keep their dates).
 | GET | `/api/v1/execution/manager/fleet/realtime-snapshot [wide ordinal]` | 200 | bffDoubleManager | control-api | `execution-alpha-fleet-realtime.v1#/$defs/AlphaFleetRealtimeSnapshot` | FIXTURE (workspace_id=ws_TEST_FLEET_RT_WIDE_ORDINAL): an ordinal beyond a safe integer, kept as its decimal string |
 | GET | `/api/v1/execution/manager/fleet/stream` | 200 | bffDoubleManager | control-api | none | FIXTURE: ONE heartbeat frame and the response ends (a fixture lane holds no connection). workspace_id picks revalidate, revoked, resync, slow and limit; a missing cursor is a terminal SNAPSHOT_REQUIRED frame, a wrong one CURSOR_INVALID_OR_EXPIRED. Last-Event-ID is not read, only ?cursor= |
 | GET | `/api/v1/execution/portfolios` | 200 | bffDoublePortfolios | control-api | `execution-portfolio-list.v1#/$defs/PortfolioListResponse` |  |
-| GET | `/api/v1/execution/resources/portfolios/{portfolio_id}` | 200 | bffDoublePortfolios | control-api | DRIFT `execution-resource-scoped.v2#/$defs/PortfolioScopedResourceWireResponse` |  |
+| GET | `/api/v1/execution/resources/portfolios/{portfolio_id}` | 200 | bffDoublePortfolios | control-api | none |  |
+| GET | `/api/v1/execution/resources/portfolios/{portfolio_id} [V2 workspace]` | 200 | bffDoubleScopedResource | control-api | `execution-resource-scoped.v2#/$defs/PortfolioScopedResourceWireResponse` | execution.portfolio-resource.v2 (SCOPED_V2): the canonical case with the requested id; served only for workspace_id=ws_TEST_SCOPED_V2 |
 | GET | `/api/v1/execution/derivations/portfolios/{portfolio_id}/capital` | 200 | bffDoublePortfolios | control-api | none |  |
 | GET | `/api/v1/execution/portfolios/{portfolio_id}/capital-ledger` | 200 | bffDoublePortfolios | control-api | none |  |
 | GET | `/api/v1/execution/portfolios/{portfolio_id}/correlation` | 200 | bffDoublePortfolios | control-api | none | every other portfolio: 503 ANALYTICS_UPSTREAM_ROUTE_ABSENT |
@@ -259,17 +261,19 @@ rows keep their dates).
 | GET | `/api/v1/execution/broker-bindings` | 200 | bffDoubleAccount | control-api | `execution-manager-lists.v1#/$defs/BindingsResponse` | one environment per read; keyset after |
 | GET | `/api/v1/execution/broker-bindings/{binding_id}` | 200 | bffDoubleAccount | control-api | `execution-manager-lists.v1#/$defs/BindingDetailResponse` |  |
 | GET | `/api/v1/execution/broker-bindings/{binding_id}/exposure` | 200 | bffDoubleAccount | control-api | none |  |
-| GET | `/api/v1/execution/resources/accounts/{account_id}` | 200 | bffDoubleAccount | control-api | DRIFT `execution-resource-scoped.v2#/$defs/AccountScopedResourceWireResponse` |  |
+| GET | `/api/v1/execution/resources/accounts/{account_id}` | 200 | bffDoubleAccount | control-api | none |  |
+| GET | `/api/v1/execution/resources/accounts/{account_id} [V2 workspace]` | 200 | bffDoubleScopedResource | control-api | `execution-resource-scoped.v2#/$defs/AccountScopedResourceWireResponse` | execution.account-resource.v2 (SCOPED_V2): the canonical case with the requested id; served only for workspace_id=ws_TEST_SCOPED_V2 |
 | GET | `/api/v1/execution/resources/accounts/{account_id}/orders` | 200 | bffDoubleAccount | control-api | none |  |
 | GET | `/api/v1/execution/resources/accounts/{account_id}/fills` | 200 | bffDoubleAccount | control-api | none |  |
-| GET | `/api/v1/execution/resources/bindings/{binding_id}` | 200 | bffDouble | control-api | DRIFT `execution-resource-scoped.v2#/$defs/BindingScopedResourceWireResponse` |  |
-| GET | `/api/v1/execution/governance/approvals` | 200 | bffDouble | control-api | DRIFT `execution-governance-product.v1#/$defs/ApprovalInboxResponse` | rows, counts, keyset after |
-| GET | `/api/v1/execution/governance/approvals/history` | 200 | bffDouble | control-api | DRIFT `execution-governance-approval-workflow.v1#/$defs/ApprovalHistoryResponse` |  |
-| GET | `/api/v1/execution/governance/approvals/{approval_id}/r1` | 200 | bffDouble | control-api | DRIFT `execution-governance-approval-workflow.v1#/$defs/R1ReviewResponse` |  |
+| GET | `/api/v1/execution/resources/bindings/{binding_id}` | 200 | bffDouble | control-api | none |  |
+| GET | `/api/v1/execution/resources/bindings/{binding_id} [V2 workspace]` | 200 | bffDoubleScopedResource | control-api | `execution-resource-scoped.v2#/$defs/BindingScopedResourceWireResponse` | execution.binding-resource.v2 (SCOPED_V2): the canonical case with the requested id; served only for workspace_id=ws_TEST_SCOPED_V2 |
+| GET | `/api/v1/execution/governance/approvals` | 200 | bffDouble | control-api | `execution-governance-product.v1#/$defs/ApprovalInboxResponse` | rows, counts, keyset after |
+| GET | `/api/v1/execution/governance/approvals/history` | 200 | bffDouble | control-api | `execution-governance-approval-workflow.v1#/$defs/ApprovalHistoryResponse` |  |
+| GET | `/api/v1/execution/governance/approvals/{approval_id}/r1` | 200 | bffDouble | control-api | `execution-governance-approval-workflow.v1#/$defs/R1ReviewResponse` |  |
 | GET | `/api/v1/execution/governance/approvals/{approval_id}/r2` | 200 | bffDouble | control-api | none |  |
 | GET | `/api/v1/execution/governance/approvals/{approval_id}/live` | 200 | bffDouble | control-api | none |  |
 | GET | `/api/v1/execution/governance/exit-reviews/{review_id}` | 200 | bffDouble | control-api | none |  |
-| GET | `/api/v1/execution/governance/waivers` | 200 | bffDouble | control-api | DRIFT `execution-governance-product.v1#/$defs/ConditionsRegisterResponse` |  |
+| GET | `/api/v1/execution/governance/waivers` | 200 | bffDouble | control-api | `execution-governance-product.v1#/$defs/ConditionsRegisterResponse` |  |
 | GET | `/api/v1/execution/governance/review-capture-capabilities` | 200 | bffDouble | control-api | `execution-governance-review-capture.v1#/$defs/Capabilities` |  |
 | GET | `/api/v1/execution/governance/stage-action-eligibility` | 200 | bffDoubleGovernance | control-api | `execution-governance.openapi.json#/components/schemas/StageActionEligibility` | FIXTURE admin_with_r2_read; workspace_id picks the case (ws_TEST_PLAIN_USER, ws_TEST_NO_R2_GRANT, ws_TEST_OTHER_WORKSPACE, ws_TEST_NOT_AUTHORIZED, ws_TEST_RETAINED_REVIEW, ws_TEST_STEP_UP_ACTIVE, ws_TEST_DENIED 403, ws_TEST_UNAVAILABLE 503) and is echoed |
 | GET | `/api/v1/execution/governance/stage-action-eligibility [plain user]` | 200 | bffDoubleGovernance | control-api | `execution-governance.openapi.json#/components/schemas/StageActionEligibility` | FIXTURE plain_user |
