@@ -125,3 +125,25 @@ New: `fixtureBff/wpcFixture.test.ts` (16), `alpha/lifecycleModel.test.ts`, `alph
 - Real Edge answers: nothing here proves what the control-api returns for any of the open keys.
 - Visual baselines were not recorded (board rule); layout numbers are from the local audit stack, not the preview.
 - The Alphas tab overlay, the drawdown pane, the receipt link, per-venue contribution and the shell context bar wait on the requests in BOARD section 5.
+
+## 7. Layout numbers (scripts/layout-audit.mjs, widths 1440/1280/1024/660/390)
+
+Cell format: overflowPx / clipped / wrapped figures / font outliers. Before = the running preview (port 8095, read only, `--base-url`), label `wpc-before`; after = a local build of this branch with the fixture BFF, label `wpc-final`. Findings JSON and screenshots are in the session scratchpad (`wpc-layout/`), not in the repo.
+
+| Route | Before (all widths) | After (all widths) |
+|---|---|---|
+| alpha-360 (`alpha_a`) | 0/0/0/1, 390: 0/0/1/1 | 0/0/0/1, 390: 0/0/1/1 |
+| alpha-360-btc | 0/0/0/1, 390: 0/0/1/1 | same |
+| alpha-activity | 0/0/0/0, 390: 0/0/1/0 | same |
+| alpha-replay, alpha-replay-btc | 0/0/0/0 | 0/0/0/0 |
+| alpha-orders | 0/0/0/3 (660, 390: 2) | 0/0/0/0 |
+| alpha-deployments | 0/0/0/1 | 0/0/0/0 |
+| compare (Core + Satellite) | 0/0/0/12 | 0/0/0/2 |
+| compare-pair (Satellite + a generated USDT book) | 0/0/0/12 (no series then) | 0/0/0/2 |
+| compare-alphas (new tab) | not drawn | 0/0/0/0 |
+
+What the remaining numbers are: the one font outlier on the Alpha 360 routes is the "Not available" button of the Return/Windowed absence that existed before; the 390 wrapped figure is the chart readout "Change across the plotted points +812.00 USDT" (existing). The two outliers on Compare are the State flag chip "Active" at the flag size (11px), a chip by design in every table. Along the way the audit found and this branch fixed: stage-band words clipped on the ribbon (now printed only when the band fits), end tags cut off at the right of the Compare overlay for money series (the margin now follows the longest tag), typed absences at the caption size inside the Compare table (now 13px like the figures beside them), partition tags at 12px in the Alpha 360 figure tables, and the Alphas tab lines running together.
+
+## 8. Tests run (this branch, worktree /home/bobby/portal/.claude/worktrees/agent-a41bebe538f3a7aa8)
+
+See the final report of the agent for the exact commands and counts; `npx tsc --noEmit -p .` exits 0 (run separately, with the roadmap-task-board node_modules linked). Known red on the lane tip, not WP-C: `titleAbsence.test.ts` names three Fleet titles (WP-A files); `fleet/fleetStream.test.tsx` "flag off" failed once under load and passes alone.
