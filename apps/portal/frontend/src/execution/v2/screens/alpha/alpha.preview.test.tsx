@@ -74,7 +74,7 @@ describe("Alpha 360 spine and tiles for alpha_a (live book)", () => {
     await waitFor(() => expect(screen.queryByText(/Preview of how the spine reads/)).toBeNull());
   });
 
-  it("fills Return, Max drawdown and Regime fit from the published keys; the score chip stays the policy words", async () => {
+  it("fills Return, Max drawdown, Regime fit and the QBTS from the published keys", async () => {
     mount("/deployments/alphas/alpha_a", "alpha_a");
     await spine();
     await waitFor(() => expect(tile("Return").textContent).toMatch(/\d%/));
@@ -82,7 +82,21 @@ describe("Alpha 360 spine and tiles for alpha_a (live book)", () => {
     // Regime fit is a ratio, or the typed absence apart from the score, never a dash and never 0.
     await waitFor(() => expect(tile("Regime fit").textContent).toMatch(/(\d\.\d{4})|Insufficient data/));
     expect(tile("Regime fit").textContent).toContain("Separate from score");
-    expect(screen.getByRole("button", { name: /Not scored/ })).toBeTruthy();
+    // The QBTS is the dataset's own published score (WP-A's keys: row key `score`, open `qbts_*` partition keys). Where it is published the chip and the tile print it
+    // with its band and the Score drawer prints the same figures; where the dataset says insufficient evidence, the chip keeps the policy words and the tile is the typed absence.
+    const probe = startPreviewLane();
+    const read = await probe.api.getManagerDataset({ surface: "ALPHA", id: "alpha_a", environment: "live", limit: 50 });
+    const score = read.ok ? read.value.items[0]?.metrics.score : undefined;
+    expect(score).toBeDefined();
+    if (score !== undefined && score.kind === "value") {
+      await waitFor(() => expect(screen.getByRole("button", { name: /QBTS \d/ })).toBeTruthy());
+      expect(tile("QBTS").textContent).toContain(score.exact);
+      fireEvent.click(screen.getByRole("button", { name: /QBTS \d/ }));
+      expect(await screen.findByText("Published by the dataset.", { exact: false })).toBeTruthy();
+    } else {
+      expect(screen.getByRole("button", { name: /Not scored/ })).toBeTruthy();
+      await waitFor(() => expect(tile("QBTS").textContent).toMatch(/Not available/));
+    }
   });
 });
 

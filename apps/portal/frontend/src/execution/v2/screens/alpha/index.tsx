@@ -70,6 +70,8 @@ import {
 } from "./model";
 import { Np, WhyMark } from "./np";
 import { PercentValue, ReturnFig, RowFigure, useAlphaDataset } from "./DatasetFigures";
+import { QbtsCell } from "../fleet/FleetDatasetTable";
+import { qbtsOf } from "../fleet/fleetMetricsModel";
 import { alphaViewOf } from "./view";
 import AlphaReplay from "./replay";
 import {
@@ -229,6 +231,9 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
   // WP-C: the events and the lifecycle the dataset publishes (open `evt_*` and `life_*` partition keys); none = the lanes say Not published.
   const life = useMemo(() => ({ ...lifeEvents(datasetValue), spans: stageSpans(datasetValue) }), [datasetValue]);
   const regime = useMemo(() => regimeFit(datasetValue), [datasetValue]);
+  // The QBTS the dataset publishes (row key `score` plus the open `qbts_*` partition keys): one per alpha version, so the first row speaks for it.
+  const qbtsRow = datasetValue?.items[0] ?? null;
+  const qbts = useMemo(() => (qbtsRow === null ? null : qbtsOf(qbtsRow)), [qbtsRow]);
   const names = view?.portfolioNameById ?? NO_NAMES;
 
   const panelId = `${uid}-panel`;
@@ -245,7 +250,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
             {view?.present && view.version !== null ? <span className="exec-alp2-version">v{view.version}</span> : null}
             {present ? (
               <button type="button" className="exec-alp2-scorechip" aria-haspopup="dialog" onClick={() => select("score")}>
-                <Flag kind="pending" label="Not scored · policy not set" size="sm" />
+                {qbts !== null && qbts.kind === "value" ? <Flag kind={qbts.band?.kind ?? "neutral"} label={`QBTS ${qbts.exact}${qbts.band ? ` · ${qbts.band.label}` : ""}`} size="sm" /> : <Flag kind="pending" label="Not scored · policy not set" size="sm" />}
               </button>
             ) : null}
           </h1>
@@ -316,6 +321,9 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
               </Fig>
               <Fig label="Return" basis="30D; methodology per source"><ReturnFig read={dataset} names={names} /></Fig>
               <Fig label="Max drawdown" basis="Window per source"><RowFigure read={dataset} names={names} metricKey="max_drawdown_pct" fallback={<Np id="FE-025" />} cell={(metric) => <PercentValue metric={metric} signed={false} />} /></Fig>
+              <Fig label="QBTS" basis="Per alpha version; the dataset's own score">
+                {qbtsRow === null ? <Np id="FE-011" /> : <QbtsCell row={qbtsRow} carried />}
+              </Fig>
               <Fig label="Regime fit" basis="Separate from score">
                 {regime === null ? <Np id="FE-011" /> : regime.kind === "value" ? <span className="exec-alp2-fig"><span className="exec-mgr-num" title="Share of the window the source places in the alpha's regime, as published">{regime.exact}</span> <button type="button" className="exec-blk-link" onClick={() => openTab("regime")}>Open</button></span>
                   : <span className="exec-alp2-fig"><Flag kind="pending" label={humanize(regime.code)} size="sm" /> <button type="button" className="exec-blk-link" onClick={() => openTab("regime")}>Open</button></span>}
@@ -403,7 +411,7 @@ function Alpha360({ api, alphaId, workspaceId }: AlphaScreenProps) {
             </div>
           </div>
 
-          {selection === "score" ? <ScoreDrawer view={view} mode={mode} onClose={close} /> : null}
+          {selection === "score" ? <ScoreDrawer view={view} mode={mode} onClose={close} qbts={qbts} /> : null}
         </div>
       )}
     </div>
