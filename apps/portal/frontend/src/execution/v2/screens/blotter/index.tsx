@@ -272,6 +272,12 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
   const rows = scoped ? scoped.rows : [];
   const counts = useMemo(() => (read ? chipCounts(read) : null), [read]);
   const unchipped = useMemo(() => (read ? unchippedStatusCounts(read) : []), [read]);
+  // Scopes that can still be added: the distinct deployments, accounts and alphas on the loaded page (they narrow the loaded rows only).
+  const scopeChoices = useMemo(() => (["deployment", "account", "alpha"] as const).flatMap((key) => {
+    if (scope[key] !== null || !read) return [];
+    const values = [...new Set(read.orders.flatMap((o) => { const v = key === "deployment" ? o.deploymentId : key === "account" ? o.accountId : o.alphaId; return v ? [v] : []; }))].sort();
+    return values.length > 0 ? [{ key, values }] : [];
+  }), [read, scope]);
   const venues = useMemo(() => [...new Set([...(read?.orders.flatMap((o) => (o.venue ? [o.venue] : [])) ?? []), ...Object.keys(read?.venueCounts ?? {}), ...(filters.venue ? [filters.venue] : [])])].sort(), [read, filters.venue]);
 
   // A link that names an order or a fill opens that row once, when its page is loaded.
@@ -382,9 +388,10 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       <header className="exec-blt2-head">
         <div>
           <h1 className="exec-blt2-title">{heading}</h1>
+          <p className="exec-blt2-sub">Orders and fills, newest first</p>
         </div>
         <div className="exec-blt2-fresh">
-          {fresh === "FRESH" ? null : <Flag kind={fresh === "STALE" ? "stale" : "unknown"} label={fresh === "STALE" ? "Stale" : page.freshness ? humanize(page.freshness) : "Freshness not stated"} size="sm" />}
+          {fresh === "FRESH" ? <Flag kind="ok" label="Fresh" size="sm" /> : <Flag kind={fresh === "STALE" ? "stale" : "unknown"} label={fresh === "STALE" ? "Stale" : page.freshness ? humanize(page.freshness) : "Freshness not stated"} size="sm" />}
           {page.asOf ? <span className="exec-blt2-meta">As of {shortUtc(page.asOf)}</span> : <span className="exec-blt2-meta">Source time not published</span>}
         </div>
       </header>
@@ -415,6 +422,19 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
               </span>
             ) : null,
           )}
+          {scopeChoices.length > 0 ? (
+            <label className="exec-blt2-field">
+              <span className="exec-blt2-sr">Add scope</span>
+              <select className="exec-blt2-input" value="" onChange={(event) => { const [key, ...rest] = event.target.value.split("|"); if (key) setParam(key, rest.join("|")); }}>
+                <option value="">Add scope…</option>
+                {scopeChoices.map((group) => (
+                  <optgroup key={group.key} label={SCOPE_LABEL[group.key]}>
+                    {group.values.map((value) => <option key={value} value={`${group.key}|${value}`}>{value}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+            </label>
+          ) : null}
           {scopeActive(scope) ? <button type="button" className="exec-blt2-btn" onClick={() => clearScope(["deployment", "account", "alpha", "order", "fill"])}>Clear scope</button> : null}
         </div>
         {scopeActive(scope) ? (

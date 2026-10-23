@@ -109,6 +109,18 @@ export function SleevesPanel({ ctx }: { ctx: PanelContext }) {
     },
     { key: "portfolio", label: "Portfolio", render: (row) => (row.portfolio === null ? <Na /> : row.portfolio) },
     { key: "internal", label: "Internal balance", numeric: true, render: (row) => <Value metric={row.internal} suffix={ctx.currency ?? undefined} /> },
+    // The venue reports the whole account; no source splits native balance among sleeves. A typed state (not a zero, not a blank).
+    {
+      key: "native",
+      label: "Native attribution",
+      numeric: true,
+      render: () => (
+        <span className="exec-acct-cell" data-state="no-source">
+          <Na />
+          <span className="exec-acct-sub">No source</span>
+        </span>
+      ),
+    },
   ];
   return (
     <SectionPanel title="Sleeves on this binding" aside="Physical" flush>
@@ -116,6 +128,7 @@ export function SleevesPanel({ ctx }: { ctx: PanelContext }) {
       <p className="exec-acct-cap">
         Not totalled: native balance is not split among sleeves
         {population.partial ? `. ${population.published} of ${population.expected} sleeves are published here` : ""}
+        <GapWhy name="Why native attribution has no source" rows={["The venue reports native balance for the whole account. No source attributes it to a sleeve, so the column is a typed absence, not a zero and not a share."]} next={null} />
       </p>
     </SectionPanel>
   );
@@ -132,7 +145,7 @@ export function MarginPanel({ ctx }: { ctx: PanelContext }) {
   return (
     <SectionPanel title="Margin" aside="Whole account">
       <dl className="exec-acct-facts">
-        <Fact label="Margin ratio"><Np fact={FE.marginRatio} /></Fact>
+        <Fact label="Margin ratio">{margin?.ratio !== undefined ? <Value metric={margin.ratio} suffix="%" /> : <Np fact={FE.marginRatio} />}</Fact>
         <Fact label="Initial margin">
           {margin?.perInstrumentOnly ? <Na why="Published per instrument only" /> : <Value metric={margin?.initial} suffix={currency ?? undefined} />}
         </Fact>

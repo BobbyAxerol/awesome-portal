@@ -417,6 +417,8 @@ export interface BalanceFacts {
 }
 
 export interface MarginFacts {
+  /** The account-level row's own `margin_ratio` in percent (`undefined` = the row publishes none: A360-2 stays typed). */
+  ratio: Metric | null | undefined;
   initial: Metric | null | undefined;
   maintenance: Metric | null | undefined;
   /** Several instrument rows and no account row: no account total is published. */
@@ -493,6 +495,11 @@ export interface AccountIdentity {
   state: string | null;
   /** Published `account_type` / margin mode word, when there is one. */
   marginMode: string | null;
+  /** The account row's own `product` word (for example "USDT-M futures · hedge"), when it publishes one (A360-4). */
+  product: string | null;
+  /** The account row's `network` word (MAINNET, TESTNET) and the instant that network was last proven (`network_proof_at_ms`). */
+  network: string | null;
+  networkProofAt: UtcEpochMs | null;
   portfolios: readonly string[];
   environment: BindingEnv | null;
   bindingId: string | null;
@@ -536,6 +543,11 @@ function displayNames(deployments: readonly Row[], allocations: readonly Row[]):
     put(deploymentNames, text(row.deployment_id), text(row.deployment_name) ?? text(row.display_name) ?? text(row.label) ?? text(row.name));
   }
   return { portfolios, deployments: deploymentNames, alphas };
+}
+
+/** A published word that does not look like a secret; anything that does is not shown. */
+function safeWord(word: string | null): string | null {
+  return word !== null && !SENSITIVE.test(word.toLowerCase()) ? word : null;
 }
 
 const SENSITIVE = /(^|_)(secret|credential|password|token|dsn|external_account_ref|raw)(_|$)/;
@@ -649,6 +661,9 @@ export function readAccountView(profile: ProfileEnvelope, accountId: string): Ac
       baseCurrency: account ? text(account.base_currency) : null,
       state: account ? text(account.state) : null,
       marginMode: typeWord && !SENSITIVE.test(typeWord.toLowerCase()) ? typeWord : null,
+      product: safeWord(account ? text(account.product) : null),
+      network: safeWord(account ? text(account.network) : null),
+      networkProofAt: account ? timeOf(account, "network_proof_at") : null,
       portfolios: [...new Set(deployments.flatMap((row) => {
         const pf = text(row.portfolio_id);
         return pf ? [pf] : [];
@@ -709,8 +724,8 @@ export function marginFacts(profile: ProfileEnvelope, accountId: string, currenc
   if (rows.length === 0) return null;
   const accountLevel = rows.filter((row) => text(row.instrument_id) === null);
   const pick = accountLevel.length > 0 ? latestBy(accountLevel, "updated_at") : rows.length === 1 ? rows[0]! : null;
-  if (pick === null) return { initial: undefined, maintenance: undefined, perInstrumentOnly: true };
-  return { initial: metricOf(pick.initial, "money"), maintenance: metricOf(pick.maintenance, "money"), perInstrumentOnly: false };
+  if (pick === null) return { ratio: undefined, initial: undefined, maintenance: undefined, perInstrumentOnly: true };
+  return { ratio: metricOf(pick.margin_ratio, "pct"), initial: metricOf(pick.initial, "money"), maintenance: metricOf(pick.maintenance, "money"), perInstrumentOnly: false };
 }
 
 export function headroomFacts(profile: ProfileEnvelope, currency: string | null): HeadroomFacts | null {

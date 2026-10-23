@@ -105,6 +105,36 @@
   overflow-x: auto;
   border-bottom: 1px solid var(--line-strong);
 }
+/* The environment tabs and the Issues toggle share one underline strip. */
+.exec-acct-tabrow {
+  display: flex;
+  align-items: flex-end;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-acct-tabrow .exec-acct-tabs {
+  overflow-x: visible;
+  border-bottom: 0;
+}
+.exec-acct-tabrow > .exec-acct-tab {
+  margin-left: var(--space-3);
+}
+.exec-acct-tab[aria-pressed="true"] {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+.exec-acct-url {
+  margin-left: auto;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-acct-url summary {
+  cursor: pointer;
+  color: var(--accent);
+}
+.exec-acct-url .exec-acct-mono {
+  overflow-wrap: anywhere;
+}
 .exec-acct-tab {
   display: inline-flex;
   align-items: center;

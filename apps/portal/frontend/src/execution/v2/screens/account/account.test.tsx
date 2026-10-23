@@ -548,7 +548,8 @@ describe("Account 360: the shared sleeve", () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
-    expect(screen.getByText("Shared by 3 sleeves").getAttribute("title")).toBe("Native figures cover the whole account, not one sleeve.");
+    expect(screen.getByText("Shared account · 3 sleeves")).toBeTruthy();
+    expect(screen.getByText(". Native figures are not sleeve capital.")).toBeTruthy();
     expect(screen.getByText("Stale 14 min")).toBeTruthy();
     expect(screen.getByText("As of 17 Oct 09:00Z")).toBeTruthy();
     expect(screen.getByText("Broker sync: Synced")).toBeTruthy();
@@ -653,7 +654,7 @@ describe("Account 360: the shared sleeve", () => {
     expect(within(panel).getByRole("img", { name: /Account drawdown/ }).className).toContain("exec-c2-na");
   });
 
-  it("the sleeves table never attributes native balance to a sleeve: no attribution column, and not totalled", async () => {
+  it("the sleeves table never attributes native balance to a sleeve: the attribution column is a typed Not available / No source, and not totalled", async () => {
     stubFetch();
     account("acc_bnc_core");
     await loaded360();
@@ -661,7 +662,7 @@ describe("Account 360: the shared sleeve", () => {
     const rows = bodyRows(table);
     expect(rows).toHaveLength(3);
     expect(rows.map((r) => cell(r, "Internal balance"))).toEqual(["88,200.00 USDT", "61,400.00 USDT", "47,900.00 USDT"]);
-    for (const row of rows) expect(row.querySelector('td[data-l="Native attribution"]'), "no sleeve gets a native figure").toBeNull();
+    for (const row of rows) expect(cell(row, "Native attribution"), "no sleeve gets a native figure").toBe("Not availableNo source");
     expect(within(table.closest("section")!).getByText(/Not totalled: native balance is not split among sleeves/)).toBeTruthy();
     expect(within(rows[1]!).getByRole("link", { name: "Binance-02b sleeve" }).getAttribute("href")).toBe("/deployments/accounts/acc_bnc_sat");
     expect(within(rows[0]!).queryByRole("link")).toBeNull();
@@ -1294,5 +1295,77 @@ describe("Account 360: Back by source", () => {
     expect(url.pathname.startsWith("/deployments/accounts/")).toBe(true);
     expect(url.searchParams.get("from")).toBe("accounts");
     expect(Object.fromEntries(new URLSearchParams(url.searchParams.get("back") ?? ""))).toEqual({ q: "bnc", issues: "1" });
+  });
+});
+
+describe("Accounts list: WP-F2 strip and URL", () => {
+  const simulated = () => stubFetch({
+    answer: (url) => {
+      const answer = answerAccount("GET", url.pathname, url.searchParams);
+      return answer === null ? null : simulate("GET", url.pathname.replace(/^\/api\/v1\/execution/, ""), url.searchParams, answer);
+    },
+  });
+
+  it("the Issues lens is part of the tab strip, beside the three environments, and the other environments carry the published counts", async () => {
+    simulated();
+    mount("/deployments/accounts");
+    await loadedList();
+    const strip = document.querySelector(".exec-acct-tabrow")!;
+    expect(within(strip as HTMLElement).getAllByRole("tab").map((t) => t.textContent)).toEqual(["Real-funded3", "Paper1", "Sandbox1"]);
+    expect(within(strip as HTMLElement).getByRole("button", { name: /Issues only/ })).toBeTruthy();
+  });
+
+  it("the URL disclosure shows the address that reopens this exact view", async () => {
+    stubFetch();
+    mount("/deployments/accounts?venue=BINANCE");
+    await loadedList();
+    const url = document.querySelector(".exec-acct-url")!;
+    fireEvent.click(within(url as HTMLElement).getByText("URL"));
+    expect(url.textContent).toContain("/deployments/accounts?venue=BINANCE");
+  });
+});
+
+/* ═══ WP-F2: Account 360 identity, margin ratio, native attribution, provenance ═══ */
+
+describe("Account 360: WP-F2 simulated identity and margin (FIXTURE_LAB)", () => {
+  const simulated = () => stubFetch({
+    answer: (url) => {
+      const answer = answerAccount("GET", url.pathname, url.searchParams);
+      return answer === null ? null : simulate("GET", url.pathname.replace(/^\/api\/v1\/execution/, ""), url.searchParams, answer);
+    },
+  });
+
+  it("prints the product, the network with its proof time, the margin ratio and the sleeve portfolio names from the account row", async () => {
+    simulated();
+    account("acc_bnc_core");
+    await loaded360();
+    const physical = screen.getByText("Physical binding", { selector: "h2, h3, .exec-blk-ph-title" }).closest("section")!;
+    expect(physical.textContent).toContain("USDT-M futures · hedge");
+    expect(physical.textContent).toMatch(/Real-funded · Mainnet · proof 17 Oct 0\d:\d\dZ/);
+    expect(physical.textContent).not.toContain("Not published");
+    const margin = screen.getByText("Margin", { selector: "h2, h3, .exec-blk-ph-title" }).closest("section")!;
+    expect(margin.textContent).toMatch(/5\.10\s?%/);
+    expect(margin.textContent).not.toContain("A360-2");
+    const rows = bodyRows(screen.getByRole("table", { name: "Sleeves on this binding" }));
+    expect(rows.map((r) => cell(r, "Portfolio"))).toEqual(["Core", "Satellite", "Canary"]);
+  });
+
+  it("the native account stays Withheld on purpose, and the physical panel opens a provenance disclosure that says so", async () => {
+    simulated();
+    account("acc_bnc_core");
+    await loaded360();
+    expect(screen.getByText("Withheld")).toBeTruthy();
+    fireEvent.click(screen.getAllByText("Provenance").at(-1)!);
+    expect(document.body.textContent).toContain("The portal never shows the broker account reference.");
+    expect(document.body.textContent).toContain("Record authority");
+  });
+
+  it("without the simulated lane the product and the margin ratio stay typed (Not published, with their request ids)", async () => {
+    stubFetch();
+    account("acc_bnc_core");
+    await loaded360();
+    const physical = screen.getByText("Physical binding", { selector: "h2, h3, .exec-blk-ph-title" }).closest("section")!;
+    expect(physical.textContent).toContain("Not published");
+    expect(screen.getByText("Margin", { selector: "h2, h3, .exec-blk-ph-title" }).closest("section")!.textContent).toContain("Not published");
   });
 });

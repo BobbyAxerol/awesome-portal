@@ -92,8 +92,36 @@ function overlayAccountResource(body: Obj, accountId: string): Obj {
       row.exposure_gross = addCents("61300.00", "35100.00");
     }
   }
+  overlayAccountF2(data, accountId); // WP-F2 (one call line)
   return out;
 }
+
+// ===== WP-F2 begin: Account 360 identity, margin ratio and sleeve portfolio names (FIXTURE_LAB; register 2f2) =====
+const PORTFOLIO_NAMES_F2: Readonly<Record<string, string>> = { pf_satellite: "Satellite", pf_canary: "Canary" };
+
+/**
+ * The account row states its `product`, `network` and the instant that network was proven (two minutes before the newest venue report);
+ * the account-level margin row states a `margin_ratio` in percent (maintenance over equity as the venue reports it: 5.10 on the core
+ * account, a fixed value, never computed by a component); sleeve deployments name their portfolio. Open keys on open rows only.
+ */
+function overlayAccountF2(data: Obj, accountId: string): void {
+  const rows = (key: string): Obj[] => (Array.isArray(data[key]) ? (data[key] as unknown[]).filter(isObj) : []);
+  const newest = rows("broker_sync").filter((row) => typeof row.synced_at_ms === "number").sort((a, b) => (b.synced_at_ms as number) - (a.synced_at_ms as number))[0];
+  for (const account of rows("accounts")) {
+    if (account.venue === "BINANCE") account.product = "USDT-M futures · hedge";
+    else if (typeof account.venue === "string") account.product = "Perpetual swap · net";
+    account.network = "MAINNET";
+    if (newest) account.network_proof_at_ms = (newest.synced_at_ms as number) - 120_000;
+  }
+  for (const margin of rows("margin_balances")) {
+    if (margin.account_id === accountId && margin.currency === "USDT" && margin.instrument_id === undefined) margin.margin_ratio = "5.10";
+  }
+  for (const row of rows("deployments")) {
+    const pf = typeof row.portfolio_id === "string" ? row.portfolio_id : "";
+    if (pf in PORTFOLIO_NAMES_F2) row.portfolio_name = PORTFOLIO_NAMES_F2[pf];
+  }
+}
+// ===== WP-F2 end =====
 
 /* ── binding exposure (`/broker-bindings/{id}/exposure`) ─────────────────── */
 

@@ -25,10 +25,10 @@ import { ENV_LABEL, useExecUrlState, withContext } from "../../urlState";
 import { PhysicalBinding } from "./PhysicalBinding";
 import { ActivityPanel, DrawdownBlock, EquityBlock } from "./readPanels";
 import { AllocationsPanel, AuthorityKpis, FeesPanel, MarginPanel, PositionsPanel, ReconciliationPanel, SleevesPanel, type PanelContext } from "./panels";
-import { Fact, Na, Np, StateFlag, WITHHELD } from "./parts";
+import { EnvironmentWord, Fact, Na, PhysicalProvenance, ProductWord, StateFlag, WITHHELD } from "./parts";
 import { useAccountResource, useBindingDetail, useBindingExposure } from "./reads";
 import {
-  FE, RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
+  RELATION_LABEL, TABS, ageAtRead, chooseCurrency, credentialView, deploymentHref, freshnessFlag, humanize,
   populationOf, portfolioHref, readAccountView, readTab, readViewMode, resourceReason, resourceStatus, rotateCredential, timeOf, type TabId,
 } from "./model";
 import { useAccountOperations } from "./useAccountOperations";
@@ -194,13 +194,20 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
             <dl className="exec-acct-facts">
               <Fact label="Venue">{identity.venue ?? <Na />}</Fact>
               <Fact label="Native account"><span className="exec-acct-withheld"><GapWhy text="Withheld" name="Withheld, reason" rows={[WITHHELD]} next={null} /></span></Fact>
-              <Fact label="Product"><Np fact={FE.product} /></Fact>
+              <Fact label="Product"><ProductWord product={identity.product} /></Fact>
               <Fact label="Margin mode">{identity.marginMode ?? <Na />}</Fact>
-              <Fact label="Environment">{environment ? ENV_LABEL[environment] : <Na />}</Fact>
+              <Fact label="Environment"><EnvironmentWord environment={environment ? ENV_LABEL[environment] : null} network={identity.network} proofAt={identity.networkProofAt} /></Fact>
               <Fact label="Credential">
                 {credential ? <Flag kind={credential.kind} label={credential.label} size="sm" /> : detail.state.phase === "loading" ? "Loading" : <Na />}
               </Fact>
             </dl>
+            <PhysicalProvenance
+              lines={[
+                { label: "Binding", value: identity.bindingId ?? <Na why="The account resource names no binding" /> },
+                { label: "Record authority", value: detail.state.phase === "ready" ? detail.state.value.recordAuthority ?? <Na /> : <Na /> },
+                { label: "Source authority", value: detail.state.phase === "ready" ? detail.state.value.sourceAuthority ?? <Na /> : <Na /> },
+              ]}
+            />
             <button type="button" className="exec-acct-btn" onClick={() => setMode("physical")}>Open physical binding view</button>
           </SectionPanel>
         </div>
@@ -294,8 +301,9 @@ function Loaded({ api, accountId, profile, staleReason, refreshing, reload, back
       ) : null}
       {population.shared ? (
         <div className="exec-acct-banner" role="note" data-tone="shared">
-          <span title="Native figures cover the whole account, not one sleeve.">Shared by {population.expected ?? population.published} sleeves</span>
+          <span>Shared account · {population.expected ?? population.published} sleeves</span>
           {population.partial ? `. ${population.published} of ${population.expected} are published here` : ""}
+          <span>. Native figures are not sleeve capital.</span>
         </div>
       ) : null}
       {credential !== null && (credential.kind === "attention" || credential.kind === "stale") ? (

@@ -9,7 +9,7 @@ import type { UtcEpochMs } from "../../../screenDataContract";
 import { formatAsOf, type Metric } from "../../boundary";
 import { GapWhy, MetricText, NaWhy, QuietIdsWhy, gapTitle } from "../../blocks";
 import { Flag } from "../../Flag";
-import { credentialView, notPublished, stateView, updatedAgo, type UnpublishedFact } from "./model";
+import { FE, credentialView, humanize, notPublished, stateView, updatedAgo, type UnpublishedFact } from "./model";
 
 import "../../css/account.css";
 
@@ -87,3 +87,33 @@ export function StateFlag({ word, size = "sm" }: { word: string | null | undefin
 
 /** The one sentence about the broker reference, so a reader knows its absence is deliberate. */
 export const WITHHELD = "Withheld. The portal never shows the broker account reference.";
+
+/** Product: the account row's own word, else the typed absence (A360-4). */
+export function ProductWord({ product }: { product: string | null }) {
+  return product !== null ? <>{product}</> : <Np fact={FE.product} />;
+}
+
+/** Environment with the proof of its network when the account row publishes one ("Real-funded · Mainnet · proof 17 Oct 09:12Z"). */
+export function EnvironmentWord({ environment, network, proofAt }: { environment: string | null; network: string | null; proofAt: UtcEpochMs | null }) {
+  if (environment === null && network === null) return <Na />;
+  const words = [environment, network !== null ? humanize(network) : null].filter((part): part is string => part !== null).join(" · ");
+  return (
+    <>
+      {words}
+      {network !== null ? <>{" · "}{proofAt !== null ? <>proof <When at={proofAt} /></> : <Na why="The network proof time is not published" />}</> : null}
+    </>
+  );
+}
+
+/** What stands behind the native facts of the physical binding panel: where they come from, and what is withheld on purpose. */
+export function PhysicalProvenance({ lines }: { lines: readonly { label: string; value: ReactNode }[] }) {
+  return (
+    <details className="exec-acct-prov">
+      <summary>Provenance</summary>
+      <dl className="exec-acct-facts">
+        {lines.map((line) => <Fact key={line.label} label={line.label}>{line.value}</Fact>)}
+      </dl>
+      <p className="exec-acct-note">Native facts are the venue&apos;s report on the whole account. {WITHHELD}</p>
+    </details>
+  );
+}

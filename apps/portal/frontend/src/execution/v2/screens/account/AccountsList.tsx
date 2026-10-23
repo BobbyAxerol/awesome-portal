@@ -17,7 +17,7 @@
  * rows already loaded, and the count line says so.
  */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { PanelState } from "../../../components/states";
@@ -57,6 +57,7 @@ const BEYOND_REST = `Physical and virtual figures the list does not publish are 
 export function AccountsList({ api, binding = null, capabilities }: AccountsListProps) {
   const url = useExecUrlState();
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const { selection, select, close } = useDockSelection();
   const mode = useDockMode();
   const panelId = useId();
@@ -325,6 +326,7 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
 
       <div className="exec-acct-main" data-docked={selection !== null && mode === "dock" ? "true" : undefined}>
         <div className="exec-acct-body">
+          <div className="exec-acct-tabrow">
           <div className="exec-acct-tabs" role="tablist" aria-label="Environment" onKeyDown={envKeys}>
             {ENV_TABS.map((id) => (
               <button
@@ -342,6 +344,17 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 {tabCount(id) !== null ? <span className="exec-acct-tab-count">{tabCount(id)}</span> : null}
               </button>
             ))}
+          </div>
+          {/* The Issues lens sits in the strip like the design's Issues tab; it is a toggle on the loaded rows (the server does not filter on it). */}
+          <button type="button" className="exec-acct-tab" aria-pressed={issuesOnly}
+              aria-label={issueCountText === null ? "Issues only, count shown once the rows are read" : `Issues only, ${issueCountText} in the ${all.length} loaded rows`}
+              title={issueCountText === null
+                ? "The count appears once the rows are read. The server does not filter on this."
+                : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.${typeof issuesEverywhere === "number" ? ` ${issuesEverywhere} across all environments.` : ""}`}
+              onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
+            >
+              Issues only{issueCountText !== null ? <span className="exec-acct-tab-count">{issueCountText}</span> : null}
+            </button>
           </div>
 
           <div className="exec-acct-tool" role="search">
@@ -372,21 +385,18 @@ export function AccountsList({ api, binding = null, capabilities }: AccountsList
                 {CREDENTIAL_FILTERS.map((id) => <option key={id} value={id}>{id === "ok" ? "Synced" : "Needs attention"}</option>)}
               </select>
             </label>
-            <button type="button" className="exec-acct-btn" aria-pressed={issuesOnly}
-              aria-label={issueCountText === null ? "Issues only, count shown once the rows are read" : `Issues only, ${issueCountText} in the ${all.length} loaded rows`}
-              title={issueCountText === null
-                ? "The count appears once the rows are read. The server does not filter on this."
-                : `${issueCountText} of the ${all.length} loaded rows need attention. The server does not filter on this.${typeof issuesEverywhere === "number" ? ` ${issuesEverywhere} across all environments.` : ""}`}
-              onClick={() => setLocal("issues", issuesOnly ? "" : "1")}
-            >
-              Issues only{issueCountText !== null ? <span className="exec-acct-tab-count">{issueCountText}</span> : null}
-            </button>
             {filtered ? <button type="button" className="exec-acct-btn" onClick={clearFilters}>Clear all</button> : null}
             <span className="exec-acct-export">
               <button type="button" className="exec-acct-btn" disabled aria-describedby={`${panelId}-export`}>Export</button>
               <span id={`${panelId}-export`} className="exec-acct-note">Export is not available yet · <Link className="exec-acct-link" to={withContext(ACCESS_PATH, params)}>My access</Link></span>
             </span>
           </div>
+
+          {/* The scope of this view is the address: the same link opens the same list (audit 8 #9). */}
+          <details className="exec-acct-url">
+            <summary>URL</summary>
+            <p className="exec-acct-mono">{location.pathname}{location.search}</p>
+          </details>
 
           {chips.length > 0 ? (
             <div className="exec-acct-chips" aria-label="Active filters">

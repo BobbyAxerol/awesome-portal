@@ -93,7 +93,7 @@ describe("account 360 resource", () => {
 
   it("display names ride the rows that already name the ids", () => {
     const view = readAccountView(core, "acc_bnc_core");
-    expect(view.names.portfolios).toEqual({ pf_core: "Core" });
+    expect(view.names.portfolios).toEqual({ pf_core: "Core", pf_satellite: "Satellite", pf_canary: "Canary" }); // WP-F2 names the two other sleeves' portfolios
     expect(view.names.deployments).toEqual({ dep_btc_live: "BTC Trend live" });
     expect(view.names.alphas).toEqual({ btc_trend: "BTC Trend" });
   });

@@ -2,8 +2,8 @@
  * WP-F2 (FIXTURE_LAB, `e2e/bffSimulated.ts` blotter block): every order row of the populated lane carries the design's columns, derived by
  * integer arithmetic from the order's own published fills; absence stays typed (a fee is never defaulted to 0).
  */
-import { cleanup, render, screen, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { answerOverview, resetOverviewDouble } from "../../../../../e2e/bffDoubleOverview";
@@ -33,6 +33,11 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+function Where() {
+  const { pathname, search } = useLocation();
+  return <output data-testid="where">{pathname + search}</output>;
+}
 
 async function firstPage() {
   const response = await fetch("/api/v1/execution/screens/blotter?limit=50");
@@ -98,5 +103,28 @@ describe("the screen", () => {
     expect(cell(idle, "Fee")).toBe("No fill");
     // Nothing is abbreviated or ellipsised.
     expect(table.textContent).not.toMatch(/…|\.\.\./);
+  });
+
+  it("states the subtitle and a Fresh chip with the read's as-of", async () => {
+    render(<MemoryRouter initialEntries={["/execution/blotter"]}><BlotterScreen api={httpApi()} /></MemoryRouter>);
+    await screen.findByRole("table", { name: "Orders" });
+    expect(screen.getByText("Orders and fills, newest first")).toBeTruthy();
+    const head = document.querySelector(".exec-blt2-fresh")!;
+    expect(head.textContent).toContain("Fresh");
+    expect(head.textContent).toMatch(/As of 17 Oct 12:00:00Z/);
+  });
+
+  it("Add scope offers the deployments on the page; choosing one narrows the loaded rows and shows a removable chip (scope in the URL)", async () => {
+    render(<MemoryRouter initialEntries={["/execution/blotter"]}><BlotterScreen api={httpApi()} /><Where /></MemoryRouter>);
+    const table = await screen.findByRole("table", { name: "Orders" });
+    const before = within(table).getAllByRole("row").length;
+    const pick = screen.getByLabelText("Add scope") as HTMLSelectElement;
+    expect([...pick.querySelectorAll("optgroup")].map((g) => g.label)).toEqual(expect.arrayContaining(["Deployment", "Account", "Alpha"]));
+    fireEvent.change(pick, { target: { value: "deployment|dep_carry_live" } });
+    await waitFor(() => expect(screen.getByTestId("where").textContent).toContain("deployment=dep_carry_live"));
+    expect(screen.getByRole("button", { name: "Remove deployment scope" })).toBeTruthy();
+    const rows = within(screen.getByRole("table", { name: "Orders" })).getAllByRole("row");
+    expect(rows.length).toBeLessThan(before);
+    expect(rows.slice(1).every((r) => (r.querySelector("td[data-l='Deployment']")?.textContent ?? "").startsWith("dep_carry_live"))).toBe(true);
   });
 });
