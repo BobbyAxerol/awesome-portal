@@ -12,6 +12,7 @@ import { buildPositiveManagerSeries } from "../../../packages/contracts/tooling/
 import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
+import type { PositiveAccountBook } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 import { legacy, traits } from "./scenario";
 
@@ -511,7 +512,7 @@ function rowsFor(environment: string, template: Draft, preset: WindowPreset, com
     row.source_state = "FRESH";
     row.stage_presence = [...new Set(deployments.map((entry) => entry.stage))].sort();
     row.children = deployments.map((entry) => ({ alpha_id: alpha.id, alpha_version_id: alpha.version, portfolio_id: entry.portfolioId,
-      deployment_id: entry.id, account_id: entry.accountId, stage: entry.stage, binding_ref: universe.bindings.find((binding) => binding.accountId === entry.accountId)?.bindingId ?? null }));
+      deployment_id: entry.id, account_id: entry.accountId, stage: entry.stage, binding_ref: universe.bindings.find((binding) => binding.accountId === entry.accountId)?.bindingId ?? WP_BINDING_OF_ACCOUNT[entry.accountId] ?? null }));
     row.current_stage = row.stage_presence.length === 1 ? row.stage_presence[0] : null;
     row.entered_at_ms = null;
     row.days_in_stage = null;
@@ -1103,26 +1104,37 @@ const WPC_CAN: [string, string] = ["pf_TEST_ONLY_canary", "Canary"];
 const WPC_PORTFOLIO_IDS = ["pf_TEST_ONLY_core", "pf_TEST_ONLY_satellite", "pf_TEST_ONLY_canary", "pf_TEST_ONLY_yen", "pf_TEST_ONLY_empty"] as const;
 /** The native alphas of the e2e suite (the ids the doubles and the audit open), booked into the TEST_ONLY portfolios. dep_*_01 are the ids the alpha resource double names. */
 // The fixture makes the FIRST row of an environment a true zero (rows.length % 11), so the halted and grid alphas come first: the default audit subjects keep their figures.
+// ===== WP-P begin (linked sleeves: a native deployment is booked on the account its environment and portfolio name)
+/** Live deployments sit on the sleeve of their portfolio (the three sleeves of the shared binding bnc_main@BINANCE); Paper on the paper simulator; Sandbox on the testnet account. */
+const WP_SLEEVE_OF_PORTFOLIO: Readonly<Record<string, string>> = { pf_TEST_ONLY_core: "acc_bnc_core", pf_TEST_ONLY_satellite: "acc_bnc_sat", pf_TEST_ONLY_canary: "acc_bnc_can" };
+const WP_SLEEVE_BINDING = "bnc_main@BINANCE";
+const WP_BINDING_OF_ACCOUNT: Readonly<Record<string, string>> = { acc_bnc_core: WP_SLEEVE_BINDING, acc_bnc_sat: WP_SLEEVE_BINDING, acc_bnc_can: WP_SLEEVE_BINDING, acc_pap_sim: "pap_sim@BINANCE", acc_tn_bnc: "tn_bnc@BINANCE" };
+const wpcDeployment = (...args: Parameters<typeof suiteDeployment>): DeploymentSpec => {
+  const deployment = suiteDeployment(...args);
+  const accountId = deployment.environment === "paper" ? "acc_pap_sim" : deployment.environment === "sandbox" ? "acc_tn_bnc" : WP_SLEEVE_OF_PORTFOLIO[deployment.portfolioId] ?? deployment.accountId;
+  return { ...deployment, accountId };
+};
+// ===== WP-P end
 const WPC_ALPHAS: AlphaSpec[] = [
-  suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [suiteDeployment("dep_c1", "alpha_c", "CANARY", "live", WPC_SAT, "15000", "0", "0", "HALTED")]),
+  suiteAlpha("alpha_c", "Momentum C", "2.0", "Minh-003", "ATTENTION", [wpcDeployment("dep_c1", "alpha_c", "CANARY", "live", WPC_SAT, "15000", "0", "0", "HALTED")]),
   suiteAlpha("alpha_d", "Grid D", "0.9", "Bobby-001", "READY", [
-    suiteDeployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", WPC_CAN, "8000", "61.2", "3"),
-    suiteDeployment("dep_d2", "alpha_d", "PAPER", "paper", WPC_SAT, "10000", "-30.75", "8.4"),
+    wpcDeployment("dep_d1", "alpha_d", "SANDBOX", "sandbox", WPC_CAN, "8000", "61.2", "3"),
+    wpcDeployment("dep_d2", "alpha_d", "PAPER", "paper", WPC_SAT, "10000", "-30.75", "8.4"),
   ]),
   suiteAlpha("alpha_a", "Carry A", "1.0", "Bobby-001", "READY", [
-    suiteDeployment("dep_live_01", "alpha_a", "LIVE", "live", WPC_CORE, "40000.00", "980.40", "140.40"),
-    suiteDeployment("dep_paper_01", "alpha_a", "PAPER", "paper", WPC_CORE, "20000.00", "-84.20", "0"),
-    suiteDeployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", WPC_CORE, "10000.00", "0", "0", "HALTED"),
+    wpcDeployment("dep_live_01", "alpha_a", "LIVE", "live", WPC_CORE, "40000.00", "980.40", "140.40"),
+    wpcDeployment("dep_paper_01", "alpha_a", "PAPER", "paper", WPC_CORE, "20000.00", "-84.20", "0"),
+    wpcDeployment("dep_sandbox_01", "alpha_a", "SANDBOX", "sandbox", WPC_CORE, "10000.00", "0", "0", "HALTED"),
   ]),
   suiteAlpha("alpha_btc_trend", "BTC Trend", "3.0", "Lan-002", "READY", [
-    suiteDeployment("dep_btc_live", "alpha_btc_trend", "LIVE", "live", WPC_CORE, "80000", "1120.8", "55.4"),
-    suiteDeployment("dep_btc_paper", "alpha_btc_trend", "PAPER", "paper", WPC_CORE, "50000.5", "-125.25", "40.1"),
-    suiteDeployment("dep_btc_sandbox", "alpha_btc_trend", "SANDBOX", "sandbox", WPC_CAN, "12000", "61.2", "3"),
+    wpcDeployment("dep_btc_live", "alpha_btc_trend", "LIVE", "live", WPC_CORE, "80000", "1120.8", "55.4"),
+    wpcDeployment("dep_btc_paper", "alpha_btc_trend", "PAPER", "paper", WPC_CORE, "50000.5", "-125.25", "40.1"),
+    wpcDeployment("dep_btc_sandbox", "alpha_btc_trend", "SANDBOX", "sandbox", WPC_CAN, "12000", "61.2", "3"),
   ]),
   suiteAlpha("alpha_b", "Basis B", "1.4", "Lan-002", "READY", [
-    suiteDeployment("dep_b1", "alpha_b", "LIVE", "live", WPC_CORE, "120000", "2150.75", "310.2"),
-    suiteDeployment("dep_b2", "alpha_b", "LIVE", "live", WPC_SAT, "60000", "-98.4", "21.05"),
-    suiteDeployment("dep_b3", "alpha_b", "CANARY", "live", WPC_CORE, "30000", "410.1", "-5.5"),
+    wpcDeployment("dep_b1", "alpha_b", "LIVE", "live", WPC_CORE, "120000", "2150.75", "310.2"),
+    wpcDeployment("dep_b2", "alpha_b", "LIVE", "live", WPC_SAT, "60000", "-98.4", "21.05"),
+    wpcDeployment("dep_b3", "alpha_b", "CANARY", "live", WPC_CORE, "30000", "410.1", "-5.5"),
   ]),
 ];
 const wpcNativeAlpha = (id: string | undefined): boolean => id !== undefined && WPC_ALPHAS.some((alpha) => alpha.id === id);
@@ -1891,5 +1903,18 @@ function wpPositiveSeries(body: Draft, method: string, path: string, search: URL
   body.comparison = comparison(body.series);
   body.lineage.revision = digest([body.workspace_id, body.environment, body.metric, body.selected_window, body.series]);
   return body;
+}
+
+/**
+ * The deployment books booked on one account: the SAME allocation / realized / unrealized the Manager dataset rows are built from
+ * (`WPC_ALPHAS`, one source), so the account double can state allocation + net PnL = balance. Registered with the account double by app.ts
+ * when the positive mode is on. `null` for an account no native deployment is booked on.
+ */
+export function wpAccountBook(accountId: string): PositiveAccountBook | null {
+  const booked = WPC_ALPHAS.flatMap((alpha) => alpha.deployments.map((deployment) => ({ alpha, deployment }))).filter(({ deployment }) => deployment.accountId === accountId);
+  if (booked.length === 0) return null;
+  return { account_id: accountId, deployments: booked.map(({ alpha, deployment }) => ({ deployment_id: deployment.id, alpha_id: alpha.id, alpha_label: alpha.label,
+    portfolio_id: deployment.portfolioId, portfolio_name: deployment.portfolioName, environment: deployment.environment, stage: deployment.stage, currency: deployment.currency,
+    allocation: deployment.allocation, realized: deployment.realized, unrealized: deployment.unrealized })) };
 }
 // ===== WP-P end

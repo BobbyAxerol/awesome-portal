@@ -10,7 +10,7 @@
 import type { OverviewDoubleVariants } from "../frontend/e2e/bffDoubleOverview";
 import type { UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import type { BffRequest } from "../frontend/e2e/bffAnswerer";
-import type { FixtureScenario } from "./scenario";
+import { healsDoubles, type FixtureScenario } from "./scenario";
 
 export interface ScenarioVariants {
   overview: Partial<OverviewDoubleVariants>;
@@ -42,6 +42,29 @@ export function resetFixtureTransitions(): void {
 
 /** Shapes a served JSON body for the value-rewrite scenarios. Identity for the others. */
 export function applyScenarioBody(scenario: FixtureScenario, path: string, body: unknown): unknown {
-  void scenario; void path;
-  return body;
+  const healed = healsDoubles(scenario) ? healBody(body) : body;
+  void path;
+  return healed;
+}
+
+/**
+ * The positive world's source health: the canonical source-health read the command center and the operations composition embed says AGING and
+ * PARTIAL for all three environments (a real-looking degraded snapshot). Here every environment is AVAILABLE, FRESH and COMPLETE. Only that
+ * envelope is rewritten, found by its schema_version at any depth; nothing else is touched.
+ */
+function healBody(value: unknown, depth = 0): unknown {
+  if (depth > 8 || value === null || typeof value !== "object") return value;
+  if (Array.isArray(value)) return value.map((entry) => healBody(entry, depth + 1));
+  const record = value as Record<string, unknown>;
+  if (record.schema_version === "execution.derivation.source-health.v1" && Array.isArray(record.profiles)) {
+    return { ...record, state: "AVAILABLE", profiles: (record.profiles as Record<string, unknown>[]).map((profile) => ({ ...profile, state: "AVAILABLE", reason_code: null, availability: "AVAILABLE", freshness: "FRESH", completeness: "COMPLETE" })) };
+  }
+  let changed = false;
+  const out: Record<string, unknown> = {};
+  for (const [key, child] of Object.entries(record)) {
+    const next = healBody(child, depth + 1);
+    if (next !== child) changed = true;
+    out[key] = next;
+  }
+  return changed ? out : value;
 }

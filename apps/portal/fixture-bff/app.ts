@@ -20,9 +20,10 @@ import { ACCESS_DOUBLE_DEFAULT_USER } from "../frontend/e2e/bffDoubleAccess";
 import { setUsersDoubleLastSignIn, setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../frontend/e2e/bffScale";
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
-import { answerReviewManager } from "./review-manager";
+import { answerReviewManager, wpAccountBook } from "./review-manager";
+import { setPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
-import { configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
+import { healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
 import { transformReviewBody } from "./review-relations";
 import { rebaseBody } from "./time-rebase";
 import { createVisitDigestFixture } from "./review-visit-digest";
@@ -139,6 +140,7 @@ export function resetFixtureGlobals(): void {
   setFixtureScale("small");
   setOverviewPlanMode("sequence");
   resetOverviewDouble();
+  setPositiveMode(false);
   setUsersDoubleVariant("paged");
   setUsersDoubleLastSignIn(false);
 }
@@ -161,6 +163,8 @@ function applyConfig(config: FixtureConfig): void {
  */
 function applyScenarioToDoubles(config: FixtureConfig): void {
   resetOverviewDouble();
+  // WP-P: the positive world heals the doubles that used to default to a degraded story (accounts, bindings); stale/partial/missing keep them.
+  setPositiveMode(config.reviewProfile !== "sparse-realistic" && healsDoubles(getScenario()), wpAccountBook);
   setOverviewPlanMode("blocked");
   const chosen = config.reviewProfile === "sparse-realistic" ? { overview: {}, users: "paged" as const } : scenarioVariants(getScenario());
   setOverviewDoubleVariants({ ...chosen.overview, ...config.overview });

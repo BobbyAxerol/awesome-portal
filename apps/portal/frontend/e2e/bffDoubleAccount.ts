@@ -52,6 +52,7 @@ import { fileURLToPath } from "node:url";
 
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
+import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
 
 export interface BffAnswerAccount {
   status: number;
@@ -108,6 +109,7 @@ const BINDINGS: readonly BindingSpec[] = [
 
 /** The five bindings the double holds, plus the generated ones (empty unless the standalone server runs at a larger scale). */
 const allBindings = (): readonly BindingSpec[] => {
+  if (isPositiveMode()) return [...BINDINGS, ...scaled().bindings].map((b) => ({ ...b, state: "ACTIVE", credentialState: "SYNC_SYNCED" })); // WP-P: no stale, expired or suspended binding in the positive world
   const extra = scaled().bindings;
   return extra.length === 0 ? BINDINGS : [...BINDINGS, ...extra];
 };
@@ -130,7 +132,7 @@ function envelopeBase(environment: Environment): Record<string, unknown> {
     environment,
     read_at: ACCOUNT_DOUBLE_READ_AT,
     source_as_of: ACCOUNT_DOUBLE_AS_OF,
-    freshness: environment === "live" ? "AGING" : "FRESH",
+    freshness: environment === "live" && !isPositiveMode() ? "AGING" : "FRESH",
   };
 }
 
@@ -220,7 +222,7 @@ function bindingExposure(id: string): BffAnswerAccount {
   const analytics = BINDING_EXPOSURE.analytics as Record<string, unknown>;
   const data = analytics.data as Record<string, unknown>;
   const shared = spec.bindingId === "bnc_main@BINANCE";
-  const breached = spec.bindingId === "okx_main@OKX";
+  const breached = spec.bindingId === "okx_main@OKX" && !isPositiveMode(); // WP-P
   const bucket = (currency: string, used: string, reserved: string, available: string, headroom: string) => ({
     currency,
     account_count: shared ? 2 : 1,
@@ -246,9 +248,9 @@ function bindingExposure(id: string): BffAnswerAccount {
           ...data,
           binding_id: spec.bindingId,
           // The shared binding publishes 2 of its 3 sleeves: a partial population.
-          account_count: shared ? 2 : 1,
+          account_count: shared && !isPositiveMode() ? 2 : shared ? 3 : 1, // WP-P: the positive binding publishes all three sleeves
           expected_account_count: shared ? 3 : 1,
-          population_completeness: shared ? "PARTIAL" : "COMPLETE",
+          population_completeness: shared && !isPositiveMode() ? "PARTIAL" : "COMPLETE",
           buckets,
         },
       },
@@ -431,7 +433,8 @@ const ACCOUNTS: readonly AccountSpec[] = [
 function scaledAccount(id: string): AccountSpec | undefined {
   const binding = scaled().bindings.find((b) => b.accountId === id);
   if (!binding) return undefined;
-  const { credentialState, environment, venue, bindingId } = binding;
+  const { environment, venue, bindingId } = binding;
+  const credentialState = isPositiveMode() ? "SYNC_SYNCED" : binding.credentialState; // WP-P
   const deployments = scaled().alphas.flatMap((a) => a.deployments.map((d) => ({ a, d }))).filter(({ d }) => d.accountId === id);
   const label = `${venue} ${id.slice(-3)}`;
   const mode = environment;
@@ -454,6 +457,7 @@ function scaledAccount(id: string): AccountSpec | undefined {
     positions: [],
     portfolio_allocations: deployments.map(({ a, d }) => ({ portfolio_id: d.portfolioId, strategy_id: a.id, deployment_id: d.id, account_id: id, mode, currency: d.currency, allocated_capital: d.allocation })),
   };
+  if (isPositiveMode()) rows.margin_balances = [margin(id, currency, fromCents(toCents(total) / 10n), fromCents(toCents(total) / 20n))]; // WP-P
   if (!expired) {
     rows.broker_sync = [{ sync_id: `bs_${id.slice(-3)}`, source: "BROKER", status: stale ? "STALE" : "SYNCED", currency, buying_power: free, synced_at: iso(at), synced_at_ms: at }];
     rows.exposure_headroom = [{ currency, free, maintenance: locked, headroom: addDecimal(free, `-${locked}`), verdict: "AVAILABLE" }];
@@ -465,12 +469,86 @@ function scaledAccount(id: string): AccountSpec | undefined {
     rows,
     capabilities: [
       cap("accounts"), cap("account_balances"),
-      cap("margin_balances", "UNAVAILABLE", "MARGIN_SOURCE_GAP"),
+      isPositiveMode() ? cap("margin_balances") : cap("margin_balances", "UNAVAILABLE", "MARGIN_SOURCE_GAP"), // WP-P
       expired ? cap("broker_account_sync_effective", "UNAVAILABLE", "BROKER_SYNC_UNAVAILABLE") : cap("broker_account_sync_effective"),
       ...(expired ? [] : [cap("exposure_headroom")]),
     ],
   };
 }
+
+// ===== WP-P begin (positive world: a complete, reconciled account; only when the fixture BFF turned the positive mode on, specs never see it)
+const toCents = (value: string): bigint => {
+  const negative = value.startsWith("-");
+  const [whole, fraction = ""] = value.replace("-", "").split(".");
+  const n = BigInt(whole + `${fraction}00`.slice(0, 2));
+  return negative ? -n : n;
+};
+const fromCents = (value: bigint): string => `${value < 0n ? "-" : ""}${(value < 0n ? -value : value) / 100n}.${String((value < 0n ? -value : value) % 100n).padStart(2, "0")}`;
+const SLEEVES = ["acc_bnc_core", "acc_bnc_sat", "acc_bnc_can"] as const;
+
+/**
+ * The positive account: state ready, FRESH, every capability AVAILABLE with the rows it names. Balances come from the deployment books the Manager
+ * dataset serves (`positiveBookOf`): total = allocation + realized + unrealized of the deployments booked on the account, locked = 10% of the
+ * allocation, free = total - locked; a margin row (initial = locked, maintenance = half), a SYNCED broker sync equal to free, a headroom that
+ * is free - maintenance, positions whose unrealized PnL sums to the book's. A shared binding publishes all three sleeves, each counted once.
+ */
+function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
+  if (!isPositiveMode()) return spec;
+  const rows: Record<string, Row[]> = { ...spec.rows };
+  const primary = SLEEVES.includes(id as (typeof SLEEVES)[number]) ? id : spec.id;
+  const shared = SLEEVES.includes(primary as (typeof SLEEVES)[number]);
+  const owners = shared ? [...SLEEVES] : [primary];
+  const books = owners.map((owner) => ({ owner, book: positiveBookOf(owner) }));
+  const money = (owner: string): { currency: string; total: bigint; locked: bigint; unrealized: bigint; allocation: bigint } | null => {
+    const book = books.find((entry) => entry.owner === owner)?.book;
+    if (!book || book.deployments.length === 0) return null;
+    const deployments = book.deployments;
+    const sum = (pick: (d: (typeof deployments)[number]) => string): bigint => deployments.reduce((acc, d) => acc + toCents(pick(d)), 0n);
+    const allocation = sum((d) => d.allocation);
+    return { currency: book.deployments[0]!.currency, allocation, unrealized: sum((d) => d.unrealized), total: allocation + sum((d) => d.realized) + sum((d) => d.unrealized), locked: allocation / 10n };
+  };
+  const own = money(primary);
+  const currency = own?.currency ?? (rows.account_balances?.[0]?.currency as string | undefined) ?? "USDT";
+  if (shared || own) {
+    rows.accounts = owners.map((owner, n) => ({ account_id: owner, label: owner === "acc_bnc_core" ? "Binance-02 sleeve" : `Binance-02${"bc"[n - 1]} sleeve`, strategy_id: books.find((b) => b.owner === owner)?.book?.deployments[0]?.alpha_id ?? null,
+      mode: spec.environment, venue: "BINANCE", base_currency: currency, account_type: "CROSS", state: "ACTIVE" }));
+    rows.deployments = books.flatMap(({ owner, book }) => (book?.deployments ?? []).map((d) => ({ deployment_id: d.deployment_id, account_id: owner, strategy_id: d.alpha_id, portfolio_id: d.portfolio_id, mode: d.environment, venue: "BINANCE", state: "RUNNING" })));
+    rows.venue_accounts = owners.map((owner) => ({ binding_id: spec.bindingId, account_id: owner, mode: spec.environment, venue: "BINANCE", state: "ACTIVE" }));
+    rows.account_balances = books.flatMap(({ owner }) => {
+      const m = money(owner);
+      return m ? [balance(owner, m.currency, fromCents(m.total), fromCents(m.total - m.locked), fromCents(m.locked))] : [];
+    });
+  }
+  if (own) {
+    const book = books.find((entry) => entry.owner === primary)!.book!;
+    rows.portfolio_allocations = book.deployments.map((d) => ({ portfolio_id: d.portfolio_id, strategy_id: d.alpha_id, deployment_id: d.deployment_id, account_id: primary, mode: d.environment, currency: d.currency, allocated_capital: d.allocation }));
+    const free = own.total - own.locked;
+    rows.margin_balances = [margin(primary, currency, fromCents(own.locked), fromCents(own.locked / 2n))];
+    rows.exposure_headroom = [{ currency, free: fromCents(free), maintenance: fromCents(own.locked / 2n), headroom: fromCents(free - own.locked / 2n), verdict: "AVAILABLE" }];
+    const long = own.unrealized * 7n / 10n;
+    rows.positions = [
+      { position_id: `pos_${primary}_btc`, account_id: primary, instrument_id: "BTCUSDT", side: "LONG", signed_qty: "0.90", quantity: "0.90", notional: fromCents(own.allocation * 55n / 100n), unrealized_pnl: fromCents(long), currency, updated_at: ACCOUNT_DOUBLE_AS_OF },
+      { position_id: `pos_${primary}_eth`, account_id: primary, instrument_id: "ETHUSDT", side: "SHORT", signed_qty: "-12.5", quantity: "12.5", notional: fromCents(own.allocation * 30n / 100n), unrealized_pnl: fromCents(own.unrealized - long), currency, updated_at: ACCOUNT_DOUBLE_AS_OF },
+    ];
+    rows.account_equity = [{ account_id: primary, currency, unrealized_pnl: fromCents(own.unrealized), fee_total: fromCents(own.allocation * 5n / 10_000n), funding_pnl: fromCents(own.allocation * 2n / 10_000n), ts: ACCOUNT_DOUBLE_AS_OF, ts_ms: AS_OF_MS }];
+    rows.broker_sync = [0, 30, 60, 90, 120].map((minutes, n) => ({ sync_id: `bs_${primary}_${n}`, source: "BROKER", status: "SYNCED", currency, buying_power: fromCents(free - BigInt(n) * 1250n), synced_at: iso(minutesBefore(minutes)), synced_at_ms: minutesBefore(minutes) }));
+    if (!shared) rows.differences = [{ currency, portal_free: fromCents(free), broker_buying_power: fromCents(free), delta: "0.00", in_sync: true }];
+    else delete rows.differences;
+  } else {
+    // An account no deployment is booked on (the idle sub account, the OKX main): healthy, with the rows its capabilities name.
+    const have = rows.account_balances?.[0];
+    const free = have ? toCents(String(have.free)) : 10_000_000n;
+    rows.account_balances = (rows.account_balances ?? []).map((row) => ({ ...row, updated_at: ACCOUNT_DOUBLE_AS_OF, updated_at_ms: AS_OF_MS }));
+    rows.margin_balances ??= [margin(primary, currency, fromCents(free / 10n), fromCents(free / 20n))];
+    rows.exposure_headroom = [{ currency, free: fromCents(free), maintenance: fromCents(free / 10n), headroom: fromCents(free - free / 10n), verdict: "AVAILABLE" }];
+    rows.broker_sync = [{ sync_id: `bs_${primary}_0`, source: "BROKER", status: "SYNCED", currency, buying_power: fromCents(free), synced_at: ACCOUNT_DOUBLE_AS_OF, synced_at_ms: AS_OF_MS }];
+    rows.differences = [{ currency, portal_free: fromCents(free), broker_buying_power: fromCents(free), delta: "0.00", in_sync: true }];
+  }
+  const capabilities = Object.keys(rows).filter((relation) => ["accounts", "account_balances", "margin_balances", "broker_sync", "exposure_headroom", "positions"].includes(relation))
+    .map((relation) => cap(relation === "broker_sync" ? "broker_account_sync_effective" : relation));
+  return { ...spec, id: shared ? primary : spec.id, state: "ready", freshness: "FRESH", rows, capabilities };
+}
+// ===== WP-P end
 
 const SYNTHETIC_PHYSICAL_KEYS = /external_account_ref/;
 
@@ -480,7 +558,7 @@ function accountResource(id: string, search: URLSearchParams): BffAnswerAccount 
   // A sibling sleeve answers as a thin account on the same binding.
   const sibling = SIBLINGS.has(id);
   if (!spec && !sibling) return problem(404, "ACCOUNT_NOT_FOUND", `no account ${id}`);
-  const source = spec ?? ACCOUNTS[0]!;
+  const source = positiveAccount(spec ?? ACCOUNTS[0]!, id); // WP-P: identity outside the positive mode
   const asked = search.get("environment");
   if (asked !== null && asked !== source.environment) return problem(404, "ACCOUNT_NOT_FOUND", `${id} is not in the ${asked} environment`);
 
@@ -488,7 +566,7 @@ function accountResource(id: string, search: URLSearchParams): BffAnswerAccount 
   for (const [relation, rows] of Object.entries(source.rows)) {
     data[relation] = rows.map(withoutPhysicalBrokerRef);
   }
-  if (sibling) {
+  if (sibling && !isPositiveMode()) {
     // Same binding, same rows (identity and deployments of all three sleeves are published); only this sleeve's own facts change.
     data.positions = [];
     data.portfolio_allocations = [];

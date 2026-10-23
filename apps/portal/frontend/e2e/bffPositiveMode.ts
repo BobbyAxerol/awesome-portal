@@ -1,0 +1,38 @@
+/**
+ * WP-P: the switch the fixture BFF flips when the selected scenario is the positive world (positive, zero, dense, denied, empty).
+ * Module state like the doubles' variants: OFF by default, so every Playwright spec and unit test sees the doubles exactly as before; only
+ * `fixture-bff/app.ts` turns it on. The doubles read it at the few places where a deliberate degradation (a stale sync, an expired credential,
+ * a breached headroom, an empty account) used to be the default; with it on they answer the complete, reconciled story instead.
+ *
+ * `books` is how the account double learns the SAME deployment books the Manager dataset serves (allocation, realized, unrealized per
+ * deployment), so an account's balance is allocation + net PnL of the deployments booked on it. The provider is the fixture BFF's; the doubles
+ * never import the BFF.
+ */
+export interface PositiveDeploymentBook {
+  deployment_id: string;
+  alpha_id: string;
+  alpha_label: string;
+  portfolio_id: string;
+  portfolio_name: string;
+  environment: "paper" | "sandbox" | "live";
+  stage: string;
+  currency: string;
+  allocation: string;
+  realized: string;
+  unrealized: string;
+}
+
+export interface PositiveAccountBook {
+  account_id: string;
+  deployments: PositiveDeploymentBook[];
+}
+
+let positive = false;
+let books: ((accountId: string) => PositiveAccountBook | null) | null = null;
+
+export const setPositiveMode = (on: boolean, provider: ((accountId: string) => PositiveAccountBook | null) | null = null): void => {
+  positive = on;
+  books = on ? provider : null;
+};
+export const isPositiveMode = (): boolean => positive;
+export const positiveBookOf = (accountId: string): PositiveAccountBook | null => (positive && books !== null ? books(accountId) : null);

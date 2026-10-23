@@ -69,6 +69,7 @@ import { fileURLToPath } from "node:url";
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { answerOperationsV2 } from "./bffDoubleV2";
 import { addDecimal as addExact, scaleCounts, scaled, sumByCurrency, type PortfolioSpec } from "./bffScale";
+import { isPositiveMode } from "./bffPositiveMode";
 
 export interface BffAnswerPortfolios {
   status: number;
@@ -142,15 +143,15 @@ function portfolioList(): BffAnswerPortfolios {
     read_at: READ_AT,
     source_as_of: AS_OF,
     freshness: "FRESH",
-    completeness: "PARTIAL",
+    completeness: isPositiveMode() ? "COMPLETE" : "PARTIAL", // WP-P
     environments: {
-      paper: { state: "PARTIAL", reason_code: "N31_PROJECTION_LAGGING" },
+      paper: isPositiveMode() ? { state: "AVAILABLE", reason_code: null } : { state: "PARTIAL", reason_code: "N31_PROJECTION_LAGGING" },
       sandbox: { state: "AVAILABLE", reason_code: null },
       live: { state: "AVAILABLE", reason_code: null },
     },
-    total_portfolios: extra.portfolios.length > 0 ? extra.portfoliosTotal : 9,
-    truncated: extra.portfolios.length > 0 ? extra.portfoliosTruncated : true,
-    items: shown.length > 0 ? [...LIST_ITEMS, ...shown.map(scaledItem)] : LIST_ITEMS,
+    total_portfolios: extra.portfolios.length > 0 ? extra.portfoliosTotal : isPositiveMode() ? 8 : 9,
+    truncated: extra.portfolios.length > 0 ? extra.portfoliosTruncated : !isPositiveMode(),
+    items: (shown.length > 0 ? [...LIST_ITEMS, ...shown.map(scaledItem)] : LIST_ITEMS).filter((item) => !isPositiveMode() || (item as { portfolio_id?: string }).portfolio_id !== PF.unallocated), // WP-P: no UNKNOWN row in the positive world
   });
 }
 
@@ -287,7 +288,10 @@ function scaledResource(p: PortfolioSpec): Row {
 
 /* ── GET /derivations/portfolios/{id}/capital ──────────────────────────── */
 
-function derivation(id: string, environment: Env, data: Row, state: "READY" | "PARTIAL" | "EMPTY", reason: string | null): Row {
+function derivation(id: string, environment: Env, data: Row, stateAsked: "READY" | "PARTIAL" | "EMPTY", reasonAsked: string | null): Row {
+  const positive = isPositiveMode() && stateAsked === "PARTIAL"; // WP-P: a partial input is complete in the positive world
+  const state = positive ? "READY" : stateAsked;
+  const reason = positive ? null : reasonAsked;
   return {
     schema_version: "execution.derivation.v1",
     logical_operation_id: "executionPortfolioCapitalV1",
@@ -451,7 +455,9 @@ function equityPayload(search: URLSearchParams): BffAnswerPortfolios {
     panel: { state: "UNAVAILABLE", reason_code: reason, retryable: false, clocks, coverage: { from_ms: null, to_ms: null, source_total: null, filtered_total: "0", returned_count: 0, truncated: false, downsampled: false, has_more: false, gaps: [] }, formula,
       data: { comparison_mode: "SINGLE_SUBJECT", scale_mode: "LINEAR", currency_policy: "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE", series: [], sampling: null, retention: null, benchmark: { requested: false, state: "UNAVAILABLE", reason_code: "EDS11R4_MARKET_CONTEXT_NOT_ACTIVATED" } } },
   });
-  const build = (currency: string, label: string, start: number, count: number, startCents: number, stepCents: number, gap: readonly [number, number] | null, state: "READY" | "PARTIAL"): BffAnswerPortfolios => {
+  const build = (currency: string, label: string, start: number, count: number, startCents: number, stepCents: number, gapAsked: readonly [number, number] | null, stateAsked: "READY" | "PARTIAL"): BffAnswerPortfolios => {
+    const gap = isPositiveMode() ? null : gapAsked; // WP-P: no retained-snapshot gap in the positive world
+    const state = isPositiveMode() ? "READY" : stateAsked;
     const from = Number(search.get("from_ms") ?? AS_OF_MS - (count - 1) * HOUR);
     const first = Number.isSafeInteger(from) ? Math.max(from, start) : start;
     const points: [number, string][] = [];
@@ -486,7 +492,7 @@ function equityPayload(search: URLSearchParams): BffAnswerPortfolios {
   if (generated && generated.deploymentIds.length > 0) {
     // Three in four generated books publish a series; one in three of those has a published gap.
     const key = Number(generated.id.slice(-3));
-    if (key % 4 !== 0) {
+    if (isPositiveMode() || key % 4 !== 0) { // WP-P: every generated book publishes a series in the positive world
       const start = Math.round(Number(generated.allocatedByCurrency[0]?.value ?? "0") * 100);
       return build(generated.base, `${generated.name} equity`, AS_OF_MS - 47 * HOUR, 48, start, Math.max(1, Math.round(start / 2500)), key % 3 === 0 ? [20, 28] : null, key % 3 === 0 ? "PARTIAL" : "READY");
     }

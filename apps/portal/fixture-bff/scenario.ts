@@ -90,6 +90,8 @@ export const SCENARIO_TRAITS: Readonly<Record<FixtureScenario, ScenarioTraits>> 
     paper: { completeness: "PARTIAL", freshness: "STALE", reasons: ["FIXTURE_LAB_SIMULATED_SOURCE_LAG"] }, sandboxDark: true },
 });
 
+/** The scenarios whose doubles tell the complete positive story (accounts, bindings, source health). `stale`, `partial` and `missing` keep the doubles' own degraded ones. */
+export const healsDoubles = (scenario: FixtureScenario): boolean => !SCENARIO_TRAITS[scenario].legacy && scenario !== "stale";
 export const traits = (): ScenarioTraits => SCENARIO_TRAITS[current];
 /** True for the scenarios that keep the former default's deliberate absences, zeros and variety (`partial`, `missing`). */
 export const legacy = (): boolean => SCENARIO_TRAITS[current].legacy;
