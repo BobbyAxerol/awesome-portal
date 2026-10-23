@@ -255,7 +255,7 @@ describe("search, domain, currency and sort", () => {
     await waitFor(() => expect(search().get("q")).toBe("nguyen"), SLOW);
     expect(names()).toEqual(["Canary", "Satellite"]);
     expect(screen.getAllByText("2 of the top 6 / 9 portfolios").length).toBeGreaterThan(0);
-    expect(screen.getByText("Filters cover the 6 loaded portfolios only.").getAttribute("title")).toContain("carry no sort or filter of their own");
+    expect(screen.getByText("Filters cover the 6 loaded portfolios only.").getAttribute("title")).toContain("the order is the server's and a note says so");
   });
 
   it("filters by domain; a mixed portfolio belongs to both", async () => {

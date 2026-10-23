@@ -12,6 +12,7 @@
 import type { ExecutionApi } from "../../../api/ports";
 import { loadCanonical } from "../../testkit/loadCanonical";
 import { readManagerDataset, type ManagerDataset, type ManagerSurface } from "../../readers/managerDataset";
+import { compareDecimal } from "../../charts/decimal";
 import { absentMetric, clone, moneyMetric, partition, richDataset, type Draft } from "../../readers/managerDataset.testbase";
 
 export { loadCanonical };
@@ -48,4 +49,39 @@ export function withDataset<T extends ExecutionApi>(api: T, answer: ((query: Par
       return dataset === null ? { ok: false as const, status: "unavailable" as const, reason: "The Manager dataset is not served." } : { ok: true as const, value: dataset, warnings: [] };
     },
   } as ExecutionApi;
+}
+
+/**
+ * Tests only: a server that applies the WP-K group query to a dataset the way the contract says (a metric is read in the pinned partition, else in the
+ * group's only partition; null sorts last both ways and fails GTE / LTE; IS_NULL keeps the nulls) and echoes `groupQuery`. A query without one is answered as is.
+ */
+export function applyGroupQueryToDataset(dataset: ManagerDataset, query: Parameters<ExecutionApi["getManagerDataset"]>[0]): ManagerDataset {
+  const sort = query.groupSort ?? [];
+  const filters = query.groupFilters ?? [];
+  if (sort.length === 0 && filters.length === 0) return dataset;
+  const pin = query.economicPartition;
+  const valueOf = (group: ManagerDataset["groups"][number], key: string): string | null => {
+    const pool = pin === undefined ? group.economicPartitions : group.economicPartitions.filter(({ partition: p }) => p.currency === pin.currency && p.economicDomain === pin.economicDomain && p.basis === pin.basis && p.nativeProfileRef === pin.nativeProfileRef);
+    if (pool.length !== 1) return null;
+    const metric = pool[0]!.metrics.get(key);
+    return metric !== undefined && metric.kind === "value" ? metric.exact : null;
+  };
+  let kept = dataset.groups.filter((group) => filters.every((f) => {
+    const v = valueOf(group, f.metricKey);
+    if (f.op === "IS_NULL") return v === null;
+    return v !== null && (f.op === "GTE" ? compareDecimal(v, f.value) >= 0 : compareDecimal(v, f.value) <= 0);
+  }));
+  const order = sort[0];
+  if (order) {
+    kept = [...kept].sort((a, b) => {
+      const x = valueOf(a, order.metricKey), y = valueOf(b, order.metricKey);
+      const tie = JSON.stringify(a.key) < JSON.stringify(b.key) ? -1 : 1;
+      if (x === null || y === null) return x === y ? tie : x === null ? 1 : -1;
+      return compareDecimal(x, y) === 0 ? tie : compareDecimal(x, y) * (order.direction === "asc" ? 1 : -1);
+    });
+  }
+  return { ...dataset, groups: kept, groupQuery: {
+    sort: sort.map((s) => ({ metricKey: s.metricKey, direction: s.direction })),
+    filters: filters.map((f) => ({ metricKey: f.metricKey, op: f.op, value: f.op === "IS_NULL" ? null : f.value })),
+    partitionBasis: pin === undefined ? "SINGLE_PARTITION_ONLY" : "PINNED_PARTITION", groupsBeforeFilter: dataset.groups.length, groupsReturned: kept.length } };
 }

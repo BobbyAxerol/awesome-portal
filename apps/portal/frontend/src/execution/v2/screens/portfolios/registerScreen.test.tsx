@@ -3,7 +3,7 @@
  * evidence, provisional, policy, typed absence, true zero), header sort and URL-driven filters with their chips, and the exact wire
  * of the one dataset question the screen asks. Judged through the real reader and the real port encoder.
  */
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -11,7 +11,7 @@ import { PF } from "../../../../../e2e/bffDoublePortfolios";
 import { encodeManagerDatasetQuery, type ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
 import type { ExecutionApi } from "../../../api/ports";
 import { absentMetric, moneyMetric, partition } from "../../readers/managerDataset.testbase";
-import { datasetFor, withDataset } from "./datasetFixtures.testbase";
+import { applyGroupQueryToDataset, datasetFor, withDataset } from "./datasetFixtures.testbase";
 import { makeApi } from "./harness.fixtures";
 import PortfolioListScreen from "./index";
 
@@ -46,15 +46,18 @@ function groups(body: any): void {
   ];
 }
 
-const served = (asked: unknown[] = []) => withDataset(makeApi().api, () => datasetFor("FLEET", PF.core, groups), asked);
+const served = (asked: unknown[] = []) => withDataset(makeApi().api, (query) => applyGroupQueryToDataset(datasetFor("FLEET", PF.core, groups), query), asked);
 const table = () => screen.getByRole("table", { name: "Portfolios" });
 const rows = () => within(table()).getAllByRole("row").slice(1);
 const names = () => rows().map((row) => row.querySelector(".exec-pf-title")?.textContent ?? "");
 const cellOf = (name: string, label: string) => (rows().find((row) => row.querySelector(".exec-pf-title")?.textContent === name)!.querySelector(`td[data-l^='${label}']`)?.textContent ?? "");
+/** The server's group query (WP-K) is a second read: let it land inside act before the next assertion or the end of the test. */
+const flush = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
 const ready = async (api: ExecutionApi, entry = "/deployments/portfolios?env=paper") => {
   mount(api, entry);
   await screen.findByRole("table", { name: "Portfolios" }, { timeout: 5000 });
   await waitFor(() => expect(table().querySelector(".exec-pf-score")).not.toBeNull());
+  await flush();
 };
 
 describe("the one dataset question", () => {
@@ -72,10 +75,19 @@ describe("the one dataset question", () => {
     });
   });
 
-  it("filters and sorts add no request: they are applied to the groups already read", async () => {
-    const asked: unknown[] = [];
+  it("a published-metric sort and range add ONE more question, the same dataset with group_sort and group_filters (WP-K); a list sort adds none", async () => {
+    const asked: ManagerDatasetQuery[] = [];
     await ready(served(asked), "/deployments/portfolios?env=paper&sort=score:desc&f_ret=-2..");
-    expect(asked).toHaveLength(1);
+    await waitFor(() => expect(asked).toHaveLength(2));
+    expect(encodeManagerDatasetQuery(asked[1]!)).toEqual({
+      path: "/manager/fleet",
+      wire: { environment: "paper", window: "\"90D\"", group_by: "portfolio_id", limit: "1",
+        group_sort: JSON.stringify([{ metric_key: "portfolio_score", direction: "desc" }]), group_filters: JSON.stringify([{ metric_key: "return_30d_pct", op: "GTE", value: "-2" }]) },
+    });
+    cleanup();
+    const plain: ManagerDatasetQuery[] = [];
+    await ready(served(plain), "/deployments/portfolios?env=paper&sort=name:asc");
+    expect(plain).toHaveLength(1);
   });
 });
 
@@ -131,6 +143,7 @@ describe("sort from the header and the URL", () => {
     expect(names()).toEqual(["Core", "Satellite", "Yen-Carry", "Canary", "Pilot", "Unallocated"]);
     fireEvent.click(within(within(table()).getByRole("columnheader", { name: /Portfolio score/ })).getByRole("button"));
     expect(search().get("sort")).toBe("score:asc");
+    await flush();
     expect(names()).toEqual(["Yen-Carry", "Satellite", "Core", "Canary", "Pilot", "Unallocated"]);
     expect(within(table()).getByRole("columnheader", { name: /Portfolio score/ }).getAttribute("aria-sort")).toBe("ascending");
   });
@@ -141,7 +154,8 @@ describe("sort from the header and the URL", () => {
     cleanup();
     await ready(served(), "/deployments/portfolios?env=paper&sort=pnl:desc&ccy=USDT");
     // JPY has no USDT figure: it sorts after every row that has one.
-    expect(names()).toEqual(["Core", "Canary", "Satellite", "Pilot", "Yen-Carry", "Unallocated"]);
+    // Server-ranked rows first (a group with no figure in the pinned partition is last among them); a portfolio with no group at all follows.
+    expect(names()).toEqual(["Core", "Canary", "Satellite", "Yen-Carry", "Pilot", "Unallocated"]);
   });
 });
 
@@ -153,6 +167,7 @@ describe("filters: ranges, missing score, chips", () => {
     expect(chips.textContent).toContain("Score ≥ 69.62 pts and ≤ 82.8 pts");
     expect(chips.textContent).toContain("Return ≥ -2%");
     fireEvent.click(within(chips).getByRole("button", { name: /Clear filter: Return/ }));
+    await flush();
     expect(search().has("f_ret")).toBe(false);
     expect(search().get("f_score")).toBe("69.62..82.8");
   });
@@ -185,6 +200,7 @@ describe("filters: ranges, missing score, chips", () => {
     mount(served(), "/deployments/portfolios?env=paper&f_score=60..&score_state=missing&q=co&sort=score:desc");
     await screen.findByRole("list", { name: "Active filters" }, { timeout: 5000 });
     fireEvent.click(within(screen.getByRole("list", { name: "Active filters" })).getByRole("button", { name: "Clear all" }));
+    await flush();
     expect(["f_score", "score_state", "q"].map((key) => search().has(key))).toEqual([false, false, false]);
     expect(search().get("sort")).toBe("score:desc");
   });
@@ -205,8 +221,10 @@ describe("filters: ranges, missing score, chips", () => {
     fireEvent.change(min, { target: { value: "60" } });
     fireEvent.blur(min);
     expect(search().get("f_score")).toBe("60..");
+    await flush();
     fireEvent.click(within(menu).getByRole("checkbox", { name: /Score missing or insufficient evidence/ }));
     expect(search().get("score_state")).toBe("missing");
+    await flush();
   });
 
   it("no score range or missing filter is offered when no group publishes a score (nothing to filter)", async () => {

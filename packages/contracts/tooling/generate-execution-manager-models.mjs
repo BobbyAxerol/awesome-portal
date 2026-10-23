@@ -103,7 +103,7 @@ const paths = Object.fromEntries(routes.map(([route,operation]) => ['/api/v1/exe
   description: 'Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile.',
   parameters: [...(route.includes('{id}') ? [{ name:'id', in:'path', required:true, schema:{type:'string',minLength:1,maxLength:256} }] : []),
     ...Object.entries(query.properties).map(([name,schema]) => ({ name, in:'query', required:query.required.includes(name),
-      ...(['filters','sort','economic_partition','window'].includes(name) ? { content: { 'application/json': { schema } } } :
+      ...(['filters','sort','economic_partition','window','group_sort','group_filters'].includes(name) ? { content: { 'application/json': { schema } } } :
         { schema, ...(schema.type === 'array' ? { style:'form',explode:false } : {}) }) }))],
   responses: { 200:{description:'Authorized current snapshot; absence and policy-pending remain typed',content:{'application/json':{schema:{$ref:'#/components/schemas/ManagerDataset'}}}},
     ...Object.fromEntries([400,401,404,409,503].map(code => [code,{description:({400:'Invalid closed query',401:'Session required',404:'Resource or current grant unavailable',409:'Authority, snapshot or cursor changed',503:'Source publication, field policy, projection or bounded capacity unavailable'})[code]}])) },

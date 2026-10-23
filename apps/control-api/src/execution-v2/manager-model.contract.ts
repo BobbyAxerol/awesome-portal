@@ -10,7 +10,7 @@ import { managerCompositionPublication } from "./manager-composition-publication
 export { managerCompositionPublication } from "./manager-composition-publication.contract";
 import { managerRegimePublication } from "./manager-regime-publication.contract";
 export { managerRegimePublication } from "./manager-regime-publication.contract";
-import { managerStageLifecycleReasons, managerStageLifecyclePolicy, validateManagerLifecycle } from "./manager-lifecycle";
+import { managerStageLifecycleReasons, managerStageLifecyclePolicy, STAGE_ENTRY_PUBLISHED, validateManagerLifecycle } from "./manager-lifecycle";
 import { managerSeriesPublication, validateManagerSeriesPublications } from "./manager-series-publication.contract";
 import { validateManagerAllScope, MANAGER_ALL_REASONS } from "./manager-all-scope";
 
@@ -111,6 +111,10 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
 });
 const filter =z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL", "IN"]),
   value: text.optional(), values: z.array(text).min(1).max(32).optional() }).strict();
+/** WP-K slice 6: portfolio-grain (group) sort and filter on a published group metric. Additive: absent = the lexical group order of before. */
+const groupMetricKey = z.string().regex(/^[a-z][a-z0-9_]{1,63}$/);
+export const managerGroupSort = z.object({ metric_key: groupMetricKey, direction: z.enum(["asc", "desc"]) }).strict();
+export const managerGroupFilter = z.object({ metric_key: groupMetricKey, op: z.enum(["GTE", "LTE", "IS_NULL"]), value: text.optional() }).strict();
 export const managerModelQuery = z.object({ workspace_id: text.optional(), environment: managerEnvironmentScope,
   q: managerSearchText.optional(), q_mode: managerSearchMode.optional(), window: managerWindowQuery.optional(),
   stage_filter: z.array(financialStage).max(4).default([]), lifecycle_filter: text.optional(),
@@ -118,6 +122,7 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
   sort: z.array(z.object({ field: managerScalar, direction: z.enum(["asc", "desc"]) }).strict()).min(1).max(3)
     .default([{ field: "name", direction: "asc" }]),
   group_by: z.array(managerGroupField).max(2).default([]),
+  group_sort: z.array(managerGroupSort).max(1).default([]), group_filters: z.array(managerGroupFilter).max(8).default([]),
   economic_partition: managerPartition.optional(), limit: z.number().int().min(1).max(200).default(100),
   after: z.string().min(1).max(4096).optional(), before: z.string().min(1).max(4096).optional(),
 }).strict().superRefine((q, c) => {
@@ -133,6 +138,15 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ALL_WINDOW_UNSUPPORTED" });
   if (q.after && q.before || new Set(q.sort.map(s => s.field)).size !== q.sort.length || new Set(q.group_by).size !== q.group_by.length)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_QUERY_INVALID" });
+  if ((q.group_sort.length || q.group_filters.length) && !q.group_by.length)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_QUERY_REQUIRES_GROUP_BY" });
+  if ((q.group_sort.length || q.group_filters.length) && q.environment === "ALL")
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_QUERY_ALL_UNSUPPORTED" });
+  for (const f of q.group_filters)
+    if (f.op === "IS_NULL" ? f.value !== undefined : f.value === undefined || !exactDecimal.safeParse(f.value).success)
+      c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_FILTER_INVALID" });
+  if (new Set(q.group_filters.map(f => `${f.metric_key}:${f.op}`)).size !== q.group_filters.length)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_GROUP_FILTER_DUPLICATE" });
   for (const f of q.filters) {
     if (f.op === "IN" ? f.value !== undefined || f.values === undefined :
       f.values !== undefined || (f.op === "IS_NULL" ? f.value !== undefined : f.value === undefined))
@@ -198,6 +212,10 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
     authorized_filtered_count: z.number().int().min(0).max(10_000), next_cursor: z.string().max(4096).nullable(), previous_cursor: z.string().max(4096).nullable() }).strict(),
   items: z.array(managerDatasetRow).max(200), groups: z.array(z.object({ key: z.array(z.object({ field: managerGroupField, value: text.nullable() }).strict()).max(2),
     unique_row_count: z.number().int().min(0).max(10_000), totals_scope: z.literal("FULL_AUTHORIZED_FILTERED_QUERY"), economic_partitions: z.array(partitionMetrics).max(200) }).strict()).max(200),
+  // WP-K slice 6: present only when the query named a group sort or filter. `partition_basis` says which partition each group's metric was read in.
+  group_query: z.object({ sort: z.array(managerGroupSort).max(1), filters: z.array(managerGroupFilter).max(8),
+    partition_basis: z.enum(["PINNED_PARTITION", "SINGLE_PARTITION_ONLY"]),
+    groups_before_filter: z.number().int().min(0).max(200), groups_returned: z.number().int().min(0).max(200) }).strict().optional(),
   capital_statements: z.array(partitionMetrics).max(200),
   statement_scope: z.literal("AUTHORIZED_RESOURCE_SELECTED_STAGES_BEFORE_TABLE_FILTERS"),
   scores: z.object({ raw: scorePending, composition: compositionSummary, direct_nav: scorePending,
@@ -210,4 +228,8 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),
-}).strict().superRefine(validateManagerAllScope).superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine(validateManagerDatasetInvariants).superRefine(validateManagerDisplayText);
+}).strict().superRefine(validateManagerAllScope).superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine((v, c) => {
+  // WP-K: the policy and the options say the same thing about the entry time.
+  if ((v.stage_lifecycle.entry_time === STAGE_ENTRY_PUBLISHED) !== (v.query_options.unavailable_fields.length === 0))
+    c.addIssue({ code: z.ZodIssueCode.custom, path: ["stage_lifecycle", "entry_time"], message: "MANAGER_STAGE_ENTRY_POLICY_MISMATCH" });
+}).superRefine(validateManagerDatasetInvariants).superRefine(validateManagerDisplayText);

@@ -54,6 +54,13 @@ export type ManagerDatasetFilter =
 
 export interface ManagerDatasetSort { field: ManagerDatasetField; direction: "asc" | "desc" }
 
+/** WP-K slice 6: sort and filter the GROUPS (a group is one portfolio when `groupBy` is `portfolio_id`) by a published group metric key. */
+export interface ManagerDatasetGroupSort { metricKey: string; direction: "asc" | "desc" }
+export type ManagerDatasetGroupFilter =
+  | { metricKey: string; op: "GTE" | "LTE"; value: string }
+  | { metricKey: string; op: "IS_NULL" };
+export const MAX_DATASET_GROUP_FILTERS = 8;
+
 export interface ManagerDatasetPartitionQuery {
   economicDomain: ManagerEconomicDomain;
   currency: string;
@@ -76,6 +83,9 @@ export interface ManagerDatasetQueryBase {
   filters?: readonly ManagerDatasetFilter[];
   sort?: readonly ManagerDatasetSort[];
   groupBy?: readonly ManagerGroupField[];
+  /** At most one; needs `groupBy` and one environment. Null sorts last both ways; a group of several partitions has no comparable value unless `economicPartition` pins one. */
+  groupSort?: readonly ManagerDatasetGroupSort[];
+  groupFilters?: readonly ManagerDatasetGroupFilter[];
   /** Pins one economic partition (all five fields). */
   economicPartition?: ManagerDatasetPartitionQuery;
   limit?: number;
@@ -224,6 +234,31 @@ export function encodeManagerDatasetQuery(query: ManagerDatasetQuery): ManagerDa
     }
     wire.group_by = fields.join(",");
   }
+  const groupSort = query.groupSort ?? [];
+  const groupFilters = query.groupFilters ?? [];
+  if (groupSort.length > 0 || groupFilters.length > 0) {
+    if (query.groupBy === undefined || query.groupBy.length === 0 || query.environment === MANAGER_ALL || groupSort.length > 1 || groupFilters.length > MAX_DATASET_GROUP_FILTERS) return null;
+    const keyOk = (key: unknown): key is string => typeof key === "string" && /^[a-z][a-z0-9_]{1,63}$/.test(key);
+    const sorts: { metric_key: string; direction: "asc" | "desc" }[] = [];
+    for (const entry of groupSort) {
+      const direction = oneOf(entry.direction, ["asc", "desc"] as const);
+      if (!keyOk(entry.metricKey) || direction === null) return null;
+      sorts.push({ metric_key: entry.metricKey, direction });
+    }
+    const filters: Record<string, string>[] = [];
+    const seen = new Set<string>();
+    for (const entry of groupFilters) {
+      const op = oneOf(entry.op, ["GTE", "LTE", "IS_NULL"] as const);
+      if (!keyOk(entry.metricKey) || op === null || seen.has(`${entry.metricKey}:${op}`)) return null;
+      seen.add(`${entry.metricKey}:${op}`);
+      if (op === "IS_NULL") { if ((entry as { value?: unknown }).value !== undefined) return null; filters.push({ metric_key: entry.metricKey, op }); continue; }
+      const value = (entry as { value?: unknown }).value;
+      if (typeof value !== "string" || value.length > 128 || !DECIMAL.test(value)) return null;
+      filters.push({ metric_key: entry.metricKey, op, value });
+    }
+    if (sorts.length > 0) wire.group_sort = JSON.stringify(sorts);
+    if (filters.length > 0) wire.group_filters = JSON.stringify(filters);
+  }
   if (query.economicPartition !== undefined) {
     const p = query.economicPartition;
     const domain = oneOf(p.economicDomain, MANAGER_ECONOMIC_DOMAINS);
@@ -308,6 +343,19 @@ export function datasetQueryMismatch(dataset: ManagerDataset, query: ManagerData
   }
 
   if (query.limit !== undefined && dataset.page.limit !== query.limit) return "limit";
+
+  // WP-K slice 6: the body echoes the group query it applied, and only when one was asked; it never promises an order it did not apply.
+  const askedSort = query.groupSort ?? [];
+  const askedFilters = query.groupFilters ?? [];
+  if (askedSort.length === 0 && askedFilters.length === 0) {
+    if (dataset.groupQuery !== undefined) return "group_query";
+  } else {
+    const applied = dataset.groupQuery;
+    if (applied === undefined || applied.groupsReturned !== dataset.groups.length) return "group_query";
+    const sameSort = applied.sort.length === askedSort.length && applied.sort.every((s, i) => s.metricKey === askedSort[i]!.metricKey && s.direction === askedSort[i]!.direction);
+    const sameFilters = applied.filters.length === askedFilters.length && askedFilters.every((f) => applied.filters.some((a) => a.metricKey === f.metricKey && a.op === f.op && a.value === (f.op === "IS_NULL" ? null : f.value)));
+    if (!sameSort || !sameFilters) return "group_query";
+  }
 
   const asked = query.groupBy ?? [];
   if (asked.length === 0 ? dataset.groups.length > 0 : dataset.groups.some((group) => group.key.length !== asked.length || group.key.some((part, index) => part.field !== asked[index]))) return "group_by";

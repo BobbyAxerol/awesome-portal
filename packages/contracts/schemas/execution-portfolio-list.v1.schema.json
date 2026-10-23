@@ -32,8 +32,28 @@
         "allocation_count": { "type": "integer", "minimum": 0 },
         "deployment_count": { "type": "integer", "minimum": 0 },
         "allocated_by_currency": { "type": "array", "maxItems": 20, "items": { "$ref": "#/$defs/CurrencyValue" } },
-        "updated_at": { "$ref": "#/$defs/Timestamp" }
+        "updated_at": { "$ref": "#/$defs/Timestamp" },
+        "health": { "$ref": "#/$defs/PortfolioHealth" }
       }
+    },
+    "PortfolioHealth": {
+      "description": "WP-K slice 6 (N3). A typed portfolio health roll-up with its source: the worst health among the portfolio's deployments, with the count of deployments in each class. The lifecycle `state` stays what it is; this is NOT it. OPTIONAL on an item: omitted = this producer has no owning source; NOT_PUBLISHED carries a reason code and no value (never a default of HEALTHY).",
+      "type": "object", "additionalProperties": false,
+      "required": ["state", "value", "basis", "deployments_by_health", "as_of", "reason_code"],
+      "properties": {
+        "state": { "enum": ["PUBLISHED", "NOT_PUBLISHED"] },
+        "value": { "oneOf": [{ "enum": ["HEALTHY", "ATTENTION", "DEGRADED", "HALTED"] }, { "type": "null" }] },
+        "basis": { "oneOf": [{ "const": "WORST_OF_DEPLOYMENT_HEALTH" }, { "type": "null" }] },
+        "deployments_by_health": { "oneOf": [{ "type": "object", "additionalProperties": false, "required": ["HEALTHY", "ATTENTION", "DEGRADED", "HALTED"],
+          "properties": { "HEALTHY": { "type": "integer", "minimum": 0 }, "ATTENTION": { "type": "integer", "minimum": 0 }, "DEGRADED": { "type": "integer", "minimum": 0 }, "HALTED": { "type": "integer", "minimum": 0 } } }, { "type": "null" }] },
+        "as_of": { "oneOf": [{ "$ref": "#/$defs/Timestamp" }, { "type": "null" }] },
+        "reason_code": { "oneOf": [{ "type": "string", "pattern": "^[A-Z][A-Z0-9_]{1,63}$" }, { "type": "null" }] }
+      },
+      "allOf": [{
+        "if": { "type": "object", "required": ["state"], "properties": { "state": { "const": "PUBLISHED" } } },
+        "then": { "type": "object", "properties": { "value": { "type": "string" }, "basis": { "type": "string" }, "deployments_by_health": { "type": "object" }, "as_of": { "type": "string" }, "reason_code": { "type": "null" } } },
+        "else": { "type": "object", "properties": { "value": { "type": "null" }, "basis": { "type": "null" }, "deployments_by_health": { "type": "null" }, "as_of": { "type": "null" }, "reason_code": { "type": "string" } } }
+      }]
     },
     "PortfolioListResponse": {
       "type": "object", "additionalProperties": false,

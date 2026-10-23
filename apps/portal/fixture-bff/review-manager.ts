@@ -11,6 +11,7 @@ import { buildPositiveManagerSeries } from "../../../packages/contracts/tooling/
 
 import { ALPHA_DOUBLE_AS_OF_MS, answerAlpha } from "../frontend/e2e/bffDoubleAlpha";
 import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoubleManager";
+import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
 
 // Mutable copies of published JSON templates, confined to this server-only fixture module.
@@ -854,6 +855,8 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   checkedQuery.delete("after");
   checkedQuery.delete("before");
   checkedQuery.delete("lifecycle_filter");
+  checkedQuery.delete("group_sort"); // WP-K: validated and applied below (the L0 double refuses what it cannot apply)
+  checkedQuery.delete("group_filters");
   // SIMULATED window presets: bare (`30D`) or JSON-quoted (`"30D"`, as httpApi encodes it). Any other window shape stays the double's 400.
   const rawWindow = search.get("window");
   const windowName = rawWindow === null ? null : (["7D", "30D", "90D", "ALL"] as const).find((name) => rawWindow === name || rawWindow === JSON.stringify(name)) ?? null;
@@ -980,13 +983,15 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   if (windowName !== null) applyWindow(body, windowName, windowPreset);
   addGroupScores(body, groups, windowName); // SIMULATED score keys (register 2c), after the window so ALL stays a gap
   addWpF1(body, groups); // WP-F1: capital statement keys and allocation shares (register 2f1)
+  const groupQuery = wpkGroupQuery(body, search, groups);
+  if (groupQuery !== null) return groupQuery; // WP-K slice 6: a 400 for a malformed or unsupported group query
   if (Buffer.byteLength(JSON.stringify(body)) > body.query_policy.maximum_response_bytes) return problem(400, "MANAGER_REVIEW_RESPONSE_TOO_LARGE", "Reduce limit/grouping for this bounded review response.");
   return { status: 200, body };
 }
 
 export function answerReviewManager(method: string, path: string, search: URLSearchParams, profile: ReviewManagerProfile): ReviewManagerResponse | null {
   const normalized = path.replace(/^\/api\/v1\/execution(?=\/)/, "");
-  return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
+  return seriesAnswer(method, normalized, search, profile) ?? wpkApprovalEvidence(method, normalized, search, profile) ?? wpkAlphaLifecycle(method, normalized, search) ?? wpkOperationsExtras(method, normalized, search) ?? wpkEntitySearch(method, normalized, search) ?? wpkPortfolioHealth(method, normalized, search) ?? wpcCandles(method, normalized, search) ?? wpcEquity(method, normalized, search) ?? wpF1Answer(method, normalized, search) ?? wpcAlphaKeys(normalized, search, datasetAnswer(method, normalized, search, profile));
 }
 
 // ===== WP-C begin (Alpha 360, Trade replay, Compare; FIXTURE_LAB, register section 2c-wpc)
@@ -1411,4 +1416,73 @@ function wpkEntitySearch(method: string, path: string, search: URLSearchParams):
   return { status: 200, body: { schema_version: "portal.execution.entity-search.v1", workspace_id: search.get("workspace_id") ?? "ws_FIXTURE_LAB", record_authority: "PORTAL_PROJECTION", read_at_ms: fixtureNowMs(),
     query: { q, kinds, limit }, groups } };
 }
+
+/* ---- Group sort and filter (slice 6): `group_sort` / `group_filters` on the dataset, FIXTURE_LAB. The same semantics the control-api applies
+ * (`applyGroupQuery`): a metric is read in the pinned partition, else in the group's only partition (several partitions = no comparable value);
+ * decimals compare exactly (bigint); null sorts last in both directions and fails GTE / LTE; IS_NULL keeps exactly the null ones. */
+function wpkGroupQuery(body: Draft, search: URLSearchParams, groupFields: string[]): ReviewManagerResponse | null {
+  if (!search.has("group_sort") && !search.has("group_filters")) return null;
+  const bad = (message: string): ReviewManagerResponse => problem(400, "EXECUTION_READ_QUERY_INVALID", message);
+  let sort: Draft[]; let filters: Draft[];
+  try { sort = JSON.parse(search.get("group_sort") ?? "[]"); filters = JSON.parse(search.get("group_filters") ?? "[]"); } catch { return bad("group_sort and group_filters are JSON arrays."); }
+  const key = /^[a-z][a-z0-9_]{1,63}$/, decimalText = /^-?(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$/;
+  if (!Array.isArray(sort) || !Array.isArray(filters) || sort.length > 1 || filters.length > 8 || groupFields.length === 0 || search.get("environment") === "ALL") return bad("A group query needs group_by, one environment, at most one sort and eight filters.");
+  if (sort.some((o) => Object.keys(o ?? {}).sort().join(",") !== "direction,metric_key" || !key.test(o.metric_key) || !["asc", "desc"].includes(o.direction))) return bad("group_sort is [{metric_key, direction}].");
+  if (filters.some((f) => !f || typeof f !== "object" || !key.test(f.metric_key) || !["GTE", "LTE", "IS_NULL"].includes(f.op)
+    || Object.keys(f).sort().join(",") !== (f.op === "IS_NULL" ? "metric_key,op" : "metric_key,op,value") || (f.op !== "IS_NULL" && !decimalText.test(String(f.value))))) return bad("group_filters are [{metric_key, op GTE|LTE|IS_NULL, value}] with an exact decimal value.");
+  if (new Set(filters.map((f) => `${f.metric_key}:${f.op}`)).size !== filters.length) return bad("A group filter occurs once per operator.");
+  const pinned = search.has("economic_partition") ? JSON.parse(search.get("economic_partition")!) : null;
+  const valueOf = (group: Draft, metricKey: string): bigint | null => {
+    const pool = pinned === null ? group.economic_partitions
+      : group.economic_partitions.filter((entry: Draft) => ["economic_domain", "currency", "basis", "native_profile_ref"].every((field) => entry.partition[field] === pinned[field]));
+    if (pool.length !== 1) return null;
+    const m = pool[0].metrics[metricKey];
+    return m && m.availability === "AVAILABLE" && typeof m.value === "string" && decimalText.test(m.value) ? toScaled(m.value) : null;
+  };
+  const before = body.groups.length;
+  let kept = (body.groups as Draft[]).filter((group) => filters.every((f) => {
+    const v = valueOf(group, f.metric_key);
+    if (f.op === "IS_NULL") return v === null;
+    if (v === null) return false;
+    return f.op === "GTE" ? v >= toScaled(f.value) : v <= toScaled(f.value);
+  }));
+  if (sort[0]) {
+    const { metric_key: metricKey, direction } = sort[0];
+    kept = [...kept].sort((a, b) => {
+      const x = valueOf(a, metricKey), y = valueOf(b, metricKey);
+      const tie = JSON.stringify(a.key) < JSON.stringify(b.key) ? -1 : 1;
+      if (x === null || y === null) return x === y ? tie : x === null ? 1 : -1;
+      return x === y ? tie : (x < y ? -1 : 1) * (direction === "asc" ? 1 : -1);
+    });
+  }
+  body.groups = kept;
+  body.group_query = { sort, filters, partition_basis: pinned === null ? "SINGLE_PARTITION_ONLY" : "PINNED_PARTITION", groups_before_filter: before, groups_returned: kept.length };
+  return null;
+}
+
+/* ---- Portfolio health roll-up (slice 6, N3): `GET /portfolios` with `health` on each item, FIXTURE_LAB. The worst class among the portfolio's deployments in the
+ * review universe (HALTED state, else FINDING = DEGRADED, ATTENTION, READY = HEALTHY), with the counts. A portfolio the universe holds no deployment of, or
+ * whose deployments outnumber the list's own `deployment_count` (two sources disagree), is NOT_PUBLISHED with a reason, never a default of HEALTHY. */
+function wpkPortfolioHealth(method: string, path: string, search: URLSearchParams): ReviewManagerResponse | null {
+  if (method !== "GET" || path !== "/portfolios") return null;
+  const base = answerPortfolios("GET", "/portfolios", search);
+  if (base === null || base.status !== 200) return base;
+  const body = copy(base.body) as Draft;
+  if (!Array.isArray(body.items)) return base;
+  const deployments = [...scaled().alphas, ...WPC_ALPHAS].flatMap((alpha) => alpha.deployments);
+  const order = ["HEALTHY", "ATTENTION", "DEGRADED", "HALTED"] as const;
+  const now = new Date(fixtureNowMs()).toISOString().replace(/\.\d+Z$/, "Z");
+  for (const item of body.items as Draft[]) {
+    const mine = deployments.filter((dep) => dep.portfolioId === item.portfolio_id);
+    const counts: Record<(typeof order)[number], number> = { HEALTHY: 0, ATTENTION: 0, DEGRADED: 0, HALTED: 0 };
+    for (const dep of mine) counts[dep.state === "HALTED" ? "HALTED" : dep.health === "FINDING" ? "DEGRADED" : dep.health === "ATTENTION" ? "ATTENTION" : "HEALTHY"] += 1;
+    const total = mine.length;
+    const worst = [...order].reverse().find((key) => counts[key] > 0);
+    item.health = total === 0 || worst === undefined ? { state: "NOT_PUBLISHED", value: null, basis: null, deployments_by_health: null, as_of: null, reason_code: "DEPLOYMENT_HEALTH_NOT_PUBLISHED" }
+      : total > item.deployment_count ? { state: "NOT_PUBLISHED", value: null, basis: null, deployments_by_health: null, as_of: null, reason_code: "DEPLOYMENT_COUNT_MISMATCH" }
+        : { state: "PUBLISHED", value: worst, basis: "WORST_OF_DEPLOYMENT_HEALTH", deployments_by_health: counts, as_of: now, reason_code: null };
+  }
+  return { status: 200, body };
+}
+
 // ===== WP-K end

@@ -39,7 +39,7 @@ export class ManagerModelController {
         if (query.window.length > 256) throw new Error("QUERY_LIMIT");
         query.window = JSON.parse(query.window);
       }
-      for (const field of ["filters", "sort", "economic_partition"]) if (typeof query[field] === "string") {
+      for (const field of ["filters", "sort", "economic_partition", "group_sort", "group_filters"]) if (typeof query[field] === "string") {
         if ((query[field] as string).length > 4096) throw new Error("QUERY_LIMIT");
         query[field] = JSON.parse(query[field] as string);
       }

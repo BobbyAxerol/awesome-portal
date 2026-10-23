@@ -81,6 +81,14 @@ export const DEFAULT_HIDDEN: readonly ColumnId[] = ["alphas", "allocations", "do
 /** The `hide` value that means "hide nothing", so a reader can switch the default off. */
 export const HIDE_NONE = "none";
 
+/** WP-K (N3): how a published health roll-up class is drawn. */
+const HEALTH_FLAG = {
+  HEALTHY: { kind: "ok", label: "Healthy" },
+  ATTENTION: { kind: "attention", label: "Attention" },
+  DEGRADED: { kind: "partial", label: "Degraded" },
+  HALTED: { kind: "paused", label: "Halted" },
+} as const;
+
 /**
  * The hidden set the address names. An absent `hide` is the default set; a
  * name it does not know is ignored; `none` (or any list with no known name) is
@@ -247,6 +255,16 @@ function cell(id: ColumnId, row: PortfolioRow, figures: PortfolioFigures | null)
     case "owner":
       return row.owner ?? <Absent reason="owner not published" />;
     case "state":
+      // WP-K (N3): a published health roll-up is what Health prints, with the lifecycle state beside it; without one, the lifecycle state as before.
+      if (row.health !== null && row.health.state === "PUBLISHED") {
+        const counts = row.health.deploymentsByHealth;
+        return (
+          <span className="exec-pf-health" data-testid="health-rollup" title={`Worst of the deployments: ${counts.HEALTHY} healthy, ${counts.ATTENTION} attention, ${counts.DEGRADED} degraded, ${counts.HALTED} halted · as of ${row.health.asOf} · lifecycle ${row.stateLabel}`}>
+            <Flag kind={HEALTH_FLAG[row.health.value].kind} label={HEALTH_FLAG[row.health.value].label} size="sm" />
+          </span>
+        );
+      }
+      if (row.health !== null) return <span data-testid="health-absent"><Flag kind={row.stateKind} label={row.stateLabel} size="sm" /> <Absent reason={`Health roll-up not published (${row.health.reasonCode}); this is the lifecycle state.`} /></span>;
       return <Flag kind={row.stateKind} label={row.stateLabel} size="sm" />;
     case "domain":
       return row.unallocated ? <Absent reason="no environment published" /> : <span className="exec-pf-domain">{row.domainLabel}<span className="exec-pf-envs">{row.environments.join(", ")}</span></span>;

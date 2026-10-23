@@ -20,7 +20,7 @@
  *
  * Pure functions, no React.
  */
-import type { CurrencyValue, PortfolioListEnvelope, PortfolioListItem } from "../../../api/profileRead";
+import type { CurrencyValue, PortfolioHealthRead, PortfolioListEnvelope, PortfolioListItem } from "../../../api/profileRead";
 import { readDecimal } from "../../boundary";
 import { compareDecimal } from "../../charts/decimal";
 import type { FlagKind } from "../../flagKinds";
@@ -43,6 +43,8 @@ export interface PortfolioRow {
   state: string;
   stateKind: FlagKind;
   stateLabel: string;
+  /** The published health roll-up (WP-K), or `null` when the read carries none. The lifecycle `state` above is a different fact. */
+  health: PortfolioHealthRead | null;
   baseCurrency: string;
   environments: readonly string[];
   domain: Domain;
@@ -82,6 +84,7 @@ export function toRow(item: PortfolioListItem): PortfolioRow {
     state: item.state,
     stateKind: view.kind,
     stateLabel: view.label,
+    health: item.health ?? null,
     baseCurrency: item.baseCurrency,
     environments: item.environments,
     domain,

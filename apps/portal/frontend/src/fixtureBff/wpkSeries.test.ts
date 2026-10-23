@@ -260,3 +260,92 @@ describe("WP-K FIXTURE_LAB: entity search", () => {
     if (parsed.ok) expect(parsed.value.groups.length).toBe(6);
   });
 });
+
+describe("WP-K FIXTURE_LAB: group sort and filter on the portfolio groups", () => {
+  const fleet = (extra: Record<string, string>): Body => {
+    prepare();
+    return answerReviewManager("GET", "/api/v1/execution/manager/fleet", new URLSearchParams({ environment: "paper", group_by: "portfolio_id", limit: "1", window: JSON.stringify("30D"), ...extra }), "populated");
+  };
+  const ids = (body: Body): string[] => (body.groups as Body[]).map((g) => g.key[0].value as string);
+  const figure = (group: Body, key: string): string | null => {
+    const entries = group.economic_partitions as Body[];
+    return entries.length === 1 && entries[0].metrics[key]?.availability === "AVAILABLE" ? (entries[0].metrics[key].value as string) : null;
+  };
+  it("without a group query the body is what it was and carries no group_query", () => {
+    const plain = fleet({});
+    expect(plain.status).toBe(200);
+    expect(plain.body.group_query).toBeUndefined();
+  });
+  it("sorts by an exact published metric, both ways, nulls last, ties by the group key, schema-valid, and echoes what it applied", () => {
+    const desc = fleet({ group_sort: JSON.stringify([{ metric_key: "return_30d_pct", direction: "desc" }]) });
+    expect(desc.status).toBe(200);
+    expect(violationsOf({ file: "execution-manager-dataset.v1", ptr: "" }, desc.body).violations).toEqual([]);
+    expect(desc.body.group_query).toMatchObject({ sort: [{ metric_key: "return_30d_pct", direction: "desc" }], filters: [], partition_basis: "SINGLE_PARTITION_ONLY" });
+    expect(desc.body.group_query.groups_returned).toBe(desc.body.groups.length);
+    const values = (desc.body.groups as Body[]).map((g) => figure(g, "return_30d_pct"));
+    const firstNull = values.findIndex((v) => v === null);
+    if (firstNull >= 0) expect(values.slice(firstNull).every((v) => v === null)).toBe(true);
+    const asc = fleet({ group_sort: JSON.stringify([{ metric_key: "return_30d_pct", direction: "asc" }]) });
+    const ascValues = (asc.body.groups as Body[]).map((g) => figure(g, "return_30d_pct"));
+    const present = (list: (string | null)[]) => list.filter((v): v is string => v !== null);
+    expect(present(ascValues)).toEqual([...present(values)].reverse());
+    const tailAsc = ascValues.findIndex((v) => v === null);
+    if (tailAsc >= 0) expect(ascValues.slice(tailAsc).every((v) => v === null)).toBe(true);
+  });
+  it("GTE and LTE keep only groups with a figure inside, IS_NULL keeps the ones without; a malformed query is a 400", () => {
+    const all = fleet({}).body.groups as Body[];
+    const kept = fleet({ group_filters: JSON.stringify([{ metric_key: "net_pnl", op: "GTE", value: "0" }]) });
+    expect(kept.status).toBe(200);
+    const ok = (kept.body.groups as Body[]);
+    expect(ok.every((g) => figure(g, "net_pnl") !== null && BigInt(String(figure(g, "net_pnl")).replace(".", "").padEnd(1, "0")) !== undefined)).toBe(true);
+    expect(kept.body.group_query).toMatchObject({ groups_before_filter: all.length, groups_returned: ok.length });
+    const nulls = fleet({ group_filters: JSON.stringify([{ metric_key: "net_pnl", op: "IS_NULL" }]) });
+    expect((nulls.body.groups as Body[]).every((g) => figure(g, "net_pnl") === null)).toBe(true);
+    expect(ok.length + (nulls.body.groups as Body[]).length).toBeLessThanOrEqual(all.length);
+    for (const bad of <Record<string, string>[]>[{ group_sort: "{" }, { group_sort: JSON.stringify([{ metric_key: "Net PnL", direction: "asc" }]) },
+      { group_filters: JSON.stringify([{ metric_key: "net_pnl", op: "GTE", value: "1e3" }]) }, { group_filters: JSON.stringify([{ metric_key: "net_pnl", op: "IS_NULL", value: "1" }]) }])
+      expect(fleet(bad).status).toBe(400);
+    expect(ids(fleet({ group_by: "alpha_id", group_sort: JSON.stringify([{ metric_key: "net_pnl", direction: "asc" }]) }).body).length).toBeGreaterThan(0);
+  });
+  it("a pinned partition reads exactly that partition; the strict reader and the echo check accept it through the unmodified HTTP port", async () => {
+    const api = client();
+    const parsed = await api.getManagerDataset({ surface: "FLEET", environment: "paper", window: "30D", groupBy: ["portfolio_id"], limit: 1,
+      groupSort: [{ metricKey: "net_pnl", direction: "desc" }], groupFilters: [{ metricKey: "return_30d_pct", op: "GTE", value: "-100" }] });
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    if (parsed.ok) expect(parsed.value.groupQuery).toMatchObject({ sort: [{ metricKey: "net_pnl", direction: "desc" }], partitionBasis: "SINGLE_PARTITION_ONLY" });
+    const unsorted = await api.getManagerDataset({ surface: "FLEET", environment: "paper", window: "30D", groupBy: ["portfolio_id"], limit: 1 });
+    expect(unsorted.ok && unsorted.value.groupQuery === undefined).toBe(true);
+  });
+});
+
+describe("WP-K FIXTURE_LAB: portfolio health roll-up", () => {
+  const list = (): Body => { prepare(); return answerReviewManager("GET", "/api/v1/execution/portfolios", new URLSearchParams({ environment: "all" }), "populated"); };
+  it("every item carries a typed health: the worst class among its deployments with the counts, or NOT_PUBLISHED with a reason and no value", () => {
+    const result = list();
+    expect(result.status).toBe(200);
+    expect(violationsOf({ file: "execution-portfolio-list.v1", ptr: "" }, result.body).violations).toEqual([]);
+    const items = result.body.items as Body[];
+    expect(items.length).toBeGreaterThan(0);
+    const states = new Set(items.map((i) => i.health.state));
+    expect(states.has("PUBLISHED")).toBe(true);
+    for (const item of items) {
+      const h = item.health;
+      if (h.state === "NOT_PUBLISHED") { expect(h.value).toBeNull(); expect(h.reason_code).toMatch(/^[A-Z_]+$/); continue; }
+      const counts = h.deployments_by_health as Record<string, number>;
+      const total = Object.values(counts).reduce((a, b) => a + b, 0);
+      expect(total).toBeGreaterThan(0);
+      expect(total).toBeLessThanOrEqual(item.deployment_count);
+      expect(h.value).toBe(["HALTED", "DEGRADED", "ATTENTION", "HEALTHY"].find((k) => counts[k]! > 0));
+    }
+    expect(list()).toEqual(result);
+  });
+  it("a portfolio the universe holds no deployment of is NOT_PUBLISHED (never HEALTHY by default); the strict reader accepts the answer through the HTTP port", async () => {
+    const empty = (list().body.items as Body[]).find((i) => i.deployment_count === 0);
+    if (empty) expect(empty.health).toMatchObject({ state: "NOT_PUBLISHED", value: null });
+    const api = client();
+    const parsed = await api.listPortfolios();
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    if (parsed.ok) expect(parsed.value.items.some((i) => i.health?.state === "PUBLISHED")).toBe(true);
+  });
+});
+

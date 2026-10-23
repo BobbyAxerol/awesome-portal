@@ -65,6 +65,17 @@ export interface PortfolioListItem {
   deployment_count: number;
   allocated_by_currency: readonly { currency: string; value: string }[];
   updated_at: string;
+  /** WP-K slice 6 (N3), OPTIONAL: no owning source exists yet, so the control-api omits it. See `PortfolioHealth` in the published schema. */
+  health?: PortfolioHealth;
+}
+
+export interface PortfolioHealth {
+  state: "PUBLISHED" | "NOT_PUBLISHED";
+  value: "HEALTHY" | "ATTENTION" | "DEGRADED" | "HALTED" | null;
+  basis: "WORST_OF_DEPLOYMENT_HEALTH" | null;
+  deployments_by_health: { HEALTHY: number; ATTENTION: number; DEGRADED: number; HALTED: number } | null;
+  as_of: string | null;
+  reason_code: string | null;
 }
 
 export interface AlphaFleetRow extends QueryResultRow {

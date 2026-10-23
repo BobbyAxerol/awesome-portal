@@ -617,6 +617,7 @@ TRACKED = (
     "fixtures/execution-entity-search.hit.synthetic.valid.json",
     "fixtures/execution-entity-search.none.synthetic.valid.json",
     "fixtures/execution-entity-search.synthetic.negative.json",
+    "fixtures/execution-portfolio-list.health.valid.json",
     # BE-P13 (2026-10-20): served command catalogue (the extract fixture above stays byte-pinned by N16B).
     "fixtures/execution-command-catalog.served.valid.json",
     "fixtures/execution-command-plan.emergency-close.valid.json",

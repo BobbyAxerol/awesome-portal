@@ -45,6 +45,7 @@ import { useManagerDataset } from "../manager/useManagerDataset";
 import { PartitionFigures, groupsByPortfolio, publishes, rowCountsByPortfolio, servesDataset } from "./PartitionFigures";
 import { EXPORT_REASON } from "./fe";
 import { FilterChips, RangeFilters, type FilterChip } from "./RangeFilters";
+import { applyServerOrder, groupAsk } from "./serverOrder";
 import { RANGES, SCORE_KEYS, SCORE_MISSING, SCORE_STATE_PARAM, readRangeState, rangeText, writeRange, type Range, type RangeId } from "./registerMetrics";
 import { OPTIONAL_COLUMNS, PortfolioTable, readHidden, writeHidden, type ColumnId, type PortfolioFigures } from "./PortfolioTable";
 import { COMPARE_OFF_REASON, DEFAULT_ROUTES, FROM_LIST, joinQuery, type PortfolioRoutes } from "./routes";
@@ -100,7 +101,7 @@ const SORT_RULES: readonly (readonly [string, string])[] = [
   ["Unallocated", "Always last, and not comparable"],
 ];
 /** Where sort and filter run, said once: the published portfolio read has no query. */
-const LOCAL_ORDER_NOTE = "Sort and filters apply to the loaded portfolios and their published group figures. The portfolio groups of the Manager dataset carry no sort or filter of their own yet.";
+const LOCAL_ORDER_NOTE = "Sort and filters apply to the loaded portfolios and their published group figures. When the server answers the group sort and range filters, the order is the server's and a note says so.";
 
 export function DeniedPortfolios({ routes }: { routes: PortfolioRoutes }) {
   return (
@@ -167,10 +168,27 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
   // The dataset's own capital statement of the environment (one entry per economic partition): the "Total · NAV" line of the hi-fi, as published.
   const statementList = dataset.phase === "ready" ? dataset.value.capitalStatements : null;
   const scopeNav = statementList !== null && publishes(statementList, "current_nav") ? statementList : null;
-  const visible = useMemo(
-    () => (invalidRanges.length > 0 ? [] : sortRows(filterRows(loaded, q, domain, { ranges, scoreMissing: scoreMissingOnly, currency: ccy, groups }), sort, ccy, groups).slice(0, ROW_CAP)),
-    [loaded, q, domain, ranges, invalidRanges, scoreMissingOnly, sort, ccy, groups],
+  // WP-K slice 6: the server sorts and range-filters the portfolio groups (`group_sort` / `group_filters`). Asked only when it can answer exactly what the register
+  // shows (see serverOrder.ts); its answer is trusted for order and membership, never for a figure. Not asked, not served or failed = the local order below.
+  const ask = useMemo(() => groupAsk({ sort, ranges, currency: ccy, groups }), [sort, ranges, ccy, groups]);
+  const serverQuery = useMemo<ManagerDatasetQuery | null>(() => (ask === null ? null : { ...datasetQuery, ...ask }), [datasetQuery, ask]);
+  const serverRead = useManagerDataset(api, permitted && servesDataset(api) && serverQuery !== null, serverQuery);
+  const serverIds = useMemo(
+    // A body that does not say it applied the group query (a server that predates it) is not used as an order.
+    () => (serverRead.phase === "ready" && serverQuery !== null && serverRead.value.groupQuery !== undefined && serverRead.value.groupQuery.groupsReturned === serverRead.value.groups.length ? serverRead.value.groups.flatMap((group) => (group.key[0]?.value ? [group.key[0].value] : [])) : null),
+    [serverRead, serverQuery],
   );
+  const serverApplied = serverIds !== null && ask !== null;
+  const visible = useMemo(() => {
+    if (invalidRanges.length > 0) return []; // an invalid range is refused visibly (F1): nothing is filtered by a guess
+    if (serverIds !== null && ask !== null) {
+      const base = filterRows(loaded, q, domain, { scoreMissing: scoreMissingOnly, currency: ccy, groups });
+      const sortedByServer = ask.groupSort.length > 0;
+      const ordered = applyServerOrder(base, serverIds, { sorted: sortedByServer, filtered: ask.groupFilters.length > 0, rest: (left) => sortRows(left, sort, ccy, groups) });
+      return (sortedByServer ? ordered : sortRows(ordered, sort, ccy, groups)).slice(0, ROW_CAP);
+    }
+    return sortRows(filterRows(loaded, q, domain, { ranges, scoreMissing: scoreMissingOnly, currency: ccy, groups }), sort, ccy, groups).slice(0, ROW_CAP);
+  }, [loaded, q, domain, ranges, invalidRanges, scoreMissingOnly, sort, ccy, groups, serverIds, ask]);
   // Portfolios that hold nothing in the chosen currency (base currency and every allocation are another one): a count of rows, no money added.
   const otherCurrency = useMemo(
     () => (ccy === null ? 0 : loaded.filter((row) => !row.unallocated && row.baseCurrency !== ccy && !row.allocated.some((entry) => entry.currency === ccy)).length),
@@ -458,6 +476,13 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
             {envelope.truncated ? <span className="exec-pf-note">{LOAD_MORE_REASON}</span> : null}
             {capped ? <span className="exec-pf-note">Showing the first {ROW_CAP} rows. Narrow the filters to see the rest.</span> : null}
           </div>
+          {serverApplied ? (
+            <p className="exec-pf-note" data-testid="server-order-note" role="status">
+              {serverRead.phase === "ready" && serverRead.value.groupQuery
+                ? `Ordered and filtered on the server by the published group figure (${serverRead.value.groupQuery.partitionBasis === "PINNED_PARTITION" ? `the ${ccy} partition` : "each portfolio's only partition"}): ${serverRead.value.groupQuery.groupsReturned} of ${serverRead.value.groupQuery.groupsBeforeFilter} portfolio groups. A portfolio with no figure sorts last.`
+                : null}
+            </p>
+          ) : null}
           {filtered || envelope.truncated ? (
             <p className="exec-pf-note" title={LOCAL_ORDER_NOTE}>Filters cover the {loaded.length} loaded {loaded.length === 1 ? "portfolio" : "portfolios"} only.</p>
           ) : null}
