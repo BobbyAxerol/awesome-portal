@@ -11,10 +11,11 @@
  * Mount contract (the integrator wires it behind the `request` flag key, on a Carbon surface, decision A2):
  * default export, props `{ api, writeBlockedReason?, accessHref? }`, rendered inside the Router.
  *
- * What differs from the hi-fi, and why (decisions D8, D13f): no "Route page | Drawer" switch and no
- * "Preview the result states" (design tools, not product; the four results are covered by tests); no
- * "Fresh" chip (no source says the run registry is fresh); the alpha list comes from completed runs (no
- * fleet read, no "all authorized" label, FE-069); the summary minimum is the server's 8, not the hi-fi's 24.
+ * What differs from the hi-fi, and why: the "Fresh · 12:04Z" chip says what the pickers rest on ("Run Library read"), with no clock,
+ * because no source publishes an as-of for the run registry; the alpha list comes from completed runs (no fleet read; the scope label
+ * is the published `alpha_scope` words, FE-069); the summary minimum is the server's 8, not the hi-fi's 24. The "Route page | Drawer
+ * from the queue" switch and "Preview the result states" are drawn (WP-E, owner directive 2026-10-23): the other frame is a link to
+ * a new tab (what was typed is not lost), and the preview is a legend of the answers that sends nothing.
  *
  * Scale and degradation (evidence/UXM07/README.md 2b):
  *
@@ -27,7 +28,7 @@ import { useSearchParams } from "react-router-dom";
 
 import type { ExecutionApi } from "../../../api/ports";
 import { NewRequestForm } from "./NewRequestForm";
-import { StepBar, WhatNextDisclosure, WorkspaceNote } from "./parts";
+import { FrameToggle, FreshChip, NextPanel, ResultPreview, StepBar, SUBTITLE, WorkspaceNote } from "./parts";
 import { readPrefill, type PrefillRead } from "./model";
 import { useNewRequest } from "./useNewRequest";
 
@@ -57,13 +58,23 @@ export default function NewRequestPage({ api, writeBlockedReason, accessHref = A
   return (
     <div className="exec-rq-page" data-screen="new-request-v2">
       <header className="exec-rq-mast">
-        <h1 className="exec-rq-title" title="Research to R1 gate, for a request that did not start in Research">New approval request</h1>
-        <WorkspaceNote />
+        <div className="exec-rq-mast-text">
+          <h1 className="exec-rq-title">New approval request</h1>
+          <p className="exec-rq-sub" data-testid="rq-subtitle">{SUBTITLE}</p>
+          <WorkspaceNote />
+        </div>
+        <div className="exec-rq-mast-ctrls">
+          <FrameToggle current="page" />
+          <FreshChip state={state.runs.status === "ok" ? "read" : state.runs.status === "unavailable" ? "unavailable" : "reading"} />
+        </div>
       </header>
       <StepBar />
-      <div className="exec-rq-col">
-        <NewRequestForm state={state} variant="page" accessHref={accessHref} />
-        <WhatNextDisclosure />
+      <div className="exec-rq-cols">
+        <div className="exec-rq-col">
+          <NewRequestForm state={state} variant="page" accessHref={accessHref} />
+          <ResultPreview />
+        </div>
+        <NextPanel />
       </div>
     </div>
   );

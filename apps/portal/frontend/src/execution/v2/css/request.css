@@ -20,7 +20,23 @@
   color: var(--ink);
 }
 .exec-rq-mast {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
   min-width: 0;
+}
+.exec-rq-mast-text {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+.exec-rq-mast-ctrls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
 }
 .exec-rq-title {
   margin: 0;
@@ -28,12 +44,94 @@
   color: var(--ink);
   overflow-wrap: anywhere;
 }
-/* One column: the form is the page; the three-line explanation is a disclosure under it. */
+.exec-rq-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-faint);
+  overflow-wrap: anywhere;
+}
+/* Route page | Drawer from the queue: the current frame is the accent one, the other a link (hi-fi .seg). */
+.exec-rq-toggle {
+  display: inline-flex;
+  flex-wrap: wrap;
+}
+.exec-rq-seg {
+  margin-right: -1px;
+  padding: 6px 14px;
+  font: var(--exec-font-control);
+  color: var(--ink);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  text-decoration: none;
+}
+.exec-rq-seg[data-on="true"] {
+  position: relative;
+  z-index: 1;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.exec-rq-seg:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-rq-fresh {
+  display: inline-flex;
+  align-items: center;
+}
+/* The form (one column) and the "What happens next" panel beside it; the panel stacks under the form at 1100px and below. */
+.exec-rq-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: var(--space-4);
+  align-items: start;
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  .exec-rq-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 .exec-rq-col {
   display: grid;
   gap: var(--space-4);
-  max-width: 880px;
   min-width: 0;
+}
+.exec-rq-next {
+  min-width: 0;
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-rq-next-head {
+  padding: var(--space-2) var(--space-4);
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+  background: var(--paper-sunken);
+  border-bottom: 1px solid var(--line-strong);
+}
+.exec-rq-preview-list {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.exec-rq-preview-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
+.exec-rq-preview {
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-rq-cap {
+  color: inherit;
 }
 
 /* ---- step bar ------------------------------------------------------------ */
