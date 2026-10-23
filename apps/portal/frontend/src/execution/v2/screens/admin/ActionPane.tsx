@@ -234,13 +234,15 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
         <Fact term="How">{row.kind === "read" ? "Runs here as a local read. Nothing is sent to the trading system." : stepsOf(row)}</Fact>
         <Fact term="State"><Flag kind={state.kind} label={state.label} size="sm" /></Fact>
         <Fact term="Not live because">
-          {first.code ?? first.sentence ? (
+          {row.state === "ready" ? (
+            "Nothing: the server classifies this action as connected, a local read."
+          ) : first.code ?? first.sentence ? (
             <>
               {first.code ? <CodeName code={first.code} /> : null}
               {first.code && first.sentence ? " " : null}
               {first.sentence ?? null}
             </>
-          ) : row.state === "ready" ? "Nothing: the server classifies this action as connected." : "No reason was published."}
+          ) : "No reason was published."}
         </Fact>
       </dl>
 

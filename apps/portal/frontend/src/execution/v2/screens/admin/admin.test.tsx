@@ -471,7 +471,8 @@ describe("the auto-open is once, filter-aware and does not take focus", () => {
     let matches = initialOverlay;
     const listeners = new Set<() => void>();
     vi.stubGlobal("matchMedia", (query: string) => ({
-      get matches() { return matches; },
+      // The page's own wide query (`min-width`) is the opposite of the overlay query (`max-width`): overlay means not wide.
+      get matches() { return query.includes("min-width") ? !matches : matches; },
       media: query,
       addEventListener: (_: string, fn: () => void) => listeners.add(fn),
       removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),

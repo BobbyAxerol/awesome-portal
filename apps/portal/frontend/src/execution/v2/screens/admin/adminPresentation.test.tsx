@@ -96,6 +96,32 @@ describe("the detail pane", () => {
   });
 });
 
+describe("QA1 I-35: the detail pane is the page's right column from 1101px", () => {
+  it("at 1440px (the shared dock mode says overlay up to 1500) the pane is docked, open on the first ready read, with Run local read", async () => {
+    // overlay query true (max-width: 1500) AND the page's own wide query true (min-width: 1101): wide wins.
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: true, media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
+    simulated = true;
+    mount();
+    await loaded();
+    const pane = await dock();
+    expect(pane.getAttribute("data-mode")).toBe("dock");
+    expect(within(pane).getByRole("heading", { name: "System health" })).toBeTruthy();
+    expect(within(pane).getByText("Run local read")).toBeTruthy();
+    // A ready action is not "not live": the line says it is connected, not a kill-switch reason.
+    const why = within(pane).getByText("Not live because").nextElementSibling as HTMLElement;
+    expect(why.textContent).toContain("Nothing: the server classifies this action as connected");
+    expect(document.querySelector('.exec-adm-main')?.getAttribute("data-docked")).toBe("true");
+  });
+
+  it("at 1000px it is an overlay again, and nothing opens unprompted", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("max-width"), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
+    mount();
+    await loaded();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.querySelector('.exec-adm-main')?.getAttribute("data-docked")).toBeNull();
+  });
+});
+
 describe("simulated lane: six connected local reads", () => {
   it("the sparse default keeps 0 of 24 and the published states", async () => {
     mount();

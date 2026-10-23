@@ -34,6 +34,7 @@ import { useDockMode, useDockSelection } from "../../Drawer";
 import { Flag } from "../../Flag";
 import type { FlagKind } from "../../flagKinds";
 import { useExecUrlState, withContext } from "../../urlState";
+import { useMediaQuery } from "../../useMediaQuery";
 import { ActionPane, withQuery } from "./ActionPane";
 import {
   ROW_CAP, ROW_STATES, ROW_STATE_VIEW, firstNotLive, firstReasonFor, humanize, stateCounts, tiersOf, toRows, type ActionRow, type RowState,
@@ -140,7 +141,10 @@ export default function AdminScreen({
   const reads = useAdminReads(api, workspaceId);
   const [params, setParams] = useSearchParams();
   const { selection, select, close } = useDockSelection();
-  const mode = useDockMode();
+  // The detail pane is the page's right column from 1101px up (QA1 I-35: at 1440 the shared dock mode is an overlay, so the page had no pane at all).
+  const wide = useMediaQuery("(min-width: 1101px)");
+  const baseMode = useDockMode();
+  const mode = wide ? "dock" : baseMode;
   const summaryId = useId();
   const url = useExecUrlState();
 
