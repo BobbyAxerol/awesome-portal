@@ -275,11 +275,11 @@ function overlayBlotter(body: Obj): Obj {
     if (!isObj(order)) continue;
     if (index >= unsafeFrom && traded(order)) {
       const alphaOf = typeof order.strategy_id === "string" ? order.strategy_id : "";
-      if (alphaOf in DEPLOYMENT_OF_ALPHA) order.deployment_id = DEPLOYMENT_OF_ALPHA[alphaOf];
+      if (alphaOf in DEPLOYMENT_OF_ALPHA && order.deployment_id === undefined) order.deployment_id = DEPLOYMENT_OF_ALPHA[alphaOf];
       continue;
     }
     const alpha = typeof order.strategy_id === "string" ? order.strategy_id : "";
-    if (alpha in DEPLOYMENT_OF_ALPHA) order.deployment_id = DEPLOYMENT_OF_ALPHA[alpha];
+    if (alpha in DEPLOYMENT_OF_ALPHA && order.deployment_id === undefined) order.deployment_id = DEPLOYMENT_OF_ALPHA[alpha];
     const mine = fills.filter((fill) => typeof fill.client_order_id === "string" && fill.client_order_id === order.client_order_id);
     const orderId = typeof order.order_id === "string" ? order.order_id : "";
     // A traded order always states what was filled; a typed absence stays on a canceled order in five (what filled before the cancel is unknown).

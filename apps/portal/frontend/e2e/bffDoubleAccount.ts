@@ -53,6 +53,7 @@ import { fileURLToPath } from "node:url";
 import { scopedResourceV2 } from "./bffDoubleScopedResource";
 import { addDecimal, scaled, sumByCurrency } from "./bffScale";
 import { isPositiveMode, positiveBookOf } from "./bffPositiveMode";
+import { accountFact, ledgerSeries } from "./bffWorld";
 
 export interface BffAnswerAccount {
   status: number;
@@ -519,7 +520,7 @@ function positiveAccount(spec: AccountSpec, id: string): AccountSpec {
   const own = money(primary);
   const currency = own?.currency ?? (rows.account_balances?.[0]?.currency as string | undefined) ?? "USDT";
   if (shared || own) {
-    rows.accounts = owners.map((owner, n) => ({ account_id: owner, label: sleeveLabel(owner, n), strategy_id: books.find((b) => b.owner === owner)?.book?.deployments[0]?.alpha_id ?? null,
+    rows.accounts = owners.map((owner, n) => ({ account_id: owner, label: accountFact(owner)?.name ?? sleeveLabel(owner, n), strategy_id: books.find((b) => b.owner === owner)?.book?.deployments[0]?.alpha_id ?? null,
       mode: spec.environment, venue: "BINANCE", base_currency: currency, account_type: "CROSS", state: "ACTIVE" }));
     rows.deployments = books.flatMap(({ owner, book }) => (book?.deployments ?? []).map((d) => ({ deployment_id: d.deployment_id, account_id: owner, strategy_id: d.alpha_id, portfolio_id: d.portfolio_id, mode: d.environment, stage: d.stage.toLowerCase(), venue: "BINANCE", state: "RUNNING" })));
     rows.venue_accounts = owners.map((owner) => ({ binding_id: spec.bindingId, account_id: owner, mode: spec.environment, venue: "BINANCE", state: "ACTIVE" }));
@@ -689,10 +690,11 @@ function equityChart(search: URLSearchParams): BffAnswerAccount | null {
   const spec = specOf(subjectId);
   if (!spec) return problem(404, "ACCOUNT_NOT_FOUND", `no account ${subjectId}`);
   const environment = spec.environment;
-  const has = subjectId === "acc_bnc_core";
-  const step = 30 * 60_000;
-  const t0 = AS_OF_MS - 5 * step;
-  const points: [number, string | null][] = [
+  const world = isPositiveMode() ? accountFact(subjectId) : null; // WORLD: the equity line ends on the ledger the account states
+  const has = world !== null || subjectId === "acc_bnc_core";
+  const step = world !== null ? 60 * 60_000 : 30 * 60_000;
+  const t0 = AS_OF_MS - (world !== null ? 47 : 5) * step;
+  const points: [number, string | null][] = world !== null ? ledgerSeries(subjectId, t0, AS_OF_MS, 48).map((p): [number, string | null] => [p.t, p.value]) : [
     [t0, "87500.00"], [t0 + step, "87620.40"], [t0 + 2 * step, null], [t0 + 3 * step, "88010.10"], [t0 + 4 * step, "88150.00"], [t0 + 5 * step, "88200.00"],
   ];
   return {
@@ -715,14 +717,14 @@ function equityChart(search: URLSearchParams): BffAnswerAccount | null {
         coverage: {
           from_ms: t0, to_ms: AS_OF_MS, source_total: null, filtered_total: has ? String(points.length) : "0", returned_count: has ? points.length : 0,
           truncated: false, downsampled: false, has_more: false,
-          gaps: has ? [{ from_ms: t0 + step + 1, to_ms: t0 + 3 * step - 1, reason: "SOURCE_GAP" }] : [],
+          gaps: has && world === null ? [{ from_ms: t0 + step + 1, to_ms: t0 + 3 * step - 1, reason: "SOURCE_GAP" }] : [],
         },
         formula: { formula_id: "account-double.equity.v1", formula_version: "v1", input_digest: "sha256:" + "0".repeat(64), input_revision: `account-double-${environment}:1` },
         data: {
           comparison_mode: "SINGLE_SUBJECT",
           scale_mode: "LINEAR",
           currency_policy: "PARTITIONED_BY_SOURCE_CURRENCY_NO_FX_AGGREGATE",
-          series: has ? [{ id: `account:${subjectId}:equity`, label: `${subjectId} equity`, account_id: subjectId, currency: "USDT", points }] : [],
+          series: has ? [{ id: `account:${subjectId}:equity`, label: `${world?.name ?? subjectId} equity`, account_id: subjectId, currency: "USDT", points }] : [],
           sampling: {
             algorithm: "IDENTITY_CURRENT_OBSERVATION_V1", source_rows: String(points.length), numeric_rows: String(points.length - 1), rejected_rows: "0", returned_rows: points.length,
             target_points: 256, bucket_seconds: null, preserves_extrema: true, preserves_first_last: true, preserves_gaps: true, gap_semantics: "GAP_IS_NULL", marker_semantics: "NONE",

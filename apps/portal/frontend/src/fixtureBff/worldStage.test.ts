@@ -74,6 +74,36 @@ describe("a deployment is ONE thing on every screen", () => {
     }
   });
 
+  it("the blotter holds orders for every deployment of the world, and the Paper workbench lists the same rows", async () => {
+    const blotter = await get(`${E}/screens/blotter?limit=200`);
+    const all = await get(`${E}/screens/blotter?limit=200`);
+    expect(all.data.orders.length).toBeGreaterThan(50);
+    // every order belongs to a deployment the Fleet knows, on the account that deployment is booked on
+    const fleet = new Map<string, string>();
+    for (const environment of ["paper", "sandbox", "live"]) for (const row of (await get(`${E}/manager/fleet?environment=${environment}&limit=200`)).items) for (const c of row.children) fleet.set(c.deployment_id, c.account_id);
+    const unknown = blotter.data.orders.filter((o: Body) => !fleet.has(o.deployment_id));
+    expect(unknown.map((o: Body) => o.deployment_id)).toEqual([]);
+    for (const o of blotter.data.orders) expect(o.account_id).toBe(fleet.get(o.deployment_id));
+    // the native books are in the first page: dep_live_01 has orders, at the world's mark of the symbol
+    const mine = blotter.data.orders.filter((o: Body) => o.deployment_id === "dep_live_01");
+    expect(mine.length).toBeGreaterThan(0);
+    for (const o of mine) if (o.price !== null) expect(Math.abs(Number(o.price) - Number(MARKS[o.symbol]))).toBeLessThan(1);
+    const paper = await get(`${E}/screens/paper/dep_paper_01`);
+    const paperIds = paper.data.orders.map((o: Body) => o.order_id);
+    expect(paperIds.length).toBeGreaterThan(0);
+    const known = new Set<string>();
+    let cursor: string | null = null;
+    for (let page = 0; page < 12; page += 1) {
+      const next: Body = await get(`${E}/screens/blotter?limit=200${cursor === null ? "" : `&after=${encodeURIComponent(cursor)}`}`);
+      for (const o of next.data.orders) known.add(o.order_id);
+      cursor = next.data.page?.next_cursor ?? next.page?.next_cursor ?? null;
+      if (cursor === null) break;
+    }
+    for (const id of paperIds) expect(known.has(id), id).toBe(true);
+    // one price: the paper positions are at the same mark
+    for (const p of paper.data.positions) expect(p.mark_price).toBe(MARKS[p.instrument_id]);
+  });
+
   it("days in stage on the Fleet are the alpha's stage history, as the stage screens date it", async () => {
     const fleet = await get(`${E}/manager/fleet?environment=live&limit=200`);
     const rows = fleet.items.filter((r: Body) => r.current_stage === "LIVE" && r.days_in_stage !== null);

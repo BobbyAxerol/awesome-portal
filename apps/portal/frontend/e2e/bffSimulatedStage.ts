@@ -26,6 +26,7 @@
  * asserted by the suite, absence is a typed `NOT_PUBLISHED` fact with a reason code, never a zero.
  */
 
+import { blotterBookOf } from "./bffDoubleOverview";
 import { isPositiveMode, positiveDeploymentFact } from "./bffPositiveMode";
 import { DAY_MS as WORLD_DAY_MS, deploymentOf, fromCents as worldCents, grossNotional, lifecycleOf, netPnlOf, netPnlSeries, positionsOf, toCents as worldToCents, workingOrdersOf, WORLD_NOW_MS } from "./bffWorld";
 
@@ -786,7 +787,8 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
   const withIdentityOf = (target: unknown): void => {
     if (!isObj(target)) return;
     target.account_id = d.accountId;
-    if ("external_account_ref" in target) target.external_account_ref = null;
+    if ("external_account_ref" in target) target.external_account_ref = d.accountId;
+    if (isObj(target.account_binding)) { target.account_binding.account_id = d.accountId; if ("external_account_ref" in target.account_binding) target.account_binding.external_account_ref = d.accountId; }
     target.alpha_id = alpha.id;
     target.alpha_name = alpha.label;
     target.portfolio_id = d.portfolioId;
@@ -857,6 +859,21 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
     if (!isObj(data)) return body;
     const started = iso(life.paperFromMs);
     if (isObj(data.deployment)) withIdentityOf(data.deployment);
+    if (Array.isArray(data.deployments)) for (const row of data.deployments) withIdentityOf(row);
+    const book = blotterBookOf(d.id);
+    data.positions = positions.map((p) => ({ instrument_id: p.symbol, side: p.side.toUpperCase(), quantity: p.quantity, avg_px_open: p.entry, mark_price: p.mark, unrealized_pnl: p.unrealised, updated_at: AS_OF }));
+    data.orders = book.orders.map((o) => ({ order_id: o.order_id, client_order_id: o.client_order_id, instrument_id: o.symbol, side: o.side, status: o.status, quantity: o.quantity, price: o.price, submitted_at: o.submitted_at }));
+    data.fills = book.fills.map((f) => ({ fill_id: f.fill_id, client_order_id: f.client_order_id, order_id: String(f.client_order_id).replace(/^cl-/, "ord_"), quantity: f.quantity, price: f.price, commission: f.commission, commission_currency: f.commission_currency, trade_time: f.trade_time }));
+    // the equity line of the paper account: allocation plus the cumulative net PnL of this deployment, ending on allocation + realized + unrealized
+    const equityPoints = netPnlSeries(d.id, NOW_MS - 199 * HOUR_MS, NOW_MS - 4 * MIN, 200);
+    let peak = 0n;
+    data.account_equity = equityPoints.map((pt, i) => {
+      const eq = alloc + worldToCents(pt.value);
+      if (eq > peak) peak = eq;
+      return { ts: new Date(pt.t).toISOString(), currency: "USDT", equity: worldCents(eq), net_pnl: pt.value, fee_total: worldCents(BigInt(i + 1) * alloc / 1_000_000n), funding_pnl: null,
+        cash_free: worldCents(eq - alloc / 10n), cash_locked: worldCents(alloc / 10n), total_fills: Math.min(i + 1, book.fills.length), state_digest: "9c1e04b7a2f1ffff", snapshot_reason: "PERIODIC", source: `paper-${d.id}`,
+        drawdown: eq === peak ? "0" : canonicalDecimal(((Number(eq - peak) / Number(peak))).toFixed(4)) };
+    });
     data.stage_facts = stageFacts({ runtime: halted ? "HALTED" : "RUNNING", since: started, verdict: "NO_OPEN_FINDINGS", open: 0, unknownOrders: 0, asOf: PAPER_AS_OF,
       sessions: [{ id: `session_${d.id}_pap_1`, started, ended: null, state: halted ? "HALTED" : "RUNNING" }] });
   }

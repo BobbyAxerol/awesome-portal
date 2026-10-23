@@ -84,7 +84,7 @@ export const NATIVE_ALPHAS: AlphaSpec[] = [
 ];
 
 /** Every alpha of the world: the native books and the generated universe (empty at small scale, where the suite's own alphas stay). */
-export const worldAlphas = (): AlphaSpec[] => [...scaled().alphas, ...NATIVE_ALPHAS];
+export const worldAlphas = (): AlphaSpec[] => [...NATIVE_ALPHAS, ...scaled().alphas];
 const ownerOf = new Map<string, { alpha: AlphaSpec; deployment: DeploymentSpec }>();
 export function deploymentOf(deploymentId: string): { alpha: AlphaSpec; deployment: DeploymentSpec } | null {
   const native = NATIVE_ALPHAS.flatMap((a) => a.deployments.map((d) => ({ alpha: a, deployment: d }))).find((entry) => entry.deployment.id === deploymentId);
@@ -165,10 +165,10 @@ export function workingOrdersOf(deploymentId: string): WorldOrder[] {
 export const netPnlOf = (d: DeploymentSpec): bigint => toCents(d.realized) + toCents(d.unrealized);
 
 /** Cumulative net PnL of a deployment from `fromMs` to `toMs`, `points` samples, ending exactly on its realized + unrealized. A bounded deterministic walk (zero at both ends of the noise). */
-export function netPnlSeries(deploymentId: string, fromMs: number, toMs: number, points: number): { t: number; value: string }[] {
+export function netPnlSeries(deploymentId: string, fromMs: number, toMs: number, points: number, target?: bigint): { t: number; value: string }[] {
   const found = deploymentOf(deploymentId);
   if (found === null || points < 2) return [];
-  const net = netPnlOf(found.deployment);
+  const net = target ?? netPnlOf(found.deployment);
   const amp = (net < 0n ? -net : net) / 6n + toCents(found.deployment.allocation) / 400n + 100n;
   let state = BigInt((seedOf(deploymentId, "series") % 2_147_483_646) + 1);
   const walk: bigint[] = [0n];
@@ -210,4 +210,12 @@ export function accountFact(accountId: string): AccountFact | null {
   const total = allocation + realized;
   const locked = allocation / 10n;
   return { id: accountId, name: meta.name, venue: "BINANCE", environment: booked[0]!.environment, bindingId: meta.binding, currency: booked[0]!.currency, deployments: booked, allocation, realized, unrealized, total, locked, free: total - locked };
+}
+
+/** The ledger of an account over time: for each booked deployment its allocation plus a cumulative realized PnL that ends on its realized, summed. The last point IS `AccountFact.total`. */
+export function ledgerSeries(accountId: string, fromMs: number, toMs: number, points: number): { t: number; value: string }[] {
+  const fact = accountFact(accountId);
+  if (fact === null || points < 2) return [];
+  const parts = fact.deployments.map((d) => ({ alloc: toCents(d.allocation), walk: netPnlSeries(d.id, fromMs, toMs, points, toCents(d.realized)) }));
+  return Array.from({ length: points }, (_, i) => ({ t: parts[0]!.walk[i]!.t, value: fromCents(parts.reduce((n, p) => n + p.alloc + toCents(p.walk[i]!.value), 0n)) }));
 }
