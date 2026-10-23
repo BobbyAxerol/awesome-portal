@@ -109,3 +109,33 @@ See the final report of the slice for the exact commands and counts. New files: 
 - `account.test.tsx` "search and venue go to the server" fails on the lane tip (6aed1421e) without any F2 change (verified on a pristine lane-tip worktree); it passed on 91cc9a28a. Logged for the primary and WP-E.
 - `titleAbsence.test.ts` still lists three fleet titles (WP-A files `FleetDatasetTable.tsx`, `FleetMetricControls.tsx`, `fleet/index.tsx`) after the rebase; not an F2 file.
 - Visual baselines for Accounts, Account 360 and Blotter were not re-recorded (board rule: the primary records baselines).
+
+
+## QA1 fixes (R4 browser review, fix round)
+Method: a local stack of this worktree (vite build of the V2 screens plus the populated fixture BFF on free ports, never 8095) and a Playwright probe at 1440, 1280, 1024 and 660 before and after; the figures below are probe measurements. The layout audit script was not repeated after this round.
+
+| Id | State | How and evidence |
+|---|---|---|
+| I1 BLOCKER drawer capital table | FIXED | in the drawer the table becomes one block per currency (label left, figure right, `data-l` labels); figures and the badge are `nowrap` everywhere. Probe: every cell one line (22 to 24 px high): `197,500.00`, `213,380.25`, `216,510.40`, `Within physical` whole |
+| I1b sleeves 2 vs 3 | FIXED | the drawer reads `expected_account_count ?? account_count` like the list: 3. Raw enums are words (`Live binance usdm`, `Synced`) |
+| I2 UPDATED clipped 1440 | FIXED | cell padding 8px; table scroll 14 px to 0, Updated right edge 1408 of 1408 |
+| I3 tabs, counts, naming | PARTLY | tab counts are the authorized totals (`page.total_count`, `counts.by_environment`) and the Issues tab shows the published `counts.issues` (37); they do not move with search, venue or Issues (probe with `venue=OKX`: 50 / 20 / 10 / 37). Label `Issues`. NOT FIXED: an All tab (CONTRACT: one environment per read), the Testnet word (DESIGN_DECISION, shared ENV_LABEL), a window selector (CONTRACT: no window on the bindings read; the shell now draws Basis and Scope chips), binding display names (CONTRACT: closed row, inbox F2 to K item 6) |
+| I4 alignment | FIXED | numeric cells right-align figures, absences and sub-lines together |
+| I5 1024 scroll | FIXED (cue) | binding identity column sticky, thin scrollbar, the sentence "Scroll sideways for the other columns" at 1300 px and below; the table still scrolls 366 px at 1024 by design |
+| I6 native attribution clip, banner space | FIXED | banner is one text node (no stray space); sleeves table scroll 0 at 1440 (181 px at 1024, a scrolling table) |
+| I7 Blotter 1440 | FIXED | ten default columns (Filled / Qty is one column as in the design; Quantity and Filled stay in the Columns menu), 4 px cell padding, bracket marker is a glyph with a screen-reader word, Fee currency stacks under the figure, Side and type may take two lines. Probe: table 1094 px in a 1094 px wrap, scroll 0 (was 310). The Order column is sticky when a narrower width scrolls |
+| I8 funnel | FIXED over the page; CONTRACT for the scope | four steps over the loaded orders (published row facts: all, risk grant id, venue order id, non-zero filled) with percent by integer arithmetic and a caption that the server publishes no scope-level funnel (50 / 50 / 45 / 30 on the first page). The design's 96 / 91 / 87 / 66 needs the K request (F2 to K item 2) |
+| I9 FILLED without fills | FIXED | a traded order always states its filled quantity (typed absence only on one canceled order in five); an order's fills settle fee in one currency, so a fee is published unless a fill has no commission |
+| I10 environment chip vs rows | FIXED | the blotter read is the paper environment and so are its deployments now (dep_*_paper) |
+| I12 quantity format | NOT FIXED | per-symbol decimals are the exact published digits; a separate formatting decision |
+| I13 reconciliation | FIXED (data); REQUEST | the Broker column draws the published buying power 301,100.00 and wallet 412,880.25 (whole account); only the Difference is Not computed on a shared binding. Sync history has Check and Duration (open keys `check`, `duration_ms`, register 2f2) and an `Open findings in Operations` link to the exceptions view; an account-scoped Operations filter and per-check results are requested (F2 to K items 7 and 8) |
+| I14 drawdown | FIXED except one label | percent (ratio moved two places in the text, exact), a 90-day daily series ending on the balance with one gap; High and Low present. NOT FIXED: the Low label touches the x tick text: FILE_OWNED_BY_OTHER_WP (`charts/EquityPanel.tsx`, WP-C had already handed back; needs scheduling by the primary: clamp the label above the last tick row) |
+| I15 Blotter 660 overlap | FIXED | card cells `height:auto`; probe: no two cells of a card overlap |
+| I19 drawer enums | FIXED | see I1b |
+| I20 sticky Issues filter | NOT FIXED | minor |
+| I21 660 no paging | NOT FIXED | minor |
+| I22 order link opens Replay | NOT FIXED | minor, replay is the only chart place |
+| I24 Activity toggle below table | NOT FIXED | minor |
+| I11, I16 | EXCLUDED | WP-P clock work, WP-F3 |
+
+Tests: account.test.tsx 101 (five rewritten for the new columns and counts), blotter 7 simulated tests, new expectations in simulated.test.ts. The one failing test on this lane, `account.test.tsx` "search and venue go to the server", also fails on a pristine lane tip (the filter works in the browser probe: `?venue=OKX`, 20 rows).

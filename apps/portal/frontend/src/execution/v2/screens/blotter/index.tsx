@@ -315,7 +315,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
         : <ExactText value={order.averageFillPrice} />;
       case "fee": return order.fee.kind === "absent"
         ? (noFill(order) ? <span className="exec-blt2-na" title="Nothing has traded on this order">No fill</span> : <NaWhy reason="The orders read publishes no fee for this order." className="exec-blt2-na" />)
-        : <><ExactText value={order.fee} />{order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}</>;
+        : <span className="exec-blt2-two exec-blt2-fee"><ExactText value={order.fee} />{order.feeCurrency ? <span className="exec-blt2-na"> {order.feeCurrency}</span> : null}</span>;
       case "venue": return order.venue ?? <span className="exec-blt2-na">Not available</span>;
       case "symbol": return order.symbol ?? <span className="exec-blt2-na">Not available</span>;
       case "side": return <>{order.side ? humanize(order.side) : "Side not stated"} <span className="exec-blt2-na">{order.orderType ? humanize(order.orderType) : ""}</span></>;
@@ -323,7 +323,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
       case "price": return <ExactText value={order.price} absent="At market" />;
       case "trigger": return <ExactText value={order.triggerPrice} absent="No trigger" />;
       case "fillqty": return (
-        <span><ExactText value={order.filledQuantity} absent="Not published" /> <span className="exec-blt2-na">/</span> <ExactText value={order.quantity} /></span>
+        <span className="exec-blt2-fq"><ExactText value={order.filledQuantity} absent="Not published" /> <span className="exec-blt2-na">/</span> <ExactText value={order.quantity} /></span>
       );
       case "qty": return <ExactText value={order.quantity} />;
       case "filled": return <ExactText value={order.filledQuantity} absent="Not published for this order" />;
@@ -550,7 +550,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
             <table className="exec-cards exec-blt2-table" aria-label="Orders">
               <thead>
                 <tr>
-                  {visibleColumns.map((c) => <th key={c.id} scope="col" data-numeric={c.numeric ? "true" : undefined}>{c.label}</th>)}
+                  {visibleColumns.map((c) => <th key={c.id} scope="col" data-col={c.id} data-numeric={c.numeric ? "true" : undefined}>{c.label}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -567,7 +567,7 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
                     <Fragment key={order.orderId}>
                       <tr data-selected={focused ? "true" : undefined} aria-current={focused ? "true" : undefined}>
                         {visibleColumns.map((c) => (
-                          <td key={c.id} data-l={c.label} data-numeric={c.numeric ? "true" : undefined}>
+                          <td key={c.id} data-l={c.label} data-col={c.id} data-numeric={c.numeric ? "true" : undefined}>
                             {c.id === "order" ? (
                               <span className="exec-blt2-ordercell">
                                 <button type="button" className="exec-blt2-x" aria-expanded={isOpen} aria-label={`${isOpen ? "Hide" : "Show"} legs and fills for order ${order.orderId}`} onClick={() => toggle(order.orderId)}>{isOpen ? "\u2212" : "+"}</button>
@@ -577,7 +577,8 @@ export default function BlotterScreen({ api, accessHref, chartHref: chartHrefPro
                                   <span className="exec-blt2-id">{order.orderId}</span>
                                 )}
                                 {legs.some((leg) => (leg.state ?? "").toUpperCase() === "ARMED") ? <span className="exec-blt2-na" title="Bracket legs armed">{"\u25c7"}</span> : null}
-                                {legs.length > 0 ? <span className="exec-blt2-na" title="Part of a bracket or conditional group"> bracket</span> : null}
+                                {legs.length > 0 ? <span className="exec-blt2-na" title="Part of a bracket or conditional group" aria-hidden="true">{"\u25a3"}</span> : null}
+                                {legs.length > 0 ? <span className="exec-blt2-sr"> bracket</span> : null}
                               </span>
                             ) : (
                               cell(order, c.id)

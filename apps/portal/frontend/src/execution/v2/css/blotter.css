@@ -220,7 +220,7 @@
 }
 /* The order id is a link to the chart (hi-fi a.chipx.mono). */
 .exec-blt2-idlink {
-  padding: 0 var(--space-2);
+  padding: 0 var(--space-1);
   font: var(--exec-font-id);
   color: var(--accent);
   background: var(--paper-sunken);
@@ -272,8 +272,27 @@
  * row identity in view when a narrower width does scroll (the status column sticks to the other edge). */
 .exec-blt2-table thead th,
 .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td {
-  padding-left: var(--space-2);
-  padding-right: var(--space-2);
+  padding-left: var(--space-1);
+  padding-right: var(--space-1);
+}
+/* A placeholder sentence inside a figure cell wraps; the figures never do. */
+.exec-blt2-fq .exec-blt2-na {
+  display: inline-block;
+  max-width: 7ch;
+  white-space: normal;
+  vertical-align: top;
+}
+/* Side and type: the header and the cell may take two lines, so the column is as wide as its words, not its label. */
+.exec-blt2-table thead th[data-col="side"],
+.exec-blt2-table tbody td[data-col="side"] {
+  white-space: normal;
+  min-width: 0;
+}
+.exec-blt2-table thead th[data-col="side"] {
+  max-width: 8ch;
+}
+.exec-blt2-fee {
+  align-items: flex-end;
 }
 .exec-blt2-table thead th:nth-child(2),
 .exec-blt2-table tbody tr:not(.exec-blt2-kid):not(.exec-cards-empty) td:nth-child(2) {
@@ -297,7 +316,7 @@
 .exec-blt2-ordercell {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
 }
 /* The expander and its id/marker sit on one line of one size: the expander glyph follows the id's role (audit: sublabel-bigger on 50 rows). */
 .exec-blt2-ordercell .exec-blt2-x {
