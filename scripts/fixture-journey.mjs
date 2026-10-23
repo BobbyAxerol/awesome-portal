@@ -138,7 +138,7 @@ function scanDegraded(value, path, into, depth = 0) {
 const KNOWN_TYPED_404 = [/retained-review/];
 
 /** Instants later than now+1min in a served body, except under a deadline key (due, expires, valid_until, next_*, ceiling ...). Mirrors time-rebase.ts futureInstants. */
-const DEADLINE_KEY = /(^|_)(due|expires?|expiry|valid_until|until|deadline|next|ceiling|retention_floor|renew|rotate)(_|$)/i;
+const DEADLINE_KEY = /(^|_)(due|expires?|expiry|valid_until|until|deadline|next|ceiling|retention_floor|renew|rotate|opens|review|scheduled|planned)(_|$)/i;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z$/;
 function futureInstants(value, limit, path = "", key = "") {
   if (DEADLINE_KEY.test(key)) return [];

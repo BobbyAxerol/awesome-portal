@@ -78,7 +78,7 @@ export function bodyAnchor(body: unknown): number | null {
 }
 
 /** Keys whose instant is a deadline or a ceiling: allowed to lie in the future, and never the anchor of a body. */
-const DEADLINE_KEY = /(^|_)(due|expires?|expiry|valid_until|until|deadline|next|ceiling|retention_floor|renew|rotate)(_|$)/i;
+const DEADLINE_KEY = /(^|_)(due|expires?|expiry|valid_until|until|deadline|next|ceiling|retention_floor|renew|rotate|opens|review|scheduled|planned)(_|$)/i;
 /** Content may legitimately sit this far after the stated read time in a double (a series written against another clock); beyond it is a deadline. */
 const CONTENT_WINDOW_MS = 120 * MS_DAY;
 

@@ -591,7 +591,7 @@ function liveLit(body: Obj, deploymentId: string, variant: StageVariant): Obj {
     previous_cursor: null,
     rows: [],
   };
-  body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(LIVE_ACTIVATED, 86_400_000, "1d", LIVE_PNL, "USDT", at(-4 * MIN)) };
+  body.series = { envelope: panel("series", "DERIVED", "ready", "FRESH", AS_OF), ...seriesMembers(LIVE_ACTIVATED, 86_400_000, "1d", LIVE_PNL, "USDT", stale ? AS_OF_STALE : at(-4 * MIN)) }; // WP-P: a stale screen never draws data newer than its stale stamp
 
   const rb = body.rollback_readiness as Obj;
   rb.envelope = panel("rollback-readiness", "EXECUTION", "ready", "FRESH", AS_OF);

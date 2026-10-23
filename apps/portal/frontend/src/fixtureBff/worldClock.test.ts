@@ -52,6 +52,21 @@ describe("the served world has one clock", () => {
     `${E}/screens/blotter?environment=live`, `${E}/operations`, `${E}/deployments/dep_paper_01/paper`, `${E}/deployments/dep_sandbox_01/sandbox`,
     `${E}/deployments/dep_live_01/live`, `${E}/governance/approvals`, `${E}/operations/audit`,
   ];
+  it.each([["dep_canary_01", "canary"], ["dep_live_01", "live"], ["dep_live_01_stale", "live"], ["dep_canary_01_stale", "canary"]])(
+    "%s (%s): no series point is newer than the stamp that stamps it, and a stale body never draws past its stale stamp", async (id, kind) => {
+      const response = await fetch(`${base}${E}/deployments/${id}/${kind}`);
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      const points = body.series?.points as { t: string }[] | undefined;
+      expect(points?.length).toBeGreaterThan(2);
+      const last = Date.parse(points!.at(-1)!.t);
+      expect(last).toBeLessThanOrEqual(Date.parse(body.series.envelope.as_of));
+      if (id.endsWith("_stale")) {
+        const stamps = (Array.isArray(body.kpis) ? body.kpis : []).map((entry: { envelope?: { as_of?: string } }) => entry.envelope?.as_of).filter(Boolean) as string[];
+        for (const stamp of stamps) expect(last).toBeLessThanOrEqual(Date.parse(stamp));
+      }
+    });
+
   it.each(routes)("%s carries no instant later than now (deadlines excepted)", async (route) => {
     const response = await fetch(`${base}${route}`);
     if (response.status !== 200) return; // a route this lane does not serve under that query is the walker's business
