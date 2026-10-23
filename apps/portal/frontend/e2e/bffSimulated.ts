@@ -14,6 +14,9 @@
  * schema is closed), and the incident children (the same GET path answers one shape: the strict V2 root).
  */
 
+import { credentialView, stateView } from "../src/execution/v2/screens/account/model";
+import { scaled } from "./bffScale";
+
 type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -158,6 +161,74 @@ function overlayBlotter(body: Obj): Obj {
   return out;
 }
 
+/* ── bindings list (`/broker-bindings`): list figures and counts (FE-CAT-4) ── */
+
+/**
+ * The bindings list publishes the per-row figures and the per-environment counts the Accounts list would otherwise read per row.
+ * Rows without an entry here are served without `figures` (the producer has no owning source for them), so the list keeps its
+ * capped two-read fallback for them: `okx_main@OKX` and every generated or non-live binding stay on it on purpose.
+ * Every figure is one currency; nothing is summed or converted.
+ *  - bnc_main: native equity 414010.40 USDT, a different figure from the 412880.25 wallet balance on the account resource.
+ *    Virtual is mixed-currency (USDC and USDT, the exposure double's own buckets); 3 sleeves, only 2 of them in the population.
+ *  - bnc_sub: the venue reported no native equity (typed null) although it reports a wallet balance; a USDT virtual sum.
+ * Observation times are the list's own `source_as_of`.
+ */
+const LIST_FIGURES: Readonly<Record<string, (at: string) => Obj>> = {
+  "bnc_main@BINANCE": (at) => ({
+    native_equity: [{ currency: "USDT", value: "414010.40", observed_at: at, coverage: "COMPLETE" }],
+    virtual_used: [
+      { currency: "USDC", value: "10000.00", observed_at: at, coverage: "COMPLETE" },
+      { currency: "USDT", value: "197500.00", observed_at: at, coverage: "COMPLETE" },
+    ],
+    virtual_headroom: [
+      { currency: "USDC", value: "2000.00", observed_at: at, coverage: "COMPLETE" },
+      { currency: "USDT", value: "215380.25", observed_at: at, coverage: "COMPLETE" },
+    ],
+    sleeve_count: { count: 3, observed_at: at, coverage: "PARTIAL" },
+  }),
+  "bnc_sub@BINANCE": (at) => ({
+    native_equity: null,
+    virtual_used: [{ currency: "USDT", value: "10.00", observed_at: at, coverage: "COMPLETE" }],
+    virtual_headroom: [{ currency: "USDT", value: "90.00", observed_at: at, coverage: "COMPLETE" }],
+    sleeve_count: { count: 1, observed_at: at, coverage: "COMPLETE" },
+  }),
+};
+
+/** The double's five native bindings: environment, state, credential state. Generated bindings (scale lane) are added at serve time. */
+const NATIVE_BINDINGS: readonly (readonly [string, string, string])[] = [
+  ["live", "ACTIVE", "SYNC_SYNCED"], ["live", "ACTIVE", "SYNC_STALE"], ["live", "ACTIVE", "EXPIRED"],
+  ["paper", "ACTIVE", "SYNC_SYNCED"], ["sandbox", "SUSPENDED", "NOT_PUBLISHED"],
+];
+
+/**
+ * Per-environment counts over every binding the double holds (all of them are visible to the fixture principal, so authorization
+ * removes none). `issues` uses the Accounts list's own rule: a state or credential word the source calls wrong.
+ */
+function listCounts(at: string): Obj {
+  const all = [...NATIVE_BINDINGS, ...scaled().bindings.map((b) => [b.environment, b.state, b.credentialState] as const)];
+  const byEnvironment = { paper: 0, sandbox: 0, live: 0 } as Record<string, number>;
+  let issues = 0;
+  for (const [environment, state, credential] of all) {
+    byEnvironment[environment]! += 1;
+    if (stateView(state).issue || credentialView(credential).issue) issues += 1;
+  }
+  return { basis: "AUTHORIZED_SNAPSHOT", observed_at: at, coverage: "COMPLETE", all: all.length, issues, by_environment: byEnvironment };
+}
+
+function overlayBindingsList(body: Obj): Obj {
+  const out = clone(body);
+  const page = out.page;
+  if (!isObj(page) || !Array.isArray(page.rows)) return out;
+  const at = typeof out.source_as_of === "string" ? out.source_as_of : null;
+  if (at === null) return out; // no observation instant to state: publish nothing rather than invent one
+  for (const row of page.rows) {
+    const figures = isObj(row) && typeof row.binding_id === "string" ? LIST_FIGURES[row.binding_id] : undefined;
+    if (isObj(row) && figures) row.figures = figures(at);
+  }
+  out.counts = listCounts(at);
+  return out;
+}
+
 /* ── entry ──────────────────────────────────────────────────────────────── */
 
 export interface SimulatedAnswer {
@@ -176,5 +247,6 @@ export function simulate<T extends SimulatedAnswer>(method: string, path: string
   }
   if (seg[0] === "broker-bindings" && seg[1] === "bnc_main@BINANCE" && seg[2] === "exposure" && seg.length === 3) return { ...answer, body: overlayExposure(answer.body) };
   if (path === "/screens/blotter") return { ...answer, body: overlayBlotter(answer.body) };
+  if (path === "/broker-bindings") return { ...answer, body: overlayBindingsList(answer.body) };
   return answer;
 }

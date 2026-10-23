@@ -276,7 +276,8 @@ export type RowFactsState = { phase: "loading" } | { phase: "ready"; facts: List
 const ROW_FACT_CONCURRENCY = 4;
 
 /**
- * Physical equity (the account's native custody) and the binding's virtual figures are not on the bindings projection. They are
+ * Physical equity (the account's native custody) and the binding's virtual figures are not on every bindings projection: a row the
+ * list publishes `figures` for (FE-CAT-4) never comes here, the caller passes only the rows without them. Those are
  * read per row through the same port, for the first `ROW_FACTS_CAP` rows only, four at a time. A row beyond the cap is never
  * read and the list says so; a failed read leaves that figure absent, never zero.
  */

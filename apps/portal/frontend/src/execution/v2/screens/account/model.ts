@@ -18,7 +18,7 @@
  *   not part of any view).
  */
 import type { BindingExposure } from "../../../analytics";
-import type { BindingItem, ProfileEnvelope } from "../../../api/profileRead";
+import type { BindingFigures, BindingItem, ProfileEnvelope } from "../../../api/profileRead";
 import type { SubjectActivityPage } from "../../../api/subjectActivity";
 import type { FinancialChartPayload } from "../../../api/financialChart";
 import type { ExactUnit } from "../../../formatExact";
@@ -294,6 +294,8 @@ export interface BindingRow {
   updatedAt: UtcEpochMs | null;
   /** Needs a person: credential or state the source calls wrong. */
   issue: boolean;
+  /** Figures the bindings list published for this row (FE-CAT-4); `null` when it did not, and the row's two carriers are read instead. */
+  listFacts: ListRowFacts | null;
 }
 
 export function toBindingRow(item: BindingItem): BindingRow {
@@ -309,6 +311,7 @@ export function toBindingRow(item: BindingItem): BindingRow {
     credentialWord: item.credentialState,
     updatedAt: timeOf({ updated_at: item.updatedAt }, "updated_at"),
     issue: credential.issue || state.issue,
+    listFacts: item.figures === undefined ? null : listFactsFromFigures(item.figures),
   };
 }
 
@@ -1109,6 +1112,12 @@ export interface ListRowFacts {
   headroom: Metric | null | undefined;
   /** Sleeves on the binding: the expected count the exposure read publishes, else the count it covered. */
   sleeves: number | null;
+  /** List figures only: why `physical` is absent when the venue reported equity, but not in this currency. */
+  physicalWhy?: string;
+  /** List figures only: a source covers only part of its population for this line. */
+  partial?: boolean;
+  /** List figures only: the other currencies of a mixed-currency binding, each its own line, never summed into this one. */
+  more?: readonly ListRowFacts[];
 }
 
 export type CheckWord = { kind: "within" } | { kind: "exceeded" } | { kind: "unavailable"; reason: string };
@@ -1140,4 +1149,43 @@ export function listRowFacts(profile: ProfileEnvelope | null, exposure: BindingE
     headroom: bucket === null ? undefined : money(bucket.headroom),
     sleeves: exposure === null ? null : exposure.expectedAccountCount ?? exposure.accountCount,
   };
+}
+
+/**
+ * FE-CAT-4 · a row's facts from the figures the bindings list published, or `null` when the list left any of the four keys out
+ * (this producer has no owning source for it: the row's two carriers are read instead, never a half-and-half row).
+ *
+ * One line per currency: the currencies that have native equity first, then the others alphabetically. A line never mixes
+ * currencies; its physical, virtual and headroom are that currency's entries. A typed `null` from the source is a typed
+ * absence; an entry missing from one currency while others are published is `undefined` (the cell says "in this currency").
+ * Nothing is added, converted or defaulted.
+ */
+export function listFactsFromFigures(figures: BindingFigures): ListRowFacts | null {
+  const { nativeEquity, virtualUsed, virtualHeadroom, sleeveCount } = figures;
+  if (nativeEquity === undefined || virtualUsed === undefined || virtualHeadroom === undefined || sleeveCount === undefined) return null;
+  const by = (list: BindingFigures["nativeEquity"]) => new Map((list ?? []).map((entry) => [entry.currency, entry] as const));
+  const native = by(nativeEquity);
+  const used = by(virtualUsed);
+  const headroom = by(virtualHeadroom);
+  const currencies = [...new Set([...native.keys(), ...used.keys(), ...headroom.keys()])]
+    .sort((a, b) => Number(native.has(b)) - Number(native.has(a)) || a.localeCompare(b));
+  const pick = (entry: { value: string } | undefined, whole: BindingFigures["nativeEquity"]): Metric | null | undefined =>
+    entry !== undefined ? metricOf(entry.value, "money") : whole === null ? metricOf(null, "money") : undefined;
+  const line = (currency: string | null): ListRowFacts => {
+    const n = currency === null ? undefined : native.get(currency);
+    const u = currency === null ? undefined : used.get(currency);
+    const h = currency === null ? undefined : headroom.get(currency);
+    return {
+      physical: pick(n, nativeEquity),
+      currency,
+      virtual: pick(u, virtualUsed),
+      headroom: pick(h, virtualHeadroom),
+      sleeves: sleeveCount === null ? null : sleeveCount.count,
+      ...(n === undefined && nativeEquity !== null ? { physicalWhy: "No native equity in this currency" } : {}),
+      ...([n, u, h].some((entry) => entry !== undefined && entry.coverage !== "COMPLETE") ? { partial: true } : {}),
+    };
+  };
+  const [first, ...rest] = currencies.length === 0 ? [line(null)] : currencies.map(line);
+  const sleevesPartial = sleeveCount !== null && sleeveCount.coverage !== "COMPLETE";
+  return { ...first!, ...(sleevesPartial ? { partial: true } : {}), ...(rest.length > 0 ? { more: rest } : {}) };
 }
