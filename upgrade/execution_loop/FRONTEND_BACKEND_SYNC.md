@@ -2522,7 +2522,8 @@ per-ID outcome, exact fixture/source receipts and remaining Edge inputs.
 freezes Claude `2f9ca2dc8f6769ea91f7d123083c2f6d4805c730`, preserving full
 code/tests/docs rather than selective UI extraction. Codex repaired final
 ALL-environment authority (130 synthetic focused PASS) and real roster login
-audit mapping (31 focused PASS); isolated PG/build/restore gate is RUNNING.
+audit mapping (31 focused PASS); isolated normal build,388/388 selected tests
+and actual PG dump/restore/hash checks PASS. Normal landing hook is RUNNING.
 Canonical landing and actual image install remain pending, not DELIVERED.
 
 [Sanitized Core→Edge current return](evidence/ELP2-10/CORE_TO_EDGE_CURRENT_CLOSEOUT_RETURN_2026-10-23.md)
@@ -2535,6 +2536,11 @@ list counts/projection, visit baseline and scoped labels; do not wait for
 financial facts that can independently retain typed absence. New cuts after
 the frozen SHA are reviewed separately. No command/Live, push or dev/main.
 <!-- CODEX_SIX_LANE_20261023_END -->
+
+[Post-freeze Portfolio review](evidence/ELP2-10/CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md):
+Claude `c9d2b717d` stays on its branch for a separate landing; correct silent
+reversed-range removal and lost Score quality/caveats/domain before handback.
+No source/visual edits by Codex; frozen gate unchanged.
 
 
 ### P0 Bobby has called Edge — NEW Core-first PREPARED23Oct00:56VN

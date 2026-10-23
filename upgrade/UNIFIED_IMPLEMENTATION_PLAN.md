@@ -15232,7 +15232,8 @@ freezes Claude `2f9ca2dc8f6769ea91f7d123083c2f6d4805c730` in the separate
 integrator; all code/test/docs are retained. Review corrected the Fleet ALL
 final-authority fence (130 focused synthetic tests PASS) and wired roster
 last-sign-in to successful non-preview login audit, never session issuance
-(31 focused tests PASS; isolated PostgreSQL/build/restore gate RUNNING).
+(31 focused tests PASS; isolated normal build, 388/388 selected tests and real
+PostgreSQL dump/restore/hash checks PASS; normal landing hook RUNNING).
 One final normal landing hook remains; these results do not imply landing.
 
 The [current Core→Edge return](execution_loop/evidence/ELP2-10/CORE_TO_EDGE_CURRENT_CLOSEOUT_RETURN_2026-10-23.md)
@@ -15252,6 +15253,11 @@ found 28 virtual tabs, M2c 95-minute reservation, and combined proposed M2c+M5
 at least185 minutes; none are newly approved or measured by this addendum.
 No load/calibration/Live/dev/main/push is authorized by a fixture or this review.
 <!-- CODEX_SIX_LANE_20261023_END -->
+
+Post-freeze Claude `d3be9ad4f`/`c9d2b717d` remains preserved, not silently
+included in the frozen gate. [Specific Portfolio review and follow-through](execution_loop/evidence/ELP2-10/CLAUDE_POST_FREEZE_REVIEW_2026-10-23.md)
+requests reversed-range validation and owning Score quality/caveat/domain
+preservation before that separate slice lands. No Codex UI redesign.
 
 
 ### P0 Bobby has called Edge — NEW Core-first PREPARED23Oct00:56VN
