@@ -104,3 +104,25 @@ Method: each issue was reproduced in a Playwright probe against a LOCAL stack (v
 | I-42 to I-45 | WP-D | Shell. |
 
 Tests: cockpit 36 (presentation) and the cockpit suites 691, access 121, admin 113, users 281 (a 200-row scale test is time-bound and fails only when the machine load is above about 30), request 489, fixtureBff 440; hygiene (testHygiene, disabledReason, uxm10Css, titleAbsence, v2Hygiene) green after the V1-matrix stylesheet moved to `screens/access/manageGrid.css` (v2Hygiene allows only `.exec-*` classes in `v2/css`); `tsc --noEmit -p .` clean.
+
+## 9. QA2 fixes (round 2, QA2_REVIEW_R3_2026-10-24.md; R3-nn ids)
+Same method as section 8 (local stack, probes at 1440/1024/660). Measured at 1024: Users table 710 of 710 (no scroll; was 1046), Admin provenance 712 of 712 (was 787), Users columns State 125, Actions 124.
+
+| Id | State | How |
+|---|---|---|
+| R3-09, R3-10 | NOT FIXED (fixture world, WP-P) | The page prints each fact from its own read; four fixture sources disagree (R2 review, approval-evidence, inbox row, history subject). Inbox row E to P lists exactly what the fixture must emit so criteria, diff, preview and capital come from one record per approval. Typed absences stay where a read publishes nothing. |
+| R3-11 | FIXED (page) / NOT FIXED (data) | The R2 heading reads "R2 review . R1 approved" (it headed an R2 request with "R1 approved"). PENDING with quorum met and OVERDUE-but-needs-you rows are fixture data (same E to P row). |
+| R3-12 | FIXED | The primary stays blue (dimmed) while off, and "Preview . not recorded" is printed beside the decision buttons. |
+| R3-13 | WP-P | Session end date (world clock). |
+| R3-14 | FIXED | An owner with no grants listed reads the empty-table sentence plus one: "You hold every capability through the owner anchor, not through a grant." Role preset stays one typed line (no source, request 6). |
+| R3-15 | FIXED | "Decide at Live gate" reads "Not available yet" beside "Live decisions are closed on this build" (the capability fact stays `allowed`, the status follows the build). Archive rows stay "Not available yet": no published eligibility. |
+| R3-16 | NOT FIXED (minor) | Capability keys are the published basis; the 36-character user id wraps into two even lines. |
+| R3-17 | FIXED | The two panels are a stretched pair (equal height). |
+| R3-19 | NOT FIXED (CONTRACT) | The "mode" box is free text because no read lists the `modes` registry; the pane now says so under the box; request to K posted. |
+| R3-20 | NOT FIXED | Role preset (CONTRACT, request 6); the 123 generic accounts and date format are fixture/shared (WP-P). |
+| R3-21 | WAITING | Will take Users, Manage grants and the signed-in person from the single roster after "WORLD-V1 sha" appears in LOG.md; inbox row E to P. |
+| R3-23 | FIXED (Users, Admin) | Users 661 to 1100px: tighter cells, Revision left to the drawer (its first fact), wrapped inline reasons, the account and its action sticky if the table still scrolls: 710 of 710. Admin provenance wraps inside its panel. Operations is WP-B. |
+| R3-25 | FIXED (Approvals) | "Go to the decision" is drawn only with a request selected. Operations' 9,005px is WP-B. |
+| R3-18, R3-24, R3-26 | WP-P / WP-D | Relay-off scenario, search ellipsis, context bar. |
+
+Tests: cockpit presentation 38, access 121 + 1, admin 114, users 281 (the 200-row search test now waits with SLOW, as the other large renders do: it failed at machine load above 15). tsc clean. `disabledReason.test.ts` fails on two buttons in `overview/Contributors.tsx` (WP-F1, not E).

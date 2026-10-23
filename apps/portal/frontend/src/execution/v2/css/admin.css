@@ -328,3 +328,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* The provenance table's reasons are long sentences with codes: they wrap inside the panel instead of widening it (QA2 R3-23, 1024px). */
+.exec-adm-prov .exec-cards tbody td,
+.exec-adm-prov .exec-cards tbody td * {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

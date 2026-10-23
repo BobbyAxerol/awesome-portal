@@ -267,6 +267,8 @@ export function ActionPane({ row, api, activation, stale = false, workspaceId, m
                       value={readParams[p.key] ?? ""}
                       onChange={(event) => setReadParams((current) => ({ ...current, [p.key]: event.target.value }))}
                     />
+                    {/* The value comes from a server registry no read lists yet (request to K): the box says so instead of pretending to be free text. */}
+                    {p.sourceRegistry ? <span className="exec-adm-note" data-testid="admin-param-registry">Value from the server's {p.sourceRegistry} registry; no read lists it yet, so type it.</span> : null}
                   </label>
                 ))}
                 <button type="button" className="exec-adm-btn" data-variant="primary" disabled={run.phase === "busy" || missingRead} aria-describedby={missingRead ? ids.note : undefined} onClick={() => void runRead()}>

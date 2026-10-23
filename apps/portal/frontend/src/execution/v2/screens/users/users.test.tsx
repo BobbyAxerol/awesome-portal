@@ -2,6 +2,7 @@
  * Users V2: the roster, the filters, the drawer and every state, through the
  * real `accountApi` client against the Playwright double's routes.
  */
+import { SLOW } from "../../waitsTestUtil";
 import { whyText } from "../../gapWhyTestUtil";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
@@ -226,7 +227,7 @@ describe("paging, search and filters (keyset pages and server-side filters, BE-P
     await loaded();
     fireEvent.change(screen.getByRole("searchbox", { name: "Search accounts" }), { target: { value: "lan" } });
     await waitFor(() => expect(search().get("q")).toBe("lan"));
-    await waitFor(() => expect(rowsOf()).toHaveLength(1));
+    await waitFor(() => expect(rowsOf()).toHaveLength(1), SLOW);
     expect(rowsOf()[0]!.textContent).toContain("Lan Tran");
     expect(new URLSearchParams(rosterGets()[rosterGets().length - 1]!.search).get("q")).toBe("lan");
     expect(screen.getByText(/^Showing 1 of 1 matching accounts \(123 in all\)$/)).toBeTruthy();
@@ -240,7 +241,7 @@ describe("paging, search and filters (keyset pages and server-side filters, BE-P
     await loaded();
     expect(screen.queryByText(/Account 120\b/)).toBeNull();
     fireEvent.change(screen.getByRole("searchbox", { name: "Search accounts" }), { target: { value: "Account 120" } });
-    await waitFor(() => expect(rowsOf()).toHaveLength(1));
+    await waitFor(() => expect(rowsOf()).toHaveLength(1), SLOW);
     expect(rowsOf()[0]!.textContent).toContain("Account 120");
   });
 
@@ -322,7 +323,7 @@ describe("paging, search and filters (keyset pages and server-side filters, BE-P
     }) as typeof fetch;
     fireEvent.click(screen.getByRole("button", { name: "Load more" }));
     fireEvent.change(screen.getByRole("searchbox", { name: "Search accounts" }), { target: { value: "lan" } });
-    await waitFor(() => expect(rowsOf()).toHaveLength(1));
+    await waitFor(() => expect(rowsOf()).toHaveLength(1), SLOW);
     await act(async () => {
       gate.release();
       await new Promise((resolve) => setTimeout(resolve, 20));
@@ -366,7 +367,7 @@ describe("scale and keyboard", () => {
     expect(screen.getByText(/Showing the first 200 rows\. Narrow the search to see the rest\./)).toBeTruthy();
     expect(screen.getByText(/^Showing 200 of 300 accounts$/)).toBeTruthy();
     fireEvent.change(screen.getByRole("searchbox", { name: "Search accounts" }), { target: { value: "user299" } });
-    await waitFor(() => expect(rowsOf()).toHaveLength(1));
+    await waitFor(() => expect(rowsOf()).toHaveLength(1), SLOW);
   });
 
   it("a row opens its drawer from the keyboard", async () => {

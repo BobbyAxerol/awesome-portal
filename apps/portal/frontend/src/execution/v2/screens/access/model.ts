@@ -224,7 +224,7 @@ export function doRows(
     const base = row(`decide:${gate.id}`, `Decide at ${gate.label.replace(" gate", "")} gate`, capabilities, { allOf: [gate.decide] }, "No capability needed");
     // R2 decisions ask for a step-up in the design; no read states it for a gate decision (`stepUpRequired` is null), so it is typed.
     if (gate.id === "r2" && base.allowed) return { ...base, stepUpAbsent: true };
-    if (gate.id === "live" && base.allowed) return { ...base, note: LIVE_CLOSED_NOTE, closed: true };
+    if (gate.id === "live" && base.allowed) return { ...base, note: LIVE_CLOSED_NOTE, closed: true as const };
     return base;
   });
   return [

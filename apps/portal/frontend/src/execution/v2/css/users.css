@@ -293,3 +293,43 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* 661 to 1100px (QA2 R3-23): the roster fits its panel. Cells are tighter, the Revision column is left to the drawer (where it is the first fact
+ * of the account), the inline reasons wrap, and where the table still scrolls the account and its action stay put under the fade. */
+@media (min-width: 661px) and (max-width: 1100px) {
+  .exec-usr-v2 .exec-cards thead th,
+  .exec-usr-v2 .exec-cards tbody td {
+    padding-inline: var(--space-2);
+  }
+  .exec-usr-v2 .exec-cards thead th:nth-child(6),
+  .exec-usr-v2 .exec-cards tbody td:nth-child(6) {
+    display: none;
+  }
+  .exec-usr-v2 .exec-cards tbody td:last-child .exec-usr-meta {
+    display: block;
+    max-width: 16ch;
+    white-space: normal;
+  }
+  .exec-usr-v2 .exec-usr-flags .exec-flag {
+    white-space: normal;
+  }
+  .exec-usr-v2 .exec-cards tbody td:first-child,
+  .exec-usr-v2 .exec-cards tbody td:last-child {
+    position: sticky;
+    z-index: 1;
+    background: var(--paper-raised);
+  }
+  .exec-usr-v2 .exec-cards thead th:first-child,
+  .exec-usr-v2 .exec-cards thead th:last-child {
+    position: sticky;
+    z-index: 2;
+  }
+  .exec-usr-v2 .exec-cards tbody td:first-child,
+  .exec-usr-v2 .exec-cards thead th:first-child {
+    left: 0;
+  }
+  .exec-usr-v2 .exec-cards tbody td:last-child,
+  .exec-usr-v2 .exec-cards thead th:last-child {
+    right: 0;
+  }
+}

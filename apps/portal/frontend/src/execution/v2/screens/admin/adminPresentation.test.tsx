@@ -113,6 +113,14 @@ describe("QA1 I-35: the detail pane is the page's right column from 1101px", () 
     expect(document.querySelector('.exec-adm-main')?.getAttribute("data-docked")).toBe("true");
   });
 
+  it("QA2 R3-19: a read parameter whose values come from a server registry says so (no read lists it yet)", async () => {
+    simulated = true;
+    mount("/administration/actions?sel=health");
+    const pane = await dock();
+    const note = await within(pane).findByTestId("admin-param-registry");
+    expect(note.textContent).toContain("modes registry");
+  });
+
   it("at 1000px it is an overlay again, and nothing opens unprompted", async () => {
     vi.stubGlobal("matchMedia", (query: string) => ({ matches: query.includes("max-width"), media: query, addEventListener: () => undefined, removeEventListener: () => undefined }));
     mount();
@@ -163,7 +171,7 @@ describe("simulated lane: six connected local reads", () => {
     const pane = await dock();
     await waitFor(() => expect(within(pane).getByRole("button", { name: "Run read" })).toBeTruthy(), SLOW);
     await act(async () => {
-      for (const field of within(pane).getAllByLabelText(/\(required\)$/)) fireEvent.change(field, { target: { value: "x" } });
+      for (const field of within(pane).getAllByLabelText(/\(required\)/)) fireEvent.change(field, { target: { value: "x" } });
     });
     fireEvent.click(within(pane).getByRole("button", { name: "Run read" }));
     await waitFor(() => expect(within(pane).getByText("Read finished")).toBeTruthy(), SLOW);
