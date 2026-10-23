@@ -135,6 +135,16 @@ describe("the carbon stylesheet", () => {
     expect(css).toMatch(/\.portal-search-label \{ white-space: nowrap; overflow: hidden; text-overflow: ellipsis;/);
   });
 
+  it("between the phone bar and 1100px the field is the icon alone (no label cut), the name stays for assistive tech", () => {
+    expect(css).toMatch(/@media \(min-width: 721px\) and \(max-width: 1099px\) \{ [^}]*\.portal-search-btn\[data-v2-search\] \{ width: 36px;/);
+    expect(css).toMatch(/\.portal-search-btn\[data-v2-search\] \.portal-search-label \{ position: absolute; width: 1px;/);
+  });
+
+  it("the V2 search button names itself with a title", () => {
+    mount({ userHref: null });
+    expect(screen.getByRole("button", { name: /Search or jump to/ }).getAttribute("title")).toBe("Search or jump to (Ctrl K)");
+  });
+
   it("the user chip is hidden below 1280px, where the trail needs the room", () => {
     expect(css).toMatch(/@media \(max-width: 1279px\) \{ :root\[data-theme="execution-carbon"\] \.portal-topbar \.portal-user-chip \{ display: none; \}/);
   });

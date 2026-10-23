@@ -165,8 +165,32 @@ async function operations(api: ExecutionApi, text: string, workspaceId: string |
     });
   }
   // An incident id is looked up by that exact id; any other text is not guessed at.
-  if (/^inc[_-]/i.test(text)) out.push((await incidentById(api, text, workspaceId)) ?? { entries: [], note: `${GROUP.incident}: incident read, exact id, none found` });
+  if (/^inc/i.test(text)) out.push(await incidentsWithExact(api, text, workspaceId));
   return out;
+}
+
+/** One incident by its exact id, or null when the read does not find it. */
+/**
+ * Incidents whose id contains `text`, from the incident links the queue read publishes on its rows (the only list of incident ids there is). Matched
+ * here, over the first page of that read, and labelled so; an id no row links to is not offered.
+ */
+async function incidentsByPrefix(api: ExecutionApi, text: string, workspaceId: string | undefined): Promise<Settled> {
+  const label = GROUP.incident;
+  const result = await api.listOperationalQueueV2({ limit: 50, ...(workspaceId ? { workspaceId } : {}) });
+  if (!result.ok || result.value.kind !== "queue") return failed(label, result.ok ? "unsupported queue shape" : result.reason);
+  const needle = text.toLowerCase();
+  const seen = new Map<string, string>();
+  for (const row of result.value.queue.page.rows) {
+    for (const link of row.incidentLinks?.items ?? []) {
+      if (link.state === "LINKED" && link.incidentId.toLowerCase().includes(needle) && !seen.has(link.incidentId)) seen.set(link.incidentId, link.incident.workflowState);
+    }
+  }
+  const ids = [...seen.keys()];
+  const shown = ids.slice(0, PER_KIND);
+  return {
+    entries: shown.map((id) => ({ id: `incident:${id}`, group: label, label: id, detail: seen.get(id), href: `/execution/operations/incidents/${enc(id)}` })),
+    note: capNote(label, shown.length, ids.length, `queue read incident links (no incident list), matched here in the first ${result.value.queue.page.rows.length} rows`),
+  };
 }
 
 /** One incident by its exact id, or null when the read does not find it. */
@@ -175,6 +199,14 @@ async function incidentById(api: ExecutionApi, id: string, workspaceId: string |
   if (!incident.ok || incident.value.kind !== "incident") return null;
   const root = incident.value.incident;
   return { entries: [{ id: `incident:${root.incidentId}`, group: GROUP.incident, label: root.incidentId, detail: root.workflowState, href: `/execution/operations/incidents/${enc(root.incidentId)}` }], note: `${GROUP.incident}: incident read, exact id, 1 shown` };
+}
+
+/** An exact incident id (when the text is one) together with the ids that contain the text; never an id no read returned. */
+async function incidentsWithExact(api: ExecutionApi, text: string, workspaceId: string | undefined): Promise<Settled> {
+  const [prefix, exact] = await Promise.all([incidentsByPrefix(api, text, workspaceId), /^inc[_-]/i.test(text) ? incidentById(api, text, workspaceId) : Promise.resolve(null)]);
+  const entries = [...(exact?.entries ?? []), ...prefix.entries.filter((e) => !(exact?.entries ?? []).some((x) => x.id === e.id))].slice(0, PER_KIND);
+  if (entries.length === 0) return { entries, note: prefix.note.includes("not available") ? prefix.note : `${GROUP.incident}: incident links and exact id, none found` };
+  return { entries, note: exact !== null && exact.entries.length > 0 ? `${prefix.note}; exact id found` : prefix.note };
 }
 
 /** The screen each kind opens, as the app routes it (used when the server's route hint is not a route this app has). */
@@ -253,7 +285,7 @@ async function searchByIndex(api: ExecutionApi, query: string, sources: SearchSo
   };
   const extra: Promise<Settled | Settled[] | null>[] = [];
   if (sources.account && uncovered("account")) extra.push(guard(GROUP.account, () => accounts(api, query, environment, workspaceId), signal));
-  if (sources.operation && /^inc[_-]/i.test(query) && uncovered("incident")) extra.push(guard(GROUP.incident, async () => (await incidentById(api, query, workspaceId)) ?? { entries: [], note: `${GROUP.incident}: incident read, exact id, none found` }, signal));
+  if (sources.operation && /^inc/i.test(query) && uncovered("incident")) extra.push(guard(GROUP.incident, () => incidentsWithExact(api, query, workspaceId), signal));
   if (extra.length > 0) {
     const done = (await Promise.all(extra)).flatMap((item) => (item === null ? [] : Array.isArray(item) ? item : [item]));
     if (signal.aborted) return null;

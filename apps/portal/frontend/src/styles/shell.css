@@ -2780,6 +2780,13 @@ html {
 :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] .portal-search-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 :root[data-theme="execution-carbon"] .portal-topbar .portal-env-wrap { display: inline-flex; align-items: center; gap: 4px; }
 :root[data-theme="execution-carbon"] .portal-topbar .portal-env-prefix { font: 400 11px/16px var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+:root[data-theme="execution-carbon"] .portal-topbar:has([data-v2-search]) .portal-search-btn kbd { font-size: 11px; line-height: 16px; }
+/* Between the phone bar and 1100px the field is the icon alone: no label is cut mid-word (QA2 R3-24, R4-20). The name stays for assistive tech. */
+@media (min-width: 721px) and (max-width: 1099px) {
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] { width: 36px; height: 32px; justify-content: center; padding: 0; margin-left: auto; }
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] kbd { display: none; }
+  :root[data-theme="execution-carbon"] .portal-topbar .portal-search-btn[data-v2-search] .portal-search-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+}
 @media (max-width: 1279px) {
   :root[data-theme="execution-carbon"] .portal-topbar .portal-user-chip { display: none; }
 }

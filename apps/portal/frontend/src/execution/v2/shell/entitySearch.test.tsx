@@ -143,7 +143,7 @@ describe("searchEntities", () => {
     const { api } = fakeApi({ getIncidentRootV2: async () => fail("not found") });
     const out = (await searchEntities(api, "inc_404", { ...ALL, alpha: false, portfolio: false, account: false, approval: false }, undefined, signal()))!;
     expect(out.entries.map((e) => e.group)).not.toContain("Incidents");
-    expect(out.notes).toContain("Incidents: incident read, exact id, none found");
+    expect(out.notes).toContain("Incidents: incident links and exact id, none found");
   });
 
   it("approvals: no search parameter exists, so the first page is matched here by id or subject and the note says how many rows", async () => {
@@ -558,7 +558,7 @@ describe("ids on screen are found, and nothing that does not exist is offered (Q
     const missing = fakeApi({ searchEntities: async () => ok(empty), getIncidentRootV2: async () => fail("not found") });
     const none = (await searchEntities(missing.api, "inc_404", ALL, undefined, signal()))!;
     expect(none.entries.map((e) => e.group)).not.toContain("Incidents");
-    expect(none.notes).toContain("Incidents: incident read, exact id, none found");
+    expect(none.notes).toContain("Incidents: incident links and exact id, none found");
   });
 
   it("compactNotes: reads with a result keep their line, the empty ones are one line", () => {
@@ -566,5 +566,41 @@ describe("ids on screen are found, and nothing that does not exist is offered (Q
       .toEqual(["Alphas: a, 2 of 14 shown", "No match in: Portfolios, Operations, Incidents"]);
     expect(compactNotes(["Alphas: a, 2 of 14 shown"])).toEqual(["Alphas: a, 2 of 14 shown"]);
     expect(compactNotes([])).toEqual([]);
+  });
+});
+
+describe("incidents are found by prefix as well as by exact id (QA2 R3-22)", () => {
+  const link = (id: string) => ({ state: "LINKED", incidentId: id, relationship: "RELATED", incident: { workflowState: "OPEN" } });
+  const queueWith = (rows: unknown[]) => async () => ok({ kind: "queue", queue: { page: { filteredCount: rows.length, rows } } });
+  const rows = [
+    { operationId: "op_1", commandKey: "C", targetType: "PORTFOLIO", targetId: "p", incidentLinks: { items: [link("inc_TEST_ONLY_fx_a"), link("inc_TEST_ONLY_fx_b")] } },
+    { operationId: "op_2", commandKey: "C", targetType: "PORTFOLIO", targetId: "p", incidentLinks: { items: [link("inc_TEST_ONLY_fx_a"), { state: "NOT_ATTESTED" }] } },
+    { operationId: "op_3", commandKey: "C", targetType: "PORTFOLIO", targetId: "p" },
+  ];
+  const onlyOps = { ...ALL, alpha: false, portfolio: false, account: false, approval: false };
+
+  it('"inc" lists the incident ids the queue rows link to, once each, and offers no id no row links to', async () => {
+    const { api } = fakeApi({ listOperationalQueueV2: queueWith(rows), getIncidentRootV2: async () => fail("none") });
+    const out = (await searchEntities(api, "inc", onlyOps, "ws_1", signal(), "live", { skipIndex: true }))!;
+    expect(out.entries.filter((e) => e.group === "Incidents").map((e) => e.label)).toEqual(["inc_TEST_ONLY_fx_a", "inc_TEST_ONLY_fx_b"]);
+    expect(out.entries.filter((e) => e.group === "Incidents").map((e) => e.href)[0]).toBe("/execution/operations/incidents/inc_TEST_ONLY_fx_a");
+    expect(out.notes.find((n) => n.startsWith("Incidents:"))).toContain("matched here in the first 3 rows");
+  });
+
+  it("a text that matches none says none found; an exact id the incident read knows is added", async () => {
+    const { api } = fakeApi({ listOperationalQueueV2: queueWith(rows) });
+    const none = (await searchEntities(api, "inc_zzz", onlyOps, undefined, signal(), "live", { skipIndex: true }))!;
+    expect(none.entries.filter((e) => e.group === "Incidents").map((e) => e.label)).toEqual(["inc_zzz"]); // the exact read (fake) answers
+    const noneAtAll = fakeApi({ listOperationalQueueV2: queueWith(rows), getIncidentRootV2: async () => fail("no") });
+    const out = (await searchEntities(noneAtAll.api, "inc_zzz", onlyOps, undefined, signal(), "live", { skipIndex: true }))!;
+    expect(out.entries.filter((e) => e.group === "Incidents")).toEqual([]);
+  });
+
+  it("through the index path an uncounted empty incident group is completed the same way", async () => {
+    const body = indexBody({ groups: [{ kind: "incident", totalMatched: null, rows: [] }] });
+    const { api } = fakeApi({ searchEntities: async () => ok(body), listOperationalQueueV2: queueWith(rows), getIncidentRootV2: async () => fail("no") });
+    const out = (await searchEntities(api, "inc", ALL, undefined, signal()))!;
+    expect(out.via).toBe("index");
+    expect(out.entries.filter((e) => e.group === "Incidents").map((e) => e.label)).toEqual(["inc_TEST_ONLY_fx_a", "inc_TEST_ONLY_fx_b"]);
   });
 });

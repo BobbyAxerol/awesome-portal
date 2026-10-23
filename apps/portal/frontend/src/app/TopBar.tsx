@@ -156,7 +156,7 @@ export function TopBar({
           {chrome.price.symbol} <b data-tone={chrome.price.up ? "good" : "bad"}>{chrome.price.value}</b> <span data-tone={chrome.price.up ? "good" : "bad"}>{chrome.price.up ? "▲" : "▼"}</span>
         </span>
       ) : null}
-      <button type="button" className="portal-search-btn" onClick={onOpenPalette} data-v2-search={v2 ? "" : undefined}>
+      <button type="button" className="portal-search-btn" onClick={onOpenPalette} data-v2-search={v2 ? "" : undefined} title={v2 ? "Search or jump to (Ctrl K)" : undefined}>
         <Search size={13} aria-hidden="true" />
         <span className="portal-search-label">{v2 ? "Search or jump to" : "Search"}</span>
         <kbd className="mono">⌘K</kbd>

@@ -66,11 +66,12 @@ describe("flag on", () => {
     const { links, groups } = rail(true, [...V2_ROLE_PRESETS.manager, PROFILE]);
     expect(groups).toContain("Execution");
     const execution = railGroups(registry, { capabilities: [...V2_ROLE_PRESETS.manager, PROFILE] }, true, "").find((g) => g.id === "execution");
-    expect(execution?.items.map((i) => i.label)).toEqual(["Overview", "Portfolios", "Alpha Fleet", "Accounts", "Operations", "Approvals"]);
+    expect(execution?.items.map((i) => i.label)).toEqual(["Overview", "Portfolios", "Alpha Fleet", "Accounts", "Operations", "Approvals", "Blotter"]);
     const hrefs = links.map((l) => l.href);
-    for (const gone of ["/deployments/paper", "/deployments/sandbox", "/deployments/live", "/governance/waivers", "/governance/exit-reviews", "/deployments/blotter", "/administration/actions"]) {
+    for (const gone of ["/deployments/paper", "/deployments/sandbox", "/deployments/live", "/governance/waivers", "/governance/exit-reviews", "/administration/actions"]) {
       expect(hrefs).not.toContain(gone);
     }
+    expect(hrefs).toContain("/deployments/blotter");
   });
 
   it("capability filtering: a researcher loses Portfolios, Accounts and Operations; no capability loses the scoped Approvals (the old stub stays)", () => {

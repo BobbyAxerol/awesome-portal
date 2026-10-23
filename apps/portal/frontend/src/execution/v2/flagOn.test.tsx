@@ -80,7 +80,7 @@ describe("V2 shell flag on", () => {
     await frame("shell,blotter", "EXECUTION_FULL_BLOTTER_SCREEN");
     expect(screen.queryByRole("button", { name: "Paper" })).toBeNull();
     expect(document.querySelector('[data-control="env"]')).toBeNull();
-    expect(document.querySelector(".exec-ctxbar")?.textContent).toContain("Not published (FE-052)");
+    expect(document.querySelector(".exec-ctxbar")?.textContent).toContain("The orders read has no environment filter.");
     expect(document.querySelector('[data-notice="lock"]')?.textContent).toContain("Not applied: Environment");
   });
 
@@ -88,7 +88,7 @@ describe("V2 shell flag on", () => {
     await frame("shell,blotter", "EXECUTION_FULL_BLOTTER_SCREEN");
     expect(document.querySelector(".exec-ctxbar-lock")?.textContent).toBe("Window: Current retained window");
     expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
-    expect(document.querySelector(".exec-ctxbar")?.textContent).toContain("Not published (FE-025)");
+    expect(document.querySelector(".exec-ctxbar")?.textContent).toContain("The orders read takes no window.");
     cleanup();
     await frame("shell", "EXECUTION_FULL_BLOTTER_SCREEN");
     expect(document.querySelector(".exec-ctxbar-lock")).toBeNull();
@@ -105,10 +105,10 @@ describe("V2 shell flag on", () => {
     expect((screen.getByRole("button", { name: "Paper" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("Operations states why the window is off (its own Range, FE-025) without a fixed-window chip", async () => {
+  it("Operations states why the window is off (its own Range) without a fixed-window chip", async () => {
     await frame("shell,ops", "EXECUTION_OPERATIONS_QUEUE_SCREEN", "/execution/operations?env=paper");
     expect(screen.queryByRole("group", { name: "Window" })).toBeNull();
-    expect(document.querySelector(".exec-ctxbar")?.textContent).toContain("Operations has its own Range control below. The server takes no window (FE-025).");
+    expect(document.querySelector(".exec-ctxbar")?.textContent).toContain("Operations has its own Range control below. The server takes no window.");
     expect(document.querySelector(".exec-ctxbar-lock")).toBeNull();
   });
 

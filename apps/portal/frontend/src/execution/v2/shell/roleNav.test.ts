@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 
 import type { PortalRegistryDocument } from "../../../portal/contracts";
 import { sidebarGroups } from "../../../portal/navigation";
-import { GO_TO_GROUP, V2_NAV_TOKEN, V2_NAV_RULES, V2_ROLE_PRESETS, applyV2Nav, filterEntriesByCapabilities, goToEntries, holds, type CommandEntry, type V2RolePreset } from "./roleNav";
+import { GO_TO_GROUP, V2_NAV_TOKEN, V2_NAV_RULES, V2_ROLE_PRESETS, applyV2Nav, filterEntriesByCapabilities, goToEntries, holds, v2Crumbs, type CommandEntry, type V2RolePreset } from "./roleNav";
 
 const registry: PortalRegistryDocument = JSON.parse(
   readFileSync(join(process.cwd(), "../registry/fixtures/registry.public.json"), "utf8"),
@@ -41,9 +41,9 @@ describe("holds", () => {
 
 describe("applyV2Nav presets", () => {
   const expected: Record<V2RolePreset, string[]> = {
-    manager: ["Overview", "Portfolios", "Alpha Fleet", "Accounts", "Operations", "Approvals"],
+    manager: ["Overview", "Portfolios", "Alpha Fleet", "Accounts", "Operations", "Approvals", "Blotter"],
     researcher: ["Overview", "Alpha Fleet", "Approvals"],
-    operator: ["Overview", "Portfolios", "Alpha Fleet", "Accounts", "Operations"],
+    operator: ["Overview", "Portfolios", "Alpha Fleet", "Accounts", "Operations", "Blotter"],
     reviewer: ["Overview", "Portfolios", "Alpha Fleet", "Approvals"],
   };
 
@@ -53,11 +53,11 @@ describe("applyV2Nav presets", () => {
     });
   }
 
-  it("gives the manager seven rail entries with Profile & Access", () => {
+  it("gives the manager eight rail entries (Blotter included, from the registry) with Profile & Access", () => {
     const out = applyV2Nav(groups, V2_ROLE_PRESETS.manager);
     const admin = out.find((group) => group.id === "administration")?.items.map((item) => item.label) ?? [];
     expect(admin).toEqual(["Profile & Access"]);
-    expect(executionLabels(V2_ROLE_PRESETS.manager).length + admin.length).toBe(7);
+    expect(executionLabels(V2_ROLE_PRESETS.manager).length + admin.length).toBe(8);
   });
 
   it("hides Accounts and Portfolios from the researcher", () => {
@@ -70,9 +70,11 @@ describe("applyV2Nav presets", () => {
     expect(executionLabels(new Set())).toEqual(["Overview", "Alpha Fleet"]);
   });
 
-  it("never lists Blotter, Waivers, Exit Reviews, Admin Actions or the stage routes in the rail", () => {
+  it("lists Blotter (the registry has it) and never Waivers, Exit Reviews, Admin Actions or the stage routes in the rail", () => {
     const all = labels(V2_ROLE_PRESETS.manager);
-    for (const gone of ["Blotter", "Waivers", "Exit Reviews", "Admin Actions", "Paper Trading", "Sandbox", "Live Operations"]) {
+    expect(all).toContain("Blotter");
+    expect(labels(V2_ROLE_PRESETS.researcher)).not.toContain("Blotter");
+    for (const gone of ["Waivers", "Exit Reviews", "Admin Actions", "Paper Trading", "Sandbox", "Live Operations"]) {
       expect(all, gone).not.toContain(gone);
     }
   });
@@ -156,12 +158,11 @@ describe("rule table", () => {
 });
 
 describe("goToEntries and filterEntriesByCapabilities", () => {
-  it("offers the rail entries plus Blotter for a manager, Blotter last", () => {
+  it("offers the rail entries including Blotter for a manager, and its route resolves from the registry", () => {
     const entries = goToEntries(groups, V2_ROLE_PRESETS.manager);
     expect(entries.every((entry) => entry.group === GO_TO_GROUP)).toBe(true);
     const names = entries.map((entry) => entry.label);
     expect(names).toContain("Blotter");
-    expect(names[names.length - 1]).toBe("Blotter");
     expect(entries.find((entry) => entry.label === "Blotter")?.href).toBe("/deployments/blotter");
   });
 
@@ -172,11 +173,16 @@ describe("goToEntries and filterEntriesByCapabilities", () => {
     expect(names).toContain("Approvals");
   });
 
-  it("finds a link-only target the sidebar no longer lists", () => {
+  it("still finds Blotter when a registry revision takes it out of the sidebar (extra features)", () => {
     const withoutBlotter = groups.map((entry) => ({ ...entry, features: entry.features.filter((f) => f.id !== "EXECUTION_BLOTTER") }));
     const blotter = registry.features.find((feature) => feature.id === "EXECUTION_BLOTTER")!;
-    expect(goToEntries(withoutBlotter, V2_ROLE_PRESETS.operator).map((e) => e.label)).not.toContain("Blotter");
-    expect(goToEntries(withoutBlotter, V2_ROLE_PRESETS.operator, [blotter]).map((e) => e.label)).toContain("Blotter");
+    expect(applyV2Nav(withoutBlotter, V2_ROLE_PRESETS.operator).flatMap((g) => g.items).map((i) => i.label)).not.toContain("Blotter");
+    expect(goToEntries(withoutBlotter, V2_ROLE_PRESETS.operator, [blotter]).map((e) => e.label)).not.toContain("Blotter");
+  });
+
+  it("the Blotter breadcrumb reads Execution / Blotter", () => {
+    const trail = [{ label: "Deployments", route: null }, { label: "Blotter", route: "/deployments/blotter" }];
+    expect(v2Crumbs(trail, registry.features).map((c) => c.label)).toEqual(["Execution", "Blotter"]);
   });
 
   it("filters caller-supplied entries by their own need", () => {

@@ -98,8 +98,8 @@ interface V2NavRule {
 }
 
 /**
- * Seven rail entries for a manager (Overview, Portfolios, Alpha Fleet, Accounts,
- * Operations, Approvals, Profile & Access), Blotter by command bar only.
+ * Eight rail entries for a manager (Overview, Portfolios, Alpha Fleet, Accounts,
+ * Operations, Approvals, Blotter, Profile & Access); the registry lists Blotter, so the rail does (QA2 R4-01).
  * Waivers and Exit Reviews live inside Approvals; Admin Actions is unlisted;
  * Paper/Sandbox/Live became stage filters on Fleet (07 C-2).
  */
@@ -110,7 +110,7 @@ export const V2_NAV_RULES: readonly V2NavRule[] = [
   { featureId: "EXECUTION_ACCOUNTS_BINDINGS", surface: "nav", label: "Accounts", order: 40, home: "execution", needs: { allOf: [V2_NAV_TOKEN.accounts] } },
   { featureId: "EXECUTION_OPERATIONS", surface: "nav", label: "Operations", order: 50, home: "execution", needs: { allOf: [V2_NAV_TOKEN.operations] } },
   { featureId: "EXECUTION_APPROVALS", surface: "nav", label: "Approvals", order: 60, home: "execution", needs: ANY_APPROVAL_READ },
-  { featureId: "EXECUTION_BLOTTER", surface: "link-only", label: "Blotter", order: 70, home: "execution", needs: { allOf: [V2_NAV_TOKEN.blotter] } },
+  { featureId: "EXECUTION_BLOTTER", surface: "nav", label: "Blotter", order: 70, home: "execution", needs: { allOf: [V2_NAV_TOKEN.blotter] } },
   { featureId: "PROFILE_ACCESS", surface: "nav", label: "Profile & Access", home: "registry" },
   { featureId: "EXECUTION_WAIVERS", surface: "hidden" },
   { featureId: "EXECUTION_EXIT_REVIEWS", surface: "hidden" },

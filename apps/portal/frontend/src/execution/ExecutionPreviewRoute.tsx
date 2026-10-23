@@ -212,15 +212,15 @@ export function cockpitClearSearch(search: URLSearchParams | string): string {
   return query === "" ? "" : `?${query}`;
 }
 // The V2 Blotter's orders read has no environment filter (Not published, FE-052): the bar says so instead of looking live.
-const BLOTTER_ENV_LOCK = { reason: "Not published (FE-052). The orders read has no environment filter.", unapplied: true };
+const BLOTTER_ENV_LOCK = { reason: "The orders read has no environment filter.", unapplied: true };
 // The V2 Blotter's orders read takes no window either (FE-025); the screen itself says what it covers
 // ("Current retained window"), so the bar prints that as the fixed window.
-const BLOTTER_WINDOW_LOCK = { reason: "Not published (FE-025). The orders read takes no window.", short: null, effective: "Current retained window" };
+const BLOTTER_WINDOW_LOCK = { reason: "The orders read takes no window.", short: null, effective: "Current retained window" };
 // Operations carries its own Range control and the server takes no window (FE-025): the bar's window says so.
 // No `effective`: a fixed chip would lie once the local Range changes.
-const OPERATIONS_WINDOW_LOCK = { reason: "Operations has its own Range control below. The server takes no window (FE-025).", short: "Own range below" };
+const OPERATIONS_WINDOW_LOCK = { reason: "Operations has its own Range control below. The server takes no window.", short: "Own range below" };
 // The S3 stage screens read one deployment, and none of those reads takes the bar's window: each says what it covers instead.
-const WORKBENCH_WINDOW_LOCK = { reason: "Not published (FE-025). The deployment read takes no window.", short: null, effective: "Published window" };
+const WORKBENCH_WINDOW_LOCK = { reason: "The deployment read takes no window.", short: null, effective: "Published window" };
 const SANDBOX_WINDOW_LOCK = { reason: "The certification run fixes the window", short: null, effective: "Certification run" };
 const CANARY_WINDOW_LOCK = { reason: "The Canary trial fixes the window.", short: null, effective: "Trial window" };
 const LIVE_WINDOW_LOCK = { reason: "Live operations reads from activation.", short: null, effective: "Since activation" };
