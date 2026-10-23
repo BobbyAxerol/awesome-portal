@@ -15,8 +15,9 @@
  *   it, else Not published (FE-005/025); Return and Drawdown: Not published (FE-006/013/025);
  * - the capital block: Balance total and Allocated per economic partition from the dataset's `capital_statements` (one line each,
  *   never totalled); Initial, Added, Returned and Budget used: Not published (FE-017);
- * - "Since your last visit": Not published (FE-024);
- * - Contributors: Not published (FE-025).
+ * - "Since your last visit": no comparison baseline is published, so a typed absence (FE-024); never computed from dates;
+ * - Contributors (FE-CAT-5): a second read of the same FUND dataset grouped by `alpha_id` (same environment and window), the
+ *   server's groups with `net_pnl` per economic partition; no sum, no join, no re-sort; typed absence (FE-025) when not offered.
  *
  * Published here: the ranked triage list, its counts with their exactness,
  * operations awaiting acknowledgement, stage counts, the Command Centre fleet
@@ -51,7 +52,7 @@ import type { FlagKind } from "../../flagKinds";
 import { profileLabel } from "../../profileLabel";
 import { isInternalPath, useExecUrlState, withContext } from "../../urlState";
 import {
-  FE_MONEY, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
+  FE_DIGEST, FE_MONEY, KIND_FLAG, currencyFacts, fleetCellGroups, humanize, modeOf,
   needsAttention, openIncidents, stageCounts, streamSentence, todayRows, triageRows, type CurrencyFact,
 } from "./overviewModel";
 import type { ManagerSeriesQuery } from "../../readers/managerSeries";
@@ -63,6 +64,8 @@ import type { ManagerDatasetQuery } from "../../../api/managerDatasetQuery";
 import { useManagerDataset } from "../manager/useManagerDataset";
 import { PartitionFigures, figureSource, publishes, servesDataset } from "../portfolios/PartitionFigures";
 import { useOverviewReads } from "./useOverviewReads";
+import { ContributorsBody } from "./Contributors";
+import { CONTRIBUTORS_GROUP_FIELD, alphaGroupOffered, contributorsView } from "./contributorsModel";
 
 import "../../css/blocks.css";
 import "../../css/overview.css";
@@ -223,6 +226,11 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
   const netPnlList = figureSource(fund, "net_pnl");
   const returnList = figureSource(fund, "return_30d_pct");
   const drawdownList = figureSource(fund, "max_drawdown_pct");
+  // Contributors: the same fund, environment and window, grouped by alpha by the server. Asked once the fund read has said it
+  // offers `alpha_id`; limit 1 because only `groups` (the whole filtered query) is read, never the page of rows.
+  const contributorsQuery = useMemo<ManagerDatasetQuery>(() => ({ ...fundQuery, groupBy: [CONTRIBUTORS_GROUP_FIELD], limit: 1 }), [fundQuery]);
+  const contributorsRead = useManagerDataset(api, servesDataset(api) && fund !== null && alphaGroupOffered(fund) === true, contributorsQuery, seriesNonce);
+  const contributors = contributorsView({ served: servesDataset(api), fundRead, fund, grouped: contributorsRead });
   const refresh = () => { reads.reload(); setSeriesNonce((n) => n + 1); };
 
   const { snapshot } = reads;
@@ -415,12 +423,21 @@ export default function OverviewScreen({ api, workspaceId, sseFactory, accessHre
       <div className="exec-ov-grid3">
         {needsPanel}
         <SectionPanel title="Since your last visit">
-          <p className="exec-ov-na"><Gap ids="FE-024" /></p>
-          <p className="exec-ov-note">The change feed since your last visit is not published.</p>
+          <p className="exec-ov-na"><Gap ids={FE_DIGEST} /></p>
+          <p className="exec-ov-note" data-digest-absence="NO_COMPARISON_BASELINE">
+            No comparison baseline is published yet.
+            <GapWhy
+              name="Why there is no comparison baseline"
+              rows={[
+                gapTitle(FE_DIGEST, null, "NO_COMPARISON_BASELINE"),
+                "It needs a persisted, user-scoped baseline (what this user last saw) and the current source facts to compare it with.",
+                "Nothing is estimated from fixture dates or from this browser's clock.",
+              ]}
+            />
+          </p>
         </SectionPanel>
-        <SectionPanel title="Contributors" aside="Amount · Portfolios">
-          <p className="exec-ov-na"><Gap ids="FE-025" /></p>
-          <p className="exec-ov-note">Per-alpha contribution over a window is not published.</p>
+        <SectionPanel title="Contributors" aside={contributors.kind === "ready" ? `Net PnL by alpha · window ${url.value.window}` : "Amount · Return · Score"}>
+          <ContributorsBody view={contributors} />
         </SectionPanel>
       </div>
 

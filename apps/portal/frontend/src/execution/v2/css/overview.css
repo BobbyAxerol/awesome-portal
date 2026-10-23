@@ -296,3 +296,31 @@ a.exec-ov-what-title {
   font: var(--exec-font-meta);
   color: var(--ink-faint);
 }
+
+/* contributors (FE-CAT-5): the server's alpha groups, one line per economic partition */
+.exec-ov-contrib {
+  width: 100%;
+  border-collapse: collapse;
+  font: var(--exec-font-data);
+  color: var(--ink-soft);
+}
+.exec-ov-contrib th,
+.exec-ov-contrib td {
+  padding: 6px var(--space-2) 6px 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line-soft);
+  overflow-wrap: anywhere;
+}
+.exec-ov-contrib thead th {
+  font: var(--exec-font-caption);
+  color: var(--ink-faint);
+}
+.exec-ov-contrib tbody th {
+  font: var(--exec-font-body);
+  color: var(--ink);
+}
+.exec-ov-contrib .exec-ov-contrib-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

@@ -528,6 +528,14 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
     grouped.set(encoded, group);
   }
   body.groups = [...grouped.values()].map((group) => ({ key: group.key, unique_row_count: group.rows.length, totals_scope: "FULL_AUTHORIZED_FILTERED_QUERY", economic_partitions: aggregate(group.rows) }));
+  // SIMULATED (FE-CAT-5): in a read grouped by alpha_id alone, the first group's first partition publishes a true zero net_pnl
+  // and the second group's first partition publishes none (a typed absence, SOURCE_FACTS_NOT_PUBLISHED).
+  if (groups.length === 1 && groups[0] === "alpha_id") {
+    body.groups.slice(0, 2).forEach((group: Draft, index: number) => {
+      const entry = group.economic_partitions[0];
+      if (entry?.metrics.net_pnl) entry.metrics.net_pnl = metric(entry.metrics.net_pnl, index === 0 ? "0" : null, entry.partition.currency);
+    });
+  }
   const bound = digest([profile, path, [...search.entries()].filter(([key]) => !["after", "before", "limit"].includes(key)).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)]);
   const snapshot = digest(["FIXTURE_LAB_SYNTHETIC", profile, environment, body.workspace_id, fixtureNowMs(), rows]);
   const limit = Number(search.get("limit") ?? 100);
