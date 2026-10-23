@@ -34,11 +34,13 @@ import {
   type TargetTypeV2, type TriageStateV2, type VerificationResultV2,
 } from "../../readers/operationalQueue";
 import { ENV_LABEL, EXEC_ENVS, serializeUrlParams, useExecUrlState, type ExecEnv } from "../../urlState";
+import { AuditPanel } from "./AuditPanel";
+import { ExceptionsPanel } from "./ExceptionsPanel";
 import { IncidentRootDrawer } from "./IncidentRootDrawer";
 import { ACCESS_PATH, AccessLink, FE, FE_B1, NotPublished, notPublishedReason, type FeId } from "./notPublished";
 import { OperationDock } from "./OperationDock";
 import {
-  invalidNotice, legacyFilterNotice, OPS_WINDOWS, readOpsUrl, writeOpsUrl, type Filters, type OpsWindow,
+  invalidNotice, legacyFilterNotice, OPS_WINDOWS, readOpsUrl, writeOpsUrl, type Filters, type OpsSource, type OpsWindow,
 } from "./opsUrl";
 import { profileLabel } from "../../profileLabel";
 import { humanize, TARGET_LABEL } from "./outcome";
@@ -171,7 +173,7 @@ export default function OperationsV2({
 
   const [params, setParams] = useSearchParams();
   const urlState = useMemo(() => readOpsUrl(params), [params]);
-  const { filters, range } = urlState;
+  const { filters, range, source } = urlState;
   const [draftKey, setDraftKey] = useState(filters.commandKey);
   const [urlNotices, setUrlNotices] = useState<readonly string[]>([]);
   const [load, setLoad] = useState<Load>({ phase: "loading" });
@@ -262,9 +264,9 @@ export default function OperationsV2({
   }, [params, wanted]);
 
   /** Writes a change of window or filters to the URL, replacing the entry: a filter is not a page. */
-  const commit = (next: { filters?: Filters; range?: OpsWindow }) => {
+  const commit = (next: { filters?: Filters; range?: OpsWindow; source?: OpsSource }) => {
     setUrlNotices([]);
-    setParams(writeOpsUrl(serializeUrlParams(url.value, params), { filters: next.filters ?? filters, range: next.range ?? range }), { replace: true });
+    setParams(writeOpsUrl(serializeUrlParams(url.value, params), { filters: next.filters ?? filters, range: next.range ?? range, source: next.source ?? source }), { replace: true });
   };
 
   const loadMore = useCallback(async () => {
@@ -296,7 +298,14 @@ export default function OperationsV2({
       : prev));
   }, [api, load, query]);
 
-  const nowMs = (now ?? new Date()).getTime();
+  // A range counts back from the READ, not from the reader's clock: the snapshot's own `observed_at_ms` is the instant the rows were
+  // true, so "24H" means the day before that read. With a live server the two are the same minute; with a lane whose clock is
+  // not the reader's (a fixture, a snapshot served late) the screen still shows what the read holds and says the read is old.
+  // A read that states no instant (`0`) falls back to the clock.
+  const clockMs = (now ?? new Date()).getTime();
+  const observedMs: number = load.phase === "ready" ? load.queue.observedAtMs : 0;
+  const nowMs = observedMs > 0 ? observedMs : clockMs;
+  const readAgeMs = observedMs > 0 ? clockMs - observedMs : 0;
   const windowMs = WINDOW_MS[range];
   const rows = load.phase === "ready" ? load.rows : [];
   const visible = windowMs === null ? rows : rows.filter((row) => row.createdAt.ms >= nowMs - windowMs);
@@ -319,16 +328,33 @@ export default function OperationsV2({
   const operationOpen = !incidentOpen && view === "commands" && selection !== null;
   const dockOpen = (incidentOpen || operationOpen) && mode === "dock";
 
-  /** The incident drawer route, over this queue, keeping the context in the query string (FE-042 links). */
+  /** The query string of a link to an incident: the page's context kept, `peek` set or dropped. */
+  const incidentSearch = useCallback((peek: boolean): string => {
+    const next = new URLSearchParams(location.search);
+    next.delete("peek");
+    if (peek) next.set("peek", "1");
+    const text = next.toString();
+    return text === "" ? "" : `?${text}`;
+  }, [location.search]);
+  /** The incident page, keeping the context in the query string (FE-042 links). It is the deep link every other screen writes. */
   const incidentTo = useCallback(
-    (id: string): To => ({ pathname: `${queuePath}/incidents/${encodeURIComponent(id)}`, search: location.search }),
-    [queuePath, location.search],
+    (id: string): To => ({ pathname: `${queuePath}/incidents/${encodeURIComponent(id)}`, search: incidentSearch(false) }),
+    [queuePath, incidentSearch],
   );
-  const closeIncident = () => navigate({ pathname: queuePath, search: location.search });
+  /** The same incident in the drawer beside the queue: the in-queue peek. */
+  const peekTo = useCallback(
+    (id: string): To => ({ pathname: `${queuePath}/incidents/${encodeURIComponent(id)}`, search: incidentSearch(true) }),
+    [queuePath, incidentSearch],
+  );
+  const closeIncident = () => navigate({ pathname: queuePath, search: incidentSearch(false) });
   const selectedRow = load.phase === "ready" && selection ? load.rows.find((row) => row.operationId === selection) ?? null : null;
 
   const ready = load.phase === "ready" ? load : null;
   const page = ready?.queue.page;
+  const exceptionCount = page?.health?.openException;
+  const exceptionTabCount = exceptionCount !== undefined && exceptionCount.count !== null ? exceptionCount.count : null;
+  /** Ranges count back from the read; when the read itself is older than the shortest range the reader is told. */
+  const readIsOld = ready !== null && readAgeMs > WINDOW_MS["24H"]!;
 
   const emptyNode = ready
     ? hidden > 0
@@ -343,6 +369,7 @@ export default function OperationsV2({
       <div className="exec-ops-head">
         <div>
           <h1 className="exec-ops-title">Operations</h1>
+          <p className="exec-ops-subtitle">Commands, exceptions and audit</p>
         </div>
         {ready ? (
           <div className="exec-ops-chips">
@@ -448,31 +475,41 @@ export default function OperationsV2({
                 onClick={() => setView(v.id)}
               >
                 {v.label}
+                {/* The server's own count (FE-CAT-2), printed as received; absent or unreported draws no figure. */}
+                {v.id === "exceptions" && exceptionTabCount !== null ? <span className="exec-ops-tab-count">{number(exceptionTabCount)}</span> : null}
               </button>
             ))}
           </div>
 
           <div id="exec-ops-panel" role="tabpanel" aria-labelledby={`exec-ops-tab-${view}`}>
             {view === "exceptions" ? (
-              <div className="exec-ops-panel">
-                <h2 className="exec-ops-panel-title">Exceptions</h2>
-                <p className="exec-ops-np">
-                  <NotPublished id={FE.events}>
-                    No exceptions feed. Incidents open from their own link.
-                  </NotPublished>
-                </p>
-              </div>
+              ready ? (
+                <ExceptionsPanel rows={visible} serverCount={ready.queue.page.health?.openException} incidentTo={incidentTo} moreRows={page?.hasMore === true} />
+              ) : (
+                <div className="exec-ops-panel">
+                  <h2 className="exec-ops-panel-title">Exceptions</h2>
+                  {load.phase === "loading" ? <PanelState status="loading" /> : (
+                    <p className="exec-ops-np">
+                      <NotPublished id={FE.events}>No exceptions are shown until the queue read answers.</NotPublished>
+                    </p>
+                  )}
+                </div>
+              )
             ) : null}
 
             {view === "audit" ? (
-              <div className="exec-ops-panel">
-                <h2 className="exec-ops-panel-title">Audit</h2>
-                <p className="exec-ops-np">
-                  <NotPublished id={FE.audit}>
-                    Who did what is not shown: the audit source is unavailable.
-                  </NotPublished>
-                </p>
-              </div>
+              ready ? (
+                <AuditPanel rows={visible} onOpenOperation={(id) => url.set({ view: null, sel: id })} />
+              ) : (
+                <div className="exec-ops-panel">
+                  <h2 className="exec-ops-panel-title">Audit</h2>
+                  {load.phase === "loading" ? <PanelState status="loading" /> : (
+                    <p className="exec-ops-np">
+                      <NotPublished id={FE.audit}>Who did what is not shown: the audit source is unavailable.</NotPublished>
+                    </p>
+                  )}
+                </div>
+              )
             ) : null}
 
             {view === "commands" ? (
@@ -512,6 +549,14 @@ export default function OperationsV2({
                           {w === "ALL" ? "All time" : w}
                         </button>
                       ))}
+                    </div>
+                  </div>
+                  <div className="exec-ops-field">
+                    <span id="exec-ops-source-label">Source</span>
+                    <div className="exec-ops-seg" role="group" aria-labelledby="exec-ops-source-label">
+                      <button type="button" aria-pressed={source === ""} onClick={() => commit({ source: "" })}>All</button>
+                      <button type="button" aria-pressed={source === "commands"} onClick={() => commit({ source: "commands" })}>Commands</button>
+                      <button type="button" aria-pressed={source === "journal"} onClick={() => commit({ source: "journal" })}>Admin journal</button>
                     </div>
                   </div>
                   <Select<TriageStateV2>
@@ -573,6 +618,11 @@ export default function OperationsV2({
                 />
 
                 {urlNotices.map((text) => <p key={text} className="exec-ops-banner" role="status">{text}</p>)}
+                {readIsOld && ready ? (
+                  <p className="exec-ops-banner" role="status">
+                    This read was observed {formatAsOf(ready.queue.observedAtMs)}, more than a day ago. Ranges count back from that read, not from now.
+                  </p>
+                ) : null}
                 {notice ? <p className="exec-ops-banner" role="status">{notice}</p> : null}
                 {ready?.stale ? (
                   <p className="exec-ops-banner" role="status">
@@ -600,7 +650,16 @@ export default function OperationsV2({
                       reason={`The server answered a queue shape this build does not read (${load.schemaVersion ?? "no schema version"}). This screen reads portal.execution.operational-queue.v2 only, so nothing is shown rather than a wrong reading.`}
                     />
                   ) : null}
-                  {ready && page ? (
+                  {ready && page && source === "journal" ? (
+                    <div className="exec-ops-journal" data-state="not-published">
+                      <p className="exec-ops-np">
+                        <NotPublished id={FE.audit}>
+                          The admin journal publishes no rows. The counts above are the command queue&apos;s, and nothing here is assumed to be healthy.
+                        </NotPublished>
+                      </p>
+                    </div>
+                  ) : null}
+                  {ready && page && source !== "journal" ? (
                     <>
                       <QueueTable
                         rows={visible}
@@ -644,7 +703,7 @@ export default function OperationsV2({
         </div>
 
         {incidentOpen ? (
-          <IncidentRootDrawer api={api} incidentId={incidentId} workspaceId={workspaceId} mode={mode} onClose={closeIncident} accessHref={accessHref} />
+          <IncidentRootDrawer api={api} incidentId={incidentId} workspaceId={workspaceId} mode={mode} onClose={closeIncident} accessHref={accessHref} pageTo={incidentTo(incidentId)} />
         ) : null}
         {operationOpen && selection ? (
           <OperationDock
@@ -655,6 +714,10 @@ export default function OperationsV2({
             onClose={close}
             api={api}
             workspaceId={ready?.queue.workspaceId ?? workspaceId}
+            observedAtMs={ready?.queue.observedAtMs ?? null}
+            displayCountedAt={ready?.queue.page.health?.displayLag?.observedAt ?? null}
+            incidentTo={incidentTo}
+            peekTo={peekTo}
           />
         ) : null}
       </div>

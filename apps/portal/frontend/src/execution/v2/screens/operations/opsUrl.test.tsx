@@ -136,7 +136,7 @@ describe("window and filters in the URL (M3)", () => {
     const { calls } = mountRouted("/execution/operations?range=30d&lens=all&severity=critical&verification=uncertain&target=portfolio&environment=live&q=portfolio%2Fadjust-target-budget");
     await table();
     expect(screen.getByRole("button", { name: "30D" }).getAttribute("aria-pressed")).toBe("true");
-    expect(screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
+    expect(within(screen.getByRole("group", { name: "Lens" })).getByRole("button", { name: "All" }).getAttribute("aria-pressed")).toBe("true");
     expect((screen.getByLabelText("Severity") as HTMLSelectElement).value).toBe("CRITICAL");
     expect((screen.getByLabelText("Verification") as HTMLSelectElement).value).toBe("UNCERTAIN");
     expect((screen.getByLabelText("Target type") as HTMLSelectElement).value).toBe("PORTFOLIO");

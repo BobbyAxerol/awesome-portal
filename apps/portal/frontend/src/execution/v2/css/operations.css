@@ -564,3 +564,61 @@ span.exec-ops-link-id {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* A status flag in a row never breaks inside its own label (a wrapped flag read as two facts at 1024). */
+.exec-ops-cell .exec-flag {
+  white-space: nowrap;
+}
+
+/* ---- WP-B: tabs count, source segment, next cell, peek, journal ---------- */
+
+.exec-ops-tab-count {
+  margin-left: var(--space-2);
+  font: var(--exec-font-id);
+  color: var(--ink-soft);
+}
+.exec-ops-tab[aria-selected="true"] .exec-ops-tab-count {
+  color: var(--ink);
+}
+.exec-ops-subtitle {
+  margin: 0;
+  font: var(--exec-font-subtitle);
+  color: var(--ink-soft);
+}
+.exec-ops-linkbtn {
+  padding: 0;
+  font: var(--exec-font-id);
+  color: var(--accent);
+  text-align: left;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.exec-ops-linkbtn:hover {
+  text-decoration: underline;
+}
+.exec-ops-linkbtn:focus-visible,
+.exec-ops-link-peek:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.exec-ops-next-text {
+  font: var(--exec-font-body);
+  color: var(--ink-soft);
+}
+a.exec-ops-next-link {
+  font: var(--exec-font-body);
+  color: var(--accent);
+}
+.exec-ops-link-peek {
+  font: var(--exec-font-meta);
+  color: var(--accent);
+}
+.exec-ops-link-peek:hover {
+  text-decoration: underline;
+}
+.exec-ops-journal {
+  padding: var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+}

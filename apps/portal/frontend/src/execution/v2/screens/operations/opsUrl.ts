@@ -13,6 +13,9 @@
  *   target        account | portfolio | deployment          the target type
  *   environment   live | paper | sandbox                    an environment filter
  *   q             the command key search
+ *   source        commands | journal                       the Source segment (absent = All). It chooses what the page
+ *                                                          shows and is never forwarded to the read: every published row is
+ *                                                          an execution command, and the admin journal publishes none (FE-021)
  *
  * `range` is not the shared `window` param: that one has no 24H and defaults
  * to 90D, and the queue's own default is the last 24 hours.
@@ -46,12 +49,18 @@ export interface Filters {
 export const NO_FILTERS: Filters = { lens: "attention", triage: "", severity: "", verification: "", targetType: "", env: "", commandKey: "" };
 
 /** The URL keys this screen owns, in the order they are written. */
-export const OPS_KEYS = ["range", "lens", "state", "severity", "verification", "target", "environment", "q"] as const;
+export const OPS_KEYS = ["range", "lens", "state", "severity", "verification", "target", "environment", "q", "source"] as const;
 export type OpsKey = (typeof OPS_KEYS)[number];
+
+/** The Source segment of the hi-fi: All (absent), the command queue, or the admin journal (not published). */
+export type OpsSource = "" | "commands" | "journal";
+export const OPS_SOURCES: readonly ("commands" | "journal")[] = ["commands", "journal"];
 
 export interface OpsUrl {
   filters: Filters;
   range: OpsWindow;
+  /** Which source segment the link chose. */
+  source: OpsSource;
   /** Keys that were present and not valid; they read as the default. */
   invalid: readonly OpsKey[];
   /** V1's `filter` value, or null when the URL carries none. Never applied. */
@@ -87,8 +96,15 @@ export function readOpsUrl(params: URLSearchParams): OpsUrl {
     invalid.push("q");
     commandKey = "";
   }
+  const segmentRaw = (params.get("source") ?? "").trim().toLowerCase();
+  let source: OpsSource = "";
+  if (segmentRaw !== "") {
+    if ((OPS_SOURCES as readonly string[]).includes(segmentRaw)) source = segmentRaw as OpsSource;
+    else invalid.push("source");
+  }
   const legacy = params.get("filter")?.trim() ?? "";
   return {
+    source,
     filters: { lens, triage, severity, verification, targetType, env: env === "" ? "" : (env.toLowerCase() as ExecEnv), commandKey },
     range,
     invalid,
@@ -97,7 +113,7 @@ export function readOpsUrl(params: URLSearchParams): OpsUrl {
 }
 
 /** Writes `filters` and `range` over `base`: a default removes its key, every other param is kept. */
-export function writeOpsUrl(base: URLSearchParams, state: { filters: Filters; range: OpsWindow }): URLSearchParams {
+export function writeOpsUrl(base: URLSearchParams, state: { filters: Filters; range: OpsWindow; source?: OpsSource }): URLSearchParams {
   const next = new URLSearchParams(base);
   const put = (key: OpsKey, value: string | null) => {
     if (value === null || value === "") next.delete(key);
@@ -112,6 +128,8 @@ export function writeOpsUrl(base: URLSearchParams, state: { filters: Filters; ra
   put("target", filters.targetType === "" ? null : filters.targetType.toLowerCase());
   put("environment", filters.env === "" ? null : filters.env);
   put("q", filters.commandKey === "" ? null : filters.commandKey);
+  // The segment is rewritten only by a caller that names it; every other write keeps the param it found.
+  if (state.source !== undefined) put("source", state.source === "" ? null : state.source);
   return next;
 }
 

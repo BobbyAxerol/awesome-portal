@@ -13,6 +13,7 @@
  * the table.
  */
 import { useEffect, useState } from "react";
+import { Link, type To } from "react-router-dom";
 
 import { PanelState } from "../../../components/states";
 import type { ExecutionApi } from "../../../api/ports";
@@ -51,7 +52,7 @@ function instant(value: InstantV2 | null, absent: string) {
   return value === null ? absent : <time dateTime={value.iso} title={value.iso}>{formatAsOf(value.ms)}</time>;
 }
 
-const STATE_FLAG: Readonly<Record<IncidentStateV2, { kind: FlagKind; label: string }>> = {
+export const STATE_FLAG: Readonly<Record<IncidentStateV2, { kind: FlagKind; label: string }>> = {
   OPEN: { kind: "attention", label: "Open" },
   MITIGATED: { kind: "neutral", label: "Mitigated" },
   // A Portal record. It is never green: the source may still be diverged.
@@ -77,9 +78,11 @@ export interface IncidentRootDrawerProps {
   onClose(): void;
   /** Where "My access" lives; the footer's blocked actions and a denied read point there. */
   accessHref?: string;
+  /** The routed incident page for this id. When given, the drawer is the in-queue peek and offers "Open full page". */
+  pageTo?: To;
 }
 
-export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose, accessHref = ACCESS_PATH }: IncidentRootDrawerProps) {
+export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose, accessHref = ACCESS_PATH, pageTo }: IncidentRootDrawerProps) {
   const [load, setLoad] = useState<Load>({ phase: "loading" });
   /** The incident detail (`execution.incident-detail.v1`), when the server published it beside the root. */
   const [detail, setDetail] = useState<IncidentDetail | null>(null);
@@ -162,6 +165,7 @@ export function IncidentRootDrawer({ api, incidentId, workspaceId, mode, onClose
       actions={actions}
       priority={notPublished}
     >
+      {pageTo ? <p className="exec-ops-reason"><Link className="exec-ops-apply" to={pageTo}>Open full page</Link></p> : null}
       <ol className="exec-ops-rail" aria-label="Workflow state">
         {railFor(incident.workflowState).map((s) => (
           <li key={s.state} data-step={s.step} aria-current={s.step === "current" ? "step" : undefined}>

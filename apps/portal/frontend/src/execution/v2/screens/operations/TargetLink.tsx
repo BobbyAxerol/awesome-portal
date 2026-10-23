@@ -29,13 +29,16 @@ export interface TargetLinkProps {
   /** The environment the target lives in; a deployment is only addressable with it. */
   environment: string;
   className?: string;
+  /** Words for the link when the id is not what the reader should read ("Open obligations"); the plain-text fallback keeps the id. */
+  label?: string;
 }
 
-export function TargetLink({ type, id, environment, className }: TargetLinkProps) {
+export function TargetLink({ type, id, environment, className, label }: TargetLinkProps) {
   const [params] = useSearchParams();
-  const text = `${TARGET_LABEL[type]} ${id}`;
+  const plain = `${TARGET_LABEL[type]} ${id}`;
+  const text = label ?? plain;
   const href = targetHrefFor(type, id, environment);
-  if (href === null) return <span className={className}>{text}</span>;
+  if (href === null) return <span className={className}>{plain}</span>;
   return (
     <Link className={className} to={withContext(href, params)} onClick={stop} onKeyDown={stopActivation}>
       {text}

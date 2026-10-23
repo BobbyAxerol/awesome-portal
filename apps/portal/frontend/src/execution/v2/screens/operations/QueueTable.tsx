@@ -18,6 +18,7 @@ import type { FlagKind } from "../../flagKinds";
 import type { DeliveryStateV2, DisplayStateV2, OperationV2 } from "../../readers/operationalQueue";
 import { ENV_LABEL } from "../../urlState";
 import { IncidentLinks } from "./IncidentLinks";
+import { nextActionOf } from "./opsViews";
 import { axesText, commandLabel, receiptOutcome, severityWord, triageOutcome } from "./outcome";
 import { TargetLink } from "./TargetLink";
 
@@ -91,7 +92,7 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
       label: "Next",
       render: (row) => {
         const triage = triageOutcome(row.triageState);
-        const outcome = receiptOutcome(row.sourceStatus, row.verificationResult);
+        const action = nextActionOf(row);
         // Next is an action. The queue's default lens is already UNACKNOWLEDGED, so repeating that flag on
         // every row says nothing; the triage flag appears only when a person has already acted on the row.
         const acted = row.triageState !== "UNACKNOWLEDGED";
@@ -102,14 +103,18 @@ function columnsFor(onOpen: (row: OperationV2) => void, incidentTo: (incidentId:
         return (
           <span className="exec-ops-cell">
             {acted ? <Flag kind={triage.kind} label={triage.label} size="sm" /> : null}
-            {outcome.checkOriginal ? (
+            {action === "check-original" ? (
               <>
                 <button type="button" className="exec-ops-apply exec-ops-next" data-variant="primary" onClick={open}>Check original request</button>
                 <span className="exec-ops-meta">Do not send it again.</span>
               </>
-            ) : acted ? null : (
-              <button type="button" className="exec-ops-apply exec-ops-next" onClick={open}>Review</button>
-            )}
+            ) : null}
+            {/* The axis is published as CATCHING_UP: the figures are on their way and there is nothing for a person to do yet. */}
+            {action === "display-updating" ? <span className="exec-ops-next-text">Display updating</span> : null}
+            {action === "open-obligations" ? (
+              <TargetLink className="exec-ops-id exec-ops-next-link" type={row.targetType} id={row.targetId} environment={row.environment} label="Open obligations" />
+            ) : null}
+            {action === "review" && !acted ? <button type="button" className="exec-ops-apply exec-ops-next" onClick={open}>Review</button> : null}
           </span>
         );
       },

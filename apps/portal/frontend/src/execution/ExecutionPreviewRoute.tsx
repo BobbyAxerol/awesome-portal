@@ -66,6 +66,8 @@ const V2ExitReviewsRedirect = import.meta.env.VITE_EXECUTION_V2_SCREENS
   : null;
 const V2Cockpit = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/cockpit")) : null;
 const V2Operations = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/operations")) : null;
+// WP-B: the routed incident page. The drawer over the queue (`?peek=1`) stays the in-queue peek; the bare route is the page.
+const V2Incident = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/operations/IncidentPage")) : null;
 const V2Overview = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/overview")) : null;
 const V2Blotter = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/blotter")) : null;
 const V2Admin = import.meta.env.VITE_EXECUTION_V2_SCREENS ? lazy(() => import("./v2/screens/admin")) : null;
@@ -537,8 +539,10 @@ export function ExecutionPreviewRoute({ screenId, profile = null, policy = null,
         : <OperationsQueueContainer api={api} requestedOperation={search.get("operation")} />;
       break;
     case "EXECUTION_INCIDENT_DETAIL_SCREEN":
-      content = V2Operations && isV2Screen("ops")
-        ? <Suspense fallback={null}><V2Operations api={api} workspaceId={routeWorkspaceId} incidentId={incidentId} /></Suspense>
+      content = V2Operations && V2Incident && isV2Screen("ops")
+        ? search.get("peek") === "1" || !incidentId
+          ? <Suspense fallback={null}><V2Operations api={api} workspaceId={routeWorkspaceId} incidentId={incidentId} /></Suspense>
+          : <Suspense fallback={null}><V2Incident api={api} workspaceId={routeWorkspaceId} incidentId={incidentId} accessHref={accessHref} /></Suspense>
         : <IncidentDetailContainer api={api} incidentId={incidentId} workspaceId={routeWorkspaceId} />;
       break;
     case "EXECUTION_APPROVAL_INBOX_SCREEN":
