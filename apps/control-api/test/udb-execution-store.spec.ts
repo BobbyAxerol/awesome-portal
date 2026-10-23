@@ -58,6 +58,32 @@ describe("UDB02 actual separated domain store",()=>{
     expect(await migrateExecutionStore(target)).toMatch(/^[a-f0-9]{64}$/);
     await expect(migrateExecutionStore(core)).rejects.toThrow("EXECUTION_SCHEMA_CORE_TARGET_REFUSED");
   });
+  it("forwards151 in the isolated Execution DB without rewriting old ledgers or retained binding/history",async()=>{
+    await importRetainedStore(target,core,join(dir,"current"));
+    const forward="151.execution-binding-list-figures.v1";
+    // Reconstruct the pre151 schema only in this disposable test database.
+    // Existing retained rows and frozen131/Manager ledger entries stay intact.
+    await target.query("ALTER TABLE execution_binding_projection DROP COLUMN list_figures");
+    await target.query("DELETE FROM execution_store_migrations WHERE version=$1",[forward]);
+    const oldLedger=(await target.query("SELECT version,digest FROM execution_store_migrations ORDER BY version")).rows;
+    const binding=(await target.query("SELECT * FROM execution_binding_projection WHERE binding_id='binding_udb'")).rows;
+    const history=(await target.query("SELECT row_to_json(h)::text AS exact FROM execution_timeseries_history h ORDER BY row_id")).rows;
+    const digest=await migrateExecutionStore(target);
+    expect((await target.query("SELECT version,digest FROM execution_store_migrations WHERE version<>$1 ORDER BY version",[forward])).rows).toEqual(oldLedger);
+    expect((await target.query("SELECT digest FROM execution_store_migrations WHERE version=$1",[forward])).rows)
+      .toEqual([{digest:"15a7f258e08195256c1aa52e6b5ba140b0b1961f1472012a969d8762a8392536"}]);
+    expect((await target.query("SELECT * FROM execution_binding_projection WHERE binding_id='binding_udb'")).rows)
+      .toEqual(binding.map(row=>({...row,list_figures:null})));
+    expect((await target.query("SELECT row_to_json(h)::text AS exact FROM execution_timeseries_history h ORDER BY row_id")).rows).toEqual(history);
+    const repository=new ManagerListsRepository(target);
+    expect(await repository.binding(workspace+":paper","binding_udb")).toMatchObject({accountId:"account_udb",listFigures:undefined});
+    const ledger=(await target.query("SELECT version,digest FROM execution_store_migrations ORDER BY version")).rows;
+    expect(await migrateExecutionStore(target)).toBe(digest);
+    expect((await target.query("SELECT version,digest FROM execution_store_migrations ORDER BY version")).rows).toEqual(ledger);
+    expect(await repository.binding("ws_wrong:paper","binding_udb")).toBeNull();
+    expect((await target.query("SELECT to_regclass('portal_users') AS users,to_regclass('workspaces') AS workspaces")).rows[0])
+      .toEqual({users:null,workspaces:null});
+  });
   it("T01 rejects changed bytes/run IDs/extra authority table before writing",async()=>{
     const copy=join(dir,"bad"),contents=await readFile(join(dir,"current.ndjson"),"utf8");
     await writeFile(copy+".ndjson",contents+" ");await writeFile(copy+".manifest.json",JSON.stringify(manifest));
