@@ -182,9 +182,9 @@ let lastSignIn = false;
 export function setUsersDoubleLastSignIn(on: boolean): void {
   lastSignIn = on;
 }
-/** A fixed rule over the account's own state: an INVITED account never signed in (null); the others carry a fixed past instant. */
-function simulatedLastSignIn(row: Wire): string | null {
-  if (row.account_state === "INVITED") return null;
+/** A fixed rule: an INVITED account and every seventh account have unknown history (the key is OMITTED, never null); the others carry a fixed past instant. */
+function simulatedLastSignIn(row: Wire): string | undefined {
+  if (row.account_state === "INVITED" || Number(row.user_id.slice(-4)) % 7 === 0) return undefined;
   const day = 1 + (Number(row.user_id.slice(-4)) % 20);
   return `2026-10-${String(day).padStart(2, "0")}T09:14:00Z`;
 }
@@ -203,6 +203,11 @@ function aliasRow<T extends { user_id?: string }>(row: T): T {
   return sessionAlias !== null && row.user_id === ALIASED ? { ...row, user_id: sessionAlias } : row;
 }
 
+function withSignIn(row: Wire): Wire & { last_sign_in_at?: string } {
+  const at = simulatedLastSignIn(row);
+  return at === undefined ? row : { ...row, last_sign_in_at: at };
+}
+
 export function answerUsers(method: string, pathname: string, search: URLSearchParams): UsersAnswer | null {
   // The alias is undone on the way in (a detail read under the session id is the first account's) and applied on the way out.
   const seg = pathname.split("/").filter(Boolean);
@@ -216,7 +221,7 @@ export function answerUsers(method: string, pathname: string, search: URLSearchP
   let next: Record<string, unknown> = body as Record<string, unknown>;
   if (Array.isArray(body.accounts)) {
     // Roster reads only; the detail read and the lifecycle history keep the unextended summary.
-    next = { ...body, accounts: body.accounts.map((row) => aliasRow(lastSignIn ? { ...row, last_sign_in_at: simulatedLastSignIn(row) } : row)) };
+    next = { ...body, accounts: body.accounts.map((row) => aliasRow(lastSignIn ? withSignIn(row) : row)) };
   } else if (body.account !== undefined && body.account !== null) {
     next = { ...body, account: aliasRow(body.account) };
   }

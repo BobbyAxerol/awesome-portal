@@ -182,11 +182,11 @@ function columnsFor(me: string | null): readonly CardsColumn<AccountSummary>[] {
     {
       key: "lastSeen",
       label: "Last seen (UTC)",
-      // FE-CAT-8: a published instant prints as received; `null` is the source saying the account never signed in; an omitted
-      // field keeps the typed gap. Nothing is guessed from the lifecycle record or the revision.
-      render: (a) => a.lastSignInAt === undefined
+      // FE-CAT-8: a published instant prints as received; an omitted field (and a bare null, which the reader folds into it) is
+      // unknown and keeps the typed gap: no "Never signed in" without a published coverage statement. Nothing is guessed from the lifecycle record or the revision.
+      render: (a) => a.lastSignInAt === undefined || a.lastSignInAt === null
         ? <Inert><NaWhy reason={gapTitle(LAST_SIGN_IN_REQUEST, "Last sign-in")} gap={LAST_SIGN_IN_REQUEST} className="exec-usr-na" /></Inert>
-        : a.lastSignInAt === null ? "Never signed in" : formatInstant(a.lastSignInAt),
+        : formatInstant(a.lastSignInAt),
     },
     { key: "revision", label: "Revision", numeric: true, render: (a) => String(a.accountRevision) },
     { key: "actions", label: "Actions", render: (a) => rowActionOf(a, me) },
