@@ -105,7 +105,7 @@ import type {
 } from "./ports";
 import { isPaperExitDecision, PAPER_EXIT_EXTENSION_DAYS, unavailable, type DecisionKind, type PlanAuthority } from "./ports";
 import { DECISION_COMMANDS } from "./governanceContext";
-import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, WaiverQuery } from "./ports";
+import type { ApprovalCreateInput, ApprovalCreateOutcome, ConditionsPage, SiblingBody, WaiverQuery } from "./ports";
 import type { StageDrift } from "../hifiInsight";
 import { readOperationalComposition, type CompositionName, type OperationalComposition } from "../operationalComposition";
 import type { AlphaFleetQuery, BindingListQuery, BlotterQuery } from "./ports";
@@ -1260,11 +1260,11 @@ export function createHttpApi({ policy, signal, readScope = {} }: HttpApiOptions
       return readGet(path, (raw) => { const read = readOperationsAuditV1(raw); return read !== null && read.kind === "operations_audit" ? read.page : null; }, "The operations audit");
     },
 
-    async getSibling(id: SiblingId, params = {}) {
-      const spec = SIBLINGS[id];
+    async getSibling<K extends SiblingId>(id: K, params: Readonly<Record<string, string>> = {}): Promise<Result<SiblingBody<K>>> {
+      const spec = SIBLINGS[id] as { path: (p: Readonly<Record<string, string>>) => string | null; read: (raw: unknown) => unknown };
       const path = spec.path(params);
       if (path === null) return unavailable(`The ${id} request was not valid (an id the Portal accepts is required), so it was not sent.`);
-      return readGet(path, (raw) => run(spec.read, raw), `The ${id} read`);
+      return readGet(path, (raw) => run(spec.read as never, raw) as SiblingBody<K> | null, `The ${id} read`) as Promise<Result<SiblingBody<K>>>;
     },
 
     async markVisitDigestSeen(workspaceId, cutRevision) {

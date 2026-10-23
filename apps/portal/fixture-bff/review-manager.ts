@@ -983,6 +983,7 @@ function datasetAnswer(method: string, path: string, search: URLSearchParams, pr
   if (windowName !== null) applyWindow(body, windowName, windowPreset);
   addGroupScores(body, groups, windowName); // SIMULATED score keys (register 2c), after the window so ALL stays a gap
   addWpF1(body, groups); // WP-F1: capital statement keys and allocation shares (register 2f1)
+  wpkStageEntry(body); // WP-K: FIXTURE_LAB stage entry (register 2k2), the single-environment reads only
   const groupQuery = wpkGroupQuery(body, search, groups);
   if (groupQuery !== null) return groupQuery; // WP-K slice 6: a 400 for a malformed or unsupported group query
   if (Buffer.byteLength(JSON.stringify(body)) > body.query_policy.maximum_response_bytes) return problem(400, "MANAGER_REVIEW_RESPONSE_TOO_LARGE", "Reduce limit/grouping for this bounded review response.");
@@ -1488,24 +1489,6 @@ function wpkPortfolioHealth(method: string, path: string, search: URLSearchParam
   return { status: 200, body };
 }
 
-/* ---- Stage entry (A->K): `stage_lifecycle.entry_time` STAGE_TRANSITION_SOURCE_PUBLISHED, `unavailable_fields` empty, and per row `entered_at_ms` /
- * `days_in_stage` for a row with ONE current stage. FIXTURE_LAB: 1 to 45 whole days, the entry instant a deterministic offset (under one day) older, so
- * `days_in_stage == floor((as_of_ms - entered_at_ms) / 86400000)` holds exactly. One row in nine keeps the typed absence (coverage is per row). */
-function wpkStageEntry(body: Draft): void {
-  body.stage_lifecycle = { ...body.stage_lifecycle, entry_time: "STAGE_TRANSITION_SOURCE_PUBLISHED" };
-  body.query_options.unavailable_fields = [];
-  const day = 86_400_000;
-  for (const row of body.items as Draft[]) {
-    const reasons = row.stage_lifecycle_reasons ?? {};
-    if (row.current_stage === null || row.current_stage === undefined) { row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
-    const seed = seedOf(row.row_key, "wpk-stage-entry");
-    if (seed % 9 === 0) { row.entered_at_ms = null; row.days_in_stage = null; row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
-    const days = 1 + (seed % 45);
-    row.entered_at_ms = body.as_of_ms - days * day - ((seed >>> 8) % day);
-    row.days_in_stage = days;
-    row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: null, days_in_stage: null };
-  }
-}
 
 /* ---- Sibling reads (second pass, GAP-3 4 5 6 7 9 11 12 13 14 15 16), FIXTURE_LAB. Each answer is deterministic per id (FNV digest) and follows the slice-2 rule:
  * about one id in seven answers every section null (source not read), one in seven omits them (no owning source), the rest publish. Registered in the
@@ -1723,5 +1706,24 @@ function wpkSiblings(method: string, path: string, search: URLSearchParams, requ
     }) })));
   }
   return null;
+}
+
+/* ---- Stage entry (A->K): `stage_lifecycle.entry_time` EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED, `unavailable_fields` empty, and per row `entered_at_ms` /
+ * `days_in_stage` for a row with ONE current stage. FIXTURE_LAB: 1 to 45 whole days, the entry instant a deterministic offset (under one day) older, so
+ * `days_in_stage == floor((as_of_ms - entered_at_ms) / 86400000)` holds exactly. One row in nine keeps the typed absence (coverage is per row). */
+function wpkStageEntry(body: Draft): void {
+  body.stage_lifecycle = { ...body.stage_lifecycle, entry_time: "EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED" };
+  body.query_options.unavailable_fields = [];
+  const day = 86_400_000;
+  for (const row of body.items as Draft[]) {
+    const reasons = row.stage_lifecycle_reasons ?? {};
+    if (row.current_stage === null || row.current_stage === undefined) { row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
+    const seed = seedOf(row.row_key, "wpk-stage-entry");
+    if (seed % 9 === 0) { row.entered_at_ms = null; row.days_in_stage = null; row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" }; continue; }
+    const days = 1 + (seed % 45);
+    row.entered_at_ms = body.as_of_ms - days * day - ((seed >>> 8) % day);
+    row.days_in_stage = days;
+    row.stage_lifecycle_reasons = { ...reasons, entered_at_ms: null, days_in_stage: null };
+  }
 }
 // ===== WP-K end

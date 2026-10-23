@@ -12,7 +12,9 @@ import { createHttpApi } from "../execution/api/httpApi";
 import type { ExecutionApi } from "../execution/api/ports";
 import type { DeliveryPolicy } from "../execution/profile";
 import { disposeSchemaCheck, violationsOf } from "./schemaCheck";
-import { run } from "../execution/v2/readers/strictRead";
+import { run as runStrict } from "../execution/v2/readers/strictRead";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const run = runStrict as (reader: unknown, raw: unknown) => any;
 import { SIBLINGS, type SiblingId } from "../execution/v2/readers/siblings.generated";
 
 const OPEN: DeliveryPolicy = { policyRevision: 4, queryEnabled: true, projectionIngestionEnabled: false, sseEnabled: false,
@@ -351,42 +353,6 @@ describe("WP-K FIXTURE_LAB: portfolio health roll-up", () => {
   });
 });
 
-describe("WP-K FIXTURE_LAB: stage entry on the Manager datasets", () => {
-  const fleet = (extra: Record<string, string> = {}): Body => {
-    prepare();
-    return answerReviewManager("GET", "/api/v1/execution/manager/fleet", new URLSearchParams({ environment: "paper", limit: "100", window: JSON.stringify("30D"), ...extra }), "populated");
-  };
-  it("the single-environment reads publish the entry time: policy, empty unavailable_fields, and exact day arithmetic on every covered row", () => {
-    const result = fleet();
-    expect(result.status).toBe(200);
-    expect(violationsOf({ file: "execution-manager-dataset.v1", ptr: "" }, result.body).violations).toEqual([]);
-    const body = result.body;
-    expect(body.stage_lifecycle.entry_time).toBe("STAGE_TRANSITION_SOURCE_PUBLISHED");
-    expect(body.query_options.unavailable_fields).toEqual([]);
-    const withStage = (body.items as Body[]).filter((row) => row.current_stage);
-    expect(withStage.length).toBeGreaterThan(5);
-    const covered = withStage.filter((row) => row.entered_at_ms !== null);
-    const uncovered = withStage.filter((row) => row.entered_at_ms === null);
-    expect(covered.length).toBeGreaterThan(0);
-    expect(uncovered.length).toBeGreaterThan(0); // coverage is per row: some rows keep the typed absence
-    for (const row of covered) {
-      expect(row.days_in_stage).toBe(Math.floor((body.as_of_ms - row.entered_at_ms) / 86_400_000));
-      expect(row.stage_lifecycle_reasons).toMatchObject({ entered_at_ms: null, days_in_stage: null });
-    }
-    for (const row of uncovered) expect(row.stage_lifecycle_reasons).toMatchObject({ entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" });
-    expect(fleet()).toEqual(result);
-  });
-  it("the strict reader accepts it through the unmodified HTTP port and says the entry time is published", async () => {
-    const api = client();
-    const parsed = await api.getManagerDataset({ surface: "FLEET", environment: "paper", window: "30D", limit: 100 });
-    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
-    if (parsed.ok) {
-      expect(parsed.value.stageEntryPublished).toBe(true);
-      expect(parsed.value.items.some((row) => row.daysInStage !== null)).toBe(true);
-    }
-  });
-});
-
 describe("WP-K FIXTURE_LAB: the fifteen sibling reads", () => {
   const route = (path: string, query: Record<string, string> = {}, method = "GET", body: unknown = null): Body => {
     prepare();
@@ -489,7 +455,7 @@ describe("WP-K FIXTURE_LAB: the fifteen sibling reads", () => {
 });
 
 describe("WP-K FIXTURE_LAB: order fee rule and funnel", () => {
-  const order = (id: string): Body => { prepare(); return answerReviewManager("GET", `/api/v1/execution/orders/${id}/detail`, new URLSearchParams(), "populated").body; };
+  const order = (id: string): Body => { prepare(); return answerReviewManager("GET", `/api/v1/execution/orders/${id}/detail`, new URLSearchParams(), "populated")!.body as Body; };
   it("a fee is never defaulted to 0: it is the exact figure in one currency, or absent with its reason; never both; an order with no fills has filled_quantity 0 and no fee", () => {
     const seen = new Set<string>();
     for (let i = 0; i < 60; i += 1) {
@@ -505,12 +471,48 @@ describe("WP-K FIXTURE_LAB: order fee rule and funnel", () => {
   it("the funnel never grows along its steps and the buckets include Working, Conditional and Cancelled", () => {
     prepare();
     for (const environment of ["paper", "sandbox", "live"]) {
-      const b = answerReviewManager("GET", "/api/v1/execution/blotter/summary", new URLSearchParams({ environment }), "populated").body;
+      const b = answerReviewManager("GET", "/api/v1/execution/blotter/summary", new URLSearchParams({ environment }), "populated")!.body as Body;
       if (!b.funnel) continue;
       expect(b.funnel.filled).toBeLessThanOrEqual(b.funnel.venue_acknowledged);
       expect(b.funnel.venue_acknowledged).toBeLessThanOrEqual(b.funnel.risk_granted);
       expect(b.funnel.risk_granted).toBeLessThanOrEqual(b.funnel.submitted);
       expect((b.status_buckets as Body[]).map((x) => x.bucket)).toEqual(expect.arrayContaining(["WORKING", "CONDITIONAL", "CANCELLED"]));
+    }
+  });
+});
+
+describe("WP-K FIXTURE_LAB: stage entry on the Manager datasets", () => {
+  const fleet = (extra: Record<string, string> = {}): Body => {
+    prepare();
+    return answerReviewManager("GET", "/api/v1/execution/manager/fleet", new URLSearchParams({ environment: "paper", limit: "100", window: JSON.stringify("30D"), ...extra }), "populated");
+  };
+  it("the single-environment reads publish the entry time: policy, empty unavailable_fields, and exact day arithmetic on every covered row", () => {
+    const result = fleet();
+    expect(result.status).toBe(200);
+    expect(violationsOf({ file: "execution-manager-dataset.v1", ptr: "" }, result.body).violations).toEqual([]);
+    const body = result.body;
+    expect(body.stage_lifecycle.entry_time).toBe("EXACT_SNAPSHOT_TRANSITION_WHEN_PUBLISHED");
+    expect(body.query_options.unavailable_fields).toEqual([]);
+    const withStage = (body.items as Body[]).filter((row) => row.current_stage);
+    expect(withStage.length).toBeGreaterThan(5);
+    const covered = withStage.filter((row) => row.entered_at_ms !== null);
+    const uncovered = withStage.filter((row) => row.entered_at_ms === null);
+    expect(covered.length).toBeGreaterThan(0);
+    expect(uncovered.length).toBeGreaterThan(0); // coverage is per row: some rows keep the typed absence
+    for (const row of covered) {
+      expect(row.days_in_stage).toBe(Math.floor((body.as_of_ms - row.entered_at_ms) / 86_400_000));
+      expect(row.stage_lifecycle_reasons).toMatchObject({ entered_at_ms: null, days_in_stage: null });
+    }
+    for (const row of uncovered) expect(row.stage_lifecycle_reasons).toMatchObject({ entered_at_ms: "STAGE_ENTRY_TIME_NOT_PUBLISHED", days_in_stage: "STAGE_ENTRY_TIME_NOT_PUBLISHED" });
+    expect(fleet()).toEqual(result);
+  });
+  it("the strict reader accepts it through the unmodified HTTP port and says the entry time is published", async () => {
+    const api = client();
+    const parsed = await api.getManagerDataset({ surface: "FLEET", environment: "paper", window: "30D", limit: 100 });
+    expect(parsed.ok, JSON.stringify(parsed)).toBe(true);
+    if (parsed.ok) {
+      expect(parsed.value.stageTimingPublished).toBe(true);
+      expect(parsed.value.items.some((row) => row.daysInStage !== null)).toBe(true);
     }
   });
 });

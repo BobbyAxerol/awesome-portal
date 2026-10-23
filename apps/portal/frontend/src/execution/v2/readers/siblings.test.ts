@@ -2,7 +2,9 @@
 import { describe, expect, it } from "vitest";
 import { loadCanonical } from "../testkit/loadCanonical";
 import { validateAgainst } from "../testkit/schema";
-import { run, FAIL } from "./strictRead";
+import { run as runStrict, FAIL } from "./strictRead";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const run = runStrict as (reader: unknown, raw: unknown) => any;
 import * as S from "./strictRead";
 import { SIBLINGS, type SiblingId } from "./siblings.generated";
 

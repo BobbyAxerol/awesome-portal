@@ -30,7 +30,9 @@ export const FIXTURE_ALL_ENVIRONMENTS_CASES = "execution-manager-dataset.all-env
 /** BE-P1: the negative cases MD-1..MD-8 as operations on FIXTURE_PARTITIONS (not a `.valid.json`, so not a dataset body). */
 export const FIXTURE_INVARIANT_CASES = "execution-manager-dataset.invariants.synthetic.negative.json";
 export const FIXTURE_METRIC = "execution-manager-metric.derived-reasons.synthetic";
-export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL, FIXTURE_PARTITIONS, FIXTURE_LIFECYCLE_LIVE, FIXTURE_ALL_ENVIRONMENTS] as const;
+/** Codex 82947ceb2: a dataset whose producer binds exact snapshot transitions (the entry time is published for the row a transition fact binds). */
+export const FIXTURE_STAGE_TRANSITIONS = "execution-manager-dataset.lifecycle.transitions.synthetic";
+export const DATASET_FIXTURES = [FIXTURE_EMPTY, FIXTURE_ROWS, FIXTURE_ALL, FIXTURE_PARTITIONS, FIXTURE_LIFECYCLE_LIVE, FIXTURE_ALL_ENVIRONMENTS, FIXTURE_STAGE_TRANSITIONS] as const;
 
 export const clone = <T,>(value: T): T => structuredClone(value);
 

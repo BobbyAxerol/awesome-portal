@@ -451,7 +451,7 @@ function readQueryOptions(raw: unknown): ManagerQueryOptions | null {
   if (!isConst(options.stage_environment, stageEnvironment)) return null;
 
   // BE-P4: `current_stage` is published; the two entry-time fields are the ones the contract cannot publish, in this order.
-  // The legacy pin lists both entry-time fields as unavailable; a producer that publishes stage timing lists none (cross-checked with `stage_lifecycle.entry_time` in readDataset).
+  // Both entry-time fields listed as unavailable (the legacy pin, and the published timing fixture), or none (a producer that states timing for every row).
   if (!Array.isArray(options.unavailable_fields) || (options.unavailable_fields.length !== 2 && options.unavailable_fields.length !== 0)) return null;
   const unavailableFields: { field: "days_in_stage" | "entered_at_ms"; reasonCode: typeof STAGE_ENTRY_TIME_NOT_PUBLISHED }[] = [];
   const expected = [["days_in_stage", STAGE_ENTRY_TIME_NOT_PUBLISHED], ["entered_at_ms", STAGE_ENTRY_TIME_NOT_PUBLISHED]] as const;
@@ -907,9 +907,9 @@ function readDataset(root: Record<string, unknown>): ManagerDataset | null {
   const queryOptions = readQueryOptions(root.query_options);
   const page = readPage(root.page);
   if (quality === null || selectedWindow === undefined || queryOptions === null || page === null) return null;
-  // ST-1: the policy and the options say the same thing about stage timing: published leaves no field unavailable, and the legacy pin lists both.
+  // Stage timing: the policy value says the producer binds exact snapshot transitions. The published fixture still lists both entry-time fields beside it and the
+  // producer may list none; the two are read independently (no tie is invented), and each ROW says whether a transition bound.
   const stageTimingPublished = stageLifecycle.entry_time === STAGE_TIMING_PUBLISHED;
-  if (stageTimingPublished !== (queryOptions.unavailableFields.length === 0)) return null;
   // FE-CAT-3: the coverage list belongs to ALL and only to ALL; an ALL body carries no window (a window resolves against ONE cutoff).
   const groupQuery = Object.prototype.hasOwnProperty.call(root, "group_query") ? readGroupQuery(root.group_query) : undefined;
   if (groupQuery === null) return null;
