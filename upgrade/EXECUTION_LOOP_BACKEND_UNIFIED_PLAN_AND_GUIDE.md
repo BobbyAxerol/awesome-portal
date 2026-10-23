@@ -32933,3 +32933,88 @@ binding. Reuse the already delivered single request; no guessed URL/grant,
 new phase, generic reapproval or replay of retired accepted specimens. Connected
 08/09 and production capacity stay NOT_MET; independent approved implementation
 may continue whenever that exact input arrives.
+
+<a id="epg10-08-adapter-contract-intake-20261023"></a>
+### Original08/09 — independent producer-contract intake,23Oct
+
+**BOBBY_APPROVED / EXECUTING_CONTRACT_INTAKE; source basef01d925a.** Implement
+and test each concrete adapter as soon as its own producer contract is accepted;
+neither waits for the other. Scope/guides remain the preceding08/09 entry and
+[single request§7](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md#7-23oct-two-executable-contracts-original0809).
+No new phase, accepting fixture, role/session, operational DB/auth/TLS, deployment,
+command/Live action or repeated retired specimen. Preserve all peer WIP.
+
+**Actual intake before coding:** Core canonical2a89e6d0 and cumulative return
+941be9da remain unchanged. Checked newer Claude backend/contract delta at
+beed0225e; current-policy transport is not published by its economic/UI helpers.
+Core read-scope/current-human wire hashesfc9440e5/4b24d455 remain unchanged.
+PM advanced tofb9de674 (original registry/financial/restrictive-state preparation)
+with active owner WIP, not a publication proof/APPLIED contract. Its exporter
+68577ab8 and endpointbf1d421d remain byte-identical and explicitly disclaim those
+facilities; updated PM return6e1a3863 contains FIX-01 implementation, no§7.3 ACK.
+
+**Runnable/blocked partition and validation:** refresh the existing public
+request's consumer pins and independent response checkpoints; deliver byte/hash
+equal to the SAME Core/PM request paths, not another ledger or framework.
+Verify links/diff/tracking and preserve producer indices/source. Each accepted
+route/schema/custody/canonical vector immediately opens its corresponding Rust
+adapter/negative tests under the already approved gates. Both adapter source
+changes are currently blocked by their OWN unpublished wire, not runtime/image
+readiness. Rollback only the public coordination delta; no test apparatus needed.
+Delivery receipts and final recorded status follow;08/09 connected remainsNOT_MET.
+
+**16:56UTC recorded result — REQUEST_DELIVERED_NOT_OWNER_ACCEPTED.** Existing
+request now has7.5, raw SHA256
+`d007c0317999368c740b326d5d3897c51c2750aa94cccfe6ecdf9a5ed68aa938`.
+Exact bytes verified at all three paths:
+
+- Edge canonical request linked above.
+- Core SGP `/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md`;
+  updated only the existing request and coordination intake near Core Unified
+  line15273. No Core source/index/commit, frontend, sync ledger or runtime edit.
+- TS/PM HK `/home/bobby/.worktrees/trading-system-pm-v1_1/upgrade/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md`;
+  updated only the same mirror and existing PM main-plan intake near94306.
+  PM's owner WIP/index/commits remain theirs; delivery is not their ACK.
+
+Core request had the earlier uncommitted section7; mapped diff/hash guard used
+that exact79b6dc10 input, not its older Git blob. Guarded preflight initially
+refused one quoting error and a journal start-of-file hunk; corrected by exact
+hash comparison/current line context, then full two-path preflight/apply PASS.
+No partial application or unrelated file overwrite. Core final owner-return
+still941be9da; newer Claude full pin
+beed0225ebe141157b81cb1e3c14a04c9c9a08b0 changes in-process population/authority
+composition, not a transferable current-policy wire. PM exporter hashes remain
+68577ab8/bf1d421d despite new command prelude commits. Neither requested wire
+is accepted or implementable against an actual schema today.
+
+**Verification:** Edge and Core tracking reconciliation terminal PASS;
+three-copy byte/hash agreement, explicit links/anchors, Edge/Core/PM diff checks
+and three peer source/guide hashes PASS. R0 Markdown intake only;0new Rust/PG/
+security tests, no inherited396 counted as a new run. Normal landing/release
+gate NOT_RUN, no executable changed.0new/reused subagents (small shared-document
+coordination, one writer),0hostedCI minutes/push/merge. Local coherent R0 commit
+contains only owned Edge request/journal, not producer WIP.
+
+**Runtime/cleanup reconciliation:**0test/scratch/image/container/role/session/
+DB/listener resources created on HK or SGP; cleanupNO_ACTION_NEEDED, no shared
+prune. Read-only HK inventory116images/93containers/100volumes/607BuildKit
+records70.73GB retained; root free165261594624B/69%used, no reclamation claim.
+Canonical Portal54c6f5f3/path+branch and all seven feature worktrees remain as
+listed in the preceding qualification; owned branchfeat/execution-edge-upgrade-v1_2
+sourcebasef01d925a. HK ten-service image/config set remains Edge/workerd6aa7a51,
+Proxy aa14e21c, native28ea3958, releasea9b10385, nativev1.0.0-9e7d3455; rollback
+6180b9bf/cd79e9c6/98a191c7 retained. Existing Paper worker now11554autonomous
+restarts, other nine0; no manual restart or healthy-runtime qualification.
+SGP stable/dev/provider28445 untouched/not requalified.
+
+**Exact unblock / next action:** Core/Claude returns7.2 contract/schema/custody
+or compatible CHANGE in the cumulative Core return; Core/Codex reviews it.
+TS/PM returns7.3 attestation/revalidation+receiver-APPLIED ACK/status contract
+or concrete compatible CHANGE in its existing owner return. Both now have the
+same updated consumer pin and independent checkpoints; no runtime window or
+joint response is requested. Either real accepted contract immediately releases
+its own concrete Edge adapter+negatives, still in08/09 and without reapproval.
+Neither adapter was written against guessed routes/grants/ACKs here; both remain
+NOT_IMPLEMENTED, new binary routes503, connected08/09NOT_MET. No runnable owned
+intake/delivery work remains; remaining producer coordination is explicit, not
+reported as adapter completion or phase closure.

@@ -317,3 +317,31 @@ runs focused security/protocol/PG tests where impacted and returns source pins
 plus honest readiness. Only after artifacts/trust are actually ready do owners
 agree a fresh finite installation/acceptance window. Full08/09 stays NOT_MET.
 Delivery of this request is not an owner ACK, accepted wire or connected PASS.
+
+### 7.5 Immediate independent return checkpoints —23Oct intake refresh
+
+Bobby has explicitly told Edge to consume each contract and implement/test its
+Rust adapter immediately, without waiting for the other producer. Consumer
+source is now `feat/execution-edge-upgrade-v1_2@f01d925a3bd44fa64106fc238e39c7ef6245e19a`;
+396 isolated Rust PASS, not a commissioned source or connected acceptance.
+This is the SAME CORE-03/04/06 request; sections7.2/7.3 remain OPEN.
+
+Observed at the current intake, not inferred from old chat:
+
+| Producer | Current source observation | Required independent next return |
+| --- | --- | --- |
+| Core/Claude, reviewed by Core/Codex | Canonical2a89e6d0, newer Claudebeed0225e backend changes reviewed; canonical read-scopefc9440e5/current-human4b24d455 and cumulative return941be9da unchanged. No published current authorized-view transport. | Respond to7.2 in the existing cumulative Core return now: CONTRACT_ACCEPTED with actual method/path/version, schemas/canonical vectors, original resolve/recheck custody, current revision and trust/bounds; or minimal CHANGE with the concrete compatible alternative and owner action. Source-only delivery is sufficient to begin Edge implementation. |
+| TS/PM | Sourcefb9de674; current FIX-01 owner return6e1a3863. Exporter68577ab8/endpointbf1d421d explicitly still exclude source-proof/APPLIED ACK. New command-writer preparation is not that wire. | Respond to7.3 in existing PM owner return now: CONTRACT_ACCEPTED with attestation/revalidation and same-original receiver-APPLIED ACK/status schema/canonical vectors/custody; or minimal CHANGE naming the exact missing producer implementation and its next deliverable. Do not pass storage/native numeric ACK off as receiver APPLIED. |
+
+Do not report DELIVERED merely because this request was copied. Producer's
+reply must cite7.2 OR7.3 and state its actual accepted version/source/hash,
+owner and concrete next checkpoint. No joint acceptance, runtime-ready image,
+P22/Manager/G2, expired window or generic approval is required to publish an
+individual contract. Existing producer business/current-COMMIT fences remain.
+
+Edge will review either actual return independently, implement only that
+concrete consumer and run its focused negatives. The other adapter stays
+uncommissioned; four new binary routes remain503 until real authority and
+source bindings qualify. No invented URL/grant/ACK, new SQL/ledger, source
+activation or silent whole-phase closure is authorized by this follow-up.
+
