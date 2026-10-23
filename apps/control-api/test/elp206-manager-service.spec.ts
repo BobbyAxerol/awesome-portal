@@ -32,7 +32,7 @@ describe("ELP2-06 service admission and final authority fences (synthetic adapte
   });
   it("closed query/workspace checks happen before projection metadata or population",async()=>{
     const f=fixture();
-    for(const query of [{environment:"ALL"},{environment:"paper",sql:"SELECT"},{environment:"paper",limit:201},{environment:"paper",workspace_id:"other"}])
+    for(const query of [{environment:"EVERYWHERE"},{environment:"paper",sql:"SELECT"},{environment:"paper",limit:201},{environment:"paper",workspace_id:"other"}])
       await expect(f.model.read(f.principal,"FLEET",query)).rejects.toMatchObject({code:"EXECUTION_READ_NOT_AVAILABLE"});
     expect(f.repository.head).not.toHaveBeenCalled();expect(f.repository.document).not.toHaveBeenCalled();
   });

@@ -581,6 +581,10 @@ TRACKED = (
     "fixtures/execution-command-apply-attempt.none.valid.json",
     "fixtures/execution-command-apply-attempt.found.valid.json",
     "fixtures/execution-command-apply-attempt.conflict.valid.json",
+    # FE-CAT-3 (2026-10-23): the Fleet ALL lens, `environment: ALL` (navigation across environments, no cross-environment sum).
+    "tooling/execution-manager-all-fixtures.mjs",
+    "fixtures/execution-manager-dataset.all-environments.synthetic.valid.json",
+    "fixtures/execution-manager-dataset.all-environments.synthetic.negative.json",
     "package.json",
 )
 

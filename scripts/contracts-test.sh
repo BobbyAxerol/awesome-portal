@@ -148,6 +148,7 @@ cp -a "${ROOT_DIR}/apps/control-api/src/execution-v2/foundation.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-series-publication.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-series.contract.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-lifecycle.ts" \
+  "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-all-scope.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/manager-score.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-catalogue.ts" \
   "${ROOT_DIR}/apps/control-api/src/execution-v2/publication-source.generated.ts" \

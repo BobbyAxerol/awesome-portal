@@ -8,6 +8,7 @@ import ts from 'typescript';
 import { amendManagerP1Schemas, describeCanonicalDecimals, managerCurrentOnlyProblem } from './execution-manager-p1-semantics.mjs';
 import { amendManagerLifecycleSchemas, attachManagerLifecycleSynthetic,
   managerLifecycleLiveSyntheticFixture } from './execution-manager-lifecycle-semantics.mjs';
+import { managerAllEnvironmentsSyntheticFixture, managerAllEnvironmentsNegativeFixture, amendManagerAllSchemas } from './execution-manager-all-fixtures.mjs';
 import { managerP1NoFactsSyntheticOptions, attachManagerP1SyntheticOptions,
   managerP1AllWindowSyntheticFixture, managerP1PartitionsSyntheticFixture, managerP1InvariantNegativeFixture,
   applyManagerP1Ops } from './execution-manager-p1-fixtures.mjs';
@@ -85,6 +86,7 @@ const queryDecimal=json(contract.managerMetric).properties.value.anyOf.find(s=>s
 amendManagerP1Schemas({response:schemas.ManagerDataset,query:schemas.ManagerDatasetQuery,
   metric:schemas.ManagerMetric,row:schemas.ManagerDatasetRow,
   options:schemas.ManagerQueryOptions,selectedWindow:schemas.ManagerSelectedWindow,queryDecimal});
+amendManagerAllSchemas({response:schemas.ManagerDataset,query:schemas.ManagerDatasetQuery,row:schemas.ManagerDataset.properties.items.items});
 // MD-5 (owner decision C): the response decimals are canonical-zero; the rule text sits next to the pattern.
 const canonicalDecimal={pattern:invariants.MANAGER_CANONICAL_DECIMAL_PATTERN.source,note:invariants.MANAGER_CANONICAL_ZERO_NOTE};
 for(const schema of [schemas.ManagerDataset,schemas.ManagerMetric,schemas.ManagerDatasetRow])describeCanonicalDecimals(schema,canonicalDecimal);
@@ -98,7 +100,7 @@ Object.assign(schemas,{ManagerScoreRevisionQuery:json(revisions.managerScoreRevi
 const routes = [['fund-overview','FundOverview'],['fleet','Fleet'],['portfolios/{id}/overview','Portfolio360'],['alphas/{id}/overview','Alpha360'],['accounts/{id}/overview','Account360'],['deployments/{id}/overview','Deployment360']];
 const paths = Object.fromEntries(routes.map(([route,operation]) => ['/api/v1/execution/manager/' + route, { get: {
   operationId: 'executionManager' + operation + 'GetV1', security: [{ PortalSession: [] }],
-  description: 'Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. ALL cross-profile navigation remains the separate existing stage-union API; this API pins one economic profile.',
+  description: 'Scoped qualified projection only. Current grants precede financial filtering/grouping/counts. Exact decimals, UTC milliseconds. No browser source/SQL/credential inputs. TEST_ONLY is never product authority. environment=ALL (Fleet only) is NAVIGATION across separately authorized environments: authorized rows of each environment with its own economic partitions, one cursor over one snapshot, per-environment coverage, and never a total over environments or partitions. Any other read pins one economic profile.',
   parameters: [...(route.includes('{id}') ? [{ name:'id', in:'path', required:true, schema:{type:'string',minLength:1,maxLength:256} }] : []),
     ...Object.entries(query.properties).map(([name,schema]) => ({ name, in:'query', required:query.required.includes(name),
       ...(['filters','sort','economic_partition','window'].includes(name) ? { content: { 'application/json': { schema } } } :
@@ -185,6 +187,18 @@ for(const [name,context] of [
       if(!invariants.managerResponseDecimal.safeParse(emitted).success) throw new Error('Canonical zero example is not a response decimal: '+emitted);
     }
     outputs['fixtures/execution-manager-dataset.invariants.synthetic.negative.json']=negative;
+    // FE-CAT-3: the Fleet ALL lens (separately labelled environments, no cross-environment sum). The generator proves the positive
+    // example is accepted and that every negative case is refused by the producer with the stated code before it writes either file.
+    const allEnvironments=managerAllEnvironmentsSyntheticFixture(sample);
+    contract.managerDatasetResponse.parse(allEnvironments.value);
+    outputs['fixtures/execution-manager-dataset.all-environments.synthetic.valid.json']=allEnvironments;
+    const allNegative=managerAllEnvironmentsNegativeFixture();
+    for(const c of allNegative.cases){
+      const refused=contract.managerDatasetResponse.safeParse(applyManagerP1Ops(allEnvironments.value,c.ops));
+      if(refused.success || !refused.error.issues.some(i=>i.message===c.code || i.code===c.code))
+        throw new Error('Negative ALL fixture case is not refused with its code: '+c.id);
+    }
+    outputs['fixtures/execution-manager-dataset.all-environments.synthetic.negative.json']=allNegative;
     const lifecycle=managerLifecycleLiveSyntheticFixture(sample);
     contract.managerDatasetResponse.parse(lifecycle.value);
     outputs['fixtures/execution-manager-dataset.lifecycle.live.synthetic.valid.json']=lifecycle;

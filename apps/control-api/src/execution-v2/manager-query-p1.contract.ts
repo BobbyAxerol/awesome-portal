@@ -103,14 +103,16 @@ export type ManagerP1Options = z.infer<typeof managerP1Options>;
 export function validateManagerP1Response(v: {
   environment: string; query_options: Pick<ManagerP1Options, "metric_keys">;
   selected_window: ManagerSelectedWindow | null;
-  items: Array<{ metrics: Record<string, unknown>; stage_presence: string[]; children: Array<{ stage: string }> }>;
+  items: Array<{ environment?: string; metrics: Record<string, unknown>; stage_presence: string[]; children: Array<{ stage: string }> }>;
   scores: { raw: { status: string; reason_code?: string }; direct_nav: { status: string; reason_code?: string };
     composition: { status: string; reason_code?: string }; reason_code: string };
 }, c: z.RefinementCtx): void {
   const expected = v.query_options.metric_keys;
-  const stages = v.environment === "paper" ? ["PAPER"] : v.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
+  const stagesOf = (environment: string) => environment === "paper" ? ["PAPER"] : environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
   for (let i = 0; i < v.items.length; i++) {
     const row = v.items[i], actual = Object.keys(row.metrics);
+    // FE-CAT-3: an ALL row is judged against ITS OWN environment's stages (a row without one has no stage to be judged by: refused there).
+    const stages = stagesOf(v.environment === "ALL" ? row.environment ?? "" : v.environment);
     const expectedSet = new Set<string>(expected);
     if (actual.length !== expected.length || actual.some(key => !expectedSet.has(key)))
       c.addIssue({ code: z.ZodIssueCode.custom, path: ["items", i, "metrics"], message: "MANAGER_METRIC_KEYS_MISMATCH" });

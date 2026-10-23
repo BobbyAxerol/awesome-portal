@@ -12,6 +12,7 @@ import { managerRegimePublication } from "./manager-regime-publication.contract"
 export { managerRegimePublication } from "./manager-regime-publication.contract";
 import { managerStageLifecycleReasons, managerStageLifecyclePolicy, validateManagerLifecycle } from "./manager-lifecycle";
 import { managerSeriesPublication, validateManagerSeriesPublications } from "./manager-series-publication.contract";
+import { validateManagerAllScope, MANAGER_ALL_REASONS } from "./manager-all-scope";
 
 // MD-S1 (DEBT-UXM07-004): the reader's display-safety rules are enforced when a dataset is EMITTED (manager-dataset-invariants.ts),
 // never here: this document schema is also what original custody parses, and custody must keep accepted source identifier bytes
@@ -31,6 +32,8 @@ export const managerTuple = z.object({ alpha_id: text, alpha_version_id: text, p
   deployment_id: text, account_id: text }).strict();
 export const managerPartition = z.object({ economic_domain: z.enum(["ACTUAL", "PAPER", "SANDBOX"]),
   currency: text, basis: text, native_profile_ref: text, domain_proof_ref: text }).strict();
+/** FE-CAT-3: `ALL` is NAVIGATION across separately authorized environments (Fleet only), never a consolidated money scope. */
+export const managerEnvironmentScope = z.enum(["paper", "sandbox", "live", "ALL"]);
 export const managerQuality = z.object({ completeness: z.enum(["COMPLETE", "PARTIAL", "UNRESOLVED"]),
   freshness: z.enum(["FRESH", "STALE", "UNKNOWN"]), reasons: z.array(text).max(32) }).strict();
 // A derived metric preserves the source reasons and adds bounded derivation
@@ -98,7 +101,7 @@ export const managerModelDocument = z.object({ schema_version: z.literal("portal
 });
 const filter =z.object({ field: managerScalar, op: z.enum(["EQ", "GTE", "LTE", "IS_NULL", "IN"]),
   value: text.optional(), values: z.array(text).min(1).max(32).optional() }).strict();
-export const managerModelQuery = z.object({ workspace_id: text.optional(), environment: executionEnvironment,
+export const managerModelQuery = z.object({ workspace_id: text.optional(), environment: managerEnvironmentScope,
   q: managerSearchText.optional(), q_mode: managerSearchMode.optional(), window: managerWindowQuery.optional(),
   stage_filter: z.array(financialStage).max(4).default([]), lifecycle_filter: text.optional(),
   filters: z.array(filter).max(16).default([]),
@@ -110,9 +113,14 @@ export const managerModelQuery = z.object({ workspace_id: text.optional(), envir
 }).strict().superRefine((q, c) => {
   if (q.q_mode !== undefined && q.q === undefined)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_SEARCH_QUERY_REQUIRED" });
-  const allowedStages = q.environment === "paper" ? ["PAPER"] : q.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
+  // ALL spans every environment: any stage word may narrow it (an environment without that stage then holds no row).
+  const allowedStages = q.environment === "ALL" ? ["PAPER", "SANDBOX", "CANARY", "LIVE"] : q.environment === "paper" ? ["PAPER"] :
+    q.environment === "sandbox" ? ["SANDBOX"] : ["CANARY", "LIVE"];
   if (q.stage_filter.some(stage => !allowedStages.includes(stage)))
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ENVIRONMENT_STAGE_QUERY_INVALID" });
+  // A window resolves against ONE environment's cutoff; ALL has no common cutoff, so it carries none.
+  if (q.environment === "ALL" && q.window !== undefined)
+    c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_ALL_WINDOW_UNSUPPORTED" });
   if (q.after && q.before || new Set(q.sort.map(s => s.field)).size !== q.sort.length || new Set(q.group_by).size !== q.group_by.length)
     c.addIssue({ code: z.ZodIssueCode.custom, message: "MANAGER_QUERY_INVALID" });
   for (const f of q.filters) {
@@ -141,7 +149,15 @@ export const managerDatasetRow = z.object({ row_key: z.string().min(1).max(2048)
   current_stage: financialStage.nullable(), entered_at_ms: utcMilliseconds.nullable(),
   days_in_stage: z.number().int().min(0).max(10_000_000).nullable(), stage_lifecycle_reasons: managerStageLifecycleReasons,
   children: z.array(managerTuple.extend({ stage: financialStage, binding_ref: text.nullable() }).strict()).max(10_000),
-  metrics: metricMap, economic_partitions: z.array(partitionMetrics).max(200) }).strict();
+  metrics: metricMap, economic_partitions: z.array(partitionMetrics).max(200),
+  // FE-CAT-3: present exactly on the rows of an `environment: ALL` dataset (the row's own environment); absent otherwise.
+  environment: executionEnvironment.optional() }).strict();
+/** FE-CAT-3: what one environment contributed to an ALL read. A missing environment is typed, never silently absent. */
+export const managerEnvironmentCoverage = z.object({ environment: executionEnvironment,
+  availability: z.enum(["INCLUDED", "UNAVAILABLE"]), reason_code: z.enum(MANAGER_ALL_REASONS).nullable(),
+  snapshot_id: publicationDigest.nullable(), as_of_ms: utcMilliseconds.nullable(), recorded_through_ms: utcMilliseconds.nullable(),
+  facts_through_ms: utcMilliseconds.nullable(), quality: managerQuality.nullable(),
+  authorized_filtered_count: z.number().int().min(0).max(10_000).nullable(), returned_count: z.number().int().min(0).max(200).nullable() }).strict();
 const scorePending = z.object({ value: managerResponseDecimal.nullable(), status: z.enum(["policy_pending", "available", "provisional", "unbound", "invalid_data", "stale", "partial_costs", "partial_components", "insufficient_data", "window_not_published"]),
   reason_code: managerWindowAbsenceReason.optional() }).strict()
   .superRefine((v,c) => { if (["available","provisional"].includes(v.status) !== (v.value !== null))
@@ -161,7 +177,10 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   selected_window: managerSelectedWindow.nullable(), query_options: managerP1Options,
   surface: z.enum(["FUND", "FLEET", "PORTFOLIO", "ALPHA", "ACCOUNT", "DEPLOYMENT"]), workspace_id: text,
   stage_lifecycle: managerStageLifecyclePolicy,
-  environment: executionEnvironment, record_authority: z.literal("PORTAL_PROJECTION"), source_authority: z.literal("TRADING_SYSTEM"),
+  environment: managerEnvironmentScope,
+  // FE-CAT-3: exactly when `environment` is ALL: one entry per environment (paper, sandbox, live), in that order.
+  environment_coverage: z.array(managerEnvironmentCoverage).length(3).optional(),
+  record_authority: z.literal("PORTAL_PROJECTION"), source_authority: z.literal("TRADING_SYSTEM"),
   snapshot_id: publicationDigest, as_of_ms: utcMilliseconds, recorded_through_ms: utcMilliseconds, facts_through_ms: utcMilliseconds.nullable(),
   quality: managerQuality, coverage: z.literal("AUTHORIZED_ONLY"), economic_aggregation: z.literal("PARTITIONED_ONLY"),
   query_policy: z.object({ null_order: z.literal("LAST_BOTH_DIRECTIONS"), stage_order: z.literal("LEXICAL_SET_NOT_RISK_RANK"), maximum_response_bytes: z.literal(1048576) }).strict(),
@@ -181,4 +200,4 @@ export const managerDatasetResponse = z.object({ schema_version: z.literal("port
   funding_bucket_pnl: z.object({ value: z.null(), reason_code: z.literal("LOT_ATTRIBUTION_METHOD_NOT_APPROVED") }).strict(),
   lineage: z.object({ reducer_revision: z.literal("manager-model.v1"), source_set_ref: publicationDigest,
     revision: publicationDigest, supersedes_revision: publicationDigest.nullable() }).strict(),
-}).strict().superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine(validateManagerDatasetInvariants).superRefine(validateManagerDisplayText);
+}).strict().superRefine(validateManagerAllScope).superRefine(validateManagerP1Response).superRefine(validateManagerLifecycle).superRefine(validateManagerDatasetInvariants).superRefine(validateManagerDisplayText);
