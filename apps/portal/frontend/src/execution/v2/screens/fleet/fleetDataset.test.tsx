@@ -372,7 +372,7 @@ describe("dataset mode: Map (tile size = published allocation of ONE partition, 
     // USDT is the first published partition: both rows have it. Sizes are geometry; the figure is the exact string.
     expect(tiles().map((tile) => tile.textContent)).toEqual([expect.stringContaining("1,000.00 USDT"), expect.stringContaining("250.50 USDT")]);
     expect(tiles().map((tile) => tile.getAttribute("data-health"))).toEqual(["ok", "attention"]);
-    expect(tiles().map((tile) => (tile as HTMLElement).style.flexGrow)).toEqual(["100", "25"]);
+    expect(tiles().map((tile) => tile.getAttribute("data-weight"))).toEqual(["100", "25"]);
     expect(within(map).queryByText(/EUR/, { selector: ".exec-mgr-num" })).toBeNull();
     // EUR: only the second row publishes it; the first is NOT drawn and says why.
     fireEvent.click(within(map).getByRole("button", { name: "Paper · EUR" }));
@@ -390,9 +390,9 @@ describe("dataset mode: Map (tile size = published allocation of ONE partition, 
     const map = await screen.findByTestId("fleet-map", undefined, SLOW);
     expect(within(map).getAllByRole("region").length).toBeGreaterThan(0);
     const tiles = () => within(map).getAllByRole("listitem").filter((li) => li.classList.contains("exec-fleet-tile"));
-    expect(tiles().map((tile) => (tile as HTMLElement).style.flexGrow)).toEqual(["100", "25"]);
+    expect(tiles().map((tile) => tile.getAttribute("data-weight"))).toEqual(["100", "25"]);
     fireEvent.click(within(within(map).getByRole("group", { name: "Map size" })).getByRole("button", { name: "Equal" }));
-    expect(tiles().map((tile) => (tile as HTMLElement).style.flexGrow)).toEqual(["1", "1"]);
+    expect(tiles().map((tile) => tile.getAttribute("data-weight"))).toEqual(["1", "1"]);
     expect(within(map).getByTestId("map-legend").textContent).toContain("Needs attention or finding");
     fireEvent.click(within(within(map).getByRole("group", { name: "Map colour" })).getByRole("button", { name: "Stage" }));
     expect(within(map).getByTestId("map-legend").textContent).toContain("Canary");
@@ -669,6 +669,16 @@ describe("dataset mode: answers that must not become rows", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(dataRows()).toHaveLength(1);
     expect(ids()[0]).toContain("a-001");
+  });
+
+  it("a lane with no loaded card says Not loaded and offers Load more while rows remain, never 0 (QA2 R2-08)", async () => {
+    const { api } = harness({ live: alphasOf(130, [["LIVE"]]) });
+    mount(api, "/execution/fleet?stage=canary,live&view=board");
+    const board = await screen.findByRole("group", { name: "Alpha fleet board" }, SLOW);
+    const note = await within(board).findByTestId("lane-not-loaded");
+    expect(note.textContent).toContain("Not loaded");
+    expect(within(note).getByRole("button", { name: "Load more" })).toBeTruthy();
+    expect(board.textContent).not.toContain("No loaded alpha");
   });
 
   it("the board cards carry the allocation per partition, QBTS and health of the dataset row, and name readiness once as not published", async () => {

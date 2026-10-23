@@ -626,6 +626,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                   type="button"
                   role="tab"
                   id={`${searchId}-tab-${spec.id}`}
+                  title="Tab counts are alphas in that stage over your whole scope (Fleet read); the table counts rows, one per alpha version in a portfolio, so the two can differ. A ~ marks an upper bound."
                   aria-selected={lens === spec.id}
                   aria-controls={`${searchId}-panel`}
                   className="exec-fleet-tab"
@@ -881,6 +882,9 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                         selectedKey={selection}
                         hrefFor={(row) => withContext(withOrigin(alphaHref(row.alphaId), { kind: "fleet" }, params), params)}
                         onOpen={(row) => { if (row.rowKey.length <= SEL_MAX) select(row.rowKey); }}
+                        hasMore={dataset.nextCursor !== null}
+                        loadingMore={dataset.loadingMore}
+                        onLoadMore={datasetCapped ? undefined : dataset.loadMore}
                       />
                     )
                   ) : mapView ? (
@@ -894,6 +898,8 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                       />
                     )
                   ) : (
+                    <>
+                    <p className="exec-fleet-scrollhint" data-testid="scroll-hint">Health, Source and more columns sit to the right: scroll the table sideways (the Alpha column stays).</p>
                     <FleetDatasetTable
                       rows={datasetRows}
                       groupFields={datasetFilters === null ? [] : [datasetFilters.group, datasetFilters.then ?? null].filter((field): field is NonNullable<typeof field> => field !== null)}
@@ -916,6 +922,7 @@ export default function FleetScreen({ api, workspaceId, streamFlag = FLEET_STREA
                       onOpen={(row) => { if (row.rowKey.length <= SEL_MAX) select(row.rowKey); }}
                       empty={emptyBlock}
                     />
+                    </>
                   )}
                   <div className="exec-fleet-foot">
                     <span className="exec-fleet-count-line" role="status" aria-live="polite">{countLine}</span>

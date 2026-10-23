@@ -93,3 +93,14 @@
 .exec-fleet-legend-swatch[data-tone="stage-sandbox"], .exec-fleet-tile[data-tone="stage-sandbox"] { background: var(--surface-2); border-left-color: var(--env-sandbox); }
 .exec-fleet-legend-swatch[data-tone="stage-canary"], .exec-fleet-tile[data-tone="stage-canary"] { background: var(--surface-2); border-left-color: var(--env-live); border-left-style: dashed; }
 .exec-fleet-legend-swatch[data-tone="stage-live"], .exec-fleet-tile[data-tone="stage-live"] { background: var(--surface-2); border-left-color: var(--env-live); }
+
+/* Treemap (QA2 R2-10): rectangles by area, left/top/width/height in percent of the parent; a tile that is too small clips its text and keeps it on the title. */
+.exec-fleet-treemap { position: relative; width: 100%; height: 640px; }
+.exec-fleet-treemap .exec-fleet-pf { position: absolute; box-sizing: border-box; display: block; min-width: 0; padding: 0; overflow: hidden; }
+.exec-fleet-treemap .exec-fleet-pf-head { position: absolute; inset: 0 0 auto 0; height: 22px; padding: 0 var(--space-2); overflow: hidden; white-space: nowrap; }
+.exec-fleet-treemap .exec-fleet-tiles { position: absolute; inset: 22px 0 0 0; display: block; }
+.exec-fleet-treemap .exec-fleet-tile { position: absolute; box-sizing: border-box; display: flex; flex: none; min-width: 0; gap: 0; padding: 4px 6px; overflow: hidden; border: 1px solid var(--paper); border-left-width: 4px; }
+.exec-fleet-treemap .exec-fleet-tile .exec-fleet-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.exec-fleet-treemap .exec-fleet-tile[data-simulated="true"] { background-image: repeating-linear-gradient(45deg, transparent 0 6px, var(--line-strong) 6px 7px); }
+.exec-fleet-legend-swatch[data-tone="simulated"] { background-image: repeating-linear-gradient(45deg, transparent 0 3px, var(--line-strong) 3px 4px); }
+@media (max-width: 660px) { .exec-fleet-treemap { height: 1100px; } }

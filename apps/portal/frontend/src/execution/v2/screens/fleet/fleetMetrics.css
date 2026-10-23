@@ -134,3 +134,11 @@
 .exec-fleet-card-instage { font: var(--exec-font-meta); color: var(--ink-faint); }
 .exec-fleet-card-figures .exec-fleet-part { flex-wrap: wrap; justify-content: flex-start; gap: 0 var(--space-2); }
 .exec-fleet-card-fig, .exec-fleet-card-figures .exec-fleet-parts { min-width: 0; max-width: 100%; }
+
+/* A table wider than the screen says so (QA2: hidden columns at 1024). */
+.exec-fleet-scrollhint { margin: 0; font: var(--exec-font-meta); color: var(--ink-faint); }
+@media (min-width: 1900px) { .exec-fleet-scrollhint { display: none; } }
+.exec-fleet-lane-tag { white-space: nowrap; }
+.exec-fleet-board .exec-fleet-lane { min-width: 240px; }
+.exec-fleet-dataset .exec-fleet-portfolio-line .exec-fleet-trunc { max-width: 22ch; }
+.exec-fleet-dataset .exec-cards-group th, .exec-fleet-pf-head { text-transform: none; letter-spacing: normal; }

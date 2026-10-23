@@ -45,6 +45,51 @@ const tagOf = (partition: ManagerPartition): string => `${DOMAIN_LABEL[partition
 const inPartition = (row: ManagerRow, identity: string): ManagerPartitionedMetrics | null =>
   row.economicPartitions.find((entry) => identityOf(entry.partition) === identity) ?? null;
 
+interface Rect { x: number; y: number; w: number; h: number }
+const pct = (r: Rect) => ({ left: `${r.x}%`, top: `${r.y}%`, width: `${r.w}%`, height: `${r.h}%` });
+
+/**
+ * Squarified treemap (Bruls et al.): every rectangle's AREA is proportional to its weight inside the parent. Weights are geometry only
+ * (the published allocation's `toGeometry`, or 1 each in Equal mode); the larger weights are placed first, so the order is by size.
+ */
+export function squarify<T>(items: readonly { key: T; weight: number }[], rect: Rect): { key: T; rect: Rect }[] {
+  const out: { key: T; rect: Rect }[] = [];
+  const list = items.filter((item) => item.weight > 0).sort((a, b) => b.weight - a.weight);
+  const total = list.reduce((sum, item) => sum + item.weight, 0);
+  if (total <= 0) return out;
+  const scale = (rect.w * rect.h) / total;
+  let free = { ...rect };
+  let row: typeof list = [];
+  const worst = (candidate: typeof list, side: number): number => {
+    const areas = candidate.map((item) => item.weight * scale);
+    const sum = areas.reduce((x, y) => x + y, 0);
+    return Math.max((side * side * Math.max(...areas)) / (sum * sum), (sum * sum) / (side * side * Math.min(...areas)));
+  };
+  const flush = () => {
+    if (row.length === 0) return;
+    const sum = row.reduce((x, item) => x + item.weight * scale, 0);
+    if (free.w >= free.h) {
+      const width = sum / free.h;
+      let y = free.y;
+      for (const item of row) { const height = (item.weight * scale) / width; out.push({ key: item.key, rect: { x: free.x, y, w: width, h: height } }); y += height; }
+      free = { x: free.x + width, y: free.y, w: free.w - width, h: free.h };
+    } else {
+      const height = sum / free.w;
+      let x = free.x;
+      for (const item of row) { const width = (item.weight * scale) / height; out.push({ key: item.key, rect: { x, y: free.y, w: width, h: height } }); x += width; }
+      free = { x: free.x, y: free.y + height, w: free.w, h: free.h - height };
+    }
+    row = [];
+  };
+  for (const item of list) {
+    const side = Math.min(free.w, free.h);
+    if (row.length === 0 || worst([...row, item], side) <= worst(row, side)) row.push(item);
+    else { flush(); row.push(item); }
+  }
+  flush();
+  return out;
+}
+
 export interface FleetMapProps {
   rows: readonly ManagerRow[];
   metricKeys: readonly string[] | null;
@@ -146,23 +191,25 @@ export function FleetMap({ rows, metricKeys, hrefFor, selectedKey, onOpen }: Fle
         {LEGEND[colourMode].map((entry) => (
           <li key={entry.tone} className="exec-fleet-legend-item"><i className="exec-fleet-legend-swatch" data-tone={entry.tone} aria-hidden="true" />{entry.label}</li>
         ))}
+        <li className="exec-fleet-legend-item"><i className="exec-fleet-legend-swatch" data-tone="simulated" aria-hidden="true" />Hatched: simulated (Paper or Sandbox)</li>
       </ul>
-      <div className="exec-fleet-pfs" role="group" aria-label="Allocation by alpha, one box per portfolio">
-        {portfolios.map((box) => (
-          <section key={box.id} className="exec-fleet-pf" style={{ flexGrow: box.tiles.reduce((sum, tile) => sum + grow(tile.weight), 0) }} aria-label={`Portfolio ${box.id}`}>
-            <header className="exec-fleet-pf-head"><strong>{box.id}</strong><span className="exec-fleet-note">{box.tiles.length} {box.tiles.length === 1 ? "alpha" : "alphas"} drawn</span></header>
+      <div className="exec-fleet-treemap" role="group" aria-label="Allocation by alpha, one box per portfolio" data-testid="treemap">
+        {squarify(portfolios.map((box) => ({ key: box, weight: box.tiles.reduce((sum, tile) => sum + grow(tile.weight), 0) })), { x: 0, y: 0, w: 100, h: 100 }).map(({ key: box, rect }) => (
+          <section key={box.id} className="exec-fleet-pf" style={pct(rect)} aria-label={`Portfolio ${box.id}`}>
+            <header className="exec-fleet-pf-head"><strong title={box.id}>{box.id}</strong><span className="exec-fleet-note">{box.tiles.length} {box.tiles.length === 1 ? "alpha" : "alphas"} drawn</span></header>
             <ul className="exec-fleet-tiles" role="list" aria-label={`Allocation by alpha in ${box.id}`}>
-              {box.tiles.map(({ row, weight }) => {
+              {squarify(box.tiles.map((tile) => ({ key: tile, weight: grow(tile.weight) })), { x: 0, y: 0, w: 100, h: 100 }).map(({ key: { row, weight }, rect: tileRect }) => {
                 const health = row.health === null ? null : healthView(row.health);
                 const metric = inPartition(row, identity)?.metrics.get(SIZE_KEY);
                 const figure = inPartition(row, identity)?.metrics.get("return_30d_pct");
                 return (
-                  <li key={row.rowKey} className="exec-fleet-tile" data-health={health === null ? "unknown" : health.kind} data-tone={toneOf(row)} data-selected={selectedKey === row.rowKey ? "true" : undefined}
-                    style={{ flexGrow: grow(weight) }}>
-                    <Link className="exec-fleet-name" to={hrefFor(row)}>{row.name ?? row.alphaId}</Link>
+                  <li key={row.rowKey} className="exec-fleet-tile" data-health={health === null ? "unknown" : health.kind} data-tone={toneOf(row)} data-weight={grow(weight)} data-selected={selectedKey === row.rowKey ? "true" : undefined}
+                    data-simulated={row.environment === "paper" || row.environment === "sandbox" || row.currentStage === "PAPER" || row.currentStage === "SANDBOX" ? "true" : undefined}
+                    style={pct(tileRect)}>
+                    <Link className="exec-fleet-name" title={row.name ?? row.alphaId} to={hrefFor(row)}>{row.name ?? row.alphaId}</Link>
                     <span className="exec-fleet-version">{row.alphaVersionId} · {row.currentStage === null ? "No single stage" : stageLabel(row.currentStage)}</span>
                     <MetricValue metric={metric} />
-                    {colourMode === "return" ? <span className="exec-fleet-version">Return 30D <MetricValue metric={figure ?? null} signed /></span> : null}
+                    <span className="exec-fleet-version">Return 30D <MetricValue metric={figure ?? null} signed /></span>
                     {health ? <Flag kind={health.kind} label={health.label} size="sm" /> : <NaWhy className="exec-fleet-np" reason="The dataset published no health for this row." />}
                     {onOpen ? <button type="button" className="exec-fleet-link" onClick={() => onOpen(row)}>Peek</button> : null}
                   </li>
