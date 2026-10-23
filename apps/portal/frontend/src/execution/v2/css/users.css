@@ -162,6 +162,8 @@
   white-space: normal;
 }
 .exec-usr-display {
+  /* a display name stays on one line; the roster scrolls instead of stacking "Account" over "10" */
+  white-space: nowrap;
   font: var(--exec-font-control);
   font-weight: 600;
   color: var(--ink);

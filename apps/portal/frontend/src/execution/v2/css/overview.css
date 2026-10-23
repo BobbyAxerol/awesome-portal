@@ -108,13 +108,30 @@
 }
 .exec-ov-grid3 {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* the third panel (Contributors) is a five-column figure table: it gets the wider share so no figure has to break */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.9fr);
   gap: var(--space-5);
+}
+/* below 1400px the figure table (the last panel) takes a full row, so Needs attention and Since last visit keep a readable width */
+@media (max-width: 1400px) {
+  .exec-ov-grid3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .exec-ov-grid3 > :last-child {
+    grid-column: 1 / -1;
+  }
 }
 @media (max-width: 1100px) {
   .exec-ov-grid2,
   .exec-ov-grid3 {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* a phone is narrower than the five figure columns: the table scrolls inside its panel instead of widening the page */
+@media (max-width: 600px) {
+  .exec-ov-contrib {
+    display: block;
+    overflow-x: auto;
   }
 }
 
@@ -311,6 +328,13 @@ a.exec-ov-what-title {
   vertical-align: top;
   border-bottom: 1px solid var(--line-soft);
   overflow-wrap: anywhere;
+}
+/* a figure or an identifier never breaks inside the token: the table gives the column its width instead */
+.exec-ov-contrib tbody th,
+.exec-ov-contrib .exec-ov-contrib-num,
+.exec-ov-contrib .exec-ov-contrib-num * {
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 .exec-ov-contrib thead th {
   font: var(--exec-font-caption);
