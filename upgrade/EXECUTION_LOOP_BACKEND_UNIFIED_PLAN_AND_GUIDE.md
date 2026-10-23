@@ -32537,3 +32537,108 @@ new local documentation links7/7 resolve. Staged scope is20owned files,
 peer C5hunk and two peer returns excluded. Bobby identity verified; no default
 hook configured, no full-hook PASS claimed. Commit is a focused source-only
 intermediate, not installation/acceptance/publication to remote.
+
+<a id="epg10-08-two-authority-contracts-20261023"></a>
+### Original08/09 — current-policy and financial publication contracts,23Oct
+
+**BOBBY_APPROVED / EXECUTING / CONTRACT_OWNER_RETURN_REQUIRED.** Continue the
+two missing concrete authority adapters, not a new phase. Goal: close the
+actual producer wire/custody contracts, implement their Rust consumers and
+qualify only the missing08/09 cases. A trait, signed caller identity or local
+fixture is not an installed authority provider. Existing four uncommissioned
+routes stay503; accepted READ/STREAM-active-revoke/restart cases stay retired.
+
+**Guides/invariants:** the preceding assembly scope and linked EDGE04/05/08,
+BE04/05/09 remain authoritative. Core owns current human/session/app/field/model
+decisions; Edge intersects that decision with independently qualified source
+binding/schema/coverage, without asking Core to certify TS history. PM reuses
+its existing report bootstrap/three data routes and owns publication proof and
+receiver-APPLIED acknowledgement. No new ledger, exporter, accounts, issuer or
+five separate proof endpoints. No standalone JWT/mTLS/hash-to-ALLOW shortcut.
+
+**Owned scope now:** actual Core/PM source and mailbox audit; exact two-contract
+intake in the existing [single request,section7](evidence/execution-edge-v1_2/EPG10-08/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md#7-23oct-two-executable-contracts-original0809);
+hash-equal public delivery to the existing Core/PM mailboxes, review/test map
+and truthful readiness. Root is the only document writer; two existing agents
+perform disjoint read-only policy/publication audits. Concrete Rust adapter
+code starts against an owner-accepted route/schema/custody wire, not guessed
+URLs or fabricated proof. This remaining Edge-owned code is NOT_IMPLEMENTED,
+not relabelled external debt; only its exact unpublished producer inputs block.
+
+**Test/exit gates:** documentation diff/link/tracking/source-pin/hash checks
+now; after accepted producer contracts, capped focused adapter tests for wrong
+actor/session/workload/resource/profile/operation, source kind/input digest,
+revocation before/after I/O/frame, policy generation/cursor/cache changes,
+timeout/cancellation and duplicate/lost-ACK same-original recovery. Reuse
+unchanged assembly qualification290Rust/127runner only at its original scope,
+not as new adapter/connected evidence. Connected08/09 remains NOT_MET until
+actual installed trust/source/session receipts and missing specimens qualify.
+
+**Safety/rollback:** public contract coordination only; no Core/PM code edit,
+DB/schema/role/grant/session, TLS/key/config/listener, command/Live, stable/dev
+or provider28445 change. No expiring installation window before artifacts are
+ready. No build/test cell, source archive, CI, push or merge. Preserve all peer
+WIP and custody. Rollback this source-only request/index slice, not runtime.
+Delivery/validation, actual producer pins, cleanup and next actions follow.
+
+**10:21UTC result — CONTRACT_REQUIREMENTS_DELIVERED, OWNER_ACK/WIRES_PENDING.**
+Audited actual Core `docs/research-loop-plan@2a89e6d0d6bb221e87f24da6be1e3394f8f22f4d`
+and same-pin closeout integrator; read current Unified/closeout return, applicable
+campaign rules, actual read-scope/current-human transport and both Claude lane
+pins. PM remainsb3ef69ec; its two exporter hashes are unchanged. Its current
+admission/membership WIP does not supply the missing publication proof/ACK.
+Two reused agents independently reviewed policy and publication requirements;
+both ACCEPTED request scope, not the as-yet-unpublished producer wire.0new agents.
+
+Updated the existing request section7 (156added lines, existing CORE-03/04/06)
+and delivered exact public bytes, raw SHA256
+`79b6dc103875b36c02b4f8ba89a5bdde13da9c6fd5258d9574fe7e38ee5c7007`, to:
+
+- Core SGP `/home/bobby/portal-research/upgrade/execution_loop/evidence/ELP2-10/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md`;
+  appended only the Core Unified coordination intake, no Core code/sync/peer
+  implementation edit. Owner has not ACKed this new section. Exact old-file
+  hash/HEAD/clean-path guards checked before patch; mapped actual patch
+  preflight/apply and post-delivery diff/hash checks PASS. Initial overfiltered
+  no-op preflight was discarded, not credited; actual mapped path check reran.
+- PM HK `/home/bobby/.worktrees/trading-system-pm-v1_1/upgrade/EDGE_TO_CORE_TS_PM_CONSOLIDATED_REQUEST_2026-10-22.md`;
+  same hash read back, append-only coordinator intake in PM main plan. Existing
+  PM WIP preserved; no PM index/commit or owner acceptance inferred.
+
+Core exact target has no `apply_patch` command; public Markdown intake used a
+zero-fuzz `patch` and existing-request byte patch used mapped `git apply`.
+No source archive, dependency, private configuration or secret was transferred.
+Copies are intentional public contract source, not disposable resources.
+Peer Core/PM indices and commits remain their owners' responsibility; this
+Edge source commit contains only the two owned Edge Markdown changes.
+
+**Verification:** Edge and Core `PYTHONDONTWRITEBYTECODE=1 bash
+scripts/execution-tracking-test.sh` both terminal PASS; exact new links/anchors,
+three-copy hash, actual cited source hashes and scoped diff checks PASS. PM
+main-plan diff check PASS. No Rust/PG/security/product tests newly run because
+no executable/contract wire changed; prior290/127 only retained at its exact
+unchanged scope. Full normal landing gate NOT_RUN, R0 docs intermediate;
+0CI minutes, no push/merge/deploy. Three peer untracked hashes remain exactly
+fe4fcfc7/1cf04b20/109659d2, peer C5hunk and two tracked returns not staged.
+
+**Runtime/cleanup:** no own build, container, scratch, role/session, DB row,
+listener, volume, network or test image was created on either server;0disposable
+resources to remove. Read-only HK inventory116images/89containers/607BuildKit
+records70.73GB; foreign active/rollback/cache retained, no prune. Root free
+186550571008B at10:19UTC,65%used; no cleanup delta claimed. The same10HK image
+identities remain Edge/worker d6aa7a51, Proxy aa14e21c, native28ea3958 with the
+versioned config/release/rollback references recorded above. Paper worker now
+10669autonomous restarts; other nine inspected services0. No restart performed,
+old worker not asserted healthy. Canonical Portal54c6f5f3/owned feature6803b341
+and all retained feature worktrees/stable release locations remain unchanged;
+SGP stable/dev/provider28445 were neither changed nor requalified.
+
+**Next executable boundary, not phase closure:** Core/Claude publishes the
+operation-specific current-policy resolve/recheck wire and Core/Codex accepts
+its contract; TS/PM publishes proof/revalidation+authenticated receiver-APPLIED
+ACK/status contract. Return exact schema/examples/canonical vectors/source
+pins or minimal CHANGE in the existing channels, independently of image/P22/
+Manager/G2. Either accepted source contract immediately releases its own Edge
+concrete adapter and negative-test slice; neither must wait for the other.
+No additional generic approval or new phase. Actual adapter implementation
+and connected tests remain NOT_IMPLEMENTED/NOT_RUN,08/09 full NOT_MET. Do not
+equate this delivered request, trait or documentation PASS with contract closure.
