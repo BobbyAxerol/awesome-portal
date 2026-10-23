@@ -432,7 +432,7 @@ export default function PortfolioListScreen({ api, capabilities, routes = DEFAUL
 
           {scopeNav !== null ? (
             <div className="exec-pf-total" role="group" aria-label="Scope statement" data-testid="scope-total">
-              <span className="exec-pf-dim" title="The Manager's own statement for this environment, before the table filters: one line per economic partition, never added across partitions. It is not a sum of the rows above.">Scope statement · Economic capital · {url.value.env === "live" ? "Real-funded" : url.value.env === "paper" ? "Paper" : "Sandbox"}</span>
+              <span className="exec-pf-dim" title="The Manager's own statement for this environment, before the table filters: one line per economic partition, partitions stay apart. The rows above are separate figures.">Scope statement · Economic capital · {url.value.env === "live" ? "Real-funded" : url.value.env === "paper" ? "Paper" : "Sandbox"}</span>
               <PartitionFigures list={scopeNav} metricKey="current_nav" />
             </div>
           ) : null}

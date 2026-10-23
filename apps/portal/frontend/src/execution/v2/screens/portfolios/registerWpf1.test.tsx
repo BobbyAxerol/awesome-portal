@@ -88,7 +88,7 @@ describe("a figure in the row's base currency prints as the bare number, its uni
 });
 
 describe("scope statement", () => {
-  it("prints the Manager's own Economic capital per partition, one line each, and says it is not a sum of the rows", async () => {
+  it("prints the Manager's own Economic capital per partition, one line each, and says the rows are separate figures", async () => {
     await ready(served());
     await waitFor(() => expect(screen.queryByTestId("scope-total")).not.toBeNull());
     const total = screen.getByTestId("scope-total");
@@ -96,7 +96,7 @@ describe("scope statement", () => {
     expect(lines).toEqual(["Real-funded · USDT230,000.00 USDT", "Real-funded · JPY23,000.00 JPY"]);
     expect(total.textContent).toContain("Scope statement · Economic capital");
     expect(total.textContent).not.toMatch(/Total/);
-    expect(total.querySelector("[title]")!.getAttribute("title")).toContain("It is not a sum of the rows above.");
+    expect(total.querySelector("[title]")!.getAttribute("title")).toContain("partitions stay apart. The rows above are separate figures.");
   });
 
   it("draws nothing when the dataset publishes no current NAV in its statements", async () => {
