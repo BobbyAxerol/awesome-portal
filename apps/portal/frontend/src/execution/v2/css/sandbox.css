@@ -171,6 +171,7 @@
   font: var(--exec-font-id);
   color: var(--ink-soft);
   overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 /* lineage */
@@ -353,4 +354,14 @@
   .exec-sbx-denied {
     padding: var(--space-4);
   }
+}
+
+/* A figure and its unit stay on one line in the Internal / Broker / Difference rows; a long label wraps by word instead. */
+.exec-sbx-v2 .exec-blk-triad-row {
+  flex-wrap: wrap;
+}
+.exec-sbx-v2 .exec-blk-triad-row dd {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
 }
