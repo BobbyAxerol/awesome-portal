@@ -21,6 +21,7 @@ import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
 import { answerReviewManager } from "./review-manager";
 import { transformReviewBody } from "./review-relations";
+import { rebaseDelta, rebaseTimes } from "./time-rebase";
 
 export const LANE_HEADER = "x-fixture-lane";
 export const DEFAULT_LANE = "FIXTURE_LAB";
@@ -40,6 +41,8 @@ export interface FixtureConfig {
   users: UsersDoubleVariant | null;
   /** Opt-in server-only data. Never a browser/real-API fallback. */
   reviewProfile: ReviewProfile;
+  /** Preview only (FIXTURE_REBASE_TIME=1): shift the time-valued fields of a served body to the real clock (see time-rebase.ts). */
+  rebaseTime: boolean;
 }
 
 /* ── configuration ──────────────────────────────────────────────────────── */
@@ -76,6 +79,9 @@ export function loadConfig(env: Record<string, string | undefined>): FixtureConf
   const nowIso = text("FIXTURE_NOW_ISO") ?? OPERATIONS_V2_DOUBLE_NOW_ISO;
   if (!Number.isFinite(Date.parse(nowIso))) throw new ConfigError("FIXTURE_NOW_ISO must be an ISO-8601 instant");
 
+  const rebaseRaw = text("FIXTURE_REBASE_TIME");
+  if (rebaseRaw !== undefined && rebaseRaw !== "0" && rebaseRaw !== "1") throw new ConfigError("FIXTURE_REBASE_TIME must be 0 or 1");
+
   const writes = text("FIXTURE_WRITES") ?? "doubles";
   if (writes !== "doubles" && writes !== "refuse") throw new ConfigError("FIXTURE_WRITES must be doubles or refuse");
   const reviewProfile = text("FIXTURE_REVIEW_PROFILE") ?? "sparse-realistic";
@@ -109,6 +115,7 @@ export function loadConfig(env: Record<string, string | undefined>): FixtureConf
     laneLabel,
     scale,
     nowIso,
+    rebaseTime: rebaseRaw === "1",
     userId: text("FIXTURE_USER_ID") ?? ACCESS_DOUBLE_DEFAULT_USER,
     writes,
     overview,
@@ -319,7 +326,8 @@ async function handle(config: FixtureConfig, incoming: IncomingMessage, response
 
   const answered = answerFor(config, request);
   if (answered !== null) {
-    send(response, config, answered.status, answered.body, { ...answered.headers });
+    const served = config.rebaseTime && typeof answered.body !== "string" ? rebaseTimes(answered.body, rebaseDelta(OPERATIONS_V2_DOUBLE_NOW_ISO, Date.now())) : answered.body;
+    send(response, config, answered.status, served, { ...answered.headers });
     return;
   }
   // Not modelled for this method. If the path IS served for GET, the method is the problem (405); otherwise nothing here answers it (404).
