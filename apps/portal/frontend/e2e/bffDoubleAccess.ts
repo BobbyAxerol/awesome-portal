@@ -197,3 +197,62 @@ export function answerAccessEffective(
       return { status: 200, body: bodyFor(workspaceId, userId) };
   }
 }
+
+/* ── the owner's grant matrix (`GET /api/admin/profile-access`, the V1 "Manage grants" read) ─────────────────────────────────────
+ * SIMULATED (FIXTURE_LAB, WP-E): a roster of five accounts with their governance capabilities, so the matrix draws and a deployed
+ * preview does not say "Could not read the access policy". Reads only (a write is not answered here: the lane refuses it). The ids
+ * are fixture ids; nothing here names a real person or authorizes a change. Register: SIMULATED_DATA_REGISTER section 2d. */
+
+export const PROFILE_ACCESS_POLICY_ROUTE = "/api/admin/profile-access";
+export const PROFILE_ACCESS_ACTIVITY_ROUTE = "/api/admin/profile-access/activity";
+
+type PolicyCapability = { capability: string; grant_id: string; workspace_id: string | null; grant_revision: number };
+const grant = (user: string, capability: string, revision = 1): PolicyCapability => ({
+  capability,
+  grant_id: `grt_${user}_${capability.replace(/\./g, "_")}`,
+  workspace_id: null,
+  grant_revision: revision,
+});
+const both = (user: string, gate: string) => [grant(user, `governance.${gate}.read`), grant(user, `governance.${gate}.decide`)];
+
+/** The five accounts of the design's matrix: an owner (absent from the grid), a researcher, a reviewer, an operator, a former analyst. */
+export function policyAccounts(ownerUserId: string): Record<string, unknown>[] {
+  return [
+    { user_id: ownerUserId, username: "bobby", display_name: "Bobby Vu", is_owner: true, account_state: "ACTIVE", capabilities: [] },
+    { user_id: "usr_fx_stan", username: "stan", display_name: "Stan", is_owner: false, account_state: "ACTIVE", capabilities: [grant("stan", "governance.r1.read")] },
+    {
+      user_id: "usr_fx_minh", username: "minh", display_name: "Minh", is_owner: false, account_state: "ACTIVE",
+      capabilities: [...both("minh", "r1"), ...both("minh", "r2"), ...both("minh", "canary"), grant("minh", "governance.live.read")],
+    },
+    { user_id: "usr_fx_lan", username: "lan", display_name: "Lan", is_owner: false, account_state: "ACTIVE", capabilities: [] },
+    { user_id: "usr_fx_former", username: "former-analyst", display_name: "Former analyst", is_owner: false, account_state: "ARCHIVED", capabilities: [] },
+  ];
+}
+
+/** Answers the policy read and the per-account activity read, or `null` when the request is neither. GET only. */
+export function answerProfileAccessPolicy(method: string, pathname: string, search: URLSearchParams, options: AccessDoubleOptions = {}): BffAnswerAccess | null {
+  if (method.toUpperCase() !== "GET") return null;
+  const userId = options.userId ?? ACCESS_DOUBLE_DEFAULT_USER;
+  if (pathname === PROFILE_ACCESS_POLICY_ROUTE) {
+    if ([...search.keys()].length > 0) return problem(400, "ACCESS_INPUT_INVALID", "Check the access request fields.");
+    return { status: 200, body: { accounts: policyAccounts(userId) } };
+  }
+  if (pathname === PROFILE_ACCESS_ACTIVITY_ROUTE) {
+    const grantee = search.get("grantee_user_id");
+    if (grantee === null || grantee === "") return problem(400, "ACCESS_INPUT_INVALID", "Check the access request fields.");
+    const known = policyAccounts(userId).some((account) => account.user_id === grantee);
+    if (!known) return problem(404, "ACCOUNT_NOT_FOUND", "The account was not found.");
+    return {
+      status: 200,
+      body: {
+        activity: grantee === "usr_fx_minh"
+          ? [
+              { event_id: "evt_fx_1", action: "GRANT", capability: "governance.r2.decide", outcome: "APPLIED", reason_code: null, step_up_used: true, occurred_at: "2026-10-12T09:30:00.000Z" },
+              { event_id: "evt_fx_2", action: "GRANT", capability: "governance.r1.decide", outcome: "APPLIED", reason_code: null, step_up_used: true, occurred_at: "2026-10-01T08:00:00.000Z" },
+            ]
+          : [],
+      },
+    };
+  }
+  return null;
+}

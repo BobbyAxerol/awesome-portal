@@ -27,7 +27,7 @@
  *  - the four shell bootstrap reads (`bffDoubleShell.ts`: the fixture identity, the registry, the links and the summary), so a
  *    deployed preview needs no Control API to sign in.
  */
-import { answerAccessEffective, ACCESS_DOUBLE_DEFAULT_USER } from "./bffDoubleAccess";
+import { answerAccessEffective, answerProfileAccessPolicy, ACCESS_DOUBLE_DEFAULT_USER } from "./bffDoubleAccess";
 import { answerSelfAccess } from "./bffDoubleSelfAccess";
 import { fixtureNowMs } from "./bffScale";
 import { answerUsers, setUsersDoubleSessionUser } from "./bffDoubleUsers";
@@ -156,6 +156,9 @@ export function answerFixtureRequest(request: BffRequest, options: FixtureAnswer
     const answer =
       answerSelfAccess(method, path, params, { nowMs: fixtureNowMs(), ceilingMs: SELF_ACCESS_CEILING_MS }) ??
       answerAccessEffective(method, path, params, { userId: options.userId }) ??
+      // ===== WP-E begin: the owner's grant matrix (Manage grants), simulated lanes only; the sparse default stays a 404
+      (options.simulated === true ? answerProfileAccessPolicy(method, path, params, { userId: options.userId }) : null) ??
+      // ===== WP-E end
       answerUsers(method, path, params);
     return answer === null ? null : respond(answer);
   }

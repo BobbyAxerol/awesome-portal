@@ -83,8 +83,9 @@ describe("identity strip", () => {
     const strip = document.querySelector('[aria-label="Who you are signed in as"]') as HTMLElement;
     expect(within(strip).getByText("Signed in as").nextElementSibling?.textContent).toBe("stan");
     expect(within(strip).getByText("usr_me")).toBeTruthy();
-    expect(within(strip).getByText("Owner").nextElementSibling?.textContent).toBe("Not an owner");
-    expect(within(strip).getByText("Capabilities held").nextElementSibling?.textContent).toBe("1");
+    // Four tiles, as the design has them. The owner state and the capability count are published facts and ride on the Role preset tile's note.
+    expect(strip.querySelectorAll(".exec-acc-kpi")).toHaveLength(4);
+    expect(within(strip).getByTestId("acc-owner-note").textContent).toBe("Not an owner · 1 capability held");
     // Role preset keeps its tile (hi-fi) and says Not available: no preset name is invented from the capabilities.
     expect(within(strip).getByText("Role preset").nextElementSibling?.textContent).toBe("Not available");
     // "Researcher field policy" is a published policy field, not a preset name.
@@ -98,12 +99,12 @@ describe("identity strip", () => {
     signIn({ owner: true });
     mount();
     await granted();
-    expect(screen.getByText("Owner", { selector: ".exec-acc-kpi-value" })).toBeTruthy();
+    expect(screen.getByTestId("acc-owner-note").textContent).toMatch(/^Owner · 0 capabilities held$/);
     cleanup();
     signIn({ ownerState: "OWNER_ANCHOR_UNCLAIMED" });
     mount();
     await granted();
-    expect(screen.getByText("Owner anchor unclaimed")).toBeTruthy();
+    expect(screen.getByTestId("acc-owner-note").textContent).toMatch(/^Owner anchor unclaimed/);
   });
 });
 

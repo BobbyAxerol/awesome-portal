@@ -23,6 +23,37 @@
   font: var(--exec-font-title);
   color: var(--ink);
 }
+.exec-acc-sub {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.exec-acc-manage {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  color: var(--ink);
+  background: var(--paper-raised);
+  border: 1px solid var(--line-strong);
+}
+.exec-acc-manage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.exec-acc-manage-title {
+  margin: 0;
+  font: var(--exec-font-label);
+  color: var(--ink-soft);
+}
+.exec-acc-manage-line {
+  margin: 0;
+  font: var(--exec-font-meta);
+  color: var(--ink-soft);
+}
 .exec-acc-chips {
   display: flex;
   flex-wrap: wrap;
