@@ -768,9 +768,10 @@ function worldStage(kind: "canary" | "live" | "sandbox" | "paper", body: Obj | n
   const alloc = worldToCents(d.allocation);
   const net = netPnlOf(d);
   const equity = worldCents(alloc + net);
-  const gross = grossNotional(d.id);
-  const positions = positionsOf(d.id).map((p) => ({ id: p.id, symbol: p.symbol, side: p.side, quantity: p.quantity, entry: p.entry, mark: p.mark, unrealised: p.unrealised })) as PositionSpec[];
-  const orders = workingOrdersOf(d.id).map((o) => ({ id: o.id, symbol: o.symbol, type: o.type, side: o.side, quantity: o.quantity, price: o.price, status: o.status, since: iso(o.sinceMs) })) as OrderSpec[];
+  const trialEnded = kind === "canary" && stageOf(deploymentId, "canary") === "live"; // the Canary page of a deployment that is Live now: a finished trial holds nothing open
+  const gross = trialEnded ? "0.00" : grossNotional(d.id);
+  const positions = (trialEnded ? [] : positionsOf(d.id)).map((p) => ({ id: p.id, symbol: p.symbol, side: p.side, quantity: p.quantity, entry: p.entry, mark: p.mark, unrealised: p.unrealised })) as PositionSpec[];
+  const orders = (trialEnded ? [] : workingOrdersOf(d.id)).map((o) => ({ id: o.id, symbol: o.symbol, type: o.type, side: o.side, quantity: o.quantity, price: o.price, status: o.status, since: iso(o.sinceMs) })) as OrderSpec[];
   const fees = worldCents(alloc * 10n / 10_000n);
   const figures = (brokerEquity: boolean) => sourceFigures({
     equity: { internal: equity, broker: brokerEquity ? equity : null, unit: "USDT" },

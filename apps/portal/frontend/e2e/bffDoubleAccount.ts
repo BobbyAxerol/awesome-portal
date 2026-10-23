@@ -110,7 +110,11 @@ const BINDINGS: readonly BindingSpec[] = [
 
 /** The five bindings the double holds, plus the generated ones (empty unless the standalone server runs at a larger scale). */
 const allBindings = (): readonly BindingSpec[] => {
-  if (isPositiveMode()) return [...BINDINGS, ...scaled().bindings].map((b) => ({ ...b, state: "ACTIVE", credentialState: "SYNC_SYNCED" })); // WP-P: no stale, expired or suspended binding in the positive world
+  if (isPositiveMode()) {
+    // WP-P: no stale, expired or suspended binding in the positive world, each updated within the last three hours of the read
+    return [...BINDINGS, ...scaled().bindings].map((b) => ({ ...b, state: "ACTIVE", credentialState: "SYNC_SYNCED",
+      updatedAt: new Date(Date.parse(ACCOUNT_DOUBLE_AS_OF) - (Array.from(b.bindingId).reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 170, 7) + 5) * 60_000).toISOString() }));
+  }
   const extra = scaled().bindings;
   return extra.length === 0 ? BINDINGS : [...BINDINGS, ...extra];
 };

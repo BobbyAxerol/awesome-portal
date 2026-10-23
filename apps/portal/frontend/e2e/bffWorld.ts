@@ -247,7 +247,8 @@ export interface BindingFact {
   wallet: bigint; equity: bigint; used: bigint; locked: bigint;
 }
 export function bindingFact(bindingId: string): BindingFact | null {
-  const ids = Object.entries(ACCOUNT_NAMES).filter(([, meta]) => meta.binding === bindingId).map(([id]) => id);
+  const generated = scaled().bindings.find((b) => b.bindingId === bindingId);
+  const ids = generated !== undefined ? [generated.accountId] : Object.entries(ACCOUNT_NAMES).filter(([, meta]) => meta.binding === bindingId).map(([id]) => id);
   const sleeves = ids.map((id) => accountFact(id)).filter((fact): fact is AccountFact => fact !== null);
   if (sleeves.length === 0) return null;
   const wallet = sleeves.reduce((n, f) => n + f.total, 0n);
