@@ -20,7 +20,7 @@ import { ACCESS_DOUBLE_DEFAULT_USER } from "../frontend/e2e/bffDoubleAccess";
 import { setUsersDoubleLastSignIn, setUsersDoubleVariant, type UsersDoubleVariant } from "../frontend/e2e/bffDoubleUsers";
 import { isScaleName, setFixtureNow, setFixtureScale, type ScaleName } from "../frontend/e2e/bffScale";
 import { isReviewProfile, reviewCatalog, reviewHtml, type ReviewProfile } from "./review-catalog";
-import { answerReviewManager, wpAccountBook } from "./review-manager";
+import { answerReviewManager, wpAccountBook, wpAlphaResource } from "./review-manager";
 import { setPositiveMode } from "../frontend/e2e/bffPositiveMode";
 import { applyScenarioBody, resetFixtureTransitions, scenarioRequest, scenarioVariants } from "./scenario-apply";
 import { healsDoubles, configuredScenario, configureScenario, DEFAULT_SCENARIO, type FixtureScenario, FIXTURE_SCENARIOS, getScenario, isFixtureScenario, resetScenario, SCENARIO_DESCRIPTIONS, setScenario } from "./scenario";
@@ -253,7 +253,10 @@ function answerFor(config: FixtureConfig, rawRequest: BffRequest): BffResponse |
     ...review, headers: { "content-type": "application/json" },
   };
   if (answered === null || profile === "sparse-realistic" || answered.status !== 200 || request.method !== "GET") return answered;
-  const shaped = transformReviewBody(request.path, answered.body, profile);
+  let shaped = transformReviewBody(request.path, answered.body, profile);
+  // WP-P (R2-02): every alpha resource is derived from that alpha's own deployments in the positive-like scenarios, not cloned from the double's one alpha.
+  const alphaResource = healsDoubles(getScenario()) ? /^\/api\/v1\/execution\/resources\/alphas\/([^/]+)$/.exec(request.path) : null;
+  if (alphaResource !== null) shaped = wpAlphaResource(shaped, decodeURIComponent(alphaResource[1]!));
   return { ...answered, body: applyScenarioBody(getScenario(), request.path, shaped) };
 }
 

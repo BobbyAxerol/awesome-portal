@@ -1907,6 +1907,54 @@ function wpPositiveSeries(body: Draft, method: string, path: string, search: URL
 }
 
 /**
+ * R2-02: the alpha resource double answers every alpha id with the same body (dep_live_01, 40,000.00, 126,500.00 exposure) under a renamed strategy id.
+ * In the positive world the identity and the money of `data` come from THAT alpha's own deployments (the rows the Fleet and the dataset are built from):
+ * deployments, accounts, balances, portfolios, allocations and positions. Anything the double has no per-alpha source for (orders, fills, replay) stays as
+ * the double answers it; those tabs are reported as not derived. Returns the body unchanged for an id the universe does not hold.
+ */
+export function wpAlphaResource(body: unknown, alphaId: string): unknown {
+  const spec = [...scaled().alphas, ...WPC_ALPHAS, ...SUITE_ALPHAS].find((entry) => entry.id === alphaId);
+  const root = body as Draft;
+  if (spec === undefined || root === null || typeof root !== "object" || root.data === undefined || root.data === null) return body;
+  const environment = String(root.selected_environment ?? "live");
+  const own = spec.deployments.filter((deployment) => deployment.environment === environment);
+  if (own.length === 0) return body;
+  const data = root.data as Draft;
+  const out = copy(root) as Draft;
+  const first = (rows: unknown): Draft => (Array.isArray(rows) && rows[0] !== undefined ? copy(rows[0]) : {});
+  const cents = (value: string): bigint => { const negative = value.startsWith("-"); const [w, f = ""] = value.replace("-", "").split("."); const n = BigInt(w + `${f}00`.slice(0, 2)); return negative ? -n : n; };
+  const text = (value: bigint): string => `${value < 0n ? "-" : ""}${(value < 0n ? -value : value) / 100n}.${String((value < 0n ? -value : value) % 100n).padStart(2, "0")}`;
+  const net = (deployment: DeploymentSpec): bigint => cents(deployment.realized) + cents(deployment.unrealized);
+  const accounts = [...new Set(own.map((deployment) => deployment.accountId))];
+  const portfolios = [...new Map(own.map((deployment) => [deployment.portfolioId, deployment.portfolioName])).entries()];
+  const profile = { profile_environment: environment };
+  out.data.deployments = own.map((deployment) => ({ ...first(data.deployments), deployment_id: deployment.id, strategy_id: alphaId, account_id: deployment.accountId, mode: environment,
+    venue: deployment.venue, currency: deployment.currency, portfolio_id: deployment.portfolioId, state: deployment.state, active: deployment.active, ...profile }));
+  out.data.accounts = accounts.map((id) => ({ ...first(data.accounts), account_id: id, strategy_id: alphaId, mode: environment, base_currency: own[0]!.currency, ...profile }));
+  out.data.account_balances = accounts.map((id) => {
+    const booked = own.filter((deployment) => deployment.accountId === id);
+    const allocation = booked.reduce((sum, deployment) => sum + cents(deployment.allocation), 0n);
+    const total = allocation + booked.reduce((sum, deployment) => sum + net(deployment), 0n);
+    return { ...first(data.account_balances), account_id: id, currency: own[0]!.currency, total: text(total), free: text(total - allocation / 10n), locked: text(allocation / 10n), ...profile };
+  });
+  out.data.portfolios = portfolios.map(([id, name]) => ({ ...first(data.portfolios), portfolio_id: id, name, base_currency: own[0]!.currency, owner: spec.owner, ...profile }));
+  out.data.portfolio_allocations = own.map((deployment) => ({ ...first(data.portfolio_allocations), portfolio_id: deployment.portfolioId, strategy_id: alphaId, deployment_id: deployment.id,
+    account_id: deployment.accountId, allocated_capital: deployment.allocation, currency: deployment.currency, ...profile }));
+  const allocation = own.reduce((sum, deployment) => sum + cents(deployment.allocation), 0n);
+  const unrealized = own.reduce((sum, deployment) => sum + cents(deployment.unrealized), 0n);
+  const long = unrealized * 7n / 10n;
+  const lead = own[0]!;
+  const position = (id: string, instrument: string, side: string, quantity: string, notional: bigint, pnl: bigint): Draft => ({ ...first(data.positions), position_id: id, strategy_id: alphaId, deployment_id: lead.id,
+    account_id: lead.accountId, mode: environment, venue: lead.venue, instrument_id: instrument, side, quantity, signed_qty: side === "SHORT" ? `-${quantity}` : quantity, notional: text(notional), unrealized_pnl: text(pnl), currency: lead.currency, ...profile });
+  out.data.positions = [position(`pos_${alphaId}_btc`, "BTCUSDT", "LONG", "0.91", allocation * 55n / 100n, long), position(`pos_${alphaId}_eth`, "ETHUSDT", "SHORT", "12.5", allocation * 30n / 100n, unrealized - long)];
+  out.data.reconciliation = (Array.isArray(data.reconciliation) ? data.reconciliation : []).map((row: Draft) => ({ ...row, deployment_id: lead.id, account_id: lead.accountId }));
+  if (out.data.alpha && typeof out.data.alpha === "object") {
+    Object.assign(out.data.alpha, { alpha_id: alphaId, alpha_label: spec.label, version: spec.version, owner: spec.owner, portfolios: portfolios.map(([id, name]) => ({ portfolio_id: id, name, base_currency: own[0]!.currency })) });
+  }
+  return out;
+}
+
+/**
  * The deployment books booked on one account: the SAME allocation / realized / unrealized the Manager dataset rows are built from
  * (`WPC_ALPHAS`, one source), so the account double can state allocation + net PnL = balance. Registered with the account double by app.ts
  * when the positive mode is on. `null` for an account no native deployment is booked on.
