@@ -258,3 +258,145 @@ export const bindingOfAccount = (accountId: string): BindingFact | null => {
   const meta = ACCOUNT_NAMES[accountId];
   return meta === undefined ? null : bindingFact(meta.binding);
 };
+
+// ===== WP-B begin: the operations world (one operation list, one record per incident). Accessors only; nothing above is touched.
+/**
+ * The named operations of the lane and the incidents they link to. ONE list: the Operations table's rows, the `incident_links` on each row,
+ * the incident roots, the incident children (evidence, assignee, gate, timeline, child operations) and the open-exception count all read
+ * these two tables, so an incident's own facts cannot disagree with each other or with the table.
+ * Times are absolute instants against the operations read (OPS_READ_MS); a body that states that read time is shifted by the preview as a
+ * whole, so every distance (acknowledged 20 minutes after it opened, linked 30 seconds after the operation) survives.
+ */
+export const OPS_READ_MS = Date.UTC(2026, 7, 22, 13, 0, 0);
+
+export interface WorldOperation {
+  id: string;
+  at: string;
+  command: string;
+  target: [string, string];
+  env: "PAPER" | "SANDBOX" | "LIVE";
+  risk: string;
+  severity: string;
+  source: string;
+  verify: string;
+  triage: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
+}
+
+// Microsecond instants on purpose: the SQL keyset boundary is six digits wide.
+export const WORLD_OPERATIONS: readonly WorldOperation[] = [
+  { id: "op_TEST_ONLY_s01", at: "2026-08-22T11:58:00.123456Z", command: "portfolio/adjust-target-budget", target: ["PORTFOLIO", "pf_TEST_ONLY_canary"], env: "LIVE", risk: "R4_LIVE_RISK_INCREASING", severity: "CRITICAL", source: "UNCERTAIN", verify: "UNCERTAIN", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s02", at: "2026-08-22T11:40:00.500000Z", command: "portfolio/recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "LIVE", risk: "R3_LIVE_PROTECTIVE", severity: "WARNING", source: "SUCCEEDED", verify: "PARTIAL", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s03", at: "2026-08-22T11:20:00.000001Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance02"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "INFO", source: "SUCCEEDED", verify: "SUCCEEDED", triage: "RESOLVED" },
+  { id: "op_TEST_ONLY_s04", at: "2026-08-22T10:55:00.250000Z", command: "deployment/archive", target: ["DEPLOYMENT", "dep_TEST_ONLY_btc"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "WARNING", source: "PENDING", verify: "PENDING", triage: "ACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s05", at: "2026-08-22T10:30:00.000000Z", command: "portfolio/adjust-target-budget", target: ["PORTFOLIO", "pf_TEST_ONLY_core"], env: "LIVE", risk: "R4_LIVE_RISK_INCREASING", severity: "ERROR", source: "FAILED", verify: "FAILED", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s06", at: "2026-08-22T10:05:00.000000Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance01"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "INFO", source: "SUCCEEDED", verify: "NOT_STARTED", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s07", at: "2026-08-22T09:40:00.000000Z", command: "account/top-up", target: ["ACCOUNT", "acc_TEST_ONLY_binance02"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "WARNING", source: "RUNNING", verify: "PENDING", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s08", at: "2026-08-22T09:10:00.000000Z", command: "portfolio/return-capital", target: ["PORTFOLIO", "pf_TEST_ONLY_core"], env: "LIVE", risk: "R3_LIVE_PROTECTIVE", severity: "ERROR", source: "EXPIRED", verify: "EXPIRED", triage: "ACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s09", at: "2026-08-22T08:45:00.000000Z", command: "deployment/resume", target: ["DEPLOYMENT", "dep_TEST_ONLY_eth"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "INFO", source: "BLOCKED", verify: "NOT_STARTED", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s10", at: "2026-08-22T08:15:00.000000Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance01"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "WARNING", source: "SUCCEEDED", verify: "DENIED", triage: "UNACKNOWLEDGED" },
+  { id: "op_TEST_ONLY_s11", at: "2026-08-22T07:30:00.000000Z", command: "portfolio/recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "INFO", source: "SUCCEEDED", verify: "SUCCEEDED", triage: "RESOLVED" },
+];
+const opById = (id: string): WorldOperation | undefined => WORLD_OPERATIONS.find((op) => op.id === id);
+
+export type IncidentRelationship = "TRIGGERED_BY" | "MITIGATES" | "RELATED";
+export type IncidentEvidenceSource = "FINDING" | "ALERT" | "DEAD_LETTER" | "ORDER_TRACE";
+export interface WorldIncident {
+  id: string;
+  target: [string, string];
+  env: "PAPER" | "SANDBOX" | "LIVE";
+  severity: string;
+  createdMs: number;
+  /** Who did what, when: the single source of the root's timestamps, the gate and the timeline. */
+  acknowledged: { actor: string; atMs: number } | null;
+  assigned: { actor: string; atMs: number } | null;
+  mitigated: { actor: string; atMs: number } | null;
+  resolved: { actor: string; atMs: number } | null;
+  openedBy: string;
+  evidence: readonly { source: IncidentEvidenceSource; label: string; atMs: number }[];
+  /** operation id, relationship, linked at (ms). The operation must be in WORLD_OPERATIONS. */
+  links: readonly (readonly [string, IncidentRelationship, number])[];
+}
+const at = (h: number, m: number, s = 0): number => Date.UTC(2026, 7, 22, h, m, s);
+
+export const WORLD_INCIDENTS: readonly WorldIncident[] = [
+  { id: "inc_TEST_ONLY_fx_mismatch", target: ["PORTFOLIO", "pf_TEST_ONLY_canary"], env: "LIVE", severity: "CRITICAL", createdMs: at(11, 59), openedBy: "bobby",
+    acknowledged: null, assigned: null, mitigated: null, resolved: null,
+    evidence: [{ source: "FINDING", label: "Position mismatch finding", atMs: at(11, 59, 30) }, { source: "ORDER_TRACE", label: "Order trace for the budget change", atMs: at(11, 59, 40) }],
+    links: [["op_TEST_ONLY_s01", "TRIGGERED_BY", at(11, 59, 5)], ["op_TEST_ONLY_s05", "RELATED", at(11, 59, 20)]] },
+  { id: "inc_TEST_ONLY_fx_recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "LIVE", severity: "WARNING", createdMs: at(11, 42), openedBy: "lan",
+    acknowledged: { actor: "lan", atMs: at(11, 50) }, assigned: { actor: "lan", atMs: at(11, 52) }, mitigated: null, resolved: null,
+    evidence: [{ source: "ALERT", label: "Recall not confirmed alert", atMs: at(11, 43) }],
+    links: [["op_TEST_ONLY_s02", "TRIGGERED_BY", at(11, 42, 30)]] },
+  { id: "inc_TEST_ONLY_fx_sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance02"], env: "PAPER", severity: "WARNING", createdMs: at(9, 45), openedBy: "bobby",
+    acknowledged: { actor: "bobby", atMs: at(10, 0) }, assigned: { actor: "bobby", atMs: at(10, 5) }, mitigated: { actor: "bobby", atMs: at(11, 25) }, resolved: null,
+    evidence: [],
+    links: [["op_TEST_ONLY_s07", "TRIGGERED_BY", at(9, 41)], ["op_TEST_ONLY_s03", "MITIGATES", at(11, 21)]] },
+  { id: "inc_TEST_ONLY_fx_budget", target: ["PORTFOLIO", "pf_TEST_ONLY_core"], env: "LIVE", severity: "ERROR", createdMs: at(10, 32), openedBy: "minh",
+    acknowledged: { actor: "minh", atMs: at(10, 40) }, assigned: { actor: "minh", atMs: at(10, 41) }, mitigated: null, resolved: null,
+    evidence: [{ source: "DEAD_LETTER", label: "Dead letter on the budget change", atMs: at(10, 34) }],
+    links: [["op_TEST_ONLY_s05", "TRIGGERED_BY", at(10, 32, 30)], ["op_TEST_ONLY_s01", "RELATED", at(11, 58, 40)], ["op_TEST_ONLY_s08", "RELATED", at(10, 35)]] },
+  { id: "inc_TEST_ONLY_fx_resume", target: ["DEPLOYMENT", "dep_TEST_ONLY_eth"], env: "PAPER", severity: "INFO", createdMs: at(8, 46), openedBy: "bobby",
+    acknowledged: { actor: "bobby", atMs: at(8, 50) }, assigned: { actor: "bobby", atMs: at(8, 52) }, mitigated: { actor: "bobby", atMs: at(9, 0) }, resolved: { actor: "bobby", atMs: at(9, 20) },
+    evidence: [],
+    links: [["op_TEST_ONLY_s09", "TRIGGERED_BY", at(8, 46, 30)]] },
+];
+export const worldIncident = (id: string): WorldIncident | undefined => WORLD_INCIDENTS.find((incident) => incident.id === id);
+
+export type IncidentState = "OPEN" | "MITIGATED" | "RESOLVED";
+export interface IncidentEvent { id: string; action: string; actor: string; atMs: number }
+/** The workflow events of one incident, in order; the root's version is how many there are, and every timestamp of the root is one of them. */
+export function incidentEvents(incident: WorldIncident): IncidentEvent[] {
+  const events: IncidentEvent[] = [{ id: "opened", action: "OPENED", actor: incident.openedBy, atMs: incident.createdMs }];
+  if (incident.acknowledged) events.push({ id: "acknowledged", action: "ACKNOWLEDGED", ...incident.acknowledged });
+  if (incident.assigned) events.push({ id: "assigned", action: "ASSIGNED", ...incident.assigned });
+  if (incident.mitigated) events.push({ id: "mitigated", action: "MITIGATED", ...incident.mitigated });
+  if (incident.resolved) events.push({ id: "resolved", action: "RESOLVED", ...incident.resolved });
+  return events.sort((a, b) => a.atMs - b.atMs);
+}
+export const incidentState = (incident: WorldIncident): IncidentState => (incident.resolved ? "RESOLVED" : incident.mitigated ? "MITIGATED" : "OPEN");
+export const incidentVersion = (incident: WorldIncident): number => incidentEvents(incident).length;
+const iso = (ms: number): string => new Date(ms).toISOString().replace(/\.000Z$/, "Z");
+
+/** The gate the server would state for this incident's own facts: every blocker is a fact this record holds. */
+export function incidentGate(incident: WorldIncident): { eligible: boolean; blocker_codes: string[] } {
+  const blockers = [
+    ...(incident.acknowledged ? [] : ["INCIDENT_ACKNOWLEDGEMENT_REQUIRED"]),
+    ...(incident.assigned ? [] : ["INCIDENT_ASSIGNEE_REQUIRED"]),
+    ...(incident.mitigated ? [] : ["INCIDENT_NOT_MITIGATED"]),
+    ...(incident.evidence.some((e) => e.source === "DEAD_LETTER") ? ["OPEN_DEAD_LETTER"] : []),
+  ];
+  return { eligible: blockers.length === 0, blocker_codes: blockers };
+}
+
+/** Root-body timestamps of the incident (ISO), the single place the double reads them from. */
+export function incidentRootTimes(incident: WorldIncident): { created_at: string; updated_at: string; acknowledged_at: string | null; mitigated_at: string | null; resolved_at: string | null } {
+  const events = incidentEvents(incident);
+  return {
+    created_at: iso(incident.createdMs), updated_at: iso(events[events.length - 1]!.atMs),
+    acknowledged_at: incident.acknowledged ? iso(incident.acknowledged.atMs) : null,
+    mitigated_at: incident.mitigated ? iso(incident.mitigated.atMs) : null,
+    resolved_at: incident.resolved ? iso(incident.resolved.atMs) : null,
+  };
+}
+
+/** Operations that name an incident: the same rows the Operations table holds. */
+export const operationsOfIncident = (incident: WorldIncident): WorldOperation[] => incident.links.flatMap(([opId]) => { const op = opById(opId); return op ? [op] : []; });
+
+const digestOf = (value: unknown): string => `sha256:${createHash("sha256").update(JSON.stringify(value)).digest("hex")}`;
+
+/** `GET /operations/incidents/{id}/children` body (`portal.execution.incident-children.v1`) for a world incident; null for an id the world does not hold. */
+export function incidentChildrenBody(incidentId: string, workspaceId: string): Record<string, unknown> | null {
+  const incident = worldIncident(incidentId);
+  if (incident === undefined) return null;
+  const events = incidentEvents(incident);
+  return {
+    schema_version: "portal.execution.incident-children.v1", workspace_id: workspaceId, incident_id: incident.id, record_authority: "PORTAL_PROJECTION", read_at_ms: OPS_READ_MS,
+    evidence: incident.evidence.map((e, n) => ({ source: e.source, digest: digestOf([incident.id, e.source, n]), label: e.label, added_at_ms: e.atMs })),
+    assigned_to: incident.assigned ? { actor: incident.assigned.actor, assigned_at_ms: incident.assigned.atMs } : null,
+    resolution_gate: incidentGate(incident),
+    timeline: events.map((e, n) => ({ event_id: `FIXTURE_LAB:${incident.id}:${e.id}`, action: e.action, actor: e.actor, version_before: n === 0 ? null : n, version_after: n + 1, at_ms: e.atMs })),
+    // The original target of a child is the operation's own target when it was linked; one child per incident the record cannot attest (null).
+    linked_operations: operationsOfIncident(incident).map((op, n) => ({ operation_id: op.id, original_target: n === 2 ? null : { type: op.target[0], id: op.target[1] } })),
+  };
+}
+// ===== WP-B end

@@ -14,7 +14,7 @@ import { answerManagerFleet, answerManagerSeries } from "../frontend/e2e/bffDoub
 import { answerPortfolios } from "../frontend/e2e/bffDoublePortfolios";
 import type { PositiveAccountBook, PositiveDeploymentFact, PositivePortfolioBook, PositiveRecall } from "../frontend/e2e/bffPositiveMode";
 import { addDecimal, fixtureNowMs, scaled, type AlphaSpec, type DeploymentSpec } from "../frontend/e2e/bffScale";
-import { lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
+import { incidentChildrenBody, lifecycleOf, MARKS, NATIVE_ALPHAS, positionsOf, stageDays, WORLD_ACTORS } from "../frontend/e2e/bffWorld";
 import { legacy, traits } from "./scenario";
 
 // Mutable copies of published JSON templates, confined to this server-only fixture module.
@@ -1586,6 +1586,12 @@ function wpkOperationsExtras(method: string, path: string, search: URLSearchPara
   const children = /^\/operations\/incidents\/([A-Za-z0-9._:-]{1,191})\/children$/.exec(path);
   if (children !== null) {
     const incidentId = children[1]!;
+    // ===== WP-B begin: the children of an incident are the world's record (e2e/bffWorld.ts), the same one the root and the row links read; an id the world does not hold is not found.
+    if (!legacy()) {
+      const world = incidentChildrenBody(incidentId, workspace);
+      return world === null ? problem(404, "OPERATIONAL_READ_NOT_FOUND", "The incident was not found.") : { status: 200, body: world };
+    }
+    // ===== WP-B end
     const seed = seedOf(incidentId, "wpk-children");
     const body: Draft = { schema_version: "portal.execution.incident-children.v1", workspace_id: workspace, incident_id: incidentId, record_authority: "PORTAL_PROJECTION", read_at_ms: now };
     const mode = legacy() ? seed % 6 : 2 + (seed % 4); // 0: not read (null); 1: no owning source (omitted); else published

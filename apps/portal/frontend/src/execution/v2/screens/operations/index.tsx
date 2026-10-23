@@ -46,6 +46,7 @@ import { profileLabel } from "../../profileLabel";
 import { humanize, TARGET_LABEL } from "./outcome";
 import { QueueTable } from "./QueueTable";
 import { StatusCounts } from "./StatusCounts";
+import { TargetNamesProvider } from "./targetNames";
 import { sourceHealthSummary, useSourceHealth } from "./useSourceHealth";
 
 import "../../css/operations.css";
@@ -160,7 +161,7 @@ export interface OperationsV2Props {
   accessHref?: string;
 }
 
-export default function OperationsV2({
+function OperationsInner({
   api, workspaceId, now, requestedOperation = null, incidentId = null, queuePath = "/execution/operations", accessHref = ACCESS_PATH,
 }: OperationsV2Props) {
   const mode = useDockMode();
@@ -727,4 +728,9 @@ export default function OperationsV2({
       ) : null}
     </div>
   );
+}
+
+/** The queue, with the portfolios' names available to every link on it (QA3 R3-05). */
+export default function OperationsV2(props: OperationsV2Props) {
+  return <TargetNamesProvider api={props.api} workspaceId={props.workspaceId}><OperationsInner {...props} /></TargetNamesProvider>;
 }

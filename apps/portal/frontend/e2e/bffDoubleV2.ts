@@ -33,6 +33,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { scaled } from "./bffScale";
+import { incidentRootTimes, incidentState, incidentVersion, WORLD_INCIDENTS, WORLD_OPERATIONS } from "./bffWorld";
 
 export interface BffAnswerV2 {
   status: number;
@@ -52,37 +53,9 @@ type Row = Record<string, unknown> & { operation_id: string; created_at: string 
 const FIXTURE_PAGE = FIXTURE.queue.page as { rows: Row[] };
 const FIXTURE_ROW = FIXTURE_PAGE.rows[0];
 
-interface Synthetic {
-  id: string;
-  at: string;
-  command: string;
-  target: [string, string];
-  env: "PAPER" | "SANDBOX" | "LIVE";
-  risk: string;
-  severity: string;
-  source: string;
-  verify: string;
-  triage: "UNACKNOWLEDGED" | "ACKNOWLEDGED" | "RESOLVED";
-}
-
-// Microsecond instants on purpose: the SQL keyset boundary is six digits wide.
-const SYNTHETIC: readonly Synthetic[] = [
-  { id: "op_TEST_ONLY_s01", at: "2026-08-22T11:58:00.123456Z", command: "portfolio/adjust-target-budget", target: ["PORTFOLIO", "pf_TEST_ONLY_canary"], env: "LIVE", risk: "R4_LIVE_RISK_INCREASING", severity: "CRITICAL", source: "UNCERTAIN", verify: "UNCERTAIN", triage: "UNACKNOWLEDGED" },
-  { id: "op_TEST_ONLY_s02", at: "2026-08-22T11:40:00.500000Z", command: "portfolio/recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "LIVE", risk: "R3_LIVE_PROTECTIVE", severity: "WARNING", source: "SUCCEEDED", verify: "PARTIAL", triage: "UNACKNOWLEDGED" },
-  { id: "op_TEST_ONLY_s03", at: "2026-08-22T11:20:00.000001Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance02"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "INFO", source: "SUCCEEDED", verify: "SUCCEEDED", triage: "RESOLVED" },
-  { id: "op_TEST_ONLY_s04", at: "2026-08-22T10:55:00.250000Z", command: "deployment/archive", target: ["DEPLOYMENT", "dep_TEST_ONLY_btc"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "WARNING", source: "PENDING", verify: "PENDING", triage: "ACKNOWLEDGED" },
-  { id: "op_TEST_ONLY_s05", at: "2026-08-22T10:30:00.000000Z", command: "portfolio/adjust-target-budget", target: ["PORTFOLIO", "pf_TEST_ONLY_core"], env: "LIVE", risk: "R4_LIVE_RISK_INCREASING", severity: "ERROR", source: "FAILED", verify: "FAILED", triage: "UNACKNOWLEDGED" },
-  { id: "op_TEST_ONLY_s06", at: "2026-08-22T10:05:00.000000Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance01"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "INFO", source: "SUCCEEDED", verify: "NOT_STARTED", triage: "UNACKNOWLEDGED" },
-  { id: "op_TEST_ONLY_s07", at: "2026-08-22T09:40:00.000000Z", command: "account/top-up", target: ["ACCOUNT", "acc_TEST_ONLY_binance02"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "WARNING", source: "RUNNING", verify: "PENDING", triage: "UNACKNOWLEDGED" },
-  { id: "op_TEST_ONLY_s08", at: "2026-08-22T09:10:00.000000Z", command: "portfolio/return-capital", target: ["PORTFOLIO", "pf_TEST_ONLY_core"], env: "LIVE", risk: "R3_LIVE_PROTECTIVE", severity: "ERROR", source: "EXPIRED", verify: "EXPIRED", triage: "ACKNOWLEDGED" },
-  { id: "op_TEST_ONLY_s09", at: "2026-08-22T08:45:00.000000Z", command: "deployment/resume", target: ["DEPLOYMENT", "dep_TEST_ONLY_eth"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "INFO", source: "BLOCKED", verify: "NOT_STARTED", triage: "UNACKNOWLEDGED" },
-  { id: "op_TEST_ONLY_s10", at: "2026-08-22T08:15:00.000000Z", command: "account/sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance01"], env: "PAPER", risk: "R1_PAPER_MUTATION", severity: "WARNING", source: "SUCCEEDED", verify: "DENIED", triage: "UNACKNOWLEDGED" },
-  { id: "op_TEST_ONLY_s11", at: "2026-08-22T07:30:00.000000Z", command: "portfolio/recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "SANDBOX", risk: "R2_SANDBOX", severity: "INFO", source: "SUCCEEDED", verify: "SUCCEEDED", triage: "RESOLVED" },
-];
-
 function dataset(): Row[] {
   // The generated rows are empty unless the standalone server runs at a larger scale (bffScale.ts).
-  const synthetic: Row[] = [...SYNTHETIC, ...scaled().operations].map((s) => ({
+  const synthetic: Row[] = [...WORLD_OPERATIONS, ...scaled().operations].map((s) => ({
     ...FIXTURE_ROW,
     operation_id: s.id,
     command_key: s.command,
@@ -205,47 +178,22 @@ function simulatedStatusCounts(all: readonly Row[], applied: readonly { field: s
  * two reads agree. Open exceptions are counted from these records (OPEN only), never from the loaded page.
  * Real source: the Portal incident records (`execution-operations.v1` OperationalIncidentCurrentV2 and OperationalIncidentLinksV2).
  */
-interface SimIncident {
-  id: string;
-  target: [string, string];
-  env: "PAPER" | "SANDBOX" | "LIVE";
-  severity: string;
-  state: "OPEN" | "MITIGATED" | "RESOLVED";
-  version: number;
-  createdAt: string;
-  acknowledgedAt: string | null;
-  mitigatedAt: string | null;
-  resolvedAt: string | null;
+/** The incidents and their links are the world's (e2e/bffWorld.ts, WP-B block): one record each, read by the root, the row links and the children. */
+const SIM_INCIDENT_BY_ID = new Map(WORLD_INCIDENTS.map((incident) => [incident.id, incident]));
+const WORLD_LINKS = new Map<string, { id: string; relationship: string; atMs: number }[]>();
+for (const incident of WORLD_INCIDENTS) {
+  for (const [opId, relationship, atMs] of incident.links) WORLD_LINKS.set(opId, [...(WORLD_LINKS.get(opId) ?? []), { id: incident.id, relationship, atMs }]);
 }
-export const SIM_INCIDENTS: readonly SimIncident[] = [
-  { id: "inc_TEST_ONLY_fx_mismatch", target: ["PORTFOLIO", "pf_TEST_ONLY_canary"], env: "LIVE", severity: "CRITICAL", state: "OPEN", version: 1, createdAt: "2026-08-22T11:55:00.000Z", acknowledgedAt: null, mitigatedAt: null, resolvedAt: null },
-  { id: "inc_TEST_ONLY_fx_recall", target: ["PORTFOLIO", "pf_TEST_ONLY_satellite"], env: "LIVE", severity: "WARNING", state: "OPEN", version: 2, createdAt: "2026-08-22T11:42:00.000Z", acknowledgedAt: "2026-08-22T11:50:00.000Z", mitigatedAt: null, resolvedAt: null },
-  { id: "inc_TEST_ONLY_fx_sync", target: ["ACCOUNT", "acc_TEST_ONLY_binance02"], env: "PAPER", severity: "WARNING", state: "MITIGATED", version: 3, createdAt: "2026-08-22T09:45:00.000Z", acknowledgedAt: "2026-08-22T10:00:00.000Z", mitigatedAt: "2026-08-22T11:25:00.000Z", resolvedAt: null },
-  { id: "inc_TEST_ONLY_fx_budget", target: ["PORTFOLIO", "pf_TEST_ONLY_core"], env: "LIVE", severity: "ERROR", state: "OPEN", version: 2, createdAt: "2026-08-22T10:32:00.000Z", acknowledgedAt: "2026-08-22T10:40:00.000Z", mitigatedAt: null, resolvedAt: null },
-  { id: "inc_TEST_ONLY_fx_resume", target: ["DEPLOYMENT", "dep_TEST_ONLY_eth"], env: "PAPER", severity: "INFO", state: "RESOLVED", version: 4, createdAt: "2026-08-22T08:46:00.000Z", acknowledgedAt: "2026-08-22T08:50:00.000Z", mitigatedAt: "2026-08-22T09:00:00.000Z", resolvedAt: "2026-08-22T09:20:00.000Z" },
-];
-const SIM_INCIDENT_BY_ID = new Map(SIM_INCIDENTS.map((incident) => [incident.id, incident]));
-
-/** operation id -> [incident id, relationship, linked at]: many to many (two operations share an incident, one operation names two). */
-const SIM_LINKS: Readonly<Record<string, readonly (readonly [string, "TRIGGERED_BY" | "MITIGATES" | "RELATED", string])[]>> = {
-  op_TEST_ONLY_s01: [["inc_TEST_ONLY_fx_mismatch", "TRIGGERED_BY", "2026-08-22T11:58:30.000001Z"], ["inc_TEST_ONLY_fx_budget", "RELATED", "2026-08-22T11:58:40.000002Z"]],
-  op_TEST_ONLY_s02: [["inc_TEST_ONLY_fx_recall", "TRIGGERED_BY", "2026-08-22T11:42:30.000003Z"]],
-  op_TEST_ONLY_s03: [["inc_TEST_ONLY_fx_sync", "TRIGGERED_BY", "2026-08-22T09:46:00.000004Z"]],
-  op_TEST_ONLY_s05: [["inc_TEST_ONLY_fx_budget", "TRIGGERED_BY", "2026-08-22T10:32:30.000005Z"], ["inc_TEST_ONLY_fx_mismatch", "RELATED", "2026-08-22T11:56:00.000006Z"]],
-  op_TEST_ONLY_s07: [["inc_TEST_ONLY_fx_sync", "MITIGATES", "2026-08-22T09:41:00.000007Z"]],
-  op_TEST_ONLY_s08: [["inc_TEST_ONLY_fx_budget", "RELATED", "2026-08-22T10:35:00.000008Z"]],
-  op_TEST_ONLY_s09: [["inc_TEST_ONLY_fx_resume", "TRIGGERED_BY", "2026-08-22T08:46:30.000009Z"]],
-};
 
 const LINK_BOUND = 3;
 const NOT_ATTESTED_HISTORY = { availability: "NOT_PUBLISHED", reason_code: "ORIGINAL_INCIDENT_TARGET_NOT_ATTESTED" };
 
 function simulatedIncidentLinks(row: Row): Record<string, unknown> {
-  const linked = (SIM_LINKS[row.operation_id] ?? []).flatMap(([id, relationship, at]) => {
+  const linked = (WORLD_LINKS.get(row.operation_id) ?? []).flatMap(({ id, relationship, atMs }) => {
     const incident = SIM_INCIDENT_BY_ID.get(id);
     return incident === undefined ? [] : [{
-      state: "LINKED", incident_id: id, relationship, linked_at: at,
-      incident: { target: { type: incident.target[0], id: incident.target[1] }, environment: incident.env, severity: incident.severity, workflow_state: incident.state },
+      state: "LINKED", incident_id: id, relationship, linked_at: new Date(atMs).toISOString().replace(".000Z", ".000000Z"),
+      incident: { target: { type: incident.target[0], id: incident.target[1] }, environment: incident.env, severity: incident.severity, workflow_state: incidentState(incident) },
       link_history: NOT_ATTESTED_HISTORY,
     }];
   });
@@ -258,7 +206,7 @@ function simulatedIncidentLinks(row: Row): Record<string, unknown> {
 function openIncidentIds(rows: readonly Row[]): readonly string[] {
   const ids = new Set<string>();
   for (const row of rows) {
-    for (const [id] of SIM_LINKS[row.operation_id] ?? []) if (SIM_INCIDENT_BY_ID.get(id)?.state === "OPEN") ids.add(id);
+    for (const { id } of WORLD_LINKS.get(row.operation_id) ?? []) { const incident = SIM_INCIDENT_BY_ID.get(id); if (incident !== undefined && incidentState(incident) === "OPEN") ids.add(id); }
   }
   return [...ids];
 }
@@ -401,11 +349,9 @@ function incident(id: string, simulate = false): BffAnswerV2 {
   // id read as if every typed id existed, and the command bar offered it). Off keeps the one body every id got, for the specs written on it.
   if (simulate && sim === undefined && !KNOWN_INCIDENT_IDS.has(id)) return problem(404, "OPERATIONAL_READ_NOT_FOUND", "The incident was not found.");
   if (sim !== undefined) {
-    const updated = [sim.createdAt, sim.acknowledgedAt, sim.mitigatedAt, sim.resolvedAt].filter((t): t is string => t !== null).sort().pop();
     return { status: 200, body: {
-      ...root, target: { type: sim.target[0], id: sim.target[1] }, environment: sim.env, severity: sim.severity, workflow_state: sim.state,
-      workflow_version: sim.version, acknowledged_at: sim.acknowledgedAt, mitigated_at: sim.mitigatedAt, resolved_at: sim.resolvedAt,
-      created_at: sim.createdAt, updated_at: updated,
+      ...root, target: { type: sim.target[0], id: sim.target[1] }, environment: sim.env, severity: sim.severity, workflow_state: incidentState(sim),
+      workflow_version: incidentVersion(sim), ...incidentRootTimes(sim),
     } };
   }
   if (id === "inc_TEST_ONLY_mitigated") {

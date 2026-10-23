@@ -177,6 +177,14 @@ describe("Operations with the lane's rows", () => {
   });
 });
 
+async function childrenFromWorld(id: string): Promise<ExecutionApi> {
+  const { incidentChildrenBody } = await import("../../../../../e2e/bffWorld");
+  const { readIncidentChildrenV1 } = await import("../../readers/incidentChildren");
+  const read = readIncidentChildrenV1(incidentChildrenBody(id, "ws"));
+  if (read === null || read.kind !== "incident_children") throw new Error("children");
+  return { ...fakeApi().api, getIncidentChildren: async () => ({ ok: true, value: read.children }) } as unknown as ExecutionApi;
+}
+
 function mountIncident(id: string, api: ExecutionApi = fakeApi().api) {
   render(
     <MemoryRouter initialEntries={[`/execution/operations/incidents/${id}?env=paper`]}>
@@ -204,11 +212,13 @@ describe("incident page", () => {
     const ops = await screen.findByRole("list", { name: "Linked operations" });
     const items = within(ops).getAllByRole("listitem");
     expect(items).toHaveLength(2);
-    expect(items[0].textContent).toContain("Triggered by this incident");
-    expect(items[1].textContent).toContain("Related to this incident");
+    // Newest link first: the failed budget change (related) was linked after the operation that triggered the incident.
+    expect(items[0].textContent).toContain("Related to this incident");
+    expect(items[1].textContent).toContain("Triggered by this incident");
+    expect(items[1].textContent).toContain("recorded ");
     expect(ops.textContent).toContain("Original target: not attested");
-    expect(within(items[0]).getByText("Unknown outcome")).toBeTruthy();
-    const href = within(items[0]).getByRole("link", { name: "Adjust target budget" }).getAttribute("href");
+    expect(within(items[1]).getByText("Unknown outcome")).toBeTruthy();
+    const href = within(items[1]).getByRole("link", { name: "Adjust target budget" }).getAttribute("href");
     expect(href).toContain("/execution/operations?");
     expect(href).toContain("operation=op_TEST_ONLY_s01");
     expect(href).toContain("env=paper");
@@ -448,5 +458,64 @@ describe("round 3 (QA2 R3): one Intent absence, no sub-line, counts that tie", (
     mount("/execution/operations?view=exceptions&lens=all");
     await screen.findByRole("table", { name: "Exceptions" });
     expect(screen.getByText(/operations? in this range/)).toBeTruthy();
+  });
+});
+
+describe("round 4: one incident record", () => {
+  it("the root, the row links, the gate and the timeline of every world incident tell one story", async () => {
+    const { WORLD_INCIDENTS, incidentChildrenBody, incidentEvents, incidentGate, incidentState, incidentVersion, operationsOfIncident, WORLD_OPERATIONS } = await import("../../../../../e2e/bffWorld");
+    const rows = queueAnswer({ limit: 250 });
+    if (!rows.ok || rows.value.kind !== "queue") throw new Error("queue");
+    const byId = new Map(rows.value.queue.page.rows.map((row) => [row.operationId, row]));
+    for (const incident of WORLD_INCIDENTS) {
+      const root = incidentAnswer(incident.id);
+      if (!root.ok || root.value.kind !== "incident") throw new Error("root");
+      expect(root.value.incident.workflowState).toBe(incidentState(incident));
+      expect(root.value.incident.workflowVersion).toBe(incidentVersion(incident));
+      const children = incidentChildrenBody(incident.id, "ws") as { timeline: { action: string; at_ms: number; version_after: number }[]; resolution_gate: { eligible: boolean; blocker_codes: string[] }; assigned_to: { actor: string; assigned_at_ms: number } | null; linked_operations: { operation_id: string }[] };
+      // the acknowledgement of the root is the acknowledgement of the timeline, to the millisecond
+      const ack = children.timeline.find((e) => e.action === "ACKNOWLEDGED");
+      expect(ack?.at_ms ?? null).toBe(root.value.incident.acknowledgedAt?.ms ?? null);
+      expect(children.timeline[children.timeline.length - 1]!.version_after).toBe(root.value.incident.workflowVersion);
+      expect(children.timeline.map((e) => e.action)).toEqual(incidentEvents(incident).map((e) => e.action));
+      // the assignee of the gate, the header and the timeline is one person at one time
+      expect(children.assigned_to?.actor ?? null).toBe(incident.assigned?.actor ?? null);
+      expect(children.resolution_gate).toEqual(incidentGate(incident));
+      // every child operation is a row of the Operations table, and that row links back to this incident
+      for (const child of children.linked_operations) {
+        const row = byId.get(child.operation_id);
+        expect(row, child.operation_id).toBeDefined();
+        expect(row!.incidentLinks?.items.some((link) => link.state === "LINKED" && link.incidentId === incident.id)).toBe(true);
+      }
+      expect(children.linked_operations.map((c) => c.operation_id).sort()).toEqual(operationsOfIncident(incident).map((o) => o.id).sort());
+      // an incident never names an operation recorded after the link, and links are not older than the operation
+      for (const [opId, , linkedAt] of incident.links) {
+        const op = WORLD_OPERATIONS.find((o) => o.id === opId)!;
+        expect(linkedAt).toBeGreaterThanOrEqual(Date.parse(op.at));
+      }
+    }
+  });
+
+  it("the page header, the gate and the timeline name the same assignee and the same acknowledgement", async () => {
+    mountIncident("inc_TEST_ONLY_fx_budget", await childrenFromWorld("inc_TEST_ONLY_fx_budget"));
+    expect((await screen.findByTestId("head-assignee")).textContent).toBe("Assigned to minh");
+    expect(screen.queryByTestId("gate-disagreement")).toBeNull();
+    expect(screen.queryByTestId("timeline-disagreement")).toBeNull();
+    const gates = within(screen.getByRole("list", { name: "Resolution gates" })).getAllByRole("listitem");
+    expect(gates[1]!.textContent).toContain("Assigned to minh");
+    expect(screen.getByTestId("children-timeline").textContent).toContain("Acknowledged");
+  });
+
+  it("an incident nobody has assigned says so in the header and the gate", async () => {
+    mountIncident("inc_TEST_ONLY_fx_mismatch", await childrenFromWorld("inc_TEST_ONLY_fx_mismatch"));
+    expect((await screen.findByTestId("head-assignee")).textContent).toBe("No assignee published");
+    expect(screen.getByTestId("children-gate").textContent).toContain("not yet eligible");
+  });
+
+  it("no ticket id is printed in the page's visible words (it stays in hidden text)", async () => {
+    mountIncident("inc_TEST_ONLY_fx_mismatch");
+    await screen.findByRole("list", { name: "Resolution gates" });
+    const visible = [...document.querySelectorAll(".exec-opi *")].filter((el) => el.children.length === 0 && !el.closest(".exec-blk-sr")).map((el) => el.textContent ?? "").join(" ");
+    expect(visible).not.toMatch(/FE-\d{3}/);
   });
 });

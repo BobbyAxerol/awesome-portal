@@ -51,7 +51,7 @@ describe("incident children", () => {
     const evidence = await screen.findByTestId("children-evidence");
     expect(within(evidence).getAllByRole("listitem").map((li) => li.getAttribute("data-source"))).toEqual(["Findings", "Alerts", "Dead letters", "Order trace"]);
     expect(evidence.textContent).toContain("Position limit finding");
-    expect(screen.getByText(/Assigned to TEST_ONLY:actor-1/)).toBeTruthy();
+    expect(screen.getAllByText(/Assigned to TEST_ONLY:actor-1/).length).toBeGreaterThan(0);
     expect(screen.getByTestId("children-gate").textContent).toMatch(/not yet eligible to resolve: Open dead letter, Unverified order trace/);
     const timeline = screen.getByTestId("children-timeline");
     expect(timeline.textContent).toMatch(/Assigned · TEST_ONLY:actor-2 · v1 to v2/);

@@ -28,9 +28,10 @@ import type { IncidentChildren } from "../../readers/incidentChildren";
 import type { UtcEpochMs } from "../../../screenDataContract";
 import { ENV_LABEL, withContext } from "../../urlState";
 import { INCIDENT_ACTION_REASONS, railFor, STATE_FLAG } from "./IncidentRootDrawer";
-import { ACCESS_PATH, AccessLink, FE, FE_B1, notPublishedReason } from "./notPublished";
+import { ACCESS_PATH, AccessLink, FE, notPublishedReason } from "./notPublished";
 import { commandLabel, humanize, receiptOutcome, TARGET_LABEL } from "./outcome";
 import { TargetLink } from "./TargetLink";
+import { TargetNamesProvider, usePortfolioNames } from "./targetNames";
 
 import "../../css/operations.css";
 import "../../css/operationsIncident.css";
@@ -167,8 +168,9 @@ function Gate({ label, state, children }: { label: string; state: "met" | "open"
   );
 }
 
-export default function IncidentPage({ api, incidentId, workspaceId, queuePath = "/execution/operations", accessHref = ACCESS_PATH }: IncidentPageProps) {
+function IncidentInner({ api, incidentId, workspaceId, queuePath = "/execution/operations", accessHref = ACCESS_PATH }: IncidentPageProps) {
   const [params] = useSearchParams();
+  const names = usePortfolioNames();
   const [root, setRoot] = useState<RootLoad>({ phase: "loading" });
   const scan = useScan(api, workspaceId);
   const [rootReady, setRootReady] = useState(false);
@@ -246,13 +248,15 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
         <div className="exec-opi-title">
           <span className="exec-opi-tag"><Flag kind="incident" label="Incident" size="md" /></span>
           {/* The root publishes no title (FE-031): the headline is built only from published words, severity and target. */}
-          <h1 className="exec-ops-title">{humanize(incident.severity)} incident on {TARGET_LABEL[incident.targetType].toLowerCase()} <span className="exec-ops-mono">{incident.targetId}</span></h1>
+          <h1 className="exec-ops-title">{humanize(incident.severity)} incident on {TARGET_LABEL[incident.targetType].toLowerCase()} <span className="exec-ops-mono">{names.get(incident.targetId) ?? incident.targetId}</span></h1>
           <p className="exec-opi-sub">
             <span className="exec-opi-idchip exec-ops-mono">{incident.incidentId}</span>
             <span> · </span>
             <TargetLink type={incident.targetType} id={incident.targetId} environment={incident.environment} />
             <span> · {ENV_LABEL[incident.environment]} · version <span className="exec-ops-mono">{incident.workflowVersion}</span> · </span>
-            <span className="exec-blk-na">No assignee published</span>
+            {kids !== null && kids.assignedTo.state === "PUBLISHED"
+              ? <span data-testid="head-assignee">Assigned to {kids.assignedTo.value.actor}</span>
+              : <span className="exec-blk-na" data-testid="head-assignee">No assignee published</span>}
           </p>
         </div>
         <div className="exec-opi-chips">
@@ -321,10 +325,10 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
                           <Link className="exec-ops-link-id" to={withContext(`${queuePath}?operation=${encodeURIComponent(row.operationId)}`, withoutPeek(params))}>{commandLabel(row.commandKey)}</Link>
                           <Flag kind={outcome.kind} label={outcome.label} size="sm" />
                         </span>
-                        <span className="exec-ops-meta">{RELATION_WORD[relationship]} · linked {instant(linkedAt, "")}</span>
+                        <span className="exec-ops-meta">{RELATION_WORD[relationship]} · recorded {instant(row.createdAt, "")} · linked {instant(linkedAt, "")}</span>
                         <span className="exec-ops-meta">
                           Target now <TargetLink type={row.targetType} id={row.targetId} environment={row.environment} />
-                          {" · "}{originalTargetText(kids, row.operationId)}
+                          {" · "}{originalTargetText(kids, row.operationId, names)}
                           <span className="exec-blk-sr"> ({incident.historicalChildren.reasonCode})</span>
                         </span>
                         {row.deliveryState ? <span className="exec-ops-meta">Receipt: {humanize(row.deliveryState)}</span> : null}
@@ -336,7 +340,7 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
               <p className="exec-ops-reason" data-role="scan">
                 Found in the newest {scan.rows.length.toLocaleString("en-US")} of {scan.matching.toLocaleString("en-US")} operations{scan.complete ? "" : "; older operations were not searched"}.
                 {anyTruncated ? " An operation that links more than three incidents lists only its newest three." : ""}
-                {anyUnpublished ? ` Incident links are not published for some rows (${FE_B1.links}).` : ""}
+                {anyUnpublished ? ` Incident links are not published for some rows.` : ""}
               </p>
               <p className="exec-ops-reason">Changes run plan, apply, then verify in Operations. This page only links to them.</p>
             </>
@@ -350,11 +354,11 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
             </Gate>
             {kids !== null && kids.assignedTo.state === "PUBLISHED"
               ? <Gate label="This incident has an assignee" state="met">Assigned to {kids.assignedTo.value.actor} {atText(kids.assignedTo.value.assignedAtMs)}</Gate>
-              : <Gate label="This incident has an assignee" state="not-published">Not available ({FE.assignee})</Gate>}
+              : <Gate label="This incident has an assignee" state="not-published">Not available<span className="exec-blk-sr"> ({FE.assignee})</span></Gate>}
             <Gate label="Exposure is recorded as mitigated" state={incident.mitigatedAt ? "met" : "open"}>
               {incident.mitigatedAt ? <>Mitigated {instant(incident.mitigatedAt, "")}</> : "Not mitigated"}
             </Gate>
-            <Gate label="A clean dry-run evidence reference is attached" state="not-published">Not available ({FE.events})</Gate>
+            <Gate label="A clean dry-run evidence reference is attached" state="not-published">Not available<span className="exec-blk-sr"> ({FE.events})</span></Gate>
           </ul>
           {kids !== null && kids.resolutionGate.state === "PUBLISHED" ? (
             <p className="exec-ops-reason" data-testid="children-gate">
@@ -366,7 +370,7 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
               The two reads disagree: the gate read says eligible, while the incident root shows {!incident.acknowledgedAt ? "no acknowledgement" : "no mitigation"}. Both are shown as read; neither is corrected here.
             </p>
           ) : null}
-          <p className="exec-ops-reason">Resolve unlocks only when every gate is met. The server enforces the gates and does not publish its verdict ({FE.eligibility}); this list mirrors the facts the incident root does publish.</p>
+          <p className="exec-ops-reason">Resolve unlocks only when every gate is met. The server enforces the gates and does not publish its verdict here; this list mirrors the facts the incident root does publish.</p>
         </SectionPanel>
 
         {kids !== null && kids.timeline.state === "PUBLISHED" ? (
@@ -412,7 +416,7 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
             {kids.linkedOperations.value.map((o) => (
               <li key={o.operationId} className="exec-opi-op">
                 <span className="exec-ops-mono">{scan.phase === "ready" && scan.rows.find((r) => r.operationId === o.operationId) ? `${commandLabel(scan.rows.find((r) => r.operationId === o.operationId)!.commandKey)} · ${o.operationId}` : o.operationId}</span>
-                <span className="exec-ops-meta">{o.originalTarget === null ? "Original target not attested" : `Original target ${humanize(o.originalTarget.type)} ${o.originalTarget.id}`}</span>
+                <span className="exec-ops-meta">{o.originalTarget === null ? "Original target not attested" : `Original target ${humanize(o.originalTarget.type)} ${o.originalTarget.type === "PORTFOLIO" ? names.get(o.originalTarget.id) ?? o.originalTarget.id : o.originalTarget.id}`}</span>
               </li>
             ))}
           </ul>
@@ -448,11 +452,11 @@ export default function IncidentPage({ api, incidentId, workspaceId, queuePath =
 }
 
 /** The original target of a linked operation: the child read's, or the root's typed reason. */
-function originalTargetText(kids: IncidentChildren | null, operationId: string): string {
+function originalTargetText(kids: IncidentChildren | null, operationId: string, names: ReadonlyMap<string, string>): string {
   if (kids === null || kids.linkedOperations.state !== "PUBLISHED") return "Original target: not attested";
   const child = kids.linkedOperations.value.find((o) => o.operationId === operationId);
   if (child === undefined || child.originalTarget === null) return "Original target: not attested";
-  return `Original target: ${humanize(child.originalTarget.type)} ${child.originalTarget.id}`;
+  return `Original target: ${humanize(child.originalTarget.type)} ${child.originalTarget.type === "PORTFOLIO" ? names.get(child.originalTarget.id) ?? child.originalTarget.id : child.originalTarget.id}`;
 }
 
 function withoutPeek(params: URLSearchParams): URLSearchParams {
@@ -460,4 +464,8 @@ function withoutPeek(params: URLSearchParams): URLSearchParams {
   next.delete("peek");
   next.delete("sel");
   return next;
+}
+
+export default function IncidentPage(props: IncidentPageProps) {
+  return <TargetNamesProvider api={props.api} workspaceId={props.workspaceId}><IncidentInner {...props} /></TargetNamesProvider>;
 }
