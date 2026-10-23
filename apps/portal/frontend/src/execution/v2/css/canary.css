@@ -232,6 +232,14 @@
 .exec-cny-rb-item:last-child {
   border-bottom: 0;
 }
+/* The text side takes the room and wraps; the state flag keeps its word whole ("READY" never breaks into "READ" and "Y"). */
+.exec-cny-rb-item > div {
+  min-width: 0;
+}
+.exec-cny-rb-item > :last-child {
+  flex: none;
+  white-space: nowrap;
+}
 .exec-cny-rb-name {
   display: block;
   font: var(--exec-font-body);
@@ -267,4 +275,14 @@
   overflow: visible;
   white-space: normal;
   text-overflow: clip;
+}
+
+/* A figure and its unit stay on one line in the Internal / Broker / Difference rows; a long label wraps by word instead. */
+.exec-cny-v2 .exec-blk-triad-row {
+  flex-wrap: wrap;
+}
+.exec-cny-v2 .exec-blk-triad-row dd {
+  flex: none;
+  margin-left: auto;
+  white-space: nowrap;
 }

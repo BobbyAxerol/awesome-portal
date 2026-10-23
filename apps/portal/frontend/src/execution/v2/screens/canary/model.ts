@@ -18,12 +18,13 @@
 import type { StageChipValue, StageChips } from "../../blocks";
 import type { BlockerItem } from "../../blocks";
 import type { FlagKind } from "../../flagKinds";
-import { type Metric } from "../../boundary";
+import { readDecimal, type Metric } from "../../boundary";
+import { fractionToPercent } from "../../blocks/CapGauge";
 import type { SpineStageId } from "../../blocks";
 import { stageWhy, type StageWhyKey } from "../stage/reasons";
 import { reconciliationChipFrom, runtimeChipFrom, timeText } from "../stage/factChips";
 import type { CapKey } from "../../../stageFacts";
-import type { FactCell } from "../../readers/stageFactViews";
+import { decimalValue, type FactCell } from "../../readers/stageFactViews";
 import {
   KPI_KEYS,
   KPI_VALUE_STATES,
@@ -216,12 +217,24 @@ function kpiBasis(view: CanaryView, key: KpiKey, panel: PanelFact): string | und
   const proposed = view.envelope?.status === "DRAFT";
   const word = proposed ? "Proposed cap" : "Envelope cap";
   const parts: string[] = [];
+  // The share of the approved cap is the SERVER's used ratio with the decimal point moved two places (formatting on the string);
+  // without a published ratio the line is the cap itself.
+  const share = (limit: LimitKey): string | null => {
+    const ratio = view.envelope?.limits.find((l) => l.key === limit)?.usedRatio;
+    const percent = ratio === undefined ? null : fractionToPercent(ratio);
+    const shown = percent === null ? null : readDecimal(percent, { unit: "pct" });
+    return shown === null ? null : `${shown.display}% of approved`;
+  };
   if (key === "capital_consumed") {
+    const used = share("capital");
     const cap = capOf(view, "capital");
-    if (cap !== null) parts.push(`${word} ${cap}`);
+    if (used !== null) parts.push(used);
+    else if (cap !== null) parts.push(`${word} ${cap}`);
   } else if (key === "gross_notional") {
+    const used = share("grossNotional");
     const cap = capOf(view, "grossNotional");
-    if (cap !== null) parts.push(`${word} ${cap}`);
+    if (used !== null) parts.push(used);
+    else if (cap !== null) parts.push(`${word} ${cap}`);
   } else if (key === "daily_pnl") {
     const cap = capOf(view, "dailyLoss");
     if (cap !== null) parts.push(`Daily loss cap ${cap}`);
@@ -324,7 +337,9 @@ export function limitRows(view: CanaryView): readonly LimitRow[] {
       ...base,
       limit: compliance?.limits[l.key] ?? null,
       limitReason: null,
-      consumed: compliance?.consumed?.byLimit[l.key] ?? null,
+      // The duration cap has no compliance row (the four caps are capital, gross notional, daily loss and open orders): its consumed
+      // figure is the trial day the lifecycle publishes, and its used ratio stays `Not published` (a request to the contracts lane).
+      consumed: l.key === "duration" && view.dayIndex !== null ? decimalValue(String(view.dayIndex), "count") : (compliance?.consumed?.byLimit[l.key] ?? null),
       consumedReason: null,
       usedReason: null,
       asOf: null,
@@ -397,6 +412,7 @@ export const BLOCKER_SENTENCES: Readonly<Record<string, string>> = {
   LIVE_SOURCE_UNAVAILABLE: "The live source is not available.",
   BASE_RISK_PROFILE_UNVERIFIED: "The base risk profile is not verified yet.",
   BROKER_SYNC_UNAVAILABLE: "Broker data is not available.",
+  BROKER_SYNC_STALE: "Broker data is stale, so scale-up is blocked.",
   PROTECTIVE_CAPABILITY_UNAVAILABLE: "Protective actions are not available on this build.",
 };
 
@@ -467,7 +483,7 @@ export function rollbackItems(view: CanaryView): readonly RollbackItem[] {
       else if (check.ready.value === false) status = { kind: "flag", flag: "attention", label: "Not ready" };
       // A stale broker snapshot contradicts a "broker data ready" statement made from it: not confirmed, never a green tick.
       else if (check.key === "broker_data" && brokerStale) status = { kind: "flag", flag: "partial", label: "Not confirmed" };
-      else status = { kind: "flag", flag: "ok", label: "Ready" };
+      else status = { kind: "flag", flag: "ok", label: check.key === "rollback_drill" ? "Passed" : "Ready" };
       return {
         key: spec.key,
         label: spec.label,

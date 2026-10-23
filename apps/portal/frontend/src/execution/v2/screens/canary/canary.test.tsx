@@ -689,7 +689,8 @@ describe("a lit V1 body: rows under the source's own names, compliance figures, 
     await ready();
     const table = screen.getByRole("table", { name: "Canary envelope caps" });
     const cells = (label: string) => Array.from(table.querySelectorAll("tbody tr")).map((row) => row.querySelector(`td[data-l="${label}"]`)?.textContent?.replace(/^Not available$/, "NP"));
-    expect(cells("Consumed")).toEqual(["3,820.00", "NP", "NP", "1", "NP"]);
+    // The duration cap has no compliance row: its consumed figure is the published trial day (6 of 14); its Used stays Not published.
+    expect(cells("Consumed")).toEqual(["3,820.00", "NP", "NP", "1", "6"]);
     const other = screen.getByRole("list", { name: "Other published figures" });
     expect(other.textContent).toContain("Headroom, capital cap 1,180.00");
     expect(other.textContent).toContain("Consumed, fees paid 4.25");
